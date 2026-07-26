@@ -12,7 +12,9 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import datetime, timezone
+from concurrent.futures import ProcessPoolExecutor, ThreadPoolExecutor
 import json
+import multiprocessing
 import os
 import re
 from pathlib import Path
@@ -342,6 +344,20 @@ def _find_cycle(adjacency: Mapping[str, set[str]]) -> list[str]:
 WorkspaceLoader = Callable[[WorkspaceIdentity], dict[str, Any]]
 
 
+def _load_parallel_component(identity: WorkspaceIdentity) -> dict[str, Any]:
+    """Load one default component in an isolated POSIX reader process."""
+
+    from kungfu.atlas import mission_control
+
+    return _safe_component(
+        identity,
+        lambda workspace: _load_component(
+            workspace,
+            relation_loader=mission_control.assignment_relations,
+        ),
+    )
+
+
 def query_federation(
     current: WorkspaceIdentity,
     *,
@@ -354,14 +370,22 @@ def query_federation(
     loader: WorkspaceLoader | None = None,
     include_excluded: bool = False,
     include_settled: bool = False,
+    max_workers: int = 1,
+    component_cache: Mapping[str, Mapping[str, Any]] | None = None,
+    refresh_identity_roots: Iterable[str] | None = None,
 ) -> dict[str, Any]:
     """Read local, related, or all known work without mutating any workspace."""
 
     if scope not in {"local", "related", "all"}:
         raise ValueError("federation scope must be local, related, or all")
     loader = loader or _load_component
+    cached = dict(component_cache or {})
+    refresh_roots = set(refresh_identity_roots or ())
+    if max_workers < 1 or max_workers > 16:
+        raise ValueError("federation max_workers must be between 1 and 16")
     catalog = load_workspace_catalog(config_home, env=env)
     identities: dict[str, WorkspaceIdentity] = {}
+    reused_components: list[dict[str, Any]] = []
 
     def include(identity: WorkspaceIdentity | None) -> None:
         if identity is None:
@@ -379,15 +403,89 @@ def query_federation(
         include(current)
     if scope == "all":
         include(inspect_workspace(home=True, env=env))
-        for entry in catalog["entries"]:
-            if not entry.get("required", True):
-                continue
-            if entry.get("workspace_kind") == "home":
-                include(inspect_workspace(home=True, env=env))
-            else:
-                include(_identity_from_catalog_entry(entry, env=env))
+        project_entries = [
+            entry
+            for entry in catalog["entries"]
+            if entry.get("required", True) and entry.get("workspace_kind") != "home"
+        ]
+        if cached:
+            entries_to_resolve = []
+            for entry in project_entries:
+                identity_root = str(entry.get("identity_root") or "")
+                if identity_root in identities:
+                    continue
+                if identity_root in cached and identity_root not in refresh_roots:
+                    reused_components.append(dict(cached[identity_root]))
+                    continue
+                entries_to_resolve.append(entry)
+            project_entries = entries_to_resolve
+        if max_workers == 1:
+            resolved = [
+                _identity_from_catalog_entry(entry, env=env)
+                for entry in project_entries
+            ]
+        else:
+            with ThreadPoolExecutor(max_workers=max_workers) as resolver_executor:
+                resolved = list(
+                    resolver_executor.map(
+                        lambda entry: _identity_from_catalog_entry(entry, env=env),
+                        project_entries,
+                    )
+                )
+        for identity in resolved:
+            include(identity)
 
-    components = [_safe_component(identity, loader) for identity in identities.values()]
+    component_identities = list(identities.values())
+
+    def load_or_reuse(identity: WorkspaceIdentity) -> dict[str, Any]:
+        identity_root = identity.identity_root or identity.workspace_id
+        if identity_root in cached and identity_root not in refresh_roots:
+            return dict(cached[identity_root])
+        return _safe_component(identity, loader)
+
+    if cached:
+        if max_workers == 1 or len(component_identities) < 2:
+            components = [load_or_reuse(identity) for identity in component_identities]
+        else:
+            with ThreadPoolExecutor(max_workers=max_workers) as component_executor:
+                components = list(
+                    component_executor.map(load_or_reuse, component_identities)
+                )
+    elif max_workers == 1 or len(component_identities) < 2:
+        components = [
+            _safe_component(identity, loader) for identity in component_identities
+        ]
+    elif loader is _load_component and os.name == "posix":
+        # Default component readers perform substantial Python decoding. A
+        # bounded fork pool avoids serializing that work behind the GIL while
+        # retaining deterministic map order. The CLI process has not opened a
+        # component runtime before this point.
+        with ProcessPoolExecutor(
+            max_workers=max_workers,
+            mp_context=multiprocessing.get_context("fork"),
+        ) as process_executor:
+            components = list(
+                process_executor.map(_load_parallel_component, component_identities)
+            )
+    else:
+        component_loader = loader
+        if loader is _load_component:
+            from kungfu.atlas import mission_control
+
+            assignment_relations = mission_control.assignment_relations
+
+            def load_parallel_component(identity: WorkspaceIdentity) -> dict[str, Any]:
+                return _load_component(identity, relation_loader=assignment_relations)
+
+            component_loader = load_parallel_component
+        with ThreadPoolExecutor(max_workers=max_workers) as component_executor:
+            components = list(
+                component_executor.map(
+                    lambda identity: _safe_component(identity, component_loader),
+                    component_identities,
+                )
+            )
+    components.extend(reused_components)
     if scope == "related":
         related_roots = {
             str(endpoint.get("workspace_identity_root") or "")
@@ -401,9 +499,7 @@ def query_federation(
             if entry.get("identity_root") not in related_roots:
                 continue
             include(_identity_from_catalog_entry(entry, env=env))
-        components = [
-            _safe_component(identity, loader) for identity in identities.values()
-        ]
+        components = [load_or_reuse(identity) for identity in identities.values()]
 
     if scope == "all":
         projected_roots = {
@@ -1384,7 +1480,11 @@ def _safe_component(
         return _bind_component_envelope(result)
 
 
-def _load_component(identity: WorkspaceIdentity) -> dict[str, Any]:
+def _load_component(
+    identity: WorkspaceIdentity,
+    *,
+    relation_loader: Callable[[str], list[dict[str, Any]]] | None = None,
+) -> dict[str, Any]:
     """Read one component through the root-bound Fact material protocol.
 
     Mission Control's high-level query correctly requires its exact active
@@ -1458,7 +1558,11 @@ def _load_component(identity: WorkspaceIdentity) -> dict[str, Any]:
         }
 
     from kungfu.storage import service as storage_service
-    from kungfu.atlas import mission_control
+
+    if relation_loader is None:
+        from kungfu.atlas import mission_control
+
+        relation_loader = mission_control.assignment_relations
 
     materials = storage_service.fact_material_list(runtime_dir)
     if materials.get("schema") != "kungfu.facts.material-catalog/v1":
@@ -1553,7 +1657,7 @@ def _load_component(identity: WorkspaceIdentity) -> dict[str, Any]:
         )
         for row in assignments
     ]
-    stored_relations = mission_control.assignment_relations(runtime_dir)
+    stored_relations = relation_loader(runtime_dir)
     derived_relations = _material_relations(projected_assignments)
     relations = {
         str(row.get("relation_root") or ""): row

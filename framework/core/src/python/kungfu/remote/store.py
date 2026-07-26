@@ -202,39 +202,6 @@ def source_projection(runtime_dir: str, source_id: str) -> dict[str, Any]:
     }
 
 
-def list_work(runtime_dir: str, source_id: str | None = None) -> list[dict[str, Any]]:
-    from kungfu.work import store as work_store
-
-    source_ids = [source_id] if source_id else sorted(load_sources(runtime_dir))
-    rows: list[dict[str, Any]] = []
-    for current in source_ids:
-        projection = source_projection(runtime_dir, current)
-        if projection["sync_state"] == "never":
-            continue
-        for item in work_store.load(projection["mirror_runtime"]).values():
-            row = dict(item)
-            row.update(
-                {
-                    "source": projection["source_label"],
-                    "source_id": current,
-                    "sync_state": projection["sync_state"],
-                    "last_synced_at": projection["last_synced_at"],
-                    "mirror_runtime": projection["mirror_runtime"],
-                    "capture_mode": projection["capture_mode"],
-                }
-            )
-            rows.append(row)
-    rows.sort(
-        key=lambda row: (
-            row.get("updated_time") or 0,
-            row.get("source_id") or "",
-            row.get("work_id") or "",
-        ),
-        reverse=True,
-    )
-    return rows
-
-
 def list_runs(runtime_dir: str, source_id: str | None = None) -> list[dict[str, Any]]:
     source_ids = [source_id] if source_id else sorted(load_sources(runtime_dir))
     rows: list[dict[str, Any]] = []

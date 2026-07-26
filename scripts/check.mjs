@@ -417,6 +417,46 @@ function testDevGateLatencyContract() {
   ]);
 }
 
+function checkTestManifest() {
+  run('tracked test manifest gate', 'node', [
+    path.join('scripts', 'check-test-manifest.mjs'),
+  ]);
+}
+
+function testTestManifest() {
+  run('tracked test manifest tests', 'node', [
+    '--test',
+    path.join('scripts', 'check-test-manifest.test.mjs'),
+  ]);
+  run('previously unregistered script tests', 'node', [
+    '--test',
+    path.join('scripts', 'collect-layer-publication.test.mjs'),
+    path.join('scripts', 'preflight-layer-publication.test.mjs'),
+    path.join('scripts', 'prepare-gate-measurement-history.test.mjs'),
+    path.join('scripts', 'gate-measurement-environment.test.mjs'),
+    path.join('scripts', 'command-argument-batches.test.mjs'),
+    path.join('scripts', 'qualify-embedding-membranes.test.mjs'),
+    path.join('scripts', 'durability-powercut-platform.test.mjs'),
+    path.join('framework', 'gui', 'scripts', 'run-electron-builder.test.mjs'),
+    path.join('scripts', 'candidate-timeline-events.test.mjs'),
+    path.join('scripts', 'qualify-xinfa-context-quality.test.mjs'),
+    path.join('scripts', 'recover-focused-gate-receipt.test.mjs'),
+    path.join('scripts', 'run-focused-gate-measurement.test.mjs'),
+    path.join('scripts', 'run-layer-artifact-gate.test.mjs'),
+    path.join('scripts', 'run-zero-burden-product-qualification.test.mjs'),
+    path.join('scripts', 'shifu-gate-evidence.test.mjs'),
+    path.join('product', 'scripts', 'product.test.mjs'),
+    path.join(
+      'framework',
+      'core',
+      'tests',
+      'qualification',
+      'live-peer-continuity',
+      'run.test.mjs',
+    ),
+  ]);
+}
+
 function checkKungfuGateCatalog() {
   run('Kungfu Gate catalog gate', 'node', [
     path.join('scripts', 'check-kungfu-gate-catalog.mjs'),
@@ -700,6 +740,7 @@ function checkInvariantSystem() {
 
 function checkStaged() {
   checkNoBashStaged();
+  checkTestManifest();
   checkPlatformMacros();
   checkShifuVersionSync();
   checkShifuEntryContract();
@@ -765,6 +806,8 @@ function checkStaged() {
 }
 
 function checkShared() {
+  checkTestManifest();
+  testTestManifest();
   testShifuEntryContract();
   testShifuCacheContract();
   testShifuDocumentationContract();

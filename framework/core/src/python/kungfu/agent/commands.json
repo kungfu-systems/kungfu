@@ -248,8 +248,8 @@
       "purpose": "Verify exact Assignment relations and relation-specific cycle constraints."
     },
     {
-      "apiId": "kungfu.assignment.relation-event",
-      "name": "kungfu assignment relation-event --relation <relation.json> --event <event> --actor <actor>",
+      "apiId": "kungfu.work.relation-event",
+      "name": "kungfu work relation-event --relation <relation.json> --event <event> --actor <actor>",
       "maturity": "experimental",
       "purpose": "Append one idempotent relation handshake fact to its endpoint-owning workspace."
     },
@@ -368,54 +368,6 @@
       "purpose": "Inspect the current Project Cut, confidence, gaps, and exact next actions without initializing runtime state."
     },
     {
-      "apiId": "kungfu.work.loop",
-      "name": "kungfu work capabilities --json",
-      "maturity": "experimental",
-      "purpose": "Discover the shared high-level Work and Cut operations, current availability, authority boundaries, and per-surface parity."
-    },
-    {
-      "apiId": "kungfu.work.inspect",
-      "name": "kungfu work inspect --repo <path> --json",
-      "maturity": "experimental",
-      "purpose": "Inspect the current Cut and open Work through one non-authoritative read model."
-    },
-    {
-      "apiId": "kungfu.work.export",
-      "name": "kungfu work export <work-id> --repo <path> --json",
-      "maturity": "experimental",
-      "purpose": "Export one byte-stable Work continuity envelope bound to the exact verified current Project Cut."
-    },
-    {
-      "apiId": "kungfu.work.import",
-      "name": "kungfu work import --file <envelope.json> --repo <path> [--execute] --json",
-      "maturity": "experimental",
-      "purpose": "Verify or explicitly append only the missing prefix of one Project Cut-bound portable Work envelope."
-    },
-    {
-      "apiId": "kungfu.work.recover",
-      "name": "kungfu work recover --repo <path> --json",
-      "maturity": "experimental",
-      "purpose": "Classify the exact next Work or Cut recovery action without changing state."
-    },
-    {
-      "apiId": "kungfu.work.complete",
-      "name": "kungfu work complete <work-id> --repo <path> --json",
-      "maturity": "experimental",
-      "purpose": "Prepare a completion candidate and disclose missing evidence without self-settling Work."
-    },
-    {
-      "apiId": "kungfu.work.settle",
-      "name": "kungfu work settle <work-id> --claim-root <root> --review-root <root> --decision-root <root> --project-cut-root <root> --json",
-      "maturity": "experimental",
-      "purpose": "Prepare a root-bound settlement plan while preserving independent review and explicit Project Cut publication authority."
-    },
-    {
-      "apiId": "kungfu.work.create",
-      "name": "kungfu work create <title> --json",
-      "maturity": "stable",
-      "purpose": "Create structured work facts in the local journal."
-    },
-    {
       "apiId": "kungfu.report.run.begin",
       "name": "kungfu report run begin --work <work-id> --provider <provider> --json",
       "maturity": "experimental",
@@ -432,12 +384,6 @@
       "name": "kungfu report run end --run <run-id> --status <status> --json",
       "maturity": "experimental",
       "purpose": "Close a reported external run and refresh its manifest."
-    },
-    {
-      "apiId": "kungfu.codex.report-goal",
-      "name": "kungfu codex report-goal --goal-id <goal-id> --status <status> --json",
-      "maturity": "stable",
-      "purpose": "Report a native Codex goal into Kungfu work/Rewind facts and emit a receipt."
     },
     {
       "apiId": "kungfu.codex.verify-goal-report",
@@ -470,10 +416,16 @@
       "purpose": "Append an exact rollback receipt, restore Atlas mutation, and retain native facts read-only."
     },
     {
-      "apiId": "kungfu.atlas.create-mission",
-      "name": "kungfu profile mission-control create-mission <mission-id> --title <title> --intent <intent> --actor <actor> --json",
+      "apiId": "kungfu.work.capture",
+      "name": "kungfu work capture <request.json>",
       "maturity": "experimental",
-      "purpose": "Create a Kungfu-native long-running Mission in the shared Fact Library."
+      "purpose": "Capture one canonical Work request without admitting runtime state."
+    },
+    {
+      "apiId": "kungfu.work.status",
+      "name": "kungfu work status --workspace <path> --initiative-id <initiative-id> --assignment-id <assignment-id>",
+      "maturity": "experimental",
+      "purpose": "Read one proof-bound Assignment orchestration state without mutation."
     },
     {
       "apiId": "kungfu.atlas.export-mission",
@@ -494,16 +446,16 @@
       "purpose": "Query admitted Mission/Go facts and persist a purpose-bound progress TrustReport."
     },
     {
-      "apiId": "kungfu.atlas.create-go",
-      "name": "kungfu profile mission-control create-go <mission-id> <goal-id> --title <title> --objective <objective> --actor <actor> [--parent-go <id>] [--depends-on <id>] [--responsibility <owner>] [--acceptance-root <root>] [--atlas-root <root>] [--context-binding-json <json>] [--project-cut-root <root>] [--episode-root <root>] --json",
+      "apiId": "kungfu.work.admit",
+      "name": "kungfu work admit <request.json> --workspace <path> --actor <actor>",
       "maturity": "experimental",
-      "purpose": "Create a Kungfu-native Go with separate containment and execution dependencies plus exact verified Xinfa context, Atlas, Project Cut, Episode, responsibility, and acceptance roots."
+      "purpose": "Admit one verified captured Work request into the selected workspace through canonical Profile actions."
     },
     {
-      "apiId": "kungfu.atlas.claim-completion",
-      "name": "kungfu profile mission-control claim-completion <mission-id> <goal-id> --statement <statement> --actor <actor> [--actor-type <type>] [--source <source>] [--evidence-episode <id>] [--go-set <id>] [--acceptance-root <root>] [--input-atlas-root <root>] [--result-atlas-root <root>] [--project-cut-root <root>] [--project-cut-receipt-root <root>] [--git-commit <sha>] [--git-tree-root <root>] [--proof-root <root>] [--known-gap <gap>] [--evidence-availability <json>] --json",
+      "apiId": "kungfu.work.claim-completion",
+      "name": "kungfu work claim-completion <input.json> --workspace <path> --authorized-by <actor>",
       "maturity": "experimental",
-      "purpose": "Record a versioned root-bound completion claim over a Go set, Atlas transition, Project Cut, Git object, Episodes, proofs, evidence availability, and known gaps."
+      "purpose": "Record a versioned root-bound completion claim through the one public Work mutation family."
     },
     {
       "apiId": "kungfu.atlas.assess-completion",
@@ -512,14 +464,14 @@
       "purpose": "Assess a Go completion claim for a declared purpose and fail closed on missing evidence."
     },
     {
-      "apiId": "kungfu.atlas.review-completion",
-      "name": "kungfu profile mission-control review-completion <mission-id> <goal-id> --reviewer <actor> --reviewer-source <source> [--checkout <path>] [--source <source>] [--purpose <purpose>] [--cut-system-time <ns>] [--executor <profile>] [--follow-up <json>] --json",
+      "apiId": "kungfu.work.review",
+      "name": "kungfu work review <input.json> --workspace <path> --authorized-by <reviewer>",
       "maturity": "experimental",
       "purpose": "Independently review one exact completion claim, emit an Assessment Episode and purpose-bound TrustReport, and seal a deterministic continuation plan."
     },
     {
-      "apiId": "kungfu.atlas.decide-continuation",
-      "name": "kungfu profile mission-control decide-continuation <mission-id> <goal-id> <review-id> --expected-review-root <root> --expected-plan-root <root> --action <action> --actor <actor> [--actor-type <type>] [--change-class <class>] [--source <source>] --reason <reason> --json",
+      "apiId": "kungfu.work.decide",
+      "name": "kungfu work decide <input.json> --workspace <path> --authorized-by <actor>",
       "maturity": "experimental",
       "purpose": "Apply one exact-root continuation decision and materialize only bounded mechanical follow-up Go rows while preserving human gates for mission, authority, privacy, security, public claims, and irreversible changes."
     },
@@ -1120,7 +1072,7 @@
     },
     "report": {
       "maturity": "stable",
-      "next": "kungfu work create <title> --json; for native Codex goals prefer kungfu codex report-goal --goal-id <goal-id> --status <status> --json.",
+      "next": "kungfu work --help; read one exact Assignment with kungfu work status and close it through claim-completion, review, and decide.",
       "when": "The useful output is structured work state, decisions, checkpoints, artifacts, or reported external run facts."
     },
     "atlas-projection": {

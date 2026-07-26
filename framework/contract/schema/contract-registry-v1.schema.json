@@ -34,6 +34,10 @@
           "type": "string",
           "minLength": 1
         },
+        "kfdId": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9-]*$"
+        },
         "source": {
           "$ref": "#/$defs/path"
         },

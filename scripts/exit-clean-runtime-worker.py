@@ -62,7 +62,7 @@ def _maximum_resident_kib() -> int | None:
 def _read(path: Path) -> dict[str, Any]:
     value = json.loads(path.read_text(encoding="utf-8"))
     if not isinstance(value, dict):
-        raise AssertionError(f"expected JSON object: {path}")
+        raise TypeError(f"expected JSON object: {path}")
     return value
 
 
@@ -143,7 +143,7 @@ def _installed_cli(
             f"{result.stdout}"
         ) from error
     if not isinstance(value, dict):
-        raise AssertionError("installed CLI JSON result must be an object")
+        raise TypeError("installed CLI JSON result must be an object")
     return value
 
 
@@ -366,18 +366,18 @@ def source_phase(args: argparse.Namespace) -> int:
         end_time=2,
         reason="sealed representative fixture",
     )
-    mission_control.create_mission(
+    mission_control.create_initiative(
         str(runtime),
-        mission_id=MISSION_ID,
+        initiative_id=MISSION_ID,
         title="Exit clean-runtime qualification",
         intent="Continue from one exact installed Exit package",
         actor="qualification-owner",
         actor_type="user",
     )
-    mission_control.create_go(
+    mission_control.create_assignment(
         str(runtime),
-        mission_id=MISSION_ID,
-        goal_id=GOAL_ID,
+        initiative_id=MISSION_ID,
+        assignment_id=GOAL_ID,
         title="Continue after installed import",
         objective="Perform one bounded continuation without chat context",
         actor="qualification-agent",

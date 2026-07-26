@@ -65,3 +65,11 @@ Journal output goes to a per-pid directory under the system temp dir.
 - Frame iteration stays inside C++; Rust receives a bounded metadata batch and
   borrowed mmap payload slices. There is no per-frame callback or payload copy.
 - Findings and the go/no-go recommendation live in the spike report, not here.
+
+## Retirement gate
+
+Delete this probe only after a supported host-shell implementation owns the
+five-step chain above, its macOS qualification has replaced this probe in the
+release evidence, and no tracked document or build command points at
+`crates/host-spike`. Until all three conditions are true, this directory remains
+non-release research evidence and stays excluded from the Rust workspace.

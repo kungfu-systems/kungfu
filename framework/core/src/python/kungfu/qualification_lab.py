@@ -3,8 +3,7 @@
 """Shared Agent Qualification Lab authority.
 
 The GUI and TUI consume this module through the public CLI. Startup inspection
-is deliberately filesystem-only and read-only: importing the native runtime or
-opening a journal can materialize an otherwise empty home.
+reads the verified global Work projection without materializing runtime state.
 """
 
 from __future__ import annotations
@@ -14,6 +13,7 @@ import json
 import multiprocessing
 import os
 import platform
+import re
 import subprocess
 import tempfile
 from pathlib import Path
@@ -21,6 +21,8 @@ from typing import Any, Mapping
 
 import kungfu
 from kungfu.agent import runtime_profiles
+from kungfu.workspace import inspect_workspace
+from kungfu.workspace_federation import query_federation
 
 
 STARTUP_SCHEMA = "kungfu.qualification-lab.startup-route/v1"
@@ -31,13 +33,24 @@ AGENT_PLAN_SCHEMA = "kungfu.qualification-lab.agent-plan/v1"
 AGENT_REPORT_SCHEMA = "kungfu.qualification-lab.agent-report/v1"
 SUITE_ID = "kungfu.agent-continuity.v1"
 FIXTURE_ID = "partial-claim-fresh-session"
-WORK_JOURNAL_RELATIVE = Path("journal/system/work/items/live")
-CONSOLE_REGISTRY_RELATIVE = Path("agent-session/work-console-registry.json")
+CONTENT_ROOT = re.compile(r"^sha256:[0-9a-f]{64}$")
 MIGRATION_MARKERS = (
     ".migration-in-progress",
     ".storage-migration-in-progress",
     "migration.lock",
 )
+SUITE_CLAIMS = [
+    "continuity mechanism",
+    "deterministic state recognition",
+    "fresh-session continuation",
+]
+SUITE_NON_CLAIMS = [
+    "model intelligence",
+    "production fitness",
+    "security assessment",
+    "KFD certification",
+    "provider ranking",
+]
 DEMO_AGENT_IDENTITY = {
     "provider": "kungfu-demo-agent",
     "executableDigest": "sha256:" + hashlib.sha256(b"kungfu-demo-agent/v1").hexdigest(),
@@ -100,135 +113,111 @@ def _empty(runtime_dir: Path, code: str) -> dict[str, Any]:
     }
 
 
-def _inspect_console_registry(runtime_dir: Path) -> dict[str, Any] | None:
-    target = runtime_dir / CONSOLE_REGISTRY_RELATIVE
-    if not target.exists():
-        return None
-    if target.is_symlink() or not target.is_file():
-        return _diagnostic(
-            runtime_dir,
-            "work-console-registry-invalid",
-            "The WorkConsole registry is not a regular file.",
-            evidence=[str(CONSOLE_REGISTRY_RELATIVE)],
-        )
-    try:
-        value = json.loads(target.read_text(encoding="utf-8"))
-    except (OSError, UnicodeError, json.JSONDecodeError) as error:
-        return _diagnostic(
-            runtime_dir,
-            "work-console-registry-unreadable",
-            f"The WorkConsole registry cannot be verified: {error}",
-            evidence=[str(CONSOLE_REGISTRY_RELATIVE)],
-        )
-    if (
-        not isinstance(value, dict)
-        or value.get("schema") != "kungfu.work-console-registry/v2"
-        or not isinstance(value.get("consoles"), list)
-    ):
-        return _diagnostic(
-            runtime_dir,
-            "work-console-registry-corrupt",
-            "The WorkConsole registry does not match its canonical contract.",
-            evidence=[str(CONSOLE_REGISTRY_RELATIVE)],
-        )
-    if value["consoles"]:
-        return _work_graph(
-            runtime_dir,
-            "work-console-registry-present",
-            [str(CONSOLE_REGISTRY_RELATIVE)],
-        )
-    return None
-
-
-def inspect_startup(runtime_dir: str | Path) -> dict[str, Any]:
-    """Resolve the boot route without opening or creating runtime state."""
+def inspect_startup(
+    runtime_dir: str | Path,
+    *,
+    config_home: str | Path | None = None,
+    env: Mapping[str, str] | None = None,
+) -> dict[str, Any]:
+    """Resolve the boot route from the verified global Work read model."""
 
     selected = Path(runtime_dir).expanduser()
-    if not selected.exists():
-        return _empty(selected.absolute(), "runtime-home-absent")
     try:
-        if selected.is_symlink() or not selected.is_dir():
-            return _diagnostic(
-                selected.absolute(),
-                "runtime-home-invalid",
-                "The Kungfu runtime home is not a regular directory.",
-            )
-        selected = selected.resolve()
-        if not os.access(selected, os.R_OK | os.X_OK):
-            return _diagnostic(
-                selected,
-                "runtime-home-permission-denied",
-                "The Kungfu runtime home cannot be inspected safely.",
-            )
-        markers = [name for name in MIGRATION_MARKERS if (selected / name).exists()]
-        if markers:
-            return _diagnostic(
-                selected,
-                "runtime-migration-in-progress",
-                "Kungfu data is migrating; startup will not classify it as empty.",
-                evidence=markers,
-            )
-        console = _inspect_console_registry(selected)
-        if console is not None:
-            return console
-        journal = selected / WORK_JOURNAL_RELATIVE
-        if not journal.exists():
-            manifest = selected / "work/store/manifest.json"
-            if manifest.exists():
+        if selected.exists():
+            if selected.is_symlink() or not selected.is_dir():
+                return _diagnostic(
+                    selected.absolute(),
+                    "runtime-home-invalid",
+                    "The Kungfu runtime home is not a regular directory.",
+                )
+            selected = selected.resolve()
+            if not os.access(selected, os.R_OK | os.X_OK):
                 return _diagnostic(
                     selected,
-                    "work-journal-missing",
-                    "Work metadata exists but the canonical journal is missing.",
-                    evidence=["work/store/manifest.json"],
+                    "runtime-home-permission-denied",
+                    "The Kungfu runtime home cannot be inspected safely.",
                 )
-            return _empty(selected, "work-authority-absent")
-        if journal.is_symlink() or not journal.is_dir():
-            return _diagnostic(
-                selected,
-                "work-journal-invalid",
-                "The canonical Work journal path is not a regular directory.",
-                evidence=[str(WORK_JOURNAL_RELATIVE)],
-            )
-        entries = list(journal.iterdir())
-        invalid = [
-            entry.name
-            for entry in entries
-            if entry.is_symlink() or not entry.is_file() or entry.stat().st_size <= 0
-        ]
-        if invalid:
-            return _diagnostic(
-                selected,
-                "work-journal-corrupt",
-                "The canonical Work journal contains unverifiable entries.",
-                evidence=[
-                    str(WORK_JOURNAL_RELATIVE / name) for name in sorted(invalid)
-                ],
-            )
-        if not entries:
-            return _diagnostic(
-                selected,
-                "work-journal-incomplete",
-                "The canonical Work journal directory exists without records.",
-                evidence=[str(WORK_JOURNAL_RELATIVE)],
-            )
-        return _work_graph(
-            selected,
-            "work-journal-present",
-            [
-                str(WORK_JOURNAL_RELATIVE / entry.name)
-                for entry in sorted(entries, key=lambda row: row.name)
-            ],
+            markers = [name for name in MIGRATION_MARKERS if (selected / name).exists()]
+            if markers:
+                return _diagnostic(
+                    selected,
+                    "runtime-migration-in-progress",
+                    "Kungfu data is migrating; startup will not classify it as empty.",
+                    evidence=markers,
+                )
+        else:
+            selected = selected.absolute()
+
+        current = inspect_workspace(home=True, env=env)
+        if current is None:
+            raise RuntimeError("Home workspace identity is unavailable")
+        query = query_federation(
+            current,
+            scope="all",
+            config_home=str(config_home) if config_home is not None else None,
+            env=env,
+            max_workers=1,
         )
-    except OSError as error:
+        verification = query.get("verification")
+        aggregate = query.get("aggregate")
+        global_work = query.get("global_work")
+        proof = query.get("proof")
+        if (
+            not isinstance(verification, Mapping)
+            or verification.get("ok") is not True
+            or not isinstance(aggregate, Mapping)
+            or aggregate.get("complete") is not True
+            or aggregate.get("writes") != 0
+            or not isinstance(global_work, Mapping)
+            or global_work.get("writes") != 0
+            or not isinstance(proof, Mapping)
+            or query.get("writes") != []
+        ):
+            return _diagnostic(
+                selected,
+                "global-work-unverified",
+                "The global Work projection is incomplete or cannot be verified.",
+            )
+        canonical_count = global_work.get("canonical_work_count")
+        if (
+            type(canonical_count) is not int
+            or canonical_count < 0
+            or aggregate.get("canonical_work_count") != canonical_count
+        ):
+            return _diagnostic(
+                selected,
+                "global-work-invalid",
+                "The global Work projection has inconsistent canonical counts.",
+            )
+        projection_root = str(global_work.get("projection_root") or "")
+        proof_root = str(proof.get("proof_root") or "")
+        if not CONTENT_ROOT.fullmatch(projection_root) or not CONTENT_ROOT.fullmatch(
+            proof_root
+        ):
+            return _diagnostic(
+                selected,
+                "global-work-invalid",
+                "The global Work projection is missing root-bound evidence.",
+            )
+        evidence = [projection_root, proof_root]
+        if canonical_count:
+            return _work_graph(selected, "global-work-present", evidence)
+        return _empty(selected, "global-work-verified-empty")
+    except (OSError, RuntimeError, TypeError, ValueError) as error:
         return _diagnostic(
             selected.absolute(),
-            "runtime-home-unreadable",
-            f"Kungfu data cannot be inspected safely: {error}",
+            "global-work-unreadable",
+            f"The global Work projection cannot be inspected safely: {error}",
         )
 
 
-def catalog(runtime_dir: str | Path) -> dict[str, Any]:
-    startup = inspect_startup(runtime_dir)
+def catalog(
+    runtime_dir: str | Path,
+    *,
+    config_home: str | Path | None = None,
+    env: Mapping[str, str] | None = None,
+) -> dict[str, Any]:
+    startup = inspect_startup(runtime_dir, config_home=config_home, env=env)
     return {
         "schema": CATALOG_SCHEMA,
         "startup": startup,
@@ -236,18 +225,8 @@ def catalog(runtime_dir: str | Path) -> dict[str, Any]:
             "id": SUITE_ID,
             "fixture": FIXTURE_ID,
             "oracle": "exact-partial-state-recognized-and-completed",
-            "claims": [
-                "continuity mechanism",
-                "deterministic state recognition",
-                "fresh-session continuation",
-            ],
-            "nonClaims": [
-                "model intelligence",
-                "production fitness",
-                "security assessment",
-                "KFD certification",
-                "provider ranking",
-            ],
+            "claims": SUITE_CLAIMS,
+            "nonClaims": SUITE_NON_CLAIMS,
         },
         "actions": [
             {
@@ -504,7 +483,7 @@ def run_demo(output_dir: str | Path | None = None) -> dict[str, Any]:
         "assessment": assessment,
         "events": events,
         "meaning": "The deterministic continuity mechanism recognized and continued governed state across fresh sessions.",
-        "nonClaims": catalog(root)["suite"]["nonClaims"],
+        "nonClaims": SUITE_NON_CLAIMS,
     }
     report = {
         **report_semantic,
@@ -831,7 +810,7 @@ def run_agent(
         ],
         "meaning": "The selected identity recognized and continued exact governed state across two fresh local agent processes.",
         "runMode": ("cross-provider-migration" if migration else "self-continuity"),
-        "nonClaims": catalog(root)["suite"]["nonClaims"],
+        "nonClaims": SUITE_NON_CLAIMS,
         "receiptRoots": [content_root(row) for row in attempts],
         "assessmentRoot": assessment["assessmentRoot"],
     }

@@ -27,7 +27,6 @@ from kungfu.agent.kfd3 import (
 )
 from kungfu.cli.commands import kfc, PrioritizedCommandGroup
 from kungfu.config import resolve_config
-from kungfu.work_facade import work_loop_capabilities
 
 agent_command_context = kfc.pass_context()
 
@@ -157,13 +156,35 @@ def _policy_payload(ctx, target, mode, enabled=True):
         "mode": mode,
         "enabled": enabled,
         "reportCloseoutGate": closeout_gate,
-        "reportAdapter": "kungfu codex report-goal"
+        "reportAdapter": "kungfu work claim-completion"
         if target == "codex"
         else "kungfu report run begin",
-        "receiptVerifier": "kungfu codex verify-goal-report"
+        "receiptVerifier": "kungfu work status"
         if target == "codex"
         else "kungfu report run end",
         "runtimeDir": ctx.runtime_dir,
+    }
+
+
+def _work_authority_capabilities():
+    return {
+        "schema": "kungfu.work.authority-capabilities/v1",
+        "commandFamily": "kungfu work",
+        "mutationAuthority": "mission-control-profile-actions",
+        "durableEvidence": ["episode", "fact", "action-receipt"],
+        "commands": [
+            "capture",
+            "admit",
+            "claim",
+            "kickoff",
+            "stage",
+            "claim-completion",
+            "review",
+            "decide",
+            "seal",
+        ],
+        "readCommands": ["status", "gate", "verify-binding", "verify-seal"],
+        "legacyStore": False,
     }
 
 
@@ -284,7 +305,7 @@ def capabilities(ctx, as_json):
         },
         "actionGeometry": action_geometry,
         "workDomainProfile": work_domain_profile,
-        "workLoop": work_loop_capabilities(),
+        "workLoop": _work_authority_capabilities(),
     }
     if as_json:
         _json(payload)

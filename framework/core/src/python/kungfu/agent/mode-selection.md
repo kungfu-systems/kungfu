@@ -5,7 +5,7 @@ Choose the smallest mode that preserves evidence.
 | Mode | Use when | First command | Maturity |
 |---|---|---|---|
 | brief | You need local facts before acting. | `kungfu agent brief` | stable |
-| report | You need structured work facts, status, decisions, artifacts, or reported external run facts. | `kungfu work create <title> --json` or `kungfu codex report-goal --goal-id <goal-id> --status <status> --json` | stable |
+| report | You need structured Work facts, status, decisions, or reported external run facts. | `kungfu work --help` then `kungfu work status --home --initiative-id <initiative-id> --assignment-id <assignment-id>` | stable |
 | atlas-projection | The user asks to sync, import, inspect, or visualize an Atlas-style mission/goal/worktree control-plane repo inside Kungfu. | `kungfu atlas import --repo <atlas-repo> --json` then `kungfu atlas show import --json` | stable |
 | trace | You already have a command or agent process to capture. | `kungfu trace -- <command>` | stable |
 | managed-run | Kungfu should launch the provider CLI and bind skill context. | `kungfu managed-run --provider <provider> --prompt <task>` | experimental |
@@ -22,9 +22,8 @@ Rules:
   control-plane snapshot into Kungfu. The source repo remains authoritative;
   verify with `kungfu profile mission-control missions --json`,
   `kungfu profile mission-control goals --json`, and `kungfu atlas show markers --json`.
-- For native Codex goals, prefer `kungfu codex report-goal` over hand-assembling
-  `kungfu report` commands; run `kungfu codex verify-goal-report` on the emitted
-  receipt before declaring the goal complete.
+- Close native Work only through `kungfu work claim-completion`, `review`, and
+  `decide`, and verify every returned Profile action receipt.
 - Switching to `managed-run` does not require disabling report mode. Keep the
   receipt closeout gate available as a fallback for native-goal or interrupted
   runs.

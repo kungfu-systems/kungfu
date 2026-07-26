@@ -114,13 +114,11 @@ The current `./shifu project-cut` command remains the developer and protocol
 implementation surface. The public command should compose it through stable
 contracts, not fork its canonicalization or verification logic.
 
-The first implemented product slice currently provides read-only `kungfu cut`,
-`kungfu work inspect`, and `kungfu work recover`, plus plan-only `complete` and
-`settle`. `kungfu work capabilities --json` is the shared capability manifest:
-it declares all high-level operations, their exact current availability, and
-CLI/Agent/GUI/TUI projection status. `kungfu agent capabilities --json`
-projects the same manifest as `workLoop`; it does not upgrade plan-only or
-unavailable operations into authority.
+The current product slice keeps `kungfu cut` read-only and routes every Work
+mutation through the canonical `kungfu work` family. Capture, admission,
+execution, completion claim, independent review, continuation, and sealing all
+return Profile action receipts backed by Episode and Fact evidence. Retired
+WorkStore journals and compatibility aliases are not alternate authorities.
 
 ## Initiative and Assignment projection
 

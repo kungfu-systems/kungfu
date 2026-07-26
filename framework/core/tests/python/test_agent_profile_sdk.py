@@ -594,7 +594,7 @@ def test_system_profile_release_receipt_is_exact_root_and_shared_with_status(
     assert receipt["profileId"] == "kungfu.mission-control"
     assert receipt["qualificationSource"] == "release"
     assert receipt["noBypass"]["policy"] == "release-owned-shared-api-parity/v1"
-    assert len(receipt["clientProbes"]) == 16
+    assert len(receipt["clientProbes"]) == 14
     assert all(row["matched"] for row in receipt["clientProbes"])
     assert {
         "cutover-authority",
@@ -1106,24 +1106,17 @@ def _activate_mission_control(runtime):
     return source
 
 
-def test_mission_control_compatibility_actions_preserve_successor_authority():
+def test_mission_control_exposes_only_canonical_creation_actions():
     source = Path(__file__).resolve().parents[4] / "extensions" / "mission-control"
     profile = json.loads((source / "profile.json").read_text())
     registry = json.loads((source / "actions" / "registry.json").read_text())
 
     profile_sdk._validate_action_registry(registry, profile)
     actions = {row["id"]: row for row in registry["actions"]}
-    assert actions["create-mission"]["compatibility"]["replacement"] == (
-        "create-initiative"
-    )
-    assert actions["create-go"]["compatibility"]["replacement"] == "create-assignment"
-
-    drifted = json.loads(json.dumps(registry))
-    actions = {row["id"]: row for row in drifted["actions"]}
-    actions["create-mission"]["requiredCapabilities"] = []
-    with pytest.raises(profile_sdk.ProfileSdkError) as raised:
-        profile_sdk._validate_action_registry(drifted, profile)
-    assert raised.value.diagnosis["code"] == "action-compatibility-authority-drift"
+    assert actions["create-initiative"]["runtimeOperation"] == "episode.append"
+    assert actions["create-assignment"]["runtimeOperation"] == "episode.append"
+    assert "create-mission" not in actions
+    assert "create-go" not in actions
 
 
 def _write_native_runtime_evidence(runtime, config_home):
@@ -1210,13 +1203,13 @@ def test_mission_control_profile_action_executes_through_public_intent(tmp_path)
     )
 
     values = {
-        "missionId": "mission:test",
+        "initiativeId": "mission:test",
         "title": "Test Mission",
         "intent": "Prove public Profile action execution",
         "actor": "test-agent",
         "actorType": "agent",
     }
-    plan = profile_sdk.intent_plan(source, runtime, "create-mission", values)
+    plan = profile_sdk.intent_plan(source, runtime, "create-initiative", values)
     cli_plan = CliRunner().invoke(
         kfc,
         [
@@ -1226,7 +1219,7 @@ def test_mission_control_profile_action_executes_through_public_intent(tmp_path)
             "intent",
             "plan",
             str(source),
-            "create-mission",
+            "create-initiative",
             "--input-base64",
             base64.b64encode(json.dumps(values).encode()).decode(),
             "--json",
@@ -1242,7 +1235,7 @@ def test_mission_control_profile_action_executes_through_public_intent(tmp_path)
     assert execution["runtimeReceipt"]["accepted"] is True
     assert execution["runtimeReceipt"]["activation"]["outcome"] == "daemonless"
     assert plan["actionPlan"]["runtimePlan"]["operation"]["id"] == "episode.append"
-    assert execution["coreReceipt"]["mission_subject"] == "kungfu:mission:test"
+    assert execution["coreReceipt"]["initiative_subject"] == "kungfu:mission:test"
     assert execution["memberReceipt"]["schema"] == ("kungfu.profile-member-receipt/v1")
     assert execution["memberReceipt"]["profileSuiteRoot"] == plan["profileSuiteRoot"]
     assert execution["memberReceipt"]["memberId"] == "mission-control-actions"
@@ -1261,9 +1254,9 @@ def test_profile_action_rejects_tampered_runtime_execution_material(tmp_path):
     plan = profile_sdk.plan_action(
         source,
         runtime,
-        "create-mission",
+        "create-initiative",
         {
-            "missionId": "mission:tampered-runtime",
+            "initiativeId": "mission:tampered-runtime",
             "title": "Tampered Runtime",
             "intent": "The callback must not bypass its exact runtime plan",
             "actor": "test-agent",

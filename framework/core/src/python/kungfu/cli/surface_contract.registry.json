@@ -30,8 +30,7 @@
     ]
   },
   "familyPolicies": {
-    "tui": {"audience": ["human"], "visibility": "start-here", "section": "start-here", "owner": "product-assembly"},
-    "qualification-lab": {"audience": ["human", "agent"], "visibility": "start-here", "section": "start-here", "owner": "core"},
+    "qualification-lab": {"audience": ["human", "agent"], "visibility": "start-here", "section": "start-here", "owner": "product-assembly"},
     "workspace": {"visibility": "start-here", "section": "start-here"},
     "agent": {"visibility": "start-here", "section": "start-here"},
     "run": {"audience": ["human", "agent", "operator"], "maturity": "experimental", "visibility": "start-here", "section": "start-here", "owner": "core"},
@@ -135,7 +134,7 @@
   "catalogProjection": {
     "artifact": "kungfu.agent/cli_surface.catalog.json",
     "authority": "runtime-fold",
-    "expectedSurfaceRoot": "sha256:5ab8c3b513aa55422de25920e83ab42000dbe8a9419a81e7486560c9fa5bca55",
+    "expectedSurfaceRoot": "sha256:3439c0a3ac904c1dd9589511528b830dae56ee8ed6dde8f64e77b36a592470d1",
     "consumers": {
       "agentCapabilities": "embed-complete",
       "agentCommands": "strict-link",

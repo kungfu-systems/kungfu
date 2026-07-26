@@ -2,7 +2,6 @@
 
 import json
 import os
-import sys
 
 import click
 
@@ -28,24 +27,6 @@ def _json(payload):
     click.echo(json.dumps(payload, indent=2, sort_keys=True))
 
 
-def _require_work(runtime_dir, work_id):
-    if not work_id:
-        return
-    from kungfu.work import store
-
-    if work_id not in store.load(runtime_dir):
-        click.echo(f"[report] unknown work item: {work_id}", err=True)
-        sys.exit(1)
-
-
-def _link_work(runtime_dir, work_id, run_id):
-    if not work_id:
-        return
-    from kungfu.work.store import WorkStore
-
-    WorkStore(runtime_dir).link_run(work_id, run_id)
-
-
 @report.group(help="report a non-managed run lifecycle")
 @report_command_context
 def run(ctx):
@@ -61,7 +42,6 @@ def run(ctx):
 @click.option("--json", "as_json", is_flag=True, help="machine-readable output")
 @report_command_context
 def begin(ctx, work_id, provider, cwd, run_id, command, as_json):
-    _require_work(ctx.runtime_dir, work_id)
     actual_run_id = run_id or reporting.new_run_id()
     manifest = reporting.begin_run(
         ctx.runtime_dir,
@@ -71,7 +51,6 @@ def begin(ctx, work_id, provider, cwd, run_id, command, as_json):
         work_id=work_id,
         command=command,
     )
-    _link_work(ctx.runtime_dir, work_id, actual_run_id)
     payload = {
         "schema": "kungfu.report-run-begin/v1",
         "run_id": actual_run_id,
@@ -160,7 +139,6 @@ def cost(
     raw_ref,
     as_json,
 ):
-    _require_work(ctx.runtime_dir, work_id)
     manifest = reporting.report_cost(
         ctx.runtime_dir,
         run_id=run_id,

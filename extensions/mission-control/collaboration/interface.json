@@ -126,38 +126,6 @@
       }
     },
     {
-      "id": "create-mission",
-      "title": "Create Initiative fact (Mission compatibility command)",
-      "actionId": "create-mission",
-      "inspectViewId": "mission-state",
-      "verifyViewId": "mission-timeline",
-      "requiredAuthority": "mission-fact-author",
-      "requiredCapabilities": ["storage"],
-      "material": true,
-      "protocol": {
-        "mode": "shared-api",
-        "apiId": "kungfu.profile.application",
-        "guiMember": "work-dashboard",
-        "guiMethod": "createMission"
-      }
-    },
-    {
-      "id": "create-go",
-      "title": "Create Assignment fact (Go compatibility command)",
-      "actionId": "create-go",
-      "inspectViewId": "mission-state",
-      "verifyViewId": "mission-timeline",
-      "requiredAuthority": "mission-fact-author",
-      "requiredCapabilities": ["storage"],
-      "material": true,
-      "protocol": {
-        "mode": "shared-api",
-        "apiId": "kungfu.profile.application",
-        "guiMember": "work-dashboard",
-        "guiMethod": "createGo"
-      }
-    },
-    {
       "id": "claim-completion",
       "title": "Record completion claim",
       "actionId": "claim-completion",

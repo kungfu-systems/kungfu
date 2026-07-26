@@ -6,37 +6,95 @@ import os
 from kungfu import qualification_lab
 
 
-def test_absent_runtime_is_verified_empty_without_materializing_it(tmp_path):
+def _verified_query(canonical_work_count=0):
+    projection_root = "sha256:" + "a" * 64
+    proof_root = "sha256:" + "b" * 64
+    return {
+        "verification": {"ok": True},
+        "aggregate": {
+            "complete": True,
+            "writes": 0,
+            "canonical_work_count": canonical_work_count,
+        },
+        "global_work": {
+            "writes": 0,
+            "canonical_work_count": canonical_work_count,
+            "projection_root": projection_root,
+        },
+        "proof": {"proof_root": proof_root},
+        "writes": [],
+    }
+
+
+def test_absent_runtime_is_verified_empty_without_materializing_it(
+    tmp_path, monkeypatch
+):
     runtime = tmp_path / "home" / "runtime"
     before = list(tmp_path.rglob("*"))
-    result = qualification_lab.inspect_startup(runtime)
+    monkeypatch.setattr(
+        qualification_lab,
+        "query_federation",
+        lambda *_args, **_kwargs: _verified_query(),
+    )
+    result = qualification_lab.inspect_startup(
+        runtime,
+        config_home=tmp_path / "config",
+        env={"HOME": str(tmp_path / "user")},
+    )
     assert result["route"] == "qualification-lab"
     assert result["state"] == "verified-empty"
+    assert result["reasonCode"] == "global-work-verified-empty"
     assert result["writeOccurred"] is False
     assert list(tmp_path.rglob("*")) == before
 
 
-def test_existing_canonical_work_journal_routes_to_work_graph(tmp_path):
+def test_existing_global_work_routes_to_work_graph(tmp_path, monkeypatch):
     runtime = tmp_path / "runtime"
-    journal = runtime / qualification_lab.WORK_JOURNAL_RELATIVE
-    journal.mkdir(parents=True)
-    (journal / "00000000.1.journal").write_bytes(b"canonical-work")
-    result = qualification_lab.inspect_startup(runtime)
+    monkeypatch.setattr(
+        qualification_lab,
+        "query_federation",
+        lambda *_args, **_kwargs: _verified_query(1),
+    )
+    result = qualification_lab.inspect_startup(
+        runtime,
+        config_home=tmp_path / "config",
+        env={"HOME": str(tmp_path / "user")},
+    )
     assert result["route"] == "work-graph"
     assert result["workGraphPresent"] is True
-    assert result["reasonCode"] == "work-journal-present"
+    assert result["reasonCode"] == "global-work-present"
+    assert result["evidence"] == [
+        "sha256:" + "a" * 64,
+        "sha256:" + "b" * 64,
+    ]
 
 
-def test_unknown_or_corrupt_state_fails_closed_to_diagnostic(tmp_path):
+def test_unknown_or_incomplete_global_work_fails_closed_to_diagnostic(
+    tmp_path, monkeypatch
+):
     runtime = tmp_path / "runtime"
-    journal = runtime / qualification_lab.WORK_JOURNAL_RELATIVE
-    journal.mkdir(parents=True)
-    (journal / "truncated.journal").touch()
-    result = qualification_lab.inspect_startup(runtime)
+    monkeypatch.setattr(
+        qualification_lab,
+        "query_federation",
+        lambda *_args, **_kwargs: {
+            **_verified_query(),
+            "aggregate": {
+                "complete": False,
+                "writes": 0,
+                "canonical_work_count": 0,
+            },
+        },
+    )
+    result = qualification_lab.inspect_startup(
+        runtime,
+        config_home=tmp_path / "config",
+        env={"HOME": str(tmp_path / "user")},
+    )
     assert result["route"] == "diagnostic"
     assert result["workGraphPresent"] is None
-    assert result["reasonCode"] == "work-journal-corrupt"
+    assert result["reasonCode"] == "global-work-unverified"
 
+    runtime.mkdir()
     (runtime / ".migration-in-progress").touch()
     migrating = qualification_lab.inspect_startup(runtime)
     assert migrating["route"] == "diagnostic"
@@ -74,8 +132,17 @@ def test_qualification_identity_change_marks_report_stale():
     assert status["stale"] is True
 
 
-def test_catalog_exposes_one_authority_for_cli_gui_and_tui(tmp_path):
-    catalog = qualification_lab.catalog(tmp_path / "missing")
+def test_catalog_exposes_one_authority_for_cli_gui_and_tui(tmp_path, monkeypatch):
+    monkeypatch.setattr(
+        qualification_lab,
+        "query_federation",
+        lambda *_args, **_kwargs: _verified_query(),
+    )
+    catalog = qualification_lab.catalog(
+        tmp_path / "missing",
+        config_home=tmp_path / "config",
+        env={"HOME": str(tmp_path / "user")},
+    )
     assert catalog["authority"]["surfaces"] == ["cli", "gui", "tui"]
     assert catalog["authority"]["uiPrivateWrites"] is False
     assert [row["id"] for row in catalog["actions"]] == [

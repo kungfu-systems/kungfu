@@ -10,6 +10,7 @@ const siteRoot = path.join(packageRoot, 'dist', 'site');
 const bundlePath = path.join(siteRoot, 'site-bundle.json');
 const agentIndexPath = path.join(siteRoot, 'agent-index.json');
 const adrMapPath = path.join(siteRoot, 'adr-map.json');
+const formatManifestPath = path.join(siteRoot, 'format', 'manifest.json');
 const schemaPath = path.join(packageRoot, 'schema', 'site-bundle.schema.json');
 
 function canonical(value) {
@@ -36,6 +37,41 @@ function loadBundle() {
   return readJson(bundlePath);
 }
 
+function resolveSitePath(relative) {
+  if (!relative || path.isAbsolute(relative)) {
+    throw new Error(`Invalid Kungfu site bundle path: ${relative}`);
+  }
+  const resolved = path.resolve(siteRoot, relative);
+  if (!resolved.startsWith(`${siteRoot}${path.sep}`)) {
+    throw new Error(`Kungfu site bundle path escapes package: ${relative}`);
+  }
+  return resolved;
+}
+
+function loadFormatAuthorityManifest() {
+  return readJson(formatManifestPath);
+}
+
+function loadFormatAuthorityRoute(routeId) {
+  const bundle = loadBundle();
+  const descriptor = bundle.formatAuthority?.routes?.[routeId];
+  if (!descriptor) {
+    throw new Error(`Unknown Kungfu format authority route: ${routeId}`);
+  }
+  const artifactPath = resolveSitePath(descriptor.path);
+  const bytes = fs.readFileSync(artifactPath);
+  if (
+    sha256(bytes) !== descriptor.artifactRoot ||
+    bytes.length !== descriptor.byteLength
+  ) {
+    throw new Error(`Kungfu format authority route root mismatch: ${routeId}`);
+  }
+  return {
+    descriptor: structuredClone(descriptor),
+    value: JSON.parse(bytes.toString('utf8')),
+  };
+}
+
 function verifyBundle() {
   const bundle = loadBundle();
   const { contentRoot: _contentRoot, ...copy } = structuredClone(bundle);
@@ -54,6 +90,59 @@ function verifyBundle() {
   ) {
     throw new Error('Kungfu agent index is not bound to the site bundle');
   }
+  const formatManifestRoot = sha256(fs.readFileSync(formatManifestPath));
+  if (formatManifestRoot !== bundle.formatAuthority?.pickup?.manifestRoot) {
+    throw new Error('Kungfu format manifest root mismatch');
+  }
+  const manifest = loadFormatAuthorityManifest();
+  if (
+    manifest.normative?.root !== bundle.formatAuthority?.normativeRoot ||
+    manifest.normative?.status !== bundle.formatAuthority?.status ||
+    manifest.package?.name !== bundle.formatAuthority?.package?.name ||
+    manifest.package?.version !== bundle.formatAuthority?.package?.version
+  ) {
+    throw new Error(
+      'Kungfu format authority is not bound to the packaged Spec manifest',
+    );
+  }
+  for (const [artifactId, descriptor] of Object.entries(
+    manifest.artifacts || {},
+  )) {
+    const artifactPath = resolveSitePath(`format/${descriptor.path}`);
+    const bytes = fs.readFileSync(artifactPath);
+    if (
+      sha256(bytes) !== descriptor.artifact_root ||
+      bytes.length !== descriptor.byte_length
+    ) {
+      throw new Error(
+        `Kungfu packaged Spec artifact root mismatch: ${artifactId}`,
+      );
+    }
+  }
+  for (const routeId of Object.keys(bundle.formatAuthority.routes)) {
+    loadFormatAuthorityRoute(routeId);
+  }
+  const vectors = loadFormatAuthorityRoute('vectors').value;
+  for (const vector of vectors.vectors || []) {
+    const vectorPath = resolveSitePath(
+      `format/vectors/${vectors.latest_release}/${vector.path}`,
+    );
+    const bytes = fs.readFileSync(vectorPath);
+    if (
+      sha256(bytes) !== vector.byteRoot ||
+      bytes.length !== vector.byteLength
+    ) {
+      throw new Error(`Kungfu retained vector root mismatch: ${vector.id}`);
+    }
+  }
+  if (
+    vectors.vectors?.length !==
+      bundle.formatAuthority.conformance.vectorCount ||
+    vectors.latest_release_root !==
+      bundle.formatAuthority.conformance.releaseRoot
+  ) {
+    throw new Error('Kungfu retained vector conformance summary mismatch');
+  }
   return {
     status: 'passing',
     package: bundle.package,
@@ -62,6 +151,13 @@ function verifyBundle() {
     contentRoot: bundle.contentRoot,
     surfaces: bundle.surfaces.length,
     sources: bundle.sources.length,
+    format: {
+      manifestRoot: formatManifestRoot,
+      normativeRoot: bundle.formatAuthority.normativeRoot,
+      specVersion: bundle.formatAuthority.specVersion,
+      status: bundle.formatAuthority.status,
+      conformance: structuredClone(bundle.formatAuthority.conformance),
+    },
   };
 }
 
@@ -69,7 +165,10 @@ module.exports = {
   adrMapPath,
   agentIndexPath,
   bundlePath,
+  formatManifestPath,
   loadBundle,
+  loadFormatAuthorityManifest,
+  loadFormatAuthorityRoute,
   schemaPath,
   siteRoot,
   verifyBundle,

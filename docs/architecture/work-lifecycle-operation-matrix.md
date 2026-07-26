@@ -2,7 +2,12 @@
 
 This document is a generated projection of
 [`kungfu-work-lifecycle-operation-matrix.contract.json`](../../framework/work-lifecycle/kungfu-work-lifecycle-operation-matrix.contract.json).
-Edit the machine contract and rerun the renderer; do not edit the table by hand.
+Do not edit the table by hand. Cut semantics come from
+[`work-lifecycle.contract.json`](../../framework/project-cut/work-lifecycle.contract.json),
+Episode semantics come from
+[`native-operation-catalog.contract.json`](../../framework/episode/native-operation-catalog.contract.json),
+and the matrix retains their routing, parity, and availability metadata. Run
+the matrix materializer before rerendering this document.
 
 The matrix separates **authority availability** from **language-envelope
 state**. Only Native Runtime decides operation semantics. A `projected`
@@ -28,12 +33,6 @@ must never be coerced to false, absent, empty, healthy, or passed.
 | `work.lifecycle.episode.export/v1` | episode | export | libkungfu-ledger-action-v1 | **implemented** | implemented: kf_ledger_action_api_v1<br>authority_export | cpp=projected<br>python=projected<br>node=projected<br>rust=projected |
 | `work.lifecycle.episode.import/v1` | episode | import | libkungfu-ledger-action-v1 | **implemented** | implemented: kf_ledger_action_api_v1<br>authority_import | cpp=projected<br>python=projected<br>node=projected<br>rust=projected |
 | `work.lifecycle.action-geometry.inspect/v1` | action-geometry | inspect | action-geometry-contract | **declarative** | declarative: contract-registry | cpp=projected<br>python=projected<br>node=projected<br>rust=projected |
-| `work.lifecycle.work.inspect/v1` | work | inspect | native-work-journal | **implemented** | implemented: kf_runtime_action_api_v1<br>work_lifecycle | cpp=projected<br>python=projected<br>node=projected<br>rust=projected |
-| `work.lifecycle.work.create/v1` | work | create | native-work-journal | **implemented** | implemented: kf_runtime_action_api_v1<br>work_lifecycle | cpp=projected<br>python=projected<br>node=projected<br>rust=projected |
-| `work.lifecycle.work.update/v1` | work | update | native-work-journal | **implemented** | implemented: kf_runtime_action_api_v1<br>work_lifecycle | cpp=projected<br>python=projected<br>node=projected<br>rust=projected |
-| `work.lifecycle.work.transition/v1` | work | transition | native-work-journal | **implemented** | implemented: kf_runtime_action_api_v1<br>work_lifecycle | cpp=projected<br>python=projected<br>node=projected<br>rust=projected |
-| `work.lifecycle.work.export/v1` | work | export | native-work-journal | **implemented** | implemented: kf_runtime_action_api_v1<br>work_lifecycle | cpp=projected<br>python=projected<br>node=projected<br>rust=projected |
-| `work.lifecycle.work.import/v1` | work | import | native-work-journal | **implemented** | implemented: kf_runtime_action_api_v1<br>work_lifecycle | cpp=projected<br>python=projected<br>node=projected<br>rust=projected |
 | `work.lifecycle.initiative.inspect/v1` | initiative | inspect | mission-control-profile | **projected** | projected: mission-control-profile<br>show-missions | cpp=projected<br>python=projected<br>node=projected<br>rust=projected |
 | `work.lifecycle.initiative.create/v1` | initiative | create | mission-control-profile | **projected** | projected: mission-control-actions<br>create-initiative | cpp=projected<br>python=projected<br>node=projected<br>rust=projected |
 | `work.lifecycle.initiative.transition/v1` | initiative | transition | mission-control-profile | **projected** | projected: mission-control-actions<br>assess-progress, review-completion, decide-continuation | cpp=projected<br>python=projected<br>node=projected<br>rust=projected |

@@ -254,9 +254,9 @@ if [ "${1:-}" = "action" ]; then
   fi
 fi
 
-# Assignment capture and cleanup are intentionally source-only. Admission and
+# Work capture and cleanup are intentionally source-only. Admission and
 # orchestration require the executable assembled from this exact checkout.
-if [ "${1:-}" = "assignment" ]; then
+if [ "${1:-}" = "work" ]; then
   shift
   if [ "${1:-}" = "capture" ] || [ "${1:-}" = "cleanup" ]; then
     if command -v fnm >/dev/null 2>&1; then
@@ -265,7 +265,7 @@ if [ "${1:-}" = "assignment" ]; then
     elif command -v node >/dev/null 2>&1; then
       exec node ./framework/assignment-capture/assignment-capture.mjs "$@"
     else
-      echo "shifu: assignment capture needs node" >&2
+      echo "shifu: work capture needs node" >&2
       exit 127
     fi
   fi
@@ -283,7 +283,7 @@ if [ "${1:-}" = "assignment" ]; then
     && [ -f "$_kungfu_checkout_build_info" ] \
     && command -v uv >/dev/null 2>&1; then
     cd ./framework/core
-    exec uv run --frozen python .devtools/kungfu_cli.py assignment "$@"
+    exec uv run --frozen python .devtools/kungfu_cli.py work "$@"
   fi
   printf '%s\n' '{"schema":"kungfu.assignment-orchestration.diagnosis/v1","ok":false,"code":"assignment-current-checkout-binding-missing","message":"Assignment admission requires pykungfu from the current checkout","next_actions":[{"action":"build-core","command":"./shifu build:core","description":"Assemble pykungfu from the current checkout"}]}'
   exit 127

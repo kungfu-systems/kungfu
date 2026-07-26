@@ -7,7 +7,7 @@
       "role": "claim-source",
       "kind": "file",
       "path": "framework/core/src/python/kungfu/cli/commands/codex.py",
-      "sha256": "54dc1ae6436427df7a15551c897c3111a88b529c610f1dd0f16673199e2dec14"
+      "sha256": "50efcd1f66507e05c06db4a4b78e43b0fce404ba6745d8eecd66108d147e4816"
     }
   ],
   "machineEvidence": [
@@ -16,7 +16,7 @@
       "pointer": {
         "kind": "file",
         "path": "framework/core/src/python/kungfu/cli/commands/codex.py",
-        "sha256": "54dc1ae6436427df7a15551c897c3111a88b529c610f1dd0f16673199e2dec14"
+        "sha256": "50efcd1f66507e05c06db4a4b78e43b0fce404ba6745d8eecd66108d147e4816"
       },
       "description": "Codex goal report adapter and receipt verifier CLI implementation."
     },
@@ -43,7 +43,7 @@
       "pointer": {
         "kind": "file",
         "path": "framework/core/src/python/kungfu/agent/examples/report-mode.md",
-        "sha256": "ef62de93bb8c9b29e50c18429a6d5c006b19a57bd730768d4d5768a175a5d70c"
+        "sha256": "228b02f232edeeea47ec90c669201087a5ca1fc78d9a0e290b65a19361bac949"
       },
       "description": "Report-mode user and agent procedure including Codex receipt verification."
     },
@@ -52,18 +52,18 @@
       "pointer": {
         "kind": "file",
         "path": "framework/core/src/python/kungfu/agent/skills/codex/SKILL.md",
-        "sha256": "5481b484896efbe90a5518f8123b7aa59899eca3d48ac178ffcdffa889fc721a"
+        "sha256": "fbead4c4a802ba65a1a19d1888c14d087e71acc6d785bab7685581d8ca09e32e"
       },
       "description": "Codex-side report closeout gate instructions shipped in the agent pack."
     }
   ],
   "hashes": {
     "registrySha256": "eb32fdb921016051b151920da3b6573143ba8db234057a911059bc98aa1ee1b7",
-    "sourceSha256": "54dc1ae6436427df7a15551c897c3111a88b529c610f1dd0f16673199e2dec14",
+    "sourceSha256": "50efcd1f66507e05c06db4a4b78e43b0fce404ba6745d8eecd66108d147e4816",
     "evidenceSha256": [
       {
         "path": "framework/core/src/python/kungfu/cli/commands/codex.py",
-        "sha256": "54dc1ae6436427df7a15551c897c3111a88b529c610f1dd0f16673199e2dec14"
+        "sha256": "50efcd1f66507e05c06db4a4b78e43b0fce404ba6745d8eecd66108d147e4816"
       },
       {
         "path": "framework/core/src/python/kungfu/rewind/cost/codex.py",
@@ -75,21 +75,21 @@
       },
       {
         "path": "framework/core/src/python/kungfu/agent/examples/report-mode.md",
-        "sha256": "ef62de93bb8c9b29e50c18429a6d5c006b19a57bd730768d4d5768a175a5d70c"
+        "sha256": "228b02f232edeeea47ec90c669201087a5ca1fc78d9a0e290b65a19361bac949"
       },
       {
         "path": "framework/core/src/python/kungfu/agent/skills/codex/SKILL.md",
-        "sha256": "5481b484896efbe90a5518f8123b7aa59899eca3d48ac178ffcdffa889fc721a"
+        "sha256": "fbead4c4a802ba65a1a19d1888c14d087e71acc6d785bab7685581d8ca09e32e"
       }
     ],
     "artifactSha256": [
       {
         "path": "framework/core/src/python/kungfu/cli/commands/codex.py",
-        "sha256": "54dc1ae6436427df7a15551c897c3111a88b529c610f1dd0f16673199e2dec14"
+        "sha256": "50efcd1f66507e05c06db4a4b78e43b0fce404ba6745d8eecd66108d147e4816"
       },
       {
         "path": "framework/core/src/python/kungfu/agent/skills/codex/SKILL.md",
-        "sha256": "5481b484896efbe90a5518f8123b7aa59899eca3d48ac178ffcdffa889fc721a"
+        "sha256": "fbead4c4a802ba65a1a19d1888c14d087e71acc6d785bab7685581d8ca09e32e"
       }
     ]
   },
@@ -97,13 +97,13 @@
     {
       "name": "codex-cli-command",
       "path": "framework/core/src/python/kungfu/cli/commands/codex.py",
-      "sha256": "54dc1ae6436427df7a15551c897c3111a88b529c610f1dd0f16673199e2dec14",
+      "sha256": "50efcd1f66507e05c06db4a4b78e43b0fce404ba6745d8eecd66108d147e4816",
       "expectedPackagePath": "kungfu/cli/commands/codex.py"
     },
     {
       "name": "codex-agent-skill",
       "path": "framework/core/src/python/kungfu/agent/skills/codex/SKILL.md",
-      "sha256": "5481b484896efbe90a5518f8123b7aa59899eca3d48ac178ffcdffa889fc721a",
+      "sha256": "fbead4c4a802ba65a1a19d1888c14d087e71acc6d785bab7685581d8ca09e32e",
       "expectedPackagePath": "kungfu/agent/skills/codex/SKILL.md"
     }
   ],

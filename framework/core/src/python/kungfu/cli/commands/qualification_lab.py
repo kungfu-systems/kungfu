@@ -34,7 +34,7 @@ def qualification_lab(ctx):
 @kfd3_api("kungfu.qualification-lab.inspect")
 @kfc.pass_context()
 def inspect(ctx, as_json):
-    payload = lab.inspect_startup(ctx.runtime_dir)
+    payload = lab.inspect_startup(ctx.runtime_dir, config_home=ctx.config_home)
     if as_json:
         _json(payload)
         return
@@ -46,7 +46,7 @@ def inspect(ctx, as_json):
 @kfd3_api("kungfu.qualification-lab.catalog")
 @kfc.pass_context()
 def catalog(ctx, as_json):
-    payload = lab.catalog(ctx.runtime_dir)
+    payload = lab.catalog(ctx.runtime_dir, config_home=ctx.config_home)
     if as_json:
         _json(payload)
         return

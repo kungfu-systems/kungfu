@@ -233,6 +233,13 @@ test('Assignment admission smoke isolates the operator Workspace Catalog', (t) =
 
   assert.equal(fs.readFileSync(operatorCatalog, 'utf8'), operatorBytes);
   assert.equal(invocations.length, 2);
+  assert.deepEqual(
+    invocations.map(({ args }) => args.slice(0, 2)),
+    [
+      ['work', 'capture'],
+      ['work', 'admit'],
+    ],
+  );
   for (const invocation of invocations) {
     assert.equal(
       invocation.env.HOME,

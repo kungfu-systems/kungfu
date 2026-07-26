@@ -349,7 +349,6 @@ def kfc(
         "health",
         "recover",
         "action",
-        "assignment",
         "dogfood",
         "agent",
         "xinfa",

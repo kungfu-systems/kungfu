@@ -14,7 +14,6 @@ from . import config
 from . import agent
 from . import rewind
 from . import schema
-from . import work
 from . import cut
 from . import atlas
 from . import assignment
@@ -59,7 +58,6 @@ __all__ = [
     "agent",
     "rewind",
     "schema",
-    "work",
     "cut",
     "atlas",
     "assignment",

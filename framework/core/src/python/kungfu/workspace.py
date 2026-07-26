@@ -10,7 +10,7 @@ import tempfile
 from dataclasses import dataclass, replace
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Callable, Literal, Mapping
+from typing import Any, Literal, Mapping
 from uuid import uuid4
 
 from kungfu.config import (
@@ -613,16 +613,53 @@ def observe_workspace_locator(
     if existing is not None:
         entry["lifecycle"] = _catalog_lifecycle(existing)
         entry["provenance"] = _catalog_provenance(existing)
-    entries = [
-        row
-        for row in catalog["entries"]
-        if _catalog_entry_key(row) != _catalog_entry_key(entry)
-        and not (
+        unchanged_entry = {
+            **entry,
+            "observed_at": existing.get("observed_at"),
+        }
+        conflicting_locator = any(
+            _catalog_entry_key(row) != _catalog_entry_key(entry)
+            and identity.identity_state == "qualified"
+            and row.get("locator_key") == entry["locator_key"]
+            for row in catalog["entries"]
+        )
+        if (
+            _persisted_catalog_entry(existing) == unchanged_entry
+            and not conflicting_locator
+        ):
+            # The Catalog is a locator set, not a recency log. Re-observing the
+            # same locator must not invalidate a live federation query cut.
+            payload = {
+                "schema": CATALOG_SCHEMA,
+                "entries": [
+                    _persisted_catalog_entry(row) for row in catalog["entries"]
+                ],
+                "epoch": int(catalog.get("epoch") or 0),
+            }
+            if "updated_at" in catalog:
+                payload["updated_at"] = catalog["updated_at"]
+            return {
+                **payload,
+                "catalog_path": catalog["catalog_path"],
+                "catalog_cut": catalog["catalog_cut"],
+                "observed": _persisted_catalog_entry(existing),
+                "changed": False,
+            }
+    entries: list[dict[str, Any]] = []
+    replaced = False
+    for row in catalog["entries"]:
+        if _catalog_entry_key(row) == _catalog_entry_key(entry):
+            entries.append(entry)
+            replaced = True
+            continue
+        if (
             identity.identity_state == "qualified"
             and row.get("locator_key") == entry["locator_key"]
-        )
-    ]
-    entries.insert(0, entry)
+        ):
+            continue
+        entries.append(_persisted_catalog_entry(row))
+    if not replaced:
+        entries.insert(0, entry)
     payload = {
         "schema": CATALOG_SCHEMA,
         "entries": entries,
@@ -636,6 +673,7 @@ def observe_workspace_locator(
         "catalog_path": path,
         "catalog_cut": _catalog_cut(payload),
         "observed": entry,
+        "changed": True,
     }
 
 
@@ -1095,10 +1133,8 @@ def record_workspace_capture(
     target: WorkspaceTarget,
     receipt: Mapping[str, Any],
     resulting_identities: list[dict[str, str]],
-    *,
-    work_store_factory: Callable[[str], Any] | None = None,
 ) -> dict[str, Any]:
-    """Persist a capture receipt and create a durable Home Inbox work item."""
+    """Persist a capture receipt without creating a second Work authority."""
     if target.operation_class != "capture-only":
         raise ValueError("workspace capture records require capture-only resolution")
     recorded = dict(receipt)
@@ -1115,33 +1151,6 @@ def record_workspace_capture(
     if target.association == "unassigned":
         recorded["skipped_effects"].insert(1, "project-association")
 
-    if target.association == "unassigned":
-        if work_store_factory is None:
-            from kungfu.work.store import WorkStore
-
-            work_store_factory = WorkStore
-        store = work_store_factory(target.runtime_dir)
-        identity_label = ", ".join(
-            f"{item['kind']}:{item['id']}" for item in resulting_identities
-        )
-        work_id = store.create(
-            title=f"Unassigned agent work {identity_label}",
-            kind="agent-work-inbox",
-            summary=(
-                "Captured without a project or declared Mission purpose from "
-                f"{target.source_working_directory}"
-            ),
-        )
-        store.set_next_action(
-            work_id,
-            "Attach this captured work to a Mission/Go or declare its purpose.",
-        )
-        for item in resulting_identities:
-            if item["kind"] == "run":
-                store.link_run(work_id, item["id"])
-        recorded["inbox_work_id"] = work_id
-        recorded["effects"].append("home-agent-work-inbox-item-created")
-
     receipt_name = recorded["receipt_id"].replace(":", "-") + ".json"
     receipt_path = os.path.join(
         target.identity.data_home,
@@ -1151,8 +1160,6 @@ def record_workspace_capture(
     )
     recorded["receipt_path"] = receipt_path
     _write_json_atomic(receipt_path, recorded)
-    if target.association == "unassigned":
-        store.artifact(recorded["inbox_work_id"], receipt_path, "workspace-capture")
     return recorded
 
 

@@ -392,7 +392,7 @@
       "surface": "work-lifecycle-operation-matrix",
       "id": "kungfu-work-lifecycle-operation-matrix",
       "schema": "kungfu.work-lifecycle-operation-matrix.contract/v1",
-      "contractSchemaRoot": "sha256:d7ce952d0ccbe3e01aa0e906db86e548ab6834d9cea278a2617770042e61db47",
+      "contractSchemaRoot": "sha256:bdc3f437083336081be97be50988a118efbd2d5aea9d71b72b0bfdbc8fe97ea6",
       "weldedSurface": "work-lifecycle-operation-matrix-contract",
       "env": "KUNGFU_WORK_LIFECYCLE_OPERATION_MATRIX_CONTRACT",
       "file": "kungfu-work-lifecycle-operation-matrix.contract.json",
@@ -411,7 +411,33 @@
           "work-lifecycle-operation-matrix",
           "--json"
         ]
-      }
+      },
+      "extraArtifacts": [
+        {
+          "label": "Project Cut lifecycle authority catalog",
+          "kfdId": "work-lifecycle-cut-catalog",
+          "source": "framework/project-cut/work-lifecycle.contract.json",
+          "artifact": "config/work-lifecycle/project-cut-work-lifecycle.contract.json"
+        },
+        {
+          "label": "Episode native operation authority catalog",
+          "kfdId": "work-lifecycle-episode-catalog",
+          "source": "framework/episode/native-operation-catalog.contract.json",
+          "artifact": "config/work-lifecycle/episode-native-operation-catalog.contract.json"
+        },
+        {
+          "label": "work lifecycle matrix materializer",
+          "kfdId": "work-lifecycle-materializer",
+          "source": "scripts/materialize-work-lifecycle-operation-matrix.mjs",
+          "artifact": "config/work-lifecycle/materialize-work-lifecycle-operation-matrix.mjs"
+        },
+        {
+          "label": "work lifecycle matrix generator helper",
+          "kfdId": "work-lifecycle-generator-helper",
+          "source": "scripts/lib/sdk-generator.mjs",
+          "artifact": "config/work-lifecycle/sdk-generator.mjs"
+        }
+      ]
     },
     {
       "surface": "domain-profile-authoring",

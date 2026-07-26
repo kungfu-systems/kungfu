@@ -20,9 +20,7 @@ kungfu agent runtime list --json
 kungfu agent session capabilities --json
 kungfu agent session list --json
 kungfu cut --repo <path> --json
-kungfu work capabilities --json
-kungfu work export <work-id> --repo <path> --json
-kungfu work import --file <envelope.json> --repo <path> --json
+kungfu work status --home --initiative-id <initiative-id> --assignment-id <assignment-id>
 kungfu primitive list --json
 kungfu primitive show fact --json
 kungfu primitive explain fact --json
@@ -98,14 +96,11 @@ another platform. Recheck retained evidence with `kungfu agent hub verify`
 instead of rerunning or paraphrasing the 20 scenarios from memory.
 
 Project-level work starts from the current Cut. `kungfu cut --repo <path>
---json` is read-only, and `kungfu work capabilities --json` reports every
-high-level operation with its current availability and authority boundary.
-The same manifest appears as `workLoop` in `kungfu agent capabilities --json`;
-an unavailable or plan-only operation must not be inferred to be executable.
-Portable Work export excludes machine-local timestamps and binds the envelope
-to the verified current Project Cut. Import is read-only unless `--execute` is
-present. Its portable root proves integrity, not origin authenticity; execution
-is the explicit local admission decision.
+--json` is read-only. Use `kungfu work --help` to discover the single public
+mutation family, then read one exact Assignment with `kungfu work status`.
+Every mutation returns an action receipt and appends canonical Episode and Fact
+evidence. Do not infer a second Work journal, compatibility alias, or hidden
+writer from older documentation.
 
 For portable Exit packages, use
 `kungfu-exit-verify --file <package.json> --json` (or
@@ -157,8 +152,9 @@ Use the modes this way:
 
 - **brief**: read the local facts; no runtime action.
 - **report**: create or inspect structured work facts with `kungfu work`, and
-  append external run facts with `kungfu report`. Native Codex goals should use
-  `kungfu codex report-goal` and verify the receipt before closeout.
+  append external run facts with `kungfu report`. Close native work through
+  `kungfu work claim-completion`, `review`, and `decide`; verify the returned
+  action receipts before closeout.
 - **domain-facts**: when a user has explicitly declared a contract world and
   schema-owned fact surface, use the experimental `kungfu facts` commands to
   record observations, inspect admission outcomes, and replay a historical

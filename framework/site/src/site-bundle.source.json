@@ -17,10 +17,10 @@
     {
       "id": "format",
       "label": ".kungfu format and workspace contract",
-      "job": "Inspect declared workspace facts, layout, schemas, verification and preservation rules.",
+      "job": "Inspect the pre-release portable authority, required-reader behavior, version matrix, schema registry, retained vectors, workspace layout and preservation rules.",
       "notRequired": "GUI, Electron, or a particular language host.",
-      "maturity": "pre-normative",
-      "sourceIds": ["format-contract", "product-layers"]
+      "maturity": "staged",
+      "sourceIds": ["spec-consumer-contract", "spec-manifest-schema", "product-layers"]
     },
     {
       "id": "libkungfu",
@@ -85,20 +85,21 @@
       "id": "format",
       "label": ".kungfu",
       "route": "/format/",
-      "headline": "A current workspace evidence contract with a still pre-normative portable semantic format.",
-      "summary": "Workspace selection, layout v1, persistence classes, journal epoch and first-party manifest identity have current contracts; the complete runtime-independent format does not yet have a normative standalone specification.",
-      "claimClass": "pre-normative",
-      "maturity": "pre-normative",
+      "headline": "An exact pre-release portable authority bundle, projected without creating a second format truth.",
+      "summary": "The site binds the generated @kungfu-tech/spec manifest, normative root and artifact roots while the owning format, reader, migration, schema and vector contracts retain semantic authority.",
+      "claimClass": "current-contract",
+      "maturity": "staged",
       "capabilities": [
-        "Resolve workspace and fallback roots through the config contract.",
-        "Classify durable, ephemeral and cache paths and fail on unknown durable candidates.",
-        "Verify declared journal epoch, manifests, schemas and content roots before admission."
+        "Inspect the portable authority overview and exact package pickup coordinate.",
+        "Route required-reader profiles, compatibility tuples, migration ownership and the schema registry.",
+        "Inspect the qualified retained cross-version vector corpus and every rooted artifact without monorepo reach-through."
       ],
       "knownLimits": [
-        "Spec 0.1 is historical walking-skeleton input, not current compatibility authority.",
-        "A complete independent-reader contract, version negotiation and retained cross-version vectors remain future work."
+        "The standalone portable format is pre-release and is not declared stable.",
+        "Package semver is a pickup coordinate, not a format compatibility algorithm.",
+        "The historical Spec 0.1 prose is non-normative."
       ],
-      "sourceIds": ["format-contract", "format-layout-decision", "spec-readme"]
+      "sourceIds": ["spec-consumer-contract", "spec-manifest-schema", "spec-readme"]
     },
     {
       "id": "primitives",
@@ -390,19 +391,19 @@
       "role": "semantic-authority"
     },
     {
-      "id": "format-contract",
-      "path": "docs/architecture/kungfu-format-contract.md",
-      "role": "semantic-authority"
-    },
-    {
-      "id": "format-layout-decision",
-      "path": "docs/adr/KF-ADR-019f86da-4f90-713d-8626-d70bca82cb76.md",
-      "role": "semantic-authority"
-    },
-    {
       "id": "spec-readme",
       "path": "framework/spec/README.md",
       "role": "product-framing"
+    },
+    {
+      "id": "spec-consumer-contract",
+      "path": "framework/spec/CONSUMING.md",
+      "role": "machine-contract"
+    },
+    {
+      "id": "spec-manifest-schema",
+      "path": "framework/spec/schema/manifest.schema.json",
+      "role": "machine-contract"
     },
     {
       "id": "fact-episode-action",
@@ -511,7 +512,9 @@
     }
   ],
   "nonClaims": [
-    "The historical Spec 0.1 draft is not the current normative .kungfu format.",
+  "The standalone portable format is pre-release and is not declared stable.",
+  "Package semver is not a format compatibility algorithm.",
+  "The historical Spec 0.1 prose is non-normative.",
     "Qualified-shadow Fact, Episode and Action Geometry work does not prove P17 release qualification or authority cutover.",
     "Source-built SDK and product qualification does not prove current public package availability or stable compatibility.",
     "Replication, high availability, arbitrary external-side-effect recovery and battle-tested external adoption are not claimed.",

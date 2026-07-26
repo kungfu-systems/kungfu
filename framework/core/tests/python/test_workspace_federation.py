@@ -27,6 +27,7 @@ from kungfu.workspace_federation import (
     verify_federation_query,
     verify_dogfood_gate_receipt,
 )
+from kungfu.workspace_federation_observer import _runtime_signal
 from kungfu.cli.commands.workspace import _human_work_line
 
 
@@ -309,6 +310,75 @@ def test_root_bound_components_keep_distinct_profile_and_runtime_envelopes(tmp_p
     )
 
 
+def test_incremental_query_reloads_only_changed_component(tmp_path):
+    config_home = tmp_path / "config"
+    identities = [_qualified_project(tmp_path, name) for name in ("one", "two")]
+    for identity in identities:
+        observe_workspace_locator(
+            identity,
+            config_home=str(config_home),
+            env={"HOME": str(tmp_path)},
+        )
+    initial = query_federation(
+        identities[0],
+        scope="all",
+        config_home=str(config_home),
+        env={"HOME": str(tmp_path)},
+        loader=lambda identity: _component_fixture(identity, {}),
+    )
+    cached = {row["workspace"]["identity_root"]: row for row in initial["components"]}
+    unchanged_root = identities[0].identity_root
+    changed_root = identities[1].identity_root
+    unchanged_envelope = cached[unchanged_root]["envelope"]["envelope_root"]
+    loaded = []
+
+    def changed_loader(identity):
+        loaded.append(identity.identity_root)
+        return _component_fixture(identity, {})
+
+    refreshed = query_federation(
+        identities[0],
+        scope="all",
+        config_home=str(config_home),
+        env={"HOME": str(tmp_path)},
+        loader=changed_loader,
+        component_cache=cached,
+        refresh_identity_roots={changed_root},
+        max_workers=4,
+    )
+
+    assert loaded == [changed_root]
+    refreshed_by_root = {
+        row["workspace"]["identity_root"]: row for row in refreshed["components"]
+    }
+    assert (
+        refreshed_by_root[unchanged_root]["envelope"]["envelope_root"]
+        == unchanged_envelope
+    )
+    assert refreshed["verification"]["ok"] is True
+
+
+def test_append_journal_signal_is_workspace_scoped_and_monotonic(tmp_path):
+    runtime = tmp_path / "runtime"
+    journal = (
+        runtime
+        / "journal"
+        / "system"
+        / "storage"
+        / "episode-manifest"
+        / "live"
+        / "00000000.1.journal"
+    )
+    journal.parent.mkdir(parents=True)
+    journal.write_bytes(b"before")
+    before = _runtime_signal(str(runtime))
+    journal.write_bytes(b"before-after")
+
+    assert before
+    assert _runtime_signal(str(runtime)) != before
+    assert _runtime_signal(str(tmp_path / "other-runtime")) == ""
+
+
 def test_false_zero_regression_preserves_31_unavailable_components(tmp_path):
     config_home = tmp_path / "config"
     home = inspect_workspace(home=True, env={"HOME": str(tmp_path)})
@@ -384,6 +454,7 @@ def test_global_projection_folds_only_root_proven_replicas(tmp_path):
         config_home=str(config_home),
         env={"HOME": str(tmp_path)},
         loader=lambda identity: _component_fixture(identity, assignments),
+        max_workers=2,
     )
 
     rows = result["global_work"]["canonical_work"]

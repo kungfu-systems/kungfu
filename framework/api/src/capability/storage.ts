@@ -39,6 +39,7 @@ export type FactMaterialInput = {
 };
 
 export type Storage = {
+  forRuntime: (runtimeDir: string) => Storage;
   layout: () => StorageValue;
   status: () => StorageValue;
   episodes: (limit?: number) => StorageValue;
@@ -127,6 +128,11 @@ export function openStorage(options: OpenStorageOptions): Storage {
     operation(name, runtimeDir, values);
 
   return {
+    forRuntime: (targetRuntimeDir) =>
+      openStorage({
+        binding: options.binding,
+        locator: { runtimeDir: targetRuntimeDir },
+      }),
     layout: () => run('layout'),
     status: () => run('status'),
     episodes: (limit = 100) => run('episode_list', { limit }),

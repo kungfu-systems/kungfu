@@ -1613,6 +1613,38 @@ function extraArtifacts(entry) {
 }
 
 /**
+ * @param {Record<string, unknown>} entry
+ * @returns {Array<{ id: string, label: string, source: string, artifact: string, sourceHash: string, byteForByte: boolean }>}
+ */
+function contractKfdProjectionRows(entry) {
+  const repoRoot = locateRepoRoot(process.cwd());
+  return extraArtifacts(entry)
+    .filter((artifact) => typeof artifact.kfdId === 'string')
+    .map((artifact) => {
+      const id = requiredString(artifact, 'kfdId');
+      const label = requiredString(artifact, 'label');
+      const source = requiredString(artifact, 'source');
+      const artifactPath = requiredString(artifact, 'artifact');
+      const sourcePath = path.resolve(repoRoot, source);
+      const packagedPath = path.resolve(repoRoot, artifactPath);
+      if (!fs.existsSync(sourcePath)) {
+        fail(`registered KFD projection source does not exist: ${source}`);
+      }
+      const sourceHash = sha256File(sourcePath);
+      return {
+        id,
+        label,
+        source,
+        artifact: artifactPath,
+        sourceHash,
+        byteForByte:
+          fs.existsSync(packagedPath) &&
+          sourceHash === sha256File(packagedPath),
+      };
+    });
+}
+
+/**
  * @param {string | undefined} surface
  * @param {CliOptions} options
  * @returns {void}
@@ -1861,13 +1893,20 @@ function buildContractWorld(repoRoot, registry) {
   const metadata = resolveKfd1Metadata();
   const constants = kfd1SchemaConstants(metadata);
   const registryPath = resolveContractRegistryPath(repoRoot);
-  const surfaces = registryContracts(registry).map((entry) => {
+  const surfaces = registryContracts(registry).flatMap((entry) => {
     const surface = contractPolicySurface(entry);
-    return {
-      id: surface.id,
-      class: 'integration-time',
-      description: `${surface.surface} contract source ${surface.source} is copied byte-for-byte to ${surface.artifact}.`,
-    };
+    return [
+      {
+        id: surface.id,
+        class: 'integration-time',
+        description: `${surface.surface} contract source ${surface.source} is copied byte-for-byte to ${surface.artifact}.`,
+      },
+      ...contractKfdProjectionRows(entry).map((projection) => ({
+        id: projection.id,
+        class: 'integration-time',
+        description: `${projection.label} source ${projection.source} is copied byte-for-byte to ${projection.artifact}.`,
+      })),
+    ];
   });
   return {
     schemaVersion: 1,
@@ -1998,16 +2037,26 @@ function buildContractWorldWitness(repoRoot) {
         path: rel(repoRoot, registryPath),
         sha256: sha256File(registryPath),
       },
-      surfaces: registryContracts(registry).map((entry) => {
+      surfaces: registryContracts(registry).flatMap((entry) => {
         const surface = contractPolicySurface(entry);
-        return {
-          name: surface.id,
-          sourcePath: surface.source,
-          sourceSha256: surface.sourceHash,
-          artifactPath: surface.artifact,
-          expectedSha256: surface.sourceHash,
-          byteForByte: surface.byteForByte,
-        };
+        return [
+          {
+            name: surface.id,
+            sourcePath: surface.source,
+            sourceSha256: surface.sourceHash,
+            artifactPath: surface.artifact,
+            expectedSha256: surface.sourceHash,
+            byteForByte: surface.byteForByte,
+          },
+          ...contractKfdProjectionRows(entry).map((projection) => ({
+            name: projection.id,
+            sourcePath: projection.source,
+            sourceSha256: projection.sourceHash,
+            artifactPath: projection.artifact,
+            expectedSha256: projection.sourceHash,
+            byteForByte: projection.byteForByte,
+          })),
+        ];
       }),
     },
     { metadata },

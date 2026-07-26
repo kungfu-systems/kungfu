@@ -56,48 +56,6 @@
       "effects": ["verify-active-lease", "append-phase-transition"]
     },
     {
-      "id": "create-mission",
-      "title": "Create Initiative fact (Mission compatibility command)",
-      "runner": "kfx-member",
-      "operation": "mission-control-actions",
-      "runtimeOperation": "episode.append",
-      "authorityClass": "mission-fact-author",
-      "requiredCapabilities": [
-        "storage"
-      ],
-      "effects": [
-        "append-admitted-fact",
-        "seal-episode"
-      ],
-      "compatibility": {
-        "status": "deprecated-alias",
-        "replacement": "create-initiative",
-        "authority": "successor-domain",
-        "writes": "initiative"
-      }
-    },
-    {
-      "id": "create-go",
-      "title": "Create Assignment fact (Go compatibility command)",
-      "runner": "kfx-member",
-      "operation": "mission-control-actions",
-      "runtimeOperation": "episode.append",
-      "authorityClass": "mission-fact-author",
-      "requiredCapabilities": [
-        "storage"
-      ],
-      "effects": [
-        "append-admitted-fact",
-        "seal-episode"
-      ],
-      "compatibility": {
-        "status": "deprecated-alias",
-        "replacement": "create-assignment",
-        "authority": "successor-domain",
-        "writes": "assignment"
-      }
-    },
-    {
       "id": "claim-completion",
       "title": "Record completion claim",
       "runner": "kfx-member",
