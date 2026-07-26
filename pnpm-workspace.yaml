@@ -9,6 +9,7 @@ allowBuilds:
   '@biomejs/biome': true
   '@kungfu-tech/libnode': true
   '@kungfu-tech/libnode-darwin-arm64': true
+  '@kungfu-tech/libnode-linux-arm64': true
   '@kungfu-tech/libnode-linux-x64': true
   '@kungfu-tech/libnode-win32-x64': true
   core-js: true
