@@ -210,7 +210,20 @@ def test_exact_root_diagnosis_is_read_only_and_recovery_is_explicit_and_idempote
 ):
     identity, runtime = _active_runtime(tmp_path)
     alternate = tmp_path / "alternate-dogfood"
-    shutil.copytree(SOURCE, alternate)
+
+    def ignore_dangling_links(directory, names):
+        return [
+            name
+            for name in names
+            if (Path(directory) / name).is_symlink()
+            and not (Path(directory) / name).exists()
+        ]
+
+    shutil.copytree(
+        SOURCE,
+        alternate,
+        ignore=ignore_dangling_links,
+    )
     readme = alternate / "dogfood-actions" / "README.md"
     readme.write_text(
         readme.read_text(encoding="utf-8") + "\nExact-root drift fixture.\n",
