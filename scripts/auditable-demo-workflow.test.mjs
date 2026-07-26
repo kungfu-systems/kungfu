@@ -12,6 +12,74 @@ const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const WORKFLOW_PATH = path.join(ROOT, '.github', 'workflows', 'build.yml');
 const WORKFLOW_TEXT = fs.readFileSync(WORKFLOW_PATH, 'utf8');
 const WORKFLOW = parse(WORKFLOW_TEXT);
+const AsyncFunction = Object.getPrototypeOf(async () => {}).constructor;
+
+async function runResolver({ declaredExpiry, observedExpiry }) {
+  const resolver = WORKFLOW.jobs['resolve-auditable-demo-source'];
+  const script = resolver.steps.find(({ id }) => id === 'resolve').with.script;
+  const sourceSha = '1'.repeat(40);
+  const runId = '30182763118';
+  const artifactId = '8626649251';
+  const name = `kungfu-linux-x64-${sourceSha}`;
+  const digest = `sha256:${'2'.repeat(64)}`;
+  const url = `https://github.com/kungfu-systems/kungfu/actions/runs/${runId}/artifacts/${artifactId}`;
+  const outputs = new Map();
+  await new AsyncFunction(
+    'require',
+    'process',
+    'github',
+    'context',
+    'core',
+    script,
+  )(
+    (name) => {
+      assert.equal(name, 'fs');
+      return {
+        writeFileSync: () =>
+          assert.fail('applicable resolver wrote a diagnosis'),
+      };
+    },
+    {
+      env: {
+        SOURCE_SHA: sourceSha,
+        PLATFORMS_JSON: JSON.stringify([{ id: 'linux-x64' }]),
+        ARTIFACT_COORDINATES_JSON: JSON.stringify({
+          schema: 'buildchain.github-artifact-coordinate-set/v1',
+          repository: 'kungfu-systems/kungfu',
+          runId,
+          runAttempt: '1',
+          sourceSha,
+          artifacts: [
+            {
+              platformId: 'linux-x64',
+              id: artifactId,
+              name,
+              digest,
+              url,
+              expiresAt: declaredExpiry,
+            },
+          ],
+        }),
+        GITHUB_RUN_ATTEMPT: '1',
+      },
+    },
+    {
+      paginate: async () => [
+        {
+          id: Number(artifactId),
+          name,
+          digest,
+          expired: false,
+          expires_at: observedExpiry,
+        },
+      ],
+      rest: { actions: { listWorkflowRunArtifacts: () => undefined } },
+    },
+    { repo: { owner: 'kungfu-systems', repo: 'kungfu' }, runId },
+    { setOutput: (key, value) => outputs.set(key, value) },
+  );
+  return outputs;
+}
 
 test('every produced Linux artifact enters the required exact-output Gate', () => {
   const build = WORKFLOW.jobs.build;
@@ -50,6 +118,22 @@ test('every produced Linux artifact enters the required exact-output Gate', () =
     '${{ needs.resolve-auditable-demo-source.outputs.artifact-digest }}',
   );
   assert.equal(gate.with['require-trusted-event'], true);
+});
+
+test('resolver accepts GitHub expiry precision normalization without weakening the coordinate', async () => {
+  const outputs = await runResolver({
+    declaredExpiry: '2026-08-09T01:47:51.000Z',
+    observedExpiry: '2026-08-09T01:47:51Z',
+  });
+  assert.equal(outputs.get('applicable'), 'true');
+  assert.equal(outputs.get('artifact-expires-at'), '2026-08-09T01:47:51.000Z');
+  await assert.rejects(
+    runResolver({
+      declaredExpiry: '2026-08-09T01:47:51.000Z',
+      observedExpiry: '2026-08-09T01:47:52Z',
+    }),
+    /live Linux artifact drifted from the producer-owned coordinate/u,
+  );
 });
 
 test('Gate runtime and renderer are immutable and Passport uses the same runtime', () => {
