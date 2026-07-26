@@ -41,7 +41,7 @@ disables the Gate.
 | --- | --- |
 | Demo renderer | `ghcr.io/kungfu-systems/build-images/demo-renderer@sha256:cb5e1dec368d21c7d4e8baded99ac75f12f7eff0d19505751888cf974086efa6` |
 | Renderer release | `build-images v1.3.0-alpha.16` |
-| Buildchain Gate | `2f6259760cb6831ad129065d3bb6ccc3a5869939` (`v2.14.19-alpha.2` protected version-state commit) |
+| Buildchain Gate | `9531e4fa2849a48d4f45e7c6dc2516e2a9ddb787` (`v2.14.19-alpha.5` protected version-state commit) |
 | Consumer adapter | `scripts/auditable-demo-adapter.py` from the exact qualified Kungfu source SHA |
 
 Buildchain's reusable build emits
@@ -76,6 +76,37 @@ names, archive digests, URLs, roots, and expiries. A separate
 `kungfu.auditable-demo.release-passport/v1` document binds those coordinates
 to the exact source SHA, Buildchain SHA, renderer digest, workflow run, claim
 boundary, and a canonical payload root.
+
+## Fail-closed qualification record
+
+The protected and manually dispatched runs were used as executable probes.
+Each blocking signal was repaired at its owning boundary rather than bypassed:
+
+- Run `30169179696` rejected a missing exact-source preflight receipt.
+- Run `30169246020` exposed hosted-runner Rust mirror TLS failure.
+- Run `30169439213` and run `30174217514` exposed the original package-size
+  breach and then the retired `assignment` command in installed smoke.
+- Run `30175240748` exposed an inherited embedded-Node variant marker.
+- Run `30177108755` exposed Human and Agent help-root divergence.
+- Run `30178806617` rejected an unqualified missing diagnostics field.
+- Run `30180137847` reached 71 of 72 release checks and rejected
+  package-manager-induced source mode drift.
+- Run `30181124335` completed release qualification but was cancelled when a
+  manual evidence build reached the separately governed S3 relay path.
+- Run `30182763118` completed the exact build and direct GitHub Artifact
+  transfer, then rejected equivalent GitHub expiry timestamps expressed with
+  different fractional-second precision.
+- Run `30185774420` completed the exact build, direct GitHub Artifact transfer,
+  and coordinate resolution, then failed inside the required checked-in
+  consumer adapter because the reusable Buildchain runtime had not bound its
+  sanitized environment object to `spawnSync`.
+
+The corresponding repairs landed through independently approved protected PRs
+`#1492`, `#1497`, `#1500`, `#1503`, `#1504`, `#1505`, `#1506`, and `#1507`.
+Buildchain PRs `#1875`, `#1876`, and `#1877` repaired the executable adapter
+path, promoted the protected Alpha channel, and released
+`v2.14.19-alpha.5`. The final qualified run below must use direct GitHub
+Artifact transfer and contains no production deployment step.
 
 This document remains `draft` until a protected Kungfu source has completed a
 real Gate and selective render run and the exact artifact coordinates are
