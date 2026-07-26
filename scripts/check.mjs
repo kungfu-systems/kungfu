@@ -214,12 +214,16 @@ function checkPythonFiles(label, files) {
   if (has('ruff')) {
     run(`${label} Python format check`, 'ruff', [
       'format',
+      '--config',
+      'framework/core/pyproject.toml',
       '--check',
       '--force-exclude',
       ...py,
     ]);
     run(`${label} Python lint check`, 'ruff', [
       'check',
+      '--config',
+      'framework/core/pyproject.toml',
       '--force-exclude',
       ...py,
     ]);
@@ -227,6 +231,8 @@ function checkPythonFiles(label, files) {
     run(`${label} Python format check`, 'uvx', [
       'ruff',
       'format',
+      '--config',
+      'framework/core/pyproject.toml',
       '--check',
       '--force-exclude',
       ...py,
@@ -234,6 +240,8 @@ function checkPythonFiles(label, files) {
     run(`${label} Python lint check`, 'uvx', [
       'ruff',
       'check',
+      '--config',
+      'framework/core/pyproject.toml',
       '--force-exclude',
       ...py,
     ]);

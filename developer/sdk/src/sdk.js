@@ -2594,6 +2594,7 @@ function resolveCorePython(coreDir) {
     'uv',
     [
       'run',
+      '--frozen',
       '--project',
       coreDir,
       'python',

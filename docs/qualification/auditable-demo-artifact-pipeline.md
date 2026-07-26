@@ -41,7 +41,7 @@ disables the Gate.
 | --- | --- |
 | Demo renderer | `ghcr.io/kungfu-systems/build-images/demo-renderer@sha256:cb5e1dec368d21c7d4e8baded99ac75f12f7eff0d19505751888cf974086efa6` |
 | Renderer release | `build-images v1.3.0-alpha.16` |
-| Buildchain Gate | `658f93fa8667a47555246c016cf0b5ec0f5ec53d` (`v3.0.1-alpha.2` protected version-state commit) |
+| Buildchain Gate | `3a93cc3ce87fd8c5239c5199f705fb14b55c7808` (`v3.0.1-alpha.4` immutable release tag) |
 | Consumer adapter | `scripts/auditable-demo-adapter.py` from the exact qualified Kungfu source SHA |
 
 Buildchain's reusable build emits
