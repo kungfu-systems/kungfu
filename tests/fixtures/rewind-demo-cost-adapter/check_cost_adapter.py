@@ -2,8 +2,8 @@
 #
 # Parse-layer assertions for the cost adapters. Proves three things without a
 # journal or the native binding:
-#   1. provider discovery locates Codex (PATH + macOS app bundle) and Claude and
-#      records misses diagnosably, touching no credential;
+#   1. provider discovery locates Codex (PATH + macOS app bundle), Claude, and
+#      OpenCode and records misses diagnosably, touching no credential;
 #   2. the Codex `exec --json` adapter accumulates turn.completed usage into an
 #      EXACT_RUN snapshot with no fabricated dollar cost;
 #   3. the Claude `--print --output-format json` adapter carries the real
@@ -13,6 +13,7 @@
 #
 # Usage: check_cost_adapter.py <fixture-dir>
 
+import importlib
 import json
 import os
 import sys
@@ -36,20 +37,21 @@ for _name in ("kungfu", "kungfu.rewind"):
         _m.__path__ = [os.path.join(core_src, *_name.split("."))]
         sys.modules[_name] = _m
 
-from kungfu.rewind.cost import (
-    AttributionLevel,
-    CostSnapshot,
-    COST_SCHEMA_VERSION,
-    ProviderDiscovery,
-    TokenUsage,
-    confidence_for,
-    discover_provider,
-    discover_providers,
-    parse_claude_print_json,
-    parse_codex_exec_json_text,
-    parse_codex_exec_jsonl,
-)
-from kungfu.rewind.cost.discovery import CODEX_APP_BUNDLE
+cost = importlib.import_module("kungfu.rewind.cost")
+COST_SCHEMA_VERSION = cost.COST_SCHEMA_VERSION
+AttributionLevel = cost.AttributionLevel
+CostSnapshot = cost.CostSnapshot
+ProviderDiscovery = cost.ProviderDiscovery
+TokenUsage = cost.TokenUsage
+confidence_for = cost.confidence_for
+discover_provider = cost.discover_provider
+discover_providers = cost.discover_providers
+parse_claude_print_json = cost.parse_claude_print_json
+parse_codex_exec_json_text = cost.parse_codex_exec_json_text
+parse_codex_exec_jsonl = cost.parse_codex_exec_jsonl
+CODEX_APP_BUNDLE = importlib.import_module(
+    "kungfu.rewind.cost.discovery"
+).CODEX_APP_BUNDLE
 
 failures = []
 
@@ -136,16 +138,22 @@ check("unknown provider -> found False + error", (not d.found) and bool(d.error)
 
 # discover_providers over the default set, no execution
 res = discover_providers(
-    which=which_from({"codex": "/c/codex", "claude": "/c/claude"}),
+    which=which_from(
+        {
+            "codex": "/c/codex",
+            "claude": "/c/claude",
+            "opencode": "/c/opencode",
+        }
+    ),
     version_probe=lambda p: None,
     platform="linux",
 )
 check(
-    "discover_providers returns both defaults",
-    set(res) == {"codex", "claude"}
+    "discover_providers returns all defaults",
+    set(res) == {"codex", "claude", "opencode"}
     and all(isinstance(v, ProviderDiscovery) for v in res.values()),
 )
-check("both defaults found with injected PATH", all(v.found for v in res.values()))
+check("all defaults found with injected PATH", all(v.found for v in res.values()))
 
 
 # ── 2. Codex exec --json adapter ─────────────────────────────────────────────

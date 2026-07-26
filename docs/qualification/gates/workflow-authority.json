@@ -1326,7 +1326,7 @@
           "authority": "diagnostic",
           "publication": "none",
           "receipt": "none",
-          "definitionDigest": "sha256:6a45d39ebc824af0745f5feaba81d10dc72425963d8d52b5b71186504e1542f9",
+          "definitionDigest": "sha256:4719fe25e836726b5c018fb944c3a7ad5c92df6fbf40b2d4c08da7842f8e3b0d",
           "credentials": {
             "githubToken": "write",
             "oidc": false,
@@ -1340,7 +1340,7 @@
               "index": 1,
               "label": "name:Sync tracking issue with patrol result",
               "authority": "diagnostic-write",
-              "definitionDigest": "sha256:6755647fb4c13a229144bf4f4c181ec9b806719868335e730a7feca50852d08d"
+              "definitionDigest": "sha256:835f590a6bebce40d2d6b76d18db0393aec1be7e73db1f5e57c13ec17a305e76"
             }
           ]
         },

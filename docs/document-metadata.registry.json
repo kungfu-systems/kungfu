@@ -556,6 +556,50 @@
       "review_state": "self-reviewed",
       "sensitivity": "public"
     },
+    "docs/development/alpha-attention-operations.md": {
+      "metadata_schema": "kungfu.document-metadata/v1",
+      "document_status": "active",
+      "doc_type": "operations-runbook",
+      "review_state": "self-reviewed",
+      "sensitivity": "public",
+      "sources": [
+        "local-files",
+        "official-upstream",
+        "user-consensus"
+      ],
+      "period": "2026-07-26",
+      "theme": "alpha-attention-operations",
+      "confidence": "high",
+      "evidence_grade": "B",
+      "last_reviewed": "2026-07-26",
+      "ai_provenance": {
+        "model_family": "OpenAI GPT-5",
+        "product": "Codex",
+        "generated_at": "2026-07-26",
+        "invisible_context_boundary": "No Alpha publication, live Discussions setting, label mutation, moderation control, security disposition, hidden model checkpoint, or runtime parameters are claimed"
+      }
+    },
+    "docs/development/community-health-baseline.md": {
+      "metadata_schema": "kungfu.document-metadata/v1",
+      "document_status": "draft",
+      "doc_type": "operations",
+      "review_state": "unreviewed",
+      "sensitivity": "public",
+      "sources": [
+        "local-files"
+      ],
+      "period": "2026-07-26",
+      "theme": "community-health",
+      "confidence": "high",
+      "evidence_grade": "A",
+      "last_reviewed": "2026-07-26",
+      "ai_provenance": {
+        "model_family": "OpenAI GPT",
+        "product": "Codex",
+        "generated_at": "2026-07-26",
+        "invisible_context_boundary": "Exact hidden model checkpoint and runtime parameters are not claimed"
+      }
+    },
     "docs/development/buildchain.md": {
       "metadata_schema": "kungfu.document-metadata/v1",
       "document_status": "active",
@@ -781,6 +825,52 @@
         "product": "Codex",
         "generated_at": "2026-07-16",
         "invisible_context_boundary": "unpublished runtime data, hidden platform state, and unretained qualification evidence are not claimed"
+      }
+    },
+    "docs/guides/alpha-status.md": {
+      "metadata_schema": "kungfu.document-metadata/v1",
+      "document_status": "active",
+      "doc_type": "status-reference",
+      "review_state": "self-reviewed",
+      "sensitivity": "public",
+      "sources": [
+        "local-files",
+        "official-upstream",
+        "user-consensus"
+      ],
+      "period": "2026-07-26",
+      "theme": "kungfu-alpha-status",
+      "confidence": "high",
+      "evidence_grade": "B",
+      "last_reviewed": "2026-07-26",
+      "ai_provenance": {
+        "model_family": "OpenAI GPT-5",
+        "product": "Codex",
+        "generated_at": "2026-07-26",
+        "invisible_context_boundary": "No product Alpha artifact, publication, platform qualification, support SLA, hidden model checkpoint, or runtime parameters are claimed"
+      }
+    },
+    "docs/guides/known-issues.md": {
+      "metadata_schema": "kungfu.document-metadata/v1",
+      "document_status": "active",
+      "doc_type": "known-issues-reference",
+      "review_state": "self-reviewed",
+      "sensitivity": "public",
+      "sources": [
+        "local-files",
+        "official-upstream",
+        "user-consensus"
+      ],
+      "period": "2026-07-26",
+      "theme": "kungfu-alpha-known-issues",
+      "confidence": "high",
+      "evidence_grade": "B",
+      "last_reviewed": "2026-07-26",
+      "ai_provenance": {
+        "model_family": "OpenAI GPT-5",
+        "product": "Codex",
+        "generated_at": "2026-07-26",
+        "invisible_context_boundary": "No private report, unpublished user data, fixed version, Alpha availability, hidden model checkpoint, or runtime parameters are claimed"
       }
     },
     "docs/guides/libkungfu-abi-consumer.md": {
