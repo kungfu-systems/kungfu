@@ -26,7 +26,10 @@ function report(source, schema, extra = {}) {
   };
 }
 
-function fixture(root, { source = SOURCE_SHA, unsafeArchive = false } = {}) {
+function fixture(
+  root,
+  { source = SOURCE_SHA, unsafeArchive = false, stdoutLineCount = 0 } = {},
+) {
   const artifact = path.join(root, 'artifact', 'product', 'release');
   const qualification = path.join(artifact, 'qualification');
   json(path.join(qualification, 'layer-qualification-summary.json'), {
@@ -72,10 +75,19 @@ function fixture(root, { source = SOURCE_SHA, unsafeArchive = false } = {}) {
   fs.mkdirSync(path.join(productRoot, 'runtime'), { recursive: true });
   fs.mkdirSync(path.join(productRoot, 'upgrade'), { recursive: true });
   const launcher = path.join(productRoot, 'kungfu');
-  fs.writeFileSync(
-    launcher,
-    '#!/bin/sh\nprintf "Kungfu agent brief fixture\\nFacts before trust.\\n"\n',
-  );
+  const launcherBody =
+    stdoutLineCount > 0
+      ? [
+          '#!/bin/sh',
+          'index=1',
+          `while [ "$index" -le ${stdoutLineCount} ]; do`,
+          '  printf "brief-line-%03d\\n" "$index"',
+          '  index=$((index + 1))',
+          'done',
+          '',
+        ].join('\n')
+      : '#!/bin/sh\nprintf "Kungfu agent brief fixture\\nFacts before trust.\\n"\n';
+  fs.writeFileSync(launcher, launcherBody);
   fs.chmodSync(launcher, 0o755);
   json(path.join(productRoot, 'product.json'), {
     schema: 'kungfu.product.cli/v1',
@@ -217,6 +229,31 @@ test('adapter rejects symlink members before extraction', () => {
     const { result } = run(root, { unsafeArchive: true });
     assert.notEqual(result.status, 0);
     assert.match(result.stderr, /unsupported CLI archive member type/);
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test('adapter bounds each visual cue while retaining a complete long transcript', () => {
+  const root = fs.mkdtempSync(
+    path.join(os.tmpdir(), 'auditable-demo-adapter-'),
+  );
+  try {
+    const { result, output } = run(root, { stdoutLineCount: 181 });
+    assert.equal(result.status, 0, result.stderr);
+    const transcript = fs.readFileSync(
+      path.join(output, 'complete-transcript.txt'),
+      'utf8',
+    );
+    assert.match(transcript, /brief-line-001/u);
+    assert.match(transcript, /brief-line-181/u);
+    const projection = JSON.parse(
+      fs.readFileSync(path.join(output, 'public-projection.json'), 'utf8'),
+    );
+    assert.equal(projection.cues[1].transcriptLines.length, 80);
+    assert.equal(projection.cues[2].transcriptLines.length, 80);
+    assert.equal(projection.cues[1].transcriptLines[0], 13);
+    assert.equal(projection.cues[2].transcriptLines.at(-1), 193);
   } finally {
     fs.rmSync(root, { recursive: true, force: true });
   }
