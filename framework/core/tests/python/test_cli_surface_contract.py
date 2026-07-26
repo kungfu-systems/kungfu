@@ -3,6 +3,7 @@
 import copy
 import importlib.util
 import json
+import re
 from pathlib import Path
 
 import click
@@ -408,6 +409,29 @@ def test_every_removed_path_is_unknown_and_every_canonical_path_is_live(tmp_path
         assert result.exit_code == 2, (removed, result.output)
         assert "No such command" in result.output
         assert _click_path(kfc, canonical) is not None
+
+
+def test_internal_engage_subprocesses_use_the_only_canonical_path():
+    sources = {
+        "SDK Python-AOT builder": (REPO_ROOT / "developer/sdk/src/sdk.js").read_text(
+            encoding="utf-8"
+        ),
+        "Nuitka bridge": (
+            REPO_ROOT
+            / "framework/core/src/python/kungfu/cli/bridging/nuitka/__init__.py"
+        ).read_text(encoding="utf-8"),
+    }
+    removed_path = re.compile(
+        r'["\']-m["\']\s*,\s*["\']kungfu["\']\s*,\s*["\']engage["\']'
+    )
+    canonical_path = re.compile(
+        r'["\']-m["\']\s*,\s*["\']kungfu["\']\s*,\s*'
+        r'["\']dev["\']\s*,\s*["\']engage["\']'
+    )
+
+    for owner, source in sources.items():
+        assert removed_path.search(source) is None, owner
+        assert canonical_path.search(source) is not None, owner
 
 
 def test_python_wheel_does_not_publish_the_kfc_executable_alias():

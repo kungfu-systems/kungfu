@@ -2733,7 +2733,7 @@ function pythonAotBuild(manifest) {
   // legacy pdm-pep517 backend again for every extension build.
   runOrFail(
     py,
-    ['-m', 'kungfu', 'engage', 'pdm', 'install', '--no-isolation'],
+    ['-m', 'kungfu', 'dev', 'engage', 'pdm', 'install', '--no-isolation'],
     { env },
   );
   // AOT-compile just this module: declared deps stay runtime imports, so we do
@@ -2743,6 +2743,7 @@ function pythonAotBuild(manifest) {
     [
       '-m',
       'kungfu',
+      'dev',
       'engage',
       'nuitka',
       '--module',
