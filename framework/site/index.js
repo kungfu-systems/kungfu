@@ -161,6 +161,70 @@ function verifyBundle() {
   };
 }
 
+function renderPageModels() {
+  verifyBundle();
+  const bundle = loadBundle();
+  const sourceById = new Map(
+    bundle.sources.map((source) => [source.id, source]),
+  );
+  const navigation = bundle.surfaces.map(({ id, label, route }) => ({
+    id,
+    label,
+    route,
+  }));
+  return bundle.surfaces.map((surface) => {
+    const model = {
+      contract: 'kungfu.site-page-model/v1',
+      id: surface.id,
+      route: surface.route,
+      label: surface.label,
+      headline: surface.headline,
+      summary: surface.summary,
+      claimClass: surface.claimClass,
+      maturity: surface.maturity,
+      capabilities: structuredClone(surface.capabilities),
+      knownLimits: structuredClone(surface.knownLimits),
+      authorities: surface.sourceIds.map((sourceId) => {
+        const source = sourceById.get(sourceId);
+        if (!source)
+          throw new Error(
+            `Kungfu site page references unknown source: ${sourceId}`,
+          );
+        return {
+          id: source.id,
+          role: source.role,
+          path: source.path,
+          contentRoot: source.contentRoot,
+          url: source.url,
+        };
+      }),
+      navigation: structuredClone(navigation),
+      bundle: {
+        package: structuredClone(bundle.package),
+        sourceRevision: bundle.source.revision,
+        sourceRoot: bundle.sourceRoot,
+        contentRoot: bundle.contentRoot,
+      },
+    };
+    if (surface.id === 'overview')
+      model.positioning = structuredClone(bundle.positioning);
+    if (surface.id === 'format')
+      model.formatAuthority = structuredClone(bundle.formatAuthority);
+    if (surface.id === 'decisions')
+      model.adrMap = structuredClone(bundle.adrMap);
+    model.contentRoot = sha256(JSON.stringify(canonical(model)));
+    return model;
+  });
+}
+
+function renderPageModel(routeOrId) {
+  const page = renderPageModels().find(
+    (candidate) => candidate.route === routeOrId || candidate.id === routeOrId,
+  );
+  if (!page) throw new Error(`Unknown Kungfu site page: ${routeOrId}`);
+  return page;
+}
+
 module.exports = {
   adrMapPath,
   agentIndexPath,
@@ -169,6 +233,8 @@ module.exports = {
   loadBundle,
   loadFormatAuthorityManifest,
   loadFormatAuthorityRoute,
+  renderPageModel,
+  renderPageModels,
   schemaPath,
   siteRoot,
   verifyBundle,

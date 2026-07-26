@@ -5,6 +5,7 @@ const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
 const test = require('node:test');
+const { execFileSync } = require('node:child_process');
 const {
   authorityArtifact,
   authorityManifest,
@@ -40,11 +41,11 @@ test('exposes rooted authority, compatibility, vectors, and non-claims', () => {
   assert.equal(inspected.normative_status, 'pre-release');
   assert.equal(inspected.authority.status.composition, 'accepted');
   assert.equal(inspected.compatibility.status, 'current');
-  assert.equal(inspected.vectors.vectors.length, 8);
+  assert.equal(inspected.vectors.vectors.length, 16);
   assert.ok(inspected.non_claims.length > 0);
   assert.equal(verified.status, 'read');
   assert.equal(verified.artifact_count, 8);
-  assert.equal(verified.vector_count, 8);
+  assert.equal(verified.vector_count, 16);
   assert.ok(verified.source_binding_count >= 8);
   assert.equal(authorityArtifact('reader_matrix').value.profiles.length, 7);
   assert.equal(
@@ -55,6 +56,32 @@ test('exposes rooted authority, compatibility, vectors, and non-claims', () => {
     manifest.history.spec_0_1_draft.status,
     'historical-non-normative',
   );
+});
+
+test('qualifies every retained vector through the packaged Python reader', () => {
+  const report = JSON.parse(
+    execFileSync(
+      'python3',
+      [
+        path.join(
+          __dirname,
+          'reference-readers/python/portable_format_reader.py',
+        ),
+        '--json',
+      ],
+      { encoding: 'utf8' },
+    ),
+  );
+  assert.equal(report.package.name, '@kungfu-tech/spec');
+  assert.equal(report.vectorCount, 16);
+  assert.deepEqual(report.runtimeDependencies, []);
+  assert.deepEqual(report.outcomes, [
+    'migration-required',
+    'preserve-only',
+    'read',
+    'read-degraded',
+    'reject',
+  ]);
 });
 
 test('generates byte-identical authority artifacts and detects hand edits', () => {

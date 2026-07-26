@@ -22,6 +22,7 @@
     "index.js",
     "bin/",
     "conformance/",
+    "reference-readers/",
     "schema/",
     "dist/",
     "README.md",

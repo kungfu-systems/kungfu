@@ -201,7 +201,11 @@ export function checkPortableFormatAuthority(root = ROOT) {
     fs.readFileSync(path.join(root, CONTRACT_PATH), 'utf8'),
   );
   const issues = validatePortableFormatAuthority(contract, { root });
-  if (contract.status?.crossVersionConformance === 'qualified-v1') {
+  if (
+    /^qualified-v[1-9][0-9]*$/u.test(
+      contract.status?.crossVersionConformance || '',
+    )
+  ) {
     const corpus = contract.readers?.retainedConformanceCorpus;
     if (!corpus || corpus.id !== 'kungfu-portable-format-vectors')
       issues.push('qualified cross-version corpus binding is missing');

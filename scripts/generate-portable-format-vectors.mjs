@@ -6,10 +6,15 @@ import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-export const VECTOR_ROOT = path.join(
+export const V1_VECTOR_ROOT = path.join(
   ROOT,
   'framework/format/conformance/portable-format-vectors/v1/bytes',
 );
+export const V2_VECTOR_ROOT = path.join(
+  ROOT,
+  'framework/format/conformance/portable-format-vectors/v2/bytes',
+);
+export const VECTOR_ROOT = V1_VECTOR_ROOT;
 
 const PAGE_SIZE = 2 * 1024 * 1024;
 const PAGE_HEADER =
@@ -40,6 +45,112 @@ function framedAtoms(atoms) {
     chunks.push(length, body);
   }
   return Buffer.concat(chunks);
+}
+
+function canonical(value) {
+  if (Array.isArray(value)) return value.map(canonical);
+  if (value && typeof value === 'object')
+    return Object.fromEntries(
+      Object.entries(value)
+        .sort(([left], [right]) => left.localeCompare(right))
+        .map(([key, member]) => [key, canonical(member)]),
+    );
+  return value;
+}
+
+const CURRENT_TUPLE = {
+  journalEpoch: 'kungfu.journal.container/e3b24c8d',
+  workspaceLayout: 'kungfu.workspace.episode-layout/v1',
+  recordSchemas: {
+    episodeManifest: 'kungfu.episode.manifest/v1',
+    manifestCatalog: 'kungfu.storage.manifest-catalog/v1',
+    factCut: 'kungfu.fact-cut-kernel.contract/v1',
+  },
+  payloadSchemas: {
+    closedKernel: 'hana-pod-owned/v1',
+    openDomain: 'flatbuffers-single-schema-owner/v1',
+  },
+  rootProtocols: {
+    factRoot: 'kungfu.fact-root.canonical/v2',
+    opaqueBytes: 'sha256:opaque-bytes/v1',
+  },
+  bundleManifest: 'libkungfu:spec:manifest:1',
+  capabilities: [
+    'preservation',
+    'inspection',
+    'structural-verification',
+    'semantic-verification',
+    'canonical-fold',
+    'admission',
+    'execution',
+  ],
+};
+
+function tupleBytes(tuple) {
+  return Buffer.from(
+    `${JSON.stringify(
+      canonical({
+        schema: 'kungfu.format.compatibility-tuple-vector/v1',
+        tuple,
+      }),
+    )}\n`,
+    'utf8',
+  );
+}
+
+export function tupleVectorBytes() {
+  const changed = (mutate) => {
+    const tuple = structuredClone(CURRENT_TUPLE);
+    mutate(tuple);
+    return tupleBytes(tuple);
+  };
+  return new Map([
+    ['tuple-current-exact.json', tupleBytes(CURRENT_TUPLE)],
+    [
+      'tuple-workspace-layout-v2.json',
+      changed((tuple) => {
+        tuple.workspaceLayout = 'kungfu.workspace.episode-layout/v2';
+      }),
+    ],
+    [
+      'tuple-record-schema-future.json',
+      changed((tuple) => {
+        tuple.recordSchemas.episodeManifest = 'kungfu.episode.manifest/v2';
+      }),
+    ],
+    [
+      'tuple-payload-schema-future.json',
+      changed((tuple) => {
+        tuple.payloadSchemas.openDomain = 'flatbuffers-single-schema-owner/v2';
+      }),
+    ],
+    [
+      'tuple-bundle-manifest-v2.json',
+      changed((tuple) => {
+        tuple.bundleManifest = 'libkungfu:spec:manifest:2';
+      }),
+    ],
+    [
+      'tuple-required-capability-missing.json',
+      changed((tuple) => {
+        tuple.capabilities = tuple.capabilities.filter(
+          (capability) => capability !== 'execution',
+        );
+      }),
+    ],
+    [
+      'tuple-optional-capability-unknown.json',
+      changed((tuple) => {
+        tuple.capabilities.push('future-optional-inspection');
+      }),
+    ],
+    [
+      'tuple-unknown-axis.json',
+      changed((tuple) => {
+        tuple.futureGlobalFormatVersion = 5;
+      }),
+    ],
+  ]);
 }
 
 export function vectorBytes() {
@@ -79,32 +190,41 @@ export function sha256(bytes) {
 
 export function generatePortableFormatVectors({ write = false } = {}) {
   const failures = [];
-  for (const [name, expected] of vectorBytes()) {
-    const target = path.join(VECTOR_ROOT, name);
-    if (write) {
-      fs.mkdirSync(path.dirname(target), { recursive: true });
-      fs.writeFileSync(target, expected);
-      continue;
+  const releases = [
+    ['v1', V1_VECTOR_ROOT, vectorBytes()],
+    ['v2', V2_VECTOR_ROOT, tupleVectorBytes()],
+  ];
+  for (const [release, root, vectors] of releases) {
+    for (const [name, expected] of vectors) {
+      const target = path.join(root, name);
+      if (write) {
+        fs.mkdirSync(path.dirname(target), { recursive: true });
+        fs.writeFileSync(target, expected);
+        continue;
+      }
+      if (!fs.existsSync(target)) {
+        failures.push(`${release}/${name}: missing`);
+        continue;
+      }
+      const actual = fs.readFileSync(target);
+      if (!actual.equals(expected))
+        failures.push(
+          `${release}/${name}: generated ${sha256(expected)}, retained ${sha256(actual)}`,
+        );
     }
-    if (!fs.existsSync(target)) {
-      failures.push(`${name}: missing`);
-      continue;
-    }
-    const actual = fs.readFileSync(target);
-    if (!actual.equals(expected))
-      failures.push(
-        `${name}: generated ${sha256(expected)}, retained ${sha256(actual)}`,
-      );
   }
   if (failures.length)
     throw new Error(
       `portable format vector drift:\n- ${failures.join('\n- ')}`,
     );
-  return [...vectorBytes()].map(([name, bytes]) => ({
-    name,
-    bytes: bytes.length,
-    root: sha256(bytes),
-  }));
+  return releases.flatMap(([release, , vectors]) =>
+    [...vectors].map(([name, bytes]) => ({
+      release,
+      name,
+      bytes: bytes.length,
+      root: sha256(bytes),
+    })),
+  );
 }
 
 function main() {
@@ -114,7 +234,9 @@ function main() {
     `[portable-format-vectors] ${write ? 'wrote' : 'verified'} ${result.length} retained byte vectors`,
   );
   for (const entry of result)
-    console.log(`${entry.root}  ${entry.bytes}  ${entry.name}`);
+    console.log(
+      `${entry.root}  ${entry.bytes}  ${entry.release}/${entry.name}`,
+    );
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href)

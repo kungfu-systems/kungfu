@@ -7,7 +7,7 @@
     "composition": "accepted",
     "requiredReader": "implemented",
     "migrationRepair": "implemented",
-    "crossVersionConformance": "qualified-v1",
+    "crossVersionConformance": "qualified-v2",
     "standaloneFormat": "pre-release"
   },
   "boundary": {
@@ -267,8 +267,8 @@
     "retainedConformanceCorpus": {
       "id": "kungfu-portable-format-vectors",
       "source": "framework/format/conformance/portable-format-vectors/index.json",
-      "release": "v1",
-      "releaseRoot": "sha256:3b75d2114d9aa2d7b19e67f3bfe2918051ba69530a2614721d9d10a70ad44a49",
+      "release": "v2",
+      "releaseRoot": "sha256:bd03705e65b8df296329e65753a577d5d4aee34a929e5e889ba20c95f9b3463d",
       "rule": "Released real-byte vectors are content-rooted and append-only; native and independent readers must reproduce the declared outcomes without rewriting retained bytes."
     }
   },
