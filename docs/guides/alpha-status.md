@@ -40,6 +40,14 @@ Publication remains fail-closed until all of the following are current:
 - the parent publication decision cites the exact artifact and every unresolved
   risk.
 
+The current staffing plan binds every human role to `dongkeren` and uses
+`kungfu-origin` as a secondary review account, not as a second human. It
+provides checkpoint-based monitoring from 08:00-24:00 `Asia/Shanghai` and a
+protected 00:00-08:00 rest window. During that rest window, read-only
+collection may continue, but publication, promotion, security disposition,
+moderation decisions, and availability claims remain paused. Any future T-0
+must be scheduled between 08:00 and 12:00.
+
 ## Support and duplicates
 
 Alpha support is best effort and has no public response-time SLA. Reproducible

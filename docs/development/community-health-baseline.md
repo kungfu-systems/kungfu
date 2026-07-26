@@ -76,7 +76,11 @@ Red enters incident triage.
 
 ## Moderation
 
-The launch commander names a moderation operator and a human escalation owner.
+The single current human operator, `dongkeren`, is the launch commander,
+moderation operator, and human escalation owner. `kungfu-origin` is the
+secondary review account, not a second human or concurrent moderation
+coverage. The product runbook preserves a protected rest window and remains
+fail-closed for consequential actions while `dongkeren` is unavailable.
 Preserve the minimum evidence, distinguish criticism from spam or abuse, use
 narrow reversible controls, and record readback and rollback. Exact interaction
 limit criteria and commands live in

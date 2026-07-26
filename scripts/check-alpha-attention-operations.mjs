@@ -93,6 +93,50 @@ export function checkAlphaAttentionOperations(root = ROOT) {
         'human-review-required',
     'agent assistance boundary drifted',
   );
+  const staffing = contract.staffing;
+  const staffingFixture = fixture.staffingCase;
+  const roleBindings = Array.isArray(staffing?.roleBindings)
+    ? staffing.roleBindings
+    : [];
+  const boundRoles = new Set(roleBindings.map((binding) => binding.role));
+  requireCheck(
+    issues,
+    staffing?.timezone === staffingFixture?.timezone &&
+      staffing?.humanOperatorCount === staffingFixture?.humanOperatorCount &&
+      staffing?.primaryHumanAccount === staffingFixture?.primaryHumanAccount &&
+      staffing?.secondaryReviewAccount ===
+        staffingFixture?.secondaryReviewAccount &&
+      staffing?.secondaryAccountIsIndependentHuman === false,
+    'single-operator account binding drifted',
+  );
+  requireCheck(
+    issues,
+    staffingFixture?.requiredRoles?.every(
+      (role) =>
+        boundRoles.has(role) &&
+        roleBindings.some(
+          (binding) =>
+            binding.role === role &&
+            binding.primaryAccount === staffingFixture.primaryHumanAccount &&
+            binding.secondaryAccount === staffingFixture.secondaryReviewAccount,
+        ),
+    ),
+    'one or more operational roles lack the declared account binding',
+  );
+  requireCheck(
+    issues,
+    staffing?.monitoredWindow === staffingFixture?.monitoredWindow &&
+      staffing?.protectedRestWindow === staffingFixture?.protectedRestWindow &&
+      staffing?.launchStartWindow === staffingFixture?.launchStartWindow &&
+      staffing?.restWindowPolicy?.readOnlyCollectionAndDraftingAllowed ===
+        true &&
+      staffing?.restWindowPolicy?.publicMutationAllowed === false &&
+      staffing?.restWindowPolicy?.securityDispositionAllowed === false &&
+      staffing?.restWindowPolicy?.moderationDecisionAllowed === false &&
+      staffing?.restWindowPolicy?.availabilityClaimAllowed === false &&
+      staffing?.restWindowPolicy?.promotionRemainsPaused === true,
+    'single-operator rest window is not fail-closed',
+  );
 
   const labelNames = contract.labels.map((label) => label.name);
   requireCheck(
@@ -210,6 +254,10 @@ export function checkAlphaAttentionOperations(root = ROOT) {
     'freeze unrelated development',
     '--method DELETE repos/kungfu-systems/kungfu/interaction-limits',
     'humanReviewRequired: true',
+    '`dongkeren`',
+    '`kungfu-origin`',
+    '00:00-08:00',
+    'not a second human',
   ]) {
     requireCheck(
       issues,
@@ -285,6 +333,7 @@ export function checkAlphaAttentionOperations(root = ROOT) {
       'known-issues',
       'threshold-transitions',
       'handoff-and-roles',
+      'single-operator-rest-coverage',
       'moderation-rollback',
     ],
     contractRoot: sha256(canonical(contract)),

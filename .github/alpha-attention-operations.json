@@ -7,6 +7,56 @@
     "security": "private-vulnerability-reporting",
     "parallelInboxAllowed": false
   },
+  "staffing": {
+    "timezone": "Asia/Shanghai",
+    "humanOperatorCount": 1,
+    "primaryHumanAccount": "dongkeren",
+    "secondaryReviewAccount": "kungfu-origin",
+    "secondaryAccountIsIndependentHuman": false,
+    "roleBindings": [
+      {
+        "role": "launch-commander",
+        "primaryAccount": "dongkeren",
+        "secondaryAccount": "kungfu-origin"
+      },
+      {
+        "role": "issue-triage-operator",
+        "primaryAccount": "dongkeren",
+        "secondaryAccount": "kungfu-origin"
+      },
+      {
+        "role": "technical-reproduction-owner",
+        "primaryAccount": "dongkeren",
+        "secondaryAccount": "kungfu-origin"
+      },
+      {
+        "role": "communications-owner",
+        "primaryAccount": "dongkeren",
+        "secondaryAccount": "kungfu-origin"
+      },
+      {
+        "role": "moderation-operator",
+        "primaryAccount": "dongkeren",
+        "secondaryAccount": "kungfu-origin"
+      },
+      {
+        "role": "security-escalation-owner",
+        "primaryAccount": "dongkeren",
+        "secondaryAccount": "kungfu-origin"
+      }
+    ],
+    "monitoredWindow": "08:00-24:00",
+    "protectedRestWindow": "00:00-08:00",
+    "launchStartWindow": "08:00-12:00",
+    "restWindowPolicy": {
+      "readOnlyCollectionAndDraftingAllowed": true,
+      "publicMutationAllowed": false,
+      "securityDispositionAllowed": false,
+      "moderationDecisionAllowed": false,
+      "availabilityClaimAllowed": false,
+      "promotionRemainsPaused": true
+    }
+  },
   "activation": {
     "state": "blocked",
     "reason": "Repository changes, live labels, Discussions categories, protected review, and rehearsal evidence must all be current before Alpha publication.",

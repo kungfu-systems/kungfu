@@ -46,6 +46,24 @@
       "url": "docs/guides/known-issues.md#launch-blockers"
     }
   ],
+  "staffingCase": {
+    "timezone": "Asia/Shanghai",
+    "humanOperatorCount": 1,
+    "primaryHumanAccount": "dongkeren",
+    "secondaryReviewAccount": "kungfu-origin",
+    "secondaryAccountIsIndependentHuman": false,
+    "requiredRoles": [
+      "launch-commander",
+      "issue-triage-operator",
+      "technical-reproduction-owner",
+      "communications-owner",
+      "moderation-operator",
+      "security-escalation-owner"
+    ],
+    "monitoredWindow": "08:00-24:00",
+    "protectedRestWindow": "00:00-08:00",
+    "launchStartWindow": "08:00-12:00"
+  },
   "thresholdCases": [
     {
       "externalIssues": 0,

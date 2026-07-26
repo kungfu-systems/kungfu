@@ -14,7 +14,7 @@ test('the complete repository-bound rehearsal passes without live mutation', () 
   assert.equal(result.verdict, 'pass', JSON.stringify(result.issues));
   assert.equal(result.liveMutation, false);
   assert.match(result.receiptRoot, /^sha256:[0-9a-f]{64}$/u);
-  assert.equal(result.checks.length, 10);
+  assert.equal(result.checks.length, 11);
 });
 
 test('public text is summarized structurally and never becomes an action', () => {

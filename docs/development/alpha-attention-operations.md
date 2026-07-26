@@ -6,22 +6,39 @@ deployment, promotion, moderation settings, or any other live mutation.
 
 ## Authorities and roles
 
-The launch handoff must bind each role to a named GitHub account and a rest
-window. One person may hold more than one role only when coverage remains
-explicit.
+The organization currently has one human operator. Every consequential role is
+therefore bound to `dongkeren`. `kungfu-origin` is the secondary GitHub account
+used for independent pull-request review and an account-level handoff; it is
+not a second human and must not be represented as concurrent human coverage.
 
-| Role | Responsibility |
-| --- | --- |
-| Launch commander | Owns the load band, pauses promotion, freezes unrelated work, and makes go/no-go recommendations |
-| Issue triage operator | Counts external arrivals, checks form completeness, and obtains first human judgment |
-| Technical reproduction owner | Reproduces only sanitized, bounded reports in an isolated environment |
-| Communications owner | Maintains Alpha Status, Known Issues, and scheduled digests without promising an SLA |
-| Moderation operator | Preserves abuse evidence and proposes proportionate reversible action |
-| Security escalation owner | Receives private reports and decides security handling; never delegates disposition to an agent |
+| Role | Primary human account | Secondary account | Responsibility |
+| --- | --- | --- | --- |
+| Launch commander | `dongkeren` | `kungfu-origin` | Owns the load band, pauses promotion, freezes unrelated work, and makes go/no-go recommendations |
+| Issue triage operator | `dongkeren` | `kungfu-origin` | Counts external arrivals, checks form completeness, and obtains first human judgment |
+| Technical reproduction owner | `dongkeren` | `kungfu-origin` | Reproduces only sanitized, bounded reports in an isolated environment |
+| Communications owner | `dongkeren` | `kungfu-origin` | Maintains Alpha Status, Known Issues, and scheduled digests without promising an SLA |
+| Moderation operator | `dongkeren` | `kungfu-origin` | Preserves abuse evidence and proposes proportionate reversible action |
+| Security escalation owner | `dongkeren` | `kungfu-origin` | Receives private reports and decides security handling; never delegates disposition to an agent |
 
 The launch commander and security escalation owner are decision roles. Agents
 may prepare deterministic summaries and candidate updates, but may not occupy
 those authorities.
+
+### Single-operator coverage and rest
+
+All times use `Asia/Shanghai`. Schedule any future T-0 between 08:00 and 12:00.
+The monitored window is 08:00-24:00 and the protected rest window is
+00:00-08:00. This is checkpoint-based human supervision, not a requirement for
+continuous screen watching:
+
+- read-only automation may count queues and prepare sanitized digest drafts;
+- `dongkeren` reviews those drafts and makes every consequential decision;
+- during the rest window there is no claimed human coverage, even if
+  `kungfu-origin` remains technically available as an account;
+- public mutations, security dispositions, moderation decisions, availability
+  claims, and promotional amplification remain paused during the rest window;
+- a pending elevated-impact signal stays fail-closed for `dongkeren` to review
+  at the next monitored checkpoint.
 
 ## Routing and queues
 
@@ -72,7 +89,8 @@ band by itself and is never a moderation trigger.
 
 ### T-24 to T-12
 
-- Bind every role and backup account; record handoff and rest windows.
+- Confirm the checked-in `dongkeren` role bindings, the `kungfu-origin`
+  secondary-account boundary, and the 00:00-08:00 protected rest window.
 - Read back repository settings, Discussions categories, labels, queues,
   private vulnerability reporting, branch protection, and the current
   interaction limit.
@@ -82,7 +100,8 @@ band by itself and is never a moderation trigger.
 
 ### T-12 to T-0
 
-- Run a handoff drill between primary and backup operators.
+- Run an account-level handoff drill between `dongkeren` and `kungfu-origin`
+  without claiming a second human operator.
 - Rehearse security and data-loss fast paths using fixtures only.
 - Rehearse the interaction-limit enable/readback/disable sequence without
   enabling it on the public repository.
