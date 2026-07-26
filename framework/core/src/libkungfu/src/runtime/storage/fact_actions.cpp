@@ -22,7 +22,8 @@ namespace {
 
 class relation_endpoint_error : public fact_request_error {
 public:
-  explicit relation_endpoint_error(const std::string &message) : fact_request_error("invalid-field", message) {}
+  explicit relation_endpoint_error(const std::string &message)
+      : fact_request_error("relation-endpoint-invalid", message) {}
 };
 
 const std::map<std::string, std::set<std::string>> MUTATION_REQUEST_FIELDS = {
@@ -426,7 +427,7 @@ parsed_mutation parse_mutation_request(const nlohmann::json &input, const std::s
       request.source = parse_endpoint(input.at("source"));
       request.target = parse_endpoint(input.at("target"));
     } catch (const relation_endpoint_error &error) {
-      return action_failure{"invalid-field", error.what()};
+      return action_failure{"relation-endpoint-invalid", error.what()};
     }
     request.attributes_root = required_text(input, "attributes_root");
     request.admission_roots = normalized_roots(input, "admission_roots");

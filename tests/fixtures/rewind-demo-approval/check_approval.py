@@ -12,7 +12,7 @@
 #   3. response strings are caller-overridable (providers differ);
 #   4. the pinned rewind_events.bfbs carries the ApprovalDecision shape, so the
 #      fact decodes from a bundle by reflection alone;
-#   5. the action_type is registered and SCHEMA_VERSION bumped.
+#   5. the action_type is registered at the current schema version.
 #
 # Needs flatbuffers (run under `uv run --frozen python`), not pykungfu: it stubs
 # only the top-level kungfu package, like the cost-wire fixture.
@@ -53,7 +53,7 @@ if "kungfu" not in sys.modules:
     )
     sys.modules["kungfu"] = _m
 
-from kungfu.rewind import (  # noqa: E402
+from kungfu.rewind import (
     ACTION_APPROVAL_DECISION,
     ACTION_TYPE_NAMES,
     SCHEMA_VERSION,
@@ -61,8 +61,10 @@ from kungfu.rewind import (  # noqa: E402
     bundle,
     reflection_fb,
 )
-from kungfu.rewind.fb.ApprovalDecision import ApprovalDecision as FbApproval  # noqa: E402
-from kungfu.rewind.fb.Decision import Decision  # noqa: E402
+from kungfu.rewind.fb.ApprovalDecision import (
+    ApprovalDecision as FbApproval,
+)
+from kungfu.rewind.fb.Decision import Decision
 
 failures = []
 
@@ -93,7 +95,7 @@ check(
     "rewind.approval.decision registered as ApprovalDecision",
     ACTION_TYPE_NAMES.get(ACTION_APPROVAL_DECISION) == "ApprovalDecision",
 )
-check("SCHEMA_VERSION bumped to 3", SCHEMA_VERSION == 3, str(SCHEMA_VERSION))
+check("SCHEMA_VERSION is current", SCHEMA_VERSION == 4, str(SCHEMA_VERSION))
 
 # --- Approve: fact recorded + input action ----------------------------------
 emit, events = sink()
@@ -189,9 +191,9 @@ if obj is not None:
     ):
         check(f"bfbs ApprovalDecision.{required}", required in field_names)
 
-# --- bundle binds rewind.approval.decision at version 3 ---------------------
-import json  # noqa: E402
-import tempfile  # noqa: E402
+# --- bundle binds rewind.approval.decision at the current version -----------
+import json
+import tempfile
 
 bundle_dir = tempfile.mkdtemp(prefix="approval-")
 manifest_path = bundle.emit(
@@ -212,7 +214,7 @@ check(
     "manifest binds rewind.approval.decision -> ApprovalDecision",
     binding.get("name") == "ApprovalDecision",
 )
-check("manifest binding schema_version 3", binding.get("schema_version") == 3)
+check("manifest binding schema_version 4", binding.get("schema_version") == 4)
 
 if failures:
     print(f"approval check failed: {failures}")
