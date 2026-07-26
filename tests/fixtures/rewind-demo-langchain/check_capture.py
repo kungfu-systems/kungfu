@@ -3,8 +3,8 @@
 # Capture assertions for the real-LangChain fixture. Proves that an unmodified
 # third-party agent framework, run once under `kungfu trace`, lands a complete
 # fact set in ONE journal: both model turns captured at the wire, the tool call
-# captured in-process by the adapter, and the tool causally bracketed between
-# the turns. Runs inside the dev kfc environment (needs pykungfu).
+# captured in-process by the adapter, and the tool result consumed by the
+# second model turn. Runs inside the dev kfc environment (needs pykungfu).
 #
 # Honest scope: this is a single-runtime run, so it upgrades the *zero-code-
 # change real-framework capture* leg of the moat from the toy toolkit to a real
@@ -12,8 +12,6 @@
 # their own fixtures; this one does not restate those claims.
 #
 # Usage: check_capture.py <runtime-dir> <run-id>
-
-# ruff: noqa: E402
 
 import hashlib
 import json
@@ -27,7 +25,6 @@ sys.path.insert(0, os.path.join(_core, "src", "python"))
 sys.path.insert(0, os.path.join(_core, "dist", "kungfu"))
 
 import kungfu
-
 from kungfu.rewind import (
     ACTION_MODEL_REQUEST,
     ACTION_MODEL_RESPONSE,
@@ -39,7 +36,6 @@ from kungfu.rewind import (
     ACTION_TYPE_NAMES,
     CARRIER_REWIND_ACTION,
 )
-from kungfu.rewind.wire import unwrap_event
 from kungfu.rewind.fb.CallStatus import CallStatus
 from kungfu.rewind.fb.CaptureLayer import CaptureLayer
 from kungfu.rewind.fb.ModelRequest import ModelRequest
@@ -48,6 +44,7 @@ from kungfu.rewind.fb.RunBegin import RunBegin
 from kungfu.rewind.fb.RunEnd import RunEnd
 from kungfu.rewind.fb.ToolCall import ToolCall
 from kungfu.rewind.fb.ToolResult import ToolResult
+from kungfu.rewind.wire import unwrap_event
 
 schema = kungfu.__binding__.yijinjing
 yjj = kungfu.__binding__.runtime
@@ -93,11 +90,10 @@ if begin_frames:
 req_frames = frames(ACTION_MODEL_REQUEST)
 check("two ModelRequest frames (tool-call turn + final turn)", len(req_frames) == 2)
 req_spans = []
-req_times = []
-for hdr, payload in req_frames:
+request_bodies = []
+for _, payload in req_frames:
     req = ModelRequest.GetRootAs(bytes(payload), 0)
     req_spans.append((req.SpanId() or b"").decode())
-    req_times.append(hdr.gen_time)
     check("ModelRequest.run_id matches", (req.RunId() or b"").decode() == run_id)
     check("ModelRequest.layer == ModelWire", req.Layer() == CaptureLayer.ModelWire)
     check(
@@ -108,17 +104,16 @@ for hdr, payload in req_frames:
         (req.Model() or b"").decode() == "fixture-model",
     )
     body = json.loads((req.RequestBody() or b"{}").decode())
+    request_bodies.append(body)
     check("ModelRequest.request_body has messages", bool(body.get("messages")))
 
 resp_frames = frames(ACTION_MODEL_RESPONSE)
 check("two ModelResponse frames", len(resp_frames) == 2)
 finish_reasons = []
 resp_spans = []
-resp_times = []
-for hdr, payload in resp_frames:
+for _, payload in resp_frames:
     resp = ModelResponse.GetRootAs(bytes(payload), 0)
     resp_spans.append((resp.SpanId() or b"").decode())
-    resp_times.append(hdr.gen_time)
     finish_reasons.append((resp.FinishReason() or b"").decode())
     check("ModelResponse.status == Ok", resp.Status() == CallStatus.Ok)
     check("ModelResponse.latency_ns > 0", resp.LatencyNs() > 0)
@@ -140,12 +135,10 @@ check(
 call_frames = frames(ACTION_TOOL_CALL)
 check("one ToolCall frame from the real BaseTool seam", len(call_frames) == 1)
 call_span = None
-call_time = None
 if call_frames:
-    hdr, payload = call_frames[0]
+    _, payload = call_frames[0]
     call = ToolCall.GetRootAs(bytes(payload), 0)
     call_span = (call.SpanId() or b"").decode()
-    call_time = hdr.gen_time
     check("ToolCall.run_id matches", (call.RunId() or b"").decode() == run_id)
     check("ToolCall.layer == InProcessHook", call.Layer() == CaptureLayer.InProcessHook)
     check("ToolCall.tool_name == lookup", (call.ToolName() or b"").decode() == "lookup")
@@ -177,15 +170,31 @@ check(
 )
 
 # ── one journal, one causal timeline ─────────────────────────────────
-# the tool call must sit between the model turn that requested it and the turn
-# that consumed its result — the real agent's causal story, in event time
-if call_time is not None and len(req_times) == 2 and len(resp_times) == 2:
-    first_turn_end = min(resp_times)
-    last_turn_start = max(req_times)
+# The proxy and in-process adapter are independent writers, so their journal
+# commit timestamps need not preserve wall-clock ordering on a loaded runner.
+# Prove the causal edge semantically instead: exactly one model request must
+# consume the real tool output before the final model response.
+tool_result_requests = [
+    body
+    for body in request_bodies
+    if any(message.get("role") == "tool" for message in body.get("messages", []))
+]
+check(
+    "one model turn consumes the tool result",
+    len(tool_result_requests) == 1,
+    f"tool-result requests={len(tool_result_requests)}",
+)
+if tool_result_requests:
+    consumed_tool_messages = [
+        message
+        for message in tool_result_requests[0].get("messages", [])
+        if message.get("role") == "tool"
+    ]
     check(
-        "tool call is bracketed by the two model turns",
-        first_turn_end <= call_time <= last_turn_start,
-        f"resp0={first_turn_end} call={call_time} req1={last_turn_start}",
+        "final model turn carries the real tool output",
+        any(
+            "KUNGFU REWIND" in json.dumps(message) for message in consumed_tool_messages
+        ),
     )
 
 end_frames = frames(ACTION_RUN_END)

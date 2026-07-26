@@ -193,7 +193,10 @@ function runEpisodeQualificationSmoke() {
     {
       cwd: ROOT,
       encoding: 'utf8',
-      timeout: 5 * 60 * 1000,
+      // The smoke is intentionally load-bearing and exercises 1k-episode
+      // accumulation plus contended writers.  Slower Linux qualification
+      // runners can legitimately exceed five minutes without hanging.
+      timeout: 15 * 60 * 1000,
       maxBuffer: 10 * 1024 * 1024,
     },
   );

@@ -57,6 +57,19 @@ test('release verification reuses the exact mypy tool lane without project sync'
   assert.doesNotMatch(verify, /uv['"], \['run', '--frozen', 'mypy'/);
 });
 
+test('cross-platform full verification keeps Python resolution frozen and allows the bounded Episode workload', () => {
+  const verify = fs.readFileSync(path.join(ROOT, 'scripts/verify.mjs'), 'utf8');
+  const sdk = fs.readFileSync(
+    path.join(ROOT, 'developer/sdk/src/sdk.js'),
+    'utf8',
+  );
+  assert.match(verify, /timeout: 15 \* 60 \* 1000/);
+  assert.match(
+    sdk,
+    /'run',\s*'--frozen',\s*'--project',\s*coreDir,\s*'python'/,
+  );
+});
+
 test('Python source checks use uvx when a bare ruff is unavailable', () => {
   const command = sourcePythonCommand(
     ['format', '--check'],
