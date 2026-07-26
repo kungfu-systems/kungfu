@@ -109,10 +109,10 @@ jobs:
       contents: write
       issues: write
       id-token: write
-    uses: kungfu-systems/buildchain/.github/workflows/release-candidate-promote.yml@3a93cc3ce87fd8c5239c5199f705fb14b55c7808 # v3.0.1-alpha.4 protected workflow shell
+    uses: kungfu-systems/buildchain/.github/workflows/release-candidate-promote.yml@4c27ff2a82f18271b20f5ebafeb4f84ab4ebfcbb # merged v3 runtime with structured cache evidence
     with:
       channel: ${{ startsWith(inputs.target-ref || github.event.pull_request.base.ref, 'alpha/') && 'alpha' || 'release' }}
-      buildchain-ref: 3a93cc3ce87fd8c5239c5199f705fb14b55c7808
+      buildchain-ref: 4c27ff2a82f18271b20f5ebafeb4f84ab4ebfcbb
       target-ref: ${{ inputs.target-ref || github.event.pull_request.base.ref }}
       target-sha: ${{ inputs.target-sha || github.event.pull_request.merge_commit_sha || github.sha }}
       buildchain-contract-lock-path: ${{ startsWith(inputs.target-ref || github.event.pull_request.base.ref, 'alpha/') && '.buildchain/alpha-contract-lock.json' || '.buildchain/contract-lock.json' }}
@@ -181,9 +181,12 @@ jobs:
     needs: [promotion-contract, promote]
     if: ${{ always() && needs.promotion-contract.result == 'success' && needs.promote.result == 'success' && startsWith(inputs.target-ref || github.event.pull_request.base.ref, 'alpha/') }}
     runs-on: ubuntu-24.04
+    concurrency:
+      group: alpha-release-history-v1
+      cancel-in-progress: false
     permissions:
       actions: read
-      contents: read
+      contents: write
     steps:
       - name: Checkout immutable Alpha candidate
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
@@ -203,6 +206,7 @@ jobs:
           receipt-run-id: ${{ needs.promotion-contract.outputs.preflight-run-id }}
 
       - name: Collect source-bound workflow timelines
+        id: timelines
         env:
           GH_TOKEN: ${{ github.token }}
           CANDIDATE_SHA: ${{ needs.promotion-contract.outputs.candidate-source-sha }}
@@ -227,6 +231,7 @@ jobs:
               --jq '.workflow_runs | map(select(.event == "pull_request")) | sort_by(.run_number) | last | .id // empty'
           )"
           test -n "$candidate_run_id"
+          echo "candidate-run-id=$candidate_run_id" >> "$GITHUB_OUTPUT"
           collect_run "$PREFLIGHT_RUN_ID" \
             .buildchain/alpha-release-timeline/runs/preflight
           collect_run "$candidate_run_id" \
@@ -239,6 +244,26 @@ jobs:
             --slurpfile promotion .buildchain/alpha-release-timeline/runs/promotion.json \
             '{preflight: $preflight[0], candidate: $candidate[0], promotion: $promotion[0]}' \
             > .buildchain/alpha-release-timeline/runs.json
+
+      - name: Restore structured cache evidence from the exact candidate run
+        env:
+          GH_TOKEN: ${{ github.token }}
+          CANDIDATE_RUN_ID: ${{ steps.timelines.outputs.candidate-run-id }}
+        run: |
+          set -euo pipefail
+          diagnostics_dir=".buildchain/alpha-release-timeline/cache-diagnostics"
+          mkdir -p "$diagnostics_dir"
+          gh run download "$CANDIDATE_RUN_ID" \
+            --repo "$GITHUB_REPOSITORY" \
+            --pattern "kungfu-diagnostics-*" \
+            --dir "$diagnostics_dir"
+          ./shifu alpha:cache:evidence write \
+            --preflight .buildchain/alpha-promotion-preflight/receipt.json \
+            --diagnostics "$diagnostics_dir" \
+            --out .buildchain/alpha-release-timeline/cache-evidence.json
+          ./shifu alpha:cache:evidence verify \
+            --preflight .buildchain/alpha-promotion-preflight/receipt.json \
+            --evidence .buildchain/alpha-release-timeline/cache-evidence.json
 
       - name: Materialize exact promotion evidence references
         env:
@@ -257,36 +282,22 @@ jobs:
             '{evidenceDigest: $evidenceDigest, payloadRoot: $payloadRoot, publicUrl: $publicUrl}' \
             > .buildchain/alpha-release-timeline/publication.json
 
-      - name: Restore compatible historical Alpha timeline samples
-        env:
-          GH_TOKEN: ${{ github.token }}
+      - name: Checkout durable content-addressed Alpha history
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          ref: alpha-release-history/v1
+          path: .buildchain/alpha-release-history-store
+          fetch-depth: 1
+
+      - name: Verify and export compatible durable Alpha samples
         run: |
           set -euo pipefail
-          mkdir -p \
-            .buildchain/alpha-release-timeline/samples \
-            .buildchain/alpha-release-timeline/history
-          sample_index=0
-          while read -r run_id; do
-            history_dir=".buildchain/alpha-release-timeline/history/${run_id}"
-            if gh run download "$run_id" \
-              --repo "$GITHUB_REPOSITORY" \
-              --pattern "alpha-release-timeline-${run_id}" \
-              --dir "$history_dir"; then
-              while read -r receipt; do
-                sample_index=$((sample_index + 1))
-                cp "$receipt" \
-                  ".buildchain/alpha-release-timeline/samples/history-${sample_index}.json"
-              done < <(find "$history_dir" -name receipt.json -type f -print)
-            fi
-          done < <(
-            gh run list \
-              --repo "$GITHUB_REPOSITORY" \
-              --workflow release-new-version.yml \
-              --status success \
-              --limit 30 \
-              --json databaseId \
-              --jq '.[].databaseId'
-          )
+          mkdir -p .buildchain/alpha-release-timeline/samples
+          ./shifu alpha:release:history verify \
+            --history .buildchain/alpha-release-history-store/history
+          ./shifu alpha:release:history export \
+            --history .buildchain/alpha-release-history-store/history \
+            --out .buildchain/alpha-release-timeline/samples
 
       - name: Write and verify Alpha release timeline
         env:
@@ -301,6 +312,7 @@ jobs:
             --promotion-tree "${{ needs.promotion-contract.outputs.promotion-tree }}" \
             --runs .buildchain/alpha-release-timeline/runs.json \
             --controller .buildchain/alpha-release-timeline/controller-receipt.json \
+            --cache-evidence .buildchain/alpha-release-timeline/cache-evidence.json \
             --candidate-artifact "${{ needs.promote.outputs.release-candidate-artifact }}" \
             --publication .buildchain/alpha-release-timeline/publication.json \
             --mode "$TIMELINE_MODE" \
@@ -313,6 +325,24 @@ jobs:
             --inputs .buildchain/alpha-release-timeline/samples \
             --out .buildchain/alpha-release-timeline/slo.json
 
+      - name: Append real release to durable Alpha history
+        if: ${{ github.event_name == 'pull_request' }}
+        run: |
+          set -euo pipefail
+          history_checkout=".buildchain/alpha-release-history-store"
+          ./shifu alpha:release:history append \
+            --history "${history_checkout}/history" \
+            --receipt .buildchain/alpha-release-timeline/receipt.json \
+            --out .buildchain/alpha-release-timeline/history-append.json
+          if test -n "$(git -C "$history_checkout" status --porcelain -- history)"; then
+            git -C "$history_checkout" config user.name "github-actions[bot]"
+            git -C "$history_checkout" config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git -C "$history_checkout" add history
+            git -C "$history_checkout" commit \
+              -m "chore(alpha): append release timeline ${{ needs.promotion-contract.outputs.candidate-source-sha }}"
+            git -C "$history_checkout" push origin HEAD:alpha-release-history/v1
+          fi
+
       - name: Upload auditable Alpha timeline and SLO
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
@@ -320,5 +350,8 @@ jobs:
           path: |
             .buildchain/alpha-release-timeline/receipt.json
             .buildchain/alpha-release-timeline/slo.json
+            .buildchain/alpha-release-timeline/cache-evidence.json
+            .buildchain/alpha-release-timeline/history-append.json
+            .buildchain/alpha-release-history-store/history/manifest.json
           if-no-files-found: error
           retention-days: 90

@@ -756,7 +756,7 @@
           "authority": "qualification",
           "publication": "none",
           "receipt": "qualifying",
-          "definitionDigest": "sha256:d7fac902da8253f5733d352d4420d90f3622c2977c984d336065bfa4313c6845",
+          "definitionDigest": "sha256:f76ac299bac932c7c7052cec118937848b1809dbfa71e83fec1abbab68f20a6e",
           "credentials": {
             "githubToken": "read",
             "oidc": false,
@@ -765,7 +765,7 @@
             "environment": null
           },
           "externalActions": [
-            "kungfu-systems/buildchain/.github/workflows/.auditable-demo.yml@3a93cc3ce87fd8c5239c5199f705fb14b55c7808"
+            "kungfu-systems/buildchain/.github/workflows/.auditable-demo.yml@4c27ff2a82f18271b20f5ebafeb4f84ab4ebfcbb"
           ],
           "steps": []
         },
@@ -774,7 +774,7 @@
           "authority": "qualification",
           "publication": "none",
           "receipt": "qualifying",
-          "definitionDigest": "sha256:e84f9d80727a58c702c89b51d53bd29f616411e7df23223cc2a7acd18f43b48e",
+          "definitionDigest": "sha256:21db2dddc05cd30efa905a7148d06cc1cee133e1892abc687d2327c1b288223b",
           "credentials": {
             "githubToken": "read",
             "oidc": false,
@@ -804,7 +804,7 @@
               "index": 3,
               "label": "name:Write exact auditable demo Release Passport",
               "authority": "evidence-publication",
-              "definitionDigest": "sha256:1a46c30936194d3954af506fba8bec9e731db6d8e16e2004971c59f1c505a110"
+              "definitionDigest": "sha256:dc3189897560915bf1beab0a4de61dc172314dcaaac1b3a68110335000a0f510"
             },
             {
               "index": 4,
@@ -819,7 +819,7 @@
           "authority": "qualification",
           "publication": "none",
           "receipt": "qualifying",
-          "definitionDigest": "sha256:1557d3227208a7b22af58666c137ac85b6e80a51ef847d6c370c9713d9a457c5",
+          "definitionDigest": "sha256:1540d37193b39f75692410ac4c8d7b85cb42d3bc0f53be645e272d2b48dba517",
           "credentials": {
             "githubToken": "write",
             "oidc": true,
@@ -832,7 +832,7 @@
             "environment": null
           },
           "externalActions": [
-            "kungfu-systems/buildchain/.github/workflows/.build.yml@3a93cc3ce87fd8c5239c5199f705fb14b55c7808"
+            "kungfu-systems/buildchain/.github/workflows/.build.yml@4c27ff2a82f18271b20f5ebafeb4f84ab4ebfcbb"
           ],
           "steps": []
         },
@@ -1019,7 +1019,7 @@
           "authority": "qualification",
           "publication": "none",
           "receipt": "diagnostic",
-          "definitionDigest": "sha256:3691ad700797746485029ad08fe0b9a785bd79b7743e9bcf090f2cbaa121ea94",
+          "definitionDigest": "sha256:23289f207a75e02fe3bf44916fca9a41313b1bf21b5e6bbb342ddfa6cddef72e",
           "credentials": {
             "githubToken": "write",
             "oidc": true,
@@ -1039,9 +1039,9 @@
             },
             {
               "index": 2,
-              "label": "name:Admit reusable source and platform probes",
+              "label": "id:receipt",
               "authority": "qualification",
-              "definitionDigest": "sha256:c14da10b06140c220c744b60a3e7f47f2160d556edf31011dd5ac1e73c54d421"
+              "definitionDigest": "sha256:4a1aa1679e886295f7fdbfe400c3f7494164ff44aafb5741f52dc6c1ae061cca"
             }
           ]
         },
@@ -2172,9 +2172,9 @@
           "authority": "qualification",
           "publication": "none",
           "receipt": "diagnostic",
-          "definitionDigest": "sha256:ae372c4e7bc78a0f2e9d912464102bb1302d1444f4425c944102375d90332a6d",
+          "definitionDigest": "sha256:8107e128b9604e7e476d4d773750b1de799586a9a1d4dda47cc6cce547cadee1",
           "credentials": {
-            "githubToken": "read",
+            "githubToken": "write",
             "oidc": false,
             "repositorySecrets": [],
             "inheritedSecrets": false,
@@ -2183,6 +2183,7 @@
           "externalActions": [
             "actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0",
             "actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e",
+            "actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0",
             "actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02"
           ],
           "steps": [
@@ -2206,33 +2207,51 @@
             },
             {
               "index": 4,
-              "label": "name:Collect source-bound workflow timelines",
+              "label": "id:timelines",
               "authority": "qualification",
-              "definitionDigest": "sha256:c6fcc155f02849c84956be57c7ed3cf745e2a4cea11f91d1402f499034c52787"
+              "definitionDigest": "sha256:9caca0f127e32c5af978c9220cdbbae7cdabbbb5950387b40f1ff130abf3b4d0"
             },
             {
               "index": 5,
+              "label": "name:Restore structured cache evidence from the exact candidate run",
+              "authority": "qualification",
+              "definitionDigest": "sha256:0c349f15e4ae4190bc9348d3b34d8e5ad6255d2358792f59455fcdf3e9e9e67b"
+            },
+            {
+              "index": 6,
               "label": "name:Materialize exact promotion evidence references",
               "authority": "qualification",
               "definitionDigest": "sha256:2b693abbdbdaac7f9eb494c6708b83da9c29711931199819789440df0e757a7a"
             },
             {
-              "index": 6,
-              "label": "name:Restore compatible historical Alpha timeline samples",
-              "authority": "qualification",
-              "definitionDigest": "sha256:e32d8c2c7c2c7a8901551e981e6fe22ad3df5f4e211bf3f290709788dc6ab738"
-            },
-            {
               "index": 7,
-              "label": "name:Write and verify Alpha release timeline",
+              "label": "name:Checkout durable content-addressed Alpha history",
               "authority": "evidence-publication",
-              "definitionDigest": "sha256:3c62f96bc4ec9526acbbed35078da61ddb924f802bb6af45666e0b79e5dbb4fb"
+              "definitionDigest": "sha256:85bdc56f02ab9a14a38d530020d53e06cb44855f84ba1467629e67b9d300f995"
             },
             {
               "index": 8,
+              "label": "name:Verify and export compatible durable Alpha samples",
+              "authority": "evidence-publication",
+              "definitionDigest": "sha256:e8cbd1d9499677f03619efcd7b69ba58772b75603ac6c58e32c76f9ad8f42611"
+            },
+            {
+              "index": 9,
+              "label": "name:Write and verify Alpha release timeline",
+              "authority": "qualification",
+              "definitionDigest": "sha256:e1b80351fdbf6f75f02e0216c50533246aa0ad66b35191750232e02618dddfea"
+            },
+            {
+              "index": 10,
+              "label": "name:Append real release to durable Alpha history",
+              "authority": "qualification",
+              "definitionDigest": "sha256:72870118963afa178d087af6da2cf66951e1c0e7b3ec9fa8b7b9517477e14b27"
+            },
+            {
+              "index": 11,
               "label": "name:Upload auditable Alpha timeline and SLO",
               "authority": "evidence-publication",
-              "definitionDigest": "sha256:aa5a292bf6e1d91deeeb24cb92145670cb1fac2d64f3592c29cd2a2d52724d0b"
+              "definitionDigest": "sha256:c2e06d0c4ee799fa578984f0414983625a8ebbe4201c8e1051ae358b70e4af7a"
             }
           ]
         },
@@ -2241,7 +2260,7 @@
           "authority": "release-control",
           "publication": "channel",
           "receipt": "qualifying",
-          "definitionDigest": "sha256:46122b68f6994ad1edb8a6f2877ee6de563b9eb58a5de722f86e2b2816814ad2",
+          "definitionDigest": "sha256:441f776461c06905c916baa34085b391201b96d602d101485f5342d223825d70",
           "credentials": {
             "githubToken": "write",
             "oidc": true,
@@ -2256,7 +2275,7 @@
             "environment": null
           },
           "externalActions": [
-            "kungfu-systems/buildchain/.github/workflows/release-candidate-promote.yml@3a93cc3ce87fd8c5239c5199f705fb14b55c7808"
+            "kungfu-systems/buildchain/.github/workflows/release-candidate-promote.yml@4c27ff2a82f18271b20f5ebafeb4f84ab4ebfcbb"
           ],
           "steps": []
         },

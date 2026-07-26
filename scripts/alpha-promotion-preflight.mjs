@@ -25,8 +25,11 @@ const ROOT_FILES = {
   toolchain: [
     '.node-version',
     'package.json',
-    'pnpm-lock.yaml',
     'crates/libwasm-spike/rust-toolchain.toml',
+  ],
+  dependencyLock: [
+    'package.json',
+    'pnpm-lock.yaml',
     'crates/libwasm-spike/wasmer/Cargo.lock',
     'crates/libwasm-spike/wasmtime/Cargo.lock',
   ],
@@ -34,11 +37,15 @@ const ROOT_FILES = {
     '.buildchain/alpha-contract-lock.json',
     '.buildchain/contract-lock.json',
     'docs/qualification/alpha-release-latency.contract.json',
+    'docs/qualification/alpha-ruleset.contract.json',
     'docs/qualification/gates/execution-profiles.json',
     'docs/release-promotion-rehearsal.contract.json',
     'scripts/alpha-promotion-preflight.mjs',
     'scripts/alpha-publication-tail-plan.mjs',
+    'scripts/alpha-cache-evidence.mjs',
     'scripts/alpha-release-timeline.mjs',
+    'scripts/alpha-release-history.mjs',
+    'scripts/alpha-ruleset.mjs',
     'scripts/probe-release-platform.mjs',
   ],
 };

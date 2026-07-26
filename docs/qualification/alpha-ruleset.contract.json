@@ -1,0 +1,85 @@
+{
+  "schema": "kungfu.alpha-ruleset-contract/v1",
+  "status": "active",
+  "repository": "kungfu-systems/kungfu",
+  "targetRef": "alpha/v4/v4.0",
+  "ruleset": {
+    "name": "Kungfu Alpha candidate authority: alpha/v4/v4.0",
+    "target": "branch",
+    "enforcement": "active",
+    "bypass_actors": [],
+    "conditions": {
+      "ref_name": {
+        "include": [
+          "refs/heads/alpha/v4/v4.0"
+        ],
+        "exclude": []
+      }
+    },
+    "rules": [
+      {
+        "type": "pull_request",
+        "parameters": {
+          "allowed_merge_methods": [
+            "merge",
+            "squash",
+            "rebase"
+          ],
+          "dismiss_stale_reviews_on_push": true,
+          "dismissal_restriction": {
+            "allowed_actors": [],
+            "enabled": false
+          },
+          "require_code_owner_review": true,
+          "require_last_push_approval": true,
+          "required_approving_review_count": 1,
+          "required_review_thread_resolution": true,
+          "required_reviewers": []
+        }
+      },
+      {
+        "type": "required_status_checks",
+        "parameters": {
+          "do_not_enforce_on_create": false,
+          "required_status_checks": [
+            {
+              "context": "build"
+            },
+            {
+              "context": "signoff",
+              "integration_id": 15368
+            },
+            {
+              "context": "validate",
+              "integration_id": 15368
+            }
+          ],
+          "strict_required_status_checks_policy": true
+        }
+      },
+      {
+        "type": "deletion"
+      },
+      {
+        "type": "non_fast_forward"
+      }
+    ]
+  },
+  "classicProtection": {
+    "mode": "defense-in-depth",
+    "requiredChecks": [
+      "build",
+      "signoff",
+      "validate"
+    ],
+    "enforceAdmins": true,
+    "requiredApprovals": 1,
+    "dismissStaleReviews": true,
+    "requireCodeOwnerReview": true,
+    "requireLastPushApproval": true,
+    "requireResolvedThreads": true,
+    "allowForcePushes": false,
+    "allowDeletions": false
+  },
+  "contractRoot": "sha256:64bd0cd5491f3e278ec93317087ddd235a73dc20c5eee0d4543c1d2824003316"
+}
