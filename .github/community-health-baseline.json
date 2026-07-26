@@ -26,6 +26,16 @@
     "target": "kungfu-systems/.github",
     "state": "planned-human-gated",
     "candidateRoot": ".github/community-health-default-repository",
+    "requiredFiles": [
+      "README.md",
+      "CODE_OF_CONDUCT.md",
+      "CONTRIBUTING.md",
+      "GOVERNANCE.md",
+      "SECURITY.md",
+      "SUPPORT.md",
+      "workflow-templates/community-intake-admission.properties.json",
+      "workflow-templates/community-intake-admission.yml"
+    ],
     "publicSafe": true,
     "liveMutationAuthorized": false
   },

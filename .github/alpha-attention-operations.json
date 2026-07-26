@@ -60,6 +60,27 @@
   "activation": {
     "state": "blocked",
     "reason": "Repository changes, live labels, Discussions categories, protected review, and rehearsal evidence must all be current before Alpha publication.",
+    "targetRepository": "kungfu-systems/kungfu",
+    "requiredDiscussionCategories": [
+      {
+        "name": "Q&A",
+        "slug": "q-a",
+        "isAnswerable": true
+      },
+      {
+        "name": "Ideas",
+        "slug": "ideas",
+        "isAnswerable": false
+      },
+      {
+        "name": "Show and tell",
+        "slug": "show-and-tell",
+        "isAnswerable": false
+      }
+    ],
+    "requiredActiveRulesets": [
+      "Buildchain dev merge queue: dev/v4/v4.0"
+    ],
     "requiredLiveReadback": {
       "issues": true,
       "discussions": true,

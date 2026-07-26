@@ -8,6 +8,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { parse } from 'yaml';
 
+import { buildAlphaAttentionActivationPlan } from './alpha-attention-activation.mjs';
 import {
   attentionBand,
   buildTriageProposal,
@@ -74,6 +75,9 @@ export function checkAlphaAttentionOperations(root = ROOT) {
       ),
     ),
   );
+  const community = JSON.parse(
+    read(path.join(root, '.github', 'community-health-baseline.json')),
+  );
 
   requireCheck(
     issues,
@@ -84,6 +88,26 @@ export function checkAlphaAttentionOperations(root = ROOT) {
     issues,
     contract.activation?.state === 'blocked',
     'Alpha activation must remain fail-closed',
+  );
+  requireCheck(
+    issues,
+    contract.activation?.targetRepository === 'kungfu-systems/kungfu' &&
+      JSON.stringify(contract.activation.requiredDiscussionCategories) ===
+        JSON.stringify([
+          { name: 'Q&A', slug: 'q-a', isAnswerable: true },
+          { name: 'Ideas', slug: 'ideas', isAnswerable: false },
+          {
+            name: 'Show and tell',
+            slug: 'show-and-tell',
+            isAnswerable: false,
+          },
+        ]) &&
+      contract.activation?.requiredActiveRulesets?.includes(
+        'Buildchain dev merge queue: dev/v4/v4.0',
+      ) &&
+      community.defaultRepository?.target === 'kungfu-systems/.github' &&
+      community.defaultRepository?.requiredFiles?.length === 8,
+    'live activation target or required readback contract drifted',
   );
   requireCheck(
     issues,
@@ -136,6 +160,35 @@ export function checkAlphaAttentionOperations(root = ROOT) {
       staffing?.restWindowPolicy?.availabilityClaimAllowed === false &&
       staffing?.restWindowPolicy?.promotionRemainsPaused === true,
     'single-operator rest window is not fail-closed',
+  );
+  const activationPlan = buildAlphaAttentionActivationPlan(
+    contract,
+    community,
+    {
+      organizationDefaultRepository: { exists: false, files: [] },
+      repository: { hasIssues: true, hasDiscussions: false },
+      discussionCategories: [],
+      labels: [],
+      privateVulnerabilityReporting: true,
+      activeRulesets: [
+        {
+          name: 'Buildchain dev merge queue: dev/v4/v4.0',
+          enforcement: 'active',
+        },
+      ],
+      interactionLimit: null,
+    },
+  );
+  requireCheck(
+    issues,
+    activationPlan.mode === 'dry-run' &&
+      activationPlan.liveMutation === false &&
+      activationPlan.executable === false &&
+      activationPlan.status === 'blocked' &&
+      activationPlan.proposedMutations.every(
+        (item) => item.authority === 'human-confirmation-required',
+      ),
+    'live activation planner is not deterministic and fail-closed',
   );
 
   const labelNames = contract.labels.map((label) => label.name);
@@ -334,6 +387,7 @@ export function checkAlphaAttentionOperations(root = ROOT) {
       'threshold-transitions',
       'handoff-and-roles',
       'single-operator-rest-coverage',
+      'deterministic-live-activation-dry-run',
       'moderation-rollback',
     ],
     contractRoot: sha256(canonical(contract)),

@@ -210,6 +210,24 @@ Live activation is a high-risk configuration change and requires a current
 human confirmation after review of the exact target, impact, readback, and
 rollback.
 
+The repository-bound planner compiles the two checked-in contracts and an
+observed GitHub state into
+`kungfu.alpha-attention-activation-plan/v1`. It is deliberately pure,
+deterministic, default-dry-run, and non-executable: every proposed mutation is
+`human-confirmation-required`, while category drift, label drift, security
+settings, rulesets, and interaction-limit ambiguity fail closed. Its command
+arrays are review evidence, not an execution interface.
+
+Generate the plan from a normalized, retained readback:
+
+```sh
+./shifu alpha-attention:activation-plan -- --observed <state.json>
+```
+
+The command does not contact GitHub. It rejects `--execute`; collect the
+read-only observations separately, retain them as evidence, and review the
+resulting differences before any human-confirmed command is run.
+
 1. Enable Discussions for `kungfu-systems/kungfu` only:
 
    ```sh
