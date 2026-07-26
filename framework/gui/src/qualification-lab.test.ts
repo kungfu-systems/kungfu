@@ -6,8 +6,10 @@ import { test } from 'node:test';
 import type { QualificationLabReport } from '@kungfu-tech/api/capability';
 import {
   QUALIFICATION_MODES,
+  QUALIFICATION_PLAYBACK_TIMING,
   qualificationBehaviorFindings,
   qualificationModeNeeds,
+  qualificationPlaybackLine,
   qualificationSessionStories,
 } from './renderer/src/qualification-lab';
 
@@ -100,6 +102,23 @@ test('canonical oracle failures and residuals stay visually distinct', () => {
   );
 });
 
+test('safe runtime events map to incremental command-like output', () => {
+  const line = qualificationPlaybackLine({
+    schema: 'kungfu.qualification-lab.event/v1',
+    step: 'session-2-start',
+    status: 'running',
+    root: `sha256:${'a'.repeat(64)}`,
+  });
+
+  assert.equal(line.status, 'running');
+  assert.match(line.command, /launch session 2/);
+  assert.match(line.detail, /not interpreting raw terminal text/);
+  assert.ok(
+    QUALIFICATION_PLAYBACK_TIMING.eventDelayMs <
+      QUALIFICATION_PLAYBACK_TIMING.verdictDelayMs,
+  );
+});
+
 test('the shell keeps navigation outside the Lab content branch', () => {
   const source = readFileSync(
     new URL('./renderer/src/main.tsx', import.meta.url),
@@ -126,4 +145,9 @@ test('the visual contract is accessible and remains a responsive two-column comp
   assert.match(source, /aria-label="Session 2 agent"/);
   assert.match(source, /<output[\s\S]*aria-label=\{meta\.label\}/);
   assert.match(source, /repeat\(auto-fit, minmax\(min\(100%, 360px\), 1fr\)\)/);
+  assert.match(source, /SAFE EVENT STREAM/);
+  assert.match(source, /lab\.runDemo\(receiveEvent\)/);
+  assert.match(source, /lab\.runAgent\(selectedAgent, receiveEvent\)/);
+  assert.match(source, /kf-lab-verdict-focus/);
+  assert.match(source, /prefers-reduced-motion: reduce/);
 });

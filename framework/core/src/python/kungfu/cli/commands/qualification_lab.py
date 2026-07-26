@@ -16,6 +16,11 @@ def _json(value):
     click.echo(json.dumps(value, indent=2, sort_keys=True))
 
 
+def _event_json(value):
+    click.echo(json.dumps(value, sort_keys=True))
+    click.get_text_stream("stdout").flush()
+
+
 @kfc.group(
     name="qualification-lab",
     cls=PrioritizedCommandGroup,
@@ -99,13 +104,14 @@ def plan(as_json):
 @kfd3_api("kungfu.qualification-lab.demo")
 def demo(output, events_json, as_json):
     try:
-        payload = lab.run_demo(output)
+        payload = lab.run_demo(
+            output,
+            on_event=_event_json if events_json else None,
+        )
     except (OSError, RuntimeError, ValueError) as error:
         raise click.ClickException(str(error)) from error
     if events_json:
-        for event in payload["events"]:
-            click.echo(json.dumps(event, sort_keys=True))
-        click.echo(json.dumps(payload, sort_keys=True))
+        _event_json(payload)
         return
     if as_json:
         _json(payload)
@@ -162,6 +168,11 @@ def agent_plan(ctx, profile_id, as_json):
     default=300,
     show_default=True,
 )
+@click.option(
+    "--events-json",
+    is_flag=True,
+    help="stream stable event boundaries followed by the final report",
+)
 @click.option("--json", "as_json", is_flag=True, help="machine-readable output")
 @kfd3_api("kungfu.qualification-lab.agent-run")
 @kfc.pass_context()
@@ -172,6 +183,7 @@ def agent_run(
     target_profile,
     output,
     timeout_seconds,
+    events_json,
     as_json,
 ):
     if not execute:
@@ -187,9 +199,13 @@ def agent_run(
             runtime_home=ctx.home,
             output_dir=output,
             timeout_seconds=timeout_seconds,
+            on_event=_event_json if events_json else None,
         )
     except (OSError, RuntimeError, ValueError) as error:
         raise click.ClickException(str(error)) from error
+    if events_json:
+        _event_json(payload)
+        return
     if as_json:
         _json(payload)
         return

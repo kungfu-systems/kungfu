@@ -110,7 +110,8 @@ def test_unknown_or_incomplete_global_work_fails_closed_to_diagnostic(
 
 def test_demo_uses_distinct_fresh_processes_and_exact_oracle(tmp_path):
     output = tmp_path / "evidence"
-    report = qualification_lab.run_demo(output)
+    streamed_events = []
+    report = qualification_lab.run_demo(output, on_event=streamed_events.append)
     assert report["status"] == "qualified"
     assert report["writeOccurred"] is True
     assert report["identity"]["provider"] == "kungfu-demo-agent"
@@ -122,6 +123,15 @@ def test_demo_uses_distinct_fresh_processes_and_exact_oracle(tmp_path):
         for attempt in report["sessionAttempts"]
     )
     assert all(check["passed"] for check in report["assessment"]["oracleChecks"])
+    assert [event["step"] for event in streamed_events] == [
+        "plan",
+        "session-1-start",
+        "session-1",
+        "session-2-start",
+        "session-2",
+        "assessment",
+    ]
+    assert streamed_events == report["events"]
     retained = json.loads((output / "report.json").read_text(encoding="utf-8"))
     assert retained["reportRoot"] == report["reportRoot"]
 
@@ -223,13 +233,24 @@ path.write_text(json.dumps(state))
             "profileId": value["id"],
         },
     )
+    streamed_events = []
     report = qualification_lab.run_agent(
         "source",
         target_profile_id="target",
         output_dir=tmp_path / "evidence",
+        on_event=streamed_events.append,
     )
     assert report["status"] == "qualified"
     assert report["runMode"] == "cross-provider-migration"
     assert report["identity"]["source"]["profileId"] == "source"
     assert report["identity"]["target"]["profileId"] == "target"
     assert len({row["processId"] for row in report["sessionAttempts"]}) == 2
+    assert [event["step"] for event in streamed_events] == [
+        "plan",
+        "session-1-start",
+        "session-1",
+        "session-2-start",
+        "session-2",
+        "assessment",
+    ]
+    assert streamed_events == report["events"]

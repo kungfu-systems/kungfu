@@ -12,6 +12,13 @@ The report stays private to the maintainers until a fix is coordinated.
 Do not report vulnerabilities through public issues, pull requests, or
 discussions.
 
+If a public report appears to contain a vulnerability, do not continue
+debugging the sensitive details in public. Preserve the public URL, ask the
+reporter to use private vulnerability reporting, and let a human security owner
+decide whether public content needs redaction or removal. An agent may identify
+the report as a possible security signal, but it may not classify it as safe,
+close it, or promise a disclosure timeline.
+
 Include:
 
 - affected version, commit, package, or release artifact;

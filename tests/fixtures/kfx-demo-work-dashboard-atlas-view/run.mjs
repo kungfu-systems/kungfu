@@ -1,10 +1,8 @@
 // SPDX-License-Identifier: Apache-2.0
 //
-// Render-smoke the work-dashboard Atlas tab without opening Electron. The kfx
-// bundle is loaded the same CommonJS-wrapped way the GUI loader consumes it,
-// while this fixture injects React and a fake Atlas capability. It proves the
-// built view can display imported Mission/go projection data when opened with
-// shell.params.view=atlas.
+// Render-smoke the current read-only global Work view without opening Electron.
+// The kfx bundle is loaded the same CommonJS-wrapped way the GUI loader consumes
+// it, while this fixture injects React and the Electron IPC boundary.
 //
 // Usage: node tests/fixtures/kfx-demo-work-dashboard-atlas-view/run.mjs
 
@@ -42,6 +40,12 @@ if (!fs.existsSync(bundlePath)) {
 
 const React = require('react');
 const ReactDomServer = require('react-dom/server');
+globalThis.window = {
+  require: (id) => {
+    if (id !== 'electron') throw new Error(`unexpected host module: ${id}`);
+    return { ipcRenderer: {} };
+  },
+};
 
 const fakeCaps = {
   work: {
@@ -97,8 +101,9 @@ const fakeCaps = {
 };
 
 const fakeShell = {
-  params: { view: 'atlas' },
+  params: {},
   open: () => undefined,
+  notify: () => undefined,
   onRefresh: () => ({ stop: () => undefined }),
 };
 
@@ -157,14 +162,12 @@ const html = ReactDomServer.renderToStaticMarkup(
 );
 
 for (const needle of [
-  'Mission Control Profile pending',
-  'No Mission selected',
-  '+ Mission',
-  '+ Go',
-  'Import',
-  'Bundle',
+  'Work · Live global view',
+  'connecting live global Work…',
+  'active local project workspace',
+  'no current Work across active local workspaces',
 ]) {
-  if (!html.includes(needle)) fail(`rendered Atlas tab missing ${needle}`);
+  if (!html.includes(needle)) fail(`rendered global Work view missing ${needle}`);
 }
 
-console.log('[kfx-demo-work-dashboard-atlas-view] render ok');
+console.log('[kfx-demo-work-dashboard-atlas-view] global Work render ok');
