@@ -41,7 +41,7 @@ disables the Gate.
 | --- | --- |
 | Demo renderer | `ghcr.io/kungfu-systems/build-images/demo-renderer@sha256:cb5e1dec368d21c7d4e8baded99ac75f12f7eff0d19505751888cf974086efa6` |
 | Renderer release | `build-images v1.3.0-alpha.16` |
-| Buildchain Gate | `658f93fa8667a47555246c016cf0b5ec0f5ec53d` (`v3.0.1-alpha.2` protected version-state commit) |
+| Buildchain Gate | `3a93cc3ce87fd8c5239c5199f705fb14b55c7808` (`v3.0.1-alpha.4` protected release source) |
 | Consumer adapter | `scripts/auditable-demo-adapter.py` from the exact qualified Kungfu source SHA |
 
 Buildchain's reusable build emits
@@ -100,13 +100,38 @@ Each blocking signal was repaired at its owning boundary rather than bypassed:
   and coordinate resolution, then failed inside the required checked-in
   consumer adapter because the reusable Buildchain runtime had not bound its
   sanitized environment object to `spawnSync`.
+- Run `30189805076` completed the exact Linux build and GitHub Artifact upload,
+  installed and executed the retained product, then failed closed because the
+  real `kungfu agent brief` stdout exceeded Buildchain's 80-line-per-cue
+  projection bound.
+- Run `30195697999` completed the new exact build, uploaded source artifact
+  `8631822103`, verified its producer-owned digest, and then failed before
+  adapter execution because the protected Buildchain v3 runtime passed an
+  undefined `env` binding to `spawnSync`. Diagnostic artifact `8631839439`
+  retained the failure independently from the 699 MB source payload.
 
 The corresponding repairs landed through independently approved protected PRs
-`#1492`, `#1497`, `#1500`, `#1503`, `#1504`, `#1505`, `#1506`, and `#1507`.
+`#1492`, `#1497`, `#1500`, `#1503`, `#1504`, `#1505`, `#1506`, `#1507`,
+`#1515`, `#1529`, and `#1546`.
 Buildchain PRs `#1875`, `#1876`, and `#1877` repaired the executable adapter
 path, promoted the protected Alpha channel, and released
-`v2.14.19-alpha.5`. The final qualified run below must use direct GitHub
-Artifact transfer and contains no production deployment step.
+`v2.14.19-alpha.5`; the current protected consumer then advanced to
+`v3.0.1-alpha.2`, where the same binding bug remained on the v3 line.
+Buildchain PRs `#1896`, `#1898`, `#1897`, `#1900`, `#1902`, and `#1901`
+ported the correction and its executable regression test to v3, closed the
+protected source and version-state inputs, and released `v3.0.1-alpha.4` at
+exact source `3a93cc3ce87fd8c5239c5199f705fb14b55c7808`. Kungfu PR `#1546`
+then pinned that immutable release into protected source
+`3c9aa7ece4f5953270d964795659957c066ec0c8`.
+
+Exact-source Alpha preflight run `30205776472` initially failed only while the
+macOS runner timed out downloading the pinned Rust toolchain from
+`rsproxy.cn`; Linux, Windows, and all early source contracts had passed. Its
+failed-job rerun retained the same run id and source SHA, then passed all three
+platform probes and the aggregate exact-source receipt.
+
+The final qualified run below must use direct GitHub Artifact transfer and
+contains no production deployment step.
 
 This document remains `draft` until a protected Kungfu source has completed a
 real Gate and selective render run and the exact artifact coordinates are
