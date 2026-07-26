@@ -1,6 +1,6 @@
 {
   "$schema": "kungfu.dev-required-latency-baseline/v1",
-  "measuredAt": "2026-07-26T11:00:15.600Z",
+  "measuredAt": "2026-07-26T11:19:29.144Z",
   "repository": "kungfu-systems/kungfu",
   "branch": "dev/v4/v4.0",
   "window": {
@@ -22,37 +22,46 @@
   ],
   "statistics": {
     "all": {"sampleCount": 30, "p50Ms": 167000, "p95Ms": 358000, "maxMs": 430000},
-    "native": {"sampleCount": 21, "p50Ms": 166000, "p95Ms": 175000, "maxMs": 180000},
-    "nonNative": {"sampleCount": 9, "p50Ms": 171000, "p95Ms": 430000, "maxMs": 430000},
+    "native": {"sampleCount": 20, "p50Ms": 167000, "p95Ms": 177000, "maxMs": 180000},
+    "nonNative": {"sampleCount": 10, "p50Ms": 171000, "p95Ms": 430000, "maxMs": 430000},
     "unknown": {"sampleCount": 0, "p50Ms": null, "p95Ms": null, "maxMs": null}
   },
   "cache": {
     "outcome": "qualified",
     "warmCount": 0,
-    "coldCount": 21,
-    "notApplicableCount": 9,
+    "coldCount": 20,
+    "notApplicableCount": 10,
     "unknownCount": 0,
-    "reason": "All 21 native samples have source-bound portable-cache receipts and passed cold fallback; duration was not used to infer cache reuse."
+    "reason": "All 20 native samples have source-bound portable-cache receipts and passed cold fallback; duration was not used to infer cache reuse."
   },
   "mergeQueueDelivery": {
-    "statistics": {"sampleCount": 30, "p50Ms": 1108000, "p90Ms": 2922000, "maxMs": 12733000},
+    "queueObservedCount": 63,
+    "deliveryObservedCount": 57,
+    "incompleteCount": 1,
+    "runnerEvidenceObservedCount": 63,
+    "statistics": {"sampleCount": 57, "p50Ms": 1496000, "p90Ms": 4576000, "maxMs": 89117000},
     "dequeue": {
-      "pullRequestCount": 3,
-      "rate": 0.1,
-      "exitCount": 7,
-      "reasons": {"manual": 2, "failed_checks": 2, "merge_conflict": 3}
+      "pullRequestCount": 16,
+      "rate": 0.25396825396825395,
+      "exitCount": 38,
+      "reasons": {"merge_conflict": 23, "manual": 8, "failed_checks": 7}
     },
-    "repeatedValidationCount": 5,
-    "wastedRunnerMs": 12396000,
-    "postDequeueRunnerMs": 1596000,
+    "repeatedValidationCount": 8,
+    "wastedRunnerMs": 24308000,
+    "postDequeueRunnerMs": 2838000,
     "verdict": "fails-target"
   },
   "verdict": "meets-target",
   "source": {
-    "command": "node scripts/measure-dev-required-latency.mjs --repository kungfu-systems/kungfu --branch dev/v4/v4.0 with one --pull argument for every PR listed below",
+    "command": "./shifu gate:latency:measure --branch dev/v4/v4.0 --limit 30",
     "rawReport": "exact live effective-rule, workflow, artifact, and merge-queue evidence generated locally on 2026-07-26"
   },
   "samples": [
+    {"pullRequest": 1537, "kind": "non-native", "durationMs": 352000, "cacheOutcome": "not-applicable"},
+    {"pullRequest": 1533, "kind": "native", "durationMs": 166000, "cacheOutcome": "miss"},
+    {"pullRequest": 1527, "kind": "native", "durationMs": 162000, "cacheOutcome": "miss"},
+    {"pullRequest": 1531, "kind": "native", "durationMs": 168000, "cacheOutcome": "miss"},
+    {"pullRequest": 1475, "kind": "native", "durationMs": 172000, "cacheOutcome": "miss"},
     {"pullRequest": 1529, "kind": "non-native", "durationMs": 150000, "cacheOutcome": "not-applicable"},
     {"pullRequest": 1526, "kind": "non-native", "durationMs": 156000, "cacheOutcome": "not-applicable"},
     {"pullRequest": 1524, "kind": "native", "durationMs": 168000, "cacheOutcome": "miss"},
@@ -67,6 +76,7 @@
     {"pullRequest": 1510, "kind": "native", "durationMs": 180000, "cacheOutcome": "miss"},
     {"pullRequest": 1509, "kind": "non-native", "durationMs": 150000, "cacheOutcome": "not-applicable"},
     {"pullRequest": 1507, "kind": "native", "durationMs": 166000, "cacheOutcome": "miss"},
+    {"pullRequest": 1464, "kind": "native", "durationMs": 177000, "cacheOutcome": "miss"},
     {"pullRequest": 1506, "kind": "native", "durationMs": 167000, "cacheOutcome": "miss"},
     {"pullRequest": 1505, "kind": "non-native", "durationMs": 177000, "cacheOutcome": "not-applicable"},
     {"pullRequest": 1504, "kind": "native", "durationMs": 140000, "cacheOutcome": "miss"},
@@ -76,13 +86,7 @@
     {"pullRequest": 1500, "kind": "native", "durationMs": 167000, "cacheOutcome": "miss"},
     {"pullRequest": 1498, "kind": "native", "durationMs": 144000, "cacheOutcome": "miss"},
     {"pullRequest": 1497, "kind": "non-native", "durationMs": 358000, "cacheOutcome": "not-applicable"},
-    {"pullRequest": 1496, "kind": "non-native", "durationMs": 430000, "cacheOutcome": "not-applicable"},
-    {"pullRequest": 1494, "kind": "native", "durationMs": 174000, "cacheOutcome": "miss"},
-    {"pullRequest": 1488, "kind": "native", "durationMs": 157000, "cacheOutcome": "miss"},
-    {"pullRequest": 1492, "kind": "native", "durationMs": 143000, "cacheOutcome": "miss"},
-    {"pullRequest": 1491, "kind": "native", "durationMs": 169000, "cacheOutcome": "miss"},
-    {"pullRequest": 1487, "kind": "native", "durationMs": 161000, "cacheOutcome": "miss"},
-    {"pullRequest": 1486, "kind": "native", "durationMs": 159000, "cacheOutcome": "miss"}
+    {"pullRequest": 1496, "kind": "non-native", "durationMs": 430000, "cacheOutcome": "not-applicable"}
   ],
   "excludedPullRequests": []
 }

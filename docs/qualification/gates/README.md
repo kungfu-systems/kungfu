@@ -187,6 +187,13 @@ only `contents: read` plus `actions: write`. The controller selects active
 PR number and cancels each run once. A `409` terminal race is idempotent;
 unexpected API or permission failures remain fatal and visible.
 
+The retained `2026-07-26T11:19:29.144Z` window qualifies required-gate latency:
+30 samples (20 native) report P50 `167000 ms` and P95 `358000 ms`, with zero
+unknown native cache outcomes. Delivery is still explicitly non-qualifying:
+57 completed samples report P50 `1496000 ms`, P90 `4576000 ms`, and a
+`16 / 63` PR dequeue cohort. The cancellation workflow is a prospective
+correction; historical tail data is not rewritten as if it had run.
+
 These measurements do not relax affected-native proof identity. Reuse remains
 bound to the exact base, candidate source tree, plan projection, partitions,
 tier, receipt, hosted-runner image, and observed compiler/CMake/Ninja evidence.
