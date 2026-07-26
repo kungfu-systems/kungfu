@@ -1105,6 +1105,46 @@
       ]
     },
     {
+      "path": ".github/workflows/cancel-dequeued-merge-group.yml",
+      "authority": "qualification",
+      "definitionDigest": "sha256:363e6063ef09de7c252267d8fecc51661b48b59f7bc10c9708c0c9ca8756889a",
+      "jobs": [
+        {
+          "id": "cancel",
+          "authority": "qualification",
+          "publication": "none",
+          "receipt": "diagnostic",
+          "definitionDigest": "sha256:1348c28887a104ed47167e4db811ccb8c6fbc96dd05b9173fc7d5890371ac406",
+          "credentials": {
+            "githubToken": "write",
+            "oidc": false,
+            "repositorySecrets": [
+              "GITHUB_TOKEN"
+            ],
+            "inheritedSecrets": false,
+            "environment": null
+          },
+          "externalActions": [
+            "actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0"
+          ],
+          "steps": [
+            {
+              "index": 1,
+              "label": "name:Checkout trusted base revision",
+              "authority": "qualification",
+              "definitionDigest": "sha256:f499afb8b18fa1dcfbfb2c8d639e727e932faecd84acb0b87f6f5900318a0ebe"
+            },
+            {
+              "index": 2,
+              "label": "name:Cancel active merge-group runs for the dequeued pull request",
+              "authority": "qualification",
+              "definitionDigest": "sha256:2fc1f5d1fc6888d41c81612ab35f770c348191325c9e6af3b3528db07dd86810"
+            }
+          ]
+        }
+      ]
+    },
+    {
       "path": ".github/workflows/core-build-profiles.yml",
       "authority": "qualification",
       "definitionDigest": "sha256:34c03b54cbe085fa521cbc9a676b68414100300ed6eae78264bf9f7393f4d1f6",

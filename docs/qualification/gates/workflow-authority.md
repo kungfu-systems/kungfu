@@ -61,6 +61,7 @@ without changing and refreshing the manifest fails the Gate catalog check.
 | `.github/workflows/build.yml` | `resolve-auditable-demo-source` | qualification | none | diagnostic | token:read | none | 2 |
 | `.github/workflows/buildchain-validate.yml` | `promotion-rehearsal` | qualification | none | diagnostic | token:read | none | 2 |
 | `.github/workflows/buildchain-validate.yml` | `validate` | qualification | none | diagnostic | token:read | none | 2 |
+| `.github/workflows/cancel-dequeued-merge-group.yml` | `cancel` | qualification | none | diagnostic | token:write, repo-secret:GITHUB_TOKEN | none | 2 |
 | `.github/workflows/core-build-profiles.yml` | `qualify` | qualification | none | diagnostic | token:read | none | 24 |
 | `.github/workflows/dco.yml` | `signoff` | qualification | none | diagnostic | token:read | none | 2 |
 | `.github/workflows/dev-verify-patrol.yml` | `report` | diagnostic | none | none | token:write | none | 1 |

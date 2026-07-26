@@ -82,33 +82,39 @@ one-shot observation runner is not rendered as a Gate's standing policy source.
 
 `scripts/measure-dev-required-latency.mjs` is the read-only measurement surface
 for the protected development branch. It discovers the required context set
-from live branch protection, then measures each merged PR revision from the
-earliest matching Actions workflow `created_at` through the first successful
-result for every required context no later than the PR merge. This includes
-workflow/job queueing and pre-admission retries while excluding post-merge
-reruns; runner execution time alone is not the metric.
+from GitHub's effective branch rules, including rulesets, then measures each
+merged PR revision from the earliest matching Actions workflow `created_at`
+through the first successful result for every required context no later than
+the PR merge. This includes workflow/job queueing and pre-admission retries
+while excluding post-merge reruns; runner execution time alone is not the
+metric.
 
 The retained baseline must change in the same protected-branch transition as
-the live required-context authority. After staged candidate CI was qualified,
-`dev/v4/v4.0` retained only the stable `affected-native / linux` aggregate; the
-baseline and subsequent reports therefore measure that aggregate rather than
-the retired standalone source and delivery-intent contexts.
+the live required-context authority. The current `dev/v4/v4.0` effective rules
+require both `Candidate source acceptance / check` and the stable
+`affected-native / linux` aggregate. A ruleset change without the matching
+baseline transition therefore fails closed before samples are collected.
 
 The report uses the current source planner to classify samples as `native`,
 `non-native`, or `unknown`, and reports nearest-rank P50/P95 for every stratum.
 Planner failures remain unknown instead of becoming non-native. For each native
-sample, the collector reads the final successful affected-native workflow's
-retained partition artifacts and validates every Buildchain
-dependency/compiler portable cache receipt. It rejects an incomplete or
-overlapping partition index set, inconsistent source/plan/coverage digests, or
-any target/CTest union that differs from the authoritative plan. It reports
-exact/compatible warm reuse, miss/corrupt cold
-fallback, unknown evidence, ccache hits, and the aggregate warm/cold ratio;
-duration is never used to infer a hit. Non-native samples are explicitly
-`not-applicable`. Missing, expired, or malformed artifacts remain `unknown`, and
-a window with unknown native cache evidence cannot qualify. Missing or
-non-success required contexts are retained as explicit exclusions with their
-reason and are never silently removed from the dataset.
+sample, the collector reads the source-bound partition artifacts from the
+merged queue round's affected-native workflow and validates every Buildchain
+dependency/compiler portable cache receipt. The evidence must bind to the exact
+merge-group SHA and current planner authority. When GitHub coalesces more than
+one PR into the group, the report records `merge-group-coalesced` rather than
+pretending that the group plan equals the single-PR plan; the receipt's own
+plan/diagnostics/coverage digests still remain exact and self-consistent. The
+collector rejects an incomplete or overlapping partition index set,
+inconsistent source/plan/coverage digests, or any target/CTest union that
+differs from the authoritative group plan. It reports exact/compatible warm
+reuse, miss/corrupt cold fallback, unknown evidence, ccache hits, and the
+aggregate warm/cold ratio; duration is never used to infer a hit. Non-native
+samples are explicitly `not-applicable`. Missing, expired, or malformed
+artifacts remain `unknown`, and a window with unknown native cache evidence
+cannot qualify. Missing or non-success required contexts are retained as
+explicit exclusions with their reason and are never silently removed from the
+dataset.
 
 New native artifacts also carry Buildchain toolkit observability. The Gate
 records source- and plan-bound spans for dependency install, configure, build,
@@ -173,6 +179,14 @@ zero observed runner work; missing event or job evidence remains incomplete.
 The delivery objective additionally requires fewer than 10% of queue-observed
 PRs to have a non-merged exit and at least 20 completed delivery samples.
 
+`.github/workflows/cancel-dequeued-merge-group.yml` bounds waste after an
+authoritative dequeue. Its `pull_request_target: dequeued` job checks out only
+the event's trusted base SHA, does not execute pull-request code, and grants
+only `contents: read` plus `actions: write`. The controller selects active
+`affected-native-pr.yml` merge-group runs whose queue branch ends in the exact
+PR number and cancels each run once. A `409` terminal race is idempotent;
+unexpected API or permission failures remain fatal and visible.
+
 These measurements do not relax affected-native proof identity. Reuse remains
 bound to the exact base, candidate source tree, plan projection, partitions,
 tier, receipt, hosted-runner image, and observed compiler/CMake/Ninja evidence.
@@ -193,15 +207,16 @@ otherwise the machine verdict remains non-qualifying. Rebuild it with:
 ```
 
 Dev admission is intentionally narrower than asynchronous observation. The
-protected branch keeps the single `affected-native / linux` aggregate as its
-only merge-critical context. Daily/manual patrol and Core-profile workflows retain
-macOS, Windows, full-profile, and fault evidence without placing those optional
-jobs in front of required merge-group work. Alpha and release admission remain
-cross-platform and fail closed according to their own matrix rows.
+protected branch keeps the source-acceptance check and
+`affected-native / linux` aggregate as its two merge-critical contexts.
+Daily/manual patrol and Core-profile workflows retain macOS, Windows,
+full-profile, and fault evidence without placing those optional jobs in front
+of required merge-group work. Alpha and release admission remain cross-platform
+and fail closed according to their own matrix rows.
 
 The command requires `unzip` plus a read-only GitHub token through `GH_TOKEN` or
 `GITHUB_TOKEN`, or an authenticated `gh` client. It reads pull requests,
-workflow/check metadata, changed paths, and branch protection; it does not
+workflow/check metadata, changed paths, and effective branch rules; it does not
 modify repository settings or workflow runs.
 
 The matrix is deliberately conservative during rollout. Existing blocking

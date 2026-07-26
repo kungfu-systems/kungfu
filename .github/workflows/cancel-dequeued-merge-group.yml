@@ -1,0 +1,30 @@
+# SPDX-License-Identifier: Apache-2.0
+
+name: Cancel dequeued merge-group work
+
+on:
+  pull_request_target:
+    types: [dequeued]
+    branches:
+      - dev/v*/v*
+
+permissions:
+  actions: write
+  contents: read
+
+jobs:
+  cancel:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Checkout trusted base revision
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          ref: ${{ github.event.pull_request.base.sha }}
+          persist-credentials: false
+      - name: Cancel active merge-group runs for the dequeued pull request
+        env:
+          DEQUEUED_PULL_REQUEST: ${{ github.event.pull_request.number }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          MERGE_GROUP_WORKFLOW: affected-native-pr.yml
+        run: ./shifu ci:cancel-dequeued-merge-group

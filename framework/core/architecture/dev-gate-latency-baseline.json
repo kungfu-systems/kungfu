@@ -1,6 +1,6 @@
 {
   "$schema": "kungfu.dev-required-latency-baseline/v1",
-  "measuredAt": "2026-07-22T22:06:51.038Z",
+  "measuredAt": "2026-07-26T11:00:15.600Z",
   "repository": "kungfu-systems/kungfu",
   "branch": "dev/v4/v4.0",
   "window": {
@@ -11,60 +11,78 @@
   },
   "metric": {
     "start": "earliest workflow.created_at among required contexts for the final PR source revision",
-    "end": "latest terminal success among all branch-protection required contexts",
+    "end": "latest terminal success among all effective branch-rule required contexts",
     "percentile": "nearest-rank",
     "target": {"p50Ms": 300000, "p95Ms": 600000},
     "minimumSamples": {"all": 20, "native": 10}
   },
   "requiredContexts": [
+    "Candidate source acceptance / check",
     "affected-native / linux"
   ],
   "statistics": {
-    "all": {"sampleCount": 30, "p50Ms": 509000, "p95Ms": 3204000, "maxMs": 4947000},
-    "native": {"sampleCount": 19, "p50Ms": 2360000, "p95Ms": 4947000, "maxMs": 4947000},
-    "nonNative": {"sampleCount": 11, "p50Ms": 157000, "p95Ms": 550000, "maxMs": 550000},
+    "all": {"sampleCount": 30, "p50Ms": 167000, "p95Ms": 358000, "maxMs": 430000},
+    "native": {"sampleCount": 21, "p50Ms": 166000, "p95Ms": 175000, "maxMs": 180000},
+    "nonNative": {"sampleCount": 9, "p50Ms": 171000, "p95Ms": 430000, "maxMs": 430000},
     "unknown": {"sampleCount": 0, "p50Ms": null, "p95Ms": null, "maxMs": null}
   },
   "cache": {
-    "outcome": "unknown",
-    "reason": "Native cache evidence was unknown for 19 samples; duration was not used to infer hits."
+    "outcome": "qualified",
+    "warmCount": 0,
+    "coldCount": 21,
+    "notApplicableCount": 9,
+    "unknownCount": 0,
+    "reason": "All 21 native samples have source-bound portable-cache receipts and passed cold fallback; duration was not used to infer cache reuse."
   },
-  "verdict": "fails-target",
+  "mergeQueueDelivery": {
+    "statistics": {"sampleCount": 30, "p50Ms": 1108000, "p90Ms": 2922000, "maxMs": 12733000},
+    "dequeue": {
+      "pullRequestCount": 3,
+      "rate": 0.1,
+      "exitCount": 7,
+      "reasons": {"manual": 2, "failed_checks": 2, "merge_conflict": 3}
+    },
+    "repeatedValidationCount": 5,
+    "wastedRunnerMs": 12396000,
+    "postDequeueRunnerMs": 1596000,
+    "verdict": "fails-target"
+  },
+  "verdict": "meets-target",
   "source": {
-    "command": "./shifu gate:latency:measure --branch dev/v4/v4.0 --limit 30",
-    "rawReport": "retained workflow/check metadata report generated locally on 2026-07-22; PR coordinates are listed below"
+    "command": "node scripts/measure-dev-required-latency.mjs --repository kungfu-systems/kungfu --branch dev/v4/v4.0 with one --pull argument for every PR listed below",
+    "rawReport": "exact live effective-rule, workflow, artifact, and merge-queue evidence generated locally on 2026-07-26"
   },
   "samples": [
-    {"pullRequest": 1270, "kind": "non-native", "durationMs": 167000},
-    {"pullRequest": 1258, "kind": "native", "durationMs": 182000},
-    {"pullRequest": 1268, "kind": "non-native", "durationMs": 148000},
-    {"pullRequest": 1267, "kind": "non-native", "durationMs": 157000},
-    {"pullRequest": 1265, "kind": "non-native", "durationMs": 376000},
-    {"pullRequest": 1262, "kind": "non-native", "durationMs": 166000},
-    {"pullRequest": 1261, "kind": "native", "durationMs": 164000},
-    {"pullRequest": 1215, "kind": "native", "durationMs": 224000},
-    {"pullRequest": 1257, "kind": "native", "durationMs": 223000},
-    {"pullRequest": 1254, "kind": "native", "durationMs": 159000},
-    {"pullRequest": 1249, "kind": "non-native", "durationMs": 67000},
-    {"pullRequest": 1250, "kind": "native", "durationMs": 941000},
-    {"pullRequest": 1245, "kind": "native", "durationMs": 2187000},
-    {"pullRequest": 1244, "kind": "native", "durationMs": 2698000},
-    {"pullRequest": 1240, "kind": "native", "durationMs": 2727000},
-    {"pullRequest": 1241, "kind": "native", "durationMs": 2913000},
-    {"pullRequest": 1238, "kind": "native", "durationMs": 3048000},
-    {"pullRequest": 1234, "kind": "native", "durationMs": 2948000},
-    {"pullRequest": 1232, "kind": "native", "durationMs": 3204000},
-    {"pullRequest": 1231, "kind": "native", "durationMs": 2825000},
-    {"pullRequest": 1225, "kind": "native", "durationMs": 4947000},
-    {"pullRequest": 1224, "kind": "non-native", "durationMs": 70000},
-    {"pullRequest": 1227, "kind": "non-native", "durationMs": 139000},
-    {"pullRequest": 1226, "kind": "non-native", "durationMs": 509000},
-    {"pullRequest": 1221, "kind": "native", "durationMs": 2928000},
-    {"pullRequest": 1218, "kind": "native", "durationMs": 1597000},
-    {"pullRequest": 1219, "kind": "non-native", "durationMs": 550000},
-    {"pullRequest": 1197, "kind": "native", "durationMs": 2360000},
-    {"pullRequest": 1217, "kind": "non-native", "durationMs": 51000},
-    {"pullRequest": 1214, "kind": "native", "durationMs": 814000}
+    {"pullRequest": 1529, "kind": "non-native", "durationMs": 150000, "cacheOutcome": "not-applicable"},
+    {"pullRequest": 1526, "kind": "non-native", "durationMs": 156000, "cacheOutcome": "not-applicable"},
+    {"pullRequest": 1524, "kind": "native", "durationMs": 168000, "cacheOutcome": "miss"},
+    {"pullRequest": 1523, "kind": "non-native", "durationMs": 337000, "cacheOutcome": "not-applicable"},
+    {"pullRequest": 1514, "kind": "native", "durationMs": 150000, "cacheOutcome": "miss"},
+    {"pullRequest": 1521, "kind": "native", "durationMs": 174000, "cacheOutcome": "miss"},
+    {"pullRequest": 1517, "kind": "native", "durationMs": 171000, "cacheOutcome": "miss"},
+    {"pullRequest": 1519, "kind": "native", "durationMs": 166000, "cacheOutcome": "miss"},
+    {"pullRequest": 1515, "kind": "native", "durationMs": 175000, "cacheOutcome": "miss"},
+    {"pullRequest": 1512, "kind": "native", "durationMs": 164000, "cacheOutcome": "miss"},
+    {"pullRequest": 1511, "kind": "native", "durationMs": 163000, "cacheOutcome": "miss"},
+    {"pullRequest": 1510, "kind": "native", "durationMs": 180000, "cacheOutcome": "miss"},
+    {"pullRequest": 1509, "kind": "non-native", "durationMs": 150000, "cacheOutcome": "not-applicable"},
+    {"pullRequest": 1507, "kind": "native", "durationMs": 166000, "cacheOutcome": "miss"},
+    {"pullRequest": 1506, "kind": "native", "durationMs": 167000, "cacheOutcome": "miss"},
+    {"pullRequest": 1505, "kind": "non-native", "durationMs": 177000, "cacheOutcome": "not-applicable"},
+    {"pullRequest": 1504, "kind": "native", "durationMs": 140000, "cacheOutcome": "miss"},
+    {"pullRequest": 1503, "kind": "native", "durationMs": 171000, "cacheOutcome": "miss"},
+    {"pullRequest": 1502, "kind": "non-native", "durationMs": 171000, "cacheOutcome": "not-applicable"},
+    {"pullRequest": 1501, "kind": "non-native", "durationMs": 167000, "cacheOutcome": "not-applicable"},
+    {"pullRequest": 1500, "kind": "native", "durationMs": 167000, "cacheOutcome": "miss"},
+    {"pullRequest": 1498, "kind": "native", "durationMs": 144000, "cacheOutcome": "miss"},
+    {"pullRequest": 1497, "kind": "non-native", "durationMs": 358000, "cacheOutcome": "not-applicable"},
+    {"pullRequest": 1496, "kind": "non-native", "durationMs": 430000, "cacheOutcome": "not-applicable"},
+    {"pullRequest": 1494, "kind": "native", "durationMs": 174000, "cacheOutcome": "miss"},
+    {"pullRequest": 1488, "kind": "native", "durationMs": 157000, "cacheOutcome": "miss"},
+    {"pullRequest": 1492, "kind": "native", "durationMs": 143000, "cacheOutcome": "miss"},
+    {"pullRequest": 1491, "kind": "native", "durationMs": 169000, "cacheOutcome": "miss"},
+    {"pullRequest": 1487, "kind": "native", "durationMs": 161000, "cacheOutcome": "miss"},
+    {"pullRequest": 1486, "kind": "native", "durationMs": 159000, "cacheOutcome": "miss"}
   ],
   "excludedPullRequests": []
 }
