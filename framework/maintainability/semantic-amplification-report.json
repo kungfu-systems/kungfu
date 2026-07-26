@@ -1,0 +1,1019 @@
+{
+  "schema": "kungfu.semantic-amplification-report/v1",
+  "verdict": "pass",
+  "authoritySemantics": "navigation-only-projection-over-existing-authorities",
+  "manifestPath": "framework/maintainability/semantic-amplification.manifest.json",
+  "manifestRoot": "sha256:fd21d877754fba6bff1c8c37c33a81746f663dcc40116efe16f616f5cfa0e352",
+  "baselineRef": "eba3eedd79e0fb2a5e314d2c74e79af4c41e0085",
+  "sourceRoot": "sha256:197096a50e413bbeeacf2de3ec711d90798e7525dcf18a550a608f0f8bd76961",
+  "roles": {
+    "authority": "exactly one authority route per family; the route may name multiple co-owned source files",
+    "allowedProjectionRoles": [
+      "generated-projection",
+      "thin-binding",
+      "compatibility-reader",
+      "conformance-oracle",
+      "test",
+      "documentation",
+      "package-release",
+      "retained-evidence"
+    ],
+    "unknownRole": "blocking",
+    "unmappedChangedSemanticSurface": "blocking"
+  },
+  "summary": {
+    "families": 6,
+    "authorities": 6,
+    "mappedSurfaces": 61,
+    "changedMappedSurfaces": 0,
+    "blockingIssues": 0
+  },
+  "families": [
+    {
+      "id": "cli-agent-surface",
+      "owner": "core",
+      "authority": {
+        "id": "live-click-tree-and-cli-surface-registry",
+        "sources": [
+          "framework/core/src/python/kungfu/cli/surface_contract.registry.json",
+          "framework/core/src/python/kungfu/cli/commands/__registry__.py"
+        ]
+      },
+      "authorityCount": 1,
+      "roles": {
+        "authority": 2,
+        "generated-projection": 3,
+        "thin-binding": 1,
+        "conformance-oracle": 1,
+        "test": 1,
+        "package-release": 1,
+        "documentation": 1
+      },
+      "amplification": {
+        "mappedSurfaces": 10,
+        "nonAuthoritySurfaces": 8,
+        "changedSurfaces": 0,
+        "changedPaths": []
+      },
+      "surfaces": [
+        {
+          "path": "framework/core/src/python/kungfu/cli/catalog_projection.py",
+          "role": "generated-projection"
+        },
+        {
+          "path": "framework/core/src/python/kungfu/agent/cli_surface.catalog.json",
+          "role": "generated-projection",
+          "generator": "framework/core/src/python/kungfu/cli/catalog_projection.py"
+        },
+        {
+          "path": "framework/core/src/python/kungfu/agent/commands.json",
+          "role": "generated-projection",
+          "generator": "framework/core/src/python/kungfu/agent/kfd3.py"
+        },
+        {
+          "path": "framework/core/src/python/kungfu/cli/help_projection.py",
+          "role": "thin-binding"
+        },
+        {
+          "path": "scripts/check-cli-catalog-parity.mjs",
+          "role": "conformance-oracle"
+        },
+        {
+          "path": "framework/core/tests/python/test_cli_surface_contract.py",
+          "role": "test"
+        },
+        {
+          "path": "product/scripts/cli-surface-qualification.mjs",
+          "role": "package-release"
+        },
+        {
+          "path": "docs/architecture/overview.md",
+          "role": "documentation"
+        }
+      ],
+      "measurements": [
+        {
+          "path": "framework/core/src/python/kungfu/cli/surface_contract.registry.json",
+          "currentLines": 155,
+          "baselineLines": 155,
+          "currentRoot": "sha256:7af1893015500d9d54e2783e44af30cd4af8753787d9d9b70c77356b0e788c17",
+          "baselineRoot": "sha256:7af1893015500d9d54e2783e44af30cd4af8753787d9d9b70c77356b0e788c17",
+          "changedSinceBaseline": false
+        },
+        {
+          "path": "framework/core/src/python/kungfu/cli/commands/__registry__.py",
+          "currentLines": 91,
+          "baselineLines": 91,
+          "currentRoot": "sha256:21ddfd68e29827a81d099362cd40c8bdef4731cddecf964633bcdea4e4a8c817",
+          "baselineRoot": "sha256:21ddfd68e29827a81d099362cd40c8bdef4731cddecf964633bcdea4e4a8c817",
+          "changedSinceBaseline": false
+        },
+        {
+          "path": "framework/core/src/python/kungfu/cli/catalog_projection.py",
+          "currentLines": 119,
+          "baselineLines": 119,
+          "currentRoot": "sha256:43f117fb6484a4dd60c5bad04b9758cf185446e0284e6b6bcebafb055122f535",
+          "baselineRoot": "sha256:43f117fb6484a4dd60c5bad04b9758cf185446e0284e6b6bcebafb055122f535",
+          "changedSinceBaseline": false
+        },
+        {
+          "path": "framework/core/src/python/kungfu/agent/cli_surface.catalog.json",
+          "currentLines": 33927,
+          "baselineLines": 33927,
+          "currentRoot": "sha256:9f2f17fca5aa4e4daa28a276c1e3a153fa263e791b497f7ea83a93796f7aeb1f",
+          "baselineRoot": "sha256:9f2f17fca5aa4e4daa28a276c1e3a153fa263e791b497f7ea83a93796f7aeb1f",
+          "changedSinceBaseline": false
+        },
+        {
+          "path": "framework/core/src/python/kungfu/agent/commands.json",
+          "currentLines": 1117,
+          "baselineLines": 1117,
+          "currentRoot": "sha256:969ac3d851c14196b7244ac1afaecfc237c82d45527fbe06a33d3fc064ea7fc4",
+          "baselineRoot": "sha256:969ac3d851c14196b7244ac1afaecfc237c82d45527fbe06a33d3fc064ea7fc4",
+          "changedSinceBaseline": false
+        },
+        {
+          "path": "framework/core/src/python/kungfu/cli/help_projection.py",
+          "currentLines": 259,
+          "baselineLines": 259,
+          "currentRoot": "sha256:efbfa84c27a90a59ab69e4c0c78902477a874a91e459cf3319070bd608d71ebf",
+          "baselineRoot": "sha256:efbfa84c27a90a59ab69e4c0c78902477a874a91e459cf3319070bd608d71ebf",
+          "changedSinceBaseline": false
+        },
+        {
+          "path": "scripts/check-cli-catalog-parity.mjs",
+          "currentLines": 346,
+          "baselineLines": 346,
+          "currentRoot": "sha256:a8e4c919d73120dd45c4a8f8c8f7187caa62ec819e74a83a9b2d3fdcbcc13c3e",
+          "baselineRoot": "sha256:a8e4c919d73120dd45c4a8f8c8f7187caa62ec819e74a83a9b2d3fdcbcc13c3e",
+          "changedSinceBaseline": false
+        },
+        {
+          "path": "framework/core/tests/python/test_cli_surface_contract.py",
+          "currentLines": 466,
+          "baselineLines": 466,
+          "currentRoot": "sha256:3e377b96b194c7a12d8240caa42fa3c4ca243cb50019d1a1b096e5dffa4c829f",
+          "baselineRoot": "sha256:3e377b96b194c7a12d8240caa42fa3c4ca243cb50019d1a1b096e5dffa4c829f",
+          "changedSinceBaseline": false
+        },
+        {
+          "path": "product/scripts/cli-surface-qualification.mjs",
+          "currentLines": 498,
+          "baselineLines": 498,
+          "currentRoot": "sha256:7533c7b772a961fd8e1ae97acc474b7c9f0fbe6626322f1e98f0e30ee163f551",
+          "baselineRoot": "sha256:7533c7b772a961fd8e1ae97acc474b7c9f0fbe6626322f1e98f0e30ee163f551",
+          "changedSinceBaseline": false
+        },
+        {
+          "path": "docs/architecture/overview.md",
+          "currentLines": 311,
+          "baselineLines": 311,
+          "currentRoot": "sha256:eae378faa493c52311a66d5a66d9e29aaa484938812f89654e91ce4473f35048",
+          "baselineRoot": "sha256:eae378faa493c52311a66d5a66d9e29aaa484938812f89654e91ce4473f35048",
+          "changedSinceBaseline": false
+        }
+      ],
+      "knownLimits": [
+        "docs/qualification/known-limits.md"
+      ],
+      "recovery": "Run the CLI catalog parity and product CLI qualification checks; edit live Click registration or the declared surface registry, never generated catalogs."
+    },
+    {
+      "id": "work-profile-lifecycle",
+      "owner": "core/runtime-action",
+      "authority": {
+        "id": "native-work-lifecycle-authority-membrane",
+        "sources": [
+          "framework/work-lifecycle/work-lifecycle-native.contract.json",
+          "framework/work-lifecycle/kungfu-work-lifecycle-operation-matrix.contract.json",
+          "framework/core/src/libkungfu/src/runtime/action/action_runtime.cpp",
+          "framework/core/src/libkungfu/src/runtime/profile/profile_lifecycle.cpp"
+        ]
+      },
+      "authorityCount": 1,
+      "roles": {
+        "authority": 4,
+        "generated-projection": 3,
+        "thin-binding": 2,
+        "conformance-oracle": 1,
+        "compatibility-reader": 1,
+        "documentation": 1
+      },
+      "amplification": {
+        "mappedSurfaces": 12,
+        "nonAuthoritySurfaces": 8,
+        "changedSurfaces": 0,
+        "changedPaths": []
+      },
+      "surfaces": [
+        {
+          "path": "scripts/materialize-work-lifecycle-operation-matrix.mjs",
+          "role": "generated-projection"
+        },
+        {
+          "path": "scripts/generate-work-lifecycle-sdk.mjs",
+          "role": "generated-projection"
+        },
+        {
+          "path": "crates/kungfu-sdk/src/generated/work_lifecycle_v1.rs",
+          "role": "generated-projection",
+          "generator": "scripts/generate-work-lifecycle-sdk.mjs"
+        },
+        {
+          "path": "framework/core/src/python/kungfu/assignment_orchestration.py",
+          "role": "thin-binding"
+        },
+        {
+          "path": "framework/core/src/python/kungfu/profile_sdk.py",
+          "role": "thin-binding"
+        },
+        {
+          "path": "scripts/check-work-lifecycle-native.test.mjs",
+          "role": "conformance-oracle"
+        },
+        {
+          "path": "scripts/check-work-lifecycle-differential.test.mjs",
+          "role": "compatibility-reader"
+        },
+        {
+          "path": "docs/architecture/work-lifecycle-operation-matrix.md",
+          "role": "documentation"
+        }
+      ],
+      "measurements": [
+        {
+          "path": "framework/work-lifecycle/work-lifecycle-native.contract.json",
+          "currentLines": 1112,
+          "baselineLines": 1112,
+          "currentRoot": "sha256:0d908729e89a3ac6aaaf642304c55436be5130d53fca1c5e77ba1a4e3e239238",
+          "baselineRoot": "sha256:0d908729e89a3ac6aaaf642304c55436be5130d53fca1c5e77ba1a4e3e239238",
+          "changedSinceBaseline": false
+        },
+        {
+          "path": "framework/work-lifecycle/kungfu-work-lifecycle-operation-matrix.contract.json",
+          "currentLines": 2553,
+          "baselineLines": 2553,
+          "currentRoot": "sha256:b8cbb16ec51e20888b46082db84f14278999507a341f706da4cbe5a44c62e309",
+          "baselineRoot": "sha256:b8cbb16ec51e20888b46082db84f14278999507a341f706da4cbe5a44c62e309",
+          "changedSinceBaseline": false
+        },
+        {
+          "path": "framework/core/src/libkungfu/src/runtime/action/action_runtime.cpp",
+          "currentLines": 517,
+          "baselineLines": 517,
+          "currentRoot": "sha256:d3026dea06dd1584f933a4e7d1a677e894eb096eac883fd80b0ab8982cef49f0",
+          "baselineRoot": "sha256:d3026dea06dd1584f933a4e7d1a677e894eb096eac883fd80b0ab8982cef49f0",
+          "changedSinceBaseline": false
+        },
+        {
+          "path": "framework/core/src/libkungfu/src/runtime/profile/profile_lifecycle.cpp",
+          "currentLines": 1084,
+          "baselineLines": 1084,
+          "currentRoot": "sha256:fd1371c3544de910030b6e59f9ac9d2c8ed8e753af2f2429c1c02577cef61fc7",
+          "baselineRoot": "sha256:fd1371c3544de910030b6e59f9ac9d2c8ed8e753af2f2429c1c02577cef61fc7",
+          "changedSinceBaseline": false
+        },
+        {
+          "path": "scripts/materialize-work-lifecycle-operation-matrix.mjs",
+          "currentLines": 206,
+          "baselineLines": 206,
+          "currentRoot": "sha256:6dfd07e9838f7e96aca404387b28dfcc4980acd05ce890fb6b550ecbbf48564d",
+          "baselineRoot": "sha256:6dfd07e9838f7e96aca404387b28dfcc4980acd05ce890fb6b550ecbbf48564d",
+          "changedSinceBaseline": false
+        },
+        {
+          "path": "scripts/generate-work-lifecycle-sdk.mjs",
+          "currentLines": 359,
+          "baselineLines": 359,
+          "currentRoot": "sha256:55b301e83183935862ca73bce0ee30c388fc5e740a03f47b1148b5930b558938",
+          "baselineRoot": "sha256:55b301e83183935862ca73bce0ee30c388fc5e740a03f47b1148b5930b558938",
+          "changedSinceBaseline": false
+        },
+        {
+          "path": "crates/kungfu-sdk/src/generated/work_lifecycle_v1.rs",
+          "currentLines": 52,
+          "baselineLines": 52,
+          "currentRoot": "sha256:7db1506dd64536b8bafde50e863cc911831a50475e564dccfd8c3ee65fb61ed1",
+          "baselineRoot": "sha256:7db1506dd64536b8bafde50e863cc911831a50475e564dccfd8c3ee65fb61ed1",
+          "changedSinceBaseline": false
+        },
+        {
+          "path": "framework/core/src/python/kungfu/assignment_orchestration.py",
+          "currentLines": 1014,
+          "baselineLines": 1014,
+          "currentRoot": "sha256:68b2491178449fab6abb8d96fb69819a8807751dd145ddd7a553393f57b73890",
+          "baselineRoot": "sha256:68b2491178449fab6abb8d96fb69819a8807751dd145ddd7a553393f57b73890",
+          "changedSinceBaseline": false
+        },
+        {
+          "path": "framework/core/src/python/kungfu/profile_sdk.py",
+          "currentLines": 3138,
+          "baselineLines": 3138,
+          "currentRoot": "sha256:fb62fb8c4e1e944811c954d22786ebaeb21ff45dbb3fc1db705feb37fbb5dc1c",
+          "baselineRoot": "sha256:fb62fb8c4e1e944811c954d22786ebaeb21ff45dbb3fc1db705feb37fbb5dc1c",
+          "changedSinceBaseline": false
+        },
+        {
+          "path": "scripts/check-work-lifecycle-native.test.mjs",
+          "currentLines": 140,
+          "baselineLines": 140,
+          "currentRoot": "sha256:f4a04cba858833c12d3dd777efa670fbc8177b7b1244ce168607ce6a9e8340d1",
+          "baselineRoot": "sha256:f4a04cba858833c12d3dd777efa670fbc8177b7b1244ce168607ce6a9e8340d1",
+          "changedSinceBaseline": false
+        },
+        {
+          "path": "scripts/check-work-lifecycle-differential.test.mjs",
+          "currentLines": 101,
+          "baselineLines": 101,
+          "currentRoot": "sha256:05a44cb0850b8531d5f5e4b19266a8de33d94d11335ff07c06edbed3f77b5bf8",
+          "baselineRoot": "sha256:05a44cb0850b8531d5f5e4b19266a8de33d94d11335ff07c06edbed3f77b5bf8",
+          "changedSinceBaseline": false
+        },
+        {
+          "path": "docs/architecture/work-lifecycle-operation-matrix.md",
+          "currentLines": 80,
+          "baselineLines": 80,
+          "currentRoot": "sha256:292778ae3595a64deaf1318b6a22e75756750317deb93f276e87fb96e4f1c6b9",
+          "baselineRoot": "sha256:292778ae3595a64deaf1318b6a22e75756750317deb93f276e87fb96e4f1c6b9",
+          "changedSinceBaseline": false
+        }
+      ],
+      "knownLimits": [
+        "docs/qualification/known-limits.md"
+      ],
+      "recovery": "Inspect native work status and operation roots, regenerate declared SDK projections, and keep Python/Rust/Node clients lossless rather than semantic."
+    },
+    {
+      "id": "kfx-package-profile",
+      "owner": "core/runtime-kfx",
+      "authority": {
+        "id": "native-kfx-contract",
+        "sources": [
+          "framework/kfx/kungfu-kfx.contract.json",
+          "framework/core/src/libkungfu/src/runtime/kfx/native_contract.cpp",
+          "framework/core/src/libkungfu/src/runtime/kfx/native_registry.cpp"
+        ]
+      },
+      "authorityCount": 1,
+      "roles": {
+        "authority": 3,
+        "thin-binding": 2,
+        "conformance-oracle": 1,
+        "test": 1,
+        "documentation": 1,
+        "package-release": 1
+      },
+      "amplification": {
+        "mappedSurfaces": 9,
+        "nonAuthoritySurfaces": 6,
+        "changedSurfaces": 0,
+        "changedPaths": []
+      },
+      "surfaces": [
+        {
+          "path": "framework/core/src/python/kungfu/kfx_contract.py",
+          "role": "thin-binding"
+        },
+        {
+          "path": "framework/core/src/python/kungfu/cli/commands/kfx.py",
+          "role": "thin-binding"
+        },
+        {
+          "path": "scripts/run-native-kfx-admission-tests.mjs",
+          "role": "conformance-oracle"
+        },
+        {
+          "path": "scripts/run-kfx-profile-suite-tests.mjs",
+          "role": "test"
+        },
+        {
+          "path": "docs/qualification/kfd-native-sdk-release-gates.md",
+          "role": "documentation"
+        },
+        {
+          "path": "product/scripts/dist.mjs",
+          "role": "package-release"
+        }
+      ],
+      "measurements": [
+        {
+          "path": "framework/kfx/kungfu-kfx.contract.json",
+          "currentLines": 1244,
+          "baselineLines": 1244,
+          "currentRoot": "sha256:09461dda185e075d08137b51d8fcada3e862ff8e4f3cecd725ec7410021bbb99",
+          "baselineRoot": "sha256:09461dda185e075d08137b51d8fcada3e862ff8e4f3cecd725ec7410021bbb99",
+          "changedSinceBaseline": false
+        },
+        {
+          "path": "framework/core/src/libkungfu/src/runtime/kfx/native_contract.cpp",
+          "currentLines": 411,
+          "baselineLines": 411,
+          "currentRoot": "sha256:f45729b83a63376ba03601a553d3110cc636a1c026ac1671e82bfdb83a3423dc",
+          "baselineRoot": "sha256:f45729b83a63376ba03601a553d3110cc636a1c026ac1671e82bfdb83a3423dc",
+          "changedSinceBaseline": false
+        },
+        {
+          "path": "framework/core/src/libkungfu/src/runtime/kfx/native_registry.cpp",
+          "currentLines": 912,
+          "baselineLines": 912,
+          "currentRoot": "sha256:9d1ca07b479450341e5c33d4740cea0835257e0b73991faf166bfc54d77ccb68",
+          "baselineRoot": "sha256:9d1ca07b479450341e5c33d4740cea0835257e0b73991faf166bfc54d77ccb68",
+          "changedSinceBaseline": false
+        },
+        {
+          "path": "framework/core/src/python/kungfu/kfx_contract.py",
+          "currentLines": 311,
+          "baselineLines": 311,
+          "currentRoot": "sha256:0ab116ea336c7482bbe214a6a26b8ce17cfe0feef9bb1fd1b04cc7b50fe459ba",
+          "baselineRoot": "sha256:0ab116ea336c7482bbe214a6a26b8ce17cfe0feef9bb1fd1b04cc7b50fe459ba",
+          "changedSinceBaseline": false
+        },
+        {
+          "path": "framework/core/src/python/kungfu/cli/commands/kfx.py",
+          "currentLines": 787,
+          "baselineLines": 787,
+          "currentRoot": "sha256:1395a3bf28f16d5fca7f38042345c2ef3001ee863b766bc6273d1900a6b47721",
+          "baselineRoot": "sha256:1395a3bf28f16d5fca7f38042345c2ef3001ee863b766bc6273d1900a6b47721",
+          "changedSinceBaseline": false
+        },
+        {
+          "path": "scripts/run-native-kfx-admission-tests.mjs",
+          "currentLines": 99,
+          "baselineLines": 99,
+          "currentRoot": "sha256:32bb3806ac0541fd4230c78febce26efcfb85b56ef8ce19b4a374d0a07f1c4a4",
+          "baselineRoot": "sha256:32bb3806ac0541fd4230c78febce26efcfb85b56ef8ce19b4a374d0a07f1c4a4",
+          "changedSinceBaseline": false
+        },
+        {
+          "path": "scripts/run-kfx-profile-suite-tests.mjs",
+          "currentLines": 89,
+          "baselineLines": 89,
+          "currentRoot": "sha256:d7d0cd90cf794bd7f9240f0f9a2a8ed1757eb42e20179396f6268bee7c1bc035",
+          "baselineRoot": "sha256:d7d0cd90cf794bd7f9240f0f9a2a8ed1757eb42e20179396f6268bee7c1bc035",
+          "changedSinceBaseline": false
+        },
+        {
+          "path": "docs/qualification/kfd-native-sdk-release-gates.md",
+          "currentLines": 495,
+          "baselineLines": 495,
+          "currentRoot": "sha256:98328a6c59d603f82b03aee017e6bc490ee43decffa7dde63ddcaa644daf9462",
+          "baselineRoot": "sha256:98328a6c59d603f82b03aee017e6bc490ee43decffa7dde63ddcaa644daf9462",
+          "changedSinceBaseline": false
+        },
+        {
+          "path": "product/scripts/dist.mjs",
+          "currentLines": 2514,
+          "baselineLines": 2514,
+          "currentRoot": "sha256:6cfd6c55e296163ab863fb1d79a4a51198ad12943274fc0858338bb651a108da",
+          "baselineRoot": "sha256:6cfd6c55e296163ab863fb1d79a4a51198ad12943274fc0858338bb651a108da",
+          "changedSinceBaseline": false
+        }
+      ],
+      "knownLimits": [
+        "docs/qualification/known-limits.md"
+      ],
+      "recovery": "Query the native KFX registry, verify the exact contract and package roots, and retain explicit unavailable/degraded results when installed product evidence is absent."
+    },
+    {
+      "id": "fact-episode",
+      "owner": "core/runtime-storage",
+      "authority": {
+        "id": "fact-cut-and-episode-journal-authority",
+        "sources": [
+          "framework/fact/kungfu-fact-cut-kernel.contract.json",
+          "framework/episode/kungfu-episode-invariants.contract.json",
+          "framework/core/src/libkungfu/src/runtime/storage/fact_authority.cpp",
+          "framework/core/src/libkungfu/src/runtime/storage/episode_control.cpp"
+        ]
+      },
+      "authorityCount": 1,
+      "roles": {
+        "authority": 4,
+        "generated-projection": 1,
+        "compatibility-reader": 1,
+        "thin-binding": 1,
+        "conformance-oracle": 1,
+        "test": 1,
+        "documentation": 1,
+        "retained-evidence": 1
+      },
+      "amplification": {
+        "mappedSurfaces": 11,
+        "nonAuthoritySurfaces": 7,
+        "changedSurfaces": 0,
+        "changedPaths": []
+      },
+      "surfaces": [
+        {
+          "path": "framework/fact/kungfu-fact-invariant-model-v1.json",
+          "role": "generated-projection"
+        },
+        {
+          "path": "framework/core/src/python/kungfu/storage/fact_root_canonical.py",
+          "role": "compatibility-reader"
+        },
+        {
+          "path": "framework/core/src/libkungfu/src/runtime/storage/fact_protocol.cpp",
+          "role": "thin-binding"
+        },
+        {
+          "path": "scripts/check-fact-cut-kernel-contract.test.mjs",
+          "role": "conformance-oracle"
+        },
+        {
+          "path": "framework/core/tests/python/test_episode_control.py",
+          "role": "test"
+        },
+        {
+          "path": "docs/architecture/fact-episode-action-runtime.md",
+          "role": "documentation"
+        },
+        {
+          "path": "docs/qualification/evidence/fact-durable-admission/current-hardware-candidate-v1/report.json",
+          "role": "retained-evidence"
+        }
+      ],
+      "measurements": [
+        {
+          "path": "framework/fact/kungfu-fact-cut-kernel.contract.json",
+          "currentLines": 1020,
+          "baselineLines": 1020,
+          "currentRoot": "sha256:848dbaafca59b1d7534c569f83552d8674e890345e008c2ece319c29e2caea44",
+          "baselineRoot": "sha256:848dbaafca59b1d7534c569f83552d8674e890345e008c2ece319c29e2caea44",
+          "changedSinceBaseline": false
+        },
+        {
+          "path": "framework/episode/kungfu-episode-invariants.contract.json",
+          "currentLines": 90,
+          "baselineLines": 90,
+          "currentRoot": "sha256:7488d42aa85e8efd4cbf86b150ab3abe1677b1b3485e2513d451bd661d2cc293",
+          "baselineRoot": "sha256:7488d42aa85e8efd4cbf86b150ab3abe1677b1b3485e2513d451bd661d2cc293",
+          "changedSinceBaseline": false
+        },
+        {
+          "path": "framework/core/src/libkungfu/src/runtime/storage/fact_authority.cpp",
+          "currentLines": 137,
+          "baselineLines": 137,
+          "currentRoot": "sha256:56bb281edbb7befb748c4518a3b2b5e7173f963984e72fa7731025ddfb487a48",
+          "baselineRoot": "sha256:56bb281edbb7befb748c4518a3b2b5e7173f963984e72fa7731025ddfb487a48",
+          "changedSinceBaseline": false
+        },
+        {
+          "path": "framework/core/src/libkungfu/src/runtime/storage/episode_control.cpp",
+          "currentLines": 364,
+          "baselineLines": 364,
+          "currentRoot": "sha256:4eda4bc6fdd9667ec3b106b2f2ff65e6c472eff90068369dff4076a879e140d0",
+          "baselineRoot": "sha256:4eda4bc6fdd9667ec3b106b2f2ff65e6c472eff90068369dff4076a879e140d0",
+          "changedSinceBaseline": false
+        },
+        {
+          "path": "framework/fact/kungfu-fact-invariant-model-v1.json",
+          "currentLines": 34,
+          "baselineLines": 34,
+          "currentRoot": "sha256:e868ed8c8a4363a5f9f54892a03911ebe6f7ff5390cbf3285c20fd4674e54e20",
+          "baselineRoot": "sha256:e868ed8c8a4363a5f9f54892a03911ebe6f7ff5390cbf3285c20fd4674e54e20",
+          "changedSinceBaseline": false
+        },
+        {
+          "path": "framework/core/src/python/kungfu/storage/fact_root_canonical.py",
+          "currentLines": 228,
+          "baselineLines": 228,
+          "currentRoot": "sha256:9170310dfe78c8c1114c080abf784c60b8390819e020ddc42634d1de1e76346f",
+          "baselineRoot": "sha256:9170310dfe78c8c1114c080abf784c60b8390819e020ddc42634d1de1e76346f",
+          "changedSinceBaseline": false
+        },
+        {
+          "path": "framework/core/src/libkungfu/src/runtime/storage/fact_protocol.cpp",
+          "currentLines": 1030,
+          "baselineLines": 1030,
+          "currentRoot": "sha256:bf160ac8ee0c4673611ef18d2a9a88c8257a9ae158623aedf0c28f4a439a3a31",
+          "baselineRoot": "sha256:bf160ac8ee0c4673611ef18d2a9a88c8257a9ae158623aedf0c28f4a439a3a31",
+          "changedSinceBaseline": false
+        },
+        {
+          "path": "scripts/check-fact-cut-kernel-contract.test.mjs",
+          "currentLines": 322,
+          "baselineLines": 322,
+          "currentRoot": "sha256:682ff55fcad16b6e0df68704d73a9a6b3708ba916a323c0a7cf448a2d01efe05",
+          "baselineRoot": "sha256:682ff55fcad16b6e0df68704d73a9a6b3708ba916a323c0a7cf448a2d01efe05",
+          "changedSinceBaseline": false
+        },
+        {
+          "path": "framework/core/tests/python/test_episode_control.py",
+          "currentLines": 330,
+          "baselineLines": 330,
+          "currentRoot": "sha256:f5b68ed3bc58db9d4d916839d52aac0194d028dac685a0cfd2714d09b2746cce",
+          "baselineRoot": "sha256:f5b68ed3bc58db9d4d916839d52aac0194d028dac685a0cfd2714d09b2746cce",
+          "changedSinceBaseline": false
+        },
+        {
+          "path": "docs/architecture/fact-episode-action-runtime.md",
+          "currentLines": 414,
+          "baselineLines": 414,
+          "currentRoot": "sha256:00fdafd867bcbe784da098209950a15d7f24bf0f1fe5d5ccc9bd6823b89bce9a",
+          "baselineRoot": "sha256:00fdafd867bcbe784da098209950a15d7f24bf0f1fe5d5ccc9bd6823b89bce9a",
+          "changedSinceBaseline": false
+        },
+        {
+          "path": "docs/qualification/evidence/fact-durable-admission/current-hardware-candidate-v1/report.json",
+          "currentLines": 224,
+          "baselineLines": 224,
+          "currentRoot": "sha256:4a18a41b71250cf57835016b86fb987e98bf428569eeba1034113aa2b7e64665",
+          "baselineRoot": "sha256:4a18a41b71250cf57835016b86fb987e98bf428569eeba1034113aa2b7e64665",
+          "changedSinceBaseline": false
+        }
+      ],
+      "knownLimits": [
+        "docs/qualification/known-limits.md"
+      ],
+      "recovery": "Verify content roots and journal-backed receipts, replay retained characterization fixtures, and never infer Fact authority from JSON projections."
+    },
+    {
+      "id": "storage-query",
+      "owner": "core/runtime-storage",
+      "authority": {
+        "id": "native-storage-api-and-component",
+        "sources": [
+          "framework/storage/kungfu-storage.contract.json",
+          "framework/core/src/libkungfu/include/kungfu/api.h",
+          "framework/core/src/libkungfu/src/runtime/storage/service.cpp"
+        ]
+      },
+      "authorityCount": 1,
+      "roles": {
+        "authority": 3,
+        "thin-binding": 2,
+        "compatibility-reader": 1,
+        "generated-projection": 1,
+        "conformance-oracle": 1,
+        "documentation": 1,
+        "retained-evidence": 1
+      },
+      "amplification": {
+        "mappedSurfaces": 10,
+        "nonAuthoritySurfaces": 7,
+        "changedSurfaces": 0,
+        "changedPaths": []
+      },
+      "surfaces": [
+        {
+          "path": "framework/storage/index.js",
+          "role": "thin-binding"
+        },
+        {
+          "path": "framework/core/src/python/kungfu/storage/service.py",
+          "role": "thin-binding"
+        },
+        {
+          "path": "framework/core/src/libkungfu/src/runtime/storage/json_compat.cpp",
+          "role": "compatibility-reader"
+        },
+        {
+          "path": "framework/core/src/libkungfu/src/runtime/storage/query_render.cpp",
+          "role": "generated-projection"
+        },
+        {
+          "path": "framework/core/tests/storage-node-binding.test.js",
+          "role": "conformance-oracle"
+        },
+        {
+          "path": "docs/qualification/fact-storage-authority.md",
+          "role": "documentation"
+        },
+        {
+          "path": "docs/qualification/evidence/durability/production-candidate-v1/README.md",
+          "role": "retained-evidence"
+        }
+      ],
+      "measurements": [
+        {
+          "path": "framework/storage/kungfu-storage.contract.json",
+          "currentLines": 38,
+          "baselineLines": 38,
+          "currentRoot": "sha256:6c55955f0289dae260d2ddecc924733f6ccfcc2d9e906ab32f987e4265ff4dd3",
+          "baselineRoot": "sha256:6c55955f0289dae260d2ddecc924733f6ccfcc2d9e906ab32f987e4265ff4dd3",
+          "changedSinceBaseline": false
+        },
+        {
+          "path": "framework/core/src/libkungfu/include/kungfu/api.h",
+          "currentLines": 412,
+          "baselineLines": 412,
+          "currentRoot": "sha256:84d9265adbdc3d117b0d9d01ee36510985f974892e7430fbdcd5e1da530d1c19",
+          "baselineRoot": "sha256:84d9265adbdc3d117b0d9d01ee36510985f974892e7430fbdcd5e1da530d1c19",
+          "changedSinceBaseline": false
+        },
+        {
+          "path": "framework/core/src/libkungfu/src/runtime/storage/service.cpp",
+          "currentLines": 2789,
+          "baselineLines": 2789,
+          "currentRoot": "sha256:01d1c02cf918c98ffef460d01cfc2c86a642d5a29ae4b066eda7a7c24d88651f",
+          "baselineRoot": "sha256:01d1c02cf918c98ffef460d01cfc2c86a642d5a29ae4b066eda7a7c24d88651f",
+          "changedSinceBaseline": false
+        },
+        {
+          "path": "framework/storage/index.js",
+          "currentLines": 96,
+          "baselineLines": 96,
+          "currentRoot": "sha256:0f75231b2b68a600ef4b51cae268cdde8d67d1de6de28ee573bcbe778805d272",
+          "baselineRoot": "sha256:0f75231b2b68a600ef4b51cae268cdde8d67d1de6de28ee573bcbe778805d272",
+          "changedSinceBaseline": false
+        },
+        {
+          "path": "framework/core/src/python/kungfu/storage/service.py",
+          "currentLines": 1737,
+          "baselineLines": 1737,
+          "currentRoot": "sha256:41cf5713cf4db1b65cdb192bf2b34160fe1e981aa2fd52833eed3cc9f76797a7",
+          "baselineRoot": "sha256:41cf5713cf4db1b65cdb192bf2b34160fe1e981aa2fd52833eed3cc9f76797a7",
+          "changedSinceBaseline": false
+        },
+        {
+          "path": "framework/core/src/libkungfu/src/runtime/storage/json_compat.cpp",
+          "currentLines": 454,
+          "baselineLines": 454,
+          "currentRoot": "sha256:ed3788eda293341a14e1137d8a4c528433613c076b3500be963f01f22effa58c",
+          "baselineRoot": "sha256:ed3788eda293341a14e1137d8a4c528433613c076b3500be963f01f22effa58c",
+          "changedSinceBaseline": false
+        },
+        {
+          "path": "framework/core/src/libkungfu/src/runtime/storage/query_render.cpp",
+          "currentLines": 406,
+          "baselineLines": 406,
+          "currentRoot": "sha256:7d8e97295419e00924fdb8f1ec74257867e6c9b3bb6a2d33c45ce3c1ad5ea0c7",
+          "baselineRoot": "sha256:7d8e97295419e00924fdb8f1ec74257867e6c9b3bb6a2d33c45ce3c1ad5ea0c7",
+          "changedSinceBaseline": false
+        },
+        {
+          "path": "framework/core/tests/storage-node-binding.test.js",
+          "currentLines": 1645,
+          "baselineLines": 1645,
+          "currentRoot": "sha256:3eb747f265ed900ca5219fd1b0b12bce270595ee9e43f0880314afe2a1e91d1b",
+          "baselineRoot": "sha256:3eb747f265ed900ca5219fd1b0b12bce270595ee9e43f0880314afe2a1e91d1b",
+          "changedSinceBaseline": false
+        },
+        {
+          "path": "docs/qualification/fact-storage-authority.md",
+          "currentLines": 175,
+          "baselineLines": 175,
+          "currentRoot": "sha256:956f31427dc25d86ad3a81298fa50911e54055319e11e1bb52f500f22602546f",
+          "baselineRoot": "sha256:956f31427dc25d86ad3a81298fa50911e54055319e11e1bb52f500f22602546f",
+          "changedSinceBaseline": false
+        },
+        {
+          "path": "docs/qualification/evidence/durability/production-candidate-v1/README.md",
+          "currentLines": 18,
+          "baselineLines": 18,
+          "currentRoot": "sha256:68595f7f2042c6c9a17ed74125b34cbda2f82599c3d64c3a2e98e7724d3cd9b2",
+          "baselineRoot": "sha256:68595f7f2042c6c9a17ed74125b34cbda2f82599c3d64c3a2e98e7724d3cd9b2",
+          "changedSinceBaseline": false
+        }
+      ],
+      "knownLimits": [
+        "docs/qualification/known-limits.md"
+      ],
+      "recovery": "Use native maintenance plans and exact provider receipts; preserve JSON as an edge projection and retain physical durability as a separate claim."
+    },
+    {
+      "id": "release-product-claim",
+      "owner": "product/release",
+      "authority": {
+        "id": "kungfu-gate-catalog-and-release-claim-contract",
+        "sources": [
+          "shifu.gates.json",
+          "framework/release/kungfu-trademark-public-use.contract.json",
+          "product/release-channel-trust.json"
+        ]
+      },
+      "authorityCount": 1,
+      "roles": {
+        "authority": 3,
+        "conformance-oracle": 2,
+        "generated-projection": 1,
+        "package-release": 1,
+        "documentation": 1,
+        "retained-evidence": 1
+      },
+      "amplification": {
+        "mappedSurfaces": 9,
+        "nonAuthoritySurfaces": 6,
+        "changedSurfaces": 0,
+        "changedPaths": []
+      },
+      "surfaces": [
+        {
+          "path": "scripts/verify-kungfu-release-admission.mjs",
+          "role": "conformance-oracle"
+        },
+        {
+          "path": "scripts/prepare-ungfu-release-evidence.mjs",
+          "role": "generated-projection"
+        },
+        {
+          "path": "scripts/release-promotion-rehearsal.mjs",
+          "role": "conformance-oracle"
+        },
+        {
+          "path": ".github/workflows/release-new-version.yml",
+          "role": "package-release"
+        },
+        {
+          "path": "docs/qualification/gates/release-and-promotion.md",
+          "role": "documentation"
+        },
+        {
+          "path": "framework/release/kungfu-ungfu-release-evidence.candidate.json",
+          "role": "retained-evidence"
+        }
+      ],
+      "measurements": [
+        {
+          "path": "shifu.gates.json",
+          "currentLines": 2196,
+          "baselineLines": 2196,
+          "currentRoot": "sha256:dc351c7747dc7005f899524caf61a63cb5edc294924aa958db6bd6aec563cb93",
+          "baselineRoot": "sha256:dc351c7747dc7005f899524caf61a63cb5edc294924aa958db6bd6aec563cb93",
+          "changedSinceBaseline": false
+        },
+        {
+          "path": "framework/release/kungfu-trademark-public-use.contract.json",
+          "currentLines": 217,
+          "baselineLines": 217,
+          "currentRoot": "sha256:dd8b40a72a646f589ff7393fdbe0d12d9f4334c1e9cb68f69000d2c40d6040b4",
+          "baselineRoot": "sha256:dd8b40a72a646f589ff7393fdbe0d12d9f4334c1e9cb68f69000d2c40d6040b4",
+          "changedSinceBaseline": false
+        },
+        {
+          "path": "product/release-channel-trust.json",
+          "currentLines": 16,
+          "baselineLines": 16,
+          "currentRoot": "sha256:68c5dbab9eee01ddeefc630a468d112a4876a1b4c188df08c5ed4667dabdd998",
+          "baselineRoot": "sha256:68c5dbab9eee01ddeefc630a468d112a4876a1b4c188df08c5ed4667dabdd998",
+          "changedSinceBaseline": false
+        },
+        {
+          "path": "scripts/verify-kungfu-release-admission.mjs",
+          "currentLines": 325,
+          "baselineLines": 325,
+          "currentRoot": "sha256:e77a02ecf79651ef1dbfbbf57d494a334fd863ae81de5d7ccd8264922a216403",
+          "baselineRoot": "sha256:e77a02ecf79651ef1dbfbbf57d494a334fd863ae81de5d7ccd8264922a216403",
+          "changedSinceBaseline": false
+        },
+        {
+          "path": "scripts/prepare-ungfu-release-evidence.mjs",
+          "currentLines": 831,
+          "baselineLines": 831,
+          "currentRoot": "sha256:ce25bc3ede98a78f6b3db3d3cca10ed7c4036a907c69e73afc4178416ed86047",
+          "baselineRoot": "sha256:ce25bc3ede98a78f6b3db3d3cca10ed7c4036a907c69e73afc4178416ed86047",
+          "changedSinceBaseline": false
+        },
+        {
+          "path": "scripts/release-promotion-rehearsal.mjs",
+          "currentLines": 713,
+          "baselineLines": 713,
+          "currentRoot": "sha256:12df72a7b881c2c3c83d5a19f1ab8d4189156a4d09ef759fe1e36328f5b4ed1d",
+          "baselineRoot": "sha256:12df72a7b881c2c3c83d5a19f1ab8d4189156a4d09ef759fe1e36328f5b4ed1d",
+          "changedSinceBaseline": false
+        },
+        {
+          "path": ".github/workflows/release-new-version.yml",
+          "currentLines": 357,
+          "baselineLines": 357,
+          "currentRoot": "sha256:a4189d6c1516df7ee75203dd4969cd325e3bfe4ed33c8892c154597ee79941c9",
+          "baselineRoot": "sha256:a4189d6c1516df7ee75203dd4969cd325e3bfe4ed33c8892c154597ee79941c9",
+          "changedSinceBaseline": false
+        },
+        {
+          "path": "docs/qualification/gates/release-and-promotion.md",
+          "currentLines": 141,
+          "baselineLines": 141,
+          "currentRoot": "sha256:5eb20fe886635e0464313023daa1a2b62529ad1d6977202dce9c91c6b8aacf9e",
+          "baselineRoot": "sha256:5eb20fe886635e0464313023daa1a2b62529ad1d6977202dce9c91c6b8aacf9e",
+          "changedSinceBaseline": false
+        },
+        {
+          "path": "framework/release/kungfu-ungfu-release-evidence.candidate.json",
+          "currentLines": 38,
+          "baselineLines": 38,
+          "currentRoot": "sha256:f563690764dc22643ad66667bcb62eea8548c046afe72dd74d5238aca85a17ae",
+          "baselineRoot": "sha256:f563690764dc22643ad66667bcb62eea8548c046afe72dd74d5238aca85a17ae",
+          "changedSinceBaseline": false
+        }
+      ],
+      "knownLimits": [
+        "docs/qualification/known-limits.md"
+      ],
+      "recovery": "Recompute source-bound release admission and exact platform passports; preparation, dry-run, or one-platform evidence never becomes a public release claim."
+    }
+  ],
+  "productionBoundaries": [
+    {
+      "id": "source-and-readonly-discovery",
+      "state": "proved",
+      "evidence": [
+        "scripts/readonly-agent-bootstrap.test.mjs",
+        "scripts/code-complexity-budget.test.mjs"
+      ],
+      "claimBoundary": "Source and protected-checkout behavior only."
+    },
+    {
+      "id": "native-macos-current-checkout",
+      "state": "partial",
+      "evidence": [
+        "framework/core/architecture/ARCHITECTURE_HEALTH.md"
+      ],
+      "claimBoundary": "Buildable current source; no installed or released artifact inference."
+    },
+    {
+      "id": "semantic-authority-convergence",
+      "state": "retained-dependency",
+      "evidence": [],
+      "dependentAssignment": {
+        "assignmentId": "2026-07-26-kungfu-authority-convergence",
+        "requestRoot": "sha256:3c21a18843d601a08012bce640fa6c184358179cc9f82999d7420b80d7806b97",
+        "captureReceiptRoot": "sha256:e9668f6ac8cf97bb59db87c1c5ec04076dd14b4d294abc1a25408c2d2dfb552b"
+      },
+      "claimBoundary": "The current report maps authority routes and detects shadow surfaces; material convergence remains a separately owned paused Assignment."
+    },
+    {
+      "id": "responsibility-hotspot-decomposition",
+      "state": "retained-dependency",
+      "evidence": [],
+      "dependentAssignment": {
+        "assignmentId": "2026-07-26-kungfu-responsibility-hotspot-decomposition",
+        "requestRoot": "sha256:5f71d58aac57e46f268dd1953473249aab182e0e3f8061a7d75929c3f81be9ee",
+        "captureReceiptRoot": "sha256:9694edded6e090e588c56286ebf9c957718ecfb14b3e92b8b74e7ffbcace2bde"
+      },
+      "claimBoundary": "Two bounded source-tooling seams are proved here; decomposition of the repository responsibility hotspots remains a separately owned paused Assignment."
+    },
+    {
+      "id": "linux-native-and-product",
+      "state": "retained-dependency",
+      "evidence": [],
+      "dependentAssignment": {
+        "assignmentId": "2026-07-26-kungfu-linux-product-qualification",
+        "requestRoot": "sha256:abfb20e87a7c06437431c133b4e32c5cb72a8c1ca4c7e5ddb8917b7eb77e0a4f",
+        "captureReceiptRoot": "sha256:91305cbc2255ed4ef18e2f7966be6f9acbc7ea68544b1535c261a70cebfa8974"
+      },
+      "claimBoundary": "Exact delivered-commit Linux native and installed-product qualification remains a separately owned paused Assignment."
+    },
+    {
+      "id": "windows-native-and-product",
+      "state": "retained-dependency",
+      "evidence": [],
+      "dependentAssignment": {
+        "assignmentId": "2026-07-26-kungfu-windows-product-qualification",
+        "requestRoot": "sha256:2abb9fb07ac8c09ca1658388731b23a1fd47bbe8115ec284cc24c54e93b2157c",
+        "captureReceiptRoot": "sha256:bc649a491246506f2e0067b089af5539136ebce8972270c2783650ca8f7b1b04"
+      },
+      "claimBoundary": "Static shifu.cmd parity is not Windows execution evidence; exact Windows native and product execution remains a separately owned paused Assignment."
+    },
+    {
+      "id": "physical-durability",
+      "state": "retained-dependency",
+      "evidence": [
+        "docs/qualification/evidence/durability/production-candidate-v1/README.md"
+      ],
+      "claimBoundary": "Current hardware candidate is not physical power-loss proof."
+    },
+    {
+      "id": "public-release",
+      "state": "retained-dependency",
+      "evidence": [
+        "framework/release/kungfu-trademark-public-use.contract.json"
+      ],
+      "claimBoundary": "Release evidence remains pending and no public release claim is made."
+    }
+  ],
+  "decompositions": [
+    {
+      "id": "readonly-shifu-routing",
+      "original": [
+        "shifu",
+        "shifu.cmd"
+      ],
+      "boundary": "Cross-platform selection stays in the platform shim; command-to-reader dispatch and stable execution move to one Node built-in route.",
+      "target": "scripts/shifu-readonly-entry.mjs",
+      "owner": "shifu/source-tooling",
+      "dependencyInvariant": "The route may use only the existing Node executable and checked-in files; no installer, package manager, cache, network, or diagnostics writer.",
+      "tests": [
+        "scripts/check-shifu-entry-contract.test.mjs",
+        "scripts/readonly-agent-bootstrap.test.mjs"
+      ],
+      "rollback": "Remove the direct route and wrapper together; protected-checkout discovery then returns to the reproduced explicit failure."
+    },
+    {
+      "id": "invariant-discovery-projection",
+      "original": [
+        "scripts/kungfu-invariant.mjs"
+      ],
+      "boundary": "Registry-to-discovery projection is pure and build-free; full verification retains authority-root and qualification behavior.",
+      "target": "scripts/kungfu-invariant-discovery.mjs",
+      "owner": "shifu/source-tooling",
+      "dependencyInvariant": "Both discovery and full verification consume the same invariant registry and projection function.",
+      "tests": [
+        "scripts/readonly-agent-bootstrap.test.mjs"
+      ],
+      "rollback": "Restore the projection function in the full verifier and remove the read-only invariant route."
+    }
+  ],
+  "issues": []
+}

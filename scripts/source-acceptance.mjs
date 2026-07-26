@@ -214,6 +214,12 @@ export function sourceAcceptancePlan(files, evidenceBaseCommit = '') {
       'framework/core/architecture/check-layers.mjs',
       '--self-test',
     ],
+    ['code complexity budget ratchet', 'scripts/code-complexity-budget.mjs'],
+    [
+      'semantic amplification and task graph',
+      'framework/maintainability/semantic-amplification.mjs',
+      '--check',
+    ],
     [
       'core architecture query and health contract',
       'framework/core/architecture/query-health.mjs',
@@ -330,6 +336,9 @@ export function sourceAcceptancePlan(files, evidenceBaseCommit = '') {
         'scripts/run-shifu-lifecycle.test.mjs',
         'scripts/check-typescript-files.test.mjs',
         'scripts/source-acceptance.test.mjs',
+        'scripts/code-complexity-budget.test.mjs',
+        'framework/maintainability/semantic-amplification.test.mjs',
+        'scripts/readonly-agent-bootstrap.test.mjs',
         'scripts/check-shifu-entry-contract.test.mjs',
         'scripts/check-shifu-cache-contract.test.mjs',
         'scripts/check-health-diagnostics-contract.test.mjs',

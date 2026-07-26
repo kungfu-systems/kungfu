@@ -1,0 +1,105 @@
+{
+  "schema": "kungfu.code-complexity-budget-policy/v1",
+  "status": "p0-calibration",
+  "baselineRef": "eba3eedd79e0fb2a5e314d2c74e79af4c41e0085",
+  "baselinePath": "framework/maintainability/code-complexity-baseline.json",
+  "waiverDirectory": "framework/maintainability/waivers",
+  "classificationOrder": [
+    "retained-evidence",
+    "vendored-source",
+    "generated-projection",
+    "test-or-fixture",
+    "declarative-schema-or-table",
+    "public-header-or-entrypoint",
+    "first-party-handwritten-implementation"
+  ],
+  "eligibleExtensions": [
+    ".c",
+    ".cc",
+    ".cjs",
+    ".cmake",
+    ".cmd",
+    ".cpp",
+    ".cxx",
+    ".fbs",
+    ".gyp",
+    ".gypi",
+    ".h",
+    ".hh",
+    ".hpp",
+    ".hxx",
+    ".js",
+    ".json",
+    ".jsonc",
+    ".lock",
+    ".mjs",
+    ".proto",
+    ".ps1",
+    ".py",
+    ".rs",
+    ".sh",
+    ".toml",
+    ".ts",
+    ".tsx",
+    ".yaml",
+    ".yml"
+  ],
+  "specialEligibleNames": [
+    "CMakeLists.txt",
+    "shifu"
+  ],
+  "calibration": {
+    "groupBy": [
+      "class",
+      "language"
+    ],
+    "softPercentile": 0.9,
+    "hardPercentile": 0.99,
+    "smallGroupPolicy": "observed-maximum",
+    "minimumGroupSizeForPercentiles": 10
+  },
+  "antiGaming": {
+    "maxNewHandwrittenFilesPerOwner": 3,
+    "newGeneratedProjectionRequiresProvenance": true
+  },
+  "blocking": {
+    "p0": [
+      "unknown-classification",
+      "unknown-owner",
+      "invalid-policy",
+      "invalid-baseline",
+      "non-read-only"
+    ],
+    "p1": [
+      "new-handwritten-file-over-hard-budget",
+      "existing-file-crossed-hard-budget",
+      "grandfathered-file-grew",
+      "new-helper-proliferation",
+      "unproven-generated-projection"
+    ]
+  },
+  "waiver": {
+    "schema": "kungfu.code-complexity-budget-waiver/v1",
+    "requiredFields": [
+      "schema",
+      "paths_or_scope",
+      "file_class",
+      "baseline_measurement",
+      "requested_measurement",
+      "allowed_delta",
+      "owner",
+      "responsibility_boundary",
+      "cohesion_rationale",
+      "rejected_split_alternatives",
+      "affected_tests_and_qualification",
+      "requested_by",
+      "approved_by",
+      "approved_at",
+      "expires_at_or_review_by",
+      "retirement_or_decomposition_ref"
+    ],
+    "independentApproval": true,
+    "mutatesBaseline": false,
+    "reusableForUnrelatedGrowth": false
+  }
+}

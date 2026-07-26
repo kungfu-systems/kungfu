@@ -530,7 +530,7 @@
           "authority": "qualification",
           "publication": "none",
           "receipt": "diagnostic",
-          "definitionDigest": "sha256:ed3961a91f8acb6023dfdb5d5219db1339cc87544c735fa7b959526b9d1bbc07",
+          "definitionDigest": "sha256:693fb8d96a00bb32018ccc128e4f9ca008a354576c4a07017c3925a73360f7a5",
           "credentials": {
             "githubToken": "read",
             "oidc": false,
@@ -547,7 +547,7 @@
               "index": 1,
               "label": "uses:actions/checkout@v4",
               "authority": "qualification",
-              "definitionDigest": "sha256:dd0465395fff2eaf34fe466af3f46904442331f18fbcb4d67ae136cd3ae05d18"
+              "definitionDigest": "sha256:013f3e07e00504e33bda746183e505021d945acc2dfb178cf1d094ef09ea5c8f"
             },
             {
               "index": 2,

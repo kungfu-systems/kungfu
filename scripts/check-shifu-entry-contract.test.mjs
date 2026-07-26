@@ -137,10 +137,34 @@ test('cache execution boundaries distinguish gate run and source acceptance', ()
     assert.match(entrypoint, /shifu-cache-entry: source-acceptance-bypass/);
     assert.match(entrypoint, /shifu-cache-entry: gate-run-outer-apply/);
   }
-  assert.match(windows, /_KFC_FORWARD_ARGS=%\*/);
-  assert.match(windows, /_KFC_FORWARD_ARGS:\* =%/);
+  assert.match(windows, /source-acceptance\.mjs/);
   assert.match(native, /gate_subcommand/);
   assert.match(native, /cache_bypass/);
+});
+
+test('build-free read-only routes bypass launcher bootstrap on both shims', () => {
+  const posix = fs.readFileSync(path.join(ROOT, 'shifu'), 'utf8');
+  const windows = fs.readFileSync(path.join(ROOT, 'shifu.cmd'), 'utf8');
+  for (const entrypoint of [posix, windows]) {
+    assert.match(entrypoint, /core:architecture/);
+    assert.match(entrypoint, /core:architecture:health/);
+    assert.match(entrypoint, /invariant:verify/);
+    assert.match(entrypoint, /maintainability:complexity/u);
+    assert.match(entrypoint, /maintainability:amplification/u);
+    assert.match(entrypoint, /maintainability:query/u);
+    assert.match(entrypoint, /shifu-readonly-entry\.mjs/u);
+    assert.match(entrypoint, /readonly-node-unavailable/u);
+  }
+  const posixFloor = posix.slice(
+    posix.indexOf('# Build-free routes'),
+    posix.indexOf('# Source acceptance'),
+  );
+  assert.doesNotMatch(posixFloor, /fnm install|pnpm|diagnostics/u);
+  const windowsFloor = windows.slice(
+    windows.indexOf(':readonlynode'),
+    windows.indexOf(':kungfucli'),
+  );
+  assert.doesNotMatch(windowsFloor, /fnm install|pnpm|diagnostics/u);
 });
 
 test('Xinfa product tasks bypass unrelated Kungfu dependency caches', () => {
