@@ -215,7 +215,6 @@ def _record_schema(kind: str) -> dict[str, Any]:
                     "import_episode_root": {"type": "string"},
                     "payload_hash": {"type": "string"},
                     "actor": {"type": "string"},
-                    "exact_identity": {"type": "object"},
                 },
                 "required": [
                     "authority_mode",
@@ -1621,6 +1620,7 @@ def create_initiative(
             for field in ("authority", "kind")
         ):
             raise ValueError("Initiative source authority and kind are required")
+        record["source_identity"] = source_identity
     subject_key = f"kungfu:{mission_id}"
     payload = {
         "record": record,
@@ -1630,7 +1630,6 @@ def create_initiative(
             "source_time": "journal-system-time",
             "payload_hash": _sha256_root(record),
             "actor": record["owner"],
-            "exact_identity": source_identity,
         },
         "links": {"initiative_id": subject_key},
     }

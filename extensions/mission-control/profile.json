@@ -17,7 +17,7 @@
   "kfd1": {
     "contractWorld": {
       "path": "contracts/world.json",
-      "sha256": "37100785532f6aace5c5f8831de445be69f835d392f0208c05bb062d3e688a5b"
+      "sha256": "b099ab642cdc3c350aab0ecc01060fe4fe81d3f1f1da075a44d56946b867a2d1"
     },
     "factSurfaces": [
       {

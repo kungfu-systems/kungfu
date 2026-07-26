@@ -98,6 +98,31 @@ def test_initiative_admission_requires_exact_content_root(tmp_path):
         assignment_orchestration.load_initiative_admission(path)
 
 
+def test_exact_initiative_identity_uses_the_open_record_without_schema_drift(
+    tmp_path,
+):
+    runtime = tmp_path / "runtime"
+    _activate(runtime)
+    admission = _initiative_admission()
+    source_identity = {
+        **admission["source"],
+        "admissionRoot": admission["admissionRoot"],
+    }
+
+    mission_control.create_initiative(
+        str(runtime),
+        initiative_id=admission["initiativeId"],
+        title=admission["title"],
+        intent=admission["intent"],
+        actor="agent-a",
+        actor_type="agent",
+        source_identity=source_identity,
+    )
+    initiatives = mission_control.list_initiatives(str(runtime))
+
+    assert initiatives[0]["source_identity"] == source_identity
+
+
 def test_cli_runtime_refreshes_a_new_workspace_identity(tmp_path, monkeypatch):
     monkeypatch.setenv("KF_CONFIG_HOME", str(tmp_path / "config"))
     identity, runtime_dir, receipt = ASSIGNMENT_CLI._runtime(str(tmp_path))

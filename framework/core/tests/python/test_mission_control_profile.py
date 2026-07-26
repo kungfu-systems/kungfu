@@ -92,6 +92,10 @@ def test_first_party_mission_control_suite_closes_and_activates(tmp_path):
             "kungfu.initiative-assignment.completion-claim",
         ],
     }
+    assert all(
+        "exact_identity" not in surface["schema"]["properties"]["source"]["properties"]
+        for surface in world["factSurfaces"]
+    )
     assert (
         profile_composition.contract_materialization_plan(SOURCE, runtime)["operations"]
         == []

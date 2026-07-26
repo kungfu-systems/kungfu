@@ -40,8 +40,7 @@
               "import_episode_id": { "type": "string" },
               "import_episode_root": { "type": "string" },
               "payload_hash": { "type": "string" },
-              "actor": { "type": "string" },
-              "exact_identity": { "type": "object" }
+              "actor": { "type": "string" }
             },
             "required": [
               "authority_mode",
@@ -92,8 +91,7 @@
               "import_episode_id": { "type": "string" },
               "import_episode_root": { "type": "string" },
               "payload_hash": { "type": "string" },
-              "actor": { "type": "string" },
-              "exact_identity": { "type": "object" }
+              "actor": { "type": "string" }
             },
             "required": [
               "authority_mode",
@@ -140,8 +138,7 @@
               "import_episode_id": { "type": "string" },
               "import_episode_root": { "type": "string" },
               "payload_hash": { "type": "string" },
-              "actor": { "type": "string" },
-              "exact_identity": { "type": "object" }
+              "actor": { "type": "string" }
             },
             "required": [
               "authority_mode",
