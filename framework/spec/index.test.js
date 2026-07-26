@@ -29,16 +29,53 @@ const {
   npmSpawnOptions,
 } = require('./scripts/pack.js');
 
-function pythonCommand(platform = process.platform) {
-  return (
-    process.env.PYTHON || (platform === 'win32' ? 'python.exe' : 'python3')
-  );
+function pythonInvocation(
+  args,
+  platform = process.platform,
+  configured = process.env.PYTHON,
+) {
+  if (platform !== 'win32' || configured)
+    return { command: configured || 'python3', args };
+  return {
+    command: 'uv',
+    args: [
+      'run',
+      '--project',
+      path.join(__dirname, '..', 'core'),
+      '--frozen',
+      'python',
+      ...args,
+    ],
+  };
 }
 
 test('uses platform command shims when qualifying and packing', () => {
-  assert.equal(pythonCommand('win32'), process.env.PYTHON || 'python.exe');
-  assert.equal(pythonCommand('darwin'), process.env.PYTHON || 'python3');
-  assert.equal(pythonCommand('linux'), process.env.PYTHON || 'python3');
+  assert.deepEqual(pythonInvocation(['reader.py'], 'win32', ''), {
+    command: 'uv',
+    args: [
+      'run',
+      '--project',
+      path.join(__dirname, '..', 'core'),
+      '--frozen',
+      'python',
+      'reader.py',
+    ],
+  });
+  assert.deepEqual(pythonInvocation(['reader.py'], 'darwin', ''), {
+    command: 'python3',
+    args: ['reader.py'],
+  });
+  assert.deepEqual(pythonInvocation(['reader.py'], 'linux', ''), {
+    command: 'python3',
+    args: ['reader.py'],
+  });
+  assert.deepEqual(
+    pythonInvocation(['reader.py'], 'win32', 'D:\\Python\\python.exe'),
+    {
+      command: 'D:\\Python\\python.exe',
+      args: ['reader.py'],
+    },
+  );
   assert.equal(npmCommand('win32'), 'npm.cmd');
   assert.equal(npmCommand('darwin'), 'npm');
   assert.equal(npmCommand('linux'), 'npm');
@@ -79,18 +116,12 @@ test('exposes rooted authority, compatibility, vectors, and non-claims', () => {
 });
 
 test('qualifies every retained vector through the packaged Python reader', () => {
+  const python = pythonInvocation([
+    path.join(__dirname, 'reference-readers/python/portable_format_reader.py'),
+    '--json',
+  ]);
   const report = JSON.parse(
-    execFileSync(
-      pythonCommand(),
-      [
-        path.join(
-          __dirname,
-          'reference-readers/python/portable_format_reader.py',
-        ),
-        '--json',
-      ],
-      { encoding: 'utf8' },
-    ),
+    execFileSync(python.command, python.args, { encoding: 'utf8' }),
   );
   assert.equal(report.package.name, '@kungfu-tech/spec');
   assert.equal(report.vectorCount, 16);

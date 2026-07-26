@@ -18,7 +18,23 @@ export function pythonCommand(
   platform = process.platform,
   configured = process.env.PYTHON,
 ) {
-  return configured || (platform === 'win32' ? 'python.exe' : 'python3');
+  return configured || (platform === 'win32' ? 'uv' : 'python3');
+}
+
+export function pythonCommandArgs(
+  args,
+  {
+    platform = process.platform,
+    configured = process.env.PYTHON,
+    project = '',
+  } = {},
+) {
+  if (platform !== 'win32' || configured) return args;
+  if (!project)
+    throw new Error(
+      'a pinned uv project is required for the Windows Python command',
+    );
+  return ['run', '--project', project, '--frozen', 'python', ...args];
 }
 
 export function prependEnvironmentPath(
