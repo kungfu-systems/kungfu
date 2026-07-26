@@ -3,7 +3,7 @@
   "positioning": {
     "promise": "Kungfu helps a fresh agent continue the same real-world work without asking you to explain it all again.",
     "firstReleaseOutcome": "Keep the work when the chat ends.",
-    "status": "Coming soon. Source-built capabilities and qualification slices exist; public packaging and stable compatibility remain separate release claims.",
+    "status": "The portable Spec and site bundles are qualified at 4.0.0-alpha.1; the complete product, public CLI and stable compatibility remain separate release claims.",
     "principle": "One core, many complete products. Higher layers add convenience, never authority.",
     "currentFocus": "Accountable agent runtime is the current product focus; quantitative trading is historical proof and games or virtual worlds are a future derivative horizon.",
     "sourceIds": [
@@ -86,13 +86,14 @@
       "label": ".kungfu",
       "route": "/format/",
       "headline": "An exact pre-release portable authority bundle, projected without creating a second format truth.",
-      "summary": "The site binds the generated @kungfu-tech/spec manifest, normative root and artifact roots while the owning format, reader, migration, schema and vector contracts retain semantic authority.",
+      "summary": "The site binds @kungfu-tech/spec@4.0.0-alpha.1, its normative root, v4 alpha baseline and artifact roots while the owning format, reader, migration, schema and vector contracts retain semantic authority.",
       "claimClass": "current-contract",
       "maturity": "staged",
       "capabilities": [
         "Inspect the portable authority overview and exact package pickup coordinate.",
         "Route required-reader profiles, compatibility tuples, migration ownership and the schema registry.",
-        "Inspect the qualified retained cross-version vector corpus and every rooted artifact without monorepo reach-through."
+        "Inspect the qualified retained cross-version vector corpus and every rooted artifact without monorepo reach-through.",
+        "Render all eleven integrity-bound human page models directly from the installed package."
       ],
       "knownLimits": [
         "The standalone portable format is pre-release and is not declared stable.",

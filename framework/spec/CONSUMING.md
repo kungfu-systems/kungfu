@@ -7,8 +7,14 @@ tables into their own source.
 ## Pin and load
 
 The package version is a pickup coordinate, not a format compatibility
-decision. Until a release is published, use an exact source-built package from
-the release qualification flow.
+decision. The current public alpha pickup is exact:
+
+```sh
+npm install --save-exact @kungfu-tech/spec@4.0.0-alpha.1
+```
+
+Use the `alpha` dist-tag only for discovery; persist the exact version and
+verify the bundled normative root before use.
 
 ```js
 const path = require('node:path');
@@ -43,6 +49,16 @@ if (proof.normative_root !== manifest.normative.root) {
 `manifest.categories` preserves the six established category routes.
 `manifest.artifacts` is the complete authority surface, including the required
 reader matrix and migration graph.
+
+The packaged compatibility map also binds the append-only `v4-alpha` baseline.
+Changing a bound authority under an existing alpha release is rejected; a
+successor must be explicit. This is not a stable compatibility promise.
+
+Run the independent stdlib-only reader directly from the installed package:
+
+```sh
+python3 node_modules/@kungfu-tech/spec/reference-readers/python/portable_format_reader.py --json
+```
 
 ## Site behavior
 

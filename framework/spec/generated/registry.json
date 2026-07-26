@@ -117,7 +117,7 @@
     "sources": [
       {
         "path": "framework/format/kungfu-portable-format-authority.contract.json",
-        "root": "sha256:067eab9f0495580c0b279be7b8babd01e18fe3adc7b77b60a25fd6187652fcde"
+        "root": "sha256:935ebf826adf19e31a6362380c06405b59b94fcbb2df66063d205571243a7eff"
       },
       {
         "path": "framework/fact/kungfu-fact-cut-kernel.contract.json",

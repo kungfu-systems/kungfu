@@ -138,9 +138,23 @@ async function main() {
       [binary, 'authority-verify'],
       { cwd: temp, env },
     );
+    const pythonReader = await runMeasured(
+      'python3',
+      [
+        path.join(
+          packageRoot,
+          'reference-readers',
+          'python',
+          'portable_format_reader.py',
+        ),
+        '--json',
+      ],
+      { cwd: temp, env },
+    );
     const outputs = [inspect, verify, preserve, authority, authorityVerify].map(
       (result) => JSON.parse(result.stdout.trim()),
     );
+    const pythonOutput = JSON.parse(pythonReader.stdout.trim());
     if (
       outputs[0].status !== 'read-degraded' ||
       outputs[1].status !== 'read-degraded' ||
@@ -153,10 +167,16 @@ async function main() {
       outputs[3].status !== 'read' ||
       outputs[4].status !== 'read' ||
       outputs[4].artifact_count !== 8 ||
-      outputs[4].vector_count !== 8 ||
+      outputs[4].vector_count !== 16 ||
       outputs[3].normative_root !== outputs[4].normative_root
     )
       fail('installed authority inspection proof is incomplete');
+    if (
+      pythonOutput.vectorCount !== 16 ||
+      pythonOutput.normativeRoot !== outputs[4].normative_root ||
+      pythonOutput.runtimeDependencies.length !== 0
+    )
+      fail('installed independent Python reader proof is incomplete');
     const source = {
       commit: git(['rev-parse', 'HEAD']),
       tree_dirty: git(['status', '--porcelain']).length > 0,
@@ -179,6 +199,8 @@ async function main() {
           'preserve_unknowns',
           'inspect_authority',
           'verify_authority_roots',
+          'verify_all_compatibility_axes',
+          'independent_python_reader',
         ],
         measurements: {
           dependency_count: 1,
@@ -191,6 +213,7 @@ async function main() {
             preserve.peakResidentBytes,
             authority.peakResidentBytes,
             authorityVerify.peakResidentBytes,
+            pythonReader.peakResidentBytes,
           ),
           onboarding_concept_count: 6,
         },

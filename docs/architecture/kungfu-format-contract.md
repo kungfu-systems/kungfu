@@ -19,7 +19,8 @@ verification commands.
 | workspace and fallback root selection | implemented configuration contract | [Configuration](../guides/config.md) and [`kungfu-config.contract.json`](../../framework/config/kungfu-config.contract.json) | `kungfu config path --json` |
 | workspace `.kungfu/` layout v1 and persistence classes | accepted decision; implementation staged | [Freeze workspace `.kungfu` home layout v1](../adr/KF-ADR-019f86da-4f90-713d-8626-d70bca82cb76.md) and the [typed C++ layout projection](../../framework/core/src/libkungfu/src/runtime/storage/layout.cpp) | `kungfu storage layout --json` and `kungfu storage layout --verify --json` |
 | journal wire epoch used by layout v1 | declared and reader-enforced; implementation staged with the layout decision | [`layout_fingerprint.h`](../../framework/core/src/libyijinjing/include/kungfu/yijinjing/journal/layout_fingerprint.h) and the [retained fixture](../../framework/core/src/libyijinjing/tests/fixtures/journal-wire-v1.json) | native build and journal mmap tests |
-| retained cross-version byte corpus | qualified v1; append-only releases | [`portable-format-vectors`](../../framework/format/conformance/portable-format-vectors/index.json) | `./shifu check:portable-format-authority` |
+| retained cross-version byte corpus | qualified v2; append-only releases and all seven compatibility axes | [`portable-format-vectors`](../../framework/format/conformance/portable-format-vectors/index.json) | `./shifu check:portable-format-authority` |
+| pre-stable v4 alpha baseline | `4.0.0-alpha.1` content-rooted and append-only; incompatible in-place mutation rejected | [`v4-alpha/index.json`](../../framework/format/compatibility/v4-alpha/index.json) | `./shifu check:portable-format-authority` |
 | `first-party.json` envelope | versioned schema; implementation staged with the layout decision | [`first-party-manifest.schema.json`](../../framework/kfx/schema/first-party-manifest.schema.json) | KFX contract validation and `./shifu verify` |
 | Fact and Episode meaning | current public semantic authority | [Fact, Episode, and Action Primitive Runtime](fact-episode-action-runtime.md), [Episode Object Model](../concepts/episode-object-model.md), and [Event Model](event-model.md) | source and qualification gates named by those documents |
 | portable spec bundle manifest | generated and content-root qualified; standalone status remains pre-release | [`@kungfu-tech/spec`](../../framework/spec/README.md), its [`manifest.schema.json`](../../framework/spec/schema/manifest.schema.json), and [generated authority](../../framework/spec/generated/authority.json) | deterministic generation, full schema/root verification, clean install, and layer-format qualification |
@@ -58,11 +59,27 @@ evidence. Downgrade and unsupported edges refuse before authority changes.
 Structural repair keeps damage evidence and cannot claim semantic recovery it
 cannot prove.
 
-The retained v1 conformance corpus now content-roots eight real byte vectors
-covering journal pages and Fact-root preimages, all five required-reader
-outcomes, supported and refused migration, retry reconciliation, and repair
-without invented semantics. Native yijinjing and an independent JavaScript
-reader reproduce the declared journal roots and classifications.
+The retained v2 conformance corpus keeps every v1 byte and appends eight exact
+compatibility-tuple vectors. Its sixteen vectors cover journal epoch, workspace
+layout, record schemas, payload schemas, root protocols, bundle manifest,
+capabilities, malformed unknown axes, and all five required-reader outcomes.
+Native yijinjing, the independent JavaScript oracle, and the stdlib-only Python
+reader shipped inside `@kungfu-tech/spec` reproduce the applicable roots and
+classifications.
+
+The `v4-alpha` baseline binds the complete current tuple and exact roots of the
+composition, required-reader, migration/repair, and retained-corpus
+authorities. Rewriting any bound source under `4.0.0-alpha.1` fails the gate. A
+change must append a content-rooted successor baseline, bind its predecessor,
+and enumerate every changed authority; this is a pre-stable alpha discipline,
+not a stable-v4 compatibility promise.
+
+The disposable migration campaign exercises preview, no-op, successful
+successor admission, unsupported refusal before writes, injected interruption,
+staging recovery, exact receipt retry, evidence-preserving repair, and semantic
+repair refusal. It proves source preservation and deterministic receipts
+without touching a user `.kungfu` workspace. Real user-workspace mutation
+remains explicitly unimplemented.
 
 The generated normative bundle is now qualified. It contains eight
 content-addressed machine projections for composition authority, schema
@@ -72,8 +89,10 @@ roots, and the manifest binds all artifact roots into one canonical normative
 root. Mutable build provenance is outside that root. The package's clean-install
 CLI and Node API can inspect and recompute those roots without the monorepo.
 
-The standalone format is still pre-release because the exact site projection
-has not yet completed qualification.
+The exact package-local site projection and all eleven renderable page models
+are qualified through clean tarball installation. The standalone format remains
+pre-release because the v4 alpha baseline has not been promoted to a stable
+compatibility contract.
 
 ## Historical Spec 0.1 is not normative
 
@@ -86,15 +105,17 @@ Episode-centered object model and must not be used to implement a reader or
 claim compatibility. Its `spec_version: 0.1` is not the workspace layout
 version and is not a stable format promise.
 
-A stable portable format must still complete the exact site projection from
-the qualified package. The executable reader, retained-vector, and generated
-package boundaries are now qualified.
+A stable portable format must still define and approve the post-alpha
+compatibility window, promotion criteria, and real-workspace migration policy.
+The executable readers, retained vectors, disposable migration/repair campaign,
+generated Spec bundle, and exact site projection are now qualified.
 
 Until those conditions are met, describe the current surface as:
 
-> a machine-readable workspace layout and runtime evidence system with a
-> qualified portable authority package, not yet a finalized standalone
-> `.kungfu` format.
+> a machine-readable workspace layout and runtime evidence system with
+> qualified `@kungfu-tech/spec@4.0.0-alpha.1` and
+> `@kungfu-tech/site@4.0.0-alpha.1` package surfaces, not yet a stable
+> standalone `.kungfu` format.
 
 ## Authority boundaries
 
@@ -148,6 +169,8 @@ refresh this index and its Xinfa route. Run:
 
 ```sh
 ./shifu docs:check
+./shifu check:portable-format-authority
+./shifu qualify:portable-format-packages
 ./shifu adr:audit
 ./shifu adr:map:check
 ```

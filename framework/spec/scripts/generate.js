@@ -21,6 +21,7 @@ const sourcePaths = {
   migration: 'framework/format/kungfu-format-migration.contract.json',
   vectorIndex:
     'framework/format/conformance/portable-format-vectors/index.json',
+  baselineIndex: 'framework/format/compatibility/v4-alpha/index.json',
 };
 
 /** @param {unknown} value @returns {any} */
@@ -77,6 +78,15 @@ function buildArtifacts() {
   const reader = readSource(sourcePaths.reader);
   const migration = readSource(sourcePaths.migration);
   const vectorIndex = readSource(sourcePaths.vectorIndex);
+  const baselineIndex = readSource(sourcePaths.baselineIndex);
+  const baselineReleasePath = path.posix.join(
+    path.posix.dirname(sourcePaths.baselineIndex),
+    baselineIndex.value.releases.find(
+      /** @param {{id:string}} release */
+      (release) => release.id === baselineIndex.value.latestRelease,
+    ).path,
+  );
+  const baselineRelease = readSource(baselineReleasePath);
   const vectorReleasePath = path.posix.join(
     path.posix.dirname(sourcePaths.vectorIndex),
     vectorIndex.value.releases.find(
@@ -179,7 +189,7 @@ function buildArtifacts() {
 
   const compatibility = artifact(
     'kungfu.spec.compatibility-map/v1',
-    [composition, reader, migration],
+    [composition, reader, migration, baselineIndex, baselineRelease],
     {
       id: 'kungfu-portable-format-compatibility',
       status: 'current',
@@ -187,6 +197,14 @@ function buildArtifacts() {
       current_tuple: migration.value.currentTuple,
       reader_outcomes: migration.value.readerOutcomeMap,
       composition_rule: composition.value.compatibility.rule,
+      v4_alpha_baseline: {
+        format_line: baselineIndex.value.formatLine,
+        latest_release: baselineIndex.value.latestRelease,
+        latest_release_root: baselineIndex.value.latestReleaseRoot,
+        append_policy: baselineIndex.value.appendPolicy,
+        stability: baselineRelease.value.stability,
+        source_bindings: baselineRelease.value.sourceBindings,
+      },
       non_claims: [
         ...composition.value.nonClaims,
         ...migration.value.nonClaims,

@@ -13,6 +13,8 @@ const {
   loadBundle,
   loadFormatAuthorityManifest,
   loadFormatAuthorityRoute,
+  renderPageModel,
+  renderPageModels,
   schemaPath,
   verifyBundle,
 } = require('./index.js');
@@ -113,4 +115,33 @@ test('exposes the complete product route hierarchy', () => {
     '/decisions/',
     '/horizons/',
   ]);
+});
+
+test('renders one integrity-bound page model for every human route', () => {
+  const bundle = loadBundle();
+  const pages = renderPageModels();
+  assert.equal(pages.length, bundle.surfaces.length);
+  assert.deepEqual(
+    pages.map(({ route }) => route),
+    bundle.surfaces.map(({ route }) => route),
+  );
+  for (const page of pages) {
+    assert.equal(page.contract, 'kungfu.site-page-model/v1');
+    assert.match(page.contentRoot, /^sha256:[0-9a-f]{64}$/u);
+    assert.equal(page.bundle.contentRoot, bundle.contentRoot);
+    assert.equal(page.navigation.length, pages.length);
+    assert.ok(page.authorities.length > 0);
+    assert.equal(JSON.stringify(page).includes('undefined'), false);
+    assert.deepEqual(renderPageModel(page.route), page);
+    assert.deepEqual(renderPageModel(page.id), page);
+  }
+  assert.equal(
+    renderPageModel('/format/').formatAuthority.normativeRoot,
+    bundle.formatAuthority.normativeRoot,
+  );
+  assert.equal(
+    renderPageModel('/decisions/').adrMap.contentRoot,
+    bundle.adrMap.contentRoot,
+  );
+  assert.throws(() => renderPageModel('/missing/'), /Unknown Kungfu site page/);
 });

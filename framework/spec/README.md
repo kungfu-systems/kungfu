@@ -40,6 +40,14 @@ owner. This package generates eight projections:
 | `migration.json` | directed migration graph, receipts, repair rules, and refusals |
 | `vectors/index.json` | retained real-byte corpus with release and byte roots |
 
+The package also carries a stdlib-only independent Python reader at
+`reference-readers/python/portable_format_reader.py`. It verifies every rooted
+artifact and retained vector using only installed package bytes:
+
+```bash
+python3 node_modules/@kungfu-tech/spec/reference-readers/python/portable_format_reader.py --json
+```
+
 The six legacy category routes remain available in `manifest.categories`, but
 they now point at these rooted generated artifacts. Additional machine routes
 live in `manifest.artifacts`.
