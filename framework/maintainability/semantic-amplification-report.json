@@ -3,9 +3,9 @@
   "verdict": "pass",
   "authoritySemantics": "navigation-only-projection-over-existing-authorities",
   "manifestPath": "framework/maintainability/semantic-amplification.manifest.json",
-  "manifestRoot": "sha256:fd21d877754fba6bff1c8c37c33a81746f663dcc40116efe16f616f5cfa0e352",
-  "baselineRef": "eba3eedd79e0fb2a5e314d2c74e79af4c41e0085",
-  "sourceRoot": "sha256:197096a50e413bbeeacf2de3ec711d90798e7525dcf18a550a608f0f8bd76961",
+  "manifestRoot": "sha256:0e00a74ae1e728ebbb5f0616d44fc32b036ad82e6d9ec2ab94b008432e01a3c6",
+  "baselineRef": "dbfed9ca1785d147b26f4f06e7e6895ac7368fee",
+  "sourceRoot": "sha256:5cc6600bd214112695a49bd7904242e4178af594d25219b77610ca6e40263586",
   "roles": {
     "authority": "exactly one authority route per family; the route may name multiple co-owned source files",
     "allowedProjectionRoles": [
@@ -875,10 +875,10 @@
         },
         {
           "path": ".github/workflows/release-new-version.yml",
-          "currentLines": 357,
-          "baselineLines": 357,
-          "currentRoot": "sha256:a4189d6c1516df7ee75203dd4969cd325e3bfe4ed33c8892c154597ee79941c9",
-          "baselineRoot": "sha256:a4189d6c1516df7ee75203dd4969cd325e3bfe4ed33c8892c154597ee79941c9",
+          "currentLines": 362,
+          "baselineLines": 362,
+          "currentRoot": "sha256:3bdd847c80a05030de1d826282cef2e76a85e31dc0904df02c7f0cdda7a5eb74",
+          "baselineRoot": "sha256:3bdd847c80a05030de1d826282cef2e76a85e31dc0904df02c7f0cdda7a5eb74",
           "changedSinceBaseline": false
         },
         {

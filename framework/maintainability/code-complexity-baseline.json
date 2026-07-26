@@ -1,7 +1,7 @@
 {
   "schema": "kungfu.code-complexity-budget-baseline/v1",
-  "policyRoot": "sha256:ceb7a04f2ac7b43fdca1531c73baced99a9bcfd55f65ea72ee0f561945acdd8a",
-  "baselineRef": "eba3eedd79e0fb2a5e314d2c74e79af4c41e0085",
+  "policyRoot": "sha256:a8b85cd2ce15029ec7c1c83a1d9affc789f91499403e28590e9b0a4f6ecb14ce",
+  "baselineRef": "dbfed9ca1785d147b26f4f06e7e6895ac7368fee",
   "classification": "ordered-policy-and-content-marker/v1",
   "calibration": {
     "groupBy": [
@@ -15,12 +15,12 @@
   },
   "summary": {
     "declarative-schema-or-table": {
-      "files": 1168,
-      "lines": 586858
+      "files": 1170,
+      "lines": 588363
     },
     "first-party-handwritten-implementation": {
-      "files": 886,
-      "lines": 282446
+      "files": 887,
+      "lines": 283416
     },
     "generated-projection": {
       "files": 79,
@@ -35,8 +35,8 @@
       "lines": 44677
     },
     "test-or-fixture": {
-      "files": 709,
-      "lines": 128203
+      "files": 710,
+      "lines": 128340
     },
     "vendored-source": {
       "files": 451,
@@ -55,8 +55,8 @@
     "declarative-schema-or-table:declarative": {
       "class": "declarative-schema-or-table",
       "language": "declarative",
-      "population": 1141,
-      "soft": 174,
+      "population": 1143,
+      "soft": 176,
       "hard": 2605,
       "calibration": "p90/p99"
     },
@@ -71,9 +71,9 @@
     "first-party-handwritten-implementation:javascript-typescript": {
       "class": "first-party-handwritten-implementation",
       "language": "javascript-typescript",
-      "population": 469,
-      "soft": 662,
-      "hard": 1771,
+      "population": 470,
+      "soft": 661,
+      "hard": 1977,
       "calibration": "p90/p99"
     },
     "first-party-handwritten-implementation:python": {
@@ -231,8 +231,8 @@
     "test-or-fixture:javascript-typescript": {
       "class": "test-or-fixture",
       "language": "javascript-typescript",
-      "population": 329,
-      "soft": 492,
+      "population": 330,
+      "soft": 487,
       "hard": 1152,
       "calibration": "p90/p99"
     },
@@ -267,7 +267,7 @@
       "class": "declarative-schema-or-table",
       "language": "declarative",
       "owner": "kungfu/repository-contract",
-      "baselineLines": 3671,
+      "baselineLines": 3843,
       "hardBudget": 2605
     },
     {
@@ -323,8 +323,8 @@
       "class": "first-party-handwritten-implementation",
       "language": "javascript-typescript",
       "owner": "developer/sdk",
-      "baselineLines": 3794,
-      "hardBudget": 1771
+      "baselineLines": 3853,
+      "hardBudget": 1977
     },
     {
       "path": "docs/architecture/adr-map.json",
@@ -455,14 +455,6 @@
       "hardBudget": 2605
     },
     {
-      "path": "framework/project-cut/src/settlement.mjs",
-      "class": "first-party-handwritten-implementation",
-      "language": "javascript-typescript",
-      "owner": "framework/project-cut",
-      "baselineLines": 1977,
-      "hardBudget": 1771
-    },
-    {
       "path": "pnpm-lock.yaml",
       "class": "declarative-schema-or-table",
       "language": "declarative",
@@ -476,7 +468,15 @@
       "language": "javascript-typescript",
       "owner": "product/assembly",
       "baselineLines": 2514,
-      "hardBudget": 1771
+      "hardBudget": 1977
+    },
+    {
+      "path": "scripts/buildchain-kfd-evidence.mjs",
+      "class": "first-party-handwritten-implementation",
+      "language": "javascript-typescript",
+      "owner": "shifu/source-tooling",
+      "baselineLines": 1991,
+      "hardBudget": 1977
     },
     {
       "path": "scripts/measure-dev-required-latency.mjs",
@@ -484,7 +484,7 @@
       "language": "javascript-typescript",
       "owner": "shifu/source-tooling",
       "baselineLines": 2131,
-      "hardBudget": 1771
+      "hardBudget": 1977
     },
     {
       "path": "scripts/shifu-cache-runtime.test.mjs",
@@ -662,7 +662,7 @@
       "generatedProvenance": false,
       "language": "declarative",
       "owner": "kungfu/repository-contract",
-      "lines": 3671
+      "lines": 3843
     },
     {
       "path": ".buildchain/kfd/kfd-3/collaboration-interface.artifact.json",
@@ -687,6 +687,14 @@
       "language": "declarative",
       "owner": "kungfu/repository-contract",
       "lines": 3425
+    },
+    {
+      "path": ".buildchain/kfd/support-matrix.json",
+      "class": "declarative-schema-or-table",
+      "generatedProvenance": false,
+      "language": "declarative",
+      "owner": "kungfu/repository-contract",
+      "lines": 652
     },
     {
       "path": ".github/actionlint.yaml",
@@ -902,7 +910,7 @@
       "generatedProvenance": false,
       "language": "declarative",
       "owner": "kungfu/release-workflow",
-      "lines": 357
+      "lines": 362
     },
     {
       "path": ".github/workflows/release-shifu.yml",
@@ -13497,6 +13505,14 @@
       "lines": 3425
     },
     {
+      "path": "developer/sdk/kfd/support-matrix.json",
+      "class": "declarative-schema-or-table",
+      "generatedProvenance": false,
+      "language": "declarative",
+      "owner": "developer/sdk",
+      "lines": 652
+    },
+    {
       "path": "developer/sdk/kfd/upstream-aggregate.json",
       "class": "declarative-schema-or-table",
       "generatedProvenance": false,
@@ -13518,7 +13534,7 @@
       "generatedProvenance": false,
       "language": "javascript-typescript",
       "owner": "developer/sdk",
-      "lines": 3794
+      "lines": 3853
     },
     {
       "path": "developer/sdk/templates/app/biome.json",
@@ -13574,7 +13590,7 @@
       "generatedProvenance": false,
       "language": "javascript-typescript",
       "owner": "developer/sdk",
-      "lines": 606
+      "lines": 645
     },
     {
       "path": "docs.contract.json",
@@ -13622,7 +13638,7 @@
       "generatedProvenance": false,
       "language": "declarative",
       "owner": "kungfu/docs",
-      "lines": 1891
+      "lines": 1913
     },
     {
       "path": "docs/qualification/alpha-release-latency.contract.json",
@@ -30206,7 +30222,7 @@
       "generatedProvenance": false,
       "language": "declarative",
       "owner": "kungfu/repository-contract",
-      "lines": 307
+      "lines": 309
     },
     {
       "path": "pnpm-lock.yaml",
@@ -30798,7 +30814,7 @@
       "generatedProvenance": false,
       "language": "javascript-typescript",
       "owner": "shifu/source-tooling",
-      "lines": 1409
+      "lines": 1991
     },
     {
       "path": "scripts/cancel-dequeued-merge-group-runs.mjs",
@@ -31254,7 +31270,7 @@
       "generatedProvenance": false,
       "language": "javascript-typescript",
       "owner": "shifu/source-tooling",
-      "lines": 204
+      "lines": 218
     },
     {
       "path": "scripts/check-primitive-authority-boundary.test.mjs",
@@ -31262,7 +31278,7 @@
       "generatedProvenance": false,
       "language": "javascript-typescript",
       "owner": "shifu/source-tooling",
-      "lines": 123
+      "lines": 125
     },
     {
       "path": "scripts/check-primitive-catalog.test.mjs",
@@ -31622,7 +31638,7 @@
       "generatedProvenance": false,
       "language": "javascript-typescript",
       "owner": "shifu/source-tooling",
-      "lines": 919
+      "lines": 932
     },
     {
       "path": "scripts/collect-layer-publication.mjs",
@@ -31839,6 +31855,22 @@
       "language": "javascript-typescript",
       "owner": "shifu/source-tooling",
       "lines": 114
+    },
+    {
+      "path": "scripts/kfd-support-matrix.mjs",
+      "class": "first-party-handwritten-implementation",
+      "generatedProvenance": false,
+      "language": "javascript-typescript",
+      "owner": "shifu/source-tooling",
+      "lines": 296
+    },
+    {
+      "path": "scripts/kfd-support-matrix.test.mjs",
+      "class": "test-or-fixture",
+      "generatedProvenance": false,
+      "language": "javascript-typescript",
+      "owner": "shifu/source-tooling",
+      "lines": 96
     },
     {
       "path": "scripts/kfd7-public-symbols.mjs",
@@ -33158,7 +33190,7 @@
       "generatedProvenance": false,
       "language": "javascript-typescript",
       "owner": "shifu/source-tooling",
-      "lines": 577
+      "lines": 583
     },
     {
       "path": "scripts/source-acceptance.test.mjs",

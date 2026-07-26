@@ -1,7 +1,7 @@
 {
   "schema": "kungfu.semantic-amplification-manifest/v1",
   "status": "navigation-projection-input",
-  "baselineRef": "eba3eedd79e0fb2a5e314d2c74e79af4c41e0085",
+  "baselineRef": "dbfed9ca1785d147b26f4f06e7e6895ac7368fee",
   "reportPath": "framework/maintainability/semantic-amplification-report.json",
   "rolePolicy": {
     "authority": "exactly one authority route per family; the route may name multiple co-owned source files",

@@ -31,9 +31,9 @@ cache of repository and command observations, not a new semantic authority.
   `4003c4485b508181c3e2157ed8435b551a8dbf80`
   (`origin/dev/v4/v4.0` after PR #1564 advanced the queue).
 - Final delivery ratchet baseline:
-  `eba3eedd79e0fb2a5e314d2c74e79af4c41e0085`
-  (`origin/dev/v4/v4.0` after the subsequent Episode qualification budget
-  adjustment). The
+  `dbfed9ca1785d147b26f4f06e7e6895ac7368fee`
+  (`origin/dev/v4/v4.0` after PR #1559 advanced the KFD support-claim
+  authority and its generated evidence). The
   calibrated complexity baseline and semantic changed-surface comparison use
   this final target cut so already-admitted upstream work is not misclassified
   as this branch's regression. All earlier observation cuts remain immutable.
