@@ -34,6 +34,14 @@ on:
         required: false
         type: boolean
         default: false
+      artifact-transfer-mode:
+        description: "Transfer native artifacts directly or through the configured S3 relay"
+        required: false
+        type: choice
+        options:
+          - github-artifacts
+          - s3-to-github-artifacts
+        default: github-artifacts
       render-auditable-demo:
         description: "Render full media after the exact Linux artifact passes the required auditable-demo Gate"
         required: false
@@ -138,7 +146,7 @@ jobs:
       verify-command: node scripts/run-release-qualification.mjs --execution-profile ${{ startsWith(github.base_ref, 'release/') && 'release-candidate' || 'alpha' }} --native-upgrade-policy skip
       release-candidate: true
       publish-channel: ${{ github.event_name == 'pull_request' && (startsWith(github.base_ref, 'release/') && 'release' || 'alpha') || 'none' }}
-      artifact-transfer-mode: ${{ github.event_name == 'workflow_dispatch' && 'github-artifacts' || 's3-to-github-artifacts' }}
+      artifact-transfer-mode: ${{ github.event_name == 'workflow_dispatch' && inputs.artifact-transfer-mode || 's3-to-github-artifacts' }}
       artifact-retention-days: 14
       checkout-cache-mode: auto
       checkout-cache-mirror-url-template: ${{ vars.BUILDCHAIN_CHECKOUT_CACHE_MIRROR_URL_TEMPLATE }}

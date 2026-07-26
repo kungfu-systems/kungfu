@@ -749,7 +749,7 @@
     {
       "path": ".github/workflows/build.yml",
       "authority": "product-publication",
-      "definitionDigest": "sha256:aadbb97771ffd89eaec3f3ed67ef3925e1730472a5a722c1a8b956c8ee71b6c1",
+      "definitionDigest": "sha256:5c60682da8f4f610db1d6e85afda4e9f3617790ccf47ce80720e7127b7e158d1",
       "jobs": [
         {
           "id": "auditable-demo",
@@ -819,7 +819,7 @@
           "authority": "qualification",
           "publication": "none",
           "receipt": "qualifying",
-          "definitionDigest": "sha256:1540d37193b39f75692410ac4c8d7b85cb42d3bc0f53be645e272d2b48dba517",
+          "definitionDigest": "sha256:8fa0340164d6c2d6d87fab4d03ab6599e7b22c7b560bdee58d34f021421365c6",
           "credentials": {
             "githubToken": "write",
             "oidc": true,
