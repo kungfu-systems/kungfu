@@ -432,7 +432,11 @@ def build_projection(lines: list[str], exit_code: int) -> dict[str, Any]:
     stdout_lines = list(range(stdout_start, stdout_end + 1))
     if not stdout_lines:
         fail("installed kungfu agent brief produced no stdout")
-    midpoint = min(len(stdout_lines), max(1, len(stdout_lines) // 2))
+    first_stdout_lines = stdout_lines[:80]
+    remaining_stdout_lines = stdout_lines[80:]
+    continued_stdout_lines = (
+        remaining_stdout_lines[-80:] if remaining_stdout_lines else stdout_lines[-1:]
+    )
     return {
         "schema": "build-images.demo-projection/v1",
         "evidenceClass": "exact-installed-artifact-agent-brief/v1",
@@ -452,14 +456,17 @@ def build_projection(lines: list[str], exit_code: int) -> dict[str, Any]:
             {
                 "startMs": 4000,
                 "endMs": 10000,
-                "transcriptLines": stdout_lines[:midpoint],
+                "transcriptLines": first_stdout_lines,
                 "annotation": "Literal installed-product stdout.",
             },
             {
                 "startMs": 10000,
                 "endMs": 15000,
-                "transcriptLines": stdout_lines[midpoint:] or stdout_lines[-1:],
-                "annotation": "Literal installed-product stdout continued.",
+                "transcriptLines": continued_stdout_lines,
+                "annotation": (
+                    "Literal installed-product stdout continued; when output "
+                    "exceeds the cue budget this selects its exact tail."
+                ),
             },
             {
                 "startMs": 15000,
