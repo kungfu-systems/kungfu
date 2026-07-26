@@ -185,7 +185,7 @@ infrastructure it would describe (see [`MAP.md`](../MAP.md), `provenance.md` —
 ## The end-user shell is partial, not complete
 
 The `kungfu` command is the runtime today and the canonical CLI over it. Several
-operator-facing slices have landed — for example `kungfu cockpit`,
+operator-facing slices have landed — for example `kungfu tui`,
 `kungfu managed-run`, Kungfu Skill context injection, and the first skill-manager
 view. That is not yet the same as a complete end-user shell.
 
@@ -198,6 +198,15 @@ What is **not yet guaranteed**:
   provider CLI details, or development worktree paths.
 
 Treat these as usable pre-release slices, not a finished shell promise.
+
+The Agent Qualification Lab proves only its exact continuity fixture. The
+bundled offline run proves deterministic state recognition across fresh
+processes; a selected-agent run binds the executable digest, version, runtime
+profile, platform, fixture, oracle, plan, attempts, assessment, and report.
+Neither result establishes model intelligence, provider ranking, security,
+production fitness, or KFD certification. Providers without a verifiable
+workspace-only sandbox are reported with residual confinement risk rather than
+silently receiving an unqualified verdict.
 
 ## Ecosystem SDK qualification is source-complete on one platform, not released
 

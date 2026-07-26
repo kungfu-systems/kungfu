@@ -48,7 +48,7 @@ extraResources:
   - from: resources/cli
     to: cli
   # The Ink reference TUI, bundled to a single ES module and run through
-  # kungfu's embedded Node (libnode) via `kungfu cockpit`.
+  # kungfu's embedded Node (libnode) via `kungfu tui`.
   - from: ../tui/dist
     to: tui
   # Tray/menu-bar icon assets used by the resident GUI control surface.

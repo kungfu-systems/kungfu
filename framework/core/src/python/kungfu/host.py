@@ -27,7 +27,7 @@ entry_command() where it is not; the product-root family (contract
 registry/artifact discovery, the baked first-party manifest, the trunk
 binary next to the entry, variants dist-module detection) resolves through
 product_root(); the argv0 family that only names a process for libnode
-(cockpit/sdk/kfd) keeps argv0 semantics untouched. Signal handlers
+(tui/sdk/kfd) keeps argv0 semantics untouched. Signal handlers
 (runtime_service SIGTERM/SIGINT, peer os_signal) and the vendored
 site.py atexit hook stay as they are: in stage 2 CPython still owns the
 process main thread; the forwarding seam is stage 3 work.
