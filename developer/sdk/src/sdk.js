@@ -2733,7 +2733,7 @@ function pythonAotBuild(manifest) {
   // legacy pdm-pep517 backend again for every extension build.
   runOrFail(
     py,
-    ['-m', 'kungfu', 'engage', 'pdm', 'install', '--no-isolation'],
+    ['-m', 'kungfu', 'dev', 'engage', 'pdm', 'install', '--no-isolation'],
     { env },
   );
   // AOT-compile just this module: declared deps stay runtime imports, so we do
@@ -2743,6 +2743,7 @@ function pythonAotBuild(manifest) {
     [
       '-m',
       'kungfu',
+      'dev',
       'engage',
       'nuitka',
       '--module',
@@ -3321,7 +3322,7 @@ function buildKfdStandardsStatus(registry, registryPath, aggregate) {
         ],
         schemaCount: schemas.standards['kfd-4']?.length || 0,
         source: ownKfd.kfd4 || {
-          note: 'Buildchain 2.10.8 exposes KFD-4 as schema-only; Kungfu declares schema visibility, not a verification pass.',
+          note: 'Buildchain exposes KFD-4 as schema-only; Kungfu declares schema visibility, not a verification pass.',
         },
       },
     },

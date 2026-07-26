@@ -14,6 +14,15 @@ const WORKFLOW_TEXT = fs.readFileSync(WORKFLOW_PATH, 'utf8');
 const WORKFLOW = parse(WORKFLOW_TEXT);
 const AsyncFunction = Object.getPrototypeOf(async () => {}).constructor;
 
+test('Alpha and release builds rerun when candidate source is synchronized', () => {
+  assert.deepEqual(WORKFLOW.on.pull_request.types, [
+    'opened',
+    'synchronize',
+    'reopened',
+    'ready_for_review',
+  ]);
+});
+
 async function runResolver({ declaredExpiry, observedExpiry }) {
   const resolver = WORKFLOW.jobs['resolve-auditable-demo-source'];
   const script = resolver.steps.find(({ id }) => id === 'resolve').with.script;
@@ -102,7 +111,7 @@ test('every produced Linux artifact enters the required exact-output Gate', () =
   );
   assert.equal(
     build.uses,
-    'kungfu-systems/buildchain/.github/workflows/.build.yml@9531e4fa2849a48d4f45e7c6dc2516e2a9ddb787',
+    'kungfu-systems/buildchain/.github/workflows/.build.yml@658f93fa8667a47555246c016cf0b5ec0f5ec53d',
     'the build runtime must be the protected Buildchain release that owns artifact-coordinates-json',
   );
   assert.match(

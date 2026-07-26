@@ -17,7 +17,7 @@ A qualifying capability must bind all of the following exact values:
 | --- | --- |
 | Source | one 40-character Kungfu revision and its release-candidate tree |
 | Gate policy | current `shifu.gates.json`, `release-promotion` matrix digest, complete passing rows and platform receipts |
-| Runtime | Stable release authority remains `@kungfu-tech/buildchain@2.14.1`; dev/MQ telemetry uses the isolated npm alias `@kungfu-tech/buildchain-alpha@npm:@kungfu-tech/buildchain@2.14.17-alpha.3`. `alpha` binds the reviewed `v2-alpha` publication-commit runtime at `4286b2e7a5424e2af8bfac9eede324d96b579654`, while `release` remains isolated on `v2` at `bb9ce34b368c6b5a27b00fbdcb0515076abd9744`, each with its exact contract lock and digest; the standalone Shifu tool pin is tracked separately in `.buildchain-version` |
+| Runtime | Stable release authority is `@kungfu-tech/buildchain@3.0.0`; dev/MQ telemetry uses the isolated npm alias `@kungfu-tech/buildchain-alpha@npm:@kungfu-tech/buildchain@3.0.1-alpha.2`. `alpha` binds the reviewed `v3-alpha` publication-commit runtime at `658f93fa8667a47555246c016cf0b5ec0f5ec53d`, while `release` remains isolated on `v3` at `9e904de2c85dbea7c799780ee166510b3336d812`, each with its exact contract lock and digest; the standalone Shifu tool pin is tracked separately in `.buildchain-version` |
 | Controller | qualifying source/runtime-bound Buildchain controller receipt referenced by the RC passport |
 | Runner | qualifying ephemeral, reimaged, or measured persistent-runner provenance; unqualified is denied |
 | Control plane | fresh passing Actions, branch/ruleset, Environment, OIDC, publisher, and runner audit facts |

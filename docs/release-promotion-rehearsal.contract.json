@@ -6,15 +6,15 @@
     "validation": ".github/workflows/buildchain-validate.yml"
   },
   "buildchain": {
-    "workflow_shell_sha": "9531e4fa2849a48d4f45e7c6dc2516e2a9ddb787",
+    "workflow_shell_sha": "658f93fa8667a47555246c016cf0b5ec0f5ec53d",
     "alpha": {
-      "workflow_ref": "v2-alpha",
+      "workflow_ref": "v3-alpha",
       "contract_lock": ".buildchain/alpha-contract-lock.json",
       "publish_channel": "alpha",
       "publish_dist_tag": "alpha"
     },
     "stable": {
-      "workflow_ref": "v2",
+      "workflow_ref": "v3",
       "contract_lock": ".buildchain/contract-lock.json",
       "publish_channel": "release",
       "publish_dist_tag": "latest"
