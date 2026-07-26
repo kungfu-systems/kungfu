@@ -2,6 +2,7 @@
 
 import json
 from pathlib import Path
+import shutil
 
 from click.testing import CliRunner
 import pytest
@@ -10,6 +11,7 @@ from kungfu import dogfood as dogfood_api
 from kungfu import profile_sdk
 from kungfu.cli.commands import kfc
 from kungfu.cli.commands import dogfood as _dogfood_command  # noqa: F401
+from kungfu.storage import service as storage_service
 from kungfu.workspace import (
     ensure_workspace_data_home,
     inspect_workspace,
@@ -22,6 +24,27 @@ ROOT_A = "sha256:" + "a" * 64
 ROOT_B = "sha256:" + "b" * 64
 ROOT_C = "sha256:" + "c" * 64
 ROOT_D = "sha256:" + "d" * 64
+EXACT_ROOT_DRIFT_FINDING = (
+    "sha256:f9ffba0229835b0521c566fb82c8c4bb48730a8b235ff63600d502f0e8290cd7"
+)
+INSTALLED_REGRESSION_CASES = (
+    (
+        EXACT_ROOT_DRIFT_FINDING,
+        "Installed Dogfood exact Profile-root drift",
+    ),
+    (
+        "sha256:7d2d57c2a3eb89e5ae40aa3b2a59f78d6133b9d16ad434e938313135084cff97",
+        "Installed CLI package omits a declared Mission Control Suite member",
+    ),
+    (
+        "sha256:9de6878fe13c157c4003af332e5769cea8e12fcf1e2c1cd9188dfaf670ca26d7",
+        "Work Dashboard refresh starvation hides Initiative data",
+    ),
+    (
+        "sha256:30e7c086ece6ee836b73bc39e819c28f061eda5ed2c5704f2cd53ebbd8a6544f",
+        "Embedded Python writes into the signed macOS App bundle",
+    ),
+)
 
 
 def _workspace(tmp_path: Path, name: str):
@@ -121,6 +144,28 @@ def test_cli_runtime_failure_is_a_stable_json_diagnosis(tmp_path):
     }
 
 
+def test_cli_missing_lookup_is_one_stable_json_result(tmp_path):
+    identity, _ = _active_runtime(tmp_path)
+
+    result = CliRunner().invoke(
+        kfc,
+        [
+            "dogfood",
+            "show",
+            ROOT_A,
+            "--workspace",
+            str(identity.workspace_root),
+        ],
+    )
+
+    assert result.exit_code == 3
+    assert "Traceback" not in result.output
+    payload = json.loads(result.output)
+    assert payload["ok"] is False
+    assert payload["identity"] == ROOT_A
+    assert payload["match_count"] == 0
+
+
 def test_profile_closes_and_declares_four_kfd1_fact_surfaces(tmp_path):
     validated = profile_sdk.validate_source(SOURCE, tmp_path / "runtime")
     world = json.loads((SOURCE / "contracts" / "world.json").read_text())
@@ -158,6 +203,81 @@ def test_profile_closes_and_declares_four_kfd1_fact_surfaces(tmp_path):
             "kungfu.dogfood-feedback.migration",
         ],
     }
+
+
+def test_exact_root_diagnosis_is_read_only_and_recovery_is_explicit_and_idempotent(
+    tmp_path,
+):
+    identity, runtime = _active_runtime(tmp_path)
+    alternate = tmp_path / "alternate-dogfood"
+    shutil.copytree(SOURCE, alternate)
+    readme = alternate / "dogfood-actions" / "README.md"
+    readme.write_text(
+        readme.read_text(encoding="utf-8") + "\nExact-root drift fixture.\n",
+        encoding="utf-8",
+    )
+    for action in ("upgrade", "qualify", "activate"):
+        values = {"granted_permissions": ["storage"]} if action == "activate" else {}
+        plan = profile_sdk.lifecycle_plan(str(runtime), action, alternate, **values)
+        answer = profile_sdk.answer_decision(
+            plan["decisionCard"], "approve", "test-owner"
+        )
+        profile_sdk.authorized_lifecycle_apply(str(runtime), plan, answer)
+
+    lifecycle_before = storage_service.profile_lifecycle(
+        str(runtime), "list", include_removed=True
+    )
+    facts_before = storage_service.fact_state(str(runtime))
+    first = dogfood_api.profile_diagnosis(str(runtime))
+    second = dogfood_api.profile_diagnosis(str(runtime))
+    with pytest.raises(
+        profile_sdk.ProfileSdkError, match="exact active Profile root"
+    ) as error:
+        dogfood_api.read(
+            str(runtime),
+            "query",
+            {"workspaceRoot": identity.workspace_root, "scope": "local"},
+        )
+
+    assert first == second
+    assert first["current_root"] != first["desired_root"]
+    assert first["cause"] == "exact-profile-root-drift"
+    assert first["writes"] == []
+    assert error.value.diagnosis["profileDiagnosis"] == first
+    assert error.value.diagnosis["currentRoot"] == first["current_root"]
+    assert error.value.diagnosis["desiredRoot"] == first["desired_root"]
+    assert EXACT_ROOT_DRIFT_FINDING.startswith("sha256:")
+    assert (
+        storage_service.profile_lifecycle(str(runtime), "list", include_removed=True)
+        == lifecycle_before
+    )
+    assert storage_service.fact_state(str(runtime)) == facts_before
+
+    plan = dogfood_api.recovery_plan(str(runtime))
+    assert plan["status"] == "ready"
+    assert [row["operation"] for row in plan["operations"]] == [
+        "upgrade",
+        "qualify",
+        "activate",
+        "materialize-contract",
+    ]
+    recovered = dogfood_api.apply_recovery(
+        str(runtime),
+        expected_plan_root=plan["plan_root"],
+        authorized_by="test-owner",
+    )
+    assert recovered["status"] == "recovered"
+    assert recovered["diagnosis"]["ok"] is True
+
+    repeated_plan = dogfood_api.recovery_plan(str(runtime))
+    repeated = dogfood_api.apply_recovery(
+        str(runtime),
+        expected_plan_root=repeated_plan["plan_root"],
+        authorized_by="test-owner",
+    )
+    assert repeated_plan["status"] == "no-op"
+    assert repeated["status"] == "already-current"
+    assert repeated["verified_no_op"] is True
 
 
 def test_finding_is_immutable_and_issue_resolution_requires_independent_roots(
@@ -259,6 +379,212 @@ def test_finding_is_immutable_and_issue_resolution_requires_independent_roots(
     assert resolved["state"] == "resolved"
     assert resolved["predecessor_root"] == in_progress["issue_root"]
     assert resolved["resolution"]["product_root"] == ROOT_D
+
+
+def test_installed_regression_cases_include_one_legally_reconciled_fix(tmp_path):
+    _, runtime = _active_runtime(tmp_path)
+    findings = []
+    for index, (source_root, title) in enumerate(INSTALLED_REGRESSION_CASES):
+        findings.append(
+            _capture(
+                runtime,
+                suffix=f"installed-regression-{index}",
+                title=title,
+                summary="Sanitized installed-product regression evidence.",
+                episodeRoot=source_root,
+                evidenceRoots=[source_root],
+                observedAt=f"2026-07-{10 + index:02d}T00:00:00Z",
+            )["finding"]
+        )
+
+    assert [row["episode_root"] for row in findings] == [
+        source_root for source_root, _ in INSTALLED_REGRESSION_CASES
+    ]
+    fixed = findings[0]
+    proposal = dogfood_api.read(
+        str(runtime),
+        "issue-proposal",
+        {
+            "findingIdentity": fixed["finding_root"],
+            "ownerCandidates": ["dogfood-runtime"],
+        },
+    )
+    assert proposal["admission_ready"] is True
+    admitted = _admit(
+        runtime,
+        fixed["finding_root"],
+        suffix="installed-exact-root-fix",
+        title="Reconcile installed exact-root recovery",
+        owner="dogfood-runtime",
+    )["issue"]
+    accepted = dogfood_api.action(
+        str(runtime),
+        "transition-issue",
+        {
+            "issueId": admitted["issue_id"],
+            "expectedIssueRoot": admitted["issue_root"],
+            "toState": "accepted",
+            "actor": "authorized-owner",
+            "reason": "accept the bounded installed-product fix",
+            "transitionedAt": "2026-07-14T00:00:00Z",
+        },
+        "test-owner",
+    )["issue"]
+    in_progress = dogfood_api.action(
+        str(runtime),
+        "transition-issue",
+        {
+            "issueId": accepted["issue_id"],
+            "expectedIssueRoot": accepted["issue_root"],
+            "toState": "in-progress",
+            "actor": "authorized-owner",
+            "reason": "qualify exact-root diagnosis and explicit recovery",
+            "transitionedAt": "2026-07-15T00:00:00Z",
+        },
+        "test-owner",
+    )["issue"]
+    evidence = {
+        "implementationRoots": [ROOT_A],
+        "protectedPrs": ["https://example.invalid/kungfu/pull/1"],
+        "independentAssessmentRoot": ROOT_B,
+        "authorizedDecisionRoot": ROOT_C,
+        "successorFactRoot": fixed["finding_root"],
+        "productRoot": ROOT_D,
+        "verificationEvidenceRoots": [EXACT_ROOT_DRIFT_FINDING],
+    }
+    reconciliation = dogfood_api.read(
+        str(runtime),
+        "issue-reconciliation",
+        {"issueIdentity": in_progress["issue_root"], "evidence": evidence},
+    )
+
+    assert reconciliation["resolution_transition_eligible"] is True
+    assert reconciliation["automatic_transition"] is False
+    assert reconciliation["writes"] == []
+    resolved = dogfood_api.action(
+        str(runtime),
+        "transition-issue",
+        {
+            "issueId": in_progress["issue_id"],
+            "expectedIssueRoot": in_progress["issue_root"],
+            "toState": "resolved",
+            "actor": "authorized-owner",
+            "reason": "independent installed-product qualification passed",
+            "independentAssessmentRoot": evidence["independentAssessmentRoot"],
+            "authorizedDecisionRoot": evidence["authorizedDecisionRoot"],
+            "successorFactRoot": evidence["successorFactRoot"],
+            "productRoot": evidence["productRoot"],
+            "verificationEvidenceRoots": evidence["verificationEvidenceRoots"],
+            "transitionedAt": "2026-07-16T00:00:00Z",
+        },
+        "test-owner",
+    )["issue"]
+    assert resolved["state"] == "resolved"
+    assert resolved["predecessor_root"] == in_progress["issue_root"]
+    assert resolved["resolution"]["independent_assessment_root"] == ROOT_B
+    assert resolved["resolution"]["successor_fact_root"] == fixed["finding_root"]
+
+
+def test_local_lookup_issue_proposal_and_reconciliation_never_mutate(tmp_path):
+    identity, runtime = _active_runtime(tmp_path)
+    finding = _capture(runtime)["finding"]
+    issue = _admit(runtime, finding["finding_root"])["issue"]
+    accepted = dogfood_api.action(
+        str(runtime),
+        "transition-issue",
+        {
+            "issueId": issue["issue_id"],
+            "expectedIssueRoot": issue["issue_root"],
+            "toState": "accepted",
+            "actor": "test-agent",
+            "reason": "owned",
+            "transitionedAt": "2026-07-03T00:00:00Z",
+        },
+        "test-owner",
+    )["issue"]
+    in_progress = dogfood_api.action(
+        str(runtime),
+        "transition-issue",
+        {
+            "issueId": issue["issue_id"],
+            "expectedIssueRoot": accepted["issue_root"],
+            "toState": "in-progress",
+            "actor": "test-agent",
+            "reason": "implementation started",
+            "transitionedAt": "2026-07-04T00:00:00Z",
+        },
+        "test-owner",
+    )["issue"]
+    facts_before = storage_service.fact_state(str(runtime))
+
+    lookup = dogfood_api.read(
+        str(runtime), "lookup", {"identity": finding["finding_root"]}
+    )
+    no_owner = dogfood_api.read(
+        str(runtime),
+        "issue-proposal",
+        {"findingIdentity": finding["finding_root"], "ownerCandidates": []},
+    )
+    owned = dogfood_api.read(
+        str(runtime),
+        "issue-proposal",
+        {
+            "findingIdentity": finding["finding_root"],
+            "ownerCandidates": ["owner-a"],
+        },
+    )
+    incomplete = dogfood_api.read(
+        str(runtime),
+        "issue-reconciliation",
+        {
+            "issueIdentity": in_progress["issue_root"],
+            "evidence": {"implementationRoots": [ROOT_A]},
+        },
+    )
+    complete = dogfood_api.read(
+        str(runtime),
+        "issue-reconciliation",
+        {
+            "issueIdentity": in_progress["issue_root"],
+            "evidence": {
+                "implementationRoots": [ROOT_A],
+                "protectedPrs": ["https://example.invalid/pull/1"],
+                "independentAssessmentRoot": ROOT_A,
+                "authorizedDecisionRoot": ROOT_B,
+                "successorFactRoot": ROOT_C,
+                "productRoot": ROOT_D,
+                "verificationEvidenceRoots": [ROOT_A],
+            },
+        },
+    )
+
+    assert lookup["scope"] == "local"
+    assert lookup["match_count"] == 1
+    assert "federation" not in lookup
+    assert no_owner["admission_ready"] is False
+    assert owned["admission_ready"] is True
+    assert owned["requires_explicit_authorization"] is True
+    assert owned["proposal"]["findingRoots"] == [finding["finding_root"]]
+    assert incomplete["resolution_transition_eligible"] is False
+    assert "independent_assessment_root" in incomplete["omissions"]
+    assert complete["resolution_transition_eligible"] is True
+    assert complete["automatic_transition"] is False
+    assert storage_service.fact_state(str(runtime)) == facts_before
+    current = dogfood_api.read(str(runtime), "lookup", {"identity": issue["issue_id"]})
+    assert current["matches"][0]["record"]["state"] == "in-progress"
+    health = dogfood_api.read(
+        str(runtime),
+        "health",
+        {
+            "workspaceRoot": identity.workspace_root,
+            "scope": "local",
+            "now": "2026-08-01T00:00:00Z",
+        },
+    )
+    assert health["counts"]["raw_issue_observations"] == 3
+    assert health["counts"]["latest_logical_issues"] == 1
+    assert health["counts"]["issue_replicas_or_revisions"] == 2
+    assert identity.identity_root
 
 
 def test_relevance_is_bounded_explainable_and_consideration_fails_closed(
@@ -463,7 +789,7 @@ def test_federation_preserves_independent_component_cuts_and_unavailable_state(
 
 
 def test_atlas_jsonl_import_preserves_every_revision_and_source_root(tmp_path):
-    _, runtime = _active_runtime(tmp_path)
+    identity, runtime = _active_runtime(tmp_path)
     source = tmp_path / "items.jsonl"
     rows = [
         {
@@ -544,3 +870,20 @@ def test_atlas_jsonl_import_preserves_every_revision_and_source_root(tmp_path):
     assert verified["ok"] is True
     assert verified["source_bytes_retained"] is True
     assert verified["imported_revision_count"] == 3
+
+    health = dogfood_api.read(
+        str(runtime),
+        "health",
+        {
+            "workspaceRoot": identity.workspace_root,
+            "scope": "local",
+            "now": "2026-08-01T00:00:00Z",
+        },
+    )
+    assert health["counts"]["raw_finding_observations"] == 3
+    assert health["counts"]["unique_logical_findings"] == 2
+    assert health["counts"]["finding_replicas_or_revisions"] == 1
+    assert health["atomic_global_cut"] is False
+    assert health["p10"]["supports_human_evidence_gate"] is True
+    assert health["p10"]["completion_authority"] is False
+    assert health["writes"] == []
