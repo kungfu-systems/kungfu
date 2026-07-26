@@ -188,7 +188,11 @@ test('bootstrap publication is deterministic and pins signed release identity', 
     const powershell = first.assets.find(
       (asset) => asset.name === 'install.ps1',
     );
-    assert.match(powershell.bytes.toString(), /Get-AuthenticodeSignature/);
+    assert.doesNotMatch(
+      powershell.bytes.toString(),
+      /Get-AuthenticodeSignature/,
+    );
+    assert.match(powershell.bytes.toString(), /signed-channel-digest/);
     assert.match(powershell.bytes.toString(), /update bootstrap-verify/);
     assert.match(powershell.bytes.toString(), /PATH, profiles, registry/);
     assert.match(powershell.bytes.toString(), /RequestedVersion/);

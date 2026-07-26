@@ -13,6 +13,36 @@
   },
   "apis": [
     {
+      "id": "kungfu.release.status",
+      "surface": "cli-api",
+      "name": "kungfu release status [--source <file-or-url>] [--json]",
+      "purpose": "Read the stable public release-status contract and explain whether a qualified Kungfu release is actually available.",
+      "maturity": "preview",
+      "visibility": "public-agent",
+      "anchor": { "kind": "catalog", "symbol": "status_cmd" },
+      "projections": ["commands.json", "capabilities-json", "agent-pack-doc", "provider-skill"]
+    },
+    {
+      "id": "kungfu.release.verify",
+      "surface": "cli-api",
+      "name": "kungfu release verify <file-or-https-url> [--json]",
+      "purpose": "Fail closed while verifying a release status, five-receipt activation set, or released-evidence index with immediately understandable human and stable JSON output.",
+      "maturity": "preview",
+      "visibility": "public-agent",
+      "anchor": { "kind": "catalog", "symbol": "verify_cmd" },
+      "projections": ["commands.json", "capabilities-json", "agent-pack-doc", "provider-skill"]
+    },
+    {
+      "id": "kungfu.release.explain",
+      "surface": "cli-api",
+      "name": "kungfu release explain [--json]",
+      "purpose": "Explain what unavailable, preparation, and current-release mean and name the legal and first-use conclusions the verifier does not make.",
+      "maturity": "preview",
+      "visibility": "public-agent",
+      "anchor": { "kind": "catalog", "symbol": "explain_cmd" },
+      "projections": ["commands.json", "capabilities-json", "agent-pack-doc", "provider-skill"]
+    },
+    {
       "id": "kungfu.agent",
       "surface": "cli",
       "name": "kungfu agent",

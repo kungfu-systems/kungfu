@@ -3,6 +3,183 @@
   "$id": "https://kungfu.tech/schemas/kungfu-ungfu-release-evidence.schema.json",
   "title": "Kungfu UNGFU public release evidence index",
   "type": "object",
+  "$defs": {
+    "sha": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{40}$"
+    },
+    "root": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "date": {
+      "type": "string",
+      "format": "date"
+    },
+    "publicUrl": {
+      "type": "string",
+      "format": "uri",
+      "pattern": "^https://"
+    },
+    "artifactRoot": {
+      "type": "object",
+      "required": ["name", "sha256"],
+      "properties": {
+        "name": { "type": "string", "minLength": 1 },
+        "sha256": { "$ref": "#/$defs/root" }
+      },
+      "additionalProperties": false
+    },
+    "acquisition": {
+      "type": "object",
+      "required": [
+        "id",
+        "kind",
+        "exactMark",
+        "softwareDescription",
+        "publicUrl",
+        "acquisitionUrl",
+        "accessedAt",
+        "sourceCommit",
+        "deploymentOrReleaseCoordinate",
+        "renderedEvidence"
+      ],
+      "properties": {
+        "id": { "const": "install-page" },
+        "kind": { "const": "public-release-download" },
+        "exactMark": { "const": "Kungfu UNGFU™" },
+        "softwareDescription": {
+          "const": "Downloadable software for durable AI-agent work, inspection, and development workflows."
+        },
+        "publicUrl": { "$ref": "#/$defs/publicUrl" },
+        "acquisitionUrl": { "$ref": "#/$defs/publicUrl" },
+        "accessedAt": { "$ref": "#/$defs/date" },
+        "sourceCommit": { "$ref": "#/$defs/sha" },
+        "deploymentOrReleaseCoordinate": {
+          "type": "string",
+          "minLength": 1
+        },
+        "renderedEvidence": { "$ref": "#/$defs/publicUrl" }
+      },
+      "additionalProperties": false
+    },
+    "product": {
+      "type": "object",
+      "required": [
+        "id",
+        "kind",
+        "exactMark",
+        "publicUrl",
+        "accessedAt",
+        "sourceCommit",
+        "deploymentOrReleaseCoordinate",
+        "renderedEvidence"
+      ],
+      "properties": {
+        "id": { "const": "cli-version" },
+        "kind": { "const": "kungfu --version" },
+        "exactMark": { "const": "Kungfu UNGFU™" },
+        "publicUrl": { "$ref": "#/$defs/publicUrl" },
+        "accessedAt": { "$ref": "#/$defs/date" },
+        "sourceCommit": { "$ref": "#/$defs/sha" },
+        "deploymentOrReleaseCoordinate": {
+          "type": "string",
+          "minLength": 1
+        },
+        "renderedEvidence": { "$ref": "#/$defs/publicUrl" }
+      },
+      "additionalProperties": false
+    },
+    "specimenRecord": {
+      "type": "object",
+      "required": [
+        "kind",
+        "acquisitionSurfaceId",
+        "productSurfaceId",
+        "publicUrl",
+        "accessedAt",
+        "sourceRepository",
+        "sourceCommit",
+        "deploymentOrReleaseCoordinate",
+        "renderedEvidence"
+      ],
+      "properties": {
+        "kind": { "const": "release" },
+        "acquisitionSurfaceId": { "const": "install-page" },
+        "productSurfaceId": { "const": "cli-version" },
+        "publicUrl": { "$ref": "#/$defs/publicUrl" },
+        "accessedAt": { "$ref": "#/$defs/date" },
+        "sourceRepository": {
+          "const": "https://github.com/kungfu-systems/kungfu"
+        },
+        "sourceCommit": { "$ref": "#/$defs/sha" },
+        "deploymentOrReleaseCoordinate": {
+          "type": "string",
+          "minLength": 1
+        },
+        "renderedEvidence": { "$ref": "#/$defs/publicUrl" }
+      },
+      "additionalProperties": false
+    },
+    "class9Record": {
+      "type": "object",
+      "required": [
+        "id",
+        "planId",
+        "termId",
+        "identification",
+        "status",
+        "capabilityEvidenceKind",
+        "commandOrSurface",
+        "qualificationCheck",
+        "publicUrl",
+        "accessedAt",
+        "sourceRepository",
+        "sourceCommit",
+        "acquisitionSurfaceId",
+        "productSurfaceId",
+        "deploymentOrReleaseCoordinate",
+        "renderedEvidence"
+      ],
+      "properties": {
+        "id": { "type": "string", "pattern": "^class9-" },
+        "planId": { "type": "string", "minLength": 1 },
+        "termId": { "type": "string", "minLength": 1 },
+        "identification": { "type": "string", "minLength": 1 },
+        "status": { "const": "released" },
+        "capabilityEvidenceKind": {
+          "enum": ["released-cli-capability", "released-sdk-capability"]
+        },
+        "commandOrSurface": { "type": "string", "minLength": 1 },
+        "qualificationCheck": {
+          "const": "checks.releaseCapability.passed"
+        },
+        "publicUrl": { "$ref": "#/$defs/publicUrl" },
+        "accessedAt": { "$ref": "#/$defs/date" },
+        "sourceRepository": {
+          "const": "https://github.com/kungfu-systems/kungfu"
+        },
+        "sourceCommit": { "$ref": "#/$defs/sha" },
+        "acquisitionSurfaceId": { "const": "install-page" },
+        "productSurfaceId": { "const": "cli-version" },
+        "deploymentOrReleaseCoordinate": {
+          "type": "string",
+          "minLength": 1
+        },
+        "renderedEvidence": { "$ref": "#/$defs/publicUrl" }
+      },
+      "additionalProperties": false
+    },
+    "brandRecord": {
+      "type": "object",
+      "required": ["kind", "url"],
+      "properties": {
+        "kind": { "const": "public-brand-history" },
+        "url": { "$ref": "#/$defs/publicUrl" }
+      },
+      "additionalProperties": false
+    }
+  },
   "required": [
     "schemaVersion",
     "contract",
@@ -30,22 +207,18 @@
         "artifactRoots"
       ],
       "properties": {
-        "sourceSha": { "type": "string" },
-        "tag": { "type": "string" },
-        "channel": { "type": "string" },
-        "version": { "type": "string" },
-        "deploymentCoordinate": { "type": "string" },
+        "sourceSha": { "type": "string", "minLength": 1 },
+        "siteSourceSha": { "$ref": "#/$defs/sha" },
+        "tag": { "type": "string", "minLength": 1 },
+        "channel": { "type": "string", "minLength": 1 },
+        "version": { "type": "string", "minLength": 1 },
+        "deploymentCoordinate": { "type": "string", "minLength": 1 },
+        "artifactSetRoot": { "$ref": "#/$defs/root" },
+        "releasePassportRoot": { "$ref": "#/$defs/root" },
+        "activationReceiptSetRoot": { "$ref": "#/$defs/root" },
         "artifactRoots": {
           "type": "array",
-          "items": {
-            "type": "object",
-            "required": ["name", "sha256"],
-            "properties": {
-              "name": { "type": "string" },
-              "sha256": { "type": "string" }
-            },
-            "additionalProperties": false
-          }
+          "items": { "$ref": "#/$defs/artifactRoot" }
         }
       },
       "additionalProperties": false
@@ -58,10 +231,25 @@
           "type": "object",
           "required": ["role", "acquisition", "product", "records"],
           "properties": {
-            "role": { "const": "filing-oriented-acquisition-product-pair" },
-            "acquisition": { "type": ["object", "null"] },
-            "product": { "type": ["object", "null"] },
-            "records": { "type": "array" }
+            "role": {
+              "const": "filing-oriented-acquisition-product-pair"
+            },
+            "acquisition": {
+              "oneOf": [
+                { "type": "null" },
+                { "$ref": "#/$defs/acquisition" }
+              ]
+            },
+            "product": {
+              "oneOf": [
+                { "type": "null" },
+                { "$ref": "#/$defs/product" }
+              ]
+            },
+            "records": {
+              "type": "array",
+              "items": { "$ref": "#/$defs/specimenRecord" }
+            }
           },
           "additionalProperties": false
         },
@@ -70,7 +258,10 @@
           "required": ["role", "records"],
           "properties": {
             "role": { "const": "released-capability-truth" },
-            "records": { "type": "array" }
+            "records": {
+              "type": "array",
+              "items": { "$ref": "#/$defs/class9Record" }
+            }
           },
           "additionalProperties": false
         },
@@ -80,7 +271,10 @@
           "properties": {
             "role": { "const": "supporting-history-only" },
             "primaryEvidence": { "const": false },
-            "records": { "type": "array" }
+            "records": {
+              "type": "array",
+              "items": { "$ref": "#/$defs/brandRecord" }
+            }
           },
           "additionalProperties": false
         }
@@ -104,5 +298,78 @@
       "additionalProperties": false
     }
   },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "state": { "const": "released-observation" }
+        },
+        "required": ["state"]
+      },
+      "then": {
+        "properties": {
+          "release": {
+            "required": [
+              "siteSourceSha",
+              "artifactSetRoot",
+              "releasePassportRoot",
+              "activationReceiptSetRoot"
+            ],
+            "properties": {
+              "sourceSha": { "$ref": "#/$defs/sha" },
+              "channel": { "enum": ["alpha", "release"] },
+              "artifactRoots": { "minItems": 1 }
+            }
+          },
+          "layers": {
+            "properties": {
+              "specimen": {
+                "properties": {
+                  "acquisition": { "$ref": "#/$defs/acquisition" },
+                  "product": { "$ref": "#/$defs/product" },
+                  "records": { "minItems": 1 }
+                }
+              },
+              "class9CapabilityTruth": {
+                "properties": {
+                  "records": { "minItems": 1 }
+                }
+              }
+            }
+          }
+        }
+      },
+      "else": {
+        "properties": {
+          "release": {
+            "properties": {
+              "artifactRoots": { "maxItems": 0 }
+            }
+          },
+          "layers": {
+            "properties": {
+              "specimen": {
+                "properties": {
+                  "acquisition": { "type": "null" },
+                  "product": { "type": "null" },
+                  "records": { "maxItems": 0 }
+                }
+              },
+              "class9CapabilityTruth": {
+                "properties": {
+                  "records": { "maxItems": 0 }
+                }
+              },
+              "brandArchive": {
+                "properties": {
+                  "records": { "maxItems": 0 }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  ],
   "additionalProperties": false
 }

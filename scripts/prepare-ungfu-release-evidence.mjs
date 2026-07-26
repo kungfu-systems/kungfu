@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 // SPDX-License-Identifier: Apache-2.0
 
+import crypto from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -18,6 +19,15 @@ const SOURCE_REPOSITORY = 'https://github.com/kungfu-systems/kungfu';
 const PRINCIPLE = 'Never Guess. Facts Unfold.';
 const SOFTWARE_DESCRIPTION =
   'Downloadable software for durable AI-agent work, inspection, and development workflows.';
+const RECEIPT_SET_SCHEMA =
+  'kungfu-buildchain-release-activation-receipt-set/v1';
+const RECEIPT_KINDS = [
+  'artifact-publication',
+  'release-passport',
+  'site-publication',
+  'public-readback',
+  'product-qualification',
+];
 
 function object(value) {
   return value && typeof value === 'object' && !Array.isArray(value)
@@ -79,6 +89,285 @@ function readJson(file, label = 'JSON') {
   } catch (error) {
     throw new Error(`cannot read ${label} ${file}: ${error.message}`);
   }
+}
+
+function stableJson(value) {
+  if (Array.isArray(value)) return `[${value.map(stableJson).join(',')}]`;
+  if (value && typeof value === 'object') {
+    return `{${Object.keys(value)
+      .sort()
+      .map((key) => `${JSON.stringify(key)}:${stableJson(value[key])}`)
+      .join(',')}}`;
+  }
+  return JSON.stringify(value);
+}
+
+export function contentRoot(value) {
+  return `sha256:${crypto
+    .createHash('sha256')
+    .update(stableJson(value))
+    .digest('hex')}`;
+}
+
+function receiptSetRoot(value) {
+  const {
+    receiptSetRoot: _receiptSetRoot,
+    transactionRoot: _transactionRoot,
+    ...copy
+  } = structuredClone(value);
+  return contentRoot(copy);
+}
+
+function bindingRoot(value) {
+  return contentRoot(value);
+}
+
+function loadReceiptDocuments(receiptSet, receiptSetPath) {
+  const base = path.dirname(path.resolve(receiptSetPath));
+  return Object.fromEntries(
+    array(receiptSet.receipts).map((receipt) => {
+      const locator = String(object(receipt).locator || '');
+      if (!locator || /^https?:/u.test(locator)) {
+        throw new Error(
+          'release evidence synthesis requires retained local receipt locators',
+        );
+      }
+      const file = path.resolve(base, locator);
+      if (!file.startsWith(`${base}${path.sep}`)) {
+        throw new Error('receipt locator escapes the receipt-set directory');
+      }
+      return [receipt.kind, readJson(file, `${receipt.kind} receipt`)];
+    }),
+  );
+}
+
+function assertReceiptSet(receiptSet, documents) {
+  if (
+    receiptSet.schema !== RECEIPT_SET_SCHEMA ||
+    receiptSet.mode !== 'activation' ||
+    receiptSet.releasedUseClaim !== true
+  ) {
+    throw new Error(
+      'released evidence requires an activation-mode authoritative receipt set',
+    );
+  }
+  if (receiptSet.receiptSetRoot !== receiptSetRoot(receiptSet)) {
+    throw new Error('activation receiptSetRoot mismatch');
+  }
+  const bindings = object(receiptSet.bindings);
+  const exactBindingRoot = bindingRoot(bindings);
+  const receipts = array(receiptSet.receipts);
+  if (
+    receipts.map((receipt) => receipt.kind).join(',') !==
+    RECEIPT_KINDS.join(',')
+  ) {
+    throw new Error(
+      'activation receipt set must contain five canonical receipt kinds',
+    );
+  }
+  for (const receipt of receipts) {
+    const document = documents[receipt.kind];
+    if (!document || contentRoot(document) !== receipt.root) {
+      throw new Error(`${receipt.kind} receipt content root mismatch`);
+    }
+    if (receipt.bindingRoot !== exactBindingRoot) {
+      throw new Error(`${receipt.kind} receipt binding root mismatch`);
+    }
+  }
+  if (
+    !/^[0-9a-f]{40}$/u.test(String(bindings.sourceSha || '')) ||
+    !/^[0-9a-f]{40}$/u.test(String(bindings.siteSourceSha || '')) ||
+    !/^sha256:[0-9a-f]{64}$/u.test(String(bindings.artifactSetRoot || '')) ||
+    bindings.tag !== `v${bindings.version}` ||
+    !['alpha', 'release'].includes(bindings.channel) ||
+    bindings.environment !== 'production'
+  ) {
+    throw new Error(
+      'activation receipt bindings are incomplete or non-production',
+    );
+  }
+  return bindings;
+}
+
+export function createUngfuReleaseEvidenceFromReceipts(
+  receiptSet,
+  documents,
+  { root = ROOT } = {},
+) {
+  const bindings = assertReceiptSet(receiptSet, documents);
+  const artifact = object(documents['artifact-publication']);
+  const passport = object(documents['release-passport']);
+  const site = object(documents['site-publication']);
+  const readback = object(documents['public-readback']);
+  const qualification = object(documents['product-qualification']);
+  const roots = array(artifact.artifactRoots);
+  const siteRelease = object(site.release);
+  const siteAcquisition = object(site.acquisitionEvidence);
+  if (
+    artifact.schema !== 'kungfu.activation-artifact-publication/v1' ||
+    artifact.sourceSha !== bindings.sourceSha ||
+    artifact.artifactSetRoot !== bindings.artifactSetRoot ||
+    roots.length === 0
+  ) {
+    throw new Error('artifact publication receipt does not match activation');
+  }
+  if (
+    passport.contract !== 'kungfu-buildchain-release-passport' ||
+    passport.release?.sourceSha !== bindings.sourceSha ||
+    passport.release?.tag !== bindings.tag ||
+    passport.release?.channel !== bindings.channel ||
+    (passport.release?.publishedVersion || passport.release?.version) !==
+      bindings.version ||
+    !/^sha256:[0-9a-f]{64}$/u.test(String(passport.passportRoot || ''))
+  ) {
+    throw new Error('Release Passport does not match activation');
+  }
+  if (
+    site.schema !== 'kungfu.release-status/v1' ||
+    site.status !== 'current-release' ||
+    site.releasedUseClaim !== true ||
+    siteRelease.sourceSha !== bindings.sourceSha ||
+    siteRelease.siteSourceSha !== bindings.siteSourceSha ||
+    siteRelease.tag !== bindings.tag ||
+    siteRelease.channel !== bindings.channel ||
+    siteRelease.version !== bindings.version ||
+    siteRelease.releasePassport?.root !== passport.passportRoot ||
+    !publicUrl(siteAcquisition.url) ||
+    !/^sha256:[0-9a-f]{64}$/u.test(String(siteAcquisition.root || ''))
+  ) {
+    throw new Error('site publication receipt does not match activation');
+  }
+  if (
+    readback.schema !== 'kungfu.release-public-readback/v1' ||
+    readback.qualified !== true ||
+    readback.sourceSha !== bindings.sourceSha ||
+    readback.siteSourceSha !== bindings.siteSourceSha ||
+    readback.version !== bindings.version ||
+    readback.channel !== bindings.channel ||
+    readback.acquisitionRoot !== siteAcquisition.root ||
+    !dateOnly(readback.observedAt)
+  ) {
+    throw new Error('public readback receipt is stale or mismatched');
+  }
+  if (
+    qualification.schema !== 'kungfu.cli-installed-product-qualification/v1' ||
+    qualification.qualified !== true ||
+    qualification.version !== bindings.version ||
+    qualification.sourceSha !== bindings.sourceSha ||
+    qualification.productIdentity?.exactMark !== EXACT_MARK ||
+    qualification.productIdentity?.principle !== PRINCIPLE ||
+    qualification.checks?.releaseCapability?.passed !== true
+  ) {
+    throw new Error(
+      'installed product qualification does not match activation',
+    );
+  }
+  const archiveRoot = `sha256:${qualification.identity?.archiveSha256 || ''}`;
+  if (!roots.some((item) => object(item).sha256 === archiveRoot)) {
+    throw new Error(
+      'installed product qualification archive root is not an artifact receipt root',
+    );
+  }
+  const deploymentCoordinate = `github-release:kungfu-systems/kungfu@${bindings.tag}`;
+  const acquisition = {
+    id: 'install-page',
+    kind: 'public-release-download',
+    exactMark: EXACT_MARK,
+    softwareDescription: SOFTWARE_DESCRIPTION,
+    publicUrl: readback.acquisition.publicUrl,
+    acquisitionUrl: readback.acquisition.acquisitionUrl,
+    accessedAt: readback.observedAt,
+    sourceCommit: bindings.sourceSha,
+    deploymentOrReleaseCoordinate: deploymentCoordinate,
+    renderedEvidence: readback.acquisition.renderedEvidence,
+  };
+  const product = {
+    id: 'cli-version',
+    kind: 'kungfu --version',
+    exactMark: EXACT_MARK,
+    publicUrl: readback.product.publicUrl,
+    accessedAt: readback.observedAt,
+    sourceCommit: bindings.sourceSha,
+    deploymentOrReleaseCoordinate: deploymentCoordinate,
+    renderedEvidence: readback.product.renderedEvidence,
+  };
+  const plans =
+    loadTrademarkPublicUse(root).contract.firstPublicReleaseGate
+      .class9FilingReadiness.coreIdentifications;
+  return {
+    schemaVersion: 1,
+    contract: CONTRACT,
+    id: ID,
+    kind: 'public-acquisition-and-capability-evidence',
+    state: 'released-observation',
+    release: {
+      sourceSha: bindings.sourceSha,
+      siteSourceSha: bindings.siteSourceSha,
+      tag: bindings.tag,
+      channel: bindings.channel,
+      version: bindings.version,
+      deploymentCoordinate,
+      artifactSetRoot: bindings.artifactSetRoot,
+      releasePassportRoot: passport.passportRoot,
+      activationReceiptSetRoot: receiptSet.receiptSetRoot,
+      artifactRoots: roots.map(({ name, sha256 }) => ({ name, sha256 })),
+    },
+    layers: {
+      specimen: {
+        role: 'filing-oriented-acquisition-product-pair',
+        acquisition,
+        product,
+        records: [
+          {
+            kind: 'release',
+            acquisitionSurfaceId: acquisition.id,
+            productSurfaceId: product.id,
+            publicUrl: acquisition.publicUrl,
+            accessedAt: readback.observedAt,
+            sourceRepository: SOURCE_REPOSITORY,
+            sourceCommit: bindings.sourceSha,
+            deploymentOrReleaseCoordinate: deploymentCoordinate,
+            renderedEvidence: acquisition.renderedEvidence,
+          },
+        ],
+      },
+      class9CapabilityTruth: {
+        role: 'released-capability-truth',
+        records: plans.map((plan) => ({
+          id: `class9-${plan.planId}`,
+          planId: plan.planId,
+          termId: plan.termId,
+          identification: plan.identification,
+          status: 'released',
+          capabilityEvidenceKind:
+            plan.planId === 'application-programming-interface'
+              ? 'released-sdk-capability'
+              : 'released-cli-capability',
+          commandOrSurface: `kungfu qualification ${plan.planId}`,
+          qualificationCheck: 'checks.releaseCapability.passed',
+          publicUrl: product.publicUrl,
+          accessedAt: readback.observedAt,
+          sourceRepository: SOURCE_REPOSITORY,
+          sourceCommit: bindings.sourceSha,
+          acquisitionSurfaceId: acquisition.id,
+          productSurfaceId: product.id,
+          deploymentOrReleaseCoordinate: deploymentCoordinate,
+          renderedEvidence: product.renderedEvidence,
+        })),
+      },
+      brandArchive: {
+        role: 'supporting-history-only',
+        primaryEvidence: false,
+        records: array(readback.brandArchive),
+      },
+    },
+    legalBoundary: {
+      firstUseDateClaim: null,
+      legalConclusion: 'not-made',
+      registrationStatusClaim: 'none',
+      counselReviewRequired: true,
+    },
+  };
 }
 
 function exactLegalBoundary(value) {
@@ -243,6 +532,9 @@ export function validateUngfuReleaseEvidence(
   if (!/^[0-9a-f]{40}$/u.test(String(release.sourceSha || ''))) {
     issues.push('release.sourceSha must be a full Git commit');
   }
+  if (!/^[0-9a-f]{40}$/u.test(String(release.siteSourceSha || ''))) {
+    issues.push('release.siteSourceSha must be a full Git commit');
+  }
   if (release.tag !== `v${release.version}`) {
     issues.push('release tag and version must match exactly');
   }
@@ -250,6 +542,15 @@ export function validateUngfuReleaseEvidence(
     issues.push('release channel must be alpha or release');
   }
   const roots = array(release.artifactRoots);
+  for (const [field, value] of Object.entries({
+    artifactSetRoot: release.artifactSetRoot,
+    releasePassportRoot: release.releasePassportRoot,
+    activationReceiptSetRoot: release.activationReceiptSetRoot,
+  })) {
+    if (!/^sha256:[0-9a-f]{64}$/u.test(String(value || ''))) {
+      issues.push(`release.${field} must be a SHA-256 content root`);
+    }
+  }
   if (
     roots.length === 0 ||
     roots.some(
@@ -433,6 +734,7 @@ function parseArgs(argv) {
         '--channel',
         '--version',
         '--deployment-coordinate',
+        '--receipts',
       ].includes(arg)
     ) {
       throw new Error(`unknown option: ${arg}`);
@@ -467,25 +769,26 @@ async function main(argv) {
           options.deployment_coordinate ||
           process.env.BUILDCHAIN_RELEASE_DEPLOYMENT_COORDINATE,
       })
-    : readJson(
-        path.resolve(
-          options.input ||
-            'framework/release/kungfu-ungfu-release-evidence.candidate.json',
-        ),
-        'release evidence candidate',
-      );
-  if (options.release) {
-    index.release.sourceSha =
-      process.env.BUILDCHAIN_RELEASE_SOURCE_SHA || index.release.sourceSha;
-    index.release.tag = process.env.BUILDCHAIN_RELEASE_TAG || index.release.tag;
-    index.release.channel =
-      process.env.BUILDCHAIN_RELEASE_CHANNEL || index.release.channel;
-    index.release.version =
-      process.env.BUILDCHAIN_RELEASE_VERSION || index.release.version;
-    index.release.deploymentCoordinate =
-      process.env.BUILDCHAIN_RELEASE_DEPLOYMENT_COORDINATE ||
-      index.release.deploymentCoordinate;
-  }
+    : (() => {
+        const receiptSetPath = path.resolve(
+          options.receipts ||
+            process.env.BUILDCHAIN_RELEASE_ACTIVATION_RECEIPTS ||
+            '',
+        );
+        if (
+          !options.receipts &&
+          !process.env.BUILDCHAIN_RELEASE_ACTIVATION_RECEIPTS
+        ) {
+          throw new Error(
+            '--release requires --receipts or BUILDCHAIN_RELEASE_ACTIVATION_RECEIPTS',
+          );
+        }
+        const receiptSet = readJson(receiptSetPath, 'activation receipt set');
+        return createUngfuReleaseEvidenceFromReceipts(
+          receiptSet,
+          loadReceiptDocuments(receiptSet, receiptSetPath),
+        );
+      })();
   const issues = validateUngfuReleaseEvidence(index, {
     requireReleased: options.release,
   });

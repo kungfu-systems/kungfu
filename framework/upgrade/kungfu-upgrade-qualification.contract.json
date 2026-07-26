@@ -121,7 +121,7 @@
       "tier": "source-fixture",
       "advertised": false,
       "promotionEligible": false,
-      "blocker": "signed old-to-new archive and in-use executable campaign is not retained"
+      "blocker": "unsigned old-to-new archive and in-use executable campaign is not retained"
     }
   },
   "fixtureFile": "tests/fixtures/upgrade-qualification/cases.json",

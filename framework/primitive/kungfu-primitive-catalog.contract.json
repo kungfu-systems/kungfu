@@ -538,7 +538,7 @@
             "refs": [
               {
                 "path": "framework/core/src/libkungfu/src/runtime/storage/fact_actions.cpp",
-                "root": "sha256:3bd2fdf973a5e3af86c80d5db2c44c8ef1aac046360cd4733aa62e43e69cce7e"
+                "root": "sha256:2ea15c90be3c12a9eee1cf992450d1bda4e0f028945c6825dbc10f265df7db37"
               },
               {
                 "path": "framework/core/src/python/kungfu/cli/commands/cut.py",
@@ -576,7 +576,7 @@
             "refs": [
               {
                 "path": "framework/core/src/libkungfu/src/runtime/storage/fact_actions.cpp",
-                "root": "sha256:3bd2fdf973a5e3af86c80d5db2c44c8ef1aac046360cd4733aa62e43e69cce7e"
+                "root": "sha256:2ea15c90be3c12a9eee1cf992450d1bda4e0f028945c6825dbc10f265df7db37"
               },
               {
                 "path": "framework/core/src/python/kungfu/cli/commands/cut.py",
@@ -597,7 +597,7 @@
             "refs": [
               {
                 "path": "framework/core/src/libkungfu/src/runtime/storage/fact_actions.cpp",
-                "root": "sha256:3bd2fdf973a5e3af86c80d5db2c44c8ef1aac046360cd4733aa62e43e69cce7e"
+                "root": "sha256:2ea15c90be3c12a9eee1cf992450d1bda4e0f028945c6825dbc10f265df7db37"
               }
             ],
             "proofRefs": []
@@ -1428,7 +1428,7 @@
             "refs": [
               {
                 "path": "framework/core/src/libkungfu/src/runtime/storage/fact_actions.cpp",
-                "root": "sha256:3bd2fdf973a5e3af86c80d5db2c44c8ef1aac046360cd4733aa62e43e69cce7e"
+                "root": "sha256:2ea15c90be3c12a9eee1cf992450d1bda4e0f028945c6825dbc10f265df7db37"
               }
             ],
             "policy": "all four language implementation references are required for complete"
@@ -1458,7 +1458,7 @@
             "refs": [
               {
                 "path": "framework/core/src/libkungfu/src/runtime/storage/fact_actions.cpp",
-                "root": "sha256:3bd2fdf973a5e3af86c80d5db2c44c8ef1aac046360cd4733aa62e43e69cce7e"
+                "root": "sha256:2ea15c90be3c12a9eee1cf992450d1bda4e0f028945c6825dbc10f265df7db37"
               }
             ],
             "policy": "implementation references are bounded operational evidence, not availability"
@@ -1475,7 +1475,7 @@
             "refs": [
               {
                 "path": "framework/core/src/libkungfu/src/runtime/storage/fact_actions.cpp",
-                "root": "sha256:3bd2fdf973a5e3af86c80d5db2c44c8ef1aac046360cd4733aa62e43e69cce7e"
+                "root": "sha256:2ea15c90be3c12a9eee1cf992450d1bda4e0f028945c6825dbc10f265df7db37"
               }
             ],
             "proofRefs": []
@@ -1697,5 +1697,5 @@
       "artifacts": []
     }
   ],
-  "catalogRoot": "sha256:0b4e0be094f92f87065e5a18ef54261378157653859066a0d8642bd04259d33e"
+  "catalogRoot": "sha256:9f6a88f1e9367249459779591913da0ca6c15e1955c612e12a709dd587eefadf"
 }

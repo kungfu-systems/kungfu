@@ -48,6 +48,7 @@
     "facts": {"visibility": "public", "section": "facts-proof"},
     "query": {"visibility": "public", "section": "facts-proof"},
     "contract": {"visibility": "public", "section": "facts-proof"},
+    "release": {"audience": ["human", "agent", "operator"], "maturity": "preview", "visibility": "public", "section": "facts-proof", "owner": "core"},
     "primitive": {"visibility": "public", "section": "facts-proof", "owner": "core", "audience": ["human", "agent", "developer"]},
     "kfd": {"audience": ["agent", "developer"], "visibility": "public", "section": "facts-proof"},
     "kfx": {"audience": ["human", "agent", "developer", "operator"], "visibility": "public", "section": "extensions"},
@@ -134,7 +135,7 @@
   "catalogProjection": {
     "artifact": "kungfu.agent/cli_surface.catalog.json",
     "authority": "runtime-fold",
-    "expectedSurfaceRoot": "sha256:3439c0a3ac904c1dd9589511528b830dae56ee8ed6dde8f64e77b36a592470d1",
+    "expectedSurfaceRoot": "sha256:56c4bb7fe13553ec4610bfb9ed9448073ad5eabe7f0b0e752eb51f9ca9898be0",
     "consumers": {
       "agentCapabilities": "embed-complete",
       "agentCommands": "strict-link",

@@ -158,7 +158,7 @@ function verifyLinux(root, manifest) {
   return { kind: 'appimage-native', executable: true };
 }
 
-function verifyWindows(root, manifest) {
+export function verifyWindows(root, manifest) {
   const desktop = manifest.artifacts.find((item) => item.kind === 'desktop');
   const installer = artifactPath(root, desktop);
   const executable = findExactlyOne(
@@ -167,19 +167,27 @@ function verifyWindows(root, manifest) {
       entry.isFile() && path.basename(target) === 'Kungfu Episodes.exe',
     'packaged Windows application',
   );
-  const script = [
-    '$targets = ConvertFrom-Json $env:KF_SIGNATURE_TARGETS_JSON',
-    '$rows = foreach ($target in $targets) { Get-AuthenticodeSignature -LiteralPath $target }',
-    "if ($rows.Count -ne 2 -or @($rows | Where-Object Status -ne 'Valid').Count -ne 0) { $rows | Select-Object Path,Status,StatusMessage | ConvertTo-Json -Compress; exit 1 }",
-    "$rows | Select-Object Path,Status,@{Name='Subject';Expression={$_.SignerCertificate.Subject}} | ConvertTo-Json -Compress",
-  ].join('; ');
-  run('powershell.exe', ['-NoProfile', '-NonInteractive', '-Command', script], {
-    env: {
-      ...process.env,
-      KF_SIGNATURE_TARGETS_JSON: JSON.stringify([installer, executable]),
-    },
-  });
-  return { kind: 'authenticode', installer: true, executable: true };
+  for (const [label, target] of [
+    ['installer', installer],
+    ['executable', executable],
+  ]) {
+    const descriptor = fs.openSync(target, 'r');
+    const magic = Buffer.alloc(2);
+    try {
+      fs.readSync(descriptor, magic, 0, magic.length, 0);
+    } finally {
+      fs.closeSync(descriptor);
+    }
+    if (!magic.equals(Buffer.from('MZ')))
+      fail(`Windows ${label} is not a PE executable`);
+  }
+  return {
+    kind: 'unsigned-pe',
+    installer: true,
+    executable: true,
+    platformCodeSigning: false,
+    artifactIntegrity: 'signed-channel-digest',
+  };
 }
 
 export function buildQualificationEvidence({

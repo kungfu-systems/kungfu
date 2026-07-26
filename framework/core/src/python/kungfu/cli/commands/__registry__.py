@@ -39,6 +39,7 @@ from . import profile
 from . import primitive
 from . import lock
 from . import health
+from . import release
 from . import recover
 from . import exit
 from . import dev
@@ -83,6 +84,7 @@ __all__ = [
     "primitive",
     "lock",
     "health",
+    "release",
     "recover",
     "exit",
     "dev",

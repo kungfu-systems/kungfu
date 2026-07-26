@@ -1,0 +1,11 @@
+{
+  "name": "Kungfu community intake admission",
+  "description": "Revalidate recognized local Issue Forms and route bypass submissions without auto-closing them.",
+  "iconName": "octicon issue-opened",
+  "categories": [
+    "Automation"
+  ],
+  "filePatterns": [
+    "^\\.github/ISSUE_TEMPLATE/.*\\.ya?ml$"
+  ]
+}

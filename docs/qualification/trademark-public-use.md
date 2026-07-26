@@ -20,7 +20,21 @@ repository does not claim released-software use or a first-use date. Source
 code, a pull-request preview, staging, a screenshot without a real acquisition
 path, and a Coming Soon page do not satisfy this gate.
 
-The machine-readable current state and release requirements live in
+The public machine-readable current state is
+`https://kungfu.tech/.well-known/kungfu-release-status.json`. An installed
+artifact explains or verifies it with:
+
+```sh
+kungfu release status
+kungfu release verify <file-or-https-url>
+kungfu release explain
+```
+
+Use `--json` for an Agent. The stable output distinguishes a verified current
+release, a verified unavailable state, and rejected partial or stale evidence,
+then names both the proof and its non-claims.
+
+The repository-owned release requirements live in
 [`kungfu-trademark-public-use.contract.json`](../../framework/release/kungfu-trademark-public-use.contract.json).
 Source acceptance runs `scripts/check-trademark-public-use.mjs` and its negative
 fixtures. The governing decision is
@@ -84,10 +98,40 @@ preparation file with:
   --output .buildchain/release-evidence/ungfu-public-use.json
 ```
 
-At the exact Alpha cut, the protected release path invokes the same script in
-`--release --readback` mode. That mode rejects preparation state, placeholders,
-Coming Soon, preview, staging and private URLs, 404 acquisition actions, future
-dates, partial source SHAs, unqualified Class 9 plans, and any mismatch among
+At the exact Alpha cut, the protected release path completes one Buildchain
+activation transaction in this order:
+
+1. qualify the immutable candidate;
+2. publish the artifacts;
+3. seal the Release Passport;
+4. merge and publish the exact site source;
+5. read back the public status and acquisition surfaces; and
+6. synthesize released evidence from the resulting receipt set.
+
+Every receipt binds the same product and site source SHAs, artifact root,
+version, tag, channel, and production environment. A failed phase records its
+state and stops later phases; a retry may replay only the same roots. Changed
+roots fail closed. Shadow mode exercises the complete transaction but always
+sets `releasedUseClaim=false`.
+
+Windows Alpha qualification accepts the exact unsigned PE installer and
+application bytes. It relies on signed-channel and digest/root verification and
+does not require or claim Authenticode certification or a Windows publisher
+identity.
+
+The final synthesis command accepts the authoritative receipt set, not a
+hand-authored candidate:
+
+```sh
+node scripts/prepare-ungfu-release-evidence.mjs --release \
+  --receipts .buildchain/release-activation/receipt-set.json \
+  --output .buildchain/release-evidence/ungfu-public-use.json \
+  --readback --json
+```
+
+It rejects preparation state, placeholders, Coming Soon, preview, staging and
+private URLs, 404 acquisition actions, future dates, partial source SHAs,
+unqualified Class 9 plans, missing or stale receipts, and any mismatch among
 source, version, tag, channel, deployment coordinate, product qualification,
 and signed artifact roots.
 
@@ -104,9 +148,9 @@ The product half is the public
 installed release archive. It records the observed two-line `kungfu --version`
 identity and archive root. The final evidence index must bind that root and
 every selected Class 9 capability check to the same release as the site.
-Buildchain copies the complete product-owned index into the Release Passport,
-rehashes it during verification, publishes it as a release asset, and retains
-it in the offline release evidence bundle.
+Buildchain validates the five-receipt activation set, retains the receipt set
+and synthesized product-owned index in controller evidence, and never upgrades
+a candidate document into released proof by inference.
 
 Passing these engineering checks records only public observations. It does not
 select a filing date, determine first use, establish ownership, assess specimen

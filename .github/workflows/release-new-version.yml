@@ -80,6 +80,8 @@ jobs:
         kungfu-episodes-cli-*.qualification.json
       publication-commit-command: ${{ startsWith(inputs.target-ref || github.event.pull_request.base.ref, 'alpha/') && 'node scripts/alpha-publication-commit.mjs' || '' }}
       publication-commit-evidence-path: .buildchain/publication-commit/evidence.json
+      release-activation-command: ${{ startsWith(inputs.target-ref || github.event.pull_request.base.ref, 'alpha/') && 'node scripts/activate-ungfu-release.mjs' || '' }}
+      release-activation-receipt-set-path: .buildchain/release-activation/receipt-set.json
       standalone-binary-distribution: false
       publish-mode: publish-final-version
       publish-dist-tag: ${{ startsWith(inputs.target-ref || github.event.pull_request.base.ref, 'alpha/') && 'alpha' || 'latest' }}
@@ -101,9 +103,10 @@ jobs:
       release-passport-kfd-3-artifact-verify-command: node scripts/buildchain-kfd-evidence.mjs --artifact-witness --json
       release-passport-evidence-command: >-
         node scripts/prepare-ungfu-release-evidence.mjs --release
-        --input framework/release/kungfu-ungfu-release-evidence.candidate.json
-        --output .buildchain/release-evidence/ungfu-public-use.json
+        --receipts "$BUILDCHAIN_RELEASE_ACTIVATION_RECEIPTS"
+        --output "$BUILDCHAIN_RELEASE_EVIDENCE_PATH"
         --readback --json
+      release-passport-evidence-path: .buildchain/release-evidence/ungfu-public-use.json
       release-passport-invariant-passport-command: >-
         node scripts/kungfu-invariant.mjs --collect-evidence .
         --passport product/release/qualification/invariant-passport.json --json
