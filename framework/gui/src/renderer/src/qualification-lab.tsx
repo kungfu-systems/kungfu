@@ -40,13 +40,15 @@ type BehaviorFinding = {
 };
 
 type PlaybackLine = {
+  session: 1 | 2;
+  kind: 'system' | 'user' | 'agent' | 'tool' | 'output';
   status: VisualStatus;
   command: string;
   detail: string;
 };
 
 export const QUALIFICATION_PLAYBACK_TIMING = {
-  eventDelayMs: 360,
+  eventDelayMs: 1000,
   verdictDelayMs: 520,
   reducedMotionDelayMs: 24,
 } as const;
@@ -118,6 +120,17 @@ const STATUS_META: Record<
   },
 };
 
+const PLAYBACK_KIND_META: Record<
+  PlaybackLine['kind'],
+  { label: string; color: string; prompt: string }
+> = {
+  system: { label: 'system', color: '#9cdcfe', prompt: '◆' },
+  user: { label: 'user', color: '#ce9178', prompt: '❯' },
+  agent: { label: 'agent/public', color: '#4ec9b0', prompt: '▸' },
+  tool: { label: 'tool', color: '#dcdcaa', prompt: '⚙' },
+  output: { label: 'output', color: '#b5cea8', prompt: '←' },
+};
+
 const CHECK_COPY: Record<string, { title: string; detail: string }> = {
   'two-distinct-fresh-processes': {
     title: 'The two sessions were genuinely fresh',
@@ -181,49 +194,154 @@ function eventStatus(
   return event ? 'warning' : 'waiting';
 }
 
-export function qualificationPlaybackLine(
+export function qualificationPlaybackLines(
   event: QualificationLabEvent,
-): PlaybackLine {
+): PlaybackLine[] {
+  if (event.step === 'plan') {
+    return [
+      {
+        session: 1,
+        kind: 'system',
+        status: 'ready',
+        command: 'governed two-session plan ready',
+        detail: `One task identity was sealed before either provider started · ${shortRoot(event.root)}`,
+      },
+    ];
+  }
   if (event.step.endsWith('-start')) {
-    const session = event.step.includes('session-1')
-      ? 'Session 1'
-      : 'Session 2';
-    return {
-      status: 'running',
-      command: `$ launch ${session.toLowerCase()} as a fresh process`,
-      detail:
-        'The provider process is active. Kungfu is waiting for a governed state observation, not interpreting raw terminal text.',
-    };
+    const session = event.step.includes('session-1') ? 1 : 2;
+    return [
+      {
+        session,
+        kind: 'user',
+        status: 'ready',
+        command:
+          session === 1
+            ? 'Begin the bounded task. Leave a governed partial result, then stop.'
+            : 'Continue this task from Kungfu state. No prior chat is available.',
+        detail:
+          session === 1
+            ? 'The first process receives the qualification task.'
+            : 'The fresh process receives the same task identity, not Session 1 conversation.',
+      },
+      {
+        session,
+        kind: 'agent',
+        status: 'running',
+        command:
+          session === 1
+            ? 'I’ll make bounded progress and leave evidence for a fresh session.'
+            : 'I’ll inspect governed state first, then continue only unfinished work.',
+        detail:
+          'Public progress narration projected from the canonical action boundary; private reasoning remains hidden.',
+      },
+      {
+        session,
+        kind: 'tool',
+        status: 'running',
+        command: `spawn_provider(session=${session}, fresh_process=true)`,
+        detail:
+          'The provider process is active. Kungfu waits for governed state evidence instead of treating terminal text as proof.',
+      },
+    ];
   }
   if (event.step === 'session-1') {
-    return {
-      status: eventStatus([event], 1),
-      command: 'observe session-1 → partial state sealed',
-      detail: `A bounded result was recorded · ${shortRoot(event.root)}`,
-    };
+    const status = eventStatus([event], 1);
+    return [
+      {
+        session: 1,
+        kind: 'tool',
+        status,
+        command: 'read_governed_state(session=1)',
+        detail: 'Kungfu observes the fixture state after the provider exits.',
+      },
+      {
+        session: 1,
+        kind: 'output',
+        status,
+        command: `status=${event.status}`,
+        detail: `Bounded state evidence · ${shortRoot(event.root)}`,
+      },
+      {
+        session: 1,
+        kind: 'agent',
+        status,
+        command:
+          status === 'correct'
+            ? 'Partial work is recorded. I’m stopping so a fresh session must continue.'
+            : 'The expected partial handoff state was not proved.',
+        detail:
+          'This is the public completion summary for Session 1, not hidden model reasoning.',
+      },
+    ];
   }
   if (event.step === 'session-2') {
-    return {
-      status: eventStatus([event], 2),
-      command: 'observe session-2 → continuation verified',
-      detail: `The fresh process continued the governed state · ${shortRoot(event.root)}`,
-    };
+    const status = eventStatus([event], 2);
+    return [
+      {
+        session: 2,
+        kind: 'tool',
+        status,
+        command: 'read_governed_state(session=2)',
+        detail:
+          'Kungfu checks the same Work identity and the final ordered state.',
+      },
+      {
+        session: 2,
+        kind: 'output',
+        status,
+        command: `status=${event.status}`,
+        detail: `Fresh-process continuation evidence · ${shortRoot(event.root)}`,
+      },
+      {
+        session: 2,
+        kind: 'agent',
+        status,
+        command:
+          status === 'correct'
+            ? 'I found the prior partial result and completed only the remaining work.'
+            : 'I could not prove a correct continuation from the recorded state.',
+        detail:
+          'This is the public completion summary for Session 2, not hidden model reasoning.',
+      },
+    ];
   }
-  return {
-    status:
-      event.status === 'failed'
-        ? 'undesirable'
-        : event.step === 'assessment'
-          ? event.status === 'qualified-with-residuals'
-            ? 'warning'
-            : 'correct'
-          : 'ready',
-    command:
-      event.step === 'assessment'
-        ? 'assess canonical oracle checks'
-        : 'prepare bounded two-session plan',
-    detail: `${event.status} · ${shortRoot(event.root)}`,
-  };
+  const status =
+    event.status === 'failed'
+      ? 'undesirable'
+      : event.step === 'assessment'
+        ? event.status === 'qualified-with-residuals'
+          ? 'warning'
+          : 'correct'
+        : 'ready';
+  if (event.step === 'assessment') {
+    return [
+      {
+        session: 2,
+        kind: 'tool',
+        status,
+        command: 'run_continuity_oracle()',
+        detail:
+          'The canonical checks compare process identity, governed state, and expected completion.',
+      },
+      {
+        session: 2,
+        kind: 'output',
+        status,
+        command: `qualification=${event.status}`,
+        detail: `Assessment proof · ${shortRoot(event.root)}`,
+      },
+    ];
+  }
+  return [
+    {
+      session: 1,
+      kind: 'system',
+      status,
+      command: event.step,
+      detail: `${event.status} · ${shortRoot(event.root)}`,
+    },
+  ];
 }
 
 export function qualificationModeNeeds(mode: QualificationMode): {
@@ -400,17 +518,15 @@ function StatusBadge({ status }: { status: VisualStatus }) {
 function SessionColumn({
   story,
   session,
-  events,
+  lines,
   running,
 }: {
   story: SessionStory;
   session: 1 | 2;
-  events: QualificationLabEvent[];
+  lines: PlaybackLine[];
   running: boolean;
 }) {
-  const sessionEvents = events.filter((event) =>
-    event.step.startsWith(`session-${session}`),
-  );
+  const sessionLines = lines.filter((line) => line.session === session);
   return (
     <article
       style={{
@@ -427,58 +543,101 @@ function SessionColumn({
       <h2 style={{ margin: '6px 0 16px', fontSize: 19 }}>{story.subtitle}</h2>
       <div
         aria-live="polite"
-        aria-label={`${story.title} live event stream`}
+        aria-label={`${story.title} public activity transcript`}
         style={{
           ...mono,
-          minHeight: 96,
+          minHeight: 260,
           marginBottom: 16,
-          padding: 12,
+          overflow: 'hidden',
           borderRadius: 6,
-          background: '#0f1112',
-          border: '1px solid #2f3638',
+          background: '#090b0c',
+          border: '1px solid #343a3d',
           fontSize: 11,
           lineHeight: 1.45,
         }}
       >
-        <div style={{ color: '#6fa8bd', marginBottom: 8 }}>
-          SAFE EVENT STREAM
-          {running && !sessionEvents.length ? (
-            <span className="kf-lab-live-dots"> · waiting</span>
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 7,
+            padding: '8px 10px',
+            color: '#858585',
+            background: '#17191a',
+            borderBottom: '1px solid #2b3032',
+          }}
+        >
+          <span style={{ color: '#f48771' }}>●</span>
+          <span style={{ color: '#d7ba7d' }}>●</span>
+          <span style={{ color: '#4ec9b0' }}>●</span>
+          <span style={{ marginLeft: 5 }}>
+            agent@qualification-lab · session-{session}
+          </span>
+          {running ? (
+            <span className="kf-lab-live-dots" style={{ marginLeft: 'auto' }}>
+              live
+            </span>
           ) : null}
         </div>
-        {sessionEvents.length ? (
-          sessionEvents.map((event, index) => {
-            const line = qualificationPlaybackLine(event);
-            return (
-              <div
-                className="kf-lab-event-line"
-                key={`${event.step}-${event.status}-${index}`}
-                style={{
-                  display: 'grid',
-                  gridTemplateColumns: 'auto minmax(0, 1fr)',
-                  gap: 8,
-                  marginTop: index ? 9 : 0,
-                }}
-              >
-                <span style={{ color: STATUS_META[line.status].color }}>
-                  {STATUS_META[line.status].icon}
-                </span>
-                <div>
-                  <div style={{ color: '#d7d7d7' }}>{line.command}</div>
-                  <div style={{ color: '#858585', marginTop: 2 }}>
-                    {line.detail}
+        <div style={{ padding: 12 }}>
+          <div style={{ color: '#6fa8bd', marginBottom: 10 }}>
+            PUBLIC ACTIVITY TRANSCRIPT
+          </div>
+          {sessionLines.length ? (
+            sessionLines.map((line, index) => {
+              const kind = PLAYBACK_KIND_META[line.kind];
+              return (
+                <div
+                  className="kf-lab-event-line"
+                  key={`${line.kind}-${line.command}-${index}`}
+                  style={{
+                    display: 'grid',
+                    gridTemplateColumns: '24px 72px minmax(0, 1fr)',
+                    gap: 7,
+                    marginTop: index ? 10 : 0,
+                    alignItems: 'start',
+                  }}
+                >
+                  <span style={{ color: '#555' }}>
+                    {String(index + 1).padStart(2, '0')}
+                  </span>
+                  <span style={{ color: kind.color }}>
+                    {kind.prompt} {kind.label}
+                  </span>
+                  <div>
+                    <div style={{ color: STATUS_META[line.status].color }}>
+                      {line.command}
+                    </div>
+                    <div style={{ color: '#858585', marginTop: 2 }}>
+                      {line.detail}
+                    </div>
                   </div>
                 </div>
-              </div>
-            );
-          })
-        ) : (
-          <div style={{ color: '#666' }}>
-            {running
-              ? 'No safe milestone has been observed yet.'
-              : 'Events will appear here one command boundary at a time.'}
+              );
+            })
+          ) : (
+            <div style={{ color: '#666' }}>
+              {running
+                ? 'Waiting for the first canonical activity boundary…'
+                : 'Agent activity will appear here one line at a time.'}
+            </div>
+          )}
+          {running ? (
+            <div style={{ marginTop: 10, color: '#4ec9b0' }}>
+              <span className="kf-lab-terminal-cursor">▌</span>
+            </div>
+          ) : null}
+          <div
+            style={{
+              marginTop: 12,
+              paddingTop: 8,
+              color: '#626262',
+              borderTop: '1px solid #1f2324',
+            }}
+          >
+            PRIVATE REASONING HIDDEN · RAW PROVIDER OUTPUT REDACTED
           </div>
-        )}
+        </div>
       </div>
       <div style={{ display: 'grid', gap: 14 }}>
         {story.milestones.map((milestone) => (
@@ -675,6 +834,9 @@ export function QualificationLabPanel({
   const [visibleEvents, setVisibleEvents] = React.useState<
     QualificationLabEvent[]
   >([]);
+  const [visiblePlaybackLines, setVisiblePlaybackLines] = React.useState<
+    PlaybackLine[]
+  >([]);
   const [visibleFindingCount, setVisibleFindingCount] = React.useState(0);
   const [activeFindingIndex, setActiveFindingIndex] = React.useState(-1);
   const [busy, setBusy] = React.useState('');
@@ -717,6 +879,7 @@ export function QualificationLabPanel({
     setTargetPlan(null);
     setReport(null);
     setVisibleEvents([]);
+    setVisiblePlaybackLines([]);
     setVisibleFindingCount(0);
     setActiveFindingIndex(-1);
     setError('');
@@ -747,6 +910,7 @@ export function QualificationLabPanel({
     setBusy('run');
     setReport(null);
     setVisibleEvents([]);
+    setVisiblePlaybackLines([]);
     setVisibleFindingCount(0);
     setActiveFindingIndex(-1);
     const reducedMotion =
@@ -760,8 +924,13 @@ export function QualificationLabPanel({
       : QUALIFICATION_PLAYBACK_TIMING.verdictDelayMs;
     let playbackQueue = Promise.resolve();
     const receiveEvent = (event: QualificationLabEvent) => {
+      const lines = qualificationPlaybackLines(event);
       playbackQueue = playbackQueue.then(async () => {
-        await waitForPlayback(eventDelay);
+        for (const line of lines) {
+          await waitForPlayback(eventDelay);
+          if (playbackRunRef.current !== runId) return;
+          setVisiblePlaybackLines((current) => [...current, line]);
+        }
         if (playbackRunRef.current !== runId) return;
         setVisibleEvents((current) => [...current, event]);
       });
@@ -936,6 +1105,7 @@ export function QualificationLabPanel({
                   setTargetPlan(null);
                   setReport(null);
                   setVisibleEvents([]);
+                  setVisiblePlaybackLines([]);
                   setVisibleFindingCount(0);
                   setActiveFindingIndex(-1);
                 }}
@@ -964,6 +1134,7 @@ export function QualificationLabPanel({
                   setTargetPlan(null);
                   setReport(null);
                   setVisibleEvents([]);
+                  setVisiblePlaybackLines([]);
                   setVisibleFindingCount(0);
                   setActiveFindingIndex(-1);
                 }}
@@ -1022,13 +1193,13 @@ export function QualificationLabPanel({
           <SessionColumn
             story={sessionOne}
             session={1}
-            events={visibleEvents}
+            lines={visiblePlaybackLines}
             running={running}
           />
           <SessionColumn
             story={sessionTwo}
             session={2}
-            events={visibleEvents}
+            lines={visiblePlaybackLines}
             running={running}
           />
         </div>
@@ -1149,7 +1320,8 @@ evidence ${report.evidenceDirectory}`
         }
         .kf-lab-running-badge,
         .kf-lab-live-dots,
-        .kf-lab-handoff-active {
+        .kf-lab-handoff-active,
+        .kf-lab-terminal-cursor {
           animation: kf-lab-pulse 1.15s ease-in-out infinite;
         }
         .kf-lab-verdict-focus {
@@ -1163,6 +1335,7 @@ evidence ${report.evidenceDirectory}`
           .kf-lab-running-badge,
           .kf-lab-live-dots,
           .kf-lab-handoff-active,
+          .kf-lab-terminal-cursor,
           .kf-lab-verdict-focus {
             animation-duration: 1ms !important;
             animation-iteration-count: 1 !important;
