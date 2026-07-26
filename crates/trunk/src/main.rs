@@ -331,7 +331,7 @@ fn route_product(
         }
         if matches!(
             option.name.as_str(),
-            "help_all" | "help_section" | "help_json"
+            "help_all" | "help_section" | "help_json" | "qualification_lab_demo"
         ) {
             return Ok(ProductRoute::Launch);
         }
@@ -550,6 +550,13 @@ mod tests {
                 flags: vec!["--help-json".to_string()],
                 choices: vec![],
             },
+            help::RootOption {
+                name: "qualification_lab_demo".to_string(),
+                arity: 0,
+                envvar: Some("KF_QUALIFICATION_LAB_DEMO".to_string()),
+                flags: vec!["--qualification-lab-demo".to_string()],
+                choices: vec![],
+            },
         ]
     }
 
@@ -656,6 +663,14 @@ mod tests {
                 ProductRoute::Launch
             );
         }
+    }
+
+    #[test]
+    fn qualification_lab_demo_routes_to_the_python_product_surface() {
+        assert_eq!(
+            route_product(&s(&["--qualification-lab-demo"]), &root_options()).unwrap(),
+            ProductRoute::Launch
+        );
     }
 
     #[test]

@@ -3,6 +3,7 @@
 export type ShellKey =
   | 'quit'
   | 'refresh'
+  | 'qualification-lab'
   | 'next-card'
   | 'previous-card'
   | 'next-subject'
@@ -14,6 +15,7 @@ export type ShellKey =
 export function decodeShellKey(input: string): ShellKey {
   if (input === 'q' || input === '\u0003' || input === '\u001b') return 'quit';
   if (input === 'r') return 'refresh';
+  if (input === 'a') return 'qualification-lab';
   if (input === 'j' || input === '\u001b[B') return 'next-card';
   if (input === 'k' || input === '\u001b[A') return 'previous-card';
   if (input === 'l' || input === '\u001b[C') return 'next-subject';

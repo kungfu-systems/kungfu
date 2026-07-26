@@ -38,7 +38,7 @@
           "pointer": {
             "kind": "file",
             "path": "framework/core/src/python/kungfu/agent/cli_surface.catalog.json",
-            "sha256": "fa38505d6ac0cdc6e09030ba7ddf350a22d1b470a8bd17d321d2612d9f5b0248"
+            "sha256": "4f8e97d20a88e5015ab37ee86c7d0d8c1979e496b60a120ec905a17618b24616"
           },
           "description": "Complete deterministic CLI surface graph shared by offline Agent capabilities and catalog parity checks."
         },
@@ -301,7 +301,7 @@
           "pointer": {
             "kind": "file",
             "path": "framework/core/src/python/kungfu/agent/kfd3_api.registry.json",
-            "sha256": "0a5edafae9148ea66c5ab2879374c604ac019506b33ede960987a94ce5880d8f"
+            "sha256": "bdb27d5270b7654004a505e5c14e721b65fa18b36e54121ee6ac555526abf901"
           },
           "description": "Agent collaboration-interface registration for the work-model query."
         }

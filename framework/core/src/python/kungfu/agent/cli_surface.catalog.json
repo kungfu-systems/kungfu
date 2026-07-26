@@ -1,7 +1,7 @@
 {
-  "catalogRoot": "sha256:b8547daa3e66c80c525bc43aa4974dfe9cd2bf202d5166c405c9e6e6ad56ea0a",
+  "catalogRoot": "sha256:b280b3f5b591170e7d22e9075683ca617e6f42d93f784769cf33584b48d6b9d3",
   "contractId": "kungfu-cli-surface",
-  "contractRoot": "sha256:ef52615a4a8fdd274c96ce45a2e5407d8dcd763b5271d7363aee557ee5e40620",
+  "contractRoot": "sha256:29b8b3c15901f5cad36f44ea7231b2b7468a03490ec7fb9d7c1029331c1ec971",
   "kfd3Linkage": [
     {
       "apiIds": [],
@@ -380,15 +380,11 @@
       "surfaceId": "kungfu.cli.commands.atlas.verify"
     },
     {
-      "apiIds": [],
-      "reason": "not-agent-visible",
-      "state": "unlinked",
-      "surfaceId": "kungfu.cli.commands.cockpit.cockpit"
-    },
-    {
-      "apiIds": [],
-      "reason": "navigation-only",
-      "state": "unlinked",
+      "apiIds": [
+        "kungfu.codex.report-goal"
+      ],
+      "reason": null,
+      "state": "linked",
       "surfaceId": "kungfu.cli.commands.codex.codex"
     },
     {
@@ -1401,9 +1397,15 @@
       "surfaceId": "kungfu.cli.commands.profile.member.call"
     },
     {
-      "apiIds": [],
-      "reason": "navigation-only",
-      "state": "unlinked",
+      "apiIds": [
+        "kungfu.atlas.claim-completion",
+        "kungfu.atlas.create-go",
+        "kungfu.atlas.create-mission",
+        "kungfu.atlas.decide-continuation",
+        "kungfu.atlas.review-completion"
+      ],
+      "reason": null,
+      "state": "linked",
       "surfaceId": "kungfu.cli.commands.atlas.mission.control"
     },
     {
@@ -1575,6 +1577,70 @@
       "reason": "no-agent-first-api-declared",
       "state": "unlinked",
       "surfaceId": "kungfu.cli.commands.primitive.role.register.role.commands.locals.inspect.kungfu.pursuit.inspect"
+    },
+    {
+      "apiIds": [
+        "kungfu.qualification-lab"
+      ],
+      "reason": null,
+      "state": "linked",
+      "surfaceId": "kungfu.qualification-lab"
+    },
+    {
+      "apiIds": [
+        "kungfu.qualification-lab.agent-plan"
+      ],
+      "reason": null,
+      "state": "linked",
+      "surfaceId": "kungfu.qualification-lab.agent-plan"
+    },
+    {
+      "apiIds": [
+        "kungfu.qualification-lab.agent-run"
+      ],
+      "reason": null,
+      "state": "linked",
+      "surfaceId": "kungfu.qualification-lab.agent-run"
+    },
+    {
+      "apiIds": [
+        "kungfu.qualification-lab.agents"
+      ],
+      "reason": null,
+      "state": "linked",
+      "surfaceId": "kungfu.qualification-lab.agents"
+    },
+    {
+      "apiIds": [
+        "kungfu.qualification-lab.catalog"
+      ],
+      "reason": null,
+      "state": "linked",
+      "surfaceId": "kungfu.qualification-lab.catalog"
+    },
+    {
+      "apiIds": [
+        "kungfu.qualification-lab.demo"
+      ],
+      "reason": null,
+      "state": "linked",
+      "surfaceId": "kungfu.qualification-lab.demo"
+    },
+    {
+      "apiIds": [
+        "kungfu.qualification-lab.inspect"
+      ],
+      "reason": null,
+      "state": "linked",
+      "surfaceId": "kungfu.qualification-lab.inspect"
+    },
+    {
+      "apiIds": [
+        "kungfu.qualification-lab.plan"
+      ],
+      "reason": null,
+      "state": "linked",
+      "surfaceId": "kungfu.qualification-lab.plan"
     },
     {
       "apiIds": [],
@@ -2440,6 +2506,12 @@
     },
     {
       "apiIds": [],
+      "reason": "no-agent-first-api-declared",
+      "state": "unlinked",
+      "surfaceId": "kungfu.cli.commands.tui.tui"
+    },
+    {
+      "apiIds": [],
       "reason": "navigation-only",
       "state": "unlinked",
       "surfaceId": "kungfu.cli.commands.update.update"
@@ -2505,9 +2577,18 @@
       "surfaceId": "kungfu.cli.commands.primitive.role.register.role.commands.locals.inspect.kungfu.warrant.inspect"
     },
     {
-      "apiIds": [],
-      "reason": "navigation-only",
-      "state": "unlinked",
+      "apiIds": [
+        "kungfu.work.complete",
+        "kungfu.work.create",
+        "kungfu.work.export",
+        "kungfu.work.import",
+        "kungfu.work.inspect",
+        "kungfu.work.loop",
+        "kungfu.work.recover",
+        "kungfu.work.settle"
+      ],
+      "reason": null,
+      "state": "linked",
       "surfaceId": "kungfu.cli.commands.assignment.assignment"
     },
     {
@@ -2821,11 +2902,11 @@
       "kfd3Registry": "strict-link",
       "packagedInventory": "required-agent-pack-entry"
     },
-    "expectedSurfaceRoot": "sha256:602dfd64d5b072508be92eddbef4bf2c8d29161c8a7a85b8f7e54522c3b07c3d",
+    "expectedSurfaceRoot": "sha256:3439c0a3ac904c1dd9589511528b830dae56ee8ed6dde8f64e77b36a592470d1",
     "regeneration": "./shifu fix:cli-catalog-parity",
     "validation": "./shifu check:cli-catalog-parity"
   },
-  "registryRoot": "sha256:418887febb6962def4ec16ba2060105591013b2669c6b2f078f7dffcee7d559f",
+  "registryRoot": "sha256:92136d102fbcfc370f42abb308ed5ad6c704c18db9a78cb46af128398bf34635",
   "schema": "kungfu.cli-surface-catalog/v1",
   "schemaRoot": "sha256:30e0c49658aee967b24294362af12e977c8d62eaa455eb83ffdaa50072021569",
   "source": {
@@ -2838,7 +2919,7 @@
     "pathAuthority": "live-click-tree",
     "root": "kungfu"
   },
-  "surfaceRoot": "sha256:602dfd64d5b072508be92eddbef4bf2c8d29161c8a7a85b8f7e54522c3b07c3d",
+  "surfaceRoot": "sha256:3439c0a3ac904c1dd9589511528b830dae56ee8ed6dde8f64e77b36a592470d1",
   "surfaces": [
     {
       "aliases": [],
@@ -2967,6 +3048,17 @@
           "hidden": false,
           "kind": "option",
           "name": "help_json",
+          "required": false,
+          "type": "boolean"
+        },
+        {
+          "arity": 1,
+          "flags": [
+            "--qualification-lab-demo"
+          ],
+          "hidden": false,
+          "kind": "option",
+          "name": "qualification_lab_demo",
           "required": false,
           "type": "boolean"
         },
@@ -6320,51 +6412,6 @@
         "preconditions": []
       },
       "audience": [
-        "human"
-      ],
-      "availability": {
-        "conditions": [
-          "source-runtime"
-        ],
-        "state": "available"
-      },
-      "canonical_path": "kungfu cockpit",
-      "id": "kungfu.cli.commands.cockpit.cockpit",
-      "kfd3_api_id": null,
-      "kfd3_api_ids": [],
-      "kind": "command",
-      "maturity": "stable",
-      "mutation_class": "read",
-      "owner": "product-assembly",
-      "parameters": [
-        {
-          "arity": -1,
-          "kind": "argument",
-          "name": "commands",
-          "required": false,
-          "type": "text"
-        }
-      ],
-      "path_depth": 2,
-      "schema_refs": [],
-      "section": "start-here",
-      "source": {
-        "familyPolicy": true,
-        "kind": "runtime-click",
-        "module": "kungfu.cli.commands.cockpit",
-        "symbol": "cockpit"
-      },
-      "summary": "Kungfu cockpit \u2014 the terminal operator surface: monitor and operate the running system (rendered by the reference TUI, Ink).",
-      "visibility": "start-here"
-    },
-    {
-      "aliases": [],
-      "approval_policy": {
-        "caller_confirmation_required": false,
-        "mode": "none",
-        "preconditions": []
-      },
-      "audience": [
         "developer",
         "agent"
       ],
@@ -6376,8 +6423,10 @@
       },
       "canonical_path": "kungfu codex",
       "id": "kungfu.cli.commands.codex.codex",
-      "kfd3_api_id": null,
-      "kfd3_api_ids": [],
+      "kfd3_api_id": "kungfu.codex.report-goal",
+      "kfd3_api_ids": [
+        "kungfu.codex.report-goal"
+      ],
       "kind": "family",
       "maturity": "stable",
       "mutation_class": "read",
@@ -16426,10 +16475,16 @@
       },
       "canonical_path": "kungfu profile mission-control",
       "id": "kungfu.cli.commands.atlas.mission.control",
-      "kfd3_api_id": null,
-      "kfd3_api_ids": [],
+      "kfd3_api_id": "kungfu.atlas.claim-completion",
+      "kfd3_api_ids": [
+        "kungfu.atlas.claim-completion",
+        "kungfu.atlas.create-go",
+        "kungfu.atlas.create-mission",
+        "kungfu.atlas.decide-continuation",
+        "kungfu.atlas.review-completion"
+      ],
       "kind": "group",
-      "maturity": "stable",
+      "maturity": "experimental",
       "mutation_class": "read",
       "owner": "core",
       "parameters": [
@@ -16456,7 +16511,7 @@
         "symbol": "mission_control"
       },
       "summary": "operate the installed Mission Control Profile",
-      "visibility": "advanced"
+      "visibility": "public"
     },
     {
       "aliases": [],
@@ -18231,6 +18286,503 @@
       },
       "summary": "inspect this role at one named Fact ref",
       "visibility": "advanced"
+    },
+    {
+      "aliases": [],
+      "approval_policy": {
+        "caller_confirmation_required": false,
+        "mode": "none",
+        "preconditions": []
+      },
+      "audience": [
+        "human",
+        "agent"
+      ],
+      "availability": {
+        "conditions": [
+          "source-runtime"
+        ],
+        "state": "available"
+      },
+      "canonical_path": "kungfu qualification-lab",
+      "id": "kungfu.qualification-lab",
+      "kfd3_api_id": "kungfu.qualification-lab",
+      "kfd3_api_ids": [
+        "kungfu.qualification-lab"
+      ],
+      "kind": "family",
+      "maturity": "experimental",
+      "mutation_class": "read",
+      "owner": "product-assembly",
+      "parameters": [
+        {
+          "arity": 1,
+          "flags": [
+            "-h",
+            "--help"
+          ],
+          "hidden": false,
+          "kind": "option",
+          "name": "help",
+          "required": false,
+          "type": "boolean"
+        }
+      ],
+      "path_depth": 2,
+      "schema_refs": [],
+      "section": "start-here",
+      "source": {
+        "familyPolicy": true,
+        "kind": "runtime-click",
+        "module": "kungfu.cli.commands.qualification_lab",
+        "symbol": "qualification_lab"
+      },
+      "summary": "inspect startup and qualify local agent continuity",
+      "visibility": "start-here"
+    },
+    {
+      "aliases": [],
+      "approval_policy": {
+        "caller_confirmation_required": false,
+        "mode": "none",
+        "preconditions": []
+      },
+      "audience": [
+        "human",
+        "agent"
+      ],
+      "availability": {
+        "conditions": [
+          "source-runtime"
+        ],
+        "state": "available"
+      },
+      "canonical_path": "kungfu qualification-lab agent-plan",
+      "id": "kungfu.qualification-lab.agent-plan",
+      "kfd3_api_id": "kungfu.qualification-lab.agent-plan",
+      "kfd3_api_ids": [
+        "kungfu.qualification-lab.agent-plan"
+      ],
+      "kind": "command",
+      "maturity": "experimental",
+      "mutation_class": "plan",
+      "owner": "product-assembly",
+      "parameters": [
+        {
+          "arity": 1,
+          "kind": "argument",
+          "name": "profile_id",
+          "required": true,
+          "type": "text"
+        },
+        {
+          "arity": 1,
+          "flags": [
+            "--json"
+          ],
+          "hidden": false,
+          "kind": "option",
+          "name": "as_json",
+          "required": false,
+          "type": "boolean"
+        }
+      ],
+      "path_depth": 3,
+      "schema_refs": [],
+      "section": "start-here",
+      "source": {
+        "familyPolicy": true,
+        "kind": "runtime-click",
+        "module": "kungfu.cli.commands.qualification_lab",
+        "symbol": "agent_plan"
+      },
+      "summary": "preview one exact local agent run",
+      "visibility": "public"
+    },
+    {
+      "aliases": [],
+      "approval_policy": {
+        "caller_confirmation_required": false,
+        "mode": "explicit-execute",
+        "preconditions": []
+      },
+      "audience": [
+        "human",
+        "agent"
+      ],
+      "availability": {
+        "conditions": [
+          "source-runtime"
+        ],
+        "state": "available"
+      },
+      "canonical_path": "kungfu qualification-lab agent-run",
+      "id": "kungfu.qualification-lab.agent-run",
+      "kfd3_api_id": "kungfu.qualification-lab.agent-run",
+      "kfd3_api_ids": [
+        "kungfu.qualification-lab.agent-run"
+      ],
+      "kind": "command",
+      "maturity": "experimental",
+      "mutation_class": "write",
+      "owner": "product-assembly",
+      "parameters": [
+        {
+          "arity": 1,
+          "kind": "argument",
+          "name": "profile_id",
+          "required": true,
+          "type": "text"
+        },
+        {
+          "arity": 1,
+          "flags": [
+            "--execute"
+          ],
+          "hidden": false,
+          "kind": "option",
+          "name": "execute",
+          "required": false,
+          "type": "boolean"
+        },
+        {
+          "arity": 1,
+          "flags": [
+            "--target-profile"
+          ],
+          "hidden": false,
+          "kind": "option",
+          "name": "target_profile",
+          "required": false,
+          "type": "text"
+        },
+        {
+          "arity": 1,
+          "flags": [
+            "--output"
+          ],
+          "hidden": false,
+          "kind": "option",
+          "name": "output",
+          "required": false,
+          "type": "path"
+        },
+        {
+          "arity": 1,
+          "flags": [
+            "--timeout"
+          ],
+          "hidden": false,
+          "kind": "option",
+          "name": "timeout_seconds",
+          "required": false,
+          "type": "integer range"
+        },
+        {
+          "arity": 1,
+          "flags": [
+            "--json"
+          ],
+          "hidden": false,
+          "kind": "option",
+          "name": "as_json",
+          "required": false,
+          "type": "boolean"
+        }
+      ],
+      "path_depth": 3,
+      "schema_refs": [],
+      "section": "start-here",
+      "source": {
+        "familyPolicy": true,
+        "kind": "runtime-click",
+        "module": "kungfu.cli.commands.qualification_lab",
+        "symbol": "agent_run"
+      },
+      "summary": "run two fresh sessions of one exact local agent after confirmation",
+      "visibility": "public"
+    },
+    {
+      "aliases": [],
+      "approval_policy": {
+        "caller_confirmation_required": false,
+        "mode": "none",
+        "preconditions": []
+      },
+      "audience": [
+        "human",
+        "agent"
+      ],
+      "availability": {
+        "conditions": [
+          "source-runtime"
+        ],
+        "state": "available"
+      },
+      "canonical_path": "kungfu qualification-lab agents",
+      "id": "kungfu.qualification-lab.agents",
+      "kfd3_api_id": "kungfu.qualification-lab.agents",
+      "kfd3_api_ids": [
+        "kungfu.qualification-lab.agents"
+      ],
+      "kind": "command",
+      "maturity": "experimental",
+      "mutation_class": "read",
+      "owner": "product-assembly",
+      "parameters": [
+        {
+          "arity": 1,
+          "flags": [
+            "--json"
+          ],
+          "hidden": false,
+          "kind": "option",
+          "name": "as_json",
+          "required": false,
+          "type": "boolean"
+        }
+      ],
+      "path_depth": 3,
+      "schema_refs": [],
+      "section": "start-here",
+      "source": {
+        "familyPolicy": true,
+        "kind": "runtime-click",
+        "module": "kungfu.cli.commands.qualification_lab",
+        "symbol": "agents"
+      },
+      "summary": "discover local agent launchers without credentials",
+      "visibility": "public"
+    },
+    {
+      "aliases": [],
+      "approval_policy": {
+        "caller_confirmation_required": false,
+        "mode": "none",
+        "preconditions": []
+      },
+      "audience": [
+        "human",
+        "agent"
+      ],
+      "availability": {
+        "conditions": [
+          "source-runtime"
+        ],
+        "state": "available"
+      },
+      "canonical_path": "kungfu qualification-lab catalog",
+      "id": "kungfu.qualification-lab.catalog",
+      "kfd3_api_id": "kungfu.qualification-lab.catalog",
+      "kfd3_api_ids": [
+        "kungfu.qualification-lab.catalog"
+      ],
+      "kind": "command",
+      "maturity": "experimental",
+      "mutation_class": "read",
+      "owner": "product-assembly",
+      "parameters": [
+        {
+          "arity": 1,
+          "flags": [
+            "--json"
+          ],
+          "hidden": false,
+          "kind": "option",
+          "name": "as_json",
+          "required": false,
+          "type": "boolean"
+        }
+      ],
+      "path_depth": 3,
+      "schema_refs": [],
+      "section": "start-here",
+      "source": {
+        "familyPolicy": true,
+        "kind": "runtime-click",
+        "module": "kungfu.cli.commands.qualification_lab",
+        "symbol": "catalog"
+      },
+      "summary": "list canonical Lab actions and startup state",
+      "visibility": "public"
+    },
+    {
+      "aliases": [],
+      "approval_policy": {
+        "caller_confirmation_required": false,
+        "mode": "none",
+        "preconditions": []
+      },
+      "audience": [
+        "human",
+        "agent"
+      ],
+      "availability": {
+        "conditions": [
+          "source-runtime"
+        ],
+        "state": "available"
+      },
+      "canonical_path": "kungfu qualification-lab demo",
+      "id": "kungfu.qualification-lab.demo",
+      "kfd3_api_id": "kungfu.qualification-lab.demo",
+      "kfd3_api_ids": [
+        "kungfu.qualification-lab.demo"
+      ],
+      "kind": "command",
+      "maturity": "experimental",
+      "mutation_class": "read",
+      "owner": "product-assembly",
+      "parameters": [
+        {
+          "arity": 1,
+          "flags": [
+            "--output"
+          ],
+          "hidden": false,
+          "kind": "option",
+          "name": "output",
+          "required": false,
+          "type": "path"
+        },
+        {
+          "arity": 1,
+          "flags": [
+            "--events-json"
+          ],
+          "hidden": false,
+          "kind": "option",
+          "name": "events_json",
+          "required": false,
+          "type": "boolean"
+        },
+        {
+          "arity": 1,
+          "flags": [
+            "--json"
+          ],
+          "hidden": false,
+          "kind": "option",
+          "name": "as_json",
+          "required": false,
+          "type": "boolean"
+        }
+      ],
+      "path_depth": 3,
+      "schema_refs": [],
+      "section": "start-here",
+      "source": {
+        "familyPolicy": true,
+        "kind": "runtime-click",
+        "module": "kungfu.cli.commands.qualification_lab",
+        "symbol": "demo"
+      },
+      "summary": "run the isolated two-session offline demo",
+      "visibility": "public"
+    },
+    {
+      "aliases": [],
+      "approval_policy": {
+        "caller_confirmation_required": false,
+        "mode": "none",
+        "preconditions": []
+      },
+      "audience": [
+        "human",
+        "agent"
+      ],
+      "availability": {
+        "conditions": [
+          "source-runtime"
+        ],
+        "state": "available"
+      },
+      "canonical_path": "kungfu qualification-lab inspect",
+      "id": "kungfu.qualification-lab.inspect",
+      "kfd3_api_id": "kungfu.qualification-lab.inspect",
+      "kfd3_api_ids": [
+        "kungfu.qualification-lab.inspect"
+      ],
+      "kind": "command",
+      "maturity": "experimental",
+      "mutation_class": "read",
+      "owner": "product-assembly",
+      "parameters": [
+        {
+          "arity": 1,
+          "flags": [
+            "--json"
+          ],
+          "hidden": false,
+          "kind": "option",
+          "name": "as_json",
+          "required": false,
+          "type": "boolean"
+        }
+      ],
+      "path_depth": 3,
+      "schema_refs": [],
+      "section": "start-here",
+      "source": {
+        "familyPolicy": true,
+        "kind": "runtime-click",
+        "module": "kungfu.cli.commands.qualification_lab",
+        "symbol": "inspect"
+      },
+      "summary": "resolve the boot route without writing state",
+      "visibility": "public"
+    },
+    {
+      "aliases": [],
+      "approval_policy": {
+        "caller_confirmation_required": false,
+        "mode": "none",
+        "preconditions": []
+      },
+      "audience": [
+        "human",
+        "agent"
+      ],
+      "availability": {
+        "conditions": [
+          "source-runtime"
+        ],
+        "state": "available"
+      },
+      "canonical_path": "kungfu qualification-lab plan",
+      "id": "kungfu.qualification-lab.plan",
+      "kfd3_api_id": "kungfu.qualification-lab.plan",
+      "kfd3_api_ids": [
+        "kungfu.qualification-lab.plan"
+      ],
+      "kind": "command",
+      "maturity": "experimental",
+      "mutation_class": "plan",
+      "owner": "product-assembly",
+      "parameters": [
+        {
+          "arity": 1,
+          "flags": [
+            "--json"
+          ],
+          "hidden": false,
+          "kind": "option",
+          "name": "as_json",
+          "required": false,
+          "type": "boolean"
+        }
+      ],
+      "path_depth": 3,
+      "schema_refs": [],
+      "section": "start-here",
+      "source": {
+        "familyPolicy": true,
+        "kind": "runtime-click",
+        "module": "kungfu.cli.commands.qualification_lab",
+        "symbol": "plan"
+      },
+      "summary": "preview the deterministic offline demo",
+      "visibility": "public"
     },
     {
       "aliases": [],
@@ -28118,6 +28670,52 @@
       },
       "audience": [
         "human",
+        "agent"
+      ],
+      "availability": {
+        "conditions": [
+          "source-runtime"
+        ],
+        "state": "available"
+      },
+      "canonical_path": "kungfu tui",
+      "id": "kungfu.cli.commands.tui.tui",
+      "kfd3_api_id": null,
+      "kfd3_api_ids": [],
+      "kind": "command",
+      "maturity": "stable",
+      "mutation_class": "read",
+      "owner": "core",
+      "parameters": [
+        {
+          "arity": -1,
+          "kind": "argument",
+          "name": "commands",
+          "required": false,
+          "type": "text"
+        }
+      ],
+      "path_depth": 2,
+      "schema_refs": [],
+      "section": "advanced",
+      "source": {
+        "familyPolicy": false,
+        "kind": "runtime-click",
+        "module": "kungfu.cli.commands.tui",
+        "symbol": "tui"
+      },
+      "summary": "Open Kungfu's interactive terminal product surface.",
+      "visibility": "advanced"
+    },
+    {
+      "aliases": [],
+      "approval_policy": {
+        "caller_confirmation_required": false,
+        "mode": "none",
+        "preconditions": []
+      },
+      "audience": [
+        "human",
         "operator"
       ],
       "availability": {
@@ -28960,10 +29558,19 @@
       },
       "canonical_path": "kungfu work",
       "id": "kungfu.cli.commands.assignment.assignment",
-      "kfd3_api_id": null,
-      "kfd3_api_ids": [],
+      "kfd3_api_id": "kungfu.work.complete",
+      "kfd3_api_ids": [
+        "kungfu.work.complete",
+        "kungfu.work.create",
+        "kungfu.work.export",
+        "kungfu.work.import",
+        "kungfu.work.inspect",
+        "kungfu.work.loop",
+        "kungfu.work.recover",
+        "kungfu.work.settle"
+      ],
       "kind": "family",
-      "maturity": "stable",
+      "maturity": "experimental",
       "mutation_class": "read",
       "owner": "core",
       "parameters": [
@@ -32557,6 +33164,28 @@
           "name": "gate_phase",
           "required": false,
           "type": "choice"
+        },
+        {
+          "arity": 1,
+          "flags": [
+            "--observe"
+          ],
+          "hidden": false,
+          "kind": "option",
+          "name": "observe",
+          "required": false,
+          "type": "boolean"
+        },
+        {
+          "arity": 1,
+          "flags": [
+            "--observer-state"
+          ],
+          "hidden": false,
+          "kind": "option",
+          "name": "observer_state",
+          "required": false,
+          "type": "file"
         },
         {
           "arity": 1,

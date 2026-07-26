@@ -10,6 +10,7 @@ import {
   type Ledger,
   type Profile,
   type PtyModule,
+  type QualificationLab,
   type RemoteWork,
   type Rewind,
   type Storage,
@@ -23,6 +24,7 @@ import {
   openDomainState,
   openLedger,
   openProfile,
+  openQualificationLab,
   openRemoteWork,
   openRewind,
   openStorage,
@@ -142,7 +144,87 @@ export type Runtime = {
   agentRuntime: AgentRuntime | null;
   agentSession: AgentSession | null;
   workspace: WorkspaceGuidance | null;
+  qualificationLab: QualificationLab;
 };
+
+export function openRendererQualificationLab(): QualificationLab {
+  const env = window.process.env as Record<string, string | undefined>;
+  const runtimeDir = env.KF_RUNTIME_DIR || '';
+  const path = window.require('node:path') as {
+    dirname: (value: string) => string;
+    join: (...values: string[]) => string;
+  };
+  type ExecOptions = {
+    encoding: 'utf8';
+    env: Record<string, string | undefined>;
+    maxBuffer: number;
+  };
+  const childProcess = window.require('node:child_process') as {
+    execFileSync: (
+      file: string,
+      args: string[],
+      options: ExecOptions,
+    ) => string;
+    execFile: (
+      file: string,
+      args: string[],
+      options: ExecOptions,
+      callback: (error: Error | null, stdout: string, stderr: string) => void,
+    ) => void;
+  };
+  const bindingPath = env.KFE_PATH || '';
+  const bin =
+    env.KUNGFU_CLI_BIN ||
+    env.KUNGFU_BIN ||
+    path.join(
+      path.dirname(bindingPath),
+      process.platform === 'win32' ? 'kungfu.exe' : 'kungfu',
+    );
+  return openQualificationLab({
+    runtimeDir,
+    bin,
+    env,
+    execFileSync: (file, args, options) =>
+      childProcess.execFileSync(file, args, options),
+    execFile: (file, args, options) =>
+      new Promise<string>((resolve, reject) => {
+        childProcess.execFile(file, args, options, (error, stdout, stderr) => {
+          if (error) reject(new Error(stderr.trim() || error.message));
+          else resolve(stdout);
+        });
+      }),
+  });
+}
+
+export function deferredRuntime(
+  qualificationLab: QualificationLab,
+  message: string,
+): Runtime {
+  return {
+    ok: false,
+    message,
+    runtimeDir: window.process.env.KF_RUNTIME_DIR || '',
+    kungfuVersion: window.process.env.KUNGFU_VERSION || '',
+    buildInfo: null,
+    skillManager: null,
+    exports: [],
+    schemaTypes: [],
+    binding: null,
+    ledger: null,
+    domain: null,
+    rewind: null,
+    storage: null,
+    remoteWork: null,
+    terminal: null,
+    work: null,
+    workLoop: null,
+    profile: null,
+    agentRuntime: null,
+    agentSession: null,
+    workspace: null,
+    qualificationLab,
+  };
+}
 
 function readSchemaTypes(
   binding: KfNativeBinding,
@@ -171,6 +253,7 @@ export function bootRuntime(): Runtime {
 function createRuntime(): Runtime {
   const env = window.process.env;
   const runtimeDir = env.KF_RUNTIME_DIR || '';
+  const qualificationLab = openRendererQualificationLab();
   const base: Omit<Runtime, 'ok' | 'message'> = {
     runtimeDir,
     kungfuVersion: env.KUNGFU_VERSION || '',
@@ -191,6 +274,7 @@ function createRuntime(): Runtime {
     agentRuntime: null,
     agentSession: null,
     workspace: null,
+    qualificationLab,
   };
   if (
     env.KF_WORKSPACE_STATE === 'uninitialized' ||

@@ -19,6 +19,7 @@ export * from './profile.js';
 export * from './agent-runtime.js';
 export * from './agent-console.js';
 export * from './agent-session.js';
+export * from './qualification-lab.js';
 export * from './runtime.js';
 
 // The runtime-plane trust boundary (KF-ADR-019f86da-4f90-79f1-8716-aca36b142847 / KF-ADR-019f86da-4f90-7789-8b48-620aa694acf9): the OS-sandbox

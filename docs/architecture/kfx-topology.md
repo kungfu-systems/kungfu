@@ -48,10 +48,10 @@ OS-level sandbox exists to confine.
 A kfx can be loaded from either host:
 
 - **GUI** — the Electron shell; views render in Chromium.
-- **CLI** — reached through `kungfu cockpit`, which starts the Ink TUI on
+- **CLI** — reached through `kungfu tui`, which starts the Ink TUI on
   Kungfu's embedded Node runtime (libnode).
 
-`kungfu cockpit` is a Python command, but it only launches the TUI — the TUI
+`kungfu tui` is a Python command, but it only launches the TUI — the TUI
 itself is Node/TS. So **both hosts decide in the same Node/TS environment** and
 import the *same* load rule from `@kungfu-tech/kfx`. There is no second copy of
 "is this trusted, which tier" to keep in sync. Only the *loaded* kfx may be

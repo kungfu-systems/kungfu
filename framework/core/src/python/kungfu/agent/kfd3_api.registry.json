@@ -2345,6 +2345,126 @@
         "agent-pack-doc",
         "provider-skill"
       ]
+    },
+    {
+      "id": "kungfu.qualification-lab",
+      "surface": "cli-api-gui",
+      "name": "kungfu qualification-lab",
+      "purpose": "Discover the shared boot-safe continuity qualification surface and its exact actions.",
+      "maturity": "experimental",
+      "visibility": "public-agent",
+      "anchor": {
+        "kind": "catalog"
+      },
+      "projections": [
+        "capabilities-json",
+        "kfd-3-surfaces"
+      ]
+    },
+    {
+      "id": "kungfu.qualification-lab.inspect",
+      "surface": "cli-api-gui",
+      "name": "kungfu qualification-lab inspect --json",
+      "purpose": "Resolve an empty, existing-Work, or diagnostic startup route without materializing runtime state.",
+      "maturity": "experimental",
+      "visibility": "public-agent",
+      "anchor": {
+        "kind": "catalog"
+      },
+      "projections": [
+        "capabilities-json",
+        "kfd-3-surfaces"
+      ]
+    },
+    {
+      "id": "kungfu.qualification-lab.catalog",
+      "surface": "cli-api-gui",
+      "name": "kungfu qualification-lab catalog --json",
+      "purpose": "List the canonical fixture, oracle, non-claims, lifecycle states, and shared surface authority.",
+      "maturity": "experimental",
+      "visibility": "public-agent",
+      "anchor": {
+        "kind": "catalog"
+      },
+      "projections": [
+        "capabilities-json",
+        "kfd-3-surfaces"
+      ]
+    },
+    {
+      "id": "kungfu.qualification-lab.agents",
+      "surface": "cli-api-gui",
+      "name": "kungfu qualification-lab agents --json",
+      "purpose": "Discover exact local agent launch profiles through bounded executable and version inspection without credential reads.",
+      "maturity": "experimental",
+      "visibility": "public-agent",
+      "anchor": {
+        "kind": "catalog"
+      },
+      "projections": [
+        "capabilities-json",
+        "kfd-3-surfaces"
+      ]
+    },
+    {
+      "id": "kungfu.qualification-lab.plan",
+      "surface": "cli-api-gui",
+      "name": "kungfu qualification-lab plan --json",
+      "purpose": "Preview the immutable offline two-session fixture and deterministic oracle.",
+      "maturity": "experimental",
+      "visibility": "public-agent",
+      "anchor": {
+        "kind": "catalog"
+      },
+      "projections": [
+        "capabilities-json",
+        "kfd-3-surfaces"
+      ]
+    },
+    {
+      "id": "kungfu.qualification-lab.demo",
+      "surface": "cli-api-gui",
+      "name": "kungfu qualification-lab demo --json",
+      "purpose": "Run the isolated bundled fixture in two fresh processes and emit an exact qualification report.",
+      "maturity": "experimental",
+      "visibility": "public-agent",
+      "anchor": {
+        "kind": "catalog"
+      },
+      "projections": [
+        "capabilities-json",
+        "kfd-3-surfaces"
+      ]
+    },
+    {
+      "id": "kungfu.qualification-lab.agent-plan",
+      "surface": "cli-api-gui",
+      "name": "kungfu qualification-lab agent-plan <profile-id> --json",
+      "purpose": "Preview the exact identity-bound local provider commands without reading credential contents.",
+      "maturity": "experimental",
+      "visibility": "public-agent",
+      "anchor": {
+        "kind": "catalog"
+      },
+      "projections": [
+        "capabilities-json",
+        "kfd-3-surfaces"
+      ]
+    },
+    {
+      "id": "kungfu.qualification-lab.agent-run",
+      "surface": "cli-api-gui",
+      "name": "kungfu qualification-lab agent-run <profile-id> --execute --json",
+      "purpose": "After explicit authorization, qualify self-continuity or a cross-profile handoff through two fresh local provider processes and exact receipts.",
+      "maturity": "experimental",
+      "visibility": "public-agent",
+      "anchor": {
+        "kind": "catalog"
+      },
+      "projections": [
+        "capabilities-json",
+        "kfd-3-surfaces"
+      ]
     }
   ],
   "witness": {
