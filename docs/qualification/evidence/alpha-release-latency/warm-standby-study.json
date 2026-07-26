@@ -1,0 +1,60 @@
+{
+  "schema": "kungfu.alpha-runner-warm-standby-study/v1",
+  "status": "deferred-pending-evidence",
+  "generatedAt": "2026-07-26T01:30:00.000Z",
+  "evidenceBoundary": {
+    "sourceLevel": "local-files",
+    "confidence": "medium",
+    "reviewState": "unreviewed",
+    "excluded": [
+      "runner-credentials",
+      "private-logs",
+      "live-capacity-telemetry"
+    ]
+  },
+  "decision": "Do not introduce a real warm-standby runner in this change. Remove avoidable orchestration work and measure at least five healthy public Alpha releases first.",
+  "capacity": {
+    "artifactProofBudgetSeconds": 2100,
+    "signingAndNotarizationBudgetSeconds": 900,
+    "finding": "A continuously warm macOS signing runner would reserve scarce capacity without a successful public Alpha timeline proving the utilization or saved cold-start time."
+  },
+  "isolationAndThreatModel": {
+    "risk": "A warm credential-island runner increases the lifetime of a host able to reach signing material.",
+    "requiredControls": [
+      "ephemeral-job-workspace",
+      "single-job-exclusivity",
+      "outbound-allowlisting",
+      "short-lived-credentials",
+      "attested-toolchain-identity",
+      "audit-log-export",
+      "fail-closed-wipe-between-jobs"
+    ],
+    "prohibited": [
+      "signing-credentials-on-functional-build-runners",
+      "cache-as-release-authority"
+    ]
+  },
+  "observability": {
+    "minimumRealSamples": 5,
+    "reconsiderWhen": [
+      {
+        "metric": "signing-runner-queue-p50-seconds",
+        "operator": ">",
+        "threshold": 300
+      },
+      {
+        "metric": "credential-island-cold-preparation-seconds",
+        "operator": ">",
+        "threshold": 300
+      }
+    ],
+    "evidence": "real-source-bound-alpha-release-timeline-receipts"
+  },
+  "rollback": [
+    "drain-runner",
+    "remove-registration",
+    "revoke-short-lived-credential-authority",
+    "restore-current-runner-preset"
+  ],
+  "realInfrastructureChanged": false
+}

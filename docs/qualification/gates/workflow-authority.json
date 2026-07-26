@@ -970,6 +970,51 @@
           ]
         },
         {
+          "id": "precompute-alpha-publication-tail",
+          "authority": "qualification",
+          "publication": "none",
+          "receipt": "diagnostic",
+          "definitionDigest": "sha256:c5ea8d035640c1c4778ed53ae7b4208202e519f585d85547ace756e6a98d72ee",
+          "credentials": {
+            "githubToken": "read",
+            "oidc": false,
+            "repositorySecrets": [],
+            "inheritedSecrets": false,
+            "environment": null
+          },
+          "externalActions": [
+            "actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0",
+            "actions/setup-node@48b55a011ce3ff2d5eaaf3c4fba94b0c6f8b2a7c",
+            "actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a"
+          ],
+          "steps": [
+            {
+              "index": 1,
+              "label": "name:Check out exact qualified source",
+              "authority": "qualification",
+              "definitionDigest": "sha256:29b1db9963a2029aabffae82fe0ec406fa6ec8d3a522d80493e9e84be9967dbe"
+            },
+            {
+              "index": 2,
+              "label": "name:Set up pinned Node.js",
+              "authority": "qualification",
+              "definitionDigest": "sha256:fa4008478ea00030e1ecf5cf9d5b8a216ea49b0c31f91f4912535f098bac8222"
+            },
+            {
+              "index": 3,
+              "label": "name:Write and verify source-bound publication tail plan",
+              "authority": "qualification",
+              "definitionDigest": "sha256:e075a84c94c4739580838ada3af1260ab9564d2588370db897a15b69706fb698"
+            },
+            {
+              "index": 4,
+              "label": "name:Upload immutable publication tail plan",
+              "authority": "evidence-publication",
+              "definitionDigest": "sha256:b0388d88b612b793c99061ca6ce9c6ae485b7c4677c6057c2dd1745dbfc55853"
+            }
+          ]
+        },
+        {
           "id": "preflight",
           "authority": "qualification",
           "publication": "none",
@@ -2063,8 +2108,77 @@
     {
       "path": ".github/workflows/release-new-version.yml",
       "authority": "release-control",
-      "definitionDigest": "sha256:252e98997e1697208d8f67840d78a7d3d9dc09e2bfcaf0c55d6ae1db0b7d702a",
+      "definitionDigest": "sha256:605743db259b0bf409d49070a30a092034bee9b1e105e7f20f923fef8ce51db4",
       "jobs": [
+        {
+          "id": "alpha-timeline",
+          "authority": "qualification",
+          "publication": "none",
+          "receipt": "diagnostic",
+          "definitionDigest": "sha256:ae372c4e7bc78a0f2e9d912464102bb1302d1444f4425c944102375d90332a6d",
+          "credentials": {
+            "githubToken": "read",
+            "oidc": false,
+            "repositorySecrets": [],
+            "inheritedSecrets": false,
+            "environment": null
+          },
+          "externalActions": [
+            "actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0",
+            "actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e",
+            "actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02"
+          ],
+          "steps": [
+            {
+              "index": 1,
+              "label": "name:Checkout immutable Alpha candidate",
+              "authority": "qualification",
+              "definitionDigest": "sha256:2d071396743bd1edcf46b0d2c8c2e4b71ce24ba4ea6cbe193176eb2b6acde00b"
+            },
+            {
+              "index": 2,
+              "label": "uses:actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e",
+              "authority": "qualification",
+              "definitionDigest": "sha256:a869cc671103a9106dc90b4275a4148de9a5d18cd3578a2642d8ae8076d8dbf0"
+            },
+            {
+              "index": 3,
+              "label": "name:Restore exact development qualification receipt",
+              "authority": "qualification",
+              "definitionDigest": "sha256:7ee301663202a9a8a88b5464ba1dd67316025cc6e0cfbafe55386d0a2e1da65d"
+            },
+            {
+              "index": 4,
+              "label": "name:Collect source-bound workflow timelines",
+              "authority": "qualification",
+              "definitionDigest": "sha256:c6fcc155f02849c84956be57c7ed3cf745e2a4cea11f91d1402f499034c52787"
+            },
+            {
+              "index": 5,
+              "label": "name:Materialize exact promotion evidence references",
+              "authority": "qualification",
+              "definitionDigest": "sha256:2b693abbdbdaac7f9eb494c6708b83da9c29711931199819789440df0e757a7a"
+            },
+            {
+              "index": 6,
+              "label": "name:Restore compatible historical Alpha timeline samples",
+              "authority": "qualification",
+              "definitionDigest": "sha256:e32d8c2c7c2c7a8901551e981e6fe22ad3df5f4e211bf3f290709788dc6ab738"
+            },
+            {
+              "index": 7,
+              "label": "name:Write and verify Alpha release timeline",
+              "authority": "evidence-publication",
+              "definitionDigest": "sha256:3c62f96bc4ec9526acbbed35078da61ddb924f802bb6af45666e0b79e5dbb4fb"
+            },
+            {
+              "index": 8,
+              "label": "name:Upload auditable Alpha timeline and SLO",
+              "authority": "evidence-publication",
+              "definitionDigest": "sha256:aa5a292bf6e1d91deeeb24cb92145670cb1fac2d64f3592c29cd2a2d52724d0b"
+            }
+          ]
+        },
         {
           "id": "promote",
           "authority": "release-control",
@@ -2094,7 +2208,7 @@
           "authority": "qualification",
           "publication": "none",
           "receipt": "diagnostic",
-          "definitionDigest": "sha256:c93058a31bf565602b7608d491aab9f7fed662933485c35490d80921fe37e179",
+          "definitionDigest": "sha256:6ca10ec2736c6ce1bfc1015dccff78793034cbe32402153fef33b1acc1ffb98d",
           "credentials": {
             "githubToken": "read",
             "oidc": false,
@@ -2103,23 +2217,55 @@
             "environment": null
           },
           "externalActions": [
+            "actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0",
+            "actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e",
             "actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0"
           ],
           "steps": [
             {
               "index": 1,
-              "label": "name:Checkout immutable promotion result",
+              "label": "id:candidate",
               "authority": "qualification",
-              "definitionDigest": "sha256:5884933589ce86f2851efa9dbeb4830062ac07a9f10365499526c1eb36720310"
+              "definitionDigest": "sha256:b26ccd80ef6de735f425e42a2f6bc52b4d0473bf52771cc1d9c2efecb674843a"
             },
             {
               "index": 2,
+              "label": "name:Checkout immutable Alpha candidate",
+              "authority": "qualification",
+              "definitionDigest": "sha256:8f1ff28917c625d57760451e82ab1239ddf747a611068bf9c6ad1067ad8f6284"
+            },
+            {
+              "index": 3,
+              "label": "uses:actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e",
+              "authority": "qualification",
+              "definitionDigest": "sha256:a869cc671103a9106dc90b4275a4148de9a5d18cd3578a2642d8ae8076d8dbf0"
+            },
+            {
+              "index": 4,
+              "label": "id:preflight",
+              "authority": "qualification",
+              "definitionDigest": "sha256:de360134fee9dbf785d19794d87d62f16b07c7bf2872c83ce97be75fa0b8a02f"
+            },
+            {
+              "index": 5,
+              "label": "name:Checkout immutable promotion result",
+              "authority": "qualification",
+              "definitionDigest": "sha256:9ff1aa9f5707e1bed64e57983cf9e409bd19fc8146dd5aa1801e1f6d4b8413f4"
+            },
+            {
+              "index": 6,
+              "label": "id:promotion-tree",
+              "authority": "qualification",
+              "definitionDigest": "sha256:391088f704e8df632f937c4fe9c1265efb3846849c489032170178e871bde248"
+            },
+            {
+              "index": 7,
               "label": "name:Rehearse the Kungfu promotion contract for a pull request",
               "authority": "qualification",
               "definitionDigest": "sha256:4d4885aa665463d66b68f8a5bff8a49edebb706ad1d3231dfca06b7b069537fb"
             },
             {
-              "index": 3,
+              "index": 8,
               "label": "name:Rehearse the Kungfu promotion contract for a manual dry-run",
               "authority": "qualification",
               "definitionDigest": "sha256:1ace488d45082bba37f5896c4e6f57fa25046403b54f1e295afdf692d21cfbf6"

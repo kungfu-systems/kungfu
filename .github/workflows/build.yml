@@ -486,6 +486,51 @@ jobs:
           compression-level: 0
           overwrite: false
 
+  precompute-alpha-publication-tail:
+    name: Precompute non-secret Alpha publication tail
+    needs: build
+    if: ${{ needs.build.result == 'success' && startsWith(github.base_ref, 'alpha/') }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    steps:
+      - name: Check out exact qualified source
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          ref: ${{ needs.build.outputs.publish-source-sha }}
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Set up pinned Node.js
+        uses: actions/setup-node@48b55a011ce3ff2d5eaaf3c4fba94b0c6f8b2a7c # v6.3.0
+        with:
+          node-version-file: .node-version
+          check-latest: false
+
+      - name: Write and verify source-bound publication tail plan
+        env:
+          SOURCE_SHA: ${{ needs.build.outputs.publish-source-sha }}
+          SOURCE_TREE_SHA: ${{ needs.build.outputs.publish-source-tree-sha }}
+        run: |
+          ./shifu alpha:publication:tail write \
+            --source-commit "${SOURCE_SHA}" \
+            --source-tree "${SOURCE_TREE_SHA}" \
+            --out alpha-publication-tail-plan.json
+          ./shifu alpha:publication:tail verify \
+            --plan alpha-publication-tail-plan.json \
+            --source-commit "${SOURCE_SHA}"
+
+      - name: Upload immutable publication tail plan
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: kungfu-alpha-publication-tail-${{ needs.build.outputs.publish-source-sha }}
+          path: alpha-publication-tail-plan.json
+          if-no-files-found: error
+          retention-days: 14
+          compression-level: 0
+          overwrite: false
+
   credential-island-macos:
     name: Sign and notarize sealed macOS application
     needs: build

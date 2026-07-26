@@ -26,6 +26,10 @@ import {
   releaseChannelKeyId,
   releaseChannelTrust,
 } from '../product/scripts/release-channel-trust.mjs';
+import {
+  findAlphaPublicationTailPlan,
+  verifyAlphaPublicationTailPlan,
+} from './alpha-publication-tail-plan.mjs';
 import { verifyUpgradePublicationPayloads } from './upgrade-publication-admission.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -481,6 +485,12 @@ async function main() {
   if (environment.releaseTag !== `v${environment.version}`) {
     throw new Error('publication version and public release tag disagree');
   }
+  const tailPlanPath = findAlphaPublicationTailPlan(environment.payloadDir);
+  verifyAlphaPublicationTailPlan({
+    plan: readJson(tailPlanPath, 'Alpha publication tail plan'),
+    expectedSourceCommit: environment.sourceSha,
+    expectedVersion: environment.version,
+  });
   const trustDocument = readJson(TRUST_PATH, 'release-channel trust');
   const trust = releaseChannelTrust(trustDocument, 'alpha');
   const previous = await previousAuthority(trustedKeyMap(trust));
