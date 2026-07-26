@@ -82,6 +82,21 @@ private runner or local-network topology. Buildchain still resolves and verifies
 the immutable source commit and tree before running lifecycle commands, and it
 writes sanitized `source-checkout.json` diagnostics into the platform artifacts.
 
+## Alpha and release artifact relay
+
+Every Alpha or release candidate build transfers native platform artifacts
+through Buildchain's configured S3 relay before the collector rehydrates the
+exact artifacts for downstream GitHub Actions consumers. The same fail-closed
+route applies to manual diagnostic Build runs: the workflow exposes no direct
+GitHub artifact-transfer selector, so manually collected evidence exercises the
+same relay boundary as protected promotion.
+
+The relay changes transport, not artifact identity. Buildchain still binds the
+source SHA, platform, digest, and expiry in its artifact coordinates, and the
+publication workflows consume the rehydrated exact artifacts. Missing relay
+roles or a failed upload/download is therefore a failed build, never permission
+to fall back to an unrecorded direct transfer path.
+
 ## Maturity
 
 The local build path (`./shifu sync && ./shifu build`) is real and is
