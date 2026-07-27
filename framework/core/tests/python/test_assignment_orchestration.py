@@ -507,6 +507,91 @@ def test_atlas_mission_id_is_source_context_not_implicit_initiative_identity():
     assert projected["work_definition"]["mission_id"] == "atlas-mission-context"
 
 
+@pytest.mark.parametrize("action", ["reopen", "request-evidence"])
+def test_nonterminal_continuation_decision_starts_a_new_completion_cycle(
+    tmp_path, action
+):
+    runtime = tmp_path / ".kungfu" / "runtime"
+    _activate(runtime)
+    mission_control.create_initiative(
+        str(runtime),
+        initiative_id="initiative-a",
+        title="Initiative A",
+        intent="Keep failed review cycles open",
+        actor="owner-a",
+    )
+    mission_control.create_assignment(
+        str(runtime),
+        initiative_id="initiative-a",
+        assignment_id="assignment-a",
+        title="Assignment A",
+        objective="Require a new claim after a nonterminal decision",
+        actor="agent-a",
+    )
+    first_claim = mission_control.claim_completion(
+        str(runtime),
+        mission_id="initiative-a",
+        goal_id="assignment-a",
+        statement="The first claim is intentionally missing independent evidence",
+        actor="agent-a",
+    )
+    first_review = mission_control.review_completion(
+        str(runtime),
+        mission_id="initiative-a",
+        goal_id="assignment-a",
+        reviewer="reviewer-a",
+        reviewer_source="independent-session-a",
+    )
+    assert action in first_review["review"]["continuation_plan"]["allowed_actions"]
+
+    mission_control.decide_continuation(
+        str(runtime),
+        mission_id="initiative-a",
+        goal_id="assignment-a",
+        review_id=first_review["review"]["review_id"],
+        expected_review_root=first_review["review_root"],
+        expected_plan_root=first_review["continuation_plan_root"],
+        action=action,
+        actor="agent-b",
+        reason="return the Assignment to an evidence-bearing completion cycle",
+    )
+    reopened = mission_control.assignment_orchestration_status(
+        str(runtime), initiative_id="initiative-a", assignment_id="assignment-a"
+    )
+    assert reopened["phase"] == "stage-ready"
+    assert assignment_orchestration.gate(reopened, "closeout")["ok"] is False
+    assert assignment_orchestration.next_actions(reopened)[0]["action"] == (
+        "claim-completion"
+    )
+
+    second_claim = mission_control.claim_completion(
+        str(runtime),
+        mission_id="initiative-a",
+        goal_id="assignment-a",
+        statement="A later claim begins a new completion cycle",
+        actor="agent-a",
+    )
+    assert second_claim["claim"]["claim_id"] != first_claim["claim"]["claim_id"]
+    claimed = mission_control.assignment_orchestration_status(
+        str(runtime), initiative_id="initiative-a", assignment_id="assignment-a"
+    )
+    assert claimed["phase"] == "completion-claimed"
+    second_review = mission_control.review_completion(
+        str(runtime),
+        mission_id="initiative-a",
+        goal_id="assignment-a",
+        reviewer="reviewer-a",
+        reviewer_source="independent-session-a",
+    )
+    reviewed = mission_control.assignment_orchestration_status(
+        str(runtime), initiative_id="initiative-a", assignment_id="assignment-a"
+    )
+    assert reviewed["phase"] == "independently-reviewed"
+    assert reviewed["completion_claim_count"] == 2
+    assert reviewed["independent_review_count"] == 2
+    assert second_review["review"]["claim_id"] == second_claim["claim"]["claim_id"]
+
+
 def test_gate_field_equivalence_and_runtime_independent_seal(tmp_path):
     status = {
         "initiative_id": "initiative-a",

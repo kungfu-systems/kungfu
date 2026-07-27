@@ -205,9 +205,9 @@
     {
       "name": "kungfu-primitive-catalog",
       "sourcePath": "framework/primitive/kungfu-primitive-catalog.contract.json",
-      "sourceSha256": "ef81edbbf0da9b6c63843da289315b7d6a070b09e849cdd9a71e9f7199e44e0c",
+      "sourceSha256": "b15ef92c54e3e63eccb1446382179cc6d321d63625df31ed19a2a68cfb751681",
       "artifactPath": "config/primitive/kungfu-primitive-catalog.contract.json",
-      "expectedSha256": "ef81edbbf0da9b6c63843da289315b7d6a070b09e849cdd9a71e9f7199e44e0c",
+      "expectedSha256": "b15ef92c54e3e63eccb1446382179cc6d321d63625df31ed19a2a68cfb751681",
       "byteForByte": true
     }
   ],
