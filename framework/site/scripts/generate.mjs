@@ -311,20 +311,34 @@ function main() {
   const treeDirty = git('status', '--porcelain=v1').length > 0;
   const sources = source.sources.map((entry) => {
     const absolute = assertRelativeSourcePath(entry.path);
+    const bytes = fs.readFileSync(absolute);
     return {
       ...entry,
+      packagePath: `sources/${entry.id}/${path.basename(entry.path)}`,
       contentRoot: fileRoot(absolute),
+      byteLength: bytes.length,
       url: `${REPOSITORY}/blob/${revision}/${entry.path}`,
     };
   });
   const sourceRoot = sha256(
     canonicalJson(
-      sources.map(({ id, path: sourcePath, role, contentRoot }) => ({
-        id,
-        path: sourcePath,
-        role,
-        contentRoot,
-      })),
+      sources.map(
+        ({
+          id,
+          path: sourcePath,
+          packagePath,
+          role,
+          contentRoot,
+          byteLength,
+        }) => ({
+          id,
+          path: sourcePath,
+          packagePath,
+          role,
+          contentRoot,
+          byteLength,
+        }),
+      ),
     ),
   );
   const adrSource = sources.find((entry) => entry.id === 'adr-map');
@@ -335,6 +349,11 @@ function main() {
   }
   fs.rmSync(DIST_ROOT, { recursive: true, force: true });
   fs.mkdirSync(DIST_ROOT, { recursive: true });
+  for (const packagedSource of sources) {
+    const target = path.join(DIST_ROOT, packagedSource.packagePath);
+    fs.mkdirSync(path.dirname(target), { recursive: true });
+    fs.copyFileSync(assertRelativeSourcePath(packagedSource.path), target);
+  }
   const formatAuthority = projectFormatAuthority(revision);
   writeJson(ADR_MAP_PATH, adrMap);
   const bundle = {
@@ -421,7 +440,9 @@ function main() {
           id,
           role: authority.role,
           path: authority.path,
+          packagePath: authority.packagePath,
           contentRoot: authority.contentRoot,
+          byteLength: authority.byteLength,
           url: authority.url,
         };
       }),

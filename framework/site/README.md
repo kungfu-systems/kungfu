@@ -107,6 +107,21 @@ for (const page of renderPageModels()) render(page);
 for (const guide of renderFormatGuideModels()) renderGuide(guide);
 ```
 
+`renderFormatDocumentModels()` is the complete web-document projection. It
+adds the authority overview, CLI/Node/Python handbooks, and explicitly
+historical Spec draft to the seven task guides. Every model binds the exact
+Markdown route, byte length, SHA-256 root, progressive previous/next/related
+navigation, and rewritten package-local links.
+
+`renderSourceDocumentModels()` projects every declared product authority into
+a human route plus an exact raw-source route. The current bundle covers all
+thirty declared sources behind product framing, primitives, runtime, ABI, SDK,
+extensions, products, qualification, ADR navigation, and domain horizons.
+Markdown is rendered as structured prose; JSON contracts and the public C
+header remain readable as exact code. Relative document links resolve to
+another packaged authority page when available and otherwise to the pinned
+source revision.
+
 The guide content explains the direct Spec API, `kungfu-spec` CLI, independent
 Python reader, and conformance corpus. To execute those tools, install
 `@kungfu-tech/spec`; Site intentionally provides the documentation and rooted
@@ -131,6 +146,13 @@ const experience = renderProductSiteExperience({
 verifySiteExperience(experience);
 for (const file of experience.files) writeRoute(file.route, file.body);
 ```
+
+The generated product experience contains all eleven product pages, all twelve
+format documentation pages, all thirty product-authority pages, their exact raw
+sources, every packaged JSON/JSONL format route, and the complete retained
+conformance vector corpus. The site does not need a source checkout or a
+site-specific copy step. `agent-index.json`, `manifest.json`, and `llms.txt`
+list the same documentation and evidence routes that humans can open.
 
 Every human page is generated with the same order:
 
