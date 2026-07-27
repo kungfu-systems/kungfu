@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import assert from 'node:assert/strict';
+import crypto from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 import { test } from 'node:test';
@@ -14,6 +15,12 @@ const ARM_WORKFLOW = path.join(
   '.github',
   'workflows',
   'linux-arm64-alpha-qualification.yml',
+);
+const ARM_CACHE_PROFILE = path.join(
+  ROOT,
+  'docs',
+  'shifu',
+  'linux-arm64-qualification-portable-off.cache-profile.json',
 );
 
 test('Linux ARM64 qualification is isolated from the common build matrix', () => {
@@ -44,6 +51,22 @@ test('Linux ARM64 runs artifact qualification with an independent budget', () =>
   );
   assert.equal(inputs['require-verify'], false);
   assert.equal(inputs['lifecycle-timeout-minutes'], 240);
+  assert.equal(
+    inputs['shifu-cache-profile-ref'],
+    'docs/shifu/linux-arm64-qualification-portable-off.cache-profile.json',
+  );
+  assert.equal(
+    inputs['shifu-cache-profile-digest'],
+    'sha256:92b19f65a4e75c16cf11f43f37a1778f6ab61db62a68fc849e51f7d3aaac65f5',
+  );
+  const profileBytes = fs.readFileSync(ARM_CACHE_PROFILE);
+  const profile = JSON.parse(profileBytes.toString('utf8'));
+  assert.deepEqual(profile.subject.platforms, ['linux-arm64']);
+  assert.equal(profile.policy.mode, 'off');
+  assert.equal(
+    inputs['shifu-cache-profile-digest'],
+    `sha256:${crypto.createHash('sha256').update(profileBytes).digest('hex')}`,
+  );
   assert.doesNotMatch(
     fs.readFileSync(ARM_WORKFLOW, 'utf8'),
     /run-release-qualification/u,

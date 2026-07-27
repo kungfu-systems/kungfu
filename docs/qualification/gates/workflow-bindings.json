@@ -512,7 +512,7 @@
           "release-candidate": true,
           "publish-channel": "${{ github.event_name == 'pull_request' && (startsWith(github.base_ref, 'release/') && 'release' || 'alpha') || 'none' }}",
           "artifact-transfer-mode": "s3-to-github-artifacts",
-          "shifu-cache-profile-ref": "docs/shifu/qualification-portable-off.cache-profile.json",
+          "shifu-cache-profile-ref": "docs/shifu/linux-arm64-qualification-portable-off.cache-profile.json",
           "buildchain-contract-lock-path": ".buildchain/contract-lock.json",
           "buildchain-contract-compatibility-policy": "major-compatible"
         }

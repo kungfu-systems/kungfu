@@ -98,8 +98,8 @@ jobs:
       checkout-cache-fallback: github
       checkout-cache-timeout-seconds: 60
       checkout-cache-github-timeout-seconds: 1200
-      shifu-cache-profile-ref: docs/shifu/qualification-portable-off.cache-profile.json
-      shifu-cache-profile-digest: sha256:251ecdb33a34b770a6fbd40b0b05c5c8c0d629a06d9144e6d2d89c9c8e70258b
+      shifu-cache-profile-ref: docs/shifu/linux-arm64-qualification-portable-off.cache-profile.json
+      shifu-cache-profile-digest: sha256:92b19f65a4e75c16cf11f43f37a1778f6ab61db62a68fc849e51f7d3aaac65f5
       cache-dependency-lock-root: ${{ needs.preflight.outputs.dependency-lock-root }}
       cache-toolchain-root: ${{ needs.preflight.outputs.toolchain-root }}
       cache-policy-root: ${{ needs.preflight.outputs.policy-root }}
