@@ -53,10 +53,10 @@
     {
       "name": "kungfu-kfx",
       "sourcePath": "framework/kfx/kungfu-kfx.contract.json",
-      "sourceSha256": "09461dda185e075d08137b51d8fcada3e862ff8e4f3cecd725ec7410021bbb99",
+      "sourceSha256": "ef4d2a70d7dbe09265e3f10f9e6eaf3b3d219a9dadd1eb1cd736b5dbb5b1c8a8",
       "artifactPath": "config/kungfu-kfx.contract.json",
-      "expectedSha256": "09461dda185e075d08137b51d8fcada3e862ff8e4f3cecd725ec7410021bbb99",
-      "byteForByte": true
+      "expectedSha256": "ef4d2a70d7dbe09265e3f10f9e6eaf3b3d219a9dadd1eb1cd736b5dbb5b1c8a8",
+      "byteForByte": false
     },
     {
       "name": "kungfu-skill",
