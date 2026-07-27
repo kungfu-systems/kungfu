@@ -62,6 +62,45 @@ test('promotion workflow drift is rejected before Buildchain promotion', () => {
   );
 });
 
+test('Linux artifact attestation subject and provider permissions fail closed on drift', () => {
+  const build = fs.readFileSync(
+    path.join(ROOT, CONTRACT.workflows.build),
+    'utf8',
+  );
+  const promotion = fs.readFileSync(
+    path.join(ROOT, CONTRACT.workflows.promotion),
+    'utf8',
+  );
+  const result = validateWorkflowSources(ROOT, CONTRACT, {
+    build: build
+      .replace(
+        CONTRACT.buildchain.artifact_attestation.subject_path,
+        'product/release/cli/wrong-linux-subject.tar.gz',
+      )
+      .replace(
+        CONTRACT.buildchain.artifact_attestation.signer_sha,
+        'f'.repeat(40),
+      ),
+    promotion: promotion.replace('attestations: write', 'attestations: read'),
+  });
+  assert.equal(result.ok, false);
+  assert.ok(
+    result.findings.some((entry) =>
+      entry.message.includes('exact Linux CLI attestation subject'),
+    ),
+  );
+  assert.ok(
+    result.findings.some((entry) =>
+      entry.message.includes('attestations: write'),
+    ),
+  );
+  assert.ok(
+    result.findings.some((entry) =>
+      entry.message.includes('immutable Buildchain signer bootstrap'),
+    ),
+  );
+});
+
 test('promotion rejects an event-scoped Buildchain runtime override', () => {
   const promotionPath = CONTRACT.workflows.promotion;
   const original = fs.readFileSync(path.join(ROOT, promotionPath), 'utf8');

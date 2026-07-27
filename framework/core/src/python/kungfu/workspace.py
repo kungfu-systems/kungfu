@@ -777,30 +777,40 @@ def verify_workspace_catalog(
     results: list[dict[str, Any]] = []
     for entry in catalog["entries"]:
         locator = entry.get("locator")
-        if entry["workspace_kind"] == "home":
-            identity = _home_identity(
-                os.environ if env is None else env,
-                "catalog-verification",
-            )
-        elif isinstance(locator, str) and locator:
-            identity = _project_identity(locator, "catalog-verification", env=env)
-        else:
+        problem: dict[str, str] | None = None
+        try:
+            if entry["workspace_kind"] == "home":
+                identity = _home_identity(
+                    os.environ if env is None else env,
+                    "catalog-verification",
+                )
+            elif isinstance(locator, str) and locator:
+                identity = _project_identity(locator, "catalog-verification", env=env)
+            else:
+                identity = None
+        except (OSError, ValueError) as error:
             identity = None
+            problem = {
+                "code": "workspace-identity-unreadable",
+                "message": str(error),
+            }
         available = bool(identity and _workspace_available(identity))
         actual_root = identity.identity_root if identity else ""
-        results.append(
-            {
-                "identity_root": entry["identity_root"],
-                "workspace_id": entry["workspace_id"],
-                "available": available,
-                "identity_matches": bool(
-                    available and actual_root == entry["identity_root"]
-                ),
-                "actual_identity_root": actual_root,
-            }
-        )
+        result = {
+            "identity_root": entry["identity_root"],
+            "workspace_id": entry["workspace_id"],
+            "available": available,
+            "identity_matches": bool(
+                available and actual_root == entry["identity_root"]
+            ),
+            "actual_identity_root": actual_root,
+        }
+        if problem is not None:
+            result["problem"] = problem
+        results.append(result)
     ok = not catalog["issues"] and all(
-        not row["available"] or row["identity_matches"] for row in results
+        ("problem" not in row) and (not row["available"] or row["identity_matches"])
+        for row in results
     )
     return {
         "schema": CATALOG_VERIFICATION_SCHEMA,
