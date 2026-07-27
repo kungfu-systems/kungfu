@@ -9,8 +9,9 @@ import { INCIDENT_BOARD_REFERENCE_REPAIR } from './incident-board-replay-v1-refe
 const args = process.argv.slice(2);
 const agentIndex = args.indexOf('--agent');
 const agent = agentIndex >= 0 ? args[agentIndex + 1] : '';
+const prompt = args.at(-1) || '';
 
-if (agent === 'plan') {
+if (agent === 'build' && prompt.includes('Investigate the repository defect')) {
   const claim = {
     schema: 'kungfu.agent-repository-work.investigation-claim/v1',
     investigationComplete: true,

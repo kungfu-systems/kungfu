@@ -446,7 +446,10 @@ export function runExperiment(options = {}) {
       image: normalized.image,
       baseUrl: normalized.baseUrl,
       opencode: normalized.opencode,
-      agent: 'plan',
+      // OpenCode's built-in plan agent disables shell execution. Use the
+      // tool-capable agent while the Docker mount and permission policy keep
+      // this runtime strictly read-only.
+      agent: 'build',
     });
     const buildProfile = runtimeProfile({
       id: 'opencode.repository-work.repair',
@@ -503,8 +506,9 @@ export function runExperiment(options = {}) {
     writeJson(workRefPath, workRef);
     const promptA = [
       'Investigate the repository defect without modifying any file.',
-      'Run the visible test suite, inspect the lease, command, and replay boundaries, and identify the exact bounded repair paths.',
-      'Return only JSON with schema "kungfu.agent-repository-work.investigation-claim/v1", investigationComplete true, failingTests containing exactly the two failing test method names, repairPaths containing exactly the three Warrant paths, remainingObligation "implement-and-verify-bounded-repair", and nextAction "repair-seeded-completion-idempotency".',
+      'Run `python -m unittest discover -s tests -v`, inspect the lease, command, and replay boundaries, and identify the exact bounded repair paths.',
+      'Return only one JSON object, with no prose or Markdown.',
+      'The object must contain schema "kungfu.agent-repository-work.investigation-claim/v1", investigationComplete true, failingTests containing exactly the two failing unittest method names, repairPaths containing exactly three repository-relative Python paths without leading slashes, line numbers, or fragments, remainingObligation "implement-and-verify-bounded-repair", and nextAction "repair-seeded-completion-idempotency".',
     ].join(' ');
     const sessionA = JSON.parse(
       pythonKungfu(
