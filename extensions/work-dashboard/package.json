@@ -18,7 +18,8 @@
   "files": [
     "dist",
     "package.json",
-    "README.md"
+    "README.md",
+    "kungfu.kfx.json"
   ],
   "scripts": {
     "build": "kungfu sdk kfx build",
@@ -36,20 +37,5 @@
   },
   "peerDependencies": {
     "react": "^18.3.1"
-  },
-  "kungfuConfig": {
-    "key": "work-dashboard",
-    "name": "Work",
-    "product": {
-      "roles": ["profile-view"],
-      "icon": "🧭",
-      "order": 10
-    },
-    "config": {
-      "view": {
-        "title": "Work",
-        "capabilities": ["storage"]
-      }
-    }
   }
 }

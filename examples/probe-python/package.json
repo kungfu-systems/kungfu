@@ -5,9 +5,6 @@
   "description": "Python AOT dogfood coverage probe: exercises engage pdm (install a dependency) + engage nuitka (--module AOT compile) into a native module.",
   "license": "Apache-2.0",
   "private": true,
-  "kungfuConfig": {
-    "key": "ProbePython"
-  },
   "kungfuBuild": {
     "python": {
       "dependencies": {

@@ -16,6 +16,8 @@ import path from 'node:path';
 import { test } from 'node:test';
 import { fileURLToPath } from 'node:url';
 import {
+  KFX_MANIFEST_FILE,
+  KFX_MANIFEST_SCHEMA,
   type KfxContract,
   type KfxLoadPlan,
   type KfxPlanDeps,
@@ -190,6 +192,7 @@ test('KFX plan projects the declared Work Control GUI experience', () => {
 
 test('KFX package contract rejects unknown or duplicate product roles', () => {
   const manifest = {
+    schema: KFX_MANIFEST_SCHEMA,
     name: '@example/view',
     version: '1.0.0',
     kungfuConfig: {
@@ -203,6 +206,53 @@ test('KFX package contract rejects unknown or duplicate product roles', () => {
   assert.throws(() => validateKfxPackageManifest(manifest, contract));
   manifest.kungfuConfig.product.roles = ['tool'];
   validateKfxPackageManifest(manifest, contract);
+});
+
+test('Node rejects legacy-only and dual KFX manifest authority', () => {
+  const parent = mkdtempSync(path.join(os.tmpdir(), 'kungfu-kfx-authority-'));
+  const legacy = path.join(parent, 'legacy-only');
+  const dual = path.join(parent, 'dual');
+  const legacyClaim = {
+    name: '@example/legacy',
+    version: '1.0.0',
+    kungfuConfig: { key: 'legacy' },
+  };
+  try {
+    mkdirSync(legacy);
+    writeFileSync(
+      path.join(legacy, 'package.json'),
+      JSON.stringify(legacyClaim),
+    );
+    mkdirSync(dual);
+    writeFileSync(path.join(dual, 'package.json'), JSON.stringify(legacyClaim));
+    writeFileSync(
+      path.join(dual, KFX_MANIFEST_FILE),
+      JSON.stringify({
+        schema: KFX_MANIFEST_SCHEMA,
+        name: '@example/dual',
+        version: '1.0.0',
+        kungfuConfig: { key: 'dual' },
+      }),
+    );
+
+    const plan = planKfx(
+      {
+        KUNGFU_KFX_CONTRACT: path.join(
+          root,
+          'framework/kfx/kungfu-kfx.contract.json',
+        ),
+        KF_EXTENSION_PATH: parent,
+      },
+      planDeps,
+    );
+    assert.deepEqual(
+      plan.failures.map(({ error }) => error.split(':', 1)[0]).sort(),
+      ['KF_KFX_MANIFEST_CONFLICT', 'KF_KFX_MANIFEST_MISSING'],
+    );
+    assert.deepEqual(plan.entries, []);
+  } finally {
+    rmSync(parent, { recursive: true, force: true });
+  }
 });
 
 test('product roles cannot elevate an untrusted runtime tier', () => {
@@ -220,8 +270,9 @@ test('Node resolves exact Suite member package roots without lifecycle authority
     mkdirSync(source);
     mkdirSync(path.join(source, 'members'), { recursive: true });
     writeFileSync(
-      path.join(source, 'package.json'),
+      path.join(source, KFX_MANIFEST_FILE),
       JSON.stringify({
+        schema: KFX_MANIFEST_SCHEMA,
         name: '@example/week',
         version: '1.0.0',
         kungfuConfig: {
@@ -238,8 +289,9 @@ test('Node resolves exact Suite member package roots without lifecycle authority
       const directory = path.join(source, 'members', member);
       mkdirSync(directory, { recursive: true });
       writeFileSync(
-        path.join(directory, 'package.json'),
+        path.join(directory, KFX_MANIFEST_FILE),
         JSON.stringify({
+          schema: KFX_MANIFEST_SCHEMA,
           name: `@example/${member}`,
           version: '1.0.0',
           kungfuConfig: { key: member },

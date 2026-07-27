@@ -29,6 +29,8 @@ using json = nlohmann::json;
 
 inline constexpr size_t MAX_PACKAGE_FILES = 10000;
 inline constexpr size_t MAX_PACKAGES = 4096;
+inline constexpr const char *KFX_MANIFEST_FILE = "kungfu.kfx.json";
+inline constexpr const char *PACKAGE_TRANSPORT_FILE = "package.json";
 
 [[noreturn]] void refuse(const std::string &code, const std::string &message) {
   throw std::invalid_argument(code + ": " + message);
@@ -206,7 +208,7 @@ std::vector<std::string> declared_capabilities(const json &manifest) {
 
 std::vector<fs::path> package_directories(const fs::path &root) {
   std::set<fs::path> result;
-  if (fs::is_regular_file(root / "package.json"))
+  if (fs::is_regular_file(root / KFX_MANIFEST_FILE) || fs::is_regular_file(root / PACKAGE_TRANSPORT_FILE))
     result.insert(root);
   std::error_code error;
   fs::recursive_directory_iterator iterator(root, fs::directory_options::skip_permission_denied, error);
@@ -220,7 +222,8 @@ std::vector<fs::path> package_directories(const fs::path &root) {
       iterator.disable_recursion_pending();
       continue;
     }
-    if (fs::is_regular_file(iterator->path() / "package.json", error))
+    if (fs::is_regular_file(iterator->path() / KFX_MANIFEST_FILE, error) ||
+        fs::is_regular_file(iterator->path() / PACKAGE_TRANSPORT_FILE, error))
       result.insert(fs::weakly_canonical(iterator->path()));
   }
   if (error)
@@ -623,7 +626,25 @@ snapshot build_snapshot(const json &request) {
     for (const auto &package_path : package_directories(root)) {
       if (!seen_packages.insert(package_path).second)
         continue;
-      const auto manifest_bytes = read_file(package_path / "package.json");
+      const auto manifest_path = package_path / KFX_MANIFEST_FILE;
+      const auto package_transport_path = package_path / PACKAGE_TRANSPORT_FILE;
+      bool package_transport_claims_kfx = false;
+      if (fs::is_regular_file(package_transport_path)) {
+        try {
+          const auto package_transport = json::parse(read_file(package_transport_path));
+          package_transport_claims_kfx = package_transport.is_object() && package_transport.contains("kungfuConfig");
+        } catch (const json::exception &) {
+          // Transport validation belongs to the package manager. It becomes a
+          // KFX concern only when it claims the removed semantic authority.
+        }
+      }
+      if (package_transport_claims_kfx) {
+        refuse(fs::is_regular_file(manifest_path) ? "KF_KFX_MANIFEST_CONFLICT" : "KF_KFX_MANIFEST_MISSING",
+               "package.json must not author kungfuConfig; kungfu.kfx.json is the only KFX manifest authority");
+      }
+      if (!fs::is_regular_file(manifest_path))
+        continue;
+      const auto manifest_bytes = read_file(manifest_path);
       json manifest;
       try {
         manifest = json::parse(manifest_bytes);

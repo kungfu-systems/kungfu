@@ -193,7 +193,7 @@ function sourceValidation() {
   )
     fail('packaged GUI lacks the bounded qualification startup mode');
   const guiManifest = readJson(
-    path.join(ROOT, 'extensions/system/status/package.json'),
+    path.join(ROOT, 'extensions/system/status/kungfu.kfx.json'),
   );
   if (!guiManifest.kungfuConfig.config.view.capabilities.includes('storage'))
     fail('GUI status view does not declare storage capability');

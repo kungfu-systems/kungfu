@@ -162,9 +162,10 @@ const home = mkdtempSync(join(tmpdir(), 'kungfu-skill-manager-'));
 const rewindInspectorRoot = join(home, 'extensions', 'rewind-inspector');
 mkdirSync(rewindInspectorRoot, { recursive: true });
 writeFileSync(
-  join(rewindInspectorRoot, 'package.json'),
+  join(rewindInspectorRoot, 'kungfu.kfx.json'),
   `${JSON.stringify(
     {
+      schema: 'kungfu.kfx.manifest/v1',
       name: '@kungfu-tech/kfx-view-rewind-inspector',
       version: '4.0.0-alpha.1',
       kungfuConfig: {

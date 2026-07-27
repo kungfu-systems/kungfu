@@ -1,16 +1,5 @@
 {
   "name": "@kungfu-tech/kfx-work-control-actions",
   "version": "4.0.0-alpha.1",
-  "private": true,
-  "kungfuConfig": {
-    "key": "work-control-actions",
-    "config": {
-      "adapter": {
-        "targets": ["kungfu.profile.member"],
-        "runtimes": ["python"],
-        "entry": { "python": "adapter.py" },
-        "capabilities": ["storage"]
-      }
-    }
-  }
+  "private": true
 }

@@ -628,7 +628,7 @@ def test_kfd3_qualification_rejects_custom_view_mutation_boundary(tmp_path):
     source, _ = create_source(tmp_path)
     make_collaboration_action_lifecycle(source)
     member = source / "members" / "example-week-day-contract"
-    manifest_path = member / "package.json"
+    manifest_path = member / "kungfu.kfx.json"
     manifest = json.loads(manifest_path.read_text())
     manifest["kungfuConfig"]["config"] = {
         "view": {
@@ -656,7 +656,7 @@ def test_kfd3_qualification_allows_capability_free_sandboxed_view(tmp_path):
     source, _ = create_source(tmp_path)
     make_collaboration_action_lifecycle(source)
     member = source / "members" / "example-week-day-contract"
-    manifest_path = member / "package.json"
+    manifest_path = member / "kungfu.kfx.json"
     manifest = json.loads(manifest_path.read_text())
     manifest["kungfuConfig"]["config"] = {
         "view": {

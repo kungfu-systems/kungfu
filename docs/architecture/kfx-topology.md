@@ -110,7 +110,8 @@ stages.
 ```
 
 1. **Discover** — the host scans its extension roots and reads each package's
-   `kungfuConfig` manifest. Roots are the bundled first-party artifact root
+   canonical `kungfu.kfx.json` manifest. `package.json` remains distribution
+   transport and cannot author KFX facts. Roots are the bundled first-party artifact root
    (`Resources/extensions`), a dev override (`KF_EXTENSION_PATH`), and the install
    root next to the runtime.
 2. **Plan** *(proposed: `planKfx`)* — the shared rule computes, per kfx, a neutral

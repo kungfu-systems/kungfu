@@ -1,0 +1,55 @@
+{
+  "schema": "kungfu.kfx.manifest/v1",
+  "name": "@kungfu-test/contributor",
+  "version": "2.0.0",
+  "kungfuConfig": {
+    "key": "contributor",
+    "registry": {
+      "contributions": [
+        {
+          "id": "workbench",
+          "extensionPoint": "kungfu.experience",
+          "version": "^1.0.0",
+          "capabilities": [
+            "domain"
+          ],
+          "presentation": {
+            "optional": true,
+            "hosts": [
+              "gui",
+              "cli"
+            ]
+          }
+        }
+      ],
+      "dependencies": [
+        {
+          "provider": "provider-host",
+          "version": "^1.0.0",
+          "mode": "required",
+          "capabilities": [
+            "domain"
+          ],
+          "admissionGrades": [
+            "unverified"
+          ]
+        },
+        {
+          "provider": "optional-support",
+          "version": "*",
+          "mode": "uses-if-present"
+        }
+      ]
+    },
+    "config": {
+      "view": {
+        "title": "Workbench",
+        "runtime": "sandboxed-ipc",
+        "entry": "view.js",
+        "capabilities": [
+          "domain"
+        ]
+      }
+    }
+  }
+}

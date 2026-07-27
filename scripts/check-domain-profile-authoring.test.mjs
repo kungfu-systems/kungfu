@@ -63,8 +63,10 @@ test('generates a complete hash-closed KFX Profile Suite source package', () => 
   const validateProfile = ajv.compile(kfx.profileSuiteSchema);
   const validatePackage = ajv.compile(kfx.packageManifestSchema);
   const profile = parse('profile.json');
-  const packageManifest = parse('package.json');
-  const memberManifest = parse('members/course-production-domain/package.json');
+  const packageManifest = parse('kungfu.kfx.json');
+  const memberManifest = parse(
+    'members/course-production-domain/kungfu.kfx.json',
+  );
   assert.equal(
     validateProfile(profile),
     true,

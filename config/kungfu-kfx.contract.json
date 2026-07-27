@@ -1,7 +1,7 @@
 {
   "schema": "kungfu.kfx.contract/v1",
   "id": "kungfu-kfx",
-  "version": 8,
+  "version": 9,
   "weldedSurface": "kfx-contract",
   "description": "Single source for KFX package manifests, discovery rules, trust inputs, and build detection.",
   "contractSchema": {
@@ -126,7 +126,7 @@
       "KF_RUNTIME_DIR_HOME_EXTENSIONS"
     ],
     "duplicateKeyPolicy": "first-root-wins",
-    "packageManifestFile": "package.json"
+    "packageManifestFile": "kungfu.kfx.json"
   },
   "knownCapabilities": [
     "domain",
@@ -138,16 +138,35 @@
   "packageManifestSchema": {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
     "type": "object",
-    "additionalProperties": true,
+    "additionalProperties": false,
     "required": [
+      "schema",
+      "name",
+      "version",
       "kungfuConfig"
     ],
     "properties": {
+      "schema": {
+        "type": "string",
+        "const": "kungfu.kfx.manifest/v1"
+      },
       "name": {
-        "type": "string"
+        "type": "string",
+        "minLength": 1
       },
       "version": {
-        "type": "string"
+        "type": "string",
+        "minLength": 1
+      },
+      "kungfuBuild": {
+        "type": "object",
+        "additionalProperties": true,
+        "properties": {
+          "python": {
+            "type": "object",
+            "additionalProperties": true
+          }
+        }
       },
       "kungfuConfig": {
         "type": "object",
@@ -221,164 +240,164 @@
               }
             }
           },
-        "registry": {
-          "type": "object",
-          "additionalProperties": false,
-          "properties": {
-            "extensionPoints": {
-              "type": "array",
-              "uniqueItems": true,
-              "items": {
-                "type": "object",
-                "additionalProperties": false,
-                "required": [
-                  "id",
-                  "version",
-                  "surface"
-                ],
-                "properties": {
-                  "id": {
-                    "type": "string",
-                    "minLength": 1,
-                    "pattern": "^[A-Za-z0-9._-]+$"
-                  },
-                  "version": {
-                    "type": "string",
-                    "minLength": 1
-                  },
-                  "surface": {
-                    "type": "string",
-                    "enum": [
-                      "experience",
-                      "flow",
-                      "service",
-                      "adapter"
-                    ]
-                  },
-                  "capabilities": {
-                    "type": "array",
-                    "items": {
+          "registry": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "extensionPoints": {
+                "type": "array",
+                "uniqueItems": true,
+                "items": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "id",
+                    "version",
+                    "surface"
+                  ],
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "minLength": 1,
+                      "pattern": "^[A-Za-z0-9._-]+$"
+                    },
+                    "version": {
                       "type": "string",
                       "minLength": 1
                     },
-                    "uniqueItems": true
+                    "surface": {
+                      "type": "string",
+                      "enum": [
+                        "experience",
+                        "flow",
+                        "service",
+                        "adapter"
+                      ]
+                    },
+                    "capabilities": {
+                      "type": "array",
+                      "items": {
+                        "type": "string",
+                        "minLength": 1
+                      },
+                      "uniqueItems": true
+                    }
                   }
                 }
-              }
-            },
-            "contributions": {
-              "type": "array",
-              "uniqueItems": true,
-              "items": {
-                "type": "object",
-                "additionalProperties": false,
-                "required": [
-                  "id",
-                  "extensionPoint",
-                  "version"
-                ],
-                "properties": {
-                  "id": {
-                    "type": "string",
-                    "minLength": 1,
-                    "pattern": "^[A-Za-z0-9._-]+$"
-                  },
-                  "extensionPoint": {
-                    "type": "string",
-                    "minLength": 1,
-                    "pattern": "^[A-Za-z0-9._-]+$"
-                  },
-                  "version": {
-                    "type": "string",
-                    "minLength": 1
-                  },
-                  "capabilities": {
-                    "type": "array",
-                    "items": {
+              },
+              "contributions": {
+                "type": "array",
+                "uniqueItems": true,
+                "items": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "id",
+                    "extensionPoint",
+                    "version"
+                  ],
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "minLength": 1,
+                      "pattern": "^[A-Za-z0-9._-]+$"
+                    },
+                    "extensionPoint": {
+                      "type": "string",
+                      "minLength": 1,
+                      "pattern": "^[A-Za-z0-9._-]+$"
+                    },
+                    "version": {
                       "type": "string",
                       "minLength": 1
                     },
-                    "uniqueItems": true
-                  },
-                  "presentation": {
-                    "type": "object",
-                    "additionalProperties": false,
-                    "properties": {
-                      "optional": {
-                        "type": "boolean"
+                    "capabilities": {
+                      "type": "array",
+                      "items": {
+                        "type": "string",
+                        "minLength": 1
                       },
-                      "hosts": {
-                        "type": "array",
-                        "items": {
-                          "type": "string",
-                          "enum": [
-                            "gui",
-                            "tui",
-                            "cli",
-                            "agent"
-                          ]
+                      "uniqueItems": true
+                    },
+                    "presentation": {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "properties": {
+                        "optional": {
+                          "type": "boolean"
                         },
-                        "uniqueItems": true
+                        "hosts": {
+                          "type": "array",
+                          "items": {
+                            "type": "string",
+                            "enum": [
+                              "gui",
+                              "tui",
+                              "cli",
+                              "agent"
+                            ]
+                          },
+                          "uniqueItems": true
+                        }
                       }
                     }
                   }
                 }
-              }
-            },
-            "dependencies": {
-              "type": "array",
-              "uniqueItems": true,
-              "items": {
-                "type": "object",
-                "additionalProperties": false,
-                "required": [
-                  "provider",
-                  "version",
-                  "mode"
-                ],
-                "properties": {
-                  "provider": {
-                    "type": "string",
-                    "minLength": 1,
-                    "pattern": "^[A-Za-z0-9._-]+$"
-                  },
-                  "version": {
-                    "type": "string",
-                    "minLength": 1
-                  },
-                  "mode": {
-                    "type": "string",
-                    "enum": [
-                      "required",
-                      "uses-if-present"
-                    ]
-                  },
-                  "capabilities": {
-                    "type": "array",
-                    "items": {
+              },
+              "dependencies": {
+                "type": "array",
+                "uniqueItems": true,
+                "items": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "provider",
+                    "version",
+                    "mode"
+                  ],
+                  "properties": {
+                    "provider": {
+                      "type": "string",
+                      "minLength": 1,
+                      "pattern": "^[A-Za-z0-9._-]+$"
+                    },
+                    "version": {
                       "type": "string",
                       "minLength": 1
                     },
-                    "uniqueItems": true
-                  },
-                  "admissionGrades": {
-                    "type": "array",
-                    "items": {
+                    "mode": {
                       "type": "string",
                       "enum": [
-                        "unverified",
-                        "identity-verified",
-                        "kfd-attested",
-                        "product-system"
+                        "required",
+                        "uses-if-present"
                       ]
                     },
-                    "uniqueItems": true
+                    "capabilities": {
+                      "type": "array",
+                      "items": {
+                        "type": "string",
+                        "minLength": 1
+                      },
+                      "uniqueItems": true
+                    },
+                    "admissionGrades": {
+                      "type": "array",
+                      "items": {
+                        "type": "string",
+                        "enum": [
+                          "unverified",
+                          "identity-verified",
+                          "kfd-attested",
+                          "product-system"
+                        ]
+                      },
+                      "uniqueItems": true
+                    }
                   }
                 }
               }
             }
-          }
-        },
+          },
           "config": {
             "type": "object",
             "additionalProperties": false,
@@ -615,16 +634,6 @@
                 }
               }
             }
-          }
-        }
-      },
-      "kungfuBuild": {
-        "type": "object",
-        "additionalProperties": true,
-        "properties": {
-          "python": {
-            "type": "object",
-            "additionalProperties": true
           }
         }
       }
