@@ -234,8 +234,11 @@ tier, receipt, hosted-runner image, and observed compiler/CMake/Ninja evidence.
 A successful PR run may publish proof only after its complete required native,
 SDK, Shifu, and KFD dependency graph passes. The matching merge-group may
 consume that proof, and a serialized repeat may consume a same-SHA queue proof,
-only when lookup returns one unambiguous trusted producer and bundle
-verification preserves every identity binding. PR proof records its triggering
+only when lookup deterministically selects the newest trusted producer for the
+exact proof identity and bundle verification preserves every identity binding.
+Concurrent duplicate PR runs for the same PR head are cancelled; retained
+same-identity artifacts are ordered by creation time and immutable artifact and
+run ids before selection. PR proof records its triggering
 head separately from the synthetic checkout; queue proof requires both SHAs to
 be identical. A changed merge-group base therefore continues to fail closed to
 a full run even when the PR patch and

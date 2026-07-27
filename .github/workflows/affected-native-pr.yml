@@ -10,8 +10,8 @@ on:
     types: [checks_requested]
 
 concurrency:
-  group: core-affected-native-${{ github.event.merge_group.head_sha || github.run_id }}
-  cancel-in-progress: false
+  group: core-affected-native-${{ github.event.merge_group.head_sha || github.ref || github.run_id }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 permissions:
   actions: read
