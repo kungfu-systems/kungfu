@@ -21,8 +21,9 @@ and required omissions as blockers. The repository guide
 complete budgets.
 
 An installed Kungfu runtime consumes a precompiled documentation Atlas and
-ships the independently qualified Xinfa engine behind the only public
-executable, `kungfu`:
+ships the independently qualified Xinfa engine behind the only npm/Core
+executable, `kungfu`. The separate `xinfa` executable is a GitHub-only product;
+this embedded route never searches `PATH` for it:
 
 ```sh
 kungfu agent docs --verify --json

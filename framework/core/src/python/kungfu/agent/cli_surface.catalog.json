@@ -1,2921 +1,432 @@
 {
-  "catalogRoot": "sha256:cfaa2d46d1b0596787d7e6374e5f8abb95103a1b575b41e1f45f7dd780909f1f",
+  "catalogRoot": "sha256:116715eece3c524a6e3511fe1715bfa20edd26a6068c6116c4a82e26a8ad6d26",
   "contractId": "kungfu-cli-surface",
-  "contractRoot": "sha256:5ed37af1aa8f7ed161a5a1fc9c21c5ad035ef5b19bf97f532c9421b00b4e966f",
+  "contractRoot": "sha256:499ae21fa21a7f995611d41db673c1c7144569bc8eda33c22659aa8cf12dabb1",
   "kfd3Linkage": [
-    {
-      "apiIds": [],
-      "reason": "navigation-only",
-      "state": "unlinked",
-      "surfaceId": "kungfu.cli.commands.kfc"
-    },
-    {
-      "apiIds": [],
-      "reason": "no-agent-first-api-declared",
-      "state": "unlinked",
-      "surfaceId": "kungfu.cli.commands.action.action"
-    },
-    {
-      "apiIds": [
-        "kungfu.agent"
-      ],
-      "reason": null,
-      "state": "linked",
-      "surfaceId": "kungfu.agent"
-    },
-    {
-      "apiIds": [
-        "kungfu.agent.bootstrap"
-      ],
-      "reason": null,
-      "state": "linked",
-      "surfaceId": "kungfu.agent.bootstrap"
-    },
-    {
-      "apiIds": [
-        "kungfu.agent.brief"
-      ],
-      "reason": null,
-      "state": "linked",
-      "surfaceId": "kungfu.agent.brief"
-    },
-    {
-      "apiIds": [
-        "kungfu.agent.capabilities"
-      ],
-      "reason": null,
-      "state": "linked",
-      "surfaceId": "kungfu.agent.capabilities"
-    },
-    {
-      "apiIds": [
-        "kungfu.agent.choose-mode"
-      ],
-      "reason": null,
-      "state": "linked",
-      "surfaceId": "kungfu.agent.choose-mode"
-    },
-    {
-      "apiIds": [
-        "kungfu.agent.console"
-      ],
-      "reason": null,
-      "state": "linked",
-      "surfaceId": "kungfu.agent.console"
-    },
-    {
-      "apiIds": [
-        "kungfu.agent.console.current"
-      ],
-      "reason": null,
-      "state": "linked",
-      "surfaceId": "kungfu.agent.console.current"
-    },
-    {
-      "apiIds": [
-        "kungfu.agent.context"
-      ],
-      "reason": null,
-      "state": "linked",
-      "surfaceId": "kungfu.agent.context"
-    },
-    {
-      "apiIds": [
-        "kungfu.agent.docs"
-      ],
-      "reason": null,
-      "state": "linked",
-      "surfaceId": "kungfu.agent.docs"
-    },
-    {
-      "apiIds": [
-        "kungfu.agent.hub"
-      ],
-      "reason": null,
-      "state": "linked",
-      "surfaceId": "kungfu.agent.hub"
-    },
-    {
-      "apiIds": [
-        "kungfu.agent.hub.adapter"
-      ],
-      "reason": null,
-      "state": "linked",
-      "surfaceId": "kungfu.agent.hub.adapter"
-    },
-    {
-      "apiIds": [
-        "kungfu.agent.hub.capabilities"
-      ],
-      "reason": null,
-      "state": "linked",
-      "surfaceId": "kungfu.agent.hub.capabilities"
-    },
-    {
-      "apiIds": [
-        "kungfu.agent.hub.handle"
-      ],
-      "reason": null,
-      "state": "linked",
-      "surfaceId": "kungfu.agent.hub.handle"
-    },
-    {
-      "apiIds": [
-        "kungfu.agent.hub.qualify"
-      ],
-      "reason": null,
-      "state": "linked",
-      "surfaceId": "kungfu.agent.hub.qualify"
-    },
-    {
-      "apiIds": [
-        "kungfu.agent.hub.verify"
-      ],
-      "reason": null,
-      "state": "linked",
-      "surfaceId": "kungfu.agent.hub.verify"
-    },
-    {
-      "apiIds": [
-        "kungfu.agent.install-skill"
-      ],
-      "reason": null,
-      "state": "linked",
-      "surfaceId": "kungfu.agent.install-skill"
-    },
-    {
-      "apiIds": [
-        "kungfu.agent.mode"
-      ],
-      "reason": null,
-      "state": "linked",
-      "surfaceId": "kungfu.agent.mode"
-    },
-    {
-      "apiIds": [
-        "kungfu.agent.mode.set"
-      ],
-      "reason": null,
-      "state": "linked",
-      "surfaceId": "kungfu.agent.mode.set"
-    },
-    {
-      "apiIds": [
-        "kungfu.agent.runtime"
-      ],
-      "reason": null,
-      "state": "linked",
-      "surfaceId": "kungfu.agent.runtime"
-    },
-    {
-      "apiIds": [
-        "kungfu.agent.runtime.discover"
-      ],
-      "reason": null,
-      "state": "linked",
-      "surfaceId": "kungfu.agent.runtime.discover"
-    },
-    {
-      "apiIds": [
-        "kungfu.agent.runtime.list"
-      ],
-      "reason": null,
-      "state": "linked",
-      "surfaceId": "kungfu.agent.runtime.list"
-    },
-    {
-      "apiIds": [
-        "kungfu.agent.runtime.remove"
-      ],
-      "reason": null,
-      "state": "linked",
-      "surfaceId": "kungfu.agent.runtime.remove"
-    },
-    {
-      "apiIds": [
-        "kungfu.agent.runtime.set-default"
-      ],
-      "reason": null,
-      "state": "linked",
-      "surfaceId": "kungfu.agent.runtime.set-default"
-    },
-    {
-      "apiIds": [
-        "kungfu.agent.runtime.upsert"
-      ],
-      "reason": null,
-      "state": "linked",
-      "surfaceId": "kungfu.agent.runtime.upsert"
-    },
-    {
-      "apiIds": [
-        "kungfu.agent.runtime.verify"
-      ],
-      "reason": null,
-      "state": "linked",
-      "surfaceId": "kungfu.agent.runtime.verify"
-    },
-    {
-      "apiIds": [
-        "kungfu.agent.session"
-      ],
-      "reason": null,
-      "state": "linked",
-      "surfaceId": "kungfu.agent.session"
-    },
-    {
-      "apiIds": [
-        "kungfu.agent.status"
-      ],
-      "reason": null,
-      "state": "linked",
-      "surfaceId": "kungfu.agent.status"
-    },
-    {
-      "apiIds": [
-        "kungfu.agent.unbootstrap"
-      ],
-      "reason": null,
-      "state": "linked",
-      "surfaceId": "kungfu.agent.unbootstrap"
-    },
-    {
-      "apiIds": [
-        "kungfu.agent.uninstall"
-      ],
-      "reason": null,
-      "state": "linked",
-      "surfaceId": "kungfu.agent.uninstall"
-    },
-    {
-      "apiIds": [
-        "kungfu.agent.verify"
-      ],
-      "reason": null,
-      "state": "linked",
-      "surfaceId": "kungfu.agent.verify"
-    },
-    {
-      "apiIds": [
-        "kungfu.agent.work"
-      ],
-      "reason": null,
-      "state": "linked",
-      "surfaceId": "kungfu.agent.work"
-    },
-    {
-      "apiIds": [
-        "kungfu.agent.work.action"
-      ],
-      "reason": null,
-      "state": "linked",
-      "surfaceId": "kungfu.agent.work.action"
-    },
-    {
-      "apiIds": [
-        "kungfu.agent.work.capabilities"
-      ],
-      "reason": null,
-      "state": "linked",
-      "surfaceId": "kungfu.agent.work.capabilities"
-    },
-    {
-      "apiIds": [
-        "kungfu.agent.work.export-authority"
-      ],
-      "reason": null,
-      "state": "linked",
-      "surfaceId": "kungfu.agent.work.export-authority"
-    },
-    {
-      "apiIds": [
-        "kungfu.agent.work.import-authority"
-      ],
-      "reason": null,
-      "state": "linked",
-      "surfaceId": "kungfu.agent.work.import-authority"
-    },
-    {
-      "apiIds": [
-        "kungfu.agent.work.inspect"
-      ],
-      "reason": null,
-      "state": "linked",
-      "surfaceId": "kungfu.agent.work.inspect"
-    },
-    {
-      "apiIds": [
-        "kungfu.agent.work.session"
-      ],
-      "reason": null,
-      "state": "linked",
-      "surfaceId": "kungfu.agent.work.session"
-    },
-    {
-      "apiIds": [
-        "kungfu.agent.work-model"
-      ],
-      "reason": null,
-      "state": "linked",
-      "surfaceId": "kungfu.agent.work-model"
-    },
-    {
-      "apiIds": [],
-      "reason": "navigation-only",
-      "state": "unlinked",
-      "surfaceId": "kungfu.cli.commands.atlas.atlas"
-    },
-    {
-      "apiIds": [],
-      "reason": "no-agent-first-api-declared",
-      "state": "unlinked",
-      "surfaceId": "kungfu.cli.commands.primitive.role.register.role.commands.locals.action.kungfu.atlas.action"
-    },
-    {
-      "apiIds": [],
-      "reason": "no-agent-first-api-declared",
-      "state": "unlinked",
-      "surfaceId": "kungfu.cli.commands.primitive.role.register.role.commands.locals.capabilities.kungfu.atlas.capabilities"
-    },
-    {
-      "apiIds": [
-        "kungfu.atlas.import"
-      ],
-      "reason": null,
-      "state": "linked",
-      "surfaceId": "kungfu.cli.commands.atlas.import.cmd"
-    },
-    {
-      "apiIds": [],
-      "reason": "no-agent-first-api-declared",
-      "state": "unlinked",
-      "surfaceId": "kungfu.cli.commands.primitive.role.register.role.commands.locals.inspect.kungfu.atlas.inspect"
-    },
-    {
-      "apiIds": [],
-      "reason": "navigation-only",
-      "state": "unlinked",
-      "surfaceId": "kungfu.cli.commands.atlas.show"
-    },
-    {
-      "apiIds": [
-        "kungfu.atlas.show.import"
-      ],
-      "reason": null,
-      "state": "linked",
-      "surfaceId": "kungfu.cli.commands.atlas.import.info"
-    },
-    {
-      "apiIds": [
-        "kungfu.atlas.show.markers"
-      ],
-      "reason": null,
-      "state": "linked",
-      "surfaceId": "kungfu.cli.commands.atlas.markers"
-    },
-    {
-      "apiIds": [],
-      "reason": "no-agent-first-api-declared",
-      "state": "unlinked",
-      "surfaceId": "kungfu.cli.commands.atlas.verify"
-    },
-    {
-      "apiIds": [],
-      "reason": "navigation-only",
-      "state": "unlinked",
-      "surfaceId": "kungfu.cli.commands.codex.codex"
-    },
-    {
-      "apiIds": [
-        "kungfu.codex.verify-goal-report"
-      ],
-      "reason": null,
-      "state": "linked",
-      "surfaceId": "kungfu.cli.commands.codex.verify.goal.report"
-    },
-    {
-      "apiIds": [],
-      "reason": "navigation-only",
-      "state": "unlinked",
-      "surfaceId": "kungfu.cli.commands.config.config"
-    },
-    {
-      "apiIds": [],
-      "reason": "no-agent-first-api-declared",
-      "state": "unlinked",
-      "surfaceId": "kungfu.cli.commands.config.contract"
-    },
-    {
-      "apiIds": [],
-      "reason": "no-agent-first-api-declared",
-      "state": "unlinked",
-      "surfaceId": "kungfu.cli.commands.config.defaults"
-    },
-    {
-      "apiIds": [],
-      "reason": "no-agent-first-api-declared",
-      "state": "unlinked",
-      "surfaceId": "kungfu.cli.commands.config.durability"
-    },
-    {
-      "apiIds": [],
-      "reason": "no-agent-first-api-declared",
-      "state": "unlinked",
-      "surfaceId": "kungfu.cli.commands.config.path"
-    },
-    {
-      "apiIds": [],
-      "reason": "no-agent-first-api-declared",
-      "state": "unlinked",
-      "surfaceId": "kungfu.cli.commands.config.schema"
-    },
-    {
-      "apiIds": [],
-      "reason": "no-agent-first-api-declared",
-      "state": "unlinked",
-      "surfaceId": "kungfu.cli.commands.config.set.value"
-    },
-    {
-      "apiIds": [],
-      "reason": "no-agent-first-api-declared",
-      "state": "unlinked",
-      "surfaceId": "kungfu.cli.commands.config.show"
-    },
-    {
-      "apiIds": [],
-      "reason": "no-agent-first-api-declared",
-      "state": "unlinked",
-      "surfaceId": "kungfu.cli.commands.config.unset.value"
-    },
-    {
-      "apiIds": [],
-      "reason": "navigation-only",
-      "state": "unlinked",
-      "surfaceId": "kungfu.cli.commands.contract.contract"
-    },
-    {
-      "apiIds": [],
-      "reason": "no-agent-first-api-declared",
-      "state": "unlinked",
-      "surfaceId": "kungfu.cli.commands.contract.list.contracts"
-    },
-    {
-      "apiIds": [],
-      "reason": "no-agent-first-api-declared",
-      "state": "unlinked",
-      "surfaceId": "kungfu.cli.commands.contract.show"
-    },
-    {
-      "apiIds": [],
-      "reason": "no-agent-first-api-declared",
-      "state": "unlinked",
-      "surfaceId": "kungfu.cli.commands.contract.surface.contract.cmd"
-    },
-    {
-      "apiIds": [],
-      "reason": "no-agent-first-api-declared",
-      "state": "unlinked",
-      "surfaceId": "kungfu.cli.commands.contract.verify"
-    },
-    {
-      "apiIds": [
-        "kungfu.cut.inspect"
-      ],
-      "reason": null,
-      "state": "linked",
-      "surfaceId": "kungfu.cli.commands.cut.cut"
-    },
-    {
-      "apiIds": [],
-      "reason": "navigation-only",
-      "state": "unlinked",
-      "surfaceId": "kungfu.cli.commands.dev.dev"
-    },
-    {
-      "apiIds": [],
-      "reason": "navigation-only",
-      "state": "unlinked",
-      "surfaceId": "kungfu.cli.commands.engage.engage"
-    },
-    {
-      "apiIds": [],
-      "reason": "not-agent-visible",
-      "state": "unlinked",
-      "surfaceId": "kungfu.cli.commands.engage.black"
-    },
-    {
-      "apiIds": [],
-      "reason": "not-agent-visible",
-      "state": "unlinked",
-      "surfaceId": "kungfu.cli.commands.engage.nuitka"
-    },
-    {
-      "apiIds": [],
-      "reason": "not-agent-visible",
-      "state": "unlinked",
-      "surfaceId": "kungfu.cli.commands.engage.nuitka.data.composer"
-    },
-    {
-      "apiIds": [],
-      "reason": "not-agent-visible",
-      "state": "unlinked",
-      "surfaceId": "kungfu.cli.commands.engage.pdm"
-    },
-    {
-      "apiIds": [],
-      "reason": "not-agent-visible",
-      "state": "unlinked",
-      "surfaceId": "kungfu.cli.commands.engage.scons"
-    },
-    {
-      "apiIds": [],
-      "reason": "navigation-only",
-      "state": "unlinked",
-      "surfaceId": "kungfu.cli.commands.schema.schema"
-    },
-    {
-      "apiIds": [],
-      "reason": "not-agent-visible",
-      "state": "unlinked",
-      "surfaceId": "kungfu.cli.commands.schema.compile.cmd"
-    },
-    {
-      "apiIds": [],
-      "reason": "navigation-only",
-      "state": "unlinked",
-      "surfaceId": "kungfu.cli.commands.dogfood.dogfood"
-    },
-    {
-      "apiIds": [],
-      "reason": "no-agent-first-api-declared",
-      "state": "unlinked",
-      "surfaceId": "kungfu.dogfood.admit"
-    },
-    {
-      "apiIds": [],
-      "reason": "no-agent-first-api-declared",
-      "state": "unlinked",
-      "surfaceId": "kungfu.cli.commands.dogfood.capabilities"
-    },
-    {
-      "apiIds": [],
-      "reason": "no-agent-first-api-declared",
-      "state": "unlinked",
-      "surfaceId": "kungfu.dogfood.capture"
-    },
-    {
-      "apiIds": [],
-      "reason": "no-agent-first-api-declared",
-      "state": "unlinked",
-      "surfaceId": "kungfu.dogfood.consider"
-    },
-    {
-      "apiIds": [],
-      "reason": "no-agent-first-api-declared",
-      "state": "unlinked",
-      "surfaceId": "kungfu.dogfood.doctor"
-    },
-    {
-      "apiIds": [],
-      "reason": "no-agent-first-api-declared",
-      "state": "unlinked",
-      "surfaceId": "kungfu.dogfood.export-atlas"
-    },
-    {
-      "apiIds": [],
-      "reason": "no-agent-first-api-declared",
-      "state": "unlinked",
-      "surfaceId": "kungfu.dogfood.gate"
-    },
-    {
-      "apiIds": [],
-      "reason": "no-agent-first-api-declared",
-      "state": "unlinked",
-      "surfaceId": "kungfu.dogfood.health"
-    },
-    {
-      "apiIds": [],
-      "reason": "no-agent-first-api-declared",
-      "state": "unlinked",
-      "surfaceId": "kungfu.dogfood.import-atlas"
-    },
-    {
-      "apiIds": [],
-      "reason": "no-agent-first-api-declared",
-      "state": "unlinked",
-      "surfaceId": "kungfu.dogfood.propose.issue"
-    },
-    {
-      "apiIds": [],
-      "reason": "no-agent-first-api-declared",
-      "state": "unlinked",
-      "surfaceId": "kungfu.dogfood.query"
-    },
-    {
-      "apiIds": [],
-      "reason": "no-agent-first-api-declared",
-      "state": "unlinked",
-      "surfaceId": "kungfu.dogfood.reconcile"
-    },
-    {
-      "apiIds": [],
-      "reason": "no-agent-first-api-declared",
-      "state": "unlinked",
-      "surfaceId": "kungfu.dogfood.recover"
-    },
-    {
-      "apiIds": [],
-      "reason": "no-agent-first-api-declared",
-      "state": "unlinked",
-      "surfaceId": "kungfu.cli.commands.dogfood.relevance"
-    },
-    {
-      "apiIds": [],
-      "reason": "no-agent-first-api-declared",
-      "state": "unlinked",
-      "surfaceId": "kungfu.dogfood.show"
-    },
-    {
-      "apiIds": [],
-      "reason": "no-agent-first-api-declared",
-      "state": "unlinked",
-      "surfaceId": "kungfu.cli.commands.dogfood.starvation"
-    },
-    {
-      "apiIds": [],
-      "reason": "no-agent-first-api-declared",
-      "state": "unlinked",
-      "surfaceId": "kungfu.dogfood.transition"
-    },
-    {
-      "apiIds": [],
-      "reason": "not-agent-visible",
-      "state": "unlinked",
-      "surfaceId": "kungfu.cli.commands.env.env"
-    },
-    {
-      "apiIds": [],
-      "reason": "navigation-only",
-      "state": "unlinked",
-      "surfaceId": "kungfu.cli.commands.episode.episode"
-    },
-    {
-      "apiIds": [],
-      "reason": "no-agent-first-api-declared",
-      "state": "unlinked",
-      "surfaceId": "kungfu.cli.commands.primitive.role.register.role.commands.locals.action.kungfu.episode.action"
-    },
-    {
-      "apiIds": [],
-      "reason": "no-agent-first-api-declared",
-      "state": "unlinked",
-      "surfaceId": "kungfu.cli.commands.primitive.role.register.role.commands.locals.capabilities.kungfu.episode.capabilities"
-    },
-    {
-      "apiIds": [],
-      "reason": "no-agent-first-api-declared",
-      "state": "unlinked",
-      "surfaceId": "kungfu.cli.commands.primitive.role.register.role.commands.locals.inspect.kungfu.episode.inspect"
-    },
-    {
-      "apiIds": [],
-      "reason": "navigation-only",
-      "state": "unlinked",
-      "surfaceId": "kungfu.cli.commands.exit.exit.group"
-    },
-    {
-      "apiIds": [
-        "kungfu.exit.bundle"
-      ],
-      "reason": null,
-      "state": "linked",
-      "surfaceId": "kungfu.cli.commands.exit.build.cmd"
-    },
-    {
-      "apiIds": [
-        "kungfu.exit.bundle"
-      ],
-      "reason": null,
-      "state": "linked",
-      "surfaceId": "kungfu.cli.commands.exit.import.cmd"
-    },
-    {
-      "apiIds": [
-        "kungfu.exit.bundle"
-      ],
-      "reason": null,
-      "state": "linked",
-      "surfaceId": "kungfu.cli.commands.exit.inspect.cmd"
-    },
-    {
-      "apiIds": [
-        "kungfu.exit.verify"
-      ],
-      "reason": null,
-      "state": "linked",
-      "surfaceId": "kungfu.cli.commands.exit.verify.cmd"
-    },
-    {
-      "apiIds": [],
-      "reason": "navigation-only",
-      "state": "unlinked",
-      "surfaceId": "kungfu.cli.commands.facts.facts"
-    },
-    {
-      "apiIds": [
-        "kungfu.facts.capabilities"
-      ],
-      "reason": null,
-      "state": "linked",
-      "surfaceId": "kungfu.cli.commands.facts.capabilities"
-    },
-    {
-      "apiIds": [
-        "kungfu.facts.declare-surface"
-      ],
-      "reason": null,
-      "state": "linked",
-      "surfaceId": "kungfu.cli.commands.facts.declare.surface"
-    },
-    {
-      "apiIds": [
-        "kungfu.facts.declare-world"
-      ],
-      "reason": null,
-      "state": "linked",
-      "surfaceId": "kungfu.cli.commands.facts.declare.world"
-    },
-    {
-      "apiIds": [
-        "kungfu.facts.export"
-      ],
-      "reason": null,
-      "state": "linked",
-      "surfaceId": "kungfu.cli.commands.facts.export.library"
-    },
-    {
-      "apiIds": [
-        "kungfu.facts.import"
-      ],
-      "reason": null,
-      "state": "linked",
-      "surfaceId": "kungfu.cli.commands.facts.import.library"
-    },
-    {
-      "apiIds": [],
-      "reason": "navigation-only",
-      "state": "unlinked",
-      "surfaceId": "kungfu.cli.commands.facts.fact.integrity"
-    },
-    {
-      "apiIds": [],
-      "reason": "no-agent-first-api-declared",
-      "state": "unlinked",
-      "surfaceId": "kungfu.cli.commands.facts.export.fact.kernel"
-    },
-    {
-      "apiIds": [],
-      "reason": "no-agent-first-api-declared",
-      "state": "unlinked",
-      "surfaceId": "kungfu.cli.commands.facts.fsck.fact.kernel"
-    },
-    {
-      "apiIds": [],
-      "reason": "no-agent-first-api-declared",
-      "state": "unlinked",
-      "surfaceId": "kungfu.cli.commands.facts.import.fact.kernel"
-    },
-    {
-      "apiIds": [],
-      "reason": "no-agent-first-api-declared",
-      "state": "unlinked",
-      "surfaceId": "kungfu.cli.commands.facts.rebuild.fact.projections"
-    },
-    {
-      "apiIds": [],
-      "reason": "no-agent-first-api-declared",
-      "state": "unlinked",
-      "surfaceId": "kungfu.cli.commands.facts.plan.fact.retention"
-    },
-    {
-      "apiIds": [],
-      "reason": "no-agent-first-api-declared",
-      "state": "unlinked",
-      "surfaceId": "kungfu.cli.commands.facts.fact.kernel"
-    },
-    {
-      "apiIds": [
-        "kungfu.facts.library"
-      ],
-      "reason": null,
-      "state": "linked",
-      "surfaceId": "kungfu.cli.commands.facts.library"
-    },
-    {
-      "apiIds": [],
-      "reason": "navigation-only",
-      "state": "unlinked",
-      "surfaceId": "kungfu.cli.commands.facts.fact.material"
-    },
-    {
-      "apiIds": [
-        "kungfu.facts.material-list"
-      ],
-      "reason": null,
-      "state": "linked",
-      "surfaceId": "kungfu.cli.commands.facts.list.fact.material"
-    },
-    {
-      "apiIds": [
-        "kungfu.facts.material-put"
-      ],
-      "reason": null,
-      "state": "linked",
-      "surfaceId": "kungfu.cli.commands.facts.put.fact.material"
-    },
-    {
-      "apiIds": [
-        "kungfu.facts.observe"
-      ],
-      "reason": null,
-      "state": "linked",
-      "surfaceId": "kungfu.cli.commands.facts.observe"
-    },
-    {
-      "apiIds": [],
-      "reason": "navigation-only",
-      "state": "unlinked",
-      "surfaceId": "kungfu.cli.commands.facts.fact.shadow"
-    },
-    {
-      "apiIds": [],
-      "reason": "no-agent-first-api-declared",
-      "state": "unlinked",
-      "surfaceId": "kungfu.cli.commands.facts.compare.fact.shadow"
-    },
-    {
-      "apiIds": [],
-      "reason": "no-agent-first-api-declared",
-      "state": "unlinked",
-      "surfaceId": "kungfu.cli.commands.facts.inspect.fact.shadow"
-    },
-    {
-      "apiIds": [],
-      "reason": "no-agent-first-api-declared",
-      "state": "unlinked",
-      "surfaceId": "kungfu.cli.commands.facts.project.fact.shadow"
-    },
-    {
-      "apiIds": [
-        "kungfu.facts.state"
-      ],
-      "reason": null,
-      "state": "linked",
-      "surfaceId": "kungfu.cli.commands.facts.state"
-    },
-    {
-      "apiIds": [],
-      "reason": "navigation-only",
-      "state": "unlinked",
-      "surfaceId": "kungfu.cli.commands.facts.fact.type"
-    },
-    {
-      "apiIds": [
-        "kungfu.facts.type-create"
-      ],
-      "reason": null,
-      "state": "linked",
-      "surfaceId": "kungfu.cli.commands.facts.create.fact.type"
-    },
-    {
-      "apiIds": [
-        "kungfu.facts.type-list"
-      ],
-      "reason": null,
-      "state": "linked",
-      "surfaceId": "kungfu.cli.commands.facts.list.fact.types"
-    },
-    {
-      "apiIds": [
-        "kungfu.health",
-        "kungfu.health.deep"
-      ],
-      "reason": null,
-      "state": "linked",
-      "surfaceId": "kungfu.cli.commands.health.health"
-    },
-    {
-      "apiIds": [],
-      "reason": "no-agent-first-api-declared",
-      "state": "unlinked",
-      "surfaceId": "kungfu.cli.commands.kfd.kfd"
-    },
-    {
-      "apiIds": [],
-      "reason": "navigation-only",
-      "state": "unlinked",
-      "surfaceId": "kungfu.cli.commands.kfx.kfx"
-    },
-    {
-      "apiIds": [],
-      "reason": "no-agent-first-api-declared",
-      "state": "unlinked",
-      "surfaceId": "kungfu.cli.commands.kfx.contract"
-    },
-    {
-      "apiIds": [],
-      "reason": "no-agent-first-api-declared",
-      "state": "unlinked",
-      "surfaceId": "kungfu.cli.commands.kfx.inspect"
-    },
-    {
-      "apiIds": [
-        "kungfu.kfx.install"
-      ],
-      "reason": null,
-      "state": "linked",
-      "surfaceId": "kungfu.cli.commands.kfx.install"
-    },
-    {
-      "apiIds": [],
-      "reason": "no-agent-first-api-declared",
-      "state": "unlinked",
-      "surfaceId": "kungfu.cli.commands.kfx.list.installed"
-    },
-    {
-      "apiIds": [],
-      "reason": "navigation-only",
-      "state": "unlinked",
-      "surfaceId": "kungfu.cli.commands.kfx.native.group"
-    },
-    {
-      "apiIds": [],
-      "reason": "no-agent-first-api-declared",
-      "state": "unlinked",
-      "surfaceId": "kungfu.cli.commands.kfx.native.assess"
-    },
-    {
-      "apiIds": [],
-      "reason": "no-agent-first-api-declared",
-      "state": "unlinked",
-      "surfaceId": "kungfu.cli.commands.kfx.native.inspect"
-    },
-    {
-      "apiIds": [],
-      "reason": "no-agent-first-api-declared",
-      "state": "unlinked",
-      "surfaceId": "kungfu.cli.commands.kfx.native.list"
-    },
-    {
-      "apiIds": [],
-      "reason": "no-agent-first-api-declared",
-      "state": "unlinked",
-      "surfaceId": "kungfu.cli.commands.kfx.native.plan"
-    },
-    {
-      "apiIds": [],
-      "reason": "no-agent-first-api-declared",
-      "state": "unlinked",
-      "surfaceId": "kungfu.cli.commands.kfx.native.resolve"
-    },
-    {
-      "apiIds": [],
-      "reason": "no-agent-first-api-declared",
-      "state": "unlinked",
-      "surfaceId": "kungfu.cli.commands.kfx.native.status"
-    },
-    {
-      "apiIds": [],
-      "reason": "navigation-only",
-      "state": "unlinked",
-      "surfaceId": "kungfu.cli.commands.kfx.profile.group"
-    },
-    {
-      "apiIds": [],
-      "reason": "no-agent-first-api-declared",
-      "state": "unlinked",
-      "surfaceId": "kungfu.cli.commands.kfx.profile.apply"
-    },
-    {
-      "apiIds": [],
-      "reason": "no-agent-first-api-declared",
-      "state": "unlinked",
-      "surfaceId": "kungfu.cli.commands.kfx.profile.contract"
-    },
-    {
-      "apiIds": [],
-      "reason": "no-agent-first-api-declared",
-      "state": "unlinked",
-      "surfaceId": "kungfu.cli.commands.kfx.profile.get"
-    },
-    {
-      "apiIds": [],
-      "reason": "no-agent-first-api-declared",
-      "state": "unlinked",
-      "surfaceId": "kungfu.cli.commands.kfx.profile.history"
-    },
-    {
-      "apiIds": [],
-      "reason": "no-agent-first-api-declared",
-      "state": "unlinked",
-      "surfaceId": "kungfu.cli.commands.kfx.profile.inspect"
-    },
-    {
-      "apiIds": [],
-      "reason": "no-agent-first-api-declared",
-      "state": "unlinked",
-      "surfaceId": "kungfu.cli.commands.kfx.profile.list"
-    },
-    {
-      "apiIds": [],
-      "reason": "no-agent-first-api-declared",
-      "state": "unlinked",
-      "surfaceId": "kungfu.cli.commands.kfx.profile.plan"
-    },
-    {
-      "apiIds": [],
-      "reason": "no-agent-first-api-declared",
-      "state": "unlinked",
-      "surfaceId": "kungfu.cli.commands.kfx.profile.schema"
-    },
-    {
-      "apiIds": [],
-      "reason": "no-agent-first-api-declared",
-      "state": "unlinked",
-      "surfaceId": "kungfu.cli.commands.kfx.remove"
-    },
-    {
-      "apiIds": [],
-      "reason": "no-agent-first-api-declared",
-      "state": "unlinked",
-      "surfaceId": "kungfu.cli.commands.kfx.run.wasm"
-    },
-    {
-      "apiIds": [],
-      "reason": "no-agent-first-api-declared",
-      "state": "unlinked",
-      "surfaceId": "kungfu.cli.commands.kfx.schema"
-    },
-    {
-      "apiIds": [],
-      "reason": "navigation-only",
-      "state": "unlinked",
-      "surfaceId": "kungfu.cli.commands.lock.lock"
-    },
-    {
-      "apiIds": [],
-      "reason": "no-agent-first-api-declared",
-      "state": "unlinked",
-      "surfaceId": "kungfu.cli.commands.lock.lock.run"
-    },
-    {
-      "apiIds": [],
-      "reason": "no-agent-first-api-declared",
-      "state": "unlinked",
-      "surfaceId": "kungfu.cli.commands.lock.lock.status"
-    },
-    {
-      "apiIds": [
-        "kungfu.managed-run.start"
-      ],
-      "reason": null,
-      "state": "linked",
-      "surfaceId": "kungfu.cli.commands.managed.run.managed.run"
-    },
-    {
-      "apiIds": [],
-      "reason": "navigation-only",
-      "state": "unlinked",
-      "surfaceId": "kungfu.cli.commands.primitive.primitive"
-    },
-    {
-      "apiIds": [
-        "kungfu.primitive.availability"
-      ],
-      "reason": null,
-      "state": "linked",
-      "surfaceId": "kungfu.cli.commands.primitive.primitive.availability"
-    },
-    {
-      "apiIds": [
-        "kungfu.primitive.explain"
-      ],
-      "reason": null,
-      "state": "linked",
-      "surfaceId": "kungfu.cli.commands.primitive.explain.primitive"
-    },
-    {
-      "apiIds": [
-        "kungfu.primitive.graph"
-      ],
-      "reason": null,
-      "state": "linked",
-      "surfaceId": "kungfu.cli.commands.primitive.graph.primitives"
-    },
-    {
-      "apiIds": [
-        "kungfu.primitive.list"
-      ],
-      "reason": null,
-      "state": "linked",
-      "surfaceId": "kungfu.cli.commands.primitive.list.primitives"
-    },
-    {
-      "apiIds": [
-        "kungfu.primitive.show"
-      ],
-      "reason": null,
-      "state": "linked",
-      "surfaceId": "kungfu.cli.commands.primitive.show.primitive"
-    },
-    {
-      "apiIds": [],
-      "reason": "navigation-only",
-      "state": "unlinked",
-      "surfaceId": "kungfu.cli.commands.profile.profile"
-    },
-    {
-      "apiIds": [
-        "kungfu.profile.action"
-      ],
-      "reason": null,
-      "state": "linked",
-      "surfaceId": "kungfu.cli.commands.profile.actions"
-    },
-    {
-      "apiIds": [
-        "kungfu.profile.application"
-      ],
-      "reason": null,
-      "state": "linked",
-      "surfaceId": "kungfu.cli.commands.profile.application"
-    },
-    {
-      "apiIds": [
-        "kungfu.profile.lifecycle"
-      ],
-      "reason": null,
-      "state": "linked",
-      "surfaceId": "kungfu.cli.commands.profile.apply"
-    },
-    {
-      "apiIds": [
-        "kungfu.profile.assessment"
-      ],
-      "reason": null,
-      "state": "linked",
-      "surfaceId": "kungfu.cli.commands.profile.assess.plan"
-    },
-    {
-      "apiIds": [
-        "kungfu.profile.assessment"
-      ],
-      "reason": null,
-      "state": "linked",
-      "surfaceId": "kungfu.cli.commands.profile.assess.run"
-    },
-    {
-      "apiIds": [
-        "kungfu.profile.assessment"
-      ],
-      "reason": null,
-      "state": "linked",
-      "surfaceId": "kungfu.cli.commands.profile.assessment.authorize"
-    },
-    {
-      "apiIds": [
-        "kungfu.profile.assessment"
-      ],
-      "reason": null,
-      "state": "linked",
-      "surfaceId": "kungfu.cli.commands.profile.assessment.plan"
-    },
-    {
-      "apiIds": [
-        "kungfu.profile.lifecycle"
-      ],
-      "reason": null,
-      "state": "linked",
-      "surfaceId": "kungfu.cli.commands.profile.authorize.lifecycle"
-    },
-    {
-      "apiIds": [
-        "kungfu.profile.discovery"
-      ],
-      "reason": null,
-      "state": "linked",
-      "surfaceId": "kungfu.cli.commands.profile.capabilities"
-    },
-    {
-      "apiIds": [
-        "kungfu.profile.composition"
-      ],
-      "reason": null,
-      "state": "linked",
-      "surfaceId": "kungfu.cli.commands.profile.catalog"
-    },
-    {
-      "apiIds": [
-        "kungfu.profile.source"
-      ],
-      "reason": null,
-      "state": "linked",
-      "surfaceId": "kungfu.cli.commands.profile.collaboration"
-    },
-    {
-      "apiIds": [],
-      "reason": "no-agent-first-api-declared",
-      "state": "unlinked",
-      "surfaceId": "kungfu.cli.commands.profile.contract.apply"
-    },
-    {
-      "apiIds": [],
-      "reason": "no-agent-first-api-declared",
-      "state": "unlinked",
-      "surfaceId": "kungfu.cli.commands.profile.contract.plan"
-    },
-    {
-      "apiIds": [
-        "kungfu.profile.lifecycle"
-      ],
-      "reason": null,
-      "state": "linked",
-      "surfaceId": "kungfu.cli.commands.profile.decide"
-    },
-    {
-      "apiIds": [
-        "kungfu.profile.diff"
-      ],
-      "reason": null,
-      "state": "linked",
-      "surfaceId": "kungfu.cli.commands.profile.diff"
-    },
-    {
-      "apiIds": [],
-      "reason": "no-agent-first-api-declared",
-      "state": "unlinked",
-      "surfaceId": "kungfu.cli.commands.profile.discover"
-    },
-    {
-      "apiIds": [
-        "kungfu.profile.discovery"
-      ],
-      "reason": null,
-      "state": "linked",
-      "surfaceId": "kungfu.cli.commands.profile.examples"
-    },
-    {
-      "apiIds": [],
-      "reason": "no-agent-first-api-declared",
-      "state": "unlinked",
-      "surfaceId": "kungfu.cli.commands.profile.export.bundle"
-    },
-    {
-      "apiIds": [
-        "kungfu.profile.read"
-      ],
-      "reason": null,
-      "state": "linked",
-      "surfaceId": "kungfu.cli.commands.profile.history"
-    },
-    {
-      "apiIds": [],
-      "reason": "no-agent-first-api-declared",
-      "state": "unlinked",
-      "surfaceId": "kungfu.cli.commands.profile.import.bundle"
-    },
-    {
-      "apiIds": [
-        "kungfu.profile.read"
-      ],
-      "reason": null,
-      "state": "linked",
-      "surfaceId": "kungfu.cli.commands.profile.inspect"
-    },
-    {
-      "apiIds": [],
-      "reason": "navigation-only",
-      "state": "unlinked",
-      "surfaceId": "kungfu.cli.commands.profile.intent"
-    },
-    {
-      "apiIds": [
-        "kungfu.profile.application"
-      ],
-      "reason": null,
-      "state": "linked",
-      "surfaceId": "kungfu.cli.commands.profile.intent.advise"
-    },
-    {
-      "apiIds": [
-        "kungfu.profile.application"
-      ],
-      "reason": null,
-      "state": "linked",
-      "surfaceId": "kungfu.cli.commands.profile.intent.apply"
-    },
-    {
-      "apiIds": [
-        "kungfu.profile.application"
-      ],
-      "reason": null,
-      "state": "linked",
-      "surfaceId": "kungfu.cli.commands.profile.intent.authorize"
-    },
-    {
-      "apiIds": [
-        "kungfu.profile.application"
-      ],
-      "reason": null,
-      "state": "linked",
-      "surfaceId": "kungfu.cli.commands.profile.intent.inspect"
-    },
-    {
-      "apiIds": [
-        "kungfu.profile.application"
-      ],
-      "reason": null,
-      "state": "linked",
-      "surfaceId": "kungfu.cli.commands.profile.intent.plan"
-    },
-    {
-      "apiIds": [
-        "kungfu.profile.application"
-      ],
-      "reason": null,
-      "state": "linked",
-      "surfaceId": "kungfu.cli.commands.profile.intent.verify"
-    },
-    {
-      "apiIds": [
-        "kungfu.profile.action"
-      ],
-      "reason": null,
-      "state": "linked",
-      "surfaceId": "kungfu.cli.commands.profile.invoke"
-    },
-    {
-      "apiIds": [
-        "kungfu.profile.kfd3-qualification"
-      ],
-      "reason": null,
-      "state": "linked",
-      "surfaceId": "kungfu.cli.commands.profile.kfd3.authorize"
-    },
-    {
-      "apiIds": [
-        "kungfu.profile.kfd3-qualification"
-      ],
-      "reason": null,
-      "state": "linked",
-      "surfaceId": "kungfu.cli.commands.profile.kfd3.plan"
-    },
-    {
-      "apiIds": [
-        "kungfu.profile.kfd3-qualification"
-      ],
-      "reason": null,
-      "state": "linked",
-      "surfaceId": "kungfu.cli.commands.profile.kfd3.qualify"
-    },
-    {
-      "apiIds": [],
-      "reason": "no-agent-first-api-declared",
-      "state": "unlinked",
-      "surfaceId": "kungfu.cli.commands.profile.kfd3.release.build"
-    },
-    {
-      "apiIds": [
-        "kungfu.profile.kfd3-qualification"
-      ],
-      "reason": null,
-      "state": "linked",
-      "surfaceId": "kungfu.cli.commands.profile.kfd3.status"
-    },
-    {
-      "apiIds": [
-        "kungfu.profile.kfd3-qualification"
-      ],
-      "reason": null,
-      "state": "linked",
-      "surfaceId": "kungfu.cli.commands.profile.kfd3.verify"
-    },
-    {
-      "apiIds": [
-        "kungfu.profile.read"
-      ],
-      "reason": null,
-      "state": "linked",
-      "surfaceId": "kungfu.cli.commands.profile.list.profiles"
-    },
-    {
-      "apiIds": [
-        "kungfu.profile.manager"
-      ],
-      "reason": null,
-      "state": "linked",
-      "surfaceId": "kungfu.cli.commands.profile.manager"
-    },
-    {
-      "apiIds": [
-        "kungfu.profile.action"
-      ],
-      "reason": null,
-      "state": "linked",
-      "surfaceId": "kungfu.cli.commands.profile.member.call"
-    },
-    {
-      "apiIds": [
-        "kungfu.atlas.assess-mission"
-      ],
-      "reason": null,
-      "state": "linked",
-      "surfaceId": "kungfu.cli.commands.atlas.mission.control"
-    },
-    {
-      "apiIds": [
-        "kungfu.atlas.assess-completion"
-      ],
-      "reason": null,
-      "state": "linked",
-      "surfaceId": "kungfu.cli.commands.atlas.assess.completion.cmd"
-    },
-    {
-      "apiIds": [
-        "kungfu.atlas.authority-cutover"
-      ],
-      "reason": null,
-      "state": "linked",
-      "surfaceId": "kungfu.cli.commands.atlas.authority.cutover.cmd"
-    },
-    {
-      "apiIds": [
-        "kungfu.atlas.authority-rollback"
-      ],
-      "reason": null,
-      "state": "linked",
-      "surfaceId": "kungfu.cli.commands.atlas.authority.rollback.cmd"
-    },
-    {
-      "apiIds": [
-        "kungfu.atlas.authority-status"
-      ],
-      "reason": null,
-      "state": "linked",
-      "surfaceId": "kungfu.cli.commands.atlas.authority.status.cmd"
-    },
-    {
-      "apiIds": [],
-      "reason": "no-agent-first-api-declared",
-      "state": "unlinked",
-      "surfaceId": "kungfu.cli.commands.atlas.dashboard"
-    },
-    {
-      "apiIds": [
-        "kungfu.atlas.export-mission"
-      ],
-      "reason": null,
-      "state": "linked",
-      "surfaceId": "kungfu.cli.commands.atlas.export.mission.cmd"
-    },
-    {
-      "apiIds": [],
-      "reason": "no-agent-first-api-declared",
-      "state": "unlinked",
-      "surfaceId": "kungfu.cli.commands.atlas.goal"
-    },
-    {
-      "apiIds": [
-        "kungfu.atlas.show.goals"
-      ],
-      "reason": null,
-      "state": "linked",
-      "surfaceId": "kungfu.cli.commands.atlas.goals"
-    },
-    {
-      "apiIds": [
-        "kungfu.atlas.import-mission"
-      ],
-      "reason": null,
-      "state": "linked",
-      "surfaceId": "kungfu.cli.commands.atlas.import.mission.cmd"
-    },
-    {
-      "apiIds": [],
-      "reason": "no-agent-first-api-declared",
-      "state": "unlinked",
-      "surfaceId": "kungfu.cli.commands.atlas.mission"
-    },
-    {
-      "apiIds": [
-        "kungfu.atlas.show.missions"
-      ],
-      "reason": null,
-      "state": "linked",
-      "surfaceId": "kungfu.cli.commands.atlas.missions"
-    },
-    {
-      "apiIds": [
-        "kungfu.profile.lifecycle"
-      ],
-      "reason": null,
-      "state": "linked",
-      "surfaceId": "kungfu.cli.commands.profile.plan"
-    },
-    {
-      "apiIds": [
-        "kungfu.profile.source"
-      ],
-      "reason": null,
-      "state": "linked",
-      "surfaceId": "kungfu.cli.commands.profile.qualify"
-    },
-    {
-      "apiIds": [
-        "kungfu.profile.composition"
-      ],
-      "reason": null,
-      "state": "linked",
-      "surfaceId": "kungfu.cli.commands.profile.query.execute"
-    },
-    {
-      "apiIds": [
-        "kungfu.profile.composition"
-      ],
-      "reason": null,
-      "state": "linked",
-      "surfaceId": "kungfu.cli.commands.profile.query.plan"
-    },
-    {
-      "apiIds": [
-        "kungfu.profile.composition"
-      ],
-      "reason": null,
-      "state": "linked",
-      "surfaceId": "kungfu.cli.commands.profile.query.run"
-    },
-    {
-      "apiIds": [
-        "kungfu.profile.scaffold"
-      ],
-      "reason": null,
-      "state": "linked",
-      "surfaceId": "kungfu.cli.commands.profile.scaffold"
-    },
-    {
-      "apiIds": [
-        "kungfu.profile.source"
-      ],
-      "reason": null,
-      "state": "linked",
-      "surfaceId": "kungfu.cli.commands.profile.validate"
-    },
-    {
-      "apiIds": [],
-      "reason": "navigation-only",
-      "state": "unlinked",
-      "surfaceId": "kungfu.cli.commands.pursuit.pursuit"
-    },
-    {
-      "apiIds": [],
-      "reason": "no-agent-first-api-declared",
-      "state": "unlinked",
-      "surfaceId": "kungfu.cli.commands.primitive.role.register.role.commands.locals.action.kungfu.pursuit.action"
-    },
-    {
-      "apiIds": [],
-      "reason": "no-agent-first-api-declared",
-      "state": "unlinked",
-      "surfaceId": "kungfu.cli.commands.primitive.role.register.role.commands.locals.capabilities.kungfu.pursuit.capabilities"
-    },
-    {
-      "apiIds": [],
-      "reason": "no-agent-first-api-declared",
-      "state": "unlinked",
-      "surfaceId": "kungfu.cli.commands.primitive.role.register.role.commands.locals.inspect.kungfu.pursuit.inspect"
-    },
-    {
-      "apiIds": [
-        "kungfu.qualification-lab"
-      ],
-      "reason": null,
-      "state": "linked",
-      "surfaceId": "kungfu.qualification-lab"
-    },
-    {
-      "apiIds": [
-        "kungfu.qualification-lab.agent-plan"
-      ],
-      "reason": null,
-      "state": "linked",
-      "surfaceId": "kungfu.qualification-lab.agent-plan"
-    },
-    {
-      "apiIds": [
-        "kungfu.qualification-lab.agent-run"
-      ],
-      "reason": null,
-      "state": "linked",
-      "surfaceId": "kungfu.qualification-lab.agent-run"
-    },
-    {
-      "apiIds": [
-        "kungfu.qualification-lab.agents"
-      ],
-      "reason": null,
-      "state": "linked",
-      "surfaceId": "kungfu.qualification-lab.agents"
-    },
-    {
-      "apiIds": [
-        "kungfu.qualification-lab.catalog"
-      ],
-      "reason": null,
-      "state": "linked",
-      "surfaceId": "kungfu.qualification-lab.catalog"
-    },
-    {
-      "apiIds": [
-        "kungfu.qualification-lab.demo"
-      ],
-      "reason": null,
-      "state": "linked",
-      "surfaceId": "kungfu.qualification-lab.demo"
-    },
-    {
-      "apiIds": [
-        "kungfu.qualification-lab.inspect"
-      ],
-      "reason": null,
-      "state": "linked",
-      "surfaceId": "kungfu.qualification-lab.inspect"
-    },
-    {
-      "apiIds": [
-        "kungfu.qualification-lab.plan"
-      ],
-      "reason": null,
-      "state": "linked",
-      "surfaceId": "kungfu.qualification-lab.plan"
-    },
-    {
-      "apiIds": [],
-      "reason": "navigation-only",
-      "state": "unlinked",
-      "surfaceId": "kungfu.cli.commands.query.query"
-    },
-    {
-      "apiIds": [
-        "kungfu.query.capabilities"
-      ],
-      "reason": null,
-      "state": "linked",
-      "surfaceId": "kungfu.cli.commands.query.capabilities"
-    },
-    {
-      "apiIds": [
-        "kungfu.query.changelog"
-      ],
-      "reason": null,
-      "state": "linked",
-      "surfaceId": "kungfu.cli.commands.query.changelog"
-    },
-    {
-      "apiIds": [],
-      "reason": "no-agent-first-api-declared",
-      "state": "unlinked",
-      "surfaceId": "kungfu.cli.commands.query.compile.sql"
-    },
-    {
-      "apiIds": [
-        "kungfu.query.describe"
-      ],
-      "reason": null,
-      "state": "linked",
-      "surfaceId": "kungfu.cli.commands.query.describe"
-    },
-    {
-      "apiIds": [
-        "kungfu.query.examples"
-      ],
-      "reason": null,
-      "state": "linked",
-      "surfaceId": "kungfu.cli.commands.query.examples"
-    },
-    {
-      "apiIds": [
-        "kungfu.query.explain"
-      ],
-      "reason": null,
-      "state": "linked",
-      "surfaceId": "kungfu.cli.commands.query.explain"
-    },
-    {
-      "apiIds": [
-        "kungfu.query.prove"
-      ],
-      "reason": null,
-      "state": "linked",
-      "surfaceId": "kungfu.cli.commands.query.prove"
-    },
-    {
-      "apiIds": [],
-      "reason": "navigation-only",
-      "state": "unlinked",
-      "surfaceId": "kungfu.cli.commands.query.saved.queries"
-    },
-    {
-      "apiIds": [
-        "kungfu.query.saved-catalog"
-      ],
-      "reason": null,
-      "state": "linked",
-      "surfaceId": "kungfu.cli.commands.query.saved.delete"
-    },
-    {
-      "apiIds": [
-        "kungfu.query.saved-catalog"
-      ],
-      "reason": null,
-      "state": "linked",
-      "surfaceId": "kungfu.cli.commands.query.saved.export"
-    },
-    {
-      "apiIds": [
-        "kungfu.query.saved-catalog"
-      ],
-      "reason": null,
-      "state": "linked",
-      "surfaceId": "kungfu.cli.commands.query.saved.history"
-    },
-    {
-      "apiIds": [
-        "kungfu.query.saved-catalog"
-      ],
-      "reason": null,
-      "state": "linked",
-      "surfaceId": "kungfu.cli.commands.query.saved.import"
-    },
-    {
-      "apiIds": [
-        "kungfu.query.saved-catalog"
-      ],
-      "reason": null,
-      "state": "linked",
-      "surfaceId": "kungfu.cli.commands.query.saved.list"
-    },
-    {
-      "apiIds": [
-        "kungfu.query.saved-catalog"
-      ],
-      "reason": null,
-      "state": "linked",
-      "surfaceId": "kungfu.cli.commands.query.saved.rebuild"
-    },
-    {
-      "apiIds": [
-        "kungfu.query.saved-catalog"
-      ],
-      "reason": null,
-      "state": "linked",
-      "surfaceId": "kungfu.cli.commands.query.saved.run"
-    },
-    {
-      "apiIds": [
-        "kungfu.query.saved-catalog"
-      ],
-      "reason": null,
-      "state": "linked",
-      "surfaceId": "kungfu.cli.commands.query.saved.show"
-    },
-    {
-      "apiIds": [
-        "kungfu.query.saved-catalog"
-      ],
-      "reason": null,
-      "state": "linked",
-      "surfaceId": "kungfu.cli.commands.query.saved.update"
-    },
-    {
-      "apiIds": [
-        "kungfu.query.saved-view"
-      ],
-      "reason": null,
-      "state": "linked",
-      "surfaceId": "kungfu.cli.commands.query.saved.view"
-    },
-    {
-      "apiIds": [
-        "kungfu.query.schema"
-      ],
-      "reason": null,
-      "state": "linked",
-      "surfaceId": "kungfu.cli.commands.query.schema"
-    },
-    {
-      "apiIds": [
-        "kungfu.query.validate"
-      ],
-      "reason": null,
-      "state": "linked",
-      "surfaceId": "kungfu.cli.commands.query.validate"
-    },
-    {
-      "apiIds": [],
-      "reason": "no-agent-first-api-declared",
-      "state": "unlinked",
-      "surfaceId": "kungfu.cli.commands.recover.recover"
-    },
-    {
-      "apiIds": [],
-      "reason": "navigation-only",
-      "state": "unlinked",
-      "surfaceId": "kungfu.cli.commands.release.release.group"
-    },
-    {
-      "apiIds": [
-        "kungfu.release.explain"
-      ],
-      "reason": null,
-      "state": "linked",
-      "surfaceId": "kungfu.cli.commands.release.explain.cmd"
-    },
-    {
-      "apiIds": [
-        "kungfu.release.status"
-      ],
-      "reason": null,
-      "state": "linked",
-      "surfaceId": "kungfu.cli.commands.release.status.cmd"
-    },
-    {
-      "apiIds": [
-        "kungfu.release.verify"
-      ],
-      "reason": null,
-      "state": "linked",
-      "surfaceId": "kungfu.cli.commands.release.verify.cmd"
-    },
-    {
-      "apiIds": [],
-      "reason": "navigation-only",
-      "state": "unlinked",
-      "surfaceId": "kungfu.cli.commands.remote.remote"
-    },
-    {
-      "apiIds": [
-        "kungfu.remote.add"
-      ],
-      "reason": null,
-      "state": "linked",
-      "surfaceId": "kungfu.cli.commands.remote.add"
-    },
-    {
-      "apiIds": [],
-      "reason": "no-agent-first-api-declared",
-      "state": "unlinked",
-      "surfaceId": "kungfu.cli.commands.remote.list.sources"
-    },
-    {
-      "apiIds": [],
-      "reason": "no-agent-first-api-declared",
-      "state": "unlinked",
-      "surfaceId": "kungfu.cli.commands.remote.runs"
-    },
-    {
-      "apiIds": [],
-      "reason": "no-agent-first-api-declared",
-      "state": "unlinked",
-      "surfaceId": "kungfu.cli.commands.remote.show"
-    },
-    {
-      "apiIds": [
-        "kungfu.remote.sync"
-      ],
-      "reason": null,
-      "state": "linked",
-      "surfaceId": "kungfu.cli.commands.remote.sync"
-    },
-    {
-      "apiIds": [],
-      "reason": "navigation-only",
-      "state": "unlinked",
-      "surfaceId": "kungfu.cli.commands.report.report"
-    },
-    {
-      "apiIds": [],
-      "reason": "no-agent-first-api-declared",
-      "state": "unlinked",
-      "surfaceId": "kungfu.cli.commands.report.approval"
-    },
-    {
-      "apiIds": [
-        "kungfu.report.cost"
-      ],
-      "reason": null,
-      "state": "linked",
-      "surfaceId": "kungfu.cli.commands.report.cost"
-    },
-    {
-      "apiIds": [],
-      "reason": "no-agent-first-api-declared",
-      "state": "unlinked",
-      "surfaceId": "kungfu.cli.commands.report.event"
-    },
-    {
-      "apiIds": [],
-      "reason": "no-agent-first-api-declared",
-      "state": "unlinked",
-      "surfaceId": "kungfu.cli.commands.report.progress"
-    },
-    {
-      "apiIds": [],
-      "reason": "navigation-only",
-      "state": "unlinked",
-      "surfaceId": "kungfu.cli.commands.report.run"
-    },
-    {
-      "apiIds": [
-        "kungfu.report.run.begin"
-      ],
-      "reason": null,
-      "state": "linked",
-      "surfaceId": "kungfu.cli.commands.report.begin"
-    },
-    {
-      "apiIds": [
-        "kungfu.report.run.end"
-      ],
-      "reason": null,
-      "state": "linked",
-      "surfaceId": "kungfu.cli.commands.report.end"
-    },
-    {
-      "apiIds": [],
-      "reason": "navigation-only",
-      "state": "unlinked",
-      "surfaceId": "kungfu.cli.commands.rewind.rewind"
-    },
-    {
-      "apiIds": [],
-      "reason": "not-agent-visible",
-      "state": "unlinked",
-      "surfaceId": "kungfu.cli.commands.rewind.export.cmd"
-    },
-    {
-      "apiIds": [],
-      "reason": "not-agent-visible",
-      "state": "unlinked",
-      "surfaceId": "kungfu.cli.commands.rewind.open.cmd"
-    },
-    {
-      "apiIds": [],
-      "reason": "not-agent-visible",
-      "state": "unlinked",
-      "surfaceId": "kungfu.cli.commands.rewind.show"
-    },
-    {
-      "apiIds": [],
-      "reason": "not-agent-visible",
-      "state": "unlinked",
-      "surfaceId": "kungfu.cli.commands.rewind.verify"
-    },
-    {
-      "apiIds": [
-        "kungfu.run"
-      ],
-      "reason": null,
-      "state": "linked",
-      "surfaceId": "kungfu.run"
-    },
-    {
-      "apiIds": [
-        "kungfu.run.agent"
-      ],
-      "reason": null,
-      "state": "linked",
-      "surfaceId": "kungfu.run.agent"
-    },
-    {
-      "apiIds": [],
-      "reason": "navigation-only",
-      "state": "unlinked",
-      "surfaceId": "kungfu.cli.commands.runtime.runtime"
-    },
-    {
-      "apiIds": [],
-      "reason": "no-agent-first-api-declared",
-      "state": "unlinked",
-      "surfaceId": "kungfu.cli.commands.runtime.assess.worker"
-    },
-    {
-      "apiIds": [],
-      "reason": "no-agent-first-api-declared",
-      "state": "unlinked",
-      "surfaceId": "kungfu.cli.commands.runtime.assessments"
-    },
-    {
-      "apiIds": [],
-      "reason": "no-agent-first-api-declared",
-      "state": "unlinked",
-      "surfaceId": "kungfu.cli.commands.runtime.ensure"
-    },
-    {
-      "apiIds": [],
-      "reason": "no-agent-first-api-declared",
-      "state": "unlinked",
-      "surfaceId": "kungfu.cli.commands.runtime.runtime.operations"
-    },
-    {
-      "apiIds": [],
-      "reason": "navigation-only",
-      "state": "unlinked",
-      "surfaceId": "kungfu.cli.commands.runtime.runtime.peer"
-    },
-    {
-      "apiIds": [],
-      "reason": "no-agent-first-api-declared",
-      "state": "unlinked",
-      "surfaceId": "kungfu.cli.commands.runtime.peer.contract"
-    },
-    {
-      "apiIds": [],
-      "reason": "no-agent-first-api-declared",
-      "state": "unlinked",
-      "surfaceId": "kungfu.cli.commands.runtime.peer.ensure"
-    },
-    {
-      "apiIds": [],
-      "reason": "no-agent-first-api-declared",
-      "state": "unlinked",
-      "surfaceId": "kungfu.cli.commands.runtime.peer.health"
-    },
-    {
-      "apiIds": [],
-      "reason": "no-agent-first-api-declared",
-      "state": "unlinked",
-      "surfaceId": "kungfu.cli.commands.runtime.peer.plan"
-    },
-    {
-      "apiIds": [],
-      "reason": "no-agent-first-api-declared",
-      "state": "unlinked",
-      "surfaceId": "kungfu.cli.commands.runtime.peer.restart"
-    },
-    {
-      "apiIds": [],
-      "reason": "no-agent-first-api-declared",
-      "state": "unlinked",
-      "surfaceId": "kungfu.cli.commands.runtime.peer.start"
-    },
-    {
-      "apiIds": [],
-      "reason": "no-agent-first-api-declared",
-      "state": "unlinked",
-      "surfaceId": "kungfu.cli.commands.runtime.peer.status"
-    },
-    {
-      "apiIds": [],
-      "reason": "no-agent-first-api-declared",
-      "state": "unlinked",
-      "surfaceId": "kungfu.cli.commands.runtime.peer.stop"
-    },
-    {
-      "apiIds": [],
-      "reason": "no-agent-first-api-declared",
-      "state": "unlinked",
-      "surfaceId": "kungfu.cli.commands.runtime.peer.host"
-    },
-    {
-      "apiIds": [],
-      "reason": "no-agent-first-api-declared",
-      "state": "unlinked",
-      "surfaceId": "kungfu.cli.commands.runtime.runtime.plan"
-    },
-    {
-      "apiIds": [],
-      "reason": "no-agent-first-api-declared",
-      "state": "unlinked",
-      "surfaceId": "kungfu.cli.commands.runtime.restart"
-    },
-    {
-      "apiIds": [],
-      "reason": "no-agent-first-api-declared",
-      "state": "unlinked",
-      "surfaceId": "kungfu.cli.commands.runtime.run"
-    },
-    {
-      "apiIds": [],
-      "reason": "navigation-only",
-      "state": "unlinked",
-      "surfaceId": "kungfu.cli.commands.runtime.service"
-    },
-    {
-      "apiIds": [],
-      "reason": "no-agent-first-api-declared",
-      "state": "unlinked",
-      "surfaceId": "kungfu.cli.commands.runtime.install"
-    },
-    {
-      "apiIds": [],
-      "reason": "no-agent-first-api-declared",
-      "state": "unlinked",
-      "surfaceId": "kungfu.cli.commands.runtime.plan"
-    },
-    {
-      "apiIds": [],
-      "reason": "no-agent-first-api-declared",
-      "state": "unlinked",
-      "surfaceId": "kungfu.cli.commands.runtime.service.status"
-    },
-    {
-      "apiIds": [],
-      "reason": "no-agent-first-api-declared",
-      "state": "unlinked",
-      "surfaceId": "kungfu.cli.commands.runtime.uninstall"
-    },
-    {
-      "apiIds": [],
-      "reason": "no-agent-first-api-declared",
-      "state": "unlinked",
-      "surfaceId": "kungfu.cli.commands.runtime.start"
-    },
-    {
-      "apiIds": [],
-      "reason": "no-agent-first-api-declared",
-      "state": "unlinked",
-      "surfaceId": "kungfu.cli.commands.runtime.runtime.status"
-    },
-    {
-      "apiIds": [],
-      "reason": "no-agent-first-api-declared",
-      "state": "unlinked",
-      "surfaceId": "kungfu.cli.commands.runtime.stop"
-    },
-    {
-      "apiIds": [],
-      "reason": "no-agent-first-api-declared",
-      "state": "unlinked",
-      "surfaceId": "kungfu.cli.commands.runtime.supervise"
-    },
-    {
-      "apiIds": [],
-      "reason": "no-agent-first-api-declared",
-      "state": "unlinked",
-      "surfaceId": "kungfu.cli.commands.runtime.trust"
-    },
-    {
-      "apiIds": [],
-      "reason": "navigation-only",
-      "state": "unlinked",
-      "surfaceId": "kungfu.cli.commands.runtime.runtime.upgrade.group"
-    },
-    {
-      "apiIds": [],
-      "reason": "no-agent-first-api-declared",
-      "state": "unlinked",
-      "surfaceId": "kungfu.cli.commands.runtime.upgrade.contract"
-    },
-    {
-      "apiIds": [],
-      "reason": "no-agent-first-api-declared",
-      "state": "unlinked",
-      "surfaceId": "kungfu.cli.commands.runtime.upgrade.gc"
-    },
-    {
-      "apiIds": [],
-      "reason": "no-agent-first-api-declared",
-      "state": "unlinked",
-      "surfaceId": "kungfu.cli.commands.runtime.upgrade.gc.plan"
-    },
-    {
-      "apiIds": [],
-      "reason": "no-agent-first-api-declared",
-      "state": "unlinked",
-      "surfaceId": "kungfu.cli.commands.runtime.upgrade.install"
-    },
-    {
-      "apiIds": [],
-      "reason": "no-agent-first-api-declared",
-      "state": "unlinked",
-      "surfaceId": "kungfu.cli.commands.runtime.upgrade.inventory"
-    },
-    {
-      "apiIds": [],
-      "reason": "no-agent-first-api-declared",
-      "state": "unlinked",
-      "surfaceId": "kungfu.cli.commands.runtime.upgrade.plan"
-    },
-    {
-      "apiIds": [],
-      "reason": "no-agent-first-api-declared",
-      "state": "unlinked",
-      "surfaceId": "kungfu.cli.commands.runtime.upgrade.plan.install"
-    },
-    {
-      "apiIds": [],
-      "reason": "no-agent-first-api-declared",
-      "state": "unlinked",
-      "surfaceId": "kungfu.cli.commands.runtime.upgrade.reconcile"
-    },
-    {
-      "apiIds": [],
-      "reason": "no-agent-first-api-declared",
-      "state": "unlinked",
-      "surfaceId": "kungfu.cli.commands.runtime.upgrade.stage"
-    },
-    {
-      "apiIds": [],
-      "reason": "not-agent-visible",
-      "state": "unlinked",
-      "surfaceId": "kungfu.cli.commands.sdk.sdk"
-    },
-    {
-      "apiIds": [],
-      "reason": "navigation-only",
-      "state": "unlinked",
-      "surfaceId": "kungfu.cli.commands.skill.skill"
-    },
-    {
-      "apiIds": [],
-      "reason": "no-agent-first-api-declared",
-      "state": "unlinked",
-      "surfaceId": "kungfu.cli.commands.skill.audit"
-    },
-    {
-      "apiIds": [
-        "kungfu.skill.catalog"
-      ],
-      "reason": null,
-      "state": "linked",
-      "surfaceId": "kungfu.cli.commands.skill.catalog"
-    },
-    {
-      "apiIds": [],
-      "reason": "no-agent-first-api-declared",
-      "state": "unlinked",
-      "surfaceId": "kungfu.cli.commands.skill.context"
-    },
-    {
-      "apiIds": [],
-      "reason": "no-agent-first-api-declared",
-      "state": "unlinked",
-      "surfaceId": "kungfu.cli.commands.skill.contract.cmd"
-    },
-    {
-      "apiIds": [],
-      "reason": "no-agent-first-api-declared",
-      "state": "unlinked",
-      "surfaceId": "kungfu.cli.commands.skill.deps"
-    },
-    {
-      "apiIds": [],
-      "reason": "no-agent-first-api-declared",
-      "state": "unlinked",
-      "surfaceId": "kungfu.cli.commands.skill.explain"
-    },
-    {
-      "apiIds": [],
-      "reason": "no-agent-first-api-declared",
-      "state": "unlinked",
-      "surfaceId": "kungfu.cli.commands.skill.install"
-    },
-    {
-      "apiIds": [],
-      "reason": "no-agent-first-api-declared",
-      "state": "unlinked",
-      "surfaceId": "kungfu.cli.commands.skill.list.skills"
-    },
-    {
-      "apiIds": [
-        "kungfu.skill.read"
-      ],
-      "reason": null,
-      "state": "linked",
-      "surfaceId": "kungfu.cli.commands.skill.read"
-    },
-    {
-      "apiIds": [],
-      "reason": "no-agent-first-api-declared",
-      "state": "unlinked",
-      "surfaceId": "kungfu.cli.commands.skill.schema.cmd"
-    },
-    {
-      "apiIds": [],
-      "reason": "no-agent-first-api-declared",
-      "state": "unlinked",
-      "surfaceId": "kungfu.cli.commands.skill.validate"
-    },
-    {
-      "apiIds": [],
-      "reason": "no-agent-first-api-declared",
-      "state": "unlinked",
-      "surfaceId": "kungfu.cli.commands.skill.verify"
-    },
-    {
-      "apiIds": [],
-      "reason": "navigation-only",
-      "state": "unlinked",
-      "surfaceId": "kungfu.cli.commands.source.source"
-    },
-    {
-      "apiIds": [],
-      "reason": "no-agent-first-api-declared",
-      "state": "unlinked",
-      "surfaceId": "kungfu.cli.commands.source.add.cmd"
-    },
-    {
-      "apiIds": [],
-      "reason": "no-agent-first-api-declared",
-      "state": "unlinked",
-      "surfaceId": "kungfu.cli.commands.source.fsck"
-    },
-    {
-      "apiIds": [],
-      "reason": "no-agent-first-api-declared",
-      "state": "unlinked",
-      "surfaceId": "kungfu.cli.commands.source.list.cmd"
-    },
-    {
-      "apiIds": [],
-      "reason": "no-agent-first-api-declared",
-      "state": "unlinked",
-      "surfaceId": "kungfu.cli.commands.source.show"
-    },
-    {
-      "apiIds": [],
-      "reason": "no-agent-first-api-declared",
-      "state": "unlinked",
-      "surfaceId": "kungfu.cli.commands.source.sync"
-    },
-    {
-      "apiIds": [],
-      "reason": "navigation-only",
-      "state": "unlinked",
-      "surfaceId": "kungfu.cli.commands.storage.storage"
-    },
-    {
-      "apiIds": [],
-      "reason": "navigation-only",
-      "state": "unlinked",
-      "surfaceId": "kungfu.cli.commands.storage.backend"
-    },
-    {
-      "apiIds": [],
-      "reason": "no-agent-first-api-declared",
-      "state": "unlinked",
-      "surfaceId": "kungfu.cli.commands.storage.backend.rollback"
-    },
-    {
-      "apiIds": [],
-      "reason": "no-agent-first-api-declared",
-      "state": "unlinked",
-      "surfaceId": "kungfu.cli.commands.storage.backend.status"
-    },
-    {
-      "apiIds": [],
-      "reason": "no-agent-first-api-declared",
-      "state": "unlinked",
-      "surfaceId": "kungfu.cli.commands.storage.backend.switch"
-    },
-    {
-      "apiIds": [
-        "kungfu.storage.compact"
-      ],
-      "reason": null,
-      "state": "linked",
-      "surfaceId": "kungfu.cli.commands.storage.compact"
-    },
-    {
-      "apiIds": [],
-      "reason": "no-agent-first-api-declared",
-      "state": "unlinked",
-      "surfaceId": "kungfu.cli.commands.storage.durability.reconcile"
-    },
-    {
-      "apiIds": [],
-      "reason": "navigation-only",
-      "state": "unlinked",
-      "surfaceId": "kungfu.cli.commands.storage.episode"
-    },
-    {
-      "apiIds": [],
-      "reason": "no-agent-first-api-declared",
-      "state": "unlinked",
-      "surfaceId": "kungfu.cli.commands.storage.episode.abort"
-    },
-    {
-      "apiIds": [],
-      "reason": "no-agent-first-api-declared",
-      "state": "unlinked",
-      "surfaceId": "kungfu.cli.commands.storage.attach.frame"
-    },
-    {
-      "apiIds": [],
-      "reason": "no-agent-first-api-declared",
-      "state": "unlinked",
-      "surfaceId": "kungfu.cli.commands.storage.attach.ref"
-    },
-    {
-      "apiIds": [],
-      "reason": "no-agent-first-api-declared",
-      "state": "unlinked",
-      "surfaceId": "kungfu.cli.commands.storage.begin"
-    },
-    {
-      "apiIds": [],
-      "reason": "no-agent-first-api-declared",
-      "state": "unlinked",
-      "surfaceId": "kungfu.cli.commands.storage.episode.end"
-    },
-    {
-      "apiIds": [],
-      "reason": "no-agent-first-api-declared",
-      "state": "unlinked",
-      "surfaceId": "kungfu.cli.commands.storage.heartbeat"
-    },
-    {
-      "apiIds": [],
-      "reason": "no-agent-first-api-declared",
-      "state": "unlinked",
-      "surfaceId": "kungfu.cli.commands.storage.episode.inspect"
-    },
-    {
-      "apiIds": [],
-      "reason": "no-agent-first-api-declared",
-      "state": "unlinked",
-      "surfaceId": "kungfu.cli.commands.storage.episode.list"
-    },
-    {
-      "apiIds": [],
-      "reason": "no-agent-first-api-declared",
-      "state": "unlinked",
-      "surfaceId": "kungfu.cli.commands.storage.episode.rebuild.projection"
-    },
-    {
-      "apiIds": [],
-      "reason": "no-agent-first-api-declared",
-      "state": "unlinked",
-      "surfaceId": "kungfu.cli.commands.storage.episode.recover"
-    },
-    {
-      "apiIds": [],
-      "reason": "no-agent-first-api-declared",
-      "state": "unlinked",
-      "surfaceId": "kungfu.cli.commands.storage.export"
-    },
-    {
-      "apiIds": [
-        "kungfu.storage.fsck"
-      ],
-      "reason": null,
-      "state": "linked",
-      "surfaceId": "kungfu.cli.commands.storage.fsck"
-    },
-    {
-      "apiIds": [
-        "kungfu.storage.gc"
-      ],
-      "reason": null,
-      "state": "linked",
-      "surfaceId": "kungfu.cli.commands.storage.gc"
-    },
-    {
-      "apiIds": [
-        "kungfu.storage.episode-import"
-      ],
-      "reason": null,
-      "state": "linked",
-      "surfaceId": "kungfu.cli.commands.storage.import.cmd"
-    },
-    {
-      "apiIds": [],
-      "reason": "no-agent-first-api-declared",
-      "state": "unlinked",
-      "surfaceId": "kungfu.cli.commands.storage.layout"
-    },
-    {
-      "apiIds": [],
-      "reason": "no-agent-first-api-declared",
-      "state": "unlinked",
-      "surfaceId": "kungfu.cli.commands.storage.projection.candidate.status"
-    },
-    {
-      "apiIds": [
-        "kungfu.storage.query"
-      ],
-      "reason": null,
-      "state": "linked",
-      "surfaceId": "kungfu.cli.commands.storage.query"
-    },
-    {
-      "apiIds": [
-        "kungfu.storage.rebuild-index"
-      ],
-      "reason": null,
-      "state": "linked",
-      "surfaceId": "kungfu.cli.commands.storage.rebuild.index"
-    },
-    {
-      "apiIds": [
-        "kungfu.storage.repair",
-        "kungfu.storage.repair.apply",
-        "kungfu.storage.repair.fetch"
-      ],
-      "reason": null,
-      "state": "linked",
-      "surfaceId": "kungfu.cli.commands.storage.repair"
-    },
-    {
-      "apiIds": [
-        "kungfu.storage.status"
-      ],
-      "reason": null,
-      "state": "linked",
-      "surfaceId": "kungfu.cli.commands.storage.status"
-    },
-    {
-      "apiIds": [
-        "kungfu.storage.verify-sync"
-      ],
-      "reason": null,
-      "state": "linked",
-      "surfaceId": "kungfu.cli.commands.storage.verify.sync"
-    },
-    {
-      "apiIds": [
-        "kungfu.trace.capture"
-      ],
-      "reason": null,
-      "state": "linked",
-      "surfaceId": "kungfu.cli.commands.trace.trace"
-    },
-    {
-      "apiIds": [],
-      "reason": "navigation-only",
-      "state": "unlinked",
-      "surfaceId": "kungfu.cli.commands.update.update"
-    },
-    {
-      "apiIds": [],
-      "reason": "not-agent-visible",
-      "state": "unlinked",
-      "surfaceId": "kungfu.cli.commands.update.update.apply"
-    },
-    {
-      "apiIds": [],
-      "reason": "not-agent-visible",
-      "state": "unlinked",
-      "surfaceId": "kungfu.cli.commands.update.bootstrap.verify"
-    },
-    {
-      "apiIds": [],
-      "reason": "not-agent-visible",
-      "state": "unlinked",
-      "surfaceId": "kungfu.cli.commands.update.update.check"
-    },
-    {
-      "apiIds": [],
-      "reason": "not-agent-visible",
-      "state": "unlinked",
-      "surfaceId": "kungfu.cli.commands.update.update.download"
-    },
-    {
-      "apiIds": [],
-      "reason": "not-agent-visible",
-      "state": "unlinked",
-      "surfaceId": "kungfu.cli.commands.update.update.plan"
-    },
-    {
-      "apiIds": [],
-      "reason": "not-agent-visible",
-      "state": "unlinked",
-      "surfaceId": "kungfu.cli.commands.update.update.status"
-    },
-    {
-      "apiIds": [],
-      "reason": "navigation-only",
-      "state": "unlinked",
-      "surfaceId": "kungfu.cli.commands.warrant.warrant"
-    },
-    {
-      "apiIds": [],
-      "reason": "no-agent-first-api-declared",
-      "state": "unlinked",
-      "surfaceId": "kungfu.cli.commands.primitive.role.register.role.commands.locals.action.kungfu.warrant.action"
-    },
-    {
-      "apiIds": [],
-      "reason": "no-agent-first-api-declared",
-      "state": "unlinked",
-      "surfaceId": "kungfu.cli.commands.primitive.role.register.role.commands.locals.capabilities.kungfu.warrant.capabilities"
-    },
-    {
-      "apiIds": [],
-      "reason": "no-agent-first-api-declared",
-      "state": "unlinked",
-      "surfaceId": "kungfu.cli.commands.primitive.role.register.role.commands.locals.inspect.kungfu.warrant.inspect"
-    },
-    {
-      "apiIds": [],
-      "reason": "navigation-only",
-      "state": "unlinked",
-      "surfaceId": "kungfu.cli.commands.assignment.assignment"
-    },
-    {
-      "apiIds": [
-        "kungfu.work.admit"
-      ],
-      "reason": null,
-      "state": "linked",
-      "surfaceId": "kungfu.cli.commands.assignment.admit"
-    },
-    {
-      "apiIds": [],
-      "reason": "no-agent-first-api-declared",
-      "state": "unlinked",
-      "surfaceId": "kungfu.cli.commands.assignment.bind"
-    },
-    {
-      "apiIds": [],
-      "reason": "no-agent-first-api-declared",
-      "state": "unlinked",
-      "surfaceId": "kungfu.cli.commands.assignment.binding.create"
-    },
-    {
-      "apiIds": [
-        "kungfu.work.capture"
-      ],
-      "reason": null,
-      "state": "linked",
-      "surfaceId": "kungfu.work.capture"
-    },
-    {
-      "apiIds": [],
-      "reason": "no-agent-first-api-declared",
-      "state": "unlinked",
-      "surfaceId": "kungfu.cli.commands.assignment.claim"
-    },
-    {
-      "apiIds": [
-        "kungfu.work.claim-completion"
-      ],
-      "reason": null,
-      "state": "linked",
-      "surfaceId": "kungfu.work.claim.completion"
-    },
-    {
-      "apiIds": [
-        "kungfu.work.decide"
-      ],
-      "reason": null,
-      "state": "linked",
-      "surfaceId": "kungfu.work.decide"
-    },
-    {
-      "apiIds": [],
-      "reason": "no-agent-first-api-declared",
-      "state": "unlinked",
-      "surfaceId": "kungfu.cli.commands.assignment.gate"
-    },
-    {
-      "apiIds": [],
-      "reason": "no-agent-first-api-declared",
-      "state": "unlinked",
-      "surfaceId": "kungfu.cli.commands.assignment.kickoff"
-    },
-    {
-      "apiIds": [
-        "kungfu.work.relation-event"
-      ],
-      "reason": null,
-      "state": "linked",
-      "surfaceId": "kungfu.cli.commands.assignment.relation.event"
-    },
-    {
-      "apiIds": [
-        "kungfu.work.review"
-      ],
-      "reason": null,
-      "state": "linked",
-      "surfaceId": "kungfu.work.review"
-    },
-    {
-      "apiIds": [],
-      "reason": "no-agent-first-api-declared",
-      "state": "unlinked",
-      "surfaceId": "kungfu.cli.commands.assignment.seal"
-    },
-    {
-      "apiIds": [],
-      "reason": "no-agent-first-api-declared",
-      "state": "unlinked",
-      "surfaceId": "kungfu.cli.commands.assignment.stage"
-    },
-    {
-      "apiIds": [
-        "kungfu.work.status"
-      ],
-      "reason": null,
-      "state": "linked",
-      "surfaceId": "kungfu.cli.commands.assignment.status"
-    },
-    {
-      "apiIds": [],
-      "reason": "no-agent-first-api-declared",
-      "state": "unlinked",
-      "surfaceId": "kungfu.cli.commands.assignment.verify.binding"
-    },
-    {
-      "apiIds": [],
-      "reason": "no-agent-first-api-declared",
-      "state": "unlinked",
-      "surfaceId": "kungfu.cli.commands.assignment.verify.seal"
-    },
-    {
-      "apiIds": [],
-      "reason": "navigation-only",
-      "state": "unlinked",
-      "surfaceId": "kungfu.cli.commands.workspace.workspace"
-    },
-    {
-      "apiIds": [
-        "kungfu.workspace.advise"
-      ],
-      "reason": null,
-      "state": "linked",
-      "surfaceId": "kungfu.cli.commands.workspace.advise"
-    },
-    {
-      "apiIds": [
-        "kungfu.workspace.apply"
-      ],
-      "reason": null,
-      "state": "linked",
-      "surfaceId": "kungfu.cli.commands.workspace.apply"
-    },
-    {
-      "apiIds": [
-        "kungfu.workspace.authorize"
-      ],
-      "reason": null,
-      "state": "linked",
-      "surfaceId": "kungfu.cli.commands.workspace.authorize"
-    },
-    {
-      "apiIds": [
-        "kungfu.workspace.catalog"
-      ],
-      "reason": null,
-      "state": "linked",
-      "surfaceId": "kungfu.cli.commands.workspace.catalog"
-    },
-    {
-      "apiIds": [],
-      "reason": "no-agent-first-api-declared",
-      "state": "unlinked",
-      "surfaceId": "kungfu.cli.commands.workspace.catalog.maintain"
-    },
-    {
-      "apiIds": [
-        "kungfu.workspace.catalog"
-      ],
-      "reason": null,
-      "state": "linked",
-      "surfaceId": "kungfu.cli.commands.workspace.catalog.rebind"
-    },
-    {
-      "apiIds": [
-        "kungfu.workspace.catalog"
-      ],
-      "reason": null,
-      "state": "linked",
-      "surfaceId": "kungfu.cli.commands.workspace.catalog.rebuild"
-    },
-    {
-      "apiIds": [
-        "kungfu.workspace.catalog"
-      ],
-      "reason": null,
-      "state": "linked",
-      "surfaceId": "kungfu.cli.commands.workspace.catalog.verify"
-    },
-    {
-      "apiIds": [],
-      "reason": "no-agent-first-api-declared",
-      "state": "unlinked",
-      "surfaceId": "kungfu.cli.commands.workspace.current"
-    },
-    {
-      "apiIds": [
-        "kungfu.workspace.start-continuation"
-      ],
-      "reason": null,
-      "state": "linked",
-      "surfaceId": "kungfu.cli.commands.workspace.ensure"
-    },
-    {
-      "apiIds": [
-        "kungfu.workspace.graph-qualify"
-      ],
-      "reason": null,
-      "state": "linked",
-      "surfaceId": "kungfu.cli.commands.workspace.graph.qualify"
-    },
-    {
-      "apiIds": [
-        "kungfu.workspace.import-full-evidence"
-      ],
-      "reason": null,
-      "state": "linked",
-      "surfaceId": "kungfu.cli.commands.workspace.import.full.evidence.cmd"
-    },
-    {
-      "apiIds": [
-        "kungfu.workspace.inspect"
-      ],
-      "reason": null,
-      "state": "linked",
-      "surfaceId": "kungfu.cli.commands.workspace.inspect"
-    },
-    {
-      "apiIds": [],
-      "reason": "no-agent-first-api-declared",
-      "state": "unlinked",
-      "surfaceId": "kungfu.cli.commands.workspace.inspect.guidance.cmd"
-    },
-    {
-      "apiIds": [],
-      "reason": "no-agent-first-api-declared",
-      "state": "unlinked",
-      "surfaceId": "kungfu.cli.commands.workspace.list.workspaces"
-    },
-    {
-      "apiIds": [
-        "kungfu.workspace.preview"
-      ],
-      "reason": null,
-      "state": "linked",
-      "surfaceId": "kungfu.cli.commands.workspace.preview"
-    },
-    {
-      "apiIds": [
-        "kungfu.workspace.pull"
-      ],
-      "reason": null,
-      "state": "linked",
-      "surfaceId": "kungfu.cli.commands.workspace.pull"
-    },
-    {
-      "apiIds": [
-        "kungfu.workspace.push"
-      ],
-      "reason": null,
-      "state": "linked",
-      "surfaceId": "kungfu.cli.commands.workspace.push"
-    },
-    {
-      "apiIds": [
-        "kungfu.workspace.request-full-evidence"
-      ],
-      "reason": null,
-      "state": "linked",
-      "surfaceId": "kungfu.cli.commands.workspace.request.full.evidence.cmd"
-    },
-    {
-      "apiIds": [],
-      "reason": "no-agent-first-api-declared",
-      "state": "unlinked",
-      "surfaceId": "kungfu.cli.commands.workspace.select"
-    },
-    {
-      "apiIds": [],
-      "reason": "no-agent-first-api-declared",
-      "state": "unlinked",
-      "surfaceId": "kungfu.cli.commands.workspace.select.home"
-    },
-    {
-      "apiIds": [
-        "kungfu.workspace.verify"
-      ],
-      "reason": null,
-      "state": "linked",
-      "surfaceId": "kungfu.cli.commands.workspace.verify"
-    },
-    {
-      "apiIds": [
-        "kungfu.workspace.work"
-      ],
-      "reason": null,
-      "state": "linked",
-      "surfaceId": "kungfu.cli.commands.workspace.work"
-    },
-    {
-      "apiIds": [],
-      "reason": "no-agent-first-api-declared",
-      "state": "unlinked",
-      "surfaceId": "kungfu.cli.commands.xinfa.xinfa"
-    }
+    {"apiIds":[],"reason":"navigation-only","state":"unlinked","surfaceId":"kungfu.cli.commands.kfc"},
+    {"apiIds":[],"reason":"no-agent-first-api-declared","state":"unlinked","surfaceId":"kungfu.cli.commands.action.action"},
+    {"apiIds":["kungfu.agent"],"reason":null,"state":"linked","surfaceId":"kungfu.agent"},
+    {"apiIds":["kungfu.agent.bootstrap"],"reason":null,"state":"linked","surfaceId":"kungfu.agent.bootstrap"},
+    {"apiIds":["kungfu.agent.brief"],"reason":null,"state":"linked","surfaceId":"kungfu.agent.brief"},
+    {"apiIds":["kungfu.agent.capabilities"],"reason":null,"state":"linked","surfaceId":"kungfu.agent.capabilities"},
+    {"apiIds":["kungfu.agent.choose-mode"],"reason":null,"state":"linked","surfaceId":"kungfu.agent.choose-mode"},
+    {"apiIds":["kungfu.agent.console"],"reason":null,"state":"linked","surfaceId":"kungfu.agent.console"},
+    {"apiIds":["kungfu.agent.console.current"],"reason":null,"state":"linked","surfaceId":"kungfu.agent.console.current"},
+    {"apiIds":["kungfu.agent.context"],"reason":null,"state":"linked","surfaceId":"kungfu.agent.context"},
+    {"apiIds":["kungfu.agent.docs"],"reason":null,"state":"linked","surfaceId":"kungfu.agent.docs"},
+    {"apiIds":["kungfu.agent.hub"],"reason":null,"state":"linked","surfaceId":"kungfu.agent.hub"},
+    {"apiIds":["kungfu.agent.hub.adapter"],"reason":null,"state":"linked","surfaceId":"kungfu.agent.hub.adapter"},
+    {"apiIds":["kungfu.agent.hub.capabilities"],"reason":null,"state":"linked","surfaceId":"kungfu.agent.hub.capabilities"},
+    {"apiIds":["kungfu.agent.hub.handle"],"reason":null,"state":"linked","surfaceId":"kungfu.agent.hub.handle"},
+    {"apiIds":["kungfu.agent.hub.qualify"],"reason":null,"state":"linked","surfaceId":"kungfu.agent.hub.qualify"},
+    {"apiIds":["kungfu.agent.hub.verify"],"reason":null,"state":"linked","surfaceId":"kungfu.agent.hub.verify"},
+    {"apiIds":["kungfu.agent.install-skill"],"reason":null,"state":"linked","surfaceId":"kungfu.agent.install-skill"},
+    {"apiIds":["kungfu.agent.mode"],"reason":null,"state":"linked","surfaceId":"kungfu.agent.mode"},
+    {"apiIds":["kungfu.agent.mode.set"],"reason":null,"state":"linked","surfaceId":"kungfu.agent.mode.set"},
+    {"apiIds":["kungfu.agent.runtime"],"reason":null,"state":"linked","surfaceId":"kungfu.agent.runtime"},
+    {"apiIds":["kungfu.agent.runtime.discover"],"reason":null,"state":"linked","surfaceId":"kungfu.agent.runtime.discover"},
+    {"apiIds":["kungfu.agent.runtime.list"],"reason":null,"state":"linked","surfaceId":"kungfu.agent.runtime.list"},
+    {"apiIds":["kungfu.agent.runtime.remove"],"reason":null,"state":"linked","surfaceId":"kungfu.agent.runtime.remove"},
+    {"apiIds":["kungfu.agent.runtime.set-default"],"reason":null,"state":"linked","surfaceId":"kungfu.agent.runtime.set-default"},
+    {"apiIds":["kungfu.agent.runtime.upsert"],"reason":null,"state":"linked","surfaceId":"kungfu.agent.runtime.upsert"},
+    {"apiIds":["kungfu.agent.runtime.verify"],"reason":null,"state":"linked","surfaceId":"kungfu.agent.runtime.verify"},
+    {"apiIds":["kungfu.agent.session"],"reason":null,"state":"linked","surfaceId":"kungfu.agent.session"},
+    {"apiIds":["kungfu.agent.status"],"reason":null,"state":"linked","surfaceId":"kungfu.agent.status"},
+    {"apiIds":["kungfu.agent.unbootstrap"],"reason":null,"state":"linked","surfaceId":"kungfu.agent.unbootstrap"},
+    {"apiIds":["kungfu.agent.uninstall"],"reason":null,"state":"linked","surfaceId":"kungfu.agent.uninstall"},
+    {"apiIds":["kungfu.agent.verify"],"reason":null,"state":"linked","surfaceId":"kungfu.agent.verify"},
+    {"apiIds":["kungfu.agent.work"],"reason":null,"state":"linked","surfaceId":"kungfu.agent.work"},
+    {"apiIds":["kungfu.agent.work.action"],"reason":null,"state":"linked","surfaceId":"kungfu.agent.work.action"},
+    {"apiIds":["kungfu.agent.work.capabilities"],"reason":null,"state":"linked","surfaceId":"kungfu.agent.work.capabilities"},
+    {"apiIds":["kungfu.agent.work.export-authority"],"reason":null,"state":"linked","surfaceId":"kungfu.agent.work.export-authority"},
+    {"apiIds":["kungfu.agent.work.import-authority"],"reason":null,"state":"linked","surfaceId":"kungfu.agent.work.import-authority"},
+    {"apiIds":["kungfu.agent.work.inspect"],"reason":null,"state":"linked","surfaceId":"kungfu.agent.work.inspect"},
+    {"apiIds":["kungfu.agent.work.session"],"reason":null,"state":"linked","surfaceId":"kungfu.agent.work.session"},
+    {"apiIds":["kungfu.agent.work-model"],"reason":null,"state":"linked","surfaceId":"kungfu.agent.work-model"},
+    {"apiIds":[],"reason":"navigation-only","state":"unlinked","surfaceId":"kungfu.cli.commands.atlas.atlas"},
+    {"apiIds":[],"reason":"no-agent-first-api-declared","state":"unlinked","surfaceId":"kungfu.cli.commands.primitive.role.register.role.commands.locals.action.kungfu.atlas.action"},
+    {"apiIds":[],"reason":"no-agent-first-api-declared","state":"unlinked","surfaceId":"kungfu.cli.commands.primitive.role.register.role.commands.locals.capabilities.kungfu.atlas.capabilities"},
+    {"apiIds":["kungfu.atlas.import"],"reason":null,"state":"linked","surfaceId":"kungfu.cli.commands.atlas.import.cmd"},
+    {"apiIds":[],"reason":"no-agent-first-api-declared","state":"unlinked","surfaceId":"kungfu.cli.commands.primitive.role.register.role.commands.locals.inspect.kungfu.atlas.inspect"},
+    {"apiIds":[],"reason":"navigation-only","state":"unlinked","surfaceId":"kungfu.cli.commands.atlas.show"},
+    {"apiIds":["kungfu.atlas.show.import"],"reason":null,"state":"linked","surfaceId":"kungfu.cli.commands.atlas.import.info"},
+    {"apiIds":["kungfu.atlas.show.markers"],"reason":null,"state":"linked","surfaceId":"kungfu.cli.commands.atlas.markers"},
+    {"apiIds":[],"reason":"no-agent-first-api-declared","state":"unlinked","surfaceId":"kungfu.cli.commands.atlas.verify"},
+    {"apiIds":[],"reason":"navigation-only","state":"unlinked","surfaceId":"kungfu.cli.commands.codex.codex"},
+    {"apiIds":["kungfu.codex.verify-goal-report"],"reason":null,"state":"linked","surfaceId":"kungfu.cli.commands.codex.verify.goal.report"},
+    {"apiIds":[],"reason":"navigation-only","state":"unlinked","surfaceId":"kungfu.cli.commands.config.config"},
+    {"apiIds":[],"reason":"no-agent-first-api-declared","state":"unlinked","surfaceId":"kungfu.cli.commands.config.contract"},
+    {"apiIds":[],"reason":"no-agent-first-api-declared","state":"unlinked","surfaceId":"kungfu.cli.commands.config.defaults"},
+    {"apiIds":[],"reason":"no-agent-first-api-declared","state":"unlinked","surfaceId":"kungfu.cli.commands.config.durability"},
+    {"apiIds":[],"reason":"no-agent-first-api-declared","state":"unlinked","surfaceId":"kungfu.cli.commands.config.path"},
+    {"apiIds":[],"reason":"no-agent-first-api-declared","state":"unlinked","surfaceId":"kungfu.cli.commands.config.schema"},
+    {"apiIds":[],"reason":"no-agent-first-api-declared","state":"unlinked","surfaceId":"kungfu.cli.commands.config.set.value"},
+    {"apiIds":[],"reason":"no-agent-first-api-declared","state":"unlinked","surfaceId":"kungfu.cli.commands.config.show"},
+    {"apiIds":[],"reason":"no-agent-first-api-declared","state":"unlinked","surfaceId":"kungfu.cli.commands.config.unset.value"},
+    {"apiIds":[],"reason":"navigation-only","state":"unlinked","surfaceId":"kungfu.cli.commands.contract.contract"},
+    {"apiIds":[],"reason":"no-agent-first-api-declared","state":"unlinked","surfaceId":"kungfu.cli.commands.contract.list.contracts"},
+    {"apiIds":[],"reason":"no-agent-first-api-declared","state":"unlinked","surfaceId":"kungfu.cli.commands.contract.show"},
+    {"apiIds":[],"reason":"no-agent-first-api-declared","state":"unlinked","surfaceId":"kungfu.cli.commands.contract.surface.contract.cmd"},
+    {"apiIds":[],"reason":"no-agent-first-api-declared","state":"unlinked","surfaceId":"kungfu.cli.commands.contract.verify"},
+    {"apiIds":["kungfu.cut.inspect"],"reason":null,"state":"linked","surfaceId":"kungfu.cli.commands.cut.cut"},
+    {"apiIds":[],"reason":"navigation-only","state":"unlinked","surfaceId":"kungfu.cli.commands.dev.dev"},
+    {"apiIds":[],"reason":"navigation-only","state":"unlinked","surfaceId":"kungfu.cli.commands.engage.engage"},
+    {"apiIds":[],"reason":"not-agent-visible","state":"unlinked","surfaceId":"kungfu.cli.commands.engage.black"},
+    {"apiIds":[],"reason":"not-agent-visible","state":"unlinked","surfaceId":"kungfu.cli.commands.engage.nuitka"},
+    {"apiIds":[],"reason":"not-agent-visible","state":"unlinked","surfaceId":"kungfu.cli.commands.engage.nuitka.data.composer"},
+    {"apiIds":[],"reason":"not-agent-visible","state":"unlinked","surfaceId":"kungfu.cli.commands.engage.pdm"},
+    {"apiIds":[],"reason":"not-agent-visible","state":"unlinked","surfaceId":"kungfu.cli.commands.engage.scons"},
+    {"apiIds":[],"reason":"navigation-only","state":"unlinked","surfaceId":"kungfu.cli.commands.schema.schema"},
+    {"apiIds":[],"reason":"not-agent-visible","state":"unlinked","surfaceId":"kungfu.cli.commands.schema.compile.cmd"},
+    {"apiIds":[],"reason":"navigation-only","state":"unlinked","surfaceId":"kungfu.cli.commands.dogfood.dogfood"},
+    {"apiIds":[],"reason":"no-agent-first-api-declared","state":"unlinked","surfaceId":"kungfu.dogfood.admit"},
+    {"apiIds":[],"reason":"no-agent-first-api-declared","state":"unlinked","surfaceId":"kungfu.cli.commands.dogfood.capabilities"},
+    {"apiIds":[],"reason":"no-agent-first-api-declared","state":"unlinked","surfaceId":"kungfu.dogfood.capture"},
+    {"apiIds":[],"reason":"no-agent-first-api-declared","state":"unlinked","surfaceId":"kungfu.dogfood.consider"},
+    {"apiIds":[],"reason":"no-agent-first-api-declared","state":"unlinked","surfaceId":"kungfu.dogfood.doctor"},
+    {"apiIds":[],"reason":"no-agent-first-api-declared","state":"unlinked","surfaceId":"kungfu.dogfood.export-atlas"},
+    {"apiIds":[],"reason":"no-agent-first-api-declared","state":"unlinked","surfaceId":"kungfu.dogfood.gate"},
+    {"apiIds":[],"reason":"no-agent-first-api-declared","state":"unlinked","surfaceId":"kungfu.dogfood.health"},
+    {"apiIds":[],"reason":"no-agent-first-api-declared","state":"unlinked","surfaceId":"kungfu.dogfood.import-atlas"},
+    {"apiIds":[],"reason":"no-agent-first-api-declared","state":"unlinked","surfaceId":"kungfu.dogfood.propose.issue"},
+    {"apiIds":[],"reason":"no-agent-first-api-declared","state":"unlinked","surfaceId":"kungfu.dogfood.query"},
+    {"apiIds":[],"reason":"no-agent-first-api-declared","state":"unlinked","surfaceId":"kungfu.dogfood.reconcile"},
+    {"apiIds":[],"reason":"no-agent-first-api-declared","state":"unlinked","surfaceId":"kungfu.dogfood.recover"},
+    {"apiIds":[],"reason":"no-agent-first-api-declared","state":"unlinked","surfaceId":"kungfu.cli.commands.dogfood.relevance"},
+    {"apiIds":[],"reason":"no-agent-first-api-declared","state":"unlinked","surfaceId":"kungfu.dogfood.show"},
+    {"apiIds":[],"reason":"no-agent-first-api-declared","state":"unlinked","surfaceId":"kungfu.cli.commands.dogfood.starvation"},
+    {"apiIds":[],"reason":"no-agent-first-api-declared","state":"unlinked","surfaceId":"kungfu.dogfood.transition"},
+    {"apiIds":[],"reason":"not-agent-visible","state":"unlinked","surfaceId":"kungfu.cli.commands.env.env"},
+    {"apiIds":[],"reason":"navigation-only","state":"unlinked","surfaceId":"kungfu.cli.commands.episode.episode"},
+    {"apiIds":[],"reason":"no-agent-first-api-declared","state":"unlinked","surfaceId":"kungfu.cli.commands.primitive.role.register.role.commands.locals.action.kungfu.episode.action"},
+    {"apiIds":[],"reason":"no-agent-first-api-declared","state":"unlinked","surfaceId":"kungfu.cli.commands.primitive.role.register.role.commands.locals.capabilities.kungfu.episode.capabilities"},
+    {"apiIds":[],"reason":"no-agent-first-api-declared","state":"unlinked","surfaceId":"kungfu.cli.commands.primitive.role.register.role.commands.locals.inspect.kungfu.episode.inspect"},
+    {"apiIds":[],"reason":"navigation-only","state":"unlinked","surfaceId":"kungfu.cli.commands.exit.exit.group"},
+    {"apiIds":["kungfu.exit.bundle"],"reason":null,"state":"linked","surfaceId":"kungfu.cli.commands.exit.build.cmd"},
+    {"apiIds":["kungfu.exit.bundle"],"reason":null,"state":"linked","surfaceId":"kungfu.cli.commands.exit.import.cmd"},
+    {"apiIds":["kungfu.exit.bundle"],"reason":null,"state":"linked","surfaceId":"kungfu.cli.commands.exit.inspect.cmd"},
+    {"apiIds":["kungfu.exit.verify"],"reason":null,"state":"linked","surfaceId":"kungfu.cli.commands.exit.verify.cmd"},
+    {"apiIds":[],"reason":"navigation-only","state":"unlinked","surfaceId":"kungfu.cli.commands.facts.facts"},
+    {"apiIds":["kungfu.facts.capabilities"],"reason":null,"state":"linked","surfaceId":"kungfu.cli.commands.facts.capabilities"},
+    {"apiIds":["kungfu.facts.declare-surface"],"reason":null,"state":"linked","surfaceId":"kungfu.cli.commands.facts.declare.surface"},
+    {"apiIds":["kungfu.facts.declare-world"],"reason":null,"state":"linked","surfaceId":"kungfu.cli.commands.facts.declare.world"},
+    {"apiIds":["kungfu.facts.export"],"reason":null,"state":"linked","surfaceId":"kungfu.cli.commands.facts.export.library"},
+    {"apiIds":["kungfu.facts.import"],"reason":null,"state":"linked","surfaceId":"kungfu.cli.commands.facts.import.library"},
+    {"apiIds":[],"reason":"navigation-only","state":"unlinked","surfaceId":"kungfu.cli.commands.facts.fact.integrity"},
+    {"apiIds":[],"reason":"no-agent-first-api-declared","state":"unlinked","surfaceId":"kungfu.cli.commands.facts.export.fact.kernel"},
+    {"apiIds":[],"reason":"no-agent-first-api-declared","state":"unlinked","surfaceId":"kungfu.cli.commands.facts.fsck.fact.kernel"},
+    {"apiIds":[],"reason":"no-agent-first-api-declared","state":"unlinked","surfaceId":"kungfu.cli.commands.facts.import.fact.kernel"},
+    {"apiIds":[],"reason":"no-agent-first-api-declared","state":"unlinked","surfaceId":"kungfu.cli.commands.facts.rebuild.fact.projections"},
+    {"apiIds":[],"reason":"no-agent-first-api-declared","state":"unlinked","surfaceId":"kungfu.cli.commands.facts.plan.fact.retention"},
+    {"apiIds":[],"reason":"no-agent-first-api-declared","state":"unlinked","surfaceId":"kungfu.cli.commands.facts.fact.kernel"},
+    {"apiIds":["kungfu.facts.library"],"reason":null,"state":"linked","surfaceId":"kungfu.cli.commands.facts.library"},
+    {"apiIds":[],"reason":"navigation-only","state":"unlinked","surfaceId":"kungfu.cli.commands.facts.fact.material"},
+    {"apiIds":["kungfu.facts.material-list"],"reason":null,"state":"linked","surfaceId":"kungfu.cli.commands.facts.list.fact.material"},
+    {"apiIds":["kungfu.facts.material-put"],"reason":null,"state":"linked","surfaceId":"kungfu.cli.commands.facts.put.fact.material"},
+    {"apiIds":["kungfu.facts.observe"],"reason":null,"state":"linked","surfaceId":"kungfu.cli.commands.facts.observe"},
+    {"apiIds":[],"reason":"navigation-only","state":"unlinked","surfaceId":"kungfu.cli.commands.facts.fact.shadow"},
+    {"apiIds":[],"reason":"no-agent-first-api-declared","state":"unlinked","surfaceId":"kungfu.cli.commands.facts.compare.fact.shadow"},
+    {"apiIds":[],"reason":"no-agent-first-api-declared","state":"unlinked","surfaceId":"kungfu.cli.commands.facts.inspect.fact.shadow"},
+    {"apiIds":[],"reason":"no-agent-first-api-declared","state":"unlinked","surfaceId":"kungfu.cli.commands.facts.project.fact.shadow"},
+    {"apiIds":["kungfu.facts.state"],"reason":null,"state":"linked","surfaceId":"kungfu.cli.commands.facts.state"},
+    {"apiIds":[],"reason":"navigation-only","state":"unlinked","surfaceId":"kungfu.cli.commands.facts.fact.type"},
+    {"apiIds":["kungfu.facts.type-create"],"reason":null,"state":"linked","surfaceId":"kungfu.cli.commands.facts.create.fact.type"},
+    {"apiIds":["kungfu.facts.type-list"],"reason":null,"state":"linked","surfaceId":"kungfu.cli.commands.facts.list.fact.types"},
+    {"apiIds":["kungfu.health","kungfu.health.deep"],"reason":null,"state":"linked","surfaceId":"kungfu.cli.commands.health.health"},
+    {"apiIds":[],"reason":"no-agent-first-api-declared","state":"unlinked","surfaceId":"kungfu.cli.commands.kfd.kfd"},
+    {"apiIds":[],"reason":"navigation-only","state":"unlinked","surfaceId":"kungfu.cli.commands.kfx.kfx"},
+    {"apiIds":[],"reason":"no-agent-first-api-declared","state":"unlinked","surfaceId":"kungfu.cli.commands.kfx.contract"},
+    {"apiIds":[],"reason":"no-agent-first-api-declared","state":"unlinked","surfaceId":"kungfu.cli.commands.kfx.inspect"},
+    {"apiIds":["kungfu.kfx.install"],"reason":null,"state":"linked","surfaceId":"kungfu.cli.commands.kfx.install"},
+    {"apiIds":[],"reason":"no-agent-first-api-declared","state":"unlinked","surfaceId":"kungfu.cli.commands.kfx.list.installed"},
+    {"apiIds":[],"reason":"navigation-only","state":"unlinked","surfaceId":"kungfu.cli.commands.kfx.native.group"},
+    {"apiIds":[],"reason":"no-agent-first-api-declared","state":"unlinked","surfaceId":"kungfu.cli.commands.kfx.native.assess"},
+    {"apiIds":[],"reason":"no-agent-first-api-declared","state":"unlinked","surfaceId":"kungfu.cli.commands.kfx.native.inspect"},
+    {"apiIds":[],"reason":"no-agent-first-api-declared","state":"unlinked","surfaceId":"kungfu.cli.commands.kfx.native.list"},
+    {"apiIds":[],"reason":"no-agent-first-api-declared","state":"unlinked","surfaceId":"kungfu.cli.commands.kfx.native.plan"},
+    {"apiIds":[],"reason":"no-agent-first-api-declared","state":"unlinked","surfaceId":"kungfu.cli.commands.kfx.native.resolve"},
+    {"apiIds":[],"reason":"no-agent-first-api-declared","state":"unlinked","surfaceId":"kungfu.cli.commands.kfx.native.status"},
+    {"apiIds":[],"reason":"navigation-only","state":"unlinked","surfaceId":"kungfu.cli.commands.kfx.profile.group"},
+    {"apiIds":[],"reason":"no-agent-first-api-declared","state":"unlinked","surfaceId":"kungfu.cli.commands.kfx.profile.apply"},
+    {"apiIds":[],"reason":"no-agent-first-api-declared","state":"unlinked","surfaceId":"kungfu.cli.commands.kfx.profile.contract"},
+    {"apiIds":[],"reason":"no-agent-first-api-declared","state":"unlinked","surfaceId":"kungfu.cli.commands.kfx.profile.get"},
+    {"apiIds":[],"reason":"no-agent-first-api-declared","state":"unlinked","surfaceId":"kungfu.cli.commands.kfx.profile.history"},
+    {"apiIds":[],"reason":"no-agent-first-api-declared","state":"unlinked","surfaceId":"kungfu.cli.commands.kfx.profile.inspect"},
+    {"apiIds":[],"reason":"no-agent-first-api-declared","state":"unlinked","surfaceId":"kungfu.cli.commands.kfx.profile.list"},
+    {"apiIds":[],"reason":"no-agent-first-api-declared","state":"unlinked","surfaceId":"kungfu.cli.commands.kfx.profile.plan"},
+    {"apiIds":[],"reason":"no-agent-first-api-declared","state":"unlinked","surfaceId":"kungfu.cli.commands.kfx.profile.schema"},
+    {"apiIds":[],"reason":"no-agent-first-api-declared","state":"unlinked","surfaceId":"kungfu.cli.commands.kfx.remove"},
+    {"apiIds":[],"reason":"no-agent-first-api-declared","state":"unlinked","surfaceId":"kungfu.cli.commands.kfx.run.wasm"},
+    {"apiIds":[],"reason":"no-agent-first-api-declared","state":"unlinked","surfaceId":"kungfu.cli.commands.kfx.schema"},
+    {"apiIds":[],"reason":"navigation-only","state":"unlinked","surfaceId":"kungfu.cli.commands.lock.lock"},
+    {"apiIds":[],"reason":"no-agent-first-api-declared","state":"unlinked","surfaceId":"kungfu.cli.commands.lock.lock.run"},
+    {"apiIds":[],"reason":"no-agent-first-api-declared","state":"unlinked","surfaceId":"kungfu.cli.commands.lock.lock.status"},
+    {"apiIds":["kungfu.managed-run.start"],"reason":null,"state":"linked","surfaceId":"kungfu.cli.commands.managed.run.managed.run"},
+    {"apiIds":[],"reason":"navigation-only","state":"unlinked","surfaceId":"kungfu.cli.commands.primitive.primitive"},
+    {"apiIds":["kungfu.primitive.availability"],"reason":null,"state":"linked","surfaceId":"kungfu.cli.commands.primitive.primitive.availability"},
+    {"apiIds":["kungfu.primitive.explain"],"reason":null,"state":"linked","surfaceId":"kungfu.cli.commands.primitive.explain.primitive"},
+    {"apiIds":["kungfu.primitive.graph"],"reason":null,"state":"linked","surfaceId":"kungfu.cli.commands.primitive.graph.primitives"},
+    {"apiIds":["kungfu.primitive.list"],"reason":null,"state":"linked","surfaceId":"kungfu.cli.commands.primitive.list.primitives"},
+    {"apiIds":["kungfu.primitive.show"],"reason":null,"state":"linked","surfaceId":"kungfu.cli.commands.primitive.show.primitive"},
+    {"apiIds":[],"reason":"navigation-only","state":"unlinked","surfaceId":"kungfu.cli.commands.profile.profile"},
+    {"apiIds":["kungfu.profile.action"],"reason":null,"state":"linked","surfaceId":"kungfu.cli.commands.profile.actions"},
+    {"apiIds":["kungfu.profile.application"],"reason":null,"state":"linked","surfaceId":"kungfu.cli.commands.profile.application"},
+    {"apiIds":["kungfu.profile.lifecycle"],"reason":null,"state":"linked","surfaceId":"kungfu.cli.commands.profile.apply"},
+    {"apiIds":["kungfu.profile.assessment"],"reason":null,"state":"linked","surfaceId":"kungfu.cli.commands.profile.assess.plan"},
+    {"apiIds":["kungfu.profile.assessment"],"reason":null,"state":"linked","surfaceId":"kungfu.cli.commands.profile.assess.run"},
+    {"apiIds":["kungfu.profile.assessment"],"reason":null,"state":"linked","surfaceId":"kungfu.cli.commands.profile.assessment.authorize"},
+    {"apiIds":["kungfu.profile.assessment"],"reason":null,"state":"linked","surfaceId":"kungfu.cli.commands.profile.assessment.plan"},
+    {"apiIds":["kungfu.profile.lifecycle"],"reason":null,"state":"linked","surfaceId":"kungfu.cli.commands.profile.authorize.lifecycle"},
+    {"apiIds":["kungfu.profile.discovery"],"reason":null,"state":"linked","surfaceId":"kungfu.cli.commands.profile.capabilities"},
+    {"apiIds":["kungfu.profile.composition"],"reason":null,"state":"linked","surfaceId":"kungfu.cli.commands.profile.catalog"},
+    {"apiIds":["kungfu.profile.source"],"reason":null,"state":"linked","surfaceId":"kungfu.cli.commands.profile.collaboration"},
+    {"apiIds":[],"reason":"no-agent-first-api-declared","state":"unlinked","surfaceId":"kungfu.cli.commands.profile.contract.apply"},
+    {"apiIds":[],"reason":"no-agent-first-api-declared","state":"unlinked","surfaceId":"kungfu.cli.commands.profile.contract.plan"},
+    {"apiIds":["kungfu.profile.lifecycle"],"reason":null,"state":"linked","surfaceId":"kungfu.cli.commands.profile.decide"},
+    {"apiIds":["kungfu.profile.diff"],"reason":null,"state":"linked","surfaceId":"kungfu.cli.commands.profile.diff"},
+    {"apiIds":[],"reason":"no-agent-first-api-declared","state":"unlinked","surfaceId":"kungfu.cli.commands.profile.discover"},
+    {"apiIds":["kungfu.profile.discovery"],"reason":null,"state":"linked","surfaceId":"kungfu.cli.commands.profile.examples"},
+    {"apiIds":[],"reason":"no-agent-first-api-declared","state":"unlinked","surfaceId":"kungfu.cli.commands.profile.export.bundle"},
+    {"apiIds":["kungfu.profile.read"],"reason":null,"state":"linked","surfaceId":"kungfu.cli.commands.profile.history"},
+    {"apiIds":[],"reason":"no-agent-first-api-declared","state":"unlinked","surfaceId":"kungfu.cli.commands.profile.import.bundle"},
+    {"apiIds":["kungfu.profile.read"],"reason":null,"state":"linked","surfaceId":"kungfu.cli.commands.profile.inspect"},
+    {"apiIds":[],"reason":"navigation-only","state":"unlinked","surfaceId":"kungfu.cli.commands.profile.intent"},
+    {"apiIds":["kungfu.profile.application"],"reason":null,"state":"linked","surfaceId":"kungfu.cli.commands.profile.intent.advise"},
+    {"apiIds":["kungfu.profile.application"],"reason":null,"state":"linked","surfaceId":"kungfu.cli.commands.profile.intent.apply"},
+    {"apiIds":["kungfu.profile.application"],"reason":null,"state":"linked","surfaceId":"kungfu.cli.commands.profile.intent.authorize"},
+    {"apiIds":["kungfu.profile.application"],"reason":null,"state":"linked","surfaceId":"kungfu.cli.commands.profile.intent.inspect"},
+    {"apiIds":["kungfu.profile.application"],"reason":null,"state":"linked","surfaceId":"kungfu.cli.commands.profile.intent.plan"},
+    {"apiIds":["kungfu.profile.application"],"reason":null,"state":"linked","surfaceId":"kungfu.cli.commands.profile.intent.verify"},
+    {"apiIds":["kungfu.profile.action"],"reason":null,"state":"linked","surfaceId":"kungfu.cli.commands.profile.invoke"},
+    {"apiIds":["kungfu.profile.kfd3-qualification"],"reason":null,"state":"linked","surfaceId":"kungfu.cli.commands.profile.kfd3.authorize"},
+    {"apiIds":["kungfu.profile.kfd3-qualification"],"reason":null,"state":"linked","surfaceId":"kungfu.cli.commands.profile.kfd3.plan"},
+    {"apiIds":["kungfu.profile.kfd3-qualification"],"reason":null,"state":"linked","surfaceId":"kungfu.cli.commands.profile.kfd3.qualify"},
+    {"apiIds":[],"reason":"no-agent-first-api-declared","state":"unlinked","surfaceId":"kungfu.cli.commands.profile.kfd3.release.build"},
+    {"apiIds":["kungfu.profile.kfd3-qualification"],"reason":null,"state":"linked","surfaceId":"kungfu.cli.commands.profile.kfd3.status"},
+    {"apiIds":["kungfu.profile.kfd3-qualification"],"reason":null,"state":"linked","surfaceId":"kungfu.cli.commands.profile.kfd3.verify"},
+    {"apiIds":["kungfu.profile.read"],"reason":null,"state":"linked","surfaceId":"kungfu.cli.commands.profile.list.profiles"},
+    {"apiIds":["kungfu.profile.manager"],"reason":null,"state":"linked","surfaceId":"kungfu.cli.commands.profile.manager"},
+    {"apiIds":["kungfu.profile.action"],"reason":null,"state":"linked","surfaceId":"kungfu.cli.commands.profile.member.call"},
+    {"apiIds":["kungfu.atlas.assess-mission"],"reason":null,"state":"linked","surfaceId":"kungfu.cli.commands.atlas.mission.control"},
+    {"apiIds":["kungfu.atlas.assess-completion"],"reason":null,"state":"linked","surfaceId":"kungfu.cli.commands.atlas.assess.completion.cmd"},
+    {"apiIds":["kungfu.atlas.authority-cutover"],"reason":null,"state":"linked","surfaceId":"kungfu.cli.commands.atlas.authority.cutover.cmd"},
+    {"apiIds":["kungfu.atlas.authority-rollback"],"reason":null,"state":"linked","surfaceId":"kungfu.cli.commands.atlas.authority.rollback.cmd"},
+    {"apiIds":["kungfu.atlas.authority-status"],"reason":null,"state":"linked","surfaceId":"kungfu.cli.commands.atlas.authority.status.cmd"},
+    {"apiIds":[],"reason":"no-agent-first-api-declared","state":"unlinked","surfaceId":"kungfu.cli.commands.atlas.dashboard"},
+    {"apiIds":["kungfu.atlas.export-mission"],"reason":null,"state":"linked","surfaceId":"kungfu.cli.commands.atlas.export.mission.cmd"},
+    {"apiIds":[],"reason":"no-agent-first-api-declared","state":"unlinked","surfaceId":"kungfu.cli.commands.atlas.goal"},
+    {"apiIds":["kungfu.atlas.show.goals"],"reason":null,"state":"linked","surfaceId":"kungfu.cli.commands.atlas.goals"},
+    {"apiIds":["kungfu.atlas.import-mission"],"reason":null,"state":"linked","surfaceId":"kungfu.cli.commands.atlas.import.mission.cmd"},
+    {"apiIds":[],"reason":"no-agent-first-api-declared","state":"unlinked","surfaceId":"kungfu.cli.commands.atlas.mission"},
+    {"apiIds":["kungfu.atlas.show.missions"],"reason":null,"state":"linked","surfaceId":"kungfu.cli.commands.atlas.missions"},
+    {"apiIds":["kungfu.profile.lifecycle"],"reason":null,"state":"linked","surfaceId":"kungfu.cli.commands.profile.plan"},
+    {"apiIds":["kungfu.profile.source"],"reason":null,"state":"linked","surfaceId":"kungfu.cli.commands.profile.qualify"},
+    {"apiIds":["kungfu.profile.composition"],"reason":null,"state":"linked","surfaceId":"kungfu.cli.commands.profile.query.execute"},
+    {"apiIds":["kungfu.profile.composition"],"reason":null,"state":"linked","surfaceId":"kungfu.cli.commands.profile.query.plan"},
+    {"apiIds":["kungfu.profile.composition"],"reason":null,"state":"linked","surfaceId":"kungfu.cli.commands.profile.query.run"},
+    {"apiIds":["kungfu.profile.scaffold"],"reason":null,"state":"linked","surfaceId":"kungfu.cli.commands.profile.scaffold"},
+    {"apiIds":["kungfu.profile.source"],"reason":null,"state":"linked","surfaceId":"kungfu.cli.commands.profile.validate"},
+    {"apiIds":[],"reason":"navigation-only","state":"unlinked","surfaceId":"kungfu.cli.commands.pursuit.pursuit"},
+    {"apiIds":[],"reason":"no-agent-first-api-declared","state":"unlinked","surfaceId":"kungfu.cli.commands.primitive.role.register.role.commands.locals.action.kungfu.pursuit.action"},
+    {"apiIds":[],"reason":"no-agent-first-api-declared","state":"unlinked","surfaceId":"kungfu.cli.commands.primitive.role.register.role.commands.locals.capabilities.kungfu.pursuit.capabilities"},
+    {"apiIds":[],"reason":"no-agent-first-api-declared","state":"unlinked","surfaceId":"kungfu.cli.commands.primitive.role.register.role.commands.locals.inspect.kungfu.pursuit.inspect"},
+    {"apiIds":["kungfu.qualification-lab"],"reason":null,"state":"linked","surfaceId":"kungfu.qualification-lab"},
+    {"apiIds":["kungfu.qualification-lab.agent-plan"],"reason":null,"state":"linked","surfaceId":"kungfu.qualification-lab.agent-plan"},
+    {"apiIds":["kungfu.qualification-lab.agent-run"],"reason":null,"state":"linked","surfaceId":"kungfu.qualification-lab.agent-run"},
+    {"apiIds":["kungfu.qualification-lab.agents"],"reason":null,"state":"linked","surfaceId":"kungfu.qualification-lab.agents"},
+    {"apiIds":["kungfu.qualification-lab.catalog"],"reason":null,"state":"linked","surfaceId":"kungfu.qualification-lab.catalog"},
+    {"apiIds":["kungfu.qualification-lab.demo"],"reason":null,"state":"linked","surfaceId":"kungfu.qualification-lab.demo"},
+    {"apiIds":["kungfu.qualification-lab.inspect"],"reason":null,"state":"linked","surfaceId":"kungfu.qualification-lab.inspect"},
+    {"apiIds":["kungfu.qualification-lab.plan"],"reason":null,"state":"linked","surfaceId":"kungfu.qualification-lab.plan"},
+    {"apiIds":[],"reason":"navigation-only","state":"unlinked","surfaceId":"kungfu.cli.commands.query.query"},
+    {"apiIds":["kungfu.query.capabilities"],"reason":null,"state":"linked","surfaceId":"kungfu.cli.commands.query.capabilities"},
+    {"apiIds":["kungfu.query.changelog"],"reason":null,"state":"linked","surfaceId":"kungfu.cli.commands.query.changelog"},
+    {"apiIds":[],"reason":"no-agent-first-api-declared","state":"unlinked","surfaceId":"kungfu.cli.commands.query.compile.sql"},
+    {"apiIds":["kungfu.query.describe"],"reason":null,"state":"linked","surfaceId":"kungfu.cli.commands.query.describe"},
+    {"apiIds":["kungfu.query.examples"],"reason":null,"state":"linked","surfaceId":"kungfu.cli.commands.query.examples"},
+    {"apiIds":["kungfu.query.explain"],"reason":null,"state":"linked","surfaceId":"kungfu.cli.commands.query.explain"},
+    {"apiIds":["kungfu.query.prove"],"reason":null,"state":"linked","surfaceId":"kungfu.cli.commands.query.prove"},
+    {"apiIds":[],"reason":"navigation-only","state":"unlinked","surfaceId":"kungfu.cli.commands.query.saved.queries"},
+    {"apiIds":["kungfu.query.saved-catalog"],"reason":null,"state":"linked","surfaceId":"kungfu.cli.commands.query.saved.delete"},
+    {"apiIds":["kungfu.query.saved-catalog"],"reason":null,"state":"linked","surfaceId":"kungfu.cli.commands.query.saved.export"},
+    {"apiIds":["kungfu.query.saved-catalog"],"reason":null,"state":"linked","surfaceId":"kungfu.cli.commands.query.saved.history"},
+    {"apiIds":["kungfu.query.saved-catalog"],"reason":null,"state":"linked","surfaceId":"kungfu.cli.commands.query.saved.import"},
+    {"apiIds":["kungfu.query.saved-catalog"],"reason":null,"state":"linked","surfaceId":"kungfu.cli.commands.query.saved.list"},
+    {"apiIds":["kungfu.query.saved-catalog"],"reason":null,"state":"linked","surfaceId":"kungfu.cli.commands.query.saved.rebuild"},
+    {"apiIds":["kungfu.query.saved-catalog"],"reason":null,"state":"linked","surfaceId":"kungfu.cli.commands.query.saved.run"},
+    {"apiIds":["kungfu.query.saved-catalog"],"reason":null,"state":"linked","surfaceId":"kungfu.cli.commands.query.saved.show"},
+    {"apiIds":["kungfu.query.saved-catalog"],"reason":null,"state":"linked","surfaceId":"kungfu.cli.commands.query.saved.update"},
+    {"apiIds":["kungfu.query.saved-view"],"reason":null,"state":"linked","surfaceId":"kungfu.cli.commands.query.saved.view"},
+    {"apiIds":["kungfu.query.schema"],"reason":null,"state":"linked","surfaceId":"kungfu.cli.commands.query.schema"},
+    {"apiIds":["kungfu.query.validate"],"reason":null,"state":"linked","surfaceId":"kungfu.cli.commands.query.validate"},
+    {"apiIds":[],"reason":"no-agent-first-api-declared","state":"unlinked","surfaceId":"kungfu.cli.commands.recover.recover"},
+    {"apiIds":[],"reason":"navigation-only","state":"unlinked","surfaceId":"kungfu.cli.commands.release.release.group"},
+    {"apiIds":["kungfu.release.explain"],"reason":null,"state":"linked","surfaceId":"kungfu.cli.commands.release.explain.cmd"},
+    {"apiIds":["kungfu.release.status"],"reason":null,"state":"linked","surfaceId":"kungfu.cli.commands.release.status.cmd"},
+    {"apiIds":["kungfu.release.verify"],"reason":null,"state":"linked","surfaceId":"kungfu.cli.commands.release.verify.cmd"},
+    {"apiIds":[],"reason":"navigation-only","state":"unlinked","surfaceId":"kungfu.cli.commands.remote.remote"},
+    {"apiIds":["kungfu.remote.add"],"reason":null,"state":"linked","surfaceId":"kungfu.cli.commands.remote.add"},
+    {"apiIds":[],"reason":"no-agent-first-api-declared","state":"unlinked","surfaceId":"kungfu.cli.commands.remote.list.sources"},
+    {"apiIds":[],"reason":"no-agent-first-api-declared","state":"unlinked","surfaceId":"kungfu.cli.commands.remote.runs"},
+    {"apiIds":[],"reason":"no-agent-first-api-declared","state":"unlinked","surfaceId":"kungfu.cli.commands.remote.show"},
+    {"apiIds":["kungfu.remote.sync"],"reason":null,"state":"linked","surfaceId":"kungfu.cli.commands.remote.sync"},
+    {"apiIds":[],"reason":"navigation-only","state":"unlinked","surfaceId":"kungfu.cli.commands.report.report"},
+    {"apiIds":[],"reason":"no-agent-first-api-declared","state":"unlinked","surfaceId":"kungfu.cli.commands.report.approval"},
+    {"apiIds":["kungfu.report.cost"],"reason":null,"state":"linked","surfaceId":"kungfu.cli.commands.report.cost"},
+    {"apiIds":[],"reason":"no-agent-first-api-declared","state":"unlinked","surfaceId":"kungfu.cli.commands.report.event"},
+    {"apiIds":[],"reason":"no-agent-first-api-declared","state":"unlinked","surfaceId":"kungfu.cli.commands.report.progress"},
+    {"apiIds":[],"reason":"navigation-only","state":"unlinked","surfaceId":"kungfu.cli.commands.report.run"},
+    {"apiIds":["kungfu.report.run.begin"],"reason":null,"state":"linked","surfaceId":"kungfu.cli.commands.report.begin"},
+    {"apiIds":["kungfu.report.run.end"],"reason":null,"state":"linked","surfaceId":"kungfu.cli.commands.report.end"},
+    {"apiIds":[],"reason":"navigation-only","state":"unlinked","surfaceId":"kungfu.cli.commands.rewind.rewind"},
+    {"apiIds":[],"reason":"not-agent-visible","state":"unlinked","surfaceId":"kungfu.cli.commands.rewind.export.cmd"},
+    {"apiIds":[],"reason":"not-agent-visible","state":"unlinked","surfaceId":"kungfu.cli.commands.rewind.open.cmd"},
+    {"apiIds":[],"reason":"not-agent-visible","state":"unlinked","surfaceId":"kungfu.cli.commands.rewind.show"},
+    {"apiIds":[],"reason":"not-agent-visible","state":"unlinked","surfaceId":"kungfu.cli.commands.rewind.verify"},
+    {"apiIds":["kungfu.run"],"reason":null,"state":"linked","surfaceId":"kungfu.run"},
+    {"apiIds":["kungfu.run.agent"],"reason":null,"state":"linked","surfaceId":"kungfu.run.agent"},
+    {"apiIds":[],"reason":"navigation-only","state":"unlinked","surfaceId":"kungfu.cli.commands.runtime.runtime"},
+    {"apiIds":[],"reason":"no-agent-first-api-declared","state":"unlinked","surfaceId":"kungfu.cli.commands.runtime.assess.worker"},
+    {"apiIds":[],"reason":"no-agent-first-api-declared","state":"unlinked","surfaceId":"kungfu.cli.commands.runtime.assessments"},
+    {"apiIds":[],"reason":"no-agent-first-api-declared","state":"unlinked","surfaceId":"kungfu.cli.commands.runtime.ensure"},
+    {"apiIds":[],"reason":"no-agent-first-api-declared","state":"unlinked","surfaceId":"kungfu.cli.commands.runtime.runtime.operations"},
+    {"apiIds":[],"reason":"navigation-only","state":"unlinked","surfaceId":"kungfu.cli.commands.runtime.runtime.peer"},
+    {"apiIds":[],"reason":"no-agent-first-api-declared","state":"unlinked","surfaceId":"kungfu.cli.commands.runtime.peer.contract"},
+    {"apiIds":[],"reason":"no-agent-first-api-declared","state":"unlinked","surfaceId":"kungfu.cli.commands.runtime.peer.ensure"},
+    {"apiIds":[],"reason":"no-agent-first-api-declared","state":"unlinked","surfaceId":"kungfu.cli.commands.runtime.peer.health"},
+    {"apiIds":[],"reason":"no-agent-first-api-declared","state":"unlinked","surfaceId":"kungfu.cli.commands.runtime.peer.plan"},
+    {"apiIds":[],"reason":"no-agent-first-api-declared","state":"unlinked","surfaceId":"kungfu.cli.commands.runtime.peer.restart"},
+    {"apiIds":[],"reason":"no-agent-first-api-declared","state":"unlinked","surfaceId":"kungfu.cli.commands.runtime.peer.start"},
+    {"apiIds":[],"reason":"no-agent-first-api-declared","state":"unlinked","surfaceId":"kungfu.cli.commands.runtime.peer.status"},
+    {"apiIds":[],"reason":"no-agent-first-api-declared","state":"unlinked","surfaceId":"kungfu.cli.commands.runtime.peer.stop"},
+    {"apiIds":[],"reason":"no-agent-first-api-declared","state":"unlinked","surfaceId":"kungfu.cli.commands.runtime.peer.host"},
+    {"apiIds":[],"reason":"no-agent-first-api-declared","state":"unlinked","surfaceId":"kungfu.cli.commands.runtime.runtime.plan"},
+    {"apiIds":[],"reason":"no-agent-first-api-declared","state":"unlinked","surfaceId":"kungfu.cli.commands.runtime.restart"},
+    {"apiIds":[],"reason":"no-agent-first-api-declared","state":"unlinked","surfaceId":"kungfu.cli.commands.runtime.run"},
+    {"apiIds":[],"reason":"navigation-only","state":"unlinked","surfaceId":"kungfu.cli.commands.runtime.service"},
+    {"apiIds":[],"reason":"no-agent-first-api-declared","state":"unlinked","surfaceId":"kungfu.cli.commands.runtime.install"},
+    {"apiIds":[],"reason":"no-agent-first-api-declared","state":"unlinked","surfaceId":"kungfu.cli.commands.runtime.plan"},
+    {"apiIds":[],"reason":"no-agent-first-api-declared","state":"unlinked","surfaceId":"kungfu.cli.commands.runtime.service.status"},
+    {"apiIds":[],"reason":"no-agent-first-api-declared","state":"unlinked","surfaceId":"kungfu.cli.commands.runtime.uninstall"},
+    {"apiIds":[],"reason":"no-agent-first-api-declared","state":"unlinked","surfaceId":"kungfu.cli.commands.runtime.start"},
+    {"apiIds":[],"reason":"no-agent-first-api-declared","state":"unlinked","surfaceId":"kungfu.cli.commands.runtime.runtime.status"},
+    {"apiIds":[],"reason":"no-agent-first-api-declared","state":"unlinked","surfaceId":"kungfu.cli.commands.runtime.stop"},
+    {"apiIds":[],"reason":"no-agent-first-api-declared","state":"unlinked","surfaceId":"kungfu.cli.commands.runtime.supervise"},
+    {"apiIds":[],"reason":"no-agent-first-api-declared","state":"unlinked","surfaceId":"kungfu.cli.commands.runtime.trust"},
+    {"apiIds":[],"reason":"navigation-only","state":"unlinked","surfaceId":"kungfu.cli.commands.runtime.runtime.upgrade.group"},
+    {"apiIds":[],"reason":"no-agent-first-api-declared","state":"unlinked","surfaceId":"kungfu.cli.commands.runtime.upgrade.contract"},
+    {"apiIds":[],"reason":"no-agent-first-api-declared","state":"unlinked","surfaceId":"kungfu.cli.commands.runtime.upgrade.gc"},
+    {"apiIds":[],"reason":"no-agent-first-api-declared","state":"unlinked","surfaceId":"kungfu.cli.commands.runtime.upgrade.gc.plan"},
+    {"apiIds":[],"reason":"no-agent-first-api-declared","state":"unlinked","surfaceId":"kungfu.cli.commands.runtime.upgrade.install"},
+    {"apiIds":[],"reason":"no-agent-first-api-declared","state":"unlinked","surfaceId":"kungfu.cli.commands.runtime.upgrade.inventory"},
+    {"apiIds":[],"reason":"no-agent-first-api-declared","state":"unlinked","surfaceId":"kungfu.cli.commands.runtime.upgrade.plan"},
+    {"apiIds":[],"reason":"no-agent-first-api-declared","state":"unlinked","surfaceId":"kungfu.cli.commands.runtime.upgrade.plan.install"},
+    {"apiIds":[],"reason":"no-agent-first-api-declared","state":"unlinked","surfaceId":"kungfu.cli.commands.runtime.upgrade.reconcile"},
+    {"apiIds":[],"reason":"no-agent-first-api-declared","state":"unlinked","surfaceId":"kungfu.cli.commands.runtime.upgrade.stage"},
+    {"apiIds":[],"reason":"not-agent-visible","state":"unlinked","surfaceId":"kungfu.cli.commands.sdk.sdk"},
+    {"apiIds":[],"reason":"no-agent-first-api-declared","state":"unlinked","surfaceId":"kungfu.cli.commands.shifu.shifu"},
+    {"apiIds":[],"reason":"navigation-only","state":"unlinked","surfaceId":"kungfu.cli.commands.skill.skill"},
+    {"apiIds":[],"reason":"no-agent-first-api-declared","state":"unlinked","surfaceId":"kungfu.cli.commands.skill.audit"},
+    {"apiIds":["kungfu.skill.catalog"],"reason":null,"state":"linked","surfaceId":"kungfu.cli.commands.skill.catalog"},
+    {"apiIds":[],"reason":"no-agent-first-api-declared","state":"unlinked","surfaceId":"kungfu.cli.commands.skill.context"},
+    {"apiIds":[],"reason":"no-agent-first-api-declared","state":"unlinked","surfaceId":"kungfu.cli.commands.skill.contract.cmd"},
+    {"apiIds":[],"reason":"no-agent-first-api-declared","state":"unlinked","surfaceId":"kungfu.cli.commands.skill.deps"},
+    {"apiIds":[],"reason":"no-agent-first-api-declared","state":"unlinked","surfaceId":"kungfu.cli.commands.skill.explain"},
+    {"apiIds":[],"reason":"no-agent-first-api-declared","state":"unlinked","surfaceId":"kungfu.cli.commands.skill.install"},
+    {"apiIds":[],"reason":"no-agent-first-api-declared","state":"unlinked","surfaceId":"kungfu.cli.commands.skill.list.skills"},
+    {"apiIds":["kungfu.skill.read"],"reason":null,"state":"linked","surfaceId":"kungfu.cli.commands.skill.read"},
+    {"apiIds":[],"reason":"no-agent-first-api-declared","state":"unlinked","surfaceId":"kungfu.cli.commands.skill.schema.cmd"},
+    {"apiIds":[],"reason":"no-agent-first-api-declared","state":"unlinked","surfaceId":"kungfu.cli.commands.skill.validate"},
+    {"apiIds":[],"reason":"no-agent-first-api-declared","state":"unlinked","surfaceId":"kungfu.cli.commands.skill.verify"},
+    {"apiIds":[],"reason":"navigation-only","state":"unlinked","surfaceId":"kungfu.cli.commands.source.source"},
+    {"apiIds":[],"reason":"no-agent-first-api-declared","state":"unlinked","surfaceId":"kungfu.cli.commands.source.add.cmd"},
+    {"apiIds":[],"reason":"no-agent-first-api-declared","state":"unlinked","surfaceId":"kungfu.cli.commands.source.fsck"},
+    {"apiIds":[],"reason":"no-agent-first-api-declared","state":"unlinked","surfaceId":"kungfu.cli.commands.source.list.cmd"},
+    {"apiIds":[],"reason":"no-agent-first-api-declared","state":"unlinked","surfaceId":"kungfu.cli.commands.source.show"},
+    {"apiIds":[],"reason":"no-agent-first-api-declared","state":"unlinked","surfaceId":"kungfu.cli.commands.source.sync"},
+    {"apiIds":[],"reason":"navigation-only","state":"unlinked","surfaceId":"kungfu.cli.commands.storage.storage"},
+    {"apiIds":[],"reason":"navigation-only","state":"unlinked","surfaceId":"kungfu.cli.commands.storage.backend"},
+    {"apiIds":[],"reason":"no-agent-first-api-declared","state":"unlinked","surfaceId":"kungfu.cli.commands.storage.backend.rollback"},
+    {"apiIds":[],"reason":"no-agent-first-api-declared","state":"unlinked","surfaceId":"kungfu.cli.commands.storage.backend.status"},
+    {"apiIds":[],"reason":"no-agent-first-api-declared","state":"unlinked","surfaceId":"kungfu.cli.commands.storage.backend.switch"},
+    {"apiIds":["kungfu.storage.compact"],"reason":null,"state":"linked","surfaceId":"kungfu.cli.commands.storage.compact"},
+    {"apiIds":[],"reason":"no-agent-first-api-declared","state":"unlinked","surfaceId":"kungfu.cli.commands.storage.durability.reconcile"},
+    {"apiIds":[],"reason":"navigation-only","state":"unlinked","surfaceId":"kungfu.cli.commands.storage.episode"},
+    {"apiIds":[],"reason":"no-agent-first-api-declared","state":"unlinked","surfaceId":"kungfu.cli.commands.storage.episode.abort"},
+    {"apiIds":[],"reason":"no-agent-first-api-declared","state":"unlinked","surfaceId":"kungfu.cli.commands.storage.attach.frame"},
+    {"apiIds":[],"reason":"no-agent-first-api-declared","state":"unlinked","surfaceId":"kungfu.cli.commands.storage.attach.ref"},
+    {"apiIds":[],"reason":"no-agent-first-api-declared","state":"unlinked","surfaceId":"kungfu.cli.commands.storage.begin"},
+    {"apiIds":[],"reason":"no-agent-first-api-declared","state":"unlinked","surfaceId":"kungfu.cli.commands.storage.episode.end"},
+    {"apiIds":[],"reason":"no-agent-first-api-declared","state":"unlinked","surfaceId":"kungfu.cli.commands.storage.heartbeat"},
+    {"apiIds":[],"reason":"no-agent-first-api-declared","state":"unlinked","surfaceId":"kungfu.cli.commands.storage.episode.inspect"},
+    {"apiIds":[],"reason":"no-agent-first-api-declared","state":"unlinked","surfaceId":"kungfu.cli.commands.storage.episode.list"},
+    {"apiIds":[],"reason":"no-agent-first-api-declared","state":"unlinked","surfaceId":"kungfu.cli.commands.storage.episode.rebuild.projection"},
+    {"apiIds":[],"reason":"no-agent-first-api-declared","state":"unlinked","surfaceId":"kungfu.cli.commands.storage.episode.recover"},
+    {"apiIds":[],"reason":"no-agent-first-api-declared","state":"unlinked","surfaceId":"kungfu.cli.commands.storage.export"},
+    {"apiIds":["kungfu.storage.fsck"],"reason":null,"state":"linked","surfaceId":"kungfu.cli.commands.storage.fsck"},
+    {"apiIds":["kungfu.storage.gc"],"reason":null,"state":"linked","surfaceId":"kungfu.cli.commands.storage.gc"},
+    {"apiIds":["kungfu.storage.episode-import"],"reason":null,"state":"linked","surfaceId":"kungfu.cli.commands.storage.import.cmd"},
+    {"apiIds":[],"reason":"no-agent-first-api-declared","state":"unlinked","surfaceId":"kungfu.cli.commands.storage.layout"},
+    {"apiIds":[],"reason":"no-agent-first-api-declared","state":"unlinked","surfaceId":"kungfu.cli.commands.storage.projection.candidate.status"},
+    {"apiIds":["kungfu.storage.query"],"reason":null,"state":"linked","surfaceId":"kungfu.cli.commands.storage.query"},
+    {"apiIds":["kungfu.storage.rebuild-index"],"reason":null,"state":"linked","surfaceId":"kungfu.cli.commands.storage.rebuild.index"},
+    {"apiIds":["kungfu.storage.repair","kungfu.storage.repair.apply","kungfu.storage.repair.fetch"],"reason":null,"state":"linked","surfaceId":"kungfu.cli.commands.storage.repair"},
+    {"apiIds":["kungfu.storage.status"],"reason":null,"state":"linked","surfaceId":"kungfu.cli.commands.storage.status"},
+    {"apiIds":["kungfu.storage.verify-sync"],"reason":null,"state":"linked","surfaceId":"kungfu.cli.commands.storage.verify.sync"},
+    {"apiIds":["kungfu.trace.capture"],"reason":null,"state":"linked","surfaceId":"kungfu.cli.commands.trace.trace"},
+    {"apiIds":[],"reason":"navigation-only","state":"unlinked","surfaceId":"kungfu.cli.commands.update.update"},
+    {"apiIds":[],"reason":"not-agent-visible","state":"unlinked","surfaceId":"kungfu.cli.commands.update.update.apply"},
+    {"apiIds":[],"reason":"not-agent-visible","state":"unlinked","surfaceId":"kungfu.cli.commands.update.bootstrap.verify"},
+    {"apiIds":[],"reason":"not-agent-visible","state":"unlinked","surfaceId":"kungfu.cli.commands.update.update.check"},
+    {"apiIds":[],"reason":"not-agent-visible","state":"unlinked","surfaceId":"kungfu.cli.commands.update.update.download"},
+    {"apiIds":[],"reason":"not-agent-visible","state":"unlinked","surfaceId":"kungfu.cli.commands.update.update.plan"},
+    {"apiIds":[],"reason":"not-agent-visible","state":"unlinked","surfaceId":"kungfu.cli.commands.update.update.status"},
+    {"apiIds":[],"reason":"navigation-only","state":"unlinked","surfaceId":"kungfu.cli.commands.warrant.warrant"},
+    {"apiIds":[],"reason":"no-agent-first-api-declared","state":"unlinked","surfaceId":"kungfu.cli.commands.primitive.role.register.role.commands.locals.action.kungfu.warrant.action"},
+    {"apiIds":[],"reason":"no-agent-first-api-declared","state":"unlinked","surfaceId":"kungfu.cli.commands.primitive.role.register.role.commands.locals.capabilities.kungfu.warrant.capabilities"},
+    {"apiIds":[],"reason":"no-agent-first-api-declared","state":"unlinked","surfaceId":"kungfu.cli.commands.primitive.role.register.role.commands.locals.inspect.kungfu.warrant.inspect"},
+    {"apiIds":[],"reason":"navigation-only","state":"unlinked","surfaceId":"kungfu.cli.commands.assignment.assignment"},
+    {"apiIds":["kungfu.work.admit"],"reason":null,"state":"linked","surfaceId":"kungfu.cli.commands.assignment.admit"},
+    {"apiIds":[],"reason":"no-agent-first-api-declared","state":"unlinked","surfaceId":"kungfu.cli.commands.assignment.bind"},
+    {"apiIds":[],"reason":"no-agent-first-api-declared","state":"unlinked","surfaceId":"kungfu.cli.commands.assignment.binding.create"},
+    {"apiIds":["kungfu.work.capture"],"reason":null,"state":"linked","surfaceId":"kungfu.work.capture"},
+    {"apiIds":[],"reason":"no-agent-first-api-declared","state":"unlinked","surfaceId":"kungfu.cli.commands.assignment.claim"},
+    {"apiIds":["kungfu.work.claim-completion"],"reason":null,"state":"linked","surfaceId":"kungfu.work.claim.completion"},
+    {"apiIds":["kungfu.work.decide"],"reason":null,"state":"linked","surfaceId":"kungfu.work.decide"},
+    {"apiIds":[],"reason":"no-agent-first-api-declared","state":"unlinked","surfaceId":"kungfu.cli.commands.assignment.gate"},
+    {"apiIds":[],"reason":"no-agent-first-api-declared","state":"unlinked","surfaceId":"kungfu.cli.commands.assignment.kickoff"},
+    {"apiIds":["kungfu.work.relation-event"],"reason":null,"state":"linked","surfaceId":"kungfu.cli.commands.assignment.relation.event"},
+    {"apiIds":["kungfu.work.review"],"reason":null,"state":"linked","surfaceId":"kungfu.work.review"},
+    {"apiIds":[],"reason":"no-agent-first-api-declared","state":"unlinked","surfaceId":"kungfu.cli.commands.assignment.seal"},
+    {"apiIds":[],"reason":"no-agent-first-api-declared","state":"unlinked","surfaceId":"kungfu.cli.commands.assignment.stage"},
+    {"apiIds":["kungfu.work.status"],"reason":null,"state":"linked","surfaceId":"kungfu.cli.commands.assignment.status"},
+    {"apiIds":[],"reason":"no-agent-first-api-declared","state":"unlinked","surfaceId":"kungfu.cli.commands.assignment.verify.binding"},
+    {"apiIds":[],"reason":"no-agent-first-api-declared","state":"unlinked","surfaceId":"kungfu.cli.commands.assignment.verify.seal"},
+    {"apiIds":[],"reason":"navigation-only","state":"unlinked","surfaceId":"kungfu.cli.commands.workspace.workspace"},
+    {"apiIds":["kungfu.workspace.advise"],"reason":null,"state":"linked","surfaceId":"kungfu.cli.commands.workspace.advise"},
+    {"apiIds":["kungfu.workspace.apply"],"reason":null,"state":"linked","surfaceId":"kungfu.cli.commands.workspace.apply"},
+    {"apiIds":["kungfu.workspace.authorize"],"reason":null,"state":"linked","surfaceId":"kungfu.cli.commands.workspace.authorize"},
+    {"apiIds":["kungfu.workspace.catalog"],"reason":null,"state":"linked","surfaceId":"kungfu.cli.commands.workspace.catalog"},
+    {"apiIds":[],"reason":"no-agent-first-api-declared","state":"unlinked","surfaceId":"kungfu.cli.commands.workspace.catalog.maintain"},
+    {"apiIds":["kungfu.workspace.catalog"],"reason":null,"state":"linked","surfaceId":"kungfu.cli.commands.workspace.catalog.rebind"},
+    {"apiIds":["kungfu.workspace.catalog"],"reason":null,"state":"linked","surfaceId":"kungfu.cli.commands.workspace.catalog.rebuild"},
+    {"apiIds":["kungfu.workspace.catalog"],"reason":null,"state":"linked","surfaceId":"kungfu.cli.commands.workspace.catalog.verify"},
+    {"apiIds":[],"reason":"no-agent-first-api-declared","state":"unlinked","surfaceId":"kungfu.cli.commands.workspace.current"},
+    {"apiIds":["kungfu.workspace.start-continuation"],"reason":null,"state":"linked","surfaceId":"kungfu.cli.commands.workspace.ensure"},
+    {"apiIds":["kungfu.workspace.graph-qualify"],"reason":null,"state":"linked","surfaceId":"kungfu.cli.commands.workspace.graph.qualify"},
+    {"apiIds":["kungfu.workspace.import-full-evidence"],"reason":null,"state":"linked","surfaceId":"kungfu.cli.commands.workspace.import.full.evidence.cmd"},
+    {"apiIds":["kungfu.workspace.inspect"],"reason":null,"state":"linked","surfaceId":"kungfu.cli.commands.workspace.inspect"},
+    {"apiIds":[],"reason":"no-agent-first-api-declared","state":"unlinked","surfaceId":"kungfu.cli.commands.workspace.inspect.guidance.cmd"},
+    {"apiIds":[],"reason":"no-agent-first-api-declared","state":"unlinked","surfaceId":"kungfu.cli.commands.workspace.list.workspaces"},
+    {"apiIds":["kungfu.workspace.preview"],"reason":null,"state":"linked","surfaceId":"kungfu.cli.commands.workspace.preview"},
+    {"apiIds":["kungfu.workspace.pull"],"reason":null,"state":"linked","surfaceId":"kungfu.cli.commands.workspace.pull"},
+    {"apiIds":["kungfu.workspace.push"],"reason":null,"state":"linked","surfaceId":"kungfu.cli.commands.workspace.push"},
+    {"apiIds":["kungfu.workspace.request-full-evidence"],"reason":null,"state":"linked","surfaceId":"kungfu.cli.commands.workspace.request.full.evidence.cmd"},
+    {"apiIds":[],"reason":"no-agent-first-api-declared","state":"unlinked","surfaceId":"kungfu.cli.commands.workspace.select"},
+    {"apiIds":[],"reason":"no-agent-first-api-declared","state":"unlinked","surfaceId":"kungfu.cli.commands.workspace.select.home"},
+    {"apiIds":["kungfu.workspace.verify"],"reason":null,"state":"linked","surfaceId":"kungfu.cli.commands.workspace.verify"},
+    {"apiIds":["kungfu.workspace.work"],"reason":null,"state":"linked","surfaceId":"kungfu.cli.commands.workspace.work"},
+    {"apiIds":[],"reason":"no-agent-first-api-declared","state":"unlinked","surfaceId":"kungfu.cli.commands.xinfa.xinfa"}
   ],
   "nonClaims": [
     "This registry does not own Core lifecycle, KFX trust, authorization, or receipt state.",
@@ -2933,11 +444,11 @@
       "kfd3Registry": "strict-link",
       "packagedInventory": "required-agent-pack-entry"
     },
-    "expectedSurfaceRoot": "sha256:1933355688d68eafeccb2ca44697075be63f93ff3a6148c475693fa86bea7ca6",
+    "expectedSurfaceRoot": "sha256:5c9a4ea480162c59cd645baa40e3409831aa39fe75ebbc8668ae8771065f9dd3",
     "regeneration": "./shifu fix:cli-catalog-parity",
     "validation": "./shifu check:cli-catalog-parity"
   },
-  "registryRoot": "sha256:26c0a16389234c956f51901318b26e2504f5452d37555fcabfa99e8f85d3157b",
+  "registryRoot": "sha256:b7cc11ae61e276ba54bd67fa02ea5abf2282d3e9cb8eee95ec2bb2bb577fcaed",
   "schema": "kungfu.cli-surface-catalog/v1",
   "schemaRoot": "sha256:30e0c49658aee967b24294362af12e977c8d62eaa455eb83ffdaa50072021569",
   "source": {
@@ -2950,7 +461,7 @@
     "pathAuthority": "live-click-tree",
     "root": "kungfu"
   },
-  "surfaceRoot": "sha256:1933355688d68eafeccb2ca44697075be63f93ff3a6148c475693fa86bea7ca6",
+  "surfaceRoot": "sha256:5c9a4ea480162c59cd645baa40e3409831aa39fe75ebbc8668ae8771065f9dd3",
   "surfaces": [
     {
       "aliases": [],
@@ -25003,6 +22514,54 @@
       },
       "summary": "assemble Kungfu applications: scaffold apps/extensions, build kfx",
       "visibility": "advanced"
+    },
+    {
+      "aliases": [],
+      "approval_policy": {
+        "caller_confirmation_required": false,
+        "mode": "none",
+        "preconditions": []
+      },
+      "audience": [
+        "human",
+        "agent",
+        "developer",
+        "operator"
+      ],
+      "availability": {
+        "conditions": [
+          "source-runtime"
+        ],
+        "state": "available"
+      },
+      "canonical_path": "kungfu shifu",
+      "id": "kungfu.cli.commands.shifu.shifu",
+      "kfd3_api_id": null,
+      "kfd3_api_ids": [],
+      "kind": "command",
+      "maturity": "stable",
+      "mutation_class": "read",
+      "owner": "core",
+      "parameters": [
+        {
+          "arity": -1,
+          "kind": "argument",
+          "name": "commands",
+          "required": false,
+          "type": "text"
+        }
+      ],
+      "path_depth": 2,
+      "schema_refs": [],
+      "section": "developer",
+      "source": {
+        "familyPolicy": true,
+        "kind": "runtime-click",
+        "module": "kungfu.cli.commands.shifu",
+        "symbol": "shifu"
+      },
+      "summary": "run the linked Shifu development and recovery launcher",
+      "visibility": "public"
     },
     {
       "aliases": [],

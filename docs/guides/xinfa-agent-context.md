@@ -59,8 +59,10 @@ fall back to the first route or to README-only context.
 ## Installed runtime: compile or verify an Atlas through Kungfu
 
 The installed Kungfu runtime carries an Agent onboarding pack, a precompiled
-documentation Atlas, and a private independently qualified Xinfa engine. The
-only public executable is `kungfu`:
+documentation Atlas, and an independently qualified Xinfa engine. `kungfu` is
+the only npm/Core executable and invokes that engine in-process. The separate
+`xinfa` executable is distributed only through protected GitHub Releases and
+is never discovered through `PATH` by this route:
 
 ```sh
 kungfu agent brief

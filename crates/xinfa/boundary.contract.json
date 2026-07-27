@@ -43,7 +43,9 @@
     "hostManifestFromXinfaRoot": "../trunk/Cargo.toml",
     "hostDependency": "xinfa = { path = \"../xinfa\" }",
     "linkedSubcommand": "xinfa",
-    "packagedStandaloneBinary": false
+    "packagedStandaloneBinary": false,
+    "independentStandaloneRelease": true,
+    "standaloneReleaseWorkflow": ".github/workflows/release-shifu.yml"
   },
   "wasmTarget": {
     "target": "wasm32-unknown-unknown",

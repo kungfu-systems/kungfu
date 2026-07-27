@@ -190,6 +190,11 @@ export function sourceAcceptancePlan(files, evidenceBaseCommit = '') {
       'scripts/check-community-health-baseline.mjs',
     ],
     ['npm Release package registry', 'scripts/check-npm-package-registry.mjs'],
+    [
+      'component distribution boundary',
+      'scripts/check-npm-package-registry.mjs',
+      '--component-distribution',
+    ],
     ['schema authority', 'scripts/check-schema-authority.mjs'],
     ['incubation passport governance', 'scripts/check-incubation-passport.mjs'],
     [

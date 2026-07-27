@@ -128,22 +128,26 @@ export function validateBoundary(root = XINFA_ROOT) {
     );
   }
   if (
-    product.distribution.publicExecutable !== 'kungfu' ||
-    product.distribution.publicCommand !== 'kungfu xinfa' ||
-    product.distribution.secondPublicExecutable !== false ||
+    product.distribution.publicNpmExecutable !== 'kungfu' ||
+    product.distribution.embeddedCommand !== 'kungfu xinfa' ||
+    product.distribution.standaloneExecutable !== 'xinfa' ||
+    product.distribution.standaloneChannel !== 'protected-github-release' ||
     product.distribution.linkedComponent.hostCrate !== 'kungfu-trunk' ||
     product.distribution.linkedComponent.dispatch !== 'in-process'
   ) {
-    findings.push('product contract: only kungfu may be a public executable');
+    findings.push(
+      'product contract: Kungfu must embed Xinfa while standalone Xinfa remains GitHub-only',
+    );
   }
   if (
-    product.artifacts.independentRelease !== false ||
+    product.artifacts.independentRelease !== true ||
     boundary.hostIntegration.packagedStandaloneBinary !== false ||
+    boundary.hostIntegration.independentStandaloneRelease !== true ||
     boundary.hostIntegration.dependencyDirection !==
       'kungfu-trunk-to-xinfa-only'
   ) {
     findings.push(
-      'component boundary: Xinfa must link one-way into the trunk without a standalone product artifact',
+      'component boundary: Xinfa must link one-way into the trunk and stay out of Core while retaining its independent release',
     );
   }
   if (product.state.workspaceDefault !== '.xinfa') {
