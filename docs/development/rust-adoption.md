@@ -105,10 +105,12 @@ The paved road for mode 1, as implemented for the launcher:
   `scripts/sync-shifu-version.mjs`: the root `version` lifecycle rewrites it
   during `lerna version`, and `./shifu check` gates against drift. No separate
   VERSION files.
-- **Release** — tag `shifu-v<version>` triggers
-  `.github/workflows/release-shifu.yml`: a 3-platform matrix
-  (macos-arm64, linux-x64 as a fully static musl build, windows-x64) publishes
-  binaries plus `SHA256SUMS` to GitHub Releases.
+- **Release** — tags `shifu-v<version>` and `xinfa-v<version>` trigger
+  `.github/workflows/release-shifu.yml`: independent 3-platform native matrices
+  (macos-arm64, linux-x64 as a fully static musl build, windows-x64) publish
+  binaries, `SHA256SUMS`, a source-bound component BOM, and GitHub Sigstore
+  provenance to protected GitHub Releases. A manual dispatch rehearses the same
+  build without publication.
 - **Fetch** — thin shims (`shifu`, `shifu.cmd`) read the pin,
   download the matching asset, cache it, and `exec` it. Mirrors are
   configurable per environment through the user-global `build-local.env`
@@ -141,8 +143,9 @@ The paved road for mode 1, as implemented for the launcher:
   source if cargo is present, then fall back to the legacy in-script path, so
   no machine class is stranded.
 
-A second binary component can copy this pipeline mechanically: new tag prefix,
-same workflow shape, same shim pattern (or dispatch through the launcher).
+Xinfa uses this pipeline with its own version and tag prefix. Kungfu links both
+libraries in-process while `@kungfu-tech/core` continues to ship only the
+`kungfu` executable and no standalone component payload.
 
 ## Selective exercise discipline
 

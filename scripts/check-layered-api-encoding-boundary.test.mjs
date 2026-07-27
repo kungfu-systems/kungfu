@@ -17,10 +17,22 @@ const readJson = (path) => JSON.parse(read(path));
 const sha256 = (path) =>
   createHash('sha256').update(fs.readFileSync(path)).digest('hex');
 const contract = readJson(CONTRACT_PATH);
+const GENERATED_DIRECTORY_NAMES = new Set([
+  'build',
+  'dist',
+  'node_modules',
+  'out',
+  'target',
+]);
 const sourceFiles = (root) => {
   const files = [];
   for (const entry of fs.readdirSync(root, { withFileTypes: true })) {
-    if (entry.name === 'target' || entry.name === '.git') continue;
+    if (
+      entry.name === '.git' ||
+      (entry.isDirectory() && GENERATED_DIRECTORY_NAMES.has(entry.name))
+    ) {
+      continue;
+    }
     const target = path.join(root, entry.name);
     if (entry.isDirectory()) files.push(...sourceFiles(target));
     else files.push(target);

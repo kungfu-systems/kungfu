@@ -233,11 +233,12 @@
         {
           "path": ".github/workflows/release-shifu.yml",
           "classification": "publication",
-          "owner": "shifu",
+          "owner": "native-components",
           "surfaceIds": [
-            "shifu-launcher"
+            "shifu-launcher",
+            "xinfa-compiler"
           ],
-          "sourceRoot": "sha256:eb0746015492c0d57d2c931a6650262b4f18d95dc810bab4eb83f620ba01fb0b"
+          "sourceRoot": "sha256:21b1abce53f87b1e1bdb9f20e143ebc997f5bb6511f11c639978abdeac71f85a"
         },
         {
           "path": ".github/workflows/shifu-ci.yml",
@@ -654,6 +655,41 @@
       }
     },
     {
+      "id": "xinfa-compiler",
+      "class": "github-release-assets",
+      "owner": "xinfa",
+      "workflowBindings": [
+        ".github/workflows/release-shifu.yml"
+      ],
+      "artifactSource": "xinfa-compiler exact artifact adapter",
+      "credentialIsland": "xinfa-compiler bounded credential island",
+      "readback": "xinfa-compiler immutable public readback",
+      "rollback": "resume exact transaction; never replace immutable bytes",
+      "telemetry": "xinfa-compiler evidence and status projection",
+      "lifecycle": "active-isolated",
+      "protocolMode": "isolated",
+      "isolation": {
+        "rationale": "Standalone Xinfa lacks common transaction/passport/history/status.",
+        "owner": "xinfa",
+        "preservedInvariants": [
+          "exact-source-admission",
+          "public-readback",
+          "deterministic-rerun"
+        ],
+        "missingInvariants": [
+          "build-once-artifact",
+          "publication-transaction",
+          "durable-history",
+          "ruleset-readback",
+          "latency-evidence",
+          "status-rehearsal"
+        ],
+        "risk": "Partial Release creation has workflow-local recovery.",
+        "reviewDate": "2026-08-31",
+        "sunsetCondition": "Adopt the Buildchain binary publication adapter."
+      }
+    },
+    {
       "id": "layer-artifacts",
       "class": "multi-registry",
       "owner": "kungfu-layers",
@@ -792,5 +828,5 @@
       }
     }
   ],
-  "registryRoot": "sha256:7c60966bd659629fcfe235f474f9b323d74958de193eff2fd80fbd344a7857f1"
+  "registryRoot": "sha256:383e421695cf20fce2373233c5cfe054b45e212cc32f42b775f4ce34a943de02"
 }

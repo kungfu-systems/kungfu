@@ -65,7 +65,7 @@ Episode alone does not execute Xinfa.
 | Project | source documents, domain semantics, provider instances, route intent | Context IR or compiler receipts |
 | Shifu | project submission protocol, conformance diagnostics, Gate execution, thin invocation adapters | a second Context IR, graph, selector, pack, or capsule compiler |
 | Xinfa | Atlas identity, Context IR, graph and impact semantics, selection, pack/capsule formats, compiler provenance | project truth, runtime facts, or release attestation |
-| Kungfu | the single public executable, thin product adapters, and consumption of public Xinfa artifacts | Xinfa schemas, state, version, or compiler internals |
+| Kungfu | the single npm/Core executable, thin in-process product adapters, and consumption of public Xinfa artifacts | Xinfa schemas, state, version, standalone release, or compiler internals |
 | Buildchain | exact artifact and release attestation | authoring or compiler semantics |
 
 The dependency direction is Project sources → public submission contracts →

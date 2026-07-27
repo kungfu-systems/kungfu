@@ -50,8 +50,9 @@ kungfu primitive show fact --json
 kungfu primitive explain fact --json
 ```
 
-Kungfu has one public executable. Xinfa and all four Action Primitive roles are
-subcommands of it:
+Kungfu has one npm/Core executable. It embeds Shifu, Xinfa, and all four Action
+Primitive roles as subcommands; Shifu and Xinfa also retain independently
+installable GitHub-only executables:
 
 ```text
 kungfu xinfa compile        workspace -> immutable Xinfa Atlas
@@ -61,11 +62,15 @@ kungfu warrant ...          bounded authority
 kungfu episode ...          causal experience
 ```
 
+The linked development and recovery entry is `kungfu shifu doctor`; it is a
+product command, not an Agent KFD-3 API.
+
 Use `capabilities`, `inspect`, and `action` under each role group. Role actions
 delegate to one Profile engine and native Fact authority; they do not prove
-Pursuit completion. Xinfa retains its own schemas, `.xinfa` state, version, and
-engine qualification, but the installed engine is private and is not a second
-PATH command.
+Pursuit completion. Xinfa retains its own schemas, `.xinfa` state, version,
+engine qualification, and GitHub Release executable. Kungfu dispatch never
+discovers that executable through `PATH`; it calls the linked Rust library
+in-process.
 
 Before source implementation, load the repository's verified Xinfa context
 instead of treating this brief, a README, or chat history as the whole task
