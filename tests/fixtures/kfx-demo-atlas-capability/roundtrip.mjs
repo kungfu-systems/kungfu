@@ -31,7 +31,7 @@ uvPython(coreDir, [
 const profile = openProfile({
   runtimeDir,
   execFileSync,
-  env: { KUNGFU_ATLAS_REPO: sampleRoot },
+  env: { ...process.env, KUNGFU_ATLAS_REPO: sampleRoot },
   bin,
 });
 const atlas = openWorkControlProfile(profile, sampleRoot);
