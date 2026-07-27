@@ -1828,7 +1828,9 @@ export function runInstalledKungfuAssignmentAdmissionSmoke({
     installRoot,
     'assignment-admission-request.json',
   );
+  const initiativeId = 'installed-product-qualification';
   const assignmentId = 'installed-product-admission-smoke';
+  const retentionPolicy = 'explicit-expiry-retain-bytes-v1';
   const assignmentEnv = {
     ...env,
     HOME: userHome,
@@ -1847,17 +1849,11 @@ export function runInstalledKungfuAssignmentAdmissionSmoke({
     `${JSON.stringify(
       {
         schema: 'kungfu.assignment-request/v1',
-        source: {
-          kind: 'installed-product-qualification',
-          sourceId: assignmentId,
-        },
-        retention: {
-          policy: 'explicit-expiry-retain-bytes-v1',
-          expiresAt: null,
-        },
+        source: { kind: initiativeId, sourceId: assignmentId },
+        retention: { policy: retentionPolicy, expiresAt: null },
         workDefinition: {
           goal_id: assignmentId,
-          mission_id: 'installed-product-qualification',
+          mission_id: initiativeId,
           title: 'Verify installed Assignment admission',
           objective: 'Prove the packaged Mission Control Suite is closed.',
           owner_agent: 'product-qualification',
@@ -1897,6 +1893,10 @@ export function runInstalledKungfuAssignmentAdmissionSmoke({
         captured.requestPath,
         '--workspace',
         workspace,
+        '--initiative-id',
+        initiativeId,
+        '--assignment-id',
+        assignmentId,
         '--actor',
         'product-qualification',
         '--actor-type',
