@@ -119,6 +119,36 @@ function validateSourceDeclaration(source) {
       throw new Error(`positioning references unknown source ${sourceId}`);
     }
   }
+  const experience = source.siteExperienceDefaults;
+  if (experience?.contract !== 'kungfu.site-experience-defaults/v1') {
+    throw new Error('site experience defaults contract is missing');
+  }
+  if (
+    experience.brand?.signature !== 'Kungfu UNGFU™' ||
+    experience.brand?.productName !== 'Kungfu' ||
+    !experience.brand?.boundary?.includes('not a second product or runtime')
+  ) {
+    throw new Error('site experience brand boundary drifted');
+  }
+  if (
+    experience.firstScreen?.humanFirst !== true ||
+    experience.progressiveDisclosure?.technicalDefault !== 'collapsed' ||
+    experience.navigation?.machineEntriesInPrimary !== false ||
+    experience.kfd3?.standard !== 'KFD-3' ||
+    experience.kfd3?.machineEntry !== 'agentIndex'
+  ) {
+    throw new Error('site reader experience invariant drifted');
+  }
+  for (const sourceId of [
+    ...(experience.sourceIds || []),
+    ...(experience.kfd3?.sourceIds || []),
+  ]) {
+    if (!sourceIds.has(sourceId)) {
+      throw new Error(
+        `site experience defaults reference unknown source ${sourceId}`,
+      );
+    }
+  }
 }
 
 function assertSpecRelativePath(relative) {
@@ -326,6 +356,11 @@ function main() {
     positioning: Object.fromEntries(
       Object.entries(source.positioning).filter(([key]) => key !== 'sourceIds'),
     ),
+    siteExperienceDefaults: Object.fromEntries(
+      Object.entries(source.siteExperienceDefaults).filter(
+        ([key]) => key !== 'sourceIds',
+      ),
+    ),
     adoptionLayers: source.adoptionLayers,
     surfaces: source.surfaces,
     sources,
@@ -359,6 +394,7 @@ function main() {
     bundleContentRoot: bundle.contentRoot,
     promise: bundle.positioning.promise,
     firstReleaseOutcome: bundle.positioning.firstReleaseOutcome,
+    siteExperienceDefaults: bundle.siteExperienceDefaults,
     formatAuthority: {
       package: formatAuthority.package,
       pickup: formatAuthority.pickup,

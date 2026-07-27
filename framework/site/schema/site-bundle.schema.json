@@ -12,6 +12,7 @@
     "sourceRoot",
     "contentRoot",
     "positioning",
+    "siteExperienceDefaults",
     "adoptionLayers",
     "surfaces",
     "sources",
@@ -108,6 +109,9 @@
           "minLength": 1
         }
       }
+    },
+    "siteExperienceDefaults": {
+      "$ref": "#/$defs/siteExperienceDefaults"
     },
     "adoptionLayers": {
       "type": "array",
@@ -209,6 +213,135 @@
       "items": {
         "type": "string",
         "minLength": 1
+      }
+    },
+    "siteExperienceDefaults": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "contract",
+        "brand",
+        "firstScreen",
+        "progressiveDisclosure",
+        "navigation",
+        "kfd3"
+      ],
+      "properties": {
+        "contract": {
+          "const": "kungfu.site-experience-defaults/v1"
+        },
+        "brand": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "signature",
+            "productName",
+            "boundary",
+            "trademarkNotice"
+          ],
+          "properties": {
+            "signature": {
+              "const": "Kungfu UNGFU™"
+            },
+            "productName": {
+              "const": "Kungfu"
+            },
+            "boundary": {
+              "type": "string",
+              "minLength": 1
+            },
+            "trademarkNotice": {
+              "const": "Kungfu UNGFU™ is a trademark of Kungfu Origin Technology Limited."
+            }
+          }
+        },
+        "firstScreen": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "humanFirst",
+            "coReadingLabel",
+            "coReadingPrompt"
+          ],
+          "properties": {
+            "humanFirst": {
+              "const": true
+            },
+            "coReadingLabel": {
+              "type": "string",
+              "minLength": 1
+            },
+            "coReadingPrompt": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        },
+        "progressiveDisclosure": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "technicalDefault",
+            "technicalLabel",
+            "openLabel",
+            "closeLabel"
+          ],
+          "properties": {
+            "technicalDefault": {
+              "const": "collapsed"
+            },
+            "technicalLabel": {
+              "type": "string",
+              "minLength": 1
+            },
+            "openLabel": {
+              "type": "string",
+              "minLength": 1
+            },
+            "closeLabel": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        },
+        "navigation": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["brandOwnsHome", "machineEntriesInPrimary"],
+          "properties": {
+            "brandOwnsHome": {
+              "const": true
+            },
+            "machineEntriesInPrimary": {
+              "const": false
+            }
+          }
+        },
+        "kfd3": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "standard",
+            "machineEntry",
+            "parityRule",
+            "sourceIds"
+          ],
+          "properties": {
+            "standard": {
+              "const": "KFD-3"
+            },
+            "machineEntry": {
+              "const": "agentIndex"
+            },
+            "parityRule": {
+              "type": "string",
+              "minLength": 1
+            },
+            "sourceIds": {
+              "$ref": "#/$defs/sourceIds"
+            }
+          }
+        }
       }
     },
     "adoptionLayer": {
