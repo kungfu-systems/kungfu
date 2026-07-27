@@ -1,7 +1,9 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import {
+  type KfxControlStatus,
   type KfxExperienceFlowDescriptor,
+  projectKfxControlSuiteHost,
   projectKfxExperienceFlowHost,
 } from '@kungfu-tech/api/capability';
 
@@ -11,4 +13,8 @@ export function projectGuiKfxExperienceFlow(
   descriptor: KfxExperienceFlowDescriptor,
 ) {
   return projectKfxExperienceFlowHost(descriptor, 'gui');
+}
+
+export function projectGuiKfxControl(status: KfxControlStatus) {
+  return projectKfxControlSuiteHost(status, 'gui');
 }

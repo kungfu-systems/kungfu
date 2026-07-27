@@ -213,6 +213,12 @@ std::vector<std::string> declared_capabilities(const json &manifest) {
   return {capabilities.begin(), capabilities.end()};
 }
 
+std::vector<std::string> declared_product_roles(const json &manifest) {
+  const auto product = object_or_empty(manifest.at("kungfuConfig"), "product");
+  const auto roles = string_array_or_empty(product, "roles");
+  return roles;
+}
+
 std::vector<fs::path> package_directories(const fs::path &root) {
   std::set<fs::path> result;
   if (fs::is_regular_file(root / KFX_MANIFEST_FILE) || fs::is_regular_file(root / PACKAGE_TRANSPORT_FILE))
@@ -686,6 +692,7 @@ snapshot build_snapshot(const json &request) {
                       {"closure", closure},
                       {"facets", declared_facets(manifest, package_path)},
                       {"declaredCapabilities", declared_capabilities(manifest)},
+                      {"productRoles", declared_product_roles(manifest)},
                       {"runtimeTier", tier},
                       {"admissionGrade", "unverified"},
                       {"hosts", host_placements(manifest, placements, key)},
@@ -1444,6 +1451,225 @@ json lifecycle_plan(const snapshot &value, const lifecycle_view &lifecycle, cons
   return result;
 }
 
+inline constexpr const char *KFX_CONTROL_SUITE_ID = "kungfu-kfx-control-suite";
+inline constexpr const char *KFX_CONTROL_PACKAGE_KEY = "kfx-manager";
+
+json control_bootstrap_policy() {
+  const json identity = {{"schema", "kungfu.kfx.control-bootstrap-policy/v1"},
+                         {"controllerId", KFX_CONTROL_SUITE_ID},
+                         {"packageKey", KFX_CONTROL_PACKAGE_KEY},
+                         {"requiredProductRoles", json::array({"boot-critical", "system-management"})},
+                         {"maximumCapabilities", json::array({"kfxControl", "profile"})},
+                         {"requiredCapabilities", json::array({"kfxControl"})},
+                         {"requiredRuntimeTier", "first-party-pinned"},
+                         {"requiredRootKind", "product"},
+                         {"authority",
+                          {{"candidateIdentity", "kungfu.kfx.json plus Core-computed package closure"},
+                           {"lifecycle", "public-kfx-status-plan-apply"},
+                           {"settlement", "fact-work-named-cut-cas"},
+                           {"selfGrant", false},
+                           {"receiptsBypassPolicy", false}}},
+                         {"recovery",
+                          {{"lastKnownGood", "retained-package-referenced-by-sealed-kfx-episode-fact"},
+                           {"corruptOrMissingActive", "deterministic-safe-mode"},
+                           {"automaticActivation", false}}}};
+  auto result = identity;
+  result["policyRoot"] = root_of(identity);
+  return result;
+}
+
+json validate_control_package(const json &package) {
+  const auto policy = control_bootstrap_policy();
+  json reasons = json::array();
+  if (package.is_null() || !package.is_object()) {
+    reasons.push_back("KF_KFX_CONTROL_CANDIDATE_MISSING");
+  } else {
+    if (package.value("key", "") != KFX_CONTROL_PACKAGE_KEY)
+      reasons.push_back("KF_KFX_CONTROL_IDENTITY_MISMATCH");
+    if (package.value("rootKind", "") != policy.at("requiredRootKind").get<std::string>())
+      reasons.push_back("KF_KFX_CONTROL_SOURCE_REJECTED");
+    if (package.value("runtimeTier", "") != policy.at("requiredRuntimeTier").get<std::string>())
+      reasons.push_back("KF_KFX_CONTROL_TRUST_REJECTED");
+    const auto roles = package.value("productRoles", json::array());
+    if (roles != policy.at("requiredProductRoles"))
+      reasons.push_back("KF_KFX_CONTROL_ROLE_BROADENING");
+    const auto capabilities = package.value("declaredCapabilities", json::array());
+    for (const auto &required : policy.at("requiredCapabilities")) {
+      if (std::find(capabilities.begin(), capabilities.end(), required) == capabilities.end())
+        reasons.push_back("KF_KFX_CONTROL_CAPABILITY_MISSING");
+    }
+    for (const auto &capability : capabilities) {
+      if (std::find(policy.at("maximumCapabilities").begin(), policy.at("maximumCapabilities").end(), capability) ==
+          policy.at("maximumCapabilities").end())
+        reasons.push_back("KF_KFX_CONTROL_SELF_GRANT");
+    }
+  }
+  return {{"schema", "kungfu.kfx.control-bootstrap-verification/v1"},
+          {"controllerId", KFX_CONTROL_SUITE_ID},
+          {"policyRoot", policy.at("policyRoot")},
+          {"packageRoot", package.is_object() ? package.value("packageRoot", "") : ""},
+          {"manifestRoot", package.is_object() ? package.value("manifestRoot", "") : ""},
+          {"valid", reasons.empty()},
+          {"reasons", reasons}};
+}
+
+json inspect_control_package_path(const fs::path &path) {
+  if (!fs::is_directory(path))
+    refuse("KF_KFX_CONTROL_ACTIVE_CORRUPT", "Control Suite package path is missing");
+  const json request = {{"roots", json::array({{{"kind", "product"}, {"path", path.string()}}})},
+                        {"runtimeTiers", {{KFX_CONTROL_PACKAGE_KEY, "first-party-pinned"}}}};
+  const auto observed = build_snapshot(request);
+  const auto package = find_package(observed.packages, KFX_CONTROL_PACKAGE_KEY);
+  const auto verification = validate_control_package(package);
+  if (!verification.at("valid").get<bool>())
+    refuse("KF_KFX_CONTROL_ACTIVE_CORRUPT", "Control Suite package failed embedded bootstrap verification");
+  return package;
+}
+
+std::vector<json> retained_control_candidates(const lifecycle_view &lifecycle) {
+  std::vector<std::pair<int64_t, fs::path>> paths;
+  for (const auto &event : lifecycle.work_history) {
+    if (event.value("schema", "") != "kungfu.kfx.episode-fact/v1" ||
+        event.value("packageKey", "") != KFX_CONTROL_PACKAGE_KEY)
+      continue;
+    const auto materialization = event.value("materialization", json::object());
+    if (!materialization.contains("retainedPath") || !materialization.at("retainedPath").is_string() ||
+        materialization.at("retainedPath").get<std::string>().empty())
+      continue;
+    paths.emplace_back(event.value("recordedAt", int64_t{0}),
+                       fs::path(materialization.at("retainedPath").get<std::string>()));
+  }
+  std::sort(paths.begin(), paths.end(), [](const auto &left, const auto &right) { return left.first > right.first; });
+  std::vector<json> result;
+  std::set<std::string> seen_roots;
+  for (const auto &[ignored, path] : paths) {
+    (void)ignored;
+    try {
+      const auto package = inspect_control_package_path(path);
+      const auto root = package.at("packageRoot").get<std::string>();
+      if (!seen_roots.insert(root).second)
+        continue;
+      result.push_back({{"packageRoot", root},
+                        {"manifestRoot", package.at("manifestRoot")},
+                        {"version", package.value("version", "")},
+                        {"sourcePath", path.string()}});
+    } catch (const std::invalid_argument &) {
+      // Retained bytes are recovery candidates, never authority. Corrupt or
+      // stale candidates stay excluded and cannot weaken safe mode.
+    }
+  }
+  return result;
+}
+
+json control_status(const lifecycle_view &lifecycle) {
+  const auto policy = control_bootstrap_policy();
+  json active = nullptr;
+  json active_verification = {{"schema", "kungfu.kfx.control-bootstrap-verification/v1"},
+                              {"controllerId", KFX_CONTROL_SUITE_ID},
+                              {"policyRoot", policy.at("policyRoot")},
+                              {"packageRoot", ""},
+                              {"manifestRoot", ""},
+                              {"valid", false},
+                              {"reasons", json::array({"KF_KFX_CONTROL_ACTIVE_MISSING"})}};
+  if (lifecycle.present) {
+    active = find_package(lifecycle.authoritative.packages, KFX_CONTROL_PACKAGE_KEY);
+    if (!active.is_null()) {
+      active_verification = validate_control_package(active);
+      if (active_verification.at("valid").get<bool>()) {
+        try {
+          const auto physical = inspect_control_package_path(active.at("path").get<std::string>());
+          if (physical.at("packageRoot") != active.at("packageRoot") ||
+              physical.at("manifestRoot") != active.at("manifestRoot")) {
+            active_verification["valid"] = false;
+            active_verification["reasons"] = json::array({"KF_KFX_CONTROL_ACTIVE_CORRUPT"});
+          }
+        } catch (const std::invalid_argument &) {
+          active_verification["valid"] = false;
+          active_verification["reasons"] = json::array({"KF_KFX_CONTROL_ACTIVE_CORRUPT"});
+        }
+      }
+    }
+  }
+  const auto retained = retained_control_candidates(lifecycle);
+  const auto active_valid = active_verification.at("valid").get<bool>();
+  json last_known_good = nullptr;
+  if (!retained.empty())
+    last_known_good = retained.front();
+  else if (active_valid)
+    last_known_good = {{"packageRoot", active.at("packageRoot")},
+                       {"manifestRoot", active.at("manifestRoot")},
+                       {"version", active.value("version", "")},
+                       {"sourcePath", active.value("path", "")}};
+  const auto mode = active_valid ? "active" : "safe-mode";
+  json identity = {
+      {"schema", "kungfu.kfx.control-suite-status/v1"},
+      {"controllerId", KFX_CONTROL_SUITE_ID},
+      {"authority", lifecycle.present ? "pinned-fact-cut" : "bootstrap-safe-mode"},
+      {"cutRef", KFX_REGISTRY_REF},
+      {"cutRoot", lifecycle.present ? json(lifecycle.cut_root) : json(nullptr)},
+      {"revision", lifecycle.revision},
+      {"policy", policy},
+      {"active", active.is_null() ? json(nullptr)
+                                  : json({{"packageRoot", active.at("packageRoot")},
+                                          {"manifestRoot", active.at("manifestRoot")},
+                                          {"version", active.value("version", "")}})},
+      {"activeVerification", active_verification},
+      {"lastKnownGood", last_known_good},
+      {"mode", mode},
+      {"executionAllowed", active_valid},
+      {"diagnostics",
+       active_valid
+           ? json::array()
+           : json::array({{{"code", "KF_KFX_CONTROL_SAFE_MODE"},
+                           {"recoveryGuidance", last_known_good.is_null()
+                                                    ? json::array({"install-qualified-control-suite"})
+                                                    : json::array({"plan-explicit-last-known-good-rollback"})}}})}};
+  auto result = identity;
+  result["statusRoot"] = root_of(identity);
+  return result;
+}
+
+json control_plan(const snapshot &value, const lifecycle_view &lifecycle, const json &request, const json &load_plan) {
+  const auto operation = request.value("operation", "");
+  if (operation != "install" && operation != "update")
+    refuse("KF_KFX_CONTROL_OPERATION_REJECTED", "Control Suite only admits explicit install or update plans");
+  if (request.value("packageKey", "") != KFX_CONTROL_PACKAGE_KEY)
+    refuse("KF_KFX_CONTROL_IDENTITY_MISMATCH", "Control Suite cannot mutate another package identity");
+  const auto candidate = find_package(value.packages, KFX_CONTROL_PACKAGE_KEY);
+  const auto verification = validate_control_package(candidate);
+  if (!verification.at("valid").get<bool>()) {
+    const auto reasons = verification.at("reasons");
+    const auto code = reasons.empty() ? "KF_KFX_CONTROL_TRUST_REJECTED" : reasons.front().get<std::string>();
+    refuse(code, "Control Suite candidate exceeds the embedded bootstrap contract");
+  }
+  const auto status = control_status(lifecycle);
+  const json identity = {
+      {"schema", "kungfu.kfx.control-suite-plan/v1"},
+      {"controllerId", KFX_CONTROL_SUITE_ID},
+      {"operation", operation},
+      {"packageKey", KFX_CONTROL_PACKAGE_KEY},
+      {"basis",
+       {{"cutRoot", lifecycle.present ? json(lifecycle.cut_root) : json(nullptr)},
+        {"revision", lifecycle.revision},
+        {"activePackageRoot", status.at("active").is_null() ? json(nullptr) : status.at("active").at("packageRoot")}}},
+      {"candidate",
+       {{"packageRoot", candidate.at("packageRoot")},
+        {"manifestRoot", candidate.at("manifestRoot")},
+        {"version", candidate.value("version", "")}}},
+      {"bootstrapVerification", verification},
+      {"bootstrapPolicyRoot", control_bootstrap_policy().at("policyRoot")},
+      {"loadPlanRoot", load_plan.at("planRoot")},
+      {"registryRoot", load_plan.at("registryRoot")},
+      {"graphRoot", load_plan.at("graphRoot")},
+      {"allowed", true},
+      {"requiresAuthorization", true},
+      {"authority", "public-kfx-plan-plus-fact-work-settlement"}};
+  auto result = identity;
+  result["controlPlanRoot"] = root_of(identity);
+  result["loadPlan"] = load_plan;
+  return result;
+}
+
 int64_t receipt_time(const json &request) {
   if (request.contains("systemTime")) {
     if (!request.at("systemTime").is_number_integer() || request.at("systemTime").get<int64_t>() < 0)
@@ -1980,12 +2206,23 @@ snapshot empty_observation() {
 
 } // namespace
 
+json native_kfx_control_bootstrap_policy() { return control_bootstrap_policy(); }
+
 static json query_native_kfx_registry_unchecked(const std::string &action, const json &request,
                                                 const std::string &runtime_dir) {
   static const std::set<std::string> actions = {"list",   "inspect", "resolve", "plan",
                                                 "status", "assess",  "apply",   "history"};
   if (!actions.contains(action))
     refuse("KF_KFX_AUTHORITY_CLAIM_FORBIDDEN", "unsupported native KFX registry operation: " + action);
+  const auto controller = request.value("controller", "");
+  const bool control_request = !controller.empty();
+  if (control_request && controller != KFX_CONTROL_SUITE_ID)
+    refuse("KF_KFX_CONTROL_IDENTITY_MISMATCH", "unknown KFX lifecycle controller");
+  for (const auto *field : {"bootstrapPolicy", "systemAuthority", "grantedCapabilities"}) {
+    if (request.contains(field))
+      refuse("KF_KFX_CONTROL_SELF_GRANT",
+             std::string("caller may not supply embedded Control Suite authority field ") + field);
+  }
   if (action == "history")
     return lifecycle_history(runtime_dir, request);
   if (action == "apply" && runtime_dir.empty())
@@ -2014,8 +2251,33 @@ static json query_native_kfx_registry_unchecked(const std::string &action, const
     refuse("KF_KFX_CUT_MISSING", "no named KFX Fact Cut exists; provide a bounded discovery observation to plan");
   }
   const auto load_plan = lifecycle_plan(selected, lifecycle, request);
+  if (control_request && action == "apply") {
+    if (request.value("authorizationId", "").empty())
+      refuse("KF_KFX_CONTROL_AUTHORIZATION_REQUIRED", "Control Suite apply requires an authorization identity");
+    const auto planned = control_plan(selected, lifecycle, request, load_plan);
+    if (request.value("expectedControlPlanRoot", "") != planned.at("controlPlanRoot").get<std::string>())
+      refuse("KF_KFX_CONTROL_PLAN_STALE", "Control Suite plan root changed since authorization");
+    if (request.value("expectedBootstrapPolicyRoot", "") != planned.at("bootstrapPolicyRoot").get<std::string>())
+      refuse("KF_KFX_CONTROL_POLICY_STALE", "Control Suite bootstrap policy root changed since authorization");
+    const auto application = apply_lifecycle_mutation(selected, lifecycle, load_plan, request, runtime_dir);
+    const auto settled = load_lifecycle(runtime_dir);
+    return {{"schema", "kungfu.kfx.control-suite-application/v1"},
+            {"controllerId", KFX_CONTROL_SUITE_ID},
+            {"controlPlanRoot", planned.at("controlPlanRoot")},
+            {"bootstrapPolicyRoot", planned.at("bootstrapPolicyRoot")},
+            {"authorizationId", request.at("authorizationId")},
+            {"application", application},
+            {"status", control_status(settled)},
+            {"verified", true}};
+  }
   if (action == "apply")
     return apply_lifecycle_mutation(selected, lifecycle, load_plan, request, runtime_dir);
+  if (control_request && action == "status")
+    return control_status(lifecycle);
+  if (control_request && action == "plan")
+    return control_plan(selected, lifecycle, request, load_plan);
+  if (control_request)
+    refuse("KF_KFX_CONTROL_OPERATION_REJECTED", "Control Suite supports only public status, plan, and apply");
   const json cut_root = lifecycle.present ? json(lifecycle.cut_root) : json(nullptr);
   if (action == "status") {
     return {{"schema", "kungfu.kfx.registry-status/v3"},

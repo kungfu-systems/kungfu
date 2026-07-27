@@ -9,6 +9,7 @@
 #include <string>
 #include <unordered_set>
 
+#include <kungfu/runtime/kfx/native_registry.h>
 #include <kungfu/runtime/profile/profile_source_contract.h>
 #include <kungfu/yijinjing/storage/content_hash.h>
 
@@ -374,7 +375,8 @@ json native_kfx_contract() {
   contract["sourceContractSchema"] = source_contract().at("schema");
   contract["sourceContractVersion"] = source_contract().at("version");
   contract["sourceContractRoot"] = root_of(profile::schema::KFX_CONTRACT_JSON);
-  contract["nativeContractRoot"] = root_of(native_contract_source().dump());
+  contract["controlSuiteBootstrap"] = native_kfx_control_bootstrap_policy();
+  contract["nativeContractRoot"] = root_of(contract.dump());
   return contract;
 }
 

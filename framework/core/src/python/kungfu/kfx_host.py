@@ -8,6 +8,32 @@ from typing import Any
 HOSTS = frozenset({"gui", "tui", "cli", "agent"})
 
 
+def project_control_suite_host(status: dict[str, Any], host: str) -> dict[str, Any]:
+    """Retain the exact Core Control status across every presentation host."""
+
+    if host not in HOSTS:
+        raise ValueError(f"unsupported KFX host: {host}")
+    if (
+        status.get("schema") != "kungfu.kfx.control-suite-status/v1"
+        or status.get("controllerId") != "kungfu-kfx-control-suite"
+        or not str(status.get("statusRoot") or "").startswith("sha256:")
+        or (status.get("mode") == "active") != bool(status.get("executionAllowed"))
+        or (status.get("cutRoot") is None) != (status.get("revision") == 0)
+    ):
+        raise ValueError("KFX Control status identity does not match")
+    return {
+        "schema": "kungfu.kfx.control-host-projection/v1",
+        "host": host,
+        "controllerId": status["controllerId"],
+        "statusRoot": status["statusRoot"],
+        "cutRoot": status["cutRoot"],
+        "revision": status["revision"],
+        "mode": status["mode"],
+        "executionAllowed": status["executionAllowed"],
+        "diagnostics": status["diagnostics"],
+    }
+
+
 def project_experience_flow_host(
     descriptor: dict[str, Any], host: str
 ) -> dict[str, Any]:
