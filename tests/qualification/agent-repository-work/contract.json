@@ -1,0 +1,69 @@
+{
+  "schema": "kungfu.agent-repository-work.v1",
+  "id": "incident-board-replay-v1",
+  "status": "experimental",
+  "evidenceClass": "bounded-experiment",
+  "fixture": {
+    "language": "python",
+    "dependencyPolicy": "standard-library-only",
+    "fileCount": 49,
+    "lineCount": 2433,
+    "sourceRoot": "sha256:5c9498cf308e4ee7f53be1ce2a6025a8b26f3bb197322a3ebd93c5cfa4774de6",
+    "seededFailures": [
+      "test_expired_lease_cannot_complete",
+      "test_legacy_duplicate_log_has_stable_restart_summary"
+    ]
+  },
+  "sessions": {
+    "count": 2,
+    "agentA": {
+      "mode": "investigation-only",
+      "productionModifications": 0
+    },
+    "agentB": {
+      "mode": "bounded-repair",
+      "priorTranscriptBytes": 0,
+      "humanRestatementCount": 0
+    }
+  },
+  "warrant": {
+    "writablePaths": [
+      "incident_board/commands.py",
+      "incident_board/lease.py",
+      "incident_board/replay.py"
+    ],
+    "protectedRootsFailClosed": true,
+    "externalVerifierAuthoritative": true
+  },
+  "oracle": {
+    "sourceRoot": "sha256:74b1ec3cd7dcd4f27e4db981fa7d869119b6fc208fd890547576ad00f524349f",
+    "referenceRoot": "sha256:9c55e48f2d0cbcc5fe88c8a0a8e1a0f9dd242bf12f955519e5738c1b7d6fd634",
+    "mountedIntoAgentWorkspace": false,
+    "visibleAndHiddenTestsRequired": true
+  },
+  "runtime": {
+    "runner": "agent-120",
+    "image": "ghcr.io/kungfu-systems/build-images/opencode-ci@sha256:4083ee089fa9a419f4915505094a6c1bcce433ff77455605ce8993af3b684ed3",
+    "model": "qwen3-coder:30b-opencode-64k",
+    "context": 65536,
+    "workspace": "disposable",
+    "network": "bridge-to-explicit-local-model-endpoint",
+    "credentials": "none"
+  },
+  "evidenceDimensions": [
+    "execution",
+    "correctness",
+    "scope",
+    "continuity",
+    "evidence",
+    "efficiency",
+    "residuals"
+  ],
+  "nonClaims": {
+    "auditableDemo": true,
+    "qualificationLab": true,
+    "releaseGate": true,
+    "publicClaim": true,
+    "modelRanking": true
+  }
+}
