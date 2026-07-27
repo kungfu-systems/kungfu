@@ -932,7 +932,6 @@
             {
               "index": 2,
               "label": "name:Set up pinned Node.js",
-              "authority": "qualification",
               "definitionDigest": "sha256:93f3675945caff80d4b510964b74f50d37e770eade12d52d8600f9da040518ad"
             },
             {
