@@ -43,11 +43,11 @@ jobs:
       actions: read
       contents: write
       pull-requests: write
-    # The reusable workflow is immutable; its streamed runtime is the reviewed
-    # v3 validation train so this consumer proves the train before stable refs move.
-    uses: kungfu-systems/buildchain/.github/workflows/dev-alpha-candidate-patrol.yml@9090ef05d9c83bc6466831210acf85eaf1e8b2b1
+    # The reusable workflow and its runtime are pinned to the same merged,
+    # immutable Buildchain source.
+    uses: kungfu-systems/buildchain/.github/workflows/dev-alpha-candidate-patrol.yml@1ccbb93811ccd52cd83eda156d89fba05cc60c75
     with:
-      buildchain-ref: ${{ inputs.buildchain-ref || 'train/v3/v3.0/dev-alpha-candidate-single-flight' }}
+      buildchain-ref: ${{ inputs.buildchain-ref || '1ccbb93811ccd52cd83eda156d89fba05cc60c75' }}
       source-branch: dev/v4/v4.0
       target-branch: alpha/v4/v4.0
       dev-workflow-path: .github/workflows/dev-verify-patrol.yml
