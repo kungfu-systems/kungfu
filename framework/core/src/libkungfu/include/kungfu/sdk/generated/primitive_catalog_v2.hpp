@@ -6,6 +6,7 @@
 #include <cstddef>
 #include <string_view>
 
+// clang-format off
 namespace kungfu::sdk::generated::primitive_catalog_v2 {
 inline constexpr std::string_view CATALOG_ROOT =
     "sha256:9e6ab981d3a5e11636cc746fbb9b6559d2912a7e297cbca2ae57c39fd04ce6ba";
@@ -31,3 +32,4 @@ inline constexpr auto CATALOG_JSON_STORAGE = make_catalog_json();
 inline constexpr std::string_view CATALOG_JSON{
     CATALOG_JSON_STORAGE.data(), CATALOG_JSON_STORAGE.size()};
 } // namespace kungfu::sdk::generated::primitive_catalog_v2
+// clang-format on

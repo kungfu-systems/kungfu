@@ -9,6 +9,7 @@ import { fileURLToPath } from 'node:url';
 
 import {
   CATALOG_ARTIFACT,
+  CATALOG_HEADER,
   CATALOG_SOURCE,
   buildPrimitiveCatalog,
   discoverPrimitiveArtifacts,
@@ -161,6 +162,12 @@ test('generated C++ catalog uses bounded UTF-8 literals without changing JSON', 
     new RegExp(`CATALOG_JSON_SIZE = ${Buffer.byteLength(payload)}`),
   );
   assert.doesNotMatch(header, /CATALOG_JSON =\s*R"KUNGFU_PRIMITIVE/u);
+
+  const generatedHeader = expectedOutputs(ROOT).get(CATALOG_HEADER);
+  assert.match(
+    generatedHeader,
+    /\/\/ clang-format off[\s\S]*\/\/ clang-format on/u,
+  );
 });
 
 test('ghost fixture is rejected by the declaration join', () => {
