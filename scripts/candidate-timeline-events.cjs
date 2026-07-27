@@ -283,6 +283,34 @@ function requiredMergeQueueWindow(requiredContexts, mergeQueue) {
   };
 }
 
+function latestMergedPulls(pulls, limit) {
+  return pulls
+    .filter(({ merged_at: mergedAt }) => Number.isFinite(Date.parse(mergedAt)))
+    .sort((left, right) => {
+      const mergedOrder =
+        Date.parse(right.merged_at) - Date.parse(left.merged_at);
+      return mergedOrder || right.number - left.number;
+    })
+    .slice(0, limit);
+}
+
+async function collectLatestMergedPullWindow(fetchPage, limit, pageSize = 100) {
+  const pulls = [];
+  for (let page = 1; ; page += 1) {
+    const batch = await fetchPage(page, pageSize);
+    if (!Array.isArray(batch)) throw new Error('expected pull request page');
+    pulls.push(...batch);
+    const merged = latestMergedPulls(pulls, limit);
+    if (!batch.length || batch.length < pageSize) return { pulls, merged };
+    if (merged.length < limit) continue;
+    const cutoffMs = Date.parse(merged.at(-1).merged_at);
+    const lastUpdatedMs = Date.parse(batch.at(-1).updated_at);
+    if (Number.isFinite(lastUpdatedMs) && lastUpdatedMs < cutoffMs) {
+      return { pulls, merged };
+    }
+  }
+}
+
 function parseDevRequiredLatencyArgs(argv) {
   const options = {
     repository: process.env.GITHUB_REPOSITORY || '',
@@ -368,6 +396,8 @@ function latencyOnlyEvidence(classification, workflowRunId = null) {
 }
 
 module.exports = {
+  collectLatestMergedPullWindow,
+  latestMergedPulls,
   latencyOnlyEvidence,
   measureCandidateStage,
   measureCandidateStageSync,

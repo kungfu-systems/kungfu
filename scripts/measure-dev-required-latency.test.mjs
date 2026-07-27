@@ -7,6 +7,10 @@ import test from 'node:test';
 import { createCandidateTimeline } from '@kungfu-tech/buildchain-alpha/candidate-timeline';
 
 import {
+  collectLatestMergedPullWindow,
+  latestMergedPulls,
+} from './candidate-timeline-events.cjs';
+import {
   affectedNativeEvidenceBinding,
   aggregatePartitionEvidence,
   cacheEvidenceFromMembers,
@@ -116,6 +120,55 @@ test('merge-group branch names bind Actions runs to one pull request', () => {
   );
 });
 
+test('latest merged pull window is stable when updated open pulls are added', async () => {
+  const merged = [
+    {
+      number: 11,
+      merged_at: '2026-07-22T13:00:00Z',
+      updated_at: '2026-07-22T13:00:00Z',
+    },
+    {
+      number: 10,
+      merged_at: '2026-07-22T12:00:00Z',
+      updated_at: '2026-07-22T12:00:00Z',
+    },
+    {
+      number: 9,
+      merged_at: '2026-07-22T11:00:00Z',
+      updated_at: '2026-07-22T11:00:00Z',
+    },
+  ];
+  const updatedOpen = Array.from({ length: 4 }, (_, index) => ({
+    number: 100 + index,
+    merged_at: null,
+    updated_at: `2026-07-22T14:0${index}:00Z`,
+  }));
+  const pages = [
+    updatedOpen.slice(0, 3),
+    updatedOpen.slice(3).concat(merged.slice(0, 2)),
+    merged.slice(2),
+  ];
+  const fetchedPages = [];
+  const value = await collectLatestMergedPullWindow(
+    async (page) => {
+      fetchedPages.push(page);
+      return pages[page - 1] || [];
+    },
+    2,
+    3,
+  );
+
+  assert.deepEqual(
+    value.merged.map(({ number }) => number),
+    [11, 10],
+  );
+  assert.deepEqual(
+    latestMergedPulls(merged, 2).map(({ number }) => number),
+    [11, 10],
+  );
+  assert.deepEqual(fetchedPages, [1, 2, 3]);
+});
+
 test('queue candidate discovery retains recent closed attempts without runs', () => {
   const pulls = [
     {
@@ -148,6 +201,10 @@ test('queue candidate discovery retains recent closed attempts without runs', ()
     {
       head_branch:
         'gh-readonly-queue/dev/v4/v4.0/pr-4-7ea9c140b15ef11d4387be4ca84b84e124f5c7aa',
+    },
+    {
+      head_branch:
+        'gh-readonly-queue/dev/v4/v4.0/pr-5-7ea9c140b15ef11d4387be4ca84b84e124f5c7aa',
     },
   ];
 

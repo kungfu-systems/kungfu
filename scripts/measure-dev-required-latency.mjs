@@ -16,13 +16,13 @@ import {
 } from '@kungfu-tech/buildchain-alpha/candidate-timeline';
 
 import {
+  collectLatestMergedPullWindow,
   latencyOnlyEvidence,
   parseDevRequiredLatencyArgs,
   requiredMergeQueueWindow,
 } from './candidate-timeline-events.cjs';
 import { planAffectedPaths } from './run-core-affected-native.mjs';
 export { requiredMergeQueueWindow };
-
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const MINIMUM_SAMPLE_COUNT = 20;
 const MINIMUM_NATIVE_SAMPLE_COUNT = 10;
@@ -139,7 +139,6 @@ async function githubPages(route, token, limit = Number.POSITIVE_INFINITY) {
   }
   return records.slice(0, limit);
 }
-
 async function githubWorkflowRuns(route, token) {
   const separator = route.includes('?') ? '&' : '?';
   const records = [];
@@ -196,14 +195,14 @@ export function selectMergeQueueCandidatePulls(pulls, merged, runs) {
   );
   return pulls.filter(
     ({ number, merged_at: mergedAt, updated_at: updatedAt }) => {
-      if (selectedNumbers.has(number) || runNumbers.has(number)) return true;
+      if (selectedNumbers.has(number) || (!mergedAt && runNumbers.has(number)))
+        return true;
       if (mergedAt || !Number.isFinite(windowStartMs)) return false;
       const updatedAtMs = Date.parse(updatedAt);
       return Number.isFinite(updatedAtMs) && updatedAtMs >= windowStartMs;
     },
   );
 }
-
 function jobDuration(job) {
   if (!job.started_at) return 0;
   if (!job.completed_at) return null;
@@ -1980,7 +1979,8 @@ async function main() {
     throw new Error('cannot resolve GitHub repository');
   const token = githubToken();
   const branchPath = encodeURIComponent(options.branch);
-  const [effectiveRules, pulls] = await Promise.all([
+  const pullRoute = `/repos/${repository}/pulls?state=all&base=${encodeURIComponent(options.branch)}&sort=updated&direction=desc`;
+  const [effectiveRules, pullWindow] = await Promise.all([
     githubJson(`/repos/${repository}/rules/branches/${branchPath}`, token),
     options.pulls.length
       ? Promise.all(
@@ -1988,12 +1988,13 @@ async function main() {
             githubJson(`/repos/${repository}/pulls/${pullNumber}`, token),
           ),
         )
-      : githubPages(
-          `/repos/${repository}/pulls?state=all&base=${encodeURIComponent(options.branch)}&sort=updated&direction=desc`,
-          token,
-          options.limit * 3,
+      : collectLatestMergedPullWindow(
+          (page, pageSize) =>
+            githubJson(`${pullRoute}&per_page=${pageSize}&page=${page}`, token),
+          options.limit,
         ),
   ]);
+  const pulls = options.pulls.length ? pullWindow : pullWindow.pulls;
   const requiredContexts = requiredContextsFromEffectiveRules(effectiveRules);
   if (!requiredContexts.length)
     throw new Error(`no required contexts on ${options.branch}`);
@@ -2003,12 +2004,11 @@ async function main() {
       requiredContexts,
     );
   }
-  const merged = pulls
-    .filter(({ merged_at: mergedAt }) => mergedAt)
-    .slice(0, options.limit);
-  if (options.pulls.length && merged.length !== options.pulls.length) {
+  const merged = options.pulls.length
+    ? pulls.filter(({ merged_at: mergedAt }) => mergedAt)
+    : pullWindow.merged;
+  if (options.pulls.length && merged.length !== options.pulls.length)
     throw new Error('every requested --pull must be merged');
-  }
   const earliestPullCreatedAt = merged
     .map(({ created_at: createdAt }) => createdAt)
     .filter(Boolean)
