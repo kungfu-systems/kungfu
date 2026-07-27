@@ -17,6 +17,7 @@ import {
   createBuildchainLogger,
   verifyBuildchainLogEvents,
 } from '@kungfu-tech/buildchain/logging';
+import { installedAgentHubSmokeEnvironment } from './agent-hub-smoke-environment.mjs';
 import { extractTarGz, extractZip, writeTarGz, writeZip } from './archive.mjs';
 import { cliLauncherContent } from './cli-launcher.mjs';
 import { qualifyCliSurface } from './cli-surface-qualification.mjs';
@@ -1547,12 +1548,10 @@ function runInstalledKungfuKfdSmoke({
 function runInstalledKungfuAgentHubSmoke({ installRoot, kungfuBin, env }) {
   const qualificationDir = path.join(installRoot, 'agent-hub-qualification');
   const runtimeHome = path.join(installRoot, '.agent-hub-runtime-home');
-  const userHome = path.join(installRoot, '.agent-hub-user-home');
-  const smokeEnv = {
-    ...env,
-    HOME: userHome,
-    USERPROFILE: userHome,
-  };
+  const { userHome, env: smokeEnv } = installedAgentHubSmokeEnvironment(
+    installRoot,
+    env,
+  );
   const qualification = parseJsonOutput(
     runInstalledKungfu({
       kungfuBin,

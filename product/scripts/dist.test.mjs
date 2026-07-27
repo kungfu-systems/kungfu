@@ -7,6 +7,7 @@ import { createRequire } from 'node:module';
 import os from 'node:os';
 import path from 'node:path';
 import { test } from 'node:test';
+import { installedAgentHubSmokeEnvironment } from './agent-hub-smoke-environment.mjs';
 import { cliLauncherContent } from './cli-launcher.mjs';
 import {
   cliArchiveBase,
@@ -102,6 +103,34 @@ test('CLI authoring runtime resolves the exact Agent Hub KFD package', () => {
       `missing installed KFD Agent Hub entry: ${relative}`,
     );
   }
+});
+
+test('Agent Hub installed smoke keeps disposable cache outside user HOME', (t) => {
+  const root = fs.mkdtempSync(
+    path.join(os.tmpdir(), 'kungfu-agent-hub-smoke-environment-'),
+  );
+  t.after(() => fs.rmSync(root, { recursive: true, force: true }));
+  const installRoot = path.join(root, 'installed');
+  const operatorHome = path.join(root, 'operator-home');
+  const operatorCache = path.join(operatorHome, 'operator-cache');
+  fs.mkdirSync(installRoot, { recursive: true });
+
+  const smoke = installedAgentHubSmokeEnvironment(installRoot, {
+    HOME: operatorHome,
+    USERPROFILE: operatorHome,
+    KF_CACHE_HOME: operatorCache,
+  });
+
+  assert.equal(smoke.userHome, path.join(installRoot, '.agent-hub-user-home'));
+  assert.equal(smoke.env.HOME, smoke.userHome);
+  assert.equal(smoke.env.USERPROFILE, smoke.userHome);
+  assert.equal(
+    smoke.env.KF_CACHE_HOME,
+    path.join(installRoot, '.agent-hub-cache-home'),
+  );
+  fs.mkdirSync(smoke.env.KF_CACHE_HOME, { recursive: true });
+  assert.equal(fs.existsSync(smoke.userHome), false);
+  assert.equal(fs.existsSync(operatorHome), false);
 });
 
 test('CLI product archive name uses the Kungfu Episodes product prefix', () => {
