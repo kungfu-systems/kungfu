@@ -505,6 +505,7 @@
           "platforms-json": "[{\"id\":\"linux-arm64\",\"name\":\"Linux ARM64 Hub CLI\",\"platform\":\"linux\",\"runner\":\"[\\\"ubuntu-24.04-arm\\\"]\",\"capabilities\":[\"native-toolchain\",\"node\",\"product-artifacts\",\"publication-evidence\",\"rust\"]}]",
           "artifact-name": "kungfu-hub-cli",
           "require-install": true,
+          "install-command": "sudo apt-get update -y && sudo apt-get install -y gcc-14 g++-14 && printf 'CC=gcc-14\\nCXX=g++-14\\n' >> \"$GITHUB_ENV\" && CC=gcc-14 CXX=g++-14 node scripts/buildchain-install.mjs",
           "require-build": true,
           "build-command": "node scripts/run-shifu-lifecycle.mjs cache-apply dist:cli",
           "require-verify": false,

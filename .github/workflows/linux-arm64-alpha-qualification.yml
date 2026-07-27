@@ -83,6 +83,11 @@ jobs:
       expected-artifacts-json: >-
         {"minFiles":2,"minTotalBytes":1,"requiredPaths":["product/release/cli/kungfu-episodes-cli-linux-arm64.tar.gz","product/release/cli/kungfu-episodes-cli-linux-arm64.qualification.json"]}
       require-install: true
+      install-command: >-
+        sudo apt-get update -y &&
+        sudo apt-get install -y gcc-14 g++-14 &&
+        printf 'CC=gcc-14\nCXX=g++-14\n' >> "$GITHUB_ENV" &&
+        CC=gcc-14 CXX=g++-14 node scripts/buildchain-install.mjs
       require-build: true
       build-command: node scripts/run-shifu-lifecycle.mjs cache-apply dist:cli
       require-verify: false

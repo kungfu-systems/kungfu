@@ -44,6 +44,12 @@ test('Linux ARM64 runs artifact qualification with an independent budget', () =>
   assert.equal(inputs['runner-preset'], 'custom');
   assert.match(inputs['platforms-json'], /ubuntu-24\.04-arm/u);
   assert.equal(inputs['require-install'], true);
+  assert.match(
+    inputs['install-command'],
+    /apt-get install -y gcc-14 g\+\+-14/u,
+  );
+  assert.match(inputs['install-command'], /CC=gcc-14 CXX=g\+\+-14/u);
+  assert.match(inputs['install-command'], /scripts\/buildchain-install\.mjs/u);
   assert.equal(inputs['require-build'], true);
   assert.equal(
     inputs['build-command'],
