@@ -54,6 +54,11 @@ function requirePattern(source, pattern, findings, message) {
   if (!pattern.test(source)) findings.push(finding(message));
 }
 
+/** @param {string} value */
+function escapeRegExp(value) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
 /** @param {string} source @param {RegExp} pattern @param {any[]} findings @param {string} message */
 function forbidPattern(source, pattern, findings, message) {
   if (pattern.test(source)) findings.push(finding(message));
@@ -74,6 +79,7 @@ export function validateWorkflowSources(root, contract, overrides = {}) {
   const preflight = extractWorkflowJob(promotion, 'promotion-contract');
   const promote = extractWorkflowJob(promotion, 'promote');
   const rehearsal = extractWorkflowJob(validation, 'promotion-rehearsal');
+  const attestation = contract.buildchain.artifact_attestation;
 
   requirePattern(
     build,
@@ -130,6 +136,30 @@ export function validateWorkflowSources(root, contract, overrides = {}) {
     /release-candidate: true/,
     findings,
     'candidate build must remain a Buildchain release candidate',
+  );
+  requirePattern(
+    build,
+    new RegExp(
+      `github-artifact-attestation-subject-path: ${escapeRegExp(attestation.subject_path)}`,
+    ),
+    findings,
+    'release-candidate build must bind the exact Linux CLI attestation subject',
+  );
+  requirePattern(
+    build,
+    new RegExp(
+      `github-artifact-attestation-signer-sha: ${escapeRegExp(attestation.signer_sha)}`,
+    ),
+    findings,
+    'release-candidate build must pin the immutable Buildchain signer bootstrap',
+  );
+  requirePattern(
+    build,
+    new RegExp(
+      `github-artifact-attestation-platform-id: ${escapeRegExp(attestation.platform_id)}`,
+    ),
+    findings,
+    'release-candidate build must bind the Linux attestation platform manifest',
   );
 
   requirePattern(
@@ -192,6 +222,30 @@ export function validateWorkflowSources(root, contract, overrides = {}) {
       ),
     );
   }
+  for (const permission of ['artifact-metadata', 'attestations']) {
+    requirePattern(
+      promote,
+      new RegExp(`${permission}: write`),
+      findings,
+      `promotion must grant ${permission}: write for GitHub keyless attestation`,
+    );
+  }
+  requirePattern(
+    promote,
+    new RegExp(
+      `github-artifact-attestation-policy-json: ${escapeRegExp(attestation.policy_json)}`,
+    ),
+    findings,
+    'promotion must consume the exact auto-discovered attestation policy',
+  );
+  requirePattern(
+    promote,
+    new RegExp(
+      `github-artifact-attestation-environment: ${escapeRegExp(attestation.environment)}`,
+    ),
+    findings,
+    'promotion must retain the protected attestation environment boundary',
+  );
   requirePattern(
     promote,
     /buildchain-contract-lock-path: \$\{\{ startsWith\(inputs\.target-ref \|\| github\.event\.pull_request\.base\.ref, 'alpha\/'\) && '\.buildchain\/alpha-contract-lock\.json' \|\| '\.buildchain\/contract-lock\.json' \}\}/,
