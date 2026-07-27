@@ -33,7 +33,7 @@ test('affected native manifests share exact roots and separate cache layers', ()
   assert.deepEqual(manifests.dependency.identity, manifests.compiler.identity);
 });
 
-test('compiler cache identity is partitioned while dependency identity is shared', () => {
+test('compiler exact roots are partitioned while compatibility identity is shared', () => {
   const options = {
     plan: {
       ...plan,
@@ -53,9 +53,46 @@ test('compiler cache identity is partitioned while dependency identity is shared
     partitionIndex: 1,
   });
   assert.deepEqual(first.dependency.identity, second.dependency.identity);
-  assert.notEqual(
+  assert.equal(
     first.compiler.identity.profileDigest,
     second.compiler.identity.profileDigest,
+  );
+  assert.notEqual(
+    first.compiler.identity.planDigest,
+    second.compiler.identity.planDigest,
+  );
+});
+
+test('affected plan profiles share the same validated cache compatibility family', () => {
+  const options = {
+    env: { RUNNER_OS: 'Linux', RUNNER_ARCH: 'X64', ImageOS: 'ubuntu24' },
+    toolFacts: [{ command: 'c++', status: 0, version: 'fixture compiler' }],
+  };
+  const narrow = createAffectedNativeCacheManifests({
+    ...options,
+    plan,
+  });
+  const full = createAffectedNativeCacheManifests({
+    ...options,
+    plan: {
+      ...plan,
+      profile: 'full',
+      planDigest: `sha256:${'e'.repeat(64)}`,
+      closureComponents: ['storage-runtime', 'execution-runtime'],
+      targets: ['kungfu_storage_services', 'kungfu_execution'],
+    },
+  });
+  assert.equal(
+    narrow.dependency.identity.profileDigest,
+    full.dependency.identity.profileDigest,
+  );
+  assert.equal(
+    narrow.compiler.identity.profileDigest,
+    full.compiler.identity.profileDigest,
+  );
+  assert.notEqual(
+    narrow.compiler.identity.planDigest,
+    full.compiler.identity.planDigest,
   );
 });
 
