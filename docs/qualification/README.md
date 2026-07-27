@@ -7,6 +7,7 @@ implemented behavior, retained evidence, and released guarantees. Begin with
 - [Contracts](contracts.md)
 - [Known Limits](known-limits.md)
 - [Runtime Activation and Product Delivery](runtime-activation-and-product-delivery.md)
+- [Native KFX Registry Foundation](evidence/native-kfx-registry-foundation/report.json)
 - [Unified Recovery Portable Qualification](unified-recovery.md)
 - [GUI Capability-boundary Qualification](gui-capability-boundary.md)
 - [Strong Durability and Crash Recovery](durability-and-crash-recovery.md)

@@ -1,0 +1,184 @@
+{
+  "schema": "kungfu.native-kfx-registry-foundation.qualification-report/v1",
+  "metadata": {
+    "metadataSchema": "kungfu.document-metadata/v1",
+    "documentStatus": "active",
+    "period": "2026-07-27",
+    "theme": "native-kfx-registry-foundation",
+    "documentType": "engineering-evidence",
+    "sources": [
+      "local-files",
+      "executable-probe",
+      "official-upstream"
+    ],
+    "confidence": "high",
+    "sensitivity": "public",
+    "evidenceGrade": "B",
+    "reviewState": "self-reviewed",
+    "lastReviewed": "2026-07-27",
+    "aiProvenance": {
+      "modelFamily": "GPT-5",
+      "product": "Codex",
+      "generatedAt": "2026-07-27",
+      "visibleEvidence": [
+        "checked-in Kungfu source",
+        "local Shifu builds and tests",
+        "read-only protected pull request 1585 evidence"
+      ],
+      "unseenOrUnclaimed": [
+        "unexecuted platforms",
+        "notarization",
+        "publication",
+        "deferred Qualification Lab cutover"
+      ]
+    }
+  },
+  "verdict": "conversion-ready",
+  "source": {
+    "baseCommit": "d1d3581400e86ead173901ffdbd50a19b86bd012",
+    "implementationCommit": "83b867585e37f08c66227837a10555be68953dad",
+    "implementationBranch": "feature/native-kfx-registry-foundation",
+    "platform": "darwin-arm64",
+    "dirtyAtQualification": false
+  },
+  "isolation": {
+    "protectedPullRequest": 1585,
+    "protectedMergeCommit": "1f7cfe58cc7699ac27106241430d77f6938eadcd",
+    "descendsFromProtectedMerge": true,
+    "protectedPathChanges": 0,
+    "protectedBranchUsed": false
+  },
+  "qualifiedBoundary": {
+    "semanticGraph": [
+      "providers",
+      "extension-points",
+      "contributions",
+      "required-dependencies",
+      "uses-if-present-dependencies",
+      "version-constraints",
+      "trust-constraints",
+      "capability-constraints",
+      "typed-active-dormant-degraded-states"
+    ],
+    "lifecycle": {
+      "authority": "one-libkungfu-writer-per-runtime-directory",
+      "fences": [
+        "generation",
+        "registry-root",
+        "graph-root",
+        "plan-root",
+        "trust-root",
+        "package-root"
+      ],
+      "operations": [
+        "install",
+        "update",
+        "remove",
+        "enable",
+        "disable",
+        "activate"
+      ],
+      "receipts": [
+        "applied",
+        "refused"
+      ],
+      "payloadRetention": "content-addressed-no-gc",
+      "replacement": "staged-atomic-rename-with-bounded-rollback"
+    },
+    "hostProjection": {
+      "authority": "core-owned-experience-flow-descriptor",
+      "hosts": [
+        "gui",
+        "tui",
+        "cli",
+        "agent"
+      ],
+      "rendering": "host-native"
+    },
+    "cliMutation": "delegated-to-native-lifecycle"
+  },
+  "canonicalRoots": {
+    "semanticGraph": "sha256:34de162dc1bdfe04ced850d9507ef8e4f005f975c26810879cc41a67a8fc129b",
+    "semanticPlan": "sha256:b0aba51db6d487b8b45fb8f765bd29916feda3721a584441f26ef4d7754b5ad8",
+    "semanticHostReceiptDependency": "sha256:6500683e113e6d27410f6fa24e48968824f0c572ddba8cecade8498ba4aaf680",
+    "lifecycleRegistry": "sha256:fc5f824650a673ada8c150c97d7f6bd3378fff4ed73f582c50b62fdf66b295fe",
+    "lifecycleGraph": "sha256:fd68fcfb313affa93116d10ecf74190ef4651a8e1b0f877c105647e82178ceff",
+    "lifecyclePlan": "sha256:173d88c10a8db590a66a273cb376b30563b19c1f63c5624095719a4212ca5220",
+    "lifecycleReceiptDependency": "sha256:1c98b205f94772c18c7c9f865c38e7f9575b574e93a00fb15460da0dac658db9"
+  },
+  "checks": [
+    {
+      "command": "./shifu build:core",
+      "status": "passed",
+      "scope": "Core, Node, Electron, Python, KFD Agent Runtime, production libwasm"
+    },
+    {
+      "command": "./shifu test:native-kfx-admission",
+      "status": "passed",
+      "counts": {
+        "ctestTargets": 2,
+        "pythonTests": 13,
+        "apiAndHostTests": 5,
+        "nativeNodeTests": 2,
+        "incubationTests": 5,
+        "layeredBoundaryTests": 9
+      },
+      "additionalGates": [
+        "typescript",
+        "schema-authority",
+        "qualification-lab-isolation"
+      ]
+    },
+    {
+      "command": "./shifu test:kfx-profile-suite",
+      "status": "passed",
+      "tests": 57
+    },
+    {
+      "command": "./shifu lint",
+      "status": "passed",
+      "files": 2819
+    },
+    {
+      "command": "./shifu product gui build --no-instance-home",
+      "status": "passed",
+      "mode": "directory-only"
+    }
+  ],
+  "product": {
+    "sourceCommit": "83b867585e37f08c66227837a10555be68953dad",
+    "runtimeBuildId": "runtime-4.0.0-alpha.1-a699ec3b9f73dd1f",
+    "runtimeDigest": "sha256:a699ec3b9f73dd1f1f61c7c3217d37e26ab49e075a64ba380a853f22e6a948df",
+    "frontendBuildId": "product-4.0.0-alpha.1-83b867585e37f08c",
+    "firstPartyKfxKeys": 10,
+    "kfd3Profiles": 2,
+    "kfd3BuildReceiptVerified": true,
+    "sharedModules": 7,
+    "packagedMainDependenciesResolved": 8,
+    "singleKungfuRuntime": true,
+    "signature": {
+      "validOnDisk": true,
+      "satisfiesDesignatedRequirement": true,
+      "identifier": "com.kungfu.app",
+      "teamIdentifier": "ZDL5TK5LL4",
+      "cdHash": "58a608abace48850554fb9ddc63e9f55fb2f3f06"
+    },
+    "notarized": false,
+    "publishableUpdateArtifact": false,
+    "generatedArtifactsRetained": false,
+    "rawLogsRetained": false
+  },
+  "nonClaims": [
+    "linux-or-windows-native-product-qualification",
+    "macos-notarization-or-production-release",
+    "sudden-power-loss-receipt-durability",
+    "retained-content-garbage-collection",
+    "stale-writer-lock-recovery",
+    "distributed-writers-replication-or-consensus",
+    "universal-host-rendering-parity",
+    "qualification-lab-registry-cutover"
+  ],
+  "deferredBoundary": {
+    "qualificationLabCutover": "separate-paused-assignment-after-foundation-merge-and-review"
+  }
+}
