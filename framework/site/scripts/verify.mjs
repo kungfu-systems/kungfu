@@ -143,6 +143,69 @@ function main() {
     'format non-claims drifted from the Spec manifest',
     failures,
   );
+  const journeyDescriptor = bundle.formatAuthority?.readerJourney;
+  const manifestJourney = formatManifest.reader_journey;
+  const journeyPath = path.resolve(DIST_ROOT, journeyDescriptor?.path || '');
+  check(
+    journeyDescriptor?.contentRoot === manifestJourney?.content_root &&
+      journeyDescriptor?.byteLength === manifestJourney?.byte_length &&
+      journeyDescriptor?.schema === manifestJourney?.schema,
+    'format reader journey descriptor drifted from the Spec manifest',
+    failures,
+  );
+  check(
+    journeyPath.startsWith(`${FORMAT_ROOT}${path.sep}`) &&
+      fs.existsSync(journeyPath),
+    'format reader journey is not package-local',
+    failures,
+  );
+  if (fs.existsSync(journeyPath)) {
+    check(
+      fileRoot(journeyPath) === journeyDescriptor?.contentRoot,
+      'format reader journey root mismatch',
+      failures,
+    );
+    check(
+      fs.statSync(journeyPath).size === journeyDescriptor?.byteLength,
+      'format reader journey byte length mismatch',
+      failures,
+    );
+    const journey = readJson(journeyPath);
+    const projectedGuideIds = new Set(
+      journeyDescriptor?.guides?.map((guide) => guide.id),
+    );
+    check(
+      projectedGuideIds.size === journey.guides?.length,
+      'format reader journey guide coverage drifted',
+      failures,
+    );
+    for (const guide of journey.guides || []) {
+      const projected = journeyDescriptor?.guides?.find(
+        (entry) => entry.id === guide.id,
+      );
+      const guidePath = path.resolve(DIST_ROOT, projected?.path || '');
+      check(
+        projected?.contentRoot === guide.content_root &&
+          projected?.byteLength === guide.byte_length &&
+          projected?.path === `format/${guide.path}`,
+        `format reader guide descriptor drifted: ${guide.id}`,
+        failures,
+      );
+      check(
+        guidePath.startsWith(`${FORMAT_ROOT}${path.sep}`) &&
+          fs.existsSync(guidePath),
+        `format reader guide is not package-local: ${guide.id}`,
+        failures,
+      );
+      if (fs.existsSync(guidePath)) {
+        check(
+          fileRoot(guidePath) === projected?.contentRoot,
+          `format reader guide root mismatch: ${guide.id}`,
+          failures,
+        );
+      }
+    }
+  }
   for (const [artifactId, descriptor] of Object.entries(
     formatManifest.artifacts || {},
   )) {
@@ -195,6 +258,7 @@ function main() {
         status: bundle.formatAuthority.status,
         normativeRoot: bundle.formatAuthority.normativeRoot,
         conformance: bundle.formatAuthority.conformance,
+        readerJourney: bundle.formatAuthority.readerJourney,
         docsUrl: bundle.formatAuthority.docsUrl,
         routes: bundle.formatAuthority.routes,
         nonClaims: bundle.formatAuthority.nonClaims,

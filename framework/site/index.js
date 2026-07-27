@@ -11,6 +11,12 @@ const bundlePath = path.join(siteRoot, 'site-bundle.json');
 const agentIndexPath = path.join(siteRoot, 'agent-index.json');
 const adrMapPath = path.join(siteRoot, 'adr-map.json');
 const formatManifestPath = path.join(siteRoot, 'format', 'manifest.json');
+const formatGuideIndexPath = path.join(
+  siteRoot,
+  'format',
+  'guides',
+  'index.json',
+);
 const schemaPath = path.join(packageRoot, 'schema', 'site-bundle.schema.json');
 
 function canonical(value) {
@@ -69,6 +75,57 @@ function loadFormatAuthorityRoute(routeId) {
   return {
     descriptor: structuredClone(descriptor),
     value: JSON.parse(bytes.toString('utf8')),
+  };
+}
+
+function loadFormatGuideIndex() {
+  const bundle = loadBundle();
+  const descriptor = bundle.formatAuthority?.readerJourney;
+  if (!descriptor) throw new Error('Kungfu format reader journey is missing');
+  const journeyPath = resolveSitePath(descriptor.path);
+  const bytes = fs.readFileSync(journeyPath);
+  if (
+    sha256(bytes) !== descriptor.contentRoot ||
+    bytes.length !== descriptor.byteLength
+  ) {
+    throw new Error('Kungfu format reader journey root mismatch');
+  }
+  const value = JSON.parse(bytes.toString('utf8'));
+  if (value.schema !== descriptor.schema) {
+    throw new Error('Kungfu format reader journey schema mismatch');
+  }
+  return value;
+}
+
+function loadFormatGuide(guideId) {
+  const bundle = loadBundle();
+  const projected = bundle.formatAuthority?.readerJourney?.guides?.find(
+    (guide) => guide.id === guideId,
+  );
+  if (!projected)
+    throw new Error(`Unknown Kungfu format reader guide: ${guideId}`);
+  const indexGuide = loadFormatGuideIndex().guides.find(
+    (guide) => guide.id === guideId,
+  );
+  if (
+    !indexGuide ||
+    `format/${indexGuide.path}` !== projected.path ||
+    indexGuide.content_root !== projected.contentRoot ||
+    indexGuide.byte_length !== projected.byteLength
+  ) {
+    throw new Error(`Kungfu format reader guide index drifted: ${guideId}`);
+  }
+  const guidePath = resolveSitePath(projected.path);
+  const bytes = fs.readFileSync(guidePath);
+  if (
+    sha256(bytes) !== projected.contentRoot ||
+    bytes.length !== projected.byteLength
+  ) {
+    throw new Error(`Kungfu format reader guide root mismatch: ${guideId}`);
+  }
+  return {
+    descriptor: structuredClone(projected),
+    body: bytes.toString('utf8'),
   };
 }
 
@@ -143,6 +200,18 @@ function verifyBundle() {
   ) {
     throw new Error('Kungfu retained vector conformance summary mismatch');
   }
+  const journey = loadFormatGuideIndex();
+  const guideIds = new Set(journey.guides.map((guide) => guide.id));
+  const levelGuideIds = journey.levels.flatMap((level) => level.guide_ids);
+  if (
+    guideIds.size !== journey.guides.length ||
+    levelGuideIds.length !== journey.guides.length ||
+    new Set(levelGuideIds).size !== journey.guides.length ||
+    levelGuideIds.some((guideId) => !guideIds.has(guideId))
+  ) {
+    throw new Error('Kungfu format reader journey coverage mismatch');
+  }
+  for (const guideId of guideIds) loadFormatGuide(guideId);
   return {
     status: 'passing',
     package: bundle.package,
@@ -157,6 +226,7 @@ function verifyBundle() {
       specVersion: bundle.formatAuthority.specVersion,
       status: bundle.formatAuthority.status,
       conformance: structuredClone(bundle.formatAuthority.conformance),
+      readerGuides: journey.guides.length,
     },
   };
 }
@@ -225,14 +295,64 @@ function renderPageModel(routeOrId) {
   return page;
 }
 
+function renderFormatGuideModels() {
+  verifyBundle();
+  const bundle = loadBundle();
+  const journey = loadFormatGuideIndex();
+  return journey.guides.map((guide) => {
+    const loaded = loadFormatGuide(guide.id);
+    const model = {
+      contract: 'kungfu.site-format-guide-model/v1',
+      id: guide.id,
+      level: guide.level,
+      order: guide.order,
+      title: guide.title,
+      summary: guide.summary,
+      body: loaded.body,
+      navigation: {
+        previous: guide.previous,
+        next: guide.next,
+        related: structuredClone(guide.related),
+      },
+      journey: {
+        title: journey.title,
+        summary: journey.summary,
+        levels: structuredClone(journey.levels),
+      },
+      bundle: {
+        package: structuredClone(bundle.package),
+        sourceRevision: bundle.source.revision,
+        contentRoot: bundle.contentRoot,
+        specPackage: structuredClone(bundle.formatAuthority.package),
+        normativeRoot: bundle.formatAuthority.normativeRoot,
+      },
+    };
+    model.contentRoot = sha256(JSON.stringify(canonical(model)));
+    return model;
+  });
+}
+
+function renderFormatGuideModel(guideId) {
+  const guide = renderFormatGuideModels().find(
+    (candidate) => candidate.id === guideId,
+  );
+  if (!guide) throw new Error(`Unknown Kungfu format reader guide: ${guideId}`);
+  return guide;
+}
+
 module.exports = {
   adrMapPath,
   agentIndexPath,
   bundlePath,
+  formatGuideIndexPath,
   formatManifestPath,
   loadBundle,
   loadFormatAuthorityManifest,
   loadFormatAuthorityRoute,
+  loadFormatGuide,
+  loadFormatGuideIndex,
+  renderFormatGuideModel,
+  renderFormatGuideModels,
   renderPageModel,
   renderPageModels,
   schemaPath,

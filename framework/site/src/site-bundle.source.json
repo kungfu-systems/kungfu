@@ -86,7 +86,7 @@
       "label": ".kungfu",
       "route": "/format/",
       "headline": "An exact pre-release portable authority bundle, projected without creating a second format truth.",
-      "summary": "The site binds @kungfu-tech/spec@4.0.0-alpha.1, its normative root, v4 alpha baseline and artifact roots while the owning format, reader, migration, schema and vector contracts retain semantic authority.",
+      "summary": "The site binds the exact installed @kungfu-tech/spec package coordinate, its normative root, v4 alpha baseline and artifact roots while the owning format, reader, migration, schema and vector contracts retain semantic authority.",
       "claimClass": "current-contract",
       "maturity": "staged",
       "capabilities": [

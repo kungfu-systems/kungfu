@@ -21,8 +21,20 @@ The standalone format is still pre-release. That status is explicit in the
 manifest and its non-claims; it is not hidden behind empty registries, seed
 tables, or walking-skeleton language.
 
-For the human entrypoint, see the
-[portable format authority overview](docs/overview.md).
+## Read in layers
+
+Do not start with the complete artifact inventory. Begin with the
+[reader journey](docs/guides/index.md):
+
+1. choose Site for rendering or Spec for direct tooling;
+2. verify one installed authority;
+3. open only the Node API, CLI, or Python task guide you need;
+4. interpret conformance evidence when required;
+5. use the complete reference for exact routes and trust rules.
+
+The same rooted guide set is emitted under `dist/guides/` and projected
+byte-for-byte into `@kungfu-tech/site`, so human pages and agent navigation
+share one reading order.
 
 ## Authority graph
 
@@ -63,6 +75,9 @@ An agent does not need the monorepo:
 ```bash
 kungfu-spec authority
 kungfu-spec authority-verify
+kungfu-spec corpus
+kungfu-spec corpus-verify
+kungfu-spec corpus-vector journal-v1-unknown-carrier
 ```
 
 The Node API exposes the same boundary:
@@ -82,6 +97,10 @@ console.log(authority.normative_root, proof.artifact_count);
 vector, source-root, artifact-root, and non-claim projections.
 `verifyAuthorityBundle()` recomputes the normative root and every installed
 artifact root before returning.
+
+`inspectConformance()`, `verifyConformanceCorpus()`, and
+`conformanceVector(id)` expose the same retained corpus boundary through the
+Node API. See the [complete API guide](docs/guides/api.md).
 
 The existing portable-fixture operations remain available:
 

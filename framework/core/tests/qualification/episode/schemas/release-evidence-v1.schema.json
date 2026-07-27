@@ -177,6 +177,7 @@
         "ref": { "type": "string" },
         "sha": { "type": "string" },
         "source_sha": { "type": "string" },
+        "source_tree_sha": { "type": "string" },
         "buildchain_runtime_ref": { "type": "string" },
         "buildchain_runtime_sha": { "type": "string" },
         "run_url": { "type": "string" }
