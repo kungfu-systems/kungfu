@@ -507,6 +507,8 @@ export function runExperiment(options = {}) {
     const promptA = [
       'Investigate the repository defect without modifying any file.',
       'Run `python -m unittest discover -s tests -v`, inspect the lease, command, and replay boundaries, and identify the exact bounded repair paths.',
+      `The admitted investigation Warrant limits the candidate repair to exactly these repository-relative paths: ${INCIDENT_BOARD_FIXTURE.warrants.agentB.writablePaths.join(', ')}.`,
+      'Confirm the seeded failures can be repaired within that Warrant; do not propose tests, service.py, or any other path.',
       'Return only one JSON object, with no prose or Markdown.',
       'The object must contain schema "kungfu.agent-repository-work.investigation-claim/v1", investigationComplete true, failingTests containing exactly the two failing unittest method names, repairPaths containing exactly three repository-relative Python paths without leading slashes, line numbers, or fragments, remainingObligation "implement-and-verify-bounded-repair", and nextAction "repair-seeded-completion-idempotency".',
     ].join(' ');
