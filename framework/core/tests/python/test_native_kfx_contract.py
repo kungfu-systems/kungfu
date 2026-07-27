@@ -1,6 +1,7 @@
 import json
 from pathlib import Path
 
+import pytest
 from click.testing import CliRunner
 
 from kungfu import kfx_contract, kfx_host
@@ -158,9 +159,35 @@ def test_python_and_host_projections_preserve_core_semantic_roots(tmp_path):
     assert {projection["revision"] for projection in projections} == {
         plan["hostContract"]["revision"]
     }
+    assert {projection["generationRoot"] for projection in projections} == {
+        plan["hostContract"]["generationRoot"]
+    }
+    assert {projection["admissionState"] for projection in projections} == {
+        "preview-only"
+    }
+    assert all(
+        not projection["contributions"][0]["executionEligible"]
+        for projection in projections
+    )
     tui = next(item for item in projections if item["host"] == "tui")
     assert tui["contributions"][0]["semanticState"] == "active"
     assert tui["contributions"][0]["presentationState"] == "dormant"
+    assert tui["diagnostics"][0]["code"] == "KF_KFX_HOST_NOT_ADMITTED"
+    assert (
+        kfx_host.project_cli_experience_flow_host(plan["hostContract"])["planRoot"]
+        == plan["planRoot"]
+    )
+    assert (
+        kfx_host.project_agent_experience_flow_host(plan["hostContract"])["planRoot"]
+        == plan["planRoot"]
+    )
+
+    mismatched = json.loads(json.dumps(plan["hostContract"]))
+    mismatched["admission"]["capabilityRoots"][0] = "sha256:" + "f" * 64
+    with pytest.raises(
+        ValueError, match="contribution admission identity does not match"
+    ):
+        kfx_host.project_experience_flow_host(mismatched, "gui")
 
 
 def test_native_kfx_cli_projects_the_same_plan_root(tmp_path):

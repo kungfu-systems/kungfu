@@ -1315,18 +1315,71 @@ json experience_flow_descriptor(const snapshot &value, const lifecycle_view &lif
     const auto observed =
         lifecycle.observed_states.contains(provider_id) ? lifecycle.observed_states.at(provider_id) : "unknown";
     projected["providerState"] = derived_verdict(provider_for(value, provider_id), desired, observed);
+    const auto &provider = provider_for(value, provider_id);
+    const json facet_identity = {{"schema", "kungfu.kfx.presentation-facet/v1"},
+                                 {"contributionRoot", contribution.at("contributionRoot")},
+                                 {"presentation", contribution.value("presentation", json::object())}};
+    const json authorization_identity = {{"schema", "kungfu.kfx.host-authorization/v1"},
+                                         {"ownerProviderRoot", provider.at("providerRoot")},
+                                         {"trustRoot", provider.at("trustRoot")},
+                                         {"capabilityRoot", contribution.at("capabilityRoot")},
+                                         {"requiredCapabilities", contribution.at("capabilities")},
+                                         {"cutRoot", lifecycle.present ? json(lifecycle.cut_root) : json(nullptr)},
+                                         {"revision", lifecycle.revision}};
+    projected["ownerProviderRoot"] = provider.at("providerRoot");
+    projected["ownerTrustRoot"] = provider.at("trustRoot");
+    projected["facetRoot"] = root_of(facet_identity);
+    projected["authorization"] = authorization_identity;
+    projected["authorization"]["authorizationRoot"] = root_of(authorization_identity);
     contributions.push_back(projected);
   }
   const json cut_root = lifecycle.present ? json(lifecycle.cut_root) : json(nullptr);
-  const json receipt_dependency = {{"graphRoot", value.graph_root},
+  const json generation = {{"schema", "kungfu.kfx.host-generation/v1"},
+                           {"registryRoot", value.registry_root},
+                           {"graphRoot", value.graph_root},
+                           {"cutRoot", cut_root},
+                           {"revision", lifecycle.revision}};
+  const auto generation_root = root_of(generation);
+  json contribution_roots = json::array();
+  json facet_roots = json::array();
+  json capability_roots = json::array();
+  json authorization_roots = json::array();
+  for (const auto &contribution : contributions) {
+    contribution_roots.push_back(contribution.at("contributionRoot"));
+    facet_roots.push_back(contribution.at("facetRoot"));
+    capability_roots.push_back(contribution.at("capabilityRoot"));
+    authorization_roots.push_back(contribution.at("authorization").at("authorizationRoot"));
+  }
+  const json admission = {{"schema", "kungfu.kfx.host-admission/v1"},
+                          {"state", lifecycle.present ? "admitted" : "preview-only"},
+                          {"exactRootRequired", true},
+                          {"registryRoot", value.registry_root},
+                          {"graphRoot", value.graph_root},
+                          {"planRoot", plan_root},
+                          {"cutRoot", cut_root},
+                          {"revision", lifecycle.revision},
+                          {"generationRoot", generation_root},
+                          {"contributionRoots", contribution_roots},
+                          {"facetRoots", facet_roots},
+                          {"capabilityRoots", capability_roots},
+                          {"authorizationRoots", authorization_roots}};
+  const json receipt_dependency = {{"registryRoot", value.registry_root},
+                                   {"graphRoot", value.graph_root},
                                    {"planRoot", plan_root},
                                    {"cutRoot", cut_root},
-                                   {"revision", lifecycle.revision}};
-  const json identity = {{"schema", "kungfu.kfx.experience-flow-host/v1"},
+                                   {"revision", lifecycle.revision},
+                                   {"generationRoot", generation_root},
+                                   {"authorizationRoots", authorization_roots}};
+  const json identity = {{"schema", "kungfu.kfx.experience-flow-host/v2"},
+                         {"registryRoot", value.registry_root},
                          {"graphRoot", value.graph_root},
                          {"planRoot", plan_root},
                          {"cutRoot", cut_root},
                          {"revision", lifecycle.revision},
+                         {"generation", generation},
+                         {"generationRoot", generation_root},
+                         {"admission", admission},
+                         {"receiptDependencies", receipt_dependency},
                          {"receiptDependencyRoot", root_of(receipt_dependency)},
                          {"hosts", json::array({"gui", "tui", "cli", "agent"})},
                          {"contributions", contributions}};
