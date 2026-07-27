@@ -16,9 +16,13 @@ const contractPath = path.join(
   process.cwd(),
   'docs/qualification/alpha-ruleset.contract.json',
 );
+const stableContractPath = path.join(
+  process.cwd(),
+  'docs/qualification/stable-ruleset.contract.json',
+);
 
-function contract() {
-  return JSON.parse(fs.readFileSync(contractPath, 'utf8'));
+function contract(file = contractPath) {
+  return JSON.parse(fs.readFileSync(file, 'utf8'));
 }
 
 test('checked-in Alpha ruleset contract is exact-target and root-bound', () => {
@@ -29,6 +33,15 @@ test('checked-in Alpha ruleset contract is exact-target and root-bound', () => {
     normalizeRuleset(value.ruleset).rules.map(({ type }) => type),
     ['deletion', 'non_fast_forward', 'pull_request', 'required_status_checks'],
   );
+});
+
+test('checked-in Stable ruleset contract reuses exact-target fail-closed governance', () => {
+  const value = contract(stableContractPath);
+  assert.equal(validateContract(value), value);
+  assert.equal(value.targetRef, 'release/v4/v4.0');
+  assert.equal(value.ruleset.bypass_actors.length, 0);
+  assert.equal(compareRuleset(value, []).status, 'missing');
+  assert.equal(compareRuleset(value, [value.ruleset]).status, 'matching');
 });
 
 test('missing and ambiguous exact-target rulesets fail closed', () => {

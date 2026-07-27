@@ -93,6 +93,7 @@ without changing and refreshing the manifest fails the Gate catalog check.
 | `.github/workflows/shifu-ci.yml` | `check` | qualification | none | diagnostic | token:read | none | 9 |
 | `.github/workflows/shifu-ci.yml` | `preflight` | qualification | none | diagnostic | token:read | none | 2 |
 | `.github/workflows/source-acceptance.yml` | `source-acceptance` | qualification | none | qualifying | token:read | none | 0 |
+| `.github/workflows/stable-candidate-patrol.yml` | `stable` | qualification | none | diagnostic | token:write, repo-secret:KUNGFU_GITHUB_TOKEN | none | 0 |
 <!-- END GENERATED WORKFLOW AUTHORITY MATRIX -->
 
 ## Change procedure
