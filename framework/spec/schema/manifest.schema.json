@@ -14,6 +14,7 @@
     "provenance",
     "docs_url_base",
     "overview",
+    "reader_journey",
     "artifacts",
     "categories",
     "handbooks",
@@ -109,6 +110,9 @@
     },
     "overview": {
       "$ref": "#/$defs/guide"
+    },
+    "reader_journey": {
+      "$ref": "#/$defs/readerJourney"
     },
     "artifacts": {
       "type": "object",
@@ -347,6 +351,43 @@
         "status": {
           "type": "string",
           "const": "non-normative-guide"
+        }
+      }
+    },
+    "readerJourney": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "path",
+        "source_package",
+        "status",
+        "schema",
+        "protocol",
+        "byte_length",
+        "content_root"
+      ],
+      "properties": {
+        "path": {
+          "$ref": "#/$defs/relativePath"
+        },
+        "source_package": {
+          "const": "framework/spec"
+        },
+        "status": {
+          "const": "non-normative-guide"
+        },
+        "schema": {
+          "const": "kungfu.spec.reader-journey/v1"
+        },
+        "protocol": {
+          "const": "sha256:opaque-bytes/v1"
+        },
+        "byte_length": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "content_root": {
+          "$ref": "#/$defs/root"
         }
       }
     },

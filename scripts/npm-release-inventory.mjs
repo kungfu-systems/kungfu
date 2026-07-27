@@ -59,9 +59,9 @@ export function collectPublishabilityIssues({
     registry.trustedPublishing?.exactArtifactPackages || [];
   if (
     names.length !== registry.releaseInventory?.expectedPackageCount ||
-    names.length !== 28
+    names.length !== 29
   )
-    issues.push('release inventory must contain exactly 28 packages');
+    issues.push('release inventory must contain exactly 29 packages');
   if (
     exactArtifacts.length !== names.length ||
     JSON.stringify([...exactArtifacts].sort()) !==
@@ -217,7 +217,7 @@ function main(argv = process.argv.slice(2)) {
   const issues = collectPublishabilityIssues({ registry });
   if (issues.length > 0) fail(issues.join('; '));
   if (argv.includes('--check')) {
-    console.log('[npm-release] all 28 package sources are public and packable');
+    console.log('[npm-release] all 29 package sources are public and packable');
     return;
   }
   if (process.platform !== 'linux' && !argv.includes('--force')) {

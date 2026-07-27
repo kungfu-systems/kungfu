@@ -26,11 +26,11 @@ const version = JSON.parse(
   fs.readFileSync(path.join(root, 'lerna.json')),
 ).version;
 
-test('all 28 packages are public and exactly 19 use portable workspace packing', () => {
+test('all 29 packages are public and exactly 19 use portable workspace packing', () => {
   assert.deepEqual(collectPublishabilityIssues({ root, registry }), []);
-  assert.equal(registry.packages.length, 28);
+  assert.equal(registry.packages.length, 29);
   assert.equal(bulkWorkspaceEntries(registry).length, 19);
-  assert.equal(registry.trustedPublishing.exactArtifactPackages.length, 28);
+  assert.equal(registry.trustedPublishing.exactArtifactPackages.length, 29);
 });
 
 test('private and non-public workspace packages fail closed', (t) => {
@@ -75,12 +75,12 @@ test('the staged npm set must contain one exact archive for every package', () =
   }));
   assert.equal(
     validateStagedNpmArtifacts({ artifacts }, registry, version).size,
-    28,
+    29,
   );
   artifacts.pop();
   assert.throws(
     () => validateStagedNpmArtifacts({ artifacts }, registry, version),
-    /expected 28 npm artifacts, found 27/u,
+    /expected 29 npm artifacts, found 28/u,
   );
 });
 

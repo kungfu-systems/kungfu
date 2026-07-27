@@ -21,13 +21,16 @@ Kungfu human and agent sites. It answers one navigation question:
 > primitives, runtime, ABI, SDKs, extensions, products, qualification,
 > decisions, and future horizons fit together?
 
-The current alpha pickup is exact:
+Publication follows Kungfu's coordinated package release. After a release is
+published, use `alpha` only for discovery and persist the reviewed exact
+pickup:
 
 ```sh
-npm install --save-exact @kungfu-tech/site@4.0.0-alpha.1
+SITE_VERSION=$(npm view @kungfu-tech/site@alpha version)
+npm install --save-exact "@kungfu-tech/site@$SITE_VERSION"
 ```
 
-The `alpha` tag is a discovery channel only. This package does not make a
+Do not leave `@alpha` in a package manifest. This package does not make a
 stable-format or `latest` release claim.
 
 It does not own those technical facts. `src/site-bundle.source.json` is a
@@ -45,8 +48,9 @@ artifacts under `dist/site/`.
   root, portable normative root, status and non-claims are repeated in the
   bundle for fail-closed inspection.
 - `dist/site/format/` — package-local copy of the verified Spec bundle,
-  including stable overview, reader-contract, version-matrix, registry and
-  retained-vector routes. Consumers never need a monorepo checkout.
+  including the progressive reader journey, complete task guides, overview,
+  reader-contract, version-matrix, registry and retained-vector routes.
+  Consumers never need a monorepo checkout.
 - `schema/site-bundle.schema.json` — package/consumer contract.
 - `installer-publication.mjs` — package-owned writer and verifier for a
   content-addressed installer publication handoff. It packages exact
@@ -75,13 +79,31 @@ source-tree dependency.
 
 `renderPageModels()` verifies the complete bundle and returns one serializable,
 integrity-bound page model for every human route. `renderPageModel(routeOrId)`
-selects one route or surface id. A downstream site can therefore install this
-package and render all pages without checking out the Kungfu monorepo:
+selects one route or surface id. The `/format/` model exposes only the journey
+summary and navigation metadata; it does not flatten every guide body into the
+landing page.
+
+`renderFormatGuideModels()` returns the seven rooted guides in their declared
+reading order. `renderFormatGuideModel(id)` selects one guide with its Markdown
+body, previous/next/related navigation, level map, package coordinate, and
+normative root. A downstream site can therefore install this package and
+render both product pages and progressively disclosed Spec documentation
+without checking out the Kungfu monorepo:
 
 ```js
-const { renderPageModels } = require('@kungfu-tech/site');
+const {
+  renderFormatGuideModels,
+  renderPageModels,
+} = require('@kungfu-tech/site');
+
 for (const page of renderPageModels()) render(page);
+for (const guide of renderFormatGuideModels()) renderGuide(guide);
 ```
+
+The guide content explains the direct Spec API, `kungfu-spec` CLI, independent
+Python reader, and conformance corpus. To execute those tools, install
+`@kungfu-tech/spec`; Site intentionally provides the documentation and rooted
+evidence projection, not a duplicate executable surface.
 
 ## Authority boundary
 
@@ -101,4 +123,5 @@ Run through Shifu from the repository root:
 ./shifu --filter @kungfu-tech/site build
 ./shifu --filter @kungfu-tech/site verify
 ./shifu --filter @kungfu-tech/site test
+./shifu pack:site
 ```

@@ -16,7 +16,7 @@ const source = JSON.parse(
   ),
 );
 
-test('accepts the exact 28-package Release inventory', () => {
+test('accepts the exact 29-package Release inventory', () => {
   assert.deepEqual(collectNpmRegistryIssues({ root, registry: source }), []);
 });
 

@@ -9,10 +9,15 @@ const test = require('node:test');
 const {
   adrMapPath,
   agentIndexPath,
+  formatGuideIndexPath,
   formatManifestPath,
   loadBundle,
   loadFormatAuthorityManifest,
   loadFormatAuthorityRoute,
+  loadFormatGuide,
+  loadFormatGuideIndex,
+  renderFormatGuideModel,
+  renderFormatGuideModels,
   renderPageModel,
   renderPageModels,
   schemaPath,
@@ -29,8 +34,77 @@ test('publishes one integrity-bound human and agent product map', () => {
   assert.ok(fs.existsSync(agentIndexPath));
   assert.ok(fs.existsSync(adrMapPath));
   assert.ok(fs.existsSync(formatManifestPath));
+  assert.ok(fs.existsSync(formatGuideIndexPath));
   assert.equal(result.format.status, 'pre-release');
   assert.equal(result.format.conformance.status, 'qualified-retained-corpus');
+});
+
+test('projects a progressive format journey without flattening guide bodies', () => {
+  const bundle = loadBundle();
+  const journey = loadFormatGuideIndex();
+  assert.deepEqual(
+    journey.levels.map(({ id }) => id),
+    ['orientation', 'quickstart', 'task-guides', 'evidence', 'reference'],
+  );
+  assert.deepEqual(
+    journey.guides.map(({ id }) => id),
+    [
+      'start',
+      'quickstart',
+      'api',
+      'cli',
+      'python-reader',
+      'conformance',
+      'reference',
+    ],
+  );
+  assert.equal(
+    bundle.formatAuthority.readerJourney.entryGuideId,
+    journey.guides[0].id,
+  );
+  assert.equal(
+    bundle.machineEntries.formatReaderJourney,
+    'format/guides/index.json',
+  );
+  assert.equal(
+    Object.hasOwn(renderPageModel('/format/').formatAuthority, 'body'),
+    false,
+  );
+  const guide = loadFormatGuide('quickstart');
+  assert.match(guide.body, /First success/);
+  assert.throws(
+    () => loadFormatGuide('../missing'),
+    /Unknown Kungfu format reader guide/,
+  );
+});
+
+test('renders integrity-bound guide models in declared reading order', () => {
+  const models = renderFormatGuideModels();
+  assert.equal(models.length, 7);
+  assert.deepEqual(
+    models.map(({ id }) => id),
+    [
+      'start',
+      'quickstart',
+      'api',
+      'cli',
+      'python-reader',
+      'conformance',
+      'reference',
+    ],
+  );
+  for (const model of models) {
+    assert.equal(model.contract, 'kungfu.site-format-guide-model/v1');
+    assert.match(model.contentRoot, /^sha256:[0-9a-f]{64}$/u);
+    assert.ok(model.body.startsWith('# '));
+    assert.deepEqual(renderFormatGuideModel(model.id), model);
+  }
+  assert.equal(renderFormatGuideModel('start').navigation.next, 'quickstart');
+  assert.equal(renderFormatGuideModel('reference').navigation.next, null);
+  assert.throws(
+    () => renderFormatGuideModel('missing'),
+    /Unknown Kungfu format reader guide/,
+  );
 });
 
 test('keeps maturity and authority boundaries explicit', () => {

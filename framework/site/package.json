@@ -39,6 +39,7 @@
     "build": "pnpm run prepare:spec && node scripts/generate.mjs",
     "verify": "pnpm run build && node scripts/verify.mjs",
     "test": "pnpm run verify && node --test index.test.js installer-publication.test.mjs",
+    "pack:artifact": "node scripts/pack.mjs",
     "prepack": "pnpm run test",
     "prepublishOnly": "pnpm run test",
     "clean": "rimraf dist"

@@ -166,6 +166,30 @@ function projectFormatAuthority(revision) {
       throw new Error(`Spec artifact byte length mismatch: ${id}`);
     }
   }
+  const journeyDescriptor = manifest.reader_journey;
+  if (!journeyDescriptor) {
+    throw new Error('Spec manifest lacks the progressive reader journey');
+  }
+  const journeyPath = assertSpecRelativePath(journeyDescriptor.path);
+  if (
+    fileRoot(journeyPath) !== journeyDescriptor.content_root ||
+    fs.statSync(journeyPath).size !== journeyDescriptor.byte_length
+  ) {
+    throw new Error('Spec reader journey index root mismatch');
+  }
+  const journey = readJson(journeyPath);
+  if (journey.schema !== journeyDescriptor.schema) {
+    throw new Error('Spec reader journey schema mismatch');
+  }
+  for (const guide of journey.guides || []) {
+    const guidePath = assertSpecRelativePath(guide.path);
+    if (
+      fileRoot(guidePath) !== guide.content_root ||
+      fs.statSync(guidePath).size !== guide.byte_length
+    ) {
+      throw new Error(`Spec reader guide root mismatch: ${guide.id}`);
+    }
+  }
 
   fs.cpSync(SPEC_DIST_ROOT, FORMAT_ROOT, { recursive: true });
   const routes = {};
@@ -208,6 +232,34 @@ function projectFormatAuthority(revision) {
       release: vectors.latest_release,
       releaseRoot: vectors.latest_release_root,
       vectorCount: vectors.vectors?.length || 0,
+    },
+    readerJourney: {
+      path: `format/${journeyDescriptor.path}`,
+      contentRoot: journeyDescriptor.content_root,
+      byteLength: journeyDescriptor.byte_length,
+      schema: journeyDescriptor.schema,
+      title: journey.title,
+      summary: journey.summary,
+      entryGuideId: journey.guides[0].id,
+      levels: journey.levels.map(({ id, label, purpose, guide_ids }) => ({
+        id,
+        label,
+        purpose,
+        guideIds: guide_ids,
+      })),
+      guides: journey.guides.map((guide) => ({
+        id: guide.id,
+        level: guide.level,
+        order: guide.order,
+        title: guide.title,
+        summary: guide.summary,
+        path: `format/${guide.path}`,
+        contentRoot: guide.content_root,
+        byteLength: guide.byte_length,
+        previous: guide.previous,
+        next: guide.next,
+        related: guide.related,
+      })),
     },
     docsUrl: `${REPOSITORY}/blob/${revision}/framework/spec/CONSUMING.md`,
     routes,
@@ -291,6 +343,7 @@ function main() {
       agentIndex: 'agent-index.json',
       adrMap: 'adr-map.json',
       formatAuthority: 'format/manifest.json',
+      formatReaderJourney: formatAuthority.readerJourney.path,
       schema: 'schema/site-bundle.schema.json',
     },
     nonClaims: source.nonClaims,
@@ -314,6 +367,7 @@ function main() {
       status: formatAuthority.status,
       normativeRoot: formatAuthority.normativeRoot,
       conformance: formatAuthority.conformance,
+      readerJourney: formatAuthority.readerJourney,
       docsUrl: formatAuthority.docsUrl,
       routes: formatAuthority.routes,
       nonClaims: formatAuthority.nonClaims,
