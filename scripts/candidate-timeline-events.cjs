@@ -283,8 +283,94 @@ function requiredMergeQueueWindow(requiredContexts, mergeQueue) {
   };
 }
 
+function parseDevRequiredLatencyArgs(argv) {
+  const options = {
+    repository: process.env.GITHUB_REPOSITORY || '',
+    branch: 'dev/v4/v4.0',
+    limit: 30,
+    output: '',
+    pulls: [],
+    timelineOutput: '',
+    latencyOnly: false,
+  };
+  for (let index = 0; index < argv.length; index += 1) {
+    const arg = argv[index];
+    if (arg === '--latency-only') options.latencyOnly = true;
+    else if (arg === '--repository') options.repository = argv[++index];
+    else if (arg === '--branch') options.branch = argv[++index];
+    else if (arg === '--limit') options.limit = Number(argv[++index]);
+    else if (arg === '--output') options.output = argv[++index];
+    else if (arg === '--pull') options.pulls.push(Number(argv[++index]));
+    else if (arg === '--timeline-output')
+      options.timelineOutput = argv[++index];
+    else throw new Error(`unknown argument: ${arg}`);
+  }
+  if (
+    !Number.isInteger(options.limit) ||
+    options.limit < 1 ||
+    options.limit > 100
+  ) {
+    throw new Error('--limit must be an integer from 1 to 100');
+  }
+  if (
+    options.pulls.some(
+      (pullNumber) => !Number.isInteger(pullNumber) || pullNumber < 1,
+    )
+  ) {
+    throw new Error('--pull must be a positive integer');
+  }
+  if (options.timelineOutput && options.pulls.length !== 1) {
+    throw new Error('--timeline-output requires exactly one --pull');
+  }
+  return options;
+}
+
+function latencyOnlyEvidence(classification, workflowRunId = null) {
+  if (classification.kind === 'non-native') {
+    return {
+      cache: {
+        outcome: 'not-applicable',
+        authority: 'source-planner',
+        warm: false,
+        cold: false,
+        layers: [],
+        compilerStats: null,
+      },
+      native: {
+        outcome: 'not-applicable',
+        authority: 'source-planner',
+        steps: [],
+        candidateEvents: [],
+      },
+    };
+  }
+  const reason = 'native artifact download skipped by explicit --latency-only';
+  return {
+    cache: {
+      outcome: 'unknown',
+      authority: 'latency-only',
+      reason,
+      warm: false,
+      cold: false,
+      layers: [],
+      compilerStats: null,
+      workflowRunId,
+    },
+    native: {
+      outcome: 'unknown',
+      authority: 'latency-only',
+      reason,
+      steps: [],
+      candidateEvents: [],
+      workflowRunId,
+    },
+  };
+}
+
 module.exports = {
+  latencyOnlyEvidence,
   measureCandidateStage,
   measureCandidateStageSync,
+  parseDevRequiredLatencyArgs,
   requiredMergeQueueWindow,
 };

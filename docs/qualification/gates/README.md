@@ -160,6 +160,25 @@ the compact human report on stderr:
   --timeline-output /tmp/kungfu-pr-1254-candidate-timeline.json
 ```
 
+For a quick required-latency and delivery refresh, `--latency-only` keeps the
+same branch-rules, merge-queue event, job, required-window, and source-planner
+authority while skipping the large native diagnostic artifact downloads:
+
+```sh
+./shifu gate:latency:measure \
+  --repository kungfu-systems/kungfu \
+  --branch dev/v4/v4.0 \
+  --limit 30 \
+  --latency-only \
+  --output /tmp/kungfu-dev-latency-only.json
+```
+
+This mode marks native cache and attribution evidence `unknown`, leaves the
+full `verdict.qualified` fail closed, and sets
+`collection.retainedBaselineEligible` to `false`. It is therefore suitable for
+monitoring the queue-inclusive SLO and delivery/dequeue window, but it cannot
+replace the full artifact-backed command or update the retained baseline.
+
 The same report has a separate merge-queue delivery section. Delivery latency
 runs from the first authoritative GitHub `AddedToMergeQueueEvent` through the
 PR `merged_at`, with P50/P90 targets of 15/30 minutes. The dequeue cohort also

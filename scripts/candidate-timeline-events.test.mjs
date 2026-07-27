@@ -10,8 +10,10 @@ import test from 'node:test';
 
 const require = createRequire(import.meta.url);
 const {
+  latencyOnlyEvidence,
   measureCandidateStage,
   measureCandidateStageSync,
+  parseDevRequiredLatencyArgs,
 } = require('./candidate-timeline-events.cjs');
 
 function fixture() {
@@ -116,4 +118,35 @@ test('candidate stage instrumentation has bounded local overhead and output', ()
   } finally {
     fs.rmSync(value.root, { recursive: true, force: true });
   }
+});
+
+test('latency-only is explicit and skips native artifacts', () => {
+  assert.deepEqual(
+    [
+      parseDevRequiredLatencyArgs([]).latencyOnly,
+      parseDevRequiredLatencyArgs(['--latency-only']).latencyOnly,
+    ],
+    [false, true],
+  );
+  const evidence = latencyOnlyEvidence({ kind: 'native' }, 42);
+  assert.equal(evidence.cache.outcome, 'unknown');
+  assert.equal(evidence.native.outcome, 'unknown');
+  assert.equal(evidence.native.workflowRunId, 42);
+});
+
+test('latency-only reports cannot qualify or update the baseline', async () => {
+  const { report } = await import('./measure-dev-required-latency.mjs');
+  const record = {
+    excluded: false,
+    sourceSha: 'a'.repeat(40),
+    durationMs: 120000,
+    classification: { kind: 'native' },
+    cache: latencyOnlyEvidence({ kind: 'native' }).cache,
+  };
+  const records = Array(20).fill(record);
+  const value = report('owner/repo', 'dev', ['required'], records, records, {
+    latencyOnly: true,
+  });
+  assert.equal(value.collection.retainedBaselineEligible, false);
+  assert.equal(value.verdict.qualified, false);
 });

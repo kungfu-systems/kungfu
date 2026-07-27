@@ -15,58 +15,21 @@ import {
   formatCandidateTimelineReport,
 } from '@kungfu-tech/buildchain-alpha/candidate-timeline';
 
-import { requiredMergeQueueWindow } from './candidate-timeline-events.cjs';
+import {
+  latencyOnlyEvidence,
+  parseDevRequiredLatencyArgs,
+  requiredMergeQueueWindow,
+} from './candidate-timeline-events.cjs';
 import { planAffectedPaths } from './run-core-affected-native.mjs';
 export { requiredMergeQueueWindow };
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const DEFAULT_BRANCH = 'dev/v4/v4.0';
 const MINIMUM_SAMPLE_COUNT = 20;
 const MINIMUM_NATIVE_SAMPLE_COUNT = 10;
 const BASELINE_PATH = path.join(
   ROOT,
   'framework/core/architecture/dev-gate-latency-baseline.json',
 );
-
-function parseArgs(argv) {
-  const options = {
-    repository: process.env.GITHUB_REPOSITORY || '',
-    branch: DEFAULT_BRANCH,
-    limit: 30,
-    output: '',
-    pulls: [],
-    timelineOutput: '',
-  };
-  for (let index = 0; index < argv.length; index += 1) {
-    const arg = argv[index];
-    if (arg === '--repository') options.repository = argv[++index];
-    else if (arg === '--branch') options.branch = argv[++index];
-    else if (arg === '--limit') options.limit = Number(argv[++index]);
-    else if (arg === '--output') options.output = argv[++index];
-    else if (arg === '--pull') options.pulls.push(Number(argv[++index]));
-    else if (arg === '--timeline-output')
-      options.timelineOutput = argv[++index];
-    else throw new Error(`unknown argument: ${arg}`);
-  }
-  if (
-    !Number.isInteger(options.limit) ||
-    options.limit < 1 ||
-    options.limit > 100
-  ) {
-    throw new Error('--limit must be an integer from 1 to 100');
-  }
-  if (
-    options.pulls.some(
-      (pullNumber) => !Number.isInteger(pullNumber) || pullNumber < 1,
-    )
-  ) {
-    throw new Error('--pull must be a positive integer');
-  }
-  if (options.timelineOutput && options.pulls.length !== 1) {
-    throw new Error('--timeline-output requires exactly one --pull');
-  }
-  return options;
-}
 
 function repositoryFromOrigin() {
   const result = spawnSync('git', ['remote', 'get-url', 'origin'], {
@@ -1355,6 +1318,7 @@ async function collectSample(
   requiredContexts,
   mergeQueue,
   token,
+  latencyOnly = false,
 ) {
   const sha = pull.head.sha;
   const files = await githubPages(
@@ -1423,14 +1387,19 @@ async function collectSample(
   const affectedNativeContext = requiredWindow.contexts.find(
     ({ context }) => context === 'affected-native / linux',
   );
-  const evidence = await collectAffectedNativeEvidence(
-    repository,
-    affectedNativeContext?.workflowRunId || requiredWindow.workflowRunId,
-    classification,
-    token,
-    affectedNativeContext?.workflowHeadSha || requiredWindow.workflowHeadSha,
-    sha,
-  );
+  const affectedNativeWorkflowRunId =
+    affectedNativeContext?.workflowRunId || requiredWindow.workflowRunId;
+  const evidence = latencyOnly
+    ? latencyOnlyEvidence(classification, affectedNativeWorkflowRunId)
+    : await collectAffectedNativeEvidence(
+        repository,
+        affectedNativeWorkflowRunId,
+        classification,
+        token,
+        affectedNativeContext?.workflowHeadSha ||
+          requiredWindow.workflowHeadSha,
+        sha,
+      );
   return {
     excluded: false,
     pullRequest: pull.number,
@@ -1893,6 +1862,7 @@ export function report(
   requiredContexts,
   records,
   mergeQueueRecords = records,
+  options = {},
 ) {
   const samples = records.filter(({ excluded }) => !excluded);
   const byKind = (kind) =>
@@ -1937,6 +1907,11 @@ export function report(
     generatedAt,
     repository,
     branch,
+    collection: {
+      evidenceMode: options.latencyOnly ? 'latency-only' : 'full',
+      nativeArtifacts: options.latencyOnly ? 'skipped' : 'required',
+      retainedBaselineEligible: !options.latencyOnly,
+    },
     metric: {
       start: 'first authoritative GitHub AddedToMergeQueueEvent',
       end: 'latest successful required job completion in the first complete required-context set on the eventual merged merge-group round',
@@ -1999,7 +1974,7 @@ export function report(
 }
 
 async function main() {
-  const options = parseArgs(process.argv.slice(2));
+  const options = parseDevRequiredLatencyArgs(process.argv.slice(2));
   const repository = options.repository || repositoryFromOrigin();
   if (!/^[^/]+\/[^/]+$/.test(repository))
     throw new Error('cannot resolve GitHub repository');
@@ -2088,6 +2063,7 @@ async function main() {
         requiredContexts,
         mergeQueueByPull.get(pull.number),
         token,
+        options.latencyOnly,
       ),
     );
     console.error(`[dev-gate-latency] collected PR #${pull.number}`);
@@ -2098,6 +2074,7 @@ async function main() {
     requiredContexts,
     records,
     mergeQueueRecords,
+    { latencyOnly: options.latencyOnly },
   );
   const json = `${JSON.stringify(value, null, 2)}\n`;
   if (options.output) {
