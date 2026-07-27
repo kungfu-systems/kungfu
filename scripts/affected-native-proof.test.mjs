@@ -615,6 +615,10 @@ test('workflow keeps one context while PR proof replaces duplicate queue builds'
   assert.match(workflow, /^\s{2}proof_probe:$/mu);
   assert.match(
     workflow,
+    /name: Verify protected merge-queue replay[\s\S]*github\.event_name == 'pull_request'[\s\S]*project-cut:queue-admission --[\s\S]*--base "\$base_sha"[\s\S]*--head "\$head_sha"/u,
+  );
+  assert.match(
+    workflow,
     /affected_native_shards:[\s\S]*- source_acceptance[\s\S]*- candidate_preflight[\s\S]*needs\.proof_probe\.outputs\.reuse != 'true'/u,
   );
   assert.match(

@@ -103,6 +103,16 @@ jobs:
         with:
           fetch-depth: 0
           persist-credentials: false
+      - name: Verify protected merge-queue replay
+        if: ${{ github.event_name == 'pull_request' }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          base_sha="$(jq -r '.pull_request.base.sha' "$GITHUB_EVENT_PATH")"
+          head_sha="$(jq -r '.pull_request.head.sha' "$GITHUB_EVENT_PATH")"
+          ./shifu project-cut:queue-admission -- \
+            --base "$base_sha" \
+            --head "$head_sha"
       - name: Verify ADR delivery intent
         run: ./shifu gate run governance.adr-delivery
       - name: Rehearse alpha and stable promotion contracts

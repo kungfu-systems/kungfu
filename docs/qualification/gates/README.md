@@ -220,6 +220,15 @@ later thread; a corrected head is eligible for a fresh admission. Manual
 dequeues do not mint the marker, so a serialized position race can safely
 yield and retry.
 
+Before expensive pull-request qualification starts, candidate preflight also
+replays the pull request's first-parent commit series onto the exact protected
+base using the repository's existing rebase-queue admission. The replay writes
+only unreachable Git objects and changes no ref, index, or worktree. A
+deterministic replay conflict fails preflight, so native, SDK, Shifu, and KFD
+jobs do not spend runner time on a source revision that the protected `REBASE`
+queue cannot admit. Merge-group candidates have already been synthesized by
+the queue and do not repeat this PR-only admission.
+
 The retained `2026-07-27T02:55:08.491Z` window is explicitly non-qualifying:
 30 samples (21 native) report queue-inclusive P50 `1037000 ms` and P95
 `9507000 ms`. All 21 native cache outcomes are source-qualified cold misses;

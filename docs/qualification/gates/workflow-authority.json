@@ -349,7 +349,7 @@
           "authority": "qualification",
           "publication": "none",
           "receipt": "diagnostic",
-          "definitionDigest": "sha256:cd53b383561d4d1b80a4a19645cdca6c0d1df21f0791e6a2a632b1b89604f460",
+          "definitionDigest": "sha256:1967183ab132b9b2c5477f2aca185805da63367a065160e1773ea2cd4acb677d",
           "credentials": {
             "githubToken": "read",
             "oidc": false,
@@ -366,21 +366,27 @@
             },
             {
               "index": 2,
+              "label": "name:Verify protected merge-queue replay",
+              "definitionDigest": "sha256:b22ad8c4f639edde93812925d5245c4badfe8b5f7e78856457bc750b20938218"
+            },
+            {
+              "index": 3,
               "label": "name:Verify ADR delivery intent",
               "definitionDigest": "sha256:48e72bd895c8aa22b8c612709f9293c257b8a12867d2ae22eab5eed5c4f2930a"
             },
             {
-              "index": 3,
+              "index": 4,
               "label": "name:Rehearse alpha and stable promotion contracts",
               "definitionDigest": "sha256:4d2045f4b3c7579ce197cfeda1d57ccb35a6a23fa10ccd537888359f9b657165"
             },
             {
-              "index": 4,
+              "index": 5,
               "label": "id:plan",
+              "authority": "evidence-publication",
               "definitionDigest": "sha256:6cb207a1bf071e89ad5d3b8387ae9fda49887f09745e8e498c27a6df8ade834a"
             },
             {
-              "index": 5,
+              "index": 6,
               "label": "name:Upload candidate preflight plan",
               "authority": "evidence-publication",
               "definitionDigest": "sha256:0f0f752f45e91760b224bbdd55a062798d67e512c73fdaf4d47529d78258af3a"
