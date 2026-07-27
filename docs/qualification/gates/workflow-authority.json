@@ -708,7 +708,7 @@
     {
       "path": ".github/workflows/build.yml",
       "authority": "product-publication",
-      "definitionDigest": "sha256:aadbb97771ffd89eaec3f3ed67ef3925e1730472a5a722c1a8b956c8ee71b6c1",
+      "definitionDigest": "sha256:ddf4488ea8a4ef1ec62115d43646924a3f1ee7c46d2489c8620d4bd8b8fa033f",
       "jobs": [
         {
           "id": "auditable-demo",
@@ -842,6 +842,26 @@
               "definitionDigest": "sha256:a41f8263042a7679a2140cc228d4ea1bdc2c2713cf76f7bb298493e2b8e02a14"
             }
           ]
+        },
+        {
+          "id": "hub-cli-linux-arm64",
+          "authority": "qualification",
+          "publication": "none",
+          "receipt": "diagnostic",
+          "definitionDigest": "sha256:ba5be3ddff4f52b785d8ffc173adb374b0db519ddb65a1ae611eea2283c461c3",
+          "credentials": {
+            "githubToken": "write",
+            "oidc": true,
+            "repositorySecrets": [
+              "BUILDCHAIN_ARTIFACT_RELAY_S3_DOWNLOAD_ROLE_ARN",
+              "BUILDCHAIN_ARTIFACT_RELAY_S3_ROLE_ARN",
+              "BUILDCHAIN_ARTIFACT_RELAY_S3_UPLOAD_ROLE_ARN"
+            ],
+            "inheritedSecrets": false,
+            "environment": null
+          },
+          "externalActions": ["kungfu-systems/buildchain/.github/workflows/.build.yml@bfe43b0fe5577f15d2af01bc542de8a8ce587457"],
+          "steps": []
         },
         {
           "id": "kungfu-phase-b",
@@ -2108,7 +2128,7 @@
           "authority": "release-control",
           "publication": "channel",
           "receipt": "qualifying",
-          "definitionDigest": "sha256:f7c8516eaa7dfffebc7ddd6388a5050944582c61f2babc59e7b9c9683a8a95ad",
+          "definitionDigest": "sha256:2cb985964809909d7b9aee5bba8fa401b63403f62edf73fa6713badf239caaf5",
           "credentials": {
             "githubToken": "write",
             "oidc": true,

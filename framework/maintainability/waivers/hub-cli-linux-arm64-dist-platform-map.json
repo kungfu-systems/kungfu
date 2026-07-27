@@ -1,0 +1,18 @@
+{
+  "schema": "kungfu.code-complexity-budget-waiver/v1",
+  "paths_or_scope": ["product/scripts/dist.mjs"],
+  "file_class": "first-party-handwritten-implementation",
+  "baseline_measurement": 2528,
+  "requested_measurement": 2530,
+  "allowed_delta": 2,
+  "owner": "product/assembly",
+  "responsibility_boundary": "Canonical runtime platform-package selection for native linux-arm64 libnode and esbuild assembly.",
+  "cohesion_rationale": "Both mappings extend the existing platform dispatch tables and keep packaging behavior auditable at the established assembly boundary.",
+  "rejected_split_alternatives": ["A new helper module for two table entries would increase indirection and helper proliferation.", "Runtime conditionals outside the canonical maps would duplicate platform authority."],
+  "affected_tests_and_qualification": ["product/scripts/dist.test.mjs", "framework/core/tests/core-platform-package.test.js", "./shifu check:source"],
+  "requested_by": "dongkeren",
+  "approved_by": "kungfu-origin",
+  "approved_at": "2026-07-27T07:06:00+08:00",
+  "expires_at_or_review_by": "2026-10-31T23:59:59+08:00",
+  "retirement_or_decomposition_ref": "KF-ADR-019f9388-a139-7355-b9f2-f6dd9aa91042"
+}

@@ -145,7 +145,7 @@
         "evidenceRoots": [
           {
             "path": ".buildchain/kfd/kfd-3/surfaces.json",
-            "sha256": "sha256:bf60b7d672aa3eb1c88a1ac16b4b701ca0776a272a743426d385d206442d0f3b"
+            "sha256": "sha256:efac6806c4d82d904d60446fb2e3dea73414e1294e4c83d871dd3ac87f2d3dbd"
           },
           {
             "path": ".buildchain/kfd/kfd-3/capability-query.json",
@@ -247,7 +247,7 @@
         "evidenceRoots": [
           {
             "path": "framework/primitive/kungfu-primitive-catalog.contract.json",
-            "sha256": "sha256:b15ef92c54e3e63eccb1446382179cc6d321d63625df31ed19a2a68cfb751681"
+            "sha256": "sha256:d9dd641ae6d7ffccb326ad39c81be2cc5d50b02708b80d31d7b1832b97cfa410"
           },
           {
             "path": "docs/architecture/primitive-management-plane.md",

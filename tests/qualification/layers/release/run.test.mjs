@@ -143,22 +143,25 @@ function fixture(root) {
         url: 'https://example.com/core',
       },
       platforms: Object.fromEntries(
-        ['darwin-arm64', 'linux-x64', 'win32-x64'].map((platform) => [
-          platform,
-          {
-            digest: digestFor('core', platform),
-            url: `https://example.com/core/${platform}`,
-          },
-        ]),
+        ['darwin-arm64', 'linux-arm64', 'linux-x64', 'win32-x64'].map(
+          (platform) => [
+            platform,
+            {
+              digest: digestFor('core', platform),
+              url: `https://example.com/core/${platform}`,
+            },
+          ],
+        ),
       ),
     },
     npmPackageInventory: {
       schema: 'kungfu.npm-release-package-inventory-evidence/v1',
       status: 'passing',
-      expectedPackageCount: 28,
+      expectedPackageCount: 29,
       packages: [
         '@kungfu-tech/core',
         '@kungfu-tech/core-darwin-arm64',
+        '@kungfu-tech/core-linux-arm64',
         '@kungfu-tech/core-linux-x64',
         '@kungfu-tech/core-win32-x64',
         ...Array.from(
