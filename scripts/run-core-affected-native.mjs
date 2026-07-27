@@ -68,6 +68,7 @@ const sdkRootScriptKeys = [
   'sdk:layered:generate',
 ];
 const sdkQualificationPaths = [
+  '.github/workflows/affected-native-cache-promote.yml',
   '.github/workflows/affected-native-pr.yml',
   'crates/Cargo.lock',
   'crates/Cargo.toml',
@@ -99,6 +100,7 @@ const sdkQualificationPaths = [
   'scripts/platform-command.mjs',
   'scripts/run-core-affected-native.mjs',
   'scripts/run-layer-artifact-gate.mjs',
+  'scripts/write-affected-native-cache-manifests.mjs',
   'shifu.gates.json',
   'tests/qualification/layers/process-metrics.mjs',
   'tests/qualification/layers/sdk/',
@@ -113,6 +115,7 @@ const shifuWorkspaceQualificationPaths = [
   { prefix: 'scripts/shifu-gate-' },
   { exact: 'package.json' },
   { exact: 'shifu.gates.json' },
+  { exact: '.github/workflows/affected-native-cache-promote.yml' },
   { exact: '.github/workflows/affected-native-pr.yml' },
   { exact: '.github/workflows/shifu-ci.yml' },
 ];
@@ -121,6 +124,7 @@ const kfdVerifierQualificationPaths = [
   { exact: 'scripts/verify-kfd-owned-fixtures.mjs' },
   { exact: 'package.json' },
   { exact: 'pnpm-lock.yaml' },
+  { exact: '.github/workflows/affected-native-cache-promote.yml' },
   { exact: '.github/workflows/affected-native-pr.yml' },
   { exact: '.github/workflows/kfd-verifier-drift.yml' },
 ];
@@ -471,8 +475,10 @@ export function planFromChanged(
     'framework/core/uv.lock',
     'framework/core/package.json',
     'framework/core/tests/',
+    'scripts/write-affected-native-cache-manifests.mjs',
     'scripts/run-core-affected-native.mjs',
     'scripts/affected-native-proof.mjs',
+    '.github/workflows/affected-native-cache-promote.yml',
     '.github/workflows/affected-native-pr.yml',
     'shifu.gates.json',
     'docs/qualification/gates/',
