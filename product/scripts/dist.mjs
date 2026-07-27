@@ -1830,6 +1830,7 @@ export function runInstalledKungfuAssignmentAdmissionSmoke({
   );
   const initiativeId = 'installed-product-qualification';
   const assignmentId = 'installed-product-admission-smoke';
+  const retentionPolicy = 'explicit-expiry-retain-bytes-v1';
   const assignmentEnv = {
     ...env,
     HOME: userHome,
@@ -1848,14 +1849,8 @@ export function runInstalledKungfuAssignmentAdmissionSmoke({
     `${JSON.stringify(
       {
         schema: 'kungfu.assignment-request/v1',
-        source: {
-          kind: 'installed-product-qualification',
-          sourceId: assignmentId,
-        },
-        retention: {
-          policy: 'explicit-expiry-retain-bytes-v1',
-          expiresAt: null,
-        },
+        source: { kind: initiativeId, sourceId: assignmentId },
+        retention: { policy: retentionPolicy, expiresAt: null },
         workDefinition: {
           goal_id: assignmentId,
           mission_id: initiativeId,
