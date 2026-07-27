@@ -236,8 +236,8 @@ jobs:
         if: >-
           ${{
             github.event_name == 'merge_group' &&
-            steps.descriptor.outputs.native-required == 'true' &&
-            steps.descriptor.outputs.sdk-required != 'true'
+            (steps.descriptor.outputs.native-required == 'true' ||
+             steps.descriptor.outputs.sdk-required == 'true')
           }}
         env:
           GITHUB_TOKEN: ${{ github.token }}
@@ -291,8 +291,7 @@ jobs:
           reuse=false
           producer_run_id=""
           if [ "$GITHUB_EVENT_NAME" = "merge_group" ] && \
-             [ "$NATIVE_REQUIRED" = "true" ] && \
-             [ "$SDK_REQUIRED" != "true" ] && \
+             { [ "$NATIVE_REQUIRED" = "true" ] || [ "$SDK_REQUIRED" = "true" ]; } && \
              [ "$LOOKUP_OUTCOME" = "success" ] && \
              [ "$LOOKUP_REUSABLE" = "true" ] && \
              [ "$DOWNLOAD_OUTCOME" = "success" ] && \
@@ -607,11 +606,14 @@ jobs:
     needs:
       - source_acceptance
       - candidate_preflight
+      - proof_probe
     if: >-
       ${{
         github.event_name == 'merge_group' &&
         needs.source_acceptance.result == 'success' &&
         needs.candidate_preflight.result == 'success' &&
+        needs.proof_probe.result == 'success' &&
+        needs.proof_probe.outputs.reuse != 'true' &&
         needs.candidate_preflight.outputs.shifu-required == 'true'
       }}
     strategy:
@@ -658,11 +660,14 @@ jobs:
     needs:
       - source_acceptance
       - candidate_preflight
+      - proof_probe
     if: >-
       ${{
         github.event_name == 'merge_group' &&
         needs.source_acceptance.result == 'success' &&
         needs.candidate_preflight.result == 'success' &&
+        needs.proof_probe.result == 'success' &&
+        needs.proof_probe.outputs.reuse != 'true' &&
         needs.candidate_preflight.outputs.kfd-required == 'true'
       }}
     runs-on: ubuntu-24.04
@@ -752,11 +757,13 @@ jobs:
           fi
           if [ "$REUSE" = "true" ]; then
             require_result "reused queue affected-native" skipped "$NATIVE_RESULT"
+            require_result "reused queue Shifu workspace" skipped "$SHIFU_RESULT"
+            require_result "reused queue KFD verifier" skipped "$KFD_RESULT"
           else
             require_optional_gate "queue affected-native" "$native_or_sdk" "$NATIVE_RESULT"
+            require_optional_gate "queue Shifu workspace" "$SHIFU_REQUIRED" "$SHIFU_RESULT"
+            require_optional_gate "queue KFD verifier" "$KFD_REQUIRED" "$KFD_RESULT"
           fi
-          require_optional_gate "queue Shifu workspace" "$SHIFU_REQUIRED" "$SHIFU_RESULT"
-          require_optional_gate "queue KFD verifier" "$KFD_REQUIRED" "$KFD_RESULT"
           echo "Merge Queue staged qualification passed."
       - name: Download current proof descriptor
         uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
@@ -850,10 +857,6 @@ jobs:
             exit 0
           fi
           if [ "$REUSE" = "true" ]; then
-            if [ "$NATIVE_REQUIRED" != "true" ] || [ "$SDK_REQUIRED" = "true" ]; then
-              echo "queue proof reuse is outside the native-only contract" >&2
-              exit 1
-            fi
             if [ "$PARTITION_RESULT" != "skipped" ]; then
               echo "reused affected-native partitions must be skipped: $PARTITION_RESULT" >&2
               exit 1
@@ -867,7 +870,7 @@ jobs:
               --producer-event merge_group \
               --producer-head-sha "$(git rev-parse HEAD)"
             echo "proof-created=false" >> "$GITHUB_OUTPUT"
-            echo "Exact same-SHA queue proof admitted; native partitions remained skipped."
+            echo "Exact same-SHA successful queue proof admitted; repeated heavy gates remained skipped."
             exit 0
           fi
           if [ "$PARTITION_RESULT" != "success" ]; then
