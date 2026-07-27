@@ -4,17 +4,31 @@ This package is the only portable bundle boundary a site or independent tool
 needs. Consumers must not reach into the Kungfu monorepo or copy semantic
 tables into their own source.
 
+## Start with the reader journey
+
+If you are reading rather than implementing a package adapter, start at
+[Start here](docs/guides/index.md). The guide set deliberately reveals the
+contract in stages: orientation, first verification, task guides, evidence,
+then complete reference.
+
+Site builders should consume `@kungfu-tech/site`; it carries this complete
+rooted journey and renders serializable guide models. Direct format tools
+should consume this package.
+
 ## Pin and load
 
 The package version is a pickup coordinate, not a format compatibility
-decision. The current public alpha pickup is exact:
+decision. Publication follows Kungfu's coordinated package release. After a
+release is published, use the `alpha` tag only to discover the version, review
+it, and persist that exact pickup:
 
 ```sh
-npm install --save-exact @kungfu-tech/spec@4.0.0-alpha.1
+SPEC_VERSION=$(npm view @kungfu-tech/spec@alpha version)
+npm install --save-exact "@kungfu-tech/spec@$SPEC_VERSION"
 ```
 
-Use the `alpha` dist-tag only for discovery; persist the exact version and
-verify the bundled normative root before use.
+Do not leave `@alpha` in a package manifest. Verify the bundled normative root
+before use.
 
 ```js
 const path = require('node:path');
@@ -59,6 +73,19 @@ Run the independent stdlib-only reader directly from the installed package:
 ```sh
 python3 node_modules/@kungfu-tech/spec/reference-readers/python/portable_format_reader.py --json
 ```
+
+Inspect and verify the retained corpus without running the Python reader:
+
+```sh
+kungfu-spec corpus
+kungfu-spec corpus-verify
+kungfu-spec corpus-vector journal-v1-unknown-carrier
+```
+
+The equivalent Node API is documented in
+[Use the Node API](docs/guides/api.md). The corpus outcome and evidence
+boundary is documented in
+[Run and interpret the conformance corpus](docs/guides/conformance.md).
 
 ## Site behavior
 

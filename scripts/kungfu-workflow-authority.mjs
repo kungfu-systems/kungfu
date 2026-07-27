@@ -517,10 +517,12 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
       process.exit(1);
     }
     fs.mkdirSync(path.dirname(target), { recursive: true });
-    fs.writeFileSync(
-      target,
-      `${JSON.stringify(projection.document, null, 2)}\n`,
-    );
+    const rendered =
+      `${JSON.stringify(projection.document, null, 2)}\n`.replace(
+        /\[\n\s+("(?:[^"\\]|\\.)*")\n\s+\]/gu,
+        '[$1]',
+      );
+    fs.writeFileSync(target, rendered);
     const docTarget = path.join(ROOT, WORKFLOW_AUTHORITY_DOC);
     if (fs.existsSync(docTarget)) {
       fs.writeFileSync(

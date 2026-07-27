@@ -330,7 +330,8 @@
         "sources": [
           "shifu.gates.json",
           "framework/release/kungfu-trademark-public-use.contract.json",
-          "product/release-channel-trust.json"
+          "product/release-channel-trust.json",
+          "docs/qualification/gates/release-admission-policy.json"
         ]
       },
       "surfaces": [
@@ -347,11 +348,19 @@
           "role": "conformance-oracle"
         },
         {
+          "path": "docs/qualification/gates/workflow-bindings.json",
+          "role": "thin-binding"
+        },
+        {
           "path": ".github/workflows/release-new-version.yml",
           "role": "package-release"
         },
         {
           "path": "docs/qualification/gates/release-and-promotion.md",
+          "role": "documentation"
+        },
+        {
+          "path": "docs/qualification/gates/release-admission.md",
           "role": "documentation"
         },
         {

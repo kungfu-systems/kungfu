@@ -34,14 +34,6 @@ on:
         required: false
         type: boolean
         default: false
-      artifact-transfer-mode:
-        description: "Transfer native artifacts directly or through the configured S3 relay"
-        required: false
-        type: choice
-        options:
-          - github-artifacts
-          - s3-to-github-artifacts
-        default: github-artifacts
       render-auditable-demo:
         description: "Render full media after the exact Linux artifact passes the required auditable-demo Gate"
         required: false
@@ -84,7 +76,7 @@ jobs:
 
   build:
     needs: preflight
-    uses: kungfu-systems/buildchain/.github/workflows/.build.yml@bfe43b0fe5577f15d2af01bc542de8a8ce587457 # v3.0.2-alpha.1 with cross-attempt artifact recovery
+    uses: kungfu-systems/buildchain/.github/workflows/.build.yml@625384b4927222022a2cd0758399afbf9333ccdc # v3.0.2-alpha.2 with renderer input normalization
     secrets:
       BUILDCHAIN_ARTIFACT_RELAY_S3_ROLE_ARN: ${{ secrets.BUILDCHAIN_ARTIFACT_RELAY_S3_ROLE_ARN }}
       BUILDCHAIN_ARTIFACT_RELAY_S3_UPLOAD_ROLE_ARN: ${{ secrets.BUILDCHAIN_ARTIFACT_RELAY_S3_UPLOAD_ROLE_ARN }}
@@ -146,7 +138,10 @@ jobs:
       verify-command: node scripts/run-release-qualification.mjs --execution-profile ${{ startsWith(github.base_ref, 'release/') && 'release-candidate' || 'alpha' }} --native-upgrade-policy skip
       release-candidate: true
       publish-channel: ${{ github.event_name == 'pull_request' && (startsWith(github.base_ref, 'release/') && 'release' || 'alpha') || 'none' }}
-      artifact-transfer-mode: ${{ github.event_name == 'workflow_dispatch' && inputs.artifact-transfer-mode || 's3-to-github-artifacts' }}
+      # Alpha and release evidence always crosses the configured S3 relay,
+      # including manual diagnostic runs. Keep this literal so a dispatch
+      # cannot silently fall back to direct GitHub artifact transfer.
+      artifact-transfer-mode: s3-to-github-artifacts
       artifact-retention-days: 14
       checkout-cache-mode: auto
       checkout-cache-mirror-url-template: ${{ vars.BUILDCHAIN_CHECKOUT_CACHE_MIRROR_URL_TEMPLATE }}
@@ -365,7 +360,7 @@ jobs:
     permissions:
       actions: read
       contents: read
-    uses: kungfu-systems/buildchain/.github/workflows/.auditable-demo.yml@bfe43b0fe5577f15d2af01bc542de8a8ce587457 # v3.0.2-alpha.1 with cross-attempt artifact recovery
+    uses: kungfu-systems/buildchain/.github/workflows/.auditable-demo.yml@625384b4927222022a2cd0758399afbf9333ccdc # v3.0.2-alpha.2 with renderer input normalization
     with:
       source-ref: ${{ needs.build.outputs.publish-source-sha }}
       source-artifact-name: ${{ needs.resolve-auditable-demo-source.outputs.artifact-name }}
@@ -435,13 +430,21 @@ jobs:
               artifacts.map((artifact) => [String(artifact.id), artifact]),
             );
             for (const coordinate of declared) {
+              if (/^[0-9a-f]{64}$/.test(coordinate.digest)) {
+                coordinate.digest = `sha256:${coordinate.digest}`;
+              }
               const present = [coordinate.id, coordinate.name, coordinate.digest]
                 .filter(Boolean).length;
               if (!coordinate.required && present === 0) {
+                core.setOutput(`${coordinate.kind}-artifact-digest`, "");
                 core.setOutput(`${coordinate.kind}-artifact-expires-at`, "");
                 continue;
               }
-              if (present !== 3 || !/^[1-9][0-9]*$/.test(coordinate.id)) {
+              if (
+                present !== 3 ||
+                !/^[1-9][0-9]*$/.test(coordinate.id) ||
+                !/^sha256:[0-9a-f]{64}$/.test(coordinate.digest)
+              ) {
                 throw new Error(`${coordinate.kind} artifact coordinate is partial or invalid`);
               }
               const artifact = byId.get(coordinate.id);
@@ -463,6 +466,10 @@ jobs:
                 throw new Error(`${coordinate.kind} artifact is expired or has no live expiry`);
               }
               core.setOutput(
+                `${coordinate.kind}-artifact-digest`,
+                artifact.digest,
+              );
+              core.setOutput(
                 `${coordinate.kind}-artifact-expires-at`,
                 new Date(expiresAt).toISOString(),
               );
@@ -478,17 +485,17 @@ jobs:
           SOURCE_ARTIFACT_EXPIRES_AT: ${{ needs.resolve-auditable-demo-source.outputs.artifact-expires-at }}
           GATE_ARTIFACT_ID: ${{ needs.auditable-demo.outputs.gate-artifact-id }}
           GATE_ARTIFACT_NAME: ${{ needs.auditable-demo.outputs.gate-artifact-name }}
-          GATE_ARTIFACT_DIGEST: ${{ needs.auditable-demo.outputs.gate-artifact-digest }}
+          GATE_ARTIFACT_DIGEST: ${{ steps.artifact-expiry.outputs.gate-artifact-digest }}
           GATE_ARTIFACT_URL: ${{ needs.auditable-demo.outputs.gate-artifact-url }}
           GATE_ARTIFACT_EXPIRES_AT: ${{ steps.artifact-expiry.outputs.gate-artifact-expires-at }}
           GATE_ROOT: ${{ needs.auditable-demo.outputs.gate-root }}
           MEDIA_ARTIFACT_ID: ${{ needs.auditable-demo.outputs.media-artifact-id }}
           MEDIA_ARTIFACT_NAME: ${{ needs.auditable-demo.outputs.media-artifact-name }}
-          MEDIA_ARTIFACT_DIGEST: ${{ needs.auditable-demo.outputs.media-artifact-digest }}
+          MEDIA_ARTIFACT_DIGEST: ${{ steps.artifact-expiry.outputs.media-artifact-digest }}
           MEDIA_ARTIFACT_URL: ${{ needs.auditable-demo.outputs.media-artifact-url }}
           MEDIA_ARTIFACT_EXPIRES_AT: ${{ steps.artifact-expiry.outputs.media-artifact-expires-at }}
           MEDIA_ROOT: ${{ needs.auditable-demo.outputs.media-root }}
-          BUILDCHAIN_SHA: bfe43b0fe5577f15d2af01bc542de8a8ce587457
+          BUILDCHAIN_SHA: 625384b4927222022a2cd0758399afbf9333ccdc
           RENDERER_IMAGE: ghcr.io/kungfu-systems/build-images/demo-renderer@sha256:cb5e1dec368d21c7d4e8baded99ac75f12f7eff0d19505751888cf974086efa6
         run: ./shifu node scripts/auditable-demo-passport.mjs write --output auditable-demo-release-passport.json
 
