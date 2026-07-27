@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
-import { execFile, execFileSync } from 'node:child_process';
+import { execFile, execFileSync, spawn } from 'node:child_process';
 import fs from 'node:fs';
 import { createRequire } from 'node:module';
 import { constants as osConstants } from 'node:os';
@@ -8,17 +8,20 @@ import path from 'node:path';
 import {
   type Profile,
   type QualificationLab,
-  type QualificationLabAgentPlan,
+  type QualificationLabEvent,
   type QualificationLabReport,
   type QualificationLabStartupRoute,
   type WorkLoop,
   openProfile,
   openQualificationLab,
   openWorkLoop,
+  qualificationLabStartupSurface,
+  qualificationRunProgressLabel,
 } from '@kungfu-tech/api/capability';
 import { Box, Text, render, useApp } from 'ink';
 import React from 'react';
 
+import { IncrementalTerminalOutput } from './incremental-terminal-output.js';
 import { loadTuiKfxPlan } from './kfx-plan.js';
 import { boundedIndex, decodeShellKey } from './navigation.js';
 import {
@@ -26,7 +29,24 @@ import {
   type ProfileShellModel,
   type TerminalDimensions,
 } from './profile-shell.js';
-import { TerminalLifecycle } from './terminal-lifecycle.js';
+import {
+  QualificationLabView,
+  type TuiQualificationFocus,
+  type TuiQualificationMode,
+  type TuiQualificationNextPrompt,
+  type TuiQualificationReportDetail,
+  isQualificationReportReturnInput,
+  nextQualificationFocus,
+  qualificationEventLines,
+  qualificationEventRunningSession,
+  qualificationNextModePrompt,
+} from './qualification-lab-view.js';
+import { terminalCanvasRows } from './terminal-canvas.js';
+import {
+  TerminalLifecycle,
+  describeCliFailure,
+  resolveTuiRuntimeDir,
+} from './terminal-lifecycle.js';
 import {
   degradedWorkControlModel,
   loadWorkControlContribution,
@@ -56,8 +76,15 @@ function runtimePaths() {
     process.platform === 'win32' ? 'kungfu.exe' : 'kungfu',
   );
   return {
-    runtimeDir:
-      process.env.KF_RUNTIME_DIR || path.join(process.cwd(), 'demo-runtime'),
+    runtimeDir: resolveTuiRuntimeDir({
+      env: process.env,
+      cwd: process.cwd(),
+      contractPath: path.join(
+        kungfuDir,
+        'config',
+        'kungfu-config.contract.json',
+      ),
+    }),
     bin:
       process.env.KUNGFU_CLI_BIN ||
       process.env.KUNGFU_BIN ||
@@ -75,8 +102,9 @@ function openTuiProfile(): Profile {
     execFileSync: (file, args, options) => execFileSync(file, args, options),
     execFile: (file, args, options) =>
       new Promise<string>((resolve, reject) => {
-        execFile(file, args, options, (error, stdout) => {
-          if (error) reject(error);
+        execFile(file, args, options, (error, stdout, stderr) => {
+          if (error)
+            reject(new Error(describeCliFailure(error, stdout, stderr)));
           else resolve(stdout);
         });
       }),
@@ -93,8 +121,73 @@ function openTuiQualificationLab(): QualificationLab {
     execFile: (file, args, options) =>
       new Promise<string>((resolve, reject) => {
         execFile(file, args, options, (error, stdout, stderr) => {
-          if (error) reject(new Error(stderr.trim() || error.message));
+          if (error)
+            reject(new Error(describeCliFailure(error, stdout, stderr)));
           else resolve(stdout);
+        });
+      }),
+    execFileEvents: (file, args, options, onLine) =>
+      new Promise<void>((resolve, reject) => {
+        const child = spawn(file, args, {
+          env: options.env,
+          stdio: ['ignore', 'pipe', 'pipe'],
+        });
+        let stdoutBuffer = '';
+        let stderr = '';
+        let outputSize = 0;
+        let settled = false;
+        const fail = (error: Error) => {
+          if (settled) return;
+          settled = true;
+          child.kill();
+          reject(error);
+        };
+        const emitLine = (line: string) => {
+          if (!line.trim()) return true;
+          try {
+            onLine(line);
+            return true;
+          } catch (reason) {
+            fail(
+              reason instanceof Error
+                ? reason
+                : new Error(`invalid qualification event: ${String(reason)}`),
+            );
+            return false;
+          }
+        };
+        child.stdout.on('data', (chunk) => {
+          const text = String(chunk);
+          outputSize += text.length;
+          if (outputSize > options.maxBuffer) {
+            fail(new Error('qualification event stream exceeded maxBuffer'));
+            return;
+          }
+          stdoutBuffer += text;
+          const lines = stdoutBuffer.split(/\r?\n/);
+          stdoutBuffer = lines.pop() ?? '';
+          for (const line of lines) {
+            if (!emitLine(line)) return;
+          }
+        });
+        child.stderr.on('data', (chunk) => {
+          stderr += String(chunk);
+        });
+        child.once('error', fail);
+        child.once('close', (code, signal) => {
+          if (settled) return;
+          if (!emitLine(stdoutBuffer)) return;
+          if (code !== 0) {
+            fail(
+              new Error(
+                stderr.trim() ||
+                  `qualification event stream exited ${code ?? signal ?? 'unknown'}`,
+              ),
+            );
+            return;
+          }
+          settled = true;
+          resolve();
         });
       }),
   });
@@ -109,8 +202,9 @@ function openTuiWorkLoop(): WorkLoop {
     env: cliEnvironment(),
     execFile: (file, args, options) =>
       new Promise<string>((resolve, reject) => {
-        execFile(file, args, options, (error, stdout) => {
-          if (error) reject(error);
+        execFile(file, args, options, (error, stdout, stderr) => {
+          if (error)
+            reject(new Error(describeCliFailure(error, stdout, stderr)));
           else resolve(stdout);
         });
       }),
@@ -169,14 +263,16 @@ function WorkControlHost({
         );
         let loopProjection: ProfileShellModel['workLoop'];
         let loopError = '';
-        try {
-          const [inspection, recovery] = await Promise.all([
-            workLoop.inspect(),
-            workLoop.recover(),
-          ]);
-          loopProjection = workLoopShellModel(inspection, recovery);
-        } catch (error) {
-          loopError = error instanceof Error ? error.message : String(error);
+        if (next.profile.qualified) {
+          try {
+            const [inspection, recovery] = await Promise.all([
+              workLoop.inspect(),
+              workLoop.recover(),
+            ]);
+            loopProjection = workLoopShellModel(inspection, recovery);
+          } catch (error) {
+            loopError = error instanceof Error ? error.message : String(error);
+          }
         }
         if (generation === refreshGeneration.current) {
           setModel({
@@ -257,24 +353,48 @@ function WorkControlHost({
 function QualificationLabHost({
   lab,
   startup,
+  dimensions,
   onOpenWork,
 }: {
   lab: QualificationLab;
   startup: QualificationLabStartupRoute;
+  dimensions: DimensionStore;
   onOpenWork?: () => void;
 }) {
   const { exit } = useApp();
+  const [size, setSize] = React.useState(dimensions.get());
   const [agents, setAgents] = React.useState<
     Awaited<ReturnType<QualificationLab['discoverAgents']>> | undefined
   >();
+  const [mode, setMode] = React.useState<TuiQualificationMode>('offline-demo');
   const [selected, setSelected] = React.useState(0);
   const [target, setTarget] = React.useState(0);
   const [report, setReport] = React.useState<QualificationLabReport>();
-  const [plan, setPlan] = React.useState<QualificationLabAgentPlan>();
-  const [targetPlan, setTargetPlan] =
-    React.useState<QualificationLabAgentPlan>();
+  const [lines, setLines] = React.useState<
+    ReturnType<typeof qualificationEventLines>
+  >([]);
+  const [activeFocus, setActiveFocus] =
+    React.useState<TuiQualificationFocus>('session-1');
+  const [reportDetail, setReportDetail] =
+    React.useState<TuiQualificationReportDetail>();
+  const [nextPrompt, setNextPrompt] =
+    React.useState<TuiQualificationNextPrompt>();
+  const [scrollBack, setScrollBack] = React.useState<Record<1 | 2, number>>({
+    1: 0,
+    2: 0,
+  });
+  const [showHelp, setShowHelp] = React.useState(false);
   const [busy, setBusy] = React.useState('');
   const [error, setError] = React.useState('');
+  const [runProgress, setRunProgress] = React.useState<{
+    startedAt: number;
+    lastEventAt: number;
+    eventCount: number;
+    phase: 'running' | 'assessing';
+  }>();
+  const [runningSession, setRunningSession] = React.useState<1 | 2>();
+  const [progressNow, setProgressNow] = React.useState(() => Date.now());
+  const playbackGeneration = React.useRef(0);
   const profiles = React.useMemo(
     () =>
       Array.from(
@@ -301,10 +421,141 @@ function QualificationLabHost({
   React.useEffect(() => {
     void discover();
   }, [discover]);
+  React.useEffect(
+    () => dimensions.subscribe((next) => setSize(next)),
+    [dimensions],
+  );
+  React.useEffect(() => {
+    if (!runProgress) return undefined;
+    setProgressNow(Date.now());
+    const timer = setInterval(() => setProgressNow(Date.now()), 1000);
+    return () => clearInterval(timer);
+  }, [runProgress]);
+  React.useEffect(() => {
+    if (!nextPrompt) return undefined;
+    const timer = setTimeout(() => setNextPrompt(undefined), 5000);
+    return () => clearTimeout(timer);
+  }, [nextPrompt]);
+  const runQualification = React.useCallback(
+    (
+      nextMode: TuiQualificationMode,
+      label: string,
+      execute: (
+        onEvent: Parameters<QualificationLab['runDemo']>[0],
+      ) => Promise<QualificationLabReport>,
+    ) => {
+      const generation = playbackGeneration.current + 1;
+      playbackGeneration.current = generation;
+      setMode(nextMode);
+      setBusy(label);
+      setReport(undefined);
+      setLines([]);
+      setActiveFocus('session-1');
+      setReportDetail(undefined);
+      setNextPrompt(undefined);
+      setScrollBack({ 1: 0, 2: 0 });
+      setError('');
+      const startedAt = Date.now();
+      setProgressNow(startedAt);
+      setRunProgress({
+        startedAt,
+        lastEventAt: startedAt,
+        eventCount: 0,
+        phase: 'running',
+      });
+      setRunningSession(1);
+      let queue = Promise.resolve();
+      const receiveEvent = (event: QualificationLabEvent) => {
+        queue = queue.then(
+          () =>
+            new Promise<void>((resolve) => {
+              setTimeout(resolve, 1000);
+            }),
+        );
+        queue = queue.then(() => {
+          if (playbackGeneration.current !== generation) return;
+          const eventSession = qualificationEventRunningSession(event);
+          if (eventSession) setRunningSession(eventSession);
+          setLines((current) => [
+            ...current,
+            ...qualificationEventLines(event),
+          ]);
+          setRunProgress((current) =>
+            current
+              ? {
+                  ...current,
+                  lastEventAt: Date.now(),
+                  eventCount: current.eventCount + 1,
+                }
+              : current,
+          );
+        });
+      };
+      void execute(receiveEvent)
+        .then(async (value) => {
+          await queue;
+          setRunProgress((current) =>
+            current ? { ...current, phase: 'assessing' } : current,
+          );
+          await new Promise<void>((resolve) => {
+            setTimeout(resolve, 520);
+          });
+          if (playbackGeneration.current !== generation) return;
+          setReport(value);
+          setActiveFocus('correct');
+          setNextPrompt(qualificationNextModePrompt(nextMode));
+          setError('');
+        })
+        .catch((reason) => {
+          if (playbackGeneration.current !== generation) return;
+          setError(reason instanceof Error ? reason.message : String(reason));
+        })
+        .finally(() => {
+          if (playbackGeneration.current === generation) {
+            setBusy('');
+            setRunProgress(undefined);
+            setRunningSession(undefined);
+          }
+        });
+    },
+    [],
+  );
   React.useEffect(() => {
     const onData = (chunk: Buffer | string) => {
-      const key = decodeShellKey(String(chunk));
+      const input = String(chunk);
+      if (reportDetail && isQualificationReportReturnInput(input)) {
+        return setReportDetail(undefined);
+      }
+      const key = decodeShellKey(input);
       if (key === 'quit') return exit();
+      if (input === '\t')
+        return setActiveFocus((current) =>
+          nextQualificationFocus(current, Boolean(report)),
+        );
+      if (
+        report &&
+        (input === '\r' || input === '\n') &&
+        (activeFocus === 'correct' || activeFocus === 'failed')
+      ) {
+        return setReportDetail(activeFocus);
+      }
+      const focusedSession =
+        activeFocus === 'session-1'
+          ? 1
+          : activeFocus === 'session-2'
+            ? 2
+            : undefined;
+      if (input === '\u001b[A' && focusedSession)
+        return setScrollBack((current) => ({
+          ...current,
+          [focusedSession]: current[focusedSession] + 1,
+        }));
+      if (input === '\u001b[B' && focusedSession)
+        return setScrollBack((current) => ({
+          ...current,
+          [focusedSession]: Math.max(0, current[focusedSession] - 1),
+        }));
+      if (input === '?') return setShowHelp((current) => !current);
       if (key === 'next-card')
         return setSelected((current) =>
           boundedIndex(current, 1, profiles.length),
@@ -313,77 +564,46 @@ function QualificationLabHost({
         return setSelected((current) =>
           boundedIndex(current, -1, profiles.length),
         );
-      if (String(chunk) === ']')
+      if (input === ']')
         return setTarget((current) =>
           boundedIndex(current, 1, profiles.length),
         );
-      if (String(chunk) === '[')
+      if (input === '[')
         return setTarget((current) =>
           boundedIndex(current, -1, profiles.length),
         );
-      if (String(chunk) === 'w' && onOpenWork) return onOpenWork();
-      if (String(chunk) === 'd' && !busy) {
-        setBusy('running two fresh sessions');
-        void lab
-          .runDemo()
-          .then((value) => {
-            setReport(value);
-            setError('');
-          })
-          .catch((reason) =>
-            setError(reason instanceof Error ? reason.message : String(reason)),
-          )
-          .finally(() => setBusy(''));
+      if (input === 'w' && onOpenWork) return onOpenWork();
+      if (input === 'd' && !busy) {
+        return runQualification(
+          'offline-demo',
+          'running two fresh demo sessions',
+          (onEvent) => lab.runDemo(onEvent),
+        );
       }
-      if (String(chunk) === 'p' && !busy && profiles[selected]) {
-        setBusy('planning exact agent run');
-        void Promise.all([
-          lab.planAgent(profiles[selected].id),
-          lab.planAgent(profiles[target]?.id || profiles[selected].id),
-        ])
-          .then(([source, continuation]) => {
-            setPlan(source);
-            setTargetPlan(continuation);
-            setError('');
-          })
-          .catch((reason) =>
-            setError(reason instanceof Error ? reason.message : String(reason)),
-          )
-          .finally(() => setBusy(''));
-      }
-      if (String(chunk) === 'x' && !busy && plan && profiles[selected]) {
-        setBusy('running selected agent twice');
-        void lab
-          .runAgent(profiles[selected].id)
-          .then((value) => {
-            setReport(value);
-            setError('');
-          })
-          .catch((reason) =>
-            setError(reason instanceof Error ? reason.message : String(reason)),
-          )
-          .finally(() => setBusy(''));
+      if (input === 'x' && !busy && profiles[selected]) {
+        return runQualification(
+          'same-agent',
+          'running selected agent twice',
+          (onEvent) => lab.runAgent(profiles[selected].id, onEvent),
+        );
       }
       if (
-        String(chunk) === 'm' &&
+        input === 'm' &&
         !busy &&
-        plan &&
-        targetPlan &&
         profiles[selected] &&
         profiles[target] &&
         selected !== target
       ) {
-        setBusy('running cross-provider handoff');
-        void lab
-          .runMigration(profiles[selected].id, profiles[target].id)
-          .then((value) => {
-            setReport(value);
-            setError('');
-          })
-          .catch((reason) =>
-            setError(reason instanceof Error ? reason.message : String(reason)),
-          )
-          .finally(() => setBusy(''));
+        return runQualification(
+          'cross-agent',
+          'running cross-provider handoff',
+          (onEvent) =>
+            lab.runMigration(
+              profiles[selected].id,
+              profiles[target].id,
+              onEvent,
+            ),
+        );
       }
     };
     process.stdin.on('data', onData);
@@ -392,90 +612,183 @@ function QualificationLabHost({
     };
   }, [
     busy,
+    activeFocus,
     exit,
     lab,
     onOpenWork,
-    plan,
     profiles,
+    report,
+    reportDetail,
     selected,
     target,
-    targetPlan,
+    runQualification,
   ]);
+  const sourceLabel =
+    mode === 'offline-demo' ? '' : profiles[selected]?.label || '';
+  const targetLabel =
+    mode === 'offline-demo'
+      ? ''
+      : mode === 'same-agent'
+        ? sourceLabel
+        : profiles[target]?.label || '';
+  const progress = runProgress
+    ? qualificationRunProgressLabel({
+        elapsedMs: progressNow - runProgress.startedAt,
+        quietMs: progressNow - runProgress.lastEventAt,
+        eventCount: runProgress.eventCount,
+        phase: runProgress.phase,
+      })
+    : '';
   return (
-    <Box flexDirection="column" paddingX={1}>
-      <Text color="cyan">AGENT QUALIFICATION LAB</Text>
-      <Text bold>Prove continuity before configuration</Text>
-      <Text>
-        Offline demo: two fresh processes, no transcript, isolated evidence.
+    <QualificationLabView
+      dimensions={size}
+      mode={mode}
+      sourceLabel={sourceLabel}
+      targetLabel={targetLabel}
+      lines={lines}
+      report={report}
+      busy={busy}
+      progress={progress}
+      error={
+        error ||
+        (startup.route === 'diagnostic'
+          ? `${startup.state} · ${startup.reasonCode}`
+          : '')
+      }
+      activeFocus={activeFocus}
+      scrollBack={scrollBack}
+      showHelp={showHelp}
+      activityFrame={
+        runProgress
+          ? Math.floor((progressNow - runProgress.startedAt) / 1000)
+          : 0
+      }
+      runningSession={runningSession}
+      nextPrompt={nextPrompt}
+      reportDetail={reportDetail}
+    />
+  );
+}
+
+const PENDING_STARTUP: QualificationLabStartupRoute = {
+  schema: 'kungfu.qualification-lab.startup-route/v1',
+  state: 'verified-empty',
+  route: 'qualification-lab',
+  reasonCode: 'startup-inspection-pending',
+  message: 'Kungfu is reading local Work and Profile roots.',
+  runtimeDir: '',
+  workGraphPresent: null,
+  evidence: [],
+  writeOccurred: false,
+};
+
+function StartingHost({
+  dimensions,
+  onOpenLab,
+}: {
+  dimensions: DimensionStore;
+  onOpenLab: () => void;
+}) {
+  const { exit } = useApp();
+  const [size, setSize] = React.useState(dimensions.get());
+  React.useEffect(() => dimensions.subscribe(setSize), [dimensions]);
+  React.useEffect(() => {
+    const onData = (chunk: Buffer | string) => {
+      const key = decodeShellKey(String(chunk));
+      if (key === 'quit') exit();
+      if (key === 'qualification-lab') onOpenLab();
+    };
+    process.stdin.on('data', onData);
+    return () => {
+      process.stdin.off('data', onData);
+    };
+  }, [exit, onOpenLab]);
+  return (
+    <Box
+      width={size.columns}
+      height={terminalCanvasRows(size.rows)}
+      flexDirection="column"
+      paddingX={1}
+    >
+      <Text bold color="cyan">
+        KUNGFU
       </Text>
+      <Text>Terminal product is open.</Text>
       <Text dimColor>
-        Claims continuity only—not intelligence, security, production fitness,
-        KFD certification, or provider ranking.
+        Reading local Work and exact Profile evidence in the background…
       </Text>
-      <Text color={startup.route === 'diagnostic' ? 'red' : undefined}>
-        startup {startup.state} · {startup.reasonCode} · no workspace write
-      </Text>
-      <Text>
-        [d] demo [j/k] source [ and ] target [p] preview [x] self [m] handoff
-        {onOpenWork ? ' [w] return to Work graph' : ''} [q] quit
-      </Text>
-      {busy ? <Text color="yellow">{busy}…</Text> : null}
-      {report ? (
-        <Text color={report.status === 'failed' ? 'red' : 'green'}>
-          demo {report.status} · {report.reportRoot}
-        </Text>
-      ) : null}
-      <Text bold>Local agents</Text>
-      {profiles.length === 0 ? <Text dimColor>none discovered</Text> : null}
-      {profiles.map((profile, index) => (
-        <Text key={profile.id} color={index === selected ? 'cyan' : undefined}>
-          {index === selected ? 'S' : ' '}
-          {index === target ? 'T' : ' '} {profile.label} ·{' '}
-          {profile.launch.executable}
-        </Text>
-      ))}
-      {plan ? (
-        <Box flexDirection="column">
-          <Text>identity {plan.identityRoot}</Text>
-          <Text>plan {plan.planRoot}</Text>
-          <Text>{JSON.stringify(plan.commandPreview)}</Text>
-          <Text>{JSON.stringify(targetPlan?.commandPreview)}</Text>
-          <Text>continuation identity {targetPlan?.identityRoot}</Text>
-          <Text dimColor>credential contents read: no</Text>
-        </Box>
-      ) : null}
-      {error ? <Text color="red">{error}</Text> : null}
+      <Text dimColor>a qualification lab · q quit</Text>
     </Box>
   );
 }
 
 function ProductHost({
   lab,
-  startup,
   dimensions,
 }: {
   lab: QualificationLab;
-  startup: QualificationLabStartupRoute;
   dimensions: DimensionStore;
 }) {
-  const [labOpen, setLabOpen] = React.useState(startup.route !== 'work-graph');
+  const [startup, setStartup] = React.useState<QualificationLabStartupRoute>();
+  const [surface, setSurface] = React.useState<'auto' | 'lab' | 'work'>('auto');
+  const profile = React.useMemo(() => openTuiProfile(), []);
+  const workLoop = React.useMemo(() => openTuiWorkLoop(), []);
+  React.useEffect(() => {
+    let active = true;
+    void lab
+      .inspect()
+      .then((value) => {
+        if (active) setStartup(value);
+      })
+      .catch((error) => {
+        if (!active) return;
+        setStartup({
+          schema: 'kungfu.qualification-lab.startup-route/v1',
+          state: 'diagnostic',
+          route: 'diagnostic',
+          reasonCode: 'startup-inspection-failed',
+          message: error instanceof Error ? error.message : String(error),
+          runtimeDir: runtimePaths().runtimeDir,
+          workGraphPresent: null,
+          evidence: [],
+          writeOccurred: false,
+        });
+      });
+    return () => {
+      active = false;
+    };
+  }, [lab]);
+  if (!startup && surface !== 'lab') {
+    return (
+      <StartingHost
+        dimensions={dimensions}
+        onOpenLab={() => setSurface('lab')}
+      />
+    );
+  }
+  const resolvedStartup = startup ?? PENDING_STARTUP;
+  const startupSurface = qualificationLabStartupSurface(resolvedStartup);
+  const labOpen =
+    surface === 'lab' ||
+    (surface === 'auto' && startupSurface === 'qualification-lab');
   if (labOpen) {
     return (
       <QualificationLabHost
         lab={lab}
-        startup={startup}
+        startup={resolvedStartup}
+        dimensions={dimensions}
         onOpenWork={
-          startup.route === 'work-graph' ? () => setLabOpen(false) : undefined
+          startupSurface === 'work-graph' ? () => setSurface('work') : undefined
         }
       />
     );
   }
   return (
     <WorkControlHost
-      profile={openTuiProfile()}
-      workLoop={openTuiWorkLoop()}
+      profile={profile}
+      workLoop={workLoop}
       dimensions={dimensions}
-      onOpenLab={() => setLabOpen(true)}
+      onOpenLab={() => setSurface('lab')}
     />
   );
 }
@@ -488,7 +801,7 @@ function printNonInteractiveDiagnostic(): void {
       status: 'not-started',
       reason: 'interactive terminal required',
       runtimeDir: paths.runtimeDir,
-      next: 'run `kungfu tui` in a TTY',
+      next: 'run `kungfu` in a TTY',
     })}\n`,
   );
 }
@@ -525,22 +838,7 @@ async function main(): Promise<void> {
     process,
   );
   const dimensions = new DimensionStore(lifecycle.dimensions());
-  let startup: QualificationLabStartupRoute;
-  try {
-    startup = lab.inspectSync();
-  } catch (error) {
-    startup = {
-      schema: 'kungfu.qualification-lab.startup-route/v1',
-      state: 'diagnostic',
-      route: 'diagnostic',
-      reasonCode: 'startup-inspection-failed',
-      message: error instanceof Error ? error.message : String(error),
-      runtimeDir: runtimePaths().runtimeDir,
-      workGraphPresent: null,
-      evidence: [],
-      writeOccurred: false,
-    };
-  }
+  const terminalOutput = new IncrementalTerminalOutput(process.stdout);
   let instance: ReturnType<typeof render> | undefined;
   let terminating = false;
   await lifecycle.run(
@@ -554,16 +852,14 @@ async function main(): Promise<void> {
     },
     async () => {
       if (terminating) return;
-      instance = render(
-        <ProductHost lab={lab} startup={startup} dimensions={dimensions} />,
-        {
-          stdin: process.stdin,
-          stdout: process.stdout,
-          stderr: process.stderr,
-          exitOnCtrlC: false,
-          patchConsole: false,
-        },
-      );
+      instance = render(<ProductHost lab={lab} dimensions={dimensions} />, {
+        stdin: process.stdin,
+        stdout: terminalOutput as unknown as NodeJS.WriteStream,
+        stderr: process.stderr,
+        exitOnCtrlC: false,
+        patchConsole: false,
+        debug: true,
+      });
       await instance.waitUntilExit();
     },
   );

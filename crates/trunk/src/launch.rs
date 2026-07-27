@@ -11,7 +11,9 @@
 // the no-bytecode boundary because product callers may invoke it without the
 // outer desktop CLI wrapper.
 
+use crate::variant;
 use std::env;
+use std::io::IsTerminal;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
@@ -30,6 +32,80 @@ pub fn invoked_as_kungfu() -> bool {
                 .and_then(|p| p.file_stem().map(|s| s.to_string_lossy().into_owned()))
         });
     name.as_deref() == Some("kungfu")
+}
+
+fn interactive_tui_policy(
+    stdin_is_terminal: bool,
+    stdout_is_terminal: bool,
+    term: Option<&str>,
+    ci: Option<&str>,
+) -> bool {
+    stdin_is_terminal
+        && stdout_is_terminal
+        && !term.is_some_and(|value| value.eq_ignore_ascii_case("dumb"))
+        && ci.is_none_or(|value| value.is_empty())
+}
+
+/// Launch the bundled terminal product through the native libnode host.
+///
+/// Returns `Ok(false)` when the fast path is not applicable, so callers can
+/// preserve the Python/Click fallback. On success this function replaces the
+/// process on Unix (or exits with the child status on Windows).
+pub fn launch_tui(args: &[String]) -> Result<bool, String> {
+    let term = env::var("TERM").ok();
+    let ci = env::var("CI").ok();
+    if !interactive_tui_policy(
+        std::io::stdin().is_terminal(),
+        std::io::stdout().is_terminal(),
+        term.as_deref(),
+        ci.as_deref(),
+    ) || !variant::native_node_available()
+    {
+        return Ok(false);
+    }
+
+    let exe = env::current_exe()
+        .and_then(|path| path.canonicalize())
+        .map_err(|error| format!("cannot resolve the entry binary path: {error}"))?;
+    let runtime = exe
+        .parent()
+        .ok_or_else(|| "the entry binary has no parent directory".to_string())?;
+    let resources = runtime
+        .parent()
+        .ok_or_else(|| "the runtime has no product resources parent".to_string())?;
+    let entry = resources.join("tui").join("tui.mjs");
+    if !entry.is_file() {
+        return Ok(false);
+    }
+
+    let mut command = Command::new(&exe);
+    command
+        .arg(&entry)
+        .args(args)
+        .env("KUNGFU_AS_VARIANT", "node")
+        .env("KUNGFU_NODE_VARIANT_ENTRY", &entry)
+        .env("PYTHONDONTWRITEBYTECODE", "1")
+        .env("KUNGFU_DIR", runtime)
+        .env(
+            "KUNGFU_KFX_CONTRACT",
+            runtime.join("config").join("kungfu-kfx.contract.json"),
+        );
+    #[cfg(unix)]
+    {
+        use std::os::unix::process::CommandExt;
+        let error = command.exec();
+        Err(format!(
+            "cannot exec native terminal product {}: {error}",
+            entry.display()
+        ))
+    }
+    #[cfg(not(unix))]
+    {
+        let status = command
+            .status()
+            .map_err(|error| format!("cannot run {}: {error}", entry.display()))?;
+        std::process::exit(status.code().unwrap_or(1));
+    }
 }
 
 fn tree_python() -> Result<PathBuf, String> {
@@ -71,6 +147,9 @@ fn product_python_command(python: &Path, args: &[String]) -> Command {
 /// verbatim. Unix replaces the process; Windows waits and mirrors the exit
 /// code (no exec semantics there).
 pub fn launch(args: &[String]) -> Result<(), String> {
+    if args.is_empty() && launch_tui(args)? {
+        return Ok(());
+    }
     let python = tree_python()?;
     let mut command = product_python_command(&python, args);
     #[cfg(unix)]
@@ -110,5 +189,34 @@ mod tests {
                 .and_then(|(_, value)| value),
             Some(OsStr::new("1"))
         );
+    }
+
+    #[test]
+    fn native_tui_fast_path_requires_a_real_interactive_terminal() {
+        assert!(interactive_tui_policy(
+            true,
+            true,
+            Some("xterm-256color"),
+            None
+        ));
+        assert!(!interactive_tui_policy(
+            false,
+            true,
+            Some("xterm-256color"),
+            None
+        ));
+        assert!(!interactive_tui_policy(
+            true,
+            false,
+            Some("xterm-256color"),
+            None
+        ));
+        assert!(!interactive_tui_policy(true, true, Some("dumb"), None));
+        assert!(!interactive_tui_policy(
+            true,
+            true,
+            Some("xterm-256color"),
+            Some("1")
+        ));
     }
 }

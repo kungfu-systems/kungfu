@@ -1,9 +1,14 @@
 // SPDX-License-Identifier: Apache-2.0
 
+import fs from 'node:fs';
+import path from 'node:path';
+
 import type { TerminalDimensions } from './profile-shell.js';
 
 export const ENTER_ALTERNATE_SCREEN = '\u001b[?1049h';
 export const LEAVE_ALTERNATE_SCREEN = '\u001b[?1049l';
+export const HIDE_CURSOR = '\u001b[?25l';
+export const SHOW_CURSOR = '\u001b[?25h';
 
 type Listener = (...args: unknown[]) => void;
 
@@ -29,6 +34,188 @@ export type ProcessSignals = {
   on: (event: string, listener: Listener) => unknown;
   off: (event: string, listener: Listener) => unknown;
 };
+
+type RuntimeResolution = {
+  runtimeHomeEnv?: string;
+  defaultRuntimeHome?: Record<string, string>;
+  environmentFallbacks?: Record<string, string>;
+};
+
+function expandTemplate(
+  value: string,
+  env: NodeJS.ProcessEnv,
+  fallbacks: Record<string, string>,
+  seen = new Set<string>(),
+): string {
+  const home = env.HOME || env.USERPROFILE || '';
+  let expanded =
+    value === '~'
+      ? home
+      : value.startsWith('~/')
+        ? path.join(home, value.slice(2))
+        : value;
+  expanded = expanded.replace(/\$\{([^}]+)\}/g, (_match, name: string) => {
+    if (env[name]) return env[name] as string;
+    if (seen.has(name)) return '';
+    const fallback = fallbacks[name];
+    if (!fallback) return '';
+    return expandTemplate(fallback, env, fallbacks, new Set([...seen, name]));
+  });
+  return path.resolve(expanded);
+}
+
+function workspaceDataHome(
+  cwd: string,
+  env: NodeJS.ProcessEnv,
+): string | undefined {
+  let current = path.resolve(cwd);
+  if (fs.existsSync(current) && fs.statSync(current).isFile()) {
+    current = path.dirname(current);
+  }
+  const legacyUserHome = path.resolve(
+    env.HOME || env.USERPROFILE || '',
+    '.kungfu',
+  );
+  let gitWorkspace: string | undefined;
+  while (true) {
+    const candidate = path.join(current, '.kungfu');
+    if (
+      fs.existsSync(candidate) &&
+      fs.statSync(candidate).isDirectory() &&
+      path.resolve(candidate) !== legacyUserHome
+    ) {
+      return fs.realpathSync(candidate);
+    }
+    if (!gitWorkspace && fs.existsSync(path.join(current, '.git'))) {
+      gitWorkspace = candidate;
+    }
+    const parent = path.dirname(current);
+    if (parent === current) return gitWorkspace;
+    current = parent;
+  }
+}
+
+function platformKey(): string {
+  if (process.platform === 'darwin') return 'darwin';
+  if (process.platform === 'win32') return 'win32';
+  if (process.platform === 'linux') return 'linux';
+  return 'default';
+}
+
+function fallbackMachineHome(env: NodeJS.ProcessEnv): string {
+  if (process.platform === 'darwin') {
+    return path.join(
+      env.HOME || '',
+      'Library',
+      'Application Support',
+      'kungfu',
+      'home',
+    );
+  }
+  if (process.platform === 'win32') {
+    return path.join(
+      env.APPDATA || path.join(env.USERPROFILE || '', 'AppData', 'Roaming'),
+      'kungfu',
+      'home',
+    );
+  }
+  return path.join(
+    env.XDG_CONFIG_HOME || path.join(env.HOME || '', '.config'),
+    'kungfu',
+    'home',
+  );
+}
+
+export function resolveTuiRuntimeDir({
+  env,
+  cwd,
+  contractPath,
+}: {
+  env: NodeJS.ProcessEnv;
+  cwd: string;
+  contractPath: string;
+}): string {
+  if (env.KF_RUNTIME_DIR) {
+    return path.resolve(expandTemplate(env.KF_RUNTIME_DIR, env, {}));
+  }
+
+  let resolution: RuntimeResolution = {};
+  try {
+    resolution =
+      (
+        JSON.parse(fs.readFileSync(contractPath, 'utf8')) as {
+          resolution?: RuntimeResolution;
+        }
+      ).resolution ?? {};
+  } catch {
+    // The packaged product carries this contract. Source-only TUI development
+    // keeps the same platform fallback when the product tree is not assembled.
+  }
+  const runtimeHomeEnv = resolution.runtimeHomeEnv || 'KF_HOME';
+  const explicitHome = env[runtimeHomeEnv];
+  const workspaceHome = workspaceDataHome(cwd, env);
+  const templates = resolution.defaultRuntimeHome ?? {};
+  const template = templates[platformKey()] || templates.default;
+  const machineHome = template
+    ? expandTemplate(template, env, resolution.environmentFallbacks ?? {})
+    : fallbackMachineHome(env);
+  return path.join(
+    explicitHome
+      ? expandTemplate(explicitHome, env, {})
+      : workspaceHome || machineHome,
+    'runtime',
+  );
+}
+
+function terminalText(value: string | Buffer | undefined): string {
+  return value === undefined ? '' : String(value).trim();
+}
+
+function structuredDiagnosis(value: string): string {
+  if (!value) return '';
+  try {
+    const parsed = JSON.parse(value) as {
+      code?: unknown;
+      message?: unknown;
+    };
+    if (typeof parsed.message !== 'string' || !parsed.message.trim()) return '';
+    const code =
+      typeof parsed.code === 'string' && parsed.code.trim()
+        ? `${parsed.code.trim()}: `
+        : '';
+    return `${code}${parsed.message.trim()}`;
+  } catch {
+    return '';
+  }
+}
+
+function conciseStderr(value: string): string {
+  if (!value.includes('Traceback (most recent call last):')) return value;
+  const last = value
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .at(-1);
+  if (!last) return 'Kungfu CLI failed without a diagnostic.';
+  if (last === 'StopIteration') {
+    return 'Kungfu CLI routing produced no command result.';
+  }
+  return last.replace(/^click\.exceptions\./, '');
+}
+
+export function describeCliFailure(
+  error: Error,
+  stdout?: string | Buffer,
+  stderr?: string | Buffer,
+): string {
+  const output = terminalText(stdout);
+  const diagnostic = structuredDiagnosis(output);
+  if (diagnostic) return diagnostic;
+  const errorOutput = terminalText(stderr);
+  return (
+    (errorOutput ? conciseStderr(errorOutput) : '') || output || error.message
+  );
+}
 
 export class TerminalLifecycle {
   private active = false;
@@ -62,7 +249,7 @@ export class TerminalLifecycle {
     this.previousRaw = this.input.isRaw === true;
     this.previousFlowing = this.input.readableFlowing ?? null;
     try {
-      this.output.write(ENTER_ALTERNATE_SCREEN);
+      this.output.write(`${ENTER_ALTERNATE_SCREEN}${HIDE_CURSOR}`);
       this.input.setRawMode?.(true);
       this.input.resume?.();
 
@@ -115,7 +302,7 @@ export class TerminalLifecycle {
     };
     attempt(() => this.input.setRawMode?.(this.previousRaw));
     if (this.previousFlowing !== true) attempt(() => this.input.pause?.());
-    attempt(() => this.output.write(LEAVE_ALTERNATE_SCREEN));
+    attempt(() => this.output.write(`${SHOW_CURSOR}${LEAVE_ALTERNATE_SCREEN}`));
     if (this.resizeListener) {
       const resizeListener = this.resizeListener;
       attempt(() => this.output.off('resize', resizeListener));

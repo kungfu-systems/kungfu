@@ -5,7 +5,11 @@
   "manifestPath": "framework/maintainability/semantic-amplification.manifest.json",
   "manifestRoot": "sha256:13bba3d8469c4ec5d50acd2dd380832cbd42808c287642fc5cfe82b423260628",
   "baselineRef": "dbfed9ca1785d147b26f4f06e7e6895ac7368fee",
+<<<<<<< HEAD
   "sourceRoot": "sha256:8306c9fe4d75e10ae381073e3c93139ffd1082dffbd2572aa172830e8aecdee9",
+=======
+  "sourceRoot": "sha256:51c37f17e8e22c2ed1190f841eadccfa2f91fe6379e85cf2390b5d340a63d5a0",
+>>>>>>> 553a6dc5e7 (feat(product): unify agent qualification experience)
   "roles": {
     "authority": "exactly one authority route per family; the route may name multiple co-owned source files",
     "allowedProjectionRoles": [
@@ -25,7 +29,7 @@
     "families": 6,
     "authorities": 6,
     "mappedSurfaces": 70,
-    "changedMappedSurfaces": 19,
+    "changedMappedSurfaces": 21,
     "blockingIssues": 0
   },
   "families": [
@@ -52,11 +56,13 @@
       "amplification": {
         "mappedSurfaces": 10,
         "nonAuthoritySurfaces": 8,
-        "changedSurfaces": 3,
+        "changedSurfaces": 5,
         "changedPaths": [
           "framework/core/src/python/kungfu/cli/surface_contract.registry.json",
+          "framework/core/src/python/kungfu/cli/commands/__registry__.py",
           "framework/core/src/python/kungfu/agent/cli_surface.catalog.json",
-          "framework/core/src/python/kungfu/agent/commands.json"
+          "framework/core/src/python/kungfu/agent/commands.json",
+          "docs/architecture/overview.md"
         ]
       },
       "surfaces": [
@@ -100,17 +106,17 @@
           "path": "framework/core/src/python/kungfu/cli/surface_contract.registry.json",
           "currentLines": 155,
           "baselineLines": 155,
-          "currentRoot": "sha256:8046ed5199ce7087bfcb712a260b7f46bf2c0c9c29875f5587bd2ef27d909200",
+          "currentRoot": "sha256:58851f1b73d81e75a6ba6954c35b090a64f4079cb1584d3ea7feb4101baf6d4a",
           "baselineRoot": "sha256:7af1893015500d9d54e2783e44af30cd4af8753787d9d9b70c77356b0e788c17",
           "changedSinceBaseline": true
         },
         {
           "path": "framework/core/src/python/kungfu/cli/commands/__registry__.py",
-          "currentLines": 91,
+          "currentLines": 89,
           "baselineLines": 91,
-          "currentRoot": "sha256:21ddfd68e29827a81d099362cd40c8bdef4731cddecf964633bcdea4e4a8c817",
+          "currentRoot": "sha256:4660f6fe0d212c915c036ead8fc0f43335a0990b5fde40b4be7eeead04f7f7d7",
           "baselineRoot": "sha256:21ddfd68e29827a81d099362cd40c8bdef4731cddecf964633bcdea4e4a8c817",
-          "changedSinceBaseline": false
+          "changedSinceBaseline": true
         },
         {
           "path": "framework/core/src/python/kungfu/cli/catalog_projection.py",
@@ -122,9 +128,9 @@
         },
         {
           "path": "framework/core/src/python/kungfu/agent/cli_surface.catalog.json",
-          "currentLines": 33820,
+          "currentLines": 33768,
           "baselineLines": 33927,
-          "currentRoot": "sha256:283a537926ffba49e6774703e4f6be86c1745f58ea13bd5d2d7802cede7d364e",
+          "currentRoot": "sha256:a6a6ff81fb3d88d000abcc7149c5a2cf9e3ac909bfadf675dfca587a511ea62c",
           "baselineRoot": "sha256:9f2f17fca5aa4e4daa28a276c1e3a153fa263e791b497f7ea83a93796f7aeb1f",
           "changedSinceBaseline": true
         },
@@ -172,9 +178,9 @@
           "path": "docs/architecture/overview.md",
           "currentLines": 311,
           "baselineLines": 311,
-          "currentRoot": "sha256:eae378faa493c52311a66d5a66d9e29aaa484938812f89654e91ce4473f35048",
+          "currentRoot": "sha256:bdfae936c9be86ccb89ff89bd9bcd982a8ca3d6e756f03042e5ccf80c8f0795f",
           "baselineRoot": "sha256:eae378faa493c52311a66d5a66d9e29aaa484938812f89654e91ce4473f35048",
-          "changedSinceBaseline": false
+          "changedSinceBaseline": true
         }
       ],
       "knownLimits": [

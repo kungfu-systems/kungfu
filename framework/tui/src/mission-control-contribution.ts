@@ -113,22 +113,67 @@ export async function loadMissionControlContribution(
   preferredMissionId = '',
 ): Promise<ProfileShellModel> {
   const discovery = await profile.discoverAsync(PROFILE_ID);
-  const [application, kfd3, dashboardReceipt] = await Promise.all([
+  const [application, kfd3] = await Promise.all([
     profile.applicationAsync(discovery.source),
     profile.kfd3StatusAsync(discovery.source),
-    profile.memberCallAsync<Dashboard>(
-      discovery.source,
-      MEMBER_ID,
-      'dashboard',
-      {},
-    ),
   ]);
-  const dashboard = dashboardReceipt.result;
   if (!kfd3.qualified || !kfd3.activeExactRoot) {
-    throw new Error(
-      'Mission Control Profile is not KFD-3 exact-root qualified',
-    );
+    return {
+      profile: {
+        id: PROFILE_ID,
+        title: 'Mission Control',
+        version: 'Profile found · paused',
+        suiteRoot: discovery.profileSuiteRoot,
+        qualified: false,
+      },
+      subject: {
+        id: '',
+        title: 'Mission Control needs activation',
+        subtitle:
+          kfd3.reason ||
+          'This installed Profile version is not active in the current workspace.',
+      },
+      navigation: [],
+      cards: [
+        {
+          id: 'profile-version-found',
+          title: 'Kungfu found the Profile',
+          status: 'degraded',
+          summary:
+            'The Mission Control files are installed and their exact root was verified.',
+        },
+        {
+          id: 'profile-activation-required',
+          title: 'Why Kungfu stopped',
+          status: 'degraded',
+          summary:
+            'This installed version has not been approved for the current workspace, so Kungfu did not read work through a different Profile root.',
+        },
+        {
+          id: 'qualification-lab-available',
+          title: 'What you can do now',
+          status: 'degraded',
+          summary:
+            'Press a to open Agent Qualification Lab. Profile activation remains an explicit reviewed action.',
+        },
+      ],
+      evidence: [
+        { label: 'installed profile suite', value: discovery.profileSuiteRoot },
+        {
+          label: 'KFX plan',
+          value: `${kfxPlan.entries.length} views · ${kfxPlan.services.length} services`,
+        },
+      ],
+      notice: 'activation required · no mutation attempted',
+    };
   }
+  const dashboardReceipt = await profile.memberCallAsync<Dashboard>(
+    discovery.source,
+    MEMBER_ID,
+    'dashboard',
+    {},
+  );
+  const dashboard = dashboardReceipt.result;
   assertSameNonEmptyRoot('Profile Suite root', [
     discovery.profileSuiteRoot,
     application.profileSuiteRoot,

@@ -2,7 +2,6 @@
 
 from . import engage
 from . import env
-from . import tui
 from . import qualification_lab
 from . import trace
 from . import managed_run
@@ -47,7 +46,6 @@ from . import dev
 __all__ = [
     "engage",
     "env",
-    "tui",
     "qualification_lab",
     "trace",
     "managed_run",

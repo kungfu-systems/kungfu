@@ -107,7 +107,7 @@ The foundation: the `yijinjing` append-only journal runtime and schema layout in
 C++, with Python and Node (N-API) bindings, exposed zero-copy in-process. It
 also produces the `kungfu` runtime, which embeds the Python and Node runtimes
 and bridges the development toolchain; it is the base for
-operator-facing surfaces such as `kungfu tui`, managed runs, skill context
+operator-facing surfaces such as the interactive bare `kungfu` TUI, managed runs, skill context
 injection, and the richer end-user shell as it matures.
 
 ### Capability SDK — `framework/api`

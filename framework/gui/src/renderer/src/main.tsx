@@ -863,15 +863,18 @@ function App() {
       };
     }
   });
+  const startupSurface = capability.qualificationLabStartupSurface(startup);
   const [runtime] = React.useState(() =>
-    startup.route === 'work-graph'
+    startupSurface === 'work-graph'
       ? bootRuntime()
       : deferredRuntime(
           qualificationLab,
           `startup routed to ${startup.route}: ${startup.reasonCode}`,
         ),
   );
-  const [labOpen, setLabOpen] = React.useState(startup.route !== 'work-graph');
+  const [labOpen, setLabOpen] = React.useState(
+    startupSurface === 'qualification-lab',
+  );
   const [loaded] = React.useState<KfxLoadResult>(() =>
     loadKfx(window.process.env, SHARED_MODULES),
   );

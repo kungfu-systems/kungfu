@@ -8,8 +8,10 @@ import type {
   QualificationLabReport,
   QualificationLabStartupRoute,
 } from '@kungfu-tech/api/capability';
+import { qualificationRunProgressLabel } from '@kungfu-tech/api/capability';
 import { mono, panelStyle } from '@kungfu-tech/kfx';
 import React from 'react';
+import { createPortal } from 'react-dom';
 
 export type QualificationMode = 'offline-demo' | 'same-agent' | 'cross-agent';
 
@@ -42,6 +44,7 @@ type BehaviorFinding = {
 type PlaybackLine = {
   session: 1 | 2;
   kind: 'system' | 'user' | 'agent' | 'tool' | 'output';
+  origin: 'canonical-projection' | 'provider-observation';
   status: VisualStatus;
   command: string;
   detail: string;
@@ -126,10 +129,23 @@ const PLAYBACK_KIND_META: Record<
 > = {
   system: { label: 'system', color: '#9cdcfe', prompt: '◆' },
   user: { label: 'user', color: '#ce9178', prompt: '❯' },
-  agent: { label: 'agent/public', color: '#4ec9b0', prompt: '▸' },
+  agent: { label: 'agent', color: '#4ec9b0', prompt: '▸' },
   tool: { label: 'tool', color: '#dcdcaa', prompt: '⚙' },
   output: { label: 'output', color: '#b5cea8', prompt: '←' },
 };
+
+function playbackSourceLabel(line: PlaybackLine): string {
+  if (line.origin === 'provider-observation') {
+    return `${PLAYBACK_KIND_META[line.kind].label}/live`;
+  }
+  return {
+    system: 'kungfu',
+    user: 'task',
+    agent: 'agent/guide',
+    tool: 'kungfu/tool',
+    output: 'evidence',
+  }[line.kind];
+}
 
 const CHECK_COPY: Record<string, { title: string; detail: string }> = {
   'two-distinct-fresh-processes': {
@@ -197,11 +213,29 @@ function eventStatus(
 export function qualificationPlaybackLines(
   event: QualificationLabEvent,
 ): PlaybackLine[] {
+  if (event.publicActivity) {
+    const session = event.step.includes('session-1') ? 1 : 2;
+    return [
+      {
+        session,
+        kind: event.publicActivity.kind,
+        origin: 'provider-observation',
+        status:
+          event.publicActivity.phase === 'completed' ? 'correct' : 'running',
+        command: event.publicActivity.text,
+        detail:
+          event.publicActivity.kind === 'agent'
+            ? 'A live public status message emitted by the selected Agent. It is not private reasoning.'
+            : 'A live provider tool boundary. Command text and raw tool output remain redacted.',
+      },
+    ];
+  }
   if (event.step === 'plan') {
     return [
       {
         session: 1,
         kind: 'system',
+        origin: 'canonical-projection',
         status: 'ready',
         command: 'governed two-session plan ready',
         detail: `One task identity was sealed before either provider started · ${shortRoot(event.root)}`,
@@ -214,11 +248,12 @@ export function qualificationPlaybackLines(
       {
         session,
         kind: 'user',
+        origin: 'canonical-projection',
         status: 'ready',
         command:
           session === 1
-            ? 'Begin the bounded task. Leave a governed partial result, then stop.'
-            : 'Continue this task from Kungfu state. No prior chat is available.',
+            ? 'Start one bounded task; stop after a provable partial result.'
+            : 'Continue the same Work from governed state; prior chat is unavailable.',
         detail:
           session === 1
             ? 'The first process receives the qualification task.'
@@ -227,19 +262,21 @@ export function qualificationPlaybackLines(
       {
         session,
         kind: 'agent',
+        origin: 'canonical-projection',
         status: 'running',
         command:
           session === 1
-            ? 'I’ll make bounded progress and leave evidence for a fresh session.'
-            : 'I’ll inspect governed state first, then continue only unfinished work.',
+            ? 'I’m starting fresh. I’ll inspect the task state before I change anything.'
+            : 'I’m a fresh process, so I’ll recover the task state instead of guessing.',
         detail:
-          'Public progress narration projected from the canonical action boundary; private reasoning remains hidden.',
+          'A Kungfu preview of the expected safe working posture. Live Agent messages are labeled agent/live.',
       },
       {
         session,
         kind: 'tool',
+        origin: 'canonical-projection',
         status: 'running',
-        command: `spawn_provider(session=${session}, fresh_process=true)`,
+        command: `Starting fresh provider process ${session} in the isolated workspace…`,
         detail:
           'The provider process is active. Kungfu waits for governed state evidence instead of treating terminal text as proof.',
       },
@@ -248,9 +285,19 @@ export function qualificationPlaybackLines(
   if (event.step === 'session-1') {
     const status = eventStatus([event], 1);
     return [
+      ...(event.publicOutput?.lines ?? []).map((line) => ({
+        session: 1 as const,
+        kind: 'agent' as const,
+        origin: 'provider-observation' as const,
+        status,
+        command: line,
+        detail:
+          'Actual provider stdout admitted through the exact qualification marker; all other raw output remains redacted.',
+      })),
       {
         session: 1,
         kind: 'tool',
+        origin: 'canonical-projection',
         status,
         command: 'read_governed_state(session=1)',
         detail: 'Kungfu observes the fixture state after the provider exits.',
@@ -258,29 +305,41 @@ export function qualificationPlaybackLines(
       {
         session: 1,
         kind: 'output',
+        origin: 'canonical-projection',
         status,
         command: `status=${event.status}`,
         detail: `Bounded state evidence · ${shortRoot(event.root)}`,
       },
       {
         session: 1,
-        kind: 'agent',
+        kind: 'system',
+        origin: 'canonical-projection',
         status,
         command:
           status === 'correct'
-            ? 'Partial work is recorded. I’m stopping so a fresh session must continue.'
-            : 'The expected partial handoff state was not proved.',
+            ? 'Kungfu verified the expected partial handoff state.'
+            : 'Kungfu could not verify the expected partial handoff state.',
         detail:
-          'This is the public completion summary for Session 1, not hidden model reasoning.',
+          'This statement comes from the continuity oracle, not from Agent self-report.',
       },
     ];
   }
   if (event.step === 'session-2') {
     const status = eventStatus([event], 2);
     return [
+      ...(event.publicOutput?.lines ?? []).map((line) => ({
+        session: 2 as const,
+        kind: 'agent' as const,
+        origin: 'provider-observation' as const,
+        status,
+        command: line,
+        detail:
+          'Actual provider stdout admitted through the exact qualification marker; all other raw output remains redacted.',
+      })),
       {
         session: 2,
         kind: 'tool',
+        origin: 'canonical-projection',
         status,
         command: 'read_governed_state(session=2)',
         detail:
@@ -289,20 +348,22 @@ export function qualificationPlaybackLines(
       {
         session: 2,
         kind: 'output',
+        origin: 'canonical-projection',
         status,
         command: `status=${event.status}`,
         detail: `Fresh-process continuation evidence · ${shortRoot(event.root)}`,
       },
       {
         session: 2,
-        kind: 'agent',
+        kind: 'system',
+        origin: 'canonical-projection',
         status,
         command:
           status === 'correct'
-            ? 'I found the prior partial result and completed only the remaining work.'
-            : 'I could not prove a correct continuation from the recorded state.',
+            ? 'Kungfu verified continuation from the recorded partial state.'
+            : 'Kungfu could not verify a correct continuation from recorded state.',
         detail:
-          'This is the public completion summary for Session 2, not hidden model reasoning.',
+          'This statement comes from the continuity oracle, not from Agent self-report.',
       },
     ];
   }
@@ -319,6 +380,7 @@ export function qualificationPlaybackLines(
       {
         session: 2,
         kind: 'tool',
+        origin: 'canonical-projection',
         status,
         command: 'run_continuity_oracle()',
         detail:
@@ -327,6 +389,7 @@ export function qualificationPlaybackLines(
       {
         session: 2,
         kind: 'output',
+        origin: 'canonical-projection',
         status,
         command: `qualification=${event.status}`,
         detail: `Assessment proof · ${shortRoot(event.root)}`,
@@ -337,6 +400,7 @@ export function qualificationPlaybackLines(
     {
       session: 1,
       kind: 'system',
+      origin: 'canonical-projection',
       status,
       command: event.step,
       detail: `${event.status} · ${shortRoot(event.root)}`,
@@ -395,10 +459,10 @@ export function qualificationSessionStories(
         {
           status: firstStatus,
           title: firstObserved
-            ? 'Created a bounded partial result'
+            ? 'Partial result saved'
             : running
-              ? 'Canonical two-session action is running'
-              : 'Will receive the governed test task',
+              ? 'Task running'
+              : 'Governed task',
           detail: firstObserved
             ? 'The first process stopped after leaving evidence that a fresh session can inspect.'
             : running
@@ -407,7 +471,7 @@ export function qualificationSessionStories(
         },
         {
           status: firstObserved ? firstStatus : 'waiting',
-          title: 'Ends without completing the whole task',
+          title: 'Stops at boundary',
           detail:
             'This creates a real continuity question for Session 2 instead of two unrelated successful runs.',
         },
@@ -420,10 +484,10 @@ export function qualificationSessionStories(
         {
           status: secondStatus,
           title: secondObserved
-            ? 'Started without the prior transcript'
+            ? 'Fresh process'
             : running
-              ? 'Will start after Session 1 leaves evidence'
-              : 'Will start as a genuinely fresh process',
+              ? 'Waiting for evidence'
+              : 'Fresh start',
           detail: secondObserved
             ? 'The second process had to identify the task and prior state from Kungfu evidence.'
             : running
@@ -433,8 +497,8 @@ export function qualificationSessionStories(
         {
           status: secondObserved ? secondStatus : 'waiting',
           title: secondObserved
-            ? 'Continued from the recorded state'
-            : 'Must continue instead of restart',
+            ? 'Continued correctly'
+            : 'Continue, not restart',
           detail:
             'Correct behavior is to recognize what Session 1 already did, perform only the remaining work, and preserve the same task identity.',
         },
@@ -515,6 +579,112 @@ function StatusBadge({ status }: { status: VisualStatus }) {
   );
 }
 
+function InfoTip({
+  label,
+  text,
+  placement = 'bottom',
+}: {
+  label: string;
+  text: string;
+  placement?: 'top' | 'bottom';
+}) {
+  const tooltipId = React.useId();
+  const triggerRef = React.useRef<HTMLButtonElement>(null);
+  const tooltipRef = React.useRef<HTMLSpanElement>(null);
+  const [open, setOpen] = React.useState(false);
+  const [position, setPosition] = React.useState<{
+    left: number;
+    top: number;
+    width: number;
+  } | null>(null);
+  const updatePosition = React.useCallback(() => {
+    const trigger = triggerRef.current;
+    if (!trigger) return;
+    const margin = 12;
+    const gap = 8;
+    const rect = trigger.getBoundingClientRect();
+    const width = Math.max(180, Math.min(320, window.innerWidth - margin * 2));
+    const height = tooltipRef.current?.getBoundingClientRect().height ?? 80;
+    const below = window.innerHeight - rect.bottom - margin;
+    const above = rect.top - margin;
+    const useBottom =
+      placement === 'bottom'
+        ? below >= height || below >= above
+        : !(above >= height || above >= below);
+    const preferredTop = useBottom
+      ? rect.bottom + gap
+      : rect.top - height - gap;
+    const top = Math.max(
+      margin,
+      Math.min(preferredTop, window.innerHeight - height - margin),
+    );
+    const centeredLeft = rect.left + rect.width / 2;
+    const left = Math.max(
+      margin + width / 2,
+      Math.min(centeredLeft, window.innerWidth - margin - width / 2),
+    );
+    setPosition({ left, top, width });
+  }, [placement]);
+  React.useLayoutEffect(() => {
+    if (!open) {
+      setPosition(null);
+      return;
+    }
+    updatePosition();
+    window.addEventListener('resize', updatePosition);
+    window.addEventListener('scroll', updatePosition, true);
+    return () => {
+      window.removeEventListener('resize', updatePosition);
+      window.removeEventListener('scroll', updatePosition, true);
+    };
+  }, [open, updatePosition]);
+  return (
+    <>
+      <span
+        className="kf-lab-tip"
+        onMouseEnter={() => setOpen(true)}
+        onMouseLeave={() => setOpen(false)}
+      >
+        <button
+          ref={triggerRef}
+          type="button"
+          className="kf-lab-tip-trigger"
+          aria-label={label}
+          aria-describedby={open ? tooltipId : undefined}
+          aria-expanded={open}
+          onClick={() => setOpen(true)}
+          onFocus={() => setOpen(true)}
+          onBlur={() => setOpen(false)}
+          onKeyDown={(event) => {
+            if (event.key === 'Escape') setOpen(false);
+          }}
+        >
+          ?
+        </button>
+      </span>
+      {open && typeof document !== 'undefined'
+        ? createPortal(
+            <span
+              ref={tooltipRef}
+              id={tooltipId}
+              role="tooltip"
+              className="kf-lab-tip-content"
+              style={{
+                left: position?.left ?? 0,
+                top: position?.top ?? 0,
+                width: position?.width ?? 240,
+                opacity: position ? 1 : 0,
+              }}
+            >
+              {text}
+            </span>,
+            document.body,
+          )
+        : null}
+    </>
+  );
+}
+
 function SessionColumn({
   story,
   session,
@@ -527,33 +697,115 @@ function SessionColumn({
   running: boolean;
 }) {
   const sessionLines = lines.filter((line) => line.session === session);
+  const lineCount = sessionLines.length;
+  const transcriptRef = React.useRef<HTMLDivElement>(null);
+  React.useEffect(() => {
+    const transcript = transcriptRef.current;
+    if (transcript && lineCount > 0) {
+      transcript.scrollTop = transcript.scrollHeight;
+    }
+  }, [lineCount]);
   return (
     <article
+      className="kf-lab-session-column"
       style={{
         ...panelStyle,
         minWidth: 0,
-        padding: 18,
+        minHeight: 0,
+        padding: 12,
         background: '#181818',
         border: '1px solid #3c3c3c',
+        display: 'flex',
+        flexDirection: 'column',
       }}
     >
-      <div style={{ ...mono, color: '#9cdcfe', fontSize: 12 }}>
-        {story.title.toUpperCase()}
+      <header
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          gap: 10,
+          marginBottom: 8,
+        }}
+      >
+        <div style={{ minWidth: 0 }}>
+          <div style={{ ...mono, color: '#9cdcfe', fontSize: 11 }}>
+            {story.title.toUpperCase()}
+          </div>
+          <h2
+            style={{
+              margin: '2px 0 0',
+              fontSize: 16,
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              whiteSpace: 'nowrap',
+            }}
+          >
+            {story.subtitle}
+          </h2>
+        </div>
+        <StatusBadge status={story.milestones[0]?.status ?? 'waiting'} />
+      </header>
+      <div
+        aria-label={`${story.title} milestones`}
+        style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
+          gap: 7,
+          marginBottom: 8,
+          paddingBottom: 2,
+        }}
+      >
+        {story.milestones.map((milestone) => (
+          <span
+            key={milestone.title}
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 5,
+              minWidth: 0,
+              padding: '4px 7px',
+              borderRadius: 5,
+              color: STATUS_META[milestone.status].color,
+              background: STATUS_META[milestone.status].background,
+              fontSize: 11,
+              overflow: 'visible',
+            }}
+          >
+            <span aria-hidden="true">{STATUS_META[milestone.status].icon}</span>
+            <span
+              style={{
+                minWidth: 0,
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                whiteSpace: 'nowrap',
+              }}
+            >
+              {milestone.title}
+            </span>
+            <InfoTip
+              label={`Explain ${milestone.title}`}
+              text={milestone.detail}
+            />
+          </span>
+        ))}
       </div>
-      <h2 style={{ margin: '6px 0 16px', fontSize: 19 }}>{story.subtitle}</h2>
       <div
         aria-live="polite"
         aria-label={`${story.title} public activity transcript`}
+        className="kf-lab-terminal"
         style={{
           ...mono,
-          minHeight: 260,
-          marginBottom: 16,
+          flex: 1,
+          minHeight: 0,
           overflow: 'hidden',
           borderRadius: 6,
           background: '#090b0c',
           border: '1px solid #343a3d',
           fontSize: 11,
           lineHeight: 1.45,
+          display: 'flex',
+          flexDirection: 'column',
         }}
       >
         <div
@@ -579,7 +831,17 @@ function SessionColumn({
             </span>
           ) : null}
         </div>
-        <div style={{ padding: 12 }}>
+        <div
+          ref={transcriptRef}
+          className="kf-lab-terminal-scroll"
+          style={{
+            flex: 1,
+            minHeight: 0,
+            overflowY: 'auto',
+            overscrollBehavior: 'contain',
+            padding: 12,
+          }}
+        >
           <div style={{ color: '#6fa8bd', marginBottom: 10 }}>
             PUBLIC ACTIVITY TRANSCRIPT
           </div>
@@ -592,26 +854,28 @@ function SessionColumn({
                   key={`${line.kind}-${line.command}-${index}`}
                   style={{
                     display: 'grid',
-                    gridTemplateColumns: '24px 72px minmax(0, 1fr)',
+                    gridTemplateColumns: '24px 86px minmax(0, 1fr) auto',
                     gap: 7,
-                    marginTop: index ? 10 : 0,
-                    alignItems: 'start',
+                    marginTop: index ? 8 : 0,
+                    alignItems: 'center',
                   }}
                 >
                   <span style={{ color: '#555' }}>
                     {String(index + 1).padStart(2, '0')}
                   </span>
                   <span style={{ color: kind.color }}>
-                    {kind.prompt} {kind.label}
+                    {kind.prompt} {playbackSourceLabel(line)}
                   </span>
-                  <div>
-                    <div style={{ color: STATUS_META[line.status].color }}>
-                      {line.command}
-                    </div>
-                    <div style={{ color: '#858585', marginTop: 2 }}>
-                      {line.detail}
-                    </div>
-                  </div>
+                  <span style={{ color: STATUS_META[line.status].color }}>
+                    {line.command}
+                  </span>
+                  <span
+                    aria-label={line.detail}
+                    title={line.detail}
+                    style={{ color: '#666', cursor: 'help' }}
+                  >
+                    ⓘ
+                  </span>
                 </div>
               );
             })
@@ -627,44 +891,18 @@ function SessionColumn({
               <span className="kf-lab-terminal-cursor">▌</span>
             </div>
           ) : null}
-          <div
-            style={{
-              marginTop: 12,
-              paddingTop: 8,
-              color: '#626262',
-              borderTop: '1px solid #1f2324',
-            }}
-          >
-            PRIVATE REASONING HIDDEN · RAW PROVIDER OUTPUT REDACTED
-          </div>
         </div>
-      </div>
-      <div style={{ display: 'grid', gap: 14 }}>
-        {story.milestones.map((milestone) => (
-          <div
-            key={milestone.title}
-            style={{
-              display: 'grid',
-              gridTemplateColumns: 'auto minmax(0, 1fr)',
-              alignItems: 'start',
-              gap: 10,
-            }}
-          >
-            <StatusBadge status={milestone.status} />
-            <div>
-              <strong>{milestone.title}</strong>
-              <div
-                style={{
-                  marginTop: 4,
-                  color: '#a9a9a9',
-                  lineHeight: 1.45,
-                }}
-              >
-                {milestone.detail}
-              </div>
-            </div>
-          </div>
-        ))}
+        <div
+          style={{
+            padding: '6px 10px',
+            color: '#626262',
+            borderTop: '1px solid #1f2324',
+            fontSize: 10,
+          }}
+        >
+          PRIVATE REASONING HIDDEN · COMMANDS + RAW OUTPUT REDACTED · PUBLIC
+          STATUS + TOOL BOUNDARIES ONLY
+        </div>
       </div>
     </article>
   );
@@ -686,9 +924,9 @@ function HandoffBridge({
   return (
     <section
       aria-label="Kungfu handoff bridge"
+      className="kf-lab-handoff"
       style={{
-        margin: '12px 0',
-        padding: '12px 16px',
+        padding: '7px 12px',
         border: `1px solid ${proven ? '#287f70' : active ? '#9b7a31' : '#3c3c3c'}`,
         borderRadius: 8,
         background: proven ? '#102c28' : active ? '#332b18' : '#202020',
@@ -711,101 +949,190 @@ function HandoffBridge({
           style={{ color: proven ? '#4ec9b0' : active ? '#d7ba7d' : '#b8b8b8' }}
         >
           {proven
-            ? 'Kungfu evidence proved the handoff'
+            ? 'Handoff proved'
             : active
-              ? 'Partial evidence sealed · starting the fresh continuation'
+              ? 'Evidence sealed · fresh continuation starting'
               : secondComplete
-                ? 'Both session observations received · assessment pending'
-                : 'Kungfu handoff evidence'}
+                ? 'Both sessions observed · assessment pending'
+                : 'Governed handoff'}
         </strong>
+        <InfoTip
+          label="Explain the governed handoff"
+          text="Retained: task identity, Work reference, partial state, evidence, and next action. Excluded: prior transcript, credentials, private reasoning, and unadmitted provider output."
+        />
         <span aria-hidden="true">──▶</span>
         <strong>Session 2</strong>
-      </div>
-      <div
-        style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
-          gap: 8,
-          marginTop: 10,
-          color: '#b8b8b8',
-          fontSize: 12,
-        }}
-      >
-        <span>Retained: task identity and Work reference</span>
-        <span>Retained: partial state, evidence, and next action</span>
-        <span>Excluded: prior transcript and credentials</span>
       </div>
     </section>
   );
 }
 
-function ResultPanel({
+function ReportDock({
   report,
   visibleFindingCount,
   activeFindingIndex,
+  running,
+  progress,
+  agentPlan,
+  targetPlan,
+  error,
 }: {
-  report: QualificationLabReport;
+  report: QualificationLabReport | null;
   visibleFindingCount: number;
   activeFindingIndex: number;
+  running: boolean;
+  progress: string;
+  agentPlan: QualificationLabAgentPlan | null;
+  targetPlan: QualificationLabAgentPlan | null;
+  error: string;
 }) {
-  const passed = report.status !== 'failed';
+  const passed = Boolean(report && report.status !== 'failed');
   const findings = qualificationBehaviorFindings(report);
+  const visibleFindings = report
+    ? findings.slice(0, visibleFindingCount)
+    : findings;
+  const technicalDetail = report
+    ? `report ${shortRoot(report.reportRoot)} · plan ${shortRoot(
+        report.planRoot,
+      )} · identity ${shortRoot(report.identityRoot)} · attempts ${
+        report.sessionAttempts.length
+      } · credential contents read: no`
+    : agentPlan
+      ? `source plan ${shortRoot(agentPlan.planRoot)} · continuation plan ${
+          targetPlan ? shortRoot(targetPlan.planRoot) : 'same selected agent'
+        } · credential contents read: no`
+      : 'No local-agent plan prepared. The offline demo needs no provider credentials.';
   return (
     <section
-      aria-label="Qualification result"
+      aria-label={report ? 'Qualification result' : 'Behavior guide'}
       aria-live="polite"
-      className="kf-lab-result-enter"
+      className={`kf-lab-report-dock${report ? ' kf-lab-result-enter' : ''}`}
       style={{
         ...panelStyle,
-        marginTop: 18,
-        padding: 18,
-        border: `1px solid ${passed ? '#287f70' : '#a14a3a'}`,
-        background: passed ? '#102a26' : '#351b18',
+        minHeight: 0,
+        padding: 10,
+        border: `1px solid ${
+          report ? (passed ? '#287f70' : '#a14a3a') : '#3c3c3c'
+        }`,
+        background: report ? (passed ? '#102a26' : '#351b18') : '#202020',
+        display: 'grid',
+        gridTemplateColumns: 'minmax(250px, 0.9fr) minmax(0, 2fr)',
+        gap: 10,
+        alignItems: 'center',
       }}
     >
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-        <StatusBadge status={passed ? 'correct' : 'undesirable'} />
-        <h2 style={{ margin: 0 }}>
-          {passed
-            ? 'Continuity proved: the session changed, but the work did not disappear.'
-            : 'Continuity was not proved.'}
-        </h2>
+      <div style={{ minWidth: 0 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <StatusBadge
+            status={
+              report
+                ? passed
+                  ? 'correct'
+                  : 'undesirable'
+                : running
+                  ? 'running'
+                  : 'ready'
+            }
+          />
+          <strong>
+            {report
+              ? passed
+                ? 'Continuity proved'
+                : 'Continuity not proved'
+              : running
+                ? 'Observing both sessions'
+                : 'What this test judges'}
+          </strong>
+          <InfoTip
+            placement="top"
+            label="Explain the qualification result"
+            text={
+              report
+                ? report.meaning
+                : 'Good: Session 2 continues the same governed work. Bad: it restarts, loses identity, relies on copied chat, or cannot prove the exact final state.'
+            }
+          />
+        </div>
+        <div
+          style={{
+            marginTop: 5,
+            color: report ? '#d4f2eb' : '#b8b8b8',
+            fontSize: 12,
+          }}
+        >
+          {running && progress
+            ? progress
+            : 'Kungfu makes cross-session work continuable and provable.'}
+          <InfoTip
+            placement="top"
+            label="Explain Kungfu value"
+            text="Kungfu does not answer the task for the agent. It preserves governed identity, state, evidence, and next action so another session or agent can continue without guesswork."
+          />
+          <InfoTip
+            placement="top"
+            label="Show technical evidence"
+            text={technicalDetail}
+          />
+        </div>
+        {error ? (
+          <div role="alert" style={{ ...mono, color: '#f48771', marginTop: 5 }}>
+            {error}
+          </div>
+        ) : null}
       </div>
-      <p style={{ margin: '10px 0 0', fontSize: 16, lineHeight: 1.5 }}>
-        {passed
-          ? 'Kungfu made the handoff evidenced rather than guessed: Session 2 used the same governed work identity and state to continue.'
-          : 'The report found at least one behavior that breaks trustworthy continuation. Review the evidence below before relying on this agent path.'}
-      </p>
       <div
+        className="kf-lab-finding-strip"
         style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))',
-          gap: 10,
-          marginTop: 16,
+          display: 'flex',
+          gap: 7,
+          minWidth: 0,
+          overflowX: 'auto',
+          padding: 2,
         }}
       >
-        {findings.slice(0, visibleFindingCount).map((finding, index) => (
+        {visibleFindings.map((finding, index) => (
           <div
             key={`${finding.status}-${finding.title}`}
             className={`kf-lab-verdict-card${
               index === activeFindingIndex ? ' kf-lab-verdict-focus' : ''
             }`}
+            title={finding.detail}
             style={{
-              padding: 12,
+              minWidth: 190,
+              maxWidth: 260,
+              padding: '7px 9px',
               borderRadius: 6,
               background: '#181818',
               border: '1px solid #3c3c3c',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 7,
             }}
           >
             <StatusBadge status={finding.status} />
-            <strong style={{ display: 'block', marginTop: 8 }}>
+            <strong
+              style={{
+                fontSize: 11,
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                whiteSpace: 'nowrap',
+              }}
+            >
               {finding.title}
             </strong>
-            <div style={{ marginTop: 4, color: '#a9a9a9', lineHeight: 1.45 }}>
-              {finding.detail}
-            </div>
+            <span
+              aria-label={finding.detail}
+              style={{ marginLeft: 'auto', color: '#777', cursor: 'help' }}
+            >
+              ⓘ
+            </span>
           </div>
         ))}
+        {report && visibleFindings.length === 0 ? (
+          <span style={{ color: '#858585', fontSize: 12 }}>
+            Verdict checks will appear one by one…
+          </span>
+        ) : null}
       </div>
     </section>
   );
@@ -841,7 +1168,21 @@ export function QualificationLabPanel({
   const [activeFindingIndex, setActiveFindingIndex] = React.useState(-1);
   const [busy, setBusy] = React.useState('');
   const [error, setError] = React.useState('');
+  const [runProgress, setRunProgress] = React.useState<{
+    startedAt: number;
+    lastEventAt: number;
+    eventCount: number;
+    phase: 'running' | 'assessing';
+  } | null>(null);
+  const [progressNow, setProgressNow] = React.useState(() => Date.now());
   const playbackRunRef = React.useRef(0);
+
+  React.useEffect(() => {
+    if (!runProgress) return undefined;
+    setProgressNow(Date.now());
+    const timer = window.setInterval(() => setProgressNow(Date.now()), 1000);
+    return () => window.clearInterval(timer);
+  }, [runProgress]);
 
   const discover = React.useCallback(async () => {
     setBusy('discover');
@@ -882,6 +1223,7 @@ export function QualificationLabPanel({
     setVisiblePlaybackLines([]);
     setVisibleFindingCount(0);
     setActiveFindingIndex(-1);
+    setRunProgress(null);
     setError('');
   };
 
@@ -913,6 +1255,14 @@ export function QualificationLabPanel({
     setVisiblePlaybackLines([]);
     setVisibleFindingCount(0);
     setActiveFindingIndex(-1);
+    const startedAt = Date.now();
+    setProgressNow(startedAt);
+    setRunProgress({
+      startedAt,
+      lastEventAt: startedAt,
+      eventCount: 0,
+      phase: 'running',
+    });
     const reducedMotion =
       typeof window.matchMedia === 'function' &&
       window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -933,6 +1283,15 @@ export function QualificationLabPanel({
         }
         if (playbackRunRef.current !== runId) return;
         setVisibleEvents((current) => [...current, event]);
+        setRunProgress((current) =>
+          current
+            ? {
+                ...current,
+                lastEventAt: Date.now(),
+                eventCount: current.eventCount + 1,
+              }
+            : current,
+        );
       });
     };
     try {
@@ -945,6 +1304,9 @@ export function QualificationLabPanel({
       await playbackQueue;
       if (playbackRunRef.current !== runId) return;
       setReport(nextReport);
+      setRunProgress((current) =>
+        current ? { ...current, phase: 'assessing' } : current,
+      );
       const findings = qualificationBehaviorFindings(nextReport);
       await waitForPlayback(verdictDelay);
       for (let index = 0; index < findings.length; index += 1) {
@@ -963,6 +1325,7 @@ export function QualificationLabPanel({
     } finally {
       if (playbackRunRef.current === runId) {
         setBusy('');
+        setRunProgress(null);
       }
     }
   };
@@ -996,39 +1359,57 @@ export function QualificationLabPanel({
     label: 'Unknown test mode',
     description: 'Choose a supported qualification mode.',
   };
+  const progress = runProgress
+    ? qualificationRunProgressLabel({
+        elapsedMs: progressNow - runProgress.startedAt,
+        quietMs: progressNow - runProgress.lastEventAt,
+        eventCount: runProgress.eventCount,
+        phase: runProgress.phase,
+      })
+    : '';
 
   return (
     <section
+      className="kf-lab-frame"
       style={{
         ...panelStyle,
         height: '100%',
-        overflow: 'auto',
+        minHeight: 0,
+        overflow: 'hidden',
         boxSizing: 'border-box',
-        padding: 20,
+        padding: 14,
+        display: 'grid',
+        gridTemplateRows: 'auto auto minmax(0, 1fr) auto',
+        gap: 10,
       }}
     >
       <header
         style={{
           display: 'flex',
-          alignItems: 'flex-start',
+          alignItems: 'center',
           justifyContent: 'space-between',
-          gap: 20,
-          flexWrap: 'wrap',
+          gap: 12,
         }}
       >
-        <div>
-          <div style={{ ...mono, color: '#9cdcfe' }}>
+        <div style={{ minWidth: 0 }}>
+          <div style={{ ...mono, color: '#9cdcfe', fontSize: 11 }}>
             AGENT QUALIFICATION LAB
           </div>
-          <h1 style={{ margin: '7px 0' }}>
+          <h1
+            style={{
+              margin: '2px 0 0',
+              fontSize: 20,
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              whiteSpace: 'nowrap',
+            }}
+          >
             Can a fresh agent session continue the same work?
+            <InfoTip
+              label="Explain this Lab"
+              text="This Lab runs one bounded task across two independent sessions. Session 1 begins and leaves governed evidence. Session 2 receives no prior chat and must discover the same work, then continue from the correct point."
+            />
           </h1>
-          <p style={{ maxWidth: 820, margin: 0, lineHeight: 1.55 }}>
-            This Lab runs one bounded task across two independent sessions.
-            Session 1 begins and leaves evidence. Session 2 gets no prior chat
-            and must discover what happened, then continue from the correct
-            point.
-          </p>
         </div>
         {onOpenWork ? (
           <button type="button" onClick={onOpenWork}>
@@ -1037,42 +1418,30 @@ export function QualificationLabPanel({
         ) : null}
       </header>
 
-      <div
-        style={{
-          ...mono,
-          color: '#858585',
-          marginTop: 10,
-          fontSize: 11,
-        }}
-      >
-        startup {startup.state} · {startup.reasonCode} · no real workspace write
-      </div>
-      {startup.route === 'diagnostic' ? (
-        <div style={{ ...mono, color: '#f48771', marginTop: 12 }}>
-          {startup.message}
-        </div>
-      ) : null}
-
       <section
         aria-label="Test configuration"
+        className="kf-lab-controls"
         style={{
           ...panelStyle,
-          marginTop: 18,
-          padding: 16,
+          padding: 10,
           background: '#202020',
         }}
       >
         <div
           style={{
             display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
-            gap: 12,
+            gridTemplateColumns: 'repeat(auto-fit, minmax(190px, 1fr))',
+            gap: 9,
             alignItems: 'end',
           }}
         >
           <label>
-            <strong style={{ display: 'block', marginBottom: 6 }}>
+            <strong style={{ display: 'block', marginBottom: 4 }}>
               Test mode
+              <InfoTip
+                label={`Explain ${selectedMode.label}`}
+                text={selectedMode.description}
+              />
             </strong>
             <select
               aria-label="Test mode"
@@ -1092,7 +1461,7 @@ export function QualificationLabPanel({
           </label>
           {needs.source ? (
             <label>
-              <strong style={{ display: 'block', marginBottom: 6 }}>
+              <strong style={{ display: 'block', marginBottom: 4 }}>
                 Session 1 agent
               </strong>
               <select
@@ -1122,7 +1491,7 @@ export function QualificationLabPanel({
           ) : null}
           {needs.target ? (
             <label>
-              <strong style={{ display: 'block', marginBottom: 6 }}>
+              <strong style={{ display: 'block', marginBottom: 4 }}>
                 Session 2 agent
               </strong>
               <select
@@ -1174,20 +1543,34 @@ export function QualificationLabPanel({
             <button type="button" disabled={Boolean(busy)} onClick={discover}>
               Refresh agents
             </button>
+            <InfoTip
+              label="Show startup safety status"
+              text={`startup ${startup.state} · ${startup.reasonCode} · no real workspace write${
+                startup.route === 'diagnostic' ? ` · ${startup.message}` : ''
+              }`}
+            />
           </div>
         </div>
-        <p style={{ margin: '12px 0 0', color: '#b8b8b8' }}>
-          <strong>{selectedMode.label}:</strong> {selectedMode.description}
-        </p>
       </section>
 
-      <section aria-label="Two-session experiment" style={{ marginTop: 18 }}>
+      <section
+        aria-label="Two-session experiment"
+        className="kf-lab-session-stage"
+        style={{
+          minHeight: 0,
+          display: 'grid',
+          gridTemplateRows: 'minmax(0, 1fr) auto',
+          gap: 8,
+        }}
+      >
         <div
+          className="kf-lab-session-grid"
           style={{
             display: 'grid',
-            gridTemplateColumns:
-              'repeat(auto-fit, minmax(min(100%, 360px), 1fr))',
+            gridTemplateColumns: 'repeat(2, minmax(320px, 1fr))',
             gap: 12,
+            minHeight: 0,
+            overflowX: 'auto',
           }}
         >
           <SessionColumn
@@ -1210,96 +1593,58 @@ export function QualificationLabPanel({
         />
       </section>
 
-      {!report ? (
-        <section
-          aria-label="Behavior guide"
-          style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))',
-            gap: 10,
-            marginTop: 16,
-          }}
-        >
-          {qualificationBehaviorFindings(null).map((finding) => (
-            <div
-              key={finding.status}
-              style={{
-                ...panelStyle,
-                padding: 12,
-                background: '#181818',
-                border: '1px solid #3c3c3c',
-              }}
-            >
-              <StatusBadge status={finding.status} />
-              <strong style={{ display: 'block', marginTop: 8 }}>
-                {finding.title}
-              </strong>
-              <div style={{ marginTop: 4, color: '#a9a9a9', lineHeight: 1.45 }}>
-                {finding.detail}
-              </div>
-            </div>
-          ))}
-        </section>
-      ) : (
-        <ResultPanel
-          report={report}
-          visibleFindingCount={visibleFindingCount}
-          activeFindingIndex={activeFindingIndex}
-        />
-      )}
-
-      <section
-        style={{
-          marginTop: 18,
-          padding: 14,
-          borderLeft: '3px solid #4ec9b0',
-          background: '#182522',
-        }}
-      >
-        <strong>What Kungfu changes</strong>
-        <div style={{ marginTop: 5, lineHeight: 1.5 }}>
-          Kungfu does not answer the task for the agent. It makes work
-          continuable, handoff-ready, and provable across sessions, agents, and
-          time.
-        </div>
-      </section>
-
-      <details style={{ marginTop: 16 }}>
-        <summary style={{ cursor: 'pointer' }}>Technical details</summary>
-        <pre
-          style={{
-            ...mono,
-            whiteSpace: 'pre-wrap',
-            padding: 12,
-            background: '#111',
-            overflow: 'auto',
-          }}
-        >
-          {agentPlan
-            ? `source command ${JSON.stringify(agentPlan.commandPreview)}
-source identity ${agentPlan.identityRoot}
-source plan ${agentPlan.planRoot}
-continuation command ${JSON.stringify(targetPlan?.commandPreview)}
-continuation identity ${targetPlan?.identityRoot}
-credential contents read: no`
-            : 'No local-agent plan prepared.'}
-          {report
-            ? `
-report ${shortRoot(report.reportRoot)}
-plan ${shortRoot(report.planRoot)}
-identity ${shortRoot(report.identityRoot)}
-attempts ${report.sessionAttempts.length}
-meaning ${report.meaning}
-evidence ${report.evidenceDirectory}`
-            : ''}
-        </pre>
-      </details>
-      {error ? (
-        <div role="alert" style={{ ...mono, color: '#f48771', marginTop: 12 }}>
-          {error}
-        </div>
-      ) : null}
+      <ReportDock
+        report={report}
+        visibleFindingCount={visibleFindingCount}
+        activeFindingIndex={activeFindingIndex}
+        running={running}
+        progress={progress}
+        agentPlan={agentPlan}
+        targetPlan={targetPlan}
+        error={error}
+      />
       <style>{`
+        .kf-lab-tip {
+          position: relative;
+          display: inline-flex;
+          align-items: center;
+          margin-left: 5px;
+          vertical-align: middle;
+        }
+        .kf-lab-tip-trigger {
+          width: 17px;
+          height: 17px;
+          padding: 0;
+          border: 1px solid #555;
+          border-radius: 999px;
+          color: #9cdcfe;
+          background: #242424;
+          font: 11px/15px ui-monospace, SFMono-Regular, Menlo, monospace;
+          cursor: help;
+        }
+        .kf-lab-tip-content {
+          position: fixed;
+          z-index: 9999;
+          display: block;
+          padding: 9px 10px;
+          border: 1px solid #555;
+          border-radius: 6px;
+          color: #e4e4e4;
+          background: #101112;
+          box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
+          font-size: 12px;
+          font-weight: 400;
+          line-height: 1.45;
+          text-align: left;
+          white-space: normal;
+          transform: translateX(-50%);
+          pointer-events: none;
+        }
+        .kf-lab-terminal-scroll,
+        .kf-lab-finding-strip,
+        .kf-lab-session-grid {
+          scrollbar-gutter: stable;
+        }
         @keyframes kf-lab-line-enter {
           from { opacity: 0; transform: translateY(7px); }
           to { opacity: 1; transform: translateY(0); }

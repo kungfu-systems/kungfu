@@ -2,6 +2,7 @@
 
 import { Box, Text } from 'ink';
 import React from 'react';
+import { terminalCanvasRows } from './terminal-canvas.js';
 import type { WorkLoopShellModel } from './work-loop-contribution.js';
 
 export type TerminalDimensions = { columns: number; rows: number };
@@ -239,7 +240,7 @@ export function ProfileShell({
   return (
     <Box
       width={dimensions.columns}
-      height={dimensions.rows}
+      height={terminalCanvasRows(dimensions.rows)}
       flexDirection="column"
     >
       <Box justifyContent="space-between" paddingX={1}>
@@ -277,7 +278,8 @@ export function ProfileShell({
       ) : null}
       <Box paddingX={1}>
         <Text dimColor>
-          ↑↓/jk answer · ←→/hl subject · tab region · r refresh · q quit
+          ↑↓/jk answer · ←→/hl subject · tab region · a qualification lab · r
+          refresh · q quit
         </Text>
       </Box>
     </Box>
@@ -349,7 +351,7 @@ export function renderProfileShellSnapshot(
       dimensions.columns,
     ),
     clipped(
-      '↑↓/jk answer · ←→/hl subject · tab region · r refresh · q quit',
+      '↑↓/jk answer · ←→/hl subject · tab region · a qualification lab · r refresh · q quit',
       dimensions.columns,
     ),
   ];

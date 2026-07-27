@@ -47,8 +47,8 @@ extraResources:
   # /usr/local/bin; it resolves the bundled runtime next to it and execs it.
   - from: resources/cli
     to: cli
-  # The Ink reference TUI, bundled to a single ES module and run through
-  # kungfu's embedded Node (libnode) via `kungfu tui`.
+  # The Ink reference TUI, bundled to a single ES module and launched by bare
+  # interactive `kungfu` through its embedded Node (libnode).
   - from: ../tui/dist
     to: tui
   # Tray/menu-bar icon assets used by the resident GUI control surface.
