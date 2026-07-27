@@ -34,7 +34,7 @@ class CaptureOutput extends Writable {
   }
 }
 
-test('opens Help, slash commands, and product search from the idle input bar', () => {
+test('opens Help, slash commands, and product search from the focused input', () => {
   assert.equal(
     reduceControlPlaneInput(CLOSED_CONTROL_PLANE, '?', 0).state.mode,
     'help',
@@ -42,16 +42,32 @@ test('opens Help, slash commands, and product search from the idle input bar', (
   assert.deepEqual(
     reduceControlPlaneInput(CLOSED_CONTROL_PLANE, '/', QUICK_COMMANDS.length)
       .state,
-    { mode: 'commands', query: '/', selected: 0 },
+    { mode: 'commands', focus: 'input', query: '/', selected: 0 },
   );
   assert.equal(
     reduceControlPlaneInput(CLOSED_CONTROL_PLANE, '\u000b', 0).state.mode,
     'search',
   );
-  assert.equal(
-    reduceControlPlaneInput(CLOSED_CONTROL_PLANE, 'j', 0).handled,
-    false,
+  const typed = reduceControlPlaneInput(CLOSED_CONTROL_PLANE, 'hello', 0);
+  assert.equal(typed.handled, true);
+  assert.equal(typed.state.query, 'hello');
+  assert.match(
+    reduceControlPlaneInput(typed.state, '\r', 0).state.notice ?? '',
+    /Free-form Agent conversation is coming soon/,
   );
+});
+
+test('Esc hands focus to workspace shortcuts and i returns to input', () => {
+  const workspace = reduceControlPlaneInput(
+    CLOSED_CONTROL_PLANE,
+    '\u001b',
+    0,
+  ).state;
+  assert.equal(workspace.focus, 'workspace');
+  assert.equal(reduceControlPlaneInput(workspace, 'j', 0).handled, false);
+  const focused = reduceControlPlaneInput(workspace, 'i', 0);
+  assert.equal(focused.handled, true);
+  assert.equal(focused.state.focus, 'input');
 });
 
 test('edits input, selects results, activates, and returns without leaking keys', () => {
@@ -81,10 +97,13 @@ test('keeps a closing key captured for the rest of its synchronous input emissio
   const input = new EventEmitter();
   let state: ControlPlaneState = {
     mode: 'help',
+    focus: 'input',
     query: '',
     selected: 0,
   };
-  const fence = createControlPlaneInputFence(() => state.mode !== 'closed');
+  const fence = createControlPlaneInputFence(
+    () => state.mode !== 'closed' || state.focus === 'input',
+  );
   let leaked = false;
   input.prependListener('data', (chunk: string) => {
     const update = reduceControlPlaneInput(state, chunk, 0);
@@ -100,6 +119,8 @@ test('keeps a closing key captured for the rest of its synchronous input emissio
   assert.equal(state.mode, 'closed');
   assert.equal(leaked, false);
   await Promise.resolve();
+  assert.equal(fence.isCaptured(), true);
+  state = reduceControlPlaneInput(state, '\u001b', 0).state;
   assert.equal(fence.isCaptured(), false);
 });
 
@@ -121,14 +142,14 @@ test('the real Ink control plane covers the product canvas and keeps a fixed inp
       React.createElement(Text, null, 'UNDERLYING PRODUCT CONTENT'),
       React.createElement(ControlPlaneOverlay, {
         dimensions: { columns: 80, rows: 22 },
-        state: { mode: 'help', query: '', selected: 0 },
+        state: { mode: 'help', focus: 'input', query: '', selected: 0 },
         searchResults: [],
         quickCommands: QUICK_COMMANDS,
         catalogStatus: 'catalog ready',
       }),
       React.createElement(ControlPlaneBar, {
         dimensions,
-        state: { mode: 'help', query: '', selected: 0 },
+        state: { mode: 'help', focus: 'input', query: '', selected: 0 },
         resultCount: 0,
       }),
     ),
@@ -144,9 +165,45 @@ test('the real Ink control plane covers the product canvas and keeps a fixed inp
   instance.unmount();
   instance.cleanup();
   assert.match(frame, /KUNGFU · HELP/);
-  assert.match(frame, /The input bar runs bounded product actions/);
-  assert.match(frame, /Help open · Esc return/);
+  assert.match(frame, /focused input accepts text/);
+  assert.match(frame, /Help is open/);
+  assert.match(frame, /╭/);
+  assert.match(frame, /╰/);
   assert.doesNotMatch(frame, /UNDERLYING PRODUCT CONTENT/);
+});
+
+test('the idle input is a focused full panel and renders typed text', async () => {
+  const output = new CaptureOutput();
+  const typed = reduceControlPlaneInput(
+    CLOSED_CONTROL_PLANE,
+    'continue work',
+    0,
+  ).state;
+  const instance = render(
+    React.createElement(
+      Box,
+      { width: 80, height: 23, flexDirection: 'column' },
+      React.createElement(ControlPlaneBar, {
+        dimensions: { columns: 80, rows: 24 },
+        state: typed,
+        resultCount: 0,
+      }),
+    ),
+    {
+      stdout: output as unknown as NodeJS.WriteStream,
+      exitOnCtrlC: false,
+      patchConsole: false,
+      debug: true,
+    },
+  );
+  await new Promise<void>((resolve) => setTimeout(resolve, 80));
+  const frame = output.chunks.join('');
+  instance.unmount();
+  instance.cleanup();
+  assert.match(frame, /continue work/);
+  assert.match(frame, /Focused · Enter is bounded for now/);
+  assert.match(frame, /╭/);
+  assert.match(frame, /╰/);
 });
 
 test('search keeps the selected result visible beyond the first viewport', async () => {
@@ -165,7 +222,12 @@ test('search keeps the selected result visible beyond the first viewport', async
       { width: 80, height: 11, flexDirection: 'column' },
       React.createElement(ControlPlaneOverlay, {
         dimensions: { columns: 80, rows: 12 },
-        state: { mode: 'search', query: 'help', selected: 11 },
+        state: {
+          mode: 'search',
+          focus: 'input',
+          query: 'help',
+          selected: 11,
+        },
         searchResults,
         quickCommands: QUICK_COMMANDS,
         catalogStatus: 'catalog ready',

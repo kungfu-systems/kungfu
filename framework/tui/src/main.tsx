@@ -477,7 +477,11 @@ function ProductHost({
   const controlRef = React.useRef(control);
   const inputFence = React.useMemo(
     () =>
-      createControlPlaneInputFence(() => controlRef.current.mode !== 'closed'),
+      createControlPlaneInputFence(
+        () =>
+          controlRef.current.mode !== 'closed' ||
+          controlRef.current.focus === 'input',
+      ),
     [],
   );
   const [cliDocuments, setCliDocuments] = React.useState<
@@ -492,7 +496,7 @@ function ProductHost({
   const profile = React.useMemo(() => openTuiProfile(), []);
   const workLoop = React.useMemo(() => openTuiWorkLoop(), []);
   const contentDimensions = React.useMemo(
-    () => new InsetDimensionSource(dimensions, 2),
+    () => new InsetDimensionSource(dimensions, 4),
     [dimensions],
   );
   React.useEffect(() => dimensions.subscribe(setSize), [dimensions]);
@@ -636,9 +640,19 @@ function ProductHost({
       const command = quickCommandsRef.current[current.selected];
       if (!command) return;
       if (command.action === 'help') {
-        setControlNow({ mode: 'help', query: '', selected: 0 });
+        setControlNow({
+          mode: 'help',
+          focus: 'input',
+          query: '',
+          selected: 0,
+        });
       } else if (command.action === 'search') {
-        setControlNow({ mode: 'search', query: '', selected: 0 });
+        setControlNow({
+          mode: 'search',
+          focus: 'input',
+          query: '',
+          selected: 0,
+        });
       } else if (command.action === 'work') {
         setSurface('work');
         closeControl();
@@ -665,6 +679,7 @@ function ProductHost({
     } else {
       setControlNow({
         mode: 'detail',
+        focus: 'input',
         query: current.query,
         selected: current.selected,
         detail: result,

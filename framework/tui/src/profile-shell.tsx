@@ -933,8 +933,10 @@ export type ControlPlaneMode =
 
 export type ControlPlaneState = {
   mode: ControlPlaneMode;
+  focus: 'input' | 'workspace';
   query: string;
   selected: number;
+  notice?: string;
   detail?: ProductSearchDocument;
 };
 
@@ -1021,6 +1023,7 @@ export const QUICK_COMMANDS: QuickCommand[] = [
 
 export const CLOSED_CONTROL_PLANE: ControlPlaneState = {
   mode: 'closed',
+  focus: 'input',
   query: '',
   selected: 0,
 };
@@ -1045,7 +1048,7 @@ function openedControlPlane(
   mode: Exclude<ControlPlaneMode, 'closed' | 'detail'>,
   query = '',
 ): ControlPlaneState {
-  return { mode, query, selected: 0 };
+  return { mode, focus: 'input', query, selected: 0 };
 }
 
 export function reduceControlPlaneInput(
@@ -1057,19 +1060,87 @@ export function reduceControlPlaneInput(
     return { handled: true, state: current, quit: true };
   }
   if (input === '\u000b') {
-    return { handled: true, state: openedControlPlane('search') };
+    return {
+      handled: true,
+      state: openedControlPlane(
+        'search',
+        current.mode === 'closed' && current.focus === 'input'
+          ? current.query
+          : '',
+      ),
+    };
   }
   if (current.mode === 'closed') {
-    if (input === '?') {
+    if (current.focus === 'workspace') {
+      if (input === 'i') {
+        return {
+          handled: true,
+          state: { ...current, focus: 'input', notice: undefined },
+        };
+      }
+      if (input === '?') {
+        return { handled: true, state: openedControlPlane('help') };
+      }
+      if (input === '/') {
+        return {
+          handled: true,
+          state: openedControlPlane('commands', '/'),
+        };
+      }
+      return { handled: false, state: current };
+    }
+    if (input === '\u001b') {
+      if (current.query) {
+        return {
+          handled: true,
+          state: { ...current, query: '', notice: undefined },
+        };
+      }
+      return {
+        handled: true,
+        state: { ...current, focus: 'workspace', notice: undefined },
+      };
+    }
+    if (input === '\u007f' || input === '\b') {
+      return {
+        handled: true,
+        state: {
+          ...current,
+          query: [...current.query].slice(0, -1).join(''),
+          notice: undefined,
+        },
+      };
+    }
+    if ((input === '\r' || input === '\n') && current.query) {
+      return {
+        handled: true,
+        state: {
+          ...current,
+          notice:
+            'Free-form Agent conversation is coming soon. Use / commands or Ctrl+K search.',
+        },
+      };
+    }
+    if (input === '?' && !current.query) {
       return { handled: true, state: openedControlPlane('help') };
     }
-    if (input === '/') {
+    if (input === '/' && !current.query) {
       return {
         handled: true,
         state: openedControlPlane('commands', '/'),
       };
     }
-    return { handled: false, state: current };
+    if (/^[\x20-\x7e]+$/.test(input)) {
+      return {
+        handled: true,
+        state: {
+          ...current,
+          query: `${current.query}${input}`.slice(0, 160),
+          notice: undefined,
+        },
+      };
+    }
+    return { handled: true, state: current };
   }
   if (input === '\u001b') {
     return { handled: true, state: CLOSED_CONTROL_PLANE };
@@ -1247,7 +1318,10 @@ export function ControlPlaneOverlay({
 }) {
   if (state.mode === 'closed') return null;
   const height = terminalCanvasRows(dimensions.rows);
-  const rowBudget = Math.max(1, Math.floor((height - 7) / 2));
+  const width = Math.max(24, dimensions.columns);
+  const panelWidth = Math.max(20, width - 4);
+  const panelHeight = Math.max(8, height - 2);
+  const rowBudget = Math.max(1, Math.floor((panelHeight - 7) / 2));
   const title =
     state.mode === 'help'
       ? 'HELP'
@@ -1259,81 +1333,109 @@ export function ControlPlaneOverlay({
   return (
     <Box
       position="absolute"
-      width={dimensions.columns}
+      width={width}
       height={height}
       flexDirection="column"
-      borderStyle="double"
-      borderColor="cyan"
-      paddingX={1}
       overflow="hidden"
     >
-      <Text bold color="cyan">
-        KUNGFU · {title}
-      </Text>
-      {state.mode === 'help' ? (
-        <>
-          <Text>? Help · / Quick commands · Ctrl+K Search · Esc return</Text>
-          <Text dimColor>
-            The input bar runs bounded product actions. It is not a shell and
-            does not execute arbitrary text.
+      <Box width={width} height={height} flexDirection="column">
+        {Array.from(
+          { length: height },
+          (_, index) => `backdrop-row-${index + 1}`,
+        ).map((rowId) => (
+          <Text key={rowId} backgroundColor="black">
+            {' '.repeat(width)}
           </Text>
-          <Text dimColor>
-            Search covers system Help, governed Kungfu Commands, current Work,
-            and available product views.
-          </Text>
-          <Box marginTop={1} flexDirection="column">
-            <Text color="yellow">/work</Text>
-            <Text color="yellow">/lab</Text>
-            <Text color="yellow">/home</Text>
-            <Text color="yellow">/search</Text>
-            <Text color="yellow">/quit</Text>
-          </Box>
-        </>
-      ) : null}
-      {state.mode === 'commands' ? (
-        <>
-          <Text dimColor>
-            Enter runs the selected bounded action · ↑↓ choose · Esc cancel
-          </Text>
-          <QuickCommandRows
-            rows={quickCommands}
-            selected={state.selected}
-            height={rowBudget}
-          />
-        </>
-      ) : null}
-      {state.mode === 'search' ? (
-        <>
-          <Text dimColor>
-            {catalogStatus} · Enter opens or explains · ↑↓ choose · Esc cancel
-          </Text>
-          <ControlPlaneResultRows
-            rows={searchResults}
-            selected={state.selected}
-            height={rowBudget}
-          />
-        </>
-      ) : null}
-      {state.mode === 'detail' && state.detail ? (
-        <Box flexDirection="column" marginTop={1}>
-          <Text bold color={controlPlaneKindColor(state.detail.kind)}>
-            {state.detail.kind.toUpperCase()} · {state.detail.title}
-          </Text>
-          <Text>{state.detail.summary}</Text>
-          {state.detail.section ? (
-            <Text dimColor>Section · {state.detail.section}</Text>
-          ) : null}
-          {state.detail.action.kind === 'describe-command' ? (
-            <Text color="yellow">
-              Inspect only · run `{state.detail.action.command} --help` in a
-              shell. Search did not execute it.
+        ))}
+      </Box>
+      <Box
+        position="absolute"
+        marginLeft={2}
+        marginTop={1}
+        width={panelWidth}
+        height={panelHeight}
+        flexDirection="column"
+        borderStyle="double"
+        borderColor="cyan"
+        paddingX={1}
+        overflow="hidden"
+      >
+        <Text bold color="cyan">
+          KUNGFU · {title}
+        </Text>
+        {state.mode === 'help' ? (
+          <>
+            <Text>? Help · / Quick commands · Ctrl+K Search · Esc return</Text>
+            <Text dimColor>
+              The focused input accepts text, but free-form Agent conversation
+              is not available yet.
             </Text>
-          ) : null}
-          <Text dimColor>Enter / Esc / Backspace returns.</Text>
-        </Box>
-      ) : null}
+            <Text dimColor>
+              Search covers system Help, governed Kungfu Commands, current Work,
+              and available product views.
+            </Text>
+            <Box marginTop={1} flexDirection="column">
+              <Text color="yellow">/work</Text>
+              <Text color="yellow">/lab</Text>
+              <Text color="yellow">/home</Text>
+              <Text color="yellow">/search</Text>
+              <Text color="yellow">/quit</Text>
+            </Box>
+          </>
+        ) : null}
+        {state.mode === 'commands' ? (
+          <>
+            <Text dimColor>
+              Enter runs the selected bounded action · ↑↓ choose · Esc cancel
+            </Text>
+            <QuickCommandRows
+              rows={quickCommands}
+              selected={state.selected}
+              height={rowBudget}
+            />
+          </>
+        ) : null}
+        {state.mode === 'search' ? (
+          <>
+            <Text dimColor>
+              {catalogStatus} · Enter opens or explains · ↑↓ choose · Esc cancel
+            </Text>
+            <ControlPlaneResultRows
+              rows={searchResults}
+              selected={state.selected}
+              height={rowBudget}
+            />
+          </>
+        ) : null}
+        {state.mode === 'detail' && state.detail ? (
+          <Box flexDirection="column" marginTop={1}>
+            <Text bold color={controlPlaneKindColor(state.detail.kind)}>
+              {state.detail.kind.toUpperCase()} · {state.detail.title}
+            </Text>
+            <Text>{state.detail.summary}</Text>
+            {state.detail.section ? (
+              <Text dimColor>Section · {state.detail.section}</Text>
+            ) : null}
+            {state.detail.action.kind === 'describe-command' ? (
+              <Text color="yellow">
+                Inspect only · run `{state.detail.action.command} --help` in a
+                shell. Search did not execute it.
+              </Text>
+            ) : null}
+            <Text dimColor>Enter / Esc / Backspace returns.</Text>
+          </Box>
+        ) : null}
+      </Box>
     </Box>
   );
+}
+
+function inputCursor(active: boolean) {
+  return active ? (
+    <Text inverse color="cyan">
+      {' '}
+    </Text>
+  ) : null;
 }
 
 export function ControlPlaneBar({
@@ -1345,39 +1447,52 @@ export function ControlPlaneBar({
   state: ControlPlaneState;
   resultCount: number;
 }) {
+  const modalOpen = state.mode !== 'closed';
+  const inputFocused = modalOpen || state.focus === 'input';
   const value =
-    state.mode === 'commands'
+    state.mode === 'commands' || state.mode === 'search' || !modalOpen
       ? state.query
+      : '';
+  const prompt =
+    state.mode === 'help'
+      ? 'Help is open'
+      : state.mode === 'detail'
+        ? 'Result details are open'
+        : value || (!modalOpen ? 'Type a message…' : '');
+  const hint =
+    state.notice ??
+    (state.mode === 'commands'
+      ? `${resultCount} bounded command${resultCount === 1 ? '' : 's'} · Enter run · Esc cancel`
       : state.mode === 'search'
-        ? state.query
-        : '';
-  const label =
-    state.mode === 'closed'
-      ? '›  ? Help   / Commands   Ctrl+K Search'
-      : state.mode === 'help'
-        ? '›  Help open · Esc return · / commands · Ctrl+K search'
-        : state.mode === 'detail'
-          ? '›  Result details · Enter or Esc to return'
-          : `› ${value}${value ? '' : ' '}  · ${resultCount} result${resultCount === 1 ? '' : 's'}`;
+        ? `${resultCount} result${resultCount === 1 ? '' : 's'} · Enter open · Esc cancel`
+        : state.mode === 'help' || state.mode === 'detail'
+          ? 'Esc returns to the input'
+          : state.focus === 'workspace'
+            ? 'Workspace shortcuts active · i focus input · ? Help · / Commands · Ctrl+K Search'
+            : 'Focused · Enter is bounded for now · ? Help · / Commands · Ctrl+K Search · Esc workspace');
+  const tone = inputFocused ? 'cyan' : 'gray';
   return (
     <Box
       position="absolute"
-      marginTop={Math.max(0, terminalCanvasRows(dimensions.rows) - 2)}
+      marginTop={Math.max(0, terminalCanvasRows(dimensions.rows) - 4)}
       width={dimensions.columns}
-      height={2}
-      borderStyle="single"
-      borderLeft={false}
-      borderRight={false}
-      borderBottom={false}
-      borderColor={state.mode === 'closed' ? 'gray' : 'cyan'}
+      height={4}
+      flexDirection="column"
+      borderStyle="round"
+      borderColor={tone}
       paddingX={1}
       overflow="hidden"
     >
+      <Text color={tone} wrap="truncate-end">
+        <Text bold>{modalOpen ? 'KUNGFU' : '›'}</Text> {prompt}
+        {!modalOpen ? inputCursor(inputFocused) : null}
+      </Text>
       <Text
-        color={state.mode === 'closed' ? 'gray' : 'cyan'}
+        color={state.notice ? 'yellow' : inputFocused ? 'white' : 'gray'}
+        dimColor={!state.notice}
         wrap="truncate-end"
       >
-        {label}
+        {hint}
       </Text>
     </Box>
   );
