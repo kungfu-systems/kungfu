@@ -1765,9 +1765,17 @@ function App() {
       if (result.action.kind === 'open-view') {
         openKfx(result.action.viewId);
       } else if (result.action.kind === 'open-work') {
-        openKfx(profileHomeId(profile, enabled), {
-          workId: result.action.workId,
-        });
+        const workView = productRoleEntry(enabled, 'profile-view');
+        if (workView) {
+          openKfx(workView.id, { workId: result.action.workId });
+        } else {
+          showNotification({
+            level: 'warning',
+            title: 'Work view unavailable',
+            message:
+              'The Work result remains read-only, but no enabled Profile view can open its details.',
+          });
+        }
       } else {
         showNotification({
           level: 'info',
@@ -1777,7 +1785,7 @@ function App() {
       }
       setSearchText('');
     },
-    [enabled, openKfx, profile, showNotification],
+    [enabled, openKfx, showNotification],
   );
 
   const workspaceRuntime = deriveWorkspaceRuntimePresentation(runtimeStatus);
