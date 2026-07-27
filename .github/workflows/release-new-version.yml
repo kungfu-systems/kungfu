@@ -127,10 +127,10 @@ jobs:
       contents: write
       issues: write
       id-token: write
-    uses: kungfu-systems/buildchain/.github/workflows/release-candidate-promote.yml@625384b4927222022a2cd0758399afbf9333ccdc # v3.0.2-alpha.2 with renderer input normalization
+    uses: kungfu-systems/buildchain/.github/workflows/release-candidate-promote.yml@ebc7b2d86ecce1de835c8f8ba4436bcac65a62c2 # v3.0.2-alpha.3 with bundled macOS entitlements
     with:
       channel: ${{ startsWith(inputs.target-ref || github.event.pull_request.base.ref, 'alpha/') && 'alpha' || 'release' }}
-      buildchain-ref: 625384b4927222022a2cd0758399afbf9333ccdc
+      buildchain-ref: ebc7b2d86ecce1de835c8f8ba4436bcac65a62c2
       target-ref: ${{ inputs.target-ref || github.event.pull_request.base.ref }}
       target-sha: ${{ inputs.target-sha || github.event.pull_request.merge_commit_sha || github.sha }}
       buildchain-contract-lock-path: ${{ startsWith(inputs.target-ref || github.event.pull_request.base.ref, 'alpha/') && '.buildchain/alpha-contract-lock.json' || '.buildchain/contract-lock.json' }}
