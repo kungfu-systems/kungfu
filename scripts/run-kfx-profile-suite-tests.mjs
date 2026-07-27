@@ -47,6 +47,15 @@ run('GUI Agent Work Lab visual contract', 'pnpm', [
   path.join(root, 'framework/gui/src/qualification-lab.test.ts'),
 ]);
 
+run('GUI product search contract', 'pnpm', [
+  '--filter',
+  '@kungfu-tech/tui',
+  'exec',
+  'tsx',
+  '--test',
+  path.join(root, 'framework/gui/src/product-search.test.ts'),
+]);
+
 run('GUI KFX shared-module contract', 'pnpm', [
   '--filter',
   '@kungfu-tech/tui',

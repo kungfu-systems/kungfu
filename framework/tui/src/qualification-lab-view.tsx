@@ -282,11 +282,13 @@ export function AgentWorkLabHost({
   startup,
   dimensions,
   onOpenWork,
+  isInputCaptured = () => false,
 }: {
   lab: QualificationLab;
   startup: QualificationLabStartupRoute;
   dimensions: DimensionSource;
   onOpenWork?: () => void;
+  isInputCaptured?: () => boolean;
 }) {
   const { exit } = useApp();
   const [size, setSize] = React.useState(dimensions.get());
@@ -458,6 +460,7 @@ export function AgentWorkLabHost({
   );
   React.useEffect(() => {
     const onData = (chunk: Buffer | string) => {
+      if (isInputCaptured()) return;
       const input = String(chunk);
       if (reportDetail && isQualificationReportReturnInput(input)) {
         return setReportDetail(undefined);
@@ -539,6 +542,7 @@ export function AgentWorkLabHost({
     busy,
     activeFocus,
     exit,
+    isInputCaptured,
     lab,
     onOpenWork,
     profiles,

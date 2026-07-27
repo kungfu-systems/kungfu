@@ -5,7 +5,7 @@
   "manifestPath": "framework/maintainability/semantic-amplification.manifest.json",
   "manifestRoot": "sha256:85829360a77ec44639ba99defd7692d96844002e554e115b72a34d0bd5cacf47",
   "baselineRef": "dbfed9ca1785d147b26f4f06e7e6895ac7368fee",
-  "sourceRoot": "sha256:8cb3e0a9aa947f8a473e6a3beb5b1944f2fd2fdef00a42386b10e49f508c9082",
+  "sourceRoot": "sha256:365cb652a2eda128837b3ec491849a54d49a25e0509be93f913b6bfe48e41a98",
   "roles": {
     "authority": "exactly one authority route per family; the route may name multiple co-owned source files",
     "allowedProjectionRoles": [
@@ -530,9 +530,9 @@
         },
         {
           "path": "scripts/run-kfx-profile-suite-tests.mjs",
-          "currentLines": 89,
+          "currentLines": 98,
           "baselineLines": 89,
-          "currentRoot": "sha256:3d7024ffde6aed01312c0635edb3d9fee671f26c1cbc33a68ffd2811203616ac",
+          "currentRoot": "sha256:39ad307e3879616e5d712bafa586d87f6d34366f8d3265fe7304bd8fac0a3dba",
           "baselineRoot": "sha256:d7d0cd90cf794bd7f9240f0f9a2a8ed1757eb42e20179396f6268bee7c1bc035",
           "changedSinceBaseline": true
         },

@@ -6,14 +6,18 @@ import { createRequire } from 'node:module';
 import { constants as osConstants } from 'node:os';
 import path from 'node:path';
 import {
+  type ProductSearchDocument,
   type Profile,
   type QualificationLab,
   type QualificationLabStartupRoute,
+  SYSTEM_HELP_DOCUMENTS,
   type WorkLoop,
+  loadCliHelpSearchDocuments,
   openProfile,
   openQualificationLab,
   openWorkLoop,
   qualificationLabStartupSurface,
+  searchProductDocuments,
 } from '@kungfu-tech/api/capability';
 import { Box, Text, render, useApp } from 'ink';
 import React from 'react';
@@ -21,9 +25,17 @@ import React from 'react';
 import { loadTuiKfxPlan } from './kfx-plan.js';
 import { boundedIndex, decodeShellKey } from './navigation.js';
 import {
+  CLOSED_CONTROL_PLANE,
+  ControlPlaneBar,
+  ControlPlaneOverlay,
+  type ControlPlaneState,
   ProfileShell,
   type ProfileShellModel,
+  QUICK_COMMANDS,
   type TerminalDimensions,
+  createControlPlaneInputFence,
+  quickCommandMatches,
+  reduceControlPlaneInput,
 } from './profile-shell.js';
 import { AgentWorkLabHost } from './qualification-lab-view.js';
 import {
@@ -217,16 +229,41 @@ class DimensionStore {
   }
 }
 
+class InsetDimensionSource {
+  constructor(
+    private readonly source: DimensionStore,
+    private readonly bottomRows: number,
+  ) {}
+  private map(dimensions: TerminalDimensions): TerminalDimensions {
+    return {
+      ...dimensions,
+      rows: Math.max(8, dimensions.rows - this.bottomRows),
+    };
+  }
+  get() {
+    return this.map(this.source.get());
+  }
+  subscribe(listener: (dimensions: TerminalDimensions) => void) {
+    return this.source.subscribe((dimensions) =>
+      listener(this.map(dimensions)),
+    );
+  }
+}
+
 function WorkControlHost({
   profile,
   workLoop,
   dimensions,
   onOpenLab,
+  onSearchDocuments,
+  isInputCaptured,
 }: {
   profile: Profile;
   workLoop: WorkLoop;
-  dimensions: DimensionStore;
+  dimensions: InsetDimensionSource;
   onOpenLab: () => void;
+  onSearchDocuments: (documents: ProductSearchDocument[]) => void;
+  isInputCaptured: () => boolean;
 }) {
   const { exit } = useApp();
   const kfxPlan = React.useMemo(() => loadTuiKfxPlan(process.env), []);
@@ -292,7 +329,38 @@ function WorkControlHost({
     void refresh(process.env.KF_INITIATIVE_ID || '');
   }, [refresh]);
   React.useEffect(() => {
+    const documents: ProductSearchDocument[] = [
+      ...(model.subject.id
+        ? [
+            {
+              id: `work.initiative.${model.subject.id}`,
+              kind: 'work' as const,
+              title: model.subject.title,
+              summary: model.subject.subtitle,
+              keywords: ['initiative', model.subject.id],
+              priority: 0,
+              action: {
+                kind: 'open-work' as const,
+                workId: model.subject.id,
+              },
+            },
+          ]
+        : []),
+      ...model.cards.map((card, index) => ({
+        id: `work.assignment.${card.id}`,
+        kind: 'work' as const,
+        title: card.title,
+        summary: `${card.summary} · ${card.status}`,
+        keywords: ['assignment', card.id, card.status],
+        priority: index + 1,
+        action: { kind: 'open-work' as const, workId: card.id },
+      })),
+    ];
+    onSearchDocuments(documents);
+  }, [model, onSearchDocuments]);
+  React.useEffect(() => {
     const onData = (chunk: Buffer | string) => {
+      if (isInputCaptured()) return;
       const key = decodeShellKey(String(chunk));
       if (key === 'quit') return exit();
       if (key === 'qualification-lab') return onOpenLab();
@@ -325,7 +393,7 @@ function WorkControlHost({
     return () => {
       process.stdin.off('data', onData);
     };
-  }, [exit, model, onOpenLab, refresh]);
+  }, [exit, isInputCaptured, model, onOpenLab, refresh]);
 
   return (
     <ProfileShell
@@ -353,15 +421,18 @@ const PENDING_STARTUP: QualificationLabStartupRoute = {
 function StartingHost({
   dimensions,
   onOpenLab,
+  isInputCaptured,
 }: {
-  dimensions: DimensionStore;
+  dimensions: InsetDimensionSource;
   onOpenLab: () => void;
+  isInputCaptured: () => boolean;
 }) {
   const { exit } = useApp();
   const [size, setSize] = React.useState(dimensions.get());
   React.useEffect(() => dimensions.subscribe(setSize), [dimensions]);
   React.useEffect(() => {
     const onData = (chunk: Buffer | string) => {
+      if (isInputCaptured()) return;
       const key = decodeShellKey(String(chunk));
       if (key === 'quit') exit();
       if (key === 'qualification-lab') onOpenLab();
@@ -370,7 +441,7 @@ function StartingHost({
     return () => {
       process.stdin.off('data', onData);
     };
-  }, [exit, onOpenLab]);
+  }, [exit, isInputCaptured, onOpenLab]);
   return (
     <Box
       width={size.columns}
@@ -397,10 +468,68 @@ function ProductHost({
   lab: QualificationLab;
   dimensions: DimensionStore;
 }) {
+  const { exit } = useApp();
+  const [size, setSize] = React.useState(dimensions.get());
   const [startup, setStartup] = React.useState<QualificationLabStartupRoute>();
   const [surface, setSurface] = React.useState<'auto' | 'lab' | 'work'>('auto');
+  const [control, setControl] =
+    React.useState<ControlPlaneState>(CLOSED_CONTROL_PLANE);
+  const controlRef = React.useRef(control);
+  const inputFence = React.useMemo(
+    () =>
+      createControlPlaneInputFence(() => controlRef.current.mode !== 'closed'),
+    [],
+  );
+  const [cliDocuments, setCliDocuments] = React.useState<
+    ProductSearchDocument[]
+  >([]);
+  const [workDocuments, setWorkDocuments] = React.useState<
+    ProductSearchDocument[]
+  >([]);
+  const [catalogStatus, setCatalogStatus] = React.useState(
+    'Loading governed command catalog',
+  );
   const profile = React.useMemo(() => openTuiProfile(), []);
   const workLoop = React.useMemo(() => openTuiWorkLoop(), []);
+  const contentDimensions = React.useMemo(
+    () => new InsetDimensionSource(dimensions, 2),
+    [dimensions],
+  );
+  React.useEffect(() => dimensions.subscribe(setSize), [dimensions]);
+  React.useEffect(() => {
+    let active = true;
+    const paths = runtimePaths();
+    void loadCliHelpSearchDocuments({
+      bin: paths.bin,
+      env: cliEnvironment() as Record<string, string | undefined>,
+      execFile: (file, args, options) =>
+        new Promise<string>((resolve, reject) => {
+          execFile(file, args, options, (error, stdout, stderr) => {
+            if (error)
+              reject(new Error(describeCliFailure(error, stdout, stderr)));
+            else resolve(stdout);
+          });
+        }),
+    })
+      .then((documents) => {
+        if (!active) return;
+        setCliDocuments(documents);
+        setCatalogStatus(
+          `${documents.length} governed Help and Command entries`,
+        );
+      })
+      .catch((error) => {
+        if (!active) return;
+        setCatalogStatus(
+          `Command catalog unavailable: ${
+            error instanceof Error ? error.message : String(error)
+          }`,
+        );
+      });
+    return () => {
+      active = false;
+    };
+  }, []);
   React.useEffect(() => {
     let active = true;
     void lab
@@ -426,38 +555,211 @@ function ProductHost({
       active = false;
     };
   }, [lab]);
-  if (!startup && surface !== 'lab') {
-    return (
-      <StartingHost
-        dimensions={dimensions}
-        onOpenLab={() => setSurface('lab')}
-      />
-    );
-  }
+
   const resolvedStartup = startup ?? PENDING_STARTUP;
   const startupSurface = qualificationLabStartupSurface(resolvedStartup);
   const labOpen =
     surface === 'lab' ||
     (surface === 'auto' && startupSurface === 'qualification-lab');
-  if (labOpen) {
-    return (
+  const viewDocuments = React.useMemo<ProductSearchDocument[]>(
+    () => [
+      {
+        id: 'view.work-control',
+        kind: 'view',
+        title: 'Work Control',
+        summary: 'Open the read-only Work and Profile projection.',
+        keywords: ['home', 'assignments', 'initiatives'],
+        action: { kind: 'open-view', viewId: 'work' },
+      },
+      {
+        id: 'view.agent-work-lab',
+        kind: 'view',
+        title: 'Agent Work Lab',
+        summary: 'Compare bounded Agent Work behavior across two Sessions.',
+        keywords: ['qualification', 'handoff', 'session'],
+        action: { kind: 'open-view', viewId: 'lab' },
+      },
+    ],
+    [],
+  );
+  const quickSearchDocuments = React.useMemo<ProductSearchDocument[]>(
+    () =>
+      QUICK_COMMANDS.map((command, index) => ({
+        id: `command.quick.${command.id}`,
+        kind: 'command',
+        title: command.command,
+        summary: command.summary,
+        section: 'Quick commands',
+        keywords: [command.title],
+        priority: index,
+        action: {
+          kind: 'describe-command',
+          command: command.command,
+        },
+      })),
+    [],
+  );
+  const documents = React.useMemo(
+    () => [
+      ...SYSTEM_HELP_DOCUMENTS,
+      ...quickSearchDocuments,
+      ...cliDocuments,
+      ...workDocuments,
+      ...viewDocuments,
+    ],
+    [cliDocuments, quickSearchDocuments, viewDocuments, workDocuments],
+  );
+  const searchResults = React.useMemo(
+    () => searchProductDocuments(documents, control.query),
+    [control.query, documents],
+  );
+  const quickCommands = React.useMemo(
+    () => quickCommandMatches(control.query),
+    [control.query],
+  );
+  const searchResultsRef = React.useRef(searchResults);
+  const quickCommandsRef = React.useRef(quickCommands);
+  searchResultsRef.current = searchResults;
+  quickCommandsRef.current = quickCommands;
+
+  const setControlNow = React.useCallback((next: ControlPlaneState) => {
+    controlRef.current = next;
+    setControl(next);
+  }, []);
+  const closeControl = React.useCallback(
+    () => setControlNow(CLOSED_CONTROL_PLANE),
+    [setControlNow],
+  );
+  const activateControl = React.useCallback(() => {
+    const current = controlRef.current;
+    if (current.mode === 'commands') {
+      const command = quickCommandsRef.current[current.selected];
+      if (!command) return;
+      if (command.action === 'help') {
+        setControlNow({ mode: 'help', query: '', selected: 0 });
+      } else if (command.action === 'search') {
+        setControlNow({ mode: 'search', query: '', selected: 0 });
+      } else if (command.action === 'work') {
+        setSurface('work');
+        closeControl();
+      } else if (command.action === 'lab') {
+        setSurface('lab');
+        closeControl();
+      } else if (command.action === 'home') {
+        setSurface('auto');
+        closeControl();
+      } else {
+        exit();
+      }
+      return;
+    }
+    if (current.mode !== 'search') return;
+    const result = searchResultsRef.current[current.selected];
+    if (!result) return;
+    if (result.action.kind === 'open-work') {
+      setSurface('work');
+      closeControl();
+    } else if (result.action.kind === 'open-view') {
+      setSurface(result.action.viewId === 'lab' ? 'lab' : 'work');
+      closeControl();
+    } else {
+      setControlNow({
+        mode: 'detail',
+        query: current.query,
+        selected: current.selected,
+        detail: result,
+      });
+    }
+  }, [closeControl, exit, setControlNow]);
+  const activateControlRef = React.useRef(activateControl);
+  activateControlRef.current = activateControl;
+  const isInputCaptured = React.useCallback(
+    () => inputFence.isCaptured(),
+    [inputFence],
+  );
+  React.useEffect(() => {
+    const onData = (chunk: Buffer | string) => {
+      const current = controlRef.current;
+      const itemCount =
+        current.mode === 'commands'
+          ? quickCommandsRef.current.length
+          : current.mode === 'search'
+            ? searchResultsRef.current.length
+            : 0;
+      const update = reduceControlPlaneInput(current, String(chunk), itemCount);
+      if (!update.handled) return;
+      inputFence.captureCurrentEmission();
+      setControlNow(update.state);
+      if (update.quit) return exit();
+      if (update.activate) activateControlRef.current();
+    };
+    process.stdin.prependListener('data', onData);
+    return () => {
+      process.stdin.off('data', onData);
+    };
+  }, [exit, inputFence, setControlNow]);
+
+  let content: React.ReactNode;
+  if (!startup && surface !== 'lab') {
+    content = (
+      <StartingHost
+        dimensions={contentDimensions}
+        onOpenLab={() => setSurface('lab')}
+        isInputCaptured={isInputCaptured}
+      />
+    );
+  } else if (labOpen) {
+    content = (
       <AgentWorkLabHost
         lab={lab}
         startup={resolvedStartup}
-        dimensions={dimensions}
+        dimensions={contentDimensions}
+        isInputCaptured={isInputCaptured}
         onOpenWork={
           startupSurface === 'work-graph' ? () => setSurface('work') : undefined
         }
       />
     );
+  } else {
+    content = (
+      <WorkControlHost
+        profile={profile}
+        workLoop={workLoop}
+        dimensions={contentDimensions}
+        onOpenLab={() => setSurface('lab')}
+        onSearchDocuments={setWorkDocuments}
+        isInputCaptured={isInputCaptured}
+      />
+    );
   }
+
+  const resultCount =
+    control.mode === 'commands'
+      ? quickCommands.length
+      : control.mode === 'search'
+        ? searchResults.length
+        : 0;
   return (
-    <WorkControlHost
-      profile={profile}
-      workLoop={workLoop}
-      dimensions={dimensions}
-      onOpenLab={() => setSurface('lab')}
-    />
+    <Box
+      width={size.columns}
+      height={terminalCanvasRows(size.rows)}
+      flexDirection="column"
+      overflow="hidden"
+    >
+      {content}
+      <ControlPlaneOverlay
+        dimensions={contentDimensions.get()}
+        state={control}
+        searchResults={searchResults}
+        quickCommands={quickCommands}
+        catalogStatus={catalogStatus}
+      />
+      <ControlPlaneBar
+        dimensions={size}
+        state={control}
+        resultCount={resultCount}
+      />
+    </Box>
   );
 }
 

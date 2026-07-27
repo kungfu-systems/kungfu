@@ -1,7 +1,12 @@
 // SPDX-License-Identifier: Apache-2.0
 
+import type {
+  ProductSearchDocument,
+  ProductSearchResult,
+} from '@kungfu-tech/api/capability';
 import { Box, Text } from 'ink';
 import React from 'react';
+import { boundedIndex } from './navigation.js';
 import { terminalCanvasRows } from './terminal-canvas.js';
 import type { WorkLoopShellModel } from './work-loop-contribution.js';
 
@@ -915,6 +920,465 @@ export function SessionWorkbench(props: SessionWorkbenchProps) {
           </Text>
         </Box>
       ) : null}
+    </Box>
+  );
+}
+
+export type ControlPlaneMode =
+  | 'closed'
+  | 'help'
+  | 'commands'
+  | 'search'
+  | 'detail';
+
+export type ControlPlaneState = {
+  mode: ControlPlaneMode;
+  query: string;
+  selected: number;
+  detail?: ProductSearchDocument;
+};
+
+export type ControlPlaneUpdate = {
+  handled: boolean;
+  state: ControlPlaneState;
+  activate?: boolean;
+  quit?: boolean;
+};
+
+export type ControlPlaneInputFence = {
+  captureCurrentEmission: () => void;
+  isCaptured: () => boolean;
+};
+
+export function createControlPlaneInputFence(
+  isOpen: () => boolean,
+): ControlPlaneInputFence {
+  let capturedCurrentEmission = false;
+  return {
+    captureCurrentEmission: () => {
+      capturedCurrentEmission = true;
+      queueMicrotask(() => {
+        capturedCurrentEmission = false;
+      });
+    },
+    isCaptured: () => capturedCurrentEmission || isOpen(),
+  };
+}
+
+export type QuickCommand = {
+  id: string;
+  command: `/${string}`;
+  title: string;
+  summary: string;
+  action: 'help' | 'search' | 'work' | 'lab' | 'home' | 'quit';
+};
+
+export const QUICK_COMMANDS: QuickCommand[] = [
+  {
+    id: 'help',
+    command: '/help',
+    title: 'Open Help',
+    summary:
+      'Explain the input bar, shortcuts, search sources, and safety boundary.',
+    action: 'help',
+  },
+  {
+    id: 'search',
+    command: '/search',
+    title: 'Search Kungfu',
+    summary: 'Find Help, Commands, Work, and product views.',
+    action: 'search',
+  },
+  {
+    id: 'work',
+    command: '/work',
+    title: 'Open Work',
+    summary: 'Open the current read-only Work Control projection.',
+    action: 'work',
+  },
+  {
+    id: 'lab',
+    command: '/lab',
+    title: 'Open Lab',
+    summary: 'Open the installed first-party work experiment suite.',
+    action: 'lab',
+  },
+  {
+    id: 'home',
+    command: '/home',
+    title: 'Open startup home',
+    summary: 'Return to the surface selected from current Work evidence.',
+    action: 'home',
+  },
+  {
+    id: 'quit',
+    command: '/quit',
+    title: 'Quit Kungfu',
+    summary: 'Leave the TUI and restore the terminal.',
+    action: 'quit',
+  },
+];
+
+export const CLOSED_CONTROL_PLANE: ControlPlaneState = {
+  mode: 'closed',
+  query: '',
+  selected: 0,
+};
+
+export function quickCommandMatches(query: string): QuickCommand[] {
+  const needle = query.replace(/^\//, '').trim().toLocaleLowerCase();
+  if (!needle) return QUICK_COMMANDS;
+  const prefixMatches = QUICK_COMMANDS.filter(
+    (command) =>
+      command.command.slice(1).startsWith(needle) ||
+      command.title.toLocaleLowerCase().startsWith(needle),
+  );
+  if (prefixMatches.length > 0) return prefixMatches;
+  return QUICK_COMMANDS.filter((command) =>
+    `${command.command} ${command.title} ${command.summary}`
+      .toLocaleLowerCase()
+      .includes(needle),
+  );
+}
+
+function openedControlPlane(
+  mode: Exclude<ControlPlaneMode, 'closed' | 'detail'>,
+  query = '',
+): ControlPlaneState {
+  return { mode, query, selected: 0 };
+}
+
+export function reduceControlPlaneInput(
+  current: ControlPlaneState,
+  input: string,
+  itemCount: number,
+): ControlPlaneUpdate {
+  if (input === '\u0003') {
+    return { handled: true, state: current, quit: true };
+  }
+  if (input === '\u000b') {
+    return { handled: true, state: openedControlPlane('search') };
+  }
+  if (current.mode === 'closed') {
+    if (input === '?') {
+      return { handled: true, state: openedControlPlane('help') };
+    }
+    if (input === '/') {
+      return {
+        handled: true,
+        state: openedControlPlane('commands', '/'),
+      };
+    }
+    return { handled: false, state: current };
+  }
+  if (input === '\u001b') {
+    return { handled: true, state: CLOSED_CONTROL_PLANE };
+  }
+  if (current.mode === 'help' || current.mode === 'detail') {
+    if (
+      input === '?' ||
+      input === '\r' ||
+      input === '\n' ||
+      input === '\u007f'
+    ) {
+      return { handled: true, state: CLOSED_CONTROL_PLANE };
+    }
+    if (input === '/') {
+      return {
+        handled: true,
+        state: openedControlPlane('commands', '/'),
+      };
+    }
+    return { handled: true, state: current };
+  }
+  if (input === '\u001b[A') {
+    return {
+      handled: true,
+      state: {
+        ...current,
+        selected: boundedIndex(current.selected, -1, itemCount),
+      },
+    };
+  }
+  if (input === '\u001b[B' || input === '\t') {
+    return {
+      handled: true,
+      state: {
+        ...current,
+        selected: boundedIndex(current.selected, 1, itemCount),
+      },
+    };
+  }
+  if (input === '\r' || input === '\n') {
+    return { handled: true, state: current, activate: itemCount > 0 };
+  }
+  if (input === '\u007f' || input === '\b') {
+    const next = [...current.query].slice(0, -1).join('');
+    if (current.mode === 'commands' && next === '') {
+      return { handled: true, state: CLOSED_CONTROL_PLANE };
+    }
+    return {
+      handled: true,
+      state: { ...current, query: next, selected: 0 },
+    };
+  }
+  if (/^[\x20-\x7e]+$/.test(input)) {
+    return {
+      handled: true,
+      state: {
+        ...current,
+        query: `${current.query}${input}`,
+        selected: 0,
+      },
+    };
+  }
+  return { handled: true, state: current };
+}
+
+function controlPlaneKindColor(kind: ProductSearchDocument['kind']): string {
+  if (kind === 'work') return 'green';
+  if (kind === 'command') return 'yellow';
+  if (kind === 'view') return 'magenta';
+  return 'cyan';
+}
+
+function ControlPlaneResultRows({
+  rows,
+  selected,
+  height,
+}: {
+  rows: Array<ProductSearchDocument | ProductSearchResult>;
+  selected: number;
+  height: number;
+}) {
+  const visibleCount = Math.max(1, height);
+  const start = Math.min(
+    Math.max(0, selected - visibleCount + 1),
+    Math.max(0, rows.length - visibleCount),
+  );
+  const visible = rows.slice(start, start + visibleCount);
+  return (
+    <Box flexDirection="column" flexGrow={1} minHeight={0}>
+      {visible.length === 0 ? (
+        <Text color="yellow">No matching results.</Text>
+      ) : null}
+      {visible.map((row, index) => {
+        const absoluteIndex = start + index;
+        return (
+          <Box key={row.id} flexDirection="column">
+            <Text
+              bold={absoluteIndex === selected}
+              color={
+                absoluteIndex === selected
+                  ? 'black'
+                  : controlPlaneKindColor(row.kind)
+              }
+              backgroundColor={absoluteIndex === selected ? 'cyan' : undefined}
+              wrap="truncate-end"
+            >
+              {absoluteIndex === selected ? '›' : ' '}{' '}
+              {row.kind.toUpperCase().padEnd(7)} {row.title}
+            </Text>
+            <Text dimColor wrap="truncate-end">
+              {'  '}
+              {row.summary}
+            </Text>
+          </Box>
+        );
+      })}
+    </Box>
+  );
+}
+
+function QuickCommandRows({
+  rows,
+  selected,
+  height,
+}: {
+  rows: QuickCommand[];
+  selected: number;
+  height: number;
+}) {
+  const visibleCount = Math.max(1, height);
+  const start = Math.min(
+    Math.max(0, selected - visibleCount + 1),
+    Math.max(0, rows.length - visibleCount),
+  );
+  return (
+    <Box flexDirection="column" flexGrow={1} minHeight={0}>
+      {rows.length === 0 ? (
+        <Text color="yellow">No matching quick command.</Text>
+      ) : null}
+      {rows.slice(start, start + visibleCount).map((row, index) => {
+        const absoluteIndex = start + index;
+        return (
+          <Box key={row.id} flexDirection="column">
+            <Text
+              bold={absoluteIndex === selected}
+              color={absoluteIndex === selected ? 'black' : 'yellow'}
+              backgroundColor={absoluteIndex === selected ? 'cyan' : undefined}
+            >
+              {absoluteIndex === selected ? '›' : ' '} {row.command.padEnd(10)}{' '}
+              {row.title}
+            </Text>
+            <Text dimColor wrap="truncate-end">
+              {'  '}
+              {row.summary}
+            </Text>
+          </Box>
+        );
+      })}
+    </Box>
+  );
+}
+
+export function ControlPlaneOverlay({
+  dimensions,
+  state,
+  searchResults,
+  quickCommands,
+  catalogStatus,
+}: {
+  dimensions: TerminalDimensions;
+  state: ControlPlaneState;
+  searchResults: ProductSearchResult[];
+  quickCommands: QuickCommand[];
+  catalogStatus: string;
+}) {
+  if (state.mode === 'closed') return null;
+  const height = terminalCanvasRows(dimensions.rows);
+  const rowBudget = Math.max(1, Math.floor((height - 7) / 2));
+  const title =
+    state.mode === 'help'
+      ? 'HELP'
+      : state.mode === 'commands'
+        ? 'QUICK COMMANDS'
+        : state.mode === 'detail'
+          ? 'RESULT DETAILS'
+          : 'SEARCH KUNGFU';
+  return (
+    <Box
+      position="absolute"
+      width={dimensions.columns}
+      height={height}
+      flexDirection="column"
+      borderStyle="double"
+      borderColor="cyan"
+      paddingX={1}
+      overflow="hidden"
+    >
+      <Text bold color="cyan">
+        KUNGFU · {title}
+      </Text>
+      {state.mode === 'help' ? (
+        <>
+          <Text>? Help · / Quick commands · Ctrl+K Search · Esc return</Text>
+          <Text dimColor>
+            The input bar runs bounded product actions. It is not a shell and
+            does not execute arbitrary text.
+          </Text>
+          <Text dimColor>
+            Search covers system Help, governed Kungfu Commands, current Work,
+            and available product views.
+          </Text>
+          <Box marginTop={1} flexDirection="column">
+            <Text color="yellow">/work</Text>
+            <Text color="yellow">/lab</Text>
+            <Text color="yellow">/home</Text>
+            <Text color="yellow">/search</Text>
+            <Text color="yellow">/quit</Text>
+          </Box>
+        </>
+      ) : null}
+      {state.mode === 'commands' ? (
+        <>
+          <Text dimColor>
+            Enter runs the selected bounded action · ↑↓ choose · Esc cancel
+          </Text>
+          <QuickCommandRows
+            rows={quickCommands}
+            selected={state.selected}
+            height={rowBudget}
+          />
+        </>
+      ) : null}
+      {state.mode === 'search' ? (
+        <>
+          <Text dimColor>
+            {catalogStatus} · Enter opens or explains · ↑↓ choose · Esc cancel
+          </Text>
+          <ControlPlaneResultRows
+            rows={searchResults}
+            selected={state.selected}
+            height={rowBudget}
+          />
+        </>
+      ) : null}
+      {state.mode === 'detail' && state.detail ? (
+        <Box flexDirection="column" marginTop={1}>
+          <Text bold color={controlPlaneKindColor(state.detail.kind)}>
+            {state.detail.kind.toUpperCase()} · {state.detail.title}
+          </Text>
+          <Text>{state.detail.summary}</Text>
+          {state.detail.section ? (
+            <Text dimColor>Section · {state.detail.section}</Text>
+          ) : null}
+          {state.detail.action.kind === 'describe-command' ? (
+            <Text color="yellow">
+              Inspect only · run `{state.detail.action.command} --help` in a
+              shell. Search did not execute it.
+            </Text>
+          ) : null}
+          <Text dimColor>Enter / Esc / Backspace returns.</Text>
+        </Box>
+      ) : null}
+    </Box>
+  );
+}
+
+export function ControlPlaneBar({
+  dimensions,
+  state,
+  resultCount,
+}: {
+  dimensions: TerminalDimensions;
+  state: ControlPlaneState;
+  resultCount: number;
+}) {
+  const value =
+    state.mode === 'commands'
+      ? state.query
+      : state.mode === 'search'
+        ? state.query
+        : '';
+  const label =
+    state.mode === 'closed'
+      ? '›  ? Help   / Commands   Ctrl+K Search'
+      : state.mode === 'help'
+        ? '›  Help open · Esc return · / commands · Ctrl+K search'
+        : state.mode === 'detail'
+          ? '›  Result details · Enter or Esc to return'
+          : `› ${value}${value ? '' : ' '}  · ${resultCount} result${resultCount === 1 ? '' : 's'}`;
+  return (
+    <Box
+      position="absolute"
+      marginTop={Math.max(0, terminalCanvasRows(dimensions.rows) - 2)}
+      width={dimensions.columns}
+      height={2}
+      borderStyle="single"
+      borderLeft={false}
+      borderRight={false}
+      borderBottom={false}
+      borderColor={state.mode === 'closed' ? 'gray' : 'cyan'}
+      paddingX={1}
+      overflow="hidden"
+    >
+      <Text
+        color={state.mode === 'closed' ? 'gray' : 'cyan'}
+        wrap="truncate-end"
+      >
+        {label}
+      </Text>
     </Box>
   );
 }

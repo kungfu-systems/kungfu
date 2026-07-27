@@ -1,5 +1,9 @@
 import * as capability from '@kungfu-tech/api/capability';
-import type { QualificationLabStartupRoute } from '@kungfu-tech/api/capability';
+import type {
+  ProductSearchDocument,
+  ProductSearchResult,
+  QualificationLabStartupRoute,
+} from '@kungfu-tech/api/capability';
 import * as query from '@kungfu-tech/api/query';
 // Reference app shell: boots the in-process runtime and mounts kfx loaded
 // from extension packages. The shell owns system concerns only — extension
@@ -389,28 +393,66 @@ function useWindowChrome(): [
 function ShellTitleBar({
   chrome,
   activeTitle,
-  commandText,
-  commandOptions,
+  searchText,
+  searchResults,
+  searchStatus,
   settingsOpen,
   workspaceLabel,
-  onCommandChange,
-  onCommandSubmit,
+  onSearchChange,
+  onSearchActivate,
   onOpenSettings,
   onOpenWorkspace,
   onWindowControl,
 }: {
   chrome: WindowChromeConfig;
   activeTitle: string;
-  commandText: string;
-  commandOptions: { id: string; title: string }[];
+  searchText: string;
+  searchResults: ProductSearchResult[];
+  searchStatus: string;
   settingsOpen: boolean;
   workspaceLabel: string;
-  onCommandChange: (value: string) => void;
-  onCommandSubmit: () => void;
+  onSearchChange: (value: string) => void;
+  onSearchActivate: (result: ProductSearchResult) => void;
   onOpenSettings: () => void;
   onOpenWorkspace: () => void;
   onWindowControl: (control: WindowChromeControl) => void;
 }) {
+  const searchRoot = React.useRef<HTMLFormElement>(null);
+  const searchInput = React.useRef<HTMLInputElement>(null);
+  const [searchOpen, setSearchOpen] = React.useState(false);
+  const [selectedSearchResult, setSelectedSearchResult] = React.useState(0);
+  React.useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'k') {
+        event.preventDefault();
+        setSearchOpen(true);
+        searchInput.current?.focus();
+        searchInput.current?.select();
+      }
+    };
+    const onPointerDown = (event: MouseEvent) => {
+      const target = event.target;
+      if (
+        target instanceof Node &&
+        searchRoot.current &&
+        !searchRoot.current.contains(target)
+      ) {
+        setSearchOpen(false);
+      }
+    };
+    window.addEventListener('keydown', onKeyDown);
+    window.addEventListener('mousedown', onPointerDown);
+    return () => {
+      window.removeEventListener('keydown', onKeyDown);
+      window.removeEventListener('mousedown', onPointerDown);
+    };
+  }, []);
+  const activateSearchResult = (index = selectedSearchResult) => {
+    const result = searchResults[index];
+    if (!result) return;
+    onSearchActivate(result);
+    setSearchOpen(false);
+  };
   const dragRegion: ElectronChromeStyle = {
     WebkitAppRegion: chrome.draggable ? 'drag' : undefined,
   };
@@ -458,6 +500,8 @@ function ShellTitleBar({
     <header
       style={{
         ...dragRegion,
+        position: 'relative',
+        zIndex: 100,
         height: 42,
         flexShrink: 0,
         display: 'grid',
@@ -492,23 +536,50 @@ function ShellTitleBar({
           Kungfu Episodes
         </div>
         <form
+          ref={searchRoot}
           onSubmit={(event) => {
             event.preventDefault();
-            onCommandSubmit();
+            activateSearchResult();
           }}
           style={{
             ...interactiveRegion,
+            position: 'relative',
             minWidth: 0,
             display: 'flex',
             alignItems: 'center',
+            zIndex: 50,
           }}
         >
           <input
-            aria-label="Search views"
-            list="kf-shell-command-options"
-            value={commandText}
-            onChange={(event) => onCommandChange(event.target.value)}
-            placeholder="Search"
+            ref={searchInput}
+            aria-label="Search Kungfu"
+            value={searchText}
+            onFocus={() => setSearchOpen(true)}
+            onChange={(event) => {
+              setSelectedSearchResult(0);
+              onSearchChange(event.target.value);
+            }}
+            onKeyDown={(event) => {
+              if (event.key === 'ArrowDown') {
+                event.preventDefault();
+                setSelectedSearchResult(
+                  (current) =>
+                    (current + 1) % Math.max(1, searchResults.length),
+                );
+              } else if (event.key === 'ArrowUp') {
+                event.preventDefault();
+                setSelectedSearchResult(
+                  (current) =>
+                    (current - 1 + Math.max(1, searchResults.length)) %
+                    Math.max(1, searchResults.length),
+                );
+              } else if (event.key === 'Escape') {
+                event.preventDefault();
+                setSearchOpen(false);
+                searchInput.current?.blur();
+              }
+            }}
+            placeholder="Search Help, Commands, Work"
             style={{
               width: '100%',
               height: 26,
@@ -522,11 +593,108 @@ function ShellTitleBar({
               fontSize: 12,
             }}
           />
-          <datalist id="kf-shell-command-options">
-            {commandOptions.map((option) => (
-              <option key={option.id} value={option.title} />
-            ))}
-          </datalist>
+          {searchOpen ? (
+            <section
+              aria-label="Kungfu search results"
+              style={{
+                position: 'absolute',
+                top: 30,
+                left: 0,
+                width: '100%',
+                maxHeight: 360,
+                overflow: 'auto',
+                boxSizing: 'border-box',
+                border: '1px solid #454545',
+                borderRadius: 6,
+                background: '#181818',
+                boxShadow: '0 12px 28px rgba(0, 0, 0, 0.55)',
+                padding: 5,
+              }}
+            >
+              <div
+                style={{
+                  ...mono,
+                  color: '#858585',
+                  padding: '3px 7px 6px',
+                  fontSize: 11,
+                }}
+              >
+                {searchStatus} · ↑↓ choose · Enter open
+              </div>
+              {searchResults.length === 0 ? (
+                <div style={{ ...mono, color: '#dcdcaa', padding: 8 }}>
+                  No matching Help, Command, Work, or view.
+                </div>
+              ) : null}
+              {searchResults.map((result, index) => (
+                <button
+                  key={result.id}
+                  type="button"
+                  aria-pressed={index === selectedSearchResult}
+                  onMouseEnter={() => setSelectedSearchResult(index)}
+                  onClick={() => activateSearchResult(index)}
+                  style={{
+                    ...mono,
+                    width: '100%',
+                    display: 'grid',
+                    gridTemplateColumns: '68px minmax(0, 1fr)',
+                    gap: 7,
+                    padding: '6px 7px',
+                    border: 'none',
+                    borderRadius: 4,
+                    cursor: 'pointer',
+                    textAlign: 'left',
+                    color: '#cccccc',
+                    background:
+                      index === selectedSearchResult
+                        ? '#04395e'
+                        : 'transparent',
+                  }}
+                >
+                  <span
+                    style={{
+                      color:
+                        result.kind === 'work'
+                          ? '#4ec9b0'
+                          : result.kind === 'command'
+                            ? '#dcdcaa'
+                            : result.kind === 'view'
+                              ? '#c586c0'
+                              : '#9cdcfe',
+                      fontSize: 10,
+                      textTransform: 'uppercase',
+                    }}
+                  >
+                    {result.kind}
+                  </span>
+                  <span style={{ minWidth: 0 }}>
+                    <span
+                      style={{
+                        display: 'block',
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        whiteSpace: 'nowrap',
+                      }}
+                    >
+                      {result.title}
+                    </span>
+                    <span
+                      style={{
+                        display: 'block',
+                        color: '#858585',
+                        fontSize: 11,
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        whiteSpace: 'nowrap',
+                      }}
+                    >
+                      {result.summary}
+                    </span>
+                  </span>
+                </button>
+              ))}
+            </section>
+          ) : null}
         </form>
       </div>
       <div
@@ -901,7 +1069,16 @@ function App() {
   const [params, setParams] = React.useState<Record<string, string>>({});
   const [settingsOpen, setSettingsOpen] = React.useState(false);
   const [workspaceOpen, setWorkspaceOpen] = React.useState(false);
-  const [commandText, setCommandText] = React.useState('');
+  const [searchText, setSearchText] = React.useState('');
+  const [cliSearchDocuments, setCliSearchDocuments] = React.useState<
+    ProductSearchDocument[]
+  >([]);
+  const [workSearchDocuments, setWorkSearchDocuments] = React.useState<
+    ProductSearchDocument[]
+  >([]);
+  const [searchCatalogStatus, setSearchCatalogStatus] = React.useState(
+    'Loading governed command catalog',
+  );
   const [windowChrome, controlWindow] = useWindowChrome();
   const [config, setConfig] = React.useState<KungfuResolvedConfig | null>(null);
   const [configError, setConfigError] = React.useState('');
@@ -931,6 +1108,63 @@ function App() {
       setActive(consoleEntry.id);
     }
   }, [config, enabled]);
+
+  React.useEffect(() => {
+    type ExecFile = (
+      file: string,
+      args: string[],
+      options: {
+        encoding: 'utf8';
+        env: Record<string, string | undefined>;
+        maxBuffer: number;
+      },
+      callback: (error: Error | null, stdout: string, stderr: string) => void,
+    ) => void;
+    const { execFile } = window.require('node:child_process') as {
+      execFile: ExecFile;
+    };
+    const env: Record<string, string | undefined> = {
+      ...window.process.env,
+      KUNGFU_AS_VARIANT: undefined,
+    };
+    let active = true;
+    void capability
+      .loadCliHelpSearchDocuments({
+        bin:
+          env.KUNGFU_CLI_BIN ||
+          env.KUNGFU_BIN ||
+          (window.process.platform === 'win32' ? 'kungfu.exe' : 'kungfu'),
+        env,
+        execFile: (file, args, options) =>
+          new Promise<string>((resolve, reject) => {
+            execFile(file, args, options, (error, stdout, stderr) => {
+              if (error) {
+                reject(new Error(stderr.trim() || error.message));
+              } else {
+                resolve(stdout);
+              }
+            });
+          }),
+      })
+      .then((documents) => {
+        if (!active) return;
+        setCliSearchDocuments(documents);
+        setSearchCatalogStatus(
+          `${documents.length} governed Help and Command entries`,
+        );
+      })
+      .catch((error) => {
+        if (!active) return;
+        setSearchCatalogStatus(
+          `Command catalog unavailable: ${
+            error instanceof Error ? error.message : String(error)
+          }`,
+        );
+      });
+    return () => {
+      active = false;
+    };
+  }, []);
 
   // shared refresh bus: one shell-owned timer, kfx subscribe
   const subscribers = React.useRef(new Set<() => void>());
@@ -998,6 +1232,39 @@ function App() {
       window.clearInterval(timer);
     };
   }, [runtime.ok]);
+
+  React.useEffect(() => {
+    if (!runtime.work) {
+      setWorkSearchDocuments([]);
+      return;
+    }
+    const refresh = () => {
+      try {
+        runtime.work?.refresh();
+        setWorkSearchDocuments(
+          (runtime.work?.items() ?? []).map((item, index) => ({
+            id: `work.${item.workId}`,
+            kind: 'work',
+            title: item.title || item.workId,
+            summary:
+              [item.summary, item.nextAction && `Next: ${item.nextAction}`]
+                .filter(Boolean)
+                .join(' · ') || 'Current Work information.',
+            keywords: [item.workId, item.kind || '', item.nextAction || ''],
+            priority: index,
+            action: { kind: 'open-work', workId: item.workId },
+          })),
+        );
+      } catch {
+        setWorkSearchDocuments([]);
+      }
+    };
+    refresh();
+    subscribers.current.add(refresh);
+    return () => {
+      subscribers.current.delete(refresh);
+    };
+  }, [runtime.work]);
 
   React.useEffect(
     () => () => {
@@ -1400,29 +1667,51 @@ function App() {
     loaded.entries.find((k) => k.id === 'settings') ??
     null;
   const settingsCaps = settingsKfx ? subsetCaps(runtime, settingsKfx) : null;
-  const commandOptions = enabled.map((entry) => ({
-    id: entry.id,
-    title: entry.title,
-  }));
-  const submitCommand = React.useCallback(() => {
-    const query = commandText.trim().toLowerCase();
-    if (!query) return;
-    const match =
-      enabled.find((entry) => entry.title.toLowerCase() === query) ??
-      enabled.find((entry) => entry.id.toLowerCase() === query) ??
-      enabled.find((entry) => entry.title.toLowerCase().includes(query)) ??
-      enabled.find((entry) => entry.id.toLowerCase().includes(query));
-    if (!match) {
-      showNotification({
-        level: 'info',
-        title: 'No matching view',
-        message: commandText,
-      });
-      return;
-    }
-    openKfx(match.id);
-    setCommandText('');
-  }, [commandText, enabled, openKfx, showNotification]);
+  const viewSearchDocuments = React.useMemo<ProductSearchDocument[]>(
+    () =>
+      enabled.map((entry, index) => ({
+        id: `view.${entry.id}`,
+        kind: 'view',
+        title: entry.title,
+        summary: `Open the ${entry.title} product view.`,
+        keywords: [entry.id, ...(entry.product.roles ?? [])],
+        priority: index,
+        action: { kind: 'open-view', viewId: entry.id },
+      })),
+    [enabled],
+  );
+  const searchDocuments = React.useMemo(
+    () => [
+      ...capability.SYSTEM_HELP_DOCUMENTS,
+      ...cliSearchDocuments,
+      ...workSearchDocuments,
+      ...viewSearchDocuments,
+    ],
+    [cliSearchDocuments, viewSearchDocuments, workSearchDocuments],
+  );
+  const searchResults = React.useMemo(
+    () => capability.searchProductDocuments(searchDocuments, searchText),
+    [searchDocuments, searchText],
+  );
+  const activateSearchResult = React.useCallback(
+    (result: ProductSearchResult) => {
+      if (result.action.kind === 'open-view') {
+        openKfx(result.action.viewId);
+      } else if (result.action.kind === 'open-work') {
+        openKfx(profileHomeId(profile, enabled), {
+          workId: result.action.workId,
+        });
+      } else {
+        showNotification({
+          level: 'info',
+          title: result.title,
+          message: result.summary,
+        });
+      }
+      setSearchText('');
+    },
+    [enabled, openKfx, profile, showNotification],
+  );
 
   const workspaceRuntime = deriveWorkspaceRuntimePresentation(runtimeStatus);
   const trustCounts = runtimeStatus?.payload?.assessments?.counts ?? {};
@@ -1859,14 +2148,15 @@ function App() {
         activeTitle={
           labOpen ? 'Agent Work Lab' : (activeKfx?.title ?? 'Kungfu Episodes')
         }
-        commandText={commandText}
-        commandOptions={commandOptions}
+        searchText={searchText}
+        searchResults={searchResults}
+        searchStatus={searchCatalogStatus}
         settingsOpen={settingsOpen}
         workspaceLabel={
           window.process.env.KF_WORKSPACE_DISPLAY_PATH || 'Home Workspace'
         }
-        onCommandChange={setCommandText}
-        onCommandSubmit={submitCommand}
+        onSearchChange={setSearchText}
+        onSearchActivate={activateSearchResult}
         onOpenSettings={() => setSettingsOpen(true)}
         onOpenWorkspace={() => setWorkspaceOpen(true)}
         onWindowControl={controlWindow}
