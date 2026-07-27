@@ -22,12 +22,7 @@ export function runRuntimeUpgradeTests() {
   ]
     .filter(Boolean)
     .join(path.delimiter);
-  const uv = runtimeUpgradeUvCommand([
-    'run',
-    '--project',
-    path.join(root, 'framework', 'core'),
-    '--frozen',
-    'pytest',
+  const testFiles = [
     path.join(
       root,
       'framework',
@@ -53,7 +48,21 @@ export function runRuntimeUpgradeTests() {
       'test_release_channel.py',
     ),
     '-q',
-  ]);
+  ];
+  const readonlyPytest = process.env.KUNGFU_READONLY_PYTEST;
+  const uv = readonlyPytest
+    ? {
+        command: readonlyPytest,
+        args: ['-p', 'no:cacheprovider', ...testFiles],
+      }
+    : runtimeUpgradeUvCommand([
+        'run',
+        '--project',
+        path.join(root, 'framework', 'core'),
+        '--frozen',
+        'pytest',
+        ...testFiles,
+      ]);
   const result = spawnSync(uv.command, uv.args, {
     cwd: root,
     env: { ...process.env, PYTHONPATH: pythonPath },

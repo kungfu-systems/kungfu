@@ -28,8 +28,8 @@ function mutate(fn) {
   return collectHubStarterIssues(value, ROOT).map(({ code }) => code);
 }
 
-test('repository passes the concept-only contract and documentation gate', () => {
-  const result = validateHubStarterRepository(ROOT);
+test('repository passes the concept-only contract and documentation gate', async () => {
+  const result = await validateHubStarterRepository(ROOT);
   assert.equal(result.ok, true, JSON.stringify(result, null, 2));
   assert.deepEqual(result.passedEvidence, ['concept-static']);
 });

@@ -51,8 +51,8 @@ function keys(issues) {
   return issues.map((entry) => entry.key);
 }
 
-test('repository matches the exact known-issue baseline', () => {
-  const result = validateRepository(ROOT, '2026-07-23');
+test('repository matches the exact known-issue baseline', async () => {
+  const result = await validateRepository(ROOT, '2026-07-23');
   assert.equal(result.ok, true, JSON.stringify(result, null, 2));
   assert.equal(result.currentIssueCount, 6);
   assert.equal(result.acceptedIssueCount, 6);

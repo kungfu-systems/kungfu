@@ -8,6 +8,10 @@ import { createRequire } from 'node:module';
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
+import {
+  ReadonlyGithubSlugger,
+  parseReadonlyMarkdown,
+} from './docs-markdown-readonly.mjs';
 import { validateDocumentMetadata } from './document-metadata-contract.mjs';
 import { validateVocabularyContract } from './vocabulary-contract.mjs';
 
@@ -18,14 +22,27 @@ const requireFrom = createRequire(
     ? path.join(path.resolve(MODULES), '..', 'package.json')
     : import.meta.url,
 );
-const GithubSlugger = (
-  await import(pathToFileURL(requireFrom.resolve('github-slugger')).href)
-).default;
-const MarkdownIt = (
-  await import(pathToFileURL(requireFrom.resolve('markdown-it')).href)
-).default;
+let GithubSlugger = ReadonlyGithubSlugger;
+let MarkdownIt = null;
+try {
+  GithubSlugger = (
+    await import(pathToFileURL(requireFrom.resolve('github-slugger')).href)
+  ).default;
+  MarkdownIt = (
+    await import(pathToFileURL(requireFrom.resolve('markdown-it')).href)
+  ).default;
+} catch (error) {
+  if (
+    /** @type {NodeJS.ErrnoException} */ (error).code !== 'MODULE_NOT_FOUND' &&
+    /** @type {NodeJS.ErrnoException} */ (error).code !== 'ERR_MODULE_NOT_FOUND'
+  ) {
+    throw error;
+  }
+}
 const DEFAULT_CONTRACT = 'docs.contract.json';
-const MARKDOWN = new MarkdownIt({ html: true, linkify: false });
+const MARKDOWN = MarkdownIt
+  ? new MarkdownIt({ html: true, linkify: false })
+  : null;
 const EXTERNAL_SCHEME = /^[a-z][a-z0-9+.-]*:/i;
 const SAFE_EXAMPLE_COMMANDS = new Set([
   JSON.stringify(['./shifu', 'self-version']),
@@ -106,38 +123,47 @@ export function markdownFiles(root = ROOT) {
 
 /** @param {string} rel @param {string} text */
 export function parseDocument(rel, text) {
-  const tokens = MARKDOWN.parse(text, {});
   const anchors = new Set();
   const links = [];
   const examples = [];
   const slugger = new GithubSlugger();
 
-  for (let index = 0; index < tokens.length; index += 1) {
-    const token = tokens[index];
-    if (token.type === 'heading_open') {
-      const inline = tokens[index + 1];
-      anchors.add(slugger.slug(headingText(inline?.children || [])));
-    }
-    if (token.type === 'fence') {
-      const match = /(?:^|\s)docs-exec=([a-z0-9][a-z0-9-]*)\b/.exec(token.info);
-      if (match)
-        examples.push({
-          id: match[1],
-          line: (token.map?.[0] ?? 0) + 1,
-          source: token.content.trim(),
-        });
-    }
-    if (token.type !== 'inline') continue;
-    const line = (token.map?.[0] ?? 0) + 1;
-    for (const child of token.children || []) {
-      if (child.type === 'link_open') {
-        const href = child.attrGet('href');
-        if (href) links.push({ href, line });
-      } else if (child.type === 'image') {
-        const href = child.attrGet('src');
-        if (href) links.push({ href, line });
+  if (MARKDOWN) {
+    const tokens = MARKDOWN.parse(text, {});
+    for (let index = 0; index < tokens.length; index += 1) {
+      const token = tokens[index];
+      if (token.type === 'heading_open') {
+        const inline = tokens[index + 1];
+        anchors.add(slugger.slug(headingText(inline?.children || [])));
+      }
+      if (token.type === 'fence') {
+        const match = /(?:^|\s)docs-exec=([a-z0-9][a-z0-9-]*)\b/.exec(
+          token.info,
+        );
+        if (match)
+          examples.push({
+            id: match[1],
+            line: (token.map?.[0] ?? 0) + 1,
+            source: token.content.trim(),
+          });
+      }
+      if (token.type !== 'inline') continue;
+      const line = (token.map?.[0] ?? 0) + 1;
+      for (const child of token.children || []) {
+        if (child.type === 'link_open') {
+          const href = child.attrGet('href');
+          if (href) links.push({ href, line });
+        } else if (child.type === 'image') {
+          const href = child.attrGet('src');
+          if (href) links.push({ href, line });
+        }
       }
     }
+  } else {
+    const parsed = parseReadonlyMarkdown(text);
+    for (const heading of parsed.headings) anchors.add(slugger.slug(heading));
+    links.push(...parsed.links);
+    examples.push(...parsed.examples);
   }
 
   const anchorPattern =

@@ -11,6 +11,14 @@
   "buildchain": {
     "version": "3.0.0",
     "registry": "node_modules/@kungfu-tech/buildchain/dist/site/publication-authority-registry.json",
+    "authorityRegistryDigest": "5487944a7dcac3931faeec5cde33a00254b9fdd8023ef0d21e1569c43d65e1bf",
+    "publicationAuthority": {
+      "workflowPath": ".github/workflows/release-candidate-promote.yml",
+      "authorityClass": "product-publication",
+      "publicationCapable": true,
+      "publisherWorkflowMode": "caller-bound",
+      "environment": "none"
+    },
     "runtimes": {
       "alpha": {
         "ref": "v3-alpha",

@@ -3,32 +3,25 @@
 // @ts-check
 
 import { spawnSync } from 'node:child_process';
-import crypto from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 import process from 'node:process';
 import { fileURLToPath } from 'node:url';
 
+import {
+  baselineIntegrityIssues,
+  baselineMeasurementRoot,
+  digest,
+  digestBytes,
+  enrichIssue,
+  measurementPolicyRoot,
+  protectedBaselineIssues,
+  validWaiverFor,
+  waiverIssues,
+} from '../framework/maintainability/complexity-governance.mjs';
+
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const POLICY_PATH = 'framework/maintainability/code-complexity-policy.json';
-
-function ordered(value) {
-  if (Array.isArray(value)) return value.map(ordered);
-  if (value && typeof value === 'object')
-    return Object.fromEntries(
-      Object.keys(value)
-        .sort()
-        .map((key) => [key, ordered(value[key])]),
-    );
-  return value;
-}
-
-function digest(value) {
-  return `sha256:${crypto
-    .createHash('sha256')
-    .update(JSON.stringify(ordered(value)))
-    .digest('hex')}`;
-}
 
 function readJson(relative) {
   return JSON.parse(fs.readFileSync(path.join(ROOT, relative), 'utf8'));
@@ -45,6 +38,10 @@ function git(args, options = {}) {
       `git ${args.join(' ')} failed: ${String(result.stderr || '').trim()}`,
     );
   return result.stdout;
+}
+
+function readJsonAt(ref, relative) {
+  return JSON.parse(String(git(['show', `${ref}:${relative}`])));
 }
 
 function gitLines(args) {
@@ -85,6 +82,18 @@ function language(pathname) {
 }
 
 function isEligible(pathname, policy) {
+  const metadataPaths = [policy.baselinePath];
+  const metadataPrefixes = [
+    policy.waiverDirectory,
+    policy.baselineGovernance?.transitionDirectory,
+  ].filter(Boolean);
+  if (
+    metadataPaths.includes(pathname) ||
+    metadataPrefixes.some(
+      (prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`),
+    )
+  )
+    return false;
   return (
     policy.specialEligibleNames.includes(path.posix.basename(pathname)) ||
     policy.eligibleExtensions.includes(
@@ -296,6 +305,7 @@ function measureBaseline(policy, layers) {
         language: language(pathname),
         owner: ownerFor(pathname, layers),
         lines: lineCount(bytes),
+        contentRoot: digestBytes(bytes),
       };
     })
     .sort((left, right) => left.path.localeCompare(right.path));
@@ -324,6 +334,7 @@ function measureCurrent(policy, layers) {
         language: language(pathname),
         owner: ownerFor(pathname, layers),
         lines: lineCount(bytes),
+        contentRoot: digestBytes(bytes),
       };
     })
     .sort((left, right) => left.path.localeCompare(right.path));
@@ -424,9 +435,9 @@ function buildBaseline(policy, layers) {
       baselineLines: file.lines,
       hardBudget: groups[groupKey(file)].hard,
     }));
-  return {
+  const baseline = {
     schema: 'kungfu.code-complexity-budget-baseline/v1',
-    policyRoot: digest(policy),
+    policyRoot: measurementPolicyRoot(policy),
     baselineRef: policy.baselineRef,
     classification: 'ordered-policy-and-content-marker/v1',
     calibration: policy.calibration,
@@ -435,6 +446,10 @@ function buildBaseline(policy, layers) {
     grandfathered,
     files,
     issues,
+  };
+  return {
+    ...baseline,
+    measurementRoot: baselineMeasurementRoot(baseline),
   };
 }
 
@@ -449,68 +464,6 @@ function loadWaivers(policy) {
       file: `${policy.waiverDirectory}/${name}`,
       value: JSON.parse(fs.readFileSync(path.join(directory, name), 'utf8')),
     }));
-}
-
-function waiverIssues(record, policy) {
-  const issues = [];
-  const waiver = record.value;
-  for (const field of policy.waiver.requiredFields)
-    if (
-      waiver[field] === undefined ||
-      waiver[field] === null ||
-      waiver[field] === ''
-    )
-      issues.push({
-        code: 'invalid-waiver',
-        path: record.file,
-        message: `missing ${field}`,
-      });
-  if (waiver.schema !== policy.waiver.schema)
-    issues.push({
-      code: 'invalid-waiver',
-      path: record.file,
-      message: 'schema mismatch',
-    });
-  if (waiver.requested_by && waiver.approved_by === waiver.requested_by)
-    issues.push({
-      code: 'self-approved-waiver',
-      path: record.file,
-      message: 'requester and approver must be independent',
-    });
-  const expiry = Date.parse(waiver.expires_at_or_review_by || '');
-  if (!Number.isFinite(expiry) || expiry <= Date.now())
-    issues.push({
-      code: 'expired-waiver',
-      path: record.file,
-      message: 'expiry or review-by cut is missing, invalid, or expired',
-    });
-  if (
-    !Array.isArray(waiver.paths_or_scope) ||
-    waiver.paths_or_scope.length === 0
-  )
-    issues.push({
-      code: 'invalid-waiver',
-      path: record.file,
-      message: 'paths_or_scope must be a non-empty exact path list',
-    });
-  return issues;
-}
-
-function validWaiverFor(issue, current, waivers, policy) {
-  for (const record of waivers) {
-    if (waiverIssues(record, policy).length) continue;
-    const waiver = record.value;
-    if (
-      issue.path === current.path &&
-      waiver.paths_or_scope.includes(issue.path) &&
-      waiver.file_class === current.class &&
-      waiver.owner === current.owner &&
-      waiver.requested_measurement === current.lines &&
-      waiver.allowed_delta >= current.lines - waiver.baseline_measurement
-    )
-      return record.file;
-  }
-  return '';
 }
 
 function regressionIssues(files, baseline, policy = {}) {
@@ -530,6 +483,25 @@ function regressionIssues(files, baseline, policy = {}) {
       continue;
     }
     const previous = baselineByPath.get(current.path);
+    if (
+      previous &&
+      (previous.class !== current.class ||
+        previous.language !== current.language ||
+        previous.owner !== current.owner)
+    )
+      issues.push({
+        code: 'classification-or-owner-relabeled',
+        path: current.path,
+        paths: [current.path],
+        previousClass: previous.class,
+        currentClass: current.class,
+        previousLanguage: previous.language,
+        currentLanguage: current.language,
+        previousOwner: previous.owner,
+        currentOwner: current.owner,
+        message:
+          'existing source changed class, language, or owner instead of retiring responsibility',
+      });
     if (
       !previous &&
       current.class === 'first-party-handwritten-implementation' &&
@@ -600,17 +572,101 @@ function regressionIssues(files, baseline, policy = {}) {
       code: 'new-helper-proliferation',
       path: paths[0],
       owner,
-      paths,
+      paths: [...paths].sort(),
       message: `${owner} adds ${paths.length} handwritten files; limit is ${helperLimit}`,
     });
   }
+  const currentByPath = new Map(files.map((file) => [file.path, file]));
+  const added = files.filter((file) => !baselinePaths.has(file.path));
+  const deleted = baseline.files.filter(
+    (file) => !currentByPath.has(file.path),
+  );
+  for (const previous of deleted) {
+    if (previous.class !== 'first-party-handwritten-implementation') continue;
+    const sameOwner = added.filter(
+      (file) =>
+        file.owner === previous.owner &&
+        !['test-or-fixture', 'retained-evidence'].includes(file.class),
+    );
+    const generated = sameOwner.filter(
+      (file) =>
+        file.class === 'generated-projection' ||
+        file.class === 'vendored-source',
+    );
+    if (
+      generated.reduce((total, file) => total + file.lines, 0) >=
+      Math.max(40, previous.lines * 0.5)
+    )
+      issues.push({
+        code: 'generated-or-vendor-laundering',
+        path: previous.path,
+        paths: [previous.path, ...generated.map((file) => file.path)].sort(),
+        owner: previous.owner,
+        message:
+          'deleted handwritten responsibility reappears under a generated or vendor classification',
+      });
+    const handwritten = sameOwner.filter(
+      (file) => file.class === 'first-party-handwritten-implementation',
+    );
+    if (
+      handwritten.length > 1 &&
+      handwritten.reduce((total, file) => total + file.lines, 0) >=
+        Math.max(80, previous.lines * 0.8)
+    )
+      issues.push({
+        code: 'responsibility-preserving-split',
+        path: previous.path,
+        paths: [previous.path, ...handwritten.map((file) => file.path)].sort(),
+        owner: previous.owner,
+        message:
+          'deleted hotspot responsibility is preserved across multiple new helpers',
+      });
+  }
   return issues;
+}
+
+function softBudgetWarnings(files, baseline) {
+  const baselineByPath = new Map(
+    baseline.files.map((file) => [file.path, file]),
+  );
+  const warnings = [];
+  for (const current of files) {
+    const previous = baselineByPath.get(current.path);
+    const budget = baseline.groups[groupKey(current)];
+    if (
+      !budget ||
+      current.class !== 'first-party-handwritten-implementation' ||
+      current.lines <= budget.soft ||
+      (previous && previous.lines > budget.soft)
+    )
+      continue;
+    warnings.push({
+      code: 'soft-budget-crossed',
+      path: current.path,
+      paths: [current.path],
+      owner: current.owner,
+      softBudget: budget.soft,
+      hardBudget: budget.hard,
+      baselineLines: previous?.lines || 0,
+      currentLines: current.lines,
+      message: `file crossed soft budget ${budget.soft}: ${previous?.lines || 0} -> ${current.lines}`,
+    });
+  }
+  return warnings;
 }
 
 function checkCurrent(policy, layers, baseline) {
   const files = measureCurrent(policy, layers);
   const issues = validateMeasured(files);
-  if (baseline.policyRoot !== digest(policy))
+  const recomputedBaseline = buildBaseline(policy, layers);
+  issues.push(
+    ...baselineIntegrityIssues(
+      baseline,
+      recomputedBaseline,
+      policy.baselinePath,
+    ),
+  );
+  if (baseline.policyRoot !== measurementPolicyRoot(policy))
     issues.push({
       code: 'invalid-baseline',
       path: policy.baselinePath,
@@ -623,15 +679,84 @@ function checkCurrent(policy, layers, baseline) {
       message: 'baseline ref does not match current policy',
     });
   issues.push(...regressionIssues(files, baseline, policy));
+  const requester = String(git(['show', '-s', '--format=%ae', 'HEAD'])).trim();
+  const evaluationTime = new Date();
   const waivers = loadWaivers(policy);
-  for (const waiver of waivers) issues.push(...waiverIssues(waiver, policy));
+  for (const waiver of waivers)
+    issues.push(
+      ...waiverIssues(waiver, policy, {
+        evaluationTime,
+        requester,
+      }),
+    );
+  const scopedIssues = issues.map((issue) =>
+    enrichIssue(issue, baseline.files, files),
+  );
+  const softWarnings = softBudgetWarnings(files, baseline).map((issue) =>
+    enrichIssue(issue, baseline.files, files),
+  );
   const waived = [];
   const blocking = [];
-  for (const issue of issues) {
-    const current = files.find((file) => file.path === issue.path);
+  if (policy.baselineGovernance) {
+    const protectedRef =
+      process.env[policy.baselineGovernance.protectedRefEnv] ||
+      policy.baselineGovernance.protectedRef;
+    try {
+      const protectedPolicy = readJsonAt(protectedRef, POLICY_PATH);
+      const protectedBaseline = readJsonAt(
+        protectedRef,
+        protectedPolicy.baselinePath,
+      );
+      const transitionDirectory = policy.baselineGovernance.transitionDirectory;
+      const transitions = fs.existsSync(path.join(ROOT, transitionDirectory))
+        ? fs
+            .readdirSync(path.join(ROOT, transitionDirectory))
+            .filter((name) => name.endsWith('.json'))
+            .sort()
+            .map((name) => ({
+              file: `${transitionDirectory}/${name}`,
+              value: readJson(`${transitionDirectory}/${name}`),
+            }))
+        : [];
+      scopedIssues.push(
+        ...protectedBaselineIssues({
+          protectedPolicy,
+          protectedBaseline,
+          candidatePolicy: policy,
+          candidateBaseline: baseline,
+          transitions,
+          evaluationTime,
+        }).map((issue) => enrichIssue(issue, baseline.files, files)),
+      );
+    } catch (error) {
+      scopedIssues.push(
+        enrichIssue(
+          {
+            code: 'protected-baseline-unavailable',
+            path: POLICY_PATH,
+            paths: [POLICY_PATH],
+            message: `cannot read protected baseline '${protectedRef}': ${
+              error instanceof Error ? error.message : String(error)
+            }`,
+          },
+          baseline.files,
+          files,
+        ),
+      );
+    }
+  }
+  for (const issue of scopedIssues) {
+    const current =
+      files.find((file) => file.path === issue.path) ||
+      issue.currentMeasurement
+        .map((item) => files.find((file) => file.path === item.path))
+        .find(Boolean);
     const waiver =
       current && issue.code !== 'invalid-waiver'
-        ? validWaiverFor(issue, current, waivers, policy)
+        ? validWaiverFor(issue, current, waivers, policy, {
+            evaluationTime,
+            requester,
+          })
         : '';
     if (waiver) waived.push({ ...issue, waiver });
     else blocking.push(issue);
@@ -643,10 +768,14 @@ function checkCurrent(policy, layers, baseline) {
     sourceCommit: String(git(['rev-parse', 'HEAD'])).trim(),
     mode: 'p1-regression-ratchet',
     verdict: blocking.length ? 'fail' : 'pass',
+    evaluationTime: evaluationTime.toISOString(),
+    requester,
     summary: summarize(files),
     groupBudgets: baseline.groups,
+    baselineMeasurementRoot: baseline.measurementRoot || '',
     blocking,
     waived,
+    softWarnings,
     files,
   };
 }

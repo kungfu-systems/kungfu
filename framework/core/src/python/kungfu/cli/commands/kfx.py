@@ -42,18 +42,6 @@ def _install_root(ctx):
     return os.path.join(ctx.home, "extensions")
 
 
-def _read_manifest_from_dir(package_dir):
-    return kfx_contract.read_manifest_from_dir(package_dir)
-
-
-def _read_manifest_from_tgz(tgz):
-    return kfx_contract.read_manifest_from_tgz(tgz)
-
-
-def _kind(manifest):
-    return kfx_contract.package_kind(manifest)
-
-
 def _trusted(manifest):
     return first_party.is_first_party(kfx_contract.package_key(manifest))
 
@@ -146,9 +134,9 @@ def install(ctx, source, force):
     is_tgz = os.path.isfile(source)
     try:
         manifest = (
-            _read_manifest_from_tgz(source)
+            kfx_contract.read_manifest_from_tgz(source)
             if is_tgz
-            else _read_manifest_from_dir(source)
+            else kfx_contract.read_manifest_from_dir(source)
         )
     except (OSError, KeyError, ValueError, json.JSONDecodeError, tarfile.TarError) as e:
         click.echo(f"[kfx] unreadable package manifest: {e}", err=True)
@@ -184,7 +172,7 @@ def install(ctx, source, force):
 
     click.echo(
         f"[kfx] installed {manifest.get('name', key)}@{manifest.get('version', '?')} "
-        f"({_kind(manifest)}) -> {dest}"
+        f"({kfx_contract.package_kind(manifest)}) -> {dest}"
     )
     for line in _trust_notice(manifest):
         click.echo(line)
@@ -203,7 +191,7 @@ def list_installed(ctx, as_json):
             if not os.path.isfile(manifest_path):
                 continue
             try:
-                manifest = _read_manifest_from_dir(package_dir)
+                manifest = kfx_contract.read_manifest_from_dir(package_dir)
             except (OSError, ValueError, json.JSONDecodeError):
                 rows.append({"key": name, "error": "unreadable package.json"})
                 continue
@@ -259,7 +247,7 @@ def list_installed(ctx, as_json):
 def run_wasm(ctx, key, grants, source_namespace, source_name, engine):
     package_dir = os.path.join(_install_root(ctx), key)
     try:
-        manifest = _read_manifest_from_dir(package_dir)
+        manifest = kfx_contract.read_manifest_from_dir(package_dir)
         wasm, module = _wasm_run_spec(package_dir, manifest, grants)
         host = _libwasm_host()
     except (OSError, KeyError, TypeError, ValueError, json.JSONDecodeError) as error:
@@ -761,9 +749,9 @@ def inspect(ctx, source, as_json):
     is_tgz = os.path.isfile(source)
     try:
         manifest = (
-            _read_manifest_from_tgz(source)
+            kfx_contract.read_manifest_from_tgz(source)
             if is_tgz
-            else _read_manifest_from_dir(source)
+            else kfx_contract.read_manifest_from_dir(source)
         )
         data = {
             "schema": "kungfu.kfx.inspect/v1",

@@ -2,7 +2,6 @@
 
 import os
 import subprocess
-import sys
 from pathlib import Path
 
 import click
@@ -38,6 +37,21 @@ def _resolve_trunk() -> str | None:
     return None
 
 
+def _run_trunk_component(
+    component: str, commands: tuple[str, ...], missing_message: str
+) -> int:
+    """Forward one CLI subtree to the product-owned trunk binary."""
+
+    trunk = _resolve_trunk()
+    if not trunk:
+        raise click.ClickException(missing_message)
+    argv = [trunk, component, *commands]
+    if os.name == "nt":
+        raise SystemExit(subprocess.run(argv).returncode)
+    os.execv(trunk, argv)
+    return 0
+
+
 @kfc.command(
     help_priority=2,
     context_settings=dict(ignore_unknown_options=True, help_option_names=[]),
@@ -51,14 +65,12 @@ def env(commands):
     arguments (including -h/--help); this wrapper only routes. Layering per
     KF-ADR-019f86da-4f90-73ff-9543-f0a4f0beef05: whoever implements the semantics parses the arguments.
     """
-    trunk = _resolve_trunk()
-    if not trunk:
-        raise click.ClickException(
+    return _run_trunk_component(
+        "env",
+        commands,
+        (
             "kungfu-trunk not found next to the kungfu binary; the install "
             "surface ships with the product dist (dev: cargo build --release "
             "-p kungfu-trunk, or set KUNGFU_TRUNK_BIN)"
-        )
-    argv = [trunk, "env", *commands]
-    if os.name == "nt":
-        sys.exit(subprocess.run(argv).returncode)
-    os.execv(trunk, argv)
+        ),
+    )

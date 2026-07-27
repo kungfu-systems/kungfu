@@ -4,12 +4,18 @@ import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
 import crypto from 'node:crypto';
 import fs from 'node:fs';
+import { createRequire } from 'node:module';
 import os from 'node:os';
 import path from 'node:path';
 import { test } from 'node:test';
 import { fileURLToPath } from 'node:url';
 
+import { sourceMergeBase } from './source-acceptance.mjs';
+
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+const requireFromGui = createRequire(
+  path.join(ROOT, 'framework/gui/package.json'),
+);
 
 function copyFile(sourceRoot, targetRoot, relative) {
   const target = path.join(targetRoot, relative);
@@ -91,11 +97,11 @@ test('declared discovery routes are zero-write in a cold read-only fixture', (t)
   }
 
   const temporary = fs.mkdtempSync(
-    path.join(os.tmpdir(), 'kungfu-readonly-bootstrap-'),
+    path.join(os.tmpdir(), 'kungfu readonly bootstrap-'),
   );
-  const fixture = path.join(temporary, 'source');
+  const fixture = path.join(temporary, 'source with spaces');
   const tools = path.join(temporary, 'tools');
-  const home = path.join(temporary, 'home');
+  const home = path.join(temporary, 'cold home with spaces');
   const toolLog = path.join(temporary, 'unexpected-tool.log');
   fs.mkdirSync(tools);
   fs.mkdirSync(home);
@@ -112,6 +118,29 @@ test('declared discovery routes are zero-write in a cold read-only fixture', (t)
     { encoding: 'utf8' },
   );
   assert.equal(cloned.status, 0, cloned.stderr);
+  const base = sourceMergeBase();
+  const corePytest = path.join(ROOT, 'framework/core/.venv/bin/pytest');
+  const pytest = fs.existsSync(corePytest)
+    ? corePytest
+    : executableOnPath('pytest');
+  const fixedBase = spawnSync(
+    git,
+    ['update-ref', 'refs/heads/dev/v4/v4.0', base.sha],
+    {
+      cwd: fixture,
+      encoding: 'utf8',
+    },
+  );
+  assert.equal(fixedBase.status, 0, fixedBase.stderr);
+  const fixedProtectedBase = spawnSync(
+    git,
+    ['update-ref', 'refs/remotes/origin/dev/v4/v4.0', base.sha],
+    {
+      cwd: fixture,
+      encoding: 'utf8',
+    },
+  );
+  assert.equal(fixedProtectedBase.status, 0, fixedProtectedBase.stderr);
   for (const relative of [
     'shifu',
     'shifu.cmd',
@@ -119,23 +148,80 @@ test('declared discovery routes are zero-write in a cold read-only fixture', (t)
     'scripts/kungfu-invariant.mjs',
     'scripts/code-complexity-budget.mjs',
     'scripts/code-complexity-budget.test.mjs',
+    'scripts/check-readonly-source-routes.mjs',
+    'scripts/check-readonly-source-routes.test.mjs',
+    'scripts/check-alpha-attention-operations.mjs',
+    'scripts/check-docs.mjs',
+    'scripts/check-incubation-passport.mjs',
+    'scripts/check-incubation-passport.test.mjs',
+    'scripts/check-hub-starter-docker-concept.mjs',
+    'scripts/check-hub-starter-docker-concept.test.mjs',
+    'scripts/check-evidence-envelope.test.mjs',
+    'scripts/check-exit-bundle-contract.test.mjs',
+    'scripts/check-fact-cut-kernel-contract.test.mjs',
+    'scripts/check-git-episode-provider.test.mjs',
+    'scripts/documentation-product-pack.test.mjs',
+    'scripts/docs-markdown-readonly.mjs',
+    'scripts/kungfu-gate-workflow-facts.mjs',
+    'scripts/kungfu-invariant.test.mjs',
+    'scripts/kfd-support-matrix.mjs',
+    'scripts/kfd-support-matrix.test.mjs',
+    'scripts/kungfu-workflow-authority.mjs',
+    'scripts/readonly-source-toolchain.mjs',
     'scripts/readonly-agent-bootstrap.test.mjs',
+    'scripts/run-documentation-material-tests.mjs',
+    'scripts/run-agent-work-state-tests.mjs',
+    'scripts/run-desktop-update-tests.mjs',
+    'scripts/run-runtime-upgrade-tests.mjs',
+    'scripts/registry-envelope.mjs',
+    'scripts/runtime-contract.mjs',
+    'scripts/run-docs-source-check.mjs',
+    'scripts/shifu-documentation-qualification.mjs',
     'scripts/shifu-readonly-entry.mjs',
+    'scripts/shifu-cache-runtime.test.mjs',
+    'scripts/source-acceptance.mjs',
+    'scripts/verify-kungfu-release-admission.mjs',
+    'scripts/verify-kungfu-release-admission.test.mjs',
+    'scripts/check-work-lifecycle-operation-matrix.test.mjs',
+    'scripts/buildchain-kfd-evidence.mjs',
+    '.buildchain/kfd/support-matrix.json',
+    'framework/release/buildchain-kfd-runtime.mjs',
+    'docs/qualification/gates/release-admission-policy.json',
+    'framework/core/src/python/kungfu/agent/documentation.py',
+    'framework/core/src/python/kungfu/cli/surface_contract.py',
+    'framework/core/src/python/kungfu/cli/commands/env.py',
+    'framework/core/src/python/kungfu/cli/commands/kfx.py',
+    'framework/core/src/python/kungfu/cli/commands/shifu.py',
+    'framework/maintainability/baseline-transitions/README.md',
     'framework/maintainability/code-complexity-policy.json',
     'framework/maintainability/code-complexity-baseline.json',
-    'framework/maintainability/waivers/hub-cli-linux-arm64-dist-platform-map.json',
-    'framework/maintainability/waivers/hub-cli-linux-arm64-post-queue-workflow-authority.json',
-    'framework/maintainability/waivers/hub-cli-linux-arm64-workflow-authority.json',
-    'framework/maintainability/waivers/libnode-linux-arm64-lockfile.json',
+    'framework/maintainability/waivers/retired/hub-cli-linux-arm64-dist-platform-map.v1.json',
+    'framework/maintainability/waivers/retired/hub-cli-linux-arm64-post-queue-workflow-authority.v1.json',
+    'framework/maintainability/waivers/retired/hub-cli-linux-arm64-workflow-authority.v1.json',
+    'framework/maintainability/waivers/retired/libnode-linux-arm64-lockfile.v1.json',
+    'framework/maintainability/complexity-governance.mjs',
+    'framework/maintainability/readonly-source-routes.json',
     'framework/maintainability/semantic-amplification.manifest.json',
     'framework/maintainability/semantic-amplification-report.json',
     'framework/maintainability/semantic-amplification.mjs',
+    'framework/maintainability/waivers/README.md',
   ])
     copyFile(ROOT, fixture, relative);
   fs.chmodSync(path.join(fixture, 'shifu'), 0o755);
 
   fs.symlinkSync(git, path.join(tools, 'git'));
   fs.symlinkSync(node, path.join(tools, 'node'));
+  for (const [name, relative] of [
+    ['ruff', 'framework/core/.venv/bin/ruff'],
+    ['mypy', 'framework/core/.venv/bin/mypy'],
+    ['clang-format', 'framework/core/.venv/bin/clang-format'],
+  ]) {
+    const projectExecutable = path.join(ROOT, relative);
+    const executable = fs.existsSync(projectExecutable)
+      ? projectExecutable
+      : executableOnPath(name);
+    fs.symlinkSync(executable, path.join(tools, name));
+  }
   for (const name of ['cargo', 'corepack', 'curl', 'fnm', 'pnpm', 'uv']) {
     const file = path.join(tools, name);
     fs.writeFileSync(
@@ -166,6 +252,17 @@ test('declared discovery routes are zero-write in a cold read-only fixture', (t)
   }
 
   const before = snapshotSource(fixture);
+  const protectedRef = JSON.parse(
+    fs.readFileSync(
+      path.join(
+        fixture,
+        'framework',
+        'maintainability',
+        'code-complexity-policy.json',
+      ),
+      'utf8',
+    ),
+  ).baselineRef;
   makeReadOnly(fixture);
   const env = {
     ...process.env,
@@ -173,6 +270,14 @@ test('declared discovery routes are zero-write in a cold read-only fixture', (t)
     XDG_CACHE_HOME: path.join(home, 'cache'),
     XDG_CONFIG_HOME: path.join(home, 'config'),
     KUNGFU_READONLY_TOOL_LOG: toolLog,
+    KUNGFU_READONLY_NESTED_SOURCE_ACCEPTANCE: '1',
+    KUNGFU_READONLY_PYTEST: pytest,
+    KUNGFU_READONLY_TSX: requireFromGui.resolve('tsx/cli'),
+    KUNGFU_READONLY_BIOME: path.join(
+      ROOT,
+      'node_modules/@biomejs/biome/bin/biome',
+    ),
+    KUNGFU_COMPLEXITY_PROTECTED_REF: protectedRef,
     PATH: `${tools}:/usr/bin:/bin`,
   };
   const cases = [
@@ -212,20 +317,40 @@ test('declared discovery routes are zero-write in a cold read-only fixture', (t)
       'kungfu.maintainability-task-graph/v1',
     ],
   ];
-  for (const [name, args, schema] of cases) {
-    const result = spawnSync(path.join(fixture, 'shifu'), args, {
+  for (let iteration = 0; iteration < 2; iteration += 1) {
+    for (const [name, args, schema] of cases) {
+      const result = spawnSync(path.join(fixture, 'shifu'), args, {
+        cwd: fixture,
+        encoding: 'utf8',
+        env,
+        maxBuffer: 32 * 1024 * 1024,
+      });
+      assert.equal(
+        result.status,
+        0,
+        `${name} iteration ${iteration}: ${result.stderr || result.stdout}`,
+      );
+      assert.equal(JSON.parse(result.stdout).schema, schema);
+    }
+  }
+  const sourceAcceptance = spawnSync(
+    path.join(fixture, 'shifu'),
+    ['check:source'],
+    {
       cwd: fixture,
       encoding: 'utf8',
       env,
-      maxBuffer: 32 * 1024 * 1024,
-    });
-    assert.equal(
-      result.status,
-      0,
-      `${name}: ${result.stderr || result.stdout}`,
-    );
-    assert.equal(JSON.parse(result.stdout).schema, schema);
-  }
+      maxBuffer: 64 * 1024 * 1024,
+      timeout: 10 * 60 * 1000,
+    },
+  );
+  assert.equal(
+    sourceAcceptance.status,
+    0,
+    `check:source:\n${[sourceAcceptance.stderr, sourceAcceptance.stdout]
+      .filter(Boolean)
+      .join('\n')}`,
+  );
   assert.deepEqual(snapshotSource(fixture), before);
   assert.equal(fs.existsSync(toolLog), false, 'bootstrap tool was invoked');
   assert.equal(

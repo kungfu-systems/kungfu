@@ -7,6 +7,7 @@ content-addressed Xinfa artifacts, then exposes exact catalog, document and
 precompiled Human/Agent projection reads for installed Kungfu surfaces.
 """
 
+import gzip
 import hashlib
 import json
 import os
@@ -31,9 +32,20 @@ def _byte_digest(value):
     return "sha256:" + hashlib.sha256(value).hexdigest()
 
 
-def _json(path):
-    with path.open(encoding="utf-8") as source:
-        return json.load(source)
+def _artifact_bytes(root, relative):
+    direct = root / relative
+    if direct.is_file():
+        return direct.read_bytes()
+    bundle = os.environ.get("KUNGFU_DOCUMENTATION_ATLAS_BUNDLE")
+    if bundle:
+        compressed = Path(bundle) / f"{relative}.gz"
+        if compressed.is_file():
+            return gzip.decompress(compressed.read_bytes())
+    raise FileNotFoundError(f"Documentation Atlas artifact is absent: {relative}")
+
+
+def _json(root, relative):
+    return json.loads(_artifact_bytes(root, relative).decode("utf-8"))
 
 
 def _portable_path(value):
@@ -71,7 +83,9 @@ def verify(root=None):
     ]
     diagnostics = []
     for relative in required:
-        if not (root / relative).is_file():
+        try:
+            _artifact_bytes(root, relative)
+        except (FileNotFoundError, OSError):
             diagnostics.append({"code": "missing-artifact", "path": relative})
     if diagnostics:
         return {
@@ -80,13 +94,12 @@ def verify(root=None):
             "diagnostics": diagnostics,
         }
 
-    atlas = _json(root / "atlas.json")
-    manifest = _json(root / "manifest.json")
-    receipt = _json(root / "receipt.json")
-    pack_root = root / _COMPATIBILITY
-    pack = _json(pack_root / "pack.json")
-    pack_manifest = _json(pack_root / "manifest.json")
-    pack_receipt = _json(pack_root / "receipt.json")
+    atlas = _json(root, "atlas.json")
+    manifest = _json(root, "manifest.json")
+    receipt = _json(root, "receipt.json")
+    pack = _json(root, str(_COMPATIBILITY / "pack.json"))
+    pack_manifest = _json(root, str(_COMPATIBILITY / "manifest.json"))
+    pack_receipt = _json(root, str(_COMPATIBILITY / "receipt.json"))
 
     atlas_core = dict(atlas)
     atlas_root = atlas_core.pop("atlas_root", None)
@@ -102,7 +115,7 @@ def verify(root=None):
 
     for artifact in manifest.get("artifacts", []):
         relative = _portable_path(artifact.get("path"))
-        data = (root / relative).read_bytes()
+        data = _artifact_bytes(root, relative)
         if len(data) != artifact.get("size") or _byte_digest(data) != artifact.get(
             "content_root"
         ):
@@ -117,7 +130,7 @@ def verify(root=None):
     if _digest(receipt_core) != receipt_root:
         diagnostics.append({"code": "receipt-root", "path": "receipt.json"})
 
-    pack_bytes = (pack_root / "pack.json").read_bytes()
+    pack_bytes = _artifact_bytes(root, str(_COMPATIBILITY / "pack.json"))
     pack_manifest_core = dict(pack_manifest)
     pack_manifest_root = pack_manifest_core.pop("manifestRoot", None)
     artifact = (pack_manifest.get("artifacts") or [{}])[0]
@@ -148,7 +161,7 @@ def verify(root=None):
         )
 
     for audience in ("human", "agent"):
-        view = _json(root / "views" / f"{audience}.json")
+        view = _json(root, f"views/{audience}.json")
         if view.get("atlas_root") != atlas_root or view.get("audience") != audience:
             diagnostics.append(
                 {"code": "projection-root", "path": f"views/{audience}.json"}
@@ -188,7 +201,7 @@ def _verified_pack(root=None):
             "Documentation Atlas verification failed: "
             + json.dumps(result["diagnostics"], sort_keys=True)
         )
-    return root, _json(root / _COMPATIBILITY / "pack.json"), result
+    return root, _json(root, str(_COMPATIBILITY / "pack.json")), result
 
 
 def catalog(root=None):
@@ -224,7 +237,7 @@ def projection(audience, root=None):
     if audience not in {"human", "agent"}:
         raise ValueError("audience must be human or agent")
     root, _, result = _verified_pack(root)
-    value = _json(root / "views" / f"{audience}.json")
+    value = _json(root, f"views/{audience}.json")
     return {
         "schema": "kungfu.documentation-projection/v1",
         "roots": {key: result[key] for key in ("atlasRoot", "packRoot", "cutRoot")},

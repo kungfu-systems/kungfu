@@ -2,13 +2,10 @@
 // SPDX-License-Identifier: Apache-2.0
 // @ts-check
 
+import crypto from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import {
-  publicationAuthorityDigest,
-  verifyPublicationAdmission,
-} from '@kungfu-tech/buildchain/publication-authority';
 import {
   CATALOG_ARTIFACT,
   CATALOG_SOURCE,
@@ -46,6 +43,21 @@ function exactKeys(value, keys, label) {
     throw new Error(`${label} fields must be exactly [${expected.join(', ')}]`);
 }
 
+function stableJson(value) {
+  if (Array.isArray(value)) return `[${value.map(stableJson).join(',')}]`;
+  if (value && typeof value === 'object') {
+    return `{${Object.keys(value)
+      .sort()
+      .map((key) => `${JSON.stringify(key)}:${stableJson(value[key])}`)
+      .join(',')}}`;
+  }
+  return JSON.stringify(value);
+}
+
+function publicationAuthorityDigest(value) {
+  return crypto.createHash('sha256').update(stableJson(value)).digest('hex');
+}
+
 function validatePolicy(root, policy) {
   exactKeys(
     policy,
@@ -77,8 +89,25 @@ function validatePolicy(root, policy) {
   );
   exactKeys(
     policy.buildchain,
-    ['version', 'registry', 'runtimes'],
+    [
+      'version',
+      'registry',
+      'authorityRegistryDigest',
+      'publicationAuthority',
+      'runtimes',
+    ],
     'buildchain',
+  );
+  exactKeys(
+    policy.buildchain.publicationAuthority,
+    [
+      'workflowPath',
+      'authorityClass',
+      'publicationCapable',
+      'publisherWorkflowMode',
+      'environment',
+    ],
+    'buildchain.publicationAuthority',
   );
   exactKeys(
     policy.publication,
@@ -111,6 +140,21 @@ function validatePolicy(root, policy) {
       policy.publication.channels.length
   )
     throw new Error('publication.channels must be a non-empty unique array');
+  if (
+    !/^[0-9a-f]{64}$/.test(policy.buildchain.authorityRegistryDigest) ||
+    policy.buildchain.publicationAuthority.workflowPath !==
+      policy.publication.workflowPath ||
+    policy.buildchain.publicationAuthority.authorityClass !==
+      'product-publication' ||
+    policy.buildchain.publicationAuthority.publicationCapable !== true ||
+    policy.buildchain.publicationAuthority.publisherWorkflowMode !==
+      'caller-bound' ||
+    policy.buildchain.publicationAuthority.environment !==
+      policy.publication.environment
+  )
+    throw new Error(
+      'Buildchain publication authority consumer lock is not qualifying',
+    );
   const runtimeChannels = Object.keys(policy.buildchain.runtimes || {}).sort();
   if (
     runtimeChannels.join('\0') !==
@@ -156,7 +200,22 @@ function currentBuildchain(root, policy) {
     throw new Error(
       'installed Buildchain contract digest differs from release admission policy',
     );
-  return readJson(root, policy.buildchain.registry);
+  const registry = readJson(root, policy.buildchain.registry);
+  if (registry.registryDigest !== policy.buildchain.authorityRegistryDigest)
+    throw new Error(
+      'installed Buildchain authority registry differs from release admission policy',
+    );
+  const descriptor = registry.entries?.find(
+    (item) => item.workflowPath === policy.publication.workflowPath,
+  );
+  for (const [key, expected] of Object.entries(
+    policy.buildchain.publicationAuthority,
+  ))
+    if (descriptor?.[key] !== expected)
+      throw new Error(
+        'Buildchain registry does not authorize the configured sealed publication lane',
+      );
+  return registry;
 }
 
 function validateAuthorityJob(authorityDocument, policy) {
@@ -209,29 +268,14 @@ export function validateKungfuReleaseAdmissionPolicy(root = ROOT) {
       `workflow authority is not closed: ${authority.issues.join('; ')}`,
     );
   validateAuthorityJob(authority.document, policy);
-  const buildchainRegistry = currentBuildchain(root, policy);
-  const descriptor = buildchainRegistry.entries?.find(
-    (item) => item.workflowPath === policy.publication.workflowPath,
-  );
-  if (
-    !descriptor ||
-    descriptor.authorityClass !== 'product-publication' ||
-    descriptor.publicationCapable !== true ||
-    descriptor.publisherWorkflowMode !== 'caller-bound' ||
-    descriptor.environment !== policy.publication.environment
-  )
-    throw new Error(
-      'Buildchain registry does not authorize the configured sealed publication lane',
-    );
   return {
     policy,
     authority: authority.document,
-    buildchainRegistry,
     primitiveCatalog,
   };
 }
 
-export function verifyKungfuReleaseAdmission({
+export async function verifyKungfuReleaseAdmission({
   root = ROOT,
   admission,
   runnerProvenance,
@@ -242,7 +286,11 @@ export function verifyKungfuReleaseAdmission({
   now = new Date(),
 } = {}) {
   const validated = validateKungfuReleaseAdmissionPolicy(root);
-  const { policy, authority, buildchainRegistry } = validated;
+  const { policy, authority } = validated;
+  const buildchainRegistry = currentBuildchain(root, policy);
+  const { verifyPublicationAdmission } = await import(
+    '@kungfu-tech/buildchain/publication-authority'
+  );
   const aggregate = publicationEvidence?.gateAggregate;
   validateKungfuGateAggregate(root, aggregate, policy);
   const runtime = kungfuBuildchainRuntimePolicy(policy, admission?.channel);
@@ -301,8 +349,8 @@ function arg(name) {
   return index >= 0 ? process.argv[index + 1] : '';
 }
 
-function main() {
-  const result = verifyKungfuReleaseAdmission({
+async function main() {
+  const result = await verifyKungfuReleaseAdmission({
     admission: readJson(ROOT, requiredFile(arg('admission'), 'admission')),
     runnerProvenance: readJson(
       ROOT,
@@ -322,4 +370,8 @@ function main() {
   process.stdout.write(`${JSON.stringify(result, null, 2)}\n`);
 }
 
-if (process.argv[1] === fileURLToPath(import.meta.url)) main();
+if (process.argv[1] === fileURLToPath(import.meta.url))
+  main().catch((error) => {
+    process.stderr.write(`${error.stack || error.message}\n`);
+    process.exitCode = 1;
+  });

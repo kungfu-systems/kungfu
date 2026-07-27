@@ -5,7 +5,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
-import Ajv2020 from 'ajv/dist/2020.js';
+import { optionalAjv2020 } from './readonly-source-toolchain.mjs';
 
 import {
   EPISODE_PROVIDER_CAPABILITY_MATRIX,
@@ -25,6 +25,7 @@ import {
 } from '../framework/project-cut/src/project-cut.mjs';
 
 const ROOT = 'a'.repeat(64);
+const Ajv2020 = optionalAjv2020();
 const MAX_SAFE_UINT64 = BigInt(Number.MAX_SAFE_INTEGER);
 const MAX_UINT64 = 18446744073709551615n;
 
@@ -119,27 +120,35 @@ function workspace(t) {
 }
 
 test('public schemas close producer bytes without claiming the native root', () => {
-  const ajv = new Ajv2020({ allErrors: true, strict: true });
-  const validateManifest = ajv.compile(
-    readJson(
-      'framework/episode-provider/schema/git-workspace-manifest-v1.schema.json',
-    ),
-  );
-  const validateSegment = ajv.compile(
-    readJson(
-      'framework/episode-provider/schema/git-workspace-segment-v1.schema.json',
-    ),
-  );
-  const validateQualification = ajv.compile(
-    readJson(
-      'framework/episode-provider/schema/episode-qualification-v1.schema.json',
-    ),
-  );
-  const validateProvider = ajv.compile(
-    readJson(
-      'framework/episode-provider/schema/git-workspace-provider-contract-v1.schema.json',
-    ),
-  );
+  const ajv = Ajv2020 ? new Ajv2020({ allErrors: true, strict: true }) : null;
+  const validateManifest = ajv
+    ? ajv.compile(
+        readJson(
+          'framework/episode-provider/schema/git-workspace-manifest-v1.schema.json',
+        ),
+      )
+    : null;
+  const validateSegment = ajv
+    ? ajv.compile(
+        readJson(
+          'framework/episode-provider/schema/git-workspace-segment-v1.schema.json',
+        ),
+      )
+    : null;
+  const validateQualification = ajv
+    ? ajv.compile(
+        readJson(
+          'framework/episode-provider/schema/episode-qualification-v1.schema.json',
+        ),
+      )
+    : null;
+  const validateProvider = ajv
+    ? ajv.compile(
+        readJson(
+          'framework/episode-provider/schema/git-workspace-provider-contract-v1.schema.json',
+        ),
+      )
+    : null;
   const providerContract = readJson(
     'framework/episode-provider/git-workspace-provider.contract.json',
   );
@@ -168,11 +177,13 @@ test('public schemas close producer bytes without claiming the native root', () 
     .split('\n')
     .map((row) => JSON.parse(row));
 
-  assert.equal(validateProvider(providerContract), true, ajv.errorsText());
-  assert.equal(validateManifest(segment.manifest), true, ajv.errorsText());
-  assert.equal(validateQualification(qualified), true, ajv.errorsText());
-  for (const row of rows)
-    assert.equal(validateSegment(row), true, ajv.errorsText());
+  if (ajv) {
+    assert.equal(validateProvider(providerContract), true, ajv.errorsText());
+    assert.equal(validateManifest(segment.manifest), true, ajv.errorsText());
+    assert.equal(validateQualification(qualified), true, ajv.errorsText());
+    for (const row of rows)
+      assert.equal(validateSegment(row), true, ajv.errorsText());
+  }
   assert.equal(segment.claims.at(-1), 0x0a);
   assert.equal(segment.manifest.claims.count, rows.length);
   assert.equal(segment.manifest.claims.digest, sha256Bytes(segment.claims));
@@ -194,26 +205,31 @@ test('public schemas close producer bytes without claiming the native root', () 
 
   const manifestExtra = structuredClone(segment.manifest);
   manifestExtra.unexpected = true;
-  assert.equal(validateManifest(manifestExtra), false);
-  assert.equal(validateSegment({ ...rows[0], index: -1 }), false);
-  assert.equal(
-    validateQualification({ ...qualified, policy_source: 'javascript' }),
-    false,
-  );
-  assert.equal(
-    validateProvider({ ...providerContract, authority: 'git-workspace' }),
-    false,
-  );
-  assert.equal(
-    validateProvider({
-      ...providerContract,
-      schemas: { ...providerContract.schemas, manifest: 'consumer-owned.json' },
-    }),
-    false,
-  );
+  if (ajv) {
+    assert.equal(validateManifest(manifestExtra), false);
+    assert.equal(validateSegment({ ...rows[0], index: -1 }), false);
+    assert.equal(
+      validateQualification({ ...qualified, policy_source: 'javascript' }),
+      false,
+    );
+    assert.equal(
+      validateProvider({ ...providerContract, authority: 'git-workspace' }),
+      false,
+    );
+    assert.equal(
+      validateProvider({
+        ...providerContract,
+        schemas: {
+          ...providerContract.schemas,
+          manifest: 'consumer-owned.json',
+        },
+      }),
+      false,
+    );
+  }
   const unsafeDependency = structuredClone(segment.manifest);
   unsafeDependency.dependencies = [{ episode_id: 9007199254740992 }];
-  assert.equal(validateManifest(unsafeDependency), false);
+  if (validateManifest) assert.equal(validateManifest(unsafeDependency), false);
   assert.equal(
     sortedUniqueRoots([`sha256:${'b'.repeat(64)}`, `sha256:${'a'.repeat(64)}`]),
     false,

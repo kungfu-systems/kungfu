@@ -9,6 +9,7 @@ const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const CORE = path.join(ROOT, 'framework/core');
 const isWin = process.platform === 'win32';
 const shifu = path.join(ROOT, isWin ? 'shifu.cmd' : 'shifu');
+const readonlyPytest = process.env.KUNGFU_READONLY_PYTEST;
 const steps = [
   {
     command: process.execPath,
@@ -16,18 +17,25 @@ const steps = [
     cwd: ROOT,
   },
   {
-    command: shifu,
-    args: [
-      'exec',
-      'uv',
-      'run',
-      '--project',
-      CORE,
-      '--frozen',
-      'pytest',
-      '-q',
-      path.join(CORE, 'tests/python/test_agent_work_state_contract.py'),
-    ],
+    command: readonlyPytest || shifu,
+    args: readonlyPytest
+      ? [
+          '-q',
+          '-p',
+          'no:cacheprovider',
+          path.join(CORE, 'tests/python/test_agent_work_state_contract.py'),
+        ]
+      : [
+          'exec',
+          'uv',
+          'run',
+          '--project',
+          CORE,
+          '--frozen',
+          'pytest',
+          '-q',
+          path.join(CORE, 'tests/python/test_agent_work_state_contract.py'),
+        ],
     cwd: CORE,
     env: {
       ...process.env,

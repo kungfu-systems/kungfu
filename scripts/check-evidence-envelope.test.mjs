@@ -6,8 +6,6 @@ import path from 'node:path';
 import test from 'node:test';
 import { fileURLToPath } from 'node:url';
 
-import Ajv2020 from 'ajv/dist/2020.js';
-
 import {
   createEvidenceEnvelope,
   verifyEvidenceEnvelope,
@@ -18,12 +16,14 @@ import {
   projectCutReceiptEvidence,
   settlementReceiptEvidence,
 } from '../framework/project-cut/src/receipt-evidence.mjs';
+import { optionalAjv2020 } from './readonly-source-toolchain.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const HASH = `sha256:${'a'.repeat(64)}`;
 const OID = 'b'.repeat(40);
 const readJson = (relative) =>
   JSON.parse(fs.readFileSync(path.join(ROOT, relative), 'utf8'));
+const Ajv2020 = optionalAjv2020();
 
 const projectCutReceipt = {
   schema: 'project.cut.receipt/v1',
@@ -79,17 +79,20 @@ test('Project Cut receipt families share one typed evidence envelope', () => {
   const envelopeSchema = readJson(
     'framework/evidence/schema/evidence-envelope-v1.schema.json',
   );
-  const validateEnvelope = new Ajv2020({
-    allErrors: true,
-    strict: false,
-    validateFormats: false,
-  }).compile(envelopeSchema);
+  const validateEnvelope = Ajv2020
+    ? new Ajv2020({
+        allErrors: true,
+        strict: false,
+        validateFormats: false,
+      }).compile(envelopeSchema)
+    : null;
   for (const envelope of envelopes) {
-    assert.equal(
-      validateEnvelope(envelope),
-      true,
-      JSON.stringify(validateEnvelope.errors),
-    );
+    if (validateEnvelope)
+      assert.equal(
+        validateEnvelope(envelope),
+        true,
+        JSON.stringify(validateEnvelope.errors),
+      );
     assert.equal(verifyEvidenceEnvelope(envelope).valid, true);
     assert.equal(envelope.kind, 'receipt');
     assert.equal(envelope.type, envelope.evidence.schema);
@@ -105,7 +108,11 @@ test('Project Cut receipt families share one typed evidence envelope', () => {
   );
 });
 
-test('typed payload schemas stay independently valid', () => {
+test('typed payload schemas stay independently valid', (t) => {
+  if (!Ajv2020) {
+    t.skip('ajv is not installed; CI enforces JSON Schema conformance');
+    return;
+  }
   const ajv = new Ajv2020({
     allErrors: true,
     strict: false,

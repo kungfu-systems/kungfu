@@ -8,6 +8,14 @@ import process from 'node:process';
 import { fileURLToPath } from 'node:url';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+const READONLY_SOURCE_COMMANDS = [
+  'core:architecture',
+  'core:architecture:health',
+  'invariant:verify --list',
+  'maintainability:complexity',
+  'maintainability:amplification',
+  'maintainability:query',
+];
 
 function route(command, args) {
   if (command === 'core:architecture')
@@ -31,27 +39,35 @@ function route(command, args) {
   return null;
 }
 
-const [command = '', ...args] = process.argv.slice(2);
-const target = route(command, args);
-if (!target) {
-  process.stderr.write(`shifu: unsupported build-free route '${command}'\n`);
-  process.exit(2);
-}
-const result = spawnSync(
-  process.execPath,
-  [path.join(ROOT, target[0]), ...target[1]],
-  {
-    cwd: ROOT,
-    env: process.env,
-    stdio: 'inherit',
-  },
-);
-if (result.error) {
-  process.stderr.write(
-    `shifu: build-free route failed: ${result.error.message}\n`,
+function main() {
+  const [command = '', ...args] = process.argv.slice(2);
+  const target = route(command, args);
+  if (!target) {
+    process.stderr.write(`shifu: unsupported build-free route '${command}'\n`);
+    process.exit(2);
+  }
+  const result = spawnSync(
+    process.execPath,
+    [path.join(ROOT, target[0]), ...target[1]],
+    {
+      cwd: ROOT,
+      env: process.env,
+      stdio: 'inherit',
+    },
   );
-  process.exit(2);
+  if (result.error) {
+    process.stderr.write(
+      `shifu: build-free route failed: ${result.error.message}\n`,
+    );
+    process.exit(2);
+  }
+  process.exit(result.status ?? 2);
 }
-process.exit(result.status ?? 2);
 
-export { route };
+if (
+  process.argv[1] &&
+  path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)
+)
+  main();
+
+export { READONLY_SOURCE_COMMANDS, route };

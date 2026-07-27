@@ -365,14 +365,14 @@ function fixture({
   };
 }
 
-test('Kungfu independently accepts only a current sealed qualifying capability', () => {
-  const result = verifyKungfuReleaseAdmission(fixture());
+test('Kungfu independently accepts only a current sealed qualifying capability', async () => {
+  const result = await verifyKungfuReleaseAdmission(fixture());
   assert.equal(result.qualifying, true);
   assert.equal(result.capability.decision, 'allow');
   assert.equal(result.capability.runtimeSha, RUNTIME_SHA);
   assert.match(result.consumerPolicyDigest, /^[0-9a-f]{64}$/);
 
-  const stable = verifyKungfuReleaseAdmission(
+  const stable = await verifyKungfuReleaseAdmission(
     fixture({
       channel: 'release',
       runtimeSha: STABLE_RUNTIME_SHA,
@@ -381,8 +381,8 @@ test('Kungfu independently accepts only a current sealed qualifying capability',
   );
   assert.equal(stable.capability.runtimeSha, STABLE_RUNTIME_SHA);
 
-  assert.throws(
-    () =>
+  await assert.rejects(
+    async () =>
       verifyKungfuReleaseAdmission(
         fixture({
           channel: 'alpha',
@@ -394,45 +394,48 @@ test('Kungfu independently accepts only a current sealed qualifying capability',
   );
 });
 
-test('Kungfu rejects missing platform evidence and replayed or stale admission', () => {
+test('Kungfu rejects missing platform evidence and replayed or stale admission', async () => {
   const missingPlatform = fixture();
   missingPlatform.publicationEvidence.gateAggregate.receipts.pop();
-  assert.throws(
-    () => verifyKungfuReleaseAdmission(missingPlatform),
+  await assert.rejects(
+    async () => verifyKungfuReleaseAdmission(missingPlatform),
     /missing windows qualification/,
   );
 
   const replayed = fixture();
   replayed.usedNonces = [replayed.admission.nonce];
-  assert.throws(
-    () => verifyKungfuReleaseAdmission(replayed),
+  await assert.rejects(
+    async () => verifyKungfuReleaseAdmission(replayed),
     /nonce was replayed/,
   );
 
   const stale = fixture();
   stale.now = new Date('2026-07-15T00:11:00.000Z');
-  assert.throws(() => verifyKungfuReleaseAdmission(stale), /stale/);
+  await assert.rejects(
+    async () => verifyKungfuReleaseAdmission(stale),
+    /stale/,
+  );
 });
 
-test('Kungfu rejects policy, runner, control-plane, and artifact substitution', () => {
+test('Kungfu rejects policy, runner, control-plane, and artifact substitution', async () => {
   const policy = fixture();
   policy.expected.channel = 'latest';
-  assert.throws(
-    () => verifyKungfuReleaseAdmission(policy),
+  await assert.rejects(
+    async () => verifyKungfuReleaseAdmission(policy),
     /channel is not allowed/,
   );
 
   const runner = fixture();
   runner.runnerProvenance.qualificationStatus = 'unqualified';
-  assert.throws(
-    () => verifyKungfuReleaseAdmission(runner),
+  await assert.rejects(
+    async () => verifyKungfuReleaseAdmission(runner),
     /runner provenance qualification floor was not met|digest mismatch/,
   );
 
   const controlPlane = fixture();
   controlPlane.controlPlaneAudit.facts[0].status = 'fail';
-  assert.throws(
-    () => verifyKungfuReleaseAdmission(controlPlane),
+  await assert.rejects(
+    async () => verifyKungfuReleaseAdmission(controlPlane),
     /control-plane audit fact did not pass|digest mismatch/,
   );
 
@@ -440,15 +443,15 @@ test('Kungfu rejects policy, runner, control-plane, and artifact substitution', 
   artifact.publicationEvidence.artifactPayloads[0].files[0].sha256 = 'e'.repeat(
     64,
   );
-  assert.throws(
-    () => verifyKungfuReleaseAdmission(artifact),
+  await assert.rejects(
+    async () => verifyKungfuReleaseAdmission(artifact),
     /payload bytes do not match/,
   );
 });
 
 test('Kungfu consumer qualification seals only an exact current handoff', async () => {
   const input = fixture();
-  const capability = verifyKungfuReleaseAdmission(input).capability;
+  const capability = (await verifyKungfuReleaseAdmission(input)).capability;
   const gateAggregate = input.publicationEvidence.gateAggregate;
   const decision = await createKungfuConsumerPublicationDecision({
     root: ROOT,

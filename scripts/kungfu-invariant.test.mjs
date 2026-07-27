@@ -5,7 +5,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import test from 'node:test';
 import { fileURLToPath } from 'node:url';
-import Ajv2020 from 'ajv/dist/2020.js';
+import { optionalAjv2020 } from './readonly-source-toolchain.mjs';
 
 import {
   canonicalJson,
@@ -30,6 +30,7 @@ import {
 import { factKernelNativeInvocation } from './run-fact-kernel-native-tests.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+const Ajv2020 = optionalAjv2020();
 const readJson = (relative) =>
   JSON.parse(fs.readFileSync(path.join(ROOT, relative), 'utf8'));
 const registry = readJson('framework/invariant/kungfu-invariant.registry.json');
@@ -591,16 +592,18 @@ test('successor gate rejects silent semantic change and requires model/refinemen
 });
 
 test('schemas reject unknown verdicts and tampered receipt roots', () => {
-  const schema = readJson(
-    'framework/invariant/schema/invariant-evidence-v1.schema.json',
-  );
-  const validate = new Ajv2020({
-    strict: false,
-    validateFormats: false,
-  }).compile(schema);
-  const sample = completeEvidence()[0];
-  sample.verdict = 'passed';
-  assert.equal(validate(sample), false);
+  if (Ajv2020) {
+    const schema = readJson(
+      'framework/invariant/schema/invariant-evidence-v1.schema.json',
+    );
+    const validate = new Ajv2020({
+      strict: false,
+      validateFormats: false,
+    }).compile(schema);
+    const sample = completeEvidence()[0];
+    sample.verdict = 'passed';
+    assert.equal(validate(sample), false);
+  }
   const receipt = qualifyEpisodeObject(qualificationSubject(), {
     observedAt: '2026-07-20T00:00:00.000Z',
   });

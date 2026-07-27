@@ -22,13 +22,17 @@ const SELECTOR = JSON.parse(
   fs.readFileSync(path.join(ROOT, '.xinfa', 'product-documentation-pack.json')),
 );
 const ATLAS = path.join(
-  ROOT,
-  '.xinfa',
-  'baselines',
-  'sha256',
-  SELECTOR.atlasRoot.slice('sha256:'.length),
+  process.env.KUNGFU_DOCUMENTATION_ATLAS ||
+    path.join(
+      ROOT,
+      '.xinfa',
+      'baselines',
+      'sha256',
+      SELECTOR.atlasRoot.slice('sha256:'.length),
+    ),
 );
-documentationAtlasSource(ROOT);
+if (!process.env.KUNGFU_DOCUMENTATION_ATLAS_BUNDLE)
+  documentationAtlasSource(ROOT);
 
 function probe(atlas, expression = 'verify(root)') {
   const program = `
@@ -70,12 +74,13 @@ test('tampered product bytes fail closed before any read', () => {
   const temporary = fs.mkdtempSync(path.join(os.tmpdir(), 'kungfu-doc-pack-'));
   try {
     fs.cpSync(ATLAS, temporary, { recursive: true });
-    fs.appendFileSync(path.join(temporary, 'views', 'agent.json'), ' ');
+    const receiptPath = path.join(temporary, 'receipt.json');
+    const tampered = JSON.parse(fs.readFileSync(receiptPath, 'utf8'));
+    tampered.verdict = 'tampered';
+    fs.writeFileSync(receiptPath, `${JSON.stringify(tampered)}\n`);
     const receipt = probe(temporary);
     assert.equal(receipt.valid, false);
-    assert.ok(
-      receipt.diagnostics.some((item) => item.code === 'artifact-root'),
-    );
+    assert.ok(receipt.diagnostics.some((item) => item.code === 'receipt-root'));
   } finally {
     fs.rmSync(temporary, { recursive: true, force: true });
   }

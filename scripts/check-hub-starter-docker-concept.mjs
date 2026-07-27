@@ -6,8 +6,6 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import Ajv2020 from 'ajv/dist/2020.js';
-
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const CONTRACT_PATH =
   'framework/hub-starter/kungfu-hub-starter-docker.contract.json';
@@ -138,16 +136,40 @@ export function collectHubStarterIssues(contract, root = ROOT) {
   return issues.sort((left, right) => left.code.localeCompare(right.code));
 }
 
-export function validateHubStarterRepository(root = ROOT) {
+async function loadAjv2020() {
+  try {
+    return (await import('ajv/dist/2020.js')).default;
+  } catch (error) {
+    if (error && error.code === 'ERR_MODULE_NOT_FOUND') return null;
+    throw error;
+  }
+}
+
+export async function validateHubStarterRepository(root = ROOT) {
   const contract = JSON.parse(
     fs.readFileSync(path.join(root, CONTRACT_PATH), 'utf8'),
   );
   const schema = JSON.parse(
     fs.readFileSync(path.join(root, SCHEMA_PATH), 'utf8'),
   );
-  const ajv = new Ajv2020({ allErrors: true, strict: true });
-  const validate = ajv.compile(schema);
-  const schemaValid = validate(contract);
+  const Ajv2020 = await loadAjv2020();
+  let schemaValid = true;
+  let schemaErrors = [];
+  let schemaValidation = 'skipped';
+  if (Ajv2020) {
+    const validate = new Ajv2020({ allErrors: true, strict: true }).compile(
+      schema,
+    );
+    schemaValid = validate(contract);
+    schemaErrors = validate.errors || [];
+    schemaValidation = 'passed';
+  } else {
+    console.warn(
+      '[hub-starter] ajv not installed; topology, authority, safety, ' +
+        'documentation, and non-claim checks still ran. Run `./shifu sync` ' +
+        'to enable JSON Schema conformance locally; CI enforces it.',
+    );
+  }
   const issues = collectHubStarterIssues(contract, root);
 
   for (const documentPath of [
@@ -172,7 +194,8 @@ export function validateHubStarterRepository(root = ROOT) {
     ok: Boolean(schemaValid) && issues.length === 0,
     contract: CONTRACT_PATH,
     schema: SCHEMA_PATH,
-    schemaErrors: validate.errors || [],
+    schemaValidation,
+    schemaErrors,
     issues,
     passedEvidence: (contract.evidenceLadder || [])
       .filter(({ status }) => status === 'passed')
@@ -180,8 +203,8 @@ export function validateHubStarterRepository(root = ROOT) {
   };
 }
 
-function main() {
-  const result = validateHubStarterRepository();
+async function main() {
+  const result = await validateHubStarterRepository();
   process.stdout.write(`${JSON.stringify(result, null, 2)}\n`);
   if (!result.ok) process.exitCode = 1;
 }
@@ -190,4 +213,7 @@ if (
   process.argv[1] &&
   path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)
 )
-  main();
+  main().catch((error) => {
+    process.stderr.write(`${error.stack || error.message}\n`);
+    process.exitCode = 1;
+  });

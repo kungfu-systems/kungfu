@@ -107,13 +107,15 @@ export function runDocumentationQualification() {
       'utf8',
     ),
   );
-  const atlas = path.join(
-    ROOT,
-    '.xinfa',
-    'baselines',
-    'sha256',
-    selector.atlasRoot.slice('sha256:'.length),
-  );
+  const atlas =
+    process.env.KUNGFU_DOCUMENTATION_ATLAS ||
+    path.join(
+      ROOT,
+      '.xinfa',
+      'baselines',
+      'sha256',
+      selector.atlasRoot.slice('sha256:'.length),
+    );
   const product = productProbe(atlas);
   const consumers = runConsumerQualification();
   const diagnostics = validateQualificationMatrix(matrix);

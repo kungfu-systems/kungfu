@@ -2,8 +2,18 @@
 // @ts-check
 
 import assert from 'node:assert/strict';
+import { generateKeyPairSync, sign } from 'node:crypto';
 import test from 'node:test';
 
+import {
+  baselineIntegrityIssues,
+  baselineMeasurementRoot,
+  baselineTransitionAuthorization,
+  digest,
+  enrichIssue,
+  protectedBaselineIssues,
+  waiverAuthorization,
+} from '../framework/maintainability/complexity-governance.mjs';
 import {
   classify,
   hasGeneratedProvenance,
@@ -23,6 +33,7 @@ const handwritten = (path, lines, owner = 'shifu/source-tooling') => ({
   language: 'javascript-typescript',
   owner,
   lines,
+  contentRoot: digest({ path, lines, owner }),
 });
 const groups = {
   'first-party-handwritten-implementation:javascript-typescript': {
@@ -155,6 +166,46 @@ test('anti-gaming rejects helper proliferation and generated laundering', () => 
   );
 });
 
+test('anti-gaming rejects relabeling, responsibility splits, and re-added debt', () => {
+  const deleted = handwritten('scripts/hotspot.mjs', 120);
+  const generated = {
+    ...handwritten('scripts/generated/hotspot.mjs', 70),
+    class: 'generated-projection',
+    generatedProvenance: true,
+  };
+  const split = [
+    handwritten('scripts/hotspot-reader.mjs', 50),
+    handwritten('scripts/hotspot-writer.mjs', 50),
+  ];
+  const policy = {
+    antiGaming: {
+      maxNewHandwrittenFilesPerOwner: 3,
+      newGeneratedProjectionRequiresProvenance: true,
+    },
+  };
+  const replacementCodes = regressionIssues(
+    [generated, ...split],
+    { groups, files: [deleted] },
+    policy,
+  ).map((issue) => issue.code);
+  assert.ok(replacementCodes.includes('generated-or-vendor-laundering'));
+  assert.ok(replacementCodes.includes('responsibility-preserving-split'));
+
+  const relabeledCodes = regressionIssues(
+    [{ ...deleted, class: 'generated-projection' }],
+    { groups, files: [deleted] },
+    policy,
+  ).map((issue) => issue.code);
+  assert.ok(relabeledCodes.includes('classification-or-owner-relabeled'));
+
+  const readdedCodes = regressionIssues(
+    [{ ...deleted, lines: 121, contentRoot: digest('re-added') }],
+    { groups, files: [deleted] },
+    policy,
+  ).map((issue) => issue.code);
+  assert.ok(readdedCodes.includes('grandfathered-file-grew'));
+});
+
 test('unknown classification or owner fails closed', () => {
   const issues = validateMeasured([
     { path: 'mystery', class: '', owner: '', lines: 1 },
@@ -165,13 +216,17 @@ test('unknown classification or owner fails closed', () => {
   );
 });
 
-test('waivers require independent, current, exact, non-reusable approval', () => {
+function signedWaiverFixture() {
+  const { privateKey, publicKey } = generateKeyPairSync('ed25519');
+  const publicKeyPem = publicKey.export({ type: 'spki', format: 'pem' });
   const requiredFields = [
     'schema',
+    'issue_root',
+    'issue_kind',
     'paths_or_scope',
-    'file_class',
+    'budget_classes',
     'baseline_measurement',
-    'requested_measurement',
+    'current_measurement',
     'allowed_delta',
     'owner',
     'responsibility_boundary',
@@ -179,66 +234,257 @@ test('waivers require independent, current, exact, non-reusable approval', () =>
     'rejected_split_alternatives',
     'affected_tests_and_qualification',
     'requested_by',
-    'approved_by',
-    'approved_at',
-    'expires_at_or_review_by',
+    'approval_receipt',
     'retirement_or_decomposition_ref',
   ];
   const policy = {
+    status: 'p1-trusted-governance',
     waiver: {
-      schema: 'kungfu.code-complexity-budget-waiver/v1',
+      schema: 'kungfu.code-complexity-budget-waiver/v2',
+      approvalReceiptSchema:
+        'kungfu.code-complexity-budget-approval-receipt/v1',
+      maxApprovalAgeDays: 30,
+      trustedAuthorities: [
+        {
+          authority_id: 'independent-reviewer',
+          key_id: 'review-key-1',
+          algorithm: 'ed25519',
+          public_key_pem: publicKeyPem,
+        },
+      ],
       requiredFields,
     },
   };
+  const baseline = handwritten('scripts/debt.mjs', 120);
+  const current = handwritten('scripts/debt.mjs', 125);
+  const issue = enrichIssue(
+    {
+      code: 'grandfathered-file-grew',
+      path: current.path,
+      paths: [current.path],
+    },
+    [baseline],
+    [current],
+  );
   const value = {
     schema: policy.waiver.schema,
-    paths_or_scope: ['scripts/debt.mjs'],
-    file_class: 'first-party-handwritten-implementation',
-    baseline_measurement: 120,
-    requested_measurement: 125,
+    issue_root: issue.issueRoot,
+    issue_kind: issue.issueKind,
+    paths_or_scope: issue.paths,
+    budget_classes: issue.budgetClasses,
+    baseline_measurement: issue.baselineMeasurement,
+    current_measurement: issue.currentMeasurement,
     allowed_delta: 5,
     owner: 'shifu/source-tooling',
     responsibility_boundary: 'one bounded compatibility adapter',
     cohesion_rationale: 'the adapter must remain atomic',
     rejected_split_alternatives: ['split would duplicate ordering'],
     affected_tests_and_qualification: ['scripts/debt.test.mjs'],
-    requested_by: 'author',
-    approved_by: 'independent-reviewer',
-    approved_at: '2098-01-01T00:00:00Z',
-    expires_at_or_review_by: '2099-01-01T00:00:00Z',
+    requested_by: 'author@example.com',
     retirement_or_decomposition_ref: 'issue-123',
+    approval_receipt: {
+      schema: policy.waiver.approvalReceiptSchema,
+      authority_id: 'independent-reviewer',
+      key_id: 'review-key-1',
+      algorithm: 'ed25519',
+      issued_at: '2026-07-26T00:00:00Z',
+      approved_at: '2026-07-26T00:01:00Z',
+      expires_at: '2026-08-01T00:00:00Z',
+      authorization_root: '',
+      signature: '',
+    },
   };
   const record = { file: 'waiver.json', value };
-  const current = handwritten('scripts/debt.mjs', 125);
-  const issue = { path: current.path };
-  assert.deepEqual(waiverIssues(record, policy), []);
-  assert.equal(validWaiverFor(issue, current, [record], policy), 'waiver.json');
+  value.approval_receipt.authorization_root = digest(
+    waiverAuthorization(record, issue, value.requested_by),
+  );
+  value.approval_receipt.signature = sign(
+    null,
+    Buffer.from(value.approval_receipt.authorization_root),
+    privateKey,
+  ).toString('base64');
+  return {
+    privateKey,
+    policy,
+    baseline,
+    current,
+    issue,
+    record,
+    evaluationTime: new Date('2026-07-27T00:00:00Z'),
+  };
+}
+
+test('waivers require independent signed exact non-reusable approval', () => {
+  const fixture = signedWaiverFixture();
+  const context = {
+    evaluationTime: fixture.evaluationTime,
+    requester: fixture.record.value.requested_by,
+    issue: fixture.issue,
+  };
+  assert.deepEqual(waiverIssues(fixture.record, fixture.policy, context), []);
   assert.equal(
     validWaiverFor(
-      issue,
-      { ...current, path: 'scripts/other.mjs' },
-      [record],
-      policy,
+      fixture.issue,
+      fixture.current,
+      [fixture.record],
+      fixture.policy,
+      context,
+    ),
+    'waiver.json',
+  );
+  const partialIssue = {
+    ...fixture.issue,
+    paths: [...fixture.issue.paths, 'scripts/other.mjs'].sort(),
+  };
+  assert.equal(
+    validWaiverFor(
+      partialIssue,
+      fixture.current,
+      [fixture.record],
+      fixture.policy,
+      { ...context, issue: partialIssue },
     ),
     '',
   );
+  const forged = structuredClone(fixture.record);
+  forged.value.current_measurement[0].lines += 1;
   assert.equal(
-    validWaiverFor(issue, { ...current, lines: 126 }, [record], policy),
+    validWaiverFor(
+      fixture.issue,
+      fixture.current,
+      [forged],
+      fixture.policy,
+      context,
+    ),
     '',
   );
-  assert.ok(
-    waiverIssues(
-      { file: 'self.json', value: { ...value, approved_by: 'author' } },
-      policy,
-    ).some((item) => item.code === 'self-approved-waiver'),
+});
+
+test('waiver approval rejects fabricated, unknown, same-authority, and stale receipts', () => {
+  const fixture = signedWaiverFixture();
+  const context = {
+    evaluationTime: fixture.evaluationTime,
+    requester: fixture.record.value.requested_by,
+    issue: fixture.issue,
+  };
+  const codes = (record, policy = fixture.policy, localContext = context) =>
+    waiverIssues(record, policy, localContext).map((item) => item.code);
+  const fabricated = structuredClone(fixture.record);
+  fabricated.value.approval_receipt.signature = 'AA==';
+  assert.ok(codes(fabricated).includes('invalid-approval-signature'));
+  const unknown = structuredClone(fixture.record);
+  unknown.value.approval_receipt.key_id = 'unknown';
+  assert.ok(codes(unknown).includes('unknown-approval-authority'));
+  const samePolicy = structuredClone(fixture.policy);
+  samePolicy.waiver.trustedAuthorities[0].authority_id =
+    fixture.record.value.requested_by;
+  const same = structuredClone(fixture.record);
+  same.value.approval_receipt.authority_id = fixture.record.value.requested_by;
+  assert.ok(codes(same, samePolicy).includes('same-authority-approval'));
+  const stale = structuredClone(fixture.record);
+  stale.value.approval_receipt.issued_at = '2026-05-01T00:00:00Z';
+  stale.value.approval_receipt.approved_at = '2026-05-01T00:01:00Z';
+  stale.value.approval_receipt.expires_at = '2026-08-01T00:00:00Z';
+  assert.ok(codes(stale).includes('stale-approval'));
+});
+
+test('baseline integrity rejects forged measurements and artifact fields', () => {
+  const baseline = {
+    schema: 'kungfu.code-complexity-budget-baseline/v1',
+    policyRoot: `sha256:${'1'.repeat(64)}`,
+    baselineRef: 'a'.repeat(40),
+    classification: 'ordered-policy-and-content-marker/v1',
+    calibration: { hard: 100 },
+    summary: { handwritten: { files: 1, lines: 10 } },
+    groups: { handwritten: { hard: 100 } },
+    grandfathered: [],
+    files: [handwritten('scripts/a.mjs', 10)],
+    issues: [],
+  };
+  baseline.measurementRoot = baselineMeasurementRoot(baseline);
+  assert.deepEqual(
+    baselineIntegrityIssues(baseline, baseline, 'base.json'),
+    [],
   );
-  assert.ok(
-    waiverIssues(
-      {
-        file: 'expired.json',
-        value: { ...value, expires_at_or_review_by: '2020-01-01T00:00:00Z' },
-      },
-      policy,
-    ).some((item) => item.code === 'expired-waiver'),
+  const forged = structuredClone(baseline);
+  forged.files[0].lines = 1;
+  const codes = baselineIntegrityIssues(forged, baseline, 'base.json').map(
+    (item) => item.code,
+  );
+  assert.ok(codes.includes('forged-baseline-artifact'));
+});
+
+test('protected baseline refresh requires one exact protected signed transition', () => {
+  const fixture = signedWaiverFixture();
+  const protectedBaseline = {
+    measurementRoot: `sha256:${'1'.repeat(64)}`,
+    baselineRef: 'a'.repeat(40),
+  };
+  const candidateBaseline = {
+    measurementRoot: `sha256:${'2'.repeat(64)}`,
+    baselineRef: 'b'.repeat(40),
+  };
+  const protectedPolicy = {
+    ...fixture.policy,
+    status: 'p1-trusted-governance',
+    baselineGovernance: {
+      transitionSchema: 'kungfu.code-complexity-baseline-transition/v1',
+      maxChangedMeasurements: 10,
+      maxAggregateLineDelta: 100,
+    },
+  };
+  const candidatePolicy = {
+    ...protectedPolicy,
+    baselinePath: 'framework/maintainability/code-complexity-baseline.json',
+  };
+  const value = {
+    schema: protectedPolicy.baselineGovernance.transitionSchema,
+    expected_old_measurement_root: protectedBaseline.measurementRoot,
+    expected_old_baseline_ref: protectedBaseline.baselineRef,
+    new_measurement_root: candidateBaseline.measurementRoot,
+    new_baseline_ref: candidateBaseline.baselineRef,
+    changed_measurements: 1,
+    aggregate_line_delta: 5,
+    requested_by: 'author@example.com',
+    reason: 'advance the frozen exact source cut',
+    retirement_or_decomposition_ref: 'issue-456',
+    approval_receipt: {
+      schema: protectedPolicy.waiver.approvalReceiptSchema,
+      authority_id: 'independent-reviewer',
+      key_id: 'review-key-1',
+      algorithm: 'ed25519',
+      issued_at: '2026-07-26T00:00:00Z',
+      approved_at: '2026-07-26T00:01:00Z',
+      expires_at: '2026-08-01T00:00:00Z',
+      authorization_root: '',
+      signature: '',
+    },
+  };
+  value.approval_receipt.authorization_root = digest(
+    baselineTransitionAuthorization(value),
+  );
+  value.approval_receipt.signature = sign(
+    null,
+    Buffer.from(value.approval_receipt.authorization_root),
+    fixture.privateKey,
+  ).toString('base64');
+  const context = {
+    protectedPolicy,
+    protectedBaseline,
+    candidatePolicy,
+    candidateBaseline,
+    evaluationTime: fixture.evaluationTime,
+    transitions: [{ file: 'transition.json', value }],
+  };
+  assert.deepEqual(protectedBaselineIssues(context), []);
+  assert.equal(
+    protectedBaselineIssues({ ...context, transitions: [] })[0].code,
+    'unauthorized-baseline-transition',
+  );
+  const forged = structuredClone(context.transitions[0]);
+  forged.value.new_baseline_ref = 'c'.repeat(40);
+  assert.equal(
+    protectedBaselineIssues({ ...context, transitions: [forged] })[0].code,
+    'unauthorized-baseline-transition',
   );
 });

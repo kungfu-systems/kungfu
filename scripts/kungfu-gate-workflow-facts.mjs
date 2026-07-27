@@ -3,8 +3,8 @@
 
 import fs from 'node:fs';
 import path from 'node:path';
-import { parseDocument } from 'yaml';
 import { controllerFactsForJob } from './kungfu-gate-controller-adapters.mjs';
+import { parseDocument } from './readonly-source-toolchain.mjs';
 
 const WORKFLOW_ROOT = '.github/workflows';
 const GATE_PROFILE_WORKFLOW = '/.github/workflows/.gate-profile.yml@';

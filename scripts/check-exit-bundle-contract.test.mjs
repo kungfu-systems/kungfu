@@ -6,7 +6,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import test from 'node:test';
 import { fileURLToPath } from 'node:url';
-import Ajv2020 from 'ajv/dist/2020.js';
+import { optionalAjv2020 } from './readonly-source-toolchain.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const read = (relative) => fs.readFileSync(path.join(ROOT, relative), 'utf8');
@@ -23,6 +23,7 @@ const providerQualification = readJson(
 const canonicalPolicy = readJson(
   'framework/contract/kungfu-agent-first-canonical-policy.json',
 );
+const Ajv2020 = optionalAjv2020();
 
 const ROOT_PATTERN = /^sha256:[0-9a-f]{64}$/u;
 const THIN_CAPABILITIES = new Set(['inspect', 'verify-inventory']);
@@ -89,11 +90,13 @@ function validateBundle(bundle) {
       return 'unsupported-member-protocol';
   }
 
-  const validateSchema = new Ajv2020({
-    allErrors: true,
-    strict: true,
-  }).compile(contract.manifestSchema);
-  if (!validateSchema(bundle)) return 'manifest-schema-invalid';
+  if (Ajv2020) {
+    const validateSchema = new Ajv2020({
+      allErrors: true,
+      strict: true,
+    }).compile(contract.manifestSchema);
+    if (!validateSchema(bundle)) return 'manifest-schema-invalid';
+  }
 
   if (bundle.mode === 'thin') {
     const required = {
@@ -295,22 +298,24 @@ test('registers one packaged KFD-1 Exit Bundle contract', () => {
 });
 
 test('embedded schemas validate the exact contract and full fixture', () => {
-  const ajv = new Ajv2020({ allErrors: true, strict: true });
-  const validateContract = ajv.compile(contract.contractSchema);
-  assert.equal(
-    validateContract(contract),
-    true,
-    JSON.stringify(validateContract.errors),
-  );
-  const validateManifest = ajv.compile(contract.manifestSchema);
-  ajv.compile(contract.requestSchema);
-  ajv.compile(contract.packageSchema);
-  ajv.compile(contract.receiptSchema);
-  assert.equal(
-    validateManifest(fixtures.base),
-    true,
-    JSON.stringify(validateManifest.errors),
-  );
+  if (Ajv2020) {
+    const ajv = new Ajv2020({ allErrors: true, strict: true });
+    const validateContract = ajv.compile(contract.contractSchema);
+    assert.equal(
+      validateContract(contract),
+      true,
+      JSON.stringify(validateContract.errors),
+    );
+    const validateManifest = ajv.compile(contract.manifestSchema);
+    ajv.compile(contract.requestSchema);
+    ajv.compile(contract.packageSchema);
+    ajv.compile(contract.receiptSchema);
+    assert.equal(
+      validateManifest(fixtures.base),
+      true,
+      JSON.stringify(validateManifest.errors),
+    );
+  }
   assert.equal(
     fixtures.base.contractSchemaRoot,
     schemaRoot(contract.manifestSchema),

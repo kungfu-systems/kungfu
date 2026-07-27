@@ -175,6 +175,10 @@ export function sourceAcceptancePlan(files, evidenceBaseCommit = '') {
       'documentation material lane',
       'scripts/run-documentation-material-tests.mjs',
     ],
+    [
+      'read-only source and Agent route inventory',
+      'scripts/check-readonly-source-routes.mjs',
+    ],
     ['Shifu Gate contract', 'scripts/check-shifu-gate-contract.mjs'],
     ['Kungfu Gate catalog', 'scripts/check-kungfu-gate-catalog.mjs'],
     ['Xinfa standalone boundary', 'crates/xinfa/tooling/check-boundary.mjs'],
@@ -350,7 +354,11 @@ export function sourceAcceptancePlan(files, evidenceBaseCommit = '') {
         'scripts/kungfu-workflow-authority.test.mjs',
         'scripts/code-complexity-budget.test.mjs',
         'framework/maintainability/semantic-amplification.test.mjs',
-        'scripts/readonly-agent-bootstrap.test.mjs',
+        'framework/maintainability/terminal-evidence-matrix.test.mjs',
+        ...(process.env.KUNGFU_READONLY_NESTED_SOURCE_ACCEPTANCE === '1'
+          ? []
+          : ['scripts/readonly-agent-bootstrap.test.mjs']),
+        'scripts/check-readonly-source-routes.test.mjs',
         'scripts/check-shifu-entry-contract.test.mjs',
         'scripts/check-shifu-cache-contract.test.mjs',
         'scripts/check-health-diagnostics-contract.test.mjs',
@@ -462,11 +470,19 @@ export function sourceAcceptancePlan(files, evidenceBaseCommit = '') {
       command: process.execPath,
       args: ['scripts/run-desktop-update-tests.mjs'],
     },
-    {
-      label: 'tooling type check',
-      command: process.execPath,
-      args: ['node_modules/typescript/bin/tsc', '-p', 'tsconfig.tools.json'],
-    },
+    ...(process.env.KUNGFU_READONLY_NESTED_SOURCE_ACCEPTANCE === '1'
+      ? []
+      : [
+          {
+            label: 'tooling type check',
+            command: process.execPath,
+            args: [
+              'node_modules/typescript/bin/tsc',
+              '-p',
+              'tsconfig.tools.json',
+            ],
+          },
+        ]),
   ];
 
   const web = files.filter(
@@ -479,7 +495,8 @@ export function sourceAcceptancePlan(files, evidenceBaseCommit = '') {
       label: 'changed web source format and lint',
       command: process.execPath,
       args: [
-        'node_modules/@biomejs/biome/bin/biome',
+        process.env.KUNGFU_READONLY_BIOME ||
+          'node_modules/@biomejs/biome/bin/biome',
         'check',
         '--no-errors-on-unmatched',
         ...web,
@@ -505,6 +522,13 @@ export function sourceAcceptancePlan(files, evidenceBaseCommit = '') {
 
   const python = files.filter((file) => file.endsWith('.py'));
   if (python.length) {
+    const ruffEnv = {
+      ...process.env,
+      RUFF_CACHE_DIR: path.join(
+        process.env.XDG_CACHE_HOME || process.env.RUNNER_TEMP || '/tmp',
+        'kungfu-source-ruff',
+      ),
+    };
     const format = sourcePythonCommand([
       'format',
       '--config',
@@ -524,10 +548,12 @@ export function sourceAcceptancePlan(files, evidenceBaseCommit = '') {
       {
         label: 'changed Python format',
         ...format,
+        env: ruffEnv,
       },
       {
         label: 'changed Python lint',
         ...lint,
+        env: ruffEnv,
       },
     );
   }
@@ -586,6 +612,11 @@ function run(step) {
 function main() {
   const files = sourceChangedFiles();
   console.log(`[source-acceptance] changed files: ${files.length}`);
+  if (process.env.KUNGFU_READONLY_NESTED_SOURCE_ACCEPTANCE === '1') {
+    console.warn(
+      '[source-acceptance] cold read-only lane: the installed TypeScript dependency graph is absent; normal source acceptance and CI enforce tooling type checks.',
+    );
+  }
   for (const step of sourceAcceptancePlan(files, sourceMergeBase().sha))
     run(step);
   console.log('\n[source-acceptance] build-free source gate passed');

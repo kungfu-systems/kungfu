@@ -7,8 +7,6 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import Ajv2020 from 'ajv/dist/2020.js';
-
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(HERE, '..');
 const CONTRACT_PATH = 'framework/incubation/incubation-passport.contract.json';
@@ -244,7 +242,16 @@ function validationErrors(validate) {
   );
 }
 
-export function validateRepository(root = ROOT, today = utcDate()) {
+async function loadAjv2020() {
+  try {
+    return (await import('ajv/dist/2020.js')).default;
+  } catch (error) {
+    if (error && error.code === 'ERR_MODULE_NOT_FOUND') return null;
+    throw error;
+  }
+}
+
+export async function validateRepository(root = ROOT, today = utcDate()) {
   const contract = loadJson(root, CONTRACT_PATH);
   const contractSchema = loadJson(root, CONTRACT_SCHEMA_PATH);
   const registry = loadJson(root, contract.registry);
@@ -252,19 +259,34 @@ export function validateRepository(root = ROOT, today = utcDate()) {
   const baseline = loadJson(root, contract.baseline);
   const authority = loadJson(root, contract.schemaAuthority);
 
-  const ajv = new Ajv2020({ allErrors: true, strict: true });
-  ajv.addFormat('date', /^\d{4}-\d{2}-\d{2}$/);
-  const validateContract = ajv.compile(contractSchema);
-  const validateRegistry = ajv.compile(registrySchema);
   const structuralErrors = [];
-  if (!validateContract(contract)) {
-    structuralErrors.push(
-      ...validationErrors(validateContract).map((entry) => `contract ${entry}`),
-    );
-  }
-  if (!validateRegistry(registry)) {
-    structuralErrors.push(
-      ...validationErrors(validateRegistry).map((entry) => `registry ${entry}`),
+  const Ajv2020 = await loadAjv2020();
+  let schemaValidation = 'skipped';
+  if (Ajv2020) {
+    const ajv = new Ajv2020({ allErrors: true, strict: true });
+    ajv.addFormat('date', /^\d{4}-\d{2}-\d{2}$/);
+    const validateContract = ajv.compile(contractSchema);
+    const validateRegistry = ajv.compile(registrySchema);
+    if (!validateContract(contract)) {
+      structuralErrors.push(
+        ...validationErrors(validateContract).map(
+          (entry) => `contract ${entry}`,
+        ),
+      );
+    }
+    if (!validateRegistry(registry)) {
+      structuralErrors.push(
+        ...validationErrors(validateRegistry).map(
+          (entry) => `registry ${entry}`,
+        ),
+      );
+    }
+    schemaValidation = 'passed';
+  } else {
+    console.warn(
+      '[incubation-passport] ajv not installed; semantic governance and exact ' +
+        'baseline checks still ran. Run `./shifu sync` to enable JSON Schema ' +
+        'conformance locally; CI enforces it.',
     );
   }
   if (registry.contract !== CONTRACT_PATH) {
@@ -291,6 +313,7 @@ export function validateRepository(root = ROOT, today = utcDate()) {
     today,
     currentIssueCount: issues.length,
     acceptedIssueCount: issues.length - comparison.newIssues.length,
+    schemaValidation,
     structuralErrors,
     ...comparison,
   };
@@ -322,7 +345,7 @@ if (invoked) {
     console.error('[incubation-passport] --today requires YYYY-MM-DD');
     process.exit(2);
   }
-  const result = validateRepository(ROOT, today);
+  const result = await validateRepository(ROOT, today);
   if (json) console.log(JSON.stringify(result, null, 2));
   else if (result.ok)
     console.log(

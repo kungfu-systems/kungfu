@@ -145,7 +145,7 @@
         "evidenceRoots": [
           {
             "path": ".buildchain/kfd/kfd-3/surfaces.json",
-          "sha256": "sha256:efac6806c4d82d904d60446fb2e3dea73414e1294e4c83d871dd3ac87f2d3dbd"
+            "sha256": "sha256:efac6806c4d82d904d60446fb2e3dea73414e1294e4c83d871dd3ac87f2d3dbd"
           },
           {
             "path": ".buildchain/kfd/kfd-3/capability-query.json",

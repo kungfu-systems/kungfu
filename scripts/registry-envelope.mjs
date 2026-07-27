@@ -6,9 +6,9 @@ import crypto from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import Ajv2020 from 'ajv/dist/2020.js';
 
 import { fileRoot, loadJson, repositoryRoot } from './lib/sdk-generator.mjs';
+import { optionalAjv2020 } from './readonly-source-toolchain.mjs';
 
 const ROOT = repositoryRoot(import.meta.url);
 const ENVELOPE_SCHEMA_PATH =
@@ -68,14 +68,19 @@ export function validateEntryUniqueness(entries, uniqueFields) {
 
 export function validateRegistryDefinition(envelope, root = ROOT) {
   const errors = [];
-  const envelopeSchema = loadJson(root, ENVELOPE_SCHEMA_PATH);
-  const validateEnvelope = new Ajv2020({
-    allErrors: true,
-    strict: true,
-  }).compile(envelopeSchema);
-  if (!validateEnvelope(envelope))
-    errors.push(`envelope schema: ${formatAjvErrors(validateEnvelope.errors)}`);
-  if (errors.length > 0) return errors;
+  const Ajv2020 = optionalAjv2020();
+  if (Ajv2020) {
+    const envelopeSchema = loadJson(root, ENVELOPE_SCHEMA_PATH);
+    const validateEnvelope = new Ajv2020({
+      allErrors: true,
+      strict: true,
+    }).compile(envelopeSchema);
+    if (!validateEnvelope(envelope))
+      errors.push(
+        `envelope schema: ${formatAjvErrors(validateEnvelope.errors)}`,
+      );
+    if (errors.length > 0) return errors;
+  }
 
   const { registry } = envelope;
   for (const relative of [registry.source, registry.schemaPath]) {
@@ -94,15 +99,19 @@ export function validateRegistryDefinition(envelope, root = ROOT) {
       `schema root drift for ${registry.schemaPath}; expected ${registry.schemaRoot}, got ${actualSchemaRoot}`,
     );
 
-  const registrySchema = loadJson(root, registry.schemaPath);
   const registryValue = loadJson(root, registry.source);
-  const validateRegistry = new Ajv2020({
-    allErrors: true,
-    strict: true,
-    strictRequired: false,
-  }).compile(registrySchema);
-  if (!validateRegistry(registryValue))
-    errors.push(`registry schema: ${formatAjvErrors(validateRegistry.errors)}`);
+  if (Ajv2020) {
+    const registrySchema = loadJson(root, registry.schemaPath);
+    const validateRegistry = new Ajv2020({
+      allErrors: true,
+      strict: true,
+      strictRequired: false,
+    }).compile(registrySchema);
+    if (!validateRegistry(registryValue))
+      errors.push(
+        `registry schema: ${formatAjvErrors(validateRegistry.errors)}`,
+      );
+  }
   const entries = atPointer(registryValue, registry.entriesPointer);
   if (!Array.isArray(entries))
     errors.push(
@@ -227,6 +236,11 @@ function main() {
   const check = process.argv.includes('--check');
   if (write === check)
     throw new Error('choose exactly one of --write or --check');
+  if (!optionalAjv2020())
+    console.warn(
+      '[registry-envelope] ajv not installed; roots, paths, identities, and ' +
+        'projection checks still ran. CI enforces JSON Schema conformance.',
+    );
   for (const relative of ENVELOPE_PATHS) {
     const envelope = write
       ? writeRegistryEnvelope(relative)

@@ -9,9 +9,14 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+const AUTHORITY_MATRIX_PATH = path.join(
+  ROOT,
+  '.buildchain',
+  'kfd',
+  'support-matrix.json',
+);
 const MATRIX_PATH = path.resolve(
-  process.env.KUNGFU_KFD_SUPPORT_MATRIX_AUTHORITY ||
-    path.join(ROOT, '.buildchain', 'kfd', 'support-matrix.json'),
+  process.env.KUNGFU_KFD_SUPPORT_MATRIX_AUTHORITY || AUTHORITY_MATRIX_PATH,
 );
 const SDK_PROJECTION_PATH = path.join(
   ROOT,
@@ -27,10 +32,15 @@ const DOC_PROJECTION_PATH = path.join(
   'kfd-support-matrix.md',
 );
 const require = createRequire(import.meta.url);
-const KFD_ROOT = path.dirname(require.resolve('@kungfu-tech/kfd/package.json'));
-const STANDARDS_PATH = path.join(KFD_ROOT, 'standards.json');
-const RELEASE_ANCHOR_PATH = path.join(KFD_ROOT, 'kfd.release.json');
-const KFD_PACKAGE_PATH = path.join(KFD_ROOT, 'package.json');
+let KFD_ROOT = '';
+try {
+  KFD_ROOT = path.dirname(require.resolve('@kungfu-tech/kfd/package.json'));
+} catch (error) {
+  if (error?.code !== 'MODULE_NOT_FOUND') throw error;
+}
+const STANDARDS_PATH = KFD_ROOT && path.join(KFD_ROOT, 'standards.json');
+const RELEASE_ANCHOR_PATH = KFD_ROOT && path.join(KFD_ROOT, 'kfd.release.json');
+const KFD_PACKAGE_PATH = KFD_ROOT && path.join(KFD_ROOT, 'package.json');
 
 function sha256Buffer(value) {
   return `sha256:${createHash('sha256').update(value).digest('hex')}`;
@@ -64,9 +74,19 @@ function validateMatrix(matrix) {
     );
   }
 
-  const standards = readJson(STANDARDS_PATH);
-  const kfdPackage = readJson(KFD_PACKAGE_PATH);
-  const releaseAnchor = readJson(RELEASE_ANCHOR_PATH);
+  const coldAuthority = KFD_ROOT ? null : readJson(AUTHORITY_MATRIX_PATH);
+  const standards = KFD_ROOT ? readJson(STANDARDS_PATH) : null;
+  const kfdPackage = KFD_ROOT ? readJson(KFD_PACKAGE_PATH) : null;
+  const releaseAnchor = KFD_ROOT ? readJson(RELEASE_ANCHOR_PATH) : null;
+  const expectedUpstream = KFD_ROOT
+    ? {
+        version: kfdPackage.version,
+        line: releaseAnchor.line,
+        channel: releaseAnchor.channel,
+        standardsSha256: sha256File(STANDARDS_PATH),
+        releaseAnchorSha256: sha256File(RELEASE_ANCHOR_PATH),
+      }
+    : coldAuthority.upstream;
   const expectedKeys = Array.from(
     { length: 13 },
     (_, index) => `kfd-${index + 1}`,
@@ -80,37 +100,44 @@ function validateMatrix(matrix) {
       `support matrix rows must be ordered kfd-1 through kfd-13, found ${actualKeys.join(',')}`,
     );
   }
-  if (matrix.upstream.version !== kfdPackage.version) {
+  if (matrix.upstream.version !== expectedUpstream.version) {
     fail(
-      `KFD package version drift: matrix=${matrix.upstream.version} installed=${kfdPackage.version}`,
+      `KFD package version drift: matrix=${matrix.upstream.version} installed=${expectedUpstream.version}`,
     );
   }
-  if (matrix.upstream.line !== releaseAnchor.line) {
+  if (matrix.upstream.line !== expectedUpstream.line) {
     fail(
-      `KFD release line drift: matrix=${matrix.upstream.line} installed=${releaseAnchor.line}`,
+      `KFD release line drift: matrix=${matrix.upstream.line} installed=${expectedUpstream.line}`,
     );
   }
-  if (matrix.upstream.channel !== releaseAnchor.channel) {
+  if (matrix.upstream.channel !== expectedUpstream.channel) {
     fail(
-      `KFD release channel drift: matrix=${matrix.upstream.channel} installed=${releaseAnchor.channel}`,
+      `KFD release channel drift: matrix=${matrix.upstream.channel} installed=${expectedUpstream.channel}`,
     );
   }
-  if (matrix.upstream.standardsSha256 !== sha256File(STANDARDS_PATH)) {
+  if (matrix.upstream.standardsSha256 !== expectedUpstream.standardsSha256) {
     fail('installed KFD standards.json root does not match the support matrix');
   }
-  if (matrix.upstream.releaseAnchorSha256 !== sha256File(RELEASE_ANCHOR_PATH)) {
+  if (
+    matrix.upstream.releaseAnchorSha256 !== expectedUpstream.releaseAnchorSha256
+  ) {
     fail('installed KFD release anchor root does not match the support matrix');
   }
 
   for (const row of matrix.rows) {
-    const standard = standards.standards?.[row.key];
+    const standard = KFD_ROOT
+      ? standards.standards?.[row.key]
+      : coldAuthority.rows.find((entry) => entry.key === row.key)?.normative;
     if (!standard) fail(`${row.key} is absent from installed KFD standards`);
     const expectedId = row.key.toUpperCase();
     if (row.id !== expectedId) fail(`${row.key} id must be ${expectedId}`);
     if (
       row.normative.status !== standard.status ||
       row.normative.revision !== standard.revision ||
-      row.normative.documentSha256 !== `sha256:${standard.document.sha256}`
+      row.normative.documentSha256 !==
+        (KFD_ROOT
+          ? `sha256:${standard.document.sha256}`
+          : standard.documentSha256)
     ) {
       fail(
         `${row.key} normative projection drifts from installed KFD metadata`,
@@ -249,6 +276,8 @@ function main() {
       'usage: node scripts/kfd-support-matrix.mjs [--check|--validate|--write]',
     );
   }
+  if (mode === '--write' && !KFD_ROOT)
+    fail('KFD package is required to write support-matrix projections');
   const matrix = validateMatrix(readJson(MATRIX_PATH));
   const sdkProjection = canonicalJson(matrix);
   const docProjection = renderDocument(matrix);

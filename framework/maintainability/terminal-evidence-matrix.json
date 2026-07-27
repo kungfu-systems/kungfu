@@ -1,0 +1,229 @@
+{
+  "schema": "kungfu.maintainability-terminal-evidence-matrix/v1",
+  "goalId": "2026-07-27-kungfu-maintainability-terminal-closure",
+  "sourceBinding": {
+    "repository": "kungfu-systems/kungfu",
+    "protectedBranch": "dev/v4/v4.0",
+    "deliveryPullRequest": 1578,
+    "exactHeadRule": "Evaluate this matrix only from the exact protected commit being qualified. Every workflow selector, artifact coordinate, completion claim, and review must resolve to that commit or to a listed already-merged prerequisite.",
+    "alreadyMergedPrerequisites": [
+      {
+        "pullRequest": 1553,
+        "mergeCommit": "fce257aeeff617304ecb334614188c0efbc3f25c"
+      },
+      {
+        "pullRequest": 1563,
+        "mergeCommit": "0d894b38af1f869e57c03b9a4ffdd2f8db02e7e2"
+      }
+    ]
+  },
+  "terminalEvidence": {
+    "sourceWorkflow": ".github/workflows/affected-native-pr.yml",
+    "platformPreflightWorkflow": ".github/workflows/alpha-promotion-preflight.yml",
+    "productWorkflow": ".github/workflows/build.yml",
+    "requiredSourceJobs": [
+      "Candidate source acceptance / check",
+      "affected-native / linux"
+    ],
+    "requiredPreflightPlatforms": [
+      "linux-x64",
+      "macos-arm64",
+      "windows-x64"
+    ],
+    "requiredProductPlatforms": [
+      "linux-x64",
+      "macos-arm64",
+      "windows-x64"
+    ],
+    "artifactIdentityRule": "Use the Build workflow artifact coordinates and digests whose publish-source-sha equals the exact protected commit.",
+    "reviewRule": {
+      "reviewer": "kungfu-origin",
+      "decision": "APPROVED",
+      "commit": "exact protected commit",
+      "freshContext": true,
+      "maximumOpenSeverity": "no P0, no P1, and no material P2 in scope"
+    },
+    "assignmentRule": "Every listed child and the parent must have an accepted native completion decision whose gitCommit is the exact protected commit, except the Dogfood prerequisite may additionally bind its listed protected merge commits and installed-product root."
+  },
+  "exceptions": [],
+  "rows": [
+    {
+      "assignmentId": "2026-07-26-kungfu-authority-convergence",
+      "disposition": "implemented",
+      "obligations": [
+        "one declared authority per changed semantic family",
+        "retire duplicated KFX forwarding decisions",
+        "mechanically validate projections and golden parity"
+      ],
+      "sourceEvidence": [
+        "framework/maintainability/semantic-amplification.manifest.json",
+        "framework/maintainability/semantic-amplification-report.json",
+        "framework/core/src/python/kungfu/cli/commands/kfx.py"
+      ],
+      "rawChecks": [
+        "framework/maintainability/semantic-amplification.test.mjs",
+        "scripts/check-kungfu-gate-catalog.test.mjs",
+        "scripts/run-agent-work-state-tests.mjs"
+      ],
+      "productPlatforms": [
+        "linux-x64",
+        "macos-arm64",
+        "windows-x64"
+      ],
+      "reviewDisposition": "terminalEvidence.reviewRule"
+    },
+    {
+      "assignmentId": "2026-07-26-kungfu-responsibility-hotspot-decomposition",
+      "disposition": "implemented",
+      "obligations": [
+        "extract cohesive complexity-governance ownership",
+        "extract cohesive Buildchain KFD runtime ownership",
+        "reject mechanical split, helper-proliferation, relabel, and laundering variants"
+      ],
+      "sourceEvidence": [
+        "framework/maintainability/complexity-governance.mjs",
+        "framework/release/buildchain-kfd-runtime.mjs",
+        "framework/maintainability/code-complexity-policy.json"
+      ],
+      "rawChecks": [
+        "scripts/code-complexity-budget.test.mjs",
+        "scripts/buildchain-install.test.mjs",
+        "framework/core/architecture/check-layers.mjs"
+      ],
+      "productPlatforms": [
+        "linux-x64",
+        "macos-arm64",
+        "windows-x64"
+      ],
+      "reviewDisposition": "terminalEvidence.reviewRule"
+    },
+    {
+      "assignmentId": "2026-07-26-kungfu-linux-product-qualification",
+      "disposition": "implemented",
+      "obligations": [
+        "bind native, CLI, API, package, and product evidence to one exact Linux artifact",
+        "prove locked-checkout zero-write discovery",
+        "keep signing, release, and physical-durability claims separate"
+      ],
+      "sourceEvidence": [
+        ".github/workflows/alpha-promotion-preflight.yml",
+        ".github/workflows/build.yml",
+        "framework/maintainability/readonly-source-routes.json"
+      ],
+      "rawChecks": [
+        "scripts/readonly-agent-bootstrap.test.mjs",
+        "scripts/check-readonly-source-routes.test.mjs",
+        "scripts/run-release-qualification.mjs"
+      ],
+      "productPlatforms": [
+        "linux-x64"
+      ],
+      "reviewDisposition": "terminalEvidence.reviewRule"
+    },
+    {
+      "assignmentId": "2026-07-26-kungfu-windows-product-qualification",
+      "disposition": "implemented",
+      "obligations": [
+        "execute Windows native and product qualification rather than infer it from shell parity",
+        "prove platform-appropriate locked-checkout zero-write behavior",
+        "keep signing, distribution, durability, and live-stream claims separate"
+      ],
+      "sourceEvidence": [
+        ".github/workflows/alpha-promotion-preflight.yml",
+        ".github/workflows/build.yml",
+        "framework/maintainability/readonly-source-routes.json"
+      ],
+      "rawChecks": [
+        "scripts/readonly-agent-bootstrap.test.mjs",
+        "scripts/check-readonly-source-routes.test.mjs",
+        "scripts/run-release-qualification.mjs"
+      ],
+      "productPlatforms": [
+        "windows-x64"
+      ],
+      "reviewDisposition": "terminalEvidence.reviewRule"
+    },
+    {
+      "assignmentId": "2026-07-26-kungfu-dogfood-operational-hardening",
+      "disposition": "implemented",
+      "obligations": [
+        "diagnose exact Profile-root drift without mutation",
+        "separate authorized recovery from read-only diagnosis",
+        "retain local lookup, proposal, reconciliation, and deduplicated health projection",
+        "qualify installed-product lifecycle and settle the native Assignment"
+      ],
+      "sourceEvidence": [
+        "extensions/dogfood/dogfood-actions/domain/dogfood.py",
+        "framework/core/src/python/kungfu/dogfood.py",
+        "framework/core/src/python/kungfu/cli/commands/dogfood.py",
+        "crates/trunk/src/launch.rs"
+      ],
+      "rawChecks": [
+        "framework/core/tests/python/test_dogfood_profile.py",
+        "https://github.com/kungfu-systems/kungfu/pull/1553",
+        "https://github.com/kungfu-systems/kungfu/pull/1563"
+      ],
+      "productPlatforms": [
+        "macos-arm64"
+      ],
+      "reviewDisposition": "independently approved at both listed prerequisite commits and rechecked by terminalEvidence.reviewRule"
+    },
+    {
+      "assignmentId": "2026-07-27-kungfu-complexity-gate-integrity",
+      "disposition": "implemented",
+      "obligations": [
+        "recompute measurements at exact base and candidate commits",
+        "bind independent approvals, complete path sets, dates, expiry, and removal conditions",
+        "authorize baseline transitions with expected-old and deterministic roots",
+        "reject generated laundering, relabel, delete/re-add, helper proliferation, and responsibility-preserving splits"
+      ],
+      "sourceEvidence": [
+        "framework/maintainability/code-complexity-policy.json",
+        "framework/maintainability/code-complexity-baseline.json",
+        "framework/maintainability/complexity-governance.mjs",
+        "framework/maintainability/baseline-transitions/README.md",
+        "framework/maintainability/waivers/README.md"
+      ],
+      "rawChecks": [
+        "scripts/code-complexity-budget.mjs",
+        "scripts/code-complexity-budget.test.mjs",
+        "framework/maintainability/semantic-amplification.test.mjs"
+      ],
+      "productPlatforms": [
+        "linux-x64",
+        "macos-arm64",
+        "windows-x64"
+      ],
+      "reviewDisposition": "terminalEvidence.reviewRule"
+    },
+    {
+      "assignmentId": "2026-07-27-kungfu-readonly-source-acceptance-closure",
+      "disposition": "implemented",
+      "obligations": [
+        "classify every supported source and Agent read route",
+        "run the full cold source suite without checkout writes, network access, or dependency installation",
+        "fail when any transitive writer is reintroduced",
+        "qualify POSIX locks and Windows-equivalent write denial"
+      ],
+      "sourceEvidence": [
+        "framework/maintainability/readonly-source-routes.json",
+        "scripts/check-readonly-source-routes.mjs",
+        "scripts/shifu-readonly-entry.mjs",
+        "scripts/readonly-source-toolchain.mjs",
+        "scripts/buildchain-install.mjs"
+      ],
+      "rawChecks": [
+        "scripts/check-readonly-source-routes.test.mjs",
+        "scripts/readonly-agent-bootstrap.test.mjs",
+        "scripts/buildchain-install.test.mjs",
+        "scripts/source-acceptance.mjs"
+      ],
+      "productPlatforms": [
+        "linux-x64",
+        "macos-arm64",
+        "windows-x64"
+      ],
+      "reviewDisposition": "terminalEvidence.reviewRule"
+    }
+  ]
+}

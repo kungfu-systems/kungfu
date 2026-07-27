@@ -598,8 +598,11 @@ def _mutation_policy(command, path, metadata_registry):
     expected = sorted(
         name
         for name in option_names
-        if name.startswith("expected_")
-        or name in {"authorization_file", "authorization_id"}
+        if name is not None
+        and (
+            name.startswith("expected_")
+            or name in {"authorization_file", "authorization_id"}
+        )
     )
     if tokens & set(rules.get("destructiveTokens", [])):
         mutation = "destructive"

@@ -459,6 +459,30 @@ function validateSnapshot(value, contract) {
   return issues;
 }
 
+function validateNativeReadinessEvidence(value) {
+  const required = [
+    'schema',
+    'workspaceId',
+    'runtimeHome',
+    'dataRoot',
+    'minimumCut',
+    'durability',
+    'projection',
+  ];
+  const missing = required.filter(
+    (key) => !Object.prototype.hasOwnProperty.call(value, key),
+  );
+  if (missing.length)
+    return [
+      issue(
+        'schema-invalid',
+        '/',
+        `native readiness evidence is missing: ${missing.join(', ')}`,
+      ),
+    ];
+  return [];
+}
+
 export function validateRuntimeContractValue(target, value, contract) {
   if (target === 'runtimeRequirement')
     return validateRequirement(object(value), contract);
@@ -470,7 +494,8 @@ export function validateRuntimeContractValue(target, value, contract) {
     return validateReceipt(object(value), contract);
   if (target === 'runtimeSnapshot')
     return validateSnapshot(object(value), contract);
-  if (target === 'nativeReadinessEvidence') return [];
+  if (target === 'nativeReadinessEvidence')
+    return validateNativeReadinessEvidence(object(value));
   return [
     issue(
       'unknown-target',

@@ -10,7 +10,7 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const guiRequire = createRequire(
   path.join(root, 'framework', 'gui', 'package.json'),
 );
-const tsxCli = guiRequire.resolve('tsx/cli');
+const tsxCli = process.env.KUNGFU_READONLY_TSX || guiRequire.resolve('tsx/cli');
 const result = spawnSync(
   process.execPath,
   [

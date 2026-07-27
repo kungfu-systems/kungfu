@@ -9,8 +9,7 @@ import path from 'node:path';
 import test from 'node:test';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
-import Ajv2020 from 'ajv/dist/2020.js';
-
+import { optionalAjv2020 } from './readonly-source-toolchain.mjs';
 import {
   CacheProfileError,
   applyCacheProfile,
@@ -22,7 +21,7 @@ import {
 } from './shifu-cache-runtime.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-
+const Ajv2020 = optionalAjv2020();
 const platform =
   process.platform === 'darwin'
     ? `darwin-${process.arch}`
@@ -400,6 +399,7 @@ test('resolves an HTTP reference and emits a redacted schema receipt', async (t)
       'utf8',
     ),
   );
+  if (!Ajv2020) return;
   const ajv = new Ajv2020({ strict: false });
   ajv.addFormat('date-time', (value) => Number.isFinite(Date.parse(value)));
   ajv.addFormat('uri-reference', () => true);

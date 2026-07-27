@@ -16,23 +16,15 @@ import {
   BUILDCHAIN_KFD2_DIR,
   BUILDCHAIN_KFD2_REGISTRY_PATH,
   BUILDCHAIN_KFD3_DIR,
-  BUILDCHAIN_KFD3_SURFACE_REGISTRY_PATH as KFD3_DEFAULT_REGISTRY_PATH,
-} from '@kungfu-tech/buildchain-alpha/buildchain-layout';
-import { kfd1, kfd2, kfd3 } from '@kungfu-tech/buildchain-alpha/kfd';
-import {
-  KFD_PRODUCT_GATE_INPUT_CONTRACT,
-  createKfdSupportProjection,
-  evaluateKfdProductGate,
-  validateKfdProductGateResult,
-  validateKfdSupportProjection,
-} from '@kungfu-tech/buildchain-alpha/kfd-product-gates';
+  KFD3_DEFAULT_REGISTRY_PATH,
+  checkColdBuildchainKfd,
+  loadBuildchainKfdRuntime,
+} from '../framework/release/buildchain-kfd-runtime.mjs';
+
+let runtime;
 
 const KFD3_SURFACE_REGISTRY_CONTRACT =
   'kungfu-buildchain-kfd-3-surface-registry';
-const {
-  queryCapabilities: queryKfd3Capabilities,
-  readSurfaceRegistry: readKfd3SurfaceRegistry,
-} = kfd3;
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -168,7 +160,6 @@ const ARTIFACT_VERIFY_COMMAND =
 const STRICT_KFD3_MODE = 'strict-buildchain-managed-registry';
 const KFD_EVIDENCE_SOURCE_SHA =
   process.env.KUNGFU_KFD_SOURCE_SHA || 'local-dev-snapshot';
-
 function usage() {
   return `Usage:
   node scripts/buildchain-kfd-evidence.mjs --check [--json]
@@ -198,7 +189,6 @@ Writes:
   .buildchain/runtime/kfd-product-gates/kfd-support.json
 `;
 }
-
 function parseArgs(argv) {
   const options = {
     check: false,
@@ -232,7 +222,6 @@ function parseArgs(argv) {
   if (modes === 0) options.check = true;
   return options;
 }
-
 function readJson(filePath) {
   return JSON.parse(fs.readFileSync(filePath, 'utf8'));
 }
@@ -873,7 +862,7 @@ function missingSurfaceFields(surface) {
 
 function buildStrictBuildchainAudit(registry) {
   const onDisk = readJson(KFD3_REGISTRY_PATH);
-  const buildchainRegistry = readKfd3SurfaceRegistry({
+  const buildchainRegistry = runtime.kfd3.readSurfaceRegistry({
     cwd: ROOT,
     registryPath: KFD3_DEFAULT_REGISTRY_PATH,
   });
@@ -1070,7 +1059,7 @@ function buildKfd1Witness() {
 }
 
 function buildKfd1ReleaseGate(kfd1Witness) {
-  return kfd1.createReleaseGateEvidence({
+  return runtime.kfd1.createReleaseGateEvidence({
     cwd: ROOT,
     artifacts: (kfd1Witness.surfaces || []).map((surface) => ({
       name: surface.artifactPath,
@@ -1082,7 +1071,7 @@ function buildKfd1ReleaseGate(kfd1Witness) {
 }
 
 function buildKfd1VerifyResult(kfd1Gate) {
-  const issues = kfd1.validateReleaseGateEvidence(kfd1Gate);
+  const issues = runtime.kfd1.validateReleaseGateEvidence(kfd1Gate);
   return {
     schemaVersion: 1,
     contract: 'kungfu-buildchain-kfd-1-verify-result',
@@ -1093,12 +1082,12 @@ function buildKfd1VerifyResult(kfd1Gate) {
 
 function buildKfd2Claims({ write, outputDir = KFD2_OUTPUT_DIR }) {
   const result = write
-    ? kfd2.writeProductClaimOutputs({
+    ? runtime.kfd2.writeProductClaimOutputs({
         cwd: ROOT,
         outputDir: rel(outputDir),
         sourceSha: KFD_EVIDENCE_SOURCE_SHA,
       })
-    : kfd2.checkProductClaimOutputs({
+    : runtime.kfd2.checkProductClaimOutputs({
         cwd: ROOT,
         outputDir: rel(outputDir),
         sourceSha: KFD_EVIDENCE_SOURCE_SHA,
@@ -1142,7 +1131,7 @@ function assertCurrentKfd2Output(outputDir, label) {
 }
 
 async function buildQuery(registry) {
-  const query = await queryKfd3Capabilities({
+  const query = await runtime.kfd3.queryCapabilities({
     cwd: ROOT,
     product: 'kungfu',
     registryPath: KFD3_DEFAULT_REGISTRY_PATH,
@@ -1200,7 +1189,7 @@ function productGateEnvelope({
 }) {
   return {
     schemaVersion: 1,
-    contract: KFD_PRODUCT_GATE_INPUT_CONTRACT,
+    contract: runtime.productGates.KFD_PRODUCT_GATE_INPUT_CONTRACT,
     standard,
     standardRevision,
     source: {
@@ -1691,16 +1680,19 @@ async function buildProductGates({ write }) {
     ];
     const gates = [];
     for (const input of inputs) {
-      const gate = await evaluateKfdProductGate({
+      const gate = await runtime.productGates.evaluateKfdProductGate({
         cwd: workspace,
         input,
         expectedSourceSha: sourceSha,
         checkedAt,
       });
-      const validation = validateKfdProductGateResult(gate, {
-        expectedSourceSha: sourceSha,
-        checkedAt,
-      });
+      const validation = runtime.productGates.validateKfdProductGateResult(
+        gate,
+        {
+          expectedSourceSha: sourceSha,
+          checkedAt,
+        },
+      );
       if (!validation.valid) {
         throw new Error(
           `${input.standard} product-gate result is invalid: ${JSON.stringify(validation.issues)}`,
@@ -1719,17 +1711,18 @@ async function buildProductGates({ write }) {
       }
     }
     const matrix = readJson(KFD_SUPPORT_MATRIX_PATH);
-    const projection = createKfdSupportProjection({
+    const projection = runtime.productGates.createKfdSupportProjection({
       matrix,
       matrixRoot: `sha256:${sha256File(KFD_SUPPORT_MATRIX_PATH)}`,
       gateResults: gates,
       expectedSourceSha: sourceSha,
       checkedAt,
     });
-    const projectionValidation = validateKfdSupportProjection(projection, {
-      expectedSourceSha: sourceSha,
-      checkedAt,
-    });
+    const projectionValidation =
+      runtime.productGates.validateKfdSupportProjection(projection, {
+        expectedSourceSha: sourceSha,
+        checkedAt,
+      });
     if (!projectionValidation.valid) {
       throw new Error(
         `KFD support projection is invalid: ${JSON.stringify(projectionValidation.issues)}`,
@@ -1980,7 +1973,14 @@ async function runQuery(options) {
 
 try {
   const options = parseArgs(process.argv.slice(2));
-  if (options.artifactWitness) await runArtifactWitness(options);
+  runtime = await loadBuildchainKfdRuntime();
+  if (!runtime && options.check)
+    process.stdout.write(renderJson(checkColdBuildchainKfd(ROOT)));
+  else if (!runtime)
+    throw new Error(
+      'Buildchain KFD runtime is required for write, query, and artifact-witness modes',
+    );
+  else if (options.artifactWitness) await runArtifactWitness(options);
   else if (options.query) await runQuery(options);
   else await runCheckOrWrite(options);
 } catch (error) {

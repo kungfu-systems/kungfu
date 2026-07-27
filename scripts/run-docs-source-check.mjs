@@ -3,10 +3,17 @@
 // @ts-check
 
 import { spawnSync } from 'node:child_process';
+import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+const MARKDOWNLINT = path.join(
+  ROOT,
+  'node_modules',
+  'markdownlint-cli2',
+  'markdownlint-cli2-bin.mjs',
+);
 
 /** @param {string} label @param {string[]} args */
 function run(label, args) {
@@ -23,9 +30,13 @@ function run(label, args) {
 }
 
 try {
-  run('Markdown structure', [
-    path.join('node_modules', 'markdownlint-cli2', 'markdownlint-cli2-bin.mjs'),
-  ]);
+  if (fs.existsSync(MARKDOWNLINT)) {
+    run('Markdown structure', [MARKDOWNLINT]);
+  } else {
+    console.warn(
+      '[docs:source] markdownlint-cli2 is not installed; repository documentation contracts still run, and CI enforces Markdown structure.',
+    );
+  }
   run('local links, anchors, and contracts', [
     path.join('scripts', 'check-docs.mjs'),
   ]);
