@@ -1814,7 +1814,6 @@ function runInstalledActionPrimitiveDiscovery({ installRoot, kungfuBin, env }) {
     }
   }
 }
-
 export function runInstalledKungfuAssignmentAdmissionSmoke({
   installRoot,
   kungfuBin,
@@ -1919,7 +1918,6 @@ export function runInstalledKungfuAssignmentAdmissionSmoke({
     );
   }
 }
-
 export function smokeCliProductArchive({ archivePath, archiveBase }) {
   return buildchainLogger.spanSync(
     'product.cli.smoke',
