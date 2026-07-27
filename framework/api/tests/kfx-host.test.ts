@@ -11,7 +11,8 @@ const descriptor: KfxExperienceFlowDescriptor = {
   graphRoot: `sha256:${'2'.repeat(64)}`,
   planRoot: `sha256:${'3'.repeat(64)}`,
   receiptDependencyRoot: `sha256:${'4'.repeat(64)}`,
-  generation: 7,
+  cutRoot: `sha256:${'5'.repeat(64)}`,
+  revision: 7,
   contributions: [
     {
       contributionId: 'workbench',
@@ -33,7 +34,8 @@ test('GUI, TUI, CLI, and Agent adapters retain the same Core identities', () => 
       projection.receiptDependencyRoot,
       descriptor.receiptDependencyRoot,
     );
-    assert.equal(projection.generation, descriptor.generation);
+    assert.equal(projection.cutRoot, descriptor.cutRoot);
+    assert.equal(projection.revision, descriptor.revision);
     assert.equal(projection.contributions[0]?.semanticState, 'active');
   }
   assert.equal(projections[0]?.contributions[0]?.presentationState, 'active');

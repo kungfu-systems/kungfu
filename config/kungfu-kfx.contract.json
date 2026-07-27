@@ -1,7 +1,7 @@
 {
   "schema": "kungfu.kfx.contract/v1",
   "id": "kungfu-kfx",
-  "version": 9,
+  "version": 10,
   "weldedSurface": "kfx-contract",
   "description": "Single source for KFX package manifests, discovery rules, trust inputs, and build detection.",
   "contractSchema": {
@@ -895,16 +895,17 @@
     }
   },
   "nativeRuntime": {
-    "schema": "kungfu.kfx.native-contract/v2",
-    "contractVersion": 2,
+    "schema": "kungfu.kfx.native-contract/v3",
+    "contractVersion": 3,
     "versionNegotiation": {
-      "current": 2,
+      "current": 3,
       "supported": [
         1,
-        2
+        2,
+        3
       ],
       "minimumReader": 1,
-      "minimumWriter": 2,
+      "minimumWriter": 3,
       "policy": "exact-supported-version-or-refuse"
     },
     "authority": {
@@ -1257,7 +1258,8 @@
       "schema": "kungfu.kfx.lifecycle/v1",
       "authority": "one-libkungfu-writer-per-runtime-directory",
       "fences": [
-        "expectedGeneration",
+        "expectedCutRoot",
+        "expectedRevision",
         "expectedRegistryRoot",
         "expectedGraphRoot",
         "expectedPlanRoot",
@@ -1270,7 +1272,8 @@
         "remove",
         "enable",
         "disable",
-        "activate"
+        "activate",
+        "qualify"
       ],
       "receiptOutcomes": [
         "applied",
@@ -1278,7 +1281,7 @@
       ],
       "payloadRetention": "content-addressed-retain-no-gc",
       "replacement": "stage-then-atomic-rename",
-      "history": "append-only-receipt-chain"
+      "history": "immutable-work-episode-settlement-facts-at-named-cut"
     },
     "experienceFlowHost": {
       "schema": "kungfu.kfx.experience-flow-host/v1",
@@ -1312,6 +1315,7 @@
       "KF_KFX_GRAPH_STALE",
       "KF_KFX_PLAN_STALE",
       "KF_KFX_WRITER_BUSY",
+      "KF_KFX_CUT_STALE",
       "KF_KFX_GENERATION_MISMATCH",
       "KF_KFX_REQUIRED_PROVIDER_MISSING",
       "KF_KFX_PROVIDER_VERSION_MISMATCH",
@@ -1328,9 +1332,9 @@
       "KF_KFX_AUTHORITY_CLAIM_FORBIDDEN"
     ],
     "compatibility": {
-      "typescriptLoader": "retained-shadow-adapter",
-      "pythonInstaller": "retained-shadow-adapter",
-      "mutationCutover": "native-service-edge-after-exact-plan-fence",
+      "typescriptLoader": "thin-native-service-adapter",
+      "pythonInstaller": "thin-native-service-adapter",
+      "mutationCutover": "named-fact-cut-after-exact-cut-and-revision-fence",
       "unknownFields": "reject",
       "migration": "validate-existing-documents-before-authority-cutover"
     },
@@ -1503,6 +1507,95 @@
             "receiptId",
             "planId",
             "generation",
+            "verified"
+          ]
+        }
+      },
+      "3": {
+        "request": {
+          "schema": "kungfu.kfx.native-request/v3",
+          "required": [
+            "schema",
+            "contractVersion",
+            "operation",
+            "packagePath",
+            "requestedCapabilities"
+          ],
+          "allowed": [
+            "schema",
+            "contractVersion",
+            "operation",
+            "packagePath",
+            "requestedCapabilities",
+            "actor"
+          ]
+        },
+        "inspection": {
+          "schema": "kungfu.kfx.native-inspection/v3",
+          "required": [
+            "schema",
+            "contractVersion",
+            "packageKey",
+            "packageRoot",
+            "runtimeTier",
+            "admissionGrade",
+            "owners",
+            "closure",
+            "declaredCapabilities"
+          ],
+          "allowed": [
+            "schema",
+            "contractVersion",
+            "packageKey",
+            "packageRoot",
+            "runtimeTier",
+            "admissionGrade",
+            "owners",
+            "closure",
+            "declaredCapabilities"
+          ]
+        },
+        "plan": {
+          "schema": "kungfu.kfx.native-plan/v3",
+          "required": [
+            "schema",
+            "contractVersion",
+            "planId",
+            "basis",
+            "nextRevision",
+            "requestedCapabilities",
+            "grantedCapabilities",
+            "effects"
+          ],
+          "allowed": [
+            "schema",
+            "contractVersion",
+            "planId",
+            "basis",
+            "nextRevision",
+            "requestedCapabilities",
+            "grantedCapabilities",
+            "effects"
+          ]
+        },
+        "receipt": {
+          "schema": "kungfu.kfx.native-receipt/v3",
+          "required": [
+            "schema",
+            "contractVersion",
+            "receiptId",
+            "planId",
+            "cutRoot",
+            "revision",
+            "verified"
+          ],
+          "allowed": [
+            "schema",
+            "contractVersion",
+            "receiptId",
+            "planId",
+            "cutRoot",
+            "revision",
             "verified"
           ]
         }

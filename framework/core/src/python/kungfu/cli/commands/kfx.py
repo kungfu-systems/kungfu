@@ -139,14 +139,15 @@ def _libwasm_host():
 
 def _native_mutation(ctx, package_root, key, operation, trusted, **values):
     request = {
-        "roots": [{"kind": "user", "path": str(Path(package_root).resolve())}],
-        "runtimeTiers": {
-            key: "first-party-pinned" if trusted else "untrusted",
-        },
         "packageKey": key,
         "operation": operation,
         **values,
     }
+    if package_root is not None:
+        request["roots"] = [{"kind": "user", "path": str(Path(package_root).resolve())}]
+        request["runtimeTiers"] = {
+            key: "first-party-pinned" if trusted else "untrusted",
+        }
     plan = storage_service.kfx_registry("plan", request, ctx.runtime_dir)
     package = next(
         (item for item in plan["packages"] if item.get("key") == key),
@@ -156,7 +157,8 @@ def _native_mutation(ctx, package_root, key, operation, trusted, **values):
         raise ValueError(f"native KFX plan did not contain package {key}")
     mutation = {
         **request,
-        "expectedGeneration": plan["generation"],
+        "expectedCutRoot": plan["cutRoot"],
+        "expectedRevision": plan["revision"],
         "expectedRegistryRoot": plan["registryRoot"],
         "expectedGraphRoot": plan["graphRoot"],
         "expectedPlanRoot": plan["planRoot"],
@@ -241,7 +243,7 @@ def install(ctx, source, force):
     click.echo(
         f"[kfx] installed {manifest.get('name', key)}@{manifest.get('version', '?')} "
         f"({_kind(manifest)}) -> {dest} "
-        f"(generation {application['generation']})"
+        f"(Fact Cut revision {application['revision']})"
     )
     for line in _trust_notice(manifest):
         click.echo(line)
@@ -252,31 +254,27 @@ def install(ctx, source, force):
 @kfx_command_context
 def list_installed(ctx, as_json):
     root = _install_root(ctx)
-    rows = []
-    if os.path.isdir(root):
-        for name in sorted(os.listdir(root)):
-            package_dir = os.path.join(root, name)
-            manifest_path = os.path.join(
-                package_dir, kfx_contract.PACKAGE_MANIFEST_FILE
-            )
-            if not os.path.isfile(manifest_path):
-                continue
-            try:
-                manifest = _read_manifest_from_dir(package_dir)
-            except (OSError, ValueError, json.JSONDecodeError):
-                rows.append({"key": name, "error": "unreadable kungfu.kfx.json"})
-                continue
-            key = kfx_contract.package_key(manifest) or name
-            rows.append(
-                {
-                    "key": key,
-                    "package": manifest.get("name"),
-                    "version": manifest.get("version"),
-                    "kind": kfx_contract.package_kind(manifest, package_dir),
-                    "trusted": _trusted(manifest),
-                    "path": package_dir,
-                }
-            )
+    authority = storage_service.kfx_registry("list", {}, ctx.runtime_dir)
+    rows = [
+        {
+            "key": package["key"],
+            "package": package.get("name"),
+            "version": package.get("version"),
+            "kind": (
+                "suite"
+                if "profile-suite" in package.get("facets", [])
+                else ",".join(package.get("facets", [])) or "package"
+            ),
+            "trusted": package.get("runtimeTier") == "first-party-pinned",
+            "path": package.get("path"),
+            "desiredState": package["desiredState"],
+            "observedState": package["observedState"],
+            "verdict": package["verdict"],
+            "cutRoot": authority["cutRoot"],
+            "revision": authority["revision"],
+        }
+        for package in authority["packages"]
+    ]
     if as_json:
         click.echo(json.dumps(rows, indent=2, sort_keys=True))
         return
@@ -377,14 +375,14 @@ def remove(ctx, key):
         manifest = _read_manifest_from_dir(dest)
         application = _native_mutation(
             ctx,
-            _install_root(ctx),
+            None,
             key,
             "remove",
             _trusted(manifest),
         )
     except (OSError, RuntimeError, ValueError, json.JSONDecodeError) as error:
         raise click.ClickException(str(error)) from error
-    click.echo(f"[kfx] removed {key} (generation {application['generation']})")
+    click.echo(f"[kfx] removed {key} (Fact Cut revision {application['revision']})")
 
 
 @kfx.command(help="print the kfx contract metadata")

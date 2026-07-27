@@ -85,9 +85,9 @@ def _expected_registry_roots():
 
 def test_native_kfx_python_binding_is_a_thin_core_edge(tmp_path):
     contract = storage_service.kfx_runtime_contract(tmp_path)
-    assert contract["schema"] == "kungfu.kfx.native-contract/v2"
-    assert contract["contractVersion"] == 2
-    assert contract["versionNegotiation"]["supported"] == [1, 2]
+    assert contract["schema"] == "kungfu.kfx.native-contract/v3"
+    assert contract["contractVersion"] == 3
+    assert contract["versionNegotiation"]["supported"] == [1, 2, 3]
     assert contract["runtimeTiers"] != contract["admissionGrades"]
     assert contract["authority"]["owner"] == "libkungfu"
     assert contract["sourceContractRoot"].startswith("sha256:")
@@ -151,6 +151,12 @@ def test_python_and_host_projections_preserve_core_semantic_roots(tmp_path):
     assert {projection["planRoot"] for projection in projections} == {plan["planRoot"]}
     assert {projection["receiptDependencyRoot"] for projection in projections} == {
         plan["hostContract"]["receiptDependencyRoot"]
+    }
+    assert {projection["cutRoot"] for projection in projections} == {
+        plan["hostContract"]["cutRoot"]
+    }
+    assert {projection["revision"] for projection in projections} == {
+        plan["hostContract"]["revision"]
     }
     tui = next(item for item in projections if item["host"] == "tui")
     assert tui["contributions"][0]["semanticState"] == "active"

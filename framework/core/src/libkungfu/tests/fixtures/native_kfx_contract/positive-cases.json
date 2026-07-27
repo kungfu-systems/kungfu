@@ -106,5 +106,45 @@
       "generation": 4,
       "verified": true
     }
+  },
+  {
+    "name": "v3 named-Cut plan",
+    "kind": "plan",
+    "document": {
+      "schema": "kungfu.kfx.native-plan/v3",
+      "contractVersion": 3,
+      "planId": "sha256:fact-plan",
+      "basis": {
+        "packageRoot": "sha256:package",
+        "cutRoot": "sha256:cut",
+        "revision": 3
+      },
+      "nextRevision": 4,
+      "requestedCapabilities": [
+        "marketData"
+      ],
+      "grantedCapabilities": [
+        "marketData"
+      ],
+      "effects": [
+        {
+          "kind": "install",
+          "packageKey": "example-kfx"
+        }
+      ]
+    }
+  },
+  {
+    "name": "v3 Fact Work settlement receipt",
+    "kind": "receipt",
+    "document": {
+      "schema": "kungfu.kfx.native-receipt/v3",
+      "contractVersion": 3,
+      "receiptId": "sha256:receipt",
+      "planId": "sha256:fact-plan",
+      "cutRoot": "sha256:next-cut",
+      "revision": 4,
+      "verified": true
+    }
   }
 ]
