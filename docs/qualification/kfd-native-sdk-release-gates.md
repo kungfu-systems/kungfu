@@ -275,9 +275,11 @@ SDK tooling:
   kungfu sdk kfd witness --json
   kungfu sdk kfd upstream --json
   kungfu sdk kfd aggregate --json
+  ./shifu kfd status
+  ./shifu kfd query KFD-3 --json
+  ./shifu kfd check --json
   ./shifu kfd:buildchain
   ./shifu kfd:buildchain:check
-  ./shifu kfd:query
   node scripts/buildchain-kfd-evidence.mjs --artifact-witness --json
   kungfu sdk collaboration-interface add ...
   kungfu sdk collaboration-interface render --check --json
@@ -285,6 +287,15 @@ SDK tooling:
   kungfu sdk collaboration-interface audit --json
   kungfu sdk collaboration-interface witness --json
 ```
+
+The three space-delimited Shifu commands above are a build-free source
+qualification surface. They read the checked-in matrix, evidence roots,
+projections, and KFD-3 registry/query without dependency repair, network
+access, runtime initialization, or checkout writes. Human output leads with a
+bounded verdict; `--json` returns the same facts, non-claims, and next actions.
+This source result must not be presented as installed-product qualification.
+For the installed Agent Hub path, use `kungfu agent hub qualify` and
+`kungfu agent hub verify`.
 
 The root `.buildchain/kfd/kfd-3/surfaces.json` registry is the single Buildchain-facing fact
 source for participant-facing Kungfu APIs. It should classify every shipped

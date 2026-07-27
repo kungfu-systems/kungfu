@@ -233,7 +233,6 @@
       "KF-ADR-019f86da-4f90-7e58-bb03-bee0f101dc01": "Workspace data home implementation spans legacy history not yet reconstructed.",
       "KF-ADR-019f86da-4f90-760e-9945-f737049d905f": "Location namespace terminology implementation spans legacy history not yet reconstructed.",
       "KF-ADR-019f86da-4f90-7a66-b427-f4bcd638d8bc": "Unified view interface implementation spans legacy history not yet reconstructed.",
-      "KF-ADR-019f86da-4f90-7626-861e-3fdee887abd2": "Shifu delegation implementation spans legacy history not yet reconstructed.",
       "KF-ADR-019f86da-4f90-7e38-b72f-ef8829e14104": "Runtime fact query work is staged and awaiting evidence consolidation.",
       "KF-ADR-019f86da-4f90-7ecd-9660-81f9f74dc416": "Runtime standard-library pruning implementation spans legacy history not yet reconstructed.",
       "KF-ADR-019f86da-4f90-7171-9dde-411f02f55950": "Libwasm runtime implementation spans legacy history not yet reconstructed."

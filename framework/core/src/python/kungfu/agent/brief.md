@@ -137,6 +137,13 @@ registry. `kungfu agent verify --json` checks the installed runtime command tree
 against the registry so a shipped agent surface cannot quietly expose extra
 `kungfu agent` commands outside the declared interface.
 
+When working in a Kungfu source checkout, use `./shifu kfd status` for the
+human verdict and `./shifu kfd query KFD-3 --json` or
+`./shifu kfd check --json` for machine-readable source evidence. These commands
+are read-only and dependency-cold. Keep their scope explicit: they validate the
+checked-in source authority, evidence roots, projections, declared KFD-3 set,
+and hard-Gate bindings; they do not qualify an installed product.
+
 When asked whether this installed Kungfu can perform the tested local KFD Agent
 Hub exchange, run `kungfu agent hub qualify --output-dir <new-directory>
 --json`. Use its `meaning`, `nonClaims`, `coverage`, `isolation`, and `evidence`

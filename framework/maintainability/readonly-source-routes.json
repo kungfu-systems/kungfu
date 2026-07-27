@@ -17,6 +17,51 @@
       "dependencyInstallation": false
     },
     {
+      "id": "kfd-status",
+      "command": "./shifu kfd status [--json]",
+      "classification": "read-only-source",
+      "implementation": "scripts/kfd-support-matrix.mjs",
+      "transitiveWriters": [],
+      "network": false,
+      "dependencyInstallation": false
+    },
+    {
+      "id": "kfd-query",
+      "command": "./shifu kfd query [KFD-N] [--json]",
+      "classification": "read-only-source",
+      "implementation": "scripts/kfd-support-matrix.mjs",
+      "transitiveWriters": [],
+      "network": false,
+      "dependencyInstallation": false
+    },
+    {
+      "id": "kfd-check",
+      "command": "./shifu kfd check [--json]",
+      "classification": "read-only-source",
+      "implementation": "scripts/kfd-support-matrix.mjs",
+      "transitiveWriters": [],
+      "network": false,
+      "dependencyInstallation": false
+    },
+    {
+      "id": "kfd-query-compatibility",
+      "command": "./shifu kfd:query [KFD-N] [--json]",
+      "classification": "read-only-source",
+      "implementation": "scripts/kfd-support-matrix.mjs",
+      "transitiveWriters": [],
+      "network": false,
+      "dependencyInstallation": false
+    },
+    {
+      "id": "kfd-check-compatibility",
+      "command": "./shifu kfd:support-matrix:check [--json]",
+      "classification": "read-only-source",
+      "implementation": "scripts/kfd-support-matrix.mjs",
+      "transitiveWriters": [],
+      "network": false,
+      "dependencyInstallation": false
+    },
+    {
       "id": "core-architecture-query",
       "command": "./shifu core:architecture",
       "classification": "read-only-source",

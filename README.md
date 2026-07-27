@@ -216,6 +216,20 @@ Source implementation, verification, Buildchain gating, and shipped release
 support are reported separately; a declared badge is not a release
 qualification.
 
+Inspect the current checkout before installing dependencies or initializing a
+Kungfu runtime:
+
+```sh
+./shifu kfd status
+./shifu kfd query KFD-3 --json
+./shifu kfd check --json
+```
+
+The first command gives an immediate human verdict. The JSON forms expose the
+same checked-in facts and non-claims to an Agent. They qualify source evidence,
+not an installed product: use `kungfu agent hub qualify` and
+`kungfu agent hub verify` for the installed Agent Hub path.
+
 <!-- buildchain:badges:start -->
 [![KFD-1: declared](https://buildchain.libkungfu.dev/badges/v1/kfd-1/declared.svg)](https://github.com/kungfu-systems/kungfu/releases/latest/download/buildchain.release.json)
 [![KFD-2: declared](https://buildchain.libkungfu.dev/badges/v1/kfd-2/declared.svg)](https://github.com/kungfu-systems/kungfu/releases/latest/download/buildchain.release.json)
