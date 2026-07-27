@@ -765,6 +765,7 @@ const globalWorkObserverBinding = bindElectronGlobalWorkObserver(
       'gui',
       'global-work-observer.json',
     ),
+    readState: (file) => readFileSync(file, 'utf8'),
     spawn: (file, args, options) => spawn(file, args, options),
     restart: (fn, delayMs) => setTimeout(fn, delayMs),
     cancelRestart: (timer) => clearTimeout(timer),
