@@ -195,6 +195,13 @@
           "sourceRoot": "sha256:b59d313837702193d551d655a944a74b86d6dbf91c4d99b5968cf2a6ceb08488"
         },
         {
+          "path": ".github/workflows/opencode-agent-repository-work.yml",
+          "classification": "non-publication",
+          "owner": "kungfu-ci",
+          "surfaceIds": [],
+          "sourceRoot": "sha256:f918cb568e819fdcc64b8417d8c17cab1fcba8015bcd81e287125d17275859a5"
+        },
+        {
           "path": ".github/workflows/opencode-local-model-canary.yml",
           "classification": "non-publication",
           "owner": "kungfu-ci",
@@ -821,5 +828,5 @@
       }
     }
   ],
-  "registryRoot": "sha256:841a45db7b3b4240be7554bddd95c850de685955ee4ad29184ede3c7c2bbb33b"
+  "registryRoot": "sha256:7e4387658a5fdf61383618908377fed20fada312fbdaf8bf8174d6f4b363a04e"
 }

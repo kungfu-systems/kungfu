@@ -1,0 +1,86 @@
+# SPDX-License-Identifier: Apache-2.0
+
+name: OpenCode Agent Repository Work Experiment
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: opencode-agent-repository-work
+  cancel-in-progress: false
+
+jobs:
+  experiment:
+    name: agent-120 / two-session Qwen3-Coder
+    runs-on:
+      - self-hosted
+      - Linux
+      - X64
+      - agent-120
+      - kungfu-build
+    timeout-minutes: 45
+    env:
+      OPENCODE_IMAGE: ghcr.io/kungfu-systems/build-images/opencode-ci@sha256:4083ee089fa9a419f4915505094a6c1bcce433ff77455605ce8993af3b684ed3
+      OPENCODE_MODEL: qwen3-coder:30b-opencode-64k
+      OPENCODE_BASE_URL: http://host.docker.internal:11435/v1
+      OPENCODE_HOST_PROBE_URL: http://172.17.0.1:11435/v1/models
+    steps:
+      - name: Check out exact requested source
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Verify trusted runner and local-model runtime
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$RUNNER_NAME" = "agent-120-kungfu-systems"
+          # shifu-entry-contract: allow trusted runner Node version probe before workspace execution
+          test "$(node --version | cut -d. -f1)" = "v24"
+          docker image inspect "$OPENCODE_IMAGE" >/dev/null
+          curl -fsS --max-time 5 "$OPENCODE_HOST_PROBE_URL" >/dev/null
+
+      - name: Install and build exact Kungfu source
+        shell: bash
+        run: |
+          set -euo pipefail
+          ./shifu install --frozen-lockfile
+          ./shifu build:core
+          ./shifu test:agent-repository-work
+
+      - name: Run two fresh OpenCode sessions through Kungfu
+        shell: bash
+        run: |
+          set -euo pipefail
+          evidence_dir="$RUNNER_TEMP/agent-repository-work-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT"
+          printf 'AGENT_REPOSITORY_WORK_EVIDENCE=%s\n' "$evidence_dir" >>"$GITHUB_ENV"
+          ./shifu qualify:agent-repository-work -- \
+            --output "$evidence_dir" \
+            --image "$OPENCODE_IMAGE" \
+            --model "$OPENCODE_MODEL" \
+            --base-url "$OPENCODE_BASE_URL" \
+            --source-head "$GITHUB_SHA" \
+            --timeout-seconds 900
+          jq -e \
+            '.passed == true
+             and .sessions.distinct == 2
+             and .continuity.priorTranscriptBytes == 0
+             and .continuity.humanRestatementCount == 0
+             and .warrant.agentAZeroModification == true
+             and .oracle.passed == true
+             and .oracle.authoritative == true' \
+            "$evidence_dir/agent-repository-work-report.json" >/dev/null
+
+      - name: Upload bounded pass/fail evidence
+        if: ${{ always() }}
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: agent-repository-work-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ env.AGENT_REPOSITORY_WORK_EVIDENCE }}/agent-repository-work-report.json
+          if-no-files-found: warn
+          retention-days: 14
