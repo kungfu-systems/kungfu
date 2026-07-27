@@ -220,6 +220,15 @@ later thread; a corrected head is eligible for a fresh admission. Manual
 dequeues do not mint the marker, so a serialized position race can safely
 yield and retry.
 
+Before expensive pull-request qualification starts, candidate preflight also
+replays the pull request's first-parent commit series onto the exact protected
+base using the repository's existing rebase-queue admission. The replay writes
+only unreachable Git objects and changes no ref, index, or worktree. A
+deterministic replay conflict fails preflight, so native, SDK, Shifu, and KFD
+jobs do not spend runner time on a source revision that the protected `REBASE`
+queue cannot admit. Merge-group candidates have already been synthesized by
+the queue and do not repeat this PR-only admission.
+
 The retained `2026-07-27T02:55:08.491Z` window is explicitly non-qualifying:
 30 samples (21 native) report queue-inclusive P50 `1037000 ms` and P95
 `9507000 ms`. All 21 native cache outcomes are source-qualified cold misses;
@@ -234,8 +243,11 @@ tier, receipt, hosted-runner image, and observed compiler/CMake/Ninja evidence.
 A successful PR run may publish proof only after its complete required native,
 SDK, Shifu, and KFD dependency graph passes. The matching merge-group may
 consume that proof, and a serialized repeat may consume a same-SHA queue proof,
-only when lookup returns one unambiguous trusted producer and bundle
-verification preserves every identity binding. PR proof records its triggering
+only when lookup deterministically selects the newest trusted producer for the
+exact proof identity and bundle verification preserves every identity binding.
+Concurrent duplicate PR runs for the same PR head are cancelled; retained
+same-identity artifacts are ordered by creation time and immutable artifact and
+run ids before selection. PR proof records its triggering
 head separately from the synthetic checkout; queue proof requires both SHAs to
 be identical. A changed merge-group base therefore continues to fail closed to
 a full run even when the PR patch and

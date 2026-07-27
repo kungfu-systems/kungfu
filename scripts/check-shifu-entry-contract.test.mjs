@@ -165,6 +165,8 @@ test('build-free read-only routes bypass launcher bootstrap on both shims', () =
     assert.match(entrypoint, /maintainability:complexity/u);
     assert.match(entrypoint, /maintainability:amplification/u);
     assert.match(entrypoint, /maintainability:query/u);
+    assert.match(entrypoint, /kfd:query/u);
+    assert.match(entrypoint, /kfd:support-matrix:check/u);
     assert.match(entrypoint, /shifu-readonly-entry\.mjs/u);
     assert.match(entrypoint, /readonly-node-unavailable/u);
   }

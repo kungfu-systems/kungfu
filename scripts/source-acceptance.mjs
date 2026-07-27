@@ -453,7 +453,12 @@ export function sourceAcceptancePlan(files, evidenceBaseCommit = '') {
     {
       label: 'Phase B package identity contract tests',
       command: 'python3',
-      args: ['-m', 'unittest', 'scripts.test_prepare_kungfu_phase_b_package'],
+      args: [
+        '-B',
+        '-m',
+        'unittest',
+        'scripts.test_prepare_kungfu_phase_b_package',
+      ],
     },
     {
       label: 'agent work state contract and CLI parity',
@@ -609,6 +614,14 @@ function run(step) {
     throw new Error(
       `${step.label} failed: ${result.error?.message || result.status}`,
     );
+  }
+  if (process.env.KUNGFU_READONLY_NESTED_SOURCE_ACCEPTANCE === '1') {
+    const homeEntries = fs.readdirSync(process.env.HOME || '');
+    if (homeEntries.length) {
+      throw new Error(
+        `${step.label} wrote into HOME: ${homeEntries.join(', ')}`,
+      );
+    }
   }
 }
 

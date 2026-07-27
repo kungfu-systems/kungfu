@@ -22,6 +22,13 @@
     "documentation": "docs/qualification/kfd-support-matrix.md",
     "releasePassport": "buildchain.release.json#/kfdSupport"
   },
+  "kfd3Enforcement": {
+    "schema": "kungfu-kfd-3-release-gate-enforcement/v1",
+    "declaredSurfaceCount": 166,
+    "enforcedSurfaceCount": 0,
+    "gateBindings": [],
+    "claimBoundary": "Declared means discoverable; enforced requires a retained passed hard release Gate. Merely detected or declared surfaces are not enforced."
+  },
   "rows": [
     {
       "id": "KFD-1",

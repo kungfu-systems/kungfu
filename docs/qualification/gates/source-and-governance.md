@@ -179,6 +179,12 @@ Each section is bound to the registry id by the catalog meta gate.
   that same head, including from another account or thread, and observes a new
   source SHA as the only ordinary unlock. Manual dequeues remain unmarked so
   position-one serialization can yield without manufacturing a repair debt.
+- **Rebase-queue admission:** pull-request candidate preflight uses
+  `./shifu project-cut:queue-admission -- --base <base> --head <head>` to replay
+  the exact first-parent series onto the protected base with unreachable Git
+  objects only. A deterministic conflict fails before native, SDK, Shifu, or
+  KFD work starts. Merge-group events skip this PR-only check because the queue
+  has already synthesized their candidate source.
 - **Diagnosis:** inspect without building with `./shifu core:affected -- --base
   <base> --head <head> --json`; run mutation fixtures with `./shifu
   core:affected -- --self-test`.

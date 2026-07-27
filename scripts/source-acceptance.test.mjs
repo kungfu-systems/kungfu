@@ -300,6 +300,7 @@ test('source plan covers representative source-only checks', () => {
     (step) => step.label === 'Phase B package identity contract tests',
   );
   assert.deepEqual(phaseBPackageTests.args, [
+    '-B',
     '-m',
     'unittest',
     'scripts.test_prepare_kungfu_phase_b_package',

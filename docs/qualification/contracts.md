@@ -394,16 +394,21 @@ kungfu sdk kfd upstream --json
 kungfu sdk kfd aggregate --json
 ./shifu kfd:buildchain
 ./shifu kfd:buildchain:check
-./shifu kfd:query
+./shifu kfd status
+./shifu kfd query KFD-3 --json
+./shifu kfd check --json
 node scripts/buildchain-kfd-evidence.mjs --artifact-witness --json
 ```
 
 `kungfu kfd ...` is the installed-runtime bridge for users and agents;
 `kungfu sdk kfd ...` exposes the same SDK-distributed Buildchain bridge directly.
-The `./shifu kfd:*` commands are the repository development and release
-evidence generators. `query` reports Kungfu's own declared surfaces, while
-`upstream` and `aggregate` expose the packaged KFD/libnode/Buildchain upstream
-KFD aggregate.
+The `./shifu kfd status|query|check` commands are dependency-cold, read-only
+source-checkout projections over the checked-in support authority and retained
+evidence. They separate declared KFD-3 surfaces from surfaces enforced by a
+retained passed hard release Gate. The `./shifu kfd:buildchain*` commands remain
+the repository development and release-evidence generators. Installed
+`query`, `upstream`, and `aggregate` expose the product-declared surfaces and
+the packaged KFD/libnode/Buildchain upstream aggregate.
 
 During `./shifu product gui dev` and `./shifu product tui dev`, the
 product wrapper exports `KUNGFU_SDK_ENTRY`, `KUNGFU_KFD3_REGISTRY`, and

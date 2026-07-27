@@ -20,12 +20,16 @@ const REQUIRED_AGENT_DISCOVERY = [
 ];
 
 function sourceCommand(command) {
+  const normalized = command
+    .replace(/^\.\/*shifu\s+/u, '')
+    .replace(/^invariant:verify -- --list$/u, 'invariant:verify --list');
+  if (/^kfd\s+(?:status|query|check)(?:\s|$)/u.test(normalized))
+    return normalized.split(/\s+/u).slice(0, 2).join(' ');
+  if (/^kfd:(?:query|support-matrix:check)(?:\s|$)/u.test(normalized))
+    return normalized.split(/\s+/u)[0];
   return (
-    command
-      .replace(/^\.\/*shifu\s+/u, '')
-      .replace(/^invariant:verify -- --list$/u, 'invariant:verify --list')
-      .split(/\s+/u)[0] +
-    (command.includes('invariant:verify') ? ' --list' : '')
+    normalized.split(/\s+/u)[0] +
+    (normalized.includes('invariant:verify') ? ' --list' : '')
   );
 }
 
