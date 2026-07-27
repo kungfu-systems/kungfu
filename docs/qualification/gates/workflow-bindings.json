@@ -476,8 +476,8 @@
     {
       "id": "hub-cli-linux-arm64",
       "execution": "controller",
-      "workflow": ".github/workflows/build.yml",
-      "job": "hub-cli-linux-arm64",
+      "workflow": ".github/workflows/linux-arm64-alpha-qualification.yml",
+      "job": "artifact",
       "profiles": [
         "alpha-pr",
         "release-pr"
@@ -487,14 +487,13 @@
         "episode.smoke",
         "episode.release"
       ],
-      "activation": "alpha or release pull request, or selected manual Linux ARM64 qualification",
+      "activation": "alpha or release pull request, or isolated manual Linux ARM64 qualification",
       "adapter": {
         "type": "buildchain-hub-cli-linux-arm64",
         "kind": "job-uses",
         "uses": "kungfu-systems/buildchain/.github/workflows/.build.yml@bfe43b0fe5577f15d2af01bc542de8a8ce587457",
         "job": {
           "needs": "preflight",
-          "if": "${{ github.event_name == 'pull_request' || !inputs.platforms-json || inputs.run-hub-cli-linux-arm64 || contains(inputs.platforms-json, 'linux-arm64') }}",
           "secrets": {
             "BUILDCHAIN_ARTIFACT_RELAY_S3_ROLE_ARN": "${{ secrets.BUILDCHAIN_ARTIFACT_RELAY_S3_ROLE_ARN }}",
             "BUILDCHAIN_ARTIFACT_RELAY_S3_UPLOAD_ROLE_ARN": "${{ secrets.BUILDCHAIN_ARTIFACT_RELAY_S3_UPLOAD_ROLE_ARN }}",
@@ -507,8 +506,9 @@
           "artifact-name": "kungfu-hub-cli",
           "require-install": true,
           "require-build": true,
-          "require-verify": true,
-          "verify-command": "node scripts/run-release-qualification.mjs --execution-profile ${{ startsWith(github.base_ref, 'release/') && 'release-candidate' || 'alpha' }} --native-upgrade-policy skip",
+          "build-command": "node scripts/run-shifu-lifecycle.mjs cache-apply dist:cli",
+          "require-verify": false,
+          "lifecycle-timeout-minutes": 240,
           "release-candidate": true,
           "publish-channel": "${{ github.event_name == 'pull_request' && (startsWith(github.base_ref, 'release/') && 'release' || 'alpha') || 'none' }}",
           "artifact-transfer-mode": "s3-to-github-artifacts",
