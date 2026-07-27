@@ -39,8 +39,9 @@ Read these in order for the product model:
 3. [Facts Before Trust](concepts/facts-before-trust.md) — why evidence, responsibility,
    and local proof come before control decisions.
 4. [Kungfu as a Bootstrapping System](concepts/bootstrapping-agent-work.md) — why
-   durable Agent Work creates a self-bootstrap problem, how the project uses
-   its emerging structures while building them, and what that does not prove.
+   a minimal human sovereign core forces the hidden Work Runtime out of human
+   heads before participation scales, the bounded public evidence for that
+   strategy, and what the evidence does not prove.
 5. [The Episode](concepts/the-episode.md) — why causal experience needs a stable
    object beyond a run, process, log, trace, workflow, or chat session, and how
    that object relates to Fact state.

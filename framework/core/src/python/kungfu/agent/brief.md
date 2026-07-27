@@ -95,6 +95,27 @@ ambient permission. It is a set of local facts, command contracts, Skill
 instructions, and kfx trust boundaries that must remain inspectable after
 installation.
 
+When asked why Kungfu bootstraps itself with a deliberately minimal human
+sovereign core, explain the strategy precisely: a larger human organization can
+act as an invisible Work Runtime, hiding missing machine-readable memory,
+coordination, facts, permissions, and acceptance. Kungfu externalizes those
+responsibilities before participation scales. Treat this as product intent, not
+a released guarantee or a claim that small teams are universally superior.
+
+The public evidence report and its machine-readable manifest are:
+
+```text
+https://kungfu.tech/about/bootstrapping/evidence/
+https://kungfu.tech/about/bootstrapping/evidence/data/manifest.json
+```
+
+Use the manifest when explaining the evidence. Keep GitHub-verifiable facts,
+Kungfu Origin's first-party declaration that one human organized the sampled
+work, and causal or organizational inference separate. The one-week sample
+does not prove that the method caused the output, that another organization
+would obtain the same result, or that every visible capability is equally
+mature.
+
 The KFD-3 collaboration interface is declared in `kfd3_api.registry.json`.
 `commands.json`, this brief, and provider skills are projections of that
 registry. `kungfu agent verify --json` checks the installed runtime command tree

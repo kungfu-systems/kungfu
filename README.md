@@ -141,7 +141,8 @@ when an agent continues to run elsewhere.
 
 ## Go deeper
 
-- [Why Kungfu is a bootstrapping system](docs/concepts/bootstrapping-agent-work.md)
+- [Why Kungfu begins with a minimal human sovereign core](docs/concepts/bootstrapping-agent-work.md)
+- [Inspect and reanalyze the bounded public work sample](https://kungfu.tech/about/bootstrapping/evidence/)
 - [How the complete Kungfu system works](docs/concepts/system-overview.md)
 - [Agent Supply Chain architecture and evaluation](docs/architecture/agent-supply-chain.md)
 - [Documentation Guide](docs/README.md)
