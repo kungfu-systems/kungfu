@@ -1,6 +1,6 @@
 # SPDX-License-Identifier: Apache-2.0
 
-"""Portable Mission closure composed from self-contained Episode bundles."""
+"""Portable Initiative closure plus exact legacy Mission bundle readers."""
 
 import json
 from pathlib import Path
@@ -14,6 +14,7 @@ from . import mission_control
 
 BUNDLE_SCHEMA = "kungfu.mission-control.bundle/v2"
 LEGACY_BUNDLE_SCHEMA = "kungfu.mission-control.bundle/v1"
+INITIATIVE_BUNDLE_SCHEMA = "kungfu.work-control.initiative-bundle/v1"
 BUNDLE_MODES = ("full", "thin")
 
 
@@ -285,6 +286,78 @@ def build_mission_bundle(
     return body
 
 
+def build_initiative_bundle(
+    runtime_dir: str,
+    *,
+    initiative_id: str,
+    mode: str = "full",
+    storage_source_id: str = "atlas",
+    purpose: str = mission_control.PROGRESS_PURPOSE,
+) -> dict[str, Any]:
+    """Build a native Initiative bundle without changing sealed Episodes."""
+
+    legacy = build_mission_bundle(
+        runtime_dir,
+        mission_id=initiative_id,
+        mode=mode,
+        storage_source_id=storage_source_id,
+        purpose=purpose,
+    )
+    closure = dict(legacy["closure"])
+    closure["known_limits"] = [
+        (
+            "Atlas bridge provenance may be a shared import Episode with "
+            "records outside this Initiative"
+        )
+        for _ in closure.get("known_limits") or []
+    ]
+    episodes = [
+        {
+            **dict(entry),
+            "roles": [
+                "initiative-state" if role == "mission-state" else role
+                for role in entry.get("roles") or []
+            ],
+        }
+        for entry in legacy["episodes"]
+    ]
+    body = {
+        key: value
+        for key, value in legacy.items()
+        if key
+        not in {
+            "schema",
+            "mission_subject",
+            "mission_id",
+            "bundle_id",
+            "bundle_root",
+            "closure",
+            "episodes",
+        }
+    }
+    body.update(
+        {
+            "schema": INITIATIVE_BUNDLE_SCHEMA,
+            "initiative_subject": legacy["mission_subject"],
+            "initiative_id": legacy["mission_id"],
+            "closure": closure,
+            "episodes": episodes,
+        }
+    )
+    body["bundle_id"] = (
+        "initiative:"
+        + _root(
+            {
+                "initiative_subject": body["initiative_subject"],
+                "result_hash": body["expected_state"]["result_hash"],
+                "mode": mode,
+            }
+        )[7:31]
+    )
+    body["bundle_root"] = _bundle_root(body)
+    return body
+
+
 def write_mission_bundle(
     runtime_dir: str,
     out_path: str | Path,
@@ -302,6 +375,32 @@ def write_mission_bundle(
         "status": bundle["status"],
         "mode": bundle["mode"],
         "mission_subject": bundle["mission_subject"],
+        "bundle_id": bundle["bundle_id"],
+        "bundle_root": bundle["bundle_root"],
+        "episode_count": bundle["closure"]["episode_count"],
+        "out": str(path.resolve()),
+    }
+
+
+def write_initiative_bundle(
+    runtime_dir: str,
+    out_path: str | Path,
+    **options: Any,
+) -> dict[str, Any]:
+    bundle = build_initiative_bundle(runtime_dir, **options)
+    path = Path(out_path).expanduser()
+    if not path.parent.exists():
+        raise FileNotFoundError(
+            f"Initiative bundle parent does not exist: {path.parent}"
+        )
+    path.write_text(
+        json.dumps(bundle, indent=2, sort_keys=True) + "\n", encoding="utf-8"
+    )
+    return {
+        "schema": "kungfu.work-control.initiative-bundle-export/v1",
+        "status": bundle["status"],
+        "mode": bundle["mode"],
+        "initiative_subject": bundle["initiative_subject"],
         "bundle_id": bundle["bundle_id"],
         "bundle_root": bundle["bundle_root"],
         "episode_count": bundle["closure"]["episode_count"],
@@ -444,5 +543,107 @@ def import_mission_bundle_file(
     execute: bool = False,
 ) -> dict[str, Any]:
     return import_mission_bundle(
+        runtime_dir, read_mission_bundle(path), execute=execute
+    )
+
+
+def import_initiative_bundle(
+    runtime_dir: str,
+    bundle: dict[str, Any],
+    *,
+    execute: bool = False,
+) -> dict[str, Any]:
+    """Verify or materialize one native Initiative bundle."""
+
+    if bundle.get("schema") != INITIATIVE_BUNDLE_SCHEMA:
+        raise ValueError(
+            f"unsupported Initiative bundle schema: {bundle.get('schema')}"
+        )
+    declared_root = str(bundle.get("bundle_root") or "")
+    if not declared_root or declared_root != _bundle_root(bundle):
+        raise ValueError("Initiative bundle root mismatch")
+    legacy = {
+        key: value
+        for key, value in bundle.items()
+        if key
+        not in {
+            "schema",
+            "initiative_subject",
+            "initiative_id",
+            "bundle_id",
+            "bundle_root",
+            "closure",
+            "episodes",
+        }
+    }
+    closure = dict(bundle.get("closure") or {})
+    closure["known_limits"] = [
+        (
+            "Atlas bridge provenance may be a shared import Episode with "
+            "records outside this Mission"
+        )
+        for _ in closure.get("known_limits") or []
+    ]
+    legacy.update(
+        {
+            "schema": BUNDLE_SCHEMA,
+            "mission_subject": bundle.get("initiative_subject"),
+            "mission_id": bundle.get("initiative_id"),
+            "closure": closure,
+            "episodes": [
+                {
+                    **dict(entry),
+                    "roles": [
+                        "mission-state" if role == "initiative-state" else role
+                        for role in entry.get("roles") or []
+                    ],
+                }
+                for entry in bundle.get("episodes") or []
+            ],
+        }
+    )
+    legacy["bundle_id"] = (
+        "mission:"
+        + _root(
+            {
+                "mission_subject": legacy["mission_subject"],
+                "result_hash": legacy["expected_state"]["result_hash"],
+                "mode": legacy["mode"],
+            }
+        )[7:31]
+    )
+    legacy["bundle_root"] = _bundle_root(legacy)
+    result = import_mission_bundle(runtime_dir, legacy, execute=execute)
+    return {
+        "schema": "kungfu.work-control.initiative-bundle-import/v1",
+        "status": result["status"],
+        "accepted": result["accepted"],
+        "materialized": result["materialized"],
+        "mode": result["mode"],
+        "initiative_subject": bundle["initiative_subject"],
+        "bundle_id": bundle["bundle_id"],
+        "bundle_root": declared_root,
+        "profile_verification": result["profile_verification"],
+        "episode_count": result["episode_count"],
+        "missing_material_count": result["missing_material_count"],
+        "missing_episodes": result["missing_episodes"],
+        "state_verification": result["state_verification"],
+        "receipts": result["receipts"],
+        "diagnosis": (
+            "thin bundles preserve roots and references but require a full "
+            "bundle before Initiative state can be materialized"
+            if execute and result["mode"] == "thin"
+            else ""
+        ),
+    }
+
+
+def import_initiative_bundle_file(
+    runtime_dir: str,
+    path: str | Path,
+    *,
+    execute: bool = False,
+) -> dict[str, Any]:
+    return import_initiative_bundle(
         runtime_dir, read_mission_bundle(path), execute=execute
     )

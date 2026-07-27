@@ -30,7 +30,7 @@ export type GoalCardQuerySpec = {
 
 export type MissionControlGoalCardViewSpec = ProfileQueryViewSpec & {
   profileId: 'kungfu.mission-control';
-  memberId: 'mission-control-views';
+  memberId: 'work-control-views';
   viewId: 'goal-cards';
   spec: {
     schema: 'kungfu.mission-control.goal-card-view/v1';
@@ -163,7 +163,7 @@ export function missionControlGoalCardView(
     kind: 'profile',
     profileId: 'kungfu.mission-control',
     profileVersion,
-    memberId: 'mission-control-views',
+    memberId: 'work-control-views',
     viewId: 'goal-cards',
     spec: {
       schema: 'kungfu.mission-control.goal-card-view/v1',
@@ -181,7 +181,7 @@ export function goalCardQueryFromView(
   if (!view || view.profileId !== 'kungfu.mission-control') return null;
   if (view.kind === 'profile') {
     if (
-      view.memberId !== 'mission-control-views' ||
+      view.memberId !== 'work-control-views' ||
       view.viewId !== 'goal-cards'
     ) {
       return null;

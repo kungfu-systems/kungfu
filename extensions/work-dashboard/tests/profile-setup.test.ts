@@ -4,11 +4,11 @@ import type {
   ManagedProfile,
   ProfileSourceDiscovery,
 } from '@kungfu-tech/api/capability';
-import { missionControlProfileSetupStep } from '../src/view/profile-setup.ts';
+import { workControlProfileSetupStep } from '../src/view/profile-setup.ts';
 
 const discovery: ProfileSourceDiscovery = {
   schema: 'kungfu.profile-source-discovery/v1',
-  profileId: 'kungfu.mission-control',
+  profileId: 'kungfu.work-control',
   profileSuiteRoot: 'sha256:source',
   memberRoots: {},
   source: '/product/extensions/mission-control',
@@ -19,8 +19,8 @@ function managed(
   overrides: Partial<ManagedProfile> = {},
 ): ManagedProfile {
   return {
-    profileId: 'kungfu.mission-control',
-    profileVersion: '3.0.0',
+    profileId: 'kungfu.work-control',
+    profileVersion: '4.0.0',
     profileSuiteRoot: 'sha256:source',
     profileRevision: 1,
     lifecycleState,
@@ -37,37 +37,37 @@ function managed(
   };
 }
 
-test('Mission Control setup starts with the packaged public Profile source', () => {
-  assert.deepEqual(missionControlProfileSetupStep(null, discovery), {
+test('Work Control setup starts with the packaged public Profile source', () => {
+  assert.deepEqual(workControlProfileSetupStep(null, discovery), {
     action: 'install',
     source: discovery.source,
   });
 });
 
-test('Mission Control setup preserves explicit lifecycle gates', () => {
+test('Work Control setup preserves explicit lifecycle gates', () => {
   assert.deepEqual(
-    missionControlProfileSetupStep(managed('installed'), discovery),
+    workControlProfileSetupStep(managed('installed'), discovery),
     { action: 'qualify', source: discovery.source },
   );
   assert.deepEqual(
-    missionControlProfileSetupStep(managed('qualified'), discovery),
+    workControlProfileSetupStep(managed('qualified'), discovery),
     { action: 'activate', source: discovery.source },
   );
   assert.equal(
-    missionControlProfileSetupStep(managed('activated'), discovery),
+    workControlProfileSetupStep(managed('activated'), discovery),
     null,
   );
 });
 
 test('a promoted factory Profile exposes the exact upgrade gate', () => {
   assert.deepEqual(
-    missionControlProfileSetupStep(
+    workControlProfileSetupStep(
       managed('activated', {
         health: 'inactive',
         catalog: {
           schema: 'kungfu.profile-composition/v1',
-          profileId: 'kungfu.mission-control',
-          profileVersion: '3.0.0',
+          profileId: 'kungfu.work-control',
+          profileVersion: '4.0.0',
           profileSuiteRoot: 'sha256:promoted-source',
           profileRevision: 2,
           activeExactRoot: false,
@@ -87,9 +87,9 @@ test('a promoted factory Profile exposes the exact upgrade gate', () => {
   );
 });
 
-test('removed Mission Control can be explicitly reinstalled', () => {
+test('removed Work Control can be explicitly reinstalled', () => {
   assert.deepEqual(
-    missionControlProfileSetupStep(
+    workControlProfileSetupStep(
       managed('removed', { health: 'removed' }),
       discovery,
     ),

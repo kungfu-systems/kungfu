@@ -1,8 +1,7 @@
 #  SPDX-License-Identifier: Apache-2.0
 #
-# `kungfu atlas` — the Atlas bridge and proof-backed Atlas primitives.
-# Imported Atlas records keep Atlas authority; Kungfu-native Mission/Go facts
-# and portable Mission bundles share the same Fact Library and proof path.
+# `kungfu atlas` — the explicit Atlas compatibility bridge.
+# Kungfu-native Work Control lives under `kungfu work`.
 
 import click
 import json
@@ -32,7 +31,8 @@ register_role_commands(atlas, "atlas")
 @profile.group(
     name="mission-control",
     cls=PrioritizedCommandGroup,
-    help="operate the installed Mission Control Profile",
+    help="operate the legacy Mission Control compatibility reader",
+    hidden=True,
 )
 @click.help_option("-h", "--help")
 @profile_context
@@ -47,9 +47,14 @@ def _echo_json(payload):
 def _profile_source(ctx):
     from kungfu import profile_sdk
 
-    return profile_sdk.discover_source("kungfu.mission-control", ctx.runtime_dir)[
-        "source"
-    ]
+    try:
+        return profile_sdk.discover_source("kungfu.work-control", ctx.runtime_dir)[
+            "source"
+        ]
+    except ValueError:
+        return profile_sdk.discover_source("kungfu.mission-control", ctx.runtime_dir)[
+            "source"
+        ]
 
 
 def _profile_read(ctx, operation, values):
@@ -58,7 +63,7 @@ def _profile_read(ctx, operation, values):
     return profile_sdk.invoke_member_adapter(
         _profile_source(ctx),
         ctx.runtime_dir,
-        "mission-control-actions",
+        "work-control-actions",
         operation,
         values,
     )["result"]
@@ -217,7 +222,7 @@ def authority_cutover_cmd(
     try:
         result = _profile_action(
             ctx,
-            "cutover-authority",
+            "activate-work-control",
             {
                 "source": storage_source_id,
                 "expectedParityRoot": expected_parity_root,
@@ -257,7 +262,7 @@ def authority_rollback_cmd(
     try:
         result = _profile_action(
             ctx,
-            "rollback-authority",
+            "restore-atlas-authority",
             {
                 "expectedMigrationId": expected_migration_id,
                 "actor": actor,
@@ -436,75 +441,6 @@ def import_info(ctx, as_json):
 
 
 @mission_control.command(
-    name="assess-mission",
-    help="query admitted Mission/Go facts and persist a purpose-bound TrustReport",
-)
-@click.argument("mission_id", type=str)
-@click.option("--source", "storage_source_id", type=str, default="atlas")
-@click.option("--purpose", type=str, default="operator-review")
-@click.option("--cut-system-time", type=int, default=0)
-@click.option(
-    "--executor",
-    "executor_profile",
-    type=click.Choice(["inline", "thread", "process"]),
-    default="thread",
-)
-@click.option("--authorized-by", default="kungfu-cli", show_default=True)
-@click.option("--json", "as_json", is_flag=True, help="machine-readable output")
-@atlas_command_context
-def assess_mission(
-    ctx,
-    mission_id,
-    storage_source_id,
-    purpose,
-    cut_system_time,
-    executor_profile,
-    authorized_by,
-    as_json,
-):
-    try:
-        report = _profile_action(
-            ctx,
-            "assess-progress",
-            {
-                "missionId": mission_id,
-                "source": storage_source_id,
-                "purpose": purpose,
-                "cutSystemTime": cut_system_time,
-                "executorProfile": executor_profile,
-                "authorizedBy": authorized_by,
-            },
-        )
-    except (RuntimeError, ValueError) as error:
-        click.echo(f"[atlas] Mission assessment failed: {error}", err=True)
-        sys.exit(1)
-    if as_json:
-        _echo_json(report)
-        return
-    click.echo(
-        f"[atlas] {mission_id}: {report['fitness']} for {purpose} "
-        f"({report['assessment']['state']})"
-    )
-    profile = report["profile"]
-    cost = profile["cost"]
-    click.echo(
-        f"  profile: cost={cost['status']} "
-        f"state={profile['state']['value']} "
-        f"proof={'canonical' if profile['proof']['canonical_state'] else 'degraded'}"
-    )
-    click.echo(
-        f"  usage: {cost['tokens']['input_tokens']} input / "
-        f"{cost['tokens']['output_tokens']} output tokens; "
-        f"usd={cost['cost_usd'] if cost['cost_usd_known'] else 'unknown'}; "
-        f"attribution={cost['attribution']['worst']}"
-    )
-    click.echo(f"  assessment: {report['assessment_key']}")
-    click.echo(f"  proof: {report['query_proof_root']}")
-    for finding in report["findings"]:
-        click.echo(f"  finding: {finding}")
-
-
-@mission_control.command(
     name="export-mission",
     help="export a full or thin portable Mission bundle",
 )
@@ -521,9 +457,9 @@ def export_mission_cmd(
     try:
         result = _profile_action(
             ctx,
-            "export-mission",
+            "export-initiative",
             {
-                "missionId": mission_id,
+                "initiativeId": mission_id,
                 "out": out_path,
                 "mode": mode,
                 "source": storage_source_id,
@@ -558,8 +494,12 @@ def import_mission_cmd(ctx, from_path, execute, as_json):
     try:
         result = _profile_action(
             ctx,
-            "import-mission",
-            {"from": from_path, "execute": execute},
+            "import-initiative",
+            {
+                "from": from_path,
+                "execute": execute,
+                "compatibilityMode": "legacy",
+            },
         )
     except (OSError, RuntimeError, ValueError) as error:
         click.echo(f"[atlas] import Mission failed: {error}", err=True)
@@ -609,8 +549,8 @@ def assess_completion_cmd(
             ctx,
             "assess-progress",
             {
-                "missionId": mission_id,
-                "goalId": goal_id,
+                "initiativeId": mission_id,
+                "assignmentId": goal_id,
                 "source": storage_source_id,
                 "purpose": purpose,
                 "cutSystemTime": cut_system_time,

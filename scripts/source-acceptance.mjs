@@ -387,6 +387,7 @@ export function sourceAcceptancePlan(files, evidenceBaseCommit = '') {
         'scripts/check-layered-api-encoding-boundary.test.mjs',
         'scripts/check-work-lifecycle-native.test.mjs',
         'scripts/check-work-lifecycle-operation-matrix.test.mjs',
+        'scripts/check-work-control-vocabulary.test.mjs',
         'scripts/registry-envelope.test.mjs',
         'scripts/check-kfd-agent-runtime-boundary.mjs',
         'scripts/check-fact-root-canonical.test.mjs',

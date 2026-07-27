@@ -217,13 +217,14 @@ public term definitions; Concepts owns implementation names; Event Model owns
 journal and Replay mechanics; Contracts and Known Limits own guarantee
 maturity; ADRs own why a load-bearing decision was made.
 
-Mission, Go, Cost/State/Proof, and Mission Control belong to the current Agent
-Work compatibility profile. The target product language organizes continuing
-work as Initiative and bounded responsibility as Assignment, then settles a
-successor Project Cut. None of these terms redefines the domain-neutral Fact
-and Episode substrates. See [The Project Cut Product Loop](concepts/project-cut-product-loop.md),
-[Domain Horizons](concepts/domain-horizons.md), [Mission Control](profiles/mission-control.md),
-and [Mission Control Workspace Design](profiles/mission-control-workspaces.md).
+Work Control organizes continuing work as Initiative and bounded
+responsibility as Assignment, federates exact workspace observations through
+Portfolio, and settles a successor Project Cut. None of these terms redefines
+the domain-neutral Fact and Episode substrates. Atlas-shaped vocabulary is
+retained only by its explicit adapter and exact compatibility readers. See
+[Work Control](profiles/work-control.md),
+[The Project Cut Product Loop](concepts/project-cut-product-loop.md), and
+[Domain Horizons](concepts/domain-horizons.md).
 
 Spike reports such as the Rust host and embedding-membrane studies are retained
 as research evidence. Read their resulting ADRs and current architecture docs

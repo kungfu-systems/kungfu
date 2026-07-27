@@ -1,26 +1,26 @@
 {
   "schema": "kungfu.profile-collaboration/v1",
-  "profileId": "kungfu.mission-control",
+  "profileId": "kungfu.work-control",
   "value": {
     "summary": "Keep Initiative and Assignment progress understandable and operable through the same admitted-fact and assessment APIs for a human or an agent.",
     "participantBenefits": [
       {
         "participantKind": "human",
-        "description": "See, authorize, and operate Mission Control through the product GUI."
+        "description": "See, authorize, and operate Work Control through the product GUI."
       },
       {
         "participantKind": "agent",
-        "description": "Discover and invoke the same Mission Control capability APIs through Kungfu CLI."
+        "description": "Discover and invoke the same Work Control capability APIs through Kungfu CLI."
       }
     ]
   },
   "participants": [
     {
-      "id": "mission-owner",
+      "id": "initiative-owner",
       "kind": "human",
-      "title": "Mission owner",
+      "title": "Initiative owner",
       "authorityClasses": [
-        "mission-fact-author",
+        "work-control-author",
         "assignment-relation-operator",
         "assignment-execution-owner",
         "assignment-stage-operator",
@@ -47,9 +47,9 @@
       "id": "create-initiative",
       "title": "Create Initiative fact",
       "actionId": "create-initiative",
-      "inspectViewId": "mission-state",
-      "verifyViewId": "mission-timeline",
-      "requiredAuthority": "mission-fact-author",
+      "inspectViewId": "initiative-state",
+      "verifyViewId": "initiative-timeline",
+      "requiredAuthority": "work-control-author",
       "requiredCapabilities": ["storage"],
       "material": true,
       "protocol": {
@@ -63,9 +63,9 @@
       "id": "create-assignment",
       "title": "Create Assignment fact",
       "actionId": "create-assignment",
-      "inspectViewId": "mission-state",
-      "verifyViewId": "mission-timeline",
-      "requiredAuthority": "mission-fact-author",
+      "inspectViewId": "initiative-state",
+      "verifyViewId": "initiative-timeline",
+      "requiredAuthority": "work-control-author",
       "requiredCapabilities": ["storage"],
       "material": true,
       "protocol": {
@@ -79,8 +79,8 @@
       "id": "append-assignment-relation-event",
       "title": "Append workspace-routed Assignment relation event",
       "actionId": "append-assignment-relation-event",
-      "inspectViewId": "mission-state",
-      "verifyViewId": "mission-timeline",
+      "inspectViewId": "initiative-state",
+      "verifyViewId": "initiative-timeline",
       "requiredAuthority": "assignment-relation-operator",
       "requiredCapabilities": [
         "storage"
@@ -97,8 +97,8 @@
       "id": "claim-assignment",
       "title": "Claim Assignment execution lease",
       "actionId": "claim-assignment",
-      "inspectViewId": "mission-state",
-      "verifyViewId": "mission-timeline",
+      "inspectViewId": "initiative-state",
+      "verifyViewId": "initiative-timeline",
       "requiredAuthority": "assignment-execution-owner",
       "requiredCapabilities": ["storage"],
       "material": true,
@@ -113,8 +113,8 @@
       "id": "advance-assignment",
       "title": "Advance Assignment orchestration phase",
       "actionId": "advance-assignment",
-      "inspectViewId": "mission-state",
-      "verifyViewId": "mission-timeline",
+      "inspectViewId": "initiative-state",
+      "verifyViewId": "initiative-timeline",
       "requiredAuthority": "assignment-stage-operator",
       "requiredCapabilities": ["storage"],
       "material": true,
@@ -129,8 +129,8 @@
       "id": "claim-completion",
       "title": "Record completion claim",
       "actionId": "claim-completion",
-      "inspectViewId": "mission-state",
-      "verifyViewId": "mission-attention",
+      "inspectViewId": "initiative-state",
+      "verifyViewId": "initiative-attention",
       "requiredAuthority": "claim-author",
       "requiredCapabilities": ["storage"],
       "material": true,
@@ -143,10 +143,10 @@
     },
     {
       "id": "assess-progress",
-      "title": "Assess Mission progress",
+      "title": "Assess Initiative progress",
       "actionId": "assess-progress",
-      "inspectViewId": "mission-state",
-      "verifyViewId": "mission-attention",
+      "inspectViewId": "initiative-state",
+      "verifyViewId": "initiative-attention",
       "requiredAuthority": "profile-assessment-operator",
       "requiredCapabilities": ["storage"],
       "material": true,
@@ -154,15 +154,15 @@
         "mode": "shared-api",
         "apiId": "kungfu.profile.application",
         "guiMember": "work-dashboard",
-        "guiMethod": "assessMissionAsync"
+        "guiMethod": "assessInitiativeAsync"
       }
     },
     {
       "id": "review-completion",
       "title": "Review completion independently",
       "actionId": "review-completion",
-      "inspectViewId": "mission-state",
-      "verifyViewId": "mission-attention",
+      "inspectViewId": "initiative-state",
+      "verifyViewId": "initiative-attention",
       "requiredAuthority": "independent-reviewer",
       "requiredCapabilities": ["storage"],
       "material": true,
@@ -177,8 +177,8 @@
       "id": "decide-continuation",
       "title": "Decide exact-root continuation",
       "actionId": "decide-continuation",
-      "inspectViewId": "mission-state",
-      "verifyViewId": "mission-timeline",
+      "inspectViewId": "initiative-state",
+      "verifyViewId": "initiative-timeline",
       "requiredAuthority": "continuation-operator",
       "requiredCapabilities": ["storage"],
       "material": true,
@@ -193,9 +193,9 @@
       "id": "import-atlas",
       "title": "Import Atlas projection source",
       "actionId": "import-atlas",
-      "inspectViewId": "mission-state",
-      "verifyViewId": "mission-timeline",
-      "requiredAuthority": "mission-fact-author",
+      "inspectViewId": "initiative-state",
+      "verifyViewId": "initiative-timeline",
+      "requiredAuthority": "work-control-author",
       "requiredCapabilities": ["storage"],
       "material": true,
       "protocol": {
@@ -206,74 +206,74 @@
       }
     },
     {
-      "id": "cutover-authority",
-      "title": "Cut over Mission and Go authority",
-      "actionId": "cutover-authority",
-      "inspectViewId": "mission-state",
-      "verifyViewId": "mission-timeline",
-      "requiredAuthority": "mission-fact-author",
+      "id": "activate-work-control",
+      "title": "Activate Work Control authority after exact Atlas parity",
+      "actionId": "activate-work-control",
+      "inspectViewId": "initiative-state",
+      "verifyViewId": "initiative-timeline",
+      "requiredAuthority": "work-control-author",
       "requiredCapabilities": ["storage"],
       "material": true,
       "protocol": {
         "mode": "shared-api",
         "apiId": "kungfu.profile.application",
         "guiMember": "work-dashboard",
-        "guiMethod": "cutoverAuthority"
+        "guiMethod": "activateWorkControl"
       }
     },
     {
-      "id": "rollback-authority",
-      "title": "Roll back Mission and Go authority",
-      "actionId": "rollback-authority",
-      "inspectViewId": "mission-state",
-      "verifyViewId": "mission-timeline",
-      "requiredAuthority": "mission-fact-author",
+      "id": "restore-atlas-authority",
+      "title": "Restore Atlas adapter authority",
+      "actionId": "restore-atlas-authority",
+      "inspectViewId": "initiative-state",
+      "verifyViewId": "initiative-timeline",
+      "requiredAuthority": "work-control-author",
       "requiredCapabilities": ["storage"],
       "material": true,
       "protocol": {
         "mode": "shared-api",
         "apiId": "kungfu.profile.application",
         "guiMember": "work-dashboard",
-        "guiMethod": "rollbackAuthority"
+        "guiMethod": "restoreAtlasAuthority"
       }
     },
     {
-      "id": "export-mission",
-      "title": "Export portable Mission bundle",
-      "actionId": "export-mission",
-      "inspectViewId": "mission-state",
-      "verifyViewId": "mission-timeline",
-      "requiredAuthority": "mission-fact-author",
+      "id": "export-initiative",
+      "title": "Export portable Initiative bundle",
+      "actionId": "export-initiative",
+      "inspectViewId": "initiative-state",
+      "verifyViewId": "initiative-timeline",
+      "requiredAuthority": "work-control-author",
       "requiredCapabilities": ["storage"],
       "material": true,
       "protocol": {
         "mode": "shared-api",
         "apiId": "kungfu.profile.application",
         "guiMember": "work-dashboard",
-        "guiMethod": "exportMission"
+        "guiMethod": "exportInitiative"
       }
     },
     {
-      "id": "import-mission",
-      "title": "Import portable Mission bundle",
-      "actionId": "import-mission",
-      "inspectViewId": "mission-state",
-      "verifyViewId": "mission-timeline",
-      "requiredAuthority": "mission-fact-author",
+      "id": "import-initiative",
+      "title": "Import portable Initiative bundle",
+      "actionId": "import-initiative",
+      "inspectViewId": "initiative-state",
+      "verifyViewId": "initiative-timeline",
+      "requiredAuthority": "work-control-author",
       "requiredCapabilities": ["storage"],
       "material": true,
       "protocol": {
         "mode": "shared-api",
         "apiId": "kungfu.profile.application",
         "guiMember": "work-dashboard",
-        "guiMethod": "importMission"
+        "guiMethod": "importInitiative"
       }
     }
   ],
   "constraints": [
     {
       "id": "declared-authority",
-      "description": "Material Mission Control writes and assessments require the authority declared by each intent.",
+      "description": "Material Work Control writes and assessments require the authority declared by each intent.",
       "enforcement": "runtime",
       "appliesTo": ["*"]
     }
@@ -287,6 +287,6 @@
   ],
   "presentation": {
     "mode": "generic",
-    "homeViewId": "mission-state"
+    "homeViewId": "initiative-state"
   }
 }

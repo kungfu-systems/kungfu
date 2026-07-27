@@ -161,8 +161,8 @@ function fixture() {
     ]),
   );
   const input = {
-    workConsoleId: 'work:mission-control:go:go-42',
-    sessionAttemptId: 'attempt:go-42:1',
+    workConsoleId: 'work:kungfu.work-control:assignment:assignment-42',
+    sessionAttemptId: 'attempt:assignment-42:1',
     provider: 'codex',
     providerVersion: '0.144.3',
     profileRoot: PROFILE_ROOT,
@@ -175,10 +175,10 @@ function fixture() {
       workRef: {
         schema: 'kungfu.work-ref/v1',
         workspaceId: 'workspace-1',
-        profileId: 'kungfu.mission-control',
+        profileId: 'kungfu.work-control',
         profileRoot: PROFILE_ROOT,
-        entityType: 'go',
-        entityId: 'go-42',
+        entityType: 'assignment',
+        entityId: 'assignment-42',
         entityRoot: `sha256:${'e'.repeat(64)}`,
         purpose: 'delegated-work',
         systemTimeCut: '2026-07-14T09:00:00Z',
@@ -233,8 +233,11 @@ test('Core resolves one primary WorkConsole for a generic WorkRef', () => {
     workspaceId: 'ignored-for-work-binding',
   });
   assert.deepEqual(first, second);
-  assert.equal(first.workConsoleId, 'work:kungfu.mission-control:go:go-42');
-  assert.equal(first.binding.workRef.entityType, 'go');
+  assert.equal(
+    first.workConsoleId,
+    'work:kungfu.work-control:assignment:assignment-42',
+  );
+  assert.equal(first.binding.workRef.entityType, 'assignment');
 });
 
 function invokeRpc(endpoint, request) {
@@ -263,12 +266,12 @@ test('GUI, CLI, and KFD-3 produce the exact same reviewed start plan', () => {
   assert.deepEqual(plans[0].workEffects, []);
 });
 
-test('one Go action starts once, auto-attaches, and later views reuse the Capsule', () => {
+test('one Assignment action starts once, auto-attaches, and later views reuse the Capsule', () => {
   const { clients, input, runtime } = fixture();
   const firstPlan = clients.gui.planStart(input);
   const first = clients.gui.start(firstPlan, {
-    attachmentId: 'view:go-card',
-    presentation: 'go-card-side-console',
+    attachmentId: 'view:assignment-card',
+    presentation: 'assignment-card-side-console',
   });
   assert.equal(first.status, 'started');
   assert.equal(first.autoAttached, true);
@@ -322,8 +325,8 @@ test('one Go action starts once, auto-attaches, and later views reuse the Capsul
 test('all clients see one Hub projection and presentation detach never ends the provider', () => {
   const { clients, input, runtime } = fixture();
   clients.gui.start(clients.gui.planStart(input), {
-    attachmentId: 'view:go-card',
-    presentation: 'go-card-side-console',
+    attachmentId: 'view:assignment-card',
+    presentation: 'assignment-card-side-console',
   });
   const projections = Object.values(clients).map((client) => client.list());
   assert.deepEqual(projections[0], projections[1]);
@@ -335,7 +338,7 @@ test('all clients see one Hub projection and presentation detach never ends the 
       workConsoleId: input.workConsoleId,
       sessionAttemptId: input.sessionAttemptId,
     },
-    'view:go-card',
+    'view:assignment-card',
   );
   assert.equal(detached.providerEnded, false);
   assert.equal(runtime.list()[0].host.status().lifecycleState, 'ready');
@@ -354,7 +357,7 @@ test('a provider restart creates a new attempt under the same primary WorkConsol
   runtime.list()[0].child.emit('exit', { exitCode: 0, signal: 0 });
   const secondInput = {
     ...input,
-    sessionAttemptId: 'attempt:go-42:2',
+    sessionAttemptId: 'attempt:assignment-42:2',
   };
   clients.cli.start(clients.cli.planStart(secondInput), {
     attachmentId: 'view:second-attempt',
@@ -496,8 +499,8 @@ test('provider exit metadata remains visible without retaining terminal output',
     sessionAttemptId: input.sessionAttemptId,
   };
   clients.gui.start(clients.gui.planStart(input), {
-    attachmentId: 'view:go-card',
-    presentation: 'go-card-side-console',
+    attachmentId: 'view:assignment-card',
+    presentation: 'assignment-card-side-console',
   });
   runtime.list()[0].child.emit('exit', { exitCode: 64, signal: 0 });
   const status = clients.cli.show(ref);
@@ -516,7 +519,7 @@ test('controller lease has one winner and transfers only after exact release', (
   };
   clients.gui.start(clients.gui.planStart(input), {
     attachmentId: 'view:controller-1',
-    presentation: 'go-card-side-console',
+    presentation: 'assignment-card-side-console',
   });
   const observer = createAgentSessionSurfaceClient({
     invoke: (request) => surface.invoke(request),
@@ -559,8 +562,8 @@ test('controller lease has one winner and transfers only after exact release', (
 test('Agent instruction uses the shared plan and receipt without claiming work outcome', () => {
   const { clients, input, runtime } = fixture();
   clients.gui.start(clients.gui.planStart(input), {
-    attachmentId: 'view:go-card',
-    presentation: 'go-card-side-console',
+    attachmentId: 'view:assignment-card',
+    presentation: 'assignment-card-side-console',
   });
   const session = {
     workConsoleId: input.workConsoleId,
@@ -568,7 +571,7 @@ test('Agent instruction uses the shared plan and receipt without claiming work o
   };
   runtime.list()[0].child.emit('data', '\u001b[2J\u001b[H› Ready');
   const payload = {
-    text: 'Inspect the current Go through public Profile actions',
+    text: 'Inspect the current Assignment through public Profile actions',
     mode: 'when-ready',
   };
   const plans = Object.values(clients).map((client) =>
@@ -586,15 +589,18 @@ test('Agent instruction uses the shared plan and receipt without claiming work o
   assert.equal(result.semanticOutcome, null);
   assert.equal(result.workState, null);
   assert.equal(result.proof, null);
-  assert.doesNotMatch(JSON.stringify(result), /Inspect the current Go/u);
+  assert.doesNotMatch(
+    JSON.stringify(result),
+    /Inspect the current Assignment/u,
+  );
   assert.equal(runtime.list()[0].child.writes.length, 1);
 });
 
 test('approval state holds shared automatic instruction and stale plans fail closed', () => {
   const { clients, input, runtime } = fixture();
   clients.gui.start(clients.gui.planStart(input), {
-    attachmentId: 'view:go-card',
-    presentation: 'go-card-side-console',
+    attachmentId: 'view:assignment-card',
+    presentation: 'assignment-card-side-console',
   });
   const session = {
     workConsoleId: input.workConsoleId,

@@ -152,7 +152,7 @@ test('Node rejects a GUI Home outside the Profile Suite members', () => {
   );
 });
 
-test('KFX plan projects the declared Mission Control GUI experience', () => {
+test('KFX plan projects the declared Work Control GUI experience', () => {
   const plan = planKfx(
     {
       KUNGFU_KFX_CONTRACT: path.join(
@@ -164,16 +164,16 @@ test('KFX plan projects the declared Mission Control GUI experience', () => {
     planDeps,
   );
   const profile = plan.profiles.find(
-    (candidate) => candidate.id === 'kungfu.mission-control',
+    (candidate) => candidate.id === 'kungfu.work-control',
   );
   assert.deepEqual(profile, {
-    id: 'kungfu.mission-control',
-    title: 'Mission Control',
+    id: 'kungfu.work-control',
+    title: 'Work Control',
     kfx: [
-      'mission-control-actions',
-      'mission-control-assessment',
-      'mission-control-contract',
-      'mission-control-views',
+      'work-control-actions',
+      'work-control-assessment',
+      'work-control-contract',
+      'work-control-views',
       'work-dashboard',
     ],
     defaultView: 'work-dashboard',

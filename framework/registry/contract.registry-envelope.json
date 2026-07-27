@@ -23,7 +23,7 @@
       "id": "work-lifecycle-operation-matrix",
       "source": "framework/work-lifecycle/kungfu-work-lifecycle-operation-matrix.contract.json",
       "artifact": "config/work-lifecycle/kungfu-work-lifecycle-operation-matrix.contract.json",
-      "root": "sha256:b8cbb16ec51e20888b46082db84f14278999507a341f706da4cbe5a44c62e309"
+      "root": "sha256:7daf812d259e2d7c2ebef7da819d6f99bfbed5ad7da3ed2677d0876de1ce94e0"
     }
   ]
 }
