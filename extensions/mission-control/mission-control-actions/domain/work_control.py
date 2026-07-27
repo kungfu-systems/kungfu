@@ -73,6 +73,52 @@ def assignment_row(state: dict[str, Any], assignment_id: str) -> dict[str, Any]:
     return row
 
 
+def fold_completion_cycle(
+    linked: list[dict[str, Any]],
+) -> tuple[list[dict[str, Any]], list[dict[str, Any]], list[dict[str, Any]], str]:
+    """Project the latest append-only completion event into one live phase."""
+
+    typed_rows: list[tuple[dict[str, Any], str]] = []
+    for row in linked:
+        record = row.get("payload", {}).get("record", {})
+        if record.get("claim_type") == mission_control.COMPLETION_CLAIM:
+            typed_rows.append((row, "completion-claimed"))
+        elif record.get("review_type") == mission_control.INDEPENDENT_REVIEW:
+            typed_rows.append((row, "independently-reviewed"))
+        elif record.get("review_type") == mission_control.CONTINUATION_DECISION:
+            phase = (
+                "stage-ready"
+                if record.get("action") in {"reopen", "request-evidence"}
+                else "continuation-decided"
+            )
+            typed_rows.append((row, phase))
+    latest_phase = (
+        max(
+            typed_rows,
+            key=lambda item: (
+                int(item[0].get("system_time") or 0),
+                str(item[0].get("observation_id") or ""),
+            ),
+        )[1]
+        if typed_rows
+        else ""
+    )
+
+    def records(kind: str, value: str) -> list[dict[str, Any]]:
+        return [
+            row["payload"]["record"]
+            for row, _ in typed_rows
+            if row.get("payload", {}).get("record", {}).get(kind) == value
+        ]
+
+    return (
+        records("claim_type", mission_control.COMPLETION_CLAIM),
+        records("review_type", mission_control.INDEPENDENT_REVIEW),
+        records("review_type", mission_control.CONTINUATION_DECISION),
+        latest_phase,
+    )
+
+
 def query_state(
     runtime_dir: str,
     *,
