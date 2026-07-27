@@ -76,7 +76,7 @@ jobs:
 
   build:
     needs: preflight
-    uses: kungfu-systems/buildchain/.github/workflows/.build.yml@ebc7b2d86ecce1de835c8f8ba4436bcac65a62c2 # v3.0.2-alpha.3 with bundled macOS entitlements
+    uses: kungfu-systems/buildchain/.github/workflows/.build.yml@881e8e4ee063b184ad7db535829ebd3872b0323a # train/v3/v3.0/linux-github-attestation
     secrets:
       BUILDCHAIN_ARTIFACT_RELAY_S3_ROLE_ARN: ${{ secrets.BUILDCHAIN_ARTIFACT_RELAY_S3_ROLE_ARN }}
       BUILDCHAIN_ARTIFACT_RELAY_S3_UPLOAD_ROLE_ARN: ${{ secrets.BUILDCHAIN_ARTIFACT_RELAY_S3_UPLOAD_ROLE_ARN }}
@@ -94,6 +94,9 @@ jobs:
       artifact-name: kungfu
       artifact-paths: |
         product/release
+      github-artifact-attestation-subject-path: product/release/cli/kungfu-episodes-cli-linux-x64.tar.gz
+      github-artifact-attestation-signer-sha: ad57ae0fee5072a1de7a0b0182f70c0c41e45abb
+      github-artifact-attestation-platform-id: linux-x64
       credential-island-macos-app-path: product/dist/desktop/mac-arm64/Kungfu Episodes.app
       credential-island-caller-owned: true
       credential-island-macos-platform-id: macos-arm64
