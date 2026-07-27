@@ -257,7 +257,7 @@ function verifyArchive(file, layer) {
       const entry = prefix ? `${prefix}/${name}` : name;
       const type = String.fromCharCode(header[156] || 48);
       assert(
-        type === '0' || type === '5',
+        type === '0' || type === '2' || type === '5',
         `${layer} cache payload contains a non-file entry: ${entry}`,
       );
       const sizeField = field(124, 12).trim();
@@ -270,7 +270,11 @@ function verifyArchive(file, layer) {
         Number.isSafeInteger(size) && size >= 0,
         `${layer} cache payload has an invalid entry size`,
       );
-      entries.push(entry);
+      entries.push({
+        path: entry,
+        type,
+        linkTarget: type === '2' ? field(157, 100) : '',
+      });
       offset += 512 + Math.ceil(size / 512) * 512;
       assert(offset <= stat.size, `${layer} cache payload is truncated`);
     }
@@ -280,15 +284,29 @@ function verifyArchive(file, layer) {
   assert(terminated, `${layer} cache payload has no terminal block`);
   assert(entries.length > 0, `${layer} cache payload is empty`);
   for (const entry of entries) {
-    const normalized = entry.replace(/\/+$/, '');
+    const normalized = entry.path.replace(/\/+$/, '');
     assert(
       normalized === expected || normalized.startsWith(`${expected}/`),
-      `${layer} cache payload contains an unauthorized path: ${entry}`,
+      `${layer} cache payload contains an unauthorized path: ${entry.path}`,
     );
     assert(
       !path.posix.isAbsolute(normalized) &&
         !normalized.split('/').includes('..'),
-      `${layer} cache payload contains an unsafe path: ${entry}`,
+      `${layer} cache payload contains an unsafe path: ${entry.path}`,
+    );
+    if (entry.type !== '2') continue;
+    assert(
+      entry.linkTarget &&
+        !path.posix.isAbsolute(entry.linkTarget) &&
+        !entry.linkTarget.includes('\0'),
+      `${layer} cache payload contains an unsafe symlink: ${entry.path}`,
+    );
+    const resolved = path.posix.normalize(
+      path.posix.join(path.posix.dirname(normalized), entry.linkTarget),
+    );
+    assert(
+      resolved === expected || resolved.startsWith(`${expected}/`),
+      `${layer} cache payload contains an escaping symlink: ${entry.path}`,
     );
   }
 }

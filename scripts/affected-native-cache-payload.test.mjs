@@ -83,12 +83,14 @@ function createCachePlan(layer, sourceSha, planDigest) {
   });
 }
 
-function createArchive(home, archive, layer, marker, unsafeSymlink = false) {
+function createArchive(home, archive, layer, marker, symlinkTarget = '') {
   const relative = layer === 'dependency' ? '.conan2/p' : '.cache/ccache';
   const root = path.join(home, relative);
   fs.mkdirSync(root, { recursive: true });
-  if (unsafeSymlink) fs.symlinkSync('/etc/passwd', path.join(root, marker));
-  else fs.writeFileSync(path.join(root, marker), marker);
+  const markerPath = path.join(root, marker);
+  fs.mkdirSync(path.dirname(markerPath), { recursive: true });
+  if (symlinkTarget) fs.symlinkSync(symlinkTarget, markerPath);
+  else fs.writeFileSync(markerPath, marker);
   const result = spawnSync(
     'tar',
     ['--format=ustar', '-cf', archive, '-C', home, relative],
@@ -107,7 +109,9 @@ function createPartitionArtifact({
   partitionCount,
   repository,
   runId,
-  unsafeCompilerSymlink = false,
+  compilerSymlinkTarget = '',
+  dependencyMarker = 'package',
+  dependencySymlinkTarget = '',
 }) {
   const artifact = path.join(
     artifactsRoot,
@@ -156,12 +160,18 @@ function createPartitionArtifact({
     compilerArchive,
     'compiler',
     `object-${partitionIndex}`,
-    unsafeCompilerSymlink,
+    compilerSymlinkTarget,
   );
   let dependencyArchive = '';
   if (partitionIndex === 0) {
     dependencyArchive = path.join(payloadRoot, 'dependency.tar');
-    createArchive(home, dependencyArchive, 'dependency', 'package');
+    createArchive(
+      home,
+      dependencyArchive,
+      'dependency',
+      dependencyMarker,
+      dependencySymlinkTarget,
+    );
   }
   sealAffectedNativeCachePayload({
     qualificationDir: qualification,
@@ -251,7 +261,27 @@ test('push promotion waits for the exact required Gate instead of whole-run comp
   assert.doesNotMatch(workflow, /status=completed/u);
 });
 
-test('cache payload sealing rejects symlinks before trusted extraction', (t) => {
+test('cache payload sealing accepts Conan-relative symlinks inside its root', (t) => {
+  const root = fs.mkdtempSync(
+    path.join(os.tmpdir(), 'kungfu-cache-promotion-conan-symlink-'),
+  );
+  t.after(() => fs.rmSync(root, { recursive: true, force: true }));
+  assert.doesNotThrow(() =>
+    createPartitionArtifact({
+      artifactsRoot: root,
+      plan: createPlan(),
+      partitionIndex: 0,
+      partitionCount: 2,
+      repository: 'kungfu-systems/kungfu',
+      runId: 12345,
+      dependencyMarker:
+        'flatbuffers/s/src/tests/ts/bazel_repository_test_dir/.npmrc',
+      dependencySymlinkTarget: '../../../.npmrc',
+    }),
+  );
+});
+
+test('cache payload sealing rejects symlinks escaping its cache root', (t) => {
   const root = fs.mkdtempSync(
     path.join(os.tmpdir(), 'kungfu-cache-promotion-symlink-'),
   );
@@ -265,8 +295,21 @@ test('cache payload sealing rejects symlinks before trusted extraction', (t) => 
         partitionCount: 2,
         repository: 'kungfu-systems/kungfu',
         runId: 12345,
-        unsafeCompilerSymlink: true,
+        compilerSymlinkTarget: '/etc/passwd',
       }),
-    /non-file entry/,
+    /unsafe symlink/,
+  );
+  assert.throws(
+    () =>
+      createPartitionArtifact({
+        artifactsRoot: root,
+        plan: createPlan(),
+        partitionIndex: 1,
+        partitionCount: 2,
+        repository: 'kungfu-systems/kungfu',
+        runId: 12346,
+        compilerSymlinkTarget: '../../outside',
+      }),
+    /escaping symlink/,
   );
 });
