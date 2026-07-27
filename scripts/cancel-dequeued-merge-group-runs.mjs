@@ -12,6 +12,12 @@ const ACTIVE_STATUSES = [
   'waiting',
   'pending',
 ];
+const REPAIR_REASONS = new Set([
+  'failed_checks',
+  'invalid_merge_commit',
+  'merge_conflict',
+]);
+const REPAIR_MARKER = '<!-- kungfu-merge-queue-repair:v1';
 
 function required(value, label, pattern) {
   if (!value || !pattern.test(value)) {
@@ -42,6 +48,148 @@ async function githubResponse(route, token, request, init = {}) {
     },
   });
   return response;
+}
+
+function splitRepository(repository) {
+  const [owner, name] = repository.split('/');
+  return { owner, name };
+}
+
+export function mergeQueueRepairComment({ headSha, reason }) {
+  required(headSha, 'head sha', /^[0-9a-f]{40}$/u);
+  required(reason, 'dequeue reason', /^[a-z_]+$/u);
+  return (
+    `${REPAIR_MARKER} head=${headSha} reason=${reason} -->\n` +
+    `Merge queue repair required for source \`${headSha.slice(0, 12)}\`: ` +
+    `\`${reason}\`. Push a corrected source revision before re-enqueueing.`
+  );
+}
+
+async function latestMergeQueueRemoval({
+  repository,
+  pullRequest,
+  token,
+  request,
+}) {
+  const { owner, name } = splitRepository(repository);
+  const response = await githubResponse('/graphql', token, request, {
+    method: 'POST',
+    body: JSON.stringify({
+      query: `query($owner:String!,$name:String!,$number:Int!){
+        repository(owner:$owner,name:$name){
+          pullRequest(number:$number){
+            timelineItems(last:20,itemTypes:[REMOVED_FROM_MERGE_QUEUE_EVENT]){
+              nodes{
+                ... on RemovedFromMergeQueueEvent{createdAt reason}
+              }
+            }
+          }
+        }
+      }`,
+      variables: { owner, name, number: pullRequest },
+    }),
+  });
+  if (!response.ok) {
+    throw new Error(
+      `GitHub API ${response.status} while reading merge-queue removal`,
+    );
+  }
+  const payload = await response.json();
+  const nodes = payload?.data?.repository?.pullRequest?.timelineItems?.nodes;
+  if (!Array.isArray(nodes) || nodes.length === 0) {
+    throw new Error('merge-queue removal timeline is unavailable');
+  }
+  const removal = nodes.at(-1);
+  const reason = String(removal?.reason || '').toLowerCase();
+  required(reason, 'dequeue reason', /^[a-z_]+$/u);
+  return {
+    createdAt: required(
+      String(removal?.createdAt || ''),
+      'dequeue timestamp',
+      /^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\dZ$/u,
+    ),
+    reason,
+  };
+}
+
+async function upsertRepairComment({
+  repository,
+  pullRequest,
+  body,
+  token,
+  request,
+}) {
+  const listRoute = `/repos/${repository}/issues/${pullRequest}/comments?per_page=100&sort=created&direction=desc`;
+  const listResponse = await githubResponse(listRoute, token, request);
+  if (!listResponse.ok) {
+    throw new Error(
+      `GitHub API ${listResponse.status} while listing repair comments`,
+    );
+  }
+  const comments = await listResponse.json();
+  if (!Array.isArray(comments)) {
+    throw new Error('GitHub issue comments response is invalid');
+  }
+  const existing = comments.find(
+    ({ body: candidate, user }) =>
+      user?.login === 'github-actions[bot]' &&
+      String(candidate || '').startsWith(REPAIR_MARKER),
+  );
+  const route = existing
+    ? `/repos/${repository}/issues/comments/${existing.id}`
+    : `/repos/${repository}/issues/${pullRequest}/comments`;
+  const response = await githubResponse(route, token, request, {
+    method: existing ? 'PATCH' : 'POST',
+    body: JSON.stringify({ body }),
+  });
+  if (!response.ok) {
+    throw new Error(
+      `GitHub API ${response.status} while writing repair comment`,
+    );
+  }
+  return existing ? 'updated' : 'created';
+}
+
+export async function recordDequeuedRepairMarker({
+  repository,
+  pullRequest,
+  headSha,
+  token,
+  request = fetch,
+}) {
+  required(repository, 'repository', /^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/u);
+  required(headSha, 'head sha', /^[0-9a-f]{40}$/u);
+  if (!Number.isInteger(pullRequest) || pullRequest < 1) {
+    throw new Error('invalid pull request number');
+  }
+  if (!token) throw new Error('GitHub token is unavailable');
+
+  const removal = await latestMergeQueueRemoval({
+    repository,
+    pullRequest,
+    token,
+    request,
+  });
+  if (!REPAIR_REASONS.has(removal.reason)) {
+    return {
+      repairRequired: false,
+      removal,
+      comment: 'not-applicable',
+    };
+  }
+  const comment = await upsertRepairComment({
+    repository,
+    pullRequest,
+    body: mergeQueueRepairComment({ headSha, reason: removal.reason }),
+    token,
+    request,
+  });
+  return {
+    repairRequired: true,
+    removal,
+    headSha,
+    comment,
+  };
 }
 
 async function activeWorkflowRuns(repository, workflow, token, request) {
@@ -123,14 +271,21 @@ async function main() {
   const repository = process.env.GITHUB_REPOSITORY || '';
   const pullRequest = Number(process.env.DEQUEUED_PULL_REQUEST || 0);
   const workflow = process.env.MERGE_GROUP_WORKFLOW || 'affected-native-pr.yml';
+  const headSha = process.env.DEQUEUED_HEAD_SHA || '';
   const token = process.env.GITHUB_TOKEN || '';
-  const result = await cancelDequeuedMergeGroupRuns({
+  const cancellation = await cancelDequeuedMergeGroupRuns({
     repository,
     pullRequest,
     workflow,
     token,
   });
-  process.stdout.write(`${JSON.stringify(result)}\n`);
+  const repairMarker = await recordDequeuedRepairMarker({
+    repository,
+    pullRequest,
+    headSha,
+    token,
+  });
+  process.stdout.write(`${JSON.stringify({ cancellation, repairMarker })}\n`);
 }
 
 if (import.meta.url === pathToFileURL(process.argv[1] || '').href) {

@@ -31,8 +31,16 @@ test('dev queue impact selects Shifu and KFD from their declared source surfaces
 
 test('the staged workflow remains self-qualifying under both moved gates', () => {
   const impact = devQueueQualificationImpact([
+    '.github/workflows/affected-native-cache-promote.yml',
     '.github/workflows/affected-native-pr.yml',
   ]);
   assert.equal(impact.shifuWorkspace.required, true);
   assert.equal(impact.kfdVerifier.required, true);
+  assert.deepEqual(
+    impact.shifuWorkspace.reasons.map(({ path }) => path),
+    [
+      '.github/workflows/affected-native-cache-promote.yml',
+      '.github/workflows/affected-native-pr.yml',
+    ],
+  );
 });

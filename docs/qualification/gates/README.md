@@ -83,10 +83,12 @@ one-shot observation runner is not rendered as a Gate's standing policy source.
 `scripts/measure-dev-required-latency.mjs` is the read-only measurement surface
 for the protected development branch. It discovers the required context set
 from GitHub's effective branch rules, including rulesets, then measures each
-merged PR revision from the earliest matching Actions workflow `created_at`
-through the first successful result for every required context no later than
-the PR merge. This includes workflow/job queueing and pre-admission retries
-while excluding post-merge reruns; runner execution time alone is not the
+merged PR from its first authoritative `AddedToMergeQueueEvent` through the
+latest job completion in the first successful required-context set on the
+eventual merged queue round. Required contexts may come from separate workflow
+runs only when they bind the same merge-group source. The window includes every
+dequeue, retry, and gap after first enqueue. PR-head checks remain diagnostic
+only, post-merge reruns are excluded, and runner execution time alone is not the
 metric.
 
 The retained baseline must change in the same protected-branch transition as
@@ -115,6 +117,12 @@ artifacts remain `unknown`, and a window with unknown native cache evidence
 cannot qualify. Missing or non-success required contexts are retained as
 explicit exclusions with their reason and are never silently removed from the
 dataset.
+
+The retained baseline records the last observed window even when it fails the
+target. It must not preserve an earlier passing verdict derived from PR-head
+workflow timing after the queue-inclusive authority changes. A new optimization
+therefore proves itself prospectively; historical slow queue rounds remain
+visible until they naturally age out of the exact rolling window.
 
 New native artifacts also carry Buildchain toolkit observability. The Gate
 records source- and plan-bound spans for dependency install, configure, build,
@@ -182,17 +190,24 @@ PRs to have a non-merged exit and at least 20 completed delivery samples.
 `.github/workflows/cancel-dequeued-merge-group.yml` bounds waste after an
 authoritative dequeue. Its `pull_request_target: dequeued` job checks out only
 the event's trusted base SHA, does not execute pull-request code, and grants
-only `contents: read` plus `actions: write`. The controller selects active
-`affected-native-pr.yml` merge-group runs whose queue branch ends in the exact
-PR number and cancels each run once. A `409` terminal race is idempotent;
-unexpected API or permission failures remain fatal and visible.
+only the scoped permissions required to cancel Actions runs and maintain the
+PR repair marker. The controller selects active `affected-native-pr.yml`
+merge-group runs whose queue branch ends in the exact PR number and cancels
+each run once. A `409` terminal race is idempotent; unexpected API or
+permission failures remain fatal and visible. A `failed_checks`,
+`merge_conflict`, or `invalid_merge_commit` removal also upserts one marker
+bound to the event's exact PR head. Atlas admission refuses that same head in a
+later thread; a corrected head is eligible for a fresh admission. Manual
+dequeues do not mint the marker, so a serialized position race can safely
+yield and retry.
 
-The retained `2026-07-26T11:19:29.144Z` window qualifies required-gate latency:
-30 samples (20 native) report P50 `167000 ms` and P95 `358000 ms`, with zero
-unknown native cache outcomes. Delivery is still explicitly non-qualifying:
-57 completed samples report P50 `1496000 ms`, P90 `4576000 ms`, and a
-`16 / 63` PR dequeue cohort. The cancellation workflow is a prospective
-correction; historical tail data is not rewritten as if it had run.
+The retained `2026-07-27T02:55:08.491Z` window is explicitly non-qualifying:
+30 samples (21 native) report queue-inclusive P50 `1037000 ms` and P95
+`9507000 ms`. All 21 native cache outcomes are source-qualified cold misses;
+none is unknown. Delivery is also non-qualifying: 37 completed samples report
+P50 `1268000 ms`, P90 `4183000 ms`, and a `16 / 46` PR dequeue cohort.
+Cancellation bounds post-dequeue work to `82000 ms` in the retained window,
+but historical conflict and retry gaps remain part of the measured tail.
 
 These measurements do not relax affected-native proof identity. Reuse remains
 bound to the exact base, candidate source tree, plan projection, partitions,
