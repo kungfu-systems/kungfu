@@ -141,6 +141,24 @@ test('cache contract schemas accept valid fixtures and reject unsafe policy', as
   });
 });
 
+test('portable-off qualification profile covers every native Build lane', () => {
+  const profile = JSON.parse(
+    fs.readFileSync(
+      path.join(
+        ROOT,
+        'docs/shifu/qualification-portable-off.cache-profile.json',
+      ),
+      'utf8',
+    ),
+  );
+  assert.deepEqual(profile.subject.platforms, [
+    'darwin-arm64',
+    'linux-arm64',
+    'linux-x64',
+    'windows-x64',
+  ]);
+});
+
 for (const [label, args, source] of [
   ['contract', ['cache', 'contract'], 'docs/shifu/cache-contract.json'],
   [

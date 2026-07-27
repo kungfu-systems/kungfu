@@ -11,7 +11,7 @@
   },
   "subject": {
     "principal": "runner:qualification",
-    "platforms": ["darwin-arm64", "linux-x64", "windows-x64"],
+    "platforms": ["darwin-arm64", "linux-arm64", "linux-x64", "windows-x64"],
     "scopes": ["ci", "self-hosted-runner"]
   },
   "policy": {
