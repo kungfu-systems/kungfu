@@ -306,7 +306,6 @@ export function releaseQualificationStages(
     '--execution-context',
     JSON.stringify({
       executionProfile: execution.name,
-      artifactScope,
       effectiveParameters: execution.parameters,
       policyDigest: execution.policyDigest,
       policyRef: execution.policyRef,

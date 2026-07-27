@@ -476,7 +476,13 @@ test('Hub CLI scope retains headless evidence without claiming desktop or SDK ar
   assert.ok(!gate.includes('layers.sdk'));
   assert.ok(!gate.includes('layers.surfaces'));
   const context = JSON.parse(gate[gate.indexOf('--execution-context') + 1]);
-  assert.equal(context.artifactScope, 'hub-cli');
+  assert.deepEqual(Object.keys(context).sort(), [
+    'effectiveParameters',
+    'executionProfile',
+    'policyDigest',
+    'policyRef',
+  ]);
+  assert.ok(!Object.hasOwn(context, 'artifactScope'));
 });
 
 test('execution profile parsing fails closed on missing, duplicate, and unknown values', () => {
