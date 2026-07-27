@@ -183,6 +183,14 @@
       },
       "surfaces": [
         {
+          "path": "framework/kfx/src/index.ts",
+          "role": "thin-binding"
+        },
+        {
+          "path": "framework/kfx/src/agent-work-lab.ts",
+          "role": "thin-binding"
+        },
+        {
           "path": "framework/core/src/python/kungfu/kfx_contract.py",
           "role": "thin-binding"
         },

@@ -1368,8 +1368,8 @@ function App() {
     <button
       type="button"
       onClick={() => setLabOpen(true)}
-      title="Agent Qualification Lab"
-      aria-label="Agent Qualification Lab"
+      title="Agent Work Lab"
+      aria-label="Agent Work Lab"
       aria-current={labOpen ? 'page' : undefined}
       style={{
         ...mono,
@@ -1390,7 +1390,7 @@ function App() {
       <span aria-hidden="true" style={{ fontSize: 16 }}>
         🧪
       </span>
-      {!sidebarCollapsed && <span>Agent Lab</span>}
+      {!sidebarCollapsed && <span>Agent Work Lab</span>}
     </button>
   );
 
@@ -1857,9 +1857,7 @@ function App() {
       <ShellTitleBar
         chrome={windowChrome}
         activeTitle={
-          labOpen
-            ? 'Agent Qualification Lab'
-            : (activeKfx?.title ?? 'Kungfu Episodes')
+          labOpen ? 'Agent Work Lab' : (activeKfx?.title ?? 'Kungfu Episodes')
         }
         commandText={commandText}
         commandOptions={commandOptions}

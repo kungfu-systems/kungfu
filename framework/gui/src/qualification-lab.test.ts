@@ -8,6 +8,10 @@ import type {
   QualificationLabReport,
 } from '@kungfu-tech/api/capability';
 import {
+  AGENT_WORK_LAB_SUITE,
+  agentWorkLabRecommendation,
+} from '@kungfu-tech/kfx';
+import {
   QUALIFICATION_MODES,
   QUALIFICATION_PLAYBACK_TIMING,
   qualificationBehaviorFindings,
@@ -50,6 +54,19 @@ test('the Lab exposes one explicit selector for all three experiment modes', () 
     source: true,
     target: true,
   });
+  assert.equal(AGENT_WORK_LAB_SUITE.title, 'Agent Work Lab');
+  assert.equal(AGENT_WORK_LAB_SUITE.collection.title, 'Work Continuity');
+  assert.deepEqual(
+    QUALIFICATION_MODES.map(({ id, label }) => ({ id, label })),
+    AGENT_WORK_LAB_SUITE.cases.map(({ id, title }) => ({
+      id,
+      label: title,
+    })),
+  );
+  assert.equal(
+    agentWorkLabRecommendation('offline-demo').nextCase,
+    'same-agent',
+  );
 });
 
 test('the two session stories distinguish bounded progress from continuation', () => {
@@ -136,6 +153,10 @@ test('canonical runtime events expand into public terminal activity', () => {
   );
   assert.equal(QUALIFICATION_PLAYBACK_TIMING.eventDelayMs, 1000);
   assert.equal(QUALIFICATION_PLAYBACK_TIMING.verdictDelayMs, 520);
+  assert.equal(
+    QUALIFICATION_PLAYBACK_TIMING.eventDelayMs,
+    AGENT_WORK_LAB_SUITE.timing.eventIntervalMs,
+  );
 });
 
 test('live provider activity becomes safe agent and tool narration', () => {
@@ -242,6 +263,8 @@ test('the visual contract keeps a fixed frame with independently scrolling sessi
   );
   assert.match(source, /kf-lab-report-dock/);
   assert.match(source, /role="tooltip"/);
+  assert.match(source, /WHAT TO TRY NEXT/);
+  assert.match(source, /recommendationDurationMs/);
   assert.match(source, /createPortal/);
   assert.match(source, /position: fixed/);
   assert.match(source, /window\.innerWidth/);

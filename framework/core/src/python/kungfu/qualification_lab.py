@@ -1,6 +1,6 @@
 # SPDX-License-Identifier: Apache-2.0
 
-"""Shared Agent Qualification Lab authority.
+"""Shared Agent Work Lab authority.
 
 The GUI and TUI consume this module through the public CLI. Startup inspection
 reads the verified global Work projection without materializing runtime state.
@@ -655,7 +655,7 @@ def _agent_prompt(state_path: Path, attempt_index: int) -> str:
         attempt_index
     ]
     return (
-        "Kungfu Agent Qualification Lab. Work only inside the current isolated "
+        "Kungfu Agent Work Lab. Work only inside the current isolated "
         "temporary directory. Do not inspect credentials, user chats, or any "
         "path outside this directory. "
         "Make your work observable with concise public status updates, never "

@@ -10,10 +10,16 @@ import type {
 } from '@kungfu-tech/api/capability';
 import { qualificationRunProgressLabel } from '@kungfu-tech/api/capability';
 import { mono, panelStyle } from '@kungfu-tech/kfx';
+import {
+  AGENT_WORK_LAB_CHECKS,
+  AGENT_WORK_LAB_SUITE,
+  type AgentWorkLabCaseId,
+  agentWorkLabRecommendation,
+} from '@kungfu-tech/kfx';
 import React from 'react';
 import { createPortal } from 'react-dom';
 
-export type QualificationMode = 'offline-demo' | 'same-agent' | 'cross-agent';
+export type QualificationMode = AgentWorkLabCaseId;
 
 type VisualStatus =
   | 'ready'
@@ -51,35 +57,20 @@ type PlaybackLine = {
 };
 
 export const QUALIFICATION_PLAYBACK_TIMING = {
-  eventDelayMs: 1000,
-  verdictDelayMs: 520,
-  reducedMotionDelayMs: 24,
+  eventDelayMs: AGENT_WORK_LAB_SUITE.timing.eventIntervalMs,
+  verdictDelayMs: AGENT_WORK_LAB_SUITE.timing.verdictIntervalMs,
+  reducedMotionDelayMs: AGENT_WORK_LAB_SUITE.timing.reducedMotionIntervalMs,
 } as const;
 
 export const QUALIFICATION_MODES: Array<{
   id: QualificationMode;
   label: string;
   description: string;
-}> = [
-  {
-    id: 'offline-demo',
-    label: 'Offline demo',
-    description:
-      'Start here. A bundled deterministic agent proves the continuity mechanism without accounts or configuration.',
-  },
-  {
-    id: 'same-agent',
-    label: 'Same-agent continuity',
-    description:
-      'Run one selected local agent in two fresh processes and check whether the second process continues the first.',
-  },
-  {
-    id: 'cross-agent',
-    label: 'Cross-agent handoff',
-    description:
-      'Let one local agent begin the task and a different local agent continue from the same governed evidence.',
-  },
-];
+}> = AGENT_WORK_LAB_SUITE.cases.map((entry) => ({
+  id: entry.id,
+  label: entry.title,
+  description: entry.description,
+}));
 
 const STATUS_META: Record<
   VisualStatus,
@@ -147,38 +138,13 @@ function playbackSourceLabel(line: PlaybackLine): string {
   }[line.kind];
 }
 
-const CHECK_COPY: Record<string, { title: string; detail: string }> = {
-  'two-distinct-fresh-processes': {
-    title: 'The two sessions were genuinely fresh',
-    detail:
-      'Kungfu observed two different process identities instead of reusing one hidden session.',
-  },
-  'second-attempt-no-transcript-or-explanation': {
-    title: 'No transcript or human re-explanation was injected',
-    detail:
-      'Session 2 had to recover the work from governed state, not from copied conversation context.',
-  },
-  'second-attempt-recognized-partial-state': {
-    title: 'Session 2 recognized the partial result',
-    detail:
-      'The continuation found the exact state left by Session 1 before deciding what to do next.',
-  },
-  'fixture-completed': {
-    title: 'The task reached the expected final state',
-    detail:
-      'The deterministic oracle found both the first claim and the continuation result.',
-  },
-  'both-processes-exited-cleanly': {
-    title: 'Both agent processes exited cleanly',
-    detail:
-      'Process completion was observed for both sessions without treating exit alone as task proof.',
-  },
-  'fresh-session-completed-exact-state': {
-    title: 'The fresh session completed the exact governed task',
-    detail:
-      'The final state retained the same Work identity and the expected ordered steps.',
-  },
-};
+const CHECK_COPY: Record<string, { title: string; detail: string }> =
+  Object.fromEntries(
+    Object.entries(AGENT_WORK_LAB_CHECKS).map(([id, copy]) => [
+      id,
+      { title: copy.title, detail: copy.meaning },
+    ]),
+  );
 
 function shortRoot(value: string): string {
   return value.length > 28 ? `${value.slice(0, 16)}…${value.slice(-8)}` : value;
@@ -823,7 +789,7 @@ function SessionColumn({
           <span style={{ color: '#d7ba7d' }}>●</span>
           <span style={{ color: '#4ec9b0' }}>●</span>
           <span style={{ marginLeft: 5 }}>
-            agent@qualification-lab · session-{session}
+            agent@work-lab · session-{session}
           </span>
           {running ? (
             <span className="kf-lab-live-dots" style={{ marginLeft: 'auto' }}>
@@ -1166,6 +1132,8 @@ export function QualificationLabPanel({
   >([]);
   const [visibleFindingCount, setVisibleFindingCount] = React.useState(0);
   const [activeFindingIndex, setActiveFindingIndex] = React.useState(-1);
+  const [showNextRecommendation, setShowNextRecommendation] =
+    React.useState(false);
   const [busy, setBusy] = React.useState('');
   const [error, setError] = React.useState('');
   const [runProgress, setRunProgress] = React.useState<{
@@ -1180,9 +1148,20 @@ export function QualificationLabPanel({
   React.useEffect(() => {
     if (!runProgress) return undefined;
     setProgressNow(Date.now());
-    const timer = window.setInterval(() => setProgressNow(Date.now()), 1000);
+    const timer = window.setInterval(
+      () => setProgressNow(Date.now()),
+      AGENT_WORK_LAB_SUITE.timing.quietProgressIntervalMs,
+    );
     return () => window.clearInterval(timer);
   }, [runProgress]);
+  React.useEffect(() => {
+    if (!showNextRecommendation) return undefined;
+    const timer = window.setTimeout(
+      () => setShowNextRecommendation(false),
+      AGENT_WORK_LAB_SUITE.timing.recommendationDurationMs,
+    );
+    return () => window.clearTimeout(timer);
+  }, [showNextRecommendation]);
 
   const discover = React.useCallback(async () => {
     setBusy('discover');
@@ -1223,6 +1202,7 @@ export function QualificationLabPanel({
     setVisiblePlaybackLines([]);
     setVisibleFindingCount(0);
     setActiveFindingIndex(-1);
+    setShowNextRecommendation(false);
     setRunProgress(null);
     setError('');
   };
@@ -1255,6 +1235,7 @@ export function QualificationLabPanel({
     setVisiblePlaybackLines([]);
     setVisibleFindingCount(0);
     setActiveFindingIndex(-1);
+    setShowNextRecommendation(false);
     const startedAt = Date.now();
     setProgressNow(startedAt);
     setRunProgress({
@@ -1317,6 +1298,7 @@ export function QualificationLabPanel({
       }
       if (playbackRunRef.current !== runId) return;
       setActiveFindingIndex(-1);
+      setShowNextRecommendation(true);
       setError('');
     } catch (reason) {
       if (playbackRunRef.current === runId) {
@@ -1359,6 +1341,7 @@ export function QualificationLabPanel({
     label: 'Unknown test mode',
     description: 'Choose a supported qualification mode.',
   };
+  const nextRecommendation = agentWorkLabRecommendation(mode);
   const progress = runProgress
     ? qualificationRunProgressLabel({
         elapsedMs: progressNow - runProgress.startedAt,
@@ -1393,7 +1376,8 @@ export function QualificationLabPanel({
       >
         <div style={{ minWidth: 0 }}>
           <div style={{ ...mono, color: '#9cdcfe', fontSize: 11 }}>
-            AGENT QUALIFICATION LAB
+            AGENT WORK LAB ·{' '}
+            {AGENT_WORK_LAB_SUITE.collection.title.toUpperCase()}
           </div>
           <h1
             style={{
@@ -1603,6 +1587,71 @@ export function QualificationLabPanel({
         targetPlan={targetPlan}
         error={error}
       />
+      {showNextRecommendation && typeof document !== 'undefined'
+        ? createPortal(
+            <output
+              aria-live="polite"
+              style={{
+                position: 'fixed',
+                inset: 0,
+                zIndex: 10000,
+                display: 'grid',
+                placeItems: 'center',
+                background: 'rgba(6, 8, 10, 0.78)',
+              }}
+            >
+              <div
+                style={{
+                  ...panelStyle,
+                  width: 'min(520px, calc(100vw - 48px))',
+                  padding: 20,
+                  border: '2px solid #d7ba7d',
+                  background: '#101820',
+                  boxShadow: '0 18px 64px rgba(0, 0, 0, 0.72)',
+                }}
+              >
+                <div style={{ ...mono, color: '#d7ba7d', fontSize: 11 }}>
+                  WHAT TO TRY NEXT
+                </div>
+                <h2 style={{ margin: '8px 0', fontSize: 19 }}>
+                  {nextRecommendation.title}
+                </h2>
+                <p style={{ margin: 0, color: '#d4d4d4', lineHeight: 1.5 }}>
+                  {nextRecommendation.instruction}
+                </p>
+                <div
+                  style={{
+                    marginTop: 14,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    gap: 12,
+                  }}
+                >
+                  <span style={{ ...mono, color: '#858585', fontSize: 11 }}>
+                    Closes automatically in 5 seconds
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setShowNextRecommendation(false)}
+                    style={{
+                      ...mono,
+                      border: '1px solid #666',
+                      borderRadius: 4,
+                      padding: '5px 9px',
+                      color: '#f3f3f3',
+                      background: '#292929',
+                      cursor: 'pointer',
+                    }}
+                  >
+                    Dismiss
+                  </button>
+                </div>
+              </div>
+            </output>,
+            document.body,
+          )
+        : null}
       <style>{`
         .kf-lab-tip {
           position: relative;
@@ -1671,7 +1720,7 @@ export function QualificationLabPanel({
         }
         .kf-lab-verdict-focus {
           border-color: #4ec9b0 !important;
-          animation: kf-lab-verdict-emphasis 520ms ease-out both;
+          animation: kf-lab-verdict-emphasis ${AGENT_WORK_LAB_SUITE.timing.verdictIntervalMs}ms ease-out both;
         }
         @media (prefers-reduced-motion: reduce) {
           .kf-lab-event-line,

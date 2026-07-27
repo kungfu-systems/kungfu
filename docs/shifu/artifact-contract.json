@@ -17,6 +17,14 @@
     "productQualificationRequired": true,
     "productMainlineRef": "origin/dev/v4/v4.0",
     "productSourceMustEqualMainline": true,
+    "localPreview": {
+      "explicitBuildIdRequired": true,
+      "cleanSourceRequired": true,
+      "productManifestSourceMustEqualArtifactCommit": true,
+      "mainlineQualificationClaimed": false,
+      "rollbackCoordinateRequired": true,
+      "installedMode": "preview"
+    },
     "priorInstalledSlotRetainedForRollback": true,
     "priorInstalledSlotRequiredBeforePromotion": true,
     "macProductManifestsRequired": [

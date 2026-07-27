@@ -27,6 +27,22 @@ import type {
 } from '@kungfu-tech/api/capability';
 import Ajv2020 from 'ajv/dist/2020.js';
 import type React from 'react';
+import { AGENT_WORK_LAB_KFX_SUITE } from './agent-work-lab.js';
+
+export {
+  AGENT_WORK_LAB_CHECKS,
+  AGENT_WORK_LAB_KFX_SUITE,
+  AGENT_WORK_LAB_RECOMMENDATIONS,
+  AGENT_WORK_LAB_SUITE,
+  agentWorkLabCase,
+  agentWorkLabRecommendation,
+} from './agent-work-lab.js';
+export type {
+  AgentWorkLabCase,
+  AgentWorkLabCaseId,
+  AgentWorkLabCheckMeaning,
+  AgentWorkLabRecommendation,
+} from './agent-work-lab.js';
 
 // Re-export the terminal session types a view needs to build its own UI (pane
 // snapshots, discovery, spawn options). The view contract package is the one
@@ -1174,7 +1190,12 @@ export function planKfx(
   const { fs, path } = deps;
   const entries: KfxPlanEntry[] = [];
   const services: KfxServicePlanEntry[] = [];
-  const suites: Record<string, KfxSuiteDecl> = {};
+  const suites: Record<string, KfxSuiteDecl> = {
+    'kungfu.agent-work-lab': {
+      title: AGENT_WORK_LAB_KFX_SUITE.title,
+      members: [...AGENT_WORK_LAB_KFX_SUITE.members],
+    },
+  };
   const profiles: ProfileManifest[] = [];
   const failures: KfxPlanFailure[] = [];
   const seen = new Set<string>();

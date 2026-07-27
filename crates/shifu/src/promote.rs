@@ -176,15 +176,19 @@ fn build_relation(entry: &BuildEntry, installed: &str, entry_count: usize) -> Gi
 }
 
 fn build_valid(entry: &BuildEntry) -> bool {
+    build_previewable(entry)
+        && entry.integrated
+        && entry.qualified
+        && entry.sha == entry.mainline_sha
+}
+
+fn build_previewable(entry: &BuildEntry) -> bool {
     !entry.sha.is_empty()
         && entry.sha != "unknown"
         && !entry.sha.ends_with("-dirty")
         && matches!(entry.kind.as_str(), "app" | "installer" | "appimage")
         && entry.slot.join(&entry.artifact).exists()
-        && entry.integrated
-        && entry.qualified
         && entry.mainline_ref == "origin/dev/v4/v4.0"
-        && entry.sha == entry.mainline_sha
         && product_manifests_valid(entry)
 }
 
@@ -266,17 +270,7 @@ fn select_product_build<'a>(
     allow_nonlinear: bool,
 ) -> &'a BuildEntry {
     if let Some(id) = selected {
-        let matches: Vec<_> = entries
-            .iter()
-            .filter(|entry| entry.name == id || entry.name.starts_with(id))
-            .collect();
-        if matches.len() != 1 {
-            util::die(&format!(
-                "--build {id} matched {} builds; use the exact id from shifu builds",
-                matches.len()
-            ));
-        }
-        let entry = matches[0];
+        let entry = select_named_build(entries, id);
         if !build_valid(entry) {
             util::die(&format!(
                 "build {} is invalid and cannot be promoted even with an override",
@@ -316,6 +310,47 @@ fn select_product_build<'a>(
              one explicitly with --build <id>",
         ),
     }
+}
+
+fn select_named_build<'a>(entries: &'a [BuildEntry], id: &str) -> &'a BuildEntry {
+    let matches: Vec<_> = entries
+        .iter()
+        .filter(|entry| entry.name == id || entry.name.starts_with(id))
+        .collect();
+    if matches.len() != 1 {
+        util::die(&format!(
+            "--build {id} matched {} builds; use the exact id from shifu builds",
+            matches.len()
+        ));
+    }
+    matches[0]
+}
+
+fn select_preview_build<'a>(
+    entries: &'a [BuildEntry],
+    installed: &str,
+    selected: Option<&str>,
+    allow_nonlinear: bool,
+) -> &'a BuildEntry {
+    let Some(id) = selected else {
+        util::die("--preview requires an explicit --build <id>");
+    };
+    let entry = select_named_build(entries, id);
+    if !build_previewable(entry) {
+        util::die(&format!(
+            "build {} lacks exact clean product provenance and cannot be previewed",
+            entry.name
+        ));
+    }
+    let relation = build_relation(entry, installed, entries.len());
+    if !matches!(relation, GitRelation::Same | GitRelation::Descendant) && !allow_nonlinear {
+        util::die(&format!(
+            "preview build {} is {} and requires --allow-nonlinear after review",
+            entry.name,
+            relation.as_str()
+        ));
+    }
+    entry
 }
 
 fn print_builds_json(entries: &[BuildEntry]) {
@@ -365,6 +400,7 @@ fn write_installed_receipt(
     installed: &Path,
     rollback_build_id: &str,
     rollback_sha: &str,
+    mode: &str,
 ) {
     let text = format!(
         "KUNGFU_ARTIFACT_SCHEMA='shifu.local-artifact/v1'\n\
@@ -379,6 +415,7 @@ fn write_installed_receipt(
          KUNGFU_INSTALLED_MAINLINE_SHA='{}'\n\
          KUNGFU_INSTALLED_INTEGRATED='{}'\n\
          KUNGFU_INSTALLED_QUALIFIED='{}'\n\
+         KUNGFU_INSTALLED_MODE='{}'\n\
          KUNGFU_ROLLBACK_BUILD_ID='{}'\n\
          KUNGFU_ROLLBACK_SHA='{}'\n",
         entry.sha,
@@ -392,6 +429,7 @@ fn write_installed_receipt(
         entry.mainline_sha,
         entry.integrated,
         entry.qualified,
+        mode,
         rollback_build_id,
         rollback_sha,
     );
@@ -484,6 +522,7 @@ pub fn run_promote(args: &[String]) -> ! {
     let mut force = false;
     let mut check = false;
     let mut rollback = false;
+    let mut preview = false;
     let mut allow_nonlinear = false;
     let mut build_arg: Option<String> = None;
     let mut iter = args.iter();
@@ -493,6 +532,7 @@ pub fn run_promote(args: &[String]) -> ! {
             "--force" => force = true,
             "--check" => check = true,
             "--rollback" => rollback = true,
+            "--preview" => preview = true,
             "--allow-nonlinear" => allow_nonlinear = true,
             "--build" => match iter.next() {
                 Some(value) => build_arg = Some(value.clone()),
@@ -510,10 +550,10 @@ pub fn run_promote(args: &[String]) -> ! {
     let previous_build_id = installed_value("KUNGFU_INSTALLED_BUILD_ID");
     let rollback_build_id = installed_value("KUNGFU_ROLLBACK_BUILD_ID");
     let rollback_sha = installed_value("KUNGFU_ROLLBACK_SHA");
-    if rollback && (build_arg.is_some() || allow_nonlinear) {
+    if rollback && (build_arg.is_some() || allow_nonlinear || preview) {
         util::die(
             "--rollback identifies the exact retained Product; do not combine it with \
-             --build or --allow-nonlinear",
+             --build, --preview, or --allow-nonlinear",
         );
     }
     let entry = if rollback {
@@ -523,6 +563,13 @@ pub fn run_promote(args: &[String]) -> ! {
         rollback_build(&entries, &rollback_build_id, &rollback_sha).unwrap_or_else(|| {
             util::die("verified rollback Product is absent from the local registry")
         })
+    } else if preview {
+        if !rollback_entry_valid(&registry_dir(), &previous_build_id, &installed) {
+            util::die(
+                "installed Product has no verified rollback coordinate; refusing dogfood promotion",
+            );
+        }
+        select_preview_build(&entries, &installed, build_arg.as_deref(), allow_nonlinear)
     } else {
         if !rollback_entry_valid(&registry_dir(), &previous_build_id, &installed) {
             util::die(
@@ -531,7 +578,13 @@ pub fn run_promote(args: &[String]) -> ! {
         }
         select_product_build(&entries, &installed, build_arg.as_deref(), allow_nonlinear)
     };
-    let action = if rollback { "rollback" } else { "promote" };
+    let action = if rollback {
+        "rollback"
+    } else if preview {
+        "preview"
+    } else {
+        "promote"
+    };
     if check {
         println!(
             "{{\"schema\":\"shifu.local-promotion-plan/v1\",\"ok\":true,\
@@ -556,6 +609,8 @@ pub fn run_promote(args: &[String]) -> ! {
             "{} dev build {} ({} @ {})",
             if rollback {
                 "rolling back to"
+            } else if preview {
+                "previewing"
             } else {
                 "promoting"
             },
@@ -574,12 +629,29 @@ pub fn run_promote(args: &[String]) -> ! {
 
     eprintln!(
         "\u{2705} {} {}",
-        style::green(if rollback { "rolled back" } else { "promoted" }),
+        style::green(if rollback {
+            "rolled back"
+        } else if preview {
+            "previewed"
+        } else {
+            "promoted"
+        }),
         style::bold(&installed.display().to_string())
     );
     let previous_sha = installed_sha();
     let relation = build_relation(entry, &previous_sha, entries.len());
-    write_installed_receipt(entry, &installed, &previous_build_id, &previous_sha);
+    let installed_mode = if build_valid(entry) {
+        "qualified"
+    } else {
+        "preview"
+    };
+    write_installed_receipt(
+        entry,
+        &installed,
+        &previous_build_id,
+        &previous_sha,
+        installed_mode,
+    );
     if let Err(error) = write_promotion_receipt(
         &registry_dir(),
         "kungfu",
@@ -604,7 +676,7 @@ pub fn run_promote(args: &[String]) -> ! {
 }
 
 const PROMOTE_USAGE: &str =
-    "usage: shifu promote [--build <id> [--allow-nonlinear] | --rollback] [--check] [--launch] [--force]";
+    "usage: shifu promote [--build <id> [--preview] [--allow-nonlinear] | --rollback] [--check] [--launch] [--force]";
 
 /// Install target: KUNGFU_PRODUCT_INSTALL_DIR > platform default (falling
 /// back to a per-user location when the default is not writable).
@@ -841,6 +913,22 @@ mod tests {
             r#"{"sourceCommit":"2222222222222222222222222222222222222222"}"#,
         )
         .unwrap();
+        assert!(!build_valid(&entry));
+        let _ = fs::remove_dir_all(root);
+    }
+
+    #[test]
+    fn preview_keeps_mainline_qualification_separate_from_exact_product_provenance() {
+        let root = shifu_core::host::unique_temp_dir("promote-preview").unwrap();
+        let mut entry = qualified_app(&root);
+        entry.branch = "feature/local-review".into();
+        entry.integrated = false;
+        entry.qualified = false;
+        entry.mainline_sha = "2222222222222222222222222222222222222222".into();
+        fs::create_dir_all(entry.slot.join(&entry.artifact)).unwrap();
+        write_app_manifests(&entry);
+
+        assert!(build_previewable(&entry));
         assert!(!build_valid(&entry));
         let _ = fs::remove_dir_all(root);
     }

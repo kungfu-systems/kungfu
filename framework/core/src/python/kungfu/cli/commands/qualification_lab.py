@@ -31,7 +31,7 @@ def _event_json(value):
 @kfd3_api("kungfu.qualification-lab")
 @kfc.pass_context()
 def qualification_lab(ctx):
-    """The shared, boot-safe Agent Qualification Lab authority."""
+    """The shared, boot-safe Agent Work Lab authority."""
 
 
 @qualification_lab.command(help="resolve the boot route without writing state")
@@ -55,7 +55,7 @@ def catalog(ctx, as_json):
     if as_json:
         _json(payload)
         return
-    click.echo("Agent Qualification Lab")
+    click.echo("Agent Work Lab")
     click.echo(f"  startup: {payload['startup']['route']}")
     for action in payload["actions"]:
         click.echo(f"  {action['id']} ({action['mutation']})")
@@ -116,9 +116,7 @@ def demo(output, events_json, as_json):
     if as_json:
         _json(payload)
         return
-    click.echo(
-        f"Agent Qualification Lab demo: {payload['status']} ({payload['reportRoot']})"
-    )
+    click.echo(f"Agent Work Lab demo: {payload['status']} ({payload['reportRoot']})")
 
 
 @qualification_lab.command(name="agent-plan", help="preview one exact local agent run")

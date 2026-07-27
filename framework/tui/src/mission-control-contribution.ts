@@ -154,7 +154,7 @@ export async function loadMissionControlContribution(
           title: 'What you can do now',
           status: 'degraded',
           summary:
-            'Press a to open Agent Qualification Lab. Profile activation remains an explicit reviewed action.',
+            'Press a to open Agent Work Lab. Profile activation remains an explicit reviewed action.',
         },
       ],
       evidence: [

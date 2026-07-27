@@ -270,7 +270,7 @@ def _progressive_help(ctx, param, value):
 @click.option(
     "--qualification-lab-demo",
     is_flag=True,
-    help="run the deterministic Agent Qualification Lab demo in the TUI",
+    help="run the deterministic Agent Work Lab demo in the TUI",
 )
 @click.help_option("-h", "--help")
 @click.version_option(

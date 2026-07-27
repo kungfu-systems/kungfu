@@ -11,6 +11,11 @@ import type {
 import { render } from 'ink';
 import React from 'react';
 import {
+  createIncrementalPlayback,
+  nextWorkbenchFocus,
+  sessionTitleBar,
+} from './profile-shell.js';
+import {
   QualificationLabView,
   isQualificationReportReturnInput,
   nextQualificationFocus,
@@ -21,6 +26,61 @@ import {
   qualificationSessionTitleBar,
 } from './qualification-lab-view.js';
 import { IncrementalTerminalOutput } from './terminal-canvas.js';
+
+test('generic workbench has no product-specific test or oracle vocabulary', () => {
+  const moduleSource = readFileSync(
+    new URL('./profile-shell.tsx', import.meta.url),
+    'utf8',
+  );
+  const source = moduleSource.slice(
+    moduleSource.indexOf('// Generic two-session workbench'),
+  );
+  assert.doesNotMatch(
+    source,
+    /Agent Work Lab|offline-demo|same-agent|cross-agent|qualification-lab|oracle/i,
+  );
+});
+
+test('generic playback serializes events before the verdict boundary', async () => {
+  const calls: string[] = [];
+  const delays: number[] = [];
+  const playback = createIncrementalPlayback<string>({
+    timing: { eventIntervalMs: 1000, verdictIntervalMs: 520 },
+    onEvent: (event) => calls.push(event),
+    onAssessing: () => calls.push('assessing'),
+    wait: async (milliseconds) => {
+      delays.push(milliseconds);
+    },
+  });
+  playback.enqueue('first');
+  playback.enqueue('second');
+  assert.equal(await playback.finish(), true);
+  assert.deepEqual(calls, ['first', 'second', 'assessing']);
+  assert.deepEqual(delays, [1000, 1000, 520]);
+});
+
+test('title-bar focus changes style without changing geometry', () => {
+  const active = sessionTitleBar({
+    session: 1,
+    title: 'Local provider',
+    active: true,
+    running: true,
+    columns: 40,
+    activityFrame: 1,
+  });
+  const inactive = sessionTitleBar({
+    session: 1,
+    title: 'Local provider',
+    active: false,
+    running: true,
+    columns: 40,
+    activityFrame: 1,
+  });
+  assert.equal(active.length, 40);
+  assert.equal(inactive.length, 40);
+  assert.equal(active.slice(1), inactive.slice(1));
+  assert.equal(nextWorkbenchFocus('session-2', true), 'correct');
+});
 
 class CaptureOutput extends EventEmitter {
   isTTY = true;
@@ -102,36 +162,43 @@ test('TUI renders admitted provider narration without raw commands', () => {
 });
 
 test('TUI qualification layout keeps two Sessions and the verdict dock fixed', () => {
-  const source = readFileSync(
+  const adapterSource = readFileSync(
     new URL('./qualification-lab-view.tsx', import.meta.url),
     'utf8',
   );
+  const frameworkSource = readFileSync(
+    new URL('./profile-shell.tsx', import.meta.url),
+    'utf8',
+  );
 
-  assert.match(source, /width="50%"/);
-  assert.match(source, /PUBLIC STATUS/);
-  assert.match(source, /PRIVATE REASONING \+ RAW OUTPUT HIDDEN/);
-  assert.match(source, /CONTINUITY PROVED/);
-  assert.match(source, /height=\{6\}/);
-  assert.match(source, /↑↓ scroll focused Session/);
-  assert.match(source, /borderColor="gray"/);
-  assert.match(source, /color=\{active \? 'black' : 'white'\}/);
-  assert.match(source, /backgroundColor=\{active \? 'cyan' : 'gray'\}/);
-  assert.match(source, /qualificationSessionTitleBar/);
+  assert.match(frameworkSource, /width="50%"/);
+  assert.match(frameworkSource, /PUBLIC ACTIVITY/);
+  assert.match(frameworkSource, /SENSITIVE INTERNALS HIDDEN/);
+  assert.match(adapterSource, /WORK CONTINUITY PROVED/);
+  assert.match(frameworkSource, /height=\{6\}/);
+  assert.match(frameworkSource, /↑↓ scroll focused Session/);
+  assert.match(frameworkSource, /borderColor=\{active \? 'cyan' : 'gray'\}/);
+  assert.match(frameworkSource, /color=\{active \? 'black' : 'white'\}/);
   assert.match(
-    source,
+    frameworkSource,
+    /backgroundColor=\{active \? 'cyan' : 'gray'\}/,
+  );
+  assert.match(frameworkSource, /sessionTitleBar/);
+  assert.match(
+    frameworkSource,
     /running=\{Boolean\(progress\) && runningSession === 1\}/,
   );
   assert.match(
-    source,
+    frameworkSource,
     /running=\{Boolean\(progress\) && runningSession === 2\}/,
   );
-  assert.match(source, /Enter details/);
-  assert.match(source, /WHAT TO TRY NEXT/);
-  assert.match(source, /backgroundColor="blue"/);
-  assert.match(source, /opaquePromptLine/);
-  assert.doesNotMatch(source, /\[p\] prepare/);
-  assert.match(source, /\[Tab\]\s*focus/);
-  assert.match(source, /\[\?\] explain/);
+  assert.match(frameworkSource, /Enter details/);
+  assert.match(frameworkSource, /WHAT TO TRY NEXT/);
+  assert.match(frameworkSource, /backgroundColor="blue"/);
+  assert.match(frameworkSource, /opaqueWorkbenchLine/);
+  assert.doesNotMatch(adapterSource, /\[p\] prepare/);
+  assert.match(adapterSource, /\[Tab\]\s*focus/);
+  assert.match(adapterSource, /\[\?\]\s*explain/);
 });
 
 test('Session title bars keep focus and running state visible at fixed width', () => {
@@ -240,22 +307,25 @@ test('Tab focus includes result cards only after a report exists', () => {
 });
 
 test('completed modes coach the next qualification step', () => {
-  assert.deepEqual(qualificationNextModePrompt('offline-demo'), {
-    title: 'Offline complete · now test your real agent',
-    instruction:
-      'Press x to test same-agent continuity with your selected agent.',
-  });
+  assert.equal(
+    qualificationNextModePrompt('offline-demo').title,
+    'Offline complete · now test your real agent',
+  );
+  assert.match(
+    qualificationNextModePrompt('offline-demo').instruction,
+    /Press x to start it/,
+  );
   assert.doesNotMatch(
     qualificationNextModePrompt('offline-demo').instruction,
     /Press p/,
   );
   assert.match(
     qualificationNextModePrompt('same-agent').instruction,
-    /press m to test handoff/i,
+    /press m/i,
   );
   assert.match(
     qualificationNextModePrompt('cross-agent').instruction,
-    /press Enter to open its details/,
+    /Open Correct or Failed/,
   );
 });
 
@@ -277,32 +347,44 @@ test('report details accept obvious return keys', () => {
 });
 
 test('TUI host streams events and preserves the one-second rhythm', () => {
-  const source = readFileSync(new URL('./main.tsx', import.meta.url), 'utf8');
+  const mainSource = readFileSync(
+    new URL('./main.tsx', import.meta.url),
+    'utf8',
+  );
+  const hostSource = readFileSync(
+    new URL('./qualification-lab-view.tsx', import.meta.url),
+    'utf8',
+  );
+  const playbackSource = readFileSync(
+    new URL('./profile-shell.tsx', import.meta.url),
+    'utf8',
+  );
 
-  assert.match(source, /execFileEvents:/);
-  assert.match(source, /setTimeout\(resolve, 1000\)/);
-  assert.match(source, /setTimeout\(resolve, 520\)/);
-  assert.match(source, /qualificationRunProgressLabel/);
-  assert.match(source, /qualificationLabStartupSurface/);
+  assert.match(mainSource, /execFileEvents:/);
+  assert.match(playbackSource, /wait\(timing\.eventIntervalMs\)/);
+  assert.match(playbackSource, /wait\(timing\.verdictIntervalMs\)/);
+  assert.match(hostSource, /qualificationRunProgressLabel/);
+  assert.match(mainSource, /qualificationLabStartupSurface/);
+  assert.match(hostSource, /quietProgressIntervalMs/);
+  assert.match(hostSource, /recommendationDurationMs/);
+  assert.match(hostSource, /nextQualificationFocus/);
+  assert.match(hostSource, /isQualificationReportReturnInput/);
+  assert.match(hostSource, /setReportDetail\(activeFocus\)/);
+  assert.doesNotMatch(hostSource, /input === 'p'/);
+  assert.doesNotMatch(hostSource, /lab\.planAgent/);
+  assert.match(hostSource, /lab\.runDemo\(onEvent\)/);
   assert.match(
-    source,
-    /setInterval\(\(\) => setProgressNow\(Date\.now\(\)\), 1000\)/,
+    hostSource,
+    /lab\.runAgent\(profiles\[selected\]\.id, onEvent\)/,
   );
-  assert.match(
-    source,
-    /setTimeout\(\(\) => setNextPrompt\(undefined\), 5000\)/,
+  assert.match(hostSource, /lab\.runMigration\(/);
+  assert.match(mainSource, /void lab\s*\.inspect\(\)/);
+  assert.doesNotMatch(mainSource, /startup = lab\.inspectSync\(\)/);
+  assert.match(mainSource, /Terminal product is open/);
+  assert.doesNotMatch(
+    mainSource,
+    /setRunProgress|setNextPrompt|setReportDetail/,
   );
-  assert.match(source, /nextQualificationFocus/);
-  assert.match(source, /isQualificationReportReturnInput/);
-  assert.match(source, /setReportDetail\(activeFocus\)/);
-  assert.doesNotMatch(source, /input === 'p'/);
-  assert.doesNotMatch(source, /lab\.planAgent/);
-  assert.match(source, /lab\.runDemo\(onEvent\)/);
-  assert.match(source, /lab\.runAgent\(profiles\[selected\]\.id, onEvent\)/);
-  assert.match(source, /lab\.runMigration\(/);
-  assert.match(source, /void lab\s*\.inspect\(\)/);
-  assert.doesNotMatch(source, /startup = lab\.inspectSync\(\)/);
-  assert.match(source, /Terminal product is open/);
 });
 
 test('state updates use incremental terminal painting instead of clearTerminal', async () => {
@@ -359,7 +441,7 @@ test('the real Ink 80x24 Lab keeps both Session headers visible', async () => {
   instance.cleanup();
   assert.match(frame, /│> S1 · Bundled Demo Agent\s+READY│/);
   assert.match(frame, /S2 · Fresh Demo Agent\s+READY/);
-  assert.match(frame, /AGENT QUALIFICATION LAB/);
+  assert.match(frame, /AGENT WORK LAB/);
 });
 
 test('the real Ink 80x24 title bars show only the active running Session', async () => {

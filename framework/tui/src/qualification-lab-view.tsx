@@ -1,122 +1,62 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import type {
+  QualificationLab,
   QualificationLabEvent,
   QualificationLabReport,
+  QualificationLabStartupRoute,
 } from '@kungfu-tech/api/capability';
-import { Box, Text } from 'ink';
+import { qualificationRunProgressLabel } from '@kungfu-tech/api/capability';
+import {
+  AGENT_WORK_LAB_CHECKS,
+  AGENT_WORK_LAB_SUITE,
+  type AgentWorkLabCaseId,
+  agentWorkLabCase,
+  agentWorkLabRecommendation,
+} from '@kungfu-tech/kfx';
+import { useApp } from 'ink';
 import React from 'react';
-import type { TerminalDimensions } from './profile-shell.js';
-import { terminalCanvasRows } from './terminal-canvas.js';
+import { boundedIndex, decodeShellKey } from './navigation.js';
+import {
+  SessionWorkbench,
+  type TerminalDimensions,
+  type WorkbenchCheck,
+  type WorkbenchFocus,
+  type WorkbenchLine,
+  type WorkbenchNextPrompt,
+  type WorkbenchReportDetail,
+  boundedPromptRows,
+  createIncrementalPlayback,
+  isWorkbenchReturnInput,
+  nextWorkbenchFocus,
+  sessionTitleBar,
+} from './profile-shell.js';
 
-export type TuiQualificationMode =
-  | 'offline-demo'
-  | 'same-agent'
-  | 'cross-agent';
+export type TuiQualificationMode = AgentWorkLabCaseId;
+export type TuiQualificationFocus = WorkbenchFocus;
+export type TuiQualificationReportDetail = WorkbenchReportDetail;
+export type TuiQualificationNextPrompt = WorkbenchNextPrompt;
+export type TuiQualificationLine = WorkbenchLine;
 
-export type TuiQualificationFocus =
-  | 'session-1'
-  | 'session-2'
-  | 'correct'
-  | 'failed';
-
-export type TuiQualificationReportDetail = 'correct' | 'failed';
-
-export type TuiQualificationNextPrompt = {
-  title: string;
-  instruction: string;
-};
-
-export type TuiQualificationLine = {
-  session: 1 | 2;
-  source:
-    | 'kungfu'
-    | 'task'
-    | 'agent/guide'
-    | 'agent/live'
-    | 'tool/live'
-    | 'evidence';
-  text: string;
-  tone: 'normal' | 'running' | 'good' | 'bad' | 'dim';
-};
-
-const FOCUS_ORDER: TuiQualificationFocus[] = [
-  'session-1',
-  'session-2',
-  'correct',
-  'failed',
-];
-
-const CHECK_COPY: Record<string, { title: string; meaning: string }> = {
-  'distinct-fresh-processes': {
-    title: 'Two genuinely fresh processes',
-    meaning: 'Session 2 did not reuse the Session 1 provider process.',
-  },
-  'first-attempt-ended-partial': {
-    title: 'Session 1 stopped at a bounded partial result',
-    meaning:
-      'The first process left durable evidence instead of pretending to finish.',
-  },
-  'second-attempt-no-transcript-or-explanation': {
-    title: 'Session 2 received no copied chat',
-    meaning:
-      'Continuation came from governed Work, not hidden transcript transfer.',
-  },
-  'second-attempt-recognized-partial-state': {
-    title: 'Session 2 recovered the partial state',
-    meaning: 'The fresh process found what was done and what remained.',
-  },
-  'fixture-completed': {
-    title: 'The original Work was completed',
-    meaning:
-      'The second process continued the same identity to its expected result.',
-  },
-};
-
-export function nextQualificationFocus(
-  current: TuiQualificationFocus,
-  reportAvailable: boolean,
-): TuiQualificationFocus {
-  const available = reportAvailable ? FOCUS_ORDER : FOCUS_ORDER.slice(0, 2);
-  const currentIndex = Math.max(0, available.indexOf(current));
-  return available[(currentIndex + 1) % available.length];
-}
+export const nextQualificationFocus = nextWorkbenchFocus;
+export const isQualificationReportReturnInput = isWorkbenchReturnInput;
+export const qualificationSessionTitleBar = sessionTitleBar;
+export const qualificationPromptRows = boundedPromptRows;
 
 export function qualificationNextModePrompt(
   mode: TuiQualificationMode,
 ): TuiQualificationNextPrompt {
-  if (mode === 'offline-demo') {
-    return {
-      title: 'Offline complete · now test your real agent',
-      instruction:
-        'Press x to test same-agent continuity with your selected agent.',
-    };
-  }
-  if (mode === 'same-agent') {
-    return {
-      title: 'Same-agent complete · now test a handoff',
-      instruction:
-        'Choose a different target with [ or ], then press m to test handoff.',
-    };
-  }
+  const recommendation = agentWorkLabRecommendation(mode);
+  const shortcut =
+    recommendation.nextCase === 'same-agent'
+      ? ' Press x to start it.'
+      : recommendation.nextCase === 'cross-agent'
+        ? ' Choose a different target with [ or ], then press m.'
+        : '';
   return {
-    title: 'Handoff complete · inspect the evidence',
-    instruction:
-      'Tab to CORRECT or FAILED, then press Enter to open its details.',
+    title: recommendation.title,
+    instruction: `${recommendation.instruction}${shortcut}`,
   };
-}
-
-export function isQualificationReportReturnInput(input: string): boolean {
-  return (
-    input === '\r' ||
-    input === '\n' ||
-    input === '\u001b' ||
-    input === '\u007f' ||
-    input === '\b' ||
-    input === 'b' ||
-    input === 'B' ||
-    input === '\u001b[D'
-  );
 }
 
 export function qualificationEventRunningSession(
@@ -197,7 +137,7 @@ export function qualificationEventLines(
     return [
       ...(event.publicOutput?.lines ?? []).map((text) => ({
         session,
-        source: 'agent/live' as const,
+        source: 'agent/live',
         text,
         tone: good ? ('good' as const) : ('bad' as const),
       })),
@@ -223,7 +163,7 @@ export function qualificationEventLines(
       {
         session: 2,
         source: 'kungfu',
-        text: 'Continuity oracle compared process identity and governed state.',
+        text: 'Continuity checks compared process identity and governed state.',
         tone: 'normal',
       },
       {
@@ -237,185 +177,9 @@ export function qualificationEventLines(
   return [];
 }
 
-function lineColor(tone: TuiQualificationLine['tone']) {
-  if (tone === 'running') return 'yellow';
-  if (tone === 'good') return 'green';
-  if (tone === 'bad') return 'red';
-  if (tone === 'dim') return 'gray';
-  return undefined;
-}
-
-export function qualificationSessionTitleBar({
-  session,
-  title,
-  active,
-  running,
-  columns,
-  activityFrame = 0,
-}: {
-  session: 1 | 2;
-  title: string;
-  active: boolean;
-  running: boolean;
-  columns: number;
-  activityFrame?: number;
-}): string {
-  const prefix = `${active ? '>' : ' '} S${session} · `;
-  const spinner = ['◐', '◓', '◑', '◒'][activityFrame % 4];
-  const status = running ? `${spinner} RUNNING` : 'READY';
-  const titleColumns = Math.max(0, columns - prefix.length - status.length - 1);
-  const compactTitle =
-    title.length <= titleColumns
-      ? title
-      : titleColumns > 1
-        ? `${title.slice(0, titleColumns - 1)}…`
-        : '';
-  const left = `${prefix}${compactTitle}`;
-  const gap = ' '.repeat(Math.max(1, columns - left.length - status.length));
-  return `${left}${gap}${status}`.padEnd(columns).slice(0, columns);
-}
-
-export function qualificationPromptRows(
-  value: string,
-  columns: number,
-  maxRows = 2,
-): string[] {
-  const width = Math.max(1, columns);
-  const rows: string[] = [];
-  let remaining = value.trim();
-  while (remaining && rows.length < maxRows) {
-    if (remaining.length <= width) {
-      rows.push(remaining);
-      remaining = '';
-      break;
-    }
-    const space = remaining.lastIndexOf(' ', width);
-    const cut = space > 0 ? space : width;
-    rows.push(remaining.slice(0, cut).trimEnd());
-    remaining = remaining.slice(cut).trimStart();
-  }
-  if (remaining && rows.length > 0) {
-    const last = rows.length - 1;
-    rows[last] = `${rows[last].slice(0, Math.max(0, width - 1))}…`;
-  }
-  while (rows.length < maxRows) rows.push('');
-  return rows;
-}
-
-function opaquePromptLine(value: string, columns: number): string {
-  return value.slice(0, columns).padEnd(columns);
-}
-
-function SessionPane({
-  session,
-  title,
-  lines,
-  active,
-  scrollBack,
-  viewportRows,
-  running,
-  titleBarColumns,
-  activityFrame,
-}: {
-  session: 1 | 2;
-  title: string;
-  lines: TuiQualificationLine[];
-  active: boolean;
-  scrollBack: number;
-  viewportRows: number;
-  running: boolean;
-  titleBarColumns: number;
-  activityFrame: number;
-}) {
-  const sessionLines = lines.filter((line) => line.session === session);
-  const lastStart = Math.max(0, sessionLines.length - viewportRows);
-  const start = Math.max(0, lastStart - scrollBack);
-  const visible = sessionLines.slice(start, start + viewportRows);
-  return (
-    <Box
-      width="50%"
-      flexDirection="column"
-      borderStyle="round"
-      borderColor="gray"
-      overflow="hidden"
-    >
-      <Text
-        bold
-        color={active ? 'black' : 'white'}
-        backgroundColor={active ? 'cyan' : 'gray'}
-        wrap="truncate-end"
-      >
-        {qualificationSessionTitleBar({
-          session,
-          title,
-          active,
-          running,
-          columns: titleBarColumns,
-          activityFrame,
-        })}
-      </Text>
-      <Box paddingX={1}>
-        <Text dimColor>
-          PUBLIC STATUS · PRIVATE REASONING + RAW OUTPUT HIDDEN
-        </Text>
-      </Box>
-      <Box
-        flexDirection="column"
-        height={viewportRows}
-        overflow="hidden"
-        paddingX={1}
-      >
-        {visible.length === 0 ? (
-          <Text dimColor>Agent activity will appear one event at a time.</Text>
-        ) : null}
-        {visible.map((line, index) => (
-          <Text
-            key={`${start + index}-${line.source}-${line.text}`}
-            color={lineColor(line.tone)}
-            wrap="truncate-end"
-          >
-            {String(start + index + 1).padStart(2, '0')}{' '}
-            {line.source.padEnd(11)} {line.text}
-          </Text>
-        ))}
-      </Box>
-      <Box paddingX={1}>
-        <Text dimColor>
-          ↑↓ scroll focused Session · Tab switch ·{' '}
-          {scrollBack > 0 ? `${scrollBack} lines back` : 'following live'}
-        </Text>
-      </Box>
-    </Box>
-  );
-}
-
-function reportChecks(report: QualificationLabReport | undefined): {
-  passed: number;
-  failed: number;
-} {
-  const checks = Array.isArray(report?.assessment?.oracleChecks)
-    ? report.assessment.oracleChecks
-    : [];
-  return {
-    passed: checks.filter(
-      (check) =>
-        check &&
-        typeof check === 'object' &&
-        (check as Record<string, unknown>).passed === true,
-    ).length,
-    failed: checks.filter(
-      (check) =>
-        check &&
-        typeof check === 'object' &&
-        (check as Record<string, unknown>).passed === false,
-    ).length,
-  };
-}
-
-function reportCheckRows(
+function reportChecks(
   report: QualificationLabReport | undefined,
-  detail: TuiQualificationReportDetail,
-): Array<{ id: string; passed: boolean; title: string; meaning: string }> {
+): WorkbenchCheck[] {
   const checks = Array.isArray(report?.assessment?.oracleChecks)
     ? report.assessment.oracleChecks
     : [];
@@ -424,100 +188,12 @@ function reportCheckRows(
     const row = check as Record<string, unknown>;
     if (typeof row.id !== 'string' || typeof row.passed !== 'boolean')
       return [];
-    if ((detail === 'correct') !== row.passed) return [];
-    const copy = CHECK_COPY[row.id] ?? {
+    const copy = AGENT_WORK_LAB_CHECKS[row.id] ?? {
       title: row.id.replaceAll('-', ' '),
-      meaning: 'This check came from the canonical continuity assessment.',
+      meaning: 'This check came from the canonical Work assessment.',
     };
     return [{ id: row.id, passed: row.passed, ...copy }];
   });
-}
-
-function ReportDetailPage({
-  dimensions,
-  report,
-  detail,
-}: {
-  dimensions: TerminalDimensions;
-  report: QualificationLabReport;
-  detail: TuiQualificationReportDetail;
-}) {
-  const rows = reportCheckRows(report, detail);
-  const correct = detail === 'correct';
-  return (
-    <Box
-      width={dimensions.columns}
-      height={terminalCanvasRows(dimensions.rows)}
-      flexDirection="column"
-      borderStyle="double"
-      borderColor={correct ? 'green' : 'red'}
-      paddingX={1}
-      overflow="hidden"
-    >
-      <Text bold color={correct ? 'green' : 'red'}>
-        {correct ? '✓ CORRECT CHECKS' : '× FAILED CHECKS'} · {rows.length}
-      </Text>
-      <Text dimColor>
-        Canonical continuity oracle details · private reasoning remains hidden
-      </Text>
-      <Box flexDirection="column" flexGrow={1} minHeight={0} marginTop={1}>
-        {rows.length === 0 ? (
-          <Text color={correct ? 'yellow' : 'green'}>
-            {correct
-              ? 'No correct checks were recorded.'
-              : 'No failed checks. This is the expected result.'}
-          </Text>
-        ) : null}
-        {rows.map((row, index) => (
-          <Box key={row.id} flexDirection="column" marginBottom={1}>
-            <Text bold color={row.passed ? 'green' : 'red'}>
-              {String(index + 1).padStart(2, '0')} {row.passed ? '✓' : '×'}{' '}
-              {row.title}
-            </Text>
-            <Text dimColor>{row.meaning}</Text>
-          </Box>
-        ))}
-      </Box>
-      <Box borderStyle="round" borderColor="cyan" paddingX={1}>
-        <Text bold color="cyan" wrap="truncate-end">
-          ← RETURN TO RESULT CARDS · Esc / Enter / Backspace / b
-        </Text>
-      </Box>
-    </Box>
-  );
-}
-
-function ResultCard({
-  kind,
-  count,
-  active,
-  available,
-}: {
-  kind: TuiQualificationReportDetail;
-  count: number;
-  active: boolean;
-  available: boolean;
-}) {
-  const correct = kind === 'correct';
-  const label = correct ? 'CORRECT' : 'FAILED';
-  const tone = correct || count === 0 ? 'green' : 'red';
-  const cardColor = !available ? 'gray' : active ? 'cyan' : tone;
-  return (
-    <Box
-      width="50%"
-      height={3}
-      borderStyle="round"
-      borderColor={cardColor}
-      paddingX={1}
-      overflow="hidden"
-    >
-      <Text bold color={cardColor} wrap="truncate-end">
-        {active ? '> ' : '  '}
-        {correct ? '✓' : '×'} {count} {label}
-        {available ? ' · Enter details' : ' · waiting'}
-      </Text>
-    </Box>
-  );
 }
 
 export function QualificationLabView({
@@ -537,6 +213,7 @@ export function QualificationLabView({
   runningSession,
   nextPrompt,
   reportDetail,
+  emphasizedResult,
 }: {
   dimensions: TerminalDimensions;
   mode: TuiQualificationMode;
@@ -554,165 +231,370 @@ export function QualificationLabView({
   runningSession?: 1 | 2;
   nextPrompt?: TuiQualificationNextPrompt;
   reportDetail?: TuiQualificationReportDetail;
+  emphasizedResult?: TuiQualificationReportDetail;
 }) {
-  if (report && reportDetail) {
-    return (
-      <ReportDetailPage
-        dimensions={dimensions}
-        report={report}
-        detail={reportDetail}
-      />
-    );
-  }
-  const paneTitleColumns = Math.max(1, Math.floor(dimensions.columns / 2) - 2);
-  const paneTextColumns = Math.max(1, paneTitleColumns - 2);
-  const wrappedRows = (text: string) =>
-    Math.max(1, Math.ceil(text.length / paneTextColumns));
-  const chromeRows =
-    3 +
-    (showHelp ? 1 : 0) +
-    6 +
-    2 +
-    1 +
-    wrappedRows('PUBLIC STATUS · PRIVATE REASONING + RAW OUTPUT HIDDEN') +
-    wrappedRows('↑↓ scroll focused Session · Tab switch · 999 lines back');
-  const viewportRows = Math.max(
-    4,
-    terminalCanvasRows(dimensions.rows) - chromeRows,
-  );
-  const checks = reportChecks(report);
-  const passed = Boolean(report && report.status !== 'failed');
-  const promptWidth = Math.min(
-    dimensions.columns,
-    Math.min(68, Math.max(24, dimensions.columns - 8)),
-  );
-  const promptColumns = Math.max(1, promptWidth - 2);
-  const promptRows = nextPrompt
-    ? qualificationPromptRows(
-        `${nextPrompt.title} · ${nextPrompt.instruction}`,
-        Math.max(1, promptColumns - 2),
-      )
-    : [];
+  const selectedCase = agentWorkLabCase(mode);
   return (
-    <Box
-      width={dimensions.columns}
-      height={terminalCanvasRows(dimensions.rows)}
-      flexDirection="column"
-      overflow="hidden"
-    >
-      <Box paddingX={1} justifyContent="space-between">
-        <Text bold color="cyan">
-          AGENT QUALIFICATION LAB
-        </Text>
-        <Text>{mode}</Text>
-      </Box>
-      <Text wrap="truncate-end">
-        S1 {sourceLabel || 'Bundled Demo Agent'} → governed evidence → S2{' '}
-        {targetLabel || 'Fresh Demo Agent'}
-      </Text>
-      <Text dimColor wrap="truncate-end">
-        [d] demo [j/k] source [brackets] target [x] same [m] handoff [Tab] focus
-        [?] explain [w] Work [q] quit
-      </Text>
-      {showHelp ? (
-        <Text dimColor wrap="truncate-end">
-          Good: fresh Session 2 finds the same Work and continues. Bad: restart,
-          copied chat, lost identity. Live labels are admitted provider events;
-          guide labels are Kungfu previews.
-        </Text>
-      ) : null}
-      <Box flexGrow={1} minHeight={0}>
-        <SessionPane
-          session={1}
-          title={sourceLabel || 'Bundled Demo Agent'}
-          lines={lines}
-          active={activeFocus === 'session-1'}
-          scrollBack={scrollBack[1]}
-          viewportRows={viewportRows}
-          running={Boolean(progress) && runningSession === 1}
-          titleBarColumns={paneTitleColumns}
-          activityFrame={activityFrame}
-        />
-        <SessionPane
-          session={2}
-          title={targetLabel || 'Fresh Demo Agent'}
-          lines={lines}
-          active={activeFocus === 'session-2'}
-          scrollBack={scrollBack[2]}
-          viewportRows={viewportRows}
-          running={Boolean(progress) && runningSession === 2}
-          titleBarColumns={paneTitleColumns}
-          activityFrame={activityFrame}
-        />
-      </Box>
-      <Box
-        height={6}
-        borderStyle="round"
-        borderColor={report ? (passed ? 'green' : 'red') : 'gray'}
-        paddingX={1}
-        flexDirection="column"
-        overflow="hidden"
-      >
-        <Text
-          color={report ? (passed ? 'green' : 'red') : 'yellow'}
-          bold
-          wrap="truncate-end"
-        >
-          {report
-            ? passed
-              ? 'CONTINUITY PROVED'
-              : 'CONTINUITY NOT PROVED'
-            : error ||
-              busy ||
-              progress ||
-              'Ready · choose demo, same-agent, or handoff'}
-        </Text>
-        <Box>
-          <ResultCard
-            kind="correct"
-            count={checks.passed}
-            active={activeFocus === 'correct'}
-            available={Boolean(report)}
-          />
-          <ResultCard
-            kind="failed"
-            count={checks.failed}
-            active={activeFocus === 'failed'}
-            available={Boolean(report)}
-          />
-        </Box>
-      </Box>
-      {nextPrompt ? (
-        <Box
-          position="absolute"
-          width={promptWidth}
-          height={6}
-          marginTop={Math.max(4, Math.floor(dimensions.rows / 2) - 2)}
-          marginLeft={Math.max(
-            2,
-            Math.floor((dimensions.columns - promptWidth) / 2),
-          )}
-          borderStyle="double"
-          borderColor="yellow"
-          flexDirection="column"
-          overflow="hidden"
-        >
-          <Text bold color="yellow" backgroundColor="blue">
-            {opaquePromptLine(' WHAT TO TRY NEXT', promptColumns)}
-          </Text>
-          {promptRows.map((row, index) => (
-            <Text key={`${index}-${row}`} color="white" backgroundColor="blue">
-              {opaquePromptLine(` ${row}`, promptColumns)}
-            </Text>
-          ))}
-          <Text color="white" backgroundColor="blue">
-            {opaquePromptLine(
-              ' Closes automatically in 5 seconds.',
-              promptColumns,
-            )}
-          </Text>
-        </Box>
-      ) : null}
-    </Box>
+    <SessionWorkbench
+      dimensions={dimensions}
+      heading={AGENT_WORK_LAB_SUITE.title}
+      collectionLabel={AGENT_WORK_LAB_SUITE.collection.title}
+      caseLabel={selectedCase.title}
+      relationship="→ governed Work →"
+      controls="[d] demo [j/k] source [brackets] target [x] same [m] handoff [Tab] focus [?] explain [w] Work [q] quit"
+      help={`${selectedCase.description} Good: a fresh Session 2 finds the same Work and continues. Bad: restart, copied chat, or lost identity.`}
+      sourceLabel={sourceLabel || 'Bundled Demo Agent'}
+      targetLabel={targetLabel || 'Fresh Demo Agent'}
+      lines={lines}
+      checks={reportChecks(report)}
+      reportAvailable={Boolean(report)}
+      reportPassed={Boolean(report && report.status !== 'failed')}
+      verdictSuccess="WORK CONTINUITY PROVED"
+      verdictFailure="WORK CONTINUITY NOT PROVED"
+      detailCaption="Canonical Work continuity checks · sensitive internals remain hidden"
+      busy={busy}
+      progress={progress}
+      error={error}
+      activeFocus={activeFocus}
+      scrollBack={scrollBack}
+      showHelp={showHelp}
+      activityFrame={activityFrame}
+      runningSession={runningSession}
+      nextPrompt={nextPrompt}
+      reportDetail={reportDetail}
+      emphasizedResult={emphasizedResult}
+    />
+  );
+}
+
+type DimensionSource = {
+  get(): TerminalDimensions;
+  subscribe(listener: (dimensions: TerminalDimensions) => void): () => void;
+};
+
+const wait = (milliseconds: number) =>
+  new Promise<void>((resolve) => {
+    setTimeout(resolve, milliseconds);
+  });
+
+export function AgentWorkLabHost({
+  lab,
+  startup,
+  dimensions,
+  onOpenWork,
+}: {
+  lab: QualificationLab;
+  startup: QualificationLabStartupRoute;
+  dimensions: DimensionSource;
+  onOpenWork?: () => void;
+}) {
+  const { exit } = useApp();
+  const [size, setSize] = React.useState(dimensions.get());
+  const [agents, setAgents] = React.useState<
+    Awaited<ReturnType<QualificationLab['discoverAgents']>> | undefined
+  >();
+  const [mode, setMode] = React.useState<TuiQualificationMode>('offline-demo');
+  const [selected, setSelected] = React.useState(0);
+  const [target, setTarget] = React.useState(0);
+  const [report, setReport] = React.useState<QualificationLabReport>();
+  const [lines, setLines] = React.useState<
+    ReturnType<typeof qualificationEventLines>
+  >([]);
+  const [activeFocus, setActiveFocus] =
+    React.useState<TuiQualificationFocus>('session-1');
+  const [reportDetail, setReportDetail] =
+    React.useState<TuiQualificationReportDetail>();
+  const [emphasizedResult, setEmphasizedResult] =
+    React.useState<TuiQualificationReportDetail>();
+  const [nextPrompt, setNextPrompt] =
+    React.useState<TuiQualificationNextPrompt>();
+  const [scrollBack, setScrollBack] = React.useState<Record<1 | 2, number>>({
+    1: 0,
+    2: 0,
+  });
+  const [showHelp, setShowHelp] = React.useState(false);
+  const [busy, setBusy] = React.useState('');
+  const [error, setError] = React.useState('');
+  const [runProgress, setRunProgress] = React.useState<{
+    startedAt: number;
+    lastEventAt: number;
+    eventCount: number;
+    phase: 'running' | 'assessing';
+  }>();
+  const [runningSession, setRunningSession] = React.useState<1 | 2>();
+  const [progressNow, setProgressNow] = React.useState(() => Date.now());
+  const playbackGeneration = React.useRef(0);
+  const profiles = React.useMemo(
+    () =>
+      Array.from(
+        new Map(
+          [
+            ...(agents?.configured ?? []),
+            ...(agents?.discovered.map((row) => row.profile) ?? []),
+          ].map((profile) => [profile.id, profile]),
+        ).values(),
+      ),
+    [agents],
+  );
+  const discover = React.useCallback(async () => {
+    setBusy('discovering agents');
+    try {
+      setAgents(await lab.discoverAgents());
+      setError('');
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : String(reason));
+    } finally {
+      setBusy('');
+    }
+  }, [lab]);
+  React.useEffect(() => {
+    void discover();
+  }, [discover]);
+  React.useEffect(
+    () => dimensions.subscribe((next) => setSize(next)),
+    [dimensions],
+  );
+  React.useEffect(() => {
+    if (!runProgress) return undefined;
+    setProgressNow(Date.now());
+    const timer = setInterval(
+      () => setProgressNow(Date.now()),
+      AGENT_WORK_LAB_SUITE.timing.quietProgressIntervalMs,
+    );
+    return () => clearInterval(timer);
+  }, [runProgress]);
+  React.useEffect(() => {
+    if (!nextPrompt) return undefined;
+    const timer = setTimeout(
+      () => setNextPrompt(undefined),
+      AGENT_WORK_LAB_SUITE.timing.recommendationDurationMs,
+    );
+    return () => clearTimeout(timer);
+  }, [nextPrompt]);
+  const runQualification = React.useCallback(
+    (
+      nextMode: TuiQualificationMode,
+      execute: (
+        onEvent: Parameters<QualificationLab['runDemo']>[0],
+      ) => Promise<QualificationLabReport>,
+    ) => {
+      const generation = playbackGeneration.current + 1;
+      playbackGeneration.current = generation;
+      const selectedCase = agentWorkLabCase(nextMode);
+      setMode(nextMode);
+      setBusy(selectedCase.runLabel);
+      setReport(undefined);
+      setLines([]);
+      setActiveFocus('session-1');
+      setReportDetail(undefined);
+      setEmphasizedResult(undefined);
+      setNextPrompt(undefined);
+      setScrollBack({ 1: 0, 2: 0 });
+      setError('');
+      const startedAt = Date.now();
+      setProgressNow(startedAt);
+      setRunProgress({
+        startedAt,
+        lastEventAt: startedAt,
+        eventCount: 0,
+        phase: 'running',
+      });
+      setRunningSession(1);
+      const playback = createIncrementalPlayback<QualificationLabEvent>({
+        timing: AGENT_WORK_LAB_SUITE.timing,
+        isCurrent: () => playbackGeneration.current === generation,
+        onEvent: (event) => {
+          setRunningSession(qualificationEventRunningSession(event));
+          setLines((current) => [
+            ...current,
+            ...qualificationEventLines(event),
+          ]);
+          setRunProgress((current) =>
+            current
+              ? {
+                  ...current,
+                  lastEventAt: Date.now(),
+                  eventCount: current.eventCount + 1,
+                }
+              : current,
+          );
+        },
+        onAssessing: () => {
+          setRunningSession(undefined);
+          setRunProgress((current) =>
+            current ? { ...current, phase: 'assessing' } : current,
+          );
+        },
+      });
+      void execute((event) => playback.enqueue(event))
+        .then(async (value) => {
+          if (!(await playback.finish())) return;
+          setReport(value);
+          setActiveFocus('correct');
+          setEmphasizedResult('correct');
+          await wait(AGENT_WORK_LAB_SUITE.timing.verdictIntervalMs);
+          if (playbackGeneration.current !== generation) return;
+          setEmphasizedResult('failed');
+          await wait(AGENT_WORK_LAB_SUITE.timing.verdictIntervalMs);
+          if (playbackGeneration.current !== generation) return;
+          setEmphasizedResult(undefined);
+          setNextPrompt(qualificationNextModePrompt(nextMode));
+          setError('');
+        })
+        .catch((reason) => {
+          playback.cancel();
+          if (playbackGeneration.current !== generation) return;
+          setError(reason instanceof Error ? reason.message : String(reason));
+        })
+        .finally(() => {
+          if (playbackGeneration.current === generation) {
+            setBusy('');
+            setRunProgress(undefined);
+            setRunningSession(undefined);
+          }
+        });
+    },
+    [],
+  );
+  React.useEffect(() => {
+    const onData = (chunk: Buffer | string) => {
+      const input = String(chunk);
+      if (reportDetail && isQualificationReportReturnInput(input)) {
+        return setReportDetail(undefined);
+      }
+      const key = decodeShellKey(input);
+      if (key === 'quit') return exit();
+      if (input === '\t')
+        return setActiveFocus((current) =>
+          nextQualificationFocus(current, Boolean(report)),
+        );
+      if (
+        report &&
+        (input === '\r' || input === '\n') &&
+        (activeFocus === 'correct' || activeFocus === 'failed')
+      ) {
+        return setReportDetail(activeFocus);
+      }
+      const focusedSession =
+        activeFocus === 'session-1'
+          ? 1
+          : activeFocus === 'session-2'
+            ? 2
+            : undefined;
+      if (input === '\u001b[A' && focusedSession)
+        return setScrollBack((current) => ({
+          ...current,
+          [focusedSession]: current[focusedSession] + 1,
+        }));
+      if (input === '\u001b[B' && focusedSession)
+        return setScrollBack((current) => ({
+          ...current,
+          [focusedSession]: Math.max(0, current[focusedSession] - 1),
+        }));
+      if (input === '?') return setShowHelp((current) => !current);
+      if (key === 'next-card')
+        return setSelected((current) =>
+          boundedIndex(current, 1, profiles.length),
+        );
+      if (key === 'previous-card')
+        return setSelected((current) =>
+          boundedIndex(current, -1, profiles.length),
+        );
+      if (input === ']')
+        return setTarget((current) =>
+          boundedIndex(current, 1, profiles.length),
+        );
+      if (input === '[')
+        return setTarget((current) =>
+          boundedIndex(current, -1, profiles.length),
+        );
+      if (input === 'w' && onOpenWork) return onOpenWork();
+      if (input === 'd' && !busy) {
+        return runQualification('offline-demo', (onEvent) =>
+          lab.runDemo(onEvent),
+        );
+      }
+      if (input === 'x' && !busy && profiles[selected]) {
+        return runQualification('same-agent', (onEvent) =>
+          lab.runAgent(profiles[selected].id, onEvent),
+        );
+      }
+      if (
+        input === 'm' &&
+        !busy &&
+        profiles[selected] &&
+        profiles[target] &&
+        selected !== target
+      ) {
+        return runQualification('cross-agent', (onEvent) =>
+          lab.runMigration(profiles[selected].id, profiles[target].id, onEvent),
+        );
+      }
+    };
+    process.stdin.on('data', onData);
+    return () => {
+      process.stdin.off('data', onData);
+    };
+  }, [
+    busy,
+    activeFocus,
+    exit,
+    lab,
+    onOpenWork,
+    profiles,
+    report,
+    reportDetail,
+    selected,
+    target,
+    runQualification,
+  ]);
+  const sourceLabel =
+    mode === 'offline-demo' ? '' : profiles[selected]?.label || '';
+  const targetLabel =
+    mode === 'offline-demo'
+      ? ''
+      : mode === 'same-agent'
+        ? sourceLabel
+        : profiles[target]?.label || '';
+  const progress = runProgress
+    ? qualificationRunProgressLabel({
+        elapsedMs: progressNow - runProgress.startedAt,
+        quietMs: progressNow - runProgress.lastEventAt,
+        eventCount: runProgress.eventCount,
+        phase: runProgress.phase,
+      })
+    : '';
+  return (
+    <QualificationLabView
+      dimensions={size}
+      mode={mode}
+      sourceLabel={sourceLabel}
+      targetLabel={targetLabel}
+      lines={lines}
+      report={report}
+      busy={busy}
+      progress={progress}
+      error={
+        error ||
+        (startup.route === 'diagnostic'
+          ? `${startup.state} · ${startup.reasonCode}`
+          : '')
+      }
+      activeFocus={activeFocus}
+      scrollBack={scrollBack}
+      showHelp={showHelp}
+      activityFrame={
+        runProgress
+          ? Math.floor(
+              (progressNow - runProgress.startedAt) /
+                AGENT_WORK_LAB_SUITE.timing.quietProgressIntervalMs,
+            )
+          : 0
+      }
+      runningSession={runningSession}
+      nextPrompt={nextPrompt}
+      reportDetail={reportDetail}
+      emphasizedResult={emphasizedResult}
+    />
   );
 }

@@ -8,15 +8,12 @@ import path from 'node:path';
 import {
   type Profile,
   type QualificationLab,
-  type QualificationLabEvent,
-  type QualificationLabReport,
   type QualificationLabStartupRoute,
   type WorkLoop,
   openProfile,
   openQualificationLab,
   openWorkLoop,
   qualificationLabStartupSurface,
-  qualificationRunProgressLabel,
 } from '@kungfu-tech/api/capability';
 import { Box, Text, render, useApp } from 'ink';
 import React from 'react';
@@ -28,18 +25,7 @@ import {
   type ProfileShellModel,
   type TerminalDimensions,
 } from './profile-shell.js';
-import {
-  QualificationLabView,
-  type TuiQualificationFocus,
-  type TuiQualificationMode,
-  type TuiQualificationNextPrompt,
-  type TuiQualificationReportDetail,
-  isQualificationReportReturnInput,
-  nextQualificationFocus,
-  qualificationEventLines,
-  qualificationEventRunningSession,
-  qualificationNextModePrompt,
-} from './qualification-lab-view.js';
+import { AgentWorkLabHost } from './qualification-lab-view.js';
 import {
   IncrementalTerminalOutput,
   terminalCanvasRows,
@@ -352,326 +338,6 @@ function WorkControlHost({
   );
 }
 
-function QualificationLabHost({
-  lab,
-  startup,
-  dimensions,
-  onOpenWork,
-}: {
-  lab: QualificationLab;
-  startup: QualificationLabStartupRoute;
-  dimensions: DimensionStore;
-  onOpenWork?: () => void;
-}) {
-  const { exit } = useApp();
-  const [size, setSize] = React.useState(dimensions.get());
-  const [agents, setAgents] = React.useState<
-    Awaited<ReturnType<QualificationLab['discoverAgents']>> | undefined
-  >();
-  const [mode, setMode] = React.useState<TuiQualificationMode>('offline-demo');
-  const [selected, setSelected] = React.useState(0);
-  const [target, setTarget] = React.useState(0);
-  const [report, setReport] = React.useState<QualificationLabReport>();
-  const [lines, setLines] = React.useState<
-    ReturnType<typeof qualificationEventLines>
-  >([]);
-  const [activeFocus, setActiveFocus] =
-    React.useState<TuiQualificationFocus>('session-1');
-  const [reportDetail, setReportDetail] =
-    React.useState<TuiQualificationReportDetail>();
-  const [nextPrompt, setNextPrompt] =
-    React.useState<TuiQualificationNextPrompt>();
-  const [scrollBack, setScrollBack] = React.useState<Record<1 | 2, number>>({
-    1: 0,
-    2: 0,
-  });
-  const [showHelp, setShowHelp] = React.useState(false);
-  const [busy, setBusy] = React.useState('');
-  const [error, setError] = React.useState('');
-  const [runProgress, setRunProgress] = React.useState<{
-    startedAt: number;
-    lastEventAt: number;
-    eventCount: number;
-    phase: 'running' | 'assessing';
-  }>();
-  const [runningSession, setRunningSession] = React.useState<1 | 2>();
-  const [progressNow, setProgressNow] = React.useState(() => Date.now());
-  const playbackGeneration = React.useRef(0);
-  const profiles = React.useMemo(
-    () =>
-      Array.from(
-        new Map(
-          [
-            ...(agents?.configured ?? []),
-            ...(agents?.discovered.map((row) => row.profile) ?? []),
-          ].map((profile) => [profile.id, profile]),
-        ).values(),
-      ),
-    [agents],
-  );
-  const discover = React.useCallback(async () => {
-    setBusy('discovering agents');
-    try {
-      setAgents(await lab.discoverAgents());
-      setError('');
-    } catch (reason) {
-      setError(reason instanceof Error ? reason.message : String(reason));
-    } finally {
-      setBusy('');
-    }
-  }, [lab]);
-  React.useEffect(() => {
-    void discover();
-  }, [discover]);
-  React.useEffect(
-    () => dimensions.subscribe((next) => setSize(next)),
-    [dimensions],
-  );
-  React.useEffect(() => {
-    if (!runProgress) return undefined;
-    setProgressNow(Date.now());
-    const timer = setInterval(() => setProgressNow(Date.now()), 1000);
-    return () => clearInterval(timer);
-  }, [runProgress]);
-  React.useEffect(() => {
-    if (!nextPrompt) return undefined;
-    const timer = setTimeout(() => setNextPrompt(undefined), 5000);
-    return () => clearTimeout(timer);
-  }, [nextPrompt]);
-  const runQualification = React.useCallback(
-    (
-      nextMode: TuiQualificationMode,
-      label: string,
-      execute: (
-        onEvent: Parameters<QualificationLab['runDemo']>[0],
-      ) => Promise<QualificationLabReport>,
-    ) => {
-      const generation = playbackGeneration.current + 1;
-      playbackGeneration.current = generation;
-      setMode(nextMode);
-      setBusy(label);
-      setReport(undefined);
-      setLines([]);
-      setActiveFocus('session-1');
-      setReportDetail(undefined);
-      setNextPrompt(undefined);
-      setScrollBack({ 1: 0, 2: 0 });
-      setError('');
-      const startedAt = Date.now();
-      setProgressNow(startedAt);
-      setRunProgress({
-        startedAt,
-        lastEventAt: startedAt,
-        eventCount: 0,
-        phase: 'running',
-      });
-      setRunningSession(1);
-      let queue = Promise.resolve();
-      const receiveEvent = (event: QualificationLabEvent) => {
-        queue = queue.then(
-          () =>
-            new Promise<void>((resolve) => {
-              setTimeout(resolve, 1000);
-            }),
-        );
-        queue = queue.then(() => {
-          if (playbackGeneration.current !== generation) return;
-          const eventSession = qualificationEventRunningSession(event);
-          if (eventSession) setRunningSession(eventSession);
-          setLines((current) => [
-            ...current,
-            ...qualificationEventLines(event),
-          ]);
-          setRunProgress((current) =>
-            current
-              ? {
-                  ...current,
-                  lastEventAt: Date.now(),
-                  eventCount: current.eventCount + 1,
-                }
-              : current,
-          );
-        });
-      };
-      void execute(receiveEvent)
-        .then(async (value) => {
-          await queue;
-          setRunProgress((current) =>
-            current ? { ...current, phase: 'assessing' } : current,
-          );
-          await new Promise<void>((resolve) => {
-            setTimeout(resolve, 520);
-          });
-          if (playbackGeneration.current !== generation) return;
-          setReport(value);
-          setActiveFocus('correct');
-          setNextPrompt(qualificationNextModePrompt(nextMode));
-          setError('');
-        })
-        .catch((reason) => {
-          if (playbackGeneration.current !== generation) return;
-          setError(reason instanceof Error ? reason.message : String(reason));
-        })
-        .finally(() => {
-          if (playbackGeneration.current === generation) {
-            setBusy('');
-            setRunProgress(undefined);
-            setRunningSession(undefined);
-          }
-        });
-    },
-    [],
-  );
-  React.useEffect(() => {
-    const onData = (chunk: Buffer | string) => {
-      const input = String(chunk);
-      if (reportDetail && isQualificationReportReturnInput(input)) {
-        return setReportDetail(undefined);
-      }
-      const key = decodeShellKey(input);
-      if (key === 'quit') return exit();
-      if (input === '\t')
-        return setActiveFocus((current) =>
-          nextQualificationFocus(current, Boolean(report)),
-        );
-      if (
-        report &&
-        (input === '\r' || input === '\n') &&
-        (activeFocus === 'correct' || activeFocus === 'failed')
-      ) {
-        return setReportDetail(activeFocus);
-      }
-      const focusedSession =
-        activeFocus === 'session-1'
-          ? 1
-          : activeFocus === 'session-2'
-            ? 2
-            : undefined;
-      if (input === '\u001b[A' && focusedSession)
-        return setScrollBack((current) => ({
-          ...current,
-          [focusedSession]: current[focusedSession] + 1,
-        }));
-      if (input === '\u001b[B' && focusedSession)
-        return setScrollBack((current) => ({
-          ...current,
-          [focusedSession]: Math.max(0, current[focusedSession] - 1),
-        }));
-      if (input === '?') return setShowHelp((current) => !current);
-      if (key === 'next-card')
-        return setSelected((current) =>
-          boundedIndex(current, 1, profiles.length),
-        );
-      if (key === 'previous-card')
-        return setSelected((current) =>
-          boundedIndex(current, -1, profiles.length),
-        );
-      if (input === ']')
-        return setTarget((current) =>
-          boundedIndex(current, 1, profiles.length),
-        );
-      if (input === '[')
-        return setTarget((current) =>
-          boundedIndex(current, -1, profiles.length),
-        );
-      if (input === 'w' && onOpenWork) return onOpenWork();
-      if (input === 'd' && !busy) {
-        return runQualification(
-          'offline-demo',
-          'running two fresh demo sessions',
-          (onEvent) => lab.runDemo(onEvent),
-        );
-      }
-      if (input === 'x' && !busy && profiles[selected]) {
-        return runQualification(
-          'same-agent',
-          'running selected agent twice',
-          (onEvent) => lab.runAgent(profiles[selected].id, onEvent),
-        );
-      }
-      if (
-        input === 'm' &&
-        !busy &&
-        profiles[selected] &&
-        profiles[target] &&
-        selected !== target
-      ) {
-        return runQualification(
-          'cross-agent',
-          'running cross-provider handoff',
-          (onEvent) =>
-            lab.runMigration(
-              profiles[selected].id,
-              profiles[target].id,
-              onEvent,
-            ),
-        );
-      }
-    };
-    process.stdin.on('data', onData);
-    return () => {
-      process.stdin.off('data', onData);
-    };
-  }, [
-    busy,
-    activeFocus,
-    exit,
-    lab,
-    onOpenWork,
-    profiles,
-    report,
-    reportDetail,
-    selected,
-    target,
-    runQualification,
-  ]);
-  const sourceLabel =
-    mode === 'offline-demo' ? '' : profiles[selected]?.label || '';
-  const targetLabel =
-    mode === 'offline-demo'
-      ? ''
-      : mode === 'same-agent'
-        ? sourceLabel
-        : profiles[target]?.label || '';
-  const progress = runProgress
-    ? qualificationRunProgressLabel({
-        elapsedMs: progressNow - runProgress.startedAt,
-        quietMs: progressNow - runProgress.lastEventAt,
-        eventCount: runProgress.eventCount,
-        phase: runProgress.phase,
-      })
-    : '';
-  return (
-    <QualificationLabView
-      dimensions={size}
-      mode={mode}
-      sourceLabel={sourceLabel}
-      targetLabel={targetLabel}
-      lines={lines}
-      report={report}
-      busy={busy}
-      progress={progress}
-      error={
-        error ||
-        (startup.route === 'diagnostic'
-          ? `${startup.state} · ${startup.reasonCode}`
-          : '')
-      }
-      activeFocus={activeFocus}
-      scrollBack={scrollBack}
-      showHelp={showHelp}
-      activityFrame={
-        runProgress
-          ? Math.floor((progressNow - runProgress.startedAt) / 1000)
-          : 0
-      }
-      runningSession={runningSession}
-      nextPrompt={nextPrompt}
-      reportDetail={reportDetail}
-    />
-  );
-}
-
 const PENDING_STARTUP: QualificationLabStartupRoute = {
   schema: 'kungfu.qualification-lab.startup-route/v1',
   state: 'verified-empty',
@@ -719,7 +385,7 @@ function StartingHost({
       <Text dimColor>
         Reading local Work and exact Profile evidence in the background…
       </Text>
-      <Text dimColor>a qualification lab · q quit</Text>
+      <Text dimColor>[a] Agent Work Lab · q quit</Text>
     </Box>
   );
 }
@@ -775,7 +441,7 @@ function ProductHost({
     (surface === 'auto' && startupSurface === 'qualification-lab');
   if (labOpen) {
     return (
-      <QualificationLabHost
+      <AgentWorkLabHost
         lab={lab}
         startup={resolvedStartup}
         dimensions={dimensions}

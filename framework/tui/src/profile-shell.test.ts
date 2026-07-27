@@ -98,19 +98,19 @@ for (const qualification of [
     columns: 80,
     rows: 24,
     mode: 'one-column',
-    digest: 'd32f4a02bf7badced4261cc06aca4ffc567e1f8bc9412d802e5652f5f3e522fe',
+    digest: '0f5fca0d6800b6fe1298b22dc484227b4c786ed4e5af8930ec006a452702ad8e',
   },
   {
     columns: 120,
     rows: 36,
     mode: 'two-column',
-    digest: '690700c2cb0eb8849ac890c67a3486fe2e283a02db86fed0af122428a5f00f15',
+    digest: '40b746256cc4623a1507d33b8896624e321ced7da98a4b32c133a37f0c0d87a2',
   },
   {
     columns: 160,
     rows: 48,
     mode: 'three-column',
-    digest: '393d419269b2df5b89d54538e91d3d20a61c6706c80387afc04f287ca574c96b',
+    digest: 'd08bfff06683732a89735f3162a05566dbe07ee90d08906ad63b25f09dd80cb2',
   },
 ] as const) {
   test(`qualifies the ${qualification.columns}x${qualification.rows} renderer snapshot`, () => {
