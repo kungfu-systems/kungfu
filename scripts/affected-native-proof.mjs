@@ -10,7 +10,7 @@ import process from 'node:process';
 import { pathToFileURL } from 'node:url';
 
 export const IDENTITY_SCHEMA = 'kungfu.affected-native-proof-identity/v3';
-export const PROOF_SCHEMA = 'kungfu.affected-native-proof/v1';
+export const PROOF_SCHEMA = 'kungfu.affected-native-proof/v2';
 export const WORKFLOW_PATH = '.github/workflows/affected-native-pr.yml';
 export const DEFAULT_MAX_AGE_SECONDS = 6 * 60 * 60;
 const QUEUE_PRODUCER_EVENT = 'merge_group';
@@ -328,6 +328,7 @@ export function sealProof(descriptor, inputDir, producer) {
     verdict: {
       status: 'passed',
       nativeRequired: descriptor.nativeRequired,
+      sdkRequired: descriptor.sdkRequired,
     },
   };
   return { ...proof, proofRoot: digest(proof) };
@@ -372,7 +373,8 @@ export function verifyProofBundle(descriptor, bundleDir, options) {
   }
   if (
     proof.verdict?.status !== 'passed' ||
-    proof.verdict.nativeRequired !== descriptor.nativeRequired
+    proof.verdict.nativeRequired !== descriptor.nativeRequired ||
+    proof.verdict.sdkRequired !== descriptor.sdkRequired
   ) {
     throw new Error('affected-native proof verdict drift');
   }

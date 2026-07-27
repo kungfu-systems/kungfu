@@ -155,20 +155,23 @@ Each section is bound to the registry id by the catalog meta gate.
   executions sharing one synthetic merge-group SHA; `cancel-in-progress: false`
   preserves the active execution while GitHub may coalesce identical pending
   replacements. The first successful execution produces the authoritative queue
-  proof. A later execution
-  skips only the native partitions after a unique completed-success artifact
+  proof. A later execution skips the repeated native/SDK, Shifu workspace, and
+  KFD work after a unique completed-success artifact
   matches that exact SHA and its cryptographically verified identity binds the
   same base, candidate tree, plan projection, partition set, platform tier,
   hosted-runner image, and observed compiler/CMake/Ninja facts. PR producers,
-  SDK-required plans, moved bases, changed trees/toolchains, duplicate
-  artifacts, expired evidence, and every lookup/download/verification failure
-  run the full native set. The probe descriptor is handed unchanged to the
+  moved bases, changed trees/toolchains, duplicate artifacts, expired evidence,
+  and every lookup/download/verification failure run the full required set.
+  The producer workflow must itself be completed-success, so the source-bound
+  plan also proves that its SDK, Shifu, and KFD obligations passed before a
+  repeated run can skip them. The probe descriptor is handed unchanged to the
   aggregate job: that job independently recomputes the base, candidate tree,
   and plan projection with the probe's sealed toolchain facts instead of
   substituting facts from a later non-native runner. Every native shard receipt
   must still match the complete probe toolchain, including the hosted image
   version; cross-runner drift therefore remains fail-closed. Shifu workspace
-  and KFD jobs remain independent of native proof reuse.
+  and KFD remain independent on the first execution; only a later exact-SHA
+  execution backed by the completed-success producer may skip them.
 - **Dequeue repair admission:** the trusted-base dequeue controller cancels
   active work and writes one PR marker for deterministic `failed_checks`,
   `merge_conflict`, or `invalid_merge_commit` exits. The marker binds the exact
