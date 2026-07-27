@@ -553,6 +553,115 @@ def native_status(ctx, roots, runtime_tiers):
     _native_query(ctx, "status", roots, runtime_tiers)
 
 
+@native_group.group(
+    name="control",
+    help="operate the first-party Control Suite through public KFX Fact/Work",
+)
+@click.help_option("-h", "--help")
+@kfx_command_context
+def native_control(ctx):
+    pass
+
+
+def _control_request(candidate, operation):
+    request = {
+        "controller": "kungfu-kfx-control-suite",
+        "packageKey": "kfx-manager",
+        "operation": operation,
+    }
+    if candidate:
+        request["roots"] = [
+            {"kind": "product", "path": str(Path(candidate).expanduser().resolve())}
+        ]
+        request["runtimeTiers"] = {"kfx-manager": "first-party-pinned"}
+    return request
+
+
+@native_control.command(
+    name="status", help="show Core-derived active/LKG/safe-mode state"
+)
+@kfx_command_context
+def native_control_status(ctx):
+    click.echo(
+        json.dumps(
+            storage_service.kfx_registry(
+                "status",
+                {"controller": "kungfu-kfx-control-suite"},
+                ctx.runtime_dir,
+            ),
+            indent=2,
+            sort_keys=True,
+        )
+    )
+
+
+@native_control.command(
+    name="plan", help="plan an exact Control Suite install or update"
+)
+@click.argument("candidate", type=click.Path(exists=True, file_okay=False))
+@click.option("--operation", type=click.Choice(["install", "update"]), required=True)
+@kfx_command_context
+def native_control_plan(ctx, candidate, operation):
+    click.echo(
+        json.dumps(
+            storage_service.kfx_registry(
+                "plan",
+                _control_request(candidate, operation),
+                ctx.runtime_dir,
+            ),
+            indent=2,
+            sort_keys=True,
+        )
+    )
+
+
+@native_control.command(
+    name="apply", help="apply one still-current authorized Control Suite plan"
+)
+@click.argument("candidate", type=click.Path(exists=True, file_okay=False))
+@click.argument(
+    "plan_file", type=click.Path(exists=True, dir_okay=False, path_type=Path)
+)
+@click.option("--authorized-by", required=True)
+@kfx_command_context
+def native_control_apply(ctx, candidate, plan_file, authorized_by):
+    plan = _native_json_file(plan_file, "Control Suite plan")
+    load_plan = plan.get("loadPlan") or {}
+    package = next(
+        (
+            item
+            for item in load_plan.get("packages", [])
+            if item.get("key") == "kfx-manager"
+        ),
+        None,
+    )
+    if not package:
+        raise click.BadParameter(
+            "Control Suite plan does not contain kfx-manager", param_hint="plan_file"
+        )
+    request = {
+        **_control_request(candidate, str(plan.get("operation") or "")),
+        "expectedCutRoot": load_plan.get("cutRoot"),
+        "expectedRevision": load_plan.get("revision"),
+        "expectedRegistryRoot": load_plan.get("registryRoot"),
+        "expectedGraphRoot": load_plan.get("graphRoot"),
+        "expectedPlanRoot": load_plan.get("planRoot"),
+        "expectedTrustRoot": package.get("trustRoot"),
+        "expectedPackageRoot": package.get("packageRoot"),
+        "expectedControlPlanRoot": plan.get("controlPlanRoot"),
+        "expectedBootstrapPolicyRoot": plan.get("bootstrapPolicyRoot"),
+        "authorizationId": authorized_by,
+        "actor": authorized_by,
+    }
+    click.echo(
+        json.dumps(
+            storage_service.kfx_registry("apply", request, ctx.runtime_dir),
+            indent=2,
+            sort_keys=True,
+        )
+    )
+
+
 @native_group.command(
     name="assess",
     help="produce the Core TrustReport and operation-specific admission plan",

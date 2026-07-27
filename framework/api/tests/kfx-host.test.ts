@@ -1,9 +1,17 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { projectGuiKfxExperienceFlow } from '../../gui/src/main/kfx-host.ts';
-import { projectTuiKfxExperienceFlow } from '../../tui/src/kfx-host.ts';
+import {
+  projectGuiKfxControl,
+  projectGuiKfxExperienceFlow,
+} from '../../gui/src/main/kfx-host.ts';
+import {
+  projectTuiKfxControl,
+  projectTuiKfxExperienceFlow,
+} from '../../tui/src/kfx-host.ts';
+import type { KfxControlStatus } from '../src/capability/kfx-control.ts';
 import {
   type KfxExperienceFlowDescriptor,
+  projectKfxControlSuiteHost,
   projectKfxExperienceFlowHost,
 } from '../src/capability/kfx-host.ts';
 
@@ -114,4 +122,43 @@ test('preview and mismatched admissions fail closed before host execution', () =
     () => projectKfxExperienceFlowHost(mismatched, 'gui'),
     /contribution admission identity does not match/,
   );
+});
+
+test('GUI, TUI, CLI, and Agent retain one Control Suite status root', () => {
+  const status: KfxControlStatus = {
+    schema: 'kungfu.kfx.control-suite-status/v1',
+    controllerId: 'kungfu-kfx-control-suite',
+    statusRoot: `sha256:${'d'.repeat(64)}`,
+    cutRoot: `sha256:${'e'.repeat(64)}`,
+    revision: 3,
+    mode: 'active',
+    executionAllowed: true,
+    active: {
+      packageRoot: `sha256:${'1'.repeat(64)}`,
+      manifestRoot: `sha256:${'2'.repeat(64)}`,
+      version: '4.0.0-alpha.2',
+    },
+    lastKnownGood: {
+      packageRoot: `sha256:${'3'.repeat(64)}`,
+      manifestRoot: `sha256:${'4'.repeat(64)}`,
+      version: '4.0.0-alpha.1',
+      sourcePath: '/retained/kfx-manager',
+    },
+    diagnostics: [],
+  };
+  const projections = [
+    projectGuiKfxControl(status),
+    projectTuiKfxControl(status),
+    projectKfxControlSuiteHost(status, 'cli'),
+    projectKfxControlSuiteHost(status, 'agent'),
+  ];
+  assert.deepEqual(
+    projections.map((projection) => projection.statusRoot),
+    Array(4).fill(status.statusRoot),
+  );
+  assert.deepEqual(
+    projections.map((projection) => projection.revision),
+    Array(4).fill(status.revision),
+  );
+  assert.ok(projections.every((projection) => projection.executionAllowed));
 });

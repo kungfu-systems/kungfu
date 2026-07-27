@@ -17,6 +17,7 @@
       "view": {
         "title": "Profiles",
         "capabilities": [
+          "kfxControl",
           "profile"
         ],
         "system": true

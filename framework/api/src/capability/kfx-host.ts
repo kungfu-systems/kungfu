@@ -86,6 +86,56 @@ export type KfxHostProjection = {
   >;
 };
 
+export type KfxControlHostProjection = {
+  schema: 'kungfu.kfx.control-host-projection/v1';
+  host: KfxHost;
+  controllerId: 'kungfu-kfx-control-suite';
+  statusRoot: string;
+  cutRoot: string | null;
+  revision: number;
+  mode: 'active' | 'safe-mode';
+  executionAllowed: boolean;
+  diagnostics: Array<{
+    code: 'KF_KFX_CONTROL_SAFE_MODE';
+    recoveryGuidance: string[];
+  }>;
+};
+
+export function projectKfxControlSuiteHost(
+  status: {
+    schema: string;
+    controllerId: string;
+    statusRoot: string;
+    cutRoot: string | null;
+    revision: number;
+    mode: 'active' | 'safe-mode';
+    executionAllowed: boolean;
+    diagnostics: KfxControlHostProjection['diagnostics'];
+  },
+  host: KfxHost,
+): KfxControlHostProjection {
+  if (
+    status.schema !== 'kungfu.kfx.control-suite-status/v1' ||
+    status.controllerId !== 'kungfu-kfx-control-suite' ||
+    !status.statusRoot.startsWith('sha256:') ||
+    (status.mode === 'active') !== status.executionAllowed ||
+    (status.cutRoot === null) !== (status.revision === 0)
+  ) {
+    throw new Error('KFX Control status identity does not match');
+  }
+  return {
+    schema: 'kungfu.kfx.control-host-projection/v1',
+    host,
+    controllerId: 'kungfu-kfx-control-suite',
+    statusRoot: status.statusRoot,
+    cutRoot: status.cutRoot,
+    revision: status.revision,
+    mode: status.mode,
+    executionAllowed: status.executionAllowed,
+    diagnostics: status.diagnostics,
+  };
+}
+
 // Rendering stays host-native. This adapter may annotate availability, but it
 // cannot change Core graph, plan, capability, authorization, or receipt roots.
 export function projectKfxExperienceFlowHost(

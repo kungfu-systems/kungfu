@@ -14,6 +14,7 @@ import type {
   AgentRuntime,
   AgentSession,
   DomainState,
+  KfxControl,
   Ledger,
   Profile,
   QualificationLab,
@@ -55,6 +56,11 @@ export type {
   DiscoveredSession,
   DomainState,
   KfLocation,
+  KfxControl,
+  KfxControlApplication,
+  KfxControlPlan,
+  KfxControlRoot,
+  KfxControlStatus,
   Terminal,
   TerminalBackend,
   TerminalExit,
@@ -120,6 +126,7 @@ export type KfxCapabilities = {
   terminal: Terminal;
   work: Work;
   workLoop?: WorkLoop;
+  kfxControl?: KfxControl;
   profile?: Profile;
   agentRuntime?: AgentRuntime;
   agentSession?: AgentSession;

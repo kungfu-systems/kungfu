@@ -4,7 +4,7 @@ from pathlib import Path
 import pytest
 from click.testing import CliRunner
 
-from kungfu import kfx_contract, kfx_host
+from kungfu import kfx_contract, kfx_control, kfx_host
 from kungfu.cli.commands import __registry__  # noqa: F401
 from kungfu.cli.commands import kfc
 from kungfu.storage import service as storage_service
@@ -188,6 +188,19 @@ def test_python_and_host_projections_preserve_core_semantic_roots(tmp_path):
         ValueError, match="contribution admission identity does not match"
     ):
         kfx_host.project_experience_flow_host(mismatched, "gui")
+
+
+def test_control_suite_safe_mode_projects_one_root_to_all_hosts(tmp_path):
+    status = kfx_control.status(tmp_path / "runtime")
+    assert status["mode"] == "safe-mode"
+    assert status["executionAllowed"] is False
+    projections = [
+        kfx_host.project_control_suite_host(status, host)
+        for host in ("gui", "tui", "cli", "agent")
+    ]
+    assert {row["statusRoot"] for row in projections} == {status["statusRoot"]}
+    assert {row["revision"] for row in projections} == {0}
+    assert {row["mode"] for row in projections} == {"safe-mode"}
 
 
 def test_native_kfx_cli_projects_the_same_plan_root(tmp_path):
