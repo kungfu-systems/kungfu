@@ -30,6 +30,7 @@ implemented behavior, retained evidence, and released guarantees. Begin with
 - [Native Dogfood Feedback-loop Qualification](native-dogfood-feedback-loop.md)
 - [Continuity Pilot v1](continuity-pilot.md)
 - [`kungfu run agent` OpenCode Continuity](run-agent-opencode-continuity.md)
+- [Local-agent Repository-work Experiment](agent-repository-work-experiment.md)
 - [Auditable Demo Artifact Pipeline](auditable-demo-artifact-pipeline.md)
 - [Layer Gate Timing Baseline](layer-gate-timing-baseline.md)
 - [KFD-2 Trust Assessment](kfd2-trust-assessment.md)
