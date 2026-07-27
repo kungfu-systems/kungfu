@@ -15,6 +15,7 @@ mod launch;
 mod pins;
 mod plans;
 mod product_identity;
+mod shifu_command;
 mod status;
 mod variant;
 mod xinfa_command;
@@ -48,6 +49,7 @@ usage:
                                                plan storage repair (never writes)
   kungfu-trunk storage-status [--source <id>]  summarize native storage state
   kungfu-trunk compact-plan [--source <id>]    plan storage compaction (never writes)
+  kungfu-trunk shifu <command> [<args>...]      run the linked Shifu launcher
   kungfu-trunk xinfa <command> [<args>...]      run the linked Xinfa compiler
   kungfu-trunk --version | --help
 
@@ -67,6 +69,7 @@ enum NativeCommand {
     RepairPlan,
     StorageStatus,
     CompactPlan,
+    Shifu,
     Xinfa,
 }
 
@@ -144,6 +147,13 @@ const NATIVE_COMMANDS: &[NativeCommandSpec] = &[
         summary: "plan native storage compaction without writing",
         section: "system-maintenance",
         visibility: "advanced",
+    },
+    NativeCommandSpec {
+        command: NativeCommand::Shifu,
+        name: "shifu",
+        summary: "run the linked Shifu development and recovery launcher",
+        section: "developer",
+        visibility: "public",
     },
     NativeCommandSpec {
         command: NativeCommand::Xinfa,
@@ -237,6 +247,7 @@ fn main() {
         Some("repair-plan") => plans::run_repair(&args[1..]),
         Some("storage-status") => status::run(&args[1..]),
         Some("compact-plan") => plans::run_compact(&args[1..]),
+        Some("shifu") => shifu_command::run(&args[1..]),
         Some("xinfa") => xinfa_command::run(&args[1..]),
         Some("--version" | "-V" | "version") => {
             println!("kungfu-trunk {}", env!("CARGO_PKG_VERSION"));
@@ -287,6 +298,7 @@ fn run_native(command: NativeCommand, args: &[String]) -> Result<(), String> {
         NativeCommand::RepairPlan => plans::run_repair(args),
         NativeCommand::StorageStatus => status::run(args),
         NativeCommand::CompactPlan => plans::run_compact(args),
+        NativeCommand::Shifu => shifu_command::run(args),
         NativeCommand::Xinfa => xinfa_command::run(args),
     }
 }
@@ -687,27 +699,7 @@ mod tests {
         assert!(error.contains("invalid value 'loud'"));
         assert!(error.contains("trace, debug, info, warning, error, critical"));
     }
-
-    #[test]
-    fn native_command_table_is_unique_and_complete() {
-        let mut names: Vec<_> = NATIVE_COMMANDS.iter().map(|spec| spec.name).collect();
-        names.sort_unstable();
-        names.dedup();
-        assert_eq!(names.len(), NATIVE_COMMANDS.len());
-        assert_eq!(
-            names,
-            vec![
-                "compact-plan",
-                "doctor",
-                "env",
-                "fsck",
-                "gc-plan",
-                "prewarm",
-                "repair-plan",
-                "storage-status",
-                "verify",
-                "xinfa",
-            ]
-        );
-    }
 }
+
+#[cfg(test)]
+mod native_command_tests;

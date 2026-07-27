@@ -44,6 +44,7 @@
     "dogfood": {"audience": ["human", "agent", "operator"], "maturity": "preview", "visibility": "public", "section": "action-model", "owner": "profile-kfx"},
     "warrant": {"visibility": "public", "section": "action-model"},
     "episode": {"visibility": "public", "section": "action-model"},
+    "shifu": {"audience": ["human", "agent", "developer", "operator"], "visibility": "public", "section": "developer", "owner": "core"},
     "xinfa": {"visibility": "public", "section": "action-model"},
     "facts": {"visibility": "public", "section": "facts-proof"},
     "query": {"visibility": "public", "section": "facts-proof"},
@@ -135,7 +136,7 @@
   "catalogProjection": {
     "artifact": "kungfu.agent/cli_surface.catalog.json",
     "authority": "runtime-fold",
-    "expectedSurfaceRoot": "sha256:1933355688d68eafeccb2ca44697075be63f93ff3a6148c475693fa86bea7ca6",
+    "expectedSurfaceRoot": "sha256:5c9a4ea480162c59cd645baa40e3409831aa39fe75ebbc8668ae8771065f9dd3",
     "consumers": {
       "agentCapabilities": "embed-complete",
       "agentCommands": "strict-link",

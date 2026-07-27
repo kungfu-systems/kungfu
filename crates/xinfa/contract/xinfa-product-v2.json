@@ -54,9 +54,12 @@
   },
   "artifacts": {
     "component": "libxinfa",
-    "sourceDevelopmentBinary": "xinfa",
-    "independentRelease": false,
-    "versionSource": "Cargo.toml"
+    "standaloneExecutable": "xinfa",
+    "independentRelease": true,
+    "releaseTag": "xinfa-v{version}",
+    "releaseAssets": ["xinfa-macos-arm64", "xinfa-linux-x64", "xinfa-windows-x64.exe"],
+    "versionSource": "Cargo.toml",
+    "provenance": "github-sigstore-attestation"
   },
   "state": {
     "workspaceDefault": ".xinfa",
@@ -65,10 +68,11 @@
     "cacheOverride": "XINFA_CACHE_HOME"
   },
   "distribution": {
-    "publicExecutable": "kungfu",
-    "publicCommand": "kungfu xinfa",
+    "publicNpmExecutable": "kungfu",
+    "embeddedCommand": "kungfu xinfa",
     "workspaceAtlasCompile": "kungfu xinfa compile",
-    "secondPublicExecutable": false,
+    "standaloneExecutable": "xinfa",
+    "standaloneChannel": "protected-github-release",
     "linkedComponent": {
       "id": "xinfa",
       "hostCrate": "kungfu-trunk",
@@ -80,7 +84,7 @@
     "componentQualification": {
       "entry": "target/{profile}/xinfa",
       "cleanExtraction": true,
-      "distributionEntrypoint": false
+      "distributionEntrypoint": true
     }
   },
   "incubation": {

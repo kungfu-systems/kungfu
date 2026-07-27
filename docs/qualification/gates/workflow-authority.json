@@ -2187,22 +2187,22 @@
     {
       "path": ".github/workflows/release-shifu.yml",
       "authority": "product-publication",
-      "definitionDigest": "sha256:ea6621578c0ae053477b4bc2a4de5a2aeb489293acbd17ea341abd8c24230a1c",
+      "definitionDigest": "sha256:c6bdcd6bc21d215528141d7fb96fb1970fbda752a2b23f081e889303186aef2b",
       "jobs": [
         {
           "id": "build",
           "authority": "qualification",
           "publication": "none",
           "receipt": "diagnostic",
-          "definitionDigest": "sha256:4d75dbb1bcad2acb26625795be31df4af23956486a2c0f100d94d94043f29f43",
+          "definitionDigest": "sha256:18b1cf747c86ab70874c9b0019e3fc93c36dca3d54678db3b01cd901d0a6a45f",
           "credentials": {
-            "githubToken": "read",
-            "oidc": false,
+            "githubToken": "write",
+            "oidc": true,
             "repositorySecrets": [],
             "inheritedSecrets": false,
             "environment": null
           },
-          "externalActions": ["actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5","actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02"],
+          "externalActions": ["actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5","actions/attest-build-provenance@0f67c3f4856b2e3261c31976d6725780e5e4c373","actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02"],
           "steps": [
             {
               "index": 1,
@@ -2211,39 +2211,34 @@
             },
             {
               "index": 2,
-              "label": "name:Verify tag matches Cargo.toml version",
-              "definitionDigest": "sha256:d85877b9229e76c210970d1f243ab431baa2e334bf2f9944073c57303d0095e9"
-            },
-            {
-              "index": 3,
               "label": "name:Install musl target",
               "definitionDigest": "sha256:77379dcf80a322b2c87c8ebc2d2d83ac0441bdeb9ab4df7659a106f8ba0c9a48"
             },
             {
-              "index": 4,
+              "index": 3,
               "label": "name:Add target",
               "definitionDigest": "sha256:a4ab1497968f6812ee8bb7d3d89e6b6a39a3e70a3e3b1455b1c23ddc0f78f874"
             },
             {
-              "index": 5,
+              "index": 4,
               "label": "name:Build",
-              "definitionDigest": "sha256:71bea966d857d1f2c3d6ffa495e29bfad70db272e290c4971b58875b2cff766f"
+              "definitionDigest": "sha256:6f54c91f13bcfee6447c924c6f0b3081ef407caa561527c7ef2af1fd220ec3a3"
+            },
+            {
+              "index": 5,
+              "label": "name:Stage asset",
+              "definitionDigest": "sha256:6f7391a103ba19a4f04360a7344c597d16aeba8040cb72a3dbb48674f095b7f3"
             },
             {
               "index": 6,
-              "label": "name:Stage asset",
-              "definitionDigest": "sha256:54a5dd3feef52f67fbebb70db18ada20d308c79db2bf8d3401ae3e5a78f70161"
+              "label": "name:Sign source-bound build provenance",
+              "definitionDigest": "sha256:80aea232d865b0ec73b2621bbb878a0e00a1f2ad2955f0e90a60ebd541e5ddce"
             },
             {
               "index": 7,
-              "label": "name:Checksum",
-              "definitionDigest": "sha256:69ea732fd8ff4e13a0358d054719a9042b5153d1523718db57f394a43e9ad48f"
-            },
-            {
-              "index": 8,
               "label": "uses:actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02",
               "authority": "evidence-publication",
-              "definitionDigest": "sha256:c3bd89a945bbb595ba86aa09938668d2a0b55e05da4fcdafe635250003fcc24f"
+              "definitionDigest": "sha256:cd88f5f3c89466599e60766269fe5ee830c5d19f356133096e52c357846f5d10"
             }
           ]
         },
@@ -2252,7 +2247,7 @@
           "authority": "product-publication",
           "publication": "product",
           "receipt": "none",
-          "definitionDigest": "sha256:f3b16b343c6d1dad0be6a80a12ab0035981a224fc2267fe40c6b4f18b6a6ba1b",
+          "definitionDigest": "sha256:8cf6cb98b53762af88f412926aa13a5cb227592232515506e4e646e77ce3868e",
           "credentials": {
             "githubToken": "write",
             "oidc": false,
@@ -2260,7 +2255,7 @@
               "GITHUB_TOKEN"
             ],
             "inheritedSecrets": false,
-            "environment": null
+            "environment": "adr0049-production-publication"
           },
           "externalActions": ["actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093"],
           "steps": [
@@ -2268,19 +2263,19 @@
               "index": 1,
               "label": "uses:actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093",
               "authority": "product-publication",
-              "definitionDigest": "sha256:002dc164de7ce67b0f53de40e6d7c12abdbddfbeb352561f2e1b90be1ca7309e"
+              "definitionDigest": "sha256:99dbc72263e088984416f62b5688ba02da572d777d1953e195449252bcdc9b2f"
             },
             {
               "index": 2,
               "label": "name:Combined checksums",
               "authority": "product-publication",
-              "definitionDigest": "sha256:8af37947573149784267ecf3762511eb0bfd814047ef071eef3a8fae8f4c8bd6"
+              "definitionDigest": "sha256:a5c063dd62f479e30a6324dc71d8a7dc08c57e71611c49b931656335ac817578"
             },
             {
               "index": 3,
               "label": "name:Create release",
               "authority": "product-publication",
-              "definitionDigest": "sha256:c3f9e83f952bfac691870d95e82276664f39c42e2b42d9306317b7adf996fac5"
+              "definitionDigest": "sha256:a0fd6b9741bda25f076696be1429db7c7d4f6faf3cd537dd255af8c742bd9bc6"
             }
           ]
         }

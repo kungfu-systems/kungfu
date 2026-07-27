@@ -160,7 +160,133 @@ export function collectNpmRegistryIssues({
   return issues;
 }
 
+function readText(root, relative) {
+  return fs.readFileSync(path.join(root, relative), 'utf8');
+}
+
+function readJson(root, relative) {
+  return JSON.parse(readText(root, relative));
+}
+
+export function loadComponentDistributionInputs(root = ROOT) {
+  return {
+    contract: readJson(
+      root,
+      'framework/release/component-distribution.contract.json',
+    ),
+    npmRegistry: readJson(root, 'framework/release/npm-package-registry.json'),
+    corePackage: readJson(root, 'framework/core/package.json'),
+    shifuCargo: readText(root, 'crates/shifu/Cargo.toml'),
+    shifuSource: readText(root, 'crates/shifu/src/main.rs'),
+    xinfaCargo: readText(root, 'crates/xinfa/Cargo.toml'),
+    trunkCargo: readText(root, 'crates/trunk/Cargo.toml'),
+    trunkSource: readText(root, 'crates/trunk/src/main.rs'),
+    workflow: readText(root, '.github/workflows/release-shifu.yml'),
+  };
+}
+
+function cargoVersion(source) {
+  return source.match(/^version = "([^"]+)"$/mu)?.[1] || '';
+}
+
+export function validateComponentDistribution(inputs) {
+  const issues = [];
+  const { contract } = inputs;
+  if (contract.schema !== 'kungfu.component-distribution-contract/v1')
+    issues.push('unexpected component distribution schema');
+  if (contract.productBoundary?.npmExecutable !== 'kungfu')
+    issues.push('Kungfu must remain the only npm executable');
+  if (contract.productBoundary?.npmPackageInventory !== 28)
+    issues.push('component contract must retain the 28-package npm inventory');
+  if (contract.productBoundary?.coreCarriesStandalonePayloads !== false)
+    issues.push('Core must not carry standalone Shifu or Xinfa payloads');
+
+  const bins = Object.keys(inputs.corePackage.bin || {});
+  if (bins.length !== 1 || bins[0] !== 'kungfu')
+    issues.push('@kungfu-tech/core must expose exactly the kungfu bin');
+  const packages = inputs.npmRegistry.packages || [];
+  if (
+    inputs.npmRegistry.releaseInventory?.expectedPackageCount !== 28 ||
+    packages.length !== 28
+  )
+    issues.push('npm Release registry must contain exactly 28 packages');
+  if (packages.some((row) => /(?:shifu|xinfa)/iu.test(row.name || '')))
+    issues.push('Shifu and Xinfa must not enter the npm Release registry');
+
+  const components = new Map(
+    (contract.components || []).map((component) => [component.id, component]),
+  );
+  for (const [id, cargo] of [
+    ['shifu', inputs.shifuCargo],
+    ['xinfa', inputs.xinfaCargo],
+  ]) {
+    const component = components.get(id);
+    if (!component) {
+      issues.push(`missing ${id} component contract`);
+      continue;
+    }
+    if (!cargoVersion(cargo) || component.releaseTag !== `${id}-v{version}`)
+      issues.push(`${id} version or release-tag authority drifted`);
+    for (const asset of component.assets || [])
+      if (!inputs.workflow.includes(`asset: ${asset}`))
+        issues.push(`${id} release workflow lacks ${asset}`);
+  }
+
+  for (const dependency of ['shifu', 'xinfa'])
+    if (
+      !new RegExp(
+        `^${dependency} = \\{ path = "\\.\\./${dependency}" \\}$`,
+        'mu',
+      ).test(inputs.trunkCargo)
+    )
+      issues.push(`kungfu-trunk must link ${dependency} by workspace path`);
+  for (const command of ['Shifu', 'Xinfa'])
+    if (!inputs.trunkSource.includes(`NativeCommand::${command}`))
+      issues.push(`trunk native routing lacks ${command}`);
+  if (!inputs.shifuSource.includes('pub fn main_and_exit('))
+    issues.push('Shifu must expose one reusable library entrypoint');
+  if (!inputs.shifuSource.includes('InvocationMode::EmbeddedKungfu'))
+    issues.push('Shifu embedded invocation mode is not observable');
+  if (!inputs.shifuSource.includes('use `kungfu update`'))
+    issues.push('embedded Shifu self-update must fail toward Kungfu update');
+
+  for (const marker of [
+    '"shifu-v*"',
+    '"xinfa-v*"',
+    'cargo build --locked --release',
+    'actions/attest-build-provenance@0f67c3f4856b2e3261c31976d6725780e5e4c373',
+    'component-release-bom.json',
+    'SHA256SUMS',
+    'adr0049-production-publication',
+  ])
+    if (!inputs.workflow.includes(marker))
+      issues.push(`component release workflow lacks ${marker}`);
+
+  const size = contract.sizePolicyMiB || {};
+  if (
+    size.optimizationTarget !== 70 ||
+    size.normalCeiling !== 85 ||
+    size.hardCeiling !== 100
+  )
+    issues.push('Core size policy must retain the 70/85/100 MiB thresholds');
+  return issues;
+}
+
 function main() {
+  if (process.argv.includes('--component-distribution')) {
+    const componentIssues = validateComponentDistribution(
+      loadComponentDistributionInputs(),
+    );
+    if (componentIssues.length > 0) {
+      for (const message of componentIssues)
+        console.error(`[component-distribution] ${message}`);
+      process.exit(1);
+    }
+    console.log(
+      '[component-distribution] contract, embedded routes, npm boundary, and protected releases passed',
+    );
+    return;
+  }
   const issues = collectNpmRegistryIssues();
   if (issues.length > 0) {
     for (const entry of issues)

@@ -25,3 +25,11 @@ repository.workspace = true
 
 [dependencies]
 shifu-core = { path = "../shifu-core" }
+
+[lib]
+name = "shifu"
+path = "src/main.rs"
+
+[[bin]]
+name = "shifu"
+path = "src/bin/shifu.rs"

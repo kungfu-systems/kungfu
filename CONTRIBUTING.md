@@ -88,12 +88,22 @@ for how the layers fit together; the main areas:
   dependency on Kungfu or Shifu; the host-to-Xinfa dependency is one-way. Its
   source ownership map is [`crates/xinfa/ARCHITECTURE.md`](crates/xinfa/ARCHITECTURE.md).
 
-Two command-line entry points, kept forward-compatible:
+Three product entry points, with one npm/Core executable boundary:
 
-- `kungfu` — the end-user CLI command (`kungfu --version`, `query`, `storage`,
-  …). It fronts the `kungfu` runtime.
-- `./shifu` — the development/build orchestrator used while working on the
-  repo (see below).
+- `kungfu` — the only executable exposed by `@kungfu-tech/core`. It embeds the
+  authoritative Shifu and Xinfa Rust libraries as `kungfu shifu ...` and
+  `kungfu xinfa ...`; neither route searches `PATH` for another component.
+- `shifu` — the independently installable development/build orchestrator,
+  published only as signed-provenance GitHub Release assets. `./shifu` is the
+  checkout-pinned entrypoint.
+- `xinfa` — the independently installable verified context compiler, published
+  only as signed-provenance GitHub Release assets. It retains its own version,
+  schemas, state, and release identity.
+
+The standalone component executables are never npm packages and are not copied
+into Core platform payloads. Embedded Shifu self-update is intentionally
+disabled: use `kungfu update`; standalone `shifu self-update` remains owned by
+the standalone product.
 
 ## Toolchain & build
 

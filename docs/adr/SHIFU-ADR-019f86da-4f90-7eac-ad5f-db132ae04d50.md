@@ -4,9 +4,9 @@ doc_type: architecture-decision
 adr_id: SHIFU-ADR-019f86da-4f90-7eac-ad5f-db132ae04d50
 decision_status: accepted
 implementation_status: implemented
-implementation_prs: [https://github.com/kungfu-systems/kungfu/pull/965, https://github.com/kungfu-systems/kungfu/pull/984]
+implementation_prs: [https://github.com/kungfu-systems/kungfu/pull/965, https://github.com/kungfu-systems/kungfu/pull/984, https://github.com/kungfu-systems/kungfu/pull/1583]
 closure_pr: https://github.com/kungfu-systems/kungfu/pull/984
-qualification_refs: [scripts/check-kungfu-gate-catalog.test.mjs, scripts/verify-kungfu-release-admission.test.mjs, scripts/kungfu-release-qualification.mjs, docs/qualification/gates/workflow-authority.json, docs/qualification/gates/release-admission-policy.json]
+qualification_refs: [scripts/check-kungfu-gate-catalog.test.mjs, scripts/verify-kungfu-release-admission.test.mjs, scripts/kungfu-release-qualification.mjs, docs/qualification/gates/workflow-authority.json, docs/qualification/gates/release-admission-policy.json, framework/release/component-distribution.contract.json, .github/workflows/release-shifu.yml]
 review_state: self-reviewed
 sensitivity: public
 sources: [local-files, user-consensus]
@@ -14,12 +14,13 @@ period: ongoing
 theme: closed-world-release-admission
 confidence: high
 evidence_grade: B
-last_reviewed: 2026-07-16
+last_reviewed: 2026-07-27
 ---
 
 # SHIFU-ADR-019f86da-4f90-7eac-ad5f-db132ae04d50: Closed-world workflow and release admission
 
-- Status: accepted and implemented
+- Status: accepted and implemented; protected component-release extension is
+  stage-ready pending review, merge, and publication
 - Date: 2026-07-15
 - Scope: Kungfu workflow authority, qualifying evidence, product publication,
   and channel promotion

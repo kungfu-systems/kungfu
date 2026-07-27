@@ -38,6 +38,7 @@ mod artifact_catalog;
 mod dispatch;
 mod doctor;
 mod envfile;
+mod invocation;
 #[cfg(windows)]
 mod msvc;
 mod promote;
@@ -46,6 +47,7 @@ mod self_update;
 mod tools;
 mod util;
 
+pub use invocation::{InvocationContext, InvocationMode};
 use shifu_core::style;
 
 /// Rich subcommands handled by the L2 node implementation (shifu.mjs),
@@ -180,8 +182,7 @@ fn print_usage() {
     );
 }
 
-fn main() {
-    let args: Vec<String> = env::args().skip(1).collect();
+pub fn main_and_exit(args: &[String], invocation: InvocationContext) -> ! {
     let first = args.first().map(String::as_str);
 
     // Answers for this binary itself — never delegated (the shim reads it to
@@ -214,10 +215,17 @@ fn main() {
     let lenient =
         is_version || is_doctor || is_self_update || is_promote || is_builds || is_artifacts;
 
+    if is_self_update && invocation.mode == InvocationMode::EmbeddedKungfu {
+        util::die_code(
+            "embedded shifu is part of the kungfu executable and cannot replace itself; use `kungfu update` to update the product, or run a standalone `shifu self-update`",
+            2,
+        );
+    }
+
     let root = find_repo_root(lenient);
 
     if is_version {
-        println!("{}", version_line(root.as_deref()));
+        println!("{}", version_line(root.as_deref(), invocation));
     }
     // User-global config loads unconditionally (rootless verbs read it too);
     // the repo-root override only exists inside a checkout.
@@ -229,7 +237,7 @@ fn main() {
         if is_self_update {
             self_update::run(Some(root), &args[1..]);
         }
-        maybe_delegate_to_repo_entrypoint(root, &args);
+        maybe_delegate_to_repo_entrypoint(root, args);
     }
     if is_version {
         exit(0);
@@ -288,7 +296,7 @@ fn main() {
         if let Ok(current_exe) = env::current_exe() {
             env::set_var("SHIFU_BIN", current_exe);
         }
-        dispatch::delegate_l2(&root, &auto_apply_args(&args));
+        dispatch::delegate_l2(&root, &auto_apply_args(args));
     }
 
     // L2 build/rebuild dispatches inherit this process environment, so load
@@ -300,8 +308,8 @@ fn main() {
     }
 
     match first {
-        Some(cmd) if L2_SUBCOMMANDS.contains(&cmd) => dispatch::delegate_l2(&root, &args),
-        _ => dispatch::run_pnpm(&root, &args),
+        Some(cmd) if L2_SUBCOMMANDS.contains(&cmd) => dispatch::delegate_l2(&root, args),
+        _ => dispatch::run_pnpm(&root, args),
     }
 }
 
@@ -362,7 +370,7 @@ fn clone_repo(args: &[String]) -> ! {
 /// own launcher or an externally installed one. The repo role also reports the
 /// checkout's current branch — the binary identity is baked, but the branch is
 /// live repo state.
-fn version_line(root: Option<&Path>) -> String {
+fn version_line(root: Option<&Path>, invocation: InvocationContext) -> String {
     let mut is_repo = env::var("SHIFU_FROM_SHIM").ok().as_deref() == Some("1");
     if !is_repo {
         if let (Ok(exe), Some(root)) = (env::current_exe(), root) {
@@ -371,7 +379,9 @@ fn version_line(root: Option<&Path>) -> String {
             is_repo = exe.starts_with(root);
         }
     }
-    let role = if is_repo {
+    let role = if invocation.mode == InvocationMode::EmbeddedKungfu {
+        "embedded in kungfu".to_string()
+    } else if is_repo {
         match root.and_then(current_branch) {
             Some(branch) => format!("repo @ {branch}"),
             None => "repo".to_string(),

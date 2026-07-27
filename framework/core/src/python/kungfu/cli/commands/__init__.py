@@ -338,9 +338,8 @@ def kfc(
         click.echo(kfc.get_help(ctx))
         return
 
-    # Workspace discovery and selection are control-plane operations. They must
-    # be able to inspect an uninitialized candidate without the root callback
-    # creating directories or rewriting the caller's resolution evidence first.
+    # Workspace/control-plane commands must inspect uninitialized candidates
+    # without the root callback rewriting their resolution evidence first.
     if ctx.invoked_subcommand in {
         "workspace",
         "managed-run",
@@ -351,6 +350,7 @@ def kfc(
         "action",
         "dogfood",
         "agent",
+        "shifu",
         "xinfa",
         "pursuit",
         "warrant",
