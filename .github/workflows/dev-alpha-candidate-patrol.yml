@@ -3,9 +3,15 @@
 name: Dev to Alpha Candidate Patrol
 
 on:
+  workflow_run:
+    workflows:
+      - Dev Verify Patrol
+      - Alpha promotion preflight
+    types:
+      - completed
   schedule:
-    # Daily at 22:00 UTC (06:00 Asia/Shanghai), after the 04:00 Dev Patrol.
-    - cron: "0 22 * * *"
+    # Offset 30-minute recovery patrol; avoids GitHub's top-of-hour load peak.
+    - cron: "17,47 * * * *"
   workflow_dispatch:
     inputs:
       buildchain-ref:
@@ -25,22 +31,29 @@ on:
 
 permissions:
   actions: read
-  contents: write
-  pull-requests: write
+  contents: read
+  pull-requests: read
 
 jobs:
   candidate:
-    # This exact Buildchain source commit is replaced by the merged commit if
-    # review changes the reusable workflow before this PR is merged.
-    uses: kungfu-systems/buildchain/.github/workflows/dev-alpha-candidate-patrol.yml@e95c0251390f4948b7aa00de63c49f018ef1f6ff
+    if: >-
+      github.event_name != 'workflow_run' ||
+      github.event.workflow_run.head_branch == 'dev/v4/v4.0'
+    permissions:
+      actions: read
+      contents: write
+      pull-requests: write
+    # The reusable workflow is immutable; its streamed runtime is the reviewed
+    # v3 validation train so this consumer proves the train before stable refs move.
+    uses: kungfu-systems/buildchain/.github/workflows/dev-alpha-candidate-patrol.yml@9090ef05d9c83bc6466831210acf85eaf1e8b2b1
     with:
-      buildchain-ref: ${{ inputs.buildchain-ref || 'e95c0251390f4948b7aa00de63c49f018ef1f6ff' }}
+      buildchain-ref: ${{ inputs.buildchain-ref || 'train/v3/v3.0/dev-alpha-candidate-single-flight' }}
       source-branch: dev/v4/v4.0
       target-branch: alpha/v4/v4.0
       dev-workflow-path: .github/workflows/dev-verify-patrol.yml
       alpha-workflow-path: .github/workflows/alpha-promotion-preflight.yml
       max-age-seconds: 604800
-      create-pull-request: ${{ github.event_name == 'schedule' || inputs.create-pull-request }}
-      dry-run: ${{ github.event_name != 'schedule' && inputs.dry-run }}
+      settlement-authorized: ${{ github.event_name != 'workflow_dispatch' || inputs.create-pull-request }}
+      dry-run: ${{ github.event_name == 'workflow_dispatch' && inputs.dry-run }}
     secrets:
       promotion-token: ${{ secrets.KUNGFU_GITHUB_TOKEN }}
