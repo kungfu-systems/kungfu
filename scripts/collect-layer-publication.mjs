@@ -43,7 +43,7 @@ function expectedCounts(entries) {
       entries.filter((entry) => entry.kind === kind).length,
     ]),
   );
-  const expected = { npm: 28, pypi: 3, cargo: 1, github: 6 };
+  const expected = { npm: 29, pypi: 3, cargo: 1, github: 6 };
   for (const [kind, count] of Object.entries(expected)) {
     if (counts[kind] !== count)
       fail(`expected ${count} unique ${kind} artifacts, found ${counts[kind]}`);

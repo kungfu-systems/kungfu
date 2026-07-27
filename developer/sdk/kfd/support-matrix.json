@@ -247,7 +247,7 @@
         "evidenceRoots": [
           {
             "path": "framework/primitive/kungfu-primitive-catalog.contract.json",
-            "sha256": "sha256:39070c5380c7d0a30d98652d7e74f1860bca14252f9fbfe8c7ec879f9a197509"
+            "sha256": "sha256:fd37d81e23749dbc62f456b0197d6886eece2822f87bdc779a9cf8f2ba53d606"
           },
           {
             "path": "docs/architecture/primitive-management-plane.md",

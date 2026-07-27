@@ -5,7 +5,7 @@
   "manifestPath": "framework/maintainability/semantic-amplification.manifest.json",
   "manifestRoot": "sha256:efcfcb1e91cbc43306edb2aef93188e1dbaca6714b54144340618a28f7ff81a7",
   "baselineRef": "dbfed9ca1785d147b26f4f06e7e6895ac7368fee",
-  "sourceRoot": "sha256:7deba2385a15d5e36c6c267b8dd20c752055ef3bf21cc6ef098202aaec49d329",
+  "sourceRoot": "sha256:60bb5d082735340e21ea0f7ea6628c4c1d57438b36415466ad36007e8bf4d3a0",
   "roles": {
     "authority": "exactly one authority route per family; the route may name multiple co-owned source files",
     "allowedProjectionRoles": [
@@ -25,7 +25,7 @@
     "families": 6,
     "authorities": 6,
     "mappedSurfaces": 62,
-    "changedMappedSurfaces": 2,
+    "changedMappedSurfaces": 3,
     "blockingIssues": 0
   },
   "families": [
@@ -464,9 +464,9 @@
         },
         {
           "path": "product/scripts/dist.mjs",
-          "currentLines": 2528,
+          "currentLines": 2530,
           "baselineLines": 2514,
-          "currentRoot": "sha256:939c5fccd5be8c0a1f3eedcb240f7aae00f96d6c6dba42af9654e4acd310f8d4",
+          "currentRoot": "sha256:06651c521eef117a46fd2c3016921705a3facb86920158b87dbc03a2e3239a05",
           "baselineRoot": "sha256:6cfd6c55e296163ab863fb1d79a4a51198ad12943274fc0858338bb651a108da",
           "changedSinceBaseline": true
         }
@@ -798,9 +798,10 @@
       "amplification": {
         "mappedSurfaces": 10,
         "nonAuthoritySurfaces": 7,
-        "changedSurfaces": 1,
+        "changedSurfaces": 2,
         "changedPaths": [
-          "docs/qualification/gates/workflow-bindings.json"
+          "docs/qualification/gates/workflow-bindings.json",
+          ".github/workflows/release-new-version.yml"
         ]
       },
       "surfaces": [
@@ -884,9 +885,9 @@
         },
         {
           "path": "docs/qualification/gates/workflow-bindings.json",
-          "currentLines": 580,
+          "currentLines": 625,
           "baselineLines": 580,
-          "currentRoot": "sha256:03acc515ad4de4f331e21a873412685333cdb1cd8dff1c8dacc4080aedadeafb",
+          "currentRoot": "sha256:e60f41268527f145c7d19d57aa595c513ede49ad9ab57455391b5f28fffc9e63",
           "baselineRoot": "sha256:233cd22ebce4c9930e0e4889808b88661d77c202d5e5f73121823dcdc461576d",
           "changedSinceBaseline": true
         },
@@ -894,9 +895,9 @@
           "path": ".github/workflows/release-new-version.yml",
           "currentLines": 362,
           "baselineLines": 362,
-          "currentRoot": "sha256:3bdd847c80a05030de1d826282cef2e76a85e31dc0904df02c7f0cdda7a5eb74",
+          "currentRoot": "sha256:a2cd1e4907d8a8721d499977ee01f5c23647b4b3ea68949898df7ea75407605f",
           "baselineRoot": "sha256:3bdd847c80a05030de1d826282cef2e76a85e31dc0904df02c7f0cdda7a5eb74",
-          "changedSinceBaseline": false
+          "changedSinceBaseline": true
         },
         {
           "path": "docs/qualification/gates/release-and-promotion.md",

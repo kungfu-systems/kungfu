@@ -45,11 +45,11 @@ export function collectNpmRegistryIssues({
   const generatedEntries = packages.filter(
     (entry) => entry.kind === 'generated-platform',
   );
-  if (workspaceEntries.length !== 22 || generatedEntries.length !== 6)
+  if (workspaceEntries.length !== 22 || generatedEntries.length !== 7)
     issues.push(
       issue(
         'composition',
-        `expected 22 workspace and 6 generated packages, found ${workspaceEntries.length} and ${generatedEntries.length}`,
+        `expected 22 workspace and 7 generated packages, found ${workspaceEntries.length} and ${generatedEntries.length}`,
       ),
     );
   for (const entry of workspaceEntries) {
@@ -100,14 +100,14 @@ export function collectNpmRegistryIssues({
   const exactArtifacts =
     registry.trustedPublishing?.exactArtifactPackages || [];
   if (
-    exactArtifacts.length !== 28 ||
+    exactArtifacts.length !== 29 ||
     JSON.stringify([...exactArtifacts].sort()) !==
       JSON.stringify([...names].sort())
   )
     issues.push(
       issue(
         'exact-artifacts',
-        'trusted exact-artifact set must contain all 28 registered packages',
+        'trusted exact-artifact set must contain all 29 registered packages',
       ),
     );
   const dedicatedPackages = registry.workspacePacking?.dedicatedPackages || [];
@@ -167,7 +167,7 @@ function main() {
       console.error(`[npm-registry] ${entry.code}: ${entry.message}`);
     process.exit(1);
   }
-  console.log('[npm-registry] 28-package Release inventory is coherent');
+  console.log('[npm-registry] 29-package Release inventory is coherent');
 }
 
 if (

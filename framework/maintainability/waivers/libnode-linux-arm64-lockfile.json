@@ -1,0 +1,18 @@
+{
+  "schema": "kungfu.code-complexity-budget-waiver/v1",
+  "paths_or_scope": ["pnpm-lock.yaml"],
+  "file_class": "declarative-schema-or-table",
+  "baseline_measurement": 10134,
+  "requested_measurement": 10143,
+  "allowed_delta": 9,
+  "owner": "kungfu/repository-contract",
+  "responsibility_boundary": "Frozen workspace dependency resolution for the exact libnode multi-platform package set including linux-arm64.",
+  "cohesion_rationale": "pnpm owns one canonical lockfile; the additional platform package and optional dependency edges cannot be represented in a separate authoritative file.",
+  "rejected_split_alternatives": ["Hand-editing generated lock entries would violate pnpm resolution authority.", "A second lockfile would break frozen-install parity across platforms."],
+  "affected_tests_and_qualification": ["pnpm install --frozen-lockfile", "node scripts/check-npm-package-registry.mjs", "./shifu check:source"],
+  "requested_by": "dongkeren",
+  "approved_by": "kungfu-origin",
+  "approved_at": "2026-07-27T07:06:00+08:00",
+  "expires_at_or_review_by": "2026-10-31T23:59:59+08:00",
+  "retirement_or_decomposition_ref": "KF-ADR-019f9388-a139-7355-b9f2-f6dd9aa91042"
+}
