@@ -101,6 +101,18 @@ test('Linux artifact attestation subject and provider permissions fail closed on
   );
 });
 
+test('promotion caller grants the write permissions required by Buildchain', () => {
+  const workflow = fs.readFileSync(
+    path.join(ROOT, CONTRACT.workflows.promotion),
+    'utf8',
+  );
+  const promote = extractWorkflowJob(workflow, 'promote');
+  assert.ok(promote);
+  for (const permission of ['actions', 'checks', 'pull-requests']) {
+    assert.match(promote, new RegExp(`^      ${permission}: write$`, 'mu'));
+  }
+});
+
 test('promotion rejects an event-scoped Buildchain runtime override', () => {
   const promotionPath = CONTRACT.workflows.promotion;
   const original = fs.readFileSync(path.join(ROOT, promotionPath), 'utf8');

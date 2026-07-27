@@ -2178,7 +2178,7 @@
           "authority": "release-control",
           "publication": "channel",
           "receipt": "qualifying",
-          "definitionDigest": "sha256:3ed3d37fb3b7518c0d6345809deff70bf7b4fdf5102f99597559918e705e86dd",
+          "definitionDigest": "sha256:54f82c0f9d9821a54a059d599c6ab2271d1616bd453e8491a5219d258c292fe4",
           "credentials": {
             "githubToken": "write",
             "oidc": true,

@@ -123,12 +123,14 @@ jobs:
     needs: promotion-contract
     if: ${{ github.event_name == 'workflow_dispatch' || github.event.pull_request.merged == true }}
     permissions:
-      actions: read
+      actions: write
       artifact-metadata: write
       attestations: write
+      checks: write
       contents: write
       issues: write
       id-token: write
+      pull-requests: write
     uses: kungfu-systems/buildchain/.github/workflows/release-candidate-promote.yml@c83cb444d79c2e647de6e12a0bfde68dfaf57701 # v3.0.2-alpha.7 auditable demo + Linux attestation + safe notarization diagnostics
     with:
       channel: ${{ startsWith(inputs.target-ref || github.event.pull_request.base.ref, 'alpha/') && 'alpha' || 'release' }}
