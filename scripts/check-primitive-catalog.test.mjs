@@ -15,6 +15,8 @@ import {
   expectedOutputs,
   findGhostArtifacts,
   primitiveArtifactClosureIssues,
+  renderHeader,
+  splitUtf8ForCppLiterals,
   verifyPrimitiveDefinition,
   verifyPrimitivePromotion,
 } from './generate-primitive-catalog.mjs';
@@ -134,6 +136,31 @@ test('catalog is a deterministic projection with nine required primitives', () =
     expectedOutputs(ROOT).get(CATALOG_SOURCE),
     expectedOutputs(ROOT).get(CATALOG_ARTIFACT),
   );
+});
+
+test('generated C++ catalog uses bounded UTF-8 literals without changing JSON', () => {
+  const catalog = buildPrimitiveCatalog(ROOT);
+  const payload = JSON.stringify(catalog);
+  const chunks = splitUtf8ForCppLiterals(payload);
+  assert.ok(chunks.length > 1);
+  assert.equal(chunks.join(''), payload);
+  assert.ok(chunks.every((chunk) => Buffer.byteLength(chunk) <= 8 * 1024));
+
+  const unicode = `${'a'.repeat(8)}\u529f\u592b`;
+  assert.equal(splitUtf8ForCppLiterals(unicode, 9).join(''), unicode);
+  assert.ok(
+    splitUtf8ForCppLiterals(unicode, 9).every(
+      (chunk) => Buffer.byteLength(chunk) <= 9,
+    ),
+  );
+
+  const header = renderHeader(catalog);
+  assert.match(header, /CATALOG_JSON_CHUNKS/u);
+  assert.match(
+    header,
+    new RegExp(`CATALOG_JSON_SIZE = ${Buffer.byteLength(payload)}`),
+  );
+  assert.doesNotMatch(header, /CATALOG_JSON =\s*R"KUNGFU_PRIMITIVE/u);
 });
 
 test('ghost fixture is rejected by the declaration join', () => {
