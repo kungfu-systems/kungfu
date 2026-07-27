@@ -10,11 +10,14 @@ const {
   authorityArtifact,
   authorityManifest,
   conformanceBundlePath,
+  conformanceVector,
   inspectAuthority,
   inspectBundle,
+  inspectConformance,
   preserveBundle,
   verifyAuthorityBundle,
   verifyBundle,
+  verifyConformanceCorpus,
 } = require('./index.js');
 const {
   buildArtifacts,
@@ -133,6 +136,130 @@ test('qualifies every retained vector through the packaged Python reader', () =>
     'read-degraded',
     'reject',
   ]);
+});
+
+test('exposes and verifies the complete retained conformance corpus', () => {
+  const corpus = inspectConformance();
+  const proof = verifyConformanceCorpus();
+  assert.equal(corpus.status, 'qualified-retained-corpus');
+  assert.equal(corpus.release, 'v2');
+  assert.equal(corpus.vector_count, 16);
+  assert.deepEqual(Object.keys(corpus.outcomes).sort(), [
+    'migration-required',
+    'preserve-only',
+    'read',
+    'read-degraded',
+    'reject',
+  ]);
+  assert.deepEqual(corpus.axes, [
+    'bundleManifest',
+    'capabilities',
+    'journalEpoch',
+    'payloadSchemas',
+    'recordSchemas',
+    'rootProtocols',
+    'unknownAxis',
+    'workspaceLayout',
+  ]);
+  assert.equal(proof.status, 'read');
+  assert.equal(proof.verification_scope, 'retained-byte-roots');
+  assert.equal(proof.release_root, corpus.release_root);
+  const vector = conformanceVector(corpus.vectors[0].id);
+  assert.equal(vector.status, 'read');
+  assert.match(vector.package_path, /^vectors\/v[0-9]+\//u);
+  assert.equal(vector.descriptor.byteRoot, corpus.vectors[0].byte_root);
+  assert.throws(
+    () => conformanceVector('../missing'),
+    /unknown conformance vector/,
+  );
+});
+
+test('provides JSON CLI routes for the corpus and individual vectors', () => {
+  const cli = path.join(__dirname, 'bin', 'kungfu-spec.js');
+  const corpus = JSON.parse(
+    execFileSync(process.execPath, [cli, 'corpus'], { encoding: 'utf8' }),
+  );
+  const proof = JSON.parse(
+    execFileSync(process.execPath, [cli, 'corpus-verify'], {
+      encoding: 'utf8',
+    }),
+  );
+  const vector = JSON.parse(
+    execFileSync(process.execPath, [
+      cli,
+      'corpus-vector',
+      corpus.vectors[0].id,
+    ]),
+  );
+  assert.equal(corpus.vector_count, 16);
+  assert.equal(proof.vector_count, 16);
+  assert.equal(vector.id, corpus.vectors[0].id);
+});
+
+test('publishes a rooted progressive reader journey', () => {
+  const manifest = authorityManifest();
+  const journeyPath = path.join(
+    __dirname,
+    'dist',
+    manifest.reader_journey.path,
+  );
+  const bytes = fs.readFileSync(journeyPath);
+  const journey = JSON.parse(bytes);
+  assert.equal(journey.schema, 'kungfu.spec.reader-journey/v1');
+  assert.deepEqual(
+    journey.levels.map(({ id }) => id),
+    ['orientation', 'quickstart', 'task-guides', 'evidence', 'reference'],
+  );
+  assert.deepEqual(
+    journey.guides.map(({ id }) => id),
+    [
+      'start',
+      'quickstart',
+      'api',
+      'cli',
+      'python-reader',
+      'conformance',
+      'reference',
+    ],
+  );
+  assert.equal(
+    `sha256:${require('node:crypto').createHash('sha256').update(bytes).digest('hex')}`,
+    manifest.reader_journey.content_root,
+  );
+});
+
+test('keeps every public API and CLI route discoverable from the guides', () => {
+  const apiGuide = fs.readFileSync(
+    path.join(__dirname, 'dist', 'guides', 'api.md'),
+    'utf8',
+  );
+  for (const exported of Object.keys(require('./index.js'))) {
+    assert.match(
+      apiGuide,
+      new RegExp(`\\b${exported}\\b`, 'u'),
+      `API guide does not mention ${exported}`,
+    );
+  }
+  const cliGuide = fs.readFileSync(
+    path.join(__dirname, 'dist', 'guides', 'cli.md'),
+    'utf8',
+  );
+  for (const command of [
+    'authority',
+    'authority-verify',
+    'corpus',
+    'corpus-verify',
+    'corpus-vector',
+    'inspect',
+    'verify',
+    'preserve',
+  ]) {
+    assert.match(
+      cliGuide,
+      new RegExp(`\\b${command}\\b`, 'u'),
+      `CLI guide does not mention ${command}`,
+    );
+  }
 });
 
 test('generates byte-identical authority artifacts and detects hand edits', () => {

@@ -330,7 +330,8 @@
         "sources": [
           "shifu.gates.json",
           "framework/release/kungfu-trademark-public-use.contract.json",
-          "product/release-channel-trust.json"
+          "product/release-channel-trust.json",
+          "docs/qualification/gates/release-admission-policy.json"
         ]
       },
       "surfaces": [
@@ -356,6 +357,10 @@
         },
         {
           "path": "docs/qualification/gates/release-and-promotion.md",
+          "role": "documentation"
+        },
+        {
+          "path": "docs/qualification/gates/release-admission.md",
           "role": "documentation"
         },
         {

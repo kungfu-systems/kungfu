@@ -87,7 +87,7 @@
       "protocol_id": "libkungfu:spec:manifest:1",
       "source": "framework/spec/schema/manifest.schema.json",
       "source_role": "generated-Spec-Bundle-pickup-and-routing-envelope",
-      "source_root": "sha256:272b75700c2d467bc78ac3d19c1d3d1cfd8d09ec0e1835d1487ab307bfda3391",
+      "source_root": "sha256:e545cd71ccd61b622ff5500f4cffee0143950f2c5223f7b2efafa8b685e1d292",
       "version_axis": "manifest_version, spec_version, and package.version remain independent"
     },
     {
@@ -153,7 +153,7 @@
       },
       {
         "path": "framework/spec/schema/manifest.schema.json",
-        "root": "sha256:272b75700c2d467bc78ac3d19c1d3d1cfd8d09ec0e1835d1487ab307bfda3391"
+        "root": "sha256:e545cd71ccd61b622ff5500f4cffee0143950f2c5223f7b2efafa8b685e1d292"
       },
       {
         "path": "framework/kfx/schema/first-party-manifest.schema.json",

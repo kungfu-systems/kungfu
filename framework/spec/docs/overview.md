@@ -31,12 +31,15 @@ package, or website.
 - `vectors/index.json` — qualified retained evidence across every compatibility
   axis and all required-reader outcomes.
 
-The installed package also includes a stdlib-only Python reader under
-`reference-readers/python/`. It verifies every rooted artifact and retained
-vector without importing Kungfu runtime or monorepo code.
+The direct `@kungfu-tech/spec` package also includes a stdlib-only Python
+reader under `reference-readers/python/`. It verifies every rooted artifact
+and retained vector without importing Kungfu runtime or monorepo code. A Site
+Bundle projection carries the guide and evidence, but does not claim to export
+that executable reader.
 
 ## Human context
 
+- [Progressive reader journey](guides/index.md)
 - [Kungfu CLI handbook](handbooks/cli.md)
 - [Node binding handbook](handbooks/node.md)
 - [Python binding handbook](handbooks/python.md)

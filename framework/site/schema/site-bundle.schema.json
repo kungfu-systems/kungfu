@@ -159,7 +159,14 @@
     "machineEntries": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["bundle", "agentIndex", "adrMap", "formatAuthority", "schema"],
+      "required": [
+        "bundle",
+        "agentIndex",
+        "adrMap",
+        "formatAuthority",
+        "formatReaderJourney",
+        "schema"
+      ],
       "properties": {
         "bundle": {
           "const": "site-bundle.json"
@@ -172,6 +179,9 @@
         },
         "formatAuthority": {
           "const": "format/manifest.json"
+        },
+        "formatReaderJourney": {
+          "const": "format/guides/index.json"
         },
         "schema": {
           "const": "schema/site-bundle.schema.json"
@@ -363,6 +373,154 @@
         }
       }
     },
+    "formatReaderLevel": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "label", "purpose", "guideIds"],
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "label": {
+          "type": "string",
+          "minLength": 1
+        },
+        "purpose": {
+          "type": "string",
+          "minLength": 1
+        },
+        "guideIds": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      }
+    },
+    "formatReaderGuide": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "level",
+        "order",
+        "title",
+        "summary",
+        "path",
+        "contentRoot",
+        "byteLength",
+        "previous",
+        "next",
+        "related"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "level": {
+          "type": "string",
+          "minLength": 1
+        },
+        "order": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "title": {
+          "type": "string",
+          "minLength": 1
+        },
+        "summary": {
+          "type": "string",
+          "minLength": 1
+        },
+        "path": {
+          "type": "string",
+          "pattern": "^format/guides/[a-z0-9-]+\\.md$"
+        },
+        "contentRoot": {
+          "$ref": "#/$defs/sha256"
+        },
+        "byteLength": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "previous": {
+          "type": ["string", "null"]
+        },
+        "next": {
+          "type": ["string", "null"]
+        },
+        "related": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      }
+    },
+    "formatReaderJourney": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "path",
+        "contentRoot",
+        "byteLength",
+        "schema",
+        "title",
+        "summary",
+        "entryGuideId",
+        "levels",
+        "guides"
+      ],
+      "properties": {
+        "path": {
+          "const": "format/guides/index.json"
+        },
+        "contentRoot": {
+          "$ref": "#/$defs/sha256"
+        },
+        "byteLength": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "schema": {
+          "const": "kungfu.spec.reader-journey/v1"
+        },
+        "title": {
+          "type": "string",
+          "minLength": 1
+        },
+        "summary": {
+          "type": "string",
+          "minLength": 1
+        },
+        "entryGuideId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "levels": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/formatReaderLevel"
+          }
+        },
+        "guides": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/formatReaderGuide"
+          }
+        }
+      }
+    },
     "formatAuthority": {
       "type": "object",
       "additionalProperties": false,
@@ -378,6 +536,7 @@
         "rootProtocol",
         "reproducibility",
         "conformance",
+        "readerJourney",
         "docsUrl",
         "routes",
         "nonClaims"
@@ -476,6 +635,9 @@
               "minimum": 1
             }
           }
+        },
+        "readerJourney": {
+          "$ref": "#/$defs/formatReaderJourney"
         },
         "docsUrl": {
           "type": "string",

@@ -205,6 +205,63 @@ test('rejects a Buildchain source SHA that differs from the qualified revision',
   );
 });
 
+test('accepts a regenerated pull merge when the Buildchain source tree is unchanged', () => {
+  const buildContext = context();
+  buildContext.ci = {
+    provider: 'github-actions',
+    ref: 'refs/pull/1448/merge',
+    source_sha: '9'.repeat(40),
+    source_tree_sha: buildContext.sourceTree,
+  };
+  const evidence = buildReleaseEvidence(report(), buildContext);
+  const validation = validateReleaseEvidence(evidence, { profilePath });
+  const sourceGate = evidence.qualification.hard_gates.find(
+    (row) => row.id === 'ci_source_revision',
+  );
+  assert.equal(evidence.verdict, 'qualified');
+  assert.equal(sourceGate?.passed, true);
+  assert.match(sourceGate?.evidence || '', /mode=tree-equivalent-pull-merge/);
+  assert.equal(validation.ok, true, validation.errors.join('; '));
+});
+
+test('rejects tree equivalence outside a pull merge ref', () => {
+  const buildContext = context();
+  buildContext.ci = {
+    provider: 'github-actions',
+    ref: 'refs/heads/dev/v4/v4.0',
+    source_sha: '9'.repeat(40),
+    source_tree_sha: buildContext.sourceTree,
+  };
+  const evidence = buildReleaseEvidence(report(), buildContext);
+  const validation = validateReleaseEvidence(evidence, { profilePath });
+  const sourceGate = evidence.qualification.hard_gates.find(
+    (row) => row.id === 'ci_source_revision',
+  );
+  assert.equal(evidence.verdict, 'failed');
+  assert.equal(sourceGate?.passed, false);
+  assert.match(sourceGate?.evidence || '', /mode=mismatch/);
+  assert.equal(validation.ok, false);
+});
+
+test('rejects a regenerated pull merge whose Buildchain source tree differs', () => {
+  const buildContext = context();
+  buildContext.ci = {
+    provider: 'github-actions',
+    ref: 'refs/pull/1448/merge',
+    source_sha: '9'.repeat(40),
+    source_tree_sha: '8'.repeat(40),
+  };
+  const evidence = buildReleaseEvidence(report(), buildContext);
+  const validation = validateReleaseEvidence(evidence, { profilePath });
+  const sourceGate = evidence.qualification.hard_gates.find(
+    (row) => row.id === 'ci_source_revision',
+  );
+  assert.equal(evidence.verdict, 'failed');
+  assert.equal(sourceGate?.passed, false);
+  assert.match(sourceGate?.evidence || '', /mode=mismatch/);
+  assert.equal(validation.ok, false);
+});
+
 test('rejects a Windows absolute profile path in a resealed envelope', () => {
   const evidence = buildReleaseEvidence(report(), context());
   evidence.profile.path = 'C:\\outside\\mvp-baseline-v1.json';

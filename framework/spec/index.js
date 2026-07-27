@@ -14,6 +14,33 @@ const conformanceBundlePath = path.join(
   'conformance',
   'unknown-record',
 );
+
+/**
+ * @typedef {{
+ *   id: string,
+ *   axes: string[],
+ *   layer: string,
+ *   protocol: string,
+ *   readerProfile: string,
+ *   expected: Record<string, unknown>,
+ *   oracles: string[],
+ *   byteLength: number,
+ *   byteRoot: string,
+ *   path: string
+ * }} ConformanceVectorDescriptor
+ */
+
+/**
+ * @typedef {{
+ *   status: string,
+ *   latest_release: string,
+ *   latest_release_root: string,
+ *   release?: {previous_release_root?: string},
+ *   append_policy: string,
+ *   vectors: ConformanceVectorDescriptor[]
+ * }} ConformanceIndex
+ */
+
 function readerProfiles() {
   const generated = JSON.parse(
     fs.readFileSync(path.join(bundleRoot, 'reader-matrix.json'), 'utf8'),
@@ -54,7 +81,7 @@ function rootedJson(value) {
   return `sha256:${sha256(`${JSON.stringify(canonical(value), null, 2)}\n`)}`;
 }
 
-/** @param {string} message */
+/** @param {string} message @returns {never} */
 function fail(message) {
   throw new Error(message);
 }
@@ -163,6 +190,90 @@ function verifyAuthorityBundle() {
       (total, artifact) => total + artifact.source_roots.length,
       0,
     ),
+  };
+}
+
+/** @returns {ConformanceIndex} */
+function conformanceIndex() {
+  return authorityArtifact('conformance_vectors').value;
+}
+
+/** @param {string} vectorId */
+function resolveConformanceVector(vectorId) {
+  const vectors = conformanceIndex();
+  const descriptor = vectors.vectors.find((vector) => vector.id === vectorId);
+  if (!descriptor) fail(`unknown conformance vector: ${vectorId}`);
+  const absolute = path.resolve(
+    bundleRoot,
+    'vectors',
+    vectors.latest_release,
+    descriptor.path,
+  );
+  if (!absolute.startsWith(`${bundleRoot}${path.sep}`))
+    fail(`retained vector escapes the installed bundle: ${vectorId}`);
+  return { vectors, descriptor, absolute };
+}
+
+function inspectConformance() {
+  const vectors = conformanceIndex();
+  const capabilities = authorityArtifact('capabilities').value;
+  return {
+    status: vectors.status,
+    release: vectors.latest_release,
+    release_root: vectors.latest_release_root,
+    previous_release_root: vectors.release?.previous_release_root || null,
+    append_policy: vectors.append_policy,
+    vector_count: vectors.vectors.length,
+    axes: [
+      ...new Set(vectors.vectors.flatMap((vector) => vector.axes || [])),
+    ].sort(),
+    outcomes: Object.fromEntries(
+      Object.entries(capabilities.outcomes).map(([id, outcome]) => [
+        id,
+        { meaning: outcome.meaning, terminal: outcome.terminal },
+      ]),
+    ),
+    vectors: vectors.vectors.map((vector) => ({
+      id: vector.id,
+      axes: vector.axes,
+      layer: vector.layer,
+      protocol: vector.protocol,
+      reader_profile: vector.readerProfile,
+      expected: vector.expected,
+      oracles: vector.oracles,
+      byte_length: vector.byteLength,
+      byte_root: vector.byteRoot,
+    })),
+  };
+}
+
+/** @param {string} vectorId */
+function conformanceVector(vectorId) {
+  const { vectors, descriptor, absolute } = resolveConformanceVector(vectorId);
+  const bytes = fs.readFileSync(absolute);
+  if (bytes.length !== descriptor.byteLength)
+    fail(`retained vector length mismatch: ${vectorId}`);
+  if (`sha256:${sha256(bytes)}` !== descriptor.byteRoot)
+    fail(`retained vector root mismatch: ${vectorId}`);
+  return {
+    status: 'read',
+    release: vectors.latest_release,
+    release_root: vectors.latest_release_root,
+    id: descriptor.id,
+    package_path: path.relative(bundleRoot, absolute).split(path.sep).join('/'),
+    descriptor: structuredClone(descriptor),
+  };
+}
+
+function verifyConformanceCorpus() {
+  const vectors = conformanceIndex();
+  for (const vector of vectors.vectors) conformanceVector(vector.id);
+  return {
+    status: 'read',
+    verification_scope: 'retained-byte-roots',
+    release: vectors.latest_release,
+    release_root: vectors.latest_release_root,
+    vector_count: vectors.vectors.length,
   };
 }
 
@@ -295,11 +406,14 @@ module.exports = {
   authorityManifest,
   bundleRoot,
   conformanceBundlePath,
+  conformanceVector,
   inspectAuthority,
   inspectBundle,
+  inspectConformance,
   manifestPath,
   manifestSchemaPath,
   preserveBundle,
   verifyAuthorityBundle,
   verifyBundle,
+  verifyConformanceCorpus,
 };
