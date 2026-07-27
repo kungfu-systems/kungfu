@@ -234,6 +234,44 @@ def test_catalog_damage_degrades_discovery_without_changing_workspace_authority(
     assert verify_workspace_catalog(str(config_home), env={"HOME": str(tmp_path)})["ok"]
 
 
+def test_catalog_verify_isolates_unreadable_workspace_identity(tmp_path):
+    config_home = tmp_path / "config"
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    env = {"HOME": str(tmp_path)}
+    candidate = inspect_workspace(str(repo), env=env)
+    assert candidate is not None
+    ensure_workspace_data_home(candidate, "catalog-verify-fixture")
+    qualified = inspect_workspace(str(repo), env=env)
+    assert qualified is not None
+    select_workspace(qualified, config_home=str(config_home), env=env)
+
+    identity_path = repo / ".kungfu" / "workspace-identity.json"
+    identity_path.write_text(
+        json.dumps({"identityRoot": "sha256:" + "8" * 64}),
+        encoding="utf-8",
+    )
+
+    report = verify_workspace_catalog(str(config_home), env=env)
+
+    assert report["ok"] is False
+    assert report["authority"] is False
+    assert report["writes"] == []
+    assert report["entries"] == [
+        {
+            "identity_root": qualified.identity_root,
+            "workspace_id": qualified.workspace_id,
+            "available": False,
+            "identity_matches": False,
+            "actual_identity_root": "",
+            "problem": {
+                "code": "workspace-identity-unreadable",
+                "message": f"workspace identity material field mismatch: {identity_path}",
+            },
+        }
+    ]
+
+
 def test_catalog_lifecycle_is_dry_run_reversible_and_retains_authority(tmp_path):
     config_home = tmp_path / "config"
     identity = inspect_workspace(str(tmp_path / "repo"), env={"HOME": str(tmp_path)})

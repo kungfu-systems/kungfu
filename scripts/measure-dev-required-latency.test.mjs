@@ -17,6 +17,7 @@ import {
   nearestRank,
   report,
   requiredContextsFromEffectiveRules,
+  requiredMergeQueueWindow,
   selectMergeQueueCandidatePulls,
   selectedContext,
   summarize,
@@ -224,6 +225,162 @@ test('merge queue evidence preserves failed dequeue and wasted runner time', () 
   assert.equal(value.wastedRunnerMs, 20 * 60 * 1000);
   assert.equal(value.postDequeueRunnerMs, 7 * 60 * 1000);
   assert.equal(value.rounds[0].mergeGroupRuns[0].jobs.length, 2);
+});
+
+test('required latency starts at first enqueue and ends at the merged round required set', () => {
+  const value = requiredMergeQueueWindow(
+    ['Candidate source acceptance / check', 'affected-native / linux'],
+    {
+      queueStatus: 'observed',
+      status: 'observed',
+      firstEnqueuedAt: '2026-07-22T13:00:00Z',
+      mergedAt: '2026-07-22T13:30:02Z',
+      rounds: [
+        {
+          index: 0,
+          enqueuedAt: '2026-07-22T13:00:00Z',
+          removedAt: '2026-07-22T13:05:00Z',
+          reason: 'failed_checks',
+          mergeGroupRuns: [],
+        },
+        {
+          index: 1,
+          enqueuedAt: '2026-07-22T13:10:00Z',
+          removedAt: '2026-07-22T13:30:00Z',
+          reason: 'merged',
+          mergeGroupRuns: [
+            {
+              id: 102,
+              headSha: 'b'.repeat(40),
+              jobs: [
+                {
+                  id: 1,
+                  name: 'Candidate source acceptance / check',
+                  status: 'completed',
+                  conclusion: 'success',
+                  startedAt: '2026-07-22T13:11:00Z',
+                  completedAt: '2026-07-22T13:12:00Z',
+                },
+                {
+                  id: 2,
+                  name: 'affected-native / linux',
+                  status: 'completed',
+                  conclusion: 'success',
+                  startedAt: '2026-07-22T13:27:00Z',
+                  completedAt: '2026-07-22T13:29:00Z',
+                },
+              ],
+            },
+          ],
+        },
+      ],
+    },
+  );
+
+  assert.equal(value.status, 'observed');
+  assert.equal(value.durationMs, 29 * 60 * 1000);
+  assert.equal(value.workflowRunId, 102);
+  assert.equal(value.priorQueueRoundCount, 1);
+  assert.deepEqual(
+    value.contexts.map(({ context }) => context),
+    ['Candidate source acceptance / check', 'affected-native / linux'],
+  );
+});
+
+test('required contexts may complete in separate exact-source workflows', () => {
+  const headSha = 'b'.repeat(40);
+  const value = requiredMergeQueueWindow(['source', 'native'], {
+    queueStatus: 'observed',
+    status: 'observed',
+    firstEnqueuedAt: '2026-07-22T13:00:00Z',
+    mergedAt: '2026-07-22T13:10:00Z',
+    rounds: [
+      {
+        index: 0,
+        removedAt: '2026-07-22T13:10:00Z',
+        reason: 'merged',
+        mergeGroupRuns: [
+          {
+            id: 101,
+            headSha,
+            jobs: [
+              {
+                id: 1,
+                name: 'source',
+                status: 'completed',
+                conclusion: 'success',
+                completedAt: '2026-07-22T13:02:00Z',
+              },
+            ],
+          },
+          {
+            id: 102,
+            headSha,
+            jobs: [
+              {
+                id: 2,
+                name: 'native',
+                status: 'completed',
+                conclusion: 'success',
+                completedAt: '2026-07-22T13:09:00Z',
+              },
+            ],
+          },
+        ],
+      },
+    ],
+  });
+  assert.equal(value.status, 'observed');
+  assert.equal(value.durationMs, 9 * 60 * 1000);
+  assert.deepEqual(value.workflowRunIds, [101, 102]);
+});
+
+test('required latency fails closed on missing or ambiguous merged-round jobs', () => {
+  const mergeQueue = {
+    queueStatus: 'observed',
+    status: 'observed',
+    firstEnqueuedAt: '2026-07-22T13:00:00Z',
+    mergedAt: '2026-07-22T13:30:00Z',
+    rounds: [
+      {
+        index: 0,
+        enqueuedAt: '2026-07-22T13:00:00Z',
+        removedAt: '2026-07-22T13:30:00Z',
+        reason: 'merged',
+        mergeGroupRuns: [
+          {
+            id: 102,
+            headSha: 'b'.repeat(40),
+            jobs: [
+              {
+                id: 1,
+                name: 'required',
+                status: 'completed',
+                conclusion: 'success',
+                completedAt: '2026-07-22T13:10:00Z',
+              },
+            ],
+          },
+        ],
+      },
+    ],
+  };
+
+  assert.match(
+    requiredMergeQueueWindow(['required', 'missing'], mergeQueue).reason,
+    /no complete successful required-context set/,
+  );
+  mergeQueue.rounds[0].mergeGroupRuns[0].jobs.push({
+    id: 2,
+    name: 'required',
+    status: 'completed',
+    conclusion: 'success',
+    completedAt: '2026-07-22T13:11:00Z',
+  });
+  assert.match(
+    requiredMergeQueueWindow(['required'], mergeQueue).reason,
+    /ambiguous/,
+  );
 });
 
 test('candidate timeline input correlates provider and internal events without mixing attempts', () => {
@@ -778,6 +935,27 @@ test('summary reports sample count and queue-inclusive distribution', () => {
     ]),
     { sampleCount: 3, p50Ms: 300000, p95Ms: 700000, maxMs: 700000 },
   );
+});
+
+test('report declares merge-queue authority and PR checks as diagnostic only', () => {
+  const value = report(
+    'owner/repo',
+    'dev',
+    ['required'],
+    [
+      {
+        excluded: false,
+        pullRequest: 1,
+        sourceSha: 'a'.repeat(40),
+        durationMs: 120000,
+        classification: { kind: 'non-native' },
+        cache: { outcome: 'not-applicable' },
+      },
+    ],
+  );
+  assert.match(value.metric.start, /AddedToMergeQueueEvent/);
+  assert.match(value.metric.end, /eventual merged merge-group round/);
+  assert.match(value.metric.retries, /diagnostic only/);
 });
 
 test('context duration starts at the workflow run creation time', () => {

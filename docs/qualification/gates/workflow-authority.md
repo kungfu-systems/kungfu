@@ -40,7 +40,8 @@ without changing and refreshing the manifest fails the Gate catalog check.
 | Workflow | Job | Authority | Publication | Receipt | Credentials | Environment | Steps |
 | --- | --- | --- | --- | --- | --- | --- | ---: |
 | `.github/workflows/adr-release-gate.yml` | `adr-release` | qualification | none | diagnostic | token:read | none | 2 |
-| `.github/workflows/affected-native-pr.yml` | `affected_native_shards` | qualification | none | diagnostic | token:read | none | 24 |
+| `.github/workflows/affected-native-cache-promote.yml` | `promote` | qualification | none | diagnostic | token:write | none | 10 |
+| `.github/workflows/affected-native-pr.yml` | `affected_native_shards` | qualification | none | diagnostic | token:read | none | 23 |
 | `.github/workflows/affected-native-pr.yml` | `affected-native` | qualification | none | diagnostic | token:read | none | 9 |
 | `.github/workflows/affected-native-pr.yml` | `candidate_buildchain_config` | qualification | none | diagnostic | token:read | none | 2 |
 | `.github/workflows/affected-native-pr.yml` | `candidate_preflight` | qualification | none | diagnostic | token:read | none | 5 |

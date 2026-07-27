@@ -125,9 +125,17 @@ Each section is bound to the registry id by the catalog meta gate.
   semantics. Contradictory or foreign-key evidence fails closed. Successful
   queue candidates may restore a compatible base-branch baseline while
   retaining source-bound exact keys and always rerunning configure/build/CTest.
-  The workflow does not repeat the candidate-equivalent native build on the
-  resulting dev push. A missing or expired cache therefore spends queue time
-  on the qualified cold path instead of manufacturing a post-merge duplicate.
+  GitHub scopes a cache saved by a merge-group run to its synthetic queue ref,
+  so that cache is not itself a reusable base-branch baseline. After a
+  successful native Gate, each partition instead seals its secret-free cache
+  roots into a source-, run-, plan-, partition-, receipt-, and digest-bound
+  artifact. The resulting trusted dev push locates the exact successful
+  merge-group producer, requires the complete partition set, revalidates every
+  payload and receipt, combines the compiler roots, and writes the result into
+  the long-lived base-branch cache scope. A non-native push or any missing,
+  ambiguous, stale, source-drifted, or malformed producer is an auditable no-op.
+  The push workflow transports already-qualified cache data and does not repeat
+  the candidate-equivalent native build.
 - **Cold-path partitioning:** the authoritative target and CTest lists are split
   deterministically across two GitHub-hosted Linux jobs. Each receipt binds its
   zero-based partition index, partition count, selected targets/tests, partition
@@ -136,10 +144,13 @@ Each section is bound to the registry id by the catalog meta gate.
   succeeds. The retained latency collector rejects missing, duplicate,
   source-drifted, plan-drifted, or coverage-drifted partition artifacts before
   aggregating their critical-path timings. Dependency cache identity stays
-  common; compiler cache identity includes the partition so independently
-  produced ccache roots cannot collide. This preserves configure/build/CTest
-  coverage while using parallel GitHub-hosted capacity for a cold cohort; it
-  does not claim that GitHub PR-scoped cache data was promoted to default scope.
+  common. Compiler exact roots bind the partition through the exact plan digest,
+  while their compatibility identity stays common across affected profiles
+  under the same hosted image, toolchain, lock set, authority, platform tier,
+  and roots. Independently produced queue-ref roots therefore cannot collide,
+  while the trusted base-push promotion can publish their validated union for
+  later compatible restores. This preserves configure/build/CTest coverage
+  while using parallel GitHub-hosted capacity for a cold cohort.
 - **Repeated-run proof admission:** workflow concurrency prevents concurrent
   executions sharing one synthetic merge-group SHA; `cancel-in-progress: false`
   preserves the active execution while GitHub may coalesce identical pending
@@ -158,6 +169,13 @@ Each section is bound to the registry id by the catalog meta gate.
   must still match the complete probe toolchain, including the hosted image
   version; cross-runner drift therefore remains fail-closed. Shifu workspace
   and KFD jobs remain independent of native proof reuse.
+- **Dequeue repair admission:** the trusted-base dequeue controller cancels
+  active work and writes one PR marker for deterministic `failed_checks`,
+  `merge_conflict`, or `invalid_merge_commit` exits. The marker binds the exact
+  pull-request head SHA. Atlas merge orchestration rejects a later enqueue of
+  that same head, including from another account or thread, and observes a new
+  source SHA as the only ordinary unlock. Manual dequeues remain unmarked so
+  position-one serialization can yield without manufacturing a repair debt.
 - **Diagnosis:** inspect without building with `./shifu core:affected -- --base
   <base> --head <head> --json`; run mutation fixtures with `./shifu
   core:affected -- --self-test`.
