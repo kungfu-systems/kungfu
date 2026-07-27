@@ -280,6 +280,7 @@ function ciRecord(env = process.env) {
     ref: env.GITHUB_REF || '',
     sha: env.GITHUB_SHA || '',
     source_sha: env.BUILDCHAIN_SOURCE_SHA || '',
+    source_tree_sha: env.BUILDCHAIN_SOURCE_TREE_SHA || '',
     buildchain_runtime_ref: env.BUILDCHAIN_RUNTIME_REF || '',
     buildchain_runtime_sha: env.BUILDCHAIN_RUNTIME_SHA || '',
     run_url:
@@ -328,6 +329,22 @@ export function evaluateHardGates(report, context) {
     'dependency_failure_containment',
     'projection_drift_and_rebuild',
   ];
+  const ciSourceSha = context.ci?.source_sha || '';
+  const ciSourceTreeSha = context.ci?.source_tree_sha || '';
+  const ciSourceRevisionMatches =
+    !ciSourceSha || ciSourceSha === context.sourceRevision;
+  const ciPullMergeTreeEquivalent =
+    Boolean(ciSourceSha) &&
+    ciSourceSha !== context.sourceRevision &&
+    /^refs\/pull\/\d+\/merge$/.test(context.ci?.ref || '') &&
+    Boolean(ciSourceTreeSha) &&
+    Boolean(context.sourceTree) &&
+    ciSourceTreeSha === context.sourceTree;
+  const ciSourceIdentityMode = ciSourceRevisionMatches
+    ? 'commit'
+    : ciPullMergeTreeEquivalent
+      ? 'tree-equivalent-pull-merge'
+      : 'mismatch';
   return [
     gate(
       'harness_exit',
@@ -363,9 +380,8 @@ export function evaluateHardGates(report, context) {
     ),
     gate(
       'ci_source_revision',
-      !context.ci?.source_sha ||
-        context.ci.source_sha === context.sourceRevision,
-      `ci=${context.ci?.source_sha || 'local'} expected=${context.sourceRevision}`,
+      ciSourceRevisionMatches || ciPullMergeTreeEquivalent,
+      `ci=${ciSourceSha || 'local'} expected=${context.sourceRevision} ci_tree=${ciSourceTreeSha || 'missing'} expected_tree=${context.sourceTree || 'missing'} mode=${ciSourceIdentityMode}`,
     ),
     gate(
       'trust_report_qualified',
@@ -525,6 +541,7 @@ export function validateReleaseEvidence(evidence, options = {}) {
     shifuEntrypoint: evidence.toolchain?.shifu?.entrypoint_provenance,
     profile: evidence.profile,
     sourceRevision: evidence.source?.revision,
+    sourceTree: evidence.source?.tree,
     runtimeArtifacts: evidence.runtime?.artifact_manifest?.artifacts || [],
     ci: evidence.ci || { provider: 'local' },
   };
@@ -689,6 +706,14 @@ async function runCommand(options) {
     console.log(
       `[episode-release-evidence] verdict=${evidence.verdict} gates=${evidence.qualification.hard_gates.filter((row) => row.passed).length}/${evidence.qualification.hard_gates.length} digest=${evidence.evidence_digest}`,
     );
+    const failedGates = evidence.qualification.hard_gates.filter(
+      (row) => !row.passed,
+    );
+    if (failedGates.length > 0) {
+      console.error(
+        `[episode-release-evidence] failed gates: ${failedGates.map((row) => `${row.id} (${row.evidence})`).join('; ')}`,
+      );
+    }
     if (!schemaValidation.ok) {
       console.error(
         `[episode-release-evidence] schema invalid: ${schemaValidation.output}`,
