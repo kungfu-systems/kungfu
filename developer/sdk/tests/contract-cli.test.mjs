@@ -19,7 +19,18 @@ const sdk = join(repoRoot, 'developer', 'sdk', 'src', 'sdk.js');
 const require = createRequire(import.meta.url);
 const { contractArtifacts } = require('../../../scripts/contract-registry.cjs');
 const kfdPackage = require('@kungfu-tech/kfd/package.json');
-const buildchainPackage = require('@kungfu-tech/buildchain/package.json');
+const buildchainPackagePath = require.resolve(
+  '@kungfu-tech/buildchain/package.json',
+);
+const buildchainRequire = createRequire(buildchainPackagePath);
+const buildchainPackage = require(buildchainPackagePath);
+const buildchainAlphaPackagePath = require.resolve(
+  '@kungfu-tech/buildchain-alpha/package.json',
+);
+const buildchainAlphaRequire = createRequire(buildchainAlphaPackagePath);
+const buildchainAlphaPackage = buildchainAlphaRequire(
+  '@kungfu-tech/buildchain-alpha/package.json',
+);
 const corePackage = require('../../../framework/core/package.json');
 const buildchainKfdVersion = buildchainPackage.dependencies['@kungfu-tech/kfd'];
 const sdkKfd2ReleaseClaims = JSON.parse(
@@ -88,6 +99,20 @@ function makeContractRepo(t) {
   t.after(() => rmSync(root, { recursive: true, force: true }));
   return root;
 }
+
+test('keeps stable and Alpha Buildchain KFD metadata on their declared lines', () => {
+  const stableKfd = buildchainRequire('@kungfu-tech/kfd/package.json');
+  const alphaKfd = buildchainAlphaRequire('@kungfu-tech/kfd/package.json');
+  assert.equal(
+    stableKfd.version,
+    buildchainPackage.dependencies['@kungfu-tech/kfd'],
+  );
+  assert.equal(
+    alphaKfd.version,
+    buildchainAlphaPackage.dependencies['@kungfu-tech/kfd'],
+  );
+  assert.notEqual(stableKfd.version, alphaKfd.version);
+});
 
 for (const [surface, source] of [
   ['config', 'framework/config/kungfu-config.contract.json'],
