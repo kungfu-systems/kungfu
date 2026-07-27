@@ -477,6 +477,51 @@
       }
     },
     {
+      "id": "hub-cli-linux-arm64",
+      "execution": "controller",
+      "workflow": ".github/workflows/build.yml",
+      "job": "hub-cli-linux-arm64",
+      "profiles": [
+        "alpha-pr",
+        "release-pr"
+      ],
+      "gates": [
+        "product.distribution",
+        "episode.smoke",
+        "episode.release"
+      ],
+      "activation": "alpha or release pull request, or selected manual Linux ARM64 qualification",
+      "adapter": {
+        "type": "buildchain-hub-cli-linux-arm64",
+        "kind": "job-uses",
+        "uses": "kungfu-systems/buildchain/.github/workflows/.build.yml@bfe43b0fe5577f15d2af01bc542de8a8ce587457",
+        "job": {
+          "needs": "preflight",
+          "if": "${{ github.event_name == 'pull_request' || !inputs.platforms-json || inputs.run-hub-cli-linux-arm64 || contains(inputs.platforms-json, 'linux-arm64') }}",
+          "secrets": {
+            "BUILDCHAIN_ARTIFACT_RELAY_S3_ROLE_ARN": "${{ secrets.BUILDCHAIN_ARTIFACT_RELAY_S3_ROLE_ARN }}",
+            "BUILDCHAIN_ARTIFACT_RELAY_S3_UPLOAD_ROLE_ARN": "${{ secrets.BUILDCHAIN_ARTIFACT_RELAY_S3_UPLOAD_ROLE_ARN }}",
+            "BUILDCHAIN_ARTIFACT_RELAY_S3_DOWNLOAD_ROLE_ARN": "${{ secrets.BUILDCHAIN_ARTIFACT_RELAY_S3_DOWNLOAD_ROLE_ARN }}"
+          }
+        },
+        "with": {
+          "runner-preset": "custom",
+          "platforms-json": "[{\"id\":\"linux-arm64\",\"name\":\"Linux ARM64 Hub CLI\",\"platform\":\"linux\",\"runner\":\"[\\\"ubuntu-24.04-arm\\\"]\",\"capabilities\":[\"native-toolchain\",\"node\",\"product-artifacts\",\"publication-evidence\",\"rust\"]}]",
+          "artifact-name": "kungfu-hub-cli",
+          "require-install": true,
+          "require-build": true,
+          "require-verify": true,
+          "verify-command": "node scripts/run-release-qualification.mjs --execution-profile ${{ startsWith(github.base_ref, 'release/') && 'release-candidate' || 'alpha' }} --native-upgrade-policy skip",
+          "release-candidate": true,
+          "publish-channel": "${{ github.event_name == 'pull_request' && (startsWith(github.base_ref, 'release/') && 'release' || 'alpha') || 'none' }}",
+          "artifact-transfer-mode": "s3-to-github-artifacts",
+          "shifu-cache-profile-ref": "docs/shifu/qualification-portable-off.cache-profile.json",
+          "buildchain-contract-lock-path": ".buildchain/contract-lock.json",
+          "buildchain-contract-compatibility-policy": "major-compatible"
+        }
+      }
+    },
+    {
       "id": "channel-membranes",
       "execution": "gate",
       "workflow": ".github/workflows/embedding-membrane-spike.yml",
@@ -546,7 +591,7 @@
           "publication-consumer-predicate-id": "kungfu.release-admission/v1",
           "publish-command": "node scripts/buildchain-custom-publish-evidence.mjs",
           "runner-preset": "kungfu-v4-self-hosted",
-          "required-artifact-count": 4,
+          "required-artifact-count": 5,
           "release-passport": true,
           "release-activation-command": "${{ startsWith(inputs.target-ref || github.event.pull_request.base.ref, 'alpha/') && 'node scripts/activate-ungfu-release.mjs' || '' }}",
           "release-activation-receipt-set-path": ".buildchain/release-activation/receipt-set.json",

@@ -51,6 +51,7 @@ function completeFixture(root) {
     write(root, platform, `kungfu_storage-4.0.0a1-cp313-${platform}.whl`);
     write(root, platform, 'kungfu-sdk-4.0.0-alpha.1.crate', 'same-crate');
   }
+  write(root, 'linux-arm64', 'kungfu-tech-core-linux-arm64-4.0.0-alpha.1.tgz');
   write(root, 'darwin', 'kungfu-episodes-cli-darwin-arm64.tar.gz');
   write(root, 'linux', 'kungfu-episodes-cli-linux-x64.tar.gz');
   write(root, 'win32', 'kungfu-episodes-cli-win32-x64.zip');
@@ -59,7 +60,7 @@ function completeFixture(root) {
   write(root, 'win32', 'Kungfu Episodes Setup 4.0.0-alpha.1.exe');
 }
 
-test('collects the exact 38-file cross-platform publication set', () => {
+test('collects the exact 39-file cross-platform publication set', () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'kungfu-publish-test-'));
   try {
     const input = path.join(root, 'input');
@@ -74,7 +75,7 @@ test('collects the exact 38-file cross-platform publication set', () => {
     const manifest = JSON.parse(
       fs.readFileSync(path.join(output, 'manifest.json'), 'utf8'),
     );
-    assert.equal(manifest.artifacts.length, 38);
+    assert.equal(manifest.artifacts.length, 39);
   } finally {
     fs.rmSync(root, { recursive: true, force: true });
   }

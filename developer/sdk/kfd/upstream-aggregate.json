@@ -73,7 +73,7 @@
       "role": "embedded-node-runtime-provider",
       "package": {
         "name": "@kungfu-tech/libnode",
-        "version": "22.22.3-kf.4"
+        "version": "22.22.3-kf.5-alpha.1"
       },
       "repository": "kungfu-systems/libnode",
       "kfd": {
@@ -87,13 +87,13 @@
         "nodeVersion": "22.22.3",
         "nodeTag": "v22.22.3",
         "nodeCommit": "fdfa0ff0dbaf0fbf4d7d6d89a2ab807f3177fa5c",
-        "libnodeRevision": 4,
-        "npmVersion": "22.22.3-kf.4"
+        "libnodeRevision": 5,
+        "npmVersion": "22.22.3-kf.5-alpha.1"
       },
       "assets": [
         {
           "path": "libnode.release.json",
-          "sha256": "sha256:47234b2fe6142db4479d018867274256c19c230169156f22ad067ef7f0ac1c5b"
+          "sha256": "sha256:c29741c757402b17ff91b026899c8ba91a9a4d9f58ccf817848b4cf7ef7d7bcf"
         }
       ],
       "residualRisk": [
@@ -193,7 +193,7 @@
     ],
     "packageVersions": {
       "kfd": "1.0.0-alpha.47",
-      "libnode": "22.22.3-kf.4",
+      "libnode": "22.22.3-kf.5-alpha.1",
       "buildchain": "3.0.0"
     }
   }

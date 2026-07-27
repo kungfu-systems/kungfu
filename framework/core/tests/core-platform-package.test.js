@@ -22,6 +22,7 @@ test('Core platform package authority is exact and source package is neutral', (
     [
       '@kungfu-tech/core-darwin-arm64',
       '@kungfu-tech/core-linux-x64',
+      '@kungfu-tech/core-linux-arm64',
       '@kungfu-tech/core-win32-x64',
     ],
   );

@@ -187,7 +187,7 @@ test('current Kungfu catalog, docs, matrix, actions, and workflows align', () =>
   const controllers = result.workflowFacts.filter(
     (fact) => fact.execution === 'controller',
   );
-  assert.equal(controllers.length, 9);
+  assert.equal(controllers.length, 10);
   assert.ok(controllers.every((fact) => fact.gates.length > 0));
   assert.equal(result.workflowAuthority.workflows.length, 22);
   const alphaPreflight = result.workflowAuthority.workflows.find(
@@ -781,8 +781,8 @@ test('every controller class has a structured adapter and input drift fails clos
     {
       id: 'release-admission',
       workflow: '.github/workflows/release-new-version.yml',
-      from: 'required-artifact-count: 4',
-      to: 'required-artifact-count: 3',
+      from: 'required-artifact-count: 5',
+      to: 'required-artifact-count: 4',
       drift: 'with.required-artifact-count',
     },
   ];

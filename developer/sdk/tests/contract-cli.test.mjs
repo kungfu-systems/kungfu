@@ -20,6 +20,7 @@ const require = createRequire(import.meta.url);
 const { contractArtifacts } = require('../../../scripts/contract-registry.cjs');
 const kfdPackage = require('@kungfu-tech/kfd/package.json');
 const buildchainPackage = require('@kungfu-tech/buildchain/package.json');
+const corePackage = require('../../../framework/core/package.json');
 const buildchainKfdVersion = buildchainPackage.dependencies['@kungfu-tech/kfd'];
 const sdkKfd2ReleaseClaims = JSON.parse(
   readFileSync(
@@ -506,7 +507,10 @@ test('kfd upstream exposes aggregated upstream KFD package facts', () => {
   );
   assert.ok(
     data.upstreams.some(
-      (row) => row.id === 'libnode' && row.package.version === '22.22.3-kf.4',
+      (row) =>
+        row.id === 'libnode' &&
+        row.package.version ===
+          corePackage.devDependencies['@kungfu-tech/libnode'],
     ),
   );
   assert.equal(data.ownKfd.kfd1.status, 'supported');

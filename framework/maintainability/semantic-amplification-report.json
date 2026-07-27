@@ -5,7 +5,7 @@
   "manifestPath": "framework/maintainability/semantic-amplification.manifest.json",
   "manifestRoot": "sha256:13bba3d8469c4ec5d50acd2dd380832cbd42808c287642fc5cfe82b423260628",
   "baselineRef": "dbfed9ca1785d147b26f4f06e7e6895ac7368fee",
-  "sourceRoot": "sha256:87b82b1b83984811ea8eff0dd08a75e3c8a31e0c1d3d0c837d8e38f05c612a87",
+  "sourceRoot": "sha256:eb139392b2522f570e9d4c901b7351bfa03d36137616004e38e93f84e881aa4b",
   "roles": {
     "authority": "exactly one authority route per family; the route may name multiple co-owned source files",
     "allowedProjectionRoles": [
@@ -519,9 +519,9 @@
         },
         {
           "path": "product/scripts/dist.mjs",
-          "currentLines": 2528,
+          "currentLines": 2530,
           "baselineLines": 2514,
-          "currentRoot": "sha256:9a5a60497415a9a8d74e8fcf43aa5b68d8193bd0b629869df8898a1cd84897d0",
+          "currentRoot": "sha256:d48088fe0951e44834cf2f07ada4459daa67ed34c85c624897f75d42f359f6d1",
           "baselineRoot": "sha256:6cfd6c55e296163ab863fb1d79a4a51198ad12943274fc0858338bb651a108da",
           "changedSinceBaseline": true
         }
@@ -999,9 +999,9 @@
         },
         {
           "path": "docs/qualification/gates/workflow-bindings.json",
-          "currentLines": 585,
+          "currentLines": 630,
           "baselineLines": 580,
-          "currentRoot": "sha256:d67774b5728aa128e83435de188255738bcf60e89327786d16f6c3a4dce683d9",
+          "currentRoot": "sha256:002e13cfabfd66226544ea89b6e2ecf5eb19ddb4855d9b019b94dda17a2f699b",
           "baselineRoot": "sha256:233cd22ebce4c9930e0e4889808b88661d77c202d5e5f73121823dcdc461576d",
           "changedSinceBaseline": true
         },
@@ -1009,7 +1009,7 @@
           "path": ".github/workflows/release-new-version.yml",
           "currentLines": 384,
           "baselineLines": 362,
-          "currentRoot": "sha256:7e3a872713244237ea86109149bbbe64a10e36c4ec0e8d9789bb4d03952859b5",
+          "currentRoot": "sha256:40b02a006d82a6b1bab1ec08d1ef15139a6c96659fc94b6443da49c158e6c806",
           "baselineRoot": "sha256:3bdd847c80a05030de1d826282cef2e76a85e31dc0904df02c7f0cdda7a5eb74",
           "changedSinceBaseline": true
         },

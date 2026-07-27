@@ -220,16 +220,17 @@ function requireNpmDistributionClosure(publication) {
   if (
     inventory?.schema !== 'kungfu.npm-release-package-inventory-evidence/v1' ||
     inventory.status !== 'passing' ||
-    inventory.expectedPackageCount !== 28 ||
-    inventory.packages?.length !== 28
+    inventory.expectedPackageCount !== 29 ||
+    inventory.packages?.length !== 29
   )
-    fail('publication report lacks passing 28-package npm inventory evidence');
+    fail('publication report lacks passing 29-package npm inventory evidence');
   const names = inventory.packages.map((entry) => entry.name);
-  if (new Set(names).size !== 28)
+  if (new Set(names).size !== 29)
     fail('npm package inventory contains duplicate names');
   const requiredCore = [
     '@kungfu-tech/core',
     '@kungfu-tech/core-darwin-arm64',
+    '@kungfu-tech/core-linux-arm64',
     '@kungfu-tech/core-linux-x64',
     '@kungfu-tech/core-win32-x64',
   ];
@@ -238,7 +239,7 @@ function requireNpmDistributionClosure(publication) {
   const core = publication.coreDistribution;
   const assets = [
     core?.main,
-    ...['darwin-arm64', 'linux-x64', 'win32-x64'].map(
+    ...['darwin-arm64', 'linux-arm64', 'linux-x64', 'win32-x64'].map(
       (platform) => core?.platforms?.[platform],
     ),
   ];
@@ -352,7 +353,7 @@ function main() {
     core_distribution: publication.coreDistribution,
     artifact_status_counts: { passing: artifacts.length },
     boundary:
-      'passing is computed from clean-source exact artifacts, every required platform, all six numeric budgets, installer-uninstall evidence for product surfaces, immutable publication coordinates, the exact Core package family, and the 28-package npm Release inventory.',
+      'passing is computed from clean-source exact artifacts, every required platform, all six numeric budgets, installer-uninstall evidence for product surfaces, immutable publication coordinates, the exact Core package family, and the 29-package npm Release inventory.',
   };
   if (options.report) {
     fs.mkdirSync(path.dirname(options.report), { recursive: true });

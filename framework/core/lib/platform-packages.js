@@ -38,6 +38,12 @@ const platformPackages = [
     cpu: ['arm64'],
   },
   { key: 'linux-x64', name: `${SCOPE}-linux-x64`, os: ['linux'], cpu: ['x64'] },
+  {
+    key: 'linux-arm64',
+    name: `${SCOPE}-linux-arm64`,
+    os: ['linux'],
+    cpu: ['arm64'],
+  },
   { key: 'win32-x64', name: `${SCOPE}-win32-x64`, os: ['win32'], cpu: ['x64'] },
 ];
 

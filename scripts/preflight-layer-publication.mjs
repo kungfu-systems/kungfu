@@ -80,15 +80,15 @@ async function main() {
   const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
   if (
     manifest.schema !== 'kungfu.layer-publication.staging-manifest/v1' ||
-    manifest.artifacts?.length !== 38
+    manifest.artifacts?.length !== 39
   )
-    fail('publication manifest is not the complete 38-artifact set');
+    fail('publication manifest is not the complete 39-artifact set');
   const npmRegistry = JSON.parse(fs.readFileSync(npmRegistryPath, 'utf8'));
   if (
     npmRegistry.schema !== 'kungfu.npm-release-package-registry/v1' ||
-    npmRegistry.packages?.length !== 28
+    npmRegistry.packages?.length !== 29
   )
-    fail('npm package registry is not the exact 28-package Release inventory');
+    fail('npm package registry is not the exact 29-package Release inventory');
   validateStagedNpmArtifacts(manifest, npmRegistry, version);
   const checks = [];
   for (const { name: packageName } of npmRegistry.packages) {
@@ -167,7 +167,7 @@ async function main() {
     staging_manifest_sha256: sha256(manifestPath),
     checks,
     boundary:
-      'Preflight proves the exact 38-artifact set, including all 28 npm packages, and requires target versions to be absent, except an immutable crates.io version may already exist only with the exact staged digest. It does not publish, reserve, overwrite, or delete any coordinate.',
+      'Preflight proves the exact 39-artifact set, including all 29 npm packages, and requires target versions to be absent, except an immutable crates.io version may already exist only with the exact staged digest. It does not publish, reserve, overwrite, or delete any coordinate.',
   };
   fs.mkdirSync(path.dirname(reportPath), { recursive: true });
   fs.writeFileSync(reportPath, `${JSON.stringify(report, null, 2)}\n`);

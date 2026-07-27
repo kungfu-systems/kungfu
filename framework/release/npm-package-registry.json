@@ -3,7 +3,7 @@
   "scope": "@kungfu-tech",
   "releaseInventory": {
     "previousPackageCount": 25,
-    "expectedPackageCount": 28,
+    "expectedPackageCount": 29,
     "versionAuthority": "lerna.json"
   },
   "trustedPublishing": {
@@ -41,6 +41,7 @@
       "@kungfu-tech/storage",
       "@kungfu-tech/tui",
       "@kungfu-tech/core-darwin-arm64",
+      "@kungfu-tech/core-linux-arm64",
       "@kungfu-tech/core-linux-x64",
       "@kungfu-tech/core-win32-x64",
       "@kungfu-tech/storage-darwin-arm64",
@@ -88,6 +89,7 @@
     { "name": "@kungfu-tech/storage", "kind": "workspace", "source": "framework/storage/package.json" },
     { "name": "@kungfu-tech/tui", "kind": "workspace", "source": "framework/tui/package.json" },
     { "name": "@kungfu-tech/core-darwin-arm64", "kind": "generated-platform", "source": "framework/core/core-platform-package.contract.json#platformPackages" },
+    { "name": "@kungfu-tech/core-linux-arm64", "kind": "generated-platform", "source": "framework/core/core-platform-package.contract.json#platformPackages" },
     { "name": "@kungfu-tech/core-linux-x64", "kind": "generated-platform", "source": "framework/core/core-platform-package.contract.json#platformPackages" },
     { "name": "@kungfu-tech/core-win32-x64", "kind": "generated-platform", "source": "framework/core/core-platform-package.contract.json#platformPackages" },
     { "name": "@kungfu-tech/storage-darwin-arm64", "kind": "generated-platform", "source": "framework/storage/package-artifacts.mjs#PLATFORMS" },
