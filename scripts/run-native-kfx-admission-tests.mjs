@@ -64,7 +64,24 @@ run('public API transport projection', 'pnpm', [
   'tsx',
   '--test',
   path.join(root, 'framework/api/tests/storage.test.ts'),
+  path.join(root, 'framework/api/tests/kfx-host.test.ts'),
 ]);
+
+run(
+  'native Node binding root parity',
+  'node',
+  [
+    '--test',
+    '--test-name-pattern',
+    'Node KFX',
+    path.join(root, 'framework/core/tests/storage-node-binding.test.js'),
+  ],
+  {
+    ...process.env,
+    KUNGFU_DIR: path.join(root, 'framework/core/build/Release'),
+    KUNGFU_REQUIRE_NATIVE: '1',
+  },
+);
 
 run('public API type contract', 'pnpm', [
   '--filter',
@@ -96,4 +113,8 @@ run('incubation passport contract tests', 'node', [
 run('layered API encoding authority', 'node', [
   '--test',
   path.join(root, 'scripts/check-layered-api-encoding-boundary.test.mjs'),
+]);
+
+run('Qualification Lab and PR #1585 isolation', 'node', [
+  path.join(root, 'scripts/check-native-kfx-foundation-isolation.mjs'),
 ]);

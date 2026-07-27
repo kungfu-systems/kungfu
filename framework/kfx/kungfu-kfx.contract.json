@@ -221,6 +221,164 @@
               }
             }
           },
+        "registry": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "extensionPoints": {
+              "type": "array",
+              "uniqueItems": true,
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "id",
+                  "version",
+                  "surface"
+                ],
+                "properties": {
+                  "id": {
+                    "type": "string",
+                    "minLength": 1,
+                    "pattern": "^[A-Za-z0-9._-]+$"
+                  },
+                  "version": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "surface": {
+                    "type": "string",
+                    "enum": [
+                      "experience",
+                      "flow",
+                      "service",
+                      "adapter"
+                    ]
+                  },
+                  "capabilities": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "uniqueItems": true
+                  }
+                }
+              }
+            },
+            "contributions": {
+              "type": "array",
+              "uniqueItems": true,
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "id",
+                  "extensionPoint",
+                  "version"
+                ],
+                "properties": {
+                  "id": {
+                    "type": "string",
+                    "minLength": 1,
+                    "pattern": "^[A-Za-z0-9._-]+$"
+                  },
+                  "extensionPoint": {
+                    "type": "string",
+                    "minLength": 1,
+                    "pattern": "^[A-Za-z0-9._-]+$"
+                  },
+                  "version": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "capabilities": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "uniqueItems": true
+                  },
+                  "presentation": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "properties": {
+                      "optional": {
+                        "type": "boolean"
+                      },
+                      "hosts": {
+                        "type": "array",
+                        "items": {
+                          "type": "string",
+                          "enum": [
+                            "gui",
+                            "tui",
+                            "cli",
+                            "agent"
+                          ]
+                        },
+                        "uniqueItems": true
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "dependencies": {
+              "type": "array",
+              "uniqueItems": true,
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "provider",
+                  "version",
+                  "mode"
+                ],
+                "properties": {
+                  "provider": {
+                    "type": "string",
+                    "minLength": 1,
+                    "pattern": "^[A-Za-z0-9._-]+$"
+                  },
+                  "version": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "mode": {
+                    "type": "string",
+                    "enum": [
+                      "required",
+                      "uses-if-present"
+                    ]
+                  },
+                  "capabilities": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "uniqueItems": true
+                  },
+                  "admissionGrades": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "enum": [
+                        "unverified",
+                        "identity-verified",
+                        "kfd-attested",
+                        "product-system"
+                      ]
+                    },
+                    "uniqueItems": true
+                  }
+                }
+              }
+            }
+          }
+        },
           "config": {
             "type": "object",
             "additionalProperties": false,
@@ -752,11 +910,17 @@
       "sourceContractRoot": "core-computed",
       "nativeContractRoot": "core-computed",
       "packageRoot": "core-computed",
+      "providerRoot": "core-computed",
+      "extensionPointRoot": "core-computed",
+      "contributionRoot": "core-computed",
+      "dependencyRoot": "core-computed",
+      "graphRoot": "core-computed",
       "suiteRoot": "profile-lifecycle-owned",
       "planRoot": "core-computed",
       "policyRoot": "core-computed",
       "trustRoot": "core-computed",
-      "receiptRoot": "core-computed"
+      "receiptRoot": "core-computed",
+      "historyRoot": "core-computed"
     },
     "service": {
       "interface": "kungfu::runtime::kfx::native_kfx_service",
@@ -1035,6 +1199,94 @@
       "service",
       "profile-member"
     ],
+    "semanticGraph": {
+      "schema": "kungfu.kfx.semantic-graph/v1",
+      "identity": {
+        "provider": [
+          "providerId",
+          "version",
+          "packageRoot",
+          "trustRoot",
+          "capabilityRoot"
+        ],
+        "extensionPoint": [
+          "ownerProviderId",
+          "extensionPointId",
+          "version",
+          "surface",
+          "capabilityRoot"
+        ],
+        "contribution": [
+          "ownerProviderId",
+          "contributionId",
+          "extensionPointId",
+          "version",
+          "capabilityRoot"
+        ],
+        "dependency": [
+          "consumerProviderId",
+          "providerId",
+          "versionConstraint",
+          "mode",
+          "trustConstraintRoot",
+          "capabilityConstraintRoot"
+        ]
+      },
+      "dependencyModes": [
+        "required",
+        "uses-if-present"
+      ],
+      "nodeStates": [
+        "active",
+        "dormant",
+        "degraded"
+      ],
+      "compositionRule": "contributes-to-never-transfers-extension-point-ownership",
+      "ordering": "canonical-json-lexical-identity"
+    },
+    "lifecycle": {
+      "schema": "kungfu.kfx.lifecycle/v1",
+      "authority": "one-libkungfu-writer-per-runtime-directory",
+      "fences": [
+        "expectedGeneration",
+        "expectedRegistryRoot",
+        "expectedGraphRoot",
+        "expectedPlanRoot",
+        "expectedTrustRoot",
+        "expectedPackageRoot"
+      ],
+      "mutationOperations": [
+        "install",
+        "update",
+        "remove",
+        "enable",
+        "disable",
+        "activate"
+      ],
+      "receiptOutcomes": [
+        "applied",
+        "refused"
+      ],
+      "payloadRetention": "content-addressed-retain-no-gc",
+      "replacement": "stage-then-atomic-rename",
+      "history": "append-only-receipt-chain"
+    },
+    "experienceFlowHost": {
+      "schema": "kungfu.kfx.experience-flow-host/v1",
+      "surfaces": [
+        "experience",
+        "flow"
+      ],
+      "hosts": [
+        "gui",
+        "tui",
+        "cli",
+        "agent"
+      ],
+      "semanticAuthority": "libkungfu-graph-and-plan",
+      "renderingAuthority": "host-native",
+      "optionalPresentation": "typed-dormant-with-semantic-contribution-retained"
+    },
     "errors": [
       "KF_KFX_CONTRACT_VERSION_UNSUPPORTED",
       "KF_KFX_DOCUMENT_KIND_UNKNOWN",
@@ -1048,7 +1300,14 @@
       "KF_KFX_SUITE_CYCLE",
       "KF_KFX_HOST_UNKNOWN",
       "KF_KFX_REGISTRY_STALE",
+      "KF_KFX_GRAPH_STALE",
+      "KF_KFX_PLAN_STALE",
+      "KF_KFX_WRITER_BUSY",
       "KF_KFX_GENERATION_MISMATCH",
+      "KF_KFX_REQUIRED_PROVIDER_MISSING",
+      "KF_KFX_PROVIDER_VERSION_MISMATCH",
+      "KF_KFX_DEPENDENCY_CYCLE",
+      "KF_KFX_EXTENSION_POINT_MISSING",
       "KF_KFX_CAPABILITY_BROADENING",
       "KF_KFX_ATTESTATION_INVALID",
       "KF_KFX_ATTESTATION_ROOT_MISMATCH",
@@ -1062,7 +1321,7 @@
     "compatibility": {
       "typescriptLoader": "retained-shadow-adapter",
       "pythonInstaller": "retained-shadow-adapter",
-      "mutationCutover": "forbidden-before-native-parity",
+      "mutationCutover": "native-service-edge-after-exact-plan-fence",
       "unknownFields": "reject",
       "migration": "validate-existing-documents-before-authority-cutover"
     },

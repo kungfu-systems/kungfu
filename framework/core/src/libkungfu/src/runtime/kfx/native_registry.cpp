@@ -4,11 +4,14 @@
 
 #include <algorithm>
 #include <cctype>
+#include <chrono>
 #include <filesystem>
 #include <fstream>
 #include <functional>
 #include <map>
+#include <optional>
 #include <set>
+#include <sstream>
 #include <stdexcept>
 #include <string>
 #include <vector>
@@ -229,7 +232,9 @@ struct snapshot {
   json packages = json::array();
   json suites = json::array();
   json diagnostics = json::array();
+  json graph = json::object();
   std::string registry_root;
+  std::string graph_root;
 };
 
 std::string mapped_value(const json &mapping, const std::string &key, const std::string &fallback) {
@@ -314,6 +319,281 @@ void detect_suite_cycles(const json &packages) {
   }
 }
 
+bool version_matches(const std::string &version, const std::string &constraint) {
+  if (constraint == "*")
+    return true;
+  if (constraint.starts_with("^")) {
+    const auto expected = constraint.substr(1, constraint.find('.') - 1);
+    return version.substr(0, version.find('.')) == expected;
+  }
+  if (constraint.ends_with(".*"))
+    return version.starts_with(constraint.substr(0, constraint.size() - 1));
+  return version == constraint;
+}
+
+json semantic_graph(const json &packages, json &diagnostics) {
+  json providers = json::array();
+  json extension_points = json::array();
+  json contributions = json::array();
+  json dependencies = json::array();
+  std::map<std::string, json> provider_by_id;
+  std::map<std::string, json> extension_point_by_id;
+  std::map<std::string, std::string> provider_state;
+
+  for (const auto &package : packages) {
+    const auto provider_id = package.at("key").get<std::string>();
+    const auto capabilities = package.at("declaredCapabilities");
+    const json trust_identity = {{"runtimeTier", package.at("runtimeTier")},
+                                 {"admissionGrade", package.at("admissionGrade")}};
+    const auto trust_root = root_of(trust_identity);
+    const auto capability_root = root_of(capabilities);
+    const json identity = {{"providerId", provider_id},
+                           {"version", package.at("version")},
+                           {"packageRoot", package.at("packageRoot")},
+                           {"trustRoot", trust_root},
+                           {"capabilityRoot", capability_root}};
+    json provider = identity;
+    provider["providerRoot"] = root_of(identity);
+    provider["trust"] = trust_identity;
+    provider["capabilities"] = capabilities;
+    provider["state"] = "active";
+    provider["causes"] = json::array();
+    provider["recoveryGuidance"] = json::array();
+    providers.push_back(provider);
+    provider_by_id[provider_id] = provider;
+    provider_state[provider_id] = "active";
+  }
+
+  auto add_diagnostic = [&](const std::string &code, const std::string &provider_id, const std::string &cause,
+                            const std::string &recovery, const std::string &severity) {
+    diagnostics.push_back({{"code", code},
+                           {"providerId", provider_id},
+                           {"cause", cause},
+                           {"recoveryGuidance", json::array({recovery})},
+                           {"severity", severity}});
+    if (severity == "degraded")
+      provider_state[provider_id] = "degraded";
+  };
+
+  for (const auto &package : packages) {
+    const auto provider_id = package.at("key").get<std::string>();
+    const auto semantic = package.at("semantic");
+    const auto points = semantic.value("extensionPoints", json::array());
+    for (const auto &declaration : points) {
+      const auto point_id = required_text(declaration, "id", "kungfuConfig.registry.extensionPoints[]");
+      if (!safe_token(point_id))
+        refuse("KF_KFX_SCHEMA_INVALID", "extension point id is not a safe token");
+      if (extension_point_by_id.contains(point_id))
+        refuse("KF_KFX_OWNER_DUPLICATE", "one extension point may have only one owner: " + point_id);
+      const auto capabilities = declaration.value("capabilities", json::array());
+      const json identity = {{"ownerProviderId", provider_id},
+                             {"extensionPointId", point_id},
+                             {"version", declaration.at("version")},
+                             {"surface", declaration.at("surface")},
+                             {"capabilityRoot", root_of(capabilities)}};
+      json point = identity;
+      point["extensionPointRoot"] = root_of(identity);
+      point["capabilities"] = capabilities;
+      point["state"] = "active";
+      extension_points.push_back(point);
+      extension_point_by_id[point_id] = point;
+    }
+  }
+
+  std::map<std::string, std::vector<std::string>> dependency_graph;
+  for (const auto &package : packages) {
+    const auto consumer_id = package.at("key").get<std::string>();
+    const auto declarations = package.at("semantic").value("dependencies", json::array());
+    for (const auto &declaration : declarations) {
+      const auto provider_id = required_text(declaration, "provider", "kungfuConfig.registry.dependencies[]");
+      const auto mode = required_text(declaration, "mode", "kungfuConfig.registry.dependencies[]");
+      const auto constraint = required_text(declaration, "version", "kungfuConfig.registry.dependencies[]");
+      const auto capabilities = declaration.value("capabilities", json::array());
+      const auto grades = declaration.value("admissionGrades", json::array());
+      const json identity = {
+          {"consumerProviderId", consumer_id},      {"providerId", provider_id},
+          {"versionConstraint", constraint},        {"mode", mode},
+          {"trustConstraintRoot", root_of(grades)}, {"capabilityConstraintRoot", root_of(capabilities)}};
+      json edge = identity;
+      edge["dependencyRoot"] = root_of(identity);
+      edge["state"] = "active";
+      edge["causes"] = json::array();
+      edge["recoveryGuidance"] = json::array();
+      if (!provider_by_id.contains(provider_id)) {
+        const auto code = mode == "required" ? "KF_KFX_REQUIRED_PROVIDER_MISSING" : "KF_KFX_OPTIONAL_PROVIDER_MISSING";
+        edge["state"] = mode == "required" ? "degraded" : "dormant";
+        edge["causes"].push_back(code);
+        edge["recoveryGuidance"].push_back("install-provider:" + provider_id);
+        add_diagnostic(code, consumer_id, "provider is absent: " + provider_id, "install-provider:" + provider_id,
+                       mode == "required" ? "degraded" : "dormant");
+      } else {
+        const auto &provider = provider_by_id.at(provider_id);
+        if (!version_matches(provider.at("version").get<std::string>(), constraint)) {
+          edge["state"] = mode == "required" ? "degraded" : "dormant";
+          edge["causes"].push_back("KF_KFX_PROVIDER_VERSION_MISMATCH");
+          edge["recoveryGuidance"].push_back("install-compatible-provider:" + provider_id + "@" + constraint);
+          add_diagnostic("KF_KFX_PROVIDER_VERSION_MISMATCH", consumer_id,
+                         "provider version does not satisfy " + constraint + ": " + provider_id,
+                         "install-compatible-provider:" + provider_id + "@" + constraint,
+                         mode == "required" ? "degraded" : "dormant");
+        }
+        for (const auto &capability : capabilities) {
+          if (std::find(provider.at("capabilities").begin(), provider.at("capabilities").end(), capability) ==
+              provider.at("capabilities").end()) {
+            edge["state"] = mode == "required" ? "degraded" : "dormant";
+            edge["causes"].push_back("KF_KFX_CAPABILITY_BROADENING");
+            edge["recoveryGuidance"].push_back("use-provider-with-declared-capability:" +
+                                               capability.get<std::string>());
+            add_diagnostic("KF_KFX_CAPABILITY_BROADENING", consumer_id,
+                           "dependency capability is not declared by provider: " + capability.get<std::string>(),
+                           "use-provider-with-declared-capability:" + capability.get<std::string>(),
+                           mode == "required" ? "degraded" : "dormant");
+          }
+        }
+        if (!grades.empty() &&
+            std::find(grades.begin(), grades.end(), provider.at("trust").at("admissionGrade")) == grades.end()) {
+          edge["state"] = mode == "required" ? "degraded" : "dormant";
+          edge["causes"].push_back("KF_KFX_TRUST_CONSTRAINT_REJECTED");
+          edge["recoveryGuidance"].push_back("admit-exact-provider-root:" + provider_id);
+          add_diagnostic("KF_KFX_TRUST_CONSTRAINT_REJECTED", consumer_id,
+                         "provider admission grade is outside the dependency constraint: " + provider_id,
+                         "admit-exact-provider-root:" + provider_id, mode == "required" ? "degraded" : "dormant");
+        }
+        dependency_graph[consumer_id].push_back(provider_id);
+      }
+      dependencies.push_back(edge);
+    }
+  }
+
+  std::set<std::string> visiting;
+  std::set<std::string> visited;
+  std::set<std::string> cycle_members;
+  std::function<void(const std::string &)> visit = [&](const std::string &provider_id) {
+    if (visiting.contains(provider_id)) {
+      cycle_members.insert(provider_id);
+      return;
+    }
+    if (visited.contains(provider_id))
+      return;
+    visiting.insert(provider_id);
+    for (const auto &dependency : dependency_graph[provider_id]) {
+      if (visiting.contains(dependency)) {
+        cycle_members.insert(provider_id);
+        cycle_members.insert(dependency);
+      } else {
+        visit(dependency);
+      }
+    }
+    visiting.erase(provider_id);
+    visited.insert(provider_id);
+  };
+  for (const auto &[provider_id, ignored] : dependency_graph) {
+    (void)ignored;
+    visit(provider_id);
+  }
+  for (const auto &provider_id : cycle_members)
+    add_diagnostic("KF_KFX_DEPENDENCY_CYCLE", provider_id, "semantic provider dependency cycle",
+                   "remove-or-relax-cyclic-dependency", "degraded");
+  for (auto &edge : dependencies) {
+    if (cycle_members.contains(edge.at("consumerProviderId").get<std::string>()) &&
+        cycle_members.contains(edge.at("providerId").get<std::string>())) {
+      edge["state"] = "degraded";
+      edge["causes"].push_back("KF_KFX_DEPENDENCY_CYCLE");
+      edge["recoveryGuidance"].push_back("remove-or-relax-cyclic-dependency");
+    }
+  }
+
+  std::set<std::string> contribution_ids;
+  for (const auto &package : packages) {
+    const auto provider_id = package.at("key").get<std::string>();
+    const auto declarations = package.at("semantic").value("contributions", json::array());
+    for (const auto &declaration : declarations) {
+      const auto contribution_id = required_text(declaration, "id", "kungfuConfig.registry.contributions[]");
+      const auto point_id = required_text(declaration, "extensionPoint", "kungfuConfig.registry.contributions[]");
+      const auto canonical_id = provider_id + ":" + contribution_id;
+      if (!contribution_ids.insert(canonical_id).second)
+        refuse("KF_KFX_OWNER_DUPLICATE", "duplicate contribution identity: " + canonical_id);
+      const auto capabilities = declaration.value("capabilities", json::array());
+      const json identity = {{"ownerProviderId", provider_id},
+                             {"contributionId", contribution_id},
+                             {"extensionPointId", point_id},
+                             {"version", declaration.at("version")},
+                             {"capabilityRoot", root_of(capabilities)}};
+      json contribution = identity;
+      contribution["contributionRoot"] = root_of(identity);
+      contribution["capabilities"] = capabilities;
+      contribution["presentation"] = declaration.value("presentation", json::object());
+      contribution["state"] = provider_state.at(provider_id);
+      contribution["causes"] = json::array();
+      contribution["recoveryGuidance"] = json::array();
+      if (!extension_point_by_id.contains(point_id)) {
+        contribution["state"] = "degraded";
+        contribution["causes"].push_back("KF_KFX_EXTENSION_POINT_MISSING");
+        contribution["recoveryGuidance"].push_back("install-extension-point-owner:" + point_id);
+        add_diagnostic("KF_KFX_EXTENSION_POINT_MISSING", provider_id, "contribution target is absent: " + point_id,
+                       "install-extension-point-owner:" + point_id, "degraded");
+      } else {
+        const auto &point = extension_point_by_id.at(point_id);
+        contribution["extensionPointRoot"] = point.at("extensionPointRoot");
+        contribution["targetOwnerProviderId"] = point.at("ownerProviderId");
+        contribution["surface"] = point.at("surface");
+        if (!version_matches(point.at("version").get<std::string>(), declaration.at("version").get<std::string>())) {
+          contribution["state"] = "degraded";
+          contribution["causes"].push_back("KF_KFX_PROVIDER_VERSION_MISMATCH");
+          contribution["recoveryGuidance"].push_back("target-compatible-extension-point:" + point_id);
+          add_diagnostic("KF_KFX_PROVIDER_VERSION_MISMATCH", provider_id,
+                         "extension point version does not satisfy contribution constraint: " + point_id,
+                         "target-compatible-extension-point:" + point_id, "degraded");
+        }
+        for (const auto &capability : capabilities) {
+          if (std::find(package.at("declaredCapabilities").begin(), package.at("declaredCapabilities").end(),
+                        capability) == package.at("declaredCapabilities").end()) {
+            contribution["state"] = "degraded";
+            contribution["causes"].push_back("KF_KFX_CAPABILITY_BROADENING");
+            contribution["recoveryGuidance"].push_back("declare-contribution-capability:" +
+                                                       capability.get<std::string>());
+            add_diagnostic("KF_KFX_CAPABILITY_BROADENING", provider_id,
+                           "contribution capability is not declared by its provider: " + capability.get<std::string>(),
+                           "declare-contribution-capability:" + capability.get<std::string>(), "degraded");
+          }
+        }
+      }
+      contributions.push_back(contribution);
+    }
+  }
+
+  for (auto &provider : providers) {
+    const auto provider_id = provider.at("providerId").get<std::string>();
+    provider["state"] = provider_state.at(provider_id);
+    for (const auto &diagnostic : diagnostics) {
+      if (diagnostic.value("providerId", "") != provider_id)
+        continue;
+      provider["causes"].push_back(diagnostic.at("code"));
+      for (const auto &guidance : diagnostic.at("recoveryGuidance"))
+        provider["recoveryGuidance"].push_back(guidance);
+    }
+    std::sort(provider["causes"].begin(), provider["causes"].end());
+    std::sort(provider["recoveryGuidance"].begin(), provider["recoveryGuidance"].end());
+  }
+  auto sort_by = [](json &values, const char *field) {
+    std::sort(values.begin(), values.end(), [field](const auto &left, const auto &right) {
+      return left.at(field).template get<std::string>() < right.at(field).template get<std::string>();
+    });
+  };
+  sort_by(providers, "providerRoot");
+  sort_by(extension_points, "extensionPointRoot");
+  sort_by(contributions, "contributionRoot");
+  sort_by(dependencies, "dependencyRoot");
+  const json identity = {{"schema", "kungfu.kfx.semantic-graph/v1"},
+                         {"providers", providers},
+                         {"extensionPoints", extension_points},
+                         {"contributions", contributions},
+                         {"dependencies", dependencies}};
+  auto graph = identity;
+  graph["graphRoot"] = root_of(identity);
+  return graph;
+}
+
 snapshot build_snapshot(const json &request) {
   if (!request.is_object() || !request.contains("roots") || !request.at("roots").is_array() ||
       request.at("roots").empty())
@@ -381,6 +661,7 @@ snapshot build_snapshot(const json &request) {
                       {"runtimeTier", tier},
                       {"admissionGrade", "unverified"},
                       {"hosts", host_placements(manifest, placements, key)},
+                      {"semantic", object_or_empty(manifest.at("kungfuConfig"), "registry")},
                       {"candidate", true},
                       {"installed", false},
                       {"admitted", false}};
@@ -479,6 +760,9 @@ snapshot build_snapshot(const json &request) {
                              {"missingOptional", missing_optional}});
   }
 
+  result.graph = semantic_graph(result.packages, result.diagnostics);
+  result.graph_root = result.graph.at("graphRoot").get<std::string>();
+
   json package_identity = json::array();
   for (const auto &package : result.packages) {
     package_identity.push_back({{"key", package.at("key")},
@@ -506,6 +790,7 @@ json public_package(json package) {
   package.erase("closure");
   package.erase("suiteMembers");
   package.erase("profilePath");
+  package.erase("semantic");
   return package;
 }
 
@@ -823,29 +1108,451 @@ json assess_package(const json &package, const std::string &registry_root, const
           {"admissionPlan", plan}};
 }
 
+struct lifecycle_view {
+  json receipts = json::array();
+  uint64_t generation = 0;
+  std::string history_root;
+  std::map<std::string, std::string> package_states;
+};
+
+fs::path lifecycle_root(const std::string &runtime_dir) {
+  if (runtime_dir.empty())
+    refuse("KF_KFX_SCHEMA_INVALID", "native KFX lifecycle requires an explicit runtime directory");
+  return fs::absolute(runtime_dir) / "kfx";
+}
+
+lifecycle_view load_lifecycle(const std::string &runtime_dir) {
+  lifecycle_view result;
+  json receipt_roots = json::array();
+  const auto path = lifecycle_root(runtime_dir) / "registry-history.jsonl";
+  if (!fs::exists(path)) {
+    result.history_root = root_of(receipt_roots);
+    return result;
+  }
+  std::ifstream input(path);
+  if (!input)
+    refuse("KF_KFX_SCHEMA_INVALID", "cannot read native KFX lifecycle history");
+  std::string line;
+  size_t expected_sequence = 1;
+  std::string previous_root;
+  while (std::getline(input, line)) {
+    if (line.empty())
+      continue;
+    json receipt;
+    try {
+      receipt = json::parse(line);
+    } catch (const json::exception &error) {
+      refuse("KF_KFX_SCHEMA_INVALID", "native KFX lifecycle history is not valid JSONL: " + std::string(error.what()));
+    }
+    if (receipt.value("schema", "") != "kungfu.kfx.lifecycle-receipt/v1" ||
+        receipt.value("sequence", size_t{0}) != expected_sequence ||
+        receipt.value("previousReceiptRoot", "") != previous_root || !receipt.contains("receiptRoot") ||
+        !receipt.at("receiptRoot").is_string())
+      refuse("KF_KFX_SCHEMA_INVALID", "native KFX lifecycle receipt chain is invalid");
+    auto identity = receipt;
+    const auto receipt_root = identity.at("receiptRoot").get<std::string>();
+    identity.erase("receiptRoot");
+    if (root_of(identity) != receipt_root)
+      refuse("KF_KFX_SCHEMA_INVALID", "native KFX lifecycle receipt root is invalid");
+    result.receipts.push_back(receipt);
+    receipt_roots.push_back(receipt_root);
+    previous_root = receipt_root;
+    ++expected_sequence;
+    if (receipt.value("outcome", "") != "applied")
+      continue;
+    const auto generation = receipt.value("generation", uint64_t{0});
+    if (generation != result.generation + 1)
+      refuse("KF_KFX_SCHEMA_INVALID", "native KFX applied generation chain is invalid");
+    result.generation = generation;
+    const auto package_key = receipt.value("packageKey", "");
+    const auto state = receipt.value("state", "");
+    if (!package_key.empty() && !state.empty())
+      result.package_states[package_key] = state;
+  }
+  result.history_root = root_of(receipt_roots);
+  return result;
+}
+
+class lifecycle_writer_lock {
+public:
+  explicit lifecycle_writer_lock(const std::string &runtime_dir) : path_(lifecycle_root(runtime_dir) / ".writer-lock") {
+    fs::create_directories(path_.parent_path());
+    std::error_code error;
+    if (!fs::create_directory(path_, error))
+      refuse("KF_KFX_WRITER_BUSY", "another native KFX writer owns this runtime directory");
+    held_ = true;
+  }
+
+  lifecycle_writer_lock(const lifecycle_writer_lock &) = delete;
+  lifecycle_writer_lock &operator=(const lifecycle_writer_lock &) = delete;
+
+  ~lifecycle_writer_lock() {
+    if (!held_)
+      return;
+    std::error_code ignored;
+    fs::remove(path_, ignored);
+  }
+
+private:
+  fs::path path_;
+  bool held_ = false;
+};
+
+json append_lifecycle_receipt(const std::string &runtime_dir, const lifecycle_view &current, json identity) {
+  identity["schema"] = "kungfu.kfx.lifecycle-receipt/v1";
+  identity["sequence"] = current.receipts.size() + 1;
+  identity["previousReceiptRoot"] =
+      current.receipts.empty() ? "" : current.receipts.back().at("receiptRoot").get<std::string>();
+  const auto receipt_root = root_of(identity);
+  identity["receiptRoot"] = receipt_root;
+  const auto path = lifecycle_root(runtime_dir) / "registry-history.jsonl";
+  fs::create_directories(path.parent_path());
+  std::ofstream output(path, std::ios::app);
+  if (!output)
+    refuse("KF_KFX_SCHEMA_INVALID", "cannot append native KFX lifecycle receipt");
+  output << identity.dump() << '\n';
+  output.flush();
+  if (!output)
+    refuse("KF_KFX_SCHEMA_INVALID", "cannot durably flush native KFX lifecycle receipt");
+  return identity;
+}
+
+const json &provider_for(const snapshot &value, const std::string &provider_id) {
+  for (const auto &provider : value.graph.at("providers")) {
+    if (provider.at("providerId") == provider_id)
+      return provider;
+  }
+  refuse("KF_KFX_MEMBER_MISSING", "KFX provider is not present in the semantic graph: " + provider_id);
+}
+
+json experience_flow_descriptor(const snapshot &value, const lifecycle_view &lifecycle, const std::string &plan_root) {
+  json contributions = json::array();
+  for (const auto &contribution : value.graph.at("contributions")) {
+    if (!contribution.contains("surface") ||
+        (contribution.at("surface") != "experience" && contribution.at("surface") != "flow"))
+      continue;
+    json projected = contribution;
+    const auto provider_id = contribution.at("ownerProviderId").get<std::string>();
+    projected["providerState"] =
+        lifecycle.package_states.contains(provider_id) ? lifecycle.package_states.at(provider_id) : "dormant";
+    contributions.push_back(projected);
+  }
+  const json receipt_dependency = {
+      {"graphRoot", value.graph_root}, {"planRoot", plan_root}, {"generation", lifecycle.generation}};
+  const json identity = {{"schema", "kungfu.kfx.experience-flow-host/v1"},
+                         {"graphRoot", value.graph_root},
+                         {"planRoot", plan_root},
+                         {"generation", lifecycle.generation},
+                         {"receiptDependencyRoot", root_of(receipt_dependency)},
+                         {"hosts", json::array({"gui", "tui", "cli", "agent"})},
+                         {"contributions", contributions}};
+  auto descriptor = identity;
+  descriptor["descriptorRoot"] = root_of(identity);
+  return descriptor;
+}
+
+json lifecycle_plan(const snapshot &value, const lifecycle_view &lifecycle, const json &request) {
+  json package_plan = json::array();
+  for (const auto &package : value.packages) {
+    const auto key = package.at("key").get<std::string>();
+    const auto &provider = provider_for(value, key);
+    const auto lifecycle_state =
+        lifecycle.package_states.contains(key) ? lifecycle.package_states.at(key) : std::string{"dormant"};
+    const auto effective_state = provider.at("state") == "degraded" ? "degraded" : lifecycle_state;
+    package_plan.push_back({{"key", package.at("key")},
+                            {"providerRoot", provider.at("providerRoot")},
+                            {"rootKind", package.at("rootKind")},
+                            {"packageRoot", package.at("packageRoot")},
+                            {"apiCompatibility", package.at("apiCompatibility")},
+                            {"facets", package.at("facets")},
+                            {"runtimeTier", package.at("runtimeTier")},
+                            {"admissionGrade", package.at("admissionGrade")},
+                            {"trustRoot", provider.at("trustRoot")},
+                            {"capabilityRoot", provider.at("capabilityRoot")},
+                            {"hosts", package.at("hosts")},
+                            {"declaredCapabilities", package.at("declaredCapabilities")},
+                            {"semanticState", provider.at("state")},
+                            {"lifecycleState", lifecycle_state},
+                            {"state", effective_state},
+                            {"causes", provider.at("causes")},
+                            {"recoveryGuidance", provider.at("recoveryGuidance")}});
+  }
+  json intent = nullptr;
+  if (request.contains("operation") || request.contains("packageKey")) {
+    intent = {{"operation", request.value("operation", "")}, {"packageKey", request.value("packageKey", "")}};
+  }
+  json identity = {{"schema", "kungfu.kfx.load-plan/v2"},
+                   {"registryRoot", value.registry_root},
+                   {"graphRoot", value.graph_root},
+                   {"generation", lifecycle.generation},
+                   {"packages", package_plan},
+                   {"suites", value.suites},
+                   {"diagnostics", value.diagnostics},
+                   {"intent", intent},
+                   {"readOnly", false}};
+  auto result = identity;
+  const auto plan_root = root_of(identity);
+  result["planRoot"] = plan_root;
+  result["graph"] = value.graph;
+  result["nextGeneration"] = intent.is_null() ? lifecycle.generation : lifecycle.generation + 1;
+  result["hostContract"] = experience_flow_descriptor(value, lifecycle, plan_root);
+  return result;
+}
+
+int64_t receipt_time(const json &request) {
+  if (request.contains("systemTime")) {
+    if (!request.at("systemTime").is_number_integer() || request.at("systemTime").get<int64_t>() < 0)
+      refuse("KF_KFX_SCHEMA_INVALID", "systemTime must be a non-negative integer");
+    return request.at("systemTime").get<int64_t>();
+  }
+  return std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::system_clock::now().time_since_epoch())
+      .count();
+}
+
+json lifecycle_history(const std::string &runtime_dir, const json &request) {
+  const auto lifecycle = load_lifecycle(runtime_dir);
+  json receipts = json::array();
+  const auto package_key = request.value("packageKey", "");
+  for (const auto &receipt : lifecycle.receipts) {
+    if (package_key.empty() || receipt.value("packageKey", "") == package_key)
+      receipts.push_back(receipt);
+  }
+  return {{"schema", "kungfu.kfx.lifecycle-history/v1"},
+          {"authority", "libkungfu"},
+          {"generation", lifecycle.generation},
+          {"historyRoot", lifecycle.history_root},
+          {"receipts", receipts}};
+}
+
+json apply_lifecycle_mutation(const snapshot &value, const lifecycle_view &lifecycle, const json &plan,
+                              const json &request, const std::string &runtime_dir) {
+  const auto operation = required_text(request, "operation", "request");
+  static const std::set<std::string> operations = {"install", "update", "remove", "enable", "disable", "activate"};
+  validate_enum(operation, operations, "lifecycle operation");
+  const auto package_key = required_text(request, "packageKey", "request");
+  const auto package = find_package(value.packages, package_key);
+  if (package.is_null())
+    refuse("KF_KFX_MEMBER_MISSING", "KFX package is not present in the registry: " + package_key);
+  const auto &provider = provider_for(value, package_key);
+  const auto prior_state = lifecycle.package_states.contains(package_key) ? lifecycle.package_states.at(package_key)
+                                                                          : std::string{"dormant"};
+
+  auto refuse_with_receipt = [&](const std::string &code, const std::string &message) -> void {
+    const json identity = {{"outcome", "refused"},
+                           {"previousGeneration", lifecycle.generation},
+                           {"generation", lifecycle.generation},
+                           {"operation", operation},
+                           {"packageKey", package_key},
+                           {"packageRoot", package.at("packageRoot")},
+                           {"registryRoot", value.registry_root},
+                           {"graphRoot", value.graph_root},
+                           {"planRoot", plan.at("planRoot")},
+                           {"trustRoot", provider.at("trustRoot")},
+                           {"priorState", prior_state},
+                           {"nextState", prior_state},
+                           {"state", prior_state},
+                           {"actor", request.value("actor", "anonymous")},
+                           {"recordedAt", receipt_time(request)},
+                           {"code", code},
+                           {"message", message},
+                           {"expected",
+                            {{"generation", request.value("expectedGeneration", uint64_t{0})},
+                             {"registryRoot", request.value("expectedRegistryRoot", "")},
+                             {"graphRoot", request.value("expectedGraphRoot", "")},
+                             {"planRoot", request.value("expectedPlanRoot", "")},
+                             {"trustRoot", request.value("expectedTrustRoot", "")},
+                             {"packageRoot", request.value("expectedPackageRoot", "")}}}};
+    (void)append_lifecycle_receipt(runtime_dir, lifecycle, identity);
+    refuse(code, message);
+  };
+
+  if (!request.contains("expectedGeneration") || !request.at("expectedGeneration").is_number_integer() ||
+      request.at("expectedGeneration").get<int64_t>() < 0 ||
+      static_cast<uint64_t>(request.at("expectedGeneration").get<int64_t>()) != lifecycle.generation)
+    refuse_with_receipt("KF_KFX_GENERATION_MISMATCH", "lifecycle generation changed since planning");
+  if (request.value("expectedRegistryRoot", "") != value.registry_root)
+    refuse_with_receipt("KF_KFX_REGISTRY_STALE", "registry root changed since planning");
+  if (request.value("expectedGraphRoot", "") != value.graph_root)
+    refuse_with_receipt("KF_KFX_GRAPH_STALE", "semantic graph root changed since planning");
+  if (request.value("expectedPlanRoot", "") != plan.at("planRoot").get<std::string>())
+    refuse_with_receipt("KF_KFX_PLAN_STALE", "load plan root changed since planning");
+  if (request.value("expectedTrustRoot", "") != provider.at("trustRoot").get<std::string>())
+    refuse_with_receipt("KF_KFX_ASSESSMENT_STALE", "provider trust root changed since planning");
+  if (request.value("expectedPackageRoot", "") != package.at("packageRoot").get<std::string>())
+    refuse_with_receipt("KF_KFX_REGISTRY_STALE", "package root changed since planning");
+
+  const auto runtime_root = lifecycle_root(runtime_dir);
+  const auto install_root = fs::absolute(runtime_dir).parent_path() / "extensions";
+  const auto destination = install_root / package_key;
+  const auto source = fs::path(package.at("path").get<std::string>());
+  const auto generation = lifecycle.generation + 1;
+  fs::path retained_path;
+  fs::path staged_path;
+  fs::path content_path;
+  bool destination_replaced = false;
+  bool destination_materialized = false;
+  bool appending_receipt = false;
+
+  auto rollback = [&] {
+    std::error_code ignored;
+    if (destination_materialized && fs::exists(destination))
+      fs::rename(destination, staged_path, ignored);
+    if (destination_replaced && !retained_path.empty() && fs::exists(retained_path) && !fs::exists(destination))
+      fs::rename(retained_path, destination, ignored);
+    if (!staged_path.empty() && fs::exists(staged_path))
+      fs::remove_all(staged_path, ignored);
+  };
+
+  try {
+    if (operation == "install" || operation == "update") {
+      content_path = runtime_root / "content" / package.at("packageRoot").get<std::string>().substr(7);
+      fs::create_directories(content_path.parent_path());
+      if (!fs::exists(content_path)) {
+        fs::copy(source, content_path, fs::copy_options::recursive);
+      } else if (root_of(package_closure(content_path)) != package.at("packageRoot").get<std::string>()) {
+        refuse("KF_KFX_SCHEMA_INVALID", "retained KFX content does not match its package root");
+      }
+      fs::create_directories(install_root);
+      staged_path = install_root / (".kfx-stage-" + package_key + "-" + std::to_string(generation));
+      if (fs::exists(staged_path))
+        refuse("KF_KFX_WRITER_BUSY", "a staged KFX package already exists for this generation");
+      fs::copy(content_path, staged_path, fs::copy_options::recursive);
+      if (fs::exists(destination)) {
+        if (operation == "install" && !request.value("replaceExisting", false))
+          refuse("KF_KFX_PACKAGE_DUPLICATE", "KFX package is already installed: " + package_key);
+        retained_path =
+            runtime_root / "retained" /
+            (std::to_string(generation) + "-" + package_key + "-" + root_of(package_closure(destination)).substr(7));
+        fs::create_directories(retained_path.parent_path());
+        fs::rename(destination, retained_path);
+        destination_replaced = true;
+      } else if (operation == "update") {
+        refuse("KF_KFX_MEMBER_MISSING", "cannot update an absent KFX package: " + package_key);
+      }
+      fs::rename(staged_path, destination);
+      destination_materialized = true;
+    } else if (operation == "remove") {
+      const auto canonical_destination = fs::weakly_canonical(source);
+      const auto canonical_install_root = fs::weakly_canonical(install_root);
+      if (canonical_destination.parent_path() != canonical_install_root)
+        refuse("KF_KFX_PATH_TRAVERSAL", "remove is confined to the managed KFX install root");
+      retained_path = runtime_root / "retained" /
+                      (std::to_string(generation) + "-" + package_key + "-" +
+                       package.at("packageRoot").get<std::string>().substr(7));
+      fs::create_directories(retained_path.parent_path());
+      fs::rename(canonical_destination, retained_path);
+      destination_replaced = true;
+    }
+
+    const auto state = operation == "remove" || operation == "disable" ? "dormant"
+                       : provider.at("state") == "degraded"            ? "degraded"
+                                                                       : "active";
+    const json dependency_identity = {
+        {"registryRoot", value.registry_root},      {"graphRoot", value.graph_root},
+        {"planRoot", plan.at("planRoot")},          {"trustRoot", provider.at("trustRoot")},
+        {"packageRoot", package.at("packageRoot")}, {"generation", generation}};
+    const json identity = {{"outcome", "applied"},
+                           {"previousGeneration", lifecycle.generation},
+                           {"generation", generation},
+                           {"operation", operation},
+                           {"packageKey", package_key},
+                           {"packageRoot", package.at("packageRoot")},
+                           {"registryRoot", value.registry_root},
+                           {"graphRoot", value.graph_root},
+                           {"planRoot", plan.at("planRoot")},
+                           {"trustRoot", provider.at("trustRoot")},
+                           {"receiptDependencyRoot", root_of(dependency_identity)},
+                           {"priorState", prior_state},
+                           {"nextState", state},
+                           {"state", state},
+                           {"actor", request.value("actor", "anonymous")},
+                           {"recordedAt", receipt_time(request)},
+                           {"contentPath", content_path.empty() ? nullptr : json(content_path.string())},
+                           {"retainedPath", retained_path.empty() ? nullptr : json(retained_path.string())}};
+    appending_receipt = true;
+    auto receipt = append_lifecycle_receipt(runtime_dir, lifecycle, identity);
+    return {{"schema", "kungfu.kfx.lifecycle-application/v1"},
+            {"applied", true},
+            {"generation", generation},
+            {"receipt", receipt}};
+  } catch (const std::invalid_argument &error) {
+    rollback();
+    if (appending_receipt)
+      throw;
+    const std::string detail = error.what();
+    const auto separator = detail.find(':');
+    const auto code = detail.starts_with("KF_") ? detail.substr(0, separator) : "KF_KFX_SCHEMA_INVALID";
+    refuse_with_receipt(code, detail);
+  } catch (const std::exception &error) {
+    rollback();
+    if (appending_receipt)
+      throw;
+    refuse_with_receipt("KF_KFX_SCHEMA_INVALID", error.what());
+  } catch (...) {
+    rollback();
+    if (appending_receipt)
+      throw;
+    refuse_with_receipt("KF_KFX_SCHEMA_INVALID", "unknown native KFX lifecycle failure");
+  }
+  return json::object();
+}
+
 } // namespace
 
-static json query_native_kfx_registry_unchecked(const std::string &action, const json &request) {
-  static const std::set<std::string> actions = {"list", "inspect", "resolve", "plan", "status", "assess"};
+static json query_native_kfx_registry_unchecked(const std::string &action, const json &request,
+                                                const std::string &runtime_dir) {
+  static const std::set<std::string> actions = {"list",   "inspect", "resolve", "plan",
+                                                "status", "assess",  "apply",   "history"};
   if (!actions.contains(action))
-    refuse("KF_KFX_AUTHORITY_CLAIM_FORBIDDEN", "native KFX registry is read-only: " + action);
-  const auto snapshot = build_snapshot(request);
+    refuse("KF_KFX_AUTHORITY_CLAIM_FORBIDDEN", "unsupported native KFX registry operation: " + action);
+  if (action == "history")
+    return lifecycle_history(runtime_dir, request);
+  if (action == "apply" && runtime_dir.empty())
+    refuse("KF_KFX_AUTHORITY_CLAIM_FORBIDDEN", "native KFX mutation requires an explicit runtime directory");
+  std::optional<lifecycle_writer_lock> writer_lock;
+  if (action == "apply")
+    writer_lock.emplace(runtime_dir);
+  auto snapshot_request = request;
+  if (action == "apply")
+    snapshot_request.erase("expectedRegistryRoot");
+  const auto snapshot = build_snapshot(snapshot_request);
+  lifecycle_view lifecycle;
+  if (runtime_dir.empty()) {
+    lifecycle.history_root = root_of(json::array());
+  } else {
+    lifecycle = load_lifecycle(runtime_dir);
+  }
+  const auto load_plan = lifecycle_plan(snapshot, lifecycle, request);
+  if (action == "apply")
+    return apply_lifecycle_mutation(snapshot, lifecycle, load_plan, request, runtime_dir);
   if (action == "status") {
-    return {{"schema", "kungfu.kfx.registry-status/v1"},
+    return {{"schema", "kungfu.kfx.registry-status/v2"},
             {"authority", "libkungfu"},
-            {"readOnly", true},
+            {"writer", "one-libkungfu-writer-per-runtime-directory"},
+            {"readOnly", false},
             {"cacheAuthority", false},
             {"registryRoot", snapshot.registry_root},
+            {"graphRoot", snapshot.graph_root},
+            {"generation", lifecycle.generation},
+            {"historyRoot", lifecycle.history_root},
             {"packageCount", snapshot.packages.size()},
             {"suiteCount", snapshot.suites.size()},
             {"diagnostics", snapshot.diagnostics}};
   }
   if (action == "list") {
     json packages = json::array();
-    for (const auto &package : snapshot.packages)
-      packages.push_back(public_package(package));
-    return {{"schema", "kungfu.kfx.registry-list/v1"},
+    for (const auto &package : snapshot.packages) {
+      auto projected = public_package(package);
+      const auto key = package.at("key").get<std::string>();
+      projected["state"] =
+          lifecycle.package_states.contains(key) ? lifecycle.package_states.at(key) : std::string{"dormant"};
+      projected["providerRoot"] = provider_for(snapshot, key).at("providerRoot");
+      packages.push_back(projected);
+    }
+    return {{"schema", "kungfu.kfx.registry-list/v2"},
             {"registryRoot", snapshot.registry_root},
+            {"graphRoot", snapshot.graph_root},
+            {"generation", lifecycle.generation},
             {"packages", packages},
             {"diagnostics", snapshot.diagnostics}};
   }
@@ -854,9 +1561,16 @@ static json query_native_kfx_registry_unchecked(const std::string &action, const
     const auto package = find_package(snapshot.packages, key);
     if (package.is_null())
       refuse("KF_KFX_MEMBER_MISSING", "KFX package is not present in the registry: " + key);
-    return {{"schema", "kungfu.kfx.registry-inspection/v1"},
+    auto projected = package;
+    projected.erase("semantic");
+    projected["provider"] = provider_for(snapshot, key);
+    projected["state"] =
+        lifecycle.package_states.contains(key) ? lifecycle.package_states.at(key) : std::string{"dormant"};
+    return {{"schema", "kungfu.kfx.registry-inspection/v2"},
             {"registryRoot", snapshot.registry_root},
-            {"package", package},
+            {"graphRoot", snapshot.graph_root},
+            {"generation", lifecycle.generation},
+            {"package", projected},
             {"diagnostics", snapshot.diagnostics}};
   }
   if (action == "assess") {
@@ -866,6 +1580,8 @@ static json query_native_kfx_registry_unchecked(const std::string &action, const
       refuse("KF_KFX_MEMBER_MISSING", "KFX package is not present in the registry: " + key);
     auto result = assess_package(package, snapshot.registry_root, request);
     result["registryRoot"] = snapshot.registry_root;
+    result["graphRoot"] = snapshot.graph_root;
+    result["generation"] = lifecycle.generation;
     result["diagnostics"] = snapshot.diagnostics;
     return result;
   }
@@ -873,37 +1589,22 @@ static json query_native_kfx_registry_unchecked(const std::string &action, const
     const auto key = required_text(request, "suiteKey", "request");
     for (const auto &suite : snapshot.suites) {
       if (suite.at("suiteKey") == key)
-        return {{"schema", "kungfu.kfx.registry-resolution/v1"},
+        return {{"schema", "kungfu.kfx.registry-resolution/v2"},
                 {"registryRoot", snapshot.registry_root},
+                {"graphRoot", snapshot.graph_root},
+                {"generation", lifecycle.generation},
                 {"suite", suite},
                 {"diagnostics", snapshot.diagnostics}};
     }
     refuse("KF_KFX_MEMBER_MISSING", "KFX Suite is not present in the registry: " + key);
   }
 
-  json package_plan = json::array();
-  for (const auto &package : snapshot.packages) {
-    package_plan.push_back({{"key", package.at("key")},
-                            {"rootKind", package.at("rootKind")},
-                            {"packageRoot", package.at("packageRoot")},
-                            {"apiCompatibility", package.at("apiCompatibility")},
-                            {"facets", package.at("facets")},
-                            {"runtimeTier", package.at("runtimeTier")},
-                            {"admissionGrade", package.at("admissionGrade")},
-                            {"hosts", package.at("hosts")},
-                            {"declaredCapabilities", package.at("declaredCapabilities")}});
-  }
-  json identity = {
-      {"schema", "kungfu.kfx.load-plan/v1"}, {"registryRoot", snapshot.registry_root}, {"packages", package_plan},
-      {"suites", snapshot.suites},           {"diagnostics", snapshot.diagnostics},    {"readOnly", true}};
-  auto result = identity;
-  result["planRoot"] = root_of(identity);
-  return result;
+  return load_plan;
 }
 
-json query_native_kfx_registry(const std::string &action, const json &request) {
+json query_native_kfx_registry(const std::string &action, const json &request, const std::string &runtime_dir) {
   try {
-    return query_native_kfx_registry_unchecked(action, request);
+    return query_native_kfx_registry_unchecked(action, request, runtime_dir);
   } catch (const json::exception &error) {
     refuse("KF_KFX_SCHEMA_INVALID", "invalid KFX registry document: " + std::string(error.what()));
   }

@@ -11,7 +11,8 @@ namespace kungfu::runtime::kfx {
 
 // Build one immutable, read-only registry snapshot from explicit roots. Every
 // call re-derives its result from content; no process-local cache is authority.
-[[nodiscard]] nlohmann::json query_native_kfx_registry(const std::string &action, const nlohmann::json &request);
+[[nodiscard]] nlohmann::json query_native_kfx_registry(const std::string &action, const nlohmann::json &request,
+                                                       const std::string &runtime_dir = {});
 
 } // namespace kungfu::runtime::kfx
 

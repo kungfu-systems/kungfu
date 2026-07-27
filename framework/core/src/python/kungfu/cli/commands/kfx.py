@@ -13,10 +13,10 @@ import click
 import hashlib
 import json
 import os
-import shutil
 import subprocess
 import sys
 import tarfile
+import tempfile
 from pathlib import Path
 
 from kungfu import kfx_contract
@@ -136,6 +136,49 @@ def _libwasm_host():
     )
 
 
+def _native_mutation(ctx, package_root, key, operation, trusted, **values):
+    request = {
+        "roots": [{"kind": "user", "path": str(Path(package_root).resolve())}],
+        "runtimeTiers": {
+            key: "first-party-pinned" if trusted else "untrusted",
+        },
+        "packageKey": key,
+        "operation": operation,
+        **values,
+    }
+    plan = storage_service.kfx_registry("plan", request, ctx.runtime_dir)
+    package = next(
+        (item for item in plan["packages"] if item.get("key") == key),
+        None,
+    )
+    if package is None:
+        raise ValueError(f"native KFX plan did not contain package {key}")
+    mutation = {
+        **request,
+        "expectedGeneration": plan["generation"],
+        "expectedRegistryRoot": plan["registryRoot"],
+        "expectedGraphRoot": plan["graphRoot"],
+        "expectedPlanRoot": plan["planRoot"],
+        "expectedTrustRoot": package["trustRoot"],
+        "expectedPackageRoot": package["packageRoot"],
+        "actor": "kungfu-cli",
+    }
+    return storage_service.kfx_registry("apply", mutation, ctx.runtime_dir)
+
+
+def _extract_package_tgz(source, package_root):
+    package_root.mkdir(parents=True)
+    with tarfile.open(source, "r:gz") as archive:
+        members = [m for m in archive.getmembers() if m.name.startswith("package/")]
+        for member in members:
+            member.name = member.name[len("package/") :]
+        archive.extractall(
+            package_root,
+            members=[m for m in members if m.name],
+            filter="data",
+        )
+
+
 @kfx.command(help="install a kfx package (npm pack tgz, or a package directory)")
 @click.argument("source", type=click.Path(exists=True))
 @click.option(
@@ -160,31 +203,43 @@ def install(ctx, source, force):
         )
         sys.exit(1)
 
-    dest = os.path.join(_install_root(ctx), key)
-    if os.path.exists(dest):
+    dest = Path(_install_root(ctx)) / key
+    if dest.exists():
         if not force:
             click.echo(
                 f"[kfx] {key} is already installed (use --force to replace)", err=True
             )
             sys.exit(1)
-        shutil.rmtree(dest)
-    os.makedirs(dest, exist_ok=True)
-
-    if is_tgz:
-        # npm tgz layout: everything under the package/ prefix
-        with tarfile.open(source, "r:gz") as archive:
-            members = [m for m in archive.getmembers() if m.name.startswith("package/")]
-            for member in members:
-                member.name = member.name[len("package/") :]
-            archive.extractall(
-                dest, members=[m for m in members if m.name], filter="data"
+    operation = "update" if dest.exists() else "install"
+    try:
+        if is_tgz:
+            with tempfile.TemporaryDirectory(prefix="kungfu-kfx-package-") as temp:
+                package_root = Path(temp) / "package"
+                _extract_package_tgz(source, package_root)
+                application = _native_mutation(
+                    ctx,
+                    package_root,
+                    key,
+                    operation,
+                    _trusted(manifest),
+                    replaceExisting=force,
+                )
+        else:
+            application = _native_mutation(
+                ctx,
+                source,
+                key,
+                operation,
+                _trusted(manifest),
+                replaceExisting=force,
             )
-    else:
-        shutil.copytree(source, dest, dirs_exist_ok=True)
+    except (OSError, RuntimeError, ValueError) as error:
+        raise click.ClickException(str(error)) from error
 
     click.echo(
         f"[kfx] installed {manifest.get('name', key)}@{manifest.get('version', '?')} "
-        f"({_kind(manifest)}) -> {dest}"
+        f"({_kind(manifest)}) -> {dest} "
+        f"(generation {application['generation']})"
     )
     for line in _trust_notice(manifest):
         click.echo(line)
@@ -306,16 +361,26 @@ def run_wasm(ctx, key, grants, source_namespace, source_name, engine):
 @click.argument("key", type=str)
 @kfx_command_context
 def remove(ctx, key):
-    dest = os.path.join(_install_root(ctx), key)
+    dest = Path(_install_root(ctx)) / key
     # uninstall is scoped to the managed install root; never touch elsewhere
-    if os.path.realpath(os.path.dirname(dest)) != os.path.realpath(_install_root(ctx)):
+    if os.path.realpath(dest.parent) != os.path.realpath(_install_root(ctx)):
         click.echo(f"[kfx] invalid key: {key}", err=True)
         sys.exit(1)
-    if not os.path.isdir(dest):
+    if not dest.is_dir():
         click.echo(f"[kfx] not installed: {key}", err=True)
         sys.exit(1)
-    shutil.rmtree(dest)
-    click.echo(f"[kfx] removed {key}")
+    try:
+        manifest = _read_manifest_from_dir(dest)
+        application = _native_mutation(
+            ctx,
+            _install_root(ctx),
+            key,
+            "remove",
+            _trusted(manifest),
+        )
+    except (OSError, RuntimeError, ValueError, json.JSONDecodeError) as error:
+        raise click.ClickException(str(error)) from error
+    click.echo(f"[kfx] removed {key} (generation {application['generation']})")
 
 
 @kfx.command(help="print the kfx contract metadata")
@@ -368,7 +433,7 @@ def profile_schema(ctx, as_json):
 
 @kfx.group(
     name="native",
-    help="inspect the read-only Core-native KFX registry and canonical load plan",
+    help="inspect the Core-native KFX semantic registry, plan, and lifecycle",
 )
 @click.help_option("-h", "--help")
 @kfx_command_context
@@ -454,12 +519,28 @@ def native_resolve(ctx, suite_key, roots, runtime_tiers):
     _native_query(ctx, "resolve", roots, runtime_tiers, suiteKey=suite_key)
 
 
-@native_group.command(name="plan", help="print the canonical read-only KFX load plan")
+@native_group.command(name="plan", help="print the canonical fenced KFX load plan")
 @click.option("--root", "roots", multiple=True, required=True, help="KIND=PATH")
 @click.option("--runtime-tier", "runtime_tiers", multiple=True, help="KEY=TIER")
 @kfx_command_context
 def native_plan(ctx, roots, runtime_tiers):
     _native_query(ctx, "plan", roots, runtime_tiers)
+
+
+@native_group.command(
+    name="history", help="print immutable native KFX lifecycle receipts"
+)
+@click.option("--package-key", default="", help="filter receipts by package key")
+@kfx_command_context
+def native_history(ctx, package_key):
+    request = {"packageKey": package_key} if package_key else {}
+    click.echo(
+        json.dumps(
+            storage_service.kfx_registry("history", request, ctx.runtime_dir),
+            indent=2,
+            sort_keys=True,
+        )
+    )
 
 
 @native_group.command(name="status", help="print native KFX registry authority status")

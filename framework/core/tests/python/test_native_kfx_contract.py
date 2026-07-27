@@ -3,7 +3,7 @@ from pathlib import Path
 
 from click.testing import CliRunner
 
-from kungfu import kfx_contract
+from kungfu import kfx_contract, kfx_host
 from kungfu.cli.commands import __registry__  # noqa: F401
 from kungfu.cli.commands import kfc
 from kungfu.storage import service as storage_service
@@ -57,6 +57,32 @@ def _assessment_request(tmp_path):
     }
 
 
+def _semantic_registry_request():
+    root = (
+        Path(__file__).parents[2]
+        / "src"
+        / "libkungfu"
+        / "tests"
+        / "fixtures"
+        / "native_kfx_registry"
+        / "semantic"
+    )
+    return {"roots": [{"kind": "workspace", "path": str(root)}]}
+
+
+def _expected_registry_roots():
+    path = (
+        Path(__file__).parents[2]
+        / "src"
+        / "libkungfu"
+        / "tests"
+        / "fixtures"
+        / "native_kfx_registry"
+        / "expected-roots.json"
+    )
+    return json.loads(path.read_text(encoding="utf-8"))
+
+
 def test_native_kfx_python_binding_is_a_thin_core_edge(tmp_path):
     contract = storage_service.kfx_runtime_contract(tmp_path)
     assert contract["schema"] == "kungfu.kfx.native-contract/v2"
@@ -95,8 +121,40 @@ def test_native_kfx_registry_python_projection_matches_core_roots(tmp_path):
     assert plan["suites"][0]["suiteRoot"] == resolved["suite"]["suiteRoot"]
     assert plan["suites"][0]["profileRoot"] == resolved["suite"]["profileRoot"]
     assert plan["planRoot"].startswith("sha256:")
-    assert status["readOnly"] is True
+    assert status["readOnly"] is False
     assert status["cacheAuthority"] is False
+    assert plan["graphRoot"] == status["graphRoot"]
+
+
+def test_python_and_host_projections_preserve_core_semantic_roots(tmp_path):
+    plan = storage_service.kfx_registry(
+        "plan", _semantic_registry_request(), tmp_path / "runtime"
+    )
+    expected = _expected_registry_roots()
+    assert plan["graphRoot"] == expected["semanticGraphRoot"]
+    assert plan["planRoot"] == expected["semanticPlanRoot"]
+    assert (
+        plan["hostContract"]["receiptDependencyRoot"]
+        == expected["semanticHostReceiptDependencyRoot"]
+    )
+    assert plan["graph"]["providers"]
+    assert plan["graphRoot"].startswith("sha256:")
+    assert plan["hostContract"]["planRoot"] == plan["planRoot"]
+
+    projections = [
+        kfx_host.project_experience_flow_host(plan["hostContract"], host)
+        for host in ("gui", "tui", "cli", "agent")
+    ]
+    assert {projection["graphRoot"] for projection in projections} == {
+        plan["graphRoot"]
+    }
+    assert {projection["planRoot"] for projection in projections} == {plan["planRoot"]}
+    assert {projection["receiptDependencyRoot"] for projection in projections} == {
+        plan["hostContract"]["receiptDependencyRoot"]
+    }
+    tui = next(item for item in projections if item["host"] == "tui")
+    assert tui["contributions"][0]["semanticState"] == "active"
+    assert tui["contributions"][0]["presentationState"] == "dormant"
 
 
 def test_native_kfx_cli_projects_the_same_plan_root(tmp_path):

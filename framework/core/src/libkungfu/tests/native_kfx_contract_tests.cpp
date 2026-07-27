@@ -35,6 +35,19 @@ fs::path registry_root() {
   return fs::path(KUNGFU_NATIVE_KFX_TEST_SOURCE_DIR) / "fixtures" / "native_kfx_registry" / "roots" / "workspace";
 }
 
+fs::path semantic_registry_root() {
+  return fs::path(KUNGFU_NATIVE_KFX_TEST_SOURCE_DIR) / "fixtures" / "native_kfx_registry" / "semantic";
+}
+
+nlohmann::json expected_registry_roots() {
+  const auto path =
+      fs::path(KUNGFU_NATIVE_KFX_TEST_SOURCE_DIR) / "fixtures" / "native_kfx_registry" / "expected-roots.json";
+  std::ifstream input(path);
+  if (!input)
+    throw std::runtime_error("cannot open expected registry roots: " + path.string());
+  return nlohmann::json::parse(input);
+}
+
 nlohmann::json registry_request() {
   return {{"roots", nlohmann::json::array({{{"kind", "workspace"}, {"path", registry_root().string()}}})},
           {"runtimeTiers", {{"optional-view", "verified-third-party"}}}};
@@ -91,6 +104,14 @@ void test_contract_is_versioned_and_core_owned() {
           "native admission contract did not bind future mutation receipts");
   require(assessment.at("kfdAssessment").at("lifecycleOwner") == "KF-ADR-019f86da-4f90-7b3f-9ef3-84f5a878f302",
           "native KFX admission created a second KFD assessment lifecycle");
+  require(first.at("semanticGraph").at("dependencyModes") == nlohmann::json::array({"required", "uses-if-present"}),
+          "native contract did not freeze required and optional semantic dependency modes");
+  require(first.at("semanticGraph").at("compositionRule") == "contributes-to-never-transfers-extension-point-ownership",
+          "native contract allowed contribution composition to become ownership");
+  require(first.at("lifecycle").at("authority") == "one-libkungfu-writer-per-runtime-directory",
+          "native contract did not freeze one runtime-directory writer");
+  require(first.at("experienceFlowHost").at("renderingAuthority") == "host-native",
+          "native contract claimed host rendering authority");
   require(first.at("nativeContractRoot") == second.at("nativeContractRoot"), "native contract root was unstable");
   require(first.at("sourceContractRoot").get<std::string>().rfind("sha256:", 0) == 0,
           "source contract root was not content-addressed");
@@ -182,7 +203,8 @@ void test_registry_produces_one_deterministic_cross_surface_plan() {
   require(first_plan.at("planRoot").get<std::string>().rfind("sha256:", 0) == 0,
           "native load plan is not content-addressed");
   require(status.at("registryRoot") == first_plan.at("registryRoot"), "status and plan read different snapshots");
-  require(status.at("readOnly") && !status.at("cacheAuthority"), "registry claimed mutation or cache authority");
+  require(!status.at("readOnly") && !status.at("cacheAuthority"), "registry did not expose its single writer seam");
+  require(status.at("graphRoot") == first_plan.at("graphRoot"), "status and plan read different semantic graphs");
 }
 
 void test_registry_negative_and_concurrent_reads() {
@@ -446,6 +468,237 @@ void test_exact_buildchain_attestation_and_operation_admission() {
           "identity verification incorrectly inherited KFD-attested operation admission");
 }
 
+void test_semantic_graph_and_host_contract_are_canonical() {
+  const nlohmann::json request = {
+      {"roots", nlohmann::json::array({{{"kind", "workspace"}, {"path", semantic_registry_root().string()}}})}};
+  const auto first = kfx::query_native_kfx_registry("plan", request);
+  const auto second = kfx::query_native_kfx_registry("plan", request);
+  const auto expected = expected_registry_roots();
+  require(first == second, "semantic graph and plan roots are not deterministic");
+  require(first.at("graphRoot") == expected.at("semanticGraphRoot") &&
+              first.at("planRoot") == expected.at("semanticPlanRoot") &&
+              first.at("hostContract").at("receiptDependencyRoot") == expected.at("semanticHostReceiptDependencyRoot"),
+          "C++ semantic graph, plan, or host receipt dependency root drifted from the cross-language fixture");
+  require(first.at("graph").at("providers").size() == 2, "semantic graph lost a provider");
+  require(first.at("graphRoot").get<std::string>().starts_with("sha256:"), "semantic graph is not rooted");
+  const auto &dependencies = first.at("graph").at("dependencies");
+  require(dependencies.size() == 2, "semantic graph lost dependency edges");
+  require(std::any_of(dependencies.begin(), dependencies.end(),
+                      [](const auto &edge) {
+                        return edge.at("providerId") == "optional-support" && edge.at("mode") == "uses-if-present" &&
+                               edge.at("state") == "dormant";
+                      }),
+          "missing optional provider did not become a typed dormant edge");
+  const auto &contribution = first.at("graph").at("contributions").front();
+  require(contribution.at("ownerProviderId") == "contributor" &&
+              contribution.at("targetOwnerProviderId") == "provider-host",
+          "contributes-to composition transferred extension-point ownership");
+  require(contribution.at("state") == "active", "optional provider loss hid an active semantic contribution");
+  const auto &host = first.at("hostContract");
+  require(host.at("schema") == "kungfu.kfx.experience-flow-host/v1" && host.at("planRoot") == first.at("planRoot") &&
+              host.at("graphRoot") == first.at("graphRoot"),
+          "Experience/Flow descriptor did not bind the exact graph and plan");
+  require(host.at("contributions").front().at("surface") == "experience",
+          "host descriptor lost the surface-neutral Experience contribution");
+
+  const auto fault_root = temp_root("semantic-faults");
+  fs::copy(semantic_registry_root(), fault_root, fs::copy_options::recursive | fs::copy_options::overwrite_existing);
+  const auto contributor_path = fault_root / "contributor" / "package.json";
+  auto contributor = nlohmann::json::parse([&] {
+    std::ifstream input(contributor_path);
+    return std::string(std::istreambuf_iterator<char>(input), std::istreambuf_iterator<char>());
+  }());
+  contributor["kungfuConfig"]["registry"]["dependencies"][0]["version"] = "^9.0.0";
+  write_json(contributor_path, contributor);
+  const nlohmann::json fault_request = {
+      {"roots", nlohmann::json::array({{{"kind", "workspace"}, {"path", fault_root.string()}}})}};
+  const auto mismatch = kfx::query_native_kfx_registry("plan", fault_request);
+  require(std::any_of(mismatch.at("diagnostics").begin(), mismatch.at("diagnostics").end(),
+                      [](const auto &item) {
+                        return item.at("code") == "KF_KFX_PROVIDER_VERSION_MISMATCH" &&
+                               item.at("severity") == "degraded";
+                      }),
+          "provider version mismatch did not fail closed with a typed diagnostic");
+
+  contributor["kungfuConfig"]["registry"]["dependencies"][0]["version"] = "^1.0.0";
+  contributor["kungfuConfig"]["registry"]["contributions"][0]["capabilities"].push_back("shell");
+  write_json(contributor_path, contributor);
+  const auto broadened = kfx::query_native_kfx_registry("plan", fault_request);
+  require(std::any_of(broadened.at("diagnostics").begin(), broadened.at("diagnostics").end(),
+                      [](const auto &item) { return item.at("code") == "KF_KFX_CAPABILITY_BROADENING"; }),
+          "contribution capability broadening was hidden by the graph projection");
+
+  contributor["kungfuConfig"]["registry"]["contributions"][0]["capabilities"] = nlohmann::json::array({"domain"});
+  contributor["kungfuConfig"]["registry"]["dependencies"][0]["admissionGrades"] =
+      nlohmann::json::array({"kfd-attested"});
+  write_json(contributor_path, contributor);
+  const auto trust_rejected = kfx::query_native_kfx_registry("plan", fault_request);
+  require(std::any_of(trust_rejected.at("diagnostics").begin(), trust_rejected.at("diagnostics").end(),
+                      [](const auto &item) { return item.at("code") == "KF_KFX_TRUST_CONSTRAINT_REJECTED"; }),
+          "dependency trust mismatch did not fail closed with a typed diagnostic");
+
+  contributor["kungfuConfig"]["registry"]["dependencies"][0]["admissionGrades"] = nlohmann::json::array({"unverified"});
+  contributor["kungfuConfig"]["registry"]["dependencies"][1] = {
+      {"provider", "provider-host"}, {"version", "^1.0.0"}, {"mode", "required"}};
+  write_json(contributor_path, contributor);
+  const auto provider_path = fault_root / "provider-host" / "package.json";
+  auto provider = nlohmann::json::parse([&] {
+    std::ifstream input(provider_path);
+    return std::string(std::istreambuf_iterator<char>(input), std::istreambuf_iterator<char>());
+  }());
+  provider["kungfuConfig"]["registry"]["dependencies"] =
+      nlohmann::json::array({{{"provider", "contributor"}, {"version", "^2.0.0"}, {"mode", "required"}}});
+  write_json(provider_path, provider);
+  const auto cyclic = kfx::query_native_kfx_registry("plan", fault_request);
+  require(std::any_of(cyclic.at("diagnostics").begin(), cyclic.at("diagnostics").end(),
+                      [](const auto &item) { return item.at("code") == "KF_KFX_DEPENDENCY_CYCLE"; }),
+          "semantic provider cycle did not degrade the typed dependency graph");
+  fs::remove_all(fault_root);
+
+  const auto restored_root = temp_root("semantic-restored");
+  fs::copy(semantic_registry_root(), restored_root, fs::copy_options::recursive | fs::copy_options::overwrite_existing);
+  write_json(restored_root / "optional-support" / "package.json", {{"name", "@kungfu-test/optional-support"},
+                                                                   {"version", "1.0.0"},
+                                                                   {"kungfuConfig", {{"key", "optional-support"}}}});
+  const nlohmann::json restored_request = {
+      {"roots", nlohmann::json::array({{{"kind", "workspace"}, {"path", restored_root.string()}}})}};
+  const auto restored = kfx::query_native_kfx_registry("plan", restored_request);
+  require(std::any_of(restored.at("graph").at("dependencies").begin(), restored.at("graph").at("dependencies").end(),
+                      [](const auto &edge) {
+                        return edge.at("providerId") == "optional-support" && edge.at("mode") == "uses-if-present" &&
+                               edge.at("state") == "active";
+                      }),
+          "late optional provider restoration did not reactivate the typed dependency edge");
+  require(restored.at("graphRoot") != first.at("graphRoot"),
+          "late optional provider restoration did not create a complete next graph state");
+  fs::remove_all(restored_root);
+}
+
+nlohmann::json mutation_request(const nlohmann::json &request, const nlohmann::json &plan,
+                                const std::string &package_key, const std::string &operation) {
+  auto mutation = request;
+  mutation["packageKey"] = package_key;
+  mutation["operation"] = operation;
+  mutation["expectedGeneration"] = plan.at("generation");
+  mutation["expectedRegistryRoot"] = plan.at("registryRoot");
+  mutation["expectedGraphRoot"] = plan.at("graphRoot");
+  mutation["expectedPlanRoot"] = plan.at("planRoot");
+  for (const auto &package : plan.at("packages")) {
+    if (package.at("key") != package_key)
+      continue;
+    mutation["expectedTrustRoot"] = package.at("trustRoot");
+    mutation["expectedPackageRoot"] = package.at("packageRoot");
+    break;
+  }
+  mutation["actor"] = "native-kfx-test";
+  mutation["systemTime"] = 100 + plan.at("generation").get<uint64_t>();
+  return mutation;
+}
+
+void test_native_lifecycle_fences_mutations_and_retains_history() {
+  const auto home = temp_root("lifecycle");
+  const auto source_root = home / "sources";
+  const auto package_source = source_root / "optional-view";
+  fs::create_directories(source_root);
+  fs::copy(registry_root() / "example-suite" / "members" / "optional-view", package_source,
+           fs::copy_options::recursive);
+  const auto runtime_dir = home / "runtime";
+  const nlohmann::json source_request = {
+      {"roots", nlohmann::json::array({{{"kind", "user"}, {"path", source_root.string()}}})},
+      {"runtimeTiers", {{"optional-view", "verified-third-party"}}},
+      {"packageKey", "optional-view"},
+      {"operation", "install"}};
+  const auto install_plan = kfx::query_native_kfx_registry("plan", source_request, runtime_dir.string());
+  const auto install = kfx::query_native_kfx_registry(
+      "apply", mutation_request(source_request, install_plan, "optional-view", "install"), runtime_dir.string());
+  const auto expected = expected_registry_roots();
+  require(install_plan.at("registryRoot") == expected.at("lifecycleRegistryRoot") &&
+              install_plan.at("graphRoot") == expected.at("lifecycleGraphRoot") &&
+              install_plan.at("planRoot") == expected.at("lifecyclePlanRoot") &&
+              install.at("receipt").at("receiptDependencyRoot") == expected.at("lifecycleReceiptDependencyRoot"),
+          "C++ lifecycle roots drifted from the cross-language fixture");
+  require(install.at("generation") == 1 && install.at("receipt").at("outcome") == "applied",
+          "late install did not produce generation one");
+  require(fs::is_regular_file(home / "extensions" / "optional-view" / "package.json"),
+          "native lifecycle did not atomically materialize the package");
+
+  require_refusal("KF_KFX_GENERATION_MISMATCH", [&] {
+    (void)kfx::query_native_kfx_registry(
+        "apply", mutation_request(source_request, install_plan, "optional-view", "install"), runtime_dir.string());
+  });
+  auto history = kfx::query_native_kfx_registry("history", nlohmann::json::object(), runtime_dir.string());
+  require(history.at("generation") == 1 && history.at("receipts").size() == 2 &&
+              history.at("receipts").back().at("outcome") == "refused",
+          "stale caller did not retain one immutable refused receipt");
+
+  const nlohmann::json installed_request = {
+      {"roots", nlohmann::json::array({{{"kind", "user"}, {"path", (home / "extensions").string()}}})},
+      {"runtimeTiers", {{"optional-view", "verified-third-party"}}},
+      {"packageKey", "optional-view"},
+      {"operation", "remove"}};
+  const auto remove_plan = kfx::query_native_kfx_registry("plan", installed_request, runtime_dir.string());
+  const auto removed = kfx::query_native_kfx_registry(
+      "apply", mutation_request(installed_request, remove_plan, "optional-view", "remove"), runtime_dir.string());
+  require(removed.at("generation") == 2 && !fs::exists(home / "extensions" / "optional-view"),
+          "native lifecycle did not apply the bounded remove transition");
+  require(fs::exists(removed.at("receipt").at("retainedPath").get<std::string>()),
+          "remove discarded referenced package bytes");
+
+  const auto restore_plan = kfx::query_native_kfx_registry("plan", source_request, runtime_dir.string());
+  const auto restored = kfx::query_native_kfx_registry(
+      "apply", mutation_request(source_request, restore_plan, "optional-view", "install"), runtime_dir.string());
+  require(restored.at("generation") == 3 && fs::exists(home / "extensions" / "optional-view"),
+          "late restoration did not produce a complete next state");
+  history = kfx::query_native_kfx_registry("history", {{"packageKey", "optional-view"}}, runtime_dir.string());
+  require(history.at("generation") == 3 && history.at("receipts").size() == 4 &&
+              history.at("historyRoot").get<std::string>().starts_with("sha256:"),
+          "lifecycle history did not reconstruct applied and refused transitions");
+  require(history.at("receipts").front().at("previousGeneration") == 0 &&
+              history.at("receipts").front().at("priorState") == "dormant" &&
+              history.at("receipts").front().at("nextState") == "active",
+          "applied receipt did not retain its complete prior and next state");
+
+  const auto duplicate_plan = kfx::query_native_kfx_registry("plan", source_request, runtime_dir.string());
+  require_refusal("KF_KFX_PACKAGE_DUPLICATE", [&] {
+    (void)kfx::query_native_kfx_registry(
+        "apply", mutation_request(source_request, duplicate_plan, "optional-view", "install"), runtime_dir.string());
+  });
+  history = kfx::query_native_kfx_registry("history", {{"packageKey", "optional-view"}}, runtime_dir.string());
+  require(history.at("generation") == 3 && history.at("receipts").size() == 5 &&
+              history.at("receipts").back().at("outcome") == "refused" &&
+              history.at("receipts").back().at("priorState") == history.at("receipts").back().at("nextState"),
+          "failed materialization did not retain an immutable no-transition receipt");
+  require(!fs::exists(home / "extensions" / ".kfx-stage-optional-view-4"),
+          "failed materialization left a staged package behind");
+
+  auto enable_request = source_request;
+  enable_request["operation"] = "enable";
+  const auto enable_plan = kfx::query_native_kfx_registry("plan", enable_request, runtime_dir.string());
+  const auto enable_mutation = mutation_request(enable_request, enable_plan, "optional-view", "enable");
+  auto invoke_enable = [enable_mutation, runtime_dir]() {
+    try {
+      const auto result = kfx::query_native_kfx_registry("apply", enable_mutation, runtime_dir.string());
+      return result.at("receipt").at("outcome").get<std::string>();
+    } catch (const std::invalid_argument &error) {
+      return std::string(error.what());
+    }
+  };
+  auto first_writer = std::async(std::launch::async, invoke_enable);
+  auto second_writer = std::async(std::launch::async, invoke_enable);
+  const auto first_outcome = first_writer.get();
+  const auto second_outcome = second_writer.get();
+  const auto applied_count =
+      static_cast<int>(first_outcome == "applied") + static_cast<int>(second_outcome == "applied");
+  const auto refused_outcome = first_outcome == "applied" ? second_outcome : first_outcome;
+  require(applied_count == 1 && (refused_outcome.starts_with("KF_KFX_WRITER_BUSY") ||
+                                 refused_outcome.starts_with("KF_KFX_GENERATION_MISMATCH")),
+          "concurrent lifecycle writers did not serialize behind the Core-owned runtime fence");
+  history = kfx::query_native_kfx_registry("history", {{"packageKey", "optional-view"}}, runtime_dir.string());
+  require(history.at("generation") == 4 && history.at("receipts").size() >= 6,
+          "serialized lifecycle mutation did not preserve a complete generation-four history");
+  fs::remove_all(home);
+}
+
 } // namespace
 
 int main() {
@@ -457,6 +710,8 @@ int main() {
     test_registry_produces_one_deterministic_cross_surface_plan();
     test_registry_negative_and_concurrent_reads();
     test_exact_buildchain_attestation_and_operation_admission();
+    test_semantic_graph_and_host_contract_are_canonical();
+    test_native_lifecycle_fences_mutations_and_retains_history();
     std::cout << "native KFX contract tests passed\n";
     return 0;
   } catch (const std::exception &error) {

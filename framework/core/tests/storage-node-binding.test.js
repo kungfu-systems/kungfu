@@ -249,6 +249,99 @@ test(
     assert.match(plan.planRoot, /^sha256:[0-9a-f]{64}$/);
     assert.equal(plan.suites[0].suiteRoot, resolved.suite.suiteRoot);
     assert.equal(plan.suites[0].profileRoot, resolved.suite.profileRoot);
+
+    const expected = JSON.parse(
+      fs.readFileSync(
+        path.join(
+          coreDir,
+          'src',
+          'libkungfu',
+          'tests',
+          'fixtures',
+          'native_kfx_registry',
+          'expected-roots.json',
+        ),
+        'utf8',
+      ),
+    );
+    const semanticPlan = kungfu.runStorageServiceOperation('kfx_runtime', '', {
+      action: 'plan',
+      request: {
+        roots: [
+          {
+            kind: 'workspace',
+            path: path.join(
+              coreDir,
+              'src',
+              'libkungfu',
+              'tests',
+              'fixtures',
+              'native_kfx_registry',
+              'semantic',
+            ),
+          },
+        ],
+      },
+    });
+    assert.equal(semanticPlan.graphRoot, expected.semanticGraphRoot);
+    assert.equal(semanticPlan.planRoot, expected.semanticPlanRoot);
+    assert.equal(
+      semanticPlan.hostContract.receiptDependencyRoot,
+      expected.semanticHostReceiptDependencyRoot,
+    );
+
+    const home = fs.mkdtempSync(path.join(os.tmpdir(), 'kf-native-kfx-node-'));
+    try {
+      const sourceRoot = path.join(home, 'sources');
+      fs.mkdirSync(sourceRoot);
+      fs.cpSync(
+        path.join(fixtureRoot, 'example-suite', 'members', 'optional-view'),
+        path.join(sourceRoot, 'optional-view'),
+        { recursive: true },
+      );
+      const runtimeDir = path.join(home, 'runtime');
+      const lifecycleRequest = {
+        roots: [{ kind: 'user', path: sourceRoot }],
+        runtimeTiers: { 'optional-view': 'verified-third-party' },
+        packageKey: 'optional-view',
+        operation: 'install',
+      };
+      const lifecyclePlan = kungfu.runStorageServiceOperation(
+        'kfx_runtime',
+        runtimeDir,
+        { action: 'plan', request: lifecycleRequest },
+      );
+      const pkg = lifecyclePlan.packages.find(
+        (item) => item.key === 'optional-view',
+      );
+      const application = kungfu.runStorageServiceOperation(
+        'kfx_runtime',
+        runtimeDir,
+        {
+          action: 'apply',
+          request: {
+            ...lifecycleRequest,
+            expectedGeneration: lifecyclePlan.generation,
+            expectedRegistryRoot: lifecyclePlan.registryRoot,
+            expectedGraphRoot: lifecyclePlan.graphRoot,
+            expectedPlanRoot: lifecyclePlan.planRoot,
+            expectedTrustRoot: pkg.trustRoot,
+            expectedPackageRoot: pkg.packageRoot,
+            actor: 'node-root-parity-test',
+            systemTime: 100,
+          },
+        },
+      );
+      assert.equal(lifecyclePlan.registryRoot, expected.lifecycleRegistryRoot);
+      assert.equal(lifecyclePlan.graphRoot, expected.lifecycleGraphRoot);
+      assert.equal(lifecyclePlan.planRoot, expected.lifecyclePlanRoot);
+      assert.equal(
+        application.receipt.receiptDependencyRoot,
+        expected.lifecycleReceiptDependencyRoot,
+      );
+    } finally {
+      fs.rmSync(home, { recursive: true, force: true });
+    }
   },
 );
 
