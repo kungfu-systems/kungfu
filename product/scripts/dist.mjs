@@ -1542,26 +1542,30 @@ function runInstalledKungfuKfdSmoke({
   }
 }
 
-function runInstalledKungfuAgentHubSmoke({ installRoot, kungfuBin, env }) {
-  const qualificationDir = path.join(installRoot, 'agent-hub-qualification');
-  const runtimeHome = path.join(installRoot, '.agent-hub-runtime-home');
+export function runInstalledKungfuAgentHubSmoke({
+  installRoot,
+  kungfuBin,
+  env,
+  run = runInstalledKungfu,
+}) {
   const userHome = path.join(installRoot, '.agent-hub-user-home');
   const smokeEnv = {
     ...env,
     HOME: userHome,
     USERPROFILE: userHome,
+    KF_CACHE_HOME: path.join(installRoot, '.agent-hub-cache-home'),
   };
   const qualification = parseJsonOutput(
-    runInstalledKungfu({
+    run({
       kungfuBin,
       installRoot,
-      home: runtimeHome,
+      home: path.join(installRoot, '.agent-hub-runtime-home'),
       args: [
         'agent',
         'hub',
         'qualify',
         '--output-dir',
-        qualificationDir,
+        path.join(installRoot, 'agent-hub-qualification'),
         '--json',
       ],
       env: smokeEnv,
@@ -1584,16 +1588,16 @@ function runInstalledKungfuAgentHubSmoke({ installRoot, kungfuBin, env }) {
     );
   }
   const verification = parseJsonOutput(
-    runInstalledKungfu({
+    run({
       kungfuBin,
       installRoot,
-      home: runtimeHome,
+      home: path.join(installRoot, '.agent-hub-runtime-home'),
       args: [
         'agent',
         'hub',
         'verify',
         '--qualification-dir',
-        qualificationDir,
+        path.join(installRoot, 'agent-hub-qualification'),
         '--json',
       ],
       env: smokeEnv,
@@ -1614,11 +1618,7 @@ function runInstalledKungfuAgentHubSmoke({ installRoot, kungfuBin, env }) {
     );
   }
   if (fs.existsSync(userHome)) {
-    // Qualification must remain stateless even when the product receives an
-    // isolated HOME instead of the operator's real user directory.
-    throw new Error(
-      'installed kungfu Agent Hub smoke modified its isolated user home',
-    );
+    throw new Error('Agent Hub smoke modified isolated HOME');
   }
 }
 
