@@ -11,8 +11,17 @@ import { fileURLToPath } from 'node:url';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const SCRIPT = path.join(ROOT, 'scripts', 'kfd-support-matrix.mjs');
+const SHIFU = path.join(ROOT, 'shifu');
 const AUTHORITY = path.join(ROOT, '.buildchain', 'kfd', 'support-matrix.json');
+const KFD3_QUERY = path.join(
+  ROOT,
+  '.buildchain',
+  'kfd',
+  'kfd-3',
+  'capability-query.json',
+);
 const BASE = JSON.parse(readFileSync(AUTHORITY, 'utf8'));
+const BASE_QUERY = JSON.parse(readFileSync(KFD3_QUERY, 'utf8'));
 
 function clone(value) {
   return JSON.parse(JSON.stringify(value));
@@ -28,6 +37,24 @@ function validateFixture(t, value) {
     env: {
       ...process.env,
       KUNGFU_KFD_SUPPORT_MATRIX_AUTHORITY: matrixPath,
+    },
+    encoding: 'utf8',
+  });
+}
+
+function sourceFixture(t, matrix, query = BASE_QUERY) {
+  const directory = mkdtempSync(path.join(tmpdir(), 'kungfu-kfd-source-'));
+  t.after(() => rmSync(directory, { recursive: true, force: true }));
+  const matrixPath = path.join(directory, 'support-matrix.json');
+  const queryPath = path.join(directory, 'capability-query.json');
+  writeFileSync(matrixPath, `${JSON.stringify(matrix, null, 2)}\n`);
+  writeFileSync(queryPath, `${JSON.stringify(query, null, 2)}\n`);
+  return spawnSync(process.execPath, [SCRIPT, '--source-check', '--json'], {
+    cwd: ROOT,
+    env: {
+      ...process.env,
+      KUNGFU_KFD_SUPPORT_MATRIX_AUTHORITY: matrixPath,
+      KUNGFU_KFD3_QUERY_AUTHORITY: queryPath,
     },
     encoding: 'utf8',
   });
@@ -93,4 +120,136 @@ test('fails closed on stale normative KFD metadata', (t) => {
   const result = validateFixture(t, matrix);
   assert.equal(result.status, 1);
   assert.match(result.stderr, /normative projection drifts/);
+});
+
+test('Shifu separates the immediate human verdict from stable agent JSON', () => {
+  const human = spawnSync(SHIFU, ['kfd', 'status'], {
+    cwd: ROOT,
+    encoding: 'utf8',
+  });
+  assert.equal(human.status, 0, human.stderr);
+  assert.match(human.stdout, /BOUNDED SUPPORT/);
+  assert.match(human.stdout, /166 declared, 0 enforced/);
+  assert.doesNotMatch(human.stdout, /^\s*\{/u);
+
+  const agent = spawnSync(SHIFU, ['kfd', 'status', '--json'], {
+    cwd: ROOT,
+    encoding: 'utf8',
+  });
+  assert.equal(agent.status, 0, agent.stderr);
+  const report = JSON.parse(agent.stdout);
+  assert.equal(report.schema, 'shifu.kfd-source-report/v1');
+  assert.equal(report.scope, 'source-checkout');
+  assert.deepEqual(report.support.shipped, [
+    'KFD-1',
+    'KFD-2',
+    'KFD-3',
+    'KFD-7',
+  ]);
+  assert.equal(report.kfd3.enforcement.declaredSurfaceCount, 166);
+  assert.equal(report.kfd3.enforcement.enforcedSurfaceCount, 0);
+});
+
+test('legacy KFD query alias delegates to the same source report', () => {
+  const result = spawnSync(SHIFU, ['kfd:query', 'KFD-3', '--json'], {
+    cwd: ROOT,
+    encoding: 'utf8',
+  });
+  assert.equal(result.status, 0, result.stderr);
+  const report = JSON.parse(result.stdout);
+  assert.equal(report.schema, 'shifu.kfd-source-report/v1');
+  assert.equal(report.operation, 'query');
+  assert.equal(report.selection.id, 'KFD-3');
+});
+
+test('source check fails closed when retained evidence disappears', (t) => {
+  const matrix = clone(BASE);
+  matrix.rows[0].verification.evidenceRoots[0].path =
+    '.buildchain/kfd/kfd-1/does-not-exist.json';
+  const result = sourceFixture(t, matrix);
+  assert.equal(result.status, 1);
+  const diagnosis = JSON.parse(result.stdout);
+  assert.equal(diagnosis.schema, 'shifu.kfd-source-diagnosis/v1');
+  assert.match(diagnosis.message, /evidence is missing/);
+  assert.equal(result.stderr, '');
+});
+
+test('source check never follows evidence outside the checkout', (t) => {
+  const matrix = clone(BASE);
+  matrix.rows[0].verification.evidenceRoots[0].path = '../outside.json';
+  const result = sourceFixture(t, matrix);
+  assert.equal(result.status, 1);
+  assert.match(
+    JSON.parse(result.stdout).message,
+    /escapes the source checkout/,
+  );
+});
+
+test('source check rejects malformed and claim-widened matrices', (t) => {
+  const malformed = clone(BASE);
+  malformed.rows.pop();
+  const malformedResult = sourceFixture(t, malformed);
+  assert.equal(malformedResult.status, 1);
+  assert.match(JSON.parse(malformedResult.stdout).message, /exactly 13 rows/);
+
+  const widened = clone(BASE);
+  widened.rows[3].releaseQualification.shippedSupport = true;
+  const widenedResult = sourceFixture(t, widened);
+  assert.equal(widenedResult.status, 1);
+  assert.match(
+    JSON.parse(widenedResult.stdout).message,
+    /shipped support must remain exactly/,
+  );
+});
+
+test('source check rejects a stale support projection', (t) => {
+  const matrix = clone(BASE);
+  matrix.rows[0].owner = 'stale-projection-fixture';
+  const result = sourceFixture(t, matrix);
+  assert.equal(result.status, 1);
+  assert.match(JSON.parse(result.stdout).message, /projection is stale/);
+});
+
+test('source check rejects a malformed or failed KFD-3 query', (t) => {
+  const query = clone(BASE_QUERY);
+  query.status = 'failed';
+  const result = sourceFixture(t, BASE, query);
+  assert.equal(result.status, 1);
+  assert.match(
+    JSON.parse(result.stdout).message,
+    /capability query is malformed or not passed/,
+  );
+});
+
+test('declared KFD-3 surfaces cannot silently become enforced', (t) => {
+  const matrix = clone(BASE);
+  const query = clone(BASE_QUERY);
+  query.capabilities[0].enforced = true;
+  query.summary.enforced = 1;
+  matrix.kfd3Enforcement.enforcedSurfaceCount = 1;
+  const result = sourceFixture(t, matrix, query);
+  assert.equal(result.status, 1);
+  assert.match(JSON.parse(result.stdout).message, /enforced count drift/);
+});
+
+test('an enforced KFD-3 surface requires a retained passed hard Gate', (t) => {
+  const matrix = clone(BASE);
+  const query = clone(BASE_QUERY);
+  const surfaceId = query.capabilities[0].id;
+  query.capabilities[0].enforced = true;
+  query.summary.enforced = 1;
+  matrix.kfd3Enforcement.enforcedSurfaceCount = 1;
+  matrix.kfd3Enforcement.gateBindings = [
+    {
+      surfaceId,
+      gate: {
+        path: '.buildchain/kfd/kfd-3/missing-hard-gate.json',
+        sha256: `sha256:${'0'.repeat(64)}`,
+        requiredStatus: 'passed',
+      },
+    },
+  ];
+  const result = sourceFixture(t, matrix, query);
+  assert.equal(result.status, 1);
+  assert.match(JSON.parse(result.stdout).message, /enforced Gate is missing/);
 });

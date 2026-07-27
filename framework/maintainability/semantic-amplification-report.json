@@ -5,7 +5,7 @@
   "manifestPath": "framework/maintainability/semantic-amplification.manifest.json",
   "manifestRoot": "sha256:85829360a77ec44639ba99defd7692d96844002e554e115b72a34d0bd5cacf47",
   "baselineRef": "dbfed9ca1785d147b26f4f06e7e6895ac7368fee",
-  "sourceRoot": "sha256:865abb51683e09a8fec069a0e16f3541759607778133c5f6beb7578fa00390f1",
+  "sourceRoot": "sha256:f55fa4e6183c45697992b3d051f6faa683e8f3f557ad3ccd79fae2600737dc83",
   "roles": {
     "authority": "exactly one authority route per family; the route may name multiple co-owned source files",
     "allowedProjectionRoles": [
@@ -25,7 +25,7 @@
     "families": 6,
     "authorities": 6,
     "mappedSurfaces": 72,
-    "changedMappedSurfaces": 29,
+    "changedMappedSurfaces": 30,
     "blockingIssues": 0
   },
   "families": [
@@ -421,12 +421,13 @@
       "amplification": {
         "mappedSurfaces": 11,
         "nonAuthoritySurfaces": 8,
-        "changedSurfaces": 5,
+        "changedSurfaces": 6,
         "changedPaths": [
           "framework/kfx/src/index.ts",
           "framework/kfx/src/agent-work-lab.ts",
           "framework/core/src/python/kungfu/cli/commands/kfx.py",
           "scripts/run-kfx-profile-suite-tests.mjs",
+          "docs/qualification/kfd-native-sdk-release-gates.md",
           "product/scripts/dist.mjs"
         ]
       },
@@ -539,11 +540,11 @@
         },
         {
           "path": "docs/qualification/kfd-native-sdk-release-gates.md",
-          "currentLines": 495,
+          "currentLines": 506,
           "baselineLines": 495,
-          "currentRoot": "sha256:98328a6c59d603f82b03aee017e6bc490ee43decffa7dde63ddcaa644daf9462",
+          "currentRoot": "sha256:194b495014fc88e24868c61e84b6fcc99c5154eff3eebd363d9f8cb2823020eb",
           "baselineRoot": "sha256:98328a6c59d603f82b03aee017e6bc490ee43decffa7dde63ddcaa644daf9462",
-          "changedSinceBaseline": false
+          "changedSinceBaseline": true
         },
         {
           "path": "product/scripts/dist.mjs",

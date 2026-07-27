@@ -23,8 +23,14 @@ Source implementation is not the same as released support. Verification, Buildch
 ## Claim boundary
 
 - KFD-1, KFD-2, KFD-3, and KFD-7 are the bounded shipped-support set for the current Alpha release declaration.
-- KFD-3 uses Buildchain's product-declared registry audit directly; the former local fallback has been removed.
+- KFD-3 uses Buildchain's product-declared registry audit directly. It currently has 166 declared surfaces and 0 release-Gate-enforced surfaces. Declaration is discoverability; it is not enforcement.
 - KFD-4 passes one bounded observer/contrastive-replay product gate but remains a non-shipped adoption candidate.
 - KFD-5 remains a non-shipped adoption candidate and its retained product gate fails on missing qualification evidence.
 - KFD-6 is explicitly unsupported.
 - KFD-8 through KFD-13 expose only non-conforming draft adopter evidence. They are not shipped support.
+
+## Inspect this source with Shifu
+
+`./shifu kfd status` gives a human-readable support verdict. `./shifu kfd status --json` exposes the same facts to an Agent. `./shifu kfd check --json` validates the checked-in matrix, evidence roots, projections, KFD-3 declared set, and every hard-Gate binding without installing dependencies or initializing a Kungfu runtime.
+
+These Shifu commands qualify the exact source checkout. Prepared source maintainers can run the deeper `./shifu kfd:agent-runtime:qualify`, `./shifu kfd:agent-hub:qualify`, and `./shifu kfd:agent-hub:verify` gates. Installed-product users should use `kungfu agent hub qualify --output-dir <new-directory>` and then `kungfu agent hub verify --qualification-dir <directory>`; source evidence does not substitute for an installed artifact result.

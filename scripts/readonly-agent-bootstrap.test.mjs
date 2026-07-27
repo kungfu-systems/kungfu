@@ -23,6 +23,32 @@ function copyFile(sourceRoot, targetRoot, relative) {
   fs.copyFileSync(path.join(sourceRoot, relative), target);
 }
 
+function semanticAmplificationFixturePaths(manifest) {
+  const paths = new Set([
+    'framework/core/architecture/layers.json',
+    'framework/maintainability/semantic-amplification.manifest.json',
+    'framework/maintainability/semantic-amplification.mjs',
+    manifest.reportPath,
+  ]);
+  for (const family of manifest.families || []) {
+    for (const relative of family.authority?.sources || []) paths.add(relative);
+    for (const surface of family.surfaces || []) {
+      paths.add(surface.path);
+      if (surface.generator) paths.add(surface.generator);
+    }
+  }
+  for (const boundary of manifest.productionBoundaries || [])
+    for (const relative of boundary.evidence || []) paths.add(relative);
+  for (const record of manifest.decompositions || [])
+    for (const relative of [
+      ...(record.original || []),
+      record.target,
+      ...(record.tests || []),
+    ])
+      if (relative) paths.add(relative);
+  return [...paths].sort();
+}
+
 function executableOnPath(name) {
   for (const directory of (process.env.PATH || '').split(path.delimiter)) {
     const candidate = path.join(directory, name);
@@ -144,6 +170,13 @@ test('declared discovery routes are zero-write in a cold read-only fixture', (t)
   for (const relative of [
     'shifu',
     'shifu.cmd',
+    '.buildchain/kfd/support-matrix.json',
+    '.buildchain/kfd/kfd-3/surfaces.json',
+    '.buildchain/kfd/kfd-3/capability-query.json',
+    'developer/sdk/kfd/support-matrix.json',
+    'docs/qualification/kfd-support-matrix.md',
+    'product/package.json',
+    'scripts/kfd-support-matrix.mjs',
     'scripts/kungfu-invariant-discovery.mjs',
     'scripts/kungfu-invariant.mjs',
     'scripts/code-complexity-budget.mjs',
@@ -207,6 +240,37 @@ test('declared discovery routes are zero-write in a cold read-only fixture', (t)
     'framework/maintainability/waivers/README.md',
   ])
     copyFile(ROOT, fixture, relative);
+  const amplificationManifest = JSON.parse(
+    fs.readFileSync(
+      path.join(
+        ROOT,
+        'framework',
+        'maintainability',
+        'semantic-amplification.manifest.json',
+      ),
+      'utf8',
+    ),
+  );
+  for (const relative of semanticAmplificationFixturePaths(
+    amplificationManifest,
+  ))
+    copyFile(ROOT, fixture, relative);
+  const matrix = JSON.parse(
+    fs.readFileSync(
+      path.join(ROOT, '.buildchain', 'kfd', 'support-matrix.json'),
+      'utf8',
+    ),
+  );
+  const evidencePaths = new Set();
+  for (const row of matrix.rows) {
+    for (const section of [
+      row.verification?.evidenceRoots,
+      row.releaseQualification?.evidenceRoots,
+    ]) {
+      for (const evidence of section || []) evidencePaths.add(evidence.path);
+    }
+  }
+  for (const relative of evidencePaths) copyFile(ROOT, fixture, relative);
   fs.chmodSync(path.join(fixture, 'shifu'), 0o755);
 
   fs.symlinkSync(git, path.join(tools, 'git'));
@@ -264,6 +328,7 @@ test('declared discovery routes are zero-write in a cold read-only fixture', (t)
     ),
   ).baselineRef;
   makeReadOnly(fixture);
+  fs.chmodSync(home, 0o555);
   const env = {
     ...process.env,
     HOME: home,
@@ -316,6 +381,23 @@ test('declared discovery routes are zero-write in a cold read-only fixture', (t)
       ['maintainability:query', 'storage-query', '--json'],
       'kungfu.maintainability-task-graph/v1',
     ],
+    ['kfd-status', ['kfd', 'status', '--json'], 'shifu.kfd-source-report/v1'],
+    [
+      'kfd-query',
+      ['kfd', 'query', 'KFD-3', '--json'],
+      'shifu.kfd-source-report/v1',
+    ],
+    ['kfd-check', ['kfd', 'check', '--json'], 'shifu.kfd-source-report/v1'],
+    [
+      'kfd-query-alias',
+      ['kfd:query', 'KFD-3', '--json'],
+      'shifu.kfd-source-report/v1',
+    ],
+    [
+      'kfd-check-alias',
+      ['kfd:support-matrix:check', '--json'],
+      'shifu.kfd-source-report/v1',
+    ],
   ];
   for (let iteration = 0; iteration < 2; iteration += 1) {
     for (const [name, args, schema] of cases) {
@@ -331,6 +413,11 @@ test('declared discovery routes are zero-write in a cold read-only fixture', (t)
         `${name} iteration ${iteration}: ${result.stderr || result.stdout}`,
       );
       assert.equal(JSON.parse(result.stdout).schema, schema);
+      assert.deepEqual(
+        fs.readdirSync(home),
+        [],
+        `${name} iteration ${iteration} wrote into HOME`,
+      );
     }
   }
   const sourceAcceptance = spawnSync(
@@ -353,6 +440,7 @@ test('declared discovery routes are zero-write in a cold read-only fixture', (t)
   );
   assert.deepEqual(snapshotSource(fixture), before);
   assert.equal(fs.existsSync(toolLog), false, 'bootstrap tool was invoked');
+  assert.deepEqual(fs.readdirSync(home), [], 'read-only route wrote into HOME');
   assert.equal(
     spawnSync(git, ['status', '--porcelain=v1', '--untracked-files=all'], {
       cwd: fixture,

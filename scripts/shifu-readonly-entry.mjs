@@ -9,6 +9,11 @@ import { fileURLToPath } from 'node:url';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const READONLY_SOURCE_COMMANDS = [
+  'kfd status',
+  'kfd query',
+  'kfd check',
+  'kfd:query',
+  'kfd:support-matrix:check',
   'core:architecture',
   'core:architecture:health',
   'invariant:verify --list',
@@ -18,6 +23,18 @@ const READONLY_SOURCE_COMMANDS = [
 ];
 
 function route(command, args) {
+  if (command === 'kfd') {
+    const [operation = '', ...rest] = args;
+    if (!['status', 'query', 'check'].includes(operation)) return null;
+    return [
+      'scripts/kfd-support-matrix.mjs',
+      [`--source-${operation}`, ...rest],
+    ];
+  }
+  if (command === 'kfd:query')
+    return ['scripts/kfd-support-matrix.mjs', ['--source-query', ...args]];
+  if (command === 'kfd:support-matrix:check')
+    return ['scripts/kfd-support-matrix.mjs', ['--source-check', ...args]];
   if (command === 'core:architecture')
     return ['framework/core/architecture/query-health.mjs', args];
   if (command === 'core:architecture:health')
