@@ -24,12 +24,10 @@ test('candidate patrol is a thin Buildchain caller with exact channel and eviden
     /uses: kungfu-systems\/buildchain\/.github\/workflows\/dev-alpha-candidate-patrol\.yml@([0-9a-f]{40})/u,
   )?.[1];
   assert.match(reusableRef || '', /^[0-9a-f]{40}$/u);
+  assert.equal(reusableRef, '9090ef05d9c83bc6466831210acf85eaf1e8b2b1');
   assert.match(
     source,
-    new RegExp(
-      `buildchain-ref: \\$\\{\\{ inputs\\.buildchain-ref \\|\\| '${reusableRef}' \\}\\}`,
-      'u',
-    ),
+    /buildchain-ref: \$\{\{ inputs\.buildchain-ref \|\| 'train\/v3\/v3\.0\/dev-alpha-candidate-single-flight' \}\}/u,
   );
   assert.match(source, /source-branch: dev\/v4\/v4\.0/u);
   assert.match(source, /target-branch: alpha\/v4\/v4\.0/u);
@@ -43,9 +41,18 @@ test('candidate patrol is a thin Buildchain caller with exact channel and eviden
   );
   assert.match(
     source,
-    /create-pull-request: \$\{\{ github\.event_name == 'schedule'/u,
+    /settlement-authorized: \$\{\{ github\.event_name != 'workflow_dispatch'/u,
   );
-  assert.match(source, /dry-run: \$\{\{ github\.event_name != 'schedule'/u);
+  assert.match(
+    source,
+    /dry-run: \$\{\{ github\.event_name == 'workflow_dispatch'/u,
+  );
+  assert.match(source, /cron: "17,47 \* \* \* \*"/u);
+  assert.match(source, /workflow_run:/u);
+  assert.match(source, /Dev Verify Patrol/u);
+  assert.match(source, /Alpha promotion preflight/u);
+  assert.match(source, /head_branch == 'dev\/v4\/v4\.0'/u);
+  assert.doesNotMatch(source, /cron: "0 22 \* \* \*"/u);
   assert.match(
     source,
     /promotion-token: \$\{\{ secrets\.KUNGFU_GITHUB_TOKEN \}\}/u,
