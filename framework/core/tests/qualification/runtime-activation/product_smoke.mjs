@@ -53,6 +53,31 @@ function invoke(home, configHome, args) {
   return { payload, durationUs };
 }
 
+export function invokeAfterIdentitySettlement(
+  invokeCommand,
+  home,
+  configHome,
+  args,
+  { attempts = 50, wait = () => {} } = {},
+) {
+  let identityError = null;
+  for (let attempt = 0; attempt < attempts; attempt += 1) {
+    try {
+      return invokeCommand(home, configHome, args);
+    } catch (error) {
+      if (
+        !String(error?.message || error).includes('runtime_identity_unverified')
+      ) {
+        throw error;
+      }
+      identityError = error;
+      invokeCommand(home, configHome, ['runtime', 'status', '--json']);
+      wait();
+    }
+  }
+  throw identityError;
+}
+
 function running(payload) {
   return (
     payload?.supervisor?.running === true &&
@@ -101,7 +126,16 @@ function main() {
       throw new Error('daemonless product status invented live readiness');
     }
 
-    const cold = invoke(home, configHome, ['runtime', 'ensure', '--json']);
+    const cold = invokeAfterIdentitySettlement(
+      invoke,
+      home,
+      configHome,
+      ['runtime', 'ensure', '--json'],
+      {
+        wait: () =>
+          Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 100),
+      },
+    );
     const coldStatus = waitForRunning(home, configHome);
     const warm = invoke(home, configHome, ['runtime', 'ensure', '--json']);
     if (warm.payload.changed !== false) {
@@ -177,9 +211,14 @@ function main() {
   }
 }
 
-try {
-  main();
-} catch (error) {
-  console.error(error?.stack || String(error));
-  process.exit(1);
+if (
+  process.argv[1] &&
+  path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)
+) {
+  try {
+    main();
+  } catch (error) {
+    console.error(error?.stack || String(error));
+    process.exit(1);
+  }
 }

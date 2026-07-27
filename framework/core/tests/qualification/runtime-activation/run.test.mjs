@@ -6,6 +6,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { test } from 'node:test';
 
+import { invokeAfterIdentitySettlement } from './product_smoke.mjs';
 import {
   boundedFailureTail,
   createLogBundle,
@@ -139,6 +140,70 @@ test('Windows suites invoke the repository Shifu shim through ComSpec', () => {
   assert.equal(
     invocation.args[3],
     'call shifu.cmd exec "argument with spaces"',
+  );
+});
+
+test('product smoke waits for a transient runtime identity handoff without bypassing preflight', () => {
+  const calls = [];
+  const result = invokeAfterIdentitySettlement(
+    (_home, _configHome, args) => {
+      calls.push(args);
+      if (calls.length === 1) {
+        throw new Error('runtime_identity_unverified: coordinator is starting');
+      }
+      if (args[1] === 'status') {
+        return { payload: { coordinator: { running: true } } };
+      }
+      return { payload: { changed: false } };
+    },
+    'home',
+    'config',
+    ['runtime', 'ensure', '--json'],
+    { attempts: 2, wait: () => calls.push(['wait']) },
+  );
+
+  assert.deepEqual(result, { payload: { changed: false } });
+  assert.deepEqual(calls, [
+    ['runtime', 'ensure', '--json'],
+    ['runtime', 'status', '--json'],
+    ['wait'],
+    ['runtime', 'ensure', '--json'],
+  ]);
+});
+
+test('product smoke keeps persistent or unrelated identity failures fail-closed', () => {
+  const persistent = new Error(
+    'runtime_identity_unverified: coordinator identity never settled',
+  );
+  let attempts = 0;
+  assert.throws(
+    () =>
+      invokeAfterIdentitySettlement(
+        (_home, _configHome, args) => {
+          if (args[1] === 'status') return { payload: {} };
+          attempts += 1;
+          throw persistent;
+        },
+        'home',
+        'config',
+        ['runtime', 'ensure', '--json'],
+        { attempts: 2 },
+      ),
+    (error) => error === persistent,
+  );
+  assert.equal(attempts, 2);
+
+  assert.throws(
+    () =>
+      invokeAfterIdentitySettlement(
+        () => {
+          throw new Error('runtime_route_stale');
+        },
+        'home',
+        'config',
+        ['runtime', 'ensure', '--json'],
+      ),
+    /runtime_route_stale/,
   );
 });
 
