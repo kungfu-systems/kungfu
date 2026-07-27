@@ -445,7 +445,15 @@
     "source": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["id", "path", "role", "contentRoot", "url"],
+      "required": [
+        "id",
+        "path",
+        "packagePath",
+        "role",
+        "contentRoot",
+        "byteLength",
+        "url"
+      ],
       "properties": {
         "id": {
           "type": "string",
@@ -454,6 +462,10 @@
         "path": {
           "type": "string",
           "minLength": 1
+        },
+        "packagePath": {
+          "type": "string",
+          "pattern": "^sources/[a-z0-9-]+/[a-zA-Z0-9._-]+$"
         },
         "role": {
           "enum": [
@@ -467,6 +479,10 @@
         },
         "contentRoot": {
           "$ref": "#/$defs/sha256"
+        },
+        "byteLength": {
+          "type": "integer",
+          "minimum": 1
         },
         "url": {
           "type": "string",
