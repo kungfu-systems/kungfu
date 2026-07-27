@@ -5,7 +5,7 @@
   "manifestPath": "framework/maintainability/semantic-amplification.manifest.json",
   "manifestRoot": "sha256:f7294c5e23cfbaa75432394d61d4c860a8ca647bd71ed378a7b89404d6b44cb4",
   "baselineRef": "dbfed9ca1785d147b26f4f06e7e6895ac7368fee",
-  "sourceRoot": "sha256:9022f747d5a16f1708f9ec3eada262a75c427078f9642c030b50be1ad9868316",
+  "sourceRoot": "sha256:d27703cff121cbe9bc0482899a1d1cf70c602cae02f30a3e8044adf8a48b09c9",
   "roles": {
     "authority": "exactly one authority route per family; the route may name multiple co-owned source files",
     "allowedProjectionRoles": [
@@ -908,9 +908,9 @@
         },
         {
           "path": ".github/workflows/release-new-version.yml",
-          "currentLines": 362,
+          "currentLines": 380,
           "baselineLines": 362,
-          "currentRoot": "sha256:7f6c48e7801189520758ff94e653bd88126fc3196453e2fbe8abf90ed7c1fa1e",
+          "currentRoot": "sha256:46b1f5435d40378f7ef205c1a1f8e3991c02ca5752e8c113375025f1fbcf4779",
           "baselineRoot": "sha256:3bdd847c80a05030de1d826282cef2e76a85e31dc0904df02c7f0cdda7a5eb74",
           "changedSinceBaseline": true
         },

@@ -2309,7 +2309,7 @@
           "authority": "qualification",
           "publication": "none",
           "receipt": "diagnostic",
-          "definitionDigest": "sha256:6ca10ec2736c6ce1bfc1015dccff78793034cbe32402153fef33b1acc1ffb98d",
+          "definitionDigest": "sha256:928b92797b78a1666e40d816dd7b25e7c95478af3465dcd6620fbd2ebc857335",
           "credentials": {
             "githubToken": "read",
             "oidc": false,
@@ -2363,13 +2363,13 @@
               "index": 7,
               "label": "name:Rehearse the Kungfu promotion contract for a pull request",
               "authority": "qualification",
-              "definitionDigest": "sha256:4d4885aa665463d66b68f8a5bff8a49edebb706ad1d3231dfca06b7b069537fb"
+              "definitionDigest": "sha256:0af2d30832fe4041d9997fd0a331f528a62b23fba2e3c9cfc23e45dd8ab38947"
             },
             {
               "index": 8,
               "label": "name:Rehearse the Kungfu promotion contract for a manual dry-run",
               "authority": "qualification",
-              "definitionDigest": "sha256:1ace488d45082bba37f5896c4e6f57fa25046403b54f1e295afdf692d21cfbf6"
+              "definitionDigest": "sha256:ac10175c46721c013cdc70ec9c5db82713fabd00be703439cf665365bef6c05d"
             }
           ]
         }
