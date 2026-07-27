@@ -8,6 +8,13 @@ import path from 'node:path';
 import test from 'node:test';
 import { fileURLToPath } from 'node:url';
 
+import { dockerArgs } from '../framework/agent-repository-work/opencode-docker-proxy.mjs';
+import {
+  parseInvestigationClaim,
+  runExperiment,
+  runtimeProfile,
+  validateExperimentReport,
+} from '../framework/agent-repository-work/run.mjs';
 import {
   applyIncidentBoardReferenceRepair,
   materializeIncidentBoardFixture,
@@ -16,13 +23,6 @@ import {
   verifyIncidentBoardWorkspace,
 } from '../tests/qualification/agent-repository-work/incident-board-replay-v1-oracle.mjs';
 import { INCIDENT_BOARD_FIXTURE } from '../tests/qualification/agent-repository-work/incident-board-replay-v1.mjs';
-import { dockerArgs } from './opencode-docker-proxy.mjs';
-import {
-  parseInvestigationClaim,
-  runExperiment,
-  runtimeProfile,
-  validateExperimentReport,
-} from './run-agent-repository-work-experiment.mjs';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const contractPath = path.join(

@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 // SPDX-License-Identifier: Apache-2.0
+// Internal least-privilege adapter for the repository-work experiment.
 
 import { spawnSync } from 'node:child_process';
 import process from 'node:process';

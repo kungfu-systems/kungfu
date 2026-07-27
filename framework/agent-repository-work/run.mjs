@@ -13,11 +13,14 @@ import {
   materializeIncidentBoardFixture,
   qualifySeededIncidentBoardFixture,
   verifyIncidentBoardWorkspace,
-} from '../tests/qualification/agent-repository-work/incident-board-replay-v1-oracle.mjs';
-import { INCIDENT_BOARD_FIXTURE } from '../tests/qualification/agent-repository-work/incident-board-replay-v1.mjs';
+} from '../../tests/qualification/agent-repository-work/incident-board-replay-v1-oracle.mjs';
+import { INCIDENT_BOARD_FIXTURE } from '../../tests/qualification/agent-repository-work/incident-board-replay-v1.mjs';
 
-const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const PROXY_PATH = path.join(ROOT, 'scripts/opencode-docker-proxy.mjs');
+const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
+const PROXY_PATH = path.join(
+  ROOT,
+  'framework/agent-repository-work/opencode-docker-proxy.mjs',
+);
 const CONTRACT_PATH = path.join(
   ROOT,
   'tests/qualification/agent-repository-work/contract.json',
