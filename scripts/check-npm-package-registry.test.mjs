@@ -6,7 +6,11 @@ import os from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
 import { fileURLToPath } from 'node:url';
-import { collectNpmRegistryIssues } from './check-npm-package-registry.mjs';
+import {
+  collectNpmRegistryIssues,
+  loadComponentDistributionInputs,
+  validateComponentDistribution,
+} from './check-npm-package-registry.mjs';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const source = JSON.parse(
@@ -62,4 +66,32 @@ test('rejects private package sources and an incomplete exact artifact set', (t)
   );
   assert.ok(codes.includes('source-private'));
   assert.ok(codes.includes('exact-artifacts'));
+});
+
+test('component distribution closes embedded, standalone, and npm boundaries', () => {
+  assert.deepEqual(
+    validateComponentDistribution(loadComponentDistributionInputs()),
+    [],
+  );
+});
+
+test('component distribution rejects a second Core npm executable', () => {
+  const inputs = structuredClone(loadComponentDistributionInputs());
+  inputs.corePackage.bin.shifu = 'lib/shifu.js';
+  assert.match(
+    validateComponentDistribution(inputs).join('\n'),
+    /exactly the kungfu bin/u,
+  );
+});
+
+test('component distribution rejects unsigned release workflow drift', () => {
+  const inputs = structuredClone(loadComponentDistributionInputs());
+  inputs.workflow = inputs.workflow.replace(
+    'actions/attest-build-provenance@',
+    'actions/removed@',
+  );
+  assert.match(
+    validateComponentDistribution(inputs).join('\n'),
+    /actions\/attest-build-provenance/u,
+  );
 });

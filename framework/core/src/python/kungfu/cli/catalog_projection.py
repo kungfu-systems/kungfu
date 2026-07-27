@@ -68,7 +68,19 @@ def build(contract: dict[str, Any]) -> dict[str, Any]:
 
 
 def render(payload: dict[str, Any]) -> str:
-    return json.dumps(payload, indent=2, sort_keys=True) + "\n"
+    # The linkage index is already tabular generated data. Keep one complete
+    # record per line so adding a CLI surface does not inflate this projection
+    # by six formatting-only lines.
+    projected = dict(payload)
+    projected["kfd3Linkage"] = "__KUNGFU_KFD3_LINKAGE__"
+    rendered = json.dumps(projected, indent=2, sort_keys=True)
+    marker = '  "kfd3Linkage": "__KUNGFU_KFD3_LINKAGE__",'
+    linkage = ",\n".join(
+        f"    {json.dumps(row, sort_keys=True, separators=(',', ':'))}"
+        for row in payload["kfd3Linkage"]
+    )
+    replacement = f'  "kfd3Linkage": [\n{linkage}\n  ],'
+    return rendered.replace(marker, replacement, 1) + "\n"
 
 
 def current() -> dict[str, Any]:
