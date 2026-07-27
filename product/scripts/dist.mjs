@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-// Build distributable Kungfu products from source in one command:
-// dependency sync -> core rebuild -> freeze -> all declared first-party kfx ->
+// Build distributable Kungfu products: dependency sync -> core rebuild -> freeze ->
 // product assembly -> TUI bundle -> desktop installer and/or CLI archive under
 // product/release.
 // Run through the repo entrypoint so Node is pinned:
