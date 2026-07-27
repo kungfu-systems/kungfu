@@ -106,6 +106,26 @@ function main() {
     failures,
   );
   check(
+    agentIndex.siteExperienceDefaults?.brand?.signature === 'Kungfu UNGFU™' &&
+      agentIndex.siteExperienceDefaults?.firstScreen?.humanFirst === true &&
+      agentIndex.siteExperienceDefaults?.progressiveDisclosure
+        ?.technicalDefault === 'collapsed' &&
+      agentIndex.siteExperienceDefaults?.navigation?.machineEntriesInPrimary ===
+        false &&
+      agentIndex.siteExperienceDefaults?.kfd3?.standard === 'KFD-3',
+    'agent index reader experience defaults drifted',
+    failures,
+  );
+  check(
+    bundle.siteExperienceDefaults?.brand?.productName === 'Kungfu' &&
+      bundle.siteExperienceDefaults?.brand?.boundary?.includes(
+        'not a second product or runtime',
+      ) &&
+      bundle.siteExperienceDefaults?.kfd3?.machineEntry === 'agentIndex',
+    'site experience brand or KFD-3 boundary drifted',
+    failures,
+  );
+  check(
     bundle.formatAuthority?.pickup?.manifestRoot ===
       fileRoot(FORMAT_MANIFEST_PATH),
     'format manifest byte root mismatch',
@@ -267,6 +287,13 @@ function main() {
     failures,
   );
   const sourceIds = new Set(bundle.sources?.map((entry) => entry.id));
+  for (const sourceId of bundle.siteExperienceDefaults?.kfd3?.sourceIds || []) {
+    check(
+      sourceIds.has(sourceId),
+      `site experience KFD-3 source is missing: ${sourceId}`,
+      failures,
+    );
+  }
   for (const source of bundle.sources || []) {
     const absolute = assertRelativeSourcePath(source.path);
     check(

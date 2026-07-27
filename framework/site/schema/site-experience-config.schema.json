@@ -1,0 +1,277 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://core.libkungfu.dev/schema/site-experience-config-v1.json",
+  "title": "Kungfu site experience configuration",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["contract", "site", "content"],
+  "properties": {
+    "contract": {
+      "const": "kungfu.site-experience-config/v1"
+    },
+    "site": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "context", "canonicalBaseUrl"],
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[a-z0-9-]+$"
+        },
+        "context": {
+          "type": "string",
+          "minLength": 1
+        },
+        "canonicalBaseUrl": {
+          "type": "string",
+          "format": "uri",
+          "pattern": "^https?://"
+        },
+        "language": {
+          "type": "string",
+          "default": "en"
+        }
+      }
+    },
+    "navigation": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "primary": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "pattern": "^[a-z0-9-]+$"
+          }
+        },
+        "external": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/navigationEntry"
+          }
+        }
+      }
+    },
+    "machineRoutes": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "manifest": {
+          "$ref": "#/$defs/route"
+        },
+        "agentIndex": {
+          "$ref": "#/$defs/route"
+        },
+        "llms": {
+          "$ref": "#/$defs/route"
+        }
+      }
+    },
+    "content": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["pages"],
+      "properties": {
+        "pages": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/page"
+          }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "route": {
+      "type": "string",
+      "pattern": "^/(?:[a-zA-Z0-9._-]+/)*[a-zA-Z0-9._-]+$"
+    },
+    "navigationEntry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["label", "href"],
+      "properties": {
+        "label": {
+          "type": "string",
+          "minLength": 1
+        },
+        "href": {
+          "type": "string",
+          "anyOf": [
+            {
+              "pattern": "^/(?!/)"
+            },
+            {
+              "format": "uri",
+              "pattern": "^https?://"
+            }
+          ]
+        }
+      }
+    },
+    "item": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["heading", "body"],
+      "properties": {
+        "heading": {
+          "type": "string",
+          "minLength": 1
+        },
+        "body": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "section": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "heading"],
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[a-z0-9-]+$"
+        },
+        "eyebrow": {
+          "type": "string",
+          "minLength": 1
+        },
+        "heading": {
+          "type": "string",
+          "minLength": 1
+        },
+        "body": {
+          "type": "string",
+          "minLength": 1
+        },
+        "items": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/item"
+          }
+        }
+      },
+      "anyOf": [
+        {
+          "required": ["body"]
+        },
+        {
+          "required": ["items"]
+        }
+      ]
+    },
+    "page": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "label",
+        "route",
+        "headline",
+        "summary",
+        "claimClass",
+        "maturity",
+        "knownLimits",
+        "humanSections",
+        "technicalSections"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[a-z0-9-]+$"
+        },
+        "label": {
+          "type": "string",
+          "minLength": 1
+        },
+        "route": {
+          "type": "string",
+          "pattern": "^/(?:[a-zA-Z0-9._-]+/)*$"
+        },
+        "kicker": {
+          "type": "string",
+          "minLength": 1
+        },
+        "headline": {
+          "type": "string",
+          "minLength": 1
+        },
+        "summary": {
+          "type": "string",
+          "minLength": 1
+        },
+        "claimClass": {
+          "type": "string",
+          "minLength": 1
+        },
+        "maturity": {
+          "type": "string",
+          "minLength": 1
+        },
+        "knownLimits": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "humanSections": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/section"
+          }
+        },
+        "technicalSections": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/section"
+          }
+        },
+        "technicalSummary": {
+          "type": "string",
+          "minLength": 1
+        },
+        "authorities": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/authority"
+          }
+        }
+      }
+    },
+    "authority": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "path", "role", "contentRoot", "url"],
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[a-z0-9-]+$"
+        },
+        "path": {
+          "type": "string",
+          "minLength": 1
+        },
+        "role": {
+          "type": "string",
+          "minLength": 1
+        },
+        "contentRoot": {
+          "type": "string",
+          "pattern": "^sha256:[0-9a-f]{64}$"
+        },
+        "url": {
+          "type": "string",
+          "format": "uri"
+        }
+      }
+    }
+  }
+}

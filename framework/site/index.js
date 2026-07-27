@@ -4,6 +4,10 @@
 const { createHash } = require('node:crypto');
 const fs = require('node:fs');
 const path = require('node:path');
+const {
+  createSiteExperience,
+  verifySiteExperience: verifyExperience,
+} = require('./experience.js');
 
 const packageRoot = __dirname;
 const siteRoot = path.join(packageRoot, 'dist', 'site');
@@ -18,6 +22,11 @@ const formatGuideIndexPath = path.join(
   'index.json',
 );
 const schemaPath = path.join(packageRoot, 'schema', 'site-bundle.schema.json');
+const experienceSchemaPath = path.join(
+  packageRoot,
+  'schema',
+  'site-experience-config.schema.json',
+);
 
 function canonical(value) {
   if (Array.isArray(value)) return value.map(canonical);
@@ -276,6 +285,8 @@ function renderPageModels() {
         contentRoot: bundle.contentRoot,
       },
     };
+    if (surface.presentation)
+      model.presentation = structuredClone(surface.presentation);
     if (surface.id === 'overview')
       model.positioning = structuredClone(bundle.positioning);
     if (surface.id === 'format')
@@ -340,12 +351,174 @@ function renderFormatGuideModel(guideId) {
   return guide;
 }
 
+function sectionItems(values, label) {
+  return values.map((body, index) => ({
+    heading: `${label} ${String(index + 1).padStart(2, '0')}`,
+    body,
+  }));
+}
+
+function productTechnicalSections(page) {
+  const sections = [];
+  if (page.formatAuthority) {
+    const authority = page.formatAuthority;
+    sections.push({
+      id: 'format-authority',
+      eyebrow: 'Exact packaged Spec authority',
+      heading: 'Verify the pickup, status, normative root and retained corpus.',
+      items: [
+        {
+          heading: 'Package pickup',
+          body: authority.pickup.coordinate,
+        },
+        {
+          heading: 'Authority status',
+          body: `${authority.status}; format namespace ${authority.formatNamespace}; Spec ${authority.specVersion}.`,
+        },
+        {
+          heading: 'Normative root',
+          body: authority.normativeRoot,
+        },
+        {
+          heading: 'Retained conformance corpus',
+          body: `${authority.conformance.release}; ${authority.conformance.vectorCount} vectors; ${authority.conformance.releaseRoot}.`,
+        },
+      ],
+    });
+    sections.push({
+      id: 'format-machine-routes',
+      eyebrow: 'Rooted machine routes',
+      heading: 'Inspect every exact artifact without a monorepo checkout.',
+      items: Object.entries(authority.routes).map(([id, descriptor]) => ({
+        heading: id,
+        body: `${descriptor.path}; ${descriptor.artifactRoot}; ${descriptor.byteLength} bytes.`,
+      })),
+    });
+    sections.push({
+      id: 'format-reader-journey',
+      eyebrow: 'Progressive Spec journey',
+      heading: 'Open only the guide required for the current task.',
+      items: authority.readerJourney.guides.map((guide) => ({
+        heading: `${guide.order}. ${guide.title}`,
+        body: `${guide.summary} Root: ${guide.contentRoot}.`,
+      })),
+    });
+  }
+  if (page.adrMap) {
+    sections.push({
+      id: 'adr-navigation',
+      eyebrow: 'Generated decision navigation',
+      heading:
+        'Keep navigation projections separate from architecture authority.',
+      items: [
+        {
+          heading: 'Projection root',
+          body: page.adrMap.contentRoot,
+        },
+        {
+          heading: 'Authority boundary',
+          body: page.adrMap.authorityBoundary,
+        },
+      ],
+    });
+  }
+  if (page.positioning) {
+    sections.push({
+      id: 'product-positioning',
+      eyebrow: 'Product framing',
+      heading: 'Move from the outcome to the independently adoptable layers.',
+      items: Object.entries(page.positioning).map(([heading, body]) => ({
+        heading,
+        body,
+      })),
+    });
+  }
+  sections.push({
+    id: 'upstream-authorities',
+    eyebrow: 'Pinned authority',
+    heading: 'Audit the exact upstream source roots.',
+    items: page.authorities.map((authority) => ({
+      heading: authority.path,
+      body: `${authority.role}; ${authority.contentRoot}; ${authority.url}.`,
+    })),
+  });
+  return sections;
+}
+
+function productExperiencePage(page) {
+  const reader = page.presentation?.readerExperience;
+  return {
+    id: page.id,
+    label: page.label,
+    route: page.route,
+    kicker: reader?.kicker || page.label,
+    headline: reader?.headline || page.headline,
+    summary: reader?.lead || page.summary,
+    claimClass: page.claimClass,
+    maturity: page.maturity,
+    knownLimits: structuredClone(page.knownLimits),
+    humanSections: reader?.humanSections
+      ? structuredClone(reader.humanSections)
+      : [
+          {
+            id: 'capabilities',
+            eyebrow: 'What it enables',
+            heading: 'Start with the useful outcome.',
+            items: sectionItems(page.capabilities, 'Capability'),
+          },
+        ],
+    technicalSections: productTechnicalSections(page),
+    technicalSummary:
+      reader?.technicalSummary ||
+      'Inspect exact contracts, evidence, authority roots and source boundaries.',
+    authorities: structuredClone(page.authorities),
+  };
+}
+
+function renderSiteExperience(config) {
+  verifyBundle();
+  const bundle = loadBundle();
+  return createSiteExperience(
+    config,
+    bundle.siteExperienceDefaults,
+    bundle.sources,
+  );
+}
+
+function renderProductSiteExperience(options = {}) {
+  const pages = renderPageModels().map(productExperiencePage);
+  return renderSiteExperience({
+    contract: 'kungfu.site-experience-config/v1',
+    site: {
+      id: options.id || 'kungfu-core',
+      context: options.context || 'Core Product and Developer Platform',
+      canonicalBaseUrl:
+        options.canonicalBaseUrl || 'https://core.libkungfu.dev',
+      language: options.language || 'en',
+    },
+    navigation: {
+      primary:
+        options.primary ||
+        pages.filter((page) => page.route !== '/').map((page) => page.id),
+      external: options.external || [],
+    },
+    machineRoutes: options.machineRoutes,
+    content: { pages },
+  });
+}
+
+function verifySiteExperience(experience) {
+  verifyBundle();
+  return verifyExperience(experience);
+}
+
 module.exports = {
   adrMapPath,
   agentIndexPath,
   bundlePath,
   formatGuideIndexPath,
   formatManifestPath,
+  experienceSchemaPath,
   loadBundle,
   loadFormatAuthorityManifest,
   loadFormatAuthorityRoute,
@@ -355,7 +528,10 @@ module.exports = {
   renderFormatGuideModels,
   renderPageModel,
   renderPageModels,
+  renderProductSiteExperience,
+  renderSiteExperience,
   schemaPath,
   siteRoot,
   verifyBundle,
+  verifySiteExperience,
 };

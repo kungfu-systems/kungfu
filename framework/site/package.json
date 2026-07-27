@@ -25,10 +25,12 @@
     "./installer-publication": "./installer-publication.mjs",
     "./installer-publication-schema": "./schema/installer-publication-bundle.schema.json",
     "./schema": "./schema/site-bundle.schema.json",
+    "./experience-schema": "./schema/site-experience-config.schema.json",
     "./package.json": "./package.json"
   },
   "files": [
     "index.js",
+    "experience.js",
     "installer-publication.mjs",
     "dist/site/",
     "schema/",
