@@ -160,7 +160,7 @@ test('PR-stage builds reject a premature publish-source lock', () => {
 test('release builds retain the bounded large-repository GitHub fallback window', () => {
   const buildPath = CONTRACT.workflows.build;
   const original = fs.readFileSync(path.join(ROOT, buildPath), 'utf8');
-  const drifted = original.replace(
+  const drifted = original.replaceAll(
     '      checkout-cache-github-timeout-seconds: 1200',
     '      checkout-cache-github-timeout-seconds: 600',
   );

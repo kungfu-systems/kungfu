@@ -12,6 +12,7 @@ from click.testing import CliRunner
 
 from kungfu.cli.commands import __registry__  # noqa: F401
 from kungfu.cli.commands import kfc
+from kungfu.content_hash import compute_content_hash_value
 from kungfu.storage import service
 
 
@@ -165,6 +166,101 @@ def test_storage_layout_verify_fails_on_unclassified_runtime_path(tmp_path):
     layout = json.loads(result.output)
     assert layout["coverage"]["complete"] is False
     assert layout["coverage"]["unclassified_durable_candidates"] == [str(undeclared)]
+
+
+def test_episode_attach_payload_cli_publishes_verifiable_content(tmp_path):
+    home = tmp_path / "home"
+    runtime_dir = home / "runtime"
+    payload = tmp_path / "course-outline.json"
+    payload.write_text('{"sections":3}\n', encoding="utf-8")
+    service.episode_begin(runtime_dir, episode_id=42, begin_time=1)
+
+    result = CliRunner().invoke(
+        kfc,
+        [
+            "--home",
+            str(home),
+            "storage",
+            "episode",
+            "attach-payload",
+            "--episode-id",
+            "42",
+            "--path",
+            str(payload),
+            "--ref-id",
+            "course-outline.json",
+            "--json",
+        ],
+    )
+
+    assert result.exit_code == 0, result.output
+    attached = json.loads(result.output)
+    assert attached["payload_reference"]["ref_id"] == "course-outline.json"
+    assert attached["payload_reference"]["ref_hash"].startswith("sha256:")
+    service.episode_end(runtime_dir, episode_id=42, end_time=2)
+    assert service.fsck(runtime_dir, episode_id=42, verify_frames=True)["ok"] is True
+
+
+def test_episode_attach_payload_cli_rejects_a_false_content_hash(tmp_path):
+    home = tmp_path / "home"
+    runtime_dir = home / "runtime"
+    payload = tmp_path / "course-outline.json"
+    payload.write_text('{"sections":3}\n', encoding="utf-8")
+    service.episode_begin(runtime_dir, episode_id=43, begin_time=1)
+
+    result = CliRunner().invoke(
+        kfc,
+        [
+            "--home",
+            str(home),
+            "storage",
+            "episode",
+            "attach-payload",
+            "--episode-id",
+            "43",
+            "--path",
+            str(payload),
+            "--content-hash",
+            f"sha256:{'0' * 64}",
+            "--json",
+        ],
+    )
+
+    assert result.exit_code != 0
+    assert "does not match the bytes" in str(result.exception)
+    inspected = service.episode_inspect(runtime_dir, episode_id=43)
+    assert inspected.get("refs", []) == []
+
+
+def test_episode_attach_payload_cli_preserves_bare_digest_compatibility(tmp_path):
+    home = tmp_path / "home"
+    runtime_dir = home / "runtime"
+    payload = tmp_path / "course-outline.json"
+    payload.write_text('{"sections":3}\n', encoding="utf-8")
+    digest = compute_content_hash_value(payload.read_bytes())
+    service.episode_begin(runtime_dir, episode_id=44, begin_time=1)
+
+    result = CliRunner().invoke(
+        kfc,
+        [
+            "--home",
+            str(home),
+            "storage",
+            "episode",
+            "attach-payload",
+            "--episode-id",
+            "44",
+            "--path",
+            str(payload),
+            "--content-hash",
+            digest,
+            "--json",
+        ],
+    )
+
+    assert result.exit_code == 0, result.output
+    attached = json.loads(result.output)
+    assert attached["payload_reference"]["ref_hash"] == f"sha256:{digest}"
 
 
 def test_episode_recover_cli_plans_then_executes_a_fenced_abort(tmp_path):

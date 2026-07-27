@@ -110,6 +110,10 @@ test('CLI product archive name uses the Kungfu Episodes product prefix', () => {
     'kungfu-episodes-cli-darwin-arm64',
   );
   assert.equal(cliArchiveBase('linux-x64'), 'kungfu-episodes-cli-linux-x64');
+  assert.equal(
+    cliArchiveBase('linux-arm64'),
+    'kungfu-episodes-cli-linux-arm64',
+  );
   assert.equal(cliArchiveBase('win32-x64'), 'kungfu-episodes-cli-win32-x64');
 });
 

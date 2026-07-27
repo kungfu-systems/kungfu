@@ -100,7 +100,7 @@
             "product-stable",
             "product-binaries"
           ],
-          "sourceRoot": "sha256:4a1635277045783522db473ad7e3c5ca97bf99693053777878e664563dd8c2b8"
+          "sourceRoot": "sha256:bc26dd49a4739eefdf2479dbf06d431b179c76390e4427936f03949443f4e5ee"
         },
         {
           "path": ".github/workflows/buildchain-validate.yml",
@@ -230,7 +230,7 @@
             "product-stable",
             "product-binaries"
           ],
-          "sourceRoot": "sha256:6f3d500aa2d6860e082023aac6c8ef0f39c5d43efa9aa5ae3ae3940bc8f837b2"
+          "sourceRoot": "sha256:1352bc9714fd3d064ad3c283caf48a882d5b4b96cf3149de11715afde0fd78dd"
         },
         {
           "path": ".github/workflows/release-shifu.yml",
@@ -760,5 +760,5 @@
       }
     }
   ],
-  "registryRoot": "sha256:6e8b0a9182065e114a5f686abf5844a16516168dbf4bc3e2e04a381bef4f283c"
+  "registryRoot": "sha256:d3648d4cb2b372e16f303897a6f40ca84539a54f7cb8d197910b032377678241"
 }

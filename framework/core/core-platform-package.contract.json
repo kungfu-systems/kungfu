@@ -15,6 +15,12 @@
       "cpu": ["x64"]
     },
     {
+      "key": "linux-arm64",
+      "name": "@kungfu-tech/core-linux-arm64",
+      "os": ["linux"],
+      "cpu": ["arm64"]
+    },
+    {
       "key": "win32-x64",
       "name": "@kungfu-tech/core-win32-x64",
       "os": ["win32"],

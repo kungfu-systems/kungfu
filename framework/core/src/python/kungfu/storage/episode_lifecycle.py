@@ -43,6 +43,48 @@ def _relative_ref(runtime_dir: str, path: str) -> str:
         return path
 
 
+def publish_payload_reference(
+    runtime_dir: str,
+    path: str,
+    *,
+    content_hash: str = "",
+    ref_id: str | None = None,
+) -> dict[str, Any]:
+    """Publish exact payload bytes before an Episode claims their hash."""
+
+    from kungfu.content_hash import compute_content_hash_value
+    from kungfu.storage import content_store
+
+    with open(path, "rb") as payload_file:
+        raw = payload_file.read()
+    digest = compute_content_hash_value(raw)
+    computed_hash = f"sha256:{digest}"
+    declared_hash = (
+        content_hash if content_hash.startswith("sha256:") else f"sha256:{content_hash}"
+    )
+    if content_hash and declared_hash != computed_hash:
+        raise ValueError(
+            "publish_payload_reference: declared hash "
+            f"{content_hash} does not match the bytes at {path} ({computed_hash})"
+        )
+    published = content_store.put_if_absent(
+        runtime_dir,
+        content_store.PAYLOADS_NAMESPACE,
+        raw,
+        expected_hash=computed_hash,
+    )
+    if not published["ok"]:
+        raise RuntimeError(
+            "publish_payload_reference: publish failed: "
+            f"{published['error']}: {published.get('message', '')}"
+        )
+    return {
+        "ref_id": ref_id or _relative_ref(runtime_dir, path),
+        "ref_hash": computed_hash,
+        "payload": published,
+    }
+
+
 def find_open_episode_id(runtime_dir: str, *, source: str) -> int | None:
     listed = service.episode_list(runtime_dir, limit=0)
     matches = [
@@ -175,30 +217,12 @@ class RuntimeEpisodeLifecycle:
         # edge label (the runtime-relative origin of the bytes). Publication
         # goes through the KF-ADR-019f86da-4f90-738c-b372-e509976f69ff facade, so the provider-selected backend
         # (file or engine) owns the bytes the ref claims.
-        from kungfu.content_hash import compute_content_hash_value
-        from kungfu.storage import content_store
-
-        with open(path, "rb") as payload_file:
-            raw = payload_file.read()
-        digest = compute_content_hash_value(raw)
-        if content_hash:
-            declared = content_hash.split(":", 1)[-1]
-            if declared != digest:
-                raise ValueError(
-                    f"attach_payload_ref: declared hash {content_hash} does not "
-                    f"match the bytes at {path} (sha256:{digest})"
-                )
-        published = content_store.put_if_absent(
+        reference = publish_payload_reference(
             self.runtime_dir,
-            content_store.PAYLOADS_NAMESPACE,
-            raw,
-            expected_hash=f"sha256:{digest}",
+            path,
+            content_hash=content_hash,
+            ref_id=ref_id,
         )
-        if not published["ok"]:
-            raise RuntimeError(
-                "attach_payload_ref: publish failed: "
-                f"{published['error']}: {published.get('message', '')}"
-            )
         self._write(
             "episode_attach_ref",
             lambda write_retry: service.episode_attach_ref(
@@ -206,8 +230,8 @@ class RuntimeEpisodeLifecycle:
                 episode_id=self.episode_id,
                 location_uid=self.location_uid,
                 ref_kind="payload",
-                ref_id=ref_id or _relative_ref(self.runtime_dir, path),
-                ref_hash=f"sha256:{digest}",
+                ref_id=reference["ref_id"],
+                ref_hash=reference["ref_hash"],
                 write_retry=write_retry,
             ),
         )
