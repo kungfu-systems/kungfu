@@ -39,6 +39,16 @@ function coordinatorEnvironment(
   return environment;
 }
 
+function sourceCheckoutCoordinatorEnvironment(
+  inherited = process.env,
+  platform = process.platform,
+) {
+  return {
+    ...coordinatorEnvironment(inherited, platform),
+    KUNGFU_ALLOW_FOREIGN_RUNTIME: '1',
+  };
+}
+
 test('Windows coordinator launch preserves the inherited Path key', () => {
   const environment = coordinatorEnvironment(
     { Path: 'C:\\host-tools', HOME: 'C:\\home' },
@@ -46,6 +56,15 @@ test('Windows coordinator launch preserves the inherited Path key', () => {
   );
   assert.equal(environment.Path, `${CORE_DIST};C:\\host-tools`);
   assert.equal(environment.PATH, undefined);
+});
+
+test('source-checkout coordinator declares the named foreign-runtime allowance', () => {
+  const inherited = { CUSTOM_MARKER: 'preserved' };
+  const environment = sourceCheckoutCoordinatorEnvironment(inherited, 'darwin');
+  assert.equal(environment.CUSTOM_MARKER, 'preserved');
+  assert.equal(environment.KUNGFU_ALLOW_FOREIGN_RUNTIME, '1');
+  assert.equal(environment.DYLD_FALLBACK_LIBRARY_PATH, CORE_DIST);
+  assert.equal(inherited.KUNGFU_ALLOW_FOREIGN_RUNTIME, undefined);
 });
 
 function waitForJsonLine(child, type, timeout = 20_000) {
@@ -245,7 +264,7 @@ test(
       {
         cwd: CORE_DIR,
         detached: process.platform !== 'win32',
-        env: coordinatorEnvironment(),
+        env: sourceCheckoutCoordinatorEnvironment(),
         stdio: ['ignore', output, output],
       },
     );
