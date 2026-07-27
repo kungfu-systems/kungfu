@@ -35,6 +35,7 @@
     "test:auditable-demo": "node scripts/require-shifu.mjs test:auditable-demo && node --test scripts/auditable-demo-adapter.test.mjs scripts/auditable-demo-passport.test.mjs scripts/auditable-demo-workflow.test.mjs scripts/update-auditable-demo-readme.test.mjs",
     "check:canonical-json": "node scripts/require-shifu.mjs check:canonical-json && node --test scripts/check-canonical-json.test.mjs",
     "check:npm-package-registry": "node scripts/require-shifu.mjs check:npm-package-registry && node scripts/check-npm-package-registry.mjs && node --test scripts/check-npm-package-registry.test.mjs scripts/npm-release-inventory.test.mjs",
+    "check:component-distribution": "node scripts/require-shifu.mjs check:component-distribution && node scripts/check-npm-package-registry.mjs --component-distribution && node --test scripts/check-npm-package-registry.test.mjs",
     "pack:npm-release-inventory": "node scripts/require-shifu.mjs pack:npm-release-inventory && node scripts/npm-release-inventory.mjs",
     "check:primitive-catalog": "node scripts/require-shifu.mjs check:primitive-catalog && node scripts/generate-primitive-catalog.mjs --check && node scripts/check-primitive-authority-boundary.mjs && node --test scripts/check-primitive-catalog.test.mjs scripts/check-primitive-authority-boundary.test.mjs",
     "check:primitive-authority-boundary": "node scripts/require-shifu.mjs check:primitive-authority-boundary && node scripts/check-primitive-authority-boundary.mjs && node --test scripts/check-primitive-authority-boundary.test.mjs",

@@ -27,6 +27,7 @@ from . import codex
 from . import sdk
 from . import kfd
 from . import action
+from . import shifu
 from . import xinfa
 from . import pursuit
 from . import warrant
@@ -71,6 +72,7 @@ __all__ = [
     "sdk",
     "kfd",
     "action",
+    "shifu",
     "xinfa",
     "pursuit",
     "warrant",
