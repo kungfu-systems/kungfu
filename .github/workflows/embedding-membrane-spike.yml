@@ -279,6 +279,10 @@ jobs:
         run: |
           kfd_root="${RUNNER_TEMP}/kfd-runtime-100"
           git init "$kfd_root"
+          # Runtime 100 vectors are hashed as raw bytes. Keep their canonical
+          # LF representation on Windows regardless of runner Git defaults.
+          git -C "$kfd_root" config core.autocrlf false
+          git -C "$kfd_root" config core.eol lf
           git -C "$kfd_root" remote add origin https://github.com/kungfu-systems/kfd.git
           git -C "$kfd_root" fetch --no-tags --depth=1 origin "$KFD_SHA"
           git -C "$kfd_root" checkout --detach "$KFD_SHA"

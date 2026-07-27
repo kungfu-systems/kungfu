@@ -1463,7 +1463,7 @@
           "authority": "qualification",
           "publication": "none",
           "receipt": "diagnostic",
-          "definitionDigest": "sha256:5067a806e4d8dbbf194387c062741f272cf205e95b535518a59f75ec31fa8244",
+          "definitionDigest": "sha256:5e30a0b403effd1740f8df343bada09a19740839efd5f8c246dd27eca62d59b4",
           "credentials": {
             "githubToken": "read",
             "oidc": false,
@@ -1542,7 +1542,7 @@
             {
               "index": 14,
               "label": "name:Materialize exact KFD Runtime 100",
-              "definitionDigest": "sha256:e138b795a81dc221702018286bcfcf9473822651332c6b989160b3be8e30369c"
+              "definitionDigest": "sha256:853c5fa53a2fb1fc7734baa7356e76a1e5ee85f9cc29aac908305d44b0766174"
             },
             {
               "index": 15,

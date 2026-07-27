@@ -181,7 +181,7 @@
           "classification": "non-publication",
           "owner": "kungfu-runtime",
           "surfaceIds": [],
-          "sourceRoot": "sha256:e564f05af8911af07dbdc61e628a57f39d94c3389211a56b7f33a8161e8ba169"
+          "sourceRoot": "sha256:412723bd879a96b272665602209e1cc336d51c3ca8df156668a540b7b5e1f60b"
         },
         {
           "path": ".github/workflows/gate-measurement.yml",
@@ -767,5 +767,5 @@
       }
     }
   ],
-  "registryRoot": "sha256:0394a497583db9ae53a81b143c29764336be8f0ae7ae4b1e5d2f8effccb4a6bd"
+  "registryRoot": "sha256:2fc2e2cdd636d8be3977328e044fb65d10b1a6ae7c403ea8e3fd65de47a3697d"
 }

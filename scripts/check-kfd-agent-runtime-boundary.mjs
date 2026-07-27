@@ -27,6 +27,40 @@ const cmake = fs.readFileSync(cmakePath, 'utf8');
 const workflow = fs.readFileSync(workflowPath, 'utf8');
 const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
 
+const kfdCheckoutStart = workflow.indexOf(
+  'kfd_root="${RUNNER_TEMP}/kfd-runtime-100"',
+);
+const kfdCheckoutEnd = workflow.indexOf(
+  'echo "KFD_PACKAGE_ROOT=$kfd_root"',
+  kfdCheckoutStart,
+);
+assert.notEqual(
+  kfdCheckoutStart,
+  -1,
+  'the workflow must materialize the exact KFD Runtime 100 checkout',
+);
+assert.notEqual(
+  kfdCheckoutEnd,
+  -1,
+  'the KFD Runtime 100 checkout must publish its package root',
+);
+const kfdCheckout = workflow.slice(kfdCheckoutStart, kfdCheckoutEnd);
+const kfdAutocrlfConfig = kfdCheckout.indexOf(
+  'git -C "$kfd_root" config core.autocrlf false',
+);
+const kfdEolConfig = kfdCheckout.indexOf(
+  'git -C "$kfd_root" config core.eol lf',
+);
+const kfdCheckoutCommand = kfdCheckout.indexOf(
+  'git -C "$kfd_root" checkout --detach "$KFD_SHA"',
+);
+assert.ok(
+  kfdAutocrlfConfig >= 0 &&
+    kfdEolConfig > kfdAutocrlfConfig &&
+    kfdCheckoutCommand > kfdEolConfig,
+  'the workflow must force canonical LF bytes before checking out KFD Runtime 100',
+);
+
 const kungfuIncludes = [...main.matchAll(/#include\s+[<"]([^>"]+)[>"]/g)]
   .map((match) => match[1])
   .filter((include) => include.startsWith('kungfu/'));
