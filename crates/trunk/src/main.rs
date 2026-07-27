@@ -311,7 +311,7 @@ fn route_product(
     root_options: &[help::RootOption],
 ) -> Result<ProductRoute, String> {
     if args.is_empty() {
-        return Ok(ProductRoute::Help);
+        return Ok(ProductRoute::Launch);
     }
 
     let mut globals = Vec::new();

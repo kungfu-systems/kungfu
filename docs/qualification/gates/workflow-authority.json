@@ -1322,11 +1322,13 @@
           "authority": "qualification",
           "publication": "none",
           "receipt": "diagnostic",
-          "definitionDigest": "sha256:c4fd03d3a0a5c7c0d16ad4d9594d0f1e3f879f442fe976d5667b17b3737670c7",
+          "definitionDigest": "sha256:16149888ed96c050fb421464ad037eb09152994e0aa82eb08604ee9f9e87333c",
           "credentials": {
             "githubToken": "write",
             "oidc": false,
-            "repositorySecrets": [],
+            "repositorySecrets": [
+              "KUNGFU_GITHUB_TOKEN"
+            ],
             "inheritedSecrets": false,
             "environment": null
           },

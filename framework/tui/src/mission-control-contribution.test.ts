@@ -13,6 +13,8 @@ function profileFixture(
     suiteRoot?: string;
     dashboardSuiteRoot?: string;
     questionIds?: string[];
+    qualified?: boolean;
+    memberCalls?: string[];
   } = {},
 ): Profile {
   const suiteRoot = options.suiteRoot ?? 'sha256:suite';
@@ -25,15 +27,20 @@ function profileFixture(
     }),
     applicationAsync: async () => ({ profileSuiteRoot: suiteRoot }),
     kfd3StatusAsync: async () => ({
-      qualified: true,
-      activeExactRoot: true,
+      qualified: options.qualified ?? true,
+      activeExactRoot: options.qualified ?? true,
       profileSuiteRoot: suiteRoot,
+      reason:
+        options.qualified === false
+          ? 'Profile must be active at this exact root before KFD-3 qualification'
+          : undefined,
     }),
     memberCallAsync: async <TResult>(
       _source: string,
       _member: string,
       operation: string,
     ) => {
+      options.memberCalls?.push(operation);
       const result =
         operation === 'dashboard'
           ? {
@@ -107,6 +114,20 @@ test('loads five questions through public read-only Profile member calls', async
     model.evidence.slice(2, 4).map((row) => row.value),
     ['sha256:definition', 'sha256:proof'],
   );
+});
+
+test('does not call Profile members before the installed exact root is active', async () => {
+  const memberCalls: string[] = [];
+  const model = await loadMissionControlContribution(
+    profileFixture({ qualified: false, memberCalls }),
+    kfxPlan,
+  );
+  assert.deepEqual(memberCalls, []);
+  assert.equal(model.subject.title, 'Mission Control needs activation');
+  assert.match(model.subject.subtitle, /active at this exact root/);
+  assert.match(model.cards[1]?.summary ?? '', /did not read work/);
+  assert.match(model.cards[2]?.summary ?? '', /Press a/);
+  assert.equal(model.notice, 'activation required · no mutation attempted');
 });
 
 test('fails closed when public query roots drift', async () => {

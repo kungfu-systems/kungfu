@@ -4,6 +4,10 @@
 # (libnode), the same bridge `kungfu sdk` uses — no separate node install. The
 # TUI bundle is shipped next to the runtime (packaged app: Resources/tui/tui.mjs)
 # and loads the kungfu_node binding at runtime from KUNGFU_DIR.
+#
+# This module deliberately lives outside cli.commands: interactive bare
+# `kungfu` is the sole terminal-product entry and there is no `kungfu tui`
+# command, alias, or compatibility shim.
 
 import os
 import sys
@@ -11,7 +15,6 @@ import sys
 import click
 
 import kungfu
-from kungfu.cli.commands import kfc
 
 
 def _resolve_tui_entry():
@@ -49,20 +52,3 @@ def run_tui(ctx, commands=()):
         )
     argv = [sys.argv[0], entry, *commands]
     return kungfu.__binding__.libnode.run(*argv)
-
-
-@kfc.command(
-    help_priority=1,
-    context_settings=dict(ignore_unknown_options=True),
-)
-@click.argument(
-    "commands",
-    nargs=-1,
-    required=False,
-    type=click.UNPROCESSED,
-)
-@kfc.pass_context()
-def tui(ctx, commands):
-    """Open Kungfu's interactive terminal product surface."""
-
-    return run_tui(ctx, commands)

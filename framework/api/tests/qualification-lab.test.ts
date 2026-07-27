@@ -3,7 +3,11 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 
-import { openQualificationLab } from '../src/capability/qualification-lab.ts';
+import {
+  openQualificationLab,
+  qualificationLabStartupSurface,
+  qualificationRunProgressLabel,
+} from '../src/capability/qualification-lab.ts';
 
 const startup = {
   schema: 'kungfu.qualification-lab.startup-route/v1',
@@ -132,4 +136,54 @@ test('the adapter streams safe milestones before returning the canonical report'
 
   assert.deepEqual(received, ['session-1-start']);
   assert.equal(result.status, 'qualified');
+});
+
+test('GUI and TUI share the same fail-closed startup surface policy', () => {
+  assert.equal(
+    qualificationLabStartupSurface({
+      ...startup,
+      state: 'existing-work',
+      route: 'work-graph',
+      workGraphPresent: true,
+    }),
+    'work-graph',
+  );
+  assert.equal(qualificationLabStartupSurface(startup), 'qualification-lab');
+  assert.equal(
+    qualificationLabStartupSurface({
+      ...startup,
+      state: 'diagnostic',
+      route: 'diagnostic',
+      workGraphPresent: null,
+    }),
+    'qualification-lab',
+  );
+  assert.equal(
+    qualificationLabStartupSurface({
+      ...startup,
+      state: 'verified-empty',
+      route: 'work-graph',
+      workGraphPresent: true,
+    }),
+    'qualification-lab',
+  );
+});
+
+test('run progress distinguishes a live wait from an admitted event', () => {
+  assert.equal(
+    qualificationRunProgressLabel({
+      elapsedMs: 2400,
+      quietMs: 2400,
+      eventCount: 0,
+    }),
+    'Still running · 2s elapsed · waiting for first admitted event',
+  );
+  assert.equal(
+    qualificationRunProgressLabel({
+      elapsedMs: 12_400,
+      quietMs: 5400,
+      eventCount: 4,
+    }),
+    'Still running · 12s elapsed · 4 admitted events shown · last update 5s ago',
+  );
 });

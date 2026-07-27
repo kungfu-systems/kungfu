@@ -1,7 +1,7 @@
 {
-  "catalogRoot": "sha256:3aead9de7d0beb5971796cca4d989091ca4b297619216e56d9f574f236c35363",
+  "catalogRoot": "sha256:116715eece3c524a6e3511fe1715bfa20edd26a6068c6116c4a82e26a8ad6d26",
   "contractId": "kungfu-cli-surface",
-  "contractRoot": "sha256:7ff693da5be528206a6334e1ab22d1bc93949ca19696ab44200c9675db24438b",
+  "contractRoot": "sha256:499ae21fa21a7f995611d41db673c1c7144569bc8eda33c22659aa8cf12dabb1",
   "kfd3Linkage": [
     {"apiIds":[],"reason":"navigation-only","state":"unlinked","surfaceId":"kungfu.cli.commands.kfc"},
     {"apiIds":[],"reason":"no-agent-first-api-declared","state":"unlinked","surfaceId":"kungfu.cli.commands.action.action"},
@@ -374,7 +374,6 @@
     {"apiIds":["kungfu.storage.status"],"reason":null,"state":"linked","surfaceId":"kungfu.cli.commands.storage.status"},
     {"apiIds":["kungfu.storage.verify-sync"],"reason":null,"state":"linked","surfaceId":"kungfu.cli.commands.storage.verify.sync"},
     {"apiIds":["kungfu.trace.capture"],"reason":null,"state":"linked","surfaceId":"kungfu.cli.commands.trace.trace"},
-    {"apiIds":[],"reason":"no-agent-first-api-declared","state":"unlinked","surfaceId":"kungfu.cli.commands.tui.tui"},
     {"apiIds":[],"reason":"navigation-only","state":"unlinked","surfaceId":"kungfu.cli.commands.update.update"},
     {"apiIds":[],"reason":"not-agent-visible","state":"unlinked","surfaceId":"kungfu.cli.commands.update.update.apply"},
     {"apiIds":[],"reason":"not-agent-visible","state":"unlinked","surfaceId":"kungfu.cli.commands.update.bootstrap.verify"},
@@ -445,11 +444,11 @@
       "kfd3Registry": "strict-link",
       "packagedInventory": "required-agent-pack-entry"
     },
-    "expectedSurfaceRoot": "sha256:451140a0ed72260398d0fecf295b54f28882b253b8198af7bc90be03e168f1b6",
+    "expectedSurfaceRoot": "sha256:5c9a4ea480162c59cd645baa40e3409831aa39fe75ebbc8668ae8771065f9dd3",
     "regeneration": "./shifu fix:cli-catalog-parity",
     "validation": "./shifu check:cli-catalog-parity"
   },
-  "registryRoot": "sha256:90c0d1a92c9343342413d26a7af0115f371c182faaa3df6adfcbcf36eba78c75",
+  "registryRoot": "sha256:b7cc11ae61e276ba54bd67fa02ea5abf2282d3e9cb8eee95ec2bb2bb577fcaed",
   "schema": "kungfu.cli-surface-catalog/v1",
   "schemaRoot": "sha256:30e0c49658aee967b24294362af12e977c8d62eaa455eb83ffdaa50072021569",
   "source": {
@@ -462,7 +461,7 @@
     "pathAuthority": "live-click-tree",
     "root": "kungfu"
   },
-  "surfaceRoot": "sha256:451140a0ed72260398d0fecf295b54f28882b253b8198af7bc90be03e168f1b6",
+  "surfaceRoot": "sha256:5c9a4ea480162c59cd645baa40e3409831aa39fe75ebbc8668ae8771065f9dd3",
   "surfaces": [
     {
       "aliases": [],
@@ -26769,52 +26768,6 @@
         "symbol": "trace"
       },
       "summary": "capture an agent run into a local trace store: kungfu trace -- <command>",
-      "visibility": "advanced"
-    },
-    {
-      "aliases": [],
-      "approval_policy": {
-        "caller_confirmation_required": false,
-        "mode": "none",
-        "preconditions": []
-      },
-      "audience": [
-        "human",
-        "agent"
-      ],
-      "availability": {
-        "conditions": [
-          "source-runtime"
-        ],
-        "state": "available"
-      },
-      "canonical_path": "kungfu tui",
-      "id": "kungfu.cli.commands.tui.tui",
-      "kfd3_api_id": null,
-      "kfd3_api_ids": [],
-      "kind": "command",
-      "maturity": "stable",
-      "mutation_class": "read",
-      "owner": "core",
-      "parameters": [
-        {
-          "arity": -1,
-          "kind": "argument",
-          "name": "commands",
-          "required": false,
-          "type": "text"
-        }
-      ],
-      "path_depth": 2,
-      "schema_refs": [],
-      "section": "advanced",
-      "source": {
-        "familyPolicy": false,
-        "kind": "runtime-click",
-        "module": "kungfu.cli.commands.tui",
-        "symbol": "tui"
-      },
-      "summary": "Open Kungfu's interactive terminal product surface.",
       "visibility": "advanced"
     },
     {
