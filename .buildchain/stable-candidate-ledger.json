@@ -1,0 +1,43 @@
+{
+  "schemaVersion": 1,
+  "contract": "kungfu-buildchain-stable-candidate-ledger",
+  "repository": "kungfu-systems/kungfu",
+  "targetBranch": "release/v4/v4.0",
+  "hold": {
+    "enabled": false,
+    "reason": "",
+    "updatedAt": "2026-07-27T19:30:15.314Z"
+  },
+  "candidates": [
+    {
+      "version": "4.0.0-alpha.0",
+      "stableVersion": "4.0.0",
+      "sha": "33d74385fe48761671b4edcd1fc715f5c567d733",
+      "tag": "v4.0.0-alpha.0",
+      "publishedAt": "2026-06-25T15:13:13.000Z",
+      "state": "soaking",
+      "qualification": {
+        "ok": false,
+        "observedAt": "2026-07-27T19:30:15.314Z",
+        "soakStartedAt": "",
+        "soakElapsedSeconds": 0,
+        "requiredSeconds": 86400,
+        "checks": [
+          {
+            "id": "alpha-release",
+            "status": "fail",
+            "completedAt": "",
+            "evidenceUrl": "https://api.github.com/repos/kungfu-systems/kungfu/git/refs/tags/v4.0.0-alpha.0"
+          }
+        ]
+      },
+      "decision": {
+        "reason": "checks-incomplete",
+        "updatedAt": "2026-07-27T19:30:15.314Z",
+        "actor": "buildchain-patrol"
+      }
+    }
+  ],
+  "updatedAt": "2026-07-27T19:30:15.314Z",
+  "stableReleases": []
+}
