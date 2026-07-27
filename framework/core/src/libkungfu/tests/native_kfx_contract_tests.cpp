@@ -525,9 +525,13 @@ void test_semantic_graph_and_host_contract_are_canonical() {
           "contributes-to composition transferred extension-point ownership");
   require(contribution.at("state") == "active", "optional provider loss hid an active semantic contribution");
   const auto &host = first.at("hostContract");
-  require(host.at("schema") == "kungfu.kfx.experience-flow-host/v1" && host.at("planRoot") == first.at("planRoot") &&
+  require(host.at("schema") == "kungfu.kfx.experience-flow-host/v2" && host.at("planRoot") == first.at("planRoot") &&
               host.at("graphRoot") == first.at("graphRoot"),
           "Experience/Flow descriptor did not bind the exact graph and plan");
+  require(host.at("admission").at("state") == "preview-only" && host.at("cutRoot").is_null() &&
+              host.at("generation").at("revision") == 0 &&
+              host.at("contributions").front().at("authorization").at("cutRoot").is_null(),
+          "observation-only host descriptor claimed executable admission");
   require(host.at("contributions").front().at("surface") == "experience",
           "host descriptor lost the surface-neutral Experience contribution");
 
@@ -660,6 +664,11 @@ void test_native_lifecycle_uses_fact_work_and_named_cut_authority() {
           "native lifecycle did not atomically materialize the package");
   require(!fs::exists(runtime_dir / "kfx" / "registry-history.jsonl"),
           "native lifecycle recreated a KFX-specific authority journal");
+  const auto admitted_plan = kfx::query_native_kfx_registry("plan", nlohmann::json::object(), runtime_dir.string());
+  require(admitted_plan.at("hostContract").at("admission").at("state") == "admitted" &&
+              admitted_plan.at("hostContract").at("cutRoot") == install.at("cutRoot") &&
+              admitted_plan.at("hostContract").at("generation").at("revision") == 1,
+          "settled Fact Cut did not produce one exact admitted host generation");
 
   require_refusal("KF_KFX_CUT_STALE", [&] {
     (void)kfx::query_native_kfx_registry(
