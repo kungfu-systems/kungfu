@@ -162,10 +162,10 @@ const html = ReactDomServer.renderToStaticMarkup(
 );
 
 for (const needle of [
-  'Work · Live global view',
-  'connecting live global Work…',
+  'Portfolio · Live federated view',
+  'connecting live Portfolio…',
   'active local project workspace',
-  'no current Work across active local workspaces',
+  'no current work across active local workspaces',
 ]) {
   if (!html.includes(needle)) fail(`rendered global Work view missing ${needle}`);
 }
