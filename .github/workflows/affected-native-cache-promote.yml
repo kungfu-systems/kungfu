@@ -120,7 +120,7 @@ jobs:
         id: promotion
         run: |
           # shifu-entry-contract: allow verifying post-merge cache transport evidence outside the candidate Gate
-          node scripts/affected-native-cache-payload.mjs promote \
+          node scripts/write-affected-native-cache-manifests.mjs promote \
             --artifacts-dir product/qualification/cache-promotion/artifacts \
             --expected-head-sha "$GITHUB_SHA" \
             --expected-run-id "${{ steps.producer.outputs.run-id }}" \

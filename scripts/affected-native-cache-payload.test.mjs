@@ -13,12 +13,12 @@ import {
   createPortableDevCacheReceipt,
 } from '@kungfu-tech/buildchain/portable-dev-cache';
 
+import { partitionAffectedNativePlan } from './run-core-affected-native.mjs';
 import {
+  affectedNativeCompilerPlanDigest,
   createAffectedNativeCachePromotion,
   sealAffectedNativeCachePayload,
-} from './affected-native-cache-payload.mjs';
-import { partitionAffectedNativePlan } from './run-core-affected-native.mjs';
-import { affectedNativeCompilerPlanDigest } from './write-affected-native-cache-manifests.mjs';
+} from './write-affected-native-cache-manifests.mjs';
 
 function ordered(value) {
   if (Array.isArray(value)) return value.map(ordered);

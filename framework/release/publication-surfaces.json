@@ -60,6 +60,17 @@
           "sourceRoot": "sha256:7ef2c233954d197c05e360f397b8a70886afe93aaf6d1c6f8733668802a97705"
         },
         {
+          "path": ".github/workflows/affected-native-cache-promote.yml",
+          "classification": "qualification",
+          "owner": "kungfu-release",
+          "surfaceIds": [
+            "product-alpha",
+            "product-stable",
+            "product-binaries"
+          ],
+          "sourceRoot": "sha256:107cb2a8e5825f5cc525248185405e059dc3255383d3ec15f593c7a6ccee97c5"
+        },
+        {
           "path": ".github/workflows/affected-native-pr.yml",
           "classification": "qualification",
           "owner": "kungfu-release",
@@ -68,7 +79,7 @@
             "product-stable",
             "product-binaries"
           ],
-          "sourceRoot": "sha256:b0b8dbead1fc3ad8eaa44123cc4c1da1c2079714da38693d7dae5ff8f9498a9d"
+          "sourceRoot": "sha256:f42523e0d97970d88391f1d434b869d74ecbf83670d248f2e2f5accdbcdc9db1"
         },
         {
           "path": ".github/workflows/alpha-promotion-preflight.yml",
@@ -106,7 +117,7 @@
           "classification": "non-publication",
           "owner": "kungfu-ci",
           "surfaceIds": [],
-          "sourceRoot": "sha256:0d337c25db3ce925cc6f2718b9881774523275a7976b96d0beaf78a3fcbc2a4b"
+          "sourceRoot": "sha256:1d9a795b7e1b4bf7dbbc34e5801d8c4209fb89de088da668a8bddd98e7db6f87"
         },
         {
           "path": ".github/workflows/core-build-profiles.yml",

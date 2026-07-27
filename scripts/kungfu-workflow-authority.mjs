@@ -154,12 +154,12 @@ function immutableReference(reference) {
   return marker > 0 && /^[0-9a-f]{40}$/.test(reference.slice(marker + 1));
 }
 
-function exactKeys(value, keys, location, issues) {
+function exactKeys(value, keys, location, issues, optional = []) {
   if (!value || typeof value !== 'object' || Array.isArray(value)) {
     issues.push(`[workflow-authority] ${location} must be an object`);
     return false;
   }
-  const allowed = new Set(keys);
+  const allowed = new Set([...keys, ...optional]);
   for (const key of keys)
     if (!Object.hasOwn(value, key))
       issues.push(`[workflow-authority] ${location}.${key} is required`);
@@ -228,14 +228,17 @@ export function projectWorkflowAuthority(root = ROOT, previous = null) {
       const [initialAuthority, initialPublication, initialReceipt] =
         initialJobPolicy(relative, jobId);
       const steps = (Array.isArray(job.steps) ? job.steps : []).map(
-        (step, index) => ({
-          index: index + 1,
-          label: stepLabel(step, index),
-          authority:
+        (step, index) => {
+          const authority =
             previousJob?.steps?.find((item) => item.index === index + 1)
-              ?.authority || initialStepAuthority(initialAuthority, step),
-          definitionDigest: authorityDigest(step),
-        }),
+              ?.authority || initialStepAuthority(initialAuthority, step);
+          return {
+            index: index + 1,
+            label: stepLabel(step, index),
+            ...(authority === 'qualification' ? {} : { authority }),
+            definitionDigest: authorityDigest(step),
+          };
+        },
       );
       jobs.push({
         id: jobId,
@@ -486,11 +489,13 @@ export function validateWorkflowAuthority(root = ROOT, document = null) {
       for (const [stepIndex, step] of (job.steps || []).entries()) {
         exactKeys(
           step,
-          ['index', 'label', 'authority', 'definitionDigest'],
+          ['index', 'label', 'definitionDigest'],
           `${jobAt}.steps[${stepIndex}]`,
           issues,
+          ['authority'],
         );
-        if (!STEP_AUTHORITIES.has(step.authority))
+        const stepAuthority = step.authority || 'qualification';
+        if (!STEP_AUTHORITIES.has(stepAuthority))
           issues.push(
             `[workflow-authority] ${jobAt}.steps[${stepIndex}]: unsupported authority`,
           );
@@ -522,7 +527,7 @@ export function validateWorkflowAuthority(root = ROOT, document = null) {
             'product-publication',
           ],
         };
-        if (!permittedStepAuthorities[job.authority]?.includes(step.authority))
+        if (!permittedStepAuthorities[job.authority]?.includes(stepAuthority))
           issues.push(
             `[workflow-authority] ${jobAt} step ${step.index}: step authority exceeds job authority`,
           );

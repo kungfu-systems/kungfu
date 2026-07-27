@@ -581,7 +581,7 @@ jobs:
             )
           fi
           # shifu-entry-contract: allow sealing post-build cache transport evidence without re-entering the Gate
-          node scripts/affected-native-cache-payload.mjs seal \
+          node scripts/write-affected-native-cache-manifests.mjs seal \
             --qualification-dir "$qualification" \
             --output "$payload/payload.manifest.json" \
             --partition-index "$KUNGFU_AFFECTED_NATIVE_PARTITION_INDEX" \
