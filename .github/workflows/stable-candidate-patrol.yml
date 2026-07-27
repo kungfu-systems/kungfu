@@ -1,0 +1,45 @@
+# SPDX-License-Identifier: Apache-2.0
+
+name: Stable Candidate Patrol
+
+on:
+  schedule:
+    # 03:00 Asia/Shanghai. The exact alpha must also complete the 24-hour soak.
+    - cron: "0 19 * * *"
+  workflow_dispatch:
+    inputs:
+      release-now:
+        description: Exact non-revoked Alpha selected by explicit human authority
+        required: false
+        default: ""
+      create-pull-request:
+        description: Create or reuse the exact source-lock stable candidate PR
+        required: false
+        type: boolean
+        default: false
+
+permissions:
+  actions: write
+  contents: write
+  pull-requests: write
+  checks: read
+  statuses: read
+
+jobs:
+  stable:
+    # The reusable workflow and runtime are pinned to the same reviewed,
+    # immutable Buildchain source.
+    uses: kungfu-systems/buildchain/.github/workflows/stable-candidate-patrol.yml@7629c4b499cd2d4eebf4c020fbc81637ae1dcb39
+    with:
+      buildchain-ref: 7629c4b499cd2d4eebf4c020fbc81637ae1dcb39
+      target-branch: release/v4/v4.0
+      ledger-ref: buildchain/candidate-ledger/v4/v4.0
+      release-now: ${{ inputs.release-now }}
+      auto-approve: false
+      auto-merge: false
+      # Scheduled patrols may create the protected source-lock PR. Manual
+      # dispatch remains evidence-only unless the operator explicitly enables
+      # PR creation; neither path publishes before that PR is reviewed/merged.
+      dry-run: ${{ github.event_name == 'workflow_dispatch' && !inputs.create-pull-request }}
+    secrets:
+      promotion-token: ${{ secrets.KUNGFU_GITHUB_TOKEN }}
