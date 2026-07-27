@@ -850,7 +850,14 @@ async function main(): Promise<void> {
   );
 }
 
-void main().catch((error) => {
-  process.stderr.write(`Kungfu TUI failed: ${(error as Error).message}\n`);
-  process.exitCode = 1;
-});
+void main()
+  .then(() => {
+    // Ink has released the terminal at this point. Exit explicitly so an
+    // in-flight discovery child cannot keep the user's shell in the foreground
+    // after the visible TUI has already closed.
+    process.exit(process.exitCode ?? 0);
+  })
+  .catch((error) => {
+    process.stderr.write(`Kungfu TUI failed: ${(error as Error).message}\n`);
+    process.exitCode = 1;
+  });
