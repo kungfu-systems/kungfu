@@ -137,12 +137,12 @@ const html = ReactDomServer.renderToStaticMarkup(
 );
 
 for (const needle of [
-  'Work · Live global view',
-  'connecting live global Work…',
+  'Portfolio · Live federated view',
+  'connecting live Portfolio…',
   'active local project workspace',
-  'no current Work across active local workspaces',
+  'no current work across active local workspaces',
 ]) {
-  if (!html.includes(needle)) fail(`live global Work view missing ${needle}`);
+  if (!html.includes(needle)) fail(`live Portfolio view missing ${needle}`);
 }
 
-console.log('[kfx-demo-work-dashboard-atlas-live] profile + global Work render ok');
+console.log('[kfx-demo-work-dashboard-atlas-live] profile + Portfolio render ok');
