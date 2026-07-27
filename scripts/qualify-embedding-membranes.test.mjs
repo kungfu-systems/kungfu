@@ -18,5 +18,9 @@ test('locked Cargo fetch precedes the offline native build', () => {
   assert.ok(build > fetch, 'native build begins before Cargo fetch');
   assert.ok(offline > build, 'native build is not explicitly offline');
   assert.match(source, /for \(const engine of \['wasmtime', 'wasmer'\]\)/u);
+  assert.match(
+    source,
+    /for \(const crateFamily of \['libwasm-spike', 'libwasm'\]\)/u,
+  );
   assert.match(source, /'--locked'/u);
 });
