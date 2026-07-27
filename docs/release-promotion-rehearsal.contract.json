@@ -6,7 +6,7 @@
     "validation": ".github/workflows/buildchain-validate.yml"
   },
   "buildchain": {
-    "workflow_shell_sha": "ebc7b2d86ecce1de835c8f8ba4436bcac65a62c2",
+    "workflow_shell_sha": "881e8e4ee063b184ad7db535829ebd3872b0323a",
     "alpha": {
       "workflow_ref": "v3-alpha",
       "contract_lock": ".buildchain/alpha-contract-lock.json",
@@ -21,6 +21,13 @@
     },
     "required_status_check": "build",
     "required_artifact_count": 4,
+    "artifact_attestation": {
+      "subject_path": "product/release/cli/kungfu-episodes-cli-linux-x64.tar.gz",
+      "signer_sha": "ad57ae0fee5072a1de7a0b0182f70c0c41e45abb",
+      "platform_id": "linux-x64",
+      "policy_json": "auto",
+      "environment": "buildchain-artifact-attestation"
+    },
     "required_surfaces": [
       "reusable-build",
       "release-candidate-promote",
