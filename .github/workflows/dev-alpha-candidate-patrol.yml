@@ -32,9 +32,9 @@ jobs:
   candidate:
     # This exact Buildchain source commit is replaced by the merged commit if
     # review changes the reusable workflow before this PR is merged.
-    uses: kungfu-systems/buildchain/.github/workflows/dev-alpha-candidate-patrol.yml@7a6243537b902e1be0dca722b12cd459c2a4e697
+    uses: kungfu-systems/buildchain/.github/workflows/dev-alpha-candidate-patrol.yml@e95c0251390f4948b7aa00de63c49f018ef1f6ff
     with:
-      buildchain-ref: ${{ inputs.buildchain-ref || '7a6243537b902e1be0dca722b12cd459c2a4e697' }}
+      buildchain-ref: ${{ inputs.buildchain-ref || 'e95c0251390f4948b7aa00de63c49f018ef1f6ff' }}
       source-branch: dev/v4/v4.0
       target-branch: alpha/v4/v4.0
       dev-workflow-path: .github/workflows/dev-verify-patrol.yml
