@@ -145,6 +145,7 @@ test('Docker profile is digest-pinned, bounded, and mode-specific', () => {
   assert.ok(args.includes('--read-only'));
   assert.ok(args.includes('ALL'));
   assert.ok(args.includes('no-new-privileges'));
+  assert.ok(args.includes('PYTHONDONTWRITEBYTECODE=1'));
   assert.ok(args.includes('/tmp/disposable-workspace:/workspace:ro'));
   assert.ok(!args.includes('--privileged'));
   assert.ok(!args.includes('/var/run/docker.sock'));
@@ -224,6 +225,31 @@ test('native Kungfu runner carries a transcript-free continuation end to end', (
     assert.equal(result.report.warrant.agentAZeroModification, true);
     assert.equal(result.report.oracle.passed, true);
     assert.deepEqual(result.report.warrant.scopeViolations, []);
+  } finally {
+    fs.rmSync(output, { recursive: true, force: true });
+  }
+});
+
+test('failed repair retains bounded session and oracle diagnostics', () => {
+  const output = fs.mkdtempSync(
+    path.join(os.tmpdir(), 'agent-repository-work-failure-test.'),
+  );
+  try {
+    const result = runExperiment({
+      output,
+      opencode: mockOpenCodePath,
+      model: 'mock-incomplete-repository-model',
+      sourceHead: '0123456789abcdef0123456789abcdef01234567',
+      timeoutSeconds: 120,
+    });
+    assert.equal(result.report.passed, false);
+    assert.equal(result.report.failure.category, 'verifier');
+    assert.equal(result.report.sessions.distinct, 2);
+    assert.equal(result.report.oracle.passed, false);
+    assert.equal(result.report.oracle.checks.visible.passed, false);
+    assert.equal(result.report.oracle.checks.hidden.passed, false);
+    assert.deepEqual(result.report.warrant.scopeViolations, []);
+    assert.ok(fs.existsSync(result.reportPath));
   } finally {
     fs.rmSync(output, { recursive: true, force: true });
   }

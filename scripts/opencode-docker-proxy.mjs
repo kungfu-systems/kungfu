@@ -122,6 +122,8 @@ export function dockerArgs(options, cwd = process.cwd()) {
     '--env',
     'XDG_CACHE_HOME=/tmp/opencode-cache',
     '--env',
+    'PYTHONDONTWRITEBYTECODE=1',
+    '--env',
     `OPENCODE_CONFIG_CONTENT=${config(options)}`,
     options.image,
     'opencode',

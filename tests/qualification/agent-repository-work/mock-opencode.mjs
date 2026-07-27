@@ -35,9 +35,13 @@ if (agent === 'build' && prompt.includes('Investigate the repository defect')) {
     })}\n`,
   );
 } else if (agent === 'build') {
-  for (const [relative, content] of Object.entries(
-    INCIDENT_BOARD_REFERENCE_REPAIR,
-  ))
+  const repair = args.some((arg) => arg.includes('mock-incomplete'))
+    ? {
+        'incident_board/lease.py':
+          INCIDENT_BOARD_REFERENCE_REPAIR['incident_board/lease.py'],
+      }
+    : INCIDENT_BOARD_REFERENCE_REPAIR;
+  for (const [relative, content] of Object.entries(repair))
     fs.writeFileSync(path.join(process.cwd(), relative), content);
   process.stdout.write(
     `${JSON.stringify({

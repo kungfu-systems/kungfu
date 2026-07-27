@@ -606,11 +606,6 @@ export function runExperiment(options = {}) {
         context,
       ),
     );
-    const oracle = verifyIncidentBoardWorkspace(workspace, {
-      expectedInitialTree: initialTree,
-    });
-    if (!oracle.passed)
-      throw new Error(`external oracle rejected repair: ${oracle.reportRoot}`);
     const providerSessionA = providerSessionId(sessionA, 'Agent A');
     const providerSessionB = providerSessionId(sessionB, 'Agent B');
     if (providerSessionA === providerSessionB)
@@ -637,7 +632,6 @@ export function runExperiment(options = {}) {
       );
     if (!episodeVerification.a.ok || !episodeVerification.b.ok)
       throw new Error('Kungfu Episode frame verification failed');
-    report.passed = true;
     report.sessions = {
       distinct: 2,
       a: {
@@ -671,15 +665,26 @@ export function runExperiment(options = {}) {
     report.warrant = {
       ...report.warrant,
       agentAZeroModification,
+    };
+    report.episodeVerification = episodeVerification;
+    const oracle = verifyIncidentBoardWorkspace(workspace, {
+      expectedInitialTree: initialTree,
+    });
+    report.oracle = oracle;
+    report.warrant = {
+      ...report.warrant,
       changedPaths: oracle.changedPaths,
       scopeViolations: oracle.scopeViolations,
     };
-    report.oracle = oracle;
-    report.episodeVerification = episodeVerification;
     report.dimensions = {
       execution: 'two-fresh-opencode-processes-completed',
-      correctness: 'visible-and-hidden-oracles-passed',
-      scope: 'all-changes-within-three-file-warrant',
+      correctness: oracle.passed
+        ? 'visible-and-hidden-oracles-passed'
+        : 'external-oracle-rejected-repair',
+      scope:
+        oracle.scopeViolations.length === 0
+          ? 'all-changes-within-three-file-warrant'
+          : 'warrant-scope-violation',
       continuity: 'native-workref-and-transcript-free-continuation-admitted',
       evidence: 'content-rooted-episodes-claim-assessment-and-oracle',
       efficiency: {
@@ -695,6 +700,9 @@ export function runExperiment(options = {}) {
         'no multi-day durability or concurrent repository-edit claim',
       ],
     };
+    if (!oracle.passed)
+      throw new Error(`external oracle rejected repair: ${oracle.reportRoot}`);
+    report.passed = true;
     validateExperimentReport(report);
   } catch (error) {
     report.failure = {
