@@ -9,7 +9,7 @@ import {
   verifyAlphaCacheEvidence,
 } from './alpha-cache-evidence.mjs';
 
-const PLATFORMS = ['linux-x64', 'macos-arm64', 'windows-x64'];
+const PLATFORMS = ['linux-x64', 'linux-arm64', 'macos-arm64', 'windows-x64'];
 const BINDING = {
   sourceCommit: 'a'.repeat(40),
   sourceTree: 'b'.repeat(40),
@@ -111,13 +111,13 @@ function preflight() {
   };
 }
 
-test('Alpha cache evidence binds three platform sets to preflight roots', () => {
+test('Alpha cache evidence binds four platform sets to preflight roots', () => {
   const receipt = createAlphaCacheEvidence({
     preflightReceipt: preflight(),
     sets: PLATFORMS.map(set),
   });
-  assert.equal(receipt.summary.outcomes.hit, 6);
-  assert.equal(receipt.summary.metrics.restoredBytes.observedTotal, 6144);
+  assert.equal(receipt.summary.outcomes.hit, 8);
+  assert.equal(receipt.summary.metrics.restoredBytes.observedTotal, 8192);
   assert.equal(receipt.summary.metrics.savedTime.observedTotal, null);
   assert.equal(
     verifyAlphaCacheEvidence({

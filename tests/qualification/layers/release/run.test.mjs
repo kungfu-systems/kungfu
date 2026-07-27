@@ -143,7 +143,7 @@ function fixture(root) {
         url: 'https://example.com/core',
       },
       platforms: Object.fromEntries(
-        ['darwin-arm64', 'linux-arm64', 'linux-x64', 'win32-x64'].map(
+        ['darwin-arm64', 'linux-x64', 'linux-arm64', 'win32-x64'].map(
           (platform) => [
             platform,
             {

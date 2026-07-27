@@ -3,9 +3,9 @@
   "verdict": "pass",
   "authoritySemantics": "navigation-only-projection-over-existing-authorities",
   "manifestPath": "framework/maintainability/semantic-amplification.manifest.json",
-  "manifestRoot": "sha256:85829360a77ec44639ba99defd7692d96844002e554e115b72a34d0bd5cacf47",
+  "manifestRoot": "sha256:986f0c45c6d16cbbf666de80c5c19c7e19c7e04c1c7e199e421458f68207b1b1",
   "baselineRef": "dbfed9ca1785d147b26f4f06e7e6895ac7368fee",
-  "sourceRoot": "sha256:1854b2b15c8a4b024dee3b1c51701e974873402d38c856f0e424fbe09b991db0",
+  "sourceRoot": "sha256:bb686f5df7a89d2aa01ac87738f5359cc0537a9ba09f9b22c4b7f02d0b67a740",
   "roles": {
     "authority": "exactly one authority route per family; the route may name multiple co-owned source files",
     "allowedProjectionRoles": [
@@ -24,8 +24,8 @@
   "summary": {
     "families": 6,
     "authorities": 6,
-    "mappedSurfaces": 72,
-    "changedMappedSurfaces": 30,
+    "mappedSurfaces": 73,
+    "changedMappedSurfaces": 33,
     "blockingIssues": 0
   },
   "families": [
@@ -920,21 +920,24 @@
         "authority": 4,
         "conformance-oracle": 2,
         "generated-projection": 1,
+        "package-release": 2,
         "thin-binding": 1,
-        "package-release": 1,
         "documentation": 2,
         "retained-evidence": 1
       },
       "amplification": {
-        "mappedSurfaces": 12,
-        "nonAuthoritySurfaces": 8,
-        "changedSurfaces": 6,
+        "mappedSurfaces": 13,
+        "nonAuthoritySurfaces": 9,
+        "changedSurfaces": 9,
         "changedPaths": [
+          "shifu.gates.json",
           "docs/qualification/gates/release-admission-policy.json",
           "scripts/verify-kungfu-release-admission.mjs",
           "scripts/release-promotion-rehearsal.mjs",
+          "scripts/kungfu-release-qualification.mjs",
           "docs/qualification/gates/workflow-bindings.json",
           ".github/workflows/release-new-version.yml",
+          "docs/qualification/gates/release-and-promotion.md",
           "docs/qualification/gates/release-admission.md"
         ]
       },
@@ -950,6 +953,10 @@
         {
           "path": "scripts/release-promotion-rehearsal.mjs",
           "role": "conformance-oracle"
+        },
+        {
+          "path": "scripts/kungfu-release-qualification.mjs",
+          "role": "package-release"
         },
         {
           "path": "docs/qualification/gates/workflow-bindings.json",
@@ -977,9 +984,9 @@
           "path": "shifu.gates.json",
           "currentLines": 2196,
           "baselineLines": 2196,
-          "currentRoot": "sha256:dc351c7747dc7005f899524caf61a63cb5edc294924aa958db6bd6aec563cb93",
+          "currentRoot": "sha256:a805d2e7481c47af35a06c8ee18fe5aad787e6e1447653e2b184b41a19d90fae",
           "baselineRoot": "sha256:dc351c7747dc7005f899524caf61a63cb5edc294924aa958db6bd6aec563cb93",
-          "changedSinceBaseline": false
+          "changedSinceBaseline": true
         },
         {
           "path": "framework/release/kungfu-trademark-public-use.contract.json",
@@ -1001,15 +1008,15 @@
           "path": "docs/qualification/gates/release-admission-policy.json",
           "currentLines": 49,
           "baselineLines": 41,
-          "currentRoot": "sha256:b700161aa02b53026eb97e653e49939680623fc098c13129f79dd854454130c4",
+          "currentRoot": "sha256:97f182ee12f8c8e78bdea86ec13ed30e5cd2cc47a357bd18972d142cea9bc114",
           "baselineRoot": "sha256:e8a0f7037f2331610f3b9c07e7cdf5e47ea701045c73d0f67bf909372e77e0ac",
           "changedSinceBaseline": true
         },
         {
           "path": "scripts/verify-kungfu-release-admission.mjs",
-          "currentLines": 377,
+          "currentLines": 378,
           "baselineLines": 325,
-          "currentRoot": "sha256:b63705eb9575f2faf34c5c9b31b07cbb3375ba69f17d19730a77d04225ee79e0",
+          "currentRoot": "sha256:c2590dc2d04d6b6ab40e4f3b5db72d94eaedea003da0e13436493081954dfd3c",
           "baselineRoot": "sha256:e77a02ecf79651ef1dbfbbf57d494a334fd863ae81de5d7ccd8264922a216403",
           "changedSinceBaseline": true
         },
@@ -1030,10 +1037,18 @@
           "changedSinceBaseline": true
         },
         {
+          "path": "scripts/kungfu-release-qualification.mjs",
+          "currentLines": 273,
+          "baselineLines": 272,
+          "currentRoot": "sha256:5f710e2818fc077c0a407462402fd3ce1056cfdcb56e62eb14c51bf413a6864c",
+          "baselineRoot": "sha256:9b894df2a5f9ecb2f08f937d9d59747b5d8005d6948b6b853228fc45921ed552",
+          "changedSinceBaseline": true
+        },
+        {
           "path": "docs/qualification/gates/workflow-bindings.json",
           "currentLines": 632,
           "baselineLines": 580,
-          "currentRoot": "sha256:be26ccaa0c70e51bdb7ff634acce1aced29380ba8fcc009cc67dd2c392fa3105",
+          "currentRoot": "sha256:c16f011f5bfbadf147bf7b95f0e1ea7f2c8cf2521739b77efcd56d846ebd47bb",
           "baselineRoot": "sha256:233cd22ebce4c9930e0e4889808b88661d77c202d5e5f73121823dcdc461576d",
           "changedSinceBaseline": true
         },
@@ -1041,7 +1056,7 @@
           "path": ".github/workflows/release-new-version.yml",
           "currentLines": 386,
           "baselineLines": 362,
-          "currentRoot": "sha256:92b331d7748c6ffa1cbac43020b794acd790a88dfbc8ace99592b6d062ab11cc",
+          "currentRoot": "sha256:3f740eff64c4c5fc8a60ff08ad06aaba097a21103dfe22409e205960fc330b00",
           "baselineRoot": "sha256:3bdd847c80a05030de1d826282cef2e76a85e31dc0904df02c7f0cdda7a5eb74",
           "changedSinceBaseline": true
         },
@@ -1049,9 +1064,9 @@
           "path": "docs/qualification/gates/release-and-promotion.md",
           "currentLines": 141,
           "baselineLines": 141,
-          "currentRoot": "sha256:5eb20fe886635e0464313023daa1a2b62529ad1d6977202dce9c91c6b8aacf9e",
+          "currentRoot": "sha256:5624acfe1039d90bdbfc315fa35dd97c342dff42229e35a9997973d9e3a4ad66",
           "baselineRoot": "sha256:5eb20fe886635e0464313023daa1a2b62529ad1d6977202dce9c91c6b8aacf9e",
-          "changedSinceBaseline": false
+          "changedSinceBaseline": true
         },
         {
           "path": "docs/qualification/gates/release-admission.md",

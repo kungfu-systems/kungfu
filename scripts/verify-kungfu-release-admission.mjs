@@ -77,10 +77,11 @@ function validatePolicy(root, policy) {
     throw new Error('unsupported Kungfu release admission policy');
   if (
     !Array.isArray(policy.requiredPlatforms) ||
-    policy.requiredPlatforms.join('\0') !== 'linux\0macos\0windows'
+    policy.requiredPlatforms.join('\0') !==
+      'linux-x64\0linux-arm64\0macos-arm64\0windows-x64'
   )
     throw new Error(
-      'Kungfu release admission requires linux, macos, and windows',
+      'Kungfu release admission requires linux-x64, linux-arm64, macos-arm64, and windows-x64',
     );
   exactKeys(
     policy.workflowAuthority,

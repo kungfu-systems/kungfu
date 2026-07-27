@@ -166,7 +166,7 @@ jobs:
       publish-dist-tag: ${{ startsWith(inputs.target-ref || github.event.pull_request.base.ref, 'alpha/') && 'alpha' || 'latest' }}
       publish-package-set-order: as-provided
       trusted-publishing: false
-      runner-preset: kungfu-v4-self-hosted
+      runner-preset: kungfu-v4-native
       required-artifact-count: 5
       release-passport: true
       release-passport-product-name: Kungfu Episodes

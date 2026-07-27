@@ -9,6 +9,7 @@ import { test } from 'node:test';
 import { fileURLToPath } from 'node:url';
 
 import {
+  buildchainBuildPlan,
   cacheAppliedArgs,
   cacheAppliedCommandArgs,
   cacheAwareArgs,
@@ -17,6 +18,29 @@ import {
   runShifu,
   windowsCmdArgs,
 } from './run-shifu-lifecycle.mjs';
+
+test('Buildchain keeps full product builds on the three established platforms', () => {
+  for (const [platform, arch] of [
+    ['linux', 'x64'],
+    ['darwin', 'arm64'],
+    ['win32', 'x64'],
+  ]) {
+    assert.deepEqual(buildchainBuildPlan(platform, arch), [
+      { args: ['dist'], env: {} },
+    ]);
+  }
+});
+
+test('Buildchain gives Linux ARM64 one bounded Core-only build lane', () => {
+  assert.deepEqual(buildchainBuildPlan('linux', 'arm64'), [
+    { args: ['rebuild:core'], env: {} },
+    { args: ['freeze'], env: { KF_REQUIRE_NATIVE_HOST: '1' } },
+    {
+      args: ['pack:core-platform'],
+      env: { KF_PACKAGE_STAGE_DIR: 'product/release/npm' },
+    },
+  ]);
+});
 
 test('wraps an arbitrary child command in one cache projection', () => {
   assert.deepEqual(

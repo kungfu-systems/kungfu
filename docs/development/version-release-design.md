@@ -49,7 +49,8 @@ command.
 
 **The pipeline is asymmetric by design.** `dev` remains the fast integration
 zone: it runs a lightweight source and ADR-delivery gate rather than the full
-three-platform release build. Feature PRs must nevertheless arrive in a bounded
+release build across three full-product platforms plus a bounded Linux ARM64
+Core lane. Feature PRs must nevertheless arrive in a bounded
 state (`stage-ready` or an `implemented` candidate); ordinary non-architecture
 fixes use an explicit ADR-neutral path. The expensive, un-cheatable trust
 pipeline and weak-centralization described below begin at `dev → alpha`, where
@@ -79,7 +80,8 @@ to it.*
 **4. "Worthy of being frozen" is defined by an un-cheatable pipeline, not by judgment.** A
 state becomes a release only by passing the channel pipeline with machine-enforced gates
 (branch protection with `isAdminEnforced=true`, not bypassable even by admins): the
-three-platform `verify` (build + automated QA + code signing) is green, status checks are
+native release `verify` (three full-product builds, the Linux ARM64 Core lane,
+automated QA, and code signing) is green, status checks are
 strict (not stale), review is required (code-owner on the release channel), and
 conversations are resolved. The mechanism deliberately makes **no judgment about whether the
 code is "good"** — that is not reliably decidable, by humans or machines. It replaces an
@@ -91,7 +93,7 @@ un-bypassability, not asserted by a person.
 promotion of an alpha that real users have already exercised; over the last validated alpha
 the release introduces no new code (the `patch` bump only advances the version string). A
 release is therefore a **consensus** produced by the pipeline (developers + real users +
-three-platform build + review), not any one developer's unilateral call — which also removes
+native release build + review), not any one developer's unilateral call — which also removes
 the "must not make a mistake" pressure from any individual. Developers have more say but no
 unilateral authority — and that constraint deliberately includes the maintainers
 themselves.

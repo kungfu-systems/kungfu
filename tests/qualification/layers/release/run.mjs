@@ -239,7 +239,7 @@ function requireNpmDistributionClosure(publication) {
   const core = publication.coreDistribution;
   const assets = [
     core?.main,
-    ...['darwin-arm64', 'linux-arm64', 'linux-x64', 'win32-x64'].map(
+    ...['darwin-arm64', 'linux-x64', 'linux-arm64', 'win32-x64'].map(
       (platform) => core?.platforms?.[platform],
     ),
   ];
@@ -251,7 +251,7 @@ function requireNpmDistributionClosure(publication) {
         !String(asset?.url || '').startsWith('https://'),
     )
   )
-    fail('Core npm distribution lacks four exact public assets');
+    fail('Core npm distribution lacks five exact public assets');
 }
 
 function main() {

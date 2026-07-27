@@ -2,6 +2,7 @@
 
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
+import { createHash } from 'node:crypto';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
@@ -15,7 +16,60 @@ import {
   prepareReleaseQualificationHistory,
   releaseQualificationEnvironment,
   releaseQualificationStages,
+  verifyCorePlatformRelease,
 } from './run-release-qualification.mjs';
+
+function corePlatformReleaseFixture() {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'kungfu-core-release-'));
+  const packageName = '@kungfu-tech/core-linux-arm64';
+  const version = '4.0.0-alpha.1';
+  const archiveName = 'kungfu-tech-core-linux-arm64-4.0.0-alpha.1.tgz';
+  const archive = path.join(root, 'product/release/npm', archiveName);
+  fs.mkdirSync(path.dirname(archive), { recursive: true });
+  fs.writeFileSync(archive, 'exact archive\n');
+  fs.mkdirSync(path.join(root, 'framework/core'), { recursive: true });
+  fs.writeFileSync(
+    path.join(root, 'framework/core/package.json'),
+    JSON.stringify({ name: '@kungfu-tech/core', version }),
+  );
+  fs.writeFileSync(
+    path.join(root, 'framework/core/core-platform-package.contract.json'),
+    JSON.stringify({
+      platformPackages: [
+        {
+          key: 'linux-arm64',
+          name: packageName,
+          os: ['linux'],
+          cpu: ['arm64'],
+        },
+      ],
+      platformPayload: {
+        requiredPathPatterns: [
+          '^dist/kungfu/kungfu$',
+          '^dist/kungfu/kungfu_node\\.node$',
+        ],
+      },
+    }),
+  );
+  fs.writeFileSync(
+    `${archive}.receipt.json`,
+    JSON.stringify({
+      schema: 'kungfu.core-platform-package.receipt/v1',
+      package: packageName,
+      version,
+      platform: 'linux-arm64',
+      archive: archiveName,
+      sha256: createHash('sha256')
+        .update(fs.readFileSync(archive))
+        .digest('hex'),
+      files: ['dist/kungfu/kungfu', 'dist/kungfu/kungfu_node.node'],
+      executables: ['dist/kungfu/kungfu'],
+      nativeLibraries: ['dist/kungfu/kungfu_node.node'],
+      prohibitedContent: { status: 'passing', paths: [] },
+    }),
+  );
+  return { root, archive };
+}
 
 function writeMacApplication(root) {
   const application = path.join(
@@ -101,6 +155,46 @@ test('cheap platform probe runs before every expensive qualification stage', () 
       'release:probe:platform',
     );
   }
+});
+
+test('Linux ARM64 release qualification is bounded to the exact Core artifact', () => {
+  assert.deepEqual(
+    releaseQualificationStages(
+      'linux',
+      loadExecutionProfile('alpha'),
+      'required',
+      'product',
+      'arm64',
+    ),
+    [['release:qualify:core-platform']],
+  );
+});
+
+test('accepts an exact Linux ARM64 Core archive and receipt', (t) => {
+  const value = corePlatformReleaseFixture();
+  t.after(() => fs.rmSync(value.root, { recursive: true, force: true }));
+  const report = verifyCorePlatformRelease({
+    root: value.root,
+    platform: 'linux',
+    arch: 'arm64',
+  });
+  assert.equal(report.status, 'passed');
+  assert.equal(report.package, '@kungfu-tech/core-linux-arm64');
+});
+
+test('fails closed when Core archive bytes differ from the receipt', (t) => {
+  const value = corePlatformReleaseFixture();
+  t.after(() => fs.rmSync(value.root, { recursive: true, force: true }));
+  fs.appendFileSync(value.archive, 'tampered\n');
+  assert.throws(
+    () =>
+      verifyCorePlatformRelease({
+        root: value.root,
+        platform: 'linux',
+        arch: 'arm64',
+      }),
+    /sha256 mismatch/u,
+  );
 });
 
 test('macOS platform probe defers final signature authority to the credential island', () => {
@@ -272,6 +366,10 @@ test('release qualification hydrates complete Git history only on Linux', () => 
     prepareReleaseQualificationHistory('/source', 'win32', prepare),
     'not-required',
   );
+  assert.equal(
+    prepareReleaseQualificationHistory('/source', 'linux', prepare, 'arm64'),
+    'not-required',
+  );
   assert.deepEqual(calls, ['/source']);
 });
 
@@ -364,7 +462,7 @@ test('alpha and release qualification retain the cross-layer desktop report and 
   }
 });
 
-test('the Buildchain artifact contract requires every retained report and raw bundle', () => {
+test('the Buildchain artifact contract requires the common lane summary', () => {
   const workflow = fs.readFileSync(
     path.join(process.cwd(), '.github', 'workflows', 'build.yml'),
     'utf8',
@@ -376,14 +474,8 @@ test('the Buildchain artifact contract requires every retained report and raw bu
   const expected = JSON.parse(encoded);
   assert.deepEqual(expected.requiredPaths, [
     'product/release/qualification/layer-qualification-summary.json',
-    'product/release/qualification/live-peer-continuity/report.json',
-    'product/release/qualification/live-peer-continuity/raw-logs.jsonl.gz',
-    'product/release/qualification/runtime-activation/report.json',
-    'product/release/qualification/runtime-activation/raw-logs.jsonl.gz',
-    'product/release/qualification/zero-burden-desktop/report.json',
-    'product/release/qualification/zero-burden-desktop/raw-logs.jsonl.gz',
-    'product/release/qualification/invariant-run.json',
   ]);
+  assert.equal(expected.minFiles, 3);
 });
 
 test('the Gate stage emits one source-bound receipt for all artifact layers', () => {

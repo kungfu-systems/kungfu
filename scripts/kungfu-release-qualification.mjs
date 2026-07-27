@@ -42,10 +42,11 @@ function validatePolicy(policy) {
     throw new Error('unsupported Kungfu release admission policy');
   if (
     !Array.isArray(policy.requiredPlatforms) ||
-    policy.requiredPlatforms.join('\0') !== 'linux\0macos\0windows'
+    policy.requiredPlatforms.join('\0') !==
+      'linux-x64\0linux-arm64\0macos-arm64\0windows-x64'
   )
     throw new Error(
-      'Kungfu release admission requires linux, macos, and windows',
+      'Kungfu release admission requires linux-x64, linux-arm64, macos-arm64, and windows-x64',
     );
   if (
     !Array.isArray(policy.publication?.channels) ||
@@ -143,16 +144,16 @@ export function validateKungfuGateAggregate(root, aggregate, policy) {
   const receiptPlatforms = new Set(
     aggregate.receipts.map((receipt) =>
       String(
-        receipt.platform?.os ||
-          receipt.platform?.id ||
-          receipt.platform ||
+        receipt.platform?.id ||
           receipt.platformId ||
+          receipt.platform?.os ||
+          receipt.platform ||
           '',
       ).toLowerCase(),
     ),
   );
   for (const platform of policy.requiredPlatforms)
-    if (![...receiptPlatforms].some((item) => item.includes(platform)))
+    if (!receiptPlatforms.has(platform))
       throw new Error(`Gate aggregate is missing ${platform} qualification`);
 
   return { registryDigest, plan };

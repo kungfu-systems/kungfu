@@ -29,6 +29,10 @@ const SUMMARY = path.join(
   'layer-qualification-summary.json',
 );
 
+function readJson(file) {
+  return JSON.parse(fs.readFileSync(file, 'utf8'));
+}
+
 function canonical(value) {
   if (Array.isArray(value)) return value.map(canonical);
   if (value && typeof value === 'object')
@@ -232,6 +236,7 @@ export function releaseQualificationStages(
   execution = loadExecutionProfile('full-patrol'),
   nativeUpgradePolicy = 'required',
   artifactScope = 'product',
+  arch = 'x64',
 ) {
   if (!['required', 'skip'].includes(nativeUpgradePolicy))
     throw new Error(`unknown native upgrade policy: ${nativeUpgradePolicy}`);
@@ -239,6 +244,8 @@ export function releaseQualificationStages(
     throw new Error(`unknown artifact scope: ${artifactScope}`);
   if (artifactScope === 'hub-cli' && nativeUpgradePolicy !== 'skip')
     throw new Error('hub-cli qualification cannot require native upgrade');
+  if (platform === 'linux' && arch === 'arm64' && artifactScope === 'product')
+    return [['release:qualify:core-platform']];
   const stages = [
     ['release:probe:platform'],
     ['verify', '--fuzz'],
@@ -333,8 +340,11 @@ export function prepareReleaseQualificationHistory(
   root = ROOT,
   platform = process.platform,
   prepare = prepareGateMeasurementHistory,
+  arch = 'x64',
+  artifactScope = 'product',
 ) {
-  if (platform !== 'linux') return 'not-required';
+  if (platform !== 'linux' || (arch === 'arm64' && artifactScope === 'product'))
+    return 'not-required';
   return prepare(root);
 }
 
@@ -371,6 +381,82 @@ function artifactManifestDigest() {
   return digest(
     rows.sort((left, right) => left.path.localeCompare(right.path)),
   );
+}
+
+export function verifyCorePlatformRelease({
+  root = ROOT,
+  platform = process.platform,
+  arch = process.arch,
+} = {}) {
+  const key = `${platform}-${arch}`;
+  const contract = readJson(
+    path.join(root, 'framework/core/core-platform-package.contract.json'),
+  );
+  const descriptor = contract.platformPackages.find((item) => item.key === key);
+  if (!descriptor)
+    throw new Error(`Core release package does not support ${key}`);
+  const version = readJson(
+    path.join(root, 'framework/core/package.json'),
+  ).version;
+  const archiveName = `${descriptor.name
+    .replace(/^@/u, '')
+    .replaceAll('/', '-')}-${version}.tgz`;
+  const archive = path.join(root, 'product/release/npm', archiveName);
+  const receiptPath = `${archive}.receipt.json`;
+  if (!fs.existsSync(archive)) throw new Error(`missing ${archiveName}`);
+  if (!fs.existsSync(receiptPath))
+    throw new Error(`missing ${archiveName}.receipt.json`);
+
+  const receipt = readJson(receiptPath);
+  const expected = {
+    schema: 'kungfu.core-platform-package.receipt/v1',
+    package: descriptor.name,
+    version,
+    platform: key,
+    archive: archiveName,
+  };
+  for (const [field, value] of Object.entries(expected)) {
+    if (receipt[field] !== value)
+      throw new Error(`Core release receipt ${field} mismatch`);
+  }
+  if (receipt.sha256 !== fileDigest(archive).slice('sha256:'.length))
+    throw new Error('Core release archive sha256 mismatch');
+  if (receipt.prohibitedContent?.status !== 'passing')
+    throw new Error('Core release prohibited-content gate did not pass');
+  if (!Array.isArray(receipt.files) || receipt.files.length === 0)
+    throw new Error('Core release receipt has no files');
+  for (const pattern of contract.platformPayload.requiredPathPatterns) {
+    if (!receipt.files.some((file) => new RegExp(pattern, 'u').test(file)))
+      throw new Error(`Core release receipt lacks required pattern ${pattern}`);
+  }
+  if (!receipt.executables?.some((file) => /\/kungfu(?:\.exe)?$/u.test(file)))
+    throw new Error('Core release receipt lacks the Kungfu CLI');
+  if (
+    !receipt.nativeLibraries?.some((file) => /kungfu_node\.node$/u.test(file))
+  )
+    throw new Error('Core release receipt lacks the native addon');
+
+  const report = {
+    schema: 'kungfu.core-platform-release-qualification/v1',
+    generatedAt: new Date().toISOString(),
+    status: 'passed',
+    platform: key,
+    package: descriptor.name,
+    version,
+    archive: path.relative(root, archive).split(path.sep).join('/'),
+    sha256: receipt.sha256,
+    receipt: path.relative(root, receiptPath).split(path.sep).join('/'),
+    fileCount: receipt.files.length,
+  };
+  const reportPath = path.join(
+    root,
+    'product/release/qualification/core-platform',
+    key,
+    'report.json',
+  );
+  fs.mkdirSync(path.dirname(reportPath), { recursive: true });
+  fs.writeFileSync(reportPath, `${JSON.stringify(report, null, 2)}\n`);
+  return report;
 }
 
 function writeSummary(
@@ -455,9 +541,24 @@ function writeSummary(
 }
 
 export function main(argv = process.argv.slice(2)) {
+  if (argv.length === 1 && argv[0] === '--core-platform-only') {
+    try {
+      console.log(JSON.stringify(verifyCorePlatformRelease()));
+      return 0;
+    } catch (error) {
+      console.error(`[core-platform-release] ${error.message}`);
+      return 1;
+    }
+  }
   const options = parseReleaseQualificationOptions(argv);
   const execution = loadExecutionProfile(options.executionProfile);
-  prepareReleaseQualificationHistory();
+  prepareReleaseQualificationHistory(
+    ROOT,
+    process.platform,
+    prepareGateMeasurementHistory,
+    process.arch,
+    options.artifactScope,
+  );
   const env = releaseQualificationEnvironment(
     ROOT,
     process.env,
@@ -471,6 +572,7 @@ export function main(argv = process.argv.slice(2)) {
     execution,
     options.nativeUpgradePolicy,
     options.artifactScope,
+    process.arch,
   )) {
     const started = Date.now();
     const status = runShifuWithCache(args, { env });

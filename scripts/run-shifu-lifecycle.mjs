@@ -135,6 +135,23 @@ export function runShifuWithCache(args, options = {}) {
   return runShifu(cacheAwareArgs(args, options), options);
 }
 
+export function buildchainBuildPlan(
+  platform = process.platform,
+  arch = process.arch,
+) {
+  if (platform !== 'linux' || arch !== 'arm64') {
+    return [{ args: ['dist'], env: {} }];
+  }
+  return [
+    { args: ['rebuild:core'], env: {} },
+    { args: ['freeze'], env: { KF_REQUIRE_NATIVE_HOST: '1' } },
+    {
+      args: ['pack:core-platform'],
+      env: { KF_PACKAGE_STAGE_DIR: 'product/release/npm' },
+    },
+  ];
+}
+
 function main() {
   if (process.argv.length < 3) {
     console.error(
@@ -143,6 +160,19 @@ function main() {
     process.exit(2);
   }
   const [mode, ...args] = process.argv.slice(2);
+  if (mode === 'buildchain-build') {
+    for (const stage of buildchainBuildPlan()) {
+      const task = stage.args[0];
+      const status = runShifuWithCache(stage.args, {
+        env: lifecycleEnvironment({ ...process.env, ...stage.env }, task),
+      });
+      if (status !== 0) {
+        process.exitCode = status;
+        return;
+      }
+    }
+    return;
+  }
   if (mode === 'cache-apply') {
     if (args.length === 0) {
       console.error('cache-apply requires a Shifu task');

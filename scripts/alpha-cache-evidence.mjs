@@ -146,10 +146,8 @@ export function createAlphaCacheEvidence({ preflightReceipt, sets }) {
     throw new Error(
       'Alpha cache evidence requires aggregate preflight receipt',
     );
-  if (!Array.isArray(sets) || sets.length !== 3)
-    throw new Error(
-      'Alpha cache evidence requires exactly three platform sets',
-    );
+  if (!Array.isArray(sets) || sets.length !== 4)
+    throw new Error('Alpha cache evidence requires exactly four platform sets');
   sets.forEach(verifySet);
   const byPlatform = new Map();
   const binding = preflightReceipt.binding || {};

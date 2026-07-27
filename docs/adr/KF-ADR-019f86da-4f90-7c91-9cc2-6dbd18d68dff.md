@@ -241,16 +241,19 @@ CLI must retain their independent contracts and qualifications.
 - Release engineering becomes more demanding because each artifact needs an
   independent qualification and compatibility matrix.
 
-## npm distribution closure (2026-07-25)
+## npm distribution closure (2026-07-27)
 
-PR #1459 makes the registered 28-package `@kungfu-tech` inventory an exact
+PR #1459 first made the registered 28-package `@kungfu-tech` inventory an exact
 publication set rather than a post-publication lookup list. Twenty-two
 workspace package sources must remove the `private` field and declare public
 npm publishing; Linux owns deterministic packing for the 19 portable workspace
 packages not covered by the dedicated Core, storage, and spec packers. The
-three-platform build contributes the six generated native packages. Collection,
+current closure expands that inventory to 29 by adding the exact
+`@kungfu-tech/core-linux-arm64` package. Three full-product builds contribute
+the existing Core and storage packages, while a bounded hosted Linux ARM64 lane
+builds and qualifies only the additional Core package. Collection,
 dry-run, absence preflight, OIDC publication, and public digest verification
-all fail closed unless the complete 28-tarball set is present. Prerelease npm
+all fail closed unless the complete 29-tarball set is present. Prerelease npm
 tags are derived from the version so an alpha cannot silently become `latest`.
 
 ## Site bundle reader closure (2026-07-27)

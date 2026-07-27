@@ -41,7 +41,7 @@ const ROOT_FILES = [
   'scripts/probe-release-platform.mjs',
   'shifu.gates.json',
 ];
-const PLATFORMS = ['linux-x64', 'macos-arm64', 'windows-x64'];
+const PLATFORMS = ['linux-x64', 'linux-arm64', 'macos-arm64', 'windows-x64'];
 
 function git(root, ...args) {
   return childProcess

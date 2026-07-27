@@ -325,7 +325,12 @@ async function main() {
     [npmInventory['@kungfu-tech/core']],
     'Core main package',
   );
-  for (const platform of ['darwin-arm64', 'linux-x64', 'win32-x64']) {
+  for (const platform of [
+    'darwin-arm64',
+    'linux-x64',
+    'linux-arm64',
+    'win32-x64',
+  ]) {
     const packageName = `@kungfu-tech/core-${platform}`;
     corePlatforms[platform] = exactAsset(
       stagedNpmDigest(

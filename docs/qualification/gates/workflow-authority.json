@@ -679,7 +679,7 @@
           "authority": "qualification",
           "publication": "none",
           "receipt": "diagnostic",
-          "definitionDigest": "sha256:4189238841d9cf2cebc6fb512da7837ffda933cd362f7cc41b81080139f8c8c0",
+          "definitionDigest": "sha256:c6ab21fa86ab188d7061e5ebf01856429763e448144812853c30b180d6604be7",
           "credentials": {
             "githubToken": "read",
             "oidc": false,
@@ -809,7 +809,7 @@
           "authority": "qualification",
           "publication": "none",
           "receipt": "qualifying",
-          "definitionDigest": "sha256:be225e4e8c4369c3c95a8148fc768916c984d08773f5226bbde9d97fe32d6155",
+          "definitionDigest": "sha256:4d8af9d7c0a014ee5dde3a24543c378ae0ec68a46e68e657ed870504a7ce5581",
           "credentials": {
             "githubToken": "write",
             "oidc": true,
@@ -887,7 +887,7 @@
           "authority": "qualification",
           "publication": "none",
           "receipt": "diagnostic",
-          "definitionDigest": "sha256:d1c1499bddf2e924f3039a906fc6107378b5de78008dcd9631b1701af2168fe7",
+          "definitionDigest": "sha256:34814874cd167899ade57f61b78467f19bbb83c44692b94b5335cd5832a8d730",
           "credentials": {
             "githubToken": "write",
             "oidc": true,
@@ -899,7 +899,7 @@
             "inheritedSecrets": false,
             "environment": null
           },
-          "externalActions": ["kungfu-systems/buildchain/.github/workflows/.build.yml@bfe43b0fe5577f15d2af01bc542de8a8ce587457"],
+          "externalActions": ["kungfu-systems/buildchain/.github/workflows/.build.yml@c83cb444d79c2e647de6e12a0bfde68dfaf57701"],
           "steps": []
         },
         {
@@ -2217,7 +2217,7 @@
           "authority": "release-control",
           "publication": "channel",
           "receipt": "qualifying",
-          "definitionDigest": "sha256:54f82c0f9d9821a54a059d599c6ab2271d1616bd453e8491a5219d258c292fe4",
+          "definitionDigest": "sha256:80237b4b7e9a2e4f6393b949e3c24cf36743bdd840b8987339cd2ee0ae1402f8",
           "credentials": {
             "githubToken": "write",
             "oidc": true,

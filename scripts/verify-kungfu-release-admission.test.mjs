@@ -104,7 +104,12 @@ function fixture({
   const matrixDigest = publicationAuthorityDigest({
     profile: 'release-promotion',
     registryDigest,
-    requiredPlatforms: ['linux', 'macos', 'windows'],
+    requiredPlatforms: [
+      'linux-x64',
+      'linux-arm64',
+      'macos-arm64',
+      'windows-x64',
+    ],
   });
   const gates = plan.groups.flatMap((group) =>
     group.gates.map((gate) => {
@@ -134,13 +139,15 @@ function fixture({
     status: 'pass',
     ok: true,
     qualifying: true,
-    receipts: ['linux', 'macos', 'windows'].map((platform) => ({
-      platformId: `${platform}-fixture`,
-      platform: { os: platform },
-      status: 'passed',
-      qualifying: true,
-      issues: [],
-    })),
+    receipts: ['linux-x64', 'linux-arm64', 'macos-arm64', 'windows-x64'].map(
+      (platform) => ({
+        platformId: platform,
+        platform: { id: platform, os: platform.split('-')[0] },
+        status: 'passed',
+        qualifying: true,
+        issues: [],
+      }),
+    ),
     gates,
     omitted: [],
     issues: [],
@@ -399,7 +406,7 @@ test('Kungfu rejects missing platform evidence and replayed or stale admission',
   missingPlatform.publicationEvidence.gateAggregate.receipts.pop();
   await assert.rejects(
     async () => verifyKungfuReleaseAdmission(missingPlatform),
-    /missing windows qualification/,
+    /missing windows-x64 qualification/,
   );
 
   const replayed = fixture();

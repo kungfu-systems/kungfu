@@ -10,7 +10,12 @@ import { fileURLToPath } from 'node:url';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const SCHEMA = 'kungfu.alpha-promotion-preflight-receipt/v1';
-const REQUIRED_PLATFORMS = ['linux-x64', 'macos-arm64', 'windows-x64'];
+const REQUIRED_PLATFORMS = [
+  'linux-x64',
+  'linux-arm64',
+  'macos-arm64',
+  'windows-x64',
+];
 const MAX_AGE_SECONDS = 7 * 24 * 60 * 60;
 const ROOT_FILES = {
   workflow: [
@@ -51,6 +56,7 @@ const ROOT_FILES = {
 };
 const PLATFORM_CHECKS = {
   'linux-x64': ['exact-source', 'adr-cutover-history', 'cargo-locked-fetch'],
+  'linux-arm64': ['exact-source', 'cargo-locked-fetch'],
   'macos-arm64': ['exact-source', 'codesign-tool', 'cargo-locked-fetch'],
   'windows-x64': ['exact-source', 'windows-cmd-spawn', 'cargo-locked-fetch'],
 };
@@ -172,7 +178,7 @@ export function aggregatePlatformReceipts({
   generatedAt = new Date().toISOString(),
 }) {
   if (!Array.isArray(receipts) || receipts.length !== REQUIRED_PLATFORMS.length)
-    throw new Error('aggregate requires exactly three platform receipts');
+    throw new Error('aggregate requires exactly four platform receipts');
   const byPlatform = new Map();
   const binding = sourceBinding(root);
   for (const receipt of receipts) {

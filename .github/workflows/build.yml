@@ -88,7 +88,7 @@ jobs:
       BUILDCHAIN_ARTIFACT_RELAY_S3_DOWNLOAD_ROLE_ARN: ${{ secrets.BUILDCHAIN_ARTIFACT_RELAY_S3_DOWNLOAD_ROLE_ARN }}
     with:
       buildchain-ref: ${{ inputs.buildchain-ref || '' }}
-      runner-preset: ${{ inputs.platforms-json && 'custom' || 'kungfu-v4-self-hosted' }}
+      runner-preset: ${{ inputs.platforms-json && 'custom' || 'kungfu-v4-native' }}
       platforms-json: ${{ inputs.platforms-json || '' }}
       fail-fast: ${{ github.event_name == 'pull_request' || !inputs.diagnostic-mode }}
       setup-rust: true
@@ -106,7 +106,11 @@ jobs:
       credential-island-caller-owned: true
       credential-island-macos-platform-id: macos-arm64
       expected-artifacts-json: >-
-        {"minFiles":8,"minTotalBytes":1,"requiredPaths":["product/release/qualification/layer-qualification-summary.json","product/release/qualification/live-peer-continuity/report.json","product/release/qualification/live-peer-continuity/raw-logs.jsonl.gz","product/release/qualification/runtime-activation/report.json","product/release/qualification/runtime-activation/raw-logs.jsonl.gz","product/release/qualification/zero-burden-desktop/report.json","product/release/qualification/zero-burden-desktop/raw-logs.jsonl.gz","product/release/qualification/invariant-run.json"]}
+        {"minFiles":3,"minTotalBytes":1,"requiredPaths":["product/release/qualification/layer-qualification-summary.json"]}
+      # Every lane must retain its source-bound qualification summary. The
+      # three full-product lanes also fail closed inside lifecycle.verify on
+      # their runtime, desktop, invariant, and layer reports; Linux ARM64 is a
+      # deliberately bounded Core-only lane and retains its exact npm receipt.
       require-install: true
       require-build: true
       require-verify: true
@@ -161,11 +165,11 @@ jobs:
       # the LAN mirror and this repository can exceed Buildchain's 600-second
       # fallback default, so retain a bounded 20-minute GitHub fetch window.
       checkout-cache-github-timeout-seconds: 1200
-      # Custom qualification matrices can mix hosted and self-hosted runners.
-      # Do not project the private-LAN runner profile onto hosted legs; use the
-      # checked-in explicit-off profile so cache provenance remains auditable.
-      shifu-cache-profile-ref: ${{ inputs.platforms-json && 'docs/shifu/qualification-portable-off.cache-profile.json' || vars.SHIFU_CACHE_PROFILE_REF }}
-      shifu-cache-profile-digest: ${{ inputs.platforms-json && 'sha256:d7002041716ea1e5ad703492815c9557576d5679227743541c13d42b6ea9de5c' || vars.SHIFU_CACHE_PROFILE_DIGEST }}
+      # The default native matrix now mixes hosted Linux ARM64 with the three
+      # self-hosted lanes. Never project a private-LAN cache profile onto a
+      # hosted runner; the explicit-off profile keeps all four legs auditable.
+      shifu-cache-profile-ref: docs/shifu/qualification-portable-off.cache-profile.json
+      shifu-cache-profile-digest: sha256:d7002041716ea1e5ad703492815c9557576d5679227743541c13d42b6ea9de5c
       cache-dependency-lock-root: ${{ needs.preflight.outputs.dependency-lock-root }}
       cache-toolchain-root: ${{ needs.preflight.outputs.toolchain-root }}
       cache-policy-root: ${{ needs.preflight.outputs.policy-root }}
@@ -177,7 +181,7 @@ jobs:
     name: Build Hub CLI on native Linux ARM64
     needs: preflight
     if: ${{ github.event_name == 'pull_request' || !inputs.platforms-json || inputs.run-hub-cli-linux-arm64 || contains(inputs.platforms-json, 'linux-arm64') }}
-    uses: kungfu-systems/buildchain/.github/workflows/.build.yml@bfe43b0fe5577f15d2af01bc542de8a8ce587457 # v3.0.2-alpha.1 with cross-attempt artifact recovery
+    uses: kungfu-systems/buildchain/.github/workflows/.build.yml@c83cb444d79c2e647de6e12a0bfde68dfaf57701 # v3.0.2-alpha.7 auditable demo + Linux attestation + safe notarization diagnostics
     secrets:
       BUILDCHAIN_ARTIFACT_RELAY_S3_ROLE_ARN: ${{ secrets.BUILDCHAIN_ARTIFACT_RELAY_S3_ROLE_ARN }}
       BUILDCHAIN_ARTIFACT_RELAY_S3_UPLOAD_ROLE_ARN: ${{ secrets.BUILDCHAIN_ARTIFACT_RELAY_S3_UPLOAD_ROLE_ARN }}

@@ -6,7 +6,7 @@ Each section is bound to the registry id by the catalog meta gate.
 
 ## Exact-source Alpha preflight
 
-Every push to the development channel produces a three-platform
+Every push to the development channel produces a four-platform
 `kungfu.alpha-promotion-preflight-receipt/v1` before an immutable Alpha pull
 request can enter the expensive Buildchain, embedding, or Shifu matrices. The
 aggregate receipt binds the exact commit and Git tree plus the relevant
@@ -60,7 +60,7 @@ all platform lanes running.
 <!-- gate-doc:release.artifact-admission -->
 ## Release artifact admission (`release.artifact-admission`)
 
-- **Problem:** Requires build status, three functional platform payloads, one authoritative signed and notarized macOS credential-island payload, release passport, and KFD witnesses.
+- **Problem:** Requires build status, three full-product platform payloads, one exact Linux ARM64 Core payload, one authoritative signed and notarized macOS credential-island payload, release passport, and KFD witnesses.
 - **Protects:** release regressions from becoming an unexplained green profile or release claim.
 - **Action:** named handler `kungfu.buildchain.artifact-admission`; execution requires the declared remote controller capability.
 - **Dependencies:** `governance.promotion-rehearsal`.
@@ -75,8 +75,8 @@ all platform lanes running.
 <!-- /gate-doc:release.artifact-admission -->
 
 The handler executes once in the Linux promotion controller. Its admitted
-payload remains cross-platform: the controller still requires exact Linux,
-macOS, and Windows functional artifacts before the Gate passes. It separately
+payload remains cross-platform: the controller still requires exact Linux x64,
+Linux ARM64 Core, macOS ARM64, and Windows x64 artifacts before the Gate passes. It separately
 requires the source-bound macOS credential-island DMG, ZIP, and accepted
 signing/notarization evidence; the signing credentials never enter a functional
 build runner.

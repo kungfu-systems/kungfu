@@ -43,7 +43,7 @@ command = "./shifu check:source"
 
 [lifecycle.build]
 # shifu-entry-contract: allow the cross-platform dispatcher to enter the canonical shifu shim
-command = "node scripts/run-shifu-lifecycle.mjs cache-apply dist"
+command = "node scripts/run-shifu-lifecycle.mjs buildchain-build"
 
 [lifecycle.verify]
 # shifu-entry-contract: allow the cross-platform dispatcher to enter the canonical shifu shim

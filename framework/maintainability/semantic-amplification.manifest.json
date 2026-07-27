@@ -385,6 +385,10 @@
           "role": "conformance-oracle"
         },
         {
+          "path": "scripts/kungfu-release-qualification.mjs",
+          "role": "package-release"
+        },
+        {
           "path": "docs/qualification/gates/workflow-bindings.json",
           "role": "thin-binding"
         },

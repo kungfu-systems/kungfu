@@ -39,6 +39,9 @@ jobs:
           - name: Linux source and Cargo probe
             os: ubuntu-24.04
             platform: linux-x64
+          - name: Linux ARM64 source and Cargo probe
+            os: ubuntu-24.04-arm
+            platform: linux-arm64
           - name: macOS source and Cargo probe
             os: macos-15
             platform: macos-arm64

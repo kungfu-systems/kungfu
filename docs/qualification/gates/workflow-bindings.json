@@ -456,7 +456,7 @@
           }
         },
         "with": {
-          "runner-preset": "${{ inputs.platforms-json && 'custom' || 'kungfu-v4-self-hosted' }}",
+          "runner-preset": "${{ inputs.platforms-json && 'custom' || 'kungfu-v4-native' }}",
           "github-artifact-attestation-subject-path": "product/release/cli/kungfu-episodes-cli-linux-x64.tar.gz",
           "github-artifact-attestation-signer-sha": "ad57ae0fee5072a1de7a0b0182f70c0c41e45abb",
           "github-artifact-attestation-platform-id": "linux-x64",
@@ -470,7 +470,7 @@
           "release-candidate": true,
           "publish-channel": "${{ github.event_name == 'pull_request' && (startsWith(github.base_ref, 'release/') && 'release' || 'alpha') || 'none' }}",
           "artifact-transfer-mode": "s3-to-github-artifacts",
-          "shifu-cache-profile-ref": "${{ inputs.platforms-json && 'docs/shifu/qualification-portable-off.cache-profile.json' || vars.SHIFU_CACHE_PROFILE_REF }}",
+          "shifu-cache-profile-ref": "docs/shifu/qualification-portable-off.cache-profile.json",
           "buildchain-contract-lock-path": ".buildchain/contract-lock.json",
           "buildchain-contract-compatibility-policy": "major-compatible"
         }
@@ -496,7 +496,7 @@
       "adapter": {
         "type": "buildchain-hub-cli-linux-arm64",
         "kind": "job-uses",
-        "uses": "kungfu-systems/buildchain/.github/workflows/.build.yml@bfe43b0fe5577f15d2af01bc542de8a8ce587457",
+        "uses": "kungfu-systems/buildchain/.github/workflows/.build.yml@c83cb444d79c2e647de6e12a0bfde68dfaf57701",
         "job": {
           "needs": "preflight",
           "if": "${{ github.event_name == 'pull_request' || !inputs.platforms-json || inputs.run-hub-cli-linux-arm64 || contains(inputs.platforms-json, 'linux-arm64') }}",
@@ -592,7 +592,7 @@
           "publication-consumer-qualification-command": "node scripts/kungfu-release-qualification.mjs",
           "publication-consumer-predicate-id": "kungfu.release-admission/v1",
           "publish-command": "node scripts/buildchain-custom-publish-evidence.mjs",
-          "runner-preset": "kungfu-v4-self-hosted",
+          "runner-preset": "kungfu-v4-native",
           "required-artifact-count": 5,
           "release-passport": true,
           "release-activation-command": "${{ startsWith(inputs.target-ref || github.event.pull_request.base.ref, 'alpha/') && 'node scripts/activate-ungfu-release.mjs' || '' }}",
