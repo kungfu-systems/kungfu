@@ -49,5 +49,5 @@ your own release evidence.
 - Checking independence from Node and Kungfu runtime:
   [Run the Python reader](python-reader.md).
 
-Previous: [Start here](index.md)  
+Previous: [Start here](index.md)\
 Next: [Use the Node API](api.md)

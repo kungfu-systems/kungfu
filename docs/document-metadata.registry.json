@@ -228,6 +228,29 @@
       "evidence_grade": "B",
       "last_reviewed": "2026-07-21"
     },
+    "docs/architecture/product-cache-home.md": {
+      "metadata_schema": "kungfu.document-metadata/v1",
+      "document_status": "active",
+      "doc_type": "design-reference",
+      "review_state": "self-reviewed",
+      "sensitivity": "public",
+      "sources": [
+        "local-files",
+        "executable-probe",
+        "user-consensus"
+      ],
+      "period": "2026-07-26",
+      "theme": "product-cache-home",
+      "confidence": "high",
+      "evidence_grade": "B",
+      "last_reviewed": "2026-07-26",
+      "ai_provenance": {
+        "model_family": "OpenAI GPT-5",
+        "product": "Codex",
+        "generated_at": "2026-07-26",
+        "invisible_context_boundary": "Unobserved release artifacts, other hosts, hidden model checkpoint, and runtime parameters are not claimed"
+      }
+    },
     "docs/architecture/kfd7-library-boundary.md": {
       "metadata_schema": "kungfu.document-metadata/v1",
       "document_status": "active",

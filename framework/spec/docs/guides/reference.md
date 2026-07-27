@@ -60,5 +60,5 @@ The standalone portable format is not declared stable. Package semver is not a
 format compatibility algorithm. Historical Spec 0.1 prose is not normative.
 The package is a projection and does not replace its owning sources.
 
-Previous: [Run and interpret the conformance corpus](conformance.md)  
+Previous: [Run and interpret the conformance corpus](conformance.md)\
 Start over: [Reader journey](index.md)

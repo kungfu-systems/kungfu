@@ -82,6 +82,7 @@ name = "kungfu-trunk"
 version = "4.0.0-alpha.1"
 dependencies = [
  "kungfu-embedding",
+ "serde_json",
  "shifu-core",
  "xinfa",
 ]

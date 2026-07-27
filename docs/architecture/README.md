@@ -32,6 +32,7 @@ Architecture decisions and their historical rationale remain in
 - [Work Lifecycle Operation Matrix](work-lifecycle-operation-matrix.md)
 - [Domain Profile Authoring](domain-profile-authoring.md)
 - [Project Cut Product Loop](project-cut-product-loop.md)
+- [Product Cache Home](product-cache-home.md)
 - [Invariant Verification System](invariant-verification-system.md)
 - [Incubation Passport Governance](incubation-passport-governance.md)
 - [Primitive Management Plane](primitive-management-plane.md)
