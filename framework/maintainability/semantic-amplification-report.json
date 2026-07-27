@@ -5,7 +5,7 @@
   "manifestPath": "framework/maintainability/semantic-amplification.manifest.json",
   "manifestRoot": "sha256:13bba3d8469c4ec5d50acd2dd380832cbd42808c287642fc5cfe82b423260628",
   "baselineRef": "dbfed9ca1785d147b26f4f06e7e6895ac7368fee",
-  "sourceRoot": "sha256:8306c9fe4d75e10ae381073e3c93139ffd1082dffbd2572aa172830e8aecdee9",
+  "sourceRoot": "sha256:d831b6571247cca6f7fa1cdbf148dbb8d224c51bdcdf6f1bbb0775864265739c",
   "roles": {
     "authority": "exactly one authority route per family; the route may name multiple co-owned source files",
     "allowedProjectionRoles": [
@@ -518,7 +518,7 @@
           "path": "product/scripts/dist.mjs",
           "currentLines": 2528,
           "baselineLines": 2514,
-          "currentRoot": "sha256:939c5fccd5be8c0a1f3eedcb240f7aae00f96d6c6dba42af9654e4acd310f8d4",
+          "currentRoot": "sha256:181f551e0398612979ddbf7864af4a465b9e7bad4788b2d56dbc7cde3b2eefea",
           "baselineRoot": "sha256:6cfd6c55e296163ab863fb1d79a4a51198ad12943274fc0858338bb651a108da",
           "changedSinceBaseline": true
         }
