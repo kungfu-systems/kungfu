@@ -284,6 +284,18 @@ test('Assignment admission smoke isolates the operator Workspace Catalog', (t) =
       ['work', 'admit'],
     ],
   );
+  assert.deepEqual(
+    invocations[1].args.slice(
+      invocations[1].args.indexOf('--initiative-id'),
+      invocations[1].args.indexOf('--actor'),
+    ),
+    [
+      '--initiative-id',
+      'installed-product-qualification',
+      '--assignment-id',
+      'installed-product-admission-smoke',
+    ],
+  );
   for (const invocation of invocations) {
     assert.equal(
       invocation.env.HOME,

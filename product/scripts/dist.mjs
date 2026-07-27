@@ -1828,6 +1828,7 @@ export function runInstalledKungfuAssignmentAdmissionSmoke({
     installRoot,
     'assignment-admission-request.json',
   );
+  const initiativeId = 'installed-product-qualification';
   const assignmentId = 'installed-product-admission-smoke';
   const assignmentEnv = {
     ...env,
@@ -1857,7 +1858,7 @@ export function runInstalledKungfuAssignmentAdmissionSmoke({
         },
         workDefinition: {
           goal_id: assignmentId,
-          mission_id: 'installed-product-qualification',
+          mission_id: initiativeId,
           title: 'Verify installed Assignment admission',
           objective: 'Prove the packaged Mission Control Suite is closed.',
           owner_agent: 'product-qualification',
@@ -1897,6 +1898,10 @@ export function runInstalledKungfuAssignmentAdmissionSmoke({
         captured.requestPath,
         '--workspace',
         workspace,
+        '--initiative-id',
+        initiativeId,
+        '--assignment-id',
+        assignmentId,
         '--actor',
         'product-qualification',
         '--actor-type',
