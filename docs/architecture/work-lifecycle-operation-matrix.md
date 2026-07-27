@@ -33,15 +33,15 @@ must never be coerced to false, absent, empty, healthy, or passed.
 | `work.lifecycle.episode.export/v1` | episode | export | libkungfu-ledger-action-v1 | **implemented** | implemented: kf_ledger_action_api_v1<br>authority_export | cpp=projected<br>python=projected<br>node=projected<br>rust=projected |
 | `work.lifecycle.episode.import/v1` | episode | import | libkungfu-ledger-action-v1 | **implemented** | implemented: kf_ledger_action_api_v1<br>authority_import | cpp=projected<br>python=projected<br>node=projected<br>rust=projected |
 | `work.lifecycle.action-geometry.inspect/v1` | action-geometry | inspect | action-geometry-contract | **declarative** | declarative: contract-registry | cpp=projected<br>python=projected<br>node=projected<br>rust=projected |
-| `work.lifecycle.initiative.inspect/v1` | initiative | inspect | mission-control-profile | **projected** | projected: mission-control-profile<br>show-missions | cpp=projected<br>python=projected<br>node=projected<br>rust=projected |
-| `work.lifecycle.initiative.create/v1` | initiative | create | mission-control-profile | **projected** | projected: mission-control-actions<br>create-initiative | cpp=projected<br>python=projected<br>node=projected<br>rust=projected |
-| `work.lifecycle.initiative.transition/v1` | initiative | transition | mission-control-profile | **projected** | projected: mission-control-actions<br>assess-progress, review-completion, decide-continuation | cpp=projected<br>python=projected<br>node=projected<br>rust=projected |
-| `work.lifecycle.initiative.export/v1` | initiative | export | mission-control-profile | **projected** | projected: mission-control-actions<br>export-mission | cpp=projected<br>python=projected<br>node=projected<br>rust=projected |
-| `work.lifecycle.initiative.import/v1` | initiative | import | mission-control-profile | **projected** | projected: mission-control-actions<br>import-mission | cpp=projected<br>python=projected<br>node=projected<br>rust=projected |
-| `work.lifecycle.assignment.inspect/v1` | assignment | inspect | mission-control-profile | **projected** | projected: mission-control-profile<br>show-goals | cpp=projected<br>python=projected<br>node=projected<br>rust=projected |
-| `work.lifecycle.assignment.create/v1` | assignment | create | mission-control-profile | **projected** | projected: mission-control-actions<br>create-assignment | cpp=projected<br>python=projected<br>node=projected<br>rust=projected |
-| `work.lifecycle.assignment.transition/v1` | assignment | transition | mission-control-profile | **projected** | projected: mission-control-actions<br>claim-completion, review-completion | cpp=projected<br>python=projected<br>node=projected<br>rust=projected |
-| `work.lifecycle.assignment.archive/v1` | assignment | archive | mission-control-profile | **unavailable** | missing: mission-control-actions | cpp=projected<br>python=projected<br>node=projected<br>rust=projected |
+| `work.lifecycle.initiative.inspect/v1` | initiative | inspect | work-control-profile | **projected** | projected: work-control-profile<br>initiatives | cpp=projected<br>python=projected<br>node=projected<br>rust=projected |
+| `work.lifecycle.initiative.create/v1` | initiative | create | work-control-profile | **projected** | projected: work-control-actions<br>create-initiative | cpp=projected<br>python=projected<br>node=projected<br>rust=projected |
+| `work.lifecycle.initiative.transition/v1` | initiative | transition | work-control-profile | **projected** | projected: work-control-actions<br>assess-progress, review-completion, decide-continuation | cpp=projected<br>python=projected<br>node=projected<br>rust=projected |
+| `work.lifecycle.initiative.export/v1` | initiative | export | work-control-profile | **projected** | projected: work-control-actions<br>export-initiative | cpp=projected<br>python=projected<br>node=projected<br>rust=projected |
+| `work.lifecycle.initiative.import/v1` | initiative | import | work-control-profile | **projected** | projected: work-control-actions<br>import-initiative | cpp=projected<br>python=projected<br>node=projected<br>rust=projected |
+| `work.lifecycle.assignment.inspect/v1` | assignment | inspect | work-control-profile | **projected** | projected: work-control-profile<br>assignments | cpp=projected<br>python=projected<br>node=projected<br>rust=projected |
+| `work.lifecycle.assignment.create/v1` | assignment | create | work-control-profile | **projected** | projected: work-control-actions<br>create-assignment | cpp=projected<br>python=projected<br>node=projected<br>rust=projected |
+| `work.lifecycle.assignment.transition/v1` | assignment | transition | work-control-profile | **projected** | projected: work-control-actions<br>claim-completion, review-completion | cpp=projected<br>python=projected<br>node=projected<br>rust=projected |
+| `work.lifecycle.assignment.archive/v1` | assignment | archive | work-control-profile | **unavailable** | missing: work-control-actions | cpp=projected<br>python=projected<br>node=projected<br>rust=projected |
 | `work.lifecycle.cut.inspect/v1` | cut | inspect | core-cut-protocol | **implemented** | implemented: kf_runtime_action_api_v1<br>work_lifecycle | cpp=projected<br>python=projected<br>node=projected<br>rust=projected |
 | `work.lifecycle.cut.create/v1` | cut | create | domain-profile-cut-authority | **implemented** | implemented: kf_runtime_action_api_v1<br>work_lifecycle | cpp=projected<br>python=projected<br>node=projected<br>rust=projected |
 | `work.lifecycle.cut.verify/v1` | cut | verify | core-cut-protocol | **implemented** | implemented: kf_runtime_action_api_v1<br>work_lifecycle | cpp=projected<br>python=projected<br>node=projected<br>rust=projected |
@@ -66,7 +66,7 @@ must never be coerced to false, absent, empty, healthy, or passed.
 - Episode authority owns causal occurrence and seal/recovery evidence; an accepted action or completion claim is not an Episode.
 - Action Geometry owns responsibility separation and non-substitution invariants, while Domain Profiles own lifecycle vocabulary and validation.
 - Domain Profile declarations own adopter-specific objects, mappings, workflows, and policies; Core owns installed roots and lifecycle mutation receipts.
-- Initiative and Assignment are Mission Control domain facts over Core authority; storage capability alone grants no domain authority.
+- Initiative and Assignment are Work Control domain facts over Core authority; storage capability alone grants no domain authority.
 - Core Cut binds typed authority roots without domain special cases; the software-development Profile alone maps Git source, Xinfa Atlas, and Episode roots into its Project Cut projection.
 - A language marked partial or missing must fail visibly; backend access, private layout access, or a locally reconstructed state cannot upgrade parity.
 
@@ -74,7 +74,7 @@ must never be coerced to false, absent, empty, healthy, or passed.
 
 - Equal C++, Python, Node.js, and Rust envelope parity means every underlying Domain Profile authority is available.
 - Project Cut is a second Core protocol or may reinterpret legacy project.cut/v1 roots.
-- Mission Control domain lifecycle is implied by generic Fact or Episode storage operations.
+- Work Control domain lifecycle is implied by generic Fact or Episode storage operations.
 - A generated language binding may use a backend-specific implementation as equivalent authority.
 - A valid Domain Profile declaration is signed, qualified, installed, active, or safe for production use.
 - The pre-stable lifecycle operation rename silently changes persisted roots, schemas, or receipt identities.

@@ -20,7 +20,7 @@ test('Mission Control owns goal-card validation and the Profile ViewSpec', () =>
   const view = missionControlGoalCardView('3.0.0', attentionQuery);
 
   assert.equal(view.kind, 'profile');
-  assert.equal(view.memberId, 'mission-control-views');
+  assert.equal(view.memberId, 'work-control-views');
   assert.equal(view.spec.schema, 'kungfu.mission-control.goal-card-view/v1');
   assert.deepEqual(goalCardQueryFromView(view)?.sections, ['attention']);
 });

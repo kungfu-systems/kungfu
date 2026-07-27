@@ -1,15 +1,18 @@
 import type { Profile } from '@kungfu-tech/api/capability';
 
-const MISSION_CONTROL_PROFILE_ID = 'kungfu.mission-control';
+const WORK_CONTROL_PROFILE_ID = 'kungfu.work-control';
 
-export function resolveGoalWorkspaceRoot(goal: {
+export function resolveAssignmentWorkspaceRoot(assignment: {
   worktree_path?: string;
 }): string | null {
-  const root = goal.worktree_path?.trim();
+  const root = assignment.worktree_path?.trim();
   return root || null;
 }
 
-export async function resolveMissionControlProfileRoot(
+/** Explicit compatibility alias for callers that have not migrated yet. */
+export const resolveGoalWorkspaceRoot = resolveAssignmentWorkspaceRoot;
+
+export async function resolveWorkControlProfileRoot(
   profile: Pick<Profile, 'managerAsync'> | undefined,
 ): Promise<string> {
   if (!profile) {
@@ -18,14 +21,14 @@ export async function resolveMissionControlProfileRoot(
 
   const manager = await profile.managerAsync();
   const current = manager.profiles.find(
-    (candidate) => candidate.profileId === MISSION_CONTROL_PROFILE_ID,
+    (candidate) => candidate.profileId === WORK_CONTROL_PROFILE_ID,
   );
   if (!current) {
-    throw new Error('Mission Control Profile is not installed');
+    throw new Error('Work Control Profile is not installed');
   }
   if (current.catalog && !current.catalog.activeExactRoot) {
     throw new Error(
-      'Mission Control Profile update requires approval in Work Dashboard',
+      'Work Control Profile update requires approval in Work Dashboard',
     );
   }
   if (
@@ -33,7 +36,10 @@ export async function resolveMissionControlProfileRoot(
     !current.catalog ||
     !current.profileSuiteRoot
   ) {
-    throw new Error('Mission Control Profile setup is not complete');
+    throw new Error('Work Control Profile setup is not complete');
   }
   return current.profileSuiteRoot;
 }
+
+/** Explicit compatibility alias for callers that have not migrated yet. */
+export const resolveMissionControlProfileRoot = resolveWorkControlProfileRoot;

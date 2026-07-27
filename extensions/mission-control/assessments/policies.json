@@ -2,9 +2,9 @@
   "schema": "kungfu.profile-assessment-policies/v1",
   "policies": [
     {
-      "id": "mission-progress-policy",
+      "id": "initiative-progress-policy",
       "version": "1",
-      "claimId": "mission-progress-is-reasonable",
+      "claimId": "initiative-progress-is-reasonable",
       "purposes": [
         "operator-review"
       ],
@@ -14,7 +14,7 @@
         "canonical-facts",
         "independent-observation"
       ],
-      "responsibility": "Declared Mission source authority supplies intent; libkungfu establishes query and Episode proof.",
+      "responsibility": "Declared Initiative source authority supplies intent; libkungfu establishes query and Episode proof.",
       "residualRisks": [
         "declared source status is evidence, not universal external truth",
         "missing next responsibility remains an operator decision"

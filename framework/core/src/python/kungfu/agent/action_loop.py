@@ -56,7 +56,7 @@ def inspect_native_authority(
 
     binding_path = Path(kungfu.__binding__.__file__).resolve()
     binding_root = _file_root(binding_path)
-    discovered = profile_sdk.discover_source("kungfu.mission-control", runtime_dir)
+    discovered = profile_sdk.discover_source("kungfu.work-control", runtime_dir)
     application = profile_sdk.application(
         discovered["source"], runtime_dir, include_qualification=False
     )
@@ -82,7 +82,7 @@ def inspect_native_authority(
         return {
             "status": "denied",
             "code": "native-authority-inactive",
-            "message": "Mission Control Profile is not active at this exact root",
+            "message": "Work Control Profile is not active at this exact root",
             "current": current,
             "writeOccurred": False,
         }
@@ -606,9 +606,7 @@ def _mission_action(
 ) -> dict[str, Any]:
     from kungfu import profile_sdk
 
-    source = profile_sdk.discover_source("kungfu.mission-control", runtime_dir)[
-        "source"
-    ]
+    source = profile_sdk.discover_source("kungfu.work-control", runtime_dir)["source"]
     plan = profile_sdk.intent_plan(source, runtime_dir, intent_id, values)
     answer = profile_sdk.answer_decision(plan["decisionCard"], "approve", "action-loop")
     receipt = profile_sdk.intent_apply(runtime_dir, plan, answer)

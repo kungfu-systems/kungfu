@@ -1,6 +1,6 @@
 # SPDX-License-Identifier: Apache-2.0
 
-"""Pure boundaries for captured Assignment admission and sealed go state."""
+"""Pure boundaries for captured Assignment admission and sealed work state."""
 
 from __future__ import annotations
 
@@ -19,6 +19,8 @@ ROOT = "sha256:"
 REQUEST_SCHEMA = "kungfu.assignment-request/v1"
 CAPTURE_RECEIPT_SCHEMA = "kungfu.assignment-capture.receipt/v1"
 CAPTURE_RESPONSE_SCHEMA = "kungfu.assignment-capture.response/v1"
+INITIATIVE_ADMISSION_SCHEMA = "kungfu.work-control.initiative-admission/v1"
+INITIATIVE_SOURCE_SCHEMA = "kungfu.work-control.exact-source/v1"
 RETENTION_POLICY = "explicit-expiry-retain-bytes-v1"
 STATE_SCHEMA = "kungfu.assignment-orchestration.sealed-state/v1"
 CROSS_WORKSPACE_BINDING_SCHEMA = (
@@ -407,11 +409,60 @@ def load_captured_request(request_file: str | Path) -> dict[str, Any]:
     }
 
 
+def load_initiative_admission(
+    admission_file: str | Path, *, stdin_text: str = ""
+) -> dict[str, Any]:
+    """Verify one explicit exact-source promotion into a native Initiative."""
+
+    if str(admission_file) == "-":
+        value = json.loads(stdin_text)
+    else:
+        value = json.loads(
+            Path(admission_file).expanduser().read_text(encoding="utf-8")
+        )
+    if not isinstance(value, dict):
+        raise ValueError("Initiative admission must be a JSON object")
+    declared_root = _root(value.pop("admissionRoot", ""), "admissionRoot")
+    source = value.get("source")
+    if value.get("schema") != INITIATIVE_ADMISSION_SCHEMA:
+        raise ValueError("Initiative admission schema is unsupported")
+    if not isinstance(source, dict) or source.get("schema") != INITIATIVE_SOURCE_SCHEMA:
+        raise ValueError("Initiative admission requires one exact source identity")
+    allowed_source = {
+        "schema",
+        "authority",
+        "kind",
+        "sourceId",
+        "versionRoot",
+    }
+    if set(source) != allowed_source:
+        raise ValueError("Initiative source identity has unsupported fields")
+    if not all(
+        str(source.get(field) or "").strip()
+        for field in ("authority", "kind", "sourceId")
+    ):
+        raise ValueError("Initiative source authority, kind, and id are required")
+    _root(source.get("versionRoot"), "source.versionRoot")
+    if not all(
+        str(value.get(field) or "").strip()
+        for field in ("initiativeId", "title", "intent")
+    ):
+        raise ValueError("Initiative id, title, and intent are required")
+    if semantic_root(value) != declared_root:
+        raise ValueError("Initiative admission root does not verify")
+    return {
+        **value,
+        "source": dict(source),
+        "admissionRoot": declared_root,
+    }
+
+
 def atlas_assignment_projection(
     captured: Mapping[str, Any],
     *,
     initiative_id: str = "",
     assignment_id: str = "",
+    initiative_admission: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
     work = dict(captured["request"]["workDefinition"])
     resource = work.get("resource_plan")
@@ -419,8 +470,12 @@ def atlas_assignment_projection(
     dependencies = resource.get("depends_on") or work.get("depends_on") or []
     if not isinstance(dependencies, list):
         dependencies = []
-    initiative = initiative_id or str(work.get("mission_id") or "")
-    assignment = assignment_id or str(work.get("goal_id") or "")
+    initiative = initiative_id or str(work.get("initiative_id") or "")
+    assignment = (
+        assignment_id
+        or str(work.get("assignment_id") or "")
+        or str(work.get("goal_id") or "")
+    )
     context_binding = work.get("context_binding") or {}
     if not isinstance(context_binding, dict):
         raise ValueError("workDefinition context_binding must be an object")
@@ -448,11 +503,51 @@ def atlas_assignment_projection(
         raise ValueError(
             "workDefinition cannot mix dependency refs and local shorthand"
         )
+    explicit_initiative = dict(initiative_admission or {})
+    if initiative_ref and explicit_initiative:
+        raise ValueError(
+            "admission cannot mix an exact Initiative WorkRef and source promotion"
+        )
+    if explicit_initiative:
+        promoted_id = str(explicit_initiative.get("initiativeId") or "")
+        source = explicit_initiative.get("source") or {}
+        if promoted_id != initiative:
+            raise ValueError(
+                "explicit Initiative admission does not match requested identity"
+            )
+        if str(source.get("sourceId") or "") != initiative:
+            raise ValueError(
+                "Initiative source identity does not match requested identity"
+            )
+    request_source = captured["request"].get("source") or {}
+    atlas_request = (
+        isinstance(request_source, dict)
+        and request_source.get("kind") == "atlas-go-card"
+    )
+    if atlas_request and not initiative_ref and not explicit_initiative:
+        raise ValueError(
+            "Atlas admission requires an exact parent Initiative admission or WorkRef"
+        )
     return {
         "initiative_id": initiative,
-        "initiative_title": str(work.get("mission_title") or initiative),
+        "initiative_title": str(
+            explicit_initiative.get("title")
+            or work.get("initiative_title")
+            or initiative
+        ),
         "initiative_intent": str(
-            work.get("mission_why_matters") or work.get("objective") or assignment
+            explicit_initiative.get("intent")
+            or work.get("initiative_intent")
+            or work.get("objective")
+            or assignment
+        ),
+        "initiative_source_identity": (
+            {
+                **dict(explicit_initiative.get("source") or {}),
+                "admissionRoot": str(explicit_initiative.get("admissionRoot") or ""),
+            }
+            if explicit_initiative
+            else {}
         ),
         "assignment_id": assignment,
         "title": str(work.get("title") or assignment),

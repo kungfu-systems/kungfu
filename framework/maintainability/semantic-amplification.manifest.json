@@ -92,6 +92,7 @@
         "framework/core/src/libkungfu/src/runtime/action/",
         "framework/core/src/libkungfu/src/runtime/profile/",
         "framework/core/src/python/kungfu/",
+        "framework/storage/",
         "crates/kungfu-sdk/",
         "scripts/"
       ],
@@ -119,6 +120,16 @@
           "generator": "scripts/generate-work-lifecycle-sdk.mjs"
         },
         {
+          "path": "framework/storage/generated/work-lifecycle-v1.js",
+          "role": "generated-projection",
+          "generator": "scripts/generate-work-lifecycle-sdk.mjs"
+        },
+        {
+          "path": "framework/storage/python/kungfu_sdk/generated/work_lifecycle_v1.py",
+          "role": "generated-projection",
+          "generator": "scripts/generate-work-lifecycle-sdk.mjs"
+        },
+        {
           "path": "framework/core/src/python/kungfu/assignment_orchestration.py",
           "role": "thin-binding"
         },
@@ -133,6 +144,10 @@
         {
           "path": "scripts/check-work-lifecycle-differential.test.mjs",
           "role": "compatibility-reader"
+        },
+        {
+          "path": "scripts/check-work-lifecycle-operation-matrix.test.mjs",
+          "role": "test"
         },
         {
           "path": "docs/architecture/work-lifecycle-operation-matrix.md",
@@ -292,6 +307,20 @@
         {
           "path": "framework/core/src/libkungfu/src/runtime/storage/query_render.cpp",
           "role": "generated-projection"
+        },
+        {
+          "path": "framework/storage/generated/work-lifecycle-v1.js",
+          "role": "generated-projection",
+          "generator": "scripts/generate-work-lifecycle-sdk.mjs"
+        },
+        {
+          "path": "framework/storage/python/kungfu_sdk/generated/work_lifecycle_v1.py",
+          "role": "generated-projection",
+          "generator": "scripts/generate-work-lifecycle-sdk.mjs"
+        },
+        {
+          "path": "scripts/check-work-lifecycle-operation-matrix.test.mjs",
+          "role": "test"
         },
         {
           "path": "framework/core/tests/storage-node-binding.test.js",

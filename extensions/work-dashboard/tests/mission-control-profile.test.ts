@@ -4,10 +4,10 @@ import test from 'node:test';
 import type { Profile } from '../../../framework/api/src/capability/profile.ts';
 import {
   type AtlasDashboardSnapshot,
-  openMissionControlProfile,
+  openWorkControlProfile,
 } from '../src/view/mission-control-profile.ts';
 
-test('Mission Control uses the exact-root Profile projection and intent surfaces', async () => {
+test('Work Control uses the exact-root Profile projection and intent surfaces', async () => {
   const source = '/profiles/mission-control';
   const initiativeInput = {
     initiativeId: 'initiative-a',
@@ -69,7 +69,7 @@ test('Mission Control uses the exact-root Profile projection and intent surfaces
   const profile = {
     runtimeDir: '/runtime',
     discover: (profileId: string) => {
-      assert.equal(profileId, 'kungfu.mission-control');
+      assert.equal(profileId, 'kungfu.work-control');
       return { source };
     },
     memberCallAsync: async (
@@ -79,7 +79,7 @@ test('Mission Control uses the exact-root Profile projection and intent surfaces
       memberInput?: unknown,
     ) => {
       assert.equal(memberSource, source);
-      assert.equal(memberId, 'mission-control-actions');
+      assert.equal(memberId, 'work-control-actions');
       calls.push({ operation, input: memberInput });
       return { result: snapshot };
     },
@@ -115,7 +115,7 @@ test('Mission Control uses the exact-root Profile projection and intent surfaces
     },
   } as unknown as Profile;
 
-  const missionControl = openMissionControlProfile(profile);
+  const missionControl = openWorkControlProfile(profile);
   const projected = await missionControl.dashboard();
   await missionControl.missionHome('mission-a', { source: 'atlas' });
   await missionControl.createInitiative('initiative-a', {
@@ -220,8 +220,8 @@ test('Mission Control uses the exact-root Profile projection and intent surfaces
     {
       operation: 'plan:review-completion',
       input: {
-        missionId: 'mission-a',
-        goalId: 'goal-a',
+        initiativeId: 'mission-a',
+        assignmentId: 'goal-a',
         reviewer: 'test-owner',
         reviewerSource: 'new-review-session',
       },
@@ -229,8 +229,8 @@ test('Mission Control uses the exact-root Profile projection and intent surfaces
     {
       operation: 'authorize:review-completion',
       input: {
-        missionId: 'mission-a',
-        goalId: 'goal-a',
+        initiativeId: 'mission-a',
+        assignmentId: 'goal-a',
         reviewer: 'test-owner',
         reviewerSource: 'new-review-session',
       },
@@ -238,8 +238,8 @@ test('Mission Control uses the exact-root Profile projection and intent surfaces
     {
       operation: 'plan:decide-continuation',
       input: {
-        missionId: 'mission-a',
-        goalId: 'goal-a',
+        initiativeId: 'mission-a',
+        assignmentId: 'goal-a',
         reviewId: 'review-a',
         expectedReviewRoot: 'sha256:review',
         expectedPlanRoot: 'sha256:plan-root',
@@ -251,8 +251,8 @@ test('Mission Control uses the exact-root Profile projection and intent surfaces
     {
       operation: 'authorize:decide-continuation',
       input: {
-        missionId: 'mission-a',
-        goalId: 'goal-a',
+        initiativeId: 'mission-a',
+        assignmentId: 'goal-a',
         reviewId: 'review-a',
         expectedReviewRoot: 'sha256:review',
         expectedPlanRoot: 'sha256:plan-root',

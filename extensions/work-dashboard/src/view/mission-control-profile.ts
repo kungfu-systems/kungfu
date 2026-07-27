@@ -507,7 +507,7 @@ export type Atlas = {
   currentDashboard: () => AtlasDashboardSnapshot | null;
   importRepo: (repoRoot: string) => Promise<AtlasImportResult>;
   authorityStatus: () => Promise<AtlasAuthorityInspection>;
-  cutoverAuthority: (input: {
+  activateWorkControl: (input: {
     expectedParityRoot: string;
     projectCutRoot: string;
     atlasRoot: string;
@@ -515,7 +515,7 @@ export type Atlas = {
     actorType?: 'user' | 'agent';
     reason: string;
   }) => Promise<AtlasAuthorityTransition>;
-  rollbackAuthority: (input: {
+  restoreAtlasAuthority: (input: {
     expectedMigrationId: string;
     actor: string;
     actorType?: 'user' | 'agent';
@@ -532,7 +532,7 @@ export type Atlas = {
     missionId: string,
     options?: { source?: string; purpose?: string; authorizedBy?: string },
   ) => Promise<AtlasMissionControlReport>;
-  assessMissionAsync: (
+  assessInitiativeAsync: (
     missionId: string,
     options?: { source?: string; purpose?: string; authorizedBy?: string },
   ) => Promise<AtlasMissionControlReport>;
@@ -547,12 +547,12 @@ export type Atlas = {
       horizon?: string;
     },
   ) => Promise<InitiativeWrite>;
-  exportMission: (
+  exportInitiative: (
     missionId: string,
     outPath: string,
     options?: { mode?: 'full' | 'thin'; source?: string; purpose?: string },
   ) => Promise<AtlasMissionBundleExport>;
-  importMission: (
+  importInitiative: (
     fromPath: string,
     options?: { execute?: boolean },
   ) => Promise<AtlasMissionBundleImport>;
@@ -696,10 +696,10 @@ type IntentExecutionReceipt<TResult> = ProfileIntentReceipt & {
   };
 };
 
-const PROFILE_ID = 'kungfu.mission-control';
-const ADAPTER_MEMBER = 'mission-control-actions';
+const PROFILE_ID = 'kungfu.work-control';
+const ADAPTER_MEMBER = 'work-control-actions';
 
-export function openMissionControlProfile(
+export function openWorkControlProfile(
   profile: Profile,
   defaultRepoRoot = '',
 ): Atlas {
@@ -757,15 +757,15 @@ export function openMissionControlProfile(
       memberAsync<AtlasAuthorityInspection>('authority-status', {
         source: 'atlas',
       }),
-    cutoverAuthority: (input) =>
+    activateWorkControl: (input) =>
       authorize<AtlasAuthorityTransition>(
-        'cutover-authority',
+        'activate-work-control',
         { source: 'atlas', ...input },
         input.actor,
       ),
-    rollbackAuthority: (input) =>
+    restoreAtlasAuthority: (input) =>
       authorize<AtlasAuthorityTransition>(
-        'rollback-authority',
+        'restore-atlas-authority',
         input,
         input.actor,
       ),
@@ -783,18 +783,18 @@ export function openMissionControlProfile(
       authorize<AtlasMissionControlReport>(
         'assess-progress',
         {
-          missionId,
+          initiativeId: missionId,
           source: assessment.source,
           purpose: assessment.purpose,
           authorizedBy: assessment.authorizedBy,
         },
         assessment.authorizedBy ?? 'work-dashboard',
       ),
-    assessMissionAsync: (missionId, assessment = {}) =>
+    assessInitiativeAsync: (missionId, assessment = {}) =>
       authorize<AtlasMissionControlReport>(
         'assess-progress',
         {
-          missionId,
+          initiativeId: missionId,
           source: assessment.source,
           purpose: assessment.purpose,
           authorizedBy: assessment.authorizedBy,
@@ -807,15 +807,15 @@ export function openMissionControlProfile(
         { initiativeId, ...input },
         input.actor,
       ),
-    exportMission: (missionId, outPath, transfer = {}) =>
+    exportInitiative: (missionId, outPath, transfer = {}) =>
       authorize<AtlasMissionBundleExport>(
-        'export-mission',
-        { missionId, out: outPath, ...transfer },
+        'export-initiative',
+        { initiativeId: missionId, out: outPath, ...transfer },
         'work-dashboard',
       ),
-    importMission: (fromPath, transfer = {}) =>
+    importInitiative: (fromPath, transfer = {}) =>
       authorize<AtlasMissionBundleImport>(
-        'import-mission',
+        'import-initiative',
         { from: fromPath, ...transfer },
         'work-dashboard',
       ),
@@ -846,15 +846,15 @@ export function openMissionControlProfile(
     claimCompletion: (missionId, goalId, input) =>
       authorize<AtlasCompletionClaimWrite>(
         'claim-completion',
-        { missionId, goalId, ...input },
+        { initiativeId: missionId, assignmentId: goalId, ...input },
         input.actor,
       ),
     assessCompletion: (missionId, goalId, assessment = {}) =>
       authorize<AtlasMissionControlReport>(
         'assess-progress',
         {
-          missionId,
-          goalId,
+          initiativeId: missionId,
+          assignmentId: goalId,
           source: assessment.source,
           purpose: assessment.purpose ?? 'handoff',
           authorizedBy: assessment.authorizedBy,
@@ -865,8 +865,8 @@ export function openMissionControlProfile(
       authorize<AtlasMissionControlReport>(
         'assess-progress',
         {
-          missionId,
-          goalId,
+          initiativeId: missionId,
+          assignmentId: goalId,
           source: assessment.source,
           purpose: assessment.purpose ?? 'handoff',
           authorizedBy: assessment.authorizedBy,
@@ -876,13 +876,13 @@ export function openMissionControlProfile(
     reviewCompletion: (missionId, goalId, input) =>
       authorize<AtlasIndependentReview>(
         'review-completion',
-        { missionId, goalId, ...input },
+        { initiativeId: missionId, assignmentId: goalId, ...input },
         input.reviewer,
       ),
     decideContinuation: (missionId, goalId, input) =>
       authorize<AtlasContinuationDecision>(
         'decide-continuation',
-        { missionId, goalId, ...input },
+        { initiativeId: missionId, assignmentId: goalId, ...input },
         input.actor,
       ),
     goals: (filter = {}) => member<AtlasGoal[]>('goals', filter),
@@ -892,3 +892,6 @@ export function openMissionControlProfile(
     markers: () => member<AtlasMarker[]>('markers'),
   };
 }
+
+/** Explicit compatibility alias for callers that have not migrated yet. */
+export const openMissionControlProfile = openWorkControlProfile;

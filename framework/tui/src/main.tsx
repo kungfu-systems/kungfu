@@ -20,10 +20,6 @@ import { Box, Text, render, useApp } from 'ink';
 import React from 'react';
 
 import { loadTuiKfxPlan } from './kfx-plan.js';
-import {
-  degradedMissionControlModel,
-  loadMissionControlContribution,
-} from './mission-control-contribution.js';
 import { boundedIndex, decodeShellKey } from './navigation.js';
 import {
   ProfileShell,
@@ -31,6 +27,10 @@ import {
   type TerminalDimensions,
 } from './profile-shell.js';
 import { TerminalLifecycle } from './terminal-lifecycle.js';
+import {
+  degradedWorkControlModel,
+  loadWorkControlContribution,
+} from './work-control-contribution.js';
 import { workLoopShellModel } from './work-loop-contribution.js';
 
 const nodeRequire = createRequire(import.meta.url);
@@ -135,7 +135,7 @@ class DimensionStore {
   }
 }
 
-function MissionControlHost({
+function WorkControlHost({
   profile,
   workLoop,
   dimensions,
@@ -150,7 +150,7 @@ function MissionControlHost({
   const kfxPlan = React.useMemo(() => loadTuiKfxPlan(process.env), []);
   const [size, setSize] = React.useState(dimensions.get());
   const [model, setModel] = React.useState<ProfileShellModel>(() =>
-    degradedMissionControlModel('loading public Profile projection'),
+    degradedWorkControlModel('loading public Profile projection'),
   );
   const [busy, setBusy] = React.useState(true);
   const [selectedCard, setSelectedCard] = React.useState(0);
@@ -158,14 +158,14 @@ function MissionControlHost({
   const refreshGeneration = React.useRef(0);
 
   const refresh = React.useCallback(
-    async (missionId = '') => {
+    async (initiativeId = '') => {
       const generation = ++refreshGeneration.current;
       setBusy(true);
       try {
-        const next = await loadMissionControlContribution(
+        const next = await loadWorkControlContribution(
           profile,
           kfxPlan,
-          missionId,
+          initiativeId,
         );
         let loopProjection: ProfileShellModel['workLoop'];
         let loopError = '';
@@ -188,7 +188,7 @@ function MissionControlHost({
         }
       } catch (error) {
         if (generation === refreshGeneration.current) {
-          setModel(degradedMissionControlModel(error));
+          setModel(degradedWorkControlModel(error));
         }
       } finally {
         if (generation === refreshGeneration.current) setBusy(false);
@@ -205,7 +205,7 @@ function MissionControlHost({
     [],
   );
   React.useEffect(() => {
-    void refresh(process.env.KF_MISSION_ID || '');
+    void refresh(process.env.KF_INITIATIVE_ID || '');
   }, [refresh]);
   React.useEffect(() => {
     const onData = (chunk: Buffer | string) => {
@@ -471,7 +471,7 @@ function ProductHost({
     );
   }
   return (
-    <MissionControlHost
+    <WorkControlHost
       profile={openTuiProfile()}
       workLoop={openTuiWorkLoop()}
       dimensions={dimensions}
@@ -496,7 +496,7 @@ function printNonInteractiveDiagnostic(): void {
 async function main(): Promise<void> {
   if (process.argv.includes('--help')) {
     process.stdout.write(
-      'Kungfu Mission Control TUI\n\nRun in an interactive terminal.\nAgent brief: `kungfu agent brief`.\n',
+      'Kungfu Work Control TUI\n\nRun in an interactive terminal.\nAgent brief: `kungfu agent brief`.\n',
     );
     return;
   }

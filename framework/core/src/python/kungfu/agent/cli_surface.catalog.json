@@ -1,7 +1,7 @@
 {
-  "catalogRoot": "sha256:8aaf11a7ea3fd572ce07970d62309eb606086063777c8b9256a296cd65115b65",
+  "catalogRoot": "sha256:3aead9de7d0beb5971796cca4d989091ca4b297619216e56d9f574f236c35363",
   "contractId": "kungfu-cli-surface",
-  "contractRoot": "sha256:309946625431241a011f3d07d7d2928c904101cea41db8021bd729c25071112c",
+  "contractRoot": "sha256:7ff693da5be528206a6334e1ab22d1bc93949ca19696ab44200c9675db24438b",
   "kfd3Linkage": [
     {"apiIds":[],"reason":"navigation-only","state":"unlinked","surfaceId":"kungfu.cli.commands.kfc"},
     {"apiIds":[],"reason":"no-agent-first-api-declared","state":"unlinked","surfaceId":"kungfu.cli.commands.action.action"},
@@ -207,9 +207,8 @@
     {"apiIds":["kungfu.profile.read"],"reason":null,"state":"linked","surfaceId":"kungfu.cli.commands.profile.list.profiles"},
     {"apiIds":["kungfu.profile.manager"],"reason":null,"state":"linked","surfaceId":"kungfu.cli.commands.profile.manager"},
     {"apiIds":["kungfu.profile.action"],"reason":null,"state":"linked","surfaceId":"kungfu.cli.commands.profile.member.call"},
-    {"apiIds":[],"reason":"navigation-only","state":"unlinked","surfaceId":"kungfu.cli.commands.atlas.mission.control"},
+    {"apiIds":["kungfu.atlas.assess-mission"],"reason":null,"state":"linked","surfaceId":"kungfu.cli.commands.atlas.mission.control"},
     {"apiIds":["kungfu.atlas.assess-completion"],"reason":null,"state":"linked","surfaceId":"kungfu.cli.commands.atlas.assess.completion.cmd"},
-    {"apiIds":["kungfu.atlas.assess-mission"],"reason":null,"state":"linked","surfaceId":"kungfu.cli.commands.atlas.assess.mission"},
     {"apiIds":["kungfu.atlas.authority-cutover"],"reason":null,"state":"linked","surfaceId":"kungfu.cli.commands.atlas.authority.cutover.cmd"},
     {"apiIds":["kungfu.atlas.authority-rollback"],"reason":null,"state":"linked","surfaceId":"kungfu.cli.commands.atlas.authority.rollback.cmd"},
     {"apiIds":["kungfu.atlas.authority-status"],"reason":null,"state":"linked","surfaceId":"kungfu.cli.commands.atlas.authority.status.cmd"},
@@ -446,11 +445,11 @@
       "kfd3Registry": "strict-link",
       "packagedInventory": "required-agent-pack-entry"
     },
-    "expectedSurfaceRoot": "sha256:6fe06d08bfe07444de697916bc46b5551a81ae8920b4db7d80072e83c938d5a2",
+    "expectedSurfaceRoot": "sha256:451140a0ed72260398d0fecf295b54f28882b253b8198af7bc90be03e168f1b6",
     "regeneration": "./shifu fix:cli-catalog-parity",
     "validation": "./shifu check:cli-catalog-parity"
   },
-  "registryRoot": "sha256:e317355649a816037a89efd815dd1c7a7b68dd124ff3e06c53dbffc80768a11f",
+  "registryRoot": "sha256:90c0d1a92c9343342413d26a7af0115f371c182faaa3df6adfcbcf36eba78c75",
   "schema": "kungfu.cli-surface-catalog/v1",
   "schemaRoot": "sha256:30e0c49658aee967b24294362af12e977c8d62eaa455eb83ffdaa50072021569",
   "source": {
@@ -463,7 +462,7 @@
     "pathAuthority": "live-click-tree",
     "root": "kungfu"
   },
-  "surfaceRoot": "sha256:6fe06d08bfe07444de697916bc46b5551a81ae8920b4db7d80072e83c938d5a2",
+  "surfaceRoot": "sha256:451140a0ed72260398d0fecf295b54f28882b253b8198af7bc90be03e168f1b6",
   "surfaces": [
     {
       "aliases": [],
@@ -14416,10 +14415,12 @@
       },
       "canonical_path": "kungfu profile mission-control",
       "id": "kungfu.cli.commands.atlas.mission.control",
-      "kfd3_api_id": null,
-      "kfd3_api_ids": [],
+      "kfd3_api_id": "kungfu.atlas.assess-mission",
+      "kfd3_api_ids": [
+        "kungfu.atlas.assess-mission"
+      ],
       "kind": "group",
-      "maturity": "stable",
+      "maturity": "experimental",
       "mutation_class": "read",
       "owner": "core",
       "parameters": [
@@ -14438,15 +14439,15 @@
       ],
       "path_depth": 3,
       "schema_refs": [],
-      "section": "start-here",
+      "section": "internal",
       "source": {
         "familyPolicy": true,
         "kind": "runtime-click",
         "module": "kungfu.cli.commands.atlas",
         "symbol": "mission_control"
       },
-      "summary": "operate the installed Mission Control Profile",
-      "visibility": "advanced"
+      "summary": "operate the legacy Mission Control compatibility reader",
+      "visibility": "hidden-internal"
     },
     {
       "aliases": [],
@@ -14568,120 +14569,6 @@
       },
       "summary": "assess one Go completion claim for a declared purpose",
       "visibility": "advanced"
-    },
-    {
-      "aliases": [],
-      "approval_policy": {
-        "caller_confirmation_required": false,
-        "mode": "authorization-artifact",
-        "preconditions": []
-      },
-      "audience": [
-        "human",
-        "agent"
-      ],
-      "availability": {
-        "conditions": [
-          "source-runtime"
-        ],
-        "state": "available"
-      },
-      "canonical_path": "kungfu profile mission-control assess-mission",
-      "id": "kungfu.cli.commands.atlas.assess.mission",
-      "kfd3_api_id": "kungfu.atlas.assess-mission",
-      "kfd3_api_ids": [
-        "kungfu.atlas.assess-mission"
-      ],
-      "kind": "command",
-      "maturity": "experimental",
-      "mutation_class": "plan",
-      "owner": "profile-kfx",
-      "parameters": [
-        {
-          "arity": 1,
-          "kind": "argument",
-          "name": "mission_id",
-          "required": true,
-          "type": "text"
-        },
-        {
-          "arity": 1,
-          "flags": [
-            "--source"
-          ],
-          "hidden": false,
-          "kind": "option",
-          "name": "storage_source_id",
-          "required": false,
-          "type": "text"
-        },
-        {
-          "arity": 1,
-          "flags": [
-            "--purpose"
-          ],
-          "hidden": false,
-          "kind": "option",
-          "name": "purpose",
-          "required": false,
-          "type": "text"
-        },
-        {
-          "arity": 1,
-          "flags": [
-            "--cut-system-time"
-          ],
-          "hidden": false,
-          "kind": "option",
-          "name": "cut_system_time",
-          "required": false,
-          "type": "integer"
-        },
-        {
-          "arity": 1,
-          "flags": [
-            "--executor"
-          ],
-          "hidden": false,
-          "kind": "option",
-          "name": "executor_profile",
-          "required": false,
-          "type": "choice"
-        },
-        {
-          "arity": 1,
-          "flags": [
-            "--authorized-by"
-          ],
-          "hidden": false,
-          "kind": "option",
-          "name": "authorized_by",
-          "required": false,
-          "type": "text"
-        },
-        {
-          "arity": 1,
-          "flags": [
-            "--json"
-          ],
-          "hidden": false,
-          "kind": "option",
-          "name": "as_json",
-          "required": false,
-          "type": "boolean"
-        }
-      ],
-      "path_depth": 4,
-      "schema_refs": [],
-      "section": "start-here",
-      "source": {
-        "familyPolicy": true,
-        "kind": "runtime-click",
-        "module": "kungfu.cli.commands.atlas",
-        "symbol": "assess_mission"
-      },
-      "summary": "query admitted Mission/Go facts and persist a purpose-bound TrustReport",
-      "visibility": "public"
     },
     {
       "aliases": [],
@@ -27889,6 +27776,17 @@
           "hidden": false,
           "kind": "option",
           "name": "assignment_id",
+          "required": false,
+          "type": "text"
+        },
+        {
+          "arity": 1,
+          "flags": [
+            "--initiative-admission"
+          ],
+          "hidden": false,
+          "kind": "option",
+          "name": "initiative_admission",
           "required": false,
           "type": "text"
         },

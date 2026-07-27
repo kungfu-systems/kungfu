@@ -3,8 +3,8 @@
   "evidenceStrength": "independently-observed",
   "claims": [
     {
-      "id": "mission-progress-is-reasonable",
-      "type": "kungfu.mission-control.reasonable-progress/v1",
+      "id": "initiative-progress-is-reasonable",
+      "type": "kungfu.work-control.reasonable-progress/v1",
       "factSurfaces": [
         "kungfu.initiative-assignment.initiative",
         "kungfu.initiative-assignment.assignment"
@@ -12,7 +12,7 @@
     },
     {
       "id": "task-completed",
-      "type": "kungfu.mission-control.task-completed/v1",
+      "type": "kungfu.work-control.task-completed/v1",
       "factSurfaces": [
         "kungfu.initiative-assignment.assignment",
         "kungfu.initiative-assignment.completion-claim"
