@@ -188,6 +188,33 @@ test('KFX plan projects the declared Work Control GUI experience', () => {
   );
 });
 
+test('KFX plan discovers the stable Agent Work Lab Suite membership', () => {
+  const plan = planKfx(
+    {
+      KUNGFU_KFX_CONTRACT: path.join(
+        root,
+        'framework/kfx/kungfu-kfx.contract.json',
+      ),
+      KF_EXTENSION_PATH: path.join(root, 'extensions'),
+    },
+    planDeps,
+  );
+  assert.deepEqual(plan.suites['kungfu.agent-work-lab'], {
+    title: 'Agent Work Lab',
+    members: [
+      'agent-work-lab-catalog',
+      'agent-work-lab-gui',
+      'agent-work-lab-tui',
+    ],
+  });
+  assert.equal(
+    plan.failures.some((failure) =>
+      failure.dir.includes(path.join('extensions', 'agent-work-lab')),
+    ),
+    false,
+  );
+});
+
 test('KFX package contract rejects unknown or duplicate product roles', () => {
   const manifest = {
     name: '@example/view',

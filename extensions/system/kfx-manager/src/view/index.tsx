@@ -232,6 +232,7 @@ function KfxManagerView({ caps, shell }: KfxViewProps) {
     Record<string, string>
   >({});
   const [loading, setLoading] = React.useState(true);
+  const initialLoad = React.useRef(true);
   const [pending, setPending] = React.useState<{
     plan: ProfileLifecyclePlan;
     action: 'qualify' | 'activate' | 'upgrade';
@@ -255,10 +256,11 @@ function KfxManagerView({ caps, shell }: KfxViewProps) {
 
   const refresh = React.useCallback(async () => {
     if (!caps.profile) return;
-    setLoading(true);
+    if (initialLoad.current) setLoading(true);
     try {
       const next = await caps.profile.managerAsync();
       setManager(next);
+      initialLoad.current = false;
       const rows = await Promise.all(
         next.profiles
           .filter((managed) => managed.source)

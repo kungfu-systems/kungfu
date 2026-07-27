@@ -507,7 +507,10 @@ export function sourceAcceptancePlan(files, evidenceBaseCommit = '') {
   const guiTypeScript = files.filter(
     (file) => file.startsWith('framework/gui/src/') && /\.tsx?$/.test(file),
   );
-  if (guiTypeScript.length) {
+  if (
+    guiTypeScript.length &&
+    process.env.KUNGFU_READONLY_NESTED_SOURCE_ACCEPTANCE !== '1'
+  ) {
     plan.push({
       label: 'changed GUI TypeScript check',
       command: process.execPath,

@@ -124,3 +124,49 @@ test('late renderer immediately receives the retained snapshot', () => {
   assert.equal(received.length, 1);
   host.dispose();
 });
+
+test('first renderer receives the last verified observer cache before a live scan', () => {
+  const child = fakeChild();
+  const host = createGlobalWorkObserverHost({
+    bin: '/kungfu',
+    env: {},
+    statePath: '/state',
+    readState: () =>
+      JSON.stringify({
+        schema: 'kungfu.gui.global-work-observer/v2',
+        query: {
+          schema: 'kungfu.workspace-federation.query/v1',
+          observed_at: '2026-07-27T14:29:26Z',
+          aggregate: { state: 'partial' },
+          global_work: {
+            visible_work: [
+              {
+                canonical_root: 'sha256:initiative',
+                object_kind: 'initiative',
+              },
+              {
+                canonical_root: 'sha256:assignment',
+                object_kind: 'assignment',
+              },
+            ],
+          },
+        },
+      }),
+    spawn: () => child as never,
+    restart: () => ({}) as NodeJS.Timeout,
+    cancelRestart: () => {},
+  });
+  const received: unknown[] = [];
+  host.subscribe('renderer', (event) => received.push(event));
+  assert.equal(received.length, 1);
+  assert.equal((received[0] as { mode: string }).mode, 'resume');
+  assert.equal(
+    (
+      received[0] as {
+        snapshot: { global_work: { visible_work: unknown[] } };
+      }
+    ).snapshot.global_work.visible_work.length,
+    2,
+  );
+  host.dispose();
+});

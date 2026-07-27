@@ -29,6 +29,7 @@ export type GlobalWorkObserverHostDeps = {
   bin: string;
   env: NodeJS.ProcessEnv;
   statePath: string;
+  readState?: (path: string) => string;
   spawn: (
     file: string,
     args: string[],
@@ -63,6 +64,38 @@ function snapshotRevision(event: GlobalWorkObserverEvent): string {
     aggregate: event.snapshot.aggregate,
     verification: event.snapshot.verification,
   });
+}
+
+function cachedObserverSnapshot(value: string): GlobalWorkObserverEvent | null {
+  try {
+    const state = JSON.parse(value) as {
+      schema?: string;
+      query?: Record<string, unknown>;
+    };
+    const query = state.query;
+    const globalWork = query?.global_work as
+      | { visible_work?: unknown }
+      | undefined;
+    if (
+      state.schema !== 'kungfu.gui.global-work-observer/v2' ||
+      query?.schema !== 'kungfu.workspace-federation.query/v1' ||
+      !Array.isArray(globalWork?.visible_work)
+    ) {
+      return null;
+    }
+    return {
+      schema: 'kungfu.gui.global-work-observer-event/v1',
+      kind: 'snapshot',
+      mode: 'resume',
+      observed_at:
+        typeof query.observed_at === 'string' ? query.observed_at : '',
+      latency_ms: 0,
+      changed_workspace_ids: [],
+      snapshot: query,
+    };
+  } catch {
+    return null;
+  }
 }
 
 export function createGlobalWorkObserverHost(deps: GlobalWorkObserverHostDeps) {
@@ -159,6 +192,17 @@ export function createGlobalWorkObserverHost(deps: GlobalWorkObserverHostDeps) {
       subscriber: (event: GlobalWorkObserverEvent) => void,
     ) {
       subscribers.set(clientKey, subscriber);
+      if (!latestSnapshot && deps.readState) {
+        try {
+          const cached = cachedObserverSnapshot(deps.readState(deps.statePath));
+          if (cached) {
+            latestSnapshot = cached;
+            latestRevision = snapshotRevision(cached);
+          }
+        } catch {
+          // A missing or partial cache never blocks the live observer.
+        }
+      }
       if (latestSnapshot) subscriber(latestSnapshot);
       start();
     },

@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
-// Shared adapter over the Core Agent Qualification Lab. Hosts inject process
+// Shared adapter over the Core Agent Work Lab. Hosts inject process
 // execution; GUI and TUI receive the same startup route, plans, receipts,
 // assessments and reports and own no private semantic state.
 import type { AgentRuntimeCatalog } from './agent-runtime.js';

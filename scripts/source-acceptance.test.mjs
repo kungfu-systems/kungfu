@@ -457,6 +457,29 @@ test('changed GUI TypeScript receives a file-scoped semantic check', () => {
   ]);
 });
 
+test('cold read-only source acceptance skips dependency-backed GUI TypeScript', () => {
+  const previous = process.env.KUNGFU_READONLY_NESTED_SOURCE_ACCEPTANCE;
+  process.env.KUNGFU_READONLY_NESTED_SOURCE_ACCEPTANCE = '1';
+  try {
+    const plan = sourceAcceptancePlan([
+      'framework/gui/src/renderer/src/runtime.ts',
+    ]);
+    assert.equal(
+      plan.some((step) => step.label === 'changed GUI TypeScript check'),
+      false,
+    );
+  } finally {
+    if (previous === undefined) {
+      Reflect.deleteProperty(
+        process.env,
+        'KUNGFU_READONLY_NESTED_SOURCE_ACCEPTANCE',
+      );
+    } else {
+      process.env.KUNGFU_READONLY_NESTED_SOURCE_ACCEPTANCE = previous;
+    }
+  }
+});
+
 test('RocksDB source archive keeps an explicit tar filename', () => {
   const recipe = fs.readFileSync(
     path.join(ROOT, 'framework/core/.conan/recipes/rocksdb/conanfile.py'),

@@ -4,41 +4,42 @@ import { execFile, execFileSync, spawn } from 'node:child_process';
 import fs from 'node:fs';
 import { createRequire } from 'node:module';
 import { constants as osConstants } from 'node:os';
+import { homedir } from 'node:os';
 import path from 'node:path';
 import {
-  type Profile,
+  type GlobalWorkSnapshot,
+  type ProductSearchDocument,
   type QualificationLab,
-  type QualificationLabEvent,
-  type QualificationLabReport,
   type QualificationLabStartupRoute,
-  type WorkLoop,
-  openProfile,
+  SYSTEM_HELP_DOCUMENTS,
+  loadCliHelpSearchDocuments,
   openQualificationLab,
-  openWorkLoop,
   qualificationLabStartupSurface,
-  qualificationRunProgressLabel,
+  searchProductDocuments,
 } from '@kungfu-tech/api/capability';
 import { Box, Text, render, useApp } from 'ink';
 import React from 'react';
 
-import { loadTuiKfxPlan } from './kfx-plan.js';
 import { boundedIndex, decodeShellKey } from './navigation.js';
 import {
+  CLOSED_CONTROL_PLANE,
+  ControlPlaneBar,
+  ControlPlaneOverlay,
+  type ControlPlaneState,
   ProfileShell,
   type ProfileShellModel,
+  QUICK_COMMANDS,
   type TerminalDimensions,
+  createControlPlaneInputFence,
+  quickCommandMatches,
+  reduceControlPlaneInput,
 } from './profile-shell.js';
 import {
-  QualificationLabView,
-  type TuiQualificationFocus,
-  type TuiQualificationMode,
-  type TuiQualificationNextPrompt,
-  type TuiQualificationReportDetail,
-  isQualificationReportReturnInput,
-  nextQualificationFocus,
-  qualificationEventLines,
-  qualificationEventRunningSession,
-  qualificationNextModePrompt,
+  AGENT_WORK_LAB_QUICK_COMMANDS,
+  type AgentWorkLabActionRequest,
+  AgentWorkLabHost,
+  type AgentWorkLabSuiteAction,
+  agentWorkLabActionReturnsToControls,
 } from './qualification-lab-view.js';
 import {
   IncrementalTerminalOutput,
@@ -50,10 +51,11 @@ import {
   resolveTuiRuntimeDir,
 } from './terminal-lifecycle.js';
 import {
-  degradedWorkControlModel,
-  loadWorkControlContribution,
+  degradedGlobalWorkModel,
+  globalWorkContribution,
+  loadLatestGlobalWorkCache,
+  startGlobalWorkObserver,
 } from './work-control-contribution.js';
-import { workLoopShellModel } from './work-loop-contribution.js';
 
 const nodeRequire = createRequire(import.meta.url);
 
@@ -87,30 +89,13 @@ function runtimePaths() {
         'kungfu-config.contract.json',
       ),
     }),
+    configHome:
+      process.env.KF_CONFIG_HOME || path.join(homedir(), '.kungfu-config'),
     bin:
       process.env.KUNGFU_CLI_BIN ||
       process.env.KUNGFU_BIN ||
       (fs.existsSync(packagedBin) ? packagedBin : 'kungfu'),
-    repoRoot: process.env.KF_WORKSPACE_ROOT || process.cwd(),
   };
-}
-
-function openTuiProfile(): Profile {
-  const paths = runtimePaths();
-  return openProfile({
-    runtimeDir: paths.runtimeDir,
-    bin: paths.bin,
-    env: cliEnvironment(),
-    execFileSync: (file, args, options) => execFileSync(file, args, options),
-    execFile: (file, args, options) =>
-      new Promise<string>((resolve, reject) => {
-        execFile(file, args, options, (error, stdout, stderr) => {
-          if (error)
-            reject(new Error(describeCliFailure(error, stdout, stderr)));
-          else resolve(stdout);
-        });
-      }),
-  });
 }
 
 function openTuiQualificationLab(): QualificationLab {
@@ -195,24 +180,6 @@ function openTuiQualificationLab(): QualificationLab {
   });
 }
 
-function openTuiWorkLoop(): WorkLoop {
-  const paths = runtimePaths();
-  return openWorkLoop({
-    runtimeDir: paths.runtimeDir,
-    repoRoot: paths.repoRoot,
-    bin: paths.bin,
-    env: cliEnvironment(),
-    execFile: (file, args, options) =>
-      new Promise<string>((resolve, reject) => {
-        execFile(file, args, options, (error, stdout, stderr) => {
-          if (error)
-            reject(new Error(describeCliFailure(error, stdout, stderr)));
-          else resolve(stdout);
-        });
-      }),
-  });
-}
-
 class DimensionStore {
   private listeners = new Set<(dimensions: TerminalDimensions) => void>();
   constructor(private current: TerminalDimensions) {}
@@ -231,86 +198,127 @@ class DimensionStore {
   }
 }
 
+class InsetDimensionSource {
+  constructor(
+    private readonly source: DimensionStore,
+    private readonly bottomRows: number,
+  ) {}
+  private map(dimensions: TerminalDimensions): TerminalDimensions {
+    return {
+      ...dimensions,
+      rows: Math.max(8, dimensions.rows - this.bottomRows),
+    };
+  }
+  get() {
+    return this.map(this.source.get());
+  }
+  subscribe(listener: (dimensions: TerminalDimensions) => void) {
+    return this.source.subscribe((dimensions) =>
+      listener(this.map(dimensions)),
+    );
+  }
+}
+
 function WorkControlHost({
-  profile,
-  workLoop,
   dimensions,
   onOpenLab,
+  onSearchDocuments,
+  isInputCaptured,
 }: {
-  profile: Profile;
-  workLoop: WorkLoop;
-  dimensions: DimensionStore;
+  dimensions: InsetDimensionSource;
   onOpenLab: () => void;
+  onSearchDocuments: (documents: ProductSearchDocument[]) => void;
+  isInputCaptured: () => boolean;
 }) {
   const { exit } = useApp();
-  const kfxPlan = React.useMemo(() => loadTuiKfxPlan(process.env), []);
+  const paths = React.useMemo(() => runtimePaths(), []);
+  const observerStatePath = React.useMemo(
+    () => path.join(paths.configHome, 'tui', 'global-work-observer.json'),
+    [paths.configHome],
+  );
+  const initialSnapshot = React.useMemo(
+    () =>
+      loadLatestGlobalWorkCache(
+        (candidate) => fs.readFileSync(candidate, 'utf8'),
+        [
+          observerStatePath,
+          path.join(paths.configHome, 'gui', 'global-work-observer.json'),
+        ],
+      ),
+    [observerStatePath, paths.configHome],
+  );
   const [size, setSize] = React.useState(dimensions.get());
   const [model, setModel] = React.useState<ProfileShellModel>(() =>
-    degradedWorkControlModel('loading public Profile projection'),
+    initialSnapshot
+      ? globalWorkContribution(initialSnapshot).model
+      : degradedGlobalWorkModel('loading global Portfolio'),
   );
-  const [busy, setBusy] = React.useState(true);
+  const [busy, setBusy] = React.useState(initialSnapshot === null);
+  const [observerError, setObserverError] = React.useState('');
   const [selectedCard, setSelectedCard] = React.useState(0);
   const [activeRegion, setActiveRegion] = React.useState(1);
-  const refreshGeneration = React.useRef(0);
+  const latestRevision = React.useRef('');
 
-  const refresh = React.useCallback(
-    async (initiativeId = '') => {
-      const generation = ++refreshGeneration.current;
-      setBusy(true);
-      try {
-        const next = await loadWorkControlContribution(
-          profile,
-          kfxPlan,
-          initiativeId,
-        );
-        let loopProjection: ProfileShellModel['workLoop'];
-        let loopError = '';
-        if (next.profile.qualified) {
-          try {
-            const [inspection, recovery] = await Promise.all([
-              workLoop.inspect(),
-              workLoop.recover(),
-            ]);
-            loopProjection = workLoopShellModel(inspection, recovery);
-          } catch (error) {
-            loopError = error instanceof Error ? error.message : String(error);
-          }
-        }
-        if (generation === refreshGeneration.current) {
-          setModel({
-            ...next,
-            workLoop: loopProjection,
-            workLoopError: loopError || undefined,
-          });
-          setSelectedCard(0);
-        }
-      } catch (error) {
-        if (generation === refreshGeneration.current) {
-          setModel(degradedWorkControlModel(error));
-        }
-      } finally {
-        if (generation === refreshGeneration.current) setBusy(false);
+  const applySnapshot = React.useCallback(
+    (snapshot: GlobalWorkSnapshot) => {
+      const revision = JSON.stringify({
+        projection: snapshot.global_work.projection_root,
+        observedAt: snapshot.observed_at,
+        visible: snapshot.global_work.visible_work_count,
+        state: snapshot.aggregate.state,
+      });
+      if (revision === latestRevision.current) {
+        setBusy(false);
+        return;
       }
+      latestRevision.current = revision;
+      const contribution = globalWorkContribution(snapshot);
+      setModel(contribution.model);
+      onSearchDocuments(contribution.searchDocuments);
+      setSelectedCard((current) =>
+        Math.min(current, Math.max(0, contribution.model.cards.length - 1)),
+      );
+      setObserverError('');
+      setBusy(false);
     },
-    [profile, workLoop, kfxPlan],
+    [onSearchDocuments],
   );
 
   React.useEffect(() => dimensions.subscribe(setSize), [dimensions]);
-  React.useEffect(
-    () => () => {
-      refreshGeneration.current += 1;
-    },
-    [],
-  );
   React.useEffect(() => {
-    void refresh(process.env.KF_INITIATIVE_ID || '');
-  }, [refresh]);
+    if (initialSnapshot) applySnapshot(initialSnapshot);
+    fs.mkdirSync(path.dirname(observerStatePath), { recursive: true });
+    return startGlobalWorkObserver({
+      bin: paths.bin,
+      env: cliEnvironment(),
+      statePath: observerStatePath,
+      spawn: (file, args, options) => spawn(file, args, options),
+      onSnapshot: applySnapshot,
+      onError: (error) => {
+        setObserverError(error.message);
+        setBusy(false);
+      },
+    });
+  }, [applySnapshot, initialSnapshot, observerStatePath, paths.bin]);
   React.useEffect(() => {
     const onData = (chunk: Buffer | string) => {
+      if (isInputCaptured()) return;
       const key = decodeShellKey(String(chunk));
       if (key === 'quit') return exit();
       if (key === 'qualification-lab') return onOpenLab();
-      if (key === 'refresh') return void refresh(model.subject.id);
+      if (key === 'refresh') {
+        setBusy(true);
+        const cached = loadLatestGlobalWorkCache(
+          (candidate) => fs.readFileSync(candidate, 'utf8'),
+          [
+            observerStatePath,
+            path.join(paths.configHome, 'gui', 'global-work-observer.json'),
+          ],
+        );
+        if (cached) applySnapshot(cached);
+        else setBusy(false);
+        return;
+      }
       if (key === 'next-card') {
         setSelectedCard((current) =>
           boundedIndex(current, 1, model.cards.length),
@@ -323,289 +331,6 @@ function WorkControlHost({
         setActiveRegion((current) => boundedIndex(current, 1, 3));
       } else if (key === 'previous-region') {
         setActiveRegion((current) => boundedIndex(current, -1, 3));
-      } else if (key === 'next-subject' || key === 'previous-subject') {
-        const current = model.navigation.findIndex(
-          (row) => row.id === model.subject.id,
-        );
-        const delta = key === 'next-subject' ? 1 : -1;
-        const next =
-          model.navigation[
-            boundedIndex(current, delta, model.navigation.length)
-          ];
-        if (next) void refresh(next.id);
-      }
-    };
-    process.stdin.on('data', onData);
-    return () => {
-      process.stdin.off('data', onData);
-    };
-  }, [exit, model, onOpenLab, refresh]);
-
-  return (
-    <ProfileShell
-      model={model}
-      dimensions={size}
-      selectedCard={selectedCard}
-      activeRegion={activeRegion}
-      busy={busy}
-    />
-  );
-}
-
-function QualificationLabHost({
-  lab,
-  startup,
-  dimensions,
-  onOpenWork,
-}: {
-  lab: QualificationLab;
-  startup: QualificationLabStartupRoute;
-  dimensions: DimensionStore;
-  onOpenWork?: () => void;
-}) {
-  const { exit } = useApp();
-  const [size, setSize] = React.useState(dimensions.get());
-  const [agents, setAgents] = React.useState<
-    Awaited<ReturnType<QualificationLab['discoverAgents']>> | undefined
-  >();
-  const [mode, setMode] = React.useState<TuiQualificationMode>('offline-demo');
-  const [selected, setSelected] = React.useState(0);
-  const [target, setTarget] = React.useState(0);
-  const [report, setReport] = React.useState<QualificationLabReport>();
-  const [lines, setLines] = React.useState<
-    ReturnType<typeof qualificationEventLines>
-  >([]);
-  const [activeFocus, setActiveFocus] =
-    React.useState<TuiQualificationFocus>('session-1');
-  const [reportDetail, setReportDetail] =
-    React.useState<TuiQualificationReportDetail>();
-  const [nextPrompt, setNextPrompt] =
-    React.useState<TuiQualificationNextPrompt>();
-  const [scrollBack, setScrollBack] = React.useState<Record<1 | 2, number>>({
-    1: 0,
-    2: 0,
-  });
-  const [showHelp, setShowHelp] = React.useState(false);
-  const [busy, setBusy] = React.useState('');
-  const [error, setError] = React.useState('');
-  const [runProgress, setRunProgress] = React.useState<{
-    startedAt: number;
-    lastEventAt: number;
-    eventCount: number;
-    phase: 'running' | 'assessing';
-  }>();
-  const [runningSession, setRunningSession] = React.useState<1 | 2>();
-  const [progressNow, setProgressNow] = React.useState(() => Date.now());
-  const playbackGeneration = React.useRef(0);
-  const profiles = React.useMemo(
-    () =>
-      Array.from(
-        new Map(
-          [
-            ...(agents?.configured ?? []),
-            ...(agents?.discovered.map((row) => row.profile) ?? []),
-          ].map((profile) => [profile.id, profile]),
-        ).values(),
-      ),
-    [agents],
-  );
-  const discover = React.useCallback(async () => {
-    setBusy('discovering agents');
-    try {
-      setAgents(await lab.discoverAgents());
-      setError('');
-    } catch (reason) {
-      setError(reason instanceof Error ? reason.message : String(reason));
-    } finally {
-      setBusy('');
-    }
-  }, [lab]);
-  React.useEffect(() => {
-    void discover();
-  }, [discover]);
-  React.useEffect(
-    () => dimensions.subscribe((next) => setSize(next)),
-    [dimensions],
-  );
-  React.useEffect(() => {
-    if (!runProgress) return undefined;
-    setProgressNow(Date.now());
-    const timer = setInterval(() => setProgressNow(Date.now()), 1000);
-    return () => clearInterval(timer);
-  }, [runProgress]);
-  React.useEffect(() => {
-    if (!nextPrompt) return undefined;
-    const timer = setTimeout(() => setNextPrompt(undefined), 5000);
-    return () => clearTimeout(timer);
-  }, [nextPrompt]);
-  const runQualification = React.useCallback(
-    (
-      nextMode: TuiQualificationMode,
-      label: string,
-      execute: (
-        onEvent: Parameters<QualificationLab['runDemo']>[0],
-      ) => Promise<QualificationLabReport>,
-    ) => {
-      const generation = playbackGeneration.current + 1;
-      playbackGeneration.current = generation;
-      setMode(nextMode);
-      setBusy(label);
-      setReport(undefined);
-      setLines([]);
-      setActiveFocus('session-1');
-      setReportDetail(undefined);
-      setNextPrompt(undefined);
-      setScrollBack({ 1: 0, 2: 0 });
-      setError('');
-      const startedAt = Date.now();
-      setProgressNow(startedAt);
-      setRunProgress({
-        startedAt,
-        lastEventAt: startedAt,
-        eventCount: 0,
-        phase: 'running',
-      });
-      setRunningSession(1);
-      let queue = Promise.resolve();
-      const receiveEvent = (event: QualificationLabEvent) => {
-        queue = queue.then(
-          () =>
-            new Promise<void>((resolve) => {
-              setTimeout(resolve, 1000);
-            }),
-        );
-        queue = queue.then(() => {
-          if (playbackGeneration.current !== generation) return;
-          const eventSession = qualificationEventRunningSession(event);
-          if (eventSession) setRunningSession(eventSession);
-          setLines((current) => [
-            ...current,
-            ...qualificationEventLines(event),
-          ]);
-          setRunProgress((current) =>
-            current
-              ? {
-                  ...current,
-                  lastEventAt: Date.now(),
-                  eventCount: current.eventCount + 1,
-                }
-              : current,
-          );
-        });
-      };
-      void execute(receiveEvent)
-        .then(async (value) => {
-          await queue;
-          setRunProgress((current) =>
-            current ? { ...current, phase: 'assessing' } : current,
-          );
-          await new Promise<void>((resolve) => {
-            setTimeout(resolve, 520);
-          });
-          if (playbackGeneration.current !== generation) return;
-          setReport(value);
-          setActiveFocus('correct');
-          setNextPrompt(qualificationNextModePrompt(nextMode));
-          setError('');
-        })
-        .catch((reason) => {
-          if (playbackGeneration.current !== generation) return;
-          setError(reason instanceof Error ? reason.message : String(reason));
-        })
-        .finally(() => {
-          if (playbackGeneration.current === generation) {
-            setBusy('');
-            setRunProgress(undefined);
-            setRunningSession(undefined);
-          }
-        });
-    },
-    [],
-  );
-  React.useEffect(() => {
-    const onData = (chunk: Buffer | string) => {
-      const input = String(chunk);
-      if (reportDetail && isQualificationReportReturnInput(input)) {
-        return setReportDetail(undefined);
-      }
-      const key = decodeShellKey(input);
-      if (key === 'quit') return exit();
-      if (input === '\t')
-        return setActiveFocus((current) =>
-          nextQualificationFocus(current, Boolean(report)),
-        );
-      if (
-        report &&
-        (input === '\r' || input === '\n') &&
-        (activeFocus === 'correct' || activeFocus === 'failed')
-      ) {
-        return setReportDetail(activeFocus);
-      }
-      const focusedSession =
-        activeFocus === 'session-1'
-          ? 1
-          : activeFocus === 'session-2'
-            ? 2
-            : undefined;
-      if (input === '\u001b[A' && focusedSession)
-        return setScrollBack((current) => ({
-          ...current,
-          [focusedSession]: current[focusedSession] + 1,
-        }));
-      if (input === '\u001b[B' && focusedSession)
-        return setScrollBack((current) => ({
-          ...current,
-          [focusedSession]: Math.max(0, current[focusedSession] - 1),
-        }));
-      if (input === '?') return setShowHelp((current) => !current);
-      if (key === 'next-card')
-        return setSelected((current) =>
-          boundedIndex(current, 1, profiles.length),
-        );
-      if (key === 'previous-card')
-        return setSelected((current) =>
-          boundedIndex(current, -1, profiles.length),
-        );
-      if (input === ']')
-        return setTarget((current) =>
-          boundedIndex(current, 1, profiles.length),
-        );
-      if (input === '[')
-        return setTarget((current) =>
-          boundedIndex(current, -1, profiles.length),
-        );
-      if (input === 'w' && onOpenWork) return onOpenWork();
-      if (input === 'd' && !busy) {
-        return runQualification(
-          'offline-demo',
-          'running two fresh demo sessions',
-          (onEvent) => lab.runDemo(onEvent),
-        );
-      }
-      if (input === 'x' && !busy && profiles[selected]) {
-        return runQualification(
-          'same-agent',
-          'running selected agent twice',
-          (onEvent) => lab.runAgent(profiles[selected].id, onEvent),
-        );
-      }
-      if (
-        input === 'm' &&
-        !busy &&
-        profiles[selected] &&
-        profiles[target] &&
-        selected !== target
-      ) {
-        return runQualification(
-          'cross-agent',
-          'running cross-provider handoff',
-          (onEvent) =>
-            lab.runMigration(
-              profiles[selected].id,
-              profiles[target].id,
-              onEvent,
-            ),
-        );
       }
     };
     process.stdin.on('data', onData);
@@ -613,61 +338,31 @@ function QualificationLabHost({
       process.stdin.off('data', onData);
     };
   }, [
-    busy,
-    activeFocus,
+    applySnapshot,
     exit,
-    lab,
-    onOpenWork,
-    profiles,
-    report,
-    reportDetail,
-    selected,
-    target,
-    runQualification,
+    isInputCaptured,
+    model.cards.length,
+    observerStatePath,
+    onOpenLab,
+    paths.configHome,
   ]);
-  const sourceLabel =
-    mode === 'offline-demo' ? '' : profiles[selected]?.label || '';
-  const targetLabel =
-    mode === 'offline-demo'
-      ? ''
-      : mode === 'same-agent'
-        ? sourceLabel
-        : profiles[target]?.label || '';
-  const progress = runProgress
-    ? qualificationRunProgressLabel({
-        elapsedMs: progressNow - runProgress.startedAt,
-        quietMs: progressNow - runProgress.lastEventAt,
-        eventCount: runProgress.eventCount,
-        phase: runProgress.phase,
-      })
-    : '';
+
+  const displayedModel = observerError
+    ? {
+        ...model,
+        notice: [model.notice, `live observer: ${observerError}`]
+          .filter(Boolean)
+          .join(' · '),
+      }
+    : model;
+
   return (
-    <QualificationLabView
+    <ProfileShell
+      model={displayedModel}
       dimensions={size}
-      mode={mode}
-      sourceLabel={sourceLabel}
-      targetLabel={targetLabel}
-      lines={lines}
-      report={report}
+      selectedCard={selectedCard}
+      activeRegion={activeRegion}
       busy={busy}
-      progress={progress}
-      error={
-        error ||
-        (startup.route === 'diagnostic'
-          ? `${startup.state} · ${startup.reasonCode}`
-          : '')
-      }
-      activeFocus={activeFocus}
-      scrollBack={scrollBack}
-      showHelp={showHelp}
-      activityFrame={
-        runProgress
-          ? Math.floor((progressNow - runProgress.startedAt) / 1000)
-          : 0
-      }
-      runningSession={runningSession}
-      nextPrompt={nextPrompt}
-      reportDetail={reportDetail}
     />
   );
 }
@@ -687,15 +382,18 @@ const PENDING_STARTUP: QualificationLabStartupRoute = {
 function StartingHost({
   dimensions,
   onOpenLab,
+  isInputCaptured,
 }: {
-  dimensions: DimensionStore;
+  dimensions: InsetDimensionSource;
   onOpenLab: () => void;
+  isInputCaptured: () => boolean;
 }) {
   const { exit } = useApp();
   const [size, setSize] = React.useState(dimensions.get());
   React.useEffect(() => dimensions.subscribe(setSize), [dimensions]);
   React.useEffect(() => {
     const onData = (chunk: Buffer | string) => {
+      if (isInputCaptured()) return;
       const key = decodeShellKey(String(chunk));
       if (key === 'quit') exit();
       if (key === 'qualification-lab') onOpenLab();
@@ -704,7 +402,7 @@ function StartingHost({
     return () => {
       process.stdin.off('data', onData);
     };
-  }, [exit, onOpenLab]);
+  }, [exit, isInputCaptured, onOpenLab]);
   return (
     <Box
       width={size.columns}
@@ -719,7 +417,7 @@ function StartingHost({
       <Text dimColor>
         Reading local Work and exact Profile evidence in the background…
       </Text>
-      <Text dimColor>a qualification lab · q quit</Text>
+      <Text dimColor>[a] Agent Work Lab · q quit</Text>
     </Box>
   );
 }
@@ -731,10 +429,73 @@ function ProductHost({
   lab: QualificationLab;
   dimensions: DimensionStore;
 }) {
+  const { exit } = useApp();
+  const [size, setSize] = React.useState(dimensions.get());
   const [startup, setStartup] = React.useState<QualificationLabStartupRoute>();
   const [surface, setSurface] = React.useState<'auto' | 'lab' | 'work'>('auto');
-  const profile = React.useMemo(() => openTuiProfile(), []);
-  const workLoop = React.useMemo(() => openTuiWorkLoop(), []);
+  const [labActionRequest, setLabActionRequest] =
+    React.useState<AgentWorkLabActionRequest>();
+  const nextLabActionId = React.useRef(0);
+  const [control, setControl] =
+    React.useState<ControlPlaneState>(CLOSED_CONTROL_PLANE);
+  const controlRef = React.useRef(control);
+  const inputFence = React.useMemo(
+    () =>
+      createControlPlaneInputFence(
+        () =>
+          controlRef.current.mode !== 'closed' ||
+          controlRef.current.focus === 'input',
+      ),
+    [],
+  );
+  const [cliDocuments, setCliDocuments] = React.useState<
+    ProductSearchDocument[]
+  >([]);
+  const [workDocuments, setWorkDocuments] = React.useState<
+    ProductSearchDocument[]
+  >([]);
+  const [catalogStatus, setCatalogStatus] = React.useState(
+    'Loading governed command catalog',
+  );
+  const contentDimensions = React.useMemo(
+    () => new InsetDimensionSource(dimensions, 4),
+    [dimensions],
+  );
+  React.useEffect(() => dimensions.subscribe(setSize), [dimensions]);
+  React.useEffect(() => {
+    let active = true;
+    const paths = runtimePaths();
+    void loadCliHelpSearchDocuments({
+      bin: paths.bin,
+      env: cliEnvironment() as Record<string, string | undefined>,
+      execFile: (file, args, options) =>
+        new Promise<string>((resolve, reject) => {
+          execFile(file, args, options, (error, stdout, stderr) => {
+            if (error)
+              reject(new Error(describeCliFailure(error, stdout, stderr)));
+            else resolve(stdout);
+          });
+        }),
+    })
+      .then((documents) => {
+        if (!active) return;
+        setCliDocuments(documents);
+        setCatalogStatus(
+          `${documents.length} governed Help and Command entries`,
+        );
+      })
+      .catch((error) => {
+        if (!active) return;
+        setCatalogStatus(
+          `Command catalog unavailable: ${
+            error instanceof Error ? error.message : String(error)
+          }`,
+        );
+      });
+    return () => {
+      active = false;
+    };
+  }, []);
   React.useEffect(() => {
     let active = true;
     void lab
@@ -760,38 +521,307 @@ function ProductHost({
       active = false;
     };
   }, [lab]);
-  if (!startup && surface !== 'lab') {
-    return (
-      <StartingHost
-        dimensions={dimensions}
-        onOpenLab={() => setSurface('lab')}
-      />
-    );
-  }
+
   const resolvedStartup = startup ?? PENDING_STARTUP;
   const startupSurface = qualificationLabStartupSurface(resolvedStartup);
+  const cachedGlobalWorkPresent = React.useMemo(() => {
+    const paths = runtimePaths();
+    return (
+      (loadLatestGlobalWorkCache(
+        (candidate) => fs.readFileSync(candidate, 'utf8'),
+        [
+          path.join(paths.configHome, 'tui', 'global-work-observer.json'),
+          path.join(paths.configHome, 'gui', 'global-work-observer.json'),
+        ],
+      )?.global_work.visible_work.length ?? 0) > 0
+    );
+  }, []);
   const labOpen =
     surface === 'lab' ||
-    (surface === 'auto' && startupSurface === 'qualification-lab');
-  if (labOpen) {
-    return (
-      <QualificationLabHost
+    (surface === 'auto' &&
+      startupSurface === 'qualification-lab' &&
+      !cachedGlobalWorkPresent);
+  const availableQuickCommands = React.useMemo(
+    () =>
+      labOpen
+        ? [...AGENT_WORK_LAB_QUICK_COMMANDS, ...QUICK_COMMANDS]
+        : QUICK_COMMANDS,
+    [labOpen],
+  );
+  const viewDocuments = React.useMemo<ProductSearchDocument[]>(
+    () => [
+      {
+        id: 'view.work-control',
+        kind: 'view',
+        title: 'Work Control',
+        summary: 'Open the read-only Work and Profile projection.',
+        keywords: ['home', 'assignments', 'initiatives'],
+        action: { kind: 'open-view', viewId: 'work' },
+      },
+      {
+        id: 'view.agent-work-lab',
+        kind: 'view',
+        title: 'Agent Work Lab',
+        summary: 'Compare bounded Agent Work behavior across two Sessions.',
+        keywords: ['qualification', 'handoff', 'session'],
+        action: { kind: 'open-view', viewId: 'lab' },
+      },
+    ],
+    [],
+  );
+  const quickSearchDocuments = React.useMemo<ProductSearchDocument[]>(
+    () =>
+      availableQuickCommands.map((command, index) => ({
+        id: `command.quick.${command.id}`,
+        kind: 'command',
+        title: command.command,
+        summary: command.summary,
+        section: 'Quick actions',
+        keywords: [command.title],
+        priority: index,
+        action: {
+          kind: 'describe-command',
+          command: command.command,
+        },
+      })),
+    [availableQuickCommands],
+  );
+  const documents = React.useMemo(
+    () => [
+      ...SYSTEM_HELP_DOCUMENTS,
+      ...quickSearchDocuments,
+      ...cliDocuments,
+      ...workDocuments,
+      ...viewDocuments,
+    ],
+    [cliDocuments, quickSearchDocuments, viewDocuments, workDocuments],
+  );
+  const searchResults = React.useMemo(
+    () => searchProductDocuments(documents, control.query),
+    [control.query, documents],
+  );
+  const quickCommands = React.useMemo(
+    () => quickCommandMatches(control.query, availableQuickCommands),
+    [availableQuickCommands, control.query],
+  );
+  const searchResultsRef = React.useRef(searchResults);
+  const quickCommandsRef = React.useRef(quickCommands);
+  searchResultsRef.current = searchResults;
+  quickCommandsRef.current = quickCommands;
+
+  const setControlNow = React.useCallback((next: ControlPlaneState) => {
+    controlRef.current = next;
+    setControl(next);
+  }, []);
+  const closeControl = React.useCallback(
+    () => setControlNow(CLOSED_CONTROL_PLANE),
+    [setControlNow],
+  );
+  const dispatchLabAction = React.useCallback(
+    (action: AgentWorkLabSuiteAction) => {
+      nextLabActionId.current += 1;
+      setLabActionRequest({ id: nextLabActionId.current, action });
+    },
+    [],
+  );
+  const acknowledgeLabAction = React.useCallback((id: number) => {
+    setLabActionRequest((current) =>
+      current?.id === id ? undefined : current,
+    );
+  }, []);
+  const activateControl = React.useCallback(() => {
+    const current = controlRef.current;
+    if (current.mode === 'commands') {
+      const command = quickCommandsRef.current[current.selected];
+      if (!command) return;
+      if (command.action === 'help') {
+        setControlNow({
+          mode: 'help',
+          focus: 'input',
+          query: '',
+          selected: 0,
+        });
+      } else if (command.action === 'search') {
+        setControlNow({
+          mode: 'search',
+          focus: 'input',
+          query: '',
+          selected: 0,
+        });
+      } else if (command.action === 'health') {
+        const health =
+          cliDocuments.find(
+            (document) =>
+              document.action.kind === 'describe-command' &&
+              document.action.command === 'kungfu health',
+          ) ??
+          ({
+            id: 'command.health',
+            kind: 'command',
+            title: 'kungfu health',
+            summary:
+              'Inspect read-only runtime, Peer, storage, and Episode health.',
+            section: 'Governed Commands',
+            keywords: ['health', 'runtime', 'peer', 'storage', 'episode'],
+            priority: 0,
+            action: {
+              kind: 'describe-command',
+              command: 'kungfu health',
+            },
+          } satisfies ProductSearchDocument);
+        setControlNow({
+          mode: 'detail',
+          focus: 'input',
+          query: 'health',
+          selected: 0,
+          detail: health,
+        });
+      } else if (command.action === 'work') {
+        setSurface('work');
+        closeControl();
+      } else if (command.action === 'lab') {
+        setSurface('lab');
+        closeControl();
+      } else if (command.action === 'home') {
+        setSurface('auto');
+        closeControl();
+      } else if (command.action === 'quit') {
+        exit();
+      } else if (
+        AGENT_WORK_LAB_QUICK_COMMANDS.some(
+          (candidate) => candidate.action === command.action,
+        )
+      ) {
+        setSurface('lab');
+        dispatchLabAction(command.action as AgentWorkLabSuiteAction);
+        setControlNow(
+          agentWorkLabActionReturnsToControls(
+            command.action as AgentWorkLabSuiteAction,
+          )
+            ? { ...CLOSED_CONTROL_PLANE, focus: 'workspace' }
+            : CLOSED_CONTROL_PLANE,
+        );
+      }
+      return;
+    }
+    if (current.mode !== 'search') return;
+    const result = searchResultsRef.current[current.selected];
+    if (!result) return;
+    if (result.action.kind === 'open-work') {
+      setSurface('work');
+      closeControl();
+    } else if (result.action.kind === 'open-view') {
+      setSurface(result.action.viewId === 'lab' ? 'lab' : 'work');
+      closeControl();
+    } else {
+      setControlNow({
+        mode: 'detail',
+        focus: 'input',
+        query: current.query,
+        selected: current.selected,
+        detail: result,
+      });
+    }
+  }, [cliDocuments, closeControl, dispatchLabAction, exit, setControlNow]);
+  const activateControlRef = React.useRef(activateControl);
+  activateControlRef.current = activateControl;
+  const isInputCaptured = React.useCallback(
+    () => inputFence.isCaptured(),
+    [inputFence],
+  );
+  React.useEffect(() => {
+    const onData = (chunk: Buffer | string) => {
+      const current = controlRef.current;
+      const itemCount =
+        current.mode === 'commands'
+          ? quickCommandsRef.current.length
+          : current.mode === 'search'
+            ? searchResultsRef.current.length
+            : 0;
+      const update = reduceControlPlaneInput(current, String(chunk), itemCount);
+      if (!update.handled) return;
+      inputFence.captureCurrentEmission();
+      setControlNow(update.state);
+      if (update.quit) return exit();
+      if (update.workspaceNavigation && labOpen) {
+        dispatchLabAction('lab-focus-next');
+      }
+      if (update.activate) activateControlRef.current();
+    };
+    process.stdin.prependListener('data', onData);
+    return () => {
+      process.stdin.off('data', onData);
+    };
+  }, [dispatchLabAction, exit, inputFence, labOpen, setControlNow]);
+
+  let content: React.ReactNode;
+  if (!startup && surface !== 'lab' && !cachedGlobalWorkPresent) {
+    content = (
+      <StartingHost
+        dimensions={contentDimensions}
+        onOpenLab={() => setSurface('lab')}
+        isInputCaptured={isInputCaptured}
+      />
+    );
+  } else if (labOpen) {
+    content = (
+      <AgentWorkLabHost
         lab={lab}
         startup={resolvedStartup}
-        dimensions={dimensions}
+        dimensions={contentDimensions}
+        isInputCaptured={isInputCaptured}
+        actionRequest={labActionRequest}
+        onActionHandled={acknowledgeLabAction}
         onOpenWork={
           startupSurface === 'work-graph' ? () => setSurface('work') : undefined
         }
       />
     );
+  } else {
+    content = (
+      <WorkControlHost
+        dimensions={contentDimensions}
+        onOpenLab={() => setSurface('lab')}
+        onSearchDocuments={setWorkDocuments}
+        isInputCaptured={isInputCaptured}
+      />
+    );
   }
+
+  const resultCount =
+    control.mode === 'commands'
+      ? quickCommands.length
+      : control.mode === 'search'
+        ? searchResults.length
+        : 0;
   return (
-    <WorkControlHost
-      profile={profile}
-      workLoop={workLoop}
-      dimensions={dimensions}
-      onOpenLab={() => setSurface('lab')}
-    />
+    <Box
+      width={size.columns}
+      height={terminalCanvasRows(size.rows)}
+      flexDirection="column"
+      overflow="hidden"
+    >
+      {content}
+      <ControlPlaneOverlay
+        dimensions={contentDimensions.get()}
+        state={control}
+        searchResults={searchResults}
+        quickCommands={quickCommands}
+        catalogStatus={catalogStatus}
+      />
+      <ControlPlaneBar
+        dimensions={size}
+        state={control}
+        resultCount={resultCount}
+        surfaceLabel={labOpen ? 'Agent Work Lab' : 'Work Control'}
+        controlsLabel={labOpen ? 'LAB CONTROLS' : 'WORK CONTROLS'}
+        controlsHint={
+          labOpen
+            ? 'd Demo · x Same · m Handoff · Tab Focus'
+            : 'Work navigation is active'
+        }
+      />
+    </Box>
   );
 }
 
@@ -867,7 +897,14 @@ async function main(): Promise<void> {
   );
 }
 
-void main().catch((error) => {
-  process.stderr.write(`Kungfu TUI failed: ${(error as Error).message}\n`);
-  process.exitCode = 1;
-});
+void main()
+  .then(() => {
+    // Ink has released the terminal at this point. Exit explicitly so an
+    // in-flight discovery child cannot keep the user's shell in the foreground
+    // after the visible TUI has already closed.
+    process.exit(process.exitCode ?? 0);
+  })
+  .catch((error) => {
+    process.stderr.write(`Kungfu TUI failed: ${(error as Error).message}\n`);
+    process.exitCode = 1;
+  });

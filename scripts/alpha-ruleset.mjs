@@ -9,7 +9,24 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const CONTRACT_SCHEMA = 'kungfu.alpha-ruleset-contract/v1';
+const CONTRACTS = new Map([
+  [
+    'kungfu.alpha-ruleset-contract/v1',
+    {
+      label: 'Alpha',
+      targetRef: 'alpha/v4/v4.0',
+      inspectionSchema: 'kungfu.alpha-ruleset-inspection/v1',
+    },
+  ],
+  [
+    'kungfu.stable-ruleset-contract/v1',
+    {
+      label: 'Stable',
+      targetRef: 'release/v4/v4.0',
+      inspectionSchema: 'kungfu.stable-ruleset-inspection/v1',
+    },
+  ],
+]);
 
 function canonical(value) {
   if (Array.isArray(value)) return value.map(canonical);
@@ -81,15 +98,20 @@ export function normalizeRuleset(ruleset) {
 }
 
 export function validateContract(contract) {
-  if (contract?.schema !== CONTRACT_SCHEMA || contract.status !== 'active')
-    throw new Error('Alpha ruleset contract is not active');
+  const specification = CONTRACTS.get(contract?.schema);
+  if (!specification || contract.status !== 'active')
+    throw new Error('Release channel ruleset contract is not active');
   if (contract.repository !== 'kungfu-systems/kungfu')
-    throw new Error('Alpha ruleset repository is not admitted');
-  if (contract.targetRef !== 'alpha/v4/v4.0')
-    throw new Error('Alpha ruleset target ref is not admitted');
+    throw new Error(
+      `${specification.label} ruleset repository is not admitted`,
+    );
+  if (contract.targetRef !== specification.targetRef)
+    throw new Error(
+      `${specification.label} ruleset target ref is not admitted`,
+    );
   const { contractRoot, ...body } = contract;
   if (contractRoot !== digest(body))
-    throw new Error('Alpha ruleset contract root mismatch');
+    throw new Error(`${specification.label} ruleset contract root mismatch`);
   const desired = normalizeRuleset(contract.ruleset);
   if (
     desired.conditions?.ref_name?.include?.length !== 1 ||
@@ -97,9 +119,13 @@ export function validateContract(contract) {
       `refs/heads/${contract.targetRef}` ||
     desired.conditions.ref_name.exclude?.length !== 0
   )
-    throw new Error('Alpha ruleset must target one exact branch');
+    throw new Error(
+      `${specification.label} ruleset must target one exact branch`,
+    );
   if (desired.bypass_actors.length !== 0)
-    throw new Error('Alpha ruleset contract cannot declare bypass actors');
+    throw new Error(
+      `${specification.label} ruleset contract cannot declare bypass actors`,
+    );
   const types = desired.rules.map(({ type }) => type);
   for (const type of [
     'deletion',
@@ -108,7 +134,9 @@ export function validateContract(contract) {
     'required_status_checks',
   ]) {
     if (types.filter((candidate) => candidate === type).length !== 1)
-      throw new Error(`Alpha ruleset requires exactly one ${type} rule`);
+      throw new Error(
+        `${specification.label} ruleset requires exactly one ${type} rule`,
+      );
   }
   return contract;
 }
@@ -170,6 +198,7 @@ function github(route) {
 }
 
 function inspect(contract) {
+  const specification = CONTRACTS.get(contract.schema);
   const listed = github(
     `repos/${contract.repository}/rulesets?includes_parents=false&per_page=100`,
   );
@@ -177,7 +206,7 @@ function inspect(contract) {
     github(`repos/${contract.repository}/rulesets/${entry.id}`),
   );
   return {
-    schema: 'kungfu.alpha-ruleset-inspection/v1',
+    schema: specification.inspectionSchema,
     repository: contract.repository,
     targetRef: contract.targetRef,
     contractRoot: contract.contractRoot,
@@ -290,7 +319,7 @@ function main(argv = process.argv.slice(2)) {
     runBuildchain(bin, args);
     return;
   }
-  throw new Error(`unknown Alpha ruleset command: ${command}`);
+  throw new Error(`unknown release channel ruleset command: ${command}`);
 }
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) main();

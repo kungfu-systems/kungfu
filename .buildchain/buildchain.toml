@@ -53,6 +53,16 @@ command = "node scripts/run-shifu-lifecycle.mjs cache-apply verify"
 # shifu-entry-contract: allow Buildchain publish adapter bootstraps before repository lifecycle dispatch
 command = "node scripts/buildchain-custom-publish-evidence.mjs"
 
+[release.stable]
+strategy = "latest-qualified-alpha"
+timezone = "Asia/Shanghai"
+publish_at = "03:00"
+minimum_soak_seconds = 86400
+required_checks = ["alpha-release"]
+ledger_ref = "buildchain/candidate-ledger/v4/v4.0"
+auto_promote = true
+auto_merge = false
+
 [badges]
 release_passport = "https://github.com/kungfu-systems/kungfu/releases/latest/download/buildchain.release.json"
 kfd_standards = "developer/sdk/node_modules/@kungfu-tech/kfd/standards.json"

@@ -1,6 +1,17 @@
 // SPDX-License-Identifier: Apache-2.0
 
-import type { Profile } from '@kungfu-tech/api/capability';
+import type { ChildProcessByStdio } from 'node:child_process';
+import type { Readable } from 'node:stream';
+
+import type {
+  GlobalWorkSnapshot,
+  ProductSearchDocument,
+  Profile,
+} from '@kungfu-tech/api/capability';
+import {
+  globalWorkSearchDocuments,
+  parseGlobalWorkSnapshot,
+} from '@kungfu-tech/api/capability';
 import type { KfxLoadPlan } from '@kungfu-tech/kfx';
 
 import type { ProfileShellModel } from './profile-shell.js';
@@ -178,5 +189,242 @@ export function degradedWorkControlModel(error: unknown): ProfileShellModel {
     cards: [],
     evidence: [],
     notice: message,
+  };
+}
+
+type ObserverChild = ChildProcessByStdio<null, Readable, Readable>;
+
+export type GlobalWorkContribution = {
+  model: ProfileShellModel;
+  searchDocuments: ProductSearchDocument[];
+};
+
+export type GlobalWorkObserverDeps = {
+  bin: string;
+  env: NodeJS.ProcessEnv;
+  statePath: string;
+  spawn: (
+    file: string,
+    args: string[],
+    options: { env: NodeJS.ProcessEnv; stdio: ['ignore', 'pipe', 'pipe'] },
+  ) => ObserverChild;
+  onSnapshot: (snapshot: GlobalWorkSnapshot) => void;
+  onError: (error: Error) => void;
+};
+
+export function globalWorkContribution(
+  snapshot: GlobalWorkSnapshot,
+): GlobalWorkContribution {
+  const rows = snapshot.global_work.visible_work;
+  const initiativeCount = rows.filter(
+    (row) => row.object_kind === 'initiative',
+  ).length;
+  const assignmentCount = rows.filter(
+    (row) => row.object_kind === 'assignment',
+  ).length;
+  const state = snapshot.aggregate.state ?? 'unknown';
+  const verified = snapshot.verification?.ok === true;
+  return {
+    model: {
+      profile: {
+        id: 'kungfu.global-work',
+        title: 'Work',
+        version: 'Global Portfolio',
+        suiteRoot: snapshot.global_work.projection_root ?? '',
+        qualified: verified,
+        qualificationLabel: 'Global proof',
+      },
+      subject: {
+        id: 'portfolio',
+        title: `Portfolio · ${rows.length} current work items`,
+        subtitle: `${initiativeCount} Initiatives · ${assignmentCount} Assignments · ${snapshot.aggregate.component_count ?? 0} local workspaces`,
+      },
+      navigation: [
+        {
+          id: 'portfolio',
+          label: 'Global Portfolio',
+          status: state,
+        },
+      ],
+      cards: rows.map((row) => {
+        const status =
+          row.display.status?.trim() ||
+          row.display.portfolio_state?.trim() ||
+          'open';
+        const next = (row.display.next_actions ?? []).filter(Boolean);
+        return {
+          id: row.canonical_root,
+          title: row.display.title?.trim() || row.subject || row.canonical_root,
+          status: row.conflict ? 'degraded' : status,
+          summary: [
+            row.object_kind,
+            row.subject,
+            next.length > 0 ? `Next: ${next.join(' · ')}` : '',
+          ]
+            .filter(Boolean)
+            .join(' · '),
+        };
+      }),
+      evidence: [
+        {
+          label: 'query proof',
+          value: snapshot.proof?.proof_root ?? '',
+        },
+        {
+          label: 'projection',
+          value: snapshot.global_work.projection_root ?? '',
+        },
+        {
+          label: 'available workspaces',
+          value: String(snapshot.aggregate.available_component_count ?? 0),
+        },
+      ],
+      notice:
+        state === 'complete'
+          ? undefined
+          : `${state} Portfolio · ${snapshot.aggregate.unknown_component_count ?? 0} workspace observations unknown`,
+    },
+    searchDocuments: globalWorkSearchDocuments(snapshot),
+  };
+}
+
+export function degradedGlobalWorkModel(error: unknown): ProfileShellModel {
+  const message = error instanceof Error ? error.message : String(error);
+  return {
+    profile: {
+      id: 'kungfu.global-work',
+      title: 'Work',
+      version: 'Global Portfolio',
+      suiteRoot: '',
+      qualified: false,
+      qualificationLabel: 'Global proof',
+    },
+    subject: {
+      id: 'portfolio',
+      title: 'Global Portfolio unavailable',
+      subtitle: 'No mutation was attempted.',
+    },
+    navigation: [],
+    cards: [],
+    evidence: [],
+    notice: message,
+  };
+}
+
+export function loadLatestGlobalWorkCache(
+  readFile: (path: string) => string,
+  paths: string[],
+): GlobalWorkSnapshot | null {
+  const snapshots: GlobalWorkSnapshot[] = [];
+  for (const candidate of paths) {
+    try {
+      snapshots.push(parseGlobalWorkSnapshot(JSON.parse(readFile(candidate))));
+    } catch {
+      // A missing, partial, or old cache never blocks the live observer.
+    }
+  }
+  return (
+    snapshots.sort((left, right) =>
+      (right.observed_at ?? '').localeCompare(left.observed_at ?? ''),
+    )[0] ?? null
+  );
+}
+
+export function parseGlobalWorkObserverLine(
+  line: string,
+): GlobalWorkSnapshot | Error | null {
+  try {
+    const value = JSON.parse(line) as {
+      schema?: string;
+      kind?: string;
+      error?: string;
+    };
+    if (
+      value.schema !== 'kungfu.gui.global-work-observer-event/v1' ||
+      (value.kind !== 'snapshot' && value.kind !== 'error')
+    ) {
+      return null;
+    }
+    if (value.kind === 'error') {
+      return new Error(value.error || 'global Work observer failed');
+    }
+    return parseGlobalWorkSnapshot(value);
+  } catch {
+    return null;
+  }
+}
+
+export function startGlobalWorkObserver(
+  deps: GlobalWorkObserverDeps,
+): () => void {
+  let child: ObserverChild | null = null;
+  let restartTimer: NodeJS.Timeout | null = null;
+  let stopped = false;
+
+  const start = () => {
+    if (stopped || child) return;
+    let stdout = '';
+    let stderr = '';
+    const launched = deps.spawn(
+      deps.bin,
+      [
+        'workspace',
+        'work',
+        '--scope',
+        'all',
+        '--max-workers',
+        '8',
+        '--observe',
+        '--observer-state',
+        deps.statePath,
+        '--json',
+      ],
+      {
+        env: { ...deps.env, PYTHONDONTWRITEBYTECODE: '1' },
+        stdio: ['ignore', 'pipe', 'pipe'],
+      },
+    );
+    child = launched;
+    launched.stdout.on('data', (chunk: Buffer | string) => {
+      stdout += chunk.toString();
+      for (;;) {
+        const newline = stdout.indexOf('\n');
+        if (newline < 0) break;
+        const line = stdout.slice(0, newline).trim();
+        stdout = stdout.slice(newline + 1);
+        if (!line) continue;
+        const value = parseGlobalWorkObserverLine(line);
+        if (value instanceof Error) deps.onError(value);
+        else if (value) deps.onSnapshot(value);
+      }
+    });
+    launched.stderr.on('data', (chunk: Buffer | string) => {
+      stderr = `${stderr}${chunk.toString()}`.slice(-8192);
+    });
+    launched.on('error', deps.onError);
+    launched.on('exit', (_code, signal) => {
+      if (child !== launched) return;
+      child = null;
+      if (stopped) return;
+      deps.onError(
+        new Error(
+          stderr.trim() ||
+            `global Work observer exited${signal ? ` (${signal})` : ''}`,
+        ),
+      );
+      restartTimer = setTimeout(() => {
+        restartTimer = null;
+        start();
+      }, 1000);
+    });
+  };
+
+  start();
+  return () => {
+    stopped = true;
+    if (restartTimer) clearTimeout(restartTimer);
+    restartTimer = null;
+    child?.kill('SIGTERM');
+    child = null;
   };
 }

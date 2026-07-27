@@ -11,7 +11,7 @@
   "properties": {
     "schema": { "const": "shifu.local-promotion-receipt/v1" },
     "product": { "type": "string", "minLength": 1 },
-    "action": { "enum": ["promote", "self-update", "rollback"] },
+    "action": { "enum": ["promote", "preview", "self-update", "rollback"] },
     "artifactId": { "type": "string" },
     "fromCommit": { "type": "string" },
     "toCommit": { "type": "string" },

@@ -3,9 +3,9 @@
   "verdict": "pass",
   "authoritySemantics": "navigation-only-projection-over-existing-authorities",
   "manifestPath": "framework/maintainability/semantic-amplification.manifest.json",
-  "manifestRoot": "sha256:13bba3d8469c4ec5d50acd2dd380832cbd42808c287642fc5cfe82b423260628",
+  "manifestRoot": "sha256:85829360a77ec44639ba99defd7692d96844002e554e115b72a34d0bd5cacf47",
   "baselineRef": "dbfed9ca1785d147b26f4f06e7e6895ac7368fee",
-  "sourceRoot": "sha256:b781cc85ea58882668857201b28819d0935cc0b151dfe4dca3c1a866f7a67d72",
+  "sourceRoot": "sha256:865abb51683e09a8fec069a0e16f3541759607778133c5f6beb7578fa00390f1",
   "roles": {
     "authority": "exactly one authority route per family; the route may name multiple co-owned source files",
     "allowedProjectionRoles": [
@@ -24,8 +24,8 @@
   "summary": {
     "families": 6,
     "authorities": 6,
-    "mappedSurfaces": 70,
-    "changedMappedSurfaces": 26,
+    "mappedSurfaces": 72,
+    "changedMappedSurfaces": 29,
     "blockingIssues": 0
   },
   "families": [
@@ -412,22 +412,33 @@
       "authorityCount": 1,
       "roles": {
         "authority": 3,
-        "thin-binding": 2,
+        "thin-binding": 4,
         "conformance-oracle": 1,
         "test": 1,
         "documentation": 1,
         "package-release": 1
       },
       "amplification": {
-        "mappedSurfaces": 9,
-        "nonAuthoritySurfaces": 6,
-        "changedSurfaces": 2,
+        "mappedSurfaces": 11,
+        "nonAuthoritySurfaces": 8,
+        "changedSurfaces": 5,
         "changedPaths": [
+          "framework/kfx/src/index.ts",
+          "framework/kfx/src/agent-work-lab.ts",
           "framework/core/src/python/kungfu/cli/commands/kfx.py",
+          "scripts/run-kfx-profile-suite-tests.mjs",
           "product/scripts/dist.mjs"
         ]
       },
       "surfaces": [
+        {
+          "path": "framework/kfx/src/index.ts",
+          "role": "thin-binding"
+        },
+        {
+          "path": "framework/kfx/src/agent-work-lab.ts",
+          "role": "thin-binding"
+        },
         {
           "path": "framework/core/src/python/kungfu/kfx_contract.py",
           "role": "thin-binding"
@@ -479,6 +490,22 @@
           "changedSinceBaseline": false
         },
         {
+          "path": "framework/kfx/src/index.ts",
+          "currentLines": 1643,
+          "baselineLines": 1622,
+          "currentRoot": "sha256:b002d1c496fec0e6c988a7ca25b30b84f28977dcf6ae2059a49e049d851f4786",
+          "baselineRoot": "sha256:c27078f816d82f9d6aceb9d681f387ab1ee5ccdb806f0570e1b8959f8f2fadf8",
+          "changedSinceBaseline": true
+        },
+        {
+          "path": "framework/kfx/src/agent-work-lab.ts",
+          "currentLines": 158,
+          "baselineLines": null,
+          "currentRoot": "sha256:52ce6b086a910c2184d6223750d26c566fb4fb6574c8c80a36c25b7ea9874a27",
+          "baselineRoot": null,
+          "changedSinceBaseline": true
+        },
+        {
           "path": "framework/core/src/python/kungfu/kfx_contract.py",
           "currentLines": 311,
           "baselineLines": 311,
@@ -504,11 +531,11 @@
         },
         {
           "path": "scripts/run-kfx-profile-suite-tests.mjs",
-          "currentLines": 89,
+          "currentLines": 98,
           "baselineLines": 89,
-          "currentRoot": "sha256:d7d0cd90cf794bd7f9240f0f9a2a8ed1757eb42e20179396f6268bee7c1bc035",
+          "currentRoot": "sha256:39ad307e3879616e5d712bafa586d87f6d34366f8d3265fe7304bd8fac0a3dba",
           "baselineRoot": "sha256:d7d0cd90cf794bd7f9240f0f9a2a8ed1757eb42e20179396f6268bee7c1bc035",
-          "changedSinceBaseline": false
+          "changedSinceBaseline": true
         },
         {
           "path": "docs/qualification/kfd-native-sdk-release-gates.md",

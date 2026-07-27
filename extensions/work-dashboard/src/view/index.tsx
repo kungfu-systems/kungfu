@@ -134,7 +134,9 @@ function GlobalWorkView({
   const [snapshot, setSnapshot] = React.useState<GlobalWorkSnapshot | null>(
     null,
   );
-  const [selected, setSelected] = React.useState<string | null>(null);
+  const [selected, setSelected] = React.useState<string | null>(
+    () => shell.params.workId?.trim() || null,
+  );
   const [search, setSearch] = React.useState('');
   const [status, setStatus] = React.useState('connecting live Portfolio…');
   const [error, setError] = React.useState('');
@@ -150,6 +152,13 @@ function GlobalWorkView({
       ).ipcRenderer,
     [host],
   );
+
+  React.useEffect(() => {
+    const requestedWorkId = shell.params.workId?.trim();
+    if (!requestedWorkId) return;
+    setSelected(requestedWorkId);
+    setSearch('');
+  }, [shell.params.workId]);
 
   React.useEffect(() => {
     let dispose: (() => Promise<void>) | undefined;

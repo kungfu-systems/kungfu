@@ -259,6 +259,7 @@ test('Assignment admission smoke isolates the operator Workspace Catalog', (t) =
   fs.writeFileSync(operatorCatalog, operatorBytes);
 
   const invocations = [];
+  let capturedRequest;
   runInstalledKungfuAssignmentAdmissionSmoke({
     installRoot,
     kungfuBin: path.join(installRoot, 'kungfu'),
@@ -276,6 +277,10 @@ test('Assignment admission smoke isolates the operator Workspace Catalog', (t) =
         'catalog.json',
       );
       if (invocation.args.includes('capture')) {
+        const requestIndex = invocation.args.indexOf('--request');
+        capturedRequest = JSON.parse(
+          fs.readFileSync(invocation.args[requestIndex + 1], 'utf8'),
+        );
         fs.mkdirSync(path.dirname(isolatedCatalog), { recursive: true });
         fs.writeFileSync(
           isolatedCatalog,
@@ -303,6 +308,14 @@ test('Assignment admission smoke isolates the operator Workspace Catalog', (t) =
   });
 
   assert.equal(fs.readFileSync(operatorCatalog, 'utf8'), operatorBytes);
+  assert.equal(
+    capturedRequest.workDefinition.initiative_id,
+    'installed-product-qualification',
+  );
+  assert.equal(
+    capturedRequest.workDefinition.assignment_id,
+    'installed-product-admission-smoke',
+  );
   assert.equal(invocations.length, 2);
   assert.deepEqual(
     invocations.map(({ args }) => args.slice(0, 2)),
