@@ -7,9 +7,9 @@ implementation_status: implemented
 review_state: legacy-unreviewed
 sensitivity: public
 implementation_commits: [360c1dfcaf12aa410158f22ff175e5c608b0a77a]
-implementation_prs: [https://github.com/kungfu-systems/kungfu/pull/797, https://github.com/kungfu-systems/kungfu/pull/911, https://github.com/kungfu-systems/kungfu/pull/921, https://github.com/kungfu-systems/kungfu/pull/929, https://github.com/kungfu-systems/kungfu/pull/938, https://github.com/kungfu-systems/kungfu/pull/941, https://github.com/kungfu-systems/kungfu/pull/1418, https://github.com/kungfu-systems/kungfu/pull/1459, https://github.com/kungfu-systems/kungfu/pull/1547, https://github.com/kungfu-systems/kungfu/pull/1597]
+implementation_prs: [https://github.com/kungfu-systems/kungfu/pull/797, https://github.com/kungfu-systems/kungfu/pull/911, https://github.com/kungfu-systems/kungfu/pull/921, https://github.com/kungfu-systems/kungfu/pull/929, https://github.com/kungfu-systems/kungfu/pull/938, https://github.com/kungfu-systems/kungfu/pull/941, https://github.com/kungfu-systems/kungfu/pull/1418, https://github.com/kungfu-systems/kungfu/pull/1459, https://github.com/kungfu-systems/kungfu/pull/1547, https://github.com/kungfu-systems/kungfu/pull/1597, https://github.com/kungfu-systems/kungfu/pull/1625]
 closure_pr: https://github.com/kungfu-systems/kungfu/pull/797
-qualification_refs: [.github/workflows/publish-layer-artifacts.yml, docs/qualification/layer-product-release-qualification.md, framework/core/architecture/layers.json, framework/core/architecture/LAYERS.md, framework/core/architecture/TARGETS.cmake, framework/core/architecture/check-layers.mjs, framework/site/experience.js, framework/site/index.test.js, framework/site/scripts/pack.mjs, framework/site/scripts/verify.mjs, framework/site/schema/site-bundle.schema.json, framework/site/schema/site-experience-config.schema.json, shifu.gates.json, tests/qualification/layers/run.mjs, tests/qualification/layers/release/run.mjs, tests/qualification/layers/surfaces/run.mjs, scripts/run-release-qualification.mjs, scripts/source-acceptance.mjs, scripts/npm-release-inventory.mjs, scripts/check-npm-package-registry.mjs, scripts/collect-layer-publication.mjs, scripts/preflight-layer-publication.mjs, scripts/verify-layer-publication.mjs]
+qualification_refs: [.github/workflows/publish-layer-artifacts.yml, docs/qualification/layer-product-release-qualification.md, framework/core/architecture/layers.json, framework/core/architecture/LAYERS.md, framework/core/architecture/TARGETS.cmake, framework/core/architecture/check-layers.mjs, framework/site/README.md, framework/site/experience.js, framework/site/index.js, framework/site/index.test.js, framework/site/scripts/generate.mjs, framework/site/scripts/pack.mjs, framework/site/scripts/verify.mjs, framework/site/schema/site-bundle.schema.json, framework/site/schema/site-experience-config.schema.json, shifu.gates.json, tests/qualification/layers/run.mjs, tests/qualification/layers/release/run.mjs, tests/qualification/layers/surfaces/run.mjs, scripts/run-release-qualification.mjs, scripts/source-acceptance.mjs, scripts/npm-release-inventory.mjs, scripts/check-npm-package-registry.mjs, scripts/collect-layer-publication.mjs, scripts/preflight-layer-publication.mjs, scripts/verify-layer-publication.mjs]
 last_reviewed: 2026-07-27
 ---
 
@@ -252,6 +252,22 @@ three-platform build contributes the six generated native packages. Collection,
 dry-run, absence preflight, OIDC publication, and public digest verification
 all fail closed unless the complete 28-tarball set is present. Prerelease npm
 tags are derived from the version so an alpha cannot silently become `latest`.
+
+## Site bundle reader closure (2026-07-27)
+
+PR #1625 makes the independently consumable `@kungfu-tech/site` artifact a
+complete reader surface rather than a flat document export. The bundle carries
+the full product route, progressive topic and child-page navigation, exact
+source provenance, KFD-3 machine entry points, and consistent Kungfu UNGFU™
+brand metadata. Its experience contract keeps the first screen human-readable,
+offers an explicit Agent co-reading route, and lets technical detail expand
+without hiding the complete source corpus.
+
+Consumers provide content and bounded configuration; they do not recreate
+reader hierarchy, brand chrome, source verification, or machine-entry behavior
+as site-local patches. The bundle schema, generator, verifier, and package tests
+jointly prove that the derived presentation remains traceable to the same
+lower-layer contracts and introduces no new format or product authority.
 
 ## Alternatives considered
 
