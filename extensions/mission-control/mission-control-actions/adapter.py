@@ -1,13 +1,14 @@
 # SPDX-License-Identifier: Apache-2.0
 
-"""Mission Control Profile member adapter.
+"""Work Control Profile member adapter.
 
 The generic Profile runtime binds this module to the exact Suite/member roots.
-All Mission, Go, Atlas projection and portable bundle semantics stay here.
+Native Initiative/Assignment operations and exact legacy compatibility stay here.
 """
 
 from __future__ import annotations
 
+import re
 import time
 from collections.abc import Mapping
 from typing import Any
@@ -17,7 +18,7 @@ from kungfu import profile_sdk
 
 def _object(value: Any) -> Mapping[str, Any]:
     if not isinstance(value, Mapping):
-        raise TypeError("Mission Control adapter input must be an object")
+        raise TypeError("Work Control adapter input must be an object")
     return value
 
 
@@ -35,7 +36,7 @@ def _projection(runtime_dir: str):
 
 def _domain(context: Mapping[str, Any]):
     return profile_sdk.load_member_python_package(
-        str(context["source"]), "mission-control-actions", "domain"
+        str(context["source"]), "work-control-actions", "domain"
     )
 
 
@@ -81,9 +82,131 @@ def _goal_cards(
     ]
 
 
+def _initiative_cards(domain, runtime_dir: str, cut_system_time: int = 0):
+    return domain.mission_control.list_domain_records(
+        runtime_dir,
+        surface_ids={domain.mission_control.INITIATIVE_SURFACE_ID},
+        vocabulary="initiative-assignment",
+        cut_system_time=cut_system_time,
+    )
+
+
+def _assignment_cards(
+    domain,
+    runtime_dir: str,
+    *,
+    status: str | None = None,
+    initiative_id: str | None = None,
+    cut_system_time: int = 0,
+):
+    rows = domain.mission_control.list_domain_records(
+        runtime_dir,
+        surface_ids={domain.mission_control.ASSIGNMENT_SURFACE_ID},
+        vocabulary="initiative-assignment",
+        cut_system_time=cut_system_time,
+    )
+    return [
+        row
+        for row in rows
+        if (status is None or row.get("status") == status)
+        and (
+            initiative_id is None
+            or row.get("initiative_id") == initiative_id
+            or row.get("initiative_subject") == initiative_id
+        )
+    ]
+
+
+_NATIVE_KEYS = {
+    "mission": "initiative",
+    "goal": "assignment",
+    "mission_control": "work_control",
+    "mission_subject": "initiative_subject",
+    "go_subject": "assignment_subject",
+    "mission_id": "initiative_id",
+    "goal_id": "assignment_id",
+    "go_set": "assignment_set",
+    "missions": "initiatives",
+    "goals": "assignments",
+    "requires_mission": "requires_initiative",
+    "requires_linked_go": "requires_linked_assignment",
+}
+_NATIVE_USER_TEXT_KEYS = {
+    "actor",
+    "intent",
+    "objective",
+    "reason",
+    "responsibility",
+    "statement",
+    "title",
+    "why_created",
+}
+
+
+def _native_key(value: Any) -> str:
+    key = str(value)
+    if key in _NATIVE_KEYS:
+        return _NATIVE_KEYS[key]
+    for old, new in (
+        ("mission_", "initiative_"),
+        ("goal_", "assignment_"),
+        ("go_", "assignment_"),
+    ):
+        if key.startswith(old):
+            return new + key.removeprefix(old)
+    return key
+
+
+def _native_string(value: str) -> str:
+    if value.startswith("kungfu.mission-control"):
+        return "kungfu.work-control" + value.removeprefix("kungfu.mission-control")
+    exact = {
+        "mission": "initiative",
+        "goal": "assignment",
+        "go": "assignment",
+        "mission-go": "initiative-assignment",
+        "mission-control-profile": "work-control-profile",
+        "mission-intent": "initiative-intent",
+        "mission_id": "initiative_id",
+        "goal_id": "assignment_id",
+        "go_set": "assignment_set",
+    }
+    if value in exact:
+        return exact[value]
+    projected = value.replace("Mission Control", "Work Control").replace(
+        "Mission/Go", "Initiative/Assignment"
+    )
+    projected = re.sub(r"\bMission\b", "Initiative", projected)
+    projected = re.sub(r"\bGo\(s\)", "Assignment(s)", projected)
+    return re.sub(r"\bGo\b", "Assignment", projected)
+
+
+def _native_result(value: Any, *, preserve_text: bool = False) -> Any:
+    """Project native receipts without rewriting explicit Atlas source metadata."""
+
+    if isinstance(value, Mapping):
+        result = {}
+        for key, item in value.items():
+            native_key = _native_key(key)
+            if key in {"work_definition", "atlas_source"} and isinstance(item, Mapping):
+                result[native_key] = dict(item)
+            else:
+                result[native_key] = _native_result(
+                    item,
+                    preserve_text=str(key) in _NATIVE_USER_TEXT_KEYS,
+                )
+        return result
+    if isinstance(value, list):
+        return [_native_result(item, preserve_text=preserve_text) for item in value]
+    if isinstance(value, str) and not preserve_text:
+        return _native_string(value)
+    return value
+
+
 def _action(domain, operation: str, runtime_dir: str, values: Mapping[str, Any]):
     mission_bundle = domain.mission_bundle
     mission_control = domain.mission_control
+    native_projection = True
 
     if operation == "create-initiative":
         _only(
@@ -96,6 +219,7 @@ def _action(domain, operation: str, runtime_dir: str, values: Mapping[str, Any])
                 "actorType",
                 "status",
                 "horizon",
+                "sourceIdentity",
             },
             operation,
         )
@@ -108,6 +232,7 @@ def _action(domain, operation: str, runtime_dir: str, values: Mapping[str, Any])
             actor_type=str(values.get("actorType") or "agent"),
             status=str(values.get("status") or "active"),
             horizon=str(values.get("horizon") or "long-term"),
+            source_identity=dict(values.get("sourceIdentity") or {}),
         )
         affected = [receipt["initiative_subject"]]
     elif operation == "create-assignment":
@@ -272,14 +397,14 @@ def _action(domain, operation: str, runtime_dir: str, values: Mapping[str, Any])
         _only(
             values,
             {
-                "missionId",
-                "goalId",
+                "initiativeId",
+                "assignmentId",
                 "statement",
                 "actor",
                 "actorType",
                 "source",
                 "evidenceEpisodeIds",
-                "goSet",
+                "assignmentSet",
                 "acceptanceRoot",
                 "inputAtlasRoot",
                 "resultAtlasRoot",
@@ -295,8 +420,8 @@ def _action(domain, operation: str, runtime_dir: str, values: Mapping[str, Any])
         )
         receipt = mission_control.claim_completion(
             runtime_dir,
-            mission_id=str(values.get("missionId") or ""),
-            goal_id=str(values.get("goalId") or ""),
+            mission_id=str(values.get("initiativeId") or ""),
+            goal_id=str(values.get("assignmentId") or ""),
             statement=str(values.get("statement") or ""),
             actor=str(values.get("actor") or ""),
             actor_type=str(values.get("actorType") or "agent"),
@@ -304,7 +429,7 @@ def _action(domain, operation: str, runtime_dir: str, values: Mapping[str, Any])
             evidence_episode_ids=[
                 int(row) for row in values.get("evidenceEpisodeIds", [])
             ],
-            go_set=[str(row) for row in values.get("goSet", [])],
+            go_set=[str(row) for row in values.get("assignmentSet", [])],
             acceptance_root=str(values.get("acceptanceRoot") or ""),
             input_atlas_root=str(values.get("inputAtlasRoot") or ""),
             result_atlas_root=str(values.get("resultAtlasRoot") or ""),
@@ -325,27 +450,30 @@ def _action(domain, operation: str, runtime_dir: str, values: Mapping[str, Any])
         _only(
             values,
             {
-                "missionId",
-                "goalId",
+                "initiativeId",
+                "assignmentId",
                 "source",
                 "purpose",
                 "authorizedBy",
                 "cutSystemTime",
                 "executorProfile",
+                "compatibilityMode",
             },
             operation,
         )
+        if values.get("compatibilityMode") == "legacy":
+            native_projection = False
         common = {
-            "mission_id": str(values.get("missionId") or ""),
+            "mission_id": str(values.get("initiativeId") or ""),
             "storage_source_id": str(values.get("source") or "atlas"),
             "purpose": str(values.get("purpose") or "operator-review"),
             "authorized_by": str(values.get("authorizedBy") or "kungfu-profile"),
             "cut_system_time": int(values.get("cutSystemTime") or 0),
             "executor_profile": str(values.get("executorProfile") or "thread"),
         }
-        if values.get("goalId"):
+        if values.get("assignmentId"):
             receipt = mission_control.assess_completion(
-                runtime_dir, goal_id=str(values["goalId"]), **common
+                runtime_dir, goal_id=str(values["assignmentId"]), **common
             )
         else:
             receipt = mission_control.assess_progress(runtime_dir, **common)
@@ -354,8 +482,8 @@ def _action(domain, operation: str, runtime_dir: str, values: Mapping[str, Any])
         _only(
             values,
             {
-                "missionId",
-                "goalId",
+                "initiativeId",
+                "assignmentId",
                 "reviewer",
                 "reviewerSource",
                 "source",
@@ -369,8 +497,8 @@ def _action(domain, operation: str, runtime_dir: str, values: Mapping[str, Any])
         )
         receipt = mission_control.review_completion(
             runtime_dir,
-            mission_id=str(values.get("missionId") or ""),
-            goal_id=str(values.get("goalId") or ""),
+            mission_id=str(values.get("initiativeId") or ""),
+            goal_id=str(values.get("assignmentId") or ""),
             reviewer=str(values.get("reviewer") or ""),
             reviewer_source=str(values.get("reviewerSource") or ""),
             storage_source_id=str(values.get("source") or "atlas"),
@@ -388,8 +516,8 @@ def _action(domain, operation: str, runtime_dir: str, values: Mapping[str, Any])
         _only(
             values,
             {
-                "missionId",
-                "goalId",
+                "initiativeId",
+                "assignmentId",
                 "reviewId",
                 "expectedReviewRoot",
                 "expectedPlanRoot",
@@ -404,8 +532,8 @@ def _action(domain, operation: str, runtime_dir: str, values: Mapping[str, Any])
         )
         receipt = mission_control.decide_continuation(
             runtime_dir,
-            mission_id=str(values.get("missionId") or ""),
-            goal_id=str(values.get("goalId") or ""),
+            mission_id=str(values.get("initiativeId") or ""),
+            goal_id=str(values.get("assignmentId") or ""),
             review_id=str(values.get("reviewId") or ""),
             expected_review_root=str(values.get("expectedReviewRoot") or ""),
             expected_plan_root=str(values.get("expectedPlanRoot") or ""),
@@ -417,28 +545,62 @@ def _action(domain, operation: str, runtime_dir: str, values: Mapping[str, Any])
             reason=str(values.get("reason") or ""),
         )
         affected = [receipt["decision"]["review_id"]]
-    elif operation == "export-mission":
-        _only(values, {"missionId", "out", "mode", "source", "purpose"}, operation)
-        receipt = mission_bundle.write_mission_bundle(
-            runtime_dir,
-            str(values.get("out") or ""),
-            mission_id=str(values.get("missionId") or ""),
-            mode=str(values.get("mode") or "full"),
-            storage_source_id=str(values.get("source") or "atlas"),
-            purpose=str(values.get("purpose") or "operator-review"),
+    elif operation == "export-initiative":
+        _only(
+            values,
+            {
+                "initiativeId",
+                "out",
+                "mode",
+                "source",
+                "purpose",
+                "compatibilityMode",
+            },
+            operation,
         )
-        affected = [receipt["mission_subject"]]
-    elif operation == "import-mission":
-        _only(values, {"from", "execute"}, operation)
+        options = {
+            "mode": str(values.get("mode") or "full"),
+            "storage_source_id": str(values.get("source") or "atlas"),
+            "purpose": str(values.get("purpose") or "operator-review"),
+        }
+        if values.get("compatibilityMode") == "legacy":
+            native_projection = False
+            receipt = mission_bundle.write_mission_bundle(
+                runtime_dir,
+                str(values.get("out") or ""),
+                mission_id=str(values.get("initiativeId") or ""),
+                **options,
+            )
+            affected = [receipt["mission_subject"]]
+        else:
+            receipt = mission_bundle.write_initiative_bundle(
+                runtime_dir,
+                str(values.get("out") or ""),
+                initiative_id=str(values.get("initiativeId") or ""),
+                **options,
+            )
+            affected = [receipt["initiative_subject"]]
+    elif operation == "import-initiative":
+        _only(values, {"from", "execute", "compatibilityMode"}, operation)
         mission_control._ensure_native_write_allowed(runtime_dir)
-        receipt = mission_bundle.import_mission_bundle_file(
-            runtime_dir,
-            str(values.get("from") or ""),
-            execute=bool(values.get("execute")),
-        )
-        affected = [receipt["mission_subject"]]
+        if values.get("compatibilityMode") == "legacy":
+            native_projection = False
+            receipt = mission_bundle.import_mission_bundle_file(
+                runtime_dir,
+                str(values.get("from") or ""),
+                execute=bool(values.get("execute")),
+            )
+            affected = [receipt["mission_subject"]]
+        else:
+            receipt = mission_bundle.import_initiative_bundle_file(
+                runtime_dir,
+                str(values.get("from") or ""),
+                execute=bool(values.get("execute")),
+            )
+            affected = [receipt["initiative_subject"]]
     elif operation == "import-atlas":
         _only(values, {"repo", "source", "range"}, operation)
+        native_projection = False
         from kungfu.atlas.store import ImportStore
 
         mission_control._ensure_atlas_write_allowed(runtime_dir)
@@ -458,7 +620,7 @@ def _action(domain, operation: str, runtime_dir: str, values: Mapping[str, Any])
         )
         receipt["mission_control"] = receipt.pop("post_seal")
         affected = [str(values.get("repo") or "")]
-    elif operation == "cutover-authority":
+    elif operation == "activate-work-control":
         _only(
             values,
             {
@@ -482,8 +644,8 @@ def _action(domain, operation: str, runtime_dir: str, values: Mapping[str, Any])
             actor_type=str(values.get("actorType") or "agent"),
             reason=str(values.get("reason") or ""),
         )
-        affected = ["mission-go-authority"]
-    elif operation == "rollback-authority":
+        affected = ["work-control-authority"]
+    elif operation == "restore-atlas-authority":
         _only(
             values,
             {"expectedMigrationId", "actor", "actorType", "reason"},
@@ -496,15 +658,19 @@ def _action(domain, operation: str, runtime_dir: str, values: Mapping[str, Any])
             actor_type=str(values.get("actorType") or "agent"),
             reason=str(values.get("reason") or ""),
         )
-        affected = ["mission-go-authority"]
+        affected = ["work-control-authority"]
     else:
-        raise ValueError(f"unsupported Mission Control action: {operation}")
+        raise ValueError(f"unsupported Work Control action: {operation}")
     return {
-        "coreReceipt": receipt,
+        "coreReceipt": (_native_result(receipt) if native_projection else receipt),
         "affected": {
-            "profileId": "kungfu.mission-control",
+            "profileId": "kungfu.work-control",
             "entityKeys": affected,
-            "queryKeys": ["mission-state", "mission-timeline", "mission-attention"],
+            "queryKeys": [
+                "initiative-state",
+                "initiative-timeline",
+                "initiative-attention",
+            ],
         },
     }
 
@@ -530,23 +696,55 @@ def _invoke(
     if operation in {
         "create-initiative",
         "create-assignment",
+        "append-assignment-relation-event",
         "claim-assignment",
         "advance-assignment",
         "claim-completion",
         "assess-progress",
         "review-completion",
         "decide-continuation",
-        "export-mission",
-        "import-mission",
+        "export-initiative",
+        "import-initiative",
         "import-atlas",
-        "cutover-authority",
-        "rollback-authority",
+        "activate-work-control",
+        "restore-atlas-authority",
     }:
         if context.get("invocationMode") != "authorized-action":
             raise ValueError(
-                "Mission Control writes require the Profile intent authorization path"
+                "Work Control writes require the Profile intent authorization path"
             )
         return _action(domain, operation, runtime_dir, values)
+    if operation == "portfolio":
+        _only(values, set(), operation)
+        cut = time.time_ns()
+        return {
+            "schema": "kungfu.work-control.portfolio-snapshot/v1",
+            "cut": {"kind": "system_time", "system_time": str(cut)},
+            "projection_authority": {
+                "mode": "read-only",
+                "scope": "owning-workspace",
+                "profileSuiteRoot": context["profileSuiteRoot"],
+                "memberRoot": context["memberRoot"],
+                "writableAuthority": False,
+                "atomicGlobalCut": False,
+                "completionAuthority": False,
+            },
+            "initiatives": _initiative_cards(domain, runtime_dir, cut),
+            "assignments": _assignment_cards(domain, runtime_dir, cut_system_time=cut),
+        }
+    if operation == "initiatives":
+        _only(values, set(), operation)
+        return _initiative_cards(domain, runtime_dir)
+    if operation == "assignments":
+        _only(values, {"status", "initiativeId"}, operation)
+        return _assignment_cards(
+            domain,
+            runtime_dir,
+            status=str(values["status"]) if values.get("status") else None,
+            initiative_id=(
+                str(values["initiativeId"]) if values.get("initiativeId") else None
+            ),
+        )
     if operation == "dashboard":
         _only(values, set(), operation)
         projection = _projection(runtime_dir)
@@ -596,6 +794,7 @@ def _invoke(
             cut_system_time=int(values.get("cutSystemTime") or 0),
         )
     if operation == "goals":
+        _only(values, {"status", "missionId"}, operation)
         return _goal_cards(
             domain,
             runtime_dir,
@@ -619,11 +818,13 @@ def _invoke(
         }
     if operation == "assignment-status":
         _only(values, {"initiativeId", "assignmentId", "source", "now"}, operation)
-        return domain.mission_control.assignment_orchestration_status(
-            runtime_dir,
-            initiative_id=str(values.get("initiativeId") or ""),
-            assignment_id=str(values.get("assignmentId") or ""),
-            storage_source_id=str(values.get("source") or "atlas"),
-            now=str(values.get("now") or ""),
+        return _native_result(
+            domain.mission_control.assignment_orchestration_status(
+                runtime_dir,
+                initiative_id=str(values.get("initiativeId") or ""),
+                assignment_id=str(values.get("assignmentId") or ""),
+                storage_source_id=str(values.get("source") or "atlas"),
+                now=str(values.get("now") or ""),
+            )
         )
-    raise ValueError(f"unsupported Mission Control adapter operation: {operation}")
+    raise ValueError(f"unsupported Work Control adapter operation: {operation}")

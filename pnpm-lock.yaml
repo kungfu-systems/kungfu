@@ -664,27 +664,15 @@ importers:
       '@kungfu-tech/kfx-dogfood-contract':
         specifier: workspace:*
         version: link:../extensions/dogfood/dogfood-contract
-      '@kungfu-tech/kfx-mission-control-actions':
-        specifier: workspace:*
-        version: link:../extensions/mission-control/mission-control-actions
-      '@kungfu-tech/kfx-mission-control-assessment':
-        specifier: workspace:*
-        version: link:../extensions/mission-control/mission-control-assessment
-      '@kungfu-tech/kfx-mission-control-contract':
-        specifier: workspace:*
-        version: link:../extensions/mission-control/mission-control-contract
-      '@kungfu-tech/kfx-mission-control-views':
-        specifier: workspace:*
-        version: link:../extensions/mission-control/mission-control-views
       '@kungfu-tech/kfx-suite-dogfood-feedback':
         specifier: workspace:*
         version: link:../extensions/dogfood
-      '@kungfu-tech/kfx-suite-mission-control':
-        specifier: workspace:*
-        version: link:../extensions/mission-control
       '@kungfu-tech/kfx-suite-system':
         specifier: workspace:*
         version: link:../extensions/system
+      '@kungfu-tech/kfx-suite-work-control':
+        specifier: workspace:*
+        version: link:../extensions/mission-control
       '@kungfu-tech/kfx-view-config-manager':
         specifier: workspace:*
         version: link:../extensions/config-manager
@@ -715,6 +703,18 @@ importers:
       '@kungfu-tech/kfx-view-work-dashboard':
         specifier: workspace:*
         version: link:../extensions/work-dashboard
+      '@kungfu-tech/kfx-work-control-actions':
+        specifier: workspace:*
+        version: link:../extensions/mission-control/mission-control-actions
+      '@kungfu-tech/kfx-work-control-assessment':
+        specifier: workspace:*
+        version: link:../extensions/mission-control/mission-control-assessment
+      '@kungfu-tech/kfx-work-control-contract':
+        specifier: workspace:*
+        version: link:../extensions/mission-control/mission-control-contract
+      '@kungfu-tech/kfx-work-control-views':
+        specifier: workspace:*
+        version: link:../extensions/mission-control/mission-control-views
       '@kungfu-tech/sdk':
         specifier: workspace:*
         version: link:../developer/sdk

@@ -1016,6 +1016,28 @@
       "review_state": "self-reviewed",
       "sensitivity": "public"
     },
+    "docs/profiles/work-control.md": {
+      "metadata_schema": "kungfu.document-metadata/v1",
+      "document_status": "active",
+      "doc_type": "public-document",
+      "review_state": "self-reviewed",
+      "sensitivity": "public",
+      "sources": [
+        "local-files",
+        "user-consensus"
+      ],
+      "period": "2026-07-26",
+      "theme": "work-control",
+      "confidence": "high",
+      "evidence_grade": "B",
+      "last_reviewed": "2026-07-26",
+      "ai_provenance": {
+        "model_family": "OpenAI GPT-5",
+        "product": "Codex",
+        "generated_at": "2026-07-26",
+        "invisible_context_boundary": "unobserved deployed runtimes and private Atlas control-plane contents are not claimed"
+      }
+    },
     "docs/qualification/README.md": {
       "metadata_schema": "kungfu.document-metadata/v1",
       "document_status": "active",

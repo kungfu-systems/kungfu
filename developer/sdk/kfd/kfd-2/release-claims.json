@@ -29,7 +29,7 @@
           "pointer": {
             "kind": "file",
             "path": "framework/core/src/python/kungfu/agent/commands.json",
-            "sha256": "969ac3d851c14196b7244ac1afaecfc237c82d45527fbe06a33d3fc064ea7fc4"
+            "sha256": "9f7384f508d9d356f0fc5b111be6fdc43c1e6cff65a90141f2a586da47fa2ce7"
           },
           "description": "Machine-readable command catalog and mode maturity metadata."
         },
@@ -38,7 +38,7 @@
           "pointer": {
             "kind": "file",
             "path": "framework/core/src/python/kungfu/agent/cli_surface.catalog.json",
-            "sha256": "9f2f17fca5aa4e4daa28a276c1e3a153fa263e791b497f7ea83a93796f7aeb1f"
+            "sha256": "283a537926ffba49e6774703e4f6be86c1745f58ea13bd5d2d7802cede7d364e"
           },
           "description": "Complete deterministic CLI surface graph shared by offline Agent capabilities and catalog parity checks."
         },
@@ -212,7 +212,7 @@
           "pointer": {
             "kind": "file",
             "path": "framework/core/src/python/kungfu/agent/commands.json",
-            "sha256": "969ac3d851c14196b7244ac1afaecfc237c82d45527fbe06a33d3fc064ea7fc4"
+            "sha256": "9f7384f508d9d356f0fc5b111be6fdc43c1e6cff65a90141f2a586da47fa2ce7"
           },
           "description": "Remote add/sync command declarations and mode metadata."
         },
@@ -301,7 +301,7 @@
           "pointer": {
             "kind": "file",
             "path": "framework/core/src/python/kungfu/agent/kfd3_api.registry.json",
-            "sha256": "947a0cca02a357d4185dd4e945567549a57f1cbf37fb67e0539d1bfd6ce950d8"
+            "sha256": "b17b7af7cd6df657e720dd7d7f74bfe6822a7c65e51651b45517a8b4cf32907a"
           },
           "description": "Agent collaboration-interface registration for the work-model query."
         }
@@ -339,7 +339,7 @@
       "source": {
         "kind": "file",
         "path": "framework/work-lifecycle/kungfu-work-lifecycle-operation-matrix.contract.json",
-        "sha256": "b8cbb16ec51e20888b46082db84f14278999507a341f706da4cbe5a44c62e309"
+        "sha256": "7daf812d259e2d7c2ebef7da819d6f99bfbed5ad7da3ed2677d0876de1ce94e0"
       },
       "evidence": [
         {
@@ -365,7 +365,7 @@
           "pointer": {
             "kind": "file",
             "path": "tests/qualification/work-lifecycle/four-language-v1.json",
-            "sha256": "132ff43963bebc6f23eb76e496082074506f152a7f6847bed6aec94c4799005f"
+            "sha256": "9f68398f076a690e8009fb1012fdcdf16c2ab6ad4afdbd985c35e699292a65b6"
           },
           "description": "Installed four-language byte, mutation, error, unavailable, unsupported, and bypass vectors."
         },

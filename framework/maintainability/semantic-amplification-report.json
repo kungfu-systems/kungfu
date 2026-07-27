@@ -3,9 +3,9 @@
   "verdict": "pass",
   "authoritySemantics": "navigation-only-projection-over-existing-authorities",
   "manifestPath": "framework/maintainability/semantic-amplification.manifest.json",
-  "manifestRoot": "sha256:f7294c5e23cfbaa75432394d61d4c860a8ca647bd71ed378a7b89404d6b44cb4",
+  "manifestRoot": "sha256:13bba3d8469c4ec5d50acd2dd380832cbd42808c287642fc5cfe82b423260628",
   "baselineRef": "dbfed9ca1785d147b26f4f06e7e6895ac7368fee",
-  "sourceRoot": "sha256:d27703cff121cbe9bc0482899a1d1cf70c602cae02f30a3e8044adf8a48b09c9",
+  "sourceRoot": "sha256:d50f41ae4943940c66a06a5a9905d9f58318ec41e4adc754863430bb70d89182",
   "roles": {
     "authority": "exactly one authority route per family; the route may name multiple co-owned source files",
     "allowedProjectionRoles": [
@@ -24,8 +24,8 @@
   "summary": {
     "families": 6,
     "authorities": 6,
-    "mappedSurfaces": 64,
-    "changedMappedSurfaces": 5,
+    "mappedSurfaces": 70,
+    "changedMappedSurfaces": 19,
     "blockingIssues": 0
   },
   "families": [
@@ -52,8 +52,12 @@
       "amplification": {
         "mappedSurfaces": 10,
         "nonAuthoritySurfaces": 8,
-        "changedSurfaces": 0,
-        "changedPaths": []
+        "changedSurfaces": 3,
+        "changedPaths": [
+          "framework/core/src/python/kungfu/cli/surface_contract.registry.json",
+          "framework/core/src/python/kungfu/agent/cli_surface.catalog.json",
+          "framework/core/src/python/kungfu/agent/commands.json"
+        ]
       },
       "surfaces": [
         {
@@ -96,9 +100,9 @@
           "path": "framework/core/src/python/kungfu/cli/surface_contract.registry.json",
           "currentLines": 155,
           "baselineLines": 155,
-          "currentRoot": "sha256:7af1893015500d9d54e2783e44af30cd4af8753787d9d9b70c77356b0e788c17",
+          "currentRoot": "sha256:8046ed5199ce7087bfcb712a260b7f46bf2c0c9c29875f5587bd2ef27d909200",
           "baselineRoot": "sha256:7af1893015500d9d54e2783e44af30cd4af8753787d9d9b70c77356b0e788c17",
-          "changedSinceBaseline": false
+          "changedSinceBaseline": true
         },
         {
           "path": "framework/core/src/python/kungfu/cli/commands/__registry__.py",
@@ -118,19 +122,19 @@
         },
         {
           "path": "framework/core/src/python/kungfu/agent/cli_surface.catalog.json",
-          "currentLines": 33927,
+          "currentLines": 33820,
           "baselineLines": 33927,
-          "currentRoot": "sha256:9f2f17fca5aa4e4daa28a276c1e3a153fa263e791b497f7ea83a93796f7aeb1f",
+          "currentRoot": "sha256:283a537926ffba49e6774703e4f6be86c1745f58ea13bd5d2d7802cede7d364e",
           "baselineRoot": "sha256:9f2f17fca5aa4e4daa28a276c1e3a153fa263e791b497f7ea83a93796f7aeb1f",
-          "changedSinceBaseline": false
+          "changedSinceBaseline": true
         },
         {
           "path": "framework/core/src/python/kungfu/agent/commands.json",
           "currentLines": 1117,
           "baselineLines": 1117,
-          "currentRoot": "sha256:969ac3d851c14196b7244ac1afaecfc237c82d45527fbe06a33d3fc064ea7fc4",
+          "currentRoot": "sha256:9f7384f508d9d356f0fc5b111be6fdc43c1e6cff65a90141f2a586da47fa2ce7",
           "baselineRoot": "sha256:969ac3d851c14196b7244ac1afaecfc237c82d45527fbe06a33d3fc064ea7fc4",
-          "changedSinceBaseline": false
+          "changedSinceBaseline": true
         },
         {
           "path": "framework/core/src/python/kungfu/cli/help_projection.py",
@@ -193,17 +197,27 @@
       "authorityCount": 1,
       "roles": {
         "authority": 4,
-        "generated-projection": 3,
+        "generated-projection": 5,
         "thin-binding": 2,
         "conformance-oracle": 1,
         "compatibility-reader": 1,
+        "test": 1,
         "documentation": 1
       },
       "amplification": {
-        "mappedSurfaces": 12,
-        "nonAuthoritySurfaces": 8,
-        "changedSurfaces": 0,
-        "changedPaths": []
+        "mappedSurfaces": 15,
+        "nonAuthoritySurfaces": 11,
+        "changedSurfaces": 8,
+        "changedPaths": [
+          "framework/work-lifecycle/work-lifecycle-native.contract.json",
+          "framework/work-lifecycle/kungfu-work-lifecycle-operation-matrix.contract.json",
+          "crates/kungfu-sdk/src/generated/work_lifecycle_v1.rs",
+          "framework/storage/generated/work-lifecycle-v1.js",
+          "framework/storage/python/kungfu_sdk/generated/work_lifecycle_v1.py",
+          "framework/core/src/python/kungfu/assignment_orchestration.py",
+          "scripts/check-work-lifecycle-operation-matrix.test.mjs",
+          "docs/architecture/work-lifecycle-operation-matrix.md"
+        ]
       },
       "surfaces": [
         {
@@ -216,6 +230,16 @@
         },
         {
           "path": "crates/kungfu-sdk/src/generated/work_lifecycle_v1.rs",
+          "role": "generated-projection",
+          "generator": "scripts/generate-work-lifecycle-sdk.mjs"
+        },
+        {
+          "path": "framework/storage/generated/work-lifecycle-v1.js",
+          "role": "generated-projection",
+          "generator": "scripts/generate-work-lifecycle-sdk.mjs"
+        },
+        {
+          "path": "framework/storage/python/kungfu_sdk/generated/work_lifecycle_v1.py",
           "role": "generated-projection",
           "generator": "scripts/generate-work-lifecycle-sdk.mjs"
         },
@@ -236,6 +260,10 @@
           "role": "compatibility-reader"
         },
         {
+          "path": "scripts/check-work-lifecycle-operation-matrix.test.mjs",
+          "role": "test"
+        },
+        {
           "path": "docs/architecture/work-lifecycle-operation-matrix.md",
           "role": "documentation"
         }
@@ -245,17 +273,17 @@
           "path": "framework/work-lifecycle/work-lifecycle-native.contract.json",
           "currentLines": 1112,
           "baselineLines": 1112,
-          "currentRoot": "sha256:0d908729e89a3ac6aaaf642304c55436be5130d53fca1c5e77ba1a4e3e239238",
+          "currentRoot": "sha256:dad768a717aad3880b53ed420e1e55722e5e63236783b0961807384ed2de5106",
           "baselineRoot": "sha256:0d908729e89a3ac6aaaf642304c55436be5130d53fca1c5e77ba1a4e3e239238",
-          "changedSinceBaseline": false
+          "changedSinceBaseline": true
         },
         {
           "path": "framework/work-lifecycle/kungfu-work-lifecycle-operation-matrix.contract.json",
           "currentLines": 2553,
           "baselineLines": 2553,
-          "currentRoot": "sha256:b8cbb16ec51e20888b46082db84f14278999507a341f706da4cbe5a44c62e309",
+          "currentRoot": "sha256:7daf812d259e2d7c2ebef7da819d6f99bfbed5ad7da3ed2677d0876de1ce94e0",
           "baselineRoot": "sha256:b8cbb16ec51e20888b46082db84f14278999507a341f706da4cbe5a44c62e309",
-          "changedSinceBaseline": false
+          "changedSinceBaseline": true
         },
         {
           "path": "framework/core/src/libkungfu/src/runtime/action/action_runtime.cpp",
@@ -293,17 +321,33 @@
           "path": "crates/kungfu-sdk/src/generated/work_lifecycle_v1.rs",
           "currentLines": 52,
           "baselineLines": 52,
-          "currentRoot": "sha256:7db1506dd64536b8bafde50e863cc911831a50475e564dccfd8c3ee65fb61ed1",
+          "currentRoot": "sha256:d3e701dc88e9ac22cf0ab851814d061dc30102f83ad9c9af9a11cadf2b22f2d9",
           "baselineRoot": "sha256:7db1506dd64536b8bafde50e863cc911831a50475e564dccfd8c3ee65fb61ed1",
-          "changedSinceBaseline": false
+          "changedSinceBaseline": true
+        },
+        {
+          "path": "framework/storage/generated/work-lifecycle-v1.js",
+          "currentLines": 25,
+          "baselineLines": 25,
+          "currentRoot": "sha256:33d1adb42d90b742a46950cf61801ef96955ce27b735dfb2eacc66388efb46f7",
+          "baselineRoot": "sha256:e8e332b59a495d14daef3adc6bca0432f98d1a3c27a5a4241c1d6bf90641fe97",
+          "changedSinceBaseline": true
+        },
+        {
+          "path": "framework/storage/python/kungfu_sdk/generated/work_lifecycle_v1.py",
+          "currentLines": 55,
+          "baselineLines": 55,
+          "currentRoot": "sha256:fdc38b484a22b48cfbd6ac3db2ee15164010aa06e25cb475aa72bfe4c04a6c59",
+          "baselineRoot": "sha256:64c5eceb65f777ab8a095dbae2d81ccf8398587a6f46ed42b5c8b18370d07508",
+          "changedSinceBaseline": true
         },
         {
           "path": "framework/core/src/python/kungfu/assignment_orchestration.py",
-          "currentLines": 1014,
+          "currentLines": 1109,
           "baselineLines": 1014,
-          "currentRoot": "sha256:68b2491178449fab6abb8d96fb69819a8807751dd145ddd7a553393f57b73890",
+          "currentRoot": "sha256:5e02c8966266ac92eece47988e977381d4a91adb361a439d6da1964a1691711c",
           "baselineRoot": "sha256:68b2491178449fab6abb8d96fb69819a8807751dd145ddd7a553393f57b73890",
-          "changedSinceBaseline": false
+          "changedSinceBaseline": true
         },
         {
           "path": "framework/core/src/python/kungfu/profile_sdk.py",
@@ -330,12 +374,20 @@
           "changedSinceBaseline": false
         },
         {
+          "path": "scripts/check-work-lifecycle-operation-matrix.test.mjs",
+          "currentLines": 355,
+          "baselineLines": 355,
+          "currentRoot": "sha256:7591d5eec7a656ffcb287609c0f50f4a6e0eca802a0b0209d902c05b1b5217c4",
+          "baselineRoot": "sha256:7fb9d01feb8ef08e8af4a2d7d7691551923a8fc2714a0e967e332d0057131283",
+          "changedSinceBaseline": true
+        },
+        {
           "path": "docs/architecture/work-lifecycle-operation-matrix.md",
           "currentLines": 80,
           "baselineLines": 80,
-          "currentRoot": "sha256:292778ae3595a64deaf1318b6a22e75756750317deb93f276e87fb96e4f1c6b9",
+          "currentRoot": "sha256:ad21e249fb6f7ae3ceb37a6a4c4efac3d49931faf60b2ab84979b2ab2ed3b494",
           "baselineRoot": "sha256:292778ae3595a64deaf1318b6a22e75756750317deb93f276e87fb96e4f1c6b9",
-          "changedSinceBaseline": false
+          "changedSinceBaseline": true
         }
       ],
       "knownLimits": [
@@ -646,16 +698,21 @@
         "authority": 3,
         "thin-binding": 2,
         "compatibility-reader": 1,
-        "generated-projection": 1,
+        "generated-projection": 3,
+        "test": 1,
         "conformance-oracle": 1,
         "documentation": 1,
         "retained-evidence": 1
       },
       "amplification": {
-        "mappedSurfaces": 10,
-        "nonAuthoritySurfaces": 7,
-        "changedSurfaces": 0,
-        "changedPaths": []
+        "mappedSurfaces": 13,
+        "nonAuthoritySurfaces": 10,
+        "changedSurfaces": 3,
+        "changedPaths": [
+          "framework/storage/generated/work-lifecycle-v1.js",
+          "framework/storage/python/kungfu_sdk/generated/work_lifecycle_v1.py",
+          "scripts/check-work-lifecycle-operation-matrix.test.mjs"
+        ]
       },
       "surfaces": [
         {
@@ -673,6 +730,20 @@
         {
           "path": "framework/core/src/libkungfu/src/runtime/storage/query_render.cpp",
           "role": "generated-projection"
+        },
+        {
+          "path": "framework/storage/generated/work-lifecycle-v1.js",
+          "role": "generated-projection",
+          "generator": "scripts/generate-work-lifecycle-sdk.mjs"
+        },
+        {
+          "path": "framework/storage/python/kungfu_sdk/generated/work_lifecycle_v1.py",
+          "role": "generated-projection",
+          "generator": "scripts/generate-work-lifecycle-sdk.mjs"
+        },
+        {
+          "path": "scripts/check-work-lifecycle-operation-matrix.test.mjs",
+          "role": "test"
         },
         {
           "path": "framework/core/tests/storage-node-binding.test.js",
@@ -743,6 +814,30 @@
           "currentRoot": "sha256:7d8e97295419e00924fdb8f1ec74257867e6c9b3bb6a2d33c45ce3c1ad5ea0c7",
           "baselineRoot": "sha256:7d8e97295419e00924fdb8f1ec74257867e6c9b3bb6a2d33c45ce3c1ad5ea0c7",
           "changedSinceBaseline": false
+        },
+        {
+          "path": "framework/storage/generated/work-lifecycle-v1.js",
+          "currentLines": 25,
+          "baselineLines": 25,
+          "currentRoot": "sha256:33d1adb42d90b742a46950cf61801ef96955ce27b735dfb2eacc66388efb46f7",
+          "baselineRoot": "sha256:e8e332b59a495d14daef3adc6bca0432f98d1a3c27a5a4241c1d6bf90641fe97",
+          "changedSinceBaseline": true
+        },
+        {
+          "path": "framework/storage/python/kungfu_sdk/generated/work_lifecycle_v1.py",
+          "currentLines": 55,
+          "baselineLines": 55,
+          "currentRoot": "sha256:fdc38b484a22b48cfbd6ac3db2ee15164010aa06e25cb475aa72bfe4c04a6c59",
+          "baselineRoot": "sha256:64c5eceb65f777ab8a095dbae2d81ccf8398587a6f46ed42b5c8b18370d07508",
+          "changedSinceBaseline": true
+        },
+        {
+          "path": "scripts/check-work-lifecycle-operation-matrix.test.mjs",
+          "currentLines": 355,
+          "baselineLines": 355,
+          "currentRoot": "sha256:7591d5eec7a656ffcb287609c0f50f4a6e0eca802a0b0209d902c05b1b5217c4",
+          "baselineRoot": "sha256:7fb9d01feb8ef08e8af4a2d7d7691551923a8fc2714a0e967e332d0057131283",
+          "changedSinceBaseline": true
         },
         {
           "path": "framework/core/tests/storage-node-binding.test.js",

@@ -591,14 +591,14 @@ def test_system_profile_release_receipt_is_exact_root_and_shared_with_status(
     manifest = profile_sdk.build_kfd3_release_manifest([source], runtime)
     receipt = manifest["entries"][0]["receipt"]
 
-    assert receipt["profileId"] == "kungfu.mission-control"
+    assert receipt["profileId"] == "kungfu.work-control"
     assert receipt["qualificationSource"] == "release"
     assert receipt["noBypass"]["policy"] == "release-owned-shared-api-parity/v1"
     assert len(receipt["clientProbes"]) == 14
     assert all(row["matched"] for row in receipt["clientProbes"])
     assert {
-        "cutover-authority",
-        "rollback-authority",
+        "activate-work-control",
+        "restore-atlas-authority",
         "claim-assignment",
         "advance-assignment",
         "append-assignment-relation-event",
@@ -1238,12 +1238,16 @@ def test_mission_control_profile_action_executes_through_public_intent(tmp_path)
     assert execution["coreReceipt"]["initiative_subject"] == "kungfu:mission:test"
     assert execution["memberReceipt"]["schema"] == ("kungfu.profile-member-receipt/v1")
     assert execution["memberReceipt"]["profileSuiteRoot"] == plan["profileSuiteRoot"]
-    assert execution["memberReceipt"]["memberId"] == "mission-control-actions"
+    assert execution["memberReceipt"]["memberId"] == "work-control-actions"
     assert execution["memberReceipt"]["memberRoot"].startswith("sha256:")
     assert execution["affected"] == {
-        "profileId": "kungfu.mission-control",
+        "profileId": "kungfu.work-control",
         "entityKeys": ["kungfu:mission:test"],
-        "queryKeys": ["mission-state", "mission-timeline", "mission-attention"],
+        "queryKeys": [
+            "initiative-state",
+            "initiative-timeline",
+            "initiative-attention",
+        ],
     }
     assert receipt["executionReceiptVerified"] is True
 

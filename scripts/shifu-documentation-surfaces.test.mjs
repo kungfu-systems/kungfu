@@ -156,12 +156,12 @@ test(
         'kungfu-format-contract',
         'kungfu-gui',
         'kungfu-kfx-development',
-        'kungfu-mission-agent',
         'kungfu-operations',
         'kungfu-primitive-management',
         'kungfu-sdk',
         'kungfu-storage-journal',
         'kungfu-user-guide',
+        'kungfu-work-control',
       ],
     );
     assert.ok(

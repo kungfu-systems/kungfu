@@ -1,8 +1,8 @@
 {
-  "name": "@kungfu-tech/kfx-mission-control-assessment",
+  "name": "@kungfu-tech/kfx-work-control-assessment",
   "version": "4.0.0-alpha.1",
   "private": true,
   "kungfuConfig": {
-    "key": "mission-control-assessment"
+    "key": "work-control-assessment"
   }
 }

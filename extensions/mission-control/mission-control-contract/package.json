@@ -1,8 +1,8 @@
 {
-  "name": "@kungfu-tech/kfx-mission-control-contract",
+  "name": "@kungfu-tech/kfx-work-control-contract",
   "version": "4.0.0-alpha.1",
   "private": true,
   "kungfuConfig": {
-    "key": "mission-control-contract"
+    "key": "work-control-contract"
   }
 }

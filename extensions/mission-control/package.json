@@ -1,22 +1,22 @@
 {
-  "name": "@kungfu-tech/kfx-suite-mission-control",
+  "name": "@kungfu-tech/kfx-suite-work-control",
   "version": "4.0.0-alpha.1",
-  "description": "First-party Mission Control semantic Profile Suite",
+  "description": "First-party Work Control semantic Profile Suite",
   "license": "Apache-2.0",
   "private": true,
   "dependencies": {
     "@kungfu-tech/kfx-view-work-dashboard": "workspace:*"
   },
   "kungfuConfig": {
-    "key": "kungfu.mission-control",
-    "name": "Mission Control",
+    "key": "kungfu.work-control",
+    "name": "Work Control",
     "suite": {
-      "title": "Mission Control",
+      "title": "Work Control",
       "members": [
-        "mission-control-contract",
-        "mission-control-actions",
-        "mission-control-assessment",
-        "mission-control-views",
+        "work-control-contract",
+        "work-control-actions",
+        "work-control-assessment",
+        "work-control-views",
         "work-dashboard"
       ],
       "profile": "profile.json"

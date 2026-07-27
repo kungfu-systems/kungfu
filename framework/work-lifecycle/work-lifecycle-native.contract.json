@@ -5,8 +5,8 @@
   "requestSchema": "kungfu.action-runtime.operation/v1",
   "responseSchema": "kungfu.action-runtime.result/v1",
   "action": "work_lifecycle",
-  "operationSetRoot": "sha256:d5a5e2a90465a48eb24f558bbd37dcc44c629e46295c158d4c6bad5ebc1511fd",
-  "matrixArtifactRoot": "sha256:b8cbb16ec51e20888b46082db84f14278999507a341f706da4cbe5a44c62e309",
+  "operationSetRoot": "sha256:7f40bf99ef9c13b122ba3b8a1cae51b909ec2a1ab3dcf5af6b4a6ba6c87fafa3",
+  "matrixArtifactRoot": "sha256:7daf812d259e2d7c2ebef7da819d6f99bfbed5ad7da3ed2677d0876de1ce94e0",
   "operationCatalogSource": "framework/work-lifecycle/kungfu-work-lifecycle-operation-matrix.contract.json",
   "authorityMembrane": {
     "semanticDecisionOwner": "native-runtime-only",
@@ -19,8 +19,8 @@
       "kungfu.profile_sdk": "libkungfu/runtime/profile",
       "kungfu::runtime::kfx::native_kfx_service": "libkungfu/runtime/kfx",
       "kungfu::runtime::profile::profile_lifecycle": "libkungfu/runtime/profile",
-      "mission-control-actions": "libkungfu/runtime/action/mission-control",
-      "mission-control-profile": "libkungfu/runtime/action/mission-control"
+      "work-control-actions": "libkungfu/runtime/action/work-control",
+      "work-control-profile": "libkungfu/runtime/action/work-control"
     },
     "nativeWaist": {
       "bootstrap": "kungfu_get_api",
@@ -563,11 +563,11 @@
       "id": "work.lifecycle.initiative.inspect/v1",
       "capability": "inspect",
       "layer": "initiative",
-      "authority": "mission-control-profile",
-      "semanticOwner": "libkungfu/runtime/action/mission-control",
-      "interface": "mission-control-profile",
+      "authority": "work-control-profile",
+      "semanticOwner": "libkungfu/runtime/action/work-control",
+      "interface": "work-control-profile",
       "routes": [
-        "show-missions"
+        "initiatives"
       ],
       "availability": "degraded",
       "reasonCode": "native-operation-degraded",
@@ -583,9 +583,9 @@
       "id": "work.lifecycle.initiative.create/v1",
       "capability": "create",
       "layer": "initiative",
-      "authority": "mission-control-profile",
-      "semanticOwner": "libkungfu/runtime/action/mission-control",
-      "interface": "mission-control-actions",
+      "authority": "work-control-profile",
+      "semanticOwner": "libkungfu/runtime/action/work-control",
+      "interface": "work-control-actions",
       "routes": [
         "create-initiative"
       ],
@@ -603,9 +603,9 @@
       "id": "work.lifecycle.initiative.transition/v1",
       "capability": "transition",
       "layer": "initiative",
-      "authority": "mission-control-profile",
-      "semanticOwner": "libkungfu/runtime/action/mission-control",
-      "interface": "mission-control-actions",
+      "authority": "work-control-profile",
+      "semanticOwner": "libkungfu/runtime/action/work-control",
+      "interface": "work-control-actions",
       "routes": [
         "assess-progress",
         "review-completion",
@@ -625,11 +625,11 @@
       "id": "work.lifecycle.initiative.export/v1",
       "capability": "export",
       "layer": "initiative",
-      "authority": "mission-control-profile",
-      "semanticOwner": "libkungfu/runtime/action/mission-control",
-      "interface": "mission-control-actions",
+      "authority": "work-control-profile",
+      "semanticOwner": "libkungfu/runtime/action/work-control",
+      "interface": "work-control-actions",
       "routes": [
-        "export-mission"
+        "export-initiative"
       ],
       "availability": "degraded",
       "reasonCode": "native-operation-degraded",
@@ -645,11 +645,11 @@
       "id": "work.lifecycle.initiative.import/v1",
       "capability": "import",
       "layer": "initiative",
-      "authority": "mission-control-profile",
-      "semanticOwner": "libkungfu/runtime/action/mission-control",
-      "interface": "mission-control-actions",
+      "authority": "work-control-profile",
+      "semanticOwner": "libkungfu/runtime/action/work-control",
+      "interface": "work-control-actions",
       "routes": [
-        "import-mission"
+        "import-initiative"
       ],
       "availability": "degraded",
       "reasonCode": "native-operation-degraded",
@@ -665,11 +665,11 @@
       "id": "work.lifecycle.assignment.inspect/v1",
       "capability": "inspect",
       "layer": "assignment",
-      "authority": "mission-control-profile",
-      "semanticOwner": "libkungfu/runtime/action/mission-control",
-      "interface": "mission-control-profile",
+      "authority": "work-control-profile",
+      "semanticOwner": "libkungfu/runtime/action/work-control",
+      "interface": "work-control-profile",
       "routes": [
-        "show-goals"
+        "assignments"
       ],
       "availability": "degraded",
       "reasonCode": "native-operation-degraded",
@@ -685,9 +685,9 @@
       "id": "work.lifecycle.assignment.create/v1",
       "capability": "create",
       "layer": "assignment",
-      "authority": "mission-control-profile",
-      "semanticOwner": "libkungfu/runtime/action/mission-control",
-      "interface": "mission-control-actions",
+      "authority": "work-control-profile",
+      "semanticOwner": "libkungfu/runtime/action/work-control",
+      "interface": "work-control-actions",
       "routes": [
         "create-assignment"
       ],
@@ -705,9 +705,9 @@
       "id": "work.lifecycle.assignment.transition/v1",
       "capability": "transition",
       "layer": "assignment",
-      "authority": "mission-control-profile",
-      "semanticOwner": "libkungfu/runtime/action/mission-control",
-      "interface": "mission-control-actions",
+      "authority": "work-control-profile",
+      "semanticOwner": "libkungfu/runtime/action/work-control",
+      "interface": "work-control-actions",
       "routes": [
         "claim-completion",
         "review-completion"
@@ -726,9 +726,9 @@
       "id": "work.lifecycle.assignment.archive/v1",
       "capability": "archive",
       "layer": "assignment",
-      "authority": "mission-control-profile",
-      "semanticOwner": "libkungfu/runtime/action/mission-control",
-      "interface": "mission-control-actions",
+      "authority": "work-control-profile",
+      "semanticOwner": "libkungfu/runtime/action/work-control",
+      "interface": "work-control-actions",
       "routes": [],
       "availability": "unavailable",
       "reasonCode": "native-operation-unavailable",
@@ -1094,19 +1094,19 @@
   "generatedOutputRoots": {
     "cpp": {
       "path": "framework/core/src/libkungfu/include/kungfu/sdk/generated/work_lifecycle_v1.hpp",
-      "root": "sha256:9221cf41f620916a453c88743bf4f0090ef7bd19e770192568ba708a6c482e08"
+      "root": "sha256:44a7f63db956e2754a7d36e66852d10766d5d7103f6febbc51d3f8f6e218066f"
     },
     "node": {
       "path": "framework/storage/generated/work-lifecycle-v1.js",
-      "root": "sha256:e8e332b59a495d14daef3adc6bca0432f98d1a3c27a5a4241c1d6bf90641fe97"
+      "root": "sha256:33d1adb42d90b742a46950cf61801ef96955ce27b735dfb2eacc66388efb46f7"
     },
     "python": {
       "path": "framework/storage/python/kungfu_sdk/generated/work_lifecycle_v1.py",
-      "root": "sha256:64c5eceb65f777ab8a095dbae2d81ccf8398587a6f46ed42b5c8b18370d07508"
+      "root": "sha256:fdc38b484a22b48cfbd6ac3db2ee15164010aa06e25cb475aa72bfe4c04a6c59"
     },
     "rust": {
       "path": "crates/kungfu-sdk/src/generated/work_lifecycle_v1.rs",
-      "root": "sha256:7db1506dd64536b8bafde50e863cc911831a50475e564dccfd8c3ee65fb61ed1"
+      "root": "sha256:d3e701dc88e9ac22cf0ab851814d061dc30102f83ad9c9af9a11cadf2b22f2d9"
     }
   }
 }

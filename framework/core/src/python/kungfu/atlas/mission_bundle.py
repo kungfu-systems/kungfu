@@ -6,9 +6,9 @@ from kungfu import profile_sdk
 
 
 def _domain():
-    source = profile_sdk.discover_source("kungfu.mission-control")["source"]
+    source = profile_sdk.discover_source("kungfu.work-control")["source"]
     package = profile_sdk.load_member_python_package(
-        source, "mission-control-actions", "domain"
+        source, "work-control-actions", "domain"
     )
     return package.mission_bundle
 
