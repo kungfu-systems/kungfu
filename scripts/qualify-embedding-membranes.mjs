@@ -68,17 +68,19 @@ const cargoSourceArgs = [
   `source.kungfu-spike-mirror.registry="${cargoRegistry}"`,
 ];
 
-// Resolve every locked dependency before Ninja starts unrelated native work.
+// Resolve every spike and production dependency before Ninja starts native work.
 // The build below is deliberately offline so a registry failure cannot surface
 // late after C++ and product compilation have already consumed the runner.
-for (const engine of ['wasmtime', 'wasmer']) {
-  run('cargo', [
-    ...cargoSourceArgs,
-    'fetch',
-    '--locked',
-    '--manifest-path',
-    path.join(root, 'crates', 'libwasm-spike', engine, 'Cargo.toml'),
-  ]);
+for (const crateFamily of ['libwasm-spike', 'libwasm']) {
+  for (const engine of ['wasmtime', 'wasmer']) {
+    run('cargo', [
+      ...cargoSourceArgs,
+      'fetch',
+      '--locked',
+      '--manifest-path',
+      path.join(root, 'crates', crateFamily, engine, 'Cargo.toml'),
+    ]);
+  }
 }
 
 run('cmake', [
