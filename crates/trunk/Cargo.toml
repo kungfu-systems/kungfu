@@ -36,3 +36,4 @@ embedding = ["dep:kungfu-embedding"]
 shifu-core = { path = "../shifu-core" }
 kungfu-embedding = { path = "../kungfu-embedding", optional = true }
 xinfa = { path = "../xinfa" }
+serde_json = "1.0"

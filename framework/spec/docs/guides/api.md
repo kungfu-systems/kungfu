@@ -83,6 +83,6 @@ result is bounded by its selected reader profile. Use the conformance guide for
 the meanings of `read-degraded`, `preserve-only`, `migration-required`, and
 `reject`.
 
-Previous: [Verify your first installed authority](quickstart.md)  
-Next: [Use the Spec CLI](cli.md)  
+Previous: [Verify your first installed authority](quickstart.md)\
+Next: [Use the Spec CLI](cli.md)\
 Evidence: [Run and interpret the conformance corpus](conformance.md)
