@@ -1437,7 +1437,7 @@
           "authority": "qualification",
           "publication": "none",
           "receipt": "diagnostic",
-          "definitionDigest": "sha256:5067a806e4d8dbbf194387c062741f272cf205e95b535518a59f75ec31fa8244",
+          "definitionDigest": "sha256:59225f5deb39bbdaff9edc2d41d3dfa04b953d43e67f3685df60d2509a20d32e",
           "credentials": {
             "githubToken": "read",
             "oidc": false,
@@ -1475,8 +1475,8 @@
             },
             {
               "index": 6,
-              "label": "name:Verify pinned spike Rust toolchain",
-              "definitionDigest": "sha256:32fd42c280abcb64c25877dd920f9e95637132dacce97fdd10528dcf4cf2aed2"
+              "label": "name:Verify Rust toolchain and fetch locked libwasm dependencies",
+              "definitionDigest": "sha256:125b64ddf252c71d54c37d4f18823e095badcbd9751311b12097edd63d1e15c5"
             },
             {
               "index": 7,
