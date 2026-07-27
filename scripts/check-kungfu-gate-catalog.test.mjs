@@ -189,7 +189,7 @@ test('current Kungfu catalog, docs, matrix, actions, and workflows align', () =>
   );
   assert.equal(controllers.length, 10);
   assert.ok(controllers.every((fact) => fact.gates.length > 0));
-  assert.equal(result.workflowAuthority.workflows.length, 23);
+  assert.equal(result.workflowAuthority.workflows.length, 24);
   const alphaPreflight = result.workflowAuthority.workflows.find(
     (workflow) =>
       workflow.path === '.github/workflows/alpha-promotion-preflight.yml',

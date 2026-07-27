@@ -1,0 +1,37 @@
+{
+  "schema": "kungfu.stable-release-continuation-rehearsal/v1",
+  "status": "qualified",
+  "recordedAt": "2026-07-27",
+  "buildchain": {
+    "repository": "kungfu-systems/buildchain",
+    "ref": "7629c4b499cd2d4eebf4c020fbc81637ae1dcb39",
+    "command": "release dry-run"
+  },
+  "candidate": {
+    "targetRef": "release/v4/v4.0",
+    "sourceRef": "alpha/v4/v4.0",
+    "sourceTag": "v4.0.0-alpha.0",
+    "sourceSha": "33d743722d59ab1a9723b907fdd1d64fabac032e"
+  },
+  "expectedTransaction": {
+    "stableTag": "v4.0.0",
+    "nextAlphaTag": "v4.0.1-alpha.0",
+    "productionRef": "release/v4/v4.0",
+    "nextAlphaRefs": [
+      "alpha/v4/v4.0",
+      "dev/v4/v4.0"
+    ],
+    "versionState": [
+      "4.0.0",
+      "4.0.1-alpha.0"
+    ],
+    "publishTransaction": "enabled:lifecycle.publish"
+  },
+  "safety": {
+    "dryRun": true,
+    "modifiedRefs": false,
+    "modifiedTags": false,
+    "published": false
+  },
+  "contractRoot": "sha256:86592cdd58ce7f487fec8b61fabd455cb8fd96fb5bb6b1f302a635ea4cf6c6fa"
+}
