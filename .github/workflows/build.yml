@@ -165,7 +165,7 @@ jobs:
       # Do not project the private-LAN runner profile onto hosted legs; use the
       # checked-in explicit-off profile so cache provenance remains auditable.
       shifu-cache-profile-ref: ${{ inputs.platforms-json && 'docs/shifu/qualification-portable-off.cache-profile.json' || vars.SHIFU_CACHE_PROFILE_REF }}
-      shifu-cache-profile-digest: ${{ inputs.platforms-json && 'sha256:251ecdb33a34b770a6fbd40b0b05c5c8c0d629a06d9144e6d2d89c9c8e70258b' || vars.SHIFU_CACHE_PROFILE_DIGEST }}
+      shifu-cache-profile-digest: ${{ inputs.platforms-json && 'sha256:d7002041716ea1e5ad703492815c9557576d5679227743541c13d42b6ea9de5c' || vars.SHIFU_CACHE_PROFILE_DIGEST }}
       cache-dependency-lock-root: ${{ needs.preflight.outputs.dependency-lock-root }}
       cache-toolchain-root: ${{ needs.preflight.outputs.toolchain-root }}
       cache-policy-root: ${{ needs.preflight.outputs.policy-root }}
@@ -211,7 +211,7 @@ jobs:
       checkout-cache-timeout-seconds: 60
       checkout-cache-github-timeout-seconds: 1200
       shifu-cache-profile-ref: docs/shifu/qualification-portable-off.cache-profile.json
-      shifu-cache-profile-digest: sha256:251ecdb33a34b770a6fbd40b0b05c5c8c0d629a06d9144e6d2d89c9c8e70258b
+      shifu-cache-profile-digest: sha256:d7002041716ea1e5ad703492815c9557576d5679227743541c13d42b6ea9de5c
       buildchain-contract-lock-path: .buildchain/contract-lock.json
       buildchain-contract-compatibility-policy: major-compatible
       buildchain-contract-drift-issue-mode: compatible-and-breaking

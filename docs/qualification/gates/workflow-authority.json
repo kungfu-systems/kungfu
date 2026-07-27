@@ -770,7 +770,7 @@
           "authority": "qualification",
           "publication": "none",
           "receipt": "qualifying",
-          "definitionDigest": "sha256:78e35dd1773156161451b5e2736410c724d8142a37e4bf378621760deba0478b",
+          "definitionDigest": "sha256:be225e4e8c4369c3c95a8148fc768916c984d08773f5226bbde9d97fe32d6155",
           "credentials": {
             "githubToken": "write",
             "oidc": true,
@@ -848,7 +848,7 @@
           "authority": "qualification",
           "publication": "none",
           "receipt": "diagnostic",
-          "definitionDigest": "sha256:ba5be3ddff4f52b785d8ffc173adb374b0db519ddb65a1ae611eea2283c461c3",
+          "definitionDigest": "sha256:e6305adae11b3207995daa414fc106118500a958dd99f2440df1ad6fe90c77c4",
           "credentials": {
             "githubToken": "write",
             "oidc": true,

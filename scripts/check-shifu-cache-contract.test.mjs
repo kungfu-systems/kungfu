@@ -142,21 +142,25 @@ test('cache contract schemas accept valid fixtures and reject unsafe policy', as
 });
 
 test('portable-off qualification profile covers every native Build lane', () => {
-  const profile = JSON.parse(
-    fs.readFileSync(
-      path.join(
-        ROOT,
-        'docs/shifu/qualification-portable-off.cache-profile.json',
-      ),
-      'utf8',
-    ),
+  const profilePath = path.join(
+    ROOT,
+    'docs/shifu/qualification-portable-off.cache-profile.json',
   );
+  const profileText = fs.readFileSync(profilePath, 'utf8');
+  const profile = JSON.parse(profileText);
   assert.deepEqual(profile.subject.platforms, [
     'darwin-arm64',
     'linux-arm64',
     'linux-x64',
     'windows-x64',
   ]);
+
+  const digest = crypto.createHash('sha256').update(profileText).digest('hex');
+  const buildWorkflow = fs.readFileSync(
+    path.join(ROOT, '.github/workflows/build.yml'),
+    'utf8',
+  );
+  assert.equal(buildWorkflow.split(`sha256:${digest}`).length - 1, 2);
 });
 
 for (const [label, args, source] of [
