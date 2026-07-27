@@ -15,7 +15,9 @@ import {
   formatCandidateTimelineReport,
 } from '@kungfu-tech/buildchain-alpha/candidate-timeline';
 
+import { requiredMergeQueueWindow } from './candidate-timeline-events.cjs';
 import { planAffectedPaths } from './run-core-affected-native.mjs';
+export { requiredMergeQueueWindow };
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const DEFAULT_BRANCH = 'dev/v4/v4.0';
@@ -23,10 +25,7 @@ const MINIMUM_SAMPLE_COUNT = 20;
 const MINIMUM_NATIVE_SAMPLE_COUNT = 10;
 const BASELINE_PATH = path.join(
   ROOT,
-  'framework',
-  'core',
-  'architecture',
-  'dev-gate-latency-baseline.json',
+  'framework/core/architecture/dev-gate-latency-baseline.json',
 );
 
 function parseArgs(argv) {
@@ -1358,23 +1357,28 @@ async function collectSample(
   token,
 ) {
   const sha = pull.head.sha;
-  const [checkPayload, files] = await Promise.all([
-    githubJson(
+  const files = await githubPages(
+    `/repos/${repository}/pulls/${pull.number}/files`,
+    token,
+  );
+  let checks;
+  try {
+    const checkPayload = await githubJson(
       `/repos/${repository}/commits/${sha}/check-runs?per_page=100`,
       token,
-    ),
-    githubPages(`/repos/${repository}/pulls/${pull.number}/files`, token),
-  ]);
-  const checkRuns = checkPayload.check_runs || [];
-  const actionsRuns = await Promise.all(
-    workflowRunIds(checkRuns).map((runId) =>
-      githubJson(`/repos/${repository}/actions/runs/${runId}`, token),
-    ),
-  );
-  const checks = requiredContexts.map((context) =>
-    selectedContext(checkRuns, actionsRuns, context, pull.merged_at),
-  );
-  const incomplete = checks.filter(({ status }) => status !== 'success');
+    );
+    const checkRuns = checkPayload.check_runs || [];
+    const actionsRuns = await Promise.all(
+      workflowRunIds(checkRuns).map((runId) =>
+        githubJson(`/repos/${repository}/actions/runs/${runId}`, token),
+      ),
+    );
+    checks = requiredContexts.map((context) =>
+      selectedContext(checkRuns, actionsRuns, context, pull.merged_at),
+    );
+  } catch (error) {
+    checks = [{ status: 'unknown', reason: error.message }];
+  }
   const changedPaths = [
     ...new Set(
       files
@@ -1403,36 +1407,30 @@ async function collectSample(
       planDigest: null,
     };
   }
-  if (incomplete.length) {
+  const requiredWindow = requiredMergeQueueWindow(requiredContexts, mergeQueue);
+  if (requiredWindow.status !== 'observed') {
     return {
       excluded: true,
-      exclusionReason: 'required-context-incomplete',
+      exclusionReason: 'merge-queue-required-context-incomplete',
       pullRequest: pull.number,
       sourceSha: sha,
       classification,
+      requiredWindow,
       checks,
       mergeQueue,
     };
   }
-  const affectedNative = checks.find(
+  const affectedNativeContext = requiredWindow.contexts.find(
     ({ context }) => context === 'affected-native / linux',
   );
-  const mergedQueueRun = mergeQueue?.rounds
-    ?.find(({ reason }) => reason === 'merged')
-    ?.mergeGroupRuns?.at(-1);
   const evidence = await collectAffectedNativeEvidence(
     repository,
-    mergedQueueRun?.id || affectedNative?.finalWorkflowRunId,
+    affectedNativeContext?.workflowRunId || requiredWindow.workflowRunId,
     classification,
     token,
-    mergedQueueRun?.headSha || affectedNative?.finalWorkflowHeadSha || sha,
+    affectedNativeContext?.workflowHeadSha || requiredWindow.workflowHeadSha,
     sha,
   );
-  const startedAt = checks.map(({ startedAt }) => startedAt).sort()[0];
-  const completedAt = checks
-    .map(({ completedAt }) => completedAt)
-    .sort()
-    .at(-1);
   return {
     excluded: false,
     pullRequest: pull.number,
@@ -1442,9 +1440,11 @@ async function collectSample(
     classification,
     cache: evidence.cache,
     nativeEvidence: evidence.native,
-    startedAt,
-    completedAt,
-    durationMs: milliseconds(startedAt, completedAt),
+    startedAt: requiredWindow.startedAt,
+    completedAt: requiredWindow.completedAt,
+    durationMs: requiredWindow.durationMs,
+    requiredWindow,
+    checkAuthority: 'pull-request-head-diagnostic-only',
     checks,
     mergeQueue,
   };
@@ -1938,11 +1938,10 @@ export function report(
     repository,
     branch,
     metric: {
-      start:
-        'earliest workflow.created_at among required contexts for the final PR source revision',
-      end: 'latest first-success timestamp among required contexts no later than PR merge',
+      start: 'first authoritative GitHub AddedToMergeQueueEvent',
+      end: 'latest successful required job completion in the first complete required-context set on the eventual merged merge-group round',
       retries:
-        'included from the first matching workflow run through the first pre-merge success; post-merge reruns are excluded',
+        'all dequeue, retry, and queue gaps after first enqueue are included; pull-request-head checks are diagnostic only',
       percentile: 'nearest-rank',
       target: { p50Ms: 300000, p95Ms: 600000 },
       minimumSamples: {

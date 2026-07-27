@@ -125,7 +125,166 @@ async function measureCandidateStage(id, phase, callback, options = {}) {
   }
 }
 
+function incompleteRequiredWindow(reason, diagnostics = []) {
+  return {
+    status: 'incomplete',
+    authority:
+      'github-graphql-first-added-to-merge-queue+github-actions-merged-round-required-jobs',
+    startAuthority: 'github-graphql-first-added-to-merge-queue',
+    endAuthority: 'first-successful-merged-round-required-context-set',
+    reason,
+    diagnostics,
+    startedAt: null,
+    completedAt: null,
+    durationMs: null,
+    queueRoundIndex: null,
+    workflowRunId: null,
+    workflowHeadSha: null,
+    contexts: [],
+  };
+}
+
+function requiredMergeQueueWindow(requiredContexts, mergeQueue) {
+  const contexts = [...new Set(requiredContexts || [])].filter(Boolean).sort();
+  if (!contexts.length) {
+    return incompleteRequiredWindow('required context set is empty');
+  }
+  if (
+    mergeQueue?.queueStatus !== 'observed' ||
+    mergeQueue?.status !== 'observed'
+  ) {
+    return incompleteRequiredWindow(
+      'authoritative merge queue delivery evidence is incomplete',
+      mergeQueue?.diagnostics || [],
+    );
+  }
+  const startedAt = mergeQueue.firstEnqueuedAt;
+  const startedAtMs = Date.parse(startedAt);
+  const mergedAtMs = Date.parse(mergeQueue.mergedAt);
+  if (!Number.isFinite(startedAtMs) || !Number.isFinite(mergedAtMs)) {
+    return incompleteRequiredWindow(
+      'first enqueue or merge timestamp is missing or invalid',
+    );
+  }
+  const mergedRounds = (mergeQueue.rounds || []).filter(
+    ({ reason }) => reason === 'merged',
+  );
+  if (
+    mergedRounds.length !== 1 ||
+    mergeQueue.rounds.at(-1) !== mergedRounds[0]
+  ) {
+    return incompleteRequiredWindow(
+      'eventual merged queue round is missing or ambiguous',
+    );
+  }
+  const mergedRound = mergedRounds[0];
+  const roundEndMs = Date.parse(mergedRound.removedAt);
+  if (
+    !Number.isFinite(roundEndMs) ||
+    roundEndMs < startedAtMs ||
+    mergedAtMs < startedAtMs
+  ) {
+    return incompleteRequiredWindow(
+      'merged queue or pull request timestamps have invalid chronology',
+    );
+  }
+
+  const diagnostics = [];
+  const selectedContexts = [];
+  for (const context of contexts) {
+    const candidates = [];
+    for (const run of mergedRound.mergeGroupRuns || []) {
+      const matches = (run.jobs || []).filter(({ name }) => name === context);
+      if (matches.length > 1) {
+        return incompleteRequiredWindow(
+          `required context is ambiguous in merged queue run: ${context}`,
+          [`workflow-run-${run.id}-duplicate-${context}`],
+        );
+      }
+      const job = matches[0];
+      if (!job || job.status !== 'completed' || job.conclusion !== 'success') {
+        diagnostics.push(`workflow-run-${run.id}-missing-success-${context}`);
+        continue;
+      }
+      const completedAtMs = Date.parse(job.completedAt);
+      if (
+        !Number.isFinite(completedAtMs) ||
+        completedAtMs < startedAtMs ||
+        completedAtMs > roundEndMs ||
+        completedAtMs > mergedAtMs
+      ) {
+        return incompleteRequiredWindow(
+          `required context has invalid queue chronology: ${context}`,
+          [`workflow-run-${run.id}-invalid-completion-${context}`],
+        );
+      }
+      candidates.push({
+        context,
+        jobId: job.id,
+        workflowRunId: run.id,
+        workflowHeadSha: run.headSha,
+        startedAt: job.startedAt || null,
+        completedAt: job.completedAt,
+        completedAtMs,
+        conclusion: job.conclusion,
+      });
+    }
+    if (!candidates.length) {
+      return incompleteRequiredWindow(
+        'eventual merged queue round has no complete successful required-context set',
+        diagnostics,
+      );
+    }
+    candidates.sort(
+      (left, right) =>
+        left.completedAtMs - right.completedAtMs ||
+        Number(left.workflowRunId) - Number(right.workflowRunId),
+    );
+    selectedContexts.push(candidates[0]);
+  }
+  const selectedHeadShas = [
+    ...new Set(selectedContexts.map(({ workflowHeadSha }) => workflowHeadSha)),
+  ];
+  if (selectedHeadShas.length !== 1 || !selectedHeadShas[0]) {
+    return incompleteRequiredWindow(
+      'successful required contexts disagree on merge-group source',
+      selectedHeadShas.map(
+        (sha) => `required-context-source-${sha || 'missing'}`,
+      ),
+    );
+  }
+  selectedContexts.sort(
+    (left, right) =>
+      left.completedAtMs - right.completedAtMs ||
+      Number(left.workflowRunId) - Number(right.workflowRunId),
+  );
+  const finalContext = selectedContexts.at(-1);
+  return {
+    status: 'observed',
+    authority:
+      'github-graphql-first-added-to-merge-queue+github-actions-merged-round-required-jobs',
+    startAuthority: 'github-graphql-first-added-to-merge-queue',
+    endAuthority: 'first-successful-merged-round-required-context-set',
+    reason: 'complete successful required-context set observed',
+    diagnostics,
+    startedAt,
+    completedAt: finalContext.completedAt,
+    durationMs:
+      new Date(finalContext.completedAt).getTime() -
+      new Date(startedAt).getTime(),
+    queueRoundIndex: mergedRound.index,
+    workflowRunId: finalContext.workflowRunId,
+    workflowHeadSha: finalContext.workflowHeadSha,
+    workflowRunIds: [
+      ...new Set(selectedContexts.map(({ workflowRunId }) => workflowRunId)),
+    ],
+    contexts: selectedContexts.map(({ completedAtMs, ...context }) => context),
+    priorQueueRoundCount: Math.max(0, (mergeQueue.rounds || []).length - 1),
+  };
+}
+
 module.exports = {
   measureCandidateStage,
   measureCandidateStageSync,
+  requiredMergeQueueWindow,
 };

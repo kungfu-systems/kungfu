@@ -9,6 +9,8 @@ import { fileURLToPath } from 'node:url';
 import {
   activeMergeGroupRunsForPull,
   cancelDequeuedMergeGroupRuns,
+  mergeQueueRepairComment,
+  recordDequeuedRepairMarker,
 } from './cancel-dequeued-merge-group-runs.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -56,12 +58,124 @@ test('dequeue workflow executes only the trusted base with least privilege', () 
   );
   assert.match(workflow, /pull_request_target:\n\s+types: \[dequeued\]/u);
   assert.match(workflow, /permissions:\n\s+actions: write\n\s+contents: read/u);
+  assert.match(workflow, /\s+pull-requests: write/u);
   assert.match(
     workflow,
     /ref: \$\{\{ github\.event\.pull_request\.base\.sha \}\}/u,
   );
   assert.match(workflow, /persist-credentials: false/u);
-  assert.doesNotMatch(workflow, /pull_request\.head/u);
+  assert.doesNotMatch(
+    workflow,
+    /ref:\s+\$\{\{ github\.event\.pull_request\.head/u,
+  );
+});
+
+test('failed or conflicting dequeue records one exact-head repair marker', async () => {
+  const requests = [];
+  const headSha = 'a'.repeat(40);
+  const request = async (url, init = {}) => {
+    requests.push({
+      url,
+      method: init.method || 'GET',
+      body: init.body ? JSON.parse(init.body) : null,
+    });
+    if (url.endsWith('/graphql')) {
+      return response(200, {
+        data: {
+          repository: {
+            pullRequest: {
+              timelineItems: {
+                nodes: [
+                  {
+                    createdAt: '2026-07-27T02:00:00Z',
+                    reason: 'MERGE_CONFLICT',
+                  },
+                ],
+              },
+            },
+          },
+        },
+      });
+    }
+    if (url.includes('/issues/1510/comments?')) {
+      return response(200, [
+        {
+          id: 99,
+          body: mergeQueueRepairComment({
+            headSha,
+            reason: 'merge_conflict',
+          }),
+          user: { login: 'untrusted-contributor' },
+        },
+      ]);
+    }
+    if (url.endsWith('/issues/1510/comments')) {
+      return response(201, { id: 7 });
+    }
+    throw new Error(`unexpected request ${url}`);
+  };
+  assert.deepEqual(
+    await recordDequeuedRepairMarker({
+      repository: 'kungfu-systems/kungfu',
+      pullRequest: 1510,
+      headSha,
+      token: 'test-token',
+      request,
+    }),
+    {
+      repairRequired: true,
+      removal: {
+        createdAt: '2026-07-27T02:00:00Z',
+        reason: 'merge_conflict',
+      },
+      headSha,
+      comment: 'created',
+    },
+  );
+  assert.equal(requests.at(-1).method, 'POST');
+  assert.equal(
+    requests.at(-1).body.body,
+    mergeQueueRepairComment({ headSha, reason: 'merge_conflict' }),
+  );
+});
+
+test('manual dequeue does not mint a repair marker', async () => {
+  const request = async (url) => {
+    assert.match(url, /\/graphql$/u);
+    return response(200, {
+      data: {
+        repository: {
+          pullRequest: {
+            timelineItems: {
+              nodes: [
+                {
+                  createdAt: '2026-07-27T02:00:00Z',
+                  reason: 'MANUAL',
+                },
+              ],
+            },
+          },
+        },
+      },
+    });
+  };
+  assert.deepEqual(
+    await recordDequeuedRepairMarker({
+      repository: 'kungfu-systems/kungfu',
+      pullRequest: 1510,
+      headSha: 'b'.repeat(40),
+      token: 'test-token',
+      request,
+    }),
+    {
+      repairRequired: false,
+      removal: {
+        createdAt: '2026-07-27T02:00:00Z',
+        reason: 'manual',
+      },
+      comment: 'not-applicable',
+    },
+  );
 });
 
 test('cancellation is deduplicated and treats terminal races idempotently', async () => {
