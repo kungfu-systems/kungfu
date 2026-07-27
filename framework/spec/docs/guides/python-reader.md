@@ -38,5 +38,5 @@ The Site Bundle carries this guide and all rooted Spec documentation and
 evidence, but it intentionally does not claim to contain this executable
 reader. Install `@kungfu-tech/spec` when you need to run it.
 
-Previous: [Use the Spec CLI](cli.md)  
+Previous: [Use the Spec CLI](cli.md)\
 Next: [Run and interpret the conformance corpus](conformance.md)

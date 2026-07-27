@@ -120,6 +120,8 @@
     "check:cli-catalog-parity": "node scripts/require-shifu.mjs check:cli-catalog-parity && node scripts/check-cli-catalog-parity.mjs && PYTHONPATH=framework/core/src/python:${KUNGFU_NATIVE_PATH:-framework/core/build/Release} uv run --project framework/core --frozen python -m kungfu.cli.catalog_projection --check",
     "cli-surface:qualify": "node scripts/require-shifu.mjs cli-surface:qualify && node product/scripts/cli-surface-qualification.mjs",
     "test:cli-surface-qualification": "node scripts/require-shifu.mjs test:cli-surface-qualification && node --test product/scripts/archive.test.mjs product/scripts/cli-launcher.test.mjs product/scripts/cli-surface-qualification.test.mjs product/scripts/dist.test.mjs",
+    "qualify:product-cache-home": "node scripts/require-shifu.mjs qualify:product-cache-home && node product/scripts/qualify-product-cache-home.mjs --json",
+    "test:product-cache-home": "node scripts/require-shifu.mjs test:product-cache-home && node --test product/scripts/qualify-product-cache-home.test.mjs",
     "check:health-diagnostics-contract": "node scripts/require-shifu.mjs check:health-diagnostics-contract && node --test scripts/check-health-diagnostics-contract.test.mjs",
     "check:agent-work-state-contract": "node scripts/require-shifu.mjs check:agent-work-state-contract && node scripts/run-agent-work-state-tests.mjs",
     "test:continuity-pilot": "node scripts/require-shifu.mjs test:continuity-pilot && node --test scripts/run-continuity-pilot.test.mjs",

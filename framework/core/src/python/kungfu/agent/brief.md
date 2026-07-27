@@ -17,6 +17,16 @@ not require or imply Authenticode certification or a Windows publisher identity.
 This installed runtime carries a local agent pack. Use it before guessing from
 old docs, release notes, or memory.
 
+Disposable product state lives under one `KF_CACHE_HOME`, separate from
+workspace facts and configuration. Python bytecode is redirected to
+`KF_CACHE_HOME/python/<runtimeBuildId>` so normal GUI and CLI use never writes
+into the signed runtime or the selected workspace. Resolution prefers an
+explicit `KF_CACHE_HOME`, then `<KF_INSTANCE_HOME>/cache`, then the native user
+cache (`~/Library/Caches/kungfu` on macOS,
+`%LOCALAPPDATA%\Kungfu\Cache` on Windows, or
+`${XDG_CACHE_HOME:-~/.cache}/kungfu` on Linux). Cache contents are disposable;
+do not treat them as authoritative Kungfu data.
+
 Start here. This one command is the complete onboarding read; the remaining
 commands deepen the facts when the task needs them:
 

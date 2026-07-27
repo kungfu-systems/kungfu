@@ -78,5 +78,5 @@ The independent Python reader additionally classifies every retained vector
 using its implemented reader contract. Neither check silently promotes the
 pre-release authority to stable or replaces the owning protocol sources.
 
-Previous: [Run the independent Python reader](python-reader.md)  
+Previous: [Run the independent Python reader](python-reader.md)\
 Next: [Complete contract reference](reference.md)

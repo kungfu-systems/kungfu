@@ -20,16 +20,17 @@ test('CLI launchers defer install ownership to the colocated product manifest', 
   assert.doesNotMatch(windows, /electron/i);
 });
 
-test('desktop companion CLI keeps the signed Python runtime immutable', () => {
+test('desktop companion delegates bytecode cache ownership to the native trunk', () => {
   const launcher = readFileSync(
     fileURLToPath(
       new URL('../../framework/gui/resources/cli/kungfu', import.meta.url),
     ),
     'utf8',
   );
-  assert.match(launcher, /export PYTHONDONTWRITEBYTECODE=1/u);
+  assert.match(launcher, /export KUNGFU_UPGRADE_MANIFEST=/u);
   assert.ok(
-    launcher.indexOf('export PYTHONDONTWRITEBYTECODE=1') <
+    launcher.indexOf('export KUNGFU_UPGRADE_MANIFEST=') <
       launcher.indexOf('exec "$runtime/kungfu" "$@"'),
   );
+  assert.doesNotMatch(launcher, /PYTHONDONTWRITEBYTECODE/u);
 });
