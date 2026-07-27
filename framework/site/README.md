@@ -8,8 +8,9 @@ sources: [local-files, user-consensus]
 confidence: high
 sensitivity: public
 evidence_grade: A
-review_state: unreviewed
-last_reviewed: 2026-07-24
+review_state: self-reviewed
+last_reviewed: 2026-07-27
+ai_provenance: GPT-5 via Codex on 2026-07-27; based on the current site bundle, packaged Spec reader journey, KFD-3 registries, trademark policy, and visually verified downstream reader patterns; no site deployment, npm publication, or downstream repository mutation is claimed
 ---
 
 # `@kungfu-tech/site`
@@ -52,6 +53,12 @@ artifacts under `dist/site/`.
   reader-contract, version-matrix, registry and retained-vector routes.
   Consumers never need a monorepo checkout.
 - `schema/site-bundle.schema.json` — package/consumer contract.
+- `experience.js` — deterministic, framework-independent human/Agent page
+  generator. It emits complete HTML pages plus rooted `manifest.json`,
+  `agent-index.json`, and `llms.txt` bodies without writing a downstream
+  repository.
+- `schema/site-experience-config.schema.json` — closed configuration/content
+  boundary for the experience generator.
 - `installer-publication.mjs` — package-owned writer and verifier for a
   content-addressed installer publication handoff. It packages exact
   `install.sh`, `install.ps1`, signed-channel, trust-anchor, route, digest,
@@ -104,6 +111,93 @@ The guide content explains the direct Spec API, `kungfu-spec` CLI, independent
 Python reader, and conformance corpus. To execute those tools, install
 `@kungfu-tech/spec`; Site intentionally provides the documentation and rooted
 evidence projection, not a duplicate executable surface.
+
+## Generate a complete reader experience
+
+`renderProductSiteExperience()` turns the packaged product map into a complete
+Core site. A consumer supplies only its canonical base URL and local context:
+
+```js
+const {
+  renderProductSiteExperience,
+  verifySiteExperience,
+} = require('@kungfu-tech/site');
+
+const experience = renderProductSiteExperience({
+  canonicalBaseUrl: 'https://core.libkungfu.dev',
+  context: 'Core Product and Developer Platform',
+});
+
+verifySiteExperience(experience);
+for (const file of experience.files) writeRoute(file.route, file.body);
+```
+
+Every human page is generated with the same order:
+
+1. a concise human proposition;
+2. a visible Agent co-reading prompt linked to the KFD-3 machine entry;
+3. human-oriented explanation and known limits; and
+4. complete implementer/auditor material inside a collapsed technical
+   disclosure.
+
+The header, metadata, footer, primary navigation, machine alternates, and
+machine artifacts all use the exact `Kungfu UNGFU™` signature. `Kungfu`
+remains the product name; UNGFU is not a second product or runtime. Machine
+routes stay out of the human primary navigation while remaining visible in the
+first-screen cue and `<link rel="alternate">` metadata.
+
+`renderSiteExperience(config)` applies the same contract to other Kungfu
+surfaces. Its input is intentionally only site context, navigation, machine
+routes, and page content split into `humanSections` and `technicalSections`.
+It escapes all supplied prose, renders technical sections collapsed by
+default, creates human and Agent projections from the same page array, and
+binds every emitted body to SHA-256 roots:
+
+```js
+const { renderSiteExperience } = require('@kungfu-tech/site');
+
+const experience = renderSiteExperience({
+  contract: 'kungfu.site-experience-config/v1',
+  site: {
+    id: 'example-site',
+    context: 'Example Surface',
+    canonicalBaseUrl: 'https://example.kungfu.test',
+  },
+  content: {
+    pages: [
+      {
+        id: 'home',
+        label: 'Home',
+        route: '/',
+        headline: 'Start from the human outcome.',
+        summary: 'Open exact technical evidence only when the task needs it.',
+        claimClass: 'site-synthesis',
+        maturity: 'staged',
+        knownLimits: ['This example is not a release claim.'],
+        humanSections: [
+          {
+            id: 'orientation',
+            heading: 'Understand the result first.',
+            body: 'The first reading layer stays short and useful.',
+          },
+        ],
+        technicalSections: [
+          {
+            id: 'evidence',
+            heading: 'Inspect exact evidence.',
+            body: 'Put rooted contracts and source references here.',
+          },
+        ],
+      },
+    ],
+  },
+});
+```
+
+This generator projects KFD-3 parity; it does not certify a downstream site.
+The package binds the parity rule to Kungfu's exact KFD-3 API and Buildchain
+surface registries. A downstream release still owns its own conformance and
+publication evidence.
 
 ## Authority boundary
 
