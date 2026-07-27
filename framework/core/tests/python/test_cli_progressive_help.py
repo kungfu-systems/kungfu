@@ -217,7 +217,8 @@ def test_live_interactive_bare_command_enters_tui_without_materializing_runtime(
 ):
     pytest.importorskip("pykungfu")
     from kungfu.cli import commands
-    from kungfu.cli.commands import __registry__, tui  # noqa: F401
+    from kungfu.cli import tui_runtime
+    from kungfu.cli.commands import __registry__  # noqa: F401
 
     calls = []
     monkeypatch.setattr(
@@ -225,7 +226,9 @@ def test_live_interactive_bare_command_enters_tui_without_materializing_runtime(
     )
     monkeypatch.setenv("TERM", "xterm-256color")
     monkeypatch.delenv("CI", raising=False)
-    monkeypatch.setattr(tui, "run_tui", lambda ctx, commands=(): calls.append(commands))
+    monkeypatch.setattr(
+        tui_runtime, "run_tui", lambda ctx, commands=(): calls.append(commands)
+    )
     monkeypatch.setattr(
         commands,
         "initialize_runtime_context",
@@ -237,31 +240,25 @@ def test_live_interactive_bare_command_enters_tui_without_materializing_runtime(
     assert calls == [()]
 
 
-def test_live_tui_is_the_canonical_named_entry():
+def test_live_tui_named_command_is_absent_without_compatibility_alias():
     pytest.importorskip("pykungfu")
     from kungfu.cli.commands import __registry__, kfc  # noqa: F401
 
-    assert "tui" in kfc.commands
+    assert "tui" not in kfc.commands
 
-
-def test_live_tui_forwards_product_surface_arguments(monkeypatch):
-    pytest.importorskip("pykungfu")
-    from kungfu.cli.commands import __registry__, kfc, tui  # noqa: F401
-
-    calls = []
-    monkeypatch.setattr(tui, "run_tui", lambda ctx, argv=(): calls.append(argv))
     result = CliRunner().invoke(kfc, ["tui", "--diagnostic"])
-    assert result.exit_code == 0, result.output
-    assert calls == [("--diagnostic",)]
+    assert result.exit_code == 2
+    assert "No such command 'tui'" in result.output
 
 
 def test_live_demo_flag_drives_the_tui_lab_without_runtime_startup(monkeypatch):
     pytest.importorskip("pykungfu")
     from kungfu.cli import commands
-    from kungfu.cli.commands import __registry__, tui  # noqa: F401
+    from kungfu.cli import tui_runtime
+    from kungfu.cli.commands import __registry__  # noqa: F401
 
     calls = []
-    monkeypatch.setattr(tui, "run_tui", lambda ctx, argv=(): calls.append(argv))
+    monkeypatch.setattr(tui_runtime, "run_tui", lambda ctx, argv=(): calls.append(argv))
     monkeypatch.setattr(
         commands,
         "initialize_runtime_context",

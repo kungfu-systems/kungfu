@@ -8,7 +8,9 @@ import test from 'node:test';
 
 import {
   ENTER_ALTERNATE_SCREEN,
+  HIDE_CURSOR,
   LEAVE_ALTERNATE_SCREEN,
+  SHOW_CURSOR,
   type TerminalInput,
   TerminalLifecycle,
   type TerminalOutput,
@@ -55,9 +57,9 @@ test('owns alternate screen, raw mode, resize, and idempotent restoration', () =
   lifecycle.restore();
 
   assert.deepEqual(output.writes, [
-    ENTER_ALTERNATE_SCREEN,
+    `${ENTER_ALTERNATE_SCREEN}${HIDE_CURSOR}`,
     'INK-UNMOUNTED',
-    LEAVE_ALTERNATE_SCREEN,
+    `${SHOW_CURSOR}${LEAVE_ALTERNATE_SCREEN}`,
   ]);
   assert.deepEqual(raw, [true, false]);
   assert.deepEqual(flow, ['resume', 'pause']);
@@ -100,7 +102,7 @@ test('restores terminal state when the wrapped task throws', async () => {
     /fixture boot failure/,
   );
   assert.deepEqual(raw, [true, false]);
-  assert.equal(output.writes.at(-1), LEAVE_ALTERNATE_SCREEN);
+  assert.equal(output.writes.at(-1), `${SHOW_CURSOR}${LEAVE_ALTERNATE_SCREEN}`);
 });
 
 test('restores alternate screen and input after partial startup failure', async () => {
@@ -127,8 +129,8 @@ test('restores alternate screen and input after partial startup failure', async 
   );
   assert.deepEqual(raw, [true, false]);
   assert.deepEqual(output.writes, [
-    ENTER_ALTERNATE_SCREEN,
-    LEAVE_ALTERNATE_SCREEN,
+    `${ENTER_ALTERNATE_SCREEN}${HIDE_CURSOR}`,
+    `${SHOW_CURSOR}${LEAVE_ALTERNATE_SCREEN}`,
   ]);
 });
 

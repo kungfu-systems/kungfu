@@ -42,3 +42,5 @@ jobs:
       max-age-seconds: 604800
       create-pull-request: ${{ github.event_name == 'schedule' || inputs.create-pull-request }}
       dry-run: ${{ github.event_name != 'schedule' && inputs.dry-run }}
+    secrets:
+      promotion-token: ${{ secrets.KUNGFU_GITHUB_TOKEN }}

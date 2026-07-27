@@ -39,6 +39,13 @@ const NODE_HOST_LIB: &str = "libkungfu_node_host.so";
 #[cfg(windows)]
 const NODE_HOST_LIB: &str = "kungfu_node_host.dll";
 
+pub fn native_node_available() -> bool {
+    env::current_exe()
+        .ok()
+        .and_then(|exe| exe.parent().map(|root| root.join(NODE_HOST_LIB)))
+        .is_some_and(|path| path.is_file())
+}
+
 /// If this process was asked to be a variant the trunk can own natively, run it
 /// to completion and return `Some(exit_code)`. Return `None` to fall through to
 /// the normal launch path, where the Python variant table still handles it.

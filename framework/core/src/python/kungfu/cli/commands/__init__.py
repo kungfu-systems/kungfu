@@ -316,7 +316,7 @@ def kfc(
             raise click.UsageError(
                 "--qualification-lab-demo cannot be combined with a command"
             )
-        from kungfu.cli.commands.tui import run_tui
+        from kungfu.cli.tui_runtime import run_tui
 
         run_tui(ctx, ("--qualification-lab-demo",))
         return
@@ -331,7 +331,7 @@ def kfc(
             and not os.environ.get("CI")
         )
         if interactive:
-            from kungfu.cli.commands.tui import run_tui
+            from kungfu.cli.tui_runtime import run_tui
 
             run_tui(ctx)
             return

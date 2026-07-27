@@ -130,7 +130,7 @@
             "product-alpha",
             "product-binaries"
           ],
-          "sourceRoot": "sha256:ff9c5dc260e541871da9d45137b69316bc4395f4ed1026b8816c8ebaf585b361"
+          "sourceRoot": "sha256:d63c602571f0233d59729ea2be06c6b8470027a40d7676bdd79f97a1484fd3ba"
         },
         {
           "path": ".github/workflows/dev-verify-patrol.yml",
@@ -182,6 +182,13 @@
             "product-stable"
           ],
           "sourceRoot": "sha256:b59d313837702193d551d655a944a74b86d6dbf91c4d99b5968cf2a6ceb08488"
+        },
+        {
+          "path": ".github/workflows/opencode-local-model-canary.yml",
+          "classification": "non-publication",
+          "owner": "kungfu-ci",
+          "surfaceIds": [],
+          "sourceRoot": "sha256:baf3ed36c209a804a24978ece7537399c2fa4b524ec25b283aa78f9f69f9403f"
         },
         {
           "path": ".github/workflows/publish-layer-artifacts.yml",
@@ -767,5 +774,5 @@
       }
     }
   ],
-  "registryRoot": "sha256:089613ac438146ed5438ab25e64586f2436fdf22e61e47345f796160695abea4"
+  "registryRoot": "sha256:1766677bf02aa873b8fe12a89e80b3af736ad0bf3b3b2c9942db9e021b49274c"
 }

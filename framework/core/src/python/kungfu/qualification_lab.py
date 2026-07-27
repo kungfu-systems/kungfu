@@ -16,8 +16,9 @@ import platform
 import re
 import subprocess
 import tempfile
-from pathlib import Path
+import threading
 from collections.abc import Callable
+from pathlib import Path
 from typing import Any, Mapping
 
 import kungfu
@@ -32,9 +33,26 @@ DEMO_PLAN_SCHEMA = "kungfu.qualification-lab.demo-plan/v1"
 DEMO_REPORT_SCHEMA = "kungfu.qualification-lab.report/v1"
 AGENT_PLAN_SCHEMA = "kungfu.qualification-lab.agent-plan/v1"
 AGENT_REPORT_SCHEMA = "kungfu.qualification-lab.agent-report/v1"
+PUBLIC_ACTIVITY_SCHEMA = "kungfu.qualification-lab.public-activity/v1"
+PUBLIC_OUTPUT_SCHEMA = "kungfu.qualification-lab.public-output/v1"
 SUITE_ID = "kungfu.agent-continuity.v1"
 FIXTURE_ID = "partial-claim-fresh-session"
 CONTENT_ROOT = re.compile(r"^sha256:[0-9a-f]{64}$")
+ANSI_ESCAPE = re.compile(r"\x1b(?:[@-_][0-?]*[ -/]*[@-~]|\][^\x07]*(?:\x07|\x1b\\))")
+PUBLIC_OUTPUT_MESSAGES = {
+    1: "Recorded the bounded partial result and stopped.",
+    2: "Found the prior governed state and completed only the remaining step.",
+}
+PUBLIC_PROGRESS_MESSAGES = {
+    1: (
+        "I’m starting fresh, so I’ll inspect the governed task state first.",
+        "I found an unstarted task. I’ll record only the bounded first step.",
+    ),
+    2: (
+        "I’m starting fresh, so I’ll recover the governed task state before acting.",
+        "I found Session 1’s partial result and the same Work identity.",
+    ),
+}
 MIGRATION_MARKERS = (
     ".migration-in-progress",
     ".storage-migration-in-progress",
@@ -550,6 +568,8 @@ def _provider_command(profile: Mapping[str, Any], prompt: str) -> list[str]:
         return [
             *command,
             "exec",
+            "--json",
+            "--ephemeral",
             "--skip-git-repo-check",
             "--sandbox",
             "workspace-write",
@@ -630,20 +650,157 @@ def _agent_prompt(state_path: Path, attempt_index: int) -> str:
             "remaining step, then stop."
         )
     )
+    public_output = PUBLIC_OUTPUT_MESSAGES[attempt_index]
+    progress_before_read, progress_before_write = PUBLIC_PROGRESS_MESSAGES[
+        attempt_index
+    ]
     return (
         "Kungfu Agent Qualification Lab. Work only inside the current isolated "
         "temporary directory. Do not inspect credentials, user chats, or any "
         "path outside this directory. "
+        "Make your work observable with concise public status updates, never "
+        "private reasoning. Before your first tool call, send exactly this "
+        "public status line with no markdown: "
+        f"KUNGFU_PROGRESS: {progress_before_read} "
+        "After reading the state and before modifying it, send exactly this "
+        "public status line with no markdown: "
+        f"KUNGFU_PROGRESS: {progress_before_write} "
         f"{prior} Read {state_path.name}, then replace it with valid JSON. "
         "Preserve schema, suite, fixture, and workRef exactly. Set "
         f'status="{target_status}" and steps={target_steps}. '
-        "Do not create or modify any other file. This fixture measures exact "
-        "state recognition and continuation, not general intelligence."
+        "Do not create or modify any other file. After the file is valid, make "
+        "your final response exactly this single public line, with no markdown: "
+        f"KUNGFU_PUBLIC: {public_output} "
+        "This fixture measures exact state recognition and continuation, not "
+        "general intelligence."
     )
 
 
+def _provider_text_lines(stdout: str, provider: str) -> list[str]:
+    """Extract public Agent messages while ignoring reasoning and tool payloads."""
+
+    messages: list[str] = []
+    for raw_line in stdout.splitlines():
+        normalized = ANSI_ESCAPE.sub("", raw_line).strip()
+        if provider != "codex":
+            messages.append(normalized)
+            continue
+        try:
+            payload = json.loads(normalized)
+        except json.JSONDecodeError:
+            # Keep compatibility with bounded test adapters and older CLIs.
+            messages.append(normalized)
+            continue
+        if not isinstance(payload, dict) or payload.get("type") != "item.completed":
+            continue
+        item = payload.get("item")
+        if not isinstance(item, dict) or item.get("type") != "agent_message":
+            continue
+        text = item.get("text")
+        if isinstance(text, str):
+            messages.extend(
+                ANSI_ESCAPE.sub("", line).strip() for line in text.splitlines()
+            )
+    return messages
+
+
+def _admit_public_activities(
+    line: str, provider: str, attempt_index: int
+) -> list[dict[str, Any]]:
+    """Admit bounded Codex JSONL events without exposing commands or raw output."""
+
+    if provider != "codex":
+        return []
+    try:
+        payload = json.loads(ANSI_ESCAPE.sub("", line).strip())
+    except json.JSONDecodeError:
+        return []
+    if not isinstance(payload, dict):
+        return []
+    event_type = payload.get("type")
+    item = payload.get("item")
+    if event_type not in {"item.started", "item.completed"} or not isinstance(
+        item, dict
+    ):
+        return []
+    item_type = item.get("type")
+    if item_type == "agent_message" and event_type == "item.completed":
+        text = item.get("text")
+        if not isinstance(text, str):
+            return []
+        admitted: list[dict[str, Any]] = []
+        expected = set(PUBLIC_PROGRESS_MESSAGES[attempt_index])
+        for raw_text_line in text.splitlines():
+            normalized = ANSI_ESCAPE.sub("", raw_text_line).strip()
+            if not normalized.startswith("KUNGFU_PROGRESS: "):
+                continue
+            message = normalized.removeprefix("KUNGFU_PROGRESS: ")
+            if message not in expected:
+                continue
+            admitted.append(
+                {
+                    "schema": PUBLIC_ACTIVITY_SCHEMA,
+                    "source": "provider-jsonl",
+                    "kind": "agent",
+                    "phase": "progress",
+                    "text": message,
+                    "rawOutputRedacted": True,
+                }
+            )
+        return admitted
+    if item_type not in {"command_execution", "file_change"}:
+        return []
+    phase = "started" if event_type == "item.started" else "completed"
+    if item_type == "file_change":
+        text = (
+            "Applying the bounded fixture change in the isolated workspace."
+            if phase == "started"
+            else "The bounded fixture change was applied."
+        )
+    elif phase == "started":
+        text = "Using a bounded tool inside the isolated test workspace."
+    else:
+        exit_code = item.get("exit_code")
+        text = (
+            "The bounded workspace tool completed."
+            if exit_code in {None, 0}
+            else "The bounded workspace tool reported a failure."
+        )
+    return [
+        {
+            "schema": PUBLIC_ACTIVITY_SCHEMA,
+            "source": "provider-jsonl",
+            "kind": "tool",
+            "phase": phase,
+            "text": text,
+            "rawOutputRedacted": True,
+        }
+    ]
+
+
+def _admit_public_output(
+    stdout: str, attempt_index: int, provider: str = "codex"
+) -> dict[str, Any] | None:
+    """Admit only the exact bounded line requested by the qualification fixture."""
+
+    expected = f"KUNGFU_PUBLIC: {PUBLIC_OUTPUT_MESSAGES[attempt_index]}"
+    normalized_lines = _provider_text_lines(stdout, provider)
+    if expected not in normalized_lines:
+        return None
+    return {
+        "schema": PUBLIC_OUTPUT_SCHEMA,
+        "source": "provider-stdout",
+        "admission": "exact-qualification-marker",
+        "lines": [PUBLIC_OUTPUT_MESSAGES[attempt_index]],
+        "rawOutputRedacted": True,
+    }
+
+
 def _run_agent_process(
-    command: list[str], root: Path, timeout_seconds: int
+    command: list[str],
+    root: Path,
+    timeout_seconds: int,
+    on_stdout_line: Callable[[str], None] | None = None,
 ) -> tuple[int, int, str, str]:
     process = subprocess.Popen(
         command,
@@ -653,15 +810,50 @@ def _run_agent_process(
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
     )
+    stdout_lines: list[str] = []
+    stderr_lines: list[str] = []
+    reader_errors: list[Exception] = []
+
+    def drain_stdout() -> None:
+        assert process.stdout is not None
+        for line in process.stdout:
+            stdout_lines.append(line)
+            if on_stdout_line is not None:
+                try:
+                    on_stdout_line(line)
+                except Exception as error:  # pragma: no cover - host callback failure
+                    reader_errors.append(error)
+
+    def drain_stderr() -> None:
+        assert process.stderr is not None
+        stderr_lines.extend(process.stderr)
+
+    stdout_thread = threading.Thread(target=drain_stdout, daemon=True)
+    stderr_thread = threading.Thread(target=drain_stderr, daemon=True)
+    stdout_thread.start()
+    stderr_thread.start()
     try:
-        stdout, stderr = process.communicate(timeout=timeout_seconds)
+        process.wait(timeout=timeout_seconds)
     except subprocess.TimeoutExpired:
         process.kill()
-        stdout, stderr = process.communicate()
+        process.wait()
+        stdout_thread.join()
+        stderr_thread.join()
         raise RuntimeError(
             f"local agent session timed out after {timeout_seconds} seconds"
         ) from None
-    return process.pid, process.returncode, stdout, stderr
+    stdout_thread.join()
+    stderr_thread.join()
+    if reader_errors:
+        raise RuntimeError(
+            f"local agent event stream failed: {reader_errors[0]}"
+        ) from reader_errors[0]
+    return (
+        process.pid,
+        process.returncode,
+        "".join(stdout_lines),
+        "".join(stderr_lines),
+    )
 
 
 def run_agent(
@@ -759,8 +951,31 @@ def run_agent(
         )
         prompt = _agent_prompt(state_path, attempt_index)
         command = _provider_command(profiles[attempt_index - 1], prompt)
+        provider = str(profiles[attempt_index - 1]["provider"])
+
+        def receive_provider_line(line: str) -> None:
+            for activity in _admit_public_activities(line, provider, attempt_index):
+                _publish_event(
+                    events,
+                    {
+                        "schema": "kungfu.qualification-lab.event/v1",
+                        "step": f"session-{attempt_index}-activity",
+                        "status": (
+                            "complete"
+                            if activity["phase"] == "completed"
+                            else "running"
+                        ),
+                        "root": content_root(activity),
+                        "publicActivity": activity,
+                    },
+                    on_event,
+                )
+
         process_id, returncode, stdout, stderr = _run_agent_process(
-            command, root, timeout_seconds
+            command,
+            root,
+            timeout_seconds,
+            on_stdout_line=receive_provider_line,
         )
         receipt = {
             "schema": "kungfu.session-attempt/v1",
@@ -806,6 +1021,7 @@ def run_agent(
             if returncode == 0 and observed is not None
             else "failed"
         )
+        public_output = _admit_public_output(stdout, attempt_index, provider)
         _publish_event(
             events,
             {
@@ -813,6 +1029,7 @@ def run_agent(
                 "step": f"session-{attempt_index}",
                 "status": event_status,
                 "root": content_root(receipt),
+                **({"publicOutput": public_output} if public_output else {}),
             },
             on_event,
         )

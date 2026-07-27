@@ -185,7 +185,7 @@ infrastructure it would describe (see [`MAP.md`](../MAP.md), `provenance.md` —
 ## The end-user shell is partial, not complete
 
 The `kungfu` command is the runtime today and the canonical CLI over it. Several
-operator-facing slices have landed — for example `kungfu tui`,
+operator-facing slices have landed — for example the interactive bare `kungfu` TUI,
 `kungfu managed-run`, Kungfu Skill context injection, and the first skill-manager
 view. That is not yet the same as a complete end-user shell.
 
