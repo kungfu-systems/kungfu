@@ -341,6 +341,8 @@ export function sourceAcceptancePlan(files, evidenceBaseCommit = '') {
         'scripts/run-shifu-lifecycle.test.mjs',
         'scripts/check-typescript-files.test.mjs',
         'scripts/source-acceptance.test.mjs',
+        'scripts/opencode-local-model-canary-workflow.test.mjs',
+        'scripts/kungfu-workflow-authority.test.mjs',
         'scripts/code-complexity-budget.test.mjs',
         'framework/maintainability/semantic-amplification.test.mjs',
         'scripts/readonly-agent-bootstrap.test.mjs',

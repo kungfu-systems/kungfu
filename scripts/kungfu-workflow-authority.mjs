@@ -295,6 +295,34 @@ export function renderWorkflowAuthorityMatrix(document) {
   ].join('\n');
 }
 
+export function serializeWorkflowAuthority(document) {
+  const lines = JSON.stringify(document, null, 2).split('\n');
+  const rendered = [];
+  for (let index = 0; index < lines.length; index += 1) {
+    const match = lines[index].match(/^(\s*)"externalActions": \[$/);
+    if (!match) {
+      rendered.push(lines[index]);
+      continue;
+    }
+    const indent = match[1];
+    const values = [];
+    let closed = false;
+    for (index += 1; index < lines.length; index += 1) {
+      if (lines[index] === `${indent}],`) {
+        closed = true;
+        break;
+      }
+      const item = lines[index].trim().replace(/,$/, '');
+      if (!/^"(?:[^"\\]|\\.)*"$/.test(item))
+        throw new Error('unexpected external action serialization');
+      values.push(JSON.parse(item));
+    }
+    if (!closed) throw new Error('unterminated external action serialization');
+    rendered.push(`${indent}"externalActions": ${JSON.stringify(values)},`);
+  }
+  return `${rendered.join('\n')}\n`;
+}
+
 export function replaceWorkflowAuthorityMatrix(text, document) {
   const start = text.indexOf(MATRIX_BEGIN);
   const finish = text.indexOf(MATRIX_END);
@@ -517,10 +545,7 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
       process.exit(1);
     }
     fs.mkdirSync(path.dirname(target), { recursive: true });
-    fs.writeFileSync(
-      target,
-      `${JSON.stringify(projection.document, null, 2)}\n`,
-    );
+    fs.writeFileSync(target, serializeWorkflowAuthority(projection.document));
     const docTarget = path.join(ROOT, WORKFLOW_AUTHORITY_DOC);
     if (fs.existsSync(docTarget)) {
       fs.writeFileSync(
