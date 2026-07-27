@@ -18,6 +18,7 @@ import { useApp } from 'ink';
 import React from 'react';
 import { boundedIndex, decodeShellKey } from './navigation.js';
 import {
+  type QuickCommand,
   SessionWorkbench,
   type TerminalDimensions,
   type WorkbenchCheck,
@@ -38,6 +39,63 @@ export type TuiQualificationReportDetail = WorkbenchReportDetail;
 export type TuiQualificationNextPrompt = WorkbenchNextPrompt;
 export type TuiQualificationLine = WorkbenchLine;
 
+export type AgentWorkLabSuiteAction =
+  | 'lab-demo'
+  | 'lab-same'
+  | 'lab-handoff'
+  | 'lab-report'
+  | 'lab-focus-next';
+
+export type AgentWorkLabActionRequest = {
+  id: number;
+  action: AgentWorkLabSuiteAction;
+};
+
+export const AGENT_WORK_LAB_QUICK_COMMANDS: QuickCommand<AgentWorkLabSuiteAction>[] =
+  [
+    {
+      id: 'lab-demo',
+      command: '/demo',
+      title: 'Run Offline Demo',
+      summary: 'Show the two-Session continuity experiment without an Agent.',
+      action: 'lab-demo',
+    },
+    {
+      id: 'lab-same',
+      command: '/same',
+      title: 'Test Same Agent',
+      summary: 'Run two fresh Sessions with the selected Agent provider.',
+      action: 'lab-same',
+    },
+    {
+      id: 'lab-handoff',
+      command: '/handoff',
+      title: 'Test Agent Handoff',
+      summary: 'Continue the same Work with a different Agent provider.',
+      action: 'lab-handoff',
+    },
+    {
+      id: 'lab-report',
+      command: '/report',
+      title: 'Open Latest Report',
+      summary: 'Open the strongest result detail from the completed test.',
+      action: 'lab-report',
+    },
+    {
+      id: 'lab-focus-next',
+      command: '/focus',
+      title: 'Move Lab Focus',
+      summary: 'Move focus across Session windows and available result cards.',
+      action: 'lab-focus-next',
+    },
+  ];
+
+export function agentWorkLabActionReturnsToControls(
+  action: AgentWorkLabSuiteAction,
+): boolean {
+  return action === 'lab-report';
+}
+
 export const nextQualificationFocus = nextWorkbenchFocus;
 export const isQualificationReportReturnInput = isWorkbenchReturnInput;
 export const qualificationSessionTitleBar = sessionTitleBar;
@@ -49,9 +107,9 @@ export function qualificationNextModePrompt(
   const recommendation = agentWorkLabRecommendation(mode);
   const shortcut =
     recommendation.nextCase === 'same-agent'
-      ? ' Press x to start it.'
+      ? ' Run /same, or press Esc then x.'
       : recommendation.nextCase === 'cross-agent'
-        ? ' Choose a different target with [ or ], then press m.'
+        ? ' Run /handoff, or press Esc, choose a target with [ or ], then press m.'
         : '';
   return {
     title: recommendation.title,
@@ -283,12 +341,16 @@ export function AgentWorkLabHost({
   dimensions,
   onOpenWork,
   isInputCaptured = () => false,
+  actionRequest,
+  onActionHandled,
 }: {
   lab: QualificationLab;
   startup: QualificationLabStartupRoute;
   dimensions: DimensionSource;
   onOpenWork?: () => void;
   isInputCaptured?: () => boolean;
+  actionRequest?: AgentWorkLabActionRequest;
+  onActionHandled?: (id: number) => void;
 }) {
   const { exit } = useApp();
   const [size, setSize] = React.useState(dimensions.get());
@@ -326,6 +388,7 @@ export function AgentWorkLabHost({
   const [runningSession, setRunningSession] = React.useState<1 | 2>();
   const [progressNow, setProgressNow] = React.useState(() => Date.now());
   const playbackGeneration = React.useRef(0);
+  const handledActionRequest = React.useRef(0);
   const profiles = React.useMemo(
     () =>
       Array.from(
@@ -458,6 +521,70 @@ export function AgentWorkLabHost({
     },
     [],
   );
+  const performSuiteAction = React.useCallback(
+    (action: AgentWorkLabSuiteAction) => {
+      if (action === 'lab-focus-next') {
+        setActiveFocus((current) =>
+          nextQualificationFocus(current, Boolean(report)),
+        );
+        return;
+      }
+      if (action === 'lab-report') {
+        if (!report) {
+          setError('No report yet. Run /demo, /same, or /handoff first.');
+          return;
+        }
+        const detail = reportChecks(report).some((check) => !check.passed)
+          ? 'failed'
+          : 'correct';
+        setActiveFocus(detail);
+        setReportDetail(detail);
+        setError('');
+        return;
+      }
+      if (busy) {
+        setError('A Lab test is already running.');
+        return;
+      }
+      if (action === 'lab-demo') {
+        runQualification('offline-demo', (onEvent) => lab.runDemo(onEvent));
+        return;
+      }
+      const source = profiles[selected];
+      if (!source) {
+        setError('No configured Agent is available for this test.');
+        return;
+      }
+      if (action === 'lab-same') {
+        runQualification('same-agent', (onEvent) =>
+          lab.runAgent(source.id, onEvent),
+        );
+        return;
+      }
+      const destination = profiles[target];
+      if (!destination) {
+        setError('Choose an available handoff target first.');
+        return;
+      }
+      if (source.id === destination.id) {
+        setError(
+          'Handoff needs two different Agents. Choose the target in LAB CONTROLS.',
+        );
+        return;
+      }
+      runQualification('cross-agent', (onEvent) =>
+        lab.runMigration(source.id, destination.id, onEvent),
+      );
+    },
+    [busy, lab, profiles, report, runQualification, selected, target],
+  );
+  React.useEffect(() => {
+    if (!actionRequest || actionRequest.id <= handledActionRequest.current)
+      return;
+    handledActionRequest.current = actionRequest.id;
+    performSuiteAction(actionRequest.action);
+    onActionHandled?.(actionRequest.id);
+  }, [actionRequest, onActionHandled, performSuiteAction]);
   React.useEffect(() => {
     const onData = (chunk: Buffer | string) => {
       if (isInputCaptured()) return;
@@ -467,10 +594,7 @@ export function AgentWorkLabHost({
       }
       const key = decodeShellKey(input);
       if (key === 'quit') return exit();
-      if (input === '\t')
-        return setActiveFocus((current) =>
-          nextQualificationFocus(current, Boolean(report)),
-        );
+      if (input === '\t') return performSuiteAction('lab-focus-next');
       if (
         report &&
         (input === '\r' || input === '\n') &&
@@ -512,45 +636,23 @@ export function AgentWorkLabHost({
           boundedIndex(current, -1, profiles.length),
         );
       if (input === 'w' && onOpenWork) return onOpenWork();
-      if (input === 'd' && !busy) {
-        return runQualification('offline-demo', (onEvent) =>
-          lab.runDemo(onEvent),
-        );
-      }
-      if (input === 'x' && !busy && profiles[selected]) {
-        return runQualification('same-agent', (onEvent) =>
-          lab.runAgent(profiles[selected].id, onEvent),
-        );
-      }
-      if (
-        input === 'm' &&
-        !busy &&
-        profiles[selected] &&
-        profiles[target] &&
-        selected !== target
-      ) {
-        return runQualification('cross-agent', (onEvent) =>
-          lab.runMigration(profiles[selected].id, profiles[target].id, onEvent),
-        );
-      }
+      if (input === 'd') return performSuiteAction('lab-demo');
+      if (input === 'x') return performSuiteAction('lab-same');
+      if (input === 'm') return performSuiteAction('lab-handoff');
     };
     process.stdin.on('data', onData);
     return () => {
       process.stdin.off('data', onData);
     };
   }, [
-    busy,
     activeFocus,
     exit,
     isInputCaptured,
-    lab,
     onOpenWork,
+    performSuiteAction,
     profiles,
     report,
     reportDetail,
-    selected,
-    target,
-    runQualification,
   ]);
   const sourceLabel =
     mode === 'offline-demo' ? '' : profiles[selected]?.label || '';

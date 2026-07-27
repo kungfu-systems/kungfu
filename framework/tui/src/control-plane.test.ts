@@ -17,6 +17,7 @@ import {
   quickCommandMatches,
   reduceControlPlaneInput,
 } from './profile-shell.js';
+import { AGENT_WORK_LAB_QUICK_COMMANDS } from './qualification-lab-view.js';
 
 class CaptureOutput extends Writable {
   readonly isTTY = false;
@@ -68,6 +69,17 @@ test('Esc hands focus to workspace shortcuts and i returns to input', () => {
   const focused = reduceControlPlaneInput(workspace, 'i', 0);
   assert.equal(focused.handled, true);
   assert.equal(focused.state.focus, 'input');
+});
+
+test('Tab enters controls and requests one bounded focus move', () => {
+  const update = reduceControlPlaneInput(CLOSED_CONTROL_PLANE, '\t', 0);
+  assert.equal(update.handled, true);
+  assert.equal(update.state.focus, 'workspace');
+  assert.equal(update.workspaceNavigation, 'next-focus');
+
+  const typed = reduceControlPlaneInput(CLOSED_CONTROL_PLANE, 'd', 0);
+  assert.equal(typed.state.query, 'd');
+  assert.equal(typed.workspaceNavigation, undefined);
 });
 
 test('edits input, selects results, activates, and returns without leaking keys', () => {
@@ -130,6 +142,19 @@ test('keeps quick commands bounded to declared product actions', () => {
     ['help', 'search', 'work', 'lab', 'home', 'quit'],
   );
   assert.equal(quickCommandMatches('/rm -rf').length, 0);
+});
+
+test('adds Suite actions only to the active Lab command catalog', () => {
+  const labCommands = [...AGENT_WORK_LAB_QUICK_COMMANDS, ...QUICK_COMMANDS];
+  assert.deepEqual(
+    quickCommandMatches('/same', labCommands).map((row) => row.action),
+    ['lab-same'],
+  );
+  assert.equal(quickCommandMatches('/same').length, 0);
+  assert.deepEqual(
+    AGENT_WORK_LAB_QUICK_COMMANDS.map((row) => row.command),
+    ['/demo', '/same', '/handoff', '/report', '/focus'],
+  );
 });
 
 test('the real Ink control plane covers the product canvas and keeps a fixed input bar', async () => {
@@ -201,9 +226,42 @@ test('the idle input is a focused full panel and renders typed text', async () =
   instance.unmount();
   instance.cleanup();
   assert.match(frame, /continue work/);
-  assert.match(frame, /Focused · Enter is bounded for now/);
+  assert.match(frame, /INPUT · Kungfu/);
+  assert.match(frame, /Text entry is active · Esc Controls/);
   assert.match(frame, /╭/);
   assert.match(frame, /╰/);
+});
+
+test('the idle bar makes Lab controls visually explicit', async () => {
+  const output = new CaptureOutput();
+  const instance = render(
+    React.createElement(
+      Box,
+      { width: 80, height: 23, flexDirection: 'column' },
+      React.createElement(ControlPlaneBar, {
+        dimensions: { columns: 80, rows: 24 },
+        state: { ...CLOSED_CONTROL_PLANE, focus: 'workspace' },
+        resultCount: 0,
+        surfaceLabel: 'Agent Work Lab',
+        controlsLabel: 'LAB CONTROLS',
+        controlsHint: 'd Demo · x Same · m Handoff · Tab Focus',
+      }),
+    ),
+    {
+      stdout: output as unknown as NodeJS.WriteStream,
+      exitOnCtrlC: false,
+      patchConsole: false,
+      debug: true,
+    },
+  );
+  await new Promise<void>((resolve) => setTimeout(resolve, 80));
+  const frame = output.chunks.join('');
+  instance.unmount();
+  instance.cleanup();
+
+  assert.match(frame, /LAB CONTROLS · Agent Work Lab/);
+  assert.match(frame, /d Demo · x Same · m Handoff · Tab Focus/);
+  assert.match(frame, /i Input/);
 });
 
 test('search keeps the selected result visible beyond the first viewport', async () => {

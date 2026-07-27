@@ -945,6 +945,7 @@ export type ControlPlaneUpdate = {
   state: ControlPlaneState;
   activate?: boolean;
   quit?: boolean;
+  workspaceNavigation?: 'next-focus';
 };
 
 export type ControlPlaneInputFence = {
@@ -967,15 +968,23 @@ export function createControlPlaneInputFence(
   };
 }
 
-export type QuickCommand = {
+export type QuickCommand<Action extends string = string> = {
   id: string;
   command: `/${string}`;
   title: string;
   summary: string;
-  action: 'help' | 'search' | 'work' | 'lab' | 'home' | 'quit';
+  action: Action;
 };
 
-export const QUICK_COMMANDS: QuickCommand[] = [
+export type ProductQuickCommandAction =
+  | 'help'
+  | 'search'
+  | 'work'
+  | 'lab'
+  | 'home'
+  | 'quit';
+
+export const QUICK_COMMANDS: QuickCommand<ProductQuickCommandAction>[] = [
   {
     id: 'help',
     command: '/help',
@@ -1028,16 +1037,19 @@ export const CLOSED_CONTROL_PLANE: ControlPlaneState = {
   selected: 0,
 };
 
-export function quickCommandMatches(query: string): QuickCommand[] {
+export function quickCommandMatches(
+  query: string,
+  commands: QuickCommand[] = QUICK_COMMANDS,
+): QuickCommand[] {
   const needle = query.replace(/^\//, '').trim().toLocaleLowerCase();
-  if (!needle) return QUICK_COMMANDS;
-  const prefixMatches = QUICK_COMMANDS.filter(
+  if (!needle) return commands;
+  const prefixMatches = commands.filter(
     (command) =>
       command.command.slice(1).startsWith(needle) ||
       command.title.toLocaleLowerCase().startsWith(needle),
   );
   if (prefixMatches.length > 0) return prefixMatches;
-  return QUICK_COMMANDS.filter((command) =>
+  return commands.filter((command) =>
     `${command.command} ${command.title} ${command.summary}`
       .toLocaleLowerCase()
       .includes(needle),
@@ -1099,6 +1111,13 @@ export function reduceControlPlaneInput(
       return {
         handled: true,
         state: { ...current, focus: 'workspace', notice: undefined },
+      };
+    }
+    if (input === '\t' && !current.query) {
+      return {
+        handled: true,
+        state: { ...current, focus: 'workspace', notice: undefined },
+        workspaceNavigation: 'next-focus',
       };
     }
     if (input === '\u007f' || input === '\b') {
@@ -1375,11 +1394,11 @@ export function ControlPlaneOverlay({
               and available product views.
             </Text>
             <Box marginTop={1} flexDirection="column">
-              <Text color="yellow">/work</Text>
-              <Text color="yellow">/lab</Text>
-              <Text color="yellow">/home</Text>
-              <Text color="yellow">/search</Text>
-              <Text color="yellow">/quit</Text>
+              {quickCommands.slice(0, Math.max(1, rowBudget)).map((command) => (
+                <Text key={command.id} color="yellow" wrap="truncate-end">
+                  {command.command.padEnd(10)} {command.title}
+                </Text>
+              ))}
             </Box>
           </>
         ) : null}
@@ -1442,10 +1461,16 @@ export function ControlPlaneBar({
   dimensions,
   state,
   resultCount,
+  surfaceLabel = 'Kungfu',
+  controlsLabel = 'VIEW CONTROLS',
+  controlsHint = 'Workspace shortcuts active',
 }: {
   dimensions: TerminalDimensions;
   state: ControlPlaneState;
   resultCount: number;
+  surfaceLabel?: string;
+  controlsLabel?: string;
+  controlsHint?: string;
 }) {
   const modalOpen = state.mode !== 'closed';
   const inputFocused = modalOpen || state.focus === 'input';
@@ -1458,7 +1483,17 @@ export function ControlPlaneBar({
       ? 'Help is open'
       : state.mode === 'detail'
         ? 'Result details are open'
-        : value || (!modalOpen ? 'Type a message…' : '');
+        : value ||
+          (!modalOpen
+            ? inputFocused
+              ? 'Type a message…'
+              : 'Keyboard shortcuts are active'
+            : '');
+  const modeLabel = modalOpen
+    ? 'KUNGFU'
+    : inputFocused
+      ? 'INPUT'
+      : controlsLabel;
   const hint =
     state.notice ??
     (state.mode === 'commands'
@@ -1468,8 +1503,8 @@ export function ControlPlaneBar({
         : state.mode === 'help' || state.mode === 'detail'
           ? 'Esc returns to the input'
           : state.focus === 'workspace'
-            ? 'Workspace shortcuts active · i focus input · ? Help · / Commands · Ctrl+K Search'
-            : 'Focused · Enter is bounded for now · ? Help · / Commands · Ctrl+K Search · Esc workspace');
+            ? `${controlsHint} · i Input · ? Help · / Commands · Ctrl+K Search`
+            : 'Text entry is active · Esc Controls · Tab next focus · ? Help · / Commands · Ctrl+K Search');
   const tone = inputFocused ? 'cyan' : 'gray';
   return (
     <Box
@@ -1484,7 +1519,15 @@ export function ControlPlaneBar({
       overflow="hidden"
     >
       <Text color={tone} wrap="truncate-end">
-        <Text bold>{modalOpen ? 'KUNGFU' : '›'}</Text> {prompt}
+        <Text
+          bold
+          color={inputFocused ? 'black' : 'white'}
+          backgroundColor={inputFocused ? 'cyan' : 'gray'}
+        >
+          {' '}
+          {modeLabel} · {surfaceLabel}{' '}
+        </Text>{' '}
+        <Text bold>{modalOpen ? '›' : inputFocused ? '›' : '◆'}</Text> {prompt}
         {!modalOpen ? inputCursor(inputFocused) : null}
       </Text>
       <Text

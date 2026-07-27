@@ -16,7 +16,9 @@ import {
   sessionTitleBar,
 } from './profile-shell.js';
 import {
+  AGENT_WORK_LAB_QUICK_COMMANDS,
   QualificationLabView,
+  agentWorkLabActionReturnsToControls,
   isQualificationReportReturnInput,
   nextQualificationFocus,
   qualificationEventLines,
@@ -313,7 +315,7 @@ test('completed modes coach the next qualification step', () => {
   );
   assert.match(
     qualificationNextModePrompt('offline-demo').instruction,
-    /Press x to start it/,
+    /Run \/same, or press Esc then x/,
   );
   assert.doesNotMatch(
     qualificationNextModePrompt('offline-demo').instruction,
@@ -321,12 +323,30 @@ test('completed modes coach the next qualification step', () => {
   );
   assert.match(
     qualificationNextModePrompt('same-agent').instruction,
-    /press m/i,
+    /Run \/handoff.*press m/i,
   );
   assert.match(
     qualificationNextModePrompt('cross-agent').instruction,
     /Open Correct or Failed/,
   );
+});
+
+test('Suite commands and Lab control keys share one action vocabulary', () => {
+  assert.deepEqual(
+    AGENT_WORK_LAB_QUICK_COMMANDS.map(({ command, action }) => ({
+      command,
+      action,
+    })),
+    [
+      { command: '/demo', action: 'lab-demo' },
+      { command: '/same', action: 'lab-same' },
+      { command: '/handoff', action: 'lab-handoff' },
+      { command: '/report', action: 'lab-report' },
+      { command: '/focus', action: 'lab-focus-next' },
+    ],
+  );
+  assert.equal(agentWorkLabActionReturnsToControls('lab-report'), true);
+  assert.equal(agentWorkLabActionReturnsToControls('lab-demo'), false);
 });
 
 test('report details accept obvious return keys', () => {
@@ -370,13 +390,13 @@ test('TUI host streams events and preserves the one-second rhythm', () => {
   assert.match(hostSource, /nextQualificationFocus/);
   assert.match(hostSource, /isQualificationReportReturnInput/);
   assert.match(hostSource, /setReportDetail\(activeFocus\)/);
+  assert.match(hostSource, /performSuiteAction\('lab-demo'\)/);
+  assert.match(hostSource, /performSuiteAction\('lab-same'\)/);
+  assert.match(hostSource, /performSuiteAction\('lab-handoff'\)/);
   assert.doesNotMatch(hostSource, /input === 'p'/);
   assert.doesNotMatch(hostSource, /lab\.planAgent/);
   assert.match(hostSource, /lab\.runDemo\(onEvent\)/);
-  assert.match(
-    hostSource,
-    /lab\.runAgent\(profiles\[selected\]\.id, onEvent\)/,
-  );
+  assert.match(hostSource, /lab\.runAgent\(source\.id, onEvent\)/);
   assert.match(hostSource, /lab\.runMigration\(/);
   assert.match(mainSource, /void lab\s*\.inspect\(\)/);
   assert.doesNotMatch(mainSource, /startup = lab\.inspectSync\(\)/);

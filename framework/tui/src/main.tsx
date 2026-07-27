@@ -37,7 +37,13 @@ import {
   quickCommandMatches,
   reduceControlPlaneInput,
 } from './profile-shell.js';
-import { AgentWorkLabHost } from './qualification-lab-view.js';
+import {
+  AGENT_WORK_LAB_QUICK_COMMANDS,
+  type AgentWorkLabActionRequest,
+  AgentWorkLabHost,
+  type AgentWorkLabSuiteAction,
+  agentWorkLabActionReturnsToControls,
+} from './qualification-lab-view.js';
 import {
   IncrementalTerminalOutput,
   terminalCanvasRows,
@@ -472,6 +478,9 @@ function ProductHost({
   const [size, setSize] = React.useState(dimensions.get());
   const [startup, setStartup] = React.useState<QualificationLabStartupRoute>();
   const [surface, setSurface] = React.useState<'auto' | 'lab' | 'work'>('auto');
+  const [labActionRequest, setLabActionRequest] =
+    React.useState<AgentWorkLabActionRequest>();
+  const nextLabActionId = React.useRef(0);
   const [control, setControl] =
     React.useState<ControlPlaneState>(CLOSED_CONTROL_PLANE);
   const controlRef = React.useRef(control);
@@ -565,6 +574,13 @@ function ProductHost({
   const labOpen =
     surface === 'lab' ||
     (surface === 'auto' && startupSurface === 'qualification-lab');
+  const availableQuickCommands = React.useMemo(
+    () =>
+      labOpen
+        ? [...AGENT_WORK_LAB_QUICK_COMMANDS, ...QUICK_COMMANDS]
+        : QUICK_COMMANDS,
+    [labOpen],
+  );
   const viewDocuments = React.useMemo<ProductSearchDocument[]>(
     () => [
       {
@@ -588,7 +604,7 @@ function ProductHost({
   );
   const quickSearchDocuments = React.useMemo<ProductSearchDocument[]>(
     () =>
-      QUICK_COMMANDS.map((command, index) => ({
+      availableQuickCommands.map((command, index) => ({
         id: `command.quick.${command.id}`,
         kind: 'command',
         title: command.command,
@@ -601,7 +617,7 @@ function ProductHost({
           command: command.command,
         },
       })),
-    [],
+    [availableQuickCommands],
   );
   const documents = React.useMemo(
     () => [
@@ -618,8 +634,8 @@ function ProductHost({
     [control.query, documents],
   );
   const quickCommands = React.useMemo(
-    () => quickCommandMatches(control.query),
-    [control.query],
+    () => quickCommandMatches(control.query, availableQuickCommands),
+    [availableQuickCommands, control.query],
   );
   const searchResultsRef = React.useRef(searchResults);
   const quickCommandsRef = React.useRef(quickCommands);
@@ -634,6 +650,18 @@ function ProductHost({
     () => setControlNow(CLOSED_CONTROL_PLANE),
     [setControlNow],
   );
+  const dispatchLabAction = React.useCallback(
+    (action: AgentWorkLabSuiteAction) => {
+      nextLabActionId.current += 1;
+      setLabActionRequest({ id: nextLabActionId.current, action });
+    },
+    [],
+  );
+  const acknowledgeLabAction = React.useCallback((id: number) => {
+    setLabActionRequest((current) =>
+      current?.id === id ? undefined : current,
+    );
+  }, []);
   const activateControl = React.useCallback(() => {
     const current = controlRef.current;
     if (current.mode === 'commands') {
@@ -662,8 +690,22 @@ function ProductHost({
       } else if (command.action === 'home') {
         setSurface('auto');
         closeControl();
-      } else {
+      } else if (command.action === 'quit') {
         exit();
+      } else if (
+        AGENT_WORK_LAB_QUICK_COMMANDS.some(
+          (candidate) => candidate.action === command.action,
+        )
+      ) {
+        setSurface('lab');
+        dispatchLabAction(command.action as AgentWorkLabSuiteAction);
+        setControlNow(
+          agentWorkLabActionReturnsToControls(
+            command.action as AgentWorkLabSuiteAction,
+          )
+            ? { ...CLOSED_CONTROL_PLANE, focus: 'workspace' }
+            : CLOSED_CONTROL_PLANE,
+        );
       }
       return;
     }
@@ -685,7 +727,7 @@ function ProductHost({
         detail: result,
       });
     }
-  }, [closeControl, exit, setControlNow]);
+  }, [closeControl, dispatchLabAction, exit, setControlNow]);
   const activateControlRef = React.useRef(activateControl);
   activateControlRef.current = activateControl;
   const isInputCaptured = React.useCallback(
@@ -706,13 +748,16 @@ function ProductHost({
       inputFence.captureCurrentEmission();
       setControlNow(update.state);
       if (update.quit) return exit();
+      if (update.workspaceNavigation && labOpen) {
+        dispatchLabAction('lab-focus-next');
+      }
       if (update.activate) activateControlRef.current();
     };
     process.stdin.prependListener('data', onData);
     return () => {
       process.stdin.off('data', onData);
     };
-  }, [exit, inputFence, setControlNow]);
+  }, [dispatchLabAction, exit, inputFence, labOpen, setControlNow]);
 
   let content: React.ReactNode;
   if (!startup && surface !== 'lab') {
@@ -730,6 +775,8 @@ function ProductHost({
         startup={resolvedStartup}
         dimensions={contentDimensions}
         isInputCaptured={isInputCaptured}
+        actionRequest={labActionRequest}
+        onActionHandled={acknowledgeLabAction}
         onOpenWork={
           startupSurface === 'work-graph' ? () => setSurface('work') : undefined
         }
@@ -773,6 +820,13 @@ function ProductHost({
         dimensions={size}
         state={control}
         resultCount={resultCount}
+        surfaceLabel={labOpen ? 'Agent Work Lab' : 'Work Control'}
+        controlsLabel={labOpen ? 'LAB CONTROLS' : 'WORK CONTROLS'}
+        controlsHint={
+          labOpen
+            ? 'd Demo · x Same · m Handoff · Tab Focus'
+            : 'Work navigation is active'
+        }
       />
     </Box>
   );
