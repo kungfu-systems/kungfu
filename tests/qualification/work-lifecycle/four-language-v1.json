@@ -37,7 +37,7 @@
             "result",
             "operationSetRoot"
           ],
-          "equals": "sha256:d5a5e2a90465a48eb24f558bbd37dcc44c629e46295c158d4c6bad5ebc1511fd"
+          "equals": "sha256:7f40bf99ef9c13b122ba3b8a1cae51b909ec2a1ab3dcf5af6b4a6ba6c87fafa3"
         }
       ]
     },
@@ -68,7 +68,7 @@
             "result",
             "operationSetRoot"
           ],
-          "equals": "sha256:d5a5e2a90465a48eb24f558bbd37dcc44c629e46295c158d4c6bad5ebc1511fd"
+          "equals": "sha256:7f40bf99ef9c13b122ba3b8a1cae51b909ec2a1ab3dcf5af6b4a6ba6c87fafa3"
         }
       ]
     },
