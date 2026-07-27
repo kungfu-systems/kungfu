@@ -130,7 +130,7 @@
             "product-alpha",
             "product-binaries"
           ],
-          "sourceRoot": "sha256:ff9c5dc260e541871da9d45137b69316bc4395f4ed1026b8816c8ebaf585b361"
+          "sourceRoot": "sha256:d63c602571f0233d59729ea2be06c6b8470027a40d7676bdd79f97a1484fd3ba"
         },
         {
           "path": ".github/workflows/dev-verify-patrol.yml",
@@ -767,5 +767,5 @@
       }
     }
   ],
-  "registryRoot": "sha256:089613ac438146ed5438ab25e64586f2436fdf22e61e47345f796160695abea4"
+  "registryRoot": "sha256:4d4383563d6a155bee75b1562bd4da52d51803fd84c482ed296011b306e01753"
 }

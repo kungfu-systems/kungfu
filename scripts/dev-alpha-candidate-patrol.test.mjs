@@ -46,6 +46,10 @@ test('candidate patrol is a thin Buildchain caller with exact channel and eviden
     /create-pull-request: \$\{\{ github\.event_name == 'schedule'/u,
   );
   assert.match(source, /dry-run: \$\{\{ github\.event_name != 'schedule'/u);
+  assert.match(
+    source,
+    /promotion-token: \$\{\{ secrets\.KUNGFU_GITHUB_TOKEN \}\}/u,
+  );
   assert.doesNotMatch(
     source,
     /npm publish|gh release create|git tag|auto-merge/iu,
