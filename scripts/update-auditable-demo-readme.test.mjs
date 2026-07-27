@@ -56,6 +56,7 @@ function evidence() {
 
 test('renders one exact source, run, Gate, media, and Passport boundary', () => {
   const block = renderAuditableDemoBlock(evidence());
+  assert.match(block, /^## Auditable exact-output demo$/mu);
   assert.match(block, new RegExp(SHA, 'u'));
   assert.match(
     block,

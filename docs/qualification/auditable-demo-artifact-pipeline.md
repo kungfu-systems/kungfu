@@ -1,15 +1,15 @@
 ---
 metadata_schema: kungfu.document-metadata/v1
-document_status: draft
+document_status: stable
 period: 2026-07-25
 theme: auditable-demo-artifact-pipeline
 doc_type: engineering-evidence
 sources: [local-files, executable-probe, official-upstream, user-consensus]
 confidence: high
 sensitivity: public
-evidence_grade: B
+evidence_grade: A
 review_state: self-reviewed
-last_reviewed: 2026-07-25
+last_reviewed: 2026-07-27
 ai_provenance: GPT-5 via Codex on 2026-07-25; based on checked-in Kungfu, Buildchain, and build-images source plus protected GitHub workflow evidence visible to this task; no production deployment or unobserved runtime is claimed
 ---
 
@@ -133,6 +133,13 @@ Each blocking signal was repaired at its owning boundary rather than bypassed:
   from the 699 MB source payload.
   [Buildchain issue #1940](https://github.com/kungfu-systems/buildchain/issues/1940)
   retained the reusable normalization defect.
+- Run `30225695823` completed the exact Linux build, forced S3 relay, required
+  Gate, and selective media render, then failed closed while binding the
+  Release Passport. `actions/upload-artifact` exposed a raw 64-hex digest while
+  the same-run Actions API exposed the equivalent canonical `sha256:<hex>`
+  coordinate. [Kungfu issue #1579](https://github.com/kungfu-systems/kungfu/issues/1579)
+  retained the provider-representation defect; no Passport artifact was
+  admitted.
 
 The corresponding repairs landed through independently approved protected PRs
 `#1492`, `#1497`, `#1500`, `#1503`, `#1504`, `#1505`, `#1506`, `#1507`,
@@ -158,18 +165,40 @@ promoted the repair, and released `v3.0.2-alpha.2` at exact tag commit
 `625384b4927222022a2cd0758399afbf9333ccdc`. Kungfu PR `#1571` then pinned
 that immutable runtime while preserving the required Gate, selective render,
 and no-production-deployment boundary.
+Kungfu PR `#1581` normalized the provider-specific raw digest before the
+same-run API comparison, kept malformed or genuinely mismatched coordinates
+fail-closed, and passed the verified canonical API digest into the Passport.
 
-Exact-source Alpha preflight run `30205776472` initially failed only while the
+Earlier exact-source Alpha preflight run `30205776472` initially failed only while the
 macOS runner timed out downloading the pinned Rust toolchain from
 `rsproxy.cn`; Linux, Windows, and all early source contracts had passed. Its
 failed-job rerun retained the same run id and source SHA, then passed all three
 platform probes and the aggregate exact-source receipt.
 
-The final qualified run below must use Buildchain's governed
-`s3-to-github-artifacts` relay and retain its public-safe evidence as GitHub
-Artifacts. It contains no production deployment step.
+## Qualified exact-output run
 
-This document remains `draft` until a protected Kungfu source has completed a
-real Gate and selective render run and the exact artifact coordinates are
-projected here and into the managed README block. GitHub Artifacts are
-expiring evidence, not a production media deployment.
+Protected source `0c584fc0e6446a07a5bdb1462738ffab47dddadb` passed
+three-platform exact-source Alpha preflight run
+[`30230804584`](https://github.com/kungfu-systems/kungfu/actions/runs/30230804584).
+Manual Build run
+[`30230901970`](https://github.com/kungfu-systems/kungfu/actions/runs/30230901970)
+then used Buildchain's governed `s3-to-github-artifacts` relay, completed the
+Linux release build and verification, passed the required demo Gate, rendered
+the selective media, and bound the Release Passport.
+
+| Evidence | Exact coordinate | Content root |
+| --- | --- | --- |
+| Linux source artifact | [`8640708681`](https://github.com/kungfu-systems/kungfu/actions/runs/30230901970/artifacts/8640708681), `sha256:c7a721a54491d62edc9dcc904da27577e6366266226dc8b5b61d088d34613431` | producer-owned release artifact |
+| Required Gate | [`8640731842`](https://github.com/kungfu-systems/kungfu/actions/runs/30230901970/artifacts/8640731842), `sha256:f1c4f976f149a473fc1c56a21c9b976ddecff748d591fe7d31d9eb9c33a449e4` | `sha256:7587c9bc315f49f88e11152d5387ff13a4fe606ef6ba97be8f70c5995aebf2d6` |
+| Selective media | [`8640746864`](https://github.com/kungfu-systems/kungfu/actions/runs/30230901970/artifacts/8640746864), `sha256:794bf5a229311de642b3e313ecf92a31e22717239d1d3bdb95fc2058c8adeb40` | `sha256:ee95e4c65effd4edea98a4355595fe8c9eb3291f1966cb6e46f6fad6a8caab21` |
+| Release Passport | [`8640755422`](https://github.com/kungfu-systems/kungfu/actions/runs/30230901970/artifacts/8640755422), `sha256:f968bc0046f529e07ca5be03da1001ffdd642a3581118ded405ed46461793a24` | `sha256:0c44a9618fd4114340ca460a6fd7e3a391ada4c7a540d76b4136c3173373391e` |
+
+The frozen Buildchain verifier at
+`625384b4927222022a2cd0758399afbf9333ccdc` independently verified the
+downloaded Gate root. Every media checksum and the Kungfu Passport canonical
+root also verified after each GitHub Artifact ZIP matched its Actions API
+digest. The Passport limits publication to `github-artifacts-only`, records
+`productionDeployment: false`, and expires with the retained Artifacts; the
+committed GIF and public-evidence projection preserve the qualified,
+public-safe claim without turning expiring evidence into a production
+deployment claim.

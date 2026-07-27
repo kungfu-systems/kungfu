@@ -154,7 +154,7 @@ export function renderAuditableDemoBlock(value) {
   const shortSource = evidence.sourceSha.slice(0, 12);
   return [
     START,
-    '### Auditable exact-output demo',
+    '## Auditable exact-output demo',
     '',
     'A selectively rendered demo now comes from one exact retained Linux build artifact:',
     'the installed `kungfu` launcher produced the transcript, the required Buildchain Gate',
