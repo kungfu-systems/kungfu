@@ -81,7 +81,7 @@ jobs:
 
   build:
     needs: preflight
-    uses: kungfu-systems/buildchain/.github/workflows/.build.yml@f288ea1ab6a69fa6085f7616261fa5a6ba60f671 # dev/v3/v3.0 safe notarization diagnostics
+    uses: kungfu-systems/buildchain/.github/workflows/.build.yml@c83cb444d79c2e647de6e12a0bfde68dfaf57701 # v3.0.2-alpha.7 auditable demo + Linux attestation + safe notarization diagnostics
     secrets:
       BUILDCHAIN_ARTIFACT_RELAY_S3_ROLE_ARN: ${{ secrets.BUILDCHAIN_ARTIFACT_RELAY_S3_ROLE_ARN }}
       BUILDCHAIN_ARTIFACT_RELAY_S3_UPLOAD_ROLE_ARN: ${{ secrets.BUILDCHAIN_ARTIFACT_RELAY_S3_UPLOAD_ROLE_ARN }}
@@ -411,7 +411,7 @@ jobs:
     permissions:
       actions: read
       contents: read
-    uses: kungfu-systems/buildchain/.github/workflows/.auditable-demo.yml@ebc7b2d86ecce1de835c8f8ba4436bcac65a62c2 # v3.0.2-alpha.3 with bundled macOS entitlements
+    uses: kungfu-systems/buildchain/.github/workflows/.auditable-demo.yml@2123ee9c76013f09888d3a01543e66762a6b5819 # v3.0.2-alpha.5 auditable demo + Linux GitHub Artifact Attestation
     with:
       source-ref: ${{ needs.build.outputs.publish-source-sha }}
       source-artifact-name: ${{ needs.resolve-auditable-demo-source.outputs.artifact-name }}
@@ -546,7 +546,7 @@ jobs:
           MEDIA_ARTIFACT_URL: ${{ needs.auditable-demo.outputs.media-artifact-url }}
           MEDIA_ARTIFACT_EXPIRES_AT: ${{ steps.artifact-expiry.outputs.media-artifact-expires-at }}
           MEDIA_ROOT: ${{ needs.auditable-demo.outputs.media-root }}
-          BUILDCHAIN_SHA: ebc7b2d86ecce1de835c8f8ba4436bcac65a62c2
+          BUILDCHAIN_SHA: 2123ee9c76013f09888d3a01543e66762a6b5819
           RENDERER_IMAGE: ghcr.io/kungfu-systems/build-images/demo-renderer@sha256:cb5e1dec368d21c7d4e8baded99ac75f12f7eff0d19505751888cf974086efa6
         run: ./shifu node scripts/auditable-demo-passport.mjs write --output auditable-demo-release-passport.json
 
