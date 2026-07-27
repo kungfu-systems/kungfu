@@ -16,7 +16,8 @@ export type KfxExperienceFlowDescriptor = {
   graphRoot: string;
   planRoot: string;
   receiptDependencyRoot: string;
-  generation: number;
+  cutRoot: string | null;
+  revision: number;
   contributions: KfxHostContribution[];
 };
 
@@ -27,7 +28,8 @@ export type KfxHostProjection = {
   graphRoot: string;
   planRoot: string;
   receiptDependencyRoot: string;
-  generation: number;
+  cutRoot: string | null;
+  revision: number;
   contributions: Array<
     KfxHostContribution & {
       semanticState: KfxNodeState;
@@ -53,7 +55,8 @@ export function projectKfxExperienceFlowHost(
     graphRoot: descriptor.graphRoot,
     planRoot: descriptor.planRoot,
     receiptDependencyRoot: descriptor.receiptDependencyRoot,
-    generation: descriptor.generation,
+    cutRoot: descriptor.cutRoot,
+    revision: descriptor.revision,
     contributions: descriptor.contributions.map((contribution) => {
       const supported =
         contribution.presentation?.hosts?.includes(host) === true;

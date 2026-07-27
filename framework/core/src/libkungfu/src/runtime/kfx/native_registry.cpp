@@ -16,8 +16,10 @@
 #include <string>
 #include <vector>
 
+#include <kungfu/runtime/kfx/kfx_domain_profile_contract.h>
 #include <kungfu/runtime/kfx/native_contract.h>
 #include <kungfu/runtime/profile/profile_lifecycle.h>
+#include <kungfu/runtime/storage/fact_kernel.h>
 #include <kungfu/yijinjing/storage/content_hash.h>
 
 namespace kungfu::runtime::kfx {
@@ -41,6 +43,11 @@ std::string sha256(const std::string &value) {
 }
 
 std::string root_of(const json &value) { return "sha256:" + sha256(value.dump()); }
+
+json embedded_domain_profile() {
+  const auto &source = generated::KFX_DOMAIN_PROFILE_CONTRACT;
+  return json::parse(source.begin(), source.end());
+}
 
 std::string read_file(const fs::path &path) {
   std::ifstream input(path, std::ios::binary);
@@ -1129,11 +1136,20 @@ json assess_package(const json &package, const std::string &registry_root, const
           {"admissionPlan", plan}};
 }
 
+inline constexpr const char *KFX_REGISTRY_REF = "profiles/kfx/registry";
+inline constexpr const char *KFX_PROFILE_ID = "kungfu-kfx-domain-profile";
+
 struct lifecycle_view {
-  json receipts = json::array();
-  uint64_t generation = 0;
-  std::string history_root;
-  std::map<std::string, std::string> package_states;
+  bool present = false;
+  uint64_t revision = 0;
+  std::string cut_root;
+  json cut = json::object();
+  snapshot authoritative;
+  std::map<std::string, std::string> desired_states;
+  std::map<std::string, std::string> observed_states;
+  json work_history = json::array();
+  std::map<std::string, std::string> current_versions;
+  std::set<std::string> relation_roots;
 };
 
 fs::path lifecycle_root(const std::string &runtime_dir) {
@@ -1142,55 +1158,106 @@ fs::path lifecycle_root(const std::string &runtime_dir) {
   return fs::absolute(runtime_dir) / "kfx";
 }
 
+json fact_call(const std::string &runtime_dir, const std::string &action, json request) {
+  request["action"] = action;
+  auto response = storage_service_api::run_fact_kernel_operation(runtime_dir, request);
+  if (!response.value("ok", false)) {
+    refuse(action == "ref-cas" && response.value("failure_code", "") == "stale-ref" ? "KF_KFX_CUT_STALE"
+                                                                                    : "KF_KFX_FACT_REJECTED",
+           response.value("failure_code", "unknown") + ": " + response.value("message", "Fact kernel rejected KFX"));
+  }
+  return response;
+}
+
+std::string fact_id(const std::string &kind, const std::string &identity) {
+  return "fact:" + sha256(std::string(KFX_PROFILE_ID) + ":" + kind + ":" + identity).substr(0, 32);
+}
+
+std::string relation_id(const std::string &kind, const std::string &source, const std::string &target) {
+  return fact_id("relation", kind + ":" + source + ":" + target);
+}
+
+json snapshot_projection(const snapshot &value) {
+  return {{"packages", value.packages},          {"suites", value.suites},
+          {"diagnostics", value.diagnostics},    {"graph", value.graph},
+          {"registryRoot", value.registry_root}, {"graphRoot", value.graph_root}};
+}
+
+snapshot snapshot_from_projection(const json &value) {
+  if (!value.is_object() || !value.contains("packages") || !value.at("packages").is_array() ||
+      !value.contains("suites") || !value.at("suites").is_array() || !value.contains("diagnostics") ||
+      !value.at("diagnostics").is_array() || !value.contains("graph") || !value.at("graph").is_object() ||
+      !value.contains("registryRoot") || !value.at("registryRoot").is_string() || !value.contains("graphRoot") ||
+      !value.at("graphRoot").is_string())
+    refuse("KF_KFX_SCHEMA_INVALID", "KFX registry projection Fact body is incomplete");
+  snapshot result;
+  result.packages = value.at("packages");
+  result.suites = value.at("suites");
+  result.diagnostics = value.at("diagnostics");
+  result.graph = value.at("graph");
+  result.registry_root = value.at("registryRoot").get<std::string>();
+  result.graph_root = value.at("graphRoot").get<std::string>();
+  if (result.graph.value("graphRoot", "") != result.graph_root)
+    refuse("KF_KFX_SCHEMA_INVALID", "KFX registry projection graph root is inconsistent");
+  return result;
+}
+
+json parse_fact_body(const json &member) {
+  if (!member.is_object() || member.value("body_status", "") != "present" || !member.contains("body") ||
+      !member.at("body").is_string())
+    return nullptr;
+  try {
+    return json::parse(member.at("body").get<std::string>());
+  } catch (const json::exception &error) {
+    refuse("KF_KFX_SCHEMA_INVALID", "KFX Fact body is not canonical JSON: " + std::string(error.what()));
+  }
+}
+
 lifecycle_view load_lifecycle(const std::string &runtime_dir) {
   lifecycle_view result;
-  json receipt_roots = json::array();
-  const auto path = lifecycle_root(runtime_dir) / "registry-history.jsonl";
-  if (!fs::exists(path)) {
-    result.history_root = root_of(receipt_roots);
+  if (runtime_dir.empty())
     return result;
+  const auto response = storage_service_api::run_fact_kernel_operation(
+      runtime_dir, {{"action", "query"}, {"ref_name", KFX_REGISTRY_REF}, {"include_bodies", true}});
+  if (!response.value("ok", false)) {
+    if (response.value("failure_code", "") == "unknown-cut")
+      return result;
+    refuse("KF_KFX_FACT_REJECTED",
+           response.value("failure_code", "unknown") + ": " + response.value("message", "Fact query failed"));
   }
-  std::ifstream input(path);
-  if (!input)
-    refuse("KF_KFX_SCHEMA_INVALID", "cannot read native KFX lifecycle history");
-  std::string line;
-  size_t expected_sequence = 1;
-  std::string previous_root;
-  while (std::getline(input, line)) {
-    if (line.empty())
+  result.present = true;
+  result.cut_root = response.at("cut_root").get<std::string>();
+  result.cut = response.at("cut");
+  const auto &resolution = response.at("ref_resolution");
+  result.revision = resolution.at("revision").get<uint64_t>();
+  for (const auto &member : result.cut.at("objectVersions")) {
+    result.current_versions[member.at(0).get<std::string>()] = member.at(1).get<std::string>();
+  }
+  for (const auto &root : result.cut.at("activeRelationRoots"))
+    result.relation_roots.insert(root.get<std::string>());
+  for (const auto &member : response.at("objects")) {
+    const auto body = parse_fact_body(member);
+    if (body.is_null() || !body.contains("schema") || !body.at("schema").is_string())
       continue;
-    json receipt;
-    try {
-      receipt = json::parse(line);
-    } catch (const json::exception &error) {
-      refuse("KF_KFX_SCHEMA_INVALID", "native KFX lifecycle history is not valid JSONL: " + std::string(error.what()));
+    const auto schema = body.at("schema").get<std::string>();
+    if (schema == "kungfu.kfx.registry-projection-fact/v1") {
+      if (body.value("domainProfileRoot", "") != native_kfx_domain_profile().at("domainProfileRoot").get<std::string>())
+        refuse("KF_KFX_SCHEMA_INVALID", "KFX registry projection binds a different Domain Profile");
+      result.authoritative = snapshot_from_projection(body.at("projection"));
+    } else if (schema == "kungfu.kfx.package-fact/v1") {
+      result.desired_states[body.at("transport").at("packageKey").get<std::string>()] =
+          body.at("desiredState").get<std::string>();
+    } else if (schema == "kungfu.kfx.episode-fact/v1") {
+      const auto key = body.value("packageKey", "");
+      if (!key.empty())
+        result.observed_states[key] = body.value("observedState", "unknown");
+      result.work_history.push_back(body);
+    } else if (schema == "kungfu.kfx.work-fact/v1" || schema == "kungfu.kfx.settlement-fact/v1") {
+      result.work_history.push_back(body);
     }
-    if (receipt.value("schema", "") != "kungfu.kfx.lifecycle-receipt/v1" ||
-        receipt.value("sequence", size_t{0}) != expected_sequence ||
-        receipt.value("previousReceiptRoot", "") != previous_root || !receipt.contains("receiptRoot") ||
-        !receipt.at("receiptRoot").is_string())
-      refuse("KF_KFX_SCHEMA_INVALID", "native KFX lifecycle receipt chain is invalid");
-    auto identity = receipt;
-    const auto receipt_root = identity.at("receiptRoot").get<std::string>();
-    identity.erase("receiptRoot");
-    if (root_of(identity) != receipt_root)
-      refuse("KF_KFX_SCHEMA_INVALID", "native KFX lifecycle receipt root is invalid");
-    result.receipts.push_back(receipt);
-    receipt_roots.push_back(receipt_root);
-    previous_root = receipt_root;
-    ++expected_sequence;
-    if (receipt.value("outcome", "") != "applied")
-      continue;
-    const auto generation = receipt.value("generation", uint64_t{0});
-    if (generation != result.generation + 1)
-      refuse("KF_KFX_SCHEMA_INVALID", "native KFX applied generation chain is invalid");
-    result.generation = generation;
-    const auto package_key = receipt.value("packageKey", "");
-    const auto state = receipt.value("state", "");
-    if (!package_key.empty() && !state.empty())
-      result.package_states[package_key] = state;
   }
-  result.history_root = root_of(receipt_roots);
+  if (result.authoritative.registry_root.empty())
+    refuse("KF_KFX_SCHEMA_INVALID", "named KFX Fact Cut has no registry projection Fact");
   return result;
 }
 
@@ -1219,31 +1286,20 @@ private:
   bool held_ = false;
 };
 
-json append_lifecycle_receipt(const std::string &runtime_dir, const lifecycle_view &current, json identity) {
-  identity["schema"] = "kungfu.kfx.lifecycle-receipt/v1";
-  identity["sequence"] = current.receipts.size() + 1;
-  identity["previousReceiptRoot"] =
-      current.receipts.empty() ? "" : current.receipts.back().at("receiptRoot").get<std::string>();
-  const auto receipt_root = root_of(identity);
-  identity["receiptRoot"] = receipt_root;
-  const auto path = lifecycle_root(runtime_dir) / "registry-history.jsonl";
-  fs::create_directories(path.parent_path());
-  std::ofstream output(path, std::ios::app);
-  if (!output)
-    refuse("KF_KFX_SCHEMA_INVALID", "cannot append native KFX lifecycle receipt");
-  output << identity.dump() << '\n';
-  output.flush();
-  if (!output)
-    refuse("KF_KFX_SCHEMA_INVALID", "cannot durably flush native KFX lifecycle receipt");
-  return identity;
-}
-
 const json &provider_for(const snapshot &value, const std::string &provider_id) {
   for (const auto &provider : value.graph.at("providers")) {
     if (provider.at("providerId") == provider_id)
       return provider;
   }
   refuse("KF_KFX_MEMBER_MISSING", "KFX provider is not present in the semantic graph: " + provider_id);
+}
+
+std::string derived_verdict(const json &provider, const std::string &desired, const std::string &observed) {
+  if (provider.value("state", "active") == "degraded" || observed == "failed" || observed == "degraded")
+    return "degraded";
+  if (desired == "dormant" || desired == "removed" || desired == "disabled")
+    return "dormant";
+  return observed == "unknown" ? "dormant" : "active";
 }
 
 json experience_flow_descriptor(const snapshot &value, const lifecycle_view &lifecycle, const std::string &plan_root) {
@@ -1254,16 +1310,23 @@ json experience_flow_descriptor(const snapshot &value, const lifecycle_view &lif
       continue;
     json projected = contribution;
     const auto provider_id = contribution.at("ownerProviderId").get<std::string>();
-    projected["providerState"] =
-        lifecycle.package_states.contains(provider_id) ? lifecycle.package_states.at(provider_id) : "dormant";
+    const auto desired =
+        lifecycle.desired_states.contains(provider_id) ? lifecycle.desired_states.at(provider_id) : "dormant";
+    const auto observed =
+        lifecycle.observed_states.contains(provider_id) ? lifecycle.observed_states.at(provider_id) : "unknown";
+    projected["providerState"] = derived_verdict(provider_for(value, provider_id), desired, observed);
     contributions.push_back(projected);
   }
-  const json receipt_dependency = {
-      {"graphRoot", value.graph_root}, {"planRoot", plan_root}, {"generation", lifecycle.generation}};
+  const json cut_root = lifecycle.present ? json(lifecycle.cut_root) : json(nullptr);
+  const json receipt_dependency = {{"graphRoot", value.graph_root},
+                                   {"planRoot", plan_root},
+                                   {"cutRoot", cut_root},
+                                   {"revision", lifecycle.revision}};
   const json identity = {{"schema", "kungfu.kfx.experience-flow-host/v1"},
                          {"graphRoot", value.graph_root},
                          {"planRoot", plan_root},
-                         {"generation", lifecycle.generation},
+                         {"cutRoot", cut_root},
+                         {"revision", lifecycle.revision},
                          {"receiptDependencyRoot", root_of(receipt_dependency)},
                          {"hosts", json::array({"gui", "tui", "cli", "agent"})},
                          {"contributions", contributions}};
@@ -1277,9 +1340,11 @@ json lifecycle_plan(const snapshot &value, const lifecycle_view &lifecycle, cons
   for (const auto &package : value.packages) {
     const auto key = package.at("key").get<std::string>();
     const auto &provider = provider_for(value, key);
-    const auto lifecycle_state =
-        lifecycle.package_states.contains(key) ? lifecycle.package_states.at(key) : std::string{"dormant"};
-    const auto effective_state = provider.at("state") == "degraded" ? "degraded" : lifecycle_state;
+    const auto desired_state =
+        lifecycle.desired_states.contains(key) ? lifecycle.desired_states.at(key) : std::string{"dormant"};
+    const auto observed_state =
+        lifecycle.observed_states.contains(key) ? lifecycle.observed_states.at(key) : std::string{"unknown"};
+    const auto verdict = derived_verdict(provider, desired_state, observed_state);
     package_plan.push_back({{"key", package.at("key")},
                             {"providerRoot", provider.at("providerRoot")},
                             {"rootKind", package.at("rootKind")},
@@ -1293,8 +1358,10 @@ json lifecycle_plan(const snapshot &value, const lifecycle_view &lifecycle, cons
                             {"hosts", package.at("hosts")},
                             {"declaredCapabilities", package.at("declaredCapabilities")},
                             {"semanticState", provider.at("state")},
-                            {"lifecycleState", lifecycle_state},
-                            {"state", effective_state},
+                            {"desiredState", desired_state},
+                            {"observedState", observed_state},
+                            {"verdict", verdict},
+                            {"state", verdict},
                             {"causes", provider.at("causes")},
                             {"recoveryGuidance", provider.at("recoveryGuidance")}});
   }
@@ -1302,10 +1369,14 @@ json lifecycle_plan(const snapshot &value, const lifecycle_view &lifecycle, cons
   if (request.contains("operation") || request.contains("packageKey")) {
     intent = {{"operation", request.value("operation", "")}, {"packageKey", request.value("packageKey", "")}};
   }
+  const json cut_root = lifecycle.present ? json(lifecycle.cut_root) : json(nullptr);
   json identity = {{"schema", "kungfu.kfx.load-plan/v2"},
                    {"registryRoot", value.registry_root},
                    {"graphRoot", value.graph_root},
-                   {"generation", lifecycle.generation},
+                   {"authorityMode", lifecycle.present ? "pinned-fact-cut" : "observation-preview"},
+                   {"cutRef", KFX_REGISTRY_REF},
+                   {"cutRoot", cut_root},
+                   {"revision", lifecycle.revision},
                    {"packages", package_plan},
                    {"suites", value.suites},
                    {"diagnostics", value.diagnostics},
@@ -1315,7 +1386,7 @@ json lifecycle_plan(const snapshot &value, const lifecycle_view &lifecycle, cons
   const auto plan_root = root_of(identity);
   result["planRoot"] = plan_root;
   result["graph"] = value.graph;
-  result["nextGeneration"] = intent.is_null() ? lifecycle.generation : lifecycle.generation + 1;
+  result["nextRevision"] = intent.is_null() ? lifecycle.revision : lifecycle.revision + 1;
   result["hostContract"] = experience_flow_descriptor(value, lifecycle, plan_root);
   return result;
 }
@@ -1331,82 +1402,363 @@ int64_t receipt_time(const json &request) {
 }
 
 json lifecycle_history(const std::string &runtime_dir, const json &request) {
-  const auto lifecycle = load_lifecycle(runtime_dir);
-  json receipts = json::array();
+  if (runtime_dir.empty())
+    refuse("KF_KFX_SCHEMA_INVALID", "KFX history requires an explicit runtime directory");
+  const auto state = storage_service_api::run_fact_kernel_operation(
+      runtime_dir, {{"action", "query"}, {"include_inventory", true}, {"include_bodies", true}});
+  if (!state.value("ok", false))
+    refuse("KF_KFX_FACT_REJECTED", state.value("message", "Fact inventory query failed"));
+  json events = json::array();
   const auto package_key = request.value("packageKey", "");
-  for (const auto &receipt : lifecycle.receipts) {
-    if (package_key.empty() || receipt.value("packageKey", "") == package_key)
-      receipts.push_back(receipt);
+  const auto &inventory = state.at("inventory");
+  if (inventory.contains("bodies") && inventory.at("bodies").is_object()) {
+    for (const auto &[ignored, body_entry] : inventory.at("bodies").items()) {
+      (void)ignored;
+      if (!body_entry.is_object() || body_entry.value("status", "") != "available" || !body_entry.contains("body") ||
+          !body_entry.at("body").is_string())
+        continue;
+      json body;
+      try {
+        body = json::parse(body_entry.at("body").get<std::string>());
+      } catch (const json::exception &) {
+        continue;
+      }
+      const auto schema = body.value("schema", "");
+      if (schema != "kungfu.kfx.work-fact/v1" && schema != "kungfu.kfx.warrant-fact/v1" &&
+          schema != "kungfu.kfx.episode-fact/v1" && schema != "kungfu.kfx.settlement-fact/v1")
+        continue;
+      if (package_key.empty() || body.value("packageKey", "") == package_key)
+        events.push_back(body);
+    }
   }
-  return {{"schema", "kungfu.kfx.lifecycle-history/v1"},
-          {"authority", "libkungfu"},
-          {"generation", lifecycle.generation},
-          {"historyRoot", lifecycle.history_root},
-          {"receipts", receipts}};
+  std::sort(events.begin(), events.end(), [](const auto &left, const auto &right) {
+    if (left.value("recordedAt", int64_t{0}) != right.value("recordedAt", int64_t{0}))
+      return left.value("recordedAt", int64_t{0}) < right.value("recordedAt", int64_t{0});
+    return left.value("actionId", "") < right.value("actionId", "");
+  });
+  const auto lifecycle = load_lifecycle(runtime_dir);
+  return {{"schema", "kungfu.kfx.lifecycle-history/v2"},
+          {"authority", "yijinjing-hana-pod-journal"},
+          {"cutRef", KFX_REGISTRY_REF},
+          {"cutRoot", lifecycle.present ? json(lifecycle.cut_root) : json(nullptr)},
+          {"revision", lifecycle.revision},
+          {"historyRoot", root_of(events)},
+          {"events", events}};
+}
+
+struct fact_work_builder {
+  std::string runtime_dir;
+  std::map<std::string, std::string> versions;
+  std::set<std::string> relations;
+  json steps = json::array();
+  std::string profile_root;
+  std::string admission_root;
+
+  fact_work_builder(std::string runtime, const lifecycle_view &current)
+      : runtime_dir(std::move(runtime)), versions(current.current_versions), relations(current.relation_roots),
+        profile_root(native_kfx_domain_profile().at("domainProfileRoot").get<std::string>()),
+        admission_root(
+            root_of({{"schema", "kungfu.kfx-domain-profile-admission/v1"}, {"domainProfileRoot", profile_root}})) {}
+
+  json invoke(const std::string &action, const json &request) {
+    auto response = fact_call(runtime_dir, action, request);
+    if (response.value("status", "") == "idempotent-replay" && response.contains("result") &&
+        response.at("result").contains("record_root")) {
+      static const std::map<std::string, std::string> replay_root_fields = {{"object-put", "object_root"},
+                                                                            {"version-put", "version_root"},
+                                                                            {"relation-add", "relation_root"},
+                                                                            {"cut-put", "cut_root"}};
+      if (replay_root_fields.contains(action))
+        response["result"][replay_root_fields.at(action)] = response.at("result").at("record_root");
+    }
+    steps.push_back({{"action", action},
+                     {"status", response.value("status", "accepted")},
+                     {"writeOccurred", response.value("write_occurred", false)},
+                     {"receiptRoot", response.contains("receipt_root") ? response.at("receipt_root") : json(nullptr)}});
+    return response;
+  }
+
+  json put(const std::string &object_id, const std::string &object_type, const json &body) {
+    const auto created_by = root_of({{"schema", "kungfu.kfx-object-declaration/v1"},
+                                     {"domainProfileRoot", profile_root},
+                                     {"objectId", object_id},
+                                     {"objectType", object_type}});
+    invoke("object-put",
+           {{"object_id", object_id}, {"object_type", object_type}, {"created_by_receipt_root", created_by}});
+    json parents = json::array();
+    if (versions.contains(object_id))
+      parents.push_back(versions.at(object_id));
+    const auto response = invoke(
+        "version-put",
+        {{"object_id", object_id},
+         {"body", body.dump()},
+         {"schema_root", root_of({{"schema", "kungfu.kfx-fact-body-schema/v1"}, {"bodySchema", body.at("schema")}})},
+         {"parent_version_roots", parents},
+         {"declaration_roots", json::array({profile_root})},
+         {"admission_roots", json::array({admission_root})}});
+    versions[object_id] = response.at("result").at("version_root").get<std::string>();
+    return response.at("result");
+  }
+
+  void relate(const std::string &type, const std::string &source, const std::string &target, const json &attributes) {
+    const auto attributes_root = root_of(attributes);
+    const auto response = invoke("relation-add", {{"relation_id", relation_id(type, source, target)},
+                                                  {"relation_type", type},
+                                                  {"source", {{"kind", "logical-object"}, {"id", source}}},
+                                                  {"target", {{"kind", "logical-object"}, {"id", target}}},
+                                                  {"attributes_root", attributes_root},
+                                                  {"admission_roots", json::array({admission_root})}});
+    relations.insert(response.at("result").at("relation_root").get<std::string>());
+  }
+};
+
+std::string package_identity_root(const json &package) {
+  return root_of(
+      {{"schema", "kungfu.kfx.package-identity/v1"},
+       {"name", package.value("name", "")},
+       {"manifestIdentity", package.value("name", "").empty() ? package.at("manifestRoot") : package.at("name")}});
+}
+
+json commit_fact_work(const std::string &runtime_dir, const snapshot &value, const lifecycle_view &current,
+                      const json &request, const std::string &operation, const std::string &desired_state,
+                      const std::string &observed_state, const json &materialization) {
+  const auto key = required_text(request, "packageKey", "request");
+  const auto recorded_at = receipt_time(request);
+  const auto action_id =
+      "kfx-action:" + sha256(json({{"operation", operation},
+                                   {"packageKey", key},
+                                   {"expectedCutRoot", current.present ? json(current.cut_root) : json(nullptr)},
+                                   {"expectedRevision", current.revision},
+                                   {"planRoot", request.value("expectedPlanRoot", "")},
+                                   {"actor", request.value("actor", "anonymous")},
+                                   {"recordedAt", recorded_at}})
+                                 .dump())
+                          .substr(0, 32);
+  fact_work_builder builder(runtime_dir, current);
+  const auto projection_id = fact_id("registry-projection", KFX_REGISTRY_REF);
+  const auto profile_root = native_kfx_domain_profile().at("domainProfileRoot");
+  builder.put(projection_id, "kungfu.kfx.registry-projection",
+              {{"schema", "kungfu.kfx.registry-projection-fact/v1"},
+               {"profile", KFX_PROFILE_ID},
+               {"domainProfileRoot", profile_root},
+               {"cutRef", KFX_REGISTRY_REF},
+               {"projection", snapshot_projection(value)}});
+
+  std::map<std::string, std::string> package_objects;
+  std::map<std::string, std::string> provider_objects;
+  for (const auto &package : value.packages) {
+    const auto package_key = package.at("key").get<std::string>();
+    const auto identity_root = package_identity_root(package);
+    const auto package_id = fact_id("package", identity_root);
+    package_objects[package_key] = package_id;
+    const auto package_desired =
+        package_key == key
+            ? desired_state
+            : (current.desired_states.contains(package_key) ? current.desired_states.at(package_key) : "dormant");
+    builder.put(package_id, "kungfu.kfx.package",
+                {{"schema", "kungfu.kfx.package-fact/v1"},
+                 {"profile", KFX_PROFILE_ID},
+                 {"domainProfileRoot", profile_root},
+                 {"identity", {{"objectId", package_id}, {"logicalIdentityRoot", identity_root}}},
+                 {"name", package.value("name", "")},
+                 {"version", package.value("version", "")},
+                 {"manifestRoot", package.at("manifestRoot")},
+                 {"packageRoot", package.at("packageRoot")},
+                 {"desiredState", package_desired},
+                 {"transport", {{"packageKey", package_key}, {"path", package.value("path", "")}}},
+                 {"lastActionId", action_id}});
+  }
+  for (const auto &provider : value.graph.at("providers")) {
+    const auto provider_key = provider.at("providerId").get<std::string>();
+    const auto provider_id = fact_id("provider", package_identity_root(find_package(value.packages, provider_key)));
+    provider_objects[provider_key] = provider_id;
+    builder.put(provider_id, "kungfu.kfx.provider",
+                {{"schema", "kungfu.kfx.provider-fact/v1"},
+                 {"profile", KFX_PROFILE_ID},
+                 {"domainProfileRoot", profile_root},
+                 {"provider", provider}});
+    if (package_objects.contains(provider_key))
+      builder.relate("kfx-package-provides", package_objects.at(provider_key), provider_id,
+                     {{"schema", "kungfu.kfx.relation-attributes/v1"}, {"kind", "provider"}});
+  }
+  for (const auto &contribution : value.graph.at("contributions")) {
+    const auto contribution_id = fact_id("contribution", contribution.at("contributionRoot").get<std::string>());
+    builder.put(contribution_id, "kungfu.kfx.contribution",
+                {{"schema", "kungfu.kfx.contribution-fact/v1"},
+                 {"profile", KFX_PROFILE_ID},
+                 {"domainProfileRoot", profile_root},
+                 {"contribution", contribution}});
+    const auto owner = contribution.value("ownerProviderId", "");
+    if (provider_objects.contains(owner))
+      builder.relate("kfx-provider-contributes", provider_objects.at(owner), contribution_id,
+                     {{"schema", "kungfu.kfx.relation-attributes/v1"}, {"kind", "contribution"}});
+  }
+  for (const auto &dependency : value.graph.at("dependencies")) {
+    const auto dependency_id = fact_id("dependency", dependency.at("dependencyRoot").get<std::string>());
+    builder.put(dependency_id, "kungfu.kfx.dependency",
+                {{"schema", "kungfu.kfx.dependency-fact/v1"},
+                 {"profile", KFX_PROFILE_ID},
+                 {"domainProfileRoot", profile_root},
+                 {"dependency", dependency}});
+    const auto source = dependency.value("providerId", "");
+    const auto target = dependency.value("targetProviderId", dependency.value("requiresProviderId", ""));
+    if (provider_objects.contains(source)) {
+      const auto target_id = provider_objects.contains(target) ? provider_objects.at(target) : dependency_id;
+      builder.relate("kfx-provider-depends-on", provider_objects.at(source), target_id,
+                     {{"schema", "kungfu.kfx.relation-attributes/v1"}, {"mode", dependency.value("mode", "required")}});
+    }
+  }
+
+  const auto work_id = fact_id("work", action_id);
+  const auto warrant_id = fact_id("warrant", action_id);
+  const auto episode_id = fact_id("episode", action_id);
+  const auto settlement_id = fact_id("settlement", action_id);
+  builder.put(
+      work_id, "kungfu.kfx.work",
+      {{"schema", "kungfu.kfx.work-fact/v1"},
+       {"profile", KFX_PROFILE_ID},
+       {"domainProfileRoot", profile_root},
+       {"actionId", action_id},
+       {"operation", operation},
+       {"packageKey", key},
+       {"actor", request.value("actor", "anonymous")},
+       {"recordedAt", recorded_at},
+       {"basis",
+        {{"cutRoot", current.present ? json(current.cut_root) : json(nullptr)}, {"revision", current.revision}}},
+       {"status", "settled"}});
+  builder.put(warrant_id, "kungfu.kfx.warrant",
+              {{"schema", "kungfu.kfx.warrant-fact/v1"},
+               {"profile", KFX_PROFILE_ID},
+               {"domainProfileRoot", profile_root},
+               {"actionId", action_id},
+               {"packageKey", key},
+               {"allowedOperation", operation},
+               {"state", "consumed"},
+               {"recordedAt", recorded_at}});
+  const auto episode_result = builder.put(episode_id, "kungfu.kfx.episode",
+                                          {{"schema", "kungfu.kfx.episode-fact/v1"},
+                                           {"profile", KFX_PROFILE_ID},
+                                           {"domainProfileRoot", profile_root},
+                                           {"actionId", action_id},
+                                           {"operation", operation},
+                                           {"packageKey", key},
+                                           {"outcome", "applied"},
+                                           {"observedState", observed_state},
+                                           {"materialization", materialization},
+                                           {"recordedAt", recorded_at}});
+  builder.put(settlement_id, "kungfu.kfx.settlement",
+              {{"schema", "kungfu.kfx.settlement-fact/v1"},
+               {"profile", KFX_PROFILE_ID},
+               {"domainProfileRoot", profile_root},
+               {"actionId", action_id},
+               {"operation", operation},
+               {"packageKey", key},
+               {"outcome", "accepted"},
+               {"desiredState", desired_state},
+               {"observedState", observed_state},
+               {"recordedAt", recorded_at}});
+  builder.relate("kfx-work-authorized-by", work_id, warrant_id,
+                 {{"schema", "kungfu.kfx.relation-attributes/v1"}, {"actionId", action_id}});
+  builder.relate("kfx-work-observed-in", work_id, episode_id,
+                 {{"schema", "kungfu.kfx.relation-attributes/v1"}, {"actionId", action_id}});
+  builder.relate("kfx-work-settled-by", work_id, settlement_id,
+                 {{"schema", "kungfu.kfx.relation-attributes/v1"}, {"actionId", action_id}});
+  if (package_objects.contains(key))
+    builder.relate("kfx-settlement-updates-package", settlement_id, package_objects.at(key),
+                   {{"schema", "kungfu.kfx.relation-attributes/v1"}, {"desiredState", desired_state}});
+
+  json object_versions = json::array();
+  for (const auto &[object_id, version_root] : builder.versions)
+    object_versions.push_back({{"object_id", object_id}, {"version_root", version_root}});
+  json relation_roots = json::array();
+  for (const auto &root : builder.relations)
+    relation_roots.push_back(root);
+  json parent_cuts = json::array();
+  if (current.present)
+    parent_cuts.push_back(current.cut_root);
+  const auto episode_number = std::stoull(sha256(action_id).substr(0, 16), nullptr, 16);
+  const auto cut_response = builder.invoke(
+      "cut-put",
+      {{"parent_cut_roots", parent_cuts},
+       {"object_versions", object_versions},
+       {"active_relation_roots", relation_roots},
+       {"declaration_roots", json::array({builder.profile_root})},
+       {"admission_roots", json::array({builder.admission_root})},
+       {"episode_frontier", json::array({{{"episode_id", episode_number},
+                                          {"sealed_content_root", episode_result.at("body_root")},
+                                          {"accepted_manifest_frame_uid", std::string("kfx:") + action_id}}})},
+       {"omission_roots", json::array()},
+       {"conflict_roots", json::array()}});
+  const auto new_cut_root = cut_response.at("result").at("cut_root");
+  const auto ref_response = builder.invoke(
+      "ref-cas",
+      {{"transition_id", action_id},
+       {"ref_name", KFX_REGISTRY_REF},
+       {"expected_old_cut_root", current.present ? json(current.cut_root) : json(nullptr)},
+       {"expected_old_revision", current.revision},
+       {"new_cut_root", new_cut_root},
+       {"kind", current.present ? "advance" : "create"},
+       {"reason_root", root_of({{"schema", "kungfu.kfx.settlement-reason/v1"}, {"settlementId", settlement_id}})}});
+  const auto result = ref_response.at("result");
+  const json receipt_identity = {{"schema", "kungfu.kfx.work-settlement-receipt/v1"},
+                                 {"actionId", action_id},
+                                 {"operation", operation},
+                                 {"packageKey", key},
+                                 {"outcome", "applied"},
+                                 {"workObjectId", work_id},
+                                 {"warrantObjectId", warrant_id},
+                                 {"episodeObjectId", episode_id},
+                                 {"settlementObjectId", settlement_id},
+                                 {"priorCutRoot", current.present ? json(current.cut_root) : json(nullptr)},
+                                 {"cutRoot", result.at("current_cut_root")},
+                                 {"priorRevision", current.revision},
+                                 {"revision", result.at("current_revision")},
+                                 {"kernelReceiptRoot", ref_response.at("receipt_root")},
+                                 {"recordedAt", recorded_at},
+                                 {"materialization", materialization}};
+  auto receipt = receipt_identity;
+  receipt["receiptRoot"] = root_of(receipt_identity);
+  receipt["steps"] = builder.steps;
+  return receipt;
 }
 
 json apply_lifecycle_mutation(const snapshot &value, const lifecycle_view &lifecycle, const json &plan,
                               const json &request, const std::string &runtime_dir) {
   const auto operation = required_text(request, "operation", "request");
-  static const std::set<std::string> operations = {"install", "update", "remove", "enable", "disable", "activate"};
+  static const std::set<std::string> operations = {"install", "update",   "remove", "enable",
+                                                   "disable", "activate", "qualify"};
   validate_enum(operation, operations, "lifecycle operation");
   const auto package_key = required_text(request, "packageKey", "request");
   const auto package = find_package(value.packages, package_key);
   if (package.is_null())
     refuse("KF_KFX_MEMBER_MISSING", "KFX package is not present in the registry: " + package_key);
   const auto &provider = provider_for(value, package_key);
-  const auto prior_state = lifecycle.package_states.contains(package_key) ? lifecycle.package_states.at(package_key)
+  const auto prior_state = lifecycle.desired_states.contains(package_key) ? lifecycle.desired_states.at(package_key)
                                                                           : std::string{"dormant"};
-
-  auto refuse_with_receipt = [&](const std::string &code, const std::string &message) -> void {
-    const json identity = {{"outcome", "refused"},
-                           {"previousGeneration", lifecycle.generation},
-                           {"generation", lifecycle.generation},
-                           {"operation", operation},
-                           {"packageKey", package_key},
-                           {"packageRoot", package.at("packageRoot")},
-                           {"registryRoot", value.registry_root},
-                           {"graphRoot", value.graph_root},
-                           {"planRoot", plan.at("planRoot")},
-                           {"trustRoot", provider.at("trustRoot")},
-                           {"priorState", prior_state},
-                           {"nextState", prior_state},
-                           {"state", prior_state},
-                           {"actor", request.value("actor", "anonymous")},
-                           {"recordedAt", receipt_time(request)},
-                           {"code", code},
-                           {"message", message},
-                           {"expected",
-                            {{"generation", request.value("expectedGeneration", uint64_t{0})},
-                             {"registryRoot", request.value("expectedRegistryRoot", "")},
-                             {"graphRoot", request.value("expectedGraphRoot", "")},
-                             {"planRoot", request.value("expectedPlanRoot", "")},
-                             {"trustRoot", request.value("expectedTrustRoot", "")},
-                             {"packageRoot", request.value("expectedPackageRoot", "")}}}};
-    (void)append_lifecycle_receipt(runtime_dir, lifecycle, identity);
-    refuse(code, message);
-  };
-
-  if (!request.contains("expectedGeneration") || !request.at("expectedGeneration").is_number_integer() ||
-      request.at("expectedGeneration").get<int64_t>() < 0 ||
-      static_cast<uint64_t>(request.at("expectedGeneration").get<int64_t>()) != lifecycle.generation)
-    refuse_with_receipt("KF_KFX_GENERATION_MISMATCH", "lifecycle generation changed since planning");
+  if (!request.contains("expectedRevision") || !request.at("expectedRevision").is_number_integer() ||
+      request.at("expectedRevision").get<int64_t>() < 0 ||
+      static_cast<uint64_t>(request.at("expectedRevision").get<int64_t>()) != lifecycle.revision)
+    refuse("KF_KFX_CUT_STALE", "named KFX Fact Cut revision changed since planning");
+  const json expected_cut = request.contains("expectedCutRoot") ? request.at("expectedCutRoot") : json(nullptr);
+  const json actual_cut = lifecycle.present ? json(lifecycle.cut_root) : json(nullptr);
+  if (expected_cut != actual_cut)
+    refuse("KF_KFX_CUT_STALE", "named KFX Fact Cut root changed since planning");
   if (request.value("expectedRegistryRoot", "") != value.registry_root)
-    refuse_with_receipt("KF_KFX_REGISTRY_STALE", "registry root changed since planning");
+    refuse("KF_KFX_REGISTRY_STALE", "registry projection changed since planning");
   if (request.value("expectedGraphRoot", "") != value.graph_root)
-    refuse_with_receipt("KF_KFX_GRAPH_STALE", "semantic graph root changed since planning");
+    refuse("KF_KFX_GRAPH_STALE", "semantic graph root changed since planning");
   if (request.value("expectedPlanRoot", "") != plan.at("planRoot").get<std::string>())
-    refuse_with_receipt("KF_KFX_PLAN_STALE", "load plan root changed since planning");
+    refuse("KF_KFX_PLAN_STALE", "load plan root changed since planning");
   if (request.value("expectedTrustRoot", "") != provider.at("trustRoot").get<std::string>())
-    refuse_with_receipt("KF_KFX_ASSESSMENT_STALE", "provider trust root changed since planning");
+    refuse("KF_KFX_ASSESSMENT_STALE", "provider trust root changed since planning");
   if (request.value("expectedPackageRoot", "") != package.at("packageRoot").get<std::string>())
-    refuse_with_receipt("KF_KFX_REGISTRY_STALE", "package root changed since planning");
+    refuse("KF_KFX_REGISTRY_STALE", "package root changed since planning");
 
   const auto runtime_root = lifecycle_root(runtime_dir);
   const auto install_root = fs::absolute(runtime_dir).parent_path() / "extensions";
   const auto destination = install_root / package_key;
   const auto source = fs::path(package.at("path").get<std::string>());
-  const auto generation = lifecycle.generation + 1;
+  const auto next_revision = lifecycle.revision + 1;
   fs::path retained_path;
   fs::path staged_path;
   fs::path content_path;
@@ -1434,16 +1786,16 @@ json apply_lifecycle_mutation(const snapshot &value, const lifecycle_view &lifec
         refuse("KF_KFX_SCHEMA_INVALID", "retained KFX content does not match its package root");
       }
       fs::create_directories(install_root);
-      staged_path = install_root / (".kfx-stage-" + package_key + "-" + std::to_string(generation));
+      staged_path = install_root / (".kfx-stage-" + package_key + "-" + std::to_string(next_revision));
       if (fs::exists(staged_path))
-        refuse("KF_KFX_WRITER_BUSY", "a staged KFX package already exists for this generation");
+        refuse("KF_KFX_WRITER_BUSY", "a staged KFX package already exists for this Fact Cut revision");
       fs::copy(content_path, staged_path, fs::copy_options::recursive);
       if (fs::exists(destination)) {
         if (operation == "install" && !request.value("replaceExisting", false))
           refuse("KF_KFX_PACKAGE_DUPLICATE", "KFX package is already installed: " + package_key);
         retained_path =
             runtime_root / "retained" /
-            (std::to_string(generation) + "-" + package_key + "-" + root_of(package_closure(destination)).substr(7));
+            (std::to_string(next_revision) + "-" + package_key + "-" + root_of(package_closure(destination)).substr(7));
         fs::create_directories(retained_path.parent_path());
         fs::rename(destination, retained_path);
         destination_replaced = true;
@@ -1458,43 +1810,43 @@ json apply_lifecycle_mutation(const snapshot &value, const lifecycle_view &lifec
       if (canonical_destination.parent_path() != canonical_install_root)
         refuse("KF_KFX_PATH_TRAVERSAL", "remove is confined to the managed KFX install root");
       retained_path = runtime_root / "retained" /
-                      (std::to_string(generation) + "-" + package_key + "-" +
+                      (std::to_string(next_revision) + "-" + package_key + "-" +
                        package.at("packageRoot").get<std::string>().substr(7));
       fs::create_directories(retained_path.parent_path());
       fs::rename(canonical_destination, retained_path);
       destination_replaced = true;
     }
 
-    const auto state = operation == "remove" || operation == "disable" ? "dormant"
-                       : provider.at("state") == "degraded"            ? "degraded"
-                                                                       : "active";
-    const json dependency_identity = {
-        {"registryRoot", value.registry_root},      {"graphRoot", value.graph_root},
-        {"planRoot", plan.at("planRoot")},          {"trustRoot", provider.at("trustRoot")},
-        {"packageRoot", package.at("packageRoot")}, {"generation", generation}};
-    const json identity = {{"outcome", "applied"},
-                           {"previousGeneration", lifecycle.generation},
-                           {"generation", generation},
-                           {"operation", operation},
-                           {"packageKey", package_key},
-                           {"packageRoot", package.at("packageRoot")},
-                           {"registryRoot", value.registry_root},
-                           {"graphRoot", value.graph_root},
-                           {"planRoot", plan.at("planRoot")},
-                           {"trustRoot", provider.at("trustRoot")},
-                           {"receiptDependencyRoot", root_of(dependency_identity)},
-                           {"priorState", prior_state},
-                           {"nextState", state},
-                           {"state", state},
-                           {"actor", request.value("actor", "anonymous")},
-                           {"recordedAt", receipt_time(request)},
-                           {"contentPath", content_path.empty() ? nullptr : json(content_path.string())},
-                           {"retainedPath", retained_path.empty() ? nullptr : json(retained_path.string())}};
+    const auto desired_state = operation == "remove" || operation == "disable" ? "dormant"
+                               : operation == "qualify"                        ? prior_state
+                                                                               : "active";
+    const auto observed_state = provider.at("state") == "degraded" ? "degraded" : "applied";
+    snapshot accepted = value;
+    for (auto &accepted_package : accepted.packages) {
+      if (accepted_package.at("key") != package_key)
+        continue;
+      if (operation == "remove" && !retained_path.empty())
+        accepted_package["path"] = retained_path.string();
+      else if (!destination.empty() && fs::exists(destination))
+        accepted_package["path"] = destination.string();
+      accepted_package["candidate"] = false;
+      accepted_package["installed"] = operation != "remove";
+    }
+    const json materialization = {{"contentPath", content_path.empty() ? nullptr : json(content_path.string())},
+                                  {"retainedPath", retained_path.empty() ? nullptr : json(retained_path.string())},
+                                  {"destinationPath", destination.string()}};
     appending_receipt = true;
-    auto receipt = append_lifecycle_receipt(runtime_dir, lifecycle, identity);
-    return {{"schema", "kungfu.kfx.lifecycle-application/v1"},
+    auto receipt = commit_fact_work(runtime_dir, accepted, lifecycle, request, operation, desired_state, observed_state,
+                                    materialization);
+    return {{"schema", "kungfu.kfx.lifecycle-application/v2"},
             {"applied", true},
-            {"generation", generation},
+            {"cutRoot", receipt.at("cutRoot")},
+            {"revision", receipt.at("revision")},
+            {"desiredState", desired_state},
+            {"observedState", observed_state},
+            {"verdict", provider.at("state") == "degraded" ? "degraded"
+                        : desired_state == "dormant"       ? "dormant"
+                                                           : "active"},
             {"receipt", receipt}};
   } catch (const std::invalid_argument &error) {
     rollback();
@@ -1503,19 +1855,74 @@ json apply_lifecycle_mutation(const snapshot &value, const lifecycle_view &lifec
     const std::string detail = error.what();
     const auto separator = detail.find(':');
     const auto code = detail.starts_with("KF_") ? detail.substr(0, separator) : "KF_KFX_SCHEMA_INVALID";
-    refuse_with_receipt(code, detail);
+    refuse(code, detail);
   } catch (const std::exception &error) {
     rollback();
     if (appending_receipt)
       throw;
-    refuse_with_receipt("KF_KFX_SCHEMA_INVALID", error.what());
+    refuse("KF_KFX_SCHEMA_INVALID", error.what());
   } catch (...) {
     rollback();
     if (appending_receipt)
       throw;
-    refuse_with_receipt("KF_KFX_SCHEMA_INVALID", "unknown native KFX lifecycle failure");
+    refuse("KF_KFX_SCHEMA_INVALID", "unknown native KFX lifecycle failure");
   }
   return json::object();
+}
+
+snapshot merge_candidate_observation(const snapshot &authority, const snapshot &candidate) {
+  snapshot result = authority;
+  std::map<std::string, json> packages;
+  for (const auto &package : authority.packages)
+    packages[package.at("key").get<std::string>()] = package;
+  for (const auto &package : candidate.packages)
+    packages[package.at("key").get<std::string>()] = package;
+  result.packages = json::array();
+  for (const auto &[ignored, package] : packages) {
+    (void)ignored;
+    result.packages.push_back(package);
+  }
+  std::map<std::string, json> suites;
+  for (const auto &suite : authority.suites)
+    suites[suite.at("suiteKey").get<std::string>()] = suite;
+  for (const auto &suite : candidate.suites)
+    suites[suite.at("suiteKey").get<std::string>()] = suite;
+  result.suites = json::array();
+  for (const auto &[ignored, suite] : suites) {
+    (void)ignored;
+    result.suites.push_back(suite);
+  }
+  result.diagnostics = candidate.diagnostics;
+  result.graph = semantic_graph(result.packages, result.diagnostics);
+  result.graph_root = result.graph.at("graphRoot").get<std::string>();
+  json package_identity = json::array();
+  for (const auto &package : result.packages) {
+    package_identity.push_back({{"key", package.at("key")},
+                                {"rootKind", package.at("rootKind")},
+                                {"packageRoot", package.at("packageRoot")},
+                                {"manifestRoot", package.at("manifestRoot")},
+                                {"apiCompatibility", package.at("apiCompatibility")},
+                                {"facets", package.at("facets")},
+                                {"runtimeTier", package.at("runtimeTier")},
+                                {"admissionGrade", package.at("admissionGrade")},
+                                {"hosts", package.at("hosts")}});
+  }
+  result.registry_root = root_of({{"schema", "kungfu.kfx-registry-snapshot/v1"},
+                                  {"packages", package_identity},
+                                  {"suites", result.suites},
+                                  {"diagnostics", result.diagnostics}});
+  return result;
+}
+
+snapshot empty_observation() {
+  snapshot result;
+  result.graph = semantic_graph(result.packages, result.diagnostics);
+  result.graph_root = result.graph.at("graphRoot").get<std::string>();
+  result.registry_root = root_of({{"schema", "kungfu.kfx-registry-snapshot/v1"},
+                                  {"packages", json::array()},
+                                  {"suites", json::array()},
+                                  {"diagnostics", json::array()}});
+  return result;
 }
 
 } // namespace
@@ -1533,94 +1940,138 @@ static json query_native_kfx_registry_unchecked(const std::string &action, const
   std::optional<lifecycle_writer_lock> writer_lock;
   if (action == "apply")
     writer_lock.emplace(runtime_dir);
+  const auto lifecycle = load_lifecycle(runtime_dir);
   auto snapshot_request = request;
   if (action == "apply")
     snapshot_request.erase("expectedRegistryRoot");
-  const auto snapshot = build_snapshot(snapshot_request);
-  lifecycle_view lifecycle;
-  if (runtime_dir.empty()) {
-    lifecycle.history_root = root_of(json::array());
+  const bool has_observation = snapshot_request.contains("roots") && snapshot_request.at("roots").is_array() &&
+                               !snapshot_request.at("roots").empty();
+  snapshot selected;
+  if (lifecycle.present) {
+    selected = lifecycle.authoritative;
+    const auto operation = request.value("operation", "");
+    if (has_observation && (operation == "install" || operation == "update")) {
+      selected = merge_candidate_observation(selected, build_snapshot(snapshot_request));
+    }
+  } else if (has_observation) {
+    selected = build_snapshot(snapshot_request);
+  } else if (action == "list" || action == "status") {
+    selected = empty_observation();
   } else {
-    lifecycle = load_lifecycle(runtime_dir);
+    refuse("KF_KFX_CUT_MISSING", "no named KFX Fact Cut exists; provide a bounded discovery observation to plan");
   }
-  const auto load_plan = lifecycle_plan(snapshot, lifecycle, request);
+  const auto load_plan = lifecycle_plan(selected, lifecycle, request);
   if (action == "apply")
-    return apply_lifecycle_mutation(snapshot, lifecycle, load_plan, request, runtime_dir);
+    return apply_lifecycle_mutation(selected, lifecycle, load_plan, request, runtime_dir);
+  const json cut_root = lifecycle.present ? json(lifecycle.cut_root) : json(nullptr);
   if (action == "status") {
-    return {{"schema", "kungfu.kfx.registry-status/v2"},
-            {"authority", "libkungfu"},
+    return {{"schema", "kungfu.kfx.registry-status/v3"},
+            {"authority", lifecycle.present ? "yijinjing-hana-pod-journal" : "observation-preview"},
+            {"domainProfileRoot", native_kfx_domain_profile().at("domainProfileRoot")},
+            {"cutRef", KFX_REGISTRY_REF},
+            {"cutRoot", cut_root},
+            {"revision", lifecycle.revision},
             {"writer", "one-libkungfu-writer-per-runtime-directory"},
             {"readOnly", false},
             {"cacheAuthority", false},
-            {"registryRoot", snapshot.registry_root},
-            {"graphRoot", snapshot.graph_root},
-            {"generation", lifecycle.generation},
-            {"historyRoot", lifecycle.history_root},
-            {"packageCount", snapshot.packages.size()},
-            {"suiteCount", snapshot.suites.size()},
-            {"diagnostics", snapshot.diagnostics}};
+            {"registryRoot", selected.registry_root},
+            {"graphRoot", selected.graph_root},
+            {"packageCount", selected.packages.size()},
+            {"suiteCount", selected.suites.size()},
+            {"diagnostics", selected.diagnostics}};
   }
   if (action == "list") {
     json packages = json::array();
-    for (const auto &package : snapshot.packages) {
+    for (const auto &package : selected.packages) {
       auto projected = public_package(package);
       const auto key = package.at("key").get<std::string>();
-      projected["state"] =
-          lifecycle.package_states.contains(key) ? lifecycle.package_states.at(key) : std::string{"dormant"};
-      projected["providerRoot"] = provider_for(snapshot, key).at("providerRoot");
+      const auto desired =
+          lifecycle.desired_states.contains(key) ? lifecycle.desired_states.at(key) : std::string{"dormant"};
+      const auto observed =
+          lifecycle.observed_states.contains(key) ? lifecycle.observed_states.at(key) : std::string{"unknown"};
+      projected["desiredState"] = desired;
+      projected["observedState"] = observed;
+      projected["verdict"] = derived_verdict(provider_for(selected, key), desired, observed);
+      projected["state"] = projected["verdict"];
+      projected["providerRoot"] = provider_for(selected, key).at("providerRoot");
       packages.push_back(projected);
     }
-    return {{"schema", "kungfu.kfx.registry-list/v2"},
-            {"registryRoot", snapshot.registry_root},
-            {"graphRoot", snapshot.graph_root},
-            {"generation", lifecycle.generation},
+    return {{"schema", "kungfu.kfx.registry-list/v3"},
+            {"authority", lifecycle.present ? "pinned-fact-cut" : "observation-preview"},
+            {"cutRef", KFX_REGISTRY_REF},
+            {"cutRoot", cut_root},
+            {"revision", lifecycle.revision},
+            {"registryRoot", selected.registry_root},
+            {"graphRoot", selected.graph_root},
             {"packages", packages},
-            {"diagnostics", snapshot.diagnostics}};
+            {"diagnostics", selected.diagnostics}};
   }
   if (action == "inspect") {
     const auto key = required_text(request, "packageKey", "request");
-    const auto package = find_package(snapshot.packages, key);
+    const auto package = find_package(selected.packages, key);
     if (package.is_null())
       refuse("KF_KFX_MEMBER_MISSING", "KFX package is not present in the registry: " + key);
     auto projected = package;
     projected.erase("semantic");
-    projected["provider"] = provider_for(snapshot, key);
-    projected["state"] =
-        lifecycle.package_states.contains(key) ? lifecycle.package_states.at(key) : std::string{"dormant"};
-    return {{"schema", "kungfu.kfx.registry-inspection/v2"},
-            {"registryRoot", snapshot.registry_root},
-            {"graphRoot", snapshot.graph_root},
-            {"generation", lifecycle.generation},
+    projected["provider"] = provider_for(selected, key);
+    const auto desired =
+        lifecycle.desired_states.contains(key) ? lifecycle.desired_states.at(key) : std::string{"dormant"};
+    const auto observed =
+        lifecycle.observed_states.contains(key) ? lifecycle.observed_states.at(key) : std::string{"unknown"};
+    projected["desiredState"] = desired;
+    projected["observedState"] = observed;
+    projected["verdict"] = derived_verdict(projected.at("provider"), desired, observed);
+    projected["state"] = projected["verdict"];
+    return {{"schema", "kungfu.kfx.registry-inspection/v3"},
+            {"authority", lifecycle.present ? "pinned-fact-cut" : "observation-preview"},
+            {"cutRef", KFX_REGISTRY_REF},
+            {"cutRoot", cut_root},
+            {"revision", lifecycle.revision},
+            {"registryRoot", selected.registry_root},
+            {"graphRoot", selected.graph_root},
             {"package", projected},
-            {"diagnostics", snapshot.diagnostics}};
+            {"diagnostics", selected.diagnostics}};
   }
   if (action == "assess") {
     const auto key = required_text(request, "packageKey", "request");
-    const auto package = find_package(snapshot.packages, key);
+    const auto package = find_package(selected.packages, key);
     if (package.is_null())
       refuse("KF_KFX_MEMBER_MISSING", "KFX package is not present in the registry: " + key);
-    auto result = assess_package(package, snapshot.registry_root, request);
-    result["registryRoot"] = snapshot.registry_root;
-    result["graphRoot"] = snapshot.graph_root;
-    result["generation"] = lifecycle.generation;
-    result["diagnostics"] = snapshot.diagnostics;
+    auto result = assess_package(package, selected.registry_root, request);
+    result["authority"] = lifecycle.present ? "pinned-fact-cut" : "observation-preview";
+    result["cutRef"] = KFX_REGISTRY_REF;
+    result["cutRoot"] = cut_root;
+    result["revision"] = lifecycle.revision;
+    result["registryRoot"] = selected.registry_root;
+    result["graphRoot"] = selected.graph_root;
+    result["diagnostics"] = selected.diagnostics;
     return result;
   }
   if (action == "resolve") {
     const auto key = required_text(request, "suiteKey", "request");
-    for (const auto &suite : snapshot.suites) {
+    for (const auto &suite : selected.suites) {
       if (suite.at("suiteKey") == key)
-        return {{"schema", "kungfu.kfx.registry-resolution/v2"},
-                {"registryRoot", snapshot.registry_root},
-                {"graphRoot", snapshot.graph_root},
-                {"generation", lifecycle.generation},
+        return {{"schema", "kungfu.kfx.registry-resolution/v3"},
+                {"authority", lifecycle.present ? "pinned-fact-cut" : "observation-preview"},
+                {"cutRef", KFX_REGISTRY_REF},
+                {"cutRoot", cut_root},
+                {"revision", lifecycle.revision},
+                {"registryRoot", selected.registry_root},
+                {"graphRoot", selected.graph_root},
                 {"suite", suite},
-                {"diagnostics", snapshot.diagnostics}};
+                {"diagnostics", selected.diagnostics}};
     }
     refuse("KF_KFX_MEMBER_MISSING", "KFX Suite is not present in the registry: " + key);
   }
 
   return load_plan;
+}
+
+json native_kfx_domain_profile() {
+  const auto profile = embedded_domain_profile();
+  auto result = profile;
+  result["domainProfileRoot"] = root_of(profile);
+  return result;
 }
 
 json query_native_kfx_registry(const std::string &action, const json &request, const std::string &runtime_dir) {

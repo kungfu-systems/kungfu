@@ -1,0 +1,11 @@
+// SPDX-License-Identifier: Apache-2.0
+#pragma once
+
+#include <string_view>
+
+namespace kungfu::runtime::kfx::generated {
+
+inline constexpr std::string_view KFX_DOMAIN_PROFILE_CONTRACT =
+    R"KFKFXPROFILE(@KFX_DOMAIN_PROFILE_JSON@)KFKFXPROFILE";
+
+} // namespace kungfu::runtime::kfx::generated

@@ -41,6 +41,17 @@ configure_file(
   @ONLY
 )
 
+# The KFX Domain Profile is the bounded semantic mapping from KFX lifecycle
+# concerns to the existing Fact/Work kernel. Embed the checked-in contract so
+# installed Core runtimes do not depend on a source checkout.
+file(READ "${PROJECT_SOURCE_DIR}/../../../kfx/kungfu-kfx-domain-profile.contract.json" KFX_DOMAIN_PROFILE_JSON)
+file(MAKE_DIRECTORY "${KUNGFU_GENERATED_INCLUDE_DIR}/kungfu/runtime/kfx")
+configure_file(
+  "${PROJECT_SOURCE_DIR}/schemas/kfx_domain_profile_contract.h.in"
+  "${KUNGFU_GENERATED_INCLUDE_DIR}/kungfu/runtime/kfx/kfx_domain_profile_contract.h"
+  @ONLY
+)
+
 # KF-ADR-019f86da-4f90-7b3f-9ef3-84f5a878f302 assessment jobs use an independent FlatBuffers authority while
 # sharing the ActionEnvelope and Episode substrates with KF-ADR-019f86da-4f90-7d81-90a0-d144fc27fe03.
 file(READ "${PROJECT_SOURCE_DIR}/schemas/assessment_event.fbs" ASSESSMENT_EVENT_FBS)

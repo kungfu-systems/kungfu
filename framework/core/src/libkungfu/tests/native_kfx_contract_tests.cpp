@@ -84,11 +84,11 @@ bool contains_text(const nlohmann::json &values, const std::string &expected) {
 void test_contract_is_versioned_and_core_owned() {
   const auto first = kfx::native_kfx_contract();
   const auto second = kfx::native_kfx_contract();
-  require(first.at("schema") == kfx::NATIVE_KFX_CONTRACT_V2, "native contract schema drifted");
-  require(first.at("contractVersion") == 2, "native contract version drifted");
-  require(first.at("versionNegotiation").at("supported") == nlohmann::json::array({1, 2}),
-          "native contract stopped accepting frozen v1 documents");
-  require(first.at("sourceContractVersion") == 9, "native contract did not expose its source compatibility version");
+  require(first.at("schema") == kfx::NATIVE_KFX_CONTRACT_V3, "native contract schema drifted");
+  require(first.at("contractVersion") == 3, "native contract version drifted");
+  require(first.at("versionNegotiation").at("supported") == nlohmann::json::array({1, 2, 3}),
+          "native contract stopped accepting frozen v1/v2 documents");
+  require(first.at("sourceContractVersion") == 10, "native contract did not expose its source compatibility version");
   require(first.at("runtimeTiers") != first.at("admissionGrades"),
           "runtime tier and admission grade were collapsed into one authority field");
   require(first.at("authority").at("owner") == "libkungfu", "native contract did not assign Core authority");
@@ -110,8 +110,16 @@ void test_contract_is_versioned_and_core_owned() {
           "native contract allowed contribution composition to become ownership");
   require(first.at("lifecycle").at("authority") == "one-libkungfu-writer-per-runtime-directory",
           "native contract did not freeze one runtime-directory writer");
+  require(first.at("lifecycle").at("fences").front() == "expectedCutRoot" &&
+              first.at("lifecycle").at("fences").at(1) == "expectedRevision",
+          "native lifecycle still fences on an independent generation");
   require(first.at("experienceFlowHost").at("renderingAuthority") == "host-native",
           "native contract claimed host rendering authority");
+  const auto profile = kfx::native_kfx_domain_profile();
+  require(profile.at("authority").at("namedCutRef") == "profiles/kfx/registry" &&
+              profile.at("authority").at("factKernel") == "yijinjing-hana-pod-journal" &&
+              profile.at("domainProfileRoot").get<std::string>().starts_with("sha256:"),
+          "KFX Domain Profile did not bind the native Fact/Cut authority");
   require(first.at("nativeContractRoot") == second.at("nativeContractRoot"), "native contract root was unstable");
   require(first.at("sourceContractRoot").get<std::string>().rfind("sha256:", 0) == 0,
           "source contract root was not content-addressed");
@@ -495,10 +503,12 @@ void test_semantic_graph_and_host_contract_are_canonical() {
   const auto second = kfx::query_native_kfx_registry("plan", request);
   const auto expected = expected_registry_roots();
   require(first == second, "semantic graph and plan roots are not deterministic");
-  require(first.at("graphRoot") == expected.at("semanticGraphRoot") &&
-              first.at("planRoot") == expected.at("semanticPlanRoot") &&
-              first.at("hostContract").at("receiptDependencyRoot") == expected.at("semanticHostReceiptDependencyRoot"),
-          "C++ semantic graph, plan, or host receipt dependency root drifted from the cross-language fixture");
+  require(first.at("graphRoot") == expected.at("semanticGraphRoot"),
+          "C++ semantic graph drifted from the cross-language fixture");
+  require(first.at("authorityMode") == "observation-preview" && first.at("cutRoot").is_null() &&
+              first.at("revision") == 0 && first.at("planRoot").get<std::string>().starts_with("sha256:") &&
+              first.at("hostContract").at("receiptDependencyRoot").get<std::string>().starts_with("sha256:"),
+          "uncommitted scan was presented as authority or lost its rooted plan");
   require(first.at("graph").at("providers").size() == 2, "semantic graph lost a provider");
   require(first.at("graphRoot").get<std::string>().starts_with("sha256:"), "semantic graph is not rooted");
   const auto &dependencies = first.at("graph").at("dependencies");
@@ -600,7 +610,8 @@ nlohmann::json mutation_request(const nlohmann::json &request, const nlohmann::j
   auto mutation = request;
   mutation["packageKey"] = package_key;
   mutation["operation"] = operation;
-  mutation["expectedGeneration"] = plan.at("generation");
+  mutation["expectedCutRoot"] = plan.at("cutRoot");
+  mutation["expectedRevision"] = plan.at("revision");
   mutation["expectedRegistryRoot"] = plan.at("registryRoot");
   mutation["expectedGraphRoot"] = plan.at("graphRoot");
   mutation["expectedPlanRoot"] = plan.at("planRoot");
@@ -612,11 +623,16 @@ nlohmann::json mutation_request(const nlohmann::json &request, const nlohmann::j
     break;
   }
   mutation["actor"] = "native-kfx-test";
-  mutation["systemTime"] = 100 + plan.at("generation").get<uint64_t>();
+  mutation["systemTime"] = 100 + plan.at("revision").get<uint64_t>();
   return mutation;
 }
 
-void test_native_lifecycle_fences_mutations_and_retains_history() {
+size_t count_schema(const nlohmann::json &events, const std::string &schema) {
+  return static_cast<size_t>(std::count_if(events.begin(), events.end(),
+                                           [&](const auto &event) { return event.value("schema", "") == schema; }));
+}
+
+void test_native_lifecycle_uses_fact_work_and_named_cut_authority() {
   const auto home = temp_root("lifecycle");
   const auto source_root = home / "sources";
   const auto package_source = source_root / "optional-view";
@@ -634,50 +650,61 @@ void test_native_lifecycle_fences_mutations_and_retains_history() {
       "apply", mutation_request(source_request, install_plan, "optional-view", "install"), runtime_dir.string());
   const auto expected = expected_registry_roots();
   require(install_plan.at("registryRoot") == expected.at("lifecycleRegistryRoot") &&
-              install_plan.at("graphRoot") == expected.at("lifecycleGraphRoot") &&
-              install_plan.at("planRoot") == expected.at("lifecyclePlanRoot") &&
-              install.at("receipt").at("receiptDependencyRoot") == expected.at("lifecycleReceiptDependencyRoot"),
-          "C++ lifecycle roots drifted from the cross-language fixture");
-  require(install.at("generation") == 1 && install.at("receipt").at("outcome") == "applied",
-          "late install did not produce generation one");
+              install_plan.at("graphRoot") == expected.at("lifecycleGraphRoot"),
+          "C++ observation snapshot drifted before Fact admission");
+  require(install.at("revision") == 1 && install.at("cutRoot").get<std::string>().starts_with("sha256:") &&
+              install.at("receipt").at("schema") == "kungfu.kfx.work-settlement-receipt/v1" &&
+              install.at("receipt").at("outcome") == "applied",
+          "late install did not settle Work into named Fact Cut revision one");
   require(fs::is_regular_file(home / "extensions" / "optional-view" / "kungfu.kfx.json"),
           "native lifecycle did not atomically materialize the package");
+  require(!fs::exists(runtime_dir / "kfx" / "registry-history.jsonl"),
+          "native lifecycle recreated a KFX-specific authority journal");
 
-  require_refusal("KF_KFX_GENERATION_MISMATCH", [&] {
+  require_refusal("KF_KFX_CUT_STALE", [&] {
     (void)kfx::query_native_kfx_registry(
         "apply", mutation_request(source_request, install_plan, "optional-view", "install"), runtime_dir.string());
   });
   auto history = kfx::query_native_kfx_registry("history", nlohmann::json::object(), runtime_dir.string());
-  require(history.at("generation") == 1 && history.at("receipts").size() == 2 &&
-              history.at("receipts").back().at("outcome") == "refused",
-          "stale caller did not retain one immutable refused receipt");
+  require(history.at("schema") == "kungfu.kfx.lifecycle-history/v2" &&
+              history.at("authority") == "yijinjing-hana-pod-journal" && history.at("revision") == 1 &&
+              count_schema(history.at("events"), "kungfu.kfx.work-fact/v1") == 1 &&
+              count_schema(history.at("events"), "kungfu.kfx.warrant-fact/v1") == 1 &&
+              count_schema(history.at("events"), "kungfu.kfx.episode-fact/v1") == 1 &&
+              count_schema(history.at("events"), "kungfu.kfx.settlement-fact/v1") == 1,
+          "Fact inventory did not reconstruct the settled Work/Warrant/Episode/Settlement");
 
-  const nlohmann::json installed_request = {
-      {"roots", nlohmann::json::array({{{"kind", "user"}, {"path", (home / "extensions").string()}}})},
-      {"runtimeTiers", {{"optional-view", "verified-third-party"}}},
-      {"packageKey", "optional-view"},
-      {"operation", "remove"}};
+  fs::remove_all(source_root);
+  const auto fact_list = kfx::query_native_kfx_registry("list", nlohmann::json::object(), runtime_dir.string());
+  const auto fact_status = kfx::query_native_kfx_registry("status", nlohmann::json::object(), runtime_dir.string());
+  require(fact_list.at("authority") == "pinned-fact-cut" && fact_list.at("packages").size() == 1 &&
+              fact_list.at("cutRoot") == install.at("cutRoot") && fact_status.at("revision") == 1 &&
+              fact_list.at("packages").front().at("desiredState") == "active" &&
+              fact_list.at("packages").front().at("observedState") == "applied" &&
+              fact_list.at("packages").front().at("verdict") == "active",
+          "named Fact Cut could not rebuild desired, observed, and derived registry views without scanning");
+
+  const nlohmann::json installed_request = {{"packageKey", "optional-view"}, {"operation", "remove"}};
   const auto remove_plan = kfx::query_native_kfx_registry("plan", installed_request, runtime_dir.string());
   const auto removed = kfx::query_native_kfx_registry(
       "apply", mutation_request(installed_request, remove_plan, "optional-view", "remove"), runtime_dir.string());
-  require(removed.at("generation") == 2 && !fs::exists(home / "extensions" / "optional-view"),
+  require(removed.at("revision") == 2 && !fs::exists(home / "extensions" / "optional-view"),
           "native lifecycle did not apply the bounded remove transition");
-  require(fs::exists(removed.at("receipt").at("retainedPath").get<std::string>()),
+  require(fs::exists(removed.at("receipt").at("materialization").at("retainedPath").get<std::string>()),
           "remove discarded referenced package bytes");
 
+  fs::create_directories(source_root);
+  fs::copy(registry_root() / "example-suite" / "members" / "optional-view", package_source,
+           fs::copy_options::recursive);
   const auto restore_plan = kfx::query_native_kfx_registry("plan", source_request, runtime_dir.string());
   const auto restored = kfx::query_native_kfx_registry(
       "apply", mutation_request(source_request, restore_plan, "optional-view", "install"), runtime_dir.string());
-  require(restored.at("generation") == 3 && fs::exists(home / "extensions" / "optional-view"),
+  require(restored.at("revision") == 3 && fs::exists(home / "extensions" / "optional-view"),
           "late restoration did not produce a complete next state");
   history = kfx::query_native_kfx_registry("history", {{"packageKey", "optional-view"}}, runtime_dir.string());
-  require(history.at("generation") == 3 && history.at("receipts").size() == 4 &&
+  require(history.at("revision") == 3 && history.at("events").size() == 12 &&
               history.at("historyRoot").get<std::string>().starts_with("sha256:"),
-          "lifecycle history did not reconstruct applied and refused transitions");
-  require(history.at("receipts").front().at("previousGeneration") == 0 &&
-              history.at("receipts").front().at("priorState") == "dormant" &&
-              history.at("receipts").front().at("nextState") == "active",
-          "applied receipt did not retain its complete prior and next state");
+          "lifecycle history did not reconstruct all immutable Fact versions");
 
   const auto duplicate_plan = kfx::query_native_kfx_registry("plan", source_request, runtime_dir.string());
   require_refusal("KF_KFX_PACKAGE_DUPLICATE", [&] {
@@ -685,15 +712,12 @@ void test_native_lifecycle_fences_mutations_and_retains_history() {
         "apply", mutation_request(source_request, duplicate_plan, "optional-view", "install"), runtime_dir.string());
   });
   history = kfx::query_native_kfx_registry("history", {{"packageKey", "optional-view"}}, runtime_dir.string());
-  require(history.at("generation") == 3 && history.at("receipts").size() == 5 &&
-              history.at("receipts").back().at("outcome") == "refused" &&
-              history.at("receipts").back().at("priorState") == history.at("receipts").back().at("nextState"),
-          "failed materialization did not retain an immutable no-transition receipt");
+  require(history.at("revision") == 3 && history.at("events").size() == 12,
+          "refused precondition incorrectly advanced Fact/Work authority");
   require(!fs::exists(home / "extensions" / ".kfx-stage-optional-view-4"),
           "failed materialization left a staged package behind");
 
-  auto enable_request = source_request;
-  enable_request["operation"] = "enable";
+  const nlohmann::json enable_request = {{"packageKey", "optional-view"}, {"operation", "enable"}};
   const auto enable_plan = kfx::query_native_kfx_registry("plan", enable_request, runtime_dir.string());
   const auto enable_mutation = mutation_request(enable_request, enable_plan, "optional-view", "enable");
   auto invoke_enable = [enable_mutation, runtime_dir]() {
@@ -711,12 +735,12 @@ void test_native_lifecycle_fences_mutations_and_retains_history() {
   const auto applied_count =
       static_cast<int>(first_outcome == "applied") + static_cast<int>(second_outcome == "applied");
   const auto refused_outcome = first_outcome == "applied" ? second_outcome : first_outcome;
-  require(applied_count == 1 && (refused_outcome.starts_with("KF_KFX_WRITER_BUSY") ||
-                                 refused_outcome.starts_with("KF_KFX_GENERATION_MISMATCH")),
+  require(applied_count == 1 &&
+              (refused_outcome.starts_with("KF_KFX_WRITER_BUSY") || refused_outcome.starts_with("KF_KFX_CUT_STALE")),
           "concurrent lifecycle writers did not serialize behind the Core-owned runtime fence");
   history = kfx::query_native_kfx_registry("history", {{"packageKey", "optional-view"}}, runtime_dir.string());
-  require(history.at("generation") == 4 && history.at("receipts").size() >= 6,
-          "serialized lifecycle mutation did not preserve a complete generation-four history");
+  require(history.at("revision") == 4 && history.at("events").size() == 16,
+          "serialized lifecycle mutation did not preserve complete Fact/Work history");
   fs::remove_all(home);
 }
 
@@ -732,7 +756,7 @@ int main() {
     test_registry_negative_and_concurrent_reads();
     test_exact_buildchain_attestation_and_operation_admission();
     test_semantic_graph_and_host_contract_are_canonical();
-    test_native_lifecycle_fences_mutations_and_retains_history();
+    test_native_lifecycle_uses_fact_work_and_named_cut_authority();
     std::cout << "native KFX contract tests passed\n";
     return 0;
   } catch (const std::exception &error) {

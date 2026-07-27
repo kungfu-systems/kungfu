@@ -22,7 +22,8 @@ def project_experience_flow_host(
         "graphRoot",
         "planRoot",
         "receiptDependencyRoot",
-        "generation",
+        "cutRoot",
+        "revision",
         "contributions",
     ):
         if field not in descriptor:
@@ -51,6 +52,7 @@ def project_experience_flow_host(
         "graphRoot": descriptor["graphRoot"],
         "planRoot": descriptor["planRoot"],
         "receiptDependencyRoot": descriptor["receiptDependencyRoot"],
-        "generation": descriptor["generation"],
+        "cutRoot": descriptor["cutRoot"],
+        "revision": descriptor["revision"],
         "contributions": contributions,
     }

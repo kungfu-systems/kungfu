@@ -93,7 +93,8 @@ test(
           action: 'apply',
           request: {
             ...request,
-            expectedGeneration: plan.generation,
+            expectedCutRoot: plan.cutRoot,
+            expectedRevision: plan.revision,
             expectedRegistryRoot: plan.registryRoot,
             expectedGraphRoot: plan.graphRoot,
             expectedPlanRoot: plan.planRoot,
@@ -108,9 +109,15 @@ test(
       assert.equal(plan.registryRoot, expected.lifecycleRegistryRoot);
       assert.equal(plan.graphRoot, expected.lifecycleGraphRoot);
       assert.equal(plan.planRoot, expected.lifecyclePlanRoot);
+      assert.equal(application.revision, 1);
+      assert.match(application.cutRoot, /^sha256:[0-9a-f]{64}$/);
       assert.equal(
-        application.receipt.receiptDependencyRoot,
-        expected.lifecycleReceiptDependencyRoot,
+        application.receipt.schema,
+        'kungfu.kfx.work-settlement-receipt/v1',
+      );
+      assert.equal(
+        fs.existsSync(path.join(runtimeDir, 'kfx', 'registry-history.jsonl')),
+        false,
       );
     } finally {
       fs.rmSync(home, { recursive: true, force: true });
