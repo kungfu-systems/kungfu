@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
+import crypto from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 import process from 'node:process';
@@ -93,6 +94,22 @@ export function validatePublicEvidence(value) {
   const gateArtifact = exactArtifact(value.gate?.artifact, 'Gate');
   const mediaArtifact = exactArtifact(value.media?.artifact, 'media');
   const passportArtifact = exactArtifact(value.passport?.artifact, 'Passport');
+  const readmeMedia = {
+    path: requiredString(
+      value.readmeMedia?.path,
+      'README media path',
+      /^docs\/qualification\/evidence\/auditable-demo\/[0-9a-f]{64}\/demo\.gif$/u,
+    ),
+    digest: requiredString(
+      value.readmeMedia?.digest,
+      'README media digest',
+      DIGEST_PATTERN,
+    ),
+  };
+  const expectedMediaPath = `docs/qualification/evidence/auditable-demo/${passportRoot.slice(7)}/demo.gif`;
+  if (readmeMedia.path !== expectedMediaPath) {
+    fail('README media path is not bound to the Passport root');
+  }
   const workflowRunPrefix = `${workflowUrl}/artifacts/`;
   for (const artifact of [gateArtifact, mediaArtifact, passportArtifact]) {
     if (!artifact.url.startsWith(workflowRunPrefix)) {
@@ -107,7 +124,29 @@ export function validatePublicEvidence(value) {
     gate: { root: gateRoot, artifact: gateArtifact },
     media: { root: mediaRoot, artifact: mediaArtifact },
     passport: { root: passportRoot, artifact: passportArtifact },
+    readmeMedia,
   };
+}
+
+export function verifyReadmeMediaFile(repoRoot, value) {
+  const evidence = validatePublicEvidence(value);
+  const mediaPath = path.resolve(repoRoot, evidence.readmeMedia.path);
+  if (!mediaPath.startsWith(`${repoRoot}${path.sep}`)) {
+    fail('README media path escapes the repository');
+  }
+  const metadata = fs.lstatSync(mediaPath);
+  if (
+    !metadata.isFile() ||
+    metadata.isSymbolicLink() ||
+    metadata.size > 10 * 1024 * 1024
+  ) {
+    fail('README media must be a bounded regular non-symlink file');
+  }
+  const digest = `sha256:${crypto.createHash('sha256').update(fs.readFileSync(mediaPath)).digest('hex')}`;
+  if (digest !== evidence.readmeMedia.digest) {
+    fail('README media digest does not match public evidence');
+  }
+  return evidence;
 }
 
 export function renderAuditableDemoBlock(value) {
@@ -115,13 +154,15 @@ export function renderAuditableDemoBlock(value) {
   const shortSource = evidence.sourceSha.slice(0, 12);
   return [
     START,
-    '### Auditable exact-output demo',
+    '## Auditable exact-output demo',
     '',
     'A selectively rendered demo now comes from one exact retained Linux build artifact:',
     'the installed `kungfu` launcher produced the transcript, the required Buildchain Gate',
     'qualified it, and full media rendered only from that passing Gate.',
     '',
-    `[Open the demo and evidence](https://kungfu.tech/how-tested/auditable-demo/) · [source \`${shortSource}\`](https://github.com/kungfu-systems/kungfu/commit/${evidence.sourceSha}) · [workflow run](${evidence.workflowUrl})`,
+    `[![Animated Kungfu terminal demo produced from the exact installed Linux artifact](${evidence.readmeMedia.path})](docs/qualification/auditable-demo-artifact-pipeline.md)`,
+    '',
+    `[Read the method and evidence](docs/qualification/auditable-demo-artifact-pipeline.md) · [source \`${shortSource}\`](https://github.com/kungfu-systems/kungfu/commit/${evidence.sourceSha}) · [workflow run](${evidence.workflowUrl})`,
     '',
     `[Gate bundle](${evidence.gate.artifact.url}) \`${evidence.gate.root}\` · [media bundle](${evidence.media.artifact.url}) \`${evidence.media.root}\` · [Release Passport](${evidence.passport.artifact.url}) \`${evidence.passport.root}\``,
     '',
@@ -187,6 +228,7 @@ function main(argv = process.argv.slice(2)) {
   const options = parseCli(argv);
   const current = fs.readFileSync(options.readme, 'utf8');
   const evidence = JSON.parse(fs.readFileSync(options.evidence, 'utf8'));
+  verifyReadmeMediaFile(path.dirname(options.readme), evidence);
   const expected = updateReadme(current, evidence);
   if (options.mode === 'check') {
     if (expected !== current) {

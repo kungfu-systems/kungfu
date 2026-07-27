@@ -1,12 +1,17 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import assert from 'node:assert/strict';
+import crypto from 'node:crypto';
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
 import test from 'node:test';
 
 import {
   renderAuditableDemoBlock,
   updateReadme,
   validatePublicEvidence,
+  verifyReadmeMediaFile,
 } from './update-auditable-demo-readme.mjs';
 
 const SHA = 'a'.repeat(40);
@@ -42,13 +47,32 @@ function evidence() {
       root: `sha256:${'f'.repeat(64)}`,
       artifact: artifact('103', 'auditable-demo-passport', '3'),
     },
+    readmeMedia: {
+      path: `docs/qualification/evidence/auditable-demo/${'f'.repeat(64)}/demo.gif`,
+      digest: `sha256:${'4'.repeat(64)}`,
+    },
   };
 }
 
 test('renders one exact source, run, Gate, media, and Passport boundary', () => {
   const block = renderAuditableDemoBlock(evidence());
+  assert.match(block, /^## Auditable exact-output demo$/mu);
   assert.match(block, new RegExp(SHA, 'u'));
-  assert.match(block, /https:\/\/kungfu\.tech\/how-tested\/auditable-demo\//u);
+  assert.match(
+    block,
+    new RegExp(
+      `docs/qualification/evidence/auditable-demo/${'f'.repeat(64)}/demo\\.gif`,
+      'u',
+    ),
+  );
+  assert.match(
+    block,
+    /Animated Kungfu terminal demo produced from the exact installed Linux artifact/u,
+  );
+  assert.match(
+    block,
+    /\[Read the method and evidence\]\(docs\/qualification\/auditable-demo-artifact-pipeline\.md\)/u,
+  );
   assert.match(block, /exact installed-artifact execution/u);
   assert.match(block, /not a continuity.*production-deployment claim/su);
 });
@@ -82,4 +106,35 @@ test('rejects partial markers and cross-run artifacts', () => {
     () => validatePublicEvidence(mismatched),
     /all artifacts must belong to the exact qualified workflow run/u,
   );
+  const wrongMediaPath = evidence();
+  wrongMediaPath.readmeMedia.path = `docs/qualification/evidence/auditable-demo/${'0'.repeat(64)}/demo.gif`;
+  assert.throws(
+    () => validatePublicEvidence(wrongMediaPath),
+    /README media path is not bound to the Passport root/u,
+  );
+});
+
+test('verifies the committed README GIF against its public evidence digest', () => {
+  const repoRoot = fs.mkdtempSync(
+    path.join(os.tmpdir(), 'auditable-demo-readme-'),
+  );
+  try {
+    const value = evidence();
+    const bytes = Buffer.from('gif fixture');
+    value.readmeMedia.digest = `sha256:${crypto.createHash('sha256').update(bytes).digest('hex')}`;
+    const mediaPath = path.join(repoRoot, value.readmeMedia.path);
+    fs.mkdirSync(path.dirname(mediaPath), { recursive: true });
+    fs.writeFileSync(mediaPath, bytes);
+    assert.equal(
+      verifyReadmeMediaFile(repoRoot, value).readmeMedia.digest,
+      value.readmeMedia.digest,
+    );
+    fs.appendFileSync(mediaPath, 'drift');
+    assert.throws(
+      () => verifyReadmeMediaFile(repoRoot, value),
+      /README media digest does not match public evidence/u,
+    );
+  } finally {
+    fs.rmSync(repoRoot, { recursive: true, force: true });
+  }
 });
