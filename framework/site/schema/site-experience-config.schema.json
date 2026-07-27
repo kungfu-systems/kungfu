@@ -79,6 +79,12 @@
           "items": {
             "$ref": "#/$defs/page"
           }
+        },
+        "documents": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/document"
+          }
         }
       }
     }
@@ -123,6 +129,13 @@
         "body": {
           "type": "string",
           "minLength": 1
+        },
+        "href": {
+          "$ref": "#/$defs/navigationHref"
+        },
+        "actionLabel": {
+          "type": "string",
+          "minLength": 1
         }
       }
     },
@@ -157,10 +170,16 @@
       },
       "anyOf": [
         {
-          "required": ["body"]
+          "required": ["body"],
+          "properties": {
+            "body": true
+          }
         },
         {
-          "required": ["items"]
+          "required": ["items"],
+          "properties": {
+            "items": true
+          }
         }
       ]
     },
@@ -212,6 +231,14 @@
           "type": "string",
           "minLength": 1
         },
+        "format": {
+          "enum": ["markdown", "json", "code"],
+          "default": "markdown"
+        },
+        "authorityPath": {
+          "type": "string",
+          "minLength": 1
+        },
         "knownLimits": {
           "type": "array",
           "minItems": 1,
@@ -249,13 +276,25 @@
     "authority": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["id", "path", "role", "contentRoot", "url"],
+      "required": [
+        "id",
+        "path",
+        "packagePath",
+        "role",
+        "contentRoot",
+        "byteLength",
+        "url"
+      ],
       "properties": {
         "id": {
           "type": "string",
           "pattern": "^[a-z0-9-]+$"
         },
         "path": {
+          "type": "string",
+          "minLength": 1
+        },
+        "packagePath": {
           "type": "string",
           "minLength": 1
         },
@@ -267,9 +306,133 @@
           "type": "string",
           "pattern": "^sha256:[0-9a-f]{64}$"
         },
+        "byteLength": {
+          "type": "integer",
+          "minimum": 1
+        },
         "url": {
           "type": "string",
           "format": "uri"
+        }
+      }
+    },
+    "navigationHref": {
+      "type": "string",
+      "anyOf": [
+        {
+          "pattern": "^/(?!/)"
+        },
+        {
+          "format": "uri",
+          "pattern": "^https?://"
+        }
+      ]
+    },
+    "documentNavigation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["label", "href"],
+      "properties": {
+        "label": {
+          "type": "string",
+          "minLength": 1
+        },
+        "href": {
+          "$ref": "#/$defs/navigationHref"
+        }
+      }
+    },
+    "document": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "label",
+        "route",
+        "summary",
+        "body",
+        "claimClass",
+        "maturity",
+        "source"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[a-z0-9-]+$"
+        },
+        "label": {
+          "type": "string",
+          "minLength": 1
+        },
+        "route": {
+          "type": "string",
+          "pattern": "^/(?:[a-zA-Z0-9._-]+/)*$"
+        },
+        "summary": {
+          "type": "string",
+          "minLength": 1
+        },
+        "body": {
+          "type": "string",
+          "minLength": 1
+        },
+        "claimClass": {
+          "type": "string",
+          "minLength": 1
+        },
+        "maturity": {
+          "type": "string",
+          "minLength": 1
+        },
+        "topicIds": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "pattern": "^[a-z0-9-]+$"
+          }
+        },
+        "source": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["route", "contentRoot", "byteLength"],
+          "properties": {
+            "route": {
+              "$ref": "#/$defs/route"
+            },
+            "contentRoot": {
+              "type": "string",
+              "pattern": "^sha256:[0-9a-f]{64}$"
+            },
+            "byteLength": {
+              "type": "integer",
+              "minimum": 1
+            }
+          }
+        },
+        "navigation": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "previous": {
+              "$ref": "#/$defs/documentNavigation"
+            },
+            "next": {
+              "$ref": "#/$defs/documentNavigation"
+            },
+            "related": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/documentNavigation"
+              }
+            }
+          }
+        },
+        "linkMap": {
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/$defs/navigationHref"
+          }
         }
       }
     }

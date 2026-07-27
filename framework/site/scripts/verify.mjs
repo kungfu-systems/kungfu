@@ -296,11 +296,25 @@ function main() {
   }
   for (const source of bundle.sources || []) {
     const absolute = assertRelativeSourcePath(source.path);
+    const packaged = path.resolve(DIST_ROOT, source.packagePath || '');
     check(
       fileRoot(absolute) === source.contentRoot,
       `source digest drifted: ${source.path}`,
       failures,
     );
+    check(
+      packaged.startsWith(`${DIST_ROOT}${path.sep}`) && fs.existsSync(packaged),
+      `packaged source is missing: ${source.path}`,
+      failures,
+    );
+    if (fs.existsSync(packaged)) {
+      check(
+        fileRoot(packaged) === source.contentRoot &&
+          fs.statSync(packaged).size === source.byteLength,
+        `packaged source bytes drifted: ${source.path}`,
+        failures,
+      );
+    }
     check(
       source.url ===
         `${bundle.source.repository}/blob/${bundle.source.revision}/${source.path}`,
