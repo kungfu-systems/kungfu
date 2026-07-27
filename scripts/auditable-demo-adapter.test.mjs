@@ -2,6 +2,7 @@
 
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
+import { createHash } from 'node:crypto';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
@@ -11,10 +12,65 @@ const ROOT = path.resolve(import.meta.dirname, '..');
 const ADAPTER = path.join(ROOT, 'scripts', 'auditable-demo-adapter.py');
 const SOURCE_SHA = '1'.repeat(40);
 const DIGEST = `sha256:${'2'.repeat(64)}`;
+const SOURCE_TREE = '4'.repeat(40);
 
 function json(pathname, value) {
   fs.mkdirSync(path.dirname(pathname), { recursive: true });
   fs.writeFileSync(pathname, `${JSON.stringify(value, null, 2)}\n`);
+}
+
+function sortValue(value) {
+  if (Array.isArray(value)) return value.map(sortValue);
+  if (value && typeof value === 'object') {
+    return Object.fromEntries(
+      Object.entries(value)
+        .sort(([left], [right]) => left.localeCompare(right))
+        .map(([key, item]) => [key, sortValue(item)]),
+    );
+  }
+  return value;
+}
+
+function sealEvidence(evidence) {
+  return {
+    ...evidence,
+    evidence_digest: `sha256:${createHash('sha256')
+      .update(JSON.stringify(sortValue(evidence)))
+      .digest('hex')}`,
+  };
+}
+
+function episodeEvidence(source, coordinateSource, overrides = {}) {
+  const gateEvidence = `ci=${coordinateSource} expected=${source} ci_tree=${SOURCE_TREE} expected_tree=${SOURCE_TREE} mode=tree-equivalent-pull-merge`;
+  return sealEvidence({
+    schema: 'kungfu.episode.release-evidence/v1',
+    verdict: 'qualified',
+    source: {
+      repository: 'kungfu-systems/kungfu',
+      revision: source,
+      tree: SOURCE_TREE,
+      dirty: false,
+    },
+    ci: {
+      provider: 'github-actions',
+      ref: 'refs/pull/1448/merge',
+      sha: source,
+      source_sha: coordinateSource,
+      source_tree_sha: SOURCE_TREE,
+      ...overrides.ci,
+    },
+    qualification: {
+      hard_gates: [
+        { id: 'harness_exit', passed: true, evidence: 'exit=0' },
+        {
+          id: 'ci_source_revision',
+          passed: true,
+          evidence: gateEvidence,
+        },
+      ],
+    },
+    trust_report: { source_revision: source, source_dirty: false },
+  });
 }
 
 function report(source, schema, extra = {}) {
@@ -28,7 +84,13 @@ function report(source, schema, extra = {}) {
 
 function fixture(
   root,
-  { source = SOURCE_SHA, unsafeArchive = false, stdoutLineCount = 0 } = {},
+  {
+    source = SOURCE_SHA,
+    coordinateSource = source,
+    sourceEvidence = null,
+    unsafeArchive = false,
+    stdoutLineCount = 0,
+  } = {},
 ) {
   const artifact = path.join(root, 'artifact', 'product', 'release');
   const qualification = path.join(artifact, 'qualification');
@@ -54,16 +116,22 @@ function fixture(
     source: { revision: source },
     summary: { verdict: 'verified' },
   });
+  if (sourceEvidence) {
+    json(
+      path.join(qualification, 'episode-release-evidence.json'),
+      sourceEvidence,
+    );
+  }
   const coordinate = path.join(root, 'coordinate.json');
   json(coordinate, {
     schema: 'buildchain.github-artifact-coordinate/v1',
     repository: 'kungfu-systems/kungfu',
     runId: '123',
     runAttempt: '1',
-    sourceSha: source,
+    sourceSha: coordinateSource,
     id: '456',
     nodeId: 'A_kwDOFixture',
-    name: `kungfu-linux-x64-${source}`,
+    name: `kungfu-linux-x64-${coordinateSource}`,
     digest: DIGEST,
     sizeInBytes: 1024,
     createdAt: '2026-07-25T00:00:00Z',
@@ -216,6 +284,37 @@ test('adapter fails closed on source mismatch', () => {
     );
     assert.notEqual(result.status, 0);
     assert.match(result.stderr, /source mismatch/);
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test('adapter accepts a resealed pull merge only through qualified tree-equivalence evidence', () => {
+  const root = fs.mkdtempSync(
+    path.join(os.tmpdir(), 'auditable-demo-adapter-'),
+  );
+  try {
+    const coordinateSource = '3'.repeat(40);
+    const sourceEvidence = episodeEvidence(SOURCE_SHA, coordinateSource);
+    const { result } = run(root, { coordinateSource, sourceEvidence });
+    assert.equal(result.status, 0, result.stderr);
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test('adapter rejects tree-equivalence evidence outside a pull merge ref', () => {
+  const root = fs.mkdtempSync(
+    path.join(os.tmpdir(), 'auditable-demo-adapter-'),
+  );
+  try {
+    const coordinateSource = '3'.repeat(40);
+    const sourceEvidence = episodeEvidence(SOURCE_SHA, coordinateSource, {
+      ci: { ref: 'refs/heads/dev/v4/v4.0' },
+    });
+    const { result } = run(root, { coordinateSource, sourceEvidence });
+    assert.notEqual(result.status, 0);
+    assert.match(result.stderr, /does not prove a qualified pull-merge/);
   } finally {
     fs.rmSync(root, { recursive: true, force: true });
   }

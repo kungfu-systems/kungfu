@@ -24,6 +24,8 @@ MAX_JSON_BYTES = 8 * 1024 * 1024
 MAX_ARCHIVE_BYTES = 2 * 1024 * 1024 * 1024
 MAX_MEMBER_BYTES = 512 * 1024 * 1024
 MAX_MEMBERS = 100_000
+EPISODE_RELEASE_EVIDENCE = "qualification/episode-release-evidence.json"
+PULL_MERGE_REF = re.compile(r"^refs/pull/[1-9][0-9]*/merge$")
 
 REPORTS = (
     (
@@ -139,6 +141,93 @@ def source_revision(report: dict[str, Any]) -> str:
     if len(values) != 1 or not SHA40.fullmatch(values[0]):
         fail("qualification report must bind exactly one 40-character source revision")
     return values[0]
+
+
+def canonical_evidence_digest(path: Path) -> str:
+    script = r"""
+const crypto = require("node:crypto");
+const fs = require("node:fs");
+function sortValue(value) {
+  if (Array.isArray(value)) return value.map(sortValue);
+  if (value && typeof value === "object") {
+    return Object.fromEntries(
+      Object.entries(value)
+        .filter(([, item]) => item !== undefined)
+        .sort(([left], [right]) => left.localeCompare(right))
+        .map(([key, item]) => [key, sortValue(item)]),
+    );
+  }
+  return value;
+}
+const evidence = JSON.parse(fs.readFileSync(process.argv[1], "utf8"));
+delete evidence.evidence_digest;
+const canonical = JSON.stringify(sortValue(evidence));
+process.stdout.write(`sha256:${crypto.createHash("sha256").update(canonical).digest("hex")}`);
+"""
+    result = subprocess.run(
+        ["node", "-e", script, str(path)],
+        text=True,
+        encoding="utf-8",
+        errors="strict",
+        capture_output=True,
+        timeout=10,
+        check=False,
+    )
+    if result.returncode != 0 or not SHA256.fullmatch(result.stdout):
+        fail("Episode release evidence canonical digest could not be verified")
+    return result.stdout
+
+
+def qualified_source_revision(release_root: Path, coordinate_source: str) -> str:
+    evidence_path = release_root / EPISODE_RELEASE_EVIDENCE
+    if not evidence_path.exists():
+        return coordinate_source
+    evidence = read_json(evidence_path, EPISODE_RELEASE_EVIDENCE)
+    evidence_source = evidence.get("source", {}).get("revision")
+    if evidence_source == coordinate_source:
+        return coordinate_source
+    evidence_tree = evidence.get("source", {}).get("tree")
+    ci = evidence.get("ci")
+    gates = evidence.get("qualification", {}).get("hard_gates")
+    trust_report = evidence.get("trust_report")
+    if (
+        evidence.get("schema") != "kungfu.episode.release-evidence/v1"
+        or evidence.get("verdict") != "qualified"
+        or not SHA40.fullmatch(str(evidence_source))
+        or not SHA40.fullmatch(str(evidence_tree))
+        or evidence.get("source", {}).get("dirty") is not False
+        or not isinstance(ci, dict)
+        or ci.get("provider") != "github-actions"
+        or ci.get("sha") != evidence_source
+        or ci.get("source_sha") != coordinate_source
+        or ci.get("source_tree_sha") != evidence_tree
+        or not PULL_MERGE_REF.fullmatch(str(ci.get("ref", "")))
+        or not isinstance(trust_report, dict)
+        or trust_report.get("source_revision") != evidence_source
+        or trust_report.get("source_dirty") is not False
+        or not isinstance(gates, list)
+        or not gates
+        or any(
+            not isinstance(row, dict) or row.get("passed") is not True for row in gates
+        )
+    ):
+        fail(
+            "Episode release evidence does not prove a qualified pull-merge tree equivalence"
+        )
+    source_gates = [row for row in gates if row.get("id") == "ci_source_revision"]
+    expected_gate_evidence = (
+        f"ci={coordinate_source} expected={evidence_source} "
+        f"ci_tree={evidence_tree} expected_tree={evidence_tree} "
+        "mode=tree-equivalent-pull-merge"
+    )
+    if (
+        len(source_gates) != 1
+        or source_gates[0].get("evidence") != expected_gate_evidence
+        or not SHA256.fullmatch(str(evidence.get("evidence_digest", "")))
+        or canonical_evidence_digest(evidence_path) != evidence.get("evidence_digest")
+    ):
+        fail("Episode release evidence tree-equivalence seal is invalid")
+    return str(evidence_source)
 
 
 def validate_coordinate(path: Path) -> dict[str, Any]:
@@ -506,7 +595,8 @@ def write_outputs(output: Path, lines: list[str], projection: dict[str, Any]) ->
 def adapt(artifact_root: Path, output: Path, source_coordinate: Path) -> None:
     coordinate = validate_coordinate(source_coordinate)
     release_root = find_release_root(artifact_root)
-    validate_reports(release_root, coordinate["sourceSha"])
+    qualified_source = qualified_source_revision(release_root, coordinate["sourceSha"])
+    validate_reports(release_root, qualified_source)
     archives = sorted(
         path
         for path in release_root.rglob(ARCHIVE_NAME)
@@ -520,7 +610,7 @@ def adapt(artifact_root: Path, output: Path, source_coordinate: Path) -> None:
         temporary_root = Path(temporary)
         installed = extract_cli(archive, temporary_root / "installed")
         launcher, product_version = validate_product(
-            installed, archive, coordinate["sourceSha"]
+            installed, archive, qualified_source
         )
         executable_digest = sha256_file(launcher)
         stdout, stderr, exit_code = run_brief(launcher, temporary_root / "home")
