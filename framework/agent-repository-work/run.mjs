@@ -16,7 +16,10 @@ import {
 } from '../../tests/qualification/agent-repository-work/incident-board-replay-v1-oracle.mjs';
 import { INCIDENT_BOARD_FIXTURE } from '../../tests/qualification/agent-repository-work/incident-board-replay-v1.mjs';
 
-const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
+const ROOT = path.resolve(
+  path.dirname(fileURLToPath(import.meta.url)),
+  '../..',
+);
 const PROXY_PATH = path.join(
   ROOT,
   'framework/agent-repository-work/opencode-docker-proxy.mjs',

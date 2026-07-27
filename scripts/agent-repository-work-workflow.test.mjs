@@ -11,8 +11,21 @@ const workflow = fs.readFileSync(
   path.join(root, '.github/workflows/opencode-agent-repository-work.yml'),
   'utf8',
 );
+const workflowAuthority = JSON.parse(
+  fs.readFileSync(
+    path.join(root, 'docs/qualification/gates/workflow-authority.json'),
+    'utf8',
+  ),
+);
 
 test('repository-work experiment is manual and restricted to trusted agent-120', () => {
+  assert.equal(
+    workflowAuthority.workflows.find(
+      ({ path: workflowPath }) =>
+        workflowPath === '.github/workflows/opencode-agent-repository-work.yml',
+    )?.authority,
+    'qualification',
+  );
   assert.match(workflow, /^on:\n {2}workflow_dispatch:\s*$/m);
   assert.doesNotMatch(workflow, /^\s+(?:pull_request|push|schedule):/m);
   assert.match(workflow, /permissions:\n {2}contents: read/);
