@@ -6,15 +6,15 @@
   "supportLevel": "release",
   "source": {
     "cwd": ".",
-    "sourceSha": "0d28838f9201654867ff2140974a066c3a3b061c",
+    "sourceSha": "d22606161449e7c6c84fcbf890506594e55b1b62",
     "registryPath": ".buildchain/kfd/kfd-3/surfaces.json",
-    "registryDigest": "sha256:2f6954cd36dd83e56472a2a96782a55110e540ac215a82cb69b81b5a87ad26c7"
+    "registryDigest": "sha256:2d8563983d8a4b0052ea4789d62d9ae279eb402e3e08f0e8a5699b33c947c60b"
   },
   "sourceRegistry": {
     "id": "kungfu",
     "path": ".buildchain/kfd/kfd-3/surfaces.json",
-    "sha256": "71ec2974e5333636d540bfcaab93793b86695f24e8232e68c758d1a2e5fc0edc",
-    "digest": "sha256:2f6954cd36dd83e56472a2a96782a55110e540ac215a82cb69b81b5a87ad26c7"
+    "sha256": "2fd35b71dcc4836740502b6e181e083ba1e553ceb8a1bfd54a279dd46aa7ae0e",
+    "digest": "sha256:2d8563983d8a4b0052ea4789d62d9ae279eb402e3e08f0e8a5699b33c947c60b"
   },
   "upstreamKfd": {
     "aggregatePath": "developer/sdk/kfd/upstream-aggregate.json",
@@ -26,15 +26,15 @@
     ],
     "packageVersions": {
       "kfd": "1.0.0-alpha.47",
-      "libnode": "22.22.3-kf.5-alpha.2",
+      "libnode": "22.22.3-kf.5-alpha.3",
       "buildchain": "3.0.0"
     },
-    "digest": "sha256:85ab5eeee63b5ca002cfe343bcbde16727aa251574d482d3efe043dd9f6dca0a"
+    "digest": "sha256:5776dcbc5a1d4796a5dd613fab235c7fe49a73b6fee70362a64dd2ef2c09d7d7"
   },
   "expectedArtifactVerification": {
     "command": "node scripts/buildchain-kfd-evidence.mjs --artifact-witness --json"
   },
-  "collaborationInterfaceDigest": "sha256:cc9f1c58bc675c37ccdba138274351123a335131fcc0004e6ea7b79aa083140b",
+  "collaborationInterfaceDigest": "sha256:b9114e62336234e04420d1f9831b9c32e86e6c41a1f8f4b97ec410d36909d0b8",
   "collaborationInterface": {
     "schemaVersion": 1,
     "contract": "kungfu-buildchain-kfd-3-surface-registry",
@@ -54,10 +54,10 @@
       ],
       "packageVersions": {
         "kfd": "1.0.0-alpha.47",
-        "libnode": "22.22.3-kf.5-alpha.2",
+        "libnode": "22.22.3-kf.5-alpha.3",
         "buildchain": "3.0.0"
       },
-      "digest": "sha256:85ab5eeee63b5ca002cfe343bcbde16727aa251574d482d3efe043dd9f6dca0a"
+      "digest": "sha256:5776dcbc5a1d4796a5dd613fab235c7fe49a73b6fee70362a64dd2ef2c09d7d7"
     },
     "surfaces": [
       {

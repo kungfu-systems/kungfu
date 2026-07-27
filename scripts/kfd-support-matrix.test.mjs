@@ -4,6 +4,7 @@
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { createRequire } from 'node:module';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
@@ -22,6 +23,7 @@ const KFD3_QUERY = path.join(
 );
 const BASE = JSON.parse(readFileSync(AUTHORITY, 'utf8'));
 const BASE_QUERY = JSON.parse(readFileSync(KFD3_QUERY, 'utf8'));
+const require = createRequire(import.meta.url);
 
 function clone(value) {
   return JSON.parse(JSON.stringify(value));
@@ -120,6 +122,20 @@ test('fails closed on stale normative KFD metadata', (t) => {
   const result = validateFixture(t, matrix);
   assert.equal(result.status, 1);
   assert.match(result.stderr, /normative projection drifts/);
+});
+
+test('alpha Buildchain resolves the KFD authority declared by its package', () => {
+  const buildchainManifestPath = require.resolve(
+    '@kungfu-tech/buildchain-alpha/package.json',
+  );
+  const buildchainManifest = require(buildchainManifestPath);
+  const nestedRequire = createRequire(buildchainManifestPath);
+  const kfdManifest = nestedRequire('@kungfu-tech/kfd/package.json');
+  assert.equal(
+    kfdManifest.version,
+    buildchainManifest.dependencies['@kungfu-tech/kfd'],
+  );
+  assert.equal(kfdManifest.version, BASE.upstream.version);
 });
 
 test('Shifu separates the immediate human verdict from stable agent JSON', () => {
