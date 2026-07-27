@@ -9,6 +9,7 @@ const test = require('node:test');
 const {
   adrMapPath,
   agentIndexPath,
+  experienceSchemaPath,
   formatGuideIndexPath,
   formatManifestPath,
   loadBundle,
@@ -20,8 +21,11 @@ const {
   renderFormatGuideModels,
   renderPageModel,
   renderPageModels,
+  renderProductSiteExperience,
+  renderSiteExperience,
   schemaPath,
   verifyBundle,
+  verifySiteExperience,
 } = require('./index.js');
 
 test('publishes one integrity-bound human and agent product map', () => {
@@ -35,6 +39,7 @@ test('publishes one integrity-bound human and agent product map', () => {
   assert.ok(fs.existsSync(adrMapPath));
   assert.ok(fs.existsSync(formatManifestPath));
   assert.ok(fs.existsSync(formatGuideIndexPath));
+  assert.ok(fs.existsSync(experienceSchemaPath));
   assert.equal(result.format.status, 'pre-release');
   assert.equal(result.format.conformance.status, 'qualified-retained-corpus');
 });
@@ -158,6 +163,10 @@ test('rejects retained vector drift without any monorepo authority fallback', ()
     path.join(__dirname, 'index.js'),
     path.join(isolatedRoot, 'index.js'),
   );
+  fs.copyFileSync(
+    path.join(__dirname, 'experience.js'),
+    path.join(isolatedRoot, 'experience.js'),
+  );
   fs.cpSync(path.join(__dirname, 'dist'), path.join(isolatedRoot, 'dist'), {
     recursive: true,
   });
@@ -218,4 +227,142 @@ test('renders one integrity-bound page model for every human route', () => {
     bundle.adrMap.contentRoot,
   );
   assert.throws(() => renderPageModel('/missing/'), /Unknown Kungfu site page/);
+});
+
+test('generates a complete human-first product site with KFD-3 co-reading', () => {
+  const experience = renderProductSiteExperience();
+  const result = verifySiteExperience(experience);
+  assert.equal(result.status, 'passing');
+  assert.equal(result.pages, 11);
+  assert.equal(result.files, 14);
+  assert.equal(result.machineEntry, '/agent-index.json');
+  assert.equal(experience.brand.signature, 'Kungfu UNGFU™');
+  assert.equal(experience.brand.productName, 'Kungfu');
+  assert.equal(experience.kfd3.standard, 'KFD-3');
+  assert.equal(experience.kfd3.authorities.length, 2);
+  assert.ok(
+    experience.kfd3.authorities.every((authority) =>
+      /^sha256:[0-9a-f]{64}$/u.test(authority.contentRoot),
+    ),
+  );
+  assert.equal(experience.navigation.machineEntriesInPrimary, false);
+  assert.ok(
+    !experience.navigation.primary.some((entry) => entry.route === '/'),
+  );
+  assert.ok(
+    experience.navigation.primary.every(
+      (entry) => !Object.values(experience.machineEntries).includes(entry.href),
+    ),
+  );
+
+  const formatPage = experience.files.find((file) => file.route === '/format/');
+  assert.match(
+    formatPage.body,
+    /\.kungfu is a portable, verifiable record of real work\./,
+  );
+  assert.match(formatPage.body, /Human first · Agent co-reading/);
+  assert.match(formatPage.body, /KFD-3 machine entry/);
+  assert.match(formatPage.body, /Qualified does not mean stable\./);
+  assert.match(formatPage.body, /Exact packaged Spec authority/);
+  assert.ok(
+    formatPage.body.indexOf('Human first · Agent co-reading') <
+      formatPage.body.indexOf('Why it exists'),
+  );
+  assert.ok(
+    formatPage.body.indexOf('Why it exists') <
+      formatPage.body.indexOf('<details class="kungfu-technical">'),
+  );
+  assert.doesNotMatch(
+    formatPage.body,
+    /<details class="kungfu-technical" open/u,
+  );
+
+  const agentIndex = JSON.parse(
+    experience.files.find((file) => file.route === '/agent-index.json').body,
+  );
+  const manifest = JSON.parse(
+    experience.files.find((file) => file.route === '/manifest.json').body,
+  );
+  assert.deepEqual(agentIndex.brand, experience.brand);
+  assert.deepEqual(agentIndex.navigation, experience.navigation);
+  assert.deepEqual(manifest.brand, experience.brand);
+  assert.deepEqual(manifest.navigation, experience.navigation);
+  assert.equal(agentIndex.readingOrder.length, 11);
+});
+
+test('lets a site supply only content and configuration', () => {
+  const config = {
+    contract: 'kungfu.site-experience-config/v1',
+    site: {
+      id: 'example-site',
+      context: 'Example Surface',
+      canonicalBaseUrl: 'https://example.test',
+    },
+    navigation: {
+      external: [{ label: 'Source', href: 'https://example.test/source' }],
+    },
+    content: {
+      pages: [
+        {
+          id: 'home',
+          label: 'Home',
+          route: '/',
+          kicker: 'Human orientation',
+          headline: 'Understand the outcome before the contract.',
+          summary: 'One concise first screen stays paired with exact evidence.',
+          claimClass: 'site-synthesis',
+          maturity: 'staged',
+          knownLimits: ['This fixture is not a product release.'],
+          humanSections: [
+            {
+              id: 'orientation',
+              heading: 'Start with the human question.',
+              body: 'The renderer owns order and disclosure, not upstream truth.',
+            },
+          ],
+          technicalSections: [
+            {
+              id: 'evidence',
+              heading: 'Inspect exact evidence.',
+              items: [
+                {
+                  heading: 'Root',
+                  body: 'sha256:opaque-example',
+                },
+              ],
+            },
+          ],
+        },
+      ],
+    },
+  };
+  const experience = renderSiteExperience(config);
+  assert.equal(verifySiteExperience(experience).pages, 1);
+  const html = experience.files.find((file) => file.route === '/').body;
+  assert.match(html, /Kungfu UNGFU™/);
+  assert.match(html, /Example Surface/);
+  assert.match(html, /href="\/agent-index\.json"/);
+  assert.match(html, /<details class="kungfu-technical">/);
+
+  const unknownField = structuredClone(config);
+  unknownField.content.pages[0].sitePatch = 'downstream override';
+  assert.throws(
+    () => renderSiteExperience(unknownField),
+    /page has unknown fields: sitePatch/,
+  );
+
+  const protocolRelativeNavigation = structuredClone(config);
+  protocolRelativeNavigation.navigation.external[0].href =
+    '//untrusted.example';
+  assert.throws(
+    () => renderSiteExperience(protocolRelativeNavigation),
+    /external navigation must be HTTP\(S\)/,
+  );
+});
+
+test('fails closed when a generated experience file is changed', () => {
+  const experience = renderProductSiteExperience();
+  const tampered = structuredClone(experience);
+  tampered.files.find((file) => file.route === '/').body += '\nchanged\n';
+  assert.throws(() => verifySiteExperience(tampered), /file root mismatch/);
 });

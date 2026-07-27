@@ -13,6 +13,37 @@
       "domain-horizons"
     ]
   },
+  "siteExperienceDefaults": {
+    "contract": "kungfu.site-experience-defaults/v1",
+    "brand": {
+      "signature": "Kungfu UNGFU™",
+      "productName": "Kungfu",
+      "boundary": "Kungfu is the product name. UNGFU is not a second product or runtime, and the trademark symbol makes no registration-status claim.",
+      "trademarkNotice": "Kungfu UNGFU™ is a trademark of Kungfu Origin Technology Limited."
+    },
+    "firstScreen": {
+      "humanFirst": true,
+      "coReadingLabel": "Read with an Agent",
+      "coReadingPrompt": "Share the machine entry with an Agent to inspect the same page map, claim boundaries, known limits, navigation, and source roots."
+    },
+    "progressiveDisclosure": {
+      "technicalDefault": "collapsed",
+      "technicalLabel": "For implementers and auditors",
+      "openLabel": "Open technical details",
+      "closeLabel": "Close technical details"
+    },
+    "navigation": {
+      "brandOwnsHome": true,
+      "machineEntriesInPrimary": false
+    },
+    "kfd3": {
+      "standard": "KFD-3",
+      "machineEntry": "agentIndex",
+      "parityRule": "Human pages and the machine entry describe the same product mechanism, reading order, claim classes, known limits, navigation, and integrity roots.",
+      "sourceIds": ["kfd3-api-registry", "kfd3-surface-registry"]
+    },
+    "sourceIds": ["project-readme", "trademark-policy", "kfd3-api-registry", "kfd3-surface-registry"]
+  },
   "adoptionLayers": [
     {
       "id": "format",
@@ -100,6 +131,80 @@
         "Package semver is a pickup coordinate, not a format compatibility algorithm.",
         "The historical Spec 0.1 prose is non-normative."
       ],
+      "presentation": {
+        "readerExperience": {
+          "kicker": ".kungfu portable work format",
+          "headline": ".kungfu is a portable, verifiable record of real work.",
+          "lead": "It keeps one bounded piece of work—what happened, the facts and artifacts it produced, and the evidence needed to verify it—together so a fresh person or Agent can inspect and continue it without reconstructing the story from a chat.",
+          "humanSections": [
+            {
+              "id": "why",
+              "eyebrow": "Why it exists",
+              "heading": "Keep the work, not just the conversation.",
+              "body": "A folder keeps files. A transcript keeps words. Neither reliably tells the next Agent what actually happened, which information was trusted, which outputs belong to the work, or how to check them. .kungfu keeps those relationships together.",
+              "items": [
+                {
+                  "heading": "What happened",
+                  "body": "An Episode records one bounded occurrence. Facts record the state the work relied on."
+                },
+                {
+                  "heading": "What it produced",
+                  "body": "Artifacts, a Manifest, Receipts and dependencies keep outputs connected to the work that produced them."
+                },
+                {
+                  "heading": "Why it can be checked",
+                  "body": "Content roots let another reader verify the retained material before trusting or acting on it."
+                }
+              ]
+            },
+            {
+              "id": "handoff",
+              "eyebrow": "A simple handoff",
+              "heading": "How a fresh Agent continues the same work",
+              "items": [
+                {
+                  "heading": "Work",
+                  "body": "An Agent performs a bounded piece of real work and produces facts, artifacts and evidence."
+                },
+                {
+                  "heading": "Retain",
+                  "body": ".kungfu keeps the Episode and its verification material together instead of leaving context scattered across a chat and a folder."
+                },
+                {
+                  "heading": "Continue",
+                  "body": "A fresh Agent can inspect what is known, preserve material it does not yet understand, and act only when the required semantics are compatible."
+                }
+              ]
+            },
+            {
+              "id": "reader-levels",
+              "eyebrow": "Safe reader behavior",
+              "heading": "Not understanding something is different from losing it.",
+              "items": [
+                {
+                  "heading": "Preserve",
+                  "body": "Keep unfamiliar but well-formed material as exact bytes without pretending to understand it."
+                },
+                {
+                  "heading": "Inspect",
+                  "body": "Read structure and verification evidence within the reader's declared capability."
+                },
+                {
+                  "heading": "Act",
+                  "body": "Deriving canonical state, admitting it as trusted, or executing it requires complete compatible semantics."
+                }
+              ]
+            },
+            {
+              "id": "status",
+              "eyebrow": "Current boundary",
+              "heading": "Qualified does not mean stable.",
+              "body": "This packaged format authority is qualified but still pre-release. It proves the current contract and retained test corpus; it does not promise stable compatibility or automatic understanding of every future format."
+            }
+          ],
+          "technicalSummary": "Inspect the exact Spec contract, compatibility rules, roots and machine artifacts."
+        }
+      },
       "sourceIds": ["spec-consumer-contract", "spec-manifest-schema", "spec-readme"]
     },
     {
@@ -380,6 +485,21 @@
       "id": "project-readme",
       "path": "README.md",
       "role": "product-framing"
+    },
+    {
+      "id": "trademark-policy",
+      "path": "TRADEMARK.md",
+      "role": "semantic-authority"
+    },
+    {
+      "id": "kfd3-api-registry",
+      "path": "framework/core/src/python/kungfu/agent/kfd3_api.registry.json",
+      "role": "machine-contract"
+    },
+    {
+      "id": "kfd3-surface-registry",
+      "path": ".buildchain/kfd/kfd-3/surfaces.json",
+      "role": "machine-contract"
     },
     {
       "id": "agent-work-state",
