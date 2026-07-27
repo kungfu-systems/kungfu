@@ -10,10 +10,10 @@ import process from 'node:process';
 import { pathToFileURL } from 'node:url';
 
 export const IDENTITY_SCHEMA = 'kungfu.affected-native-proof-identity/v3';
-export const PROOF_SCHEMA = 'kungfu.affected-native-proof/v2';
+export const PROOF_SCHEMA = 'kungfu.affected-native-proof/v3';
 export const WORKFLOW_PATH = '.github/workflows/affected-native-pr.yml';
 export const DEFAULT_MAX_AGE_SECONDS = 6 * 60 * 60;
-const QUEUE_PRODUCER_EVENT = 'merge_group';
+const PRODUCER_EVENTS = new Set(['pull_request', 'merge_group']);
 
 function ordered(value) {
   if (Array.isArray(value)) return value.map(ordered);
@@ -321,6 +321,7 @@ export function sealProof(descriptor, inputDir, producer) {
       runId: Number(producer.runId),
       event: producer.event,
       workflowPath: producer.workflowPath,
+      triggerHeadSha: requireSha(producer.triggerHeadSha, 'producer trigger'),
       checkoutSha: requireSha(producer.checkoutSha, 'producer checkout'),
       createdAt: producer.createdAt,
     },
@@ -336,12 +337,14 @@ export function sealProof(descriptor, inputDir, producer) {
 
 function validateProducer(producer, options) {
   if (
-    options.producerEvent !== QUEUE_PRODUCER_EVENT ||
+    !PRODUCER_EVENTS.has(options.producerEvent) ||
     producer.repository !== options.repository ||
-    producer.event !== QUEUE_PRODUCER_EVENT ||
+    producer.event !== options.producerEvent ||
     producer.workflowPath !== WORKFLOW_PATH ||
     producer.runId !== Number(options.producerRunId) ||
-    producer.checkoutSha !== options.producerHeadSha
+    producer.triggerHeadSha !== options.producerHeadSha ||
+    (producer.event === 'merge_group' &&
+      producer.checkoutSha !== producer.triggerHeadSha)
   ) {
     throw new Error('affected-native proof producer authority drift');
   }
@@ -386,19 +389,11 @@ export function selectReusableArtifact({
   runsById,
   artifactName,
   repositoryId,
-  producerEvent,
   headSha,
   now = Date.now(),
   maxAgeSeconds = DEFAULT_MAX_AGE_SECONDS,
 }) {
-  if (producerEvent !== QUEUE_PRODUCER_EVENT) {
-    return {
-      reusable: false,
-      reason: 'only merge-group queue proofs are reusable',
-      candidateCount: 0,
-    };
-  }
-  requireSha(headSha, 'producer head');
+  requireSha(headSha, 'consumer head');
   const candidates = artifacts.filter((artifact) => {
     const run = runsById.get(Number(artifact.workflow_run?.id));
     const age =
@@ -412,8 +407,8 @@ export function selectReusableArtifact({
       Number.isFinite(age) &&
       age >= -300 &&
       age <= maxAgeSeconds &&
-      run?.event === QUEUE_PRODUCER_EVENT &&
-      run?.head_sha === headSha &&
+      PRODUCER_EVENTS.has(run?.event) &&
+      (run.event === 'pull_request' || run.head_sha === headSha) &&
       run?.status === 'completed' &&
       run?.conclusion === 'success' &&
       run?.path === WORKFLOW_PATH
@@ -429,12 +424,15 @@ export function selectReusableArtifact({
       candidateCount: candidates.length,
     };
   }
+  const selectedRun = runsById.get(Number(candidates[0].workflow_run.id));
   return {
     reusable: true,
     reason: 'exact trusted producer proof artifact found',
     candidateCount: 1,
     runId: Number(candidates[0].workflow_run.id),
     artifactId: Number(candidates[0].id),
+    producerEvent: selectedRun.event,
+    producerHeadSha: selectedRun.head_sha,
   };
 }
 
@@ -456,7 +454,6 @@ export async function lookupReusableArtifact({
   apiUrl,
   repository,
   artifactName,
-  producerEvent,
   headSha,
   token,
   maxAgeSeconds = DEFAULT_MAX_AGE_SECONDS,
@@ -487,7 +484,6 @@ export async function lookupReusableArtifact({
     runsById: new Map(runs),
     artifactName,
     repositoryId: Number(repositoryDocument.id),
-    producerEvent,
     headSha,
     maxAgeSeconds,
   });
@@ -562,7 +558,6 @@ async function main() {
         apiUrl: options['api-url'],
         repository: options.repository,
         artifactName: descriptor.artifactName,
-        producerEvent: options['producer-event'],
         headSha: options['head-sha'],
         token: process.env.GITHUB_TOKEN || '',
         maxAgeSeconds: Number(
@@ -574,6 +569,8 @@ async function main() {
     }
     appendGithubOutput(options['github-output'], {
       'run-id': result.reusable ? result.runId : '',
+      'producer-event': result.reusable ? result.producerEvent : '',
+      'producer-head-sha': result.reusable ? result.producerHeadSha : '',
       reusable: result.reusable,
       reason: result.reason,
     });
@@ -589,6 +586,7 @@ async function main() {
       runId: options['run-id'],
       event: options.event,
       workflowPath: WORKFLOW_PATH,
+      triggerHeadSha: options['trigger-head-sha'],
       checkoutSha: options['checkout-sha'] || git('rev-parse', 'HEAD'),
       createdAt: options['created-at'] || new Date().toISOString(),
     });

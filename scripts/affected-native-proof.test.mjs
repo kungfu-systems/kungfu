@@ -20,6 +20,7 @@ const BASE = '1'.repeat(40);
 const HEAD = '2'.repeat(40);
 const OTHER_HEAD = '3'.repeat(40);
 const TREE = '4'.repeat(40);
+const QUEUE_HEAD = '5'.repeat(40);
 const TOOLCHAIN = {
   compiler: 'g++-14 (Ubuntu 14.2.0) 14.2.0',
   cmake: 'cmake version 3.31.6',
@@ -129,14 +130,15 @@ function producer(overrides = {}) {
     runId: 42,
     event: 'merge_group',
     workflowPath: '.github/workflows/affected-native-pr.yml',
+    triggerHeadSha: HEAD,
     checkoutSha: HEAD,
     createdAt: '2026-07-22T00:00:00Z',
     ...overrides,
   };
 }
 
-function writeBundle(descriptor, value) {
-  const proof = sealProof(descriptor, value.inputs, producer());
+function writeBundle(descriptor, value, proofProducer = producer()) {
+  const proof = sealProof(descriptor, value.inputs, proofProducer);
   fs.mkdirSync(value.bundle, { recursive: true });
   fs.writeFileSync(
     path.join(value.bundle, 'proof.json'),
@@ -241,6 +243,37 @@ test('complete partition evidence seals and verifies against the exact producer'
     now: '2026-07-22T01:00:00Z',
   });
   assert.equal(verified.proofRoot, proof.proofRoot);
+  fs.rmSync(value.root, { recursive: true, force: true });
+});
+
+test('exact PR proof survives the synthetic merge-group commit rewrite', () => {
+  const value = fixture();
+  const pullDescriptor = createProofDescriptor(value.value, TREE, 2, TOOLCHAIN);
+  const queueDescriptor = createProofDescriptor(
+    plan(QUEUE_HEAD),
+    TREE,
+    2,
+    TOOLCHAIN,
+  );
+  writeBundle(
+    pullDescriptor,
+    value,
+    producer({
+      event: 'pull_request',
+      triggerHeadSha: OTHER_HEAD,
+      checkoutSha: HEAD,
+    }),
+  );
+  assert.doesNotThrow(() =>
+    verifyProofBundle(queueDescriptor, value.bundle, {
+      repository: 'kungfu-systems/kungfu',
+      producerRunId: 42,
+      producerEvent: 'pull_request',
+      producerHeadSha: OTHER_HEAD,
+      maxAgeSeconds: 6 * 60 * 60,
+      now: '2026-07-22T01:00:00Z',
+    }),
+  );
   fs.rmSync(value.root, { recursive: true, force: true });
 });
 
@@ -374,6 +407,19 @@ test('tree, producer, and unsuccessful receipt drift cannot reuse proof', () => 
       }),
     /producer authority drift/,
   );
+  writeBundle(descriptor, value, producer({ triggerHeadSha: OTHER_HEAD }));
+  assert.throws(
+    () =>
+      verifyProofBundle(descriptor, value.bundle, {
+        repository: 'kungfu-systems/kungfu',
+        producerRunId: 42,
+        producerEvent: 'merge_group',
+        producerHeadSha: OTHER_HEAD,
+        maxAgeSeconds: 6 * 60 * 60,
+        now: '2026-07-22T01:00:00Z',
+      }),
+    /producer authority drift/,
+  );
 
   const failedPath = path.join(value.inputs, 'partition-1', 'receipt.json');
   const toolchainDrift = receipt(value.value, 1);
@@ -430,7 +476,6 @@ test('lookup admits one exact successful same-SHA merge-group artifact', () => {
       runsById,
       artifactName: 'proof-name',
       repositoryId: 100,
-      producerEvent: 'merge_group',
       headSha: HEAD,
       now: '2026-07-22T01:00:00Z',
     }),
@@ -440,11 +485,13 @@ test('lookup admits one exact successful same-SHA merge-group artifact', () => {
       candidateCount: 1,
       runId: 42,
       artifactId: 7,
+      producerEvent: 'merge_group',
+      producerHeadSha: HEAD,
     },
   );
 });
 
-test('lookup degrades duplicate, fork, failed, and expired artifacts to full run', () => {
+test('lookup admits PR proofs and degrades ambiguity or untrusted artifacts', () => {
   const run = {
     event: 'merge_group',
     head_sha: HEAD,
@@ -472,7 +519,6 @@ test('lookup degrades duplicate, fork, failed, and expired artifacts to full run
     ]),
     artifactName: 'proof-name',
     repositoryId: 100,
-    producerEvent: 'merge_group',
     headSha: HEAD,
     now: '2026-07-22T01:00:00Z',
   });
@@ -498,7 +544,6 @@ test('lookup degrades duplicate, fork, failed, and expired artifacts to full run
     ]),
     artifactName: 'proof-name',
     repositoryId: 100,
-    producerEvent: 'merge_group',
     headSha: HEAD,
     now: '2026-07-22T01:00:00Z',
   });
@@ -510,7 +555,6 @@ test('lookup degrades duplicate, fork, failed, and expired artifacts to full run
     runsById: new Map([[6, { ...run, head_sha: OTHER_HEAD }]]),
     artifactName: 'proof-name',
     repositoryId: 100,
-    producerEvent: 'merge_group',
     headSha: HEAD,
     now: '2026-07-22T01:00:00Z',
   });
@@ -519,18 +563,20 @@ test('lookup degrades duplicate, fork, failed, and expired artifacts to full run
 
   const pullRequestProducer = selectReusableArtifact({
     artifacts: [artifact(7)],
-    runsById: new Map([[7, { ...run, event: 'pull_request' }]]),
+    runsById: new Map([
+      [7, { ...run, event: 'pull_request', head_sha: OTHER_HEAD }],
+    ]),
     artifactName: 'proof-name',
     repositoryId: 100,
-    producerEvent: 'pull_request',
     headSha: HEAD,
     now: '2026-07-22T01:00:00Z',
   });
-  assert.equal(pullRequestProducer.reusable, false);
-  assert.match(pullRequestProducer.reason, /only merge-group queue proofs/);
+  assert.equal(pullRequestProducer.reusable, true);
+  assert.equal(pullRequestProducer.producerEvent, 'pull_request');
+  assert.equal(pullRequestProducer.producerHeadSha, OTHER_HEAD);
 });
 
-test('workflow keeps one required context while staging authoritative queue builds', () => {
+test('workflow keeps one context while PR proof replaces duplicate queue builds', () => {
   const workflow = fs.readFileSync(
     path.join(ROOT, '.github/workflows/affected-native-pr.yml'),
     'utf8',
@@ -548,14 +594,16 @@ test('workflow keeps one required context while staging authoritative queue buil
   assert.match(workflow, /^\s{2}proof_probe:$/mu);
   assert.match(
     workflow,
-    /affected_native_shards:[\s\S]*- source_acceptance[\s\S]*- candidate_preflight[\s\S]*github\.event_name == 'merge_group'/u,
+    /affected_native_shards:[\s\S]*- source_acceptance[\s\S]*- candidate_preflight[\s\S]*needs\.proof_probe\.outputs\.reuse != 'true'/u,
   );
   assert.match(
     workflow,
-    /name: affected-native \/ linux[\s\S]*DCO_RESULT:[\s\S]*SOURCE_RESULT:[\s\S]*PREFLIGHT_RESULT:[\s\S]*PR fast admission passed without compiler or installed-artifact work/u,
+    /name: affected-native \/ linux[\s\S]*DCO_RESULT:[\s\S]*SOURCE_RESULT:[\s\S]*PREFLIGHT_RESULT:[\s\S]*require_optional_gate "PR affected-native"[\s\S]*PR staged qualification passed/u,
   );
   assert.match(workflow, /producer-run-id/u);
-  assert.match(workflow, /Merge Queue is the only native proof producer/u);
+  assert.match(workflow, /producer-event/u);
+  assert.match(workflow, /producer-head-sha/u);
+  assert.match(workflow, /Exact PR or same-SHA queue proof reuse/u);
   assert.match(
     workflow,
     /name: Upload current proof descriptor[\s\S]*core-affected-native-proof-descriptor-\$\{\{ github\.run_id \}\}/u,
@@ -566,7 +614,10 @@ test('workflow keeps one required context while staging authoritative queue buil
   );
   const aggregate = workflow.slice(workflow.indexOf('  affected-native:\n'));
   assert.doesNotMatch(aggregate, /affected-native-proof\.mjs toolchain/u);
-  assert.match(workflow, /--producer-event merge_group/u);
+  assert.match(
+    workflow,
+    /--producer-event "\$\{\{ steps\.lookup\.outputs\.producer-event \}\}"/u,
+  );
   assert.match(workflow, /--head-sha "\$GITHUB_SHA"/u);
   assert.match(workflow, /needs\.proof_probe\.outputs\.reuse != 'true'/u);
   assert.doesNotMatch(
@@ -631,13 +682,20 @@ test('workflow keeps one required context while staging authoritative queue buil
     workflow,
     /reused queue Shifu workspace[\s\S]*reused queue KFD verifier/u,
   );
+  assert.match(
+    workflow,
+    /name: Upload authoritative producer proof[\s\S]*retention-days: 14/u,
+  );
   assert.doesNotMatch(workflow, /retention-days: 1$/mu);
   const verifier = fs.readFileSync(
     path.join(ROOT, 'scripts/affected-native-proof.mjs'),
     'utf8',
   );
   assert.match(verifier, /head_repository_id === repositoryId/u);
-  assert.match(verifier, /run\?\.head_sha === headSha/u);
+  assert.match(
+    verifier,
+    /run\.event === 'pull_request' \|\| run\.head_sha === headSha/u,
+  );
   assert.match(
     verifier,
     /stableJson\(nativeToolchainIdentity\(receipt\.toolchain, true\)\) !==\s+stableJson\(descriptor\.identity\.toolchain/u,

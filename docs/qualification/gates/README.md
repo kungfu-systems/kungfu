@@ -231,11 +231,16 @@ but historical conflict and retry gaps remain part of the measured tail.
 These measurements do not relax affected-native proof identity. Reuse remains
 bound to the exact base, candidate source tree, plan projection, partitions,
 tier, receipt, hosted-runner image, and observed compiler/CMake/Ninja evidence.
-Only a serialized repeat of the same merge-group SHA may consume the one
-unambiguous successful queue proof; PR proof and SDK qualification are outside
-that reuse boundary. A changed merge-group base therefore continues to fail
-closed to a full run even when the PR patch and affected plan look unchanged;
-the delivery report measures that cost without authorizing base-forward reuse.
+A successful PR run may publish proof only after its complete required native,
+SDK, Shifu, and KFD dependency graph passes. The matching merge-group may
+consume that proof, and a serialized repeat may consume a same-SHA queue proof,
+only when lookup returns one unambiguous trusted producer and bundle
+verification preserves every identity binding. PR proof records its triggering
+head separately from the synthetic checkout; queue proof requires both SHAs to
+be identical. A changed merge-group base therefore continues to fail closed to
+a full run even when the PR patch and
+affected plan look unchanged; the delivery report measures that cost without
+authorizing base-forward reuse.
 
 The current dev objective is queue-inclusive P50 at most 300 seconds and P95 at
 most 600 seconds. A report is an observation, not a release credential, and a

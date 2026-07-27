@@ -121,7 +121,7 @@
           "authority": "qualification",
           "publication": "none",
           "receipt": "diagnostic",
-          "definitionDigest": "sha256:b2776671b77061c98d431f22f26aad76eed380769140ec38d993e326c56721ff",
+          "definitionDigest": "sha256:0a1fa9b22247f7de7aa7249716bcb0eaf7c363d7ff1b375049b96c360f54fd7c",
           "credentials": {
             "githubToken": "read",
             "oidc": false,
@@ -254,7 +254,7 @@
           "authority": "qualification",
           "publication": "none",
           "receipt": "diagnostic",
-          "definitionDigest": "sha256:94bd4175978964e3664d2680bde4e08decf1be8d3acb04c556f6138af78c03fc",
+          "definitionDigest": "sha256:c26248a93398a31586f9e859cd042339cbbf522c82ee7a5c0ccaaa282eb1a756",
           "credentials": {
             "githubToken": "read",
             "oidc": false,
@@ -277,7 +277,7 @@
             {
               "index": 3,
               "label": "name:Admit staged candidate dependency graph",
-              "definitionDigest": "sha256:ea24ceceb70496619b2db15371a51c414db00028f3e08db4c412a36325ed5e51"
+              "definitionDigest": "sha256:e1190d35b582e2200e0f25a7a5066cc6c86f44f3ef6193a84443cd2fb84045a2"
             },
             {
               "index": 4,
@@ -293,27 +293,27 @@
             },
             {
               "index": 6,
-              "label": "name:Download admitted queue proof",
+              "label": "name:Download admitted producer proof",
               "authority": "evidence-publication",
-              "definitionDigest": "sha256:6fdee1db5eda85fd52f7a3503768940d0116be8640b3882b697d35c2df8c2537"
+              "definitionDigest": "sha256:c6b84878600569041c7b0dabc910113f680d57237ecbb737b0c5114371d88c87"
             },
             {
               "index": 7,
               "label": "name:Download current partition evidence",
               "authority": "evidence-publication",
-              "definitionDigest": "sha256:cac95842496dd5c5a73d88a1fe28f9456fcb069a763d5747b254def7ad4e7d33"
+              "definitionDigest": "sha256:4b57bb62fe678978688b21349fe0af530202dfa888fb586f3fc2b7f008c5f324"
             },
             {
               "index": 8,
               "label": "id:admit",
               "authority": "evidence-publication",
-              "definitionDigest": "sha256:9acc3bb1a2412020d5000fa222bf27d13a8e9a93f639d9071f667b852889d1e3"
+              "definitionDigest": "sha256:8c96b54df7d092b5becf327ee3b0b7cb8ec87bc06c321a9ed30f61cbd463cc4d"
             },
             {
               "index": 9,
-              "label": "name:Upload authoritative queue proof",
+              "label": "name:Upload authoritative producer proof",
               "authority": "evidence-publication",
-              "definitionDigest": "sha256:c74d724fdd216e2d2653d723dd47f7bfecd58d3f044f222add022012500775d2"
+              "definitionDigest": "sha256:fe1606def564bd546877397a1b84e548fd45f241c958dbed56376fc448d85336"
             }
           ]
         },
@@ -419,7 +419,7 @@
           "authority": "qualification",
           "publication": "none",
           "receipt": "diagnostic",
-          "definitionDigest": "sha256:aaf2c35660e8ef1223801e7b78ae5272608885b1b51fa4216831fa7403ad824c",
+          "definitionDigest": "sha256:821e24c0aa6bd63f10be13721771a550035c3c50283d65e1913143e040f0cf89",
           "credentials": {
             "githubToken": "read",
             "oidc": false,
@@ -456,7 +456,7 @@
           "authority": "qualification",
           "publication": "none",
           "receipt": "diagnostic",
-          "definitionDigest": "sha256:8797adab8a7787876072d7e91b2efa68d72fe0297aceb2436bcc080af5cd098c",
+          "definitionDigest": "sha256:a92d9e0145bce5000ecec19cb5d53a6d19552256beae2f110bf9729765eb5268",
           "credentials": {
             "githubToken": "read",
             "oidc": false,
@@ -496,23 +496,23 @@
               "index": 6,
               "label": "id:lookup",
               "authority": "evidence-publication",
-              "definitionDigest": "sha256:7357c433b49e647153e7c6274d36fa32e305179d29597690a53f2d8e187367b7"
+              "definitionDigest": "sha256:c44e54386865d44506d6f7b814b1ac7f2839beb21569d8011cbfec0644604251"
             },
             {
               "index": 7,
               "label": "id:download",
               "authority": "evidence-publication",
-              "definitionDigest": "sha256:a4adcb3f2a224f2093c4279f981c7f82e3e1ac7945b85a7945cb6f61cca9cb01"
+              "definitionDigest": "sha256:2ccefb7f1f6cd536b00d478afd0677f3c84a6062cc4965eefc4b5fdafbb93b64"
             },
             {
               "index": 8,
               "label": "id:verify",
-              "definitionDigest": "sha256:28184a202a8abf94b933d37b2ab9770462adbb8fb5b540eea887d288e7fbc28a"
+              "definitionDigest": "sha256:41fac7638e19f00c28f159a2eaec37145408a985c013e80282f78a5a1aab172c"
             },
             {
               "index": 9,
               "label": "id:decision",
-              "definitionDigest": "sha256:605bf66857c5f7ca2a6c8882da2e1295f01a4e2258d66bacb3eb763b702d368d"
+              "definitionDigest": "sha256:2a011137ae2b9242a86196d0b22fbc3cc6e70536f2a199a99fd4807f0c0c7625"
             }
           ]
         },
@@ -521,7 +521,7 @@
           "authority": "qualification",
           "publication": "none",
           "receipt": "diagnostic",
-          "definitionDigest": "sha256:4a33dfcec2664bc11953518d2ffe3b72a75a57f2654f597bc6d7be04756d83f3",
+          "definitionDigest": "sha256:3311b476456c79f491d192fbbd7c002c3924964490949bbe50bbe9d341bbf162",
           "credentials": {
             "githubToken": "read",
             "oidc": false,

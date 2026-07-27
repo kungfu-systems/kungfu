@@ -103,21 +103,21 @@ test('the single required dev workflow is merge-queue compatible', () => {
   }
 });
 
-test('dev candidate heavy work is queue-only and depends on both preflights', () => {
-  const relative = '.github/workflows/affected-native-pr.yml';
-  const source = fs.readFileSync(path.join(ROOT, relative), 'utf8');
-  assert.doesNotMatch(source, /^\s{2}push\s*:/m, relative);
-  assert.match(
-    source,
-    /affected_native_shards:[\s\S]*- source_acceptance[\s\S]*- candidate_preflight[\s\S]*github\.event_name == 'merge_group'/,
-    relative,
+test('PR proof closes heavy gates before exact queue reuse', () => {
+  const source = fs.readFileSync(
+    path.join(ROOT, '.github/workflows/affected-native-pr.yml'),
+    'utf8',
   );
-  assert.match(
-    source,
-    /shifu_workspace:[\s\S]*- source_acceptance[\s\S]*- candidate_preflight/,
-    relative,
+  const native = source.slice(
+    source.indexOf('  affected_native_shards:\n'),
+    source.indexOf('  shifu_workspace:\n'),
   );
-  assert.match(source, /PR fast admission passed without compiler/, relative);
+  assert.match(native, /- source_acceptance[\s\S]*- candidate_preflight/);
+  assert.match(native, /needs\.proof_probe\.outputs\.reuse != 'true'/);
+  assert.doesNotMatch(native, /github\.event_name == 'merge_group'/);
+  assert.match(source, /require_optional_gate "PR affected-native"/);
+  assert.match(source, /producer-event[\s\S]*producer-head-sha/);
+  assert.match(source, /Upload authoritative producer proof/);
 });
 
 function readMeasurementCoverage(root) {

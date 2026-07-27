@@ -161,6 +161,8 @@ jobs:
     outputs:
       reuse: ${{ steps.decision.outputs.reuse }}
       producer-run-id: ${{ steps.decision.outputs.producer-run-id }}
+      producer-event: ${{ steps.decision.outputs.producer-event }}
+      producer-head-sha: ${{ steps.decision.outputs.producer-head-sha }}
       artifact-name: ${{ steps.descriptor.outputs.artifact-name }}
       proof-id: ${{ steps.descriptor.outputs.proof-id }}
     env:
@@ -231,7 +233,7 @@ jobs:
           path: product/qualification/affected-native/proof-probe
           if-no-files-found: error
           retention-days: 14
-      - name: Find one exact prior queue proof
+      - name: Find one exact prior producer proof
         id: lookup
         if: >-
           ${{
@@ -247,10 +249,9 @@ jobs:
             --descriptor product/qualification/affected-native/proof-probe/descriptor.json \
             --api-url "$GITHUB_API_URL" \
             --repository "$GITHUB_REPOSITORY" \
-            --producer-event merge_group \
             --head-sha "$GITHUB_SHA" \
             --github-output "$GITHUB_OUTPUT"
-      - name: Download exact prior queue proof
+      - name: Download exact prior producer proof
         id: download
         if: ${{ steps.lookup.outputs.reusable == 'true' }}
         continue-on-error: true
@@ -261,7 +262,7 @@ jobs:
           repository: ${{ github.repository }}
           run-id: ${{ steps.lookup.outputs.run-id }}
           github-token: ${{ github.token }}
-      - name: Verify exact prior queue proof
+      - name: Verify exact prior producer proof
         id: verify
         if: ${{ steps.download.outcome == 'success' }}
         continue-on-error: true
@@ -272,8 +273,8 @@ jobs:
             --bundle product/qualification/affected-native/proof-reuse \
             --repository "$GITHUB_REPOSITORY" \
             --producer-run-id "${{ steps.lookup.outputs.run-id }}" \
-            --producer-event merge_group \
-            --producer-head-sha "$GITHUB_SHA"
+            --producer-event "${{ steps.lookup.outputs.producer-event }}" \
+            --producer-head-sha "${{ steps.lookup.outputs.producer-head-sha }}"
       - name: Select authoritative queue execution
         id: decision
         if: ${{ always() }}
@@ -284,12 +285,16 @@ jobs:
           LOOKUP_OUTCOME: ${{ steps.lookup.outcome }}
           LOOKUP_REUSABLE: ${{ steps.lookup.outputs.reusable }}
           PRODUCER_RUN_ID: ${{ steps.lookup.outputs.run-id }}
+          PRODUCER_EVENT: ${{ steps.lookup.outputs.producer-event }}
+          PRODUCER_HEAD_SHA: ${{ steps.lookup.outputs.producer-head-sha }}
           DOWNLOAD_OUTCOME: ${{ steps.download.outcome }}
           VERIFY_OUTCOME: ${{ steps.verify.outcome }}
         run: |
           set -euo pipefail
           reuse=false
           producer_run_id=""
+          producer_event=""
+          producer_head_sha=""
           if [ "$GITHUB_EVENT_NAME" = "merge_group" ] && \
              { [ "$NATIVE_REQUIRED" = "true" ] || [ "$SDK_REQUIRED" = "true" ]; } && \
              [ "$LOOKUP_OUTCOME" = "success" ] && \
@@ -298,12 +303,16 @@ jobs:
              [ "$VERIFY_OUTCOME" = "success" ]; then
             reuse=true
             producer_run_id="$PRODUCER_RUN_ID"
+            producer_event="$PRODUCER_EVENT"
+            producer_head_sha="$PRODUCER_HEAD_SHA"
           fi
           {
             echo "reuse=${reuse}"
             echo "producer-run-id=${producer_run_id}"
+            echo "producer-event=${producer_event}"
+            echo "producer-head-sha=${producer_head_sha}"
           } >> "$GITHUB_OUTPUT"
-          echo "Merge Queue is the only native proof producer; exact same-SHA reuse=${reuse}."
+          echo "Exact PR or same-SHA queue proof reuse=${reuse}."
 
   affected_native_shards:
     name: affected-native shard ${{ matrix.partition }} of 2 / linux
@@ -313,7 +322,6 @@ jobs:
       - proof_probe
     if: >-
       ${{
-        github.event_name == 'merge_group' &&
         needs.source_acceptance.result == 'success' &&
         needs.candidate_preflight.result == 'success' &&
         needs.proof_probe.result == 'success' &&
@@ -609,7 +617,6 @@ jobs:
       - proof_probe
     if: >-
       ${{
-        github.event_name == 'merge_group' &&
         needs.source_acceptance.result == 'success' &&
         needs.candidate_preflight.result == 'success' &&
         needs.proof_probe.result == 'success' &&
@@ -663,7 +670,6 @@ jobs:
       - proof_probe
     if: >-
       ${{
-        github.event_name == 'merge_group' &&
         needs.source_acceptance.result == 'success' &&
         needs.candidate_preflight.result == 'success' &&
         needs.proof_probe.result == 'success' &&
@@ -734,15 +740,6 @@ jobs:
           require_result "source acceptance" success "$SOURCE_RESULT"
           require_result "candidate preflight" success "$PREFLIGHT_RESULT"
           require_result "impact probe" success "$PROBE_RESULT"
-          if [ "$GITHUB_EVENT_NAME" = "pull_request" ]; then
-            require_result "PR DCO" success "$DCO_RESULT"
-            require_result "PR affected-native" skipped "$NATIVE_RESULT"
-            require_result "PR Shifu workspace" skipped "$SHIFU_RESULT"
-            require_result "PR KFD verifier" skipped "$KFD_RESULT"
-            echo "PR fast admission passed without compiler or installed-artifact work."
-            exit 0
-          fi
-          require_result "queue DCO" skipped "$DCO_RESULT"
           require_optional_gate() {
             label="$1"
             required="$2"
@@ -755,16 +752,24 @@ jobs:
           if [ "$NATIVE_REQUIRED" = "true" ] || [ "$SDK_REQUIRED" = "true" ]; then
             native_or_sdk=true
           fi
-          if [ "$REUSE" = "true" ]; then
+          if [ "$GITHUB_EVENT_NAME" = "pull_request" ]; then
+            require_result "PR DCO" success "$DCO_RESULT"
+            require_optional_gate "PR affected-native" "$native_or_sdk" "$NATIVE_RESULT"
+            require_optional_gate "PR Shifu workspace" "$SHIFU_REQUIRED" "$SHIFU_RESULT"
+            require_optional_gate "PR KFD verifier" "$KFD_REQUIRED" "$KFD_RESULT"
+            echo "PR staged qualification passed."
+          elif [ "$REUSE" = "true" ]; then
+            require_result "queue DCO" skipped "$DCO_RESULT"
             require_result "reused queue affected-native" skipped "$NATIVE_RESULT"
             require_result "reused queue Shifu workspace" skipped "$SHIFU_RESULT"
             require_result "reused queue KFD verifier" skipped "$KFD_RESULT"
           else
+            require_result "queue DCO" skipped "$DCO_RESULT"
             require_optional_gate "queue affected-native" "$native_or_sdk" "$NATIVE_RESULT"
             require_optional_gate "queue Shifu workspace" "$SHIFU_REQUIRED" "$SHIFU_RESULT"
             require_optional_gate "queue KFD verifier" "$KFD_REQUIRED" "$KFD_RESULT"
           fi
-          echo "Merge Queue staged qualification passed."
+          echo "Staged candidate qualification passed."
       - name: Download current proof descriptor
         uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
         with:
@@ -813,7 +818,7 @@ jobs:
           cmp "$descriptor" "$admission/recomputed-descriptor.json"
           test "$PROBE_ARTIFACT_NAME" = "$(jq -r '.artifactName' "$descriptor")"
           cp "$descriptor" "$admission/descriptor.json"
-      - name: Download admitted queue proof
+      - name: Download admitted producer proof
         if: ${{ needs.proof_probe.outputs.reuse == 'true' }}
         uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
         with:
@@ -825,7 +830,6 @@ jobs:
       - name: Download current partition evidence
         if: >-
           ${{
-            github.event_name == 'merge_group' &&
             needs.proof_probe.outputs.reuse != 'true' &&
             (needs.candidate_preflight.outputs.native-required == 'true' ||
              needs.candidate_preflight.outputs.sdk-required == 'true')
@@ -834,7 +838,7 @@ jobs:
         with:
           pattern: core-affected-native-${{ github.sha }}-partition-*-of-2
           path: product/qualification/affected-native/proof-input
-      - name: Admit exact queue partition set
+      - name: Admit exact producer partition set
         id: admit
         shell: bash
         env:
@@ -843,14 +847,11 @@ jobs:
           SDK_REQUIRED: ${{ needs.candidate_preflight.outputs.sdk-required }}
           REUSE: ${{ needs.proof_probe.outputs.reuse }}
           PRODUCER_RUN_ID: ${{ needs.proof_probe.outputs.producer-run-id }}
+          PRODUCER_EVENT: ${{ needs.proof_probe.outputs.producer-event }}
+          PRODUCER_HEAD_SHA: ${{ needs.proof_probe.outputs.producer-head-sha }}
         run: |
           set -euo pipefail
           descriptor=product/qualification/affected-native/proof-admission/descriptor.json
-          if [ "$GITHUB_EVENT_NAME" = "pull_request" ]; then
-            echo "PR admission intentionally has no native proof."
-            echo "proof-created=false" >> "$GITHUB_OUTPUT"
-            exit 0
-          fi
           if [ "$NATIVE_REQUIRED" != "true" ] && [ "$SDK_REQUIRED" != "true" ]; then
             echo "The source-impact plan explicitly requires no native or SDK qualification."
             echo "proof-created=false" >> "$GITHUB_OUTPUT"
@@ -867,16 +868,21 @@ jobs:
               --bundle product/qualification/affected-native/proof-reuse \
               --repository "$GITHUB_REPOSITORY" \
               --producer-run-id "$PRODUCER_RUN_ID" \
-              --producer-event merge_group \
-              --producer-head-sha "$(git rev-parse HEAD)"
+              --producer-event "$PRODUCER_EVENT" \
+              --producer-head-sha "$PRODUCER_HEAD_SHA"
             echo "proof-created=false" >> "$GITHUB_OUTPUT"
-            echo "Exact same-SHA successful queue proof admitted; repeated heavy gates remained skipped."
+            echo "Exact successful producer proof admitted; repeated heavy gates remained skipped."
             exit 0
           fi
           if [ "$PARTITION_RESULT" != "success" ]; then
             echo "affected-native partition set is not complete: $PARTITION_RESULT" >&2
             exit 1
           fi
+          case "$GITHUB_EVENT_NAME" in
+            pull_request) trigger_head_sha="$(jq -r '.pull_request.head.sha' "$GITHUB_EVENT_PATH")" ;;
+            merge_group) trigger_head_sha="$(jq -r '.merge_group.head_sha' "$GITHUB_EVENT_PATH")" ;;
+            *) echo "unsupported producer event: $GITHUB_EVENT_NAME" >&2; exit 1 ;;
+          esac
           # shifu-entry-contract: allow source-bound proof sealing after both native partitions passed
           node scripts/affected-native-proof.mjs seal \
             --descriptor "$descriptor" \
@@ -885,10 +891,11 @@ jobs:
             --repository "$GITHUB_REPOSITORY" \
             --run-id "$GITHUB_RUN_ID" \
             --event "$GITHUB_EVENT_NAME" \
+            --trigger-head-sha "$trigger_head_sha" \
             --checkout-sha "$(git rev-parse HEAD)"
           echo "proof-created=true" >> "$GITHUB_OUTPUT"
           echo "All affected-native partitions passed."
-      - name: Upload authoritative queue proof
+      - name: Upload authoritative producer proof
         if: ${{ steps.admit.outputs.proof-created == 'true' }}
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
