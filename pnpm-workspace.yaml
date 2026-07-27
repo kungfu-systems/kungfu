@@ -25,10 +25,6 @@ allowBuilds:
 # it ages past the cutoff, forcing a per-version allow-list. 0 = no minimum age.
 minimumReleaseAge: 0
 overrides:
-  # Preserve the stable SDK contract while the Alpha release gate consumes the
-  # newer support-matrix authority. Each Buildchain line owns its KFD metadata.
-  '@kungfu-tech/buildchain@3.0.0>@kungfu-tech/kfd': 1.0.0-alpha.41
-  '@kungfu-tech/buildchain@3.0.2-alpha.3>@kungfu-tech/kfd': 1.0.0-alpha.47
   # node-gyp 9.x cannot detect Visual Studio 2026; 13.x adds VS2026 support, which
   # the Windows build needs to match the prebuilt (MSVC 19.5) conan dependencies.
   node-gyp: ^13.0.0
