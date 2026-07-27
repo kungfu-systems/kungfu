@@ -184,6 +184,13 @@
           "sourceRoot": "sha256:b59d313837702193d551d655a944a74b86d6dbf91c4d99b5968cf2a6ceb08488"
         },
         {
+          "path": ".github/workflows/opencode-local-model-canary.yml",
+          "classification": "non-publication",
+          "owner": "kungfu-ci",
+          "surfaceIds": [],
+          "sourceRoot": "sha256:baf3ed36c209a804a24978ece7537399c2fa4b524ec25b283aa78f9f69f9403f"
+        },
+        {
           "path": ".github/workflows/publish-layer-artifacts.yml",
           "classification": "publication",
           "owner": "kungfu-layers",
@@ -767,5 +774,5 @@
       }
     }
   ],
-  "registryRoot": "sha256:e845bea3dcfb052daec13bdffd4df53106a610973d28b16a30b013cd23cab4cd"
+  "registryRoot": "sha256:6af8092e805e85e785766b10fb3fe26ced9270ae988ed4cda32759046557c765"
 }
