@@ -21,6 +21,13 @@ evidence.
 
 The rendered reading edition is also available at
 [kungfu.tech/about/bootstrapping](https://kungfu.tech/about/bootstrapping/).
+Its companion
+[public work sample](https://kungfu.tech/about/bootstrapping/evidence/)
+separates GitHub-verifiable facts, Kungfu Origin's first-party declaration, and
+interpretation. The
+[machine-readable manifest](https://kungfu.tech/about/bootstrapping/evidence/data/manifest.json)
+publishes the exact window, source files, byte sizes, and SHA-256 digests for
+independent analysis.
 
 ## Read This With Your Agent
 
@@ -38,6 +45,8 @@ Read this page as an argument, not as marketing.
    from my own work.
 5. Give the strongest counterargument and say what evidence would falsify the
    thesis.
+6. Audit the public evidence manifest, keeping public facts, first-party
+   declarations, and inference separate.
 ```
 
 The purpose is not to make an agent persuade the reader. The purpose is to let
@@ -115,6 +124,31 @@ The sequence is deliberate:
    organization around the software.
 
 > **Externalize capability before scaling participation.**
+
+## One Ordinary Piece Of Work
+
+Consider a bounded task: revise the public Bootstrap page so a reader no longer
+mistakes Kungfu's bootstrap for ordinary dogfood. The difference between a
+Session and a Work Runtime becomes visible as soon as the first Agent stops.
+
+| When the runtime stays human | When responsibility is externalized |
+| --- | --- |
+| The author remembers the real intent and rejected interpretations. | The Work keeps a stable identity, intent, current state, and next action. |
+| A successful edit or command is mistaken for task completion. | Exact source, decisions, checks, and visible limits become durable facts. |
+| A reviewer asks the author what changed, what remains, and what may ship. | Staging and production authority remain separate and inspectable. |
+| A fresh Agent reconstructs the task from chat and human memory. | A fresh Agent continues from the same evidence without a human retelling it. |
+
+The current evidence revision left a small public trace:
+[site pull request 172](https://github.com/kungfu-systems/site-kungfu-tech/pull/172)
+bounded the source change, the site checks and staging apply ran against that
+source, and production remained a separate authority represented by
+[release pull request 173](https://github.com/kungfu-systems/site-kungfu-tech/pull/173).
+A new participant can inspect those coordinates rather than ask the author to
+reconstruct what happened.
+
+Today, much of that trace is carried by GitHub and
+[Buildchain](https://buildchain.libkungfu.dev). It is partial bootstrap
+evidence, not proof that the finished Kungfu Work Runtime already exists.
 
 ## Why Could This Begin Here?
 
@@ -227,13 +261,13 @@ The exact implementation and qualification boundaries are documented in
 [Agent Supply Chain](../architecture/agent-supply-chain.md), and
 [Product Layers](product-layers.md).
 
-## What The Bootstrap Proves
+## What The Public Record Shows
 
 Using Kungfu's own ideas while building Kungfu is not the central proof. The
-stronger evidence is whether work that would normally depend on private human
-memory and coordination becomes durable, inspectable, transferable, and bounded
-by explicit authority. Several public mechanisms contribute to that existence
-proof:
+more useful evidence is whether work that would normally depend on private
+human memory and coordination becomes durable, inspectable, transferable, and
+bounded by explicit authority. Several public mechanisms contribute to that
+existence proof:
 
 - the journal and Episode runtime preserve important work facts as durable
   objects rather than disposable conversation;
@@ -247,10 +281,56 @@ proof:
 The evidence for each mechanism must still be read at its own maturity. A
 merged design or source implementation is not a released product guarantee.
 
+### A bounded public sample
+
+The companion report examines public activity across the Kungfu Systems GitHub
+organization from 20 July 2026, 00:00 through 27 July 2026, 10:48 in
+Asia/Shanghai:
+
+| Public measure | Result |
+| --- | ---: |
+| Merged pull requests | 1,026 across 15 repositories |
+| Releases | 112 |
+| Closed non-PR issues | 59 |
+| Commits represented by merged pull requests | 5,501 |
+
+These are mechanical activity measures, not a feature count or a labor
+conversion. Release trains can express one capability through several pull
+requests; generated files and repeated propagation can inflate totals; one
+feature can also cross runtime code, tests, schemas, packages, and
+documentation.
+
+Kungfu Origin makes a separate first-party declaration: one human independently
+organized this body of work, retained direction, judgment, and authority, and
+used software Agents including Codex, Claude, Cursor, and Amp for operational
+execution. The public record can verify accounts, artifacts, timestamps,
+reviews, and releases. It cannot independently verify that no second human
+contributed, and readers are not required to accept that part of the statement.
+
+The visible work spans responsibilities that a conventional organization would
+normally distribute across runtime and storage, protocol and SDK design,
+terminal, desktop, and web product surfaces, release engineering and package
+distribution, qualification and governance, technical writing, research, and
+product acceptance. The report does not assign a person-month number; readers
+can map those functions to their own organization and make their own estimate.
+
+The collection and its first analysis were also produced by an Agent. Readers
+can inspect the
+[manifest](https://kungfu.tech/about/bootstrapping/evidence/data/manifest.json),
+[collector](https://kungfu.tech/about/bootstrapping/evidence/data/collect.mjs),
+and
+[raw records](https://kungfu.tech/about/bootstrapping/evidence/data/pull-requests.json),
+then reclassify the work with their own Agent or method.
+
 ## What It Does Not Prove
 
 A private loop can become an elaborate cognitive exoskeleton for one founding
 context. Internal usefulness does not prove universality.
+
+The public sample does not prove that the bootstrap method caused the output,
+that minimal human staffing is superior for every organization, that every
+merged capability has equal depth or user value, or that a one-week result
+establishes long-term maintainability and institutional resilience.
 
 The stronger test requires:
 
@@ -307,4 +387,5 @@ invisible runtime while human sovereignty remains explicit.
 
 Continue with [Facts Before Trust](facts-before-trust.md),
 [Design Philosophy](design-philosophy.md), or
-[Known Limits](../qualification/known-limits.md).
+[Known Limits](../qualification/known-limits.md), or independently inspect the
+[public work sample](https://kungfu.tech/about/bootstrapping/evidence/).

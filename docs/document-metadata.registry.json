@@ -444,7 +444,7 @@
       "theme": "kungfu-agent-work-bootstrap",
       "confidence": "medium",
       "evidence_grade": "C",
-      "last_reviewed": "2026-07-26",
+      "last_reviewed": "2026-07-27",
       "ai_provenance": {
         "model_family": "OpenAI GPT-5",
         "product": "Codex",
