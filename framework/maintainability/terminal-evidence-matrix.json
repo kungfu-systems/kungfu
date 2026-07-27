@@ -62,6 +62,7 @@
       ],
       "rawChecks": [
         "framework/maintainability/semantic-amplification.test.mjs",
+        "framework/agent-session/tests/runtime-port.native.test.mjs",
         "scripts/check-kungfu-gate-catalog.test.mjs",
         "scripts/run-agent-work-state-tests.mjs"
       ],
