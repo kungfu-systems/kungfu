@@ -284,6 +284,20 @@ test('Assignment admission smoke isolates the operator Workspace Catalog', (t) =
       ['work', 'admit'],
     ],
   );
+  const admissionRequest = JSON.parse(
+    fs.readFileSync(
+      path.join(installRoot, 'assignment-admission-request.json'),
+      'utf8',
+    ),
+  );
+  assert.equal(
+    admissionRequest.workDefinition.initiative_id,
+    'installed-product-qualification',
+  );
+  assert.equal(
+    admissionRequest.workDefinition.assignment_id,
+    'installed-product-admission-smoke',
+  );
   for (const invocation of invocations) {
     assert.equal(
       invocation.env.HOME,
