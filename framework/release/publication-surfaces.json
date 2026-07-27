@@ -79,7 +79,7 @@
             "product-stable",
             "product-binaries"
           ],
-          "sourceRoot": "sha256:f42523e0d97970d88391f1d434b869d74ecbf83670d248f2e2f5accdbcdc9db1"
+          "sourceRoot": "sha256:ee362b94f6e6c6eb790bf521634452dd7f76ab6d9ab34df3ef4c9bfafa0bc4dc"
         },
         {
           "path": ".github/workflows/alpha-promotion-preflight.yml",
@@ -785,5 +785,5 @@
       }
     }
   ],
-  "registryRoot": "sha256:5c34c8f84a3e8deb4a6e64a913da333a41e1db70a4c6be83e1635227dacbbc60"
+  "registryRoot": "sha256:8674cb886e5a131c89a1de541a85d9e9cad2fec6b6c618940bd6a5985d6ccf04"
 }

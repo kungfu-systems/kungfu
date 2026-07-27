@@ -244,6 +244,53 @@ test('complete partition evidence seals and verifies against the exact producer'
   fs.rmSync(value.root, { recursive: true, force: true });
 });
 
+test('successful queue proof binds SDK qualification before repeat reuse', () => {
+  const value = fixture();
+  value.value = plan(HEAD, {
+    sdkQualification: { required: true, reasons: ['public-sdk-contract'] },
+  });
+  for (const index of [0, 1]) {
+    fs.writeFileSync(
+      path.join(value.inputs, `partition-${index}`, 'receipt.json'),
+      `${JSON.stringify(receipt(value.value, index), null, 2)}\n`,
+    );
+  }
+  const descriptor = createProofDescriptor(value.value, TREE, 2, TOOLCHAIN);
+  const proof = writeBundle(descriptor, value);
+  assert.equal(descriptor.sdkRequired, true);
+  assert.equal(proof.verdict.sdkRequired, true);
+  assert.doesNotThrow(() =>
+    verifyProofBundle(descriptor, value.bundle, {
+      repository: 'kungfu-systems/kungfu',
+      producerRunId: 42,
+      producerEvent: 'merge_group',
+      producerHeadSha: HEAD,
+      maxAgeSeconds: 6 * 60 * 60,
+      now: '2026-07-22T01:00:00Z',
+    }),
+  );
+  const proofPath = path.join(value.bundle, 'proof.json');
+  const incomplete = JSON.parse(fs.readFileSync(proofPath, 'utf8'));
+  const { sdkRequired: _sdkRequired, ...legacyVerdict } = incomplete.verdict;
+  incomplete.verdict = legacyVerdict;
+  const { proofRoot: _proofRoot, ...body } = incomplete;
+  incomplete.proofRoot = digest(body);
+  fs.writeFileSync(proofPath, `${JSON.stringify(incomplete, null, 2)}\n`);
+  assert.throws(
+    () =>
+      verifyProofBundle(descriptor, value.bundle, {
+        repository: 'kungfu-systems/kungfu',
+        producerRunId: 42,
+        producerEvent: 'merge_group',
+        producerHeadSha: HEAD,
+        maxAgeSeconds: 6 * 60 * 60,
+        now: '2026-07-22T01:00:00Z',
+      }),
+    /proof verdict drift/,
+  );
+  fs.rmSync(value.root, { recursive: true, force: true });
+});
+
 test('missing, tampered, or stale proof evidence fails closed', () => {
   const value = fixture();
   const descriptor = createProofDescriptor(value.value, TREE, 2, TOOLCHAIN);
@@ -522,6 +569,10 @@ test('workflow keeps one required context while staging authoritative queue buil
   assert.match(workflow, /--producer-event merge_group/u);
   assert.match(workflow, /--head-sha "\$GITHUB_SHA"/u);
   assert.match(workflow, /needs\.proof_probe\.outputs\.reuse != 'true'/u);
+  assert.doesNotMatch(
+    workflow,
+    /steps\.descriptor\.outputs\.sdk-required != 'true'/u,
+  );
   assert.match(workflow, /echo "native-required=\$\{native_required\}"/u);
   assert.match(workflow, /echo "sdk-required=\$\{sdk_required\}"/u);
   assert.match(workflow, /echo "shifu-required=\$\(jq/u);
@@ -529,6 +580,10 @@ test('workflow keeps one required context while staging authoritative queue buil
   const shifuWorkspace = workflow.slice(
     workflow.indexOf('  shifu_workspace:\n'),
     workflow.indexOf('  kfd_verifier:\n'),
+  );
+  assert.match(
+    shifuWorkspace,
+    /- proof_probe[\s\S]*needs\.proof_probe\.outputs\.reuse != 'true'/u,
   );
   assert.match(
     shifuWorkspace,
@@ -564,6 +619,18 @@ test('workflow keeps one required context while staging authoritative queue buil
   );
   assert.match(workflow, /^\s{2}shifu_workspace:$/mu);
   assert.match(workflow, /^\s{2}kfd_verifier:$/mu);
+  const kfdVerifier = workflow.slice(
+    workflow.indexOf('  kfd_verifier:\n'),
+    workflow.indexOf('  affected-native:\n'),
+  );
+  assert.match(
+    kfdVerifier,
+    /- proof_probe[\s\S]*needs\.proof_probe\.outputs\.reuse != 'true'/u,
+  );
+  assert.match(
+    workflow,
+    /reused queue Shifu workspace[\s\S]*reused queue KFD verifier/u,
+  );
   assert.doesNotMatch(workflow, /retention-days: 1$/mu);
   const verifier = fs.readFileSync(
     path.join(ROOT, 'scripts/affected-native-proof.mjs'),

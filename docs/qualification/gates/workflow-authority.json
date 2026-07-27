@@ -254,7 +254,7 @@
           "authority": "qualification",
           "publication": "none",
           "receipt": "diagnostic",
-          "definitionDigest": "sha256:b20b2fc3c5bb77c1d72d497cfc8a573cf27a0cb1c888593c1f167349c792036c",
+          "definitionDigest": "sha256:94bd4175978964e3664d2680bde4e08decf1be8d3acb04c556f6138af78c03fc",
           "credentials": {
             "githubToken": "read",
             "oidc": false,
@@ -277,7 +277,7 @@
             {
               "index": 3,
               "label": "name:Admit staged candidate dependency graph",
-              "definitionDigest": "sha256:a138076d5d611bebda4e5f0663a8470c3c78119262041688961ad9f3f890dd62"
+              "definitionDigest": "sha256:ea24ceceb70496619b2db15371a51c414db00028f3e08db4c412a36325ed5e51"
             },
             {
               "index": 4,
@@ -307,7 +307,7 @@
               "index": 8,
               "label": "id:admit",
               "authority": "evidence-publication",
-              "definitionDigest": "sha256:fa78904b5253525209a5766394fa9095686cd07b448131a578a70b5217d16e73"
+              "definitionDigest": "sha256:9acc3bb1a2412020d5000fa222bf27d13a8e9a93f639d9071f667b852889d1e3"
             },
             {
               "index": 9,
@@ -419,7 +419,7 @@
           "authority": "qualification",
           "publication": "none",
           "receipt": "diagnostic",
-          "definitionDigest": "sha256:cff226f48ab18774a27feb0ad91f2001f6551a75ad62a68a4fed8c792072dc63",
+          "definitionDigest": "sha256:aaf2c35660e8ef1223801e7b78ae5272608885b1b51fa4216831fa7403ad824c",
           "credentials": {
             "githubToken": "read",
             "oidc": false,
@@ -456,7 +456,7 @@
           "authority": "qualification",
           "publication": "none",
           "receipt": "diagnostic",
-          "definitionDigest": "sha256:4dd795707f86083118628ca9446f327001e4f1aaeec33175c8d37a0065b15d82",
+          "definitionDigest": "sha256:8797adab8a7787876072d7e91b2efa68d72fe0297aceb2436bcc080af5cd098c",
           "credentials": {
             "githubToken": "read",
             "oidc": false,
@@ -496,7 +496,7 @@
               "index": 6,
               "label": "id:lookup",
               "authority": "evidence-publication",
-              "definitionDigest": "sha256:301c7a9dc3567b33566c566d31507feac5c7af3cf3a3b7157c8cc19c0172ad48"
+              "definitionDigest": "sha256:7357c433b49e647153e7c6274d36fa32e305179d29597690a53f2d8e187367b7"
             },
             {
               "index": 7,
@@ -512,7 +512,7 @@
             {
               "index": 9,
               "label": "id:decision",
-              "definitionDigest": "sha256:b00d41210baf996b9273a6c5f734be7a340d63ab2b31de3b1bfd38c79d6781e0"
+              "definitionDigest": "sha256:605bf66857c5f7ca2a6c8882da2e1295f01a4e2258d66bacb3eb763b702d368d"
             }
           ]
         },
@@ -521,7 +521,7 @@
           "authority": "qualification",
           "publication": "none",
           "receipt": "diagnostic",
-          "definitionDigest": "sha256:edc52f7da49447feda564cb29d2b59665e30309778c90109af054e6489ad6cff",
+          "definitionDigest": "sha256:4a33dfcec2664bc11953518d2ffe3b72a75a57f2654f597bc6d7be04756d83f3",
           "credentials": {
             "githubToken": "read",
             "oidc": false,
