@@ -365,7 +365,7 @@
           "pointer": {
             "kind": "file",
             "path": "tests/qualification/work-lifecycle/four-language-v1.json",
-            "sha256": "132ff43963bebc6f23eb76e496082074506f152a7f6847bed6aec94c4799005f"
+            "sha256": "8f48b9b6cc78008124492e7dcca21a275f528b7a7e85e90d160d003cac1d9315"
           },
           "description": "Installed four-language byte, mutation, error, unavailable, unsupported, and bypass vectors."
         },
