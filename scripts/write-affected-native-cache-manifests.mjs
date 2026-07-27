@@ -343,7 +343,10 @@ export function sealAffectedNativeCachePayload({
   const root = path.resolve(qualificationDir);
   const plan = verifyAffectedPlan(readJson(path.join(root, 'plan.json')));
   assert(plan.head === headSha, 'cache payload producer source drift');
-  assert(event === 'merge_group', 'cache payload producer must be merge_group');
+  assert(
+    event === 'pull_request' || event === 'merge_group',
+    'cache payload producer event is invalid',
+  );
   assert(
     /^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/.test(repository),
     'cache payload repository is invalid',
@@ -452,7 +455,7 @@ function verifyPayload(payload, manifestFile, expected) {
     'cache producer repository drift',
   );
   assert(
-    payload.producer?.event === 'merge_group',
+    payload.producer?.event === expected.producerEvent,
     'cache producer event drift',
   );
   assert(
@@ -511,17 +514,59 @@ function verifyPayload(payload, manifestFile, expected) {
 
 export function createAffectedNativeCachePromotion({
   artifactsDir,
-  expectedHeadSha,
-  expectedRunId,
+  expectedTargetHeadSha,
+  expectedMergeGroupRunId,
+  expectedPayloadHeadSha,
+  expectedProducerRunId,
+  expectedProducerEvent,
   expectedRepository,
+  authorityMode,
+  authorityDigest = '',
 }) {
   assert(
-    SHA_RE.test(expectedHeadSha || ''),
-    'expected promotion source is invalid',
+    SHA_RE.test(expectedTargetHeadSha || ''),
+    'expected promotion target source is invalid',
   );
   assert(
-    Number.isInteger(Number(expectedRunId)) && Number(expectedRunId) > 0,
-    'expected promotion run id is invalid',
+    Number.isInteger(Number(expectedMergeGroupRunId)) &&
+      Number(expectedMergeGroupRunId) > 0,
+    'expected merge-group run id is invalid',
+  );
+  assert(
+    SHA_RE.test(expectedPayloadHeadSha || ''),
+    'expected promotion payload source is invalid',
+  );
+  assert(
+    Number.isInteger(Number(expectedProducerRunId)) &&
+      Number(expectedProducerRunId) > 0,
+    'expected producer run id is invalid',
+  );
+  assert(
+    expectedProducerEvent === 'pull_request' ||
+      expectedProducerEvent === 'merge_group',
+    'expected producer event is invalid',
+  );
+  assert(
+    authorityMode === 'direct' || authorityMode === 'reused-proof',
+    'promotion authority mode is invalid',
+  );
+  if (authorityMode === 'direct') {
+    assert(
+      expectedProducerEvent === 'merge_group' &&
+        expectedTargetHeadSha === expectedPayloadHeadSha &&
+        Number(expectedMergeGroupRunId) === Number(expectedProducerRunId) &&
+        !authorityDigest,
+      'direct promotion authority identity drift',
+    );
+  } else {
+    assert(
+      DIGEST_RE.test(authorityDigest),
+      'reused-proof promotion authority digest is invalid',
+    );
+  }
+  assert(
+    /^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/.test(expectedRepository || ''),
+    'expected promotion repository is invalid',
   );
   const manifestFiles = findFiles(
     path.resolve(artifactsDir),
@@ -532,8 +577,9 @@ export function createAffectedNativeCachePromotion({
     'no affected-native cache payload manifests found',
   );
   const expected = {
-    headSha: expectedHeadSha,
-    runId: Number(expectedRunId),
+    headSha: expectedPayloadHeadSha,
+    runId: Number(expectedProducerRunId),
+    producerEvent: expectedProducerEvent,
     repository: expectedRepository,
   };
   const payloads = manifestFiles.map((file) =>
@@ -585,9 +631,18 @@ export function createAffectedNativeCachePromotion({
     'dependency cache payload must come uniquely from partition 0',
   );
   const body = {
-    schema: 'kungfu.affected-native-cache-promotion/v1',
-    sourceSha: expectedHeadSha,
-    producerRunId: Number(expectedRunId),
+    schema: 'kungfu.affected-native-cache-promotion/v2',
+    targetSourceSha: expectedTargetHeadSha,
+    payloadSourceSha: expectedPayloadHeadSha,
+    mergeGroupRunId: Number(expectedMergeGroupRunId),
+    producer: {
+      runId: Number(expectedProducerRunId),
+      event: expectedProducerEvent,
+    },
+    authority: {
+      mode: authorityMode,
+      digest: authorityDigest || null,
+    },
     repository: expectedRepository,
     planDigest: payloads[0].planDigest,
     partitionCount: count,
@@ -655,9 +710,18 @@ function main() {
   if (command === 'promote') {
     const promotion = createAffectedNativeCachePromotion({
       artifactsDir: required(options, 'artifacts-dir'),
-      expectedHeadSha: required(options, 'expected-head-sha'),
-      expectedRunId: Number(required(options, 'expected-run-id')),
+      expectedTargetHeadSha: required(options, 'expected-target-head-sha'),
+      expectedMergeGroupRunId: Number(
+        required(options, 'expected-merge-group-run-id'),
+      ),
+      expectedPayloadHeadSha: required(options, 'expected-payload-head-sha'),
+      expectedProducerRunId: Number(
+        required(options, 'expected-producer-run-id'),
+      ),
+      expectedProducerEvent: required(options, 'expected-producer-event'),
       expectedRepository: required(options, 'expected-repository'),
+      authorityMode: required(options, 'authority-mode'),
+      authorityDigest: options['authority-digest'] || '',
     });
     const output = required(options, 'output');
     fs.writeFileSync(

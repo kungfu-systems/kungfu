@@ -109,6 +109,7 @@ function createPartitionArtifact({
   partitionCount,
   repository,
   runId,
+  event = 'merge_group',
   compilerSymlinkTarget = '',
   dependencyMarker = 'package',
   dependencySymlinkTarget = '',
@@ -180,7 +181,7 @@ function createPartitionArtifact({
     partitionCount,
     repository,
     runId,
-    event: 'merge_group',
+    event,
     headSha: plan.head,
     compilerArchive,
     dependencyArchive,
@@ -208,11 +209,18 @@ test('qualified merge-group partitions form one default-branch cache promotion',
   }
   const promotion = createAffectedNativeCachePromotion({
     artifactsDir: root,
-    expectedHeadSha: plan.head,
-    expectedRunId: runId,
+    expectedTargetHeadSha: plan.head,
+    expectedMergeGroupRunId: runId,
+    expectedPayloadHeadSha: plan.head,
+    expectedProducerRunId: runId,
+    expectedProducerEvent: 'merge_group',
     expectedRepository: repository,
+    authorityMode: 'direct',
   });
-  assert.equal(promotion.sourceSha, plan.head);
+  assert.equal(promotion.schema, 'kungfu.affected-native-cache-promotion/v2');
+  assert.equal(promotion.targetSourceSha, plan.head);
+  assert.equal(promotion.payloadSourceSha, plan.head);
+  assert.equal(promotion.authority.mode, 'direct');
   assert.equal(promotion.partitionCount, 2);
   assert.equal(promotion.dependency.partitionIndex, 0);
   assert.equal(promotion.compiler.archives.length, 2);
@@ -240,9 +248,13 @@ test('cache promotion fails closed on an incomplete partition set', (t) => {
     () =>
       createAffectedNativeCachePromotion({
         artifactsDir: root,
-        expectedHeadSha: plan.head,
-        expectedRunId: 12345,
+        expectedTargetHeadSha: plan.head,
+        expectedMergeGroupRunId: 12345,
+        expectedPayloadHeadSha: plan.head,
+        expectedProducerRunId: 12345,
+        expectedProducerEvent: 'merge_group',
         expectedRepository: 'kungfu-systems/kungfu',
+        authorityMode: 'direct',
       }),
     /partition set is incomplete/,
   );
@@ -256,19 +268,72 @@ test('push promotion waits for the exact required Gate instead of whole-run comp
   assert.match(workflow, /head_sha="\$GITHUB_SHA"/u);
   assert.match(workflow, /actions\/runs\/\$\{run_id\}\/jobs/u);
   assert.match(workflow, /\.name == "affected-native \/ linux"/u);
-  assert.match(workflow, /artifact_state.*complete/su);
+  assert.match(workflow, /direct_state.*complete/su);
+  assert.match(workflow, /authority_count.*reused-proof/su);
   assert.match(workflow, /while \[ "\$attempt" -le 60 \]/u);
   assert.doesNotMatch(workflow, /status=completed/u);
 });
 
-test('pull-request proof producers never seal merge-group cache payloads', () => {
+test('PR payload transport requires merge-group reused-proof authority', (t) => {
+  const root = fs.mkdtempSync(
+    path.join(os.tmpdir(), 'kungfu-cache-promotion-reused-proof-'),
+  );
+  t.after(() => fs.rmSync(root, { recursive: true, force: true }));
+  const plan = createPlan();
+  const repository = 'kungfu-systems/kungfu';
+  for (const partitionIndex of [0, 1]) {
+    createPartitionArtifact({
+      artifactsRoot: root,
+      plan,
+      partitionIndex,
+      partitionCount: 2,
+      repository,
+      runId: 12345,
+      event: 'pull_request',
+    });
+  }
+  const authorityDigest = `sha256:${'e'.repeat(64)}`;
+  const promotion = createAffectedNativeCachePromotion({
+    artifactsDir: root,
+    expectedTargetHeadSha: 'f'.repeat(40),
+    expectedMergeGroupRunId: 12346,
+    expectedPayloadHeadSha: plan.head,
+    expectedProducerRunId: 12345,
+    expectedProducerEvent: 'pull_request',
+    expectedRepository: repository,
+    authorityMode: 'reused-proof',
+    authorityDigest,
+  });
+  assert.equal(promotion.targetSourceSha, 'f'.repeat(40));
+  assert.equal(promotion.payloadSourceSha, plan.head);
+  assert.deepEqual(promotion.producer, {
+    runId: 12345,
+    event: 'pull_request',
+  });
+  assert.deepEqual(promotion.authority, {
+    mode: 'reused-proof',
+    digest: authorityDigest,
+  });
+
   const workflow = fs.readFileSync(
     '.github/workflows/affected-native-pr.yml',
     'utf8',
   );
   assert.match(
     workflow,
-    /name: Seal cache promotion payload[\s\S]*?if:\s*>-[\s\S]*?github\.event_name == 'merge_group' &&[\s\S]*?steps\.native-gate\.outcome == 'success'/u,
+    /name: Seal cache promotion payload[\s\S]*?github\.event_name == 'pull_request'[\s\S]*?github\.event_name == 'merge_group'[\s\S]*?steps\.native-gate\.outcome == 'success'/u,
+  );
+  assert.match(
+    workflow,
+    /name: Seal reused-proof cache promotion authority[\s\S]*?seal-cache-authority/u,
+  );
+  const promotionWorkflow = fs.readFileSync(
+    '.github/workflows/affected-native-cache-promote.yml',
+    'utf8',
+  );
+  assert.match(
+    promotionWorkflow,
+    /verify-cache-authority[\s\S]*?expected-payload-head-sha/u,
   );
 });
 

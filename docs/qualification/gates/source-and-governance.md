@@ -127,15 +127,22 @@ Each section is bound to the registry id by the catalog meta gate.
   retaining source-bound exact keys and always rerunning configure/build/CTest.
   GitHub scopes a cache saved by a merge-group run to its synthetic queue ref,
   so that cache is not itself a reusable base-branch baseline. After a
-  successful native Gate, each partition instead seals its secret-free cache
-  roots into a source-, run-, plan-, partition-, receipt-, and digest-bound
-  artifact. The resulting trusted dev push locates the exact successful
-  merge-group producer, requires the complete partition set, revalidates every
-  payload and receipt, combines the compiler roots, and writes the result into
-  the long-lived base-branch cache scope. A non-native push or any missing,
-  ambiguous, stale, source-drifted, or malformed producer is an auditable no-op.
-  The push workflow transports already-qualified cache data and does not repeat
-  the candidate-equivalent native build.
+  successful native Gate, each pull-request or merge-group partition instead
+  seals its secret-free cache roots into a source-, run-, plan-, partition-,
+  receipt-, and digest-bound artifact. The resulting trusted dev push locates
+  the exact successful merge-group admission. A direct merge-group build
+  supplies its own complete partition set. A merge group that reused an exact
+  pull-request proof instead seals a separate immutable promotion authority
+  that binds the merged head and source tree to the verified proof root,
+  producer run, producer checkout, plan projection, and partition contract.
+  The push independently revalidates that authority before selecting the exact
+  producer payloads; it never rewrites their source-bound receipts as
+  merge-group evidence. It then requires the complete partition set,
+  revalidates every payload and receipt, combines the compiler roots, and writes
+  the result into the long-lived base-branch cache scope. A non-native push or
+  any missing, ambiguous, stale, source-drifted, or malformed producer or
+  authority is an auditable no-op. The push transports already-qualified cache
+  data and does not repeat the candidate-equivalent native build.
 - **Cold-path partitioning:** the authoritative target and CTest lists are split
   deterministically across two GitHub-hosted Linux jobs. Each receipt binds its
   zero-based partition index, partition count, selected targets/tests, partition
@@ -154,14 +161,15 @@ Each section is bound to the registry id by the catalog meta gate.
 - **Repeated-run proof admission:** workflow concurrency prevents concurrent
   executions sharing one synthetic merge-group SHA; `cancel-in-progress: false`
   preserves the active execution while GitHub may coalesce identical pending
-  replacements. The first successful execution produces the authoritative queue
-  proof. A later execution skips the repeated native/SDK, Shifu workspace, and
-  KFD work after a unique completed-success artifact
-  matches that exact SHA and its cryptographically verified identity binds the
-  same base, candidate tree, plan projection, partition set, platform tier,
-  hosted-runner image, and observed compiler/CMake/Ninja facts. PR producers,
-  moved bases, changed trees/toolchains, duplicate artifacts, expired evidence,
-  and every lookup/download/verification failure run the full required set.
+  replacements. A successful pull-request candidate or first queue execution
+  produces an authoritative proof. A merge group or later same-SHA queue
+  execution skips the repeated native/SDK, Shifu workspace, and KFD work only
+  after deterministic lookup selects a completed-success artifact and
+  cryptographic verification binds the same base, candidate tree, plan
+  projection, partition set, platform tier, hosted-runner image, and observed
+  compiler/CMake/Ninja facts. Moved bases, changed trees/toolchains, expired or
+  untrusted evidence, and every lookup/download/verification failure run the
+  full required set.
   The producer workflow must itself be completed-success, so the source-bound
   plan also proves that its SDK, Shifu, and KFD obligations passed before a
   repeated run can skip them. The probe descriptor is handed unchanged to the
@@ -170,8 +178,8 @@ Each section is bound to the registry id by the catalog meta gate.
   substituting facts from a later non-native runner. Every native shard receipt
   must still match the complete probe toolchain, including the hosted image
   version; cross-runner drift therefore remains fail-closed. Shifu workspace
-  and KFD remain independent on the first execution; only a later exact-SHA
-  execution backed by the completed-success producer may skip them.
+  and KFD remain independent on the producer execution; only a candidate backed
+  by that completed-success exact proof may skip them.
 - **Dequeue repair admission:** the trusted-base dequeue controller cancels
   active work and writes one PR marker for deterministic `failed_checks`,
   `merge_conflict`, or `invalid_merge_commit` exits. The marker binds the exact

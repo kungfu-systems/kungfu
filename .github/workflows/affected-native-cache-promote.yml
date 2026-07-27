@@ -36,8 +36,9 @@ jobs:
         run: |
           set -euo pipefail
           producer_run=""
+          producer_mode=""
           attempt=1
-          gate_without_payload_polls=0
+          gate_without_authority_polls=0
           while [ "$attempt" -le 60 ]; do
             runs="$(
               gh api --method GET \
@@ -59,16 +60,32 @@ jobs:
               )"
               [ "$gate_success_count" -eq 1 ] || continue
               gate_observed=true
-              artifact_state="$(
+              direct_state="$(
                 gh api \
                   "repos/${GITHUB_REPOSITORY}/actions/runs/${run_id}/artifacts?per_page=100" \
                   --jq "[.artifacts[] | select(.expired == false and (.name | startswith(\"core-affected-native-${GITHUB_SHA}-partition-\"))) | (.name | capture(\"-partition-(?<index>[0-9]+)-of-(?<count>[0-9]+)$\"))] | if length == 0 then \"absent\" elif ((map(.count) | unique | length) == 1 and (.[0].count | tonumber) == length and (map(.index | tonumber) | sort) == [range(0; (.[0].count | tonumber))]) then \"complete\" else \"partial\" end"
               )"
-              if [ "$artifact_state" = "complete" ]; then
+              authority_count="$(
+                gh api \
+                  "repos/${GITHUB_REPOSITORY}/actions/runs/${run_id}/artifacts?per_page=100" \
+                  --jq "[.artifacts[] | select(.expired == false and .name == \"core-affected-native-cache-promotion-authority-${run_id}\")] | length"
+              )"
+              if [ "$direct_state" = "complete" ] &&
+                [ "$authority_count" -eq 0 ]; then
                 producer_run="$run_id"
+                producer_mode=direct
                 break
               fi
-              if [ "$artifact_state" = "partial" ]; then
+              if [ "$direct_state" = "absent" ] &&
+                [ "$authority_count" -eq 1 ]; then
+                producer_run="$run_id"
+                producer_mode=reused-proof
+                break
+              fi
+              if [ "$direct_state" = "partial" ] ||
+                [ "$authority_count" -gt 1 ] ||
+                { [ "$direct_state" = "complete" ] &&
+                  [ "$authority_count" -ne 0 ]; }; then
                 artifact_partial=true
               fi
             done
@@ -77,12 +94,12 @@ jobs:
             fi
             if [ "$gate_observed" = "true" ] &&
               [ "$artifact_partial" = "false" ]; then
-              gate_without_payload_polls=$((gate_without_payload_polls + 1))
-              if [ "$gate_without_payload_polls" -ge 3 ]; then
+              gate_without_authority_polls=$((gate_without_authority_polls + 1))
+              if [ "$gate_without_authority_polls" -ge 3 ]; then
                 break
               fi
             else
-              gate_without_payload_polls=0
+              gate_without_authority_polls=0
             fi
             sleep 10
             attempt=$((attempt + 1))
@@ -91,44 +108,140 @@ jobs:
             {
               echo "available=false"
               echo "run-id="
+              echo "mode="
             } >> "$GITHUB_OUTPUT"
-            echo "No complete required-Gate cache payload exists for merged source $GITHUB_SHA."
+            echo "No unambiguous cache promotion authority exists for merged source $GITHUB_SHA."
             exit 0
           fi
           {
             echo "available=true"
             echo "run-id=${producer_run}"
+            echo "mode=${producer_mode}"
           } >> "$GITHUB_OUTPUT"
-          echo "Exact merge-group producer run: ${producer_run}"
-      - name: Download exact partition payloads
-        if: ${{ steps.producer.outputs.available == 'true' }}
+          echo "Exact merge-group authority run: ${producer_run} (${producer_mode})"
+      - name: Download reused-proof promotion authority
+        if: ${{ steps.producer.outputs.mode == 'reused-proof' }}
         uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
         with:
           repository: ${{ github.repository }}
           run-id: ${{ steps.producer.outputs.run-id }}
           github-token: ${{ github.token }}
-          pattern: core-affected-native-${{ github.sha }}-partition-*-of-*
+          name: core-affected-native-cache-promotion-authority-${{ steps.producer.outputs.run-id }}
+          path: product/qualification/cache-promotion/authority
+      - name: Verify reused-proof promotion authority
+        if: ${{ steps.producer.outputs.mode == 'reused-proof' }}
+        id: authority
+        shell: bash
+        run: |
+          set -euo pipefail
+          # shifu-entry-contract: allow trusted dev push to reverify immutable merge-group authority
+          node scripts/affected-native-proof.mjs verify-cache-authority \
+            --bundle product/qualification/cache-promotion/authority \
+            --repository "$GITHUB_REPOSITORY" \
+            --target-run-id "${{ steps.producer.outputs.run-id }}" \
+            --target-head-sha "$GITHUB_SHA" \
+            --target-source-tree "$(git rev-parse 'HEAD^{tree}')" \
+            --github-output "$GITHUB_OUTPUT"
+      - name: Select authorized payload producer
+        if: ${{ steps.producer.outputs.available == 'true' }}
+        id: payload-source
+        shell: bash
+        env:
+          MODE: ${{ steps.producer.outputs.mode }}
+          MERGE_GROUP_RUN_ID: ${{ steps.producer.outputs.run-id }}
+          AUTHORITY_DIGEST: ${{ steps.authority.outputs.authority-digest }}
+          AUTHORIZED_RUN_ID: ${{ steps.authority.outputs.producer-run-id }}
+          AUTHORIZED_EVENT: ${{ steps.authority.outputs.producer-event }}
+          AUTHORIZED_TRIGGER_HEAD: ${{ steps.authority.outputs.producer-trigger-head-sha }}
+          AUTHORIZED_PAYLOAD_SOURCE: ${{ steps.authority.outputs.payload-source-sha }}
+        run: |
+          set -euo pipefail
+          if [ "$MODE" = "direct" ]; then
+            producer_run_id="$MERGE_GROUP_RUN_ID"
+            producer_event=merge_group
+            producer_trigger_head="$GITHUB_SHA"
+            payload_source_sha="$GITHUB_SHA"
+            authority_digest=""
+          else
+            producer_run_id="$AUTHORIZED_RUN_ID"
+            producer_event="$AUTHORIZED_EVENT"
+            producer_trigger_head="$AUTHORIZED_TRIGGER_HEAD"
+            payload_source_sha="$AUTHORIZED_PAYLOAD_SOURCE"
+            authority_digest="$AUTHORITY_DIGEST"
+          fi
+          {
+            echo "producer-run-id=${producer_run_id}"
+            echo "producer-event=${producer_event}"
+            echo "producer-trigger-head-sha=${producer_trigger_head}"
+            echo "payload-source-sha=${payload_source_sha}"
+            echo "authority-digest=${authority_digest}"
+          } >> "$GITHUB_OUTPUT"
+      - name: Confirm complete authorized partition payloads
+        if: ${{ steps.producer.outputs.available == 'true' }}
+        id: payload
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PRODUCER_RUN_ID: ${{ steps.payload-source.outputs.producer-run-id }}
+          PRODUCER_EVENT: ${{ steps.payload-source.outputs.producer-event }}
+          PRODUCER_TRIGGER_HEAD: ${{ steps.payload-source.outputs.producer-trigger-head-sha }}
+          PAYLOAD_SOURCE_SHA: ${{ steps.payload-source.outputs.payload-source-sha }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          trusted="$(
+            gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${PRODUCER_RUN_ID}" |
+              jq -r \
+                --arg event "$PRODUCER_EVENT" \
+                --arg head "$PRODUCER_TRIGGER_HEAD" \
+                '(.event == $event and .head_sha == $head and .status == "completed" and .conclusion == "success" and .path == ".github/workflows/affected-native-pr.yml")'
+          )"
+          state="$(
+            gh api \
+              "repos/${GITHUB_REPOSITORY}/actions/runs/${PRODUCER_RUN_ID}/artifacts?per_page=100" |
+              jq -r \
+                --arg prefix "core-affected-native-${PAYLOAD_SOURCE_SHA}-partition-" \
+                '[.artifacts[] | select(.expired == false and (.name | startswith($prefix))) | (.name | capture("-partition-(?<index>[0-9]+)-of-(?<count>[0-9]+)$"))] | if length == 0 then "absent" elif ((map(.count) | unique | length) == 1 and (.[0].count | tonumber) == length and (map(.index | tonumber) | sort) == [range(0; (.[0].count | tonumber))]) then "complete" else "partial" end'
+          )"
+          if [ "$trusted" != "true" ] || [ "$state" != "complete" ]; then
+            echo "available=false" >> "$GITHUB_OUTPUT"
+            echo "Authorized payload producer is unavailable or incomplete: trusted=${trusted}, state=${state}."
+            exit 0
+          fi
+          echo "available=true" >> "$GITHUB_OUTPUT"
+      - name: Download exact authorized partition payloads
+        if: ${{ steps.payload.outputs.available == 'true' }}
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          repository: ${{ github.repository }}
+          run-id: ${{ steps.payload-source.outputs.producer-run-id }}
+          github-token: ${{ github.token }}
+          pattern: core-affected-native-${{ steps.payload-source.outputs.payload-source-sha }}-partition-*-of-*
           path: product/qualification/cache-promotion/artifacts
       - name: Install pinned cache contract tools
-        if: ${{ steps.producer.outputs.available == 'true' }}
+        if: ${{ steps.payload.outputs.available == 'true' }}
         env:
           BUILDCHAIN_CHECK_MODE: source
         # shifu-entry-contract: allow source-tool bootstrap before the promotion verifier is runnable
         run: node scripts/buildchain-install.mjs
       - name: Verify promotion authority
-        if: ${{ steps.producer.outputs.available == 'true' }}
+        if: ${{ steps.payload.outputs.available == 'true' }}
         id: promotion
         run: |
           # shifu-entry-contract: allow verifying post-merge cache transport evidence outside the candidate Gate
           node scripts/write-affected-native-cache-manifests.mjs promote \
             --artifacts-dir product/qualification/cache-promotion/artifacts \
-            --expected-head-sha "$GITHUB_SHA" \
-            --expected-run-id "${{ steps.producer.outputs.run-id }}" \
+            --expected-target-head-sha "$GITHUB_SHA" \
+            --expected-merge-group-run-id "${{ steps.producer.outputs.run-id }}" \
+            --expected-payload-head-sha "${{ steps.payload-source.outputs.payload-source-sha }}" \
+            --expected-producer-run-id "${{ steps.payload-source.outputs.producer-run-id }}" \
+            --expected-producer-event "${{ steps.payload-source.outputs.producer-event }}" \
             --expected-repository "$GITHUB_REPOSITORY" \
+            --authority-mode "${{ steps.producer.outputs.mode }}" \
+            --authority-digest "${{ steps.payload-source.outputs.authority-digest }}" \
             --output product/qualification/cache-promotion/promotion.json \
             --github-output "$GITHUB_OUTPUT"
       - name: Materialize qualified cache roots
-        if: ${{ steps.producer.outputs.available == 'true' }}
+        if: ${{ steps.payload.outputs.available == 'true' }}
         shell: bash
         run: |
           set -euo pipefail
@@ -139,26 +252,28 @@ jobs:
             tar -xf "$compiler_archive" -C "$HOME"
           done < <(jq -r '.compiler.archives[].archive' "$promotion")
       - name: Save default-branch dependency cache
-        if: ${{ steps.producer.outputs.available == 'true' }}
+        if: ${{ steps.payload.outputs.available == 'true' }}
         uses: actions/cache/save@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
         with:
           path: ~/.conan2/p
           key: ${{ steps.promotion.outputs.dependency-key }}
       - name: Save default-branch compiler cache
-        if: ${{ steps.producer.outputs.available == 'true' }}
+        if: ${{ steps.payload.outputs.available == 'true' }}
         uses: actions/cache/save@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
         with:
           path: ~/.cache/ccache
           key: ${{ steps.promotion.outputs.compiler-key }}
       - name: Summarize promotion
-        if: ${{ steps.producer.outputs.available == 'true' }}
+        if: ${{ steps.payload.outputs.available == 'true' }}
         shell: bash
         run: |
           {
             echo "### Affected-native cache promotion"
             echo
             echo "- merged source: \`$GITHUB_SHA\`"
-            echo "- merge-group producer: \`${{ steps.producer.outputs.run-id }}\`"
-            echo "- authority: complete source-bound partition receipts and payload digests"
+            echo "- merge-group authority: \`${{ steps.producer.outputs.run-id }}\`"
+            echo "- payload producer: \`${{ steps.payload-source.outputs.producer-run-id }}\` (\`${{ steps.payload-source.outputs.producer-event }}\`)"
+            echo "- authority mode: \`${{ steps.producer.outputs.mode }}\`"
+            echo "- authority: exact source-tree proof plus complete partition receipts and payload digests"
             echo "- validation: current-source configure/build/CTest remains mandatory on restore"
           } >> "$GITHUB_STEP_SUMMARY"

@@ -8,11 +8,13 @@ import test from 'node:test';
 import { fileURLToPath } from 'node:url';
 
 import {
+  createCachePromotionAuthority,
   createProofDescriptor,
   digest,
   nativeToolchainIdentity,
   sealProof,
   selectReusableArtifact,
+  verifyCachePromotionAuthority,
   verifyProofBundle,
 } from './affected-native-proof.mjs';
 
@@ -273,6 +275,112 @@ test('exact PR proof survives the synthetic merge-group commit rewrite', () => {
       maxAgeSeconds: 6 * 60 * 60,
       now: '2026-07-22T01:00:00Z',
     }),
+  );
+  fs.rmSync(value.root, { recursive: true, force: true });
+});
+
+test('merge-group authority admits exact PR cache payload transport', () => {
+  const value = fixture();
+  const pullDescriptor = createProofDescriptor(value.value, TREE, 2, TOOLCHAIN);
+  const queueDescriptor = createProofDescriptor(
+    plan(QUEUE_HEAD),
+    TREE,
+    2,
+    TOOLCHAIN,
+  );
+  const proof = writeBundle(
+    pullDescriptor,
+    value,
+    producer({
+      event: 'pull_request',
+      triggerHeadSha: OTHER_HEAD,
+      checkoutSha: HEAD,
+    }),
+  );
+  const authority = createCachePromotionAuthority(
+    queueDescriptor,
+    value.bundle,
+    {
+      targetRepository: 'kungfu-systems/kungfu',
+      targetRunId: 84,
+      targetEvent: 'merge_group',
+      targetHeadSha: QUEUE_HEAD,
+      targetSourceTree: TREE,
+      producerRepository: 'kungfu-systems/kungfu',
+      producerRunId: 42,
+      producerEvent: 'pull_request',
+      producerHeadSha: OTHER_HEAD,
+      maxAgeSeconds: 6 * 60 * 60,
+      now: '2026-07-22T01:00:00Z',
+    },
+  );
+  const authorityDir = path.join(value.root, 'authority');
+  fs.mkdirSync(path.join(authorityDir, 'proof'), { recursive: true });
+  fs.writeFileSync(
+    path.join(authorityDir, 'descriptor.json'),
+    `${JSON.stringify(queueDescriptor, null, 2)}\n`,
+  );
+  fs.writeFileSync(
+    path.join(authorityDir, 'authority.json'),
+    `${JSON.stringify(authority, null, 2)}\n`,
+  );
+  for (const entry of fs.readdirSync(value.bundle)) {
+    fs.copyFileSync(
+      path.join(value.bundle, entry),
+      path.join(authorityDir, 'proof', entry),
+    );
+  }
+  const verified = verifyCachePromotionAuthority(authorityDir, {
+    targetRepository: 'kungfu-systems/kungfu',
+    targetRunId: 84,
+    targetHeadSha: QUEUE_HEAD,
+    targetSourceTree: TREE,
+    maxAgeSeconds: 6 * 60 * 60,
+    now: '2026-07-22T01:00:00Z',
+  });
+  assert.equal(verified.proof.proofRoot, proof.proofRoot);
+  assert.equal(verified.payloadSourceSha, HEAD);
+  assert.equal(verified.producer.event, 'pull_request');
+  fs.rmSync(value.root, { recursive: true, force: true });
+});
+
+test('cache promotion authority fails closed on target or proof drift', () => {
+  const value = fixture();
+  const descriptor = createProofDescriptor(value.value, TREE, 2, TOOLCHAIN);
+  writeBundle(descriptor, value);
+  assert.throws(
+    () =>
+      createCachePromotionAuthority(descriptor, value.bundle, {
+        targetRepository: 'kungfu-systems/kungfu',
+        targetRunId: 84,
+        targetEvent: 'merge_group',
+        targetHeadSha: QUEUE_HEAD,
+        targetSourceTree: '6'.repeat(40),
+        producerRepository: 'kungfu-systems/kungfu',
+        producerRunId: 42,
+        producerEvent: 'merge_group',
+        producerHeadSha: HEAD,
+        maxAgeSeconds: 6 * 60 * 60,
+        now: '2026-07-22T01:00:00Z',
+      }),
+    /target source tree drift/,
+  );
+  assert.throws(
+    () =>
+      createCachePromotionAuthority(descriptor, value.bundle, {
+        targetRepository: 'other/repository',
+        targetRunId: 84,
+        targetEvent: 'merge_group',
+        targetHeadSha: QUEUE_HEAD,
+        targetSourceTree: TREE,
+        producerRepository: 'kungfu-systems/kungfu',
+        producerRunId: 42,
+        producerEvent: 'merge_group',
+        producerHeadSha: HEAD,
+        maxAgeSeconds: 6 * 60 * 60,
+        now: '2026-07-22T01:00:00Z',
+      }),
+    /producer repository drift/,
   );
   fs.rmSync(value.root, { recursive: true, force: true });
 });
