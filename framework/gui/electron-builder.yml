@@ -39,6 +39,10 @@ extraResources:
   # Electron binding so Resources/kungfu remains one loader-closed directory.
   - from: ../core/dist/kungfu
     to: kungfu
+    filter:
+      - "**/*"
+      - "!**/__pycache__/**"
+      - "!**/*.pyc"
   # Generated after the runtime tree is final. Keep it outside Resources/kungfu
   # so the manifest does not participate in its own runtime digest.
   - from: dist/update/kungfu-release-manifest.json

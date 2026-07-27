@@ -38,6 +38,10 @@ extraResources:
       - schemas/**/*
   - from: ../core/dist/kungfu
     to: kungfu
+    filter:
+      - "**/*"
+      - "!**/__pycache__/**"
+      - "!**/*.pyc"
   - from: dist/update/kungfu-release-manifest.json
     to: upgrade/kungfu-release-manifest.json
   - from: resources/cli

@@ -105,7 +105,7 @@ export function createGlobalWorkObserverHost(deps: GlobalWorkObserverHostDeps) {
         '--json',
       ],
       {
-        env: { ...deps.env, PYTHONDONTWRITEBYTECODE: '1' },
+        env: { ...deps.env },
         stdio: ['ignore', 'pipe', 'pipe'],
       },
     );

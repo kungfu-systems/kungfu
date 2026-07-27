@@ -50,6 +50,6 @@ Run `kungfu-spec` with no arguments to print the canonical usage line. Treat
 the JSON fields and status values as the interface; do not scrape prose from
 standard error.
 
-Previous: [Use the Node API](api.md)  
-Next: [Run the independent Python reader](python-reader.md)  
+Previous: [Use the Node API](api.md)\
+Next: [Run the independent Python reader](python-reader.md)\
 Evidence: [Run and interpret the conformance corpus](conformance.md)

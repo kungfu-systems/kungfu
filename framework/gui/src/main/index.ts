@@ -61,7 +61,7 @@ import {
   bindElectronAgentSessionHost,
   createMainAgentSessionHost,
 } from './agent-session-host';
-import { protectPackagedPythonEnvironment } from './desktop-python-environment';
+import { configureProductCacheEnvironment } from './desktop-python-environment';
 import {
   type ProductionDesktopUpdateProvider,
   createProductionDesktopUpdateProvider,
@@ -106,8 +106,6 @@ import {
   listRecentDesktopWorkspaces,
   resolveLastDesktopWorkspace,
 } from './workspace-selection';
-
-protectPackagedPythonEnvironment(process.env, app.isPackaged);
 
 const qualificationMode = process.env.KF_QUALIFICATION_MODE === '1';
 
@@ -211,6 +209,12 @@ if (
 // than Desktop project selections. Preserve their existing eager-runtime
 // behavior while the Workspace product path remains lazy.
 process.env.KF_WORKSPACE_STATE = process.env.KF_WORKSPACE_STATE || 'ready';
+
+configureProductCacheEnvironment(process.env, {
+  isPackaged: app.isPackaged,
+  resourcesPath: process.resourcesPath,
+  homeDir: app.getPath('home'),
+});
 
 const workspaceRuntimeReady =
   process.env.KF_WORKSPACE_STATE === 'ready' ||

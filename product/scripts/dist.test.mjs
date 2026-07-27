@@ -14,6 +14,7 @@ import {
   desktopUpdaterArtifact,
   esbuildPlatformBinaryPath,
   installedKungfuInvocation,
+  isPythonBytecodePath,
   isShippedKfdSupport,
   kfxBundleExternalModules,
   requiresManagedEsbuildPlatform,
@@ -146,6 +147,27 @@ test('CLI archive keeps the launcher distinct from its runtime tree', () => {
   });
   assert.match(cliLauncherContent('darwin'), /exec "\$here\/runtime\/kungfu"/);
   assert.match(cliLauncherContent('win32'), /%~dp0runtime\\kungfu\.exe/);
+});
+
+test('product staging excludes every Python bytecode form', () => {
+  assert.equal(
+    isPythonBytecodePath('/runtime/pkg/__pycache__/module.pyc'),
+    true,
+  );
+  assert.equal(isPythonBytecodePath('C:\\runtime\\pkg\\module.pyc'), true);
+  assert.equal(isPythonBytecodePath('/runtime/pkg/module.PYC'), true);
+  assert.equal(isPythonBytecodePath('/runtime/pkg/module.py'), false);
+  for (const configPath of [
+    '../electron-builder.yml',
+    '../../framework/gui/electron-builder.yml',
+  ]) {
+    const config = fs.readFileSync(
+      new URL(configPath, import.meta.url),
+      'utf8',
+    );
+    assert.match(config, /!\*\*\/__pycache__\/\*\*/u);
+    assert.match(config, /!\*\*\/\*\.pyc/u);
+  }
 });
 
 test('installed CLI launcher uses cmd.exe explicitly on Windows', () => {
