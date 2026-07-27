@@ -1214,6 +1214,25 @@
         "invisible_context_boundary": "provider internals, private session stores, unobserved release artifacts, and hidden model checkpoints are not claimed"
       }
     },
+    "docs/qualification/agent-repository-work-experiment.md": {
+      "metadata_schema": "kungfu.document-metadata/v1",
+      "document_status": "draft",
+      "doc_type": "qualification-guide",
+      "review_state": "self-reviewed",
+      "sensitivity": "public",
+      "sources": ["executable-probe", "local-files", "user-consensus"],
+      "period": "2026-07-27",
+      "theme": "local-agent-repository-work",
+      "confidence": "high",
+      "evidence_grade": "B",
+      "last_reviewed": "2026-07-27",
+      "ai_provenance": {
+        "model_family": "OpenAI GPT-5",
+        "product": "Codex",
+        "generated_at": "2026-07-27",
+        "invisible_context_boundary": "provider internals, hidden model checkpoints, private session stores, and generalized product claims are not claimed"
+      }
+    },
     "docs/qualification/fact-storage-authority.md": {
       "metadata_schema": "kungfu.document-metadata/v1",
       "document_status": "active",
