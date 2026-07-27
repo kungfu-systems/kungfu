@@ -446,7 +446,7 @@
       "adapter": {
         "type": "buildchain-heavy-build",
         "kind": "job-uses",
-        "uses": "kungfu-systems/buildchain/.github/workflows/.build.yml@ebc7b2d86ecce1de835c8f8ba4436bcac65a62c2",
+        "uses": "kungfu-systems/buildchain/.github/workflows/.build.yml@881e8e4ee063b184ad7db535829ebd3872b0323a",
         "job": {
           "needs": "preflight",
           "secrets": {
@@ -457,6 +457,9 @@
         },
         "with": {
           "runner-preset": "${{ inputs.platforms-json && 'custom' || 'kungfu-v4-self-hosted' }}",
+          "github-artifact-attestation-subject-path": "product/release/cli/kungfu-episodes-cli-linux-x64.tar.gz",
+          "github-artifact-attestation-signer-sha": "ad57ae0fee5072a1de7a0b0182f70c0c41e45abb",
+          "github-artifact-attestation-platform-id": "linux-x64",
           "credential-island-macos-app-path": "product/dist/desktop/mac-arm64/Kungfu Episodes.app",
           "credential-island-caller-owned": true,
           "credential-island-macos-platform-id": "macos-arm64",
@@ -528,14 +531,14 @@
       "adapter": {
         "type": "buildchain-release-admission",
         "kind": "job-uses",
-        "uses": "kungfu-systems/buildchain/.github/workflows/release-candidate-promote.yml@ebc7b2d86ecce1de835c8f8ba4436bcac65a62c2",
+        "uses": "kungfu-systems/buildchain/.github/workflows/release-candidate-promote.yml@881e8e4ee063b184ad7db535829ebd3872b0323a",
         "job": {
           "needs": "promotion-contract",
           "if": "${{ github.event_name == 'workflow_dispatch' || github.event.pull_request.merged == true }}"
         },
         "with": {
           "channel": "${{ startsWith(inputs.target-ref || github.event.pull_request.base.ref, 'alpha/') && 'alpha' || 'release' }}",
-          "buildchain-ref": "ebc7b2d86ecce1de835c8f8ba4436bcac65a62c2",
+          "buildchain-ref": "881e8e4ee063b184ad7db535829ebd3872b0323a",
           "target-sha": "${{ inputs.target-sha || github.event.pull_request.merge_commit_sha || github.sha }}",
           "required-status-check": "build",
           "publication-auto-admission": true,
@@ -550,6 +553,8 @@
           "release-passport-evidence-command": "node scripts/prepare-ungfu-release-evidence.mjs --release --receipts \"$BUILDCHAIN_RELEASE_ACTIVATION_RECEIPTS\" --output \"$BUILDCHAIN_RELEASE_EVIDENCE_PATH\" --readback --json",
           "release-passport-evidence-path": ".buildchain/release-evidence/ungfu-public-use.json",
           "release-passport-invariant-passport-command": "node scripts/kungfu-invariant.mjs --collect-evidence . --passport product/release/qualification/invariant-passport.json --json",
+          "github-artifact-attestation-policy-json": "auto",
+          "github-artifact-attestation-environment": "buildchain-artifact-attestation",
           "dry-run": "${{ github.event_name == 'workflow_dispatch' }}"
         }
       }
