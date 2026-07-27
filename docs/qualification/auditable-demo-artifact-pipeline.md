@@ -125,6 +125,14 @@ Each blocking signal was repaired at its owning boundary rather than bypassed:
   required to enter REST mode across attempts.
   [Buildchain issue #1935](https://github.com/kungfu-systems/buildchain/issues/1935)
   retained the cross-attempt defect.
+- Run `30216301917` completed exact-source preflight, the Linux build, the
+  required release qualification, and same-run artifact resolution. The
+  required Gate then rejected a root mismatch between the adapter bundle and
+  the renderer's normalized input set before any media or Passport could be
+  admitted. Diagnostic artifact `8636763753` retained the failure independently
+  from the 699 MB source payload.
+  [Buildchain issue #1940](https://github.com/kungfu-systems/buildchain/issues/1940)
+  retained the reusable normalization defect.
 
 The corresponding repairs landed through independently approved protected PRs
 `#1492`, `#1497`, `#1500`, `#1503`, `#1504`, `#1505`, `#1506`, `#1507`,
@@ -144,6 +152,12 @@ cross-attempt artifact downloads and added a closed-world contract test.
 Protected Alpha promotion then released `v3.0.2-alpha.1` at exact tag commit
 `bfe43b0fe5577f15d2af01bc542de8a8ce587457`; Kungfu PR `#1564` pinned that
 release and contract digest into protected source.
+Buildchain PRs `#1941`, `#1942`, `#1943`, and `#1944` aligned the Gate with the
+renderer-normalized input contract, reconciled protected v3 Alpha state,
+promoted the repair, and released `v3.0.2-alpha.2` at exact tag commit
+`625384b4927222022a2cd0758399afbf9333ccdc`. Kungfu PR `#1571` then pinned
+that immutable runtime while preserving the required Gate, selective render,
+and no-production-deployment boundary.
 
 Exact-source Alpha preflight run `30205776472` initially failed only while the
 macOS runner timed out downloading the pinned Rust toolchain from
@@ -151,8 +165,9 @@ macOS runner timed out downloading the pinned Rust toolchain from
 failed-job rerun retained the same run id and source SHA, then passed all three
 platform probes and the aggregate exact-source receipt.
 
-The final qualified run below must use direct GitHub Artifact transfer and
-contains no production deployment step.
+The final qualified run below must use Buildchain's governed
+`s3-to-github-artifacts` relay and retain its public-safe evidence as GitHub
+Artifacts. It contains no production deployment step.
 
 This document remains `draft` until a protected Kungfu source has completed a
 real Gate and selective render run and the exact artifact coordinates are
