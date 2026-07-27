@@ -18,7 +18,8 @@
   "files": [
     "dist",
     "package.json",
-    "README.md"
+    "README.md",
+    "kungfu.kfx.json"
   ],
   "scripts": {
     "build": "kungfu sdk kfx build",
@@ -37,26 +38,5 @@
   },
   "peerDependencies": {
     "react": "^18.3.1"
-  },
-  "kungfuConfig": {
-    "key": "terminal",
-    "name": "Terminal",
-    "product": {
-      "roles": ["agent-console"],
-      "icon": "💬",
-      "order": 20
-    },
-    "config": {
-      "view": {
-        "title": "Agent Console",
-        "capabilities": [
-          "terminal",
-          "domain",
-          "rewind",
-          "agentRuntime",
-          "agentSession"
-        ]
-      }
-    }
   }
 }

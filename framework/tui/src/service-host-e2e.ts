@@ -28,7 +28,13 @@ import { fileURLToPath } from 'node:url';
 import crypto from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
-import { type KfxLoadPlan, type KfxPlanDeps, planKfx } from '@kungfu-tech/kfx';
+import {
+  KFX_MANIFEST_FILE,
+  KFX_MANIFEST_SCHEMA,
+  type KfxLoadPlan,
+  type KfxPlanDeps,
+  planKfx,
+} from '@kungfu-tech/kfx';
 
 import type { ServiceAuthz } from '@kungfu-tech/api/capability';
 import { launchDiscoveredService } from './service-host.js';
@@ -191,8 +197,9 @@ function discoverDogfood(trusted: boolean): {
   const pkgDir = join(root, 'openclaw');
   mkdirSync(pkgDir, { recursive: true });
   writeFileSync(
-    join(pkgDir, 'package.json'),
+    join(pkgDir, KFX_MANIFEST_FILE),
     JSON.stringify({
+      schema: KFX_MANIFEST_SCHEMA,
       name: '@dogfood/openclaw',
       version: '1.0.0',
       kungfuConfig: {
@@ -284,8 +291,9 @@ function discoverDogfoodCpp(binary: string): {
   // cpSync preserves its executable mode.
   cpSync(binary, join(pkgDir, 'service-bin'));
   writeFileSync(
-    join(pkgDir, 'package.json'),
+    join(pkgDir, KFX_MANIFEST_FILE),
     JSON.stringify({
+      schema: KFX_MANIFEST_SCHEMA,
       name: '@dogfood/openclaw-cpp',
       version: '1.0.0',
       kungfuConfig: {

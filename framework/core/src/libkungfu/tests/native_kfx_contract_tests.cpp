@@ -88,7 +88,7 @@ void test_contract_is_versioned_and_core_owned() {
   require(first.at("contractVersion") == 2, "native contract version drifted");
   require(first.at("versionNegotiation").at("supported") == nlohmann::json::array({1, 2}),
           "native contract stopped accepting frozen v1 documents");
-  require(first.at("sourceContractVersion") == 8, "native contract did not expose its source compatibility version");
+  require(first.at("sourceContractVersion") == 9, "native contract did not expose its source compatibility version");
   require(first.at("runtimeTiers") != first.at("admissionGrades"),
           "runtime tier and admission grade were collapsed into one authority field");
   require(first.at("authority").at("owner") == "libkungfu", "native contract did not assign Core authority");
@@ -135,6 +135,7 @@ void test_positive_and_negative_fixtures() {
 
 void test_manifest_normalization_uses_the_embedded_source_contract() {
   const nlohmann::json manifest = {
+      {"schema", "kungfu.kfx.manifest/v1"},
       {"version", "1.0.0"},
       {"name", "@example/view"},
       {"kungfuConfig",
@@ -241,18 +242,35 @@ void test_registry_negative_and_concurrent_reads() {
   fs::remove_all(degraded_root);
 
   const auto duplicate_root = temp_root("duplicate");
-  const nlohmann::json duplicate_manifest = {
-      {"name", "duplicate"}, {"version", "1.0.0"}, {"kungfuConfig", {{"key", "duplicate-key"}}}};
-  write_json(duplicate_root / "one" / "package.json", duplicate_manifest);
-  write_json(duplicate_root / "two" / "package.json", duplicate_manifest);
+  const nlohmann::json duplicate_manifest = {{"schema", "kungfu.kfx.manifest/v1"},
+                                             {"name", "duplicate"},
+                                             {"version", "1.0.0"},
+                                             {"kungfuConfig", {{"key", "duplicate-key"}}}};
+  write_json(duplicate_root / "one" / "kungfu.kfx.json", duplicate_manifest);
+  write_json(duplicate_root / "two" / "kungfu.kfx.json", duplicate_manifest);
   const nlohmann::json duplicate_request = {
       {"roots", nlohmann::json::array({{{"kind", "workspace"}, {"path", duplicate_root.string()}}})}};
   require_refusal("KF_KFX_PACKAGE_DUPLICATE", [&] { (void)kfx::query_native_kfx_registry("list", duplicate_request); });
   fs::remove_all(duplicate_root);
 
+  const auto legacy_root = temp_root("legacy-manifest");
+  const nlohmann::json legacy_manifest = {
+      {"name", "legacy"}, {"version", "1.0.0"}, {"kungfuConfig", {{"key", "legacy"}}}};
+  write_json(legacy_root / "legacy" / "package.json", legacy_manifest);
+  const nlohmann::json legacy_request = {
+      {"roots", nlohmann::json::array({{{"kind", "workspace"}, {"path", legacy_root.string()}}})}};
+  require_refusal("KF_KFX_MANIFEST_MISSING", [&] { (void)kfx::query_native_kfx_registry("list", legacy_request); });
+  write_json(legacy_root / "legacy" / "kungfu.kfx.json", {{"schema", "kungfu.kfx.manifest/v1"},
+                                                          {"name", "legacy"},
+                                                          {"version", "1.0.0"},
+                                                          {"kungfuConfig", {{"key", "legacy"}}}});
+  require_refusal("KF_KFX_MANIFEST_CONFLICT", [&] { (void)kfx::query_native_kfx_registry("list", legacy_request); });
+  fs::remove_all(legacy_root);
+
   const auto missing_root = temp_root("missing");
-  write_json(missing_root / "suite" / "package.json",
-             {{"name", "missing-suite"},
+  write_json(missing_root / "suite" / "kungfu.kfx.json",
+             {{"schema", "kungfu.kfx.manifest/v1"},
+              {"name", "missing-suite"},
               {"version", "1.0.0"},
               {"kungfuConfig",
                {{"key", "missing-suite"},
@@ -264,13 +282,15 @@ void test_registry_negative_and_concurrent_reads() {
 
   const auto cycle_root = temp_root("cycle");
   write_json(
-      cycle_root / "a" / "package.json",
-      {{"name", "a"},
+      cycle_root / "a" / "kungfu.kfx.json",
+      {{"schema", "kungfu.kfx.manifest/v1"},
+       {"name", "a"},
        {"version", "1.0.0"},
        {"kungfuConfig", {{"key", "a"}, {"suite", {{"title", "A"}, {"members", nlohmann::json::array({"b"})}}}}}});
   write_json(
-      cycle_root / "b" / "package.json",
-      {{"name", "b"},
+      cycle_root / "b" / "kungfu.kfx.json",
+      {{"schema", "kungfu.kfx.manifest/v1"},
+       {"name", "b"},
        {"version", "1.0.0"},
        {"kungfuConfig", {{"key", "b"}, {"suite", {{"title", "B"}, {"members", nlohmann::json::array({"a"})}}}}}});
   const nlohmann::json cycle_request = {
@@ -503,7 +523,7 @@ void test_semantic_graph_and_host_contract_are_canonical() {
 
   const auto fault_root = temp_root("semantic-faults");
   fs::copy(semantic_registry_root(), fault_root, fs::copy_options::recursive | fs::copy_options::overwrite_existing);
-  const auto contributor_path = fault_root / "contributor" / "package.json";
+  const auto contributor_path = fault_root / "contributor" / "kungfu.kfx.json";
   auto contributor = nlohmann::json::parse([&] {
     std::ifstream input(contributor_path);
     return std::string(std::istreambuf_iterator<char>(input), std::istreambuf_iterator<char>());
@@ -541,7 +561,7 @@ void test_semantic_graph_and_host_contract_are_canonical() {
   contributor["kungfuConfig"]["registry"]["dependencies"][1] = {
       {"provider", "provider-host"}, {"version", "^1.0.0"}, {"mode", "required"}};
   write_json(contributor_path, contributor);
-  const auto provider_path = fault_root / "provider-host" / "package.json";
+  const auto provider_path = fault_root / "provider-host" / "kungfu.kfx.json";
   auto provider = nlohmann::json::parse([&] {
     std::ifstream input(provider_path);
     return std::string(std::istreambuf_iterator<char>(input), std::istreambuf_iterator<char>());
@@ -557,9 +577,10 @@ void test_semantic_graph_and_host_contract_are_canonical() {
 
   const auto restored_root = temp_root("semantic-restored");
   fs::copy(semantic_registry_root(), restored_root, fs::copy_options::recursive | fs::copy_options::overwrite_existing);
-  write_json(restored_root / "optional-support" / "package.json", {{"name", "@kungfu-test/optional-support"},
-                                                                   {"version", "1.0.0"},
-                                                                   {"kungfuConfig", {{"key", "optional-support"}}}});
+  write_json(restored_root / "optional-support" / "kungfu.kfx.json", {{"schema", "kungfu.kfx.manifest/v1"},
+                                                                      {"name", "@kungfu-test/optional-support"},
+                                                                      {"version", "1.0.0"},
+                                                                      {"kungfuConfig", {{"key", "optional-support"}}}});
   const nlohmann::json restored_request = {
       {"roots", nlohmann::json::array({{{"kind", "workspace"}, {"path", restored_root.string()}}})}};
   const auto restored = kfx::query_native_kfx_registry("plan", restored_request);
@@ -619,7 +640,7 @@ void test_native_lifecycle_fences_mutations_and_retains_history() {
           "C++ lifecycle roots drifted from the cross-language fixture");
   require(install.at("generation") == 1 && install.at("receipt").at("outcome") == "applied",
           "late install did not produce generation one");
-  require(fs::is_regular_file(home / "extensions" / "optional-view" / "package.json"),
+  require(fs::is_regular_file(home / "extensions" / "optional-view" / "kungfu.kfx.json"),
           "native lifecycle did not atomically materialize the package");
 
   require_refusal("KF_KFX_GENERATION_MISMATCH", [&] {

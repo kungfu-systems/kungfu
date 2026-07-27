@@ -2,7 +2,8 @@
 #
 # `kungfu kfx` — install, list and remove kfx packages for this home.
 #
-# A kfx is an npm package whose package.json carries a `kungfuConfig`
+# A KFX package carries semantic authority in `kungfu.kfx.json`; package.json
+# is transport metadata only.
 # manifest; `npm pack` of such a package is its distribution unit. Install
 # extracts the package into `<home>/extensions/<key>` — the install root the
 # GUI shell and the runtime scan — so a single tgz is a complete, offline
@@ -117,7 +118,7 @@ def _wasm_run_spec(package_dir, manifest, grants):
         raise ValueError("wasm entry must be a file inside the installed package")
     actual_hash = hashlib.sha256(module.read_bytes()).hexdigest()
     if actual_hash != wasm["sha256"]:
-        raise ValueError("wasm entry SHA-256 does not match package.json")
+        raise ValueError("wasm entry SHA-256 does not match kungfu.kfx.json")
     return wasm, module
 
 
@@ -199,7 +200,8 @@ def install(ctx, source, force):
     key = kfx_contract.package_key(manifest)
     if not key:
         click.echo(
-            "[kfx] package.json has no kungfuConfig.key — not a kfx package", err=True
+            "[kfx] kungfu.kfx.json has no kungfuConfig.key — not a kfx package",
+            err=True,
         )
         sys.exit(1)
 
@@ -254,13 +256,15 @@ def list_installed(ctx, as_json):
     if os.path.isdir(root):
         for name in sorted(os.listdir(root)):
             package_dir = os.path.join(root, name)
-            manifest_path = os.path.join(package_dir, "package.json")
+            manifest_path = os.path.join(
+                package_dir, kfx_contract.PACKAGE_MANIFEST_FILE
+            )
             if not os.path.isfile(manifest_path):
                 continue
             try:
                 manifest = _read_manifest_from_dir(package_dir)
             except (OSError, ValueError, json.JSONDecodeError):
-                rows.append({"key": name, "error": "unreadable package.json"})
+                rows.append({"key": name, "error": "unreadable kungfu.kfx.json"})
                 continue
             key = kfx_contract.package_key(manifest) or name
             rows.append(

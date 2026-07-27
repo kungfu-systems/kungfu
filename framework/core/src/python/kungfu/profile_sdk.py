@@ -211,7 +211,7 @@ def discover_source(
         for parent in list(candidates[1:]):
             candidates.extend(path for path in parent.iterdir() if path.is_dir())
         for candidate in candidates:
-            manifest_path = candidate / "package.json"
+            manifest_path = candidate / kfx_contract.PACKAGE_MANIFEST_FILE
             if not manifest_path.is_file():
                 continue
             try:
@@ -2692,6 +2692,13 @@ def _source_files(brief: Mapping[str, Any]) -> dict[str, bytes]:
                 "name": f"@kungfu-profile/{slug}",
                 "version": brief["version"],
                 "private": True,
+            }
+        ),
+        kfx_contract.PACKAGE_MANIFEST_FILE: _pretty(
+            {
+                "schema": kfx_contract.PACKAGE_MANIFEST_SCHEMA,
+                "name": f"@kungfu-profile/{slug}",
+                "version": brief["version"],
                 "kungfuConfig": {
                     "key": brief["id"],
                     "suite": {
@@ -2711,6 +2718,13 @@ def _source_files(brief: Mapping[str, Any]) -> dict[str, bytes]:
                 "name": f"@kungfu-profile/{member}",
                 "version": brief["version"],
                 "private": True,
+            }
+        )
+        files[f"members/{member}/{kfx_contract.PACKAGE_MANIFEST_FILE}"] = _pretty(
+            {
+                "schema": kfx_contract.PACKAGE_MANIFEST_SCHEMA,
+                "name": f"@kungfu-profile/{member}",
+                "version": brief["version"],
                 "kungfuConfig": {"key": member},
             }
         )
@@ -2738,7 +2752,7 @@ def _package_dirs(suite_dir: Path) -> list[Path]:
         for candidate in [root, *[p for p in root.iterdir() if p.is_dir()]]:
             resolved = candidate.resolve()
             try:
-                is_package = (resolved / "package.json").is_file()
+                is_package = (resolved / kfx_contract.PACKAGE_MANIFEST_FILE).is_file()
             except OSError:
                 is_package = False
             if resolved not in seen and is_package:

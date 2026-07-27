@@ -1,20 +1,4 @@
 {
   "name": "@kungfu-test/required-service",
-  "version": "1.0.0",
-  "kungfuConfig": {
-    "key": "required-service",
-    "config": {
-      "service": {
-        "runtimes": [
-          "python"
-        ],
-        "entry": {
-          "python": "service.py"
-        },
-        "capabilities": [
-          "ledger"
-        ]
-      }
-    }
-  }
+  "version": "1.0.0"
 }

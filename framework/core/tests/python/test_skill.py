@@ -421,9 +421,10 @@ def test_skill_dependency_binding_resolves_installed_kfx(tmp_path):
     home = tmp_path / "home"
     extension = home / "extensions" / "journal-manager"
     extension.mkdir(parents=True)
-    (extension / "package.json").write_text(
+    (extension / "kungfu.kfx.json").write_text(
         json.dumps(
             {
+                "schema": "kungfu.kfx.manifest/v1",
                 "name": "@kungfu-tech/kfx-view-journal-manager",
                 "version": "4.0.0-alpha.1",
                 "kungfuConfig": {
@@ -452,9 +453,10 @@ def test_multiple_skills_bind_one_shared_kfx_without_duplicate_registry(tmp_path
     home = tmp_path / "home"
     extension = home / "extensions" / "shared-view"
     extension.mkdir(parents=True)
-    (extension / "package.json").write_text(
+    (extension / "kungfu.kfx.json").write_text(
         json.dumps(
             {
+                "schema": "kungfu.kfx.manifest/v1",
                 "name": "@kungfu-tech/kfx-view-shared",
                 "version": "1.2.3",
                 "kungfuConfig": {
@@ -507,9 +509,10 @@ def test_skill_dependency_binding_marks_version_mismatch_unresolved(tmp_path):
     home = tmp_path / "home"
     extension = home / "extensions" / "versioned-view"
     extension.mkdir(parents=True)
-    (extension / "package.json").write_text(
+    (extension / "kungfu.kfx.json").write_text(
         json.dumps(
             {
+                "schema": "kungfu.kfx.manifest/v1",
                 "name": "@kungfu-tech/kfx-view-versioned",
                 "version": "1.0.0",
                 "kungfuConfig": {

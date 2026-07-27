@@ -20,11 +20,11 @@ def check(name, ok, detail=""):
 
 
 install_dir = os.path.join(home, "extensions", "work-dashboard")
-manifest_path = os.path.join(install_dir, "package.json")
+manifest_path = os.path.join(install_dir, "kungfu.kfx.json")
 bundle_path = os.path.join(install_dir, "dist", "view", "index.js")
 
 check("installed under <home>/extensions/<key>", os.path.isdir(install_dir))
-check("package.json present", os.path.isfile(manifest_path))
+check("kungfu.kfx.json present", os.path.isfile(manifest_path))
 check("view bundle present", os.path.isfile(bundle_path))
 
 if os.path.isfile(manifest_path):

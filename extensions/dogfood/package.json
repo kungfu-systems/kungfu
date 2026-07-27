@@ -6,19 +6,5 @@
   "private": true,
   "dependencies": {
     "@kungfu-tech/kfx-view-work-dashboard": "workspace:*"
-  },
-  "kungfuConfig": {
-    "key": "kungfu.dogfood-feedback",
-    "name": "Dogfood Feedback",
-    "suite": {
-      "title": "Dogfood Feedback",
-      "members": [
-        "dogfood-contract",
-        "dogfood-actions",
-        "dogfood-assessment",
-        "work-dashboard"
-      ],
-      "profile": "profile.json"
-    }
   }
 }

@@ -18,10 +18,10 @@
 
 from __future__ import annotations
 
-import json
 import os
 from collections.abc import Iterator
 
+from kungfu import kfx_contract
 from kungfu.rewind import first_party
 
 ENV_EXTENSION_PATH = "KF_EXTENSION_PATH"
@@ -49,12 +49,14 @@ def _scan_packages(root: str) -> Iterator[str]:
         return
     for name in sorted(os.listdir(root)):
         pkg = os.path.join(root, name)
-        if os.path.isfile(os.path.join(pkg, "package.json")):
+        if os.path.isfile(os.path.join(pkg, kfx_contract.PACKAGE_MANIFEST_FILE)):
             yield pkg
         elif os.path.isdir(pkg):
             for sub in sorted(os.listdir(pkg)):
                 nested = os.path.join(pkg, sub)
-                if os.path.isfile(os.path.join(nested, "package.json")):
+                if os.path.isfile(
+                    os.path.join(nested, kfx_contract.PACKAGE_MANIFEST_FILE)
+                ):
                     yield nested
 
 
@@ -78,8 +80,7 @@ def discover_adapters(
     for root in _extension_roots(runtime_dir):
         for pkg in _scan_packages(root):
             try:
-                with open(os.path.join(pkg, "package.json")) as f:
-                    manifest = json.load(f)
+                manifest = kfx_contract.read_manifest_from_dir(pkg)
             except (OSError, ValueError):
                 continue
             kfx = manifest.get("kungfuConfig") or {}
