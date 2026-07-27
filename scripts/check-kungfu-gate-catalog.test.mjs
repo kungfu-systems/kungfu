@@ -114,7 +114,7 @@ test('PR proof closes heavy gates before exact queue reuse', () => {
   );
   assert.match(native, /- source_acceptance[\s\S]*- candidate_preflight/);
   assert.match(native, /needs\.proof_probe\.outputs\.reuse != 'true'/);
-  assert.doesNotMatch(native, /github\.event_name == 'merge_group'/);
+  assert.doesNotMatch(native, /if:.*merge_group.*runs-on:/su);
   assert.match(source, /require_optional_gate "PR affected-native"/);
   assert.match(source, /producer-event[\s\S]*producer-head-sha/);
   assert.match(source, /Upload authoritative producer proof/);

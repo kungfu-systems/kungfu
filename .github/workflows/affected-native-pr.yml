@@ -570,7 +570,11 @@ jobs:
           seal dependency "$DEPENDENCY_MATCHED_KEY" "$DEPENDENCY_HIT"
           seal compiler "$COMPILER_MATCHED_KEY" "$COMPILER_HIT"
       - name: Seal cache promotion payload
-        if: ${{ steps.native-gate.outcome == 'success' }}
+        if: >-
+          ${{
+            github.event_name == 'merge_group' &&
+            steps.native-gate.outcome == 'success'
+          }}
         shell: bash
         run: |
           set -euo pipefail

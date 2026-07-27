@@ -121,7 +121,7 @@
           "authority": "qualification",
           "publication": "none",
           "receipt": "diagnostic",
-          "definitionDigest": "sha256:0a1fa9b22247f7de7aa7249716bcb0eaf7c363d7ff1b375049b96c360f54fd7c",
+          "definitionDigest": "sha256:ae120c4e72309e2df03eec607999f337152dabd852fcf73b701fc9fc62770ce9",
           "credentials": {
             "githubToken": "read",
             "oidc": false,
@@ -239,7 +239,7 @@
             {
               "index": 22,
               "label": "name:Seal cache promotion payload",
-              "definitionDigest": "sha256:bb228f735f4b1094ce7963277b6d3e1b14c4b7c4df5bce743ebc58f0ad0718a5"
+              "definitionDigest": "sha256:8df9b0df2db2468af1ce0466b5979bdfbde7abc42b6aa183c060fdab44d048b0"
             },
             {
               "index": 23,
@@ -1761,25 +1761,21 @@
             {
               "index": 1,
               "label": "name:Check out exact requested source",
-              "authority": "qualification",
               "definitionDigest": "sha256:8dadccb662572a36e399d8e49b2d322f8bfd05795c0ccfc318f9467d456738af"
             },
             {
               "index": 2,
               "label": "name:Verify trusted runner and local-model runtime",
-              "authority": "qualification",
               "definitionDigest": "sha256:5adf31a595ebc0f5a293750189dc15ca3ab7606595a87fbb551bb67ca0358cf7"
             },
             {
               "index": 3,
               "label": "name:Install and build exact Kungfu source",
-              "authority": "qualification",
               "definitionDigest": "sha256:815183de19d5ab01d9425cd24cb6b362832291eecd1c0332678171eb6bdbfe57"
             },
             {
               "index": 4,
               "label": "name:Run two fresh OpenCode sessions through Kungfu",
-              "authority": "qualification",
               "definitionDigest": "sha256:c631b34757f41ccc053a34122e4fba284a0453b6f1b30e924d5e930149a9fd5a"
             },
             {

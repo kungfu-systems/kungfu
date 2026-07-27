@@ -261,6 +261,17 @@ test('push promotion waits for the exact required Gate instead of whole-run comp
   assert.doesNotMatch(workflow, /status=completed/u);
 });
 
+test('pull-request proof producers never seal merge-group cache payloads', () => {
+  const workflow = fs.readFileSync(
+    '.github/workflows/affected-native-pr.yml',
+    'utf8',
+  );
+  assert.match(
+    workflow,
+    /name: Seal cache promotion payload[\s\S]*?if:\s*>-[\s\S]*?github\.event_name == 'merge_group' &&[\s\S]*?steps\.native-gate\.outcome == 'success'/u,
+  );
+});
+
 test('cache payload sealing accepts Conan-relative symlinks inside its root', (t) => {
   const root = fs.mkdtempSync(
     path.join(os.tmpdir(), 'kungfu-cache-promotion-conan-symlink-'),
