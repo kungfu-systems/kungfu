@@ -161,6 +161,13 @@ test('portable-off qualification profile covers every native Build lane', () => 
     'utf8',
   );
   assert.equal(buildWorkflow.split(`sha256:${digest}`).length - 1, 2);
+  assert.match(
+    fs.readFileSync(
+      path.join(ROOT, 'scripts/measure-layer-gate-baseline.ps1'),
+      'utf8',
+    ),
+    new RegExp(`SHIFU_CACHE_PROFILE_DIGEST = 'sha256:${digest}'`, 'u'),
+  );
 });
 
 for (const [label, args, source] of [

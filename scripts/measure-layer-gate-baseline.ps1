@@ -17,7 +17,7 @@ if (-not $RunLabel) {
 }
 
 $env:SHIFU_CACHE_PROFILE_REF = 'docs/shifu/qualification-portable-off.cache-profile.json'
-$env:SHIFU_CACHE_PROFILE_DIGEST = 'sha256:251ecdb33a34b770a6fbd40b0b05c5c8c0d629a06d9144e6d2d89c9c8e70258b'
+$env:SHIFU_CACHE_PROFILE_DIGEST = 'sha256:d7002041716ea1e5ad703492815c9557576d5679227743541c13d42b6ea9de5c'
 $env:SHIFU_CACHE_SCOPE = 'self-hosted-runner'
 $env:KUNGFU_BUILDCHAIN_NO_OPTIONAL = '1'
 $env:KUNGFU_BUILDCHAIN_SOURCE_BUILD = '1'
