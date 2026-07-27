@@ -164,7 +164,7 @@ test('KFX plan projects the declared Work Control GUI experience', () => {
     planDeps,
   );
   const profile = plan.profiles.find(
-    (candidate) => candidate.id === 'kungfu.mission-control',
+    (candidate) => candidate.id === 'kungfu.work-control',
   );
   assert.deepEqual(profile, {
     id: 'kungfu.work-control',
