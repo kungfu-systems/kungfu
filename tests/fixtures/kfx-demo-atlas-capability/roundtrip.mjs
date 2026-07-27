@@ -4,7 +4,7 @@ import { execFileSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 import { openProfile } from '../../../framework/api/src/capability/profile.ts';
-import { openMissionControlProfile } from '../../../extensions/work-dashboard/src/view/mission-control-profile.ts';
+import { openWorkControlProfile } from '../../../extensions/work-dashboard/src/view/mission-control-profile.ts';
 import { fail, locate, tmpDir, uvPython } from '../_harness.mjs';
 
 const { fixtureDir, coreDir } = locate(import.meta.url);
@@ -34,7 +34,7 @@ const profile = openProfile({
   env: { KUNGFU_ATLAS_REPO: sampleRoot },
   bin,
 });
-const atlas = openMissionControlProfile(profile, sampleRoot);
+const atlas = openWorkControlProfile(profile, sampleRoot);
 
 function ck(label, ok) {
   if (!ok) fail(label);

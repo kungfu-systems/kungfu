@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 //
-// Render-smoke the current read-only global Work view without opening Electron.
+// Render-smoke the current read-only Portfolio view without opening Electron.
 // The kfx bundle is loaded the same CommonJS-wrapped way the GUI loader consumes
 // it, while this fixture injects React and the Electron IPC boundary.
 //
@@ -162,12 +162,12 @@ const html = ReactDomServer.renderToStaticMarkup(
 );
 
 for (const needle of [
-  'Work · Live global view',
-  'connecting live global Work…',
+  'Portfolio · Live federated view',
+  'connecting live Portfolio…',
   'active local project workspace',
-  'no current Work across active local workspaces',
+  'no current work across active local workspaces',
 ]) {
-  if (!html.includes(needle)) fail(`rendered global Work view missing ${needle}`);
+  if (!html.includes(needle)) fail(`rendered Portfolio view missing ${needle}`);
 }
 
-console.log('[kfx-demo-work-dashboard-atlas-view] global Work render ok');
+console.log('[kfx-demo-work-dashboard-atlas-view] Portfolio render ok');
