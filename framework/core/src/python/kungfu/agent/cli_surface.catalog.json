@@ -1,7 +1,7 @@
 {
-  "catalogRoot": "sha256:d1ed4528448bd29f33b7fc0624a6b333a500fc5d4a91c6c115769cd46b0e3a0a",
+  "catalogRoot": "sha256:cfaa2d46d1b0596787d7e6374e5f8abb95103a1b575b41e1f45f7dd780909f1f",
   "contractId": "kungfu-cli-surface",
-  "contractRoot": "sha256:289fa3ae518742f2e8fe86746ad0c482396e96bd16da5c0c038ad1a886026a74",
+  "contractRoot": "sha256:5ed37af1aa8f7ed161a5a1fc9c21c5ad035ef5b19bf97f532c9421b00b4e966f",
   "kfd3Linkage": [
     {
       "apiIds": [],
@@ -2552,12 +2552,6 @@
     },
     {
       "apiIds": [],
-      "reason": "no-agent-first-api-declared",
-      "state": "unlinked",
-      "surfaceId": "kungfu.cli.commands.tui.tui"
-    },
-    {
-      "apiIds": [],
       "reason": "navigation-only",
       "state": "unlinked",
       "surfaceId": "kungfu.cli.commands.update.update"
@@ -2939,11 +2933,11 @@
       "kfd3Registry": "strict-link",
       "packagedInventory": "required-agent-pack-entry"
     },
-    "expectedSurfaceRoot": "sha256:ea7bde6841a235b1a5b3adff9db0415ab134190be6b3814570565297ac1a03e0",
+    "expectedSurfaceRoot": "sha256:1933355688d68eafeccb2ca44697075be63f93ff3a6148c475693fa86bea7ca6",
     "regeneration": "./shifu fix:cli-catalog-parity",
     "validation": "./shifu check:cli-catalog-parity"
   },
-  "registryRoot": "sha256:9511636a3d40612ef10e46b91c45c1455c909716052a6a432efcee675287c1ef",
+  "registryRoot": "sha256:26c0a16389234c956f51901318b26e2504f5452d37555fcabfa99e8f85d3157b",
   "schema": "kungfu.cli-surface-catalog/v1",
   "schemaRoot": "sha256:30e0c49658aee967b24294362af12e977c8d62eaa455eb83ffdaa50072021569",
   "source": {
@@ -2956,7 +2950,7 @@
     "pathAuthority": "live-click-tree",
     "root": "kungfu"
   },
-  "surfaceRoot": "sha256:ea7bde6841a235b1a5b3adff9db0415ab134190be6b3814570565297ac1a03e0",
+  "surfaceRoot": "sha256:1933355688d68eafeccb2ca44697075be63f93ff3a6148c475693fa86bea7ca6",
   "surfaces": [
     {
       "aliases": [],
@@ -29215,52 +29209,6 @@
         "symbol": "trace"
       },
       "summary": "capture an agent run into a local trace store: kungfu trace -- <command>",
-      "visibility": "advanced"
-    },
-    {
-      "aliases": [],
-      "approval_policy": {
-        "caller_confirmation_required": false,
-        "mode": "none",
-        "preconditions": []
-      },
-      "audience": [
-        "human",
-        "agent"
-      ],
-      "availability": {
-        "conditions": [
-          "source-runtime"
-        ],
-        "state": "available"
-      },
-      "canonical_path": "kungfu tui",
-      "id": "kungfu.cli.commands.tui.tui",
-      "kfd3_api_id": null,
-      "kfd3_api_ids": [],
-      "kind": "command",
-      "maturity": "stable",
-      "mutation_class": "read",
-      "owner": "core",
-      "parameters": [
-        {
-          "arity": -1,
-          "kind": "argument",
-          "name": "commands",
-          "required": false,
-          "type": "text"
-        }
-      ],
-      "path_depth": 2,
-      "schema_refs": [],
-      "section": "advanced",
-      "source": {
-        "familyPolicy": false,
-        "kind": "runtime-click",
-        "module": "kungfu.cli.commands.tui",
-        "symbol": "tui"
-      },
-      "summary": "Open Kungfu's interactive terminal product surface.",
       "visibility": "advanced"
     },
     {

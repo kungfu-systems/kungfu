@@ -17,6 +17,40 @@ export type QualificationLabStartupRoute = {
   writeOccurred: false;
 };
 
+export type QualificationLabStartupSurface = 'work-graph' | 'qualification-lab';
+
+export function qualificationLabStartupSurface(
+  startup: QualificationLabStartupRoute,
+): QualificationLabStartupSurface {
+  return startup.state === 'existing-work' &&
+    startup.route === 'work-graph' &&
+    startup.workGraphPresent === true
+    ? 'work-graph'
+    : 'qualification-lab';
+}
+
+export function qualificationRunProgressLabel({
+  elapsedMs,
+  quietMs,
+  eventCount,
+  phase = 'running',
+}: {
+  elapsedMs: number;
+  quietMs: number;
+  eventCount: number;
+  phase?: 'running' | 'assessing';
+}): string {
+  const elapsedSeconds = Math.max(0, Math.floor(elapsedMs / 1000));
+  const quietSeconds = Math.max(0, Math.floor(quietMs / 1000));
+  if (phase === 'assessing') {
+    return `Canonical run complete · emphasizing verdicts · ${eventCount} admitted events shown`;
+  }
+  if (eventCount === 0) {
+    return `Still running · ${elapsedSeconds}s elapsed · waiting for first admitted event`;
+  }
+  return `Still running · ${elapsedSeconds}s elapsed · ${eventCount} admitted events shown · last update ${quietSeconds}s ago`;
+}
+
 export type QualificationLabCatalog = {
   schema: 'kungfu.qualification-lab.catalog/v1';
   startup: QualificationLabStartupRoute;
@@ -45,6 +79,21 @@ export type QualificationLabEvent = {
   step: string;
   status: string;
   root: string;
+  publicActivity?: {
+    schema: 'kungfu.qualification-lab.public-activity/v1';
+    source: 'provider-jsonl';
+    kind: 'agent' | 'tool';
+    phase: 'progress' | 'started' | 'completed';
+    text: string;
+    rawOutputRedacted: true;
+  };
+  publicOutput?: {
+    schema: 'kungfu.qualification-lab.public-output/v1';
+    source: 'provider-stdout';
+    admission: 'exact-qualification-marker';
+    lines: string[];
+    rawOutputRedacted: true;
+  };
 };
 
 export type QualificationLabReport = {
