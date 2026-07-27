@@ -58,6 +58,14 @@ test('conformant surface cannot omit a binding', () => {
   reroot(v);
   assert.throws(() => validateRegistry(v), /does not bind every invariant/);
 });
+test('surface workflow binding must be declared by the workflow inventory', () => {
+  const v = get();
+  v.surfaces
+    .find((x) => x.id === 'product-binaries')
+    .workflowBindings.push('.github/workflows/stable-candidate-patrol.yml');
+  reroot(v);
+  assert.throws(() => validateRegistry(v), /not surface-bound/);
+});
 test('prose-only isolation fails', () => {
   const v = get();
   const s = v.surfaces.find((x) => x.id === 'shifu-launcher');
@@ -65,10 +73,10 @@ test('prose-only isolation fails', () => {
   reroot(v);
   assert.throws(() => validateRegistry(v), /partition every invariant/);
 });
-test('alpha admits while stable and major fail closed', () => {
+test('alpha and stable admit while major fails closed', () => {
   const v = get();
   assert.equal(admit(v, 'product-alpha').qualifying, true);
-  assert.equal(admit(v, 'product-stable').qualifying, false);
+  assert.equal(admit(v, 'product-stable').qualifying, true);
   assert.equal(admit(v, 'product-major').qualifying, false);
 });
 test('isolated rehearsal never publishes', () => {
@@ -88,16 +96,20 @@ test('Buildchain inventory detects additions', () => {
   assert.deepEqual(x.unregistered, ['.github/workflows/release-surprise.yml']);
 });
 
-test('live inspection reads exact Buildchain and reports missing isolated rulesets', () => {
+test('live inspection reads exact Buildchain and both admitted channel rulesets', () => {
   const v = get();
   const alpha = JSON.parse(
     fs.readFileSync('docs/qualification/alpha-ruleset.contract.json', 'utf8'),
   );
+  const stable = JSON.parse(
+    fs.readFileSync('docs/qualification/stable-ruleset.contract.json', 'utf8'),
+  );
   const routes = [];
   const github = (route) => {
     routes.push(route);
-    if (route.includes('/rulesets?')) return [{ id: 101 }];
+    if (route.includes('/rulesets?')) return [{ id: 101 }, { id: 102 }];
     if (route.endsWith('/rulesets/101')) return { id: 101, ...alpha.ruleset };
+    if (route.endsWith('/rulesets/102')) return { id: 102, ...stable.ruleset };
     if (route.includes('/git/trees/'))
       return {
         truncated: false,
@@ -115,7 +127,7 @@ test('live inspection reads exact Buildchain and reports missing isolated rulese
   );
   assert.equal(
     live.rulesets.find(({ channel }) => channel === 'stable').status,
-    'missing',
+    'matching',
   );
   assert.equal(
     live.rulesets.find(({ channel }) => channel === 'major').status,
@@ -127,8 +139,8 @@ test('live inspection reads exact Buildchain and reports missing isolated rulese
   );
   assert.equal(
     live.surfaces.find(({ id }) => id === 'product-stable').publicationReady,
-    false,
+    true,
   );
-  assert.equal(routes.length, 3);
+  assert.equal(routes.length, 4);
   assert.ok(routes.every((route) => !/[?&](method|action)=/u.test(route)));
 });

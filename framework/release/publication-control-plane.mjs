@@ -95,6 +95,9 @@ export function validateRegistry(r, { root = ROOT } = {}) {
     r.repositories.kungfu.workflowInventory.map((x) => x.path),
     'workflow inventory',
   ).sort();
+  const workflowInventory = new Map(
+    r.repositories.kungfu.workflowInventory.map((x) => [x.path, x]),
+  );
   if (JSON.stringify(declared) !== JSON.stringify(workflows(root)))
     throw new Error('Kungfu workflow inventory drift');
   const surfaceIds = new Set(r.surfaces.map((x) => x.id));
@@ -125,6 +128,8 @@ export function validateRegistry(r, { root = ROOT } = {}) {
     for (const workflow of s.workflowBindings || []) {
       if (!declared.includes(workflow))
         throw new Error(`${s.id} unknown workflow`);
+      if (!workflowInventory.get(workflow)?.surfaceIds.includes(s.id))
+        throw new Error(`${s.id} workflow binding is not surface-bound`);
     }
     if (s.protocolMode === 'conformant') {
       if (
@@ -158,6 +163,7 @@ export function validateRegistry(r, { root = ROOT } = {}) {
       throw new Error(`${c.id} optional ruleset`);
     if (c.adapterContractPath) {
       const a = read(path.join(root, c.adapterContractPath));
+      validateAlphaRulesetContract(a);
       if (`refs/heads/${a.targetRef}` !== c.target)
         throw new Error(`${c.id} adapter drift`);
     } else if (
