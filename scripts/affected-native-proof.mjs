@@ -11,6 +11,8 @@ import { pathToFileURL } from 'node:url';
 
 export const IDENTITY_SCHEMA = 'kungfu.affected-native-proof-identity/v3';
 export const PROOF_SCHEMA = 'kungfu.affected-native-proof/v3';
+export const CACHE_PROMOTION_AUTHORITY_SCHEMA =
+  'kungfu.affected-native-cache-promotion-authority/v1';
 export const WORKFLOW_PATH = '.github/workflows/affected-native-pr.yml';
 export const DEFAULT_MAX_AGE_SECONDS = 6 * 60 * 60;
 const PRODUCER_EVENTS = new Set(['pull_request', 'merge_group']);
@@ -45,6 +47,21 @@ function readJson(file) {
 function requireSha(value, label) {
   if (!/^[0-9a-f]{40}$/u.test(value || '')) {
     throw new Error(`${label} must be an exact Git SHA`);
+  }
+  return value;
+}
+
+function requireRunId(value, label) {
+  const runId = Number(value);
+  if (!Number.isInteger(runId) || runId < 1) {
+    throw new Error(`${label} must be a positive integer`);
+  }
+  return runId;
+}
+
+function requireRepository(value, label) {
+  if (!/^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/u.test(value || '')) {
+    throw new Error(`${label} must be an exact repository`);
   }
   return value;
 }
@@ -384,6 +401,120 @@ export function verifyProofBundle(descriptor, bundleDir, options) {
   return proof;
 }
 
+export function createCachePromotionAuthority(
+  descriptor,
+  proofBundleDir,
+  options,
+) {
+  const target = {
+    repository: requireRepository(
+      options.targetRepository,
+      'cache promotion target repository',
+    ),
+    runId: requireRunId(options.targetRunId, 'cache promotion target run id'),
+    event: options.targetEvent,
+    headSha: requireSha(options.targetHeadSha, 'cache promotion target head'),
+    sourceTree: requireSha(
+      options.targetSourceTree,
+      'cache promotion target source tree',
+    ),
+  };
+  if (target.event !== 'merge_group') {
+    throw new Error('cache promotion target must be merge_group');
+  }
+  if (descriptor.identity?.sourceTree !== target.sourceTree) {
+    throw new Error('cache promotion target source tree drift');
+  }
+  const proof = verifyProofBundle(descriptor, proofBundleDir, {
+    repository: options.producerRepository,
+    producerRunId: options.producerRunId,
+    producerEvent: options.producerEvent,
+    producerHeadSha: options.producerHeadSha,
+    maxAgeSeconds:
+      options.maxAgeSeconds === undefined
+        ? DEFAULT_MAX_AGE_SECONDS
+        : Number(options.maxAgeSeconds),
+    now: options.now,
+  });
+  if (proof.producer.repository !== target.repository) {
+    throw new Error('cache promotion producer repository drift');
+  }
+  const body = {
+    schema: CACHE_PROMOTION_AUTHORITY_SCHEMA,
+    target,
+    proof: {
+      proofId: proof.proofId,
+      artifactName: proof.artifactName,
+      proofRoot: proof.proofRoot,
+    },
+    producer: proof.producer,
+    partitionCount: descriptor.identity.partitionCount,
+    planProjectionDigest: descriptor.identity.planProjectionDigest,
+    payloadSourceSha: proof.producer.checkoutSha,
+  };
+  return { ...body, authorityDigest: digest(body) };
+}
+
+export function verifyCachePromotionAuthority(authorityDir, options) {
+  const authority = readJson(path.join(authorityDir, 'authority.json'));
+  const { authorityDigest, ...body } = authority;
+  if (
+    authority.schema !== CACHE_PROMOTION_AUTHORITY_SCHEMA ||
+    authorityDigest !== digest(body)
+  ) {
+    throw new Error('cache promotion authority digest drift');
+  }
+  const expectedTarget = {
+    repository: requireRepository(
+      options.targetRepository,
+      'cache promotion target repository',
+    ),
+    runId: requireRunId(options.targetRunId, 'cache promotion target run id'),
+    event: 'merge_group',
+    headSha: requireSha(options.targetHeadSha, 'cache promotion target head'),
+    sourceTree: requireSha(
+      options.targetSourceTree,
+      'cache promotion target source tree',
+    ),
+  };
+  if (stableJson(authority.target) !== stableJson(expectedTarget)) {
+    throw new Error('cache promotion target authority drift');
+  }
+  const descriptor = readJson(path.join(authorityDir, 'descriptor.json'));
+  if (
+    descriptor.identity?.sourceTree !== expectedTarget.sourceTree ||
+    authority.partitionCount !== descriptor.identity?.partitionCount ||
+    authority.planProjectionDigest !== descriptor.identity?.planProjectionDigest
+  ) {
+    throw new Error('cache promotion descriptor authority drift');
+  }
+  const proof = verifyProofBundle(
+    descriptor,
+    path.join(authorityDir, 'proof'),
+    {
+      repository: authority.producer?.repository,
+      producerRunId: authority.producer?.runId,
+      producerEvent: authority.producer?.event,
+      producerHeadSha: authority.producer?.triggerHeadSha,
+      maxAgeSeconds:
+        options.maxAgeSeconds === undefined
+          ? DEFAULT_MAX_AGE_SECONDS
+          : Number(options.maxAgeSeconds),
+      now: options.now,
+    },
+  );
+  if (
+    authority.proof?.proofId !== proof.proofId ||
+    authority.proof?.artifactName !== proof.artifactName ||
+    authority.proof?.proofRoot !== proof.proofRoot ||
+    stableJson(authority.producer) !== stableJson(proof.producer) ||
+    authority.payloadSourceSha !== proof.producer.checkoutSha
+  ) {
+    throw new Error('cache promotion proof authority drift');
+  }
+  return authority;
+}
+
 export function selectReusableArtifact({
   artifacts,
   runsById,
@@ -533,6 +664,19 @@ function writeJson(file, value) {
   fs.writeFileSync(file, `${JSON.stringify(value, null, 2)}\n`);
 }
 
+function copyDirectory(source, destination) {
+  fs.mkdirSync(destination, { recursive: true });
+  for (const entry of fs.readdirSync(source, { withFileTypes: true })) {
+    const sourcePath = path.join(source, entry.name);
+    const destinationPath = path.join(destination, entry.name);
+    if (entry.isDirectory()) {
+      copyDirectory(sourcePath, destinationPath);
+    } else if (entry.isFile()) {
+      fs.copyFileSync(sourcePath, destinationPath);
+    }
+  }
+}
+
 async function main() {
   const options = parseArgs(process.argv.slice(2));
   if (options.command === 'toolchain') {
@@ -642,8 +786,75 @@ async function main() {
     );
     return;
   }
+  if (options.command === 'seal-cache-authority') {
+    const descriptorFile = path.resolve(options.descriptor);
+    const proofBundleDir = path.resolve(options.bundle);
+    const outputDir = path.resolve(options['output-dir']);
+    const authority = createCachePromotionAuthority(
+      readJson(descriptorFile),
+      proofBundleDir,
+      {
+        targetRepository: options.repository,
+        targetRunId: options['target-run-id'],
+        targetEvent: 'merge_group',
+        targetHeadSha: options['target-head-sha'],
+        targetSourceTree:
+          options['target-source-tree'] || git('rev-parse', 'HEAD^{tree}'),
+        producerRepository: options.repository,
+        producerRunId: options['producer-run-id'],
+        producerEvent: options['producer-event'],
+        producerHeadSha: options['producer-head-sha'],
+        maxAgeSeconds: Number(
+          options['max-age-seconds'] || DEFAULT_MAX_AGE_SECONDS,
+        ),
+        now: options.now,
+      },
+    );
+    fs.mkdirSync(outputDir, { recursive: true });
+    fs.copyFileSync(descriptorFile, path.join(outputDir, 'descriptor.json'));
+    copyDirectory(proofBundleDir, path.join(outputDir, 'proof'));
+    writeJson(path.join(outputDir, 'authority.json'), authority);
+    console.log(JSON.stringify(authority, null, 2));
+    return;
+  }
+  if (options.command === 'verify-cache-authority') {
+    const authority = verifyCachePromotionAuthority(
+      path.resolve(options.bundle),
+      {
+        targetRepository: options.repository,
+        targetRunId: options['target-run-id'],
+        targetHeadSha: options['target-head-sha'],
+        targetSourceTree:
+          options['target-source-tree'] || git('rev-parse', 'HEAD^{tree}'),
+        maxAgeSeconds: Number(
+          options['max-age-seconds'] || DEFAULT_MAX_AGE_SECONDS,
+        ),
+        now: options.now,
+      },
+    );
+    appendGithubOutput(options['github-output'], {
+      'authority-digest': authority.authorityDigest,
+      'producer-run-id': authority.producer.runId,
+      'producer-event': authority.producer.event,
+      'producer-trigger-head-sha': authority.producer.triggerHeadSha,
+      'payload-source-sha': authority.payloadSourceSha,
+    });
+    console.log(
+      JSON.stringify(
+        {
+          status: 'verified',
+          authorityDigest: authority.authorityDigest,
+          payloadSourceSha: authority.payloadSourceSha,
+          producer: authority.producer,
+        },
+        null,
+        2,
+      ),
+    );
+    return;
+  }
   throw new Error(
-    'usage: affected-native-proof.mjs <toolchain|describe|lookup|seal|verify>',
+    'usage: affected-native-proof.mjs <toolchain|describe|lookup|seal|verify|seal-cache-authority|verify-cache-authority>',
   );
 }
 

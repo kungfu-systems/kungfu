@@ -582,7 +582,8 @@ jobs:
       - name: Seal cache promotion payload
         if: >-
           ${{
-            github.event_name == 'merge_group' &&
+            (github.event_name == 'pull_request' ||
+             github.event_name == 'merge_group') &&
             steps.native-gate.outcome == 'success'
           }}
         shell: bash
@@ -909,11 +910,49 @@ jobs:
             --checkout-sha "$(git rev-parse HEAD)"
           echo "proof-created=true" >> "$GITHUB_OUTPUT"
           echo "All affected-native partitions passed."
+      - name: Seal reused-proof cache promotion authority
+        if: >-
+          ${{
+            github.event_name == 'merge_group' &&
+            needs.proof_probe.outputs.reuse == 'true'
+          }}
+        shell: bash
+        env:
+          PRODUCER_RUN_ID: ${{ needs.proof_probe.outputs.producer-run-id }}
+          PRODUCER_EVENT: ${{ needs.proof_probe.outputs.producer-event }}
+          PRODUCER_HEAD_SHA: ${{ needs.proof_probe.outputs.producer-head-sha }}
+        run: |
+          set -euo pipefail
+          admission=product/qualification/affected-native
+          # shifu-entry-contract: allow sealing post-admission cache transport authority
+          node scripts/affected-native-proof.mjs seal-cache-authority \
+            --descriptor "$admission/proof-admission/descriptor.json" \
+            --bundle "$admission/proof-reuse" \
+            --output-dir "$admission/cache-promotion-authority" \
+            --repository "$GITHUB_REPOSITORY" \
+            --target-run-id "$GITHUB_RUN_ID" \
+            --target-head-sha "$GITHUB_SHA" \
+            --target-source-tree "$(git rev-parse 'HEAD^{tree}')" \
+            --producer-run-id "$PRODUCER_RUN_ID" \
+            --producer-event "$PRODUCER_EVENT" \
+            --producer-head-sha "$PRODUCER_HEAD_SHA"
       - name: Upload authoritative producer proof
         if: ${{ steps.admit.outputs.proof-created == 'true' }}
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: ${{ needs.proof_probe.outputs.artifact-name }}
           path: product/qualification/affected-native/proof-bundle
+          if-no-files-found: error
+          retention-days: 14
+      - name: Upload reused-proof cache promotion authority
+        if: >-
+          ${{
+            github.event_name == 'merge_group' &&
+            needs.proof_probe.outputs.reuse == 'true'
+          }}
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: core-affected-native-cache-promotion-authority-${{ github.run_id }}
+          path: product/qualification/affected-native/cache-promotion-authority
           if-no-files-found: error
           retention-days: 14
