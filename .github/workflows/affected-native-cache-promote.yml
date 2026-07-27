@@ -1,0 +1,164 @@
+# SPDX-License-Identifier: Apache-2.0
+
+name: Promote affected-native cache
+
+on:
+  push:
+    branches:
+      - dev/v*/v*
+
+concurrency:
+  group: affected-native-cache-promote-${{ github.sha }}
+  cancel-in-progress: false
+
+permissions:
+  actions: write
+  contents: read
+
+jobs:
+  promote:
+    name: Promote qualified merge-group cache
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@v6.4.0
+        with:
+          node-version: "24"
+      - name: Locate an exact successful merge-group producer
+        id: producer
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          producer_run=""
+          attempt=1
+          gate_without_payload_polls=0
+          while [ "$attempt" -le 60 ]; do
+            runs="$(
+              gh api --method GET \
+                "repos/${GITHUB_REPOSITORY}/actions/workflows/affected-native-pr.yml/runs" \
+                -f event=merge_group \
+                -f head_sha="$GITHUB_SHA" \
+                -f per_page=20 \
+                --jq '.workflow_runs | sort_by(.created_at) | reverse | .[].id'
+            )"
+            gate_observed=false
+            artifact_partial=false
+            for run_id in $runs; do
+              gate_success_count="$(
+                gh api --method GET \
+                  "repos/${GITHUB_REPOSITORY}/actions/runs/${run_id}/jobs" \
+                  -f filter=latest \
+                  -f per_page=100 \
+                  --jq '[.jobs[] | select(.name == "affected-native / linux" and .status == "completed" and .conclusion == "success")] | length'
+              )"
+              [ "$gate_success_count" -eq 1 ] || continue
+              gate_observed=true
+              artifact_state="$(
+                gh api \
+                  "repos/${GITHUB_REPOSITORY}/actions/runs/${run_id}/artifacts?per_page=100" \
+                  --jq "[.artifacts[] | select(.expired == false and (.name | startswith(\"core-affected-native-${GITHUB_SHA}-partition-\"))) | (.name | capture(\"-partition-(?<index>[0-9]+)-of-(?<count>[0-9]+)$\"))] | if length == 0 then \"absent\" elif ((map(.count) | unique | length) == 1 and (.[0].count | tonumber) == length and (map(.index | tonumber) | sort) == [range(0; (.[0].count | tonumber))]) then \"complete\" else \"partial\" end"
+              )"
+              if [ "$artifact_state" = "complete" ]; then
+                producer_run="$run_id"
+                break
+              fi
+              if [ "$artifact_state" = "partial" ]; then
+                artifact_partial=true
+              fi
+            done
+            if [ -n "$producer_run" ]; then
+              break
+            fi
+            if [ "$gate_observed" = "true" ] &&
+              [ "$artifact_partial" = "false" ]; then
+              gate_without_payload_polls=$((gate_without_payload_polls + 1))
+              if [ "$gate_without_payload_polls" -ge 3 ]; then
+                break
+              fi
+            else
+              gate_without_payload_polls=0
+            fi
+            sleep 10
+            attempt=$((attempt + 1))
+          done
+          if [ -z "$producer_run" ]; then
+            {
+              echo "available=false"
+              echo "run-id="
+            } >> "$GITHUB_OUTPUT"
+            echo "No complete required-Gate cache payload exists for merged source $GITHUB_SHA."
+            exit 0
+          fi
+          {
+            echo "available=true"
+            echo "run-id=${producer_run}"
+          } >> "$GITHUB_OUTPUT"
+          echo "Exact merge-group producer run: ${producer_run}"
+      - name: Download exact partition payloads
+        if: ${{ steps.producer.outputs.available == 'true' }}
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          repository: ${{ github.repository }}
+          run-id: ${{ steps.producer.outputs.run-id }}
+          github-token: ${{ github.token }}
+          pattern: core-affected-native-${{ github.sha }}-partition-*-of-*
+          path: product/qualification/cache-promotion/artifacts
+      - name: Install pinned cache contract tools
+        if: ${{ steps.producer.outputs.available == 'true' }}
+        env:
+          BUILDCHAIN_CHECK_MODE: source
+        # shifu-entry-contract: allow source-tool bootstrap before the promotion verifier is runnable
+        run: node scripts/buildchain-install.mjs
+      - name: Verify promotion authority
+        if: ${{ steps.producer.outputs.available == 'true' }}
+        id: promotion
+        run: |
+          # shifu-entry-contract: allow verifying post-merge cache transport evidence outside the candidate Gate
+          node scripts/affected-native-cache-payload.mjs promote \
+            --artifacts-dir product/qualification/cache-promotion/artifacts \
+            --expected-head-sha "$GITHUB_SHA" \
+            --expected-run-id "${{ steps.producer.outputs.run-id }}" \
+            --expected-repository "$GITHUB_REPOSITORY" \
+            --output product/qualification/cache-promotion/promotion.json \
+            --github-output "$GITHUB_OUTPUT"
+      - name: Materialize qualified cache roots
+        if: ${{ steps.producer.outputs.available == 'true' }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          promotion="product/qualification/cache-promotion/promotion.json"
+          dependency_archive="$(jq -r '.dependency.absoluteArchive' "$promotion")"
+          tar -xf "$dependency_archive" -C "$HOME"
+          while IFS= read -r compiler_archive; do
+            tar -xf "$compiler_archive" -C "$HOME"
+          done < <(jq -r '.compiler.archives[].archive' "$promotion")
+      - name: Save default-branch dependency cache
+        if: ${{ steps.producer.outputs.available == 'true' }}
+        uses: actions/cache/save@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+        with:
+          path: ~/.conan2/p
+          key: ${{ steps.promotion.outputs.dependency-key }}
+      - name: Save default-branch compiler cache
+        if: ${{ steps.producer.outputs.available == 'true' }}
+        uses: actions/cache/save@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+        with:
+          path: ~/.cache/ccache
+          key: ${{ steps.promotion.outputs.compiler-key }}
+      - name: Summarize promotion
+        if: ${{ steps.producer.outputs.available == 'true' }}
+        shell: bash
+        run: |
+          {
+            echo "### Affected-native cache promotion"
+            echo
+            echo "- merged source: \`$GITHUB_SHA\`"
+            echo "- merge-group producer: \`${{ steps.producer.outputs.run-id }}\`"
+            echo "- authority: complete source-bound partition receipts and payload digests"
+            echo "- validation: current-source configure/build/CTest remains mandatory on restore"
+          } >> "$GITHUB_STEP_SUMMARY"

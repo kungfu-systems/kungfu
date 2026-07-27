@@ -562,18 +562,36 @@ jobs:
           }
           seal dependency "$DEPENDENCY_MATCHED_KEY" "$DEPENDENCY_HIT"
           seal compiler "$COMPILER_MATCHED_KEY" "$COMPILER_HIT"
-      - name: Save dependency cache
-        if: ${{ steps.native-gate.outcome == 'success' && steps.dependency-cache.outputs.cache-hit != 'true' && matrix.partition == 0 }}
-        uses: actions/cache/save@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
-        with:
-          path: ${{ steps.dependency-plan.outputs.cache-paths }}
-          key: ${{ steps.dependency-plan.outputs.cache-key }}
-      - name: Save compiler cache
-        if: ${{ steps.native-gate.outcome == 'success' && steps.compiler-cache.outputs.cache-hit != 'true' }}
-        uses: actions/cache/save@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
-        with:
-          path: ${{ steps.compiler-plan.outputs.cache-paths }}
-          key: ${{ steps.compiler-plan.outputs.cache-key }}
+      - name: Seal cache promotion payload
+        if: ${{ steps.native-gate.outcome == 'success' }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          qualification="product/qualification/affected-native"
+          payload="${qualification}/cache/payload"
+          mkdir -p "$payload"
+          test -d "$HOME/.cache/ccache"
+          tar --format=ustar -cf "$payload/compiler.tar" -C "$HOME" .cache/ccache
+          dependency_args=()
+          if [ "$KUNGFU_AFFECTED_NATIVE_PARTITION_INDEX" = "0" ]; then
+            test -d "$HOME/.conan2/p"
+            tar --format=ustar -cf "$payload/dependency.tar" -C "$HOME" .conan2/p
+            dependency_args=(
+              --dependency-archive "$payload/dependency.tar"
+            )
+          fi
+          # shifu-entry-contract: allow sealing post-build cache transport evidence without re-entering the Gate
+          node scripts/affected-native-cache-payload.mjs seal \
+            --qualification-dir "$qualification" \
+            --output "$payload/payload.manifest.json" \
+            --partition-index "$KUNGFU_AFFECTED_NATIVE_PARTITION_INDEX" \
+            --partition-count "$KUNGFU_AFFECTED_NATIVE_PARTITION_COUNT" \
+            --repository "$GITHUB_REPOSITORY" \
+            --run-id "$GITHUB_RUN_ID" \
+            --event "$GITHUB_EVENT_NAME" \
+            --head-sha "$GITHUB_SHA" \
+            --compiler-archive "$payload/compiler.tar" \
+            "${dependency_args[@]}"
       - name: Upload raw plan, receipt, and logs
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
@@ -582,6 +600,7 @@ jobs:
           path: product/qualification/affected-native
           if-no-files-found: warn
           retention-days: 14
+          compression-level: 0
 
   shifu_workspace:
     name: Shifu workspace / ${{ matrix.os }}
@@ -615,6 +634,7 @@ jobs:
           ./shifu gate run shifu.workspace --capability rust
       - name: Run Shifu workspace Gate (Windows)
         if: runner.os == 'Windows'
+        shell: pwsh
         run: |
           .\shifu.cmd install --frozen-lockfile
           .\shifu.cmd gate run shifu.workspace --capability rust
@@ -623,12 +643,14 @@ jobs:
         run: ./shifu xinfa:check
       - name: Verify Xinfa producer contracts (Windows)
         if: runner.os == 'Windows'
+        shell: pwsh
         run: .\shifu.cmd xinfa:check
       - name: Qualify repository context quality (POSIX)
         if: runner.os != 'Windows'
         run: ./shifu xinfa:quality --check
       - name: Qualify repository context quality (Windows)
         if: runner.os == 'Windows'
+        shell: pwsh
         run: .\shifu.cmd xinfa:quality --check
 
   kfd_verifier:

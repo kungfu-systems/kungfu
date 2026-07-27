@@ -41,6 +41,21 @@ function digest(value) {
     .digest('hex')}`;
 }
 
+export function affectedNativeCompilerPlanDigest(
+  planDigest,
+  executionPartition,
+) {
+  return digest({
+    planDigest,
+    executionPartition: {
+      count: executionPartition.count,
+      index: executionPartition.index,
+      coverageDigest: executionPartition.coverageDigest,
+      partitionDigest: executionPartition.partitionDigest,
+    },
+  });
+}
+
 function fileIdentity(root) {
   return IDENTITY_FILES.map((relative) => ({
     path: relative,
@@ -85,17 +100,18 @@ export function createAffectedNativeCacheManifests({
     partitionCount,
     partitionIndex,
   );
+  const cacheProfileDigest = digest({
+    profile: 'core-affected-native-v1',
+    authority: plan.authority,
+    platformTier: plan.platformTier,
+  });
   const commonIdentity = {
     platform: (env.RUNNER_OS || process.platform).toLowerCase(),
     arch: (env.RUNNER_ARCH || process.arch).toLowerCase(),
     runnerImage: env.ImageOS || env.RUNNER_IMAGE || 'ubuntu-24.04',
     toolchainDigest: digest({ tools, node: process.version }),
     dependencyLockDigest: digest(files),
-    profileDigest: digest({
-      profile: plan.profile,
-      authority: plan.authority,
-      platformTier: plan.platformTier,
-    }),
+    profileDigest: cacheProfileDigest,
     sourceSha: plan.head,
     planDigest: plan.planDigest,
   };
@@ -118,15 +134,10 @@ export function createAffectedNativeCacheManifests({
         ? commonIdentity
         : {
             ...commonIdentity,
-            profileDigest: digest({
-              profileDigest: commonIdentity.profileDigest,
-              executionPartition: {
-                count: executionPartition.count,
-                index: executionPartition.index,
-                coverageDigest: executionPartition.coverageDigest,
-                partitionDigest: executionPartition.partitionDigest,
-              },
-            }),
+            planDigest: affectedNativeCompilerPlanDigest(
+              commonIdentity.planDigest,
+              executionPartition,
+            ),
           },
     ),
   };

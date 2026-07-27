@@ -11,6 +11,7 @@ on:
 permissions:
   actions: write
   contents: read
+  pull-requests: write
 
 jobs:
   cancel:
@@ -25,6 +26,7 @@ jobs:
       - name: Cancel active merge-group runs for the dequeued pull request
         env:
           DEQUEUED_PULL_REQUEST: ${{ github.event.pull_request.number }}
+          DEQUEUED_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           MERGE_GROUP_WORKFLOW: affected-native-pr.yml
         run: ./shifu ci:cancel-dequeued-merge-group

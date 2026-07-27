@@ -190,6 +190,27 @@ test('current Kungfu catalog, docs, matrix, actions, and workflows align', () =>
   assert.equal(controllers.length, 9);
   assert.ok(controllers.every((fact) => fact.gates.length > 0));
   assert.equal(result.workflowAuthority.workflows.length, 21);
+  const cachePromotion = result.workflowAuthority.workflows.find(
+    (workflow) =>
+      workflow.path === '.github/workflows/affected-native-cache-promote.yml',
+  );
+  assert.equal(cachePromotion?.authority, 'qualification');
+  assert.deepEqual(
+    cachePromotion?.jobs.map(({ id, credentials, publication, receipt }) => ({
+      id,
+      githubToken: credentials.githubToken,
+      publication,
+      receipt,
+    })),
+    [
+      {
+        id: 'promote',
+        githubToken: 'write',
+        publication: 'none',
+        receipt: 'diagnostic',
+      },
+    ],
+  );
   const alphaPreflight = result.workflowAuthority.workflows.find(
     (workflow) =>
       workflow.path === '.github/workflows/alpha-promotion-preflight.yml',

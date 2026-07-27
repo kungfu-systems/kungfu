@@ -39,6 +39,96 @@
       ]
     },
     {
+      "path": ".github/workflows/affected-native-cache-promote.yml",
+      "authority": "qualification",
+      "definitionDigest": "sha256:7167d6d244e4b14a9c763971264ab56786590032e0b7382630da0b614082355f",
+      "jobs": [
+        {
+          "id": "promote",
+          "authority": "qualification",
+          "publication": "none",
+          "receipt": "diagnostic",
+          "definitionDigest": "sha256:51eb5b344fc83cdf48efa439a2bb78505e07349d220fd3ad6b73262302b28341",
+          "credentials": {
+            "githubToken": "write",
+            "oidc": false,
+            "repositorySecrets": [],
+            "inheritedSecrets": false,
+            "environment": null
+          },
+          "externalActions": [
+            "actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0",
+            "actions/setup-node@v6.4.0",
+            "actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093",
+            "actions/cache/save@0057852bfaa89a56745cba8c7296529d2fc39830",
+            "actions/cache/save@0057852bfaa89a56745cba8c7296529d2fc39830"
+          ],
+          "steps": [
+            {
+              "index": 1,
+              "label": "uses:actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0",
+              "authority": "qualification",
+              "definitionDigest": "sha256:632ec7dde43669059eab6d285d75746bede178c3eb57b9a15f693b4ac96c355d"
+            },
+            {
+              "index": 2,
+              "label": "uses:actions/setup-node@v6.4.0",
+              "authority": "qualification",
+              "definitionDigest": "sha256:789e56d63991440fb89fffa3b2795c1cab043e6b7df6237a0c830c5c89759690"
+            },
+            {
+              "index": 3,
+              "label": "id:producer",
+              "authority": "qualification",
+              "definitionDigest": "sha256:1f4880e2366f083e279cfe8e1980be8cf3d933ca64478f94dbfd37ed07fa83f6"
+            },
+            {
+              "index": 4,
+              "label": "name:Download exact partition payloads",
+              "authority": "evidence-publication",
+              "definitionDigest": "sha256:eea8a5315f7fd516d02c2f68771a345b394857c61c0d21355bd4a73f0a91e897"
+            },
+            {
+              "index": 5,
+              "label": "name:Install pinned cache contract tools",
+              "authority": "qualification",
+              "definitionDigest": "sha256:1ea792aaabfae4d87b5e301934af76d2be0986f30f1f640e8a62e9d70329607d"
+            },
+            {
+              "index": 6,
+              "label": "id:promotion",
+              "authority": "qualification",
+              "definitionDigest": "sha256:1a9cfe82c0a54c6e61733defe4b09179fb596cfcd3b6c5e904c092b9c2e58ade"
+            },
+            {
+              "index": 7,
+              "label": "name:Materialize qualified cache roots",
+              "authority": "qualification",
+              "definitionDigest": "sha256:1b094565f9b248158eb8668d57ed8ba1048e4cd51b59d3c8723c527b6c30be50"
+            },
+            {
+              "index": 8,
+              "label": "name:Save default-branch dependency cache",
+              "authority": "qualification",
+              "definitionDigest": "sha256:48ca9d95481afa9aff0ff03818bdc7cd6b6a68c47495d19d721efa6e1df7a700"
+            },
+            {
+              "index": 9,
+              "label": "name:Save default-branch compiler cache",
+              "authority": "qualification",
+              "definitionDigest": "sha256:b323dbabda91082de84ba5cb0c7275f7d3c96713ef378f87c817b70731cf9272"
+            },
+            {
+              "index": 10,
+              "label": "name:Summarize promotion",
+              "authority": "qualification",
+              "definitionDigest": "sha256:145278d59db41a14aacb6d069297739a40478d43087b019fa146405066142a91"
+            }
+          ]
+        }
+      ]
+    },
+    {
       "path": ".github/workflows/affected-native-pr.yml",
       "authority": "qualification",
       "definitionDigest": "sha256:39fd2da7f5cadbcd59d570a8d6c98c074e2ed33d94c369d53b461793a6f57627",
@@ -48,7 +138,7 @@
           "authority": "qualification",
           "publication": "none",
           "receipt": "diagnostic",
-          "definitionDigest": "sha256:52a05c4c83408343c3928fa3e37468d53908689cf66ae08bf891261697a07626",
+          "definitionDigest": "sha256:8ea536c190534e322e3481e35b9db84159b838887bb480f102d1ae07659c9de6",
           "credentials": {
             "githubToken": "read",
             "oidc": false,
@@ -186,21 +276,15 @@
             },
             {
               "index": 22,
-              "label": "name:Save dependency cache",
+              "label": "name:Seal cache promotion payload",
               "authority": "qualification",
-              "definitionDigest": "sha256:8f6eabd31ff9c94980e28ea47b32d2d0c927d23dda497c0c642d5297a6f523c6"
+              "definitionDigest": "sha256:5a08f60bc594df88d88341ff1b5fbffbe51b399f4de43b006d38d59635ba289e"
             },
             {
               "index": 23,
-              "label": "name:Save compiler cache",
-              "authority": "evidence-publication",
-              "definitionDigest": "sha256:01670cfed95efad195e0c2e5451634eeb401468493d46aadbc9c8a329146bbe8"
-            },
-            {
-              "index": 24,
               "label": "name:Upload raw plan, receipt, and logs",
               "authority": "evidence-publication",
-              "definitionDigest": "sha256:69bcddc7d298cf073e4479481e6b810b8cdc33013f012e12f927530ab54d85a0"
+              "definitionDigest": "sha256:e658c08749a4041fa584bfea835e1b1df8233ef908bddc87cc0a565a45118220"
             }
           ]
         },
@@ -497,7 +581,7 @@
           "authority": "qualification",
           "publication": "none",
           "receipt": "diagnostic",
-          "definitionDigest": "sha256:4802085227e1ebe682982fef8a6ff7b4367476c692fbd2e6ec02c40f4a2fbe5a",
+          "definitionDigest": "sha256:edc52f7da49447feda564cb29d2b59665e30309778c90109af054e6489ad6cff",
           "credentials": {
             "githubToken": "read",
             "oidc": false,
@@ -529,7 +613,7 @@
               "index": 4,
               "label": "name:Run Shifu workspace Gate (Windows)",
               "authority": "qualification",
-              "definitionDigest": "sha256:bf5dbf1e72381bfe8a6588801c7b7100b9e5e7986623f38c7749d00cf4597a5c"
+              "definitionDigest": "sha256:2d69c9917e49532f53e1ea93b523b2c2b0fa88450b6df1bdf7cdb50a9ed7dd59"
             },
             {
               "index": 5,
@@ -541,7 +625,7 @@
               "index": 6,
               "label": "name:Verify Xinfa producer contracts (Windows)",
               "authority": "qualification",
-              "definitionDigest": "sha256:cf18195970fdb8eb168be74c0c3affcd71b0951a12e6b901f3573e1e9cd2b566"
+              "definitionDigest": "sha256:2614f1feaff1c58fb2cbb1882d0b9776056e2330955d8d633c255ae1104c3f69"
             },
             {
               "index": 7,
@@ -553,7 +637,7 @@
               "index": 8,
               "label": "name:Qualify repository context quality (Windows)",
               "authority": "qualification",
-              "definitionDigest": "sha256:80f3c187a20ae685904dea5732bf0bce3f43779e40eb59d4d7a19855df31bb58"
+              "definitionDigest": "sha256:70fc4a83da8efee0bf4434a4326e8e51f214ca3e46048d5fd2f4952abacda2af"
             }
           ]
         },
@@ -1073,14 +1157,14 @@
     {
       "path": ".github/workflows/cancel-dequeued-merge-group.yml",
       "authority": "qualification",
-      "definitionDigest": "sha256:363e6063ef09de7c252267d8fecc51661b48b59f7bc10c9708c0c9ca8756889a",
+      "definitionDigest": "sha256:fb8c59a8ba571c6091bdc5663830676b0cbe14a2741a7063ad69f78e1694fb52",
       "jobs": [
         {
           "id": "cancel",
           "authority": "qualification",
           "publication": "none",
           "receipt": "diagnostic",
-          "definitionDigest": "sha256:1348c28887a104ed47167e4db811ccb8c6fbc96dd05b9173fc7d5890371ac406",
+          "definitionDigest": "sha256:d14354805fbdc7b02ea0ad410361729d6d8cb8da3303fad62f3b26e299c2f3a3",
           "credentials": {
             "githubToken": "write",
             "oidc": false,
@@ -1102,7 +1186,7 @@
               "index": 2,
               "label": "name:Cancel active merge-group runs for the dequeued pull request",
               "authority": "qualification",
-              "definitionDigest": "sha256:2fc1f5d1fc6888d41c81612ab35f770c348191325c9e6af3b3528db07dd86810"
+              "definitionDigest": "sha256:47dbc2484365ea0484e9bb75c329d8f55362c2b70057ebf7044856f0868a546e"
             }
           ]
         }
