@@ -10,11 +10,14 @@ import { fileURLToPath } from 'node:url';
 import {
   CATALOG_ARTIFACT,
   CATALOG_SOURCE,
+  CPP_STRING_LITERAL_CHUNK_BYTES,
   buildPrimitiveCatalog,
   discoverPrimitiveArtifacts,
   expectedOutputs,
   findGhostArtifacts,
   primitiveArtifactClosureIssues,
+  renderCppRawStringChunks,
+  renderHeader,
   verifyPrimitiveDefinition,
   verifyPrimitivePromotion,
 } from './generate-primitive-catalog.mjs';
@@ -134,6 +137,27 @@ test('catalog is a deterministic projection with nine required primitives', () =
     expectedOutputs(ROOT).get(CATALOG_SOURCE),
     expectedOutputs(ROOT).get(CATALOG_ARTIFACT),
   );
+});
+
+test('generated C++ catalog preserves bytes across MSVC-safe literals', () => {
+  const catalog = buildPrimitiveCatalog(ROOT);
+  const payload = JSON.stringify(catalog);
+  const literals = renderCppRawStringChunks(payload);
+  const chunks = literals.map((literal) => {
+    const match = literal.match(/^ {4}R"(KFPC\d+)\((.*)\)\1"$/su);
+    assert.ok(match, `expected one generated raw string literal: ${literal}`);
+    return match[2];
+  });
+  assert.ok(chunks.length > 1, 'fixture must exercise literal chunking');
+  assert.equal(chunks.join(''), payload);
+  assert.ok(
+    chunks.every(
+      (chunk) =>
+        Buffer.byteLength(chunk) <= CPP_STRING_LITERAL_CHUNK_BYTES &&
+        Buffer.byteLength(chunk) < 16_380,
+    ),
+  );
+  assert.ok(renderHeader(catalog).includes(literals.join('\n')));
 });
 
 test('ghost fixture is rejected by the declaration join', () => {
