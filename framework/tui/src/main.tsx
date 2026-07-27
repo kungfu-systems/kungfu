@@ -4,25 +4,22 @@ import { execFile, execFileSync, spawn } from 'node:child_process';
 import fs from 'node:fs';
 import { createRequire } from 'node:module';
 import { constants as osConstants } from 'node:os';
+import { homedir } from 'node:os';
 import path from 'node:path';
 import {
+  type GlobalWorkSnapshot,
   type ProductSearchDocument,
-  type Profile,
   type QualificationLab,
   type QualificationLabStartupRoute,
   SYSTEM_HELP_DOCUMENTS,
-  type WorkLoop,
   loadCliHelpSearchDocuments,
-  openProfile,
   openQualificationLab,
-  openWorkLoop,
   qualificationLabStartupSurface,
   searchProductDocuments,
 } from '@kungfu-tech/api/capability';
 import { Box, Text, render, useApp } from 'ink';
 import React from 'react';
 
-import { loadTuiKfxPlan } from './kfx-plan.js';
 import { boundedIndex, decodeShellKey } from './navigation.js';
 import {
   CLOSED_CONTROL_PLANE,
@@ -54,10 +51,11 @@ import {
   resolveTuiRuntimeDir,
 } from './terminal-lifecycle.js';
 import {
-  degradedWorkControlModel,
-  loadWorkControlContribution,
+  degradedGlobalWorkModel,
+  globalWorkContribution,
+  loadLatestGlobalWorkCache,
+  startGlobalWorkObserver,
 } from './work-control-contribution.js';
-import { workLoopShellModel } from './work-loop-contribution.js';
 
 const nodeRequire = createRequire(import.meta.url);
 
@@ -91,30 +89,13 @@ function runtimePaths() {
         'kungfu-config.contract.json',
       ),
     }),
+    configHome:
+      process.env.KF_CONFIG_HOME || path.join(homedir(), '.kungfu-config'),
     bin:
       process.env.KUNGFU_CLI_BIN ||
       process.env.KUNGFU_BIN ||
       (fs.existsSync(packagedBin) ? packagedBin : 'kungfu'),
-    repoRoot: process.env.KF_WORKSPACE_ROOT || process.cwd(),
   };
-}
-
-function openTuiProfile(): Profile {
-  const paths = runtimePaths();
-  return openProfile({
-    runtimeDir: paths.runtimeDir,
-    bin: paths.bin,
-    env: cliEnvironment(),
-    execFileSync: (file, args, options) => execFileSync(file, args, options),
-    execFile: (file, args, options) =>
-      new Promise<string>((resolve, reject) => {
-        execFile(file, args, options, (error, stdout, stderr) => {
-          if (error)
-            reject(new Error(describeCliFailure(error, stdout, stderr)));
-          else resolve(stdout);
-        });
-      }),
-  });
 }
 
 function openTuiQualificationLab(): QualificationLab {
@@ -199,24 +180,6 @@ function openTuiQualificationLab(): QualificationLab {
   });
 }
 
-function openTuiWorkLoop(): WorkLoop {
-  const paths = runtimePaths();
-  return openWorkLoop({
-    runtimeDir: paths.runtimeDir,
-    repoRoot: paths.repoRoot,
-    bin: paths.bin,
-    env: cliEnvironment(),
-    execFile: (file, args, options) =>
-      new Promise<string>((resolve, reject) => {
-        execFile(file, args, options, (error, stdout, stderr) => {
-          if (error)
-            reject(new Error(describeCliFailure(error, stdout, stderr)));
-          else resolve(stdout);
-        });
-      }),
-  });
-}
-
 class DimensionStore {
   private listeners = new Set<(dimensions: TerminalDimensions) => void>();
   constructor(private current: TerminalDimensions) {}
@@ -257,120 +220,105 @@ class InsetDimensionSource {
 }
 
 function WorkControlHost({
-  profile,
-  workLoop,
   dimensions,
   onOpenLab,
   onSearchDocuments,
   isInputCaptured,
 }: {
-  profile: Profile;
-  workLoop: WorkLoop;
   dimensions: InsetDimensionSource;
   onOpenLab: () => void;
   onSearchDocuments: (documents: ProductSearchDocument[]) => void;
   isInputCaptured: () => boolean;
 }) {
   const { exit } = useApp();
-  const kfxPlan = React.useMemo(() => loadTuiKfxPlan(process.env), []);
+  const paths = React.useMemo(() => runtimePaths(), []);
+  const observerStatePath = React.useMemo(
+    () => path.join(paths.configHome, 'tui', 'global-work-observer.json'),
+    [paths.configHome],
+  );
+  const initialSnapshot = React.useMemo(
+    () =>
+      loadLatestGlobalWorkCache(
+        (candidate) => fs.readFileSync(candidate, 'utf8'),
+        [
+          observerStatePath,
+          path.join(paths.configHome, 'gui', 'global-work-observer.json'),
+        ],
+      ),
+    [observerStatePath, paths.configHome],
+  );
   const [size, setSize] = React.useState(dimensions.get());
   const [model, setModel] = React.useState<ProfileShellModel>(() =>
-    degradedWorkControlModel('loading public Profile projection'),
+    initialSnapshot
+      ? globalWorkContribution(initialSnapshot).model
+      : degradedGlobalWorkModel('loading global Portfolio'),
   );
-  const [busy, setBusy] = React.useState(true);
+  const [busy, setBusy] = React.useState(initialSnapshot === null);
+  const [observerError, setObserverError] = React.useState('');
   const [selectedCard, setSelectedCard] = React.useState(0);
   const [activeRegion, setActiveRegion] = React.useState(1);
-  const refreshGeneration = React.useRef(0);
+  const latestRevision = React.useRef('');
 
-  const refresh = React.useCallback(
-    async (initiativeId = '') => {
-      const generation = ++refreshGeneration.current;
-      setBusy(true);
-      try {
-        const next = await loadWorkControlContribution(
-          profile,
-          kfxPlan,
-          initiativeId,
-        );
-        let loopProjection: ProfileShellModel['workLoop'];
-        let loopError = '';
-        if (next.profile.qualified) {
-          try {
-            const [inspection, recovery] = await Promise.all([
-              workLoop.inspect(),
-              workLoop.recover(),
-            ]);
-            loopProjection = workLoopShellModel(inspection, recovery);
-          } catch (error) {
-            loopError = error instanceof Error ? error.message : String(error);
-          }
-        }
-        if (generation === refreshGeneration.current) {
-          setModel({
-            ...next,
-            workLoop: loopProjection,
-            workLoopError: loopError || undefined,
-          });
-          setSelectedCard(0);
-        }
-      } catch (error) {
-        if (generation === refreshGeneration.current) {
-          setModel(degradedWorkControlModel(error));
-        }
-      } finally {
-        if (generation === refreshGeneration.current) setBusy(false);
+  const applySnapshot = React.useCallback(
+    (snapshot: GlobalWorkSnapshot) => {
+      const revision = JSON.stringify({
+        projection: snapshot.global_work.projection_root,
+        observedAt: snapshot.observed_at,
+        visible: snapshot.global_work.visible_work_count,
+        state: snapshot.aggregate.state,
+      });
+      if (revision === latestRevision.current) {
+        setBusy(false);
+        return;
       }
+      latestRevision.current = revision;
+      const contribution = globalWorkContribution(snapshot);
+      setModel(contribution.model);
+      onSearchDocuments(contribution.searchDocuments);
+      setSelectedCard((current) =>
+        Math.min(current, Math.max(0, contribution.model.cards.length - 1)),
+      );
+      setObserverError('');
+      setBusy(false);
     },
-    [profile, workLoop, kfxPlan],
+    [onSearchDocuments],
   );
 
   React.useEffect(() => dimensions.subscribe(setSize), [dimensions]);
-  React.useEffect(
-    () => () => {
-      refreshGeneration.current += 1;
-    },
-    [],
-  );
   React.useEffect(() => {
-    void refresh(process.env.KF_INITIATIVE_ID || '');
-  }, [refresh]);
-  React.useEffect(() => {
-    const documents: ProductSearchDocument[] = [
-      ...(model.subject.id
-        ? [
-            {
-              id: `work.initiative.${model.subject.id}`,
-              kind: 'work' as const,
-              title: model.subject.title,
-              summary: model.subject.subtitle,
-              keywords: ['initiative', model.subject.id],
-              priority: 0,
-              action: {
-                kind: 'open-work' as const,
-                workId: model.subject.id,
-              },
-            },
-          ]
-        : []),
-      ...model.cards.map((card, index) => ({
-        id: `work.assignment.${card.id}`,
-        kind: 'work' as const,
-        title: card.title,
-        summary: `${card.summary} · ${card.status}`,
-        keywords: ['assignment', card.id, card.status],
-        priority: index + 1,
-        action: { kind: 'open-work' as const, workId: card.id },
-      })),
-    ];
-    onSearchDocuments(documents);
-  }, [model, onSearchDocuments]);
+    if (initialSnapshot) applySnapshot(initialSnapshot);
+    fs.mkdirSync(path.dirname(observerStatePath), { recursive: true });
+    return startGlobalWorkObserver({
+      bin: paths.bin,
+      env: cliEnvironment(),
+      statePath: observerStatePath,
+      spawn: (file, args, options) => spawn(file, args, options),
+      onSnapshot: applySnapshot,
+      onError: (error) => {
+        setObserverError(error.message);
+        setBusy(false);
+      },
+    });
+  }, [applySnapshot, initialSnapshot, observerStatePath, paths.bin]);
   React.useEffect(() => {
     const onData = (chunk: Buffer | string) => {
       if (isInputCaptured()) return;
       const key = decodeShellKey(String(chunk));
       if (key === 'quit') return exit();
       if (key === 'qualification-lab') return onOpenLab();
-      if (key === 'refresh') return void refresh(model.subject.id);
+      if (key === 'refresh') {
+        setBusy(true);
+        const cached = loadLatestGlobalWorkCache(
+          (candidate) => fs.readFileSync(candidate, 'utf8'),
+          [
+            observerStatePath,
+            path.join(paths.configHome, 'gui', 'global-work-observer.json'),
+          ],
+        );
+        if (cached) applySnapshot(cached);
+        else setBusy(false);
+        return;
+      }
       if (key === 'next-card') {
         setSelectedCard((current) =>
           boundedIndex(current, 1, model.cards.length),
@@ -383,27 +331,34 @@ function WorkControlHost({
         setActiveRegion((current) => boundedIndex(current, 1, 3));
       } else if (key === 'previous-region') {
         setActiveRegion((current) => boundedIndex(current, -1, 3));
-      } else if (key === 'next-subject' || key === 'previous-subject') {
-        const current = model.navigation.findIndex(
-          (row) => row.id === model.subject.id,
-        );
-        const delta = key === 'next-subject' ? 1 : -1;
-        const next =
-          model.navigation[
-            boundedIndex(current, delta, model.navigation.length)
-          ];
-        if (next) void refresh(next.id);
       }
     };
     process.stdin.on('data', onData);
     return () => {
       process.stdin.off('data', onData);
     };
-  }, [exit, isInputCaptured, model, onOpenLab, refresh]);
+  }, [
+    applySnapshot,
+    exit,
+    isInputCaptured,
+    model.cards.length,
+    observerStatePath,
+    onOpenLab,
+    paths.configHome,
+  ]);
+
+  const displayedModel = observerError
+    ? {
+        ...model,
+        notice: [model.notice, `live observer: ${observerError}`]
+          .filter(Boolean)
+          .join(' · '),
+      }
+    : model;
 
   return (
     <ProfileShell
-      model={model}
+      model={displayedModel}
       dimensions={size}
       selectedCard={selectedCard}
       activeRegion={activeRegion}
@@ -502,8 +457,6 @@ function ProductHost({
   const [catalogStatus, setCatalogStatus] = React.useState(
     'Loading governed command catalog',
   );
-  const profile = React.useMemo(() => openTuiProfile(), []);
-  const workLoop = React.useMemo(() => openTuiWorkLoop(), []);
   const contentDimensions = React.useMemo(
     () => new InsetDimensionSource(dimensions, 4),
     [dimensions],
@@ -571,9 +524,23 @@ function ProductHost({
 
   const resolvedStartup = startup ?? PENDING_STARTUP;
   const startupSurface = qualificationLabStartupSurface(resolvedStartup);
+  const cachedGlobalWorkPresent = React.useMemo(() => {
+    const paths = runtimePaths();
+    return (
+      (loadLatestGlobalWorkCache(
+        (candidate) => fs.readFileSync(candidate, 'utf8'),
+        [
+          path.join(paths.configHome, 'tui', 'global-work-observer.json'),
+          path.join(paths.configHome, 'gui', 'global-work-observer.json'),
+        ],
+      )?.global_work.visible_work.length ?? 0) > 0
+    );
+  }, []);
   const labOpen =
     surface === 'lab' ||
-    (surface === 'auto' && startupSurface === 'qualification-lab');
+    (surface === 'auto' &&
+      startupSurface === 'qualification-lab' &&
+      !cachedGlobalWorkPresent);
   const availableQuickCommands = React.useMemo(
     () =>
       labOpen
@@ -609,7 +576,7 @@ function ProductHost({
         kind: 'command',
         title: command.command,
         summary: command.summary,
-        section: 'Quick commands',
+        section: 'Quick actions',
         keywords: [command.title],
         priority: index,
         action: {
@@ -681,6 +648,34 @@ function ProductHost({
           query: '',
           selected: 0,
         });
+      } else if (command.action === 'health') {
+        const health =
+          cliDocuments.find(
+            (document) =>
+              document.action.kind === 'describe-command' &&
+              document.action.command === 'kungfu health',
+          ) ??
+          ({
+            id: 'command.health',
+            kind: 'command',
+            title: 'kungfu health',
+            summary:
+              'Inspect read-only runtime, Peer, storage, and Episode health.',
+            section: 'Governed Commands',
+            keywords: ['health', 'runtime', 'peer', 'storage', 'episode'],
+            priority: 0,
+            action: {
+              kind: 'describe-command',
+              command: 'kungfu health',
+            },
+          } satisfies ProductSearchDocument);
+        setControlNow({
+          mode: 'detail',
+          focus: 'input',
+          query: 'health',
+          selected: 0,
+          detail: health,
+        });
       } else if (command.action === 'work') {
         setSurface('work');
         closeControl();
@@ -727,7 +722,7 @@ function ProductHost({
         detail: result,
       });
     }
-  }, [closeControl, dispatchLabAction, exit, setControlNow]);
+  }, [cliDocuments, closeControl, dispatchLabAction, exit, setControlNow]);
   const activateControlRef = React.useRef(activateControl);
   activateControlRef.current = activateControl;
   const isInputCaptured = React.useCallback(
@@ -760,7 +755,7 @@ function ProductHost({
   }, [dispatchLabAction, exit, inputFence, labOpen, setControlNow]);
 
   let content: React.ReactNode;
-  if (!startup && surface !== 'lab') {
+  if (!startup && surface !== 'lab' && !cachedGlobalWorkPresent) {
     content = (
       <StartingHost
         dimensions={contentDimensions}
@@ -785,8 +780,6 @@ function ProductHost({
   } else {
     content = (
       <WorkControlHost
-        profile={profile}
-        workLoop={workLoop}
         dimensions={contentDimensions}
         onOpenLab={() => setSurface('lab')}
         onSearchDocuments={setWorkDocuments}

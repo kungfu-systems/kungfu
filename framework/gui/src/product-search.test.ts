@@ -12,6 +12,8 @@ const source = readFileSync(
 test('the title-bar search shares Help, Command, Work, and view sources', () => {
   assert.match(source, /SYSTEM_HELP_DOCUMENTS/);
   assert.match(source, /loadCliHelpSearchDocuments/);
+  assert.match(source, /GLOBAL_WORK_OBSERVER_SUBSCRIBE_CHANNEL/);
+  assert.match(source, /globalWorkSearchDocuments/);
   assert.match(source, /workSearchDocuments/);
   assert.match(source, /viewSearchDocuments/);
   assert.match(source, /searchProductDocuments\(searchDocuments, searchText\)/);

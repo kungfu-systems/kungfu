@@ -18,6 +18,48 @@ import {
   reduceControlPlaneInput,
 } from './profile-shell.js';
 import { AGENT_WORK_LAB_QUICK_COMMANDS } from './qualification-lab-view.js';
+import {
+  degradedGlobalWorkModel,
+  globalWorkContribution,
+  loadLatestGlobalWorkCache,
+  parseGlobalWorkObserverLine,
+} from './work-control-contribution.js';
+
+const globalWorkSnapshot = {
+  schema: 'kungfu.workspace-federation.query/v1' as const,
+  observed_at: '2026-07-27T12:00:00Z',
+  aggregate: {
+    state: 'partial',
+    component_count: 3,
+    available_component_count: 2,
+    unknown_component_count: 1,
+  },
+  verification: { ok: true },
+  proof: { proof_root: 'sha256:proof' },
+  global_work: {
+    projection_root: 'sha256:projection',
+    visible_work: [
+      {
+        canonical_root: 'sha256:initiative',
+        object_kind: 'initiative',
+        subject: 'initiative-a',
+        display: { title: 'Initiative A', status: 'active' },
+        observations: [{ workspace_id: 'home' }],
+      },
+      {
+        canonical_root: 'sha256:assignment',
+        object_kind: 'assignment',
+        subject: 'initiative-a:assignment-a',
+        display: {
+          title: 'Assignment A',
+          status: 'executing',
+          next_actions: ['continue'],
+        },
+        observations: [{ workspace_id: 'project:a' }],
+      },
+    ],
+  },
+};
 
 class CaptureOutput extends Writable {
   readonly isTTY = false;
@@ -139,9 +181,78 @@ test('keeps a closing key captured for the rest of its synchronous input emissio
 test('keeps quick commands bounded to declared product actions', () => {
   assert.deepEqual(
     QUICK_COMMANDS.map((row) => row.action),
-    ['help', 'search', 'work', 'lab', 'home', 'quit'],
+    ['help', 'search', 'health', 'work', 'lab', 'home', 'quit'],
   );
   assert.equal(quickCommandMatches('/rm -rf').length, 0);
+});
+
+test('projects the global Portfolio and indexes every visible Work row', () => {
+  const contribution = globalWorkContribution(globalWorkSnapshot);
+  assert.equal(contribution.model.profile.title, 'Work');
+  assert.equal(contribution.model.profile.qualificationLabel, 'Global proof');
+  assert.equal(
+    contribution.model.subject.title,
+    'Portfolio · 2 current work items',
+  );
+  assert.match(
+    contribution.model.subject.subtitle,
+    /1 Initiatives · 1 Assignments/,
+  );
+  assert.deepEqual(
+    contribution.searchDocuments.map((row) => row.title),
+    ['Initiative A', 'Assignment A'],
+  );
+  assert.match(
+    degradedGlobalWorkModel(new Error('observer unavailable')).notice ?? '',
+    /observer unavailable/,
+  );
+});
+
+test('reads and parses the shared GUI or TUI global Work observer state', () => {
+  const files: Record<string, string> = {
+    gui: JSON.stringify({
+      schema: 'kungfu.gui.global-work-observer/v2',
+      query: globalWorkSnapshot,
+    }),
+    tui: JSON.stringify({
+      schema: 'kungfu.gui.global-work-observer/v2',
+      query: {
+        ...globalWorkSnapshot,
+        observed_at: '2026-07-27T13:00:00Z',
+      },
+    }),
+  };
+  assert.equal(
+    loadLatestGlobalWorkCache(
+      (candidate) => files[candidate] ?? '',
+      ['gui', 'tui'],
+    )?.observed_at,
+    '2026-07-27T13:00:00Z',
+  );
+  const parsed = parseGlobalWorkObserverLine(
+    JSON.stringify({
+      schema: 'kungfu.gui.global-work-observer-event/v1',
+      kind: 'snapshot',
+      snapshot: globalWorkSnapshot,
+    }),
+  );
+  assert.equal(
+    parsed instanceof Error ? '' : parsed?.schema,
+    globalWorkSnapshot.schema,
+  );
+  assert.match(
+    (
+      parseGlobalWorkObserverLine(
+        JSON.stringify({
+          schema: 'kungfu.gui.global-work-observer-event/v1',
+          kind: 'error',
+          error: 'observer stopped',
+        }),
+      ) as Error
+    ).message,
+    /observer stopped/,
+  );
+  assert.equal(parseGlobalWorkObserverLine('not json'), null);
 });
 
 test('adds Suite actions only to the active Lab command catalog', () => {

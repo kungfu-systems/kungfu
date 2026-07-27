@@ -4,6 +4,11 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 
 import {
+  type GlobalWorkSnapshot,
+  globalWorkSearchDocuments,
+  parseGlobalWorkSnapshot,
+} from '../src/capability/global-work.ts';
+import {
   type ProductSearchDocument,
   SYSTEM_HELP_DOCUMENTS,
   cliHelpSearchDocuments,
@@ -116,5 +121,63 @@ test('searches help, commands, Work, and views with deterministic ranking', () =
   assert.deepEqual(
     searchProductDocuments([work, work], 'improve').map((row) => row.id),
     [work.id],
+  );
+});
+
+test('projects the same global Work snapshot into searchable Initiative and Assignment rows', () => {
+  const snapshot: GlobalWorkSnapshot = {
+    schema: 'kungfu.workspace-federation.query/v1',
+    aggregate: { state: 'complete', component_count: 2 },
+    verification: { ok: true },
+    proof: { proof_root: 'sha256:proof' },
+    global_work: {
+      projection_root: 'sha256:projection',
+      visible_work: [
+        {
+          canonical_root: 'sha256:initiative',
+          object_kind: 'initiative',
+          subject: 'initiative-a',
+          display: { title: 'Improve Work', status: 'active' },
+          observations: [{ workspace_id: 'home' }],
+        },
+        {
+          canonical_root: 'sha256:assignment',
+          object_kind: 'assignment',
+          subject: 'initiative-a:assignment-a',
+          display: {
+            title: 'Unify product search',
+            portfolio_state: 'open',
+            next_actions: ['ship one shared projection'],
+          },
+          observations: [{ workspace_id: 'project:one' }],
+        },
+      ],
+    },
+  };
+  const cached = {
+    schema: 'kungfu.gui.global-work-observer/v2',
+    query: snapshot,
+  };
+  assert.equal(parseGlobalWorkSnapshot(cached), snapshot);
+  const documents = globalWorkSearchDocuments(snapshot);
+  assert.equal(
+    searchProductDocuments(documents, 'initiative')[0]?.title,
+    'Improve Work',
+  );
+  assert.deepEqual(
+    searchProductDocuments(documents, 'assignment').map((row) => row.title),
+    ['Unify product search'],
+  );
+  assert.equal(documents[1]?.action.kind, 'open-work');
+});
+
+test('rejects observer state without a global Work projection', () => {
+  assert.throws(
+    () =>
+      parseGlobalWorkSnapshot({
+        schema: 'kungfu.gui.global-work-observer/v2',
+        query: {},
+      }),
+    /invalid global Work snapshot/,
   );
 });

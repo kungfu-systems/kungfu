@@ -26,6 +26,7 @@ export type ProfileShellModel = {
     version: string;
     suiteRoot: string;
     qualified: boolean;
+    qualificationLabel?: string;
   };
   subject: { id: string; title: string; subtitle: string };
   navigation: Array<{ id: string; label: string; status: string }>;
@@ -57,6 +58,13 @@ export function resolveProfileShellLayout(
 function shortRoot(value: string): string {
   if (value.length <= 18) return value;
   return `${value.slice(0, 7)}…${value.slice(-10)}`;
+}
+
+function qualificationState(model: ProfileShellModel): string {
+  if ((model.profile.qualificationLabel ?? 'KFD-3') === 'KFD-3') {
+    return model.profile.qualified ? 'qualified' : 'not qualified';
+  }
+  return model.profile.qualified ? 'verified' : 'not verified';
 }
 
 function NavigationPanel({
@@ -92,11 +100,19 @@ function CardPanel({
   model,
   selectedCard,
   active,
+  maxRows,
 }: {
   model: ProfileShellModel;
   selectedCard: number;
   active: boolean;
+  maxRows: number;
 }) {
+  const visibleCount = Math.max(1, Math.floor((maxRows - 8) / 2));
+  const start = Math.min(
+    Math.max(0, selectedCard - visibleCount + 1),
+    Math.max(0, model.cards.length - visibleCount),
+  );
+  const visibleCards = model.cards.slice(start, start + visibleCount);
   return (
     <Box
       flexDirection="column"
@@ -112,22 +128,34 @@ function CardPanel({
           No Profile answers are available at this cut.
         </Text>
       ) : null}
-      {model.cards.map((card, index) => (
-        <Box
-          key={card.id}
-          flexDirection="column"
-          marginTop={index === 0 ? 1 : 0}
-        >
-          <Text color={index === selectedCard ? 'cyan' : undefined} bold>
-            {index === selectedCard ? '› ' : '  '}
-            {index + 1}. {card.title}{' '}
-            <Text color={card.status === 'degraded' ? 'yellow' : 'green'}>
-              [{card.status}]
-            </Text>
-          </Text>
-          <Text wrap="truncate-end"> {card.summary}</Text>
-        </Box>
-      ))}
+      {model.cards.length > visibleCards.length ? (
+        <Text dimColor>
+          showing {start + 1}–{start + visibleCards.length} of{' '}
+          {model.cards.length}
+        </Text>
+      ) : null}
+      {visibleCards.map((card, offset) => {
+        const index = start + offset;
+        return (
+          <Box
+            key={card.id}
+            flexDirection="column"
+            marginTop={offset === 0 ? 1 : 0}
+          >
+            <Box>
+              <Text color={index === selectedCard ? 'cyan' : undefined} bold>
+                {index === selectedCard ? '› ' : '  '}
+                {index + 1}. {card.title}
+              </Text>
+              <Text color={card.status === 'degraded' ? 'yellow' : 'green'}>
+                {' '}
+                [{card.status}]
+              </Text>
+            </Box>
+            <Text wrap="truncate-end"> {card.summary}</Text>
+          </Box>
+        );
+      })}
     </Box>
   );
 }
@@ -136,6 +164,7 @@ function EvidencePanel({
   model,
   active,
 }: { model: ProfileShellModel; active: boolean }) {
+  const qualificationLabel = model.profile.qualificationLabel ?? 'KFD-3';
   return (
     <Box
       flexDirection="column"
@@ -152,7 +181,7 @@ function EvidencePanel({
         </Box>
       ))}
       <Text color={model.profile.qualified ? 'green' : 'yellow'}>
-        KFD-3 {model.profile.qualified ? 'qualified' : 'not qualified'}
+        {qualificationLabel} {qualificationState(model)}
       </Text>
       {model.notice ? <Text color="yellow">{model.notice}</Text> : null}
     </Box>
@@ -165,6 +194,7 @@ function CompactContext({ model }: { model: ProfileShellModel }) {
   );
   const subjectPosition = activeIndex < 0 ? 'none' : `${activeIndex + 1}`;
   const proof = model.evidence.find((row) => row.label === 'query proof');
+  const qualificationLabel = model.profile.qualificationLabel ?? 'KFD-3';
   return (
     <>
       <Text wrap="truncate-end">
@@ -175,7 +205,7 @@ function CompactContext({ model }: { model: ProfileShellModel }) {
         color={model.profile.qualified ? 'green' : 'yellow'}
         wrap="truncate-end"
       >
-        KFD-3 {model.profile.qualified ? 'qualified' : 'not qualified'} · proof{' '}
+        {qualificationLabel} {qualificationState(model)} · proof{' '}
         {shortRoot(proof?.value ?? '—')}
         {model.notice ? ` · ${model.notice}` : ''}
       </Text>
@@ -239,6 +269,7 @@ export function ProfileShell({
       model={model}
       selectedCard={selectedCard}
       active={activeRegion === 1}
+      maxRows={bodyHeight}
     />
   );
 
@@ -303,6 +334,7 @@ export function renderProfileShellSnapshot(
   dimensions: TerminalDimensions,
 ): string {
   const layout = resolveProfileShellLayout(dimensions);
+  const qualificationLabel = model.profile.qualificationLabel ?? 'KFD-3';
   const lines = [
     clipped(
       `${model.profile.title} · ${model.profile.version} · ${layout.mode} · read-only`,
@@ -352,7 +384,7 @@ export function renderProfileShellSnapshot(
       dimensions.columns,
     ),
     clipped(
-      `KFD-3 ${model.profile.qualified ? 'qualified' : 'not qualified'}${model.notice ? ` · ${model.notice}` : ''}`,
+      `${qualificationLabel} ${qualificationState(model)}${model.notice ? ` · ${model.notice}` : ''}`,
       dimensions.columns,
     ),
     clipped(
@@ -979,6 +1011,7 @@ export type QuickCommand<Action extends string = string> = {
 export type ProductQuickCommandAction =
   | 'help'
   | 'search'
+  | 'health'
   | 'work'
   | 'lab'
   | 'home'
@@ -999,6 +1032,14 @@ export const QUICK_COMMANDS: QuickCommand<ProductQuickCommandAction>[] = [
     title: 'Search Kungfu',
     summary: 'Find Help, Commands, Work, and product views.',
     action: 'search',
+  },
+  {
+    id: 'health',
+    command: '/health',
+    title: 'Inspect Health',
+    summary:
+      'Describe the read-only runtime, Peer, storage, and Episode health command.',
+    action: 'health',
   },
   {
     id: 'work',
@@ -1297,7 +1338,7 @@ function QuickCommandRows({
   return (
     <Box flexDirection="column" flexGrow={1} minHeight={0}>
       {rows.length === 0 ? (
-        <Text color="yellow">No matching quick command.</Text>
+        <Text color="yellow">No matching quick action.</Text>
       ) : null}
       {rows.slice(start, start + visibleCount).map((row, index) => {
         const absoluteIndex = start + index;
@@ -1345,7 +1386,7 @@ export function ControlPlaneOverlay({
     state.mode === 'help'
       ? 'HELP'
       : state.mode === 'commands'
-        ? 'QUICK COMMANDS'
+        ? 'QUICK ACTIONS'
         : state.mode === 'detail'
           ? 'RESULT DETAILS'
           : 'SEARCH KUNGFU';
@@ -1384,14 +1425,14 @@ export function ControlPlaneOverlay({
         </Text>
         {state.mode === 'help' ? (
           <>
-            <Text>? Help · / Quick commands · Ctrl+K Search · Esc return</Text>
+            <Text>? Help · / Quick actions · Ctrl+K Search · Esc return</Text>
             <Text dimColor>
               The focused input accepts text, but free-form Agent conversation
               is not available yet.
             </Text>
             <Text dimColor>
-              Search covers system Help, governed Kungfu Commands, current Work,
-              and available product views.
+              Search covers system Help, the full governed Kungfu Command
+              catalog, global Work, and available product views.
             </Text>
             <Box marginTop={1} flexDirection="column">
               {quickCommands.slice(0, Math.max(1, rowBudget)).map((command) => (
@@ -1497,14 +1538,14 @@ export function ControlPlaneBar({
   const hint =
     state.notice ??
     (state.mode === 'commands'
-      ? `${resultCount} bounded command${resultCount === 1 ? '' : 's'} · Enter run · Esc cancel`
+      ? `${resultCount} bounded action${resultCount === 1 ? '' : 's'} · Enter run · Esc cancel`
       : state.mode === 'search'
         ? `${resultCount} result${resultCount === 1 ? '' : 's'} · Enter open · Esc cancel`
         : state.mode === 'help' || state.mode === 'detail'
           ? 'Esc returns to the input'
           : state.focus === 'workspace'
-            ? `${controlsHint} · i Input · ? Help · / Commands · Ctrl+K Search`
-            : 'Text entry is active · Esc Controls · Tab next focus · ? Help · / Commands · Ctrl+K Search');
+            ? `${controlsHint} · i Input · ? Help · / Actions · Ctrl+K Search`
+            : 'Text entry is active · Esc Controls · Tab next focus · ? Help · / Actions · Ctrl+K Search');
   const tone = inputFocused ? 'cyan' : 'gray';
   return (
     <Box

@@ -48,6 +48,9 @@ import {
   deriveWorkspaceRuntimePresentation,
 } from '../../runtime-status';
 import {
+  GLOBAL_WORK_OBSERVER_EVENT_CHANNEL,
+  GLOBAL_WORK_OBSERVER_SUBSCRIBE_CHANNEL,
+  GLOBAL_WORK_OBSERVER_UNSUBSCRIBE_CHANNEL,
   RUNTIME_BACKUP_RESET_CHANNEL,
   RUNTIME_STATUS_GET_CHANNEL,
   SESSION_WINDOW_OPEN_CHANNEL,
@@ -1076,6 +1079,8 @@ function App() {
   const [workSearchDocuments, setWorkSearchDocuments] = React.useState<
     ProductSearchDocument[]
   >([]);
+  const [globalWorkSearchDocuments, setGlobalWorkSearchDocuments] =
+    React.useState<ProductSearchDocument[]>([]);
   const [searchCatalogStatus, setSearchCatalogStatus] = React.useState(
     'Loading governed command catalog',
   );
@@ -1163,6 +1168,62 @@ function App() {
       });
     return () => {
       active = false;
+    };
+  }, []);
+
+  React.useEffect(() => {
+    type GlobalWorkObserverEvent =
+      | {
+          schema: 'kungfu.gui.global-work-observer-event/v1';
+          kind: 'snapshot';
+          snapshot: Record<string, unknown>;
+        }
+      | {
+          schema: 'kungfu.gui.global-work-observer-event/v1';
+          kind: 'error';
+          error: string;
+        };
+    type GlobalWorkIpc = {
+      invoke: (channel: string) => Promise<unknown>;
+      on: (
+        channel: string,
+        listener: (event: unknown, payload: GlobalWorkObserverEvent) => void,
+      ) => void;
+      removeListener: (
+        channel: string,
+        listener: (event: unknown, payload: GlobalWorkObserverEvent) => void,
+      ) => void;
+    };
+    let ipc: GlobalWorkIpc | null = null;
+    try {
+      ipc = (window.require('electron') as { ipcRenderer: GlobalWorkIpc })
+        .ipcRenderer;
+    } catch {
+      ipc = null;
+    }
+    if (!ipc) return;
+    const receive = (_event: unknown, payload: GlobalWorkObserverEvent) => {
+      if (
+        payload?.schema !== 'kungfu.gui.global-work-observer-event/v1' ||
+        payload.kind !== 'snapshot'
+      ) {
+        return;
+      }
+      try {
+        setGlobalWorkSearchDocuments(
+          capability.globalWorkSearchDocuments(
+            capability.parseGlobalWorkSnapshot(payload.snapshot),
+          ),
+        );
+      } catch {
+        // Keep the last verified search projection during observer recovery.
+      }
+    };
+    ipc.on(GLOBAL_WORK_OBSERVER_EVENT_CHANNEL, receive);
+    void ipc.invoke(GLOBAL_WORK_OBSERVER_SUBSCRIBE_CHANNEL);
+    return () => {
+      ipc?.removeListener(GLOBAL_WORK_OBSERVER_EVENT_CHANNEL, receive);
+      void ipc?.invoke(GLOBAL_WORK_OBSERVER_UNSUBSCRIBE_CHANNEL);
     };
   }, []);
 
@@ -1684,10 +1745,16 @@ function App() {
     () => [
       ...capability.SYSTEM_HELP_DOCUMENTS,
       ...cliSearchDocuments,
+      ...globalWorkSearchDocuments,
       ...workSearchDocuments,
       ...viewSearchDocuments,
     ],
-    [cliSearchDocuments, viewSearchDocuments, workSearchDocuments],
+    [
+      cliSearchDocuments,
+      globalWorkSearchDocuments,
+      viewSearchDocuments,
+      workSearchDocuments,
+    ],
   );
   const searchResults = React.useMemo(
     () => capability.searchProductDocuments(searchDocuments, searchText),
