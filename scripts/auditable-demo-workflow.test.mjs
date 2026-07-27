@@ -90,6 +90,57 @@ async function runResolver({ declaredExpiry, observedExpiry }) {
   return outputs;
 }
 
+async function runPassportArtifactBinding({
+  gateDigest = '3'.repeat(64),
+  mediaDigest = '4'.repeat(64),
+  observedGateDigest = `sha256:${'3'.repeat(64)}`,
+  observedMediaDigest = `sha256:${'4'.repeat(64)}`,
+}) {
+  const passport = WORKFLOW.jobs['auditable-demo-passport'];
+  const script = passport.steps.find(({ id }) => id === 'artifact-expiry').with
+    .script;
+  const runId = '30225695823';
+  const gateId = '8639472306';
+  const mediaId = '8639492343';
+  const gateName = 'auditable-demo-gate-source-root';
+  const mediaName = 'auditable-demo-media-source-root';
+  const outputs = new Map();
+  await new AsyncFunction('process', 'github', 'context', 'core', script)(
+    {
+      env: {
+        GATE_ARTIFACT_ID: gateId,
+        GATE_ARTIFACT_NAME: gateName,
+        GATE_ARTIFACT_DIGEST: gateDigest,
+        MEDIA_ARTIFACT_ID: mediaId,
+        MEDIA_ARTIFACT_NAME: mediaName,
+        MEDIA_ARTIFACT_DIGEST: mediaDigest,
+      },
+    },
+    {
+      paginate: async () => [
+        {
+          id: Number(gateId),
+          name: gateName,
+          digest: observedGateDigest,
+          expired: false,
+          expires_at: '2026-08-10T01:08:00Z',
+        },
+        {
+          id: Number(mediaId),
+          name: mediaName,
+          digest: observedMediaDigest,
+          expired: false,
+          expires_at: '2026-08-10T01:09:31Z',
+        },
+      ],
+      rest: { actions: { listWorkflowRunArtifacts: () => undefined } },
+    },
+    { repo: { owner: 'kungfu-systems', repo: 'kungfu' }, runId },
+    { setOutput: (key, value) => outputs.set(key, value) },
+  );
+  return outputs;
+}
+
 test('every produced Linux artifact enters the required exact-output Gate', () => {
   const build = WORKFLOW.jobs.build;
   const resolver = WORKFLOW.jobs['resolve-auditable-demo-source'];
@@ -173,6 +224,14 @@ test('Gate runtime and renderer are immutable and Passport uses the same runtime
     /listWorkflowRunArtifacts[\s\S]*artifact\.digest !== coordinate\.digest/u,
   );
   assert.equal(
+    passportStep.env.GATE_ARTIFACT_DIGEST,
+    '${{ steps.artifact-expiry.outputs.gate-artifact-digest }}',
+  );
+  assert.equal(
+    passportStep.env.MEDIA_ARTIFACT_DIGEST,
+    '${{ steps.artifact-expiry.outputs.media-artifact-digest }}',
+  );
+  assert.equal(
     passportStep.env.GATE_ARTIFACT_EXPIRES_AT,
     '${{ steps.artifact-expiry.outputs.gate-artifact-expires-at }}',
   );
@@ -181,6 +240,26 @@ test('Gate runtime and renderer are immutable and Passport uses the same runtime
     '${{ steps.artifact-expiry.outputs.media-artifact-expires-at }}',
   );
   assert.match(passport.if, /needs\.auditable-demo\.result == 'success'/u);
+});
+
+test('Passport binding normalizes upload digests to exact API coordinates', async () => {
+  const outputs = await runPassportArtifactBinding({});
+  assert.equal(outputs.get('gate-artifact-digest'), `sha256:${'3'.repeat(64)}`);
+  assert.equal(
+    outputs.get('media-artifact-digest'),
+    `sha256:${'4'.repeat(64)}`,
+  );
+  await assert.rejects(
+    runPassportArtifactBinding({
+      gateDigest: '3'.repeat(64),
+      observedGateDigest: `sha256:${'5'.repeat(64)}`,
+    }),
+    /gate artifact name or digest differs from the retained artifact/u,
+  );
+  await assert.rejects(
+    runPassportArtifactBinding({ gateDigest: 'not-a-digest' }),
+    /gate artifact coordinate is partial or invalid/u,
+  );
 });
 
 test('full media is selective while the Gate remains unconditional when applicable', () => {

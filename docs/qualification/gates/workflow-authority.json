@@ -774,7 +774,7 @@
           "authority": "qualification",
           "publication": "none",
           "receipt": "qualifying",
-          "definitionDigest": "sha256:ef30440f027a568c983d10679e1825b86879a411035ed107f0e77285a8bcbc3e",
+          "definitionDigest": "sha256:3a2fb8ae784a8a65927b7396f1a244a579c6f117d0565fe2f0791e2ca4a4de3d",
           "credentials": {
             "githubToken": "read",
             "oidc": false,
@@ -798,13 +798,13 @@
               "index": 2,
               "label": "id:artifact-expiry",
               "authority": "qualification",
-              "definitionDigest": "sha256:88c9afd277e1ccb9be342a312b8d3bc428c02400fb7189b881047a32b7bb482b"
+              "definitionDigest": "sha256:b63afe1390635ea616d7c2a9ccc69bfb49f5b8d2ee193c8b8df61800eaad0591"
             },
             {
               "index": 3,
               "label": "name:Write exact auditable demo Release Passport",
               "authority": "evidence-publication",
-              "definitionDigest": "sha256:b25ae4625ef24821eff017ce43e4f62bbfb85473f857285c6c684dbd6e82790f"
+              "definitionDigest": "sha256:6653dcbf5eb4a05acdfa2fb0d62fdabb359ba6795f7ec3c2525da5dd4bc79b70"
             },
             {
               "index": 4,
