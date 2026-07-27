@@ -124,13 +124,15 @@ jobs:
     if: ${{ github.event_name == 'workflow_dispatch' || github.event.pull_request.merged == true }}
     permissions:
       actions: read
+      artifact-metadata: write
+      attestations: write
       contents: write
       issues: write
       id-token: write
-    uses: kungfu-systems/buildchain/.github/workflows/release-candidate-promote.yml@ebc7b2d86ecce1de835c8f8ba4436bcac65a62c2 # v3.0.2-alpha.3 with bundled macOS entitlements
+    uses: kungfu-systems/buildchain/.github/workflows/release-candidate-promote.yml@881e8e4ee063b184ad7db535829ebd3872b0323a # train/v3/v3.0/linux-github-attestation
     with:
       channel: ${{ startsWith(inputs.target-ref || github.event.pull_request.base.ref, 'alpha/') && 'alpha' || 'release' }}
-      buildchain-ref: ebc7b2d86ecce1de835c8f8ba4436bcac65a62c2
+      buildchain-ref: 881e8e4ee063b184ad7db535829ebd3872b0323a
       target-ref: ${{ inputs.target-ref || github.event.pull_request.base.ref }}
       target-sha: ${{ inputs.target-sha || github.event.pull_request.merge_commit_sha || github.sha }}
       buildchain-contract-lock-path: ${{ startsWith(inputs.target-ref || github.event.pull_request.base.ref, 'alpha/') && '.buildchain/alpha-contract-lock.json' || '.buildchain/contract-lock.json' }}
@@ -190,6 +192,8 @@ jobs:
       release-passport-invariant-passport-command: >-
         node scripts/kungfu-invariant.mjs --collect-evidence .
         --passport product/release/qualification/invariant-passport.json --json
+      github-artifact-attestation-policy-json: auto
+      github-artifact-attestation-environment: buildchain-artifact-attestation
       dry-run: ${{ github.event_name == 'workflow_dispatch' }}
     secrets:
       BUILDCHAIN_PROMOTION_TOKEN: ${{ secrets.KUNGFU_GITHUB_TOKEN }}
