@@ -72,12 +72,21 @@ classify parity with the legacy TypeScript and Python paths. Lifecycle mutation,
 authorization, fenced writer ownership, and migration off the legacy mutation
 paths remain outside this stage.
 
-PR #1624 establishes the conversion-ready semantic registry and transactional
-lifecycle foundation. Core now owns deterministic semantic graphs, immutable
-content publication, fenced plan/apply/history, and durable applied or refused
-receipts; Python and TypeScript project that authority through thin storage and
-host edges. The protected Agent Qualification Lab cutover remains a separate
-stage, so the umbrella decision remains partial.
+PR #1624 establishes an incremental native semantic-registry, trust, content,
+fencing, and host-projection foundation. Core now produces deterministic
+semantic graphs, immutable content publication, fenced plan/apply/history, and
+durable applied or refused receipts; Python and TypeScript project that result
+through thin storage and host edges. It is not the final KFX lifecycle
+authority: authored package metadata still enters through
+`package.json#kungfuConfig`, and lifecycle state still folds from a
+KFX-specific history rather than a named Fact Cut settled through Work.
+
+Conversion readiness therefore remains blocked on three ordered gates: a
+transport-neutral `kungfu.kfx.json` manifest authority, Fact/Work lifecycle
+authority with Cut and CAS semantics, and a recursively dogfooded KFX Control
+Suite behind a minimal Core bootstrap verifier. The protected Agent
+Qualification Lab cutover remains a later separate stage after those gates are
+proved, so the umbrella decision remains partial.
 
 ## Decision
 

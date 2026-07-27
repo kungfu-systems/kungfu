@@ -29,11 +29,14 @@
         "unexecuted platforms",
         "notarization",
         "publication",
+        "transport-neutral kungfu.kfx.json manifest authority",
+        "Fact Cut and Work-settled lifecycle authority",
+        "recursive KFX Control Suite self-upgrade and recovery",
         "deferred Qualification Lab cutover"
       ]
     }
   },
-  "verdict": "conversion-ready",
+  "verdict": "incremental-foundation",
   "source": {
     "baseCommit": "d1d3581400e86ead173901ffdbd50a19b86bd012",
     "implementationCommit": "83b867585e37f08c66227837a10555be68953dad",
@@ -49,6 +52,7 @@
     "protectedBranchUsed": false
   },
   "qualifiedBoundary": {
+    "authorityStatus": "provisional-native-foundation-not-final-lifecycle-authority",
     "semanticGraph": [
       "providers",
       "extension-points",
@@ -176,9 +180,19 @@
     "stale-writer-lock-recovery",
     "distributed-writers-replication-or-consensus",
     "universal-host-rendering-parity",
+    "transport-neutral-kungfu-kfx-json-authority",
+    "fact-cut-backed-kfx-lifecycle-authority",
+    "work-warrant-episode-settlement-lifecycle",
+    "recursive-kfx-control-suite",
+    "conversion-ready",
     "qualification-lab-registry-cutover"
   ],
+  "blockingSuccessorGates": [
+    "transport-neutral-manifest-authority",
+    "fact-and-work-lifecycle-authority",
+    "recursive-control-suite-dogfood"
+  ],
   "deferredBoundary": {
-    "qualificationLabCutover": "separate-paused-assignment-after-foundation-merge-and-review"
+    "qualificationLabCutover": "separate-paused-assignment-after-manifest-fact-work-and-control-suite-gates"
   }
 }
