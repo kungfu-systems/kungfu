@@ -430,13 +430,21 @@ jobs:
               artifacts.map((artifact) => [String(artifact.id), artifact]),
             );
             for (const coordinate of declared) {
+              if (/^[0-9a-f]{64}$/.test(coordinate.digest)) {
+                coordinate.digest = `sha256:${coordinate.digest}`;
+              }
               const present = [coordinate.id, coordinate.name, coordinate.digest]
                 .filter(Boolean).length;
               if (!coordinate.required && present === 0) {
+                core.setOutput(`${coordinate.kind}-artifact-digest`, "");
                 core.setOutput(`${coordinate.kind}-artifact-expires-at`, "");
                 continue;
               }
-              if (present !== 3 || !/^[1-9][0-9]*$/.test(coordinate.id)) {
+              if (
+                present !== 3 ||
+                !/^[1-9][0-9]*$/.test(coordinate.id) ||
+                !/^sha256:[0-9a-f]{64}$/.test(coordinate.digest)
+              ) {
                 throw new Error(`${coordinate.kind} artifact coordinate is partial or invalid`);
               }
               const artifact = byId.get(coordinate.id);
@@ -458,6 +466,10 @@ jobs:
                 throw new Error(`${coordinate.kind} artifact is expired or has no live expiry`);
               }
               core.setOutput(
+                `${coordinate.kind}-artifact-digest`,
+                artifact.digest,
+              );
+              core.setOutput(
                 `${coordinate.kind}-artifact-expires-at`,
                 new Date(expiresAt).toISOString(),
               );
@@ -473,13 +485,13 @@ jobs:
           SOURCE_ARTIFACT_EXPIRES_AT: ${{ needs.resolve-auditable-demo-source.outputs.artifact-expires-at }}
           GATE_ARTIFACT_ID: ${{ needs.auditable-demo.outputs.gate-artifact-id }}
           GATE_ARTIFACT_NAME: ${{ needs.auditable-demo.outputs.gate-artifact-name }}
-          GATE_ARTIFACT_DIGEST: ${{ needs.auditable-demo.outputs.gate-artifact-digest }}
+          GATE_ARTIFACT_DIGEST: ${{ steps.artifact-expiry.outputs.gate-artifact-digest }}
           GATE_ARTIFACT_URL: ${{ needs.auditable-demo.outputs.gate-artifact-url }}
           GATE_ARTIFACT_EXPIRES_AT: ${{ steps.artifact-expiry.outputs.gate-artifact-expires-at }}
           GATE_ROOT: ${{ needs.auditable-demo.outputs.gate-root }}
           MEDIA_ARTIFACT_ID: ${{ needs.auditable-demo.outputs.media-artifact-id }}
           MEDIA_ARTIFACT_NAME: ${{ needs.auditable-demo.outputs.media-artifact-name }}
-          MEDIA_ARTIFACT_DIGEST: ${{ needs.auditable-demo.outputs.media-artifact-digest }}
+          MEDIA_ARTIFACT_DIGEST: ${{ steps.artifact-expiry.outputs.media-artifact-digest }}
           MEDIA_ARTIFACT_URL: ${{ needs.auditable-demo.outputs.media-artifact-url }}
           MEDIA_ARTIFACT_EXPIRES_AT: ${{ steps.artifact-expiry.outputs.media-artifact-expires-at }}
           MEDIA_ROOT: ${{ needs.auditable-demo.outputs.media-root }}
