@@ -2274,21 +2274,11 @@ def assignment_orchestration_status(
     if transitions:
         explicit = {str(row.get("to_phase") or "") for row in transitions}
         phase = max(explicit, key=ASSIGNMENT_PHASES.index)
-    completion_claims = [
-        row for row in records if row.get("claim_type") == COMPLETION_CLAIM
-    ]
-    independent_reviews = [
-        row for row in records if row.get("review_type") == INDEPENDENT_REVIEW
-    ]
-    decisions = [
-        row for row in records if row.get("review_type") == CONTINUATION_DECISION
-    ]
-    if completion_claims:
-        phase = "completion-claimed"
-    if independent_reviews:
-        phase = "independently-reviewed"
-    if decisions:
-        phase = "continuation-decided"
+    completion_claims, independent_reviews, decisions, completion_phase = (
+        work_control.fold_completion_cycle(linked)
+    )
+    if completion_phase:
+        phase = completion_phase
     return {
         "schema": "kungfu.assignment-orchestration.status/v1",
         "initiative_subject": state["initiative_subject"],
