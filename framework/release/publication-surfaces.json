@@ -144,6 +144,15 @@
           "sourceRoot": "sha256:edec638207894f10a184613550cd9ee355d92f2922f381485f7e7ba45721d4a7"
         },
         {
+          "path": ".github/workflows/stable-candidate-patrol.yml",
+          "classification": "qualification",
+          "owner": "kungfu-release",
+          "surfaceIds": [
+            "product-stable"
+          ],
+          "sourceRoot": "sha256:131e6b02eee1fbcd643a4487b55f94182851fa1ab4c6caf649a05973e221104c"
+        },
+        {
           "path": ".github/workflows/dev-verify-patrol.yml",
           "classification": "qualification",
           "owner": "kungfu-release",
@@ -355,70 +364,8 @@
       "id": "stable-v4",
       "channel": "stable",
       "target": "refs/heads/release/v4/v4.0",
-      "requiredBeforePublication": true,
-      "ruleset": {
-        "name": "Kungfu stable release authority: release/v4/v4.0",
-        "target": "branch",
-        "enforcement": "active",
-        "bypass_actors": [],
-        "conditions": {
-          "ref_name": {
-            "exclude": [],
-            "include": [
-              "refs/heads/release/v4/v4.0"
-            ]
-          }
-        },
-        "rules": [
-          {
-            "type": "pull_request",
-            "parameters": {
-              "required_approving_review_count": 1,
-              "dismiss_stale_reviews_on_push": true,
-              "required_reviewers": [],
-              "require_code_owner_review": true,
-              "dismissal_restriction": {
-                "enabled": false,
-                "allowed_actors": []
-              },
-              "require_last_push_approval": true,
-              "required_review_thread_resolution": true,
-              "allowed_merge_methods": [
-                "merge",
-                "squash",
-                "rebase"
-              ]
-            }
-          },
-          {
-            "type": "required_status_checks",
-            "parameters": {
-              "strict_required_status_checks_policy": true,
-              "do_not_enforce_on_create": false,
-              "required_status_checks": [
-                {
-                  "context": "build"
-                },
-                {
-                  "context": "signoff",
-                  "integration_id": 15368
-                },
-                {
-                  "context": "validate",
-                  "integration_id": 15368
-                }
-              ]
-            }
-          },
-          {
-            "type": "deletion"
-          },
-          {
-            "type": "non_fast_forward"
-          }
-        ]
-      },
-      "contractRoot": "sha256:bc9564214b1c27cbb7d2a4bc0e5d23cdf1ad2b1d23ee4082a8d9c7207edb5dcf"
+      "adapterContractPath": "docs/qualification/stable-ruleset.contract.json",
+      "requiredBeforePublication": true
     },
     {
       "id": "major-v4",
@@ -552,35 +499,27 @@
       "owner": "kungfu-release",
       "workflowBindings": [
         ".github/workflows/build.yml",
-        ".github/workflows/release-new-version.yml"
+        ".github/workflows/release-new-version.yml",
+        ".github/workflows/stable-candidate-patrol.yml"
       ],
       "artifactSource": "product-stable exact artifact adapter",
       "credentialIsland": "product-stable bounded credential island",
       "readback": "product-stable immutable public readback",
       "rollback": "resume exact transaction; never replace immutable bytes",
       "telemetry": "product-stable evidence and status projection",
-      "lifecycle": "blocked-pending-governance",
+      "lifecycle": "active",
       "channel": "stable",
-      "protocolMode": "isolated",
-      "isolation": {
-        "rationale": "Stable v4 branch/live ruleset do not exist and Alpha history is not channel-general.",
-        "owner": "kungfu-release",
-        "preservedInvariants": [
-          "exact-source-admission",
-          "build-once-artifact",
-          "publication-transaction",
-          "public-readback",
-          "deterministic-rerun"
-        ],
-        "missingInvariants": [
-          "durable-history",
-          "ruleset-readback",
-          "latency-evidence",
-          "status-rehearsal"
-        ],
-        "risk": "Stable would be less recoverable than Alpha.",
-        "reviewDate": "2026-08-31",
-        "sunsetCondition": "Create release/v4/v4.0, read back stable-v4 rules, and bind channel history/status."
+      "protocolMode": "conformant",
+      "bindings": {
+        "exact-source-admission": "buildchain:stable-candidate-ledger@buildchain/candidate-ledger/v4/v4.0",
+        "build-once-artifact": ".github/workflows/release-new-version.yml#promote",
+        "publication-transaction": "buildchain:controller:release-candidate-promotion",
+        "public-readback": "scripts/prepare-ungfu-release-evidence.mjs",
+        "durable-history": "buildchain/candidate-ledger/v4/v4.0:.buildchain/stable-candidate-ledger.json",
+        "ruleset-readback": "docs/qualification/stable-ruleset.contract.json",
+        "latency-evidence": ".buildchain/patrol/stable-candidate.json#ledger.candidates[].checks",
+        "deterministic-rerun": "buildchain:release-candidate-promote",
+        "status-rehearsal": "framework/release/publication-control-plane.mjs"
       }
     },
     {
@@ -828,5 +767,5 @@
       }
     }
   ],
-  "registryRoot": "sha256:74db4089f0dbcb967326bc59fe71f54607f41ce36f1cbd724bf7b5d7bc488112"
+  "registryRoot": "sha256:a6dc91d27a6f709cf26370f3468d4b60dbb4ac3b146f056daf0e382d848c6215"
 }

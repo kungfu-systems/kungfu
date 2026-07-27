@@ -2469,6 +2469,31 @@
           "steps": []
         }
       ]
+    },
+    {
+      "path": ".github/workflows/stable-candidate-patrol.yml",
+      "authority": "qualification",
+      "definitionDigest": "sha256:8a44642e3a6e8a6eca98b062218322fd678946d106ad5d9a096bc8a2cc29a51a",
+      "jobs": [
+        {
+          "id": "stable",
+          "authority": "qualification",
+          "publication": "none",
+          "receipt": "diagnostic",
+          "definitionDigest": "sha256:329cb68d35bd9c01be292f4df54e25d76c5c292c18f2ce60222933c14d0178e5",
+          "credentials": {
+            "githubToken": "write",
+            "oidc": false,
+            "repositorySecrets": [
+              "KUNGFU_GITHUB_TOKEN"
+            ],
+            "inheritedSecrets": false,
+            "environment": null
+          },
+          "externalActions": ["kungfu-systems/buildchain/.github/workflows/stable-candidate-patrol.yml@7629c4b499cd2d4eebf4c020fbc81637ae1dcb39"],
+          "steps": []
+        }
+      ]
     }
   ]
 }
