@@ -196,12 +196,20 @@ jobs:
           test -z "$(git -C "$SOURCE_ROOT" status --porcelain)"
           test -f "$SOURCE_ROOT/shifu"
 
-      - name: Verify pinned spike Rust toolchain
+      - name: Verify Rust toolchain and fetch locked libwasm dependencies
         shell: bash
         run: |
           cd "$SOURCE_ROOT/crates/libwasm-spike"
           rustc --version
           cargo --version
+          registry_args=(
+            --config 'source.crates-io.replace-with="kungfu-embedding-mirror"'
+            --config 'source.kungfu-embedding-mirror.registry="sparse+https://rsproxy.cn/index/"'
+          )
+          for engine in wasmtime wasmer; do
+            cargo "${registry_args[@]}" fetch --locked \
+              --manifest-path "$SOURCE_ROOT/crates/libwasm/$engine/Cargo.toml"
+          done
 
       - name: Install frozen workspace (POSIX)
         if: ${{ runner.os != 'Windows' }}

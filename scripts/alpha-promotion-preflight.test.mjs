@@ -103,6 +103,29 @@ test('automatic hosted preflight does not inherit a private Cargo mirror', () =>
   );
 });
 
+test('embedding qualification fetches production libwasm crates before the offline gate', () => {
+  const workflow = fs.readFileSync(
+    path.join(process.cwd(), '.github/workflows/embedding-membrane-spike.yml'),
+    'utf8',
+  );
+  const fetchIndex = workflow.indexOf(
+    'cargo "${registry_args[@]}" fetch --locked',
+  );
+  const gateIndex = workflow.indexOf(
+    '- name: Build and run membrane consumers (POSIX)',
+  );
+  assert.ok(fetchIndex >= 0);
+  assert.ok(gateIndex > fetchIndex);
+  assert.match(
+    workflow,
+    /cargo "\$\{registry_args\[@\]\}" fetch --locked[\s\S]*crates\/libwasm\/\$engine\/Cargo\.toml/u,
+  );
+  assert.doesNotMatch(
+    workflow,
+    /fetch --locked\s+\\\s+--manifest-path "\$SOURCE_ROOT\/crates\/libwasm-spike/u,
+  );
+});
+
 test('custom Linux-only builds do not start the macOS credential island', () => {
   const workflow = fs.readFileSync(
     path.join(process.cwd(), '.github/workflows/build.yml'),
