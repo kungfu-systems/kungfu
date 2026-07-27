@@ -414,23 +414,32 @@ export function selectReusableArtifact({
       run?.path === WORKFLOW_PATH
     );
   });
-  if (candidates.length !== 1) {
+  if (candidates.length === 0) {
     return {
       reusable: false,
-      reason:
-        candidates.length === 0
-          ? 'no exact trusted producer proof artifact'
-          : 'proof artifact lookup is ambiguous',
-      candidateCount: candidates.length,
+      reason: 'no exact trusted producer proof artifact',
+      candidateCount: 0,
     };
   }
-  const selectedRun = runsById.get(Number(candidates[0].workflow_run.id));
+  const selected = [...candidates].sort((left, right) => {
+    const createdAtOrder =
+      new Date(right.created_at).getTime() -
+      new Date(left.created_at).getTime();
+    if (createdAtOrder !== 0) return createdAtOrder;
+    const artifactIdOrder = Number(right.id) - Number(left.id);
+    if (artifactIdOrder !== 0) return artifactIdOrder;
+    return Number(right.workflow_run?.id) - Number(left.workflow_run?.id);
+  })[0];
+  const selectedRun = runsById.get(Number(selected.workflow_run.id));
   return {
     reusable: true,
-    reason: 'exact trusted producer proof artifact found',
-    candidateCount: 1,
-    runId: Number(candidates[0].workflow_run.id),
-    artifactId: Number(candidates[0].id),
+    reason:
+      candidates.length === 1
+        ? 'exact trusted producer proof artifact found'
+        : 'newest exact trusted producer proof artifact selected',
+    candidateCount: candidates.length,
+    runId: Number(selected.workflow_run.id),
+    artifactId: Number(selected.id),
     producerEvent: selectedRun.event,
     producerHeadSha: selectedRun.head_sha,
   };

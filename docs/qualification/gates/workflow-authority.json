@@ -114,7 +114,7 @@
     {
       "path": ".github/workflows/affected-native-pr.yml",
       "authority": "qualification",
-      "definitionDigest": "sha256:39fd2da7f5cadbcd59d570a8d6c98c074e2ed33d94c369d53b461793a6f57627",
+      "definitionDigest": "sha256:463c5c8356302ae6148a3c3baa946e50679a3de3c3584ba2cbe9863fb014bf27",
       "jobs": [
         {
           "id": "affected_native_shards",

@@ -491,7 +491,7 @@ test('lookup admits one exact successful same-SHA merge-group artifact', () => {
   );
 });
 
-test('lookup admits PR proofs and degrades ambiguity or untrusted artifacts', () => {
+test('lookup admits PR proofs, deterministically deduplicates, and rejects untrusted artifacts', () => {
   const run = {
     event: 'merge_group',
     head_sha: HEAD,
@@ -512,7 +512,10 @@ test('lookup admits PR proofs and degrades ambiguity or untrusted artifacts', ()
     ...overrides,
   });
   const duplicate = selectReusableArtifact({
-    artifacts: [artifact(1), artifact(2)],
+    artifacts: [
+      artifact(1, { created_at: '2026-07-22T00:20:00Z' }),
+      artifact(2, { created_at: '2026-07-22T00:30:00Z' }),
+    ],
     runsById: new Map([
       [1, run],
       [2, run],
@@ -522,8 +525,26 @@ test('lookup admits PR proofs and degrades ambiguity or untrusted artifacts', ()
     headSha: HEAD,
     now: '2026-07-22T01:00:00Z',
   });
-  assert.equal(duplicate.reusable, false);
-  assert.match(duplicate.reason, /ambiguous/);
+  assert.equal(duplicate.reusable, true);
+  assert.equal(duplicate.candidateCount, 2);
+  assert.equal(duplicate.runId, 2);
+  assert.equal(duplicate.artifactId, 2);
+  assert.match(duplicate.reason, /newest/);
+
+  const tied = selectReusableArtifact({
+    artifacts: [artifact(8), artifact(9)],
+    runsById: new Map([
+      [8, run],
+      [9, run],
+    ]),
+    artifactName: 'proof-name',
+    repositoryId: 100,
+    headSha: HEAD,
+    now: '2026-07-22T01:00:00Z',
+  });
+  assert.equal(tied.reusable, true);
+  assert.equal(tied.runId, 9);
+  assert.equal(tied.artifactId, 9);
 
   const rejected = selectReusableArtifact({
     artifacts: [
@@ -585,7 +606,7 @@ test('workflow keeps one context while PR proof replaces duplicate queue builds'
   assert.doesNotMatch(workflow, /^\s{2}push\s*:/mu);
   assert.match(
     workflow,
-    /concurrency:[\s\S]*merge_group\.head_sha \|\| github\.run_id[\s\S]*cancel-in-progress: false/u,
+    /concurrency:[\s\S]*merge_group\.head_sha \|\| github\.ref \|\| github\.run_id[\s\S]*cancel-in-progress: \$\{\{ github\.event_name == 'pull_request' \}\}/u,
   );
   assert.doesNotMatch(workflow, /^\s*queue:/mu);
   assert.match(workflow, /^\s{2}dco:$/mu);
