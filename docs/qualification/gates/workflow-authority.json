@@ -20,9 +20,7 @@
             "inheritedSecrets": false,
             "environment": null
           },
-          "externalActions": [
-            "actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0"
-          ],
+          "externalActions": ["actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0"],
           "steps": [
             {
               "index": 1,
@@ -58,15 +56,7 @@
             "inheritedSecrets": false,
             "environment": null
           },
-          "externalActions": [
-            "actions/checkout@v4",
-            "actions/setup-node@v6.4.0",
-            "actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830",
-            "actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830",
-            "actions/cache/save@0057852bfaa89a56745cba8c7296529d2fc39830",
-            "actions/cache/save@0057852bfaa89a56745cba8c7296529d2fc39830",
-            "actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02"
-          ],
+          "externalActions": ["actions/checkout@v4","actions/setup-node@v6.4.0","actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830","actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830","actions/cache/save@0057852bfaa89a56745cba8c7296529d2fc39830","actions/cache/save@0057852bfaa89a56745cba8c7296529d2fc39830","actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02"],
           "steps": [
             {
               "index": 1,
@@ -227,14 +217,7 @@
             "inheritedSecrets": false,
             "environment": null
           },
-          "externalActions": [
-            "actions/checkout@v4",
-            "actions/setup-node@v6.4.0",
-            "actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093",
-            "actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093",
-            "actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093",
-            "actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02"
-          ],
+          "externalActions": ["actions/checkout@v4","actions/setup-node@v6.4.0","actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093","actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093","actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093","actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02"],
           "steps": [
             {
               "index": 1,
@@ -305,10 +288,7 @@
             "inheritedSecrets": false,
             "environment": null
           },
-          "externalActions": [
-            "actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0",
-            "kungfu-systems/buildchain/actions/validate-config@v3"
-          ],
+          "externalActions": ["actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0","kungfu-systems/buildchain/actions/validate-config@v3"],
           "steps": [
             {
               "index": 1,
@@ -337,10 +317,7 @@
             "inheritedSecrets": false,
             "environment": null
           },
-          "externalActions": [
-            "actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0",
-            "actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02"
-          ],
+          "externalActions": ["actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0","actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02"],
           "steps": [
             {
               "index": 1,
@@ -387,9 +364,7 @@
             "inheritedSecrets": false,
             "environment": null
           },
-          "externalActions": [
-            "actions/checkout@v4"
-          ],
+          "externalActions": ["actions/checkout@v4"],
           "steps": [
             {
               "index": 1,
@@ -418,10 +393,7 @@
             "inheritedSecrets": false,
             "environment": null
           },
-          "externalActions": [
-            "actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0",
-            "actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e"
-          ],
+          "externalActions": ["actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0","actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e"],
           "steps": [
             {
               "index": 1,
@@ -462,12 +434,7 @@
             "inheritedSecrets": false,
             "environment": null
           },
-          "externalActions": [
-            "actions/checkout@v4",
-            "actions/setup-node@v6.4.0",
-            "actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02",
-            "actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093"
-          ],
+          "externalActions": ["actions/checkout@v4","actions/setup-node@v6.4.0","actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02","actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093"],
           "steps": [
             {
               "index": 1,
@@ -538,10 +505,7 @@
             "inheritedSecrets": false,
             "environment": null
           },
-          "externalActions": [
-            "actions/checkout@v4",
-            "actions/setup-node@v6.4.0"
-          ],
+          "externalActions": ["actions/checkout@v4","actions/setup-node@v6.4.0"],
           "steps": [
             {
               "index": 1,
@@ -606,9 +570,7 @@
             "inheritedSecrets": false,
             "environment": null
           },
-          "externalActions": [
-            "kungfu-systems/buildchain/.github/workflows/check.yml@9e904de2c85dbea7c799780ee166510b3336d812"
-          ],
+          "externalActions": ["kungfu-systems/buildchain/.github/workflows/check.yml@9e904de2c85dbea7c799780ee166510b3336d812"],
           "steps": []
         }
       ]
@@ -631,11 +593,7 @@
             "inheritedSecrets": false,
             "environment": null
           },
-          "externalActions": [
-            "actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0",
-            "actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093",
-            "actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02"
-          ],
+          "externalActions": ["actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0","actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093","actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02"],
           "steps": [
             {
               "index": 1,
@@ -676,11 +634,7 @@
             "inheritedSecrets": false,
             "environment": null
           },
-          "externalActions": [
-            "actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0",
-            "actions/setup-node@v6.4.0",
-            "actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02"
-          ],
+          "externalActions": ["actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0","actions/setup-node@v6.4.0","actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02"],
           "steps": [
             {
               "index": 1,
@@ -764,9 +718,7 @@
             "inheritedSecrets": false,
             "environment": null
           },
-          "externalActions": [
-            "kungfu-systems/buildchain/.github/workflows/.auditable-demo.yml@ebc7b2d86ecce1de835c8f8ba4436bcac65a62c2"
-          ],
+          "externalActions": ["kungfu-systems/buildchain/.github/workflows/.auditable-demo.yml@ebc7b2d86ecce1de835c8f8ba4436bcac65a62c2"],
           "steps": []
         },
         {
@@ -782,11 +734,7 @@
             "inheritedSecrets": false,
             "environment": null
           },
-          "externalActions": [
-            "actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0",
-            "actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd",
-            "actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a"
-          ],
+          "externalActions": ["actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0","actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd","actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a"],
           "steps": [
             {
               "index": 1,
@@ -831,9 +779,7 @@
             "inheritedSecrets": false,
             "environment": null
           },
-          "externalActions": [
-            "kungfu-systems/buildchain/.github/workflows/.build.yml@ebc7b2d86ecce1de835c8f8ba4436bcac65a62c2"
-          ],
+          "externalActions": ["kungfu-systems/buildchain/.github/workflows/.build.yml@ebc7b2d86ecce1de835c8f8ba4436bcac65a62c2"],
           "steps": []
         },
         {
@@ -855,12 +801,7 @@
             "inheritedSecrets": false,
             "environment": "alpha-macos-signing"
           },
-          "externalActions": [
-            "actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131",
-            "actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131",
-            "actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a",
-            "actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a"
-          ],
+          "externalActions": ["actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131","actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131","actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a","actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a"],
           "steps": [
             {
               "index": 1,
@@ -913,9 +854,7 @@
             "inheritedSecrets": false,
             "environment": null
           },
-          "externalActions": [
-            "kungfu-systems/build-images/.github/workflows/comparator-kungfu-package-smoke.yml@3056c23e70b83f5bb63062f04027a93e79039e4b"
-          ],
+          "externalActions": ["kungfu-systems/build-images/.github/workflows/comparator-kungfu-package-smoke.yml@3056c23e70b83f5bb63062f04027a93e79039e4b"],
           "steps": []
         },
         {
@@ -931,11 +870,7 @@
             "inheritedSecrets": false,
             "environment": null
           },
-          "externalActions": [
-            "actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0",
-            "actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093",
-            "actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02"
-          ],
+          "externalActions": ["actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0","actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093","actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02"],
           "steps": [
             {
               "index": 1,
@@ -982,11 +917,7 @@
             "inheritedSecrets": false,
             "environment": null
           },
-          "externalActions": [
-            "actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0",
-            "actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e",
-            "actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a"
-          ],
+          "externalActions": ["actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0","actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e","actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a"],
           "steps": [
             {
               "index": 1,
@@ -1027,9 +958,7 @@
             "inheritedSecrets": false,
             "environment": null
           },
-          "externalActions": [
-            "actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0"
-          ],
+          "externalActions": ["actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0"],
           "steps": [
             {
               "index": 1,
@@ -1058,10 +987,7 @@
             "inheritedSecrets": false,
             "environment": null
           },
-          "externalActions": [
-            "actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd",
-            "actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a"
-          ],
+          "externalActions": ["actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd","actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a"],
           "steps": [
             {
               "index": 1,
@@ -1097,9 +1023,7 @@
             "inheritedSecrets": false,
             "environment": null
           },
-          "externalActions": [
-            "actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0"
-          ],
+          "externalActions": ["actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0"],
           "steps": [
             {
               "index": 1,
@@ -1128,10 +1052,7 @@
             "inheritedSecrets": false,
             "environment": null
           },
-          "externalActions": [
-            "actions/checkout@v4",
-            "kungfu-systems/buildchain/actions/validate-config@v3"
-          ],
+          "externalActions": ["actions/checkout@v4","kungfu-systems/buildchain/actions/validate-config@v3"],
           "steps": [
             {
               "index": 1,
@@ -1169,9 +1090,7 @@
             "inheritedSecrets": false,
             "environment": null
           },
-          "externalActions": [
-            "actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0"
-          ],
+          "externalActions": ["actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0"],
           "steps": [
             {
               "index": 1,
@@ -1207,13 +1126,7 @@
             "inheritedSecrets": false,
             "environment": null
           },
-          "externalActions": [
-            "actions/checkout@v4",
-            "actions/setup-node@v6.4.0",
-            "actions/upload-artifact@v4",
-            "actions/upload-artifact@v4",
-            "actions/upload-artifact@v4"
-          ],
+          "externalActions": ["actions/checkout@v4","actions/setup-node@v6.4.0","actions/upload-artifact@v4","actions/upload-artifact@v4","actions/upload-artifact@v4"],
           "steps": [
             {
               "index": 1,
@@ -1381,9 +1294,7 @@
             "inheritedSecrets": false,
             "environment": null
           },
-          "externalActions": [
-            "actions/checkout@v4"
-          ],
+          "externalActions": ["actions/checkout@v4"],
           "steps": [
             {
               "index": 1,
@@ -1419,9 +1330,7 @@
             "inheritedSecrets": false,
             "environment": null
           },
-          "externalActions": [
-            "kungfu-systems/buildchain/.github/workflows/dev-alpha-candidate-patrol.yml@e95c0251390f4948b7aa00de63c49f018ef1f6ff"
-          ],
+          "externalActions": ["kungfu-systems/buildchain/.github/workflows/dev-alpha-candidate-patrol.yml@e95c0251390f4948b7aa00de63c49f018ef1f6ff"],
           "steps": []
         }
       ]
@@ -1467,9 +1376,7 @@
             "inheritedSecrets": false,
             "environment": null
           },
-          "externalActions": [
-            "kungfu-systems/buildchain/.github/workflows/.gate-profile.yml@f8ef93be41b0badd75eb35cc1506c2be12198984"
-          ],
+          "externalActions": ["kungfu-systems/buildchain/.github/workflows/.gate-profile.yml@f8ef93be41b0badd75eb35cc1506c2be12198984"],
           "steps": []
         }
       ]
@@ -1492,9 +1399,7 @@
             "inheritedSecrets": false,
             "environment": null
           },
-          "externalActions": [
-            "actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0"
-          ],
+          "externalActions": ["actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0"],
           "steps": [
             {
               "index": 1,
@@ -1538,10 +1443,7 @@
             "inheritedSecrets": false,
             "environment": null
           },
-          "externalActions": [
-            "actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0",
-            "lycheeverse/lychee-action@e7477775783ea5526144ba13e8db5eec57747ce8"
-          ],
+          "externalActions": ["actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0","lycheeverse/lychee-action@e7477775783ea5526144ba13e8db5eec57747ce8"],
           "steps": [
             {
               "index": 1,
@@ -1577,11 +1479,7 @@
             "inheritedSecrets": false,
             "environment": null
           },
-          "externalActions": [
-            "actions/setup-node@v6.4.0",
-            "actions/download-artifact@v4",
-            "actions/upload-artifact@v4"
-          ],
+          "externalActions": ["actions/setup-node@v6.4.0","actions/download-artifact@v4","actions/upload-artifact@v4"],
           "steps": [
             {
               "index": 1,
@@ -1700,9 +1598,7 @@
             "inheritedSecrets": false,
             "environment": null
           },
-          "externalActions": [
-            "actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0"
-          ],
+          "externalActions": ["actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0"],
           "steps": [
             {
               "index": 1,
@@ -1731,10 +1627,7 @@
             "inheritedSecrets": false,
             "environment": null
           },
-          "externalActions": [
-            "actions/checkout@v4",
-            "actions/upload-artifact@v4"
-          ],
+          "externalActions": ["actions/checkout@v4","actions/upload-artifact@v4"],
           "steps": [
             {
               "index": 1,
@@ -1835,9 +1728,7 @@
             "inheritedSecrets": false,
             "environment": null
           },
-          "externalActions": [
-            "kungfu-systems/buildchain/.github/workflows/.gate-profile.yml@9e904de2c85dbea7c799780ee166510b3336d812"
-          ],
+          "externalActions": ["kungfu-systems/buildchain/.github/workflows/.gate-profile.yml@9e904de2c85dbea7c799780ee166510b3336d812"],
           "steps": []
         }
       ]
@@ -1860,10 +1751,7 @@
             "inheritedSecrets": false,
             "environment": null
           },
-          "externalActions": [
-            "actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0",
-            "actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e"
-          ],
+          "externalActions": ["actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0","actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e"],
           "steps": [
             {
               "index": 1,
@@ -1894,6 +1782,54 @@
       ]
     },
     {
+      "path": ".github/workflows/opencode-local-model-canary.yml",
+      "authority": "qualification",
+      "definitionDigest": "sha256:7d70ef34c7fd9bc2fd9e42d9b9aa5e500223527e10cbaa1f6f04ed7d5aef1c85",
+      "jobs": [
+        {
+          "id": "canary",
+          "authority": "qualification",
+          "publication": "none",
+          "receipt": "diagnostic",
+          "definitionDigest": "sha256:b5c332864a9fbcef8afb4f6587d3273ba7a65808993c81964df6c5454f25a69b",
+          "credentials": {
+            "githubToken": "read",
+            "oidc": false,
+            "repositorySecrets": [],
+            "inheritedSecrets": false,
+            "environment": null
+          },
+          "externalActions": ["actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02"],
+          "steps": [
+            {
+              "index": 1,
+              "label": "name:Verify trusted runner and preloaded image",
+              "authority": "qualification",
+              "definitionDigest": "sha256:2a237279ba9fbf601cee91adf9c92be06a0f89ae3cbfada949ad13b937902867"
+            },
+            {
+              "index": 2,
+              "label": "name:Prepare deterministic fixture",
+              "authority": "qualification",
+              "definitionDigest": "sha256:d674b621fa175c03922e03243027d6ff5589f60bc99c865fb681271e4e51c03f"
+            },
+            {
+              "index": 3,
+              "label": "name:Run OpenCode with the local model",
+              "authority": "qualification",
+              "definitionDigest": "sha256:5f26709990943c65786ad2a3b5bb8df1ff9f9e42be6f7321ea37986706b4da12"
+            },
+            {
+              "index": 4,
+              "label": "name:Upload bounded canary evidence",
+              "authority": "evidence-publication",
+              "definitionDigest": "sha256:83b8681f05d40eb268da160b5246293dd16791a823b28513ad0ccffa0ff6bfdc"
+            }
+          ]
+        }
+      ]
+    },
+    {
       "path": ".github/workflows/publish-layer-artifacts.yml",
       "authority": "product-publication",
       "definitionDigest": "sha256:2a1f4fe360c74e3811ec1e1ad1a98d78d8218abbab6d6a209e0ccbdbd30cd55f",
@@ -1911,12 +1847,7 @@
             "inheritedSecrets": false,
             "environment": null
           },
-          "externalActions": [
-            "actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5",
-            "actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020",
-            "actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093",
-            "actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02"
-          ],
+          "externalActions": ["actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5","actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020","actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093","actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02"],
           "steps": [
             {
               "index": 1,
@@ -1999,13 +1930,7 @@
             "inheritedSecrets": false,
             "environment": "adr0049-production-publication"
           },
-          "externalActions": [
-            "actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5",
-            "actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020",
-            "actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093",
-            "rust-lang/crates-io-auth-action@c6f97d42243bad5fab37ca0427f495c86d5b1a18",
-            "actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02"
-          ],
+          "externalActions": ["actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5","actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020","actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093","rust-lang/crates-io-auth-action@c6f97d42243bad5fab37ca0427f495c86d5b1a18","actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02"],
           "steps": [
             {
               "index": 1,
@@ -2076,10 +2001,7 @@
             "inheritedSecrets": false,
             "environment": "adr0049-production-publication"
           },
-          "externalActions": [
-            "actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093",
-            "pypa/gh-action-pypi-publish@cef221092ed1bacb1cc03d23a2d87d1d172e277b"
-          ],
+          "externalActions": ["actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093","pypa/gh-action-pypi-publish@cef221092ed1bacb1cc03d23a2d87d1d172e277b"],
           "steps": [
             {
               "index": 1,
@@ -2108,11 +2030,7 @@
             "inheritedSecrets": false,
             "environment": null
           },
-          "externalActions": [
-            "actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093",
-            "actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020",
-            "actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02"
-          ],
+          "externalActions": ["actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093","actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020","actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02"],
           "steps": [
             {
               "index": 1,
@@ -2153,11 +2071,7 @@
             "inheritedSecrets": false,
             "environment": null
           },
-          "externalActions": [
-            "actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5",
-            "actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093",
-            "actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02"
-          ],
+          "externalActions": ["actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5","actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093","actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02"],
           "steps": [
             {
               "index": 1,
@@ -2205,12 +2119,7 @@
             "inheritedSecrets": false,
             "environment": null
           },
-          "externalActions": [
-            "actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0",
-            "actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e",
-            "actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0",
-            "actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02"
-          ],
+          "externalActions": ["actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0","actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e","actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0","actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02"],
           "steps": [
             {
               "index": 1,
@@ -2299,9 +2208,7 @@
             "inheritedSecrets": false,
             "environment": null
           },
-          "externalActions": [
-            "kungfu-systems/buildchain/.github/workflows/release-candidate-promote.yml@ebc7b2d86ecce1de835c8f8ba4436bcac65a62c2"
-          ],
+          "externalActions": ["kungfu-systems/buildchain/.github/workflows/release-candidate-promote.yml@ebc7b2d86ecce1de835c8f8ba4436bcac65a62c2"],
           "steps": []
         },
         {
@@ -2317,11 +2224,7 @@
             "inheritedSecrets": false,
             "environment": null
           },
-          "externalActions": [
-            "actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0",
-            "actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e",
-            "actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0"
-          ],
+          "externalActions": ["actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0","actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e","actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0"],
           "steps": [
             {
               "index": 1,
@@ -2393,10 +2296,7 @@
             "inheritedSecrets": false,
             "environment": null
           },
-          "externalActions": [
-            "actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5",
-            "actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02"
-          ],
+          "externalActions": ["actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5","actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02"],
           "steps": [
             {
               "index": 1,
@@ -2463,9 +2363,7 @@
             "inheritedSecrets": false,
             "environment": null
           },
-          "externalActions": [
-            "actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093"
-          ],
+          "externalActions": ["actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093"],
           "steps": [
             {
               "index": 1,
@@ -2507,10 +2405,7 @@
             "inheritedSecrets": false,
             "environment": null
           },
-          "externalActions": [
-            "actions/checkout@v4",
-            "actions/setup-node@v6.4.0"
-          ],
+          "externalActions": ["actions/checkout@v4","actions/setup-node@v6.4.0"],
           "steps": [
             {
               "index": 1,
@@ -2581,9 +2476,7 @@
             "inheritedSecrets": false,
             "environment": null
           },
-          "externalActions": [
-            "actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0"
-          ],
+          "externalActions": ["actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0"],
           "steps": [
             {
               "index": 1,
@@ -2619,9 +2512,7 @@
             "inheritedSecrets": false,
             "environment": null
           },
-          "externalActions": [
-            "kungfu-systems/buildchain/.github/workflows/check.yml@9e904de2c85dbea7c799780ee166510b3336d812"
-          ],
+          "externalActions": ["kungfu-systems/buildchain/.github/workflows/check.yml@9e904de2c85dbea7c799780ee166510b3336d812"],
           "steps": []
         }
       ]
