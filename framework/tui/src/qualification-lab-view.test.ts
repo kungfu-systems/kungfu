@@ -10,7 +10,6 @@ import type {
 } from '@kungfu-tech/api/capability';
 import { render } from 'ink';
 import React from 'react';
-import { IncrementalTerminalOutput } from './incremental-terminal-output.js';
 import {
   QualificationLabView,
   isQualificationReportReturnInput,
@@ -21,6 +20,7 @@ import {
   qualificationPromptRows,
   qualificationSessionTitleBar,
 } from './qualification-lab-view.js';
+import { IncrementalTerminalOutput } from './terminal-canvas.js';
 
 class CaptureOutput extends EventEmitter {
   isTTY = true;

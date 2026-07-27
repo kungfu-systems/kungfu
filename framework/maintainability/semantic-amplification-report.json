@@ -5,11 +5,7 @@
   "manifestPath": "framework/maintainability/semantic-amplification.manifest.json",
   "manifestRoot": "sha256:13bba3d8469c4ec5d50acd2dd380832cbd42808c287642fc5cfe82b423260628",
   "baselineRef": "dbfed9ca1785d147b26f4f06e7e6895ac7368fee",
-<<<<<<< HEAD
-  "sourceRoot": "sha256:8306c9fe4d75e10ae381073e3c93139ffd1082dffbd2572aa172830e8aecdee9",
-=======
-  "sourceRoot": "sha256:51c37f17e8e22c2ed1190f841eadccfa2f91fe6379e85cf2390b5d340a63d5a0",
->>>>>>> 553a6dc5e7 (feat(product): unify agent qualification experience)
+  "sourceRoot": "sha256:7df5cbc4775bbc6bb89d73e6dc1b3474a09ddc86d9695406c800ba5763720879",
   "roles": {
     "authority": "exactly one authority route per family; the route may name multiple co-owned source files",
     "allowedProjectionRoles": [

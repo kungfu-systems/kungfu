@@ -7,7 +7,7 @@ import test from 'node:test';
 import {
   IncrementalTerminalOutput,
   type WritableTerminal,
-} from './incremental-terminal-output.js';
+} from './terminal-canvas.js';
 
 class FakeTerminal extends EventEmitter implements WritableTerminal {
   isTTY = true;

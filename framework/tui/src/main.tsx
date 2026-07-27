@@ -21,7 +21,6 @@ import {
 import { Box, Text, render, useApp } from 'ink';
 import React from 'react';
 
-import { IncrementalTerminalOutput } from './incremental-terminal-output.js';
 import { loadTuiKfxPlan } from './kfx-plan.js';
 import { boundedIndex, decodeShellKey } from './navigation.js';
 import {
@@ -41,7 +40,10 @@ import {
   qualificationEventRunningSession,
   qualificationNextModePrompt,
 } from './qualification-lab-view.js';
-import { terminalCanvasRows } from './terminal-canvas.js';
+import {
+  IncrementalTerminalOutput,
+  terminalCanvasRows,
+} from './terminal-canvas.js';
 import {
   TerminalLifecycle,
   describeCliFailure,
