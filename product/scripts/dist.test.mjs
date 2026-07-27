@@ -18,6 +18,7 @@ import {
   isShippedKfdSupport,
   kfxBundleExternalModules,
   requiresManagedEsbuildPlatform,
+  runInstalledKungfuAgentHubSmoke,
   runInstalledKungfuAssignmentAdmissionSmoke,
   runInstalledKungfuCommand,
   stageXinfaContract,
@@ -354,6 +355,61 @@ test('Assignment admission smoke isolates the operator Workspace Catalog', (t) =
     JSON.parse(fs.readFileSync(isolatedCatalog, 'utf8')).locator,
     path.join(installRoot, 'assignment-admission-workspace'),
   );
+});
+
+test('Agent Hub smoke redirects Python cache outside its isolated user home', (t) => {
+  const root = fs.mkdtempSync(
+    path.join(os.tmpdir(), 'kungfu-agent-hub-cache-isolation-'),
+  );
+  t.after(() => fs.rmSync(root, { recursive: true, force: true }));
+  const installRoot = path.join(root, 'installed');
+  fs.mkdirSync(installRoot, { recursive: true });
+
+  const invocations = [];
+  const meaning = 'Agent Hub qualification passed';
+  const nonClaims = ['KFD certification'];
+  runInstalledKungfuAgentHubSmoke({
+    installRoot,
+    kungfuBin: path.join(installRoot, 'kungfu'),
+    env: process.env,
+    run(invocation) {
+      invocations.push(invocation);
+      fs.mkdirSync(invocation.env.KF_CACHE_HOME, { recursive: true });
+      fs.writeFileSync(
+        path.join(invocation.env.KF_CACHE_HOME, 'qualification.pyc'),
+        'cache',
+      );
+      if (invocation.args.includes('qualify')) {
+        return `${JSON.stringify({
+          valid: true,
+          coverage: { passed: 20, total: 20 },
+          isolation: { realHomeUnchanged: true },
+          meaning,
+          nonClaims,
+          next: { verify: 'kungfu agent hub verify' },
+          evidence: { reportDigest: `sha256:${'1'.repeat(64)}` },
+        })}\n`;
+      }
+      return `${JSON.stringify({
+        valid: true,
+        coverage: { passed: 20, total: 20 },
+        meaning,
+        nonClaims,
+        checks: [{ passed: true }],
+      })}\n`;
+    },
+  });
+
+  assert.equal(invocations.length, 2);
+  const expectedUserHome = path.join(installRoot, '.agent-hub-user-home');
+  const expectedCacheHome = path.join(installRoot, '.agent-hub-cache-home');
+  for (const invocation of invocations) {
+    assert.equal(invocation.env.HOME, expectedUserHome);
+    assert.equal(invocation.env.USERPROFILE, expectedUserHome);
+    assert.equal(invocation.env.KF_CACHE_HOME, expectedCacheHome);
+  }
+  assert.equal(fs.existsSync(expectedUserHome), false);
+  assert.equal(fs.existsSync(expectedCacheHome), true);
 });
 
 test('product observability ignores errors from sibling components', () => {
