@@ -19,7 +19,7 @@
     "semanticSources": {
       "cut": {
         "path": "framework/project-cut/work-lifecycle.contract.json",
-        "root": "sha256:a8c880ce0e996bfa2cd086ff87dac689f2ba2a8f98577cee8f68f7f75ab9445c"
+        "root": "sha256:4898f2e35780852cc2b63d37a72dbc2f4a9c009cdf0359bd2e3023a269efbfc6"
       },
       "episode": {
         "path": "framework/episode/native-operation-catalog.contract.json",
@@ -478,8 +478,8 @@
       "kungfu.profile_sdk": "libkungfu/runtime/profile",
       "kungfu::runtime::kfx::native_kfx_service": "libkungfu/runtime/kfx",
       "kungfu::runtime::profile::profile_lifecycle": "libkungfu/runtime/profile",
-      "mission-control-actions": "libkungfu/runtime/action/mission-control",
-      "mission-control-profile": "libkungfu/runtime/action/mission-control"
+      "work-control-actions": "libkungfu/runtime/action/work-control",
+      "work-control-profile": "libkungfu/runtime/action/work-control"
     },
     "nativeWaist": {
       "bootstrap": "kungfu_get_api",
@@ -1383,13 +1383,13 @@
       "capability": "inspect",
       "layer": "initiative",
       "public": true,
-      "authorityOwner": "mission-control-profile",
+      "authorityOwner": "work-control-profile",
       "authoritySurface": "Initiative domain facts resolved at an exact native Cut",
       "preconditions": [
-        "Readable Mission Control profile and exact query basis"
+        "Readable Work Control profile and exact query basis"
       ],
       "result": "Initiative identity, state, decomposition, evidence roots, and visible omissions",
-      "receipt": "Fact query basis and Mission Control projection result",
+      "receipt": "Fact query basis and Work Control projection result",
       "idempotency": "The same exact Cut and profile contract produce an equivalent projection",
       "durability": "read-only",
       "failureClasses": [
@@ -1400,9 +1400,9 @@
       "capabilityContraction": "A host may inspect Core facts without claiming complete Initiative semantics",
       "native": {
         "status": "projected",
-        "interface": "mission-control-profile",
+        "interface": "work-control-profile",
         "operations": [
-          "show-missions"
+          "initiatives"
         ]
       },
       "currentParity": {
@@ -1427,13 +1427,13 @@
       "capability": "create",
       "layer": "initiative",
       "public": true,
-      "authorityOwner": "mission-control-profile",
+      "authorityOwner": "work-control-profile",
       "authoritySurface": "Initiative domain fact over Kungfu Core",
       "preconditions": [
-        "Mission fact-author capability and admitted storage"
+        "Initiative fact-author capability and admitted storage"
       ],
       "result": "Initiative fact appended in a sealed Episode",
-      "receipt": "Mission Control action receipt plus Episode seal",
+      "receipt": "Work Control action receipt plus Episode seal",
       "idempotency": "Domain identity and storage receipt govern replay",
       "durability": "append-decision",
       "failureClasses": [
@@ -1444,7 +1444,7 @@
       "capabilityContraction": "Native storage availability alone does not grant Initiative domain authority",
       "native": {
         "status": "projected",
-        "interface": "mission-control-actions",
+        "interface": "work-control-actions",
         "operations": [
           "create-initiative"
         ]
@@ -1471,13 +1471,13 @@
       "capability": "transition",
       "layer": "initiative",
       "public": true,
-      "authorityOwner": "mission-control-profile",
+      "authorityOwner": "work-control-profile",
       "authoritySurface": "Initiative progress assessment and continuation decision",
       "preconditions": [
         "Exact Initiative root, admitted evidence, and appropriate assessment or continuation capability"
       ],
       "result": "Assessment, independent review, or continuation decision appended as facts",
-      "receipt": "Trust report and/or Mission Control action receipt",
+      "receipt": "Trust report and/or Work Control action receipt",
       "idempotency": "Exact-root decision identity prevents silent replacement",
       "durability": "append-decision",
       "failureClasses": [
@@ -1488,7 +1488,7 @@
       "capabilityContraction": "Assessment does not imply completion; continuation does not rewrite prior evidence",
       "native": {
         "status": "projected",
-        "interface": "mission-control-actions",
+        "interface": "work-control-actions",
         "operations": [
           "assess-progress",
           "review-completion",
@@ -1516,13 +1516,13 @@
       "capability": "export",
       "layer": "initiative",
       "public": true,
-      "authorityOwner": "mission-control-profile",
+      "authorityOwner": "work-control-profile",
       "authoritySurface": "Portable Initiative graph bundle projection",
       "preconditions": [
         "Exact Initiative root and exportable native Fact/Episode closure"
       ],
-      "result": "Portable Mission bundle containing Initiative and bounded Assignment facts",
-      "receipt": "Mission Control export result bound to native authority roots",
+      "result": "Portable Initiative bundle containing Initiative and bounded Assignment facts",
+      "receipt": "Work Control export result bound to native authority roots",
       "idempotency": "Exact Initiative and authority frontier retain one semantic export root",
       "durability": "read-only",
       "failureClasses": [
@@ -1533,9 +1533,9 @@
       "capabilityContraction": "The domain bundle cannot weaken or replace native authority export evidence",
       "native": {
         "status": "projected",
-        "interface": "mission-control-actions",
+        "interface": "work-control-actions",
         "operations": [
-          "export-mission"
+          "export-initiative"
         ]
       },
       "currentParity": {
@@ -1560,13 +1560,13 @@
       "capability": "import",
       "layer": "initiative",
       "public": true,
-      "authorityOwner": "mission-control-profile",
+      "authorityOwner": "work-control-profile",
       "authoritySurface": "Portable Initiative graph bundle admission",
       "preconditions": [
-        "Validated Mission bundle, compatible Profile contract, and native import receipts"
+        "Validated Initiative bundle, compatible Profile contract, and native import receipts"
       ],
       "result": "Admitted Initiative/Assignment projection over preserved native roots",
-      "receipt": "Mission Control import result plus native acceptance receipts",
+      "receipt": "Work Control import result plus native acceptance receipts",
       "idempotency": "Bundle identity and native committed-prefix receipts govern replay",
       "durability": "append-decision",
       "failureClasses": [
@@ -1578,9 +1578,9 @@
       "capabilityContraction": "Profile import cannot mint an alternative Fact/Episode authority or reinterpret roots",
       "native": {
         "status": "projected",
-        "interface": "mission-control-actions",
+        "interface": "work-control-actions",
         "operations": [
-          "import-mission"
+          "import-initiative"
         ]
       },
       "currentParity": {
@@ -1605,13 +1605,13 @@
       "capability": "inspect",
       "layer": "assignment",
       "public": true,
-      "authorityOwner": "mission-control-profile",
+      "authorityOwner": "work-control-profile",
       "authoritySurface": "Assignment domain facts resolved at an exact native Cut",
       "preconditions": [
-        "Readable Mission Control profile and exact query basis"
+        "Readable Work Control profile and exact query basis"
       ],
       "result": "Assignment identity, parent Initiative, state, claims, reviews, and visible omissions",
-      "receipt": "Fact query basis and Mission Control projection result",
+      "receipt": "Fact query basis and Work Control projection result",
       "idempotency": "The same exact Cut and profile contract produce an equivalent projection",
       "durability": "read-only",
       "failureClasses": [
@@ -1622,9 +1622,9 @@
       "capabilityContraction": "A completion claim or storage row alone cannot be projected as a completed Assignment",
       "native": {
         "status": "projected",
-        "interface": "mission-control-profile",
+        "interface": "work-control-profile",
         "operations": [
-          "show-goals"
+          "assignments"
         ]
       },
       "currentParity": {
@@ -1649,13 +1649,13 @@
       "capability": "create",
       "layer": "assignment",
       "public": true,
-      "authorityOwner": "mission-control-profile",
+      "authorityOwner": "work-control-profile",
       "authoritySurface": "Assignment domain fact over Kungfu Core",
       "preconditions": [
-        "Mission fact-author capability and admitted parent Initiative"
+        "Initiative fact-author capability and admitted parent Initiative"
       ],
       "result": "Assignment fact appended in a sealed Episode",
-      "receipt": "Mission Control action receipt plus Episode seal",
+      "receipt": "Work Control action receipt plus Episode seal",
       "idempotency": "Domain identity and storage receipt govern replay",
       "durability": "append-decision",
       "failureClasses": [
@@ -1666,7 +1666,7 @@
       "capabilityContraction": "Assignment creation cannot mint or reinterpret its Initiative parent",
       "native": {
         "status": "projected",
-        "interface": "mission-control-actions",
+        "interface": "work-control-actions",
         "operations": [
           "create-assignment"
         ]
@@ -1692,13 +1692,13 @@
       "capability": "transition",
       "layer": "assignment",
       "public": true,
-      "authorityOwner": "mission-control-profile",
+      "authorityOwner": "work-control-profile",
       "authoritySurface": "Assignment completion claim and independent review",
       "preconditions": [
         "Exact Assignment root and evidence appropriate to the requested transition"
       ],
       "result": "Completion claim and independent review remain distinct admitted facts",
-      "receipt": "Mission Control action receipt",
+      "receipt": "Work Control action receipt",
       "idempotency": "Claim and review identities retain exact evidence roots",
       "durability": "append-decision",
       "failureClasses": [
@@ -1709,7 +1709,7 @@
       "capabilityContraction": "A claim cannot substitute for review, and review cannot substitute for continuation authority",
       "native": {
         "status": "projected",
-        "interface": "mission-control-actions",
+        "interface": "work-control-actions",
         "operations": [
           "claim-completion",
           "review-completion"
@@ -1736,13 +1736,13 @@
       "capability": "archive",
       "layer": "assignment",
       "public": true,
-      "authorityOwner": "mission-control-profile",
+      "authorityOwner": "work-control-profile",
       "authoritySurface": "Assignment terminal abandonment or supersession fact",
       "preconditions": [
         "Exact Assignment root and an admitted terminal reason"
       ],
       "result": "Append-only terminal fact; prior Assignment history remains visible",
-      "receipt": "Mission Control action receipt",
+      "receipt": "Work Control action receipt",
       "idempotency": "Terminal reason and prior root are immutable inputs",
       "durability": "append-decision",
       "failureClasses": [
@@ -1750,10 +1750,10 @@
         "evidence-unavailable",
         "unsupported-operation"
       ],
-      "capabilityContraction": "Current Mission Control exposes no standalone archive action; callers must report this operation missing rather than delete facts",
+      "capabilityContraction": "Current Work Control exposes no standalone archive action; callers must report this operation missing rather than delete facts",
       "native": {
         "status": "missing",
-        "interface": "mission-control-actions",
+        "interface": "work-control-actions",
         "operations": []
       },
       "currentParity": {
@@ -1792,7 +1792,7 @@
         "root-mismatch",
         "schema-drift"
       ],
-      "capabilityContraction": "Inspection owns no source, Atlas, Episode, Mission, Go, or Git authority",
+      "capabilityContraction": "Inspection owns no source, Atlas, Episode, Initiative, Assignment, or Git authority",
       "native": {
         "status": "implemented",
         "interface": "kf_runtime_action_api_v1",
@@ -2538,14 +2538,14 @@
     "Episode authority owns causal occurrence and seal/recovery evidence; an accepted action or completion claim is not an Episode.",
     "Action Geometry owns responsibility separation and non-substitution invariants, while Domain Profiles own lifecycle vocabulary and validation.",
     "Domain Profile declarations own adopter-specific objects, mappings, workflows, and policies; Core owns installed roots and lifecycle mutation receipts.",
-    "Initiative and Assignment are Mission Control domain facts over Core authority; storage capability alone grants no domain authority.",
+    "Initiative and Assignment are Work Control domain facts over Core authority; storage capability alone grants no domain authority.",
     "Core Cut binds typed authority roots without domain special cases; the software-development Profile alone maps Git source, Xinfa Atlas, and Episode roots into its Project Cut projection.",
     "A language marked partial or missing must fail visibly; backend access, private layout access, or a locally reconstructed state cannot upgrade parity."
   ],
   "nonClaims": [
     "Equal C++, Python, Node.js, and Rust envelope parity means every underlying Domain Profile authority is available.",
     "Project Cut is a second Core protocol or may reinterpret legacy project.cut/v1 roots.",
-    "Mission Control domain lifecycle is implied by generic Fact or Episode storage operations.",
+    "Work Control domain lifecycle is implied by generic Fact or Episode storage operations.",
     "A generated language binding may use a backend-specific implementation as equivalent authority.",
     "A valid Domain Profile declaration is signed, qualified, installed, active, or safe for production use.",
     "The pre-stable lifecycle operation rename silently changes persisted roots, schemas, or receipt identities."

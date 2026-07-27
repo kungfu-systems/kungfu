@@ -2,19 +2,19 @@
   "schema": "kungfu.profile-views/v1",
   "views": [
     {
-      "id": "mission-state",
-      "title": "Mission state",
+      "id": "initiative-state",
+      "title": "Initiative state",
       "factSurfaces": [
         "kungfu.initiative-assignment.initiative",
         "kungfu.initiative-assignment.assignment",
         "kungfu.initiative-assignment.completion-claim"
       ],
       "queryFamily": {
-        "id": "mission-state-at-cut",
-        "member": "mission-control-views",
+        "id": "initiative-state-at-cut",
+        "member": "work-control-views",
         "resolutionMode": "member-resolved-definition",
         "bindings": [
-          { "name": "missionId", "type": "string", "required": true },
+          { "name": "initiativeId", "type": "string", "required": true },
           { "name": "storageSourceId", "type": "string", "required": true },
           { "name": "cutSystemTime", "type": "integer", "required": false }
         ]
@@ -25,19 +25,19 @@
       }
     },
     {
-      "id": "mission-timeline",
-      "title": "Mission timeline",
+      "id": "initiative-timeline",
+      "title": "Initiative timeline",
       "factSurfaces": [
         "kungfu.initiative-assignment.initiative",
         "kungfu.initiative-assignment.assignment",
         "kungfu.initiative-assignment.completion-claim"
       ],
       "queryFamily": {
-        "id": "mission-state-at-cut",
-        "member": "mission-control-views",
+        "id": "initiative-state-at-cut",
+        "member": "work-control-views",
         "resolutionMode": "member-resolved-definition",
         "bindings": [
-          { "name": "missionId", "type": "string", "required": true },
+          { "name": "initiativeId", "type": "string", "required": true },
           { "name": "storageSourceId", "type": "string", "required": true },
           { "name": "cutSystemTime", "type": "integer", "required": false }
         ]
@@ -50,19 +50,19 @@
       }
     },
     {
-      "id": "mission-diff",
-      "title": "Mission change",
+      "id": "initiative-diff",
+      "title": "Initiative change",
       "factSurfaces": [
         "kungfu.initiative-assignment.initiative",
         "kungfu.initiative-assignment.assignment",
         "kungfu.initiative-assignment.completion-claim"
       ],
       "queryFamily": {
-        "id": "mission-state-at-cut",
-        "member": "mission-control-views",
+        "id": "initiative-state-at-cut",
+        "member": "work-control-views",
         "resolutionMode": "member-resolved-definition",
         "bindings": [
-          { "name": "missionId", "type": "string", "required": true },
+          { "name": "initiativeId", "type": "string", "required": true },
           { "name": "storageSourceId", "type": "string", "required": true },
           { "name": "cutSystemTime", "type": "integer", "required": false }
         ]
@@ -74,19 +74,19 @@
       }
     },
     {
-      "id": "mission-causal-graph",
-      "title": "Mission causal graph",
+      "id": "initiative-causal-graph",
+      "title": "Initiative causal graph",
       "factSurfaces": [
         "kungfu.initiative-assignment.initiative",
         "kungfu.initiative-assignment.assignment",
         "kungfu.initiative-assignment.completion-claim"
       ],
       "queryFamily": {
-        "id": "mission-state-at-cut",
-        "member": "mission-control-views",
+        "id": "initiative-state-at-cut",
+        "member": "work-control-views",
         "resolutionMode": "member-resolved-definition",
         "bindings": [
-          { "name": "missionId", "type": "string", "required": true },
+          { "name": "initiativeId", "type": "string", "required": true },
           { "name": "storageSourceId", "type": "string", "required": true },
           { "name": "cutSystemTime", "type": "integer", "required": false }
         ]
@@ -99,19 +99,19 @@
       }
     },
     {
-      "id": "mission-attention",
-      "title": "Mission attention",
+      "id": "initiative-attention",
+      "title": "Initiative attention",
       "factSurfaces": [
         "kungfu.initiative-assignment.initiative",
         "kungfu.initiative-assignment.assignment",
         "kungfu.initiative-assignment.completion-claim"
       ],
       "queryFamily": {
-        "id": "mission-state-at-cut",
-        "member": "mission-control-views",
+        "id": "initiative-state-at-cut",
+        "member": "work-control-views",
         "resolutionMode": "member-resolved-definition",
         "bindings": [
-          { "name": "missionId", "type": "string", "required": true },
+          { "name": "initiativeId", "type": "string", "required": true },
           { "name": "storageSourceId", "type": "string", "required": true },
           { "name": "cutSystemTime", "type": "integer", "required": false }
         ]
@@ -126,33 +126,33 @@
       }
     },
     {
-      "id": "goal-cards",
-      "title": "Mission goal cards",
+      "id": "assignment-cards",
+      "title": "Assignment cards",
       "factSurfaces": [
         "kungfu.initiative-assignment.initiative",
         "kungfu.initiative-assignment.assignment",
         "kungfu.initiative-assignment.completion-claim"
       ],
       "queryFamily": {
-        "id": "mission-state-at-cut",
-        "member": "mission-control-views",
+        "id": "initiative-state-at-cut",
+        "member": "work-control-views",
         "resolutionMode": "member-resolved-definition",
         "bindings": [
-          { "name": "missionId", "type": "string", "required": true },
+          { "name": "initiativeId", "type": "string", "required": true },
           { "name": "storageSourceId", "type": "string", "required": true },
           { "name": "cutSystemTime", "type": "integer", "required": false }
         ]
       },
       "view": {
         "kind": "profile",
-        "profileId": "kungfu.mission-control",
+        "profileId": "kungfu.work-control",
         "profileVersion": "3.1.0",
-        "memberId": "mission-control-views",
-        "viewId": "goal-cards",
+        "memberId": "work-control-views",
+        "viewId": "assignment-cards",
         "spec": {
-          "schema": "kungfu.mission-control.goal-card-view/v1",
+          "schema": "kungfu.work-control.goal-card-view/v1",
           "questionId": "observed-progress",
-          "reducer": "kungfu.mission-control.five-questions"
+          "reducer": "kungfu.work-control.five-questions"
         }
       }
     }

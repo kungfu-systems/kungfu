@@ -14,7 +14,7 @@
       "idempotency": "Exact artifact bytes and authority roots reproduce the same verdict",
       "durability": "read-only",
       "failureClasses": ["missing-authority", "root-mismatch", "schema-drift"],
-      "capabilityContraction": "Inspection owns no source, Atlas, Episode, Mission, Go, or Git authority"
+      "capabilityContraction": "Inspection owns no source, Atlas, Episode, Initiative, Assignment, or Git authority"
     },
     {
       "id": "work.lifecycle.cut.create/v1",

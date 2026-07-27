@@ -9,5 +9,7 @@ execution vocabulary.
 - [Agent-first Profile Authoring](profile-authoring.md)
 - [Agent Work State](agent-work-state.md)
 - [Cost/State/Proof Profile](cost-state-proof-profile.md)
-- [Mission Control](mission-control.md)
-- [Mission Control Workspace Design](mission-control-workspaces.md)
+- [Work Control](work-control.md)
+- [Legacy Mission Control](mission-control.md) — exact compatibility history.
+- [Legacy Mission Control Workspace Design](mission-control-workspaces.md) —
+  retained design history.

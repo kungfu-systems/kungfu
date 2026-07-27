@@ -99,15 +99,17 @@ def _runtime(workspace_root="", home=False, operation_class="semantic-write"):
 
 
 def _profile_source():
-    packaged = (
-        Path(orchestration.__file__).resolve().parent / "profiles" / "mission-control"
-    )
-    if packaged.is_dir():
-        return packaged
-    source = orchestration.source_root() / "extensions" / "mission-control"
+    profiles = Path(orchestration.__file__).resolve().parent / "profiles"
+    for profile_name in ("work-control", "mission-control"):  # compatibility path
+        packaged = profiles / profile_name
+        if packaged.is_dir():
+            return packaged
+    source = (
+        orchestration.source_root() / "extensions" / "mission-control"
+    )  # compatibility source layout
     if source.is_dir():
         return source
-    raise ValueError("Mission Control Profile is absent from this Kungfu product")
+    raise ValueError("Work Control Profile is absent from this Kungfu product")
 
 
 def _ensure_profile(runtime_dir, authorized_by):
@@ -164,7 +166,7 @@ def _profile_read(runtime_dir, operation, values):
     return profile_sdk.invoke_member_adapter(
         str(_profile_source()),
         runtime_dir,
-        "mission-control-actions",
+        "work-control-actions",
         operation,
         values,
     )["result"]
@@ -231,6 +233,11 @@ def capture(ctx, request_value, workspace_root, home, cwd, json_output):
 @click.option("--home", is_flag=True, help="admit into the logical Home Workspace")
 @click.option("--initiative-id", default="")
 @click.option("--assignment-id", default="")
+@click.option(
+    "--initiative-admission",
+    type=str,
+    help="exact parent Initiative admission JSON",
+)
 @click.option("--actor", required=True)
 @click.option("--actor-type", type=click.Choice(["user", "agent"]), default="agent")
 @click.option(
@@ -246,6 +253,7 @@ def admit(
     home,
     initiative_id,
     assignment_id,
+    initiative_admission,
     actor,
     actor_type,
     allow_foreign_binding,
@@ -271,10 +279,21 @@ def admit(
             )
             raise click.exceptions.Exit(3)
         captured = orchestration.load_captured_request(request_file)
+        promoted = None
+        if initiative_admission:
+            stdin_text = (
+                click.get_text_stream("stdin").read()
+                if initiative_admission == "-"
+                else ""
+            )
+            promoted = orchestration.load_initiative_admission(
+                initiative_admission, stdin_text=stdin_text
+            )
         projected = orchestration.atlas_assignment_projection(
             captured,
             initiative_id=initiative_id,
             assignment_id=assignment_id,
+            initiative_admission=promoted,
         )
         identity, runtime_dir, workspace_receipt = _runtime(workspace_root, home)
         lifecycle = _ensure_profile(runtime_dir, actor)
@@ -291,6 +310,7 @@ def admit(
                     "actorType": actor_type,
                     "status": "active",
                     "horizon": "long-term",
+                    "sourceIdentity": projected["initiative_source_identity"],
                 },
                 actor,
             )

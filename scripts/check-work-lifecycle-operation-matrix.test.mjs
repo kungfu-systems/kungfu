@@ -204,7 +204,7 @@ test('mechanically closes the native ABI and runtime-action operation inventory'
   }
 });
 
-test('binds implemented native and Mission Control routes to repository evidence', () => {
+test('binds implemented native and Work Control routes to repository evidence', () => {
   const missionIds = new Set(missionActions.actions.map((action) => action.id));
   for (const operation of contract.operations) {
     if (operation.native.interface === 'kf_ledger_action_api_v1') {
@@ -227,7 +227,7 @@ test('binds implemented native and Mission Control routes to repository evidence
         assert.match(rustSdk, new RegExp(`"${name}"`, 'u'));
       }
     }
-    if (operation.native.interface === 'mission-control-actions') {
+    if (operation.native.interface === 'work-control-actions') {
       for (const name of operation.native.operations) {
         assert.equal(missionIds.has(name), true, name);
       }

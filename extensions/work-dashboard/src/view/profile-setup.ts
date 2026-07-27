@@ -4,7 +4,7 @@ import type {
   ProfileSourceDiscovery,
 } from '@kungfu-tech/api/capability';
 
-export type MissionControlProfileSetupStep = {
+export type WorkControlProfileSetupStep = {
   action: Extract<
     ProfileLifecycleAction,
     'install' | 'qualify' | 'activate' | 'upgrade'
@@ -12,10 +12,13 @@ export type MissionControlProfileSetupStep = {
   source: string;
 };
 
-export function missionControlProfileSetupStep(
+/** Explicit compatibility type alias for callers that have not migrated yet. */
+export type MissionControlProfileSetupStep = WorkControlProfileSetupStep;
+
+export function workControlProfileSetupStep(
   managed: ManagedProfile | null,
   discovery: ProfileSourceDiscovery | null,
-): MissionControlProfileSetupStep | null {
+): WorkControlProfileSetupStep | null {
   if (
     managed?.activated &&
     managed.health === 'active' &&
@@ -41,3 +44,6 @@ export function missionControlProfileSetupStep(
   }
   return null;
 }
+
+/** Explicit compatibility alias for callers that have not migrated yet. */
+export const missionControlProfileSetupStep = workControlProfileSetupStep;

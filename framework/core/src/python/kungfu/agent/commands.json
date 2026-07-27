@@ -491,7 +491,7 @@
       "apiId": "kungfu.work.decide",
       "name": "kungfu work decide <input.json> --workspace <path> --authorized-by <actor>",
       "maturity": "experimental",
-      "purpose": "Apply one exact-root continuation decision and materialize only bounded mechanical follow-up Go rows while preserving human gates for mission, authority, privacy, security, public claims, and irreversible changes."
+      "purpose": "Apply one exact-root continuation decision and materialize only bounded mechanical follow-up Assignment rows while preserving human gates for initiative, authority, privacy, security, public claims, and irreversible changes."
     },
     {
       "apiId": "kungfu.atlas.show.import",

@@ -21,7 +21,7 @@ function profileFixture(
     discoverAsync: async () => ({
       source: '/profile/mission-control',
       profileSuiteRoot: suiteRoot,
-      memberRoots: { 'mission-control-actions': memberRoot },
+      memberRoots: { 'work-control-actions': memberRoot },
     }),
     applicationAsync: async () => ({ profileSuiteRoot: suiteRoot }),
     kfd3StatusAsync: async () => ({
@@ -64,7 +64,7 @@ function profileFixture(
                   version: '3.0.0',
                   profile_suite_root: suiteRoot,
                   catalog_root: 'sha256:catalog',
-                  member_roots: { 'mission-control-actions': memberRoot },
+                  member_roots: { 'work-control-actions': memberRoot },
                 },
                 mission_subject: 'atlas:mission-a',
                 query_definition_root: 'sha256:definition',

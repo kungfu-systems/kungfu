@@ -1,0 +1,771 @@
+{
+  "schema": "kungfu.release-publication-control-plane/v1",
+  "status": "active",
+  "protocol": {
+    "schema": "kungfu.release-publication-protocol/v1",
+    "authority": "adapter-only",
+    "invariants": [
+      {
+        "id": "exact-source-admission",
+        "requirement": "exact source/tree/workflow/policy/toolchain/platform/integrity"
+      },
+      {
+        "id": "build-once-artifact",
+        "requirement": "PR-stage payload reuse without heavy rebuild"
+      },
+      {
+        "id": "publication-transaction",
+        "requirement": "idempotent side-effect transaction and recovery"
+      },
+      {
+        "id": "public-readback",
+        "requirement": "immutable public coordinate integrity readback"
+      },
+      {
+        "id": "durable-history",
+        "requirement": "append-only content-addressed channel-aware history"
+      },
+      {
+        "id": "ruleset-readback",
+        "requirement": "versioned policy and normalized live ruleset readback"
+      },
+      {
+        "id": "latency-evidence",
+        "requirement": "producer-only timing/cache/savings evidence"
+      },
+      {
+        "id": "deterministic-rerun",
+        "requirement": "identity-equal rerun and exact unfinished effect"
+      },
+      {
+        "id": "status-rehearsal",
+        "requirement": "credential-safe status and non-publishing rehearsal"
+      }
+    ],
+    "protocolRoot": "sha256:b1abfc6aa23264aab99f124f89ae93f160120cd9bf7595ec6e62e20fb10bf159"
+  },
+  "repositories": {
+    "kungfu": {
+      "repository": "kungfu-systems/kungfu",
+      "workflowRoot": ".github/workflows",
+      "workflowInventory": [
+        {
+          "path": ".github/workflows/adr-release-gate.yml",
+          "classification": "qualification",
+          "owner": "kungfu-release",
+          "surfaceIds": [
+            "product-alpha",
+            "product-stable"
+          ],
+          "sourceRoot": "sha256:7ef2c233954d197c05e360f397b8a70886afe93aaf6d1c6f8733668802a97705"
+        },
+        {
+          "path": ".github/workflows/affected-native-pr.yml",
+          "classification": "qualification",
+          "owner": "kungfu-release",
+          "surfaceIds": [
+            "product-alpha",
+            "product-stable",
+            "product-binaries"
+          ],
+          "sourceRoot": "sha256:b0b8dbead1fc3ad8eaa44123cc4c1da1c2079714da38693d7dae5ff8f9498a9d"
+        },
+        {
+          "path": ".github/workflows/alpha-promotion-preflight.yml",
+          "classification": "qualification",
+          "owner": "kungfu-release",
+          "surfaceIds": [
+            "product-alpha",
+            "product-binaries"
+          ],
+          "sourceRoot": "sha256:46bd17a93530d33a653ca042eb8dadd4610ba39a7dcc0a7fc67a0d460461ff84"
+        },
+        {
+          "path": ".github/workflows/build.yml",
+          "classification": "qualification",
+          "owner": "kungfu-release",
+          "surfaceIds": [
+            "product-alpha",
+            "product-stable",
+            "product-binaries"
+          ],
+          "sourceRoot": "sha256:96bd4e0409c96c75f7b7bf762ed7318808e1bb3dc6b5506a465107582b4c2fbe"
+        },
+        {
+          "path": ".github/workflows/buildchain-validate.yml",
+          "classification": "qualification",
+          "owner": "kungfu-release",
+          "surfaceIds": [
+            "product-alpha",
+            "product-stable"
+          ],
+          "sourceRoot": "sha256:0705b36624cbe89157bf6859bc3e7f762e8fefd9a0334a05692cb4e579a56a77"
+        },
+        {
+          "path": ".github/workflows/cancel-dequeued-merge-group.yml",
+          "classification": "non-publication",
+          "owner": "kungfu-ci",
+          "surfaceIds": [],
+          "sourceRoot": "sha256:0d337c25db3ce925cc6f2718b9881774523275a7976b96d0beaf78a3fcbc2a4b"
+        },
+        {
+          "path": ".github/workflows/core-build-profiles.yml",
+          "classification": "non-publication",
+          "owner": "kungfu-core",
+          "surfaceIds": [],
+          "sourceRoot": "sha256:fc2a12003259fc44ca930ab5899dce316386c40d96858562daab664816e7e0e6"
+        },
+        {
+          "path": ".github/workflows/dco.yml",
+          "classification": "non-publication",
+          "owner": "kungfu-governance",
+          "surfaceIds": [],
+          "sourceRoot": "sha256:3d48e354d5b43bcba1b9bec6c6f5fbcdfcdf76f69a9506673576d47d9d2318c6"
+        },
+        {
+          "path": ".github/workflows/dev-alpha-candidate-patrol.yml",
+          "classification": "qualification",
+          "owner": "kungfu-release",
+          "surfaceIds": [
+            "product-alpha",
+            "product-binaries"
+          ],
+          "sourceRoot": "sha256:d9bbd764d67e5ecd2d4852cc096566516de77e82d81147958a43a9988a0683a6"
+        },
+        {
+          "path": ".github/workflows/dev-verify-patrol.yml",
+          "classification": "qualification",
+          "owner": "kungfu-release",
+          "surfaceIds": [
+            "product-alpha",
+            "product-stable"
+          ],
+          "sourceRoot": "sha256:1dbacd2884961ba8c76451f9f167a4915109b430cce6d2f64fab52818eaf1dd9"
+        },
+        {
+          "path": ".github/workflows/docs-check.yml",
+          "classification": "non-publication",
+          "owner": "kungfu-docs",
+          "surfaceIds": [],
+          "sourceRoot": "sha256:4fd74feb768620dee9e7eb1fc443913e33a9b564b80e604c47f7f470383a10ec"
+        },
+        {
+          "path": ".github/workflows/docs-external-links.yml",
+          "classification": "non-publication",
+          "owner": "kungfu-docs",
+          "surfaceIds": [],
+          "sourceRoot": "sha256:fdc749b58d126ff19da4d5e8e16a607e6144f2b3ec319195cc3498a7865a0c4d"
+        },
+        {
+          "path": ".github/workflows/embedding-membrane-spike.yml",
+          "classification": "non-publication",
+          "owner": "kungfu-runtime",
+          "surfaceIds": [],
+          "sourceRoot": "sha256:e564f05af8911af07dbdc61e628a57f39d94c3389211a56b7f33a8161e8ba169"
+        },
+        {
+          "path": ".github/workflows/gate-measurement.yml",
+          "classification": "qualification",
+          "owner": "kungfu-release",
+          "surfaceIds": [
+            "product-alpha",
+            "product-stable"
+          ],
+          "sourceRoot": "sha256:4a2f0d9207bbf64962833c8188d1afc5c95fb69a3602d6abc6ba338495643f8a"
+        },
+        {
+          "path": ".github/workflows/kfd-verifier-drift.yml",
+          "classification": "qualification",
+          "owner": "kungfu-release",
+          "surfaceIds": [
+            "product-alpha",
+            "product-stable"
+          ],
+          "sourceRoot": "sha256:b59d313837702193d551d655a944a74b86d6dbf91c4d99b5968cf2a6ceb08488"
+        },
+        {
+          "path": ".github/workflows/publish-layer-artifacts.yml",
+          "classification": "publication",
+          "owner": "kungfu-layers",
+          "surfaceIds": [
+            "layer-artifacts",
+            "portable-format",
+            "site-package"
+          ],
+          "sourceRoot": "sha256:3cef6c2cadd0f5402f406f81e859f10c2f5909ad71f248bbb06263d80e08293e"
+        },
+        {
+          "path": ".github/workflows/release-new-version.yml",
+          "classification": "publication",
+          "owner": "kungfu-release",
+          "surfaceIds": [
+            "product-alpha",
+            "product-stable",
+            "product-binaries"
+          ],
+          "sourceRoot": "sha256:46b1f5435d40378f7ef205c1a1f8e3991c02ca5752e8c113375025f1fbcf4779"
+        },
+        {
+          "path": ".github/workflows/release-shifu.yml",
+          "classification": "publication",
+          "owner": "shifu",
+          "surfaceIds": [
+            "shifu-launcher"
+          ],
+          "sourceRoot": "sha256:eb0746015492c0d57d2c931a6650262b4f18d95dc810bab4eb83f620ba01fb0b"
+        },
+        {
+          "path": ".github/workflows/shifu-ci.yml",
+          "classification": "non-publication",
+          "owner": "shifu",
+          "surfaceIds": [],
+          "sourceRoot": "sha256:c6330020bfdc2a2aefeecd0852659a107f3bd4cc26218916580f5e9e444c8ca3"
+        },
+        {
+          "path": ".github/workflows/source-acceptance.yml",
+          "classification": "qualification",
+          "owner": "kungfu-release",
+          "surfaceIds": [
+            "product-alpha",
+            "product-stable",
+            "product-major"
+          ],
+          "sourceRoot": "sha256:14924c40cbb7dbc0bc44a91df1d8d0be7ebfa97548c6917252fd1d129ffae93a"
+        }
+      ]
+    },
+    "buildchain": {
+      "repository": "kungfu-systems/buildchain",
+      "owner": "kungfu-systems/buildchain",
+      "sourceRevision": "625384b4927222022a2cd0758399afbf9333ccdc",
+      "version": "3.0.2-alpha.2",
+      "compatibilityMode": "stable-v3-contract-plus-exact-additive-runtime",
+      "stableContractLock": ".buildchain/contract-lock.json",
+      "runtimeContractLock": ".buildchain/alpha-contract-lock.json",
+      "workflowInventoryRoot": "sha256:570866f0204d887e761e69c3a8907a6348eab1b77dba133d76f32a4034d0f05c",
+      "workflowDiscoveryPattern": "(release|publish|publication|promotion|stable-candidate|alpha-self-dogfood|candidate-lab|auditable-demo|binary-distribution|web-surface|wheel|bump-minor)",
+      "workflowInventory": [
+        ".github/workflows/.auditable-demo.yml",
+        ".github/workflows/.binary-release-assets.yml",
+        ".github/workflows/.bump-minor-version.yml",
+        ".github/workflows/.publication-authority.yml",
+        ".github/workflows/.release-candidate-promote.yml",
+        ".github/workflows/.release-docker.yml",
+        ".github/workflows/.release-elastic-beanstalk.yml",
+        ".github/workflows/.release-new-version.yml",
+        ".github/workflows/.release-verify.yml",
+        ".github/workflows/.sam-release.yml",
+        ".github/workflows/.sync-release-page.yml",
+        ".github/workflows/.web-surface.yml",
+        ".github/workflows/.wheel-release.yml",
+        ".github/workflows/.wheel-verify.yml",
+        ".github/workflows/binary-distribution.yml",
+        ".github/workflows/binary-release-assets.yml",
+        ".github/workflows/buildchain-alpha-self-dogfood.yml",
+        ".github/workflows/buildchain-ref-promotion.yml",
+        ".github/workflows/buildchain-stable-candidate-patrol.yml",
+        ".github/workflows/buildchain-stable-candidate-qualification.yml",
+        ".github/workflows/candidate-lab.yml",
+        ".github/workflows/npm-publish.yml",
+        ".github/workflows/paper-release-sealed.yml",
+        ".github/workflows/paper-release.yml",
+        ".github/workflows/publication-artifact.yml",
+        ".github/workflows/release-candidate-promote.yml",
+        ".github/workflows/release-governance-reconcile.yml",
+        ".github/workflows/release-line-bootstrap.yml",
+        ".github/workflows/release-new-version.yml",
+        ".github/workflows/release-propagation.yml",
+        ".github/workflows/release-verify.yml",
+        ".github/workflows/stable-candidate-patrol.yml"
+      ],
+      "reviewDate": "2026-08-31",
+      "sunsetCondition": "Move additive runtime capabilities into a newer stable v3 release."
+    }
+  },
+  "buildchainCapabilities": {
+    "required": [
+      "source-lock",
+      "promote-only",
+      "cache-evidence",
+      "publication-transaction",
+      "recovery",
+      "release-passport"
+    ],
+    "bindings": {
+      "source-lock": [
+        "release-candidate-promote",
+        "controller:release-candidate-promotion"
+      ],
+      "promote-only": [
+        "release-candidate-promote",
+        "controller:release-candidate-promotion"
+      ],
+      "cache-evidence": [
+        "controller:build-lifecycle",
+        "controller:release-candidate-promotion"
+      ],
+      "publication-transaction": [
+        "controller:publication-artifact",
+        "controller:release-candidate-promotion"
+      ],
+      "recovery": [
+        "controller:publication-artifact",
+        "controller:release-candidate-promotion"
+      ],
+      "release-passport": [
+        "release-passport-schema"
+      ]
+    }
+  },
+  "rulesetContracts": [
+    {
+      "id": "alpha-v4",
+      "channel": "alpha",
+      "target": "refs/heads/alpha/v4/v4.0",
+      "adapterContractPath": "docs/qualification/alpha-ruleset.contract.json",
+      "requiredBeforePublication": true
+    },
+    {
+      "id": "stable-v4",
+      "channel": "stable",
+      "target": "refs/heads/release/v4/v4.0",
+      "requiredBeforePublication": true,
+      "ruleset": {
+        "name": "Kungfu stable release authority: release/v4/v4.0",
+        "target": "branch",
+        "enforcement": "active",
+        "bypass_actors": [],
+        "conditions": {
+          "ref_name": {
+            "exclude": [],
+            "include": [
+              "refs/heads/release/v4/v4.0"
+            ]
+          }
+        },
+        "rules": [
+          {
+            "type": "pull_request",
+            "parameters": {
+              "required_approving_review_count": 1,
+              "dismiss_stale_reviews_on_push": true,
+              "required_reviewers": [],
+              "require_code_owner_review": true,
+              "dismissal_restriction": {
+                "enabled": false,
+                "allowed_actors": []
+              },
+              "require_last_push_approval": true,
+              "required_review_thread_resolution": true,
+              "allowed_merge_methods": [
+                "merge",
+                "squash",
+                "rebase"
+              ]
+            }
+          },
+          {
+            "type": "required_status_checks",
+            "parameters": {
+              "strict_required_status_checks_policy": true,
+              "do_not_enforce_on_create": false,
+              "required_status_checks": [
+                {
+                  "context": "build"
+                },
+                {
+                  "context": "signoff",
+                  "integration_id": 15368
+                },
+                {
+                  "context": "validate",
+                  "integration_id": 15368
+                }
+              ]
+            }
+          },
+          {
+            "type": "deletion"
+          },
+          {
+            "type": "non_fast_forward"
+          }
+        ]
+      },
+      "contractRoot": "sha256:bc9564214b1c27cbb7d2a4bc0e5d23cdf1ad2b1d23ee4082a8d9c7207edb5dcf"
+    },
+    {
+      "id": "major-v4",
+      "channel": "major",
+      "target": "refs/heads/publish-gate/major/v4/v4.0/*",
+      "requiredBeforePublication": true,
+      "ruleset": {
+        "name": "Kungfu major publication gate authority: v4",
+        "target": "branch",
+        "enforcement": "active",
+        "bypass_actors": [],
+        "conditions": {
+          "ref_name": {
+            "exclude": [],
+            "include": [
+              "refs/heads/publish-gate/major/v4/v4.0/*"
+            ]
+          }
+        },
+        "rules": [
+          {
+            "type": "pull_request",
+            "parameters": {
+              "required_approving_review_count": 1,
+              "dismiss_stale_reviews_on_push": true,
+              "required_reviewers": [],
+              "require_code_owner_review": true,
+              "dismissal_restriction": {
+                "enabled": false,
+                "allowed_actors": []
+              },
+              "require_last_push_approval": true,
+              "required_review_thread_resolution": true,
+              "allowed_merge_methods": [
+                "merge",
+                "squash",
+                "rebase"
+              ]
+            }
+          },
+          {
+            "type": "required_status_checks",
+            "parameters": {
+              "strict_required_status_checks_policy": true,
+              "do_not_enforce_on_create": false,
+              "required_status_checks": [
+                {
+                  "context": "build"
+                },
+                {
+                  "context": "signoff",
+                  "integration_id": 15368
+                },
+                {
+                  "context": "validate",
+                  "integration_id": 15368
+                }
+              ]
+            }
+          },
+          {
+            "type": "deletion"
+          },
+          {
+            "type": "non_fast_forward"
+          }
+        ]
+      },
+      "contractRoot": "sha256:8a64372704fc3171973a33adf4150ea24d4ec4857c9e446789e9c1e63c8f8df4"
+    }
+  ],
+  "surfaces": [
+    {
+      "id": "product-alpha",
+      "class": "product-channel",
+      "owner": "kungfu-release",
+      "workflowBindings": [
+        ".github/workflows/build.yml",
+        ".github/workflows/release-new-version.yml"
+      ],
+      "artifactSource": "product-alpha exact artifact adapter",
+      "credentialIsland": "product-alpha bounded credential island",
+      "readback": "product-alpha immutable public readback",
+      "rollback": "resume exact transaction; never replace immutable bytes",
+      "telemetry": "product-alpha evidence and status projection",
+      "lifecycle": "active",
+      "channel": "alpha",
+      "protocolMode": "conformant",
+      "bindings": {
+        "exact-source-admission": "scripts/alpha-promotion-preflight.mjs",
+        "build-once-artifact": ".github/workflows/release-new-version.yml#promote",
+        "publication-transaction": "buildchain:controller:release-candidate-promotion",
+        "public-readback": "scripts/prepare-ungfu-release-evidence.mjs",
+        "durable-history": "scripts/alpha-release-history.mjs",
+        "ruleset-readback": "docs/qualification/alpha-ruleset.contract.json",
+        "latency-evidence": "scripts/alpha-release-timeline.mjs",
+        "deterministic-rerun": "buildchain:release-candidate-promote",
+        "status-rehearsal": "framework/release/publication-control-plane.mjs"
+      }
+    },
+    {
+      "id": "product-binaries",
+      "class": "product-binary",
+      "owner": "kungfu-release",
+      "workflowBindings": [
+        ".github/workflows/build.yml",
+        ".github/workflows/release-new-version.yml"
+      ],
+      "artifactSource": "product-binaries exact artifact adapter",
+      "credentialIsland": "product-binaries bounded credential island",
+      "readback": "product-binaries immutable public readback",
+      "rollback": "resume exact transaction; never replace immutable bytes",
+      "telemetry": "product-binaries evidence and status projection",
+      "lifecycle": "active",
+      "protocolMode": "conformant",
+      "bindings": {
+        "exact-source-admission": "surface:product-alpha",
+        "build-once-artifact": "surface:product-alpha",
+        "publication-transaction": "surface:product-alpha",
+        "public-readback": "surface:product-alpha",
+        "durable-history": "surface:product-alpha",
+        "ruleset-readback": "surface:product-alpha",
+        "latency-evidence": "surface:product-alpha",
+        "deterministic-rerun": "surface:product-alpha",
+        "status-rehearsal": "surface:product-alpha"
+      }
+    },
+    {
+      "id": "product-stable",
+      "class": "product-channel",
+      "owner": "kungfu-release",
+      "workflowBindings": [
+        ".github/workflows/build.yml",
+        ".github/workflows/release-new-version.yml"
+      ],
+      "artifactSource": "product-stable exact artifact adapter",
+      "credentialIsland": "product-stable bounded credential island",
+      "readback": "product-stable immutable public readback",
+      "rollback": "resume exact transaction; never replace immutable bytes",
+      "telemetry": "product-stable evidence and status projection",
+      "lifecycle": "blocked-pending-governance",
+      "channel": "stable",
+      "protocolMode": "isolated",
+      "isolation": {
+        "rationale": "Stable v4 branch/live ruleset do not exist and Alpha history is not channel-general.",
+        "owner": "kungfu-release",
+        "preservedInvariants": [
+          "exact-source-admission",
+          "build-once-artifact",
+          "publication-transaction",
+          "public-readback",
+          "deterministic-rerun"
+        ],
+        "missingInvariants": [
+          "durable-history",
+          "ruleset-readback",
+          "latency-evidence",
+          "status-rehearsal"
+        ],
+        "risk": "Stable would be less recoverable than Alpha.",
+        "reviewDate": "2026-08-31",
+        "sunsetCondition": "Create release/v4/v4.0, read back stable-v4 rules, and bind channel history/status."
+      }
+    },
+    {
+      "id": "product-major",
+      "class": "product-channel",
+      "owner": "kungfu-release",
+      "workflowBindings": [
+        ".github/workflows/source-acceptance.yml"
+      ],
+      "artifactSource": "product-major exact artifact adapter",
+      "credentialIsland": "product-major bounded credential island",
+      "readback": "product-major immutable public readback",
+      "rollback": "resume exact transaction; never replace immutable bytes",
+      "telemetry": "product-major evidence and status projection",
+      "lifecycle": "blocked-pending-topology",
+      "channel": "major",
+      "protocolMode": "isolated",
+      "isolation": {
+        "rationale": "No major workflow exists; only its future publish-gate namespace is contract-bound.",
+        "owner": "kungfu-release",
+        "preservedInvariants": [
+          "exact-source-admission",
+          "ruleset-readback",
+          "status-rehearsal"
+        ],
+        "missingInvariants": [
+          "build-once-artifact",
+          "publication-transaction",
+          "public-readback",
+          "durable-history",
+          "latency-evidence",
+          "deterministic-rerun"
+        ],
+        "risk": "Inventing topology would create a second authority.",
+        "reviewDate": "2026-08-31",
+        "sunsetCondition": "Admit one major topology under major-v4 rules and reuse Buildchain."
+      }
+    },
+    {
+      "id": "shifu-launcher",
+      "class": "github-release-assets",
+      "owner": "shifu",
+      "workflowBindings": [
+        ".github/workflows/release-shifu.yml"
+      ],
+      "artifactSource": "shifu-launcher exact artifact adapter",
+      "credentialIsland": "shifu-launcher bounded credential island",
+      "readback": "shifu-launcher immutable public readback",
+      "rollback": "resume exact transaction; never replace immutable bytes",
+      "telemetry": "shifu-launcher evidence and status projection",
+      "lifecycle": "active-isolated",
+      "protocolMode": "isolated",
+      "isolation": {
+        "rationale": "Standalone Shifu lacks common transaction/passport/history/status.",
+        "owner": "shifu",
+        "preservedInvariants": [
+          "exact-source-admission",
+          "public-readback",
+          "deterministic-rerun"
+        ],
+        "missingInvariants": [
+          "build-once-artifact",
+          "publication-transaction",
+          "durable-history",
+          "ruleset-readback",
+          "latency-evidence",
+          "status-rehearsal"
+        ],
+        "risk": "Partial Release creation has workflow-local recovery.",
+        "reviewDate": "2026-08-31",
+        "sunsetCondition": "Adopt the Buildchain binary publication adapter."
+      }
+    },
+    {
+      "id": "layer-artifacts",
+      "class": "multi-registry",
+      "owner": "kungfu-layers",
+      "workflowBindings": [
+        ".github/workflows/publish-layer-artifacts.yml"
+      ],
+      "artifactSource": "layer-artifacts exact artifact adapter",
+      "credentialIsland": "layer-artifacts bounded credential island",
+      "readback": "layer-artifacts immutable public readback",
+      "rollback": "resume exact transaction; never replace immutable bytes",
+      "telemetry": "layer-artifacts evidence and status projection",
+      "lifecycle": "active-isolated",
+      "protocolMode": "isolated",
+      "isolation": {
+        "rationale": "Payload qualification is strong but common transaction/history/status is absent.",
+        "owner": "kungfu-layers",
+        "preservedInvariants": [
+          "exact-source-admission",
+          "public-readback",
+          "deterministic-rerun"
+        ],
+        "missingInvariants": [
+          "build-once-artifact",
+          "publication-transaction",
+          "durable-history",
+          "ruleset-readback",
+          "latency-evidence",
+          "status-rehearsal"
+        ],
+        "risk": "Partial multi-registry failure needs local reconstruction.",
+        "reviewDate": "2026-08-31",
+        "sunsetCondition": "Wrap existing order with Buildchain transaction/recovery/history/status."
+      }
+    },
+    {
+      "id": "portable-format",
+      "class": "npm-package-set",
+      "owner": "kungfu-format",
+      "workflowBindings": [
+        ".github/workflows/publish-layer-artifacts.yml"
+      ],
+      "artifactSource": "portable-format exact artifact adapter",
+      "credentialIsland": "portable-format bounded credential island",
+      "readback": "portable-format immutable public readback",
+      "rollback": "resume exact transaction; never replace immutable bytes",
+      "telemetry": "portable-format evidence and status projection",
+      "lifecycle": "active-isolated",
+      "protocolMode": "isolated",
+      "isolation": {
+        "rationale": "Focused npm flow lacks common transaction/history/status.",
+        "owner": "kungfu-format",
+        "preservedInvariants": [
+          "exact-source-admission",
+          "public-readback",
+          "deterministic-rerun"
+        ],
+        "missingInvariants": [
+          "build-once-artifact",
+          "publication-transaction",
+          "durable-history",
+          "ruleset-readback",
+          "latency-evidence",
+          "status-rehearsal"
+        ],
+        "risk": "Rerun diagnosis remains package-specific.",
+        "reviewDate": "2026-08-31",
+        "sunsetCondition": "Bind focused packages to common adapters without restoring full builds."
+      }
+    },
+    {
+      "id": "site-package",
+      "class": "npm-package",
+      "owner": "kungfu-site",
+      "workflowBindings": [
+        ".github/workflows/publish-layer-artifacts.yml"
+      ],
+      "artifactSource": "site-package exact artifact adapter",
+      "credentialIsland": "site-package bounded credential island",
+      "readback": "site-package immutable public readback",
+      "rollback": "resume exact transaction; never replace immutable bytes",
+      "telemetry": "site-package evidence and status projection",
+      "lifecycle": "active-isolated",
+      "protocolMode": "isolated",
+      "isolation": {
+        "rationale": "Package publication and hosted deployment are separate.",
+        "owner": "kungfu-site",
+        "preservedInvariants": [
+          "exact-source-admission",
+          "public-readback",
+          "deterministic-rerun",
+          "status-rehearsal"
+        ],
+        "missingInvariants": [
+          "build-once-artifact",
+          "publication-transaction",
+          "durable-history",
+          "ruleset-readback",
+          "latency-evidence"
+        ],
+        "risk": "Package availability must not imply deployment.",
+        "reviewDate": "2026-08-31",
+        "sunsetCondition": "Add package transaction/history; keep hosted projection separate."
+      }
+    },
+    {
+      "id": "hosted-site-delivery",
+      "class": "downstream-deployment",
+      "owner": "kungfu-site",
+      "workflowBindings": [],
+      "artifactSource": "hosted-site-delivery exact artifact adapter",
+      "credentialIsland": "hosted-site-delivery bounded credential island",
+      "readback": "hosted-site-delivery immutable public readback",
+      "rollback": "resume exact transaction; never replace immutable bytes",
+      "telemetry": "hosted-site-delivery evidence and status projection",
+      "lifecycle": "out-of-scope-isolated",
+      "protocolMode": "isolated",
+      "isolation": {
+        "rationale": "This repo owns no hosted deployment workflow.",
+        "owner": "kungfu-site",
+        "preservedInvariants": [
+          "exact-source-admission",
+          "public-readback",
+          "status-rehearsal"
+        ],
+        "missingInvariants": [
+          "build-once-artifact",
+          "publication-transaction",
+          "durable-history",
+          "ruleset-readback",
+          "latency-evidence",
+          "deterministic-rerun"
+        ],
+        "risk": "Package publication must not imply deployment.",
+        "reviewDate": "2026-08-31",
+        "sunsetCondition": "Use a separate deployment Assignment that pins and exposes package/evidence roots."
+      }
+    }
+  ],
+  "registryRoot": "sha256:e845bea3dcfb052daec13bdffd4df53106a610973d28b16a30b013cd23cab4cd"
+}
