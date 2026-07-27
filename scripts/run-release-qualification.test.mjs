@@ -448,6 +448,37 @@ test('native upgrade evidence is retained only after exact artifact gates pass',
   }
 });
 
+test('Hub CLI scope retains headless evidence without claiming desktop or SDK artifacts', () => {
+  const stages = releaseQualificationStages(
+    'linux',
+    loadExecutionProfile('alpha'),
+    'skip',
+    'hub-cli',
+  );
+  const stageNames = stages.map(([name]) => name);
+  for (const required of [
+    'release:probe:platform',
+    'verify',
+    'live-peer:qualify',
+    'runtime:qualify',
+    'test:upgrade-qualification',
+    'episode:qualify:release',
+    'adr:release:gate',
+    'gate',
+    'invariant:verify',
+  ])
+    assert.ok(stageNames.includes(required), required);
+  assert.ok(!stageNames.includes('zero-burden:qualify'));
+  assert.ok(!stageNames.includes('upgrade:qualify:native'));
+
+  const gate = stages.find(([name]) => name === 'gate');
+  assert.deepEqual(gate.slice(0, 3), ['gate', 'run', 'layers.format']);
+  assert.ok(!gate.includes('layers.sdk'));
+  assert.ok(!gate.includes('layers.surfaces'));
+  const context = JSON.parse(gate[gate.indexOf('--execution-context') + 1]);
+  assert.equal(context.artifactScope, 'hub-cli');
+});
+
 test('execution profile parsing fails closed on missing, duplicate, and unknown values', () => {
   assert.equal(
     parseExecutionProfile(['--execution-profile', 'alpha']),
@@ -472,7 +503,36 @@ test('execution profile parsing fails closed on missing, duplicate, and unknown 
       '--native-upgrade-policy',
       'skip',
     ]),
-    { executionProfile: 'alpha', nativeUpgradePolicy: 'skip' },
+    {
+      executionProfile: 'alpha',
+      nativeUpgradePolicy: 'skip',
+      artifactScope: 'product',
+    },
+  );
+  assert.deepEqual(
+    parseReleaseQualificationOptions([
+      '--execution-profile',
+      'alpha',
+      '--native-upgrade-policy',
+      'skip',
+      '--artifact-scope',
+      'hub-cli',
+    ]),
+    {
+      executionProfile: 'alpha',
+      nativeUpgradePolicy: 'skip',
+      artifactScope: 'hub-cli',
+    },
+  );
+  assert.throws(
+    () =>
+      parseReleaseQualificationOptions([
+        '--execution-profile',
+        'alpha',
+        '--artifact-scope',
+        'hub-cli',
+      ]),
+    /requires --native-upgrade-policy skip/,
   );
   assert.throws(
     () =>

@@ -18,7 +18,7 @@ Each section is bound to the registry id by the catalog meta gate.
 - **Evidence:** unified Gate receipt; no separate artifact is currently required.
 - **Diagnosis:** `./shifu gate explain layers.contract --profile <profile>`; reproduce with `./shifu gate run layers.contract` on a capable runner.
 - **Cost:** light; timeout 900 seconds.
-- **Current source:** .github/workflows/build.yml (build; alpha or release pull request)
+- **Current source:** .github/workflows/build.yml (build; alpha or release pull request); .github/workflows/build.yml (hub-cli-linux-arm64; alpha or release pull request, or selected manual Linux ARM64 qualification)
 - **Retirement:** remove only after every selecting profile and workflow binding is migrated or explicitly replaced, with the registry and matrix changed in the same review.
 <!-- /gate-doc:layers.contract -->
 
@@ -36,7 +36,7 @@ Each section is bound to the registry id by the catalog meta gate.
 - **Evidence:** unified source-bound Gate receipt, required `kungfu.layer-qualification.gate-evidence/v1` pointers, and `product/release/qualification/layer-format-report.json`.
 - **Diagnosis:** `./shifu gate explain layers.format --profile alpha-pr`; plan with `./shifu gate plan alpha-pr --platform <platform>` before reproducing on a capable host.
 - **Cost:** heavy; timeout 900 seconds.
-- **Current source:** .github/workflows/build.yml (build; alpha or release pull request)
+- **Current source:** .github/workflows/build.yml (build; alpha or release pull request); .github/workflows/build.yml (hub-cli-linux-arm64; alpha or release pull request, or selected manual Linux ARM64 qualification)
 - **Retirement:** remove only after the portable artifact is retired or a replacement Gate preserves exact archive, budget, report, profile, and workflow-binding coverage.
 <!-- /gate-doc:layers.format -->
 
@@ -118,6 +118,14 @@ from [`execution-profiles.json`](execution-profiles.json): alpha uses
 `mvp-smoke-v1`, release-candidate uses `mvp-candidate-v1`, and full-patrol keeps
 the complete baseline. The unified layer receipt records the selected profile,
 effective ceilings, reserve, fuzz duration, and policy digest.
+
+The dedicated native Linux ARM64 Hub CLI lane selects the explicit
+`hub-cli` artifact scope. It retains source fuzzing, live-Peer and runtime
+activation, Episode and ADR evidence, portable-format qualification, and
+source/native/runtime invariants. Desktop zero-burden evidence, assembled
+desktop surfaces, and cross-language SDK packages remain owned by the full
+Product matrix; their absence from a headless-only runner is not converted
+into a false product failure or a product-wide qualification claim.
 
 The standalone Gate ceilings cover their complete declared actions rather than
 the shorter profile-specific reuse path: the smoke ceiling includes all four

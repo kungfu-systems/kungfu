@@ -486,6 +486,8 @@
         "release-pr"
       ],
       "gates": [
+        "layers.contract",
+        "layers.format",
         "product.distribution",
         "episode.smoke",
         "episode.release"
@@ -511,7 +513,7 @@
           "require-install": true,
           "require-build": true,
           "require-verify": true,
-          "verify-command": "node scripts/run-release-qualification.mjs --execution-profile ${{ startsWith(github.base_ref, 'release/') && 'release-candidate' || 'alpha' }} --native-upgrade-policy skip",
+          "verify-command": "node scripts/run-release-qualification.mjs --execution-profile ${{ startsWith(github.base_ref, 'release/') && 'release-candidate' || 'alpha' }} --native-upgrade-policy skip --artifact-scope hub-cli",
           "release-candidate": true,
           "publish-channel": "${{ github.event_name == 'pull_request' && (startsWith(github.base_ref, 'release/') && 'release' || 'alpha') || 'none' }}",
           "artifact-transfer-mode": "s3-to-github-artifacts",

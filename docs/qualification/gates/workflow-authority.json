@@ -854,7 +854,7 @@
           "authority": "qualification",
           "publication": "none",
           "receipt": "diagnostic",
-          "definitionDigest": "sha256:e6305adae11b3207995daa414fc106118500a958dd99f2440df1ad6fe90c77c4",
+          "definitionDigest": "sha256:d1c1499bddf2e924f3039a906fc6107378b5de78008dcd9631b1701af2168fe7",
           "credentials": {
             "githubToken": "write",
             "oidc": true,

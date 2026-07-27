@@ -117,9 +117,17 @@ export function parseReleaseQualificationOptions(argv) {
   let name = '';
   let nativeUpgradePolicy = 'required';
   let nativeUpgradePolicySeen = false;
+  let artifactScope = 'product';
+  let artifactScopeSeen = false;
   for (let index = 0; index < argv.length; index += 1) {
     const arg = argv[index];
-    if (!['--execution-profile', '--native-upgrade-policy'].includes(arg))
+    if (
+      ![
+        '--execution-profile',
+        '--native-upgrade-policy',
+        '--artifact-scope',
+      ].includes(arg)
+    )
       throw new Error(`unknown release qualification option: ${arg}`);
     index += 1;
     if (index >= argv.length) throw new Error(`${arg} requires a value`);
@@ -128,10 +136,17 @@ export function parseReleaseQualificationOptions(argv) {
       name = argv[index];
       continue;
     }
-    if (nativeUpgradePolicySeen)
-      throw new Error('--native-upgrade-policy may be specified once');
-    nativeUpgradePolicySeen = true;
-    nativeUpgradePolicy = argv[index];
+    if (arg === '--native-upgrade-policy') {
+      if (nativeUpgradePolicySeen)
+        throw new Error('--native-upgrade-policy may be specified once');
+      nativeUpgradePolicySeen = true;
+      nativeUpgradePolicy = argv[index];
+      continue;
+    }
+    if (artifactScopeSeen)
+      throw new Error('--artifact-scope may be specified once');
+    artifactScopeSeen = true;
+    artifactScope = argv[index];
   }
   if (!name)
     throw new Error(
@@ -139,7 +154,13 @@ export function parseReleaseQualificationOptions(argv) {
     );
   if (!['required', 'skip'].includes(nativeUpgradePolicy))
     throw new Error('--native-upgrade-policy must be required or skip');
-  return { executionProfile: name, nativeUpgradePolicy };
+  if (!['product', 'hub-cli'].includes(artifactScope))
+    throw new Error('--artifact-scope must be product or hub-cli');
+  if (artifactScope === 'hub-cli' && nativeUpgradePolicy !== 'skip')
+    throw new Error(
+      '--artifact-scope hub-cli requires --native-upgrade-policy skip',
+    );
+  return { executionProfile: name, nativeUpgradePolicy, artifactScope };
 }
 
 export function releaseQualificationEnvironment(
@@ -210,9 +231,14 @@ export function releaseQualificationStages(
   platform = process.platform,
   execution = loadExecutionProfile('full-patrol'),
   nativeUpgradePolicy = 'required',
+  artifactScope = 'product',
 ) {
   if (!['required', 'skip'].includes(nativeUpgradePolicy))
     throw new Error(`unknown native upgrade policy: ${nativeUpgradePolicy}`);
+  if (!['product', 'hub-cli'].includes(artifactScope))
+    throw new Error(`unknown artifact scope: ${artifactScope}`);
+  if (artifactScope === 'hub-cli' && nativeUpgradePolicy !== 'skip')
+    throw new Error('hub-cli qualification cannot require native upgrade');
   const stages = [
     ['release:probe:platform'],
     ['verify', '--fuzz'],
@@ -232,13 +258,14 @@ export function releaseQualificationStages(
       'product/release/qualification/runtime-activation',
     ],
     ['test:upgrade-qualification'],
-    [
+  ];
+  if (artifactScope === 'product')
+    stages.push([
       'zero-burden:qualify',
       '--',
       '--retain',
       'product/release/qualification/zero-burden-desktop',
-    ],
-  ];
+    ]);
   if (platform === 'linux') {
     stages.push([
       'episode:qualify:release',
@@ -257,12 +284,14 @@ export function releaseQualificationStages(
       'product/release/qualification/adr-release-admissibility.json',
     ]);
   }
+  const artifactLayers =
+    artifactScope === 'hub-cli'
+      ? ['layers.format']
+      : ['layers.format', 'layers.sdk', 'layers.surfaces'];
   stages.push([
     'gate',
     'run',
-    'layers.format',
-    'layers.sdk',
-    'layers.surfaces',
+    ...artifactLayers,
     '--capability',
     'node',
     '--capability',
@@ -277,6 +306,7 @@ export function releaseQualificationStages(
     '--execution-context',
     JSON.stringify({
       executionProfile: execution.name,
+      artifactScope,
       effectiveParameters: execution.parameters,
       policyDigest: execution.policyDigest,
       policyRef: execution.policyRef,
@@ -350,6 +380,7 @@ function writeSummary(
   status,
   startedAt,
   nativeUpgradePolicy,
+  artifactScope,
 ) {
   const receiptPath = path.join(
     ROOT,
@@ -400,6 +431,7 @@ function writeSummary(
     startedAt,
     status: withinLimit ? 'passed' : 'failed',
     executionProfile: execution.name,
+    artifactScope,
     nativeUpgradePolicy,
     effectiveParameters: execution.parameters,
     policy: { ref: execution.policyRef, digest: execution.policyDigest },
@@ -439,6 +471,7 @@ export function main(argv = process.argv.slice(2)) {
     process.platform,
     execution,
     options.nativeUpgradePolicy,
+    options.artifactScope,
   )) {
     const started = Date.now();
     const status = runShifuWithCache(args, { env });
@@ -458,6 +491,7 @@ export function main(argv = process.argv.slice(2)) {
     finalStatus,
     startedAt,
     options.nativeUpgradePolicy,
+    options.artifactScope,
   );
   if (finalStatus === 0 && !summary.budget.withinLimit) {
     console.error(

@@ -201,7 +201,10 @@ jobs:
       require-build: true
       require-verify: true
       lifecycle-timeout-minutes: 180
-      verify-command: node scripts/run-release-qualification.mjs --execution-profile ${{ startsWith(github.base_ref, 'release/') && 'release-candidate' || 'alpha' }} --native-upgrade-policy skip
+      # The native ARM64 lane publishes only the headless Hub CLI. Keep its
+      # runtime, Episode, ADR, portable-format, and invariant evidence, but do
+      # not ask it to manufacture desktop or cross-language SDK artifacts.
+      verify-command: node scripts/run-release-qualification.mjs --execution-profile ${{ startsWith(github.base_ref, 'release/') && 'release-candidate' || 'alpha' }} --native-upgrade-policy skip --artifact-scope hub-cli
       release-candidate: true
       publish-channel: ${{ github.event_name == 'pull_request' && (startsWith(github.base_ref, 'release/') && 'release' || 'alpha') || 'none' }}
       artifact-transfer-mode: s3-to-github-artifacts
