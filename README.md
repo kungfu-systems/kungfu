@@ -7,40 +7,19 @@ it all again. It does this from declared project sources, makes missing or
 conflicting context visible, and preserves enough structure to continue without
 reconstructing everything from conversation history.
 
-> **Kungfu UNGFU™** · Never Guess. Facts Unfold.
+> **Kungfu UNGFU™** · Never Guess. Facts Unfold. [Why this signature
+> exists](docs/concepts/why-kungfu.md).
 
-[Why this source-identifying signature exists](docs/concepts/why-kungfu.md).
-UNGFU is not a second product or runtime; Kungfu remains the product name.
-
-**Status: Coming soon.** The first public CLI is being qualified against the
-experience below.
-
-The first public Alpha is additionally gated by one ordered activation
-transaction. Artifact publication, Release Passport sealing, exact site
-publication, public read-back, and installed-product qualification must all
-bind the same product/site source SHAs, artifact root, version, tag, and
-channel. Released evidence is synthesized only from those receipts; a
-preparation file cannot make a released-use or first-use claim. See
-[Trademark public-use qualification](docs/qualification/trademark-public-use.md).
-
-An installed Kungfu gives a person or Agent the same direct answer:
+The intended first-release path is:
 
 ```sh
-kungfu release status
-kungfu release verify <release-status-or-evidence.json>
-kungfu release explain
+cd your-project
+kungfu run agent
 ```
 
-The human result says what passed and what did not; `--json` returns the stable
-KFD-3 surface. Before activation, the truthful answer is `VERIFIED, NOT
-AVAILABLE`. These commands do not make trademark-registration, legal, or
-first-use-date claims.
-
-See the [continuity handoff](https://kungfu.tech/#continuity-demo) and
-[how it was tested](https://kungfu.tech/how-tested/continuity/), or inspect the
-[source protocol and retained evidence](docs/qualification/continuity-pilot.md).
-The current result is preparatory fixture evidence—not a provider comparison,
-multi-day durability or retention result, or FO10 qualification.
+**Status: Coming soon.** The first public CLI is being qualified against the
+experience below. The command is the target entrypoint, not a claim that a
+public artifact is available today.
 
 <!-- kungfu:auditable-demo:start -->
 ## Auditable exact-output demo
@@ -59,6 +38,35 @@ This proves exact installed-artifact execution and the named Gate/render path on
 It is not a continuity, provider-migration, macOS, durability, performance, FO10,
 or production-deployment claim.
 <!-- kungfu:auditable-demo:end -->
+
+## The first-release experience
+
+A qualified release must let the agent:
+
+- inspect the project and explain what it understands;
+- show important omissions, conflicts, and decisions instead of guessing;
+- keep the current work coherent across fresh contexts and agent processes;
+- record what happened so progress and the next action do not depend on chat
+  history.
+
+The first visible value should arrive within minutes. The deeper value appears
+over the following days, when the same work survives context loss, changed
+understanding, failed attempts, handoff, and restart.
+
+See the [continuity handoff](https://kungfu.tech/#continuity-demo) and
+[how it was tested](https://kungfu.tech/how-tested/continuity/), or inspect the
+[source protocol and retained evidence](docs/qualification/continuity-pilot.md).
+The current result is preparatory fixture evidence—not a provider comparison,
+multi-day durability or retention result, or FO10 qualification.
+
+## Why it matters
+
+- **Less context pressure.** The agent can select verified project context
+  instead of repeatedly loading the whole repository.
+- **Durable work continuity.** Intent, current understanding, action boundaries,
+  and outcomes remain available after the original conversation is gone.
+- **Inspectable understanding.** Sources, omissions, uncertainty, and evidence
+  stay visible to both people and agents.
 
 ## Kungfu in the Agent Supply Chain
 
@@ -97,37 +105,6 @@ artifact, two isolated local authority domains, and the fixed KFD package cut.
 It is not KFD certification, security assessment, production fitness,
 remote-network interoperability, external adoption, or evidence for an
 unobserved platform.
-
-## The first-release experience
-
-The intended one-command path is:
-
-```sh
-cd your-project
-kungfu run agent
-```
-
-The command is the target first-release entrypoint, not a claim that a public
-artifact is available today. A qualified release must let the agent:
-
-- inspect the project and explain what it understands;
-- show important omissions, conflicts, and decisions instead of guessing;
-- keep the current work coherent across fresh contexts and agent processes;
-- record what happened so progress and the next action do not depend on chat
-  history.
-
-The first visible value should arrive within minutes. The deeper value appears
-over the following days, when the same work survives context loss, changed
-understanding, failed attempts, handoff, and restart.
-
-## Why it matters
-
-- **Less context pressure.** The agent can select verified project context
-  instead of repeatedly loading the whole repository.
-- **Durable work continuity.** Intent, current understanding, action boundaries,
-  and outcomes remain available after the original conversation is gone.
-- **Inspectable understanding.** Sources, omissions, uncertainty, and evidence
-  stay visible to both people and agents.
 
 ## Keep your work when you leave or upgrade
 
@@ -215,6 +192,30 @@ Kungfu v4 is **Coming soon**. Source-built capabilities and qualification
 slices exist, but public packaging, cross-platform evidence, strong power-loss
 durability, and the institutional profile remain staged unless linked evidence
 says otherwise.
+
+UNGFU is Kungfu's source-identifying signature, not a second product or runtime.
+See [Why Kungfu](docs/concepts/why-kungfu.md) for the naming boundary.
+
+The first public Alpha is additionally gated by one ordered activation
+transaction. Artifact publication, Release Passport sealing, exact site
+publication, public read-back, and installed-product qualification must all
+bind the same product/site source SHAs, artifact root, version, tag, and
+channel. Released evidence is synthesized only from those receipts; a
+preparation file cannot make a released-use or first-use claim. See
+[Trademark public-use qualification](docs/qualification/trademark-public-use.md).
+
+An installed Kungfu gives a person or Agent the same direct answer:
+
+```sh
+kungfu release status
+kungfu release verify <release-status-or-evidence.json>
+kungfu release explain
+```
+
+The human result says what passed and what did not; `--json` returns the stable
+KFD-3 surface. Before activation, the truthful answer is `VERIFIED, NOT
+AVAILABLE`. These commands do not make trademark-registration, legal, or
+first-use-date claims.
 
 Design intent, implemented behavior, qualified guarantees, and released
 artifacts are deliberately distinct. Before relying on a claim, check
