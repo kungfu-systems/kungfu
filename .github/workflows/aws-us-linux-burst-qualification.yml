@@ -76,7 +76,8 @@ jobs:
       require-install: true
       install-command: node scripts/buildchain-install.mjs
       require-build: true
-      build-command: ./shifu build:core && node scripts/buildchain-install.mjs qualify-codebuild record
+      build-command: KUNGFU_BUILD_JOBS=4 ./shifu build:core && node scripts/buildchain-install.mjs qualify-codebuild record
+      requested-parallelism: 4
       require-verify: true
       verify-command: node scripts/buildchain-install.mjs qualify-codebuild verify
       lifecycle-timeout-minutes: 105
