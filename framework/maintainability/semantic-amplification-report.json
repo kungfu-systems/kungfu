@@ -5,7 +5,7 @@
   "manifestPath": "framework/maintainability/semantic-amplification.manifest.json",
   "manifestRoot": "sha256:b8b9c591c4e123b18dadc49c7b2a1d4a9c4c06998b673d8ce8711575340764de",
   "baselineRef": "dbfed9ca1785d147b26f4f06e7e6895ac7368fee",
-  "sourceRoot": "sha256:67ee58dcd38d2d99b9c99ab471e894b103bc6a01ff168eabbbd25550e7ec442b",
+  "sourceRoot": "sha256:0a2d94d9b4bc4d97d39007207b02e82472df3fe0b41382cbdb876da56ad62942",
   "roles": {
     "authority": "exactly one authority route per family; the route may name multiple co-owned source files",
     "allowedProjectionRoles": [
@@ -115,7 +115,7 @@
           "path": "framework/core/src/python/kungfu/cli/surface_contract.registry.json",
           "currentLines": 156,
           "baselineLines": 155,
-          "currentRoot": "sha256:2a067de9686cf56e2d4e57cba50fd4331795d1388d504e0465c7acdc3b86b592",
+          "currentRoot": "sha256:0d310e8bcd10447e484779f459a8af7d8d26655d49b71d89b0732e8c4ee68355",
           "baselineRoot": "sha256:7af1893015500d9d54e2783e44af30cd4af8753787d9d9b70c77356b0e788c17",
           "changedSinceBaseline": true
         },
@@ -129,9 +129,9 @@
         },
         {
           "path": "framework/core/src/python/kungfu/cli/catalog_projection.py",
-          "currentLines": 143,
+          "currentLines": 134,
           "baselineLines": 119,
-          "currentRoot": "sha256:7fe73f25ef1c39f05d12b16584bd3e73c0beb82cdc8b9c5bd22b0c6f4926c59d",
+          "currentRoot": "sha256:fc0dc02716385f11ec86db31e733d57ce85a5fe9d828185dbba64c47134aa787",
           "baselineRoot": "sha256:43f117fb6484a4dd60c5bad04b9758cf185446e0284e6b6bcebafb055122f535",
           "changedSinceBaseline": true
         },
@@ -139,7 +139,7 @@
           "path": "framework/core/src/python/kungfu/agent/cli_surface.catalog.json",
           "currentLines": 912,
           "baselineLines": 33927,
-          "currentRoot": "sha256:aa200c6d6a3e3db89f533ec23bb448e426e170c5ca55b5443ed2fd3b3735f950",
+          "currentRoot": "sha256:89926e1400a2b6913a2f2482fc872bdf43278b7b5b88ffee1fbbc161aeb45653",
           "baselineRoot": "sha256:9f2f17fca5aa4e4daa28a276c1e3a153fa263e791b497f7ea83a93796f7aeb1f",
           "changedSinceBaseline": true
         },
@@ -512,9 +512,9 @@
       "measurements": [
         {
           "path": "framework/kfx/kungfu-kfx.contract.json",
-          "currentLines": 1605,
+          "currentLines": 1639,
           "baselineLines": 1244,
-          "currentRoot": "sha256:56be047ca42cb26e284c932cb5e14532aff6c79b7ef1591c290f0602fdf8c990",
+          "currentRoot": "sha256:0eb5b6ccfa8cabb4d9e9186e021ac189c07ce42ee5302b611216272b289cec81",
           "baselineRoot": "sha256:09461dda185e075d08137b51d8fcada3e862ff8e4f3cecd725ec7410021bbb99",
           "changedSinceBaseline": true
         },
@@ -528,9 +528,9 @@
         },
         {
           "path": "framework/core/src/libkungfu/src/runtime/kfx/native_registry.cpp",
-          "currentLines": 2400,
+          "currentLines": 2561,
           "baselineLines": 912,
-          "currentRoot": "sha256:3a97941018ed697abbfb20419d814d1ef825019eca38e0823906d9d5ba919c2d",
+          "currentRoot": "sha256:1b95a73037cfc7ec093b705080d4e400f6f8045665349c0fc655739edba90e3e",
           "baselineRoot": "sha256:9d1ca07b479450341e5c33d4740cea0835257e0b73991faf166bfc54d77ccb68",
           "changedSinceBaseline": true
         },
@@ -568,9 +568,9 @@
         },
         {
           "path": "framework/core/src/python/kungfu/cli/commands/kfx.py",
-          "currentLines": 967,
+          "currentLines": 1039,
           "baselineLines": 787,
-          "currentRoot": "sha256:1a989407857e613d84092847272d082d1fe1a871d18bd7ae316374c8616a0be0",
+          "currentRoot": "sha256:0aa9c815c0f7e3ee7695cda92025c9f288263a3efb9ccf16a74a83c30119b74e",
           "baselineRoot": "sha256:1395a3bf28f16d5fca7f38042345c2ef3001ee863b766bc6273d1900a6b47721",
           "changedSinceBaseline": true
         },
