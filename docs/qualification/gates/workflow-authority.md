@@ -48,7 +48,7 @@ without changing and refreshing the manifest fails the Gate catalog check.
 | `.github/workflows/affected-native-pr.yml` | `dco` | qualification | none | diagnostic | token:read | none | 2 |
 | `.github/workflows/affected-native-pr.yml` | `kfd_verifier` | qualification | none | diagnostic | token:read | none | 4 |
 | `.github/workflows/affected-native-pr.yml` | `proof_probe` | qualification | none | diagnostic | token:read | none | 9 |
-| `.github/workflows/affected-native-pr.yml` | `shifu_workspace` | qualification | none | diagnostic | token:read | none | 8 |
+| `.github/workflows/affected-native-pr.yml` | `shifu_workspace` | qualification | none | diagnostic | token:read | none | 3 |
 | `.github/workflows/affected-native-pr.yml` | `source_acceptance` | qualification | none | diagnostic | token:read | none | 0 |
 | `.github/workflows/alpha-promotion-preflight.yml` | `aggregate` | qualification | none | diagnostic | token:read | none | 4 |
 | `.github/workflows/alpha-promotion-preflight.yml` | `probe` | qualification | none | diagnostic | token:read | none | 10 |
@@ -66,6 +66,7 @@ without changing and refreshing the manifest fails the Gate catalog check.
 | `.github/workflows/buildchain-validate.yml` | `validate` | qualification | none | diagnostic | token:read | none | 2 |
 | `.github/workflows/cancel-dequeued-merge-group.yml` | `cancel` | qualification | none | diagnostic | token:write, repo-secret:GITHUB_TOKEN | none | 2 |
 | `.github/workflows/core-build-profiles.yml` | `qualify` | qualification | none | diagnostic | token:read | none | 24 |
+| `.github/workflows/core-build-profiles.yml` | `shifu_observation` | qualification | none | diagnostic | token:read | none | 4 |
 | `.github/workflows/dco.yml` | `signoff` | qualification | none | diagnostic | token:read | none | 2 |
 | `.github/workflows/dev-alpha-candidate-patrol.yml` | `candidate` | qualification | none | diagnostic | token:write, repo-secret:KUNGFU_GITHUB_TOKEN | none | 0 |
 | `.github/workflows/dev-verify-patrol.yml` | `report` | diagnostic | none | none | token:write | none | 1 |

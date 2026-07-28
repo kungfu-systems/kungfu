@@ -44,7 +44,7 @@ explains Kungfu's current policy and does not redefine Shifu semantics.
 
 | Profile | Current entry |
 | --- | --- |
-| `dev-pr` | GitHub-hosted build-free source, governance, docs-path, and Shifu-path checks |
+| `dev-pr` | GitHub-hosted build-free source, governance, docs-path, and Linux Shifu-path checks |
 | `dev-patrol` | daily or manual three-platform self-hosted full product verify plus advisory external links |
 | `alpha-pr` | three self-hosted full-product lanes plus one hosted Linux ARM64 Core lane, with build/verify/release evidence and conditional membrane and Shifu matrices |
 | `release-pr` | currently the same qualification strength as alpha, with the release publication channel |
@@ -52,14 +52,17 @@ explains Kungfu's current policy and does not redefine Shifu semantics.
 | `measurement` | manual three-platform source-bound observation of every task-backed Gate; all selected actions are advisory and it never publishes |
 
 The separate `Core build profiles` workflow is an asynchronous diagnostic
-observer, not a policy profile or qualifying receipt source. It runs the
-`embedded-minimal` and `full` Core profiles on Linux, macOS, and Windows once
-per day or on explicit manual dispatch. It deliberately does not run for each
-development pull request: optional cross-platform observation must not occupy
-GitHub-hosted capacity ahead of the Linux required contexts or extend the dev
-merge critical path. Alpha and release qualification continue to require their
-declared three-platform Gate profiles; moving this observer off the PR event
-does not weaken those policies.
+observer, not a policy profile or qualifying receipt source. Once per day or
+on explicit manual dispatch it runs the `embedded-minimal` and `full` Core
+profiles plus the Shifu workspace and Xinfa observations on Linux, macOS, and
+Windows. It deliberately does not run for each development pull request:
+optional cross-platform observation must not occupy GitHub-hosted capacity
+ahead of the Linux required contexts or extend the dev merge critical path.
+The dev aggregate still requires the complete Shifu workspace Gate on hosted
+Linux when its exact path plan selects it. Alpha and release qualification
+continue to require their declared three-platform Gate profiles; moving the
+other platform observations off the dev PR event does not weaken those
+policies.
 
 `local-changed` is intentionally not a qualifying profile. Local diagnosis uses
 `./shifu gate run source.changed-scope` or an explicit list of Gate ids, and the
