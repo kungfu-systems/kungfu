@@ -20,7 +20,7 @@ jobs:
     name: agent-121 / OpenCode Qwen3-Coder patrol
     if: >-
       github.repository == 'kungfu-systems/kungfu' &&
-      github.ref == 'refs/heads/dev/v4/v4.0' &&
+      github.ref == format('refs/heads/{0}', github.event.repository.default_branch) &&
       github.ref_protected == true &&
       (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch')
     runs-on:

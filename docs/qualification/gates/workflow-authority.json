@@ -1551,7 +1551,7 @@
           "authority": "qualification",
           "publication": "none",
           "receipt": "diagnostic",
-          "definitionDigest": "sha256:1473d224d5d5c33966b74b597005d744d7296a2955fece07660efdedf1b68538",
+          "definitionDigest": "sha256:d20bbcfb8bc6fa41e3d00274537abdfa16b181376bb1b3ed3b325609113fca32",
           "credentials": {"githubToken":"read","oidc":false,"repositorySecrets":[],"inheritedSecrets":false,"environment":null},
           "externalActions": ["actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0","actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02"],
           "steps": [
