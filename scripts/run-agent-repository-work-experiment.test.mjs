@@ -141,6 +141,12 @@ test('Docker profile is digest-pinned, bounded, and mode-specific', () => {
     profile.launch.argv[dockerHostIndex + 1],
     'unix:///run/user/996/docker.sock',
   );
+  const rootfulProfile = runtimeProfile({
+    ...input,
+    mode: 'read-only',
+    dockerHost: '',
+  });
+  assert.equal(rootfulProfile.launch.argv.includes('--docker-host'), false);
   const args = dockerArgs(
     {
       image: input.image,
