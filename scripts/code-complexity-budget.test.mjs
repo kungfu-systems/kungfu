@@ -16,12 +16,13 @@ import {
 } from '../framework/maintainability/complexity-governance.mjs';
 import {
   classify,
+  composeRenameEvidence,
   hasGeneratedProvenance,
   ownerFor,
   percentile,
   protectedBaselineCandidates,
   regressionIssues,
-  renameHistoryMap,
+  renameEvidenceBase,
   validWaiverFor,
   validateMeasured,
   waiverIssues,
@@ -264,18 +265,34 @@ test('one-to-one Git renames preserve the old budget without becoming helper spl
   ]);
 });
 
-test('rename history keeps the baseline identity after the protected head advances', () => {
+test('rename evidence remains anchored to the measured baseline after a refactor merges', () => {
+  const baselineRef = 'a'.repeat(40);
+  assert.equal(
+    renameEvidenceBase({
+      baselineRef,
+      baselineGovernance: { protectedRef: 'origin/HEAD' },
+    }),
+    baselineRef,
+  );
+  assert.throws(
+    () => renameEvidenceBase({ baselineRef: 'origin/HEAD' }),
+    /exact baseline ref/u,
+  );
   assert.deepEqual(
     [
-      ...renameHistoryMap(
-        [
-          'R100\tscripts/qualification' +
-            '-lab.mjs\tscripts/agent-work-lab.mjs',
-          'R100\tscripts/agent-work-lab.mjs\tscripts/work-lab.mjs',
-        ].join('\n'),
+      ...composeRenameEvidence(
+        'R100\told.ts\tmiddle.ts\nR060\tmiddle.ts\tnew.ts',
       ),
     ],
-    [['scripts/work-lab.mjs', 'scripts/qualification' + '-lab.mjs']],
+    [['new.ts', 'old.ts']],
+  );
+  assert.deepEqual(
+    [
+      ...composeRenameEvidence(
+        'R100\told.ts\tcurrent.ts\nD\tcurrent.ts\nA\tcurrent.ts',
+      ),
+    ],
+    [],
   );
 });
 

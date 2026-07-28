@@ -689,58 +689,48 @@ function softBudgetWarnings(files, baseline, renamedFrom = new Map()) {
   return warnings;
 }
 
-export function renameHistoryMap(output) {
+export function renameEvidenceBase(policy) {
+  const baselineRef = String(policy?.baselineRef || '').trim();
+  if (!/^[0-9a-f]{40}$/u.test(baselineRef)) {
+    throw new Error(
+      'complexity rename evidence requires an exact baseline ref',
+    );
+  }
+  return baselineRef;
+}
+
+export function composeRenameEvidence(statusLines) {
   const renamedFrom = new Map();
-  for (const line of String(output).split('\n').filter(Boolean)) {
+  for (const line of String(statusLines || '').split('\n')) {
     const [status, previous, current] = line.split('\t');
-    if (!/^R\d{3}$/u.test(status || '') || !previous || !current) continue;
-    const baselinePath = renamedFrom.get(previous) || previous;
-    renamedFrom.delete(previous);
-    renamedFrom.set(current, baselinePath);
+    if (/^R\d{3}$/u.test(status || '') && previous && current) {
+      const baselinePath = renamedFrom.get(previous) || previous;
+      renamedFrom.delete(previous);
+      renamedFrom.set(current, baselinePath);
+      continue;
+    }
+    if (/^[AD]$/u.test(status || '') && previous) renamedFrom.delete(previous);
   }
   return renamedFrom;
 }
 
 function currentRenameMap(policy) {
-  const history = spawnSync(
+  const result = spawnSync(
     'git',
     [
       'log',
       '--reverse',
+      '--topo-order',
       '--format=',
       '--name-status',
-      '--diff-filter=R',
       '--find-renames=50%',
-      `${policy.baselineRef}..HEAD`,
+      `${renameEvidenceBase(policy)}..HEAD`,
+      '--',
     ],
     { cwd: ROOT, encoding: 'utf8', maxBuffer: 16 * 1024 * 1024 },
   );
-  const renamedFrom =
-    history.status === 0 ? renameHistoryMap(history.stdout) : new Map();
-  for (const candidate of protectedBaselineCandidates(policy)) {
-    const mergeBase = spawnSync('git', ['merge-base', candidate, 'HEAD'], {
-      cwd: ROOT,
-      encoding: 'utf8',
-    });
-    if (mergeBase.status !== 0 || !String(mergeBase.stdout || '').trim())
-      continue;
-    const result = spawnSync(
-      'git',
-      [
-        'diff',
-        '--find-renames=50%',
-        '--diff-filter=R',
-        '--name-status',
-        `${String(mergeBase.stdout).trim()}..HEAD`,
-      ],
-      { cwd: ROOT, encoding: 'utf8', maxBuffer: 16 * 1024 * 1024 },
-    );
-    if (result.status !== 0) continue;
-    for (const [current, previous] of renameHistoryMap(result.stdout))
-      if (!renamedFrom.has(current)) renamedFrom.set(current, previous);
-    break;
-  }
-  return renamedFrom;
+  if (result.status !== 0) return new Map();
+  return composeRenameEvidence(result.stdout);
 }
 
 function checkCurrent(policy, layers, baseline) {
