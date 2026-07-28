@@ -52,7 +52,7 @@ without changing and refreshing the manifest fails the Gate catalog check.
 | `.github/workflows/affected-native-pr.yml` | `source_acceptance` | qualification | none | diagnostic | token:read | none | 0 |
 | `.github/workflows/alpha-promotion-preflight.yml` | `aggregate` | qualification | none | diagnostic | token:read | none | 4 |
 | `.github/workflows/alpha-promotion-preflight.yml` | `probe` | qualification | none | diagnostic | token:read | none | 10 |
-| `.github/workflows/aws-us-linux-burst-qualification.yml` | `qualify` | qualification | none | diagnostic | token:read | none | 0 |
+| `.github/workflows/aws-us-linux-burst-qualification.yml` | `qualify` | qualification | none | diagnostic | token:write | none | 0 |
 | `.github/workflows/aws-us-linux-burst-qualification.yml` | `trust` | qualification | none | diagnostic | token:read | none | 2 |
 | `.github/workflows/build.yml` | `auditable-demo` | qualification | none | qualifying | token:read | none | 0 |
 | `.github/workflows/build.yml` | `auditable-demo-passport` | qualification | none | qualifying | token:read | none | 4 |

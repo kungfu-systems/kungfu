@@ -680,7 +680,7 @@
     {
       "path": ".github/workflows/aws-us-linux-burst-qualification.yml",
       "authority": "qualification",
-      "definitionDigest": "sha256:6d3dce83fd46bd0c8df1abfde698d6c83a555770130d2ffcffcadca21ea9c05a",
+      "definitionDigest": "sha256:2ceb58f323b6d996b5b7a9a80c2ab652059db3aa6186f2bfd0b8944236928cfb",
       "jobs": [
         {
           "id": "qualify",
@@ -688,7 +688,7 @@
           "publication": "none",
           "receipt": "diagnostic",
           "definitionDigest": "sha256:2a23496189129a8b4d62cf12ca048f05327e6f103f744eb8b3dbce56f896f174",
-          "credentials": {"githubToken":"read","oidc":false,"repositorySecrets":[],"inheritedSecrets":false,"environment":null},
+          "credentials": {"githubToken":"write","oidc":false,"repositorySecrets":[],"inheritedSecrets":false,"environment":null},
           "externalActions": ["kungfu-systems/buildchain/.github/workflows/.build.yml@train/v2/v2.3/aws-us-elastic-runner-burst-plane"],
           "steps": []
         },
