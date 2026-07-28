@@ -3,8 +3,10 @@
 This section owns Kungfu's public mental model: the complete system overview,
 journal-backed Fact state, Episode causal experience, the fact-first trust
 boundary, the name's recursive technical meaning, canonical vocabulary,
-implementation concepts, and product layers. Start with
-[System Overview](system-overview.md), continue with
+implementation concepts, and product layers. If you do not yet have a
+longitudinal model of how these concepts accumulated, read the
+[Evolution Map](../evolution/README.md) before comparing them in the current
+system. Then start with [System Overview](system-overview.md), continue with
 [Facts Before Trust](facts-before-trust.md), then read [The Episode](the-episode.md)
 and use the [Vocabulary Reference](vocabulary.md) for precise terms. The
 canonical integration model is

@@ -6,6 +6,14 @@ Xinfa compiles one immutable Atlas and selects a bounded Task Chart from that
 verified cut. It prevents a convenient README, stale summary, or guessed route
 from silently becoming authority.
 
+Repository orientation and task context are different cuts. When an Agent is
+first trying to understand Kungfu as a whole, request the
+`kungfu-evolution-map-agent` route to establish longitudinal anchors, then
+select the bounded Core, kfx, documentation, or user route for the actual task.
+Do not inject the complete [Evolution Map](../evolution/README.md) into every
+known local task: once the component or operation is clear, the task-specific
+route should remain the smaller authoritative context.
+
 ## Source checkout: compile the Task Chart
 
 Start with the project-owned inventory. Its route declarations are the

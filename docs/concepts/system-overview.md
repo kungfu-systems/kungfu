@@ -4,9 +4,12 @@ Kungfu is a local-first runtime that records real-world agent work and verifies
 what actually got done. It works alongside the agents and execution surfaces
 you already use.
 
-This page is the second layer behind the concise project
-[README](../../README.md). It explains the complete system model without making
-new users understand that model before they receive value.
+This page is the current-system cross-section behind the concise project
+[README](../../README.md). For whole-system study, it is the second layer after
+the longitudinal [Evolution Map](../evolution/README.md): establish why the
+major abstractions and authority boundaries appeared, then use this page to see
+how they fit together now. A reader with one bounded product question can
+enter this overview directly without loading the complete history.
 
 Kungfu turns execution into **Episodes**, bounded causal units that bind Facts,
 Artifacts, Receipts, dependencies, and verification roots into one inspectable

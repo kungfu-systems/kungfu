@@ -41,7 +41,7 @@ Feature PRs targeting `dev/*` must replace the block with:
 Alpha and stable promotion manifests are documented in the release design;
 do not use the ADR-neutral form for a channel promotion.
 
-## Evolution map impact
+## [Evolution Map](../docs/evolution/README.md) impact
 
 Evolution impact: <!-- none | extends | opens | settles | supersedes -->
 

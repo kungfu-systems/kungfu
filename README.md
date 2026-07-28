@@ -159,6 +159,18 @@ when an agent continues to run elsewhere.
 
 ## Go deeper
 
+If your goal is to understand Kungfu as a system, do not begin by comparing
+repository directories and current modules side by side. Start with the
+[Evolution Map](docs/evolution/README.md): it establishes the historical
+pressures, abstraction compressions, and authority transitions that produced
+the current cross-section. Then use its reader routes to enter the exact
+current module, contract, and source authority for your question.
+
+If you already have one bounded implementation or operational task, use
+[AGENTS.md](AGENTS.md) and the task-specific Xinfa route instead of loading the
+whole history first.
+
+- [Start with Kungfu's longitudinal Evolution Map](docs/evolution/README.md)
 - [Why Kungfu begins with a minimal human sovereign core](docs/concepts/bootstrapping-agent-work.md)
 - [Inspect and reanalyze the bounded public work sample](https://kungfu.tech/about/bootstrapping/evidence/)
 - [How the complete Kungfu system works](docs/concepts/system-overview.md)
