@@ -16,6 +16,7 @@ import {
 } from '../framework/maintainability/complexity-governance.mjs';
 import {
   classify,
+  currentRenameMap,
   hasGeneratedProvenance,
   ownerFor,
   percentile,
@@ -261,6 +262,28 @@ test('one-to-one Git renames preserve the old budget without becoming helper spl
     'scripts/legacy-lab.mjs',
     'scripts/current-lab.mjs',
   ]);
+});
+
+test('rename discovery remains rooted at the complexity baseline after merge', () => {
+  const baselineRef = 'a'.repeat(40);
+  let argumentsSeen = [];
+  const renamedFrom = currentRenameMap(
+    { baselineRef },
+    (_command, argumentsValue) => {
+      argumentsSeen = argumentsValue;
+      return {
+        status: 0,
+        stdout:
+          'R100\tscripts/middle-lab.mjs\tscripts/current-lab.mjs\n' +
+          'R100\tscripts/legacy-lab.mjs\tscripts/middle-lab.mjs\n',
+      };
+    },
+  );
+  assert.ok(argumentsSeen.includes(`${baselineRef}..HEAD`));
+  assert.equal(
+    renamedFrom.get('scripts/current-lab.mjs'),
+    'scripts/legacy-lab.mjs',
+  );
 });
 
 test('unknown classification or owner fails closed', () => {

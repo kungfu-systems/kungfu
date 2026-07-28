@@ -689,44 +689,54 @@ function softBudgetWarnings(files, baseline, renamedFrom = new Map()) {
   return warnings;
 }
 
-function currentRenameMap(policy) {
-  for (const candidate of protectedBaselineCandidates(policy)) {
-    const mergeBase = spawnSync('git', ['merge-base', candidate, 'HEAD'], {
-      cwd: ROOT,
-      encoding: 'utf8',
-    });
-    if (mergeBase.status !== 0 || !String(mergeBase.stdout || '').trim())
-      continue;
-    const result = spawnSync(
-      'git',
-      [
-        'diff',
-        '--find-renames=50%',
-        '--diff-filter=R',
-        '--name-status',
-        `${String(mergeBase.stdout).trim()}..HEAD`,
-      ],
-      { cwd: ROOT, encoding: 'utf8', maxBuffer: 16 * 1024 * 1024 },
-    );
-    if (result.status !== 0) continue;
-    return new Map(
-      String(result.stdout || '')
-        .split('\n')
-        .filter(Boolean)
-        .flatMap((line) => {
-          const [status, previous, current] = line.split('\t');
-          return /^R\d{3}$/u.test(status || '') && previous && current
-            ? [[current, previous]]
-            : [];
-        }),
-    );
-  }
-  return new Map();
+export function currentRenameMap(baseline, runner = spawnSync) {
+  const baselineRef = String(baseline?.baselineRef || '').trim();
+  if (!baselineRef) return new Map();
+  const result = runner(
+    'git',
+    [
+      'log',
+      '--format=',
+      '--find-renames=50%',
+      '--diff-filter=R',
+      '--name-status',
+      `${baselineRef}..HEAD`,
+      '--',
+    ],
+    { cwd: ROOT, encoding: 'utf8', maxBuffer: 16 * 1024 * 1024 },
+  );
+  if (result.status !== 0) return new Map();
+  const previousByCurrent = new Map(
+    String(result.stdout || '')
+      .split('\n')
+      .filter(Boolean)
+      .flatMap((line) => {
+        const [status, previous, current] = line.split('\t');
+        return /^R\d{3}$/u.test(status || '') && previous && current
+          ? [[current, previous]]
+          : [];
+      }),
+  );
+  return new Map(
+    [...previousByCurrent].map(([current]) => {
+      const seen = new Set([current]);
+      let previous = previousByCurrent.get(current);
+      while (
+        previous &&
+        previousByCurrent.has(previous) &&
+        !seen.has(previous)
+      ) {
+        seen.add(previous);
+        previous = previousByCurrent.get(previous);
+      }
+      return [current, previous];
+    }),
+  );
 }
 
 function checkCurrent(policy, layers, baseline) {
   const files = measureCurrent(policy, layers);
-  const renamedFrom = currentRenameMap(policy);
+  const renamedFrom = currentRenameMap(baseline);
   const issues = validateMeasured(files);
   const recomputedBaseline = buildBaseline(policy, layers);
   issues.push(
