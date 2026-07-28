@@ -242,6 +242,11 @@ but historical conflict and retry gaps remain part of the measured tail.
 These measurements do not relax affected-native proof identity. Reuse remains
 bound to the exact base, candidate source tree, plan projection, partitions,
 tier, receipt, hosted-runner image, and observed compiler/CMake/Ninja evidence.
+A reusable qualification id excludes the transient family lease, required
+status snapshot, and queue-attempt binding. Those delivery facts remain
+fail-closed in the descriptor and are sealed independently into the
+merge-group delivery attempt and cache-promotion authority; they cannot
+authorize a different source, plan, toolchain, or SDK obligation.
 A successful PR run may publish proof only after its complete required native,
 SDK, Shifu, and KFD dependency graph passes. The matching merge-group may
 consume that proof, and a serialized repeat may consume a same-SHA queue proof,

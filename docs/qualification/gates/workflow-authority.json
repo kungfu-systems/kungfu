@@ -477,7 +477,7 @@
           "authority": "qualification",
           "publication": "none",
           "receipt": "diagnostic",
-          "definitionDigest": "sha256:5b5b215982086bb9ae947aa28749bd2b329431871d57add56a7eeb869c876e0e",
+          "definitionDigest": "sha256:9561cd41d2b32fd3002ae936789654c3160fb330af8eb5b12878f111b42ba780",
           "credentials": {"githubToken":"read","oidc":false,"repositorySecrets":[],"inheritedSecrets":false,"environment":null},
           "externalActions": ["actions/checkout@v4","actions/setup-node@v6.4.0","actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02","actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093"],
           "steps": [
@@ -499,7 +499,7 @@
             {
               "index": 4,
               "label": "id:delivery",
-              "definitionDigest": "sha256:8cd648d1975633976c118d51b2f201e51b73a241b6611005719d976c33f4754e"
+              "definitionDigest": "sha256:5add98bf62d272dc66b4c5a051d990364e979b3f38bae42ef14083a60648104f"
             },
             {
               "index": 5,
