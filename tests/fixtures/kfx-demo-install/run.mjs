@@ -11,7 +11,16 @@
 
 import fs from 'node:fs';
 import path from 'node:path';
-import { locate, tmpDir, run, kfc, uvPython, fail } from '../_harness.mjs';
+import {
+  locate,
+  tmpDir,
+  run,
+  kfc,
+  uvPython,
+  fail,
+  writeKfxPassportAuthority,
+  writeKfxRecoveryAuthority,
+} from '../_harness.mjs';
 
 const { fixtureDir, coreDir } = locate(import.meta.url);
 const repoDir = path.resolve(coreDir, '..', '..');
@@ -30,20 +39,43 @@ const packed = run('npm', ['pack', '--pack-destination', packdir], { cwd: extDir
 const tgzName = packed.stdout.trim().split(/\r?\n/).pop();
 const tgz = path.join(packdir, tgzName);
 if (!fs.existsSync(tgz)) fail('npm pack produced no tgz');
+const passportAuthority = writeKfxPassportAuthority(
+  coreDir,
+  home,
+  extDir,
+  'work-dashboard',
+  path.join(packdir, 'passport-authority.json'),
+);
 
-k(['kfx', 'install', tgz]);
+k(['kfx', 'install', tgz, '--authority-file', passportAuthority]);
 k(['kfx', 'list']);
 
 // double install must refuse without --force, succeed with it
-if (k(['kfx', 'install', tgz], { allowFail: true }).status === 0) {
+if (
+  k(['kfx', 'install', tgz, '--authority-file', passportAuthority], {
+    allowFail: true,
+  }).status === 0
+) {
   fail('double install did not refuse');
 }
-k(['kfx', 'install', tgz, '--force']);
+k(['kfx', 'install', tgz, '--force', '--authority-file', passportAuthority]);
 
 uvPython(coreDir, [path.join(fixtureDir, 'check_install.py'), home]);
 
-k(['kfx', 'remove', 'work-dashboard']);
-if (k(['kfx', 'remove', 'work-dashboard'], { allowFail: true }).status === 0) {
+const recoveryAuthority = writeKfxRecoveryAuthority(
+  coreDir,
+  home,
+  'work-dashboard',
+  'remove',
+  path.join(packdir, 'recovery-authority.json'),
+);
+k(['kfx', 'remove', 'work-dashboard', '--authority-file', recoveryAuthority]);
+if (
+  k(
+    ['kfx', 'remove', 'work-dashboard', '--authority-file', recoveryAuthority],
+    { allowFail: true },
+  ).status === 0
+) {
   fail('removing a missing key did not fail');
 }
 if (fs.existsSync(path.join(home, 'extensions', 'work-dashboard'))) fail('not removed');

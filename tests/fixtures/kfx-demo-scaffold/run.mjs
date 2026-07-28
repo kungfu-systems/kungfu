@@ -20,6 +20,8 @@ import {
   kfc,
   assertContains,
   fail,
+  writeKfxPassportAuthority,
+  writeKfxRecoveryAuthority,
 } from '../_harness.mjs';
 
 const { coreDir } = locate(import.meta.url);
@@ -82,12 +84,26 @@ const packed = run('npm', ['pack', '--pack-destination', packdir], { cwd: extDir
 const tgzName = packed.stdout.trim().split(/\r?\n/).pop();
 const tgz = path.join(packdir, tgzName);
 if (!fs.existsSync(tgz)) fail('npm pack produced no tgz');
+const passportAuthority = writeKfxPassportAuthority(
+  coreDir,
+  home,
+  extDir,
+  'my-view',
+  path.join(packdir, 'passport-authority.json'),
+);
 
-k(['kfx', 'install', tgz]);
+k(['kfx', 'install', tgz, '--authority-file', passportAuthority]);
 assertContains(k(['kfx', 'list']), 'my-view', 'installed kfx not listed');
 if (!fs.existsSync(path.join(home, 'extensions', 'my-view', 'dist', 'view', 'index.js'))) {
   fail('bundle missing from install root');
 }
-k(['kfx', 'remove', 'my-view']);
+const recoveryAuthority = writeKfxRecoveryAuthority(
+  coreDir,
+  home,
+  'my-view',
+  'remove',
+  path.join(packdir, 'recovery-authority.json'),
+);
+k(['kfx', 'remove', 'my-view', '--authority-file', recoveryAuthority]);
 if (fs.existsSync(path.join(home, 'extensions', 'my-view'))) fail('not removed');
 console.log('[kfx-demo-scaffold] scaffold-to-install ok');

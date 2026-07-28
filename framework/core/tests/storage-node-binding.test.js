@@ -236,7 +236,6 @@ test(
     );
     const request = {
       roots: [{ kind: 'workspace', path: fixtureRoot }],
-      runtimeTiers: { 'optional-view': 'verified-third-party' },
     };
     const plan = kungfu.runStorageServiceOperation('kfx_runtime', '', {
       action: 'plan',

@@ -142,6 +142,129 @@ export function kfc(coreDir, home, args, opts = {}) {
   );
 }
 
+const KFX_AUTHORITY_FIXTURE = path.join(
+  'src',
+  'libkungfu',
+  'tests',
+  'fixtures',
+  'native_kfx_contract',
+  'buildchain-2.13.0-alpha.0-envelope.json',
+);
+
+function nativeKfxPackage(coreDir, home, packageDir, packageKey) {
+  return json(
+    kfc(coreDir, home, [
+      'kfx',
+      'native',
+      'inspect',
+      packageKey,
+      '--root',
+      `user=${path.dirname(packageDir)}`,
+    ]),
+  ).package;
+}
+
+/** Write exact Buildchain/KFD authority for one package install or update. */
+export function writeKfxPassportAuthority(
+  coreDir,
+  home,
+  packageDir,
+  packageKey,
+  target,
+) {
+  const pkg = nativeKfxPackage(coreDir, home, packageDir, packageKey);
+  const fixture = JSON.parse(
+    fs.readFileSync(path.join(coreDir, KFX_AUTHORITY_FIXTURE), 'utf8'),
+  );
+  const projection = structuredClone(fixture.projection);
+  projection.attestation.bindings.packageRoot = pkg.packageRoot;
+  projection.trustInputs.packageRoot = pkg.packageRoot;
+  const requestedCapabilities = [...pkg.declaredCapabilities].sort();
+  const policy = structuredClone(fixture.admission.policy);
+  policy.allowedCapabilities = [
+    ...new Set([...policy.allowedCapabilities, ...requestedCapabilities]),
+  ].sort();
+  policy.autoOperations = [
+    ...new Set([
+      ...policy.autoOperations,
+      'install',
+      'update',
+      'enable',
+      'activate',
+      'qualify',
+    ]),
+  ].sort();
+  const highConsequence = new Set([
+    'agentRuntime',
+    'kfxControl',
+    'process',
+    'storage',
+  ]);
+  const authority = {
+    purpose: fixture.admission.purpose,
+    policy,
+    assessmentTime: fixture.assessmentTime,
+    authorizationTime: fixture.assessmentTime,
+    attestation: projection.attestation,
+    trustInputs: projection.trustInputs,
+    kfdAssessment: projection.kfdAssessment,
+    requestedCapabilities,
+    approvalRoots: requestedCapabilities.some((capability) =>
+      highConsequence.has(capability),
+    )
+      ? [`sha256:${'a'.repeat(64)}`]
+      : [],
+  };
+  fs.writeFileSync(target, `${JSON.stringify(authority, null, 2)}\n`);
+  return target;
+}
+
+/** Write an exact owner recovery Warrant for the currently installed package. */
+export function writeKfxRecoveryAuthority(
+  coreDir,
+  home,
+  packageKey,
+  operation,
+  target,
+) {
+  const installRoot = path.join(home, 'extensions');
+  const pkg = nativeKfxPackage(
+    coreDir,
+    home,
+    path.join(installRoot, packageKey),
+    packageKey,
+  );
+  const status = json(
+    kfc(coreDir, home, [
+      'kfx',
+      'native',
+      'status',
+      '--root',
+      `user=${installRoot}`,
+    ]),
+  );
+  const authorizationTime = 1000 + Number(status.revision);
+  const approvalRoots = [`sha256:${'a'.repeat(64)}`];
+  const authority = {
+    authorizationTime,
+    approvalRoots,
+    recoveryWarrant: {
+      schema: 'kungfu.kfx-recovery-warrant/v1',
+      issuerClass: 'workspace-owner',
+      operation,
+      packageRoot: pkg.packageRoot,
+      expectedCutRoot: status.cutRoot,
+      expectedRevision: status.revision,
+      approvalRoots,
+      issuedAt: authorizationTime - 1,
+      expiresAt: authorizationTime + 100,
+      nonce: `fixture-${packageKey}-${operation}`,
+    },
+  };
+  fs.writeFileSync(target, `${JSON.stringify(authority, null, 2)}\n`);
+  return target;
+}
+
 /** Parse the single JSON object a `--json` command prints to stdout. */
 export function json(result) {
   try {
