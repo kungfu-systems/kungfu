@@ -1,15 +1,17 @@
 {
   "schema": "kungfu.evolution-map-projection/v1",
   "generatedFrom": {
-    "authority": "append-only Era and Stage records under docs/evolution",
+    "authority": "append-only canonical Era and Stage records plus non-authoritative Era Candidate revisions under docs/evolution",
     "semanticGraphAuthority": "Xinfa Atlas; this projection never creates current runtime authority",
-    "sourceRoot": "sha256:329bbdd073732af763778cf80d0bb797f72f0471ae46004a2cfac4ad15a5368c"
+    "sourceRoot": "sha256:ff6f0d663fa94d1cd76081f993ad8d354d64d144293452732f6cd9d5711a3fc3"
   },
   "summary": {
     "eras": 5,
     "stages": 8,
     "evidence": 31,
-    "authoritySubjects": 7
+    "authoritySubjects": 7,
+    "eraCandidates": 0,
+    "unresolvedEraCandidates": 0
   },
   "eras": [
     {
@@ -754,6 +756,7 @@
       "file": "docs/evolution/stages/08-native-work-control-dogfood.md"
     }
   ],
+  "eraCandidates": [],
   "currentAuthority": [
     {
       "subject": "action-semantics",

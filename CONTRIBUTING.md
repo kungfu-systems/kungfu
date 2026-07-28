@@ -224,6 +224,16 @@ an append-only Era or Stage record under `docs/evolution/` and regenerate its
 projections with `./shifu evolution:map`. Settled records are immutable; publish
 an amendment or successor instead of rewriting history.
 
+For cross-layer work, Agents must also test whether the current Era thesis has
+become insufficient. Do not open a Candidate for ordinary feature growth. Open
+or advance an [Era Candidate](docs/evolution/candidates.md) only when one
+emerging compression or authority axis plausibly supports at least two future
+Stages and exact evidence plus counter-evidence can be retained. Use
+`./shifu evolution:candidate -- --input FILE` to inspect the dry-run and repeat
+with `--write` only in an isolated branch. Candidate revisions are immutable,
+do not reserve an Era number, and do not change current authority. Only an
+explicit maintainer decision or appropriately scoped Warrant may promote one.
+
 Before a cross-layer change, contributors who cannot yet place the affected
 capability and authority transition should read the
 [Evolution Map timeline](docs/evolution/timeline.md) and

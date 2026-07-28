@@ -50,6 +50,11 @@ Use `extends` for evidence added to the current open Stage. Use `opens`,
 authority transition. Settled Stage records are append-only; corrections use a
 new amendment or successor record.
 
+If the current Era thesis may no longer explain at least two future Stages,
+open or update the non-authoritative [Era Candidate ledger](../docs/evolution/candidates.md).
+A Candidate-only PR normally remains `extends`; it cannot allocate an Era
+sequence or change current authority.
+
 ## Governance risk check
 
 Does this PR touch any of these boundaries?
