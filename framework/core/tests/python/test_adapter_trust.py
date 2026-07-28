@@ -7,7 +7,6 @@
 import json
 import os
 
-from kungfu import profile_sdk
 from kungfu.rewind import adapters
 
 
@@ -39,7 +38,7 @@ def _write_adapter(root, key, runtime="python"):
     return pkg
 
 
-def _host_descriptor(package_key, package_root, authorization_root):
+def _host_descriptor(package_key, authorization_root):
     roots = {
         name: f"sha256:{character * 64}"
         for name, character in {
@@ -68,7 +67,7 @@ def _host_descriptor(package_key, package_root, authorization_root):
     authorization = {
         "schema": "kungfu.kfx.host-authorization/v2",
         "packageKey": package_key,
-        "packageRoot": package_root,
+        "packageRoot": roots["package"],
         "manifestRoot": roots["manifest"],
         "ownerProviderRoot": roots["provider"],
         "trustRoot": roots["trust"],
@@ -131,19 +130,63 @@ def _host_descriptor(package_key, package_root, authorization_root):
     }
 
 
-def _write_descriptor(tmp_path, monkeypatch, package_key, authorization_root):
-    path = tmp_path / "host-descriptor.json"
-    path.write_text(
-        json.dumps(
-            _host_descriptor(
-                package_key,
-                profile_sdk.package_content_root(tmp_path / "extensions" / package_key),
-                authorization_root,
+def _mock_native_authority(
+    monkeypatch, descriptor, allowed_key=None, *, observed_matches=True
+):
+    calls = []
+
+    def kfx_registry(action, request, runtime_dir):
+        calls.append((action, request, runtime_dir))
+        if action == "plan":
+            if descriptor is None:
+                raise ValueError("KF_KFX_CUT_MISSING")
+            return {"hostContract": descriptor}
+        if action == "inspect":
+            candidate = next(
+                (
+                    item
+                    for item in descriptor["runtimeAuthorizations"]
+                    if item["packageKey"] == request["packageKey"]
+                ),
+                None,
             )
-        ),
-        encoding="utf-8",
-    )
-    monkeypatch.setenv("KF_KFX_HOST_DESCRIPTOR", str(path))
+            if candidate is None or not observed_matches:
+                return {
+                    "package": {
+                        "packageRoot": f"sha256:{'e' * 64}",
+                        "manifestRoot": f"sha256:{'e' * 64}",
+                    }
+                }
+            return {
+                "package": {
+                    "packageRoot": candidate["packageRoot"],
+                    "manifestRoot": candidate["manifestRoot"],
+                }
+            }
+        if action != "authorize-host":
+            raise AssertionError(f"unexpected native KFX action: {action}")
+        candidate = next(
+            (
+                item
+                for item in descriptor["runtimeAuthorizations"]
+                if item["packageKey"] == request["packageKey"]
+                and item["host"] == request["host"]
+            ),
+            None,
+        )
+        if (
+            candidate is None
+            or request["packageKey"] != allowed_key
+            or request["expectedAuthorizationRoot"] != candidate["authorizationRoot"]
+        ):
+            raise ValueError("KF_KFX_AUTHORIZATION_STALE")
+        return {
+            "executionAllowed": True,
+            "authorization": candidate,
+        }
+
+    monkeypatch.setattr(adapters.storage_service, "kfx_registry", kfx_registry)
+    return calls
 
 
 def _setup(tmp_path, monkeypatch):
@@ -155,7 +198,10 @@ def _setup(tmp_path, monkeypatch):
 
 def test_discovery_origin_and_package_name_confer_zero_authority(tmp_path, monkeypatch):
     _setup(tmp_path, monkeypatch)
-    entries, dirs, refused = adapters.discover_adapters(None, "python")
+    _mock_native_authority(monkeypatch, None)
+    entries, dirs, refused = adapters.discover_adapters(
+        str(tmp_path / "runtime"), "python"
+    )
     assert entries == [] and dirs == []
     assert {row["key"] for row in refused} == {"bundled-a", "external-b"}
 
@@ -165,48 +211,46 @@ def test_only_the_exact_core_authorization_allows_in_process_injection(
 ):
     _setup(tmp_path, monkeypatch)
     authorization_root = f"sha256:{'4' * 64}"
-    _write_descriptor(tmp_path, monkeypatch, "external-b", authorization_root)
+    descriptor = _host_descriptor("external-b", authorization_root)
+    calls = _mock_native_authority(monkeypatch, descriptor, "external-b")
 
-    entries, dirs, refused = adapters.discover_adapters(None, "python")
+    entries, dirs, refused = adapters.discover_adapters(
+        str(tmp_path / "runtime"), "python"
+    )
     assert len(entries) == 1
     assert {os.path.basename(path) for path in dirs} == {"external-b"}
     assert {row["key"] for row in refused} == {"bundled-a"}
+    launch = next(request for action, request, _ in calls if action == "authorize-host")
+    assert launch["expectedCutRoot"] == descriptor["cutRoot"]
+    assert launch["expectedGenerationRoot"] == descriptor["generationRoot"]
+    assert launch["expectedAuthorizationRoot"] == authorization_root
 
 
-def test_mismatched_authorization_root_fails_closed(tmp_path, monkeypatch):
+def test_caller_supplied_descriptor_conveys_zero_authority(tmp_path, monkeypatch):
     _setup(tmp_path, monkeypatch)
-    descriptor = _host_descriptor(
-        "bundled-a",
-        profile_sdk.package_content_root(tmp_path / "extensions" / "bundled-a"),
-        f"sha256:{'4' * 64}",
-    )
-    descriptor["admission"]["runtimeAuthorizationRoots"][0] = f"sha256:{'5' * 64}"
+    descriptor = _host_descriptor("bundled-a", f"sha256:{'4' * 64}")
     path = tmp_path / "host-descriptor.json"
     path.write_text(json.dumps(descriptor), encoding="utf-8")
     monkeypatch.setenv("KF_KFX_HOST_DESCRIPTOR", str(path))
+    _mock_native_authority(monkeypatch, None)
 
-    entries, dirs, refused = adapters.discover_adapters(None, "python")
-    assert entries == [] and dirs == []
-    assert {row["key"] for row in refused} == {"bundled-a", "external-b"}
-
-
-def test_same_key_with_different_package_root_cannot_borrow_authority(
-    tmp_path, monkeypatch
-):
-    _setup(tmp_path, monkeypatch)
-    authorization_root = f"sha256:{'4' * 64}"
-    _write_descriptor(tmp_path, monkeypatch, "external-b", authorization_root)
-    adapter = (
-        tmp_path
-        / "extensions"
-        / "external-b"
-        / "src"
-        / "adapter"
-        / "python"
-        / "index.py"
+    entries, dirs, refused = adapters.discover_adapters(
+        str(tmp_path / "runtime"), "python"
     )
-    adapter.write_text("# different adapter source\n", encoding="utf-8")
-
-    entries, dirs, refused = adapters.discover_adapters(None, "python")
     assert entries == [] and dirs == []
     assert {row["key"] for row in refused} == {"bundled-a", "external-b"}
+
+
+def test_same_key_shadow_with_different_closure_is_refused(tmp_path, monkeypatch):
+    _setup(tmp_path, monkeypatch)
+    descriptor = _host_descriptor("external-b", f"sha256:{'4' * 64}")
+    calls = _mock_native_authority(
+        monkeypatch, descriptor, "external-b", observed_matches=False
+    )
+
+    entries, dirs, refused = adapters.discover_adapters(
+        str(tmp_path / "runtime"), "python"
+    )
+    assert entries == [] and dirs == []
+    assert {row["key"] for row in refused} == {"bundled-a", "external-b"}
+    assert not any(action == "authorize-host" for action, _, _ in calls)

@@ -642,6 +642,7 @@ snapshot build_snapshot(const json &request) {
       keys[key] = package_path;
       const auto closure = package_closure(package_path);
       const auto native_contract = native_kfx_contract();
+      const auto hosts = host_placements(manifest);
       json package = {{"key", key},
                       {"name", manifest.value("name", "")},
                       {"version", manifest.value("version", "")},
@@ -661,7 +662,7 @@ snapshot build_snapshot(const json &request) {
                       {"admissionGrade", "unverified"},
                       {"supplyChainGrade", "unverified"},
                       {"grantedCapabilities", json::array()},
-                      {"hosts", host_placements(manifest)},
+                      {"hosts", hosts},
                       {"semantic", object_or_empty(manifest.at("kungfuConfig"), "registry")},
                       {"candidate", true},
                       {"installed", false},
@@ -977,7 +978,7 @@ std::string runtime_placement(const std::string &host) {
   if (host.starts_with("service-"))
     return "process-isolated";
   if (host.starts_with("adapter-"))
-    return "integrated-disabled";
+    return "integrated-explicit";
   if (host == "profile")
     return "metadata-only";
   refuse("KF_KFX_HOST_UNKNOWN", "Core cannot derive a physical placement for host " + host);

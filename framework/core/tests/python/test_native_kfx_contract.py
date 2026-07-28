@@ -106,6 +106,48 @@ def test_native_kfx_python_binding_is_a_thin_core_edge(tmp_path):
         )
 
 
+def test_native_kfx_registry_python_edge_forwards_host_authorization(
+    tmp_path, monkeypatch
+):
+    calls = []
+
+    class Runtime:
+        def run_storage_service_operation(self, operation, runtime_dir, options):
+            calls.append((operation, runtime_dir, options))
+            return {"executionAllowed": False}
+
+    runtime = Runtime()
+    monkeypatch.setattr(storage_service, "_runtime", lambda: runtime)
+    request = {
+        "packageKey": "langchain-adapter",
+        "host": "adapter-python",
+        "expectedAuthorizationRoot": f"sha256:{'a' * 64}",
+    }
+
+    assert storage_service.kfx_registry("authorize-host", request, tmp_path) == {
+        "executionAllowed": False
+    }
+    assert calls == [
+        (
+            "kfx_runtime",
+            str(tmp_path),
+            {"action": "authorize-host", "request": request},
+        )
+    ]
+
+
+def test_native_kfx_registry_binding_reaches_host_authorization(tmp_path):
+    with pytest.raises(ValueError, match="KF_KFX_CUT_MISSING"):
+        storage_service.kfx_registry(
+            "authorize-host",
+            {
+                "packageKey": "langchain-adapter",
+                "host": "adapter-python",
+            },
+            tmp_path / "runtime",
+        )
+
+
 def test_native_kfx_registry_python_projection_matches_core_roots(tmp_path):
     request = _registry_request()
     plan = storage_service.kfx_registry("plan", request, tmp_path)

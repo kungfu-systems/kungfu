@@ -991,6 +991,64 @@ void test_native_lifecycle_uses_fact_work_and_named_cut_authority() {
   fs::remove_all(home);
 }
 
+void test_native_adapter_authority_requires_the_current_fact_cut() {
+  const auto home = temp_root("adapter-authority");
+  const auto source_root = home / "sources";
+  const auto package_source = source_root / "trace-adapter";
+  const auto runtime_dir = home / "runtime";
+  fs::create_directories(package_source);
+  auto manifest = nlohmann::json::object();
+  manifest["schema"] = "kungfu.kfx.manifest/v1";
+  manifest["name"] = "@kungfu-test/trace-adapter";
+  manifest["version"] = "1.0.0";
+  manifest["kungfuConfig"]["key"] = "trace-adapter";
+  manifest["kungfuConfig"]["config"]["adapter"]["runtimes"] = nlohmann::json::array({"python"});
+  manifest["kungfuConfig"]["config"]["adapter"]["entry"] = {{"python", "index.py"}};
+  manifest["kungfuConfig"]["config"]["adapter"]["capabilities"] = nlohmann::json::array();
+  write_json(package_source / "kungfu.kfx.json", manifest);
+  std::ofstream(package_source / "index.py") << "# qualification adapter\n";
+
+  const auto source_request = passport_authorized_request(
+      {{"roots", nlohmann::json::array({{{"kind", "workspace"}, {"path", source_root.string()}}})}}, "trace-adapter",
+      "install", runtime_dir.string());
+  const auto preview = kfx::query_native_kfx_registry("plan", source_request, runtime_dir.string());
+  const auto &preview_authorization = preview.at("hostContract").at("runtimeAuthorizations").front();
+  require(preview.at("packages").front().at("runtimeTier") == "isolated" &&
+              preview_authorization.at("placement") == "integrated-explicit" &&
+              !preview_authorization.at("executionAllowed").get<bool>(),
+          "adapter preview either gained authority or lost its Core-derived integrated placement");
+
+  const auto installed = kfx::query_native_kfx_registry(
+      "apply", mutation_request(source_request, preview, "trace-adapter", "install"), runtime_dir.string());
+  const auto admitted = kfx::query_native_kfx_registry("plan", nlohmann::json::object(), runtime_dir.string());
+  const auto &descriptor = admitted.at("hostContract");
+  const auto &authorization = descriptor.at("runtimeAuthorizations").front();
+  require(installed.at("receipt").at("outcome") == "applied" && authorization.at("host") == "adapter-python" &&
+              authorization.at("runtimeTier") == "isolated" && authorization.at("placement") == "integrated-explicit" &&
+              authorization.at("executionAllowed").get<bool>(),
+          "settled adapter did not receive one exact native integrated authorization");
+
+  const nlohmann::json launch_request = {{"packageKey", "trace-adapter"},
+                                         {"host", "adapter-python"},
+                                         {"expectedCutRoot", descriptor.at("cutRoot")},
+                                         {"expectedRevision", descriptor.at("revision")},
+                                         {"expectedGenerationRoot", descriptor.at("generationRoot")},
+                                         {"expectedPackageRoot", authorization.at("packageRoot")},
+                                         {"expectedCapabilityGrantRoot", authorization.at("capabilityGrantRoot")},
+                                         {"expectedAuthorizationRoot", authorization.at("authorizationRoot")},
+                                         {"expectedGrantedCapabilities", authorization.at("grantedCapabilities")}};
+  const auto launch = kfx::query_native_kfx_registry("authorize-host", launch_request, runtime_dir.string());
+  require(launch.at("executionAllowed").get<bool>() &&
+              launch.at("authorization").at("authorizationRoot") == authorization.at("authorizationRoot"),
+          "native adapter launch did not revalidate the current Fact Cut authorization");
+
+  auto replayed = launch_request;
+  replayed["expectedAuthorizationRoot"] = fixture_root('f');
+  require_refusal("KF_KFX_AUTHORIZATION_STALE",
+                  [&] { (void)kfx::query_native_kfx_registry("authorize-host", replayed, runtime_dir.string()); });
+  fs::remove_all(home);
+}
+
 void test_control_suite_recursively_dogfoods_public_fact_work() {
   const auto home = temp_root("control-suite");
   const auto runtime_dir = home / "runtime";
@@ -1106,6 +1164,7 @@ int main() {
     test_exact_buildchain_attestation_and_operation_admission();
     test_semantic_graph_and_host_contract_are_canonical();
     test_native_lifecycle_uses_fact_work_and_named_cut_authority();
+    test_native_adapter_authority_requires_the_current_fact_cut();
     test_control_suite_recursively_dogfoods_public_fact_work();
     std::cout << "native KFX contract tests passed\n";
     return 0;

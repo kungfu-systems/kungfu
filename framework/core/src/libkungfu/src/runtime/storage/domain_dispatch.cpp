@@ -261,7 +261,7 @@ public:
                                                object_or_empty(options.operation_options, "document"));
     }
     if (action == "list" || action == "inspect" || action == "resolve" || action == "plan" || action == "status" ||
-        action == "assess" || action == "apply" || action == "history") {
+        action == "assess" || action == "apply" || action == "authorize-host" || action == "history") {
       return kfx::query_native_kfx_registry(action, object_or_empty(options.operation_options, "request"),
                                             options.runtime_dir);
     }

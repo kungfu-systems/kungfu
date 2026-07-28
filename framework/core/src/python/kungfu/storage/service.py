@@ -909,6 +909,7 @@ def kfx_registry(
         "assess",
         "apply",
         "history",
+        "authorize-host",
     }:
         raise ValueError(f"unsupported KFX registry action: {action}")
     return dict(
