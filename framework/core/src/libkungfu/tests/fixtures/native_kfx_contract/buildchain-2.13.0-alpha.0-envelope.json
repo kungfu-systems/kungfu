@@ -10,7 +10,7 @@
   "projection": {
     "schemaVersion": 1,
     "contract": "kungfu-buildchain-kfx-admission-inputs",
-    "envelopeRoot": "sha256:cdae88dbdc721a9908adb543d0eaff76c5aaef7d1d4cb3bec98fabdde05b712d",
+    "envelopeRoot": "sha256:d46314fbc2e999e31216f677d2e6f5fa7c39ff00e69f7a1687af8da90165724c",
     "attestation": {
       "schemaVersion": 1,
       "contract": "kungfu-buildchain-artifact-verification",
@@ -64,7 +64,7 @@
       },
       "bindings": {
         "schema": "kungfu.kfx-trust-inputs/v1",
-        "packageRoot": "sha256:9409d0a0deac2689cb4364350c1e976cfdafa5773a57d668ab72b09adb59b223",
+        "packageRoot": "sha256:10291fdce4bf0977cc9b86e5a5b39920f13a39f9cda1ed602836b7f7363d35d5",
         "sourceRoot": "sha256:1111111111111111111111111111111111111111111111111111111111111111",
         "dependencyRoot": "sha256:2222222222222222222222222222222222222222222222222222222222222222",
         "buildPlanRoot": "sha256:3333333333333333333333333333333333333333333333333333333333333333",
@@ -122,12 +122,12 @@
         "schemaVersion": 1,
         "contract": "kungfu-buildchain-artifact-verification-envelope",
         "canonicalization": "buildchain-stable-json/v1",
-        "root": "sha256:cdae88dbdc721a9908adb543d0eaff76c5aaef7d1d4cb3bec98fabdde05b712d"
+        "root": "sha256:d46314fbc2e999e31216f677d2e6f5fa7c39ff00e69f7a1687af8da90165724c"
       }
     },
     "trustInputs": {
       "schema": "kungfu.kfx-trust-inputs/v1",
-      "packageRoot": "sha256:9409d0a0deac2689cb4364350c1e976cfdafa5773a57d668ab72b09adb59b223",
+      "packageRoot": "sha256:10291fdce4bf0977cc9b86e5a5b39920f13a39f9cda1ed602836b7f7363d35d5",
       "sourceRoot": "sha256:1111111111111111111111111111111111111111111111111111111111111111",
       "dependencyRoot": "sha256:2222222222222222222222222222222222222222222222222222222222222222",
       "buildPlanRoot": "sha256:3333333333333333333333333333333333333333333333333333333333333333",
@@ -223,8 +223,8 @@
     }
   },
   "expected": {
-    "envelopeRoot": "sha256:cdae88dbdc721a9908adb543d0eaff76c5aaef7d1d4cb3bec98fabdde05b712d",
+    "envelopeRoot": "sha256:d46314fbc2e999e31216f677d2e6f5fa7c39ff00e69f7a1687af8da90165724c",
     "kfdReportRoot": "sha256:63670117b00f6a5de4a2af48aa0aa3cc06337b2768d611a67039dbf50d8cf444",
-    "coreReportRoot": "sha256:6fc81e26bd8e97b88eff58f4ef1df2524b4907de6c2cb9ce4f25c0407986ffa9"
+    "coreReportRoot": "sha256:6008c0e6456edf067d8866582e8df653aa9498c832ac1ad030e3f8dcf7ba8366"
   }
 }

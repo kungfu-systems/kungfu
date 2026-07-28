@@ -81,13 +81,15 @@ function listKfxPackages() {
   const visit = (dir, depth) => {
     if (depth > 2 || !fs.existsSync(dir)) return;
     const pkgPath = path.join(dir, 'package.json');
-    if (fs.existsSync(pkgPath)) {
+    const manifestPath = path.join(dir, 'kungfu.kfx.json');
+    if (fs.existsSync(pkgPath) && fs.existsSync(manifestPath)) {
       const pkg = readJson(pkgPath);
-      if (pkg?.name && pkg?.kungfuConfig) {
+      const manifest = readJson(manifestPath);
+      if (manifest?.name && manifest?.kungfuConfig) {
         packages.push({
-          name: pkg.name,
+          name: manifest.name,
           dir,
-          config: pkg.kungfuConfig,
+          config: manifest.kungfuConfig,
           scripts: pkg.scripts || {},
         });
       }

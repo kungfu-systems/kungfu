@@ -560,7 +560,7 @@
           "authority": "qualification",
           "publication": "none",
           "receipt": "diagnostic",
-          "definitionDigest": "sha256:3311b476456c79f491d192fbbd7c002c3924964490949bbe50bbe9d341bbf162",
+          "definitionDigest": "sha256:e9bdb64f8a73c24f5e38c878adddc267b7a42caf7d6f22f0516e2789ea65e72e",
           "credentials": {
             "githubToken": "read",
             "oidc": false,
@@ -582,33 +582,8 @@
             },
             {
               "index": 3,
-              "label": "name:Run Shifu workspace Gate (POSIX)",
-              "definitionDigest": "sha256:d4272a88ebcd477fc8e3a2cba6c41c734a9e1f454d755bd1321c9cb0b0645e0b"
-            },
-            {
-              "index": 4,
-              "label": "name:Run Shifu workspace Gate (Windows)",
-              "definitionDigest": "sha256:2d69c9917e49532f53e1ea93b523b2c2b0fa88450b6df1bdf7cdb50a9ed7dd59"
-            },
-            {
-              "index": 5,
-              "label": "name:Verify Xinfa producer contracts (POSIX)",
-              "definitionDigest": "sha256:15752c37fb68edba03d505347c7aae2e2817db34c555691efefbee3eb4bb4546"
-            },
-            {
-              "index": 6,
-              "label": "name:Verify Xinfa producer contracts (Windows)",
-              "definitionDigest": "sha256:2614f1feaff1c58fb2cbb1882d0b9776056e2330955d8d633c255ae1104c3f69"
-            },
-            {
-              "index": 7,
-              "label": "name:Qualify repository context quality (POSIX)",
-              "definitionDigest": "sha256:c374ee36eff61fa55741ed99fdb994ff3dc78fdee52c0bdd9b3f7a3500718507"
-            },
-            {
-              "index": 8,
-              "label": "name:Qualify repository context quality (Windows)",
-              "definitionDigest": "sha256:70fc4a83da8efee0bf4434a4326e8e51f214ca3e46048d5fd2f4952abacda2af"
+              "label": "name:Run required Linux Shifu workspace Gate",
+              "definitionDigest": "sha256:cfe99cc55d3b51b37a8f976fcacde13a61e5f514dfd5ae2893706c0f7bda0330"
             }
           ]
         },
@@ -1301,6 +1276,43 @@
               "label": "name:Retain KFD-7 installed-consumer qualification",
               "authority": "evidence-publication",
               "definitionDigest": "sha256:50e02c236c98941180f47868bdee5495445b1fc9f839aa5db110592e8424de71"
+            }
+          ]
+        },
+        {
+          "id": "shifu_observation",
+          "authority": "qualification",
+          "publication": "none",
+          "receipt": "diagnostic",
+          "definitionDigest": "sha256:ff0d396b293f22004a112384ad493c675da04a4eddfd307d05348e17ae6a0853",
+          "credentials": {
+            "githubToken": "read",
+            "oidc": false,
+            "repositorySecrets": [],
+            "inheritedSecrets": false,
+            "environment": null
+          },
+          "externalActions": ["actions/checkout@v4","actions/setup-node@v6.4.0"],
+          "steps": [
+            {
+              "index": 1,
+              "label": "uses:actions/checkout@v4",
+              "definitionDigest": "sha256:013f3e07e00504e33bda746183e505021d945acc2dfb178cf1d094ef09ea5c8f"
+            },
+            {
+              "index": 2,
+              "label": "uses:actions/setup-node@v6.4.0",
+              "definitionDigest": "sha256:c18c6bcd952b8a597d4a32bed3cc75aa1f3e9867ea94ff6bab439a3fd7e28974"
+            },
+            {
+              "index": 3,
+              "label": "name:Run observed Shifu and Xinfa checks (POSIX)",
+              "definitionDigest": "sha256:afde5eda862614e4c9b02e156da60f5d9fc5fd6d2cc7c5cdd295f8c54b84106e"
+            },
+            {
+              "index": 4,
+              "label": "name:Run observed Shifu and Xinfa checks (Windows)",
+              "definitionDigest": "sha256:5f19271aa6e0f378a4fd1ae0b96d02fdd6e666c103ca42c5026141e867055ad1"
             }
           ]
         }

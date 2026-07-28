@@ -169,6 +169,11 @@ export function createReferencePackageFiles(contract) {
     version: profile.version,
     private: true,
     license: profile.package.license,
+  });
+  put('kungfu.kfx.json', {
+    schema: 'kungfu.kfx.manifest/v1',
+    name: '@kungfu-tech/reference-course-production-profile',
+    version: profile.version,
     kungfuConfig: {
       key: 'course-production-suite',
       suite: {
@@ -183,6 +188,11 @@ export function createReferencePackageFiles(contract) {
     version: profile.version,
     private: true,
     license: profile.package.license,
+  });
+  put('members/course-production-domain/kungfu.kfx.json', {
+    schema: 'kungfu.kfx.manifest/v1',
+    name: '@kungfu-tech/reference-course-production-domain',
+    version: profile.version,
     kungfuConfig: { key: 'course-production-domain' },
   });
   return files;

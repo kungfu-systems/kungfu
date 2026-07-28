@@ -298,6 +298,6 @@ Each section is bound to the registry id by the catalog meta gate.
 - **Evidence:** unified Gate receipt; no separate artifact is currently required.
 - **Diagnosis:** `./shifu gate explain shifu.workspace --profile <profile>`; reproduce with `./shifu gate run shifu.workspace` on a capable runner.
 - **Cost:** heavy; timeout 1800 seconds.
-- **Current source:** .github/workflows/shifu-ci.yml (check; alpha or release pull request touching the declared Shifu workspace paths); .github/workflows/affected-native-pr.yml (shifu_workspace; three GitHub-hosted platforms after merge-group preflight when the exact source-impact plan requires Shifu qualification).
+- **Current source:** .github/workflows/shifu-ci.yml (check; alpha or release pull request touching the declared Shifu workspace paths); .github/workflows/affected-native-pr.yml (shifu_workspace; GitHub-hosted Linux after merge-group preflight when the exact source-impact plan requires Shifu qualification).
 - **Retirement:** remove only after every selecting profile and workflow binding is migrated or explicitly replaced, with the registry and matrix changed in the same review.
 <!-- /gate-doc:shifu.workspace -->

@@ -109,7 +109,7 @@ stable before GUI modules consume config.
 
 ## The kfx contract is a single source of truth
 
-**Guarantee.** KFX package manifests (`package.json.kungfuConfig`),
+**Guarantee.** KFX package manifests (`kungfu.kfx.json`),
 first-party trust manifests, discovery defaults, and build-facet compatibility
 rules have one machine-readable contract source:
 [`kungfu-kfx.contract.json`](../../framework/kfx/kungfu-kfx.contract.json).
@@ -124,9 +124,9 @@ its canonical root in Profile closure/lifecycle evidence, and evaluates
 
 The contract carries `contractSchema`, `packageManifestSchema`,
 `profileSuiteSchema`, and `firstPartyManifestSchema`. A package can still use
-current compatibility surfaces such as `kungfuBuild.python` or a package-root
-`CMakeLists.txt`, but the accepted manifest envelope and kind classification
-are described by this contract, not by ad hoc consumers.
+current compatibility surfaces such as manifest-owned `kungfuBuild.python` or
+a package-root `CMakeLists.txt`, but the accepted manifest envelope and kind
+classification are described by this contract, not by ad hoc consumers.
 
 **Verify.** Run:
 

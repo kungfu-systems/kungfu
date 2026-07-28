@@ -71,7 +71,18 @@ export function invokeAfterIdentitySettlement(
         throw error;
       }
       identityError = error;
-      invokeCommand(home, configHome, ['runtime', 'status', '--json']);
+      try {
+        invokeCommand(home, configHome, ['runtime', 'status', '--json']);
+      } catch (statusError) {
+        if (
+          !String(statusError?.message || statusError).includes(
+            'runtime_identity_unverified',
+          )
+        ) {
+          throw statusError;
+        }
+        identityError = statusError;
+      }
       wait();
     }
   }

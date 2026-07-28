@@ -286,6 +286,18 @@ test('product gui dev dry-run supports a single kfx package directory', (t) => {
       {
         name: 'demo-kfx',
         version: '0.1.0',
+      },
+      null,
+      2,
+    )}\n`,
+  );
+  writeFileSync(
+    join(root, 'kungfu.kfx.json'),
+    `${JSON.stringify(
+      {
+        schema: 'kungfu.kfx.manifest/v1',
+        name: 'demo-kfx',
+        version: '0.1.0',
         kungfuConfig: {
           key: 'demo-kfx',
           name: 'Demo KFX',
@@ -312,6 +324,18 @@ test('installed SDK builds an optional custom KFX member without rebuilding Kung
     join(root, 'package.json'),
     `${JSON.stringify(
       {
+        name: '@example/custom-member',
+        version: '1.0.0',
+      },
+      null,
+      2,
+    )}\n`,
+  );
+  writeFileSync(
+    join(root, 'kungfu.kfx.json'),
+    `${JSON.stringify(
+      {
+        schema: 'kungfu.kfx.manifest/v1',
         name: '@example/custom-member',
         version: '1.0.0',
         kungfuConfig: {

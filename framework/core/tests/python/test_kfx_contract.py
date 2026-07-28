@@ -45,6 +45,7 @@ def test_kfx_contract_metadata_has_hash():
 
 def test_kfx_package_manifest_schema_accepts_python_aot_probe():
     manifest = {
+        "schema": kfx_contract.PACKAGE_MANIFEST_SCHEMA,
         "name": "@kungfu-tech/examples-probe-python",
         "version": "4.0.0-alpha.1",
         "kungfuConfig": {"key": "ProbePython"},
@@ -57,6 +58,7 @@ def test_kfx_package_manifest_schema_accepts_python_aot_probe():
 
 def test_kfx_package_manifest_schema_accepts_bounded_wasm_profile():
     manifest = {
+        "schema": kfx_contract.PACKAGE_MANIFEST_SCHEMA,
         "name": "example-wasm",
         "version": "1.0.0",
         "kungfuConfig": {
@@ -87,6 +89,7 @@ def test_kfx_package_manifest_schema_accepts_bounded_wasm_profile():
 
 def test_kfx_package_manifest_schema_accepts_profile_suite_binding():
     manifest = {
+        "schema": kfx_contract.PACKAGE_MANIFEST_SCHEMA,
         "name": "example-week-day-suite",
         "version": "1.0.0",
         "kungfuConfig": {
@@ -154,9 +157,10 @@ def test_kfx_profile_suite_rejects_home_outside_profile_members():
 def test_kfx_package_manifest_schema_rejects_invalid_view_capabilities(tmp_path):
     package_dir = tmp_path / "bad-view"
     package_dir.mkdir()
-    (package_dir / "package.json").write_text(
+    (package_dir / kfx_contract.PACKAGE_MANIFEST_FILE).write_text(
         json.dumps(
             {
+                "schema": kfx_contract.PACKAGE_MANIFEST_SCHEMA,
                 "name": "@bad/view",
                 "version": "1.0.0",
                 "kungfuConfig": {
@@ -169,6 +173,31 @@ def test_kfx_package_manifest_schema_rejects_invalid_view_capabilities(tmp_path)
     )
 
     with pytest.raises(ValueError, match="capabilities.*is not of type 'array'"):
+        kfx_contract.read_manifest_from_dir(str(package_dir))
+
+
+def test_kfx_manifest_authority_rejects_legacy_and_dual_declarations(tmp_path):
+    package_dir = tmp_path / "legacy"
+    package_dir.mkdir()
+    legacy = {
+        "name": "@bad/legacy",
+        "version": "1.0.0",
+        "kungfuConfig": {"key": "legacy"},
+    }
+    (package_dir / "package.json").write_text(json.dumps(legacy), encoding="utf-8")
+    with pytest.raises(ValueError, match="KF_KFX_MANIFEST_MISSING"):
+        kfx_contract.read_manifest_from_dir(str(package_dir))
+
+    (package_dir / kfx_contract.PACKAGE_MANIFEST_FILE).write_text(
+        json.dumps(
+            {
+                "schema": kfx_contract.PACKAGE_MANIFEST_SCHEMA,
+                **legacy,
+            }
+        ),
+        encoding="utf-8",
+    )
+    with pytest.raises(ValueError, match="KF_KFX_MANIFEST_CONFLICT"):
         kfx_contract.read_manifest_from_dir(str(package_dir))
 
 

@@ -368,9 +368,19 @@
     "docs/architecture/extensions.md": {
       "metadata_schema": "kungfu.document-metadata/v1",
       "document_status": "active",
-      "doc_type": "public-document",
-      "review_state": "unreviewed",
-      "sensitivity": "public"
+      "doc_type": "developer-guide",
+      "review_state": "self-reviewed",
+      "sensitivity": "public",
+      "sources": [
+        "architecture-decisions",
+        "local-files",
+        "user-decision"
+      ],
+      "last_reviewed": "2026-07-27",
+      "period": "2026-07-27",
+      "theme": "kfx-extension-authoring",
+      "confidence": "high",
+      "evidence_grade": "B"
     },
     "docs/architecture/kungfu-format-contract.md": {
       "metadata_schema": "kungfu.document-metadata/v1",
@@ -396,10 +406,20 @@
     },
     "docs/architecture/kfx-topology.md": {
       "metadata_schema": "kungfu.document-metadata/v1",
-      "document_status": "active",
-      "doc_type": "public-document",
-      "review_state": "unreviewed",
-      "sensitivity": "public"
+      "document_status": "draft",
+      "doc_type": "architecture",
+      "review_state": "self-reviewed",
+      "sensitivity": "public",
+      "sources": [
+        "architecture-decisions",
+        "local-files",
+        "user-decision"
+      ],
+      "last_reviewed": "2026-07-27",
+      "period": "2026-07-27",
+      "theme": "kfx-runtime-topology",
+      "confidence": "high",
+      "evidence_grade": "B"
     },
     "docs/architecture/overview.md": {
       "metadata_schema": "kungfu.document-metadata/v1",
@@ -1155,9 +1175,19 @@
     "docs/qualification/contracts.md": {
       "metadata_schema": "kungfu.document-metadata/v1",
       "document_status": "active",
-      "doc_type": "public-document",
-      "review_state": "unreviewed",
-      "sensitivity": "public"
+      "doc_type": "qualification-contract",
+      "review_state": "self-reviewed",
+      "sensitivity": "public",
+      "sources": [
+        "architecture-decisions",
+        "executable-probe",
+        "local-files"
+      ],
+      "last_reviewed": "2026-07-27",
+      "period": "2026-07-27",
+      "theme": "kungfu-verifiable-contracts",
+      "confidence": "high",
+      "evidence_grade": "B"
     },
     "docs/qualification/trademark-public-use.md": {
       "metadata_schema": "kungfu.document-metadata/v1",

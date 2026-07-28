@@ -9,9 +9,19 @@
 
 namespace kungfu::runtime::kfx {
 
-// Build one immutable, read-only registry snapshot from explicit roots. Every
-// call re-derives its result from content; no process-local cache is authority.
-[[nodiscard]] nlohmann::json query_native_kfx_registry(const std::string &action, const nlohmann::json &request);
+// Return the embedded KFX Domain Profile and its deterministic root.
+[[nodiscard]] nlohmann::json native_kfx_domain_profile();
+
+// Return the minimal Core-embedded ceiling that lets the first-party Control
+// Suite manage its own next version without granting itself trust or power.
+[[nodiscard]] nlohmann::json native_kfx_control_bootstrap_policy();
+
+// Read-only calls project a pinned named Fact Cut when runtime_dir is present.
+// Explicit roots are bounded discovery observations used for planning or
+// bootstrap; they never become lifecycle authority without Work settlement and
+// an exact expected-old/revision Fact ref CAS.
+[[nodiscard]] nlohmann::json query_native_kfx_registry(const std::string &action, const nlohmann::json &request,
+                                                       const std::string &runtime_dir = {});
 
 } // namespace kungfu::runtime::kfx
 

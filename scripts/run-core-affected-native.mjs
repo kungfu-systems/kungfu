@@ -44,6 +44,11 @@ const nonNativeCoreRules = [
     kind: 'core-qualification-harness',
     extensions: ['.js', '.json', '.mjs'],
   },
+  {
+    prefix: 'src/libkungfu/tests/fixtures/',
+    kind: 'core-test-fixture',
+    extensions: ['.js', '.mjs', '.py'],
+  },
   { prefix: 'src/python/', kind: 'core-python-source' },
   { prefix: 'tests/fixtures/', kind: 'core-test-fixture' },
   { prefix: 'tests/python/', kind: 'core-python-test' },
@@ -1337,6 +1342,21 @@ function selfTest(authority, buildAuthority) {
       throw new Error('native KFX contract test missing');
     if (plan.profile !== buildAuthority.default_profile)
       throw new Error('native qualification did not select full profile');
+  });
+  expect('cross-language native fixture payload is classified', () => {
+    const fixture =
+      'framework/core/src/libkungfu/tests/fixtures/native_kfx_registry/semantic/contributor/view.js';
+    const plan = planFromChanged(
+      [fixture],
+      authority,
+      buildAuthority,
+      'base',
+      'head',
+    );
+    const reason = plan.reasons.find((item) => item.path === fixture);
+    if (reason?.kind !== 'core-test-fixture') {
+      throw new Error('cross-language native fixture was not classified');
+    }
   });
   expect('native schema artifacts propagate through contract owners', () => {
     for (const relative of [

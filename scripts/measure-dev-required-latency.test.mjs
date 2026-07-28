@@ -983,6 +983,28 @@ test('a passing latency window still requires complete native cache evidence', (
   assert.equal(complete.cache.coldCount, 1);
 });
 
+test('an overall passing window cannot mask a native P95 violation', () => {
+  const records = Array.from({ length: 20 }, (_, index) => ({
+    excluded: false,
+    pullRequest: index + 1,
+    sourceSha: index.toString(16).padStart(40, '0'),
+    durationMs: index === 0 ? 700000 : 120000,
+    classification: { kind: index < 10 ? 'native' : 'non-native' },
+    cache:
+      index < 10
+        ? { outcome: 'compatible', warm: true, cold: false }
+        : { outcome: 'not-applicable' },
+  }));
+  const value = report('owner/repo', 'dev', ['required'], records);
+  assert.equal(value.statistics.all.p95Ms, 120000);
+  assert.equal(value.statistics.native.p95Ms, 700000);
+  assert.equal(value.verdict.qualified, false);
+  assert.match(value.verdict.reason, /native sample exceeds target/);
+  records[10].classification.kind = 'unknown';
+  const incomplete = report('owner/repo', 'dev', ['required'], records);
+  assert.equal(incomplete.statistics.unknown.sampleCount, 1);
+  assert.match(incomplete.verdict.reason, /unknown impact attribution/);
+});
 test('summary reports sample count and queue-inclusive distribution', () => {
   assert.deepEqual(
     summarize([

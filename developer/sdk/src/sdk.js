@@ -146,9 +146,9 @@ function usage(code) {
       '  --json          machine-readable output for contract evidence',
       '',
       'create extension scaffolds a view extension package (kfx): src/view/',
-      'exports the View component, package.json carries the kungfuConfig',
-      'manifest. kfx commands run inside such a package (a package.json with',
-      'kungfuConfig.config.view); build bundles src/view/ to dist/view/index.js',
+      'exports the View component, kungfu.kfx.json carries the kungfuConfig',
+      'manifest; package.json remains npm transport metadata. kfx commands run',
+      'inside that package; build bundles src/view/ to dist/view/index.js',
       'with react and the capability SDK left external — the shell injects',
       'its own instances at load time.',
       '',
@@ -417,18 +417,23 @@ function productCwd(cwd) {
  * @param {string} cwd
  * @returns {Record<string, unknown>}
  */
-function readPackageJson(cwd) {
-  const packageJson = path.join(cwd, 'package.json');
+function readPackageJson(cwd, filename = 'package.json') {
+  const packageJson = path.join(cwd, filename);
   if (!fs.existsSync(packageJson)) {
-    fail(`package.json not found: ${packageJson}`);
+    fail(`${filename} not found: ${packageJson}`);
   }
   const parsed = JSON.parse(fs.readFileSync(packageJson, 'utf8'));
   if (!isObject(parsed)) {
-    fail(`package.json must be a JSON object: ${packageJson}`);
+    fail(`${filename} must be a JSON object: ${packageJson}`);
   }
   return parsed;
 }
-
+/** @param {string} cwd */
+function readKfxManifest(cwd) {
+  const parsed = readPackageJson(cwd, 'kungfu.kfx.json');
+  validateKfxManifest(parsed);
+  return parsed;
+}
 /**
  * @param {Record<string, unknown>} pkg
  * @returns {Record<string, string>}
@@ -442,14 +447,6 @@ function dependencyMap(pkg) {
       ? /** @type {Record<string, string>} */ (pkg.devDependencies)
       : {}),
   };
-}
-
-/**
- * @param {Record<string, unknown>} pkg
- * @returns {boolean}
- */
-function isKfxManifest(pkg) {
-  return isObject(pkg.kungfuConfig);
 }
 
 /**
@@ -786,9 +783,10 @@ function assembleProductExtensions(
    * @returns {void}
    */
   const copyOne = (sourceDir) => {
-    const pkg = readPackageJson(sourceDir);
-    if (!isKfxManifest(pkg)) return;
-    const key = packageInstallKey(pkg, path.basename(sourceDir));
+    const manifestPath = path.join(sourceDir, 'kungfu.kfx.json');
+    if (!fs.existsSync(manifestPath)) return;
+    const manifest = readKfxManifest(sourceDir);
+    const key = packageInstallKey(manifest, path.basename(sourceDir));
     if (copied.has(key)) return;
     copyProductPackage(sourceDir, path.join(targetRoot, key));
     copied.add(key);
@@ -818,15 +816,17 @@ function declaredKfxDependencies(cwd) {
  * @returns {boolean}
  */
 function isBuildableKfxPackage(cwd) {
-  const pkg = readPackageJson(cwd);
-  const config = isObject(pkg.kungfuConfig) ? pkg.kungfuConfig : {};
+  const manifestPath = path.join(cwd, 'kungfu.kfx.json');
+  if (!fs.existsSync(manifestPath)) return false;
+  const manifest = readKfxManifest(cwd);
+  const config = isObject(manifest.kungfuConfig) ? manifest.kungfuConfig : {};
   const facets = isObject(config.config) ? config.config : {};
   return (
     Boolean(facets.view) ||
     Boolean(facets.adapter) ||
     Boolean(facets.service) ||
     fs.existsSync(path.join(cwd, 'CMakeLists.txt')) ||
-    isObject(pkg.kungfuBuild)
+    isObject(manifest.kungfuBuild)
   );
 }
 
@@ -1057,7 +1057,7 @@ function productAssemblyCli(cwd, verb, options) {
 function productGui(verb, options) {
   const cwd = productCwd(options.dir);
   const pkg = readPackageJson(cwd);
-  if (isKfxManifest(pkg)) {
+  if (fs.existsSync(path.join(cwd, 'kungfu.kfx.json'))) {
     productKfxGui(cwd, verb, options);
     return;
   }
@@ -2412,7 +2412,7 @@ function contractAdd(surfaceArg, options) {
 const KFX_EXTERNALS = kfxSharedModuleContract.modules;
 
 /**
- * The subset of a kfx package.json this driver reads.
+ * The subset of a kungfu.kfx.json this driver reads.
  * @typedef {object} Manifest
  * @property {string} [name]
  * @property {{
@@ -2426,13 +2426,13 @@ const KFX_EXTERNALS = kfxSharedModuleContract.modules;
  */
 
 /**
- * Read and parse the package.json in the current working directory.
+ * Read and parse kungfu.kfx.json in the current working directory.
  * @returns {Manifest}
  */
 function readManifest() {
-  const manifestPath = path.resolve('package.json');
+  const manifestPath = path.resolve('kungfu.kfx.json');
   if (!fs.existsSync(manifestPath))
-    fail('no package.json in current directory');
+    fail('no kungfu.kfx.json in current directory');
   const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
   validateKfxManifest(manifest);
   return manifest;
@@ -2794,7 +2794,7 @@ async function kfxBuild() {
       return;
     }
     fail(
-      'package.json has no view/adapter facet, no CMakeLists.txt (cpp), and no kungfuBuild.python (python-AOT)',
+      'kungfu.kfx.json has no view/adapter facet, no CMakeLists.txt (cpp), and no kungfuBuild.python (python-AOT)',
     );
   }
   const entry = ['src/view/index.tsx', 'src/view/index.ts'].find((candidate) =>
