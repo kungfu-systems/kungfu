@@ -90,7 +90,6 @@ test(
       const runtimeDir = path.join(home, 'runtime');
       const observation = {
         roots: [{ kind: 'user', path: sourceRoot }],
-        runtimeTiers: { 'optional-view': 'verified-third-party' },
         packageKey: 'optional-view',
         operation: 'install',
       };
@@ -145,6 +144,7 @@ test(
             expectedTrustRoot: pkg.trustRoot,
             expectedPackageRoot: pkg.packageRoot,
             expectedAuthorizationPlanRoot: plan.authorizationPlanRoot,
+            expectedCapabilityGrantRoot: plan.capabilityGrantRoot,
             expectedWarrantRoot: plan.warrantRoot,
             actor: 'node-root-parity-test',
             systemTime: 100,

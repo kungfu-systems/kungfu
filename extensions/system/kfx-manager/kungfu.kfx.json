@@ -19,8 +19,7 @@
         "capabilities": [
           "kfxControl",
           "profile"
-        ],
-        "system": true
+        ]
       }
     }
   }

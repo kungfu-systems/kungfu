@@ -15,8 +15,7 @@
         "title": "Settings",
         "capabilities": [
           "agentRuntime"
-        ],
-        "system": true
+        ]
       }
     }
   }

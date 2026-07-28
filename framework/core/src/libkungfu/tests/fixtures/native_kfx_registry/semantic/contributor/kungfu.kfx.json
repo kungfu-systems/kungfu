@@ -44,7 +44,6 @@
     "config": {
       "view": {
         "title": "Workbench",
-        "runtime": "sandboxed-ipc",
         "entry": "view.js",
         "capabilities": [
           "domain"

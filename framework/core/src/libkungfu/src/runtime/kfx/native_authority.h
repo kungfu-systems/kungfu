@@ -14,6 +14,9 @@ namespace kungfu::runtime::kfx::authority {
 using assessment_fn =
     std::function<nlohmann::json(const nlohmann::json &, const std::string &, const nlohmann::json &)>;
 
+[[nodiscard]] nlohmann::json assess(const nlohmann::json &package, const std::string &registry_root,
+                                    const nlohmann::json &request);
+
 [[nodiscard]] nlohmann::json plan(const nlohmann::json &packages, const std::string &registry_root,
                                   const std::string &graph_root, const nlohmann::json &prior_cut, uint64_t revision,
                                   const nlohmann::json &request, const nlohmann::json &load_plan,

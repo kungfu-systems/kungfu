@@ -39,7 +39,7 @@ def project_experience_flow_host(
 ) -> dict[str, Any]:
     """Retain Core identities while adding only host-native availability."""
 
-    if descriptor.get("schema") != "kungfu.kfx.experience-flow-host/v2":
+    if descriptor.get("schema") != "kungfu.kfx.experience-flow-host/v3":
         raise ValueError("unsupported KFX Experience/Flow host descriptor")
     if host not in HOSTS:
         raise ValueError(f"unsupported KFX host: {host}")
@@ -54,6 +54,7 @@ def project_experience_flow_host(
         "generation",
         "generationRoot",
         "admission",
+        "runtimeAuthorizations",
         "contributions",
     ):
         if field not in descriptor:
@@ -62,7 +63,7 @@ def project_experience_flow_host(
     admission = descriptor["admission"]
     generation = descriptor["generation"]
     if (
-        admission.get("schema") != "kungfu.kfx.host-admission/v1"
+        admission.get("schema") != "kungfu.kfx.host-admission/v2"
         or admission.get("exactRootRequired") is not True
         or admission.get("registryRoot") != descriptor["registryRoot"]
         or admission.get("graphRoot") != descriptor["graphRoot"]
@@ -74,9 +75,20 @@ def project_experience_flow_host(
         or generation.get("graphRoot") != descriptor["graphRoot"]
         or generation.get("cutRoot") != descriptor["cutRoot"]
         or generation.get("revision") != descriptor["revision"]
+        or len(admission.get("runtimeAuthorizationRoots", []))
+        != len(descriptor["runtimeAuthorizations"])
         or (admission.get("state") == "admitted") != (descriptor["cutRoot"] is not None)
     ):
         raise ValueError("KFX host descriptor admission identity does not match")
+    for index, authorization in enumerate(descriptor["runtimeAuthorizations"]):
+        if (
+            admission["runtimeAuthorizationRoots"][index]
+            != authorization.get("authorizationRoot")
+            or authorization.get("cutRoot") != descriptor["cutRoot"]
+            or authorization.get("revision") != descriptor["revision"]
+            or authorization.get("generationRoot") != descriptor["generationRoot"]
+        ):
+            raise ValueError("KFX runtime authorization identity does not match")
 
     diagnostics = []
     if admission["state"] != "admitted":
@@ -105,9 +117,22 @@ def project_experience_flow_host(
             or authorization.get("ownerProviderRoot")
             != contribution.get("ownerProviderRoot")
             or authorization.get("trustRoot") != contribution.get("ownerTrustRoot")
-            or authorization.get("capabilityRoot") != contribution.get("capabilityRoot")
             or authorization.get("cutRoot") != descriptor["cutRoot"]
             or authorization.get("revision") != descriptor["revision"]
+            or authorization.get("generationRoot") != descriptor["generationRoot"]
+            or (
+                admission["state"] == "admitted"
+                and (
+                    not authorization.get("capabilityDeclarationRoot")
+                    or not authorization.get("capabilityGrantRoot")
+                    or not authorization.get("corePolicyRoot")
+                    or not authorization.get("requestedPolicyRoot")
+                    or not authorization.get("policyRoot")
+                    or not authorization.get("warrantRoot")
+                    or not set(authorization.get("requiredCapabilities", []))
+                    <= set(authorization.get("grantedCapabilities", []))
+                )
+            )
         ):
             raise ValueError("KFX host contribution admission identity does not match")
         projection = dict(contribution)
@@ -120,6 +145,7 @@ def project_experience_flow_host(
         )
         projection["executionEligible"] = (
             admission["state"] == "admitted"
+            and authorization.get("executionAllowed") is True
             and contribution["state"] == "active"
             and projection["presentationState"] == "active"
         )
@@ -159,3 +185,41 @@ def project_agent_experience_flow_host(
     descriptor: dict[str, Any],
 ) -> dict[str, Any]:
     return project_experience_flow_host(descriptor, "agent")
+
+
+def authorize_host_launch(
+    descriptor: dict[str, Any],
+    package_key: str,
+    host: str,
+    expected_authorization_root: str,
+) -> dict[str, Any]:
+    """Validate the exact Core authorization before any physical host launch."""
+
+    project_experience_flow_host(descriptor, "cli")
+    admission = descriptor["admission"]
+    for authorization in descriptor["runtimeAuthorizations"]:
+        if (
+            authorization.get("packageKey") != package_key
+            or authorization.get("host") != host
+        ):
+            continue
+        if (
+            admission["state"] != "admitted"
+            or expected_authorization_root not in admission["runtimeAuthorizationRoots"]
+            or authorization.get("authorizationRoot") != expected_authorization_root
+            or not authorization.get("capabilityDeclarationRoot")
+            or not authorization.get("capabilityGrantRoot")
+            or not authorization.get("corePolicyRoot")
+            or not authorization.get("requestedPolicyRoot")
+            or not authorization.get("policyRoot")
+            or not authorization.get("warrantRoot")
+            or authorization.get("cutRoot") != descriptor["cutRoot"]
+            or authorization.get("revision") != descriptor["revision"]
+            or authorization.get("generationRoot") != descriptor["generationRoot"]
+            or not set(authorization.get("requiredCapabilities", []))
+            <= set(authorization.get("grantedCapabilities", []))
+            or authorization.get("executionAllowed") is not True
+        ):
+            raise ValueError("KFX host launch authorization does not match")
+        return authorization
+    raise ValueError("KFX host launch authorization does not match")

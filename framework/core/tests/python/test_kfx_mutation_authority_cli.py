@@ -35,6 +35,7 @@ def test_native_mutation_transports_one_core_authority_plan(monkeypatch, tmp_pat
         "graphRoot": "sha256:graph",
         "planRoot": "sha256:plan",
         "authorizationPlanRoot": "sha256:authorization",
+        "capabilityGrantRoot": "sha256:grant",
         "warrantRoot": "sha256:warrant",
         "packages": [
             {
@@ -59,7 +60,6 @@ def test_native_mutation_transports_one_core_authority_plan(monkeypatch, tmp_pat
         tmp_path / "package",
         "example",
         "install",
-        True,
         authority,
     )
 
@@ -70,8 +70,10 @@ def test_native_mutation_transports_one_core_authority_plan(monkeypatch, tmp_pat
     assert planned["purpose"] == authority["purpose"]
     assert planned["packageKey"] == "example"
     assert planned["operation"] == "install"
-    assert planned["runtimeTiers"] == {"example": "first-party-pinned"}
+    assert "runtimeTiers" not in planned
+    assert "hostPlacements" not in planned
     assert "allowed" not in planned
     assert applied["expectedAuthorizationPlanRoot"] == "sha256:authorization"
+    assert applied["expectedCapabilityGrantRoot"] == "sha256:grant"
     assert applied["expectedWarrantRoot"] == "sha256:warrant"
     assert applied["actor"] == "kungfu-cli"

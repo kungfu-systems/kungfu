@@ -4,6 +4,7 @@
 #include <kungfu/libwasm.h>
 
 #include <kungfu/runtime/facts/fact_admission.h>
+#include <kungfu/runtime/kfx/native_registry.h>
 #include <kungfu/yijinjing/journal/journal.h>
 #include <kungfu/yijinjing/storage/content_hash.h>
 #include <kungfu/yijinjing/time.h>
@@ -45,6 +46,12 @@ struct options {
   std::string runtime_dir;
   std::string module;
   std::string expected_sha256;
+  std::string package_key;
+  std::string package_root;
+  std::string authorization_root;
+  std::string capability_grant_root;
+  std::string generation_root;
+  std::string cut_root;
   std::string world;
   std::string source_namespace;
   std::string source_name;
@@ -56,6 +63,7 @@ struct options {
   uint32_t batch_frames = 0;
   uint64_t module_bytes = 0;
   uint32_t output_bytes = 0;
+  uint64_t revision = 0;
   bool qualification_seed = false;
 };
 
@@ -77,8 +85,9 @@ options parse_args(int argc, char **argv) {
     values[std::string(argv[index]).substr(2)] = argv[index + 1];
   }
   for (const auto *required :
-       {"runtime-dir", "module", "expected-sha256", "world", "capabilities", "fuel", "memory-pages", "batch-frames",
-        "module-bytes", "output-bytes", "source-namespace", "source-name"}) {
+       {"runtime-dir", "module", "expected-sha256", "package-key", "package-root", "authorization-root",
+        "capability-grant-root", "generation-root", "cut-root", "revision", "world", "capabilities", "fuel",
+        "memory-pages", "batch-frames", "module-bytes", "output-bytes", "source-namespace", "source-name"}) {
     if (!values.contains(required) || values.at(required).empty()) {
       throw std::invalid_argument(std::string("missing --") + required);
     }
@@ -87,6 +96,13 @@ options parse_args(int argc, char **argv) {
   result.runtime_dir = values.at("runtime-dir");
   result.module = values.at("module");
   result.expected_sha256 = values.at("expected-sha256");
+  result.package_key = values.at("package-key");
+  result.package_root = values.at("package-root");
+  result.authorization_root = values.at("authorization-root");
+  result.capability_grant_root = values.at("capability-grant-root");
+  result.generation_root = values.at("generation-root");
+  result.cut_root = values.at("cut-root");
+  result.revision = parse_u64(values.at("revision"), "revision");
   result.world = values.at("world");
   result.capabilities = parse_u64(values.at("capabilities"), "capabilities");
   result.fuel = parse_u64(values.at("fuel"), "fuel");
@@ -343,6 +359,20 @@ int main(int argc, char **argv) {
     if (opts.world != WORLD_V1 || opts.capabilities != KF_LIBWASM_CAP_JOURNAL_READ_BATCH) {
       throw std::invalid_argument("unsupported world or capability grant");
     }
+    const auto host_authorization = kungfu::runtime::kfx::query_native_kfx_registry(
+        "authorize-host",
+        {{"packageKey", opts.package_key},
+         {"host", "wasm"},
+         {"expectedCutRoot", opts.cut_root},
+         {"expectedRevision", opts.revision},
+         {"expectedGenerationRoot", opts.generation_root},
+         {"expectedPackageRoot", opts.package_root},
+         {"expectedCapabilityGrantRoot", opts.capability_grant_root},
+         {"expectedAuthorizationRoot", opts.authorization_root},
+         {"expectedGrantedCapabilities", nlohmann::json::array({"journal.read.batch"})}},
+        opts.runtime_dir);
+    if (!host_authorization.value("executionAllowed", false))
+      throw std::invalid_argument("Core refused the exact KFX host authorization");
     if (opts.qualification_seed) {
       seed_qualification_journal(opts);
     }
