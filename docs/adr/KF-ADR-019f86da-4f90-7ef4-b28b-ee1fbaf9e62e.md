@@ -4,7 +4,7 @@ doc_type: architecture-decision
 adr_id: KF-ADR-019f86da-4f90-7ef4-b28b-ee1fbaf9e62e
 decision_status: accepted
 implementation_status: partial
-implementation_prs: [https://github.com/kungfu-systems/kungfu/pull/842, https://github.com/kungfu-systems/kungfu/pull/873, https://github.com/kungfu-systems/kungfu/pull/885, https://github.com/kungfu-systems/kungfu/pull/906, https://github.com/kungfu-systems/kungfu/pull/922, https://github.com/kungfu-systems/kungfu/pull/1624]
+implementation_prs: [https://github.com/kungfu-systems/kungfu/pull/842, https://github.com/kungfu-systems/kungfu/pull/873, https://github.com/kungfu-systems/kungfu/pull/885, https://github.com/kungfu-systems/kungfu/pull/906, https://github.com/kungfu-systems/kungfu/pull/922, https://github.com/kungfu-systems/kungfu/pull/1704]
 review_state: self-reviewed
 sensitivity: public
 sources: [local-files, user-decision]
@@ -72,14 +72,15 @@ classify parity with the legacy TypeScript and Python paths. Lifecycle mutation,
 authorization, fenced writer ownership, and migration off the legacy mutation
 paths remain outside this stage.
 
-PR #1624 establishes an incremental native semantic-registry, trust, content,
-fencing, and host-projection foundation. Core now produces deterministic
-semantic graphs, immutable content publication, fenced plan/apply/history, and
-durable applied or refused receipts; Python and TypeScript project that result
-through thin storage and host edges. It is not the final KFX lifecycle
-authority: the successor manifest-authority slice moves authored KFX metadata
-to transport-neutral `kungfu.kfx.json`, while lifecycle state still folds from
-a KFX-specific history rather than a named Fact Cut settled through Work.
+PR #1704, reconciled from source PR #1624, establishes an incremental native
+semantic-registry, trust, content, fencing, and host-projection foundation.
+Core now produces deterministic semantic graphs, immutable content publication,
+fenced plan/apply/history, and durable applied or refused receipts; Python and
+TypeScript project that result through thin storage and host edges. It is not
+the final KFX lifecycle authority: the successor manifest-authority slice moves
+authored KFX metadata to transport-neutral `kungfu.kfx.json`, while lifecycle
+state still folds from a KFX-specific history rather than a named Fact Cut
+settled through Work.
 
 Conversion readiness therefore remains blocked on the remaining ordered gates:
 Fact/Work lifecycle authority with Cut and CAS semantics, then a recursively

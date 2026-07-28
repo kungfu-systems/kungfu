@@ -4,7 +4,7 @@ doc_type: architecture-decision
 adr_id: KF-ADR-019f86da-4f90-7d6c-926a-ddd27dbde8ab
 decision_status: accepted
 implementation_status: partial
-implementation_prs: [https://github.com/kungfu-systems/kungfu/pull/571, https://github.com/kungfu-systems/kungfu/pull/568, https://github.com/kungfu-systems/kungfu/pull/731, https://github.com/kungfu-systems/kungfu/pull/734, https://github.com/kungfu-systems/kungfu/pull/906, https://github.com/kungfu-systems/kungfu/pull/922, https://github.com/kungfu-systems/kungfu/pull/942, https://github.com/kungfu-systems/kungfu/pull/975, https://github.com/kungfu-systems/kungfu/pull/1624]
+implementation_prs: [https://github.com/kungfu-systems/kungfu/pull/571, https://github.com/kungfu-systems/kungfu/pull/568, https://github.com/kungfu-systems/kungfu/pull/731, https://github.com/kungfu-systems/kungfu/pull/734, https://github.com/kungfu-systems/kungfu/pull/906, https://github.com/kungfu-systems/kungfu/pull/922, https://github.com/kungfu-systems/kungfu/pull/942, https://github.com/kungfu-systems/kungfu/pull/975, https://github.com/kungfu-systems/kungfu/pull/1704]
 qualification_refs: [framework/core/src/libkungfu/tests/fixtures/native_kfx_contract/buildchain-2.13.0-alpha.0-envelope.json, framework/core/src/libkungfu/tests/native_kfx_contract_tests.cpp, framework/core/tests/python/test_native_kfx_contract.py, framework/core/tests/storage-node-binding.test.js, framework/api/tests/storage.test.ts]
 review_state: self-reviewed
 sensitivity: public
@@ -92,12 +92,12 @@ Storage API edges. This is provider-to-consumer round-trip evidence for the
 existing read-only admission slice; it does not widen the mutation or Product
 System authority non-claims below.
 
-PR #1624 binds the semantic registry and lifecycle plans to declared trust,
-capability, version, dependency, and exact Buildchain roots. Shared fixtures
-and the machine-readable qualification receipt prove deterministic Core,
-Python, Node, and API projections. The stage consumes the existing admission
-evidence; it does not authenticate a new verifier or confer Product System
-authority.
+PR #1704, reconciled from source PR #1624, binds the semantic registry and
+lifecycle plans to declared trust, capability, version, dependency, and exact
+Buildchain roots. Shared fixtures and the machine-readable qualification
+receipt prove deterministic Core, Python, Node, and API projections. The stage
+consumes the existing admission evidence; it does not authenticate a new
+verifier or confer Product System authority.
 
 Implementation remains partial at this stage: Core validates a supplied pinned
 verifier result but does not execute or authenticate the Buildchain verifier;
