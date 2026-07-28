@@ -202,30 +202,36 @@ function checkDevChannelAuthority(root = ROOT) {
       'utf8',
     ),
   );
-  const expectedInclude = ['refs/heads/dev/v*/v*'];
-  const expectedExclude = [
+  const expectedFamilyInclude = ['refs/heads/dev/v*/v*'];
+  const expectedFamilyExclude = [
     'refs/heads/dev/v1/v*',
     'refs/heads/dev/v2/v*',
     'refs/heads/dev/v3/v*',
   ];
+  const expectedRulesetInclude = ['~DEFAULT_BRANCH'];
+  const expectedRulesetExclude = [];
   if (
     contract.branchPattern !== 'dev/v*/v*' ||
     contract.admittedFamily?.minimumMajor !== 4 ||
+    JSON.stringify(contract.admittedFamily?.include) !==
+      JSON.stringify(expectedFamilyInclude) ||
+    JSON.stringify(contract.admittedFamily?.exclude) !==
+      JSON.stringify(expectedFamilyExclude) ||
     JSON.stringify(activation?.target?.include) !==
-      JSON.stringify(expectedInclude) ||
+      JSON.stringify(expectedRulesetInclude) ||
     JSON.stringify(activation?.target?.exclude) !==
-      JSON.stringify(expectedExclude)
+      JSON.stringify(expectedRulesetExclude)
   )
-    issues.push('admitted dev family or legacy exclusions drifted');
+    issues.push('admitted dev family or default-branch ruleset target drifted');
   if (
     activation?.rulesetId !== 19057118 ||
     activation?.rulesetName !==
-      'Buildchain dev merge queue: admitted dev channel family' ||
+      'Buildchain dev merge queue: admitted default dev channel' ||
     !operations.activation?.requiredActiveRulesets?.includes(
       activation?.rulesetName,
     )
   )
-    issues.push('dev family ruleset identity drifted');
+    issues.push('default dev ruleset identity drifted');
   if (
     !isAdmittedDevBranch(`dev/v${4}/v${4}.0`, contract) ||
     !isAdmittedDevBranch(`dev/v${10}/v${10}.2`, contract) ||

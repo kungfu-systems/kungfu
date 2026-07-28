@@ -3,6 +3,7 @@
 // @ts-check
 
 import { spawnSync } from 'node:child_process';
+import crypto from 'node:crypto';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
@@ -14,6 +15,20 @@ const LIFECYCLE_DISPATCHER = path.join(
   'scripts',
   'run-shifu-lifecycle.mjs',
 );
+const CODEBUILD_QUALIFICATION_CONTRACT =
+  'kungfu-aws-codebuild-linux-qualification/v1';
+const FORBIDDEN_CODEBUILD_CREDENTIAL_ENV = [
+  'AWS_ACCESS_KEY_ID',
+  'AWS_SECRET_ACCESS_KEY',
+  'AWS_SESSION_TOKEN',
+  'GH_TOKEN',
+  'NPM_TOKEN',
+  'NODE_AUTH_TOKEN',
+  'APPLE_ID',
+  'APPLE_APP_SPECIFIC_PASSWORD',
+  'APPLE_TEAM_ID',
+  'NOTARYTOOL_PASSWORD',
+];
 
 /** @typedef {{command: string, args: string[], cwd?: string}} Command */
 
@@ -105,6 +120,155 @@ export function productToolchainBindings(env = process.env) {
   };
 }
 
+function canonicalJson(value) {
+  if (Array.isArray(value)) return `[${value.map(canonicalJson).join(',')}]`;
+  if (value && typeof value === 'object') {
+    return `{${Object.keys(value)
+      .sort()
+      .map((key) => `${JSON.stringify(key)}:${canonicalJson(value[key])}`)
+      .join(',')}}`;
+  }
+  return JSON.stringify(value);
+}
+
+function digest(value) {
+  return `sha256:${crypto
+    .createHash('sha256')
+    .update(canonicalJson(value))
+    .digest('hex')}`;
+}
+
+function codeBuildFileEvidence(root, relativePath) {
+  const absolutePath = path.join(root, relativePath);
+  if (!fs.statSync(absolutePath).isFile())
+    throw new Error(`${relativePath} is not a regular file`);
+  return {
+    path: relativePath,
+    bytes: fs.statSync(absolutePath).size,
+    sha256: crypto
+      .createHash('sha256')
+      .update(fs.readFileSync(absolutePath))
+      .digest('hex'),
+  };
+}
+
+function requiredCodeBuildFiles(root) {
+  const release = path.join(root, 'framework/core/build/Release');
+  const library = fs
+    .readdirSync(release)
+    .find(
+      (entry) => entry === 'libkungfu.so' || /^libkungfu\.so\./u.test(entry),
+    );
+  if (!library)
+    throw new Error('Linux core build did not produce libkungfu.so');
+  return [
+    'framework/core/build/Release/kungfubuildinfo.json',
+    `framework/core/build/Release/${library}`,
+  ];
+}
+
+export function createCodeBuildQualification({
+  root = ROOT,
+  env = process.env,
+  observedAt = new Date().toISOString(),
+} = {}) {
+  if (process.platform !== 'linux' && env.BUILDCHAIN_TEST_PLATFORM !== 'linux')
+    throw new Error('AWS CodeBuild qualification must execute on Linux');
+  const exposedCredentials = FORBIDDEN_CODEBUILD_CREDENTIAL_ENV.filter((name) =>
+    String(env[name] || '').trim(),
+  );
+  if (exposedCredentials.length)
+    throw new Error(
+      `forbidden credential environment is exposed: ${exposedCredentials.join(', ')}`,
+    );
+  const sourceSha = String(env.BUILDCHAIN_SOURCE_SHA || env.GITHUB_SHA || '')
+    .trim()
+    .toLowerCase();
+  if (!/^[0-9a-f]{40}$/u.test(sourceSha))
+    throw new Error('BUILDCHAIN_SOURCE_SHA must be an exact Git commit');
+  const buildId = String(env.CODEBUILD_BUILD_ID || '').trim();
+  const buildArn = String(env.CODEBUILD_BUILD_ARN || '').trim();
+  if (!buildId || !buildArn)
+    throw new Error('CodeBuild build id and ARN are required');
+  const payload = {
+    schemaVersion: 1,
+    contract: CODEBUILD_QUALIFICATION_CONTRACT,
+    status: 'passed',
+    provider: 'aws-codebuild',
+    phase: 'linux-codebuild-poc-under-usd-50',
+    source: {
+      repository: String(env.GITHUB_REPOSITORY || '').trim(),
+      sha: sourceSha,
+      ref: String(env.BUILDCHAIN_SOURCE_REF || env.GITHUB_REF || '').trim(),
+    },
+    github: {
+      runId: String(env.GITHUB_RUN_ID || '').trim(),
+      runAttempt: String(env.GITHUB_RUN_ATTEMPT || '').trim(),
+      workflow: String(env.GITHUB_WORKFLOW || '').trim(),
+      job: String(env.GITHUB_JOB || '').trim(),
+    },
+    aws: {
+      region: String(env.AWS_REGION || env.AWS_DEFAULT_REGION || '').trim(),
+      project: buildId.split(':')[0],
+      buildId,
+      buildArn,
+      initiator: String(env.CODEBUILD_INITIATOR || '').trim(),
+    },
+    isolation: {
+      ephemeralSingleJob: true,
+      forbiddenCredentialEnvironment: exposedCredentials,
+      signing: false,
+      notarization: false,
+      publication: false,
+      deployment: false,
+    },
+    files: requiredCodeBuildFiles(root).map((file) =>
+      codeBuildFileEvidence(root, file),
+    ),
+    observedAt: new Date(observedAt).toISOString(),
+  };
+  return { ...payload, digest: digest(payload) };
+}
+
+export function verifyCodeBuildQualification({ root = ROOT, report } = {}) {
+  if (
+    !report ||
+    report.contract !== CODEBUILD_QUALIFICATION_CONTRACT ||
+    report.status !== 'passed'
+  )
+    throw new Error(
+      `qualification report must be a passed ${CODEBUILD_QUALIFICATION_CONTRACT}`,
+    );
+  const { digest: declaredDigest, ...payload } = report;
+  if (declaredDigest !== digest(payload))
+    throw new Error('qualification report digest mismatch');
+  for (const expected of report.files || []) {
+    const actual = codeBuildFileEvidence(root, expected.path);
+    if (actual.bytes !== expected.bytes || actual.sha256 !== expected.sha256)
+      throw new Error(`qualification file drift: ${expected.path}`);
+  }
+  return report;
+}
+
+function runCodeBuildQualification(mode) {
+  const output = path.resolve(
+    process.env.KUNGFU_AWS_CODEBUILD_REPORT ||
+      'product/release/qualification/aws-codebuild-linux.json',
+  );
+  if (mode === 'record') {
+    const report = createCodeBuildQualification();
+    fs.mkdirSync(path.dirname(output), { recursive: true });
+    fs.writeFileSync(output, `${JSON.stringify(report, null, 2)}\n`);
+  } else if (mode === 'verify') {
+    verifyCodeBuildQualification({
+      report: JSON.parse(fs.readFileSync(output, 'utf8')),
+    });
+  } else {
+    throw new Error(`unsupported CodeBuild qualification mode: ${mode}`);
+  }
+  console.log(`[buildchain-install] CodeBuild qualification: ${output}`);
+}
+
 /** @param {Command} step */
 function run(step) {
   console.log(`[buildchain-install] $ ${step.command} ${step.args.join(' ')}`);
@@ -121,6 +285,10 @@ function run(step) {
 }
 
 function main() {
+  if (process.argv[2] === 'qualify-codebuild') {
+    runCodeBuildQualification(process.argv[3] || 'record');
+    return;
+  }
   const productBindings = productToolchainBindings();
   if (Object.keys(productBindings).length > 0) {
     if (!process.env.GITHUB_ENV) {

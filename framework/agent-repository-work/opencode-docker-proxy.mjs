@@ -84,13 +84,14 @@ function config({ baseUrl, model, context, mode }) {
 export function dockerArgs(options, cwd = process.cwd()) {
   const uid = typeof process.getuid === 'function' ? process.getuid() : 1000;
   const gid = typeof process.getgid === 'function' ? process.getgid() : 1000;
+  const containerUser = options.rootless ? '0:0' : `${uid}:${gid}`;
   const volume =
     options.mode === 'read-only' ? `${cwd}:/workspace:ro` : `${cwd}:/workspace`;
   return [
     'run',
     '--rm',
     '--user',
-    `${uid}:${gid}`,
+    containerUser,
     '--read-only',
     '--tmpfs',
     '/tmp:rw,noexec,nosuid,nodev,size=512m',
@@ -132,12 +133,48 @@ export function dockerArgs(options, cwd = process.cwd()) {
   ];
 }
 
+export function dockerIsRootless(output) {
+  let securityOptions;
+  try {
+    securityOptions = JSON.parse(output);
+  } catch {
+    fail('Docker SecurityOptions are not valid JSON');
+  }
+  if (
+    !Array.isArray(securityOptions) ||
+    securityOptions.some((option) => typeof option !== 'string')
+  )
+    fail('Docker SecurityOptions must be a string array');
+  return securityOptions.some(
+    (option) => option === 'rootless' || option === 'name=rootless',
+  );
+}
+
 export function runProxy(argv = process.argv.slice(2)) {
   const options = parseArgs(argv);
-  const result = spawnSync('docker', dockerArgs(options), {
-    cwd: process.cwd(),
-    stdio: 'inherit',
-  });
+  const info = spawnSync(
+    'docker',
+    ['info', '--format', '{{json .SecurityOptions}}'],
+    {
+      encoding: 'utf8',
+    },
+  );
+  if (info.error) {
+    process.stderr.write(`${info.error.message}\n`);
+    return 127;
+  }
+  if (info.status !== 0) {
+    process.stderr.write(info.stderr || 'docker info failed\n');
+    return info.status ?? 1;
+  }
+  const result = spawnSync(
+    'docker',
+    dockerArgs({ ...options, rootless: dockerIsRootless(info.stdout.trim()) }),
+    {
+      cwd: process.cwd(),
+      stdio: 'inherit',
+    },
+  );
   if (result.error) {
     process.stderr.write(`${result.error.message}\n`);
     return 127;
