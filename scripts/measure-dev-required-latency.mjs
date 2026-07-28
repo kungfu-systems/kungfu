@@ -1343,6 +1343,7 @@ async function collectSample(
       excluded: true,
       exclusionReason: 'merge-queue-required-context-incomplete',
       pullRequest: pull.number,
+      mergedAt: pull.merged_at,
       sourceSha: sha,
       classification,
       requiredWindow,
@@ -1838,7 +1839,36 @@ export function report(
   mergeQueueRecords = records,
   options = {},
 ) {
-  const samples = records.filter(({ excluded }) => !excluded);
+  const cohortStart = options.cohortStart || null;
+  const cohortStartMs = cohortStart ? Date.parse(cohortStart) : null;
+  if (
+    cohortStart &&
+    (!/T.*(?:Z|[+-]\d{2}:\d{2})$/u.test(cohortStart) ||
+      !Number.isFinite(cohortStartMs))
+  ) {
+    throw new Error('cohortStart must be an RFC3339 timestamp with timezone');
+  }
+  const atOrAfterCohortStart = (value) =>
+    cohortStartMs === null ||
+    (Boolean(value) && Date.parse(value) >= cohortStartMs);
+  const recordStart = (record) =>
+    record.requiredWindow?.startedAt ||
+    record.mergeQueue?.firstEnqueuedAt ||
+    record.startedAt ||
+    record.mergedAt ||
+    null;
+  const cohortRecords = records.filter((record) =>
+    atOrAfterCohortStart(recordStart(record)),
+  );
+  const preCohortRecords = records.filter(
+    (record) => !atOrAfterCohortStart(recordStart(record)),
+  );
+  const cohortMergeQueueRecords = mergeQueueRecords.filter((record) =>
+    atOrAfterCohortStart(
+      record.mergeQueue?.firstEnqueuedAt || record.mergedAt || null,
+    ),
+  );
+  const samples = cohortRecords.filter(({ excluded }) => !excluded);
   const byKind = (kind) =>
     samples.filter(({ classification }) => classification.kind === kind);
   const statistics = {
@@ -1870,7 +1900,9 @@ export function report(
   const cacheObserved = cache.warmCount + cache.coldCount;
   cache.warmRatio = cacheObserved ? cache.warmCount / cacheObserved : null;
   cache.coldRatio = cacheObserved ? cache.coldCount / cacheObserved : null;
-  const mergeQueueDelivery = summarizeMergeQueueDelivery(mergeQueueRecords);
+  const mergeQueueDelivery = summarizeMergeQueueDelivery(
+    cohortMergeQueueRecords,
+  );
   const deliveryEvidence = summarizeDeliveryEvidence(samples);
   const generatedAt = new Date().toISOString();
   const candidateTimelines = samples.map((sample) =>
@@ -1888,6 +1920,10 @@ export function report(
       evidenceMode: options.latencyOnly ? 'latency-only' : 'full',
       nativeArtifacts: options.latencyOnly ? 'skipped' : 'required',
       retainedBaselineEligible: !options.latencyOnly,
+      cohortStart,
+      cohortStartAuthority: cohortStart
+        ? 'explicit-rfc3339-first-enqueue-boundary'
+        : 'unbounded-latest-merged-window',
     },
     metric: {
       start: 'first authoritative GitHub AddedToMergeQueueEvent',
@@ -1907,6 +1943,7 @@ export function report(
       metric: {
         start: 'first GitHub AddedToMergeQueueEvent',
         end: 'pull request merged_at',
+        cohortStart,
         dequeue:
           'every non-merged RemovedFromMergeQueueEvent using the authoritative GraphQL reason',
         repeatedValidation:
@@ -1923,7 +1960,7 @@ export function report(
         minimumSamples: MINIMUM_SAMPLE_COUNT,
       },
       ...mergeQueueDelivery,
-      samples: mergeQueueRecords,
+      samples: cohortMergeQueueRecords,
     },
     deliveryEvidence,
     cache,
@@ -1947,7 +1984,14 @@ export function report(
                 : 'observed overall and native samples meet target with complete native cache evidence',
     },
     samples,
-    exclusions: records.filter(({ excluded }) => excluded),
+    exclusions: [
+      ...cohortRecords.filter(({ excluded }) => excluded),
+      ...preCohortRecords.map((record) => ({
+        ...record,
+        excluded: true,
+        exclusionReason: 'before-cohort-start',
+      })),
+    ],
   };
 }
 async function main() {
@@ -2068,7 +2112,10 @@ async function main() {
     requiredContexts,
     records,
     mergeQueueRecords,
-    { latencyOnly: options.latencyOnly },
+    {
+      latencyOnly: options.latencyOnly,
+      cohortStart: options.cohortStart,
+    },
   );
   const json = `${JSON.stringify(value, null, 2)}\n`;
   if (options.output) {

@@ -9,6 +9,7 @@ import { createCandidateTimeline } from '@kungfu-tech/buildchain-alpha/candidate
 import {
   collectLatestMergedPullWindow,
   latestMergedPulls,
+  parseDevRequiredLatencyArgs,
 } from './candidate-timeline-events.cjs';
 import {
   affectedNativeEvidenceBinding,
@@ -811,6 +812,95 @@ test('an under-sized passing window remains non-qualifying', () => {
   const value = report('owner/repo', 'dev', ['required'], [sample]);
   assert.equal(value.verdict.qualified, false);
   assert.match(value.verdict.reason, /insufficient/);
+});
+
+test('cohort start excludes samples whose first queue admission predates activation', () => {
+  const mergeQueue = (firstEnqueuedAt, deliveryDurationMs = 120000) => ({
+    queueStatus: 'observed',
+    status: 'observed',
+    firstEnqueuedAt,
+    deliveryDurationMs,
+    dequeueCount: 0,
+    dequeueReasons: {},
+    repeatedValidationCount: 0,
+    runnerEvidenceComplete: true,
+    wastedRunnerMs: 0,
+    postDequeueRunnerMs: 0,
+  });
+  const records = [
+    {
+      excluded: false,
+      pullRequest: 1,
+      mergedAt: '2026-07-28T10:40:00Z',
+      sourceSha: 'a'.repeat(40),
+      durationMs: 120000,
+      classification: { kind: 'non-native' },
+      cache: { outcome: 'not-applicable' },
+      requiredWindow: { startedAt: '2026-07-28T10:35:00Z' },
+      mergeQueue: mergeQueue('2026-07-28T10:35:00Z'),
+    },
+    {
+      excluded: false,
+      pullRequest: 2,
+      mergedAt: '2026-07-28T10:52:00Z',
+      sourceSha: 'b'.repeat(40),
+      durationMs: 180000,
+      classification: { kind: 'non-native' },
+      cache: { outcome: 'not-applicable' },
+      requiredWindow: { startedAt: '2026-07-28T10:42:00Z' },
+      mergeQueue: mergeQueue('2026-07-28T10:42:00Z'),
+    },
+    {
+      excluded: false,
+      pullRequest: 3,
+      mergedAt: '2026-07-28T10:56:00Z',
+      sourceSha: 'c'.repeat(40),
+      durationMs: 240000,
+      classification: { kind: 'non-native' },
+      cache: { outcome: 'not-applicable' },
+      requiredWindow: { startedAt: '2026-07-28T10:50:00Z' },
+      mergeQueue: mergeQueue('2026-07-28T10:50:00Z'),
+    },
+  ];
+  const value = report('owner/repo', 'dev', ['required'], records, records, {
+    cohortStart: '2026-07-28T10:47:22.936Z',
+  });
+
+  assert.equal(value.collection.cohortStart, '2026-07-28T10:47:22.936Z');
+  assert.equal(value.statistics.all.sampleCount, 1);
+  assert.equal(value.samples[0].pullRequest, 3);
+  assert.equal(value.mergeQueueDelivery.queueObservedCount, 1);
+  assert.deepEqual(
+    value.mergeQueueDelivery.samples.map(({ pullRequest }) => pullRequest),
+    [3],
+  );
+  assert.deepEqual(
+    value.exclusions.map(({ pullRequest, exclusionReason }) => ({
+      pullRequest,
+      exclusionReason,
+    })),
+    [
+      { pullRequest: 1, exclusionReason: 'before-cohort-start' },
+      { pullRequest: 2, exclusionReason: 'before-cohort-start' },
+    ],
+  );
+});
+
+test('cohort start CLI requires an RFC3339 timestamp with timezone', () => {
+  assert.equal(
+    parseDevRequiredLatencyArgs(['--cohort-start', '2026-07-28T10:47:22.936Z'])
+      .cohortStart,
+    '2026-07-28T10:47:22.936Z',
+  );
+  assert.throws(
+    () =>
+      parseDevRequiredLatencyArgs(['--cohort-start', '2026-07-28 10:47:22']),
+    /RFC3339 timestamp with timezone/,
+  );
+  assert.throws(
+    () => parseDevRequiredLatencyArgs(['--cohort-start']),
+    /requires a value/,
+  );
 });
 
 test('portable cache receipts distinguish warm compatibility from cold fallback', () => {

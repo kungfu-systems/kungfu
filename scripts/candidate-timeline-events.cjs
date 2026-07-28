@@ -567,6 +567,7 @@ function parseDevRequiredLatencyArgs(argv) {
     pulls: [],
     timelineOutput: '',
     latencyOnly: false,
+    cohortStart: '',
   };
   for (let index = 0; index < argv.length; index += 1) {
     const arg = argv[index];
@@ -576,7 +577,11 @@ function parseDevRequiredLatencyArgs(argv) {
     else if (arg === '--limit') options.limit = Number(argv[++index]);
     else if (arg === '--output') options.output = argv[++index];
     else if (arg === '--pull') options.pulls.push(Number(argv[++index]));
-    else if (arg === '--timeline-output')
+    else if (arg === '--cohort-start') {
+      options.cohortStart = argv[++index];
+      if (!options.cohortStart)
+        throw new Error('--cohort-start requires a value');
+    } else if (arg === '--timeline-output')
       options.timelineOutput = argv[++index];
     else throw new Error(`unknown argument: ${arg}`);
   }
@@ -596,6 +601,15 @@ function parseDevRequiredLatencyArgs(argv) {
   }
   if (options.timelineOutput && options.pulls.length !== 1) {
     throw new Error('--timeline-output requires exactly one --pull');
+  }
+  if (
+    options.cohortStart &&
+    (!/T.*(?:Z|[+-]\d{2}:\d{2})$/u.test(options.cohortStart) ||
+      !Number.isFinite(Date.parse(options.cohortStart)))
+  ) {
+    throw new Error(
+      '--cohort-start must be an RFC3339 timestamp with timezone',
+    );
   }
   return options;
 }
