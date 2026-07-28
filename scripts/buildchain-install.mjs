@@ -35,6 +35,15 @@ const FORBIDDEN_CODEBUILD_CREDENTIAL_ENV = [
 /** @param {NodeJS.ProcessEnv} env */
 export function installPlan(env = process.env) {
   if (env.BUILDCHAIN_CHECK_MODE !== 'source') {
+    const installArgs = [
+      LIFECYCLE_DISPATCHER,
+      'cache-apply',
+      'install',
+      '--frozen-lockfile',
+    ];
+    if (!(env.CODEBUILD_BUILD_ID && env.RUNNER_OS === 'Linux')) {
+      installArgs.push('--no-optional');
+    }
     return [
       {
         command: process.execPath,
@@ -42,13 +51,7 @@ export function installPlan(env = process.env) {
       },
       {
         command: process.execPath,
-        args: [
-          LIFECYCLE_DISPATCHER,
-          'cache-apply',
-          'install',
-          '--frozen-lockfile',
-          '--no-optional',
-        ],
+        args: installArgs,
       },
     ];
   }

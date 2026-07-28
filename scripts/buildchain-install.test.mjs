@@ -74,6 +74,17 @@ test('verify install preserves the existing Shifu lifecycle', () => {
   }
 });
 
+test('AWS CodeBuild installs the matching platform optional packages', () => {
+  const plan = installPlan({
+    BUILDCHAIN_CHECK_MODE: 'verify',
+    CODEBUILD_BUILD_ID: 'kungfu-buildchain-linux-burst-poc:build-id',
+    RUNNER_OS: 'Linux',
+  });
+  const text = JSON.stringify(plan);
+  assert.match(text, /cache-apply[^}]*install[^}]*--frozen-lockfile/);
+  assert.doesNotMatch(text, /--no-optional/);
+});
+
 test('GitHub-hosted Linux product qualification binds the admitted GCC toolchain', () => {
   assert.deepEqual(
     productToolchainBindings({
