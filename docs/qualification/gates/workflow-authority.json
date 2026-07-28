@@ -40,9 +40,9 @@
           "authority": "qualification",
           "publication": "none",
           "receipt": "diagnostic",
-          "definitionDigest": "sha256:e941529f9f9a9647b33644584b5378ce1119b1a07899b314a8848f445e50846d",
+          "definitionDigest": "sha256:ef97a5dadb0b36d6b6921bca50ffcb1d95dd4e4f3202d0f6e43f54aebf263c3c",
           "credentials": {"githubToken":"write","oidc":false,"repositorySecrets":[],"inheritedSecrets":false,"environment":null},
-          "externalActions": ["actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0","actions/setup-node@v6.4.0","actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093","actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093","actions/cache/save@0057852bfaa89a56745cba8c7296529d2fc39830","actions/cache/save@0057852bfaa89a56745cba8c7296529d2fc39830"],
+          "externalActions": ["actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0","actions/setup-node@v6.4.0","actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093","actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093","actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093","actions/cache/save@0057852bfaa89a56745cba8c7296529d2fc39830","actions/cache/save@0057852bfaa89a56745cba8c7296529d2fc39830"],
           "steps": [
             {
               "index": 1,
@@ -57,7 +57,7 @@
             {
               "index": 3,
               "label": "id:producer",
-              "definitionDigest": "sha256:a08463974270a5baddc298ff195d6f26144fc7c220067c6f4c23f5b23822f53e"
+              "definitionDigest": "sha256:bcf92e7ec8c2423db63cddf0cb04d3ce371ed3fbe8a4d0dec08b745619f4c02e"
             },
             {
               "index": 4,
@@ -67,54 +67,66 @@
             },
             {
               "index": 5,
+              "label": "name:Download exact family delivery attempt",
+              "authority": "evidence-publication",
+              "definitionDigest": "sha256:d1ebddcaeac23d7158b4c143236c0219450b08e5ba462c05fefe80c066b57dfd"
+            },
+            {
+              "index": 6,
               "label": "id:authority",
               "definitionDigest": "sha256:04e3fb6b93e18dfb76a68a38c58d2716234b11a7f76e5cdd4c9d663035ee95cb"
             },
             {
-              "index": 6,
-              "label": "id:payload-source",
-              "definitionDigest": "sha256:06766b19f9fbca9d43a1e55c604630e1d6d13a7d29ef3871d07a2d170837f47d"
+              "index": 7,
+              "label": "id:delivery",
+              "definitionDigest": "sha256:bef6201daa06eaa902ed52b970348a20b112bdb451538660950bd8f12f21d33e"
             },
             {
-              "index": 7,
+              "index": 8,
+              "label": "id:payload-source",
+              "authority": "evidence-publication",
+              "definitionDigest": "sha256:b6040813ed20a47956c3ca1b83b07caf00c8cbcc00d1aebe16bed92e290559b5"
+            },
+            {
+              "index": 9,
               "label": "id:payload",
               "definitionDigest": "sha256:034bdc31fa97a0c2e9a6c9810b7f1f56a67c81b94cc7a0fb19a6c1c22eb66bf1"
             },
             {
-              "index": 8,
+              "index": 10,
               "label": "name:Download exact authorized partition payloads",
               "authority": "evidence-publication",
               "definitionDigest": "sha256:d1f9ef894cdd352ff101bafcdc4feef6a2ecf146f67ce26d74ecbbc9422db8c4"
             },
             {
-              "index": 9,
+              "index": 11,
               "label": "name:Install pinned cache contract tools",
               "definitionDigest": "sha256:ea22d81406234a2562088536e2bbd8ed56682c733922caebd0f4dbb26aee536c"
             },
             {
-              "index": 10,
+              "index": 12,
               "label": "id:promotion",
-              "definitionDigest": "sha256:bd76125b30bcb2e630eaaa0561e5195f6b01535eaeee5b6fdc32bca2ecad98f2"
+              "definitionDigest": "sha256:0f34f7a69634b3796088d99f2fc49c9f16a58b0e47f9a53885dbac1f9104d3dd"
             },
             {
-              "index": 11,
+              "index": 13,
               "label": "name:Materialize qualified cache roots",
               "definitionDigest": "sha256:e91b19740ebb743887c1cc6f6a8eca90ba36a78f2662dbc6c992886b31462521"
             },
             {
-              "index": 12,
+              "index": 14,
               "label": "name:Save default-branch dependency cache",
               "definitionDigest": "sha256:da0f0e668b43673eb8a00f8cd55f943d240aa10d6859387cbfaab79d6a01741a"
             },
             {
-              "index": 13,
+              "index": 15,
               "label": "name:Save default-branch compiler cache",
               "definitionDigest": "sha256:21ca68790f65eb3fe710e1f87f93097248a666ecb9e8d2c46005085173c4e998"
             },
             {
-              "index": 14,
+              "index": 16,
               "label": "name:Summarize promotion",
-              "definitionDigest": "sha256:1c042098dfdded84ad4ffcec45ba29b276b78d70cb8a76a66e3f0ea3ec58f463"
+              "definitionDigest": "sha256:e94d8669faaabddfd280da28e5d81ba5902e9b0da38fd8f032d313f174d741a5"
             }
           ]
         }
@@ -257,9 +269,9 @@
           "authority": "qualification",
           "publication": "none",
           "receipt": "diagnostic",
-          "definitionDigest": "sha256:90f7aa97bc78edecd0246b1312e692e5675f4855fe98775fd284be90d41ad4d4",
+          "definitionDigest": "sha256:c958d72e270c4ad12788ee7c19e857b8c6514893c132560fc3dea66f221123d7",
           "credentials": {"githubToken":"read","oidc":false,"repositorySecrets":[],"inheritedSecrets":false,"environment":null},
-          "externalActions": ["actions/checkout@v4","actions/setup-node@v6.4.0","actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093","actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093","actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093","actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02","actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02"],
+          "externalActions": ["actions/checkout@v4","actions/setup-node@v6.4.0","actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093","actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093","actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093","actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02","actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02","actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02"],
           "steps": [
             {
               "index": 1,
@@ -286,7 +298,7 @@
               "index": 5,
               "label": "name:Revalidate exact affected-native source binding",
               "authority": "evidence-publication",
-              "definitionDigest": "sha256:0cba5ade8f395ae99a1a9dc738d08c81cbe7eedbff0d339295613394a01be9bf"
+              "definitionDigest": "sha256:e8be03cb0e8a42bb6d6730149d07ce812db43ed41fe25a9811806b79f290ae98"
             },
             {
               "index": 6,
@@ -308,18 +320,30 @@
             },
             {
               "index": 9,
+              "label": "name:Seal reconstructable family delivery attempt",
+              "authority": "evidence-publication",
+              "definitionDigest": "sha256:aeeccf8bc63598280cfce17191571adcdd7ae7836aeacfb38c9863a0b0681869"
+            },
+            {
+              "index": 10,
+              "label": "name:Upload reconstructable family delivery attempt",
+              "authority": "evidence-publication",
+              "definitionDigest": "sha256:96fd3d33843182611d0ad1af3546c3995d607049647a4300befd0ac87605cbdf"
+            },
+            {
+              "index": 11,
               "label": "name:Seal reused-proof cache promotion authority",
               "authority": "evidence-publication",
               "definitionDigest": "sha256:dba0908dcde9277b704c7690eb25ecabac31f48a4dc98ce3a8a26d54b354c241"
             },
             {
-              "index": 10,
+              "index": 12,
               "label": "name:Upload authoritative producer proof",
               "authority": "evidence-publication",
               "definitionDigest": "sha256:fe1606def564bd546877397a1b84e548fd45f241c958dbed56376fc448d85336"
             },
             {
-              "index": 11,
+              "index": 13,
               "label": "name:Upload reused-proof cache promotion authority",
               "authority": "evidence-publication",
               "definitionDigest": "sha256:cd6594bf6e2bcb1ebbcbe1aa42683ef6488bb31e68ddc1eb0a060ce6cc749d5f"
@@ -352,7 +376,7 @@
           "authority": "qualification",
           "publication": "none",
           "receipt": "diagnostic",
-          "definitionDigest": "sha256:68d14a1191c9356559b5f433f47c45f555253ccc405cbab0e5c30a7d1a508caa",
+          "definitionDigest": "sha256:3621c9948d04a4acdb74b8313b6a905e38c8e18aa2471a44fe79121f8f7a1a65",
           "credentials": {"githubToken":"read","oidc":false,"repositorySecrets":[],"inheritedSecrets":false,"environment":null},
           "externalActions": ["actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0","actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02"],
           "steps": [
@@ -369,7 +393,7 @@
             {
               "index": 3,
               "label": "name:Verify exact Initiative-family queue lease",
-              "definitionDigest": "sha256:690adf2b862d95e4ce222b37ece357191013f26f50481db8b61e7de0c772b798"
+              "definitionDigest": "sha256:99c708f213aa18008a04e2229a0b9b0712c7b9fc4664b1d0098a941bb334266b"
             },
             {
               "index": 4,
@@ -453,7 +477,7 @@
           "authority": "qualification",
           "publication": "none",
           "receipt": "diagnostic",
-          "definitionDigest": "sha256:a92d9e0145bce5000ecec19cb5d53a6d19552256beae2f110bf9729765eb5268",
+          "definitionDigest": "sha256:5b5b215982086bb9ae947aa28749bd2b329431871d57add56a7eeb869c876e0e",
           "credentials": {"githubToken":"read","oidc":false,"repositorySecrets":[],"inheritedSecrets":false,"environment":null},
           "externalActions": ["actions/checkout@v4","actions/setup-node@v6.4.0","actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02","actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093"],
           "steps": [
@@ -474,34 +498,40 @@
             },
             {
               "index": 4,
-              "label": "id:descriptor",
-              "definitionDigest": "sha256:c76bb47ed86ee6af70a5b61db93cbb69c766696f32a2241636fe6d4fcd4cf9e0"
+              "label": "id:delivery",
+              "definitionDigest": "sha256:8cd648d1975633976c118d51b2f201e51b73a241b6611005719d976c33f4754e"
             },
             {
               "index": 5,
+              "label": "id:descriptor",
+              "authority": "evidence-publication",
+              "definitionDigest": "sha256:622004df90a685fb2c610aef9b278967f54566e4625c8e67c506a0635ae543f2"
+            },
+            {
+              "index": 6,
               "label": "name:Upload current proof descriptor",
               "authority": "evidence-publication",
               "definitionDigest": "sha256:6be676f5ee6405d6537284398417681c45fa3e4bec29862ce14f6e206cd0a52d"
             },
             {
-              "index": 6,
+              "index": 7,
               "label": "id:lookup",
               "authority": "evidence-publication",
               "definitionDigest": "sha256:c44e54386865d44506d6f7b814b1ac7f2839beb21569d8011cbfec0644604251"
             },
             {
-              "index": 7,
+              "index": 8,
               "label": "id:download",
               "authority": "evidence-publication",
               "definitionDigest": "sha256:2ccefb7f1f6cd536b00d478afd0677f3c84a6062cc4965eefc4b5fdafbb93b64"
             },
             {
-              "index": 8,
+              "index": 9,
               "label": "id:verify",
               "definitionDigest": "sha256:41fac7638e19f00c28f159a2eaec37145408a985c013e80282f78a5a1aab172c"
             },
             {
-              "index": 9,
+              "index": 10,
               "label": "id:decision",
               "definitionDigest": "sha256:2a011137ae2b9242a86196d0b22fbc3cc6e70536f2a199a99fd4807f0c0c7625"
             }
@@ -973,9 +1003,9 @@
           "authority": "qualification",
           "publication": "none",
           "receipt": "diagnostic",
-          "definitionDigest": "sha256:c1091d3dc3689356b2ff27d366aa9646835ab17f927e2233733a22c773f7e23d",
+          "definitionDigest": "sha256:deee23b837ae71601ee117fdb3d9d28068aa6cdf849d23fae0cc19183ae24795",
           "credentials": {"githubToken":"write","oidc":false,"repositorySecrets":["GITHUB_TOKEN"],"inheritedSecrets":false,"environment":null},
-          "externalActions": ["actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0"],
+          "externalActions": ["actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0","actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02"],
           "steps": [
             {
               "index": 1,
@@ -985,7 +1015,13 @@
             {
               "index": 2,
               "label": "name:Cancel active merge-group runs for the dequeued pull request",
-              "definitionDigest": "sha256:52bca1a6ed9efbb2dbe63457e2be92c8b6e6635da1712395a864b2b0edef5100"
+              "definitionDigest": "sha256:4bfa3d7e543c694e249658d6d8614a2bbd56e927e9b3a795cffc343f68204cdf"
+            },
+            {
+              "index": 3,
+              "label": "name:Upload exact dequeue settlement evidence",
+              "authority": "evidence-publication",
+              "definitionDigest": "sha256:46494f13367b8ba6be342d8b43db3dafa018de51f75d5a387cdfdb309b98fc6a"
             }
           ]
         }

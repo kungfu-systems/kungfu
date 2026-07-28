@@ -68,7 +68,7 @@
             "product-stable",
             "product-binaries"
           ],
-          "sourceRoot": "sha256:51159fa1e18144ca0285932e8ba08cee75287450c06898698643d878553d507d"
+          "sourceRoot": "sha256:d3f9402a07853643403c2471475f6cb90c888aaedcb2aaffd39cdd94ccf6a2d0"
         },
         {
           "path": ".github/workflows/affected-native-pr.yml",
@@ -79,7 +79,7 @@
             "product-stable",
             "product-binaries"
           ],
-          "sourceRoot": "sha256:a2a0bfd0f4cd858d7cf7086c9a6c2eb7afcbc2d837cf1ea19bc3f8d080997d67"
+          "sourceRoot": "sha256:b1087073ae2f8599fd54e25933cbec0dda0f48b0ff6f934352c11fa27e6dd613"
         },
         {
           "path": ".github/workflows/alpha-promotion-preflight.yml",
@@ -124,7 +124,7 @@
           "classification": "non-publication",
           "owner": "kungfu-ci",
           "surfaceIds": [],
-          "sourceRoot": "sha256:256e24e20dc24d0a25c67e0b709a228720cb1614fc954cc263b8c2af5a01362f"
+          "sourceRoot": "sha256:724cda588f962bdd2744f1b3d9031269e38c835d2fe74e06e9a2f905619f0745"
         },
         {
           "path": ".github/workflows/queue-admission-lease.yml",
@@ -799,5 +799,5 @@
       }
     }
   ],
-  "registryRoot": "sha256:a7943599321b935e74ac44d643eb5034f27627dc1a6f61ab723a29569cf68013"
+  "registryRoot": "sha256:30b160dacbb40b984804960191f8da255f9ab0122293a0093abfc4cefe6d4932"
 }
