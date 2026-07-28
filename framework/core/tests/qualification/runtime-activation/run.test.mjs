@@ -171,16 +171,49 @@ test('product smoke waits for a transient runtime identity handoff without bypas
   ]);
 });
 
+test('product smoke settles when status inspection shares the transient identity handoff', () => {
+  const calls = [];
+  let ensureAttempts = 0;
+  const identityError = new Error(
+    'runtime_identity_unverified: coordinator is starting',
+  );
+  const result = invokeAfterIdentitySettlement(
+    (_home, _configHome, args) => {
+      calls.push(args);
+      if (args[1] === 'status') throw identityError;
+      ensureAttempts += 1;
+      if (ensureAttempts === 1) throw identityError;
+      return { payload: { changed: false } };
+    },
+    'home',
+    'config',
+    ['runtime', 'ensure', '--json'],
+    { attempts: 2, wait: () => calls.push(['wait']) },
+  );
+
+  assert.deepEqual(result, { payload: { changed: false } });
+  assert.deepEqual(calls, [
+    ['runtime', 'ensure', '--json'],
+    ['runtime', 'status', '--json'],
+    ['wait'],
+    ['runtime', 'ensure', '--json'],
+  ]);
+});
+
 test('product smoke keeps persistent or unrelated identity failures fail-closed', () => {
   const persistent = new Error(
     'runtime_identity_unverified: coordinator identity never settled',
   );
   let attempts = 0;
+  let statusAttempts = 0;
   assert.throws(
     () =>
       invokeAfterIdentitySettlement(
         (_home, _configHome, args) => {
-          if (args[1] === 'status') return { payload: {} };
+          if (args[1] === 'status') {
+            statusAttempts += 1;
+            throw persistent;
+          }
           attempts += 1;
           throw persistent;
         },
@@ -192,6 +225,7 @@ test('product smoke keeps persistent or unrelated identity failures fail-closed'
     (error) => error === persistent,
   );
   assert.equal(attempts, 2);
+  assert.equal(statusAttempts, 2);
 
   assert.throws(
     () =>
