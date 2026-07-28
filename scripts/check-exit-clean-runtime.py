@@ -117,7 +117,7 @@ def _run(
             "KUNGFU_CONTRACT_REGISTRY": str(
                 install_root / "runtime" / "config" / "kungfu-contracts.registry.json"
             ),
-            "KF_FIRST_PARTY_SOURCE_ROOT": str(install_root / "extensions"),
+            "KF_BUNDLED_EXTENSION_ROOT": str(install_root / "extensions"),
             "KUNGFU_QUALIFICATION_SOURCE_ROOT": str(ROOT),
             "KUNGFU_QUALIFICATION_NETWORK": network,
         }

@@ -633,11 +633,13 @@ def test_kfd3_qualification_rejects_custom_view_mutation_boundary(tmp_path):
     manifest["kungfuConfig"]["config"] = {
         "view": {
             "title": "Private mutation view",
-            "runtime": "node-integrated",
             "capabilities": ["profile"],
         }
     }
     manifest_path.write_text(json.dumps(manifest, indent=2, sort_keys=True) + "\n")
+    bundle = member / "dist" / "view" / "index.js"
+    bundle.parent.mkdir(parents=True)
+    bundle.write_text("export function View() { return null; }\n")
     runtime = tmp_path / "runtime"
     for action in ["install", "qualify", "activate"]:
         core_plan = profile_sdk.lifecycle_plan(runtime, action, source)["corePlan"]
@@ -648,6 +650,9 @@ def test_kfd3_qualification_rejects_custom_view_mutation_boundary(tmp_path):
     except profile_sdk.ProfileSdkError as error:
         assert error.diagnosis["code"] == "kfd3-no-bypass-failed"
         assert error.diagnosis["failures"][0]["facet"] == "view"
+        assert error.diagnosis["failures"][0]["reasons"] == [
+            "custom Profile views may not receive capability handles"
+        ]
     else:
         raise AssertionError("custom mutation view bypass was qualified")
 
@@ -661,7 +666,6 @@ def test_kfd3_qualification_allows_capability_free_sandboxed_view(tmp_path):
     manifest["kungfuConfig"]["config"] = {
         "view": {
             "title": "Presentational view",
-            "runtime": "sandboxed-ipc",
             "capabilities": [],
         }
     }
@@ -677,6 +681,7 @@ def test_kfd3_qualification_allows_capability_free_sandboxed_view(tmp_path):
     receipt = profile_sdk.qualify_kfd3(source, runtime)
 
     assert receipt["noBypass"]["customViews"][0]["passed"] is True
+    assert receipt["noBypass"]["customViews"][0]["runtime"] == "sandboxed-ipc"
     assert receipt["noBypass"]["customViews"][0]["bundleRoot"].startswith("sha256:")
 
 

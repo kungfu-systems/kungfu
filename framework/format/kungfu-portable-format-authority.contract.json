@@ -146,14 +146,15 @@
       ]
     },
     {
-      "protocolId": "kungfu.first-party-manifest/v1",
-      "source": "framework/kfx/schema/first-party-manifest.schema.json",
-      "sourceRole": "KFX-package-JSON-Schema-envelope",
-      "identityDomain": "first-party package key inventory and exact artifact digests",
-      "versionAxis": "package manifest schema version",
+      "protocolId": "kungfu.kfx.manifest/v1",
+      "source": "config/kungfu-kfx.contract.json",
+      "sourceRole": "KFX-identity-neutral-package-declaration-schema",
+      "identityDomain": "canonical KFX package, facet, capability declaration, and inert Product System metadata",
+      "versionAxis": "KFX package manifest schema version",
       "compatibilityOwner": "framework/kfx",
       "identityMarkers": [
-        "\"const\": \"kungfu.first-party-manifest/v1\""
+        "\"const\": \"kungfu.kfx.manifest/v1\"",
+        "\"productAssemblyAuthority\": false"
       ]
     },
     {
@@ -182,8 +183,8 @@
       "meaning": "Generated package pickup and routing inventory for @kungfu-tech/spec; it does not own component semantics."
     },
     "package JSON Schema": {
-      "protocolId": "kungfu.first-party-manifest/v1",
-      "meaning": "KFX first-party package artifact inventory, unrelated to Episode or transfer manifest identity."
+      "protocolId": "kungfu.kfx.manifest/v1",
+      "meaning": "Identity-neutral KFX declaration of facets, least required capabilities, and inert Product System metadata; it is not runtime authorization."
     },
     "payload schema": {
       "protocolId": "kungfu.layered-api-encoding-boundary.contract/v1",

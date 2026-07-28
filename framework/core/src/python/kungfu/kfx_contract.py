@@ -15,7 +15,6 @@ from kungfu import contract as contract_runtime
 CONTRACT_SCHEMA = "kungfu.kfx.contract/v1"
 CONTRACT_FILE = "kungfu-kfx.contract.json"
 CONTRACT_ENV = "KUNGFU_KFX_CONTRACT"
-FIRST_PARTY_MANIFEST_SCHEMA = "kungfu.first-party-manifest/v1"
 PACKAGE_MANIFEST_FILE = "kungfu.kfx.json"
 PACKAGE_MANIFEST_SCHEMA = "kungfu.kfx.manifest/v1"
 LEGACY_PACKAGE_MANIFEST_FILE = "package.json"
@@ -112,19 +111,6 @@ def validate_profile_suite(
             "kfx Profile Suite validation failed: profile members must match "
             "kungfuConfig.suite.members"
         )
-
-
-def validate_first_party_manifest(
-    manifest: dict[str, Any],
-    *,
-    contract: dict[str, Any] | None = None,
-) -> None:
-    contract = load_contract() if contract is None else contract
-    _validate_with_schema(
-        manifest,
-        contract.get("firstPartyManifestSchema"),
-        "first-party manifest",
-    )
 
 
 def read_manifest_from_dir(package_dir: str) -> dict[str, Any]:
@@ -299,7 +285,7 @@ def compare_kfx_shadow_plans(
         if view is not None:
             expected = (
                 "node-integrated"
-                if package.get("runtimeTier") == "first-party-pinned"
+                if package.get("runtimeTier") == "integrated-explicit"
                 else "sandboxed-ipc"
             )
             matches = view.get("tier") == expected
@@ -318,8 +304,8 @@ def compare_kfx_shadow_plans(
             )
             continue
         if service is not None:
-            expected = package.get("runtimeTier") == "first-party-pinned"
-            matches = service.get("trusted") is expected
+            expected = package.get("runtimeTier") == "integrated-explicit"
+            matches = service.get("executionAllowed") is expected
             findings.append(
                 {
                     "packageKey": key,
@@ -327,9 +313,9 @@ def compare_kfx_shadow_plans(
                         "intended-match" if matches else "adr-required-divergence"
                     ),
                     "reason": (
-                        "service placement matches the native runtime tier"
+                        "service execution authorization matches the native runtime tier"
                         if matches
-                        else "legacy service trust conflicts with the native runtime tier"
+                        else "legacy service authorization conflicts with the native runtime tier"
                     ),
                 }
             )

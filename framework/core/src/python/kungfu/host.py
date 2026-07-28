@@ -24,7 +24,7 @@ the self-re-entry family (runtime_service.entry_command, the nuitka/pdm
 bridges' [sys.executable, -m, kungfu] calls) is correct by construction
 wherever sys.executable is a real interpreter and re-routes through
 entry_command() where it is not; the product-root family (contract
-registry/artifact discovery, the baked first-party manifest, the trunk
+registry/artifact discovery, bundled assembly metadata, the trunk
 binary next to the entry, variants dist-module detection) resolves through
 product_root(); the argv0 family that only names a process for libnode
 (tui/sdk/kfd) keeps argv0 semantics untouched. Signal handlers

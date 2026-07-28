@@ -25,19 +25,16 @@ const entries = [
   {
     id: 'work-dashboard',
     title: 'Mission Control',
-    system: false,
     product: { roles: ['profile-view' as const], icon: '🧭', order: 10 },
   },
   {
     id: 'terminal',
     title: 'Agent Console',
-    system: false,
     product: { roles: ['agent-console' as const], icon: '💬', order: 20 },
   },
   {
     id: 'kfx-manager',
     title: 'Profiles',
-    system: true,
     product: {
       roles: ['system-management' as const, 'boot-critical' as const],
       icon: '🧩',
@@ -47,7 +44,6 @@ const entries = [
   {
     id: 'skill-manager',
     title: 'Skills',
-    system: true,
     product: {
       roles: ['system-management' as const, 'boot-critical' as const],
       icon: '🧠',
@@ -57,31 +53,26 @@ const entries = [
   {
     id: 'fact-manager',
     title: 'Facts',
-    system: false,
     product: { roles: ['tool' as const], icon: '🧾', order: 10 },
   },
   {
     id: 'config-manager',
     title: 'Config',
-    system: false,
     product: { roles: ['devtool' as const], icon: '⚙️', order: 20 },
   },
   {
     id: 'journal-manager',
     title: 'Journal',
-    system: false,
     product: { roles: ['devtool' as const], icon: '📓', order: 30 },
   },
   {
     id: 'rewind',
     title: 'Rewind',
-    system: false,
     product: { roles: ['devtool' as const], icon: '⏪', order: 40 },
   },
   {
     id: 'system-status',
     title: 'Status',
-    system: true,
     product: {
       roles: ['devtool' as const, 'boot-critical' as const],
       icon: '🩺',
@@ -137,7 +128,7 @@ test('a custom Profile supplies its own first screen without shell edits', () =>
   };
   const customEntries = [
     ...entries,
-    { id: 'week-dashboard', title: 'Week / Day', system: false },
+    { id: 'week-dashboard', title: 'Week / Day' },
   ];
   assert.equal(profileHomeId(custom, customEntries), 'week-dashboard');
   assert.deepEqual(primaryNavigation(custom, customEntries)[0], {
@@ -209,7 +200,6 @@ test('boot-critical preserves recovery availability without requiring system tru
   const recovery = {
     id: 'third-party-recovery',
     title: 'Recovery',
-    system: false,
     product: { roles: ['boot-critical' as const] },
   };
   assert.deepEqual(
@@ -226,19 +216,16 @@ test('replacement product surfaces compose without known KFX ids', () => {
     {
       id: 'example-home',
       title: 'Example',
-      system: false,
       product: { roles: ['profile-view' as const], icon: '🏠', order: 10 },
     },
     {
       id: 'alternate-console',
       title: 'Alternate Console',
-      system: false,
       product: { roles: ['agent-console' as const], icon: '⌨️', order: 20 },
     },
     {
       id: 'alternate-manager',
       title: 'Alternate Manager',
-      system: false,
       product: {
         roles: ['system-management' as const, 'boot-critical' as const],
         icon: '🧰',
@@ -248,7 +235,6 @@ test('replacement product surfaces compose without known KFX ids', () => {
     {
       id: 'alternate-devtool',
       title: 'Alternate DevTool',
-      system: false,
       product: { roles: ['devtool' as const], icon: '🔬', order: 10 },
     },
   ];

@@ -76,9 +76,9 @@ if binding:
         (binding.get("name") or "").endswith("KfxEvent"),
         binding.get("name"),
     )
-    # first-party Rewind bindings still present alongside the kfx one
+    # Core Rewind bindings still present alongside the KFX one
     check(
-        "first-party Rewind bindings preserved",
+        "Core Rewind bindings preserved",
         ACTION_RUN_BEGIN in manifest["schema_bindings"],
     )
     blob = os.path.join(bundle_dir, "schemas", binding["schema_hash"] + ".bfbs")

@@ -138,12 +138,12 @@ class Supervisor:
             self.runtime_dir, "node"
         )
         for refused in py_refused + node_refused:
-            # an adapter injects into the traced program in-process; an untrusted
-            # one cannot be sandboxed, so it is refused rather than contained.
+            # In-process adapter injection requires an exact Core host
+            # authorization and otherwise fails closed.
             sys.stderr.write(
-                f"[kungfu trace] refusing untrusted adapter "
-                f"{refused['key']!r} at {refused['package']}: only a "
-                f"source-verified first-party adapter may inject.\n"
+                f"[kungfu trace] refusing unauthorized adapter "
+                f"{refused['key']!r} at {refused['package']}: exact "
+                f"Passport, policy, Work/Warrant, grant and host roots are required.\n"
             )
         if py_entries:
             env[adapters.ENV_PLUGIN_ADAPTERS] = os.pathsep.join(py_entries)
@@ -214,7 +214,7 @@ class Supervisor:
                 },
             )
             # bind each kfx open-layer schema into the run manifest, on top of
-            # the first-party Rewind bindings. A bad registration must not sink
+            # the Core-authorized Rewind bindings. A bad registration must not sink
             # the run's own bundle.
             for action_type, (name, blob, tier) in self.user_schemas.items():
                 try:

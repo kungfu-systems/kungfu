@@ -52,7 +52,6 @@ storage_layout_result workspace_episode_layout_typed(const storage_layout_reques
   result.paths.data_home = home.string();
   result.paths.workspace_ignore = (home / ".gitignore").string();
   result.paths.workspace_config = (home / "config.json").string();
-  result.paths.first_party_manifest = (home / "first-party.json").string();
   result.paths.extensions_dir = (home / "extensions").string();
   result.paths.runtime_dir = runtime.string();
   result.paths.dataset_dir = (home / "dataset").string();
@@ -103,7 +102,6 @@ storage_layout_result workspace_episode_layout_typed(const storage_layout_reques
   };
   add_entry("workspace-ignore", home / ".gitignore", "durable", "workspace publication policy");
   add_entry("workspace-config", home / "config.json", "durable", "workspace configuration override");
-  add_entry("first-party-manifest", home / "first-party.json", "durable", "build-generated KFX trust manifest");
   add_entry("extensions", home / "extensions", "durable", "installed workspace KFX packages");
   add_entry("inbox", home / "inbox", "durable", "unadmitted local source material");
   add_entry("dataset", home / "dataset", "durable", "workspace datasets");

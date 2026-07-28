@@ -32,6 +32,8 @@ export const SESSION_WINDOW_OPEN_CHANNEL = 'kf-session-window:open';
 export const SESSION_WINDOW_RESTORE_CHANNEL = 'kf-session-window:restore';
 export const SESSION_WINDOW_CLOSE_CHANNEL = 'kf-session-window:close';
 export const SESSION_WINDOW_SNAPSHOT_CHANNEL = 'kf-session-window:snapshot';
+export const SESSION_WINDOW_AUTHORIZATION_CHANNEL =
+  'kf-session-window:authorization';
 
 // shell renderer <-> main: narrow window chrome bridge. The renderer owns the
 // custom titlebar UI; main owns native BrowserWindow state and controls.

@@ -27,7 +27,7 @@ import {
 // not table decoders — consumers compare status === CallStatus.Error etc.)
 export { CallStatus, CaptureLayer, RunStatus } from './generated/rewind/fb.js';
 
-// Known first-party event kinds (manifest binding.name). kfx events carry a
+// Known Core event kinds (manifest binding.name). KFX events carry a
 // fully-qualified table name, so the type stays open.
 export type RewindEventKind =
   | 'RunBegin'

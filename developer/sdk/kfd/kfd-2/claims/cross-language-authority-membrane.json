@@ -61,7 +61,7 @@
       "pointer": {
         "kind": "file",
         "path": "docs/adr/KF-ADR-019f8c53-6105-71e5-8f34-53f2a81ee61c.md",
-        "sha256": "aac21eea46a07ac3bab8bcacfb289073f05ebc26327c3bc54e5b9055f3474b7c"
+        "sha256": "b12798406a516e9ca4fe45079ce50570022ed8e100be7a9d658cf8c63d281dd6"
       },
       "description": "Accepted one-native-owner and four-language projection decision with explicit non-claims."
     }
@@ -92,7 +92,7 @@
       },
       {
         "path": "docs/adr/KF-ADR-019f8c53-6105-71e5-8f34-53f2a81ee61c.md",
-        "sha256": "aac21eea46a07ac3bab8bcacfb289073f05ebc26327c3bc54e5b9055f3474b7c"
+        "sha256": "b12798406a516e9ca4fe45079ce50570022ed8e100be7a9d658cf8c63d281dd6"
       }
     ],
     "artifactSha256": [

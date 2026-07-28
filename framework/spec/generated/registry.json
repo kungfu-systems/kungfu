@@ -69,7 +69,7 @@
       "protocol_id": "kungfu.workspace.episode-layout/v1",
       "source": "framework/core/src/libkungfu/include/kungfu/runtime/storage/service.h",
       "source_role": "workspace-path-and-persistence-class-inventory",
-      "source_root": "sha256:731c7f79e508483dd4035c89ae6e81d1edf33d5f552fd4a211768f2898a49a46",
+      "source_root": "sha256:0494977ad8ee1b2526282d5c23aac16092c5ec1e932393df652df18c74f7ed85",
       "version_axis": "workspace layout version"
     },
     {
@@ -92,12 +92,12 @@
     },
     {
       "compatibility_owner": "framework/kfx",
-      "identity_domain": "first-party package key inventory and exact artifact digests",
-      "protocol_id": "kungfu.first-party-manifest/v1",
-      "source": "framework/kfx/schema/first-party-manifest.schema.json",
-      "source_role": "KFX-package-JSON-Schema-envelope",
-      "source_root": "sha256:38dcea2fa38fa91fea9ea396141c82e8c83fa03fbaac0486464ba11a06c74d23",
-      "version_axis": "package manifest schema version"
+      "identity_domain": "canonical KFX package, facet, capability declaration, and inert Product System metadata",
+      "protocol_id": "kungfu.kfx.manifest/v1",
+      "source": "config/kungfu-kfx.contract.json",
+      "source_role": "KFX-identity-neutral-package-declaration-schema",
+      "source_root": "sha256:f9f99ee94a91580f0e5e4592c260e32f2ab3d2c12f1c439db1e31d6ee0cfadff",
+      "version_axis": "KFX package manifest schema version"
     },
     {
       "compatibility_owner": "libyijinjing",
@@ -117,7 +117,7 @@
     "sources": [
       {
         "path": "framework/format/kungfu-portable-format-authority.contract.json",
-        "root": "sha256:935ebf826adf19e31a6362380c06405b59b94fcbb2df66063d205571243a7eff"
+        "root": "sha256:d6be3712e8f3a191024d3742120927e12186dd1a5ca6a7b8c72f95498512c975"
       },
       {
         "path": "framework/fact/kungfu-fact-cut-kernel.contract.json",
@@ -145,7 +145,7 @@
       },
       {
         "path": "framework/core/src/libkungfu/include/kungfu/runtime/storage/service.h",
-        "root": "sha256:731c7f79e508483dd4035c89ae6e81d1edf33d5f552fd4a211768f2898a49a46"
+        "root": "sha256:0494977ad8ee1b2526282d5c23aac16092c5ec1e932393df652df18c74f7ed85"
       },
       {
         "path": "framework/core/architecture/layered-api-encoding-boundary.contract.json",
@@ -156,8 +156,8 @@
         "root": "sha256:e545cd71ccd61b622ff5500f4cffee0143950f2c5223f7b2efafa8b685e1d292"
       },
       {
-        "path": "framework/kfx/schema/first-party-manifest.schema.json",
-        "root": "sha256:38dcea2fa38fa91fea9ea396141c82e8c83fa03fbaac0486464ba11a06c74d23"
+        "path": "config/kungfu-kfx.contract.json",
+        "root": "sha256:f9f99ee94a91580f0e5e4592c260e32f2ab3d2c12f1c439db1e31d6ee0cfadff"
       },
       {
         "path": "framework/core/src/libyijinjing/include/kungfu/yijinjing/storage/common.h",

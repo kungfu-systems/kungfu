@@ -19,12 +19,13 @@
 from __future__ import annotations
 
 import os
+import json
 from collections.abc import Iterator
 
-from kungfu import kfx_contract
-from kungfu.rewind import first_party
+from kungfu import kfx_contract, kfx_host
 
 ENV_EXTENSION_PATH = "KF_EXTENSION_PATH"
+ENV_HOST_DESCRIPTOR = "KF_KFX_HOST_DESCRIPTOR"
 # shared contract strings with the child hooks (per runtime): the python hook
 # reads ENV_PLUGIN_ADAPTERS, the node hook reads ENV_NODE_ADAPTERS.
 ENV_PLUGIN_ADAPTERS = "KUNGFU_REWIND_ADAPTERS"
@@ -67,12 +68,18 @@ def discover_adapters(
     adapter form for `runtime` ('python' or 'node'). First occurrence of a
     package path wins; missing entry files are skipped.
 
-    Trust gate (KF-ADR-019f86da-4f90-79f1-8716-aca36b142847): an adapter runs in-process inside the traced program
-    and cannot be sandboxed, so only a package whose key is in the frozen
-    first-party set is injected. An untrusted adapter is refused — returned in
-    `refused` as {"key", "package"} so the caller can report it — never injected.
+    An adapter runs in-process inside the traced program and cannot be sandboxed,
+    so injection requires the exact Core host authorization for this package and
+    adapter runtime. Discovery origin and package identity carry no authority.
     """
-    trusted = first_party.first_party_keys()
+    descriptor = None
+    descriptor_path = os.environ.get(ENV_HOST_DESCRIPTOR)
+    if descriptor_path:
+        try:
+            with open(descriptor_path, encoding="utf-8") as descriptor_file:
+                descriptor = json.load(descriptor_file)
+        except (OSError, ValueError):
+            descriptor = None
     entries: list[str] = []
     dirs: list[str] = []
     refused: list[dict[str, str | None]] = []
@@ -94,7 +101,25 @@ def discover_adapters(
             if path in seen or not os.path.exists(path):
                 continue
             seen.add(path)
-            if kfx.get("key") not in trusted:
+            key = kfx.get("key")
+            authorization = None
+            if descriptor is not None and key:
+                for candidate in descriptor.get("runtimeAuthorizations", []):
+                    if (
+                        candidate.get("packageKey") == key
+                        and candidate.get("host") == f"adapter-{runtime}"
+                    ):
+                        try:
+                            authorization = kfx_host.authorize_host_launch(
+                                descriptor,
+                                key,
+                                f"adapter-{runtime}",
+                                candidate.get("authorizationRoot", ""),
+                            )
+                        except ValueError:
+                            authorization = None
+                        break
+            if authorization is None:
                 refused.append({"key": kfx.get("key"), "package": os.path.abspath(pkg)})
                 continue
             entries.append(path)

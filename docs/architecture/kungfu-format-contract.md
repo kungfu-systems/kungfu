@@ -3,8 +3,8 @@
 `.kungfu` is both a workspace data home and the intended boundary for portable
 Kungfu evidence. Those two surfaces are at different maturity levels:
 
-- the workspace root, layout inventory, persistence classes, journal epoch,
-  and first-party manifest identity have current machine-readable contracts;
+- the workspace root, layout inventory, persistence classes, and journal epoch
+  have current machine-readable contracts;
 - the complete runtime-independent semantic format is still pre-release and
   has no normative standalone specification.
 
@@ -20,8 +20,7 @@ verification commands.
 | workspace `.kungfu/` layout v1 and persistence classes | accepted decision; implementation staged | [Freeze workspace `.kungfu` home layout v1](../adr/KF-ADR-019f86da-4f90-713d-8626-d70bca82cb76.md) and the [typed C++ layout projection](../../framework/core/src/libkungfu/src/runtime/storage/layout.cpp) | `kungfu storage layout --json` and `kungfu storage layout --verify --json` |
 | journal wire epoch used by layout v1 | declared and reader-enforced; implementation staged with the layout decision | [`layout_fingerprint.h`](../../framework/core/src/libyijinjing/include/kungfu/yijinjing/journal/layout_fingerprint.h) and the [retained fixture](../../framework/core/src/libyijinjing/tests/fixtures/journal-wire-v1.json) | native build and journal mmap tests |
 | retained cross-version byte corpus | qualified v2; append-only releases and all seven compatibility axes | [`portable-format-vectors`](../../framework/format/conformance/portable-format-vectors/index.json) | `./shifu check:portable-format-authority` |
-| pre-stable v4 alpha baseline | `4.0.0-alpha.1` content-rooted and append-only; incompatible in-place mutation rejected | [`v4-alpha/index.json`](../../framework/format/compatibility/v4-alpha/index.json) | `./shifu check:portable-format-authority` |
-| `first-party.json` envelope | versioned schema; implementation staged with the layout decision | [`first-party-manifest.schema.json`](../../framework/kfx/schema/first-party-manifest.schema.json) | KFX contract validation and `./shifu verify` |
+| pre-stable v4 alpha baseline | `4.0.0-alpha.2` content-rooted successor; `alpha.1` retained immutably and incompatible in-place mutation rejected | [`v4-alpha/index.json`](../../framework/format/compatibility/v4-alpha/index.json) | `./shifu check:portable-format-authority` |
 | Fact and Episode meaning | current public semantic authority | [Fact, Episode, and Action Primitive Runtime](fact-episode-action-runtime.md), [Episode Object Model](../concepts/episode-object-model.md), and [Event Model](event-model.md) | source and qualification gates named by those documents |
 | portable spec bundle manifest | generated and content-root qualified; standalone status remains pre-release | [`@kungfu-tech/spec`](../../framework/spec/README.md), its [`manifest.schema.json`](../../framework/spec/schema/manifest.schema.json), and [generated authority](../../framework/spec/generated/authority.json) | deterministic generation, full schema/root verification, clean install, and layer-format qualification |
 
@@ -69,7 +68,9 @@ classifications.
 
 The `v4-alpha` baseline binds the complete current tuple and exact roots of the
 composition, required-reader, migration/repair, and retained-corpus
-authorities. Rewriting any bound source under `4.0.0-alpha.1` fails the gate. A
+authorities. `4.0.0-alpha.2` records the identity-neutral KFX manifest
+composition successor while retaining `alpha.1` immutably. Rewriting any bound
+source under either release fails the gate. A
 change must append a content-rooted successor baseline, bind its predecessor,
 and enumerate every changed authority; this is a pre-stable alpha discipline,
 not a stable-v4 compatibility promise.

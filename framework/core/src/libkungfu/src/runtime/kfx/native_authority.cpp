@@ -118,9 +118,8 @@ json assess(const json &package, const std::string &registry_root, const json &r
   const auto operation = required_text(request, "operation", "request");
   const auto purpose = required_text(request, "purpose", "request");
   const auto cut = required_text(request, "cut", "request");
-  static const std::set<std::string> operations = {"inspect",   "install",    "update",         "enable",
-                                                   "activate",  "qualify",    "host-placement", "capability",
-                                                   "migration", "system-role"};
+  static const std::set<std::string> operations = {"inspect", "install",        "update",     "enable",   "activate",
+                                                   "qualify", "host-placement", "capability", "migration"};
   validate_enum(operation, operations, "admission operation");
 
   const auto policy = object_or_empty(request, "policy");
@@ -128,8 +127,7 @@ json assess(const json &package, const std::string &registry_root, const json &r
     refuse("KF_KFX_SCHEMA_INVALID", "assessment requires kungfu.kfx-admission-policy/v1");
   require_exact_fields(policy,
                        {"schema", "allowedIssuers", "allowedPublishers", "allowedContracts", "allowedVerifierRoots",
-                        "allowedCapabilities", "autoOperations", "highConsequenceCapabilities", "systemCapabilities",
-                        "productSystemRoots", "residualRisk"},
+                        "allowedCapabilities", "autoOperations", "highConsequenceCapabilities", "residualRisk"},
                        "admission policy");
   if (!request.contains("assessmentTime") || !request.at("assessmentTime").is_number_integer())
     refuse("KF_KFX_SCHEMA_INVALID", "assessmentTime must be a non-negative integer");
@@ -143,8 +141,6 @@ json assess(const json &package, const std::string &registry_root, const json &r
   const auto allowed_capabilities = string_array_or_empty(policy, "allowedCapabilities");
   const auto requested_auto_operations = string_array_or_empty(policy, "autoOperations");
   const auto requested_high_consequence_capabilities = string_array_or_empty(policy, "highConsequenceCapabilities");
-  (void)string_array_or_empty(policy, "systemCapabilities");
-  (void)string_array_or_empty(policy, "productSystemRoots");
   const auto residual_risk = string_array_or_empty(policy, "residualRisk");
   if (allowed_issuers.empty() || allowed_publishers.empty() || allowed_contracts.empty() ||
       allowed_verifier_roots.empty())
@@ -296,10 +292,7 @@ json assess(const json &package, const std::string &registry_root, const json &r
     }
   }
 
-  std::string admission_grade = supply_chain_grade;
-  if (supply_chain_grade == "kfd-attested" &&
-      contains_text(policy.value("productSystemRoots", json::array()), package_root))
-    admission_grade = "product-system";
+  const std::string admission_grade = supply_chain_grade;
 
   const auto requested_capabilities = string_array_or_empty(request, "requestedCapabilities");
   const auto declared_capabilities = package.at("declaredCapabilities").get<std::vector<std::string>>();
@@ -323,7 +316,7 @@ json assess(const json &package, const std::string &registry_root, const json &r
   if (std::find(requested_auto_operations.begin(), requested_auto_operations.end(), operation) !=
           requested_auto_operations.end() &&
       std::find(core_auto_operations.begin(), core_auto_operations.end(), operation) != core_auto_operations.end() &&
-      (admission_grade == "kfd-attested" || admission_grade == "product-system"))
+      admission_grade == "kfd-attested")
     allowed = true;
   if (operation == "update" && request.value("capabilityExpansion", false)) {
     allowed = false;
@@ -333,17 +326,13 @@ json assess(const json &package, const std::string &registry_root, const json &r
     allowed = false;
     required_approvals.push_back("irreversible-migration");
   }
-  if (operation == "system-role" && admission_grade != "product-system") {
-    allowed = false;
-    required_approvals.push_back("product-system-assignment");
-  }
   if (operation == "capability" && !required_approvals.empty())
     allowed = false;
 
   const auto runtime = object_or_empty(request, "runtimeEvidence");
   const bool runtime_degraded = runtime.value("degraded", false) || runtime.value("receiptViolation", false);
   if (runtime_degraded && (operation == "enable" || operation == "activate" || operation == "host-placement" ||
-                           operation == "capability" || operation == "system-role")) {
+                           operation == "capability")) {
     allowed = false;
     constraints.push_back("runtime-assessment-degraded");
     required_approvals.push_back("runtime-reassessment");

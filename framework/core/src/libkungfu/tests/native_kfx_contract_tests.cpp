@@ -98,9 +98,13 @@ void test_contract_is_versioned_and_core_owned() {
   const auto second = kfx::native_kfx_contract();
   require(first.at("schema") == kfx::NATIVE_KFX_CONTRACT_V3, "native contract schema drifted");
   require(first.at("contractVersion") == 3, "native contract version drifted");
-  require(first.at("versionNegotiation").at("supported") == nlohmann::json::array({1, 2, 3}),
-          "native contract stopped accepting frozen v1/v2 documents");
-  require(first.at("sourceContractVersion") == 11, "native contract did not expose its source compatibility version");
+  require(first.at("versionNegotiation").at("supported") == nlohmann::json::array({3}),
+          "native contract retained pre-cutover authority documents");
+  require(first.at("sourceContractVersion") == 12, "native contract did not expose its source compatibility version");
+  require(first.at("runtimeTiers") == nlohmann::json::array({"isolated", "integrated-explicit", "metadata-only"}),
+          "native contract exposed an origin-derived runtime tier");
+  require(first.at("admissionGrades") == nlohmann::json::array({"unverified", "identity-verified", "kfd-attested"}),
+          "native contract exposed an origin-derived admission grade");
   require(first.at("runtimeTiers") != first.at("admissionGrades"),
           "runtime tier and admission grade were collapsed into one authority field");
   require(first.at("authority").at("owner") == "libkungfu", "native contract did not assign Core authority");
@@ -135,9 +139,17 @@ void test_contract_is_versioned_and_core_owned() {
           "native contract claimed host rendering authority");
   require(first.at("experienceFlowHost").at("authorizationSchema") == "kungfu.kfx.host-authorization/v2",
           "native contract did not freeze exact-root host launch authorization");
-  require(first.at("controlSuiteBootstrap").at("authority").at("selfGrant") == false &&
-              first.at("controlSuiteBootstrap").at("policyRoot").get<std::string>().starts_with("sha256:"),
-          "native contract did not embed the bounded Control Suite bootstrap ceiling");
+  const auto &bootstrap = first.at("controlSuiteBootstrap");
+  require(
+      bootstrap.at("authority").at("selfGrant") == false && bootstrap.at("authority").at("originAuthority") == false &&
+          bootstrap.at("authority").at("productAssemblyAuthority") == false &&
+          bootstrap.at("recovery").at("automaticActivation") == false &&
+          bootstrap.at("bootstrapTcb") ==
+              nlohmann::json::array({"manifest-and-closure-verifier", "release-passport-verifier",
+                                     "core-policy-interpreter", "fact-work-warrant-settlement",
+                                     "last-known-good-selector", "safe-mode", "owner-authorized-emergency-removal"}) &&
+          bootstrap.at("policyRoot").get<std::string>().starts_with("sha256:"),
+      "native contract did not embed the bounded Control Suite bootstrap ceiling");
   const auto profile = kfx::native_kfx_domain_profile();
   require(profile.at("authority").at("namedCutRef") == "profiles/kfx/registry" &&
               profile.at("authority").at("factKernel") == "yijinjing-hana-pod-journal" &&
@@ -192,21 +204,21 @@ public:
 void test_service_interface_routes_only_validated_requests() {
   recording_service service;
   for (const auto *operation : {"list", "inspect", "resolve", "plan", "apply", "status", "history"}) {
-    const nlohmann::json request = {{"schema", "kungfu.kfx.native-request/v2"},
-                                    {"contractVersion", 2},
+    const nlohmann::json request = {{"schema", "kungfu.kfx.native-request/v3"},
+                                    {"contractVersion", 3},
                                     {"operation", operation},
                                     {"packagePath", "extensions/example-kfx"},
                                     {"requestedCapabilities", nlohmann::json::array()}};
     require(kfx::invoke_native_kfx_service(service, request).at("operation") == operation,
             std::string("native service did not route ") + operation);
   }
-  const nlohmann::json legacy_request = {{"schema", "kungfu.kfx.native-request/v1"},
-                                         {"contractVersion", 1},
-                                         {"operation", "inspect"},
-                                         {"packagePath", "extensions/example-kfx"},
-                                         {"requestedCapabilities", nlohmann::json::array()}};
-  require(kfx::invoke_native_kfx_service(service, legacy_request).at("operation") == "inspect",
-          "frozen v1 request compatibility was lost");
+  const nlohmann::json pre_cutover_request = {{"schema", "kungfu.kfx.native-request/v1"},
+                                              {"contractVersion", 1},
+                                              {"operation", "inspect"},
+                                              {"packagePath", "extensions/example-kfx"},
+                                              {"requestedCapabilities", nlohmann::json::array()}};
+  require_refusal("KF_KFX_CONTRACT_VERSION_UNSUPPORTED",
+                  [&] { (void)kfx::invoke_native_kfx_service(service, pre_cutover_request); });
 }
 
 void test_registry_produces_one_deterministic_cross_surface_plan() {
@@ -231,6 +243,13 @@ void test_registry_produces_one_deterministic_cross_surface_plan() {
   require(resolved.at("suite").at("profileRoot").get<std::string>().rfind("sha256:", 0) == 0,
           "native registry did not reuse the Profile lifecycle root");
   require(first_plan == second_plan, "native load plan is not deterministic");
+  auto product_labeled_request = request;
+  product_labeled_request.at("roots").front()["kind"] = "product";
+  auto user_labeled_request = request;
+  user_labeled_request.at("roots").front()["kind"] = "user";
+  require(kfx::query_native_kfx_registry("plan", product_labeled_request) ==
+              kfx::query_native_kfx_registry("plan", user_labeled_request),
+          "discovery-root labels changed the KFX plan or host authorization inputs");
   require(first_plan.at("planRoot").get<std::string>().rfind("sha256:", 0) == 0,
           "native load plan is not content-addressed");
   require(status.at("registryRoot") == first_plan.at("registryRoot"), "status and plan read different snapshots");
@@ -249,7 +268,7 @@ void test_registry_negative_and_concurrent_reads() {
   require_refusal("KF_KFX_AUTHORITY_CLAIM_FORBIDDEN",
                   [&] { (void)kfx::query_native_kfx_registry("plan", caller_placement); });
   auto caller_tier = request;
-  caller_tier["runtimeTiers"] = {{"optional-view", "first-party-pinned"}};
+  caller_tier["runtimeTiers"] = {{"optional-view", "integrated-explicit"}};
   require_refusal("KF_KFX_AUTHORITY_CLAIM_FORBIDDEN",
                   [&] { (void)kfx::query_native_kfx_registry("plan", caller_tier); });
 
@@ -258,7 +277,7 @@ void test_registry_negative_and_concurrent_reads() {
   require_refusal("KF_KFX_REGISTRY_STALE", [&] { (void)kfx::query_native_kfx_registry("status", stale); });
   require_refusal("KF_KFX_AUTHORITY_CLAIM_FORBIDDEN", [&] { (void)kfx::query_native_kfx_registry("apply", request); });
   auto forged_admission = request;
-  forged_admission["admissionGrades"] = {{"optional-view", "product-system"}};
+  forged_admission["firstParty"] = {{"optional-view", true}};
   require_refusal("KF_KFX_AUTHORITY_CLAIM_FORBIDDEN",
                   [&] { (void)kfx::query_native_kfx_registry("plan", forged_admission); });
 
@@ -389,8 +408,6 @@ nlohmann::json passport_authorized_request(nlohmann::json request, const std::st
   request["trustInputs"]["packageRoot"] = package_root;
   request["requestedCapabilities"] = package.at("declaredCapabilities");
   request["policy"]["autoOperations"] = nlohmann::json::array({"install", "update", "enable", "activate", "qualify"});
-  if (package_key == "kfx-manager")
-    request["policy"]["productSystemRoots"] = nlohmann::json::array({package_root});
   request["approvalRoots"] = nlohmann::json::array();
   for (const auto &capability : request.at("requestedCapabilities")) {
     if (capability == "agentRuntime" || capability == "kfxControl" || capability == "process" ||
@@ -575,20 +592,21 @@ void test_exact_buildchain_attestation_and_operation_admission() {
   require(!stale_report.at("trustReport").at("fresh") && !stale_report.at("admissionPlan").at("allowed"),
           "changed dependency root did not invalidate the cached assessment");
 
-  auto system = request;
-  system["operation"] = "system-role";
-  system["policy"]["productSystemRoots"].push_back(system["attestation"]["bindings"]["packageRoot"]);
-  const auto system_report = kfx::query_native_kfx_registry("assess", system);
-  require(system_report.at("trustReport").at("admissionGrade") == "product-system",
-          "Product assembly metadata did not bind its exact eligible root");
-  require(system_report.at("admissionPlan").at("allowed"), "eligible Product System metadata assignment was refused");
+  auto forged_system = request;
+  forged_system["system"] = true;
+  require_refusal("KF_KFX_AUTHORITY_CLAIM_FORBIDDEN",
+                  [&] { (void)kfx::query_native_kfx_registry("assess", forged_system); });
+  auto forged_trusted = request;
+  forged_trusted["trusted"] = true;
+  require_refusal("KF_KFX_AUTHORITY_CLAIM_FORBIDDEN",
+                  [&] { (void)kfx::query_native_kfx_registry("assess", forged_trusted); });
 
   auto identity = request;
   identity.erase("attestation");
   identity.erase("trustInputs");
   identity.erase("kfdAssessment");
   identity["identity"] = {{"verified", true},
-                          {"artifactRoot", system["attestation"]["bindings"]["packageRoot"]},
+                          {"artifactRoot", request["attestation"]["bindings"]["packageRoot"]},
                           {"publisher", "kungfu-systems"}};
   const auto identity_report = kfx::query_native_kfx_registry("assess", identity);
   require(identity_report.at("trustReport").at("supplyChainGrade") == "identity-verified",
@@ -990,7 +1008,7 @@ void test_control_suite_recursively_dogfoods_public_fact_work() {
   require(install_plan.at("schema") == "kungfu.kfx.control-suite-plan/v1" &&
               install_plan.at("bootstrapVerification").at("valid").get<bool>() &&
               install_plan.at("authority") == "public-kfx-plan-plus-fact-work-settlement",
-          "Control Suite bootstrap did not independently validate the first-party candidate");
+          "Control Suite bootstrap did not independently validate the identity-neutral candidate");
   const auto installed = kfx::query_native_kfx_registry(
       "apply", control_mutation(install_request, install_plan, "control-test"), runtime_dir.string());
   require(installed.at("verified").get<bool>() && installed.at("status").at("mode") == "active" &&

@@ -989,6 +989,14 @@ def _agent_interface_authority() -> dict[str, Any]:
 def _profile_facet_audit(resolved: Mapping[str, Any]) -> dict[str, Any]:
     """Reject executable/custom surfaces that can bypass the shared service."""
 
+    native_runtime = kfx_contract.load_contract()["nativeRuntime"]
+    view_placement = native_runtime["experienceFlowHost"]["placements"].get("gui")
+    if view_placement != "sandboxed-ipc":
+        raise ProfileSdkError(
+            "kfd3-view-placement-authority-invalid",
+            "Core does not declare the required sandboxed Profile view placement",
+            placement=view_placement,
+        )
     package_dirs = {
         "suite": Path(str(resolved["source"])),
         **{
@@ -1004,23 +1012,18 @@ def _profile_facet_audit(resolved: Mapping[str, Any]) -> dict[str, Any]:
         view = config.get("view")
         if view is not None:
             capabilities = sorted(view.get("capabilities") or [])
-            runtime = view.get("runtime") or "node-integrated"
             entry = str(view.get("entry") or "dist/view/index.js")
             entry_path = _confined(package_dir, entry)
             reasons = []
-            if runtime != "sandboxed-ipc":
-                reasons.append("custom Profile views must use sandboxed-ipc")
             if capabilities:
                 reasons.append(
                     "custom Profile views may not receive capability handles"
                 )
-            if view.get("system"):
-                reasons.append("custom Profile views may not claim system authority")
             if not entry_path.is_file():
                 reasons.append("custom Profile view bundle is missing")
             row = {
                 "packageKey": key,
-                "runtime": runtime,
+                "runtime": view_placement,
                 "capabilities": capabilities,
                 "entry": entry,
                 "bundleRoot": (
@@ -1063,7 +1066,7 @@ def _profile_facet_audit(resolved: Mapping[str, Any]) -> dict[str, Any]:
 def _shared_api_release_audit(
     projection: Mapping[str, Any], resolved: Mapping[str, Any]
 ) -> tuple[dict[str, Any], list[dict[str, Any]]]:
-    """Prove first-party GUI/Agent parity through the installed API authority."""
+    """Prove bundled GUI/Agent parity through the installed API authority."""
 
     from kungfu.agent.kfd3 import registry
 
@@ -1137,7 +1140,7 @@ def _shared_api_release_audit(
     if failures:
         raise ProfileSdkError(
             "kfd3-release-api-parity-failed",
-            "one or more first-party intents lack the same GUI and Agent API surface",
+            "one or more bundled intents lack the same GUI and Agent API surface",
             failures=failures,
         )
     facets = []
@@ -1339,9 +1342,6 @@ def _release_qualification_receipt(
     explicit = os.environ.get("KF_PROFILE_KFD3_MANIFEST")
     if explicit:
         paths.append(Path(explicit))
-    first_party = os.environ.get("KF_FIRST_PARTY_MANIFEST")
-    if first_party:
-        paths.append(Path(first_party).with_name("profile-kfd3.json"))
     paths.append(Path(sys.executable).resolve().with_name("profile-kfd3.json"))
     seen = set()
     fallback = None

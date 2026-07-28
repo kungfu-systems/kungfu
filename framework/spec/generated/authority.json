@@ -47,7 +47,7 @@
     "sources": [
       {
         "path": "framework/format/kungfu-portable-format-authority.contract.json",
-        "root": "sha256:935ebf826adf19e31a6362380c06405b59b94fcbb2df66063d205571243a7eff"
+        "root": "sha256:d6be3712e8f3a191024d3742120927e12186dd1a5ca6a7b8c72f95498512c975"
       },
       {
         "path": "framework/spec/spec.meta.json",
@@ -105,8 +105,8 @@
       "protocolId": "kungfu.storage.manifest-catalog/v1"
     },
     "package JSON Schema": {
-      "meaning": "KFX first-party package artifact inventory, unrelated to Episode or transfer manifest identity.",
-      "protocolId": "kungfu.first-party-manifest/v1"
+      "meaning": "Identity-neutral KFX declaration of facets, least required capabilities, and inert Product System metadata; it is not runtime authorization.",
+      "protocolId": "kungfu.kfx.manifest/v1"
     },
     "payload schema": {
       "meaning": "Exactly one Hana POD owner or one FlatBuffers schema owner interprets a structured payload.",

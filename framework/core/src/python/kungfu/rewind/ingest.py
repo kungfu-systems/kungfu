@@ -127,7 +127,7 @@ class IngestServer:
                     str(message["action_type"]),
                     message.get("name", ""),
                     base64.b64decode(message["bfbs_b64"]),
-                    message.get("tier", "trusted"),
+                    message.get("tier", "sandboxed"),
                 )
         elif kind == "kfx_event":
             # a kfx event: write its payload verbatim under its own action type

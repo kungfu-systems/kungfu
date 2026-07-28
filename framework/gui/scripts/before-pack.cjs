@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
-// electron-builder beforePack hook: bake the frozen first-party manifest into
-// dist/kungfu just before it is shipped to Resources/kungfu, so the packaged
-// app grants extension trust by verifiable source (KF-ADR-019f86da-4f90-79f1-8716-aca36b142847). Runs after the
-// build, so the extension view bundles are present to pin.
+// electron-builder beforePack hook: bake release qualification and upgrade
+// metadata into dist/kungfu just before packaging.
 const { spawnSync } = require('node:child_process');
 const path = require('node:path');
 const { pathToFileURL } = require('node:url');
@@ -27,7 +25,6 @@ function beforePackArgs(tsxLoader, generator, platform = process.platform) {
 exports.default = async function beforePack() {
   const tsxLoader = require.resolve('tsx/esm');
   for (const [script, label] of [
-    ['gen-first-party-manifest.mjs', 'first-party manifest'],
     ['gen-system-profile-kfd3.mjs', 'system Profile KFD-3 manifest'],
     ['gen-upgrade-manifest.mjs', 'bundled runtime upgrade manifest'],
   ]) {

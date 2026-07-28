@@ -1052,7 +1052,7 @@ export const QUICK_COMMANDS: QuickCommand<ProductQuickCommandAction>[] = [
     id: 'lab',
     command: '/lab',
     title: 'Open Lab',
-    summary: 'Open the installed first-party work experiment suite.',
+    summary: 'Open the installed identity-neutral work experiment suite.',
     action: 'lab',
   },
   {

@@ -6,7 +6,7 @@
     "email": "info@kungfu.link"
   },
   "version": "4.0.0-alpha.1",
-  "description": "Kungfu Product — the dogfood assembly: desktop and CLI products with the bundled runtime, terminal surface, SDK and all first-party kfx as runnable packageable surfaces.",
+  "description": "Kungfu Product — inert assembly and distribution metadata for desktop and CLI products, the bundled runtime, terminal surface, SDK, and product-declared KFX.",
   "license": "Apache-2.0",
   "private": true,
   "kungfuProduct": {

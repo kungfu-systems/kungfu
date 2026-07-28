@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 // Build distributable Kungfu products from source in one command:
-// dependency sync -> core rebuild -> freeze -> all declared first-party kfx ->
+// dependency sync -> core rebuild -> freeze -> all product-declared KFX ->
 // product assembly -> TUI bundle -> desktop installer and/or CLI archive under
 // product/release.
 // Run through the repo entrypoint so Node is pinned:
@@ -580,7 +580,7 @@ function assertDeclaredKfx(packages) {
   if (missing.length || stale.length) {
     throw new Error(
       [
-        'product/package.json must declare every first-party kfx dependency',
+        'product/package.json must declare every product-assembled KFX dependency',
         missing.length ? `missing: ${missing.join(', ')}` : '',
         stale.length ? `stale: ${stale.join(', ')}` : '',
       ]
@@ -1510,7 +1510,7 @@ function runInstalledKungfuKfdSmoke({
       KUNGFU_SDK_ENTRY: sdkEntry,
       KUNGFU_KFD3_REGISTRY: kfd3Registry,
       KUNGFU_KFD_UPSTREAM_AGGREGATE: kfdUpstreamAggregate,
-      KF_FIRST_PARTY_SOURCE_ROOT: extensionsRoot,
+      KF_BUNDLED_EXTENSION_ROOT: extensionsRoot,
     },
     encoding: 'utf8',
   });
@@ -2136,7 +2136,7 @@ export function smokeCliProductArchive({ archivePath, archiveBase }) {
           KUNGFU_KFD_UPSTREAM_AGGREGATE: kfdUpstreamAggregate,
           KUNGFU_KFD_AGENT_RUNTIME_ADAPTER: kfdAgentRuntime,
           KUNGFU_KFD_AGENT_RUNTIME_MANIFEST: kfdAgentRuntimeManifest,
-          KF_FIRST_PARTY_SOURCE_ROOT: extensionsRoot,
+          KF_BUNDLED_EXTENSION_ROOT: extensionsRoot,
           KUNGFU_ACTION_ENTRY: actionEntry,
         };
         runInstalledKungfuXinfaSmoke({
@@ -2433,7 +2433,7 @@ function main() {
             cwd: GUI_DIR,
             env: {
               ...sdkBuildEnv,
-              KF_FIRST_PARTY_SOURCE_ROOT: ASSEMBLED_EXTENSIONS,
+              KF_BUNDLED_EXTENSION_ROOT: ASSEMBLED_EXTENSIONS,
             },
             phase: 'package',
             event: 'product.desktop.electron-builder',

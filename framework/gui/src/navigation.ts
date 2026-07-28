@@ -11,7 +11,6 @@ import type {
 export type NavigationEntry = {
   id: string;
   title: string;
-  system: boolean;
   product?: KfxProductDecl;
   suite?: string;
 };
@@ -135,7 +134,6 @@ export function accessibleEntries<T extends NavigationEntry>(
 ): T[] {
   return entries.filter(
     (entry) =>
-      entry.system ||
       hasRole(entry, 'boot-critical') ||
       (!state.disabledKfx.includes(entry.id) &&
         !(entry.suite && state.disabledSuites.includes(entry.suite))),
