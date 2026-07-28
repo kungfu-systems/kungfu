@@ -8,6 +8,8 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+import { devMergeBaseCandidates } from '../candidate-timeline-events.cjs';
+
 const ROOT = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
   '../..',
@@ -489,10 +491,14 @@ function runGit(args, { allowFailure = false } = {}) {
 function checkHistoricalIntegrity() {
   const base =
     process.env.KUNGFU_EVOLUTION_BASE ||
-    runGit(['merge-base', 'origin/dev/v4/v4.0', 'HEAD'], {
-      allowFailure: true,
-    }) ||
-    runGit(['merge-base', 'dev/v4/v4.0', 'HEAD']);
+    devMergeBaseCandidates()
+      .map((ref) =>
+        runGit(['merge-base', ref, 'HEAD'], {
+          allowFailure: true,
+        }),
+      )
+      .find(Boolean);
+  invariant(base, 'cannot resolve the evolution history merge base');
   const changed = runGit([
     'diff',
     '--name-status',
