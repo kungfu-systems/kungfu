@@ -5,6 +5,80 @@ import { createHash } from 'node:crypto';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+const REPO_ROOT = path.resolve(
+  path.dirname(fileURLToPath(import.meta.url)),
+  '..',
+  '..',
+);
+const KFX_AUTHORITY_FIXTURE = path.join(
+  REPO_ROOT,
+  'framework',
+  'core',
+  'src',
+  'libkungfu',
+  'tests',
+  'fixtures',
+  'native_kfx_contract',
+  'buildchain-2.13.0-alpha.0-envelope.json',
+);
+
+function runKungfu(root, home, args) {
+  const executable = path.join(
+    root,
+    process.platform === 'win32' ? 'kungfu.exe' : 'kungfu',
+  );
+  const result = spawnSync(executable, ['-H', home, ...args], {
+    encoding: 'utf8',
+  });
+  if (result.error || result.status !== 0) {
+    throw new Error(
+      `qualification runtime failed (${result.error?.message || `exit ${result.status}`}): ${(result.stderr || result.stdout || '').trim()}`,
+    );
+  }
+  return result;
+}
+
+function runKungfuJson(root, home, args) {
+  const result = runKungfu(root, home, args);
+  try {
+    return JSON.parse(result.stdout);
+  } catch {
+    throw new Error(
+      `qualification runtime returned non-JSON output: ${result.stdout.slice(0, 200)}`,
+    );
+  }
+}
+
+function writeQualificationAuthority(root, home, packageDir, packageKey) {
+  const inspected = runKungfuJson(root, home, [
+    'kfx',
+    'native',
+    'inspect',
+    packageKey,
+    '--root',
+    `user=${path.dirname(packageDir)}`,
+  ]).package;
+  const fixture = JSON.parse(fs.readFileSync(KFX_AUTHORITY_FIXTURE, 'utf8'));
+  const projection = structuredClone(fixture.projection);
+  projection.attestation.bindings.packageRoot = inspected.packageRoot;
+  projection.trustInputs.packageRoot = inspected.packageRoot;
+  const authority = {
+    purpose: fixture.admission.purpose,
+    policy: fixture.admission.policy,
+    assessmentTime: fixture.assessmentTime,
+    authorizationTime: fixture.assessmentTime,
+    attestation: projection.attestation,
+    trustInputs: projection.trustInputs,
+    kfdAssessment: projection.kfdAssessment,
+    requestedCapabilities: inspected.declaredCapabilities,
+    approvalRoots: [],
+  };
+  const target = path.join(home, 'qualification-authority.json');
+  fs.writeFileSync(target, `${JSON.stringify(authority, null, 2)}\n`);
+  return target;
+}
 
 export function libwasmArtifactPaths(platform = process.platform) {
   const host =
@@ -92,13 +166,94 @@ export function runLibwasmExecutionQualification(
       root,
       platform === 'win32' ? 'kungfu-wasm-host.exe' : 'kungfu-wasm-host',
     );
+    const packageKey = 'libwasm-qualification';
+    const packageDir = path.join(temporary, 'packages', packageKey);
+    fs.mkdirSync(packageDir, { recursive: true });
+    const installedModule = path.join(packageDir, 'qualification.wasm');
+    fs.copyFileSync(module, installedModule);
+    fs.writeFileSync(
+      path.join(packageDir, 'kungfu.kfx.json'),
+      `${JSON.stringify(
+        {
+          schema: 'kungfu.kfx.manifest/v1',
+          name: 'libwasm-qualification',
+          version: '1.0.0',
+          kungfuConfig: {
+            key: packageKey,
+            name: 'libwasm qualification',
+            config: {
+              wasm: {
+                world: 'kungfu:journal/batch@1.0.0',
+                entry: 'qualification.wasm',
+                sha256: digest,
+                capabilities: ['journal.read.batch'],
+                engine: 'wasmtime',
+                fallback: 'wasmer',
+                limits: {
+                  fuel: 100000,
+                  memoryPages: 2,
+                  batchFrames: 1,
+                  moduleBytes: 4096,
+                  outputBytes: 64,
+                },
+              },
+            },
+          },
+        },
+        null,
+        2,
+      )}\n`,
+    );
+    const authority = writeQualificationAuthority(
+      root,
+      temporary,
+      packageDir,
+      packageKey,
+    );
+    runKungfu(root, temporary, [
+      'kfx',
+      'install',
+      packageDir,
+      '--authority-file',
+      authority,
+    ]);
+    const descriptor = runKungfuJson(root, temporary, [
+      'kfx',
+      'native',
+      'plan',
+      '--root',
+      `user=${path.join(temporary, 'extensions')}`,
+    ]).hostContract;
+    const authorization = descriptor.runtimeAuthorizations.find(
+      (candidate) =>
+        candidate.packageKey === packageKey && candidate.host === 'wasm',
+    );
+    if (!authorization?.executionAllowed) {
+      throw new Error(
+        'Core did not authorize the libwasm qualification package',
+      );
+    }
     const receipts = {};
     for (const engine of ['wasmtime', 'wasmer']) {
       const args = [
         '--runtime-dir',
-        temporary,
+        path.join(temporary, 'runtime'),
         '--module',
-        module,
+        installedModule,
+        '--package-key',
+        packageKey,
+        '--package-root',
+        authorization.packageRoot,
+        '--authorization-root',
+        authorization.authorizationRoot,
+        '--capability-grant-root',
+        authorization.capabilityGrantRoot,
+        '--generation-root',
+        descriptor.generationRoot,
+        '--cut-root',
+        descriptor.cutRoot,
+        '--revision',
+        String(descriptor.revision),
         '--expected-sha256',
         digest,
         '--world',
