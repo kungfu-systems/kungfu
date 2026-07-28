@@ -5,7 +5,7 @@
   "manifestPath": "framework/maintainability/semantic-amplification.manifest.json",
   "manifestRoot": "sha256:b8b9c591c4e123b18dadc49c7b2a1d4a9c4c06998b673d8ce8711575340764de",
   "baselineRef": "dbfed9ca1785d147b26f4f06e7e6895ac7368fee",
-  "sourceRoot": "sha256:79c8d7ec00991298abaeeea749fe56c1da1f5302d5626d4320e7d7d7cc122f65",
+  "sourceRoot": "sha256:e024dee567610198f2c5f6d9a8ec9851b109be9a376555fe94b3c8ceaba42961",
   "roles": {
     "authority": "exactly one authority route per family; the route may name multiple co-owned source files",
     "allowedProjectionRoles": [
@@ -383,9 +383,9 @@
         },
         {
           "path": "framework/core/src/python/kungfu/profile_sdk.py",
-          "currentLines": 3135,
+          "currentLines": 3138,
           "baselineLines": 3138,
-          "currentRoot": "sha256:17cc36818018ae1721305fe1d6298699730c1d83cf7f754746ce57910e3c63aa",
+          "currentRoot": "sha256:0ec3a1deb556908ba77ac8244de0bf58425b2a1ac01383ba193ecf2129c0ef5c",
           "baselineRoot": "sha256:fb62fb8c4e1e944811c954d22786ebaeb21ff45dbb3fc1db705feb37fbb5dc1c",
           "changedSinceBaseline": true
         },
@@ -560,9 +560,9 @@
         },
         {
           "path": "framework/core/src/python/kungfu/profile_sdk.py",
-          "currentLines": 3135,
+          "currentLines": 3138,
           "baselineLines": 3138,
-          "currentRoot": "sha256:17cc36818018ae1721305fe1d6298699730c1d83cf7f754746ce57910e3c63aa",
+          "currentRoot": "sha256:0ec3a1deb556908ba77ac8244de0bf58425b2a1ac01383ba193ecf2129c0ef5c",
           "baselineRoot": "sha256:fb62fb8c4e1e944811c954d22786ebaeb21ff45dbb3fc1db705feb37fbb5dc1c",
           "changedSinceBaseline": true
         },
