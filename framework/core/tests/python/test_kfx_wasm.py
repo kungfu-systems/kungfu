@@ -32,19 +32,14 @@ def _manifest(digest):
     }
 
 
-def test_wasm_run_spec_requires_consent_and_rehashes_artifact(tmp_path):
+def test_wasm_run_spec_rehashes_the_manifest_bound_artifact(tmp_path):
     package = tmp_path / "portable"
     module = package / "dist" / "guest.wasm"
     module.parent.mkdir(parents=True)
     module.write_bytes(b"\0asmfixture")
     digest = hashlib.sha256(module.read_bytes()).hexdigest()
 
-    with pytest.raises(ValueError, match="manifest declarations do not grant"):
-        kfx._wasm_run_spec(package, _manifest(digest), [])
-
-    config, resolved = kfx._wasm_run_spec(
-        package, _manifest(digest), ["journal.read.batch"]
-    )
+    config, resolved = kfx._wasm_run_spec(package, _manifest(digest))
     assert resolved == module
     assert config["world"] == "kungfu:journal/batch@1.0.0"
 

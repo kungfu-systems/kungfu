@@ -22,7 +22,7 @@ from pathlib import Path
 
 from kungfu import kfx_contract
 from kungfu.cli.commands import kfc, PrioritizedCommandGroup
-from kungfu.rewind import first_party
+from kungfu.kfx_host import authorize_host_launch
 from kungfu.storage import service as storage_service
 
 kfx_command_context = kfc.pass_context()
@@ -43,63 +43,30 @@ def _install_root(ctx):
     return os.path.join(ctx.home, "extensions")
 
 
-def _trusted(manifest):
-    return first_party.is_first_party(kfx_contract.package_key(manifest))
+def _authority_notice(package):
+    """Report only Core-derived grade, placement class, and exact grants."""
+
+    grant = package.get("authority") or {}
+    roles = package.get("productRoles") or []
+    return [
+        "[kfx] authority: "
+        f"supply-chain={package.get('supplyChainGrade', 'unverified')}, "
+        f"admission={package.get('admissionGrade', 'unverified')}, "
+        f"runtime={package.get('runtimeTier', 'isolated')}",
+        "[kfx]   grants: "
+        + (", ".join(package.get("grantedCapabilities") or []) or "none"),
+        "[kfx]   capabilityGrantRoot: "
+        + str(grant.get("capabilityGrantRoot") or "none"),
+        "[kfx]   product roles are assembly metadata only: "
+        + (", ".join(roles) or "none"),
+    ]
 
 
-def _trust_notice(manifest):
-    """The install-time trust disclosure (KF-ADR-019f86da-4f90-79f1-8716-aca36b142847): what tier each declared facet
-    runs at, decided by whether the package is in the frozen first-party set —
-    by verifiable source, never by the install path. Returns display lines."""
-    config = (manifest.get("kungfuConfig") or {}).get("config") or {}
-    trusted = _trusted(manifest)
-    origin = "first-party (trusted)" if trusted else "third-party (untrusted)"
-    lines = [f"[kfx] trust: {origin} — granted by source, not by install path"]
-    if "view" in config:
-        tier = (
-            "node-integrated (shares the shell, full access)"
-            if trusted
-            else "sandboxed-ipc (isolated renderer, only its declared capabilities)"
-        )
-        lines.append(f"[kfx]   view runs {tier}")
-    if "adapter" in config and not trusted:
-        lines.append(
-            "[kfx]   adapter will be REFUSED at trace time: an adapter runs "
-            "in-process in the traced program and cannot be sandboxed, so only a "
-            "source-verified first-party adapter may inject"
-        )
-    elif "adapter" in config:
-        lines.append("[kfx]   adapter may inject into traced runs (in-process)")
-    if "wasm" in config:
-        lines.append(
-            "[kfx]   wasm is VM-confined, but every declared host capability "
-            "still requires an explicit run-time grant"
-        )
-    return lines
-
-
-def _wasm_run_spec(package_dir, manifest, grants):
+def _wasm_run_spec(package_dir, manifest):
     config = (manifest.get("kungfuConfig") or {}).get("config") or {}
     wasm = config.get("wasm")
     if not isinstance(wasm, dict):
         raise ValueError("package has no kungfuConfig.config.wasm facet")
-    declared = set(wasm.get("capabilities") or [])
-    granted = set(grants)
-    if granted != declared:
-        missing = sorted(declared - granted)
-        extra = sorted(granted - declared)
-        detail = ", ".join(
-            part
-            for part in [
-                f"missing grants: {', '.join(missing)}" if missing else "",
-                f"undeclared grants: {', '.join(extra)}" if extra else "",
-            ]
-            if part
-        )
-        raise ValueError(
-            "manifest declarations do not grant authority; pass one explicit "
-            f"--grant per declared capability ({detail})"
-        )
     root = Path(package_dir).resolve()
     module = (root / str(wasm["entry"])).resolve()
     if root not in module.parents or not module.is_file():
@@ -153,9 +120,7 @@ def _native_authority_file(path):
     return authority
 
 
-def _native_mutation(
-    ctx, package_root, key, operation, first_party, authority, **values
-):
+def _native_mutation(ctx, package_root, key, operation, authority, **values):
     request = {
         **authority,
         "packageKey": key,
@@ -164,9 +129,6 @@ def _native_mutation(
     }
     if package_root is not None:
         request["roots"] = [{"kind": "user", "path": str(Path(package_root).resolve())}]
-        request["runtimeTiers"] = {
-            key: "first-party-pinned" if first_party else "untrusted",
-        }
     plan = storage_service.kfx_registry("plan", request, ctx.runtime_dir)
     package = next(
         (item for item in plan["packages"] if item.get("key") == key),
@@ -184,6 +146,7 @@ def _native_mutation(
         "expectedTrustRoot": package["trustRoot"],
         "expectedPackageRoot": package["packageRoot"],
         "expectedAuthorizationPlanRoot": plan["authorizationPlanRoot"],
+        "expectedCapabilityGrantRoot": plan["capabilityGrantRoot"],
         "expectedWarrantRoot": plan["warrantRoot"],
         "actor": "kungfu-cli",
     }
@@ -253,7 +216,6 @@ def install(ctx, source, force, authority_file):
                     package_root,
                     key,
                     operation,
-                    _trusted(manifest),
                     authority,
                     replaceExisting=force,
                 )
@@ -263,7 +225,6 @@ def install(ctx, source, force, authority_file):
                 source,
                 key,
                 operation,
-                _trusted(manifest),
                 authority,
                 replaceExisting=force,
             )
@@ -275,7 +236,10 @@ def install(ctx, source, force, authority_file):
         f"({kfx_contract.package_kind(manifest)}) -> {dest} "
         f"(Fact Cut revision {application['revision']})"
     )
-    for line in _trust_notice(manifest):
+    inspected = storage_service.kfx_registry(
+        "inspect", {"packageKey": key}, ctx.runtime_dir
+    )["package"]
+    for line in _authority_notice(inspected):
         click.echo(line)
 
 
@@ -295,7 +259,10 @@ def list_installed(ctx, as_json):
                 if "profile-suite" in package.get("facets", [])
                 else ",".join(package.get("facets", [])) or "package"
             ),
-            "trusted": package.get("runtimeTier") == "first-party-pinned",
+            "supplyChainGrade": package.get("supplyChainGrade", "unverified"),
+            "admissionGrade": package.get("admissionGrade", "unverified"),
+            "runtimeTier": package.get("runtimeTier", "isolated"),
+            "grantedCapabilities": package.get("grantedCapabilities", []),
             "path": package.get("path"),
             "desiredState": package["desiredState"],
             "observedState": package["observedState"],
@@ -315,10 +282,11 @@ def list_installed(ctx, as_json):
         if "error" in row:
             click.echo(f"{row['key']}  !{row['error']}")
         else:
-            trust = "first-party" if row["trusted"] else "third-party"
             click.echo(
                 f"{row['key']}  {row['package']}@{row['version']}  "
-                f"({row['kind']}, {trust})"
+                f"({row['kind']}, admission={row['admissionGrade']}, "
+                f"runtime={row['runtimeTier']}, "
+                f"grants={','.join(row['grantedCapabilities']) or 'none'})"
             )
 
 
@@ -347,7 +315,42 @@ def run_wasm(ctx, key, grants, source_namespace, source_name, engine):
     package_dir = os.path.join(_install_root(ctx), key)
     try:
         manifest = kfx_contract.read_manifest_from_dir(package_dir)
-        wasm, module = _wasm_run_spec(package_dir, manifest, grants)
+        wasm, module = _wasm_run_spec(package_dir, manifest)
+        descriptor = storage_service.kfx_registry("plan", {}, ctx.runtime_dir)[
+            "hostContract"
+        ]
+        candidate = next(
+            (
+                item
+                for item in descriptor["runtimeAuthorizations"]
+                if item.get("packageKey") == key and item.get("host") == "wasm"
+            ),
+            None,
+        )
+        if candidate is None:
+            raise ValueError("Core has no WASM host authorization for this package")
+        authorization = authorize_host_launch(
+            descriptor, key, "wasm", candidate["authorizationRoot"]
+        )
+        if sorted(grants) != sorted(authorization["grantedCapabilities"]):
+            raise ValueError(
+                "explicit --grant values must equal the current Core capability grant"
+            )
+        storage_service.kfx_registry(
+            "authorize-host",
+            {
+                "packageKey": key,
+                "host": "wasm",
+                "expectedCutRoot": descriptor["cutRoot"],
+                "expectedRevision": descriptor["revision"],
+                "expectedGenerationRoot": descriptor["generationRoot"],
+                "expectedPackageRoot": authorization["packageRoot"],
+                "expectedCapabilityGrantRoot": authorization["capabilityGrantRoot"],
+                "expectedAuthorizationRoot": authorization["authorizationRoot"],
+                "expectedGrantedCapabilities": authorization["grantedCapabilities"],
+            },
+            ctx.runtime_dir,
+        )
         host = _libwasm_host()
     except (OSError, KeyError, TypeError, ValueError, json.JSONDecodeError) as error:
         raise click.ClickException(str(error)) from error
@@ -358,6 +361,20 @@ def run_wasm(ctx, key, grants, source_namespace, source_name, engine):
         str(ctx.runtime_dir),
         "--module",
         str(module),
+        "--package-key",
+        key,
+        "--package-root",
+        authorization["packageRoot"],
+        "--authorization-root",
+        authorization["authorizationRoot"],
+        "--capability-grant-root",
+        authorization["capabilityGrantRoot"],
+        "--generation-root",
+        descriptor["generationRoot"],
+        "--cut-root",
+        descriptor["cutRoot"],
+        "--revision",
+        str(descriptor["revision"]),
         "--expected-sha256",
         wasm["sha256"],
         "--world",
@@ -408,14 +425,13 @@ def remove(ctx, key, authority_file):
         click.echo(f"[kfx] not installed: {key}", err=True)
         sys.exit(1)
     try:
-        manifest = kfx_contract.read_manifest_from_dir(dest)
+        kfx_contract.read_manifest_from_dir(dest)
         authority = _native_authority_file(authority_file)
         application = _native_mutation(
             ctx,
             None,
             key,
             "remove",
-            _trusted(manifest),
             authority,
         )
     except (OSError, RuntimeError, ValueError, json.JSONDecodeError) as error:
@@ -494,26 +510,8 @@ def _native_roots(values):
     return roots
 
 
-def _native_runtime_tiers(values):
-    tiers = {}
-    for value in values:
-        package_key, separator, tier = value.partition("=")
-        if not separator or not package_key or not tier:
-            raise click.BadParameter(
-                "runtime tiers use PACKAGE_KEY=TIER", param_hint="--runtime-tier"
-            )
-        if package_key in tiers:
-            raise click.BadParameter(
-                f"duplicate runtime tier: {package_key}", param_hint="--runtime-tier"
-            )
-        tiers[package_key] = tier
-    return tiers
-
-
-def _native_query(ctx, action, roots, runtime_tiers, **values):
+def _native_query(ctx, action, roots, **values):
     request = {"roots": _native_roots(roots), **values}
-    if runtime_tiers:
-        request["runtimeTiers"] = _native_runtime_tiers(runtime_tiers)
     click.echo(
         json.dumps(
             storage_service.kfx_registry(action, request, ctx.runtime_dir),
@@ -535,36 +533,32 @@ def _native_json_file(path, label):
 
 @native_group.command(name="list", help="list canonical KFX package candidates")
 @click.option("--root", "roots", multiple=True, required=True, help="KIND=PATH")
-@click.option("--runtime-tier", "runtime_tiers", multiple=True, help="KEY=TIER")
 @kfx_command_context
-def native_list(ctx, roots, runtime_tiers):
-    _native_query(ctx, "list", roots, runtime_tiers)
+def native_list(ctx, roots):
+    _native_query(ctx, "list", roots)
 
 
 @native_group.command(name="inspect", help="inspect one exact KFX package closure")
 @click.argument("package_key")
 @click.option("--root", "roots", multiple=True, required=True, help="KIND=PATH")
-@click.option("--runtime-tier", "runtime_tiers", multiple=True, help="KEY=TIER")
 @kfx_command_context
-def native_inspect(ctx, package_key, roots, runtime_tiers):
-    _native_query(ctx, "inspect", roots, runtime_tiers, packageKey=package_key)
+def native_inspect(ctx, package_key, roots):
+    _native_query(ctx, "inspect", roots, packageKey=package_key)
 
 
 @native_group.command(name="resolve", help="resolve one KFX Suite and Profile closure")
 @click.argument("suite_key")
 @click.option("--root", "roots", multiple=True, required=True, help="KIND=PATH")
-@click.option("--runtime-tier", "runtime_tiers", multiple=True, help="KEY=TIER")
 @kfx_command_context
-def native_resolve(ctx, suite_key, roots, runtime_tiers):
-    _native_query(ctx, "resolve", roots, runtime_tiers, suiteKey=suite_key)
+def native_resolve(ctx, suite_key, roots):
+    _native_query(ctx, "resolve", roots, suiteKey=suite_key)
 
 
 @native_group.command(name="plan", help="print the canonical fenced KFX load plan")
 @click.option("--root", "roots", multiple=True, required=True, help="KIND=PATH")
-@click.option("--runtime-tier", "runtime_tiers", multiple=True, help="KEY=TIER")
 @kfx_command_context
-def native_plan(ctx, roots, runtime_tiers):
-    _native_query(ctx, "plan", roots, runtime_tiers)
+def native_plan(ctx, roots):
+    _native_query(ctx, "plan", roots)
 
 
 @native_group.command(
@@ -585,10 +579,9 @@ def native_history(ctx, package_key):
 
 @native_group.command(name="status", help="print native KFX registry authority status")
 @click.option("--root", "roots", multiple=True, required=True, help="KIND=PATH")
-@click.option("--runtime-tier", "runtime_tiers", multiple=True, help="KEY=TIER")
 @kfx_command_context
-def native_status(ctx, roots, runtime_tiers):
-    _native_query(ctx, "status", roots, runtime_tiers)
+def native_status(ctx, roots):
+    _native_query(ctx, "status", roots)
 
 
 @native_group.group(
@@ -611,7 +604,6 @@ def _control_request(candidate, operation):
         request["roots"] = [
             {"kind": "product", "path": str(Path(candidate).expanduser().resolve())}
         ]
-        request["runtimeTiers"] = {"kfx-manager": "first-party-pinned"}
     return request
 
 
@@ -710,6 +702,7 @@ def native_control_apply(ctx, candidate, plan_file, authority_file, authorized_b
         "expectedControlPlanRoot": plan.get("controlPlanRoot"),
         "expectedBootstrapPolicyRoot": plan.get("bootstrapPolicyRoot"),
         "expectedAuthorizationPlanRoot": plan.get("authorizationPlanRoot"),
+        "expectedCapabilityGrantRoot": plan.get("capabilityGrantRoot"),
         "expectedWarrantRoot": plan.get("warrantRoot"),
         "actor": authorized_by,
     }
@@ -728,7 +721,6 @@ def native_control_apply(ctx, candidate, plan_file, authority_file, authorized_b
 )
 @click.argument("package_key")
 @click.option("--root", "roots", multiple=True, required=True, help="KIND=PATH")
-@click.option("--runtime-tier", "runtime_tiers", multiple=True, help="KEY=TIER")
 @click.option(
     "--operation",
     type=click.Choice(
@@ -778,7 +770,6 @@ def native_assess(
     ctx,
     package_key,
     roots,
-    runtime_tiers,
     operation,
     purpose,
     cut,
@@ -817,7 +808,7 @@ def native_assess(
         )
     if cached_dependency_root is not None:
         values["cachedDependencyRoot"] = cached_dependency_root
-    _native_query(ctx, "assess", roots, runtime_tiers, **values)
+    _native_query(ctx, "assess", roots, **values)
 
 
 @kfx.group(

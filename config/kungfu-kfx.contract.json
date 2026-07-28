@@ -1,7 +1,7 @@
 {
   "schema": "kungfu.kfx.contract/v1",
   "id": "kungfu-kfx",
-  "version": 10,
+  "version": 11,
   "weldedSurface": "kfx-contract",
   "description": "Single source for KFX package manifests, discovery rules, trust inputs, and build detection.",
   "contractSchema": {
@@ -129,9 +129,16 @@
     "packageManifestFile": "kungfu.kfx.json"
   },
   "knownCapabilities": [
+    "agentRuntime",
+    "agentSession",
     "domain",
+    "journal.read.batch",
+    "kfxControl",
     "ledger",
+    "process",
+    "profile",
     "rewind",
+    "storage",
     "terminal",
     "work"
   ],
@@ -416,16 +423,6 @@
                       "minLength": 1
                     },
                     "uniqueItems": true
-                  },
-                  "runtime": {
-                    "type": "string",
-                    "enum": [
-                      "node-integrated",
-                      "sandboxed-ipc"
-                    ]
-                  },
-                  "system": {
-                    "type": "boolean"
                   },
                   "settings": {
                     "type": "array",
@@ -916,6 +913,43 @@
       "profileLifecycle": "existing-kungfu.profile-lifecycle/v1",
       "receiptsAreTrustEvidence": false
     },
+    "coreCapabilityPolicy": {
+      "schema": "kungfu.kfx-core-capability-policy/v1",
+      "allowedCapabilities": [
+        "agentRuntime",
+        "agentSession",
+        "domain",
+        "journal.read.batch",
+        "kfxControl",
+        "ledger",
+        "process",
+        "profile",
+        "rewind",
+        "storage",
+        "terminal",
+        "work"
+      ],
+      "autoOperations": [
+        "activate",
+        "capability",
+        "enable",
+        "host-placement",
+        "inspect",
+        "install",
+        "qualify",
+        "system-role",
+        "update"
+      ],
+      "highConsequenceCapabilities": [
+        "agentRuntime",
+        "kfxControl",
+        "process",
+        "storage"
+      ],
+      "identityAuthority": false,
+      "productSystemAuthority": false,
+      "kfdAuthority": "eligibility-only"
+    },
     "canonicalRoots": {
       "sourceContractRoot": "core-computed",
       "nativeContractRoot": "core-computed",
@@ -959,6 +993,9 @@
       ]
     },
     "runtimeTiers": [
+      "isolated",
+      "integrated-explicit",
+      "metadata-only",
       "first-party-pinned",
       "verified-third-party",
       "untrusted"
@@ -1039,6 +1076,7 @@
           "allowedPublishers",
           "allowedContracts",
           "allowedVerifierRoots",
+          "allowedCapabilities",
           "autoOperations",
           "highConsequenceCapabilities",
           "systemCapabilities",
@@ -1051,6 +1089,7 @@
           "allowedPublishers",
           "allowedContracts",
           "allowedVerifierRoots",
+          "allowedCapabilities",
           "autoOperations",
           "highConsequenceCapabilities",
           "systemCapabilities",
@@ -1113,6 +1152,8 @@
           "admissionGrade",
           "runtimeAssessment",
           "fresh",
+          "corePolicyRoot",
+          "requestedPolicyRoot",
           "policyRoot",
           "trustInputRoot",
           "kfdAssessmentKey",
@@ -1137,6 +1178,8 @@
           "admissionGrade",
           "runtimeAssessment",
           "fresh",
+          "corePolicyRoot",
+          "requestedPolicyRoot",
           "policyRoot",
           "trustInputRoot",
           "kfdAssessmentKey",
@@ -1194,11 +1237,21 @@
           "reportRoot",
           "admissionPlanRoot",
           "receiptDependencyRoot",
+          "corePolicyRoot",
+          "requestedPolicyRoot",
           "policyRoot",
           "packageRoot",
           "dependencyRoot",
-          "approvalRoots"
+          "approvalRoots",
+          "capabilityDeclarationRoot",
+          "capabilityGrantRoot"
         ],
+        "capabilityGrant": {
+          "schema": "kungfu.kfx-capability-grant/v1",
+          "authority": "exact-declaration-core-policy-approval-and-work-warrant",
+          "ambientAuthority": false,
+          "productSystemAuthority": false
+        },
         "warrantLifecycle": [
           "planned",
           "issued-in-fact-cut",
@@ -1298,6 +1351,7 @@
         "expectedTrustRoot",
         "expectedPackageRoot",
         "expectedAuthorizationPlanRoot",
+        "expectedCapabilityGrantRoot",
         "expectedWarrantRoot"
       ],
       "mutationOperations": [
@@ -1318,7 +1372,7 @@
       "history": "pre-side-effect-warrant-cut-then-immutable-work-episode-settlement-facts"
     },
     "experienceFlowHost": {
-      "schema": "kungfu.kfx.experience-flow-host/v1",
+      "schema": "kungfu.kfx.experience-flow-host/v3",
       "surfaces": [
         "experience",
         "flow"
@@ -1331,6 +1385,27 @@
       ],
       "semanticAuthority": "libkungfu-graph-and-plan",
       "renderingAuthority": "host-native",
+      "authorizationSchema": "kungfu.kfx.host-authorization/v2",
+      "launchValidation": [
+        "packageRoot",
+        "reportRoot",
+        "corePolicyRoot",
+        "requestedPolicyRoot",
+        "policyRoot",
+        "admissionPlanRoot",
+        "capabilityDeclarationRoot",
+        "capabilityGrantRoot",
+        "warrantRoot",
+        "cutRoot",
+        "generationRoot"
+      ],
+      "placements": {
+        "gui": "sandboxed-ipc",
+        "wasm": "wasm-confined",
+        "service": "process-isolated",
+        "adapter": "integrated-disabled-without-explicit-runtime-grant",
+        "profile": "metadata-only"
+      },
       "optionalPresentation": "typed-dormant-with-semantic-contribution-retained"
     },
     "errors": [
@@ -1356,6 +1431,10 @@
       "KF_KFX_DEPENDENCY_CYCLE",
       "KF_KFX_EXTENSION_POINT_MISSING",
       "KF_KFX_CAPABILITY_BROADENING",
+      "KF_KFX_CAPABILITY_POLICY_REJECTED",
+      "KF_KFX_CAPABILITY_GRANT_STALE",
+      "KF_KFX_RUNTIME_ISOLATION_REQUIRED",
+      "KF_KFX_HOST_NOT_ADMITTED",
       "KF_KFX_ATTESTATION_INVALID",
       "KF_KFX_ATTESTATION_ROOT_MISMATCH",
       "KF_KFX_ATTESTATION_PRINCIPAL_REJECTED",

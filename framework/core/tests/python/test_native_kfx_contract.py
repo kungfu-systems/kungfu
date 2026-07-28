@@ -21,10 +21,7 @@ def _registry_request():
         / "roots"
         / "workspace"
     )
-    return {
-        "roots": [{"kind": "workspace", "path": str(root)}],
-        "runtimeTiers": {"optional-view": "verified-third-party"},
-    }
+    return {"roots": [{"kind": "workspace", "path": str(root)}]}
 
 
 def _assessment_request(tmp_path):
@@ -46,7 +43,8 @@ def _assessment_request(tmp_path):
     assert fixture["producer"]["version"] == "2.13.0-alpha.0"
     assert projection["contract"] == "kungfu-buildchain-kfx-admission-inputs"
     assert projection["envelopeRoot"] == fixture["expected"]["envelopeRoot"]
-    assert projection["trustInputs"]["packageRoot"] == package_root
+    projection["attestation"]["bindings"]["packageRoot"] = package_root
+    projection["trustInputs"]["packageRoot"] = package_root
     return {
         **request,
         **fixture["admission"],
@@ -217,8 +215,6 @@ def test_native_kfx_cli_projects_the_same_plan_root(tmp_path):
             "plan",
             "--root",
             f"{root['kind']}={root['path']}",
-            "--runtime-tier",
-            "optional-view=verified-third-party",
         ],
     )
 
@@ -252,8 +248,6 @@ def test_native_kfx_assessment_projects_one_report_across_python_and_cli(tmp_pat
             "optional-view",
             "--root",
             f"{root['kind']}={root['path']}",
-            "--runtime-tier",
-            "optional-view=verified-third-party",
             "--operation",
             request["operation"],
             "--purpose",

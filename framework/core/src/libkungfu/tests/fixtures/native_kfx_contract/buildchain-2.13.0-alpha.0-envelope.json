@@ -204,6 +204,12 @@
       "allowedVerifierRoots": [
         "sha256:7777777777777777777777777777777777777777777777777777777777777777"
       ],
+      "allowedCapabilities": [
+        "domain",
+        "journal.read.batch",
+        "kfxControl",
+        "profile"
+      ],
       "autoOperations": [
         "install",
         "update",
@@ -225,6 +231,6 @@
   "expected": {
     "envelopeRoot": "sha256:d46314fbc2e999e31216f677d2e6f5fa7c39ff00e69f7a1687af8da90165724c",
     "kfdReportRoot": "sha256:63670117b00f6a5de4a2af48aa0aa3cc06337b2768d611a67039dbf50d8cf444",
-    "coreReportRoot": "sha256:380e94e8f8179889046eab4d42e722bb01581b664c43467648ddcbf6a98ca243"
+    "coreReportRoot": "sha256:3d3b46c6fa1d584bd382e0bd362513a0d5686afcda15d5757ac08b877f05c6c3"
   }
 }

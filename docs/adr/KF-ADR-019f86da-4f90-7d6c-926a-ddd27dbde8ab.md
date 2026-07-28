@@ -4,7 +4,7 @@ doc_type: architecture-decision
 adr_id: KF-ADR-019f86da-4f90-7d6c-926a-ddd27dbde8ab
 decision_status: accepted
 implementation_status: partial
-implementation_prs: [https://github.com/kungfu-systems/kungfu/pull/571, https://github.com/kungfu-systems/kungfu/pull/568, https://github.com/kungfu-systems/kungfu/pull/731, https://github.com/kungfu-systems/kungfu/pull/734, https://github.com/kungfu-systems/kungfu/pull/906, https://github.com/kungfu-systems/kungfu/pull/922, https://github.com/kungfu-systems/kungfu/pull/942, https://github.com/kungfu-systems/kungfu/pull/975, https://github.com/kungfu-systems/kungfu/pull/1704, https://github.com/kungfu-systems/kungfu/pull/1718]
+implementation_prs: [https://github.com/kungfu-systems/kungfu/pull/571, https://github.com/kungfu-systems/kungfu/pull/568, https://github.com/kungfu-systems/kungfu/pull/731, https://github.com/kungfu-systems/kungfu/pull/734, https://github.com/kungfu-systems/kungfu/pull/906, https://github.com/kungfu-systems/kungfu/pull/922, https://github.com/kungfu-systems/kungfu/pull/942, https://github.com/kungfu-systems/kungfu/pull/975, https://github.com/kungfu-systems/kungfu/pull/1704, https://github.com/kungfu-systems/kungfu/pull/1718, https://github.com/kungfu-systems/kungfu/pull/1728]
 qualification_refs: [framework/core/src/libkungfu/tests/fixtures/native_kfx_contract/buildchain-2.13.0-alpha.0-envelope.json, framework/core/src/libkungfu/tests/native_kfx_contract_tests.cpp, framework/core/tests/python/test_native_kfx_contract.py, framework/core/tests/storage-node-binding.test.js, framework/api/tests/storage.test.ts]
 review_state: self-reviewed
 sensitivity: public
@@ -115,6 +115,17 @@ mutation, and first-party or Product/System identity supplies no ambient grant.
 Pinned-verifier authentication, runtime capability enforcement, and terminal
 identity-neutral qualification remain later stages, so implementation remains
 partial.
+
+PR #1728 makes KFD eligibility explicitly non-authorizing at runtime. Core
+intersects requested capabilities with both the exact package declaration and
+its embedded policy ceiling, requires explicit approvals for high-consequence
+capabilities, and binds the resulting grant to the Passport, policy,
+Work/Warrant, package, and prior Cut. Product System remains assembly metadata;
+first-party identity and KFD fitness provide no implicit grant. Runtime
+confinement and launch reauthorization reject any package, policy, capability,
+Cut, revision, generation, Warrant, or replay drift. Pinned-verifier
+authentication and terminal identity-neutral qualification remain later
+stages, so implementation remains partial.
 
 ## Decision
 

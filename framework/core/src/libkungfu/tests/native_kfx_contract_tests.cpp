@@ -62,8 +62,7 @@ nlohmann::json expected_registry_roots() {
 }
 
 nlohmann::json registry_request() {
-  return {{"roots", nlohmann::json::array({{{"kind", "workspace"}, {"path", registry_root().string()}}})},
-          {"runtimeTiers", {{"optional-view", "verified-third-party"}}}};
+  return {{"roots", nlohmann::json::array({{{"kind", "workspace"}, {"path", registry_root().string()}}})}};
 }
 
 void require_refusal(const std::string &code, const std::function<void()> &operation) {
@@ -101,7 +100,7 @@ void test_contract_is_versioned_and_core_owned() {
   require(first.at("contractVersion") == 3, "native contract version drifted");
   require(first.at("versionNegotiation").at("supported") == nlohmann::json::array({1, 2, 3}),
           "native contract stopped accepting frozen v1/v2 documents");
-  require(first.at("sourceContractVersion") == 10, "native contract did not expose its source compatibility version");
+  require(first.at("sourceContractVersion") == 11, "native contract did not expose its source compatibility version");
   require(first.at("runtimeTiers") != first.at("admissionGrades"),
           "runtime tier and admission grade were collapsed into one authority field");
   require(first.at("authority").at("owner") == "libkungfu", "native contract did not assign Core authority");
@@ -129,10 +128,13 @@ void test_contract_is_versioned_and_core_owned() {
   require(first.at("lifecycle").at("fences").front() == "expectedCutRoot" &&
               first.at("lifecycle").at("fences").at(1) == "expectedRevision" &&
               contains_text(first.at("lifecycle").at("fences"), "expectedAuthorizationPlanRoot") &&
+              contains_text(first.at("lifecycle").at("fences"), "expectedCapabilityGrantRoot") &&
               contains_text(first.at("lifecycle").at("fences"), "expectedWarrantRoot"),
           "native lifecycle did not freeze Cut plus authorization/Warrant fences");
   require(first.at("experienceFlowHost").at("renderingAuthority") == "host-native",
           "native contract claimed host rendering authority");
+  require(first.at("experienceFlowHost").at("authorizationSchema") == "kungfu.kfx.host-authorization/v2",
+          "native contract did not freeze exact-root host launch authorization");
   require(first.at("controlSuiteBootstrap").at("authority").at("selfGrant") == false &&
               first.at("controlSuiteBootstrap").at("policyRoot").get<std::string>().starts_with("sha256:"),
           "native contract did not embed the bounded Control Suite bootstrap ceiling");
@@ -168,8 +170,7 @@ void test_manifest_normalization_uses_the_embedded_source_contract() {
       {"version", "1.0.0"},
       {"name", "@example/view"},
       {"kungfuConfig",
-       {{"key", "example-view"},
-        {"config", {{"view", {{"runtime", "sandboxed-ipc"}, {"capabilities", nlohmann::json::array({"domain"})}}}}}}}};
+       {{"key", "example-view"}, {"config", {{"view", {{"capabilities", nlohmann::json::array({"domain"})}}}}}}}};
   const auto normalized = kfx::normalize_native_kfx_manifest(manifest);
   require(normalized == manifest, "valid manifest normalization changed semantic content");
   auto invalid = manifest;
@@ -222,8 +223,8 @@ void test_registry_produces_one_deterministic_cross_surface_plan() {
   const auto status = kfx::query_native_kfx_registry("status", request);
 
   require(listed.at("packages").size() == 3, "native registry did not find the Suite closure");
-  require(inspected.at("package").at("runtimeTier") == "verified-third-party",
-          "native registry lost the explicit runtime tier input");
+  require(inspected.at("package").at("runtimeTier") == "isolated",
+          "native registry did not derive its safe observation placement");
   require(inspected.at("package").at("admissionGrade") == "unverified",
           "native registry collapsed admission grade into runtime tier");
   require(resolved.at("suite").at("memberRoots").size() == 2, "native Suite closure is incomplete");
@@ -243,9 +244,14 @@ void test_registry_negative_and_concurrent_reads() {
   collision.at("roots").push_back(collision.at("roots").front());
   require_refusal("KF_KFX_ROOT_COLLISION", [&] { (void)kfx::query_native_kfx_registry("list", collision); });
 
-  auto unknown_host = request;
-  unknown_host["hostPlacements"] = {{"optional-view", nlohmann::json::array({"unknown-host"})}};
-  require_refusal("KF_KFX_HOST_UNKNOWN", [&] { (void)kfx::query_native_kfx_registry("plan", unknown_host); });
+  auto caller_placement = request;
+  caller_placement["hostPlacements"] = {{"optional-view", nlohmann::json::array({"gui"})}};
+  require_refusal("KF_KFX_AUTHORITY_CLAIM_FORBIDDEN",
+                  [&] { (void)kfx::query_native_kfx_registry("plan", caller_placement); });
+  auto caller_tier = request;
+  caller_tier["runtimeTiers"] = {{"optional-view", "first-party-pinned"}};
+  require_refusal("KF_KFX_AUTHORITY_CLAIM_FORBIDDEN",
+                  [&] { (void)kfx::query_native_kfx_registry("plan", caller_tier); });
 
   auto stale = request;
   stale["expectedRegistryRoot"] = "sha256:stale";
@@ -352,13 +358,13 @@ nlohmann::json assessment_request() {
           "round-trip fixture is not the public Buildchain KFX projection");
   require(projection.at("envelopeRoot") == fixture.at("expected").at("envelopeRoot"),
           "round-trip fixture envelope root drifted");
-  require(projection.at("trustInputs").at("packageRoot") == package_root,
-          "published Buildchain fixture does not bind the exact KFX package closure");
   request.update(fixture.at("admission"));
   request["assessmentTime"] = fixture.at("assessmentTime");
   request["attestation"] = projection.at("attestation");
   request["trustInputs"] = projection.at("trustInputs");
   request["kfdAssessment"] = projection.at("kfdAssessment");
+  request["attestation"]["bindings"]["packageRoot"] = package_root;
+  request["trustInputs"]["packageRoot"] = package_root;
   return request;
 }
 
@@ -383,7 +389,16 @@ nlohmann::json passport_authorized_request(nlohmann::json request, const std::st
   request["trustInputs"]["packageRoot"] = package_root;
   request["requestedCapabilities"] = package.at("declaredCapabilities");
   request["policy"]["autoOperations"] = nlohmann::json::array({"install", "update", "enable", "activate", "qualify"});
+  if (package_key == "kfx-manager")
+    request["policy"]["productSystemRoots"] = nlohmann::json::array({package_root});
   request["approvalRoots"] = nlohmann::json::array();
+  for (const auto &capability : request.at("requestedCapabilities")) {
+    if (capability == "agentRuntime" || capability == "kfxControl" || capability == "process" ||
+        capability == "storage") {
+      request["approvalRoots"].push_back(fixture_root('a'));
+      break;
+    }
+  }
   return request;
 }
 
@@ -426,6 +441,11 @@ void test_exact_buildchain_attestation_and_operation_admission() {
   require(first.at("admissionPlan").at("allowed"), "policy did not reduce friction for an exact attestation");
   require(first.at("trustReport").at("reportRoot").get<std::string>().starts_with("sha256:"),
           "TrustReport is not content-addressed");
+  require(first.at("trustReport").at("corePolicyRoot").get<std::string>().starts_with("sha256:") &&
+              first.at("trustReport").at("requestedPolicyRoot").get<std::string>().starts_with("sha256:") &&
+              first.at("trustReport").at("policyRoot") != first.at("trustReport").at("corePolicyRoot") &&
+              first.at("trustReport").at("policyRoot") != first.at("trustReport").at("requestedPolicyRoot"),
+          "effective admission policy did not bind distinct Core and requested policy roots");
   const auto actual_report_root = first.at("trustReport").at("reportRoot").get<std::string>();
   const auto expected_report_root =
       load_fixture("buildchain-2.13.0-alpha.0-envelope.json").at("expected").at("coreReportRoot").get<std::string>();
@@ -447,6 +467,16 @@ void test_exact_buildchain_attestation_and_operation_admission() {
   auto incomplete_policy = request;
   incomplete_policy["policy"].erase("residualRisk");
   require_refusal("KF_KFX_SCHEMA_INVALID", [&] { (void)kfx::query_native_kfx_registry("assess", incomplete_policy); });
+
+  auto authority_expansion = request;
+  authority_expansion["policy"]["allowedCapabilities"].push_back("filesystem.write");
+  require_refusal("KF_KFX_CAPABILITY_POLICY_REJECTED",
+                  [&] { (void)kfx::query_native_kfx_registry("assess", authority_expansion); });
+
+  auto automatic_operation_expansion = request;
+  automatic_operation_expansion["policy"]["autoOperations"].push_back("migration");
+  require_refusal("KF_KFX_CAPABILITY_POLICY_REJECTED",
+                  [&] { (void)kfx::query_native_kfx_registry("assess", automatic_operation_expansion); });
 
   auto ambiguous_inputs = request;
   ambiguous_inputs["trustInputs"]["unversionedHint"] = true;
@@ -550,8 +580,8 @@ void test_exact_buildchain_attestation_and_operation_admission() {
   system["policy"]["productSystemRoots"].push_back(system["attestation"]["bindings"]["packageRoot"]);
   const auto system_report = kfx::query_native_kfx_registry("assess", system);
   require(system_report.at("trustReport").at("admissionGrade") == "product-system",
-          "Product assembly did not assign System authority to its exact eligible root");
-  require(system_report.at("admissionPlan").at("allowed"), "eligible Product System assignment was refused");
+          "Product assembly metadata did not bind its exact eligible root");
+  require(system_report.at("admissionPlan").at("allowed"), "eligible Product System metadata assignment was refused");
 
   auto identity = request;
   identity.erase("attestation");
@@ -574,8 +604,10 @@ void test_semantic_graph_and_host_contract_are_canonical() {
   const auto second = kfx::query_native_kfx_registry("plan", request);
   const auto expected = expected_registry_roots();
   require(first == second, "semantic graph and plan roots are not deterministic");
-  require(first.at("graphRoot") == expected.at("semanticGraphRoot"),
-          "C++ semantic graph drifted from the cross-language fixture");
+  require(
+      first.at("graphRoot") == expected.at("semanticGraphRoot"),
+      "C++ semantic graph drifted from the cross-language fixture: actual=" + first.at("graphRoot").get<std::string>() +
+          " expected=" + expected.at("semanticGraphRoot").get<std::string>());
   require(first.at("authorityMode") == "observation-preview" && first.at("cutRoot").is_null() &&
               first.at("revision") == 0 && first.at("planRoot").get<std::string>().starts_with("sha256:") &&
               first.at("hostContract").at("receiptDependencyRoot").get<std::string>().starts_with("sha256:"),
@@ -596,7 +628,7 @@ void test_semantic_graph_and_host_contract_are_canonical() {
           "contributes-to composition transferred extension-point ownership");
   require(contribution.at("state") == "active", "optional provider loss hid an active semantic contribution");
   const auto &host = first.at("hostContract");
-  require(host.at("schema") == "kungfu.kfx.experience-flow-host/v2" && host.at("planRoot") == first.at("planRoot") &&
+  require(host.at("schema") == "kungfu.kfx.experience-flow-host/v3" && host.at("planRoot") == first.at("planRoot") &&
               host.at("graphRoot") == first.at("graphRoot"),
           "Experience/Flow descriptor did not bind the exact graph and plan");
   require(host.at("admission").at("state") == "preview-only" && host.at("cutRoot").is_null() &&
@@ -691,6 +723,7 @@ nlohmann::json mutation_request(const nlohmann::json &request, const nlohmann::j
   mutation["expectedGraphRoot"] = plan.at("graphRoot");
   mutation["expectedPlanRoot"] = plan.at("planRoot");
   mutation["expectedAuthorizationPlanRoot"] = plan.at("authorizationPlanRoot");
+  mutation["expectedCapabilityGrantRoot"] = plan.at("capabilityGrantRoot");
   mutation["expectedWarrantRoot"] = plan.at("warrantRoot");
   for (const auto &package : plan.at("packages")) {
     if (package.at("key") != package_key)
@@ -709,8 +742,7 @@ nlohmann::json control_request(const fs::path &candidate, const std::string &ope
       {{"controller", "kungfu-kfx-control-suite"},
        {"packageKey", "kfx-manager"},
        {"operation", operation},
-       {"roots", nlohmann::json::array({{{"kind", "product"}, {"path", candidate.string()}}})},
-       {"runtimeTiers", {{"kfx-manager", "first-party-pinned"}}}},
+       {"roots", nlohmann::json::array({{{"kind", "product"}, {"path", candidate.string()}}})}},
       "kfx-manager", operation);
 }
 
@@ -730,6 +762,7 @@ nlohmann::json control_mutation(const nlohmann::json &request, const nlohmann::j
   mutation["expectedControlPlanRoot"] = plan.at("controlPlanRoot");
   mutation["expectedBootstrapPolicyRoot"] = plan.at("bootstrapPolicyRoot");
   mutation["expectedAuthorizationPlanRoot"] = plan.at("authorizationPlanRoot");
+  mutation["expectedCapabilityGrantRoot"] = plan.at("capabilityGrantRoot");
   mutation["expectedWarrantRoot"] = plan.at("warrantRoot");
   mutation["actor"] = authorization_id;
   return mutation;
@@ -749,9 +782,8 @@ void test_native_lifecycle_uses_fact_work_and_named_cut_authority() {
            fs::copy_options::recursive);
   const auto runtime_dir = home / "runtime";
   const auto source_request = passport_authorized_request(
-      {{"roots", nlohmann::json::array({{{"kind", "user"}, {"path", source_root.string()}}})},
-       {"runtimeTiers", {{"optional-view", "verified-third-party"}}}},
-      "optional-view", "install");
+      {{"roots", nlohmann::json::array({{{"kind", "user"}, {"path", source_root.string()}}})}}, "optional-view",
+      "install");
   const auto install_plan = kfx::query_native_kfx_registry("plan", source_request, runtime_dir.string());
   auto missing_authorization = mutation_request(source_request, install_plan, "optional-view", "install");
   missing_authorization.erase("authorizationTime");
@@ -792,11 +824,14 @@ void test_native_lifecycle_uses_fact_work_and_named_cut_authority() {
   const auto expected = expected_registry_roots();
   require(install_plan.at("registryRoot") == expected.at("lifecycleRegistryRoot") &&
               install_plan.at("graphRoot") == expected.at("lifecycleGraphRoot"),
-          "C++ observation snapshot drifted before Fact admission");
+          "C++ observation snapshot drifted before Fact admission: registry=" +
+              install_plan.at("registryRoot").get<std::string>() +
+              " graph=" + install_plan.at("graphRoot").get<std::string>());
   require(install.at("revision") == 2 && install.at("cutRoot").get<std::string>().starts_with("sha256:") &&
               install.at("receipt").at("schema") == "kungfu.kfx.work-settlement-receipt/v1" &&
               install.at("receipt").at("outcome") == "applied" && install.at("receipt").at("authorityRevision") == 1 &&
               install.at("receipt").at("authorizationPlanRoot") == install_plan.at("authorizationPlanRoot") &&
+              install.at("receipt").at("capabilityGrantRoot") == install_plan.at("capabilityGrantRoot") &&
               install.at("receipt").at("warrantRoot") == install_plan.at("warrantRoot") &&
               install.at("receipt").at("authorityRoots").contains("reportRoot") &&
               install.at("receipt").at("authorityRoots").contains("admissionPlanRoot") &&
@@ -817,8 +852,33 @@ void test_native_lifecycle_uses_fact_work_and_named_cut_authority() {
   const auto admitted_plan = kfx::query_native_kfx_registry("plan", nlohmann::json::object(), runtime_dir.string());
   require(admitted_plan.at("hostContract").at("admission").at("state") == "admitted" &&
               admitted_plan.at("hostContract").at("cutRoot") == install.at("cutRoot") &&
-              admitted_plan.at("hostContract").at("generation").at("revision") == 2,
+              admitted_plan.at("hostContract").at("generation").at("revision") == 2 &&
+              admitted_plan.at("hostContract").at("runtimeAuthorizations").front().at("executionAllowed"),
           "settled Fact Cut did not produce one exact admitted host generation");
+  const auto &host_contract = admitted_plan.at("hostContract");
+  const auto &host_authorization = host_contract.at("runtimeAuthorizations").front();
+  const nlohmann::json host_request = {{"packageKey", "optional-view"},
+                                       {"host", host_authorization.at("host")},
+                                       {"expectedCutRoot", host_contract.at("cutRoot")},
+                                       {"expectedRevision", host_contract.at("revision")},
+                                       {"expectedGenerationRoot", host_contract.at("generationRoot")},
+                                       {"expectedPackageRoot", host_authorization.at("packageRoot")},
+                                       {"expectedCapabilityGrantRoot", host_authorization.at("capabilityGrantRoot")},
+                                       {"expectedAuthorizationRoot", host_authorization.at("authorizationRoot")},
+                                       {"expectedGrantedCapabilities", host_authorization.at("grantedCapabilities")}};
+  const auto launch = kfx::query_native_kfx_registry("authorize-host", host_request, runtime_dir.string());
+  require(launch.at("executionAllowed") && launch.at("authorization").at("placement") == "sandboxed-ipc",
+          "host launch did not retain the exact grant and physical confinement");
+  auto replayed_grant = host_request;
+  replayed_grant["expectedCapabilityGrantRoot"] = fixture_root('f');
+  require_refusal("KF_KFX_CAPABILITY_GRANT_STALE", [&] {
+    (void)kfx::query_native_kfx_registry("authorize-host", replayed_grant, runtime_dir.string());
+  });
+  auto stale_generation = host_request;
+  stale_generation["expectedGenerationRoot"] = fixture_root('e');
+  require_refusal("KF_KFX_GENERATION_MISMATCH", [&] {
+    (void)kfx::query_native_kfx_registry("authorize-host", stale_generation, runtime_dir.string());
+  });
 
   require_refusal("KF_KFX_CUT_STALE", [&] {
     (void)kfx::query_native_kfx_registry(
