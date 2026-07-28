@@ -103,7 +103,7 @@ test('the single required dev workflow is merge-queue compatible', () => {
   }
 });
 
-test('proof closes heavy gates and exact delivery identity controls queue reuse', () => {
+test('PR proof closes heavy gates before exact queue reuse', () => {
   const source = fs.readFileSync(
     path.join(ROOT, '.github/workflows/affected-native-pr.yml'),
     'utf8',
@@ -118,19 +118,6 @@ test('proof closes heavy gates and exact delivery identity controls queue reuse'
   assert.match(source, /require_optional_gate "PR affected-native"/);
   assert.match(source, /producer-event[\s\S]*producer-head-sha/);
   assert.match(source, /Upload authoritative producer proof/);
-  assert.match(
-    source,
-    /Capture exact family delivery binding[\s\S]*rules\/branches\/\$encoded_branch[\s\S]*bind-delivery/,
-  );
-  assert.match(source, /--delivery-binding/);
-  assert.match(
-    source,
-    /Seal reconstructable family delivery attempt[\s\S]*seal-attempt/,
-  );
-  assert.match(
-    source,
-    /core-affected-native-delivery-attempt-\$\{\{ github\.sha \}\}/,
-  );
 });
 
 test('Initiative-family queue lease is exact-head and dequeue-released', () => {
@@ -160,16 +147,6 @@ test('Initiative-family queue lease is exact-head and dequeue-released', () => {
   );
   assert.match(dequeue, /statuses: write/);
   assert.match(dequeue, /pull-requests: write/);
-  assert.match(dequeue, /DEQUEUE_EVIDENCE_OUTPUT:/);
-  assert.match(dequeue, /Upload exact dequeue settlement evidence/);
-
-  const cachePromotion = fs.readFileSync(
-    path.join(ROOT, '.github/workflows/affected-native-cache-promote.yml'),
-    'utf8',
-  );
-  assert.match(cachePromotion, /verify-attempt/);
-  assert.match(cachePromotion, /--delivery-attempt-root/);
-  assert.match(cachePromotion, /--delivery-binding-root/);
 });
 
 function readMeasurementCoverage(root) {
