@@ -38,7 +38,7 @@ test('live activation planning is deterministic and remains non-executable', asy
     privateVulnerabilityReporting: true,
     activeRulesets: [
       {
-        name: 'Buildchain dev merge queue: dev/v4/v4.0',
+        name: 'Buildchain dev merge queue: admitted dev channel family',
         enforcement: 'active',
       },
     ],

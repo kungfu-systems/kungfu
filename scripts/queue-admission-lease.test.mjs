@@ -37,7 +37,23 @@ test('queue admission lease has distinct PR-head and merge-group authorities', (
   assert.equal(CONTRACT.admission.requiredPosition, 1);
   assert.equal(CONTRACT.admission.freshProjectCutReplay, true);
   assert.equal(CONTRACT.revocation.sameHeadRetry, 'forbidden-after-revocation');
+  assert.equal(CONTRACT.admittedFamily.minimumMajor, 4);
+  assert.deepEqual(CONTRACT.admittedFamily.include, ['refs/heads/dev/v*/v*']);
+  assert.deepEqual(CONTRACT.admittedFamily.exclude, [
+    'refs/heads/dev/v1/v*',
+    'refs/heads/dev/v2/v*',
+    'refs/heads/dev/v3/v*',
+  ]);
   assert.equal(CONTRACT.rulesetActivation.required, true);
+  assert.equal(CONTRACT.rulesetActivation.rulesetId, 19057118);
+  assert.equal(
+    CONTRACT.rulesetActivation.rulesetName,
+    'Buildchain dev merge queue: admitted dev channel family',
+  );
+  assert.deepEqual(CONTRACT.rulesetActivation.target, {
+    include: CONTRACT.admittedFamily.include,
+    exclude: CONTRACT.admittedFamily.exclude,
+  });
   assert.equal(CONTRACT.rulesetActivation.expectedSource, 'any');
 });
 

@@ -10,6 +10,7 @@ import { pathToFileURL } from 'node:url';
 
 import { observeNativeToolchain } from './affected-native-proof.mjs';
 import telemetry from './candidate-timeline-events.cjs';
+import { devMergeBaseCandidates } from './candidate-timeline-events.cjs';
 import { writeShifuGateEvidence } from './shifu-gate-evidence.mjs';
 
 const { measureCandidateStage } = telemetry;
@@ -693,7 +694,7 @@ function git(...args) {
 
 function parseArgs(argv) {
   const options = {
-    base: process.env.GITHUB_BASE_SHA || 'origin/dev/v4/v4.0',
+    base: process.env.GITHUB_BASE_SHA || devMergeBaseCandidates()[0],
     head: process.env.GITHUB_HEAD_SHA || 'HEAD',
     changedFiles: [],
     json: false,

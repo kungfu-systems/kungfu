@@ -7,6 +7,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+import { resolveDevBranch } from './candidate-timeline-events.cjs';
 import {
   exposeGateMeasurementPython,
   exposeGateMeasurementRunnerTemp,
@@ -135,7 +136,9 @@ function prepareWorkspace() {
 }
 
 function prepareHistory() {
-  prepareGateMeasurementHistory(process.cwd(), { baseRef: 'dev/v4/v4.0' });
+  prepareGateMeasurementHistory(process.cwd(), {
+    baseRef: resolveDevBranch(),
+  });
 }
 
 // Dependency installation, catalog bootstrap, and managed Python materialization

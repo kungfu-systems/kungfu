@@ -10,6 +10,8 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+import { devMergeBaseCandidates } from './candidate-timeline-events.cjs';
+
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, '..');
 const args = process.argv.slice(2);
@@ -117,12 +119,7 @@ function mergeBase() {
     '--symbolic-full-name',
     '@{upstream}',
   ]);
-  const candidates = [
-    upstream,
-    'origin/HEAD',
-    'origin/dev/v4/v4.0',
-    'dev/v4/v4.0',
-  ].filter(Boolean);
+  const candidates = [upstream, ...devMergeBaseCandidates()].filter(Boolean);
   for (const ref of candidates) {
     const base = gitMaybe(['merge-base', String(ref), 'HEAD']);
     if (base) return base;

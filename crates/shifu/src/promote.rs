@@ -26,8 +26,9 @@ use std::process::Command;
 use shifu_core::{host, json, style};
 
 use crate::artifact_catalog::{
-    automatic, compact_branch, git_relation, json_escape, select_unique_automatic, short_sha,
-    state_for, write_promotion_receipt, GitRelation, SelectionError,
+    automatic, compact_branch, git_relation, json_escape, product_mainline_ref,
+    select_unique_automatic, short_sha, state_for, write_promotion_receipt, GitRelation,
+    SelectionError,
 };
 use crate::{envfile, util};
 
@@ -188,7 +189,7 @@ fn build_previewable(entry: &BuildEntry) -> bool {
         && !entry.sha.ends_with("-dirty")
         && matches!(entry.kind.as_str(), "app" | "installer" | "appimage")
         && entry.slot.join(&entry.artifact).exists()
-        && entry.mainline_ref == "origin/dev/v4/v4.0"
+        && entry.mainline_ref == product_mainline_ref()
         && product_manifests_valid(entry)
 }
 
@@ -867,7 +868,7 @@ mod tests {
             kind: "app".into(),
             artifact: "Kungfu Episodes.app".into(),
             digest: "digest".into(),
-            mainline_ref: "origin/dev/v4/v4.0".into(),
+            mainline_ref: "origin/HEAD".into(),
             mainline_sha: "1111111111111111111111111111111111111111".into(),
             integrated: true,
             qualified: true,

@@ -89,8 +89,23 @@ test('focused measurement bootstraps without remote Action downloads', () => {
   );
   assert.match(
     focusedJob[1],
-    /KUNGFU_GATE_SOURCE_REF[\s\S]*refs\/heads\/dev\/v4\/v4\.0/,
-    'focused measurement must fetch only the locked source and history base',
+    /KUNGFU_GATE_DEFAULT_BRANCH: \$\{\{ github\.event\.repository\.default_branch \}\}/,
+    'focused measurement must derive its history base from repository authority',
+  );
+  assert.match(
+    focusedJob[1],
+    /KUNGFU_GATE_SOURCE_REF[\s\S]*refs\/heads\/\$\{KUNGFU_GATE_DEFAULT_BRANCH\}:refs\/remotes\/origin\/\$\{KUNGFU_GATE_DEFAULT_BRANCH\}/,
+    'Unix focused measurement must fetch only the locked source and dynamic history base',
+  );
+  assert.match(
+    focusedJob[1],
+    /KUNGFU_GATE_SOURCE_REF[\s\S]*refs\/heads\/\$\(\$env:KUNGFU_GATE_DEFAULT_BRANCH\):refs\/remotes\/origin\/\$\(\$env:KUNGFU_GATE_DEFAULT_BRANCH\)/,
+    'Windows focused measurement must fetch only the locked source and dynamic history base',
+  );
+  assert.doesNotMatch(
+    focusedJob[1],
+    /dev\/v\d+\/v\d+\.\d+/,
+    'focused measurement must not bind a versioned dev branch',
   );
   assert.match(
     focusedJob[1],

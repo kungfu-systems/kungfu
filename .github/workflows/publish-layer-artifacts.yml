@@ -50,7 +50,8 @@ jobs:
           test "$conclusion" = success
           sha="$(gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${RUN_ID}" --jq .head_sha)"
           if test "$PUBLICATION_SCOPE" = portable-format-alpha; then
-            relation="$(gh api "repos/${GITHUB_REPOSITORY}/compare/${sha}...dev/v4/v4.0" --jq .status)"
+            default_branch="$(gh api "repos/${GITHUB_REPOSITORY}" --jq .default_branch)"
+            relation="$(gh api "repos/${GITHUB_REPOSITORY}/compare/${sha}...${default_branch}" --jq .status)"
             test "$relation" = ahead || test "$relation" = identical
           fi
           echo "source-sha=$sha" >> "$GITHUB_OUTPUT"

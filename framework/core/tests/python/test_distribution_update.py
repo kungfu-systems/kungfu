@@ -1490,7 +1490,7 @@ def test_local_dogfood_residency_binds_product_mainline_profile_and_rollback(
                 "KUNGFU_INSTALLED_BUILD_ID='current-build'",
                 f"KUNGFU_INSTALLED_ARTIFACT='{artifact}'",
                 "KUNGFU_INSTALLED_DIGEST='sha256:" + "c" * 64 + "'",
-                "KUNGFU_INSTALLED_MAINLINE_REF='origin/dev/v4/v4.0'",
+                "KUNGFU_INSTALLED_MAINLINE_REF='origin/HEAD'",
                 f"KUNGFU_INSTALLED_MAINLINE_SHA='{commit}'",
                 "KUNGFU_INSTALLED_INTEGRATED='true'",
                 "KUNGFU_INSTALLED_QUALIFIED='true'",

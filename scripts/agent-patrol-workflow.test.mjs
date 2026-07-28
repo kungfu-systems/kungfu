@@ -16,7 +16,10 @@ test('Agent Patrol is weekly or manual only on the protected default branch', ()
   assert.match(workflow, /^ {2}workflow_dispatch:\s*$/m);
   assert.doesNotMatch(workflow, /^\s+(?:pull_request|push):/m);
   assert.match(workflow, /github\.repository == 'kungfu-systems\/kungfu'/);
-  assert.match(workflow, /github\.ref == 'refs\/heads\/dev\/v4\/v4\.0'/);
+  assert.match(
+    workflow,
+    /github\.ref == format\('refs\/heads\/\{0\}', github\.event\.repository\.default_branch\)/,
+  );
   assert.match(workflow, /github\.ref_protected == true/);
   assert.match(workflow, /permissions:\n {2}contents: read/);
 });
