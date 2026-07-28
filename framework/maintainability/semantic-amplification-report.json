@@ -5,7 +5,7 @@
   "manifestPath": "framework/maintainability/semantic-amplification.manifest.json",
   "manifestRoot": "sha256:b8b9c591c4e123b18dadc49c7b2a1d4a9c4c06998b673d8ce8711575340764de",
   "baselineRef": "dbfed9ca1785d147b26f4f06e7e6895ac7368fee",
-  "sourceRoot": "sha256:2687217d324f6666a9774d4f87c41762be5c2b11f32c4bb8034f169887d72a5b",
+  "sourceRoot": "sha256:b29c365109a5d9327dcb61ae8804d07dd0d0f83b4c8ae240f9693acef2e40b82",
   "roles": {
     "authority": "exactly one authority route per family; the route may name multiple co-owned source files",
     "allowedProjectionRoles": [
@@ -1044,7 +1044,7 @@
           "path": "shifu.gates.json",
           "currentLines": 2196,
           "baselineLines": 2196,
-          "currentRoot": "sha256:a805d2e7481c47af35a06c8ee18fe5aad787e6e1447653e2b184b41a19d90fae",
+          "currentRoot": "sha256:94030db29ba8eccd112d2e2dc24afe18466fc2d6e396f3f3daa5cca317e6cd47",
           "baselineRoot": "sha256:dc351c7747dc7005f899524caf61a63cb5edc294924aa958db6bd6aec563cb93",
           "changedSinceBaseline": true
         },
