@@ -633,7 +633,6 @@ def test_kfd3_qualification_rejects_custom_view_mutation_boundary(tmp_path):
     manifest["kungfuConfig"]["config"] = {
         "view": {
             "title": "Private mutation view",
-            "runtime": "node-integrated",
             "capabilities": ["profile"],
         }
     }
@@ -661,7 +660,6 @@ def test_kfd3_qualification_allows_capability_free_sandboxed_view(tmp_path):
     manifest["kungfuConfig"]["config"] = {
         "view": {
             "title": "Presentational view",
-            "runtime": "sandboxed-ipc",
             "capabilities": [],
         }
     }
@@ -677,6 +675,7 @@ def test_kfd3_qualification_allows_capability_free_sandboxed_view(tmp_path):
     receipt = profile_sdk.qualify_kfd3(source, runtime)
 
     assert receipt["noBypass"]["customViews"][0]["passed"] is True
+    assert receipt["noBypass"]["customViews"][0]["runtime"] == "sandboxed-ipc"
     assert receipt["noBypass"]["customViews"][0]["bundleRoot"].startswith("sha256:")
 
 
