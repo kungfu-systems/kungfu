@@ -197,6 +197,8 @@ test('AWS Linux burst workflow is trusted exact-train qualification only', () =>
     workflow,
     /aws-codebuild-project: kungfu-buildchain-linux-burst-poc/,
   );
+  assert.match(workflow, /permissions:\n {2}contents: read/);
+  assert.doesNotMatch(workflow, /\b(?:id-token|packages):\s*write/);
   assert.match(workflow, /publish-channel: none/);
   assert.match(workflow, /release-candidate: false/);
   assert.match(workflow, /artifact-transfer-mode: github-artifacts/);
