@@ -13,6 +13,10 @@
     "type": "product",
     "displayName": "Kungfu Episodes",
     "extensions": "dependencies",
+    "extensionPackages": [
+      "@kungfu-tech/kfx-agent-work-lab-experience",
+      "@kungfu-tech/kfx-suite-agent-work-lab"
+    ],
     "surfaces": [
       "gui",
       "tui",
@@ -35,7 +39,6 @@
     "@kungfu-tech/core": "workspace:*",
     "@kungfu-tech/gui": "workspace:*",
     "@kungfu-tech/kfx-adapter-langchain": "workspace:*",
-    "@kungfu-tech/kfx-agent-work-lab-experience": "workspace:*",
     "@kungfu-tech/kfx-dogfood-actions": "workspace:*",
     "@kungfu-tech/kfx-dogfood-assessment": "workspace:*",
     "@kungfu-tech/kfx-dogfood-contract": "workspace:*",
@@ -43,7 +46,6 @@
     "@kungfu-tech/kfx-work-control-assessment": "workspace:*",
     "@kungfu-tech/kfx-work-control-contract": "workspace:*",
     "@kungfu-tech/kfx-work-control-views": "workspace:*",
-    "@kungfu-tech/kfx-suite-agent-work-lab": "workspace:*",
     "@kungfu-tech/kfx-suite-dogfood-feedback": "workspace:*",
     "@kungfu-tech/kfx-suite-work-control": "workspace:*",
     "@kungfu-tech/kfx-suite-system": "workspace:*",
