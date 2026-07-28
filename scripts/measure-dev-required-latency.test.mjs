@@ -999,12 +999,12 @@ test('an overall passing window cannot mask a native P95 violation', () => {
   assert.equal(value.statistics.all.p95Ms, 120000);
   assert.equal(value.statistics.native.p95Ms, 700000);
   assert.equal(value.verdict.qualified, false);
-  assert.equal(
-    value.verdict.reason,
-    'observed overall or native sample exceeds target',
-  );
+  assert.match(value.verdict.reason, /native sample exceeds target/);
+  records[10].classification.kind = 'unknown';
+  const incomplete = report('owner/repo', 'dev', ['required'], records);
+  assert.equal(incomplete.statistics.unknown.sampleCount, 1);
+  assert.match(incomplete.verdict.reason, /unknown impact attribution/);
 });
-
 test('summary reports sample count and queue-inclusive distribution', () => {
   assert.deepEqual(
     summarize([
