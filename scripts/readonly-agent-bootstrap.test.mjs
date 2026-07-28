@@ -260,6 +260,8 @@ test('declared discovery routes are zero-write in a cold read-only fixture', (t)
     'framework/core/package.json',
     'pnpm-lock.yaml',
     'framework/release/buildchain-kfd-runtime.mjs',
+    'config/primitive/kungfu-primitive-catalog.contract.json',
+    'framework/core/src/libkungfu/include/kungfu/sdk/generated/primitive_catalog_v2.hpp',
     'docs/qualification/gates/release-admission-policy.json',
     'framework/core/src/python/kungfu/agent/documentation.py',
     'framework/core/src/python/kungfu/cli/surface_contract.py',
