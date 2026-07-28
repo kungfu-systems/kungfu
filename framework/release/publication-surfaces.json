@@ -117,7 +117,14 @@
           "classification": "non-publication",
           "owner": "kungfu-ci",
           "surfaceIds": [],
-          "sourceRoot": "sha256:1d9a795b7e1b4bf7dbbc34e5801d8c4209fb89de088da668a8bddd98e7db6f87"
+          "sourceRoot": "sha256:2d804b7ff0604ce5bb02089ec7ad9750db6a38a47d4934c7e3795eef2be9e84d"
+        },
+        {
+          "path": ".github/workflows/queue-admission-lease.yml",
+          "classification": "non-publication",
+          "owner": "kungfu-ci",
+          "surfaceIds": [],
+          "sourceRoot": "sha256:fb476b7c16cdda4db240b2ae6e24f5f9a2d6f2a92a4fdb00c222868dfd345133"
         },
         {
           "path": ".github/workflows/core-build-profiles.yml",
@@ -778,5 +785,5 @@
       }
     }
   ],
-  "registryRoot": "sha256:ed49284d3d50a911c78ac53b4c722babc598d2bfde6acfa2d201eb6872aa5cf6"
+  "registryRoot": "sha256:c28af71032c3c5d12aab1628fb630a1359d6f095ac9d606bb5009d405da38f26"
 }

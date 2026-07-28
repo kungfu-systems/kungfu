@@ -6,6 +6,11 @@ import path from 'node:path';
 import test from 'node:test';
 import { fileURLToPath } from 'node:url';
 
+import {
+  queueAdmissionRequiredContexts,
+  validateDevRequiredLatencyBaseline,
+} from './cancel-dequeued-merge-group-runs.mjs';
+
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const CONTRACT = JSON.parse(
   fs.readFileSync(
@@ -71,5 +76,54 @@ test('trusted dequeue controller revokes the same exact-head context', () => {
   assert.match(
     workflow,
     /DEQUEUED_HEAD_SHA: \$\{\{ github\.event\.pull_request\.head\.sha \}\}/u,
+  );
+});
+
+test('live required contexts match baseline or one declared lease expansion', () => {
+  const baseline = {
+    $schema: 'kungfu.dev-required-latency-baseline/v1',
+    requiredContexts: ['a', 'b'],
+  };
+  assert.equal(validateDevRequiredLatencyBaseline(baseline, ['b', 'a']), true);
+  assert.equal(
+    validateDevRequiredLatencyBaseline(
+      baseline,
+      ['b', 'queue-lease', 'a'],
+      ['queue-lease'],
+    ),
+    true,
+  );
+  assert.throws(
+    () => validateDevRequiredLatencyBaseline(baseline, ['a', 'c']),
+    /live required contexts drifted/,
+  );
+  assert.throws(
+    () =>
+      validateDevRequiredLatencyBaseline(
+        baseline,
+        ['a', 'queue-lease'],
+        ['queue-lease'],
+      ),
+    /live required contexts drifted/,
+  );
+});
+
+test('queue admission contract authorizes only one explicit required context', () => {
+  assert.deepEqual(
+    queueAdmissionRequiredContexts({
+      schema: 'kungfu.dev-queue-admission/v1',
+      requiredContext: 'Queue admission lease',
+      rulesetActivation: { required: true },
+    }),
+    ['Queue admission lease'],
+  );
+  assert.throws(
+    () =>
+      queueAdmissionRequiredContexts({
+        schema: 'kungfu.dev-queue-admission/v1',
+        requiredContext: 'Queue admission lease',
+        rulesetActivation: { required: false },
+      }),
+    /must require ruleset activation/,
   );
 });

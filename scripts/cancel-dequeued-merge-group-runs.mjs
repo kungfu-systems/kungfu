@@ -26,6 +26,46 @@ function required(value, label, pattern) {
   return value;
 }
 
+export function validateDevRequiredLatencyBaseline(
+  baseline,
+  requiredContexts,
+  allowedContextAdditions = [],
+) {
+  if (baseline.$schema !== 'kungfu.dev-required-latency-baseline/v1') {
+    throw new Error('unsupported dev required latency baseline schema');
+  }
+  const expected = [...baseline.requiredContexts].sort();
+  const actual = [...requiredContexts].sort();
+  const allowed = [...new Set(allowedContextAdditions)].sort();
+  const additions = actual.filter((context) => !expected.includes(context));
+  const removals = expected.filter((context) => !actual.includes(context));
+  if (
+    removals.length ||
+    additions.some((context) => !allowed.includes(context))
+  ) {
+    throw new Error(
+      `live required contexts drifted: expected ${expected.join(', ')}, got ${actual.join(', ')}`,
+    );
+  }
+  return true;
+}
+
+export function queueAdmissionRequiredContexts(contract) {
+  if (contract?.schema !== 'kungfu.dev-queue-admission/v1') {
+    throw new Error('unsupported dev queue admission contract schema');
+  }
+  if (contract.rulesetActivation?.required !== true) {
+    throw new Error(
+      'dev queue admission contract must require ruleset activation',
+    );
+  }
+  const context = String(contract.requiredContext || '');
+  if (!/^[A-Za-z0-9][A-Za-z0-9 ._/-]{0,99}$/u.test(context)) {
+    throw new Error('dev queue admission required context is invalid');
+  }
+  return [context];
+}
+
 export function activeMergeGroupRunsForPull(runs, pullRequest) {
   const branchPattern = new RegExp(`/pr-${pullRequest}-[0-9a-f]{7,40}$`, 'u');
   return runs.filter(
