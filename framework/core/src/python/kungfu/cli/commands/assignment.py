@@ -37,6 +37,19 @@ def _emit(payload):
     click.echo(json.dumps(payload, indent=2, sort_keys=True))
 
 
+def _write_immutable_json(path, value):
+    if path is None:
+        return None
+    output = path.expanduser().resolve()
+    content = (orchestration.canonical_json(value) + "\n").encode("utf-8")
+    if output.exists() and output.read_bytes() != content:
+        raise ValueError("immutable output exists with different bytes")
+    output.parent.mkdir(parents=True, exist_ok=True)
+    if not output.exists():
+        output.write_bytes(content)
+    return str(output)
+
+
 def _failure(code, error, next_actions=None):
     _emit(
         {
@@ -620,6 +633,88 @@ def status(ctx, workspace_root, home, initiative_id, assignment_id, now):
     def operation():
         _, runtime_dir, _ = _runtime(workspace_root, home, "read-only")
         return _status(runtime_dir, initiative_id, assignment_id, now)
+
+    _emit(_run(operation))
+
+
+@assignment.command(
+    name="family-contract",
+    help="show the versioned native Initiative-family protocol",
+)
+@assignment_context
+def family_contract_command(ctx):
+    _emit(orchestration.family_contract())
+
+
+@assignment.command(
+    name="family-create",
+    help="create one rooted inert-parent and bounded-Wave family state",
+)
+@click.argument(
+    "blueprint_file",
+    type=click.Path(exists=True, dir_okay=False, path_type=Path),
+)
+@click.option("--out", type=click.Path(dir_okay=False, path_type=Path))
+@assignment_context
+def family_create(ctx, blueprint_file, out):
+    def operation():
+        blueprint = json.loads(blueprint_file.read_text(encoding="utf-8"))
+        state = orchestration.create_family_state(blueprint)
+        return {
+            "schema": "kungfu.work-control.initiative-family-create/v1",
+            "state": state,
+            "stateRoot": state["stateRoot"],
+            "outputPath": _write_immutable_json(out, state),
+            "verification": orchestration.verify_family_state(state),
+        }
+
+    _emit(_run(operation))
+
+
+@assignment.command(
+    name="family-transition",
+    help="append one expected-root terminal or acceptance transition",
+)
+@click.argument(
+    "state_file",
+    type=click.Path(exists=True, dir_okay=False, path_type=Path),
+)
+@click.argument(
+    "transition_file",
+    type=click.Path(exists=True, dir_okay=False, path_type=Path),
+)
+@click.option("--out", type=click.Path(dir_okay=False, path_type=Path))
+@assignment_context
+def family_transition(ctx, state_file, transition_file, out):
+    def operation():
+        state = json.loads(state_file.read_text(encoding="utf-8"))
+        transition = json.loads(transition_file.read_text(encoding="utf-8"))
+        successor = orchestration.transition_family_state(state, transition)
+        return {
+            "schema": "kungfu.work-control.initiative-family-transition-result/v1",
+            "state": successor,
+            "stateRoot": successor["stateRoot"],
+            "previousStateRoot": successor["previousStateRoot"],
+            "outputPath": _write_immutable_json(out, successor),
+            "verification": orchestration.verify_family_state(successor),
+        }
+
+    _emit(_run(operation))
+
+
+@assignment.command(
+    name="family-verify",
+    help="verify one native Initiative-family state without runtime mutation",
+)
+@click.argument(
+    "state_file",
+    type=click.Path(exists=True, dir_okay=False, path_type=Path),
+)
+@assignment_context
+def family_verify(ctx, state_file):
+    def operation():
+        state = json.loads(state_file.read_text(encoding="utf-8"))
+        return orchestration.verify_family_state(state)
 
     _emit(_run(operation))
 

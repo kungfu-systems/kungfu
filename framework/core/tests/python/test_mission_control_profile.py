@@ -7,7 +7,7 @@ from pathlib import Path
 
 import pytest
 
-from kungfu import profile_composition, profile_sdk
+from kungfu import assignment_orchestration, profile_composition, profile_sdk
 from kungfu.agent import work_profile
 
 
@@ -337,3 +337,28 @@ def test_initiative_assignment_capabilities_preserve_legacy_identity_and_pursuit
     assert pursuit["roleSchemaRoots"]["pursuit"] == (
         "sha256:705f541dec68b8f18aa4b3968e0db83a4dc8ff53331b0e772999a3054cb8db7b"
     )
+
+
+def test_family_protocol_adds_no_parent_execution_or_legacy_fact_authority():
+    domain = profile_sdk.load_member_python_package(
+        str(SOURCE), "work-control-actions", "domain"
+    )
+    capabilities = domain.mission_control.capabilities()
+    contract = assignment_orchestration.family_contract()
+
+    assert contract["authority"] == {
+        "initiativeParent": "inert",
+        "waveGate": "membership-only-terminal",
+        "assignment": "bounded-execution-unit",
+    }
+    assert contract["parentDeniedAuthorities"] == [
+        "execution-claim",
+        "execution-lease",
+        "task-worktree",
+        "code-pull-request",
+        "merge-queue-lease",
+    ]
+    assert capabilities["contractWorld"] == {
+        "id": "kungfu.initiative-assignment",
+        "version": "1",
+    }

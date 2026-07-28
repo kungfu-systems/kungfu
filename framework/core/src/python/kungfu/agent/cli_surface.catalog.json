@@ -1,7 +1,7 @@
 {
-  "catalogRoot": "sha256:116715eece3c524a6e3511fe1715bfa20edd26a6068c6116c4a82e26a8ad6d26",
+  "catalogRoot": "sha256:b2be59eba6a664a3f1b801ee1132a712e1f60f19e886d6962aa04f370298667c",
   "contractId": "kungfu-cli-surface",
-  "contractRoot": "sha256:499ae21fa21a7f995611d41db673c1c7144569bc8eda33c22659aa8cf12dabb1",
+  "contractRoot": "sha256:399564874cfbb3d9c8b5db09a04a66c66997d793a00465a4d9df6c55855a2545",
   "kfd3Linkage": [
     {"apiIds":[],"reason":"navigation-only","state":"unlinked","surfaceId":"kungfu.cli.commands.kfc"},
     {"apiIds":[],"reason":"no-agent-first-api-declared","state":"unlinked","surfaceId":"kungfu.cli.commands.action.action"},
@@ -141,6 +141,11 @@
     {"apiIds":[],"reason":"no-agent-first-api-declared","state":"unlinked","surfaceId":"kungfu.cli.commands.kfx.list.installed"},
     {"apiIds":[],"reason":"navigation-only","state":"unlinked","surfaceId":"kungfu.cli.commands.kfx.native.group"},
     {"apiIds":[],"reason":"no-agent-first-api-declared","state":"unlinked","surfaceId":"kungfu.cli.commands.kfx.native.assess"},
+    {"apiIds":[],"reason":"navigation-only","state":"unlinked","surfaceId":"kungfu.cli.commands.kfx.native.control"},
+    {"apiIds":[],"reason":"no-agent-first-api-declared","state":"unlinked","surfaceId":"kungfu.cli.commands.kfx.native.control.apply"},
+    {"apiIds":[],"reason":"no-agent-first-api-declared","state":"unlinked","surfaceId":"kungfu.cli.commands.kfx.native.control.plan"},
+    {"apiIds":[],"reason":"no-agent-first-api-declared","state":"unlinked","surfaceId":"kungfu.cli.commands.kfx.native.control.status"},
+    {"apiIds":[],"reason":"no-agent-first-api-declared","state":"unlinked","surfaceId":"kungfu.cli.commands.kfx.native.history"},
     {"apiIds":[],"reason":"no-agent-first-api-declared","state":"unlinked","surfaceId":"kungfu.cli.commands.kfx.native.inspect"},
     {"apiIds":[],"reason":"no-agent-first-api-declared","state":"unlinked","surfaceId":"kungfu.cli.commands.kfx.native.list"},
     {"apiIds":[],"reason":"no-agent-first-api-declared","state":"unlinked","surfaceId":"kungfu.cli.commands.kfx.native.plan"},
@@ -354,6 +359,7 @@
     {"apiIds":[],"reason":"navigation-only","state":"unlinked","surfaceId":"kungfu.cli.commands.storage.episode"},
     {"apiIds":[],"reason":"no-agent-first-api-declared","state":"unlinked","surfaceId":"kungfu.cli.commands.storage.episode.abort"},
     {"apiIds":[],"reason":"no-agent-first-api-declared","state":"unlinked","surfaceId":"kungfu.cli.commands.storage.attach.frame"},
+    {"apiIds":[],"reason":"no-agent-first-api-declared","state":"unlinked","surfaceId":"kungfu.cli.commands.storage.attach.payload"},
     {"apiIds":[],"reason":"no-agent-first-api-declared","state":"unlinked","surfaceId":"kungfu.cli.commands.storage.attach.ref"},
     {"apiIds":[],"reason":"no-agent-first-api-declared","state":"unlinked","surfaceId":"kungfu.cli.commands.storage.begin"},
     {"apiIds":[],"reason":"no-agent-first-api-declared","state":"unlinked","surfaceId":"kungfu.cli.commands.storage.episode.end"},
@@ -393,6 +399,10 @@
     {"apiIds":[],"reason":"no-agent-first-api-declared","state":"unlinked","surfaceId":"kungfu.cli.commands.assignment.claim"},
     {"apiIds":["kungfu.work.claim-completion"],"reason":null,"state":"linked","surfaceId":"kungfu.work.claim.completion"},
     {"apiIds":["kungfu.work.decide"],"reason":null,"state":"linked","surfaceId":"kungfu.work.decide"},
+    {"apiIds":[],"reason":"no-agent-first-api-declared","state":"unlinked","surfaceId":"kungfu.cli.commands.assignment.family.contract.command"},
+    {"apiIds":[],"reason":"no-agent-first-api-declared","state":"unlinked","surfaceId":"kungfu.cli.commands.assignment.family.create"},
+    {"apiIds":[],"reason":"no-agent-first-api-declared","state":"unlinked","surfaceId":"kungfu.cli.commands.assignment.family.transition"},
+    {"apiIds":[],"reason":"no-agent-first-api-declared","state":"unlinked","surfaceId":"kungfu.cli.commands.assignment.family.verify"},
     {"apiIds":[],"reason":"no-agent-first-api-declared","state":"unlinked","surfaceId":"kungfu.cli.commands.assignment.gate"},
     {"apiIds":[],"reason":"no-agent-first-api-declared","state":"unlinked","surfaceId":"kungfu.cli.commands.assignment.kickoff"},
     {"apiIds":["kungfu.work.relation-event"],"reason":null,"state":"linked","surfaceId":"kungfu.cli.commands.assignment.relation.event"},
@@ -444,11 +454,11 @@
       "kfd3Registry": "strict-link",
       "packagedInventory": "required-agent-pack-entry"
     },
-    "expectedSurfaceRoot": "sha256:5c9a4ea480162c59cd645baa40e3409831aa39fe75ebbc8668ae8771065f9dd3",
+    "expectedSurfaceRoot": "sha256:4014275260ac958a2b3cd24caecc2dbfe0f451b558e6959f88e7860b151d4451",
     "regeneration": "./shifu fix:cli-catalog-parity",
     "validation": "./shifu check:cli-catalog-parity"
   },
-  "registryRoot": "sha256:b7cc11ae61e276ba54bd67fa02ea5abf2282d3e9cb8eee95ec2bb2bb577fcaed",
+  "registryRoot": "sha256:649efabd73a33fa1ac3adf3601fb826cc3a128715a0c9daa0f466569116fcf75",
   "schema": "kungfu.cli-surface-catalog/v1",
   "schemaRoot": "sha256:30e0c49658aee967b24294362af12e977c8d62eaa455eb83ffdaa50072021569",
   "source": {
@@ -461,7 +471,7 @@
     "pathAuthority": "live-click-tree",
     "root": "kungfu"
   },
-  "surfaceRoot": "sha256:5c9a4ea480162c59cd645baa40e3409831aa39fe75ebbc8668ae8771065f9dd3",
+  "surfaceRoot": "sha256:4014275260ac958a2b3cd24caecc2dbfe0f451b558e6959f88e7860b151d4451",
   "surfaces": [
     {
       "aliases": [],
@@ -9507,7 +9517,7 @@
         "module": "kungfu.cli.commands.kfx",
         "symbol": "native_group"
       },
-      "summary": "inspect the read-only Core-native KFX registry and canonical load plan",
+      "summary": "inspect the Core-native KFX semantic registry, plan, and lifecycle",
       "visibility": "advanced"
     },
     {
@@ -9742,6 +9752,276 @@
         ],
         "state": "available"
       },
+      "canonical_path": "kungfu kfx native control",
+      "id": "kungfu.cli.commands.kfx.native.control",
+      "kfd3_api_id": null,
+      "kfd3_api_ids": [],
+      "kind": "group",
+      "maturity": "stable",
+      "mutation_class": "read",
+      "owner": "core",
+      "parameters": [
+        {
+          "arity": 1,
+          "flags": [
+            "-h",
+            "--help"
+          ],
+          "hidden": false,
+          "kind": "option",
+          "name": "help",
+          "required": false,
+          "type": "boolean"
+        }
+      ],
+      "path_depth": 4,
+      "schema_refs": [],
+      "section": "extensions",
+      "source": {
+        "familyPolicy": true,
+        "kind": "runtime-click",
+        "module": "kungfu.cli.commands.kfx",
+        "symbol": "native_control"
+      },
+      "summary": "operate the first-party Control Suite through public KFX Fact/Work",
+      "visibility": "advanced"
+    },
+    {
+      "aliases": [],
+      "approval_policy": {
+        "caller_confirmation_required": false,
+        "mode": "authorization-artifact",
+        "preconditions": []
+      },
+      "audience": [
+        "human",
+        "agent",
+        "developer",
+        "operator"
+      ],
+      "availability": {
+        "conditions": [
+          "source-runtime"
+        ],
+        "state": "available"
+      },
+      "canonical_path": "kungfu kfx native control apply",
+      "id": "kungfu.cli.commands.kfx.native.control.apply",
+      "kfd3_api_id": null,
+      "kfd3_api_ids": [],
+      "kind": "command",
+      "maturity": "stable",
+      "mutation_class": "write",
+      "owner": "core",
+      "parameters": [
+        {
+          "arity": 1,
+          "kind": "argument",
+          "name": "candidate",
+          "required": true,
+          "type": "directory"
+        },
+        {
+          "arity": 1,
+          "kind": "argument",
+          "name": "plan_file",
+          "required": true,
+          "type": "file"
+        },
+        {
+          "arity": 1,
+          "flags": [
+            "--authorized-by"
+          ],
+          "hidden": false,
+          "kind": "option",
+          "name": "authorized_by",
+          "required": true,
+          "type": "text"
+        }
+      ],
+      "path_depth": 5,
+      "schema_refs": [],
+      "section": "extensions",
+      "source": {
+        "familyPolicy": true,
+        "kind": "runtime-click",
+        "module": "kungfu.cli.commands.kfx",
+        "symbol": "native_control_apply"
+      },
+      "summary": "apply one still-current authorized Control Suite plan",
+      "visibility": "advanced"
+    },
+    {
+      "aliases": [],
+      "approval_policy": {
+        "caller_confirmation_required": false,
+        "mode": "none",
+        "preconditions": []
+      },
+      "audience": [
+        "human",
+        "agent",
+        "developer",
+        "operator"
+      ],
+      "availability": {
+        "conditions": [
+          "source-runtime"
+        ],
+        "state": "available"
+      },
+      "canonical_path": "kungfu kfx native control plan",
+      "id": "kungfu.cli.commands.kfx.native.control.plan",
+      "kfd3_api_id": null,
+      "kfd3_api_ids": [],
+      "kind": "command",
+      "maturity": "stable",
+      "mutation_class": "plan",
+      "owner": "core",
+      "parameters": [
+        {
+          "arity": 1,
+          "kind": "argument",
+          "name": "candidate",
+          "required": true,
+          "type": "directory"
+        },
+        {
+          "arity": 1,
+          "flags": [
+            "--operation"
+          ],
+          "hidden": false,
+          "kind": "option",
+          "name": "operation",
+          "required": true,
+          "type": "choice"
+        }
+      ],
+      "path_depth": 5,
+      "schema_refs": [],
+      "section": "extensions",
+      "source": {
+        "familyPolicy": true,
+        "kind": "runtime-click",
+        "module": "kungfu.cli.commands.kfx",
+        "symbol": "native_control_plan"
+      },
+      "summary": "plan an exact Control Suite install or update",
+      "visibility": "advanced"
+    },
+    {
+      "aliases": [],
+      "approval_policy": {
+        "caller_confirmation_required": false,
+        "mode": "none",
+        "preconditions": []
+      },
+      "audience": [
+        "human",
+        "agent",
+        "developer",
+        "operator"
+      ],
+      "availability": {
+        "conditions": [
+          "source-runtime"
+        ],
+        "state": "available"
+      },
+      "canonical_path": "kungfu kfx native control status",
+      "id": "kungfu.cli.commands.kfx.native.control.status",
+      "kfd3_api_id": null,
+      "kfd3_api_ids": [],
+      "kind": "command",
+      "maturity": "stable",
+      "mutation_class": "read",
+      "owner": "core",
+      "parameters": [],
+      "path_depth": 5,
+      "schema_refs": [],
+      "section": "extensions",
+      "source": {
+        "familyPolicy": true,
+        "kind": "runtime-click",
+        "module": "kungfu.cli.commands.kfx",
+        "symbol": "native_control_status"
+      },
+      "summary": "show Core-derived active/LKG/safe-mode state",
+      "visibility": "advanced"
+    },
+    {
+      "aliases": [],
+      "approval_policy": {
+        "caller_confirmation_required": false,
+        "mode": "none",
+        "preconditions": []
+      },
+      "audience": [
+        "human",
+        "agent",
+        "developer",
+        "operator"
+      ],
+      "availability": {
+        "conditions": [
+          "source-runtime"
+        ],
+        "state": "available"
+      },
+      "canonical_path": "kungfu kfx native history",
+      "id": "kungfu.cli.commands.kfx.native.history",
+      "kfd3_api_id": null,
+      "kfd3_api_ids": [],
+      "kind": "command",
+      "maturity": "stable",
+      "mutation_class": "read",
+      "owner": "core",
+      "parameters": [
+        {
+          "arity": 1,
+          "flags": [
+            "--package-key"
+          ],
+          "hidden": false,
+          "kind": "option",
+          "name": "package_key",
+          "required": false,
+          "type": "text"
+        }
+      ],
+      "path_depth": 4,
+      "schema_refs": [],
+      "section": "extensions",
+      "source": {
+        "familyPolicy": true,
+        "kind": "runtime-click",
+        "module": "kungfu.cli.commands.kfx",
+        "symbol": "native_history"
+      },
+      "summary": "print immutable native KFX lifecycle receipts",
+      "visibility": "advanced"
+    },
+    {
+      "aliases": [],
+      "approval_policy": {
+        "caller_confirmation_required": false,
+        "mode": "none",
+        "preconditions": []
+      },
+      "audience": [
+        "human",
+        "agent",
+        "developer",
+        "operator"
+      ],
+      "availability": {
+        "conditions": [
+          "source-runtime"
+        ],
+        "state": "available"
+      },
       "canonical_path": "kungfu kfx native inspect",
       "id": "kungfu.cli.commands.kfx.native.inspect",
       "kfd3_api_id": null,
@@ -9916,7 +10196,7 @@
         "module": "kungfu.cli.commands.kfx",
         "symbol": "native_plan"
       },
-      "summary": "print the canonical read-only KFX load plan",
+      "summary": "print the canonical fenced KFX load plan",
       "visibility": "advanced"
     },
     {
@@ -24796,6 +25076,112 @@
         ],
         "state": "available"
       },
+      "canonical_path": "kungfu storage episode attach-payload",
+      "id": "kungfu.cli.commands.storage.attach.payload",
+      "kfd3_api_id": null,
+      "kfd3_api_ids": [],
+      "kind": "command",
+      "maturity": "stable",
+      "mutation_class": "read",
+      "owner": "core",
+      "parameters": [
+        {
+          "arity": 1,
+          "flags": [
+            "--episode-id"
+          ],
+          "hidden": false,
+          "kind": "option",
+          "name": "episode_id",
+          "required": true,
+          "type": "integer"
+        },
+        {
+          "arity": 1,
+          "flags": [
+            "--path"
+          ],
+          "hidden": false,
+          "kind": "option",
+          "name": "payload_path",
+          "required": true,
+          "type": "file"
+        },
+        {
+          "arity": 1,
+          "flags": [
+            "--ref-id"
+          ],
+          "hidden": false,
+          "kind": "option",
+          "name": "ref_id",
+          "required": false,
+          "type": "text"
+        },
+        {
+          "arity": 1,
+          "flags": [
+            "--content-hash"
+          ],
+          "hidden": false,
+          "kind": "option",
+          "name": "content_hash",
+          "required": false,
+          "type": "text"
+        },
+        {
+          "arity": 1,
+          "flags": [
+            "--location-uid"
+          ],
+          "hidden": false,
+          "kind": "option",
+          "name": "location_uid",
+          "required": false,
+          "type": "integer"
+        },
+        {
+          "arity": 1,
+          "flags": [
+            "--json"
+          ],
+          "hidden": false,
+          "kind": "option",
+          "name": "as_json",
+          "required": false,
+          "type": "boolean"
+        }
+      ],
+      "path_depth": 4,
+      "schema_refs": [],
+      "section": "system-maintenance",
+      "source": {
+        "familyPolicy": true,
+        "kind": "runtime-click",
+        "module": "kungfu.cli.commands.storage",
+        "symbol": "attach_payload"
+      },
+      "summary": "publish payload bytes and attach their verified content reference",
+      "visibility": "advanced"
+    },
+    {
+      "aliases": [],
+      "approval_policy": {
+        "caller_confirmation_required": false,
+        "mode": "none",
+        "preconditions": []
+      },
+      "audience": [
+        "agent",
+        "developer",
+        "operator"
+      ],
+      "availability": {
+        "conditions": [
+          "source-runtime"
+        ],
+        "state": "available"
+      },
       "canonical_path": "kungfu storage episode attach-ref",
       "id": "kungfu.cli.commands.storage.attach.ref",
       "kfd3_api_id": null,
@@ -28425,6 +28811,211 @@
       },
       "summary": "run the native decide intent from a JSON input",
       "visibility": "public"
+    },
+    {
+      "aliases": [],
+      "approval_policy": {
+        "caller_confirmation_required": false,
+        "mode": "none",
+        "preconditions": []
+      },
+      "audience": [
+        "human",
+        "agent"
+      ],
+      "availability": {
+        "conditions": [
+          "source-runtime"
+        ],
+        "state": "available"
+      },
+      "canonical_path": "kungfu work family-contract",
+      "id": "kungfu.cli.commands.assignment.family.contract.command",
+      "kfd3_api_id": null,
+      "kfd3_api_ids": [],
+      "kind": "command",
+      "maturity": "stable",
+      "mutation_class": "read",
+      "owner": "core",
+      "parameters": [],
+      "path_depth": 3,
+      "schema_refs": [],
+      "section": "advanced",
+      "source": {
+        "familyPolicy": true,
+        "kind": "runtime-click",
+        "module": "kungfu.cli.commands.assignment",
+        "symbol": "family_contract_command"
+      },
+      "summary": "show the versioned native Initiative-family protocol",
+      "visibility": "advanced"
+    },
+    {
+      "aliases": [],
+      "approval_policy": {
+        "caller_confirmation_required": false,
+        "mode": "none",
+        "preconditions": []
+      },
+      "audience": [
+        "human",
+        "agent"
+      ],
+      "availability": {
+        "conditions": [
+          "source-runtime"
+        ],
+        "state": "available"
+      },
+      "canonical_path": "kungfu work family-create",
+      "id": "kungfu.cli.commands.assignment.family.create",
+      "kfd3_api_id": null,
+      "kfd3_api_ids": [],
+      "kind": "command",
+      "maturity": "stable",
+      "mutation_class": "write",
+      "owner": "core",
+      "parameters": [
+        {
+          "arity": 1,
+          "kind": "argument",
+          "name": "blueprint_file",
+          "required": true,
+          "type": "file"
+        },
+        {
+          "arity": 1,
+          "flags": [
+            "--out"
+          ],
+          "hidden": false,
+          "kind": "option",
+          "name": "out",
+          "required": false,
+          "type": "file"
+        }
+      ],
+      "path_depth": 3,
+      "schema_refs": [],
+      "section": "advanced",
+      "source": {
+        "familyPolicy": true,
+        "kind": "runtime-click",
+        "module": "kungfu.cli.commands.assignment",
+        "symbol": "family_create"
+      },
+      "summary": "create one rooted inert-parent and bounded-Wave family state",
+      "visibility": "advanced"
+    },
+    {
+      "aliases": [],
+      "approval_policy": {
+        "caller_confirmation_required": false,
+        "mode": "none",
+        "preconditions": []
+      },
+      "audience": [
+        "human",
+        "agent"
+      ],
+      "availability": {
+        "conditions": [
+          "source-runtime"
+        ],
+        "state": "available"
+      },
+      "canonical_path": "kungfu work family-transition",
+      "id": "kungfu.cli.commands.assignment.family.transition",
+      "kfd3_api_id": null,
+      "kfd3_api_ids": [],
+      "kind": "command",
+      "maturity": "stable",
+      "mutation_class": "write",
+      "owner": "core",
+      "parameters": [
+        {
+          "arity": 1,
+          "kind": "argument",
+          "name": "state_file",
+          "required": true,
+          "type": "file"
+        },
+        {
+          "arity": 1,
+          "kind": "argument",
+          "name": "transition_file",
+          "required": true,
+          "type": "file"
+        },
+        {
+          "arity": 1,
+          "flags": [
+            "--out"
+          ],
+          "hidden": false,
+          "kind": "option",
+          "name": "out",
+          "required": false,
+          "type": "file"
+        }
+      ],
+      "path_depth": 3,
+      "schema_refs": [],
+      "section": "advanced",
+      "source": {
+        "familyPolicy": true,
+        "kind": "runtime-click",
+        "module": "kungfu.cli.commands.assignment",
+        "symbol": "family_transition"
+      },
+      "summary": "append one expected-root terminal or acceptance transition",
+      "visibility": "advanced"
+    },
+    {
+      "aliases": [],
+      "approval_policy": {
+        "caller_confirmation_required": false,
+        "mode": "none",
+        "preconditions": []
+      },
+      "audience": [
+        "human",
+        "agent"
+      ],
+      "availability": {
+        "conditions": [
+          "source-runtime"
+        ],
+        "state": "available"
+      },
+      "canonical_path": "kungfu work family-verify",
+      "id": "kungfu.cli.commands.assignment.family.verify",
+      "kfd3_api_id": null,
+      "kfd3_api_ids": [],
+      "kind": "command",
+      "maturity": "stable",
+      "mutation_class": "plan",
+      "owner": "core",
+      "parameters": [
+        {
+          "arity": 1,
+          "kind": "argument",
+          "name": "state_file",
+          "required": true,
+          "type": "file"
+        }
+      ],
+      "path_depth": 3,
+      "schema_refs": [],
+      "section": "advanced",
+      "source": {
+        "familyPolicy": true,
+        "kind": "runtime-click",
+        "module": "kungfu.cli.commands.assignment",
+        "symbol": "family_verify"
+      },
+      "summary": "verify one native Initiative-family state without runtime mutation",
+      "visibility": "advanced"
     },
     {
       "aliases": [],

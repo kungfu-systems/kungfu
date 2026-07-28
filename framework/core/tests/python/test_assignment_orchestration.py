@@ -10,9 +10,11 @@ from types import SimpleNamespace
 import click
 import kungfu
 import pytest
+from click.testing import CliRunner
 
 from kungfu import assignment_orchestration, profile_composition, profile_sdk
 from kungfu.atlas import mission_control
+from kungfu.cli.commands import kfc
 from kungfu.workspace import (
     ensure_workspace_data_home,
     inspect_workspace,
@@ -27,6 +29,10 @@ from kungfu.workspace_federation import (
 
 SOURCE = Path(__file__).resolve().parents[4] / "extensions" / "mission-control"
 ASSIGNMENT_CLI = importlib.import_module("kungfu.cli.commands.assignment")
+
+
+def _sha256(marker):
+    return "sha256:" + marker * 64
 
 
 def _activate(runtime):
@@ -71,6 +77,371 @@ def _initiative_admission(
         **body,
         "admissionRoot": assignment_orchestration.semantic_root(body),
     }
+
+
+def _family_blueprint():
+    return {
+        "schema": assignment_orchestration.FAMILY_BLUEPRINT_SCHEMA,
+        "initiative": {
+            "initiativeId": "initiative-family-a",
+            "versionRoot": _sha256("1"),
+        },
+        "wave": {
+            "waveId": "wave-0",
+            "ordinal": 0,
+            "gateAssignmentId": "wave-0-gate",
+        },
+        "children": [
+            {
+                "assignmentId": "child-a",
+                "workDefinitionRoot": _sha256("2"),
+                "deliveryClass": "native-proof-required",
+                "responsibilitySlices": ["schema"],
+                "dependsOn": [],
+            },
+            {
+                "assignmentId": "child-b",
+                "workDefinitionRoot": _sha256("3"),
+                "deliveryClass": "non-native-fast",
+                "responsibilitySlices": ["cli", "tests"],
+                "dependsOn": ["child-a"],
+            },
+            {
+                "assignmentId": "child-c",
+                "workDefinitionRoot": _sha256("4"),
+                "deliveryClass": "cross-platform",
+                "responsibilitySlices": ["compatibility"],
+                "dependsOn": ["child-b"],
+            },
+        ],
+        "acceptanceIds": ["evidence-completeness", "parent-liveness"],
+    }
+
+
+def _merged_terminal(marker="a"):
+    return {
+        "state": "merged",
+        "recordedAt": "2026-07-28T03:00:00Z",
+        "sourceRoot": _sha256(marker),
+        "pullRequestRoot": _sha256("b"),
+        "mergeCommitRoot": _sha256("c"),
+        "finalAncestryRoot": _sha256("d"),
+        "proofRoot": _sha256("e"),
+        "sloRoot": _sha256("f"),
+    }
+
+
+def _transition(state, terminal_updates=None, acceptance_updates=None):
+    return {
+        "schema": assignment_orchestration.FAMILY_TRANSITION_SCHEMA,
+        "expectedStateRoot": state["stateRoot"],
+        "terminalUpdates": terminal_updates or [],
+        "acceptanceUpdates": acceptance_updates or [],
+    }
+
+
+def test_initiative_family_state_is_rooted_bounded_and_parent_inert():
+    state = assignment_orchestration.create_family_state(_family_blueprint())
+    verification = assignment_orchestration.verify_family_state(state)
+
+    assert state["schema"] == assignment_orchestration.FAMILY_STATE_SCHEMA
+    assert state["initiative"]["role"] == "inert-parent"
+    assert set(state["initiative"]) == {"initiativeId", "versionRoot", "role"}
+    assert state["wave"]["gateState"] == "terminal"
+    assert verification["parentInert"] is True
+    assert verification["waveGateTerminal"] is True
+    assert verification["childCount"] == 3
+    assert verification["waveDrained"] is False
+    assert assignment_orchestration.family_contract()["waveChildBounds"] == {
+        "minimum": 3,
+        "maximum": 6,
+    }
+    blueprint = _family_blueprint()
+    blueprint["initiative"]["executionClaim"] = "forbidden"
+    with pytest.raises(ValueError, match="invalid field set"):
+        assignment_orchestration.create_family_state(blueprint)
+
+
+@pytest.mark.parametrize(
+    ("mutation", "message"),
+    [
+        (
+            lambda value: value["children"].pop(),
+            "exactly three to six children",
+        ),
+        (
+            lambda value: value["children"].__setitem__(1, dict(value["children"][0])),
+            "sorted and duplicate-free",
+        ),
+        (
+            lambda value: value["children"][1].__setitem__(
+                "dependsOn", ["orphan-child"]
+            ),
+            "not a Wave member",
+        ),
+        (
+            lambda value: (
+                value["children"][0].__setitem__("dependsOn", ["child-c"]),
+                value["children"][1].__setitem__("dependsOn", ["child-a"]),
+                value["children"][2].__setitem__("dependsOn", ["child-b"]),
+            ),
+            "contains a cycle",
+        ),
+    ],
+)
+def test_initiative_family_rejects_invalid_membership_and_dependencies(
+    mutation, message
+):
+    blueprint = _family_blueprint()
+    mutation(blueprint)
+
+    with pytest.raises(ValueError, match=message):
+        assignment_orchestration.create_family_state(blueprint)
+
+
+def test_family_transitions_bind_terminal_evidence_and_residual_only_successor():
+    initial = assignment_orchestration.create_family_state(_family_blueprint())
+    merged = assignment_orchestration.transition_family_state(
+        initial,
+        _transition(
+            initial,
+            terminal_updates=[
+                {"assignmentId": "child-a", "terminal": _merged_terminal()}
+            ],
+            acceptance_updates=[
+                {
+                    "acceptanceId": "evidence-completeness",
+                    "status": "partial",
+                    "evidenceRoots": [_sha256("a")],
+                }
+            ],
+        ),
+    )
+    continued_terminal = {
+        "state": "continued",
+        "recordedAt": "2026-07-28T03:04:59Z",
+        "boundExceededAt": "2026-07-28T03:00:00Z",
+        "sourceRoot": _sha256("1"),
+        "decisionRoot": _sha256("2"),
+        "completedEvidenceRoots": [_sha256("3")],
+        "completedResponsibilitySlices": ["cli"],
+        "residualSuccessor": {
+            "assignmentId": "child-b-residual",
+            "requestRoot": _sha256("4"),
+            "captureReceiptRoots": [_sha256("5")],
+            "responsibilitySlices": ["tests"],
+        },
+    }
+    continued = assignment_orchestration.transition_family_state(
+        merged,
+        _transition(
+            merged,
+            terminal_updates=[
+                {"assignmentId": "child-b", "terminal": continued_terminal}
+            ],
+        ),
+    )
+    failed = assignment_orchestration.transition_family_state(
+        continued,
+        _transition(
+            continued,
+            terminal_updates=[
+                {
+                    "assignmentId": "child-c",
+                    "terminal": {
+                        "state": "failed",
+                        "recordedAt": "2026-07-28T03:05:00Z",
+                        "sourceRoot": _sha256("6"),
+                        "failureRoot": _sha256("7"),
+                    },
+                }
+            ],
+            acceptance_updates=[
+                {
+                    "acceptanceId": "evidence-completeness",
+                    "status": "proved",
+                    "evidenceRoots": [_sha256("8")],
+                },
+                {
+                    "acceptanceId": "parent-liveness",
+                    "status": "proved",
+                    "evidenceRoots": [_sha256("9")],
+                },
+            ],
+        ),
+    )
+
+    assert merged["previousStateRoot"] == initial["stateRoot"]
+    assert continued["previousStateRoot"] == merged["stateRoot"]
+    assert continued["children"][1]["terminal"] == continued_terminal
+    verification = assignment_orchestration.verify_family_state(failed)
+    assert verification["waveDrained"] is True
+    assert verification["terminalCounts"] == {
+        "merged": 1,
+        "continued": 1,
+        "deferred": 0,
+        "failed": 1,
+    }
+
+
+def test_family_transition_fails_closed_on_scope_growth_and_invalid_coverage():
+    initial = assignment_orchestration.create_family_state(_family_blueprint())
+    merged = assignment_orchestration.transition_family_state(
+        initial,
+        _transition(
+            initial,
+            terminal_updates=[
+                {"assignmentId": "child-a", "terminal": _merged_terminal()}
+            ],
+            acceptance_updates=[
+                {
+                    "acceptanceId": "evidence-completeness",
+                    "status": "proved",
+                    "evidenceRoots": [_sha256("a")],
+                }
+            ],
+        ),
+    )
+    grown = {
+        "state": "continued",
+        "recordedAt": "2026-07-28T03:04:00Z",
+        "boundExceededAt": "2026-07-28T03:00:00Z",
+        "sourceRoot": _sha256("1"),
+        "decisionRoot": _sha256("2"),
+        "completedEvidenceRoots": [_sha256("3")],
+        "completedResponsibilitySlices": ["cli"],
+        "residualSuccessor": {
+            "assignmentId": "child-b-residual",
+            "requestRoot": _sha256("4"),
+            "captureReceiptRoots": [_sha256("5")],
+            "responsibilitySlices": ["new-scope", "tests"],
+        },
+    }
+
+    with pytest.raises(ValueError, match="exactly the uncompleted responsibility"):
+        assignment_orchestration.transition_family_state(
+            merged,
+            _transition(
+                merged,
+                terminal_updates=[{"assignmentId": "child-b", "terminal": grown}],
+            ),
+        )
+    with pytest.raises(ValueError, match="coverage transition is invalid"):
+        assignment_orchestration.transition_family_state(
+            merged,
+            _transition(
+                merged,
+                acceptance_updates=[
+                    {
+                        "acceptanceId": "evidence-completeness",
+                        "status": "missing",
+                        "evidenceRoots": [],
+                    }
+                ],
+            ),
+        )
+    with pytest.raises(ValueError, match="within five minutes"):
+        late = dict(grown)
+        late["residualSuccessor"] = {
+            **grown["residualSuccessor"],
+            "responsibilitySlices": ["tests"],
+        }
+        late["recordedAt"] = "2026-07-28T03:05:01Z"
+        assignment_orchestration.transition_family_state(
+            merged,
+            _transition(
+                merged,
+                terminal_updates=[{"assignmentId": "child-b", "terminal": late}],
+            ),
+        )
+    with pytest.raises(ValueError, match="invalid field set"):
+        incomplete = _merged_terminal()
+        incomplete.pop("proofRoot")
+        assignment_orchestration.transition_family_state(
+            initial,
+            _transition(
+                initial,
+                terminal_updates=[{"assignmentId": "child-a", "terminal": incomplete}],
+            ),
+        )
+    unchanged = {
+        "acceptanceId": "evidence-completeness",
+        "status": "proved",
+        "evidenceRoots": [_sha256("a")],
+    }
+    with pytest.raises(ValueError, match="no semantic change"):
+        assignment_orchestration.transition_family_state(
+            merged,
+            _transition(merged, acceptance_updates=[unchanged]),
+        )
+
+
+def test_family_deferred_terminal_requires_an_exact_decision_root():
+    initial = assignment_orchestration.create_family_state(_family_blueprint())
+    deferred = assignment_orchestration.transition_family_state(
+        initial,
+        _transition(
+            initial,
+            terminal_updates=[
+                {
+                    "assignmentId": "child-a",
+                    "terminal": {
+                        "state": "deferred",
+                        "recordedAt": "2026-07-28T03:00:00Z",
+                        "sourceRoot": _sha256("a"),
+                        "decisionRoot": _sha256("b"),
+                    },
+                }
+            ],
+        ),
+    )
+
+    assert deferred["children"][0]["terminal"]["state"] == "deferred"
+
+
+def test_family_cli_writes_successor_without_overwriting_prior_state(tmp_path):
+    runner = CliRunner()
+    blueprint = tmp_path / "blueprint.json"
+    initial_path = tmp_path / "initial.json"
+    blueprint.write_text(json.dumps(_family_blueprint()), encoding="utf-8")
+
+    created = runner.invoke(
+        kfc,
+        ["work", "family-create", str(blueprint), "--out", str(initial_path)],
+    )
+    assert created.exit_code == 0, created.output
+    initial = json.loads(initial_path.read_text(encoding="utf-8"))
+    transition = tmp_path / "transition.json"
+    transition.write_text(
+        json.dumps(
+            _transition(
+                initial,
+                terminal_updates=[
+                    {"assignmentId": "child-a", "terminal": _merged_terminal()}
+                ],
+            )
+        ),
+        encoding="utf-8",
+    )
+    successor_path = tmp_path / "successor.json"
+    advanced = runner.invoke(
+        kfc,
+        [
+            "work",
+            "family-transition",
+            str(initial_path),
+            str(transition),
+            "--out",
+            str(successor_path),
+        ],
+    )
+    assert advanced.exit_code == 0, advanced.output
+    successor = json.loads(successor_path.read_text(encoding="utf-8"))
+    assert successor["previousStateRoot"] == initial["stateRoot"]
+    assert json.loads(initial_path.read_text(encoding="utf-8")) == initial
+    verified = runner.invoke(kfc, ["work", "family-verify", str(successor_path)])
+    assert verified.exit_code == 0, verified.output
+    assert json.loads(verified.output)["ok"] is True
 
 
 def test_cli_run_preserves_an_intentional_machine_readable_exit(monkeypatch):
