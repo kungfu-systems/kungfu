@@ -493,9 +493,10 @@ test('exact pull-request qualification proof is reusable by bound delivery', () 
   );
   fs.rmSync(value.root, { recursive: true, force: true });
 });
-
 test('delivery attempt seals the exact family, source, proof decision, and run', () => {
-  const binding = createDeliveryBinding(deliveryFixture().values);
+  const binding = createDeliveryBinding(
+    deliveryFixture({ values: { candidateHead: OTHER_HEAD } }).values,
+  );
   const descriptor = createProofDescriptor(
     plan(QUEUE_HEAD),
     TREE,
@@ -518,13 +519,13 @@ test('delivery attempt seals the exact family, source, proof decision, and run',
     'reused',
     producer({
       runId: 42,
-      triggerHeadSha: QUEUE_HEAD,
-      checkoutSha: QUEUE_HEAD,
+      triggerHeadSha: OTHER_HEAD,
+      checkoutSha: OTHER_HEAD,
     }),
   );
   assert.equal(validateDeliveryAttempt(attempt), attempt);
   assert.equal(attempt.source.pullRequestHead, HEAD);
-  assert.equal(attempt.source.mergeGroupHead, QUEUE_HEAD);
+  assert.equal(attempt.source.mergeGroupHead, OTHER_HEAD);
   assert.equal(attempt.proof.decision, 'reused');
   assert.equal(attempt.workflow.runId, 42);
   assert.throws(
@@ -536,7 +537,6 @@ test('delivery attempt seals the exact family, source, proof decision, and run',
     /root drift/u,
   );
 });
-
 test('effective rules normalize the exact required-check set', () => {
   assert.deepEqual(
     requiredContextsFromRules([

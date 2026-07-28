@@ -799,7 +799,10 @@ export function createDeliveryAttempt(descriptor, proof, decision, producer) {
     producer.triggerHeadSha,
     'delivery merge-group head',
   );
-  if (binding.source.replayedCandidate !== mergeGroupHead) {
+  if (
+    binding.family === null &&
+    binding.source.replayedCandidate !== mergeGroupHead
+  ) {
     throw new Error('delivery merge-group candidate drift');
   }
   const body = {
@@ -853,7 +856,8 @@ export function validateDeliveryAttempt(attempt) {
   requireSha(body.source?.checkout, 'delivery checkout');
   if (
     body.source.checkout !== body.source.mergeGroupHead ||
-    body.source.replayedCandidate !== body.source.mergeGroupHead
+    (body.family === null &&
+      body.source.replayedCandidate !== body.source.mergeGroupHead)
   ) {
     throw new Error('affected-native delivery checkout drift');
   }
