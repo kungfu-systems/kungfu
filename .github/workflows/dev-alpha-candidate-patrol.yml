@@ -70,14 +70,22 @@ jobs:
       pull-requests: write
     # The reusable workflow and its runtime are pinned to the same merged,
     # immutable Buildchain source.
-    uses: kungfu-systems/buildchain/.github/workflows/dev-alpha-candidate-patrol.yml@1ccbb93811ccd52cd83eda156d89fba05cc60c75
+    uses: kungfu-systems/buildchain/.github/workflows/dev-alpha-candidate-patrol.yml@4449bf319a4507009212b9302156d42117b9b703
     with:
-      buildchain-ref: ${{ inputs.buildchain-ref || '1ccbb93811ccd52cd83eda156d89fba05cc60c75' }}
+      buildchain-ref: ${{ inputs.buildchain-ref || '4449bf319a4507009212b9302156d42117b9b703' }}
       source-branch: ${{ needs.resolve-channels.outputs.source-branch }}
       target-branch: ${{ needs.resolve-channels.outputs.target-branch }}
       dev-workflow-path: .github/workflows/dev-verify-patrol.yml
       alpha-workflow-path: .github/workflows/alpha-promotion-preflight.yml
       max-age-seconds: 604800
+      pull-request-body-prefix: |
+        <!-- kungfu-adr-release:v1
+        {
+          "schema": "kungfu.adr-release-pr/v1",
+          "kind": "alpha-settlement",
+          "no_adr_progress_reason": "The qualified development delta changes candidate admission plumbing without modifying an accepted ADR record"
+        }
+        -->
       settlement-authorized: ${{ github.event_name != 'workflow_dispatch' || inputs.create-pull-request }}
       dry-run: ${{ github.event_name == 'workflow_dispatch' && inputs.dry-run }}
     secrets:
