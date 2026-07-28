@@ -351,6 +351,22 @@
           ]
         },
         {
+          "id": "cancel_after_source_failure",
+          "authority": "qualification",
+          "publication": "none",
+          "receipt": "diagnostic",
+          "definitionDigest": "sha256:57208c6a1444ec98972a55d0daf6f4598399329fc5d887ff28794b310fa8ba86",
+          "credentials": {"githubToken":"write","oidc":false,"repositorySecrets":[],"inheritedSecrets":false,"environment":null},
+          "externalActions": [],
+          "steps": [
+            {
+              "index": 1,
+              "label": "name:Cancel this failed source workflow",
+              "definitionDigest": "sha256:67176f1a3882b1d671cce858a073b08fd093cfd45c4af8eac49e2687ccfcf062"
+            }
+          ]
+        },
+        {
           "id": "candidate_buildchain_config",
           "authority": "qualification",
           "publication": "none",

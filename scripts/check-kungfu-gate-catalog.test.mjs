@@ -118,6 +118,15 @@ test('PR proof overlaps source acceptance with heavy gates before exact queue re
   assert.match(native, /needs\.proof_probe\.outputs\.reuse != 'true'/);
   assert.doesNotMatch(native, /if:.*merge_group.*runs-on:/su);
   const aggregate = source.slice(source.indexOf('  affected-native:\n'));
+  const cancellation = source.slice(
+    source.indexOf('  cancel_after_source_failure:\n'),
+    source.indexOf('  candidate_buildchain_config:\n'),
+  );
+  assert.match(
+    cancellation,
+    /needs: source_acceptance[\s\S]*needs\.source_acceptance\.result != 'success'[\s\S]*permissions:\n {6}actions: write[\s\S]*repos\/\$GITHUB_REPOSITORY\/actions\/runs\/\$GITHUB_RUN_ID\/cancel/,
+  );
+  assert.doesNotMatch(cancellation, /run_id|head_sha|workflow_id/);
   assert.match(aggregate, /- source_acceptance/);
   assert.match(
     aggregate,

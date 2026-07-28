@@ -219,10 +219,13 @@ Each section is bound to the registry id by the catalog meta gate.
   source acceptance concurrently with the impact-selected native/SDK, Shifu,
   and KFD lanes. Those execution lanes start only after the build-free
   governance planner and proof probe pass; every optional skip is justified by
-  a `required: false` decision retained in the plan. The stable aggregate still
-  waits for and requires successful source acceptance together with every
-  selected lane, so concurrency shortens the healthy critical path without
-  admitting a source failure. A non-empty, source-bound native plan enters the
+  a `required: false` decision retained in the plan. A source failure invokes
+  an `actions: write`-scoped controller that cancels the current workflow and
+  its in-flight selected lanes; it cannot cancel another run. The stable
+  aggregate still waits for and requires successful source acceptance together
+  with every selected lane, so concurrency shortens the healthy critical path
+  without admitting a source failure or letting an already-doomed SDK shard
+  run to completion. A non-empty, source-bound native plan enters the
   registered action; a tier-none plan writes the same receipt directly without
   installing Buildchain, Conan, or the workspace.
 - **Retirement:** remove only with a replacement that consumes the same

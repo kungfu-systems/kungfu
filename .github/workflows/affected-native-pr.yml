@@ -76,6 +76,23 @@ jobs:
       mode: source
       upload-artifacts: true
 
+  cancel_after_source_failure:
+    name: Stop selected lanes after source failure
+    needs: source_acceptance
+    if: ${{ always() && needs.source_acceptance.result != 'success' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      actions: write
+      contents: read
+    steps:
+      - name: Cancel this failed source workflow
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: >-
+          gh api --method POST
+          "repos/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID/cancel"
+
   candidate_buildchain_config:
     runs-on: ubuntu-24.04
     timeout-minutes: 5
