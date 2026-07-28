@@ -989,13 +989,8 @@ def _agent_interface_authority() -> dict[str, Any]:
 def _profile_facet_audit(resolved: Mapping[str, Any]) -> dict[str, Any]:
     """Reject executable/custom surfaces that can bypass the shared service."""
 
-    contract = kfx_contract.load_contract()
-    view_placement = (
-        (contract.get("nativeRuntime") or {})
-        .get("experienceFlowHost", {})
-        .get("placements", {})
-        .get("gui")
-    )
+    native_runtime = kfx_contract.load_contract()["nativeRuntime"]
+    view_placement = native_runtime["experienceFlowHost"]["placements"].get("gui")
     if view_placement != "sandboxed-ipc":
         raise ProfileSdkError(
             "kfd3-view-placement-authority-invalid",
