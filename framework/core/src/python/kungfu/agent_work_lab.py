@@ -1125,8 +1125,9 @@ def run_agent(
         "sessions": demo_plan()["sessions"],
         "oracle": demo_plan()["oracle"],
     }
+    plan_root = content_root(run_semantic)
     plan = {
-        "planRoot": content_root(run_semantic),
+        "planRoot": plan_root,
         "identity": run_identity,
         "identityRoot": content_root(run_identity),
     }
@@ -1141,7 +1142,7 @@ def run_agent(
         "schema": "kungfu.agent-work-lab.fixture-state/v1",
         "suite": SUITE_ID,
         "fixture": FIXTURE_ID,
-        "workRef": _work_ref(plan["planRoot"]),
+        "workRef": _work_ref(plan_root),
         "steps": [],
         "status": "unstarted",
     }

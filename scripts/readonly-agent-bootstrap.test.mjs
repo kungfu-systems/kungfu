@@ -359,17 +359,7 @@ test('declared discovery routes are zero-write in a cold read-only fixture', (t)
   }
 
   const before = snapshotSource(fixture);
-  const protectedRef = JSON.parse(
-    fs.readFileSync(
-      path.join(
-        fixture,
-        'framework',
-        'maintainability',
-        'code-complexity-policy.json',
-      ),
-      'utf8',
-    ),
-  ).baselineRef;
+  const protectedRef = base.sha;
   makeReadOnly(fixture);
   fs.chmodSync(home, 0o555);
   const env = {

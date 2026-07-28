@@ -195,7 +195,7 @@
           "role": "thin-binding"
         },
         {
-          "path": "framework/kfx/src/agent-work-lab.ts",
+          "path": "extensions/agent-work-lab/experience/src/index.ts",
           "role": "thin-binding"
         },
         {
