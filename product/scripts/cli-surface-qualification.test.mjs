@@ -148,7 +148,7 @@ test('qualification binds help, canonical CLI, KFD-3 and mutation receipts', () 
     label: 'cli-archive',
     identity: {
       archive: 'kungfu-episodes-cli-fixture.tar.gz',
-      archiveSha256: 'a'.repeat(64),
+      archiveSha256: `sha256:${'a'.repeat(64)}`,
     },
     runCommand: runner(),
   });
@@ -183,7 +183,7 @@ test('verification binds the qualification to the exact archive digest', () => {
     label: 'cli-archive',
     identity: {
       archive: 'kungfu-episodes-cli-fixture.tar.gz',
-      archiveSha256: 'a'.repeat(64),
+      archiveSha256: `sha256:${'a'.repeat(64)}`,
     },
     runCommand: runner(),
   });
@@ -193,7 +193,7 @@ test('verification binds the qualification to the exact archive digest', () => {
         report,
         expectedPlatform: report.platform,
         archiveName: report.identity.archive,
-        archiveSha256: 'b'.repeat(64),
+        archiveSha256: `sha256:${'b'.repeat(64)}`,
       }),
     /archive SHA256 mismatch/u,
   );
@@ -206,7 +206,7 @@ test('verification rejects a tampered qualification root', () => {
     label: 'cli-archive',
     identity: {
       archive: 'kungfu-episodes-cli-fixture.tar.gz',
-      archiveSha256: 'a'.repeat(64),
+      archiveSha256: `sha256:${'a'.repeat(64)}`,
     },
     runCommand: runner(),
   });

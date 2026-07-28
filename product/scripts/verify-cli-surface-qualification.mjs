@@ -7,7 +7,6 @@ import { fileURLToPath } from 'node:url';
 
 import { cliQualificationRoot } from './cli-surface-qualification.mjs';
 
-const SHA256_PATTERN = /^[0-9a-f]{64}$/u;
 const ROOT_PATTERN = /^sha256:[0-9a-f]{64}$/u;
 
 function assert(condition, message) {
@@ -35,7 +34,7 @@ export function verifyCliSurfaceQualification({
     `archive name mismatch: expected ${archiveName}, got ${report.identity?.archive}`,
   );
   assert(
-    SHA256_PATTERN.test(report.identity?.archiveSha256 || ''),
+    ROOT_PATTERN.test(report.identity?.archiveSha256 || ''),
     'qualification omitted a valid archive SHA256',
   );
   assert(
@@ -105,7 +104,7 @@ function readJson(file) {
 async function sha256File(file) {
   const hash = crypto.createHash('sha256');
   for await (const chunk of fs.createReadStream(file)) hash.update(chunk);
-  return hash.digest('hex');
+  return `sha256:${hash.digest('hex')}`;
 }
 
 async function main(argv) {
