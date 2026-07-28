@@ -29,10 +29,13 @@ import {
   uvPython,
   run,
   fail,
+  extractPackedKfx,
+  kfxQualificationHostDescriptorFile,
 } from '../_harness.mjs';
 
 const PY = process.platform === 'win32' ? 'python' : 'python3';
 const { fixtureDir, coreDir } = locate(import.meta.url);
+const repoDir = path.resolve(coreDir, '..', '..');
 
 // ── provision the real framework (cached across runs) ────────────────
 const venv = path.join(fixtureDir, '.venv-langchain');
@@ -61,6 +64,25 @@ if (!hasLangchain()) {
 const home = tmpDir('rewind-langchain-');
 const runId = `fixturelangchain${Date.now()}`;
 
+// Adapter injection is an in-process host launch, so a workspace directory or
+// package name grants no authority. Exercise the same pack, exact-root
+// qualification and Core registry path a real installation uses, then bind the
+// trace to the resulting current host descriptor.
+const packdir = tmpDir('rewind-langchain-pack-');
+const extDir = path.join(repoDir, 'extensions', 'langchain-adapter');
+const packed = run('npm', ['pack', '--pack-destination', packdir], { cwd: extDir });
+const tgzName = packed.stdout.trim().split(/\r?\n/).pop();
+const tgz = path.join(packdir, tgzName);
+if (!fs.existsSync(tgz)) fail('npm pack produced no LangChain adapter tgz');
+const packedRoot = extractPackedKfx(coreDir, tgz);
+const hostDescriptor = kfxQualificationHostDescriptorFile(
+  coreDir,
+  home,
+  packedRoot,
+  'langchain-adapter',
+  'python',
+);
+
 // deterministic model upstream: the mock (stdlib only, system python3) binds an
 // ephemeral port and reports it; the supervisor picks it up as the openai
 // forward target and points the child's ChatOpenAI at its own proxy.
@@ -69,11 +91,11 @@ background(PY, [path.join(fixtureDir, 'mock_model.py'), portFile]);
 const port = waitForFile(portFile);
 const openaiBaseUrl = `http://127.0.0.1:${port}/v1`;
 
-// The LangChain adapter is NOT in core — it is the kfx package under
-// extensions/langchain-adapter. Point the extension root at the workspace
-// extensions tree so the supervisor discovers and injects it; capture of an
-// unmodified langchain run therefore comes from the package, not the kernel.
-const extRoot = path.resolve(coreDir, '..', '..', 'extensions');
+// The adapter remains product-disabled without an explicit runtime grant. This
+// qualification-only descriptor proves the authorized capture path while the
+// exact package-root check prevents a same-key workspace package from borrowing
+// authority issued to different bytes.
+const extRoot = path.resolve(repoDir, 'extensions');
 const kfExtensionPath = process.env.KF_EXTENSION_PATH
   ? `${extRoot}${path.delimiter}${process.env.KF_EXTENSION_PATH}`
   : extRoot;
@@ -88,6 +110,7 @@ kfc(
       // the openai SDK refuses to construct a client without a key; the proxy
       // never forwards request headers, so this dummy never leaves the machine
       OPENAI_API_KEY: 'sk-langchain-fixture',
+      KF_KFX_HOST_DESCRIPTOR: hostDescriptor,
       KF_EXTENSION_PATH: kfExtensionPath,
     },
   },

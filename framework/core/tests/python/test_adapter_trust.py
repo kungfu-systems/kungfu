@@ -7,6 +7,7 @@
 import json
 import os
 
+from kungfu import profile_sdk
 from kungfu.rewind import adapters
 
 
@@ -38,7 +39,7 @@ def _write_adapter(root, key, runtime="python"):
     return pkg
 
 
-def _host_descriptor(package_key, authorization_root):
+def _host_descriptor(package_key, package_root, authorization_root):
     roots = {
         name: f"sha256:{character * 64}"
         for name, character in {
@@ -67,7 +68,7 @@ def _host_descriptor(package_key, authorization_root):
     authorization = {
         "schema": "kungfu.kfx.host-authorization/v2",
         "packageKey": package_key,
-        "packageRoot": roots["package"],
+        "packageRoot": package_root,
         "manifestRoot": roots["manifest"],
         "ownerProviderRoot": roots["provider"],
         "trustRoot": roots["trust"],
@@ -133,7 +134,13 @@ def _host_descriptor(package_key, authorization_root):
 def _write_descriptor(tmp_path, monkeypatch, package_key, authorization_root):
     path = tmp_path / "host-descriptor.json"
     path.write_text(
-        json.dumps(_host_descriptor(package_key, authorization_root)),
+        json.dumps(
+            _host_descriptor(
+                package_key,
+                profile_sdk.package_content_root(tmp_path / "extensions" / package_key),
+                authorization_root,
+            )
+        ),
         encoding="utf-8",
     )
     monkeypatch.setenv("KF_KFX_HOST_DESCRIPTOR", str(path))
@@ -168,11 +175,37 @@ def test_only_the_exact_core_authorization_allows_in_process_injection(
 
 def test_mismatched_authorization_root_fails_closed(tmp_path, monkeypatch):
     _setup(tmp_path, monkeypatch)
-    descriptor = _host_descriptor("bundled-a", f"sha256:{'4' * 64}")
+    descriptor = _host_descriptor(
+        "bundled-a",
+        profile_sdk.package_content_root(tmp_path / "extensions" / "bundled-a"),
+        f"sha256:{'4' * 64}",
+    )
     descriptor["admission"]["runtimeAuthorizationRoots"][0] = f"sha256:{'5' * 64}"
     path = tmp_path / "host-descriptor.json"
     path.write_text(json.dumps(descriptor), encoding="utf-8")
     monkeypatch.setenv("KF_KFX_HOST_DESCRIPTOR", str(path))
+
+    entries, dirs, refused = adapters.discover_adapters(None, "python")
+    assert entries == [] and dirs == []
+    assert {row["key"] for row in refused} == {"bundled-a", "external-b"}
+
+
+def test_same_key_with_different_package_root_cannot_borrow_authority(
+    tmp_path, monkeypatch
+):
+    _setup(tmp_path, monkeypatch)
+    authorization_root = f"sha256:{'4' * 64}"
+    _write_descriptor(tmp_path, monkeypatch, "external-b", authorization_root)
+    adapter = (
+        tmp_path
+        / "extensions"
+        / "external-b"
+        / "src"
+        / "adapter"
+        / "python"
+        / "index.py"
+    )
+    adapter.write_text("# different adapter source\n", encoding="utf-8")
 
     entries, dirs, refused = adapters.discover_adapters(None, "python")
     assert entries == [] and dirs == []

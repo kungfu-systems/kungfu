@@ -14,6 +14,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
   qualificationAuthority,
+  qualificationHostDescriptor,
   removalAuthority,
 } from './_kfx-authority.mjs';
 
@@ -185,6 +186,34 @@ export function kfxQualificationAuthorityFile(
       repoDir,
       inspected.package.packageRoot,
       inspected.package.declaredCapabilities,
+    ),
+  );
+}
+
+/** Build a qualification-only host descriptor bound to one exact package closure. */
+export function kfxQualificationHostDescriptorFile(
+  coreDir,
+  home,
+  sourceRoot,
+  packageKey,
+  runtime,
+) {
+  const inspected = json(
+    kfc(coreDir, home, [
+      'kfx',
+      'native',
+      'inspect',
+      packageKey,
+      '--root',
+      `workspace=${sourceRoot}`,
+    ]),
+  );
+  return writeFixtureJson(
+    'kfx-qualification-host-',
+    qualificationHostDescriptor(
+      packageKey,
+      inspected.package.packageRoot,
+      runtime,
     ),
   );
 }

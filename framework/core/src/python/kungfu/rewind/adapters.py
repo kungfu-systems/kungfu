@@ -22,7 +22,7 @@ import os
 import json
 from collections.abc import Iterator
 
-from kungfu import kfx_contract, kfx_host
+from kungfu import kfx_contract, kfx_host, profile_sdk
 
 ENV_EXTENSION_PATH = "KF_EXTENSION_PATH"
 ENV_HOST_DESCRIPTOR = "KF_KFX_HOST_DESCRIPTOR"
@@ -102,6 +102,10 @@ def discover_adapters(
                 continue
             seen.add(path)
             key = kfx.get("key")
+            try:
+                package_root = profile_sdk.package_content_root(pkg)
+            except (OSError, ValueError):
+                package_root = None
             authorization = None
             if descriptor is not None and key:
                 for candidate in descriptor.get("runtimeAuthorizations", []):
@@ -117,6 +121,11 @@ def discover_adapters(
                                 candidate.get("authorizationRoot", ""),
                             )
                         except ValueError:
+                            authorization = None
+                        if (
+                            authorization is not None
+                            and authorization.get("packageRoot") != package_root
+                        ):
                             authorization = None
                         break
             if authorization is None:
