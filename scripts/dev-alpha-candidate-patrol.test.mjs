@@ -24,7 +24,7 @@ test('candidate patrol is a thin Buildchain caller with exact channel and eviden
     /uses: kungfu-systems\/buildchain\/.github\/workflows\/dev-alpha-candidate-patrol\.yml@([0-9a-f]{40})/u,
   )?.[1];
   assert.match(reusableRef || '', /^[0-9a-f]{40}$/u);
-  assert.equal(reusableRef, '1ccbb93811ccd52cd83eda156d89fba05cc60c75');
+  assert.equal(reusableRef, '4449bf319a4507009212b9302156d42117b9b703');
   assert.match(
     source,
     new RegExp(
@@ -32,8 +32,14 @@ test('candidate patrol is a thin Buildchain caller with exact channel and eviden
       'u',
     ),
   );
-  assert.match(source, /source-branch: dev\/v4\/v4\.0/u);
-  assert.match(source, /target-branch: alpha\/v4\/v4\.0/u);
+  assert.match(
+    source,
+    /source-branch: \$\{\{ needs\.resolve-channels\.outputs\.source-branch \}\}/u,
+  );
+  assert.match(
+    source,
+    /target-branch: \$\{\{ needs\.resolve-channels\.outputs\.target-branch \}\}/u,
+  );
   assert.match(
     source,
     /dev-workflow-path: \.github\/workflows\/dev-verify-patrol\.yml/u,
@@ -54,7 +60,14 @@ test('candidate patrol is a thin Buildchain caller with exact channel and eviden
   assert.match(source, /workflow_run:/u);
   assert.match(source, /Dev Verify Patrol/u);
   assert.match(source, /Alpha promotion preflight/u);
-  assert.match(source, /head_branch == 'dev\/v4\/v4\.0'/u);
+  assert.match(
+    source,
+    /head_branch == needs\.resolve-channels\.outputs\.source-branch/u,
+  );
+  assert.match(source, /pull-request-body-prefix: \|/u);
+  assert.match(source, /kungfu-adr-release:v1/u);
+  assert.match(source, /"kind": "alpha-settlement"/u);
+  assert.match(source, /"no_adr_progress_reason":/u);
   assert.doesNotMatch(source, /cron: "0 22 \* \* \*"/u);
   assert.match(
     source,
