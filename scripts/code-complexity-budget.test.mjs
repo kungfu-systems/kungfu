@@ -19,6 +19,7 @@ import {
   hasGeneratedProvenance,
   ownerFor,
   percentile,
+  protectedBaselineCandidates,
   regressionIssues,
   validWaiverFor,
   validateMeasured,
@@ -110,6 +111,29 @@ test('calibration percentile and owner routes are deterministic', () => {
   assert.equal(
     ownerFor('.kungfu/project-cuts/sha256/x/manifest.json', { components: [] }),
     'kungfu/retained-native-evidence',
+  );
+});
+
+test('protected baseline follows admitted dev authority without origin HEAD', () => {
+  const policy = {
+    baselineGovernance: {
+      protectedRef: 'origin/HEAD',
+      protectedRefEnv: 'KUNGFU_COMPLEXITY_PROTECTED_REF',
+    },
+  };
+  assert.deepEqual(
+    protectedBaselineCandidates(
+      policy,
+      { KUNGFU_DEV_BRANCH: 'dev/v10/v10.2' },
+      { symbolicRemoteHead: () => '' },
+    ),
+    ['origin/dev/v10/v10.2', 'dev/v10/v10.2', 'origin/HEAD'],
+  );
+  assert.deepEqual(
+    protectedBaselineCandidates(policy, {
+      KUNGFU_COMPLEXITY_PROTECTED_REF: 'protected-snapshot',
+    }),
+    ['protected-snapshot'],
   );
 });
 

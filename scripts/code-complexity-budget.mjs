@@ -19,6 +19,7 @@ import {
   validWaiverFor,
   waiverIssues,
 } from '../framework/maintainability/complexity-governance.mjs';
+import { devMergeBaseCandidates } from './candidate-timeline-events.cjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const POLICY_PATH = 'framework/maintainability/code-complexity-policy.json';
@@ -42,6 +43,21 @@ function git(args, options = {}) {
 
 function readJsonAt(ref, relative) {
   return JSON.parse(String(git(['show', `${ref}:${relative}`])));
+}
+
+export function protectedBaselineCandidates(
+  policy,
+  env = process.env,
+  options = {},
+) {
+  const configured =
+    env[policy.baselineGovernance.protectedRefEnv] ||
+    policy.baselineGovernance.protectedRef;
+  if (configured !== 'origin/HEAD') return [configured];
+  return devMergeBaseCandidates({
+    env,
+    symbolicRemoteHead: options.symbolicRemoteHead,
+  });
 }
 
 function gitLines(args) {
@@ -698,9 +714,19 @@ function checkCurrent(policy, layers, baseline) {
   const waived = [];
   const blocking = [];
   if (policy.baselineGovernance) {
+    const candidates = protectedBaselineCandidates(policy);
     const protectedRef =
-      process.env[policy.baselineGovernance.protectedRefEnv] ||
-      policy.baselineGovernance.protectedRef;
+      candidates.find((candidate) => {
+        const result = spawnSync(
+          'git',
+          ['rev-parse', '--verify', '--quiet', `${candidate}^{commit}`],
+          {
+            cwd: ROOT,
+            encoding: 'utf8',
+          },
+        );
+        return result.status === 0;
+      }) || candidates[0];
     try {
       const protectedPolicy = readJsonAt(protectedRef, POLICY_PATH);
       const protectedBaseline = readJsonAt(
