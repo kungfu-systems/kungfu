@@ -176,6 +176,33 @@ def test_kfx_package_manifest_schema_rejects_invalid_view_capabilities(tmp_path)
         kfx_contract.read_manifest_from_dir(str(package_dir))
 
 
+@pytest.mark.parametrize(
+    "field,value", [("runtime", "node-integrated"), ("system", True)]
+)
+def test_kfx_package_manifest_schema_rejects_view_authority_hints(
+    tmp_path, field, value
+):
+    package_dir = tmp_path / f"bad-view-{field}"
+    package_dir.mkdir()
+    (package_dir / kfx_contract.PACKAGE_MANIFEST_FILE).write_text(
+        json.dumps(
+            {
+                "schema": kfx_contract.PACKAGE_MANIFEST_SCHEMA,
+                "name": f"@bad/view-{field}",
+                "version": "1.0.0",
+                "kungfuConfig": {
+                    "key": f"bad-view-{field}",
+                    "config": {"view": {field: value}},
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    with pytest.raises(ValueError, match=f"Additional properties.*'{field}'"):
+        kfx_contract.read_manifest_from_dir(str(package_dir))
+
+
 def test_kfx_manifest_authority_rejects_legacy_and_dual_declarations(tmp_path):
     package_dir = tmp_path / "legacy"
     package_dir.mkdir()

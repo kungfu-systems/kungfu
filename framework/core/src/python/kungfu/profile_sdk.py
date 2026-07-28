@@ -989,6 +989,14 @@ def _agent_interface_authority() -> dict[str, Any]:
 def _profile_facet_audit(resolved: Mapping[str, Any]) -> dict[str, Any]:
     """Reject executable/custom surfaces that can bypass the shared service."""
 
+    native_runtime = kfx_contract.load_contract()["nativeRuntime"]
+    view_placement = native_runtime["experienceFlowHost"]["placements"].get("gui")
+    if view_placement != "sandboxed-ipc":
+        raise ProfileSdkError(
+            "kfd3-view-placement-authority-invalid",
+            "Core does not declare the required sandboxed Profile view placement",
+            placement=view_placement,
+        )
     package_dirs = {
         "suite": Path(str(resolved["source"])),
         **{
@@ -1004,23 +1012,18 @@ def _profile_facet_audit(resolved: Mapping[str, Any]) -> dict[str, Any]:
         view = config.get("view")
         if view is not None:
             capabilities = sorted(view.get("capabilities") or [])
-            runtime = view.get("runtime") or "node-integrated"
             entry = str(view.get("entry") or "dist/view/index.js")
             entry_path = _confined(package_dir, entry)
             reasons = []
-            if runtime != "sandboxed-ipc":
-                reasons.append("custom Profile views must use sandboxed-ipc")
             if capabilities:
                 reasons.append(
                     "custom Profile views may not receive capability handles"
                 )
-            if view.get("system"):
-                reasons.append("custom Profile views may not claim system authority")
             if not entry_path.is_file():
                 reasons.append("custom Profile view bundle is missing")
             row = {
                 "packageKey": key,
-                "runtime": runtime,
+                "runtime": view_placement,
                 "capabilities": capabilities,
                 "entry": entry,
                 "bundleRoot": (

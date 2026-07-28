@@ -163,6 +163,7 @@ def _dynamic_source(tmp_path):
         "adapter": {
             "targets": ["kungfu.profile.member"],
             "runtimes": ["python"],
+            "capabilities": [],
             "entry": {"python": "adapter.py"},
         }
     }
