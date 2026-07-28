@@ -32,6 +32,7 @@ implemented behavior, retained evidence, and released guarantees. Begin with
 - [Continuity Pilot v1](continuity-pilot.md)
 - [`kungfu run agent` OpenCode Continuity](run-agent-opencode-continuity.md)
 - [Local-agent Repository-work Experiment](agent-repository-work-experiment.md)
+- [Kungfu Agent Patrol on agent-121](agent-patrol-agent-121.md)
 - [Auditable Demo Artifact Pipeline](auditable-demo-artifact-pipeline.md)
 - [Layer Gate Timing Baseline](layer-gate-timing-baseline.md)
 - [KFD Support Matrix and Source Read-only Check](kfd-support-matrix.md)

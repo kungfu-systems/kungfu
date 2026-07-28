@@ -30,6 +30,27 @@ Rewind and the Fact ledger, sealed Episodes, Profile Suite composition, Project
 Cut and Xinfa continuity, native Fact and Action authority, portable Work,
 Primitive governance, native Work Control, and recursive first-party dogfood.
 
+## Recommended system-understanding sequence
+
+Use this order when the goal is to understand Kungfu across modules:
+
+1. Read the project [README](../../README.md) for the current product promise.
+2. Read the generated [timeline](timeline.md) to establish the longitudinal
+   pressures and abstraction compressions.
+3. Choose the closest pressure in [reader routes](reader-routes.md) and verify
+   its owner in [current authority](current-authority.md).
+4. Read the current [System Overview](../concepts/system-overview.md).
+5. Enter only the relevant Concepts, Architecture, Profile, contract, and
+   source modules.
+6. Use ADRs, qualification, and exact evidence when auditing a decision or
+   claim.
+
+Do not reverse this order into an exhaustive directory walk unless a
+cross-sectional inventory is itself the task. The map supplies orientation;
+current contracts and source still supply authority. A bounded task with a
+known owner can skip the historical prelude and use its verified Xinfa route
+directly.
+
 ## Record protocol
 
 An Era groups a sustained abstraction thesis. A Stage is created only when a

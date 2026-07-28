@@ -16,6 +16,21 @@ restating them.
 - **Building or contributing to this repo** — read the rest of this file, then
   [`CONTRIBUTING.md`](CONTRIBUTING.md).
 
+### Establish orientation before a repository-wide analysis
+
+When a person or agent is trying to understand Kungfu as a whole, do not start
+by walking the current directories and modules side by side. Read the
+[`Evolution Map`](docs/evolution/README.md), its generated
+[`timeline`](docs/evolution/timeline.md), and
+[`reader routes`](docs/evolution/reader-routes.md) first. They establish the
+historical pressures, abstraction compressions, and authority transitions that
+make the current cross-section intelligible; follow their current-authority
+links before treating a historical surface as an implementation owner.
+
+This is an orientation rule, not a requirement to load the whole history for
+every task. When the job is already bounded to one component or operation,
+proceed directly to the verified task-specific route below.
+
 ## Load verified context before implementation
 
 Do not treat this router, a README, chat history, or the first plausible file

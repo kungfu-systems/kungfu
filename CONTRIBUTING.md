@@ -224,6 +224,14 @@ an append-only Era or Stage record under `docs/evolution/` and regenerate its
 projections with `./shifu evolution:map`. Settled records are immutable; publish
 an amendment or successor instead of rewriting history.
 
+Before a cross-layer change, contributors who cannot yet place the affected
+capability and authority transition should read the
+[Evolution Map timeline](docs/evolution/timeline.md) and
+[current-authority projection](docs/evolution/current-authority.md) first. Use
+that historical orientation to find the current owner; do not infer ownership
+from a retired or compatibility surface. A bounded change with an already-known
+owner can proceed directly through its task-specific Xinfa route.
+
 It checks the
 whole Markdown graph so deleting or renaming a target cannot evade a
 changed-file filter. The intentionally small Markdownlint rule baseline lives
@@ -384,7 +392,7 @@ dev/<major>/<version>  →  alpha/<major>/<version>  →  release/<major>/<versi
 - Open pull requests against the relevant `dev/*` branch.
 - Declare the pull request's Evolution impact as `none`, `extends`, `opens`,
   `settles`, or `supersedes`. Any value other than `none` must be reflected in
-  the append-only Evolution Map corpus.
+  the append-only [Evolution Map corpus](docs/evolution/README.md).
 - Keep exactly one `kungfu-adr-release:v1` block from the pull-request
   template. Feature branches must declare `stage-ready` or `implemented`
   delivery intent and reference accepted ADRs; fixes and chores with no

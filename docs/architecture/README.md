@@ -1,5 +1,12 @@
 # Architecture
 
+This section is the current architecture cross-section. First-time readers who
+need to understand the whole system should begin with the
+[Evolution Map](../evolution/README.md), then use its
+[reader routes](../evolution/reader-routes.md) to enter the current owner for
+one historical pressure. Start here directly when the component or boundary is
+already known.
+
 For the KFD-7 library ownership split, current ABI inventory, and staged
 successor membrane, see
 [`kfd7-library-boundary.md`](kfd7-library-boundary.md) and

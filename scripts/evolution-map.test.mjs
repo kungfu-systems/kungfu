@@ -5,6 +5,7 @@ import { test } from 'node:test';
 
 import {
   buildEvolutionMap,
+  findUnlinkedEvolutionMapMentions,
   parseEvolutionRecord,
   renderAuthority,
   renderReaderRoutes,
@@ -146,5 +147,31 @@ test('rejects duplicate identities and forward era dependencies', () => {
         contract,
       ),
     /dangling or forward buildsOn/,
+  );
+});
+
+test('requires authored Evolution Map mentions to be navigable', () => {
+  assert.deepEqual(
+    findUnlinkedEvolutionMapMentions([
+      {
+        file: 'README.md',
+        text: '[Evolution Map](docs/evolution/README.md)\n',
+      },
+      {
+        file: 'docs/evolution/README.md',
+        text: '# Kungfu Evolution Map\n\nThe Evolution Map is this page.\n',
+      },
+      {
+        file: 'docs/adr/example.md',
+        text: '# ADR: Evolution Map\n\n```sh\nextend evolution map\n```\n',
+      },
+    ]),
+    [],
+  );
+  assert.deepEqual(
+    findUnlinkedEvolutionMapMentions([
+      { file: 'CONTRIBUTING.md', text: 'Read the Evolution Map first.\n' },
+    ]),
+    ['CONTRIBUTING.md:1'],
   );
 });

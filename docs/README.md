@@ -29,6 +29,14 @@ matches your job, then go deeper only when you need to.
 
 ## Understand Kungfu
 
+For whole-system understanding, do not begin with a directory-by-directory or
+module-by-module comparison of the current repository. That cross-section is
+the result of several completed abstraction compressions and authority
+transitions. Establish the longitudinal anchors below first, then cross into
+the current contracts and source through the generated reader routes. If your
+job is already a bounded local task, choose its responsibility section or
+verified Xinfa route directly instead.
+
 Read these in order for the product model:
 
 1. [Evolution Map](evolution/README.md) — how repeated implementation pressure,

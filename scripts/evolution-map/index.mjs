@@ -528,6 +528,45 @@ function checkPullRequestTemplate(contract) {
   );
 }
 
+export function findUnlinkedEvolutionMapMentions(entries) {
+  const violations = [];
+  for (const { file, text } of entries) {
+    if (file === 'docs/evolution/README.md') continue;
+    let fenced = false;
+    for (const [index, line] of text.split(/\r?\n/).entries()) {
+      if (/^\s*```/.test(line)) {
+        fenced = !fenced;
+        continue;
+      }
+      if (fenced || !/\bevolution map\b/i.test(line)) continue;
+      if (
+        file.startsWith('docs/adr/') &&
+        /^#\s+.*\bevolution map\b/i.test(line)
+      )
+        continue;
+      if (/\[[^\]]*\bevolution map\b[^\]]*\]\([^)]+\)/i.test(line)) continue;
+      violations.push(`${file}:${index + 1}`);
+    }
+  }
+  return violations;
+}
+
+function checkEvolutionMapNavigation() {
+  const markdownFiles = runGit(['ls-files', '--', '*.md'])
+    .split('\n')
+    .filter(Boolean);
+  const violations = findUnlinkedEvolutionMapMentions(
+    markdownFiles.map((file) => ({
+      file,
+      text: fs.readFileSync(path.join(ROOT, file), 'utf8'),
+    })),
+  );
+  invariant(
+    violations.length === 0,
+    `Evolution Map mentions must link to a navigation target: ${violations.join(', ')}`,
+  );
+}
+
 function outputs() {
   const contract = JSON.parse(
     fs.readFileSync(path.join(ROOT, CONTRACT_PATH), 'utf8'),
@@ -537,6 +576,7 @@ function outputs() {
   const projection = buildEvolutionMap(eras, stages, contract, ROOT);
   checkHistoricalIntegrity();
   checkPullRequestTemplate(contract);
+  checkEvolutionMapNavigation();
   return new Map([
     [OUTPUTS.map, `${JSON.stringify(projection, null, 2)}\n`],
     [OUTPUTS.timeline, renderTimeline(projection)],

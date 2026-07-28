@@ -222,6 +222,13 @@
           "sourceRoot": "sha256:62743a6b64d9b897792c572d6b8e3ad3eafd54b5ea330cb246b0467308ee8d3f"
         },
         {
+          "path": ".github/workflows/kungfu-agent-patrol.yml",
+          "classification": "non-publication",
+          "owner": "kungfu-ci",
+          "surfaceIds": [],
+          "sourceRoot": "sha256:4daa05a27fd900861edcbc233e2ac2f8cf0ae8ec1f454f7c1f433bba3c43018c"
+        },
+        {
           "path": ".github/workflows/opencode-agent-repository-work.yml",
           "classification": "non-publication",
           "owner": "kungfu-ci",
@@ -785,5 +792,5 @@
       }
     }
   ],
-  "registryRoot": "sha256:9314dcb582e4775b5b63a04c08d187e1f9671b94362d2e6f1e97259d5615aa34"
+  "registryRoot": "sha256:cdf325f79cea30edcf9f54426bffb98c1ce3759030bad71a3f4f125dc27f89dd"
 }

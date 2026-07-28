@@ -1,7 +1,11 @@
 # Architecture
 
-How the Kungfu repository is layered, and the principle that shapes it. For the
-accountability stance behind the product, see
+How the Kungfu repository is layered, and the principle that shapes it. This is
+a cross-sectional view of the current system. If you are new to the repository
+or the number of layers is the problem, first read the longitudinal
+[Evolution Map](../evolution/README.md) and choose the closest pressure in its
+[reader routes](../evolution/reader-routes.md); then return here for the current
+module boundaries. For the accountability stance behind the product, see
 [`facts-before-trust.md`](../concepts/facts-before-trust.md); for the two first principles
 the whole design follows from, see
 [`design-philosophy.md`](../concepts/design-philosophy.md); for the vocabulary
