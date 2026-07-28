@@ -1854,7 +1854,6 @@ export function summarizeNativeAttribution(samples) {
     },
   };
 }
-
 export function report(
   repository,
   branch,
@@ -1876,6 +1875,7 @@ export function report(
     statistics.all.sampleCount >= MINIMUM_SAMPLE_COUNT &&
     statistics.native.sampleCount >= MINIMUM_NATIVE_SAMPLE_COUNT;
   const meetsTarget =
+    statistics.unknown.sampleCount === 0 &&
     Math.max(statistics.all.p50Ms, statistics.native.p50Ms) <= 300000 &&
     Math.max(statistics.all.p95Ms, statistics.native.p95Ms) <= 600000;
   const cache = {
@@ -1963,7 +1963,7 @@ export function report(
           : !enoughSamples
             ? 'insufficient overall or native sample count'
             : !meetsTarget
-              ? 'observed overall or native sample exceeds target'
+              ? 'unknown impact attribution or observed overall or native sample exceeds target'
               : !nativeCacheEvidenceComplete
                 ? 'native cache evidence is incomplete'
                 : 'observed overall and native samples meet target with complete native cache evidence',
