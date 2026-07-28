@@ -7,6 +7,11 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
+import {
+  checkDevChannelAuthority,
+  devMergeBaseCandidates,
+} from './candidate-timeline-events.cjs';
+
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const CPP = /\.(?:c|cc|cpp|cxx|h|hh|hpp|hxx)$/;
 const WEB = /\.(?:ts|tsx|js|jsx|mjs|cjs|json|jsonc|css)$/;
@@ -123,11 +128,7 @@ export function sourceClangFormatCommand(
 }
 
 export function sourceMergeBase() {
-  const candidates = [
-    process.env.GITHUB_BASE_REF ? `origin/${process.env.GITHUB_BASE_REF}` : '',
-    'origin/dev/v4/v4.0',
-    'dev/v4/v4.0',
-  ].filter(Boolean);
+  const candidates = devMergeBaseCandidates();
   for (const ref of candidates) {
     const sha = gitMaybe(['merge-base', ref, 'HEAD']);
     if (sha) return { ref, sha };
@@ -631,6 +632,12 @@ function run(step) {
 function main() {
   const files = sourceChangedFiles();
   console.log(`[source-acceptance] changed files: ${files.length}`);
+  const devChannels = checkDevChannelAuthority();
+  console.log(
+    `\n[source-acceptance] dev channel authority\n${JSON.stringify(devChannels, null, 2)}`,
+  );
+  if (devChannels.verdict !== 'pass')
+    throw new Error('dev channel authority failed');
   if (process.env.KUNGFU_READONLY_NESTED_SOURCE_ACCEPTANCE === '1') {
     console.warn(
       '[source-acceptance] cold read-only lane: the installed TypeScript dependency graph is absent; normal source acceptance and CI enforce tooling type checks.',

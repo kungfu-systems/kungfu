@@ -68,6 +68,7 @@ jobs:
         if: ${{ matrix.platform != 'windows' && contains(format(',{0},', inputs.focused-platforms), format(',{0},', matrix.platform)) }}
         shell: bash
         env:
+          KUNGFU_GATE_DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
           KUNGFU_GATE_SOURCE_REF: ${{ inputs.source-ref || github.sha }}
         run: |
           set -euo pipefail
@@ -80,7 +81,7 @@ jobs:
           for attempt in 1 2 3; do
             if git -C "$source_dir" fetch --no-tags --filter=blob:none origin \
               "$KUNGFU_GATE_SOURCE_REF" \
-              '+refs/heads/dev/v4/v4.0:refs/remotes/origin/dev/v4/v4.0'; then
+              "+refs/heads/${KUNGFU_GATE_DEFAULT_BRANCH}:refs/remotes/origin/${KUNGFU_GATE_DEFAULT_BRANCH}"; then
               fetch_ok=true
               break
             fi
@@ -108,6 +109,7 @@ jobs:
         if: ${{ matrix.platform == 'windows' && contains(format(',{0},', inputs.focused-platforms), format(',{0},', matrix.platform)) }}
         shell: pwsh
         env:
+          KUNGFU_GATE_DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
           KUNGFU_GATE_SOURCE_REF: ${{ inputs.source-ref || github.sha }}
         run: |
           $ErrorActionPreference = "Stop"
@@ -124,7 +126,7 @@ jobs:
           foreach ($attempt in 1..3) {
             git -C $sourceDir fetch --no-tags --filter=blob:none origin `
               $env:KUNGFU_GATE_SOURCE_REF `
-              '+refs/heads/dev/v4/v4.0:refs/remotes/origin/dev/v4/v4.0'
+              "+refs/heads/$($env:KUNGFU_GATE_DEFAULT_BRANCH):refs/remotes/origin/$($env:KUNGFU_GATE_DEFAULT_BRANCH)"
             if ($LASTEXITCODE -eq 0) {
               $fetchOk = $true
               break

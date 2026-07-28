@@ -4,6 +4,247 @@
 const fs = require('node:fs');
 const path = require('node:path');
 const { performance } = require('node:perf_hooks');
+const { spawnSync } = require('node:child_process');
+
+const ROOT = path.resolve(__dirname, '..');
+const DEV_CHANNEL_CONTRACT = path.join(
+  ROOT,
+  'docs',
+  'qualification',
+  'gates',
+  'dev-queue-admission.contract.json',
+);
+const EXACT_DEV_BRANCH = /dev\/v\d+\/v\d+\.\d+/gu;
+const DEV_CHANNEL_GOVERNED_ROOTS = [
+  '.github/workflows',
+  'scripts',
+  'crates/shifu/src',
+  'framework/core/src/python/kungfu',
+];
+const DEV_CHANNEL_GOVERNED_FILES = [
+  '.github/alpha-attention-operations.json',
+  'docs/qualification/gates/README.md',
+  'docs/shifu/artifact-contract.json',
+  'framework/maintainability/code-complexity-policy.json',
+];
+
+/** @param {string} value */
+function escapeRegex(value) {
+  return value.replace(/[|\\{}()[\]^$+?.]/gu, '\\$&');
+}
+
+/** @param {string} pattern */
+function branchPatternRegex(pattern) {
+  return new RegExp(
+    `^${pattern
+      .split('*')
+      .map((part) => escapeRegex(part))
+      .join('[^/]*')}$`,
+    'u',
+  );
+}
+
+/** @param {string} [root] */
+function readDevChannelContract(root = ROOT) {
+  const contractPath =
+    root === ROOT
+      ? DEV_CHANNEL_CONTRACT
+      : path.join(
+          root,
+          'docs',
+          'qualification',
+          'gates',
+          'dev-queue-admission.contract.json',
+        );
+  return JSON.parse(fs.readFileSync(contractPath, 'utf8'));
+}
+
+/**
+ * @param {string} branch
+ * @param {ReturnType<typeof readDevChannelContract>} [contract]
+ */
+function isAdmittedDevBranch(branch, contract = readDevChannelContract()) {
+  const normalized = branch
+    .replace(/^refs\/heads\//u, '')
+    .replace(/^refs\/remotes\/origin\//u, '')
+    .replace(/^origin\//u, '');
+  const match = normalized.match(/^dev\/v(\d+)\/v(\d+)\.(\d+)$/u);
+  return Boolean(
+    match &&
+      branchPatternRegex(contract.branchPattern).test(normalized) &&
+      Number(match[1]) >= Number(contract.admittedFamily?.minimumMajor),
+  );
+}
+
+/** @param {string[]} args */
+function gitMaybe(args) {
+  const result = spawnSync('git', args, {
+    cwd: ROOT,
+    encoding: 'utf8',
+    shell: false,
+  });
+  return result.status === 0 ? result.stdout.trim() : '';
+}
+
+/** @param {NodeJS.ProcessEnv} env */
+function eventBranches(env) {
+  if (!env.GITHUB_EVENT_PATH) return [];
+  try {
+    const event = JSON.parse(fs.readFileSync(env.GITHUB_EVENT_PATH, 'utf8'));
+    return [
+      event.pull_request?.base?.ref,
+      event.merge_group?.base_ref,
+      event.repository?.default_branch,
+    ].filter((value) => typeof value === 'string' && value);
+  } catch {
+    return [];
+  }
+}
+
+/**
+ * Resolve the active development line without naming a version in source.
+ * CI event authority wins, followed by the repository's remote default branch.
+ *
+ * @param {{
+ *   env?: NodeJS.ProcessEnv,
+ *   symbolicRemoteHead?: () => string,
+ *   contract?: ReturnType<typeof readDevChannelContract>
+ * }} [options]
+ */
+function resolveDevBranch(options = {}) {
+  const env = options.env ?? process.env;
+  const contract = options.contract ?? readDevChannelContract();
+  const symbolicRemoteHead =
+    options.symbolicRemoteHead ??
+    (() => gitMaybe(['symbolic-ref', '--quiet', 'refs/remotes/origin/HEAD']));
+  const candidates = [
+    env.KUNGFU_DEV_BRANCH,
+    env.GITHUB_BASE_REF,
+    ...eventBranches(env),
+    symbolicRemoteHead(),
+  ];
+  for (const candidate of candidates) {
+    if (!candidate) continue;
+    const branch = candidate
+      .replace(/^refs\/heads\//u, '')
+      .replace(/^refs\/remotes\/origin\//u, '')
+      .replace(/^origin\//u, '');
+    if (isAdmittedDevBranch(branch, contract)) return branch;
+  }
+  throw new Error(
+    'cannot resolve the admitted dev branch; set KUNGFU_DEV_BRANCH or fetch origin/HEAD',
+  );
+}
+
+/** @param {Parameters<typeof resolveDevBranch>[0]} [options] */
+function devMergeBaseCandidates(options = {}) {
+  const branch = resolveDevBranch(options);
+  return [`origin/${branch}`, branch, 'origin/HEAD'];
+}
+
+/** @param {string} pathname */
+function isDevChannelGovernedSource(pathname) {
+  const basename = path.basename(pathname);
+  const segments = pathname.split(path.sep);
+  return (
+    !basename.includes('.test.') &&
+    !basename.includes('.spec.') &&
+    !segments.includes('tests') &&
+    !segments.includes('fixtures') &&
+    /\.(?:cjs|js|json|mjs|py|rs|ya?ml|md)$/u.test(pathname)
+  );
+}
+
+/** @param {string} root @param {string} relative */
+function filesBelow(root, relative) {
+  const absolute = path.join(root, relative);
+  if (!fs.existsSync(absolute)) return [];
+  const pending = [absolute];
+  const files = [];
+  while (pending.length) {
+    const current = pending.pop();
+    for (const entry of fs.readdirSync(current, { withFileTypes: true })) {
+      const pathname = path.join(current, entry.name);
+      if (entry.isDirectory()) pending.push(pathname);
+      else if (entry.isFile() && isDevChannelGovernedSource(pathname))
+        files.push(pathname);
+    }
+  }
+  return files;
+}
+
+/** @param {string} [root] */
+function findOperationalExactBindings(root = ROOT) {
+  const files = [
+    ...DEV_CHANNEL_GOVERNED_ROOTS.flatMap((relative) =>
+      filesBelow(root, relative),
+    ),
+    ...DEV_CHANNEL_GOVERNED_FILES.map((relative) =>
+      path.join(root, relative),
+    ).filter((pathname) => fs.existsSync(pathname)),
+  ];
+  return [...new Set(files)].flatMap((pathname) => {
+    const relative = path.relative(root, pathname).split(path.sep).join('/');
+    return [
+      ...fs.readFileSync(pathname, 'utf8').matchAll(EXACT_DEV_BRANCH),
+    ].map((match) => ({ path: relative, branch: match[0] }));
+  });
+}
+
+/** @param {string} [root] */
+function checkDevChannelAuthority(root = ROOT) {
+  const issues = [];
+  const contract = readDevChannelContract(root);
+  const activation = contract.rulesetActivation;
+  const operations = JSON.parse(
+    fs.readFileSync(
+      path.join(root, '.github', 'alpha-attention-operations.json'),
+      'utf8',
+    ),
+  );
+  const expectedInclude = ['refs/heads/dev/v*/v*'];
+  const expectedExclude = [
+    'refs/heads/dev/v1/v*',
+    'refs/heads/dev/v2/v*',
+    'refs/heads/dev/v3/v*',
+  ];
+  if (
+    contract.branchPattern !== 'dev/v*/v*' ||
+    contract.admittedFamily?.minimumMajor !== 4 ||
+    JSON.stringify(activation?.target?.include) !==
+      JSON.stringify(expectedInclude) ||
+    JSON.stringify(activation?.target?.exclude) !==
+      JSON.stringify(expectedExclude)
+  )
+    issues.push('admitted dev family or legacy exclusions drifted');
+  if (
+    activation?.rulesetId !== 19057118 ||
+    activation?.rulesetName !==
+      'Buildchain dev merge queue: admitted dev channel family' ||
+    !operations.activation?.requiredActiveRulesets?.includes(
+      activation?.rulesetName,
+    )
+  )
+    issues.push('dev family ruleset identity drifted');
+  if (
+    !isAdmittedDevBranch(`dev/v${4}/v${4}.0`, contract) ||
+    !isAdmittedDevBranch(`dev/v${10}/v${10}.2`, contract) ||
+    isAdmittedDevBranch(`dev/v${3}/v${3}.2`, contract)
+  )
+    issues.push('dev family admission examples do not match the contract');
+  for (const binding of findOperationalExactBindings(root))
+    issues.push(
+      `${binding.path} binds operational behavior to ${binding.branch}`,
+    );
+  return {
+    schema: 'kungfu.dev-channel-authority-check/v1',
+    verdict: issues.length ? 'fail' : 'pass',
+    issues,
+    rulesetId: activation?.rulesetId ?? null,
+    rulesetName: activation?.rulesetName ?? null,
+    target: activation?.target ?? null,
+  };
+}
 
 function compact(value) {
   return Object.fromEntries(
@@ -314,7 +555,7 @@ async function collectLatestMergedPullWindow(fetchPage, limit, pageSize = 100) {
 function parseDevRequiredLatencyArgs(argv) {
   const options = {
     repository: process.env.GITHUB_REPOSITORY || '',
-    branch: 'dev/v4/v4.0',
+    branch: process.env.KUNGFU_DEV_BRANCH || '',
     limit: 30,
     output: '',
     pulls: [],
@@ -396,11 +637,17 @@ function latencyOnlyEvidence(classification, workflowRunId = null) {
 }
 
 module.exports = {
+  checkDevChannelAuthority,
   collectLatestMergedPullWindow,
+  devMergeBaseCandidates,
+  findOperationalExactBindings,
+  isAdmittedDevBranch,
   latestMergedPulls,
   latencyOnlyEvidence,
   measureCandidateStage,
   measureCandidateStageSync,
   parseDevRequiredLatencyArgs,
+  readDevChannelContract,
   requiredMergeQueueWindow,
+  resolveDevBranch,
 };

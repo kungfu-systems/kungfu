@@ -39,7 +39,9 @@ const steps = [
     cwd: CORE,
     env: {
       ...process.env,
-      PYTHONPATH: path.join(CORE, 'src/python'),
+      PYTHONPATH: [path.join(CORE, 'src/python'), process.env.PYTHONPATH]
+        .filter(Boolean)
+        .join(path.delimiter),
     },
     shell: isWin,
   },

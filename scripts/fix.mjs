@@ -12,6 +12,7 @@ import { spawnSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { devMergeBaseCandidates } from './candidate-timeline-events.cjs';
 import { scanStaged, scanTree } from './no-bash-guard.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -127,13 +128,7 @@ function mergeBase() {
     '--symbolic-full-name',
     '@{upstream}',
   ]);
-  const candidates = [
-    upstream,
-    'origin/HEAD',
-    'nas/dev/v4/v4.0',
-    'origin/dev/v4/v4.0',
-    'dev/v4/v4.0',
-  ].filter(Boolean);
+  const candidates = [upstream, ...devMergeBaseCandidates()].filter(Boolean);
   for (const ref of candidates) {
     const base = gitMaybe(['merge-base', String(ref), 'HEAD']);
     if (base) return { ref: String(ref), sha: base };

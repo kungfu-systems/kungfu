@@ -5,6 +5,8 @@ import { spawnSync } from 'node:child_process';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+import { devMergeBaseCandidates } from './candidate-timeline-events.cjs';
+
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const isWin = process.platform === 'win32';
 
@@ -38,7 +40,7 @@ function git(args) {
 function checkQualificationLabIsolation() {
   const baseline =
     process.env.KUNGFU_NATIVE_KFX_BASE_REF ??
-    git(['merge-base', 'HEAD', 'origin/dev/v4/v4.0']);
+    git(['merge-base', 'HEAD', devMergeBaseCandidates()[0]]);
   const qualificationLabMerge = '1f7cfe58cc7699ac27106241430d77f6938eadcd';
   const protectedBranch = 'feature/agent-work-lab-kfx-suite';
   const protectedPaths = [

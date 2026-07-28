@@ -103,7 +103,7 @@ export function checkAlphaAttentionOperations(root = ROOT) {
           },
         ]) &&
       contract.activation?.requiredActiveRulesets?.includes(
-        'Buildchain dev merge queue: dev/v4/v4.0',
+        'Buildchain dev merge queue: admitted dev channel family',
       ) &&
       community.defaultRepository?.target === 'kungfu-systems/.github' &&
       community.defaultRepository?.requiredFiles?.length === 8,
@@ -172,7 +172,7 @@ export function checkAlphaAttentionOperations(root = ROOT) {
       privateVulnerabilityReporting: true,
       activeRulesets: [
         {
-          name: 'Buildchain dev merge queue: dev/v4/v4.0',
+          name: 'Buildchain dev merge queue: admitted dev channel family',
           enforcement: 'active',
         },
       ],

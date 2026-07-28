@@ -88,7 +88,7 @@
   },
   "baselineGovernance": {
     "schema": "kungfu.code-complexity-baseline-governance/v1",
-    "protectedRef": "origin/dev/v4/v4.0",
+    "protectedRef": "origin/HEAD",
     "protectedRefEnv": "KUNGFU_COMPLEXITY_PROTECTED_REF",
     "transitionDirectory": "framework/maintainability/baseline-transitions",
     "transitionSchema": "kungfu.code-complexity-baseline-transition/v1",

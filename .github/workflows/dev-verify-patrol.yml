@@ -3,7 +3,7 @@
 # Dev Verify Patrol
 #
 # The heavy Build workflow only fires on alpha/release PRs, so the development
-# mainline (dev/v4/v4.0, this repository's default branch) has no standing
+# mainline (this repository's default dev branch) has no standing
 # verify signal: regressions can accumulate on dev and only surface at alpha
 # promotion, forcing contributors to reproduce the baseline by hand to tell a
 # green change from an already-red tree.
@@ -78,8 +78,8 @@ jobs:
       GH_TOKEN: ${{ github.token }}
       RESULT: ${{ needs.verify.result }}
       HEAD_SHA: ${{ github.sha }}
+      DEV_BRANCH: ${{ github.event.repository.default_branch }}
       RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
-      ISSUE_TITLE: "Dev verify patrol: dev/v4/v4.0 verify is failing"
       AUTOMATION_LABELS: "kind/internal,area/buildchain,source/automation,state/blocked"
     steps:
       - name: Sync tracking issue with patrol result
@@ -87,8 +87,9 @@ jobs:
         run: |
           set -euo pipefail
           short_sha="${HEAD_SHA:0:12}"
+          issue_title="Dev verify patrol: ${DEV_BRANCH} verify is failing"
           existing="$(gh issue list --repo "${GITHUB_REPOSITORY}" \
-            --state open --search "in:title \"${ISSUE_TITLE}\"" \
+            --state open --search "in:title \"${issue_title}\"" \
             --json number --jq '.[0].number // empty')"
 
           if [ "${RESULT}" = "success" ]; then
@@ -116,7 +117,7 @@ jobs:
           body="$(cat <<EOF
           <!-- kungfu-attention-source: automation -->
 
-          The daily dev verify patrol found \`dev/v4/v4.0\` failing.
+          The daily dev verify patrol found \`${DEV_BRANCH}\` failing.
 
           - Commit: \`${short_sha}\`
           - Run: ${RUN_URL}
@@ -134,7 +135,7 @@ jobs:
             echo "refreshed tracking issue #${existing}"
           else
             gh issue create --repo "${GITHUB_REPOSITORY}" \
-              --title "${ISSUE_TITLE}" --body "${body}" \
+              --title "${issue_title}" --body "${body}" \
               --label "${AUTOMATION_LABELS}"
             echo "opened tracking issue"
           fi

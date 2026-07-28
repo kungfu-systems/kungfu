@@ -10,10 +10,14 @@ import test from 'node:test';
 
 const require = createRequire(import.meta.url);
 const {
+  findOperationalExactBindings,
+  isAdmittedDevBranch,
   latencyOnlyEvidence,
   measureCandidateStage,
   measureCandidateStageSync,
   parseDevRequiredLatencyArgs,
+  readDevChannelContract,
+  resolveDevBranch,
 } = require('./candidate-timeline-events.cjs');
 
 function fixture() {
@@ -41,6 +45,60 @@ function events(value) {
     .split('\n')
     .map((line) => JSON.parse(line));
 }
+
+test('dev channel authority admits current and future lines but rejects legacy lines', () => {
+  const contract = readDevChannelContract();
+  assert.equal(isAdmittedDevBranch(`dev/v${4}/v${4}.0`, contract), true);
+  assert.equal(isAdmittedDevBranch(`dev/v${10}/v${10}.2`, contract), true);
+  assert.equal(isAdmittedDevBranch(`dev/v${3}/v${3}.2`, contract), false);
+  assert.equal(
+    resolveDevBranch({
+      contract,
+      env: { GITHUB_BASE_REF: `dev/v${6}/v${6}.1` },
+      symbolicRemoteHead: () => '',
+    }),
+    `dev/v${6}/v${6}.1`,
+  );
+  assert.equal(
+    resolveDevBranch({
+      contract,
+      env: {},
+      symbolicRemoteHead: () => `refs/remotes/origin/dev/v${5}/v${5}.0`,
+    }),
+    `dev/v${5}/v${5}.0`,
+  );
+  assert.throws(
+    () =>
+      resolveDevBranch({
+        contract,
+        env: { KUNGFU_DEV_BRANCH: `dev/v${3}/v${3}.2` },
+        symbolicRemoteHead: () => '',
+      }),
+    /cannot resolve the admitted dev branch/u,
+  );
+});
+
+test('dev channel authority reports operational exact branch bindings', () => {
+  const temporary = fs.mkdtempSync(
+    path.join(os.tmpdir(), 'kungfu-dev-channel-authority-'),
+  );
+  try {
+    const workflow = path.join(temporary, '.github', 'workflows');
+    fs.mkdirSync(workflow, { recursive: true });
+    fs.writeFileSync(
+      path.join(workflow, 'bad.yml'),
+      `base: dev/v${9}/v${9}.0\n`,
+    );
+    assert.deepEqual(findOperationalExactBindings(temporary), [
+      {
+        path: '.github/workflows/bad.yml',
+        branch: `dev/v${9}/v${9}.0`,
+      },
+    ]);
+  } finally {
+    fs.rmSync(temporary, { recursive: true, force: true });
+  }
+});
 
 test('candidate stage records bounded source and attempt correlation', () => {
   const value = fixture();

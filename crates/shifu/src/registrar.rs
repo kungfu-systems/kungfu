@@ -43,6 +43,8 @@ use std::time::{SystemTime, UNIX_EPOCH};
 
 use shifu_core::{bootstrap, host, json, style};
 
+use crate::artifact_catalog::product_mainline_ref;
+
 /// The buildchain self-describe contract shifu asks for the repo's KFD-3
 /// registry location. shifu holds no copy of that layout path: the layout is
 /// buildchain's to define, so shifu asks the pinned `buildchain` binary
@@ -437,13 +439,13 @@ pub fn register(root: &Path, plan: &DistributionPlan) {
     } else {
         branch
     };
-    let mainline_ref = "origin/dev/v4/v4.0";
-    let mainline_sha = git(root, &["rev-parse", mainline_ref]);
+    let mainline_ref = product_mainline_ref();
+    let mainline_sha = git(root, &["rev-parse", &mainline_ref]);
     let integrated = sha != "unknown"
         && !dirty
         && !mainline_sha.is_empty()
         && sha == mainline_sha
-        && git_success(root, &["merge-base", "--is-ancestor", &sha, mainline_ref]);
+        && git_success(root, &["merge-base", "--is-ancestor", &sha, &mainline_ref]);
     let repo = git(root, &["worktree", "list", "--porcelain"])
         .lines()
         .find_map(|line| line.strip_prefix("worktree "))
@@ -486,7 +488,7 @@ pub fn register(root: &Path, plan: &DistributionPlan) {
         format!("KUNGFU_BUILD_KIND={}", quote(&primary.kind)),
         format!("KUNGFU_BUILD_ARTIFACT={}", quote(&primary_name)),
         format!("KUNGFU_BUILD_SURFACE={}", quote(&plan.surface_id)),
-        format!("KUNGFU_BUILD_MAINLINE_REF={}", quote(mainline_ref)),
+        format!("KUNGFU_BUILD_MAINLINE_REF={}", quote(&mainline_ref)),
         format!("KUNGFU_BUILD_MAINLINE_SHA={}", quote(&mainline_sha)),
         format!(
             "KUNGFU_BUILD_INTEGRATED={}",
@@ -786,7 +788,7 @@ mod tests {
         assert!(meta.contains("KUNGFU_BUILD_SURFACE='kungfu.product.release-build'"));
         // No git repo at the temp root: fingerprint degrades honestly.
         assert!(meta.contains("KUNGFU_BUILD_SHA='unknown'"));
-        assert!(meta.contains("KUNGFU_BUILD_MAINLINE_REF='origin/dev/v4/v4.0'"));
+        assert!(meta.contains("KUNGFU_BUILD_MAINLINE_REF='origin/HEAD'"));
         assert!(meta.contains("KUNGFU_BUILD_INTEGRATED='false'"));
         assert!(meta.contains("KUNGFU_BUILD_QUALIFIED='false'"));
         // Content hash of b"artifact-bytes", recorded for provenance.
