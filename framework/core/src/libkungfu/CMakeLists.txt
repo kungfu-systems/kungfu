@@ -14,9 +14,9 @@ configure_file(
   @ONLY
 )
 
-# Embed the exact KFX contract document as the sole Profile JSON schema owner.
-# Core validates its profileSuiteSchema before applying lifecycle semantics.
+# Embed the exact KFX contract as the sole Profile schema owner.
 file(READ "${PROJECT_SOURCE_DIR}/../../../kfx/kungfu-kfx.contract.json" KFX_CONTRACT_JSON)
+file(READ "${PROJECT_SOURCE_DIR}/../../../kfx/kungfu-kfx-domain-profile.contract.json" KFX_DOMAIN_PROFILE_JSON)
 # MSVC limits one string literal to 65,535 bytes. Preserve the exact contract
 # bytes while emitting bounded adjacent raw literals that C++ concatenates.
 set(KFX_CONTRACT_JSON_LITERALS "")

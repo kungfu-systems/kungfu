@@ -15,10 +15,12 @@ def _write_adapter(root, key, runtime="python"):
     pkg = os.path.join(root, key)
     entry = os.path.join("src", "adapter", runtime, "index.py")
     os.makedirs(os.path.join(pkg, os.path.dirname(entry)), exist_ok=True)
-    with open(os.path.join(pkg, "package.json"), "w") as f:
+    with open(os.path.join(pkg, "kungfu.kfx.json"), "w") as f:
         json.dump(
             {
+                "schema": "kungfu.kfx.manifest/v1",
                 "name": f"@kungfu-tech/kfx-adapter-{key}",
+                "version": "1.0.0",
                 "kungfuConfig": {
                     "key": key,
                     "config": {

@@ -16,6 +16,9 @@ CONTRACT_SCHEMA = "kungfu.kfx.contract/v1"
 CONTRACT_FILE = "kungfu-kfx.contract.json"
 CONTRACT_ENV = "KUNGFU_KFX_CONTRACT"
 FIRST_PARTY_MANIFEST_SCHEMA = "kungfu.first-party-manifest/v1"
+PACKAGE_MANIFEST_FILE = "kungfu.kfx.json"
+PACKAGE_MANIFEST_SCHEMA = "kungfu.kfx.manifest/v1"
+LEGACY_PACKAGE_MANIFEST_FILE = "package.json"
 
 
 def resolve_contract_path(
@@ -125,7 +128,21 @@ def validate_first_party_manifest(
 
 
 def read_manifest_from_dir(package_dir: str) -> dict[str, Any]:
-    manifest_path = os.path.join(package_dir, "package.json")
+    manifest_path = os.path.join(package_dir, PACKAGE_MANIFEST_FILE)
+    package_path = os.path.join(package_dir, LEGACY_PACKAGE_MANIFEST_FILE)
+    if os.path.isfile(package_path):
+        with open(package_path, encoding="utf-8") as f:
+            package = json.load(f)
+        if isinstance(package, dict) and "kungfuConfig" in package:
+            code = (
+                "KF_KFX_MANIFEST_CONFLICT"
+                if os.path.isfile(manifest_path)
+                else "KF_KFX_MANIFEST_MISSING"
+            )
+            raise ValueError(
+                f"{code}: package.json must not author kungfuConfig; "
+                f"{PACKAGE_MANIFEST_FILE} is the only KFX manifest authority"
+            )
     with open(manifest_path, encoding="utf-8") as f:
         manifest = json.load(f)
     if not isinstance(manifest, dict):
@@ -136,10 +153,35 @@ def read_manifest_from_dir(package_dir: str) -> dict[str, Any]:
 
 def read_manifest_from_tgz(tgz: str) -> dict[str, Any]:
     with tarfile.open(tgz, "r:gz") as archive:
-        member = archive.getmember("package/package.json")
+        manifest_member_name = f"package/{PACKAGE_MANIFEST_FILE}"
+        legacy_member_name = f"package/{LEGACY_PACKAGE_MANIFEST_FILE}"
+        members = {member.name: member for member in archive.getmembers()}
+        legacy_member = members.get(legacy_member_name)
+        legacy_claims_kfx = False
+        if legacy_member is not None:
+            legacy_file = archive.extractfile(legacy_member)
+            if legacy_file is not None:
+                package = json.load(legacy_file)
+                legacy_claims_kfx = (
+                    isinstance(package, dict) and "kungfuConfig" in package
+                )
+        if legacy_claims_kfx:
+            code = (
+                "KF_KFX_MANIFEST_CONFLICT"
+                if manifest_member_name in members
+                else "KF_KFX_MANIFEST_MISSING"
+            )
+            raise ValueError(
+                f"{code}: package/package.json must not author kungfuConfig"
+            )
+        member = members.get(manifest_member_name)
+        if member is None:
+            raise ValueError(
+                f"KF_KFX_MANIFEST_MISSING: archive has no {manifest_member_name}"
+            )
         extracted = archive.extractfile(member)
         if extracted is None:
-            raise ValueError("package/package.json is not a file")
+            raise ValueError(f"package/{PACKAGE_MANIFEST_FILE} is not a file")
         manifest = json.load(extracted)
     if not isinstance(manifest, dict):
         raise ValueError(f"KFX package manifest must be a JSON object: {tgz}")
@@ -189,8 +231,17 @@ def package_summary(
 
 
 def resolve_kfx_package(package_dir: str, expected_key: str) -> dict[str, Any] | None:
-    manifest_path = os.path.join(package_dir, "package.json")
+    manifest_path = os.path.join(package_dir, PACKAGE_MANIFEST_FILE)
     if not os.path.isfile(manifest_path):
+        package_path = os.path.join(package_dir, LEGACY_PACKAGE_MANIFEST_FILE)
+        if os.path.isfile(package_path):
+            with open(package_path, encoding="utf-8") as f:
+                package = json.load(f)
+            if isinstance(package, dict) and "kungfuConfig" in package:
+                raise ValueError(
+                    "KF_KFX_MANIFEST_MISSING: package.json must not author "
+                    f"kungfuConfig; add {PACKAGE_MANIFEST_FILE}"
+                )
         return None
     try:
         manifest = read_manifest_from_dir(package_dir)

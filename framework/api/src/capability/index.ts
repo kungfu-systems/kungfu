@@ -13,6 +13,7 @@ export * from './work.js';
 export * from './work-loop.js';
 export * from './workspace.js';
 export * from './storage.js';
+export * from './kfx-host.js';
 export * from './exit.js';
 export * from './query.js';
 export * from './profile.js';

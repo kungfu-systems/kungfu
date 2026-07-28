@@ -18,7 +18,8 @@
   "files": [
     "dist",
     "package.json",
-    "README.md"
+    "README.md",
+    "kungfu.kfx.json"
   ],
   "scripts": {
     "build": "kungfu sdk kfx build",
@@ -34,22 +35,5 @@
   },
   "peerDependencies": {
     "react": "^18.3.1"
-  },
-  "kungfuConfig": {
-    "key": "config-manager",
-    "name": "Config",
-    "product": {
-      "roles": ["devtool"],
-      "icon": "⚙️",
-      "order": 20
-    },
-    "config": {
-      "view": {
-        "title": "Config",
-        "capabilities": [
-          "domain"
-        ]
-      }
-    }
   }
 }

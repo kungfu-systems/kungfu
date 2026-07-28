@@ -4,7 +4,7 @@ doc_type: architecture-decision
 adr_id: KF-ADR-019f86da-4f90-72df-add3-948f3ae38c3a
 decision_status: accepted
 implementation_status: partial
-implementation_prs: [https://github.com/kungfu-systems/kungfu/pull/734, https://github.com/kungfu-systems/kungfu/pull/842, https://github.com/kungfu-systems/kungfu/pull/873, https://github.com/kungfu-systems/kungfu/pull/906, https://github.com/kungfu-systems/kungfu/pull/922, https://github.com/kungfu-systems/kungfu/pull/1137, https://github.com/kungfu-systems/kungfu/pull/1151, https://github.com/kungfu-systems/kungfu/pull/1202]
+implementation_prs: [https://github.com/kungfu-systems/kungfu/pull/734, https://github.com/kungfu-systems/kungfu/pull/842, https://github.com/kungfu-systems/kungfu/pull/873, https://github.com/kungfu-systems/kungfu/pull/906, https://github.com/kungfu-systems/kungfu/pull/922, https://github.com/kungfu-systems/kungfu/pull/1137, https://github.com/kungfu-systems/kungfu/pull/1151, https://github.com/kungfu-systems/kungfu/pull/1202, https://github.com/kungfu-systems/kungfu/pull/1624]
 review_state: self-reviewed
 sensitivity: public
 sources: [local-files, user-decision]
@@ -12,7 +12,7 @@ period: 2026-07-15
 theme: surface-neutral-kfx-contributions-thin-bindings
 confidence: high
 evidence_grade: B
-last_reviewed: 2026-07-21
+last_reviewed: 2026-07-27
 ---
 
 # KF-ADR-019f86da-4f90-72df-add3-948f3ae38c3a: KFX contributes semantics once; GUI, TUI, CLI, and agents project them
@@ -80,6 +80,12 @@ PR #1202 adds the first qualified TUI consumer of a public Profile query. Its
 generic shell renders the Mission Control contribution at one, two, or three
 columns, while discovery, CLI, TUI, and KFD-3 verification bind the same exact
 Suite, member, query-definition, and proof roots.
+
+PR #1624 adds the Core-owned semantic graph for providers, extension points,
+contributions, dependencies, trust, capabilities, and versions. Python and
+TypeScript host adapters consume the same native descriptor without rescanning
+or deciding lifecycle policy. Automated parity and isolation gates preserve
+the later Agent Qualification Lab cutover as one bounded host migration.
 
 ## Decision
 

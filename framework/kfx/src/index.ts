@@ -14,6 +14,7 @@ import type {
   AgentRuntime,
   AgentSession,
   DomainState,
+  KfxControl,
   Ledger,
   Profile,
   QualificationLab,
@@ -71,6 +72,11 @@ export type {
   DiscoveredSession,
   DomainState,
   KfLocation,
+  KfxControl,
+  KfxControlApplication,
+  KfxControlPlan,
+  KfxControlRoot,
+  KfxControlStatus,
   Terminal,
   TerminalBackend,
   TerminalExit,
@@ -136,6 +142,7 @@ export type KfxCapabilities = {
   terminal: Terminal;
   work: Work;
   workLoop?: WorkLoop;
+  kfxControl?: KfxControl;
   profile?: Profile;
   agentRuntime?: AgentRuntime;
   agentSession?: AgentSession;
@@ -145,7 +152,7 @@ export type KfxCapabilities = {
 
 export type KfxCapabilityKey = keyof KfxCapabilities;
 
-// ── manifest data (package.json `kungfuConfig`) ───────────────────────────
+// ── manifest data (`kungfu.kfx.json`) ─────────────────────────────────────
 
 // A settings entry a view contributes to the shell's Settings view. Values
 // are strings; the shell persists them in the runtime home's ConfigStore.
@@ -689,6 +696,8 @@ export function compareKfxShadowPlans(
 
 const KFX_CONTRACT_FILE = 'kungfu-kfx.contract.json';
 const KFX_CONTRACT_ENV = 'KUNGFU_KFX_CONTRACT';
+export const KFX_MANIFEST_FILE = 'kungfu.kfx.json';
+export const KFX_MANIFEST_SCHEMA = 'kungfu.kfx.manifest/v1';
 
 export type KfxContract = Record<string, unknown>;
 
@@ -994,7 +1003,7 @@ export function resolveKfxProfileSuiteSource(
   const suiteDir = deps.path.resolve(source);
   const manifest = JSON.parse(
     new TextDecoder().decode(
-      deps.fs.readFileSync(deps.path.join(suiteDir, 'package.json')),
+      deps.fs.readFileSync(deps.path.join(suiteDir, KFX_MANIFEST_FILE)),
     ),
   ) as Record<string, unknown>;
   validateKfxPackageManifest(manifest, contract);
@@ -1038,7 +1047,7 @@ export function resolveKfxProfileSuiteSource(
     ];
     for (const directory of directories) {
       const resolved = deps.path.resolve(directory);
-      const manifestPath = deps.path.join(resolved, 'package.json');
+      const manifestPath = deps.path.join(resolved, KFX_MANIFEST_FILE);
       if (visited.has(resolved) || !deps.fs.existsSync(manifestPath)) continue;
       visited.add(resolved);
       try {
@@ -1169,12 +1178,19 @@ function packageDirs(root: string, deps: KfxPlanDeps): string[] {
     for (const nested of fs.readdirSync(dir, { withFileTypes: true })) {
       if (!nested.isDirectory() || nested.name === 'node_modules') continue;
       const nestedDir = path.join(dir, nested.name);
-      if (fs.existsSync(path.join(nestedDir, 'package.json'))) {
+      if (
+        fs.existsSync(path.join(nestedDir, KFX_MANIFEST_FILE)) ||
+        fs.existsSync(path.join(nestedDir, 'package.json'))
+      ) {
         dirs.push(nestedDir);
       }
     }
   }
-  return dirs.filter((dir) => fs.existsSync(path.join(dir, 'package.json')));
+  return dirs.filter(
+    (dir) =>
+      fs.existsSync(path.join(dir, KFX_MANIFEST_FILE)) ||
+      fs.existsSync(path.join(dir, 'package.json')),
+  );
 }
 
 // planKfx: discover packages across the extension roots and decide each one's
@@ -1225,11 +1241,36 @@ export function planKfx(
   for (const root of extensionRoots(env, deps)) {
     for (const dir of packageDirs(root, deps)) {
       try {
+        const manifestPath = path.join(dir, KFX_MANIFEST_FILE);
+        const packagePath = path.join(dir, 'package.json');
+        let packageClaimsKfx = false;
+        if (fs.existsSync(packagePath)) {
+          try {
+            packageClaimsKfx = Boolean(
+              objectValue(
+                JSON.parse(fs.readFileSync(packagePath, 'utf8')) as unknown,
+              )?.kungfuConfig,
+            );
+          } catch {
+            // npm owns transport validation; only a legacy KFX claim crosses
+            // this authority boundary.
+          }
+        }
+        if (packageClaimsKfx) {
+          throw new Error(
+            `${
+              fs.existsSync(manifestPath)
+                ? 'KF_KFX_MANIFEST_CONFLICT'
+                : 'KF_KFX_MANIFEST_MISSING'
+            }: package.json must not author kungfuConfig; ${KFX_MANIFEST_FILE} is authoritative`,
+          );
+        }
+        if (!fs.existsSync(manifestPath)) continue;
         const parsed = JSON.parse(
-          fs.readFileSync(path.join(dir, 'package.json'), 'utf8'),
+          fs.readFileSync(manifestPath, 'utf8'),
         ) as unknown;
         const manifestObject = objectValue(parsed);
-        if (!manifestObject?.kungfuConfig) continue; // not a kfx package
+        if (!manifestObject?.kungfuConfig) continue; // not a KFX manifest
         validateKfxPackageManifest(manifestObject, contract);
         const manifest = manifestObject as {
           name?: string;

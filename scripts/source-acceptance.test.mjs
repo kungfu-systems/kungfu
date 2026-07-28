@@ -430,6 +430,7 @@ test('changed Python format and lint use one explicit repository configuration',
   for (const label of ['changed Python format', 'changed Python lint']) {
     const step = plan.find((candidate) => candidate.label === label);
     assert.ok(step);
+    assert.ok(step.args.includes('--no-cache'));
     assert.deepEqual(
       step.args.slice(
         step.args.indexOf('--config'),

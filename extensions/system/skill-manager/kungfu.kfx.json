@@ -1,0 +1,24 @@
+{
+  "schema": "kungfu.kfx.manifest/v1",
+  "name": "@kungfu-tech/kfx-view-skill-manager",
+  "version": "4.0.0-alpha.1",
+  "kungfuConfig": {
+    "key": "skill-manager",
+    "name": "Skills",
+    "product": {
+      "roles": [
+        "system-management",
+        "boot-critical"
+      ],
+      "icon": "🧠",
+      "order": 40
+    },
+    "config": {
+      "view": {
+        "title": "Skills",
+        "capabilities": [],
+        "system": true
+      }
+    }
+  }
+}

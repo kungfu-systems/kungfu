@@ -11,8 +11,10 @@ namespace kungfu::runtime::kfx {
 
 inline constexpr const char *NATIVE_KFX_CONTRACT_V1 = "kungfu.kfx.native-contract/v1";
 inline constexpr const char *NATIVE_KFX_CONTRACT_V2 = "kungfu.kfx.native-contract/v2";
+inline constexpr const char *NATIVE_KFX_CONTRACT_V3 = "kungfu.kfx.native-contract/v3";
 inline constexpr const char *NATIVE_KFX_VALIDATION_V1 = "kungfu.kfx.native-validation/v1";
 inline constexpr const char *NATIVE_KFX_VALIDATION_V2 = "kungfu.kfx.native-validation/v2";
+inline constexpr const char *NATIVE_KFX_VALIDATION_V3 = "kungfu.kfx.native-validation/v3";
 
 [[nodiscard]] nlohmann::json native_kfx_contract();
 

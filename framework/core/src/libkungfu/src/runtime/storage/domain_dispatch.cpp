@@ -261,8 +261,9 @@ public:
                                                object_or_empty(options.operation_options, "document"));
     }
     if (action == "list" || action == "inspect" || action == "resolve" || action == "plan" || action == "status" ||
-        action == "assess") {
-      return kfx::query_native_kfx_registry(action, object_or_empty(options.operation_options, "request"));
+        action == "assess" || action == "apply" || action == "history") {
+      return kfx::query_native_kfx_registry(action, object_or_empty(options.operation_options, "request"),
+                                            options.runtime_dir);
     }
     throw std::invalid_argument("unsupported native KFX runtime action: " + action);
   }

@@ -112,6 +112,16 @@ test('freeze replaces transient workspace links with stable Suite members', (t) 
   fs.writeFileSync(
     path.join(source, 'package.json'),
     `${JSON.stringify({
+      name: '@test/suite',
+      version: '1.0.0',
+    })}\n`,
+  );
+  fs.writeFileSync(
+    path.join(source, 'kungfu.kfx.json'),
+    `${JSON.stringify({
+      schema: 'kungfu.kfx.manifest/v1',
+      name: '@test/suite',
+      version: '1.0.0',
       kungfuConfig: {
         key: 'suite',
         suite: { members: ['member'] },
@@ -120,7 +130,16 @@ test('freeze replaces transient workspace links with stable Suite members', (t) 
   );
   fs.writeFileSync(
     path.join(member, 'package.json'),
-    `${JSON.stringify({ kungfuConfig: { key: 'member' } })}\n`,
+    `${JSON.stringify({ name: '@test/member', version: '1.0.0' })}\n`,
+  );
+  fs.writeFileSync(
+    path.join(member, 'kungfu.kfx.json'),
+    `${JSON.stringify({
+      schema: 'kungfu.kfx.manifest/v1',
+      name: '@test/member',
+      version: '1.0.0',
+      kungfuConfig: { key: 'member' },
+    })}\n`,
   );
   fs.symlinkSync(
     member,
@@ -133,7 +152,7 @@ test('freeze replaces transient workspace links with stable Suite members', (t) 
   assert.equal(fs.lstatSync(installedMember).isSymbolicLink(), false);
   assert.equal(
     JSON.parse(
-      fs.readFileSync(path.join(installedMember, 'package.json'), 'utf8'),
+      fs.readFileSync(path.join(installedMember, 'kungfu.kfx.json'), 'utf8'),
     ).kungfuConfig.key,
     'member',
   );
@@ -208,6 +227,16 @@ test('freeze closes a first-party Profile when pnpm dependencies are hoisted', (
   fs.writeFileSync(
     path.join(source, 'package.json'),
     `${JSON.stringify({
+      name: '@test/suite',
+      version: '1.0.0',
+    })}\n`,
+  );
+  fs.writeFileSync(
+    path.join(source, 'kungfu.kfx.json'),
+    `${JSON.stringify({
+      schema: 'kungfu.kfx.manifest/v1',
+      name: '@test/suite',
+      version: '1.0.0',
       kungfuConfig: {
         key: 'suite',
         suite: { members: ['nested-member', 'hoisted-member'] },
@@ -216,11 +245,29 @@ test('freeze closes a first-party Profile when pnpm dependencies are hoisted', (
   );
   fs.writeFileSync(
     path.join(nestedMember, 'package.json'),
-    `${JSON.stringify({ kungfuConfig: { key: 'nested-member' } })}\n`,
+    `${JSON.stringify({ name: '@test/nested-member', version: '1.0.0' })}\n`,
   );
   fs.writeFileSync(
     path.join(hoistedMember, 'package.json'),
-    `${JSON.stringify({ kungfuConfig: { key: 'hoisted-member' } })}\n`,
+    `${JSON.stringify({ name: '@test/hoisted-member', version: '1.0.0' })}\n`,
+  );
+  fs.writeFileSync(
+    path.join(nestedMember, 'kungfu.kfx.json'),
+    `${JSON.stringify({
+      schema: 'kungfu.kfx.manifest/v1',
+      name: '@test/nested-member',
+      version: '1.0.0',
+      kungfuConfig: { key: 'nested-member' },
+    })}\n`,
+  );
+  fs.writeFileSync(
+    path.join(hoistedMember, 'kungfu.kfx.json'),
+    `${JSON.stringify({
+      schema: 'kungfu.kfx.manifest/v1',
+      name: '@test/hoisted-member',
+      version: '1.0.0',
+      kungfuConfig: { key: 'hoisted-member' },
+    })}\n`,
   );
 
   copyMissionControlProfile(source, destination);
@@ -228,7 +275,7 @@ test('freeze closes a first-party Profile when pnpm dependencies are hoisted', (
   assert.equal(
     JSON.parse(
       fs.readFileSync(
-        path.join(destination, 'members', 'hoisted-member', 'package.json'),
+        path.join(destination, 'members', 'hoisted-member', 'kungfu.kfx.json'),
         'utf8',
       ),
     ).kungfuConfig.key,

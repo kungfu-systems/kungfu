@@ -898,10 +898,19 @@ def kfx_registry(
     request: dict[str, Any],
     runtime_dir: str | Path = "",
 ) -> dict[str, Any]:
-    """Project one read-only Core-native KFX registry operation."""
+    """Project one Core-native KFX registry or lifecycle operation."""
 
-    if action not in {"list", "inspect", "resolve", "plan", "status", "assess"}:
-        raise ValueError(f"unsupported read-only KFX registry action: {action}")
+    if action not in {
+        "list",
+        "inspect",
+        "resolve",
+        "plan",
+        "status",
+        "assess",
+        "apply",
+        "history",
+    }:
+        raise ValueError(f"unsupported KFX registry action: {action}")
     return dict(
         _runtime().run_storage_service_operation(
             "kfx_runtime",

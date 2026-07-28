@@ -18,7 +18,8 @@
   "files": [
     "dist",
     "package.json",
-    "README.md"
+    "README.md",
+    "kungfu.kfx.json"
   ],
   "scripts": {
     "build": "tsc --noEmit && kungfu sdk kfx build",
@@ -35,23 +36,5 @@
   },
   "peerDependencies": {
     "react": "^18.3.1"
-  },
-  "kungfuConfig": {
-    "key": "journal-manager",
-    "name": "Journal",
-    "product": {
-      "roles": ["devtool"],
-      "icon": "📓",
-      "order": 30
-    },
-    "config": {
-      "view": {
-        "title": "Journal",
-        "capabilities": [
-          "ledger",
-          "domain"
-        ]
-      }
-    }
   }
 }

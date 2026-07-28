@@ -20,6 +20,54 @@ function run(label, command, args, env = process.env) {
   if (result.status !== 0) process.exit(result.status ?? 1);
 }
 
+function git(args) {
+  const result = spawnSync('git', args, {
+    cwd: root,
+    encoding: 'utf8',
+    stdio: ['ignore', 'pipe', 'pipe'],
+  });
+  if (result.error) throw result.error;
+  if (result.status !== 0) {
+    throw new Error(
+      result.stderr.trim() || `git ${args.join(' ')} exited with failure`,
+    );
+  }
+  return result.stdout.trim();
+}
+
+function checkQualificationLabIsolation() {
+  const baseline =
+    process.env.KUNGFU_NATIVE_KFX_BASE_REF ??
+    git(['merge-base', 'HEAD', 'origin/dev/v4/v4.0']);
+  const qualificationLabMerge = '1f7cfe58cc7699ac27106241430d77f6938eadcd';
+  const protectedBranch = 'feature/agent-work-lab-kfx-suite';
+  const protectedPaths = [
+    'framework/core/src/python/kungfu/qualification_lab.py',
+    'framework/core/src/python/kungfu/cli/commands/qualification_lab.py',
+    'framework/api/src/capability/qualification-lab.ts',
+    'framework/gui/src/renderer/src/qualification-lab.tsx',
+    'framework/tui/src/qualification-lab-view.tsx',
+    'framework/tui/src/main.tsx',
+  ];
+  const branch = git(['branch', '--show-current']);
+  if (branch === protectedBranch) {
+    throw new Error(`refusing protected Qualification Lab branch ${branch}`);
+  }
+  git(['merge-base', '--is-ancestor', qualificationLabMerge, 'HEAD']);
+  const changed = new Set(
+    git(['diff', '--name-only', baseline, '--']).split('\n').filter(Boolean),
+  );
+  const violations = protectedPaths.filter((item) => changed.has(item));
+  if (violations.length > 0) {
+    throw new Error(
+      `protected Qualification Lab paths changed:\n${violations.join('\n')}`,
+    );
+  }
+  process.stdout.write(
+    `[native-kfx-isolation] PASS branch=${branch} baseline=${baseline} protected_changes=0 pr=1585 merge=${qualificationLabMerge}\n`,
+  );
+}
+
 run('Core ABI, contract, and admission fixtures', 'ctest', [
   '--test-dir',
   path.join(root, 'framework/core/build'),
@@ -64,7 +112,25 @@ run('public API transport projection', 'pnpm', [
   'tsx',
   '--test',
   path.join(root, 'framework/api/tests/storage.test.ts'),
+  path.join(root, 'framework/api/tests/kfx-host.test.ts'),
 ]);
+
+run(
+  'native Node binding root parity',
+  'node',
+  [
+    '--test',
+    path.join(
+      root,
+      'framework/core/tests/native-kfx-registry-node-binding.test.js',
+    ),
+  ],
+  {
+    ...process.env,
+    KUNGFU_DIR: path.join(root, 'framework/core/build/Release'),
+    KUNGFU_REQUIRE_NATIVE: '1',
+  },
+);
 
 run('public API type contract', 'pnpm', [
   '--filter',
@@ -97,3 +163,8 @@ run('layered API encoding authority', 'node', [
   '--test',
   path.join(root, 'scripts/check-layered-api-encoding-boundary.test.mjs'),
 ]);
+
+process.stdout.write(
+  '[native-admission] Qualification Lab and PR #1585 isolation\n',
+);
+checkQualificationLabIsolation();

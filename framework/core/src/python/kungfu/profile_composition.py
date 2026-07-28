@@ -15,7 +15,7 @@ import time
 from pathlib import Path
 from typing import Any, Mapping, NoReturn, Sequence
 
-from kungfu import profile_sdk
+from kungfu import kfx_contract, profile_sdk
 from kungfu.storage import service as storage_service
 
 
@@ -739,7 +739,7 @@ def _source_directory(state: Mapping[str, Any]) -> Path | None:
     profile_path = Path(raw_profile_path).expanduser().resolve()
     current = profile_path.parent
     for _ in range(16):
-        manifest_path = current / "package.json"
+        manifest_path = current / kfx_contract.PACKAGE_MANIFEST_FILE
         try:
             manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
             suite = (manifest.get("kungfuConfig") or {}).get("suite") or {}

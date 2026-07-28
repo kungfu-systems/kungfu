@@ -17,7 +17,12 @@ import { join } from 'node:path';
 import nodeCrypto from 'node:crypto';
 import nodeFs from 'node:fs';
 import nodePath from 'node:path';
-import { type KfxPlanDeps, planKfx } from '@kungfu-tech/kfx';
+import {
+  KFX_MANIFEST_FILE,
+  KFX_MANIFEST_SCHEMA,
+  type KfxPlanDeps,
+  planKfx,
+} from '@kungfu-tech/kfx';
 
 import { loadTuiKfxPlan } from './kfx-plan.js';
 
@@ -37,8 +42,13 @@ function pkg(root: string, dir: string, kungfuConfig: unknown): void {
   const d = join(root, dir);
   mkdirSync(d, { recursive: true });
   writeFileSync(
-    join(d, 'package.json'),
-    JSON.stringify({ name: `@fixture/${dir}`, version: '1.0.0', kungfuConfig }),
+    join(d, KFX_MANIFEST_FILE),
+    JSON.stringify({
+      schema: KFX_MANIFEST_SCHEMA,
+      name: `@fixture/${dir}`,
+      version: '1.0.0',
+      kungfuConfig,
+    }),
   );
 }
 

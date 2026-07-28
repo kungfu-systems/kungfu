@@ -30,7 +30,7 @@ import {
 } from './release-channel-trust.mjs';
 
 const require = createRequire(import.meta.url);
-const workDashboardPackage = require('../../extensions/work-dashboard/package.json');
+const workDashboardPackage = require('../../extensions/work-dashboard/kungfu.kfx.json');
 const sdkPackage = require('../../developer/sdk/package.json');
 const agentHubKfdLock = require('../../tests/qualification/agent-hub-20/kfd-lock.json');
 const {

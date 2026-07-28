@@ -211,7 +211,7 @@ def discover_source(
         for parent in list(candidates[1:]):
             candidates.extend(path for path in parent.iterdir() if path.is_dir())
         for candidate in candidates:
-            manifest_path = candidate / "package.json"
+            manifest_path = candidate / kfx_contract.PACKAGE_MANIFEST_FILE
             if not manifest_path.is_file():
                 continue
             try:
@@ -2686,33 +2686,30 @@ def _source_files(brief: Mapping[str, Any]) -> dict[str, bytes]:
     }
     if brief.get("collaboration") is not None:
         profile["kfd3"] = {"collaboration": ref("collaboration/interface.json")}
+
+    def package_files(prefix, name, config):
+        common = {"name": name, "version": brief["version"]}
+        manifest = {"schema": kfx_contract.PACKAGE_MANIFEST_SCHEMA, **common}
+        manifest["kungfuConfig"] = config
+        return {
+            f"{prefix}package.json": _pretty({**common, "private": True}),
+            f"{prefix}{kfx_contract.PACKAGE_MANIFEST_FILE}": _pretty(manifest),
+        }
+
+    suite = {"title": brief["title"], "members": members, "profile": "profile.json"}
+    suite_config = {"key": brief["id"], "suite": suite}
     files = {
-        "package.json": _pretty(
-            {
-                "name": f"@kungfu-profile/{slug}",
-                "version": brief["version"],
-                "private": True,
-                "kungfuConfig": {
-                    "key": brief["id"],
-                    "suite": {
-                        "title": brief["title"],
-                        "members": members,
-                        "profile": "profile.json",
-                    },
-                },
-            }
-        ),
+        **package_files("", f"@kungfu-profile/{slug}", suite_config),
         "profile.json": _pretty(profile),
         **encoded,
     }
     for member in members:
-        files[f"members/{member}/package.json"] = _pretty(
-            {
-                "name": f"@kungfu-profile/{member}",
-                "version": brief["version"],
-                "private": True,
-                "kungfuConfig": {"key": member},
-            }
+        files.update(
+            package_files(
+                f"members/{member}/",
+                f"@kungfu-profile/{member}",
+                {"key": member},
+            )
         )
         files[f"members/{member}/README.md"] = (
             f"# {member}\n\nDeclarative KFX Profile member.\n".encode()
@@ -2738,7 +2735,7 @@ def _package_dirs(suite_dir: Path) -> list[Path]:
         for candidate in [root, *[p for p in root.iterdir() if p.is_dir()]]:
             resolved = candidate.resolve()
             try:
-                is_package = (resolved / "package.json").is_file()
+                is_package = (resolved / kfx_contract.PACKAGE_MANIFEST_FILE).is_file()
             except OSError:
                 is_package = False
             if resolved not in seen and is_package:

@@ -28,9 +28,11 @@ function writeView(root, key, bundleContent) {
   const dir = join(root, key);
   mkdirSync(join(dir, 'dist', 'view'), { recursive: true });
   writeFileSync(
-    join(dir, 'package.json'),
+    join(dir, 'kungfu.kfx.json'),
     JSON.stringify({
+      schema: 'kungfu.kfx.manifest/v1',
       name: `@kungfu-tech/kfx-view-${key}`,
+      version: '1.0.0',
       kungfuConfig: { key, config: { view: { title: key, capabilities: [] } } },
     }),
   );

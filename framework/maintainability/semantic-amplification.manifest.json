@@ -195,6 +195,10 @@
           "role": "thin-binding"
         },
         {
+          "path": "framework/core/src/python/kungfu/profile_sdk.py",
+          "role": "thin-binding"
+        },
+        {
           "path": "framework/core/src/python/kungfu/cli/commands/kfx.py",
           "role": "thin-binding"
         },
@@ -208,6 +212,10 @@
         },
         {
           "path": "docs/qualification/kfd-native-sdk-release-gates.md",
+          "role": "documentation"
+        },
+        {
+          "path": "framework/gui/docs/shell-and-kfx.md",
           "role": "documentation"
         },
         {

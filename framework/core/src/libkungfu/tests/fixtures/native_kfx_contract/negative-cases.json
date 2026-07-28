@@ -222,5 +222,28 @@
       ],
       "declaredCapabilities": []
     }
+  },
+  {
+    "name": "v3 wrong named-Cut revision",
+    "kind": "plan",
+    "expectedCode": "KF_KFX_CUT_STALE",
+    "document": {
+      "schema": "kungfu.kfx.native-plan/v3",
+      "contractVersion": 3,
+      "planId": "sha256:fact-plan",
+      "basis": {
+        "packageRoot": "sha256:package",
+        "cutRoot": "sha256:cut",
+        "revision": 3
+      },
+      "nextRevision": 9,
+      "requestedCapabilities": [],
+      "grantedCapabilities": [],
+      "effects": [
+        {
+          "kind": "install"
+        }
+      ]
+    }
   }
 ]

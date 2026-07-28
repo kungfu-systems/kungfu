@@ -1,3 +1,18 @@
+---
+metadata_schema: kungfu.document-metadata/v1
+document_status: active
+period: 2026-07-27
+theme: gui-shell-kfx-contract
+doc_type: architecture
+sources: [local-files, architecture-decisions, user-consensus]
+confidence: high
+sensitivity: public
+evidence_grade: B
+review_state: self-reviewed
+last_reviewed: 2026-07-27
+ai_provenance: GPT-5 via Codex on 2026-07-27; based on checked-in Kungfu contracts, implementations, tests, and the accepted KFX authority decision; no unobserved runtime state is claimed
+---
+
 # The shell and its kfx
 
 The reference app splits into a thin shell and installable kfx view packages.
@@ -38,7 +53,8 @@ externalizable so publishing it later is a move, not a rewrite.
 
 ```
 extensions/work-dashboard/
-├── package.json          # identity + manifest (kungfuConfig)
+├── package.json          # npm transport, scripts and dependencies
+├── kungfu.kfx.json       # canonical KFX identity + manifest
 └── src/view/index.tsx    # exports exactly one thing: the View component
 ```
 
@@ -46,20 +62,25 @@ The static half lives in the manifest — managers and installers read it
 without executing code:
 
 ```json
-"kungfuConfig": {
-  "key": "work-dashboard",
-  "name": "Work dashboard",
-  "product": {
-    "roles": ["profile-view"],
-    "icon": "🧭",
-    "order": 10
-  },
-  "config": {
-    "view": {
-      "title": "Mission Control",
-      "capabilities": ["ledger", "work"],
-      "system": false,
-      "settings": []
+{
+  "schema": "kungfu.kfx.manifest/v1",
+  "name": "@kungfu-tech/kfx-work-dashboard",
+  "version": "4.0.0-alpha.4",
+  "kungfuConfig": {
+    "key": "work-dashboard",
+    "name": "Work dashboard",
+    "product": {
+      "roles": ["profile-view"],
+      "icon": "🧭",
+      "order": 10
+    },
+    "config": {
+      "view": {
+        "title": "Mission Control",
+        "capabilities": ["ledger", "work"],
+        "system": false,
+        "settings": []
+      }
     }
   }
 }
@@ -108,9 +129,17 @@ expressed through npm `dependencies`; the manifest names the member keys for
 the shell:
 
 ```json
-"kungfuConfig": {
-  "key": "system",
-  "suite": { "title": "System", "members": ["settings", "kfx-manager", "system-status"] }
+{
+  "schema": "kungfu.kfx.manifest/v1",
+  "name": "@kungfu-tech/kfx-system",
+  "version": "4.0.0-alpha.4",
+  "kungfuConfig": {
+    "key": "system",
+    "suite": {
+      "title": "System",
+      "members": ["settings", "kfx-manager", "system-status"]
+    }
+  }
 }
 ```
 

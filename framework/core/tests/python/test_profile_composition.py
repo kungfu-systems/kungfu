@@ -158,7 +158,7 @@ def _dynamic_source(tmp_path):
         profile["actions"]["registry"],
     )
     action_member = source / "members" / "example-week-day-actions"
-    action_manifest = json.loads((action_member / "package.json").read_text())
+    action_manifest = json.loads((action_member / "kungfu.kfx.json").read_text())
     action_manifest["kungfuConfig"]["config"] = {
         "adapter": {
             "targets": ["kungfu.profile.member"],
@@ -166,7 +166,7 @@ def _dynamic_source(tmp_path):
             "entry": {"python": "adapter.py"},
         }
     }
-    (action_member / "package.json").write_text(
+    (action_member / "kungfu.kfx.json").write_text(
         json.dumps(action_manifest, indent=2, sort_keys=True) + "\n"
     )
     (action_member / "adapter.py").write_text(
