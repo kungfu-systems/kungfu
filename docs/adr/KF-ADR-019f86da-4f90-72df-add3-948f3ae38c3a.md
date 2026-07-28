@@ -4,7 +4,7 @@ doc_type: architecture-decision
 adr_id: KF-ADR-019f86da-4f90-72df-add3-948f3ae38c3a
 decision_status: accepted
 implementation_status: partial
-implementation_prs: [https://github.com/kungfu-systems/kungfu/pull/734, https://github.com/kungfu-systems/kungfu/pull/842, https://github.com/kungfu-systems/kungfu/pull/873, https://github.com/kungfu-systems/kungfu/pull/906, https://github.com/kungfu-systems/kungfu/pull/922, https://github.com/kungfu-systems/kungfu/pull/1137, https://github.com/kungfu-systems/kungfu/pull/1151, https://github.com/kungfu-systems/kungfu/pull/1202, https://github.com/kungfu-systems/kungfu/pull/1704, https://github.com/kungfu-systems/kungfu/pull/1718]
+implementation_prs: [https://github.com/kungfu-systems/kungfu/pull/734, https://github.com/kungfu-systems/kungfu/pull/842, https://github.com/kungfu-systems/kungfu/pull/873, https://github.com/kungfu-systems/kungfu/pull/906, https://github.com/kungfu-systems/kungfu/pull/922, https://github.com/kungfu-systems/kungfu/pull/1137, https://github.com/kungfu-systems/kungfu/pull/1151, https://github.com/kungfu-systems/kungfu/pull/1202, https://github.com/kungfu-systems/kungfu/pull/1704, https://github.com/kungfu-systems/kungfu/pull/1718, https://github.com/kungfu-systems/kungfu/pull/1728]
 review_state: self-reviewed
 sensitivity: public
 sources: [local-files, user-decision]
@@ -95,6 +95,16 @@ metadata. Core alone recomputes the Release Passport admission plan and
 requires the purpose-bound Work/Warrant before side effects. Runtime
 capability-grant enforcement and the remaining host cutover stay outside this
 stage, so implementation remains partial.
+
+PR #1728 carries the same explicit grant and confinement contract through the
+native, Python, Node, Control API, GUI, TUI/CLI/Agent projection, and WASM
+edges. Clients may present authority roots but cannot infer runtime tier,
+admission grade, Product System status, or granted capabilities. Every host
+launch matches the current package, Cut, revision, generation, authorization,
+and capability-grant roots; integrated adapters remain disabled until a
+separate confined path exists. The identity-neutral authority cutover and
+recursive terminal dogfood remain later stages, so implementation remains
+partial.
 
 ## Decision
 

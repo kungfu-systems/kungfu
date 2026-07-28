@@ -10,11 +10,9 @@ import {
 } from '../../tui/src/kfx-host.ts';
 import {
   type KfxControlStatus,
-  projectKfxControlSuiteHost,
-} from '../src/capability/kfx-control.ts';
-import {
   type KfxExperienceFlowDescriptor,
   authorizeKfxHostLaunch,
+  projectKfxControlSuiteHost,
   projectKfxExperienceFlowHost,
 } from '../src/capability/kfx-host.ts';
 

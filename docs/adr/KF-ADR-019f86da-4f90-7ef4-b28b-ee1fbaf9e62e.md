@@ -4,7 +4,7 @@ doc_type: architecture-decision
 adr_id: KF-ADR-019f86da-4f90-7ef4-b28b-ee1fbaf9e62e
 decision_status: accepted
 implementation_status: partial
-implementation_prs: [https://github.com/kungfu-systems/kungfu/pull/842, https://github.com/kungfu-systems/kungfu/pull/873, https://github.com/kungfu-systems/kungfu/pull/885, https://github.com/kungfu-systems/kungfu/pull/906, https://github.com/kungfu-systems/kungfu/pull/922, https://github.com/kungfu-systems/kungfu/pull/1704, https://github.com/kungfu-systems/kungfu/pull/1718]
+implementation_prs: [https://github.com/kungfu-systems/kungfu/pull/842, https://github.com/kungfu-systems/kungfu/pull/873, https://github.com/kungfu-systems/kungfu/pull/885, https://github.com/kungfu-systems/kungfu/pull/906, https://github.com/kungfu-systems/kungfu/pull/922, https://github.com/kungfu-systems/kungfu/pull/1704, https://github.com/kungfu-systems/kungfu/pull/1718, https://github.com/kungfu-systems/kungfu/pull/1728]
 review_state: self-reviewed
 sensitivity: public
 sources: [local-files, user-decision]
@@ -90,6 +90,16 @@ Episode, Settlement, and Cut receipts. KFD fitness and Product/System metadata
 remain inputs rather than ambient authorization. Capability-grant enforcement,
 runtime isolation, recursive Control Suite dogfood, and terminal cutover remain
 later stages, so the umbrella decision remains partial.
+
+PR #1728 adds the next bounded runtime stage. Core issues an explicit capability
+grant from the exact package declaration, embedded Core policy, requested
+policy, Release Passport assessment, approvals, Work/Warrant, and prior Cut,
+then reauthorizes the package, grant, Cut, revision, generation, and confinement
+before each host launch. GUI IPC, WASM, service-process, integrated-adapter, and
+metadata-only placements now have fail-closed execution semantics. KFD,
+first-party identity, and Product System metadata mint no authority. The
+identity-neutral cutover, recursive Control Suite dogfood, and terminal
+qualification remain later stages, so the umbrella decision remains partial.
 
 Conversion readiness therefore remains blocked on the remaining ordered gates:
 Fact/Work lifecycle authority with Cut and CAS semantics, then a recursively
