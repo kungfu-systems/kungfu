@@ -17,7 +17,7 @@ Each section is bound to the registry id by the catalog meta gate.
 - **Failure or skip:** action failure, timeout, unsupported required capability, dependency failure, or missing required artifact is non-qualifying; advisory mode remains visible.
 - **Evidence:** unified Gate receipt; no separate artifact is currently required.
 - **Diagnosis:** `./shifu gate explain gate.catalog --profile <profile>`; reproduce with `./shifu gate run gate.catalog` on a capable runner.
-- **Cost:** light; timeout 120 seconds.
+- **Cost:** light; timeout 600 seconds.
 - **Current source:** .github/workflows/affected-native-pr.yml (source_acceptance; every dev pull request and merge-group candidate inside the staged required aggregate); .github/workflows/dev-verify-patrol.yml (verify; daily or manual on dev); .github/workflows/build.yml (build; alpha or release pull request); .github/workflows/release-new-version.yml (promotion-contract; merged alpha or release pull request, or manual source-locked dry-run measurement). The standalone .github/workflows/source-acceptance.yml remains manual-only diagnostic evidence.
 - **Retirement:** remove only after every selecting profile and workflow binding is migrated or explicitly replaced, with the registry and matrix changed in the same review.
 <!-- /gate-doc:gate.catalog -->
