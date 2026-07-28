@@ -39,7 +39,7 @@ without changing and refreshing the manifest fails the Gate catalog check.
 <!-- BEGIN GENERATED WORKFLOW AUTHORITY MATRIX -->
 | Workflow | Job | Authority | Publication | Receipt | Credentials | Environment | Steps |
 | --- | --- | --- | --- | --- | --- | --- | ---: |
-| `.github/workflows/adr-release-gate.yml` | `adr-release` | product-publication | product | none | token:read, repo-secret:BUILDCHAIN_MACOS_CERTIFICATE_P12_BASE64+BUILDCHAIN_MACOS_CERTIFICATE_PASSWORD+BUILDCHAIN_MACOS_NOTARY_API_ISSUER+BUILDCHAIN_MACOS_NOTARY_API_KEY_ID+BUILDCHAIN_MACOS_NOTARY_API_KEY_P8_BASE64+BUILDCHAIN_SIGNING_BOOTSTRAP_TOKEN | `alpha-macos-signing-hk` | 3 |
+| `.github/workflows/adr-release-gate.yml` | `adr-release` | qualification | none | diagnostic | token:read | none | 2 |
 | `.github/workflows/affected-native-cache-promote.yml` | `promote` | qualification | none | diagnostic | token:write | none | 10 |
 | `.github/workflows/affected-native-pr.yml` | `affected_native_shards` | qualification | none | diagnostic | token:read | none | 23 |
 | `.github/workflows/affected-native-pr.yml` | `affected-native` | qualification | none | diagnostic | token:read | none | 9 |

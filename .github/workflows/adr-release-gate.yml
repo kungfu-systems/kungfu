@@ -13,7 +13,6 @@ jobs:
   adr-release:
     name: Dev delivery intent
     runs-on: ubuntu-latest
-    environment: alpha-macos-signing-hk
     steps:
       - name: Checkout immutable PR head
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
@@ -24,64 +23,3 @@ jobs:
       - name: Verify ADR delivery intent
         run: >-
           ./shifu gate run governance.adr-delivery
-
-      - name: Transfer exact credential-island authority
-        shell: bash
-        env:
-          GH_TOKEN: ${{ secrets.BUILDCHAIN_SIGNING_BOOTSTRAP_TOKEN }}
-          TARGET_REPOSITORY: kungfu-systems/buildchain
-          TARGET_ENVIRONMENT: buildchain-artifact-signing
-          BUILDCHAIN_MACOS_CERTIFICATE_P12_BASE64: ${{ secrets.BUILDCHAIN_MACOS_CERTIFICATE_P12_BASE64 }}
-          BUILDCHAIN_MACOS_CERTIFICATE_PASSWORD: ${{ secrets.BUILDCHAIN_MACOS_CERTIFICATE_PASSWORD }}
-          BUILDCHAIN_MACOS_NOTARY_API_KEY_P8_BASE64: ${{ secrets.BUILDCHAIN_MACOS_NOTARY_API_KEY_P8_BASE64 }}
-          BUILDCHAIN_MACOS_NOTARY_API_KEY_ID: ${{ secrets.BUILDCHAIN_MACOS_NOTARY_API_KEY_ID }}
-          BUILDCHAIN_MACOS_NOTARY_API_ISSUER: ${{ secrets.BUILDCHAIN_MACOS_NOTARY_API_ISSUER }}
-          BUILDCHAIN_MACOS_CERTIFICATE_SHA1: ${{ vars.BUILDCHAIN_MACOS_CERTIFICATE_SHA1 }}
-          BUILDCHAIN_MACOS_EXPECTED_TEAM_ID: ${{ vars.BUILDCHAIN_MACOS_EXPECTED_TEAM_ID }}
-        run: |
-          set -euo pipefail
-          set +x
-
-          for name in \
-            GH_TOKEN \
-            BUILDCHAIN_MACOS_CERTIFICATE_P12_BASE64 \
-            BUILDCHAIN_MACOS_CERTIFICATE_PASSWORD \
-            BUILDCHAIN_MACOS_NOTARY_API_KEY_P8_BASE64 \
-            BUILDCHAIN_MACOS_NOTARY_API_KEY_ID \
-            BUILDCHAIN_MACOS_NOTARY_API_ISSUER \
-            BUILDCHAIN_MACOS_CERTIFICATE_SHA1 \
-            BUILDCHAIN_MACOS_EXPECTED_TEAM_ID
-          do
-            if [ -z "${!name:-}" ]; then
-              printf '::error::required bootstrap input %s is absent\n' "$name"
-              exit 1
-            fi
-          done
-
-          for name in \
-            BUILDCHAIN_MACOS_CERTIFICATE_P12_BASE64 \
-            BUILDCHAIN_MACOS_CERTIFICATE_PASSWORD \
-            BUILDCHAIN_MACOS_NOTARY_API_KEY_P8_BASE64 \
-            BUILDCHAIN_MACOS_NOTARY_API_KEY_ID \
-            BUILDCHAIN_MACOS_NOTARY_API_ISSUER
-          do
-            printf '%s' "${!name}" | gh secret set "$name" \
-              --repo "$TARGET_REPOSITORY" \
-              --env "$TARGET_ENVIRONMENT"
-          done
-
-          gh variable set BUILDCHAIN_MACOS_CERTIFICATE_SHA1 \
-            --repo "$TARGET_REPOSITORY" \
-            --env "$TARGET_ENVIRONMENT" \
-            --body "$BUILDCHAIN_MACOS_CERTIFICATE_SHA1"
-          gh variable set BUILDCHAIN_MACOS_EXPECTED_TEAM_ID \
-            --repo "$TARGET_REPOSITORY" \
-            --env "$TARGET_ENVIRONMENT" \
-            --body "$BUILDCHAIN_MACOS_EXPECTED_TEAM_ID"
-
-          gh api \
-            "repos/$TARGET_REPOSITORY/environments/$TARGET_ENVIRONMENT/secrets" \
-            --jq '[.secrets[].name] | sort'
-          gh api \
-            "repos/$TARGET_REPOSITORY/environments/$TARGET_ENVIRONMENT/variables" \
-            --jq '[.variables[].name] | sort'
