@@ -153,22 +153,20 @@ function workspace(t) {
 
   const firstEpisode = episodeBundle(7, 'first');
   const secondEpisode = episodeBundle(8, 'second');
-  for (const entry of [firstEpisode, secondEpisode]) {
-    sealGitEpisode(
-      root,
-      buildGitEpisodeSegment(entry.bundle, entry.qualification),
-      { writerId: 'publication-test' },
-    );
-  }
-  const firstCut = projectCut('first', firstEpisode.root);
-  const secondCut = projectCut('second', secondEpisode.root);
+  const sealedEpisodes = [firstEpisode, secondEpisode].map((entry) => {
+    const segment = buildGitEpisodeSegment(entry.bundle, entry.qualification);
+    sealGitEpisode(root, segment, { writerId: 'publication-test' });
+    return segment;
+  });
+  const firstCut = projectCut('first', sealedEpisodes[0].providerRoot);
+  const secondCut = projectCut('second', sealedEpisodes[1].providerRoot);
   addProjectCut(root, firstCut);
   addProjectCut(root, secondCut);
   git(root, 'add', '--all');
   git(root, 'commit', '-qm', 'test: seed sealed settlement material');
   return {
     root,
-    episodes: [firstEpisode.root, secondEpisode.root].sort(),
+    episodes: sealedEpisodes.map((episode) => episode.semanticRoot).sort(),
     cuts: [firstCut.cutRoot, secondCut.cutRoot].sort(),
   };
 }
@@ -265,6 +263,19 @@ test('planner is deterministic, order-independent, bounded, and root-sensitive',
   assert.equal(
     first.manifest.runtimeContinuation.publicationIsAuthority,
     false,
+  );
+  assert.ok(
+    first.manifest.selection.episodes.every(
+      (episode) => episode.semanticRoot !== episode.providerRoot,
+    ),
+  );
+  const selectedProviderRoots = new Set(
+    first.manifest.selection.episodes.map((episode) => episode.providerRoot),
+  );
+  assert.ok(
+    first.manifest.selection.projectCuts
+      .flatMap((cut) => cut.episodeRoots)
+      .every((episodeRoot) => selectedProviderRoots.has(episodeRoot)),
   );
   assert.equal(first.manifest.files.length, 10);
 

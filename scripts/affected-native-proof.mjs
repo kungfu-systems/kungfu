@@ -222,10 +222,11 @@ export function createDeliveryBinding({
     };
     return { ...body, bindingRoot: digest(body) };
   }
+  // Admission creates a synthetic replay commit before enqueue. GitHub later
+  // authors a different merge-group commit, so only their trees can be equal.
   if (
     lease.pullRequestHead !== source.pullRequestHead ||
     lease.devHead !== exactDevHead ||
-    lease.replayedCandidate !== exactCandidateHead ||
     lease.replayedTree !== exactCandidateTree
   ) {
     throw new Error('family delivery source or latest-dev replay drift');

@@ -262,7 +262,7 @@ test('descriptor binds the exact tree, base, plan projection, and toolchain', ()
 });
 
 test('family delivery binding is separate from reusable qualification identity', () => {
-  const { values } = deliveryFixture();
+  const { values } = deliveryFixture({ values: { candidateHead: OTHER_HEAD } });
   const binding = createDeliveryBinding(values);
   const first = createProofDescriptor(
     plan(QUEUE_HEAD),
