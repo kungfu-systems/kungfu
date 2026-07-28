@@ -17,6 +17,10 @@ off agent-120, which remains the Dev build primary.
 - Endpoint: the explicit loopback OpenAI-compatible tunnel on port `11435`
 - Container runtime: a runner-owned rootless Docker socket at
   `/run/user/996/docker.sock`
+- Container identity: the adapter verifies Docker `SecurityOptions`; only a
+  rootless daemon uses container `0:0`, which maps back to the unprivileged
+  runner account and preserves writable bind-mount ownership. Rootful daemons
+  continue to use the invoking host UID/GID.
 - Concurrency: one Patrol run at a time
 - Credentials: none admitted to the model or Dogfood payload
 

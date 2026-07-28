@@ -8,7 +8,10 @@ import path from 'node:path';
 import test from 'node:test';
 import { fileURLToPath } from 'node:url';
 
-import { dockerArgs } from '../framework/agent-repository-work/opencode-docker-proxy.mjs';
+import {
+  dockerArgs,
+  dockerIsRootless,
+} from '../framework/agent-repository-work/opencode-docker-proxy.mjs';
 import {
   parseInvestigationClaim,
   runExperiment,
@@ -150,6 +153,34 @@ test('Docker profile is digest-pinned, bounded, and mode-specific', () => {
   assert.ok(!args.includes('--privileged'));
   assert.ok(!args.includes('/var/run/docker.sock'));
   assert.ok(!args.includes('host'));
+});
+
+test('Docker bind-mount identity follows rootful and rootless ownership', () => {
+  const options = {
+    image:
+      'example.invalid/opencode-ci@sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
+    baseUrl: 'http://host.docker.internal:11435/v1',
+    model: 'qwen3-coder:30b-opencode-64k',
+    context: 65_536,
+    mode: 'bounded-write',
+    command: ['run', '--pure', 'prompt'],
+  };
+  const rootlessArgs = dockerArgs(
+    { ...options, rootless: true },
+    '/tmp/disposable-workspace',
+  );
+  const rootfulArgs = dockerArgs(
+    { ...options, rootless: false },
+    '/tmp/disposable-workspace',
+  );
+  const userIndex = rootlessArgs.indexOf('--user');
+  assert.equal(rootlessArgs[userIndex + 1], '0:0');
+  assert.equal(
+    rootfulArgs[userIndex + 1],
+    `${process.getuid?.() ?? 1000}:${process.getgid?.() ?? 1000}`,
+  );
+  assert.equal(dockerIsRootless('["name=seccomp","name=rootless"]'), true);
+  assert.equal(dockerIsRootless('["name=seccomp","name=cgroupns"]'), false);
 });
 
 test('Agent A claim and final report require deterministic continuity evidence', () => {
