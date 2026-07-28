@@ -53,3 +53,34 @@ terminology and sealed source bytes.
 
 The normative decision is
 [KF-ADR-019f9771-4c20-7e2c-8e7c-3f3cb3f1b9bd](../adr/KF-ADR-019f9771-4c20-7e2c-8e7c-3f3cb3f1b9bd.md).
+
+## Post-merge delivery evidence
+
+`kungfu.delivery-evidence.envelope/v1` is the adapter-edge contract for
+admitting one protected GitHub delivery into the owning workspace. The
+envelope binds the repository identity, pull-request number and exact head,
+merge commit, workflow run and attempt, Buildchain receipt, artifact and schema
+roots, merge-queue attempt root, and merge/run/observation timestamps. The
+caller supplies the same coordinates under
+`kungfu.delivery-evidence.expectation/v1`; their canonical root is the
+idempotency key.
+
+[`delivery_evidence.py`](../../framework/core/src/python/kungfu/delivery_evidence.py)
+strictly rejects missing, malformed, stale, cross-repository, PR-head, merge,
+run, receipt, artifact, schema, and queue mismatches. Missing evidence is a
+retryable failure; malformed, stale, and contradictory evidence is terminal.
+The native Fact state exposes retry count, first-seen and latest-attempt times,
+admission lag, latest sanitized error root, the admitted Episode root, and
+whether downstream Git settlement is still unpublished.
+
+A successful retry converges on one Fact subject and one delivery Episode.
+Duplicate delivery does not append another Fact observation, Episode, or
+completion effect. The adapter accepts only the versioned envelope fields:
+raw GitHub responses, logs, credentials, signed URLs, artifact bodies, and
+private payloads are rejected as unknown input and never persisted.
+
+GitHub executes and transports delivery evidence, and Buildchain produces its
+receipt and artifact roots. Neither becomes work authority. Kungfu alone admits
+the native Fact and Episode; Work Control separately decides completion. Git
+settlement is a downstream projection and must consume the Episode root plus
+the `unpublishedDownstream` state without rewriting this runtime authority.
