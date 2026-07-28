@@ -267,25 +267,121 @@ export async function cancelDequeuedMergeGroupRuns({
   };
 }
 
+export async function revokeQueueAdmissionLease({
+  repository,
+  headSha,
+  context,
+  token,
+  request = fetch,
+}) {
+  required(repository, 'repository', /^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/u);
+  required(headSha, 'head sha', /^[0-9a-f]{40}$/u);
+  required(
+    context,
+    'queue admission context',
+    /^[A-Za-z0-9][A-Za-z0-9 ._/-]{0,99}$/u,
+  );
+  if (!token) throw new Error('GitHub token is unavailable');
+
+  const response = await githubResponse(
+    `/repos/${repository}/statuses/${headSha}`,
+    token,
+    request,
+    {
+      method: 'POST',
+      body: JSON.stringify({
+        state: 'failure',
+        context,
+        description:
+          'Lease revoked after merge-queue dequeue; use the serialized wrapper',
+      }),
+    },
+  );
+  if (response.status !== 201) {
+    throw new Error(
+      `GitHub API ${response.status} while revoking queue admission lease`,
+    );
+  }
+  return { headSha, context, state: 'failure' };
+}
+
+export async function settleDequeuedMergeGroup({
+  repository,
+  pullRequest,
+  headSha,
+  workflow,
+  context,
+  token,
+  request = fetch,
+}) {
+  const results = await Promise.allSettled([
+    cancelDequeuedMergeGroupRuns({
+      repository,
+      pullRequest,
+      workflow,
+      token,
+      request,
+    }),
+    recordDequeuedRepairMarker({
+      repository,
+      pullRequest,
+      headSha,
+      token,
+      request,
+    }),
+    revokeQueueAdmissionLease({
+      repository,
+      headSha,
+      context,
+      token,
+      request,
+    }),
+  ]);
+  const failures = results
+    .map((result, index) =>
+      result.status === 'rejected'
+        ? `${['cancellation', 'repair-marker', 'lease-revocation'][index]}: ${
+            result.reason instanceof Error
+              ? result.reason.message
+              : String(result.reason)
+          }`
+        : '',
+    )
+    .filter(Boolean);
+  if (failures.length) {
+    throw new Error(`dequeue settlement failed (${failures.join('; ')})`);
+  }
+  const [cancellation, repairMarker, queueAdmissionLease] = results;
+  if (
+    cancellation.status !== 'fulfilled' ||
+    repairMarker.status !== 'fulfilled' ||
+    queueAdmissionLease.status !== 'fulfilled'
+  ) {
+    throw new Error('dequeue settlement result invariant failed');
+  }
+  return {
+    cancellation: cancellation.value,
+    repairMarker: repairMarker.value,
+    queueAdmissionLease: queueAdmissionLease.value,
+  };
+}
+
 async function main() {
   const repository = process.env.GITHUB_REPOSITORY || '';
   const pullRequest = Number(process.env.DEQUEUED_PULL_REQUEST || 0);
   const workflow = process.env.MERGE_GROUP_WORKFLOW || 'affected-native-pr.yml';
   const headSha = process.env.DEQUEUED_HEAD_SHA || '';
+  const context = process.env.QUEUE_ADMISSION_CONTEXT || '';
   const token = process.env.GITHUB_TOKEN || '';
-  const cancellation = await cancelDequeuedMergeGroupRuns({
-    repository,
-    pullRequest,
-    workflow,
-    token,
-  });
-  const repairMarker = await recordDequeuedRepairMarker({
+  const result = await settleDequeuedMergeGroup({
     repository,
     pullRequest,
     headSha,
+    workflow,
+    context,
     token,
   });
-  process.stdout.write(`${JSON.stringify({ cancellation, repairMarker })}\n`);
+  process.stdout.write(`${JSON.stringify(result)}\n`);
 }
 
 if (import.meta.url === pathToFileURL(process.argv[1] || '').href) {

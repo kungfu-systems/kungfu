@@ -1,0 +1,27 @@
+{
+  "schema": "kungfu.dev-queue-admission/v1",
+  "branchPattern": "dev/v*/v*",
+  "requiredContext": "Queue admission lease",
+  "authority": {
+    "pullRequestHead": "atlas-serialized-wrapper",
+    "mergeGroup": ".github/workflows/queue-admission-lease.yml",
+    "dequeueRevocation": ".github/workflows/cancel-dequeued-merge-group.yml"
+  },
+  "admission": {
+    "queueMustBeEmpty": true,
+    "requiredPosition": 1,
+    "freshProjectCutReplay": true,
+    "leaseAfterReplay": true
+  },
+  "revocation": {
+    "dequeue": "failure-status-on-exact-pr-head",
+    "headChange": "lease-does-not-transfer",
+    "sameHeadRetry": "forbidden-after-revocation"
+  },
+  "rulesetActivation": {
+    "required": true,
+    "expectedSource": "any",
+    "reason": "The pull-request lease is a user-authored commit status while the merge-group continuation is a GitHub Actions check."
+  },
+  "threatBoundary": "Prevents inadvertent direct queue admission. A write actor that deliberately forges the named status is outside this operational safety boundary."
+}

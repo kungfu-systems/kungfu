@@ -19,6 +19,7 @@ import {
   mergeQueueEvidence,
   nativeEvidenceFromMembers,
   nearestRank,
+  queueAdmissionRequiredContexts,
   report,
   requiredContextsFromEffectiveRules,
   requiredMergeQueueWindow,
@@ -1100,15 +1101,43 @@ test('context admission ignores successful post-merge reruns', () => {
   assert.equal(context.endAuthority, 'first-success-no-later-than-pull-merge');
 });
 
-test('live required contexts must match the retained baseline authority', () => {
+test('live required contexts match baseline or one declared lease expansion', () => {
   const baseline = {
     $schema: 'kungfu.dev-required-latency-baseline/v1',
     requiredContexts: ['a', 'b'],
   };
   assert.equal(validateBaseline(baseline, ['b', 'a']), true);
+  assert.equal(
+    validateBaseline(baseline, ['b', 'queue-lease', 'a'], ['queue-lease']),
+    true,
+  );
   assert.throws(
     () => validateBaseline(baseline, ['a', 'c']),
     /live required contexts drifted/,
+  );
+  assert.throws(
+    () => validateBaseline(baseline, ['a', 'queue-lease'], ['queue-lease']),
+    /live required contexts drifted/,
+  );
+});
+
+test('queue admission contract authorizes only one explicit required context', () => {
+  assert.deepEqual(
+    queueAdmissionRequiredContexts({
+      schema: 'kungfu.dev-queue-admission/v1',
+      requiredContext: 'Queue admission lease',
+      rulesetActivation: { required: true },
+    }),
+    ['Queue admission lease'],
+  );
+  assert.throws(
+    () =>
+      queueAdmissionRequiredContexts({
+        schema: 'kungfu.dev-queue-admission/v1',
+        requiredContext: 'Queue admission lease',
+        rulesetActivation: { required: false },
+      }),
+    /must require ruleset activation/,
   );
 });
 

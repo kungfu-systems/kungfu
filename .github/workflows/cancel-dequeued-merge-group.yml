@@ -12,6 +12,7 @@ permissions:
   actions: write
   contents: read
   pull-requests: write
+  statuses: write
 
 jobs:
   cancel:
@@ -29,4 +30,5 @@ jobs:
           DEQUEUED_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           MERGE_GROUP_WORKFLOW: affected-native-pr.yml
+          QUEUE_ADMISSION_CONTEXT: Queue admission lease
         run: ./shifu ci:cancel-dequeued-merge-group

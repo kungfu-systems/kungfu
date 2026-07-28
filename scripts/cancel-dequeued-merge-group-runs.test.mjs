@@ -11,6 +11,8 @@ import {
   cancelDequeuedMergeGroupRuns,
   mergeQueueRepairComment,
   recordDequeuedRepairMarker,
+  revokeQueueAdmissionLease,
+  settleDequeuedMergeGroup,
 } from './cancel-dequeued-merge-group-runs.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -59,6 +61,8 @@ test('dequeue workflow executes only the trusted base with least privilege', () 
   assert.match(workflow, /pull_request_target:\n\s+types: \[dequeued\]/u);
   assert.match(workflow, /permissions:\n\s+actions: write\n\s+contents: read/u);
   assert.match(workflow, /\s+pull-requests: write/u);
+  assert.match(workflow, /\s+statuses: write/u);
+  assert.match(workflow, /QUEUE_ADMISSION_CONTEXT: Queue admission lease/u);
   assert.match(
     workflow,
     /ref: \$\{\{ github\.event\.pull_request\.base\.sha \}\}/u,
@@ -68,6 +72,83 @@ test('dequeue workflow executes only the trusted base with least privilege', () 
     workflow,
     /ref:\s+\$\{\{ github\.event\.pull_request\.head/u,
   );
+});
+
+test('dequeue revokes the exact-head queue admission lease', async () => {
+  const requests = [];
+  const headSha = 'c'.repeat(40);
+  const request = async (url, init = {}) => {
+    requests.push({
+      url,
+      method: init.method || 'GET',
+      body: init.body ? JSON.parse(init.body) : null,
+    });
+    return response(201);
+  };
+  assert.deepEqual(
+    await revokeQueueAdmissionLease({
+      repository: 'kungfu-systems/kungfu',
+      headSha,
+      context: 'Queue admission lease',
+      token: 'test-token',
+      request,
+    }),
+    {
+      headSha,
+      context: 'Queue admission lease',
+      state: 'failure',
+    },
+  );
+  assert.deepEqual(requests, [
+    {
+      url: `https://api.github.com/repos/kungfu-systems/kungfu/statuses/${headSha}`,
+      method: 'POST',
+      body: {
+        state: 'failure',
+        context: 'Queue admission lease',
+        description:
+          'Lease revoked after merge-queue dequeue; use the serialized wrapper',
+      },
+    },
+  ]);
+});
+
+test('dequeue settlement still revokes the lease when other cleanup fails', async () => {
+  const headSha = 'd'.repeat(40);
+  const leaseRequests = [];
+  const request = async (url, init = {}) => {
+    if (url.endsWith(`/statuses/${headSha}`)) {
+      leaseRequests.push({
+        method: init.method,
+        body: JSON.parse(init.body),
+      });
+      return response(201);
+    }
+    return response(500);
+  };
+  await assert.rejects(
+    settleDequeuedMergeGroup({
+      repository: 'kungfu-systems/kungfu',
+      pullRequest: 1510,
+      headSha,
+      workflow: 'affected-native-pr.yml',
+      context: 'Queue admission lease',
+      token: 'test-token',
+      request,
+    }),
+    /dequeue settlement failed \(cancellation: .*; repair-marker: .*\)/u,
+  );
+  assert.deepEqual(leaseRequests, [
+    {
+      method: 'POST',
+      body: {
+        state: 'failure',
+        context: 'Queue admission lease',
+        description:
+          'Lease revoked after merge-queue dequeue; use the serialized wrapper',
+      },
+    },
+  ]);
 });
 
 test('failed or conflicting dequeue records one exact-head repair marker', async () => {

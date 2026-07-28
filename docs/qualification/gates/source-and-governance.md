@@ -180,6 +180,18 @@ Each section is bound to the registry id by the catalog meta gate.
   version; cross-runner drift therefore remains fail-closed. Shifu workspace
   and KFD remain independent on the producer execution; only a candidate backed
   by that completed-success exact proof may skip them.
+- **Serialized queue admission lease:** the dev ruleset additionally requires
+  `Queue admission lease`. On the pull-request head, only the Atlas serialized
+  wrapper issues that status after observing an empty queue and replaying the
+  Project Cut against the latest base; it then accepts only position one. A
+  merge-group-only workflow continues the same required context on the exact
+  synthetic SHA without satisfying it on ordinary PR events. Every dequeue
+  revokes the exact-head lease and forbids retrying that head; a new head
+  cannot inherit an older status. The bounded contract is
+  `docs/qualification/gates/dev-queue-admission.contract.json`. This prevents
+  an inadvertent direct position-two entry from changing the proof base and
+  turning an exact PR proof into a full native queue rebuild; it does not
+  weaken proof verification when source, plan, or toolchain identity changes.
 - **Dequeue repair admission:** the trusted-base dequeue controller cancels
   active work and writes one PR marker for deterministic `failed_checks`,
   `merge_conflict`, or `invalid_merge_commit` exits. The marker binds the exact

@@ -922,14 +922,14 @@
     {
       "path": ".github/workflows/cancel-dequeued-merge-group.yml",
       "authority": "qualification",
-      "definitionDigest": "sha256:fb8c59a8ba571c6091bdc5663830676b0cbe14a2741a7063ad69f78e1694fb52",
+      "definitionDigest": "sha256:004e56b133945a2edb879cb3caf203e8ef1af9944f61ffa64ac269e00804c130",
       "jobs": [
         {
           "id": "cancel",
           "authority": "qualification",
           "publication": "none",
           "receipt": "diagnostic",
-          "definitionDigest": "sha256:d14354805fbdc7b02ea0ad410361729d6d8cb8da3303fad62f3b26e299c2f3a3",
+          "definitionDigest": "sha256:67f561b539de1ba5df88d375313188e2a83dd5026978a7924f9d574f34c7f3bd",
           "credentials": {"githubToken":"write","oidc":false,"repositorySecrets":["GITHUB_TOKEN"],"inheritedSecrets":false,"environment":null},
           "externalActions": ["actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0"],
           "steps": [
@@ -941,7 +941,7 @@
             {
               "index": 2,
               "label": "name:Cancel active merge-group runs for the dequeued pull request",
-              "definitionDigest": "sha256:47dbc2484365ea0484e9bb75c329d8f55362c2b70057ebf7044856f0868a546e"
+              "definitionDigest": "sha256:04a5277a49a1b9b247f90e98cc1a24160fede52567ca89fbea508cef5112f458"
             }
           ]
         }
@@ -1865,6 +1865,29 @@
               "label": "uses:actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02",
               "authority": "evidence-publication",
               "definitionDigest": "sha256:a0c5bfd0f26c35c3f71c5b47f48db6322de501714f38f9709c543799841cad87"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "path": ".github/workflows/queue-admission-lease.yml",
+      "authority": "qualification",
+      "definitionDigest": "sha256:835423db04199ffe10917fb66c23a60de9b5c0472d06f9c230667f166d313392",
+      "jobs": [
+        {
+          "id": "admission",
+          "authority": "qualification",
+          "publication": "none",
+          "receipt": "diagnostic",
+          "definitionDigest": "sha256:d73f6a9c29eb100bfae8dd4ca5760103727ae866e684c51dd1ac3f5e40b991f1",
+          "credentials": {"githubToken":"none","oidc":false,"repositorySecrets":[],"inheritedSecrets":false,"environment":null},
+          "externalActions": [],
+          "steps": [
+            {
+              "index": 1,
+              "label": "name:Continue the wrapper-issued lease on the exact merge group",
+              "definitionDigest": "sha256:50cedddf4af1d2589d5561f3e1c3e582168b92d60ccae987fbf285643e08b917"
             }
           ]
         }

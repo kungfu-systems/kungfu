@@ -30,6 +30,10 @@ const BASELINE_PATH = path.join(
   ROOT,
   'framework/core/architecture/dev-gate-latency-baseline.json',
 );
+const QUEUE_ADMISSION_CONTRACT_PATH = path.join(
+  ROOT,
+  'docs/qualification/gates/dev-queue-admission.contract.json',
+);
 
 function repositoryFromOrigin() {
   const result = spawnSync('git', ['remote', 'get-url', 'origin'], {
@@ -469,18 +473,44 @@ export function summarizeMergeQueueDelivery(samples) {
   };
 }
 
-export function validateBaseline(baseline, requiredContexts) {
+export function validateBaseline(
+  baseline,
+  requiredContexts,
+  allowedContextAdditions = [],
+) {
   if (baseline.$schema !== 'kungfu.dev-required-latency-baseline/v1') {
     throw new Error('unsupported dev required latency baseline schema');
   }
   const expected = [...baseline.requiredContexts].sort();
   const actual = [...requiredContexts].sort();
-  if (JSON.stringify(expected) !== JSON.stringify(actual)) {
+  const allowed = [...new Set(allowedContextAdditions)].sort();
+  const additions = actual.filter((context) => !expected.includes(context));
+  const removals = expected.filter((context) => !actual.includes(context));
+  if (
+    removals.length ||
+    additions.some((context) => !allowed.includes(context))
+  ) {
     throw new Error(
       `live required contexts drifted: expected ${expected.join(', ')}, got ${actual.join(', ')}`,
     );
   }
   return true;
+}
+
+export function queueAdmissionRequiredContexts(contract) {
+  if (contract?.schema !== 'kungfu.dev-queue-admission/v1') {
+    throw new Error('unsupported dev queue admission contract schema');
+  }
+  if (contract.rulesetActivation?.required !== true) {
+    throw new Error(
+      'dev queue admission contract must require ruleset activation',
+    );
+  }
+  const context = String(contract.requiredContext || '');
+  if (!/^[A-Za-z0-9][A-Za-z0-9 ._/-]{0,99}$/u.test(context)) {
+    throw new Error('dev queue admission required context is invalid');
+  }
+  return [context];
 }
 
 export function requiredContextsFromEffectiveRules(rules) {
@@ -2002,6 +2032,9 @@ async function main() {
     validateBaseline(
       JSON.parse(fs.readFileSync(BASELINE_PATH, 'utf8')),
       requiredContexts,
+      queueAdmissionRequiredContexts(
+        JSON.parse(fs.readFileSync(QUEUE_ADMISSION_CONTRACT_PATH, 'utf8')),
+      ),
     );
   }
   const merged = options.pulls.length
