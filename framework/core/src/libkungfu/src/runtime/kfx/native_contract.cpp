@@ -211,7 +211,8 @@ void enforce_document_shape(const std::string &kind, const json &document) {
   for (auto item = document.begin(); item != document.end(); ++item) {
     if (!allowed.contains(item.key())) {
       if (item.key() == "packageRoot" || item.key() == "trust" || item.key() == "trustGrade" ||
-          item.key() == "systemAuthority" || item.key() == "authority") {
+          item.key() == "systemAuthority" || item.key() == "firstParty" || item.key() == "productSystem" ||
+          item.key() == "trusted" || item.key() == "authority") {
         refuse("KF_KFX_AUTHORITY_CLAIM_FORBIDDEN", kind + " may not claim Core-owned field " + item.key());
       }
       refuse("KF_KFX_SCHEMA_INVALID", kind + " contains unknown field " + item.key());
@@ -248,10 +249,7 @@ void validate_request(const json &document) {
   require_string(document, "packagePath", "request");
   (void)string_array(document, "requestedCapabilities", "request");
   validate_path(document.at("packagePath").get<std::string>(), "request.packagePath");
-  const auto version = document.at("contractVersion").get<int64_t>();
-  const std::set<std::string> operations =
-      version == 1 ? std::set<std::string>{"inspect", "plan", "apply", "status", "history"}
-                   : std::set<std::string>{"list", "inspect", "resolve", "plan", "apply", "status", "history"};
+  const std::set<std::string> operations = {"list", "inspect", "resolve", "plan", "apply", "status", "history"};
   if (!operations.contains(document.at("operation").get<std::string>())) {
     refuse("KF_KFX_AUTHORITY_CLAIM_FORBIDDEN", "only the native service may perform lifecycle mutations");
   }
@@ -263,13 +261,8 @@ void validate_request(const json &document) {
 void validate_inspection(const json &document) {
   require_string(document, "packageKey", "inspection");
   require_string(document, "packageRoot", "inspection");
-  const auto version = document.at("contractVersion").get<int64_t>();
-  if (version == 1) {
-    require_string(document, "trustGrade", "inspection");
-  } else {
-    require_string(document, "runtimeTier", "inspection");
-    require_string(document, "admissionGrade", "inspection");
-  }
+  require_string(document, "runtimeTier", "inspection");
+  require_string(document, "admissionGrade", "inspection");
   (void)string_array(document, "declaredCapabilities", "inspection");
   if (!document.at("owners").is_array()) {
     refuse("KF_KFX_SCHEMA_INVALID", "inspection.owners must be an array");
@@ -298,17 +291,14 @@ void validate_inspection(const json &document) {
     require_string(entry, "sha256", "inspection.closure[]");
     validate_path(entry.at("path").get<std::string>(), "inspection.closure[].path");
   }
-  const auto &tiers = version == 1 ? native_contract_source().at("legacyV1").at("runtimeTiers")
-                                   : native_contract_source().at("runtimeTiers");
-  const auto &tier = version == 1 ? document.at("trustGrade") : document.at("runtimeTier");
+  const auto &tiers = native_contract_source().at("runtimeTiers");
+  const auto &tier = document.at("runtimeTier");
   if (std::find(tiers.begin(), tiers.end(), tier) == tiers.end()) {
     refuse("KF_KFX_SCHEMA_INVALID", "inspection runtime tier is not in the native contract");
   }
-  if (version >= 2) {
-    const auto &grades = native_contract_source().at("admissionGrades");
-    if (std::find(grades.begin(), grades.end(), document.at("admissionGrade")) == grades.end()) {
-      refuse("KF_KFX_SCHEMA_INVALID", "inspection.admissionGrade is not in the native contract");
-    }
+  const auto &grades = native_contract_source().at("admissionGrades");
+  if (std::find(grades.begin(), grades.end(), document.at("admissionGrade")) == grades.end()) {
+    refuse("KF_KFX_SCHEMA_INVALID", "inspection.admissionGrade is not in the native contract");
   }
 }
 
@@ -316,21 +306,13 @@ void validate_plan(const json &document) {
   require_string(document, "planId", "plan");
   require_object(document.at("basis"), "plan.basis");
   const auto &basis = document.at("basis");
-  const auto version = document.at("contractVersion").get<int64_t>();
   require_string(basis, "packageRoot", "plan.basis");
-  if (version == 3) {
-    if (basis.size() != 3 || !basis.contains("cutRoot") || !basis.contains("revision"))
-      refuse("KF_KFX_SCHEMA_INVALID", "plan.basis must contain only packageRoot, cutRoot, and revision");
-    if (!basis.at("cutRoot").is_null() && !basis.at("cutRoot").is_string())
-      refuse("KF_KFX_SCHEMA_INVALID", "plan.basis.cutRoot must be null or a content root");
-    require_non_negative_integer(basis, "revision", "plan.basis");
-    require_non_negative_integer(document, "nextRevision", "plan");
-  } else {
-    if (basis.size() != 2 || !basis.contains("generation"))
-      refuse("KF_KFX_SCHEMA_INVALID", "legacy plan.basis must contain only packageRoot and generation");
-    require_non_negative_integer(basis, "generation", "plan.basis");
-    require_non_negative_integer(document, "nextGeneration", "plan");
-  }
+  if (basis.size() != 3 || !basis.contains("cutRoot") || !basis.contains("revision"))
+    refuse("KF_KFX_SCHEMA_INVALID", "plan.basis must contain only packageRoot, cutRoot, and revision");
+  if (!basis.at("cutRoot").is_null() && !basis.at("cutRoot").is_string())
+    refuse("KF_KFX_SCHEMA_INVALID", "plan.basis.cutRoot must be null or a content root");
+  require_non_negative_integer(basis, "revision", "plan.basis");
+  require_non_negative_integer(document, "nextRevision", "plan");
   const auto requested = string_array(document, "requestedCapabilities", "plan");
   const auto granted = string_array(document, "grantedCapabilities", "plan");
   if (!document.at("effects").is_array()) {
@@ -342,27 +324,17 @@ void validate_plan(const json &document) {
       refuse("KF_KFX_CAPABILITY_BROADENING", "plan grants an undeclared capability: " + capability);
     }
   }
-  if (version == 3) {
-    const auto expected = basis.at("revision").get<int64_t>() + (document.at("effects").empty() ? 0 : 1);
-    if (document.at("nextRevision").get<int64_t>() != expected)
-      refuse("KF_KFX_CUT_STALE", "nextRevision does not match the named Cut basis and effects");
-  } else {
-    const auto expected = basis.at("generation").get<int64_t>() + (document.at("effects").empty() ? 0 : 1);
-    if (document.at("nextGeneration").get<int64_t>() != expected)
-      refuse("KF_KFX_GENERATION_MISMATCH", "nextGeneration does not match the legacy basis and effects");
-  }
+  const auto expected = basis.at("revision").get<int64_t>() + (document.at("effects").empty() ? 0 : 1);
+  if (document.at("nextRevision").get<int64_t>() != expected)
+    refuse("KF_KFX_CUT_STALE", "nextRevision does not match the named Cut basis and effects");
 }
 
 void validate_receipt(const json &document) {
   require_string(document, "receiptId", "receipt");
   require_string(document, "planId", "receipt");
-  if (document.at("contractVersion") == 3) {
-    if (!document.at("cutRoot").is_string() || document.at("cutRoot").get<std::string>().empty())
-      refuse("KF_KFX_SCHEMA_INVALID", "receipt.cutRoot must be a non-empty content root");
-    require_non_negative_integer(document, "revision", "receipt");
-  } else {
-    require_non_negative_integer(document, "generation", "receipt");
-  }
+  if (!document.at("cutRoot").is_string() || document.at("cutRoot").get<std::string>().empty())
+    refuse("KF_KFX_SCHEMA_INVALID", "receipt.cutRoot must be a non-empty content root");
+  require_non_negative_integer(document, "revision", "receipt");
   if (!document.at("verified").is_boolean()) {
     refuse("KF_KFX_SCHEMA_INVALID", "receipt.verified must be a boolean");
   }
@@ -403,10 +375,7 @@ json validate_native_kfx_document(const std::string &kind, const json &document)
     refuse("KF_KFX_DOCUMENT_KIND_UNKNOWN", "unknown native KFX document kind: " + kind);
   }
   const auto version = document.at("contractVersion").get<int64_t>();
-  const auto validation_schema = version == 1   ? NATIVE_KFX_VALIDATION_V1
-                                 : version == 2 ? NATIVE_KFX_VALIDATION_V2
-                                                : NATIVE_KFX_VALIDATION_V3;
-  return {{"schema", validation_schema},
+  return {{"schema", NATIVE_KFX_VALIDATION_V3},
           {"kind", kind},
           {"contractVersion", version},
           {"nativeContractRoot", native_kfx_contract().at("nativeContractRoot")},

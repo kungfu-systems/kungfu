@@ -4,7 +4,7 @@ doc_type: architecture-decision
 adr_id: KF-ADR-019f86da-4f90-72df-add3-948f3ae38c3a
 decision_status: accepted
 implementation_status: partial
-implementation_prs: [https://github.com/kungfu-systems/kungfu/pull/734, https://github.com/kungfu-systems/kungfu/pull/842, https://github.com/kungfu-systems/kungfu/pull/873, https://github.com/kungfu-systems/kungfu/pull/906, https://github.com/kungfu-systems/kungfu/pull/922, https://github.com/kungfu-systems/kungfu/pull/1137, https://github.com/kungfu-systems/kungfu/pull/1151, https://github.com/kungfu-systems/kungfu/pull/1202, https://github.com/kungfu-systems/kungfu/pull/1704, https://github.com/kungfu-systems/kungfu/pull/1718, https://github.com/kungfu-systems/kungfu/pull/1728]
+implementation_prs: [https://github.com/kungfu-systems/kungfu/pull/734, https://github.com/kungfu-systems/kungfu/pull/842, https://github.com/kungfu-systems/kungfu/pull/873, https://github.com/kungfu-systems/kungfu/pull/906, https://github.com/kungfu-systems/kungfu/pull/922, https://github.com/kungfu-systems/kungfu/pull/1137, https://github.com/kungfu-systems/kungfu/pull/1151, https://github.com/kungfu-systems/kungfu/pull/1202, https://github.com/kungfu-systems/kungfu/pull/1704, https://github.com/kungfu-systems/kungfu/pull/1718, https://github.com/kungfu-systems/kungfu/pull/1728, https://github.com/kungfu-systems/kungfu/pull/1744]
 review_state: self-reviewed
 sensitivity: public
 sources: [local-files, user-decision]
@@ -105,6 +105,16 @@ and capability-grant roots; integrated adapters remain disabled until a
 separate confined path exists. The identity-neutral authority cutover and
 recursive terminal dogfood remain later stages, so implementation remains
 partial.
+
+PR #1744 enforces one identity-neutral public host contract across those
+surfaces, including the GUI session-window edge. No binding may branch on
+first-party/System/Product System identity, a fixed package name, a bundled
+path, installer origin, or signer to choose trust, friction, host placement,
+capabilities, or confinement. Product roles project presentation and
+distribution only. Reverse scans cover every public host/control edge, and all
+executable manifests declare an explicit least capability set. The recursive
+Control Suite dogfood and sole terminal qualification remain later stages, so
+implementation remains partial.
 
 ## Decision
 

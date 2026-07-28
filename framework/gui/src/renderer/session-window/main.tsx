@@ -13,6 +13,8 @@ import React from 'react';
 import * as ReactDOM from 'react-dom';
 import { createRoot } from 'react-dom/client';
 import * as jsxRuntime from 'react/jsx-runtime';
+import type { SessionWindowLaunchAuthorization } from '../../main/session-window-authorization';
+import { SESSION_WINDOW_AUTHORIZATION_CHANNEL } from '../../sandbox/channels';
 import { createKfxSharedModules } from '../shared-modules';
 import { loadKfx } from '../src/kfx-loader';
 import {
@@ -45,10 +47,11 @@ function fail(message: string): void {
   );
 }
 
-function main(): void {
+async function main(): Promise<void> {
   const runId = new URLSearchParams(window.location.search).get('runId');
-  if (!runId) {
-    fail('session window opened without a runId');
+  const windowId = new URLSearchParams(window.location.search).get('windowId');
+  if (!runId || !windowId) {
+    fail('session window opened without an exact window or session identity');
     return;
   }
 
@@ -64,14 +67,26 @@ function main(): void {
     return;
   }
   const terminal = createTerminalProxy(ipc);
+  let launch: SessionWindowLaunchAuthorization;
+  try {
+    launch = (await ipc.invoke(SESSION_WINDOW_AUTHORIZATION_CHANNEL, {
+      windowId,
+    })) as SessionWindowLaunchAuthorization;
+  } catch (error) {
+    fail(`session window authorization failed: ${(error as Error).message}`);
+    return;
+  }
 
   // Load the terminal kfx the same way the shell does, so its code and its CSS
   // (injected by loadKfx) match the grid exactly; the single-session branch is
   // selected by shell.params.sessionWindowRunId below.
-  const loaded = loadKfx(window.process.env, SHARED_MODULES);
+  const loaded = loadKfx(window.process.env, SHARED_MODULES, launch.descriptor);
   const entry = loaded.entries.find(
     (e: KfxEntry) =>
-      e.tier === 'node-integrated' && e.capabilities.includes('terminal'),
+      e.id === launch.packageKey &&
+      e.authorizationRoot === launch.authorizationRoot &&
+      e.tier === 'node-integrated' &&
+      e.capabilities.includes('terminal'),
   );
   if (!entry) {
     fail('terminal view not found on the extension path');
@@ -90,4 +105,4 @@ function main(): void {
   );
 }
 
-main();
+void main();

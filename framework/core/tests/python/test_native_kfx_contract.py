@@ -86,25 +86,24 @@ def test_native_kfx_python_binding_is_a_thin_core_edge(tmp_path):
     contract = storage_service.kfx_runtime_contract(tmp_path)
     assert contract["schema"] == "kungfu.kfx.native-contract/v3"
     assert contract["contractVersion"] == 3
-    assert contract["versionNegotiation"]["supported"] == [1, 2, 3]
+    assert contract["versionNegotiation"]["supported"] == [3]
     assert contract["runtimeTiers"] != contract["admissionGrades"]
     assert contract["authority"]["owner"] == "libkungfu"
     assert contract["sourceContractRoot"].startswith("sha256:")
     assert contract["nativeContractRoot"].startswith("sha256:")
 
-    validated = storage_service.validate_kfx_runtime_document(
-        "request",
-        {
-            "schema": "kungfu.kfx.native-request/v2",
-            "contractVersion": 2,
-            "operation": "inspect",
-            "packagePath": "extensions/example",
-            "requestedCapabilities": [],
-        },
-        tmp_path,
-    )
-    assert validated["valid"] is True
-    assert validated["nativeContractRoot"] == contract["nativeContractRoot"]
+    with pytest.raises(ValueError, match="KF_KFX_CONTRACT_VERSION_UNSUPPORTED"):
+        storage_service.validate_kfx_runtime_document(
+            "request",
+            {
+                "schema": "kungfu.kfx.native-request/v2",
+                "contractVersion": 2,
+                "operation": "inspect",
+                "packagePath": "extensions/example",
+                "requestedCapabilities": [],
+            },
+            tmp_path,
+        )
 
 
 def test_native_kfx_registry_python_projection_matches_core_roots(tmp_path):

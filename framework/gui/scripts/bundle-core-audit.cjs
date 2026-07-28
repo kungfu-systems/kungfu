@@ -278,7 +278,7 @@ function auditPackagedApp(appDir, options = {}) {
   }
   if (remainingDev.length > 0) {
     failures.push(
-      `first-party dev artifact directories:\n${remainingDev.join('\n')}`,
+      `product-bundled dev artifact directories:\n${remainingDev.join('\n')}`,
     );
   }
   if (nonCanonicalRuntimeDirs.length > 0) {

@@ -6,7 +6,7 @@
 // instance and capability/query surfaces. The exact list lives in
 // `framework/kfx/shared-modules.json`.
 //
-// Static facts about a view (title, capabilities, settings, system flag)
+// Static facts about a view (title, capabilities, settings, product metadata)
 // live in the package manifest (`kungfuConfig.config.view`), never in code:
 // managers and installers read them without executing the extension. The
 // code side exports exactly one thing — the View component.
@@ -180,72 +180,37 @@ export type KfxProductDecl = {
   order?: number;
 };
 
-// `kungfuConfig.config.view` — the static half of a view extension.
-// KF-ADR-019f86da-4f90-7e5e-ae22-2a8fc24086f1 trust tier. `node-integrated` (trusted) shares the shell's renderer,
-// React and capability instances; `sandboxed-ipc` runs the view in an isolated
-// renderer with no node, reaching only its declared capabilities over IPC.
+// `kungfuConfig.config.view` — inert presentation and capability-declaration
+// metadata. Runtime placement is projected only from a Core authorization.
 export type KfxRuntimeTier = 'node-integrated' | 'sandboxed-ipc';
 
 export type KfxViewDecl = {
   title: string;
   // capability handles this view receives; undeclared handles stay absent
   capabilities: KfxCapabilityKey[];
-  // trust tier hint (default node-integrated). The source-authority verdict is
-  // authoritative over this hint: an unauthorized package is never elevated
-  // above sandboxed-ipc just because its manifest asks for node-integrated.
-  runtime?: KfxRuntimeTier;
-  // shell-owned views (settings, kfx manager, status); not disableable
-  system?: boolean;
   // settings this view contributes to the shell Settings view
   settings?: KfxSettingDecl[];
   // bundle entry relative to the package root (default: dist/view/index.js)
   entry?: string;
 };
 
-// The frozen first-party set (KF-ADR-019f86da-4f90-79f1-8716-aca36b142847): the build-time record of which
-// extension identities are trusted. It maps a kfx `key` to an integrity pin —
-// a sha256 of the loaded bundle, or `null` when the key is trusted without a
-// content pin (development source builds, whose bundle changes on every
-// rebuild). Trust is granted by membership in this set — a verifiable origin —
-// never by which filesystem root a package happened to load from.
-export type FirstPartyPin = { sha256: string | null };
-export const FIRST_PARTY_MANIFEST_SCHEMA =
-  'kungfu.first-party-manifest/v1' as const;
-export type FirstPartyManifest = {
-  schema: typeof FIRST_PARTY_MANIFEST_SCHEMA;
-  version: 1;
-  keys: Record<string, FirstPartyPin>;
+export type KfxRuntimeAuthorization = {
+  runtimeTier: 'isolated' | 'integrated-explicit' | 'metadata-only';
+  executionAllowed: boolean;
+  authorizationRoot: string;
 };
 
-// The source-authority verdict (KF-ADR-019f86da-4f90-79f1-8716-aca36b142847, decision C): is this package an
-// authorized first-party extension? The frozen-set check below is the first
-// verdict implementation; a signature check can be added as a second without
-// changing `resolveRuntimeTier` or its caller — the verdict is the pluggable
-// seam. A `null` manifest (none shipped) trusts nothing: safe by default, and
-// deliberately NOT a fallback to path-based trust.
-export function authorizeFirstParty(
-  manifest: FirstPartyManifest | null,
-  key: string,
-  contentHash: string | null,
-): boolean {
-  const pin = manifest?.keys[key];
-  if (!pin) return false; // key is not in the frozen first-party set
-  if (pin.sha256 === null) return true; // trusted by key alone (dev / unpinned)
-  return pin.sha256 === contentHash; // pinned: bundle content must match
-}
-
-// The single source of the trust decision: what tier a loaded view runs at. A
-// system view, or a package the source-authority verdict authorized as
-// first-party (`authorizeFirstParty` — never a filesystem path), is
-// node-integrated; everything else is sandboxed. The manifest's `runtime` hint
-// may only keep a view sandboxed, never elevate it.
+// A legacy discovery preview has no authority. Only a Core-produced exact host
+// authorization may select integrated execution; every absent, refused or
+// metadata-only authorization remains physically isolated.
 export function resolveRuntimeTier(
-  view: Pick<KfxViewDecl, 'runtime' | 'system'>,
-  trusted: boolean,
+  authorization: KfxRuntimeAuthorization | null,
 ): KfxRuntimeTier {
-  if (view.system || trusted) return 'node-integrated';
-  // untrusted third-party: sandboxed by default; the manifest cannot elevate
-  return 'sandboxed-ipc';
+  return authorization?.executionAllowed === true &&
+    authorization.runtimeTier === 'integrated-explicit' &&
+    authorization.authorizationRoot.startsWith('sha256:')
+    ? 'node-integrated'
+    : 'sandboxed-ipc';
 }
 
 // `kungfuConfig.config.adapter` — a runtime facet. Unlike a view (a GUI screen
@@ -262,7 +227,7 @@ export type KfxAdapterDecl = {
   entry: { python?: string; node?: string };
   // capture-side capabilities the adapter needs; undeclared stay absent — the
   // same permission seam a view's `capabilities` is (reserved for enforcement)
-  capabilities?: string[];
+  capabilities: string[];
 };
 
 // A service ships a body per runtime; C++ joins Python and Node here — a
@@ -294,8 +259,9 @@ export type KfxServiceCppEntry = {
 // service runs standalone, it does not inject another process) and it adds C++.
 //
 // There is deliberately NO permission/sandbox field here. Confinement tier
-// (co-resident vs OS-sandbox) is the trust verdict's call, not the manifest's;
-// and how strict a sandbox is (network, write) is GRANTED BY THE USER, never
+// (co-resident vs OS-sandbox) is the exact Core authorization's call, not the
+// manifest's; and how strict a sandbox is (network, write) comes from an
+// explicit capability grant, never
 // self-declared by the kfx (KF-ADR-019f86da-4f90-7afa-a1e1-0510f00916be open question 1 resolution). A manifest
 // can no more relax its own sandbox than a view manifest can elevate its own
 // tier.
@@ -309,7 +275,7 @@ export type KfxServiceDecl = {
   entry: { python?: string; node?: string; cpp?: KfxServiceCppEntry };
   // kungfu relay capabilities the service needs; undeclared stay absent — the
   // same permission seam a view's `capabilities` is
-  capabilities?: KfxCapabilityKey[];
+  capabilities: KfxCapabilityKey[];
 };
 
 // `kungfuConfig.suite` — a suite groups related kfx for distribution and
@@ -452,7 +418,6 @@ export type KfxPlanEntry = {
   facet: 'view';
   title: string;
   capabilities: KfxCapabilityKey[];
-  system: boolean;
   settings: KfxSettingDecl[];
   product: KfxProductDecl;
   suite?: string;
@@ -463,23 +428,20 @@ export type KfxPlanEntry = {
   dir: string;
   source: 'built-in' | string; // extension root the entry was loaded from
   tier: KfxRuntimeTier;
+  executionAllowed: boolean;
+  authorizationRoot: string | null;
   bundlePath: string;
 };
 
-// One discovered service kfx after discovery + decision, before any host lands
-// it. Unlike a view plan entry there is no renderer `tier`: a service is not a
-// screen, so the host picks a co-resident child (trusted) or an OS-level
-// sandbox (untrusted) from the trust verdict alone, and the actual landing is a
-// later host concern (KF-ADR-019f86da-4f90-7afa-a1e1-0510f00916be). The plan carries only the verdict, the
-// declared capabilities, and where each runtime's body is.
+// Legacy discovery describes a service body but cannot authorize execution.
+// A host must join it to the exact Core host authorization before launch.
 export type KfxServicePlanEntry = {
   id: string;
   facet: 'service';
   capabilities: KfxCapabilityKey[];
   product: KfxProductDecl;
-  // the source-authority verdict (authorizeFirstParty). A service is not tiered
-  // like a view: trusted runs co-resident, untrusted is OS-sandbox confined.
-  trusted: boolean;
+  executionAllowed: boolean;
+  authorizationRoot: string | null;
   suite?: string;
   packageName?: string;
   version?: string;
@@ -515,12 +477,8 @@ export type NativeKfxPlanProjection = {
   packages: Array<{
     key: string;
     facets: string[];
-    runtimeTier: 'first-party-pinned' | 'verified-third-party' | 'untrusted';
-    admissionGrade:
-      | 'unverified'
-      | 'identity-verified'
-      | 'kfd-attested'
-      | 'product-system';
+    runtimeTier: 'isolated' | 'integrated-explicit' | 'metadata-only';
+    admissionGrade: 'unverified' | 'identity-verified' | 'kfd-attested';
   }>;
 };
 
@@ -539,14 +497,9 @@ export type NativeKfxTrustReport = {
     | 'activate'
     | 'host-placement'
     | 'capability'
-    | 'migration'
-    | 'system-role';
+    | 'migration';
   supplyChainGrade: 'unverified' | 'identity-verified' | 'kfd-attested';
-  admissionGrade:
-    | 'unverified'
-    | 'identity-verified'
-    | 'kfd-attested'
-    | 'product-system';
+  admissionGrade: 'unverified' | 'identity-verified' | 'kfd-attested';
   runtimeAssessment: 'eligible' | 'degraded';
   fresh: boolean;
   policyRoot: string;
@@ -638,7 +591,7 @@ export function compareKfxShadowPlans(
     }
     if (view) {
       const expectedTier =
-        pkg.runtimeTier === 'first-party-pinned'
+        pkg.runtimeTier === 'integrated-explicit'
           ? 'node-integrated'
           : 'sandboxed-ipc';
       findings.push({
@@ -655,17 +608,17 @@ export function compareKfxShadowPlans(
       continue;
     }
     if (service) {
-      const expectedTrusted = pkg.runtimeTier === 'first-party-pinned';
+      const expectedAllowed = pkg.runtimeTier === 'integrated-explicit';
       findings.push({
         packageKey: pkg.key,
         classification:
-          service.trusted === expectedTrusted
+          service.executionAllowed === expectedAllowed
             ? 'intended-match'
             : 'adr-required-divergence',
         reason:
-          service.trusted === expectedTrusted
-            ? 'service placement matches the native runtime tier'
-            : 'legacy service trust conflicts with the native runtime tier',
+          service.executionAllowed === expectedAllowed
+            ? 'service authorization matches the native runtime tier'
+            : 'legacy service authorization conflicts with the native runtime tier',
       });
     }
   }
@@ -762,15 +715,6 @@ export function resolveKfxContractPath(
   if (env.KUNGFU_DIR) {
     candidates.push(
       deps.path.join(env.KUNGFU_DIR, 'config', KFX_CONTRACT_FILE),
-    );
-  }
-  if (env.KF_FIRST_PARTY_MANIFEST) {
-    candidates.push(
-      deps.path.join(
-        deps.path.dirname(env.KF_FIRST_PARTY_MANIFEST),
-        'config',
-        KFX_CONTRACT_FILE,
-      ),
     );
   }
   for (const start of [options.cwd, env.PWD].filter(Boolean) as string[]) {
@@ -1093,58 +1037,6 @@ export function resolveKfxProfileSuiteSource(
   };
 }
 
-function validateFirstPartyManifest(
-  manifest: unknown,
-  contract: KfxContract,
-): void {
-  validateJsonSchema(
-    manifest,
-    objectValue(contract.firstPartyManifestSchema) ?? {},
-    'KFX first-party manifest',
-  );
-}
-
-// The frozen first-party set (KF-ADR-019f86da-4f90-79f1-8716-aca36b142847): trust is granted by membership here —
-// a verifiable origin — never by which extension root a package loaded from. It
-// ships as a build-generated JSON pointed to by KF_FIRST_PARTY_MANIFEST. A
-// missing/unreadable manifest yields `null`, which trusts nothing but the
-// shell's own `system` views (safe by default, never a path fallback).
-export function loadFirstPartyManifest(
-  env: Record<string, string | undefined>,
-  deps: KfxPlanDeps,
-): FirstPartyManifest | null {
-  const p = env.KF_FIRST_PARTY_MANIFEST;
-  if (!p || !deps.fs.existsSync(p)) return null;
-  try {
-    const contract = loadKfxContract(env, deps);
-    const raw = JSON.parse(deps.fs.readFileSync(p, 'utf8')) as Record<
-      string,
-      unknown
-    >;
-    // Pre-freeze manifests carried only `version: 1`. Normalize that exact
-    // legacy envelope at the read edge so existing homes keep their trust set;
-    // every newly generated or re-written v1 manifest carries `schema`.
-    const parsed = (
-      raw.schema === undefined &&
-      raw.version === 1 &&
-      raw.keys !== null &&
-      typeof raw.keys === 'object'
-        ? { ...raw, schema: FIRST_PARTY_MANIFEST_SCHEMA }
-        : raw
-    ) as FirstPartyManifest;
-    validateFirstPartyManifest(parsed, contract);
-    if (
-      parsed?.schema !== FIRST_PARTY_MANIFEST_SCHEMA ||
-      parsed.version !== 1 ||
-      typeof parsed.keys !== 'object'
-    )
-      return null;
-    return parsed;
-  } catch {
-    return null;
-  }
-}
-
 // Extension roots, in priority order (first occurrence of a key wins):
 //   1. KF_EXTENSION_PATH entries (path-separator list; dev override)
 //   2. <home>/extensions next to the runtime dir (the install root that
@@ -1218,8 +1110,6 @@ export function planKfx(
   const seenProfiles = new Set<string>();
   let contract: KfxContract;
 
-  // trust is granted by the frozen first-party set (KF-ADR-019f86da-4f90-79f1-8716-aca36b142847), never by which
-  // root a package loaded from — a KF_EXTENSION_PATH entry no longer confers it.
   try {
     contract = loadKfxContract(env, deps);
   } catch (e) {
@@ -1236,8 +1126,6 @@ export function planKfx(
       ],
     };
   }
-  const firstParty = loadFirstPartyManifest(env, deps);
-
   for (const root of extensionRoots(env, deps)) {
     for (const dir of packageDirs(root, deps)) {
       try {
@@ -1283,8 +1171,6 @@ export function planKfx(
               view?: {
                 title?: string;
                 capabilities?: KfxCapabilityKey[];
-                runtime?: KfxRuntimeTier;
-                system?: boolean;
                 settings?: KfxSettingDecl[];
                 entry?: string;
               };
@@ -1349,48 +1235,30 @@ export function planKfx(
         seen.add(config.key);
         if (view) {
           const bundlePath = path.join(dir, view.entry ?? 'dist/view/index.js');
-          // hash the bundle only when the key is pinned in the frozen set; an
-          // unpinned or absent key is decided by identity alone (verdict below).
-          const pin = firstParty?.keys[config.key];
-          const contentHash =
-            pin && pin.sha256 !== null && fs.existsSync(bundlePath)
-              ? planSha256(deps.crypto, fs.readFileSync(bundlePath, 'utf8'))
-              : null;
-          const trusted = authorizeFirstParty(
-            firstParty,
-            config.key,
-            contentHash,
-          );
-          const tier = resolveRuntimeTier(view, trusted);
           entries.push({
             id: config.key,
             facet: 'view',
             title: view.title ?? config.key,
             capabilities: view.capabilities ?? [],
-            system: Boolean(view.system),
             settings: view.settings ?? [],
             product,
             packageName: manifest.name,
             version: manifest.version,
             dir,
             source: root,
-            tier,
+            tier: resolveRuntimeTier(null),
+            executionAllowed: false,
+            authorizationRoot: null,
             bundlePath,
           });
         } else if (service) {
-          // A service has no single bundle to content-pin — it ships a body per
-          // runtime — so it is authorized unpinned: authorizeFirstParty with a
-          // null hash trusts an unpinned first-party key, while a key that
-          // *requires* a sha pin fails the null hash and stays untrusted. That
-          // is the default-deny side (KF-ADR-019f86da-4f90-79f1-8716-aca36b142847): an untrusted service lands in
-          // the OS sandbox, per-runtime content pinning is a follow-up.
-          const trusted = authorizeFirstParty(firstParty, config.key, null);
           services.push({
             id: config.key,
             facet: 'service',
             capabilities: service.capabilities ?? [],
             product,
-            trusted,
+            executionAllowed: false,
+            authorizationRoot: null,
             packageName: manifest.name,
             version: manifest.version,
             dir,

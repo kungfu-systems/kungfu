@@ -5,7 +5,7 @@
 //   ./shifu build
 //   ./shifu product gui dev
 //
-// `build` prepares the runtime, GUI/TUI surfaces, SDK and every first-party KFX
+// `build` prepares the runtime, GUI/TUI surfaces, SDK and every product-bundled KFX
 // view. `rebuild` first removes generated build outputs, then runs the same
 // build. Packaging remains `./shifu dist`.
 
@@ -120,7 +120,7 @@ function assertDeclaredKfx(packages) {
   if (missing.length || stale.length) {
     throw new Error(
       [
-        'product/package.json must declare every first-party kfx dependency',
+        'product/package.json must declare every product-assembled KFX dependency',
         missing.length ? `missing: ${missing.join(', ')}` : '',
         stale.length ? `stale: ${stale.join(', ')}` : '',
       ]
@@ -128,7 +128,7 @@ function assertDeclaredKfx(packages) {
         .join('\n'),
     );
   }
-  log(`[build] first-party kfx packages: ${packages.length}`);
+  log(`[build] product-bundled KFX packages: ${packages.length}`);
 }
 
 function cleanOutputs(packages) {

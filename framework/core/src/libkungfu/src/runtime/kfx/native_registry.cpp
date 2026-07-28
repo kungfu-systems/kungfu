@@ -583,7 +583,8 @@ snapshot build_snapshot(const json &request) {
       request.at("roots").empty())
     refuse("KF_KFX_SCHEMA_INVALID", "registry request requires explicit non-empty roots");
   for (const auto *field : {"runtimeTier", "runtimeTiers", "hostPlacements", "admissionGrade", "admissionGrades",
-                            "productSystem", "installed", "admitted", "systemAuthority", "grantedCapabilities"}) {
+                            "productSystem", "firstParty", "system", "trusted", "supportsKFD", "installed", "admitted",
+                            "systemAuthority", "grantedCapabilities"}) {
     if (request.contains(field))
       refuse("KF_KFX_AUTHORITY_CLAIM_FORBIDDEN",
              std::string("registry request may not claim Core-derived authority field ") + field);
@@ -645,7 +646,6 @@ snapshot build_snapshot(const json &request) {
                       {"name", manifest.value("name", "")},
                       {"version", manifest.value("version", "")},
                       {"path", package_path.string()},
-                      {"rootKind", kind},
                       {"manifestRoot", root_of(manifest)},
                       {"apiCompatibility",
                        {{"sourceContractSchema", native_contract.at("sourceContractSchema")},
@@ -660,7 +660,6 @@ snapshot build_snapshot(const json &request) {
                       {"runtimeTier", "isolated"},
                       {"admissionGrade", "unverified"},
                       {"supplyChainGrade", "unverified"},
-                      {"productSystem", false},
                       {"grantedCapabilities", json::array()},
                       {"hosts", host_placements(manifest)},
                       {"semantic", object_or_empty(manifest.at("kungfuConfig"), "registry")},
@@ -769,14 +768,12 @@ snapshot build_snapshot(const json &request) {
   for (const auto &package : result.packages) {
     package_identity.push_back(
         {{"key", package.at("key")},
-         {"rootKind", package.at("rootKind")},
          {"packageRoot", package.at("packageRoot")},
          {"manifestRoot", package.at("manifestRoot")},
          {"apiCompatibility", package.at("apiCompatibility")},
          {"facets", package.at("facets")},
          {"runtimeTier", package.at("runtimeTier")},
          {"admissionGrade", package.at("admissionGrade")},
-         {"productSystem", package.at("productSystem")},
          {"grantedCapabilities", package.at("grantedCapabilities")},
          {"capabilityGrantRoot",
           package.contains("authority") ? package.at("authority").at("capabilityGrantRoot") : json(nullptr)},
@@ -1024,7 +1021,6 @@ json package_host_authorization(const json &package, const json &provider, const
       {"trustRoot", provider.at("trustRoot")},
       {"runtimeTier", package.at("runtimeTier")},
       {"admissionGrade", package.at("admissionGrade")},
-      {"productSystem", package.at("productSystem")},
       {"placement", placement},
       {"requiredCapabilities", required_capabilities},
       {"grantedCapabilities", granted_capabilities},
@@ -1191,7 +1187,6 @@ json lifecycle_plan(const snapshot &value, const lifecycle_view &lifecycle, cons
     const auto verdict = derived_verdict(provider, desired_state, observed_state);
     package_plan.push_back({{"key", package.at("key")},
                             {"providerRoot", provider.at("providerRoot")},
-                            {"rootKind", package.at("rootKind")},
                             {"packageRoot", package.at("packageRoot")},
                             {"apiCompatibility", package.at("apiCompatibility")},
                             {"facets", package.at("facets")},
@@ -1246,43 +1241,38 @@ json mutation_authorization_plan(const snapshot &value, const lifecycle_view &li
 }
 
 json control_bootstrap_policy() {
-  const json identity = {{"schema", "kungfu.kfx.control-bootstrap-policy/v1"},
-                         {"controllerId", KFX_CONTROL_SUITE_ID},
-                         {"packageKey", KFX_CONTROL_PACKAGE_KEY},
-                         {"requiredProductRoles", json::array({"boot-critical", "system-management"})},
-                         {"maximumCapabilities", json::array({"kfxControl", "profile"})},
-                         {"requiredCapabilities", json::array({"kfxControl"})},
-                         {"requiredRootKind", "product"},
-                         {"runtimePlacement", "sandboxed-ipc"},
-                         {"productRolesAuthority", "assembly-and-distribution-metadata-only"},
-                         {"authority",
-                          {{"candidateIdentity", "kungfu.kfx.json plus Core-computed package closure"},
-                           {"lifecycle", "public-kfx-status-plan-apply"},
-                           {"settlement", "fact-work-named-cut-cas"},
-                           {"selfGrant", false},
-                           {"receiptsBypassPolicy", false}}},
-                         {"recovery",
-                          {{"lastKnownGood", "retained-package-referenced-by-sealed-kfx-episode-fact"},
-                           {"corruptOrMissingActive", "deterministic-safe-mode"},
-                           {"automaticActivation", false}}}};
+  const json identity = {
+      {"schema", "kungfu.kfx.control-bootstrap-policy/v1"},
+      {"controllerId", KFX_CONTROL_SUITE_ID},
+      {"maximumCapabilities", json::array({"kfxControl", "profile"})},
+      {"requiredCapabilities", json::array({"kfxControl"})},
+      {"runtimePlacement", "sandboxed-ipc"},
+      {"bootstrapTcb", json::array({"manifest-and-closure-verifier", "release-passport-verifier",
+                                    "core-policy-interpreter", "fact-work-warrant-settlement",
+                                    "last-known-good-selector", "safe-mode", "owner-authorized-emergency-removal"})},
+      {"authority",
+       {{"candidateIdentity", "Core-computed package closure selected by the controller route"},
+        {"lifecycle", "public-kfx-status-plan-apply"},
+        {"settlement", "fact-work-named-cut-cas"},
+        {"selfGrant", false},
+        {"originAuthority", false},
+        {"productAssemblyAuthority", false},
+        {"receiptsBypassPolicy", false}}},
+      {"recovery",
+       {{"lastKnownGood", "retained-package-referenced-by-sealed-kfx-episode-fact"},
+        {"corruptOrMissingActive", "deterministic-safe-mode"},
+        {"automaticActivation", false}}}};
   auto result = identity;
   result["policyRoot"] = root_of(identity);
   return result;
 }
 
-json validate_control_package(const json &package) {
+json validate_control_package(const json &package, bool require_authority = false) {
   const auto policy = control_bootstrap_policy();
   json reasons = json::array();
   if (package.is_null() || !package.is_object()) {
     reasons.push_back("KF_KFX_CONTROL_CANDIDATE_MISSING");
   } else {
-    if (package.value("key", "") != KFX_CONTROL_PACKAGE_KEY)
-      reasons.push_back("KF_KFX_CONTROL_IDENTITY_MISMATCH");
-    if (package.value("rootKind", "") != policy.at("requiredRootKind").get<std::string>())
-      reasons.push_back("KF_KFX_CONTROL_SOURCE_REJECTED");
-    const auto roles = package.value("productRoles", json::array());
-    if (roles != policy.at("requiredProductRoles"))
-      reasons.push_back("KF_KFX_CONTROL_ROLE_BROADENING");
     const auto capabilities = package.value("declaredCapabilities", json::array());
     for (const auto &required : policy.at("requiredCapabilities")) {
       if (std::find(capabilities.begin(), capabilities.end(), required) == capabilities.end())
@@ -1292,6 +1282,21 @@ json validate_control_package(const json &package) {
       if (std::find(policy.at("maximumCapabilities").begin(), policy.at("maximumCapabilities").end(), capability) ==
           policy.at("maximumCapabilities").end())
         reasons.push_back("KF_KFX_CONTROL_SELF_GRANT");
+    }
+    if (require_authority) {
+      const auto authority = package.value("authority", json::object());
+      const auto granted = package.value("grantedCapabilities", json::array());
+      for (const auto *root :
+           {"reportRoot", "admissionPlanRoot", "corePolicyRoot", "requestedPolicyRoot", "policyRoot",
+            "authorizationPlanRoot", "capabilityDeclarationRoot", "capabilityGrantRoot", "warrantRoot"}) {
+        if (!authority.contains(root) || !authority.at(root).is_string() ||
+            authority.at(root).get<std::string>().empty())
+          reasons.push_back("KF_KFX_CONTROL_AUTHORITY_MISSING");
+      }
+      for (const auto &required : policy.at("requiredCapabilities")) {
+        if (std::find(granted.begin(), granted.end(), required) == granted.end())
+          reasons.push_back("KF_KFX_CONTROL_GRANT_MISSING");
+      }
     }
   }
   return {{"schema", "kungfu.kfx.control-bootstrap-verification/v1"},
@@ -1364,7 +1369,7 @@ json control_status(const lifecycle_view &lifecycle) {
   if (lifecycle.present) {
     active = find_package(lifecycle.authoritative.packages, KFX_CONTROL_PACKAGE_KEY);
     if (!active.is_null()) {
-      active_verification = validate_control_package(active);
+      active_verification = validate_control_package(active, true);
       if (active_verification.at("valid").get<bool>()) {
         try {
           const auto physical = inspect_control_package_path(active.at("path").get<std::string>());
@@ -1435,9 +1440,9 @@ json control_plan(const snapshot &value, const lifecycle_view &lifecycle, const 
   const auto status = control_status(lifecycle);
   const auto mutation_authorization = mutation_authorization_plan(value, lifecycle, request, load_plan);
   const auto assessment = mutation_authorization.at("assessment");
-  if (assessment.is_null() || assessment.at("trustReport").value("admissionGrade", "") != "product-system")
+  if (assessment.is_null() || assessment.at("trustReport").value("admissionGrade", "") != "kfd-attested")
     refuse("KF_KFX_CONTROL_TRUST_REJECTED",
-           "Control Suite requires exact KFD eligibility and Product assembly-root policy metadata");
+           "Control Suite requires exact KFD eligibility before public Fact/Work authorization");
   const json identity = {
       {"schema", "kungfu.kfx.control-suite-plan/v1"},
       {"controllerId", KFX_CONTROL_SUITE_ID},
@@ -2065,11 +2070,9 @@ json apply_lifecycle_mutation(const snapshot &value, const lifecycle_view &lifec
         const auto &report = assessment.at("trustReport");
         accepted_package["supplyChainGrade"] = report.at("supplyChainGrade");
         accepted_package["admissionGrade"] = report.at("admissionGrade");
-        accepted_package["productSystem"] = report.at("admissionGrade") == "product-system";
       } else {
         accepted_package["supplyChainGrade"] = "unverified";
         accepted_package["admissionGrade"] = "unverified";
-        accepted_package["productSystem"] = false;
       }
       accepted_package["authority"] = {
           {"schema", "kungfu.kfx-package-authority/v1"},
@@ -2099,14 +2102,12 @@ json apply_lifecycle_mutation(const snapshot &value, const lifecycle_view &lifec
     for (const auto &accepted_package : accepted.packages) {
       accepted_package_identity.push_back(
           {{"key", accepted_package.at("key")},
-           {"rootKind", accepted_package.at("rootKind")},
            {"packageRoot", accepted_package.at("packageRoot")},
            {"manifestRoot", accepted_package.at("manifestRoot")},
            {"apiCompatibility", accepted_package.at("apiCompatibility")},
            {"facets", accepted_package.at("facets")},
            {"runtimeTier", accepted_package.at("runtimeTier")},
            {"admissionGrade", accepted_package.at("admissionGrade")},
-           {"productSystem", accepted_package.at("productSystem")},
            {"grantedCapabilities", accepted_package.at("grantedCapabilities")},
            {"capabilityGrantRoot", accepted_package.at("authority").at("capabilityGrantRoot")},
            {"hosts", accepted_package.at("hosts")}});
@@ -2187,14 +2188,12 @@ snapshot merge_candidate_observation(const snapshot &authority, const snapshot &
   for (const auto &package : result.packages) {
     package_identity.push_back(
         {{"key", package.at("key")},
-         {"rootKind", package.at("rootKind")},
          {"packageRoot", package.at("packageRoot")},
          {"manifestRoot", package.at("manifestRoot")},
          {"apiCompatibility", package.at("apiCompatibility")},
          {"facets", package.at("facets")},
          {"runtimeTier", package.at("runtimeTier")},
          {"admissionGrade", package.at("admissionGrade")},
-         {"productSystem", package.at("productSystem")},
          {"grantedCapabilities", package.at("grantedCapabilities")},
          {"capabilityGrantRoot",
           package.contains("authority") ? package.at("authority").at("capabilityGrantRoot") : json(nullptr)},

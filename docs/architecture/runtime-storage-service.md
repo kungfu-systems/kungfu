@@ -538,11 +538,11 @@ paths belong to live processes; cache paths are rebuildable from another
 declared authority.
 
 The same freeze pins the journal wire epoch to `0xe3b24c8d` (`3820113037`):
-the compile-time layout fingerprint must equal that declaration. It also makes
-`kungfu.first-party-manifest/v1` mandatory for new `first-party.json` writes;
-the exact schema-less pre-freeze v1 envelope remains read-compatible. `.xinfa/`
-remains the Git-published Xinfa semantic input root, not a location for live
-journals, payload CAS, locks, private material, projections, or runtime caches.
+the compile-time layout fingerprint must equal that declaration. KFX runtime
+authorization is deliberately outside this layout contract and comes only from
+exact Core-owned Fact/Work roots. `.xinfa/` remains the Git-published Xinfa
+semantic input root, not a location for live journals, payload CAS, locks,
+private material, projections, or runtime caches.
 
 `runtime/storage/projections/source-registry.sqlite` and
 `runtime/storage/projections/manifest-catalog.sqlite` are the generic SQLite

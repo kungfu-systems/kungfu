@@ -12,8 +12,8 @@ namespace kungfu::runtime::kfx {
 // Return the embedded KFX Domain Profile and its deterministic root.
 [[nodiscard]] nlohmann::json native_kfx_domain_profile();
 
-// Return the minimal Core-embedded ceiling that lets the first-party Control
-// Suite manage its own next version without granting itself trust or power.
+// Return the minimal Core-embedded ceiling that lets the Control Suite manage
+// its own next version without granting itself authority.
 [[nodiscard]] nlohmann::json native_kfx_control_bootstrap_policy();
 
 // Read-only calls project a pinned named Fact Cut when runtime_dir is present.

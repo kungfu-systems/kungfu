@@ -29,12 +29,7 @@ export type KfxHostContribution = {
     ownerProviderRoot: string;
     trustRoot: string;
     runtimeTier: 'isolated' | 'integrated-explicit' | 'metadata-only';
-    admissionGrade:
-      | 'unverified'
-      | 'identity-verified'
-      | 'kfd-attested'
-      | 'product-system';
-    productSystem: boolean;
+    admissionGrade: 'unverified' | 'identity-verified' | 'kfd-attested';
     placement: string;
     requiredCapabilities: string[];
     grantedCapabilities: string[];
@@ -251,6 +246,7 @@ export function authorizeKfxHostLaunch(
   host: KfxRuntimeHost,
   expectedAuthorizationRoot: string,
 ): KfxHostContribution['authorization'] & { host: KfxRuntimeHost } {
+  projectKfxExperienceFlowHost(descriptor, 'cli');
   const authorization = descriptor.runtimeAuthorizations.find(
     (candidate) =>
       candidate.packageKey === packageKey && candidate.host === host,

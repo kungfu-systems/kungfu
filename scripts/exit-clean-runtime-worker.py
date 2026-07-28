@@ -103,8 +103,8 @@ def _assert_installed(product_root: Path) -> dict[str, Any]:
             .resolve()
             .relative_to(product_root)
         ),
-        "firstPartySourceRoot": str(
-            Path(os.environ["KF_FIRST_PARTY_SOURCE_ROOT"])
+        "bundledExtensionRoot": str(
+            Path(os.environ["KF_BUNDLED_EXTENSION_ROOT"])
             .resolve()
             .relative_to(product_root)
         ),

@@ -79,7 +79,6 @@ nlohmann::json workspace_episode_layout_json(const storage_layout_result &result
            {{"data_home", result.paths.data_home},
             {"workspace_ignore", result.paths.workspace_ignore},
             {"workspace_config", result.paths.workspace_config},
-            {"first_party_manifest", result.paths.first_party_manifest},
             {"extensions_dir", result.paths.extensions_dir},
             {"runtime_dir", result.paths.runtime_dir},
             {"dataset_dir", result.paths.dataset_dir},

@@ -25,9 +25,9 @@ def _validate_action_type(action_type: str, tier: str) -> None:
         raise ValueError("kfx action_type must be a dotted namespace string")
     if tier == "sandboxed" and not action_type.startswith("kfx."):
         raise ValueError("sandboxed kfx action_type must use the kfx.* namespace")
-    if tier != "first_party" and action_type.startswith(_RESERVED_ACTION_PREFIXES):
+    if tier != "core-authorized" and action_type.startswith(_RESERVED_ACTION_PREFIXES):
         raise ValueError(
-            f"action_type {action_type!r} is reserved for first-party schemas"
+            f"action_type {action_type!r} requires explicit Core authorization"
         )
 
 
@@ -48,14 +48,14 @@ def register_user_schema(
     action_type: str,
     name: str,
     *,
-    tier: str = "trusted",
+    tier: str = "sandboxed",
     schema_version: str = "user",
 ) -> dict[str, str]:
     """Content-address `bfbs` and bind `action_type` -> it in the run manifest.
 
     bfbs: bytes from compile_schema. name: the event table to bind (its
-    fully-qualified name is resolved from the schema). tier: 'trusted' |
-    'sandboxed' | 'first_party'. Returns the binding dict.
+    fully-qualified name is resolved from the schema). tier: 'sandboxed' |
+    'core-authorized'. Returns the binding dict.
 
     Idempotent for an identical (action_type, hash); raises on a conflicting
     rebinding, a bad namespace, or a schema missing `name`.

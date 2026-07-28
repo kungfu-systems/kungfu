@@ -1,13 +1,5 @@
-// Dual-entry loading parity (KF-ADR-019f86da-4f90-7afa-a1e1-0510f00916be stage 3, acceptance #1): the TUI host must
-// reach the SAME trust/tier verdict for the same kfx as the gui — because both
-// import the one host-agnostic planKfx and neither reimplements the rule. This
-// lays down a fixture extension root, runs the TUI's loadTuiKfxPlan over it, and
-// checks each verdict is the shared rule's:
-//   trusted (first-party) view    → node-integrated   (gui: mounts in renderer)
-//   untrusted view                → sandboxed-ipc      (gui: isolated renderer)
-//   trusted / untrusted service   → trusted flag       (stage 2d landing)
-// It also asserts loadTuiKfxPlan is planKfx unmodified — the TUI adds no
-// divergence — so "same verdict as the gui" holds by construction, not by luck.
+// Legacy discovery parity: GUI and TUI see the same inert presentation
+// metadata, while neither can derive execution authority from identity or path.
 //
 // Run with tsx: pnpm --filter @kungfu-tech/tui exec tsx src/kfx-plan-parity.ts
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
@@ -53,63 +45,45 @@ function pkg(root: string, dir: string, kungfuConfig: unknown): void {
 }
 
 const root = mkdtempSync(join(tmpdir(), 'kfx-tui-parity-'));
-pkg(root, 'trusted-view', {
-  key: 'fixture.view.trusted',
-  config: { view: { title: 'Trusted View' } },
+pkg(root, 'bundled-view', {
+  key: 'fixture.view.bundled',
+  config: { view: { title: 'Bundled View', capabilities: [] } },
 });
-pkg(root, 'untrusted-view', {
-  key: 'fixture.view.untrusted',
-  config: { view: { title: 'Untrusted View' } },
+pkg(root, 'external-view', {
+  key: 'fixture.view.external',
+  config: { view: { title: 'External View', capabilities: [] } },
 });
-pkg(root, 'trusted-svc', {
-  key: 'fixture.svc.trusted',
-  config: { service: { runtimes: ['node'], entry: { node: 'svc.mjs' } } },
+pkg(root, 'bundled-svc', {
+  key: 'fixture.svc.bundled',
+  config: {
+    service: {
+      runtimes: ['node'],
+      entry: { node: 'svc.mjs' },
+      capabilities: [],
+    },
+  },
 });
-pkg(root, 'untrusted-svc', {
-  key: 'fixture.svc.untrusted',
-  config: { service: { runtimes: ['node'], entry: { node: 'svc.mjs' } } },
+pkg(root, 'external-svc', {
+  key: 'fixture.svc.external',
+  config: {
+    service: {
+      runtimes: ['node'],
+      entry: { node: 'svc.mjs' },
+      capabilities: [],
+    },
+  },
 });
 pkg(root, 'invalid-view', {
   key: 'fixture.invalid',
   config: { view: { title: 'Invalid', capabilities: 'ledger' } },
 });
 
-const manifest = join(root, 'first-party.json');
-writeFileSync(
-  manifest,
-  JSON.stringify({
-    schema: 'kungfu.first-party-manifest/v1',
-    version: 1,
-    keys: {
-      'fixture.view.trusted': { sha256: null },
-      'fixture.svc.trusted': { sha256: null },
-    },
-  }),
-);
-
 const env: Record<string, string | undefined> = {
   KUNGFU_KFX_CONTRACT: process.env.KUNGFU_KFX_CONTRACT,
   KF_EXTENSION_PATH: root,
-  KF_FIRST_PARTY_MANIFEST: manifest,
 };
 
-console.log('kfx dual-entry loading parity (stage 3)\n');
-
-const kfxRoot = nodePath.resolve(import.meta.dirname, '../../kfx');
-const contract = JSON.parse(
-  nodeFs.readFileSync(join(kfxRoot, 'kungfu-kfx.contract.json'), 'utf8'),
-);
-const standaloneFirstPartySchema = JSON.parse(
-  nodeFs.readFileSync(
-    join(kfxRoot, 'schema', 'first-party-manifest.schema.json'),
-    'utf8',
-  ),
-);
-ok(
-  'standalone first-party schema matches the contract authority',
-  JSON.stringify(standaloneFirstPartySchema) ===
-    JSON.stringify(contract.firstPartyManifestSchema),
-);
+console.log('kfx identity-neutral discovery parity\n');
 
 // the TUI's verdict, through loadTuiKfxPlan.
 const plan = loadTuiKfxPlan(env);
@@ -118,20 +92,20 @@ const svc = (id: string) => plan.services.find((s) => s.id === id);
 
 ok(
   'TUI discovers both views',
-  !!view('fixture.view.trusted') && !!view('fixture.view.untrusted'),
+  !!view('fixture.view.bundled') && !!view('fixture.view.external'),
 );
 ok(
-  'trusted view → node-integrated (gui mounts in renderer)',
-  view('fixture.view.trusted')?.tier === 'node-integrated',
+  'bundled view remains isolated without Core authorization',
+  view('fixture.view.bundled')?.tier === 'sandboxed-ipc',
 );
 ok(
-  'untrusted view → sandboxed-ipc (gui isolated renderer)',
-  view('fixture.view.untrusted')?.tier === 'sandboxed-ipc',
+  'external view remains isolated without Core authorization',
+  view('fixture.view.external')?.tier === 'sandboxed-ipc',
 );
-ok('trusted service → trusted', svc('fixture.svc.trusted')?.trusted === true);
 ok(
-  'untrusted service → untrusted',
-  svc('fixture.svc.untrusted')?.trusted === false,
+  'bundled and external services have equal zero ambient authority',
+  svc('fixture.svc.bundled')?.executionAllowed === false &&
+    svc('fixture.svc.external')?.executionAllowed === false,
 );
 
 // loadTuiKfxPlan is planKfx unmodified: the same env + equivalent node deps give
@@ -146,7 +120,7 @@ const direct = planKfx(env, deps);
 const tierMap = (p: typeof plan) =>
   JSON.stringify({
     views: p.entries.map((e) => [e.id, e.tier]).sort(),
-    services: p.services.map((s) => [s.id, s.trusted]).sort(),
+    services: p.services.map((s) => [s.id, s.executionAllowed]).sort(),
   });
 ok(
   'loadTuiKfxPlan == planKfx (no host divergence; verdict is the shared rule)',
@@ -160,23 +134,6 @@ ok(
       failure.error.includes('KFX package manifest validation failed'),
   ),
 );
-writeFileSync(
-  manifest,
-  JSON.stringify({
-    version: 1,
-    keys: {
-      'fixture.view.trusted': { sha256: null },
-      'fixture.svc.trusted': { sha256: null },
-    },
-  }),
-);
-const legacy = planKfx(env, deps);
-ok(
-  'schema-less pre-freeze v1 remains readable',
-  legacy.entries.find((entry) => entry.id === 'fixture.view.trusted')?.tier ===
-    'node-integrated',
-);
-
 rmSync(root, { recursive: true, force: true });
 console.log(`\n  ${pass} passed, ${fail} failed`);
 process.exit(fail === 0 ? 0 : 1);

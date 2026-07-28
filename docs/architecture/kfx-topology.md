@@ -1,187 +1,137 @@
-# kfx topology — how a kfx is loaded, trusted, confined, and connected
+# KFX topology: identity-neutral admission and confinement
 
-This page is the mental model behind [`extensions.md`](extensions.md). That page
-tells you *how to write, build and install* a kfx; this one tells you *what
-happens to it* once a host finds it — which host loads it, how the host decides
-whether to trust it, which sandbox it lands in if it isn't trusted, and how it
-talks back. The design rationale is [KF-ADR-019f86da-4f90-7afa-a1e1-0510f00916be](../adr/KF-ADR-019f86da-4f90-7afa-a1e1-0510f00916be.md)
-(with [KF-ADR-019f86da-4f90-79f1-8716-aca36b142847](../adr/KF-ADR-019f86da-4f90-79f1-8716-aca36b142847.md)
-for the trust boundary and [KF-ADR-019f86da-4f90-7789-8b48-620aa694acf9](../adr/KF-ADR-019f86da-4f90-7789-8b48-620aa694acf9.md)
-for the uniform capability surface).
+This page explains how a KFX moves from inert package bytes to an authorized
+runtime. It complements [`extensions.md`](extensions.md), which explains how to
+author a package. The machine authority is
+[`kungfu-kfx.contract.json`](../../config/kungfu-kfx.contract.json) and its
+Core implementation under `framework/core/src/libkungfu/src/runtime/kfx/`.
 
-> Status: draft — the load plan and the `service` facet are proposed
-> ([KF-ADR-019f86da-4f90-7afa-a1e1-0510f00916be](../adr/KF-ADR-019f86da-4f90-7afa-a1e1-0510f00916be.md)); `view` loading is implemented in the GUI today. Where a claim is
-> ahead of the code, it is marked *(proposed)*.
+## One authorization equation
 
-## The one rule
+A KFX may execute only when Core can reconstruct all of:
 
-**Trusted kfx are admitted; untrusted kfx are confined — by the same rule, on
-every host.** A host never trusts a kfx because of *where it was found on disk*.
-It trusts it because its identity is a member of the frozen first-party set and,
-if that entry is content-pinned, the bundle's hash matches. Everything else is
-untrusted by default and runs in a sandbox. The manifest cannot ask for more
-trust than its origin earns.
-
-Which *sandbox* an untrusted kfx lands in is the host's business, not the kfx's.
-The kfx author writes one thing; the host decides where it runs.
-
-## Three forms a kfx can take (facets)
-
-A kfx package declares one or more **facets** under `kungfuConfig.config`. A
-facet is *what the package does*; a host's loader picks up only the facets it
-understands.
-
-| facet | what it is | runs as | runtimes |
-|---|---|---|---|
-| **view** | a GUI screen the host renders | UI in the host's render surface | JS |
-| **adapter** | capture-side trace instrumentation | injected into a *traced* child (the trace supervisor loads it) | Python, Node |
-| **service** *(proposed)* | the kfx's *own* long-lived background process | a participant in Kungfu's multi-process runtime, talking to the host over the capability relay | Python, Node, **C++** |
-
-The distinction that matters for topology: a **view** is rendered, an **adapter**
-is a hook that lives inside someone else's process, and a **service** is a
-process of its own. Kungfu is a multi-process runtime, so a pure-Python or
-pure-C++ kfx is naturally a **service** — and a service is exactly what the
-OS-level sandbox exists to confine.
-
-## Two hosts, one decider
-
-A kfx can be loaded from either host:
-
-- **GUI** — the Electron shell; views render in Chromium.
-- **CLI** — reached through interactive bare `kungfu`, which starts the Ink TUI on
-  Kungfu's embedded Node runtime (libnode).
-
-Bare `kungfu` is routed by the Python CLI root, but it only launches the TUI — the TUI
-itself is Node/TS. So **both hosts decide in the same Node/TS environment** and
-import the *same* load rule from `@kungfu-tech/kfx`. There is no second copy of
-"is this trusted, which tier" to keep in sync. Only the *loaded* kfx may be
-Python or C++ — as a guest process, never as the thing making the trust decision.
-
-## Native authority seam (migration stage)
-
-The versioned seam for moving that decision into Core is frozen in
-`kungfu-kfx.contract.json#nativeRuntime`. Contract v2 preserves v1 document
-validation while separating the legacy execution `runtimeTier` from the KFD
-`admissionGrade`; these are independent policy axes.
-
-| concern | authority | Node / Python role during this stage |
-|---|---|---|
-| contract version, canonical root names, stable error codes | libkungfu | read through `kfx_runtime:contract` |
-| request / inspection / plan / receipt validation | libkungfu | forward documents through `kfx_runtime:validate` |
-| Profile Suite lifecycle and suite root | existing native Profile lifecycle | call the existing lifecycle; never create a parallel KFX Profile state |
-| registry discovery, package/Suite closure, canonical roots, load plan | libkungfu read-only registry | call `kfx_runtime:list/inspect/resolve/plan/status` with explicit roots |
-| legacy discovery comparison | TypeScript shadow comparator | classify intended match, legacy defect, or ADR-required divergence |
-| install / activate / remove mutation | existing paths until transactional cutover is proved | native registry rejects mutation |
-
-The native registry scans only explicit `product`, `user`, and `workspace`
-roots. A scan produces candidate and plan inputs, never installed or admitted
-state. Package bytes, Suite membership, Profile lifecycle roots, placement
-inputs, and diagnostics are folded into deterministic roots. Each call derives
-a fresh immutable snapshot; no process-local cache becomes authority, and an
-`expectedRegistryRoot` mismatch fails as stale. Node, Python, and the headless
-CLI remain transport projections of the same Core operation.
-
-The C++ `native_kfx_service` interface reserves `list`, `inspect`, `resolve`,
-`plan`, `apply`, `status`, and `history` behind one runtime-scoped authority.
-This registry stage implements only the read operations. Transactional
-mutation, KFD attestation verification, admission, and activation remain later
-stages.
-
-## The lifecycle: discover → plan → land
-
-```
-                 @kungfu-tech/kfx  (host-agnostic, one rule)
-                 ┌───────────────────────────────────────────┐
-   extension     │  discover      →   decide      →  plan     │
-   roots  ─────► │  scan roots,       authorizeFirstParty     │
-   (manifests)   │  read manifests    resolveRuntimeTier      │
-                 │                    (trusted? which tier?)   │
-                 └──────────────────────────┬────────────────┘
-                                            │  load plan
-                        one neutral entry per kfx:
-                    { key, facet, tier, entry, capabilities }
-                     (instantiates nothing — no View, no DOM,
-                      no process yet)
-                                            │
-                 ┌──────────────────────────┴─────────────────────────┐
-                 ▼                                                     ▼
-        GUI host lands it                                     CLI host lands it
-        (Chromium plane)                                      (OS-sandbox plane)
+```text
+exact Release Passport
++ Core policy
++ admitted Work and issued Warrant
++ exact capability declaration and grant
++ host-specific runtime isolation
+= one rooted runtime authorization
 ```
 
-1. **Discover** — the host scans its extension roots and reads each package's
-   canonical `kungfu.kfx.json` manifest. `package.json` remains distribution
-   transport and cannot author KFX facts. Roots are the bundled first-party artifact root
-   (`Resources/extensions`), a dev override (`KF_EXTENSION_PATH`), and the install
-   root next to the runtime.
-2. **Plan** *(proposed: `planKfx`)* — the shared rule computes, per kfx, a neutral
-   **load plan**: its key, facet, resolved **tier** (trusted → admitted;
-   untrusted → sandboxed), entry, and declared capabilities. The plan
-   *instantiates nothing* — it decides, it does not run.
-3. **Land** — each host takes the plan and runs it its own way. The plan says
-   *whether* to confine; the host chooses *how*.
+Every term is necessary. A KFD assessment establishes conformance and
+eligibility only; it is not an authorization. A package name, namespace,
+signature made by the package itself, discovery root, installer origin,
+bundling state, Product System role, or fixed identifier contributes zero
+authority. The same exact evidence produces the same admission and confinement
+outcome for product-bundled and externally installed packages.
 
-## Where an untrusted kfx lands (the confinement matrix)
+Product System metadata is deliberately inert. It may describe assembly,
+distribution, default installation, update routing, navigation, icons, ordering,
+and recovery presentation. It cannot change admission grade, approval friction,
+runtime tier, placement, host access, confinement, or capability grants.
 
-| facet · tier | GUI host | CLI host |
-|---|---|---|
-| view · trusted | mounted in the shared renderer | mounted in the TUI |
-| view · sandboxed | Chromium isolated `WebContentsView` | *(open — the TUI has no renderer)* |
-| service · trusted | in-process / co-resident child | co-resident child |
-| **service · sandboxed** | **OS-level sandbox process** | **OS-level sandbox process** |
+## Facets and physical hosts
 
-The **OS-level sandbox** is the platform's process-grade confinement:
+A package declares one or more facets under `kungfuConfig.config`:
 
-- **macOS** — a Seatbelt profile via `sandbox-exec`.
-- **Linux** — a bubblewrap (`bwrap`) namespace + bind mount; if `bwrap` is
-  absent the launch is *refused*, never run unconfined.
-- **Windows** — a native AppContainer applied by the libkungfu launcher.
+| Facet | Physical form | Required host authorization |
+| --- | --- | --- |
+| `view` | GUI renderer or TUI presentation | exact view authorization plus granted capabilities |
+| `adapter` | code injected into a traced child | exact adapter-runtime authorization; otherwise refused |
+| `service` | independent Python, Node, or C++ process | exact service authorization and process isolation |
 
-Chromium isolation confines a **JS view**; the OS sandbox confines a **process**
-(a Python/C++/Node service). That is why a pure-Python or pure-C++ background kfx
-needs the OS sandbox specifically — a renderer can't hold a process.
+Facet declarations express requested behavior; they do not authorize it. An
+adapter cannot be safely sandboxed after injection, so missing or mismatched
+authorization refuses before injection. A service uses the OS-isolated process
+plane. A view uses an isolated Chromium plane unless an exact
+`integrated-explicit` authorization allows co-residency.
 
-## How a confined kfx talks back (the capability relay)
+GUI, TUI, CLI, and Agent are projections of one Core descriptor. They preserve
+the same `registryRoot`, `graphRoot`, `planRoot`, `cutRoot`, revision,
+`generationRoot`, capability roots, Warrant root, and authorization root. A
+presentation host may report that a facet is dormant or unavailable; it may not
+recompute or widen authority.
 
-A sandboxed kfx has no ambient authority — it cannot reach the filesystem, the
-network, or the journal directly. It reaches **only the capabilities its manifest
-declares**, and only over the **capability relay**. The relay is one protocol
-(`createCapabilityHost` / `createCapabilityGuest`) under both sandboxes; only the
-transport differs:
+## Discover, inspect, assess, admit, launch
 
-- **Chromium plane (GUI view)** — capability calls hop over **IPC** to a trusted
-  capability host that holds the real handles.
-- **OS-sandbox plane (service)** — capability calls travel over the child's
-  **stdio** relay to the host.
+1. **Discover.** Core scans only explicit roots and parses canonical
+   `kungfu.kfx.json` manifests. `package.json` and Product System declarations
+   remain distribution inputs. Scanning produces candidates, never authority.
+2. **Inspect.** Core computes the package closure and exact package and manifest
+   roots. A package cannot add authority by declaring labels such as `system`,
+   `firstParty`, `productSystem`, `trusted`, or `supportsKFD`; such request
+   claims are refused.
+3. **Assess.** Core verifies the exact Release Passport and the existing KFD
+   assessment contract. The result is an eligibility/trust report, not
+   permission to execute.
+4. **Plan.** Core combines the report with Core policy, requested policy,
+   admitted Work, Warrant, capability declaration, explicit grant, target host,
+   and placement. Missing, replayed, sibling, stale, or post-plan-mutated roots
+   fail closed.
+5. **Admit.** A Fact cut binds the graph, plan, report, policy, Warrant, grant,
+   placement, and generation roots. Mutation authorization is recomputed before
+   side effects.
+6. **Launch.** The physical host accepts only its exact
+   `kungfu.kfx.host-authorization/v2` root from the admitted descriptor. No
+   descriptor, preview-only state, root mismatch, or stale generation means no
+   execution.
 
-Because the surface is uniform ([KF-ADR-019f86da-4f90-7789-8b48-620aa694acf9](../adr/KF-ADR-019f86da-4f90-7789-8b48-620aa694acf9.md)), the *same* kfx source addresses its
-capabilities the same way whether it is trusted or sandboxed; turning on a
-restriction narrows what a capability returns (a refused write, a refused socket)
-— it never removes a method the code calls.
+`planKfx` in the TypeScript package is an inert preview projection. It can help
+render diagnostics, but it cannot independently admit or launch a package.
+Registry history JSONL, scan results, package metadata, and process-local
+generation counters are likewise projections or inputs, never final authority.
 
-## What this means for you, the kfx author
+## Runtime tiers and capability relay
 
-- You declare a **facet** (`view`, `adapter`, or `service`) and the
-  **capabilities** you need. You do not choose your sandbox — the host does, from
-  your trust tier.
-- If your kfx isn't in the frozen first-party set, assume it runs **sandboxed**,
-  reaching only its declared capabilities over the relay. Write against that
-  surface and it also runs unchanged when trusted.
-- A **service** kfx (proposed) is how you ship a pure-Python or pure-C++
-  background extension: it runs as its own process in the multi-process runtime,
-  confined by the OS sandbox when untrusted, and speaks to the host over the
-  capability relay. Python and Node ship *source* (an interpreter loads it); a
-  **C++ service ships a prebuilt per-platform binary** — `entry.cpp` is a
-  `{ darwin?, linux?, win? }` map to the binary you cross-compiled against the
-  guest proxy (`framework/core/src/capability/guest.hpp`), because there is no
-  interpreter to compile it at launch.
+The identity-neutral runtime tiers are:
+
+- `isolated`: sandboxed renderer or OS process, no ambient filesystem or
+  network authority, and only explicitly granted relay capabilities;
+- `integrated-explicit`: co-residency allowed only by an exact rooted
+  authorization; identity and origin do not select this tier;
+- `metadata-only`: presentation and distribution metadata with no execution.
+
+Capabilities cross a narrow host relay. The KFX declares what it needs, Core
+policy decides what may be requested, an explicit grant records the allowed
+subset, and the host exposes only that subset. Undeclared or ungranted calls are
+rejected. Isolation still applies when a package is KFD-compliant.
+
+## Control Suite and minimal TCB
+
+The KFX Control Suite follows the same public contract as every other KFX. It
+does not gain authority from being shipped with Kungfu. Its normal active path
+requires the same exact Passport, KFD eligibility, policy, Work/Warrant, grant,
+Fact cut, generation, and host authorization chain.
+
+Only a minimal Core-owned recovery TCB exists:
+
+- contract parsing and canonical rooting;
+- one native registry writer per runtime directory;
+- Fact/Work/Warrant verification before side effects;
+- last-known-good selection bound to exact roots;
+- safe-mode diagnostics with execution disabled;
+- owner- and threshold-governed emergency recovery.
+
+The TCB is enumerated by the native contract and tested as refusal-first
+behavior. Safe mode does not implicitly activate the Control Suite, and product
+assembly cannot add a bootstrap exception.
+
+## Author obligations
+
+- Declare every facet and its least required capability set explicitly.
+- Expect the package to run isolated unless an exact authorization says
+  otherwise.
+- Treat KFD success as eligibility evidence, not permission.
+- Do not branch behavior on bundled paths, package namespaces, Product System
+  roles, or fixed package names.
+- Preserve exact receipt and generation roots across GUI, TUI, CLI, and Agent
+  projections.
 
 ## See also
 
-- [`extensions.md`](extensions.md) — writing, building, installing a kfx (the
-  *how-to*).
-- [KF-ADR-019f86da-4f90-7afa-a1e1-0510f00916be](../adr/KF-ADR-019f86da-4f90-7afa-a1e1-0510f00916be.md)
-  — the design decision behind dual-host loading and the service facet.
-- [KF-ADR-019f86da-4f90-79f1-8716-aca36b142847](../adr/KF-ADR-019f86da-4f90-79f1-8716-aca36b142847.md),
-  [KF-ADR-019f86da-4f90-7789-8b48-620aa694acf9](../adr/KF-ADR-019f86da-4f90-7789-8b48-620aa694acf9.md)
-  — the trust boundary and the uniform capability surface this builds on.
+- [`extensions.md`](extensions.md)
+- [KFX native registry and authority contract](../../config/kungfu-kfx.contract.json)
+- [KFX authority decision](../adr/KF-ADR-019f86da-4f90-7afa-a1e1-0510f00916be.md)
+- [KFX trust boundary](../adr/KF-ADR-019f86da-4f90-79f1-8716-aca36b142847.md)
+- [Uniform capability surface](../adr/KF-ADR-019f86da-4f90-7789-8b48-620aa694acf9.md)

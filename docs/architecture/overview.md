@@ -220,12 +220,12 @@ does not expose commands outside the declared registry.
 
 ### Distribution — `product` (`@kungfu-tech/product-kungfu`)
 
-The dogfood installer: it bundles the runtime, both reference UIs, the SDK and
-all first-party kfx declared by `product/package.json` into desktop and CLI
-products. Installing the desktop product yields the reference GUI and TUI, the
-`kungfu` shell, and the SDK for zero-setup extension and product development.
-`./shifu dist` is the single source-to-product command; its outputs live
-under `product/release`.
+The dogfood installer: inert Product System metadata assembles the runtime,
+both reference UIs, the SDK, and all product-declared KFX into desktop and CLI
+products. Assembly and distribution confer no runtime authority. Installing the
+desktop product yields the reference GUI and TUI, the `kungfu` shell, and the
+SDK for zero-setup extension and product development. `./shifu dist` is the
+single source-to-product command; its outputs live under `product/release`.
 
 ### Build tooling — `shifu`
 

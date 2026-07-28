@@ -212,7 +212,7 @@ test('freeze replaces transient workspace links with stable Suite members', (t) 
   );
 });
 
-test('freeze closes a first-party Profile when pnpm dependencies are hoisted', (t) => {
+test('freeze closes a product-declared Profile when pnpm dependencies are hoisted', (t) => {
   const temporary = fs.mkdtempSync(
     path.join(os.tmpdir(), 'kungfu-hoisted-profile-'),
   );
