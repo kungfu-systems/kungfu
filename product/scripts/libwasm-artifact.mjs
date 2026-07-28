@@ -5,6 +5,14 @@ import { createHash } from 'node:crypto';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { qualificationAuthority } from '../../tests/fixtures/_kfx-authority.mjs';
+
+const REPO_ROOT = path.resolve(
+  path.dirname(fileURLToPath(import.meta.url)),
+  '..',
+  '..',
+);
 
 export function libwasmArtifactPaths(platform = process.platform) {
   const host =
@@ -84,10 +92,114 @@ export function runLibwasmExecutionQualification(
 ) {
   const temporary = fs.mkdtempSync(path.join(os.tmpdir(), 'kungfu-libwasm-'));
   try {
-    const module = path.join(temporary, 'qualification.wasm');
+    const home = path.join(temporary, 'home');
+    const runtimeDir = path.join(home, 'runtime');
+    const sourceRoot = path.join(temporary, 'source');
+    const packageDir = path.join(sourceRoot, 'libwasm-qualification');
+    fs.mkdirSync(packageDir, { recursive: true });
+    const module = path.join(packageDir, 'qualification.wasm');
     const bytes = Buffer.from(QUALIFICATION_WASM_HEX, 'hex');
     fs.writeFileSync(module, bytes);
     const digest = createHash('sha256').update(bytes).digest('hex');
+    fs.writeFileSync(
+      path.join(packageDir, 'kungfu.kfx.json'),
+      `${JSON.stringify(
+        {
+          schema: 'kungfu.kfx.manifest/v1',
+          name: '@kungfu-test/libwasm-qualification',
+          version: '1.0.0',
+          kungfuConfig: {
+            key: 'libwasm-qualification',
+            config: {
+              wasm: {
+                world: 'kungfu:journal/batch@1.0.0',
+                entry: 'qualification.wasm',
+                sha256: digest,
+                capabilities: ['journal.read.batch'],
+                engine: 'wasmtime',
+                fallback: 'wasmer',
+                limits: {
+                  fuel: 100000,
+                  memoryPages: 2,
+                  batchFrames: 1,
+                  moduleBytes: 4096,
+                  outputBytes: 64,
+                },
+              },
+            },
+          },
+        },
+        null,
+        2,
+      )}\n`,
+    );
+    const executable = path.join(
+      root,
+      platform === 'win32' ? 'kungfu.exe' : 'kungfu',
+    );
+    const runKungfu = (args, label) => {
+      const result = spawnSync(executable, ['-H', home, ...args], {
+        encoding: 'utf8',
+      });
+      if (result.status !== 0) {
+        throw new Error(
+          `${label} failed (exit ${result.status}): ${(result.stderr || result.stdout || '').trim()}`,
+        );
+      }
+      return result;
+    };
+    const inspect = JSON.parse(
+      runKungfu(
+        [
+          'kfx',
+          'native',
+          'inspect',
+          'libwasm-qualification',
+          '--root',
+          `workspace=${sourceRoot}`,
+        ],
+        'production libwasm package inspection',
+      ).stdout,
+    );
+    const authorityFile = path.join(temporary, 'authority.json');
+    fs.writeFileSync(
+      authorityFile,
+      `${JSON.stringify(
+        qualificationAuthority(
+          REPO_ROOT,
+          inspect.package.packageRoot,
+          inspect.package.declaredCapabilities,
+        ),
+        null,
+        2,
+      )}\n`,
+    );
+    runKungfu(
+      ['kfx', 'install', packageDir, '--authority-file', authorityFile],
+      'production libwasm package admission',
+    );
+    const plan = JSON.parse(
+      runKungfu(
+        [
+          'kfx',
+          'native',
+          'plan',
+          '--root',
+          `user=${path.join(home, 'extensions')}`,
+        ],
+        'production libwasm host plan',
+      ).stdout,
+    );
+    const descriptor = plan.hostContract;
+    const authorization = descriptor.runtimeAuthorizations.find(
+      (item) =>
+        item.packageKey === 'libwasm-qualification' && item.host === 'wasm',
+    );
+    if (!authorization) {
+      throw new Error(
+        'production libwasm host plan has no admitted WASM authorization',
+      );
+    }
     const host = path.join(
       root,
       platform === 'win32' ? 'kungfu-wasm-host.exe' : 'kungfu-wasm-host',
@@ -96,11 +208,25 @@ export function runLibwasmExecutionQualification(
     for (const engine of ['wasmtime', 'wasmer']) {
       const args = [
         '--runtime-dir',
-        temporary,
+        runtimeDir,
         '--module',
         module,
         '--expected-sha256',
         digest,
+        '--package-key',
+        'libwasm-qualification',
+        '--package-root',
+        authorization.packageRoot,
+        '--authorization-root',
+        authorization.authorizationRoot,
+        '--capability-grant-root',
+        authorization.capabilityGrantRoot,
+        '--generation-root',
+        descriptor.generationRoot,
+        '--cut-root',
+        descriptor.cutRoot,
+        '--revision',
+        String(descriptor.revision),
         '--world',
         'kungfu:journal/batch@1.0.0',
         '--capabilities',

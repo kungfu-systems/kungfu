@@ -494,8 +494,9 @@ json plan(const json &packages, const std::string &registry_root, const std::str
       refuse("KF_KFX_RECOVERY_WARRANT_INVALID", "recovery Warrant issuer must be workspace-owner or core-system");
     if (recovery.value("operation", "") != operation ||
         recovery.value("packageRoot", "") != package.at("packageRoot").get<std::string>() ||
-        recovery.at("expectedCutRoot") != prior_cut || !recovery.at("expectedRevision").is_number_unsigned() ||
-        recovery.at("expectedRevision").get<uint64_t>() != revision)
+        recovery.at("expectedCutRoot") != prior_cut || !recovery.at("expectedRevision").is_number_integer() ||
+        recovery.at("expectedRevision").get<int64_t>() < 0 ||
+        static_cast<uint64_t>(recovery.at("expectedRevision").get<int64_t>()) != revision)
       refuse("KF_KFX_RECOVERY_WARRANT_INVALID", "recovery Warrant does not bind the exact package and prior Cut");
     if (!recovery.at("issuedAt").is_number_integer() || !recovery.at("expiresAt").is_number_integer() ||
         recovery.at("issuedAt").get<int64_t>() < 0 ||

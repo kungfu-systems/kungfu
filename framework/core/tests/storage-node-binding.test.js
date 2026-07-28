@@ -8,6 +8,14 @@ const { spawnSync } = require('node:child_process');
 const kungfuFactory = require('../lib/kungfu');
 
 const coreDir = path.resolve(__dirname, '..');
+const nativeKfxFixtureRoot = path.resolve(
+  coreDir,
+  'src/libkungfu/tests/fixtures/native_kfx_registry/roots/workspace',
+);
+const nativeKfxEnvelope = path.resolve(
+  coreDir,
+  'src/libkungfu/tests/fixtures/native_kfx_contract/buildchain-2.13.0-alpha.0-envelope.json',
+);
 const bindingDir = path.join(coreDir, 'dist', 'kungfu');
 const kungfu = kungfuFactory();
 const nativeAvailable =
@@ -224,19 +232,8 @@ test(
         : 'built native storage binding is unavailable',
   },
   () => {
-    const fixtureRoot = path.join(
-      coreDir,
-      'src',
-      'libkungfu',
-      'tests',
-      'fixtures',
-      'native_kfx_registry',
-      'roots',
-      'workspace',
-    );
     const request = {
-      roots: [{ kind: 'workspace', path: fixtureRoot }],
-      runtimeTiers: { 'optional-view': 'verified-third-party' },
+      roots: [{ kind: 'workspace', path: nativeKfxFixtureRoot }],
     };
     const plan = kungfu.runStorageServiceOperation('kfx_runtime', '', {
       action: 'plan',
@@ -261,37 +258,24 @@ test(
         : 'built native storage binding is unavailable',
   },
   () => {
-    const fixtureRoot = path.join(
-      coreDir,
-      'src',
-      'libkungfu',
-      'tests',
-      'fixtures',
-      'native_kfx_registry',
-      'roots',
-      'workspace',
-    );
-    const fixture = JSON.parse(
-      fs.readFileSync(
-        path.join(
-          coreDir,
-          'src',
-          'libkungfu',
-          'tests',
-          'fixtures',
-          'native_kfx_contract',
-          'buildchain-2.13.0-alpha.0-envelope.json',
-        ),
-        'utf8',
-      ),
-    );
+    const fixture = JSON.parse(fs.readFileSync(nativeKfxEnvelope, 'utf8'));
+    const inspected = kungfu.runStorageServiceOperation('kfx_runtime', '', {
+      action: 'inspect',
+      request: {
+        roots: [{ kind: 'workspace', path: nativeKfxFixtureRoot }],
+        packageKey: 'optional-view',
+      },
+    });
+    const attestation = structuredClone(fixture.projection.attestation);
+    const trustInputs = structuredClone(fixture.projection.trustInputs);
+    attestation.bindings.packageRoot = inspected.package.packageRoot;
+    trustInputs.packageRoot = inspected.package.packageRoot;
     const request = {
-      roots: [{ kind: 'workspace', path: fixtureRoot }],
-      runtimeTiers: { 'optional-view': 'verified-third-party' },
+      roots: [{ kind: 'workspace', path: nativeKfxFixtureRoot }],
       ...fixture.admission,
       assessmentTime: fixture.assessmentTime,
-      attestation: fixture.projection.attestation,
-      trustInputs: fixture.projection.trustInputs,
+      attestation,
+      trustInputs,
       kfdAssessment: fixture.projection.kfdAssessment,
     };
     const result = kungfu.runStorageServiceOperation('kfx_runtime', '', {

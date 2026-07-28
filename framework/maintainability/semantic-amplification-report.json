@@ -5,7 +5,7 @@
   "manifestPath": "framework/maintainability/semantic-amplification.manifest.json",
   "manifestRoot": "sha256:b8b9c591c4e123b18dadc49c7b2a1d4a9c4c06998b673d8ce8711575340764de",
   "baselineRef": "dbfed9ca1785d147b26f4f06e7e6895ac7368fee",
-  "sourceRoot": "sha256:e1b00026dc1a333a4c44b2a800ffd03dbedafaf16cfe4d724325bc1b76a0faaa",
+  "sourceRoot": "sha256:79c8d7ec00991298abaeeea749fe56c1da1f5302d5626d4320e7d7d7cc122f65",
   "roles": {
     "authority": "exactly one authority route per family; the route may name multiple co-owned source files",
     "allowedProjectionRoles": [
@@ -25,7 +25,7 @@
     "families": 6,
     "authorities": 6,
     "mappedSurfaces": 77,
-    "changedMappedSurfaces": 46,
+    "changedMappedSurfaces": 47,
     "blockingIssues": 0
   },
   "families": [
@@ -801,12 +801,13 @@
       "amplification": {
         "mappedSurfaces": 13,
         "nonAuthoritySurfaces": 10,
-        "changedSurfaces": 4,
+        "changedSurfaces": 5,
         "changedPaths": [
           "framework/core/src/python/kungfu/storage/service.py",
           "framework/storage/generated/work-lifecycle-v1.js",
           "framework/storage/python/kungfu_sdk/generated/work_lifecycle_v1.py",
-          "scripts/check-work-lifecycle-operation-matrix.test.mjs"
+          "scripts/check-work-lifecycle-operation-matrix.test.mjs",
+          "framework/core/tests/storage-node-binding.test.js"
         ]
       },
       "surfaces": [
@@ -936,11 +937,11 @@
         },
         {
           "path": "framework/core/tests/storage-node-binding.test.js",
-          "currentLines": 1645,
+          "currentLines": 1629,
           "baselineLines": 1645,
-          "currentRoot": "sha256:3eb747f265ed900ca5219fd1b0b12bce270595ee9e43f0880314afe2a1e91d1b",
+          "currentRoot": "sha256:766a8280617ca0c022a0dedb610c0f83b4067e1e912c1fd05641bc54633f6134",
           "baselineRoot": "sha256:3eb747f265ed900ca5219fd1b0b12bce270595ee9e43f0880314afe2a1e91d1b",
-          "changedSinceBaseline": false
+          "changedSinceBaseline": true
         },
         {
           "path": "docs/qualification/fact-storage-authority.md",

@@ -419,7 +419,7 @@ nlohmann::json recovery_authorized_request(nlohmann::json request, const std::st
                                 {"operation", operation},
                                 {"packageRoot", package.at("packageRoot")},
                                 {"expectedCutRoot", status.at("cutRoot")},
-                                {"expectedRevision", status.at("revision")},
+                                {"expectedRevision", status.at("revision").get<int64_t>()},
                                 {"approvalRoots", request.at("approvalRoots")},
                                 {"issuedAt", authorization_time - 1},
                                 {"expiresAt", authorization_time + 100},

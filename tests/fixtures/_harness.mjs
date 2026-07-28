@@ -12,6 +12,10 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import {
+  qualificationAuthority,
+  removalAuthority,
+} from './_kfx-authority.mjs';
 
 const isWin = process.platform === 'win32';
 
@@ -149,6 +153,92 @@ export function json(result) {
   } catch (e) {
     fail(`expected JSON on stdout, got: ${result.stdout?.slice(0, 200)}`);
   }
+}
+
+function writeFixtureJson(prefix, value) {
+  const file = path.join(tmpDir(prefix), 'authority.json');
+  fs.writeFileSync(file, `${JSON.stringify(value, null, 2)}\n`);
+  return file;
+}
+
+/** Build exact-root admission evidence for one source package fixture. */
+export function kfxQualificationAuthorityFile(
+  coreDir,
+  home,
+  sourceRoot,
+  packageKey,
+) {
+  const inspected = json(
+    kfc(coreDir, home, [
+      'kfx',
+      'native',
+      'inspect',
+      packageKey,
+      '--root',
+      `workspace=${sourceRoot}`,
+    ]),
+  );
+  const repoDir = path.resolve(coreDir, '..', '..');
+  return writeFixtureJson(
+    'kfx-qualification-authority-',
+    qualificationAuthority(
+      repoDir,
+      inspected.package.packageRoot,
+      inspected.package.declaredCapabilities,
+    ),
+  );
+}
+
+/**
+ * Recreate the package directory seen by `kungfu kfx install <tgz>` so the
+ * qualification authority binds the exact npm transport closure, not the
+ * larger source checkout that produced it.
+ */
+export function extractPackedKfx(coreDir, tgz) {
+  const root = tmpDir('kfx-packed-root-');
+  const packageRoot = path.join(root, 'package');
+  fs.mkdirSync(packageRoot);
+  uvPython(coreDir, [
+    '-c',
+    [
+      'import pathlib, sys, tarfile',
+      'source, destination = pathlib.Path(sys.argv[1]), pathlib.Path(sys.argv[2])',
+      'with tarfile.open(source, "r:gz") as archive:',
+      '    members = [member for member in archive.getmembers() if member.name.startswith("package/")]',
+      '    for member in members: member.name = member.name[len("package/"):]',
+      '    archive.extractall(destination, members=[member for member in members if member.name], filter="data")',
+    ].join('\n'),
+    tgz,
+    packageRoot,
+  ]);
+  return packageRoot;
+}
+
+/** Build a current owner recovery Warrant for one installed fixture package. */
+export function kfxRemovalAuthorityFile(coreDir, home, packageKey) {
+  const installedRoot = path.join(home, 'extensions');
+  const rootArg = `user=${installedRoot}`;
+  const inspected = json(
+    kfc(coreDir, home, [
+      'kfx',
+      'native',
+      'inspect',
+      packageKey,
+      '--root',
+      rootArg,
+    ]),
+  );
+  const status = json(
+    kfc(coreDir, home, ['kfx', 'native', 'status', '--root', rootArg]),
+  );
+  return writeFixtureJson(
+    'kfx-removal-authority-',
+    removalAuthority(
+      inspected.package.packageRoot,
+      status,
+      `${packageKey}-fixture-removal`,
+    ),
+  );
 }
 
 /** sha256 of a file, pure Node (replaces sha256sum/shasum). */

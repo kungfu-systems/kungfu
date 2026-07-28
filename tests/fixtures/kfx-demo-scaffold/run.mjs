@@ -20,6 +20,9 @@ import {
   kfc,
   assertContains,
   fail,
+  extractPackedKfx,
+  kfxQualificationAuthorityFile,
+  kfxRemovalAuthorityFile,
 } from '../_harness.mjs';
 
 const { coreDir } = locate(import.meta.url);
@@ -83,11 +86,24 @@ const tgzName = packed.stdout.trim().split(/\r?\n/).pop();
 const tgz = path.join(packdir, tgzName);
 if (!fs.existsSync(tgz)) fail('npm pack produced no tgz');
 
-k(['kfx', 'install', tgz]);
+const authority = kfxQualificationAuthorityFile(
+  coreDir,
+  home,
+  extractPackedKfx(coreDir, tgz),
+  'my-view',
+);
+k(['kfx', 'install', tgz, '--authority-file', authority]);
 assertContains(k(['kfx', 'list']), 'my-view', 'installed kfx not listed');
 if (!fs.existsSync(path.join(home, 'extensions', 'my-view', 'dist', 'view', 'index.js'))) {
   fail('bundle missing from install root');
 }
-k(['kfx', 'remove', 'my-view']);
+const removalAuthority = kfxRemovalAuthorityFile(coreDir, home, 'my-view');
+k([
+  'kfx',
+  'remove',
+  'my-view',
+  '--authority-file',
+  removalAuthority,
+]);
 if (fs.existsSync(path.join(home, 'extensions', 'my-view'))) fail('not removed');
 console.log('[kfx-demo-scaffold] scaffold-to-install ok');
