@@ -1876,7 +1876,8 @@ export function report(
     statistics.all.sampleCount >= MINIMUM_SAMPLE_COUNT &&
     statistics.native.sampleCount >= MINIMUM_NATIVE_SAMPLE_COUNT;
   const meetsTarget =
-    statistics.all.p50Ms <= 300000 && statistics.all.p95Ms <= 600000;
+    Math.max(statistics.all.p50Ms, statistics.native.p50Ms) <= 300000 &&
+    Math.max(statistics.all.p95Ms, statistics.native.p95Ms) <= 600000;
   const cache = {
     warmCount: samples.filter(({ cache: value }) => value?.warm).length,
     coldCount: samples.filter(({ cache: value }) => value?.cold).length,
@@ -1962,16 +1963,15 @@ export function report(
           : !enoughSamples
             ? 'insufficient overall or native sample count'
             : !meetsTarget
-              ? 'observed sample exceeds target'
+              ? 'observed overall or native sample exceeds target'
               : !nativeCacheEvidenceComplete
                 ? 'native cache evidence is incomplete'
-                : 'observed sample meets target with complete native cache evidence',
+                : 'observed overall and native samples meet target with complete native cache evidence',
     },
     samples,
     exclusions: records.filter(({ excluded }) => excluded),
   };
 }
-
 async function main() {
   const options = parseDevRequiredLatencyArgs(process.argv.slice(2));
   const repository = options.repository || repositoryFromOrigin();

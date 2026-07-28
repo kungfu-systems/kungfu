@@ -255,10 +255,12 @@ affected plan look unchanged; the delivery report measures that cost without
 authorizing base-forward reuse.
 
 The current dev objective is queue-inclusive P50 at most 300 seconds and P95 at
-most 600 seconds. A report is an observation, not a release credential, and a
-small passing sample does not by itself qualify the objective. Rebuild a recent
-window only after it contains at least 20 total samples and 10 native samples;
-otherwise the machine verdict remains non-qualifying. Rebuild it with:
+most 600 seconds. These thresholds apply independently to the overall and
+native strata; a fast non-native majority cannot mask a slow native tail. A
+report is an observation, not a release credential, and a small passing sample
+does not by itself qualify the objective. Rebuild a recent window only after it
+contains at least 20 total samples and 10 native samples; otherwise the machine
+verdict remains non-qualifying. Rebuild it with:
 
 ```sh
 ./shifu gate:latency:measure --branch dev/v4/v4.0 --limit 30
