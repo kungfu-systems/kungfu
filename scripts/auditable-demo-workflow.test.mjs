@@ -167,7 +167,7 @@ test('every produced Linux artifact enters the required exact-output Gate', () =
   );
   assert.equal(
     build.uses,
-    'kungfu-systems/buildchain/.github/workflows/.build.yml@c83cb444d79c2e647de6e12a0bfde68dfaf57701',
+    'kungfu-systems/buildchain/.github/workflows/.build.yml@44242696401d4456d23413501517735787db247d',
     'the build runtime must be the protected Buildchain alpha.7 release that combines artifact coordinates with safe diagnostics',
   );
   assert.match(

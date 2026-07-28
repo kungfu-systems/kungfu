@@ -54,7 +54,7 @@ function episodeEvidence(source, coordinateSource, overrides = {}) {
     ci: {
       provider: 'github-actions',
       ref: 'refs/pull/1448/merge',
-      sha: source,
+      sha: coordinateSource,
       source_sha: coordinateSource,
       source_tree_sha: SOURCE_TREE,
       ...overrides.ci,
@@ -298,6 +298,23 @@ test('adapter accepts a resealed pull merge only through qualified tree-equivale
     const sourceEvidence = episodeEvidence(SOURCE_SHA, coordinateSource);
     const { result } = run(root, { coordinateSource, sourceEvidence });
     assert.equal(result.status, 0, result.stderr);
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test('adapter rejects pull-merge evidence whose workflow SHA is not the artifact coordinate', () => {
+  const root = fs.mkdtempSync(
+    path.join(os.tmpdir(), 'auditable-demo-adapter-'),
+  );
+  try {
+    const coordinateSource = '3'.repeat(40);
+    const sourceEvidence = episodeEvidence(SOURCE_SHA, coordinateSource, {
+      ci: { sha: SOURCE_SHA },
+    });
+    const { result } = run(root, { coordinateSource, sourceEvidence });
+    assert.notEqual(result.status, 0);
+    assert.match(result.stderr, /does not prove a qualified pull-merge/);
   } finally {
     fs.rmSync(root, { recursive: true, force: true });
   }

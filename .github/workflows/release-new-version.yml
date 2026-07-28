@@ -131,10 +131,10 @@ jobs:
       issues: write
       id-token: write
       pull-requests: write
-    uses: kungfu-systems/buildchain/.github/workflows/release-candidate-promote.yml@c83cb444d79c2e647de6e12a0bfde68dfaf57701 # v3.0.2-alpha.7 auditable demo + Linux attestation + safe notarization diagnostics
+    uses: kungfu-systems/buildchain/.github/workflows/release-candidate-promote.yml@44242696401d4456d23413501517735787db247d # v3.0.2-alpha.10 auditable demo + embedded wheel signing
     with:
       channel: ${{ startsWith(inputs.target-ref || github.event.pull_request.base.ref, 'alpha/') && 'alpha' || 'release' }}
-      buildchain-ref: c83cb444d79c2e647de6e12a0bfde68dfaf57701
+      buildchain-ref: 44242696401d4456d23413501517735787db247d
       target-ref: ${{ inputs.target-ref || github.event.pull_request.base.ref }}
       target-sha: ${{ inputs.target-sha || github.event.pull_request.merge_commit_sha || github.sha }}
       buildchain-contract-lock-path: ${{ startsWith(inputs.target-ref || github.event.pull_request.base.ref, 'alpha/') && '.buildchain/alpha-contract-lock.json' || '.buildchain/contract-lock.json' }}

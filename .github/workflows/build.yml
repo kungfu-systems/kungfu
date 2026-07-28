@@ -76,7 +76,7 @@ jobs:
 
   build:
     needs: preflight
-    uses: kungfu-systems/buildchain/.github/workflows/.build.yml@c83cb444d79c2e647de6e12a0bfde68dfaf57701 # v3.0.2-alpha.7 auditable demo + Linux attestation + safe notarization diagnostics
+    uses: kungfu-systems/buildchain/.github/workflows/.build.yml@44242696401d4456d23413501517735787db247d # v3.0.2-alpha.10 auditable demo + embedded wheel signing
     secrets:
       BUILDCHAIN_ARTIFACT_RELAY_S3_ROLE_ARN: ${{ secrets.BUILDCHAIN_ARTIFACT_RELAY_S3_ROLE_ARN }}
       BUILDCHAIN_ARTIFACT_RELAY_S3_UPLOAD_ROLE_ARN: ${{ secrets.BUILDCHAIN_ARTIFACT_RELAY_S3_UPLOAD_ROLE_ARN }}

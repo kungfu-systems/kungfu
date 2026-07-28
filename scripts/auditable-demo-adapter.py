@@ -198,7 +198,7 @@ def qualified_source_revision(release_root: Path, coordinate_source: str) -> str
         or evidence.get("source", {}).get("dirty") is not False
         or not isinstance(ci, dict)
         or ci.get("provider") != "github-actions"
-        or ci.get("sha") != evidence_source
+        or ci.get("sha") != coordinate_source
         or ci.get("source_sha") != coordinate_source
         or ci.get("source_tree_sha") != evidence_tree
         or not PULL_MERGE_REF.fullmatch(str(ci.get("ref", "")))
