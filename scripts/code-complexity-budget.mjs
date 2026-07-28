@@ -689,7 +689,34 @@ function softBudgetWarnings(files, baseline, renamedFrom = new Map()) {
   return warnings;
 }
 
+export function renameHistoryMap(output) {
+  const renamedFrom = new Map();
+  for (const line of String(output).split('\n').filter(Boolean)) {
+    const [status, previous, current] = line.split('\t');
+    if (!/^R\d{3}$/u.test(status || '') || !previous || !current) continue;
+    const baselinePath = renamedFrom.get(previous) || previous;
+    renamedFrom.delete(previous);
+    renamedFrom.set(current, baselinePath);
+  }
+  return renamedFrom;
+}
+
 function currentRenameMap(policy) {
+  const history = spawnSync(
+    'git',
+    [
+      'log',
+      '--reverse',
+      '--format=',
+      '--name-status',
+      '--diff-filter=R',
+      '--find-renames=50%',
+      `${policy.baselineRef}..HEAD`,
+    ],
+    { cwd: ROOT, encoding: 'utf8', maxBuffer: 16 * 1024 * 1024 },
+  );
+  const renamedFrom =
+    history.status === 0 ? renameHistoryMap(history.stdout) : new Map();
   for (const candidate of protectedBaselineCandidates(policy)) {
     const mergeBase = spawnSync('git', ['merge-base', candidate, 'HEAD'], {
       cwd: ROOT,
@@ -709,19 +736,11 @@ function currentRenameMap(policy) {
       { cwd: ROOT, encoding: 'utf8', maxBuffer: 16 * 1024 * 1024 },
     );
     if (result.status !== 0) continue;
-    return new Map(
-      String(result.stdout || '')
-        .split('\n')
-        .filter(Boolean)
-        .flatMap((line) => {
-          const [status, previous, current] = line.split('\t');
-          return /^R\d{3}$/u.test(status || '') && previous && current
-            ? [[current, previous]]
-            : [];
-        }),
-    );
+    for (const [current, previous] of renameHistoryMap(result.stdout))
+      if (!renamedFrom.has(current)) renamedFrom.set(current, previous);
+    break;
   }
-  return new Map();
+  return renamedFrom;
 }
 
 function checkCurrent(policy, layers, baseline) {

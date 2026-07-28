@@ -21,6 +21,7 @@ import {
   percentile,
   protectedBaselineCandidates,
   regressionIssues,
+  renameHistoryMap,
   validWaiverFor,
   validateMeasured,
   waiverIssues,
@@ -261,6 +262,20 @@ test('one-to-one Git renames preserve the old budget without becoming helper spl
     'scripts/legacy-lab.mjs',
     'scripts/current-lab.mjs',
   ]);
+});
+
+test('rename history keeps the baseline identity after the protected head advances', () => {
+  assert.deepEqual(
+    [
+      ...renameHistoryMap(
+        [
+          'R100\tscripts/qualification-lab.mjs\tscripts/agent-work-lab.mjs',
+          'R100\tscripts/agent-work-lab.mjs\tscripts/work-lab.mjs',
+        ].join('\n'),
+      ),
+    ],
+    [['scripts/work-lab.mjs', 'scripts/qualification-lab.mjs']],
+  );
 });
 
 test('unknown classification or owner fails closed', () => {
