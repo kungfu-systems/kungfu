@@ -25,7 +25,7 @@
       },
       "cost": {
         "class": "light",
-        "timeoutSeconds": 120
+        "timeoutSeconds": 600
       },
       "action": {
         "kind": "task",
