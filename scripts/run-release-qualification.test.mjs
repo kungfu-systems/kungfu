@@ -412,8 +412,8 @@ test('execution profiles propagate bounded Episode and receipt parameters', () =
       reserveSeconds: alpha.parameters.reserveSeconds,
     },
     {
-      budgetSeconds: 5400,
-      upstreamBudgetSeconds: 2400,
+      budgetSeconds: 8400,
+      upstreamBudgetSeconds: 4200,
       reserveSeconds: 600,
     },
   );
@@ -421,7 +421,7 @@ test('execution profiles propagate bounded Episode and receipt parameters', () =
     alpha.parameters.budgetSeconds -
       alpha.parameters.upstreamBudgetSeconds -
       alpha.parameters.reserveSeconds,
-    2400,
+    3600,
   );
   const release = loadExecutionProfile('release-candidate');
   const stages = releaseQualificationStages('linux', release);
@@ -583,7 +583,7 @@ test('execution profile numeric constraints reject zero and negative values', ()
       () => loadExecutionProfile('alpha', file),
       /positive integer/,
     );
-    valid.profiles.alpha.budgetSeconds = 5400;
+    valid.profiles.alpha.budgetSeconds = 8400;
     valid.profiles.alpha.reserveSeconds = -1;
     fs.writeFileSync(file, JSON.stringify(valid));
     assert.throws(

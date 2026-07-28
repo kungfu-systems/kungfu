@@ -54,7 +54,7 @@ Do not hand-edit the generated block. A mode applies when the corresponding
 
 | Execution profile | Budget (s) | Upstream build (s) | Reserve (s) | Episode profile | Episode ceiling (s) | Fuzz seconds/target |
 | --- | ---: | ---: | ---: | --- | ---: | ---: |
-| `alpha` | 5400 | 2400 | 600 | `mvp-smoke-v1` | 600 | 90 |
+| `alpha` | 8400 | 4200 | 600 | `mvp-smoke-v1` | 600 | 90 |
 | `release-candidate` | 3600 | 900 | 600 | `mvp-candidate-v1` | 1200 | 90 |
 | `full-patrol` | 23400 | 900 | 900 | `mvp-baseline-v1` | 19800 | 90 |
 

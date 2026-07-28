@@ -9,8 +9,8 @@ confidence: high
 sensitivity: internal
 evidence_grade: B
 review_state: self-reviewed
-last_reviewed: 2026-07-15
-ai_provenance: GPT-5 via Codex on 2026-07-15; visible local source, three-host lifecycle logs, hosted CI logs, Gate receipts, qualification reports, and host identity; no private publication state inspected
+last_reviewed: 2026-07-28
+ai_provenance: GPT-5 via Codex on 2026-07-15 and 2026-07-28; visible local source, three-host lifecycle logs, hosted CI logs, Gate receipts, qualification reports, and host identity; no private publication state inspected
 ---
 
 # Layer Gate timing baseline
@@ -247,7 +247,7 @@ bounding only the Episode seeds and accumulation/contention counts:
 
 | Execution profile | End-to-end budget | Upstream allowance | Reserve | Episode workload |
 | --- | ---: | ---: | ---: | --- |
-| `alpha` | 5400s | 2400s | 600s | `mvp-smoke-v1` |
+| `alpha` | 8400s | 4200s | 600s | `mvp-smoke-v1` |
 | `release-candidate` | 3600s | 900s | 600s | `mvp-candidate-v1` |
 | `full-patrol` | 14400s | 900s | 900s | unchanged `mvp-baseline-v1` |
 
@@ -257,6 +257,20 @@ The first exact-source hosted acceptance run then measured `1467s` inside the
 qualification process because runtime activation intentionally rebuilds and
 verifies the complete product distribution. That raised the execution
 allowance from `810s` to `1710s`.
+
+The exact protected Linux x64 Build qualification at
+`82e145eec619e1bc920c4de3aca2e968f8f89016` (GitHub Actions run
+`30306399387`, job `90111969613`) later measured `2633s` for the upstream build
+lifecycle and `2529s` for the complete verify lifecycle. Every visible
+qualification and invariant completed successfully, but the wrapper then
+failed solely because the inherited `2400s` execution allowance had expired.
+The same exact-source Windows x64 job (`90111969578`) completed its upstream
+build successfully in `3537s` before its verify step failed after `2573s`.
+The alpha total is therefore raised to `8400s`, with a `4200s` upstream
+allowance, `3600s` execution allowance, and unchanged `600s` reserve. This
+covers the slowest observed successful upstream build and the Linux
+qualification failure without removing or shortening any Gate. The workflow's
+independent `180` minute lifecycle ceiling remains the outer fail-closed limit.
 
 GitHub run `29410685685` later exercised the expanded exact-source product gate
 on hosted Linux. Install plus build consumed `2086s`; the qualification wrapper
