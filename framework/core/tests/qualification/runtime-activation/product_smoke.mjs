@@ -89,10 +89,12 @@ export function invokeAfterIdentitySettlement(
   throw identityError;
 }
 
-function running(payload) {
+export function runtimeReady(payload) {
   return (
     payload?.supervisor?.running === true &&
-    payload?.coordinator?.running === true
+    payload?.supervisor?.identityVerified === true &&
+    payload?.coordinator?.running === true &&
+    payload?.coordinator?.identityVerified === true
   );
 }
 
@@ -100,7 +102,7 @@ function waitForRunning(home, configHome) {
   let latest;
   for (let attempt = 0; attempt < 50; attempt += 1) {
     latest = invoke(home, configHome, ['runtime', 'status', '--json']);
-    if (running(latest.payload)) return latest;
+    if (runtimeReady(latest.payload)) return latest;
     Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 100);
   }
   throw new Error(
@@ -171,10 +173,10 @@ function main() {
           outcomes: {
             daemonlessStatus: before.payload.product,
             coldChanged: cold.payload.changed,
-            coldRunning: running(coldStatus.payload),
+            coldRunning: runtimeReady(coldStatus.payload),
             warmChanged: warm.payload.changed,
             restartSchema: restart.payload.schema,
-            restartRunning: running(restartStatus.payload),
+            restartRunning: runtimeReady(restartStatus.payload),
             stopped: stop.payload.changed,
           },
           latency: {

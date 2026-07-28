@@ -6,7 +6,10 @@ import os from 'node:os';
 import path from 'node:path';
 import { test } from 'node:test';
 
-import { invokeAfterIdentitySettlement } from './product_smoke.mjs';
+import {
+  invokeAfterIdentitySettlement,
+  runtimeReady,
+} from './product_smoke.mjs';
 import {
   boundedFailureTail,
   createLogBundle,
@@ -140,6 +143,30 @@ test('Windows suites invoke the repository Shifu shim through ComSpec', () => {
   assert.equal(
     invocation.args[3],
     'call shifu.cmd exec "argument with spaces"',
+  );
+});
+
+test('product smoke does not report runtime readiness before both identities settle', () => {
+  assert.equal(
+    runtimeReady({
+      supervisor: { running: true, identityVerified: true },
+      coordinator: { running: true, identityVerified: false },
+    }),
+    false,
+  );
+  assert.equal(
+    runtimeReady({
+      supervisor: { running: true, identityVerified: false },
+      coordinator: { running: true, identityVerified: true },
+    }),
+    false,
+  );
+  assert.equal(
+    runtimeReady({
+      supervisor: { running: true, identityVerified: true },
+      coordinator: { running: true, identityVerified: true },
+    }),
+    true,
   );
 });
 
