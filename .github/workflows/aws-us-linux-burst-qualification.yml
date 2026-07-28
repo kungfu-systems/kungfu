@@ -82,7 +82,7 @@ jobs:
       lifecycle-timeout-minutes: 105
       artifact-transfer-mode: github-artifacts
       artifact-retention-days: 14
-      checkout-cache-mode: github
+      checkout-cache-mode: off
       checkout-cache-fallback: github
       checkout-cache-github-timeout-seconds: 1200
       publish-channel: none
