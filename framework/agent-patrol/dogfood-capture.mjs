@@ -256,7 +256,7 @@ export function captureFinding(
   });
 }
 
-function parseArgs(argv) {
+export function parseArgs(argv) {
   const result = {
     classification: '',
     output: '',
@@ -265,6 +265,7 @@ function parseArgs(argv) {
   };
   for (let index = 0; index < argv.length; index += 1) {
     const arg = argv[index];
+    if (arg === '--') continue;
     if (arg === '--classification') result.classification = argv[++index] || '';
     else if (arg === '--output') result.output = argv[++index] || '';
     else if (arg === '--intent') result.intent = argv[++index] || '';

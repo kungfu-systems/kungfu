@@ -207,7 +207,7 @@ export function classifyReport(
   };
 }
 
-function parseArgs(argv) {
+export function parseArgs(argv) {
   const result = {
     report: '',
     output: '',
@@ -219,6 +219,7 @@ function parseArgs(argv) {
   };
   for (let index = 0; index < argv.length; index += 1) {
     const arg = argv[index];
+    if (arg === '--') continue;
     if (arg === '--report') result.report = argv[++index] || '';
     else if (arg === '--output') result.output = argv[++index] || '';
     else if (arg === '--runner-exit')

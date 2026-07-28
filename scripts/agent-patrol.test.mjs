@@ -9,8 +9,12 @@ import test from 'node:test';
 import {
   classifyReport,
   jsonRoot,
+  parseArgs as parseClassificationArgs,
 } from '../framework/agent-patrol/classify.mjs';
-import { captureFinding } from '../framework/agent-patrol/dogfood-capture.mjs';
+import {
+  captureFinding,
+  parseArgs as parseDogfoodCaptureArgs,
+} from '../framework/agent-patrol/dogfood-capture.mjs';
 
 const IMAGE =
   'ghcr.io/kungfu-systems/build-images/opencode-ci@sha256:4083ee089fa9a419f4915505094a6c1bcce433ff77455605ce8993af3b684ed3';
@@ -67,6 +71,39 @@ function options(overrides = {}) {
     ...overrides,
   };
 }
+
+test('Patrol CLIs accept the Shifu argument separator', () => {
+  const classification = parseClassificationArgs([
+    '--',
+    '--report',
+    '/tmp/report.json',
+    '--output',
+    '/tmp/classification.json',
+    '--runner-exit',
+    '1',
+    '--source-head',
+    SOURCE_HEAD,
+    '--model',
+    MODEL,
+    '--image',
+    IMAGE,
+  ]);
+  assert.equal(classification.report, '/tmp/report.json');
+  assert.equal(classification.runnerExit, 1);
+  const capture = parseDogfoodCaptureArgs([
+    '--',
+    '--classification',
+    '/tmp/classification.json',
+    '--output',
+    '/tmp/receipt.json',
+    '--intent',
+    '/tmp/intent.json',
+    '--workspace',
+    '/tmp/workspace',
+  ]);
+  assert.equal(capture.classification, '/tmp/classification.json');
+  assert.equal(capture.workspace, '/tmp/workspace');
+});
 
 test('passing Patrol report creates no Dogfood Finding intent', () => {
   const report = baseReport();

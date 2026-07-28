@@ -11,6 +11,7 @@ import { fileURLToPath } from 'node:url';
 import {
   dockerArgs,
   dockerIsRootless,
+  validateDockerHost,
 } from '../framework/agent-repository-work/opencode-docker-proxy.mjs';
 import {
   parseInvestigationClaim,
@@ -128,12 +129,18 @@ test('Docker profile is digest-pinned, bounded, and mode-specific', () => {
     baseUrl: 'http://host.docker.internal:11435/v1',
     opencode: '',
     agent: 'plan',
+    dockerHost: 'unix:///run/user/996/docker.sock',
   };
   const profile = runtimeProfile({ ...input, mode: 'read-only' });
   assert.equal(profile.provider, 'opencode');
   assert.equal(profile.launch.executable, process.execPath);
   assert.ok(profile.launch.argv.includes('--mode'));
   assert.ok(profile.launch.argv.includes('read-only'));
+  const dockerHostIndex = profile.launch.argv.indexOf('--docker-host');
+  assert.equal(
+    profile.launch.argv[dockerHostIndex + 1],
+    'unix:///run/user/996/docker.sock',
+  );
   const args = dockerArgs(
     {
       image: input.image,
@@ -181,6 +188,22 @@ test('Docker bind-mount identity follows rootful and rootless ownership', () => 
   );
   assert.equal(dockerIsRootless('["name=seccomp","name=rootless"]'), true);
   assert.equal(dockerIsRootless('["name=seccomp","name=cgroupns"]'), false);
+  assert.equal(
+    validateDockerHost('unix:///run/user/996/docker.sock', 996),
+    'unix:///run/user/996/docker.sock',
+  );
+  assert.equal(
+    validateDockerHost('unix:///var/run/docker.sock', 996),
+    'unix:///var/run/docker.sock',
+  );
+  assert.throws(
+    () => validateDockerHost('tcp://127.0.0.1:2375', 996),
+    /current user rootless socket/u,
+  );
+  assert.throws(
+    () => validateDockerHost('unix:///run/user/1000/docker.sock', 996),
+    /current user rootless socket/u,
+  );
 });
 
 test('Agent A claim and final report require deterministic continuity evidence', () => {

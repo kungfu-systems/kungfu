@@ -193,6 +193,7 @@ export function runtimeProfile({
   baseUrl,
   opencode,
   agent,
+  dockerHost = '',
 }) {
   const nodeAdapter = opencode.endsWith('.mjs');
   const executable = !opencode || nodeAdapter ? process.execPath : opencode;
@@ -212,6 +213,7 @@ export function runtimeProfile({
         '65536',
         '--mode',
         mode,
+        ...(dockerHost ? ['--docker-host', dockerHost] : []),
         '--',
       ];
   return {
@@ -452,6 +454,7 @@ export function runExperiment(options = {}) {
       image: normalized.image,
       baseUrl: normalized.baseUrl,
       opencode: normalized.opencode,
+      dockerHost: process.env.DOCKER_HOST || '',
       // OpenCode's built-in plan agent disables shell execution. Use the
       // tool-capable agent while the Docker mount and permission policy keep
       // this runtime strictly read-only.
@@ -464,6 +467,7 @@ export function runExperiment(options = {}) {
       image: normalized.image,
       baseUrl: normalized.baseUrl,
       opencode: normalized.opencode,
+      dockerHost: process.env.DOCKER_HOST || '',
       agent: 'build',
     });
     const context = {

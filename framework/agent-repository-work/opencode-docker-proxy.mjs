@@ -17,6 +17,7 @@ function parseArgs(argv) {
     model: '',
     context: 65_536,
     mode: '',
+    dockerHost: '',
     command: [],
   };
   let index = 0;
@@ -32,6 +33,7 @@ function parseArgs(argv) {
     else if (value === '--context')
       result.context = Number.parseInt(argv[++index] || '', 10);
     else if (value === '--mode') result.mode = argv[++index] || '';
+    else if (value === '--docker-host') result.dockerHost = argv[++index] || '';
     else fail(`unknown proxy argument: ${value}`);
   }
   if (!result.image.includes('@sha256:'))
@@ -44,9 +46,30 @@ function parseArgs(argv) {
     fail('--context must be an integer of at least 8192');
   if (!['read-only', 'bounded-write'].includes(result.mode))
     fail('--mode must be read-only or bounded-write');
+  try {
+    result.dockerHost = validateDockerHost(result.dockerHost);
+  } catch (error) {
+    fail(error.message);
+  }
   if (result.command[0] !== 'run')
     fail('only the OpenCode run command is supported');
   return result;
+}
+
+export function validateDockerHost(
+  dockerHost,
+  uid = typeof process.getuid === 'function' ? process.getuid() : 1000,
+) {
+  if (!dockerHost) return '';
+  const allowed = new Set([
+    'unix:///var/run/docker.sock',
+    `unix:///run/user/${uid}/docker.sock`,
+  ]);
+  if (!allowed.has(dockerHost))
+    throw new Error(
+      '--docker-host must be the default rootful socket or the current user rootless socket',
+    );
+  return dockerHost;
 }
 
 function config({ baseUrl, model, context, mode }) {
@@ -152,11 +175,15 @@ export function dockerIsRootless(output) {
 
 export function runProxy(argv = process.argv.slice(2)) {
   const options = parseArgs(argv);
+  const dockerEnvironment = options.dockerHost
+    ? { ...process.env, DOCKER_HOST: options.dockerHost }
+    : process.env;
   const info = spawnSync(
     'docker',
     ['info', '--format', '{{json .SecurityOptions}}'],
     {
       encoding: 'utf8',
+      env: dockerEnvironment,
     },
   );
   if (info.error) {
@@ -173,6 +200,7 @@ export function runProxy(argv = process.argv.slice(2)) {
     {
       cwd: process.cwd(),
       stdio: 'inherit',
+      env: dockerEnvironment,
     },
   );
   if (result.error) {
