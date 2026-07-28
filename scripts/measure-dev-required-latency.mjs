@@ -394,7 +394,13 @@ export function mergeQueueEvidence(events, runs, jobsByRun, mergedAt) {
     dequeueCount: exitedRounds.length,
     dequeueReasons: reasonCounts,
     mergeGroupRunCount: assignedRunIds.size,
-    repeatedValidationCount: Math.max(0, assignedRunIds.size - 1),
+    repeatedValidationCount:
+      assignedRunIds.size -
+      new Set(
+        orderedRuns
+          .filter(({ id }) => assignedRunIds.has(Number(id)))
+          .map((run) => run.workflow_id || run.path || run.name || null),
+      ).size,
     runnerEvidenceComplete,
     wastedRunnerMs: runnerEvidenceComplete ? wastedRunnerMs : null,
     postDequeueRunnerMs: runnerEvidenceComplete ? postDequeueRunnerMs : null,
@@ -1904,7 +1910,7 @@ export function report(
         dequeue:
           'every non-merged RemovedFromMergeQueueEvent using the authoritative GraphQL reason',
         repeatedValidation:
-          'additional Core affected-native merge_group runs after the first run for the pull request',
+          'additional merge_group runs for the same workflow after its first run for the pull request',
         wastedRunner:
           'sum of Actions job execution time for non-merged queue rounds',
         postDequeueRunner:
@@ -2002,7 +2008,7 @@ async function main() {
     .sort()[0];
   const mergeGroupRuns = earliestPullCreatedAt
     ? await githubWorkflowRuns(
-        `/repos/${repository}/actions/workflows/affected-native-pr.yml/runs?event=merge_group&created=${encodeURIComponent(`>=${earliestPullCreatedAt}`)}`,
+        `/repos/${repository}/actions/runs?event=merge_group&created=${encodeURIComponent(`>=${earliestPullCreatedAt}`)}`,
         token,
       )
     : [];

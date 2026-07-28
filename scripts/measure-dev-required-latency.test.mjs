@@ -345,50 +345,62 @@ test('required latency starts at first enqueue and ends at the merged round requ
 
 test('required contexts may complete in separate exact-source workflows', () => {
   const headSha = 'b'.repeat(40);
-  const value = requiredMergeQueueWindow(['source', 'native'], {
-    queueStatus: 'observed',
-    status: 'observed',
-    firstEnqueuedAt: '2026-07-22T13:00:00Z',
-    mergedAt: '2026-07-22T13:10:00Z',
-    rounds: [
+  const mergeQueue = mergeQueueEvidence(
+    [
       {
-        index: 0,
-        removedAt: '2026-07-22T13:10:00Z',
-        reason: 'merged',
-        mergeGroupRuns: [
-          {
-            id: 101,
-            headSha,
-            jobs: [
-              {
-                id: 1,
-                name: 'source',
-                status: 'completed',
-                conclusion: 'success',
-                completedAt: '2026-07-22T13:02:00Z',
-              },
-            ],
-          },
-          {
-            id: 102,
-            headSha,
-            jobs: [
-              {
-                id: 2,
-                name: 'native',
-                status: 'completed',
-                conclusion: 'success',
-                completedAt: '2026-07-22T13:09:00Z',
-              },
-            ],
-          },
-        ],
+        __typename: 'AddedToMergeQueueEvent',
+        createdAt: '2026-07-22T13:00:00Z',
+      },
+      {
+        __typename: 'RemovedFromMergeQueueEvent',
+        createdAt: '2026-07-22T13:10:00Z',
+        reason: 'MERGED',
       },
     ],
-  });
+    [
+      {
+        id: 101,
+        workflow_id: 1,
+        head_sha: headSha,
+        created_at: '2026-07-22T13:00:30Z',
+        updated_at: '2026-07-22T13:02:00Z',
+      },
+      {
+        id: 102,
+        workflow_id: 2,
+        head_sha: headSha,
+        created_at: '2026-07-22T13:00:31Z',
+        updated_at: '2026-07-22T13:09:00Z',
+      },
+    ],
+    {
+      101: [
+        {
+          id: 1,
+          name: 'source',
+          status: 'completed',
+          conclusion: 'success',
+          completed_at: '2026-07-22T13:02:00Z',
+        },
+      ],
+      102: [
+        {
+          id: 2,
+          name: 'native',
+          status: 'completed',
+          conclusion: 'success',
+          completed_at: '2026-07-22T13:09:00Z',
+        },
+      ],
+    },
+    '2026-07-22T13:10:00Z',
+  );
+  const value = requiredMergeQueueWindow(['source', 'native'], mergeQueue);
   assert.equal(value.status, 'observed');
   assert.equal(value.durationMs, 9 * 60 * 1000);
   assert.deepEqual(value.workflowRunIds, [101, 102]);
+  assert.equal(mergeQueue.mergeGroupRunCount, 2);
+  assert.equal(mergeQueue.repeatedValidationCount, 0);
 });
 
 test('required latency fails closed on missing or ambiguous merged-round jobs', () => {
