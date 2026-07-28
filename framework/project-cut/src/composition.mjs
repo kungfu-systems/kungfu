@@ -448,6 +448,7 @@ export function observeComposition(rootInput, baseInput, commitInput) {
   const processed = new Map();
   const chronologicalInputs = [];
   const publicationDrifts = [];
+  const replayDiagnostics = new Map();
   for (const candidate of candidates) {
     const { cut, path, publication, parentPublications } = candidate;
     let projection = sourceProjectionAtCommit(root, publication.commitOid, cut);
@@ -502,7 +503,8 @@ export function observeComposition(rootInput, baseInput, commitInput) {
         projection = sourceProjectionAtTree(root, reconstructedTreeOid, cut);
         publicationMode = 'rebased-replay';
       } catch (error) {
-        diagnostics.push(
+        replayDiagnostics.set(
+          cut.cutRoot,
           diagnostic('source-replay-conflict', path, String(error.message)),
         );
       }
@@ -607,6 +609,8 @@ export function observeComposition(rootInput, baseInput, commitInput) {
       .map((leaf) => leaf.cutRoot)
       .sort(compareText);
     if (anchoredBy.length === 0) {
+      const replayDiagnostic = replayDiagnostics.get(drift.cutRoot);
+      if (replayDiagnostic) diagnostics.push(replayDiagnostic);
       diagnostics.push(
         diagnostic(
           'source-drift',

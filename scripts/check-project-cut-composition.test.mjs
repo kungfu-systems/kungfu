@@ -429,6 +429,51 @@ test('an exact successor anchors superseded Cut publications after queue rebase'
   );
 });
 
+test('an exact successor contains a superseded replay conflict after queue rebase', (t) => {
+  const { root, parent, base } = baseline(t);
+  git(root, 'checkout', '-qb', 'conflicting-feature', base);
+  fs.writeFileSync(path.join(root, 'shared.txt'), 'feature\n');
+  git(root, 'add', 'shared.txt');
+  git(root, 'commit', '-qm', 'feat: add shared state');
+  const first = publishCut(root, [parent.cut.cutRoot]);
+
+  git(root, 'checkout', '-B', 'conflicting-main', base);
+  fs.writeFileSync(path.join(root, 'shared.txt'), 'upstream\n');
+  git(root, 'add', 'shared.txt');
+  git(root, 'commit', '-qm', 'feat: add upstream shared state');
+  const movingBase = git(root, 'rev-parse', 'HEAD');
+
+  git(root, 'checkout', 'conflicting-feature');
+  assert.throws(() =>
+    git(root, 'rebase', '--onto', movingBase, base, 'conflicting-feature'),
+  );
+  fs.writeFileSync(path.join(root, 'shared.txt'), 'resolved\n');
+  git(root, 'add', 'shared.txt');
+  execFileSync('git', ['rebase', '--continue'], {
+    cwd: root,
+    env: { ...process.env, GIT_EDITOR: 'true' },
+    stdio: 'ignore',
+  });
+  const successor = publishCut(root, [first.cut.cutRoot]);
+
+  const receipt = observeComposition(root, movingBase, successor.commit);
+  assert.equal(
+    receipt.status,
+    'qualified',
+    JSON.stringify(receipt.diagnostics),
+  );
+  assert.equal(verifyComposition(root, receipt).ok, true);
+  assert.deepEqual(receipt.diagnostics, []);
+  assert.ok(
+    receipt.omissions.some(
+      (entry) =>
+        entry.code === 'superseded-publication-replay' &&
+        entry.inputCutRoot === first.cut.cutRoot &&
+        entry.anchoredByCutRoots.includes(successor.cut.cutRoot),
+    ),
+  );
+});
+
 test('a squash-published Cut chain replays independent of sibling order', (t) => {
   const { root, parent, base } = baseline(t);
   git(root, 'checkout', '-qb', 'squash-published', base);
