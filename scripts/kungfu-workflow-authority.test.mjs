@@ -13,6 +13,13 @@ test('workflow authority serialization keeps external action inventories compact
         path: '.github/workflows/example.yml',
         jobs: [
           {
+            credentials: {
+              githubToken: 'read',
+              oidc: false,
+              repositorySecrets: [],
+              inheritedSecrets: false,
+              environment: null,
+            },
             externalActions: ['actions/checkout@immutable', 'local/action@v1'],
             steps: [],
           },
@@ -27,4 +34,9 @@ test('workflow authority serialization keeps external action inventories compact
     /"externalActions": \["actions\/checkout@immutable","local\/action@v1"\],/,
   );
   assert.doesNotMatch(serialized, /"externalActions": \[\n/);
+  assert.match(
+    serialized,
+    /"credentials": \{"githubToken":"read","oidc":false,"repositorySecrets":\[\],"inheritedSecrets":false,"environment":null\},/,
+  );
+  assert.doesNotMatch(serialized, /"credentials": \{\n/);
 });

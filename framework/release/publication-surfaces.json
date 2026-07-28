@@ -100,7 +100,7 @@
             "product-stable",
             "product-binaries"
           ],
-          "sourceRoot": "sha256:0dc50adfc34f3e563d69faf4c2ce07bb2ea51770714978150f04ee45f652309a"
+          "sourceRoot": "sha256:9b6c65a4bf17c4a0e29cd700840a7f702cb136322819deb7e5cad5472408fc72"
         },
         {
           "path": ".github/workflows/buildchain-validate.yml",
@@ -202,6 +202,17 @@
             "product-stable"
           ],
           "sourceRoot": "sha256:b59d313837702193d551d655a944a74b86d6dbf91c4d99b5968cf2a6ceb08488"
+        },
+        {
+          "path": ".github/workflows/linux-arm64-alpha-qualification.yml",
+          "classification": "qualification",
+          "owner": "kungfu-release",
+          "surfaceIds": [
+            "product-alpha",
+            "product-stable",
+            "product-binaries"
+          ],
+          "sourceRoot": "sha256:62743a6b64d9b897792c572d6b8e3ad3eafd54b5ea330cb246b0467308ee8d3f"
         },
         {
           "path": ".github/workflows/opencode-agent-repository-work.yml",
@@ -767,5 +778,5 @@
       }
     }
   ],
-  "registryRoot": "sha256:a28f0bb499d952e340565f050cb72c788213fad9383d0768c4e448fb0f232893"
+  "registryRoot": "sha256:ed49284d3d50a911c78ac53b4c722babc598d2bfde6acfa2d201eb6872aa5cf6"
 }

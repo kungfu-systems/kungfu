@@ -13,13 +13,7 @@
           "publication": "none",
           "receipt": "diagnostic",
           "definitionDigest": "sha256:2ad5c08ed02d496191f486d3eb35a6ec79143499756758771276d2897a1e8cce",
-          "credentials": {
-            "githubToken": "read",
-            "oidc": false,
-            "repositorySecrets": [],
-            "inheritedSecrets": false,
-            "environment": null
-          },
+          "credentials": {"githubToken":"read","oidc":false,"repositorySecrets":[],"inheritedSecrets":false,"environment":null},
           "externalActions": ["actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0"],
           "steps": [
             {
@@ -47,13 +41,7 @@
           "publication": "none",
           "receipt": "diagnostic",
           "definitionDigest": "sha256:e941529f9f9a9647b33644584b5378ce1119b1a07899b314a8848f445e50846d",
-          "credentials": {
-            "githubToken": "write",
-            "oidc": false,
-            "repositorySecrets": [],
-            "inheritedSecrets": false,
-            "environment": null
-          },
+          "credentials": {"githubToken":"write","oidc":false,"repositorySecrets":[],"inheritedSecrets":false,"environment":null},
           "externalActions": ["actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0","actions/setup-node@v6.4.0","actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093","actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093","actions/cache/save@0057852bfaa89a56745cba8c7296529d2fc39830","actions/cache/save@0057852bfaa89a56745cba8c7296529d2fc39830"],
           "steps": [
             {
@@ -143,13 +131,7 @@
           "publication": "none",
           "receipt": "diagnostic",
           "definitionDigest": "sha256:3d9e020c9bdcd477b68354a5c8aa85a4de697638efb9515576d57c053e39b263",
-          "credentials": {
-            "githubToken": "read",
-            "oidc": false,
-            "repositorySecrets": [],
-            "inheritedSecrets": false,
-            "environment": null
-          },
+          "credentials": {"githubToken":"read","oidc":false,"repositorySecrets":[],"inheritedSecrets":false,"environment":null},
           "externalActions": ["actions/checkout@v4","actions/setup-node@v6.4.0","actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830","actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830","actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02"],
           "steps": [
             {
@@ -276,13 +258,7 @@
           "publication": "none",
           "receipt": "diagnostic",
           "definitionDigest": "sha256:90f7aa97bc78edecd0246b1312e692e5675f4855fe98775fd284be90d41ad4d4",
-          "credentials": {
-            "githubToken": "read",
-            "oidc": false,
-            "repositorySecrets": [],
-            "inheritedSecrets": false,
-            "environment": null
-          },
+          "credentials": {"githubToken":"read","oidc":false,"repositorySecrets":[],"inheritedSecrets":false,"environment":null},
           "externalActions": ["actions/checkout@v4","actions/setup-node@v6.4.0","actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093","actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093","actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093","actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02","actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02"],
           "steps": [
             {
@@ -356,13 +332,7 @@
           "publication": "none",
           "receipt": "diagnostic",
           "definitionDigest": "sha256:459c5b1ec4bce54df37f49780985484861d89112cbbf566db17624dc2dabe6c0",
-          "credentials": {
-            "githubToken": "read",
-            "oidc": false,
-            "repositorySecrets": [],
-            "inheritedSecrets": false,
-            "environment": null
-          },
+          "credentials": {"githubToken":"read","oidc":false,"repositorySecrets":[],"inheritedSecrets":false,"environment":null},
           "externalActions": ["actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0","kungfu-systems/buildchain/actions/validate-config@v3"],
           "steps": [
             {
@@ -383,13 +353,7 @@
           "publication": "none",
           "receipt": "diagnostic",
           "definitionDigest": "sha256:1967183ab132b9b2c5477f2aca185805da63367a065160e1773ea2cd4acb677d",
-          "credentials": {
-            "githubToken": "read",
-            "oidc": false,
-            "repositorySecrets": [],
-            "inheritedSecrets": false,
-            "environment": null
-          },
+          "credentials": {"githubToken":"read","oidc":false,"repositorySecrets":[],"inheritedSecrets":false,"environment":null},
           "externalActions": ["actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0","actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02"],
           "steps": [
             {
@@ -432,13 +396,7 @@
           "publication": "none",
           "receipt": "diagnostic",
           "definitionDigest": "sha256:4a8c763d5d530588e7882877dcfb1d911e1bd0097c0da6f6cb3ca2036ddf35fa",
-          "credentials": {
-            "githubToken": "read",
-            "oidc": false,
-            "repositorySecrets": [],
-            "inheritedSecrets": false,
-            "environment": null
-          },
+          "credentials": {"githubToken":"read","oidc":false,"repositorySecrets":[],"inheritedSecrets":false,"environment":null},
           "externalActions": ["actions/checkout@v4"],
           "steps": [
             {
@@ -459,13 +417,7 @@
           "publication": "none",
           "receipt": "diagnostic",
           "definitionDigest": "sha256:821e24c0aa6bd63f10be13721771a550035c3c50283d65e1913143e040f0cf89",
-          "credentials": {
-            "githubToken": "read",
-            "oidc": false,
-            "repositorySecrets": [],
-            "inheritedSecrets": false,
-            "environment": null
-          },
+          "credentials": {"githubToken":"read","oidc":false,"repositorySecrets":[],"inheritedSecrets":false,"environment":null},
           "externalActions": ["actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0","actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e"],
           "steps": [
             {
@@ -496,13 +448,7 @@
           "publication": "none",
           "receipt": "diagnostic",
           "definitionDigest": "sha256:a92d9e0145bce5000ecec19cb5d53a6d19552256beae2f110bf9729765eb5268",
-          "credentials": {
-            "githubToken": "read",
-            "oidc": false,
-            "repositorySecrets": [],
-            "inheritedSecrets": false,
-            "environment": null
-          },
+          "credentials": {"githubToken":"read","oidc":false,"repositorySecrets":[],"inheritedSecrets":false,"environment":null},
           "externalActions": ["actions/checkout@v4","actions/setup-node@v6.4.0","actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02","actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093"],
           "steps": [
             {
@@ -561,13 +507,7 @@
           "publication": "none",
           "receipt": "diagnostic",
           "definitionDigest": "sha256:e9bdb64f8a73c24f5e38c878adddc267b7a42caf7d6f22f0516e2789ea65e72e",
-          "credentials": {
-            "githubToken": "read",
-            "oidc": false,
-            "repositorySecrets": [],
-            "inheritedSecrets": false,
-            "environment": null
-          },
+          "credentials": {"githubToken":"read","oidc":false,"repositorySecrets":[],"inheritedSecrets":false,"environment":null},
           "externalActions": ["actions/checkout@v4","actions/setup-node@v6.4.0"],
           "steps": [
             {
@@ -593,13 +533,7 @@
           "publication": "none",
           "receipt": "diagnostic",
           "definitionDigest": "sha256:70e9db205319e6f55e1eb5c3adfedc732731a525d0649ba5acbf25ee91924cc9",
-          "credentials": {
-            "githubToken": "read",
-            "oidc": false,
-            "repositorySecrets": [],
-            "inheritedSecrets": false,
-            "environment": null
-          },
+          "credentials": {"githubToken":"read","oidc":false,"repositorySecrets":[],"inheritedSecrets":false,"environment":null},
           "externalActions": ["kungfu-systems/buildchain/.github/workflows/check.yml@9e904de2c85dbea7c799780ee166510b3336d812"],
           "steps": []
         }
@@ -616,13 +550,7 @@
           "publication": "none",
           "receipt": "diagnostic",
           "definitionDigest": "sha256:b1391ec88a0b91f22576cbbb4ac1042e21670a8ec62e83ebd3d68245e5e309e8",
-          "credentials": {
-            "githubToken": "read",
-            "oidc": false,
-            "repositorySecrets": [],
-            "inheritedSecrets": false,
-            "environment": null
-          },
+          "credentials": {"githubToken":"read","oidc":false,"repositorySecrets":[],"inheritedSecrets":false,"environment":null},
           "externalActions": ["actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0","actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093","actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02"],
           "steps": [
             {
@@ -655,13 +583,7 @@
           "publication": "none",
           "receipt": "diagnostic",
           "definitionDigest": "sha256:c6ab21fa86ab188d7061e5ebf01856429763e448144812853c30b180d6604be7",
-          "credentials": {
-            "githubToken": "read",
-            "oidc": false,
-            "repositorySecrets": [],
-            "inheritedSecrets": false,
-            "environment": null
-          },
+          "credentials": {"githubToken":"read","oidc":false,"repositorySecrets":[],"inheritedSecrets":false,"environment":null},
           "externalActions": ["actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0","actions/setup-node@v6.4.0","actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02"],
           "steps": [
             {
@@ -722,7 +644,7 @@
     {
       "path": ".github/workflows/build.yml",
       "authority": "product-publication",
-      "definitionDigest": "sha256:ddf4488ea8a4ef1ec62115d43646924a3f1ee7c46d2489c8620d4bd8b8fa033f",
+      "definitionDigest": "sha256:aadbb97771ffd89eaec3f3ed67ef3925e1730472a5a722c1a8b956c8ee71b6c1",
       "jobs": [
         {
           "id": "auditable-demo",
@@ -730,13 +652,7 @@
           "publication": "none",
           "receipt": "qualifying",
           "definitionDigest": "sha256:b3cd0cd1aa94021dff3ed084ece1e28f949d9f0bcd656a7bcdc6011fb3ddb3c0",
-          "credentials": {
-            "githubToken": "read",
-            "oidc": false,
-            "repositorySecrets": [],
-            "inheritedSecrets": false,
-            "environment": null
-          },
+          "credentials": {"githubToken":"read","oidc":false,"repositorySecrets":[],"inheritedSecrets":false,"environment":null},
           "externalActions": ["kungfu-systems/buildchain/.github/workflows/.auditable-demo.yml@2123ee9c76013f09888d3a01543e66762a6b5819"],
           "steps": []
         },
@@ -746,13 +662,7 @@
           "publication": "none",
           "receipt": "qualifying",
           "definitionDigest": "sha256:801aaac67b08daa0bb13ae53af3f9bfea92adaf1ce0f3d7069ee57f224322341",
-          "credentials": {
-            "githubToken": "read",
-            "oidc": false,
-            "repositorySecrets": [],
-            "inheritedSecrets": false,
-            "environment": null
-          },
+          "credentials": {"githubToken":"read","oidc":false,"repositorySecrets":[],"inheritedSecrets":false,"environment":null},
           "externalActions": ["actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0","actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd","actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a"],
           "steps": [
             {
@@ -785,17 +695,7 @@
           "publication": "none",
           "receipt": "qualifying",
           "definitionDigest": "sha256:4d8af9d7c0a014ee5dde3a24543c378ae0ec68a46e68e657ed870504a7ce5581",
-          "credentials": {
-            "githubToken": "write",
-            "oidc": true,
-            "repositorySecrets": [
-              "BUILDCHAIN_ARTIFACT_RELAY_S3_DOWNLOAD_ROLE_ARN",
-              "BUILDCHAIN_ARTIFACT_RELAY_S3_ROLE_ARN",
-              "BUILDCHAIN_ARTIFACT_RELAY_S3_UPLOAD_ROLE_ARN"
-            ],
-            "inheritedSecrets": false,
-            "environment": null
-          },
+          "credentials": {"githubToken":"write","oidc":true,"repositorySecrets":["BUILDCHAIN_ARTIFACT_RELAY_S3_DOWNLOAD_ROLE_ARN","BUILDCHAIN_ARTIFACT_RELAY_S3_ROLE_ARN","BUILDCHAIN_ARTIFACT_RELAY_S3_UPLOAD_ROLE_ARN"],"inheritedSecrets":false,"environment":null},
           "externalActions": ["kungfu-systems/buildchain/.github/workflows/.build.yml@c83cb444d79c2e647de6e12a0bfde68dfaf57701"],
           "steps": []
         },
@@ -805,19 +705,7 @@
           "publication": "product",
           "receipt": "none",
           "definitionDigest": "sha256:cf04e1dfd30b4ec8cbe0aea3637b6b2f0cc52b8b11bd20ca96f5166b3db2a5c6",
-          "credentials": {
-            "githubToken": "read",
-            "oidc": false,
-            "repositorySecrets": [
-              "BUILDCHAIN_MACOS_CERTIFICATE_P12_BASE64",
-              "BUILDCHAIN_MACOS_CERTIFICATE_PASSWORD",
-              "BUILDCHAIN_MACOS_NOTARY_API_ISSUER",
-              "BUILDCHAIN_MACOS_NOTARY_API_KEY_ID",
-              "BUILDCHAIN_MACOS_NOTARY_API_KEY_P8_BASE64"
-            ],
-            "inheritedSecrets": false,
-            "environment": "alpha-macos-signing"
-          },
+          "credentials": {"githubToken":"read","oidc":false,"repositorySecrets":["BUILDCHAIN_MACOS_CERTIFICATE_P12_BASE64","BUILDCHAIN_MACOS_CERTIFICATE_PASSWORD","BUILDCHAIN_MACOS_NOTARY_API_ISSUER","BUILDCHAIN_MACOS_NOTARY_API_KEY_ID","BUILDCHAIN_MACOS_NOTARY_API_KEY_P8_BASE64"],"inheritedSecrets":false,"environment":"alpha-macos-signing"},
           "externalActions": ["actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131","actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131","actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a","actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a"],
           "steps": [
             {
@@ -858,38 +746,12 @@
           ]
         },
         {
-          "id": "hub-cli-linux-arm64",
-          "authority": "qualification",
-          "publication": "none",
-          "receipt": "diagnostic",
-          "definitionDigest": "sha256:34814874cd167899ade57f61b78467f19bbb83c44692b94b5335cd5832a8d730",
-          "credentials": {
-            "githubToken": "write",
-            "oidc": true,
-            "repositorySecrets": [
-              "BUILDCHAIN_ARTIFACT_RELAY_S3_DOWNLOAD_ROLE_ARN",
-              "BUILDCHAIN_ARTIFACT_RELAY_S3_ROLE_ARN",
-              "BUILDCHAIN_ARTIFACT_RELAY_S3_UPLOAD_ROLE_ARN"
-            ],
-            "inheritedSecrets": false,
-            "environment": null
-          },
-          "externalActions": ["kungfu-systems/buildchain/.github/workflows/.build.yml@c83cb444d79c2e647de6e12a0bfde68dfaf57701"],
-          "steps": []
-        },
-        {
           "id": "kungfu-phase-b",
           "authority": "qualification",
           "publication": "none",
           "receipt": "qualifying",
           "definitionDigest": "sha256:fe0f6ee58c44cb0e7d830b04da1d95af5548c6a77b1e4928e921c40b6354b909",
-          "credentials": {
-            "githubToken": "read",
-            "oidc": false,
-            "repositorySecrets": [],
-            "inheritedSecrets": false,
-            "environment": null
-          },
+          "credentials": {"githubToken":"read","oidc":false,"repositorySecrets":[],"inheritedSecrets":false,"environment":null},
           "externalActions": ["kungfu-systems/build-images/.github/workflows/comparator-kungfu-package-smoke.yml@3056c23e70b83f5bb63062f04027a93e79039e4b"],
           "steps": []
         },
@@ -899,13 +761,7 @@
           "publication": "none",
           "receipt": "diagnostic",
           "definitionDigest": "sha256:b59f68f94273c218f8ba6d48b00244e46d19447ab7c9ab8ea4a8779c1f8e8ff4",
-          "credentials": {
-            "githubToken": "read",
-            "oidc": false,
-            "repositorySecrets": [],
-            "inheritedSecrets": false,
-            "environment": null
-          },
+          "credentials": {"githubToken":"read","oidc":false,"repositorySecrets":[],"inheritedSecrets":false,"environment":null},
           "externalActions": ["actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0","actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093","actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02"],
           "steps": [
             {
@@ -943,13 +799,7 @@
           "publication": "none",
           "receipt": "diagnostic",
           "definitionDigest": "sha256:1706cf4b0fc846e994a747aabad6779eaec5883c116dc0719e5cf95ec3d6ed5e",
-          "credentials": {
-            "githubToken": "read",
-            "oidc": false,
-            "repositorySecrets": [],
-            "inheritedSecrets": false,
-            "environment": null
-          },
+          "credentials": {"githubToken":"read","oidc":false,"repositorySecrets":[],"inheritedSecrets":false,"environment":null},
           "externalActions": ["actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0","actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e","actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a"],
           "steps": [
             {
@@ -981,13 +831,7 @@
           "publication": "none",
           "receipt": "diagnostic",
           "definitionDigest": "sha256:23289f207a75e02fe3bf44916fca9a41313b1bf21b5e6bbb342ddfa6cddef72e",
-          "credentials": {
-            "githubToken": "write",
-            "oidc": true,
-            "repositorySecrets": [],
-            "inheritedSecrets": false,
-            "environment": null
-          },
+          "credentials": {"githubToken":"write","oidc":true,"repositorySecrets":[],"inheritedSecrets":false,"environment":null},
           "externalActions": ["actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0"],
           "steps": [
             {
@@ -1008,13 +852,7 @@
           "publication": "none",
           "receipt": "diagnostic",
           "definitionDigest": "sha256:0fb00bc8eb417ddd3ff8ff7bc0c3a7bc4bb42cfe7e81e71d917fdc3b8ac80d49",
-          "credentials": {
-            "githubToken": "read",
-            "oidc": false,
-            "repositorySecrets": [],
-            "inheritedSecrets": false,
-            "environment": null
-          },
+          "credentials": {"githubToken":"read","oidc":false,"repositorySecrets":[],"inheritedSecrets":false,"environment":null},
           "externalActions": ["actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd","actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a"],
           "steps": [
             {
@@ -1043,13 +881,7 @@
           "publication": "none",
           "receipt": "diagnostic",
           "definitionDigest": "sha256:85df61a82b7a9d50d23ae343ea26638815809a8b8aaa66a170be75a7f509a369",
-          "credentials": {
-            "githubToken": "read",
-            "oidc": false,
-            "repositorySecrets": [],
-            "inheritedSecrets": false,
-            "environment": null
-          },
+          "credentials": {"githubToken":"read","oidc":false,"repositorySecrets":[],"inheritedSecrets":false,"environment":null},
           "externalActions": ["actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0"],
           "steps": [
             {
@@ -1070,13 +902,7 @@
           "publication": "none",
           "receipt": "diagnostic",
           "definitionDigest": "sha256:8cccfbe630507ee2b23d3e204b680ca872ef46d41b7ede1b845690521668a920",
-          "credentials": {
-            "githubToken": "read",
-            "oidc": false,
-            "repositorySecrets": [],
-            "inheritedSecrets": false,
-            "environment": null
-          },
+          "credentials": {"githubToken":"read","oidc":false,"repositorySecrets":[],"inheritedSecrets":false,"environment":null},
           "externalActions": ["actions/checkout@v4","kungfu-systems/buildchain/actions/validate-config@v3"],
           "steps": [
             {
@@ -1104,15 +930,7 @@
           "publication": "none",
           "receipt": "diagnostic",
           "definitionDigest": "sha256:d14354805fbdc7b02ea0ad410361729d6d8cb8da3303fad62f3b26e299c2f3a3",
-          "credentials": {
-            "githubToken": "write",
-            "oidc": false,
-            "repositorySecrets": [
-              "GITHUB_TOKEN"
-            ],
-            "inheritedSecrets": false,
-            "environment": null
-          },
+          "credentials": {"githubToken":"write","oidc":false,"repositorySecrets":["GITHUB_TOKEN"],"inheritedSecrets":false,"environment":null},
           "externalActions": ["actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0"],
           "steps": [
             {
@@ -1140,13 +958,7 @@
           "publication": "none",
           "receipt": "diagnostic",
           "definitionDigest": "sha256:04b5ef48577de4f255c3621df595297d1f335926b0fbfae27c005712bab9e607",
-          "credentials": {
-            "githubToken": "read",
-            "oidc": false,
-            "repositorySecrets": [],
-            "inheritedSecrets": false,
-            "environment": null
-          },
+          "credentials": {"githubToken":"read","oidc":false,"repositorySecrets":[],"inheritedSecrets":false,"environment":null},
           "externalActions": ["actions/checkout@v4","actions/setup-node@v6.4.0","actions/upload-artifact@v4","actions/upload-artifact@v4","actions/upload-artifact@v4"],
           "steps": [
             {
@@ -1285,13 +1097,7 @@
           "publication": "none",
           "receipt": "diagnostic",
           "definitionDigest": "sha256:ff0d396b293f22004a112384ad493c675da04a4eddfd307d05348e17ae6a0853",
-          "credentials": {
-            "githubToken": "read",
-            "oidc": false,
-            "repositorySecrets": [],
-            "inheritedSecrets": false,
-            "environment": null
-          },
+          "credentials": {"githubToken":"read","oidc":false,"repositorySecrets":[],"inheritedSecrets":false,"environment":null},
           "externalActions": ["actions/checkout@v4","actions/setup-node@v6.4.0"],
           "steps": [
             {
@@ -1329,13 +1135,7 @@
           "publication": "none",
           "receipt": "diagnostic",
           "definitionDigest": "sha256:faa74aa5ddf066839c122073f42cdc0c6eceab5d7f421eecd213557b3d5d97bd",
-          "credentials": {
-            "githubToken": "read",
-            "oidc": false,
-            "repositorySecrets": [],
-            "inheritedSecrets": false,
-            "environment": null
-          },
+          "credentials": {"githubToken":"read","oidc":false,"repositorySecrets":[],"inheritedSecrets":false,"environment":null},
           "externalActions": ["actions/checkout@v4"],
           "steps": [
             {
@@ -1363,15 +1163,7 @@
           "publication": "none",
           "receipt": "diagnostic",
           "definitionDigest": "sha256:9380d87f5e8e7ddb59fd62e973780b7cd1eb880f885644802f91696f33a8f82f",
-          "credentials": {
-            "githubToken": "write",
-            "oidc": false,
-            "repositorySecrets": [
-              "KUNGFU_GITHUB_TOKEN"
-            ],
-            "inheritedSecrets": false,
-            "environment": null
-          },
+          "credentials": {"githubToken":"write","oidc":false,"repositorySecrets":["KUNGFU_GITHUB_TOKEN"],"inheritedSecrets":false,"environment":null},
           "externalActions": ["kungfu-systems/buildchain/.github/workflows/dev-alpha-candidate-patrol.yml@1ccbb93811ccd52cd83eda156d89fba05cc60c75"],
           "steps": []
         }
@@ -1388,13 +1180,7 @@
           "publication": "none",
           "receipt": "none",
           "definitionDigest": "sha256:4719fe25e836726b5c018fb944c3a7ad5c92df6fbf40b2d4c08da7842f8e3b0d",
-          "credentials": {
-            "githubToken": "write",
-            "oidc": false,
-            "repositorySecrets": [],
-            "inheritedSecrets": false,
-            "environment": null
-          },
+          "credentials": {"githubToken":"write","oidc":false,"repositorySecrets":[],"inheritedSecrets":false,"environment":null},
           "externalActions": [],
           "steps": [
             {
@@ -1411,13 +1197,7 @@
           "publication": "none",
           "receipt": "qualifying",
           "definitionDigest": "sha256:423ea47d9104d4c8891a2d28d15d0d1dae4acdaf6b6999028d6a723ba2c8284e",
-          "credentials": {
-            "githubToken": "write",
-            "oidc": true,
-            "repositorySecrets": [],
-            "inheritedSecrets": false,
-            "environment": null
-          },
+          "credentials": {"githubToken":"write","oidc":true,"repositorySecrets":[],"inheritedSecrets":false,"environment":null},
           "externalActions": ["kungfu-systems/buildchain/.github/workflows/.gate-profile.yml@f8ef93be41b0badd75eb35cc1506c2be12198984"],
           "steps": []
         }
@@ -1434,13 +1214,7 @@
           "publication": "none",
           "receipt": "diagnostic",
           "definitionDigest": "sha256:3905416fb89d1ed02a17d8b5bbb94f166af35cb72df1c892301144cf87be3e64",
-          "credentials": {
-            "githubToken": "read",
-            "oidc": false,
-            "repositorySecrets": [],
-            "inheritedSecrets": false,
-            "environment": null
-          },
+          "credentials": {"githubToken":"read","oidc":false,"repositorySecrets":[],"inheritedSecrets":false,"environment":null},
           "externalActions": ["actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0"],
           "steps": [
             {
@@ -1473,15 +1247,7 @@
           "publication": "none",
           "receipt": "diagnostic",
           "definitionDigest": "sha256:7db1f376cad52de3fcd0e62ad3f9f218560e49ac15c31924549fbaec087fe7d5",
-          "credentials": {
-            "githubToken": "read",
-            "oidc": false,
-            "repositorySecrets": [
-              "GITHUB_TOKEN"
-            ],
-            "inheritedSecrets": false,
-            "environment": null
-          },
+          "credentials": {"githubToken":"read","oidc":false,"repositorySecrets":["GITHUB_TOKEN"],"inheritedSecrets":false,"environment":null},
           "externalActions": ["actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0","lycheeverse/lychee-action@e7477775783ea5526144ba13e8db5eec57747ce8"],
           "steps": [
             {
@@ -1509,13 +1275,7 @@
           "publication": "none",
           "receipt": "diagnostic",
           "definitionDigest": "sha256:5e30a0b403effd1740f8df343bada09a19740839efd5f8c246dd27eca62d59b4",
-          "credentials": {
-            "githubToken": "read",
-            "oidc": false,
-            "repositorySecrets": [],
-            "inheritedSecrets": false,
-            "environment": null
-          },
+          "credentials": {"githubToken":"read","oidc":false,"repositorySecrets":[],"inheritedSecrets":false,"environment":null},
           "externalActions": ["actions/setup-node@v6.4.0","actions/download-artifact@v4","actions/upload-artifact@v4"],
           "steps": [
             {
@@ -1613,13 +1373,7 @@
           "publication": "none",
           "receipt": "diagnostic",
           "definitionDigest": "sha256:3fdef4109d01c205f487959814da117b60b747921b0ceb5333f1c031dab97693",
-          "credentials": {
-            "githubToken": "read",
-            "oidc": false,
-            "repositorySecrets": [],
-            "inheritedSecrets": false,
-            "environment": null
-          },
+          "credentials": {"githubToken":"read","oidc":false,"repositorySecrets":[],"inheritedSecrets":false,"environment":null},
           "externalActions": ["actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0"],
           "steps": [
             {
@@ -1640,13 +1394,7 @@
           "publication": "none",
           "receipt": "diagnostic",
           "definitionDigest": "sha256:e5aa0409de2f77f6f81a9e8e07f61a0ad98f207aea36a7480e36d5681501d761",
-          "credentials": {
-            "githubToken": "read",
-            "oidc": false,
-            "repositorySecrets": [],
-            "inheritedSecrets": false,
-            "environment": null
-          },
+          "credentials": {"githubToken":"read","oidc":false,"repositorySecrets":[],"inheritedSecrets":false,"environment":null},
           "externalActions": ["actions/checkout@v4","actions/upload-artifact@v4"],
           "steps": [
             {
@@ -1680,13 +1428,7 @@
           "publication": "none",
           "receipt": "diagnostic",
           "definitionDigest": "sha256:1ad6732f78db95c20eec8bac44712edbb490854fba89b2b93940d79c3e4b21db",
-          "credentials": {
-            "githubToken": "read",
-            "oidc": false,
-            "repositorySecrets": [],
-            "inheritedSecrets": false,
-            "environment": null
-          },
+          "credentials": {"githubToken":"read","oidc":false,"repositorySecrets":[],"inheritedSecrets":false,"environment":null},
           "externalActions": [],
           "steps": [
             {
@@ -1733,13 +1475,7 @@
           "publication": "none",
           "receipt": "qualifying",
           "definitionDigest": "sha256:c230c022e6405ce86ffe3c31d9ab9553947c9fc61b47d06b377276154723ade2",
-          "credentials": {
-            "githubToken": "read",
-            "oidc": false,
-            "repositorySecrets": [],
-            "inheritedSecrets": false,
-            "environment": null
-          },
+          "credentials": {"githubToken":"read","oidc":false,"repositorySecrets":[],"inheritedSecrets":false,"environment":null},
           "externalActions": ["kungfu-systems/buildchain/.github/workflows/.gate-profile.yml@9e904de2c85dbea7c799780ee166510b3336d812"],
           "steps": []
         }
@@ -1756,13 +1492,7 @@
           "publication": "none",
           "receipt": "qualifying",
           "definitionDigest": "sha256:31aaa07f777612265ecf58b56c70c2e4884971de90e8af239b95a56bffcae15f",
-          "credentials": {
-            "githubToken": "read",
-            "oidc": false,
-            "repositorySecrets": [],
-            "inheritedSecrets": false,
-            "environment": null
-          },
+          "credentials": {"githubToken":"read","oidc":false,"repositorySecrets":[],"inheritedSecrets":false,"environment":null},
           "externalActions": ["actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0","actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e"],
           "steps": [
             {
@@ -1790,6 +1520,44 @@
       ]
     },
     {
+      "path": ".github/workflows/linux-arm64-alpha-qualification.yml",
+      "authority": "qualification",
+      "definitionDigest": "sha256:e82fc4ee99792b32cb67a6c4f00a8b76efd19eb1067c6b509c083885f21d891f",
+      "jobs": [
+        {
+          "id": "artifact",
+          "authority": "qualification",
+          "publication": "none",
+          "receipt": "diagnostic",
+          "definitionDigest": "sha256:e7014e962c7d92dc5e39467025aae54fdfd622162cf813b7506ae6d3cdc212a6",
+          "credentials": {"githubToken":"write","oidc":true,"repositorySecrets":["BUILDCHAIN_ARTIFACT_RELAY_S3_DOWNLOAD_ROLE_ARN","BUILDCHAIN_ARTIFACT_RELAY_S3_ROLE_ARN","BUILDCHAIN_ARTIFACT_RELAY_S3_UPLOAD_ROLE_ARN"],"inheritedSecrets":false,"environment":null},
+          "externalActions": ["kungfu-systems/buildchain/.github/workflows/.build.yml@bfe43b0fe5577f15d2af01bc542de8a8ce587457"],
+          "steps": []
+        },
+        {
+          "id": "preflight",
+          "authority": "qualification",
+          "publication": "none",
+          "receipt": "diagnostic",
+          "definitionDigest": "sha256:23289f207a75e02fe3bf44916fca9a41313b1bf21b5e6bbb342ddfa6cddef72e",
+          "credentials": {"githubToken":"write","oidc":true,"repositorySecrets":[],"inheritedSecrets":false,"environment":null},
+          "externalActions": ["actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0"],
+          "steps": [
+            {
+              "index": 1,
+              "label": "name:Check out exact candidate source",
+              "definitionDigest": "sha256:bebfa1169e50702a373132a593030f24fa0ca110ec67c1e795d114f59d376195"
+            },
+            {
+              "index": 2,
+              "label": "id:receipt",
+              "definitionDigest": "sha256:4a1aa1679e886295f7fdbfe400c3f7494164ff44aafb5741f52dc6c1ae061cca"
+            }
+          ]
+        }
+      ]
+    },
+    {
       "path": ".github/workflows/opencode-agent-repository-work.yml",
       "authority": "qualification",
       "definitionDigest": "sha256:1cb29566a9b397c3028374379a1b78b1b764083045cda6ba78bf670926774d8c",
@@ -1800,13 +1568,7 @@
           "publication": "none",
           "receipt": "diagnostic",
           "definitionDigest": "sha256:dfaabde68ca8fbe5350128831ba91222db8b38af927f2b9af7622781ac92eaca",
-          "credentials": {
-            "githubToken": "read",
-            "oidc": false,
-            "repositorySecrets": [],
-            "inheritedSecrets": false,
-            "environment": null
-          },
+          "credentials": {"githubToken":"read","oidc":false,"repositorySecrets":[],"inheritedSecrets":false,"environment":null},
           "externalActions": ["actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0","actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02"],
           "steps": [
             {
@@ -1850,13 +1612,7 @@
           "publication": "none",
           "receipt": "diagnostic",
           "definitionDigest": "sha256:b5c332864a9fbcef8afb4f6587d3273ba7a65808993c81964df6c5454f25a69b",
-          "credentials": {
-            "githubToken": "read",
-            "oidc": false,
-            "repositorySecrets": [],
-            "inheritedSecrets": false,
-            "environment": null
-          },
+          "credentials": {"githubToken":"read","oidc":false,"repositorySecrets":[],"inheritedSecrets":false,"environment":null},
           "externalActions": ["actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02"],
           "steps": [
             {
@@ -1895,13 +1651,7 @@
           "publication": "none",
           "receipt": "diagnostic",
           "definitionDigest": "sha256:8e39c8aa0b5ddda8f2706c636d32aaf334298243eac10e1002ba35a570f0386d",
-          "credentials": {
-            "githubToken": "read",
-            "oidc": false,
-            "repositorySecrets": [],
-            "inheritedSecrets": false,
-            "environment": null
-          },
+          "credentials": {"githubToken":"read","oidc":false,"repositorySecrets":[],"inheritedSecrets":false,"environment":null},
           "externalActions": ["actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5","actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020","actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093","actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02"],
           "steps": [
             {
@@ -1970,13 +1720,7 @@
           "publication": "product",
           "receipt": "none",
           "definitionDigest": "sha256:31047c13ee63aaf8747e0b10f79df62e83368276c2da6cc1f7fc1c79b4d47990",
-          "credentials": {
-            "githubToken": "write",
-            "oidc": true,
-            "repositorySecrets": [],
-            "inheritedSecrets": false,
-            "environment": "adr0049-production-publication"
-          },
+          "credentials": {"githubToken":"write","oidc":true,"repositorySecrets":[],"inheritedSecrets":false,"environment":"adr0049-production-publication"},
           "externalActions": ["actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5","actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020","actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093","rust-lang/crates-io-auth-action@c6f97d42243bad5fab37ca0427f495c86d5b1a18","actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02"],
           "steps": [
             {
@@ -2041,13 +1785,7 @@
           "publication": "product",
           "receipt": "none",
           "definitionDigest": "sha256:643888dbf6a929d3e5c6e8775e5d58ee84622f0fa36cc5ea9f300485b8037e0b",
-          "credentials": {
-            "githubToken": "write",
-            "oidc": true,
-            "repositorySecrets": [],
-            "inheritedSecrets": false,
-            "environment": "adr0049-production-publication"
-          },
+          "credentials": {"githubToken":"write","oidc":true,"repositorySecrets":[],"inheritedSecrets":false,"environment":"adr0049-production-publication"},
           "externalActions": ["actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093","pypa/gh-action-pypi-publish@cef221092ed1bacb1cc03d23a2d87d1d172e277b"],
           "steps": [
             {
@@ -2070,13 +1808,7 @@
           "publication": "none",
           "receipt": "diagnostic",
           "definitionDigest": "sha256:fe1c1bb0dabbfe675619ae98c7329cd73cb987bfb0fe3fbd57690285500088a7",
-          "credentials": {
-            "githubToken": "read",
-            "oidc": false,
-            "repositorySecrets": [],
-            "inheritedSecrets": false,
-            "environment": null
-          },
+          "credentials": {"githubToken":"read","oidc":false,"repositorySecrets":[],"inheritedSecrets":false,"environment":null},
           "externalActions": ["actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093","actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020","actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02"],
           "steps": [
             {
@@ -2109,13 +1841,7 @@
           "publication": "none",
           "receipt": "diagnostic",
           "definitionDigest": "sha256:2875f27bc58fbe5f1056b733787ad401a1da524482fd8331102da04737856619",
-          "credentials": {
-            "githubToken": "read",
-            "oidc": false,
-            "repositorySecrets": [],
-            "inheritedSecrets": false,
-            "environment": null
-          },
+          "credentials": {"githubToken":"read","oidc":false,"repositorySecrets":[],"inheritedSecrets":false,"environment":null},
           "externalActions": ["actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5","actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093","actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02"],
           "steps": [
             {
@@ -2155,13 +1881,7 @@
           "publication": "none",
           "receipt": "diagnostic",
           "definitionDigest": "sha256:8107e128b9604e7e476d4d773750b1de799586a9a1d4dda47cc6cce547cadee1",
-          "credentials": {
-            "githubToken": "write",
-            "oidc": false,
-            "repositorySecrets": [],
-            "inheritedSecrets": false,
-            "environment": null
-          },
+          "credentials": {"githubToken":"write","oidc":false,"repositorySecrets":[],"inheritedSecrets":false,"environment":null},
           "externalActions": ["actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0","actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e","actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0","actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02"],
           "steps": [
             {
@@ -2230,19 +1950,7 @@
           "publication": "channel",
           "receipt": "qualifying",
           "definitionDigest": "sha256:80237b4b7e9a2e4f6393b949e3c24cf36743bdd840b8987339cd2ee0ae1402f8",
-          "credentials": {
-            "githubToken": "write",
-            "oidc": true,
-            "repositorySecrets": [
-              "BUILDCHAIN_ISSUE_APP_ID",
-              "BUILDCHAIN_ISSUE_APP_PRIVATE_KEY",
-              "KUNGFU_ALPHA_CHANNEL_SIGNING_PRIVATE_KEY",
-              "KUNGFU_GITHUB_TOKEN",
-              "KUNGFU_GOVERNANCE_AUDITOR_APP_PRIVATE_KEY"
-            ],
-            "inheritedSecrets": false,
-            "environment": null
-          },
+          "credentials": {"githubToken":"write","oidc":true,"repositorySecrets":["BUILDCHAIN_ISSUE_APP_ID","BUILDCHAIN_ISSUE_APP_PRIVATE_KEY","KUNGFU_ALPHA_CHANNEL_SIGNING_PRIVATE_KEY","KUNGFU_GITHUB_TOKEN","KUNGFU_GOVERNANCE_AUDITOR_APP_PRIVATE_KEY"],"inheritedSecrets":false,"environment":null},
           "externalActions": ["kungfu-systems/buildchain/.github/workflows/release-candidate-promote.yml@c83cb444d79c2e647de6e12a0bfde68dfaf57701"],
           "steps": []
         },
@@ -2252,13 +1960,7 @@
           "publication": "none",
           "receipt": "diagnostic",
           "definitionDigest": "sha256:928b92797b78a1666e40d816dd7b25e7c95478af3465dcd6620fbd2ebc857335",
-          "credentials": {
-            "githubToken": "read",
-            "oidc": false,
-            "repositorySecrets": [],
-            "inheritedSecrets": false,
-            "environment": null
-          },
+          "credentials": {"githubToken":"read","oidc":false,"repositorySecrets":[],"inheritedSecrets":false,"environment":null},
           "externalActions": ["actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0","actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e","actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0"],
           "steps": [
             {
@@ -2316,13 +2018,7 @@
           "publication": "none",
           "receipt": "diagnostic",
           "definitionDigest": "sha256:18b1cf747c86ab70874c9b0019e3fc93c36dca3d54678db3b01cd901d0a6a45f",
-          "credentials": {
-            "githubToken": "write",
-            "oidc": true,
-            "repositorySecrets": [],
-            "inheritedSecrets": false,
-            "environment": null
-          },
+          "credentials": {"githubToken":"write","oidc":true,"repositorySecrets":[],"inheritedSecrets":false,"environment":null},
           "externalActions": ["actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5","actions/attest-build-provenance@0f67c3f4856b2e3261c31976d6725780e5e4c373","actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02"],
           "steps": [
             {
@@ -2369,15 +2065,7 @@
           "publication": "product",
           "receipt": "none",
           "definitionDigest": "sha256:8cf6cb98b53762af88f412926aa13a5cb227592232515506e4e646e77ce3868e",
-          "credentials": {
-            "githubToken": "write",
-            "oidc": false,
-            "repositorySecrets": [
-              "GITHUB_TOKEN"
-            ],
-            "inheritedSecrets": false,
-            "environment": "adr0049-production-publication"
-          },
+          "credentials": {"githubToken":"write","oidc":false,"repositorySecrets":["GITHUB_TOKEN"],"inheritedSecrets":false,"environment":"adr0049-production-publication"},
           "externalActions": ["actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093"],
           "steps": [
             {
@@ -2413,13 +2101,7 @@
           "publication": "none",
           "receipt": "diagnostic",
           "definitionDigest": "sha256:24facd9bf4d0f1eeacaccf24c714a78e7e4ce71bc0a35d21b96623b7d849c9c4",
-          "credentials": {
-            "githubToken": "read",
-            "oidc": false,
-            "repositorySecrets": [],
-            "inheritedSecrets": false,
-            "environment": null
-          },
+          "credentials": {"githubToken":"read","oidc":false,"repositorySecrets":[],"inheritedSecrets":false,"environment":null},
           "externalActions": ["actions/checkout@v4","actions/setup-node@v6.4.0"],
           "steps": [
             {
@@ -2475,13 +2157,7 @@
           "publication": "none",
           "receipt": "diagnostic",
           "definitionDigest": "sha256:3fdef4109d01c205f487959814da117b60b747921b0ceb5333f1c031dab97693",
-          "credentials": {
-            "githubToken": "read",
-            "oidc": false,
-            "repositorySecrets": [],
-            "inheritedSecrets": false,
-            "environment": null
-          },
+          "credentials": {"githubToken":"read","oidc":false,"repositorySecrets":[],"inheritedSecrets":false,"environment":null},
           "externalActions": ["actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0"],
           "steps": [
             {
@@ -2509,13 +2185,7 @@
           "publication": "none",
           "receipt": "qualifying",
           "definitionDigest": "sha256:fb79fa7494c07f0fbd6aba2c05b3113029adcb2dc088d2a6a28fde6f48ba66d4",
-          "credentials": {
-            "githubToken": "read",
-            "oidc": false,
-            "repositorySecrets": [],
-            "inheritedSecrets": false,
-            "environment": null
-          },
+          "credentials": {"githubToken":"read","oidc":false,"repositorySecrets":[],"inheritedSecrets":false,"environment":null},
           "externalActions": ["kungfu-systems/buildchain/.github/workflows/check.yml@9e904de2c85dbea7c799780ee166510b3336d812"],
           "steps": []
         }
@@ -2532,15 +2202,7 @@
           "publication": "none",
           "receipt": "diagnostic",
           "definitionDigest": "sha256:329cb68d35bd9c01be292f4df54e25d76c5c292c18f2ce60222933c14d0178e5",
-          "credentials": {
-            "githubToken": "write",
-            "oidc": false,
-            "repositorySecrets": [
-              "KUNGFU_GITHUB_TOKEN"
-            ],
-            "inheritedSecrets": false,
-            "environment": null
-          },
+          "credentials": {"githubToken":"write","oidc":false,"repositorySecrets":["KUNGFU_GITHUB_TOKEN"],"inheritedSecrets":false,"environment":null},
           "externalActions": ["kungfu-systems/buildchain/.github/workflows/stable-candidate-patrol.yml@7629c4b499cd2d4eebf4c020fbc81637ae1dcb39"],
           "steps": []
         }

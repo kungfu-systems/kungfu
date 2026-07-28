@@ -56,7 +56,6 @@ without changing and refreshing the manifest fails the Gate catalog check.
 | `.github/workflows/build.yml` | `auditable-demo-passport` | qualification | none | qualifying | token:read | none | 4 |
 | `.github/workflows/build.yml` | `build` | qualification | none | qualifying | token:write, oidc, repo-secret:BUILDCHAIN_ARTIFACT_RELAY_S3_DOWNLOAD_ROLE_ARN+BUILDCHAIN_ARTIFACT_RELAY_S3_ROLE_ARN+BUILDCHAIN_ARTIFACT_RELAY_S3_UPLOAD_ROLE_ARN | none | 0 |
 | `.github/workflows/build.yml` | `credential-island-macos` | product-publication | product | none | token:read, repo-secret:BUILDCHAIN_MACOS_CERTIFICATE_P12_BASE64+BUILDCHAIN_MACOS_CERTIFICATE_PASSWORD+BUILDCHAIN_MACOS_NOTARY_API_ISSUER+BUILDCHAIN_MACOS_NOTARY_API_KEY_ID+BUILDCHAIN_MACOS_NOTARY_API_KEY_P8_BASE64 | `alpha-macos-signing` | 6 |
-| `.github/workflows/build.yml` | `hub-cli-linux-arm64` | qualification | none | diagnostic | token:write, oidc, repo-secret:BUILDCHAIN_ARTIFACT_RELAY_S3_DOWNLOAD_ROLE_ARN+BUILDCHAIN_ARTIFACT_RELAY_S3_ROLE_ARN+BUILDCHAIN_ARTIFACT_RELAY_S3_UPLOAD_ROLE_ARN | none | 0 |
 | `.github/workflows/build.yml` | `kungfu-phase-b` | qualification | none | qualifying | token:read | none | 0 |
 | `.github/workflows/build.yml` | `phase-b-package` | qualification | none | diagnostic | token:read | none | 5 |
 | `.github/workflows/build.yml` | `precompute-alpha-publication-tail` | qualification | none | diagnostic | token:read | none | 4 |
@@ -79,6 +78,8 @@ without changing and refreshing the manifest fails the Gate catalog check.
 | `.github/workflows/gate-measurement.yml` | `focused` | qualification | none | diagnostic | token:read | none | 7 |
 | `.github/workflows/gate-measurement.yml` | `measure` | qualification | none | qualifying | token:read | none | 0 |
 | `.github/workflows/kfd-verifier-drift.yml` | `verify-owned-fixtures` | qualification | none | qualifying | token:read | none | 4 |
+| `.github/workflows/linux-arm64-alpha-qualification.yml` | `artifact` | qualification | none | diagnostic | token:write, oidc, repo-secret:BUILDCHAIN_ARTIFACT_RELAY_S3_DOWNLOAD_ROLE_ARN+BUILDCHAIN_ARTIFACT_RELAY_S3_ROLE_ARN+BUILDCHAIN_ARTIFACT_RELAY_S3_UPLOAD_ROLE_ARN | none | 0 |
+| `.github/workflows/linux-arm64-alpha-qualification.yml` | `preflight` | qualification | none | diagnostic | token:write, oidc | none | 2 |
 | `.github/workflows/opencode-agent-repository-work.yml` | `experiment` | qualification | none | diagnostic | token:read | none | 5 |
 | `.github/workflows/opencode-local-model-canary.yml` | `canary` | qualification | none | diagnostic | token:read | none | 4 |
 | `.github/workflows/publish-layer-artifacts.yml` | `prepare` | qualification | none | diagnostic | token:read | none | 11 |

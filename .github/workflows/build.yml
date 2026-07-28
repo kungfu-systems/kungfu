@@ -25,11 +25,6 @@ on:
         required: false
         type: boolean
         default: false
-      run-hub-cli-linux-arm64:
-        description: "Run the dedicated native Linux ARM64 Hub CLI package lane alongside a custom main matrix"
-        required: false
-        type: boolean
-        default: false
       preflight-run-id:
         description: "Optional exact Alpha preflight run for a trusted diagnostic replay"
         required: false
@@ -173,52 +168,6 @@ jobs:
       cache-dependency-lock-root: ${{ needs.preflight.outputs.dependency-lock-root }}
       cache-toolchain-root: ${{ needs.preflight.outputs.toolchain-root }}
       cache-policy-root: ${{ needs.preflight.outputs.policy-root }}
-      buildchain-contract-lock-path: .buildchain/contract-lock.json
-      buildchain-contract-compatibility-policy: major-compatible
-      buildchain-contract-drift-issue-mode: compatible-and-breaking
-
-  hub-cli-linux-arm64:
-    name: Build Hub CLI on native Linux ARM64
-    needs: preflight
-    if: ${{ github.event_name == 'pull_request' || !inputs.platforms-json || inputs.run-hub-cli-linux-arm64 || contains(inputs.platforms-json, 'linux-arm64') }}
-    uses: kungfu-systems/buildchain/.github/workflows/.build.yml@c83cb444d79c2e647de6e12a0bfde68dfaf57701 # v3.0.2-alpha.7 auditable demo + Linux attestation + safe notarization diagnostics
-    secrets:
-      BUILDCHAIN_ARTIFACT_RELAY_S3_ROLE_ARN: ${{ secrets.BUILDCHAIN_ARTIFACT_RELAY_S3_ROLE_ARN }}
-      BUILDCHAIN_ARTIFACT_RELAY_S3_UPLOAD_ROLE_ARN: ${{ secrets.BUILDCHAIN_ARTIFACT_RELAY_S3_UPLOAD_ROLE_ARN }}
-      BUILDCHAIN_ARTIFACT_RELAY_S3_DOWNLOAD_ROLE_ARN: ${{ secrets.BUILDCHAIN_ARTIFACT_RELAY_S3_DOWNLOAD_ROLE_ARN }}
-    with:
-      runner-preset: custom
-      platforms-json: >-
-        [{"id":"linux-arm64","name":"Linux ARM64 Hub CLI","platform":"linux","runner":"[\"ubuntu-24.04-arm\"]","capabilities":["native-toolchain","node","product-artifacts","publication-evidence","rust"]}]
-      setup-rust: true
-      rust-toolchain: "1.96.0"
-      rustup-dist-server: https://rsproxy.cn
-      rustup-update-root: https://rsproxy.cn/rustup
-      cargo-registry-index: ${{ vars.BUILDCHAIN_CARGO_REGISTRY_INDEX }}
-      artifact-name: kungfu-hub-cli
-      artifact-paths: |
-        product/release/cli/kungfu-episodes-cli-linux-arm64.tar.gz
-        product/release/cli/kungfu-episodes-cli-linux-arm64.qualification.json
-      expected-artifacts-json: >-
-        {"minFiles":2,"minTotalBytes":1,"requiredPaths":["product/release/cli/kungfu-episodes-cli-linux-arm64.tar.gz","product/release/cli/kungfu-episodes-cli-linux-arm64.qualification.json"]}
-      require-install: true
-      require-build: true
-      require-verify: true
-      lifecycle-timeout-minutes: 180
-      # The native ARM64 lane publishes only the headless Hub CLI. Keep its
-      # runtime, Episode, ADR, portable-format, and invariant evidence, but do
-      # not ask it to manufacture desktop or cross-language SDK artifacts.
-      verify-command: node scripts/run-release-qualification.mjs --execution-profile ${{ startsWith(github.base_ref, 'release/') && 'release-candidate' || 'alpha' }} --native-upgrade-policy skip --artifact-scope hub-cli
-      release-candidate: true
-      publish-channel: ${{ github.event_name == 'pull_request' && (startsWith(github.base_ref, 'release/') && 'release' || 'alpha') || 'none' }}
-      artifact-transfer-mode: s3-to-github-artifacts
-      artifact-retention-days: 14
-      checkout-cache-mode: auto
-      checkout-cache-fallback: github
-      checkout-cache-timeout-seconds: 60
-      checkout-cache-github-timeout-seconds: 1200
-      shifu-cache-profile-ref: docs/shifu/qualification-portable-off.cache-profile.json
-      shifu-cache-profile-digest: sha256:d7002041716ea1e5ad703492815c9557576d5679227743541c13d42b6ea9de5c
       buildchain-contract-lock-path: .buildchain/contract-lock.json
       buildchain-contract-compatibility-policy: major-compatible
       buildchain-contract-drift-issue-mode: compatible-and-breaking

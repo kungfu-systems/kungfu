@@ -499,27 +499,24 @@
     {
       "id": "hub-cli-linux-arm64",
       "execution": "controller",
-      "workflow": ".github/workflows/build.yml",
-      "job": "hub-cli-linux-arm64",
+      "workflow": ".github/workflows/linux-arm64-alpha-qualification.yml",
+      "job": "artifact",
       "profiles": [
         "alpha-pr",
         "release-pr"
       ],
       "gates": [
-        "layers.contract",
-        "layers.format",
         "product.distribution",
         "episode.smoke",
         "episode.release"
       ],
-      "activation": "alpha or release pull request, or selected manual Linux ARM64 qualification",
+      "activation": "alpha or release pull request, or isolated manual Linux ARM64 qualification",
       "adapter": {
         "type": "buildchain-hub-cli-linux-arm64",
         "kind": "job-uses",
-        "uses": "kungfu-systems/buildchain/.github/workflows/.build.yml@c83cb444d79c2e647de6e12a0bfde68dfaf57701",
+        "uses": "kungfu-systems/buildchain/.github/workflows/.build.yml@bfe43b0fe5577f15d2af01bc542de8a8ce587457",
         "job": {
           "needs": "preflight",
-          "if": "${{ github.event_name == 'pull_request' || !inputs.platforms-json || inputs.run-hub-cli-linux-arm64 || contains(inputs.platforms-json, 'linux-arm64') }}",
           "secrets": {
             "BUILDCHAIN_ARTIFACT_RELAY_S3_ROLE_ARN": "${{ secrets.BUILDCHAIN_ARTIFACT_RELAY_S3_ROLE_ARN }}",
             "BUILDCHAIN_ARTIFACT_RELAY_S3_UPLOAD_ROLE_ARN": "${{ secrets.BUILDCHAIN_ARTIFACT_RELAY_S3_UPLOAD_ROLE_ARN }}",
@@ -533,11 +530,11 @@
           "require-install": true,
           "require-build": true,
           "require-verify": true,
-          "verify-command": "node scripts/run-release-qualification.mjs --execution-profile ${{ startsWith(github.base_ref, 'release/') && 'release-candidate' || 'alpha' }} --native-upgrade-policy skip --artifact-scope hub-cli",
+          "verify-command": "node product/scripts/verify-cli-surface-qualification.mjs --qualification product/release/cli/kungfu-episodes-cli-linux-arm64.qualification.json --archive product/release/cli/kungfu-episodes-cli-linux-arm64.tar.gz --platform linux-arm64",
           "release-candidate": true,
           "publish-channel": "${{ github.event_name == 'pull_request' && (startsWith(github.base_ref, 'release/') && 'release' || 'alpha') || 'none' }}",
           "artifact-transfer-mode": "s3-to-github-artifacts",
-          "shifu-cache-profile-ref": "docs/shifu/qualification-portable-off.cache-profile.json",
+          "shifu-cache-profile-ref": "docs/shifu/linux-arm64-qualification-portable-off.cache-profile.json",
           "buildchain-contract-lock-path": ".buildchain/contract-lock.json",
           "buildchain-contract-compatibility-policy": "major-compatible"
         }

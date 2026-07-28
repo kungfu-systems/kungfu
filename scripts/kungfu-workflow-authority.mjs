@@ -302,6 +302,25 @@ export function serializeWorkflowAuthority(document) {
   const lines = JSON.stringify(document, null, 2).split('\n');
   const rendered = [];
   for (let index = 0; index < lines.length; index += 1) {
+    const credentialsMatch = lines[index].match(/^(\s*)"credentials": \{$/);
+    if (credentialsMatch) {
+      const indent = credentialsMatch[1];
+      const objectLines = ['{'];
+      let closed = false;
+      for (index += 1; index < lines.length; index += 1) {
+        if (lines[index] === `${indent}},`) {
+          closed = true;
+          break;
+        }
+        objectLines.push(lines[index].trim());
+      }
+      if (!closed) throw new Error('unterminated credentials serialization');
+      objectLines.push('}');
+      rendered.push(
+        `${indent}"credentials": ${JSON.stringify(JSON.parse(objectLines.join('\n')))},`,
+      );
+      continue;
+    }
     const match = lines[index].match(/^(\s*)"externalActions": \[$/);
     if (!match) {
       rendered.push(lines[index]);

@@ -3,9 +3,9 @@
   "verdict": "pass",
   "authoritySemantics": "navigation-only-projection-over-existing-authorities",
   "manifestPath": "framework/maintainability/semantic-amplification.manifest.json",
-  "manifestRoot": "sha256:89d2b6cbecb61fbb9dae7be05af7606cd367e35e2754b82c072a0b330a43e410",
+  "manifestRoot": "sha256:b8b9c591c4e123b18dadc49c7b2a1d4a9c4c06998b673d8ce8711575340764de",
   "baselineRef": "dbfed9ca1785d147b26f4f06e7e6895ac7368fee",
-  "sourceRoot": "sha256:9c7f882f34498861b32b3bbd169f74c6445d81c68ad4caa61cc5c084c56e4f3a",
+  "sourceRoot": "sha256:2687217d324f6666a9774d4f87c41762be5c2b11f32c4bb8034f169887d72a5b",
   "roles": {
     "authority": "exactly one authority route per family; the route may name multiple co-owned source files",
     "allowedProjectionRoles": [
@@ -24,8 +24,8 @@
   "summary": {
     "families": 6,
     "authorities": 6,
-    "mappedSurfaces": 75,
-    "changedMappedSurfaces": 42,
+    "mappedSurfaces": 77,
+    "changedMappedSurfaces": 45,
     "blockingIssues": 0
   },
   "families": [
@@ -44,21 +44,24 @@
         "authority": 2,
         "generated-projection": 3,
         "thin-binding": 1,
-        "conformance-oracle": 1,
-        "test": 1,
+        "conformance-oracle": 2,
+        "test": 2,
         "package-release": 1,
         "documentation": 1
       },
       "amplification": {
-        "mappedSurfaces": 10,
-        "nonAuthoritySurfaces": 8,
-        "changedSurfaces": 6,
+        "mappedSurfaces": 12,
+        "nonAuthoritySurfaces": 10,
+        "changedSurfaces": 9,
         "changedPaths": [
           "framework/core/src/python/kungfu/cli/surface_contract.registry.json",
           "framework/core/src/python/kungfu/cli/commands/__registry__.py",
           "framework/core/src/python/kungfu/cli/catalog_projection.py",
           "framework/core/src/python/kungfu/agent/cli_surface.catalog.json",
           "framework/core/src/python/kungfu/agent/commands.json",
+          "product/scripts/cli-surface-qualification.mjs",
+          "product/scripts/verify-cli-surface-qualification.mjs",
+          "product/scripts/cli-surface-qualification.test.mjs",
           "docs/architecture/overview.md"
         ]
       },
@@ -92,6 +95,14 @@
         {
           "path": "product/scripts/cli-surface-qualification.mjs",
           "role": "package-release"
+        },
+        {
+          "path": "product/scripts/verify-cli-surface-qualification.mjs",
+          "role": "conformance-oracle"
+        },
+        {
+          "path": "product/scripts/cli-surface-qualification.test.mjs",
+          "role": "test"
         },
         {
           "path": "docs/architecture/overview.md",
@@ -167,9 +178,25 @@
           "path": "product/scripts/cli-surface-qualification.mjs",
           "currentLines": 498,
           "baselineLines": 498,
-          "currentRoot": "sha256:7533c7b772a961fd8e1ae97acc474b7c9f0fbe6626322f1e98f0e30ee163f551",
+          "currentRoot": "sha256:0270d993c7016dfbfa48363e932f2f228da20311bb6a1c22c0630846406c28db",
           "baselineRoot": "sha256:7533c7b772a961fd8e1ae97acc474b7c9f0fbe6626322f1e98f0e30ee163f551",
-          "changedSinceBaseline": false
+          "changedSinceBaseline": true
+        },
+        {
+          "path": "product/scripts/verify-cli-surface-qualification.mjs",
+          "currentLines": 136,
+          "baselineLines": null,
+          "currentRoot": "sha256:7c3525552123d949e6aff475685496baadd655bf9fcf081c14242b4ca70a438a",
+          "baselineRoot": null,
+          "changedSinceBaseline": true
+        },
+        {
+          "path": "product/scripts/cli-surface-qualification.test.mjs",
+          "currentLines": 268,
+          "baselineLines": 206,
+          "currentRoot": "sha256:50080d6909afb1af0d083b65b2b6ec7a4958934f12521774e94fcd41c19da13f",
+          "baselineRoot": "sha256:8d4eea48d9b1af101eebb1e45349f22f7604067be87a3db5d4a0586d0b88f934",
+          "changedSinceBaseline": true
         },
         {
           "path": "docs/architecture/overview.md",
@@ -1079,9 +1106,9 @@
         },
         {
           "path": "docs/qualification/gates/workflow-bindings.json",
-          "currentLines": 652,
+          "currentLines": 649,
           "baselineLines": 580,
-          "currentRoot": "sha256:6474e591adb6250eca520874f5fa12e62ab2611195799602362ff782a24fdefb",
+          "currentRoot": "sha256:8de001e365bb56a71ce6674364f1370b2253f5c63f525146b2c22d0bef809a6a",
           "baselineRoot": "sha256:233cd22ebce4c9930e0e4889808b88661d77c202d5e5f73121823dcdc461576d",
           "changedSinceBaseline": true
         },

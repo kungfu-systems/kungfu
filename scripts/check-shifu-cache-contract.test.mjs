@@ -141,7 +141,7 @@ test('cache contract schemas accept valid fixtures and reject unsafe policy', as
   });
 });
 
-test('portable-off qualification profile covers every native Build lane', () => {
+test('portable-off qualification profiles cover every native Build lane', () => {
   const profilePath = path.join(
     ROOT,
     'docs/shifu/qualification-portable-off.cache-profile.json',
@@ -160,7 +160,27 @@ test('portable-off qualification profile covers every native Build lane', () => 
     path.join(ROOT, '.github/workflows/build.yml'),
     'utf8',
   );
-  assert.equal(buildWorkflow.split(`sha256:${digest}`).length - 1, 2);
+  assert.equal(buildWorkflow.split(`sha256:${digest}`).length - 1, 1);
+
+  const linuxArm64ProfilePath = path.join(
+    ROOT,
+    'docs/shifu/linux-arm64-qualification-portable-off.cache-profile.json',
+  );
+  const linuxArm64ProfileText = fs.readFileSync(linuxArm64ProfilePath, 'utf8');
+  const linuxArm64Profile = JSON.parse(linuxArm64ProfileText);
+  assert.deepEqual(linuxArm64Profile.subject.platforms, ['linux-arm64']);
+  const linuxArm64Digest = crypto
+    .createHash('sha256')
+    .update(linuxArm64ProfileText)
+    .digest('hex');
+  const linuxArm64Workflow = fs.readFileSync(
+    path.join(ROOT, '.github/workflows/linux-arm64-alpha-qualification.yml'),
+    'utf8',
+  );
+  assert.equal(
+    linuxArm64Workflow.split(`sha256:${linuxArm64Digest}`).length - 1,
+    1,
+  );
   assert.match(
     fs.readFileSync(
       path.join(ROOT, 'scripts/measure-layer-gate-baseline.ps1'),
