@@ -13,6 +13,10 @@
     "type": "product",
     "displayName": "Kungfu Episodes",
     "extensions": "dependencies",
+    "extensionPackages": [
+      "@kungfu-tech/kfx-agent-work-lab-experience",
+      "@kungfu-tech/kfx-suite-agent-work-lab"
+    ],
     "surfaces": [
       "gui",
       "tui",

@@ -282,6 +282,7 @@ jobs:
             --pull-request "$pr_number" \
             --pull-request-head "$pr_head" \
             --dev-head "$GITHUB_BASE_SHA" \
+            --candidate-head "$GITHUB_HEAD_SHA" \
             --candidate-tree "$candidate_tree" \
             --pr-body "$RUNNER_TEMP/family-pr-body.txt" \
             --status-file "$RUNNER_TEMP/family-status.json" \

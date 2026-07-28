@@ -1285,6 +1285,30 @@
       "review_state": "self-reviewed",
       "sensitivity": "public"
     },
+    "docs/qualification/kfx-identity-neutral-terminal.md": {
+      "metadata_schema": "kungfu.document-metadata/v1",
+      "document_status": "active",
+      "doc_type": "qualification-evidence",
+      "review_state": "self-reviewed",
+      "sensitivity": "public",
+      "sources": [
+        "architecture-decisions",
+        "executable-probe",
+        "local-files",
+        "user-decision"
+      ],
+      "period": "2026-07-28",
+      "theme": "kfx-identity-neutral-terminal-qualification",
+      "confidence": "high",
+      "evidence_grade": "B",
+      "last_reviewed": "2026-07-28",
+      "ai_provenance": {
+        "model_family": "OpenAI GPT-5",
+        "product": "Codex",
+        "generated_at": "2026-07-28",
+        "invisible_context_boundary": "unobserved public releases, third-party production adoption, hidden model checkpoints, and private runtime state are not claimed"
+      }
+    },
     "docs/qualification/kfd-support-matrix.md": {
       "metadata_schema": "kungfu.document-metadata/v1",
       "document_status": "active",

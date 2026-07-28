@@ -170,6 +170,11 @@ Each section is bound to the registry id by the catalog meta gate.
   compiler/CMake/Ninja facts. Moved bases, changed trees/toolchains, expired or
   untrusted evidence, and every lookup/download/verification failure run the
   full required set.
+  The reusable qualification id intentionally excludes the transient family
+  lease, required-status snapshot, and queue-attempt binding. The current
+  merge-group descriptor must still validate those facts, and its delivery
+  attempt and cache-promotion authority seal their exact binding root
+  independently before admission.
   The producer workflow must itself be completed-success, so the source-bound
   plan also proves that its SDK, Shifu, and KFD obligations passed before a
   repeated run can skip them. The probe descriptor is handed unchanged to the

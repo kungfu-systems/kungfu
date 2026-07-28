@@ -132,6 +132,7 @@ assembly cannot add a bootstrap exception.
 
 - [`extensions.md`](extensions.md)
 - [KFX native registry and authority contract](../../config/kungfu-kfx.contract.json)
+- [KFX identity-neutral terminal qualification](../qualification/kfx-identity-neutral-terminal.md)
 - [KFX authority decision](../adr/KF-ADR-019f86da-4f90-7afa-a1e1-0510f00916be.md)
 - [KFX trust boundary](../adr/KF-ADR-019f86da-4f90-79f1-8716-aca36b142847.md)
 - [Uniform capability surface](../adr/KF-ADR-019f86da-4f90-7789-8b48-620aa694acf9.md)

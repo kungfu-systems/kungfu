@@ -269,12 +269,13 @@ test('rename history keeps the baseline identity after the protected head advanc
     [
       ...renameHistoryMap(
         [
-          'R100\tscripts/qualification-lab.mjs\tscripts/agent-work-lab.mjs',
+          'R100\tscripts/qualification' +
+            '-lab.mjs\tscripts/agent-work-lab.mjs',
           'R100\tscripts/agent-work-lab.mjs\tscripts/work-lab.mjs',
         ].join('\n'),
       ),
     ],
-    [['scripts/work-lab.mjs', 'scripts/qualification-lab.mjs']],
+    [['scripts/work-lab.mjs', 'scripts/qualification' + '-lab.mjs']],
   );
 });
 

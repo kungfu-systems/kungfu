@@ -563,17 +563,17 @@ function listKfxPackages() {
   return packages.sort((a, b) => a.name.localeCompare(b.name));
 }
 
-function productKfxDependencies() {
+function productKfxDeclarations() {
   const pkg = readJson(path.join(PRODUCT_DIR, 'package.json'));
-  return new Set(
-    Object.keys(pkg.dependencies || {}).filter((name) =>
-      name.startsWith('@kungfu-tech/kfx-'),
-    ),
+  const dependencies = Object.keys(pkg.dependencies || {}).filter((name) =>
+    name.startsWith('@kungfu-tech/kfx-'),
   );
+  const metadata = pkg.kungfuProduct?.extensionPackages || [];
+  return new Set([...dependencies, ...metadata]);
 }
 
 function assertDeclaredKfx(packages) {
-  const declared = productKfxDependencies();
+  const declared = productKfxDeclarations();
   const actual = new Set(packages.map((pkg) => pkg.name));
   const missing = [...actual].filter((name) => !declared.has(name)).sort();
   const stale = [...declared].filter((name) => !actual.has(name)).sort();
@@ -588,7 +588,7 @@ function assertDeclaredKfx(packages) {
         .join('\n'),
     );
   }
-  console.log(`[product] declared kfx dependencies: ${packages.length}`);
+  console.log(`[product] declared kfx packages: ${packages.length}`);
   buildchainLogger.mark('product.kfx.dependencies.declared', {
     phase: 'prepare',
     attributes: {
@@ -2099,7 +2099,7 @@ export function smokeCliProductArchive({ archivePath, archiveBase }) {
 
         assertSameSet(
           'installed kfx package set',
-          productKfxDependencies(),
+          productKfxDeclarations(),
           listInstalledKfxPackages(extensionsRoot),
         );
 

@@ -158,6 +158,7 @@ function deliveryFixture(overrides = {}) {
       compositionChanged: false,
       compositionRoot: null,
       reasonCodes: [],
+      ...(overrides.cut || {}),
     },
     {
       initiativeId: 'go-family-native-state-contract',
@@ -179,6 +180,7 @@ function deliveryFixture(overrides = {}) {
       pullRequest: 1728,
       pullRequestHead: HEAD,
       devHead: BASE,
+      candidateHead: QUEUE_HEAD,
       candidateTree: TREE,
       pullRequestBody: lease.marker,
       combinedStatus: {
@@ -259,7 +261,7 @@ test('descriptor binds the exact tree, base, plan projection, and toolchain', ()
   );
 });
 
-test('family delivery binding enters proof identity and preserves same-attempt reuse', () => {
+test('family delivery binding is separate from reusable qualification identity', () => {
   const { values } = deliveryFixture();
   const binding = createDeliveryBinding(values);
   const first = createProofDescriptor(
@@ -277,36 +279,79 @@ test('family delivery binding enters proof identity and preserves same-attempt r
     createDeliveryBinding(values),
   );
   assert.equal(binding.state, 'bound');
-  assert.equal(first.schema, 'kungfu.affected-native-proof-descriptor/v2');
+  assert.equal(first.schema, 'kungfu.affected-native-proof-descriptor/v3');
   assert.match(first.identity.dependencyRoot, /^sha256:[0-9a-f]{64}$/u);
   assert.match(first.identity.closureRoot, /^sha256:[0-9a-f]{64}$/u);
   assert.equal(first.proofId, repeated.proofId);
+  const reclassified = createProofDescriptor(
+    plan(QUEUE_HEAD),
+    TREE,
+    2,
+    TOOLCHAIN,
+    createDeliveryBinding(
+      deliveryFixture({
+        family: { deliveryClass: 'native-proof-reclassified' },
+      }).values,
+    ),
+  );
+  const expandedChecks = createProofDescriptor(
+    plan(QUEUE_HEAD),
+    TREE,
+    2,
+    TOOLCHAIN,
+    createDeliveryBinding({
+      ...values,
+      requiredContexts: [...values.requiredContexts, 'source / acceptance'],
+    }),
+  );
+  assert.equal(first.proofId, reclassified.proofId);
+  assert.equal(first.proofId, expandedChecks.proofId);
+  assert.deepEqual(
+    first.qualificationIdentity,
+    reclassified.qualificationIdentity,
+  );
+  assert.deepEqual(
+    first.qualificationIdentity,
+    expandedChecks.qualificationIdentity,
+  );
+  assert.notEqual(
+    first.identity.deliveryBinding.bindingRoot,
+    reclassified.identity.deliveryBinding.bindingRoot,
+  );
+  assert.notEqual(
+    first.identity.deliveryBinding.bindingRoot,
+    expandedChecks.identity.deliveryBinding.bindingRoot,
+  );
   assert.notEqual(
     first.proofId,
     createProofDescriptor(
-      plan(QUEUE_HEAD),
+      plan(QUEUE_HEAD, { base: '6'.repeat(40) }),
       TREE,
       2,
       TOOLCHAIN,
       createDeliveryBinding(
         deliveryFixture({
-          family: { deliveryClass: 'native-proof-reclassified' },
+          cut: { baseCommitOid: '6'.repeat(40) },
+          values: { devHead: '6'.repeat(40) },
         }).values,
       ),
     ).proofId,
   );
-  assert.notEqual(
-    first.proofId,
-    createProofDescriptor(
-      plan(QUEUE_HEAD),
-      TREE,
-      2,
-      TOOLCHAIN,
-      createDeliveryBinding({
-        ...values,
-        requiredContexts: [...values.requiredContexts, 'source / acceptance'],
-      }),
-    ).proofId,
+  assert.throws(
+    () =>
+      createProofDescriptor(
+        plan(QUEUE_HEAD),
+        TREE,
+        2,
+        TOOLCHAIN,
+        createDeliveryBinding(
+          deliveryFixture({
+            cut: { candidateTreeOid: '6'.repeat(40) },
+            values: { candidateTree: '6'.repeat(40) },
+          }).values,
+        ),
+      ),
+    /descriptor delivery source drift/u,
   );
   assert.throws(
     () =>
@@ -318,7 +363,8 @@ test('family delivery binding enters proof identity and preserves same-attempt r
   );
 });
 
-test('pull-request proof is explicitly unbound from later family delivery', () => {
+test('exact pull-request qualification proof is reusable by bound delivery', () => {
+  const value = fixture();
   const { values } = deliveryFixture();
   const unbound = createDeliveryBinding({
     ...values,
@@ -327,20 +373,108 @@ test('pull-request proof is explicitly unbound from later family delivery', () =
     combinedStatus: {},
   });
   const bound = createDeliveryBinding(values);
+  const pullDescriptor = createProofDescriptor(
+    value.value,
+    TREE,
+    2,
+    TOOLCHAIN,
+    unbound,
+  );
+  const queueDescriptor = createProofDescriptor(
+    plan(QUEUE_HEAD),
+    TREE,
+    2,
+    TOOLCHAIN,
+    bound,
+  );
   assert.equal(unbound.state, 'unbound');
   assert.equal(unbound.queueAdmission.state, 'not-issued');
-  assert.notEqual(
-    createProofDescriptor(plan(QUEUE_HEAD), TREE, 2, TOOLCHAIN, unbound)
-      .proofId,
-    createProofDescriptor(plan(QUEUE_HEAD), TREE, 2, TOOLCHAIN, bound).proofId,
+  assert.equal(pullDescriptor.proofId, queueDescriptor.proofId);
+  assert.deepEqual(
+    pullDescriptor.qualificationIdentity,
+    queueDescriptor.qualificationIdentity,
   );
+  assert.notEqual(
+    pullDescriptor.identity.deliveryBinding.bindingRoot,
+    queueDescriptor.identity.deliveryBinding.bindingRoot,
+  );
+  writeBundle(
+    pullDescriptor,
+    value,
+    producer({
+      event: 'pull_request',
+      triggerHeadSha: OTHER_HEAD,
+      checkoutSha: HEAD,
+    }),
+  );
+  const proof = verifyProofBundle(queueDescriptor, value.bundle, {
+    repository: 'kungfu-systems/kungfu',
+    producerRunId: 42,
+    producerEvent: 'pull_request',
+    producerHeadSha: OTHER_HEAD,
+    maxAgeSeconds: 6 * 60 * 60,
+    now: '2026-07-22T01:00:00Z',
+  });
+  const projectedDrift = structuredClone(queueDescriptor);
+  projectedDrift.qualificationIdentity.sourceTree = '6'.repeat(40);
+  assert.throws(
+    () =>
+      verifyProofBundle(projectedDrift, value.bundle, {
+        repository: 'kungfu-systems/kungfu',
+        producerRunId: 42,
+        producerEvent: 'pull_request',
+        producerHeadSha: OTHER_HEAD,
+        maxAgeSeconds: 6 * 60 * 60,
+        now: '2026-07-22T01:00:00Z',
+      }),
+    /qualification identity projection drift/u,
+  );
+  const attempt = createDeliveryAttempt(
+    queueDescriptor,
+    proof,
+    'reused',
+    producer({
+      runId: 84,
+      triggerHeadSha: QUEUE_HEAD,
+      checkoutSha: QUEUE_HEAD,
+    }),
+  );
+  assert.equal(attempt.deliveryBindingRoot, bound.bindingRoot);
+  assert.equal(validateDeliveryAttempt(attempt), attempt);
+  const ordinary = createDeliveryBinding({
+    ...values,
+    pullRequestBody: '',
+    combinedStatus: {
+      statuses: [{ context: values.queueAdmissionContext, state: 'success' }],
+    },
+  });
+  const ordinaryDescriptor = createProofDescriptor(
+    plan(QUEUE_HEAD),
+    TREE,
+    2,
+    TOOLCHAIN,
+    ordinary,
+  );
+  const ordinaryAttempt = createDeliveryAttempt(
+    ordinaryDescriptor,
+    proof,
+    'reused',
+    producer({
+      runId: 84,
+      triggerHeadSha: QUEUE_HEAD,
+      checkoutSha: QUEUE_HEAD,
+    }),
+  );
+  assert.equal(ordinaryDescriptor.proofId, pullDescriptor.proofId);
+  assert.equal(validateDeliveryAttempt(ordinaryAttempt), ordinaryAttempt);
   assert.throws(
     () =>
       createDeliveryBinding({
         ...values,
         pullRequestBody: '',
+        combinedStatus: {},
       }),
-    /requires a family lease/u,
+    /queue admission lease is not successful/u,
   );
   assert.throws(
     () =>
@@ -357,6 +491,7 @@ test('pull-request proof is explicitly unbound from later family delivery', () =
       }),
     /family delivery lease is not active/u,
   );
+  fs.rmSync(value.root, { recursive: true, force: true });
 });
 
 test('delivery attempt seals the exact family, source, proof decision, and run', () => {
