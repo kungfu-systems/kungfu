@@ -306,6 +306,8 @@ def test_checked_in_catalog_is_the_deterministic_complete_projection(tmp_path):
     )
     assert first["projection"]["consumers"]["agentCapabilities"] == ("embed-complete")
     assert first == json.loads(catalog_projection.catalog_path().read_text("utf-8"))
+    rendered = catalog_projection.render(first)
+    assert rendered.count("\n") < len(first["surfaces"]) * 3
 
     stale = tmp_path / "cli_surface.catalog.json"
     stale.write_text("{}\n", encoding="utf-8")
