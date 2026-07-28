@@ -99,7 +99,6 @@ function checkIdentityNeutralAuthority() {
     'framework/kfx/schema/first-party-manifest.schema.json',
     'framework/gui/scripts/gen-first-party-manifest.mjs',
     'framework/gui/src/main/first-party-manifest.ts',
-    'framework/core/src/python/kungfu/rewind/first_party.py',
   ]) {
     assert.equal(
       fs.existsSync(path.join(root, removed)),
@@ -107,6 +106,11 @@ function checkIdentityNeutralAuthority() {
       `${removed} resurrected a parallel identity authority`,
     );
   }
+  assert.match(
+    read('framework/core/src/python/kungfu/rewind/first_party.py'),
+    /raise ImportError\(/u,
+    'retired first-party compatibility module must fail closed on import',
+  );
 
   const forbiddenManifestKeys = new Set([
     'firstParty',
