@@ -43,7 +43,8 @@
           "do_not_enforce_on_create": false,
           "required_status_checks": [
             {
-              "context": "build"
+              "context": "build / Finalize build controller evidence",
+              "integration_id": 15368
             },
             {
               "context": "signoff",
@@ -68,7 +69,7 @@
   "classicProtection": {
     "mode": "defense-in-depth",
     "requiredChecks": [
-      "build",
+      "build / Finalize build controller evidence",
       "signoff",
       "validate"
     ],
@@ -81,5 +82,5 @@
     "allowForcePushes": false,
     "allowDeletions": false
   },
-  "contractRoot": "sha256:64bd0cd5491f3e278ec93317087ddd235a73dc20c5eee0d4543c1d2824003316"
+  "contractRoot": "sha256:dc587e2c1e833e3f7d6a001b65cd8bc189029bc865b412a55a296a341b5ad7b3"
 }

@@ -604,7 +604,7 @@
           "channel": "${{ startsWith(inputs.target-ref || github.event.pull_request.base.ref, 'alpha/') && 'alpha' || 'release' }}",
           "buildchain-ref": "44242696401d4456d23413501517735787db247d",
           "target-sha": "${{ inputs.target-sha || github.event.pull_request.merge_commit_sha || github.sha }}",
-          "required-status-check": "build",
+          "required-status-check": "build / Finalize build controller evidence",
           "publication-auto-admission": true,
           "publication-consumer-qualification-command": "node scripts/kungfu-release-qualification.mjs",
           "publication-consumer-predicate-id": "kungfu.release-admission/v1",

@@ -47,7 +47,7 @@ test('promotion workflow drift is rejected before Buildchain promotion', () => {
   const promotionPath = CONTRACT.workflows.promotion;
   const original = fs.readFileSync(path.join(ROOT, promotionPath), 'utf8');
   const drifted = original.replace(
-    'required-status-check: build',
+    'required-status-check: build / Finalize build controller evidence',
     'required-status-check: skipped',
   );
   assert.notEqual(drifted, original);

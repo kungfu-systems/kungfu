@@ -19,7 +19,7 @@
       "publish_channel": "release",
       "publish_dist_tag": "latest"
     },
-    "required_status_check": "build",
+    "required_status_check": "build / Finalize build controller evidence",
     "required_artifact_count": 5,
     "artifact_attestation": {
       "subject_path": "product/release/cli/kungfu-episodes-cli-linux-x64.tar.gz",

@@ -225,7 +225,6 @@ export function createDeliveryBinding({
   if (
     lease.pullRequestHead !== source.pullRequestHead ||
     lease.devHead !== exactDevHead ||
-    lease.replayedCandidate !== exactCandidateHead ||
     lease.replayedTree !== exactCandidateTree
   ) {
     throw new Error('family delivery source or latest-dev replay drift');
@@ -246,10 +245,11 @@ export function createDeliveryBinding({
     source: {
       ...source,
       devHead: exactDevHead,
-      replayedCandidate: requireSha(
-        lease.replayedCandidate,
-        'delivery replayed candidate',
-      ),
+      // GitHub preserves the admitted base and tree but rewrites commit
+      // metadata when it creates the merge-group candidate. Bind delivery to
+      // that provider-issued head while the family lease continues to seal
+      // the deterministic Project Cut replay through its lease root.
+      replayedCandidate: exactCandidateHead,
       replayedTree: exactCandidateTree,
     },
     family: {

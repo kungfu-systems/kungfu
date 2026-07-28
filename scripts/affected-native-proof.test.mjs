@@ -495,36 +495,34 @@ test('exact pull-request qualification proof is reusable by bound delivery', () 
 });
 
 test('delivery attempt seals the exact family, source, proof decision, and run', () => {
-  const binding = createDeliveryBinding(deliveryFixture().values);
+  const binding = createDeliveryBinding({
+    ...deliveryFixture().values,
+    candidateHead: OTHER_HEAD,
+  });
   const descriptor = createProofDescriptor(
-    plan(QUEUE_HEAD),
+    plan(OTHER_HEAD),
     TREE,
     2,
     TOOLCHAIN,
     binding,
   );
+  const queueProducer = producer({
+    triggerHeadSha: OTHER_HEAD,
+    checkoutSha: OTHER_HEAD,
+  });
   const proof = {
     proofId: descriptor.proofId,
     proofRoot: digest({ proofId: descriptor.proofId }),
-    producer: producer({
-      runId: 41,
-      triggerHeadSha: QUEUE_HEAD,
-      checkoutSha: QUEUE_HEAD,
-    }),
+    producer: { ...queueProducer, runId: 41 },
   };
-  const attempt = createDeliveryAttempt(
-    descriptor,
-    proof,
-    'reused',
-    producer({
-      runId: 42,
-      triggerHeadSha: QUEUE_HEAD,
-      checkoutSha: QUEUE_HEAD,
-    }),
-  );
+  const attempt = createDeliveryAttempt(descriptor, proof, 'reused', {
+    ...queueProducer,
+    runId: 42,
+  });
   assert.equal(validateDeliveryAttempt(attempt), attempt);
   assert.equal(attempt.source.pullRequestHead, HEAD);
-  assert.equal(attempt.source.mergeGroupHead, QUEUE_HEAD);
+  assert.equal(attempt.source.mergeGroupHead, OTHER_HEAD);
+  assert.equal(attempt.source.replayedTree, TREE);
   assert.equal(attempt.proof.decision, 'reused');
   assert.equal(attempt.workflow.runId, 42);
   assert.throws(

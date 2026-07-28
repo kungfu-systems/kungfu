@@ -149,7 +149,7 @@ jobs:
       release-candidate-workflow-name: Build
       artifact-patterns: |
         kungfu-*
-      required-status-check: build
+      required-status-check: build / Finalize build controller evidence
       publish-target: custom
       publish-artifact-kind: kungfu-product
       publish-command: node scripts/buildchain-custom-publish-evidence.mjs
