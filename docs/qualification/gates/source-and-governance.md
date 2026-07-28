@@ -228,6 +228,14 @@ Each section is bound to the registry id by the catalog meta gate.
   run to completion. A non-empty, source-bound native plan enters the
   registered action; a tier-none plan writes the same receipt directly without
   installing Buildchain, Conan, or the workspace.
+- **SDK workflow impact:** the build-free planner compares a bounded semantic
+  projection of the candidate planner and affected-native shard through the
+  installed four-language SDK qualification step. The shard's
+  `source_acceptance` dependency and unrelated jobs are scheduling-only, so
+  changing only those fields does not rebuild the SDK. Changes to any other
+  dependency, runner, permissions, environment, matrix, timeout, planner
+  wiring, SDK preparation/build/pack/qualification step, or an unreadable or
+  incomplete workflow projection require SDK qualification.
 - **Retirement:** remove only with a replacement that consumes the same
   architecture authority and preserves changed-path completeness, raw native
   evidence and the alpha/release responsibility split.

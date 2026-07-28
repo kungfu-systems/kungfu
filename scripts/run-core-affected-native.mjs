@@ -11,6 +11,7 @@ import { pathToFileURL } from 'node:url';
 import { observeNativeToolchain } from './affected-native-proof.mjs';
 import telemetry from './candidate-timeline-events.cjs';
 import { devMergeBaseCandidates } from './candidate-timeline-events.cjs';
+import { parseDocument } from './readonly-source-toolchain.mjs';
 import { writeShifuGateEvidence } from './shifu-gate-evidence.mjs';
 
 const { measureCandidateStage } = telemetry;
@@ -68,9 +69,13 @@ const sdkRootScriptKeys = [
   'sdk:layered:check',
   'sdk:layered:generate',
 ];
+const affectedNativeWorkflow = '.github/workflows/affected-native-pr.yml';
+const affectedNativeSdkTerminalStep =
+  'Qualify installed four-language SDK wire contract';
+const affectedNativePlanStep = 'Plan exact dev candidate qualification';
 const sdkQualificationPaths = [
   '.github/workflows/affected-native-cache-promote.yml',
-  '.github/workflows/affected-native-pr.yml',
+  affectedNativeWorkflow,
   'crates/Cargo.lock',
   'crates/Cargo.toml',
   'crates/kungfu-sdk/',
@@ -171,6 +176,119 @@ function readJsonAtRevision(revision, file) {
   return JSON.parse(result.stdout);
 }
 
+function readWorkflowAtRevision(revision, file) {
+  const result = spawnSync('git', ['show', `${revision}:${file}`], {
+    cwd: root,
+    encoding: 'utf8',
+    shell: false,
+  });
+  if (result.status !== 0) {
+    throw new Error(
+      result.stderr.trim() || `cannot read ${file} at ${revision}`,
+    );
+  }
+  const document = parseDocument(result.stdout);
+  if (document.errors.length) throw document.errors[0];
+  return document.toJS();
+}
+
+function requiredObject(value, label) {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    throw new Error(`${label} must be an object`);
+  }
+  return value;
+}
+
+function uniqueNamedStep(job, name, label) {
+  const steps = Array.isArray(job.steps) ? job.steps : [];
+  const matches = steps
+    .map((step, index) => ({ step, index }))
+    .filter(({ step }) => step?.name === name);
+  if (matches.length !== 1) {
+    throw new Error(`${label} must contain exactly one '${name}' step`);
+  }
+  return matches[0];
+}
+
+function semanticNeeds(value, ignored, label) {
+  const needs =
+    value === undefined
+      ? []
+      : typeof value === 'string'
+        ? [value]
+        : Array.isArray(value) &&
+            value.every((item) => typeof item === 'string')
+          ? value
+          : null;
+  if (!needs)
+    throw new Error(`${label} needs must be a string or string array`);
+  return unique(needs.filter((item) => !ignored.includes(item)));
+}
+
+function semanticShardCondition(value) {
+  if (typeof value !== 'string') {
+    throw new Error('affected_native_shards job if must be a string');
+  }
+  const sourceGuard =
+    /needs\.source_acceptance\.result\s*==\s*'success'\s*&&\s*/gu;
+  const matches = value.match(sourceGuard) || [];
+  if (matches.length > 1) {
+    throw new Error(
+      'affected_native_shards job has duplicate source acceptance guards',
+    );
+  }
+  return value.replace(sourceGuard, '').replace(/\s+/gu, ' ').trim();
+}
+
+export function affectedNativeWorkflowSdkProjection(document) {
+  const workflow = requiredObject(document, 'affected-native workflow');
+  const jobs = requiredObject(workflow.jobs, 'affected-native workflow jobs');
+  const candidate = requiredObject(
+    jobs.candidate_preflight,
+    'candidate_preflight job',
+  );
+  const shard = requiredObject(
+    jobs.affected_native_shards,
+    'affected_native_shards job',
+  );
+  if (!Array.isArray(shard.steps)) {
+    throw new Error('affected_native_shards steps must be an array');
+  }
+  const terminal = uniqueNamedStep(
+    shard,
+    affectedNativeSdkTerminalStep,
+    'affected_native_shards job',
+  );
+  const candidatePlan = uniqueNamedStep(
+    candidate,
+    affectedNativePlanStep,
+    'candidate_preflight job',
+  );
+  const { steps: _candidateSteps, ...candidateJob } = candidate;
+  const { steps: _shardSteps, ...shardJob } = shard;
+  shardJob.needs = semanticNeeds(
+    shard.needs,
+    ['source_acceptance'],
+    'affected_native_shards job',
+  );
+  shardJob.if = semanticShardCondition(shard.if);
+  return {
+    workflow: {
+      permissions: workflow.permissions || null,
+      env: workflow.env || null,
+      defaults: workflow.defaults || null,
+    },
+    candidatePreflight: {
+      job: candidateJob,
+      plan: candidatePlan.step,
+    },
+    affectedNativeShards: {
+      job: shardJob,
+      stepsThroughSdkQualification: shard.steps.slice(0, terminal.index + 1),
+    },
+  };
+}
+
 export function rootPackageSdkProjection(document) {
   if (!document || typeof document !== 'object' || Array.isArray(document)) {
     throw new Error('root package document must be an object');
@@ -235,7 +353,10 @@ export function sdkQualificationImpact(
   changedFiles,
   base,
   head,
-  { packageAtRevision = readJsonAtRevision } = {},
+  {
+    packageAtRevision = readJsonAtRevision,
+    workflowAtRevision = readWorkflowAtRevision,
+  } = {},
 ) {
   let required = false;
   const reasons = [];
@@ -257,6 +378,31 @@ export function sdkQualificationImpact(
         reasons.push({
           path: file,
           kind: 'root-package-sdk-impact-unknown',
+        });
+      }
+      continue;
+    }
+    if (file === affectedNativeWorkflow) {
+      try {
+        const before = affectedNativeWorkflowSdkProjection(
+          workflowAtRevision(base, file),
+        );
+        const after = affectedNativeWorkflowSdkProjection(
+          workflowAtRevision(head, file),
+        );
+        const changed = stableJson(before) !== stableJson(after);
+        required ||= changed;
+        reasons.push({
+          path: file,
+          kind: changed
+            ? 'affected-native-workflow-sdk-projection'
+            : 'affected-native-workflow-sdk-neutral',
+        });
+      } catch {
+        required = true;
+        reasons.push({
+          path: file,
+          kind: 'affected-native-workflow-sdk-impact-unknown',
         });
       }
       continue;
