@@ -844,8 +844,9 @@ json assess_package(const json &package, const std::string &registry_root, const
   const auto operation = required_text(request, "operation", "request");
   const auto purpose = required_text(request, "purpose", "request");
   const auto cut = required_text(request, "cut", "request");
-  static const std::set<std::string> operations = {
-      "inspect", "install", "update", "enable", "activate", "host-placement", "capability", "migration", "system-role"};
+  static const std::set<std::string> operations = {"inspect",   "install",    "update",         "enable",
+                                                   "activate",  "qualify",    "host-placement", "capability",
+                                                   "migration", "system-role"};
   validate_enum(operation, operations, "admission operation");
 
   const auto policy = object_or_empty(request, "policy");
@@ -1254,12 +1255,13 @@ lifecycle_view load_lifecycle(const std::string &runtime_dir) {
     } else if (schema == "kungfu.kfx.package-fact/v1") {
       result.desired_states[body.at("transport").at("packageKey").get<std::string>()] =
           body.at("desiredState").get<std::string>();
-    } else if (schema == "kungfu.kfx.episode-fact/v1") {
+    } else if (schema == "kungfu.kfx.episode-fact/v1" || schema == "kungfu.kfx.episode-fact/v2") {
       const auto key = body.value("packageKey", "");
       if (!key.empty())
         result.observed_states[key] = body.value("observedState", "unknown");
       result.work_history.push_back(body);
-    } else if (schema == "kungfu.kfx.work-fact/v1" || schema == "kungfu.kfx.settlement-fact/v1") {
+    } else if (schema == "kungfu.kfx.work-fact/v1" || schema == "kungfu.kfx.work-fact/v2" ||
+               schema == "kungfu.kfx.settlement-fact/v1" || schema == "kungfu.kfx.settlement-fact/v2") {
       result.work_history.push_back(body);
     }
   }
@@ -1454,6 +1456,156 @@ json lifecycle_plan(const snapshot &value, const lifecycle_view &lifecycle, cons
 inline constexpr const char *KFX_CONTROL_SUITE_ID = "kungfu-kfx-control-suite";
 inline constexpr const char *KFX_CONTROL_PACKAGE_KEY = "kfx-manager";
 
+json canonical_approval_roots(const json &request) {
+  const auto roots = string_array_or_empty(request, "approvalRoots");
+  json result = json::array();
+  for (const auto &root : roots) {
+    if (!is_content_root(root))
+      refuse("KF_KFX_APPROVAL_INVALID", "approval roots must be canonical sha256 content roots");
+    result.push_back(root);
+  }
+  std::sort(result.begin(), result.end());
+  result.erase(std::unique(result.begin(), result.end()), result.end());
+  return result;
+}
+
+json mutation_authorization_plan(const snapshot &value, const lifecycle_view &lifecycle, const json &request,
+                                 const json &load_plan) {
+  const auto operation = required_text(request, "operation", "request");
+  static const std::set<std::string> operations = {"install", "update",   "remove", "enable",
+                                                   "disable", "activate", "qualify"};
+  validate_enum(operation, operations, "lifecycle operation");
+  const auto package_key = required_text(request, "packageKey", "request");
+  const auto package = find_package(value.packages, package_key);
+  if (package.is_null())
+    refuse("KF_KFX_MEMBER_MISSING", "KFX package is not present in the registry: " + package_key);
+  if (!request.contains("authorizationTime") || !request.at("authorizationTime").is_number_integer() ||
+      request.at("authorizationTime").get<int64_t>() < 0)
+    refuse("KF_KFX_AUTHORIZATION_REQUIRED", "mutation planning requires a non-negative authorizationTime");
+  const auto authorization_time = request.at("authorizationTime").get<int64_t>();
+  const json prior_cut = lifecycle.present ? json(lifecycle.cut_root) : json(nullptr);
+  const auto approval_roots = canonical_approval_roots(request);
+
+  json assessment = nullptr;
+  json report_root = nullptr;
+  json admission_plan_root = nullptr;
+  json receipt_dependency_root = nullptr;
+  json policy_root = nullptr;
+  json dependency_root = nullptr;
+  json required_approvals = json::array();
+  std::string mode = "release-passport";
+
+  if (operation == "remove" || operation == "disable") {
+    mode = "owner-system-recovery";
+    const auto recovery = object_or_empty(request, "recoveryWarrant");
+    if (recovery.empty() || recovery.value("schema", "") != "kungfu.kfx-recovery-warrant/v1")
+      refuse("KF_KFX_RECOVERY_WARRANT_REQUIRED",
+             "disable/remove requires an explicit owner or system recovery Warrant");
+    require_exact_fields(recovery,
+                         {"schema", "issuerClass", "operation", "packageRoot", "expectedCutRoot", "expectedRevision",
+                          "approvalRoots", "issuedAt", "expiresAt", "nonce"},
+                         "recovery Warrant");
+    const auto issuer_class = recovery.value("issuerClass", "");
+    if (issuer_class != "workspace-owner" && issuer_class != "core-system")
+      refuse("KF_KFX_RECOVERY_WARRANT_INVALID", "recovery Warrant issuer must be workspace-owner or core-system");
+    if (recovery.value("operation", "") != operation ||
+        recovery.value("packageRoot", "") != package.at("packageRoot").get<std::string>() ||
+        recovery.at("expectedCutRoot") != prior_cut || !recovery.at("expectedRevision").is_number_unsigned() ||
+        recovery.at("expectedRevision").get<uint64_t>() != lifecycle.revision)
+      refuse("KF_KFX_RECOVERY_WARRANT_INVALID", "recovery Warrant does not bind the exact package and prior Cut");
+    if (!recovery.at("issuedAt").is_number_integer() || !recovery.at("expiresAt").is_number_integer() ||
+        recovery.at("issuedAt").get<int64_t>() < 0 ||
+        recovery.at("expiresAt").get<int64_t>() <= recovery.at("issuedAt").get<int64_t>() ||
+        authorization_time < recovery.at("issuedAt").get<int64_t>() ||
+        authorization_time >= recovery.at("expiresAt").get<int64_t>())
+      refuse("KF_KFX_RECOVERY_WARRANT_INVALID", "recovery Warrant is not fresh at authorizationTime");
+    if (!recovery.at("approvalRoots").is_array() || recovery.at("approvalRoots") != approval_roots ||
+        approval_roots.empty())
+      refuse("KF_KFX_RECOVERY_WARRANT_INVALID", "recovery Warrant requires the exact non-empty approval roots");
+    policy_root = root_of({{"schema", "kungfu.kfx-recovery-policy/v1"},
+                           {"issuerClasses", json::array({"core-system", "workspace-owner"})},
+                           {"operations", json::array({"disable", "remove"})},
+                           {"packageCooperationRequired", false}});
+    dependency_root = root_of(recovery);
+    receipt_dependency_root = root_of({{"recoveryWarrantRoot", dependency_root},
+                                       {"policyRoot", policy_root},
+                                       {"packageRoot", package.at("packageRoot")},
+                                       {"priorCutRoot", prior_cut},
+                                       {"priorRevision", lifecycle.revision}});
+    required_approvals = json::array({issuer_class});
+  } else {
+    auto assessment_request = request;
+    assessment_request["cut"] = lifecycle.present ? lifecycle.cut_root : "unborn";
+    assessment_request["operation"] = operation;
+    assessment = assess_package(package, value.registry_root, assessment_request);
+    const auto &report = assessment.at("trustReport");
+    const auto &admission = assessment.at("admissionPlan");
+    if (!admission.value("allowed", false) || !report.value("fresh", false))
+      refuse("KF_KFX_ADMISSION_REQUIRED",
+             "mutation requires a fresh, exact-root, allowed Release Passport AdmissionPlan");
+    report_root = report.at("reportRoot");
+    admission_plan_root = admission.at("planRoot");
+    receipt_dependency_root = admission.at("receiptDependencyRoot");
+    policy_root = report.at("policyRoot");
+    dependency_root = admission.at("dependencyRoot");
+    required_approvals = admission.at("requiredApprovals");
+    if (!required_approvals.empty() && approval_roots.empty())
+      refuse("KF_KFX_APPROVAL_REQUIRED", "AdmissionPlan requires explicit approval roots");
+  }
+
+  const json basis = {{"cutRoot", prior_cut},
+                      {"revision", lifecycle.revision},
+                      {"registryRoot", value.registry_root},
+                      {"graphRoot", value.graph_root},
+                      {"loadPlanRoot", load_plan.at("planRoot")},
+                      {"packageRoot", package.at("packageRoot")},
+                      {"dependencyRoot", dependency_root}};
+  const json authority_roots = {{"reportRoot", report_root},
+                                {"admissionPlanRoot", admission_plan_root},
+                                {"receiptDependencyRoot", receipt_dependency_root},
+                                {"policyRoot", policy_root},
+                                {"packageRoot", package.at("packageRoot")},
+                                {"dependencyRoot", dependency_root},
+                                {"requiredApprovals", required_approvals},
+                                {"approvalRoots", approval_roots}};
+  const auto authority_basis_root =
+      root_of({{"schema", "kungfu.kfx-mutation-authority-basis/v1"},
+               {"mode", mode},
+               {"operation", operation},
+               {"packageKey", package_key},
+               {"basis", basis},
+               {"authorityRoots", authority_roots},
+               {"requestedCapabilities", request.value("requestedCapabilities", json::array())},
+               {"authorizationTime", authorization_time}});
+  const json warrant_identity = {{"schema", "kungfu.kfx.warrant-fact/v2"},
+                                 {"mode", mode},
+                                 {"operation", operation},
+                                 {"packageKey", package_key},
+                                 {"authorityBasisRoot", authority_basis_root},
+                                 {"basis", basis},
+                                 {"authorityRoots", authority_roots},
+                                 {"state", "issued"},
+                                 {"issuedAt", authorization_time}};
+  const auto warrant_root = root_of(warrant_identity);
+  json identity = {{"schema", "kungfu.kfx-mutation-authorization-plan/v1"},
+                   {"mode", mode},
+                   {"operation", operation},
+                   {"packageKey", package_key},
+                   {"basis", basis},
+                   {"authorityRoots", authority_roots},
+                   {"requestedCapabilities", request.value("requestedCapabilities", json::array())},
+                   {"authorizationTime", authorization_time},
+                   {"warrantRoot", warrant_root},
+                   {"warrantObjectId", fact_id("warrant", warrant_root)},
+                   {"workObjectId", fact_id("work", authority_basis_root)}};
+  const auto authorization_plan_root = root_of(identity);
+  auto result = identity;
+  result["authorizationPlanRoot"] = authorization_plan_root;
+  result["actionId"] = "kfx-action:" + sha256(authorization_plan_root).substr(0, 32);
+  result["assessment"] = assessment;
+  return result;
+}
+
 json control_bootstrap_policy() {
   const json identity = {{"schema", "kungfu.kfx.control-bootstrap-policy/v1"},
                          {"controllerId", KFX_CONTROL_SUITE_ID},
@@ -1529,7 +1681,8 @@ json inspect_control_package_path(const fs::path &path) {
 std::vector<json> retained_control_candidates(const lifecycle_view &lifecycle) {
   std::vector<std::pair<int64_t, fs::path>> paths;
   for (const auto &event : lifecycle.work_history) {
-    if (event.value("schema", "") != "kungfu.kfx.episode-fact/v1" ||
+    const auto schema = event.value("schema", "");
+    if ((schema != "kungfu.kfx.episode-fact/v1" && schema != "kungfu.kfx.episode-fact/v2") ||
         event.value("packageKey", "") != KFX_CONTROL_PACKAGE_KEY)
       continue;
     const auto materialization = event.value("materialization", json::object());
@@ -1643,6 +1796,7 @@ json control_plan(const snapshot &value, const lifecycle_view &lifecycle, const 
     refuse(code, "Control Suite candidate exceeds the embedded bootstrap contract");
   }
   const auto status = control_status(lifecycle);
+  const auto mutation_authorization = mutation_authorization_plan(value, lifecycle, request, load_plan);
   const json identity = {
       {"schema", "kungfu.kfx.control-suite-plan/v1"},
       {"controllerId", KFX_CONTROL_SUITE_ID},
@@ -1661,6 +1815,9 @@ json control_plan(const snapshot &value, const lifecycle_view &lifecycle, const 
       {"loadPlanRoot", load_plan.at("planRoot")},
       {"registryRoot", load_plan.at("registryRoot")},
       {"graphRoot", load_plan.at("graphRoot")},
+      {"mutationAuthorization", mutation_authorization},
+      {"authorizationPlanRoot", mutation_authorization.at("authorizationPlanRoot")},
+      {"warrantRoot", mutation_authorization.at("warrantRoot")},
       {"allowed", true},
       {"requiresAuthorization", true},
       {"authority", "public-kfx-plan-plus-fact-work-settlement"}};
@@ -1668,16 +1825,6 @@ json control_plan(const snapshot &value, const lifecycle_view &lifecycle, const 
   result["controlPlanRoot"] = root_of(identity);
   result["loadPlan"] = load_plan;
   return result;
-}
-
-int64_t receipt_time(const json &request) {
-  if (request.contains("systemTime")) {
-    if (!request.at("systemTime").is_number_integer() || request.at("systemTime").get<int64_t>() < 0)
-      refuse("KF_KFX_SCHEMA_INVALID", "systemTime must be a non-negative integer");
-    return request.at("systemTime").get<int64_t>();
-  }
-  return std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::system_clock::now().time_since_epoch())
-      .count();
 }
 
 json lifecycle_history(const std::string &runtime_dir, const json &request) {
@@ -1703,8 +1850,10 @@ json lifecycle_history(const std::string &runtime_dir, const json &request) {
         continue;
       }
       const auto schema = body.value("schema", "");
-      if (schema != "kungfu.kfx.work-fact/v1" && schema != "kungfu.kfx.warrant-fact/v1" &&
-          schema != "kungfu.kfx.episode-fact/v1" && schema != "kungfu.kfx.settlement-fact/v1")
+      if (schema != "kungfu.kfx.work-fact/v1" && schema != "kungfu.kfx.work-fact/v2" &&
+          schema != "kungfu.kfx.warrant-fact/v1" && schema != "kungfu.kfx.warrant-fact/v2" &&
+          schema != "kungfu.kfx.episode-fact/v1" && schema != "kungfu.kfx.episode-fact/v2" &&
+          schema != "kungfu.kfx.settlement-fact/v1" && schema != "kungfu.kfx.settlement-fact/v2")
         continue;
       if (package_key.empty() || body.value("packageKey", "") == package_key)
         events.push_back(body);
@@ -1798,21 +1947,110 @@ std::string package_identity_root(const json &package) {
        {"manifestIdentity", package.value("name", "").empty() ? package.at("manifestRoot") : package.at("name")}});
 }
 
+json issue_fact_work_authority(const std::string &runtime_dir, const snapshot &value, const lifecycle_view &current,
+                               const json &authorization) {
+  const auto action_id = authorization.at("actionId").get<std::string>();
+  const auto work_id = authorization.at("workObjectId").get<std::string>();
+  const auto warrant_id = authorization.at("warrantObjectId").get<std::string>();
+  const auto recorded_at = authorization.at("authorizationTime").get<int64_t>();
+  const auto profile_root = native_kfx_domain_profile().at("domainProfileRoot");
+  fact_work_builder builder(runtime_dir, current);
+  const auto projection_id = fact_id("registry-projection", KFX_REGISTRY_REF);
+  builder.put(projection_id, "kungfu.kfx.registry-projection",
+              {{"schema", "kungfu.kfx.registry-projection-fact/v1"},
+               {"profile", KFX_PROFILE_ID},
+               {"domainProfileRoot", profile_root},
+               {"cutRef", KFX_REGISTRY_REF},
+               {"projection", snapshot_projection(value)}});
+  builder.put(work_id, "kungfu.kfx.work",
+              {{"schema", "kungfu.kfx.work-fact/v2"},
+               {"profile", KFX_PROFILE_ID},
+               {"domainProfileRoot", profile_root},
+               {"actionId", action_id},
+               {"operation", authorization.at("operation")},
+               {"packageKey", authorization.at("packageKey")},
+               {"basis", authorization.at("basis")},
+               {"authorityRoots", authorization.at("authorityRoots")},
+               {"authorizationPlanRoot", authorization.at("authorizationPlanRoot")},
+               {"warrantRoot", authorization.at("warrantRoot")},
+               {"recordedAt", recorded_at},
+               {"status", "authorized"}});
+  builder.put(warrant_id, "kungfu.kfx.warrant",
+              {{"schema", "kungfu.kfx.warrant-fact/v2"},
+               {"profile", KFX_PROFILE_ID},
+               {"domainProfileRoot", profile_root},
+               {"actionId", action_id},
+               {"operation", authorization.at("operation")},
+               {"packageKey", authorization.at("packageKey")},
+               {"basis", authorization.at("basis")},
+               {"authorityRoots", authorization.at("authorityRoots")},
+               {"authorizationPlanRoot", authorization.at("authorizationPlanRoot")},
+               {"warrantRoot", authorization.at("warrantRoot")},
+               {"state", "issued"},
+               {"recordedAt", recorded_at}});
+  builder.relate("kfx-work-authorized-by", work_id, warrant_id,
+                 {{"schema", "kungfu.kfx.relation-attributes/v1"},
+                  {"actionId", action_id},
+                  {"authorizationPlanRoot", authorization.at("authorizationPlanRoot")}});
+
+  json object_versions = json::array();
+  for (const auto &[object_id, version_root] : builder.versions)
+    object_versions.push_back({{"object_id", object_id}, {"version_root", version_root}});
+  json relation_roots = json::array();
+  for (const auto &root : builder.relations)
+    relation_roots.push_back(root);
+  json parent_cuts = json::array();
+  if (current.present)
+    parent_cuts.push_back(current.cut_root);
+  const auto cut_response = builder.invoke(
+      "cut-put", {{"parent_cut_roots", parent_cuts},
+                  {"object_versions", object_versions},
+                  {"active_relation_roots", relation_roots},
+                  {"declaration_roots", json::array({builder.profile_root})},
+                  {"admission_roots", json::array({builder.admission_root, authorization.at("authorizationPlanRoot"),
+                                                   authorization.at("warrantRoot")})},
+                  {"episode_frontier", json::array()},
+                  {"omission_roots", json::array()},
+                  {"conflict_roots", json::array()}});
+  const auto new_cut_root = cut_response.at("result").at("cut_root");
+  const auto ref_response = builder.invoke(
+      "ref-cas", {{"transition_id", action_id + ":authorize"},
+                  {"ref_name", KFX_REGISTRY_REF},
+                  {"expected_old_cut_root", current.present ? json(current.cut_root) : json(nullptr)},
+                  {"expected_old_revision", current.revision},
+                  {"new_cut_root", new_cut_root},
+                  {"kind", current.present ? "advance" : "create"},
+                  {"reason_root", root_of({{"schema", "kungfu.kfx.warrant-issuance-reason/v1"},
+                                           {"authorizationPlanRoot", authorization.at("authorizationPlanRoot")},
+                                           {"warrantRoot", authorization.at("warrantRoot")}})}});
+  const auto result = ref_response.at("result");
+  const json receipt_identity = {{"schema", "kungfu.kfx.warrant-issuance-receipt/v1"},
+                                 {"actionId", action_id},
+                                 {"operation", authorization.at("operation")},
+                                 {"packageKey", authorization.at("packageKey")},
+                                 {"authorizationPlanRoot", authorization.at("authorizationPlanRoot")},
+                                 {"warrantRoot", authorization.at("warrantRoot")},
+                                 {"workObjectId", work_id},
+                                 {"warrantObjectId", warrant_id},
+                                 {"priorCutRoot", current.present ? json(current.cut_root) : json(nullptr)},
+                                 {"cutRoot", result.at("current_cut_root")},
+                                 {"priorRevision", current.revision},
+                                 {"revision", result.at("current_revision")},
+                                 {"kernelReceiptRoot", ref_response.at("receipt_root")},
+                                 {"recordedAt", recorded_at}};
+  auto receipt = receipt_identity;
+  receipt["receiptRoot"] = root_of(receipt_identity);
+  receipt["steps"] = builder.steps;
+  return receipt;
+}
+
 json commit_fact_work(const std::string &runtime_dir, const snapshot &value, const lifecycle_view &current,
                       const json &request, const std::string &operation, const std::string &desired_state,
-                      const std::string &observed_state, const json &materialization) {
+                      const std::string &observed_state, const json &materialization, const json &authorization,
+                      const json &warrant_receipt) {
   const auto key = required_text(request, "packageKey", "request");
-  const auto recorded_at = receipt_time(request);
-  const auto action_id =
-      "kfx-action:" + sha256(json({{"operation", operation},
-                                   {"packageKey", key},
-                                   {"expectedCutRoot", current.present ? json(current.cut_root) : json(nullptr)},
-                                   {"expectedRevision", current.revision},
-                                   {"planRoot", request.value("expectedPlanRoot", "")},
-                                   {"actor", request.value("actor", "anonymous")},
-                                   {"recordedAt", recorded_at}})
-                                 .dump())
-                          .substr(0, 32);
+  const auto recorded_at = authorization.at("authorizationTime").get<int64_t>();
+  const auto action_id = authorization.at("actionId").get<std::string>();
   fact_work_builder builder(runtime_dir, current);
   const auto projection_id = fact_id("registry-projection", KFX_REGISTRY_REF);
   const auto profile_root = native_kfx_domain_profile().at("domainProfileRoot");
@@ -1888,56 +2126,71 @@ json commit_fact_work(const std::string &runtime_dir, const snapshot &value, con
     }
   }
 
-  const auto work_id = fact_id("work", action_id);
-  const auto warrant_id = fact_id("warrant", action_id);
+  const auto work_id = authorization.at("workObjectId").get<std::string>();
+  const auto warrant_id = authorization.at("warrantObjectId").get<std::string>();
   const auto episode_id = fact_id("episode", action_id);
   const auto settlement_id = fact_id("settlement", action_id);
-  builder.put(
-      work_id, "kungfu.kfx.work",
-      {{"schema", "kungfu.kfx.work-fact/v1"},
-       {"profile", KFX_PROFILE_ID},
-       {"domainProfileRoot", profile_root},
-       {"actionId", action_id},
-       {"operation", operation},
-       {"packageKey", key},
-       {"actor", request.value("actor", "anonymous")},
-       {"recordedAt", recorded_at},
-       {"basis",
-        {{"cutRoot", current.present ? json(current.cut_root) : json(nullptr)}, {"revision", current.revision}}},
-       {"status", "settled"}});
-  builder.put(warrant_id, "kungfu.kfx.warrant",
-              {{"schema", "kungfu.kfx.warrant-fact/v1"},
-               {"profile", KFX_PROFILE_ID},
-               {"domainProfileRoot", profile_root},
-               {"actionId", action_id},
-               {"packageKey", key},
-               {"allowedOperation", operation},
-               {"state", "consumed"},
-               {"recordedAt", recorded_at}});
-  const auto episode_result = builder.put(episode_id, "kungfu.kfx.episode",
-                                          {{"schema", "kungfu.kfx.episode-fact/v1"},
-                                           {"profile", KFX_PROFILE_ID},
-                                           {"domainProfileRoot", profile_root},
-                                           {"actionId", action_id},
-                                           {"operation", operation},
-                                           {"packageKey", key},
-                                           {"outcome", "applied"},
-                                           {"observedState", observed_state},
-                                           {"materialization", materialization},
-                                           {"recordedAt", recorded_at}});
-  builder.put(settlement_id, "kungfu.kfx.settlement",
-              {{"schema", "kungfu.kfx.settlement-fact/v1"},
+  builder.put(work_id, "kungfu.kfx.work",
+              {{"schema", "kungfu.kfx.work-fact/v2"},
                {"profile", KFX_PROFILE_ID},
                {"domainProfileRoot", profile_root},
                {"actionId", action_id},
                {"operation", operation},
                {"packageKey", key},
+               {"actor", request.value("actor", "anonymous")},
+               {"recordedAt", recorded_at},
+               {"basis", authorization.at("basis")},
+               {"authorityRoots", authorization.at("authorityRoots")},
+               {"authorizationPlanRoot", authorization.at("authorizationPlanRoot")},
+               {"warrantRoot", authorization.at("warrantRoot")},
+               {"status", "settled"}});
+  builder.put(warrant_id, "kungfu.kfx.warrant",
+              {{"schema", "kungfu.kfx.warrant-fact/v2"},
+               {"profile", KFX_PROFILE_ID},
+               {"domainProfileRoot", profile_root},
+               {"actionId", action_id},
+               {"operation", operation},
+               {"packageKey", key},
+               {"basis", authorization.at("basis")},
+               {"authorityRoots", authorization.at("authorityRoots")},
+               {"authorizationPlanRoot", authorization.at("authorizationPlanRoot")},
+               {"warrantRoot", authorization.at("warrantRoot")},
+               {"state", "consumed"},
+               {"recordedAt", recorded_at}});
+  const auto episode_result = builder.put(episode_id, "kungfu.kfx.episode",
+                                          {{"schema", "kungfu.kfx.episode-fact/v2"},
+                                           {"profile", KFX_PROFILE_ID},
+                                           {"domainProfileRoot", profile_root},
+                                           {"actionId", action_id},
+                                           {"operation", operation},
+                                           {"packageKey", key},
+                                           {"basis", authorization.at("basis")},
+                                           {"authorityRoots", authorization.at("authorityRoots")},
+                                           {"authorizationPlanRoot", authorization.at("authorizationPlanRoot")},
+                                           {"warrantRoot", authorization.at("warrantRoot")},
+                                           {"outcome", "applied"},
+                                           {"observedState", observed_state},
+                                           {"materialization", materialization},
+                                           {"recordedAt", recorded_at}});
+  builder.put(settlement_id, "kungfu.kfx.settlement",
+              {{"schema", "kungfu.kfx.settlement-fact/v2"},
+               {"profile", KFX_PROFILE_ID},
+               {"domainProfileRoot", profile_root},
+               {"actionId", action_id},
+               {"operation", operation},
+               {"packageKey", key},
+               {"basis", authorization.at("basis")},
+               {"authorityRoots", authorization.at("authorityRoots")},
+               {"authorizationPlanRoot", authorization.at("authorizationPlanRoot")},
+               {"warrantRoot", authorization.at("warrantRoot")},
                {"outcome", "accepted"},
                {"desiredState", desired_state},
                {"observedState", observed_state},
                {"recordedAt", recorded_at}});
   builder.relate("kfx-work-authorized-by", work_id, warrant_id,
-                 {{"schema", "kungfu.kfx.relation-attributes/v1"}, {"actionId", action_id}});
+                 {{"schema", "kungfu.kfx.relation-attributes/v1"},
+                  {"actionId", action_id},
+                  {"authorizationPlanRoot", authorization.at("authorizationPlanRoot")}});
   builder.relate("kfx-work-observed-in", work_id, episode_id,
                  {{"schema", "kungfu.kfx.relation-attributes/v1"}, {"actionId", action_id}});
   builder.relate("kfx-work-settled-by", work_id, settlement_id,
@@ -1962,7 +2215,8 @@ json commit_fact_work(const std::string &runtime_dir, const snapshot &value, con
        {"object_versions", object_versions},
        {"active_relation_roots", relation_roots},
        {"declaration_roots", json::array({builder.profile_root})},
-       {"admission_roots", json::array({builder.admission_root})},
+       {"admission_roots", json::array({builder.admission_root, authorization.at("authorizationPlanRoot"),
+                                        authorization.at("warrantRoot")})},
        {"episode_frontier", json::array({{{"episode_id", episode_number},
                                           {"sealed_content_root", episode_result.at("body_root")},
                                           {"accepted_manifest_frame_uid", std::string("kfx:") + action_id}}})},
@@ -1984,14 +2238,20 @@ json commit_fact_work(const std::string &runtime_dir, const snapshot &value, con
                                  {"operation", operation},
                                  {"packageKey", key},
                                  {"outcome", "applied"},
+                                 {"authorizationPlanRoot", authorization.at("authorizationPlanRoot")},
+                                 {"warrantRoot", authorization.at("warrantRoot")},
+                                 {"authorityRoots", authorization.at("authorityRoots")},
                                  {"workObjectId", work_id},
                                  {"warrantObjectId", warrant_id},
                                  {"episodeObjectId", episode_id},
                                  {"settlementObjectId", settlement_id},
-                                 {"priorCutRoot", current.present ? json(current.cut_root) : json(nullptr)},
+                                 {"priorCutRoot", authorization.at("basis").at("cutRoot")},
+                                 {"authorityCutRoot", warrant_receipt.at("cutRoot")},
                                  {"cutRoot", result.at("current_cut_root")},
-                                 {"priorRevision", current.revision},
+                                 {"priorRevision", authorization.at("basis").at("revision")},
+                                 {"authorityRevision", warrant_receipt.at("revision")},
                                  {"revision", result.at("current_revision")},
+                                 {"warrantReceiptRoot", warrant_receipt.at("receiptRoot")},
                                  {"kernelReceiptRoot", ref_response.at("receipt_root")},
                                  {"recordedAt", recorded_at},
                                  {"materialization", materialization}};
@@ -2032,18 +2292,25 @@ json apply_lifecycle_mutation(const snapshot &value, const lifecycle_view &lifec
     refuse("KF_KFX_ASSESSMENT_STALE", "provider trust root changed since planning");
   if (request.value("expectedPackageRoot", "") != package.at("packageRoot").get<std::string>())
     refuse("KF_KFX_REGISTRY_STALE", "package root changed since planning");
+  const auto authorization = mutation_authorization_plan(value, lifecycle, request, plan);
+  if (request.value("expectedAuthorizationPlanRoot", "") !=
+      authorization.at("authorizationPlanRoot").get<std::string>())
+    refuse("KF_KFX_AUTHORIZATION_STALE", "mutation authorization plan changed since planning");
+  if (request.value("expectedWarrantRoot", "") != authorization.at("warrantRoot").get<std::string>())
+    refuse("KF_KFX_WARRANT_INVALID", "mutation does not present the exact planned Warrant root");
 
   const auto runtime_root = lifecycle_root(runtime_dir);
   const auto install_root = fs::absolute(runtime_dir).parent_path() / "extensions";
   const auto destination = install_root / package_key;
   const auto source = fs::path(package.at("path").get<std::string>());
-  const auto next_revision = lifecycle.revision + 1;
+  const auto next_revision = lifecycle.revision + 2;
   fs::path retained_path;
   fs::path staged_path;
   fs::path content_path;
   bool destination_replaced = false;
   bool destination_materialized = false;
   bool appending_receipt = false;
+  json warrant_receipt = nullptr;
 
   auto rollback = [&] {
     std::error_code ignored;
@@ -2055,7 +2322,22 @@ json apply_lifecycle_mutation(const snapshot &value, const lifecycle_view &lifec
       fs::remove_all(staged_path, ignored);
   };
 
+  if (operation == "install" && fs::exists(destination) && !request.value("replaceExisting", false))
+    refuse("KF_KFX_PACKAGE_DUPLICATE", "KFX package is already installed: " + package_key);
+  if (operation == "update" && !fs::exists(destination))
+    refuse("KF_KFX_MEMBER_MISSING", "cannot update an absent KFX package: " + package_key);
+  if (operation == "remove") {
+    const auto canonical_destination = fs::weakly_canonical(source);
+    const auto canonical_install_root = fs::weakly_canonical(install_root);
+    if (canonical_destination.parent_path() != canonical_install_root)
+      refuse("KF_KFX_PATH_TRAVERSAL", "remove is confined to the managed KFX install root");
+  }
+  const auto planned_stage = install_root / (".kfx-stage-" + package_key + "-" + std::to_string(next_revision));
+  if ((operation == "install" || operation == "update") && fs::exists(planned_stage))
+    refuse("KF_KFX_WRITER_BUSY", "a staged KFX package already exists for this Fact Cut revision");
+
   try {
+    warrant_receipt = issue_fact_work_authority(runtime_dir, value, lifecycle, authorization);
     if (operation == "install" || operation == "update") {
       content_path = runtime_root / "content" / package.at("packageRoot").get<std::string>().substr(7);
       fs::create_directories(content_path.parent_path());
@@ -2115,8 +2397,13 @@ json apply_lifecycle_mutation(const snapshot &value, const lifecycle_view &lifec
                                   {"retainedPath", retained_path.empty() ? nullptr : json(retained_path.string())},
                                   {"destinationPath", destination.string()}};
     appending_receipt = true;
-    auto receipt = commit_fact_work(runtime_dir, accepted, lifecycle, request, operation, desired_state, observed_state,
-                                    materialization);
+    const auto authorized_lifecycle = load_lifecycle(runtime_dir);
+    if (!authorized_lifecycle.present ||
+        authorized_lifecycle.cut_root != warrant_receipt.at("cutRoot").get<std::string>() ||
+        authorized_lifecycle.revision != warrant_receipt.at("revision"))
+      refuse("KF_KFX_WARRANT_INVALID", "issued Warrant Cut is not the current mutation authority");
+    auto receipt = commit_fact_work(runtime_dir, accepted, authorized_lifecycle, request, operation, desired_state,
+                                    observed_state, materialization, authorization, warrant_receipt);
     return {{"schema", "kungfu.kfx.lifecycle-application/v2"},
             {"applied", true},
             {"cutRoot", receipt.at("cutRoot")},
@@ -2252,8 +2539,14 @@ static json query_native_kfx_registry_unchecked(const std::string &action, const
   }
   const auto load_plan = lifecycle_plan(selected, lifecycle, request);
   if (control_request && action == "apply") {
-    if (request.value("authorizationId", "").empty())
-      refuse("KF_KFX_CONTROL_AUTHORIZATION_REQUIRED", "Control Suite apply requires an authorization identity");
+    const auto candidate = find_package(selected.packages, KFX_CONTROL_PACKAGE_KEY);
+    const json actual_cut = lifecycle.present ? json(lifecycle.cut_root) : json(nullptr);
+    if (!request.contains("expectedRevision") || !request.at("expectedRevision").is_number_integer() ||
+        request.at("expectedRevision").get<int64_t>() < 0 ||
+        static_cast<uint64_t>(request.at("expectedRevision").get<int64_t>()) != lifecycle.revision ||
+        !request.contains("expectedCutRoot") || request.at("expectedCutRoot") != actual_cut || candidate.is_null() ||
+        request.value("expectedPackageRoot", "") != candidate.value("packageRoot", ""))
+      refuse("KF_KFX_CONTROL_PLAN_STALE", "Control Suite Cut or candidate root changed since planning");
     const auto planned = control_plan(selected, lifecycle, request, load_plan);
     if (request.value("expectedControlPlanRoot", "") != planned.at("controlPlanRoot").get<std::string>())
       refuse("KF_KFX_CONTROL_PLAN_STALE", "Control Suite plan root changed since authorization");
@@ -2265,7 +2558,8 @@ static json query_native_kfx_registry_unchecked(const std::string &action, const
             {"controllerId", KFX_CONTROL_SUITE_ID},
             {"controlPlanRoot", planned.at("controlPlanRoot")},
             {"bootstrapPolicyRoot", planned.at("bootstrapPolicyRoot")},
-            {"authorizationId", request.at("authorizationId")},
+            {"authorizationPlanRoot", planned.at("authorizationPlanRoot")},
+            {"warrantRoot", planned.at("warrantRoot")},
             {"application", application},
             {"status", control_status(settled)},
             {"verified", true}};
@@ -2379,6 +2673,14 @@ static json query_native_kfx_registry_unchecked(const std::string &action, const
     refuse("KF_KFX_MEMBER_MISSING", "KFX Suite is not present in the registry: " + key);
   }
 
+  if (action == "plan" && !request.value("operation", "").empty()) {
+    const auto authorization = mutation_authorization_plan(selected, lifecycle, request, load_plan);
+    auto result = load_plan;
+    result["mutationAuthorization"] = authorization;
+    result["authorizationPlanRoot"] = authorization.at("authorizationPlanRoot");
+    result["warrantRoot"] = authorization.at("warrantRoot");
+    return result;
+  }
   return load_plan;
 }
 

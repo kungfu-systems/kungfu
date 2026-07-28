@@ -14,7 +14,6 @@
     {"removed": "kungfu atlas authority-status", "canonical": "kungfu profile mission-control authority-status"},
     {"removed": "kungfu atlas authority-cutover", "canonical": "kungfu profile mission-control authority-cutover"},
     {"removed": "kungfu atlas authority-rollback", "canonical": "kungfu profile mission-control authority-rollback"},
-    {"removed": "kungfu atlas assess-mission", "canonical": "kungfu profile mission-control assess-mission"},
     {"removed": "kungfu atlas create-mission", "canonical": "kungfu work admit"},
     {"removed": "kungfu atlas export-mission", "canonical": "kungfu profile mission-control export-mission"},
     {"removed": "kungfu atlas import-mission", "canonical": "kungfu profile mission-control import-mission"},

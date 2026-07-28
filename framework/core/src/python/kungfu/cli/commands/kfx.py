@@ -125,8 +125,39 @@ def _libwasm_host():
     )
 
 
-def _native_mutation(ctx, package_root, key, operation, trusted, **values):
+_MUTATION_AUTHORITY_FIELDS = {
+    "purpose",
+    "policy",
+    "assessmentTime",
+    "authorizationTime",
+    "attestation",
+    "identity",
+    "trustInputs",
+    "kfdAssessment",
+    "runtimeEvidence",
+    "requestedCapabilities",
+    "approvalRoots",
+    "recoveryWarrant",
+}
+
+
+def _native_authority_file(path):
+    authority = _native_json_file(path, "KFX mutation authority evidence")
+    unsupported = sorted(set(authority) - _MUTATION_AUTHORITY_FIELDS)
+    if unsupported:
+        raise click.BadParameter(
+            "KFX mutation authority evidence contains non-authority fields: "
+            + ", ".join(unsupported),
+            param_hint="--authority-file",
+        )
+    return authority
+
+
+def _native_mutation(
+    ctx, package_root, key, operation, first_party, authority, **values
+):
     request = {
+        **authority,
         "packageKey": key,
         "operation": operation,
         **values,
@@ -134,7 +165,7 @@ def _native_mutation(ctx, package_root, key, operation, trusted, **values):
     if package_root is not None:
         request["roots"] = [{"kind": "user", "path": str(Path(package_root).resolve())}]
         request["runtimeTiers"] = {
-            key: "first-party-pinned" if trusted else "untrusted",
+            key: "first-party-pinned" if first_party else "untrusted",
         }
     plan = storage_service.kfx_registry("plan", request, ctx.runtime_dir)
     package = next(
@@ -152,6 +183,8 @@ def _native_mutation(ctx, package_root, key, operation, trusted, **values):
         "expectedPlanRoot": plan["planRoot"],
         "expectedTrustRoot": package["trustRoot"],
         "expectedPackageRoot": package["packageRoot"],
+        "expectedAuthorizationPlanRoot": plan["authorizationPlanRoot"],
+        "expectedWarrantRoot": plan["warrantRoot"],
         "actor": "kungfu-cli",
     }
     return storage_service.kfx_registry("apply", mutation, ctx.runtime_dir)
@@ -175,8 +208,14 @@ def _extract_package_tgz(source, package_root):
 @click.option(
     "--force", is_flag=True, help="replace an existing install of the same key"
 )
+@click.option(
+    "--authority-file",
+    required=True,
+    type=click.Path(exists=True, dir_okay=False, path_type=Path),
+    help="JSON evidence for Core Release Passport and Warrant recomputation",
+)
 @kfx_command_context
-def install(ctx, source, force):
+def install(ctx, source, force, authority_file):
     is_tgz = os.path.isfile(source)
     try:
         manifest = (
@@ -204,6 +243,7 @@ def install(ctx, source, force):
             sys.exit(1)
     operation = "update" if dest.exists() else "install"
     try:
+        authority = _native_authority_file(authority_file)
         if is_tgz:
             with tempfile.TemporaryDirectory(prefix="kungfu-kfx-package-") as temp:
                 package_root = Path(temp) / "package"
@@ -214,6 +254,7 @@ def install(ctx, source, force):
                     key,
                     operation,
                     _trusted(manifest),
+                    authority,
                     replaceExisting=force,
                 )
         else:
@@ -223,6 +264,7 @@ def install(ctx, source, force):
                 key,
                 operation,
                 _trusted(manifest),
+                authority,
                 replaceExisting=force,
             )
     except (OSError, RuntimeError, ValueError) as error:
@@ -349,8 +391,14 @@ def run_wasm(ctx, key, grants, source_namespace, source_name, engine):
 
 @kfx.command(help="remove an installed kfx by its key")
 @click.argument("key", type=str)
+@click.option(
+    "--authority-file",
+    required=True,
+    type=click.Path(exists=True, dir_okay=False, path_type=Path),
+    help="JSON evidence containing the exact owner/system recovery Warrant",
+)
 @kfx_command_context
-def remove(ctx, key):
+def remove(ctx, key, authority_file):
     dest = Path(_install_root(ctx)) / key
     # uninstall is scoped to the managed install root; never touch elsewhere
     if os.path.realpath(dest.parent) != os.path.realpath(_install_root(ctx)):
@@ -361,12 +409,14 @@ def remove(ctx, key):
         sys.exit(1)
     try:
         manifest = kfx_contract.read_manifest_from_dir(dest)
+        authority = _native_authority_file(authority_file)
         application = _native_mutation(
             ctx,
             None,
             key,
             "remove",
             _trusted(manifest),
+            authority,
         )
     except (OSError, RuntimeError, ValueError, json.JSONDecodeError) as error:
         raise click.ClickException(str(error)) from error
@@ -588,13 +638,23 @@ def native_control_status(ctx):
 )
 @click.argument("candidate", type=click.Path(exists=True, file_okay=False))
 @click.option("--operation", type=click.Choice(["install", "update"]), required=True)
+@click.option(
+    "--authority-file",
+    required=True,
+    type=click.Path(exists=True, dir_okay=False, path_type=Path),
+    help="JSON evidence for Core Release Passport and Warrant recomputation",
+)
 @kfx_command_context
-def native_control_plan(ctx, candidate, operation):
+def native_control_plan(ctx, candidate, operation, authority_file):
+    request = {
+        **_native_authority_file(authority_file),
+        **_control_request(candidate, operation),
+    }
     click.echo(
         json.dumps(
             storage_service.kfx_registry(
                 "plan",
-                _control_request(candidate, operation),
+                request,
                 ctx.runtime_dir,
             ),
             indent=2,
@@ -610,9 +670,19 @@ def native_control_plan(ctx, candidate, operation):
 @click.argument(
     "plan_file", type=click.Path(exists=True, dir_okay=False, path_type=Path)
 )
-@click.option("--authorized-by", required=True)
+@click.option(
+    "--authority-file",
+    required=True,
+    type=click.Path(exists=True, dir_okay=False, path_type=Path),
+    help="the same JSON evidence used to form the authorized plan",
+)
+@click.option(
+    "--authorized-by",
+    required=True,
+    help="audit actor label only; this value grants no authority",
+)
 @kfx_command_context
-def native_control_apply(ctx, candidate, plan_file, authorized_by):
+def native_control_apply(ctx, candidate, plan_file, authority_file, authorized_by):
     plan = _native_json_file(plan_file, "Control Suite plan")
     load_plan = plan.get("loadPlan") or {}
     package = next(
@@ -628,6 +698,7 @@ def native_control_apply(ctx, candidate, plan_file, authorized_by):
             "Control Suite plan does not contain kfx-manager", param_hint="plan_file"
         )
     request = {
+        **_native_authority_file(authority_file),
         **_control_request(candidate, str(plan.get("operation") or "")),
         "expectedCutRoot": load_plan.get("cutRoot"),
         "expectedRevision": load_plan.get("revision"),
@@ -638,7 +709,8 @@ def native_control_apply(ctx, candidate, plan_file, authorized_by):
         "expectedPackageRoot": package.get("packageRoot"),
         "expectedControlPlanRoot": plan.get("controlPlanRoot"),
         "expectedBootstrapPolicyRoot": plan.get("bootstrapPolicyRoot"),
-        "authorizationId": authorized_by,
+        "expectedAuthorizationPlanRoot": plan.get("authorizationPlanRoot"),
+        "expectedWarrantRoot": plan.get("warrantRoot"),
         "actor": authorized_by,
     }
     click.echo(

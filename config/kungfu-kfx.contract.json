@@ -983,6 +983,7 @@
         "update",
         "enable",
         "activate",
+        "qualify",
         "host-placement",
         "capability",
         "migration",
@@ -1186,6 +1187,37 @@
         ],
         "mutationRule": "future-mutation-must-bind-exact-root"
       },
+      "mutationAuthorization": {
+        "schema": "kungfu.kfx-mutation-authorization-plan/v1",
+        "authority": "libkungfu-recomputed-before-side-effects",
+        "requiredRoots": [
+          "reportRoot",
+          "admissionPlanRoot",
+          "receiptDependencyRoot",
+          "policyRoot",
+          "packageRoot",
+          "dependencyRoot",
+          "approvalRoots"
+        ],
+        "warrantLifecycle": [
+          "planned",
+          "issued-in-fact-cut",
+          "validated-before-materialization",
+          "consumed-by-settlement"
+        ],
+        "recovery": {
+          "operations": [
+            "disable",
+            "remove"
+          ],
+          "requiredWarrant": "kungfu.kfx-recovery-warrant/v1",
+          "issuerClasses": [
+            "workspace-owner",
+            "core-system"
+          ],
+          "packageCooperationRequired": false
+        }
+      },
       "nonClaims": [
         "verifier-report-is-not-universal-safety-proof",
         "assessment-does-not-execute-or-authenticate-the-buildchain-verifier",
@@ -1264,7 +1296,9 @@
         "expectedGraphRoot",
         "expectedPlanRoot",
         "expectedTrustRoot",
-        "expectedPackageRoot"
+        "expectedPackageRoot",
+        "expectedAuthorizationPlanRoot",
+        "expectedWarrantRoot"
       ],
       "mutationOperations": [
         "install",
@@ -1281,7 +1315,7 @@
       ],
       "payloadRetention": "content-addressed-retain-no-gc",
       "replacement": "stage-then-atomic-rename",
-      "history": "immutable-work-episode-settlement-facts-at-named-cut"
+      "history": "pre-side-effect-warrant-cut-then-immutable-work-episode-settlement-facts"
     },
     "experienceFlowHost": {
       "schema": "kungfu.kfx.experience-flow-host/v1",
