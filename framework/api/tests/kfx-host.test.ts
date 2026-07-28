@@ -10,13 +10,16 @@ import {
 } from '../../tui/src/kfx-host.ts';
 import {
   type KfxControlStatus,
-  type KfxExperienceFlowDescriptor,
   projectKfxControlSuiteHost,
+} from '../src/capability/kfx-control.ts';
+import {
+  type KfxExperienceFlowDescriptor,
+  authorizeKfxHostLaunch,
   projectKfxExperienceFlowHost,
 } from '../src/capability/kfx-host.ts';
 
 const descriptor: KfxExperienceFlowDescriptor = {
-  schema: 'kungfu.kfx.experience-flow-host/v2',
+  schema: 'kungfu.kfx.experience-flow-host/v3',
   descriptorRoot: `sha256:${'1'.repeat(64)}`,
   registryRoot: `sha256:${'0'.repeat(64)}`,
   graphRoot: `sha256:${'2'.repeat(64)}`,
@@ -25,7 +28,7 @@ const descriptor: KfxExperienceFlowDescriptor = {
   cutRoot: `sha256:${'5'.repeat(64)}`,
   revision: 7,
   generation: {
-    schema: 'kungfu.kfx.host-generation/v1',
+    schema: 'kungfu.kfx.host-generation/v2',
     registryRoot: `sha256:${'0'.repeat(64)}`,
     graphRoot: `sha256:${'2'.repeat(64)}`,
     cutRoot: `sha256:${'5'.repeat(64)}`,
@@ -33,7 +36,7 @@ const descriptor: KfxExperienceFlowDescriptor = {
   },
   generationRoot: `sha256:${'6'.repeat(64)}`,
   admission: {
-    schema: 'kungfu.kfx.host-admission/v1',
+    schema: 'kungfu.kfx.host-admission/v2',
     state: 'admitted',
     exactRootRequired: true,
     registryRoot: `sha256:${'0'.repeat(64)}`,
@@ -46,7 +49,39 @@ const descriptor: KfxExperienceFlowDescriptor = {
     facetRoots: [`sha256:${'8'.repeat(64)}`],
     capabilityRoots: [`sha256:${'9'.repeat(64)}`],
     authorizationRoots: [`sha256:${'a'.repeat(64)}`],
+    runtimeAuthorizationRoots: [`sha256:${'d'.repeat(64)}`],
   },
+  runtimeAuthorizations: [
+    {
+      schema: 'kungfu.kfx.host-authorization/v2',
+      packageKey: 'workbench',
+      packageRoot: `sha256:${'e'.repeat(64)}`,
+      manifestRoot: `sha256:${'f'.repeat(64)}`,
+      ownerProviderRoot: `sha256:${'b'.repeat(64)}`,
+      trustRoot: `sha256:${'c'.repeat(64)}`,
+      runtimeTier: 'isolated',
+      admissionGrade: 'kfd-attested',
+      productSystem: false,
+      placement: 'sandboxed-ipc',
+      requiredCapabilities: ['domain'],
+      grantedCapabilities: ['domain'],
+      reportRoot: `sha256:${'1'.repeat(64)}`,
+      admissionPlanRoot: `sha256:${'2'.repeat(64)}`,
+      corePolicyRoot: `sha256:${'3'.repeat(64)}`,
+      requestedPolicyRoot: `sha256:${'4'.repeat(64)}`,
+      policyRoot: `sha256:${'5'.repeat(64)}`,
+      authorizationPlanRoot: `sha256:${'6'.repeat(64)}`,
+      capabilityDeclarationRoot: `sha256:${'7'.repeat(64)}`,
+      capabilityGrantRoot: `sha256:${'8'.repeat(64)}`,
+      warrantRoot: `sha256:${'9'.repeat(64)}`,
+      cutRoot: `sha256:${'5'.repeat(64)}`,
+      revision: 7,
+      generationRoot: `sha256:${'6'.repeat(64)}`,
+      executionAllowed: true,
+      authorizationRoot: `sha256:${'d'.repeat(64)}`,
+      host: 'gui',
+    },
+  ],
   contributions: [
     {
       contributionId: 'workbench',
@@ -57,13 +92,31 @@ const descriptor: KfxExperienceFlowDescriptor = {
       facetRoot: `sha256:${'8'.repeat(64)}`,
       capabilities: ['domain'],
       authorization: {
-        schema: 'kungfu.kfx.host-authorization/v1',
+        schema: 'kungfu.kfx.host-authorization/v2',
+        packageKey: 'workbench',
+        packageRoot: `sha256:${'e'.repeat(64)}`,
+        manifestRoot: `sha256:${'f'.repeat(64)}`,
         ownerProviderRoot: `sha256:${'b'.repeat(64)}`,
         trustRoot: `sha256:${'c'.repeat(64)}`,
-        capabilityRoot: `sha256:${'9'.repeat(64)}`,
+        runtimeTier: 'isolated',
+        admissionGrade: 'kfd-attested',
+        productSystem: false,
+        placement: 'sandboxed-ipc',
         requiredCapabilities: ['domain'],
+        grantedCapabilities: ['domain'],
+        reportRoot: `sha256:${'1'.repeat(64)}`,
+        admissionPlanRoot: `sha256:${'2'.repeat(64)}`,
+        corePolicyRoot: `sha256:${'3'.repeat(64)}`,
+        requestedPolicyRoot: `sha256:${'4'.repeat(64)}`,
+        policyRoot: `sha256:${'5'.repeat(64)}`,
+        authorizationPlanRoot: `sha256:${'6'.repeat(64)}`,
+        capabilityDeclarationRoot: `sha256:${'7'.repeat(64)}`,
+        capabilityGrantRoot: `sha256:${'8'.repeat(64)}`,
+        warrantRoot: `sha256:${'9'.repeat(64)}`,
         cutRoot: `sha256:${'5'.repeat(64)}`,
         revision: 7,
+        generationRoot: `sha256:${'6'.repeat(64)}`,
+        executionAllowed: true,
         authorizationRoot: `sha256:${'a'.repeat(64)}`,
       },
       state: 'active',
@@ -102,12 +155,41 @@ test('GUI, TUI, CLI, and Agent adapters retain the same Core identities', () => 
   );
 });
 
+test('runtime launch requires the exact grant, generation, and authorization root', () => {
+  const authorization = authorizeKfxHostLaunch(
+    descriptor,
+    'workbench',
+    'gui',
+    `sha256:${'d'.repeat(64)}`,
+  );
+  assert.equal(authorization.capabilityGrantRoot, `sha256:${'8'.repeat(64)}`);
+
+  const stale: KfxExperienceFlowDescriptor = structuredClone(descriptor);
+  const staleAuthorization = stale.runtimeAuthorizations[0];
+  assert.ok(staleAuthorization);
+  staleAuthorization.generationRoot = `sha256:${'0'.repeat(64)}`;
+  assert.throws(
+    () =>
+      authorizeKfxHostLaunch(
+        stale,
+        'workbench',
+        'gui',
+        `sha256:${'d'.repeat(64)}`,
+      ),
+    /authorization does not match/,
+  );
+});
+
 test('preview and mismatched admissions fail closed before host execution', () => {
   const preview: KfxExperienceFlowDescriptor = structuredClone(descriptor);
   preview.cutRoot = null;
   preview.generation.cutRoot = null;
   preview.admission.cutRoot = null;
   preview.admission.state = 'preview-only';
+  const previewAuthorization = preview.runtimeAuthorizations[0];
+  assert.ok(previewAuthorization);
+  previewAuthorization.cutRoot = null;
+  previewAuthorization.executionAllowed = false;
   const previewContribution = preview.contributions[0];
   assert.ok(previewContribution);
   previewContribution.authorization.cutRoot = null;

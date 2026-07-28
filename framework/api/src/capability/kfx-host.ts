@@ -1,8 +1,14 @@
-import type { KfLocator, KfNativeBinding } from './types.js';
-import { resolveRuntimeDir } from './types.js';
-
 export type KfxHost = 'gui' | 'tui' | 'cli' | 'agent';
 export type KfxNodeState = 'active' | 'dormant' | 'degraded';
+export type KfxRuntimeHost =
+  | 'gui'
+  | 'wasm'
+  | 'adapter-node'
+  | 'adapter-python'
+  | 'service-node'
+  | 'service-python'
+  | 'service-cpp'
+  | 'profile';
 
 export type KfxHostContribution = {
   state: KfxNodeState;
@@ -13,13 +19,35 @@ export type KfxHostContribution = {
   facetRoot: string;
   capabilities: string[];
   authorization: {
-    schema: 'kungfu.kfx.host-authorization/v1';
+    schema: 'kungfu.kfx.host-authorization/v2';
+    packageKey: string;
+    packageRoot: string;
+    manifestRoot: string;
     ownerProviderRoot: string;
     trustRoot: string;
-    capabilityRoot: string;
+    runtimeTier: 'isolated' | 'integrated-explicit' | 'metadata-only';
+    admissionGrade:
+      | 'unverified'
+      | 'identity-verified'
+      | 'kfd-attested'
+      | 'product-system';
+    productSystem: boolean;
+    placement: string;
     requiredCapabilities: string[];
+    grantedCapabilities: string[];
+    reportRoot: string | null;
+    admissionPlanRoot: string | null;
+    corePolicyRoot: string | null;
+    requestedPolicyRoot: string | null;
+    policyRoot: string | null;
+    authorizationPlanRoot: string | null;
+    capabilityDeclarationRoot: string | null;
+    capabilityGrantRoot: string | null;
+    warrantRoot: string | null;
     cutRoot: string | null;
     revision: number;
+    generationRoot: string;
+    executionAllowed: boolean;
     authorizationRoot: string;
   };
   presentation?: {
@@ -30,7 +58,7 @@ export type KfxHostContribution = {
 };
 
 export type KfxExperienceFlowDescriptor = {
-  schema: 'kungfu.kfx.experience-flow-host/v2';
+  schema: 'kungfu.kfx.experience-flow-host/v3';
   descriptorRoot: string;
   registryRoot: string;
   graphRoot: string;
@@ -39,7 +67,7 @@ export type KfxExperienceFlowDescriptor = {
   cutRoot: string | null;
   revision: number;
   generation: {
-    schema: 'kungfu.kfx.host-generation/v1';
+    schema: 'kungfu.kfx.host-generation/v2';
     registryRoot: string;
     graphRoot: string;
     cutRoot: string | null;
@@ -47,7 +75,7 @@ export type KfxExperienceFlowDescriptor = {
   };
   generationRoot: string;
   admission: {
-    schema: 'kungfu.kfx.host-admission/v1';
+    schema: 'kungfu.kfx.host-admission/v2';
     state: 'admitted' | 'preview-only';
     exactRootRequired: true;
     registryRoot: string;
@@ -60,7 +88,11 @@ export type KfxExperienceFlowDescriptor = {
     facetRoots: string[];
     capabilityRoots: string[];
     authorizationRoots: string[];
+    runtimeAuthorizationRoots: string[];
   };
+  runtimeAuthorizations: Array<
+    KfxHostContribution['authorization'] & { host: KfxRuntimeHost }
+  >;
   contributions: KfxHostContribution[];
 };
 
@@ -89,68 +121,18 @@ export type KfxHostProjection = {
   >;
 };
 
-export type KfxControlHostProjection = {
-  schema: 'kungfu.kfx.control-host-projection/v1';
-  host: KfxHost;
-  controllerId: 'kungfu-kfx-control-suite';
-  statusRoot: string;
-  cutRoot: string | null;
-  revision: number;
-  mode: 'active' | 'safe-mode';
-  executionAllowed: boolean;
-  diagnostics: Array<{
-    code: 'KF_KFX_CONTROL_SAFE_MODE';
-    recoveryGuidance: string[];
-  }>;
-};
-
-export function projectKfxControlSuiteHost(
-  status: {
-    schema: string;
-    controllerId: string;
-    statusRoot: string;
-    cutRoot: string | null;
-    revision: number;
-    mode: 'active' | 'safe-mode';
-    executionAllowed: boolean;
-    diagnostics: KfxControlHostProjection['diagnostics'];
-  },
-  host: KfxHost,
-): KfxControlHostProjection {
-  if (
-    status.schema !== 'kungfu.kfx.control-suite-status/v1' ||
-    status.controllerId !== 'kungfu-kfx-control-suite' ||
-    !status.statusRoot.startsWith('sha256:') ||
-    (status.mode === 'active') !== status.executionAllowed ||
-    (status.cutRoot === null) !== (status.revision === 0)
-  ) {
-    throw new Error('KFX Control status identity does not match');
-  }
-  return {
-    schema: 'kungfu.kfx.control-host-projection/v1',
-    host,
-    controllerId: 'kungfu-kfx-control-suite',
-    statusRoot: status.statusRoot,
-    cutRoot: status.cutRoot,
-    revision: status.revision,
-    mode: status.mode,
-    executionAllowed: status.executionAllowed,
-    diagnostics: status.diagnostics,
-  };
-}
-
 // Rendering stays host-native. This adapter may annotate availability, but it
 // cannot change Core graph, plan, capability, authorization, or receipt roots.
 export function projectKfxExperienceFlowHost(
   descriptor: KfxExperienceFlowDescriptor,
   host: KfxHost,
 ): KfxHostProjection {
-  if (descriptor.schema !== 'kungfu.kfx.experience-flow-host/v2') {
+  if (descriptor.schema !== 'kungfu.kfx.experience-flow-host/v3') {
     throw new Error('unsupported KFX Experience/Flow host descriptor');
   }
   const exact = descriptor.admission;
   if (
-    exact.schema !== 'kungfu.kfx.host-admission/v1' ||
+    exact.schema !== 'kungfu.kfx.host-admission/v2' ||
     exact.exactRootRequired !== true ||
     exact.registryRoot !== descriptor.registryRoot ||
     exact.graphRoot !== descriptor.graphRoot ||
@@ -162,6 +144,16 @@ export function projectKfxExperienceFlowHost(
     descriptor.generation.graphRoot !== descriptor.graphRoot ||
     descriptor.generation.cutRoot !== descriptor.cutRoot ||
     descriptor.generation.revision !== descriptor.revision ||
+    exact.runtimeAuthorizationRoots.length !==
+      descriptor.runtimeAuthorizations.length ||
+    descriptor.runtimeAuthorizations.some(
+      (authorization, index) =>
+        exact.runtimeAuthorizationRoots[index] !==
+          authorization.authorizationRoot ||
+        authorization.cutRoot !== descriptor.cutRoot ||
+        authorization.revision !== descriptor.revision ||
+        authorization.generationRoot !== descriptor.generationRoot,
+    ) ||
     (exact.state === 'admitted') !== (descriptor.cutRoot !== null)
   ) {
     throw new Error('KFX host descriptor admission identity does not match');
@@ -198,10 +190,24 @@ export function projectKfxExperienceFlowHost(
         contribution.authorization.ownerProviderRoot !==
           contribution.ownerProviderRoot ||
         contribution.authorization.trustRoot !== contribution.ownerTrustRoot ||
-        contribution.authorization.capabilityRoot !==
-          contribution.capabilityRoot ||
+        contribution.authorization.packageRoot.length === 0 ||
         contribution.authorization.cutRoot !== descriptor.cutRoot ||
-        contribution.authorization.revision !== descriptor.revision
+        contribution.authorization.revision !== descriptor.revision ||
+        contribution.authorization.generationRoot !==
+          descriptor.generationRoot ||
+        (exact.state === 'admitted' &&
+          (contribution.authorization.capabilityDeclarationRoot === null ||
+            contribution.authorization.capabilityGrantRoot === null ||
+            contribution.authorization.corePolicyRoot === null ||
+            contribution.authorization.requestedPolicyRoot === null ||
+            contribution.authorization.policyRoot === null ||
+            contribution.authorization.warrantRoot === null ||
+            contribution.authorization.requiredCapabilities.some(
+              (capability) =>
+                !contribution.authorization.grantedCapabilities.includes(
+                  capability,
+                ),
+            )))
       ) {
         throw new Error(
           'KFX host contribution admission identity does not match',
@@ -228,6 +234,7 @@ export function projectKfxExperienceFlowHost(
         presentationState,
         executionEligible:
           exact.state === 'admitted' &&
+          contribution.authorization.executionAllowed &&
           contribution.state === 'active' &&
           presentationState === 'active',
       };
@@ -235,145 +242,38 @@ export function projectKfxExperienceFlowHost(
   };
 }
 
-// Public narrow capability for the first-party KFX Control Suite. The binding
-// owns bootstrap verification, Fact/Work settlement, CAS, and recovery state;
-// hosts only carry exact plans and receipts.
-export type KfxControlRoot = {
-  kind: 'product';
-  path: string;
-};
-
-export type KfxControlStatus = {
-  schema: 'kungfu.kfx.control-suite-status/v1';
-  controllerId: 'kungfu-kfx-control-suite';
-  statusRoot: string;
-  cutRoot: string | null;
-  revision: number;
-  mode: 'active' | 'safe-mode';
-  executionAllowed: boolean;
-  active: null | {
-    packageRoot: string;
-    manifestRoot: string;
-    version: string;
-  };
-  lastKnownGood: null | {
-    packageRoot: string;
-    manifestRoot: string;
-    version: string;
-    sourcePath: string;
-  };
-  diagnostics: Array<{
-    code: 'KF_KFX_CONTROL_SAFE_MODE';
-    recoveryGuidance: string[];
-  }>;
-};
-
-export type KfxControlPlan = {
-  schema: 'kungfu.kfx.control-suite-plan/v1';
-  controllerId: 'kungfu-kfx-control-suite';
-  operation: 'install' | 'update';
-  packageKey: 'kfx-manager';
-  controlPlanRoot: string;
-  bootstrapPolicyRoot: string;
-  allowed: true;
-  requiresAuthorization: true;
-  candidate: {
-    packageRoot: string;
-    manifestRoot: string;
-    version: string;
-  };
-  loadPlan: {
-    cutRoot: string | null;
-    revision: number;
-    registryRoot: string;
-    graphRoot: string;
-    planRoot: string;
-    packages: Array<{
-      key: string;
-      packageRoot: string;
-      trustRoot: string;
-    }>;
-  };
-};
-
-export type KfxControlApplication = {
-  schema: 'kungfu.kfx.control-suite-application/v1';
-  controllerId: 'kungfu-kfx-control-suite';
-  controlPlanRoot: string;
-  bootstrapPolicyRoot: string;
-  verified: true;
-  status: KfxControlStatus;
-  application: Record<string, unknown>;
-};
-
-export type KfxControl = {
-  status: () => KfxControlStatus;
-  plan: (
-    operation: 'install' | 'update',
-    candidate: KfxControlRoot,
-  ) => KfxControlPlan;
-  apply: (
-    operation: 'install' | 'update',
-    candidate: KfxControlRoot,
-    plan: KfxControlPlan,
-    authorizationId: string,
-  ) => KfxControlApplication;
-};
-
-export type OpenKfxControlOptions = {
-  binding: KfNativeBinding;
-  locator: KfLocator;
-};
-
-export function openKfxControl(options: OpenKfxControlOptions): KfxControl {
-  const operation = options.binding.runStorageServiceOperation;
-  if (!operation) {
-    throw new Error('native binding does not expose KFX Control operations');
+export function authorizeKfxHostLaunch(
+  descriptor: KfxExperienceFlowDescriptor,
+  packageKey: string,
+  host: KfxRuntimeHost,
+  expectedAuthorizationRoot: string,
+): KfxHostContribution['authorization'] & { host: KfxRuntimeHost } {
+  const authorization = descriptor.runtimeAuthorizations.find(
+    (candidate) =>
+      candidate.packageKey === packageKey && candidate.host === host,
+  );
+  if (
+    !authorization ||
+    descriptor.admission.state !== 'admitted' ||
+    !descriptor.admission.runtimeAuthorizationRoots.includes(
+      expectedAuthorizationRoot,
+    ) ||
+    authorization.authorizationRoot !== expectedAuthorizationRoot ||
+    authorization.cutRoot !== descriptor.cutRoot ||
+    authorization.revision !== descriptor.revision ||
+    authorization.generationRoot !== descriptor.generationRoot ||
+    authorization.capabilityDeclarationRoot === null ||
+    authorization.capabilityGrantRoot === null ||
+    authorization.corePolicyRoot === null ||
+    authorization.requestedPolicyRoot === null ||
+    authorization.policyRoot === null ||
+    authorization.warrantRoot === null ||
+    authorization.requiredCapabilities.some(
+      (capability) => !authorization.grantedCapabilities.includes(capability),
+    ) ||
+    !authorization.executionAllowed
+  ) {
+    throw new Error('KFX host launch authorization does not match');
   }
-  const runtimeDir = resolveRuntimeDir(options.locator);
-  const run = <T>(action: 'status' | 'plan' | 'apply', request: object): T =>
-    operation('kfx_runtime', runtimeDir, { action, request }) as T;
-  const requestFor = (
-    action: 'install' | 'update',
-    candidate: KfxControlRoot,
-  ) => ({
-    controller: 'kungfu-kfx-control-suite',
-    packageKey: 'kfx-manager',
-    operation: action,
-    roots: [candidate],
-    runtimeTiers: { 'kfx-manager': 'first-party-pinned' },
-  });
-  return {
-    status: () =>
-      run<KfxControlStatus>('status', {
-        controller: 'kungfu-kfx-control-suite',
-      }),
-    plan: (action, candidate) =>
-      run<KfxControlPlan>('plan', requestFor(action, candidate)),
-    apply: (action, candidate, plan, authorizationId) => {
-      if (!authorizationId.trim()) {
-        throw new Error('KFX Control authorization identity is required');
-      }
-      const member = plan.loadPlan.packages.find(
-        (row) => row.key === 'kfx-manager',
-      );
-      if (!member) {
-        throw new Error('KFX Control plan does not contain kfx-manager');
-      }
-      return run<KfxControlApplication>('apply', {
-        ...requestFor(action, candidate),
-        expectedCutRoot: plan.loadPlan.cutRoot,
-        expectedRevision: plan.loadPlan.revision,
-        expectedRegistryRoot: plan.loadPlan.registryRoot,
-        expectedGraphRoot: plan.loadPlan.graphRoot,
-        expectedPlanRoot: plan.loadPlan.planRoot,
-        expectedTrustRoot: member.trustRoot,
-        expectedPackageRoot: member.packageRoot,
-        expectedControlPlanRoot: plan.controlPlanRoot,
-        expectedBootstrapPolicyRoot: plan.bootstrapPolicyRoot,
-        authorizationId,
-        actor: authorizationId,
-      });
-    },
-  };
+  return authorization;
 }

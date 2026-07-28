@@ -255,22 +255,12 @@ struct snapshot {
   std::string graph_root;
 };
 
-std::string mapped_value(const json &mapping, const std::string &key, const std::string &fallback) {
-  if (!mapping.contains(key))
-    return fallback;
-  if (!mapping.at(key).is_string() || mapping.at(key).get<std::string>().empty())
-    refuse("KF_KFX_SCHEMA_INVALID", "registry mapping value must be a non-empty string: " + key);
-  return mapping.at(key).get<std::string>();
-}
-
 void validate_enum(const std::string &value, const std::set<std::string> &allowed, const std::string &label) {
   if (!allowed.contains(value))
     refuse("KF_KFX_SCHEMA_INVALID", label + " is not supported: " + value);
 }
 
-json host_placements(const json &manifest, const json &overrides, const std::string &key) {
-  static const std::set<std::string> known = {
-      "gui", "adapter-node", "adapter-python", "service-node", "service-python", "service-cpp", "wasm", "profile"};
+json host_placements(const json &manifest) {
   std::set<std::string> hosts;
   const auto config = object_or_empty(manifest.at("kungfuConfig"), "config");
   if (config.contains("view"))
@@ -285,16 +275,6 @@ json host_placements(const json &manifest, const json &overrides, const std::str
     hosts.insert("wasm");
   if (manifest.at("kungfuConfig").contains("suite"))
     hosts.insert("profile");
-  if (overrides.contains(key)) {
-    if (!overrides.at(key).is_array())
-      refuse("KF_KFX_SCHEMA_INVALID", "hostPlacements entries must be arrays");
-    hosts.clear();
-    for (const auto &host : overrides.at(key)) {
-      if (!host.is_string() || !known.contains(host.get<std::string>()))
-        refuse("KF_KFX_HOST_UNKNOWN", "unknown KFX host placement for " + key);
-      hosts.insert(host.get<std::string>());
-    }
-  }
   return json(hosts);
 }
 
@@ -616,14 +596,12 @@ snapshot build_snapshot(const json &request) {
   if (!request.is_object() || !request.contains("roots") || !request.at("roots").is_array() ||
       request.at("roots").empty())
     refuse("KF_KFX_SCHEMA_INVALID", "registry request requires explicit non-empty roots");
-  for (const auto *field : {"admissionGrades", "installed", "admitted", "systemAuthority"}) {
+  for (const auto *field : {"runtimeTier", "runtimeTiers", "hostPlacements", "admissionGrade", "admissionGrades",
+                            "productSystem", "installed", "admitted", "systemAuthority", "grantedCapabilities"}) {
     if (request.contains(field))
       refuse("KF_KFX_AUTHORITY_CLAIM_FORBIDDEN",
-             std::string("read-only registry request may not claim Core admission field ") + field);
+             std::string("registry request may not claim Core-derived authority field ") + field);
   }
-  const auto runtime_tiers = object_or_empty(request, "runtimeTiers");
-  const auto placements = object_or_empty(request, "hostPlacements");
-  const std::set<std::string> tier_values = {"first-party-pinned", "verified-third-party", "untrusted"};
   const std::set<std::string> root_kinds = {"product", "user", "workspace"};
 
   snapshot result;
@@ -676,8 +654,6 @@ snapshot build_snapshot(const json &request) {
         refuse("KF_KFX_PACKAGE_DUPLICATE", "KFX package key resolves more than once: " + key);
       keys[key] = package_path;
       const auto closure = package_closure(package_path);
-      const auto tier = mapped_value(runtime_tiers, key, "untrusted");
-      validate_enum(tier, tier_values, "runtime tier");
       const auto native_contract = native_kfx_contract();
       json package = {{"key", key},
                       {"name", manifest.value("name", "")},
@@ -695,9 +671,12 @@ snapshot build_snapshot(const json &request) {
                       {"facets", declared_facets(manifest, package_path)},
                       {"declaredCapabilities", declared_capabilities(manifest)},
                       {"productRoles", declared_product_roles(manifest)},
-                      {"runtimeTier", tier},
+                      {"runtimeTier", "isolated"},
                       {"admissionGrade", "unverified"},
-                      {"hosts", host_placements(manifest, placements, key)},
+                      {"supplyChainGrade", "unverified"},
+                      {"productSystem", false},
+                      {"grantedCapabilities", json::array()},
+                      {"hosts", host_placements(manifest)},
                       {"semantic", object_or_empty(manifest.at("kungfuConfig"), "registry")},
                       {"candidate", true},
                       {"installed", false},
@@ -802,17 +781,22 @@ snapshot build_snapshot(const json &request) {
 
   json package_identity = json::array();
   for (const auto &package : result.packages) {
-    package_identity.push_back({{"key", package.at("key")},
-                                {"rootKind", package.at("rootKind")},
-                                {"packageRoot", package.at("packageRoot")},
-                                {"manifestRoot", package.at("manifestRoot")},
-                                {"apiCompatibility", package.at("apiCompatibility")},
-                                {"facets", package.at("facets")},
-                                {"runtimeTier", package.at("runtimeTier")},
-                                {"admissionGrade", package.at("admissionGrade")},
-                                {"hosts", package.at("hosts")}});
+    package_identity.push_back(
+        {{"key", package.at("key")},
+         {"rootKind", package.at("rootKind")},
+         {"packageRoot", package.at("packageRoot")},
+         {"manifestRoot", package.at("manifestRoot")},
+         {"apiCompatibility", package.at("apiCompatibility")},
+         {"facets", package.at("facets")},
+         {"runtimeTier", package.at("runtimeTier")},
+         {"admissionGrade", package.at("admissionGrade")},
+         {"productSystem", package.at("productSystem")},
+         {"grantedCapabilities", package.at("grantedCapabilities")},
+         {"capabilityGrantRoot",
+          package.contains("authority") ? package.at("authority").at("capabilityGrantRoot") : json(nullptr)},
+         {"hosts", package.at("hosts")}});
   }
-  json registry_identity = {{"schema", "kungfu.kfx-registry-snapshot/v1"},
+  json registry_identity = {{"schema", "kungfu.kfx-registry-snapshot/v2"},
                             {"packages", package_identity},
                             {"suites", result.suites},
                             {"diagnostics", result.diagnostics}};
@@ -856,8 +840,8 @@ json assess_package(const json &package, const std::string &registry_root, const
     refuse("KF_KFX_SCHEMA_INVALID", "assessment requires kungfu.kfx-admission-policy/v1");
   require_exact_fields(policy,
                        {"schema", "allowedIssuers", "allowedPublishers", "allowedContracts", "allowedVerifierRoots",
-                        "autoOperations", "highConsequenceCapabilities", "systemCapabilities", "productSystemRoots",
-                        "residualRisk"},
+                        "allowedCapabilities", "autoOperations", "highConsequenceCapabilities", "systemCapabilities",
+                        "productSystemRoots", "residualRisk"},
                        "admission policy");
   if (!request.contains("assessmentTime") || !request.at("assessmentTime").is_number_integer())
     refuse("KF_KFX_SCHEMA_INVALID", "assessmentTime must be a non-negative integer");
@@ -868,8 +852,9 @@ json assess_package(const json &package, const std::string &registry_root, const
   const auto allowed_publishers = string_array_or_empty(policy, "allowedPublishers");
   const auto allowed_contracts = string_array_or_empty(policy, "allowedContracts");
   const auto allowed_verifier_roots = string_array_or_empty(policy, "allowedVerifierRoots");
-  (void)string_array_or_empty(policy, "autoOperations");
-  (void)string_array_or_empty(policy, "highConsequenceCapabilities");
+  const auto allowed_capabilities = string_array_or_empty(policy, "allowedCapabilities");
+  const auto requested_auto_operations = string_array_or_empty(policy, "autoOperations");
+  const auto requested_high_consequence_capabilities = string_array_or_empty(policy, "highConsequenceCapabilities");
   (void)string_array_or_empty(policy, "systemCapabilities");
   (void)string_array_or_empty(policy, "productSystemRoots");
   const auto residual_risk = string_array_or_empty(policy, "residualRisk");
@@ -877,6 +862,23 @@ json assess_package(const json &package, const std::string &registry_root, const
       allowed_verifier_roots.empty())
     refuse("KF_KFX_SCHEMA_INVALID",
            "admission policy requires non-empty issuer, publisher, contract, and verifier allowlists");
+  const auto native_contract = native_kfx_contract();
+  const auto core_policy = object_or_empty(native_contract, "coreCapabilityPolicy");
+  if (core_policy.value("schema", "") != "kungfu.kfx-core-capability-policy/v1")
+    refuse("KF_KFX_SCHEMA_INVALID", "native contract does not contain the Core capability policy");
+  const auto core_allowed_capabilities = string_array_or_empty(core_policy, "allowedCapabilities");
+  const auto core_auto_operations = string_array_or_empty(core_policy, "autoOperations");
+  const auto core_high_consequence_capabilities = string_array_or_empty(core_policy, "highConsequenceCapabilities");
+  const auto require_core_subset = [](const std::vector<std::string> &requested,
+                                      const std::vector<std::string> &ceiling, const char *label) {
+    for (const auto &value : requested) {
+      if (std::find(ceiling.begin(), ceiling.end(), value) == ceiling.end())
+        refuse("KF_KFX_CAPABILITY_POLICY_REJECTED",
+               std::string(label) + " is outside the embedded Core policy ceiling: " + value);
+    }
+  };
+  require_core_subset(allowed_capabilities, core_allowed_capabilities, "allowed capability");
+  require_core_subset(requested_auto_operations, core_auto_operations, "automatic operation");
 
   json reasons = json::array();
   json evidence_dependencies = json::array();
@@ -1019,16 +1021,20 @@ json assess_package(const json &package, const std::string &registry_root, const
     if (std::find(declared_capabilities.begin(), declared_capabilities.end(), capability) ==
         declared_capabilities.end())
       reasons.push_back("KF_KFX_CAPABILITY_BROADENING");
-    if (contains_text(policy.value("highConsequenceCapabilities", json::array()), capability)) {
+    if (std::find(allowed_capabilities.begin(), allowed_capabilities.end(), capability) == allowed_capabilities.end())
+      reasons.push_back("KF_KFX_CAPABILITY_POLICY_REJECTED");
+    if (contains_text(policy.value("highConsequenceCapabilities", json::array()), capability) ||
+        std::find(core_high_consequence_capabilities.begin(), core_high_consequence_capabilities.end(), capability) !=
+            core_high_consequence_capabilities.end()) {
       constraints.push_back("high-consequence-capability:" + capability);
-      if (admission_grade != "product-system" ||
-          !contains_text(policy.value("systemCapabilities", json::array()), capability))
-        required_approvals.push_back("capability:" + capability);
+      required_approvals.push_back("capability:" + capability);
     }
   }
 
   bool allowed = operation == "inspect";
-  if (contains_text(policy.value("autoOperations", json::array()), operation) &&
+  if (std::find(requested_auto_operations.begin(), requested_auto_operations.end(), operation) !=
+          requested_auto_operations.end() &&
+      std::find(core_auto_operations.begin(), core_auto_operations.end(), operation) != core_auto_operations.end() &&
       (admission_grade == "kfd-attested" || admission_grade == "product-system"))
     allowed = true;
   if (operation == "update" && request.value("capabilityExpansion", false)) {
@@ -1054,7 +1060,16 @@ json assess_package(const json &package, const std::string &registry_root, const
     constraints.push_back("runtime-assessment-degraded");
     required_approvals.push_back("runtime-reassessment");
   }
-  const auto policy_root = root_of(policy);
+  const auto core_policy_root = root_of(core_policy);
+  const auto requested_policy_root = root_of(policy);
+  const auto policy_root = root_of({{"schema", "kungfu.kfx-effective-capability-policy/v1"},
+                                    {"corePolicyRoot", core_policy_root},
+                                    {"requestedPolicyRoot", requested_policy_root},
+                                    {"allowedCapabilities", allowed_capabilities},
+                                    {"autoOperations", requested_auto_operations},
+                                    {"highConsequenceCapabilities", core_high_consequence_capabilities}});
+  evidence_dependencies.push_back(core_policy_root);
+  evidence_dependencies.push_back(requested_policy_root);
   evidence_dependencies.push_back(policy_root);
   if (!runtime.empty())
     evidence_dependencies.push_back(root_of(runtime));
@@ -1112,6 +1127,8 @@ json assess_package(const json &package, const std::string &registry_root, const
                           {"admissionGrade", admission_grade},
                           {"runtimeAssessment", runtime_degraded ? "degraded" : "eligible"},
                           {"fresh", !stale},
+                          {"corePolicyRoot", core_policy_root},
+                          {"requestedPolicyRoot", requested_policy_root},
                           {"policyRoot", policy_root},
                           {"trustInputRoot", trust_input_root},
                           {"kfdAssessmentKey", kfd_assessment_key},
@@ -1313,7 +1330,94 @@ std::string derived_verdict(const json &provider, const std::string &desired, co
   return observed == "unknown" ? "dormant" : "active";
 }
 
+std::string runtime_placement(const std::string &host) {
+  if (host == "gui")
+    return "sandboxed-ipc";
+  if (host == "wasm")
+    return "wasm-confined";
+  if (host.starts_with("service-"))
+    return "process-isolated";
+  if (host.starts_with("adapter-"))
+    return "integrated-disabled";
+  if (host == "profile")
+    return "metadata-only";
+  refuse("KF_KFX_HOST_UNKNOWN", "Core cannot derive a physical placement for host " + host);
+}
+
+bool capabilities_cover(const json &granted, const json &required) {
+  if (!granted.is_array() || !required.is_array())
+    return false;
+  return std::all_of(required.begin(), required.end(), [&](const auto &capability) {
+    return std::find(granted.begin(), granted.end(), capability) != granted.end();
+  });
+}
+
+json host_generation(const snapshot &value, const lifecycle_view &lifecycle) {
+  const json cut_root = lifecycle.present ? json(lifecycle.cut_root) : json(nullptr);
+  return {{"schema", "kungfu.kfx.host-generation/v2"},
+          {"registryRoot", value.registry_root},
+          {"graphRoot", value.graph_root},
+          {"cutRoot", cut_root},
+          {"revision", lifecycle.revision}};
+}
+
+json package_host_authorization(const json &package, const json &provider, const json &required_capabilities,
+                                const std::string &placement, const lifecycle_view &lifecycle,
+                                const std::string &generation_root) {
+  const auto package_authority = package.value("authority", json::object());
+  const auto granted_capabilities = package.value("grantedCapabilities", json::array());
+  const auto desired = lifecycle.desired_states.contains(package.at("key").get<std::string>())
+                           ? lifecycle.desired_states.at(package.at("key").get<std::string>())
+                           : "dormant";
+  const bool confinement_ok = placement != "integrated-disabled" && placement != "metadata-only";
+  const bool execution_allowed = lifecycle.present && package.value("admitted", false) && desired == "active" &&
+                                 !package_authority.empty() && confinement_ok &&
+                                 capabilities_cover(granted_capabilities, required_capabilities);
+  const json identity = {
+      {"schema", "kungfu.kfx.host-authorization/v2"},
+      {"packageKey", package.at("key")},
+      {"packageRoot", package.at("packageRoot")},
+      {"manifestRoot", package.at("manifestRoot")},
+      {"ownerProviderRoot", provider.at("providerRoot")},
+      {"trustRoot", provider.at("trustRoot")},
+      {"runtimeTier", package.at("runtimeTier")},
+      {"admissionGrade", package.at("admissionGrade")},
+      {"productSystem", package.at("productSystem")},
+      {"placement", placement},
+      {"requiredCapabilities", required_capabilities},
+      {"grantedCapabilities", granted_capabilities},
+      {"reportRoot", package_authority.value("reportRoot", json(nullptr))},
+      {"admissionPlanRoot", package_authority.value("admissionPlanRoot", json(nullptr))},
+      {"corePolicyRoot", package_authority.value("corePolicyRoot", json(nullptr))},
+      {"requestedPolicyRoot", package_authority.value("requestedPolicyRoot", json(nullptr))},
+      {"policyRoot", package_authority.value("policyRoot", json(nullptr))},
+      {"authorizationPlanRoot", package_authority.value("authorizationPlanRoot", json(nullptr))},
+      {"capabilityDeclarationRoot", package_authority.value("capabilityDeclarationRoot", json(nullptr))},
+      {"capabilityGrantRoot", package_authority.value("capabilityGrantRoot", json(nullptr))},
+      {"warrantRoot", package_authority.value("warrantRoot", json(nullptr))},
+      {"cutRoot", lifecycle.present ? json(lifecycle.cut_root) : json(nullptr)},
+      {"revision", lifecycle.revision},
+      {"generationRoot", generation_root},
+      {"executionAllowed", execution_allowed}};
+  auto result = identity;
+  result["authorizationRoot"] = root_of(identity);
+  return result;
+}
+
 json experience_flow_descriptor(const snapshot &value, const lifecycle_view &lifecycle, const std::string &plan_root) {
+  const auto generation = host_generation(value, lifecycle);
+  const auto generation_root = root_of(generation);
+  json runtime_authorizations = json::array();
+  for (const auto &package : value.packages) {
+    const auto &provider = provider_for(value, package.at("key").get<std::string>());
+    for (const auto &host : package.at("hosts")) {
+      const auto host_name = host.get<std::string>();
+      auto authorization = package_host_authorization(package, provider, package.at("declaredCapabilities"),
+                                                      runtime_placement(host_name), lifecycle, generation_root);
+      authorization["host"] = host_name;
+      runtime_authorizations.push_back(authorization);
+    }
+  }
   json contributions = json::array();
   for (const auto &contribution : value.graph.at("contributions")) {
     if (!contribution.contains("surface") ||
@@ -1325,43 +1429,35 @@ json experience_flow_descriptor(const snapshot &value, const lifecycle_view &lif
         lifecycle.desired_states.contains(provider_id) ? lifecycle.desired_states.at(provider_id) : "dormant";
     const auto observed =
         lifecycle.observed_states.contains(provider_id) ? lifecycle.observed_states.at(provider_id) : "unknown";
-    projected["providerState"] = derived_verdict(provider_for(value, provider_id), desired, observed);
     const auto &provider = provider_for(value, provider_id);
+    const auto package = find_package(value.packages, provider_id);
+    projected["providerState"] = derived_verdict(provider, desired, observed);
     const json facet_identity = {{"schema", "kungfu.kfx.presentation-facet/v1"},
                                  {"contributionRoot", contribution.at("contributionRoot")},
                                  {"presentation", contribution.value("presentation", json::object())}};
-    const json authorization_identity = {{"schema", "kungfu.kfx.host-authorization/v1"},
-                                         {"ownerProviderRoot", provider.at("providerRoot")},
-                                         {"trustRoot", provider.at("trustRoot")},
-                                         {"capabilityRoot", contribution.at("capabilityRoot")},
-                                         {"requiredCapabilities", contribution.at("capabilities")},
-                                         {"cutRoot", lifecycle.present ? json(lifecycle.cut_root) : json(nullptr)},
-                                         {"revision", lifecycle.revision}};
+    const auto authorization = package_host_authorization(package, provider, contribution.at("capabilities"),
+                                                          "host-native-projection", lifecycle, generation_root);
     projected["ownerProviderRoot"] = provider.at("providerRoot");
     projected["ownerTrustRoot"] = provider.at("trustRoot");
     projected["facetRoot"] = root_of(facet_identity);
-    projected["authorization"] = authorization_identity;
-    projected["authorization"]["authorizationRoot"] = root_of(authorization_identity);
+    projected["authorization"] = authorization;
     contributions.push_back(projected);
   }
   const json cut_root = lifecycle.present ? json(lifecycle.cut_root) : json(nullptr);
-  const json generation = {{"schema", "kungfu.kfx.host-generation/v1"},
-                           {"registryRoot", value.registry_root},
-                           {"graphRoot", value.graph_root},
-                           {"cutRoot", cut_root},
-                           {"revision", lifecycle.revision}};
-  const auto generation_root = root_of(generation);
   json contribution_roots = json::array();
   json facet_roots = json::array();
   json capability_roots = json::array();
   json authorization_roots = json::array();
+  json runtime_authorization_roots = json::array();
   for (const auto &contribution : contributions) {
     contribution_roots.push_back(contribution.at("contributionRoot"));
     facet_roots.push_back(contribution.at("facetRoot"));
     capability_roots.push_back(contribution.at("capabilityRoot"));
     authorization_roots.push_back(contribution.at("authorization").at("authorizationRoot"));
   }
-  const json admission = {{"schema", "kungfu.kfx.host-admission/v1"},
+  for (const auto &authorization : runtime_authorizations)
+    runtime_authorization_roots.push_back(authorization.at("authorizationRoot"));
+  const json admission = {{"schema", "kungfu.kfx.host-admission/v2"},
                           {"state", lifecycle.present ? "admitted" : "preview-only"},
                           {"exactRootRequired", true},
                           {"registryRoot", value.registry_root},
@@ -1373,15 +1469,17 @@ json experience_flow_descriptor(const snapshot &value, const lifecycle_view &lif
                           {"contributionRoots", contribution_roots},
                           {"facetRoots", facet_roots},
                           {"capabilityRoots", capability_roots},
-                          {"authorizationRoots", authorization_roots}};
+                          {"authorizationRoots", authorization_roots},
+                          {"runtimeAuthorizationRoots", runtime_authorization_roots}};
   const json receipt_dependency = {{"registryRoot", value.registry_root},
                                    {"graphRoot", value.graph_root},
                                    {"planRoot", plan_root},
                                    {"cutRoot", cut_root},
                                    {"revision", lifecycle.revision},
                                    {"generationRoot", generation_root},
-                                   {"authorizationRoots", authorization_roots}};
-  const json identity = {{"schema", "kungfu.kfx.experience-flow-host/v2"},
+                                   {"authorizationRoots", authorization_roots},
+                                   {"runtimeAuthorizationRoots", runtime_authorization_roots}};
+  const json identity = {{"schema", "kungfu.kfx.experience-flow-host/v3"},
                          {"registryRoot", value.registry_root},
                          {"graphRoot", value.graph_root},
                          {"planRoot", plan_root},
@@ -1393,10 +1491,50 @@ json experience_flow_descriptor(const snapshot &value, const lifecycle_view &lif
                          {"receiptDependencies", receipt_dependency},
                          {"receiptDependencyRoot", root_of(receipt_dependency)},
                          {"hosts", json::array({"gui", "tui", "cli", "agent"})},
+                         {"runtimeAuthorizations", runtime_authorizations},
                          {"contributions", contributions}};
   auto descriptor = identity;
   descriptor["descriptorRoot"] = root_of(identity);
   return descriptor;
+}
+
+json authorize_host_launch(const json &descriptor, const lifecycle_view &lifecycle, const json &request) {
+  if (!lifecycle.present)
+    refuse("KF_KFX_HOST_NOT_ADMITTED", "host launch requires a settled named KFX Fact Cut");
+  const auto package_key = required_text(request, "packageKey", "request");
+  const auto host = required_text(request, "host", "request");
+  if (!request.contains("expectedRevision") || !request.at("expectedRevision").is_number_integer() ||
+      request.at("expectedRevision").get<int64_t>() < 0 ||
+      static_cast<uint64_t>(request.at("expectedRevision").get<int64_t>()) != lifecycle.revision ||
+      request.value("expectedCutRoot", "") != lifecycle.cut_root)
+    refuse("KF_KFX_CUT_STALE", "host launch does not bind the current named Fact Cut");
+  if (request.value("expectedGenerationRoot", "") != descriptor.at("generationRoot").get<std::string>())
+    refuse("KF_KFX_GENERATION_MISMATCH", "host launch generation is stale");
+  for (const auto &authorization : descriptor.at("runtimeAuthorizations")) {
+    if (authorization.at("packageKey") != package_key || authorization.at("host") != host)
+      continue;
+    if (request.value("expectedPackageRoot", "") != authorization.at("packageRoot").get<std::string>())
+      refuse("KF_KFX_REGISTRY_STALE", "host launch package root changed");
+    if (!authorization.at("capabilityGrantRoot").is_string() ||
+        request.value("expectedCapabilityGrantRoot", "") != authorization.at("capabilityGrantRoot").get<std::string>())
+      refuse("KF_KFX_CAPABILITY_GRANT_STALE", "host launch capability grant changed or was replayed");
+    if (request.value("expectedAuthorizationRoot", "") != authorization.at("authorizationRoot").get<std::string>())
+      refuse("KF_KFX_AUTHORIZATION_STALE", "host launch authorization root changed");
+    const auto expected_capabilities = request.value("expectedGrantedCapabilities", json::array());
+    if (!expected_capabilities.is_array() || expected_capabilities != authorization.at("grantedCapabilities"))
+      refuse("KF_KFX_CAPABILITY_GRANT_STALE", "host launch capability set does not match the exact grant");
+    if (!authorization.at("executionAllowed").get<bool>())
+      refuse("KF_KFX_RUNTIME_ISOLATION_REQUIRED",
+             "host launch is not active, fully granted, or confined by the Core placement");
+    return {{"schema", "kungfu.kfx.host-launch-authorization/v1"},
+            {"descriptorRoot", descriptor.at("descriptorRoot")},
+            {"generationRoot", descriptor.at("generationRoot")},
+            {"cutRoot", descriptor.at("cutRoot")},
+            {"revision", descriptor.at("revision")},
+            {"authorization", authorization},
+            {"executionAllowed", true}};
+  }
+  refuse("KF_KFX_HOST_UNKNOWN", "package does not declare the requested Core host placement");
 }
 
 json lifecycle_plan(const snapshot &value, const lifecycle_view &lifecycle, const json &request) {
@@ -1472,8 +1610,9 @@ json control_bootstrap_policy() {
                          {"requiredProductRoles", json::array({"boot-critical", "system-management"})},
                          {"maximumCapabilities", json::array({"kfxControl", "profile"})},
                          {"requiredCapabilities", json::array({"kfxControl"})},
-                         {"requiredRuntimeTier", "first-party-pinned"},
                          {"requiredRootKind", "product"},
+                         {"runtimePlacement", "sandboxed-ipc"},
+                         {"productRolesAuthority", "assembly-and-distribution-metadata-only"},
                          {"authority",
                           {{"candidateIdentity", "kungfu.kfx.json plus Core-computed package closure"},
                            {"lifecycle", "public-kfx-status-plan-apply"},
@@ -1499,8 +1638,6 @@ json validate_control_package(const json &package) {
       reasons.push_back("KF_KFX_CONTROL_IDENTITY_MISMATCH");
     if (package.value("rootKind", "") != policy.at("requiredRootKind").get<std::string>())
       reasons.push_back("KF_KFX_CONTROL_SOURCE_REJECTED");
-    if (package.value("runtimeTier", "") != policy.at("requiredRuntimeTier").get<std::string>())
-      reasons.push_back("KF_KFX_CONTROL_TRUST_REJECTED");
     const auto roles = package.value("productRoles", json::array());
     if (roles != policy.at("requiredProductRoles"))
       reasons.push_back("KF_KFX_CONTROL_ROLE_BROADENING");
@@ -1527,8 +1664,7 @@ json validate_control_package(const json &package) {
 json inspect_control_package_path(const fs::path &path) {
   if (!fs::is_directory(path))
     refuse("KF_KFX_CONTROL_ACTIVE_CORRUPT", "Control Suite package path is missing");
-  const json request = {{"roots", json::array({{{"kind", "product"}, {"path", path.string()}}})},
-                        {"runtimeTiers", {{KFX_CONTROL_PACKAGE_KEY, "first-party-pinned"}}}};
+  const json request = {{"roots", json::array({{{"kind", "product"}, {"path", path.string()}}})}};
   const auto observed = build_snapshot(request);
   const auto package = find_package(observed.packages, KFX_CONTROL_PACKAGE_KEY);
   const auto verification = validate_control_package(package);
@@ -1656,6 +1792,10 @@ json control_plan(const snapshot &value, const lifecycle_view &lifecycle, const 
   }
   const auto status = control_status(lifecycle);
   const auto mutation_authorization = mutation_authorization_plan(value, lifecycle, request, load_plan);
+  const auto assessment = mutation_authorization.at("assessment");
+  if (assessment.is_null() || assessment.at("trustReport").value("admissionGrade", "") != "product-system")
+    refuse("KF_KFX_CONTROL_TRUST_REJECTED",
+           "Control Suite requires exact KFD eligibility and Product assembly-root policy metadata");
   const json identity = {
       {"schema", "kungfu.kfx.control-suite-plan/v1"},
       {"controllerId", KFX_CONTROL_SUITE_ID},
@@ -1676,6 +1816,7 @@ json control_plan(const snapshot &value, const lifecycle_view &lifecycle, const 
       {"graphRoot", load_plan.at("graphRoot")},
       {"mutationAuthorization", mutation_authorization},
       {"authorizationPlanRoot", mutation_authorization.at("authorizationPlanRoot")},
+      {"capabilityGrantRoot", mutation_authorization.at("capabilityGrantRoot")},
       {"warrantRoot", mutation_authorization.at("warrantRoot")},
       {"allowed", true},
       {"requiresAuthorization", true},
@@ -1831,6 +1972,9 @@ json issue_fact_work_authority(const std::string &runtime_dir, const snapshot &v
                {"basis", authorization.at("basis")},
                {"authorityRoots", authorization.at("authorityRoots")},
                {"authorizationPlanRoot", authorization.at("authorizationPlanRoot")},
+               {"capabilityDeclarationRoot", authorization.at("capabilityDeclarationRoot")},
+               {"capabilityGrantRoot", authorization.at("capabilityGrantRoot")},
+               {"grantedCapabilities", authorization.at("grantedCapabilities")},
                {"warrantRoot", authorization.at("warrantRoot")},
                {"recordedAt", recorded_at},
                {"status", "authorized"}});
@@ -1844,6 +1988,9 @@ json issue_fact_work_authority(const std::string &runtime_dir, const snapshot &v
                {"basis", authorization.at("basis")},
                {"authorityRoots", authorization.at("authorityRoots")},
                {"authorizationPlanRoot", authorization.at("authorizationPlanRoot")},
+               {"capabilityDeclarationRoot", authorization.at("capabilityDeclarationRoot")},
+               {"capabilityGrantRoot", authorization.at("capabilityGrantRoot")},
+               {"grantedCapabilities", authorization.at("grantedCapabilities")},
                {"warrantRoot", authorization.at("warrantRoot")},
                {"state", "issued"},
                {"recordedAt", recorded_at}});
@@ -1862,15 +2009,16 @@ json issue_fact_work_authority(const std::string &runtime_dir, const snapshot &v
   if (current.present)
     parent_cuts.push_back(current.cut_root);
   const auto cut_response = builder.invoke(
-      "cut-put", {{"parent_cut_roots", parent_cuts},
-                  {"object_versions", object_versions},
-                  {"active_relation_roots", relation_roots},
-                  {"declaration_roots", json::array({builder.profile_root})},
-                  {"admission_roots", json::array({builder.admission_root, authorization.at("authorizationPlanRoot"),
-                                                   authorization.at("warrantRoot")})},
-                  {"episode_frontier", json::array()},
-                  {"omission_roots", json::array()},
-                  {"conflict_roots", json::array()}});
+      "cut-put",
+      {{"parent_cut_roots", parent_cuts},
+       {"object_versions", object_versions},
+       {"active_relation_roots", relation_roots},
+       {"declaration_roots", json::array({builder.profile_root})},
+       {"admission_roots", json::array({builder.admission_root, authorization.at("authorizationPlanRoot"),
+                                        authorization.at("capabilityGrantRoot"), authorization.at("warrantRoot")})},
+       {"episode_frontier", json::array()},
+       {"omission_roots", json::array()},
+       {"conflict_roots", json::array()}});
   const auto new_cut_root = cut_response.at("result").at("cut_root");
   const auto ref_response = builder.invoke(
       "ref-cas", {{"transition_id", action_id + ":authorize"},
@@ -1888,6 +2036,7 @@ json issue_fact_work_authority(const std::string &runtime_dir, const snapshot &v
                                  {"operation", authorization.at("operation")},
                                  {"packageKey", authorization.at("packageKey")},
                                  {"authorizationPlanRoot", authorization.at("authorizationPlanRoot")},
+                                 {"capabilityGrantRoot", authorization.at("capabilityGrantRoot")},
                                  {"warrantRoot", authorization.at("warrantRoot")},
                                  {"workObjectId", work_id},
                                  {"warrantObjectId", warrant_id},
@@ -2001,6 +2150,9 @@ json commit_fact_work(const std::string &runtime_dir, const snapshot &value, con
                {"basis", authorization.at("basis")},
                {"authorityRoots", authorization.at("authorityRoots")},
                {"authorizationPlanRoot", authorization.at("authorizationPlanRoot")},
+               {"capabilityDeclarationRoot", authorization.at("capabilityDeclarationRoot")},
+               {"capabilityGrantRoot", authorization.at("capabilityGrantRoot")},
+               {"grantedCapabilities", authorization.at("grantedCapabilities")},
                {"warrantRoot", authorization.at("warrantRoot")},
                {"status", "settled"}});
   builder.put(warrant_id, "kungfu.kfx.warrant",
@@ -2013,6 +2165,9 @@ json commit_fact_work(const std::string &runtime_dir, const snapshot &value, con
                {"basis", authorization.at("basis")},
                {"authorityRoots", authorization.at("authorityRoots")},
                {"authorizationPlanRoot", authorization.at("authorizationPlanRoot")},
+               {"capabilityDeclarationRoot", authorization.at("capabilityDeclarationRoot")},
+               {"capabilityGrantRoot", authorization.at("capabilityGrantRoot")},
+               {"grantedCapabilities", authorization.at("grantedCapabilities")},
                {"warrantRoot", authorization.at("warrantRoot")},
                {"state", "consumed"},
                {"recordedAt", recorded_at}});
@@ -2026,6 +2181,9 @@ json commit_fact_work(const std::string &runtime_dir, const snapshot &value, con
                                            {"basis", authorization.at("basis")},
                                            {"authorityRoots", authorization.at("authorityRoots")},
                                            {"authorizationPlanRoot", authorization.at("authorizationPlanRoot")},
+                                           {"capabilityDeclarationRoot", authorization.at("capabilityDeclarationRoot")},
+                                           {"capabilityGrantRoot", authorization.at("capabilityGrantRoot")},
+                                           {"grantedCapabilities", authorization.at("grantedCapabilities")},
                                            {"warrantRoot", authorization.at("warrantRoot")},
                                            {"outcome", "applied"},
                                            {"observedState", observed_state},
@@ -2041,6 +2199,9 @@ json commit_fact_work(const std::string &runtime_dir, const snapshot &value, con
                {"basis", authorization.at("basis")},
                {"authorityRoots", authorization.at("authorityRoots")},
                {"authorizationPlanRoot", authorization.at("authorizationPlanRoot")},
+               {"capabilityDeclarationRoot", authorization.at("capabilityDeclarationRoot")},
+               {"capabilityGrantRoot", authorization.at("capabilityGrantRoot")},
+               {"grantedCapabilities", authorization.at("grantedCapabilities")},
                {"warrantRoot", authorization.at("warrantRoot")},
                {"outcome", "accepted"},
                {"desiredState", desired_state},
@@ -2075,7 +2236,7 @@ json commit_fact_work(const std::string &runtime_dir, const snapshot &value, con
        {"active_relation_roots", relation_roots},
        {"declaration_roots", json::array({builder.profile_root})},
        {"admission_roots", json::array({builder.admission_root, authorization.at("authorizationPlanRoot"),
-                                        authorization.at("warrantRoot")})},
+                                        authorization.at("capabilityGrantRoot"), authorization.at("warrantRoot")})},
        {"episode_frontier", json::array({{{"episode_id", episode_number},
                                           {"sealed_content_root", episode_result.at("body_root")},
                                           {"accepted_manifest_frame_uid", std::string("kfx:") + action_id}}})},
@@ -2098,6 +2259,7 @@ json commit_fact_work(const std::string &runtime_dir, const snapshot &value, con
                                  {"packageKey", key},
                                  {"outcome", "applied"},
                                  {"authorizationPlanRoot", authorization.at("authorizationPlanRoot")},
+                                 {"capabilityGrantRoot", authorization.at("capabilityGrantRoot")},
                                  {"warrantRoot", authorization.at("warrantRoot")},
                                  {"authorityRoots", authorization.at("authorityRoots")},
                                  {"workObjectId", work_id},
@@ -2155,6 +2317,8 @@ json apply_lifecycle_mutation(const snapshot &value, const lifecycle_view &lifec
   if (request.value("expectedAuthorizationPlanRoot", "") !=
       authorization.at("authorizationPlanRoot").get<std::string>())
     refuse("KF_KFX_AUTHORIZATION_STALE", "mutation authorization plan changed since planning");
+  if (request.value("expectedCapabilityGrantRoot", "") != authorization.at("capabilityGrantRoot").get<std::string>())
+    refuse("KF_KFX_CAPABILITY_GRANT_STALE", "mutation does not present the exact planned capability grant root");
   if (request.value("expectedWarrantRoot", "") != authorization.at("warrantRoot").get<std::string>())
     refuse("KF_KFX_WARRANT_INVALID", "mutation does not present the exact planned Warrant root");
 
@@ -2251,7 +2415,64 @@ json apply_lifecycle_mutation(const snapshot &value, const lifecycle_view &lifec
         accepted_package["path"] = destination.string();
       accepted_package["candidate"] = false;
       accepted_package["installed"] = operation != "remove";
+      accepted_package["admitted"] = operation != "remove" && operation != "disable";
+      accepted_package["runtimeTier"] = "isolated";
+      accepted_package["grantedCapabilities"] = authorization.at("grantedCapabilities");
+      const auto assessment = authorization.at("assessment");
+      if (!assessment.is_null()) {
+        const auto &report = assessment.at("trustReport");
+        accepted_package["supplyChainGrade"] = report.at("supplyChainGrade");
+        accepted_package["admissionGrade"] = report.at("admissionGrade");
+        accepted_package["productSystem"] = report.at("admissionGrade") == "product-system";
+      } else {
+        accepted_package["supplyChainGrade"] = "unverified";
+        accepted_package["admissionGrade"] = "unverified";
+        accepted_package["productSystem"] = false;
+      }
+      accepted_package["authority"] = {
+          {"schema", "kungfu.kfx-package-authority/v1"},
+          {"packageRoot", accepted_package.at("packageRoot")},
+          {"manifestRoot", accepted_package.at("manifestRoot")},
+          {"reportRoot", authorization.at("authorityRoots").at("reportRoot")},
+          {"admissionPlanRoot", authorization.at("authorityRoots").at("admissionPlanRoot")},
+          {"corePolicyRoot", authorization.at("authorityRoots").at("corePolicyRoot")},
+          {"requestedPolicyRoot", authorization.at("authorityRoots").at("requestedPolicyRoot")},
+          {"policyRoot", authorization.at("authorityRoots").at("policyRoot")},
+          {"receiptDependencyRoot", authorization.at("authorityRoots").at("receiptDependencyRoot")},
+          {"authorizationPlanRoot", authorization.at("authorizationPlanRoot")},
+          {"capabilityDeclarationRoot", authorization.at("capabilityDeclarationRoot")},
+          {"capabilityGrantRoot", authorization.at("capabilityGrantRoot")},
+          {"warrantRoot", authorization.at("warrantRoot")},
+          {"grantedCapabilities", authorization.at("grantedCapabilities")}};
     }
+    json structural_diagnostics = json::array();
+    for (const auto &diagnostic : accepted.diagnostics) {
+      if (diagnostic.value("code", "") == "KF_KFX_OPTIONAL_MEMBER_MISSING")
+        structural_diagnostics.push_back(diagnostic);
+    }
+    accepted.diagnostics = structural_diagnostics;
+    accepted.graph = semantic_graph(accepted.packages, accepted.diagnostics);
+    accepted.graph_root = accepted.graph.at("graphRoot").get<std::string>();
+    json accepted_package_identity = json::array();
+    for (const auto &accepted_package : accepted.packages) {
+      accepted_package_identity.push_back(
+          {{"key", accepted_package.at("key")},
+           {"rootKind", accepted_package.at("rootKind")},
+           {"packageRoot", accepted_package.at("packageRoot")},
+           {"manifestRoot", accepted_package.at("manifestRoot")},
+           {"apiCompatibility", accepted_package.at("apiCompatibility")},
+           {"facets", accepted_package.at("facets")},
+           {"runtimeTier", accepted_package.at("runtimeTier")},
+           {"admissionGrade", accepted_package.at("admissionGrade")},
+           {"productSystem", accepted_package.at("productSystem")},
+           {"grantedCapabilities", accepted_package.at("grantedCapabilities")},
+           {"capabilityGrantRoot", accepted_package.at("authority").at("capabilityGrantRoot")},
+           {"hosts", accepted_package.at("hosts")}});
+    }
+    accepted.registry_root = root_of({{"schema", "kungfu.kfx-registry-snapshot/v2"},
+                                      {"packages", accepted_package_identity},
+                                      {"suites", accepted.suites},
+                                      {"diagnostics", accepted.diagnostics}});
     const json materialization = {{"contentPath", content_path.empty() ? nullptr : json(content_path.string())},
                                   {"retainedPath", retained_path.empty() ? nullptr : json(retained_path.string())},
                                   {"destinationPath", destination.string()}};
@@ -2322,17 +2543,22 @@ snapshot merge_candidate_observation(const snapshot &authority, const snapshot &
   result.graph_root = result.graph.at("graphRoot").get<std::string>();
   json package_identity = json::array();
   for (const auto &package : result.packages) {
-    package_identity.push_back({{"key", package.at("key")},
-                                {"rootKind", package.at("rootKind")},
-                                {"packageRoot", package.at("packageRoot")},
-                                {"manifestRoot", package.at("manifestRoot")},
-                                {"apiCompatibility", package.at("apiCompatibility")},
-                                {"facets", package.at("facets")},
-                                {"runtimeTier", package.at("runtimeTier")},
-                                {"admissionGrade", package.at("admissionGrade")},
-                                {"hosts", package.at("hosts")}});
+    package_identity.push_back(
+        {{"key", package.at("key")},
+         {"rootKind", package.at("rootKind")},
+         {"packageRoot", package.at("packageRoot")},
+         {"manifestRoot", package.at("manifestRoot")},
+         {"apiCompatibility", package.at("apiCompatibility")},
+         {"facets", package.at("facets")},
+         {"runtimeTier", package.at("runtimeTier")},
+         {"admissionGrade", package.at("admissionGrade")},
+         {"productSystem", package.at("productSystem")},
+         {"grantedCapabilities", package.at("grantedCapabilities")},
+         {"capabilityGrantRoot",
+          package.contains("authority") ? package.at("authority").at("capabilityGrantRoot") : json(nullptr)},
+         {"hosts", package.at("hosts")}});
   }
-  result.registry_root = root_of({{"schema", "kungfu.kfx-registry-snapshot/v1"},
+  result.registry_root = root_of({{"schema", "kungfu.kfx-registry-snapshot/v2"},
                                   {"packages", package_identity},
                                   {"suites", result.suites},
                                   {"diagnostics", result.diagnostics}});
@@ -2343,7 +2569,7 @@ snapshot empty_observation() {
   snapshot result;
   result.graph = semantic_graph(result.packages, result.diagnostics);
   result.graph_root = result.graph.at("graphRoot").get<std::string>();
-  result.registry_root = root_of({{"schema", "kungfu.kfx-registry-snapshot/v1"},
+  result.registry_root = root_of({{"schema", "kungfu.kfx-registry-snapshot/v2"},
                                   {"packages", json::array()},
                                   {"suites", json::array()},
                                   {"diagnostics", json::array()}});
@@ -2356,8 +2582,8 @@ json native_kfx_control_bootstrap_policy() { return control_bootstrap_policy(); 
 
 static json query_native_kfx_registry_unchecked(const std::string &action, const json &request,
                                                 const std::string &runtime_dir) {
-  static const std::set<std::string> actions = {"list",   "inspect", "resolve", "plan",
-                                                "status", "assess",  "apply",   "history"};
+  static const std::set<std::string> actions = {"list",   "inspect", "resolve",        "plan",   "status",
+                                                "assess", "apply",   "authorize-host", "history"};
   if (!actions.contains(action))
     refuse("KF_KFX_AUTHORITY_CLAIM_FORBIDDEN", "unsupported native KFX registry operation: " + action);
   const auto controller = request.value("controller", "");
@@ -2397,6 +2623,8 @@ static json query_native_kfx_registry_unchecked(const std::string &action, const
     refuse("KF_KFX_CUT_MISSING", "no named KFX Fact Cut exists; provide a bounded discovery observation to plan");
   }
   const auto load_plan = lifecycle_plan(selected, lifecycle, request);
+  if (action == "authorize-host")
+    return authorize_host_launch(load_plan.at("hostContract"), lifecycle, request);
   if (control_request && action == "apply") {
     const auto candidate = find_package(selected.packages, KFX_CONTROL_PACKAGE_KEY);
     const json actual_cut = lifecycle.present ? json(lifecycle.cut_root) : json(nullptr);
@@ -2418,6 +2646,7 @@ static json query_native_kfx_registry_unchecked(const std::string &action, const
             {"controlPlanRoot", planned.at("controlPlanRoot")},
             {"bootstrapPolicyRoot", planned.at("bootstrapPolicyRoot")},
             {"authorizationPlanRoot", planned.at("authorizationPlanRoot")},
+            {"capabilityGrantRoot", planned.at("capabilityGrantRoot")},
             {"warrantRoot", planned.at("warrantRoot")},
             {"application", application},
             {"status", control_status(settled)},
@@ -2537,6 +2766,7 @@ static json query_native_kfx_registry_unchecked(const std::string &action, const
     auto result = load_plan;
     result["mutationAuthorization"] = authorization;
     result["authorizationPlanRoot"] = authorization.at("authorizationPlanRoot");
+    result["capabilityGrantRoot"] = authorization.at("capabilityGrantRoot");
     result["warrantRoot"] = authorization.at("warrantRoot");
     return result;
   }

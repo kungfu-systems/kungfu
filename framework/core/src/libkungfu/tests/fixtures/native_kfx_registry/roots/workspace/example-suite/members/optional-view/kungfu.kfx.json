@@ -7,7 +7,6 @@
     "config": {
       "view": {
         "title": "Optional View",
-        "runtime": "sandboxed-ipc",
         "entry": "view.js",
         "capabilities": [
           "domain"

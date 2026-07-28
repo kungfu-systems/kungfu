@@ -19,8 +19,7 @@
         "capabilities": [
           "ledger",
           "storage"
-        ],
-        "system": true
+        ]
       }
     }
   }

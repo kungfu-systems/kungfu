@@ -124,6 +124,8 @@ json plan(const json &packages, const std::string &registry_root, const std::str
   json report_root = nullptr;
   json admission_plan_root = nullptr;
   json receipt_dependency_root = nullptr;
+  json core_policy_root = nullptr;
+  json requested_policy_root = nullptr;
   json policy_root = nullptr;
   json dependency_root = nullptr;
   json required_approvals = json::array();
@@ -160,6 +162,7 @@ json plan(const json &packages, const std::string &registry_root, const std::str
                            {"issuerClasses", json::array({"core-system", "workspace-owner"})},
                            {"operations", json::array({"disable", "remove"})},
                            {"packageCooperationRequired", false}});
+    core_policy_root = policy_root;
     dependency_root = root_of(recovery);
     receipt_dependency_root = root_of({{"recoveryWarrantRoot", dependency_root},
                                        {"policyRoot", policy_root},
@@ -181,6 +184,8 @@ json plan(const json &packages, const std::string &registry_root, const std::str
     admission_plan_root = admission.at("planRoot");
     receipt_dependency_root = admission.at("receiptDependencyRoot");
     policy_root = report.at("policyRoot");
+    core_policy_root = report.at("corePolicyRoot");
+    requested_policy_root = report.at("requestedPolicyRoot");
     dependency_root = admission.at("dependencyRoot");
     required_approvals = admission.at("requiredApprovals");
     if (!required_approvals.empty() && approval_roots.empty())
@@ -197,25 +202,60 @@ json plan(const json &packages, const std::string &registry_root, const std::str
   const json authority_roots = {{"reportRoot", report_root},
                                 {"admissionPlanRoot", admission_plan_root},
                                 {"receiptDependencyRoot", receipt_dependency_root},
+                                {"corePolicyRoot", core_policy_root},
+                                {"requestedPolicyRoot", requested_policy_root},
                                 {"policyRoot", policy_root},
                                 {"packageRoot", package.at("packageRoot")},
                                 {"dependencyRoot", dependency_root},
                                 {"requiredApprovals", required_approvals},
                                 {"approvalRoots", approval_roots}};
-  const auto authority_basis_root =
-      root_of({{"schema", "kungfu.kfx-mutation-authority-basis/v1"},
-               {"mode", mode},
-               {"operation", operation},
-               {"packageKey", package_key},
-               {"basis", basis},
-               {"authorityRoots", authority_roots},
-               {"requestedCapabilities", request.value("requestedCapabilities", json::array())},
-               {"authorizationTime", authorization_time}});
+  const auto requested_capabilities = string_array_or_empty(request, "requestedCapabilities");
+  const auto declared_capabilities = package.at("declaredCapabilities").get<std::vector<std::string>>();
+  for (const auto &capability : requested_capabilities) {
+    if (std::find(declared_capabilities.begin(), declared_capabilities.end(), capability) ==
+        declared_capabilities.end())
+      refuse("KF_KFX_CAPABILITY_BROADENING",
+             "capability grant contains a capability absent from the exact package declaration");
+  }
+  const auto authority_basis_root = root_of({{"schema", "kungfu.kfx-mutation-authority-basis/v1"},
+                                             {"mode", mode},
+                                             {"operation", operation},
+                                             {"packageKey", package_key},
+                                             {"basis", basis},
+                                             {"authorityRoots", authority_roots},
+                                             {"requestedCapabilities", requested_capabilities},
+                                             {"authorizationTime", authorization_time}});
+  const json capability_declaration = {{"schema", "kungfu.kfx-capability-declaration/v1"},
+                                       {"packageKey", package_key},
+                                       {"packageRoot", package.at("packageRoot")},
+                                       {"capabilities", declared_capabilities}};
+  const auto capability_declaration_root = root_of(capability_declaration);
+  const json capability_grant_identity = {{"schema", "kungfu.kfx-capability-grant/v1"},
+                                          {"mode", mode},
+                                          {"operation", operation},
+                                          {"packageKey", package_key},
+                                          {"packageRoot", package.at("packageRoot")},
+                                          {"capabilityDeclarationRoot", capability_declaration_root},
+                                          {"corePolicyRoot", core_policy_root},
+                                          {"requestedPolicyRoot", requested_policy_root},
+                                          {"policyRoot", policy_root},
+                                          {"reportRoot", report_root},
+                                          {"admissionPlanRoot", admission_plan_root},
+                                          {"receiptDependencyRoot", receipt_dependency_root},
+                                          {"authorityBasisRoot", authority_basis_root},
+                                          {"requiredApprovals", required_approvals},
+                                          {"approvalRoots", approval_roots},
+                                          {"grantedCapabilities", requested_capabilities},
+                                          {"priorCutRoot", prior_cut},
+                                          {"priorRevision", revision},
+                                          {"issuedAt", authorization_time}};
+  const auto capability_grant_root = root_of(capability_grant_identity);
   const auto warrant_root = root_of({{"schema", "kungfu.kfx.warrant-fact/v2"},
                                      {"mode", mode},
                                      {"operation", operation},
                                      {"packageKey", package_key},
                                      {"authorityBasisRoot", authority_basis_root},
+                                     {"capabilityGrantRoot", capability_grant_root},
                                      {"basis", basis},
                                      {"authorityRoots", authority_roots},
                                      {"state", "issued"},
@@ -226,7 +266,12 @@ json plan(const json &packages, const std::string &registry_root, const std::str
                    {"packageKey", package_key},
                    {"basis", basis},
                    {"authorityRoots", authority_roots},
-                   {"requestedCapabilities", request.value("requestedCapabilities", json::array())},
+                   {"requestedCapabilities", requested_capabilities},
+                   {"grantedCapabilities", requested_capabilities},
+                   {"capabilityDeclaration", capability_declaration},
+                   {"capabilityDeclarationRoot", capability_declaration_root},
+                   {"capabilityGrant", capability_grant_identity},
+                   {"capabilityGrantRoot", capability_grant_root},
                    {"authorizationTime", authorization_time},
                    {"warrantRoot", warrant_root},
                    {"warrantObjectId", fact_id("warrant", warrant_root)},

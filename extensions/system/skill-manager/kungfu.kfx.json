@@ -16,8 +16,7 @@
     "config": {
       "view": {
         "title": "Skills",
-        "capabilities": [],
-        "system": true
+        "capabilities": []
       }
     }
   }
