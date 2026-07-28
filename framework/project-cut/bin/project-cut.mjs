@@ -12,6 +12,14 @@ import { observeComposition, verifyComposition } from '../src/composition.mjs';
 import { observeHistory, reconcileHistory } from '../src/history.mjs';
 import { parseLosslessUint64Json, parseRootJson } from '../src/project-cut.mjs';
 import {
+  checkSettlementPublicationContract,
+  inspectSettlementPublication,
+  materializeSettlementPublication,
+  planSettlementPublication,
+  reconcileSettlementPublication,
+  verifySettlementPublication,
+} from '../src/publication.mjs';
+import {
   abandonSettlement,
   inspectSettlement,
   observeSettlementCommit,
@@ -32,7 +40,12 @@ function usage() {
   project-cut history-observe --request FILE [--root DIR] --json
   project-cut history-reconcile --observations FILE [--root DIR] --json
   project-cut composition-observe --base REF --commit REF [--root DIR] --json
-  project-cut composition-verify --receipt FILE [--root DIR] --json`;
+  project-cut composition-verify --receipt FILE [--root DIR] --json
+  project-cut publication-contract-check [--root DIR] --json
+  project-cut publication-prepare --request FILE [--commit REF] [--root DIR] [--execute] [--stage] --json
+  project-cut publication-inspect --plan FILE [--root DIR] --json
+  project-cut publication-reconcile --plan FILE --observation FILE [--root DIR] --json
+  project-cut publication-verify --batch-root ROOT [--commit REF] [--root DIR] --json`;
 }
 
 function parseArguments(argv) {
@@ -88,6 +101,8 @@ function responseSchema(action) {
   if (action === 'episode-seal') return 'project.cut.episode-seal-response/v1';
   if (action.startsWith('composition-'))
     return 'project.cut.composition-response/v1';
+  if (action.startsWith('publication-'))
+    return 'kungfu.settlement-publication.response/v1';
   return action.startsWith('history-')
     ? 'project.cut.history-response/v1'
     : 'project.cut.settlement-response/v1';
@@ -232,6 +247,51 @@ try {
       readFileSync(required(parsed.values, '--receipt'), 'utf8'),
     );
     result = { action, ...verifyComposition(root, receipt) };
+  } else if (action === 'publication-contract-check') {
+    result = {
+      action,
+      ...checkSettlementPublicationContract(path.resolve(root)),
+    };
+  } else if (action === 'publication-prepare') {
+    const request = parseRootJson(
+      readFileSync(required(parsed.values, '--request'), 'utf8'),
+    );
+    const plan = planSettlementPublication(root, request, {
+      commit: parsed.values['--commit'] ?? 'HEAD',
+    });
+    const materialization = materializeSettlementPublication(root, plan, {
+      execute,
+      stage: parsed.flags.has('--stage'),
+    });
+    result = { ok: true, action, plan, materialization };
+  } else if (action === 'publication-inspect') {
+    const plan = parseRootJson(
+      readFileSync(required(parsed.values, '--plan'), 'utf8'),
+    );
+    result = {
+      action,
+      ...inspectSettlementPublication(root, plan),
+    };
+  } else if (action === 'publication-reconcile') {
+    const plan = parseRootJson(
+      readFileSync(required(parsed.values, '--plan'), 'utf8'),
+    );
+    const observation = parseRootJson(
+      readFileSync(required(parsed.values, '--observation'), 'utf8'),
+    );
+    result = {
+      action,
+      ...reconcileSettlementPublication(root, plan, observation),
+    };
+  } else if (action === 'publication-verify') {
+    result = {
+      action,
+      ...verifySettlementPublication(
+        root,
+        required(parsed.values, '--batch-root'),
+        { commit: parsed.values['--commit'] ?? 'HEAD' },
+      ),
+    };
   } else {
     throw Object.assign(new Error(`unknown action: ${action}`), {
       code: 'unknown-action',

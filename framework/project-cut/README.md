@@ -155,3 +155,35 @@ is the stage-0, headless recovery path from tracked Git JSON/JSONL.
 Optional JSON Schema validation runs when repository dependencies are present;
 the semantic/root verifier and settlement core use only Node built-ins and
 remain available for stage-0 recovery.
+
+## Protected settlement publication
+
+[`publication.contract.json`](publication.contract.json) defines the bounded
+Git projection of already sealed Episode shadows and settled Project Cuts. A
+declared Wave or batch produces one content-addressed batch root, one
+`machine-ledger/settlement/<root>` source branch identity, and one pull-request
+marker. The protected target is never pushed directly. Duplicate and concurrent
+observations reconcile through the same batch identity; changing any selected
+root produces a distinct successor batch instead of rewriting history.
+
+The versioned no-recursion rule rejects events already marked by the generated
+branch prefix, `kungfu-machine-ledger` label, generator identity, or publication
+root. Only canonical Episode claims/manifests/qualifications, Project Cut
+manifests/receipts, and their content-addressed batch manifest enter Git. Raw
+journals, private payloads, credentials, signed URLs, caches, locks, and large
+artifacts are not planner inputs.
+
+Publication state is a rebuildable runtime projection. It exposes lag,
+unpublished Cut count, branch and pull-request coordinates, retry count, and the
+latest exact failure root. A publication failure never blocks continuation from
+the settled native Fact Cut and never becomes Work Control completion authority.
+
+```sh
+./shifu project-cut publication-prepare --request publication-request.json --json
+./shifu project-cut publication-prepare --request publication-request.json --execute --stage --json
+./shifu project-cut publication-inspect --plan publication-plan.json --json
+./shifu project-cut publication-reconcile --plan publication-plan.json --observation pr-observation.json --json
+./shifu project-cut publication-verify --batch-root sha256:... --commit HEAD --json
+./shifu check:project-cut-publication
+./shifu test:project-cut-publication
+```

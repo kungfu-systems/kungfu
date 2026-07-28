@@ -164,6 +164,9 @@ export function sourceChangedFiles() {
  * @param {string} [evidenceBaseCommit]
  */
 export function sourceAcceptancePlan(files, evidenceBaseCommit = '') {
+  const settlementPublicationPresent = fs.existsSync(
+    path.join(ROOT, 'framework/project-cut/publication.contract.json'),
+  );
   const nodeChecks = [
     ['no Bash scripts', 'scripts/no-bash-guard.mjs'],
     ['Shifu entry contract', 'scripts/check-shifu-entry-contract.mjs'],
@@ -276,6 +279,16 @@ export function sourceAcceptancePlan(files, evidenceBaseCommit = '') {
       'Project Cut composition contract',
       'scripts/check-project-cut-composition.mjs',
     ],
+    ...(settlementPublicationPresent
+      ? [
+          [
+            'Project Cut settlement publication contract',
+            'framework/project-cut/bin/project-cut.mjs',
+            'publication-contract-check',
+            '--json',
+          ],
+        ]
+      : []),
     [
       'Project Cut scoped composition admission',
       'scripts/check-project-cut-composition-gate.mjs',
@@ -413,6 +426,9 @@ export function sourceAcceptancePlan(files, evidenceBaseCommit = '') {
         'scripts/check-project-cut-settlement.test.mjs',
         'scripts/check-project-cut-history.test.mjs',
         'scripts/check-project-cut-composition.test.mjs',
+        ...(settlementPublicationPresent
+          ? ['scripts/check-project-cut-publication.test.mjs']
+          : []),
         'scripts/project-cut-merge-queue-admission.test.mjs',
         'scripts/check-workspace-continuation.test.mjs',
         'framework/assignment-capture/assignment-capture.test.mjs',
