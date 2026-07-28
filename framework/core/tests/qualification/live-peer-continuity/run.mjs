@@ -23,6 +23,13 @@ function git(args) {
   return result.status === 0 ? (result.stdout || '').trim() : null;
 }
 
+export function sourceChanges(status) {
+  return status
+    .split('\n')
+    .map((line) => line.trimEnd())
+    .filter(Boolean);
+}
+
 export function sourceFacts() {
   const status = git(['status', '--porcelain']);
   return {
@@ -30,12 +37,7 @@ export function sourceFacts() {
     tree: git(['rev-parse', 'HEAD^{tree}']) || 'unknown',
     dirty: status === null || status !== '',
     changes:
-      status === null
-        ? ['git-status-unavailable']
-        : status
-            .split('\n')
-            .map((line) => line.trimEnd())
-            .filter(Boolean),
+      status === null ? ['git-status-unavailable'] : sourceChanges(status),
   };
 }
 

@@ -18,6 +18,7 @@ import {
   pythonInvocation,
   qualificationPlan,
   retainQualificationArtifacts,
+  sourceChanges,
 } from './run.mjs';
 
 const source = (dirty = false) => ({
@@ -51,6 +52,13 @@ test('default evidence is outside the Core build tree', () => {
   const output = defaultOutputDir('qualification-test');
   assert.match(output, /live-peer-continuity/u);
   assert.doesNotMatch(output, /framework[/\\]core[/\\]build/u);
+});
+
+test('source status evidence preserves porcelain paths without blank rows', () => {
+  assert.deepEqual(sourceChanges(' M tracked.mjs  \n?? generated.json\n\n'), [
+    ' M tracked.mjs',
+    '?? generated.json',
+  ]);
 });
 
 test('native state-machine leg fails when CTest discovers no matching test', () => {
