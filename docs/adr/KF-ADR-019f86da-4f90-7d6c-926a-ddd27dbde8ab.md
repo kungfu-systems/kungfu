@@ -4,7 +4,7 @@ doc_type: architecture-decision
 adr_id: KF-ADR-019f86da-4f90-7d6c-926a-ddd27dbde8ab
 decision_status: accepted
 implementation_status: partial
-implementation_prs: [https://github.com/kungfu-systems/kungfu/pull/571, https://github.com/kungfu-systems/kungfu/pull/568, https://github.com/kungfu-systems/kungfu/pull/731, https://github.com/kungfu-systems/kungfu/pull/734, https://github.com/kungfu-systems/kungfu/pull/906, https://github.com/kungfu-systems/kungfu/pull/922, https://github.com/kungfu-systems/kungfu/pull/942, https://github.com/kungfu-systems/kungfu/pull/975, https://github.com/kungfu-systems/kungfu/pull/1704, https://github.com/kungfu-systems/kungfu/pull/1718, https://github.com/kungfu-systems/kungfu/pull/1728]
+implementation_prs: [https://github.com/kungfu-systems/kungfu/pull/571, https://github.com/kungfu-systems/kungfu/pull/568, https://github.com/kungfu-systems/kungfu/pull/731, https://github.com/kungfu-systems/kungfu/pull/734, https://github.com/kungfu-systems/kungfu/pull/906, https://github.com/kungfu-systems/kungfu/pull/922, https://github.com/kungfu-systems/kungfu/pull/942, https://github.com/kungfu-systems/kungfu/pull/975, https://github.com/kungfu-systems/kungfu/pull/1704, https://github.com/kungfu-systems/kungfu/pull/1718, https://github.com/kungfu-systems/kungfu/pull/1728, https://github.com/kungfu-systems/kungfu/pull/1744]
 qualification_refs: [framework/core/src/libkungfu/tests/fixtures/native_kfx_contract/buildchain-2.13.0-alpha.0-envelope.json, framework/core/src/libkungfu/tests/native_kfx_contract_tests.cpp, framework/core/tests/python/test_native_kfx_contract.py, framework/core/tests/storage-node-binding.test.js, framework/api/tests/storage.test.ts]
 review_state: self-reviewed
 sensitivity: public
@@ -126,6 +126,16 @@ confinement and launch reauthorization reject any package, policy, capability,
 Cut, revision, generation, Warrant, or replay drift. Pinned-verifier
 authentication and terminal identity-neutral qualification remain later
 stages, so implementation remains partial.
+
+PR #1744 closes the remaining identity-neutral admission shortcuts. KFD
+conformance is retained only as policy eligibility evidence and can neither
+select a runtime tier nor mint a capability. Product System roles are inert
+assembly/distribution/default-install/update/presentation metadata. Bundled and
+external packages traverse the same exact Release Passport, Core policy,
+Work/Warrant, capability-grant, approval, Cut, generation, and isolation
+checks; self-labels, self-signed or sibling Passports, replay, and post-plan
+mutation fail closed. Recursive dogfood and the terminal qualification remain
+outside this stage, so implementation remains partial.
 
 ## Decision
 

@@ -4,7 +4,7 @@ doc_type: architecture-decision
 adr_id: KF-ADR-019f86da-4f90-7ef4-b28b-ee1fbaf9e62e
 decision_status: accepted
 implementation_status: partial
-implementation_prs: [https://github.com/kungfu-systems/kungfu/pull/842, https://github.com/kungfu-systems/kungfu/pull/873, https://github.com/kungfu-systems/kungfu/pull/885, https://github.com/kungfu-systems/kungfu/pull/906, https://github.com/kungfu-systems/kungfu/pull/922, https://github.com/kungfu-systems/kungfu/pull/1704, https://github.com/kungfu-systems/kungfu/pull/1718, https://github.com/kungfu-systems/kungfu/pull/1728]
+implementation_prs: [https://github.com/kungfu-systems/kungfu/pull/842, https://github.com/kungfu-systems/kungfu/pull/873, https://github.com/kungfu-systems/kungfu/pull/885, https://github.com/kungfu-systems/kungfu/pull/906, https://github.com/kungfu-systems/kungfu/pull/922, https://github.com/kungfu-systems/kungfu/pull/1704, https://github.com/kungfu-systems/kungfu/pull/1718, https://github.com/kungfu-systems/kungfu/pull/1728, https://github.com/kungfu-systems/kungfu/pull/1744]
 review_state: self-reviewed
 sensitivity: public
 sources: [local-files, user-decision]
@@ -100,6 +100,18 @@ metadata-only placements now have fail-closed execution semantics. KFD,
 first-party identity, and Product System metadata mint no authority. The
 identity-neutral cutover, recursive Control Suite dogfood, and terminal
 qualification remain later stages, so the umbrella decision remains partial.
+
+PR #1744 completes the identity-neutral authority cutover across native, Node,
+Python, GUI, TUI, CLI, agent, service, adapter, WASM, and session-window host
+edges. Contract v3 accepts no older authority shape; first-party/System labels,
+Product System roles, names, bundle paths, installer origin, signers, siblings,
+and KFD status cannot change admission, runtime tier, capabilities, or
+confinement. Product System now carries assembly and distribution metadata
+only. Every executable path reuses the exact Passport, Core policy,
+Work/Warrant, capability grant, Cut, generation, and isolation roots, while
+the minimal Core bootstrap/LKG/safe-mode/emergency-removal TCB is explicit.
+Recursive Control Suite dogfood and the sole terminal qualification remain
+later stages, so the umbrella decision remains partial.
 
 Conversion readiness therefore remains blocked on the remaining ordered gates:
 Fact/Work lifecycle authority with Cut and CAS semantics, then a recursively

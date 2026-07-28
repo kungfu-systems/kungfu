@@ -126,9 +126,10 @@ export function loadKfx(
         'gui',
         candidate.authorizationRoot,
       );
+      const declaredCapabilities = new Set<string>(entry.capabilities);
       if (
         authorization.requiredCapabilities.some(
-          (capability) => !entry.capabilities.includes(capability),
+          (capability) => !declaredCapabilities.has(capability),
         )
       ) {
         throw new Error(
