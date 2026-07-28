@@ -67,7 +67,7 @@ jobs:
       rust-toolchain: "1.96.0"
       rustup-dist-server: https://rsproxy.cn
       rustup-update-root: https://rsproxy.cn/rustup
-      cargo-registry-index: ${{ vars.BUILDCHAIN_CARGO_REGISTRY_INDEX }}
+      cargo-registry-index: sparse+https://index.crates.io/
       artifact-name: kungfu-aws-linux-burst-${{ inputs.qualification-id }}
       artifact-paths: |
         product/release/qualification/aws-codebuild-linux.json

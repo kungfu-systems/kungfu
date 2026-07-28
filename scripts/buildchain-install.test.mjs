@@ -204,6 +204,11 @@ test('AWS Linux burst workflow is trusted exact-train qualification only', () =>
   assert.match(workflow, /artifact-transfer-mode: github-artifacts/);
   assert.match(workflow, /checkout-cache-mode: off/);
   assert.doesNotMatch(workflow, /checkout-cache-mode: (?:auto|require|github)/);
+  assert.match(
+    workflow,
+    /cargo-registry-index: sparse\+https:\/\/index\.crates\.io\//,
+  );
+  assert.doesNotMatch(workflow, /BUILDCHAIN_CARGO_REGISTRY_INDEX/);
   assert.doesNotMatch(
     workflow,
     /secrets:|notar|signing|npm-publish|release-new-version|deploy/,
