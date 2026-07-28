@@ -148,7 +148,7 @@ def discover_adapters(
                                         "grantedCapabilities", []
                                     ),
                                 },
-                                runtime_dir,
+                                runtime_dir or "",
                             )
                             authorization = launch.get("authorization")
                             if (
