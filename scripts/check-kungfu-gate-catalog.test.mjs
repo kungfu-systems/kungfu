@@ -189,7 +189,19 @@ test('current Kungfu catalog, docs, matrix, actions, and workflows align', () =>
   );
   assert.equal(controllers.length, 10);
   assert.ok(controllers.every((fact) => fact.gates.length > 0));
-  assert.equal(result.workflowAuthority.workflows.length, 24);
+  assert.equal(result.workflowAuthority.workflows.length, 25);
+  const linuxArm64Qualification = result.workflowAuthority.workflows.find(
+    (workflow) =>
+      workflow.path === '.github/workflows/linux-arm64-alpha-qualification.yml',
+  );
+  assert.equal(linuxArm64Qualification?.authority, 'qualification');
+  assert.deepEqual(
+    linuxArm64Qualification?.jobs.map(({ id, receipt }) => ({ id, receipt })),
+    [
+      { id: 'artifact', receipt: 'diagnostic' },
+      { id: 'preflight', receipt: 'diagnostic' },
+    ],
+  );
   const alphaPreflight = result.workflowAuthority.workflows.find(
     (workflow) =>
       workflow.path === '.github/workflows/alpha-promotion-preflight.yml',

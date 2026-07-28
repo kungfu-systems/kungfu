@@ -6,6 +6,7 @@ import {
   cliSpawnSpecification,
   qualifyCliSurface,
 } from './cli-surface-qualification.mjs';
+import { verifyCliSurfaceQualification } from './verify-cli-surface-qualification.mjs';
 
 const roots = {
   catalogRoot: 'sha256:catalog',
@@ -144,6 +145,11 @@ test('qualification binds help, canonical CLI, KFD-3 and mutation receipts', () 
   const report = qualifyCliSurface({
     cli: '/fixture/kungfu',
     expectedCatalog: catalog(),
+    label: 'cli-archive',
+    identity: {
+      archive: 'kungfu-episodes-cli-fixture.tar.gz',
+      archiveSha256: `sha256:${'a'.repeat(64)}`,
+    },
     runCommand: runner(),
   });
   assert.equal(report.qualified, true);
@@ -159,6 +165,62 @@ test('qualification binds help, canonical CLI, KFD-3 and mutation receipts', () 
   assert.equal(report.checks.canonicalOnly.aliases, 0);
   assert.equal(report.checks.mutationPlanReceipt.receiptVerified, true);
   assert.match(report.qualificationRoot, /^sha256:[0-9a-f]{64}$/u);
+  assert.equal(
+    verifyCliSurfaceQualification({
+      report,
+      expectedPlatform: report.platform,
+      archiveName: report.identity.archive,
+      archiveSha256: report.identity.archiveSha256,
+    }).verified,
+    true,
+  );
+});
+
+test('verification binds the qualification to the exact archive digest', () => {
+  const report = qualifyCliSurface({
+    cli: '/fixture/kungfu',
+    expectedCatalog: catalog(),
+    label: 'cli-archive',
+    identity: {
+      archive: 'kungfu-episodes-cli-fixture.tar.gz',
+      archiveSha256: `sha256:${'a'.repeat(64)}`,
+    },
+    runCommand: runner(),
+  });
+  assert.throws(
+    () =>
+      verifyCliSurfaceQualification({
+        report,
+        expectedPlatform: report.platform,
+        archiveName: report.identity.archive,
+        archiveSha256: `sha256:${'b'.repeat(64)}`,
+      }),
+    /archive SHA256 mismatch/u,
+  );
+});
+
+test('verification rejects a tampered qualification root', () => {
+  const report = qualifyCliSurface({
+    cli: '/fixture/kungfu',
+    expectedCatalog: catalog(),
+    label: 'cli-archive',
+    identity: {
+      archive: 'kungfu-episodes-cli-fixture.tar.gz',
+      archiveSha256: `sha256:${'a'.repeat(64)}`,
+    },
+    runCommand: runner(),
+  });
+  report.checks.kfd3.linkedApiCount += 1;
+  assert.throws(
+    () =>
+      verifyCliSurfaceQualification({
+        report,
+        expectedPlatform: report.platform,
+        archiveName: report.identity.archive,
+        archiveSha256: report.identity.archiveSha256,
+      }),
+    /qualification semantic root mismatch/u,
+  );
 });
 
 test('qualification rejects a product without the secondary signature', () => {

@@ -71,6 +71,14 @@
           "role": "package-release"
         },
         {
+          "path": "product/scripts/verify-cli-surface-qualification.mjs",
+          "role": "conformance-oracle"
+        },
+        {
+          "path": "product/scripts/cli-surface-qualification.test.mjs",
+          "role": "test"
+        },
+        {
           "path": "docs/architecture/overview.md",
           "role": "documentation"
         }

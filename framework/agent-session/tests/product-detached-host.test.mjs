@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
+import { createHash } from 'node:crypto';
 import { mkdtemp, rm } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
@@ -14,13 +15,22 @@ const FIXTURE = fileURLToPath(
   new URL('./fixtures/product-worker-fixture.mjs', import.meta.url),
 );
 
-test('detached endpoint is stable per runtime root and contains no main pid', () => {
+test('detached endpoint is stable per runtime root and derived only from it', () => {
   const first = detachedAgentSessionPaths('/tmp/kungfu-runtime-a');
   const second = detachedAgentSessionPaths('/tmp/kungfu-runtime-a');
   const other = detachedAgentSessionPaths('/tmp/kungfu-runtime-b');
+  const expectedScope = createHash('sha256')
+    .update(path.resolve('/tmp/kungfu-runtime-a', 'agent-session'))
+    .digest('hex')
+    .slice(0, 16);
   assert.deepEqual(first, second);
   assert.notEqual(first.endpoint, other.endpoint);
-  assert.doesNotMatch(first.endpoint, new RegExp(String(process.pid)));
+  assert.equal(
+    first.endpoint,
+    process.platform === 'win32'
+      ? `\\\\.\\pipe\\kungfu-agent-session-${expectedScope}`
+      : path.join(first.socketDirectory, `${expectedScope}.sock`),
+  );
 });
 
 test('a new main client reconnects to one worker and worker loss never fakes continuity', async () => {
