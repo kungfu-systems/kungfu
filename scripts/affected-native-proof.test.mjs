@@ -9,14 +9,19 @@ import { fileURLToPath } from 'node:url';
 
 import {
   createCachePromotionAuthority,
+  createDeliveryAttempt,
+  createDeliveryBinding,
   createProofDescriptor,
   digest,
   nativeToolchainIdentity,
+  requiredContextsFromRules,
   sealProof,
   selectReusableArtifact,
+  validateDeliveryAttempt,
   verifyCachePromotionAuthority,
   verifyProofBundle,
 } from './affected-native-proof.mjs';
+import { createFamilyQueueLease } from './project-cut-merge-queue-admission.mjs';
 
 const BASE = '1'.repeat(40);
 const HEAD = '2'.repeat(40);
@@ -139,6 +144,56 @@ function producer(overrides = {}) {
   };
 }
 
+function deliveryFixture(overrides = {}) {
+  const lease = createFamilyQueueLease(
+    {
+      ok: true,
+      decision: 'qualified',
+      schema: 'project.cut.merge-queue-admission/v1',
+      baseCommitOid: BASE,
+      headCommitOid: HEAD,
+      candidateCommitOid: QUEUE_HEAD,
+      candidateTreeOid: TREE,
+      replayedCommitCount: 1,
+      compositionChanged: false,
+      compositionRoot: null,
+      reasonCodes: [],
+    },
+    {
+      initiativeId: 'go-family-native-state-contract',
+      assignmentId: 'go-family-proof-evidence-binding',
+      deliveryClass: 'native-proof-required',
+      queueAttempt: 'attempt-one',
+      admissionProofRoots: [digest({ work: 'proof-evidence-binding' })],
+      ...(overrides.family || {}),
+    },
+  );
+  const requiredContexts = [
+    'affected-native / linux',
+    'project-cut / queue-admission',
+  ];
+  return {
+    lease,
+    values: {
+      event: 'merge_group',
+      pullRequest: 1728,
+      pullRequestHead: HEAD,
+      devHead: BASE,
+      candidateTree: TREE,
+      pullRequestBody: lease.marker,
+      combinedStatus: {
+        statuses: [
+          { context: lease.statusContext, state: 'pending' },
+          { context: 'project-cut / queue-admission', state: 'success' },
+        ],
+      },
+      requiredContexts,
+      queueAdmissionContext: 'project-cut / queue-admission',
+      ...(overrides.values || {}),
+    },
+  };
+}
+
 function writeBundle(descriptor, value, proofProducer = producer()) {
   const proof = sealProof(descriptor, value.inputs, proofProducer);
   fs.mkdirSync(value.bundle, { recursive: true });
@@ -201,6 +256,167 @@ test('descriptor binds the exact tree, base, plan projection, and toolchain', ()
   assert.deepEqual(
     first.identity.toolchain,
     nativeToolchainIdentity(TOOLCHAIN),
+  );
+});
+
+test('family delivery binding enters proof identity and preserves same-attempt reuse', () => {
+  const { values } = deliveryFixture();
+  const binding = createDeliveryBinding(values);
+  const first = createProofDescriptor(
+    plan(QUEUE_HEAD),
+    TREE,
+    2,
+    TOOLCHAIN,
+    binding,
+  );
+  const repeated = createProofDescriptor(
+    plan(OTHER_HEAD),
+    TREE,
+    2,
+    TOOLCHAIN,
+    createDeliveryBinding(values),
+  );
+  assert.equal(binding.state, 'bound');
+  assert.equal(first.schema, 'kungfu.affected-native-proof-descriptor/v2');
+  assert.match(first.identity.dependencyRoot, /^sha256:[0-9a-f]{64}$/u);
+  assert.match(first.identity.closureRoot, /^sha256:[0-9a-f]{64}$/u);
+  assert.equal(first.proofId, repeated.proofId);
+  assert.notEqual(
+    first.proofId,
+    createProofDescriptor(
+      plan(QUEUE_HEAD),
+      TREE,
+      2,
+      TOOLCHAIN,
+      createDeliveryBinding(
+        deliveryFixture({
+          family: { deliveryClass: 'native-proof-reclassified' },
+        }).values,
+      ),
+    ).proofId,
+  );
+  assert.notEqual(
+    first.proofId,
+    createProofDescriptor(
+      plan(QUEUE_HEAD),
+      TREE,
+      2,
+      TOOLCHAIN,
+      createDeliveryBinding({
+        ...values,
+        requiredContexts: [...values.requiredContexts, 'source / acceptance'],
+      }),
+    ).proofId,
+  );
+  assert.throws(
+    () =>
+      createDeliveryBinding({
+        ...values,
+        devHead: OTHER_HEAD,
+      }),
+    /latest-dev replay drift/u,
+  );
+});
+
+test('pull-request proof is explicitly unbound from later family delivery', () => {
+  const { values } = deliveryFixture();
+  const unbound = createDeliveryBinding({
+    ...values,
+    event: 'pull_request',
+    pullRequestBody: '',
+    combinedStatus: {},
+  });
+  const bound = createDeliveryBinding(values);
+  assert.equal(unbound.state, 'unbound');
+  assert.equal(unbound.queueAdmission.state, 'not-issued');
+  assert.notEqual(
+    createProofDescriptor(plan(QUEUE_HEAD), TREE, 2, TOOLCHAIN, unbound)
+      .proofId,
+    createProofDescriptor(plan(QUEUE_HEAD), TREE, 2, TOOLCHAIN, bound).proofId,
+  );
+  assert.throws(
+    () =>
+      createDeliveryBinding({
+        ...values,
+        pullRequestBody: '',
+      }),
+    /requires a family lease/u,
+  );
+  assert.throws(
+    () =>
+      createDeliveryBinding({
+        ...values,
+        combinedStatus: {
+          statuses: [
+            {
+              context: values.queueAdmissionContext,
+              state: 'success',
+            },
+          ],
+        },
+      }),
+    /family delivery lease is not active/u,
+  );
+});
+
+test('delivery attempt seals the exact family, source, proof decision, and run', () => {
+  const binding = createDeliveryBinding(deliveryFixture().values);
+  const descriptor = createProofDescriptor(
+    plan(QUEUE_HEAD),
+    TREE,
+    2,
+    TOOLCHAIN,
+    binding,
+  );
+  const proof = {
+    proofId: descriptor.proofId,
+    proofRoot: digest({ proofId: descriptor.proofId }),
+    producer: producer({
+      runId: 41,
+      triggerHeadSha: QUEUE_HEAD,
+      checkoutSha: QUEUE_HEAD,
+    }),
+  };
+  const attempt = createDeliveryAttempt(
+    descriptor,
+    proof,
+    'reused',
+    producer({
+      runId: 42,
+      triggerHeadSha: QUEUE_HEAD,
+      checkoutSha: QUEUE_HEAD,
+    }),
+  );
+  assert.equal(validateDeliveryAttempt(attempt), attempt);
+  assert.equal(attempt.source.pullRequestHead, HEAD);
+  assert.equal(attempt.source.mergeGroupHead, QUEUE_HEAD);
+  assert.equal(attempt.proof.decision, 'reused');
+  assert.equal(attempt.workflow.runId, 42);
+  assert.throws(
+    () =>
+      validateDeliveryAttempt({
+        ...attempt,
+        source: { ...attempt.source, pullRequestHead: OTHER_HEAD },
+      }),
+    /root drift/u,
+  );
+});
+
+test('effective rules normalize the exact required-check set', () => {
+  assert.deepEqual(
+    requiredContextsFromRules([
+      {
+        type: 'required_status_checks',
+        parameters: {
+          required_status_checks: [
+            { context: 'project-cut / queue-admission' },
+            { context: 'affected-native / linux' },
+            { context: 'affected-native / linux' },
+          ],
+        },
+      },
+    ]),
+    ['affected-native / linux', 'project-cut / queue-admission'],
   );
 });
 
@@ -341,6 +557,34 @@ test('merge-group authority admits exact PR cache payload transport', () => {
   assert.equal(verified.proof.proofRoot, proof.proofRoot);
   assert.equal(verified.payloadSourceSha, HEAD);
   assert.equal(verified.producer.event, 'pull_request');
+  fs.rmSync(value.root, { recursive: true, force: true });
+});
+
+test('cache promotion authority preserves the exact family delivery binding', () => {
+  const value = fixture();
+  const binding = createDeliveryBinding(deliveryFixture().values);
+  const descriptor = createProofDescriptor(
+    value.value,
+    TREE,
+    2,
+    TOOLCHAIN,
+    binding,
+  );
+  writeBundle(descriptor, value);
+  const authority = createCachePromotionAuthority(descriptor, value.bundle, {
+    targetRepository: 'kungfu-systems/kungfu',
+    targetRunId: 84,
+    targetEvent: 'merge_group',
+    targetHeadSha: HEAD,
+    targetSourceTree: TREE,
+    producerRepository: 'kungfu-systems/kungfu',
+    producerRunId: 42,
+    producerEvent: 'merge_group',
+    producerHeadSha: HEAD,
+    maxAgeSeconds: 6 * 60 * 60,
+    now: '2026-07-22T01:00:00Z',
+  });
+  assert.equal(authority.deliveryBindingRoot, binding.bindingRoot);
   fs.rmSync(value.root, { recursive: true, force: true });
 });
 

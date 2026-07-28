@@ -2,6 +2,9 @@
 // SPDX-License-Identifier: Apache-2.0
 // @ts-check
 
+import crypto from 'node:crypto';
+import fs from 'node:fs';
+import path from 'node:path';
 import process from 'node:process';
 import { pathToFileURL } from 'node:url';
 
@@ -23,6 +26,58 @@ const REPAIR_REASONS = new Set([
   'merge_conflict',
 ]);
 const REPAIR_MARKER = '<!-- kungfu-merge-queue-repair:v1';
+export const DEQUEUE_EVIDENCE_SCHEMA =
+  'kungfu.family-delivery-dequeue-evidence/v1';
+
+function semanticDigest(value) {
+  const ordered = (item) => {
+    if (Array.isArray(item)) return item.map(ordered);
+    if (item && typeof item === 'object') {
+      return Object.fromEntries(
+        Object.keys(item)
+          .sort()
+          .map((key) => [key, ordered(item[key])]),
+      );
+    }
+    return item;
+  };
+  return `sha256:${crypto
+    .createHash('sha256')
+    .update(JSON.stringify(ordered(value)))
+    .digest('hex')}`;
+}
+
+export function createDequeueEvidence({
+  repository,
+  pullRequest,
+  headSha,
+  settlement,
+}) {
+  const evidence = {
+    schema: DEQUEUE_EVIDENCE_SCHEMA,
+    source: {
+      repository,
+      pullRequest,
+      pullRequestHead: headSha,
+    },
+    dequeue: {
+      reason: settlement.repairMarker?.removal?.reason || null,
+      observedAt: settlement.repairMarker?.removal?.createdAt || null,
+    },
+    cancellation: settlement.cancellation,
+    queueAdmissionLease: settlement.queueAdmissionLease,
+    familyQueueLease: {
+      applicable: settlement.familyQueueLease?.applicable === true,
+      state: settlement.familyQueueLease?.state || null,
+      leaseRoot:
+        settlement.familyQueueLease?.release?.predecessorLeaseRoot ||
+        settlement.familyQueueLease?.leaseRoot ||
+        null,
+      releaseRoot: settlement.familyQueueLease?.release?.releaseRoot || null,
+    },
+  };
+  return { ...evidence, evidenceRoot: semanticDigest(evidence) };
+}
 
 function required(value, label, pattern) {
   if (!value || !pattern.test(value)) {
@@ -499,11 +554,20 @@ export async function settleDequeuedMergeGroup({
   ) {
     throw new Error('dequeue settlement result invariant failed');
   }
-  return {
+  const settlement = {
     cancellation: cancellation.value,
     repairMarker: repairMarker.value,
     queueAdmissionLease: queueAdmissionLease.value,
     familyQueueLease: familyQueueLease.value,
+  };
+  return {
+    ...settlement,
+    evidence: createDequeueEvidence({
+      repository,
+      pullRequest,
+      headSha,
+      settlement,
+    }),
   };
 }
 
@@ -515,6 +579,7 @@ async function main() {
   const pullRequestBody = process.env.DEQUEUED_PULL_REQUEST_BODY || '';
   const context = process.env.QUEUE_ADMISSION_CONTEXT || '';
   const token = process.env.GITHUB_TOKEN || '';
+  const output = process.env.DEQUEUE_EVIDENCE_OUTPUT || '';
   const result = await settleDequeuedMergeGroup({
     repository,
     pullRequest,
@@ -524,6 +589,11 @@ async function main() {
     context,
     token,
   });
+  if (output) {
+    const target = path.resolve(output);
+    fs.mkdirSync(path.dirname(target), { recursive: true });
+    fs.writeFileSync(target, `${JSON.stringify(result.evidence, null, 2)}\n`);
+  }
   process.stdout.write(`${JSON.stringify(result)}\n`);
 }
 

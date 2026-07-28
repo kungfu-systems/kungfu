@@ -70,17 +70,30 @@ jobs:
                   "repos/${GITHUB_REPOSITORY}/actions/runs/${run_id}/artifacts?per_page=100" \
                   --jq "[.artifacts[] | select(.expired == false and .name == \"core-affected-native-cache-promotion-authority-${run_id}\")] | length"
               )"
+              attempt_count="$(
+                gh api \
+                  "repos/${GITHUB_REPOSITORY}/actions/runs/${run_id}/artifacts?per_page=100" \
+                  --jq "[.artifacts[] | select(.expired == false and .name == \"core-affected-native-delivery-attempt-${GITHUB_SHA}\")] | length"
+              )"
               if [ "$direct_state" = "complete" ] &&
                 [ "$authority_count" -eq 0 ]; then
-                producer_run="$run_id"
-                producer_mode=direct
-                break
+                if [ "$attempt_count" -eq 1 ]; then
+                  producer_run="$run_id"
+                  producer_mode=direct
+                  break
+                fi
+                artifact_partial=true
+                continue
               fi
               if [ "$direct_state" = "absent" ] &&
                 [ "$authority_count" -eq 1 ]; then
-                producer_run="$run_id"
-                producer_mode=reused-proof
-                break
+                if [ "$attempt_count" -eq 1 ]; then
+                  producer_run="$run_id"
+                  producer_mode=reused-proof
+                  break
+                fi
+                artifact_partial=true
+                continue
               fi
               if [ "$direct_state" = "partial" ] ||
                 [ "$authority_count" -gt 1 ] ||
@@ -128,6 +141,15 @@ jobs:
           github-token: ${{ github.token }}
           name: core-affected-native-cache-promotion-authority-${{ steps.producer.outputs.run-id }}
           path: product/qualification/cache-promotion/authority
+      - name: Download exact family delivery attempt
+        if: ${{ steps.producer.outputs.available == 'true' }}
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          repository: ${{ github.repository }}
+          run-id: ${{ steps.producer.outputs.run-id }}
+          github-token: ${{ github.token }}
+          name: core-affected-native-delivery-attempt-${{ github.sha }}
+          path: product/qualification/cache-promotion/delivery-attempt
       - name: Verify reused-proof promotion authority
         if: ${{ steps.producer.outputs.mode == 'reused-proof' }}
         id: authority
@@ -142,6 +164,31 @@ jobs:
             --target-head-sha "$GITHUB_SHA" \
             --target-source-tree "$(git rev-parse 'HEAD^{tree}')" \
             --github-output "$GITHUB_OUTPUT"
+      - name: Verify exact family delivery attempt
+        if: ${{ steps.producer.outputs.available == 'true' }}
+        id: delivery
+        shell: bash
+        env:
+          AUTHORITY_BINDING_ROOT: ${{ steps.authority.outputs.delivery-binding-root }}
+        run: |
+          set -euo pipefail
+          # shifu-entry-contract: allow immutable delivery verification before cache contract tools are installed
+          node scripts/affected-native-proof.mjs verify-attempt \
+            --bundle product/qualification/cache-promotion/delivery-attempt \
+            --repository "$GITHUB_REPOSITORY" \
+            --run-id "${{ steps.producer.outputs.run-id }}" \
+            --head-sha "$GITHUB_SHA" \
+            --source-tree "$(git rev-parse 'HEAD^{tree}')" \
+            --github-output "$GITHUB_OUTPUT"
+          attempt_binding="$(
+            jq -r '.deliveryBindingRoot' \
+              product/qualification/cache-promotion/delivery-attempt/delivery-attempt.json
+          )"
+          if [ -n "$AUTHORITY_BINDING_ROOT" ] &&
+            [ "$AUTHORITY_BINDING_ROOT" != "$attempt_binding" ]; then
+            echo "Cache authority and family delivery binding disagree." >&2
+            exit 1
+          fi
       - name: Select authorized payload producer
         if: ${{ steps.producer.outputs.available == 'true' }}
         id: payload-source
@@ -154,6 +201,8 @@ jobs:
           AUTHORIZED_EVENT: ${{ steps.authority.outputs.producer-event }}
           AUTHORIZED_TRIGGER_HEAD: ${{ steps.authority.outputs.producer-trigger-head-sha }}
           AUTHORIZED_PAYLOAD_SOURCE: ${{ steps.authority.outputs.payload-source-sha }}
+          DELIVERY_ATTEMPT_ROOT: ${{ steps.delivery.outputs.attempt-root }}
+          DELIVERY_BINDING_ROOT: ${{ steps.delivery.outputs.delivery-binding-root }}
         run: |
           set -euo pipefail
           if [ "$MODE" = "direct" ]; then
@@ -175,6 +224,8 @@ jobs:
             echo "producer-trigger-head-sha=${producer_trigger_head}"
             echo "payload-source-sha=${payload_source_sha}"
             echo "authority-digest=${authority_digest}"
+            echo "delivery-attempt-root=${DELIVERY_ATTEMPT_ROOT}"
+            echo "delivery-binding-root=${DELIVERY_BINDING_ROOT}"
           } >> "$GITHUB_OUTPUT"
       - name: Confirm complete authorized partition payloads
         if: ${{ steps.producer.outputs.available == 'true' }}
@@ -238,6 +289,8 @@ jobs:
             --expected-repository "$GITHUB_REPOSITORY" \
             --authority-mode "${{ steps.producer.outputs.mode }}" \
             --authority-digest "${{ steps.payload-source.outputs.authority-digest }}" \
+            --delivery-attempt-root "${{ steps.payload-source.outputs.delivery-attempt-root }}" \
+            --delivery-binding-root "${{ steps.payload-source.outputs.delivery-binding-root }}" \
             --output product/qualification/cache-promotion/promotion.json \
             --github-output "$GITHUB_OUTPUT"
       - name: Materialize qualified cache roots
@@ -274,6 +327,8 @@ jobs:
             echo "- merge-group authority: \`${{ steps.producer.outputs.run-id }}\`"
             echo "- payload producer: \`${{ steps.payload-source.outputs.producer-run-id }}\` (\`${{ steps.payload-source.outputs.producer-event }}\`)"
             echo "- authority mode: \`${{ steps.producer.outputs.mode }}\`"
+            echo "- delivery attempt: \`${{ steps.payload-source.outputs.delivery-attempt-root }}\`"
+            echo "- delivery binding: \`${{ steps.payload-source.outputs.delivery-binding-root }}\`"
             echo "- authority: exact source-tree proof plus complete partition receipts and payload digests"
             echo "- validation: current-source configure/build/CTest remains mandatory on restore"
           } >> "$GITHUB_STEP_SUMMARY"
