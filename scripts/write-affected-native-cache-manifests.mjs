@@ -522,6 +522,8 @@ export function createAffectedNativeCachePromotion({
   expectedRepository,
   authorityMode,
   authorityDigest = '',
+  deliveryAttemptRoot = '',
+  deliveryBindingRoot = '',
 }) {
   assert(
     SHA_RE.test(expectedTargetHeadSha || ''),
@@ -567,6 +569,12 @@ export function createAffectedNativeCachePromotion({
   assert(
     /^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/.test(expectedRepository || ''),
     'expected promotion repository is invalid',
+  );
+  assert(
+    (!deliveryAttemptRoot && !deliveryBindingRoot) ||
+      (DIGEST_RE.test(deliveryAttemptRoot) &&
+        DIGEST_RE.test(deliveryBindingRoot)),
+    'promotion delivery evidence roots are invalid',
   );
   const manifestFiles = findFiles(
     path.resolve(artifactsDir),
@@ -631,7 +639,10 @@ export function createAffectedNativeCachePromotion({
     'dependency cache payload must come uniquely from partition 0',
   );
   const body = {
-    schema: 'kungfu.affected-native-cache-promotion/v2',
+    schema:
+      deliveryAttemptRoot && deliveryBindingRoot
+        ? 'kungfu.affected-native-cache-promotion/v3'
+        : 'kungfu.affected-native-cache-promotion/v2',
     targetSourceSha: expectedTargetHeadSha,
     payloadSourceSha: expectedPayloadHeadSha,
     mergeGroupRunId: Number(expectedMergeGroupRunId),
@@ -642,6 +653,12 @@ export function createAffectedNativeCachePromotion({
     authority: {
       mode: authorityMode,
       digest: authorityDigest || null,
+      ...(deliveryAttemptRoot && deliveryBindingRoot
+        ? {
+            deliveryAttemptRoot,
+            deliveryBindingRoot,
+          }
+        : {}),
     },
     repository: expectedRepository,
     planDigest: payloads[0].planDigest,
@@ -722,6 +739,8 @@ function main() {
       expectedRepository: required(options, 'expected-repository'),
       authorityMode: required(options, 'authority-mode'),
       authorityDigest: options['authority-digest'] || '',
+      deliveryAttemptRoot: options['delivery-attempt-root'] || '',
+      deliveryBindingRoot: options['delivery-binding-root'] || '',
     });
     const output = required(options, 'output');
     fs.writeFileSync(

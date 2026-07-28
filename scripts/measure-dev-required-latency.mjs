@@ -5,7 +5,6 @@
 import { spawnSync } from 'node:child_process';
 import crypto from 'node:crypto';
 import fs from 'node:fs';
-import os from 'node:os';
 import path from 'node:path';
 import process from 'node:process';
 import { fileURLToPath, pathToFileURL } from 'node:url';
@@ -14,7 +13,16 @@ import {
   formatCandidateTimelineReport,
 } from '@kungfu-tech/buildchain-alpha/candidate-timeline';
 import {
+  affectedNativeEvidenceBinding,
+  collectDeliveryAttemptFromArtifacts,
+  collectFinalDevAncestry,
+  deliveryEvidenceForSample,
+  deliveryTimelineEvent,
+  missingDeliveryAttempt,
   queueAdmissionRequiredContexts,
+  readZipMembers,
+  roundAttempt,
+  summarizeDeliveryEvidence,
   validateDevRequiredLatencyBaseline,
 } from './cancel-dequeued-merge-group-runs.mjs';
 import {
@@ -26,6 +34,12 @@ import {
 } from './candidate-timeline-events.cjs';
 import { planAffectedPaths } from './run-core-affected-native.mjs';
 export { requiredMergeQueueWindow };
+export {
+  affectedNativeEvidenceBinding,
+  deliveryAttemptEvidenceFromMembers,
+  finalDevAncestryFromCompare,
+  reconstructDeliveryEvidence,
+} from './cancel-dequeued-merge-group-runs.mjs';
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const MINIMUM_SAMPLE_COUNT = 20;
 const MINIMUM_NATIVE_SAMPLE_COUNT = 10;
@@ -574,39 +588,6 @@ export function selectedContext(
   };
 }
 
-export function affectedNativeEvidenceBinding(
-  cache,
-  native,
-  classification,
-  expectedSourceSha,
-  pullSourceSha,
-) {
-  if (
-    cache.layers.some(
-      ({ sourceSha }) => !sourceSha || sourceSha !== expectedSourceSha,
-    ) ||
-    native.outcome !== 'observed' ||
-    native.source?.head !== expectedSourceSha ||
-    JSON.stringify(native.planAuthority) !==
-      JSON.stringify(classification.authority)
-  ) {
-    throw new Error('affected-native evidence does not match source or plan');
-  }
-  const exactPlan =
-    JSON.stringify(native.planChangedPaths) ===
-    JSON.stringify(classification.changedPaths);
-  if (!exactPlan && expectedSourceSha === pullSourceSha) {
-    throw new Error('affected-native evidence does not match source or plan');
-  }
-  return {
-    sourceRelation:
-      expectedSourceSha === pullSourceSha
-        ? 'pull-source'
-        : 'merge-group-source',
-    planRelation: exactPlan ? 'exact' : 'merge-group-coalesced',
-  };
-}
-
 function digest(value) {
   return `sha256:${crypto.createHash('sha256').update(value).digest('hex')}`;
 }
@@ -624,45 +605,6 @@ function structuredDigest(value) {
     return item;
   };
   return digest(JSON.stringify(ordered(value)));
-}
-
-function readZipMembers(archive, names) {
-  const temporary = fs.mkdtempSync(
-    path.join(os.tmpdir(), 'kungfu-dev-gate-latency-'),
-  );
-  const archivePath = path.join(temporary, 'artifact.zip');
-  try {
-    fs.writeFileSync(archivePath, archive);
-    const listing = spawnSync('unzip', ['-Z1', archivePath], {
-      encoding: 'utf8',
-      shell: false,
-    });
-    if (listing.status !== 0) {
-      throw new Error(
-        `cannot list artifact zip: ${(listing.stderr || '').trim() || 'unzip failed'}`,
-      );
-    }
-    const entries = listing.stdout.split('\n').filter(Boolean);
-    return Object.fromEntries(
-      names.map((name) => {
-        const entry = entries.find(
-          (candidate) => candidate === name || candidate.endsWith(`/${name}`),
-        );
-        if (!entry) return [name, null];
-        const extracted = spawnSync('unzip', ['-p', archivePath, entry], {
-          encoding: 'utf8',
-          shell: false,
-          maxBuffer: 4 * 1024 * 1024,
-        });
-        if (extracted.status !== 0) {
-          throw new Error(`cannot read ${entry} from artifact zip`);
-        }
-        return [name, extracted.stdout];
-      }),
-    );
-  } finally {
-    fs.rmSync(temporary, { recursive: true, force: true });
-  }
 }
 
 function parseCompilerStats(value) {
@@ -1054,11 +996,16 @@ async function collectAffectedNativeEvidence(
   token,
   expectedSourceSha,
   pullSourceSha,
+  requiredContexts,
 ) {
   if (classification.kind === 'non-native') {
     return {
       cache: cacheEvidenceFromMembers({}, classification),
       native: nativeEvidenceFromMembers({}, classification),
+      deliveryAttempt: missingDeliveryAttempt(
+        'affected-native-delivery-attempt-artifact',
+        'delivery attempt is not emitted for non-native qualification',
+      ),
     };
   }
   if (!runId) {
@@ -1071,6 +1018,10 @@ async function collectAffectedNativeEvidence(
         ...nativeEvidenceFromMembers({}, { kind: 'unknown' }),
         authority: 'affected-native-workflow-run-missing',
       },
+      deliveryAttempt: missingDeliveryAttempt(
+        'affected-native-workflow-run-missing',
+        'affected-native workflow run is missing',
+      ),
     };
   }
   try {
@@ -1082,6 +1033,16 @@ async function collectAffectedNativeEvidence(
     const partitionPattern = new RegExp(
       `^${artifactPrefix}-partition-(\\d+)-of-(\\d+)$`,
     );
+    const deliveryAttempt = await collectDeliveryAttemptFromArtifacts({
+      artifacts: payload.artifacts,
+      expectedSourceSha,
+      repository,
+      workflowRunId: runId,
+      pullSourceSha,
+      requiredContexts,
+      token,
+      githubBytes,
+    });
     const artifacts = (payload.artifacts || [])
       .filter(
         ({ name, expired }) =>
@@ -1143,6 +1104,7 @@ async function collectAffectedNativeEvidence(
         },
         workflowRunId: runId,
       },
+      deliveryAttempt,
     };
   } catch (error) {
     return {
@@ -1161,6 +1123,12 @@ async function collectAffectedNativeEvidence(
         authority: 'artifact-unavailable',
         reason: error.message,
         steps: [],
+        workflowRunId: runId,
+      },
+      deliveryAttempt: {
+        outcome: 'invalidated',
+        authority: 'artifact-unavailable',
+        reason: error.message,
         workflowRunId: runId,
       },
     };
@@ -1309,6 +1277,7 @@ async function collectSample(
   requiredContexts,
   mergeQueue,
   token,
+  finalDev,
   latencyOnly = false,
 ) {
   const sha = pull.head.sha;
@@ -1390,7 +1359,18 @@ async function collectSample(
         affectedNativeContext?.workflowHeadSha ||
           requiredWindow.workflowHeadSha,
         sha,
+        requiredContexts,
       );
+  const deliveryEvidence = deliveryEvidenceForSample({
+    pull,
+    sourceSha: sha,
+    requiredContexts,
+    requiredWindow,
+    mergeQueue,
+    evidence,
+    finalDev,
+    latencyOnly,
+  });
   return {
     excluded: false,
     pullRequest: pull.number,
@@ -1400,6 +1380,8 @@ async function collectSample(
     classification,
     cache: evidence.cache,
     nativeEvidence: evidence.native,
+    deliveryEvidence,
+    mergeCommitSha: pull.merge_commit_sha || null,
     startedAt: requiredWindow.startedAt,
     completedAt: requiredWindow.completedAt,
     durationMs: requiredWindow.durationMs,
@@ -1506,17 +1488,6 @@ function workflowJobPhase(name = '') {
   return name === 'affected-native / linux'
     ? 'aggregate-admission'
     : 'gate-fanout';
-}
-
-function roundAttempt(pullRequest, round) {
-  const run = round.mergeGroupRuns[0];
-  return {
-    id: `mq-${pullRequest}-${round.index}`,
-    index: round.index + 1,
-    kind: 'merge-queue',
-    mergeGroupSha: run?.headSha,
-    workflowRunId: run?.id,
-  };
 }
 
 function workflowJobGate(job) {
@@ -1700,11 +1671,18 @@ export function candidateTimelineInput(repository, branch, sample) {
       timing,
       attributes: {
         sourceSha,
+        mergeCommitSha: sample.mergeCommitSha || null,
+        finalDevHead: sample.deliveryEvidence?.finalDev?.finalDevHead || null,
+        finalDevAncestry:
+          sample.deliveryEvidence?.finalDev?.outcome || 'unknown',
         pullRequestUrl: `https://github.com/${repository}/pull/${sample.pullRequest}`,
         runUrl: `https://github.com/${repository}/actions/runs/${mergedRun.id}`,
       },
     });
   }
+
+  const proofEvent = deliveryTimelineEvent(sample, rounds, sourceSha);
+  if (proofEvent) events.push(proofEvent);
 
   const internalEvents = sample.nativeEvidence?.candidateEvents || [];
   for (const event of internalEvents) {
@@ -1887,6 +1865,7 @@ export function report(
   cache.warmRatio = cacheObserved ? cache.warmCount / cacheObserved : null;
   cache.coldRatio = cacheObserved ? cache.coldCount / cacheObserved : null;
   const mergeQueueDelivery = summarizeMergeQueueDelivery(mergeQueueRecords);
+  const deliveryEvidence = summarizeDeliveryEvidence(samples);
   const generatedAt = new Date().toISOString();
   const candidateTimelines = samples.map((sample) =>
     createCandidateTimeline({
@@ -1940,6 +1919,7 @@ export function report(
       ...mergeQueueDelivery,
       samples: mergeQueueRecords,
     },
+    deliveryEvidence,
     cache,
     nativeAttribution: summarizeNativeAttribution(samples),
     candidateTimelines,
@@ -1977,7 +1957,7 @@ async function main() {
     throw new Error(`repository default is not admitted: ${options.branch}`);
   const branchPath = encodeURIComponent(options.branch);
   const pullRoute = `/repos/${repository}/pulls?state=all&base=${encodeURIComponent(options.branch)}&sort=updated&direction=desc`;
-  const [effectiveRules, pullWindow] = await Promise.all([
+  const [effectiveRules, pullWindow, branchState] = await Promise.all([
     githubJson(`/repos/${repository}/rules/branches/${branchPath}`, token),
     options.pulls.length
       ? Promise.all(
@@ -1990,6 +1970,7 @@ async function main() {
             githubJson(`${pullRoute}&per_page=${pageSize}&page=${page}`, token),
           options.limit,
         ),
+    githubJson(`/repos/${repository}/branches/${branchPath}`, token),
   ]);
   const pulls = options.pulls.length ? pullWindow : pullWindow.pulls;
   const requiredContexts = requiredContextsFromEffectiveRules(effectiveRules);
@@ -2009,6 +1990,12 @@ async function main() {
     : pullWindow.merged;
   if (options.pulls.length && merged.length !== options.pulls.length)
     throw new Error('every requested --pull must be merged');
+  const finalDevByPull = await collectFinalDevAncestry({
+    merged,
+    finalDevHead: branchState?.commit?.sha || null,
+    repository,
+    githubJson: (route) => githubJson(route, token),
+  });
   const earliestPullCreatedAt = merged
     .map(({ created_at: createdAt }) => createdAt)
     .filter(Boolean)
@@ -2063,6 +2050,7 @@ async function main() {
         requiredContexts,
         mergeQueueByPull.get(pull.number),
         token,
+        finalDevByPull.get(pull.number),
         options.latencyOnly,
       ),
     );
