@@ -216,11 +216,17 @@ test('qualified merge-group partitions form one default-branch cache promotion',
     expectedProducerEvent: 'merge_group',
     expectedRepository: repository,
     authorityMode: 'direct',
+    deliveryAttemptRoot: `sha256:${'a'.repeat(64)}`,
+    deliveryBindingRoot: `sha256:${'b'.repeat(64)}`,
   });
-  assert.equal(promotion.schema, 'kungfu.affected-native-cache-promotion/v2');
+  assert.equal(promotion.schema, 'kungfu.affected-native-cache-promotion/v3');
   assert.equal(promotion.targetSourceSha, plan.head);
   assert.equal(promotion.payloadSourceSha, plan.head);
   assert.equal(promotion.authority.mode, 'direct');
+  assert.equal(
+    promotion.authority.deliveryAttemptRoot,
+    `sha256:${'a'.repeat(64)}`,
+  );
   assert.equal(promotion.partitionCount, 2);
   assert.equal(promotion.dependency.partitionIndex, 0);
   assert.equal(promotion.compiler.archives.length, 2);
@@ -270,6 +276,10 @@ test('push promotion waits for the exact required Gate instead of whole-run comp
   assert.match(workflow, /\.name == "affected-native \/ linux"/u);
   assert.match(workflow, /direct_state.*complete/su);
   assert.match(workflow, /authority_count.*reused-proof/su);
+  assert.match(workflow, /attempt_count.*delivery-attempt/su);
+  assert.match(workflow, /verify-attempt/u);
+  assert.match(workflow, /--delivery-attempt-root/u);
+  assert.match(workflow, /--delivery-binding-root/u);
   assert.match(workflow, /while \[ "\$attempt" -le 60 \]/u);
   assert.doesNotMatch(workflow, /status=completed/u);
 });
@@ -303,6 +313,8 @@ test('PR payload transport requires merge-group reused-proof authority', (t) => 
     expectedRepository: repository,
     authorityMode: 'reused-proof',
     authorityDigest,
+    deliveryAttemptRoot: `sha256:${'a'.repeat(64)}`,
+    deliveryBindingRoot: `sha256:${'b'.repeat(64)}`,
   });
   assert.equal(promotion.targetSourceSha, 'f'.repeat(40));
   assert.equal(promotion.payloadSourceSha, plan.head);
@@ -313,6 +325,8 @@ test('PR payload transport requires merge-group reused-proof authority', (t) => 
   assert.deepEqual(promotion.authority, {
     mode: 'reused-proof',
     digest: authorityDigest,
+    deliveryAttemptRoot: `sha256:${'a'.repeat(64)}`,
+    deliveryBindingRoot: `sha256:${'b'.repeat(64)}`,
   });
 
   const workflow = fs.readFileSync(

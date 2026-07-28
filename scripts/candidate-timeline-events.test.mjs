@@ -7,8 +7,17 @@ import os from 'node:os';
 import path from 'node:path';
 import { performance } from 'node:perf_hooks';
 import test from 'node:test';
+import { fileURLToPath } from 'node:url';
+
+import { digest as proofDigest } from './affected-native-proof.mjs';
+import {
+  deliveryAttemptEvidenceFromMembers,
+  finalDevAncestryFromCompare,
+  reconstructDeliveryEvidence,
+} from './cancel-dequeued-merge-group-runs.mjs';
 
 const require = createRequire(import.meta.url);
+const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const {
   findOperationalExactBindings,
   isAdmittedDevBranch,
@@ -207,4 +216,233 @@ test('latency-only reports cannot qualify or update the baseline', async () => {
   });
   assert.equal(value.collection.retainedBaselineEligible, false);
   assert.equal(value.verdict.qualified, false);
+});
+
+function deliveryAttempt(overrides = {}) {
+  const pullRequestHead = 'a'.repeat(40);
+  const mergeGroupHead = 'b'.repeat(40);
+  const contexts = ['affected-native / linux', 'required'];
+  const body = {
+    schema: 'kungfu.affected-native-delivery-attempt/v1',
+    deliveryBindingRoot: `sha256:${'0'.repeat(64)}`,
+    source: {
+      pullRequest: 1262,
+      pullRequestHead,
+      devHead: 'c'.repeat(40),
+      replayedCandidate: 'd'.repeat(40),
+      replayedTree: 'e'.repeat(40),
+      mergeGroupHead,
+      checkout: mergeGroupHead,
+    },
+    family: {
+      initiativeId: 'go-family-native-state-contract',
+      assignmentId: 'go-family-proof-evidence-binding',
+      deliveryClass: 'native-proof-required',
+      queueAttempt: 'attempt-one',
+      leaseRoot: `sha256:${'1'.repeat(64)}`,
+      admissionProofRoot: `sha256:${'2'.repeat(64)}`,
+      admissionProofRoots: [`sha256:${'2'.repeat(64)}`],
+      statusContext: 'project-cut / family-go-family-native-state-contract',
+    },
+    requiredChecks: {
+      contexts,
+      root: proofDigest({ contexts }),
+    },
+    queueAdmission: {
+      context: 'project-cut / queue-admission',
+      state: 'success',
+      familyLeaseState: 'pending',
+      root: `sha256:${'3'.repeat(64)}`,
+    },
+    proof: {
+      decision: 'reused',
+      proofId: '4'.repeat(64),
+      proofRoot: `sha256:${'5'.repeat(64)}`,
+      producer: {
+        repository: 'kungfu-systems/kungfu',
+        runId: 41,
+        event: 'pull_request',
+        workflowPath: '.github/workflows/affected-native-pr.yml',
+        triggerHeadSha: pullRequestHead,
+        checkoutSha: pullRequestHead,
+        createdAt: '2026-07-28T00:00:00Z',
+      },
+    },
+    workflow: {
+      repository: 'kungfu-systems/kungfu',
+      runId: 42,
+      event: 'merge_group',
+      workflowPath: '.github/workflows/affected-native-pr.yml',
+      runner: {
+        environment: 'github-hosted',
+        os: 'Linux',
+        arch: 'X64',
+      },
+    },
+    ...overrides,
+  };
+  return { ...body, attemptRoot: proofDigest(body) };
+}
+
+test('delivery evidence reconstructs one exact family queue attempt through final dev', () => {
+  const attemptEvidence = deliveryAttemptEvidenceFromMembers(
+    { 'delivery-attempt.json': JSON.stringify(deliveryAttempt()) },
+    {
+      repository: 'kungfu-systems/kungfu',
+      workflowRunId: 42,
+      pullRequestHead: 'a'.repeat(40),
+      mergeGroupHead: 'b'.repeat(40),
+      requiredContexts: ['required', 'affected-native / linux'],
+    },
+  );
+  assert.equal(attemptEvidence.outcome, 'proved');
+  assert.equal(attemptEvidence.proof.decision, 'reused');
+
+  const finalDev = finalDevAncestryFromCompare('f'.repeat(40), '9'.repeat(40), {
+    status: 'ahead',
+    merge_base_commit: { sha: 'f'.repeat(40) },
+  });
+  assert.equal(finalDev.outcome, 'proved');
+
+  const mergeQueue = {
+    queueStatus: 'observed',
+    status: 'observed',
+    runnerEvidenceComplete: true,
+    dequeueCount: 1,
+    repeatedValidationCount: 1,
+    wastedRunnerMs: 60_000,
+    postDequeueRunnerMs: 0,
+    rounds: [
+      {
+        index: 0,
+        reason: 'failed_checks',
+        mergeGroupRuns: [],
+      },
+      {
+        index: 1,
+        enqueuedAt: '2026-07-28T00:00:00Z',
+        removedAt: '2026-07-28T00:10:00Z',
+        reason: 'merged',
+        mergeGroupRuns: [
+          {
+            id: 42,
+            headSha: 'b'.repeat(40),
+            jobs: [
+              {
+                startedAt: '2026-07-28T00:01:00Z',
+                completedAt: '2026-07-28T00:02:00Z',
+              },
+            ],
+          },
+        ],
+      },
+    ],
+  };
+  const requiredWindow = {
+    status: 'observed',
+    contexts: [{ context: 'affected-native / linux' }, { context: 'required' }],
+  };
+  const common = {
+    pullRequest: 1262,
+    sourceSha: 'a'.repeat(40),
+    mergeCommitSha: 'f'.repeat(40),
+    requiredContexts: ['affected-native / linux', 'required'],
+    requiredWindow,
+    mergeQueue,
+    deliveryAttempt: attemptEvidence,
+    finalDev,
+  };
+  const proved = reconstructDeliveryEvidence(common);
+  assert.equal(proved.outcome, 'proved');
+  assert.equal(proved.dequeueCount, 1);
+  assert.equal(proved.queue.repeatedValidationCount, 1);
+  assert.equal(
+    proved.queue.rounds[1].mergeGroupRuns[0].runnerUse.runnerMs,
+    60_000,
+  );
+  assert.equal(proved.mergedRound.workflowRunId, 42);
+  assert.equal(
+    proved.deliveryAttempt.family.deliveryClass,
+    'native-proof-required',
+  );
+  assert.equal(
+    reconstructDeliveryEvidence({
+      ...common,
+      mergeQueue: { ...mergeQueue, runnerEvidenceComplete: false },
+    }).outcome,
+    'partial',
+  );
+});
+
+test('delivery evidence invalidates source drift and distinguishes missing history', () => {
+  const invalid = deliveryAttemptEvidenceFromMembers(
+    { 'delivery-attempt.json': JSON.stringify(deliveryAttempt()) },
+    {
+      repository: 'kungfu-systems/kungfu',
+      workflowRunId: 42,
+      pullRequestHead: '8'.repeat(40),
+      mergeGroupHead: 'b'.repeat(40),
+      requiredContexts: ['affected-native / linux', 'required'],
+    },
+  );
+  assert.equal(invalid.outcome, 'invalidated');
+  assert.deepEqual(invalid.disagreements, ['pull-request-head']);
+  assert.equal(
+    finalDevAncestryFromCompare('f'.repeat(40), '9'.repeat(40), {
+      status: 'diverged',
+      merge_base_commit: { sha: '7'.repeat(40) },
+    }).outcome,
+    'invalidated',
+  );
+  assert.equal(
+    reconstructDeliveryEvidence({
+      pullRequest: 1,
+      sourceSha: 'a'.repeat(40),
+      mergeCommitSha: null,
+      requiredContexts: [],
+      requiredWindow: {},
+      mergeQueue: { queueStatus: 'not-observed', rounds: [] },
+      deliveryAttempt: {
+        outcome: 'missing',
+        reason: 'historical artifact absent',
+      },
+      finalDev: { outcome: 'unknown' },
+    }).outcome,
+    'missing',
+  );
+});
+
+test('delivery workflows preserve exact attempt and cache-promotion bindings', () => {
+  const affectedNative = fs.readFileSync(
+    path.join(ROOT, '.github/workflows/affected-native-pr.yml'),
+    'utf8',
+  );
+  assert.match(
+    affectedNative,
+    /Capture exact family delivery binding[\s\S]*rules\/branches\/\$encoded_branch[\s\S]*bind-delivery/,
+  );
+  assert.match(affectedNative, /--delivery-binding/);
+  assert.match(
+    affectedNative,
+    /Seal reconstructable family delivery attempt[\s\S]*seal-attempt/,
+  );
+  assert.match(
+    affectedNative,
+    /core-affected-native-delivery-attempt-\$\{\{ github\.sha \}\}/,
+  );
+
+  const dequeue = fs.readFileSync(
+    path.join(ROOT, '.github/workflows/cancel-dequeued-merge-group.yml'),
+    'utf8',
+  );
+  assert.match(dequeue, /DEQUEUE_EVIDENCE_OUTPUT:/);
+  assert.match(dequeue, /Upload exact dequeue settlement evidence/);
+
+  const cachePromotion = fs.readFileSync(
+    path.join(ROOT, '.github/workflows/affected-native-cache-promote.yml'),
+    'utf8',
+  );
+  assert.match(cachePromotion, /verify-attempt/);
+  assert.match(cachePromotion, /--delivery-attempt-root/);
+  assert.match(cachePromotion, /--delivery-binding-root/);
 });

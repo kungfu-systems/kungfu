@@ -9,6 +9,7 @@ import { fileURLToPath } from 'node:url';
 import {
   activeMergeGroupRunsForPull,
   cancelDequeuedMergeGroupRuns,
+  createDequeueEvidence,
   mergeQueueRepairComment,
   recordDequeuedRepairMarker,
   releaseDequeuedFamilyQueueLease,
@@ -67,12 +68,69 @@ test('dequeue workflow executes only the trusted base with least privilege', () 
   assert.match(workflow, /QUEUE_ADMISSION_CONTEXT: Queue admission lease/u);
   assert.match(
     workflow,
+    /DEQUEUE_EVIDENCE_OUTPUT: product\/qualification\/dequeue\/delivery-evidence\.json/u,
+  );
+  assert.match(
+    workflow,
+    /name: Upload exact dequeue settlement evidence[\s\S]*core-dequeued-family-delivery-\$\{\{ github\.event\.pull_request\.head\.sha \}\}/u,
+  );
+  assert.match(
+    workflow,
     /ref: \$\{\{ github\.event\.pull_request\.base\.sha \}\}/u,
   );
   assert.match(workflow, /persist-credentials: false/u);
   assert.doesNotMatch(
     workflow,
     /ref:\s+\$\{\{ github\.event\.pull_request\.head/u,
+  );
+});
+
+test('dequeue evidence binds the exact source, reason, lease, and cleanup outcomes', () => {
+  const values = {
+    repository: 'kungfu-systems/kungfu',
+    pullRequest: 1510,
+    headSha: 'b'.repeat(40),
+    settlement: {
+      cancellation: {
+        pullRequest: 1510,
+        matchedRunCount: 1,
+        cancellations: [{ runId: 42, outcome: 'cancelled' }],
+      },
+      repairMarker: {
+        removal: {
+          createdAt: '2026-07-28T01:00:00Z',
+          reason: 'failed_checks',
+        },
+      },
+      queueAdmissionLease: {
+        headSha: 'b'.repeat(40),
+        context: 'Queue admission lease',
+        state: 'failure',
+      },
+      familyQueueLease: {
+        applicable: true,
+        state: 'released',
+        release: {
+          predecessorLeaseRoot: `sha256:${'1'.repeat(64)}`,
+          releaseRoot: `sha256:${'2'.repeat(64)}`,
+        },
+      },
+    },
+  };
+  const evidence = createDequeueEvidence(values);
+  assert.match(evidence.evidenceRoot, /^sha256:[0-9a-f]{64}$/u);
+  assert.equal(evidence.source.pullRequestHead, values.headSha);
+  assert.equal(evidence.dequeue.reason, 'failed_checks');
+  assert.equal(
+    evidence.familyQueueLease.leaseRoot,
+    values.settlement.familyQueueLease.release.predecessorLeaseRoot,
+  );
+  assert.notEqual(
+    evidence.evidenceRoot,
+    createDequeueEvidence({
+      ...values,
+      headSha: 'c'.repeat(40),
+    }).evidenceRoot,
   );
 });
 

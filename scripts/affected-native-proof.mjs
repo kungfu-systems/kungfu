@@ -9,13 +9,24 @@ import path from 'node:path';
 import process from 'node:process';
 import { pathToFileURL } from 'node:url';
 
-export const IDENTITY_SCHEMA = 'kungfu.affected-native-proof-identity/v3';
-export const PROOF_SCHEMA = 'kungfu.affected-native-proof/v3';
+import { parseFamilyQueueLeaseMarker } from './project-cut-merge-queue-admission.mjs';
+
+const LEGACY_IDENTITY_SCHEMA = 'kungfu.affected-native-proof-identity/v3';
+const LEGACY_PROOF_SCHEMA = 'kungfu.affected-native-proof/v3';
+const LEGACY_DESCRIPTOR_SCHEMA = 'kungfu.affected-native-proof-descriptor/v1';
+export const IDENTITY_SCHEMA = 'kungfu.affected-native-proof-identity/v4';
+export const PROOF_SCHEMA = 'kungfu.affected-native-proof/v4';
+export const DESCRIPTOR_SCHEMA = 'kungfu.affected-native-proof-descriptor/v2';
+export const DELIVERY_BINDING_SCHEMA =
+  'kungfu.affected-native-delivery-binding/v1';
+export const DELIVERY_ATTEMPT_SCHEMA =
+  'kungfu.affected-native-delivery-attempt/v1';
 export const CACHE_PROMOTION_AUTHORITY_SCHEMA =
   'kungfu.affected-native-cache-promotion-authority/v1';
 export const WORKFLOW_PATH = '.github/workflows/affected-native-pr.yml';
 export const DEFAULT_MAX_AGE_SECONDS = 6 * 60 * 60;
 const PRODUCER_EVENTS = new Set(['pull_request', 'merge_group']);
+const SHA256_ROOT = /^sha256:[0-9a-f]{64}$/u;
 
 function ordered(value) {
   if (Array.isArray(value)) return value.map(ordered);
@@ -64,6 +75,240 @@ function requireRepository(value, label) {
     throw new Error(`${label} must be an exact repository`);
   }
   return value;
+}
+
+function requireRoot(value, label) {
+  if (!SHA256_ROOT.test(value || '')) {
+    throw new Error(`${label} must be an exact sha256 root`);
+  }
+  return value;
+}
+
+function requireIdentifier(value, label) {
+  if (!/^[A-Za-z0-9][A-Za-z0-9._:/-]{0,199}$/u.test(value || '')) {
+    throw new Error(`${label} must be an exact bounded identifier`);
+  }
+  return value;
+}
+
+function requireContext(value, label) {
+  if (!/^[A-Za-z0-9][A-Za-z0-9 ._/-]{0,199}$/u.test(value || '')) {
+    throw new Error(`${label} must be an exact status context`);
+  }
+  return value;
+}
+
+function requireQueueAttempt(value) {
+  if (!/^[A-Za-z0-9][A-Za-z0-9._:@/-]{0,255}$/u.test(value || '')) {
+    throw new Error('family queue attempt must be exact');
+  }
+  return value;
+}
+
+function normalizedContexts(values) {
+  const contexts = [...new Set((values || []).map(String))].sort();
+  if (
+    contexts.some(
+      (context) => !/^[A-Za-z0-9][A-Za-z0-9 ._/-]{0,199}$/u.test(context),
+    )
+  ) {
+    throw new Error('required check context is invalid');
+  }
+  return contexts;
+}
+
+export function requiredContextsFromRules(rules) {
+  if (!Array.isArray(rules)) {
+    throw new Error('expected effective branch rules array');
+  }
+  return normalizedContexts(
+    rules
+      .filter(({ type }) => type === 'required_status_checks')
+      .flatMap(({ parameters }) => parameters?.required_status_checks || [])
+      .map(({ context }) => context)
+      .filter(Boolean),
+  );
+}
+
+function latestStatus(combinedStatus, context) {
+  return (combinedStatus?.statuses || []).find(
+    (status) => status?.context === context,
+  );
+}
+
+export function createDeliveryBinding({
+  event,
+  pullRequest,
+  pullRequestHead,
+  devHead,
+  candidateTree,
+  pullRequestBody = '',
+  combinedStatus = {},
+  requiredContexts = [],
+  queueAdmissionContext,
+}) {
+  if (!PRODUCER_EVENTS.has(event)) {
+    throw new Error('delivery binding event is unsupported');
+  }
+  const source = {
+    pullRequest: requireRunId(pullRequest, 'delivery pull request'),
+    pullRequestHead: requireSha(pullRequestHead, 'delivery pull request head'),
+  };
+  const contexts = normalizedContexts(requiredContexts);
+  const queueContext = requireContext(
+    queueAdmissionContext,
+    'queue admission context',
+  );
+  if (event === 'pull_request') {
+    const body = {
+      schema: DELIVERY_BINDING_SCHEMA,
+      state: 'unbound',
+      source,
+      requiredChecks: {
+        contexts,
+        root: digest({ contexts }),
+      },
+      queueAdmission: {
+        context: queueContext,
+        state: 'not-issued',
+      },
+      reason: 'family-lease-issued-only-after-pr-qualification',
+    };
+    return { ...body, bindingRoot: digest(body) };
+  }
+  const lease = parseFamilyQueueLeaseMarker(pullRequestBody);
+  if (lease === null) {
+    throw new Error('merge-group delivery binding requires a family lease');
+  }
+  const exactDevHead = requireSha(devHead, 'delivery dev head');
+  const exactCandidateTree = requireSha(
+    candidateTree,
+    'delivery candidate tree',
+  );
+  if (
+    lease.pullRequestHead !== source.pullRequestHead ||
+    lease.devHead !== exactDevHead ||
+    lease.replayedTree !== exactCandidateTree
+  ) {
+    throw new Error('family delivery source or latest-dev replay drift');
+  }
+  const familyStatus = latestStatus(combinedStatus, lease.statusContext);
+  const queueStatus = latestStatus(combinedStatus, queueContext);
+  if (familyStatus?.state !== 'pending') {
+    throw new Error('family delivery lease is not active');
+  }
+  if (queueStatus?.state !== 'success') {
+    throw new Error('queue admission lease is not successful');
+  }
+  const admissionProofRoots = [
+    ...new Set((lease.admissionProofRoots || []).map(String)),
+  ].sort();
+  for (const root of admissionProofRoots) {
+    requireRoot(root, 'family admission proof root');
+  }
+  const body = {
+    schema: DELIVERY_BINDING_SCHEMA,
+    state: 'bound',
+    source: {
+      ...source,
+      devHead: exactDevHead,
+      replayedCandidate: requireSha(
+        lease.replayedCandidate,
+        'delivery replayed candidate',
+      ),
+      replayedTree: exactCandidateTree,
+    },
+    family: {
+      initiativeId: requireIdentifier(
+        lease.initiativeId,
+        'family initiative id',
+      ),
+      assignmentId: requireIdentifier(
+        lease.assignmentId,
+        'family assignment id',
+      ),
+      deliveryClass: requireIdentifier(
+        lease.deliveryClass,
+        'family delivery class',
+      ),
+      queueAttempt: requireQueueAttempt(lease.queueAttempt),
+      leaseRoot: requireRoot(lease.leaseRoot, 'family lease root'),
+      admissionProofRoot: requireRoot(
+        lease.admissionProofRoot,
+        'family replay admission proof root',
+      ),
+      admissionProofRoots,
+      statusContext: requireContext(
+        lease.statusContext,
+        'family status context',
+      ),
+    },
+    requiredChecks: {
+      contexts,
+      root: digest({ contexts }),
+    },
+    queueAdmission: {
+      context: queueContext,
+      state: queueStatus.state,
+      familyLeaseState: familyStatus.state,
+      root: digest({
+        context: queueContext,
+        state: queueStatus.state,
+        familyLeaseRoot: lease.leaseRoot,
+        familyLeaseState: familyStatus.state,
+      }),
+    },
+  };
+  return { ...body, bindingRoot: digest(body) };
+}
+
+export function validateDeliveryBinding(binding) {
+  const { bindingRoot, ...body } = binding || {};
+  if (
+    body.schema !== DELIVERY_BINDING_SCHEMA ||
+    bindingRoot !== digest(body) ||
+    !['bound', 'unbound'].includes(body.state)
+  ) {
+    throw new Error('affected-native delivery binding root drift');
+  }
+  requireRunId(body.source?.pullRequest, 'delivery pull request');
+  requireSha(body.source?.pullRequestHead, 'delivery pull request head');
+  const contexts = normalizedContexts(body.requiredChecks?.contexts);
+  if (body.requiredChecks?.root !== digest({ contexts })) {
+    throw new Error('affected-native required-check binding drift');
+  }
+  requireContext(body.queueAdmission?.context, 'queue admission context');
+  if (body.state === 'bound') {
+    requireSha(body.source?.devHead, 'delivery dev head');
+    requireSha(body.source?.replayedCandidate, 'delivery replayed candidate');
+    requireSha(body.source?.replayedTree, 'delivery replayed tree');
+    requireIdentifier(body.family?.initiativeId, 'family initiative id');
+    requireIdentifier(body.family?.assignmentId, 'family assignment id');
+    requireIdentifier(body.family?.deliveryClass, 'family delivery class');
+    requireQueueAttempt(body.family?.queueAttempt);
+    requireRoot(body.family?.leaseRoot, 'family lease root');
+    requireRoot(
+      body.family?.admissionProofRoot,
+      'family replay admission proof root',
+    );
+    for (const root of body.family?.admissionProofRoots || []) {
+      requireRoot(root, 'family admission proof root');
+    }
+    requireContext(body.family?.statusContext, 'family status context');
+    if (
+      body.queueAdmission?.state !== 'success' ||
+      body.queueAdmission?.familyLeaseState !== 'pending'
+    ) {
+      throw new Error('affected-native delivery admission state drift');
+    }
+    requireRoot(body.queueAdmission?.root, 'queue admission root');
+  } else if (
+    body.queueAdmission?.state !== 'not-issued' ||
+    body.reason !== 'family-lease-issued-only-after-pr-qualification'
+  ) {
+    throw new Error('affected-native unbound delivery state drift');
+  }
+  return binding;
 }
 
 function commandFact(command, args = ['--version']) {
@@ -152,6 +397,7 @@ export function createProofDescriptor(
   sourceTree,
   partitionCount,
   toolchain,
+  deliveryBinding = null,
 ) {
   requireSha(sourceTree, 'affected-native source tree');
   if (
@@ -166,18 +412,34 @@ export function createProofDescriptor(
     plan.platformTier === 'github-hosted-linux-native-pr' &&
     plan.closureComponents.length > 0;
   validateNativeToolchain(toolchain, nativeRequired);
+  const dependencyRoot = digest({
+    sourceTree,
+    authority: projection.authority,
+  });
+  const closureRoot = digest({
+    components: projection.closureComponents,
+    targets: projection.targets,
+    tests: projection.tests,
+  });
   const identity = {
-    schema: IDENTITY_SCHEMA,
+    schema: deliveryBinding ? IDENTITY_SCHEMA : LEGACY_IDENTITY_SCHEMA,
     base: plan.base,
     sourceTree,
     planProjectionDigest: digest(projection),
     partitionCount,
     platformTier: plan.platformTier,
     toolchain: nativeToolchainIdentity(toolchain, nativeRequired),
+    ...(deliveryBinding
+      ? {
+          dependencyRoot,
+          closureRoot,
+          deliveryBinding: validateDeliveryBinding(deliveryBinding),
+        }
+      : {}),
   };
   const proofId = digest(identity).slice('sha256:'.length);
   return {
-    schema: 'kungfu.affected-native-proof-descriptor/v1',
+    schema: deliveryBinding ? DESCRIPTOR_SCHEMA : LEGACY_DESCRIPTOR_SCHEMA,
     identity,
     proofId,
     artifactName: `core-affected-native-proof-${proofId}`,
@@ -329,7 +591,10 @@ export function sealProof(descriptor, inputDir, producer) {
     throw new Error('affected-native proof producer checkout drift');
   }
   const proof = {
-    schema: PROOF_SCHEMA,
+    schema:
+      descriptor.identity?.schema === IDENTITY_SCHEMA
+        ? PROOF_SCHEMA
+        : LEGACY_PROOF_SCHEMA,
     identity: descriptor.identity,
     proofId: descriptor.proofId,
     artifactName: descriptor.artifactName,
@@ -376,7 +641,11 @@ function validateProducer(producer, options) {
 export function verifyProofBundle(descriptor, bundleDir, options) {
   const proof = readJson(path.join(bundleDir, 'proof.json'));
   const { proofRoot, ...body } = proof;
-  if (proof.schema !== PROOF_SCHEMA || proofRoot !== digest(body)) {
+  const expectedProofSchema =
+    descriptor.identity?.schema === IDENTITY_SCHEMA
+      ? PROOF_SCHEMA
+      : LEGACY_PROOF_SCHEMA;
+  if (proof.schema !== expectedProofSchema || proofRoot !== digest(body)) {
     throw new Error('affected-native proof root drift');
   }
   if (
@@ -399,6 +668,126 @@ export function verifyProofBundle(descriptor, bundleDir, options) {
     throw new Error('affected-native proof verdict drift');
   }
   return proof;
+}
+
+export function createDeliveryAttempt(descriptor, proof, decision, producer) {
+  if (!['fresh', 'reused'].includes(decision)) {
+    throw new Error('affected-native proof decision is invalid');
+  }
+  const binding = validateDeliveryBinding(descriptor.identity?.deliveryBinding);
+  if (binding.state !== 'bound') {
+    throw new Error('delivery attempt requires a bound family delivery');
+  }
+  const body = {
+    schema: DELIVERY_ATTEMPT_SCHEMA,
+    deliveryBindingRoot: binding.bindingRoot,
+    source: {
+      ...binding.source,
+      mergeGroupHead: requireSha(
+        producer.triggerHeadSha,
+        'delivery merge-group head',
+      ),
+      checkout: requireSha(producer.checkoutSha, 'delivery checkout'),
+    },
+    family: binding.family,
+    requiredChecks: binding.requiredChecks,
+    queueAdmission: binding.queueAdmission,
+    proof: {
+      decision,
+      proofId: proof.proofId,
+      proofRoot: requireRoot(proof.proofRoot, 'affected-native proof root'),
+      producer: proof.producer,
+    },
+    workflow: {
+      repository: requireRepository(producer.repository, 'delivery repository'),
+      runId: requireRunId(producer.runId, 'delivery run id'),
+      event: producer.event,
+      workflowPath: WORKFLOW_PATH,
+      runner: descriptor.identity.toolchain.runner,
+    },
+  };
+  if (body.workflow.event !== 'merge_group') {
+    throw new Error('delivery attempt must be emitted by merge_group');
+  }
+  return { ...body, attemptRoot: digest(body) };
+}
+
+export function validateDeliveryAttempt(attempt) {
+  const { attemptRoot, ...body } = attempt || {};
+  if (body.schema !== DELIVERY_ATTEMPT_SCHEMA || attemptRoot !== digest(body)) {
+    throw new Error('affected-native delivery attempt root drift');
+  }
+  if (
+    body.workflow?.event !== 'merge_group' ||
+    body.workflow?.workflowPath !== WORKFLOW_PATH ||
+    !['fresh', 'reused'].includes(body.proof?.decision)
+  ) {
+    throw new Error('affected-native delivery attempt authority drift');
+  }
+  requireSha(body.source?.pullRequestHead, 'delivery pull request head');
+  requireSha(body.source?.mergeGroupHead, 'delivery merge-group head');
+  requireSha(body.source?.checkout, 'delivery checkout');
+  if (body.source.checkout !== body.source.mergeGroupHead) {
+    throw new Error('affected-native delivery checkout drift');
+  }
+  requireRoot(
+    body.deliveryBindingRoot,
+    'affected-native delivery binding root',
+  );
+  requireIdentifier(body.family?.initiativeId, 'family initiative id');
+  requireIdentifier(body.family?.assignmentId, 'family assignment id');
+  requireIdentifier(body.family?.deliveryClass, 'family delivery class');
+  requireQueueAttempt(body.family?.queueAttempt);
+  requireRoot(body.family?.leaseRoot, 'family lease root');
+  requireRoot(
+    body.family?.admissionProofRoot,
+    'family replay admission proof root',
+  );
+  for (const root of body.family?.admissionProofRoots || []) {
+    requireRoot(root, 'family admission proof root');
+  }
+  requireContext(body.family?.statusContext, 'family status context');
+  const contexts = normalizedContexts(body.requiredChecks?.contexts);
+  if (
+    body.requiredChecks?.root !== digest({ contexts }) ||
+    body.queueAdmission?.state !== 'success' ||
+    body.queueAdmission?.familyLeaseState !== 'pending'
+  ) {
+    throw new Error('affected-native delivery admission binding drift');
+  }
+  requireContext(body.queueAdmission?.context, 'queue admission context');
+  requireRoot(body.queueAdmission?.root, 'queue admission root');
+  requireRoot(body.proof?.proofRoot, 'affected-native proof root');
+  requireIdentifier(body.proof?.proofId, 'affected-native proof id');
+  const proofProducer = body.proof?.producer;
+  requireRepository(
+    proofProducer?.repository,
+    'affected-native proof producer repository',
+  );
+  requireRunId(proofProducer?.runId, 'affected-native proof producer run id');
+  if (
+    !PRODUCER_EVENTS.has(proofProducer?.event) ||
+    proofProducer?.workflowPath !== WORKFLOW_PATH
+  ) {
+    throw new Error('affected-native proof producer drift');
+  }
+  requireSha(
+    proofProducer?.triggerHeadSha,
+    'affected-native proof producer trigger',
+  );
+  requireSha(
+    proofProducer?.checkoutSha,
+    'affected-native proof producer checkout',
+  );
+  const repository = requireRepository(
+    body.workflow?.repository,
+    'delivery repository',
+  );
+  requireRunId(body.workflow?.runId, 'delivery run id');
+  if (proofProducer.repository !== repository) {
+    throw new Error('affected-native proof repository drift');
+  }
+  return attempt;
 }
 
 export function createCachePromotionAuthority(
@@ -450,6 +839,8 @@ export function createCachePromotionAuthority(
     producer: proof.producer,
     partitionCount: descriptor.identity.partitionCount,
     planProjectionDigest: descriptor.identity.planProjectionDigest,
+    deliveryBindingRoot:
+      descriptor.identity.deliveryBinding?.bindingRoot || null,
     payloadSourceSha: proof.producer.checkoutSha,
   };
   return { ...body, authorityDigest: digest(body) };
@@ -484,7 +875,10 @@ export function verifyCachePromotionAuthority(authorityDir, options) {
   if (
     descriptor.identity?.sourceTree !== expectedTarget.sourceTree ||
     authority.partitionCount !== descriptor.identity?.partitionCount ||
-    authority.planProjectionDigest !== descriptor.identity?.planProjectionDigest
+    authority.planProjectionDigest !==
+      descriptor.identity?.planProjectionDigest ||
+    authority.deliveryBindingRoot !==
+      (descriptor.identity?.deliveryBinding?.bindingRoot || null)
   ) {
     throw new Error('cache promotion descriptor authority drift');
   }
@@ -687,11 +1081,15 @@ async function main() {
     return;
   }
   if (options.command === 'describe') {
+    const deliveryBinding = options['delivery-binding']
+      ? readJson(path.resolve(options['delivery-binding']))
+      : null;
     const descriptor = createProofDescriptor(
       readJson(path.resolve(options.plan)),
       options['source-tree'] || git('rev-parse', 'HEAD^{tree}'),
       Number(options['partition-count'] || 2),
       readJson(path.resolve(options.toolchain)),
+      deliveryBinding,
     );
     writeJson(path.resolve(options.output), descriptor);
     appendGithubOutput(options['github-output'], {
@@ -701,6 +1099,30 @@ async function main() {
       'sdk-required': descriptor.sdkRequired,
     });
     console.log(JSON.stringify(descriptor, null, 2));
+    return;
+  }
+  if (options.command === 'bind-delivery') {
+    const rules = readJson(path.resolve(options['rules-file']));
+    const binding = createDeliveryBinding({
+      event: options.event,
+      pullRequest: options['pull-request'],
+      pullRequestHead: options['pull-request-head'],
+      devHead: options['dev-head'],
+      candidateTree: options['candidate-tree'],
+      pullRequestBody: fs.readFileSync(
+        path.resolve(options['pr-body']),
+        'utf8',
+      ),
+      combinedStatus: readJson(path.resolve(options['status-file'])),
+      requiredContexts: requiredContextsFromRules(rules),
+      queueAdmissionContext: options['queue-admission-context'],
+    });
+    writeJson(path.resolve(options.output), binding);
+    appendGithubOutput(options['github-output'], {
+      'binding-root': binding.bindingRoot,
+      'binding-state': binding.state,
+    });
+    console.log(JSON.stringify(binding, null, 2));
     return;
   }
   if (options.command === 'lookup') {
@@ -838,6 +1260,7 @@ async function main() {
       'producer-event': authority.producer.event,
       'producer-trigger-head-sha': authority.producer.triggerHeadSha,
       'payload-source-sha': authority.payloadSourceSha,
+      'delivery-binding-root': authority.deliveryBindingRoot || '',
     });
     console.log(
       JSON.stringify(
@@ -853,8 +1276,83 @@ async function main() {
     );
     return;
   }
+  if (options.command === 'verify-attempt') {
+    const attempt = validateDeliveryAttempt(
+      readJson(
+        path.join(path.resolve(options.bundle), 'delivery-attempt.json'),
+      ),
+    );
+    const expected = {
+      repository: requireRepository(options.repository, 'delivery repository'),
+      runId: requireRunId(options['run-id'], 'delivery run id'),
+      headSha: requireSha(options['head-sha'], 'delivery merge-group head'),
+      sourceTree: requireSha(
+        options['source-tree'] || git('rev-parse', 'HEAD^{tree}'),
+        'delivery source tree',
+      ),
+    };
+    if (
+      attempt.workflow.repository !== expected.repository ||
+      attempt.workflow.runId !== expected.runId ||
+      attempt.source.mergeGroupHead !== expected.headSha ||
+      attempt.source.checkout !== expected.headSha ||
+      attempt.source.replayedTree !== expected.sourceTree
+    ) {
+      throw new Error('affected-native delivery attempt target drift');
+    }
+    appendGithubOutput(options['github-output'], {
+      'attempt-root': attempt.attemptRoot,
+      'delivery-binding-root': attempt.deliveryBindingRoot,
+      'family-lease-root': attempt.family.leaseRoot,
+      'delivery-class': attempt.family.deliveryClass,
+      'pull-request-head': attempt.source.pullRequestHead,
+      'proof-decision': attempt.proof.decision,
+    });
+    console.log(
+      JSON.stringify(
+        {
+          status: 'verified',
+          attemptRoot: attempt.attemptRoot,
+          deliveryBindingRoot: attempt.deliveryBindingRoot,
+          family: attempt.family,
+          source: attempt.source,
+          proofDecision: attempt.proof.decision,
+        },
+        null,
+        2,
+      ),
+    );
+    return;
+  }
+  if (options.command === 'seal-attempt') {
+    const descriptor = readJson(path.resolve(options.descriptor));
+    const bundle = path.resolve(options.bundle);
+    const untrustedProof = readJson(path.join(bundle, 'proof.json'));
+    const proof = verifyProofBundle(descriptor, bundle, {
+      repository: untrustedProof.producer?.repository,
+      producerRunId: untrustedProof.producer?.runId,
+      producerEvent: untrustedProof.producer?.event,
+      producerHeadSha: untrustedProof.producer?.triggerHeadSha,
+      maxAgeSeconds: Number(
+        options['max-age-seconds'] || DEFAULT_MAX_AGE_SECONDS,
+      ),
+      now: options.now,
+    });
+    const attempt = createDeliveryAttempt(descriptor, proof, options.decision, {
+      repository: options.repository,
+      runId: options['run-id'],
+      event: options.event,
+      triggerHeadSha: options['trigger-head-sha'],
+      checkoutSha: options['checkout-sha'] || git('rev-parse', 'HEAD'),
+    });
+    const outputDir = path.resolve(options['output-dir']);
+    fs.mkdirSync(outputDir, { recursive: true });
+    writeJson(path.join(outputDir, 'delivery-attempt.json'), attempt);
+    console.log(JSON.stringify(attempt, null, 2));
+    return;
+  }
   throw new Error(
-    'usage: affected-native-proof.mjs <toolchain|describe|lookup|seal|verify|seal-cache-authority|verify-cache-authority>',
+    'usage: affected-native-proof.mjs <toolchain|bind-delivery|describe|lookup|seal|verify|seal-attempt|verify-attempt|seal-cache-authority|verify-cache-authority>',
   );
 }
 

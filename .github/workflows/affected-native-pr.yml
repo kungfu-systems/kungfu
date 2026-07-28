@@ -132,7 +132,7 @@ jobs:
           pr_head="$(jq -r '.head.sha' "$RUNNER_TEMP/family-pr.json")"
           jq -r '.body // ""' "$RUNNER_TEMP/family-pr.json" > "$RUNNER_TEMP/family-pr-body.txt"
           gh api "repos/$GITHUB_REPOSITORY/commits/$pr_head/status" > "$RUNNER_TEMP/family-status.json"
-          candidate_tree="$(git rev-parse HEAD^{tree})"
+          candidate_tree="$(git rev-parse 'HEAD^{tree}')"
           ./shifu project-cut:queue-admission -- \
             --verify-family-marker "$RUNNER_TEMP/family-pr-body.txt" \
             --status-file "$RUNNER_TEMP/family-status.json" \
@@ -239,6 +239,56 @@ jobs:
             echo "base_sha=${base_sha}"
             echo "head_sha=${head_sha}"
           } >> "$GITHUB_OUTPUT"
+      - name: Capture exact family delivery binding
+        id: delivery
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GITHUB_BASE_SHA: ${{ steps.revisions.outputs.base_sha }}
+          GITHUB_HEAD_SHA: ${{ steps.revisions.outputs.head_sha }}
+        run: |
+          set -euo pipefail
+          binding=product/qualification/affected-native/proof-probe/delivery-binding.json
+          mkdir -p "$(dirname "$binding")"
+          case "$GITHUB_EVENT_NAME" in
+            pull_request)
+              pr_number="$(jq -r '.pull_request.number' "$GITHUB_EVENT_PATH")"
+              pr_head="$(jq -r '.pull_request.head.sha' "$GITHUB_EVENT_PATH")"
+              jq -r '.pull_request.body // ""' "$GITHUB_EVENT_PATH" > "$RUNNER_TEMP/family-pr-body.txt"
+              printf '{"statuses":[]}\n' > "$RUNNER_TEMP/family-status.json"
+              base_branch="$(jq -r '.pull_request.base.ref' "$GITHUB_EVENT_PATH")"
+              ;;
+            merge_group)
+              pr_number="$(sed -nE 's#^.*/pr-([0-9]+)-[0-9a-f]+$#\1#p' <<< "$(jq -r '.merge_group.head_ref' "$GITHUB_EVENT_PATH")")"
+              test -n "$pr_number"
+              gh api "repos/$GITHUB_REPOSITORY/pulls/$pr_number" > "$RUNNER_TEMP/family-pr.json"
+              pr_head="$(jq -r '.head.sha' "$RUNNER_TEMP/family-pr.json")"
+              jq -r '.body // ""' "$RUNNER_TEMP/family-pr.json" > "$RUNNER_TEMP/family-pr-body.txt"
+              gh api "repos/$GITHUB_REPOSITORY/commits/$pr_head/status" > "$RUNNER_TEMP/family-status.json"
+              base_branch="$(jq -r '.base.ref' "$RUNNER_TEMP/family-pr.json")"
+              ;;
+            *)
+              echo "unsupported event: $GITHUB_EVENT_NAME" >&2
+              exit 1
+              ;;
+          esac
+          encoded_branch="$(jq -rn --arg value "$base_branch" '$value | @uri')"
+          gh api "repos/$GITHUB_REPOSITORY/rules/branches/$encoded_branch" > "$RUNNER_TEMP/effective-rules.json"
+          candidate_tree="$(git rev-parse 'HEAD^{tree}')"
+          queue_context="$(jq -r '.requiredContext' docs/qualification/gates/dev-queue-admission.contract.json)"
+          # shifu-entry-contract: allow immutable delivery identity capture before Gate dependencies are runnable
+          node scripts/affected-native-proof.mjs bind-delivery \
+            --event "$GITHUB_EVENT_NAME" \
+            --pull-request "$pr_number" \
+            --pull-request-head "$pr_head" \
+            --dev-head "$GITHUB_BASE_SHA" \
+            --candidate-tree "$candidate_tree" \
+            --pr-body "$RUNNER_TEMP/family-pr-body.txt" \
+            --status-file "$RUNNER_TEMP/family-status.json" \
+            --rules-file "$RUNNER_TEMP/effective-rules.json" \
+            --queue-admission-context "$queue_context" \
+            --output "$binding" \
+            --github-output "$GITHUB_OUTPUT"
       - name: Describe exact affected-native proof identity
         id: descriptor
         shell: bash
@@ -260,6 +310,7 @@ jobs:
           node scripts/affected-native-proof.mjs describe \
             --plan product/qualification/affected-native/proof-probe/plan.json \
             --toolchain product/qualification/affected-native/proof-probe/toolchain.json \
+            --delivery-binding product/qualification/affected-native/proof-probe/delivery-binding.json \
             --output product/qualification/affected-native/proof-probe/descriptor.json \
             --github-output "$GITHUB_OUTPUT"
       - name: Upload current proof descriptor
@@ -830,6 +881,7 @@ jobs:
           node scripts/affected-native-proof.mjs describe \
             --plan "$admission/plan.json" \
             --toolchain "$toolchain" \
+            --delivery-binding "$admission/probe/delivery-binding.json" \
             --output "$admission/recomputed-descriptor.json"
           cmp "$descriptor" "$admission/recomputed-descriptor.json"
           test "$PROBE_ARTIFACT_NAME" = "$(jq -r '.artifactName' "$descriptor")"
@@ -911,6 +963,49 @@ jobs:
             --checkout-sha "$(git rev-parse HEAD)"
           echo "proof-created=true" >> "$GITHUB_OUTPUT"
           echo "All affected-native partitions passed."
+      - name: Seal reconstructable family delivery attempt
+        if: >-
+          ${{
+            github.event_name == 'merge_group' &&
+            (needs.candidate_preflight.outputs.native-required == 'true' ||
+             needs.candidate_preflight.outputs.sdk-required == 'true')
+          }}
+        shell: bash
+        env:
+          REUSE: ${{ needs.proof_probe.outputs.reuse }}
+        run: |
+          set -euo pipefail
+          admission=product/qualification/affected-native
+          decision=fresh
+          bundle="$admission/proof-bundle"
+          if [ "$REUSE" = "true" ]; then
+            decision=reused
+            bundle="$admission/proof-reuse"
+          fi
+          # shifu-entry-contract: allow attempt sealing after exact proof admission
+          node scripts/affected-native-proof.mjs seal-attempt \
+            --descriptor "$admission/proof-admission/descriptor.json" \
+            --bundle "$bundle" \
+            --decision "$decision" \
+            --output-dir "$admission/delivery-attempt" \
+            --repository "$GITHUB_REPOSITORY" \
+            --run-id "$GITHUB_RUN_ID" \
+            --event "$GITHUB_EVENT_NAME" \
+            --trigger-head-sha "$GITHUB_SHA" \
+            --checkout-sha "$(git rev-parse HEAD)"
+      - name: Upload reconstructable family delivery attempt
+        if: >-
+          ${{
+            github.event_name == 'merge_group' &&
+            (needs.candidate_preflight.outputs.native-required == 'true' ||
+             needs.candidate_preflight.outputs.sdk-required == 'true')
+          }}
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: core-affected-native-delivery-attempt-${{ github.sha }}
+          path: product/qualification/affected-native/delivery-attempt
+          if-no-files-found: error
+          retention-days: 14
       - name: Seal reused-proof cache promotion authority
         if: >-
           ${{
