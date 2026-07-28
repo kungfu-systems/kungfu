@@ -138,6 +138,7 @@ export function runShifuWithCache(args, options = {}) {
 export function buildchainBuildPlan(
   platform = process.platform,
   arch = process.arch,
+  root = ROOT,
 ) {
   if (platform !== 'linux' || arch !== 'arm64') {
     return [{ args: ['dist'], env: {} }];
@@ -153,7 +154,9 @@ export function buildchainBuildPlan(
     { args: ['freeze'], env: { KF_REQUIRE_NATIVE_HOST: '1' } },
     {
       args: ['pack:core-platform'],
-      env: { KF_PACKAGE_STAGE_DIR: 'product/release/npm' },
+      env: {
+        KF_PACKAGE_STAGE_DIR: path.join(root, 'product', 'release', 'npm'),
+      },
     },
   ];
 }
