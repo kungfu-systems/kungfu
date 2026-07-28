@@ -47,7 +47,7 @@ function stable(value) {
   return value;
 }
 
-function semanticRoot(value) {
+export function cliQualificationRoot(value) {
   const bytes = JSON.stringify(stable(value));
   return `sha256:${crypto.createHash('sha256').update(bytes).digest('hex')}`;
 }
@@ -428,7 +428,7 @@ export function qualifyCliSurface({
         'Availability metadata does not activate a KFX contribution.',
       ],
     };
-    result.qualificationRoot = semanticRoot(result);
+    result.qualificationRoot = cliQualificationRoot(result);
     return result;
   } finally {
     fs.rmSync(tempRoot, { recursive: true, force: true });

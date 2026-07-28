@@ -55,7 +55,11 @@ test('Linux ARM64 runs artifact qualification with an independent budget', () =>
     inputs['build-command'],
     'node scripts/run-shifu-lifecycle.mjs cache-apply dist:cli',
   );
-  assert.equal(inputs['require-verify'], false);
+  assert.equal(inputs['require-verify'], true);
+  assert.equal(
+    inputs['verify-command'],
+    'node product/scripts/verify-cli-surface-qualification.mjs --qualification product/release/cli/kungfu-episodes-cli-linux-arm64.qualification.json --archive product/release/cli/kungfu-episodes-cli-linux-arm64.tar.gz --platform linux-arm64',
+  );
   assert.equal(inputs['lifecycle-timeout-minutes'], 240);
   assert.equal(
     inputs['shifu-cache-profile-ref'],
