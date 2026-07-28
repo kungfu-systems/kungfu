@@ -2377,10 +2377,10 @@
       ]
     },
     {
-      "id": "kungfu.qualification-lab",
+      "id": "kungfu.agent-work-lab",
       "surface": "cli-api-gui",
-      "name": "kungfu qualification-lab",
-      "purpose": "Discover the shared boot-safe continuity qualification surface and its exact actions.",
+      "name": "kungfu agent-work-lab",
+      "purpose": "Discover the shared boot-safe Agent Work Lab surface and its exact actions.",
       "maturity": "experimental",
       "visibility": "public-agent",
       "anchor": {
@@ -2392,9 +2392,9 @@
       ]
     },
     {
-      "id": "kungfu.qualification-lab.inspect",
+      "id": "kungfu.agent-work-lab.inspect",
       "surface": "cli-api-gui",
-      "name": "kungfu qualification-lab inspect --json",
+      "name": "kungfu agent-work-lab inspect --json",
       "purpose": "Resolve an empty, existing-Work, or diagnostic startup route without materializing runtime state.",
       "maturity": "experimental",
       "visibility": "public-agent",
@@ -2407,9 +2407,9 @@
       ]
     },
     {
-      "id": "kungfu.qualification-lab.catalog",
+      "id": "kungfu.agent-work-lab.catalog",
       "surface": "cli-api-gui",
-      "name": "kungfu qualification-lab catalog --json",
+      "name": "kungfu agent-work-lab catalog --json",
       "purpose": "List the canonical fixture, oracle, non-claims, lifecycle states, and shared surface authority.",
       "maturity": "experimental",
       "visibility": "public-agent",
@@ -2422,9 +2422,9 @@
       ]
     },
     {
-      "id": "kungfu.qualification-lab.agents",
+      "id": "kungfu.agent-work-lab.agents",
       "surface": "cli-api-gui",
-      "name": "kungfu qualification-lab agents --json",
+      "name": "kungfu agent-work-lab agents --json",
       "purpose": "Discover exact local agent launch profiles through bounded executable and version inspection without credential reads.",
       "maturity": "experimental",
       "visibility": "public-agent",
@@ -2437,9 +2437,9 @@
       ]
     },
     {
-      "id": "kungfu.qualification-lab.plan",
+      "id": "kungfu.agent-work-lab.plan",
       "surface": "cli-api-gui",
-      "name": "kungfu qualification-lab plan --json",
+      "name": "kungfu agent-work-lab plan --json",
       "purpose": "Preview the immutable offline two-session fixture and deterministic oracle.",
       "maturity": "experimental",
       "visibility": "public-agent",
@@ -2452,10 +2452,10 @@
       ]
     },
     {
-      "id": "kungfu.qualification-lab.demo",
+      "id": "kungfu.agent-work-lab.demo",
       "surface": "cli-api-gui",
-      "name": "kungfu qualification-lab demo --json",
-      "purpose": "Run the isolated bundled fixture in two fresh processes and emit an exact qualification report.",
+      "name": "kungfu agent-work-lab demo --json",
+      "purpose": "Run the isolated bundled fixture in two fresh processes and emit an exact Agent Work Lab report.",
       "maturity": "experimental",
       "visibility": "public-agent",
       "anchor": {
@@ -2467,9 +2467,9 @@
       ]
     },
     {
-      "id": "kungfu.qualification-lab.agent-plan",
+      "id": "kungfu.agent-work-lab.agent-plan",
       "surface": "cli-api-gui",
-      "name": "kungfu qualification-lab agent-plan <profile-id> --json",
+      "name": "kungfu agent-work-lab agent-plan <profile-id> --json",
       "purpose": "Preview the exact identity-bound local provider commands without reading credential contents.",
       "maturity": "experimental",
       "visibility": "public-agent",
@@ -2482,10 +2482,10 @@
       ]
     },
     {
-      "id": "kungfu.qualification-lab.agent-run",
+      "id": "kungfu.agent-work-lab.agent-run",
       "surface": "cli-api-gui",
-      "name": "kungfu qualification-lab agent-run <profile-id> --execute --json",
-      "purpose": "After explicit authorization, qualify self-continuity or a cross-profile handoff through two fresh local provider processes and exact receipts.",
+      "name": "kungfu agent-work-lab agent-run <profile-id> --execute --json",
+      "purpose": "After explicit authorization, run self-continuity or a cross-profile handoff through two fresh local provider processes and exact receipts.",
       "maturity": "experimental",
       "visibility": "public-agent",
       "anchor": {

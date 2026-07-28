@@ -15,7 +15,7 @@ test('decodes complete keyboard navigation without Ink raw-mode ownership', () =
   assert.equal(decodeShellKey('\t'), 'next-region');
   assert.equal(decodeShellKey('\u001b[Z'), 'previous-region');
   assert.equal(decodeShellKey('r'), 'refresh');
-  assert.equal(decodeShellKey('a'), 'qualification-lab');
+  assert.equal(decodeShellKey('a'), 'agent-work-lab');
   assert.equal(decodeShellKey('x'), 'none');
 });
 

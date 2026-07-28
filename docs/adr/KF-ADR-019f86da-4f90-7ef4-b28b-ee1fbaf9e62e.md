@@ -116,7 +116,7 @@ later stages, so the umbrella decision remains partial.
 Conversion readiness therefore remains blocked on the remaining ordered gates:
 Fact/Work lifecycle authority with Cut and CAS semantics, then a recursively
 dogfooded KFX Control Suite behind a minimal Core bootstrap verifier. The
-protected Agent Qualification Lab cutover remains a later separate stage after
+protected Agent Work Lab cutover remains a later separate stage after
 those gates are proved, so the umbrella decision remains partial.
 
 ## Decision

@@ -7,6 +7,7 @@ import test from 'node:test';
 import { Box, Text, render } from 'ink';
 import React from 'react';
 
+import { AGENT_WORK_LAB_QUICK_COMMANDS } from './agent-work-lab-view.js';
 import {
   CLOSED_CONTROL_PLANE,
   ControlPlaneBar,
@@ -17,7 +18,6 @@ import {
   quickCommandMatches,
   reduceControlPlaneInput,
 } from './profile-shell.js';
-import { AGENT_WORK_LAB_QUICK_COMMANDS } from './qualification-lab-view.js';
 import {
   degradedGlobalWorkModel,
   globalWorkContribution,

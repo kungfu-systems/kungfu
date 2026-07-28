@@ -264,6 +264,7 @@
     "test:durability-contract": "node scripts/require-shifu.mjs test:durability-contract && node scripts/run-durability-contract-tests.mjs",
     "test:state-service": "node scripts/require-shifu.mjs test:state-service && node scripts/run-state-service-tests.mjs",
     "test:kfx-profile-suite": "node scripts/require-shifu.mjs test:kfx-profile-suite && node scripts/run-kfx-profile-suite-tests.mjs",
+    "test:agent-work-lab": "node scripts/require-shifu.mjs test:agent-work-lab && node scripts/run-agent-work-lab-tests.mjs",
     "test:mission-authority-cutover": "node scripts/require-shifu.mjs test:mission-authority-cutover && node scripts/run-mission-authority-cutover-tests.mjs",
     "test:agent-review-continuation": "node scripts/require-shifu.mjs test:agent-review-continuation && node scripts/run-agent-review-continuation-tests.mjs",
     "test:native-kfx-admission": "node scripts/require-shifu.mjs test:native-kfx-admission && node scripts/run-native-kfx-admission-tests.mjs",

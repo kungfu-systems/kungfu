@@ -1,9 +1,9 @@
 import * as capability from '@kungfu-tech/api/capability';
 import type {
+  AgentWorkLabStartupRoute,
   KfxExperienceFlowDescriptor,
   ProductSearchDocument,
   ProductSearchResult,
-  QualificationLabStartupRoute,
 } from '@kungfu-tech/api/capability';
 import * as query from '@kungfu-tech/api/query';
 // Reference app shell: boots the in-process runtime and mounts kfx loaded
@@ -72,6 +72,7 @@ import {
 } from '../../sandbox/channels';
 import { publishRefresh } from '../../sandbox/refresh';
 import { createKfxSharedModules } from '../shared-modules';
+import { AgentWorkLabPanel } from './agent-work-lab';
 import {
   loadKungfuConfig,
   normalizedUiConfig,
@@ -81,12 +82,11 @@ import {
   unsetKungfuConfigValue,
 } from './gui-config';
 import { type KfxLoadResult, loadKfx } from './kfx-loader';
-import { QualificationLabPanel } from './qualification-lab';
 import {
   type Runtime,
   bootRuntime,
   deferredRuntime,
-  openRendererQualificationLab,
+  openRendererAgentWorkLab,
 } from './runtime';
 import { sandboxClient } from './sandbox-client';
 import { DEFAULT_STATE, loadShellState, saveShellState } from './shell-state';
@@ -147,7 +147,7 @@ function subsetCaps(runtime: Runtime, entry: KfxEntry): KfxCapabilities | null {
     profile: runtime.profile,
     agentRuntime: runtime.agentRuntime,
     agentSession: runtime.agentSession,
-    qualificationLab: runtime.qualificationLab,
+    agentWorkLab: runtime.agentWorkLab,
     workspace: runtime.workspace,
   } as Record<string, unknown>;
   const subset: Record<string, unknown> = {};
@@ -181,7 +181,7 @@ function sandboxSubset(
     profile: runtime.profile,
     agentRuntime: runtime.agentRuntime,
     agentSession: runtime.agentSession,
-    qualificationLab: runtime.qualificationLab,
+    agentWorkLab: runtime.agentWorkLab,
     workspace: runtime.workspace,
   };
   const subset: Record<string, Record<string, unknown>> = {};
@@ -1020,13 +1020,13 @@ function RuntimeFailurePanel({ message }: { message: string }) {
 }
 
 function App() {
-  const [qualificationLab] = React.useState(openRendererQualificationLab);
-  const [startup] = React.useState<QualificationLabStartupRoute>(() => {
+  const [agentWorkLab] = React.useState(openRendererAgentWorkLab);
+  const [startup] = React.useState<AgentWorkLabStartupRoute>(() => {
     try {
-      return qualificationLab.inspectSync();
+      return agentWorkLab.inspectSync();
     } catch (error) {
       return {
-        schema: 'kungfu.qualification-lab.startup-route/v1',
+        schema: 'kungfu.agent-work-lab.startup-route/v1',
         state: 'diagnostic',
         route: 'diagnostic',
         reasonCode: 'startup-inspection-failed',
@@ -1038,17 +1038,17 @@ function App() {
       };
     }
   });
-  const startupSurface = capability.qualificationLabStartupSurface(startup);
+  const startupSurface = capability.agentWorkLabStartupSurface(startup);
   const [runtime] = React.useState(() =>
     startupSurface === 'work-graph'
       ? bootRuntime()
       : deferredRuntime(
-          qualificationLab,
+          agentWorkLab,
           `startup routed to ${startup.route}: ${startup.reasonCode}`,
         ),
   );
   const [labOpen, setLabOpen] = React.useState(
-    startupSurface === 'qualification-lab',
+    startupSurface === 'agent-work-lab',
   );
   const [kfxDescriptor] = React.useState<KfxExperienceFlowDescriptor | null>(
     () => {
@@ -2335,8 +2335,8 @@ function App() {
           </nav>
           <div style={{ flex: 1, minHeight: 0, overflow: 'hidden' }}>
             {labOpen ? (
-              <QualificationLabPanel
-                lab={qualificationLab}
+              <AgentWorkLabPanel
+                lab={agentWorkLab}
                 startup={startup}
                 onOpenWork={() => setLabOpen(false)}
               />

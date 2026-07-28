@@ -199,7 +199,7 @@ What is **not yet guaranteed**:
 
 Treat these as usable pre-release slices, not a finished shell promise.
 
-The Agent Qualification Lab proves only its exact continuity fixture. The
+The Agent Work Lab proves only its exact continuity fixture. The
 bundled offline run proves deterministic state recognition across fresh
 processes; a selected-agent run binds the executable digest, version, runtime
 profile, platform, fixture, oracle, plan, attempts, assessment, and report.

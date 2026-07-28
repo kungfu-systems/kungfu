@@ -49,7 +49,7 @@ function baseReport() {
     dimensions: {},
     nonClaims: {
       auditableDemo: true,
-      qualificationLab: true,
+      agentWorkLab: true,
       releaseGate: true,
       publicClaim: true,
       modelRanking: true,

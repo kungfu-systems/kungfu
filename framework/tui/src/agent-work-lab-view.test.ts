@@ -5,28 +5,28 @@ import { EventEmitter } from 'node:events';
 import { readFileSync } from 'node:fs';
 import test from 'node:test';
 import type {
-  QualificationLabEvent,
-  QualificationLabReport,
+  AgentWorkLabEvent,
+  AgentWorkLabReport,
 } from '@kungfu-tech/api/capability';
 import { render } from 'ink';
 import React from 'react';
+import {
+  AGENT_WORK_LAB_QUICK_COMMANDS,
+  AgentWorkLabView,
+  agentWorkLabActionReturnsToControls,
+  agentWorkLabEventLines,
+  agentWorkLabEventRunningSession,
+  agentWorkLabNextModePrompt,
+  agentWorkLabPromptRows,
+  agentWorkLabSessionTitleBar,
+  isAgentWorkLabReportReturnInput,
+  nextAgentWorkLabFocus,
+} from './agent-work-lab-view.js';
 import {
   createIncrementalPlayback,
   nextWorkbenchFocus,
   sessionTitleBar,
 } from './profile-shell.js';
-import {
-  AGENT_WORK_LAB_QUICK_COMMANDS,
-  QualificationLabView,
-  agentWorkLabActionReturnsToControls,
-  isQualificationReportReturnInput,
-  nextQualificationFocus,
-  qualificationEventLines,
-  qualificationEventRunningSession,
-  qualificationNextModePrompt,
-  qualificationPromptRows,
-  qualificationSessionTitleBar,
-} from './qualification-lab-view.js';
 import { IncrementalTerminalOutput } from './terminal-canvas.js';
 
 test('generic workbench has no product-specific test or oracle vocabulary', () => {
@@ -39,7 +39,7 @@ test('generic workbench has no product-specific test or oracle vocabulary', () =
   );
   assert.doesNotMatch(
     source,
-    /Agent Work Lab|offline-demo|same-agent|cross-agent|qualification-lab|oracle/i,
+    /Agent Work Lab|offline-demo|same-agent|cross-agent|agent-work-lab|oracle/i,
   );
 });
 
@@ -112,10 +112,10 @@ const viewProps = {
   runningSession: undefined,
 };
 
-const qualifiedReport: QualificationLabReport = {
-  schema: 'kungfu.qualification-lab.report/v1',
+const qualifiedReport: AgentWorkLabReport = {
+  schema: 'kungfu.agent-work-lab.report/v1',
   status: 'qualified',
-  suite: 'kungfu.agent-continuity.v1',
+  suite: 'kungfu.agent-work-lab',
   fixture: 'partial-claim-fresh-session',
   planRoot: `sha256:${'1'.repeat(64)}`,
   reportRoot: `sha256:${'2'.repeat(64)}`,
@@ -133,18 +133,20 @@ const qualifiedReport: QualificationLabReport = {
   events: [],
   meaning: 'Continuity was assessed.',
   nonClaims: [],
+  receiptDependencies: [],
+  recoveryGuidance: {},
   evidenceDirectory: '/tmp/evidence',
   writeOccurred: true,
 };
 
 test('TUI renders admitted provider narration without raw commands', () => {
-  const event: QualificationLabEvent = {
-    schema: 'kungfu.qualification-lab.event/v1',
+  const event: AgentWorkLabEvent = {
+    schema: 'kungfu.agent-work-lab.event/v1',
     step: 'session-2-activity',
     status: 'running',
     root: `sha256:${'a'.repeat(64)}`,
     publicActivity: {
-      schema: 'kungfu.qualification-lab.public-activity/v1',
+      schema: 'kungfu.agent-work-lab.public-activity/v1',
       source: 'provider-jsonl',
       kind: 'agent',
       phase: 'progress',
@@ -153,7 +155,7 @@ test('TUI renders admitted provider narration without raw commands', () => {
     },
   };
 
-  assert.deepEqual(qualificationEventLines(event), [
+  assert.deepEqual(agentWorkLabEventLines(event), [
     {
       session: 2,
       source: 'agent/live',
@@ -163,9 +165,9 @@ test('TUI renders admitted provider narration without raw commands', () => {
   ]);
 });
 
-test('TUI qualification layout keeps two Sessions and the verdict dock fixed', () => {
+test('TUI Agent Work Lab layout keeps two Sessions and the verdict dock fixed', () => {
   const adapterSource = readFileSync(
-    new URL('./qualification-lab-view.tsx', import.meta.url),
+    new URL('./agent-work-lab-view.tsx', import.meta.url),
     'utf8',
   );
   const frameworkSource = readFileSync(
@@ -204,7 +206,7 @@ test('TUI qualification layout keeps two Sessions and the verdict dock fixed', (
 });
 
 test('Session title bars keep focus and running state visible at fixed width', () => {
-  const running = qualificationSessionTitleBar({
+  const running = agentWorkLabSessionTitleBar({
     session: 1,
     title: 'Bundled Demo Agent',
     active: true,
@@ -212,7 +214,7 @@ test('Session title bars keep focus and running state visible at fixed width', (
     columns: 38,
     activityFrame: 0,
   });
-  const quarter = qualificationSessionTitleBar({
+  const quarter = agentWorkLabSessionTitleBar({
     session: 1,
     title: 'Bundled Demo Agent',
     active: true,
@@ -220,7 +222,7 @@ test('Session title bars keep focus and running state visible at fixed width', (
     columns: 38,
     activityFrame: 1,
   });
-  const half = qualificationSessionTitleBar({
+  const half = agentWorkLabSessionTitleBar({
     session: 1,
     title: 'Bundled Demo Agent',
     active: true,
@@ -228,7 +230,7 @@ test('Session title bars keep focus and running state visible at fixed width', (
     columns: 38,
     activityFrame: 2,
   });
-  const threeQuarter = qualificationSessionTitleBar({
+  const threeQuarter = agentWorkLabSessionTitleBar({
     session: 1,
     title: 'Bundled Demo Agent',
     active: true,
@@ -236,7 +238,7 @@ test('Session title bars keep focus and running state visible at fixed width', (
     columns: 38,
     activityFrame: 3,
   });
-  const ready = qualificationSessionTitleBar({
+  const ready = agentWorkLabSessionTitleBar({
     session: 2,
     title: 'Fresh Demo Agent',
     active: false,
@@ -259,8 +261,8 @@ test('Session title bars keep focus and running state visible at fixed width', (
 
 test('running state follows only the Session named by an event', () => {
   assert.equal(
-    qualificationEventRunningSession({
-      schema: 'kungfu.qualification-lab.event/v1',
+    agentWorkLabEventRunningSession({
+      schema: 'kungfu.agent-work-lab.event/v1',
       step: 'session-1-activity',
       status: 'running',
       root: `sha256:${'a'.repeat(64)}`,
@@ -268,8 +270,8 @@ test('running state follows only the Session named by an event', () => {
     1,
   );
   assert.equal(
-    qualificationEventRunningSession({
-      schema: 'kungfu.qualification-lab.event/v1',
+    agentWorkLabEventRunningSession({
+      schema: 'kungfu.agent-work-lab.event/v1',
       step: 'session-2-start',
       status: 'running',
       root: `sha256:${'b'.repeat(64)}`,
@@ -277,8 +279,8 @@ test('running state follows only the Session named by an event', () => {
     2,
   );
   assert.equal(
-    qualificationEventRunningSession({
-      schema: 'kungfu.qualification-lab.event/v1',
+    agentWorkLabEventRunningSession({
+      schema: 'kungfu.agent-work-lab.event/v1',
       step: 'assessment',
       status: 'qualified',
       root: `sha256:${'c'.repeat(64)}`,
@@ -288,7 +290,7 @@ test('running state follows only the Session named by an event', () => {
 });
 
 test('coaching popup rows are bounded and fully paintable', () => {
-  const rows = qualificationPromptRows(
+  const rows = agentWorkLabPromptRows(
     'Offline complete · now test your real agent · Press x to test same-agent continuity.',
     28,
   );
@@ -301,32 +303,32 @@ test('coaching popup rows are bounded and fully paintable', () => {
 });
 
 test('Tab focus includes result cards only after a report exists', () => {
-  assert.equal(nextQualificationFocus('session-1', false), 'session-2');
-  assert.equal(nextQualificationFocus('session-2', false), 'session-1');
-  assert.equal(nextQualificationFocus('session-2', true), 'correct');
-  assert.equal(nextQualificationFocus('correct', true), 'failed');
-  assert.equal(nextQualificationFocus('failed', true), 'session-1');
+  assert.equal(nextAgentWorkLabFocus('session-1', false), 'session-2');
+  assert.equal(nextAgentWorkLabFocus('session-2', false), 'session-1');
+  assert.equal(nextAgentWorkLabFocus('session-2', true), 'correct');
+  assert.equal(nextAgentWorkLabFocus('correct', true), 'failed');
+  assert.equal(nextAgentWorkLabFocus('failed', true), 'session-1');
 });
 
-test('completed modes coach the next qualification step', () => {
+test('completed modes coach the next Agent Work Lab step', () => {
   assert.equal(
-    qualificationNextModePrompt('offline-demo').title,
+    agentWorkLabNextModePrompt('offline-demo').title,
     'Offline complete · now test your real agent',
   );
   assert.match(
-    qualificationNextModePrompt('offline-demo').instruction,
+    agentWorkLabNextModePrompt('offline-demo').instruction,
     /Run \/same, or press Esc then x/,
   );
   assert.doesNotMatch(
-    qualificationNextModePrompt('offline-demo').instruction,
+    agentWorkLabNextModePrompt('offline-demo').instruction,
     /Press p/,
   );
   assert.match(
-    qualificationNextModePrompt('same-agent').instruction,
+    agentWorkLabNextModePrompt('same-agent').instruction,
     /Run \/handoff.*press m/i,
   );
   assert.match(
-    qualificationNextModePrompt('cross-agent').instruction,
+    agentWorkLabNextModePrompt('cross-agent').instruction,
     /Open Correct or Failed/,
   );
 });
@@ -360,10 +362,10 @@ test('report details accept obvious return keys', () => {
     'B',
     '\u001b[D',
   ]) {
-    assert.equal(isQualificationReportReturnInput(input), true);
+    assert.equal(isAgentWorkLabReportReturnInput(input), true);
   }
-  assert.equal(isQualificationReportReturnInput('q'), false);
-  assert.equal(isQualificationReportReturnInput('\t'), false);
+  assert.equal(isAgentWorkLabReportReturnInput('q'), false);
+  assert.equal(isAgentWorkLabReportReturnInput('\t'), false);
 });
 
 test('TUI host streams events and preserves the one-second rhythm', () => {
@@ -372,7 +374,7 @@ test('TUI host streams events and preserves the one-second rhythm', () => {
     'utf8',
   );
   const hostSource = readFileSync(
-    new URL('./qualification-lab-view.tsx', import.meta.url),
+    new URL('./agent-work-lab-view.tsx', import.meta.url),
     'utf8',
   );
   const playbackSource = readFileSync(
@@ -383,12 +385,12 @@ test('TUI host streams events and preserves the one-second rhythm', () => {
   assert.match(mainSource, /execFileEvents:/);
   assert.match(playbackSource, /wait\(timing\.eventIntervalMs\)/);
   assert.match(playbackSource, /wait\(timing\.verdictIntervalMs\)/);
-  assert.match(hostSource, /qualificationRunProgressLabel/);
-  assert.match(mainSource, /qualificationLabStartupSurface/);
+  assert.match(hostSource, /agentWorkLabRunProgressLabel/);
+  assert.match(mainSource, /agentWorkLabStartupSurface/);
   assert.match(hostSource, /quietProgressIntervalMs/);
   assert.match(hostSource, /recommendationDurationMs/);
-  assert.match(hostSource, /nextQualificationFocus/);
-  assert.match(hostSource, /isQualificationReportReturnInput/);
+  assert.match(hostSource, /nextAgentWorkLabFocus/);
+  assert.match(hostSource, /isAgentWorkLabReportReturnInput/);
   assert.match(hostSource, /setReportDetail\(activeFocus\)/);
   assert.match(hostSource, /performSuiteAction\('lab-demo'\)/);
   assert.match(hostSource, /performSuiteAction\('lab-same'\)/);
@@ -410,19 +412,16 @@ test('TUI host streams events and preserves the one-second rhythm', () => {
 test('state updates use incremental terminal painting instead of clearTerminal', async () => {
   const output = new CaptureOutput();
   const terminalOutput = new IncrementalTerminalOutput(output);
-  const instance = render(
-    React.createElement(QualificationLabView, viewProps),
-    {
-      stdout: terminalOutput as unknown as NodeJS.WriteStream,
-      exitOnCtrlC: false,
-      patchConsole: false,
-      debug: true,
-    },
-  );
+  const instance = render(React.createElement(AgentWorkLabView, viewProps), {
+    stdout: terminalOutput as unknown as NodeJS.WriteStream,
+    exitOnCtrlC: false,
+    patchConsole: false,
+    debug: true,
+  });
   await new Promise<void>((resolve) => setTimeout(resolve, 80));
   const initialWrites = output.chunks.length;
   instance.rerender(
-    React.createElement(QualificationLabView, {
+    React.createElement(AgentWorkLabView, {
       ...viewProps,
       lines: [
         {
@@ -446,15 +445,12 @@ test('state updates use incremental terminal painting instead of clearTerminal',
 
 test('the real Ink 80x24 Lab keeps both Session headers visible', async () => {
   const output = new CaptureOutput();
-  const instance = render(
-    React.createElement(QualificationLabView, viewProps),
-    {
-      stdout: output as unknown as NodeJS.WriteStream,
-      exitOnCtrlC: false,
-      patchConsole: false,
-      debug: true,
-    },
-  );
+  const instance = render(React.createElement(AgentWorkLabView, viewProps), {
+    stdout: output as unknown as NodeJS.WriteStream,
+    exitOnCtrlC: false,
+    patchConsole: false,
+    debug: true,
+  });
   await new Promise<void>((resolve) => setTimeout(resolve, 80));
   const frame = output.chunks.join('');
   instance.unmount();
@@ -467,7 +463,7 @@ test('the real Ink 80x24 Lab keeps both Session headers visible', async () => {
 test('the real Ink 80x24 title bars show only the active running Session', async () => {
   const output = new CaptureOutput();
   const instance = render(
-    React.createElement(QualificationLabView, {
+    React.createElement(AgentWorkLabView, {
       ...viewProps,
       busy: 'running two fresh demo sessions',
       progress: 'Still running · 2s elapsed · 4 admitted events',
@@ -499,19 +495,16 @@ test('the spinner animation repaints only the shared title-bar row', async () =>
     progress: 'Still running · 2s elapsed · 4 admitted events',
     runningSession: 2 as const,
   };
-  const instance = render(
-    React.createElement(QualificationLabView, runningProps),
-    {
-      stdout: terminalOutput as unknown as NodeJS.WriteStream,
-      exitOnCtrlC: false,
-      patchConsole: false,
-      debug: true,
-    },
-  );
+  const instance = render(React.createElement(AgentWorkLabView, runningProps), {
+    stdout: terminalOutput as unknown as NodeJS.WriteStream,
+    exitOnCtrlC: false,
+    patchConsole: false,
+    debug: true,
+  });
   await new Promise<void>((resolve) => setTimeout(resolve, 80));
   const initialWrites = output.chunks.length;
   instance.rerender(
-    React.createElement(QualificationLabView, {
+    React.createElement(AgentWorkLabView, {
       ...runningProps,
       activityFrame: 1,
     }),
@@ -529,11 +522,11 @@ test('the spinner animation repaints only the shared title-bar row', async () =>
 test('report cards, coaching popup and detail page are visible at 80x24', async () => {
   const output = new CaptureOutput();
   const instance = render(
-    React.createElement(QualificationLabView, {
+    React.createElement(AgentWorkLabView, {
       ...viewProps,
       report: qualifiedReport,
       activeFocus: 'correct',
-      nextPrompt: qualificationNextModePrompt('offline-demo'),
+      nextPrompt: agentWorkLabNextModePrompt('offline-demo'),
     }),
     {
       stdout: output as unknown as NodeJS.WriteStream,
@@ -545,7 +538,7 @@ test('report cards, coaching popup and detail page are visible at 80x24', async 
   await new Promise<void>((resolve) => setTimeout(resolve, 80));
   const frame = output.chunks.join('');
   instance.rerender(
-    React.createElement(QualificationLabView, {
+    React.createElement(AgentWorkLabView, {
       ...viewProps,
       report: qualifiedReport,
       activeFocus: 'correct',
@@ -572,19 +565,16 @@ test('report cards, coaching popup and detail page are visible at 80x24', async 
 test('Tab focus repaints only the shared title-bar row', async () => {
   const output = new CaptureOutput();
   const terminalOutput = new IncrementalTerminalOutput(output);
-  const instance = render(
-    React.createElement(QualificationLabView, viewProps),
-    {
-      stdout: terminalOutput as unknown as NodeJS.WriteStream,
-      exitOnCtrlC: false,
-      patchConsole: false,
-      debug: true,
-    },
-  );
+  const instance = render(React.createElement(AgentWorkLabView, viewProps), {
+    stdout: terminalOutput as unknown as NodeJS.WriteStream,
+    exitOnCtrlC: false,
+    patchConsole: false,
+    debug: true,
+  });
   await new Promise<void>((resolve) => setTimeout(resolve, 80));
   const initialWrites = output.chunks.length;
   instance.rerender(
-    React.createElement(QualificationLabView, {
+    React.createElement(AgentWorkLabView, {
       ...viewProps,
       activeFocus: 'session-2',
     }),

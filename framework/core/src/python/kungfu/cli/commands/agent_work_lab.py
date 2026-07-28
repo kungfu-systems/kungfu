@@ -5,7 +5,7 @@ from pathlib import Path
 
 import click
 
-from kungfu import qualification_lab as lab
+from kungfu import agent_work_lab as lab
 from kungfu.agent.kfd3 import kfd3_api
 from kungfu.agent import runtime_profiles
 from kungfu.cli.commands import PrioritizedCommandGroup, kfc
@@ -22,21 +22,21 @@ def _event_json(value):
 
 
 @kfc.group(
-    name="qualification-lab",
+    name="agent-work-lab",
     cls=PrioritizedCommandGroup,
     help_priority=1,
     help="inspect startup and qualify local agent continuity",
 )
 @click.help_option("-h", "--help")
-@kfd3_api("kungfu.qualification-lab")
+@kfd3_api("kungfu.agent-work-lab")
 @kfc.pass_context()
-def qualification_lab(ctx):
+def agent_work_lab(ctx):
     """The shared, boot-safe Agent Work Lab authority."""
 
 
-@qualification_lab.command(help="resolve the boot route without writing state")
+@agent_work_lab.command(help="resolve the boot route without writing state")
 @click.option("--json", "as_json", is_flag=True, help="machine-readable output")
-@kfd3_api("kungfu.qualification-lab.inspect")
+@kfd3_api("kungfu.agent-work-lab.inspect")
 @kfc.pass_context()
 def inspect(ctx, as_json):
     payload = lab.inspect_startup(ctx.runtime_dir, config_home=ctx.config_home)
@@ -46,9 +46,9 @@ def inspect(ctx, as_json):
     click.echo(f"{payload['route']}: {payload['message']}")
 
 
-@qualification_lab.command(help="list canonical Lab actions and startup state")
+@agent_work_lab.command(help="list canonical Lab actions and startup state")
 @click.option("--json", "as_json", is_flag=True, help="machine-readable output")
-@kfd3_api("kungfu.qualification-lab.catalog")
+@kfd3_api("kungfu.agent-work-lab.catalog")
 @kfc.pass_context()
 def catalog(ctx, as_json):
     payload = lab.catalog(ctx.runtime_dir, config_home=ctx.config_home)
@@ -61,9 +61,9 @@ def catalog(ctx, as_json):
         click.echo(f"  {action['id']} ({action['mutation']})")
 
 
-@qualification_lab.command(help="discover local agent launchers without credentials")
+@agent_work_lab.command(help="discover local agent launchers without credentials")
 @click.option("--json", "as_json", is_flag=True, help="machine-readable output")
-@kfd3_api("kungfu.qualification-lab.agents")
+@kfd3_api("kungfu.agent-work-lab.agents")
 @kfc.pass_context()
 def agents(ctx, as_json):
     payload = runtime_profiles.discover_catalog(
@@ -78,18 +78,18 @@ def agents(ctx, as_json):
         click.echo(f"{row['profile']['id']}  {row['profile']['label']}")
 
 
-@qualification_lab.command(help="preview the deterministic offline demo")
+@agent_work_lab.command(help="preview the deterministic offline demo")
 @click.option("--json", "as_json", is_flag=True, help="machine-readable output")
-@kfd3_api("kungfu.qualification-lab.plan")
+@kfd3_api("kungfu.agent-work-lab.plan")
 def plan(as_json):
     payload = lab.demo_plan()
     if as_json:
         _json(payload)
         return
-    click.echo(f"Qualification demo plan: {payload['planRoot']}")
+    click.echo(f"Agent Work Lab demo plan: {payload['planRoot']}")
 
 
-@qualification_lab.command(help="run the isolated two-session offline demo")
+@agent_work_lab.command(help="run the isolated two-session offline demo")
 @click.option(
     "--output",
     type=click.Path(path_type=Path),
@@ -101,7 +101,7 @@ def plan(as_json):
     help="emit stable event boundaries followed by the final report",
 )
 @click.option("--json", "as_json", is_flag=True, help="machine-readable output")
-@kfd3_api("kungfu.qualification-lab.demo")
+@kfd3_api("kungfu.agent-work-lab.demo")
 def demo(output, events_json, as_json):
     try:
         payload = lab.run_demo(
@@ -119,10 +119,10 @@ def demo(output, events_json, as_json):
     click.echo(f"Agent Work Lab demo: {payload['status']} ({payload['reportRoot']})")
 
 
-@qualification_lab.command(name="agent-plan", help="preview one exact local agent run")
+@agent_work_lab.command(name="agent-plan", help="preview one exact local agent run")
 @click.argument("profile_id")
 @click.option("--json", "as_json", is_flag=True, help="machine-readable output")
-@kfd3_api("kungfu.qualification-lab.agent-plan")
+@kfd3_api("kungfu.agent-work-lab.agent-plan")
 @kfc.pass_context()
 def agent_plan(ctx, profile_id, as_json):
     try:
@@ -140,7 +140,7 @@ def agent_plan(ctx, profile_id, as_json):
     )
 
 
-@qualification_lab.command(
+@agent_work_lab.command(
     name="agent-run",
     help="run two fresh sessions of one exact local agent after confirmation",
 )
@@ -172,7 +172,7 @@ def agent_plan(ctx, profile_id, as_json):
     help="stream stable event boundaries followed by the final report",
 )
 @click.option("--json", "as_json", is_flag=True, help="machine-readable output")
-@kfd3_api("kungfu.qualification-lab.agent-run")
+@kfd3_api("kungfu.agent-work-lab.agent-run")
 @kfc.pass_context()
 def agent_run(
     ctx,
@@ -207,6 +207,4 @@ def agent_run(
     if as_json:
         _json(payload)
         return
-    click.echo(
-        f"Local agent qualification: {payload['status']} ({payload['reportRoot']})"
-    )
+    click.echo(f"Agent Work Lab run: {payload['status']} ({payload['reportRoot']})")

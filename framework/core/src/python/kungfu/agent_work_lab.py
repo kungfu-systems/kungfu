@@ -23,19 +23,82 @@ from typing import Any, Mapping
 
 import kungfu
 from kungfu.agent import runtime_profiles
+from kungfu.rewind import (
+    ACTION_RUN_BEGIN,
+    ACTION_RUN_END,
+    SCHEMA_VERSION,
+    events as rewind_events,
+)
+from kungfu.rewind.fb.RunStatus import RunStatus
+from kungfu.storage import service as storage_service
+from kungfu.storage.episode_lifecycle import RuntimeEpisodeLifecycle
 from kungfu.workspace import inspect_workspace
 from kungfu.workspace_federation import query_federation
 
 
-STARTUP_SCHEMA = "kungfu.qualification-lab.startup-route/v1"
-CATALOG_SCHEMA = "kungfu.qualification-lab.catalog/v1"
-DEMO_PLAN_SCHEMA = "kungfu.qualification-lab.demo-plan/v1"
-DEMO_REPORT_SCHEMA = "kungfu.qualification-lab.report/v1"
-AGENT_PLAN_SCHEMA = "kungfu.qualification-lab.agent-plan/v1"
-AGENT_REPORT_SCHEMA = "kungfu.qualification-lab.agent-report/v1"
-PUBLIC_ACTIVITY_SCHEMA = "kungfu.qualification-lab.public-activity/v1"
-PUBLIC_OUTPUT_SCHEMA = "kungfu.qualification-lab.public-output/v1"
-SUITE_ID = "kungfu.agent-continuity.v1"
+STARTUP_SCHEMA = "kungfu.agent-work-lab.startup-route/v1"
+CATALOG_SCHEMA = "kungfu.agent-work-lab.catalog/v1"
+DEMO_PLAN_SCHEMA = "kungfu.agent-work-lab.demo-plan/v1"
+DEMO_REPORT_SCHEMA = "kungfu.agent-work-lab.report/v1"
+AGENT_PLAN_SCHEMA = "kungfu.agent-work-lab.agent-plan/v1"
+AGENT_REPORT_SCHEMA = "kungfu.agent-work-lab.agent-report/v1"
+PUBLIC_ACTIVITY_SCHEMA = "kungfu.agent-work-lab.public-activity/v1"
+PUBLIC_OUTPUT_SCHEMA = "kungfu.agent-work-lab.public-output/v1"
+
+
+def _suite_catalog_candidates() -> list[Path]:
+    candidates: list[Path] = []
+    roots = [
+        value
+        for value in (
+            os.environ.get("KF_BUNDLED_EXTENSION_ROOT"),
+            *os.environ.get("KF_EXTENSION_PATH", "").split(os.pathsep),
+        )
+        if value
+    ]
+    for root in roots:
+        candidates.append(
+            Path(root).expanduser() / "agent-work-lab" / "experience" / "catalog.json"
+        )
+    candidates.append(
+        Path(__file__).resolve().parents[5]
+        / "extensions"
+        / "agent-work-lab"
+        / "experience"
+        / "catalog.json"
+    )
+    return candidates
+
+
+def _load_suite_catalog() -> tuple[dict[str, Any], Path, str]:
+    for path in _suite_catalog_candidates():
+        if not path.is_file():
+            continue
+        payload = json.loads(path.read_text(encoding="utf-8"))
+        if (
+            payload.get("schema") != "kungfu.agent-work-lab.suite-catalog/v1"
+            or payload.get("id") != "kungfu.agent-work-lab"
+            or payload.get("collection", {}).get("id") != "work-continuity"
+            or [row.get("id") for row in payload.get("cases", [])]
+            != ["offline-demo", "same-agent", "cross-agent"]
+            or payload.get("capabilityDeclarations") != ["agentRuntime", "work"]
+        ):
+            raise RuntimeError(f"invalid Agent Work Lab Suite catalog: {path}")
+        encoded = json.dumps(
+            payload, sort_keys=True, separators=(",", ":"), ensure_ascii=False
+        ).encode("utf-8")
+        return (
+            payload,
+            path.resolve(),
+            f"sha256:{hashlib.sha256(encoded).hexdigest()}",
+        )
+    raise RuntimeError(
+        "Agent Work Lab Suite catalog is unavailable; install the first-party "
+        "KFX Suite or set a valid bundled extension root"
+    )
+
+
+SUITE_ID = "kungfu.agent-work-lab"
 FIXTURE_ID = "partial-claim-fresh-session"
 CONTENT_ROOT = re.compile(r"^sha256:[0-9a-f]{64}$")
 ANSI_ESCAPE = re.compile(r"\x1b(?:[@-_][0-?]*[ -/]*[@-~]|\][^\x07]*(?:\x07|\x1b\\))")
@@ -58,18 +121,6 @@ MIGRATION_MARKERS = (
     ".storage-migration-in-progress",
     "migration.lock",
 )
-SUITE_CLAIMS = [
-    "continuity mechanism",
-    "deterministic state recognition",
-    "fresh-session continuation",
-]
-SUITE_NON_CLAIMS = [
-    "model intelligence",
-    "production fitness",
-    "security assessment",
-    "KFD certification",
-    "provider ranking",
-]
 DEMO_AGENT_IDENTITY = {
     "provider": "kungfu-demo-agent",
     "executableDigest": "sha256:" + hashlib.sha256(b"kungfu-demo-agent/v1").hexdigest(),
@@ -77,10 +128,10 @@ DEMO_AGENT_IDENTITY = {
     "model": "deterministic-state-machine",
     "runtimeProfileRoot": "sha256:"
     + hashlib.sha256(b"kungfu-demo-agent-profile/v1").hexdigest(),
-    "argv": ["bundled", "qualification-lab-demo"],
+    "argv": ["bundled", "agent-work-lab-demo"],
 }
 
-QualificationEventSink = Callable[[Mapping[str, Any]], None]
+AgentWorkLabEventSink = Callable[[Mapping[str, Any]], None]
 
 
 def content_root(value: Any) -> str:
@@ -90,10 +141,130 @@ def content_root(value: Any) -> str:
     return f"sha256:{hashlib.sha256(encoded).hexdigest()}"
 
 
+def _work_ref(plan_root: str) -> dict[str, Any]:
+    suite_catalog, _, suite_catalog_root = _load_suite_catalog()
+    entity = {
+        "suite": SUITE_ID,
+        "collection": suite_catalog["collection"]["id"],
+        "fixture": FIXTURE_ID,
+        "catalogRoot": suite_catalog_root,
+        "planRoot": plan_root,
+    }
+    return {
+        "schema": "kungfu.work-ref/v1",
+        "workspaceId": f"agent-work-lab:{suite_catalog_root[7:23]}",
+        "profileId": SUITE_ID,
+        "profileRoot": suite_catalog_root,
+        "entityType": "suite-case",
+        "entityId": FIXTURE_ID,
+        "entityRoot": content_root(entity),
+        "purpose": "work-continuity",
+        "systemTimeCut": plan_root,
+    }
+
+
+def _episode_content_root(runtime_dir: Path, episode_id: int) -> str:
+    verified = storage_service.fsck(
+        runtime_dir, episode_id=episode_id, verify_frames=True
+    )
+    if verified.get("ok") is not True:
+        raise RuntimeError("Agent Work Lab Episode failed Core frame verification")
+    inspected = storage_service.episode_inspect(runtime_dir, episode_id=episode_id)
+    candidates = [
+        inspected.get("content_root") or {},
+        ((inspected.get("episode") or {}).get("root") or {}),
+    ]
+    for candidate in candidates:
+        if not isinstance(candidate, Mapping):
+            continue
+        raw = str(
+            candidate.get("computed")
+            or candidate.get("root_value")
+            or candidate.get("value")
+            or ""
+        )
+        if CONTENT_ROOT.fullmatch(raw):
+            return raw
+        if re.fullmatch(r"[0-9a-f]{64}", raw):
+            return f"sha256:{raw}"
+    raise RuntimeError("Agent Work Lab Episode has no verified content root")
+
+
+def _open_session_episode(
+    runtime_dir: Path, attempt_index: int, actor: str
+) -> RuntimeEpisodeLifecycle:
+    run_id = f"agent-work-lab-session-{attempt_index}"
+    episode = RuntimeEpisodeLifecycle(
+        runtime_dir=str(runtime_dir),
+        namespace="agent-work-lab",
+        name=run_id,
+        title=f"Agent Work Lab Session {attempt_index}",
+        actor=actor,
+        source=f"agent-work-lab:{attempt_index}",
+    )
+    episode.record_event(
+        ACTION_RUN_BEGIN,
+        rewind_events.run_begin(
+            run_id=run_id,
+            command="Agent Work Lab governed Session",
+            runtime=platform.system().lower(),
+            supervisor_version=kungfu.__version__,
+            schema_version=SCHEMA_VERSION,
+        ),
+        run_id=run_id,
+    )
+    return episode
+
+
+def _close_session_episode(
+    episode: RuntimeEpisodeLifecycle,
+    runtime_dir: Path,
+    evidence_root: Path,
+    attempt_index: int,
+    receipt: Mapping[str, Any],
+    *,
+    ok: bool,
+) -> dict[str, Any]:
+    run_id = f"agent-work-lab-session-{attempt_index}"
+    immutable_receipt = {
+        "schema": "kungfu.agent-work-lab.session-receipt/v1",
+        "attemptIndex": attempt_index,
+        **dict(receipt),
+    }
+    receipt_root = content_root(immutable_receipt)
+    receipt_path = evidence_root / f"session-{attempt_index}-receipt.json"
+    _atomic_json(receipt_path, immutable_receipt)
+    episode.attach_payload_ref(str(receipt_path))
+    episode.record_event(
+        ACTION_RUN_END,
+        rewind_events.run_end(
+            run_id,
+            RunStatus.Succeeded if ok else RunStatus.Failed,
+            0 if ok else 1,
+        ),
+        run_id=run_id,
+    )
+    episode.close(
+        ok=ok,
+        reason=(
+            "Agent Work Lab Session evidence admitted"
+            if ok
+            else "Agent Work Lab Session evidence failed admission"
+        ),
+    )
+    episode_root = _episode_content_root(runtime_dir, episode.episode_id)
+    return {
+        "episodeId": str(episode.episode_id),
+        "episodeRoot": episode_root,
+        "receiptRoot": receipt_root,
+        "receiptPath": str(receipt_path),
+    }
+
+
 def _publish_event(
     events: list[dict[str, Any]],
     event: dict[str, Any],
-    on_event: QualificationEventSink | None,
+    on_event: AgentWorkLabEventSink | None,
 ) -> None:
     events.append(event)
     if on_event is not None:
@@ -134,7 +305,7 @@ def _empty(runtime_dir: Path, code: str) -> dict[str, Any]:
     return {
         "schema": STARTUP_SCHEMA,
         "state": "verified-empty",
-        "route": "qualification-lab",
+        "route": "agent-work-lab",
         "reasonCode": code,
         "message": "No canonical local Work graph data is present.",
         "runtimeDir": str(runtime_dir),
@@ -253,46 +424,47 @@ def catalog(
     config_home: str | Path | None = None,
     env: Mapping[str, str] | None = None,
 ) -> dict[str, Any]:
+    suite_catalog, suite_catalog_path, suite_catalog_root = _load_suite_catalog()
     startup = inspect_startup(runtime_dir, config_home=config_home, env=env)
     return {
         "schema": CATALOG_SCHEMA,
         "startup": startup,
         "suite": {
-            "id": SUITE_ID,
+            **suite_catalog,
+            "catalogRoot": suite_catalog_root,
+            "catalogPath": str(suite_catalog_path),
             "fixture": FIXTURE_ID,
             "oracle": "exact-partial-state-recognized-and-completed",
-            "claims": SUITE_CLAIMS,
-            "nonClaims": SUITE_NON_CLAIMS,
         },
         "actions": [
             {
-                "id": "qualification-lab.demo.plan",
+                "id": "agent-work-lab.demo.plan",
                 "mutation": "none",
                 "resultSchema": DEMO_PLAN_SCHEMA,
             },
             {
-                "id": "qualification-lab.demo.run",
+                "id": "agent-work-lab.demo.run",
                 "mutation": "isolated-demo-only",
                 "resultSchema": DEMO_REPORT_SCHEMA,
             },
             {
-                "id": "qualification-lab.agent.plan",
+                "id": "agent-work-lab.agent.plan",
                 "mutation": "none",
                 "resultSchema": AGENT_PLAN_SCHEMA,
             },
             {
-                "id": "qualification-lab.agent.run",
+                "id": "agent-work-lab.agent.run",
                 "mutation": "isolated-agent-processes-after-explicit-confirmation",
                 "resultSchema": AGENT_REPORT_SCHEMA,
             },
         ],
         "authority": {
             "startup": "Core read-only resolver",
-            "actions": "Core Qualification Lab",
+            "actions": "Core Agent Work Lab",
             "surfaces": ["cli", "gui", "tui"],
             "uiPrivateWrites": False,
         },
-        "qualificationStates": [
+        "assessmentStates": [
             "unqualified",
             "qualified",
             "qualified-with-residuals",
@@ -339,29 +511,24 @@ def _atomic_json(path: Path, value: Mapping[str, Any]) -> None:
     os.replace(temporary, path)
 
 
-def _demo_worker(state_path_value: str, attempt_index: int) -> None:
+def _demo_worker(
+    state_path_value: str, attempt_index: int, work_ref: Mapping[str, Any]
+) -> None:
     state_path = Path(state_path_value)
     if attempt_index == 1:
         if state_path.exists():
             raise RuntimeError("first demo session requires a new fixture")
-        work_ref = {
-            "schema": "kungfu.work-ref/v1",
-            "workspaceId": f"qualification-lab:{FIXTURE_ID}",
-            "profileId": "kungfu.agent-qualification",
-            "entityType": "qualification-fixture",
-            "entityId": FIXTURE_ID,
-        }
         state = {
-            "schema": "kungfu.qualification-lab.fixture-state/v1",
+            "schema": "kungfu.agent-work-lab.fixture-state/v1",
             "suite": SUITE_ID,
             "fixture": FIXTURE_ID,
-            "workRef": work_ref,
+            "workRef": dict(work_ref),
             "steps": ["claim-recorded"],
             "status": "partial",
             "attempts": [
                 {
                     "schema": "kungfu.session-attempt/v1",
-                    "sessionAttemptId": "qualification-attempt-1",
+                    "sessionAttemptId": "agent-work-lab-attempt-1",
                     "processId": os.getpid(),
                     "freshProcess": True,
                     "priorTranscriptIncluded": False,
@@ -376,7 +543,7 @@ def _demo_worker(state_path_value: str, attempt_index: int) -> None:
         return
     state = json.loads(state_path.read_text(encoding="utf-8"))
     if (
-        state.get("schema") != "kungfu.qualification-lab.fixture-state/v1"
+        state.get("schema") != "kungfu.agent-work-lab.fixture-state/v1"
         or state.get("suite") != SUITE_ID
         or state.get("fixture") != FIXTURE_ID
         or state.get("steps") != ["claim-recorded"]
@@ -389,7 +556,7 @@ def _demo_worker(state_path_value: str, attempt_index: int) -> None:
     state["attempts"].append(
         {
             "schema": "kungfu.session-attempt/v1",
-            "sessionAttemptId": "qualification-attempt-2",
+            "sessionAttemptId": "agent-work-lab-attempt-2",
             "processId": os.getpid(),
             "freshProcess": True,
             "priorTranscriptIncluded": False,
@@ -411,23 +578,27 @@ def _semantic_attempt(attempt: Mapping[str, Any]) -> dict[str, Any]:
 def run_demo(
     output_dir: str | Path | None = None,
     *,
-    on_event: QualificationEventSink | None = None,
+    on_event: AgentWorkLabEventSink | None = None,
 ) -> dict[str, Any]:
+    suite_catalog, _, _ = _load_suite_catalog()
     """Run the real two-process deterministic fixture in a discardable root."""
 
     plan = demo_plan()
     if output_dir is None:
-        root = Path(tempfile.mkdtemp(prefix="kungfu-qualification-lab-"))
+        root = Path(tempfile.mkdtemp(prefix="kungfu-agent-work-lab-"))
     else:
         root = Path(output_dir).expanduser().absolute()
         root.mkdir(parents=True, exist_ok=False)
     state_path = root / "fixture-state.json"
+    runtime_dir = root / "runtime"
+    work_ref = _work_ref(plan["planRoot"])
     process_ids: list[int] = []
+    session_attempts: list[dict[str, Any]] = []
     events: list[dict[str, Any]] = []
     _publish_event(
         events,
         {
-            "schema": "kungfu.qualification-lab.event/v1",
+            "schema": "kungfu.agent-work-lab.event/v1",
             "step": "plan",
             "status": "ready",
             "root": plan["planRoot"],
@@ -438,15 +609,19 @@ def run_demo(
         _publish_event(
             events,
             {
-                "schema": "kungfu.qualification-lab.event/v1",
+                "schema": "kungfu.agent-work-lab.event/v1",
                 "step": f"session-{attempt_index}-start",
                 "status": "running",
                 "root": plan["planRoot"],
             },
             on_event,
         )
+        episode = _open_session_episode(
+            runtime_dir, attempt_index, str(DEMO_AGENT_IDENTITY["provider"])
+        )
         process = multiprocessing.get_context("spawn").Process(
-            target=_demo_worker, args=(str(state_path), attempt_index)
+            target=_demo_worker,
+            args=(str(state_path), attempt_index, work_ref),
         )
         process.start()
         process_ids.append(process.pid or 0)
@@ -454,20 +629,61 @@ def run_demo(
         if process.is_alive():
             process.terminate()
             process.join(5)
+            _close_session_episode(
+                episode,
+                runtime_dir,
+                root,
+                attempt_index,
+                {
+                    "workRef": work_ref,
+                    "processId": process.pid or 0,
+                    "status": "timed-out",
+                },
+                ok=False,
+            )
             raise RuntimeError(f"demo session {attempt_index} timed out")
         if process.exitcode != 0:
+            _close_session_episode(
+                episode,
+                runtime_dir,
+                root,
+                attempt_index,
+                {
+                    "workRef": work_ref,
+                    "processId": process.pid or 0,
+                    "status": "failed",
+                    "exitCode": process.exitcode,
+                },
+                ok=False,
+            )
             raise RuntimeError(
                 f"demo session {attempt_index} exited {process.exitcode}"
             )
         observed = json.loads(state_path.read_text(encoding="utf-8"))
         observed_attempt = observed["attempts"][-1]
+        episode_receipt = _close_session_episode(
+            episode,
+            runtime_dir,
+            root,
+            attempt_index,
+            {
+                "workRef": work_ref,
+                "processId": process.pid or 0,
+                "status": str(observed_attempt["status"]),
+                "stateRoot": content_root(observed),
+                "priorTranscriptIncluded": False,
+            },
+            ok=True,
+        )
+        admitted_attempt = {**observed_attempt, **episode_receipt}
+        session_attempts.append(admitted_attempt)
         _publish_event(
             events,
             {
-                "schema": "kungfu.qualification-lab.event/v1",
+                "schema": "kungfu.agent-work-lab.event/v1",
                 "step": f"session-{attempt_index}",
                 "status": str(observed_attempt["status"]),
-                "root": content_root(_semantic_attempt(observed_attempt)),
+                "root": content_root(_semantic_attempt(admitted_attempt)),
             },
             on_event,
         )
@@ -507,7 +723,7 @@ def run_demo(
     }
     identity_root = content_root(DEMO_AGENT_IDENTITY)
     assessment = {
-        "schema": "kungfu.qualification-lab.assessment/v1",
+        "schema": "kungfu.agent-work-lab.assessment/v1",
         "status": "qualified" if passed else "failed",
         "suite": SUITE_ID,
         "fixture": FIXTURE_ID,
@@ -515,12 +731,14 @@ def run_demo(
         "identityRoot": identity_root,
         "oracleChecks": oracle_checks,
         "fixtureRoot": content_root(semantic_state),
+        "receiptRoots": [attempt["receiptRoot"] for attempt in session_attempts],
+        "episodeRoots": [attempt["episodeRoot"] for attempt in session_attempts],
     }
     assessment["assessmentRoot"] = content_root(assessment)
     _publish_event(
         events,
         {
-            "schema": "kungfu.qualification-lab.event/v1",
+            "schema": "kungfu.agent-work-lab.event/v1",
             "step": "assessment",
             "status": assessment["status"],
             "root": assessment["assessmentRoot"],
@@ -534,13 +752,19 @@ def run_demo(
         "fixture": FIXTURE_ID,
         "planRoot": plan["planRoot"],
         "workRef": state["workRef"],
-        "sessionAttempts": [_semantic_attempt(attempt) for attempt in attempts],
+        "sessionAttempts": [_semantic_attempt(attempt) for attempt in session_attempts],
         "identity": DEMO_AGENT_IDENTITY,
         "identityRoot": identity_root,
         "assessment": assessment,
         "events": events,
         "meaning": "The deterministic continuity mechanism recognized and continued governed state across fresh sessions.",
-        "nonClaims": SUITE_NON_CLAIMS,
+        "nonClaims": list(suite_catalog["nonClaims"]),
+        "receiptDependencies": [
+            root_value
+            for attempt in session_attempts
+            for root_value in (attempt["episodeRoot"], attempt["receiptRoot"])
+        ],
+        "recoveryGuidance": suite_catalog["recoveryGuidance"],
     }
     report = {
         **report_semantic,
@@ -627,7 +851,7 @@ def agent_plan(
         **semantic,
         "identityRoot": content_root(identity),
         "planRoot": content_root(semantic),
-        "commandPreview": _provider_command(profile, "<qualification-prompt>"),
+        "commandPreview": _provider_command(profile, "<agent-work-lab-prompt>"),
         "verification": verification,
         "credentialContentsRead": False,
         "writeOccurred": False,
@@ -781,7 +1005,7 @@ def _admit_public_activities(
 def _admit_public_output(
     stdout: str, attempt_index: int, provider: str = "codex"
 ) -> dict[str, Any] | None:
-    """Admit only the exact bounded line requested by the qualification fixture."""
+    """Admit only the exact bounded line requested by the Agent Work Lab fixture."""
 
     expected = f"KUNGFU_PUBLIC: {PUBLIC_OUTPUT_MESSAGES[attempt_index]}"
     normalized_lines = _provider_text_lines(stdout, provider)
@@ -790,7 +1014,7 @@ def _admit_public_output(
     return {
         "schema": PUBLIC_OUTPUT_SCHEMA,
         "source": "provider-stdout",
-        "admission": "exact-qualification-marker",
+        "admission": "exact-agent-work-lab-marker",
         "lines": [PUBLIC_OUTPUT_MESSAGES[attempt_index]],
         "rawOutputRedacted": True,
     }
@@ -864,9 +1088,10 @@ def run_agent(
     runtime_home: str | None = None,
     output_dir: str | Path | None = None,
     timeout_seconds: int = 300,
-    on_event: QualificationEventSink | None = None,
+    on_event: AgentWorkLabEventSink | None = None,
 ) -> dict[str, Any]:
-    """Qualify a selected local agent in two explicitly authorized fresh runs."""
+    suite_catalog, _, _ = _load_suite_catalog()
+    """Run a selected local agent in two explicitly authorized fresh Sessions."""
 
     source_plan = agent_plan(
         profile_id, config_home=config_home, runtime_home=runtime_home
@@ -906,22 +1131,17 @@ def run_agent(
         "identityRoot": content_root(run_identity),
     }
     if output_dir is None:
-        root = Path(tempfile.mkdtemp(prefix="kungfu-agent-qualification-"))
+        root = Path(tempfile.mkdtemp(prefix="kungfu-agent-work-lab-"))
     else:
         root = Path(output_dir).expanduser().absolute()
         root.mkdir(parents=True, exist_ok=False)
+    runtime_dir = root / "runtime"
     state_path = root / "fixture-state.json"
     initial_state = {
-        "schema": "kungfu.qualification-lab.fixture-state/v1",
+        "schema": "kungfu.agent-work-lab.fixture-state/v1",
         "suite": SUITE_ID,
         "fixture": FIXTURE_ID,
-        "workRef": {
-            "schema": "kungfu.work-ref/v1",
-            "workspaceId": f"qualification-lab:{FIXTURE_ID}",
-            "profileId": "kungfu.agent-qualification",
-            "entityType": "qualification-fixture",
-            "entityId": FIXTURE_ID,
-        },
+        "workRef": _work_ref(plan["planRoot"]),
         "steps": [],
         "status": "unstarted",
     }
@@ -931,7 +1151,7 @@ def run_agent(
     _publish_event(
         events,
         {
-            "schema": "kungfu.qualification-lab.event/v1",
+            "schema": "kungfu.agent-work-lab.event/v1",
             "step": "plan",
             "status": "ready",
             "root": plan["planRoot"],
@@ -942,7 +1162,7 @@ def run_agent(
         _publish_event(
             events,
             {
-                "schema": "kungfu.qualification-lab.event/v1",
+                "schema": "kungfu.agent-work-lab.event/v1",
                 "step": f"session-{attempt_index}-start",
                 "status": "running",
                 "root": plan["planRoot"],
@@ -952,13 +1172,14 @@ def run_agent(
         prompt = _agent_prompt(state_path, attempt_index)
         command = _provider_command(profiles[attempt_index - 1], prompt)
         provider = str(profiles[attempt_index - 1]["provider"])
+        episode = _open_session_episode(runtime_dir, attempt_index, provider)
 
         def receive_provider_line(line: str) -> None:
             for activity in _admit_public_activities(line, provider, attempt_index):
                 _publish_event(
                     events,
                     {
-                        "schema": "kungfu.qualification-lab.event/v1",
+                        "schema": "kungfu.agent-work-lab.event/v1",
                         "step": f"session-{attempt_index}-activity",
                         "status": (
                             "complete"
@@ -971,15 +1192,31 @@ def run_agent(
                     on_event,
                 )
 
-        process_id, returncode, stdout, stderr = _run_agent_process(
-            command,
-            root,
-            timeout_seconds,
-            on_stdout_line=receive_provider_line,
-        )
+        try:
+            process_id, returncode, stdout, stderr = _run_agent_process(
+                command,
+                root,
+                timeout_seconds,
+                on_stdout_line=receive_provider_line,
+            )
+        except RuntimeError as error:
+            _close_session_episode(
+                episode,
+                runtime_dir,
+                root,
+                attempt_index,
+                {
+                    "workRef": initial_state["workRef"],
+                    "status": "failed",
+                    "errorRoot": content_root(str(error)),
+                    "priorTranscriptIncluded": False,
+                },
+                ok=False,
+            )
+            raise
         receipt = {
             "schema": "kungfu.session-attempt/v1",
-            "sessionAttemptId": f"qualification-attempt-{attempt_index}",
+            "sessionAttemptId": f"agent-work-lab-attempt-{attempt_index}",
             "processId": process_id,
             "freshProcess": True,
             "priorTranscriptIncluded": False,
@@ -988,7 +1225,6 @@ def run_agent(
             "stdoutRoot": content_root(stdout),
             "stderrRoot": content_root(stderr),
         }
-        attempts.append(receipt)
         stop_after_event = returncode != 0
         if returncode != 0:
             observed = None
@@ -1016,6 +1252,20 @@ def run_agent(
                 or observed.get("steps") != expected_steps
             ):
                 stop_after_event = True
+        episode_receipt = _close_session_episode(
+            episode,
+            runtime_dir,
+            root,
+            attempt_index,
+            {
+                "workRef": initial_state["workRef"],
+                **receipt,
+                "admittedState": observed if observed is not None else None,
+            },
+            ok=not stop_after_event,
+        )
+        receipt.update(episode_receipt)
+        attempts.append(receipt)
         event_status = (
             str(receipt.get("observedState") or "complete")
             if returncode == 0 and observed is not None
@@ -1025,7 +1275,7 @@ def run_agent(
         _publish_event(
             events,
             {
-                "schema": "kungfu.qualification-lab.event/v1",
+                "schema": "kungfu.agent-work-lab.event/v1",
                 "step": f"session-{attempt_index}",
                 "status": event_status,
                 "root": content_root(receipt),
@@ -1072,7 +1322,7 @@ def run_agent(
         else "failed"
     )
     assessment = {
-        "schema": "kungfu.qualification-lab.assessment/v1",
+        "schema": "kungfu.agent-work-lab.assessment/v1",
         "status": status,
         "suite": SUITE_ID,
         "fixture": FIXTURE_ID,
@@ -1081,12 +1331,14 @@ def run_agent(
         "oracleChecks": oracle_checks,
         "residualRisks": residual_risks,
         "fixtureRoot": content_root(final_state),
+        "receiptRoots": [attempt["receiptRoot"] for attempt in attempts],
+        "episodeRoots": [attempt["episodeRoot"] for attempt in attempts],
     }
     assessment["assessmentRoot"] = content_root(assessment)
     _publish_event(
         events,
         {
-            "schema": "kungfu.qualification-lab.event/v1",
+            "schema": "kungfu.agent-work-lab.event/v1",
             "step": "assessment",
             "status": assessment["status"],
             "root": assessment["assessmentRoot"],
@@ -1107,8 +1359,14 @@ def run_agent(
         "events": events,
         "meaning": "The selected identity recognized and continued exact governed state across two fresh local agent processes.",
         "runMode": ("cross-provider-migration" if migration else "self-continuity"),
-        "nonClaims": SUITE_NON_CLAIMS,
-        "receiptRoots": [content_root(row) for row in attempts],
+        "nonClaims": list(suite_catalog["nonClaims"]),
+        "receiptRoots": [attempt["receiptRoot"] for attempt in attempts],
+        "receiptDependencies": [
+            root_value
+            for attempt in attempts
+            for root_value in (attempt["episodeRoot"], attempt["receiptRoot"])
+        ],
+        "recoveryGuidance": suite_catalog["recoveryGuidance"],
         "assessmentRoot": assessment["assessmentRoot"],
     }
     report = {
@@ -1128,7 +1386,7 @@ def report_status(
     current_root = content_root(identity)
     recorded_root = report.get("identityRoot")
     return {
-        "schema": "kungfu.qualification-lab.report-status/v1",
+        "schema": "kungfu.agent-work-lab.report-status/v1",
         "status": (
             str(report.get("status") or "failed")
             if current_root == recorded_root

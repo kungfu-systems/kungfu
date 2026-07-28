@@ -5,13 +5,13 @@
 import {
   type AgentRuntime,
   type AgentSession,
+  type AgentWorkLab,
   type DomainState,
   type KfNativeBinding,
   type KfxControl,
   type Ledger,
   type Profile,
   type PtyModule,
-  type QualificationLab,
   type RemoteWork,
   type Rewind,
   type Storage,
@@ -22,11 +22,11 @@ import {
   type WorkspaceGuidance,
   managedTmuxSocket,
   openAgentRuntime,
+  openAgentWorkLab,
   openDomainState,
   openKfxControl,
   openLedger,
   openProfile,
-  openQualificationLab,
   openRemoteWork,
   openRewind,
   openStorage,
@@ -147,10 +147,10 @@ export type Runtime = {
   agentRuntime: AgentRuntime | null;
   agentSession: AgentSession | null;
   workspace: WorkspaceGuidance | null;
-  qualificationLab: QualificationLab;
+  agentWorkLab: AgentWorkLab;
 };
 
-export function openRendererQualificationLab(): QualificationLab {
+export function openRendererAgentWorkLab(): AgentWorkLab {
   const env = window.process.env as Record<string, string | undefined>;
   const runtimeDir = env.KF_RUNTIME_DIR || '';
   const path = window.require('node:path') as {
@@ -206,7 +206,7 @@ export function openRendererQualificationLab(): QualificationLab {
       path.dirname(bindingPath),
       process.platform === 'win32' ? 'kungfu.exe' : 'kungfu',
     );
-  return openQualificationLab({
+  return openAgentWorkLab({
     runtimeDir,
     bin,
     env,
@@ -287,7 +287,7 @@ export function openRendererQualificationLab(): QualificationLab {
 }
 
 export function deferredRuntime(
-  qualificationLab: QualificationLab,
+  agentWorkLab: AgentWorkLab,
   message: string,
 ): Runtime {
   return {
@@ -313,7 +313,7 @@ export function deferredRuntime(
     agentRuntime: null,
     agentSession: null,
     workspace: null,
-    qualificationLab,
+    agentWorkLab,
   };
 }
 
@@ -344,7 +344,7 @@ export function bootRuntime(): Runtime {
 function createRuntime(): Runtime {
   const env = window.process.env;
   const runtimeDir = env.KF_RUNTIME_DIR || '';
-  const qualificationLab = openRendererQualificationLab();
+  const agentWorkLab = openRendererAgentWorkLab();
   const base: Omit<Runtime, 'ok' | 'message'> = {
     runtimeDir,
     kungfuVersion: env.KUNGFU_VERSION || '',
@@ -366,7 +366,7 @@ function createRuntime(): Runtime {
     agentRuntime: null,
     agentSession: null,
     workspace: null,
-    qualificationLab,
+    agentWorkLab,
   };
   if (
     env.KF_WORKSPACE_STATE === 'uninitialized' ||

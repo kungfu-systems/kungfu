@@ -2,24 +2,24 @@
 
 import type {
   AgentRuntimeCatalog,
-  QualificationLab,
-  QualificationLabAgentPlan,
-  QualificationLabEvent,
-  QualificationLabReport,
-  QualificationLabStartupRoute,
+  AgentWorkLab,
+  AgentWorkLabAgentPlan,
+  AgentWorkLabEvent,
+  AgentWorkLabReport,
+  AgentWorkLabStartupRoute,
 } from '@kungfu-tech/api/capability';
-import { qualificationRunProgressLabel } from '@kungfu-tech/api/capability';
+import { agentWorkLabRunProgressLabel } from '@kungfu-tech/api/capability';
 import { mono, panelStyle } from '@kungfu-tech/kfx';
 import {
   AGENT_WORK_LAB_CHECKS,
   AGENT_WORK_LAB_SUITE,
   type AgentWorkLabCaseId,
   agentWorkLabRecommendation,
-} from '@kungfu-tech/kfx';
+} from '@kungfu-tech/kfx-agent-work-lab-experience';
 import React from 'react';
 import { createPortal } from 'react-dom';
 
-export type QualificationMode = AgentWorkLabCaseId;
+export type AgentWorkLabMode = AgentWorkLabCaseId;
 
 type VisualStatus =
   | 'ready'
@@ -56,14 +56,14 @@ type PlaybackLine = {
   detail: string;
 };
 
-export const QUALIFICATION_PLAYBACK_TIMING = {
+export const AGENT_WORK_LAB_PLAYBACK_TIMING = {
   eventDelayMs: AGENT_WORK_LAB_SUITE.timing.eventIntervalMs,
   verdictDelayMs: AGENT_WORK_LAB_SUITE.timing.verdictIntervalMs,
   reducedMotionDelayMs: AGENT_WORK_LAB_SUITE.timing.reducedMotionIntervalMs,
 } as const;
 
-export const QUALIFICATION_MODES: Array<{
-  id: QualificationMode;
+export const AGENT_WORK_LAB_MODES: Array<{
+  id: AgentWorkLabMode;
   label: string;
   description: string;
 }> = AGENT_WORK_LAB_SUITE.cases.map((entry) => ({
@@ -157,7 +157,7 @@ function waitForPlayback(milliseconds: number): Promise<void> {
 }
 
 function eventStatus(
-  events: QualificationLabEvent[],
+  events: AgentWorkLabEvent[],
   session: 1 | 2,
 ): VisualStatus {
   const event = [...events]
@@ -176,8 +176,8 @@ function eventStatus(
   return event ? 'warning' : 'waiting';
 }
 
-export function qualificationPlaybackLines(
-  event: QualificationLabEvent,
+export function agentWorkLabPlaybackLines(
+  event: AgentWorkLabEvent,
 ): PlaybackLine[] {
   if (event.publicActivity) {
     const session = event.step.includes('session-1') ? 1 : 2;
@@ -222,7 +222,7 @@ export function qualificationPlaybackLines(
             : 'Continue the same Work from governed state; prior chat is unavailable.',
         detail:
           session === 1
-            ? 'The first process receives the qualification task.'
+            ? 'The first process receives the Agent Work Lab task.'
             : 'The fresh process receives the same task identity, not Session 1 conversation.',
       },
       {
@@ -258,7 +258,7 @@ export function qualificationPlaybackLines(
         status,
         command: line,
         detail:
-          'Actual provider stdout admitted through the exact qualification marker; all other raw output remains redacted.',
+          'Actual provider stdout admitted through the exact Agent Work Lab marker; all other raw output remains redacted.',
       })),
       {
         session: 1,
@@ -300,7 +300,7 @@ export function qualificationPlaybackLines(
         status,
         command: line,
         detail:
-          'Actual provider stdout admitted through the exact qualification marker; all other raw output remains redacted.',
+          'Actual provider stdout admitted through the exact Agent Work Lab marker; all other raw output remains redacted.',
       })),
       {
         session: 2,
@@ -357,7 +357,7 @@ export function qualificationPlaybackLines(
         kind: 'output',
         origin: 'canonical-projection',
         status,
-        command: `qualification=${event.status}`,
+        command: `assessment=${event.status}`,
         detail: `Assessment proof · ${shortRoot(event.root)}`,
       },
     ];
@@ -374,7 +374,7 @@ export function qualificationPlaybackLines(
   ];
 }
 
-export function qualificationModeNeeds(mode: QualificationMode): {
+export function agentWorkLabModeNeeds(mode: AgentWorkLabMode): {
   source: boolean;
   target: boolean;
 } {
@@ -384,11 +384,11 @@ export function qualificationModeNeeds(mode: QualificationMode): {
   };
 }
 
-export function qualificationSessionStories(
-  mode: QualificationMode,
+export function agentWorkLabSessionStories(
+  mode: AgentWorkLabMode,
   running: boolean,
-  report: QualificationLabReport | null,
-  visibleEvents: QualificationLabEvent[] = [],
+  report: AgentWorkLabReport | null,
+  visibleEvents: AgentWorkLabEvent[] = [],
 ): [SessionStory, SessionStory] {
   const events = report?.events ?? visibleEvents;
   const firstObserved = events.some((row) => row.step === 'session-1');
@@ -473,8 +473,8 @@ export function qualificationSessionStories(
   ];
 }
 
-export function qualificationBehaviorFindings(
-  report: QualificationLabReport | null,
+export function agentWorkLabBehaviorFindings(
+  report: AgentWorkLabReport | null,
 ): BehaviorFinding[] {
   if (!report) {
     return [
@@ -879,8 +879,8 @@ function HandoffBridge({
   events,
   running,
 }: {
-  report: QualificationLabReport | null;
-  events: QualificationLabEvent[];
+  report: AgentWorkLabReport | null;
+  events: AgentWorkLabEvent[];
   running: boolean;
 }) {
   const firstComplete = events.some((event) => event.step === 'session-1');
@@ -943,17 +943,17 @@ function ReportDock({
   targetPlan,
   error,
 }: {
-  report: QualificationLabReport | null;
+  report: AgentWorkLabReport | null;
   visibleFindingCount: number;
   activeFindingIndex: number;
   running: boolean;
   progress: string;
-  agentPlan: QualificationLabAgentPlan | null;
-  targetPlan: QualificationLabAgentPlan | null;
+  agentPlan: AgentWorkLabAgentPlan | null;
+  targetPlan: AgentWorkLabAgentPlan | null;
   error: string;
 }) {
   const passed = Boolean(report && report.status !== 'failed');
-  const findings = qualificationBehaviorFindings(report);
+  const findings = agentWorkLabBehaviorFindings(report);
   const visibleFindings = report
     ? findings.slice(0, visibleFindingCount)
     : findings;
@@ -970,7 +970,7 @@ function ReportDock({
       : 'No local-agent plan prepared. The offline demo needs no provider credentials.';
   return (
     <section
-      aria-label={report ? 'Qualification result' : 'Behavior guide'}
+      aria-label={report ? 'Agent Work Lab result' : 'Behavior guide'}
       aria-live="polite"
       className={`kf-lab-report-dock${report ? ' kf-lab-result-enter' : ''}`}
       style={{
@@ -1011,7 +1011,7 @@ function ReportDock({
           </strong>
           <InfoTip
             placement="top"
-            label="Explain the qualification result"
+            label="Explain the Agent Work Lab result"
             text={
               report
                 ? report.meaning
@@ -1104,29 +1104,27 @@ function ReportDock({
   );
 }
 
-export function QualificationLabPanel({
+export function AgentWorkLabPanel({
   lab,
   startup,
   onOpenWork,
 }: {
-  lab: QualificationLab;
-  startup: QualificationLabStartupRoute;
+  lab: AgentWorkLab;
+  startup: AgentWorkLabStartupRoute;
   onOpenWork?: () => void;
 }) {
-  const [mode, setMode] = React.useState<QualificationMode>('offline-demo');
+  const [mode, setMode] = React.useState<AgentWorkLabMode>('offline-demo');
   const [agents, setAgents] = React.useState<AgentRuntimeCatalog | null>(null);
   const [selectedAgent, setSelectedAgent] = React.useState('');
   const [targetAgent, setTargetAgent] = React.useState('');
   const [agentPlan, setAgentPlan] =
-    React.useState<QualificationLabAgentPlan | null>(null);
+    React.useState<AgentWorkLabAgentPlan | null>(null);
   const [targetPlan, setTargetPlan] =
-    React.useState<QualificationLabAgentPlan | null>(null);
-  const [report, setReport] = React.useState<QualificationLabReport | null>(
-    null,
+    React.useState<AgentWorkLabAgentPlan | null>(null);
+  const [report, setReport] = React.useState<AgentWorkLabReport | null>(null);
+  const [visibleEvents, setVisibleEvents] = React.useState<AgentWorkLabEvent[]>(
+    [],
   );
-  const [visibleEvents, setVisibleEvents] = React.useState<
-    QualificationLabEvent[]
-  >([]);
   const [visiblePlaybackLines, setVisiblePlaybackLines] = React.useState<
     PlaybackLine[]
   >([]);
@@ -1192,7 +1190,7 @@ export function QualificationLabPanel({
     void discover();
   }, [discover]);
 
-  const resetRun = (nextMode: QualificationMode) => {
+  const resetRun = (nextMode: AgentWorkLabMode) => {
     playbackRunRef.current += 1;
     setMode(nextMode);
     setAgentPlan(null);
@@ -1248,14 +1246,14 @@ export function QualificationLabPanel({
       typeof window.matchMedia === 'function' &&
       window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     const eventDelay = reducedMotion
-      ? QUALIFICATION_PLAYBACK_TIMING.reducedMotionDelayMs
-      : QUALIFICATION_PLAYBACK_TIMING.eventDelayMs;
+      ? AGENT_WORK_LAB_PLAYBACK_TIMING.reducedMotionDelayMs
+      : AGENT_WORK_LAB_PLAYBACK_TIMING.eventDelayMs;
     const verdictDelay = reducedMotion
-      ? QUALIFICATION_PLAYBACK_TIMING.reducedMotionDelayMs
-      : QUALIFICATION_PLAYBACK_TIMING.verdictDelayMs;
+      ? AGENT_WORK_LAB_PLAYBACK_TIMING.reducedMotionDelayMs
+      : AGENT_WORK_LAB_PLAYBACK_TIMING.verdictDelayMs;
     let playbackQueue = Promise.resolve();
-    const receiveEvent = (event: QualificationLabEvent) => {
-      const lines = qualificationPlaybackLines(event);
+    const receiveEvent = (event: AgentWorkLabEvent) => {
+      const lines = agentWorkLabPlaybackLines(event);
       playbackQueue = playbackQueue.then(async () => {
         for (const line of lines) {
           await waitForPlayback(eventDelay);
@@ -1288,7 +1286,7 @@ export function QualificationLabPanel({
       setRunProgress((current) =>
         current ? { ...current, phase: 'assessing' } : current,
       );
-      const findings = qualificationBehaviorFindings(nextReport);
+      const findings = agentWorkLabBehaviorFindings(nextReport);
       await waitForPlayback(verdictDelay);
       for (let index = 0; index < findings.length; index += 1) {
         if (playbackRunRef.current !== runId) return;
@@ -1320,7 +1318,7 @@ export function QualificationLabPanel({
       ].map((profile) => [profile.id, profile]),
     ).values(),
   );
-  const needs = qualificationModeNeeds(mode);
+  const needs = agentWorkLabModeNeeds(mode);
   const running = busy === 'run';
   const prepared =
     mode === 'offline-demo' ||
@@ -1330,20 +1328,20 @@ export function QualificationLabPanel({
     !busy &&
     (!needs.source || Boolean(selectedAgent)) &&
     (!needs.target || (Boolean(targetAgent) && selectedAgent !== targetAgent));
-  const [sessionOne, sessionTwo] = qualificationSessionStories(
+  const [sessionOne, sessionTwo] = agentWorkLabSessionStories(
     mode,
     running,
     report,
     visibleEvents,
   );
-  const selectedMode = QUALIFICATION_MODES.find((row) => row.id === mode) ?? {
+  const selectedMode = AGENT_WORK_LAB_MODES.find((row) => row.id === mode) ?? {
     id: mode,
     label: 'Unknown test mode',
-    description: 'Choose a supported qualification mode.',
+    description: 'Choose a supported Agent Work Lab mode.',
   };
   const nextRecommendation = agentWorkLabRecommendation(mode);
   const progress = runProgress
-    ? qualificationRunProgressLabel({
+    ? agentWorkLabRunProgressLabel({
         elapsedMs: progressNow - runProgress.startedAt,
         quietMs: progressNow - runProgress.lastEventAt,
         eventCount: runProgress.eventCount,
@@ -1432,11 +1430,11 @@ export function QualificationLabPanel({
               value={mode}
               disabled={Boolean(busy)}
               onChange={(event) =>
-                resetRun(event.target.value as QualificationMode)
+                resetRun(event.target.value as AgentWorkLabMode)
               }
               style={{ width: '100%', minHeight: 34 }}
             >
-              {QUALIFICATION_MODES.map((row) => (
+              {AGENT_WORK_LAB_MODES.map((row) => (
                 <option key={row.id} value={row.id}>
                   {row.label}
                 </option>

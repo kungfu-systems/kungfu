@@ -5,10 +5,10 @@
 // assessments and reports and own no private semantic state.
 import type { AgentRuntimeCatalog } from './agent-runtime.js';
 
-export type QualificationLabStartupRoute = {
-  schema: 'kungfu.qualification-lab.startup-route/v1';
+export type AgentWorkLabStartupRoute = {
+  schema: 'kungfu.agent-work-lab.startup-route/v1';
   state: 'verified-empty' | 'existing-work' | 'diagnostic';
-  route: 'qualification-lab' | 'work-graph' | 'diagnostic';
+  route: 'agent-work-lab' | 'work-graph' | 'diagnostic';
   reasonCode: string;
   message: string;
   runtimeDir: string;
@@ -17,19 +17,19 @@ export type QualificationLabStartupRoute = {
   writeOccurred: false;
 };
 
-export type QualificationLabStartupSurface = 'work-graph' | 'qualification-lab';
+export type AgentWorkLabStartupSurface = 'work-graph' | 'agent-work-lab';
 
-export function qualificationLabStartupSurface(
-  startup: QualificationLabStartupRoute,
-): QualificationLabStartupSurface {
+export function agentWorkLabStartupSurface(
+  startup: AgentWorkLabStartupRoute,
+): AgentWorkLabStartupSurface {
   return startup.state === 'existing-work' &&
     startup.route === 'work-graph' &&
     startup.workGraphPresent === true
     ? 'work-graph'
-    : 'qualification-lab';
+    : 'agent-work-lab';
 }
 
-export function qualificationRunProgressLabel({
+export function agentWorkLabRunProgressLabel({
   elapsedMs,
   quietMs,
   eventCount,
@@ -51,15 +51,55 @@ export function qualificationRunProgressLabel({
   return `Still running · ${elapsedSeconds}s elapsed · ${eventCount} admitted events shown · last update ${quietSeconds}s ago`;
 }
 
-export type QualificationLabCatalog = {
-  schema: 'kungfu.qualification-lab.catalog/v1';
-  startup: QualificationLabStartupRoute;
+export type AgentWorkLabCatalog = {
+  schema: 'kungfu.agent-work-lab.catalog/v1';
+  startup: AgentWorkLabStartupRoute;
   suite: {
-    id: string;
-    fixture: string;
-    oracle: string;
+    schema: 'kungfu.agent-work-lab.suite-catalog/v1';
+    id: 'kungfu.agent-work-lab';
+    version: string;
+    title: string;
+    collection: {
+      id: 'work-continuity';
+      title: string;
+      description: string;
+    };
+    cases: Array<{
+      id: 'offline-demo' | 'same-agent' | 'cross-agent';
+      title: string;
+      shortTitle: string;
+      description: string;
+      sourceRequirement: 'bundled' | 'configured';
+      targetRequirement: 'fresh-demo' | 'same' | 'different';
+      runLabel: string;
+    }>;
+    checks: Record<string, { title: string; meaning: string }>;
+    recommendations: Record<
+      'offline-demo' | 'same-agent' | 'cross-agent',
+      {
+        title: string;
+        instruction: string;
+        nextCase?: 'offline-demo' | 'same-agent' | 'cross-agent';
+      }
+    >;
+    recoveryGuidance: Record<
+      'agent-unavailable' | 'run-failed' | 'existing-work' | 'demo-retry',
+      string
+    >;
+    timing: {
+      eventIntervalMs: number;
+      verdictIntervalMs: number;
+      recommendationDurationMs: number;
+      quietProgressIntervalMs: number;
+      reducedMotionIntervalMs: number;
+    };
+    capabilityDeclarations: ['agentRuntime', 'work'];
     claims: string[];
     nonClaims: string[];
+    fixture: string;
+    oracle: string;
+    catalogRoot: string;
+    catalogPath: string;
   };
   actions: Array<{
     id: string;
@@ -74,13 +114,13 @@ export type QualificationLabCatalog = {
   };
 };
 
-export type QualificationLabEvent = {
-  schema: 'kungfu.qualification-lab.event/v1';
+export type AgentWorkLabEvent = {
+  schema: 'kungfu.agent-work-lab.event/v1';
   step: string;
   status: string;
   root: string;
   publicActivity?: {
-    schema: 'kungfu.qualification-lab.public-activity/v1';
+    schema: 'kungfu.agent-work-lab.public-activity/v1';
     source: 'provider-jsonl';
     kind: 'agent' | 'tool';
     phase: 'progress' | 'started' | 'completed';
@@ -88,18 +128,18 @@ export type QualificationLabEvent = {
     rawOutputRedacted: true;
   };
   publicOutput?: {
-    schema: 'kungfu.qualification-lab.public-output/v1';
+    schema: 'kungfu.agent-work-lab.public-output/v1';
     source: 'provider-stdout';
-    admission: 'exact-qualification-marker';
+    admission: 'exact-agent-work-lab-marker';
     lines: string[];
     rawOutputRedacted: true;
   };
 };
 
-export type QualificationLabReport = {
+export type AgentWorkLabReport = {
   schema:
-    | 'kungfu.qualification-lab.report/v1'
-    | 'kungfu.qualification-lab.agent-report/v1';
+    | 'kungfu.agent-work-lab.report/v1'
+    | 'kungfu.agent-work-lab.agent-report/v1';
   status: 'qualified' | 'qualified-with-residuals' | 'failed';
   suite: string;
   fixture: string;
@@ -109,15 +149,17 @@ export type QualificationLabReport = {
   workRef: Record<string, unknown>;
   sessionAttempts: Array<Record<string, unknown>>;
   assessment: Record<string, unknown>;
-  events: QualificationLabEvent[];
+  events: AgentWorkLabEvent[];
   meaning: string;
   nonClaims: string[];
+  receiptDependencies: string[];
+  recoveryGuidance: Record<string, string>;
   evidenceDirectory: string;
   writeOccurred: true;
 };
 
-export type QualificationLabAgentPlan = {
-  schema: 'kungfu.qualification-lab.agent-plan/v1';
+export type AgentWorkLabAgentPlan = {
+  schema: 'kungfu.agent-work-lab.agent-plan/v1';
   suite: string;
   fixture: string;
   identity: Record<string, unknown>;
@@ -129,25 +171,25 @@ export type QualificationLabAgentPlan = {
   writeOccurred: false;
 };
 
-export type QualificationLab = {
-  inspect: () => Promise<QualificationLabStartupRoute>;
-  inspectSync: () => QualificationLabStartupRoute;
-  catalog: () => Promise<QualificationLabCatalog>;
-  catalogSync: () => QualificationLabCatalog;
+export type AgentWorkLab = {
+  inspect: () => Promise<AgentWorkLabStartupRoute>;
+  inspectSync: () => AgentWorkLabStartupRoute;
+  catalog: () => Promise<AgentWorkLabCatalog>;
+  catalogSync: () => AgentWorkLabCatalog;
   discoverAgents: () => Promise<AgentRuntimeCatalog>;
   runDemo: (
-    onEvent?: (event: QualificationLabEvent) => void,
-  ) => Promise<QualificationLabReport>;
-  planAgent: (profileId: string) => Promise<QualificationLabAgentPlan>;
+    onEvent?: (event: AgentWorkLabEvent) => void,
+  ) => Promise<AgentWorkLabReport>;
+  planAgent: (profileId: string) => Promise<AgentWorkLabAgentPlan>;
   runAgent: (
     profileId: string,
-    onEvent?: (event: QualificationLabEvent) => void,
-  ) => Promise<QualificationLabReport>;
+    onEvent?: (event: AgentWorkLabEvent) => void,
+  ) => Promise<AgentWorkLabReport>;
   runMigration: (
     sourceProfileId: string,
     targetProfileId: string,
-    onEvent?: (event: QualificationLabEvent) => void,
-  ) => Promise<QualificationLabReport>;
+    onEvent?: (event: AgentWorkLabEvent) => void,
+  ) => Promise<AgentWorkLabReport>;
 };
 
 type ExecOptions = {
@@ -156,44 +198,44 @@ type ExecOptions = {
   maxBuffer: number;
 };
 
-export type QualificationLabExecFile = (
+export type AgentWorkLabExecFile = (
   file: string,
   args: string[],
   options: ExecOptions,
 ) => Promise<string>;
 
-export type QualificationLabExecFileSync = (
+export type AgentWorkLabExecFileSync = (
   file: string,
   args: string[],
   options: ExecOptions,
 ) => string;
 
-export type QualificationLabExecFileEvents = (
+export type AgentWorkLabExecFileEvents = (
   file: string,
   args: string[],
   options: ExecOptions,
   onLine: (line: string) => void,
 ) => Promise<void>;
 
-export type OpenQualificationLabOptions = {
+export type OpenAgentWorkLabOptions = {
   runtimeDir: string;
-  execFile: QualificationLabExecFile;
-  execFileSync: QualificationLabExecFileSync;
-  execFileEvents?: QualificationLabExecFileEvents;
+  execFile: AgentWorkLabExecFile;
+  execFileSync: AgentWorkLabExecFileSync;
+  execFileEvents?: AgentWorkLabExecFileEvents;
   env?: Record<string, string | undefined>;
   bin?: string;
 };
 
-export function openQualificationLab(
-  options: OpenQualificationLabOptions,
-): QualificationLab {
+export function openAgentWorkLab(
+  options: OpenAgentWorkLabOptions,
+): AgentWorkLab {
   const env: Record<string, string | undefined> = {
     ...(options.env ?? {}),
     KF_RUNTIME_DIR: options.runtimeDir,
   };
   const bin = options.bin || env.KUNGFU_CLI_BIN || env.KUNGFU_BIN || 'kungfu';
   const args = (command: string, extra: string[] = []) => [
-    'qualification-lab',
+    'agent-work-lab',
     command,
     ...extra,
     '--json',
@@ -218,17 +260,17 @@ export function openQualificationLab(
   const runWithEvents = async (
     command: string,
     extra: string[],
-    onEvent?: (event: QualificationLabEvent) => void,
-  ): Promise<QualificationLabReport> => {
+    onEvent?: (event: AgentWorkLabEvent) => void,
+  ): Promise<AgentWorkLabReport> => {
     if (!onEvent) {
-      return run<QualificationLabReport>(command, extra);
+      return run<AgentWorkLabReport>(command, extra);
     }
     if (!options.execFileEvents) {
-      const report = await run<QualificationLabReport>(command, extra);
+      const report = await run<AgentWorkLabReport>(command, extra);
       report.events.forEach(onEvent);
       return report;
     }
-    let report: QualificationLabReport | null = null;
+    let report: AgentWorkLabReport | null = null;
     await options.execFileEvents(
       bin,
       args(command, [...extra, '--events-json']),
@@ -238,10 +280,8 @@ export function openQualificationLab(
         maxBuffer: 64 * 1024 * 1024,
       },
       (line) => {
-        const payload = parse<QualificationLabEvent | QualificationLabReport>(
-          line,
-        );
-        if (payload.schema === 'kungfu.qualification-lab.event/v1') {
+        const payload = parse<AgentWorkLabEvent | AgentWorkLabReport>(line);
+        if (payload.schema === 'kungfu.agent-work-lab.event/v1') {
           onEvent(payload);
         } else {
           report = payload;
@@ -250,20 +290,20 @@ export function openQualificationLab(
     );
     if (!report) {
       throw new Error(
-        'qualification event stream ended without a canonical report',
+        'Agent Work Lab event stream ended without a canonical report',
       );
     }
     return report;
   };
   return {
-    inspect: () => run<QualificationLabStartupRoute>('inspect'),
-    inspectSync: () => runSync<QualificationLabStartupRoute>('inspect'),
-    catalog: () => run<QualificationLabCatalog>('catalog'),
-    catalogSync: () => runSync<QualificationLabCatalog>('catalog'),
+    inspect: () => run<AgentWorkLabStartupRoute>('inspect'),
+    inspectSync: () => runSync<AgentWorkLabStartupRoute>('inspect'),
+    catalog: () => run<AgentWorkLabCatalog>('catalog'),
+    catalogSync: () => runSync<AgentWorkLabCatalog>('catalog'),
     discoverAgents: () => run<AgentRuntimeCatalog>('agents'),
     runDemo: (onEvent) => runWithEvents('demo', [], onEvent),
     planAgent: (profileId) =>
-      run<QualificationLabAgentPlan>('agent-plan', [profileId]),
+      run<AgentWorkLabAgentPlan>('agent-plan', [profileId]),
     runAgent: (profileId, onEvent) =>
       runWithEvents('agent-run', [profileId, '--execute'], onEvent),
     runMigration: (sourceProfileId, targetProfileId, onEvent) =>

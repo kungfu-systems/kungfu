@@ -177,25 +177,25 @@ function checkIdentityNeutralAuthority() {
   );
 }
 
-function checkQualificationLabIsolation() {
+function checkAgentWorkLabIsolation() {
   const baseline =
     process.env.KUNGFU_NATIVE_KFX_BASE_REF ??
     git(['merge-base', 'HEAD', devMergeBaseCandidates()[0]]);
-  const qualificationLabMerge = '1f7cfe58cc7699ac27106241430d77f6938eadcd';
+  const agentWorkLabMerge = '1f7cfe58cc7699ac27106241430d77f6938eadcd';
   const protectedBranch = 'feature/agent-work-lab-kfx-suite';
   const protectedPaths = [
-    'framework/core/src/python/kungfu/qualification_lab.py',
-    'framework/core/src/python/kungfu/cli/commands/qualification_lab.py',
-    'framework/api/src/capability/qualification-lab.ts',
-    'framework/gui/src/renderer/src/qualification-lab.tsx',
-    'framework/tui/src/qualification-lab-view.tsx',
+    'framework/core/src/python/kungfu/agent_work_lab.py',
+    'framework/core/src/python/kungfu/cli/commands/agent_work_lab.py',
+    'framework/api/src/capability/agent-work-lab.ts',
+    'framework/gui/src/renderer/src/agent-work-lab.tsx',
+    'framework/tui/src/agent-work-lab-view.tsx',
     'framework/tui/src/main.tsx',
   ];
   const branch = git(['branch', '--show-current']);
   if (branch === protectedBranch) {
     throw new Error(`refusing protected Qualification Lab branch ${branch}`);
   }
-  git(['merge-base', '--is-ancestor', qualificationLabMerge, 'HEAD']);
+  git(['merge-base', '--is-ancestor', agentWorkLabMerge, 'HEAD']);
   const changed = new Set(
     git(['diff', '--name-only', baseline, '--']).split('\n').filter(Boolean),
   );
@@ -206,7 +206,7 @@ function checkQualificationLabIsolation() {
     );
   }
   process.stdout.write(
-    `[native-kfx-isolation] PASS branch=${branch} baseline=${baseline} protected_changes=0 pr=1585 merge=${qualificationLabMerge}\n`,
+    `[native-kfx-isolation] PASS branch=${branch} baseline=${baseline} protected_changes=0 pr=1585 merge=${agentWorkLabMerge}\n`,
   );
 }
 
@@ -312,4 +312,4 @@ run('layered API encoding authority', 'node', [
 process.stdout.write(
   '[native-admission] Qualification Lab and PR #1585 isolation\n',
 );
-checkQualificationLabIsolation();
+checkAgentWorkLabIsolation();

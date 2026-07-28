@@ -268,7 +268,7 @@ def _progressive_help(ctx, param, value):
     help="emit the offline discovery contract as JSON and exit",
 )
 @click.option(
-    "--qualification-lab-demo",
+    "--agent-work-lab-demo",
     is_flag=True,
     help="run the deterministic Agent Work Lab demo in the TUI",
 )
@@ -285,7 +285,7 @@ def kfc(
     name,
     stage,
     env_verify_location,
-    qualification_lab_demo,
+    agent_work_lab_demo,
 ):
     if env_verify_location:
         os.environ["KF_VERIFY_LOCATION"] = "KF_VERIFY_LOCATION"
@@ -311,14 +311,14 @@ def kfc(
     ctx.name = name or ctx.invoked_subcommand
     ctx.stage = stage or "prod"
 
-    if qualification_lab_demo:
+    if agent_work_lab_demo:
         if ctx.invoked_subcommand is not None:
             raise click.UsageError(
-                "--qualification-lab-demo cannot be combined with a command"
+                "--agent-work-lab-demo cannot be combined with a command"
             )
         from kungfu.cli.tui_runtime import run_tui
 
-        run_tui(ctx, ("--qualification-lab-demo",))
+        run_tui(ctx, ("--agent-work-lab-demo",))
         return
 
     # Bare interactive invocation enters the Product TUI. Automation, pipes,
@@ -358,7 +358,7 @@ def kfc(
         "exit",
         "cut",
         "work",
-        "qualification-lab",
+        "agent-work-lab",
     }:
         return
     initialize_runtime_context(ctx)

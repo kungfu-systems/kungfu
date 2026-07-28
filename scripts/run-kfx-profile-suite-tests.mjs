@@ -44,7 +44,7 @@ run('GUI Agent Work Lab visual contract', 'pnpm', [
   'exec',
   'tsx',
   '--test',
-  path.join(root, 'framework/gui/src/qualification-lab.test.ts'),
+  path.join(root, 'framework/gui/src/agent-work-lab.test.ts'),
 ]);
 
 run('GUI product search contract', 'pnpm', [

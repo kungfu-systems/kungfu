@@ -264,6 +264,6 @@ def test_live_demo_flag_drives_the_tui_lab_without_runtime_startup(monkeypatch):
         "initialize_runtime_context",
         lambda _ctx: pytest.fail("Lab demo flag materialized the runtime"),
     )
-    result = CliRunner().invoke(commands.kfc, ["--qualification-lab-demo"])
+    result = CliRunner().invoke(commands.kfc, ["--agent-work-lab-demo"])
     assert result.exit_code == 0, result.output
-    assert calls == [("--qualification-lab-demo",)]
+    assert calls == [("--agent-work-lab-demo",)]

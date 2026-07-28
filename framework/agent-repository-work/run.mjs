@@ -327,7 +327,7 @@ export function validateExperimentReport(report) {
     throw new Error('repository-work evidence class must stay bounded');
   if (report.nonClaims?.auditableDemo !== true)
     throw new Error('Auditable Demo non-integration boundary is required');
-  if (report.nonClaims?.qualificationLab !== true)
+  if (report.nonClaims?.agentWorkLab !== true)
     throw new Error('Qualification Lab non-integration boundary is required');
   if (
     report.nonClaims?.releaseGate !== true ||
@@ -406,7 +406,7 @@ function buildBaseReport(options, sourceHead) {
     },
     nonClaims: {
       auditableDemo: true,
-      qualificationLab: true,
+      agentWorkLab: true,
       releaseGate: true,
       publicClaim: true,
       modelRanking: true,

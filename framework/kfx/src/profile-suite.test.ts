@@ -203,11 +203,7 @@ test('KFX plan discovers the stable Agent Work Lab Suite membership', () => {
   );
   assert.deepEqual(plan.suites['kungfu.agent-work-lab'], {
     title: 'Agent Work Lab',
-    members: [
-      'agent-work-lab-catalog',
-      'agent-work-lab-gui',
-      'agent-work-lab-tui',
-    ],
+    members: ['agent-work-lab-experience'],
   });
   assert.equal(
     plan.failures.some((failure) =>

@@ -4,21 +4,21 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { test } from 'node:test';
 import type {
-  QualificationLabEvent,
-  QualificationLabReport,
+  AgentWorkLabEvent,
+  AgentWorkLabReport,
 } from '@kungfu-tech/api/capability';
 import {
   AGENT_WORK_LAB_SUITE,
   agentWorkLabRecommendation,
-} from '@kungfu-tech/kfx';
+} from '@kungfu-tech/kfx-agent-work-lab-experience';
 import {
-  QUALIFICATION_MODES,
-  QUALIFICATION_PLAYBACK_TIMING,
-  qualificationBehaviorFindings,
-  qualificationModeNeeds,
-  qualificationPlaybackLines,
-  qualificationSessionStories,
-} from './renderer/src/qualification-lab';
+  AGENT_WORK_LAB_MODES,
+  AGENT_WORK_LAB_PLAYBACK_TIMING,
+  agentWorkLabBehaviorFindings,
+  agentWorkLabModeNeeds,
+  agentWorkLabPlaybackLines,
+  agentWorkLabSessionStories,
+} from './renderer/src/agent-work-lab';
 
 const qualifiedReport = {
   status: 'qualified',
@@ -35,29 +35,29 @@ const qualifiedReport = {
     ],
     residualRisks: [],
   },
-} as unknown as QualificationLabReport;
+} as unknown as AgentWorkLabReport;
 
 test('the Lab exposes one explicit selector for all three experiment modes', () => {
   assert.deepEqual(
-    QUALIFICATION_MODES.map(({ id }) => id),
+    AGENT_WORK_LAB_MODES.map(({ id }) => id),
     ['offline-demo', 'same-agent', 'cross-agent'],
   );
-  assert.deepEqual(qualificationModeNeeds('offline-demo'), {
+  assert.deepEqual(agentWorkLabModeNeeds('offline-demo'), {
     source: false,
     target: false,
   });
-  assert.deepEqual(qualificationModeNeeds('same-agent'), {
+  assert.deepEqual(agentWorkLabModeNeeds('same-agent'), {
     source: true,
     target: false,
   });
-  assert.deepEqual(qualificationModeNeeds('cross-agent'), {
+  assert.deepEqual(agentWorkLabModeNeeds('cross-agent'), {
     source: true,
     target: true,
   });
   assert.equal(AGENT_WORK_LAB_SUITE.title, 'Agent Work Lab');
   assert.equal(AGENT_WORK_LAB_SUITE.collection.title, 'Work Continuity');
   assert.deepEqual(
-    QUALIFICATION_MODES.map(({ id, label }) => ({ id, label })),
+    AGENT_WORK_LAB_MODES.map(({ id, label }) => ({ id, label })),
     AGENT_WORK_LAB_SUITE.cases.map(({ id, title }) => ({
       id,
       label: title,
@@ -70,7 +70,7 @@ test('the Lab exposes one explicit selector for all three experiment modes', () 
 });
 
 test('the two session stories distinguish bounded progress from continuation', () => {
-  const [first, second] = qualificationSessionStories(
+  const [first, second] = agentWorkLabSessionStories(
     'cross-agent',
     false,
     qualifiedReport,
@@ -92,7 +92,7 @@ test('the two session stories distinguish bounded progress from continuation', (
 });
 
 test('an in-flight atomic report never fabricates Session 2 progress', () => {
-  const [first, second] = qualificationSessionStories('same-agent', true, null);
+  const [first, second] = agentWorkLabSessionStories('same-agent', true, null);
 
   assert.equal(first.milestones[0]?.status, 'running');
   assert.equal(second.milestones[0]?.status, 'waiting');
@@ -117,8 +117,8 @@ test('canonical oracle failures and residuals stay visually distinct', () => {
         'Provider confinement remains to be independently proven.',
       ],
     },
-  } as QualificationLabReport;
-  const findings = qualificationBehaviorFindings(report);
+  } as AgentWorkLabReport;
+  const findings = agentWorkLabBehaviorFindings(report);
 
   assert.deepEqual(
     findings.map(({ status }) => status),
@@ -128,12 +128,12 @@ test('canonical oracle failures and residuals stay visually distinct', () => {
 
 test('canonical runtime events expand into public terminal activity', () => {
   const event = {
-    schema: 'kungfu.qualification-lab.event/v1',
+    schema: 'kungfu.agent-work-lab.event/v1',
     step: 'session-2-start',
     status: 'running',
     root: `sha256:${'a'.repeat(64)}`,
   } as const;
-  const lines = qualificationPlaybackLines(event);
+  const lines = agentWorkLabPlaybackLines(event);
 
   assert.deepEqual(
     lines.map(({ session, kind }) => ({ session, kind })),
@@ -151,22 +151,22 @@ test('canonical runtime events expand into public terminal activity', () => {
     lines[2]?.detail ?? '',
     /instead of treating terminal text as proof/,
   );
-  assert.equal(QUALIFICATION_PLAYBACK_TIMING.eventDelayMs, 1000);
-  assert.equal(QUALIFICATION_PLAYBACK_TIMING.verdictDelayMs, 520);
+  assert.equal(AGENT_WORK_LAB_PLAYBACK_TIMING.eventDelayMs, 1000);
+  assert.equal(AGENT_WORK_LAB_PLAYBACK_TIMING.verdictDelayMs, 520);
   assert.equal(
-    QUALIFICATION_PLAYBACK_TIMING.eventDelayMs,
+    AGENT_WORK_LAB_PLAYBACK_TIMING.eventDelayMs,
     AGENT_WORK_LAB_SUITE.timing.eventIntervalMs,
   );
 });
 
 test('live provider activity becomes safe agent and tool narration', () => {
   const agentEvent = {
-    schema: 'kungfu.qualification-lab.event/v1',
+    schema: 'kungfu.agent-work-lab.event/v1',
     step: 'session-1-activity',
     status: 'running',
     root: `sha256:${'c'.repeat(64)}`,
     publicActivity: {
-      schema: 'kungfu.qualification-lab.public-activity/v1',
+      schema: 'kungfu.agent-work-lab.public-activity/v1',
       source: 'provider-jsonl',
       kind: 'agent',
       phase: 'progress',
@@ -184,7 +184,7 @@ test('live provider activity becomes safe agent and tool narration', () => {
     },
   } as const;
 
-  assert.deepEqual(qualificationPlaybackLines(agentEvent)[0], {
+  assert.deepEqual(agentWorkLabPlaybackLines(agentEvent)[0], {
     session: 1,
     kind: 'agent',
     origin: 'provider-observation',
@@ -194,30 +194,30 @@ test('live provider activity becomes safe agent and tool narration', () => {
     detail:
       'A live public status message emitted by the selected Agent. It is not private reasoning.',
   });
-  assert.equal(qualificationPlaybackLines(toolEvent)[0]?.kind, 'tool');
+  assert.equal(agentWorkLabPlaybackLines(toolEvent)[0]?.kind, 'tool');
   assert.match(
-    qualificationPlaybackLines(toolEvent)[0]?.detail ?? '',
+    agentWorkLabPlaybackLines(toolEvent)[0]?.detail ?? '',
     /raw tool output remain redacted/,
   );
 });
 
 test('only admitted provider output is identified as actual agent output', () => {
-  const event: QualificationLabEvent = {
-    schema: 'kungfu.qualification-lab.event/v1',
+  const event: AgentWorkLabEvent = {
+    schema: 'kungfu.agent-work-lab.event/v1',
     step: 'session-2',
     status: 'complete',
     root: `sha256:${'b'.repeat(64)}`,
     publicOutput: {
-      schema: 'kungfu.qualification-lab.public-output/v1',
+      schema: 'kungfu.agent-work-lab.public-output/v1',
       source: 'provider-stdout',
-      admission: 'exact-qualification-marker',
+      admission: 'exact-agent-work-lab-marker',
       lines: [
         'Found the prior governed state and completed only the remaining step.',
       ],
       rawOutputRedacted: true,
     },
   };
-  const lines = qualificationPlaybackLines(event);
+  const lines = agentWorkLabPlaybackLines(event);
 
   assert.equal(lines[0]?.origin, 'provider-observation');
   assert.equal(lines[0]?.kind, 'agent');
@@ -244,7 +244,7 @@ test('the shell keeps navigation outside the Lab content branch', () => {
 
 test('the visual contract keeps a fixed frame with independently scrolling sessions', () => {
   const source = readFileSync(
-    new URL('./renderer/src/qualification-lab.tsx', import.meta.url),
+    new URL('./renderer/src/agent-work-lab.tsx', import.meta.url),
     'utf8',
   );
 
@@ -275,7 +275,7 @@ test('the visual contract keeps a fixed frame with independently scrolling sessi
   assert.match(source, /lab\.runDemo\(receiveEvent\)/);
   assert.match(source, /lab\.runAgent\(selectedAgent, receiveEvent\)/);
   assert.match(source, /setVisiblePlaybackLines/);
-  assert.match(source, /qualificationRunProgressLabel/);
+  assert.match(source, /agentWorkLabRunProgressLabel/);
   assert.match(source, /progress=\{progress\}/);
   assert.match(source, /kf-lab-verdict-focus/);
   assert.match(source, /prefers-reduced-motion: reduce/);
@@ -287,7 +287,7 @@ test('the GUI shell uses the shared startup surface policy', () => {
     'utf8',
   );
 
-  assert.match(source, /qualificationLabStartupSurface\(startup\)/);
+  assert.match(source, /agentWorkLabStartupSurface\(startup\)/);
   assert.match(source, /startupSurface === 'work-graph'/);
-  assert.match(source, /startupSurface === 'qualification-lab'/);
+  assert.match(source, /startupSurface === 'agent-work-lab'/);
 });

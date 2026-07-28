@@ -4,15 +4,15 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 
 import {
-  openQualificationLab,
-  qualificationLabStartupSurface,
-  qualificationRunProgressLabel,
-} from '../src/capability/qualification-lab.ts';
+  agentWorkLabRunProgressLabel,
+  agentWorkLabStartupSurface,
+  openAgentWorkLab,
+} from '../src/capability/agent-work-lab.ts';
 
 const startup = {
-  schema: 'kungfu.qualification-lab.startup-route/v1',
+  schema: 'kungfu.agent-work-lab.startup-route/v1',
   state: 'verified-empty',
-  route: 'qualification-lab',
+  route: 'agent-work-lab',
   reasonCode: 'runtime-home-absent',
   message: 'empty',
   runtimeDir: '/runtime',
@@ -24,7 +24,7 @@ const startup = {
 test('GUI and TUI adapter invokes only the canonical public CLI authority', async () => {
   const calls: Array<{ file: string; args: string[]; runtimeDir?: string }> =
     [];
-  const lab = openQualificationLab({
+  const lab = openAgentWorkLab({
     runtimeDir: '/runtime',
     bin: '/product/kungfu',
     execFile: async (file, args, options) => {
@@ -36,7 +36,7 @@ test('GUI and TUI adapter invokes only the canonical public CLI authority', asyn
       return JSON.stringify(
         args[1] === 'agent-plan'
           ? {
-              schema: 'kungfu.qualification-lab.agent-plan/v1',
+              schema: 'kungfu.agent-work-lab.agent-plan/v1',
               commandPreview: ['/usr/bin/codex'],
             }
           : startup,
@@ -52,7 +52,7 @@ test('GUI and TUI adapter invokes only the canonical public CLI authority', asyn
     },
   });
 
-  assert.equal(lab.inspectSync().route, 'qualification-lab');
+  assert.equal(lab.inspectSync().route, 'agent-work-lab');
   assert.equal((await lab.inspect()).writeOccurred, false);
   assert.deepEqual((await lab.planAgent('codex.local')).commandPreview, [
     '/usr/bin/codex',
@@ -62,23 +62,23 @@ test('GUI and TUI adapter invokes only the canonical public CLI authority', asyn
   assert.deepEqual(calls, [
     {
       file: '/product/kungfu',
-      args: ['qualification-lab', 'inspect', '--json'],
+      args: ['agent-work-lab', 'inspect', '--json'],
       runtimeDir: '/runtime',
     },
     {
       file: '/product/kungfu',
-      args: ['qualification-lab', 'inspect', '--json'],
+      args: ['agent-work-lab', 'inspect', '--json'],
       runtimeDir: '/runtime',
     },
     {
       file: '/product/kungfu',
-      args: ['qualification-lab', 'agent-plan', 'codex.local', '--json'],
+      args: ['agent-work-lab', 'agent-plan', 'codex.local', '--json'],
       runtimeDir: '/runtime',
     },
     {
       file: '/product/kungfu',
       args: [
-        'qualification-lab',
+        'agent-work-lab',
         'agent-run',
         'codex.local',
         '--execute',
@@ -89,7 +89,7 @@ test('GUI and TUI adapter invokes only the canonical public CLI authority', asyn
     {
       file: '/product/kungfu',
       args: [
-        'qualification-lab',
+        'agent-work-lab',
         'agent-run',
         'codex.local',
         '--execute',
@@ -105,24 +105,24 @@ test('GUI and TUI adapter invokes only the canonical public CLI authority', asyn
 test('the adapter streams safe milestones before returning the canonical report', async () => {
   const received: string[] = [];
   const event = {
-    schema: 'kungfu.qualification-lab.event/v1',
+    schema: 'kungfu.agent-work-lab.event/v1',
     step: 'session-1-start',
     status: 'running',
     root: `sha256:${'a'.repeat(64)}`,
   } as const;
   const report = {
-    schema: 'kungfu.qualification-lab.report/v1',
+    schema: 'kungfu.agent-work-lab.report/v1',
     status: 'qualified',
     events: [event],
   };
-  const lab = openQualificationLab({
+  const lab = openAgentWorkLab({
     runtimeDir: '/runtime',
     bin: '/product/kungfu',
     execFile: async () => JSON.stringify(report),
     execFileSync: () => JSON.stringify(startup),
     execFileEvents: async (_file, args, _options, onLine) => {
       assert.deepEqual(args, [
-        'qualification-lab',
+        'agent-work-lab',
         'demo',
         '--events-json',
         '--json',
@@ -140,7 +140,7 @@ test('the adapter streams safe milestones before returning the canonical report'
 
 test('GUI and TUI share the same fail-closed startup surface policy', () => {
   assert.equal(
-    qualificationLabStartupSurface({
+    agentWorkLabStartupSurface({
       ...startup,
       state: 'existing-work',
       route: 'work-graph',
@@ -148,30 +148,30 @@ test('GUI and TUI share the same fail-closed startup surface policy', () => {
     }),
     'work-graph',
   );
-  assert.equal(qualificationLabStartupSurface(startup), 'qualification-lab');
+  assert.equal(agentWorkLabStartupSurface(startup), 'agent-work-lab');
   assert.equal(
-    qualificationLabStartupSurface({
+    agentWorkLabStartupSurface({
       ...startup,
       state: 'diagnostic',
       route: 'diagnostic',
       workGraphPresent: null,
     }),
-    'qualification-lab',
+    'agent-work-lab',
   );
   assert.equal(
-    qualificationLabStartupSurface({
+    agentWorkLabStartupSurface({
       ...startup,
       state: 'verified-empty',
       route: 'work-graph',
       workGraphPresent: true,
     }),
-    'qualification-lab',
+    'agent-work-lab',
   );
 });
 
 test('run progress distinguishes a live wait from an admitted event', () => {
   assert.equal(
-    qualificationRunProgressLabel({
+    agentWorkLabRunProgressLabel({
       elapsedMs: 2400,
       quietMs: 2400,
       eventCount: 0,
@@ -179,7 +179,7 @@ test('run progress distinguishes a live wait from an admitted event', () => {
     'Still running · 2s elapsed · waiting for first admitted event',
   );
   assert.equal(
-    qualificationRunProgressLabel({
+    agentWorkLabRunProgressLabel({
       elapsedMs: 12_400,
       quietMs: 5400,
       eventCount: 4,

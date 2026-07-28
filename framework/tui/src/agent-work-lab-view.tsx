@@ -1,19 +1,19 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import type {
-  QualificationLab,
-  QualificationLabEvent,
-  QualificationLabReport,
-  QualificationLabStartupRoute,
+  AgentWorkLab,
+  AgentWorkLabEvent,
+  AgentWorkLabReport,
+  AgentWorkLabStartupRoute,
 } from '@kungfu-tech/api/capability';
-import { qualificationRunProgressLabel } from '@kungfu-tech/api/capability';
+import { agentWorkLabRunProgressLabel } from '@kungfu-tech/api/capability';
 import {
   AGENT_WORK_LAB_CHECKS,
   AGENT_WORK_LAB_SUITE,
   type AgentWorkLabCaseId,
   agentWorkLabCase,
   agentWorkLabRecommendation,
-} from '@kungfu-tech/kfx';
+} from '@kungfu-tech/kfx-agent-work-lab-experience';
 import { useApp } from 'ink';
 import React from 'react';
 import { boundedIndex, decodeShellKey } from './navigation.js';
@@ -33,11 +33,11 @@ import {
   sessionTitleBar,
 } from './profile-shell.js';
 
-export type TuiQualificationMode = AgentWorkLabCaseId;
-export type TuiQualificationFocus = WorkbenchFocus;
-export type TuiQualificationReportDetail = WorkbenchReportDetail;
-export type TuiQualificationNextPrompt = WorkbenchNextPrompt;
-export type TuiQualificationLine = WorkbenchLine;
+export type TuiAgentWorkLabMode = AgentWorkLabCaseId;
+export type TuiAgentWorkLabFocus = WorkbenchFocus;
+export type TuiAgentWorkLabReportDetail = WorkbenchReportDetail;
+export type TuiAgentWorkLabNextPrompt = WorkbenchNextPrompt;
+export type TuiAgentWorkLabLine = WorkbenchLine;
 
 export type AgentWorkLabSuiteAction =
   | 'lab-demo'
@@ -96,14 +96,14 @@ export function agentWorkLabActionReturnsToControls(
   return action === 'lab-report';
 }
 
-export const nextQualificationFocus = nextWorkbenchFocus;
-export const isQualificationReportReturnInput = isWorkbenchReturnInput;
-export const qualificationSessionTitleBar = sessionTitleBar;
-export const qualificationPromptRows = boundedPromptRows;
+export const nextAgentWorkLabFocus = nextWorkbenchFocus;
+export const isAgentWorkLabReportReturnInput = isWorkbenchReturnInput;
+export const agentWorkLabSessionTitleBar = sessionTitleBar;
+export const agentWorkLabPromptRows = boundedPromptRows;
 
-export function qualificationNextModePrompt(
-  mode: TuiQualificationMode,
-): TuiQualificationNextPrompt {
+export function agentWorkLabNextModePrompt(
+  mode: TuiAgentWorkLabMode,
+): TuiAgentWorkLabNextPrompt {
   const recommendation = agentWorkLabRecommendation(mode);
   const shortcut =
     recommendation.nextCase === 'same-agent'
@@ -117,21 +117,21 @@ export function qualificationNextModePrompt(
   };
 }
 
-export function qualificationEventRunningSession(
-  event: QualificationLabEvent,
+export function agentWorkLabEventRunningSession(
+  event: AgentWorkLabEvent,
 ): 1 | 2 | undefined {
   if (event.step.includes('session-1')) return 1;
   if (event.step.includes('session-2')) return 2;
   return undefined;
 }
 
-function eventSession(event: QualificationLabEvent): 1 | 2 {
+function eventSession(event: AgentWorkLabEvent): 1 | 2 {
   return event.step.includes('session-1') ? 1 : 2;
 }
 
-export function qualificationEventLines(
-  event: QualificationLabEvent,
-): TuiQualificationLine[] {
+export function agentWorkLabEventLines(
+  event: AgentWorkLabEvent,
+): TuiAgentWorkLabLine[] {
   if (event.publicActivity) {
     return [
       {
@@ -236,7 +236,7 @@ export function qualificationEventLines(
 }
 
 function reportChecks(
-  report: QualificationLabReport | undefined,
+  report: AgentWorkLabReport | undefined,
 ): WorkbenchCheck[] {
   const checks = Array.isArray(report?.assessment?.oracleChecks)
     ? report.assessment.oracleChecks
@@ -254,7 +254,7 @@ function reportChecks(
   });
 }
 
-export function QualificationLabView({
+export function AgentWorkLabView({
   dimensions,
   mode,
   sourceLabel,
@@ -274,22 +274,22 @@ export function QualificationLabView({
   emphasizedResult,
 }: {
   dimensions: TerminalDimensions;
-  mode: TuiQualificationMode;
+  mode: TuiAgentWorkLabMode;
   sourceLabel: string;
   targetLabel: string;
-  lines: TuiQualificationLine[];
-  report?: QualificationLabReport;
+  lines: TuiAgentWorkLabLine[];
+  report?: AgentWorkLabReport;
   busy: string;
   progress: string;
   error: string;
-  activeFocus: TuiQualificationFocus;
+  activeFocus: TuiAgentWorkLabFocus;
   scrollBack: Record<1 | 2, number>;
   showHelp: boolean;
   activityFrame: number;
   runningSession?: 1 | 2;
-  nextPrompt?: TuiQualificationNextPrompt;
-  reportDetail?: TuiQualificationReportDetail;
-  emphasizedResult?: TuiQualificationReportDetail;
+  nextPrompt?: TuiAgentWorkLabNextPrompt;
+  reportDetail?: TuiAgentWorkLabReportDetail;
+  emphasizedResult?: TuiAgentWorkLabReportDetail;
 }) {
   const selectedCase = agentWorkLabCase(mode);
   return (
@@ -344,8 +344,8 @@ export function AgentWorkLabHost({
   actionRequest,
   onActionHandled,
 }: {
-  lab: QualificationLab;
-  startup: QualificationLabStartupRoute;
+  lab: AgentWorkLab;
+  startup: AgentWorkLabStartupRoute;
   dimensions: DimensionSource;
   onOpenWork?: () => void;
   isInputCaptured?: () => boolean;
@@ -355,23 +355,23 @@ export function AgentWorkLabHost({
   const { exit } = useApp();
   const [size, setSize] = React.useState(dimensions.get());
   const [agents, setAgents] = React.useState<
-    Awaited<ReturnType<QualificationLab['discoverAgents']>> | undefined
+    Awaited<ReturnType<AgentWorkLab['discoverAgents']>> | undefined
   >();
-  const [mode, setMode] = React.useState<TuiQualificationMode>('offline-demo');
+  const [mode, setMode] = React.useState<TuiAgentWorkLabMode>('offline-demo');
   const [selected, setSelected] = React.useState(0);
   const [target, setTarget] = React.useState(0);
-  const [report, setReport] = React.useState<QualificationLabReport>();
+  const [report, setReport] = React.useState<AgentWorkLabReport>();
   const [lines, setLines] = React.useState<
-    ReturnType<typeof qualificationEventLines>
+    ReturnType<typeof agentWorkLabEventLines>
   >([]);
   const [activeFocus, setActiveFocus] =
-    React.useState<TuiQualificationFocus>('session-1');
+    React.useState<TuiAgentWorkLabFocus>('session-1');
   const [reportDetail, setReportDetail] =
-    React.useState<TuiQualificationReportDetail>();
+    React.useState<TuiAgentWorkLabReportDetail>();
   const [emphasizedResult, setEmphasizedResult] =
-    React.useState<TuiQualificationReportDetail>();
+    React.useState<TuiAgentWorkLabReportDetail>();
   const [nextPrompt, setNextPrompt] =
-    React.useState<TuiQualificationNextPrompt>();
+    React.useState<TuiAgentWorkLabNextPrompt>();
   const [scrollBack, setScrollBack] = React.useState<Record<1 | 2, number>>({
     1: 0,
     2: 0,
@@ -436,12 +436,12 @@ export function AgentWorkLabHost({
     );
     return () => clearTimeout(timer);
   }, [nextPrompt]);
-  const runQualification = React.useCallback(
+  const runAgentWorkLabCase = React.useCallback(
     (
-      nextMode: TuiQualificationMode,
+      nextMode: TuiAgentWorkLabMode,
       execute: (
-        onEvent: Parameters<QualificationLab['runDemo']>[0],
-      ) => Promise<QualificationLabReport>,
+        onEvent: Parameters<AgentWorkLab['runDemo']>[0],
+      ) => Promise<AgentWorkLabReport>,
     ) => {
       const generation = playbackGeneration.current + 1;
       playbackGeneration.current = generation;
@@ -465,15 +465,12 @@ export function AgentWorkLabHost({
         phase: 'running',
       });
       setRunningSession(1);
-      const playback = createIncrementalPlayback<QualificationLabEvent>({
+      const playback = createIncrementalPlayback<AgentWorkLabEvent>({
         timing: AGENT_WORK_LAB_SUITE.timing,
         isCurrent: () => playbackGeneration.current === generation,
         onEvent: (event) => {
-          setRunningSession(qualificationEventRunningSession(event));
-          setLines((current) => [
-            ...current,
-            ...qualificationEventLines(event),
-          ]);
+          setRunningSession(agentWorkLabEventRunningSession(event));
+          setLines((current) => [...current, ...agentWorkLabEventLines(event)]);
           setRunProgress((current) =>
             current
               ? {
@@ -503,7 +500,7 @@ export function AgentWorkLabHost({
           await wait(AGENT_WORK_LAB_SUITE.timing.verdictIntervalMs);
           if (playbackGeneration.current !== generation) return;
           setEmphasizedResult(undefined);
-          setNextPrompt(qualificationNextModePrompt(nextMode));
+          setNextPrompt(agentWorkLabNextModePrompt(nextMode));
           setError('');
         })
         .catch((reason) => {
@@ -525,7 +522,7 @@ export function AgentWorkLabHost({
     (action: AgentWorkLabSuiteAction) => {
       if (action === 'lab-focus-next') {
         setActiveFocus((current) =>
-          nextQualificationFocus(current, Boolean(report)),
+          nextAgentWorkLabFocus(current, Boolean(report)),
         );
         return;
       }
@@ -547,7 +544,7 @@ export function AgentWorkLabHost({
         return;
       }
       if (action === 'lab-demo') {
-        runQualification('offline-demo', (onEvent) => lab.runDemo(onEvent));
+        runAgentWorkLabCase('offline-demo', (onEvent) => lab.runDemo(onEvent));
         return;
       }
       const source = profiles[selected];
@@ -556,7 +553,7 @@ export function AgentWorkLabHost({
         return;
       }
       if (action === 'lab-same') {
-        runQualification('same-agent', (onEvent) =>
+        runAgentWorkLabCase('same-agent', (onEvent) =>
           lab.runAgent(source.id, onEvent),
         );
         return;
@@ -572,11 +569,11 @@ export function AgentWorkLabHost({
         );
         return;
       }
-      runQualification('cross-agent', (onEvent) =>
+      runAgentWorkLabCase('cross-agent', (onEvent) =>
         lab.runMigration(source.id, destination.id, onEvent),
       );
     },
-    [busy, lab, profiles, report, runQualification, selected, target],
+    [busy, lab, profiles, report, runAgentWorkLabCase, selected, target],
   );
   React.useEffect(() => {
     if (!actionRequest || actionRequest.id <= handledActionRequest.current)
@@ -589,7 +586,7 @@ export function AgentWorkLabHost({
     const onData = (chunk: Buffer | string) => {
       if (isInputCaptured()) return;
       const input = String(chunk);
-      if (reportDetail && isQualificationReportReturnInput(input)) {
+      if (reportDetail && isAgentWorkLabReportReturnInput(input)) {
         return setReportDetail(undefined);
       }
       const key = decodeShellKey(input);
@@ -663,7 +660,7 @@ export function AgentWorkLabHost({
         ? sourceLabel
         : profiles[target]?.label || '';
   const progress = runProgress
-    ? qualificationRunProgressLabel({
+    ? agentWorkLabRunProgressLabel({
         elapsedMs: progressNow - runProgress.startedAt,
         quietMs: progressNow - runProgress.lastEventAt,
         eventCount: runProgress.eventCount,
@@ -671,7 +668,7 @@ export function AgentWorkLabHost({
       })
     : '';
   return (
-    <QualificationLabView
+    <AgentWorkLabView
       dimensions={size}
       mode={mode}
       sourceLabel={sourceLabel}

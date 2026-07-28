@@ -20,7 +20,7 @@ export * from './profile.js';
 export * from './agent-runtime.js';
 export * from './agent-console.js';
 export * from './agent-session.js';
-export * from './qualification-lab.js';
+export * from './agent-work-lab.js';
 export * from './product-search.js';
 export * from './global-work.js';
 export * from './runtime.js';

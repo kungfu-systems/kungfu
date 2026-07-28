@@ -135,6 +135,18 @@ importers:
         specifier: workspace:*
         version: link:../../developer/sdk
 
+  extensions/agent-work-lab:
+    dependencies:
+      '@kungfu-tech/kfx-agent-work-lab-experience':
+        specifier: workspace:*
+        version: link:experience
+
+  extensions/agent-work-lab/experience:
+    devDependencies:
+      typescript:
+        specifier: ^5.5.4
+        version: 5.9.3
+
   extensions/config-manager:
     dependencies:
       '@kungfu-tech/api':
@@ -498,6 +510,9 @@ importers:
       '@kungfu-tech/kfx':
         specifier: workspace:*
         version: link:../kfx
+      '@kungfu-tech/kfx-agent-work-lab-experience':
+        specifier: workspace:*
+        version: link:../../extensions/agent-work-lab/experience
       '@kungfu-tech/skill':
         specifier: workspace:*
         version: link:../skill
@@ -617,6 +632,9 @@ importers:
       '@kungfu-tech/kfx':
         specifier: workspace:*
         version: link:../kfx
+      '@kungfu-tech/kfx-agent-work-lab-experience':
+        specifier: workspace:*
+        version: link:../../extensions/agent-work-lab/experience
       ink:
         specifier: ^5.2.0
         version: 5.2.1(@types/react@18.3.31)(react@18.3.1)

@@ -85,7 +85,7 @@ PR #1704, reconciled from source PR #1624, adds the Core-owned semantic graph
 for providers, extension points, contributions, dependencies, trust,
 capabilities, and versions. Python and TypeScript host adapters consume the same
 native descriptor without rescanning or deciding lifecycle policy. Automated
-parity and isolation gates preserve the later Agent Qualification Lab cutover
+parity and isolation gates preserve the later Agent Work Lab cutover
 as one bounded host migration.
 
 PR #1718 extends that thin projection through the mutation boundary. Python,

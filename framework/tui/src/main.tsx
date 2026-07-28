@@ -7,19 +7,26 @@ import { constants as osConstants } from 'node:os';
 import { homedir } from 'node:os';
 import path from 'node:path';
 import {
+  type AgentWorkLab,
+  type AgentWorkLabStartupRoute,
   type GlobalWorkSnapshot,
   type ProductSearchDocument,
-  type QualificationLab,
-  type QualificationLabStartupRoute,
   SYSTEM_HELP_DOCUMENTS,
+  agentWorkLabStartupSurface,
   loadCliHelpSearchDocuments,
-  openQualificationLab,
-  qualificationLabStartupSurface,
+  openAgentWorkLab,
   searchProductDocuments,
 } from '@kungfu-tech/api/capability';
 import { Box, Text, render, useApp } from 'ink';
 import React from 'react';
 
+import {
+  AGENT_WORK_LAB_QUICK_COMMANDS,
+  type AgentWorkLabActionRequest,
+  AgentWorkLabHost,
+  type AgentWorkLabSuiteAction,
+  agentWorkLabActionReturnsToControls,
+} from './agent-work-lab-view.js';
 import { boundedIndex, decodeShellKey } from './navigation.js';
 import {
   CLOSED_CONTROL_PLANE,
@@ -34,13 +41,6 @@ import {
   quickCommandMatches,
   reduceControlPlaneInput,
 } from './profile-shell.js';
-import {
-  AGENT_WORK_LAB_QUICK_COMMANDS,
-  type AgentWorkLabActionRequest,
-  AgentWorkLabHost,
-  type AgentWorkLabSuiteAction,
-  agentWorkLabActionReturnsToControls,
-} from './qualification-lab-view.js';
 import {
   IncrementalTerminalOutput,
   terminalCanvasRows,
@@ -98,9 +98,9 @@ function runtimePaths() {
   };
 }
 
-function openTuiQualificationLab(): QualificationLab {
+function openTuiAgentWorkLab(): AgentWorkLab {
   const paths = runtimePaths();
-  return openQualificationLab({
+  return openAgentWorkLab({
     runtimeDir: paths.runtimeDir,
     bin: paths.bin,
     env: cliEnvironment(),
@@ -305,7 +305,7 @@ function WorkControlHost({
       if (isInputCaptured()) return;
       const key = decodeShellKey(String(chunk));
       if (key === 'quit') return exit();
-      if (key === 'qualification-lab') return onOpenLab();
+      if (key === 'agent-work-lab') return onOpenLab();
       if (key === 'refresh') {
         setBusy(true);
         const cached = loadLatestGlobalWorkCache(
@@ -367,10 +367,10 @@ function WorkControlHost({
   );
 }
 
-const PENDING_STARTUP: QualificationLabStartupRoute = {
-  schema: 'kungfu.qualification-lab.startup-route/v1',
+const PENDING_STARTUP: AgentWorkLabStartupRoute = {
+  schema: 'kungfu.agent-work-lab.startup-route/v1',
   state: 'verified-empty',
-  route: 'qualification-lab',
+  route: 'agent-work-lab',
   reasonCode: 'startup-inspection-pending',
   message: 'Kungfu is reading local Work and Profile roots.',
   runtimeDir: '',
@@ -396,7 +396,7 @@ function StartingHost({
       if (isInputCaptured()) return;
       const key = decodeShellKey(String(chunk));
       if (key === 'quit') exit();
-      if (key === 'qualification-lab') onOpenLab();
+      if (key === 'agent-work-lab') onOpenLab();
     };
     process.stdin.on('data', onData);
     return () => {
@@ -426,12 +426,12 @@ function ProductHost({
   lab,
   dimensions,
 }: {
-  lab: QualificationLab;
+  lab: AgentWorkLab;
   dimensions: DimensionStore;
 }) {
   const { exit } = useApp();
   const [size, setSize] = React.useState(dimensions.get());
-  const [startup, setStartup] = React.useState<QualificationLabStartupRoute>();
+  const [startup, setStartup] = React.useState<AgentWorkLabStartupRoute>();
   const [surface, setSurface] = React.useState<'auto' | 'lab' | 'work'>('auto');
   const [labActionRequest, setLabActionRequest] =
     React.useState<AgentWorkLabActionRequest>();
@@ -506,7 +506,7 @@ function ProductHost({
       .catch((error) => {
         if (!active) return;
         setStartup({
-          schema: 'kungfu.qualification-lab.startup-route/v1',
+          schema: 'kungfu.agent-work-lab.startup-route/v1',
           state: 'diagnostic',
           route: 'diagnostic',
           reasonCode: 'startup-inspection-failed',
@@ -523,7 +523,7 @@ function ProductHost({
   }, [lab]);
 
   const resolvedStartup = startup ?? PENDING_STARTUP;
-  const startupSurface = qualificationLabStartupSurface(resolvedStartup);
+  const startupSurface = agentWorkLabStartupSurface(resolvedStartup);
   const cachedGlobalWorkPresent = React.useMemo(() => {
     const paths = runtimePaths();
     return (
@@ -539,7 +539,7 @@ function ProductHost({
   const labOpen =
     surface === 'lab' ||
     (surface === 'auto' &&
-      startupSurface === 'qualification-lab' &&
+      startupSurface === 'agent-work-lab' &&
       !cachedGlobalWorkPresent);
   const availableQuickCommands = React.useMemo(
     () =>
@@ -845,8 +845,8 @@ async function main(): Promise<void> {
     );
     return;
   }
-  const lab = openTuiQualificationLab();
-  if (process.argv.includes('--qualification-lab-demo')) {
+  const lab = openTuiAgentWorkLab();
+  if (process.argv.includes('--agent-work-lab-demo')) {
     const report = await lab.runDemo();
     for (const event of report.events) {
       process.stdout.write(`${JSON.stringify(event)}\n`);

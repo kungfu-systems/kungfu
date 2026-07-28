@@ -253,7 +253,7 @@ test('Agent A claim and final report require deterministic continuity evidence',
     },
     nonClaims: {
       auditableDemo: true,
-      qualificationLab: true,
+      agentWorkLab: true,
       releaseGate: true,
       publicClaim: true,
     },

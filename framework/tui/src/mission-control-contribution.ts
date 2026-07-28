@@ -150,7 +150,7 @@ export async function loadMissionControlContribution(
             'This installed version has not been approved for the current workspace, so Kungfu did not read work through a different Profile root.',
         },
         {
-          id: 'qualification-lab-available',
+          id: 'agent-work-lab-available',
           title: 'What you can do now',
           status: 'degraded',
           summary:
