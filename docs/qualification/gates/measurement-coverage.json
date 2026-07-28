@@ -12,28 +12,28 @@
   "measurements": [
     {
       "gateId": "gate.catalog",
-      "definitionDigest": "sha256:2102f39caca0c0286084c59e552b7f42f5d6df2315adac134e5ae9d834559856",
+      "definitionDigest": "sha256:8140073a2a653c172bdfed324ac59e78a463a602e758807d97219ea40dc81aad",
       "observations": [
         {
           "platform": "linux",
-          "sourceSha": "3c8c3dd547ad69c3c3f74af0a4a0b1b0b29f7e31",
-          "registryDigest": "sha256:ba6be36c14e4708e1c40628cf0e9df3af410bc9a5dd82cd404a25ce2e1dfa078",
-          "durationMs": 450,
-          "receipt": "docs/qualification/evidence/gate-measurements/3c8c3dd547/linux/episode/receipt.json"
+          "sourceSha": "ec0d1c2f2dd406f16083c8f7204420321f35e292",
+          "registryDigest": "sha256:94030db29ba8eccd112d2e2dc24afe18466fc2d6e396f3f3daa5cca317e6cd47",
+          "durationMs": 469,
+          "receipt": "docs/qualification/evidence/gate-measurements/ec0d1c2f2d/linux/receipt.json"
         },
         {
           "platform": "macos",
-          "sourceSha": "3c8c3dd547ad69c3c3f74af0a4a0b1b0b29f7e31",
-          "registryDigest": "sha256:ba6be36c14e4708e1c40628cf0e9df3af410bc9a5dd82cd404a25ce2e1dfa078",
-          "durationMs": 1088,
-          "receipt": "docs/qualification/evidence/gate-measurements/3c8c3dd547/macos/episode/receipt.json"
+          "sourceSha": "ec0d1c2f2dd406f16083c8f7204420321f35e292",
+          "registryDigest": "sha256:94030db29ba8eccd112d2e2dc24afe18466fc2d6e396f3f3daa5cca317e6cd47",
+          "durationMs": 790,
+          "receipt": "docs/qualification/evidence/gate-measurements/ec0d1c2f2d/macos/receipt.json"
         },
         {
           "platform": "windows",
-          "sourceSha": "3c8c3dd547ad69c3c3f74af0a4a0b1b0b29f7e31",
-          "registryDigest": "sha256:ba6be36c14e4708e1c40628cf0e9df3af410bc9a5dd82cd404a25ce2e1dfa078",
-          "durationMs": 4156,
-          "receipt": "docs/qualification/evidence/gate-measurements/3c8c3dd547/windows/episode/receipt.json"
+          "sourceSha": "ec0d1c2f2dd406f16083c8f7204420321f35e292",
+          "registryDigest": "sha256:94030db29ba8eccd112d2e2dc24afe18466fc2d6e396f3f3daa5cca317e6cd47",
+          "durationMs": 1894,
+          "receipt": "docs/qualification/evidence/gate-measurements/ec0d1c2f2d/windows/receipt.json"
         }
       ]
     },
