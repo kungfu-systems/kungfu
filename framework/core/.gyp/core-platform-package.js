@@ -28,10 +28,21 @@ const {
 const rootDir = path.dirname(__dirname);
 const repositoryRoot = path.resolve(rootDir, '..', '..');
 const bindingDir = path.join(rootDir, BINDING_SUBDIR);
-const stageDir = path.resolve(
-  rootDir,
-  process.env.KF_PACKAGE_STAGE_DIR || path.join('build', 'stage', 'npm'),
-);
+
+/**
+ * Explicit lifecycle stage paths are repository-relative: callers such as the
+ * native ARM64 Hub lane publish into product/release/npm. Keep the historical
+ * Core-local default only when no override is supplied.
+ * @param {string | undefined} configured
+ * @returns {string}
+ */
+function resolvePackageStageDir(configured) {
+  return configured
+    ? path.resolve(repositoryRoot, configured)
+    : path.join(rootDir, 'build', 'stage', 'npm');
+}
+
+const stageDir = resolvePackageStageDir(process.env.KF_PACKAGE_STAGE_DIR);
 const packageBuildDir = path.join(rootDir, 'build', 'npm');
 const packageContract = fs.readJsonSync(
   path.join(rootDir, 'core-platform-package.contract.json'),
@@ -738,4 +749,5 @@ if (require.main === module)
 
 module.exports = {
   linuxReleaseStripCandidates,
+  resolvePackageStageDir,
 };

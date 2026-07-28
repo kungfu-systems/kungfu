@@ -13,7 +13,21 @@ const {
 } = require('../lib/platform-packages');
 const {
   linuxReleaseStripCandidates,
+  resolvePackageStageDir,
 } = require('../.gyp/core-platform-package');
+
+test('explicit package stage paths resolve from the repository root', () => {
+  const repositoryRoot = path.resolve(__dirname, '..', '..', '..');
+
+  assert.equal(
+    resolvePackageStageDir('product/release/npm'),
+    path.join(repositoryRoot, 'product', 'release', 'npm'),
+  );
+  assert.equal(
+    resolvePackageStageDir(undefined),
+    path.join(repositoryRoot, 'framework', 'core', 'build', 'stage', 'npm'),
+  );
+});
 
 test('Core platform package authority is exact and source package is neutral', () => {
   assert.deepEqual(platformPackages, contract.platformPackages);
