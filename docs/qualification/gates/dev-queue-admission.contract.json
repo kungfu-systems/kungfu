@@ -33,17 +33,14 @@
   "rulesetActivation": {
     "required": true,
     "rulesetId": 19057118,
-    "rulesetName": "Buildchain dev merge queue: admitted dev channel family",
+    "rulesetName": "Buildchain dev merge queue: admitted default dev channel",
     "target": {
       "include": [
-        "refs/heads/dev/v*/v*"
+        "~DEFAULT_BRANCH"
       ],
-      "exclude": [
-        "refs/heads/dev/v1/v*",
-        "refs/heads/dev/v2/v*",
-        "refs/heads/dev/v3/v*"
-      ]
+      "exclude": []
     },
+    "providerConstraint": "GitHub merge queue rulesets reject wildcard ref targets. The repository default branch is the moving authority pointer, and resolveDevBranch admits it only when it belongs to the v4+ dev family.",
     "expectedSource": "any",
     "reason": "The pull-request lease is a user-authored commit status while the merge-group continuation is a GitHub Actions check."
   },

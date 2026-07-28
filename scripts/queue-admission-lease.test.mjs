@@ -48,12 +48,16 @@ test('queue admission lease has distinct PR-head and merge-group authorities', (
   assert.equal(CONTRACT.rulesetActivation.rulesetId, 19057118);
   assert.equal(
     CONTRACT.rulesetActivation.rulesetName,
-    'Buildchain dev merge queue: admitted dev channel family',
+    'Buildchain dev merge queue: admitted default dev channel',
   );
   assert.deepEqual(CONTRACT.rulesetActivation.target, {
-    include: CONTRACT.admittedFamily.include,
-    exclude: CONTRACT.admittedFamily.exclude,
+    include: ['~DEFAULT_BRANCH'],
+    exclude: [],
   });
+  assert.match(
+    CONTRACT.rulesetActivation.providerConstraint,
+    /reject wildcard ref targets/u,
+  );
   assert.equal(CONTRACT.rulesetActivation.expectedSource, 'any');
 });
 

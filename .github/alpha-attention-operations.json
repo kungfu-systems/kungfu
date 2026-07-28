@@ -79,7 +79,7 @@
       }
     ],
     "requiredActiveRulesets": [
-      "Buildchain dev merge queue: admitted dev channel family"
+      "Buildchain dev merge queue: admitted default dev channel"
     ],
     "requiredLiveReadback": {
       "issues": true,
