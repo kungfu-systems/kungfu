@@ -527,7 +527,7 @@ def local_dogfood_residency(
     qualified = (
         installed.get("KUNGFU_INSTALLED_QUALIFIED") == "true"
         and installed.get("KUNGFU_INSTALLED_INTEGRATED") == "true"
-        and installed.get("KUNGFU_INSTALLED_MAINLINE_REF") == "origin/dev/v4/v4.0"
+        and installed.get("KUNGFU_INSTALLED_MAINLINE_REF") == "origin/HEAD"
     )
     artifact_matches = bool(
         artifact.is_dir()

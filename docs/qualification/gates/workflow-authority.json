@@ -1168,10 +1168,26 @@
           "authority": "qualification",
           "publication": "none",
           "receipt": "diagnostic",
-          "definitionDigest": "sha256:9380d87f5e8e7ddb59fd62e973780b7cd1eb880f885644802f91696f33a8f82f",
+          "definitionDigest": "sha256:5500861f95f91b96e669f0293b2bf0e9cf995da8617322ee3436ef24fd90944d",
           "credentials": {"githubToken":"write","oidc":false,"repositorySecrets":["KUNGFU_GITHUB_TOKEN"],"inheritedSecrets":false,"environment":null},
           "externalActions": ["kungfu-systems/buildchain/.github/workflows/dev-alpha-candidate-patrol.yml@1ccbb93811ccd52cd83eda156d89fba05cc60c75"],
           "steps": []
+        },
+        {
+          "id": "resolve-channels",
+          "authority": "qualification",
+          "publication": "none",
+          "receipt": "diagnostic",
+          "definitionDigest": "sha256:ef44cbee16db4a763932d0af5d6dad49f8306b9190795624b0d8ceb09d674c9f",
+          "credentials": {"githubToken":"none","oidc":false,"repositorySecrets":[],"inheritedSecrets":false,"environment":null},
+          "externalActions": [],
+          "steps": [
+            {
+              "index": 1,
+              "label": "id:channels",
+              "definitionDigest": "sha256:d02b3b1515239103b67aa029f4e52b186c20c358f3861ddc1d3d543d2465f268"
+            }
+          ]
         }
       ]
     },
@@ -1185,7 +1201,7 @@
           "authority": "diagnostic",
           "publication": "none",
           "receipt": "none",
-          "definitionDigest": "sha256:4719fe25e836726b5c018fb944c3a7ad5c92df6fbf40b2d4c08da7842f8e3b0d",
+          "definitionDigest": "sha256:a05982a2c1f611924354bf60fa038b8de9e34188f638622bb1edc0c8032b9610",
           "credentials": {"githubToken":"write","oidc":false,"repositorySecrets":[],"inheritedSecrets":false,"environment":null},
           "externalActions": [],
           "steps": [
@@ -1193,7 +1209,7 @@
               "index": 1,
               "label": "name:Sync tracking issue with patrol result",
               "authority": "diagnostic-write",
-              "definitionDigest": "sha256:835f590a6bebce40d2d6b76d18db0393aec1be7e73db1f5e57c13ec17a305e76"
+              "definitionDigest": "sha256:9a52c75f071708a68e46fe539e4714efde77cec2ec7d571f8e17c28fca4800b0"
             }
           ]
         },
@@ -1433,19 +1449,19 @@
           "authority": "qualification",
           "publication": "none",
           "receipt": "diagnostic",
-          "definitionDigest": "sha256:1ad6732f78db95c20eec8bac44712edbb490854fba89b2b93940d79c3e4b21db",
+          "definitionDigest": "sha256:ad67cdff4720c1bcba7c914adc7b559a4df83889e9de13339351330fb6724053",
           "credentials": {"githubToken":"read","oidc":false,"repositorySecrets":[],"inheritedSecrets":false,"environment":null},
           "externalActions": [],
           "steps": [
             {
               "index": 1,
               "label": "name:Prepare locked consumer source on Unix",
-              "definitionDigest": "sha256:c2441b83ee817b5a2f364aa4ff6cf83af476ad641d95d5733fd8c5ff3fd638bf"
+              "definitionDigest": "sha256:06f3f16a064357a77d1b0ab6ac73210a2b38ad2da63db141314a736937ad2ac3"
             },
             {
               "index": 2,
               "label": "name:Prepare locked consumer source on Windows",
-              "definitionDigest": "sha256:40335037e472fda9110da91e5826ddfc257a50d5e795a9c77e80566b6e55e11b"
+              "definitionDigest": "sha256:29540ee196dfba3aff39e2b3e66f0dfcb939c1c9c15a3bd702f729e52826d43b"
             },
             {
               "index": 3,
@@ -1715,14 +1731,14 @@
           "authority": "qualification",
           "publication": "none",
           "receipt": "diagnostic",
-          "definitionDigest": "sha256:8e39c8aa0b5ddda8f2706c636d32aaf334298243eac10e1002ba35a570f0386d",
+          "definitionDigest": "sha256:6be4fe626f8c0a3d78dd41ec929beca909157526e194fb8fc1a09e15472fdc64",
           "credentials": {"githubToken":"read","oidc":false,"repositorySecrets":[],"inheritedSecrets":false,"environment":null},
           "externalActions": ["actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5","actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020","actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093","actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02"],
           "steps": [
             {
               "index": 1,
               "label": "id:build",
-              "definitionDigest": "sha256:8aa3b74e83df71de4f73cecfe2959dd747c999916fe1c8ab4c51efb7ed268660"
+              "definitionDigest": "sha256:60c7b8a2f19b6695469e6ccc4aeba22304e251bb83623a4359d201a79beeff8b"
             },
             {
               "index": 2,

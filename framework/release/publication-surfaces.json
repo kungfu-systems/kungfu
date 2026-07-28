@@ -148,7 +148,7 @@
             "product-alpha",
             "product-binaries"
           ],
-          "sourceRoot": "sha256:edec638207894f10a184613550cd9ee355d92f2922f381485f7e7ba45721d4a7"
+          "sourceRoot": "sha256:58c33a4e8558f4a19c4a24774f2cd13abfcfdb05cb21bf8e14b180e0f8ab6449"
         },
         {
           "path": ".github/workflows/stable-candidate-patrol.yml",
@@ -167,7 +167,7 @@
             "product-alpha",
             "product-stable"
           ],
-          "sourceRoot": "sha256:1dbacd2884961ba8c76451f9f167a4915109b430cce6d2f64fab52818eaf1dd9"
+          "sourceRoot": "sha256:8655685b9293c2af41c0b19b8be3123b8baf23679fd72105f8b27409338bf9ad"
         },
         {
           "path": ".github/workflows/docs-check.yml",
@@ -198,7 +198,7 @@
             "product-alpha",
             "product-stable"
           ],
-          "sourceRoot": "sha256:4a2f0d9207bbf64962833c8188d1afc5c95fb69a3602d6abc6ba338495643f8a"
+          "sourceRoot": "sha256:d855b0bed551c031f314b8223d45729d2a4609737bacf573ac1683188227b1fe"
         },
         {
           "path": ".github/workflows/kfd-verifier-drift.yml",
@@ -251,7 +251,7 @@
             "portable-format",
             "site-package"
           ],
-          "sourceRoot": "sha256:3cef6c2cadd0f5402f406f81e859f10c2f5909ad71f248bbb06263d80e08293e"
+          "sourceRoot": "sha256:1700c2c52b5ff4b09016013b2cf643fc570560a31c805434153d524a83e2f073"
         },
         {
           "path": ".github/workflows/release-new-version.yml",
@@ -792,5 +792,5 @@
       }
     }
   ],
-  "registryRoot": "sha256:cdf325f79cea30edcf9f54426bffb98c1ce3759030bad71a3f4f125dc27f89dd"
+  "registryRoot": "sha256:87e7068c471f1f39db98ac2277e6c627b61c992cb9859d2e300fc6ed2f8da899"
 }

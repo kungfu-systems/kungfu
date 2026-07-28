@@ -9,18 +9,17 @@ import os from 'node:os';
 import path from 'node:path';
 import process from 'node:process';
 import { fileURLToPath, pathToFileURL } from 'node:url';
-
 import {
   createCandidateTimeline,
   formatCandidateTimelineReport,
 } from '@kungfu-tech/buildchain-alpha/candidate-timeline';
-
 import {
   queueAdmissionRequiredContexts,
   validateDevRequiredLatencyBaseline,
 } from './cancel-dequeued-merge-group-runs.mjs';
 import {
   collectLatestMergedPullWindow,
+  isAdmittedDevBranch,
   latencyOnlyEvidence,
   parseDevRequiredLatencyArgs,
   requiredMergeQueueWindow,
@@ -1971,6 +1970,11 @@ async function main() {
   if (!/^[^/]+\/[^/]+$/.test(repository))
     throw new Error('cannot resolve GitHub repository');
   const token = githubToken();
+  if (!options.branch)
+    options.branch =
+      (await githubJson(`/repos/${repository}`, token)).default_branch || '';
+  if (!isAdmittedDevBranch(options.branch))
+    throw new Error(`repository default is not admitted: ${options.branch}`);
   const branchPath = encodeURIComponent(options.branch);
   const pullRoute = `/repos/${repository}/pulls?state=all&base=${encodeURIComponent(options.branch)}&sort=updated&direction=desc`;
   const [effectiveRules, pullWindow] = await Promise.all([

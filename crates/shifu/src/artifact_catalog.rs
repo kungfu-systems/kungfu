@@ -9,11 +9,26 @@ use std::path::Path;
 use std::process::{Command, Stdio};
 use std::time::{SystemTime, UNIX_EPOCH};
 
+use shifu_core::json;
+
 const CONTRACT: &str = include_str!("../../../docs/shifu/artifact-contract.json");
 const SCHEMA: &str =
     include_str!("../../../docs/shifu/schema/local-artifact-catalog-v1.schema.json");
 const RECEIPT_SCHEMA: &str =
     include_str!("../../../docs/shifu/schema/local-promotion-receipt-v1.schema.json");
+
+pub fn product_mainline_ref() -> String {
+    let contract = json::parse(CONTRACT).expect("embedded artifact contract must be valid JSON");
+    let value = contract
+        .get("selection")
+        .map(|selection| selection.str_of("productMainlineRef"))
+        .unwrap_or("");
+    assert!(
+        !value.is_empty(),
+        "embedded artifact contract must declare productMainlineRef"
+    );
+    value.to_string()
+}
 
 pub fn run_discovery(args: &[String]) -> ! {
     match args {
@@ -323,7 +338,7 @@ mod tests {
 
     #[test]
     fn compact_branch_keeps_identifying_middle_and_suffix() {
-        assert_eq!(compact_branch("dev/v4/v4.0", false), "dev/v4/v4.0");
+        assert_eq!(compact_branch("dev/current", false), "dev/current");
         assert_eq!(
             compact_branch("feature/profile-kfd3-qualification-s1", false),
             "feature/profile-kfd3…ation-s1"

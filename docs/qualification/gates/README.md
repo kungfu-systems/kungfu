@@ -95,7 +95,7 @@ only, post-merge reruns are excluded, and runner execution time alone is not the
 metric.
 
 The retained baseline must change in the same protected-branch transition as
-the live required-context authority. The current `dev/v4/v4.0` effective rules
+the live required-context authority. The admitted default dev branch effective rules
 require both `Candidate source acceptance / check` and the stable
 `affected-native / linux` aggregate. A ruleset change without the matching
 baseline transition therefore fails closed before samples are collected.
@@ -170,7 +170,6 @@ authority while skipping the large native diagnostic artifact downloads:
 ```sh
 ./shifu gate:latency:measure \
   --repository kungfu-systems/kungfu \
-  --branch dev/v4/v4.0 \
   --limit 30 \
   --latency-only \
   --output /tmp/kungfu-dev-latency-only.json
@@ -266,7 +265,7 @@ contains at least 20 total samples and 10 native samples; otherwise the machine
 verdict remains non-qualifying. Rebuild it with:
 
 ```sh
-./shifu gate:latency:measure --branch dev/v4/v4.0 --limit 30
+./shifu gate:latency:measure --limit 30
 ```
 
 Dev admission is intentionally narrower than asynchronous observation. The
@@ -383,7 +382,9 @@ and what credential surface it receives. Both checks must pass.
 ./shifu gate plan alpha-pr --platform linux
 ./shifu gate run source.acceptance --receipt build/gate-receipts/source.json
 ./shifu check:gate-catalog
-gh workflow run gate-measurement.yml --ref dev/v4/v4.0 -f source-ref=<FULL_SHA>
+gh workflow run gate-measurement.yml \
+  --ref "$(git symbolic-ref --short refs/remotes/origin/HEAD | sed 's#^origin/##')" \
+  -f source-ref=<FULL_SHA>
 ```
 
 Focused measurements bootstrap from the locked source with the self-hosted

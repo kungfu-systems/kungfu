@@ -11,6 +11,7 @@ import {
   observeComposition,
   verifyComposition,
 } from '../framework/project-cut/src/composition.mjs';
+import { devMergeBaseCandidates } from './candidate-timeline-events.cjs';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 function git(args) {
@@ -21,11 +22,7 @@ function git(args) {
   });
   return result.status === 0 ? result.stdout.trim() : '';
 }
-const candidates = [
-  process.env.GITHUB_BASE_REF ? `origin/${process.env.GITHUB_BASE_REF}` : '',
-  'origin/dev/v4/v4.0',
-  'dev/v4/v4.0',
-].filter(Boolean);
+const candidates = devMergeBaseCandidates();
 const base = candidates
   .map((ref) => git(['merge-base', ref, 'HEAD']))
   .find(Boolean);
