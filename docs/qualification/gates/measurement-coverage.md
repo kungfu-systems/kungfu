@@ -20,7 +20,7 @@ Gate's complete platform set.
 <!-- BEGIN GENERATED GATE MEASUREMENTS -->
 | Gate | Coverage | Source-bound observations |
 | --- | --- | --- |
-| `gate.catalog` | measured | [linux: 450 ms @ 3c8c3dd54](../evidence/gate-measurements/3c8c3dd547/linux/episode/receipt.json)<br>[macos: 1088 ms @ 3c8c3dd54](../evidence/gate-measurements/3c8c3dd547/macos/episode/receipt.json)<br>[windows: 4156 ms @ 3c8c3dd54](../evidence/gate-measurements/3c8c3dd547/windows/episode/receipt.json) |
+| `gate.catalog` | measured | [linux: 469 ms @ ec0d1c2f2](../evidence/gate-measurements/ec0d1c2f2d/linux/receipt.json)<br>[macos: 790 ms @ ec0d1c2f2](../evidence/gate-measurements/ec0d1c2f2d/macos/receipt.json)<br>[windows: 1894 ms @ ec0d1c2f2](../evidence/gate-measurements/ec0d1c2f2d/windows/receipt.json) |
 | `governance.dco` | measured | [linux: 12000 ms @ e90b0fb2b](../evidence/gate-measurements/e90b0fb2b/linux/governance.dco.controller-receipt.json) |
 | `governance.adr-delivery` | measured | [linux: 38 ms @ 6b451a4e5](../evidence/gate-measurements/6b451a4e/linux/receipt.json)<br>[macos: 111 ms @ 6b451a4e5](../evidence/gate-measurements/6b451a4e/macos/receipt.json)<br>[windows: 101 ms @ 6b451a4e5](../evidence/gate-measurements/6b451a4e/windows/receipt.json) |
 | `governance.buildchain-config` | measured | [linux: 10000 ms @ aec4e2f07](../evidence/gate-measurements/aec4e2f072/linux/governance.buildchain-config.controller-receipt.json) |
