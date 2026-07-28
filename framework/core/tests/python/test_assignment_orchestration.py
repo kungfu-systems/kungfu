@@ -140,6 +140,211 @@ def _transition(state, terminal_updates=None, acceptance_updates=None):
     }
 
 
+def _typed_ref(
+    kind,
+    marker,
+    *,
+    identity=None,
+    fact_world="work-control-world",
+    cut_root=None,
+    status="current",
+):
+    return {
+        "kind": kind,
+        "identity": identity or f"{kind}-{marker}",
+        "root": _sha256(marker),
+        "factWorld": fact_world,
+        "cutRoot": cut_root or _sha256("0"),
+        "schema": f"example.{kind}/v1",
+        "status": status,
+    }
+
+
+def _settlement(
+    publication_state="published",
+    *,
+    fact_world="work-control-world",
+    cut_root=None,
+):
+    cut_root = cut_root or _sha256("0")
+    lag_started_at = (
+        None if publication_state == "published" else "2026-07-28T03:00:01Z"
+    )
+    failure = {"present": False, "reference": None}
+    if publication_state == "failed":
+        failure = {
+            "present": True,
+            "reference": _typed_ref(
+                "publication-failure",
+                "3",
+                fact_world=fact_world,
+                cut_root=cut_root,
+                status="visible",
+            ),
+        }
+    return {
+        "factWorld": fact_world,
+        "factCutRoot": cut_root,
+        "references": {
+            "completionClaim": _typed_ref(
+                "completion-claim",
+                "b",
+                fact_world=fact_world,
+                cut_root=cut_root,
+                status="claimed-complete",
+            ),
+            "assessment": _typed_ref(
+                "assessment",
+                "c",
+                fact_world=fact_world,
+                cut_root=cut_root,
+                status="fit",
+            ),
+            "decision": _typed_ref(
+                "decision",
+                "d",
+                fact_world=fact_world,
+                cut_root=cut_root,
+                status="accepted",
+            ),
+            "admissionReceipt": _typed_ref(
+                "admission-receipt",
+                "e",
+                fact_world=fact_world,
+                cut_root=cut_root,
+                status="admitted",
+            ),
+            "episode": _typed_ref(
+                "episode",
+                "f",
+                fact_world=fact_world,
+                cut_root=cut_root,
+                status="sealed",
+            ),
+            "projectCut": _typed_ref(
+                "project-cut",
+                "1",
+                fact_world=fact_world,
+                cut_root=cut_root,
+                status="settled",
+            ),
+            "deliveryEvidence": _typed_ref(
+                "delivery-evidence",
+                "2",
+                fact_world=fact_world,
+                cut_root=cut_root,
+                status="verified",
+            ),
+        },
+        "publication": {
+            "state": publication_state,
+            "lagStartedAt": lag_started_at,
+            "failure": failure,
+        },
+    }
+
+
+def _seal_binding_manifest(manifest):
+    manifest.pop("bindingRoot", None)
+    manifest["bindingRoot"] = assignment_orchestration.semantic_root(manifest)
+    return manifest
+
+
+def _family_binding_manifest(state, publication_state="published"):
+    fact_world = "work-control-world"
+    cut_root = _sha256("0")
+    children = []
+    for index, child in enumerate(state["children"], start=4):
+        marker = f"{index:x}"[-1]
+        settlement = {"present": False, "value": None}
+        if (child["terminal"] or {}).get("state") == "merged":
+            settlement = {
+                "present": True,
+                "value": _settlement(
+                    publication_state,
+                    fact_world=fact_world,
+                    cut_root=cut_root,
+                ),
+            }
+        work_definition = _typed_ref(
+            "work-definition",
+            marker,
+            identity=f"{child['assignmentId']}:work-definition",
+            fact_world=fact_world,
+            cut_root=cut_root,
+            status="accepted",
+        )
+        work_definition["root"] = child["workDefinitionRoot"]
+        children.append(
+            {
+                "assignmentId": child["assignmentId"],
+                "assignmentState": _typed_ref(
+                    "assignment-state",
+                    marker,
+                    identity=child["assignmentId"],
+                    fact_world=fact_world,
+                    cut_root=cut_root,
+                    status=("terminal" if child["terminal"] is not None else "active"),
+                ),
+                "workDefinition": work_definition,
+                "pursuit": _typed_ref(
+                    "pursuit",
+                    "5",
+                    fact_world=fact_world,
+                    cut_root=cut_root,
+                    status="active",
+                ),
+                "atlas": _typed_ref(
+                    "atlas",
+                    "6",
+                    fact_world=fact_world,
+                    cut_root=cut_root,
+                    status="current",
+                ),
+                "executionWarrant": _typed_ref(
+                    "execution-warrant",
+                    "7",
+                    fact_world=fact_world,
+                    cut_root=cut_root,
+                    status="active",
+                ),
+                "settlement": settlement,
+            }
+        )
+    manifest = {
+        "schema": assignment_orchestration.FAMILY_BINDING_V2_SCHEMA,
+        "v1StateRoot": state["stateRoot"],
+        "factWorld": fact_world,
+        "factCutRoot": cut_root,
+        "initiative": {
+            "initiativeId": state["initiative"]["initiativeId"],
+            "pursuit": _typed_ref(
+                "pursuit",
+                "1",
+                fact_world=fact_world,
+                cut_root=cut_root,
+                status="active",
+            ),
+            "atlas": _typed_ref(
+                "atlas",
+                "2",
+                fact_world=fact_world,
+                cut_root=cut_root,
+                status="current",
+            ),
+            "acceptancePolicy": _typed_ref(
+                "acceptance-policy",
+                "3",
+                fact_world=fact_world,
+                cut_root=cut_root,
+                status="current",
+            ),
+        },
+        "children": children,
+    }
+    return _seal_binding_manifest(manifest)
+
+
 def test_initiative_family_state_is_rooted_bounded_and_parent_inert():
     state = assignment_orchestration.create_family_state(_family_blueprint())
     verification = assignment_orchestration.verify_family_state(state)
@@ -160,6 +365,24 @@ def test_initiative_family_state_is_rooted_bounded_and_parent_inert():
     blueprint["initiative"]["executionClaim"] = "forbidden"
     with pytest.raises(ValueError, match="invalid field set"):
         assignment_orchestration.create_family_state(blueprint)
+
+
+def test_retained_wave_0_v1_fixture_preserves_exact_bytes_and_root():
+    fixture = (
+        Path(__file__).resolve().parents[1]
+        / "fixtures"
+        / "assignment-family-wave-0-state-v1.json"
+    )
+    exact_bytes = fixture.read_bytes()
+    state = json.loads(exact_bytes)
+
+    assert exact_bytes == (
+        assignment_orchestration.canonical_json(state) + "\n"
+    ).encode("utf-8")
+    assert state["stateRoot"] == (
+        "sha256:15b306c3c3ce52b4caf4a0fa0419f191d36e3a51e1cfdc54ebb2110e4aa3163a"
+    )
+    assert assignment_orchestration.validate_family_state(state) == state
 
 
 @pytest.mark.parametrize(
@@ -442,6 +665,318 @@ def test_family_cli_writes_successor_without_overwriting_prior_state(tmp_path):
     verified = runner.invoke(kfc, ["work", "family-verify", str(successor_path)])
     assert verified.exit_code == 0, verified.output
     assert json.loads(verified.output)["ok"] is True
+
+
+def test_family_v2_upgrade_is_explicit_and_projects_exact_v1_state():
+    v1_state = assignment_orchestration.create_family_state(_family_blueprint())
+    v1_bytes = assignment_orchestration.canonical_json(v1_state)
+    manifest = _family_binding_manifest(v1_state)
+
+    upgrade = assignment_orchestration.upgrade_family_state_v2(v1_state, manifest)
+    successor = upgrade["successorState"]
+    verification = assignment_orchestration.verify_family_state_v2(successor)
+    under_typed = assignment_orchestration.verify_family_state_v2(v1_state)
+
+    assert upgrade["predecessorStateRoot"] == v1_state["stateRoot"]
+    assert upgrade["v1ProjectionRoot"] == v1_state["stateRoot"]
+    assert upgrade["typedBindingRoot"] == manifest["bindingRoot"]
+    assert upgrade["successorStateRoot"] == successor["stateRoot"]
+    assert assignment_orchestration.project_family_state_v1(successor) == v1_state
+    assert assignment_orchestration.canonical_json(v1_state) == v1_bytes
+    assert verification["typingState"] == "fully-typed-v2"
+    assert verification["projectionMergeIsCompletion"] is False
+    assert under_typed["typingState"] == "under-typed-v1"
+    assert under_typed["fullyTyped"] is False
+    assert "work-definition" in under_typed["missingSemanticBindings"]
+    assert assignment_orchestration.family_contract()["schema"].endswith("/v1")
+    assert (
+        assignment_orchestration.family_contract_v2()["predecessorContractRoot"]
+        == assignment_orchestration.family_contract()["contractRoot"]
+    )
+
+
+def test_family_v2_cli_upgrade_writes_only_the_successor_state(tmp_path):
+    runner = CliRunner()
+    v1_state = assignment_orchestration.create_family_state(_family_blueprint())
+    state_path = tmp_path / "state-v1.json"
+    binding_path = tmp_path / "bindings-v2.json"
+    successor_path = tmp_path / "state-v2.json"
+    state_path.write_text(json.dumps(v1_state), encoding="utf-8")
+    binding_path.write_text(
+        json.dumps(_family_binding_manifest(v1_state)), encoding="utf-8"
+    )
+
+    result = runner.invoke(
+        kfc,
+        [
+            "work",
+            "family-upgrade-v2",
+            str(state_path),
+            str(binding_path),
+            "--out",
+            str(successor_path),
+        ],
+    )
+
+    assert result.exit_code == 0, result.output
+    successor = json.loads(successor_path.read_text(encoding="utf-8"))
+    assert successor["schema"] == assignment_orchestration.FAMILY_STATE_V2_SCHEMA
+    assert successor["v1ProjectionRoot"] == v1_state["stateRoot"]
+    assert json.loads(state_path.read_text(encoding="utf-8")) == v1_state
+
+
+def test_family_v2_transition_requires_typed_settlement_and_exposes_publication_lag():
+    v1_state = assignment_orchestration.create_family_state(_family_blueprint())
+    v2_state = assignment_orchestration.upgrade_family_state_v2(
+        v1_state, _family_binding_manifest(v1_state)
+    )["successorState"]
+    v1_transition = _transition(
+        v1_state,
+        terminal_updates=[{"assignmentId": "child-a", "terminal": _merged_terminal()}],
+    )
+    successor_projection = assignment_orchestration.transition_family_state(
+        v1_state, v1_transition
+    )
+    transition = {
+        "schema": assignment_orchestration.FAMILY_TRANSITION_V2_SCHEMA,
+        "expectedStateRoot": v2_state["stateRoot"],
+        "v1Transition": v1_transition,
+        "typedBindingManifest": _family_binding_manifest(
+            successor_projection, publication_state="pending"
+        ),
+    }
+
+    successor = assignment_orchestration.transition_family_state_v2(
+        v2_state, transition
+    )
+    verification = assignment_orchestration.verify_family_state_v2(successor)
+    settlement = successor["typedBindings"]["children"][0]["settlement"]["value"]
+
+    assert successor["previousStateRoot"] == v2_state["stateRoot"]
+    assert successor["predecessorStateRoot"] == v1_state["stateRoot"]
+    assert successor["v1ProjectionRoot"] == successor_projection["stateRoot"]
+    assert settlement["references"]["decision"]["kind"] == "decision"
+    assert settlement["references"]["admissionReceipt"]["status"] == "admitted"
+    assert settlement["publication"]["state"] == "pending"
+    assert settlement["publication"]["lagStartedAt"]
+    assert verification["pendingPublicationCount"] == 1
+    assert verification["publicationComplete"] is False
+    assert verification["completionQualified"] is False
+
+
+def test_family_v2_completion_requires_all_merged_accepted_and_published():
+    initial = assignment_orchestration.create_family_state(_family_blueprint())
+    settled = assignment_orchestration.transition_family_state(
+        initial,
+        _transition(
+            initial,
+            terminal_updates=[
+                {
+                    "assignmentId": child["assignmentId"],
+                    "terminal": _merged_terminal(),
+                }
+                for child in initial["children"]
+            ],
+            acceptance_updates=[
+                {
+                    "acceptanceId": acceptance["acceptanceId"],
+                    "status": "proved",
+                    "evidenceRoots": [_sha256(str(index))],
+                }
+                for index, acceptance in enumerate(initial["acceptance"])
+            ],
+        ),
+    )
+    typed = assignment_orchestration.upgrade_family_state_v2(
+        settled, _family_binding_manifest(settled, publication_state="published")
+    )["successorState"]
+
+    verification = assignment_orchestration.verify_family_state_v2(typed)
+
+    assert verification["waveDrained"] is True
+    assert verification["mergedSettlementCount"] == len(initial["children"])
+    assert verification["publicationComplete"] is True
+    assert verification["completionQualified"] is True
+    assert verification["projectionMergeIsCompletion"] is False
+
+
+@pytest.mark.parametrize("warrant_status", ["stale", "revoked"])
+def test_family_v2_rejects_stale_or_revoked_warrant(warrant_status):
+    state = assignment_orchestration.create_family_state(_family_blueprint())
+    manifest = _family_binding_manifest(state)
+    manifest["children"][0]["executionWarrant"]["status"] = warrant_status
+    _seal_binding_manifest(manifest)
+
+    with pytest.raises(ValueError, match="active, not stale or revoked"):
+        assignment_orchestration.upgrade_family_state_v2(state, manifest)
+
+
+@pytest.mark.parametrize("missing_field", ["decision", "admissionReceipt"])
+def test_family_v2_merged_settlement_requires_decision_and_admission(missing_field):
+    initial = assignment_orchestration.create_family_state(_family_blueprint())
+    merged = assignment_orchestration.transition_family_state(
+        initial,
+        _transition(
+            initial,
+            terminal_updates=[
+                {"assignmentId": "child-a", "terminal": _merged_terminal()}
+            ],
+        ),
+    )
+    manifest = _family_binding_manifest(merged)
+    references = manifest["children"][0]["settlement"]["value"]["references"]
+    references.pop(missing_field)
+    _seal_binding_manifest(manifest)
+
+    with pytest.raises(ValueError, match="invalid field set"):
+        assignment_orchestration.upgrade_family_state_v2(merged, manifest)
+
+
+@pytest.mark.parametrize(
+    ("coordinate", "wrong_value"),
+    [
+        ("factWorld", "other-world"),
+        ("factCutRoot", _sha256("f")),
+    ],
+)
+def test_family_v2_rejects_self_consistent_settlement_from_another_cut(
+    coordinate, wrong_value
+):
+    initial = assignment_orchestration.create_family_state(_family_blueprint())
+    merged = assignment_orchestration.transition_family_state(
+        initial,
+        _transition(
+            initial,
+            terminal_updates=[
+                {"assignmentId": "child-a", "terminal": _merged_terminal()}
+            ],
+        ),
+    )
+    manifest = _family_binding_manifest(merged)
+    settlement = manifest["children"][0]["settlement"]["value"]
+    settlement[coordinate] = wrong_value
+    reference_coordinate = "factWorld" if coordinate == "factWorld" else "cutRoot"
+    for reference in settlement["references"].values():
+        reference[reference_coordinate] = wrong_value
+    _seal_binding_manifest(manifest)
+
+    with pytest.raises(ValueError, match="does not match the family binding"):
+        assignment_orchestration.upgrade_family_state_v2(merged, manifest)
+
+
+@pytest.mark.parametrize(
+    ("field", "wrong_status", "expected_status"),
+    [
+        ("completionClaim", "declared", "claimed-complete"),
+        ("assessment", "qualified", "fit"),
+        ("decision", "proposed", "accepted"),
+        ("episode", "open", "sealed"),
+        ("projectCut", "prepared", "settled"),
+        ("deliveryEvidence", "missing", "verified"),
+    ],
+)
+def test_family_v2_settlement_requires_exact_authority_status(
+    field, wrong_status, expected_status
+):
+    initial = assignment_orchestration.create_family_state(_family_blueprint())
+    merged = assignment_orchestration.transition_family_state(
+        initial,
+        _transition(
+            initial,
+            terminal_updates=[
+                {"assignmentId": "child-a", "terminal": _merged_terminal()}
+            ],
+        ),
+    )
+    manifest = _family_binding_manifest(merged)
+    references = manifest["children"][0]["settlement"]["value"]["references"]
+    references[field]["status"] = wrong_status
+    _seal_binding_manifest(manifest)
+
+    with pytest.raises(ValueError, match=rf"status must be {expected_status}"):
+        assignment_orchestration.upgrade_family_state_v2(merged, manifest)
+
+
+def test_family_v2_assignment_state_status_must_match_v1_lifecycle():
+    state = assignment_orchestration.create_family_state(_family_blueprint())
+    manifest = _family_binding_manifest(state)
+    manifest["children"][0]["assignmentState"]["status"] = "terminal"
+    _seal_binding_manifest(manifest)
+
+    with pytest.raises(ValueError, match=r"assignmentState\.status must be active"):
+        assignment_orchestration.upgrade_family_state_v2(state, manifest)
+
+
+def test_family_v2_work_definition_identity_must_match_child():
+    state = assignment_orchestration.create_family_state(_family_blueprint())
+    manifest = _family_binding_manifest(state)
+    manifest["children"][0]["workDefinition"]["identity"] = "child-b:work-definition"
+    _seal_binding_manifest(manifest)
+
+    with pytest.raises(
+        ValueError, match="work-definition reference identity does not match child"
+    ):
+        assignment_orchestration.upgrade_family_state_v2(state, manifest)
+
+
+@pytest.mark.parametrize(
+    ("mutation", "message"),
+    [
+        (
+            lambda manifest: manifest["initiative"].update(
+                {
+                    "pursuit": manifest["initiative"]["atlas"],
+                    "atlas": manifest["initiative"]["pursuit"],
+                }
+            ),
+            r"initiative\.pursuit\.kind must be pursuit",
+        ),
+        (
+            lambda manifest: manifest["children"][0]["atlas"].update(
+                {"factWorld": "wrong-world"}
+            ),
+            "wrong fact world",
+        ),
+        (
+            lambda manifest: manifest["children"][0]["pursuit"].update(
+                {"cutRoot": _sha256("f")}
+            ),
+            "wrong cut",
+        ),
+        (
+            lambda manifest: manifest.update({"v1StateRoot": _sha256("f")}),
+            "wrong v1 predecessor state",
+        ),
+    ],
+)
+def test_family_v2_rejects_swapped_or_misbound_semantic_references(mutation, message):
+    state = assignment_orchestration.create_family_state(_family_blueprint())
+    manifest = _family_binding_manifest(state)
+    mutation(manifest)
+    _seal_binding_manifest(manifest)
+
+    with pytest.raises(ValueError, match=message):
+        assignment_orchestration.upgrade_family_state_v2(state, manifest)
+
+
+def test_family_v2_rejects_hidden_publication_lag():
+    initial = assignment_orchestration.create_family_state(_family_blueprint())
+    merged = assignment_orchestration.transition_family_state(
+        initial,
+        _transition(
+            initial,
+            terminal_updates=[
+                {"assignmentId": "child-a", "terminal": _merged_terminal()}
+            ],
+        ),
+    )
+    manifest = _family_binding_manifest(merged, publication_state="pending")
+    publication = manifest["children"][0]["settlement"]["value"]["publication"]
+    publication["lagStartedAt"] = None
+    _seal_binding_manifest(manifest)
+
+    with pytest.raises(ValueError, match="must be an ISO-8601 timestamp"):
+        assignment_orchestration.upgrade_family_state_v2(merged, manifest)
 
 
 def test_cli_run_preserves_an_intentional_machine_readable_exit(monkeypatch):
