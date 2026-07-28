@@ -352,6 +352,7 @@ export function sourceAcceptancePlan(files, evidenceBaseCommit = '') {
         'scripts/shifu-documentation-consumers.test.mjs',
         'scripts/kungfu-xinfa-consumer.test.mjs',
         'scripts/check-kungfu-gate-catalog.test.mjs',
+        'scripts/linux-arm64-alpha-qualification-workflow.test.mjs',
         'scripts/affected-native-proof.test.mjs',
         'scripts/verify-kungfu-release-admission.test.mjs',
         'crates/xinfa/tooling/check-boundary.test.mjs',

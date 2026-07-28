@@ -749,7 +749,7 @@
     {
       "path": ".github/workflows/build.yml",
       "authority": "product-publication",
-      "definitionDigest": "sha256:ddf4488ea8a4ef1ec62115d43646924a3f1ee7c46d2489c8620d4bd8b8fa033f",
+      "definitionDigest": "sha256:aadbb97771ffd89eaec3f3ed67ef3925e1730472a5a722c1a8b956c8ee71b6c1",
       "jobs": [
         {
           "id": "auditable-demo",
@@ -899,28 +899,6 @@
               "definitionDigest": "sha256:a41f8263042a7679a2140cc228d4ea1bdc2c2713cf76f7bb298493e2b8e02a14"
             }
           ]
-        },
-        {
-          "id": "hub-cli-linux-arm64",
-          "authority": "qualification",
-          "publication": "none",
-          "receipt": "diagnostic",
-          "definitionDigest": "sha256:ba5be3ddff4f52b785d8ffc173adb374b0db519ddb65a1ae611eea2283c461c3",
-          "credentials": {
-            "githubToken": "write",
-            "oidc": true,
-            "repositorySecrets": [
-              "BUILDCHAIN_ARTIFACT_RELAY_S3_DOWNLOAD_ROLE_ARN",
-              "BUILDCHAIN_ARTIFACT_RELAY_S3_ROLE_ARN",
-              "BUILDCHAIN_ARTIFACT_RELAY_S3_UPLOAD_ROLE_ARN"
-            ],
-            "inheritedSecrets": false,
-            "environment": null
-          },
-          "externalActions": [
-            "kungfu-systems/buildchain/.github/workflows/.build.yml@bfe43b0fe5577f15d2af01bc542de8a8ce587457"
-          ],
-          "steps": []
         },
         {
           "id": "kungfu-phase-b",
@@ -1910,6 +1888,66 @@
               "label": "name:Verify product-owned fixtures",
               "authority": "qualification",
               "definitionDigest": "sha256:2250b93c5189f38bcbac7c7da2220a55e73148d7091e9ab548b01ff58f681654"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "path": ".github/workflows/linux-arm64-alpha-qualification.yml",
+      "authority": "qualification",
+      "definitionDigest": "sha256:e82fc4ee99792b32cb67a6c4f00a8b76efd19eb1067c6b509c083885f21d891f",
+      "jobs": [
+        {
+          "id": "artifact",
+          "authority": "qualification",
+          "publication": "none",
+          "receipt": "diagnostic",
+          "definitionDigest": "sha256:e7014e962c7d92dc5e39467025aae54fdfd622162cf813b7506ae6d3cdc212a6",
+          "credentials": {
+            "githubToken": "write",
+            "oidc": true,
+            "repositorySecrets": [
+              "BUILDCHAIN_ARTIFACT_RELAY_S3_DOWNLOAD_ROLE_ARN",
+              "BUILDCHAIN_ARTIFACT_RELAY_S3_ROLE_ARN",
+              "BUILDCHAIN_ARTIFACT_RELAY_S3_UPLOAD_ROLE_ARN"
+            ],
+            "inheritedSecrets": false,
+            "environment": null
+          },
+          "externalActions": [
+            "kungfu-systems/buildchain/.github/workflows/.build.yml@bfe43b0fe5577f15d2af01bc542de8a8ce587457"
+          ],
+          "steps": []
+        },
+        {
+          "id": "preflight",
+          "authority": "qualification",
+          "publication": "none",
+          "receipt": "diagnostic",
+          "definitionDigest": "sha256:23289f207a75e02fe3bf44916fca9a41313b1bf21b5e6bbb342ddfa6cddef72e",
+          "credentials": {
+            "githubToken": "write",
+            "oidc": true,
+            "repositorySecrets": [],
+            "inheritedSecrets": false,
+            "environment": null
+          },
+          "externalActions": [
+            "actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0"
+          ],
+          "steps": [
+            {
+              "index": 1,
+              "label": "name:Check out exact candidate source",
+              "authority": "qualification",
+              "definitionDigest": "sha256:bebfa1169e50702a373132a593030f24fa0ca110ec67c1e795d114f59d376195"
+            },
+            {
+              "index": 2,
+              "label": "id:receipt",
+              "authority": "qualification",
+              "definitionDigest": "sha256:4a1aa1679e886295f7fdbfe400c3f7494164ff44aafb5741f52dc6c1ae061cca"
             }
           ]
         }
