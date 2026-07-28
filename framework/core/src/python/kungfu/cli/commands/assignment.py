@@ -719,6 +719,94 @@ def family_verify(ctx, state_file):
     _emit(_run(operation))
 
 
+@assignment.command(
+    name="family-contract-v2",
+    help="show the additive typed Initiative-family envelope protocol",
+)
+@assignment_context
+def family_contract_v2_command(ctx):
+    _emit(orchestration.family_contract_v2())
+
+
+@assignment.command(
+    name="family-upgrade-v2",
+    help="explicitly bind one immutable v1 state into a typed v2 envelope",
+)
+@click.argument(
+    "state_file",
+    type=click.Path(exists=True, dir_okay=False, path_type=Path),
+)
+@click.argument(
+    "binding_file",
+    type=click.Path(exists=True, dir_okay=False, path_type=Path),
+)
+@click.option("--out", type=click.Path(dir_okay=False, path_type=Path))
+@assignment_context
+def family_upgrade_v2(ctx, state_file, binding_file, out):
+    def operation():
+        state = json.loads(state_file.read_text(encoding="utf-8"))
+        bindings = json.loads(binding_file.read_text(encoding="utf-8"))
+        upgrade = orchestration.upgrade_family_state_v2(state, bindings)
+        successor = upgrade["successorState"]
+        return {
+            **upgrade,
+            "outputPath": _write_immutable_json(out, successor),
+            "verification": orchestration.verify_family_state_v2(successor),
+        }
+
+    _emit(_run(operation))
+
+
+@assignment.command(
+    name="family-transition-v2",
+    help="advance a typed family state with an exact v1 transition and bindings",
+)
+@click.argument(
+    "state_file",
+    type=click.Path(exists=True, dir_okay=False, path_type=Path),
+)
+@click.argument(
+    "transition_file",
+    type=click.Path(exists=True, dir_okay=False, path_type=Path),
+)
+@click.option("--out", type=click.Path(dir_okay=False, path_type=Path))
+@assignment_context
+def family_transition_v2(ctx, state_file, transition_file, out):
+    def operation():
+        state = json.loads(state_file.read_text(encoding="utf-8"))
+        transition = json.loads(transition_file.read_text(encoding="utf-8"))
+        successor = orchestration.transition_family_state_v2(state, transition)
+        return {
+            "schema": "kungfu.work-control.initiative-family-transition-result/v2",
+            "state": successor,
+            "stateRoot": successor["stateRoot"],
+            "previousStateRoot": successor["previousStateRoot"],
+            "v1ProjectionRoot": successor["v1ProjectionRoot"],
+            "typedBindingRoot": successor["typedBindingRoot"],
+            "outputPath": _write_immutable_json(out, successor),
+            "verification": orchestration.verify_family_state_v2(successor),
+        }
+
+    _emit(_run(operation))
+
+
+@assignment.command(
+    name="family-verify-v2",
+    help="read v1 as under-typed or verify one complete typed v2 state",
+)
+@click.argument(
+    "state_file",
+    type=click.Path(exists=True, dir_okay=False, path_type=Path),
+)
+@assignment_context
+def family_verify_v2(ctx, state_file):
+    def operation():
+        state = json.loads(state_file.read_text(encoding="utf-8"))
+        return orchestration.verify_family_state_v2(state)
+
+    _emit(_run(operation))
+
+
 @assignment.command(help="evaluate the native run or closeout gate")
 @_identity_options
 @click.option("--target", type=click.Choice(["run", "closeout"]), required=True)
