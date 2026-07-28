@@ -68,31 +68,22 @@ def build(contract: dict[str, Any]) -> dict[str, Any]:
 
 
 def render(payload: dict[str, Any]) -> str:
-    # The surface graph and linkage index are tabular generated data. Keep one
-    # complete record per line so adding a CLI surface does not inflate this
-    # projection by formatting-only lines.
+    # These arrays are generated tabular data. Keep one complete record per
+    # line so adding a CLI surface does not inflate this projection by dozens
+    # of formatting-only lines.
     projected = dict(payload)
-    projected["kfd3Linkage"] = "__KUNGFU_KFD3_LINKAGE__"
-    projected["surfaces"] = "__KUNGFU_SURFACES__"
+    compact_arrays = ("kfd3Linkage", "surfaces")
+    for field in compact_arrays:
+        projected[field] = f"__KUNGFU_{field.upper()}__"
     rendered = json.dumps(projected, indent=2, sort_keys=True)
-    marker = '  "kfd3Linkage": "__KUNGFU_KFD3_LINKAGE__",'
-    linkage = ",\n".join(
-        f"    {json.dumps(row, sort_keys=True, separators=(',', ':'))}"
-        for row in payload["kfd3Linkage"]
-    )
-    replacement = f'  "kfd3Linkage": [\n{linkage}\n  ],'
-    surface_marker = '  "surfaces": "__KUNGFU_SURFACES__",'
-    surfaces = ",\n".join(
-        f"    {json.dumps(row, sort_keys=True, separators=(',', ':'))}"
-        for row in payload["surfaces"]
-    )
-    surface_replacement = f'  "surfaces": [\n{surfaces}\n  ],'
-    return (
-        rendered.replace(marker, replacement, 1).replace(
-            surface_marker, surface_replacement, 1
+    for field in compact_arrays:
+        marker = f'  "{field}": "__KUNGFU_{field.upper()}__",'
+        rows = ",\n".join(
+            f"    {json.dumps(row, sort_keys=True, separators=(',', ':'))}"
+            for row in payload[field]
         )
-        + "\n"
-    )
+        rendered = rendered.replace(marker, f'  "{field}": [\n{rows}\n  ],', 1)
+    return rendered + "\n"
 
 
 def current() -> dict[str, Any]:
