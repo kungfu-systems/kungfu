@@ -176,6 +176,7 @@ test('declared discovery routes are zero-write in a cold read-only fixture', (t)
     'developer/sdk/kfd/support-matrix.json',
     'docs/qualification/kfd-support-matrix.md',
     '.github/workflows/affected-native-pr.yml',
+    '.github/workflows/cancel-dequeued-merge-group.yml',
     '.github/workflows/core-build-profiles.yml',
     'docs/qualification/gates/README.md',
     'docs/qualification/gates/source-and-governance.md',

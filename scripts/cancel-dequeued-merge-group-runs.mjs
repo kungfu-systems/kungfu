@@ -5,6 +5,11 @@
 import process from 'node:process';
 import { pathToFileURL } from 'node:url';
 
+import {
+  parseFamilyQueueLeaseMarker,
+  releaseFamilyQueueLease,
+} from './project-cut-merge-queue-admission.mjs';
+
 const ACTIVE_STATUSES = [
   'queued',
   'in_progress',
@@ -194,6 +199,7 @@ export async function recordDequeuedRepairMarker({
   repository,
   pullRequest,
   headSha,
+  removal: observedRemoval = null,
   token,
   request = fetch,
 }) {
@@ -204,12 +210,14 @@ export async function recordDequeuedRepairMarker({
   }
   if (!token) throw new Error('GitHub token is unavailable');
 
-  const removal = await latestMergeQueueRemoval({
-    repository,
-    pullRequest,
-    token,
-    request,
-  });
+  const removal =
+    observedRemoval ||
+    (await latestMergeQueueRemoval({
+      repository,
+      pullRequest,
+      token,
+      request,
+    }));
   if (!REPAIR_REASONS.has(removal.reason)) {
     return {
       repairRequired: false,
@@ -345,10 +353,84 @@ export async function revokeQueueAdmissionLease({
   return { headSha, context, state: 'failure' };
 }
 
+export async function releaseDequeuedFamilyQueueLease({
+  repository,
+  pullRequest,
+  headSha,
+  body,
+  reason,
+  token,
+  request = fetch,
+}) {
+  required(repository, 'repository', /^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/u);
+  required(headSha, 'head sha', /^[0-9a-f]{40}$/u);
+  if (!Number.isInteger(pullRequest) || pullRequest < 1) {
+    throw new Error('invalid pull request number');
+  }
+  if (!token) throw new Error('GitHub token is unavailable');
+
+  const lease = parseFamilyQueueLeaseMarker(body);
+  if (lease === null) {
+    return {
+      applicable: false,
+      state: 'not-applicable',
+    };
+  }
+  if (lease.pullRequestHead !== headSha) {
+    return {
+      applicable: true,
+      state: 'stale-observation',
+      leaseRoot: lease.leaseRoot,
+      observedHead: headSha,
+    };
+  }
+  const releaseReason =
+    reason ||
+    (
+      await latestMergeQueueRemoval({
+        repository,
+        pullRequest,
+        token,
+        request,
+      })
+    ).reason;
+  required(releaseReason, 'dequeue reason', /^[a-z_]+$/u);
+  const release = releaseFamilyQueueLease(lease, {
+    expectedLeaseRoot: lease.leaseRoot,
+    observedHead: headSha,
+    terminalReason: `dequeue-${releaseReason}`,
+    evidenceRoots: [],
+  });
+  const response = await githubResponse(
+    `/repos/${repository}/statuses/${headSha}`,
+    token,
+    request,
+    {
+      method: 'POST',
+      body: JSON.stringify({
+        state: 'success',
+        context: lease.statusContext,
+        description: `Released ${release.releaseRoot.slice(7, 19)} after dequeue`,
+      }),
+    },
+  );
+  if (response.status !== 201) {
+    throw new Error(
+      `GitHub API ${response.status} while releasing family queue lease`,
+    );
+  }
+  return {
+    applicable: true,
+    state: 'released',
+    release,
+  };
+}
+
 export async function settleDequeuedMergeGroup({
   repository,
   pullRequest,
   headSha,
+  pullRequestBody = '',
   workflow,
   context,
   token,
@@ -376,11 +458,27 @@ export async function settleDequeuedMergeGroup({
       token,
       request,
     }),
+    releaseDequeuedFamilyQueueLease({
+      repository,
+      pullRequest,
+      headSha,
+      body: pullRequestBody,
+      reason: '',
+      token,
+      request,
+    }),
   ]);
   const failures = results
     .map((result, index) =>
       result.status === 'rejected'
-        ? `${['cancellation', 'repair-marker', 'lease-revocation'][index]}: ${
+        ? `${
+            [
+              'cancellation',
+              'repair-marker',
+              'lease-revocation',
+              'family-lease-release',
+            ][index]
+          }: ${
             result.reason instanceof Error
               ? result.reason.message
               : String(result.reason)
@@ -391,11 +489,13 @@ export async function settleDequeuedMergeGroup({
   if (failures.length) {
     throw new Error(`dequeue settlement failed (${failures.join('; ')})`);
   }
-  const [cancellation, repairMarker, queueAdmissionLease] = results;
+  const [cancellation, repairMarker, queueAdmissionLease, familyQueueLease] =
+    results;
   if (
     cancellation.status !== 'fulfilled' ||
     repairMarker.status !== 'fulfilled' ||
-    queueAdmissionLease.status !== 'fulfilled'
+    queueAdmissionLease.status !== 'fulfilled' ||
+    familyQueueLease.status !== 'fulfilled'
   ) {
     throw new Error('dequeue settlement result invariant failed');
   }
@@ -403,6 +503,7 @@ export async function settleDequeuedMergeGroup({
     cancellation: cancellation.value,
     repairMarker: repairMarker.value,
     queueAdmissionLease: queueAdmissionLease.value,
+    familyQueueLease: familyQueueLease.value,
   };
 }
 
@@ -411,12 +512,14 @@ async function main() {
   const pullRequest = Number(process.env.DEQUEUED_PULL_REQUEST || 0);
   const workflow = process.env.MERGE_GROUP_WORKFLOW || 'affected-native-pr.yml';
   const headSha = process.env.DEQUEUED_HEAD_SHA || '';
+  const pullRequestBody = process.env.DEQUEUED_PULL_REQUEST_BODY || '';
   const context = process.env.QUEUE_ADMISSION_CONTEXT || '';
   const token = process.env.GITHUB_TOKEN || '';
   const result = await settleDequeuedMergeGroup({
     repository,
     pullRequest,
     headSha,
+    pullRequestBody,
     workflow,
     context,
     token,

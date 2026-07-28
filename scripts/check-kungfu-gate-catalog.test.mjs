@@ -120,6 +120,35 @@ test('PR proof closes heavy gates before exact queue reuse', () => {
   assert.match(source, /Upload authoritative producer proof/);
 });
 
+test('Initiative-family queue lease is exact-head and dequeue-released', () => {
+  const affectedNative = fs.readFileSync(
+    path.join(ROOT, '.github/workflows/affected-native-pr.yml'),
+    'utf8',
+  );
+  assert.match(
+    affectedNative,
+    /name: Verify exact Initiative-family queue lease/,
+  );
+  assert.match(
+    affectedNative,
+    /--verify-family-marker "\$RUNNER_TEMP\/family-pr-body\.txt"/,
+  );
+  assert.match(affectedNative, /--expected-pr-head "\$pr_head"/);
+  assert.match(affectedNative, /--expected-dev-head "\$MERGE_GROUP_BASE_SHA"/);
+  assert.match(affectedNative, /--candidate-tree "\$candidate_tree"/);
+
+  const dequeue = fs.readFileSync(
+    path.join(ROOT, '.github/workflows/cancel-dequeued-merge-group.yml'),
+    'utf8',
+  );
+  assert.match(
+    dequeue,
+    /DEQUEUED_PULL_REQUEST_BODY: \$\{\{ github\.event\.pull_request\.body \}\}/,
+  );
+  assert.match(dequeue, /statuses: write/);
+  assert.match(dequeue, /pull-requests: write/);
+});
+
 function readMeasurementCoverage(root) {
   return JSON.parse(
     fs.readFileSync(

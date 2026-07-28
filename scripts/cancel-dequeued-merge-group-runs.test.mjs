@@ -11,9 +11,11 @@ import {
   cancelDequeuedMergeGroupRuns,
   mergeQueueRepairComment,
   recordDequeuedRepairMarker,
+  releaseDequeuedFamilyQueueLease,
   revokeQueueAdmissionLease,
   settleDequeuedMergeGroup,
 } from './cancel-dequeued-merge-group-runs.mjs';
+import { createFamilyQueueLease } from './project-cut-merge-queue-admission.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 
@@ -111,6 +113,74 @@ test('dequeue revokes the exact-head queue admission lease', async () => {
       },
     },
   ]);
+});
+
+test('dequeue releases the exact family lease and ignores stale head observations', async () => {
+  const headSha = 'b'.repeat(40);
+  const lease = createFamilyQueueLease(
+    {
+      schema: 'project.cut.merge-queue-admission/v1',
+      ok: true,
+      decision: 'qualified',
+      baseCommitOid: 'a'.repeat(40),
+      headCommitOid: headSha,
+      candidateCommitOid: 'c'.repeat(40),
+      candidateTreeOid: 'd'.repeat(40),
+      replayedCommitCount: 1,
+      compositionChanged: false,
+      reasonCodes: [],
+    },
+    {
+      initiativeId: 'initiative-one',
+      assignmentId: 'child-one',
+      deliveryClass: 'non-native-fast',
+      queueAttempt: 'attempt-one',
+    },
+  );
+  const requests = [];
+  const released = await releaseDequeuedFamilyQueueLease({
+    repository: 'kungfu-systems/kungfu',
+    pullRequest: 1510,
+    headSha,
+    body: lease.marker,
+    reason: 'manual',
+    token: 'test-token',
+    request: async (url, init = {}) => {
+      requests.push({ url, body: JSON.parse(init.body) });
+      return response(201);
+    },
+  });
+  assert.equal(released.state, 'released');
+  assert.equal(released.release.terminalReason, 'dequeue-manual');
+  assert.deepEqual(requests, [
+    {
+      url: `https://api.github.com/repos/kungfu-systems/kungfu/statuses/${headSha}`,
+      body: {
+        state: 'success',
+        context: lease.statusContext,
+        description: `Released ${released.release.releaseRoot.slice(7, 19)} after dequeue`,
+      },
+    },
+  ]);
+  assert.deepEqual(
+    await releaseDequeuedFamilyQueueLease({
+      repository: 'kungfu-systems/kungfu',
+      pullRequest: 1510,
+      headSha: 'e'.repeat(40),
+      body: lease.marker,
+      reason: 'failed_checks',
+      token: 'test-token',
+      request: async () => {
+        throw new Error('stale observation must not write');
+      },
+    }),
+    {
+      applicable: true,
+      state: 'stale-observation',
+      leaseRoot: lease.leaseRoot,
+      observedHead: 'e'.repeat(40),
+    },
+  );
 });
 
 test('dequeue settlement still revokes the lease when other cleanup fails', async () => {

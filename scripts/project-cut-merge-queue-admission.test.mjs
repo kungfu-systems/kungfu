@@ -16,8 +16,13 @@ import {
 } from '../framework/project-cut/src/project-cut.mjs';
 import { sourceProjectionAtCommit } from '../framework/project-cut/src/settlement.mjs';
 import {
+  admitFamilyQueueLease,
+  createFamilyQueueLease,
   inspectProjectCutMergeQueueAdmission,
+  parseFamilyQueueLeaseMarker,
+  releaseFamilyQueueLease,
   replayFirstParentOntoBase,
+  verifyFamilyQueueLeaseAtMergeGroup,
 } from './project-cut-merge-queue-admission.mjs';
 
 const REPO_ROOT = path.resolve(
@@ -180,4 +185,182 @@ test('a source-only candidate with no Cut delta is qualified', (t) => {
   assert.equal(admission.ok, true);
   assert.equal(admission.decision, 'qualified');
   assert.equal(admission.compositionChanged, false);
+});
+
+test('family lease binds exact replay identity and blocks a second child', (t) => {
+  const root = workspace(t);
+  git(root, 'switch', '-qc', 'feature');
+  const head = commitFile(
+    root,
+    'family.txt',
+    'family\n',
+    'feat: add family candidate',
+  );
+  git(root, 'switch', '-q', 'main');
+  const base = commitFile(root, 'base.txt', 'base\n', 'feat: advance dev');
+  const workDefinitionRoot = semanticRoot({ work: 'family-queue' });
+  const admission = inspectProjectCutMergeQueueAdmission(root, base, head, {
+    initiativeId: 'initiative-one',
+    assignmentId: 'child-one',
+    deliveryClass: 'non-native-fast',
+    queueAttempt: 'attempt-one',
+    admissionProofRoots: [workDefinitionRoot],
+  });
+  assert.equal(admission.ok, true);
+  const lease = admission.familyLease;
+  assert.equal(lease.devHead, base);
+  assert.equal(lease.pullRequestHead, head);
+  assert.equal(lease.replayedCandidate, admission.candidateCommitOid);
+  assert.ok(lease.admissionProofRoots.includes(workDefinitionRoot));
+  const { marker, ...leaseWithoutMarker } = lease;
+  assert.ok(marker.includes('kungfu-family-queue-lease:v1'));
+  assert.deepEqual(parseFamilyQueueLeaseMarker(marker), leaseWithoutMarker);
+
+  const second = createFamilyQueueLease(admission, {
+    initiativeId: 'initiative-one',
+    assignmentId: 'child-two',
+    deliveryClass: 'native-proof-required',
+    queueAttempt: 'attempt-two',
+  });
+  assert.deepEqual(admitFamilyQueueLease([lease], second), {
+    ok: false,
+    decision: 'blocked',
+    reasonCodes: ['family-lease-contention'],
+    conflictingLeaseRoot: lease.leaseRoot,
+  });
+  assert.deepEqual(admitFamilyQueueLease([lease], lease), {
+    ok: true,
+    decision: 'admitted',
+    reused: true,
+    leaseRoot: lease.leaseRoot,
+  });
+});
+
+test('family merge-group verification rejects replay drift and inactive status', (t) => {
+  const root = workspace(t);
+  git(root, 'switch', '-qc', 'feature');
+  const head = commitFile(root, 'family.txt', 'family\n', 'feat: family');
+  git(root, 'switch', '-q', 'main');
+  const base = commitFile(root, 'base.txt', 'base\n', 'feat: base');
+  const admission = inspectProjectCutMergeQueueAdmission(root, base, head, {
+    initiativeId: 'initiative-one',
+    assignmentId: 'child-one',
+    deliveryClass: 'non-native-fast',
+    queueAttempt: 'attempt-one',
+  });
+  const lease = admission.familyLease;
+  const verified = verifyFamilyQueueLeaseAtMergeGroup({
+    lease,
+    pullRequestHead: head,
+    devHead: base,
+    candidateTree: lease.replayedTree,
+    combinedStatus: {
+      statuses: [{ context: lease.statusContext, state: 'pending' }],
+    },
+  });
+  assert.equal(verified.ok, true, JSON.stringify(verified));
+  const drifted = verifyFamilyQueueLeaseAtMergeGroup({
+    lease,
+    pullRequestHead: 'a'.repeat(40),
+    devHead: 'b'.repeat(40),
+    candidateTree: 'c'.repeat(40),
+    combinedStatus: {
+      statuses: [{ context: lease.statusContext, state: 'success' }],
+    },
+  });
+  assert.equal(drifted.ok, false);
+  assert.deepEqual(drifted.reasonCodes, [
+    'family-pr-head-drift',
+    'family-dev-head-drift',
+    'family-replay-tree-drift',
+    'family-lease-inactive',
+  ]);
+  assert.equal(
+    verifyFamilyQueueLeaseAtMergeGroup({
+      lease: null,
+      pullRequestHead: head,
+      devHead: base,
+      candidateTree: lease.replayedTree,
+      combinedStatus: {},
+    }).applicable,
+    false,
+  );
+});
+
+test('family release is exact-root, exact-head, and idempotent', () => {
+  const admission = {
+    schema: 'project.cut.merge-queue-admission/v1',
+    ok: true,
+    decision: 'qualified',
+    baseCommitOid: 'a'.repeat(40),
+    headCommitOid: 'b'.repeat(40),
+    candidateCommitOid: 'c'.repeat(40),
+    candidateTreeOid: 'd'.repeat(40),
+    replayedCommitCount: 1,
+    compositionChanged: false,
+    reasonCodes: [],
+  };
+  const lease = createFamilyQueueLease(admission, {
+    initiativeId: 'initiative-one',
+    assignmentId: 'child-one',
+    deliveryClass: 'non-native-fast',
+    queueAttempt: 'attempt-one',
+  });
+  assert.throws(
+    () =>
+      releaseFamilyQueueLease(lease, {
+        expectedLeaseRoot: `sha256:${'0'.repeat(64)}`,
+        observedHead: lease.pullRequestHead,
+        terminalReason: 'dequeue-manual',
+      }),
+    /stale family queue release evidence/u,
+  );
+  assert.throws(
+    () =>
+      releaseFamilyQueueLease(lease, {
+        expectedLeaseRoot: lease.leaseRoot,
+        observedHead: 'e'.repeat(40),
+        terminalReason: 'dequeue-manual',
+      }),
+    /stale family queue release head/u,
+  );
+  const released = releaseFamilyQueueLease(lease, {
+    expectedLeaseRoot: lease.leaseRoot,
+    observedHead: lease.pullRequestHead,
+    terminalReason: 'dequeue-manual',
+    evidenceRoots: [semanticRoot({ dequeue: 'manual' })],
+  });
+  assert.equal(released.state, 'released');
+  assert.equal(released.idempotent, false);
+  assert.equal(
+    releaseFamilyQueueLease(released, {
+      expectedLeaseRoot: lease.leaseRoot,
+      terminalReason: 'dequeue-manual',
+    }).idempotent,
+    true,
+  );
+  const cliRelease = JSON.parse(
+    execFileSync(
+      process.execPath,
+      [
+        path.join(
+          REPO_ROOT,
+          'scripts/check-project-cut-merge-queue-admission.mjs',
+        ),
+        '--release-family-marker',
+        '-',
+        '--expected-pr-head',
+        lease.pullRequestHead,
+        '--terminal-reason',
+        'merged',
+      ],
+      {
+        cwd: REPO_ROOT,
+        encoding: 'utf8',
+        input: `${lease.marker}\n`,
+      },
+    ),
+  );
+  assert.equal(cliRelease.state, 'released');
+  assert.equal(cliRelease.predecessorLeaseRoot, lease.leaseRoot);
 });

@@ -79,7 +79,7 @@
             "product-stable",
             "product-binaries"
           ],
-          "sourceRoot": "sha256:3ff5b85bf886eee90fdc5ded4b441b3c576d1fa724e40f2a8a4714e41b001851"
+          "sourceRoot": "sha256:a2a0bfd0f4cd858d7cf7086c9a6c2eb7afcbc2d837cf1ea19bc3f8d080997d67"
         },
         {
           "path": ".github/workflows/alpha-promotion-preflight.yml",
@@ -117,7 +117,7 @@
           "classification": "non-publication",
           "owner": "kungfu-ci",
           "surfaceIds": [],
-          "sourceRoot": "sha256:2d804b7ff0604ce5bb02089ec7ad9750db6a38a47d4934c7e3795eef2be9e84d"
+          "sourceRoot": "sha256:256e24e20dc24d0a25c67e0b709a228720cb1614fc954cc263b8c2af5a01362f"
         },
         {
           "path": ".github/workflows/queue-admission-lease.yml",
@@ -785,5 +785,5 @@
       }
     }
   ],
-  "registryRoot": "sha256:c28af71032c3c5d12aab1628fb630a1359d6f095ac9d606bb5009d405da38f26"
+  "registryRoot": "sha256:9314dcb582e4775b5b63a04c08d187e1f9671b94362d2e6f1e97259d5615aa34"
 }

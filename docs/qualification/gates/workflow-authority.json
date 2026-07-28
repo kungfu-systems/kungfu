@@ -123,7 +123,7 @@
     {
       "path": ".github/workflows/affected-native-pr.yml",
       "authority": "qualification",
-      "definitionDigest": "sha256:463c5c8356302ae6148a3c3baa946e50679a3de3c3584ba2cbe9863fb014bf27",
+      "definitionDigest": "sha256:b6ea11581e16d1792b6ed57f1d1d3736b9a21eb3746ec3cb9f77b559901b1d6b",
       "jobs": [
         {
           "id": "affected_native_shards",
@@ -352,7 +352,7 @@
           "authority": "qualification",
           "publication": "none",
           "receipt": "diagnostic",
-          "definitionDigest": "sha256:1967183ab132b9b2c5477f2aca185805da63367a065160e1773ea2cd4acb677d",
+          "definitionDigest": "sha256:68d14a1191c9356559b5f433f47c45f555253ccc405cbab0e5c30a7d1a508caa",
           "credentials": {"githubToken":"read","oidc":false,"repositorySecrets":[],"inheritedSecrets":false,"environment":null},
           "externalActions": ["actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0","actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02"],
           "steps": [
@@ -368,22 +368,28 @@
             },
             {
               "index": 3,
+              "label": "name:Verify exact Initiative-family queue lease",
+              "definitionDigest": "sha256:690adf2b862d95e4ce222b37ece357191013f26f50481db8b61e7de0c772b798"
+            },
+            {
+              "index": 4,
               "label": "name:Verify ADR delivery intent",
               "definitionDigest": "sha256:48e72bd895c8aa22b8c612709f9293c257b8a12867d2ae22eab5eed5c4f2930a"
             },
             {
-              "index": 4,
+              "index": 5,
               "label": "name:Rehearse alpha and stable promotion contracts",
+              "authority": "evidence-publication",
               "definitionDigest": "sha256:4d2045f4b3c7579ce197cfeda1d57ccb35a6a23fa10ccd537888359f9b657165"
             },
             {
-              "index": 5,
+              "index": 6,
               "label": "id:plan",
               "authority": "evidence-publication",
               "definitionDigest": "sha256:6cb207a1bf071e89ad5d3b8387ae9fda49887f09745e8e498c27a6df8ade834a"
             },
             {
-              "index": 6,
+              "index": 7,
               "label": "name:Upload candidate preflight plan",
               "authority": "evidence-publication",
               "definitionDigest": "sha256:0f0f752f45e91760b224bbdd55a062798d67e512c73fdaf4d47529d78258af3a"
@@ -929,7 +935,7 @@
           "authority": "qualification",
           "publication": "none",
           "receipt": "diagnostic",
-          "definitionDigest": "sha256:67f561b539de1ba5df88d375313188e2a83dd5026978a7924f9d574f34c7f3bd",
+          "definitionDigest": "sha256:c1091d3dc3689356b2ff27d366aa9646835ab17f927e2233733a22c773f7e23d",
           "credentials": {"githubToken":"write","oidc":false,"repositorySecrets":["GITHUB_TOKEN"],"inheritedSecrets":false,"environment":null},
           "externalActions": ["actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0"],
           "steps": [
@@ -941,7 +947,7 @@
             {
               "index": 2,
               "label": "name:Cancel active merge-group runs for the dequeued pull request",
-              "definitionDigest": "sha256:04a5277a49a1b9b247f90e98cc1a24160fede52567ca89fbea508cef5112f458"
+              "definitionDigest": "sha256:52bca1a6ed9efbb2dbe63457e2be92c8b6e6635da1712395a864b2b0edef5100"
             }
           ]
         }

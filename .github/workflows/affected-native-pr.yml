@@ -17,6 +17,7 @@ permissions:
   actions: read
   contents: read
   pull-requests: read
+  statuses: read
 
 jobs:
   dco:
@@ -113,6 +114,31 @@ jobs:
           ./shifu project-cut:queue-admission -- \
             --base "$base_sha" \
             --head "$head_sha"
+      - name: Verify exact Initiative-family queue lease
+        if: ${{ github.event_name == 'merge_group' }}
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          MERGE_GROUP_BASE_SHA: ${{ github.event.merge_group.base_sha }}
+          MERGE_GROUP_HEAD_REF: ${{ github.event.merge_group.head_ref }}
+        run: |
+          set -euo pipefail
+          pr_number="$(sed -nE 's#^.*/pr-([0-9]+)-[0-9a-f]+$#\1#p' <<< "$MERGE_GROUP_HEAD_REF")"
+          if [ -z "$pr_number" ]; then
+            echo "Unable to resolve the exact pull request from merge-group head_ref." >&2
+            exit 1
+          fi
+          gh api "repos/$GITHUB_REPOSITORY/pulls/$pr_number" > "$RUNNER_TEMP/family-pr.json"
+          pr_head="$(jq -r '.head.sha' "$RUNNER_TEMP/family-pr.json")"
+          jq -r '.body // ""' "$RUNNER_TEMP/family-pr.json" > "$RUNNER_TEMP/family-pr-body.txt"
+          gh api "repos/$GITHUB_REPOSITORY/commits/$pr_head/status" > "$RUNNER_TEMP/family-status.json"
+          candidate_tree="$(git rev-parse HEAD^{tree})"
+          ./shifu project-cut:queue-admission -- \
+            --verify-family-marker "$RUNNER_TEMP/family-pr-body.txt" \
+            --status-file "$RUNNER_TEMP/family-status.json" \
+            --expected-pr-head "$pr_head" \
+            --expected-dev-head "$MERGE_GROUP_BASE_SHA" \
+            --candidate-tree "$candidate_tree"
       - name: Verify ADR delivery intent
         run: ./shifu gate run governance.adr-delivery
       - name: Rehearse alpha and stable promotion contracts
