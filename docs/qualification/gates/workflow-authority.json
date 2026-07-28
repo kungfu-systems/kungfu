@@ -687,7 +687,7 @@
           "authority": "qualification",
           "publication": "none",
           "receipt": "diagnostic",
-          "definitionDigest": "sha256:3cb40b01b4d8c808f57679f528d62ef30e921124499b1a0c457962efef53fac6",
+          "definitionDigest": "sha256:644f282b34d334d136bfd353a94686c857493b811636ef045ec6290151ac66bb",
           "credentials": {"githubToken":"write","oidc":false,"repositorySecrets":[],"inheritedSecrets":false,"environment":null},
           "externalActions": ["kungfu-systems/buildchain/.github/workflows/.build.yml@train/v2/v2.3/aws-us-elastic-runner-burst-plane"],
           "steps": []
