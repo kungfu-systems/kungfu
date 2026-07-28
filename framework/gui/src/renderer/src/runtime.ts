@@ -7,6 +7,7 @@ import {
   type AgentSession,
   type DomainState,
   type KfNativeBinding,
+  type KfxControl,
   type Ledger,
   type Profile,
   type PtyModule,
@@ -22,6 +23,7 @@ import {
   managedTmuxSocket,
   openAgentRuntime,
   openDomainState,
+  openKfxControl,
   openLedger,
   openProfile,
   openQualificationLab,
@@ -140,6 +142,7 @@ export type Runtime = {
   terminal: Terminal | null;
   work: Work | null;
   workLoop: WorkLoop | null;
+  kfxControl: KfxControl | null;
   profile: Profile | null;
   agentRuntime: AgentRuntime | null;
   agentSession: AgentSession | null;
@@ -305,6 +308,7 @@ export function deferredRuntime(
     terminal: null,
     work: null,
     workLoop: null,
+    kfxControl: null,
     profile: null,
     agentRuntime: null,
     agentSession: null,
@@ -357,6 +361,7 @@ function createRuntime(): Runtime {
     terminal: null,
     work: null,
     workLoop: null,
+    kfxControl: null,
     profile: null,
     agentRuntime: null,
     agentSession: null,
@@ -430,6 +435,7 @@ function createRuntime(): Runtime {
       readDir: (d: string) => rewindFs.readdirSync(d),
     });
     const storage = openStorage({ binding, locator: { runtimeDir } });
+    const kfxControl = openKfxControl({ binding, locator: { runtimeDir } });
     const work = openWork({
       binding,
       locator: { runtimeDir },
@@ -556,6 +562,7 @@ function createRuntime(): Runtime {
       terminal,
       work,
       workLoop,
+      kfxControl,
       profile,
       agentRuntime,
       agentSession,

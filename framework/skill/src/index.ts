@@ -1738,7 +1738,7 @@ function resolveKfxPackage(
   packageDir: string,
   expectedKey: string,
 ): SkillDependencyPackage | undefined {
-  const manifestPath = join(packageDir, 'package.json');
+  const manifestPath = join(packageDir, 'kungfu.kfx.json');
   if (!existsSync(manifestPath)) return undefined;
   let manifest: Record<string, unknown>;
   try {

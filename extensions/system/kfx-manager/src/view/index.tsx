@@ -4,6 +4,8 @@
 // choice persists through the shell state blob. Disabling never unloads code
 // — it only removes views from navigation.
 import {
+  type KfxControlPlan,
+  type KfxControlStatus,
   type KfxViewProps,
   type ManagedProfile,
   type ProfileApplicationProjection,
@@ -249,6 +251,13 @@ function KfxManagerView({ caps, shell }: KfxViewProps) {
     source: string;
   } | null>(null);
   const [authorizedBy, setAuthorizedBy] = React.useState('');
+  const [controlStatus, setControlStatus] =
+    React.useState<KfxControlStatus | null>(null);
+  const [pendingControl, setPendingControl] = React.useState<{
+    plan: KfxControlPlan;
+    operation: 'install' | 'update';
+    path: string;
+  } | null>(null);
   const profile =
     shell.profiles.find((p) => p.id === shell.state.profileId) ??
     shell.profiles[0];
@@ -294,13 +303,16 @@ function KfxManagerView({ caps, shell }: KfxViewProps) {
             .map((row) => [row.profileId, row.error]),
         ) as Record<string, string>,
       );
+      if (caps.kfxControl) {
+        setControlStatus(caps.kfxControl.status());
+      }
       setError('');
     } catch (reason) {
       setError((reason as Error).message);
     } finally {
       setLoading(false);
     }
-  }, [caps.profile]);
+  }, [caps.kfxControl, caps.profile]);
 
   React.useEffect(() => {
     void refresh();
@@ -430,6 +442,47 @@ function KfxManagerView({ caps, shell }: KfxViewProps) {
     }
   };
 
+  const previewControl = (operation: 'install' | 'update', path: string) => {
+    if (!caps.kfxControl) return;
+    setPlanning(true);
+    try {
+      setPendingControl({
+        plan: caps.kfxControl.plan(operation, { kind: 'product', path }),
+        operation,
+        path,
+      });
+      setError('');
+    } catch (reason) {
+      setError((reason as Error).message);
+    } finally {
+      setPlanning(false);
+    }
+  };
+
+  const approveControl = async () => {
+    if (!caps.kfxControl || !pendingControl || !authorizedBy.trim()) return;
+    setPlanning(true);
+    try {
+      const receipt = caps.kfxControl.apply(
+        pendingControl.operation,
+        { kind: 'product', path: pendingControl.path },
+        pendingControl.plan,
+        authorizedBy.trim(),
+      );
+      setPendingControl(null);
+      setControlStatus(receipt.status);
+      await refresh();
+      shell.notify({
+        level: 'success',
+        title: `KFX Control ${pendingControl.operation} settled`,
+      });
+    } catch (reason) {
+      setError((reason as Error).message);
+    } finally {
+      setPlanning(false);
+    }
+  };
+
   const toggleKfx = (id: string, disabled: boolean) => {
     shell.updateState({
       disabledKfx: disabled
@@ -450,6 +503,106 @@ function KfxManagerView({ caps, shell }: KfxViewProps) {
 
   return (
     <section style={panelStyle}>
+      <h2 style={headingStyle}>KFX Control Suite</h2>
+      <div
+        style={{
+          ...mono,
+          border: `1px solid ${
+            controlStatus?.mode === 'active' ? '#4ec9b0' : '#f48771'
+          }`,
+          padding: 10,
+          marginBottom: 12,
+        }}
+      >
+        <div>
+          mode {controlStatus?.mode ?? 'unavailable'} · revision{' '}
+          {controlStatus?.revision ?? 0}
+        </div>
+        <div>status {shortRoot(controlStatus?.statusRoot)}</div>
+        <div>active {shortRoot(controlStatus?.active?.packageRoot)}</div>
+        <div>
+          last known good {shortRoot(controlStatus?.lastKnownGood?.packageRoot)}
+        </div>
+        <div style={{ color: '#858585', marginTop: 6 }}>
+          Core independently verifies the embedded bootstrap ceiling; every
+          mutation settles through the public KFX Fact/Work named-Cut CAS.
+        </div>
+        {shell.registry.find((entry) => entry.id === 'kfx-manager')?.dir ? (
+          <button
+            type="button"
+            disabled={planning}
+            onClick={() =>
+              previewControl(
+                controlStatus?.active ? 'update' : 'install',
+                shell.registry.find((entry) => entry.id === 'kfx-manager')
+                  ?.dir as string,
+              )
+            }
+            style={{ ...mono, marginTop: 8, marginRight: 8 }}
+          >
+            Preview exact self-{controlStatus?.active ? 'update' : 'install'}
+          </button>
+        ) : null}
+        {controlStatus?.lastKnownGood?.sourcePath &&
+        controlStatus.lastKnownGood.packageRoot !==
+          controlStatus.active?.packageRoot ? (
+          <button
+            type="button"
+            disabled={planning}
+            onClick={() =>
+              previewControl(
+                'update',
+                controlStatus.lastKnownGood?.sourcePath as string,
+              )
+            }
+            style={{ ...mono, marginTop: 8 }}
+          >
+            Preview last-known-good rollback
+          </button>
+        ) : null}
+      </div>
+      {pendingControl ? (
+        <div
+          style={{
+            ...mono,
+            border: '1px solid #dcdcaa',
+            padding: 10,
+            marginBottom: 12,
+          }}
+        >
+          <strong style={{ color: '#dcdcaa' }}>
+            Control Suite decision required
+          </strong>
+          <div>plan {pendingControl.plan.controlPlanRoot}</div>
+          <div>policy {pendingControl.plan.bootstrapPolicyRoot}</div>
+          <div>candidate {pendingControl.plan.candidate.packageRoot}</div>
+          <label style={{ display: 'block', marginTop: 8 }}>
+            authorized by{' '}
+            <input
+              value={authorizedBy}
+              onChange={(event) => setAuthorizedBy(event.target.value)}
+              placeholder="workspace owner identity"
+              style={{ ...mono, minWidth: 220 }}
+            />
+          </label>
+          <button
+            type="button"
+            disabled={planning || !authorizedBy.trim()}
+            onClick={() => void approveControl()}
+            style={{ ...mono, marginTop: 8, marginRight: 8 }}
+          >
+            Approve exact Control plan
+          </button>
+          <button
+            type="button"
+            disabled={planning}
+            onClick={() => setPendingControl(null)}
+            style={{ ...mono, marginTop: 8 }}
+          >
+            Dismiss
+          </button>
+        </div>
+      ) : null}
       <h2 style={headingStyle}>Profiles · {manager?.count ?? 0}</h2>
       <div style={{ ...mono, color: '#858585', marginBottom: 10 }}>
         Runtime activation controls composition authority. GUI focus is “

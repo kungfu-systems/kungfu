@@ -1,9 +1,10 @@
 import json
 from pathlib import Path
 
+import pytest
 from click.testing import CliRunner
 
-from kungfu import kfx_contract
+from kungfu import kfx_contract, kfx_control, kfx_host
 from kungfu.cli.commands import __registry__  # noqa: F401
 from kungfu.cli.commands import kfc
 from kungfu.storage import service as storage_service
@@ -57,11 +58,37 @@ def _assessment_request(tmp_path):
     }
 
 
+def _semantic_registry_request():
+    root = (
+        Path(__file__).parents[2]
+        / "src"
+        / "libkungfu"
+        / "tests"
+        / "fixtures"
+        / "native_kfx_registry"
+        / "semantic"
+    )
+    return {"roots": [{"kind": "workspace", "path": str(root)}]}
+
+
+def _expected_registry_roots():
+    path = (
+        Path(__file__).parents[2]
+        / "src"
+        / "libkungfu"
+        / "tests"
+        / "fixtures"
+        / "native_kfx_registry"
+        / "expected-roots.json"
+    )
+    return json.loads(path.read_text(encoding="utf-8"))
+
+
 def test_native_kfx_python_binding_is_a_thin_core_edge(tmp_path):
     contract = storage_service.kfx_runtime_contract(tmp_path)
-    assert contract["schema"] == "kungfu.kfx.native-contract/v2"
-    assert contract["contractVersion"] == 2
-    assert contract["versionNegotiation"]["supported"] == [1, 2]
+    assert contract["schema"] == "kungfu.kfx.native-contract/v3"
+    assert contract["contractVersion"] == 3
+    assert contract["versionNegotiation"]["supported"] == [1, 2, 3]
     assert contract["runtimeTiers"] != contract["admissionGrades"]
     assert contract["authority"]["owner"] == "libkungfu"
     assert contract["sourceContractRoot"].startswith("sha256:")
@@ -95,8 +122,85 @@ def test_native_kfx_registry_python_projection_matches_core_roots(tmp_path):
     assert plan["suites"][0]["suiteRoot"] == resolved["suite"]["suiteRoot"]
     assert plan["suites"][0]["profileRoot"] == resolved["suite"]["profileRoot"]
     assert plan["planRoot"].startswith("sha256:")
-    assert status["readOnly"] is True
+    assert status["readOnly"] is False
     assert status["cacheAuthority"] is False
+    assert plan["graphRoot"] == status["graphRoot"]
+
+
+def test_python_and_host_projections_preserve_core_semantic_roots(tmp_path):
+    plan = storage_service.kfx_registry(
+        "plan", _semantic_registry_request(), tmp_path / "runtime"
+    )
+    expected = _expected_registry_roots()
+    assert plan["graphRoot"] == expected["semanticGraphRoot"]
+    assert plan["planRoot"] == expected["semanticPlanRoot"]
+    assert (
+        plan["hostContract"]["receiptDependencyRoot"]
+        == expected["semanticHostReceiptDependencyRoot"]
+    )
+    assert plan["graph"]["providers"]
+    assert plan["graphRoot"].startswith("sha256:")
+    assert plan["hostContract"]["planRoot"] == plan["planRoot"]
+
+    projections = [
+        kfx_host.project_experience_flow_host(plan["hostContract"], host)
+        for host in ("gui", "tui", "cli", "agent")
+    ]
+    assert {projection["graphRoot"] for projection in projections} == {
+        plan["graphRoot"]
+    }
+    assert {projection["planRoot"] for projection in projections} == {plan["planRoot"]}
+    assert {projection["receiptDependencyRoot"] for projection in projections} == {
+        plan["hostContract"]["receiptDependencyRoot"]
+    }
+    assert {projection["cutRoot"] for projection in projections} == {
+        plan["hostContract"]["cutRoot"]
+    }
+    assert {projection["revision"] for projection in projections} == {
+        plan["hostContract"]["revision"]
+    }
+    assert {projection["generationRoot"] for projection in projections} == {
+        plan["hostContract"]["generationRoot"]
+    }
+    assert {projection["admissionState"] for projection in projections} == {
+        "preview-only"
+    }
+    assert all(
+        not projection["contributions"][0]["executionEligible"]
+        for projection in projections
+    )
+    tui = next(item for item in projections if item["host"] == "tui")
+    assert tui["contributions"][0]["semanticState"] == "active"
+    assert tui["contributions"][0]["presentationState"] == "dormant"
+    assert tui["diagnostics"][0]["code"] == "KF_KFX_HOST_NOT_ADMITTED"
+    assert (
+        kfx_host.project_cli_experience_flow_host(plan["hostContract"])["planRoot"]
+        == plan["planRoot"]
+    )
+    assert (
+        kfx_host.project_agent_experience_flow_host(plan["hostContract"])["planRoot"]
+        == plan["planRoot"]
+    )
+
+    mismatched = json.loads(json.dumps(plan["hostContract"]))
+    mismatched["admission"]["capabilityRoots"][0] = "sha256:" + "f" * 64
+    with pytest.raises(
+        ValueError, match="contribution admission identity does not match"
+    ):
+        kfx_host.project_experience_flow_host(mismatched, "gui")
+
+
+def test_control_suite_safe_mode_projects_one_root_to_all_hosts(tmp_path):
+    status = kfx_control.status(tmp_path / "runtime")
+    assert status["mode"] == "safe-mode"
+    assert status["executionAllowed"] is False
+    projections = [
+        kfx_host.project_control_suite_host(status, host)
+        for host in ("gui", "tui", "cli", "agent")
+    ]
+    assert {row["statusRoot"] for row in projections} == {status["statusRoot"]}
+    assert {row["revision"] for row in projections} == {0}
+    assert {row["mode"] for row in projections} == {"safe-mode"}
 
 
 def test_native_kfx_cli_projects_the_same_plan_root(tmp_path):

@@ -143,6 +143,12 @@ export function buildchainBuildPlan(
     return [{ args: ['dist'], env: {} }];
   }
   return [
+    // The Buildchain install stage intentionally omits optional dependencies
+    // so full-product lanes cannot consume prebuilt Kungfu artifacts. The
+    // bounded native ARM64 Core lane still needs libnode's exact host package
+    // to link from source, so restore platform optionals under the frozen lock
+    // before entering the Core lifecycle.
+    { args: ['install', '--frozen-lockfile'], env: {} },
     { args: ['rebuild:core'], env: {} },
     { args: ['freeze'], env: { KF_REQUIRE_NATIVE_HOST: '1' } },
     {

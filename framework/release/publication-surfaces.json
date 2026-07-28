@@ -79,7 +79,7 @@
             "product-stable",
             "product-binaries"
           ],
-          "sourceRoot": "sha256:bffa2d04f29ce9ddcc645ef0e5aabf26f0bcb7913527788a22490612bde77ab3"
+          "sourceRoot": "sha256:3ff5b85bf886eee90fdc5ded4b441b3c576d1fa724e40f2a8a4714e41b001851"
         },
         {
           "path": ".github/workflows/alpha-promotion-preflight.yml",
@@ -124,7 +124,7 @@
           "classification": "non-publication",
           "owner": "kungfu-core",
           "surfaceIds": [],
-          "sourceRoot": "sha256:fc2a12003259fc44ca930ab5899dce316386c40d96858562daab664816e7e0e6"
+          "sourceRoot": "sha256:e754d08b59e8bd1f1cc3d0ab8f5446c95f4a5435c457608117c8be873171ffc0"
         },
         {
           "path": ".github/workflows/dco.yml",
@@ -767,5 +767,5 @@
       }
     }
   ],
-  "registryRoot": "sha256:c4f89fceb7c521fee9ca61fcc6ead2280bc4e1317bad4a792b654a71f6d68c9b"
+  "registryRoot": "sha256:a28f0bb499d952e340565f050cb72c788213fad9383d0768c4e448fb0f232893"
 }

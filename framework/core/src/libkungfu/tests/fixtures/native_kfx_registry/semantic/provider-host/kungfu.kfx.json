@@ -1,0 +1,38 @@
+{
+  "schema": "kungfu.kfx.manifest/v1",
+  "name": "@kungfu-test/provider-host",
+  "version": "1.2.0",
+  "kungfuConfig": {
+    "key": "provider-host",
+    "registry": {
+      "extensionPoints": [
+        {
+          "id": "kungfu.experience",
+          "version": "1.0.0",
+          "surface": "experience",
+          "capabilities": [
+            "domain"
+          ]
+        },
+        {
+          "id": "kungfu.flow",
+          "version": "1.0.0",
+          "surface": "flow"
+        }
+      ]
+    },
+    "config": {
+      "service": {
+        "runtimes": [
+          "python"
+        ],
+        "entry": {
+          "python": "service.py"
+        },
+        "capabilities": [
+          "domain"
+        ]
+      }
+    }
+  }
+}

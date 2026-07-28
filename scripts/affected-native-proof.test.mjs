@@ -775,11 +775,16 @@ test('workflow keeps one context while PR proof replaces duplicate queue builds'
   );
   assert.match(
     shifuWorkspace,
-    /Run Shifu workspace Gate \(POSIX\)[\s\S]*\.\/shifu install --frozen-lockfile[\s\S]*\.\/shifu gate run shifu\.workspace/u,
+    /name: Shifu workspace \/ linux[\s\S]*runs-on: ubuntu-22\.04[\s\S]*Run required Linux Shifu workspace Gate[\s\S]*\.\/shifu install --frozen-lockfile[\s\S]*\.\/shifu gate run shifu\.workspace/u,
+  );
+  assert.doesNotMatch(shifuWorkspace, /strategy:|matrix:|xinfa:|pwsh/u);
+  const coreObservation = fs.readFileSync(
+    path.join(ROOT, '.github/workflows/core-build-profiles.yml'),
+    'utf8',
   );
   assert.match(
-    shifuWorkspace,
-    /Run Shifu workspace Gate \(Windows\)[\s\S]*\.\\shifu\.cmd install --frozen-lockfile[\s\S]*\.\\shifu\.cmd gate run shifu\.workspace/u,
+    coreObservation,
+    /shifu_observation:[\s\S]*os: \[macos-14, ubuntu-22\.04, windows-2022\][\s\S]*Run observed Shifu and Xinfa checks \(POSIX\)[\s\S]*xinfa:check[\s\S]*xinfa:quality --check[\s\S]*Run observed Shifu and Xinfa checks \(Windows\)[\s\S]*xinfa:check[\s\S]*xinfa:quality --check/u,
   );
   assert.match(
     workflow,

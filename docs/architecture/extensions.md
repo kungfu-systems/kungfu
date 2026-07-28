@@ -21,8 +21,9 @@ Three words carry the model — keep them apart:
   a separate earlier-generation line, still mid-migration (see
   [status](#runtime-extensions-current-status)).
 - **package (kfx)** — the unit of development and distribution: an npm
-  package whose `package.json` carries a `kungfuConfig` manifest. `npm pack`
-  of a built package is its complete, offline install unit.
+  package whose canonical `kungfu.kfx.json` carries its KFX identity and
+  declaration. `package.json` remains npm transport metadata; `npm pack` of a
+  built package is its complete, offline install unit.
 - **suite** — a group of kfx distributed and operated together (navigation
   grouping, enable/disable as a unit, lockstep versioning). Membership is
   npm `dependencies`; the manifest lists member keys. A Suite may additionally
@@ -55,7 +56,8 @@ The scaffold is two files that matter plus a README:
 
 ```
 my-view/
-├── package.json          # identity + kungfuConfig manifest
+├── package.json          # npm transport, scripts and dependencies
+├── kungfu.kfx.json       # canonical KFX identity + kungfuConfig manifest
 └── src/view/index.tsx    # exports exactly one thing: the View component
 ```
 
@@ -77,10 +79,12 @@ kungfu sdk product gui dev
 That command builds the current kfx, points the reference GUI at the package's
 extension root, and starts the GUI for inspection.
 
-## The manifest (`kungfuConfig`)
+## The manifest (`kungfu.kfx.json`)
 
-The static half of an extension lives in `package.json` — managers and
-installers read it without executing code. Field reference source of truth is
+The static half of an extension lives in `kungfu.kfx.json` — managers and
+installers read it without executing code. `package.json` is distribution
+transport only and must not author `kungfuConfig`; legacy-only and dual
+declarations fail closed. Field reference source of truth is
 [`../framework/kfx/kungfu-kfx.contract.json`](../../framework/kfx/kungfu-kfx.contract.json);
 TypeScript types in [`../framework/kfx/src/index.ts`](../../framework/kfx/src/index.ts)
 must follow that contract. The SDK resolves the same contract from

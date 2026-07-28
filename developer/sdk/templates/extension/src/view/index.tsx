@@ -2,7 +2,7 @@
 //
 // The bundle exports exactly one thing: the View component. Everything
 // static about the view (title, capability handles, settings) lives in
-// package.json under `kungfuConfig.config.view`; the shell reads it without
+// kungfu.kfx.json under `kungfuConfig.config.view`; the shell reads it without
 // executing code, and at load time injects the declared capability handles
 // plus its own react instance. Declare capabilities in the manifest and they
 // arrive here as `caps.<name>`.

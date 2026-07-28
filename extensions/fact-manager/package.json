@@ -17,7 +17,8 @@
   },
   "files": [
     "dist",
-    "package.json"
+    "package.json",
+    "kungfu.kfx.json"
   ],
   "scripts": {
     "build": "tsc --noEmit && kungfu sdk kfx build",
@@ -33,22 +34,5 @@
   },
   "peerDependencies": {
     "react": "^18.3.1"
-  },
-  "kungfuConfig": {
-    "key": "fact-manager",
-    "name": "Fact Manager",
-    "product": {
-      "roles": ["tool"],
-      "icon": "🧾",
-      "order": 10
-    },
-    "config": {
-      "view": {
-        "title": "Fact Manager",
-        "capabilities": [
-          "storage"
-        ]
-      }
-    }
   }
 }

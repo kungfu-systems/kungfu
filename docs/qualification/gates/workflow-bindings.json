@@ -297,7 +297,27 @@
       "gates": [
         "shifu.workspace"
       ],
-      "activation": "three GitHub-hosted platforms after merge-group preflight when the exact source-impact plan requires Shifu qualification",
+      "activation": "GitHub-hosted Linux after merge-group preflight when the exact source-impact plan requires Shifu qualification",
+      "invocation": {
+        "args": [
+          "--capability",
+          "rust"
+        ]
+      }
+    },
+    {
+      "id": "dev-shifu-workspace-observation",
+      "execution": "gate",
+      "workflow": ".github/workflows/core-build-profiles.yml",
+      "job": "shifu_observation",
+      "profiles": [
+        "dev-pr"
+      ],
+      "gates": [
+        "shifu.workspace"
+      ],
+      "activation": "daily or manual three-platform diagnostic observation outside the dev merge critical path",
+      "currentSource": false,
       "invocation": {
         "args": [
           "--capability",

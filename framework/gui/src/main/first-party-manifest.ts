@@ -18,6 +18,7 @@ import {
   FIRST_PARTY_MANIFEST_SCHEMA,
   type FirstPartyManifest,
   type FirstPartyPin,
+  KFX_MANIFEST_FILE,
   type KfxPlanDeps,
   loadKfxContract,
   validateKfxPackageManifest,
@@ -35,11 +36,11 @@ function packageDirs(root: string): string[] {
   for (const entry of readdirSync(root, { withFileTypes: true })) {
     if (!entry.isDirectory() || entry.name === 'node_modules') continue;
     const dir = join(root, entry.name);
-    if (existsSync(join(dir, 'package.json'))) dirs.push(dir);
+    if (existsSync(join(dir, KFX_MANIFEST_FILE))) dirs.push(dir);
     for (const nested of readdirSync(dir, { withFileTypes: true })) {
       if (!nested.isDirectory() || nested.name === 'node_modules') continue;
       const nestedDir = join(dir, nested.name);
-      if (existsSync(join(nestedDir, 'package.json'))) dirs.push(nestedDir);
+      if (existsSync(join(nestedDir, KFX_MANIFEST_FILE))) dirs.push(nestedDir);
     }
   }
   return dirs;
@@ -73,7 +74,7 @@ export function generateFirstPartyManifest(
     let manifest: ViewManifest;
     try {
       manifest = JSON.parse(
-        readFileSync(join(dir, 'package.json'), 'utf8'),
+        readFileSync(join(dir, KFX_MANIFEST_FILE), 'utf8'),
       ) as ViewManifest;
     } catch {
       continue;

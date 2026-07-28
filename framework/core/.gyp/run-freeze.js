@@ -248,7 +248,7 @@ function copyFirstPartyProfile(source, destination) {
  * @param {string} destination
  */
 function materializeFirstPartyProfileMembers(source, destination) {
-  const manifestPath = path.join(source, 'package.json');
+  const manifestPath = path.join(source, 'kungfu.kfx.json');
   if (!fs.existsSync(manifestPath)) return;
   const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
   const members = manifest.kungfuConfig?.suite?.members;
@@ -258,7 +258,7 @@ function materializeFirstPartyProfileMembers(source, destination) {
 
   /** @param {string} directory */
   const packageKey = (directory) => {
-    const candidate = path.join(directory, 'package.json');
+    const candidate = path.join(directory, 'kungfu.kfx.json');
     if (!fs.existsSync(candidate)) return '';
     const value = JSON.parse(fs.readFileSync(candidate, 'utf8'));
     return value.kungfuConfig?.key || '';

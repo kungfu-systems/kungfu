@@ -539,6 +539,7 @@ export function sourceAcceptancePlan(files, evidenceBaseCommit = '') {
     };
     const format = sourcePythonCommand([
       'format',
+      '--no-cache',
       '--config',
       RUFF_CONFIG,
       '--check',
@@ -547,6 +548,7 @@ export function sourceAcceptancePlan(files, evidenceBaseCommit = '') {
     ]);
     const lint = sourcePythonCommand([
       'check',
+      '--no-cache',
       '--config',
       RUFF_CONFIG,
       '--force-exclude',
