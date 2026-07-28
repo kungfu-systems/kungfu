@@ -7,8 +7,6 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { devMergeBaseCandidates } from './candidate-timeline-events.cjs';
-
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const isWin = process.platform === 'win32';
 
@@ -76,7 +74,7 @@ function checkIdentityNeutralAuthority() {
     'framework/api/src/capability/service-authz.ts',
     'framework/gui/src/main/index.ts',
     'framework/gui/src/navigation.ts',
-    'framework/gui/src/main/session-window-authorization.ts',
+    'framework/gui/src/main/session-windows.ts',
     'framework/gui/src/main/session-windows-host.ts',
     'framework/gui/src/renderer/src/kfx-loader.ts',
     'framework/gui/src/renderer/session-window/main.tsx',
@@ -177,36 +175,61 @@ function checkIdentityNeutralAuthority() {
   );
 }
 
-function checkAgentWorkLabIsolation() {
-  const baseline =
-    process.env.KUNGFU_NATIVE_KFX_BASE_REF ??
-    git(['merge-base', 'HEAD', devMergeBaseCandidates()[0]]);
-  const agentWorkLabMerge = '1f7cfe58cc7699ac27106241430d77f6938eadcd';
-  const protectedBranch = 'feature/agent-work-lab-kfx-suite';
-  const protectedPaths = [
-    'framework/core/src/python/kungfu/agent_work_lab.py',
-    'framework/core/src/python/kungfu/cli/commands/agent_work_lab.py',
-    'framework/api/src/capability/agent-work-lab.ts',
-    'framework/gui/src/renderer/src/agent-work-lab.tsx',
-    'framework/tui/src/agent-work-lab-view.tsx',
-    'framework/tui/src/main.tsx',
-  ];
-  const branch = git(['branch', '--show-current']);
-  if (branch === protectedBranch) {
-    throw new Error(`refusing protected Qualification Lab branch ${branch}`);
-  }
-  git(['merge-base', '--is-ancestor', agentWorkLabMerge, 'HEAD']);
-  const changed = new Set(
-    git(['diff', '--name-only', baseline, '--']).split('\n').filter(Boolean),
+function checkAgentWorkLabSuiteCutover() {
+  const suiteManifestPath = 'extensions/agent-work-lab/kungfu.kfx.json';
+  const experienceManifestPath =
+    'extensions/agent-work-lab/experience/kungfu.kfx.json';
+  const catalogPath = 'extensions/agent-work-lab/experience/catalog.json';
+  const suiteTransportPath = 'extensions/agent-work-lab/package.json';
+  const experienceTransportPath =
+    'extensions/agent-work-lab/experience/package.json';
+  const suite = JSON.parse(
+    fs.readFileSync(path.join(root, suiteManifestPath), 'utf8'),
   );
-  const violations = protectedPaths.filter((item) => changed.has(item));
-  if (violations.length > 0) {
-    throw new Error(
-      `protected Qualification Lab paths changed:\n${violations.join('\n')}`,
+  const experience = JSON.parse(
+    fs.readFileSync(path.join(root, experienceManifestPath), 'utf8'),
+  );
+  const catalog = JSON.parse(
+    fs.readFileSync(path.join(root, catalogPath), 'utf8'),
+  );
+  const branch = git(['branch', '--show-current']);
+  assert.notEqual(
+    branch,
+    'feature/agent-work-lab-kfx-suite',
+    'the superseded isolation branch cannot be reused for Suite cutover work',
+  );
+  assert.equal(suite.schema, 'kungfu.kfx.manifest/v1');
+  assert.equal(suite.kungfuConfig?.key, 'kungfu.agent-work-lab');
+  assert.deepEqual(suite.kungfuConfig?.suite?.members, [
+    'agent-work-lab-experience',
+  ]);
+  assert.deepEqual(
+    suite.kungfuConfig?.registry?.extensionPoints?.[0]?.capabilities,
+    ['agentRuntime', 'work'],
+  );
+  assert.equal(experience.schema, 'kungfu.kfx.manifest/v1');
+  assert.equal(
+    experience.kungfuConfig?.registry?.contributions?.[0]?.extensionPoint,
+    'kungfu.agent-work-lab.experience',
+  );
+  assert.equal(catalog.schema, 'kungfu.agent-work-lab.suite-catalog/v1');
+  assert.equal(catalog.id, 'kungfu.agent-work-lab');
+  assert.deepEqual(
+    catalog.cases.map(({ id }) => id),
+    ['offline-demo', 'same-agent', 'cross-agent'],
+  );
+  for (const transportPath of [suiteTransportPath, experienceTransportPath]) {
+    const transport = JSON.parse(
+      fs.readFileSync(path.join(root, transportPath), 'utf8'),
+    );
+    assert.equal(
+      Object.hasOwn(transport, 'kungfuConfig'),
+      false,
+      `${transportPath} cannot own KFX semantics`,
     );
   }
   process.stdout.write(
-    `[native-kfx-isolation] PASS branch=${branch} baseline=${baseline} protected_changes=0 pr=1585 merge=${agentWorkLabMerge}\n`,
+    `[native-kfx-agent-work-lab] PASS branch=${branch} suite=${suite.kungfuConfig.key} cases=${catalog.cases.length}\n`,
   );
 }
 
@@ -309,7 +332,5 @@ run('layered API encoding authority', 'node', [
   path.join(root, 'scripts/check-layered-api-encoding-boundary.test.mjs'),
 ]);
 
-process.stdout.write(
-  '[native-admission] Qualification Lab and PR #1585 isolation\n',
-);
-checkAgentWorkLabIsolation();
+process.stdout.write('[native-admission] Agent Work Lab Suite cutover\n');
+checkAgentWorkLabSuiteCutover();

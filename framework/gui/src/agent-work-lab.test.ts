@@ -10,7 +10,7 @@ import type {
 import {
   AGENT_WORK_LAB_SUITE,
   agentWorkLabRecommendation,
-} from '@kungfu-tech/kfx-agent-work-lab-experience';
+} from '../../../extensions/agent-work-lab/experience/src/index.js';
 import {
   AGENT_WORK_LAB_MODES,
   AGENT_WORK_LAB_PLAYBACK_TIMING,

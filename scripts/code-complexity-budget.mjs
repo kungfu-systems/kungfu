@@ -482,7 +482,12 @@ function loadWaivers(policy) {
     }));
 }
 
-function regressionIssues(files, baseline, policy = {}) {
+function regressionIssues(
+  files,
+  baseline,
+  policy = {},
+  renamedFrom = new Map(),
+) {
   const issues = [];
   const baselineByPath = new Map(
     baseline.files.map((file) => [file.path, file]),
@@ -498,7 +503,12 @@ function regressionIssues(files, baseline, policy = {}) {
       });
       continue;
     }
-    const previous = baselineByPath.get(current.path);
+    const previousPath = renamedFrom.get(current.path) || current.path;
+    const previous = baselineByPath.get(previousPath);
+    const measurementPaths =
+      previousPath === current.path
+        ? [current.path]
+        : [previousPath, current.path];
     if (
       previous &&
       (previous.class !== current.class ||
@@ -508,7 +518,7 @@ function regressionIssues(files, baseline, policy = {}) {
       issues.push({
         code: 'classification-or-owner-relabeled',
         path: current.path,
-        paths: [current.path],
+        paths: measurementPaths,
         previousClass: previous.class,
         currentClass: current.class,
         previousLanguage: previous.language,
@@ -539,6 +549,7 @@ function regressionIssues(files, baseline, policy = {}) {
       issues.push({
         code: 'grandfathered-file-grew',
         path: current.path,
+        paths: measurementPaths,
         baselineLines: previous.lines,
         currentLines: current.lines,
         hardBudget: budget.hard,
@@ -552,6 +563,7 @@ function regressionIssues(files, baseline, policy = {}) {
       issues.push({
         code: 'existing-file-crossed-hard-budget',
         path: current.path,
+        paths: measurementPaths,
         baselineLines: previous.lines,
         currentLines: current.lines,
         hardBudget: budget.hard,
@@ -561,7 +573,8 @@ function regressionIssues(files, baseline, policy = {}) {
   const newHandwrittenByOwner = new Map();
   const baselinePaths = new Set(baseline.files.map((file) => file.path));
   for (const current of files) {
-    if (baselinePaths.has(current.path)) continue;
+    if (baselinePaths.has(current.path) || renamedFrom.has(current.path))
+      continue;
     if (current.class === 'first-party-handwritten-implementation') {
       if (!newHandwrittenByOwner.has(current.owner))
         newHandwrittenByOwner.set(current.owner, []);
@@ -593,9 +606,10 @@ function regressionIssues(files, baseline, policy = {}) {
     });
   }
   const currentByPath = new Map(files.map((file) => [file.path, file]));
+  const renamedSources = new Set(renamedFrom.values());
   const added = files.filter((file) => !baselinePaths.has(file.path));
   const deleted = baseline.files.filter(
-    (file) => !currentByPath.has(file.path),
+    (file) => !currentByPath.has(file.path) && !renamedSources.has(file.path),
   );
   for (const previous of deleted) {
     if (previous.class !== 'first-party-handwritten-implementation') continue;
@@ -641,13 +655,14 @@ function regressionIssues(files, baseline, policy = {}) {
   return issues;
 }
 
-function softBudgetWarnings(files, baseline) {
+function softBudgetWarnings(files, baseline, renamedFrom = new Map()) {
   const baselineByPath = new Map(
     baseline.files.map((file) => [file.path, file]),
   );
   const warnings = [];
   for (const current of files) {
-    const previous = baselineByPath.get(current.path);
+    const previousPath = renamedFrom.get(current.path) || current.path;
+    const previous = baselineByPath.get(previousPath);
     const budget = baseline.groups[groupKey(current)];
     if (
       !budget ||
@@ -659,7 +674,10 @@ function softBudgetWarnings(files, baseline) {
     warnings.push({
       code: 'soft-budget-crossed',
       path: current.path,
-      paths: [current.path],
+      paths:
+        previousPath === current.path
+          ? [current.path]
+          : [previousPath, current.path],
       owner: current.owner,
       softBudget: budget.soft,
       hardBudget: budget.hard,
@@ -671,8 +689,44 @@ function softBudgetWarnings(files, baseline) {
   return warnings;
 }
 
+function currentRenameMap(policy) {
+  for (const candidate of protectedBaselineCandidates(policy)) {
+    const mergeBase = spawnSync('git', ['merge-base', candidate, 'HEAD'], {
+      cwd: ROOT,
+      encoding: 'utf8',
+    });
+    if (mergeBase.status !== 0 || !String(mergeBase.stdout || '').trim())
+      continue;
+    const result = spawnSync(
+      'git',
+      [
+        'diff',
+        '--find-renames=50%',
+        '--diff-filter=R',
+        '--name-status',
+        `${String(mergeBase.stdout).trim()}..HEAD`,
+      ],
+      { cwd: ROOT, encoding: 'utf8', maxBuffer: 16 * 1024 * 1024 },
+    );
+    if (result.status !== 0) continue;
+    return new Map(
+      String(result.stdout || '')
+        .split('\n')
+        .filter(Boolean)
+        .flatMap((line) => {
+          const [status, previous, current] = line.split('\t');
+          return /^R\d{3}$/u.test(status || '') && previous && current
+            ? [[current, previous]]
+            : [];
+        }),
+    );
+  }
+  return new Map();
+}
+
 function checkCurrent(policy, layers, baseline) {
   const files = measureCurrent(policy, layers);
+  const renamedFrom = currentRenameMap(policy);
   const issues = validateMeasured(files);
   const recomputedBaseline = buildBaseline(policy, layers);
   issues.push(
@@ -694,7 +748,7 @@ function checkCurrent(policy, layers, baseline) {
       path: policy.baselinePath,
       message: 'baseline ref does not match current policy',
     });
-  issues.push(...regressionIssues(files, baseline, policy));
+  issues.push(...regressionIssues(files, baseline, policy, renamedFrom));
   const requester = String(git(['show', '-s', '--format=%ae', 'HEAD'])).trim();
   const evaluationTime = new Date();
   const waivers = loadWaivers(policy);
@@ -708,8 +762,8 @@ function checkCurrent(policy, layers, baseline) {
   const scopedIssues = issues.map((issue) =>
     enrichIssue(issue, baseline.files, files),
   );
-  const softWarnings = softBudgetWarnings(files, baseline).map((issue) =>
-    enrichIssue(issue, baseline.files, files),
+  const softWarnings = softBudgetWarnings(files, baseline, renamedFrom).map(
+    (issue) => enrichIssue(issue, baseline.files, files),
   );
   const waived = [];
   const blocking = [];

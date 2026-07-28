@@ -1,3 +1,7 @@
+import {
+  type KfxExperienceFlowDescriptor,
+  authorizeKfxHostLaunch,
+} from '@kungfu-tech/api/capability';
 // Per-session OS window registry (KF-ADR-019f86da-4f90-7153-a6c1-ab7a0a3cf481 stage 2). One session can be popped
 // out of the in-shell grid into its own restorable OS window, placed on the
 // display the user left it on. This module owns the *lifecycle* — which session
@@ -32,6 +36,36 @@ export type SessionWindow = {
   onBoundsChanged(cb: () => void): void;
   onClosed(cb: () => void): void;
 };
+
+export type SessionWindowLaunchAuthorization = {
+  descriptor: KfxExperienceFlowDescriptor;
+  packageKey: string;
+  authorizationRoot: string;
+};
+
+// A session window deliberately enables Node integration because it hosts the
+// terminal relay client. That privilege is available only when the exact Core
+// descriptor grants the terminal KFX an integrated GUI placement.
+export function authorizeSessionWindowLaunch(
+  launch: SessionWindowLaunchAuthorization,
+): SessionWindowLaunchAuthorization {
+  const authorization = authorizeKfxHostLaunch(
+    launch.descriptor,
+    launch.packageKey,
+    'gui',
+    launch.authorizationRoot,
+  );
+  if (
+    authorization.runtimeTier !== 'integrated-explicit' ||
+    !authorization.requiredCapabilities.includes('terminal') ||
+    !authorization.grantedCapabilities.includes('terminal')
+  ) {
+    throw new Error(
+      'KF_KFX_HOST_NOT_AUTHORIZED: session window requires an exact integrated terminal grant',
+    );
+  }
+  return launch;
+}
 
 // A window row as persisted into WorkspaceLayout.windows[] (structurally the
 // terminal extension's PersistedWindow; it crosses IPC as plain JSON, so the

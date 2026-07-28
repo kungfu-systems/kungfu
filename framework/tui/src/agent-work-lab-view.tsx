@@ -7,15 +7,15 @@ import type {
   AgentWorkLabStartupRoute,
 } from '@kungfu-tech/api/capability';
 import { agentWorkLabRunProgressLabel } from '@kungfu-tech/api/capability';
+import { useApp } from 'ink';
+import React from 'react';
 import {
   AGENT_WORK_LAB_CHECKS,
   AGENT_WORK_LAB_SUITE,
   type AgentWorkLabCaseId,
   agentWorkLabCase,
   agentWorkLabRecommendation,
-} from '@kungfu-tech/kfx-agent-work-lab-experience';
-import { useApp } from 'ink';
-import React from 'react';
+} from '../../../extensions/agent-work-lab/experience/src/index.js';
 import { boundedIndex, decodeShellKey } from './navigation.js';
 import {
   type QuickCommand,

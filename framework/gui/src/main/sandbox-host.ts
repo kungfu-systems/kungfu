@@ -12,7 +12,11 @@
 import {
   type HostEvent,
   type HostRequest,
+  type KfxControlStatus,
+  type KfxExperienceFlowDescriptor,
   createCapabilityHost,
+  projectKfxControlSuiteHost,
+  projectKfxExperienceFlowHost,
 } from '@kungfu-tech/api/capability';
 
 import { EVENT_CHANNEL, INVOKE_CHANNEL } from '../sandbox/transport';
@@ -25,6 +29,18 @@ export type HostWiring = {
   caps: Record<string, Record<string, unknown>>;
   declared: readonly string[];
 };
+
+// Electron remains a renderer/transport host. Core supplies every semantic,
+// admission, capability, authorization, generation, and receipt identity.
+export function projectGuiKfxExperienceFlow(
+  descriptor: KfxExperienceFlowDescriptor,
+) {
+  return projectKfxExperienceFlowHost(descriptor, 'gui');
+}
+
+export function projectGuiKfxControl(status: KfxControlStatus) {
+  return projectKfxControlSuiteHost(status, 'gui');
+}
 
 // Pure: wire a capability host over abstract transport hooks. Returns the host
 // so the caller can dispose subscriptions when the view closes.

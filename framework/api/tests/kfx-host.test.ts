@@ -3,8 +3,8 @@ import test from 'node:test';
 import {
   projectGuiKfxControl,
   projectGuiKfxExperienceFlow,
-} from '../../gui/src/main/kfx-host.ts';
-import { authorizeSessionWindowLaunch } from '../../gui/src/main/session-window-authorization.ts';
+} from '../../gui/src/main/sandbox-host.ts';
+import { authorizeSessionWindowLaunch } from '../../gui/src/main/session-windows.ts';
 import {
   projectTuiKfxControl,
   projectTuiKfxExperienceFlow,

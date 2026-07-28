@@ -28,7 +28,6 @@
   "dependencies": {
     "@kungfu-tech/agent-session": "workspace:*",
     "@kungfu-tech/api": "workspace:*",
-    "@kungfu-tech/kfx-agent-work-lab-experience": "workspace:*",
     "@kungfu-tech/kfx": "workspace:*",
     "@kungfu-tech/skill": "workspace:*",
     "electron-updater": "^6.8.9",

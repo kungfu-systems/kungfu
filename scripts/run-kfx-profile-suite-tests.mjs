@@ -2,14 +2,17 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import { spawnSync } from 'node:child_process';
+import { existsSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const isWin = process.platform === 'win32';
+const agentWorkLabOnly = process.argv.includes('--agent-work-lab');
+const logPrefix = agentWorkLabOnly ? '[agent-work-lab]' : '[kfx-profile-suite]';
 
 function run(label, command, args, env = process.env) {
-  process.stdout.write(`[kfx-profile-suite] ${label}\n`);
+  process.stdout.write(`${logPrefix} ${label}\n`);
   const result = spawnSync(command, args, {
     cwd: root,
     env,
@@ -20,79 +23,187 @@ function run(label, command, args, env = process.env) {
   if (result.status !== 0) process.exit(result.status ?? 1);
 }
 
-run('Node contract fixtures', 'pnpm', [
-  '--filter',
-  '@kungfu-tech/tui',
-  'exec',
-  'tsx',
-  '--test',
-  path.join(root, 'framework/kfx/src/profile-suite.test.ts'),
-]);
-
-run('GUI Profile navigation projection', 'pnpm', [
-  '--filter',
-  '@kungfu-tech/tui',
-  'exec',
-  'tsx',
-  '--test',
-  path.join(root, 'framework/gui/src/navigation.test.ts'),
-]);
-
-run('GUI Agent Work Lab visual contract', 'pnpm', [
-  '--filter',
-  '@kungfu-tech/tui',
-  'exec',
-  'tsx',
-  '--test',
-  path.join(root, 'framework/gui/src/agent-work-lab.test.ts'),
-]);
-
-run('GUI product search contract', 'pnpm', [
-  '--filter',
-  '@kungfu-tech/tui',
-  'exec',
-  'tsx',
-  '--test',
-  path.join(root, 'framework/gui/src/product-search.test.ts'),
-]);
-
-run('GUI KFX shared-module contract', 'pnpm', [
-  '--filter',
-  '@kungfu-tech/tui',
-  'exec',
-  'tsx',
-  '--test',
-  path.join(root, 'framework/gui/src/renderer/shared-modules.test.ts'),
-]);
-
-run('GUI workspace runtime foreground projection', 'pnpm', [
-  '--filter',
-  '@kungfu-tech/tui',
-  'exec',
-  'tsx',
-  '--test',
-  path.join(root, 'framework/gui/src/runtime-status.test.ts'),
-]);
+function assertNoLegacyProductIdentity() {
+  const roots = ['framework', 'extensions', 'product', 'scripts', 'docs'];
+  const ignored = new Set([
+    'docs/development/versioning.md',
+    'framework/maintainability/code-complexity-baseline.json',
+    'scripts/run-kfx-profile-suite-tests.mjs',
+  ]);
+  const ignoredPrefixes = ['docs/qualification/evidence/'];
+  const legacyPatterns = [
+    /Agent Qualification Lab/u,
+    /qualification-lab/u,
+    /qualification_lab/u,
+    /\bQualificationLab\b/u,
+    /\bqualificationLab\b/u,
+  ];
+  const violations = [];
+  const listed = spawnSync(
+    'git',
+    ['ls-files', '--cached', '--others', '--exclude-standard', '--', ...roots],
+    { cwd: root, encoding: 'utf8' },
+  );
+  if (listed.error) throw listed.error;
+  if (listed.status !== 0) process.exit(listed.status ?? 1);
+  for (const relativePath of listed.stdout.split('\n').filter(Boolean)) {
+    if (
+      ignored.has(relativePath) ||
+      ignoredPrefixes.some((prefix) => relativePath.startsWith(prefix))
+    ) {
+      continue;
+    }
+    const entryPath = path.join(root, relativePath);
+    if (!existsSync(entryPath)) continue;
+    const source = readFileSync(entryPath, 'utf8');
+    if (legacyPatterns.some((pattern) => pattern.test(source))) {
+      violations.push(relativePath);
+    }
+  }
+  if (violations.length > 0) {
+    throw new Error(
+      `legacy Agent Qualification Lab identity remains reachable:\n${violations
+        .sort()
+        .join('\n')}`,
+    );
+  }
+  process.stdout.write(
+    '[agent-work-lab] legacy product identity absent outside immutable historical evidence\n',
+  );
+}
 
 const pythonPath = [
   path.join(root, 'framework/core/src/python'),
+  agentWorkLabOnly
+    ? (process.env.KUNGFU_NATIVE_PATH ??
+      path.join(root, 'framework/core/build/Release'))
+    : null,
   process.env.PYTHONPATH,
 ]
   .filter(Boolean)
   .join(path.delimiter);
 
-run(
-  'Python contract fixtures',
-  'uv',
-  [
-    'run',
-    '--project',
-    path.join(root, 'framework/core'),
-    '--frozen',
-    'pytest',
-    path.join(root, 'framework/core/tests/python/test_kfx_contract.py'),
-    '-k',
-    'profile_suite',
-  ],
-  { ...process.env, PYTHONPATH: pythonPath },
-);
+if (agentWorkLabOnly) {
+  assertNoLegacyProductIdentity();
+  for (const [label, file] of [
+    ['API capability adapter', 'framework/api/tests/agent-work-lab.test.ts'],
+    ['TUI experience', 'framework/tui/src/agent-work-lab-view.test.ts'],
+    ['GUI experience', 'framework/gui/src/agent-work-lab.test.ts'],
+    ['KFX Manifest discovery', 'framework/kfx/src/profile-suite.test.ts'],
+  ]) {
+    run(label, 'pnpm', [
+      '--filter',
+      '@kungfu-tech/tui',
+      'exec',
+      'tsx',
+      '--test',
+      path.join(root, file),
+    ]);
+  }
+
+  run(
+    'Core Python format',
+    'uv',
+    [
+      'run',
+      '--project',
+      path.join(root, 'framework/core'),
+      '--frozen',
+      'ruff',
+      'format',
+      '--check',
+      path.join(root, 'framework/core/src/python/kungfu/agent_work_lab.py'),
+      path.join(
+        root,
+        'framework/core/src/python/kungfu/cli/commands/agent_work_lab.py',
+      ),
+      path.join(root, 'framework/core/tests/python/test_agent_work_lab.py'),
+    ],
+    { ...process.env, PYTHONPATH: pythonPath },
+  );
+
+  run(
+    'Core plans, Work evidence, reports and CLI',
+    'uv',
+    [
+      'run',
+      '--project',
+      path.join(root, 'framework/core'),
+      '--frozen',
+      'pytest',
+      '-q',
+      path.join(root, 'framework/core/tests/python/test_agent_work_lab.py'),
+    ],
+    { ...process.env, PYTHONPATH: pythonPath },
+  );
+
+  run(
+    'CLI catalog parity',
+    'uv',
+    [
+      'run',
+      '--project',
+      path.join(root, 'framework/core'),
+      '--frozen',
+      'python',
+      '-m',
+      'kungfu.cli.catalog_projection',
+      '--check',
+    ],
+    { ...process.env, PYTHONPATH: pythonPath },
+  );
+} else {
+  run('Node contract fixtures', 'pnpm', [
+    '--filter',
+    '@kungfu-tech/tui',
+    'exec',
+    'tsx',
+    '--test',
+    path.join(root, 'framework/kfx/src/profile-suite.test.ts'),
+  ]);
+
+  for (const [label, file] of [
+    [
+      'GUI Profile navigation projection',
+      'framework/gui/src/navigation.test.ts',
+    ],
+    [
+      'GUI Agent Work Lab visual contract',
+      'framework/gui/src/agent-work-lab.test.ts',
+    ],
+    ['GUI product search contract', 'framework/gui/src/product-search.test.ts'],
+    [
+      'GUI KFX shared-module contract',
+      'framework/gui/src/renderer/shared-modules.test.ts',
+    ],
+    [
+      'GUI workspace runtime foreground projection',
+      'framework/gui/src/runtime-status.test.ts',
+    ],
+  ]) {
+    run(label, 'pnpm', [
+      '--filter',
+      '@kungfu-tech/tui',
+      'exec',
+      'tsx',
+      '--test',
+      path.join(root, file),
+    ]);
+  }
+
+  run(
+    'Python contract fixtures',
+    'uv',
+    [
+      'run',
+      '--project',
+      path.join(root, 'framework/core'),
+      '--frozen',
+      'pytest',
+      path.join(root, 'framework/core/tests/python/test_kfx_contract.py'),
+      '-k',
+      'profile_suite',
+    ],
+    { ...process.env, PYTHONPATH: pythonPath },
+  );
+}

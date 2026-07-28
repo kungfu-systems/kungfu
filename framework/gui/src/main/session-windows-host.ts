@@ -18,12 +18,10 @@ import {
   SESSION_WINDOW_SNAPSHOT_CHANNEL,
 } from '../sandbox/channels';
 import {
-  type SessionWindowLaunchAuthorization,
-  authorizeSessionWindowLaunch,
-} from './session-window-authorization';
-import {
   type SessionWindow,
+  type SessionWindowLaunchAuthorization,
   type SessionWindowRegistry,
+  authorizeSessionWindowLaunch,
   createSessionWindowRegistry,
 } from './session-windows';
 import {

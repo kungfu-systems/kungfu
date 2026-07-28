@@ -230,6 +230,39 @@ test('anti-gaming rejects relabeling, responsibility splits, and re-added debt',
   assert.ok(readdedCodes.includes('grandfathered-file-grew'));
 });
 
+test('one-to-one Git renames preserve the old budget without becoming helper splits', () => {
+  const deleted = handwritten('scripts/legacy-lab.mjs', 120);
+  const renamed = handwritten('scripts/current-lab.mjs', 121);
+  const renamedFrom = new Map([
+    ['scripts/current-lab.mjs', 'scripts/legacy-lab.mjs'],
+  ]);
+  const policy = {
+    antiGaming: {
+      maxNewHandwrittenFilesPerOwner: 3,
+      newGeneratedProjectionRequiresProvenance: true,
+    },
+  };
+  const issues = regressionIssues(
+    [
+      renamed,
+      handwritten('scripts/existing-new-helper-a.mjs', 20),
+      handwritten('scripts/existing-new-helper-b.mjs', 20),
+      handwritten('scripts/existing-new-helper-c.mjs', 20),
+    ],
+    { groups, files: [deleted] },
+    policy,
+    renamedFrom,
+  );
+  assert.deepEqual(
+    issues.map((issue) => issue.code),
+    ['grandfathered-file-grew'],
+  );
+  assert.deepEqual(issues[0].paths, [
+    'scripts/legacy-lab.mjs',
+    'scripts/current-lab.mjs',
+  ]);
+});
+
 test('unknown classification or owner fails closed', () => {
   const issues = validateMeasured([
     { path: 'mystery', class: '', owner: '', lines: 1 },

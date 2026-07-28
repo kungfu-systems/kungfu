@@ -15,11 +15,5 @@
     "src",
     "catalog.json",
     "kungfu.kfx.json"
-  ],
-  "scripts": {
-    "build": "tsc --noEmit"
-  },
-  "devDependencies": {
-    "typescript": "^5.5.4"
-  }
+  ]
 }

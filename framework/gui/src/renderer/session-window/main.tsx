@@ -13,7 +13,7 @@ import React from 'react';
 import * as ReactDOM from 'react-dom';
 import { createRoot } from 'react-dom/client';
 import * as jsxRuntime from 'react/jsx-runtime';
-import type { SessionWindowLaunchAuthorization } from '../../main/session-window-authorization';
+import type { SessionWindowLaunchAuthorization } from '../../main/session-windows';
 import { SESSION_WINDOW_AUTHORIZATION_CHANNEL } from '../../sandbox/channels';
 import { createKfxSharedModules } from '../shared-modules';
 import { loadKfx } from '../src/kfx-loader';
