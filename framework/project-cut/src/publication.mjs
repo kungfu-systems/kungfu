@@ -540,12 +540,12 @@ export function planSettlementPublication(
   const projectCuts = normalized.projectCuts.map((cutRoot) =>
     inspectProjectCut(root, sourceCommit, cutRoot),
   );
-  const selectedEpisodeRoots = new Set(
-    episodes.map((episode) => episode.semanticRoot),
+  const selectedEpisodeProviderRoots = new Set(
+    episodes.map((episode) => episode.providerRoot),
   );
   const missingEpisodeRoots = projectCuts
     .flatMap((cut) => cut.episodeRoots)
-    .filter((episodeRoot) => !selectedEpisodeRoots.has(episodeRoot))
+    .filter((episodeRoot) => !selectedEpisodeProviderRoots.has(episodeRoot))
     .sort(utf8Compare);
   if (missingEpisodeRoots.length > 0)
     throw failure(
