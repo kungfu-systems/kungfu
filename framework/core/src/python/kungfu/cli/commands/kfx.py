@@ -586,7 +586,7 @@ def native_status(ctx, roots):
 
 @native_group.group(
     name="control",
-    help="operate the first-party Control Suite through public KFX Fact/Work",
+    help="operate the Control Suite through public identity-neutral KFX Fact/Work",
 )
 @click.help_option("-h", "--help")
 @kfx_command_context
@@ -733,7 +733,6 @@ def native_control_apply(ctx, candidate, plan_file, authority_file, authorized_b
             "host-placement",
             "capability",
             "migration",
-            "system-role",
         ]
     ),
     required=True,

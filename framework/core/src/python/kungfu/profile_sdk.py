@@ -1063,7 +1063,7 @@ def _profile_facet_audit(resolved: Mapping[str, Any]) -> dict[str, Any]:
 def _shared_api_release_audit(
     projection: Mapping[str, Any], resolved: Mapping[str, Any]
 ) -> tuple[dict[str, Any], list[dict[str, Any]]]:
-    """Prove first-party GUI/Agent parity through the installed API authority."""
+    """Prove bundled GUI/Agent parity through the installed API authority."""
 
     from kungfu.agent.kfd3 import registry
 
@@ -1137,7 +1137,7 @@ def _shared_api_release_audit(
     if failures:
         raise ProfileSdkError(
             "kfd3-release-api-parity-failed",
-            "one or more first-party intents lack the same GUI and Agent API surface",
+            "one or more bundled intents lack the same GUI and Agent API surface",
             failures=failures,
         )
     facets = []
@@ -1339,9 +1339,6 @@ def _release_qualification_receipt(
     explicit = os.environ.get("KF_PROFILE_KFD3_MANIFEST")
     if explicit:
         paths.append(Path(explicit))
-    first_party = os.environ.get("KF_FIRST_PARTY_MANIFEST")
-    if first_party:
-        paths.append(Path(first_party).with_name("profile-kfd3.json"))
     paths.append(Path(sys.executable).resolve().with_name("profile-kfd3.json"))
     seen = set()
     fallback = None

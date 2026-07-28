@@ -1,15 +1,18 @@
 // Kfx loading in the GUI renderer: discover + decide via the host-agnostic
 // `planKfx` (`@kungfu-tech/kfx`), then LAND each planned kfx in this renderer.
-// Landing evaluates a trusted view's bundle — and injects its sibling CSS —
-// into this document, or stands in a placeholder for a sandboxed view the shell
+// Landing evaluates an explicitly integrated view's bundle — and injects its
+// sibling CSS — into this document, or stands in a placeholder for an isolated view the shell
 // embeds as an isolated renderer. Bundles are built by `kungfu sdk kfx build`
 // with the modules declared by `framework/kfx/shared-modules.json` left
 // external; the shell injects its own instances through a require shim, so
 // every kfx shares one React and one public API surface.
 //
-// The discovery + trust/tier rule now lives in `planKfx` so the CLI/TUI host
-// reaches the same verdict for the same kfx (KF-ADR-019f86da-4f90-7afa-a1e1-0510f00916be). Only the renderer-
-// specific landing below stays here; `View` never crosses into the plan.
+// Discovery lives in `planKfx`; authority does not. Only an exact Core host
+// descriptor can authorize renderer landing.
+import {
+  type KfxExperienceFlowDescriptor,
+  authorizeKfxHostLaunch,
+} from '@kungfu-tech/api/capability';
 import {
   type KfxPlanDeps,
   type KfxSuiteDecl,
@@ -18,9 +21,6 @@ import {
   planKfx,
 } from '@kungfu-tech/kfx';
 import type { KfxEntry } from '@kungfu-tech/kfx';
-
-// The manifest/roots readers (`loadFirstPartyManifest`, `extensionRoots`) and
-// the trust/tier rule now live in `@kungfu-tech/kfx`; import them from there.
 
 export type SharedModules = Record<string, unknown>;
 
@@ -101,17 +101,55 @@ function loadBundle(
 export function loadKfx(
   env: Record<string, string | undefined>,
   shared: SharedModules,
+  descriptor: KfxExperienceFlowDescriptor | null = null,
 ): KfxLoadResult {
   const plan = planKfx(env, deps);
   const entries: KfxEntry[] = [];
   const failures: KfxLoadFailure[] = [...plan.failures];
   for (const entry of plan.entries) {
     try {
+      const candidate = descriptor?.runtimeAuthorizations.find(
+        (authorization) =>
+          authorization.packageKey === entry.id && authorization.host === 'gui',
+      );
+      if (!descriptor || !candidate) {
+        failures.push({
+          dir: entry.dir,
+          error:
+            'KF_KFX_HOST_NOT_AUTHORIZED: exact Core host authorization required',
+        });
+        continue;
+      }
+      const authorization = authorizeKfxHostLaunch(
+        descriptor,
+        entry.id,
+        'gui',
+        candidate.authorizationRoot,
+      );
+      if (
+        authorization.requiredCapabilities.some(
+          (capability) => !entry.capabilities.includes(capability),
+        )
+      ) {
+        throw new Error(
+          'KF_KFX_HOST_NOT_AUTHORIZED: manifest and Core capability roots differ',
+        );
+      }
+      const tier =
+        authorization.runtimeTier === 'integrated-explicit'
+          ? 'node-integrated'
+          : 'sandboxed-ipc';
       const View =
-        entry.tier === 'sandboxed-ipc'
+        tier === 'sandboxed-ipc'
           ? sandboxedPlaceholder
           : loadBundle(entry.bundlePath, shared);
-      entries.push({ ...entry, View });
+      entries.push({
+        ...entry,
+        tier,
+        executionAllowed: true,
+        authorizationRoot: authorization.authorizationRoot,
+        View,
+      });
     } catch (e) {
       failures.push({ dir: entry.dir, error: (e as Error).message });
     }

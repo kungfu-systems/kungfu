@@ -465,7 +465,7 @@ test('product observability ignores errors from sibling components', () => {
 
 test('electron before-pack uses a file URL only on Windows', () => {
   const entryPath = new URL(
-    '../../framework/gui/scripts/gen-first-party-manifest.mjs',
+    '../../framework/gui/scripts/gen-system-profile-kfd3.mjs',
     import.meta.url,
   ).pathname;
   assert.equal(toEsmEntrypointSpecifier(entryPath, 'linux'), entryPath);
@@ -479,7 +479,7 @@ test('electron before-pack uses a file URL only on Windows', () => {
 
 test('electron before-pack imports its ESM entrypoint through eval', () => {
   const entryPath = new URL(
-    '../../framework/gui/scripts/gen-first-party-manifest.mjs',
+    '../../framework/gui/scripts/gen-system-profile-kfd3.mjs',
     import.meta.url,
   ).pathname;
   const specifier = toEsmEntrypointSpecifier(entryPath);

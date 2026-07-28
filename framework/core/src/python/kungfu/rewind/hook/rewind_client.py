@@ -128,7 +128,7 @@ def retry(span_id, retry_of_span_id, attempt, reason=None):
 # channel; the supervisor writes the frames and the schema bindings.
 
 
-def kfx_schema(action_type, name, bfbs, tier="trusted"):
+def kfx_schema(action_type, name, bfbs, tier="sandboxed"):
     emit(
         {
             "event": "kfx_schema",

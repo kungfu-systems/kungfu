@@ -1,12 +1,6 @@
 import { execFile, execFileSync, spawn } from 'node:child_process';
 import nodeCrypto from 'node:crypto';
-import {
-  existsSync,
-  mkdirSync,
-  readFileSync,
-  readdirSync,
-  writeFileSync,
-} from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, readdirSync } from 'node:fs';
 import path from 'node:path';
 import { type KfxPlanDeps, planKfx } from '@kungfu-tech/kfx';
 import {
@@ -67,10 +61,6 @@ import {
   createProductionDesktopUpdateProvider,
 } from './desktop-update-provider';
 import {
-  firstPartyManifestPath,
-  generateFirstPartyManifest,
-} from './first-party-manifest';
-import {
   bindElectronGlobalWorkObserver,
   createGlobalWorkObserverHost,
 } from './global-work-observer-host';
@@ -121,8 +111,8 @@ const kungfuDir = app.isPackaged
     );
 
 const bindingPath = path.join(kungfuDir, 'kungfu_electron.node');
-const firstPartySourceRoot =
-  process.env.KF_FIRST_PARTY_SOURCE_ROOT ||
+const bundledExtensionSourceRoot =
+  process.env.KF_BUNDLED_EXTENSION_ROOT ||
   path.join(__dirname, '..', '..', '..', '..', 'extensions');
 
 function expandHomePath(value: string): string {
@@ -296,45 +286,16 @@ process.env.KUNGFU_KFX_CONTRACT =
 // Extension roots for the renderer's kfx loader. Installed extensions live
 // next to the runtime home (<home>/extensions, populated by `kungfu kfx
 // install`); in development the workspace extensions/ tree is the default
-// source so the System Suite and the built-in views load from source builds. A
-// packaged app always prepends its bundled first-party kfx root, so an inherited
-// KF_EXTENSION_PATH can extend the product without hiding the shipped views.
+// source so the bundled product views load from source builds. Assembly origin
+// affects discovery and presentation only; it has no authorization weight.
 const bundledExtensionRoot = app.isPackaged
   ? path.join(process.resourcesPath, 'extensions')
-  : firstPartySourceRoot;
+  : bundledExtensionSourceRoot;
 process.env.KF_EXTENSION_PATH =
   app.isPackaged && process.env.KF_EXTENSION_PATH
     ? [bundledExtensionRoot, process.env.KF_EXTENSION_PATH].join(path.delimiter)
     : process.env.KF_EXTENSION_PATH || bundledExtensionRoot;
 
-// The frozen first-party set (KF-ADR-019f86da-4f90-79f1-8716-aca36b142847): which extension keys the renderer's
-// loader may trust with node-integrated tier. It is derived from a *fixed
-// first-party root* — never from KF_EXTENSION_PATH, which a user may extend, so
-// dropping a package on the extension path can no longer confer trust.
-//   dev: generate from the workspace extensions/ tree at startup, keys only
-//        (bundles change on every rebuild, so they are trusted by key, unpinned).
-//   packaged: point at a build-baked resource with pinned bundle hashes; if the
-//        bake step has not run the manifest is absent and only system views are
-//        trusted (safe by default). The pinned resource is baked at build time
-//        by scripts/gen-first-party-manifest.mjs into dist/kungfu, which ships to
-//        Resources/kungfu alongside the runtime.
-if (!process.env.KF_FIRST_PARTY_MANIFEST && workspaceRuntimeReady) {
-  if (app.isPackaged) {
-    process.env.KF_FIRST_PARTY_MANIFEST = path.join(
-      process.resourcesPath,
-      'kungfu',
-      'first-party.json',
-    );
-  } else if (process.env.KF_RUNTIME_DIR) {
-    const manifest = generateFirstPartyManifest(firstPartySourceRoot, {
-      pin: false,
-    });
-    const manifestPath = firstPartyManifestPath(process.env.KF_RUNTIME_DIR);
-    mkdirSync(path.dirname(manifestPath), { recursive: true });
-    writeFileSync(manifestPath, JSON.stringify(manifest), 'utf8');
-    process.env.KF_FIRST_PARTY_MANIFEST = manifestPath;
-  }
-}
 if (!process.env.KF_PROFILE_KFD3_MANIFEST && app.isPackaged) {
   process.env.KF_PROFILE_KFD3_MANIFEST = path.join(
     process.resourcesPath,

@@ -1,5 +1,6 @@
 import * as capability from '@kungfu-tech/api/capability';
 import type {
+  KfxExperienceFlowDescriptor,
   ProductSearchDocument,
   ProductSearchResult,
   QualificationLabStartupRoute,
@@ -34,6 +35,7 @@ import React from 'react';
 import * as ReactDOM from 'react-dom';
 import { createRoot } from 'react-dom/client';
 import * as jsxRuntime from 'react/jsx-runtime';
+import type { SessionWindowLaunchAuthorization } from '../../main/session-window-authorization';
 import {
   accessibleEntries,
   availableProfiles,
@@ -1048,8 +1050,20 @@ function App() {
   const [labOpen, setLabOpen] = React.useState(
     startupSurface === 'qualification-lab',
   );
+  const [kfxDescriptor] = React.useState<KfxExperienceFlowDescriptor | null>(
+    () => {
+      try {
+        const plan = runtime.storage?.kfxRegistry('plan', {});
+        return (
+          (plan?.hostContract as unknown as KfxExperienceFlowDescriptor) ?? null
+        );
+      } catch {
+        return null;
+      }
+    },
+  );
   const [loaded] = React.useState<KfxLoadResult>(() =>
-    loadKfx(window.process.env, SHARED_MODULES),
+    loadKfx(window.process.env, SHARED_MODULES, kfxDescriptor),
   );
   const [state, setState] = React.useState<ShellState>(() =>
     runtime.domain ? loadShellState(runtime.domain) : DEFAULT_STATE,
@@ -1544,6 +1558,22 @@ function App() {
     enabled[0] ??
     null;
 
+  const sessionWindowLaunch =
+    React.useMemo<SessionWindowLaunchAuthorization | null>(() => {
+      const entry = loaded.entries.find(
+        (candidate) =>
+          candidate.tier === 'node-integrated' &&
+          candidate.capabilities.includes('terminal') &&
+          candidate.authorizationRoot !== null,
+      );
+      if (!entry || !entry.authorizationRoot || !kfxDescriptor) return null;
+      return {
+        descriptor: kfxDescriptor,
+        packageKey: entry.id,
+        authorizationRoot: entry.authorizationRoot,
+      };
+    }, [kfxDescriptor, loaded.entries]);
+
   // KF-ADR-019f86da-4f90-7153-a6c1-ab7a0a3cf481 stage 2/3: expose per-session OS window control to views through the
   // shell so a view stays electron-free. Present only when the flag is on and
   // this (node-integrated) renderer can reach ipc; absent otherwise, so a view
@@ -1558,7 +1588,8 @@ function App() {
   const sessionWindowShell = React.useMemo<Partial<Shell>>(() => {
     if (
       window.process?.env?.KF_SESSION_WINDOWS !== '1' ||
-      window.process?.env?.KF_TERMINAL_HOST !== 'main'
+      window.process?.env?.KF_TERMINAL_HOST !== 'main' ||
+      !sessionWindowLaunch
     )
       return {};
     type SessionWindowIpc = {
@@ -1587,6 +1618,7 @@ function App() {
         void ipcRenderer.invoke(SESSION_WINDOW_OPEN_CHANNEL, {
           windowId,
           runId,
+          launch: sessionWindowLaunch,
         });
       },
       restoreSessionWindows: (windows) => {
@@ -1599,6 +1631,7 @@ function App() {
               displayId: w.displayId,
               bounds: { x: w.x, y: w.y, width: w.width, height: w.height },
             },
+            launch: sessionWindowLaunch,
           })),
         });
       },
@@ -1610,7 +1643,7 @@ function App() {
           ipcRenderer.removeListener(SESSION_WINDOW_SNAPSHOT_CHANNEL, handler);
       },
     };
-  }, []);
+  }, [sessionWindowLaunch]);
 
   const subscribeRefresh = React.useCallback((fn: () => void) => {
     subscribers.current.add(fn);

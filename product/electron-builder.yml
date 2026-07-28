@@ -2,7 +2,7 @@ appId: com.kungfu.app
 productName: Kungfu Episodes
 directories:
   output: ../../product/dist/desktop
-# asar:false so the native binding (.node), kungfu dylibs, and bundled first-party
+# asar:false so the native binding (.node), kungfu dylibs, and bundled product
 # kfx can be loaded directly from Resources.
 asar: false
 npmRebuild: false

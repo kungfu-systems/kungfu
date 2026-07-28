@@ -9,12 +9,7 @@ const { beforePackArgs } = require('./before-pack.cjs');
 
 test('passes Windows ESM entrypoints as file URLs', () => {
   const loader = path.resolve('node_modules', 'tsx', 'dist', 'loader.mjs');
-  const generator = path.resolve(
-    'framework',
-    'gui',
-    'scripts',
-    'gen-first-party-manifest.mjs',
-  );
+  const generator = path.resolve('framework', 'gui', 'scripts');
 
   const args = beforePackArgs(loader, generator, 'win32');
 

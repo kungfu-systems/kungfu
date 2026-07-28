@@ -1,7 +1,7 @@
 {
   "schema": "kungfu.kfx.contract/v1",
   "id": "kungfu-kfx",
-  "version": 11,
+  "version": 12,
   "weldedSurface": "kfx-contract",
   "description": "Single source for KFX package manifests, discovery rules, trust inputs, and build detection.",
   "contractSchema": {
@@ -19,7 +19,6 @@
       "knownCapabilities",
       "packageManifestSchema",
       "profileSuiteSchema",
-      "firstPartyManifestSchema",
       "nativeRuntime"
     ],
     "properties": {
@@ -52,7 +51,6 @@
           "contractEnv",
           "extensionPathEnv",
           "runtimeDirEnv",
-          "firstPartyManifestEnv",
           "installRoot",
           "viewEntryDefault",
           "rootPriority",
@@ -67,9 +65,6 @@
             "type": "string"
           },
           "runtimeDirEnv": {
-            "type": "string"
-          },
-          "firstPartyManifestEnv": {
             "type": "string"
           },
           "installRoot": {
@@ -106,9 +101,6 @@
       "profileSuiteSchema": {
         "type": "object"
       },
-      "firstPartyManifestSchema": {
-        "type": "object"
-      },
       "nativeRuntime": {
         "type": "object"
       }
@@ -118,7 +110,6 @@
     "contractEnv": "KUNGFU_KFX_CONTRACT",
     "extensionPathEnv": "KF_EXTENSION_PATH",
     "runtimeDirEnv": "KF_RUNTIME_DIR",
-    "firstPartyManifestEnv": "KF_FIRST_PARTY_MANIFEST",
     "installRoot": "${home}/extensions",
     "viewEntryDefault": "dist/view/index.js",
     "rootPriority": [
@@ -394,8 +385,7 @@
                         "enum": [
                           "unverified",
                           "identity-verified",
-                          "kfd-attested",
-                          "product-system"
+                          "kfd-attested"
                         ]
                       },
                       "uniqueItems": true
@@ -412,6 +402,9 @@
               "view": {
                 "type": "object",
                 "additionalProperties": false,
+                "required": [
+                  "capabilities"
+                ],
                 "properties": {
                   "title": {
                     "type": "string"
@@ -458,6 +451,9 @@
               "adapter": {
                 "type": "object",
                 "additionalProperties": false,
+                "required": [
+                  "capabilities"
+                ],
                 "properties": {
                   "targets": {
                     "type": "array",
@@ -505,6 +501,9 @@
               "service": {
                 "type": "object",
                 "additionalProperties": false,
+                "required": [
+                  "capabilities"
+                ],
                 "properties": {
                   "runtimes": {
                     "type": "array",
@@ -847,61 +846,15 @@
       }
     }
   },
-  "firstPartyManifestSchema": {
-    "$schema": "https://json-schema.org/draft/2020-12/schema",
-    "$id": "https://kungfu.link/schema/first-party-manifest-v1.json",
-    "type": "object",
-    "additionalProperties": false,
-    "required": [
-      "schema",
-      "version",
-      "keys"
-    ],
-    "properties": {
-      "schema": {
-        "type": "string",
-        "const": "kungfu.first-party-manifest/v1"
-      },
-      "version": {
-        "type": "integer",
-        "const": 1
-      },
-      "keys": {
-        "type": "object",
-        "additionalProperties": {
-          "type": "object",
-          "additionalProperties": false,
-          "required": [
-            "sha256"
-          ],
-          "properties": {
-            "sha256": {
-              "anyOf": [
-                {
-                  "type": "string",
-                  "pattern": "^[a-f0-9]{64}$"
-                },
-                {
-                  "type": "null"
-                }
-              ]
-            }
-          }
-        }
-      }
-    }
-  },
   "nativeRuntime": {
     "schema": "kungfu.kfx.native-contract/v3",
     "contractVersion": 3,
     "versionNegotiation": {
       "current": 3,
       "supported": [
-        1,
-        2,
         3
       ],
-      "minimumReader": 1,
+      "minimumReader": 3,
       "minimumWriter": 3,
       "policy": "exact-supported-version-or-refuse"
     },
@@ -937,7 +890,6 @@
         "inspect",
         "install",
         "qualify",
-        "system-role",
         "update"
       ],
       "highConsequenceCapabilities": [
@@ -947,7 +899,8 @@
         "storage"
       ],
       "identityAuthority": false,
-      "productSystemAuthority": false,
+      "originAuthority": false,
+      "productAssemblyAuthority": false,
       "kfdAuthority": "eligibility-only"
     },
     "canonicalRoots": {
@@ -995,16 +948,12 @@
     "runtimeTiers": [
       "isolated",
       "integrated-explicit",
-      "metadata-only",
-      "first-party-pinned",
-      "verified-third-party",
-      "untrusted"
+      "metadata-only"
     ],
     "admissionGrades": [
       "unverified",
       "identity-verified",
-      "kfd-attested",
-      "product-system"
+      "kfd-attested"
     ],
     "admissionAssessment": {
       "schema": "kungfu.kfx-admission-assessment/v1",
@@ -1023,8 +972,7 @@
         "qualify",
         "host-placement",
         "capability",
-        "migration",
-        "system-role"
+        "migration"
       ],
       "trustInputs": {
         "schema": "kungfu.kfx-trust-inputs/v1",
@@ -1079,8 +1027,6 @@
           "allowedCapabilities",
           "autoOperations",
           "highConsequenceCapabilities",
-          "systemCapabilities",
-          "productSystemRoots",
           "residualRisk"
         ],
         "allowed": [
@@ -1092,8 +1038,6 @@
           "allowedCapabilities",
           "autoOperations",
           "highConsequenceCapabilities",
-          "systemCapabilities",
-          "productSystemRoots",
           "residualRisk"
         ],
         "nonEmptyAllowlists": [
@@ -1250,7 +1194,8 @@
           "schema": "kungfu.kfx-capability-grant/v1",
           "authority": "exact-declaration-core-policy-approval-and-work-warrant",
           "ambientAuthority": false,
-          "productSystemAuthority": false
+          "originAuthority": false,
+          "productAssemblyAuthority": false
         },
         "warrantLifecycle": [
           "planned",
@@ -1277,16 +1222,6 @@
         "assessment-does-not-mutate-package-or-profile-lifecycle",
         "kfx-admission-consumes-adr-0052-report-and-does-not-replace-its-lifecycle"
       ]
-    },
-    "legacyV1": {
-      "trustGradeMeaning": "runtime-tier",
-      "runtimeTiers": [
-        "first-party-pinned",
-        "verified-third-party",
-        "untrusted"
-      ],
-      "compatibility": "validate-only",
-      "authorityCutover": "forbidden"
     },
     "contributionKinds": [
       "view",
@@ -1449,181 +1384,9 @@
       "pythonInstaller": "thin-native-service-adapter",
       "mutationCutover": "named-fact-cut-after-exact-cut-and-revision-fence",
       "unknownFields": "reject",
-      "migration": "validate-existing-documents-before-authority-cutover"
+      "migration": "pre-release-origin-authority-documents-refused"
     },
     "documents": {
-      "1": {
-        "request": {
-          "schema": "kungfu.kfx.native-request/v1",
-          "required": [
-            "schema",
-            "contractVersion",
-            "operation",
-            "packagePath",
-            "requestedCapabilities"
-          ],
-          "allowed": [
-            "schema",
-            "contractVersion",
-            "operation",
-            "packagePath",
-            "requestedCapabilities",
-            "actor"
-          ]
-        },
-        "inspection": {
-          "schema": "kungfu.kfx.native-inspection/v1",
-          "required": [
-            "schema",
-            "contractVersion",
-            "packageKey",
-            "packageRoot",
-            "trustGrade",
-            "owners",
-            "closure",
-            "declaredCapabilities"
-          ],
-          "allowed": [
-            "schema",
-            "contractVersion",
-            "packageKey",
-            "packageRoot",
-            "trustGrade",
-            "owners",
-            "closure",
-            "declaredCapabilities"
-          ]
-        },
-        "plan": {
-          "schema": "kungfu.kfx.native-plan/v1",
-          "required": [
-            "schema",
-            "contractVersion",
-            "planId",
-            "basis",
-            "nextGeneration",
-            "requestedCapabilities",
-            "grantedCapabilities",
-            "effects"
-          ],
-          "allowed": [
-            "schema",
-            "contractVersion",
-            "planId",
-            "basis",
-            "nextGeneration",
-            "requestedCapabilities",
-            "grantedCapabilities",
-            "effects"
-          ]
-        },
-        "receipt": {
-          "schema": "kungfu.kfx.native-receipt/v1",
-          "required": [
-            "schema",
-            "contractVersion",
-            "receiptId",
-            "planId",
-            "generation",
-            "verified"
-          ],
-          "allowed": [
-            "schema",
-            "contractVersion",
-            "receiptId",
-            "planId",
-            "generation",
-            "verified"
-          ]
-        }
-      },
-      "2": {
-        "request": {
-          "schema": "kungfu.kfx.native-request/v2",
-          "required": [
-            "schema",
-            "contractVersion",
-            "operation",
-            "packagePath",
-            "requestedCapabilities"
-          ],
-          "allowed": [
-            "schema",
-            "contractVersion",
-            "operation",
-            "packagePath",
-            "requestedCapabilities",
-            "actor"
-          ]
-        },
-        "inspection": {
-          "schema": "kungfu.kfx.native-inspection/v2",
-          "required": [
-            "schema",
-            "contractVersion",
-            "packageKey",
-            "packageRoot",
-            "runtimeTier",
-            "admissionGrade",
-            "owners",
-            "closure",
-            "declaredCapabilities"
-          ],
-          "allowed": [
-            "schema",
-            "contractVersion",
-            "packageKey",
-            "packageRoot",
-            "runtimeTier",
-            "admissionGrade",
-            "owners",
-            "closure",
-            "declaredCapabilities"
-          ]
-        },
-        "plan": {
-          "schema": "kungfu.kfx.native-plan/v2",
-          "required": [
-            "schema",
-            "contractVersion",
-            "planId",
-            "basis",
-            "nextGeneration",
-            "requestedCapabilities",
-            "grantedCapabilities",
-            "effects"
-          ],
-          "allowed": [
-            "schema",
-            "contractVersion",
-            "planId",
-            "basis",
-            "nextGeneration",
-            "requestedCapabilities",
-            "grantedCapabilities",
-            "effects"
-          ]
-        },
-        "receipt": {
-          "schema": "kungfu.kfx.native-receipt/v2",
-          "required": [
-            "schema",
-            "contractVersion",
-            "receiptId",
-            "planId",
-            "generation",
-            "verified"
-          ],
-          "allowed": [
-            "schema",
-            "contractVersion",
-            "receiptId",
-            "planId",
-            "generation",
-            "verified"
-          ]
-        }
-      },
       "3": {
         "request": {
           "schema": "kungfu.kfx.native-request/v3",

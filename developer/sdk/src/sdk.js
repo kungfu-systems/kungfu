@@ -878,7 +878,7 @@ function kfxProductEnv(cwd) {
   return {
     ...process.env,
     KF_EXTENSION_PATH: roots.join(path.delimiter),
-    KF_FIRST_PARTY_SOURCE_ROOT: extensionRoot,
+    KF_BUNDLED_EXTENSION_ROOT: extensionRoot,
   };
 }
 
@@ -908,7 +908,7 @@ function productKfxGui(cwd, verb, options) {
       `[dry-run] KF_EXTENSION_PATH=${path.dirname(cwd)}${path.delimiter}${referenceRoot}\n`,
     );
     process.stdout.write(
-      `[dry-run] KF_FIRST_PARTY_SOURCE_ROOT=${referenceRoot}\n`,
+      `[dry-run] KF_BUNDLED_EXTENSION_ROOT=${referenceRoot}\n`,
     );
   }
   runPackageScript(guiDir, 'dev', options, { env });
@@ -943,7 +943,7 @@ function productAssemblyGui(cwd, verb, options) {
       KF_EXTENSION_PATH: [extensionRoot, process.env.KF_EXTENSION_PATH]
         .filter(Boolean)
         .join(path.delimiter),
-      KF_FIRST_PARTY_SOURCE_ROOT: extensionRoot,
+      KF_BUNDLED_EXTENSION_ROOT: extensionRoot,
     };
     runPackageScript(guiDir, 'dev', options, { env });
     return;
@@ -978,7 +978,7 @@ function productAssemblyGui(cwd, verb, options) {
   if (verb === 'pack') args.unshift('--dir');
   if (options.dryRun) {
     process.stdout.write(
-      `[dry-run] cd ${guiDir}\n[dry-run] KF_FIRST_PARTY_SOURCE_ROOT=${extensionRoot} ${shellLine([process.execPath, builderScript, ...args])}\n`,
+      `[dry-run] cd ${guiDir}\n[dry-run] KF_BUNDLED_EXTENSION_ROOT=${extensionRoot} ${shellLine([process.execPath, builderScript, ...args])}\n`,
     );
     return;
   }
@@ -986,7 +986,7 @@ function productAssemblyGui(cwd, verb, options) {
     cwd: guiDir,
     env: {
       ...process.env,
-      KF_FIRST_PARTY_SOURCE_ROOT: extensionRoot,
+      KF_BUNDLED_EXTENSION_ROOT: extensionRoot,
     },
     stdio: 'inherit',
   });

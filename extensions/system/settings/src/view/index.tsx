@@ -760,7 +760,7 @@ function SettingsView({ shell, caps }: KfxViewProps) {
         ['KF_HOME', shellEnv('KF_HOME')],
         ['KF_CONFIG_HOME', shellEnv('KF_CONFIG_HOME')],
         ['KF_EXTENSION_PATH', shellEnv('KF_EXTENSION_PATH')],
-        ['KF_FIRST_PARTY_SOURCE_ROOT', shellEnv('KF_FIRST_PARTY_SOURCE_ROOT')],
+        ['KF_BUNDLED_EXTENSION_ROOT', shellEnv('KF_BUNDLED_EXTENSION_ROOT')],
       ].map(([label, value]) => (
         <div key={label} style={rowStyle}>
           <div style={{ color: '#858585' }}>{label}</div>

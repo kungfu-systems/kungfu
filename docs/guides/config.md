@@ -29,8 +29,9 @@ portable semantic format, see the
 unclassified durable candidate. Layout v1 is additive-only: renaming, removing,
 or changing the meaning or persistence class of an existing path requires v2
 and a migration path. The journal wire epoch pinned by this layout is
-`0xe3b24c8d` (`3820113037`), and `first-party.json` uses
-`schema: kungfu.first-party-manifest/v1`.
+`0xe3b24c8d` (`3820113037`). KFX authorization is not part of this
+workspace-layout contract; it is derived from exact Core-owned Fact/Work roots
+at runtime.
 
 `.xinfa/` is not another runtime home. It is the Git-published Xinfa semantic
 input surface. Live journals, locks, payload bodies, private/raw material,

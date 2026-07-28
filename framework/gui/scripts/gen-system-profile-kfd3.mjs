@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-// Run the shipped runtime's factory qualification harness after first-party
+// Run the shipped runtime's factory qualification harness after bundled
 // extensions have been built, then place its exact-root manifest beside the
 // frozen CLI. Product runtime reads this file; Profile identity or API authority
 // drift makes the receipt stale instead of preserving a cosmetic badge.

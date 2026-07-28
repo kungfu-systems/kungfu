@@ -4,6 +4,7 @@ import {
   projectGuiKfxControl,
   projectGuiKfxExperienceFlow,
 } from '../../gui/src/main/kfx-host.ts';
+import { authorizeSessionWindowLaunch } from '../../gui/src/main/session-window-authorization.ts';
 import {
   projectTuiKfxControl,
   projectTuiKfxExperienceFlow,
@@ -59,7 +60,6 @@ const descriptor: KfxExperienceFlowDescriptor = {
       trustRoot: `sha256:${'c'.repeat(64)}`,
       runtimeTier: 'isolated',
       admissionGrade: 'kfd-attested',
-      productSystem: false,
       placement: 'sandboxed-ipc',
       requiredCapabilities: ['domain'],
       grantedCapabilities: ['domain'],
@@ -98,7 +98,6 @@ const descriptor: KfxExperienceFlowDescriptor = {
         trustRoot: `sha256:${'c'.repeat(64)}`,
         runtimeTier: 'isolated',
         admissionGrade: 'kfd-attested',
-        productSystem: false,
         placement: 'sandboxed-ipc',
         requiredCapabilities: ['domain'],
         grantedCapabilities: ['domain'],
@@ -174,7 +173,7 @@ test('runtime launch requires the exact grant, generation, and authorization roo
         'gui',
         `sha256:${'d'.repeat(64)}`,
       ),
-    /authorization does not match/,
+    /(admission identity|authorization) does not match/,
   );
 });
 
@@ -201,6 +200,37 @@ test('preview and mismatched admissions fail closed before host execution', () =
   assert.throws(
     () => projectKfxExperienceFlowHost(mismatched, 'gui'),
     /contribution admission identity does not match/,
+  );
+});
+
+test('session windows require an exact integrated terminal grant', () => {
+  const terminal: KfxExperienceFlowDescriptor = structuredClone(descriptor);
+  const authorization = terminal.runtimeAuthorizations[0];
+  assert.ok(authorization);
+  authorization.runtimeTier = 'integrated-explicit';
+  authorization.requiredCapabilities = ['terminal'];
+  authorization.grantedCapabilities = ['terminal'];
+  assert.equal(
+    authorizeSessionWindowLaunch({
+      descriptor: terminal,
+      packageKey: 'workbench',
+      authorizationRoot: `sha256:${'d'.repeat(64)}`,
+    }).descriptor,
+    terminal,
+  );
+
+  const originOnly: KfxExperienceFlowDescriptor = structuredClone(terminal);
+  const originAuthorization = originOnly.runtimeAuthorizations[0];
+  assert.ok(originAuthorization);
+  originAuthorization.runtimeTier = 'isolated';
+  assert.throws(
+    () =>
+      authorizeSessionWindowLaunch({
+        descriptor: originOnly,
+        packageKey: 'workbench',
+        authorizationRoot: `sha256:${'d'.repeat(64)}`,
+      }),
+    /exact integrated terminal grant/,
   );
 });
 

@@ -282,10 +282,15 @@ test('Node rejects legacy-only and dual KFX manifest authority', () => {
   }
 });
 
-test('product roles cannot elevate an untrusted runtime tier', () => {
+test('product roles cannot synthesize an integrated runtime authorization', () => {
+  assert.equal(resolveRuntimeTier(null), 'sandboxed-ipc');
   assert.equal(
-    resolveRuntimeTier({ runtime: 'node-integrated', system: false }, false),
-    'sandboxed-ipc',
+    resolveRuntimeTier({
+      runtimeTier: 'integrated-explicit',
+      executionAllowed: true,
+      authorizationRoot: `sha256:${'a'.repeat(64)}`,
+    }),
+    'node-integrated',
   );
 });
 

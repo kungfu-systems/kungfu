@@ -155,7 +155,6 @@ struct storage_layout_paths_view {
   std::string data_home = {};
   std::string workspace_ignore = {};
   std::string workspace_config = {};
-  std::string first_party_manifest = {};
   std::string extensions_dir = {};
   std::string runtime_dir = {};
   std::string dataset_dir = {};

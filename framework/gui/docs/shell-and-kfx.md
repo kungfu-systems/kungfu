@@ -9,8 +9,8 @@ confidence: high
 sensitivity: public
 evidence_grade: B
 review_state: self-reviewed
-last_reviewed: 2026-07-27
-ai_provenance: GPT-5 via Codex on 2026-07-27; based on checked-in Kungfu contracts, implementations, tests, and the accepted KFX authority decision; no unobserved runtime state is claimed
+last_reviewed: 2026-07-28
+ai_provenance: GPT-5 via Codex on 2026-07-28; based on checked-in Kungfu contracts, implementations, tests, and the accepted KFX authority decision; no unobserved runtime state is claimed
 ---
 
 # The shell and its kfx
@@ -78,7 +78,6 @@ without executing code:
       "view": {
         "title": "Mission Control",
         "capabilities": ["ledger", "work"],
-        "system": false,
         "settings": []
       }
     }
@@ -113,8 +112,8 @@ The loader scans, in priority order (first occurrence of a key wins):
 
 1. `KF_EXTENSION_PATH` entries — in development this defaults to the
    workspace `extensions/` tree, so shipped views load from source builds; in a
-   packaged artifact it defaults to `Resources/extensions`, the bundled
-   first-party kfx assembly;
+   packaged artifact it defaults to `Resources/extensions`, the product-bundled
+   KFX assembly;
 2. `<home>/extensions` next to the runtime dir — the install root that
    `kungfu kfx install` populates.
 
@@ -144,9 +143,10 @@ the shell:
 ```
 
 The System Suite (`extensions/system/`) is the first consumer: Settings, the
-kfx manager and Status are ordinary view packages marked `system: true`
-(always available, never disableable), shipped through the same contract as
-everything else. Parts of a composite module do not wire to each other —
+KFX manager, and Status are ordinary view packages. Product roles such as
+`boot-critical` may keep a recovery surface visible, but they do not grant
+capabilities, change admission, or select a runtime tier. Parts of a composite
+module do not wire to each other —
 they share journal facts; a suite carries identity and versioning, never RPC
 topology. The word *bundle* is reserved for the self-describing trace/export
 package (see `docs/guides/rewind.md`) and must not be used for kfx groups.
@@ -225,34 +225,31 @@ shell.dismissNotification(id);
 
 Commands are declarative and shell-interpreted (`open-kfx`, `open-settings`,
 `dismiss-notification`). That keeps system chrome under shell ownership while
-still giving first-party/system kfx a stable notification surface. Sandboxed
+giving every exactly authorized KFX the same notification surface. Sandboxed
 views currently receive inert shell-chrome methods because the sandbox bridge
 only relays declared capabilities; a future shell bridge must be explicit IPC,
 not shared renderer callbacks.
 
-## Trust tiers ([KF-ADR-019f86da-4f90-7e5e-ae22-2a8fc24086f1](../../../docs/adr/KF-ADR-019f86da-4f90-7e5e-ae22-2a8fc24086f1.md) / [KF-ADR-019f86da-4f90-79f1-8716-aca36b142847](../../../docs/adr/KF-ADR-019f86da-4f90-79f1-8716-aca36b142847.md) / [KF-ADR-019f86da-4f90-7789-8b48-620aa694acf9](../../../docs/adr/KF-ADR-019f86da-4f90-7789-8b48-620aa694acf9.md))
+## Identity-neutral runtime tiers
 
-A view runs at one of two tiers; `resolveRuntimeTier` and the source-authority
-helpers (`../../kfx/src/index.ts`) are the single decision path. Discovery roots
-such as `Resources/extensions`, `KF_EXTENSION_PATH`, or `<home>/extensions` find
-packages; they do not grant trust. A manifest may ask to stay sandboxed, never
-to elevate.
+Discovery roots such as `Resources/extensions`, `KF_EXTENSION_PATH`, and
+`<home>/extensions` find packages only. Product assembly, names, namespaces,
+fixed identifiers, KFD compliance, and manifest self-labels grant no
+capabilities and select no tier.
 
-**node-integrated** (source-verified first-party/system views) shares the
-shell's renderer, React and capabilities. **sandboxed-ipc** (untrusted views)
-runs in an isolated renderer (`nodeIntegration:false, contextIsolation:true,
-sandbox:true`) with no node; `contextBridge` exposes only a bridge to the
-declared capabilities, each call round-trips to the trusted host over IPC
-(`sandbox-host.ts`), and an undeclared capability is rejected there — the
-declaration is an enforced boundary. The view's session denies the network and
-its process is memory-capped (`createSandboxedView`). Proven live: in a real
-sandboxed renderer `window.require`/`process`/`Buffer` are absent, a declared
-call round-trips, an undeclared call is rejected.
+The loader defaults to the isolated Chromium plane
+(`nodeIntegration:false`, `contextIsolation:true`, `sandbox:true`) and refuses
+ambient network access. It may enter the shared renderer only when Core supplies
+the exact `integrated-explicit` host authorization bound to the current
+Passport, policy, Work/Warrant, capability grant, Fact cut, and generation
+roots. `resolveRuntimeTier` consumes that authorization; it does not infer one.
+An undeclared or ungranted capability is rejected by the host relay.
 
-The `adapter` facet is not contained by a renderer sandbox: it runs inside the
-traced program's own process. Per [KF-ADR-019f86da-4f90-79f1-8716-aca36b142847](../../../docs/adr/KF-ADR-019f86da-4f90-79f1-8716-aca36b142847.md), an untrusted instrumentation adapter
-is refused rather than sandboxed. Independent runtime code belongs on the
-OS-sandbox/service plane described in `kfx-topology.md`.
+The `adapter` facet runs inside the traced program and therefore cannot be
+contained by a renderer sandbox. It is injected only with an exact
+adapter-runtime authorization; otherwise it is refused before side effects.
+Independent runtime code belongs on the OS-isolated service plane described in
+`kfx-topology.md`.
 
 ## Evolution notes
 - The manifest is a welded surface the moment packages are published. Until

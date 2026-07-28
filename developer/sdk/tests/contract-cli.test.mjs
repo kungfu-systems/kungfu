@@ -301,7 +301,7 @@ test('product gui dev dry-run supports a single kfx package directory', (t) => {
         kungfuConfig: {
           key: 'demo-kfx',
           name: 'Demo KFX',
-          config: { view: { title: 'Demo KFX' } },
+          config: { view: { title: 'Demo KFX', capabilities: [] } },
         },
       },
       null,
@@ -312,7 +312,7 @@ test('product gui dev dry-run supports a single kfx package directory', (t) => {
   const output = runText(['product', 'gui', 'dev', '--dir', root, '--dry-run']);
   assert.match(output, /sdk\.js kfx build/);
   assert.match(output, /KF_EXTENSION_PATH=/);
-  assert.match(output, /KF_FIRST_PARTY_SOURCE_ROOT=/);
+  assert.match(output, /KF_BUNDLED_EXTENSION_ROOT=/);
   assert.match(output, /run dev/);
 });
 

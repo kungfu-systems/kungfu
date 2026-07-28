@@ -3,8 +3,8 @@
 How to write, build and install a kungfu extension. This is the
 developer-facing page (*use* plane); the internal shell/kfx contract note is
 [`../framework/gui/docs/shell-and-kfx.md`](../../framework/gui/docs/shell-and-kfx.md).
-For the topology — which host loads a kfx, how it decides trust, and which
-sandbox an untrusted kfx lands in — see [`kfx-topology.md`](kfx-topology.md).
+For the topology — which host loads a KFX, how Core authorizes it, and which
+isolation plane it lands in — see [`kfx-topology.md`](kfx-topology.md).
 Per claim, this page says where to verify it; the fixtures named at the
 bottom are the machine-checked proof.
 
@@ -217,35 +217,29 @@ A double install without `--force` refuses; `remove` never touches paths
 outside the install root. The CLI and the kfx-manager view operate on the
 same facts.
 
-## Trust tiers
+## Identity-neutral runtime authorization
 
-A view runs at one of two trust tiers ([KF-ADR-019f86da-4f90-7e5e-ae22-2a8fc24086f1](../adr/KF-ADR-019f86da-4f90-7e5e-ae22-2a8fc24086f1.md)), and the runtime-plane trust
-boundary is extended by [KF-ADR-019f86da-4f90-79f1-8716-aca36b142847](../adr/KF-ADR-019f86da-4f90-79f1-8716-aca36b142847.md)/[KF-ADR-019f86da-4f90-7789-8b48-620aa694acf9](../adr/KF-ADR-019f86da-4f90-7789-8b48-620aa694acf9.md). The decision is single-sourced in
-`resolveRuntimeTier` and related source-authority helpers
-(`../framework/kfx/src/index.ts`). A manifest can ask to stay sandboxed but
-never to elevate. Trust is not granted because a package was found under a
-writable path or an environment-provided development root; those roots only
-control discovery. Trust comes from a source-authority verdict such as the
-frozen first-party set plus content pin described in
-[KF-ADR-019f86da-4f90-79f1-8716-aca36b142847](../adr/KF-ADR-019f86da-4f90-79f1-8716-aca36b142847.md).
+Discovery roots control discovery only. Bundling, installer origin, package
+name, Product System roles, and KFD compliance grant no authority. A view starts
+on the isolated renderer plane (`nodeIntegration:false`,
+`contextIsolation:true`, `sandbox:true`) with no ambient Node or network access.
+It may share the renderer only when Core supplies an exact
+`integrated-explicit` host authorization rooted in the Release Passport, Core
+policy, Work/Warrant, explicit capability grant, Fact cut, and runtime
+generation. `resolveRuntimeTier` consumes that authorization and never infers it
+from identity or origin.
 
-- **node-integrated** — source-verified first-party/system views. They share the
-  shell's renderer, React and capability instances.
-- **sandboxed-ipc** — an installed third-party view. It runs in an isolated
-  renderer (`nodeIntegration:false, contextIsolation:true, sandbox:true`): no
-  node, no `require`, no direct binding. `contextBridge` exposes only a bridge
-  to the capabilities its manifest **declared**; every call round-trips to the
-  trusted host over IPC, and an undeclared capability is rejected there — the
-  capability declaration is now an *enforced* boundary, not advice. The view's
-  session denies the network and its process is killed if it exceeds a memory
-  cap (`createSandboxedView` in `../framework/gui/src/main/sandbox-view.ts`).
+`contextBridge` exposes only the explicitly granted capability subset; every
+call round-trips to the host and an undeclared or ungranted capability is
+rejected. The view's process is memory-capped (`createSandboxedView` in
+`../framework/gui/src/main/sandbox-view.ts`).
 
 The `adapter` runtime facet is sharper than a view: an adapter is
 instrumentation that runs inside the traced program's own process. A separate
-renderer sandbox does not apply, and sandboxing an untrusted adapter into a
-separate process would defeat the instrumentation. Per [KF-ADR-019f86da-4f90-79f1-8716-aca36b142847](../adr/KF-ADR-019f86da-4f90-79f1-8716-aca36b142847.md), an untrusted
+renderer sandbox does not apply, and sandboxing an unauthorized adapter into a
+separate process would defeat the instrumentation. Per [KF-ADR-019f86da-4f90-79f1-8716-aca36b142847](../adr/KF-ADR-019f86da-4f90-79f1-8716-aca36b142847.md), an unauthorized
 adapter is **refused**, not contained. Wrapping an adapter in a Kungfu Skill or
-suite does not elevate it; it must satisfy the same runtime trust policy.
+suite does not elevate it; it must carry the same exact runtime authorization.
 
 For independent runtime code that is not instrumentation, the proposed `service`
 facet is the long-term OS-sandbox plane: a kfx-owned process talks to the host

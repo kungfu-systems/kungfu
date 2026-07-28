@@ -33,7 +33,11 @@ function fixture() {
 
 test('accepts the immutable current v4 alpha baseline', () => {
   const result = checkPortableFormatBaseline();
-  assert.equal(result.release, '4.0.0-alpha.1');
+  assert.equal(result.release, '4.0.0-alpha.2');
+  assert.equal(
+    result.releaseRoot,
+    'sha256:297d25fa8b38b57ef7c43ab94096f266d1e8a88e48c81f86064d82b7c41cce55',
+  );
   assert.equal(result.sources, 4);
 });
 

@@ -524,10 +524,16 @@
         "user-decision"
       ],
       "last_reviewed": "2026-07-27",
-      "period": "2026-07-27",
+      "period": "2026-07-28",
       "theme": "kfx-extension-authoring",
       "confidence": "high",
-      "evidence_grade": "B"
+      "evidence_grade": "B",
+      "ai_provenance": {
+        "model_family": "OpenAI GPT-5",
+        "product": "Codex",
+        "generated_at": "2026-07-28",
+        "invisible_context_boundary": "Unobserved runtime state and unpublished release artifacts are not claimed"
+      }
     },
     "docs/architecture/kungfu-format-contract.md": {
       "metadata_schema": "kungfu.document-metadata/v1",
@@ -539,21 +545,21 @@
         "architecture-decisions",
         "local-files"
       ],
-      "period": "2026-07-24",
-      "theme": "kungfu-format-contract",
+      "period": "2026-07-28",
+      "theme": "kungfu-portable-format-authority",
       "confidence": "high",
       "evidence_grade": "B",
-      "last_reviewed": "2026-07-24",
+      "last_reviewed": "2026-07-28",
       "ai_provenance": {
         "model_family": "OpenAI GPT-5",
         "product": "Codex",
-        "generated_at": "2026-07-24",
+        "generated_at": "2026-07-28",
         "invisible_context_boundary": "Unpublished release artifacts, future normative format decisions, and unobserved third-party readers are not claimed"
       }
     },
     "docs/architecture/kfx-topology.md": {
       "metadata_schema": "kungfu.document-metadata/v1",
-      "document_status": "draft",
+      "document_status": "active",
       "doc_type": "architecture",
       "review_state": "self-reviewed",
       "sensitivity": "public",
@@ -562,23 +568,43 @@
         "local-files",
         "user-decision"
       ],
-      "last_reviewed": "2026-07-27",
-      "period": "2026-07-27",
-      "theme": "kfx-runtime-topology",
+      "last_reviewed": "2026-07-28",
+      "period": "2026-07-28",
+      "theme": "kfx-identity-neutral-authority",
       "confidence": "high",
-      "evidence_grade": "B"
+      "evidence_grade": "B",
+      "ai_provenance": {
+        "model_family": "OpenAI GPT-5",
+        "product": "Codex",
+        "generated_at": "2026-07-28",
+        "invisible_context_boundary": "Unobserved runtime state and unpublished release artifacts are not claimed"
+      }
     },
     "docs/architecture/overview.md": {
       "metadata_schema": "kungfu.document-metadata/v1",
       "document_status": "active",
-      "doc_type": "public-document",
-      "review_state": "unreviewed",
-      "sensitivity": "public"
+      "doc_type": "architecture",
+      "review_state": "self-reviewed",
+      "sensitivity": "public",
+      "sources": [
+        "local-files"
+      ],
+      "period": "ongoing",
+      "theme": "kungfu-architecture-overview",
+      "confidence": "high",
+      "evidence_grade": "B",
+      "last_reviewed": "2026-07-28",
+      "ai_provenance": {
+        "model_family": "OpenAI GPT-5",
+        "product": "Codex",
+        "generated_at": "2026-07-28",
+        "invisible_context_boundary": "Unobserved runtime state and unpublished release artifacts are not claimed"
+      }
     },
     "docs/architecture/runtime-service.md": {
       "metadata_schema": "kungfu.document-metadata/v1",
-      "document_status": "active",
-      "doc_type": "public-document",
+      "document_status": "draft",
+      "doc_type": "architecture",
       "review_state": "unreviewed",
       "sensitivity": "public"
     },
@@ -592,7 +618,17 @@
         "architecture-decisions",
         "local-files"
       ],
-      "last_reviewed": "2026-07-18"
+      "last_reviewed": "2026-07-28",
+      "period": "ongoing",
+      "theme": "runtime-storage-service",
+      "confidence": "medium",
+      "evidence_grade": "B",
+      "ai_provenance": {
+        "model_family": "OpenAI GPT-5",
+        "product": "Codex",
+        "generated_at": "2026-07-28",
+        "invisible_context_boundary": "Unobserved runtime state and unpublished release artifacts are not claimed"
+      }
     },
     "docs/architecture/storage-provider-lifecycle.md": {
       "metadata_schema": "kungfu.document-metadata/v1",
@@ -609,9 +645,23 @@
     "docs/architecture/skills.md": {
       "metadata_schema": "kungfu.document-metadata/v1",
       "document_status": "active",
-      "doc_type": "public-document",
-      "review_state": "unreviewed",
-      "sensitivity": "public"
+      "doc_type": "developer-guide",
+      "review_state": "self-reviewed",
+      "sensitivity": "public",
+      "sources": [
+        "local-files"
+      ],
+      "period": "2026-07-28",
+      "theme": "kungfu-configuration",
+      "confidence": "high",
+      "evidence_grade": "B",
+      "last_reviewed": "2026-07-28",
+      "ai_provenance": {
+        "model_family": "OpenAI GPT-5",
+        "product": "Codex",
+        "generated_at": "2026-07-28",
+        "invisible_context_boundary": "Unobserved runtime state and unpublished release artifacts are not claimed"
+      }
     },
     "docs/concepts/README.md": {
       "metadata_schema": "kungfu.document-metadata/v1",
