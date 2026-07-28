@@ -214,16 +214,17 @@ Each section is bound to the registry id by the catalog meta gate.
   <base> --head <head> --json`; run mutation fixtures with `./shifu
   core:affected -- --self-test`.
 - **Cost:** heavy; timeout 1500 seconds.
-- **Current source:** .github/workflows/affected-native-pr.yml (affected_native_shards; two deterministic GitHub-hosted Linux partitions on the first exact merge-group execution after source and governance preflight, or after any reuse mismatch; the stable affected-native aggregator reports fast PR admission and admits either the complete impact-selected queue set or one verified exact same-SHA queue proof)
-- **Source-first orchestration:** the workflow first runs the build-free source
-  planner with `node scripts/run-core-affected-native.mjs --plan-out <path>
-  --json`. Pull requests stop after source/governance admission and this exact
-  impact plan. A merge group starts native/SDK, three-platform Shifu, and KFD
-  jobs in parallel only after both preflight jobs pass; every optional skip is
-  justified by a `required: false` decision retained in the plan. A non-empty,
-  source-bound native plan enters the registered action; a tier-none plan
-  writes the same receipt directly without installing Buildchain, Conan, or
-  the workspace.
+- **Current source:** .github/workflows/affected-native-pr.yml (affected_native_shards; two deterministic GitHub-hosted Linux partitions on the first exact merge-group execution after governance planning and proof probing, or after any reuse mismatch; the stable affected-native aggregator reports fast PR admission and admits either the complete impact-selected queue set or one verified exact same-SHA queue proof)
+- **Parallel source orchestration:** the workflow runs authoritative Buildchain
+  source acceptance concurrently with the impact-selected native/SDK, Shifu,
+  and KFD lanes. Those execution lanes start only after the build-free
+  governance planner and proof probe pass; every optional skip is justified by
+  a `required: false` decision retained in the plan. The stable aggregate still
+  waits for and requires successful source acceptance together with every
+  selected lane, so concurrency shortens the healthy critical path without
+  admitting a source failure. A non-empty, source-bound native plan enters the
+  registered action; a tier-none plan writes the same receipt directly without
+  installing Buildchain, Conan, or the workspace.
 - **Retirement:** remove only with a replacement that consumes the same
   architecture authority and preserves changed-path completeness, raw native
   evidence and the alpha/release responsibility split.

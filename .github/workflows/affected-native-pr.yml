@@ -405,12 +405,10 @@ jobs:
   affected_native_shards:
     name: affected-native shard ${{ matrix.partition }} of 2 / linux
     needs:
-      - source_acceptance
       - candidate_preflight
       - proof_probe
     if: >-
       ${{
-        needs.source_acceptance.result == 'success' &&
         needs.candidate_preflight.result == 'success' &&
         needs.proof_probe.result == 'success' &&
         needs.proof_probe.outputs.reuse != 'true' &&
@@ -705,12 +703,10 @@ jobs:
   shifu_workspace:
     name: Shifu workspace / linux
     needs:
-      - source_acceptance
       - candidate_preflight
       - proof_probe
     if: >-
       ${{
-        needs.source_acceptance.result == 'success' &&
         needs.candidate_preflight.result == 'success' &&
         needs.proof_probe.result == 'success' &&
         needs.proof_probe.outputs.reuse != 'true' &&
@@ -733,12 +729,10 @@ jobs:
   kfd_verifier:
     name: KFD verifier / linux
     needs:
-      - source_acceptance
       - candidate_preflight
       - proof_probe
     if: >-
       ${{
-        needs.source_acceptance.result == 'success' &&
         needs.candidate_preflight.result == 'success' &&
         needs.proof_probe.result == 'success' &&
         needs.proof_probe.outputs.reuse != 'true' &&

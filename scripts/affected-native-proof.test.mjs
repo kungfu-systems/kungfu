@@ -1106,7 +1106,7 @@ test('workflow keeps one context while PR proof replaces duplicate queue builds'
   );
   assert.match(
     workflow,
-    /affected_native_shards:[\s\S]*- source_acceptance[\s\S]*- candidate_preflight[\s\S]*needs\.proof_probe\.outputs\.reuse != 'true'/u,
+    /affected_native_shards:[\s\S]*- candidate_preflight[\s\S]*- proof_probe[\s\S]*needs\.proof_probe\.outputs\.reuse != 'true'/u,
   );
   assert.match(
     workflow,
