@@ -92,6 +92,13 @@
           "sourceRoot": "sha256:ac59ab8ac7eafa7ff1829d94c33e7f5453aa4109ad95ddc5d1b35f7df1e6b9ce"
         },
         {
+          "path": ".github/workflows/aws-us-linux-burst-qualification.yml",
+          "classification": "non-publication",
+          "owner": "kungfu-ci",
+          "surfaceIds": [],
+          "sourceRoot": "sha256:975fdc85c440a96afb2ee25bad20b79c56e977e74d44f0a9e2a07797ad2fa900"
+        },
+        {
           "path": ".github/workflows/build.yml",
           "classification": "qualification",
           "owner": "kungfu-release",
@@ -792,5 +799,5 @@
       }
     }
   ],
-  "registryRoot": "sha256:f0e028d09cdc8da97dfaa5f5b75b1cbb634b998e1a6627aca4144dca7ee61df6"
+  "registryRoot": "sha256:a7943599321b935e74ac44d643eb5034f27627dc1a6f61ab723a29569cf68013"
 }

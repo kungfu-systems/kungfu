@@ -648,6 +648,44 @@
       ]
     },
     {
+      "path": ".github/workflows/aws-us-linux-burst-qualification.yml",
+      "authority": "qualification",
+      "definitionDigest": "sha256:6d3dce83fd46bd0c8df1abfde698d6c83a555770130d2ffcffcadca21ea9c05a",
+      "jobs": [
+        {
+          "id": "qualify",
+          "authority": "qualification",
+          "publication": "none",
+          "receipt": "diagnostic",
+          "definitionDigest": "sha256:2a23496189129a8b4d62cf12ca048f05327e6f103f744eb8b3dbce56f896f174",
+          "credentials": {"githubToken":"read","oidc":false,"repositorySecrets":[],"inheritedSecrets":false,"environment":null},
+          "externalActions": ["kungfu-systems/buildchain/.github/workflows/.build.yml@train/v2/v2.3/aws-us-elastic-runner-burst-plane"],
+          "steps": []
+        },
+        {
+          "id": "trust",
+          "authority": "qualification",
+          "publication": "none",
+          "receipt": "diagnostic",
+          "definitionDigest": "sha256:c4f5796c26eafa948658ce4b8d412bd20d1801e3c99e03ddff4893588d0b7a00",
+          "credentials": {"githubToken":"read","oidc":false,"repositorySecrets":[],"inheritedSecrets":false,"environment":null},
+          "externalActions": ["actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd"],
+          "steps": [
+            {
+              "index": 1,
+              "label": "name:Require canonical repository and reviewed train",
+              "definitionDigest": "sha256:1f7dcb35de9fe34c43b4d544588ece4228538d8e8c052d3f7ff8f514d264294e"
+            },
+            {
+              "index": 2,
+              "label": "name:Require write-capable actor",
+              "definitionDigest": "sha256:3430783a3e543bfdbe6f96ad0be249927e372191c7e2cc5d8c540c14be66d68f"
+            }
+          ]
+        }
+      ]
+    },
+    {
       "path": ".github/workflows/build.yml",
       "authority": "product-publication",
       "definitionDigest": "sha256:aadbb97771ffd89eaec3f3ed67ef3925e1730472a5a722c1a8b956c8ee71b6c1",
