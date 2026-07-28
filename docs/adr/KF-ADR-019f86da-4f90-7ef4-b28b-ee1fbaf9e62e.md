@@ -5,6 +5,7 @@ adr_id: KF-ADR-019f86da-4f90-7ef4-b28b-ee1fbaf9e62e
 decision_status: accepted
 implementation_status: partial
 implementation_prs: [https://github.com/kungfu-systems/kungfu/pull/842, https://github.com/kungfu-systems/kungfu/pull/873, https://github.com/kungfu-systems/kungfu/pull/885, https://github.com/kungfu-systems/kungfu/pull/906, https://github.com/kungfu-systems/kungfu/pull/922, https://github.com/kungfu-systems/kungfu/pull/1704, https://github.com/kungfu-systems/kungfu/pull/1718, https://github.com/kungfu-systems/kungfu/pull/1728, https://github.com/kungfu-systems/kungfu/pull/1744]
+qualification_refs: [scripts/run-kfx-identity-neutral-terminal-qualification.mjs, docs/qualification/kfx-identity-neutral-terminal.md, framework/core/src/libkungfu/tests/native_kfx_contract_tests.cpp]
 review_state: self-reviewed
 sensitivity: public
 sources: [local-files, user-decision]
@@ -17,7 +18,7 @@ last_reviewed: 2026-07-28
 
 # KF-ADR-019f86da-4f90-7ef4-b28b-ee1fbaf9e62e: one Core-native KFX runtime serves GUI, TUI, CLI, and agents
 
-- Status: accepted; implementation partial
+- Status: accepted; implementation partial; terminal candidate qualified
 - Date: 2026-07-15
 - Category: extension runtime / Core authority / product layers
 - Related: [KF-ADR-019f86da-4f90-7789-8b48-620aa694acf9](KF-ADR-019f86da-4f90-7789-8b48-620aa694acf9.md),
@@ -113,11 +114,20 @@ the minimal Core bootstrap/LKG/safe-mode/emergency-removal TCB is explicit.
 Recursive Control Suite dogfood and the sole terminal qualification remain
 later stages, so the umbrella decision remains partial.
 
-Conversion readiness therefore remains blocked on the remaining ordered gates:
-Fact/Work lifecycle authority with Cut and CAS semantics, then a recursively
-dogfooded KFX Control Suite behind a minimal Core bootstrap verifier. The
-protected Agent Work Lab cutover remains a later separate stage after
-those gates are proved, so the umbrella decision remains partial.
+PR #1771 moves Agent Work Lab onto the ordinary public Profile Suite contract,
+including Core/API/GUI/TUI/CLI/Agent projections, offline first run, existing-
+Work-first rerun, and real-run planning. It supplies the final recursive
+dogfood consumer used by the terminal campaign rather than adding a privileged
+product-only path.
+
+The identity-neutral terminal qualification closes the remaining authority
+scope on one exact protected product cut. The Control Suite recursively uses
+the same public Passport, Fact/Work/Warrant, capability, host, LKG, and
+safe-mode contracts as ecosystem KFX; Agent Work Lab is a normal Profile Suite
+through GUI, TUI, CLI, and Agent projections. Product System remains inert
+assembly metadata. The retained non-claims are public release publication,
+marketplace operation, universal native-code safety, and independent external
+adoption rather than implementation gaps in this authority contract.
 
 ## Decision
 

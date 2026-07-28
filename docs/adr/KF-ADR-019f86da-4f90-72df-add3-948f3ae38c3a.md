@@ -5,6 +5,7 @@ adr_id: KF-ADR-019f86da-4f90-72df-add3-948f3ae38c3a
 decision_status: accepted
 implementation_status: partial
 implementation_prs: [https://github.com/kungfu-systems/kungfu/pull/734, https://github.com/kungfu-systems/kungfu/pull/842, https://github.com/kungfu-systems/kungfu/pull/873, https://github.com/kungfu-systems/kungfu/pull/906, https://github.com/kungfu-systems/kungfu/pull/922, https://github.com/kungfu-systems/kungfu/pull/1137, https://github.com/kungfu-systems/kungfu/pull/1151, https://github.com/kungfu-systems/kungfu/pull/1202, https://github.com/kungfu-systems/kungfu/pull/1704, https://github.com/kungfu-systems/kungfu/pull/1718, https://github.com/kungfu-systems/kungfu/pull/1728, https://github.com/kungfu-systems/kungfu/pull/1744]
+qualification_refs: [scripts/run-kfx-identity-neutral-terminal-qualification.mjs, docs/qualification/kfx-identity-neutral-terminal.md, framework/api/tests/kfx-host.test.ts, framework/gui/src/agent-work-lab.test.ts, framework/tui/src/agent-work-lab-view.test.ts]
 review_state: self-reviewed
 sensitivity: public
 sources: [local-files, user-decision]
@@ -17,7 +18,7 @@ last_reviewed: 2026-07-28
 
 # KF-ADR-019f86da-4f90-72df-add3-948f3ae38c3a: KFX contributes semantics once; GUI, TUI, CLI, and agents project them
 
-- Status: accepted; implementation partial
+- Status: accepted; implementation partial; terminal candidate qualified
 - Date: 2026-07-15
 - Category: extension contract / multi-surface product / bindings
 - Parent: [KF-ADR-019f86da-4f90-7ef4-b28b-ee1fbaf9e62e](KF-ADR-019f86da-4f90-7ef4-b28b-ee1fbaf9e62e.md)
@@ -115,6 +116,13 @@ distribution only. Reverse scans cover every public host/control edge, and all
 executable manifests declare an explicit least capability set. The recursive
 Control Suite dogfood and sole terminal qualification remain later stages, so
 implementation remains partial.
+
+The identity-neutral terminal campaign closes surface parity on the exact
+public descriptor roots. GUI, TUI, CLI, and Agent preserve one catalog, action,
+plan, Work/Warrant, capability, host authorization, Episode, Settlement, CAS,
+and receipt identity. Agent Work Lab and every bundled reference KFX use the
+same public manifest and host contract as ecosystem packages; no host has a
+Product/System allowlist or compatibility mutation path.
 
 ## Decision
 

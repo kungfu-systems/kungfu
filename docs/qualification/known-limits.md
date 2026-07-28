@@ -208,6 +208,13 @@ production fitness, or KFD certification. Providers without a verifiable
 workspace-only sandbox are reported with residual confinement risk rather than
 silently receiving an unqualified verdict.
 
+The [KFX identity-neutral terminal](kfx-identity-neutral-terminal.md) qualifies
+the native authority chain and exact Agent Work Lab Suite cut; it does not turn
+KFD, first-party identity, or Product System metadata into permission. The
+retained limits are public release publication, packaged Linux/Windows desktop
+experience, universal native-code confinement, marketplace operation, and
+independent third-party production adoption.
+
 ## Ecosystem SDK qualification is source-complete on one platform, not released
 
 Python `kungfu-storage`, Node `@kungfu-tech/storage`, and the Rust

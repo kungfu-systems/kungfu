@@ -5,7 +5,7 @@ adr_id: KF-ADR-019f86da-4f90-7d6c-926a-ddd27dbde8ab
 decision_status: accepted
 implementation_status: partial
 implementation_prs: [https://github.com/kungfu-systems/kungfu/pull/571, https://github.com/kungfu-systems/kungfu/pull/568, https://github.com/kungfu-systems/kungfu/pull/731, https://github.com/kungfu-systems/kungfu/pull/734, https://github.com/kungfu-systems/kungfu/pull/906, https://github.com/kungfu-systems/kungfu/pull/922, https://github.com/kungfu-systems/kungfu/pull/942, https://github.com/kungfu-systems/kungfu/pull/975, https://github.com/kungfu-systems/kungfu/pull/1704, https://github.com/kungfu-systems/kungfu/pull/1718, https://github.com/kungfu-systems/kungfu/pull/1728, https://github.com/kungfu-systems/kungfu/pull/1744]
-qualification_refs: [framework/core/src/libkungfu/tests/fixtures/native_kfx_contract/buildchain-2.13.0-alpha.0-envelope.json, framework/core/src/libkungfu/tests/native_kfx_contract_tests.cpp, framework/core/tests/python/test_native_kfx_contract.py, framework/core/tests/storage-node-binding.test.js, framework/api/tests/storage.test.ts]
+qualification_refs: [framework/core/src/libkungfu/tests/fixtures/native_kfx_contract/buildchain-2.13.0-alpha.0-envelope.json, framework/core/src/libkungfu/tests/native_kfx_contract_tests.cpp, framework/core/tests/python/test_native_kfx_contract.py, framework/core/tests/storage-node-binding.test.js, framework/api/tests/storage.test.ts, scripts/run-kfx-identity-neutral-terminal-qualification.mjs, docs/qualification/kfx-identity-neutral-terminal.md]
 review_state: self-reviewed
 sensitivity: public
 sources: [local-files, user-decision]
@@ -18,7 +18,7 @@ last_reviewed: 2026-07-28
 
 # KF-ADR-019f86da-4f90-7d6c-926a-ddd27dbde8ab: KFX admission consumes KFD facts and exact Buildchain attestations
 
-- Status: accepted; implementation partial
+- Status: accepted; implementation partial; terminal candidate qualified
 - Date: 2026-07-15
 - Category: KFX trust / KFD / supply chain / capability admission
 - Parent: [KF-ADR-019f86da-4f90-7ef4-b28b-ee1fbaf9e62e](KF-ADR-019f86da-4f90-7ef4-b28b-ee1fbaf9e62e.md)
@@ -136,6 +136,15 @@ Work/Warrant, capability-grant, approval, Cut, generation, and isolation
 checks; self-labels, self-signed or sibling Passports, replay, and post-plan
 mutation fail closed. Recursive dogfood and the terminal qualification remain
 outside this stage, so implementation remains partial.
+
+The identity-neutral terminal campaign proves that KFD eligibility and exact
+artifact identity remain evidence, not permission. Product-bundled and
+ecosystem-equivalent inputs produce the same decision and roots; missing
+Warrants, high-consequence grants, false System/first-party claims,
+self-signed or sibling Passports, replay, expiry, revocation, policy drift,
+capability broadening, and post-plan mutation all fail closed before execution.
+Accepted operations retain exact Passport, policy, Work, Warrant, capability,
+host, Episode, Settlement, CAS, and Cut roots.
 
 ## Decision
 

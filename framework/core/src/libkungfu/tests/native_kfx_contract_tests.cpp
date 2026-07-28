@@ -1063,10 +1063,38 @@ void test_control_suite_recursively_dogfoods_public_fact_work() {
 
   const auto install_request = control_request(v1, "install");
   const auto install_plan = kfx::query_native_kfx_registry("plan", install_request, runtime_dir.string());
+  auto ecosystem_request = install_request;
+  ecosystem_request.at("roots").front()["kind"] = "user";
+  const auto ecosystem_plan = kfx::query_native_kfx_registry("plan", ecosystem_request, runtime_dir.string());
   require(install_plan.at("schema") == "kungfu.kfx.control-suite-plan/v1" &&
               install_plan.at("bootstrapVerification").at("valid").get<bool>() &&
               install_plan.at("authority") == "public-kfx-plan-plus-fact-work-settlement",
           "Control Suite bootstrap did not independently validate the identity-neutral candidate");
+  require(install_plan == ecosystem_plan,
+          "Product-bundled and ecosystem-equivalent Control Suite evidence produced different authority roots");
+  require(contains_text(
+              install_plan.at("mutationAuthorization").at("assessment").at("admissionPlan").at("requiredApprovals"),
+              "capability:kfxControl"),
+          "high-consequence Control Suite capability did not require an explicit approval");
+
+  auto kfd_only_request = install_request;
+  kfd_only_request["approvalRoots"] = nlohmann::json::array();
+  require_refusal("KF_KFX_APPROVAL_REQUIRED",
+                  [&] { (void)kfx::query_native_kfx_registry("plan", kfd_only_request, runtime_dir.string()); });
+
+  for (const auto *claim : {"firstParty", "system", "productSystem"}) {
+    auto forged_request = install_request;
+    forged_request[claim] = true;
+    require_refusal("KF_KFX_AUTHORITY_CLAIM_FORBIDDEN",
+                    [&] { (void)kfx::query_native_kfx_registry("plan", forged_request, runtime_dir.string()); });
+  }
+
+  auto self_signed_request = install_request;
+  self_signed_request["attestation"]["bindings"]["issuer"] = "package-self";
+  self_signed_request["trustInputs"]["issuer"] = "package-self";
+  require_refusal("KF_KFX_ADMISSION_REQUIRED",
+                  [&] { (void)kfx::query_native_kfx_registry("plan", self_signed_request, runtime_dir.string()); });
+
   const auto installed = kfx::query_native_kfx_registry(
       "apply", control_mutation(install_request, install_plan, "control-test"), runtime_dir.string());
   require(installed.at("verified").get<bool>() && installed.at("status").at("mode") == "active" &&

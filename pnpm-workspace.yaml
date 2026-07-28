@@ -3,8 +3,6 @@ packages:
   - "developer/*"
   - "extensions/*"
   - "extensions/*/*"
-  - "!extensions/agent-work-lab"
-  - "!extensions/agent-work-lab/experience"
   - "examples/*"
   - "product"
 allowBuilds:
