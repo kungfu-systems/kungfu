@@ -29,6 +29,13 @@ export function sourceFacts() {
     revision: git(['rev-parse', 'HEAD']) || 'unknown',
     tree: git(['rev-parse', 'HEAD^{tree}']) || 'unknown',
     dirty: status === null || status !== '',
+    changes:
+      status === null
+        ? ['git-status-unavailable']
+        : status
+            .split('\n')
+            .map((line) => line.trimEnd())
+            .filter(Boolean),
   };
 }
 
@@ -440,6 +447,12 @@ async function main() {
   console.log(
     `[live-peer-continuity] verdict=${report.verdict} report=${path.join(outputDir, 'report.json')}`,
   );
+  for (const violation of report.violations)
+    console.error(`[live-peer-continuity] violation=${violation}`);
+  if (report.source.dirty)
+    console.error(
+      `[live-peer-continuity] source-status=${JSON.stringify(report.source.changes)}`,
+    );
   if (report.verdict !== 'passed') process.exit(1);
 }
 
