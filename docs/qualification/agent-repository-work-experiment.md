@@ -81,9 +81,25 @@ The resulting `agent-repository-work-report.json` records execution,
 correctness, scope, continuity, evidence, efficiency, and residual limitations.
 A pass is bounded to this fixture, image, model, endpoint, and runner.
 
+## Independent agent-121 Patrol
+
+The scheduled
+[`kungfu-agent-patrol.yml`](../../.github/workflows/kungfu-agent-patrol.yml)
+workflow repeats this bounded experiment on agent-121 without becoming part of
+Dev, release, or required-check authority. Model and external-oracle failures
+remain advisory; runner and evidence-integrity failures remain blocking.
+
+The Patrol classifies failures deterministically and captures only novel native
+Dogfood Findings. A stable failure fingerprint resolves recurrence to the
+existing immutable Finding before any write. Passing runs create no Finding,
+and the Patrol has no automatic Issue admission path. See the
+[agent-121 Patrol runbook](agent-patrol-agent-121.md) for the exact trigger,
+privacy, deduplication, authority, and activation boundaries.
+
 ## Residual limitations
 
 This experiment does not establish multi-day durability, concurrent editing,
 arbitrary repository competence, provider superiority, production safety,
-GUI/TUI parity, or release readiness. A single passing run is evidence that the
-tested path bore this workload; it is not a generalized product claim.
+GUI/TUI parity, cross-machine Dogfood replication, or release readiness. A
+single passing run is evidence that the tested path bore this workload; it is
+not a generalized product claim.

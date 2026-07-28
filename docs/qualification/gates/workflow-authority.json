@@ -1526,6 +1526,65 @@
       ]
     },
     {
+      "path": ".github/workflows/kungfu-agent-patrol.yml",
+      "authority": "qualification",
+      "definitionDigest": "sha256:383a26ee97c69c803d51d77dd709d7e45711a30148a0f7af6801043a9a9bc1fc",
+      "jobs": [
+        {
+          "id": "patrol",
+          "authority": "qualification",
+          "publication": "none",
+          "receipt": "diagnostic",
+          "definitionDigest": "sha256:1473d224d5d5c33966b74b597005d744d7296a2955fece07660efdedf1b68538",
+          "credentials": {"githubToken":"read","oidc":false,"repositorySecrets":[],"inheritedSecrets":false,"environment":null},
+          "externalActions": ["actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0","actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02"],
+          "steps": [
+            {
+              "index": 1,
+              "label": "name:Check out exact protected source",
+              "definitionDigest": "sha256:c29587b518fd5f52b5410a7d54bffb493087c11abc943c5aa5e31ea62b3ad212"
+            },
+            {
+              "index": 2,
+              "label": "name:Verify dedicated runner and local-model runtime",
+              "definitionDigest": "sha256:0b6eccfee8d2332de7a9042238667a639631bc6df680b527c91367f1635b0420"
+            },
+            {
+              "index": 3,
+              "label": "name:Build exact source and deterministic Patrol contracts",
+              "definitionDigest": "sha256:6ae33b692c50c24b2d2c483559594153e69f7ceb7d0a7e66ba131a8b58464fae"
+            },
+            {
+              "index": 4,
+              "label": "name:Run bounded repository-work experiment",
+              "definitionDigest": "sha256:bc41e7329ddf176b5b55b7e81e8f30efedabdc34f4f7dadd8d5f67b83e99d994"
+            },
+            {
+              "index": 5,
+              "label": "name:Classify bounded outcome",
+              "definitionDigest": "sha256:1e998c6fd0b3d9b8caed2d54fe19ee1a8e1beabd56771eca31f6aa20d4299772"
+            },
+            {
+              "index": 6,
+              "label": "name:Capture or deduplicate native Dogfood Finding",
+              "definitionDigest": "sha256:653ed067fd57cff2c6f6ea66463209cec472d8483448ebf68d4f8c80baed06c0"
+            },
+            {
+              "index": 7,
+              "label": "name:Enforce infrastructure and evidence integrity",
+              "definitionDigest": "sha256:532688cc7f28e3aaf4b41748496592f5becf691c6f1f3fdb6d062bfb48ac800a"
+            },
+            {
+              "index": 8,
+              "label": "name:Upload bounded Patrol evidence",
+              "authority": "evidence-publication",
+              "definitionDigest": "sha256:0d703a621007119b0b6e0f92b4edb4d4b3b57f1d289ec98144ba2b1721e4944f"
+            }
+          ]
+        }
+      ]
+    },
+    {
       "path": ".github/workflows/linux-arm64-alpha-qualification.yml",
       "authority": "qualification",
       "definitionDigest": "sha256:e82fc4ee99792b32cb67a6c4f00a8b76efd19eb1067c6b509c083885f21d891f",

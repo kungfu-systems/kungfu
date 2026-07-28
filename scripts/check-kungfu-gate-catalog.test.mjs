@@ -218,7 +218,15 @@ test('current Kungfu catalog, docs, matrix, actions, and workflows align', () =>
   );
   assert.equal(controllers.length, 10);
   assert.ok(controllers.every((fact) => fact.gates.length > 0));
-  assert.equal(result.workflowAuthority.workflows.length, 26);
+  assert.equal(result.workflowAuthority.workflows.length, 27);
+  const agentPatrol = result.workflowAuthority.workflows.find(
+    (workflow) => workflow.path === '.github/workflows/kungfu-agent-patrol.yml',
+  );
+  assert.equal(agentPatrol?.authority, 'qualification');
+  assert.deepEqual(
+    agentPatrol?.jobs.map(({ id, receipt }) => ({ id, receipt })),
+    [{ id: 'patrol', receipt: 'diagnostic' }],
+  );
   const linuxArm64Qualification = result.workflowAuthority.workflows.find(
     (workflow) =>
       workflow.path === '.github/workflows/linux-arm64-alpha-qualification.yml',

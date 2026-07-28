@@ -178,6 +178,7 @@ test('declared discovery routes are zero-write in a cold read-only fixture', (t)
     '.github/workflows/affected-native-pr.yml',
     '.github/workflows/cancel-dequeued-merge-group.yml',
     '.github/workflows/core-build-profiles.yml',
+    '.github/workflows/kungfu-agent-patrol.yml',
     'docs/qualification/gates/README.md',
     'docs/qualification/gates/source-and-governance.md',
     'docs/qualification/gates/workflow-authority.json',

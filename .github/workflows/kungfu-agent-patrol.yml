@@ -1,0 +1,123 @@
+# SPDX-License-Identifier: Apache-2.0
+
+name: Kungfu Agent Patrol
+
+on:
+  # Monday 02:00 Asia/Shanghai. Scheduled workflows run from the default branch.
+  schedule:
+    - cron: "0 18 * * 0"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: kungfu-agent-patrol-agent-121
+  cancel-in-progress: false
+
+jobs:
+  patrol:
+    name: agent-121 / OpenCode Qwen3-Coder patrol
+    if: >-
+      github.repository == 'kungfu-systems/kungfu' &&
+      github.ref == 'refs/heads/dev/v4/v4.0' &&
+      github.ref_protected == true &&
+      (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch')
+    runs-on:
+      - agent-121
+      - kungfu-agent-patrol
+    timeout-minutes: 75
+    env:
+      OPENCODE_IMAGE: ghcr.io/kungfu-systems/build-images/opencode-ci@sha256:4083ee089fa9a419f4915505094a6c1bcce433ff77455605ce8993af3b684ed3
+      OPENCODE_MODEL: qwen3-coder:30b-opencode-64k
+      OPENCODE_BASE_URL: http://host.docker.internal:11435/v1
+      OPENCODE_HOST_PROBE_URL: http://127.0.0.1:11435/v1/models
+    steps:
+      - name: Check out exact protected source
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Verify dedicated runner and local-model runtime
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$RUNNER_NAME" = "agent-121-kungfu-systems"
+          test "$(id -u)" = "996"
+          # shifu-entry-contract: allow inspect the runner-provided Node major before repository tasks
+          test "$(node --version | cut -d. -f1)" = "v24"
+          docker_host="unix:///run/user/$(id -u)/docker.sock"
+          printf 'DOCKER_HOST=%s\n' "$docker_host" >>"$GITHUB_ENV"
+          DOCKER_HOST="$docker_host" docker image inspect "$OPENCODE_IMAGE" >/dev/null
+          curl -fsS --max-time 5 "$OPENCODE_HOST_PROBE_URL" >/dev/null
+
+      - name: Build exact source and deterministic Patrol contracts
+        shell: bash
+        run: |
+          set -euo pipefail
+          ./shifu install --frozen-lockfile
+          ./shifu build:core
+          ./shifu test:agent-patrol
+
+      - name: Run bounded repository-work experiment
+        shell: bash
+        run: |
+          set -euo pipefail
+          evidence_dir="$RUNNER_TEMP/kungfu-agent-patrol-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT"
+          mkdir -p "$evidence_dir"
+          printf 'KUNGFU_AGENT_PATROL_EVIDENCE=%s\n' "$evidence_dir" >>"$GITHUB_ENV"
+          runner_exit=0
+          ./shifu qualify:agent-repository-work -- \
+            --output "$evidence_dir/repository-work" \
+            --image "$OPENCODE_IMAGE" \
+            --model "$OPENCODE_MODEL" \
+            --base-url "$OPENCODE_BASE_URL" \
+            --source-head "$GITHUB_SHA" \
+            --timeout-seconds 900 || runner_exit=$?
+          printf '%s\n' "$runner_exit" >"$evidence_dir/runner-exit"
+
+      - name: Classify bounded outcome
+        shell: bash
+        run: |
+          set -euo pipefail
+          ./shifu agent-patrol:classify -- \
+            --report "$KUNGFU_AGENT_PATROL_EVIDENCE/repository-work/agent-repository-work-report.json" \
+            --output "$KUNGFU_AGENT_PATROL_EVIDENCE/classification.json" \
+            --runner-exit "$(cat "$KUNGFU_AGENT_PATROL_EVIDENCE/runner-exit")" \
+            --source-head "$GITHUB_SHA" \
+            --model "$OPENCODE_MODEL" \
+            --image "$OPENCODE_IMAGE" \
+            --runner "$RUNNER_NAME"
+
+      - name: Capture or deduplicate native Dogfood Finding
+        shell: bash
+        run: |
+          set -euo pipefail
+          ./shifu agent-patrol:dogfood-capture -- \
+            --classification "$KUNGFU_AGENT_PATROL_EVIDENCE/classification.json" \
+            --intent "$KUNGFU_AGENT_PATROL_EVIDENCE/dogfood-finding-intent.json" \
+            --output "$KUNGFU_AGENT_PATROL_EVIDENCE/dogfood-capture-receipt.json" \
+            --workspace "$HOME/.local/state/kungfu-agent-patrol"
+
+      - name: Enforce infrastructure and evidence integrity
+        shell: bash
+        run: |
+          set -euo pipefail
+          jq -e '.issueAdmitted == false' \
+            "$KUNGFU_AGENT_PATROL_EVIDENCE/dogfood-capture-receipt.json" >/dev/null
+          test "$(jq -r '.blocking' \
+            "$KUNGFU_AGENT_PATROL_EVIDENCE/classification.json")" = "false"
+
+      - name: Upload bounded Patrol evidence
+        if: ${{ always() }}
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: kungfu-agent-patrol-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            ${{ runner.temp }}/kungfu-agent-patrol-${{ github.run_id }}-${{ github.run_attempt }}/repository-work/agent-repository-work-report.json
+            ${{ runner.temp }}/kungfu-agent-patrol-${{ github.run_id }}-${{ github.run_attempt }}/classification.json
+            ${{ runner.temp }}/kungfu-agent-patrol-${{ github.run_id }}-${{ github.run_attempt }}/dogfood-capture-receipt.json
+          if-no-files-found: warn
+          retention-days: 14

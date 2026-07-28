@@ -1398,16 +1398,35 @@
       "review_state": "self-reviewed",
       "sensitivity": "public",
       "sources": ["executable-probe", "local-files", "user-consensus"],
-      "period": "2026-07-27",
+      "period": "2026-07-28",
       "theme": "local-agent-repository-work",
       "confidence": "high",
       "evidence_grade": "B",
-      "last_reviewed": "2026-07-27",
+      "last_reviewed": "2026-07-28",
       "ai_provenance": {
         "model_family": "OpenAI GPT-5",
         "product": "Codex",
-        "generated_at": "2026-07-27",
+        "generated_at": "2026-07-28",
         "invisible_context_boundary": "provider internals, hidden model checkpoints, private session stores, and generalized product claims are not claimed"
+      }
+    },
+    "docs/qualification/agent-patrol-agent-121.md": {
+      "metadata_schema": "kungfu.document-metadata/v1",
+      "document_status": "draft",
+      "doc_type": "qualification-runbook",
+      "review_state": "self-reviewed",
+      "sensitivity": "public",
+      "sources": ["executable-probe", "local-files", "user-consensus"],
+      "period": "2026-07-28",
+      "theme": "kungfu-agent-patrol",
+      "confidence": "high",
+      "evidence_grade": "B",
+      "last_reviewed": "2026-07-28",
+      "ai_provenance": {
+        "model_family": "OpenAI GPT-5",
+        "product": "Codex",
+        "generated_at": "2026-07-28",
+        "invisible_context_boundary": "hidden model checkpoints, private credentials, unrecorded runner state, and generalized capability claims are not claimed"
       }
     },
     "docs/qualification/fact-storage-authority.md": {
