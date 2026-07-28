@@ -31,6 +31,7 @@ import {
   latencyOnlyEvidence,
   parseDevRequiredLatencyArgs,
   requiredMergeQueueWindow,
+  selectLatencyCohort as selectCohort,
 } from './candidate-timeline-events.cjs';
 import { planAffectedPaths } from './run-core-affected-native.mjs';
 export { requiredMergeQueueWindow };
@@ -1343,7 +1344,6 @@ async function collectSample(
       excluded: true,
       exclusionReason: 'merge-queue-required-context-incomplete',
       pullRequest: pull.number,
-      mergedAt: pull.merged_at,
       sourceSha: sha,
       classification,
       requiredWindow,
@@ -1839,36 +1839,8 @@ export function report(
   mergeQueueRecords = records,
   options = {},
 ) {
-  const cohortStart = options.cohortStart || null;
-  const cohortStartMs = cohortStart ? Date.parse(cohortStart) : null;
-  if (
-    cohortStart &&
-    (!/T.*(?:Z|[+-]\d{2}:\d{2})$/u.test(cohortStart) ||
-      !Number.isFinite(cohortStartMs))
-  ) {
-    throw new Error('cohortStart must be an RFC3339 timestamp with timezone');
-  }
-  const atOrAfterCohortStart = (value) =>
-    cohortStartMs === null ||
-    (Boolean(value) && Date.parse(value) >= cohortStartMs);
-  const recordStart = (record) =>
-    record.requiredWindow?.startedAt ||
-    record.mergeQueue?.firstEnqueuedAt ||
-    record.startedAt ||
-    record.mergedAt ||
-    null;
-  const cohortRecords = records.filter((record) =>
-    atOrAfterCohortStart(recordStart(record)),
-  );
-  const preCohortRecords = records.filter(
-    (record) => !atOrAfterCohortStart(recordStart(record)),
-  );
-  const cohortMergeQueueRecords = mergeQueueRecords.filter((record) =>
-    atOrAfterCohortStart(
-      record.mergeQueue?.firstEnqueuedAt || record.mergedAt || null,
-    ),
-  );
-  const samples = cohortRecords.filter(({ excluded }) => !excluded);
+  const cohort = selectCohort(records, mergeQueueRecords, options.cohortStart);
+  const samples = cohort.records.filter(({ excluded }) => !excluded);
   const byKind = (kind) =>
     samples.filter(({ classification }) => classification.kind === kind);
   const statistics = {
@@ -1900,9 +1872,8 @@ export function report(
   const cacheObserved = cache.warmCount + cache.coldCount;
   cache.warmRatio = cacheObserved ? cache.warmCount / cacheObserved : null;
   cache.coldRatio = cacheObserved ? cache.coldCount / cacheObserved : null;
-  const mergeQueueDelivery = summarizeMergeQueueDelivery(
-    cohortMergeQueueRecords,
-  );
+  const queueRecords = cohort.mergeQueueRecords;
+  const mergeQueueDelivery = summarizeMergeQueueDelivery(queueRecords);
   const deliveryEvidence = summarizeDeliveryEvidence(samples);
   const generatedAt = new Date().toISOString();
   const candidateTimelines = samples.map((sample) =>
@@ -1920,10 +1891,7 @@ export function report(
       evidenceMode: options.latencyOnly ? 'latency-only' : 'full',
       nativeArtifacts: options.latencyOnly ? 'skipped' : 'required',
       retainedBaselineEligible: !options.latencyOnly,
-      cohortStart,
-      cohortStartAuthority: cohortStart
-        ? 'explicit-rfc3339-first-enqueue-boundary'
-        : 'unbounded-latest-merged-window',
+      ...cohort.collection,
     },
     metric: {
       start: 'first authoritative GitHub AddedToMergeQueueEvent',
@@ -1943,7 +1911,6 @@ export function report(
       metric: {
         start: 'first GitHub AddedToMergeQueueEvent',
         end: 'pull request merged_at',
-        cohortStart,
         dequeue:
           'every non-merged RemovedFromMergeQueueEvent using the authoritative GraphQL reason',
         repeatedValidation:
@@ -1960,7 +1927,7 @@ export function report(
         minimumSamples: MINIMUM_SAMPLE_COUNT,
       },
       ...mergeQueueDelivery,
-      samples: cohortMergeQueueRecords,
+      samples: queueRecords,
     },
     deliveryEvidence,
     cache,
@@ -1984,14 +1951,7 @@ export function report(
                 : 'observed overall and native samples meet target with complete native cache evidence',
     },
     samples,
-    exclusions: [
-      ...cohortRecords.filter(({ excluded }) => excluded),
-      ...preCohortRecords.map((record) => ({
-        ...record,
-        excluded: true,
-        exclusionReason: 'before-cohort-start',
-      })),
-    ],
+    exclusions: cohort.records.filter(({ excluded }) => excluded),
   };
 }
 async function main() {
@@ -2024,8 +1984,7 @@ async function main() {
   ]);
   const pulls = options.pulls.length ? pullWindow : pullWindow.pulls;
   const requiredContexts = requiredContextsFromEffectiveRules(effectiveRules);
-  if (!requiredContexts.length)
-    throw new Error(`no required contexts on ${options.branch}`);
+  if (!requiredContexts.length) throw new Error('no required contexts');
   if (!options.pulls.length) {
     validateDevRequiredLatencyBaseline(
       JSON.parse(fs.readFileSync(BASELINE_PATH, 'utf8')),

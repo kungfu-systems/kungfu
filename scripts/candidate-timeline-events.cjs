@@ -558,6 +558,48 @@ async function collectLatestMergedPullWindow(fetchPage, limit, pageSize = 100) {
   }
 }
 
+function selectLatencyCohort(records, mergeQueueRecords, cohortStart) {
+  const cohortStartMs = cohortStart ? Date.parse(cohortStart) : null;
+  if (
+    cohortStart &&
+    (!/T.*(?:Z|[+-]\d{2}:\d{2})$/u.test(cohortStart) ||
+      !Number.isFinite(cohortStartMs))
+  ) {
+    throw new Error('cohortStart must be an RFC3339 timestamp with timezone');
+  }
+  const atOrAfterStart = (value) =>
+    cohortStartMs === null ||
+    (Boolean(value) && Date.parse(value) >= cohortStartMs);
+  const recordStart = (record) =>
+    record.requiredWindow?.startedAt ||
+    record.mergeQueue?.firstEnqueuedAt ||
+    record.startedAt ||
+    record.mergedAt;
+  return {
+    records: records.map((record) => {
+      const startedAt = recordStart(record);
+      return atOrAfterStart(startedAt)
+        ? record
+        : {
+            ...record,
+            excluded: true,
+            exclusionReason: startedAt
+              ? 'before-cohort-start'
+              : 'cohort-start-unprovable',
+          };
+    }),
+    mergeQueueRecords: mergeQueueRecords.filter((record) =>
+      atOrAfterStart(record.mergeQueue?.firstEnqueuedAt || record.mergedAt),
+    ),
+    collection: {
+      cohortStart: cohortStart || null,
+      cohortStartAuthority: cohortStart
+        ? 'explicit-rfc3339-first-enqueue-boundary'
+        : 'unbounded-latest-merged-window',
+    },
+  };
+}
+
 function parseDevRequiredLatencyArgs(argv) {
   const options = {
     repository: process.env.GITHUB_REPOSITORY || '',
@@ -670,4 +712,5 @@ module.exports = {
   readDevChannelContract,
   requiredMergeQueueWindow,
   resolveDevBranch,
+  selectLatencyCohort,
 };

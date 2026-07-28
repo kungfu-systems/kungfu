@@ -27,6 +27,7 @@ const {
   parseDevRequiredLatencyArgs,
   readDevChannelContract,
   resolveDevBranch,
+  selectLatencyCohort,
 } = require('./candidate-timeline-events.cjs');
 
 function fixture() {
@@ -84,6 +85,88 @@ test('dev channel authority admits current and future lines but rejects legacy l
         symbolicRemoteHead: () => '',
       }),
     /cannot resolve the admitted dev branch/u,
+  );
+});
+
+test('cohort start excludes samples whose first queue admission predates activation', () => {
+  const mergeQueue = (firstEnqueuedAt) => ({
+    firstEnqueuedAt,
+    queueStatus: 'observed',
+  });
+  const records = [
+    {
+      pullRequest: 1,
+      requiredWindow: { startedAt: '2026-07-28T10:35:00Z' },
+      mergeQueue: mergeQueue('2026-07-28T10:35:00Z'),
+    },
+    {
+      pullRequest: 2,
+      mergedAt: '2026-07-28T10:52:00Z',
+      requiredWindow: { startedAt: '2026-07-28T10:42:00Z' },
+      mergeQueue: mergeQueue('2026-07-28T10:42:00Z'),
+    },
+    {
+      pullRequest: 3,
+      requiredWindow: { startedAt: '2026-07-28T10:50:00Z' },
+      mergeQueue: mergeQueue('2026-07-28T10:50:00Z'),
+    },
+    {
+      pullRequest: 4,
+      mergeQueue: { queueStatus: 'unknown' },
+    },
+  ];
+  const value = selectLatencyCohort(
+    records,
+    records,
+    '2026-07-28T10:47:22.936Z',
+  );
+
+  assert.equal(value.collection.cohortStart, '2026-07-28T10:47:22.936Z');
+  assert.deepEqual(
+    value.records.map(({ pullRequest, excluded, exclusionReason }) => ({
+      pullRequest,
+      excluded,
+      exclusionReason,
+    })),
+    [
+      {
+        pullRequest: 1,
+        excluded: true,
+        exclusionReason: 'before-cohort-start',
+      },
+      {
+        pullRequest: 2,
+        excluded: true,
+        exclusionReason: 'before-cohort-start',
+      },
+      { pullRequest: 3, excluded: undefined, exclusionReason: undefined },
+      {
+        pullRequest: 4,
+        excluded: true,
+        exclusionReason: 'cohort-start-unprovable',
+      },
+    ],
+  );
+  assert.deepEqual(
+    value.mergeQueueRecords.map(({ pullRequest }) => pullRequest),
+    [3],
+  );
+});
+
+test('cohort start CLI requires an RFC3339 timestamp with timezone', () => {
+  assert.equal(
+    parseDevRequiredLatencyArgs(['--cohort-start', '2026-07-28T10:47:22.936Z'])
+      .cohortStart,
+    '2026-07-28T10:47:22.936Z',
+  );
+  assert.throws(
+    () =>
+      parseDevRequiredLatencyArgs(['--cohort-start', '2026-07-28 10:47:22']),
+    /RFC3339 timestamp with timezone/,
+  );
+  assert.throws(
+    () => parseDevRequiredLatencyArgs(['--cohort-start']),
+    /requires a value/,
   );
 });
 
