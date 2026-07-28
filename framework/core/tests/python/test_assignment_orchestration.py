@@ -160,9 +160,13 @@ def _typed_ref(
     }
 
 
-def _settlement(publication_state="published"):
-    fact_world = "settlement-world"
-    cut_root = _sha256("a")
+def _settlement(
+    publication_state="published",
+    *,
+    fact_world="work-control-world",
+    cut_root=None,
+):
+    cut_root = cut_root or _sha256("0")
     lag_started_at = (
         None if publication_state == "published" else "2026-07-28T03:00:01Z"
     )
@@ -187,14 +191,14 @@ def _settlement(publication_state="published"):
                 "b",
                 fact_world=fact_world,
                 cut_root=cut_root,
-                status="declared",
+                status="claimed-complete",
             ),
             "assessment": _typed_ref(
                 "assessment",
                 "c",
                 fact_world=fact_world,
                 cut_root=cut_root,
-                status="qualified",
+                status="fit",
             ),
             "decision": _typed_ref(
                 "decision",
@@ -256,7 +260,11 @@ def _family_binding_manifest(state, publication_state="published"):
         if (child["terminal"] or {}).get("state") == "merged":
             settlement = {
                 "present": True,
-                "value": _settlement(publication_state),
+                "value": _settlement(
+                    publication_state,
+                    fact_world=fact_world,
+                    cut_root=cut_root,
+                ),
             }
         work_definition = _typed_ref(
             "work-definition",
@@ -822,6 +830,93 @@ def test_family_v2_merged_settlement_requires_decision_and_admission(missing_fie
 
     with pytest.raises(ValueError, match="invalid field set"):
         assignment_orchestration.upgrade_family_state_v2(merged, manifest)
+
+
+@pytest.mark.parametrize(
+    ("coordinate", "wrong_value"),
+    [
+        ("factWorld", "other-world"),
+        ("factCutRoot", _sha256("f")),
+    ],
+)
+def test_family_v2_rejects_self_consistent_settlement_from_another_cut(
+    coordinate, wrong_value
+):
+    initial = assignment_orchestration.create_family_state(_family_blueprint())
+    merged = assignment_orchestration.transition_family_state(
+        initial,
+        _transition(
+            initial,
+            terminal_updates=[
+                {"assignmentId": "child-a", "terminal": _merged_terminal()}
+            ],
+        ),
+    )
+    manifest = _family_binding_manifest(merged)
+    settlement = manifest["children"][0]["settlement"]["value"]
+    settlement[coordinate] = wrong_value
+    reference_coordinate = "factWorld" if coordinate == "factWorld" else "cutRoot"
+    for reference in settlement["references"].values():
+        reference[reference_coordinate] = wrong_value
+    _seal_binding_manifest(manifest)
+
+    with pytest.raises(ValueError, match="does not match the family binding"):
+        assignment_orchestration.upgrade_family_state_v2(merged, manifest)
+
+
+@pytest.mark.parametrize(
+    ("field", "wrong_status", "expected_status"),
+    [
+        ("completionClaim", "declared", "claimed-complete"),
+        ("assessment", "qualified", "fit"),
+        ("decision", "proposed", "accepted"),
+        ("episode", "open", "sealed"),
+        ("projectCut", "prepared", "settled"),
+        ("deliveryEvidence", "missing", "verified"),
+    ],
+)
+def test_family_v2_settlement_requires_exact_authority_status(
+    field, wrong_status, expected_status
+):
+    initial = assignment_orchestration.create_family_state(_family_blueprint())
+    merged = assignment_orchestration.transition_family_state(
+        initial,
+        _transition(
+            initial,
+            terminal_updates=[
+                {"assignmentId": "child-a", "terminal": _merged_terminal()}
+            ],
+        ),
+    )
+    manifest = _family_binding_manifest(merged)
+    references = manifest["children"][0]["settlement"]["value"]["references"]
+    references[field]["status"] = wrong_status
+    _seal_binding_manifest(manifest)
+
+    with pytest.raises(ValueError, match=rf"status must be {expected_status}"):
+        assignment_orchestration.upgrade_family_state_v2(merged, manifest)
+
+
+def test_family_v2_assignment_state_status_must_match_v1_lifecycle():
+    state = assignment_orchestration.create_family_state(_family_blueprint())
+    manifest = _family_binding_manifest(state)
+    manifest["children"][0]["assignmentState"]["status"] = "terminal"
+    _seal_binding_manifest(manifest)
+
+    with pytest.raises(ValueError, match=r"assignmentState\.status must be active"):
+        assignment_orchestration.upgrade_family_state_v2(state, manifest)
+
+
+def test_family_v2_work_definition_identity_must_match_child():
+    state = assignment_orchestration.create_family_state(_family_blueprint())
+    manifest = _family_binding_manifest(state)
+    manifest["children"][0]["workDefinition"]["identity"] = "child-b:work-definition"
+    _seal_binding_manifest(manifest)
+
+    with pytest.raises(
+        ValueError, match="work-definition reference identity does not match child"
+    ):
+        assignment_orchestration.upgrade_family_state_v2(state, manifest)
 
 
 @pytest.mark.parametrize(

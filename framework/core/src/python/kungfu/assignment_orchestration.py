@@ -634,6 +634,7 @@ def _validate_family_v2_reference(
     expected_kind: str,
     expected_fact_world: str,
     expected_cut_root: str,
+    expected_status: str,
     label: str,
 ) -> dict[str, Any]:
     reference = _strict_object(
@@ -664,6 +665,8 @@ def _validate_family_v2_reference(
         raise ValueError("Admission receipt must record an admitted effect")
     if expected_kind == "publication-failure" and reference["status"] != "visible":
         raise ValueError("publication failure must remain visible")
+    if reference["status"] != expected_status:
+        raise ValueError(f"{label}.status must be {expected_status}")
     return reference
 
 
@@ -673,6 +676,7 @@ def _validate_family_v2_optional_reference(
     expected_kind: str,
     expected_fact_world: str,
     expected_cut_root: str,
+    expected_status: str,
     label: str,
 ) -> dict[str, Any]:
     optional = _strict_object(value, {"present", "reference"}, label)
@@ -689,12 +693,19 @@ def _validate_family_v2_optional_reference(
         expected_kind=expected_kind,
         expected_fact_world=expected_fact_world,
         expected_cut_root=expected_cut_root,
+        expected_status=expected_status,
         label=f"{label}.reference",
     )
     return optional
 
 
-def _validate_family_v2_settlement(value: Any, label: str) -> dict[str, Any]:
+def _validate_family_v2_settlement(
+    value: Any,
+    *,
+    expected_fact_world: str,
+    expected_cut_root: str,
+    label: str,
+) -> dict[str, Any]:
     settlement = _strict_object(
         value,
         {"factWorld", "factCutRoot", "references", "publication"},
@@ -704,6 +715,10 @@ def _validate_family_v2_settlement(value: Any, label: str) -> dict[str, Any]:
     if not isinstance(fact_world, str) or not fact_world:
         raise ValueError(f"{label}.factWorld must be a non-empty string")
     fact_cut_root = _root(settlement["factCutRoot"], f"{label}.factCutRoot")
+    if fact_world != expected_fact_world:
+        raise ValueError(f"{label}.factWorld does not match the family binding")
+    if fact_cut_root != expected_cut_root:
+        raise ValueError(f"{label}.factCutRoot does not match the family binding")
     references = _strict_object(
         settlement["references"],
         {
@@ -717,21 +732,22 @@ def _validate_family_v2_settlement(value: Any, label: str) -> dict[str, Any]:
         },
         f"{label}.references",
     )
-    reference_kinds = {
-        "completionClaim": "completion-claim",
-        "assessment": "assessment",
-        "decision": "decision",
-        "admissionReceipt": "admission-receipt",
-        "episode": "episode",
-        "projectCut": "project-cut",
-        "deliveryEvidence": "delivery-evidence",
+    reference_contracts = {
+        "completionClaim": ("completion-claim", "claimed-complete"),
+        "assessment": ("assessment", "fit"),
+        "decision": ("decision", "accepted"),
+        "admissionReceipt": ("admission-receipt", "admitted"),
+        "episode": ("episode", "sealed"),
+        "projectCut": ("project-cut", "settled"),
+        "deliveryEvidence": ("delivery-evidence", "verified"),
     }
-    for field, kind in reference_kinds.items():
+    for field, (kind, status) in reference_contracts.items():
         _validate_family_v2_reference(
             references[field],
             expected_kind=kind,
             expected_fact_world=fact_world,
             expected_cut_root=fact_cut_root,
+            expected_status=status,
             label=f"{label}.references.{field}",
         )
 
@@ -754,6 +770,7 @@ def _validate_family_v2_settlement(value: Any, label: str) -> dict[str, Any]:
         expected_kind="publication-failure",
         expected_fact_world=fact_world,
         expected_cut_root=fact_cut_root,
+        expected_status="visible",
         label=f"{label}.publication.failure",
     )
     if failure["present"] != (publication_state == "failed"):
@@ -796,16 +813,17 @@ def validate_family_binding_v2(
     )
     if initiative["initiativeId"] != projection["initiative"]["initiativeId"]:
         raise ValueError("typed binding Initiative identity does not match v1")
-    for field, kind in (
-        ("pursuit", "pursuit"),
-        ("atlas", "atlas"),
-        ("acceptancePolicy", "acceptance-policy"),
+    for field, kind, status in (
+        ("pursuit", "pursuit", "active"),
+        ("atlas", "atlas", "current"),
+        ("acceptancePolicy", "acceptance-policy", "current"),
     ):
         _validate_family_v2_reference(
             initiative[field],
             expected_kind=kind,
             expected_fact_world=fact_world,
             expected_cut_root=fact_cut_root,
+            expected_status=status,
             label=f"typed binding initiative.{field}",
         )
 
@@ -835,23 +853,29 @@ def validate_family_binding_v2(
         if assignment_id not in projected_children:
             raise ValueError(f"typed binding names an orphan child: {assignment_id}")
         projected = projected_children[assignment_id]
-        reference_kinds = {
-            "assignmentState": "assignment-state",
-            "workDefinition": "work-definition",
-            "pursuit": "pursuit",
-            "atlas": "atlas",
-            "executionWarrant": "execution-warrant",
+        reference_contracts = {
+            "assignmentState": (
+                "assignment-state",
+                "terminal" if projected["terminal"] is not None else "active",
+            ),
+            "workDefinition": ("work-definition", "accepted"),
+            "pursuit": ("pursuit", "active"),
+            "atlas": ("atlas", "current"),
+            "executionWarrant": ("execution-warrant", "active"),
         }
-        for field, kind in reference_kinds.items():
+        for field, (kind, status) in reference_contracts.items():
             _validate_family_v2_reference(
                 bound[field],
                 expected_kind=kind,
                 expected_fact_world=fact_world,
                 expected_cut_root=fact_cut_root,
+                expected_status=status,
                 label=f"typed binding child.{assignment_id}.{field}",
             )
         if bound["assignmentState"]["identity"] != assignment_id:
             raise ValueError("Assignment-state reference identity does not match child")
+        if bound["workDefinition"]["identity"] != f"{assignment_id}:work-definition":
+            raise ValueError("work-definition reference identity does not match child")
         if bound["workDefinition"]["root"] != projected["workDefinitionRoot"]:
             raise ValueError("work-definition reference root does not match v1")
 
@@ -869,7 +893,10 @@ def validate_family_binding_v2(
             if optional["value"] is None:
                 raise ValueError("typed settlement declares presence without a value")
             _validate_family_v2_settlement(
-                optional["value"], f"typed binding child.{assignment_id}.settlement"
+                optional["value"],
+                expected_fact_world=fact_world,
+                expected_cut_root=fact_cut_root,
+                label=f"typed binding child.{assignment_id}.settlement",
             )
         elif optional["value"] is not None:
             raise ValueError("absent typed settlement must not hide a value")
