@@ -3,8 +3,9 @@ metadata_schema: kungfu.document-metadata/v1
 doc_type: architecture-decision
 adr_id: KF-ADR-019f86da-4f90-7ef4-b28b-ee1fbaf9e62e
 decision_status: accepted
-implementation_status: partial
-implementation_prs: [https://github.com/kungfu-systems/kungfu/pull/842, https://github.com/kungfu-systems/kungfu/pull/873, https://github.com/kungfu-systems/kungfu/pull/885, https://github.com/kungfu-systems/kungfu/pull/906, https://github.com/kungfu-systems/kungfu/pull/922, https://github.com/kungfu-systems/kungfu/pull/1704, https://github.com/kungfu-systems/kungfu/pull/1718, https://github.com/kungfu-systems/kungfu/pull/1728, https://github.com/kungfu-systems/kungfu/pull/1744]
+implementation_status: implemented
+implementation_prs: [https://github.com/kungfu-systems/kungfu/pull/842, https://github.com/kungfu-systems/kungfu/pull/873, https://github.com/kungfu-systems/kungfu/pull/885, https://github.com/kungfu-systems/kungfu/pull/906, https://github.com/kungfu-systems/kungfu/pull/922, https://github.com/kungfu-systems/kungfu/pull/1704, https://github.com/kungfu-systems/kungfu/pull/1718, https://github.com/kungfu-systems/kungfu/pull/1728, https://github.com/kungfu-systems/kungfu/pull/1744, https://github.com/kungfu-systems/kungfu/pull/1771, https://github.com/kungfu-systems/kungfu/pull/1784]
+closure_pr: https://github.com/kungfu-systems/kungfu/pull/1784
 qualification_refs: [scripts/run-kfx-identity-neutral-terminal-qualification.mjs, docs/qualification/kfx-identity-neutral-terminal.md, framework/core/src/libkungfu/tests/native_kfx_contract_tests.cpp]
 review_state: self-reviewed
 sensitivity: public
@@ -18,7 +19,7 @@ last_reviewed: 2026-07-28
 
 # KF-ADR-019f86da-4f90-7ef4-b28b-ee1fbaf9e62e: one Core-native KFX runtime serves GUI, TUI, CLI, and agents
 
-- Status: accepted; implementation partial; terminal candidate qualified
+- Status: accepted; implemented and terminal-qualified
 - Date: 2026-07-15
 - Category: extension runtime / Core authority / product layers
 - Related: [KF-ADR-019f86da-4f90-7789-8b48-620aa694acf9](KF-ADR-019f86da-4f90-7789-8b48-620aa694acf9.md),
