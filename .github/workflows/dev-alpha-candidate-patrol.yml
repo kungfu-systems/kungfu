@@ -83,7 +83,7 @@ jobs:
         {
           "schema": "kungfu.adr-release-pr/v1",
           "kind": "alpha-settlement",
-          "no_adr_progress_reason": "The qualified development delta changes candidate admission plumbing without modifying an accepted ADR record"
+          "no_adr_progress_reason": "The qualified development delta aligns runtime-authority projections and candidate admission plumbing without modifying an accepted ADR record"
         }
         -->
       settlement-authorized: ${{ github.event_name != 'workflow_dispatch' || inputs.create-pull-request }}

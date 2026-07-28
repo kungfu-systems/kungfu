@@ -1242,7 +1242,7 @@
           "authority": "qualification",
           "publication": "none",
           "receipt": "diagnostic",
-          "definitionDigest": "sha256:029632b0ca605793c8a5a120982dac8d7cadd43704032fd3912e2b7772cb69f3",
+          "definitionDigest": "sha256:f16df1b6553f9c57d192b3bd73cb7cec254408f088d0ad502dedd881cfc4ea73",
           "credentials": {"githubToken":"write","oidc":false,"repositorySecrets":["KUNGFU_GITHUB_TOKEN"],"inheritedSecrets":false,"environment":null},
           "externalActions": ["kungfu-systems/buildchain/.github/workflows/dev-alpha-candidate-patrol.yml@4449bf319a4507009212b9302156d42117b9b703"],
           "steps": []
