@@ -4,7 +4,7 @@ doc_type: architecture-decision
 adr_id: KF-ADR-019f86da-4f90-7d6c-926a-ddd27dbde8ab
 decision_status: accepted
 implementation_status: partial
-implementation_prs: [https://github.com/kungfu-systems/kungfu/pull/571, https://github.com/kungfu-systems/kungfu/pull/568, https://github.com/kungfu-systems/kungfu/pull/731, https://github.com/kungfu-systems/kungfu/pull/734, https://github.com/kungfu-systems/kungfu/pull/906, https://github.com/kungfu-systems/kungfu/pull/922, https://github.com/kungfu-systems/kungfu/pull/942, https://github.com/kungfu-systems/kungfu/pull/975, https://github.com/kungfu-systems/kungfu/pull/1704]
+implementation_prs: [https://github.com/kungfu-systems/kungfu/pull/571, https://github.com/kungfu-systems/kungfu/pull/568, https://github.com/kungfu-systems/kungfu/pull/731, https://github.com/kungfu-systems/kungfu/pull/734, https://github.com/kungfu-systems/kungfu/pull/906, https://github.com/kungfu-systems/kungfu/pull/922, https://github.com/kungfu-systems/kungfu/pull/942, https://github.com/kungfu-systems/kungfu/pull/975, https://github.com/kungfu-systems/kungfu/pull/1704, https://github.com/kungfu-systems/kungfu/pull/1718]
 qualification_refs: [framework/core/src/libkungfu/tests/fixtures/native_kfx_contract/buildchain-2.13.0-alpha.0-envelope.json, framework/core/src/libkungfu/tests/native_kfx_contract_tests.cpp, framework/core/tests/python/test_native_kfx_contract.py, framework/core/tests/storage-node-binding.test.js, framework/api/tests/storage.test.ts]
 review_state: self-reviewed
 sensitivity: public
@@ -13,7 +13,7 @@ period: 2026-07-15
 theme: kfd-aware-kfx-trust-buildchain-admission
 confidence: high
 evidence_grade: B
-last_reviewed: 2026-07-27
+last_reviewed: 2026-07-28
 ---
 
 # KF-ADR-019f86da-4f90-7d6c-926a-ddd27dbde8ab: KFX admission consumes KFD facts and exact Buildchain attestations
@@ -105,6 +105,16 @@ verifier result but does not execute or authenticate the Buildchain verifier;
 KF-ADR-019f86da-4f90-7b3f-9ef3-84f5a878f302 Assessment Episode lifecycle. Those later mutation paths must consume
 the exact report, plan, package, and dependency roots frozen here rather than
 creating a second KFD evaluator.
+
+PR #1718 makes that consumption mandatory for every native registry mutation.
+Core recomputes the Release Passport and admission roots, then requires a
+purpose-bound Work/Warrant that also binds policy, capability, approval,
+package/dependency, receipt-dependency, and expected-Cut roots before any side
+effect. KFD fitness can reduce policy-defined friction but cannot authorize a
+mutation, and first-party or Product/System identity supplies no ambient grant.
+Pinned-verifier authentication, runtime capability enforcement, and terminal
+identity-neutral qualification remain later stages, so implementation remains
+partial.
 
 ## Decision
 

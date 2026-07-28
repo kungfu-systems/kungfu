@@ -4,7 +4,7 @@ doc_type: architecture-decision
 adr_id: KF-ADR-019f86da-4f90-7ef4-b28b-ee1fbaf9e62e
 decision_status: accepted
 implementation_status: partial
-implementation_prs: [https://github.com/kungfu-systems/kungfu/pull/842, https://github.com/kungfu-systems/kungfu/pull/873, https://github.com/kungfu-systems/kungfu/pull/885, https://github.com/kungfu-systems/kungfu/pull/906, https://github.com/kungfu-systems/kungfu/pull/922, https://github.com/kungfu-systems/kungfu/pull/1704]
+implementation_prs: [https://github.com/kungfu-systems/kungfu/pull/842, https://github.com/kungfu-systems/kungfu/pull/873, https://github.com/kungfu-systems/kungfu/pull/885, https://github.com/kungfu-systems/kungfu/pull/906, https://github.com/kungfu-systems/kungfu/pull/922, https://github.com/kungfu-systems/kungfu/pull/1704, https://github.com/kungfu-systems/kungfu/pull/1718]
 review_state: self-reviewed
 sensitivity: public
 sources: [local-files, user-decision]
@@ -12,7 +12,7 @@ period: 2026-07-15
 theme: core-native-multisurface-kfx-runtime
 confidence: high
 evidence_grade: B
-last_reviewed: 2026-07-27
+last_reviewed: 2026-07-28
 ---
 
 # KF-ADR-019f86da-4f90-7ef4-b28b-ee1fbaf9e62e: one Core-native KFX runtime serves GUI, TUI, CLI, and agents
@@ -81,6 +81,15 @@ the final KFX lifecycle authority: the successor manifest-authority slice moves
 authored KFX metadata to transport-neutral `kungfu.kfx.json`, while lifecycle
 state still folds from a KFX-specific history rather than a named Fact Cut
 settled through Work.
+
+PR #1718 welds every native registry mutation to one Core-recomputed Release
+Passport admission plan and a purpose-bound Work/Warrant before side effects.
+Apply rechecks the exact package, dependency, policy, capability, approval, and
+expected-Cut roots; success and refusal settle through immutable Work, Warrant,
+Episode, Settlement, and Cut receipts. KFD fitness and Product/System metadata
+remain inputs rather than ambient authorization. Capability-grant enforcement,
+runtime isolation, recursive Control Suite dogfood, and terminal cutover remain
+later stages, so the umbrella decision remains partial.
 
 Conversion readiness therefore remains blocked on the remaining ordered gates:
 Fact/Work lifecycle authority with Cut and CAS semantics, then a recursively
