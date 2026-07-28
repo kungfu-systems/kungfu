@@ -24,39 +24,43 @@ matches your job, then go deeper only when you need to.
 | [Research](research/README.md) | measured options and spikes that inform, but do not replace, decisions |
 | [Architecture Decisions](adr/README.md) | accepted and proposed load-bearing decisions with lifecycle evidence |
 | [ADR Map](architecture/adr-map.md) | searchable domain map, authoritative relations, and bounded navigation neighborhoods |
+| [Evolution Map](evolution/README.md) | first-party longitudinal path from the v4 journal restart to current authority and recursive dogfood |
 | [Shifu](shifu/README.md) | development entrypoint, cache profiles, artifacts, and Gate contracts |
 
 ## Understand Kungfu
 
 Read these in order for the product model:
 
-1. [System Overview](concepts/system-overview.md) — how the complete runtime,
+1. [Evolution Map](evolution/README.md) — how repeated implementation pressure,
+   abstraction compression, and authority migration produced the current
+   system; start here when the repository cross-section is too wide.
+2. [System Overview](concepts/system-overview.md) — how the complete runtime,
    product layers, Episode model, and monorepo fit together after the concise
    first-use entry.
-2. [Agent Supply Chain](architecture/agent-supply-chain.md) — how KFD-3,
+3. [Agent Supply Chain](architecture/agent-supply-chain.md) — how KFD-3,
    Buildchain, KFD-2, libkungfu / `.kungfu`, and independently owned Hubs form
    one evidence-bound evaluation path without implying external adoption.
-3. [Facts Before Trust](concepts/facts-before-trust.md) — why evidence, responsibility,
+4. [Facts Before Trust](concepts/facts-before-trust.md) — why evidence, responsibility,
    and local proof come before control decisions.
-4. [Kungfu as a Bootstrapping System](concepts/bootstrapping-agent-work.md) — why
+5. [Kungfu as a Bootstrapping System](concepts/bootstrapping-agent-work.md) — why
    a minimal human sovereign core forces the hidden Work Runtime out of human
    heads before participation scales, the bounded public evidence for that
    strategy, and what the evidence does not prove.
-5. [The Episode](concepts/the-episode.md) — why causal experience needs a stable
+6. [The Episode](concepts/the-episode.md) — why causal experience needs a stable
    object beyond a run, process, log, trace, workflow, or chat session, and how
    that object relates to Fact state.
-6. [Fact, Episode, and Action Primitive Runtime](architecture/fact-episode-action-runtime.md)
+7. [Fact, Episode, and Action Primitive Runtime](architecture/fact-episode-action-runtime.md)
    — the canonical integration model for journal authority, the two runtime
    substrates, and Pursuit, Atlas, and Warrant.
-7. [The Project Cut Product Loop](concepts/project-cut-product-loop.md) — how the
+8. [The Project Cut Product Loop](concepts/project-cut-product-loop.md) — how the
    internal model converges into current cut, bounded Agent Work, and next cut.
-8. [Design Philosophy](concepts/design-philosophy.md) — the principles and trade-offs
+9. [Design Philosophy](concepts/design-philosophy.md) — the principles and trade-offs
    behind the architecture.
-9. [Vocabulary Reference](concepts/vocabulary.md) — canonical definitions for Episode,
+10. [Vocabulary Reference](concepts/vocabulary.md) — canonical definitions for Episode,
    Fact, Initiative, Assignment, Project Cut, Artifact, Receipt, Cut, Watermark,
    Projection, Timeline, Claim, Proof, TrustReport, Decision, Replay, Rewind,
    and Recovery.
-10. [Known Limits](qualification/known-limits.md) — what is not yet implemented, qualified, or
+11. [Known Limits](qualification/known-limits.md) — what is not yet implemented, qualified, or
    released.
 
 For the exact boundary between the current workspace layout contract and the

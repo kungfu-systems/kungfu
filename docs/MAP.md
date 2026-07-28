@@ -27,7 +27,8 @@ The physical hierarchy expresses maintenance authority rather than the
 why/use/verify planes. Browse [Concepts](concepts/README.md),
 [Guides](guides/README.md), [Architecture](architecture/README.md),
 [Profiles](profiles/README.md), [Qualification](qualification/README.md),
-[Development](development/README.md), or [Research](research/README.md).
+[Development](development/README.md), [Evolution](evolution/README.md), or
+[Research](research/README.md).
 Load-bearing decisions remain in [ADR](adr/README.md), and Shifu's development
 contracts remain in [Shifu](shifu/README.md). Use the generated
 [ADR Map](architecture/adr-map.md) when you want a visual domain overview or a bounded
@@ -38,6 +39,7 @@ decision neighborhood instead of the exhaustive question index.
 | Your question | Document | Plane | Status |
 |---|---|---|---|
 | Which documentation route should I follow for my job? | [`README.md`](README.md) | use | current |
+| How did Kungfu grow from the v4 polyglot mmap journal into Fact, Episode, Profile, Project Cut, Xinfa, native Work Control, Primitive governance, and recursive dogfood without making the current repository cross-section the onboarding path? | [`evolution/README.md`](evolution/README.md) + [`evolution/timeline.md`](evolution/timeline.md) + [`evolution/current-authority.md`](evolution/current-authority.md) | why, use, verify | generated from append-only first-party Era and Stage records; exact current contracts remain authoritative |
 | What problem does Kungfu solve for an agent user, and what is the intended first-release experience? | [`../README.md`](../README.md) | use | pre-release |
 | Where does Kungfu sit in the Agent Supply Chain, what is proved now, what is only protocol-enabled, and how should a vendor evaluate it? | [`agent-supply-chain.md`](architecture/agent-supply-chain.md) + [`vendor-agent-hub-embedding.md`](qualification/vendor-agent-hub-embedding.md) | why, use, verify | pre-release · exact-source and first-party qualification only; external adoption and a second independent production Hub are not claimed |
 | Can this installed Kungfu act as the tested local KFD Agent Hub, what exactly was exercised, and how can a human or agent verify and explain the result? | [`kfd-agent-hub-20.md`](qualification/kfd-agent-hub-20.md) + `kungfu agent hub qualify --output-dir <new-directory> [--json]` | use, verify | experimental · exact installed artifact and two isolated local authority domains only; non-certifying |

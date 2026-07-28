@@ -213,11 +213,16 @@ orphan exception also fails.
 
 Canonical Markdown below `docs/` is organized by maintenance authority under
 `concepts/`, `guides/`, `architecture/`, `profiles/`, `qualification/`,
-`development/`, `research/`, `adr/`, and `shifu/`. Only `docs/README.md` and
+`development/`, `evolution/`, `research/`, `adr/`, and `shifu/`. Only `docs/README.md` and
 `docs/MAP.md` are canonical root entry files. Choose the owning section before
 adding a document and link it from that section's `README.md`; the gate rejects
 new flat canonical pages and canonical links that route through a compatibility
 redirect.
+
+Changes that alter how one capability builds on or supersedes another must add
+an append-only Era or Stage record under `docs/evolution/` and regenerate its
+projections with `./shifu evolution:map`. Settled records are immutable; publish
+an amendment or successor instead of rewriting history.
 
 It checks the
 whole Markdown graph so deleting or renaming a target cannot evade a
@@ -377,6 +382,9 @@ dev/<major>/<version>  →  alpha/<major>/<version>  →  release/<major>/<versi
 ```
 
 - Open pull requests against the relevant `dev/*` branch.
+- Declare the pull request's Evolution impact as `none`, `extends`, `opens`,
+  `settles`, or `supersedes`. Any value other than `none` must be reflected in
+  the append-only Evolution Map corpus.
 - Keep exactly one `kungfu-adr-release:v1` block from the pull-request
   template. Feature branches must declare `stage-ready` or `implemented`
   delivery intent and reference accepted ADRs; fixes and chores with no

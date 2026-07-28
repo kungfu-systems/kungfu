@@ -1,0 +1,31 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "schema": "kungfu.evolution-map-contract/v1",
+  "eraSchema": "kungfu.evolution-era/v1",
+  "stageSchema": "kungfu.evolution-stage/v1",
+  "projectionSchema": "kungfu.evolution-map-projection/v1",
+  "recordFences": {
+    "era": "kungfu-evolution-era",
+    "stage": "kungfu-evolution-stage"
+  },
+  "stageStatuses": ["open", "settled"],
+  "evolutionImpacts": ["none", "extends", "opens", "settles", "supersedes"],
+  "evidenceKinds": ["pull-request", "commit", "adr", "document"],
+  "appendPolicy": {
+    "settledBaseRecords": "immutable",
+    "corrections": "new-stage-with-amends",
+    "replacement": "new-stage-with-supersedes",
+    "generatedOutputs": [
+      "docs/evolution/map.json",
+      "docs/evolution/timeline.md",
+      "docs/evolution/current-authority.md",
+      "docs/evolution/reader-routes.md"
+    ]
+  },
+  "authorityBoundary": {
+    "history": "docs/evolution/eras and docs/evolution/stages",
+    "projection": "scripts/evolution-map/index.mjs",
+    "semanticGraph": "Xinfa Atlas",
+    "currentDomainContracts": "the exact authorityRefs selected by each transition"
+  }
+}

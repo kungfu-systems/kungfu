@@ -29,6 +29,7 @@ The current bounded routes are:
 | Work | Agent route | Measured complete budget |
 | --- | --- | ---: |
 | documentation control, human surfaces, or Xinfa integration | `kungfu-documentation-control-agent` | 66,560 |
+| longitudinal evolution, authority migration, or historical onboarding | `kungfu-evolution-map-agent` | 65,536 |
 | Core architecture or implementation | `kungfu-core-development-agent` | 16,384 |
 | kfx or Profile development | `kungfu-kfx-development-agent` | 16,384 |
 | product-use guides and operations | `kungfu-user-guide-agent` | 16,384 |

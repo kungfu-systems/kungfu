@@ -165,6 +165,8 @@
     "invariant:verify": "node scripts/require-shifu.mjs invariant:verify && node scripts/kungfu-invariant.mjs",
     "test:invariant-system": "node scripts/require-shifu.mjs test:invariant-system && node --test scripts/kungfu-invariant.test.mjs",
     "docs:check": "node scripts/require-shifu.mjs docs:check && node scripts/run-docs-check.mjs",
+    "evolution:map": "node scripts/require-shifu.mjs evolution:map && node scripts/evolution-map/index.mjs --write",
+    "evolution:map:check": "node scripts/require-shifu.mjs evolution:map:check && node scripts/evolution-map/index.mjs --check && node --test scripts/evolution-map.test.mjs",
     "check:portable-format-authority": "node scripts/require-shifu.mjs check:portable-format-authority && node scripts/check-portable-format-authority.mjs && node scripts/check-required-reader-contract.mjs && node scripts/check-format-migration-contract.mjs && node scripts/check-portable-format-vectors.mjs && node scripts/check-portable-format-baseline.mjs && node scripts/portable-format-migration-campaign.mjs && node --test scripts/check-portable-format-authority.test.mjs scripts/check-required-reader-contract.test.mjs scripts/check-format-migration-contract.test.mjs scripts/check-portable-format-vectors.test.mjs scripts/check-portable-format-baseline.test.mjs scripts/portable-format-migration-campaign.test.mjs",
     "qualify:portable-format-packages": "node scripts/require-shifu.mjs qualify:portable-format-packages && node scripts/qualify-portable-format-packages.mjs",
     "docs:material:bundle": "node scripts/require-shifu.mjs docs:material:bundle && node scripts/build-documentation-material-bundle.mjs",

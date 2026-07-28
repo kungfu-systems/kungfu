@@ -41,6 +41,15 @@ Feature PRs targeting `dev/*` must replace the block with:
 Alpha and stable promotion manifests are documented in the release design;
 do not use the ADR-neutral form for a channel promotion.
 
+## Evolution map impact
+
+Evolution impact: <!-- none | extends | opens | settles | supersedes -->
+
+Use `extends` for evidence added to the current open Stage. Use `opens`,
+`settles`, or `supersedes` only for a load-bearing abstraction compression or
+authority transition. Settled Stage records are append-only; corrections use a
+new amendment or successor record.
+
 ## Governance risk check
 
 Does this PR touch any of these boundaries?

@@ -47,6 +47,7 @@ try {
     path.join('scripts', 'adr-new.test.mjs'),
     path.join('scripts', 'adr-audit.test.mjs'),
     path.join('scripts', 'adr-navigation.test.mjs'),
+    path.join('scripts', 'evolution-map.test.mjs'),
     path.join('scripts', 'adr-release-gate.test.mjs'),
     path.join('scripts', 'release-promotion-rehearsal.test.mjs'),
     path.join('scripts', 'check-docs.test.mjs'),
@@ -61,6 +62,10 @@ try {
   run('ADR authority audit', [path.join('scripts', 'adr-audit.mjs')]);
   run('ADR human navigation projection', [
     path.join('scripts', 'adr-navigation.mjs'),
+    '--check',
+  ]);
+  run('longitudinal evolution projections', [
+    path.join('scripts', 'evolution-map', 'index.mjs'),
     '--check',
   ]);
   run('immutable documentation toolchain', [
