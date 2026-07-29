@@ -11,6 +11,7 @@ import fcntl
 import hashlib
 import json
 import os
+import posixpath
 import pty
 import re
 import select
@@ -347,8 +348,21 @@ def validate_member(member: tarfile.TarInfo) -> None:
         or parts[0] != ARCHIVE_ROOT
     ):
         fail(f"unsafe CLI archive member path: {name!r}")
-    if not (member.isfile() or member.isdir()):
+    if not (member.isfile() or member.isdir() or member.issym()):
         fail(f"unsupported CLI archive member type: {name!r}")
+    if member.issym():
+        linkname = member.linkname
+        if not linkname or linkname.startswith("/") or "\\" in linkname:
+            fail(f"unsafe CLI archive symlink target: {name!r} -> {linkname!r}")
+        normalized = PurePosixPath(
+            posixpath.normpath(str(PurePosixPath(name).parent / linkname))
+        )
+        if (
+            not normalized.parts
+            or normalized.parts[0] != ARCHIVE_ROOT
+            or ".." in normalized.parts
+        ):
+            fail(f"unsafe CLI archive symlink target: {name!r} -> {linkname!r}")
     if member.size < 0 or member.size > MAX_MEMBER_BYTES:
         fail(f"CLI archive member exceeds the bounded size: {name!r}")
 
@@ -369,10 +383,14 @@ def extract_cli(archive_path: Path, target: Path) -> Path:
             extracted_bytes = sum(member.size for member in members)
             if extracted_bytes > MAX_EXTRACTED_BYTES:
                 fail("CLI archive exceeds the bounded extracted size")
+            symlinks = []
             for member in members:
                 destination = target.joinpath(*PurePosixPath(member.name).parts)
                 if member.isdir():
                     destination.mkdir(parents=True, exist_ok=True)
+                    continue
+                if member.issym():
+                    symlinks.append((member, destination))
                     continue
                 destination.parent.mkdir(parents=True, exist_ok=True)
                 source = archive.extractfile(member)
@@ -381,6 +399,24 @@ def extract_cli(archive_path: Path, target: Path) -> Path:
                 with destination.open("xb") as output:
                     shutil.copyfileobj(source, output, length=1024 * 1024)
                 os.chmod(destination, member.mode & 0o777)
+            for member, destination in symlinks:
+                destination.parent.mkdir(parents=True, exist_ok=True)
+                destination.symlink_to(member.linkname)
+            extracted_root = (target / ARCHIVE_ROOT).resolve()
+            for member, destination in symlinks:
+                try:
+                    resolved = destination.resolve(strict=True)
+                    resolved.relative_to(extracted_root)
+                except (OSError, RuntimeError, ValueError):
+                    fail(
+                        "CLI archive symlink does not resolve inside the product: "
+                        f"{member.name!r} -> {member.linkname!r}"
+                    )
+                if not resolved.is_file():
+                    fail(
+                        "CLI archive symlink must resolve to a regular file: "
+                        f"{member.name!r} -> {member.linkname!r}"
+                    )
     except (tarfile.TarError, OSError) as error:
         fail(f"cannot extract CLI archive: {error}")
     return target / ARCHIVE_ROOT
