@@ -2,9 +2,13 @@
 metadata_schema: kungfu.document-metadata/v1
 doc_type: architecture-decision
 adr_id: KF-ADR-019fabb5-62a0-7b8d-8f8d-6505efdbc239
-decision_status: proposed
-implementation_status: not-started
-review_state: unreviewed
+decision_status: accepted
+implementation_status: implemented
+implementation_commits: [1fd38891ef22e516ea716bcb54597652c15f7a0d]
+implementation_prs: [https://github.com/kungfu-systems/kungfu/pull/1817]
+closure_pr: https://github.com/kungfu-systems/kungfu/pull/1817
+qualification_refs: [framework/core/tests/python/test_release_cut.py, framework/core/tests/python/test_distribution_update.py, framework/core/tests/python/test_release_channel.py, product/scripts/upgrade-manifest.test.mjs, product/scripts/bootstrap-installer.test.mjs, crates/shifu/src/promote.rs, crates/shifu/src/registrar.rs, scripts/kfd-support-matrix.test.mjs]
+review_state: self-reviewed
 sensitivity: public
 last_reviewed: 2026-07-29
 period: 2026-07
@@ -17,7 +21,7 @@ ai_provenance: GPT-5 via Codex on 2026-07-29; based on the admitted Assignment, 
 
 # KF-ADR-019fabb5-62a0-7b8d-8f8d-6505efdbc239: Product Release Cut is the exact updater identity
 
-- Status: proposed
+- Status: accepted and implemented; public publication remains separately authorized
 - Date: 2026-07-29
 
 ## Context
