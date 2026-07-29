@@ -6,15 +6,15 @@
   "supportLevel": "release",
   "source": {
     "cwd": ".",
-    "sourceSha": "9e6208cd2ae10da7dd0e60474e0896aae50d9344",
+    "sourceSha": "6142275afe49c7bc83d693f215552ec8032c5373",
     "registryPath": ".buildchain/kfd/kfd-3/surfaces.json",
-    "registryDigest": "sha256:3239328bcefec4bfd102c7e834d1b234e9e485c23af309d9ab89384f11b7819f"
+    "registryDigest": "sha256:a3645a8404dd134795f31f5014770c75f70a9990e41a62a865fe1bedfbf36d2b"
   },
   "sourceRegistry": {
     "id": "kungfu",
     "path": ".buildchain/kfd/kfd-3/surfaces.json",
-    "sha256": "b4b61d0a8aea3b3f1cc2c52efd46689f8fbc81778938ca8f5ebfcb57847d9ee2",
-    "digest": "sha256:3239328bcefec4bfd102c7e834d1b234e9e485c23af309d9ab89384f11b7819f"
+    "sha256": "abfafac7a2bce3e12473db4b81101ffba80d8c35a70d12a492903d04ea35ccca",
+    "digest": "sha256:a3645a8404dd134795f31f5014770c75f70a9990e41a62a865fe1bedfbf36d2b"
   },
   "upstreamKfd": {
     "aggregatePath": "developer/sdk/kfd/upstream-aggregate.json",
@@ -29,12 +29,12 @@
       "libnode": "22.22.3-kf.5-alpha.3",
       "buildchain": "3.0.0"
     },
-    "digest": "sha256:5776dcbc5a1d4796a5dd613fab235c7fe49a73b6fee70362a64dd2ef2c09d7d7"
+    "digest": "sha256:da5184fdb82a45ffad6b562698fd0cf4e1b4fc9045a92f16fd218cb0a47405bf"
   },
   "expectedArtifactVerification": {
     "command": "node scripts/buildchain-kfd-evidence.mjs --artifact-witness --json"
   },
-  "collaborationInterfaceDigest": "sha256:0813b77b27c376f146f7defdca7974854b61357f63281401b5aa5399d2523465",
+  "collaborationInterfaceDigest": "sha256:b7e653e72eec9d375d2ed011c027523610925b3fa89baf8d8d4a36f667b95120",
   "collaborationInterface": {
     "schemaVersion": 1,
     "contract": "kungfu-buildchain-kfd-3-surface-registry",
@@ -57,7 +57,7 @@
         "libnode": "22.22.3-kf.5-alpha.3",
         "buildchain": "3.0.0"
       },
-      "digest": "sha256:5776dcbc5a1d4796a5dd613fab235c7fe49a73b6fee70362a64dd2ef2c09d7d7"
+      "digest": "sha256:da5184fdb82a45ffad6b562698fd0cf4e1b4fc9045a92f16fd218cb0a47405bf"
     },
     "surfaces": [
       {
