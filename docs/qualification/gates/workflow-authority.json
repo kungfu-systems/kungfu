@@ -1077,14 +1077,14 @@
           "authority": "qualification",
           "publication": "none",
           "receipt": "diagnostic",
-          "definitionDigest": "sha256:0fb00bc8eb417ddd3ff8ff7bc0c3a7bc4bb42cfe7e81e71d917fdc3b8ac80d49",
+          "definitionDigest": "sha256:6f21a7dfe16deedab6047bd80b8279e7aa67b5ff116daa08b123fbaae62c31dd",
           "credentials": {"githubToken":"read","oidc":false,"repositorySecrets":[],"inheritedSecrets":false,"environment":null},
           "externalActions": ["actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd","actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a"],
           "steps": [
             {
               "index": 1,
               "label": "id:resolve",
-              "definitionDigest": "sha256:6929254306abf28805fd0930ea21895c8416c0ebbc6bef90d1675f0ce8d8f004"
+              "definitionDigest": "sha256:c7fb80856c78364e30e47cf16634ef4d0f94abcefc8af3ecb58a32a526d3828b"
             },
             {
               "index": 2,

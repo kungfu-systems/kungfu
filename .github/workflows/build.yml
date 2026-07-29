@@ -230,13 +230,17 @@ jobs:
                 "build artifact-coordinates-json is not valid JSON",
               );
             }
+            const currentAttempt =
+              String(process.env.GITHUB_RUN_ATTEMPT || "");
+            const producerAttempt = String(coordinateSet.runAttempt || "");
             if (
               coordinateSet.schema !==
                 "buildchain.github-artifact-coordinate-set/v1" ||
               coordinateSet.repository !== context.repo.owner + "/" + context.repo.repo ||
               coordinateSet.runId !== String(context.runId) ||
-              coordinateSet.runAttempt !==
-                String(process.env.GITHUB_RUN_ATTEMPT || "") ||
+              !/^[1-9][0-9]*$/.test(currentAttempt) ||
+              !/^[1-9][0-9]*$/.test(producerAttempt) ||
+              BigInt(producerAttempt) > BigInt(currentAttempt) ||
               coordinateSet.sourceSha !== sourceSha ||
               !Array.isArray(coordinateSet.artifacts)
             ) {
