@@ -1064,3 +1064,74 @@ jobs:
           path: product/qualification/affected-native/cache-promotion-authority
           if-no-files-found: error
           retention-days: 14
+
+  qualified_core_candidate:
+    name: Qualified Core candidate / macOS ARM64
+    needs:
+      - candidate_preflight
+      - affected-native
+    if: >-
+      ${{
+        github.event_name == 'merge_group' &&
+        needs.candidate_preflight.result == 'success' &&
+        needs.candidate_preflight.outputs.native-required == 'true' &&
+        needs.affected-native.result == 'success'
+      }}
+    continue-on-error: true
+    runs-on: macos-15
+    timeout-minutes: 90
+    permissions:
+      actions: read
+      contents: read
+    env:
+      KUNGFU_BUILD_PROFILE: full
+    steps:
+      - name: Check out exact merge-group source
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          fetch-depth: 1
+          persist-credentials: false
+      - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
+        with:
+          node-version: "24"
+      - name: Download exact native-impact plan
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: dev-candidate-plan-${{ github.sha }}
+          path: product/qualification/qualified-core/input
+      - name: Build and seal minimum relocatable Assignment Core candidate
+        id: candidate
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$RUNNER_OS" = macOS
+          test "$RUNNER_ARCH" = ARM64
+          test "$(uname -m)" = arm64
+          ./shifu install --frozen-lockfile
+          ./shifu rebuild:core
+          # required merge-group gate has already admitted this exact source.
+          # shifu-entry-contract: allow sealing immutable post-build Qualified Core bytes
+          node framework/release/qualified-assignment-core-artifact.mjs seal \
+            --repository-root . \
+            --payload-root framework/core/dist/kungfu \
+            --plan product/qualification/qualified-core/input/plan.json \
+            --output-dir product/qualification/qualified-core/candidate \
+            --repository "$GITHUB_REPOSITORY" \
+            --run-id "$GITHUB_RUN_ID" \
+            --event merge_group \
+            --workflow-path .github/workflows/affected-native-pr.yml \
+            --runner-environment github-hosted \
+            --runner-os "$RUNNER_OS" \
+            --runner-arch "$RUNNER_ARCH" \
+            --runner-image-os "${ImageOS:-}" \
+            --runner-image-version "${ImageVersion:-}" \
+            --profile "$KUNGFU_BUILD_PROFILE" \
+            --github-output "$GITHUB_OUTPUT"
+      - name: Upload non-authoritative candidate transport
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: qualified-assignment-core-candidate-${{ github.sha }}
+          path: product/qualification/qualified-core/candidate
+          if-no-files-found: error
+          retention-days: 14
+          compression-level: 0
