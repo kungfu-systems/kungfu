@@ -1021,6 +1021,17 @@ def test_apply_installs_runtime_and_selects_versioned_cli_on_next_command(
     assert applied["receiptRoot"].startswith("sha256:")
     assert applied["frontendSelection"]["generation"] == 1
     assert applied["frontendSelection"]["previousFrontendBuildId"] is None
+    inventory = distribution_update.cli_inventory_fsck(tmp_path / "config")
+    assert inventory["selectedReceiptRoot"] == applied["receiptRoot"]
+    persisted_receipt = (
+        tmp_path
+        / "config"
+        / "product"
+        / "cli"
+        / "receipts"
+        / "generation-00000000000000000001.json"
+    )
+    assert json.loads(persisted_receipt.read_text("utf-8")) == applied
 
 
 def test_cli_inventory_retains_stale_partial_and_reports_rollback_coordinates(
@@ -1122,6 +1133,22 @@ def test_cli_selection_interruption_keeps_last_known_good_and_retry_recovers(
     assert (
         selected["selected"]["frontendBuildId"]
         == older["frontendImage"]["frontendBuildId"]
+    )
+    assert selected["selectedReceiptRoot"] == older["receiptRoot"]
+    interrupted_receipt = (
+        config_home
+        / "product"
+        / "cli"
+        / "receipts"
+        / "generation-00000000000000000002.json"
+    )
+    retained = json.loads(interrupted_receipt.read_text("utf-8"))
+    assert (
+        retained["frontendSelection"]["frontendBuildId"]
+        == newer_manifest["frontendBuildId"]
+    )
+    assert retained["receiptRoot"] == distribution_update._content_root(
+        {key: value for key, value in retained.items() if key != "receiptRoot"}
     )
 
     monkeypatch.setattr(distribution_update, "_write_object", original_write)
@@ -1372,6 +1399,7 @@ def test_cli_status_explains_frontend_runtime_and_no_daemon(tmp_path: Path) -> N
     assert payload["schema"] == "kungfu.product-update-status/v1"
     assert payload["frontendVersion"] == "4.0.0-alpha.0"
     assert payload["installSource"]["source"] == "archive"
+    assert payload["nativeReceiptRoot"] is None
     assert payload["backgroundUpdater"] is False
 
 

@@ -195,7 +195,7 @@ pub fn rollback(
 
 pub struct NativeSelection {
     pub release_cut_root: String,
-    pub evidence_root: String,
+    pub receipt_root: String,
 }
 
 pub fn selected_release_cut(updater: &Path) -> Result<NativeSelection, String> {
@@ -217,10 +217,10 @@ pub fn selected_release_cut(updater: &Path) -> Result<NativeSelection, String> {
         .and_then(|inventory| inventory.get("selected"))
         .map(|selection| selection.str_of("releaseCutRoot").to_string())
         .unwrap_or_default();
-    let evidence_root = status.str_of("nativeSelectionRoot").to_string();
+    let receipt_root = status.str_of("nativeReceiptRoot").to_string();
     Ok(NativeSelection {
         release_cut_root,
-        evidence_root,
+        receipt_root,
     })
 }
 

@@ -214,6 +214,25 @@ fn desktop_phase_resumes_after_backup_and_before_target_placement() {
 }
 
 #[test]
+fn native_commit_recovery_requires_the_persisted_native_receipt_root() {
+    let target = format!("sha256:{}", "a".repeat(64));
+    let mut selected = native_update::NativeSelection {
+        release_cut_root: target.clone(),
+        receipt_root: String::new(),
+    };
+    assert!(recovered_native_receipt_root(&selected, &target).is_err());
+
+    selected.receipt_root = format!("sha256:{}", "b".repeat(64));
+    assert_eq!(
+        recovered_native_receipt_root(&selected, &target).unwrap(),
+        selected.receipt_root
+    );
+    assert!(
+        recovered_native_receipt_root(&selected, &format!("sha256:{}", "c".repeat(64))).is_err()
+    );
+}
+
+#[test]
 fn macos_shaped_partial_bundle_is_rejected_and_recovered() {
     fn copy_tree(source: &Path, target: &Path) -> Result<(), String> {
         fs::create_dir_all(target).map_err(|error| error.to_string())?;

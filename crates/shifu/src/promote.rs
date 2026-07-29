@@ -764,7 +764,9 @@ fn resume_pending_transaction(entries: &[BuildEntry], check: bool) {
         let selected =
             native_update::selected_release_cut(&updater).unwrap_or_else(|error| util::die(&error));
         if selected.release_cut_root == pending.target_release_cut_root {
-            pending.native_receipt_root = selected.evidence_root;
+            pending.native_receipt_root =
+                recovered_native_receipt_root(&selected, &pending.target_release_cut_root)
+                    .unwrap_or_else(|error| util::die(&error));
         } else {
             let native =
                 run_native(entry, pending.action == "rollback", true).unwrap_or_else(|error| {
@@ -787,10 +789,27 @@ fn resume_pending_transaction(entries: &[BuildEntry], check: bool) {
         util::die("native selection does not match the pending promotion target");
     }
     if pending.native_receipt_root.is_empty() {
-        pending.native_receipt_root = selected.evidence_root;
-        write_pending_transaction(&pending);
+        util::die("native selection has no exact persisted apply or rollback receipt");
+    }
+    if selected.receipt_root != pending.native_receipt_root {
+        util::die("native selection receipt does not match the pending promotion receipt");
     }
     finish_pending_transaction(entries, entry, &pending, &updater)
+}
+
+fn recovered_native_receipt_root(
+    selected: &native_update::NativeSelection,
+    target_release_cut_root: &str,
+) -> Result<String, String> {
+    if selected.release_cut_root != target_release_cut_root {
+        return Err("native selection does not match the pending promotion target".to_string());
+    }
+    if !valid_root(&selected.receipt_root) {
+        return Err(
+            "native selection has no exact persisted apply or rollback receipt".to_string(),
+        );
+    }
+    Ok(selected.receipt_root.clone())
 }
 
 pub fn run_builds(args: &[String]) -> ! {

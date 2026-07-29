@@ -246,7 +246,9 @@ def test_shifu_local_same_semver_successor_installs_side_by_side_and_rolls_back(
         rolled_back["frontendSelection"]["cutTransition"]
         == rolled_back["cutTransition"]
     )
-    assert distribution_update.cli_inventory_fsck(config_home)["ok"] is True
+    inventory = distribution_update.cli_inventory_fsck(config_home)
+    assert inventory["ok"] is True
+    assert inventory["selectedReceiptRoot"] == rolled_back["receiptRoot"]
 
 
 def test_shifu_native_cli_handoff_and_cache_independent_rollback(

@@ -260,6 +260,7 @@ def update_status(ctx, as_json):
             if native_selection is not None
             else None
         ),
+        "nativeReceiptRoot": frontend_inventory.get("selectedReceiptRoot"),
         "dogfoodResidency": distribution_update.local_dogfood_residency(),
         "backgroundUpdater": False,
     }

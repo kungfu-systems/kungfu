@@ -18,7 +18,7 @@ import time
 import urllib.parse
 import urllib.request
 import zipfile
-from collections.abc import Mapping
+from collections.abc import Callable, Mapping
 from datetime import datetime, timezone
 from pathlib import Path, PurePosixPath
 from typing import Any
@@ -366,6 +366,78 @@ def _cli_image_root(config_home: str | Path, frontend_build_id: str) -> Path:
 
 def _cli_selection_path(config_home: str | Path) -> Path:
     return _cli_inventory_root(config_home) / "current.json"
+
+
+def _cli_selection_receipt_path(config_home: str | Path, generation: int) -> Path:
+    return (
+        _cli_inventory_root(config_home)
+        / "receipts"
+        / f"generation-{generation:020d}.json"
+    )
+
+
+def _persist_cli_selection_receipt(
+    config_home: str | Path,
+    selection: Mapping[str, Any],
+    receipt: Mapping[str, Any],
+) -> None:
+    generation = int(selection.get("generation") or 0)
+    receipt_value = copy.deepcopy(dict(receipt))
+    receipt_root = receipt_value.get("receiptRoot")
+    receipt_core = {
+        key: value for key, value in receipt_value.items() if key != "receiptRoot"
+    }
+    if (
+        generation < 1
+        or receipt_value.get("frontendSelection") != selection
+        or not isinstance(receipt_root, str)
+        or receipt_root != _content_root(receipt_core)
+    ):
+        raise DistributionUpdateError(
+            "cli-selection-receipt-invalid",
+            "CLI selection receipt does not bind the exact selected generation",
+        )
+    path = _cli_selection_receipt_path(config_home, generation)
+    if path.is_file():
+        if _read_object(path) != receipt_value:
+            raise DistributionUpdateError(
+                "cli-selection-receipt-collision",
+                "CLI selection generation already has different receipt evidence",
+            )
+        return
+    try:
+        _write_object(path, receipt_value)
+    except OSError as error:
+        raise DistributionUpdateError(
+            "cli-selection-receipt-io-failed",
+            "CLI selection receipt could not be persisted before activation",
+        ) from error
+
+
+def _read_cli_selection_receipt(
+    config_home: str | Path, selection: Mapping[str, Any]
+) -> dict[str, Any] | None:
+    generation = int(selection.get("generation") or 0)
+    if generation < 1:
+        return None
+    path = _cli_selection_receipt_path(config_home, generation)
+    if not path.is_file():
+        return None
+    receipt = _read_object(path)
+    receipt_root = receipt.get("receiptRoot")
+    receipt_core = {
+        key: value for key, value in receipt.items() if key != "receiptRoot"
+    }
+    if (
+        receipt.get("frontendSelection") != selection
+        or not isinstance(receipt_root, str)
+        or receipt_root != _content_root(receipt_core)
+    ):
+        raise DistributionUpdateError(
+            "cli-selection-receipt-invalid",
+            "CLI selection receipt does not verify against the current generation",
+        )
+    return receipt
 
 
 def _normalize_platform() -> tuple[str, str]:
@@ -2235,7 +2307,8 @@ def _select_cli_image(
     config_home: str | Path,
     cut_decision: Mapping[str, Any] | None = None,
     cut_transition: Mapping[str, Any] | None = None,
-) -> dict[str, Any]:
+    receipt_factory: Callable[[dict[str, Any]], dict[str, Any]],
+) -> tuple[dict[str, Any], dict[str, Any] | None]:
     lock_root = _cli_inventory_root(config_home) / "locks"
     with _CLI_SELECTION_PROCESS_LOCK:
         with coordination_locks.held(
@@ -2243,6 +2316,22 @@ def _select_cli_image(
             "current-selection",
             label="cli-product-select:current",
         ):
+
+            def finish_selection(
+                selection: dict[str, Any], *, publish: bool
+            ) -> tuple[dict[str, Any], dict[str, Any]]:
+                receipt = receipt_factory(selection)
+                _persist_cli_selection_receipt(config_home, selection, receipt)
+                if publish:
+                    try:
+                        _write_object(_cli_selection_path(config_home), selection)
+                    except OSError as error:
+                        raise DistributionUpdateError(
+                            "selection-io-failed",
+                            "CLI selection could not be published; the prior selection remains authoritative",
+                        ) from error
+                return selection, receipt
+
             current = _read_cli_selection(config_home)
             if current is not None:
                 current_selection, current_image = current
@@ -2276,14 +2365,14 @@ def _select_cli_image(
                                 "release-cut-image-collision",
                                 "one Release Cut names different CLI image evidence",
                             )
-                        return current_selection
+                        return current_selection, None
                 if not cut_movement_authorized:
                     version_order = compare_product_versions(
                         str(current_image["productVersion"]),
                         str(image["productVersion"]),
                     )
                     if version_order > 0:
-                        return current_selection
+                        return current_selection, None
                     if version_order == 0:
                         if (
                             current_image["frontendBuildId"] != image["frontendBuildId"]
@@ -2295,7 +2384,7 @@ def _select_cli_image(
                                 "one CLI product version names different image evidence",
                             )
                         else:
-                            return current_selection
+                            return current_selection, None
             previous = current[0] if current is not None else None
             generation = int((previous or {}).get("generation") or 0) + 1
             rollback = (
@@ -2347,14 +2436,7 @@ def _select_cli_image(
                 ),
                 "rollback": rollback,
             }
-            try:
-                _write_object(_cli_selection_path(config_home), selection)
-            except OSError as error:
-                raise DistributionUpdateError(
-                    "selection-io-failed",
-                    "CLI selection could not be published; the prior selection remains authoritative",
-                ) from error
-            return selection
+            return finish_selection(selection, publish=True)
 
 
 def cli_inventory_fsck(config_home: str | Path) -> dict[str, Any]:
@@ -2431,10 +2513,25 @@ def cli_inventory_fsck(config_home: str | Path) -> dict[str, Any]:
                     }
                 )
     selection = None
+    selected_receipt_root = None
     try:
         selected = _read_cli_selection(config_home)
         if selected is not None:
             selection = selected[0]
+            receipt = _read_cli_selection_receipt(config_home, selection)
+            if receipt is not None:
+                selected_receipt_root = receipt["receiptRoot"]
+            elif selection.get("releaseCutRoot"):
+                issues.append(
+                    {
+                        "code": "cli-selection-receipt-missing",
+                        "path": str(
+                            _cli_selection_receipt_path(
+                                config_home, int(selection["generation"])
+                            ).relative_to(root)
+                        ),
+                    }
+                )
     except DistributionUpdateError as error:
         issues.append(
             {
@@ -2446,6 +2543,7 @@ def cli_inventory_fsck(config_home: str | Path) -> dict[str, Any]:
         "schema": CLI_INVENTORY_FSCK_SCHEMA,
         "ok": not issues,
         "selected": selection,
+        "selectedReceiptRoot": selected_receipt_root,
         "images": images,
         "retainedPartials": retained_partials,
         "issues": issues,
@@ -2715,37 +2813,44 @@ def apply_archive(
             artifact_digest=observed_digest,
             config_home=config_home,
         )
-        selection = _select_cli_image(
-            frontend_image,
-            config_home=config_home,
-            cut_decision=verified_cut_decision or cut_decision,
-            cut_transition=cut_transition,
-        )
-    receipt = {
-        "schema": APPLY_SCHEMA,
-        "state": "complete",
-        "reasonCode": "runtime-installed",
-        "runtimeImage": image,
-        "frontendImage": frontend_image,
-        "frontendSelection": selection,
-        "frontendAction": "selected-on-next-command",
-        "currentReleaseCutRoot": (
-            verified_cut_decision.get("currentReleaseCutRoot")
-            if verified_cut_decision
-            else None
-        ),
-        "targetReleaseCutRoot": value.get("releaseCutRoot"),
-        "cutTransitionRoot": (
-            verified_cut_decision.get("cutTransitionRoot")
-            if verified_cut_decision
-            else None
-        ),
-        "cutTransition": (
-            copy.deepcopy(dict(cut_transition)) if cut_transition is not None else None
-        ),
-        "documentationUrl": value["documentationUrl"],
-    }
-    return {**receipt, "receiptRoot": _content_root(receipt)}
+
+    def receipt_for_selection(selection: dict[str, Any]) -> dict[str, Any]:
+        receipt = {
+            "schema": APPLY_SCHEMA,
+            "state": "complete",
+            "reasonCode": "runtime-installed",
+            "runtimeImage": image,
+            "frontendImage": frontend_image,
+            "frontendSelection": selection,
+            "frontendAction": "selected-on-next-command",
+            "currentReleaseCutRoot": (
+                verified_cut_decision.get("currentReleaseCutRoot")
+                if verified_cut_decision
+                else None
+            ),
+            "targetReleaseCutRoot": value.get("releaseCutRoot"),
+            "cutTransitionRoot": (
+                verified_cut_decision.get("cutTransitionRoot")
+                if verified_cut_decision
+                else None
+            ),
+            "cutTransition": (
+                copy.deepcopy(dict(cut_transition))
+                if cut_transition is not None
+                else None
+            ),
+            "documentationUrl": value["documentationUrl"],
+        }
+        return {**receipt, "receiptRoot": _content_root(receipt)}
+
+    selection, receipt = _select_cli_image(
+        frontend_image,
+        config_home=config_home,
+        cut_decision=verified_cut_decision or cut_decision,
+        cut_transition=cut_transition,
+        receipt_factory=receipt_for_selection,
+    )
+    return receipt if receipt is not None else receipt_for_selection(selection)
 
 
 def apply_shifu_local_archive(
@@ -2937,12 +3042,14 @@ def rollback_shifu_local_cli(
                     "platformSliceRoot": current_image["platformSliceRoot"],
                 },
             }
+            receipt = {
+                **plan,
+                "state": "complete",
+                "reasonCode": "rollback-selected-on-next-command",
+                "executeRequired": False,
+                "frontendSelection": next_selection,
+            }
+            rooted_receipt = {**receipt, "receiptRoot": _content_root(receipt)}
+            _persist_cli_selection_receipt(config_home, next_selection, rooted_receipt)
             _write_object(_cli_selection_path(config_home), next_selection)
-    receipt = {
-        **plan,
-        "state": "complete",
-        "reasonCode": "rollback-selected-on-next-command",
-        "executeRequired": False,
-        "frontendSelection": next_selection,
-    }
-    return {**receipt, "receiptRoot": _content_root(receipt)}
+    return rooted_receipt
