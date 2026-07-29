@@ -306,6 +306,14 @@ test('push promotion waits for the exact required Gate instead of whole-run comp
   );
   assert.match(workflow, /actions\/runs\/\$\{run_id\}\/jobs/u);
   assert.match(workflow, /\.name == "affected-native \/ linux"/u);
+  assert.match(
+    workflow,
+    /core-affected-native-delivery-attempt-\$\{TARGET_SHA\}/u,
+  );
+  assert.doesNotMatch(
+    workflow,
+    /core-affected-native-delivery-attempt-\$\{GITHUB_SHA\}/u,
+  );
   assert.match(workflow, /direct_state.*complete/su);
   assert.match(workflow, /authority_count.*reused-proof/su);
   assert.match(workflow, /attempt_count.*delivery-attempt/su);

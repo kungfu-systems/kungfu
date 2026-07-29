@@ -112,7 +112,7 @@ jobs:
               attempt_count="$(
                 gh api \
                   "repos/${GITHUB_REPOSITORY}/actions/runs/${run_id}/artifacts?per_page=100" \
-                  --jq "[.artifacts[] | select(.expired == false and .name == \"core-affected-native-delivery-attempt-${GITHUB_SHA}\")] | length"
+                  --jq "[.artifacts[] | select(.expired == false and .name == \"core-affected-native-delivery-attempt-${TARGET_SHA}\")] | length"
               )"
               if [ "$direct_state" = "complete" ] &&
                 [ "$authority_count" -eq 0 ]; then

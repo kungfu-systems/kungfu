@@ -40,7 +40,7 @@
           "authority": "qualification",
           "publication": "none",
           "receipt": "diagnostic",
-          "definitionDigest": "sha256:0b1d0393206b95172bb59f4949caf303c12069688ef49b036264dfb8df15a4f6",
+          "definitionDigest": "sha256:afc19b5fbe4b8d991055b71989046a0bf778a801e78c0e505852e9e08508bb03",
           "credentials": {"githubToken":"write","oidc":false,"repositorySecrets":[],"inheritedSecrets":false,"environment":null},
           "externalActions": ["actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0","actions/setup-node@v6.4.0","actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093","actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093","actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093","actions/cache/save@0057852bfaa89a56745cba8c7296529d2fc39830","actions/cache/save@0057852bfaa89a56745cba8c7296529d2fc39830"],
           "steps": [
@@ -63,7 +63,7 @@
               "index": 4,
               "label": "id:producer",
               "authority": "evidence-publication",
-              "definitionDigest": "sha256:19dd6c9ae287d19063b19c045c0535d8c9abc3e83b3aaf77d47370ffd0227cac"
+              "definitionDigest": "sha256:cf2d3ce8db1c8facbe697f6dbef707973eeee2e1eff25b12d7bdf3954f1514b3"
             },
             {
               "index": 5,
