@@ -1075,7 +1075,7 @@ jobs:
         github.event_name == 'merge_group' &&
         needs.candidate_preflight.result == 'success' &&
         needs.candidate_preflight.outputs.native-required == 'true' &&
-        needs.affected-native.result == 'success'
+        needs['affected-native'].result == 'success'
       }}
     continue-on-error: true
     runs-on: macos-15
