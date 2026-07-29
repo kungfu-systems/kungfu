@@ -74,9 +74,11 @@ public:
   static mapped_region map(const std::string &path, size_t size, mapping_policy policy);
 
   /** Compatibility adapters; new code must construct a mapping_policy. */
-  [[deprecated("use mapped_region::map with an explicit mapping_policy")]] static mapped_region
+  [[deprecated("kungfu-deprecation:core.yijinjing.boolean-mmap-adapters#mapped-region-map-existing; use "
+               "mapped_region::map with an explicit mapping_policy")]] static mapped_region
   map_existing(const std::string &path, size_t size, bool writable = false, bool lazy = true);
-  [[deprecated("use mapped_region::map with an explicit mapping_policy")]] static mapped_region
+  [[deprecated("kungfu-deprecation:core.yijinjing.boolean-mmap-adapters#mapped-region-map-writable; use "
+               "mapped_region::map with an explicit mapping_policy")]] static mapped_region
   map_writable(const std::string &path, size_t size, bool lazy = true);
 
   [[nodiscard]] uintptr_t address() const noexcept { return address_; }
@@ -108,11 +110,15 @@ uintptr_t load_mmap_buffer(const std::string &path, size_t size, mapping_policy 
 bool flush_mmap_buffer(uintptr_t address, size_t size, mapping_durability durability);
 bool release_mmap_buffer(uintptr_t address, size_t size);
 
-[[deprecated("use the mapping_policy overload")]] uintptr_t load_mmap_buffer(const std::string &path, size_t size,
-                                                                             bool is_writing = false, bool lazy = true);
-[[deprecated("use the mapping_durability overload")]] bool flush_mmap_buffer(uintptr_t address, size_t size, bool lazy);
-[[deprecated("release no longer accepts residency through lazy")]] bool release_mmap_buffer(uintptr_t address,
-                                                                                            size_t size, bool lazy);
+[[deprecated("kungfu-deprecation:core.yijinjing.boolean-mmap-adapters#load-mmap-buffer-bool; use the mapping_policy "
+             "overload")]] uintptr_t
+load_mmap_buffer(const std::string &path, size_t size, bool is_writing = false, bool lazy = true);
+[[deprecated("kungfu-deprecation:core.yijinjing.boolean-mmap-adapters#flush-mmap-buffer-bool; use the "
+             "mapping_durability overload")]] bool
+flush_mmap_buffer(uintptr_t address, size_t size, bool lazy);
+[[deprecated("kungfu-deprecation:core.yijinjing.boolean-mmap-adapters#release-mmap-buffer-bool; release no longer "
+             "accepts residency through lazy")]] bool
+release_mmap_buffer(uintptr_t address, size_t size, bool lazy);
 } // namespace kungfu::yijinjing::platform
 
 #endif // KUNGFU_YIJINJING_PLATFORM_MMAP_H

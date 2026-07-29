@@ -4,6 +4,8 @@ Kungfu governs removals through one source registry:
 
 - lifecycle contract:
   [`framework/deprecation/deprecation-lifecycle.contract.json`](../../framework/deprecation/deprecation-lifecycle.contract.json);
+- discovery contract:
+  [`framework/deprecation/deprecation-discovery.contract.json`](../../framework/deprecation/deprecation-discovery.contract.json);
 - current and historical entries:
   [`framework/deprecation/deprecation-registry.json`](../../framework/deprecation/deprecation-registry.json); and
 - governing decision:
@@ -11,6 +13,45 @@ Kungfu governs removals through one source registry:
 
 Subsystem registries may contribute an entry or evidence, but they do not own a
 separate due date, release exception, or settlement rule.
+
+Discovery and lifecycle answer different questions. Discovery establishes that
+every machine-recognizable live marker has exactly one stable registry
+identity. The lifecycle contract alone decides due dates, removal
+qualification, settlement, and Warrant handling. A green discovery result is
+never permission to remove a surface.
+
+## Surface enrollment
+
+The versioned discovery contract recognizes:
+
+- C++ `[[deprecated]]` attributes;
+- Python `DeprecationWarning`;
+- JavaScript and TypeScript JSDoc `@deprecated`;
+- FlatBuffers and Protocol Buffer deprecation attributes;
+- structured CLI aliases, KFX deprecation records, and release artifact
+  deprecation records;
+- document frontmatter with `document_status: deprecated`.
+
+Text markers carry one token in their machine-recognizable declaration:
+
+```text
+kungfu-deprecation:<entry-id>#<marker-id>
+```
+
+Structured records carry the same coordinates as `deprecationEntry` and
+`deprecationMarker`. Documents use `deprecation_entry` and
+`deprecation_marker` frontmatter. The matching registry entry declares the
+marker id, dialect, and exact current path under `surface.markers`.
+
+Adding the marker and its registry declaration is one reviewable change.
+Orphans, unknown entries, duplicate marker identities, path or dialect
+mismatches, missing declared surfaces, and live entries without a marker fail
+closed.
+
+Generated and historical classifications are not free-form ignore lists.
+They must use a supported dialect, one exact file or a narrow generated
+subtree, and a reviewable reason in the discovery contract. Unknown dialects
+and broad prefixes are invalid.
 
 ## Lifecycle and release dispositions
 
@@ -120,14 +161,30 @@ The JSON report is a read-only projection. It carries the contract and registry
 Roots, release context, per-entry next action, blockers, and findings; it does
 not mutate lifecycle state or mint evidence.
 
+Source acceptance evaluates both scopes:
+
+- the full-tree audit catches retained drift and is the periodic baseline;
+- the changed-file audit examines every added or modified source path, so a
+  pull request cannot introduce a marker merely by leaving the registry
+  untouched.
+
 ## Current inventory
 
 The registry distinguishes live debt from retained history:
 
 - `core.yijinjing.boolean-mmap-adapters` remains deprecated and not due before
   its combined calendar and qualified-release window;
+- `core.yijinjing.journal-open-policy-adapters`,
+  `core.yijinjing.page-open-policy-adapters`, and
+  `core.yijinjing.writer-split-frame-api` retain the observed 2026-07-11 and
+  2026-07-12 introduction dates and enroll the six previously unregistered
+  C++ markers;
 - `cli.prestable-compatibility-aliases` is settled: current alias references are
   zero, while its migration and removal evidence remain queryable.
+
+The current full-tree inventory contains 11 live C++ markers, four live
+registry entries, one settled entry, and one explicitly classified historical
+document. Generated vocabulary is reported separately when present.
 
 When another local ledger is migrated, replace its lifecycle authority with a
 pointer or contribution identity rather than copying the common fields back

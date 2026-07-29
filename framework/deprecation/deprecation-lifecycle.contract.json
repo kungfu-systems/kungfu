@@ -3,8 +3,10 @@
   "schema": "kungfu.deprecation-lifecycle.contract/v1",
   "registrySchema": "kungfu.deprecation-registry/v1",
   "projectionSchema": "kungfu.deprecation-audit/v1",
+  "discoveryContract": "framework/deprecation/deprecation-discovery.contract.json",
   "authority": {
     "registry": "framework/deprecation/deprecation-registry.json",
+    "discovery": "framework/deprecation/deprecation-discovery.contract.json",
     "decision": "docs/adr/KF-ADR-019fad41-07fe-7f1e-a37a-a2572357700c.md",
     "localContributionPolicy": "Subsystem authorities may contribute governed entries, but lifecycle state, due calculation, Warrant projection, and release settlement are validated only by this contract."
   },

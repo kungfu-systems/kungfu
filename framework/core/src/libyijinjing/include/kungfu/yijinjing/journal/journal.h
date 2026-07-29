@@ -147,9 +147,11 @@ public:
                    bus_ptr bus, uint64_t page_size,
                    yijinjing::enums::Priority priority = yijinjing::enums::Priority::Medium);
 
-  [[deprecated("use journal_open_policy")]] explicit journal(
-      data::location_ptr location, uint32_t dest_id, bool is_writing, bool lazy, bool low_latency, bus_ptr bus,
-      uint64_t page_size, yijinjing::enums::Priority priority = yijinjing::enums::Priority::Medium);
+  [[deprecated("kungfu-deprecation:core.yijinjing.journal-open-policy-adapters#journal-bool-constructor; use "
+               "journal_open_policy")]] explicit journal(data::location_ptr location, uint32_t dest_id, bool is_writing,
+                                                         bool lazy, bool low_latency, bus_ptr bus, uint64_t page_size,
+                                                         yijinjing::enums::Priority priority =
+                                                             yijinjing::enums::Priority::Medium);
 
   journal(const journal &other);
 
@@ -234,7 +236,8 @@ public:
   explicit reader(reader_policy policy, bool low_latency, bus_ptr bus)
       : policy_(policy), low_latency_(low_latency), bus_(std::move(bus)), current_(nullptr) {}
 
-  [[deprecated("use reader_policy")]] explicit reader(bool lazy, bool low_latency, bus_ptr bus)
+  [[deprecated("kungfu-deprecation:core.yijinjing.journal-open-policy-adapters#reader-bool-constructor; use "
+               "reader_policy")]] explicit reader(bool lazy, bool low_latency, bus_ptr bus)
       : reader(lazy ? reader_policy::peer() : reader_policy::coordinator(), low_latency, std::move(bus)) {}
 
   reader(const reader &other);
@@ -428,10 +431,12 @@ public:
   [[nodiscard]] virtual frame_transaction reserve_frame(int64_t trigger_time, int32_t carrier_type, size_t length,
                                                         uint64_t stream_id = 0);
 
-  [[deprecated("use reserve_frame(); split open/close ownership is not exception-safe for caller abandonment")]]
+  [[deprecated("kungfu-deprecation:core.yijinjing.writer-split-frame-api#writer-open-frame; use reserve_frame(); split "
+               "open/close ownership is not exception-safe for caller abandonment")]]
   virtual frame_ptr open_frame(int64_t trigger_time, int32_t carrier_type, size_t length, uint64_t stream_id = 0);
 
-  [[deprecated("use frame_transaction::commit()")]]
+  [[deprecated("kungfu-deprecation:core.yijinjing.writer-split-frame-api#writer-close-frame; use "
+               "frame_transaction::commit()")]]
   virtual void close_frame(size_t data_length, int64_t gen_time = time::now_in_nano());
 
   virtual void copy_frame(const frame_ptr &source);
