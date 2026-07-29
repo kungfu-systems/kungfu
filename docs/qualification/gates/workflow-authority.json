@@ -1770,14 +1770,14 @@
     {
       "path": ".github/workflows/kungfu-agent-patrol.yml",
       "authority": "qualification",
-      "definitionDigest": "sha256:383a26ee97c69c803d51d77dd709d7e45711a30148a0f7af6801043a9a9bc1fc",
+      "definitionDigest": "sha256:3c50b45eb56f34f88eb3f1407b4cf469224894f5a7726e5003ce26db2dd4ab5e",
       "jobs": [
         {
           "id": "patrol",
           "authority": "qualification",
           "publication": "none",
           "receipt": "diagnostic",
-          "definitionDigest": "sha256:d20bbcfb8bc6fa41e3d00274537abdfa16b181376bb1b3ed3b325609113fca32",
+          "definitionDigest": "sha256:5b6183fa0007097274fadcbf8fa4097fbc83b89135c53aedcfd9e2acea7f5f3b",
           "credentials": {"githubToken":"read","oidc":false,"repositorySecrets":[],"inheritedSecrets":false,"environment":null},
           "externalActions": ["actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0","actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02"],
           "steps": [
@@ -1798,29 +1798,35 @@
             },
             {
               "index": 4,
-              "label": "name:Run bounded repository-work experiment",
-              "definitionDigest": "sha256:bc41e7329ddf176b5b55b7e81e8f30efedabdc34f4f7dadd8d5f67b83e99d994"
+              "label": "name:Select bounded Patrol plan",
+              "definitionDigest": "sha256:07e94217d605a7ea42dd95af957ad859d101f727067cb4e9fcc713ed03068f1e"
             },
             {
               "index": 5,
-              "label": "name:Classify bounded outcome",
-              "definitionDigest": "sha256:1e998c6fd0b3d9b8caed2d54fe19ee1a8e1beabd56771eca31f6aa20d4299772"
+              "label": "name:Run bounded repository-work experiments",
+              "definitionDigest": "sha256:9f6798817fa55908789d5c938c30db7842c6ee936ee249439c7fcbd1de28fdd9"
             },
             {
               "index": 6,
-              "label": "name:Capture or deduplicate native Dogfood Finding",
-              "definitionDigest": "sha256:653ed067fd57cff2c6f6ea66463209cec472d8483448ebf68d4f8c80baed06c0"
+              "label": "name:Classify bounded outcomes",
+              "definitionDigest": "sha256:b50b4f1fcf14af84df58711e0f730e04cecd7e95dd457d21cb1438be3d761071"
             },
             {
               "index": 7,
-              "label": "name:Enforce infrastructure and evidence integrity",
-              "definitionDigest": "sha256:532688cc7f28e3aaf4b41748496592f5becf691c6f1f3fdb6d062bfb48ac800a"
+              "label": "name:Capture or deduplicate native Dogfood Findings",
+              "definitionDigest": "sha256:ae11f433abbbf6093d7116802d4081db5db645fe3d0c12e36c1a4c62ceb8bc46"
             },
             {
               "index": 8,
+              "label": "name:Enforce infrastructure and evidence integrity",
+              "authority": "evidence-publication",
+              "definitionDigest": "sha256:7b2371cde4bcdf1b0ee56a070ba790e9040e6bd2c49d7eea936cb25d4cf2c48f"
+            },
+            {
+              "index": 9,
               "label": "name:Upload bounded Patrol evidence",
               "authority": "evidence-publication",
-              "definitionDigest": "sha256:0d703a621007119b0b6e0f92b4edb4d4b3b57f1d289ec98144ba2b1721e4944f"
+              "definitionDigest": "sha256:bc1d87aaecf76f845b0739fd113342e55f501c6f0a01cc61622910b048c1444e"
             }
           ]
         }

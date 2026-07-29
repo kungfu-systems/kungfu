@@ -10,11 +10,14 @@ import process from 'node:process';
 import { fileURLToPath } from 'node:url';
 
 import {
+  DEFAULT_REPOSITORY_WORK_FIXTURE_ID,
+  getRepositoryWorkFixture,
+} from '../../tests/qualification/agent-repository-work/fixture-catalog.mjs';
+import {
   materializeIncidentBoardFixture,
   qualifySeededIncidentBoardFixture,
   verifyIncidentBoardWorkspace,
 } from '../../tests/qualification/agent-repository-work/incident-board-replay-v1-oracle.mjs';
-import { INCIDENT_BOARD_FIXTURE } from '../../tests/qualification/agent-repository-work/incident-board-replay-v1.mjs';
 
 const ROOT = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
@@ -66,7 +69,7 @@ function writeJson(file, value) {
   fs.writeFileSync(file, `${JSON.stringify(value, null, 2)}\n`);
 }
 
-function parseArgs(argv) {
+export function parseArgs(argv) {
   const result = {
     output: '',
     image: DEFAULT_IMAGE,
@@ -75,6 +78,7 @@ function parseArgs(argv) {
     opencode: '',
     sourceHead: '',
     timeoutSeconds: 900,
+    fixture: DEFAULT_REPOSITORY_WORK_FIXTURE_ID,
   };
   for (let index = 0; index < argv.length; index += 1) {
     const arg = argv[index];
@@ -85,6 +89,7 @@ function parseArgs(argv) {
     else if (arg === '--base-url') result.baseUrl = argv[++index] || '';
     else if (arg === '--opencode') result.opencode = argv[++index] || '';
     else if (arg === '--source-head') result.sourceHead = argv[++index] || '';
+    else if (arg === '--fixture') result.fixture = argv[++index] || '';
     else if (arg === '--timeout-seconds')
       result.timeoutSeconds = Number.parseInt(argv[++index] || '', 10);
     else throw new Error(`unknown argument: ${arg}`);
@@ -93,6 +98,7 @@ function parseArgs(argv) {
     throw new Error('--timeout-seconds must be an integer of at least 60');
   if (!result.opencode && !result.image.includes('@sha256:'))
     throw new Error('--image must be pinned by digest');
+  getRepositoryWorkFixture(result.fixture);
   return result;
 }
 
@@ -277,20 +283,18 @@ function providerSessionId(run, label) {
   return values[0];
 }
 
-export function parseInvestigationClaim(text) {
+export function parseInvestigationClaim(
+  text,
+  fixture = getRepositoryWorkFixture('incident-board-replay-v1'),
+) {
   if (typeof text !== 'string' || !text.trim())
     throw new Error('Agent A returned no investigation claim');
   const fenced = text.match(/```(?:json)?\s*([\s\S]*?)```/iu);
   const source =
     fenced?.[1] || text.slice(text.indexOf('{'), text.lastIndexOf('}') + 1);
   const value = JSON.parse(source);
-  const expectedFailures = [
-    'test_expired_lease_cannot_complete',
-    'test_legacy_duplicate_log_has_stable_restart_summary',
-  ];
-  const expectedPaths = [
-    ...INCIDENT_BOARD_FIXTURE.warrants.agentB.writablePaths,
-  ].sort();
+  const expectedFailures = [...fixture.investigation.expectedFailures].sort();
+  const expectedPaths = [...fixture.warrants.agentB.writablePaths].sort();
   if (
     value?.schema !== 'kungfu.agent-repository-work.investigation-claim/v1' ||
     value.investigationComplete !== true ||
@@ -298,8 +302,8 @@ export function parseInvestigationClaim(text) {
       JSON.stringify(expectedFailures) ||
     JSON.stringify([...(value.repairPaths || [])].sort()) !==
       JSON.stringify(expectedPaths) ||
-    value.remainingObligation !== 'implement-and-verify-bounded-repair' ||
-    value.nextAction !== 'repair-seeded-completion-idempotency'
+    value.remainingObligation !== fixture.investigation.remainingObligation ||
+    value.nextAction !== fixture.investigation.nextAction
   )
     throw new Error(
       'Agent A investigation claim failed deterministic assessment',
@@ -362,16 +366,16 @@ export function validateExperimentReport(report) {
   return true;
 }
 
-function buildBaseReport(options, sourceHead) {
+function buildBaseReport(options, sourceHead, fixture) {
   return {
     schema: REPORT_SCHEMA,
     evidenceClass: 'bounded-experiment',
     passed: false,
     sourceHead,
     fixture: {
-      id: INCIDENT_BOARD_FIXTURE.id,
-      fileCount: Object.keys(INCIDENT_BOARD_FIXTURE.files).length,
-      lineCount: Object.values(INCIDENT_BOARD_FIXTURE.files).reduce(
+      id: fixture.id,
+      fileCount: Object.keys(fixture.files).length,
+      lineCount: Object.values(fixture.files).reduce(
         (count, content) => count + content.split('\n').length,
         0,
       ),
@@ -392,7 +396,7 @@ function buildBaseReport(options, sourceHead) {
     warrant: {
       agentA: 'investigation-only',
       agentB: 'bounded-repair',
-      writablePaths: [...INCIDENT_BOARD_FIXTURE.warrants.agentB.writablePaths],
+      writablePaths: [...fixture.warrants.agentB.writablePaths],
       verifierOutsideAgentWorkspace: true,
     },
     dimensions: {
@@ -426,14 +430,16 @@ export function runExperiment(options = {}) {
     opencode: options.opencode || '',
     sourceHead: options.sourceHead || '',
     timeoutSeconds: options.timeoutSeconds || 900,
+    fixture: options.fixture || DEFAULT_REPOSITORY_WORK_FIXTURE_ID,
   };
+  const fixture = getRepositoryWorkFixture(normalized.fixture);
   const output = path.resolve(normalized.output);
   if (fs.existsSync(output) && fs.readdirSync(output).length > 0)
     throw new Error('output directory must be new or empty');
   fs.mkdirSync(output, { recursive: true });
   const reportPath = path.join(output, 'agent-repository-work-report.json');
   const sourceHead = normalized.sourceHead || currentHead();
-  const report = buildBaseReport(normalized, sourceHead);
+  const report = buildBaseReport(normalized, sourceHead, fixture);
   const started = process.hrtime.bigint();
   try {
     if (!fs.existsSync(CONTRACT_PATH))
@@ -442,9 +448,9 @@ export function runExperiment(options = {}) {
     const workspace = path.join(output, 'workspace');
     const home = path.join(output, 'kf-home');
     const configHome = path.join(output, 'kf-config');
-    const initialTree = materializeIncidentBoardFixture(workspace);
+    const initialTree = materializeIncidentBoardFixture(workspace, fixture);
     const initialTreeRoot = jsonRoot(initialTree);
-    const seeded = qualifySeededIncidentBoardFixture();
+    const seeded = qualifySeededIncidentBoardFixture(fixture);
     if (!seeded.passed)
       throw new Error('seeded fixture did not expose the expected failures');
     const planProfile = runtimeProfile({
@@ -492,9 +498,9 @@ export function runExperiment(options = {}) {
     const workEntity = {
       schema: 'kungfu.agent-repository-work.entity/v1',
       contractRoot,
-      fixtureId: INCIDENT_BOARD_FIXTURE.id,
+      fixtureId: fixture.id,
       initialTreeRoot,
-      warrantRoot: jsonRoot(INCIDENT_BOARD_FIXTURE.warrants),
+      warrantRoot: jsonRoot(fixture.warrants),
     };
     const currentCutRoot = jsonRoot({
       schema: 'kungfu.agent-repository-work.cut/v1',
@@ -504,10 +510,10 @@ export function runExperiment(options = {}) {
     const workRef = {
       schema: 'kungfu.work-ref/v1',
       workspaceId: 'agent-repository-work-disposable',
-      profileId: 'incident-board-replay-v1',
+      profileId: fixture.id,
       profileRoot: jsonRoot(contract),
       entityType: 'work',
-      entityId: 'incident-board-replay-v1',
+      entityId: fixture.id,
       entityRoot: jsonRoot(workEntity),
       purpose: 'bounded-local-agent-repository-load-experiment',
       systemTimeCut: currentCutRoot,
@@ -517,10 +523,10 @@ export function runExperiment(options = {}) {
     const promptA = [
       'Investigate the repository defect without modifying any file.',
       'Run `python -m unittest discover -s tests -v`, inspect the lease, command, and replay boundaries, and identify the exact bounded repair paths.',
-      `The admitted investigation Warrant limits the candidate repair to exactly these repository-relative paths: ${INCIDENT_BOARD_FIXTURE.warrants.agentB.writablePaths.join(', ')}.`,
+      `The admitted investigation Warrant limits the candidate repair to exactly these repository-relative paths: ${fixture.warrants.agentB.writablePaths.join(', ')}.`,
       'Confirm the seeded failures can be repaired within that Warrant; do not propose tests, service.py, or any other path.',
       'Return only one JSON object, with no prose or Markdown.',
-      'The object must contain schema "kungfu.agent-repository-work.investigation-claim/v1", investigationComplete true, failingTests containing exactly the two failing unittest method names, repairPaths containing exactly three repository-relative Python paths without leading slashes, line numbers, or fragments, remainingObligation "implement-and-verify-bounded-repair", and nextAction "repair-seeded-completion-idempotency".',
+      `The object must contain schema "kungfu.agent-repository-work.investigation-claim/v1", investigationComplete true, failingTests containing exactly ${JSON.stringify(fixture.investigation.expectedFailures)}, repairPaths containing exactly ${JSON.stringify(fixture.warrants.agentB.writablePaths)} without leading slashes, line numbers, or fragments, remainingObligation "${fixture.investigation.remainingObligation}", and nextAction "${fixture.investigation.nextAction}".`,
     ].join(' ');
     const sessionA = JSON.parse(
       pythonKungfu(
@@ -549,6 +555,7 @@ export function runExperiment(options = {}) {
       throw new Error('Agent A modified the investigation-only workspace');
     const investigation = parseInvestigationClaim(
       sessionA.providerObservation?.text,
+      fixture,
     );
     const claimBody = {
       schema: 'kungfu.agent-repository-work.claim/v1',
@@ -571,8 +578,7 @@ export function runExperiment(options = {}) {
       initialTreeRoot,
       seededDefectRoot: jsonRoot(seeded),
       outcome: 'partial',
-      remainingObligation:
-        'Repair expired-lease authorization, retry idempotency, and restart replay using only incident_board/commands.py, incident_board/lease.py, and incident_board/replay.py; run python -m unittest discover -s tests -v and leave the workspace for an external hidden verifier.',
+      remainingObligation: `Complete ${fixture.task.title.toLowerCase()} using only ${fixture.warrants.agentB.writablePaths.join(', ')}; run python -m unittest discover -s tests -v and leave the workspace for an external hidden verifier.`,
       nextAction: 'implement bounded repair and run visible tests',
     };
     const assessment = {
@@ -678,6 +684,7 @@ export function runExperiment(options = {}) {
     };
     report.episodeVerification = episodeVerification;
     const oracle = verifyIncidentBoardWorkspace(workspace, {
+      fixture,
       expectedInitialTree: initialTree,
     });
     report.oracle = oracle;
@@ -705,7 +712,7 @@ export function runExperiment(options = {}) {
         sessionBUsage: sessionB.providerObservation?.usage || null,
       },
       residuals: [
-        'single deterministic Python fixture',
+        `single deterministic Python fixture ${fixture.id}`,
         'single pinned local model and one trusted runner',
         'no multi-day durability or concurrent repository-edit claim',
       ],

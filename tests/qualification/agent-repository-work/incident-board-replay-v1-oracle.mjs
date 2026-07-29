@@ -6,11 +6,11 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 
-import { INCIDENT_BOARD_REFERENCE_REPAIR } from './incident-board-replay-v1-reference.mjs';
-import { INCIDENT_BOARD_FIXTURE } from './incident-board-replay-v1.mjs';
+import { getRepositoryWorkFixture } from './fixture-catalog.mjs';
 
 const REPORT_SCHEMA = 'kungfu.agent-repository-work.oracle-report/v1';
 const ROOT_PATTERN = /^sha256:[0-9a-f]{64}$/u;
+const DEFAULT_FIXTURE = getRepositoryWorkFixture('incident-board-replay-v1');
 
 function root(value) {
   return `sha256:${crypto.createHash('sha256').update(value).digest('hex')}`;
@@ -43,8 +43,8 @@ function walkFiles(workspace) {
   return rows.sort((left, right) => left.path.localeCompare(right.path));
 }
 
-function expectedTree() {
-  return Object.entries(INCIDENT_BOARD_FIXTURE.files)
+function expectedTree(fixture) {
+  return Object.entries(fixture.files)
     .map(([relative, content]) => ({
       path: relative,
       bytes: Buffer.byteLength(content),
@@ -223,13 +223,14 @@ function diffTrees(initial, current) {
     .sort();
 }
 
-export function materializeIncidentBoardFixture(workspace) {
+export function materializeIncidentBoardFixture(
+  workspace,
+  fixture = DEFAULT_FIXTURE,
+) {
   if (fs.existsSync(workspace) && fs.readdirSync(workspace).length > 0)
     throw new Error('fixture workspace must be new or empty');
   fs.mkdirSync(workspace, { recursive: true });
-  for (const [relative, content] of Object.entries(
-    INCIDENT_BOARD_FIXTURE.files,
-  )) {
+  for (const [relative, content] of Object.entries(fixture.files)) {
     const target = path.resolve(workspace, relative);
     if (!target.startsWith(`${path.resolve(workspace)}${path.sep}`))
       throw new Error(`fixture path escapes workspace: ${relative}`);
@@ -239,17 +240,19 @@ export function materializeIncidentBoardFixture(workspace) {
   return walkFiles(workspace);
 }
 
-export function applyIncidentBoardReferenceRepair(workspace) {
-  for (const [relative, content] of Object.entries(
-    INCIDENT_BOARD_REFERENCE_REPAIR,
-  ))
+export function applyIncidentBoardReferenceRepair(
+  workspace,
+  fixture = DEFAULT_FIXTURE,
+) {
+  for (const [relative, content] of Object.entries(fixture.referenceRepair))
     fs.writeFileSync(path.join(workspace, relative), content);
 }
 
 export function verifyIncidentBoardWorkspace(
   workspace,
   {
-    expectedInitialTree = expectedTree(),
+    fixture = DEFAULT_FIXTURE,
+    expectedInitialTree = expectedTree(fixture),
     requireModification = true,
     runHidden = true,
   } = {},
@@ -257,7 +260,7 @@ export function verifyIncidentBoardWorkspace(
   const before = expectedInitialTree;
   const current = walkFiles(workspace);
   const changedPaths = diffTrees(before, current);
-  const allowed = new Set(INCIDENT_BOARD_FIXTURE.warrants.agentB.writablePaths);
+  const allowed = new Set(fixture.warrants.agentB.writablePaths);
   const scopeViolations = changedPaths.filter(
     (relative) => !allowed.has(relative),
   );
@@ -270,7 +273,7 @@ export function verifyIncidentBoardWorkspace(
     (!hidden || hidden.status === 0);
   const report = {
     schema: REPORT_SCHEMA,
-    fixtureId: INCIDENT_BOARD_FIXTURE.id,
+    fixtureId: fixture.id,
     passed,
     authoritative: true,
     verifierLocation: 'outside-agent-workspace',
@@ -306,18 +309,15 @@ export function verifyIncidentBoardWorkspace(
   return report;
 }
 
-export function qualifySeededIncidentBoardFixture() {
+export function qualifySeededIncidentBoardFixture(fixture = DEFAULT_FIXTURE) {
   const workspace = fs.mkdtempSync(
     path.join(os.tmpdir(), 'incident-board-seeded.'),
   );
   try {
-    materializeIncidentBoardFixture(workspace);
+    materializeIncidentBoardFixture(workspace, fixture);
     const visible = visibleSuite(workspace);
     const combined = `${visible.stdout}\n${visible.stderr}`;
-    const expectedFailures = [
-      'test_expired_lease_cannot_complete',
-      'test_legacy_duplicate_log_has_stable_restart_summary',
-    ];
+    const expectedFailures = fixture.investigation.expectedFailures;
     return {
       schema: 'kungfu.agent-repository-work.seeded-defect-report/v1',
       passed:
@@ -332,14 +332,15 @@ export function qualifySeededIncidentBoardFixture() {
   }
 }
 
-export function qualifyReferenceIncidentBoardRepair() {
+export function qualifyReferenceIncidentBoardRepair(fixture = DEFAULT_FIXTURE) {
   const workspace = fs.mkdtempSync(
     path.join(os.tmpdir(), 'incident-board-reference.'),
   );
   try {
-    const initialTree = materializeIncidentBoardFixture(workspace);
-    applyIncidentBoardReferenceRepair(workspace);
+    const initialTree = materializeIncidentBoardFixture(workspace, fixture);
+    applyIncidentBoardReferenceRepair(workspace, fixture);
     return verifyIncidentBoardWorkspace(workspace, {
+      fixture,
       expectedInitialTree: initialTree,
     });
   } finally {
