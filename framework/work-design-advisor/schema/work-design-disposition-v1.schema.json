@@ -1,0 +1,29 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kungfu.link/schema/work-design-disposition-v1.schema.json",
+  "title": "Human work-design advice disposition v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "adviceRoot", "intentRoot", "action", "rationaleRoot", "resultingAdviceRoot", "authority", "dispositionRoot"],
+  "properties": {
+    "schema": { "const": "kungfu.work-design.disposition/v1" },
+    "adviceRoot": { "$ref": "#/$defs/root" },
+    "intentRoot": { "$ref": "#/$defs/root" },
+    "action": { "enum": ["accepted", "adapted", "overridden", "insufficient-history"] },
+    "rationaleRoot": { "$ref": "#/$defs/root" },
+    "resultingAdviceRoot": { "oneOf": [{ "$ref": "#/$defs/root" }, { "type": "null" }] },
+    "authority": {
+      "const": {
+        "mode": "human-disposition-record",
+        "assignmentAuthority": false,
+        "workControlAuthority": false,
+        "mutatesOriginalAdvice": false,
+        "mutatesUserIntent": false
+      }
+    },
+    "dispositionRoot": { "$ref": "#/$defs/root" }
+  },
+  "$defs": {
+    "root": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" }
+  }
+}
