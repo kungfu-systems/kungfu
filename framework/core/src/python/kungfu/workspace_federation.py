@@ -38,6 +38,7 @@ QUERY_PROOF_SCHEMA = "kungfu.workspace-federation.query-proof/v1"
 QUERY_VERIFICATION_SCHEMA = "kungfu.workspace-federation.query-verification/v1"
 GLOBAL_WORK_PROJECTION_SCHEMA = "kungfu.workspace-federation.global-work/v1"
 CANONICAL_WORK_SCHEMA = "kungfu.workspace-federation.canonical-work/v1"
+INITIATIVE_GROUP_SCHEMA = "kungfu.workspace-federation.initiative-group/v1"
 CANONICAL_WORK_IDENTITY_SCHEMA = (
     "kungfu.workspace-federation.canonical-work-identity/v1"
 )
@@ -48,6 +49,10 @@ DOGFOOD_GATE_VERIFICATION_SCHEMA = (
     "kungfu.workspace-federation.dogfood-gate-verification/v1"
 )
 TRAVERSAL_SCHEMA = "kungfu.assignment-graph.traversal/v1"
+
+TERMINAL_SOURCE_STATUSES = frozenset(
+    {"archived", "closed", "complete", "completed", "merged"}
+)
 
 _ROOT = re.compile(r"^sha256:[0-9a-f]{64}$")
 _SUBJECT = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._:/-]{0,255}$")
@@ -744,6 +749,10 @@ def _compose_global_work(
                         or reference.subject
                     ),
                     "status": str(record.get("status") or ""),
+                    "source_status": str(record.get("status") or ""),
+                    "orchestration_phase": str(
+                        (record.get("lifecycle") or {}).get("orchestration_phase") or ""
+                    ),
                     "portfolio_state": str(
                         (record.get("lifecycle") or {}).get("portfolio_state") or ""
                     ),
@@ -1051,14 +1060,93 @@ def _compose_global_work(
         if include_settled
         or (
             str(row["display"].get("portfolio_state") or "") != "completed"
-            and str(row["display"].get("status") or "").lower()
-            not in {"completed", "archived", "closed"}
+            and str(row["display"].get("source_status") or "").strip().lower()
+            not in TERMINAL_SOURCE_STATUSES
         )
+    ]
+    visible_roots = {str(row["canonical_root"]) for row in visible_work}
+    initiative_groups: list[dict[str, Any]] = []
+    for (object_kind, subject), _rows in sorted(by_label.items()):
+        if object_kind != "initiative":
+            continue
+        initiative_rows = [
+            row
+            for row in canonical_rows
+            if row["object_kind"] == "initiative" and row["subject"] == subject
+        ]
+        if not initiative_rows:
+            continue
+        canonical_roots = sorted(str(row["canonical_root"]) for row in initiative_rows)
+        authority_roots = sorted(
+            {str(root) for row in initiative_rows for root in row["authority_roots"]}
+        )
+        statuses = sorted(
+            {
+                str(row["display"].get("source_status") or "")
+                for row in initiative_rows
+                if row["display"].get("source_status")
+            }
+        )
+        phases = sorted(
+            {
+                str(row["display"].get("orchestration_phase") or "")
+                for row in initiative_rows
+                if row["display"].get("orchestration_phase")
+            }
+        )
+        portfolio_states = sorted(
+            {
+                str(row["display"].get("portfolio_state") or "")
+                for row in initiative_rows
+                if row["display"].get("portfolio_state")
+            }
+        )
+        titles = sorted(
+            {str(row["display"].get("title") or subject) for row in initiative_rows}
+        )
+        group_body = {
+            "schema": INITIATIVE_GROUP_SCHEMA,
+            "object_kind": "initiative",
+            "subject": subject,
+            "authority_state": (
+                "authority-distinct" if len(canonical_roots) > 1 else "single-authority"
+            ),
+            "canonical_roots": canonical_roots,
+            "authority_roots": authority_roots,
+            "canonical_count": len(canonical_roots),
+            "authority_count": len(authority_roots),
+            "observation_count": sum(
+                int(row["observation_count"]) for row in initiative_rows
+            ),
+            "display": {
+                "title": titles[0],
+                "source_status": (
+                    statuses[0] if len(statuses) == 1 else ("mixed" if statuses else "")
+                ),
+                "orchestration_phase": (
+                    phases[0] if len(phases) == 1 else ("mixed" if phases else "")
+                ),
+                "portfolio_state": (
+                    portfolio_states[0]
+                    if len(portfolio_states) == 1
+                    else ("mixed" if portfolio_states else "")
+                ),
+            },
+        }
+        initiative_groups.append(
+            {**group_body, "group_root": semantic_root(group_body)}
+        )
+    visible_initiative_groups = [
+        group
+        for group in initiative_groups
+        if any(root in visible_roots for root in group["canonical_roots"])
     ]
     body = {
         "schema": GLOBAL_WORK_PROJECTION_SCHEMA,
         "canonical_work": canonical_rows,
         "label_collisions": label_collisions,
+        "initiative_groups": initiative_groups,
+        "visible_initiative_groups": visible_initiative_groups,
         "retained_assignment_states": [
             retained_states[root] for root in sorted(retained_states)
         ],
@@ -1074,6 +1162,7 @@ def _compose_global_work(
         "reference_resolution": reference_resolution,
         "canonical_work_count": len(canonical_rows),
         "visible_work_count": len(visible_work),
+        "visible_initiative_group_count": len(visible_initiative_groups),
         "initiative_count": sum(
             row["object_kind"] == "initiative" for row in canonical_rows
         ),

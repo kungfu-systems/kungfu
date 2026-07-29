@@ -23,6 +23,25 @@ a continuation decision remain separate facts. Portfolio reports completion
 only when the accepted decision and applicable Project Cut settlement are both
 present.
 
+Portfolio keeps three state coordinates separate: the source record's
+`source_status`, the native Assignment `orchestration_phase`, and the derived
+`portfolio_state`. The default active-and-attention view treats compatibility
+statuses `complete`, `completed`, `merged`, `archived`, and `closed` as
+terminal; `--include-settled` retains their exact canonical rows. A
+`stage-ready` Assignment is therefore visible as unfinished until review,
+continuation decision, and Project Cut settlement actually complete it.
+
+Repeated Initiative subjects are rendered as one deterministic presentation
+group. An authority-distinct group lists every canonical root and workspace
+authority root; it is a readability projection only and never asserts replica
+equivalence or discards an exact WorkRef.
+
+Disposable probe processes that intentionally share the machine Catalog must
+set `KF_WORKSPACE_CATALOG_LIFECYCLE=test-only` before their first workspace
+write. The initial observation is then retained with the `test-only` lifecycle
+and excluded from the default Portfolio. Existing active entries are changed
+only through the dry-run-bound `workspace catalog-maintain` transition.
+
 ## Assignment Family typed envelope
 
 `kungfu.work-control.initiative-family-state/v1` remains the immutable Wave 0

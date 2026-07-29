@@ -386,6 +386,40 @@ def test_catalog_lifecycle_expected_plan_mismatch_is_write_free(tmp_path):
     assert not (config_home / "workspaces" / "receipts").exists()
 
 
+def test_disposable_course_probe_is_test_only_from_first_catalog_observation(
+    tmp_path, monkeypatch
+):
+    monkeypatch.setenv("KF_WORKSPACE_CATALOG_LIFECYCLE", "test-only")
+    repo = tmp_path / "kungfu-course-control-probe"
+    repo.mkdir()
+    env = {"HOME": str(tmp_path)}
+    candidate = inspect_workspace(str(repo), env=env)
+    assert candidate is not None
+
+    receipt = ensure_workspace_data_home(candidate, "course-control probe fixture")
+    catalog = load_workspace_catalog(candidate.config_home, env=env)
+
+    assert receipt["catalog_observation"]["lifecycle"] == "test-only"
+    assert catalog["entries"][0]["lifecycle"]["state"] == "test-only"
+    assert catalog["entries"][0]["required"] is False
+    assert catalog["entries"][0]["retained"] is True
+    assert catalog["entries"][0]["exclusion_policy"] == "isolated-test-fixture"
+
+
+def test_initial_catalog_observation_rejects_maintenance_only_lifecycle(tmp_path):
+    repo = tmp_path / "retired-probe"
+    repo.mkdir()
+    candidate = inspect_workspace(str(repo), env={"HOME": str(tmp_path)})
+    assert candidate is not None
+
+    with pytest.raises(ValueError, match="use catalog-maintain"):
+        ensure_workspace_data_home(
+            candidate,
+            "invalid direct retirement",
+            catalog_lifecycle="retired",
+        )
+
+
 def test_tracked_settled_shadow_is_readable_without_runtime_initialization(tmp_path):
     repo = tmp_path / "repo"
     manifest_dir = (

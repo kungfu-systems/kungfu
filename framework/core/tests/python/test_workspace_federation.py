@@ -28,7 +28,10 @@ from kungfu.workspace_federation import (
     verify_dogfood_gate_receipt,
 )
 from kungfu.workspace_federation_observer import _runtime_signal
-from kungfu.cli.commands.workspace import _human_work_line
+from kungfu.cli.commands.workspace import (
+    _human_initiative_group_line,
+    _human_work_line,
+)
 
 
 ROOT_A = "sha256:" + "a" * 64
@@ -131,6 +134,27 @@ def test_human_projection_is_stable_at_realistic_scale_and_narrow_width():
     assert len(set(snapshot)) == 35
     assert any("!conflict" in line for line in snapshot)
     assert sum(" x2 " in line for line in snapshot) == 2
+
+
+def test_human_assignment_projection_keeps_phase_and_source_status_separate():
+    row = {
+        "object_kind": "assignment",
+        "display": {
+            "title": "Ready for independent review",
+            "portfolio_state": "awaiting-review",
+            "orchestration_phase": "stage-ready",
+            "source_status": "active",
+        },
+        "conflict": False,
+        "replica_count": 0,
+        "canonical_root": ROOT_A,
+    }
+
+    rendered = _human_work_line(row, 100)
+
+    assert "awaiting-review" in rendered
+    assert "phase=stage-ready" in rendered
+    assert "src=active" in rendered
 
 
 def test_work_ref_requires_qualified_workspace_and_contains_no_locator(tmp_path):
@@ -507,6 +531,118 @@ def test_same_label_divergent_roots_remain_distinct_without_unsafe_collapse(tmp_
     collision = result["global_work"]["label_collisions"][0]
     assert collision["state"] == "authority-distinct"
     assert len(collision["canonical_roots"]) == 2
+
+
+def test_initiative_group_preserves_authority_distinct_canonical_roots(tmp_path):
+    config_home = tmp_path / "config"
+    left = _qualified_project(tmp_path, "initiative-left")
+    right = _qualified_project(tmp_path, "initiative-right")
+    for identity in (left, right):
+        observe_workspace_locator(
+            identity,
+            config_home=str(config_home),
+            env={"HOME": str(tmp_path)},
+        )
+
+    def loader(identity):
+        component = _component_fixture(identity, {})
+        version_root = ROOT_A if identity == left else ROOT_B
+        component["initiatives"] = [
+            {
+                "title": "Technical stewardship",
+                "status": "active",
+                "lifecycle": {
+                    "portfolio_state": "open",
+                    "orchestration_phase": "executing",
+                },
+                "work_ref": build_work_ref(
+                    identity,
+                    object_kind="initiative",
+                    subject="kungfu:technical-stewardship",
+                    version_root=version_root,
+                    cut_root=ROOT_D,
+                ).as_dict(),
+            }
+        ]
+        return component
+
+    result = query_federation(
+        left,
+        scope="all",
+        config_home=str(config_home),
+        env={"HOME": str(tmp_path)},
+        loader=loader,
+    )
+
+    projection = result["global_work"]
+    assert len(projection["initiative_groups"]) == 1
+    group = projection["initiative_groups"][0]
+    raw_roots = sorted(
+        row["canonical_root"]
+        for row in projection["canonical_work"]
+        if row["object_kind"] == "initiative"
+    )
+    assert group["authority_state"] == "authority-distinct"
+    assert group["canonical_roots"] == raw_roots
+    expected_authority_roots = sorted(
+        {
+            root
+            for row in projection["canonical_work"]
+            if row["object_kind"] == "initiative"
+            for root in row["authority_roots"]
+        }
+    )
+    assert group["authority_roots"] == expected_authority_roots
+    assert {left.identity_root, right.identity_root}.issubset(group["authority_roots"])
+    assert projection["visible_initiative_groups"] == [group]
+    rendered = _human_initiative_group_line(group, 100)
+    assert "authority-distinct" in rendered
+    assert f"authorities={len(expected_authority_roots)}" in rendered
+
+
+@pytest.mark.parametrize("terminal_status", ["complete", "merged"])
+def test_default_portfolio_filter_normalizes_legacy_terminal_statuses(
+    tmp_path, terminal_status
+):
+    identity = _qualified_project(tmp_path, terminal_status)
+    assignments = {
+        identity.identity_root: [
+            {
+                "title": f"Legacy {terminal_status}",
+                "status": terminal_status,
+                "lifecycle": {
+                    "portfolio_state": "open",
+                    "orchestration_phase": "stage-ready",
+                },
+                "work_ref": _ref(
+                    identity, f"kungfu:legacy-{terminal_status}"
+                ).as_dict(),
+            }
+        ]
+    }
+
+    default = query_federation(
+        identity,
+        scope="local",
+        config_home=str(tmp_path / "config"),
+        env={"HOME": str(tmp_path)},
+        loader=lambda current: _component_fixture(current, assignments),
+    )
+    settled = query_federation(
+        identity,
+        scope="local",
+        config_home=str(tmp_path / "config"),
+        env={"HOME": str(tmp_path)},
+        loader=lambda current: _component_fixture(current, assignments),
+        include_settled=True,
+    )
+
+    assert default["global_work"]["visible_work"] == []
+    assert len(settled["global_work"]["visible_work"]) == 1
+    display = settled["global_work"]["visible_work"][0]["display"]
+    assert display["source_status"] == terminal_status
+    assert display["orchestration_phase"] == "stage-ready"
+    assert display["portfolio_state"] == "open"
 
 
 def test_same_authority_divergent_versions_are_a_strict_conflict(tmp_path):

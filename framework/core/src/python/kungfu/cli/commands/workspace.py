@@ -48,12 +48,34 @@ def _json(payload):
 def _human_work_line(row, width):
     display = row["display"]
     state = display.get("portfolio_state") or display.get("status") or "unknown"
+    phase = display.get("orchestration_phase")
+    source_status = display.get("source_status") or display.get("status")
+    state_detail = str(state)
+    if phase:
+        state_detail += f" phase={phase}"
+    if source_status:
+        state_detail += f" src={source_status}"
     conflict = " !conflict" if row["conflict"] else ""
     replicas = f" x{row['replica_count'] + 1}" if row["replica_count"] else ""
-    suffix = f" [{state}]{conflict}{replicas} {row['canonical_root'][7:15]}"
+    suffix = f" [{state_detail}]{conflict}{replicas} {row['canonical_root'][7:15]}"
     prefix = f"{row['object_kind']} "
     available = max(8, width - len(prefix) - len(suffix))
     title = str(display["title"])
+    if len(title) > available:
+        title = title[: max(1, available - 1)] + "…"
+    return f"{prefix}{title}{suffix}"
+
+
+def _human_initiative_group_line(group, width):
+    state = group["display"].get("portfolio_state") or "unknown"
+    authority = group["authority_state"]
+    suffix = (
+        f" [{state} {authority} authorities={group['authority_count']}] "
+        f"{group['group_root'][7:15]}"
+    )
+    prefix = "initiative "
+    available = max(1, width - len(prefix) - len(suffix))
+    title = str(group["display"]["title"])
     if len(title) > available:
         title = title[: max(1, available - 1)] + "…"
     return f"{prefix}{title}{suffix}"
@@ -600,8 +622,12 @@ def work(
             f"unresolved={aggregate['unresolved_reference_count']}",
             err=True,
         )
+    width = max(40, click.get_current_context().terminal_width or 80)
+    for group in projection["visible_initiative_groups"]:
+        click.echo(_human_initiative_group_line(group, width))
     for row in projection["visible_work"]:
-        width = max(40, click.get_current_context().terminal_width or 80)
+        if row["object_kind"] == "initiative":
+            continue
         click.echo(_human_work_line(row, width))
     if details == "components":
         for component in payload["components"]:

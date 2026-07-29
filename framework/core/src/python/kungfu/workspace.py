@@ -10,7 +10,7 @@ import tempfile
 from dataclasses import dataclass, replace
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Literal, Mapping
+from typing import Any, Literal, Mapping, cast
 from uuid import uuid4
 
 from kungfu.config import (
@@ -583,10 +583,21 @@ def load_workspace_catalog(
 def observe_workspace_locator(
     identity: WorkspaceIdentity,
     *,
+    lifecycle: CatalogLifecycleState = "active",
+    lifecycle_reason: str | None = None,
     config_home: str | None = None,
     env: Mapping[str, str] | None = None,
 ) -> dict[str, Any]:
     """Record one explicitly selected or successfully written locator."""
+
+    if lifecycle not in {"active", "test-only"}:
+        raise ValueError(
+            "initial Catalog observation supports only active or test-only; "
+            "use catalog-maintain for other lifecycle states"
+        )
+    lifecycle_reason = str(lifecycle_reason or "").strip()
+    if lifecycle != "active" and not lifecycle_reason:
+        raise ValueError("non-active Catalog observation requires a reason")
 
     catalog = load_workspace_catalog(config_home, env=env)
     if catalog["issues"]:
@@ -602,6 +613,17 @@ def observe_workspace_locator(
             "registration_reason": identity.resolution_reason,
         },
     )
+    if lifecycle != "active":
+        entry["provenance"] = {
+            "source": "explicit-disposable-observation",
+            "registration_reason": lifecycle_reason,
+        }
+        entry["lifecycle"] = {
+            "state": lifecycle,
+            "reason": lifecycle_reason,
+            "transitioned_at": observed_at,
+            "previous_state": None,
+        }
     existing = next(
         (
             row
@@ -611,6 +633,10 @@ def observe_workspace_locator(
         None,
     )
     if existing is not None:
+        if lifecycle != _catalog_lifecycle(existing)["state"]:
+            raise ValueError(
+                "existing Catalog lifecycle must change through catalog-maintain"
+            )
         entry["lifecycle"] = _catalog_lifecycle(existing)
         entry["provenance"] = _catalog_provenance(existing)
         unchanged_entry = {
@@ -1232,10 +1258,22 @@ def select_workspace(
 def ensure_workspace_data_home(
     identity: WorkspaceIdentity,
     reason: str,
+    *,
+    catalog_lifecycle: CatalogLifecycleState | None = None,
 ) -> dict[str, Any]:
     reason = reason.strip()
     if not reason:
         raise ValueError("workspace initialization requires a non-empty write intent")
+    requested_catalog_lifecycle = str(
+        catalog_lifecycle
+        or os.environ.get("KF_WORKSPACE_CATALOG_LIFECYCLE")
+        or "active"
+    )
+    if requested_catalog_lifecycle not in {"active", "test-only"}:
+        raise ValueError(
+            "initial Catalog observation supports only active or test-only; "
+            "use catalog-maintain for other lifecycle states"
+        )
     continuation = inspect_workspace_continuation(identity)
     previous_state = continuation["state"]
     if previous_state == "evidence-degraded":
@@ -1261,11 +1299,16 @@ def ensure_workspace_data_home(
     try:
         catalog_observation = observe_workspace_locator(
             qualified,
+            lifecycle=cast(CatalogLifecycleState, requested_catalog_lifecycle),
+            lifecycle_reason=(
+                reason if requested_catalog_lifecycle != "active" else None
+            ),
             config_home=qualified.config_home,
         )
         catalog_status = {
             "status": "observed",
             "catalog_path": catalog_observation["catalog_path"],
+            "lifecycle": requested_catalog_lifecycle,
         }
     except (OSError, ValueError) as error:
         catalog_status = {
