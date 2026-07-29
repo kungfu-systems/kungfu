@@ -248,6 +248,7 @@ test('declared discovery routes are zero-write in a cold read-only fixture', (t)
     'crates/shifu/src/main.rs',
     'crates/shifu/src/native_update.rs',
     'crates/shifu/src/promote.rs',
+    'crates/shifu/src/promote_tests.rs',
     'crates/shifu/src/registrar.rs',
     'config/kungfu-contracts.registry.json',
     'framework/core/src/python/kungfu/distribution_update.py',

@@ -244,6 +244,8 @@ def update_status(ctx, as_json):
     source = _source()
     workspace = runtime_broker.workspace_id(ctx.runtime_dir)
     current = runtime_upgrade.active_image(ctx.config_home, workspace)
+    frontend_inventory = distribution_update.cli_inventory_fsck(ctx.config_home)
+    native_selection = frontend_inventory.get("selected")
     payload = {
         "schema": "kungfu.product-update-status/v1",
         "frontendVersion": kungfu.__version__,
@@ -252,7 +254,12 @@ def update_status(ctx, as_json):
         "workspaceId": workspace,
         "selectedRuntime": current,
         "installedRuntimes": runtime_upgrade.list_images(ctx.config_home),
-        "frontendInventory": distribution_update.cli_inventory_fsck(ctx.config_home),
+        "frontendInventory": frontend_inventory,
+        "nativeSelectionRoot": (
+            runtime_upgrade.content_root(native_selection)
+            if native_selection is not None
+            else None
+        ),
         "dogfoodResidency": distribution_update.local_dogfood_residency(),
         "backgroundUpdater": False,
     }

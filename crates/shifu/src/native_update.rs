@@ -26,7 +26,6 @@ pub struct ApplyTarget<'a> {
 }
 
 pub struct NativeUpdateResult {
-    pub updater: PathBuf,
     pub transition_root: String,
     pub receipt_root: String,
 }
@@ -100,7 +99,6 @@ fn apply_args(
 }
 
 fn parse_receipt(
-    updater: PathBuf,
     output: std::process::Output,
     expected_state: &str,
     expected_cut: &str,
@@ -127,7 +125,6 @@ fn parse_receipt(
         ));
     }
     Ok(NativeUpdateResult {
-        updater,
         transition_root: transition_root.to_string(),
         receipt_root: receipt_root.to_string(),
     })
@@ -147,7 +144,6 @@ pub fn apply(
         .output()
         .map_err(|error| format!("failed to run native updater: {error}"))?;
     parse_receipt(
-        updater,
         output,
         if execute {
             "complete"
@@ -186,7 +182,6 @@ pub fn rollback(
         .output()
         .map_err(|error| format!("failed to run native rollback: {error}"))?;
     parse_receipt(
-        updater.to_path_buf(),
         output,
         if execute {
             "complete"
@@ -196,6 +191,37 @@ pub fn rollback(
         rollback_cut,
         "rollback",
     )
+}
+
+pub struct NativeSelection {
+    pub release_cut_root: String,
+    pub evidence_root: String,
+}
+
+pub fn selected_release_cut(updater: &Path) -> Result<NativeSelection, String> {
+    let output = Command::new(updater)
+        .args(["update", "status", "--json"])
+        .output()
+        .map_err(|error| format!("failed to inspect native updater state: {error}"))?;
+    if !output.status.success() {
+        return Err(format!(
+            "native updater status failed (exit {:?}): {}",
+            output.status.code(),
+            String::from_utf8_lossy(&output.stderr).trim()
+        ));
+    }
+    let status = json::parse(&String::from_utf8_lossy(&output.stdout))
+        .map_err(|error| format!("native updater status returned invalid JSON: {error}"))?;
+    let release_cut_root = status
+        .get("frontendInventory")
+        .and_then(|inventory| inventory.get("selected"))
+        .map(|selection| selection.str_of("releaseCutRoot").to_string())
+        .unwrap_or_default();
+    let evidence_root = status.str_of("nativeSelectionRoot").to_string();
+    Ok(NativeSelection {
+        release_cut_root,
+        evidence_root,
+    })
 }
 
 #[cfg(test)]

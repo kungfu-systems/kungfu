@@ -364,3 +364,93 @@ test('release admission assembles every platform into one Product Release Cut', 
     fs.rmSync(value.directory, { recursive: true, force: true });
   }
 });
+
+test('production admission roots one signed same-version successor transition', () => {
+  const value = fixture();
+  try {
+    const targets = [
+      ['darwin', 'arm64', '6'],
+      ['linux', 'x64', '7'],
+      ['win32', 'x64', '8'],
+    ];
+    const manifests = targets.map(([platform, architecture, seed]) => {
+      const manifestPath = path.join(
+        value.directory,
+        `${platform}-${architecture}.json`,
+      );
+      fs.writeFileSync(
+        manifestPath,
+        `${JSON.stringify(cutAwareManifest(platform, architecture, seed))}\n`,
+      );
+      return { platform, architecture, manifestPath };
+    });
+    const passportPath = path.join(value.directory, 'passport.json');
+    fs.writeFileSync(
+      passportPath,
+      `${JSON.stringify({ source: { headSha: sourceCommit } })}\n`,
+    );
+    const input = {
+      admission: { manifests },
+      releaseCandidatePassportPath: passportPath,
+      channel: 'alpha',
+      keyId: value.spec.keyId,
+      generatedAt: value.spec.generatedAt,
+      expiresAt: value.spec.expiresAt,
+    };
+    const previous = buildChannelIndex({
+      spec: channelSpecFromAdmission(input),
+      privateKeyPem: value.privateKeyPem,
+    });
+    const successorSpec = channelSpecFromAdmission({
+      ...input,
+      previousChannelIndex: previous,
+    });
+    const successor = buildChannelIndex({
+      spec: successorSpec,
+      privateKeyPem: value.privateKeyPem,
+    });
+    const transition = successor.entries[0].cutTransition;
+    assert.equal(transition.authorization.kind, 'signed-supersession');
+    assert.equal(
+      transition.fromReleaseCutRoot,
+      previous.entries[0].releaseCutRoot,
+    );
+    assert.equal(
+      transition.toReleaseCutRoot,
+      successor.entries[0].releaseCutRoot,
+    );
+    assert.deepEqual(
+      successor.entries[0].manifest.releaseCut.parentReleaseCutRoots,
+      [previous.entries[0].releaseCutRoot],
+    );
+    assert.equal(
+      new Set(
+        successor.entries.map((entry) => entry.cutTransition.cutTransitionRoot),
+      ).size,
+      1,
+    );
+
+    const divergent = structuredClone(successorSpec);
+    divergent.entries[1].cutTransition = structuredClone(
+      divergent.entries[1].cutTransition,
+    );
+    divergent.entries[1].cutTransition.diagnostics = ['different'];
+    divergent.entries[1].cutTransition.cutTransitionRoot = contentRoot(
+      Object.fromEntries(
+        Object.entries(divergent.entries[1].cutTransition).filter(
+          ([key]) => key !== 'cutTransitionRoot',
+        ),
+      ),
+    );
+    assert.throws(
+      () =>
+        buildChannelIndex({
+          spec: divergent,
+          privateKeyPem: value.privateKeyPem,
+        }),
+      /do not share one Cut Transition/,
+    );
+  } finally {
+    fs.rmSync(value.directory, { recursive: true, force: true });
+  }
+});

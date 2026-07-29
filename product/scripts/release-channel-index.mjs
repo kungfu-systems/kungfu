@@ -123,7 +123,10 @@ function canonicalKey(value) {
   return canonicalBytes(value).toString('ascii');
 }
 
-function assemblePublicReleaseCut(manifests) {
+function assemblePublicReleaseCut(
+  manifests,
+  { parentReleaseCutRoots = null } = {},
+) {
   const aware = manifests.filter((manifest) => manifest.releaseCut);
   if (aware.length === 0) return manifests;
   if (aware.length !== manifests.length) {
@@ -199,6 +202,15 @@ function assemblePublicReleaseCut(manifests) {
   const { releaseCutRoot: _individualRoot, ...cutContract } = firstCut;
   const releaseCut = {
     ...cutContract,
+    ...(parentReleaseCutRoots
+      ? {
+          parentReleaseCutRoots: sortedUnique(
+            parentReleaseCutRoots.map((root) =>
+              requireRoot(root, 'parentReleaseCutRoots'),
+            ),
+          ),
+        }
+      : {}),
     semanticIdentityRoot: contentRoot({
       productVersion: first.productVersion,
       releaseChannel: first.releaseChannel,
@@ -228,6 +240,99 @@ function assemblePublicReleaseCut(manifests) {
   }));
 }
 
+function rangesOverlap(left, right) {
+  return (
+    Number.isSafeInteger(left?.min) &&
+    Number.isSafeInteger(left?.max) &&
+    Number.isSafeInteger(right?.min) &&
+    Number.isSafeInteger(right?.max) &&
+    Math.max(left.min, right.min) <= Math.min(left.max, right.max)
+  );
+}
+
+function publicCutTransition(previousIndex, targetManifest, passportRoot) {
+  if (!previousIndex) return null;
+  const previousEntries = previousIndex.entries || [];
+  if (previousEntries.length === 0) {
+    throw new Error('previous public channel has no Release Cut entries');
+  }
+  const previousRoots = sortedUnique(
+    previousEntries.map((entry) =>
+      requireRoot(entry.releaseCutRoot, 'previous entry releaseCutRoot'),
+    ),
+  );
+  const previousVersions = sortedUnique(
+    previousEntries.map((entry) =>
+      requireString(entry.manifest?.productVersion, 'previous productVersion'),
+    ),
+  );
+  if (previousRoots.length !== 1 || previousVersions.length !== 1) {
+    throw new Error('previous public channel does not bind one Release Cut');
+  }
+  const previousManifest = previousEntries[0].manifest;
+  const evidenceRoots = sortedUnique([
+    requireRoot(passportRoot, 'release passport root'),
+    ...targetManifest.releaseCut.qualificationEvidenceRoots,
+    ...targetManifest.releaseCut.signingEvidenceRoots,
+  ]);
+  const providerResumeRequired = targetManifest.providerResumeRequired === true;
+  const transition = {
+    schema: 'kungfu.product-release-cut-transition/v1',
+    fromReleaseCutRoot: previousRoots[0],
+    toReleaseCutRoot: targetManifest.releaseCutRoot,
+    fromProductVersion: previousVersions[0],
+    toProductVersion: targetManifest.productVersion,
+    relation: 'verified-successor',
+    authorization: {
+      trustDomain: 'public',
+      kind:
+        previousVersions[0] === targetManifest.productVersion
+          ? 'signed-supersession'
+          : 'signed-lineage',
+      publicationEligible: true,
+      evidenceRoots,
+    },
+    compatibility: {
+      controlProtocol: rangesOverlap(
+        previousManifest.controlProtocolRange,
+        targetManifest.controlProtocolRange,
+      ),
+      peerWireProtocol: rangesOverlap(
+        previousManifest.peerWireProtocolRange,
+        targetManifest.peerWireProtocolRange,
+      ),
+      journalReadable:
+        Number.isSafeInteger(previousManifest.journalSchemaWriteVersion) &&
+        Number.isSafeInteger(targetManifest.journalSchemaReadRange?.min) &&
+        Number.isSafeInteger(targetManifest.journalSchemaReadRange?.max) &&
+        previousManifest.journalSchemaWriteVersion >=
+          targetManifest.journalSchemaReadRange.min &&
+        previousManifest.journalSchemaWriteVersion <=
+          targetManifest.journalSchemaReadRange.max,
+      migrationClass: targetManifest.migrationClass,
+      rollbackClass: targetManifest.rollbackClass,
+      providerResumeRequired,
+    },
+    migrationPlanRoot: contentRoot({
+      migrationClass: targetManifest.migrationClass,
+      fromReleaseCutRoot: previousRoots[0],
+      toReleaseCutRoot: targetManifest.releaseCutRoot,
+    }),
+    rollbackPlanRoot: contentRoot({
+      rollbackClass: targetManifest.rollbackClass,
+      fromReleaseCutRoot: targetManifest.releaseCutRoot,
+      toReleaseCutRoot: previousRoots[0],
+    }),
+    activeWorkPolicy: providerResumeRequired
+      ? 'provider-resume'
+      : targetManifest.activeWorkPolicy || 'keep-pinned',
+    evidenceRoots,
+    diagnostics: [],
+  };
+  transition.cutTransitionRoot = contentRoot(transition);
+  return transition;
+}
+
 export function channelSpecFromAdmission({
   admission,
   releaseCandidatePassportPath,
@@ -238,6 +343,7 @@ export function channelSpecFromAdmission({
   keyId,
   generatedAt,
   expiresAt,
+  previousChannelIndex = null,
 }) {
   if (!['alpha', 'stable'].includes(channel)) {
     throw new Error(`release channel is invalid: ${channel}`);
@@ -271,8 +377,24 @@ export function channelSpecFromAdmission({
     `buildchain:${
       releasePassportPath ? 'release-passport' : 'release-candidate-passport'
     }/${sourceCommit}`;
+  const previousRoots = previousChannelIndex
+    ? sortedUnique(
+        (previousChannelIndex.entries || []).map((entry) =>
+          requireRoot(entry.releaseCutRoot, 'previous entry releaseCutRoot'),
+        ),
+      )
+    : [];
+  if (previousChannelIndex && previousRoots.length !== 1) {
+    throw new Error('previous public channel does not bind one Release Cut');
+  }
   const assembled = assemblePublicReleaseCut(
     admitted.map((entry) => entry.manifest),
+    { parentReleaseCutRoots: previousRoots },
+  );
+  const cutTransition = publicCutTransition(
+    previousChannelIndex,
+    assembled[0],
+    contentRoot(passport),
   );
   return {
     keyId,
@@ -290,6 +412,7 @@ export function channelSpecFromAdmission({
         rollout: 'current',
         manifestPath,
         manifest: assembled[index],
+        ...(cutTransition ? { cutTransition } : {}),
         documentationUrl: assembled[index].documentationUrl,
       })),
     ),
@@ -385,12 +508,14 @@ export function buildChannelIndex({
             manifest.platformSliceRoot,
             'manifest.platformSliceRoot',
           ),
-          ...(entry.cutTransitionPath
+          ...(entry.cutTransition || entry.cutTransitionPath
             ? {
-                cutTransition: readJson(
-                  path.resolve(baseDirectory, entry.cutTransitionPath),
-                  'Cut Transition',
-                ),
+                cutTransition:
+                  entry.cutTransition ||
+                  readJson(
+                    path.resolve(baseDirectory, entry.cutTransitionPath),
+                    'Cut Transition',
+                  ),
               }
             : {}),
         }
@@ -434,6 +559,34 @@ export function buildChannelIndex({
       throw new Error(
         'release channel entries do not share one Product Release Cut',
       );
+    }
+    const transitionKeys = sortedUnique(
+      cutEntries.map((entry) =>
+        entry.cutTransition ? canonicalKey(entry.cutTransition) : '',
+      ),
+    );
+    if (transitionKeys.length !== 1) {
+      throw new Error(
+        'release channel entries do not share one Cut Transition',
+      );
+    }
+    const transition = cutEntries[0].cutTransition;
+    if (transition) {
+      const expectedTransitionRoot = contentRoot(
+        Object.fromEntries(
+          Object.entries(transition).filter(
+            ([key]) => key !== 'cutTransitionRoot',
+          ),
+        ),
+      );
+      if (
+        transition.toReleaseCutRoot !== [...releaseCutRoots][0] ||
+        transition.cutTransitionRoot !== expectedTransitionRoot
+      ) {
+        throw new Error(
+          'release channel Cut Transition does not bind the exact target Cut',
+        );
+      }
     }
     const cut = cutEntries[0].manifest.releaseCut;
     const admittedTargets = new Set(

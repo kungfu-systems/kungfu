@@ -331,6 +331,108 @@ def test_signed_channel_authorizes_same_semver_release_cut_supersession(
     assert selection["cutDecision"]["updateAllowed"] is True
 
 
+def test_production_admission_builds_an_executable_same_semver_plan(
+    tmp_path: Path,
+) -> None:
+    platform_name, architecture = distribution_update._normalize_platform()
+    current_manifest = _cut_aware_manifest(
+        seed="6",
+        platform=platform_name,
+        architecture=architecture,
+        artifacts=[
+            *_manifest()["artifacts"],
+            {
+                "kind": "cli",
+                "url": "https://releases.kungfu.invalid/kungfu-cli.tar.gz",
+                "size": 84,
+                "digest": _root("9"),
+                "signature": "sigstore:cli-fixture",
+            },
+        ],
+    )
+    previous, trusted = _signed_index(tmp_path, manifest=current_manifest)
+    current_release_cut_root = previous["entries"][0]["releaseCutRoot"]
+    previous_path = tmp_path / "previous.json"
+    previous_path.write_text(json.dumps(previous), "utf-8")
+    passport_path = tmp_path / "passport.json"
+    passport_path.write_text(
+        json.dumps({"source": {"headSha": SOURCE_COMMIT}}), "utf-8"
+    )
+    output_path = tmp_path / "production-successor.json"
+    script = """
+import fs from 'node:fs';
+import {
+  buildChannelIndex,
+  channelSpecFromAdmission,
+} from './product/scripts/release-channel-index.mjs';
+const [manifestPath, passportPath, previousPath, privateKeyPath, outputPath, platform, architecture] =
+  process.argv.slice(1);
+const previousChannelIndex = JSON.parse(fs.readFileSync(previousPath, 'utf8'));
+const spec = channelSpecFromAdmission({
+  admission: { manifests: [{ platform, architecture, manifestPath }] },
+  releaseCandidatePassportPath: passportPath,
+  channel: 'alpha',
+  keyId: 'fixture-2026',
+  generatedAt: '2026-07-23T00:00:00Z',
+  expiresAt: '2026-07-24T00:00:00Z',
+  previousChannelIndex,
+});
+const index = buildChannelIndex({
+  spec,
+  privateKeyPem: fs.readFileSync(privateKeyPath, 'utf8'),
+});
+fs.writeFileSync(outputPath, `${JSON.stringify(index)}\\n`);
+"""
+    subprocess.run(
+        [
+            "node",
+            "--input-type=module",
+            "-e",
+            script,
+            str(tmp_path / "manifest.json"),
+            str(passport_path),
+            str(previous_path),
+            str(tmp_path / "private.pem"),
+            str(output_path),
+            platform_name,
+            architecture,
+        ],
+        cwd=ROOT,
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    index = json.loads(output_path.read_text("utf-8"))
+    verified = release_channel.validate_signed_index(index, trusted, now=NOW)
+    selection = release_channel.select_release(
+        verified,
+        channel="alpha",
+        platform_name=platform_name,
+        architecture=architecture,
+        install_source="archive",
+        current_version=current_manifest["productVersion"],
+        current_release_cut_root=current_release_cut_root,
+    )
+    plan = distribution_update.plan_update(
+        selection,
+        current_version=current_manifest["productVersion"],
+        source={
+            "source": "archive",
+            "frontendAuthority": "archive-updater",
+            "selfUpdateAllowed": True,
+            "managerCommand": None,
+            "selectedReleaseCutRoot": current_release_cut_root,
+        },
+        cache_root=tmp_path / "downloads",
+    )
+    assert selection["cutDecision"]["updateAllowed"] is True
+    assert plan["action"] == "archive-self-update"
+    assert (
+        plan["cutTransitionRoot"]
+        == index["entries"][0]["cutTransition"]["cutTransitionRoot"]
+    )
+
+
 @pytest.mark.parametrize("relation", [None, "diverged", "unknown"])
 def test_same_semver_cut_conflict_never_updates_without_signed_supersession(
     tmp_path: Path,
