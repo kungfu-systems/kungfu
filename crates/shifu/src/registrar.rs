@@ -44,6 +44,7 @@ use std::time::{SystemTime, UNIX_EPOCH};
 use shifu_core::{bootstrap, host, json, style};
 
 use crate::artifact_catalog::product_mainline_ref;
+use crate::envfile;
 
 /// The buildchain self-describe contract shifu asks for the repo's KFD-3
 /// registry location. shifu holds no copy of that layout path: the layout is
@@ -247,12 +248,47 @@ pub struct DistributionPlan {
     artifacts: Vec<DeclaredArtifact>,
 }
 
+fn installed_release_cut_root(text: &str) -> Option<String> {
+    let root = text
+        .lines()
+        .filter_map(envfile::parse_line)
+        .find(|(key, _)| *key == "KUNGFU_INSTALLED_RELEASE_CUT_ROOT")
+        .map(|(_, value)| value.to_string())
+        .unwrap_or_default();
+    valid_sha256_root(&root).then_some(root)
+}
+
+/// Project the native updater's exact installed Cut into the next product
+/// build. This gives the generated local Cut an explicit parent without making
+/// the build script inspect Shifu's cache or invent a second selector.
+pub fn configure_child_release_cut(command: &mut Command) {
+    let receipt = registry_dir("kungfu").join("installed.meta.env");
+    let Ok(text) = fs::read_to_string(receipt) else {
+        return;
+    };
+    if let Some(root) = installed_release_cut_root(&text) {
+        command
+            .env("KUNGFU_SELECTED_RELEASE_CUT_ROOT", &root)
+            .env("KF_PARENT_RELEASE_CUT_ROOTS", &root);
+    }
+}
+
 struct DeclaredArtifact {
     kind: String,
     path_glob: String,
     /// Pinned content hash from the declaration; empty when the artifact's
     /// content is only known after the build (the dev-build case).
     sha256: String,
+}
+
+struct LocalReleaseEvidence {
+    cli_archive: String,
+    cli_archive_sha256: String,
+    upgrade_manifest: String,
+    upgrade_manifest_sha256: String,
+    product_version: String,
+    release_cut_root: String,
+    platform_slice_root: String,
 }
 
 /// Read the repo's KFD-3 registry and return the registration plan for
@@ -424,6 +460,13 @@ pub fn register(root: &Path, plan: &DistributionPlan) {
         warn("no declared artifacts to register");
         return;
     };
+    let local_release = match local_release_evidence(&resolved) {
+        Ok(value) => value,
+        Err(error) => {
+            warn(&error);
+            return;
+        }
+    };
 
     let sha = git(root, &["rev-parse", "HEAD"]);
     let sha = if sha.is_empty() {
@@ -502,6 +545,36 @@ pub fn register(root: &Path, plan: &DistributionPlan) {
     if !primary_sha.is_empty() {
         meta.push(format!("KUNGFU_BUILD_SHA256={}", quote(primary_sha)));
     }
+    if let Some(release) = local_release {
+        meta.extend([
+            format!("KUNGFU_BUILD_CLI_ARCHIVE={}", quote(&release.cli_archive)),
+            format!(
+                "KUNGFU_BUILD_CLI_ARCHIVE_SHA256={}",
+                quote(&release.cli_archive_sha256)
+            ),
+            format!(
+                "KUNGFU_BUILD_UPGRADE_MANIFEST={}",
+                quote(&release.upgrade_manifest)
+            ),
+            format!(
+                "KUNGFU_BUILD_UPGRADE_MANIFEST_SHA256={}",
+                quote(&release.upgrade_manifest_sha256)
+            ),
+            format!(
+                "KUNGFU_BUILD_PRODUCT_VERSION={}",
+                quote(&release.product_version)
+            ),
+            format!(
+                "KUNGFU_BUILD_RELEASE_CUT_ROOT={}",
+                quote(&release.release_cut_root)
+            ),
+            format!(
+                "KUNGFU_BUILD_PLATFORM_SLICE_ROOT={}",
+                quote(&release.platform_slice_root)
+            ),
+            "KUNGFU_BUILD_RELEASE_TRUST_DOMAIN='shifu-local'".to_string(),
+        ]);
+    }
     meta.push(String::new());
     if let Err(e) = fs::write(staging.join("meta.env"), meta.join("\n")) {
         warn(&format!("cannot write meta.env: {e}"));
@@ -518,6 +591,91 @@ pub fn register(root: &Path, plan: &DistributionPlan) {
         "\u{1f94b} {}",
         style::bold(&format!("registered build -> {}", slot.display()))
     );
+}
+
+fn local_release_evidence(
+    resolved: &[(PathBuf, &DeclaredArtifact, String)],
+) -> Result<Option<LocalReleaseEvidence>, String> {
+    let archive = resolved
+        .iter()
+        .find(|(_, artifact, _)| artifact.kind == "cli-archive");
+    let manifest = resolved
+        .iter()
+        .find(|(_, artifact, _)| artifact.kind == "upgrade-manifest");
+    let (Some((archive_path, _, archive_sha)), Some((manifest_path, _, manifest_sha))) =
+        (archive, manifest)
+    else {
+        if archive.is_some() || manifest.is_some() {
+            return Err(
+                "CLI archive and upgrade manifest must be declared and registered together"
+                    .to_string(),
+            );
+        }
+        return Ok(None);
+    };
+    if archive_sha.is_empty() || manifest_sha.is_empty() {
+        return Err("CLI release evidence must be regular files with exact sha256".to_string());
+    }
+    let document = fs::read_to_string(manifest_path)
+        .map_err(|error| format!("cannot read {}: {error}", manifest_path.display()))?;
+    let document = json::parse(&document)
+        .map_err(|error| format!("cannot parse {}: {error}", manifest_path.display()))?;
+    if document.str_of("schema") != "kungfu.product-upgrade.manifest/v1" {
+        return Err("upgrade manifest schema is unsupported".to_string());
+    }
+    let release_cut_root = document.str_of("releaseCutRoot");
+    let platform_slice_root = document.str_of("platformSliceRoot");
+    if !valid_sha256_root(release_cut_root) || !valid_sha256_root(platform_slice_root) {
+        return Err("upgrade manifest has no exact Release Cut coordinates".to_string());
+    }
+    let release_cut = document
+        .get("releaseCut")
+        .ok_or_else(|| "upgrade manifest has no Product Release Cut".to_string())?;
+    if release_cut.str_of("releaseCutRoot") != release_cut_root {
+        return Err("upgrade manifest and Product Release Cut roots disagree".to_string());
+    }
+    let policy = release_cut
+        .get("publicationPolicy")
+        .ok_or_else(|| "Product Release Cut has no publication policy".to_string())?;
+    if policy.str_of("trustDomain") != "shifu-local"
+        || policy.get("publicationEligible") != Some(&json::Json::Bool(false))
+    {
+        return Err("registered dev build is not publication-ineligible".to_string());
+    }
+    let cli_digest = document
+        .get("artifacts")
+        .and_then(json::Json::as_array)
+        .unwrap_or(&[])
+        .iter()
+        .find(|artifact| artifact.str_of("kind") == "cli")
+        .map(|artifact| artifact.str_of("digest"))
+        .unwrap_or("");
+    if cli_digest != format!("sha256:{archive_sha}") {
+        return Err("CLI archive digest differs from its upgrade manifest".to_string());
+    }
+    Ok(Some(LocalReleaseEvidence {
+        cli_archive: archive_path
+            .file_name()
+            .map(|name| name.to_string_lossy().to_string())
+            .unwrap_or_default(),
+        cli_archive_sha256: format!("sha256:{archive_sha}"),
+        upgrade_manifest: manifest_path
+            .file_name()
+            .map(|name| name.to_string_lossy().to_string())
+            .unwrap_or_default(),
+        upgrade_manifest_sha256: format!("sha256:{manifest_sha}"),
+        product_version: document.str_of("productVersion").to_string(),
+        release_cut_root: release_cut_root.to_string(),
+        platform_slice_root: platform_slice_root.to_string(),
+    }))
+}
+
+fn valid_sha256_root(value: &str) -> bool {
+    value.len() == 71
+        && value.starts_with("sha256:")
+        && value[7..]
+            .bytes()
+            .all(|byte| byte.is_ascii_digit() || (b'a'..=b'f').contains(&byte))
 }
 
 /// The kungfu product keeps its historical registry path (existing `builds` /
@@ -762,7 +920,9 @@ mod tests {
                       "registrar": "shifu",
                       "tasks": ["dist"],
                       "artifacts": [
-                        {{"kind": "installer", "platform": "{os}", "pathGlob": "out/*.bin"}}
+                        {{"kind": "installer", "platform": "{os}", "pathGlob": "out/app.bin"}},
+                        {{"kind": "cli-archive", "platform": "{os}", "pathGlob": "out/cli.tar.gz"}},
+                        {{"kind": "upgrade-manifest", "platform": "{os}", "pathGlob": "out/upgrade.json"}}
                       ]
                     }}
                   }}]
@@ -773,6 +933,32 @@ mod tests {
         .unwrap();
         fs::create_dir_all(root.join("out")).unwrap();
         fs::write(root.join("out/app.bin"), b"artifact-bytes").unwrap();
+        fs::write(root.join("out/cli.tar.gz"), b"cli-archive").unwrap();
+        let cli_sha = bootstrap::sha256_file(&root.join("out/cli.tar.gz")).unwrap();
+        fs::write(
+            root.join("out/upgrade.json"),
+            format!(
+                r#"{{
+                  "schema": "kungfu.product-upgrade.manifest/v1",
+                  "productVersion": "4.0.0-alpha.1",
+                  "releaseCutRoot": "sha256:{cut}",
+                  "platformSliceRoot": "sha256:{slice}",
+                  "releaseCut": {{
+                    "releaseCutRoot": "sha256:{cut}",
+                    "publicationPolicy": {{
+                      "trustDomain": "shifu-local",
+                      "publicationEligible": false
+                    }}
+                  }},
+                  "artifacts": [
+                    {{"kind": "cli", "digest": "sha256:{cli_sha}"}}
+                  ]
+                }}"#,
+                cut = "c".repeat(64),
+                slice = "d".repeat(64),
+            ),
+        )
+        .unwrap();
 
         let plan = plan_at(&root, &kfd.join("surfaces.json"), "dist").expect("plan");
         register(&root, &plan);
@@ -782,6 +968,8 @@ mod tests {
         assert_eq!(slots.len(), 1, "exactly one slot registered");
         let slot = slots[0].path();
         assert!(slot.join("app.bin").is_file());
+        assert!(slot.join("cli.tar.gz").is_file());
+        assert!(slot.join("upgrade.json").is_file());
         let meta = fs::read_to_string(slot.join("meta.env")).unwrap();
         assert!(meta.contains("KUNGFU_BUILD_ARTIFACT='app.bin'"));
         assert!(meta.contains("KUNGFU_BUILD_KIND='installer'"));
@@ -791,6 +979,20 @@ mod tests {
         assert!(meta.contains("KUNGFU_BUILD_MAINLINE_REF='origin/HEAD'"));
         assert!(meta.contains("KUNGFU_BUILD_INTEGRATED='false'"));
         assert!(meta.contains("KUNGFU_BUILD_QUALIFIED='false'"));
+        assert!(meta.contains("KUNGFU_BUILD_CLI_ARCHIVE='cli.tar.gz'"));
+        assert!(meta.contains(&format!(
+            "KUNGFU_BUILD_CLI_ARCHIVE_SHA256='sha256:{cli_sha}'"
+        )));
+        assert!(meta.contains("KUNGFU_BUILD_UPGRADE_MANIFEST='upgrade.json'"));
+        assert!(meta.contains(&format!(
+            "KUNGFU_BUILD_RELEASE_CUT_ROOT='sha256:{}'",
+            "c".repeat(64)
+        )));
+        assert!(meta.contains(&format!(
+            "KUNGFU_BUILD_PLATFORM_SLICE_ROOT='sha256:{}'",
+            "d".repeat(64)
+        )));
+        assert!(meta.contains("KUNGFU_BUILD_RELEASE_TRUST_DOMAIN='shifu-local'"));
         // Content hash of b"artifact-bytes", recorded for provenance.
         assert!(meta.contains(
             "KUNGFU_BUILD_SHA256='6521df166eb07efaf36eba5b6bedefd9d6a252e9c80bab1c99653700ec71473c'"
@@ -948,6 +1150,22 @@ mod tests {
         assert_eq!(fnv1a_hex(b"/a/b"), fnv1a_hex(b"/a/b"));
         assert_ne!(fnv1a_hex(b"/a/b"), fnv1a_hex(b"/a/c"));
         assert_eq!(fnv1a_hex(b"").len(), 16);
+    }
+
+    #[test]
+    fn installed_release_cut_projection_accepts_only_an_exact_root() {
+        let root = format!("sha256:{}", "a".repeat(64));
+        assert_eq!(
+            installed_release_cut_root(&format!(
+                "KUNGFU_INSTALLED_SHA='deadbeef'\n\
+                 KUNGFU_INSTALLED_RELEASE_CUT_ROOT='{root}'\n"
+            )),
+            Some(root)
+        );
+        assert_eq!(
+            installed_release_cut_root("KUNGFU_INSTALLED_RELEASE_CUT_ROOT='not-a-content-root'\n"),
+            None
+        );
     }
 
     #[test]

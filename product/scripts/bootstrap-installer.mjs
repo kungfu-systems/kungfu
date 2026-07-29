@@ -130,6 +130,14 @@ function publicationEntries(index, channel) {
         throw new Error(`bootstrap release identity mismatch: ${identity}`);
       }
       if (
+        !/^sha256:[a-f0-9]{64}$/.test(entry.manifest.releaseCutRoot || '') ||
+        !/^sha256:[a-f0-9]{64}$/.test(entry.manifest.platformSliceRoot || '') ||
+        entry.releaseCutRoot !== entry.manifest.releaseCutRoot ||
+        entry.platformSliceRoot !== entry.manifest.platformSliceRoot
+      ) {
+        throw new Error(`bootstrap Release Cut identity mismatch: ${identity}`);
+      }
+      if (
         !/^[0-9A-Za-z][0-9A-Za-z.+-]*$/.test(
           entry.manifest.productVersion || '',
         )
@@ -160,6 +168,8 @@ function publicationEntries(index, channel) {
         sourceCommit: index.sourceCommit,
         manifestRoot: entry.manifestRoot,
         artifactRoot: entry.artifactRoot,
+        releaseCutRoot: entry.manifest.releaseCutRoot,
+        platformSliceRoot: entry.manifest.platformSliceRoot,
         artifactUrl: artifact.url,
         artifactSize: artifact.size,
         artifactDigest: artifact.digest,
@@ -184,6 +194,8 @@ function posixCases(entries) {
     source_commit=${shellLiteral(entry.sourceCommit)}
     manifest_root=${shellLiteral(entry.manifestRoot)}
     artifact_root=${shellLiteral(entry.artifactRoot)}
+    release_cut_root=${shellLiteral(entry.releaseCutRoot)}
+    platform_slice_root=${shellLiteral(entry.platformSliceRoot)}
     artifact_url=${shellLiteral(entry.artifactUrl)}
     artifact_size=${shellLiteral(String(entry.artifactSize))}
     artifact_digest=${shellLiteral(entry.artifactDigest.slice(7))}
@@ -257,7 +269,7 @@ esac
 launcher="$bin_dir/kungfu"
 version_key=$(printf '%s' "$manifest_root" | cut -c8-23)
 version_root="$install_root/versions/$version-$version_key"
-log "plan: $channel $version ($source_commit) $platform/$architecture -> $version_root"
+log "plan: $channel $version ($source_commit) $platform/$architecture Cut $release_cut_root slice $platform_slice_root -> $version_root"
 if [ "$dry_run" -eq 1 ]; then exit 0; fi
 
 command -v curl >/dev/null 2>&1 || fail prerequisite-missing "curl is required"
@@ -349,6 +361,8 @@ function powershellCases(entries) {
     $SourceCommit = ${powershellLiteral(entry.sourceCommit)}
     $ManifestRoot = ${powershellLiteral(entry.manifestRoot)}
     $ArtifactRoot = ${powershellLiteral(entry.artifactRoot)}
+    $ReleaseCutRoot = ${powershellLiteral(entry.releaseCutRoot)}
+    $PlatformSliceRoot = ${powershellLiteral(entry.platformSliceRoot)}
     $ArtifactUrl = ${powershellLiteral(entry.artifactUrl)}
     $ArtifactSize = [int64]${entry.artifactSize}
     $ArtifactDigest = ${powershellLiteral(entry.artifactDigest.slice(7))}
@@ -394,7 +408,7 @@ $TrustedKey = ${powershellLiteral(`${keyId}=${publicKey}`)}
 $VersionKey = $ManifestRoot.Substring(7, 16)
 $VersionRoot = Join-Path $InstallDir "versions\\$Version-$VersionKey"
 $Launcher = Join-Path $BinDir 'kungfu.cmd'
-Write-Host "kungfu-install: plan: $Channel $Version win32/$Architecture -> $VersionRoot"
+Write-Host "kungfu-install: plan: $Channel $Version win32/$Architecture Cut $ReleaseCutRoot slice $PlatformSliceRoot -> $VersionRoot"
 if ($DryRun) { exit 0 }
 
 New-Item -ItemType Directory -Force -Path (Join-Path $InstallDir 'versions'), $BinDir | Out-Null

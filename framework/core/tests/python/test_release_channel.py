@@ -28,7 +28,7 @@ def _install_fake_pykungfu() -> None:
 
 _install_fake_pykungfu()
 
-from kungfu import distribution_update, release_channel  # noqa: E402
+from kungfu import distribution_update, release_channel, release_cut  # noqa: E402
 
 
 ROOT = Path(__file__).parents[4]
@@ -73,10 +73,109 @@ def _manifest(**overrides) -> dict:
     return value
 
 
+def _root(seed: str) -> str:
+    return f"sha256:{seed * 64}"
+
+
+def _cut_aware_manifest(
+    *,
+    parent_release_cut_root: str | None = None,
+    seed: str = "7",
+    **manifest_overrides,
+) -> dict:
+    manifest = _manifest(
+        productVersion="4.0.0-alpha.2",
+        frontendBuildId=f"cli-release-cut-{seed}",
+        **manifest_overrides,
+    )
+    platform_slice = release_cut.finish_platform_slice(
+        {
+            "schema": release_cut.PLATFORM_SLICE_SCHEMA,
+            "platform": manifest["platform"],
+            "architecture": manifest["architecture"],
+            "manifestIdentityRoot": release_cut.manifest_identity_root(manifest),
+            "artifactRoot": release_channel.content_root(manifest["artifacts"]),
+            "qualificationEvidenceRoots": [_root("a")],
+            "signingEvidenceRoots": [_root("b")],
+        }
+    )
+    cut = release_cut.finish_release_cut(
+        {
+            "schema": release_cut.RELEASE_CUT_SCHEMA,
+            "productVersion": manifest["productVersion"],
+            "parentReleaseCutRoots": (
+                [parent_release_cut_root] if parent_release_cut_root else []
+            ),
+            "sourceSettlementRoot": _root("c"),
+            "semanticIdentityRoot": _root(seed),
+            "productAssemblyRoot": _root("d"),
+            "compatibilityContractRoot": _root("e"),
+            "migrationContractRoot": _root("f"),
+            "platformSlices": [platform_slice],
+            "qualificationEvidenceRoots": [_root("a")],
+            "signingEvidenceRoots": [_root("b")],
+            "publicationPolicy": {
+                "trustDomain": "public",
+                "publicationEligible": True,
+                "immutable": True,
+                "eligibleChannels": ["alpha"],
+            },
+            "omissionRoots": [],
+            "waiverRoots": [],
+        }
+    )
+    return {
+        **manifest,
+        "manifestIdentityRoot": platform_slice["manifestIdentityRoot"],
+        "releaseCut": cut,
+        "releaseCutRoot": cut["releaseCutRoot"],
+        "platformSliceRoot": platform_slice["platformSliceRoot"],
+    }
+
+
+def _public_transition(
+    current_cut: dict,
+    target_cut: dict,
+    *,
+    relation: str = "verified-successor",
+    kind: str = "signed-supersession",
+) -> dict:
+    return release_cut.finish_cut_transition(
+        {
+            "schema": release_cut.CUT_TRANSITION_SCHEMA,
+            "fromReleaseCutRoot": current_cut["releaseCutRoot"],
+            "toReleaseCutRoot": target_cut["releaseCutRoot"],
+            "fromProductVersion": current_cut["productVersion"],
+            "toProductVersion": target_cut["productVersion"],
+            "relation": relation,
+            "authorization": {
+                "trustDomain": "public",
+                "kind": kind,
+                "publicationEligible": True,
+                "evidenceRoots": [_root("1")],
+            },
+            "compatibility": {
+                "controlProtocol": True,
+                "peerWireProtocol": True,
+                "journalReadable": True,
+                "migrationClass": "none",
+                "rollbackClass": "automatic",
+                "providerResumeRequired": False,
+            },
+            "migrationPlanRoot": _root("2"),
+            "rollbackPlanRoot": _root("3"),
+            "activeWorkPolicy": "keep-pinned",
+            "evidenceRoots": [_root("4")],
+            "diagnostics": [],
+        }
+    )
+
+
 def _signed_index(
     tmp_path: Path,
     *,
     manifest: dict | None = None,
+    cut_transition: dict | None = None,
     expires_at: str = "2026-07-24T00:00:00Z",
 ) -> tuple[dict, dict[str, str]]:
     manifest_path = tmp_path / "manifest.json"
@@ -97,6 +196,16 @@ process.stdout.write(der.subarray(der.length - 32).toString('base64'));
         capture_output=True,
         text=True,
     ).stdout
+    entry = {
+        "channel": "alpha",
+        "installSource": "archive",
+        "rollout": "current",
+        "manifestPath": manifest_path.name,
+    }
+    if cut_transition is not None:
+        transition_path = tmp_path / "cut-transition.json"
+        transition_path.write_text(json.dumps(cut_transition), "utf-8")
+        entry["cutTransitionPath"] = transition_path.name
     spec = {
         "keyId": "fixture-2026",
         "generatedAt": "2026-07-23T00:00:00Z",
@@ -106,14 +215,7 @@ process.stdout.write(der.subarray(der.length - 32).toString('base64'));
             "ref": "buildchain:passport/fixture",
             "root": f"sha256:{'3' * 64}",
         },
-        "entries": [
-            {
-                "channel": "alpha",
-                "installSource": "archive",
-                "rollout": "current",
-                "manifestPath": manifest_path.name,
-            }
-        ],
+        "entries": [entry],
     }
     spec_path = tmp_path / "spec.json"
     spec_path.write_text(json.dumps(spec), "utf-8")
@@ -176,6 +278,82 @@ def test_node_signature_validates_and_selects_exact_entry(tmp_path: Path) -> Non
     assert selection["targetVersion"] == "4.0.0-alpha.2"
     assert selection["payloadRoot"] == index["payloadRoot"]
     assert selection["releasePassport"] == index["releasePassport"]
+
+
+def test_signed_channel_authorizes_same_semver_release_cut_supersession(
+    tmp_path: Path,
+) -> None:
+    current_manifest = _cut_aware_manifest(seed="6")
+    target_manifest = _cut_aware_manifest(
+        parent_release_cut_root=current_manifest["releaseCutRoot"],
+        seed="7",
+    )
+    transition = _public_transition(
+        current_manifest["releaseCut"],
+        target_manifest["releaseCut"],
+    )
+    index, trusted = _signed_index(
+        tmp_path,
+        manifest=target_manifest,
+        cut_transition=transition,
+    )
+    verified = release_channel.validate_signed_index(index, trusted, now=NOW)
+    selection = release_channel.select_release(
+        verified,
+        channel="alpha",
+        platform_name="linux",
+        architecture="x64",
+        install_source="archive",
+        current_version=current_manifest["productVersion"],
+        current_release_cut_root=current_manifest["releaseCutRoot"],
+    )
+    assert selection["targetVersion"] == selection["currentVersion"]
+    assert selection["targetReleaseCutRoot"] == target_manifest["releaseCutRoot"]
+    assert selection["cutDecision"]["outcome"] == "verified-successor"
+    assert selection["cutDecision"]["updateAllowed"] is True
+
+
+@pytest.mark.parametrize("relation", [None, "diverged", "unknown"])
+def test_same_semver_cut_conflict_never_updates_without_signed_supersession(
+    tmp_path: Path,
+    relation: str | None,
+) -> None:
+    current_manifest = _cut_aware_manifest(seed="6")
+    target_manifest = _cut_aware_manifest(
+        parent_release_cut_root=current_manifest["releaseCutRoot"],
+        seed="7",
+    )
+    transition = (
+        None
+        if relation is None
+        else _public_transition(
+            current_manifest["releaseCut"],
+            target_manifest["releaseCut"],
+            relation=relation,
+            kind="signed-lineage",
+        )
+    )
+    index, trusted = _signed_index(
+        tmp_path,
+        manifest=target_manifest,
+        cut_transition=transition,
+    )
+    verified = release_channel.validate_signed_index(index, trusted, now=NOW)
+    selection = release_channel.select_release(
+        verified,
+        channel="alpha",
+        platform_name="linux",
+        architecture="x64",
+        install_source="archive",
+        current_version=current_manifest["productVersion"],
+        current_release_cut_root=current_manifest["releaseCutRoot"],
+    )
+    assert selection["cutDecision"]["updateAllowed"] is False
+    assert selection["cutDecision"]["reasonCode"] in {
+        "cut-conflict",
+        "cut-diverged",
+        "cut-relation-unknown",
+    }
 
 
 @pytest.mark.parametrize(
@@ -427,7 +605,7 @@ def test_bootstrap_verifier_binds_staged_archive_product_and_channel(
     archive = tmp_path / "kungfu-cli-linux-x64.tar.gz"
     archive.write_bytes(b"qualified bootstrap archive")
     digest = f"sha256:{hashlib.sha256(archive.read_bytes()).hexdigest()}"
-    manifest = _manifest(
+    manifest = _cut_aware_manifest(
         artifacts=[
             {
                 "kind": "runtime",
@@ -489,6 +667,8 @@ def test_bootstrap_verifier_binds_staged_archive_product_and_channel(
     assert receipt["state"] == "verified"
     assert receipt["artifactDigest"] == digest
     assert receipt["channelPayloadRoot"] == index["payloadRoot"]
+    assert receipt["releaseCutRoot"] == manifest["releaseCutRoot"]
+    assert receipt["platformSliceRoot"] == manifest["platformSliceRoot"]
     (candidate / "install").mkdir()
     (candidate / "install" / "bootstrap-receipt.json").write_text(
         json.dumps(receipt),

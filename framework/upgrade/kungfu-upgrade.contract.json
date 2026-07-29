@@ -496,6 +496,18 @@
           "documentationUrl": {
             "type": "string",
             "minLength": 1
+          },
+          "manifestIdentityRoot": {
+            "$ref": "#/$defs/contentRoot"
+          },
+          "releaseCut": {
+            "type": "object"
+          },
+          "releaseCutRoot": {
+            "$ref": "#/$defs/contentRoot"
+          },
+          "platformSliceRoot": {
+            "$ref": "#/$defs/contentRoot"
           }
         }
       },

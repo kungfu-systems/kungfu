@@ -140,7 +140,22 @@ That object always answers:
 - whether one user action is required; and
 - what happens to workspace data and session facts.
 
-Treat the release manifest as evidence, not as a version string. The current
+Treat the release manifest as evidence, not as a version string. A
+`productVersion` is a compatibility and ordering label; the exact identity is
+`releaseCutRoot`. The Product Release Cut closes over source settlement,
+semantic and assembled product identity, compatibility and migration contracts,
+platform slices, qualification/signing evidence, omissions, waivers, parent
+Cuts, and publication policy. Two manifests may therefore share one SemVer only
+when their unequal Cut roots remain explicit.
+
+Movement between unequal Cuts requires a `Cut Transition`. A same-SemVer public
+successor needs signed supersession evidence, while a local Shifu successor is
+explicitly publication-ineligible. Diverged or unknown relations never update
+implicitly. Each plan and receipt reports the current/target Cut roots and the
+transition root so a human or agent can distinguish identical, successor,
+conflict, recovery, and refused movement.
+
+The current
 pre-release adapter verifies archive size and SHA-256 against that manifest and
 requires non-placeholder signing evidence. Client-side cryptographic verification
 of that evidence is not yet a qualified release claim; official publication must
@@ -194,10 +209,12 @@ digest mismatch, or I/O failure cannot become an installed image.
 
 Concurrent archive applies may install multiple immutable CLI images, but they
 publish the current CLI selection through one process- and host-wide lock. Selection
-is monotonic by product SemVer: a slower older plan cannot replace a newer completed
-selection, and one product version cannot name different image evidence. Every
+is monotonic by Product Release Cut transition: a slower older plan cannot replace a
+newer completed selection. Equal SemVer with unequal Cut roots is accepted only
+when the verified transition authorizes it. Every
 successful selection increments a generation and retains the exact previous
-frontend build, artifact digest, runtime build, and product root as rollback
+frontend build, artifact digest, runtime build, product root, Release Cut, and
+platform slice as rollback
 coordinates. These coordinates are recovery evidence, not permission for an
 implicit downgrade.
 
@@ -228,6 +245,14 @@ references before any extraction, so direct `apply` cannot bypass the release ga
 The running CLI process is never overwritten. Its stable bootstrap selects the new
 CLI image on the next command. A desktop companion CLI does not read this standalone
 selection.
+
+For local KFD-3 builds, one Shifu slot must contain the desktop artifact, CLI
+archive, and final upgrade manifest. `shifu promote` selects that exact slot,
+preflights the native update, and hands the manifest/archive/evidence roots to
+the shipped `kungfu` updater. Shifu does not extract or select the CLI image.
+Native Core owns side-by-side installation, activation-on-next-command, and
+rollback. The installed inventory retains the rollback image, so deleting the
+Shifu source slot or build cache does not remove rollback authority.
 
 `kungfu update status --json` includes a read-only `frontendInventory` fsck result.
 It verifies the selected image and every complete side-by-side image, reports

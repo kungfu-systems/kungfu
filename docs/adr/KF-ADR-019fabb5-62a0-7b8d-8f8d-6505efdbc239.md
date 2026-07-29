@@ -1,0 +1,103 @@
+---
+metadata_schema: kungfu.document-metadata/v1
+doc_type: architecture-decision
+adr_id: KF-ADR-019fabb5-62a0-7b8d-8f8d-6505efdbc239
+decision_status: proposed
+implementation_status: not-started
+review_state: unreviewed
+sensitivity: public
+last_reviewed: 2026-07-29
+period: 2026-07
+theme: product-release-cut-updater
+sources: [local-files, user-consensus]
+confidence: high
+evidence_grade: A
+ai_provenance: GPT-5 via Codex on 2026-07-29; based on the admitted Assignment, repository contracts, implementation, and local qualification; exact model build, hidden checkpoint, public release operation, and unobserved platform execution are not claimed
+---
+
+# KF-ADR-019fabb5-62a0-7b8d-8f8d-6505efdbc239: Product Release Cut is the exact updater identity
+
+- Status: proposed
+- Date: 2026-07-29
+
+## Context
+
+Kungfu already had signed channel discovery, immutable runtime/frontend images,
+side-by-side archive installation, Shifu local-build registration, and rollback
+coordinates. Their identities did not close over the same product world.
+SemVer remained too weak to distinguish two qualified builds with the same
+label, while a manifest or desktop artifact root covered only one slice. Shifu
+could select a desktop build but was at risk of becoming a second installer for
+the CLI, and cache-resident source artifacts could be mistaken for rollback
+authority.
+
+The product needs one exact identity that covers source settlement, semantic
+assembly, compatibility and migration contracts, every platform slice,
+qualification/signing evidence, omissions, waivers, and publication policy. It
+also needs an explicit movement object so a same-SemVer successor, divergence,
+recovery, or unknown relation cannot be inferred from timestamps, Git order, or
+the version label.
+
+## Decision
+
+`kungfu.product-release-cut/v1` is the exact immutable identity of one product
+release world. `productVersion` remains a human-facing compatibility and
+ordering label; it is not product identity. Each Cut binds sorted parent Cut
+roots and one or more exact platform slices. A platform slice binds the
+cut-independent manifest identity, artifact root, qualification roots, and
+signing roots. Public and `shifu-local` trust domains are disjoint, and local
+Cuts are structurally publication-ineligible.
+
+`kungfu.product-release-cut-transition/v1` is the only authority for movement
+between different Cuts. It binds the from/to Cut roots and versions, relation,
+trust-domain-specific authorization, compatibility verdict, migration and
+rollback plans, active-work policy, evidence, and diagnostics. Equal SemVer
+with unequal Cut roots is a conflict unless a public signed supersession or
+explicit local successor transition authorizes it. Diverged and unknown
+relations never advance implicitly. Recovery requires an explicit recovery
+transition.
+
+The final release manifest and signed channel carry the Cut and platform-slice
+roots. Bootstrap receipts, installed image records, selection records, update
+plans, and rollback receipts preserve those roots. Runtime images may be reused
+when their own immutable runtime identity is unchanged; the selected frontend
+image still carries the exact current Cut.
+
+KFD-3 registers the desktop artifact, CLI archive, and final upgrade manifest
+in one Shifu provenance slot. `shifu promote` remains the local selector and
+desktop adapter. It performs a native-updater dry run and hands the exact
+manifest/archive/evidence roots to the shipped `kungfu` updater. Native Core
+alone installs and selects side-by-side CLI images and owns rollback. The
+installed inventory, not Shifu source cache availability, is rollback
+authority.
+
+The first adoption of a legacy local installation uses one explicit,
+publication-ineligible bootstrap transition from the standardized legacy
+sentinel root. This does not claim an exact historical Cut for pre-contract
+bytes; it records the boundary where exact Cut identity begins.
+
+## Consequences
+
+Benefits:
+
+- two builds with one SemVer remain distinguishable and independently
+  installable;
+- public publication and local dogfood cannot share authority accidentally;
+- every update and rollback has a content-addressed explanation;
+- Shifu selection no longer duplicates native installation semantics; and
+- retained installed images can roll back after source archives and build
+  caches are removed.
+
+Costs:
+
+- manifests and channel entries carry additional roots and must agree exactly;
+- first local adoption must name the legacy bootstrap boundary;
+- release tooling must produce a transition for same-SemVer supersession; and
+- desktop promotion and native CLI selection remain two visible adapters, so a
+  failure after one commits is diagnosable and recoverable rather than falsely
+  reported as one atomic cross-platform filesystem transaction.
+
+This decision is falsified if an accepted path can select a different Cut
+without a verified transition, publish a `shifu-local` Cut, roll back only
+while source cache survives, or make Shifu itself the CLI installation
+authority.

@@ -19,6 +19,7 @@
 // existing KUNGFU_PRODUCT_INSTALL_DIR surface.
 
 use std::env;
+use std::ffi::OsString;
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::Command;
@@ -43,6 +44,13 @@ struct BuildEntry {
     kind: String,
     artifact: String,
     digest: String,
+    cli_archive: String,
+    cli_archive_digest: String,
+    upgrade_manifest: String,
+    upgrade_manifest_digest: String,
+    product_version: String,
+    release_cut_root: String,
+    platform_slice_root: String,
     mainline_ref: String,
     mainline_sha: String,
     integrated: bool,
@@ -110,6 +118,13 @@ fn entries() -> Vec<BuildEntry> {
                 built_at: meta_get(&meta, "KUNGFU_BUILD_TIME"),
                 kind: meta_get(&meta, "KUNGFU_BUILD_KIND"),
                 digest: meta_get(&meta, "KUNGFU_BUILD_SHA256"),
+                cli_archive: meta_get(&meta, "KUNGFU_BUILD_CLI_ARCHIVE"),
+                cli_archive_digest: meta_get(&meta, "KUNGFU_BUILD_CLI_ARCHIVE_SHA256"),
+                upgrade_manifest: meta_get(&meta, "KUNGFU_BUILD_UPGRADE_MANIFEST"),
+                upgrade_manifest_digest: meta_get(&meta, "KUNGFU_BUILD_UPGRADE_MANIFEST_SHA256"),
+                product_version: meta_get(&meta, "KUNGFU_BUILD_PRODUCT_VERSION"),
+                release_cut_root: meta_get(&meta, "KUNGFU_BUILD_RELEASE_CUT_ROOT"),
+                platform_slice_root: meta_get(&meta, "KUNGFU_BUILD_PLATFORM_SLICE_ROOT"),
                 mainline_ref: meta_get(&meta, "KUNGFU_BUILD_MAINLINE_REF"),
                 mainline_sha: meta_get(&meta, "KUNGFU_BUILD_MAINLINE_SHA"),
                 integrated: meta_get(&meta, "KUNGFU_BUILD_INTEGRATED") == "true",
@@ -189,8 +204,25 @@ fn build_previewable(entry: &BuildEntry) -> bool {
         && !entry.sha.ends_with("-dirty")
         && matches!(entry.kind.as_str(), "app" | "installer" | "appimage")
         && entry.slot.join(&entry.artifact).exists()
+        && !entry.cli_archive.is_empty()
+        && valid_root(&entry.cli_archive_digest)
+        && entry.slot.join(&entry.cli_archive).is_file()
+        && !entry.upgrade_manifest.is_empty()
+        && valid_root(&entry.upgrade_manifest_digest)
+        && entry.slot.join(&entry.upgrade_manifest).is_file()
+        && !entry.product_version.is_empty()
+        && valid_root(&entry.release_cut_root)
+        && valid_root(&entry.platform_slice_root)
         && entry.mainline_ref == product_mainline_ref()
         && product_manifests_valid(entry)
+}
+
+fn valid_root(value: &str) -> bool {
+    value.len() == 71
+        && value.starts_with("sha256:")
+        && value[7..]
+            .bytes()
+            .all(|byte| byte.is_ascii_digit() || (b'a'..=b'f').contains(&byte))
 }
 
 fn product_manifests_valid(entry: &BuildEntry) -> bool {
@@ -368,12 +400,25 @@ fn print_builds_json(entries: &[BuildEntry]) {
             let valid = build_valid(entry);
             let state = state_for(relation, valid, false);
             format!(
-                "    {{\"id\":\"{}\",\"kind\":\"{}\",\"version\":\"\",\"commit\":\"{}\",\"branch\":\"{}\",\"digest\":\"{}\",\"builtAt\":\"{}\",\"state\":\"{}\",\"relation\":\"{}\",\"automatic\":{},\"rollbackOnly\":false,\"dirty\":{},\"qualified\":{},\"integrated\":{},\"mainlineRef\":\"{}\",\"mainlineCommit\":\"{}\",\"repoPath\":\"{}\",\"worktreePath\":\"{}\",\"buildPath\":\"{}\",\"artifactPath\":\"{}\",\"pathDigest\":\"\",\"reason\":\"{}\"}}",
+                "    {{\"id\":\"{}\",\"kind\":\"{}\",\"version\":\"{}\",\"commit\":\"{}\",\"branch\":\"{}\",\"digest\":\"{}\",\"releaseCutRoot\":\"{}\",\"platformSliceRoot\":\"{}\",\"cliArchivePath\":\"{}\",\"cliArchiveDigest\":\"{}\",\"upgradeManifestPath\":\"{}\",\"upgradeManifestDigest\":\"{}\",\"builtAt\":\"{}\",\"state\":\"{}\",\"relation\":\"{}\",\"automatic\":{},\"rollbackOnly\":false,\"dirty\":{},\"qualified\":{},\"integrated\":{},\"mainlineRef\":\"{}\",\"mainlineCommit\":\"{}\",\"repoPath\":\"{}\",\"worktreePath\":\"{}\",\"buildPath\":\"{}\",\"artifactPath\":\"{}\",\"pathDigest\":\"\",\"reason\":\"{}\"}}",
                 json_escape(&entry.name),
                 json_escape(schema_kind(entry)),
+                json_escape(&entry.product_version),
                 json_escape(&entry.sha),
                 json_escape(&entry.branch),
                 json_escape(&entry.digest),
+                json_escape(&entry.release_cut_root),
+                json_escape(&entry.platform_slice_root),
+                json_escape(&entry.slot.join(&entry.cli_archive).display().to_string()),
+                json_escape(&entry.cli_archive_digest),
+                json_escape(
+                    &entry
+                        .slot
+                        .join(&entry.upgrade_manifest)
+                        .display()
+                        .to_string()
+                ),
+                json_escape(&entry.upgrade_manifest_digest),
                 json_escape(&entry.built_at),
                 state.as_str(),
                 relation.as_str(),
@@ -396,12 +441,19 @@ fn print_builds_json(entries: &[BuildEntry]) {
     println!("}}");
 }
 
+struct InstalledReceiptContext<'a> {
+    rollback_build_id: &'a str,
+    rollback_sha: &'a str,
+    rollback_release_cut_root: &'a str,
+    cut_transition_root: &'a str,
+    native_updater: &'a Path,
+    mode: &'a str,
+}
+
 fn write_installed_receipt(
     entry: &BuildEntry,
     installed: &Path,
-    rollback_build_id: &str,
-    rollback_sha: &str,
-    mode: &str,
+    context: &InstalledReceiptContext<'_>,
 ) {
     let text = format!(
         "KUNGFU_ARTIFACT_SCHEMA='shifu.local-artifact/v1'\n\
@@ -417,8 +469,14 @@ fn write_installed_receipt(
          KUNGFU_INSTALLED_INTEGRATED='{}'\n\
          KUNGFU_INSTALLED_QUALIFIED='{}'\n\
          KUNGFU_INSTALLED_MODE='{}'\n\
+         KUNGFU_INSTALLED_PRODUCT_VERSION='{}'\n\
+         KUNGFU_INSTALLED_RELEASE_CUT_ROOT='{}'\n\
+         KUNGFU_INSTALLED_PLATFORM_SLICE_ROOT='{}'\n\
+         KUNGFU_INSTALLED_CUT_TRANSITION_ROOT='{}'\n\
+         KUNGFU_INSTALLED_NATIVE_UPDATER='{}'\n\
          KUNGFU_ROLLBACK_BUILD_ID='{}'\n\
-         KUNGFU_ROLLBACK_SHA='{}'\n",
+         KUNGFU_ROLLBACK_SHA='{}'\n\
+         KUNGFU_ROLLBACK_RELEASE_CUT_ROOT='{}'\n",
         entry.sha,
         entry.branch.replace('\'', ""),
         entry.repo.replace('\'', ""),
@@ -430,9 +488,15 @@ fn write_installed_receipt(
         entry.mainline_sha,
         entry.integrated,
         entry.qualified,
-        mode,
-        rollback_build_id,
-        rollback_sha,
+        context.mode,
+        entry.product_version,
+        entry.release_cut_root,
+        entry.platform_slice_root,
+        context.cut_transition_root,
+        context.native_updater.display(),
+        context.rollback_build_id,
+        context.rollback_sha,
+        context.rollback_release_cut_root,
     );
     let path = installed_receipt_path();
     let staged = path.with_extension("tmp");
@@ -444,6 +508,178 @@ fn write_installed_receipt(
                 style::yellow(&format!("could not write promotion receipt: {error}"))
             );
         }
+    }
+}
+
+const LEGACY_BOOTSTRAP_ROOT: &str =
+    "sha256:ec51232534d89e75615d44f41ed6af0b2e9978e7bf6655bf231e7f35cefd13fc";
+
+struct NativeUpdateResult {
+    updater: PathBuf,
+    transition_root: String,
+}
+
+fn native_updater(entry: &BuildEntry) -> Option<PathBuf> {
+    if let Ok(value) = env::var("KUNGFU_NATIVE_UPDATER") {
+        let path = PathBuf::from(value);
+        if path.is_file() {
+            return Some(path);
+        }
+    }
+    if entry.kind == "app" {
+        let candidate = entry
+            .slot
+            .join(&entry.artifact)
+            .join("Contents/Resources/kungfu/kungfu");
+        if candidate.is_file() {
+            return Some(candidate);
+        }
+    }
+    util::find_on_path(if cfg!(windows) {
+        "kungfu.exe"
+    } else {
+        "kungfu"
+    })
+}
+
+fn native_apply_args(
+    entry: &BuildEntry,
+    current_cut: &str,
+    current_version: &str,
+    execute: bool,
+) -> Vec<OsString> {
+    let mut args = vec![
+        "update".into(),
+        "shifu-apply".into(),
+        entry.slot.join(&entry.upgrade_manifest).into_os_string(),
+        entry.slot.join(&entry.cli_archive).into_os_string(),
+        "--expected-digest".into(),
+        entry.cli_archive_digest.clone().into(),
+        "--evidence-root".into(),
+        entry.cli_archive_digest.clone().into(),
+        "--evidence-root".into(),
+        entry.upgrade_manifest_digest.clone().into(),
+        "--json".into(),
+    ];
+    if current_cut.is_empty() {
+        args.extend([
+            "--bootstrap-release-cut-root".into(),
+            LEGACY_BOOTSTRAP_ROOT.into(),
+            "--bootstrap-version".into(),
+            if current_version.is_empty() {
+                entry.product_version.clone().into()
+            } else {
+                current_version.into()
+            },
+        ]);
+    }
+    if execute {
+        args.push("--yes".into());
+    }
+    args
+}
+
+fn run_native_apply(entry: &BuildEntry, execute: bool) -> NativeUpdateResult {
+    let updater = native_updater(entry).unwrap_or_else(|| {
+        util::die(
+            "native Kungfu updater is unavailable; set KUNGFU_NATIVE_UPDATER to \
+             one exact shipped kungfu executable",
+        )
+    });
+    let current_cut = installed_value("KUNGFU_INSTALLED_RELEASE_CUT_ROOT");
+    let current_version = installed_value("KUNGFU_INSTALLED_PRODUCT_VERSION");
+    let mut command = Command::new(&updater);
+    command.args(native_apply_args(
+        entry,
+        &current_cut,
+        &current_version,
+        execute,
+    ));
+    let output = command
+        .output()
+        .unwrap_or_else(|error| util::die(&format!("failed to run native updater: {error}")));
+    if !output.status.success() {
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        util::die(&format!(
+            "native updater rejected Shifu selection (exit {:?}): {}",
+            output.status.code(),
+            stderr.trim()
+        ));
+    }
+    let receipt = json::parse(&String::from_utf8_lossy(&output.stdout)).unwrap_or_else(|error| {
+        util::die(&format!("native updater returned invalid JSON: {error}"))
+    });
+    let expected_state = if execute {
+        "complete"
+    } else {
+        "action-required"
+    };
+    if receipt.str_of("state") != expected_state
+        || receipt.str_of("targetReleaseCutRoot") != entry.release_cut_root
+        || !valid_root(receipt.str_of("cutTransitionRoot"))
+    {
+        util::die("native updater receipt does not bind the selected Release Cut");
+    }
+    NativeUpdateResult {
+        updater,
+        transition_root: receipt.str_of("cutTransitionRoot").to_string(),
+    }
+}
+
+fn run_native_rollback(entry: &BuildEntry, execute: bool) -> NativeUpdateResult {
+    let updater = native_updater(entry).unwrap_or_else(|| {
+        util::die(
+            "native Kungfu updater is unavailable; set KUNGFU_NATIVE_UPDATER to \
+             one exact shipped kungfu executable",
+        )
+    });
+    let current_cut = installed_value("KUNGFU_INSTALLED_RELEASE_CUT_ROOT");
+    let rollback_cut = installed_value("KUNGFU_ROLLBACK_RELEASE_CUT_ROOT");
+    if !valid_root(&current_cut) || !valid_root(&rollback_cut) {
+        util::die("installed Product has no exact native Cut rollback coordinate");
+    }
+    let mut command = Command::new(&updater);
+    command
+        .arg("update")
+        .arg("shifu-rollback")
+        .arg("--expected-current-release-cut-root")
+        .arg(&current_cut)
+        .arg("--expected-rollback-release-cut-root")
+        .arg(&rollback_cut)
+        .arg("--evidence-root")
+        .arg(&current_cut)
+        .arg("--json");
+    if execute {
+        command.arg("--yes");
+    }
+    let output = command
+        .output()
+        .unwrap_or_else(|error| util::die(&format!("failed to run native rollback: {error}")));
+    if !output.status.success() {
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        util::die(&format!(
+            "native updater rejected rollback (exit {:?}): {}",
+            output.status.code(),
+            stderr.trim()
+        ));
+    }
+    let receipt = json::parse(&String::from_utf8_lossy(&output.stdout)).unwrap_or_else(|error| {
+        util::die(&format!("native updater returned invalid JSON: {error}"))
+    });
+    let expected_state = if execute {
+        "complete"
+    } else {
+        "action-required"
+    };
+    if receipt.str_of("state") != expected_state
+        || receipt.str_of("targetReleaseCutRoot") != rollback_cut
+        || !valid_root(receipt.str_of("cutTransitionRoot"))
+    {
+        util::die("native updater rollback receipt does not bind the retained Release Cut");
+    }
+    NativeUpdateResult {
+        updater,
+        transition_root: receipt.str_of("cutTransitionRoot").to_string(),
     }
 }
 
@@ -549,6 +785,7 @@ pub fn run_promote(args: &[String]) -> ! {
     }
     let installed = installed_sha();
     let previous_build_id = installed_value("KUNGFU_INSTALLED_BUILD_ID");
+    let previous_release_cut_root = installed_value("KUNGFU_INSTALLED_RELEASE_CUT_ROOT");
     let rollback_build_id = installed_value("KUNGFU_ROLLBACK_BUILD_ID");
     let rollback_sha = installed_value("KUNGFU_ROLLBACK_SHA");
     if rollback && (build_arg.is_some() || allow_nonlinear || preview) {
@@ -592,7 +829,9 @@ pub fn run_promote(args: &[String]) -> ! {
              \"action\":\"{}\",\
              \"artifactId\":\"{}\",\"sourceCommit\":\"{}\",\"mainlineRef\":\"{}\",\
              \"mainlineCommit\":\"{}\",\"qualified\":{},\"integrated\":{},\
-             \"currentCommit\":\"{}\",\"wouldWrite\":false}}",
+             \"currentCommit\":\"{}\",\"currentReleaseCutRoot\":\"{}\",\
+             \"targetReleaseCutRoot\":\"{}\",\"platformSliceRoot\":\"{}\",\
+             \"wouldWrite\":false}}",
             action,
             json_escape(&entry.name),
             json_escape(&entry.sha),
@@ -601,6 +840,9 @@ pub fn run_promote(args: &[String]) -> ! {
             entry.qualified,
             entry.integrated,
             json_escape(&installed),
+            json_escape(&previous_release_cut_root),
+            json_escape(&entry.release_cut_root),
+            json_escape(&entry.platform_slice_root),
         );
         std::process::exit(0);
     }
@@ -620,6 +862,19 @@ pub fn run_promote(args: &[String]) -> ! {
             entry.branch
         ))
     );
+
+    // The dry run verifies the exact archive, local trust boundary, current
+    // native selection, and Cut Transition before either authority mutates.
+    if rollback {
+        let _ = run_native_rollback(entry, false);
+    } else {
+        let _ = run_native_apply(entry, false);
+    }
+    let native = if rollback {
+        run_native_rollback(entry, true)
+    } else {
+        run_native_apply(entry, true)
+    };
 
     let installed = match entry.kind.as_str() {
         "app" => promote_app(entry, force),
@@ -649,9 +904,14 @@ pub fn run_promote(args: &[String]) -> ! {
     write_installed_receipt(
         entry,
         &installed,
-        &previous_build_id,
-        &previous_sha,
-        installed_mode,
+        &InstalledReceiptContext {
+            rollback_build_id: &previous_build_id,
+            rollback_sha: &previous_sha,
+            rollback_release_cut_root: &previous_release_cut_root,
+            cut_transition_root: &native.transition_root,
+            native_updater: &native.updater,
+            mode: installed_mode,
+        },
     );
     if let Err(error) = write_promotion_receipt(
         &registry_dir(),
@@ -868,6 +1128,13 @@ mod tests {
             kind: "app".into(),
             artifact: "Kungfu Episodes.app".into(),
             digest: "digest".into(),
+            cli_archive: "kungfu-episodes-cli-darwin-arm64.tar.gz".into(),
+            cli_archive_digest: format!("sha256:{}", "a".repeat(64)),
+            upgrade_manifest: "kungfu-upgrade.json".into(),
+            upgrade_manifest_digest: format!("sha256:{}", "b".repeat(64)),
+            product_version: "4.0.0-alpha.0".into(),
+            release_cut_root: format!("sha256:{}", "c".repeat(64)),
+            platform_slice_root: format!("sha256:{}", "d".repeat(64)),
             mainline_ref: "origin/HEAD".into(),
             mainline_sha: "1111111111111111111111111111111111111111".into(),
             integrated: true,
@@ -894,6 +1161,8 @@ mod tests {
             r#"{"schema":"kungfu.system-profile-kfd3-manifest/v1","entries":[{"id":"work-control"}]}"#,
         )
         .unwrap();
+        fs::write(entry.slot.join(&entry.cli_archive), "cli archive").unwrap();
+        fs::write(entry.slot.join(&entry.upgrade_manifest), "{}").unwrap();
     }
 
     #[test]
@@ -978,6 +1247,40 @@ mod tests {
             "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
         )
         .is_none());
+        let _ = fs::remove_dir_all(root);
+    }
+
+    #[test]
+    fn native_apply_adapter_binds_exact_slot_evidence_and_explicit_bootstrap() {
+        let root = shifu_core::host::unique_temp_dir("native-apply-args").unwrap();
+        let entry = qualified_app(&root);
+        let bootstrap = native_apply_args(&entry, "", "", false);
+        let bootstrap: Vec<_> = bootstrap
+            .iter()
+            .map(|value| value.to_string_lossy().into_owned())
+            .collect();
+        assert_eq!(bootstrap[0..2], ["update", "shifu-apply"]);
+        assert!(bootstrap.contains(
+            &entry
+                .slot
+                .join(&entry.upgrade_manifest)
+                .display()
+                .to_string()
+        ));
+        assert!(bootstrap.contains(&entry.slot.join(&entry.cli_archive).display().to_string()));
+        assert!(bootstrap.contains(&entry.cli_archive_digest));
+        assert!(bootstrap.contains(&entry.upgrade_manifest_digest));
+        assert!(bootstrap.contains(&LEGACY_BOOTSTRAP_ROOT.to_string()));
+        assert!(!bootstrap.contains(&"--yes".to_string()));
+
+        let current_cut = format!("sha256:{}", "e".repeat(64));
+        let successor = native_apply_args(&entry, &current_cut, "4.0.0-alpha.0", true);
+        let successor: Vec<_> = successor
+            .iter()
+            .map(|value| value.to_string_lossy().into_owned())
+            .collect();
+        assert!(!successor.contains(&"--bootstrap-release-cut-root".to_string()));
+        assert!(successor.contains(&"--yes".to_string()));
         let _ = fs::remove_dir_all(root);
     }
 }

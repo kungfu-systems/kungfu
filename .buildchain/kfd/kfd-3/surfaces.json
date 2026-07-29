@@ -65,7 +65,7 @@
       "libnode": "22.22.3-kf.5-alpha.3",
       "buildchain": "3.0.0"
     },
-    "digest": "sha256:53de9af73a4f324b11f022eb745238c35daa56df3de03319f04ee76b99bd782d"
+    "digest": "sha256:e5c38eaca5a17d76beff878f2851e0fd5c92d30b028bfc7c6b990c42cf6d71a3"
   },
   "surfaces": [
     {
@@ -1809,6 +1809,36 @@
             "kind": "appimage",
             "platform": "linux",
             "pathGlob": "product/dist/desktop/*.AppImage"
+          },
+          {
+            "kind": "cli-archive",
+            "platform": "macos",
+            "pathGlob": "product/release/cli/kungfu-episodes-cli-darwin-*.tar.gz"
+          },
+          {
+            "kind": "cli-archive",
+            "platform": "windows",
+            "pathGlob": "product/release/cli/kungfu-episodes-cli-win32-*.zip"
+          },
+          {
+            "kind": "cli-archive",
+            "platform": "linux",
+            "pathGlob": "product/release/cli/kungfu-episodes-cli-linux-*.tar.gz"
+          },
+          {
+            "kind": "upgrade-manifest",
+            "platform": "macos",
+            "pathGlob": "product/release/cli/kungfu-upgrade-*-darwin-*.json"
+          },
+          {
+            "kind": "upgrade-manifest",
+            "platform": "windows",
+            "pathGlob": "product/release/cli/kungfu-upgrade-*-win32-*.json"
+          },
+          {
+            "kind": "upgrade-manifest",
+            "platform": "linux",
+            "pathGlob": "product/release/cli/kungfu-upgrade-*-linux-*.json"
           }
         ]
       }

@@ -100,6 +100,7 @@ def _discover_update_plan(ctx, channel, offline):
         architecture=architecture,
         install_source=source["source"],
         current_version=kungfu.__version__,
+        current_release_cut_root=source.get("selectedReleaseCutRoot"),
     )
     plan = distribution_update.plan_update(
         selection,
@@ -343,6 +344,115 @@ def bootstrap_verify(
         raise click.ClickException(str(error)) from error
 
     _json(receipt)
+
+
+@update.command(
+    name="shifu-apply",
+    hidden=True,
+    help="apply one exact Shifu-selected local Cut through the native updater",
+)
+@click.argument(
+    "manifest",
+    type=click.Path(exists=True, dir_okay=False, path_type=Path),
+)
+@click.argument(
+    "archive",
+    type=click.Path(exists=True, dir_okay=False, path_type=Path),
+)
+@click.option("--expected-digest", required=True)
+@click.option("--evidence-root", "evidence_roots", multiple=True, required=True)
+@click.option("--bootstrap-release-cut-root")
+@click.option("--bootstrap-version")
+@click.option("--yes", is_flag=True, help="execute the exact verified local plan")
+@click.option("--json", "as_json", is_flag=True, help="machine-readable output")
+@update_context
+def shifu_apply(
+    ctx,
+    manifest: Path,
+    archive: Path,
+    expected_digest: str,
+    evidence_roots: tuple[str, ...],
+    bootstrap_release_cut_root: str | None,
+    bootstrap_version: str | None,
+    yes: bool,
+    as_json: bool,
+):
+    """Keep Shifu selection separate from native install and activation authority."""
+
+    try:
+        manifest_value = json.loads(manifest.read_text("utf-8"))
+        if not isinstance(manifest_value, dict):
+            raise distribution_update.DistributionUpdateError(
+                "shifu-local-input-invalid",
+                "Shifu local manifest must be a JSON object",
+            )
+        receipt = distribution_update.apply_shifu_local_archive(
+            manifest_value,
+            archive,
+            config_home=ctx.config_home,
+            expected_digest=expected_digest,
+            evidence_roots=list(evidence_roots),
+            bootstrap_release_cut_root=bootstrap_release_cut_root,
+            bootstrap_version=bootstrap_version,
+            execute=yes,
+        )
+        if as_json:
+            _json(receipt)
+        else:
+            click.echo(f"state: {receipt['state']} ({receipt['reasonCode']})")
+            if receipt.get("frontendSelection"):
+                click.echo(
+                    "selected Release Cut: "
+                    f"{receipt['frontendSelection'].get('releaseCutRoot')}"
+                )
+    except (
+        OSError,
+        json.JSONDecodeError,
+        distribution_update.DistributionUpdateError,
+        runtime_upgrade.UpgradeError,
+    ) as error:
+        _update_failure(ctx, as_json, error)
+
+
+@update.command(
+    name="shifu-rollback",
+    hidden=True,
+    help="roll back one exact native CLI Cut without consulting the Shifu cache",
+)
+@click.option("--expected-current-release-cut-root", required=True)
+@click.option("--expected-rollback-release-cut-root", required=True)
+@click.option("--evidence-root", "evidence_roots", multiple=True, required=True)
+@click.option("--yes", is_flag=True, help="execute the exact verified rollback plan")
+@click.option("--json", "as_json", is_flag=True, help="machine-readable output")
+@update_context
+def shifu_rollback(
+    ctx,
+    expected_current_release_cut_root: str,
+    expected_rollback_release_cut_root: str,
+    evidence_roots: tuple[str, ...],
+    yes: bool,
+    as_json: bool,
+):
+    """Keep rollback activation in the native installed-image inventory."""
+
+    try:
+        receipt = distribution_update.rollback_shifu_local_cli(
+            config_home=ctx.config_home,
+            expected_current_release_cut_root=expected_current_release_cut_root,
+            expected_rollback_release_cut_root=expected_rollback_release_cut_root,
+            evidence_roots=list(evidence_roots),
+            execute=yes,
+        )
+        if as_json:
+            _json(receipt)
+        else:
+            click.echo(f"state: {receipt['state']} ({receipt['reasonCode']})")
+            click.echo(f"target Release Cut: {receipt.get('targetReleaseCutRoot')}")
+    except (
+        distribution_update.DistributionUpdateError,
+        runtime_upgrade.UpgradeError,
+    ) as error:
+        _update_failure(ctx, as_json, error)
 
 
 @update.command(name="check", help="check one signed release manifest")

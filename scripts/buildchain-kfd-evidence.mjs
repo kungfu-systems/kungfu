@@ -742,6 +742,36 @@ function sdkAndProductSurfaces() {
             platform: 'linux',
             pathGlob: 'product/dist/desktop/*.AppImage',
           },
+          {
+            kind: 'cli-archive',
+            platform: 'macos',
+            pathGlob: 'product/release/cli/kungfu-episodes-cli-darwin-*.tar.gz',
+          },
+          {
+            kind: 'cli-archive',
+            platform: 'windows',
+            pathGlob: 'product/release/cli/kungfu-episodes-cli-win32-*.zip',
+          },
+          {
+            kind: 'cli-archive',
+            platform: 'linux',
+            pathGlob: 'product/release/cli/kungfu-episodes-cli-linux-*.tar.gz',
+          },
+          {
+            kind: 'upgrade-manifest',
+            platform: 'macos',
+            pathGlob: 'product/release/cli/kungfu-upgrade-*-darwin-*.json',
+          },
+          {
+            kind: 'upgrade-manifest',
+            platform: 'windows',
+            pathGlob: 'product/release/cli/kungfu-upgrade-*-win32-*.json',
+          },
+          {
+            kind: 'upgrade-manifest',
+            platform: 'linux',
+            pathGlob: 'product/release/cli/kungfu-upgrade-*-linux-*.json',
+          },
         ],
       },
     }),

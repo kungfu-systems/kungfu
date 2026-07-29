@@ -13,6 +13,7 @@ from pathlib import Path
 from typing import Any
 
 from kungfu import contract as contract_runtime
+from kungfu import release_cut
 from kungfu.coordination import locks as coordination_locks
 
 
@@ -65,6 +66,22 @@ def _stable_id(prefix: str, value: Mapping[str, Any]) -> str:
 def manifest_digest(manifest: Mapping[str, Any]) -> str:
     _validate("releaseManifest", manifest)
     return f"sha256:{hashlib.sha256(_canonical(manifest)).hexdigest()}"
+
+
+def runtime_identity(manifest: Mapping[str, Any]) -> dict[str, Any]:
+    """Project only fields owned by one immutable runtime image."""
+
+    value = validate_manifest(manifest)
+    return {
+        "runtimeBuildId": value["runtimeBuildId"],
+        "runtimeArtifactDigest": value["runtimeArtifactDigest"],
+        "runtimeEntrypoint": value["runtimeEntrypoint"],
+        "controlProtocolRange": value["controlProtocolRange"],
+        "peerWireProtocolRange": value["peerWireProtocolRange"],
+        "journalSchemaReadRange": value["journalSchemaReadRange"],
+        "journalSchemaWriteVersion": value["journalSchemaWriteVersion"],
+        "minimumSupportedRuntime": value["minimumSupportedRuntime"],
+    }
 
 
 def tree_digest(root: str | Path) -> str:
@@ -138,6 +155,50 @@ def _read_json(path: Path) -> dict[str, Any]:
 def validate_manifest(manifest: Mapping[str, Any]) -> dict[str, Any]:
     value = copy.deepcopy(dict(manifest))
     _validate("releaseManifest", value)
+    cut_fields = {
+        "manifestIdentityRoot",
+        "releaseCut",
+        "releaseCutRoot",
+        "platformSliceRoot",
+    }
+    present_cut_fields = cut_fields.intersection(value)
+    if present_cut_fields and present_cut_fields != cut_fields:
+        raise UpgradeError(
+            "release-cut-binding-incomplete",
+            "release manifest must carry the complete Release Cut binding",
+        )
+    if present_cut_fields:
+        try:
+            cut = release_cut.validate_release_cut(value["releaseCut"])
+        except (TypeError, release_cut.ReleaseCutError) as error:
+            raise UpgradeError(
+                getattr(error, "code", "release-cut-invalid"),
+                f"release manifest Product Release Cut is invalid: {error}",
+            ) from error
+        identity_root = release_cut.manifest_identity_root(value)
+        if (
+            value["manifestIdentityRoot"] != identity_root
+            or value["releaseCutRoot"] != cut["releaseCutRoot"]
+        ):
+            raise UpgradeError(
+                "release-cut-binding-mismatch",
+                "release manifest identity and Release Cut roots disagree",
+            )
+        matching_slices = [
+            item
+            for item in cut["platformSlices"]
+            if item["platform"] == value["platform"]
+            and item["architecture"] == value["architecture"]
+        ]
+        if (
+            len(matching_slices) != 1
+            or matching_slices[0]["manifestIdentityRoot"] != identity_root
+            or matching_slices[0]["platformSliceRoot"] != value["platformSliceRoot"]
+        ):
+            raise UpgradeError(
+                "release-cut-platform-slice-mismatch",
+                "release manifest is not a member of the declared platform slice",
+            )
     for name in (
         "controlProtocolRange",
         "peerWireProtocolRange",
@@ -291,10 +352,11 @@ def install_image(
             existing = _read_json(record_path)
             _validate("runtimeImage", existing)
             if existing["manifestDigest"] != current["manifestDigest"]:
-                raise UpgradeError(
-                    "build-id-collision",
-                    "runtime build id already names different content",
-                )
+                if runtime_identity(existing["manifest"]) != runtime_identity(manifest):
+                    raise UpgradeError(
+                        "build-id-collision",
+                        "runtime build id already names different content",
+                    )
             return existing
         staging = (
             inventory_root(config_home)

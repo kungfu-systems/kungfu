@@ -239,6 +239,26 @@ export function buildChannelIndex({
     if (!['current', 'paused', 'rollback-only'].includes(entry.rollout)) {
       throw new Error(`release rollout is invalid: ${identity}`);
     }
+    const cutBinding = manifest.releaseCutRoot
+      ? {
+          releaseCutRoot: requireRoot(
+            manifest.releaseCutRoot,
+            'manifest.releaseCutRoot',
+          ),
+          platformSliceRoot: requireRoot(
+            manifest.platformSliceRoot,
+            'manifest.platformSliceRoot',
+          ),
+          ...(entry.cutTransitionPath
+            ? {
+                cutTransition: readJson(
+                  path.resolve(baseDirectory, entry.cutTransitionPath),
+                  'Cut Transition',
+                ),
+              }
+            : {}),
+        }
+      : {};
     return {
       channel: entry.channel,
       platform: manifest.platform,
@@ -248,6 +268,7 @@ export function buildChannelIndex({
       manifest,
       manifestRoot: contentRoot(manifest),
       artifactRoot: artifactRoot(manifest),
+      ...cutBinding,
       documentationUrl: entry.documentationUrl || manifest.documentationUrl,
     };
   });

@@ -98,6 +98,8 @@
         "sourceCommit",
         "manifestRoot",
         "artifactRoot",
+        "releaseCutRoot",
+        "platformSliceRoot",
         "artifactUrl",
         "artifactSize",
         "artifactDigest",
@@ -124,6 +126,12 @@
           "$ref": "#/$defs/root"
         },
         "artifactRoot": {
+          "$ref": "#/$defs/root"
+        },
+        "releaseCutRoot": {
+          "$ref": "#/$defs/root"
+        },
+        "platformSliceRoot": {
           "$ref": "#/$defs/root"
         },
         "artifactUrl": {

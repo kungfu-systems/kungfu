@@ -8,13 +8,13 @@
     "cwd": ".",
     "sourceSha": "4a7faaa5cf7799bc94166e7f94abfa39838c5eeb",
     "registryPath": ".buildchain/kfd/kfd-3/surfaces.json",
-    "registryDigest": "sha256:2473a464af91e95359fe1fe02ead250af3b64d26e079fe93ada8f3b6c37af7d0"
+    "registryDigest": "sha256:8aacad03a626344de6adbb88e2e0b24bbe45ef775b5049875a008432b763fbbd"
   },
   "sourceRegistry": {
     "id": "kungfu",
     "path": ".buildchain/kfd/kfd-3/surfaces.json",
-    "sha256": "ecff533eb6b5a752968e22f0a627404a5157170afdc136dce3ad05f4339aa161",
-    "digest": "sha256:2473a464af91e95359fe1fe02ead250af3b64d26e079fe93ada8f3b6c37af7d0"
+    "sha256": "03a8c0c83bbbde916a0ddf80ffb8a86e460e27002204fb65a0ad9c2397ca7a6a",
+    "digest": "sha256:8aacad03a626344de6adbb88e2e0b24bbe45ef775b5049875a008432b763fbbd"
   },
   "upstreamKfd": {
     "aggregatePath": "developer/sdk/kfd/upstream-aggregate.json",
@@ -29,12 +29,12 @@
       "libnode": "22.22.3-kf.5-alpha.3",
       "buildchain": "3.0.0"
     },
-    "digest": "sha256:53de9af73a4f324b11f022eb745238c35daa56df3de03319f04ee76b99bd782d"
+    "digest": "sha256:e5c38eaca5a17d76beff878f2851e0fd5c92d30b028bfc7c6b990c42cf6d71a3"
   },
   "expectedArtifactVerification": {
     "command": "node scripts/buildchain-kfd-evidence.mjs --artifact-witness --json"
   },
-  "collaborationInterfaceDigest": "sha256:2650ba9627ecaba78f80042d54d5a9428aa2ca34f9f9a51a8c336fbc9ef4f577",
+  "collaborationInterfaceDigest": "sha256:7161fe7192db0a57567eb7456ee91fb78ef4069d40c2e980a55caa3005c06c47",
   "collaborationInterface": {
     "schemaVersion": 1,
     "contract": "kungfu-buildchain-kfd-3-surface-registry",
@@ -57,7 +57,7 @@
         "libnode": "22.22.3-kf.5-alpha.3",
         "buildchain": "3.0.0"
       },
-      "digest": "sha256:53de9af73a4f324b11f022eb745238c35daa56df3de03319f04ee76b99bd782d"
+      "digest": "sha256:e5c38eaca5a17d76beff878f2851e0fd5c92d30b028bfc7c6b990c42cf6d71a3"
     },
     "surfaces": [
       {
@@ -1801,6 +1801,36 @@
               "kind": "appimage",
               "platform": "linux",
               "pathGlob": "product/dist/desktop/*.AppImage"
+            },
+            {
+              "kind": "cli-archive",
+              "platform": "macos",
+              "pathGlob": "product/release/cli/kungfu-episodes-cli-darwin-*.tar.gz"
+            },
+            {
+              "kind": "cli-archive",
+              "platform": "windows",
+              "pathGlob": "product/release/cli/kungfu-episodes-cli-win32-*.zip"
+            },
+            {
+              "kind": "cli-archive",
+              "platform": "linux",
+              "pathGlob": "product/release/cli/kungfu-episodes-cli-linux-*.tar.gz"
+            },
+            {
+              "kind": "upgrade-manifest",
+              "platform": "macos",
+              "pathGlob": "product/release/cli/kungfu-upgrade-*-darwin-*.json"
+            },
+            {
+              "kind": "upgrade-manifest",
+              "platform": "windows",
+              "pathGlob": "product/release/cli/kungfu-upgrade-*-win32-*.json"
+            },
+            {
+              "kind": "upgrade-manifest",
+              "platform": "linux",
+              "pathGlob": "product/release/cli/kungfu-upgrade-*-linux-*.json"
             }
           ]
         }
@@ -5062,6 +5092,36 @@
             "kind": "appimage",
             "platform": "linux",
             "pathGlob": "product/dist/desktop/*.AppImage"
+          },
+          {
+            "kind": "cli-archive",
+            "platform": "macos",
+            "pathGlob": "product/release/cli/kungfu-episodes-cli-darwin-*.tar.gz"
+          },
+          {
+            "kind": "cli-archive",
+            "platform": "windows",
+            "pathGlob": "product/release/cli/kungfu-episodes-cli-win32-*.zip"
+          },
+          {
+            "kind": "cli-archive",
+            "platform": "linux",
+            "pathGlob": "product/release/cli/kungfu-episodes-cli-linux-*.tar.gz"
+          },
+          {
+            "kind": "upgrade-manifest",
+            "platform": "macos",
+            "pathGlob": "product/release/cli/kungfu-upgrade-*-darwin-*.json"
+          },
+          {
+            "kind": "upgrade-manifest",
+            "platform": "windows",
+            "pathGlob": "product/release/cli/kungfu-upgrade-*-win32-*.json"
+          },
+          {
+            "kind": "upgrade-manifest",
+            "platform": "linux",
+            "pathGlob": "product/release/cli/kungfu-upgrade-*-linux-*.json"
           }
         ]
       }

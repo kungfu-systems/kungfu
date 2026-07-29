@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import assert from 'node:assert/strict';
+import { spawnSync } from 'node:child_process';
 import { generateKeyPairSync, sign } from 'node:crypto';
 import fs from 'node:fs';
 import os from 'node:os';
@@ -172,6 +173,53 @@ test('bundled manifest binds exact runtime bytes and source product identity', (
       revision: '1'.repeat(40),
     });
     assert.notEqual(changed.runtimeBuildId, manifest.runtimeBuildId);
+  } finally {
+    fs.rmSync(f.root, { recursive: true, force: true });
+  }
+});
+
+test('Product Release Cut roots verify identically in Node and Python', () => {
+  const f = fixture();
+  try {
+    const manifest = buildBundledUpgradeManifest({
+      ...f,
+      platform: 'linux',
+      architecture: 'x64',
+      revision: '1'.repeat(40),
+    });
+    const modulePath = path.join(
+      repoRoot,
+      'framework/core/src/python/kungfu/release_cut.py',
+    );
+    const script = `
+import importlib.util, json, sys
+spec = importlib.util.spec_from_file_location("release_cut_cross_language", sys.argv[1])
+module = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(module)
+manifest = json.load(sys.stdin)
+cut = module.validate_release_cut(manifest["releaseCut"])
+print(json.dumps({
+  "manifestIdentityRoot": module.manifest_identity_root(manifest),
+  "releaseCutRoot": cut["releaseCutRoot"],
+  "platformSliceRoot": cut["platformSlices"][0]["platformSliceRoot"],
+}, sort_keys=True))
+`;
+    const python = spawnSync(
+      process.env.PYTHON ||
+        (process.platform === 'win32' ? 'python' : 'python3'),
+      ['-c', script, modulePath],
+      {
+        cwd: repoRoot,
+        input: JSON.stringify(manifest),
+        encoding: 'utf8',
+      },
+    );
+    assert.equal(python.status, 0, python.stderr);
+    assert.deepEqual(JSON.parse(python.stdout), {
+      manifestIdentityRoot: manifest.manifestIdentityRoot,
+      platformSliceRoot: manifest.platformSliceRoot,
+      releaseCutRoot: manifest.releaseCutRoot,
+    });
   } finally {
     fs.rmSync(f.root, { recursive: true, force: true });
   }

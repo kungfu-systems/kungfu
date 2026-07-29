@@ -1,0 +1,71 @@
+{
+  "schema": "kungfu.product-release-cut.contract/v1",
+  "id": "kungfu-product-release-cut",
+  "version": 1,
+  "weldedSurface": "product-release-cut",
+  "description": "Exact product identity and authorized movement above the domain-neutral Cut kernel.",
+  "authority": {
+    "semanticLabel": "SemVer remains display, interoperability, compatibility-promise, and downgrade-policy metadata.",
+    "exactIdentity": "releaseCutRoot identifies one exact qualified product world.",
+    "movement": "cutTransitionRoot authorizes movement between exact Release Cuts.",
+    "selection": "Shifu selects one exact local build; the native updater verifies, installs, activates, and rolls back it."
+  },
+  "canonicalization": {
+    "encoding": "canonical-ascii-json-sorted-keys-v1",
+    "hash": "sha256",
+    "manifestIdentityRoot": "Hash the semantic upgrade manifest after removing artifact and qualification evidence plus manifestIdentityRoot, releaseCut, releaseCutRoot, platformSliceRoot, and cutTransition. Artifact and qualification roots remain independently bound by the platform slice and Release Cut. This breaks the otherwise unavoidable archive-to-final-manifest and Cut-to-manifest hash cycles.",
+    "platformSliceRoot": "Hash one platform slice after removing platformSliceRoot.",
+    "releaseCutRoot": "Hash one Product Release Cut after removing releaseCutRoot.",
+    "cutTransitionRoot": "Hash one Cut Transition after removing cutTransitionRoot."
+  },
+  "relations": [
+    "identical",
+    "verified-successor",
+    "ancestor",
+    "recovery",
+    "diverged",
+    "unknown"
+  ],
+  "trustDomains": {
+    "public": {
+      "publicationEligible": true,
+      "transport": "https",
+      "requiresSigningEvidence": true,
+      "equalSemVerReplacement": "signed-supersession-only"
+    },
+    "shifu-local": {
+      "publicationEligible": false,
+      "transport": "exact-local-file",
+      "requiresShifuProvenance": true,
+      "equalSemVerReplacement": "verified-local-successor-only"
+    }
+  },
+  "invariants": [
+    "Unequal roots are never ordered by hash text, timestamps, directory order, SemVer, or network recency.",
+    "An identical Release Cut is already current.",
+    "An equal-SemVer verified successor may be update-available.",
+    "An equal-SemVer different public Cut without signed supersession is cut-conflict.",
+    "Diverged and unknown relations fail closed without a write.",
+    "Local dogfood evidence is publication-ineligible and cannot satisfy public channel admission.",
+    "A final manifest and channel entry cross-check releaseCutRoot, platformSliceRoot, manifestIdentityRoot, full manifest root, and artifact root.",
+    "Installed images and activation or rollback receipts retain exact Release Cut and transition roots independently of the Shifu source cache."
+  ],
+  "bootstrapBoundary": {
+    "required": [
+      "release Cut",
+      "platform slice",
+      "Cut Transition",
+      "upgrade manifest",
+      "artifact digest",
+      "qualification and signing evidence"
+    ],
+    "forbiddenDependencies": [
+      "source checkout",
+      "Git command",
+      "Xinfa compiler",
+      "Atlas repository",
+      "mutable Shifu cache",
+      "network after download"
+    ]
+  }
+}

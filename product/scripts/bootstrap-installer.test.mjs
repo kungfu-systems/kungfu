@@ -15,6 +15,7 @@ import {
   buildBootstrapInstallerPublication,
 } from './bootstrap-installer.mjs';
 import { buildChannelIndex } from './release-channel-index.mjs';
+import { bindProductReleaseCut } from './upgrade-manifest.mjs';
 
 function fixture() {
   const root = fs.mkdtempSync(
@@ -33,47 +34,45 @@ function fixture() {
     ['win32', 'x64', 'zip'],
   ].map(([platform, architecture, extension]) => {
     const manifestPath = path.join(root, `${platform}-${architecture}.json`);
-    fs.writeFileSync(
-      manifestPath,
-      `${JSON.stringify({
-        schema: 'kungfu.product-upgrade.manifest/v1',
-        productVersion: '4.0.0-alpha.1',
-        releaseChannel: 'alpha',
-        sourceCommit,
-        runtimeBuildId: `runtime-${platform}-${architecture}`,
-        runtimeArtifactDigest: `sha256:${'1'.repeat(64)}`,
-        runtimeEntrypoint: platform === 'win32' ? 'kungfu.exe' : 'kungfu',
-        frontendBuildId: 'product-fixture',
-        controlProtocolRange: { min: 1, max: 1 },
-        peerWireProtocolRange: { min: 1, max: 1 },
-        journalSchemaReadRange: { min: 1, max: 1 },
-        journalSchemaWriteVersion: 1,
-        migrationClass: 'none',
-        rollbackClass: 'automatic',
-        minimumSupportedFrontend: '4.0.0-alpha.0',
-        minimumSupportedRuntime: '4.0.0-alpha.0',
-        platform,
-        architecture,
-        artifacts: [
-          {
-            kind: 'runtime',
-            url: 'app-resource://kungfu',
-            size: 1,
-            digest: `sha256:${'1'.repeat(64)}`,
-            signature: 'fixture-runtime-signature',
-          },
-          {
-            kind: 'cli',
-            url: `https://github.com/kungfu-systems/kungfu/releases/download/v4.0.0-alpha.1/kungfu-cli-${platform}-${architecture}.${extension}`,
-            size: 4096,
-            digest: `sha256:${'2'.repeat(64)}`,
-            signature: `fixture-${platform}-signature`,
-          },
-        ],
-        qualificationEvidenceRef: 'buildchain:fixture/qualified',
-        documentationUrl: 'https://kungfu.tech/install/',
-      })}\n`,
-    );
+    const manifest = bindProductReleaseCut({
+      schema: 'kungfu.product-upgrade.manifest/v1',
+      productVersion: '4.0.0-alpha.1',
+      releaseChannel: 'alpha',
+      sourceCommit,
+      runtimeBuildId: `runtime-${platform}-${architecture}`,
+      runtimeArtifactDigest: `sha256:${'1'.repeat(64)}`,
+      runtimeEntrypoint: platform === 'win32' ? 'kungfu.exe' : 'kungfu',
+      frontendBuildId: 'product-fixture',
+      controlProtocolRange: { min: 1, max: 1 },
+      peerWireProtocolRange: { min: 1, max: 1 },
+      journalSchemaReadRange: { min: 1, max: 1 },
+      journalSchemaWriteVersion: 1,
+      migrationClass: 'none',
+      rollbackClass: 'automatic',
+      minimumSupportedFrontend: '4.0.0-alpha.0',
+      minimumSupportedRuntime: '4.0.0-alpha.0',
+      platform,
+      architecture,
+      artifacts: [
+        {
+          kind: 'runtime',
+          url: 'app-resource://kungfu',
+          size: 1,
+          digest: `sha256:${'1'.repeat(64)}`,
+          signature: 'fixture-runtime-signature',
+        },
+        {
+          kind: 'cli',
+          url: `https://github.com/kungfu-systems/kungfu/releases/download/v4.0.0-alpha.1/kungfu-cli-${platform}-${architecture}.${extension}`,
+          size: 4096,
+          digest: `sha256:${'2'.repeat(64)}`,
+          signature: `fixture-${platform}-signature`,
+        },
+      ],
+      qualificationEvidenceRef: 'buildchain:fixture/qualified',
+      documentationUrl: 'https://kungfu.tech/install/',
+    });
+    fs.writeFileSync(manifestPath, `${JSON.stringify(manifest)}\n`);
     return {
       channel: 'alpha',
       installSource: 'archive',
@@ -121,6 +120,10 @@ test('bootstrap publication is deterministic and pins signed release identity', 
       first.entries.map((entry) => `${entry.platform}/${entry.architecture}`),
       ['darwin/arm64', 'linux/x64', 'win32/x64'],
     );
+    for (const entry of first.entries) {
+      assert.match(entry.releaseCutRoot, /^sha256:[a-f0-9]{64}$/);
+      assert.match(entry.platformSliceRoot, /^sha256:[a-f0-9]{64}$/);
+    }
     assert.deepEqual(
       first.assets.map(({ bytes: _bytes, ...asset }) => asset),
       second.assets.map(({ bytes: _bytes, ...asset }) => asset),
@@ -167,6 +170,8 @@ test('bootstrap publication is deterministic and pins signed release identity', 
       ),
     );
     assert.match(shell.bytes.toString(), /update bootstrap-verify/);
+    assert.match(shell.bytes.toString(), /release_cut_root='sha256:/);
+    assert.match(shell.bytes.toString(), /platform_slice_root='sha256:/);
     assert.match(shell.bytes.toString(), /channel-byte-mismatch/);
     assert.match(shell.bytes.toString(), /ownership-conflict/);
     assert.match(shell.bytes.toString(), /--dry-run/);
@@ -194,6 +199,8 @@ test('bootstrap publication is deterministic and pins signed release identity', 
     );
     assert.match(powershell.bytes.toString(), /signed-channel-digest/);
     assert.match(powershell.bytes.toString(), /update bootstrap-verify/);
+    assert.match(powershell.bytes.toString(), /\$ReleaseCutRoot = 'sha256:/);
+    assert.match(powershell.bytes.toString(), /\$PlatformSliceRoot = 'sha256:/);
     assert.match(powershell.bytes.toString(), /PATH, profiles, registry/);
     assert.match(powershell.bytes.toString(), /RequestedVersion/);
   } finally {

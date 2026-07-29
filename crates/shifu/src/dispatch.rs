@@ -60,6 +60,7 @@ pub fn run_pnpm(root: &Path, args: &[String]) -> ! {
     let Some(plan) = plan else {
         util::exec_or_exit(cmd)
     };
+    registrar::configure_child_release_cut(&mut cmd);
     match cmd.status() {
         Ok(status) => {
             if status.success() {
