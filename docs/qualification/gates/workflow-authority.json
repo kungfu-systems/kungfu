@@ -1334,9 +1334,9 @@
           "authority": "qualification",
           "publication": "none",
           "receipt": "diagnostic",
-          "definitionDigest": "sha256:f16df1b6553f9c57d192b3bd73cb7cec254408f088d0ad502dedd881cfc4ea73",
+          "definitionDigest": "sha256:1979ee6fe060c2d74dbbb2c1358997a1b1d7a07cd1d074a10a2688ec1bd9b73e",
           "credentials": {"githubToken":"write","oidc":false,"repositorySecrets":["KUNGFU_GITHUB_TOKEN"],"inheritedSecrets":false,"environment":null},
-          "externalActions": ["kungfu-systems/buildchain/.github/workflows/dev-alpha-candidate-patrol.yml@4449bf319a4507009212b9302156d42117b9b703"],
+          "externalActions": ["kungfu-systems/buildchain/.github/workflows/dev-alpha-candidate-patrol.yml@009c00d7c0145b5991f56aa97a98d5d1bbcc350f"],
           "steps": []
         },
         {

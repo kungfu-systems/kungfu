@@ -24,7 +24,7 @@ test('candidate patrol is a thin Buildchain caller with exact channel and eviden
     /uses: kungfu-systems\/buildchain\/.github\/workflows\/dev-alpha-candidate-patrol\.yml@([0-9a-f]{40})/u,
   )?.[1];
   assert.match(reusableRef || '', /^[0-9a-f]{40}$/u);
-  assert.equal(reusableRef, '4449bf319a4507009212b9302156d42117b9b703');
+  assert.equal(reusableRef, '009c00d7c0145b5991f56aa97a98d5d1bbcc350f');
   assert.match(
     source,
     new RegExp(
@@ -64,10 +64,12 @@ test('candidate patrol is a thin Buildchain caller with exact channel and eviden
     source,
     /head_branch == needs\.resolve-channels\.outputs\.source-branch/u,
   );
-  assert.match(source, /pull-request-body-prefix: \|/u);
-  assert.match(source, /kungfu-adr-release:v1/u);
-  assert.match(source, /"kind": "alpha-settlement"/u);
-  assert.match(source, /"no_adr_progress_reason":/u);
+  assert.match(
+    source,
+    /pull-request-body-prefix-renderer: scripts\/adr-release-gate\.mjs/u,
+  );
+  assert.doesNotMatch(source, /pull-request-body-prefix: \|/u);
+  assert.doesNotMatch(source, /"no_adr_progress_reason":/u);
   assert.doesNotMatch(source, /cron: "0 22 \* \* \*"/u);
   assert.match(
     source,

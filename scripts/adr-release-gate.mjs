@@ -248,6 +248,106 @@ export function changedFilesBetween(ref, head, root) {
     .filter(Boolean);
 }
 
+/** @param {string} root @param {string[]} args */
+function gitOutput(root, args) {
+  const result = childProcess.spawnSync('git', args, {
+    cwd: root,
+    env: isolatedGitEnvironment(),
+    encoding: 'utf8',
+  });
+  if (result.status !== 0) {
+    throw new Error(
+      `git ${args.join(' ')} failed: ${String(result.stderr || '').trim()}`,
+    );
+  }
+  return String(result.stdout || '').trim();
+}
+
+/**
+ * @param {Map<string, {id: string, file: string, decisionStatus: string, implementationStatus: string}>} adrs
+ * @param {string[]} changedFiles
+ */
+export function buildAlphaSettlementManifest(adrs, changedFiles) {
+  const changed = new Set(changedFiles);
+  const progress = [...adrs.values()]
+    .filter((adr) => adr.decisionStatus === 'accepted' && changed.has(adr.file))
+    .sort((left, right) => left.id.localeCompare(right.id))
+    .map((adr) => ({
+      adr: adr.id,
+      to: adr.implementationStatus,
+      summary: `Exact candidate projects ${adr.implementationStatus}`,
+    }));
+  return {
+    schema: 'kungfu.adr-release-pr/v1',
+    kind: 'alpha-settlement',
+    ...(progress.length > 0
+      ? { progress }
+      : {
+          no_adr_progress_reason:
+            'The exact qualified development delta contains no accepted ADR record changes',
+        }),
+  };
+}
+
+/** @param {object} manifest */
+export function formatAlphaSettlementPrefix(manifest) {
+  return `<!-- kungfu-adr-release:v1\n${JSON.stringify(manifest, null, 2)}\n-->`;
+}
+
+export function renderAlphaSettlement(options = {}) {
+  const root = path.resolve(String(options.root || ROOT));
+  const selectedSha = String(
+    options.selectedSha ||
+      process.env.BUILDCHAIN_CHANNEL_PATROL_SELECTED_SHA ||
+      '',
+  ).trim();
+  const targetBranch = String(
+    options.targetBranch ||
+      process.env.BUILDCHAIN_CHANNEL_PATROL_TARGET_BRANCH ||
+      '',
+  ).trim();
+  const outputValue = String(
+    options.outputPath ||
+      process.env.BUILDCHAIN_CHANNEL_PATROL_PR_BODY_PREFIX_OUTPUT ||
+      '',
+  ).trim();
+  if (!outputValue) throw new Error('renderer output path is required');
+  if (!/^[0-9a-f]{40}$/u.test(selectedSha))
+    throw new Error('selected SHA must be an exact 40-character commit SHA');
+  if (!/^alpha\/v[0-9]+\/v[0-9]+\.[0-9]+$/u.test(targetBranch))
+    throw new Error('target branch must be an exact alpha/vN/vN.N channel');
+  if (gitOutput(root, ['rev-parse', 'HEAD']) !== selectedSha)
+    throw new Error('renderer checkout HEAD does not match the selected SHA');
+  const targetRef = `refs/remotes/origin/${targetBranch}`;
+  gitOutput(root, ['rev-parse', '--verify', `${targetRef}^{commit}`]);
+
+  const contract = readJson(path.join(root, DEFAULT_CONTRACT));
+  const adrs = loadAdrs(root, contract);
+  const changedFiles = changedFilesBetween(targetRef, selectedSha, root);
+  const manifest = buildAlphaSettlementManifest(adrs, changedFiles);
+  const validation = evaluateReleaseGate({
+    root,
+    contract,
+    adrs,
+    authorityFindings: [],
+    mode: 'alpha',
+    manifest,
+    changedFiles,
+  });
+  if (!validation.ok) {
+    throw new Error(
+      `generated alpha settlement is invalid: ${validation.findings
+        .map((finding) => `${finding.code}: ${finding.message}`)
+        .join('; ')}`,
+    );
+  }
+  const prefix = formatAlphaSettlementPrefix(manifest);
+  const outputPath = path.resolve(outputValue);
+  fs.mkdirSync(path.dirname(outputPath), { recursive: true });
+  fs.writeFileSync(outputPath, `${prefix}\n`);
+  return { prefix, manifest, changedFiles, targetRef };
+}
+
 /** @param {any} options */
 export function validateStaticContract(options) {
   const root = path.resolve(options.root || ROOT);
@@ -680,6 +780,10 @@ if (
   path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)
 ) {
   try {
+    if (process.env.BUILDCHAIN_CHANNEL_PATROL_PR_BODY_PREFIX_OUTPUT) {
+      renderAlphaSettlement();
+      process.exit(0);
+    }
     const args = parseArgs(process.argv.slice(2));
     if (args.contractOnly) {
       const result = validateStaticContract({
