@@ -29,14 +29,19 @@ type RuntimeCommandRunner = (
  */
 export function stopRuntimeForRecovery(options: {
   kungfuBinary: string;
+  argsPrefix?: string[];
   env: NodeJS.ProcessEnv;
   run?: RuntimeCommandRunner;
 }): void {
   const run = options.run ?? execFileSync;
-  run(options.kungfuBinary, ['runtime', 'stop'], {
-    env: options.env,
-    timeout: 15_000,
-  });
+  run(
+    options.kungfuBinary,
+    [...(options.argsPrefix ?? []), 'runtime', 'stop'],
+    {
+      env: options.env,
+      timeout: 15_000,
+    },
+  );
 }
 
 function timestampSegment(now: Date): string {

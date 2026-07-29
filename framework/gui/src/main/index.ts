@@ -1,6 +1,13 @@
 import { execFile, execFileSync, spawn } from 'node:child_process';
 import nodeCrypto from 'node:crypto';
-import { existsSync, mkdirSync, readFileSync, readdirSync } from 'node:fs';
+import {
+  existsSync,
+  mkdirSync,
+  readFileSync,
+  readdirSync,
+  realpathSync,
+  statSync,
+} from 'node:fs';
 import path from 'node:path';
 import { type KfxPlanDeps, planKfx } from '@kungfu-tech/kfx';
 import {
@@ -46,6 +53,7 @@ import {
   WORKSPACE_GET_CHANNEL,
   WORKSPACE_OPEN_CHANNEL,
   WORKSPACE_SELECT_HOME_CHANNEL,
+  WORKSPACE_SELECT_PATH_CHANNEL,
   WORKSPACE_SELECT_RECENT_CHANNEL,
   WORKSPACE_START_CONTINUATION_CHANNEL,
   WORK_LOOP_CLI_EXEC_CHANNEL,
@@ -68,6 +76,7 @@ import {
   installKungfuCliToPath,
   uninstallKungfuCliFromPath,
 } from './installCli';
+import { resolveGuiKungfuCliInvocation } from './kungfu-cli-invocation';
 import {
   PRODUCT_NAME,
   productAboutPanelOptions,
@@ -90,8 +99,12 @@ import {
 } from './terminal-host';
 import { executeWorkLoopCli } from './work-loop-cli';
 import {
+  DESKTOP_WORKSPACE_ENV_KEYS,
+  applyDesktopWorkspaceEnvironment,
   clearDesktopWorkspaceEnvForRelaunch,
   defaultHomeDesktopWorkspace,
+  desktopWorkspaceEnvironment,
+  desktopWorkspaceTransitionMode,
   inspectDesktopContinuation,
   listRecentDesktopWorkspaces,
   resolveLastDesktopWorkspace,
@@ -173,15 +186,7 @@ if (desktopWorkspaceIsRegistryManaged) {
   const selected =
     resolveLastDesktopWorkspace(configHome) ??
     defaultHomeDesktopWorkspace(app.getPath('home'));
-  process.env.KF_WORKSPACE_ID = selected.workspaceId;
-  process.env.KF_WORKSPACE_KIND = selected.workspaceKind;
-  process.env.KF_WORKSPACE_ROOT = selected.workspaceRoot || '';
-  process.env.KF_WORKSPACE_DISPLAY_PATH = selected.displayPath;
-  process.env.KF_WORKSPACE_RESOLUTION_REASON = selected.resolutionReason;
-  process.env.KF_WORKSPACE_STATE = selected.state;
-  process.env.KF_WORKSPACE_DIAGNOSIS = selected.diagnosis || '';
-  process.env.KF_HOME = selected.dataHome;
-  process.env.KF_RUNTIME_DIR = selected.runtimeDir;
+  applyDesktopWorkspaceEnvironment(process.env, selected);
 }
 
 if (
@@ -206,9 +211,12 @@ configureProductCacheEnvironment(process.env, {
   homeDir: app.getPath('home'),
 });
 
-const workspaceRuntimeReady =
-  process.env.KF_WORKSPACE_STATE === 'ready' ||
-  process.env.KF_WORKSPACE_STATE === 'live-runtime';
+function workspaceRuntimeIsReady(): boolean {
+  return (
+    process.env.KF_WORKSPACE_STATE === 'ready' ||
+    process.env.KF_WORKSPACE_STATE === 'live-runtime'
+  );
+}
 
 // KF-ADR-019f86da-4f90-7153-a6c1-ab7a0a3cf481 parity is now the product path: the main-process host survives view
 // changes and owns every tab/window, while callers may still explicitly opt
@@ -307,7 +315,7 @@ if (!process.env.KF_PROFILE_KFD3_MANIFEST && app.isPackaged) {
 if (
   !process.env.KF_SKILL_CONTEXT_FILE &&
   process.env.KF_RUNTIME_DIR &&
-  workspaceRuntimeReady
+  workspaceRuntimeIsReady()
 ) {
   try {
     process.env.KF_SKILL_CONTEXT_FILE = writeGuiSkillContextFile({
@@ -324,7 +332,7 @@ if (
 if (
   !process.env.KF_SKILL_MANAGER_FILE &&
   process.env.KF_RUNTIME_DIR &&
-  workspaceRuntimeReady
+  workspaceRuntimeIsReady()
 ) {
   try {
     process.env.KF_SKILL_MANAGER_FILE = writeGuiSkillManagerViewFile({
@@ -382,22 +390,37 @@ let desktopUpdateProvider: ProductionDesktopUpdateProvider | null = null;
 // closes during shutdown do not overwrite the persisted layout restore needs.
 let appQuitting = false;
 
+const kungfuCliInvocation = resolveGuiKungfuCliInvocation({
+  env: process.env,
+  runtimeDir: path.dirname(process.env.KFE_PATH || bindingPath),
+  platform: process.platform,
+});
+Object.assign(process.env, kungfuCliInvocation.env);
+process.env.KUNGFU_CLI_BIN = kungfuCliInvocation.bin;
+process.env.KUNGFU_CLI_ARGS_PREFIX = JSON.stringify(
+  kungfuCliInvocation.argsPrefix,
+);
+
 function kungfuBinPath(): string {
-  const binName = process.platform === 'win32' ? 'kungfu.exe' : 'kungfu';
-  return path.join(path.dirname(process.env.KFE_PATH || bindingPath), binName);
+  return kungfuCliInvocation.bin;
+}
+
+function kungfuCliArgs(args: string[]): string[] {
+  return [...kungfuCliInvocation.argsPrefix, ...args];
 }
 
 // Finder-launched apps do not inherit an interactive shell PATH. Make the
 // packaged CLI discoverable to agents launched by the Console while retaining
 // the exact absolute path for adapters that do not perform PATH lookup.
-process.env.KUNGFU_CLI_BIN = process.env.KUNGFU_CLI_BIN || kungfuBinPath();
-const kungfuBinDir = path.dirname(process.env.KUNGFU_CLI_BIN);
+const kungfuBinDir = path.isAbsolute(process.env.KUNGFU_CLI_BIN)
+  ? path.dirname(process.env.KUNGFU_CLI_BIN)
+  : '';
 process.env.PATH = [kungfuBinDir, process.env.PATH || '']
   .filter(Boolean)
   .join(path.delimiter);
 
 function readRuntimeStatus(): RuntimeStatusResult {
-  if (!workspaceRuntimeReady) {
+  if (!workspaceRuntimeIsReady()) {
     return {
       ok: false,
       payload: null,
@@ -406,15 +429,19 @@ function readRuntimeStatus(): RuntimeStatusResult {
     };
   }
   try {
-    const out = execFileSync(kungfuBinPath(), ['runtime', 'status', '--json'], {
-      env: process.env,
-      timeout: 10000,
-    });
+    const out = execFileSync(
+      kungfuBinPath(),
+      kungfuCliArgs(['runtime', 'status', '--json']),
+      {
+        env: process.env,
+        timeout: 10000,
+      },
+    );
     const payload = JSON.parse(out.toString()) as RuntimeStatusPayload;
     try {
       const assessmentOut = execFileSync(
         kungfuBinPath(),
-        ['runtime', 'assessments', '--json'],
+        kungfuCliArgs(['runtime', 'assessments', '--json']),
         { env: process.env, timeout: 10000 },
       );
       payload.assessments = JSON.parse(assessmentOut.toString());
@@ -573,7 +600,7 @@ async function showCommandResult(
   successMessage: string,
 ) {
   try {
-    const out = execFileSync(kungfuBinPath(), args, {
+    const out = execFileSync(kungfuBinPath(), kungfuCliArgs(args), {
       env: process.env,
       timeout: 10000,
     });
@@ -707,6 +734,7 @@ ipcMain.handle(AGENT_RUNTIME_CLI_EXEC_CHANNEL, (_event, payload) =>
     bin: kungfuBinPath(),
     env: process.env,
     execFile,
+    argsPrefix: kungfuCliInvocation.argsPrefix,
   }),
 );
 ipcMain.handle(PROFILE_CLI_EXEC_CHANNEL, (_event, payload) =>
@@ -714,6 +742,7 @@ ipcMain.handle(PROFILE_CLI_EXEC_CHANNEL, (_event, payload) =>
     bin: kungfuBinPath(),
     env: process.env,
     execFile,
+    argsPrefix: kungfuCliInvocation.argsPrefix,
   }),
 );
 const globalWorkObserverBinding = bindElectronGlobalWorkObserver(
@@ -721,6 +750,7 @@ const globalWorkObserverBinding = bindElectronGlobalWorkObserver(
   createGlobalWorkObserverHost({
     bin: kungfuBinPath(),
     env: process.env,
+    argsPrefix: kungfuCliInvocation.argsPrefix,
     statePath: path.join(
       defaultConfigHome(),
       'gui',
@@ -737,6 +767,7 @@ ipcMain.handle(WORK_LOOP_CLI_EXEC_CHANNEL, (_event, payload) =>
     bin: kungfuBinPath(),
     env: process.env,
     execFile,
+    argsPrefix: kungfuCliInvocation.argsPrefix,
   }),
 );
 
@@ -783,7 +814,7 @@ ipcMain.handle(RUNTIME_BACKUP_RESET_CHANNEL, async (_event, payload) => {
   }
   const dataHome = process.env.KF_HOME || '';
   const runtimeDir = process.env.KF_RUNTIME_DIR || '';
-  if (!dataHome || !runtimeDir || !workspaceRuntimeReady) {
+  if (!dataHome || !runtimeDir || !workspaceRuntimeIsReady()) {
     return { ok: false, error: 'selected workspace runtime is unavailable' };
   }
   const confirmation = await dialog.showMessageBox({
@@ -799,6 +830,7 @@ ipcMain.handle(RUNTIME_BACKUP_RESET_CHANNEL, async (_event, payload) => {
   try {
     stopRuntimeForRecovery({
       kungfuBinary: kungfuBinPath(),
+      argsPrefix: kungfuCliInvocation.argsPrefix,
       env: process.env,
     });
     const receipt = backupAndResetRuntime({
@@ -840,12 +872,32 @@ function workspaceSnapshot() {
   };
 }
 
-function relaunchWithWorkspaceSelection(args: string[]) {
-  const out = execFileSync(kungfuBinPath(), args, {
+async function relaunchWithWorkspaceSelection(args: string[]) {
+  const out = execFileSync(kungfuBinPath(), kungfuCliArgs(args), {
     env: { ...process.env, KF_CONFIG_HOME: defaultConfigHome() },
     timeout: 10000,
   });
   const selected = JSON.parse(out.toString());
+  const transition = desktopWorkspaceTransitionMode({
+    isPackaged: app.isPackaged,
+    rendererUrl: process.env.ELECTRON_RENDERER_URL || '',
+    shellWindowAvailable: Boolean(shellWindow && !shellWindow.isDestroyed()),
+  });
+  if (transition === 'renderer-reload' && shellWindow) {
+    const workspace = resolveLastDesktopWorkspace(defaultConfigHome());
+    if (!workspace) {
+      throw new Error('selected project workspace could not be resolved');
+    }
+    applyDesktopWorkspaceEnvironment(process.env, workspace);
+    const rendererEnv = desktopWorkspaceEnvironment(workspace);
+    const script = [
+      `for (const key of ${JSON.stringify(DESKTOP_WORKSPACE_ENV_KEYS)}) delete window.process.env[key];`,
+      `Object.assign(window.process.env, ${JSON.stringify(rendererEnv)});`,
+    ].join('\n');
+    await shellWindow.webContents.executeJavaScript(script);
+    shellWindow.webContents.reload();
+    return { ok: true, selected, transition: 'renderer-reload' };
+  }
   if (desktopWorkspaceIsRegistryManaged) {
     clearDesktopWorkspaceEnvForRelaunch(process.env);
   }
@@ -874,14 +926,14 @@ ipcMain.handle(WORKSPACE_START_CONTINUATION_CHANNEL, () => {
   }
   const out = execFileSync(
     kungfuBinPath(),
-    [
+    kungfuCliArgs([
       'workspace',
       'ensure',
       workspaceRoot,
       '--reason',
       'gui-start-continuation',
       '--json',
-    ],
+    ]),
     {
       env: { ...process.env, KF_CONFIG_HOME: defaultConfigHome() },
       timeout: 10000,
@@ -900,6 +952,24 @@ ipcMain.handle(WORKSPACE_START_CONTINUATION_CHANNEL, () => {
 ipcMain.handle(WORKSPACE_SELECT_HOME_CHANNEL, () =>
   relaunchWithWorkspaceSelection(['workspace', 'select-home', '--json']),
 );
+ipcMain.handle(WORKSPACE_SELECT_PATH_CHANNEL, (_event, payload) => {
+  const requestedPath = String(
+    (payload as { workspaceRoot?: unknown })?.workspaceRoot || '',
+  );
+  if (!requestedPath || !existsSync(requestedPath)) {
+    throw new Error('project workspace path is unavailable');
+  }
+  const workspaceRoot = realpathSync(requestedPath);
+  if (!statSync(workspaceRoot).isDirectory()) {
+    throw new Error('project workspace path is not a directory');
+  }
+  return relaunchWithWorkspaceSelection([
+    'workspace',
+    'select',
+    workspaceRoot,
+    '--json',
+  ]);
+});
 ipcMain.handle(WORKSPACE_OPEN_CHANNEL, async () => {
   const result = await dialog.showOpenDialog({
     title: 'Open Kungfu Workspace',

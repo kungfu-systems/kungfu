@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import suiteCatalog from '../catalog.json' with { type: 'json' };
+import starterProject from '../starter-project.json' with { type: 'json' };
 
 export type AgentWorkLabCaseId = 'offline-demo' | 'same-agent' | 'cross-agent';
 
@@ -63,6 +64,8 @@ export const AGENT_WORK_LAB_CHECKS = AGENT_WORK_LAB_SUITE.checks;
 
 export const AGENT_WORK_LAB_RECOMMENDATIONS =
   AGENT_WORK_LAB_SUITE.recommendations;
+
+export const AGENT_WORK_STARTER_PROJECT = starterProject;
 
 export function agentWorkLabCase(id: AgentWorkLabCaseId): AgentWorkLabCase {
   const found = AGENT_WORK_LAB_SUITE.cases.find((entry) => entry.id === id);

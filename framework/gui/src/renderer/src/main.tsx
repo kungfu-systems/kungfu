@@ -35,6 +35,10 @@ import React from 'react';
 import * as ReactDOM from 'react-dom';
 import { createRoot } from 'react-dom/client';
 import * as jsxRuntime from 'react/jsx-runtime';
+import {
+  shouldOpenAgentWorkLab,
+  unavailableKfxMessage,
+} from '../../kfx-availability';
 import type { SessionWindowLaunchAuthorization } from '../../main/session-windows';
 import {
   accessibleEntries,
@@ -67,6 +71,7 @@ import {
   WORKSPACE_GET_CHANNEL,
   WORKSPACE_OPEN_CHANNEL,
   WORKSPACE_SELECT_HOME_CHANNEL,
+  WORKSPACE_SELECT_PATH_CHANNEL,
   WORKSPACE_SELECT_RECENT_CHANNEL,
   WORKSPACE_START_CONTINUATION_CHANNEL,
 } from '../../sandbox/channels';
@@ -86,6 +91,7 @@ import {
   type Runtime,
   bootRuntime,
   deferredRuntime,
+  guiKungfuCliArgs,
   openRendererAgentWorkLab,
 } from './runtime';
 import { sandboxClient } from './sandbox-client';
@@ -818,6 +824,8 @@ function workspaceIpc() {
       ipcRenderer.invoke(WORKSPACE_GET_CHANNEL) as Promise<WorkspaceSnapshot>,
     open: () => ipcRenderer.invoke(WORKSPACE_OPEN_CHANNEL),
     home: () => ipcRenderer.invoke(WORKSPACE_SELECT_HOME_CHANNEL),
+    path: (workspaceRoot: string) =>
+      ipcRenderer.invoke(WORKSPACE_SELECT_PATH_CHANNEL, { workspaceRoot }),
     startContinuation: () =>
       ipcRenderer.invoke(WORKSPACE_START_CONTINUATION_CHANNEL),
     recent: (workspaceId: string) =>
@@ -1021,6 +1029,7 @@ function RuntimeFailurePanel({ message }: { message: string }) {
 
 function App() {
   const [agentWorkLab] = React.useState(openRendererAgentWorkLab);
+  const workspaceBridge = React.useMemo(workspaceIpc, []);
   const [startup] = React.useState<AgentWorkLabStartupRoute>(() => {
     try {
       return agentWorkLab.inspectSync();
@@ -1047,9 +1056,6 @@ function App() {
           `startup routed to ${startup.route}: ${startup.reasonCode}`,
         ),
   );
-  const [labOpen, setLabOpen] = React.useState(
-    startupSurface === 'agent-work-lab',
-  );
   const [kfxDescriptor] = React.useState<KfxExperienceFlowDescriptor | null>(
     () => {
       try {
@@ -1064,6 +1070,9 @@ function App() {
   );
   const [loaded] = React.useState<KfxLoadResult>(() =>
     loadKfx(window.process.env, SHARED_MODULES, kfxDescriptor),
+  );
+  const [labOpen, setLabOpen] = React.useState(() =>
+    shouldOpenAgentWorkLab(startupSurface, loaded.entries.length),
   );
   const [state, setState] = React.useState<ShellState>(() =>
     runtime.domain ? loadShellState(runtime.domain) : DEFAULT_STATE,
@@ -1158,13 +1167,18 @@ function App() {
         env,
         execFile: (file, args, options) =>
           new Promise<string>((resolve, reject) => {
-            execFile(file, args, options, (error, stdout, stderr) => {
-              if (error) {
-                reject(new Error(stderr.trim() || error.message));
-              } else {
-                resolve(stdout);
-              }
-            });
+            execFile(
+              file,
+              guiKungfuCliArgs(env, args),
+              options,
+              (error, stdout, stderr) => {
+                if (error) {
+                  reject(new Error(stderr.trim() || error.message));
+                } else {
+                  resolve(stdout);
+                }
+              },
+            );
           }),
       })
       .then((documents) => {
@@ -2339,6 +2353,10 @@ function App() {
                 lab={agentWorkLab}
                 startup={startup}
                 onOpenWork={() => setLabOpen(false)}
+                onOpenExistingProject={() => setWorkspaceOpen(true)}
+                onOpenStarterProject={(workspaceRoot) =>
+                  void workspaceBridge.path(workspaceRoot)
+                }
               />
             ) : runtime.ok ? (
               activeKfx && activeKfx.tier === 'sandboxed-ipc' ? (
@@ -2359,7 +2377,7 @@ function App() {
                   <div style={{ ...mono, color: '#f48771' }}>
                     no kfx available
                     {loaded.entries.length === 0
-                      ? ' — no extensions found on the extension path'
+                      ? ` — ${unavailableKfxMessage(loaded.discoveredKfxCount)}`
                       : ` for view "${active}"`}
                   </div>
                   {loaded.failures.map((failure) => (

@@ -18,6 +18,7 @@ export type ProfileCliDeps = {
   bin: string;
   env: NodeJS.ProcessEnv;
   execFile: ProfileCliExec;
+  argsPrefix?: string[];
 };
 
 export async function executeProfileCli(
@@ -36,7 +37,7 @@ export async function executeProfileCli(
   return await new Promise<ProfileCliResult>((resolve) => {
     deps.execFile(
       deps.bin,
-      args,
+      [...(deps.argsPrefix ?? []), ...args],
       {
         encoding: 'utf8',
         env: deps.env,

@@ -27,7 +27,7 @@ export type WorkspaceContinuationState =
   | 'evidence-degraded'
   | 'unavailable';
 
-const DESKTOP_WORKSPACE_ENV_KEYS = [
+export const DESKTOP_WORKSPACE_ENV_KEYS = [
   'KF_HOME',
   'KF_RUNTIME_DIR',
   'KF_WORKSPACE_ID',
@@ -67,6 +67,42 @@ export type DesktopWorkspaceSelection = {
   resolutionReason: 'last-workspace-registry' | 'home-fallback';
   diagnosis?: string;
 };
+
+export function desktopWorkspaceEnvironment(
+  selection: DesktopWorkspaceSelection,
+): Record<(typeof DESKTOP_WORKSPACE_ENV_KEYS)[number], string> {
+  return {
+    KF_HOME: selection.dataHome,
+    KF_RUNTIME_DIR: selection.runtimeDir,
+    KF_WORKSPACE_ID: selection.workspaceId,
+    KF_WORKSPACE_KIND: selection.workspaceKind,
+    KF_WORKSPACE_ROOT: selection.workspaceRoot || '',
+    KF_WORKSPACE_DISPLAY_PATH: selection.displayPath,
+    KF_WORKSPACE_RESOLUTION_REASON: selection.resolutionReason,
+    KF_WORKSPACE_STATE: selection.state,
+    KF_WORKSPACE_DIAGNOSIS: selection.diagnosis || '',
+  };
+}
+
+export function applyDesktopWorkspaceEnvironment(
+  env: Record<string, string | undefined>,
+  selection: DesktopWorkspaceSelection,
+): void {
+  clearDesktopWorkspaceEnvForRelaunch(env);
+  Object.assign(env, desktopWorkspaceEnvironment(selection));
+}
+
+export function desktopWorkspaceTransitionMode(options: {
+  isPackaged: boolean;
+  rendererUrl: string;
+  shellWindowAvailable: boolean;
+}): 'renderer-reload' | 'application-relaunch' {
+  return !options.isPackaged &&
+    options.rendererUrl.length > 0 &&
+    options.shellWindowAvailable
+    ? 'renderer-reload'
+    : 'application-relaunch';
+}
 
 export function workspaceRegistryPath(configHome: string): string {
   return path.join(configHome, 'gui', 'workspaces.json');

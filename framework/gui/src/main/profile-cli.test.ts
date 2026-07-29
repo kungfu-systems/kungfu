@@ -40,3 +40,30 @@ test('Profile CLI transport permits the narrow asynchronous manager path', async
   callback(null, '{"profiles":[]}', '');
   assert.deepEqual(await pending, { ok: true, stdout: '{"profiles":[]}' });
 });
+
+test('Profile CLI transport prepends the selected source invocation', async () => {
+  const result = executeProfileCli(
+    { args: ['profile', 'manager', '--json'] },
+    {
+      bin: 'uv',
+      env: {},
+      argsPrefix: ['run', '--project', '/core', 'python', '-m', 'kungfu'],
+      execFile: (_file, args, _options, next) => {
+        assert.deepEqual(args, [
+          'run',
+          '--project',
+          '/core',
+          'python',
+          '-m',
+          'kungfu',
+          'profile',
+          'manager',
+          '--json',
+        ]);
+        next(null, '{}', '');
+      },
+    },
+  );
+
+  assert.deepEqual(await result, { ok: true, stdout: '{}' });
+});

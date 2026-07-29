@@ -6,6 +6,7 @@ from pathlib import Path
 import click
 
 from kungfu import agent_work_lab as lab
+from kungfu import project_template
 from kungfu.agent.kfd3 import kfd3_api
 from kungfu.agent import runtime_profiles
 from kungfu.cli.commands import PrioritizedCommandGroup, kfc
@@ -117,6 +118,84 @@ def demo(output, events_json, as_json):
         _json(payload)
         return
     click.echo(f"Agent Work Lab demo: {payload['status']} ({payload['reportRoot']})")
+
+
+@agent_work_lab.command(
+    help="launch the guided offline autoplay in the shipped TUI",
+)
+@kfd3_api("kungfu.agent-work-lab.autoplay")
+@kfc.pass_context()
+def autoplay(ctx):
+    from kungfu.cli.tui_runtime import run_tui
+
+    return run_tui(ctx, ("--agent-work-lab-autoplay",))
+
+
+@agent_work_lab.command(
+    name="starter-plan",
+    help="preview the Agent Work Starter project without writing",
+)
+@click.option("--destination", type=click.Path(path_type=Path))
+@click.option("--parent", type=click.Path(path_type=Path))
+@click.option("--json", "as_json", is_flag=True, help="machine-readable output")
+@kfd3_api("kungfu.agent-work-lab.starter-plan")
+def starter_plan(destination, parent, as_json):
+    try:
+        payload = project_template.plan_project_template(
+            project_template.DEFAULT_TEMPLATE_ID,
+            destination,
+            parent=parent,
+        )
+    except (OSError, ValueError) as error:
+        raise click.ClickException(str(error)) from error
+    if as_json:
+        _json(payload)
+        return
+    click.echo(f"Starter Project: {payload['destination']}")
+    click.echo(f"  plan: {payload['planRoot']}")
+    click.echo("  no files written; run starter-create after reviewing this plan")
+
+
+@agent_work_lab.command(
+    name="starter-create",
+    help="create the exact reviewed Agent Work Starter project",
+)
+@click.option(
+    "--destination",
+    required=True,
+    type=click.Path(path_type=Path),
+)
+@click.option("--expected-plan-root", required=True)
+@click.option("--actor", required=True)
+@click.option(
+    "--execute",
+    is_flag=True,
+    help="confirm creation of the reviewed project and captured Work request",
+)
+@click.option("--json", "as_json", is_flag=True, help="machine-readable output")
+@kfd3_api("kungfu.agent-work-lab.starter-create")
+def starter_create(destination, expected_plan_root, actor, execute, as_json):
+    if not execute:
+        raise click.ClickException(
+            "starter-create requires --execute after reviewing starter-plan"
+        )
+    try:
+        payload = project_template.create_project_template(
+            project_template.DEFAULT_TEMPLATE_ID,
+            destination,
+            expected_plan_root=expected_plan_root,
+            actor=actor,
+        )
+    except (OSError, ValueError) as error:
+        raise click.ClickException(str(error)) from error
+    if as_json:
+        _json(payload)
+        return
+    click.echo(f"Created Starter Project: {payload['destination']}")
+    click.echo(
+        "  initial Work captured and pending explicit admission: "
+        f"{payload['initialWork']['requestRoot']}"
+    )
 
 
 @agent_work_lab.command(name="agent-plan", help="preview one exact local agent run")

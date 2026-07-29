@@ -18,6 +18,7 @@ export type WorkLoopCliDeps = {
   bin: string;
   env: NodeJS.ProcessEnv;
   execFile: WorkLoopCliExec;
+  argsPrefix?: string[];
 };
 
 function isAllowed(args: unknown): args is string[] {
@@ -46,7 +47,7 @@ export async function executeWorkLoopCli(
   return await new Promise<WorkLoopCliResult>((resolve) => {
     deps.execFile(
       deps.bin,
-      args,
+      [...(deps.argsPrefix ?? []), ...args],
       {
         encoding: 'utf8',
         env: deps.env,

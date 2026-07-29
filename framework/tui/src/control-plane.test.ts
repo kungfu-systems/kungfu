@@ -264,7 +264,7 @@ test('adds Suite actions only to the active Lab command catalog', () => {
   assert.equal(quickCommandMatches('/same').length, 0);
   assert.deepEqual(
     AGENT_WORK_LAB_QUICK_COMMANDS.map((row) => row.command),
-    ['/demo', '/same', '/handoff', '/report', '/focus'],
+    ['/demo', '/same', '/handoff', '/report', '/new', '/focus'],
   );
 });
 
