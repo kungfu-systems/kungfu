@@ -9,7 +9,7 @@ Source implementation is not the same as released support. Verification, Buildch
 | KFD-1 | active r6 | source-supported | implemented | passed | passed | alpha-release-passport | yes | Publish and retain the exact Alpha release passport. |
 | KFD-2 | active r3 | source-supported | implemented | passed | passed | alpha-release-passport | yes | Publish and retain all KFD-2 claim evaluations in the Alpha release passport. |
 | KFD-3 | active r5 | source-supported | implemented | passed | passed | alpha-release-passport | yes | Publish the exact product-declared registry audit and artifact closure in the Alpha release passport. |
-| KFD-4 | active r10 | candidate | implemented-candidate-profile | passed | passed | not-qualified | no | Admit a product release decision before changing KFD-4 from candidate to shipped support. |
+| KFD-4 | active r10 | candidate | implemented-candidate-profile | passed | passed | not-qualified | no | Retain the exact-source gate and release passport, then obtain independent adopter evidence and an explicit release decision before changing shipped support. |
 | KFD-5 | active r7 | candidate | implemented-candidate-profile | passed | passed | not-qualified | no | Retain the exact-source gate and release passport, then obtain independent adopter evidence and an explicit release decision before changing shipped support. |
 | KFD-6 | draft r10 | unsupported | not-implemented | none | not-applicable | not-qualified | no | Keep unsupported unless a separately admitted causal-experience discovery initiative is approved. |
 | KFD-7 | active r8 | source-supported | implemented | passed | passed | alpha-release-passport | yes | Publish and retain the exact KFD-7 product gate and support projection in the Alpha release passport. |
