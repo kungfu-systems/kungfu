@@ -117,7 +117,7 @@ test('PR proof overlaps source acceptance with heavy gates before exact queue re
   assert.match(native, /- candidate_preflight[\s\S]*- proof_probe/);
   assert.match(native, /needs\.proof_probe\.outputs\.reuse != 'true'/);
   assert.doesNotMatch(native, /if:.*merge_group.*runs-on:/su);
-  const aggregate = source.slice(source.indexOf('  affected-native:\n'));
+  const aggregate = source.slice(source.indexOf('  affected_native:\n'));
   const cancellation = source.slice(
     source.indexOf('  cancel_after_source_failure:\n'),
     source.indexOf('  candidate_buildchain_config:\n'),
