@@ -110,6 +110,8 @@
     "test:project-cut-composition": "node scripts/require-shifu.mjs test:project-cut-composition && node --test scripts/check-project-cut-composition.test.mjs",
     "check:project-cut-publication": "node scripts/require-shifu.mjs check:project-cut-publication && node framework/project-cut/bin/project-cut.mjs publication-contract-check --json",
     "test:project-cut-publication": "node scripts/require-shifu.mjs test:project-cut-publication && node --test scripts/check-project-cut-publication.test.mjs",
+    "check:native-loop-qualification": "node scripts/require-shifu.mjs check:native-loop-qualification && node framework/project-cut/bin/project-cut.mjs native-loop-contract-check --json",
+    "test:native-loop-qualification": "node scripts/require-shifu.mjs test:native-loop-qualification && node --test scripts/check-native-loop-qualification.test.mjs",
     "test:work-authority": "node scripts/require-shifu.mjs test:work-authority && node --test scripts/check-work-authority-surface.test.mjs scripts/project-cut-product-loop-release.test.mjs && PYTHONPATH=framework/core/src/python:${KUNGFU_NATIVE_PATH:-framework/core/build/Release} uv run --project framework/core --frozen pytest -q framework/core/tests/python/test_work_authority_surface.py",
     "test:delivery-evidence": "node scripts/require-shifu.mjs test:delivery-evidence && PYTHONPATH=framework/core/src/python:${KUNGFU_NATIVE_PATH:-framework/core/build/Release} uv run --project framework/core --frozen pytest -q framework/core/tests/python/test_delivery_evidence.py",
     "test:workspace-continuation": "node scripts/require-shifu.mjs test:workspace-continuation && node scripts/run-workspace-continuation-tests.mjs",

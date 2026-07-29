@@ -187,3 +187,26 @@ the settled native Fact Cut and never becomes Work Control completion authority.
 ./shifu check:project-cut-publication
 ./shifu test:project-cut-publication
 ```
+
+## Native delivery-loop qualification
+
+[`native-loop-qualification.contract.json`](native-loop-qualification.contract.json)
+composes the delivered post-merge evidence adapter and protected settlement
+publication interfaces into one exact, machine-verifiable success predicate.
+It does not replace either authority. The real-path manifest must bind the
+Assignment request, protected source PR and merge-group evidence, native Fact
+and Episode, settled Project Cut, protected ledger PR, deterministic fault
+receipts, and fresh-clone continuation readback.
+
+The verifier fails closed on absent or inexact coordinates and proves the
+protected ledger from Git without the original runtime cache. Its history rule
+is intentionally asymmetric: fewer than 30 samples blocks default-policy
+promotion only; advisory-mode qualification remains eligible.
+
+```sh
+./shifu project-cut native-loop-contract-check --json
+./shifu project-cut native-loop-seal --input qualification-input.json --json
+./shifu project-cut native-loop-verify --manifest qualification.json --json
+./shifu check:native-loop-qualification
+./shifu test:native-loop-qualification
+```

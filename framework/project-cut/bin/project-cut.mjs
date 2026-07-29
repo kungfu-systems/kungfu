@@ -10,6 +10,11 @@ import {
 } from '../../episode-provider/src/git-workspace-episode-provider.mjs';
 import { observeComposition, verifyComposition } from '../src/composition.mjs';
 import { observeHistory, reconcileHistory } from '../src/history.mjs';
+import {
+  checkNativeLoopQualificationContract,
+  sealNativeLoopQualification,
+  verifyNativeLoopQualification,
+} from '../src/native-loop-qualification.mjs';
 import { parseLosslessUint64Json, parseRootJson } from '../src/project-cut.mjs';
 import {
   checkSettlementPublicationContract,
@@ -45,7 +50,10 @@ function usage() {
   project-cut publication-prepare --request FILE [--commit REF] [--root DIR] [--execute] [--stage] --json
   project-cut publication-inspect --plan FILE [--root DIR] --json
   project-cut publication-reconcile --plan FILE --observation FILE [--root DIR] --json
-  project-cut publication-verify --batch-root ROOT [--commit REF] [--root DIR] --json`;
+  project-cut publication-verify --batch-root ROOT [--commit REF] [--root DIR] --json
+  project-cut native-loop-contract-check [--root DIR] --json
+  project-cut native-loop-seal --input FILE [--root DIR] --json
+  project-cut native-loop-verify --manifest FILE [--root DIR] --json`;
 }
 
 function parseArguments(argv) {
@@ -103,6 +111,8 @@ function responseSchema(action) {
     return 'project.cut.composition-response/v1';
   if (action.startsWith('publication-'))
     return 'kungfu.settlement-publication.response/v1';
+  if (action.startsWith('native-loop-'))
+    return 'kungfu.native-loop-qualification.response/v1';
   return action.startsWith('history-')
     ? 'project.cut.history-response/v1'
     : 'project.cut.settlement-response/v1';
@@ -291,6 +301,29 @@ try {
         required(parsed.values, '--batch-root'),
         { commit: parsed.values['--commit'] ?? 'HEAD' },
       ),
+    };
+  } else if (action === 'native-loop-contract-check') {
+    result = {
+      action,
+      ...checkNativeLoopQualificationContract(),
+    };
+  } else if (action === 'native-loop-seal') {
+    const input = parseRootJson(
+      readFileSync(required(parsed.values, '--input'), 'utf8'),
+    );
+    const sealed = sealNativeLoopQualification(root, input);
+    result = {
+      ok: sealed.verification.ok,
+      action,
+      ...sealed,
+    };
+  } else if (action === 'native-loop-verify') {
+    const manifest = parseRootJson(
+      readFileSync(required(parsed.values, '--manifest'), 'utf8'),
+    );
+    result = {
+      action,
+      ...verifyNativeLoopQualification(root, manifest),
     };
   } else {
     throw Object.assign(new Error(`unknown action: ${action}`), {
