@@ -860,11 +860,19 @@ export function verifyNativeLoopQualification(rootInput, manifest) {
           ),
         );
       const completed = Date.parse(manifest.delivery.timestamps.runCompletedAt);
+      const merged = Date.parse(manifest.delivery.timestamps.mergedAt);
       const observed = Date.parse(manifest.delivery.timestamps.observedAt);
+      if (completed > merged || merged > observed)
+        diagnostics.push(
+          diagnostic(
+            'delivery-timestamp-order-mismatch',
+            '$.delivery.timestamps',
+            'merge-queue validation, protected merge, and observation timestamps are out of order',
+          ),
+        );
       if (
-        observed < completed ||
         manifest.delivery.ingestionLagSeconds !==
-          Math.max(0, Math.floor((observed - completed) / 1000))
+        Math.max(0, Math.floor((observed - merged) / 1000))
       )
         diagnostics.push(
           diagnostic(

@@ -49,8 +49,8 @@ def _envelope() -> dict:
         **copy.deepcopy(_expectation()),
         "schema": delivery_evidence.ENVELOPE_SCHEMA,
         "timestamps": {
-            "mergedAt": "2026-07-28T15:00:00Z",
-            "runCompletedAt": "2026-07-28T15:05:00Z",
+            "mergedAt": "2026-07-28T15:05:00Z",
+            "runCompletedAt": "2026-07-28T15:00:00Z",
             "observedAt": "2026-07-28T15:06:00Z",
         },
     }
@@ -138,11 +138,39 @@ def test_verifier_classifies_missing_malformed_and_stale_evidence():
     assert failure.value.retryable is False
 
     stale = _envelope()
-    stale["timestamps"]["runCompletedAt"] = "2026-07-20T15:05:00Z"
-    stale["timestamps"]["mergedAt"] = "2026-07-20T15:00:00Z"
+    stale["timestamps"]["runCompletedAt"] = "2026-07-20T15:00:00Z"
+    stale["timestamps"]["mergedAt"] = "2026-07-20T15:05:00Z"
     with pytest.raises(delivery_evidence.EvidenceValidationError) as failure:
         delivery_evidence.verify_envelope(stale, _expectation(), now=NOW)
     assert failure.value.code == "delivery-evidence-stale"
+    assert failure.value.retryable is False
+
+
+@pytest.mark.parametrize(
+    "mutation",
+    [
+        lambda timestamps: timestamps.update(
+            {
+                "runCompletedAt": "2026-07-28T15:05:01Z",
+                "mergedAt": "2026-07-28T15:05:00Z",
+            }
+        ),
+        lambda timestamps: timestamps.update(
+            {
+                "mergedAt": "2026-07-28T15:06:01Z",
+                "observedAt": "2026-07-28T15:06:00Z",
+            }
+        ),
+    ],
+)
+def test_verifier_requires_merge_queue_validation_before_protected_merge(mutation):
+    envelope = _envelope()
+    mutation(envelope["timestamps"])
+
+    with pytest.raises(delivery_evidence.EvidenceValidationError) as failure:
+        delivery_evidence.verify_envelope(envelope, _expectation(), now=NOW)
+
+    assert failure.value.code == "delivery-evidence-malformed"
     assert failure.value.retryable is False
 
 
