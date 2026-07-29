@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // @ts-check
 
-import { spawnSync } from 'node:child_process';
+import { spawn, spawnSync } from 'node:child_process';
 import crypto from 'node:crypto';
 import fs from 'node:fs';
 import os from 'node:os';
@@ -23,6 +23,7 @@ const RECEIPT = '.qualified-core-materialization.json';
 const MAX_ARCHIVE_BYTES = 512 * 1024 * 1024;
 const MAX_ENTRY_BYTES = 256 * 1024 * 1024;
 const MAX_ENTRIES = 32;
+const GITHUB_DOWNLOAD_ATTEMPTS = 3;
 const SHA = /^[0-9a-f]{40}$/u;
 const ROOT_HASH = /^sha256:[0-9a-f]{64}$/u;
 
@@ -455,7 +456,90 @@ function ghJson(endpoint) {
   );
 }
 
-function discoverGithubBundle(checkout, temporary) {
+function runBinaryToFile(command, args, destination, { maxBytes, reason }) {
+  return new Promise((resolve, reject) => {
+    let descriptor;
+    try {
+      descriptor = fs.openSync(destination, 'wx', 0o600);
+    } catch {
+      reject(new QualifiedCoreUnavailable(reason));
+      return;
+    }
+    let bytes = 0;
+    let failure = null;
+    let finished = false;
+    const child = spawn(command, args, {
+      env: process.env,
+      shell: false,
+      stdio: ['ignore', 'pipe', 'pipe'],
+    });
+    const complete = (error = null) => {
+      if (finished) return;
+      finished = true;
+      try {
+        fs.closeSync(descriptor);
+      } catch {
+        failure ||= new QualifiedCoreUnavailable(reason);
+      }
+      if (error || failure) reject(error || failure);
+      else resolve({ bytes });
+    };
+    child.stdout.on('data', (chunk) => {
+      if (finished || failure) return;
+      bytes += chunk.byteLength;
+      if (bytes > maxBytes) {
+        failure = new QualifiedCoreUnavailable('archive-too-large');
+        child.kill('SIGTERM');
+        return;
+      }
+      try {
+        fs.writeSync(descriptor, chunk);
+      } catch {
+        failure = new QualifiedCoreUnavailable(reason);
+        child.kill('SIGTERM');
+      }
+    });
+    // Provider errors can contain short-lived signed URLs. Drain but never retain
+    // or surface those bytes.
+    child.stderr.resume();
+    child.on('error', () => complete(new QualifiedCoreUnavailable(reason)));
+    child.on('close', (code) => {
+      if (code !== 0 || bytes === 0) {
+        failure ||= new QualifiedCoreUnavailable(reason);
+      }
+      complete();
+    });
+  });
+}
+
+export async function downloadGithubArtifact({
+  repository,
+  artifactId,
+  destination,
+  attempts = GITHUB_DOWNLOAD_ATTEMPTS,
+  runAttempt = runBinaryToFile,
+}) {
+  if (fs.existsSync(destination)) {
+    throw new QualifiedCoreUnavailable('github-download-target-dirty');
+  }
+  const endpoint = `repos/${repository}/actions/artifacts/${artifactId}/zip`;
+  for (let attempt = 1; attempt <= attempts; attempt += 1) {
+    const partial = `${destination}.attempt-${attempt}`;
+    try {
+      await runAttempt('gh', ['api', endpoint], partial, {
+        maxBytes: MAX_ARCHIVE_BYTES + 1024,
+        reason: 'github-artifact-download-failed',
+      });
+      fs.renameSync(partial, destination);
+      return destination;
+    } catch {
+      fs.rmSync(partial, { force: true });
+    }
+  }
+  throw new QualifiedCoreUnavailable('github-artifact-download-failed');
+}
+
+async function discoverGithubBundle(checkout, temporary) {
   const name = `qualified-assignment-core-${checkout.commit}`;
   const listing = ghJson(
     `repos/${checkout.repository}/actions/artifacts?name=${name}&per_page=100`,
@@ -487,20 +571,14 @@ function discoverGithubBundle(checkout, temporary) {
   ) {
     throw new QualifiedCoreUnavailable('untrusted-github-workflow');
   }
-  const zip = run(
-    'gh',
-    [
-      'api',
-      `repos/${checkout.repository}/actions/artifacts/${artifact.id}/zip`,
-    ],
-    {
-      binary: true,
-      maxBuffer: MAX_ARCHIVE_BYTES + 1024,
-      reason: 'github-artifact-download-failed',
-    },
-  );
+  const zip = path.join(temporary, 'artifact.zip');
+  await downloadGithubArtifact({
+    repository: checkout.repository,
+    artifactId: artifact.id,
+    destination: zip,
+  });
   const bundleRoot = path.join(temporary, 'bundle');
-  extractZip(Buffer.from(zip), bundleRoot);
+  extractZip(fs.readFileSync(zip), bundleRoot);
   return {
     bundleRoot,
     transport: {
@@ -700,7 +778,7 @@ export async function consumeQualifiedCoreForCheckout({
         };
       }
     } else if (process.env.KUNGFU_QUALIFIED_CORE_GITHUB !== '0') {
-      discovered = discoverGithubBundle(checkout, temporary);
+      discovered = await discoverGithubBundle(checkout, temporary);
     } else {
       throw new QualifiedCoreUnavailable('qualified-core-cache-miss');
     }

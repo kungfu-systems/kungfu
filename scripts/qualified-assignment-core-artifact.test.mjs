@@ -10,6 +10,7 @@ import { fileURLToPath } from 'node:url';
 
 import {
   consumeQualifiedCoreForCheckout,
+  downloadGithubArtifact,
   materializeQualifiedCoreBundle,
 } from '../framework/assignment-capture/qualified-assignment-core-consumer.mjs';
 import {
@@ -581,6 +582,60 @@ test('consumer CLI emits one source-build diagnosis when reuse is unavailable', 
   const output = JSON.parse(result.stdout);
   assert.equal(output.code, 'qualified-core-reuse-unavailable');
   assert.equal(output.next_actions[0].command, './shifu build:core');
+});
+
+test('consumer streams GitHub artifacts through bounded retries and removes partials', async (t) => {
+  const temporary = fs.mkdtempSync(
+    path.join(os.tmpdir(), 'qualified-core-github-download-'),
+  );
+  t.after(() => fs.rmSync(temporary, { recursive: true, force: true }));
+  const destination = path.join(temporary, 'artifact.zip');
+  let observedAttempts = 0;
+  await downloadGithubArtifact({
+    repository: 'kungfu-systems/kungfu',
+    artifactId: 42,
+    destination,
+    runAttempt: async (_command, _args, partial, options) => {
+      observedAttempts += 1;
+      assert.equal(options.maxBytes, 512 * 1024 * 1024 + 1024);
+      fs.writeFileSync(
+        partial,
+        observedAttempts < 3 ? 'incomplete' : 'complete',
+        { flag: 'wx' },
+      );
+      if (observedAttempts < 3) throw new Error('bounded transport failure');
+    },
+  });
+  assert.equal(observedAttempts, 3);
+  assert.equal(fs.readFileSync(destination, 'utf8'), 'complete');
+  assert.deepEqual(
+    fs.readdirSync(temporary).filter((name) => name.includes('.attempt-')),
+    [],
+  );
+});
+
+test('consumer leaves no GitHub artifact bytes after retry exhaustion', async (t) => {
+  const temporary = fs.mkdtempSync(
+    path.join(os.tmpdir(), 'qualified-core-github-failure-'),
+  );
+  t.after(() => fs.rmSync(temporary, { recursive: true, force: true }));
+  const destination = path.join(temporary, 'artifact.zip');
+  let observedAttempts = 0;
+  await assert.rejects(
+    downloadGithubArtifact({
+      repository: 'kungfu-systems/kungfu',
+      artifactId: 42,
+      destination,
+      runAttempt: async (_command, _args, partial) => {
+        observedAttempts += 1;
+        fs.writeFileSync(partial, 'incomplete', { flag: 'wx' });
+        throw new Error('bounded transport failure');
+      },
+    }),
+    /github-artifact-download-failed/u,
+  );
+  assert.equal(observedAttempts, 3);
+  assert.deepEqual(fs.readdirSync(temporary), []);
 });
 
 test('consumer rejects two locally retained authorities for one exact checkout', async (t) => {
