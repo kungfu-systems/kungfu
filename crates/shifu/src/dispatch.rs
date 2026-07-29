@@ -34,7 +34,7 @@ pub fn run_pnpm(root: &Path, args: &[String]) -> ! {
     util::run_quiet(&fnm, &["install"], root);
 
     let mut cmd = Command::new(&fnm);
-    cmd.arg("exec").arg("--using-file").arg("--");
+    cmd.arg("exec").arg("--");
     if cfg!(windows) {
         // fnm spawns the target directly without PATHEXT resolution, so bare
         // "corepack" is not found on Windows — only corepack.cmd is.
@@ -83,7 +83,6 @@ pub fn delegate_l2(root: &Path, args: &[String]) -> ! {
         util::run_quiet(&fnm, &["install"], root);
         let mut cmd = Command::new(&fnm);
         cmd.arg("exec")
-            .arg("--using-file")
             .arg("--")
             .arg("node")
             .arg(&l2)
@@ -109,7 +108,6 @@ pub fn delegate_l2(root: &Path, args: &[String]) -> ! {
     util::run_quiet(&fnm, &["install"], root);
     let mut cmd = Command::new(&fnm);
     cmd.arg("exec")
-        .arg("--using-file")
         .arg("--")
         .arg("node")
         .arg(&l2)

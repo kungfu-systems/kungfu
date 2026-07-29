@@ -5,14 +5,23 @@
 from __future__ import annotations
 
 import argparse
+import base64
+import errno
+import fcntl
 import hashlib
 import json
 import os
+import pty
 import re
+import select
+import signal
 import shutil
+import struct
 import subprocess
 import tarfile
 import tempfile
+import termios
+import time
 from pathlib import Path, PurePosixPath
 from typing import Any
 
@@ -23,9 +32,20 @@ SHA256 = re.compile(r"^sha256:[0-9a-f]{64}$")
 MAX_JSON_BYTES = 8 * 1024 * 1024
 MAX_ARCHIVE_BYTES = 2 * 1024 * 1024 * 1024
 MAX_MEMBER_BYTES = 512 * 1024 * 1024
+MAX_EXTRACTED_BYTES = 4 * 1024 * 1024 * 1024
 MAX_MEMBERS = 100_000
 EPISODE_RELEASE_EVIDENCE = "qualification/episode-release-evidence.json"
 PULL_MERGE_REF = re.compile(r"^refs/pull/[1-9][0-9]*/merge$")
+COMPLETION_SENTINEL = re.compile(r"KUNGFU_TUI_DEMO_COMPLETE ([^\r\n]+)")
+TERMINAL_COLUMNS = 120
+TERMINAL_ROWS = 36
+TERMINAL_TIMEOUT_SECONDS = 60
+TERMINAL_EVENT_QUANTUM_MS = 20
+MAX_TERMINAL_BYTES = 4 * 1024 * 1024
+MAX_TERMINAL_EVENTS = 10_000
+ANSI_OSC = re.compile(r"\x1b\].*?(?:\x07|\x1b\\)", re.DOTALL)
+ANSI_CSI = re.compile(r"\x1b\[[0-?]*[ -/]*[@-~]")
+ANSI_ESCAPE = re.compile(r"\x1b[@-_]")
 
 REPORTS = (
     (
@@ -346,6 +366,9 @@ def extract_cli(archive_path: Path, target: Path) -> Path:
                 fail("CLI archive has an invalid member count")
             for member in members:
                 validate_member(member)
+            extracted_bytes = sum(member.size for member in members)
+            if extracted_bytes > MAX_EXTRACTED_BYTES:
+                fail("CLI archive exceeds the bounded extracted size")
             for member in members:
                 destination = target.joinpath(*PurePosixPath(member.name).parts)
                 if member.isdir():
@@ -425,27 +448,38 @@ def validate_product(
     return launcher, versions["product"]
 
 
-def safe_output(text: str, label: str) -> str:
-    normalized = text.replace("\r\n", "\n").replace("\r", "\n")
-    if "\x00" in normalized:
-        fail(f"{label} contains NUL")
-    if len(normalized.encode("utf-8")) > 2 * 1024 * 1024:
-        fail(f"{label} exceeds the bounded output size")
+def safe_terminal_output(raw: bytes) -> str:
+    if b"\x00" in raw:
+        fail("kungfu terminal output contains NUL")
+    if len(raw) > MAX_TERMINAL_BYTES:
+        fail("kungfu terminal output exceeds the bounded output size")
+    try:
+        decoded = raw.decode("utf-8", errors="strict")
+    except UnicodeDecodeError as error:
+        fail(f"kungfu terminal output is not valid UTF-8: {error}")
     private_patterns = (
         r"/home/runner/",
+        r"/home/[^/\s]+/",
         r"/Users/[^/\s]+/",
         r"[A-Za-z]:\\Users\\[^\\\s]+\\",
         r"(?i)(token|password|secret|cookie)\s*=",
+        r"(?i)\b(?:authorization|proxy-authorization):\s*(?:bearer|basic)\s+\S+",
+        r"\bgh[pousr]_[A-Za-z0-9]{20,}\b",
+        r"\bgithub_pat_[A-Za-z0-9_]{20,}\b",
+        r"\b(?:AKIA|ASIA)[A-Z0-9]{16}\b",
+        r"-----BEGIN [A-Z0-9 ]*PRIVATE KEY-----",
     )
     for pattern in private_patterns:
-        if re.search(pattern, normalized):
-            fail(f"{label} contains a private path or credential-shaped value")
-    return normalized
+        if re.search(pattern, decoded):
+            fail(
+                "kungfu terminal output contains a private path or credential-shaped value"
+            )
+    return decoded
 
 
-def run_brief(launcher: Path, home: Path) -> tuple[str, str, int]:
+def isolated_environment(home: Path) -> dict[str, str]:
     home.mkdir(parents=True, exist_ok=False)
-    environment = {
+    return {
         "PATH": os.environ.get("PATH", "/usr/local/bin:/usr/bin:/bin"),
         "HOME": str(home),
         "XDG_CACHE_HOME": str(home / ".cache"),
@@ -460,23 +494,183 @@ def run_brief(launcher: Path, home: Path) -> tuple[str, str, int]:
         "TZ": "UTC",
         "CI": "true",
         "SOURCE_DATE_EPOCH": "0",
+        "NO_COLOR": "0",
+        "TERM": "xterm-256color",
+        "COLORTERM": "truecolor",
     }
-    result = subprocess.run(
-        [str(launcher), "agent", "brief"],
-        cwd=home,
-        env=environment,
-        text=True,
-        encoding="utf-8",
-        errors="strict",
-        capture_output=True,
-        timeout=120,
-        check=False,
+
+
+def terminate_process_group(process: subprocess.Popen[bytes]) -> None:
+    if process.poll() is not None:
+        return
+    try:
+        os.killpg(process.pid, signal.SIGTERM)
+        process.wait(timeout=2)
+    except (ProcessLookupError, subprocess.TimeoutExpired):
+        if process.poll() is None:
+            os.killpg(process.pid, signal.SIGKILL)
+            process.wait(timeout=2)
+
+
+def validate_completion(decoded: str) -> dict[str, Any]:
+    matches = COMPLETION_SENTINEL.findall(decoded)
+    if len(matches) != 1:
+        fail(
+            "installed kungfu autoplay must emit exactly one "
+            "KUNGFU_TUI_DEMO_COMPLETE sentinel"
+        )
+    try:
+        completion = json.loads(matches[0])
+    except json.JSONDecodeError as error:
+        fail(f"installed kungfu autoplay completion sentinel is invalid JSON: {error}")
+    if not isinstance(completion, dict):
+        fail("installed kungfu autoplay completion sentinel must be an object")
+    exact_keys(
+        completion,
+        {"schema", "status", "reportRoot", "eventCount"},
+        set(),
+        "completion sentinel",
     )
-    return (
-        safe_output(result.stdout, "kungfu stdout"),
-        safe_output(result.stderr, "kungfu stderr"),
-        result.returncode,
+    if (
+        completion["schema"] != "kungfu.agent-work-lab.tui-autoplay/v1"
+        or completion["status"] != "passed"
+        or not SHA256.fullmatch(str(completion["reportRoot"]))
+        or not isinstance(completion["eventCount"], int)
+        or isinstance(completion["eventCount"], bool)
+        or completion["eventCount"] < 1
+        or completion["eventCount"] > 100_000
+    ):
+        fail("installed kungfu autoplay completion sentinel did not pass")
+    return completion
+
+
+def run_autoplay(launcher: Path, home: Path) -> tuple[dict[str, Any], bytes, int]:
+    environment = isolated_environment(home)
+    master_fd, slave_fd = pty.openpty()
+    fcntl.ioctl(
+        slave_fd,
+        termios.TIOCSWINSZ,
+        struct.pack("HHHH", TERMINAL_ROWS, TERMINAL_COLUMNS, 0, 0),
     )
+    process: subprocess.Popen[bytes] | None = None
+    raw = bytearray()
+    events: list[dict[str, Any]] = []
+    first_output_at: float | None = None
+    started_at = time.monotonic()
+    timed_out = False
+    try:
+        process = subprocess.Popen(
+            [str(launcher), "agent-work-lab", "autoplay"],
+            cwd=home,
+            env=environment,
+            stdin=slave_fd,
+            stdout=slave_fd,
+            stderr=slave_fd,
+            start_new_session=True,
+            close_fds=True,
+        )
+        os.close(slave_fd)
+        slave_fd = -1
+        while True:
+            now = time.monotonic()
+            if now - started_at > TERMINAL_TIMEOUT_SECONDS:
+                timed_out = True
+                terminate_process_group(process)
+                break
+            readable, _, _ = select.select([master_fd], [], [], 0.05)
+            if readable:
+                try:
+                    chunk = os.read(master_fd, 65_536)
+                except OSError as error:
+                    if error.errno == errno.EIO and process.poll() is not None:
+                        break
+                    raise
+                if not chunk and process.poll() is not None:
+                    break
+                if chunk:
+                    if first_output_at is None:
+                        first_output_at = time.monotonic()
+                    raw.extend(chunk)
+                    if len(raw) > MAX_TERMINAL_BYTES:
+                        terminate_process_group(process)
+                        fail(
+                            "installed kungfu autoplay exceeded the 4 MiB capture bound"
+                        )
+                    observed_ms = max(
+                        0,
+                        int((time.monotonic() - first_output_at) * 1000),
+                    )
+                    at_ms = (
+                        observed_ms // TERMINAL_EVENT_QUANTUM_MS
+                    ) * TERMINAL_EVENT_QUANTUM_MS
+                    encoded = base64.b64encode(chunk).decode("ascii")
+                    if events and events[-1]["atMs"] == at_ms:
+                        previous = base64.b64decode(events[-1]["data"], validate=True)
+                        events[-1]["data"] = base64.b64encode(previous + chunk).decode(
+                            "ascii"
+                        )
+                    else:
+                        events.append({"atMs": at_ms, "data": encoded})
+                    if len(events) > MAX_TERMINAL_EVENTS:
+                        terminate_process_group(process)
+                        fail(
+                            "installed kungfu autoplay exceeded the 10000-event "
+                            "capture bound"
+                        )
+            if process.poll() is not None and not readable:
+                break
+        if timed_out:
+            fail(
+                f"installed kungfu autoplay exceeded {TERMINAL_TIMEOUT_SECONDS} seconds"
+            )
+        exit_code = process.wait(timeout=2)
+    finally:
+        if process is not None:
+            terminate_process_group(process)
+        if slave_fd >= 0:
+            os.close(slave_fd)
+        os.close(master_fd)
+    if not events:
+        fail("installed kungfu autoplay produced no PTY output")
+    decoded = safe_terminal_output(bytes(raw))
+    completion = validate_completion(decoded)
+    if exit_code != 0:
+        fail(f"installed kungfu autoplay failed with exit status {exit_code}")
+    last_event_ms = events[-1]["atMs"]
+    if last_event_ms >= TERMINAL_TIMEOUT_SECONDS * 1000:
+        fail("installed kungfu autoplay capture reached the terminal time bound")
+    duration_ms = min(
+        60_000,
+        max(500, ((last_event_ms + 500 + 999) // 1000) * 1000),
+    )
+    capture = {
+        "schema": "kungfu.terminal-capture/v1",
+        "command": "kungfu agent-work-lab autoplay",
+        "dimensions": {
+            "columns": TERMINAL_COLUMNS,
+            "rows": TERMINAL_ROWS,
+        },
+        "durationMs": duration_ms,
+        "encoding": "base64",
+        "events": events,
+        "completion": completion,
+        "exitCode": exit_code,
+        "authority": {
+            "classification": "volatile-terminal-observation",
+            "grants": [],
+            "nonAuthorities": [
+                "first-party-identity",
+                "system-identity",
+                "kfd-compliance",
+                "product-system-metadata",
+                "package-metadata",
+                "registry-history",
+                "scan-output",
+                "standalone-generation",
+            ],
+        },
+    }
+    return capture, bytes(raw), exit_code
 
 
 def transcript_lines(
@@ -485,12 +679,21 @@ def transcript_lines(
     archive_digest: str,
     executable_digest: str,
     product_version: str,
-    stdout: str,
-    stderr: str,
+    terminal_output: str,
+    capture: dict[str, Any],
     exit_code: int,
 ) -> list[str]:
+    visible = ANSI_OSC.sub("", terminal_output)
+    visible = ANSI_CSI.sub("", visible)
+    visible = ANSI_ESCAPE.sub("", visible)
+    visible = re.sub(r"\r+\n", "\n", visible).replace("\r", "\n")
+    visible = "".join(
+        character
+        for character in visible
+        if character in "\n\t" or ord(character) >= 0x20
+    )
     lines = [
-        "$ kungfu agent brief",
+        "$ kungfu agent-work-lab autoplay",
         f"artifact.repository={coordinate['repository']}",
         f"artifact.run_id={coordinate['runId']}",
         f"artifact.name={coordinate['name']}",
@@ -501,73 +704,84 @@ def transcript_lines(
         f"install.archive_digest={archive_digest}",
         f"install.executable_digest={executable_digest}",
         f"product.version={product_version}",
-        "--- stdout (complete) ---",
+        f"pty.columns={capture['dimensions']['columns']}",
+        f"pty.rows={capture['dimensions']['rows']}",
+        f"pty.event_count={len(capture['events'])}",
+        f"pty.duration_ms={capture['durationMs']}",
+        f"autoplay.report_root={capture['completion']['reportRoot']}",
+        "authority.classification=volatile-terminal-observation",
+        "authority.grants=none",
+        "--- PTY stream (complete UTF-8; terminal controls removed) ---",
     ]
-    lines.extend(stdout.rstrip("\n").split("\n") if stdout else [""])
-    lines.append("--- stderr (complete) ---")
-    lines.extend(stderr.rstrip("\n").split("\n") if stderr else [""])
+    lines.extend(visible.rstrip("\n").split("\n") if visible else [""])
     lines.append(f"exit.status={exit_code}")
     return lines
 
 
-def build_projection(lines: list[str], exit_code: int) -> dict[str, Any]:
+def build_projection(
+    lines: list[str], capture: dict[str, Any], exit_code: int
+) -> dict[str, Any]:
     if exit_code != 0:
-        fail(f"installed kungfu agent brief failed with exit status {exit_code}")
-    identity_end = 11
-    stdout_start = 13
-    stderr_marker = lines.index("--- stderr (complete) ---") + 1
-    stdout_end = stderr_marker - 1
+        fail(f"installed kungfu autoplay failed with exit status {exit_code}")
+    identity_end = 18
+    output_start = 20
     exit_line = len(lines)
-    stdout_lines = list(range(stdout_start, stdout_end + 1))
-    if not stdout_lines:
-        fail("installed kungfu agent brief produced no stdout")
-    first_stdout_lines = stdout_lines[:80]
-    remaining_stdout_lines = stdout_lines[80:]
-    continued_stdout_lines = (
-        remaining_stdout_lines[-80:] if remaining_stdout_lines else stdout_lines[-1:]
+    output_lines = list(range(output_start, exit_line))
+    if not output_lines:
+        fail("installed kungfu autoplay produced no visible PTY transcript")
+    first_output_lines = output_lines[:80]
+    final_output_lines = (
+        output_lines[-80:] if len(output_lines) > 80 else output_lines[-1:]
     )
+    duration_ms = capture["durationMs"]
+    first_boundary = max(1, duration_ms // 3)
+    second_boundary = max(first_boundary + 1, (duration_ms * 2) // 3)
     return {
         "schema": "build-images.demo-projection/v1",
-        "evidenceClass": "exact-installed-artifact-agent-brief/v1",
+        "evidenceClass": "exact-installed-artifact-agent-work-lab-autoplay/v1",
         "claimBoundary": (
-            "This proves the exact retained Linux x64 artifact can expose its "
-            "bundled agent brief in an isolated credential-free Home. It does "
-            "not prove continuity, provider behavior, signed macOS behavior, "
-            "production durability, comparative performance, or FO10."
+            "This proves one exact retained Linux x64 artifact completed the "
+            "bundled offline Agent Work Lab autoplay inside a bounded, "
+            "credential-free PTY. Terminal bytes are observation only and "
+            "grant no authority. It does not prove hosted provider behavior, "
+            "general production continuity, signed macOS behavior, "
+            "performance, FO10, or production deployment."
         ),
         "cues": [
             {
                 "startMs": 0,
-                "endMs": 4000,
+                "endMs": first_boundary,
                 "transcriptLines": list(range(1, identity_end + 1)),
-                "annotation": "Observed artifact and executable identity.",
-            },
-            {
-                "startMs": 4000,
-                "endMs": 10000,
-                "transcriptLines": first_stdout_lines,
-                "annotation": "Literal installed-product stdout.",
-            },
-            {
-                "startMs": 10000,
-                "endMs": 15000,
-                "transcriptLines": continued_stdout_lines,
                 "annotation": (
-                    "Literal installed-product stdout continued; when output "
-                    "exceeds the cue budget this selects its exact tail."
+                    "Exact artifact, executable, bounded PTY, and "
+                    "observation-only authority identity."
                 ),
             },
             {
-                "startMs": 15000,
-                "endMs": 18000,
-                "transcriptLines": [exit_line],
-                "annotation": "Observed process exit status; scene chrome is design annotation.",
+                "startMs": first_boundary,
+                "endMs": second_boundary,
+                "transcriptLines": first_output_lines,
+                "annotation": "Installed-product PTY stream with controls removed.",
+            },
+            {
+                "startMs": second_boundary,
+                "endMs": duration_ms,
+                "transcriptLines": [*final_output_lines[-79:], exit_line],
+                "annotation": (
+                    "Passed completion sentinel and zero process exit; the "
+                    "Release Passport remains the publication authority."
+                ),
             },
         ],
     }
 
 
-def write_outputs(output: Path, lines: list[str], projection: dict[str, Any]) -> None:
+def write_outputs(
+    output: Path,
+    lines: list[str],
+    projection: dict[str, Any],
+    capture: dict[str, Any],
+) -> None:
     if output.exists() and (not output.is_dir() or any(output.iterdir())):
         fail("adapter output must be an empty directory")
     output.mkdir(parents=True, exist_ok=True)
@@ -577,15 +791,18 @@ def write_outputs(output: Path, lines: list[str], projection: dict[str, Any]) ->
     (output / "public-projection.json").write_text(
         stable_json(projection), encoding="utf-8"
     )
+    (output / "terminal-capture.json").write_text(
+        stable_json(capture), encoding="utf-8"
+    )
     scene = {
         "schema": "build-images.demo-scene/v1",
-        "id": "kungfu-agent-brief-artifact",
+        "id": "kungfu-agent-work-lab-autoplay",
         "width": 1280,
         "height": 720,
         "fps": 15,
-        "durationMs": 18000,
-        "title": "Kungfu — exact installed artifact",
-        "commandLabel": "kungfu agent brief",
+        "durationMs": capture["durationMs"],
+        "title": "Kungfu Agent Work Lab — exact installed artifact",
+        "commandLabel": "kungfu agent-work-lab autoplay",
         "background": "#0B1020",
         "accent": "#67E8A5",
     }
@@ -613,17 +830,25 @@ def adapt(artifact_root: Path, output: Path, source_coordinate: Path) -> None:
             installed, archive, qualified_source
         )
         executable_digest = sha256_file(launcher)
-        stdout, stderr, exit_code = run_brief(launcher, temporary_root / "home")
+        capture, raw_terminal_output, exit_code = run_autoplay(
+            launcher, temporary_root / "home"
+        )
+        terminal_output = safe_terminal_output(raw_terminal_output)
         lines = transcript_lines(
             coordinate=coordinate,
             archive_digest=archive_digest,
             executable_digest=executable_digest,
             product_version=product_version,
-            stdout=stdout,
-            stderr=stderr,
+            terminal_output=terminal_output,
+            capture=capture,
             exit_code=exit_code,
         )
-        write_outputs(output, lines, build_projection(lines, exit_code))
+        write_outputs(
+            output,
+            lines,
+            build_projection(lines, capture, exit_code),
+            capture,
+        )
 
 
 def parse_args() -> argparse.Namespace:

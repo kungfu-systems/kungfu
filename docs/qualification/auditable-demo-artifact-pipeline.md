@@ -9,7 +9,7 @@ confidence: high
 sensitivity: public
 evidence_grade: A
 review_state: self-reviewed
-last_reviewed: 2026-07-27
+last_reviewed: 2026-07-29
 ai_provenance: GPT-5 via Codex on 2026-07-25; based on checked-in Kungfu, Buildchain, and build-images source plus protected GitHub workflow evidence visible to this task; no production deployment or unobserved runtime is claimed
 ---
 
@@ -24,9 +24,9 @@ The required path is:
 ```text
 Buildchain producer-owned artifact coordinate
 -> checked-in Kungfu exact-output adapter
--> exact installed `kungfu agent brief` execution
--> complete transcript + public projection + literal scene
--> Buildchain Gate and immutable renderer smoke
+-> exact installed `kungfu agent-work-lab autoplay` execution in a bounded PTY
+-> bounded terminal capture + complete transcript + public projection + scene
+-> Buildchain Gate and immutable terminal-replay renderer smoke
 -> content-addressed qualified Gate bundle
 -> exact Release Passport
 ```
@@ -39,9 +39,9 @@ disables the Gate.
 
 | Component | Immutable coordinate |
 | --- | --- |
-| Demo renderer | `ghcr.io/kungfu-systems/build-images/demo-renderer@sha256:cb5e1dec368d21c7d4e8baded99ac75f12f7eff0d19505751888cf974086efa6` |
-| Renderer release | `build-images v1.3.0-alpha.16` |
-| Buildchain Gate | `2123ee9c76013f09888d3a01543e66762a6b5819` (`v3.0.2-alpha.5`, auditable Demo plus Linux GitHub Artifact Attestation) |
+| Demo renderer | Pending the protected build-images Alpha publication containing merge `195772e6df007c7ab35b10fc82cf452eaa33c825`; the previous Alpha digest cannot admit the terminal capture and is not a valid final coordinate |
+| Renderer release | Pending the same protected Alpha publication; a local image id or PR qualification image is not release authority |
+| Buildchain Gate | `de1a1cbb1176810ebee91d1e872b441d7113305a` (merged Buildchain PR `#2030`, bounded terminal-capture admission) |
 | Consumer adapter | `scripts/auditable-demo-adapter.py` from the exact qualified Kungfu source SHA |
 
 Buildchain's reusable build emits
@@ -53,21 +53,33 @@ coordinate.
 
 ## Adapter claim boundary
 
-The adapter opens exactly one release qualification root, rejects unsafe
-archive members, validates the retained layer, live-Peer, runtime activation,
-zero-burden, and invariant reports, and executes the installed archive's
-declared launcher with `kungfu agent brief` in a disposable home directory.
+The adapter opens exactly one release qualification root, rejects unsafe or
+unbounded archive members, validates the retained layer, live-Peer, runtime
+activation, zero-burden, and invariant reports, and executes the installed
+archive's declared launcher with `kungfu agent-work-lab autoplay` in a
+disposable home directory and a real `120x36` PTY. The capture is limited to
+60 seconds, 4 MiB, and 10,000 quantized events. A successful result requires
+one valid `KUNGFU_TUI_DEMO_COMPLETE` payload and exit status zero.
 
 Its public evidence class is
-`exact-installed-artifact-agent-brief/v1`. It claims only that the exact
-retained Linux artifact executed its installed launcher and that the resulting
-transcript, projection, and scene passed the Gate. It does not claim:
+`exact-installed-artifact-agent-work-lab-autoplay/v1`. It claims only that the
+exact retained Linux artifact executed its installed autoplay command in the
+bounded PTY and that the resulting capture, transcript, projection, and scene
+passed the Gate. Terminal bytes remain volatile observations, not Work,
+authorization, or publication authority. It does not claim:
 
 - cross-run continuity;
 - provider migration;
 - macOS execution;
 - durability or performance; or
 - FO10 completion.
+
+First-party identity, System identity, KFD compliance, Product System
+metadata, local bundle presence, package metadata, registry history, scan
+output, and standalone generation are explicitly non-authoritative. Execution
+or publication authority must still come from the exact Release Passport,
+Core policy, Work or Warrant, an explicit capability grant, and runtime
+isolation.
 
 ## Retained evidence
 
@@ -175,7 +187,12 @@ macOS runner timed out downloading the pinned Rust toolchain from
 failed-job rerun retained the same run id and source SHA, then passed all three
 platform probes and the aggregate exact-source receipt.
 
-## Qualified exact-output run
+## Historical qualified exact-output run
+
+The following retained run proves the earlier
+`exact-installed-artifact-agent-brief/v1` evidence class. It is preserved for
+rollback and audit, but it does not qualify the Agent Work Lab autoplay
+animation and cannot update the new README or site projection.
 
 Protected source `0c584fc0e6446a07a5bdb1462738ffab47dddadb` passed
 three-platform exact-source Alpha preflight run

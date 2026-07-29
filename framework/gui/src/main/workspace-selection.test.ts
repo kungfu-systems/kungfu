@@ -12,8 +12,10 @@ import path from 'node:path';
 import test from 'node:test';
 
 import {
+  applyDesktopWorkspaceEnvironment,
   clearDesktopWorkspaceEnvForRelaunch,
   defaultHomeDesktopWorkspace,
+  desktopWorkspaceTransitionMode,
   listRecentDesktopWorkspaces,
   resolveLastDesktopWorkspace,
   workspaceRegistryPath,
@@ -40,6 +42,68 @@ test('desktop relaunch clears derived workspace env but preserves config home', 
     KF_CONFIG_HOME: '/tmp/config',
     KUNGFU_VERSION: '4.0.0',
   });
+});
+
+test('desktop workspace replacement updates every workspace-bound environment value', () => {
+  const env = {
+    KF_CONFIG_HOME: '/tmp/config',
+    KF_HOME: '/tmp/old-home',
+    KF_WORKSPACE_ID: 'home',
+  };
+
+  applyDesktopWorkspaceEnvironment(env, {
+    workspaceId: 'project:starter',
+    workspaceKind: 'project',
+    workspaceRoot: '/tmp/starter',
+    displayPath: '/tmp/starter',
+    dataHome: '/tmp/starter/.kungfu',
+    runtimeDir: '/tmp/starter/.kungfu/runtime',
+    state: 'uninitialized',
+    evidenceLevel: 'none',
+    settledEpisodeCount: 0,
+    projectCutCount: 0,
+    resolutionReason: 'last-workspace-registry',
+  });
+
+  assert.deepEqual(env, {
+    KF_CONFIG_HOME: '/tmp/config',
+    KF_HOME: '/tmp/starter/.kungfu',
+    KF_RUNTIME_DIR: '/tmp/starter/.kungfu/runtime',
+    KF_WORKSPACE_ID: 'project:starter',
+    KF_WORKSPACE_KIND: 'project',
+    KF_WORKSPACE_ROOT: '/tmp/starter',
+    KF_WORKSPACE_DISPLAY_PATH: '/tmp/starter',
+    KF_WORKSPACE_RESOLUTION_REASON: 'last-workspace-registry',
+    KF_WORKSPACE_STATE: 'uninitialized',
+    KF_WORKSPACE_DIAGNOSIS: '',
+  });
+});
+
+test('development workspace selection reloads the current renderer instead of relaunching Electron', () => {
+  assert.equal(
+    desktopWorkspaceTransitionMode({
+      isPackaged: false,
+      rendererUrl: 'http://localhost:5173',
+      shellWindowAvailable: true,
+    }),
+    'renderer-reload',
+  );
+  assert.equal(
+    desktopWorkspaceTransitionMode({
+      isPackaged: true,
+      rendererUrl: '',
+      shellWindowAvailable: true,
+    }),
+    'application-relaunch',
+  );
+  assert.equal(
+    desktopWorkspaceTransitionMode({
+      isPackaged: false,
+      rendererUrl: '',
+      shellWindowAvailable: true,
+    }),
+    'application-relaunch',
+  );
 });
 
 function fixture(name: string): string {

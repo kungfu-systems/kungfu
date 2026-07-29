@@ -3,7 +3,11 @@
 import json
 import os
 
+from click.testing import CliRunner
+
 from kungfu import agent_work_lab
+from kungfu.cli.commands import kfc
+from kungfu.cli.commands import agent_work_lab as agent_work_lab_commands  # noqa: F401
 
 
 def _verified_query(canonical_work_count=0):
@@ -46,6 +50,41 @@ def test_absent_runtime_is_verified_empty_without_materializing_it(
     assert result["reasonCode"] == "global-work-verified-empty"
     assert result["writeOccurred"] is False
     assert list(tmp_path.rglob("*")) == before
+
+
+def test_starter_create_requires_explicit_execute():
+    result = CliRunner().invoke(
+        kfc,
+        [
+            "agent-work-lab",
+            "starter-create",
+            "--destination",
+            "/tmp/not-created-by-test",
+            "--expected-plan-root",
+            "sha256:" + ("0" * 64),
+            "--actor",
+            "test",
+        ],
+    )
+
+    assert result.exit_code != 0
+    assert "requires --execute" in result.output
+
+
+def test_autoplay_cli_launches_the_shipped_tui(monkeypatch):
+    from kungfu.cli import tui_runtime
+
+    launches = []
+    monkeypatch.setattr(
+        tui_runtime,
+        "run_tui",
+        lambda _ctx, commands=(): launches.append(tuple(commands)),
+    )
+
+    result = CliRunner().invoke(kfc, ["agent-work-lab", "autoplay"])
+
+    assert result.exit_code == 0, result.output
+    assert launches == [("--agent-work-lab-autoplay",)]
 
 
 def test_existing_global_work_routes_to_work_graph(tmp_path, monkeypatch):
@@ -199,6 +238,8 @@ def test_catalog_exposes_one_authority_for_cli_gui_and_tui(tmp_path, monkeypatch
         "agent-work-lab.demo.run",
         "agent-work-lab.agent.plan",
         "agent-work-lab.agent.run",
+        "agent-work-lab.starter-project.plan",
+        "agent-work-lab.starter-project.create",
     ]
 
 
