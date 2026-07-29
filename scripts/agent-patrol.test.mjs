@@ -15,6 +15,12 @@ import {
   captureFinding,
   parseArgs as parseDogfoodCaptureArgs,
 } from '../framework/agent-patrol/dogfood-capture.mjs';
+import {
+  DAILY_LIGHT_SCHEDULE,
+  WEEKLY_DEEP_SCHEDULE,
+  parseArgs as parseSelectionArgs,
+  selectPatrolPlan,
+} from '../framework/agent-patrol/select.mjs';
 
 const IMAGE =
   'ghcr.io/kungfu-systems/build-images/opencode-ci@sha256:4083ee089fa9a419f4915505094a6c1bcce433ff77455605ce8993af3b684ed3';
@@ -24,6 +30,80 @@ const ROOT_A = `sha256:${'a'.repeat(64)}`;
 const ROOT_B = `sha256:${'b'.repeat(64)}`;
 const ROOT_C = `sha256:${'c'.repeat(64)}`;
 const ROOT_D = `sha256:${'d'.repeat(64)}`;
+
+test('Patrol selector maps the two protected schedules to bounded modes', () => {
+  const light = selectPatrolPlan({
+    eventName: 'schedule',
+    schedule: DAILY_LIGHT_SCHEDULE,
+    rotationKey: 1,
+  });
+  assert.equal(light.mode, 'light');
+  assert.deepEqual(light.fixtures, ['incident-board-lease-v1']);
+  assert.equal(light.timeoutSeconds, 600);
+  assert.match(light.planRoot, /^sha256:[0-9a-f]{64}$/u);
+
+  const deep = selectPatrolPlan({
+    eventName: 'schedule',
+    schedule: WEEKLY_DEEP_SCHEDULE,
+    rotationKey: 1,
+  });
+  assert.equal(deep.mode, 'deep');
+  assert.deepEqual(deep.fixtures, [
+    'incident-board-lease-v1',
+    'incident-board-recovery-v1',
+  ]);
+  assert.equal(deep.timeoutSeconds, 900);
+});
+
+test('weekly deep Patrol rotates two-fixture suites across the catalog', () => {
+  const suites = [1, 2, 3].map(
+    (rotationKey) =>
+      selectPatrolPlan({
+        eventName: 'workflow_dispatch',
+        manualMode: 'deep',
+        rotationKey,
+      }).fixtures,
+  );
+  assert.deepEqual(suites, [
+    ['incident-board-lease-v1', 'incident-board-recovery-v1'],
+    ['incident-board-recovery-v1', 'incident-board-replay-v1'],
+    ['incident-board-replay-v1', 'incident-board-lease-v1'],
+  ]);
+  assert.equal(new Set(suites.flat()).size, 3);
+});
+
+test('Patrol selector rejects undeclared schedules and untrusted events', () => {
+  assert.throws(
+    () =>
+      selectPatrolPlan({
+        eventName: 'schedule',
+        schedule: '0 0 * * *',
+        rotationKey: 1,
+      }),
+    /unrecognized protected schedule/u,
+  );
+  assert.throws(
+    () =>
+      selectPatrolPlan({
+        eventName: 'pull_request',
+        manualMode: 'light',
+        rotationKey: 1,
+      }),
+    /untrusted Patrol event/u,
+  );
+  const parsed = parseSelectionArgs([
+    '--',
+    '--event-name',
+    'workflow_dispatch',
+    '--manual-mode',
+    'light',
+    '--rotation-key',
+    '7',
+    '--output',
+    '/tmp/plan.json',
+  ]);
+  assert.equal(parsed.rotationKey, 7);
+});
 
 function baseReport() {
   return {

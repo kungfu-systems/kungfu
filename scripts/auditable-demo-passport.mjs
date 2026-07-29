@@ -13,6 +13,25 @@ const ARTIFACT_NAME_PATTERN = /^[A-Za-z0-9][A-Za-z0-9._-]{0,255}$/u;
 const REPOSITORY_PATTERN = /^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/u;
 const RENDERER_PATTERN =
   /^[a-z0-9][a-z0-9./_-]*@[sS][hH][aA]256:[0-9a-f]{64}$/u;
+const EVIDENCE_CLASS = 'exact-installed-artifact-agent-work-lab-autoplay/v1';
+const REQUIRED_AUTHORIZATION_SOURCES = [
+  'exact-release-passport',
+  'core-policy',
+  'work-or-warrant',
+  'explicit-capability-grant',
+  'runtime-isolation',
+];
+const NON_AUTHORITIES = [
+  'first-party-identity',
+  'system-identity',
+  'kfd-compliance',
+  'product-system-metadata',
+  'local-bundle-presence',
+  'package-metadata',
+  'registry-history',
+  'scan-output',
+  'standalone-generation',
+];
 
 function fail(message) {
   throw new Error(`auditable-demo passport: ${message}`);
@@ -202,12 +221,18 @@ export function buildPassport(env = process.env) {
       rendererImage,
     },
     authority: {
-      evidenceClass: 'exact-installed-artifact-agent-brief/v1',
+      evidenceClass: EVIDENCE_CLASS,
       publication: 'github-artifacts-only',
       productionDeployment: false,
+      authorization: {
+        status: 'not-granted-by-demo',
+        requiredSources: REQUIRED_AUTHORIZATION_SOURCES,
+        nonAuthorities: NON_AUTHORITIES,
+      },
       claims: [
-        'The exact retained Linux artifact executed its installed kungfu launcher.',
-        'The exact transcript, public projection, and scene passed the Buildchain Gate.',
+        'The exact retained Linux artifact executed its installed kungfu agent-work-lab autoplay command in a bounded PTY.',
+        'The autoplay completion sentinel passed with exit status zero.',
+        'The exact terminal capture, transcript, public projection, and scene passed the Buildchain Gate and bound the rendered media.',
       ],
       nonClaims: [
         'cross-run continuity',
@@ -216,6 +241,9 @@ export function buildPassport(env = process.env) {
         'durability',
         'performance',
         'FO10',
+        'authorization from first-party or System identity',
+        'authorization from KFD compliance or Product System metadata',
+        'authorization from local bundle presence, package metadata, registry history, scan output, or standalone generation',
       ],
     },
   };
@@ -245,6 +273,22 @@ export function verifyPassport(passport) {
   const { root, ...payload } = passport;
   if (root.value !== sha256(stableJson(payload))) {
     fail('document root does not match the canonical payload');
+  }
+  if (
+    passport.authority?.evidenceClass !== EVIDENCE_CLASS ||
+    passport.authority?.publication !== 'github-artifacts-only' ||
+    passport.authority?.productionDeployment !== false ||
+    passport.authority?.authorization?.status !== 'not-granted-by-demo' ||
+    JSON.stringify(passport.authority.authorization.requiredSources) !==
+      JSON.stringify(REQUIRED_AUTHORIZATION_SOURCES) ||
+    JSON.stringify(passport.authority.authorization.nonAuthorities) !==
+      JSON.stringify(NON_AUTHORITIES) ||
+    !Array.isArray(passport.authority.claims) ||
+    passport.authority.claims.length < 1 ||
+    !Array.isArray(passport.authority.nonClaims) ||
+    passport.authority.nonClaims.length < 1
+  ) {
+    fail('authority boundary is invalid');
   }
   return passport;
 }

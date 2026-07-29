@@ -79,7 +79,7 @@
             "product-stable",
             "product-binaries"
           ],
-          "sourceRoot": "sha256:ad4cddef1611a96e383efc7a16a2c09e8f7f18a830e5242245c7f0e887274433"
+          "sourceRoot": "sha256:32c64460a994dcc872c9257b03b885ebb838992e0ea485eb7ad220940c9fdaeb"
         },
         {
           "path": ".github/workflows/alpha-promotion-preflight.yml",
@@ -114,7 +114,7 @@
             "product-stable",
             "product-binaries"
           ],
-          "sourceRoot": "sha256:af9319edd8c232c24ce2e944ba309fe5d3fe29a715a984a93d774f2cfee5bbfe"
+          "sourceRoot": "sha256:cc5f4b2e8c94c6a66a957b5e926ddf2845566c7ca76b2b3c8adc5e20c7042d9c"
         },
         {
           "path": ".github/workflows/buildchain-validate.yml",
@@ -240,7 +240,7 @@
           "classification": "non-publication",
           "owner": "kungfu-ci",
           "surfaceIds": [],
-          "sourceRoot": "sha256:fb701486e6006ffc60567756d1bb11117fbb6a6c85abd1e8ed8581a516ac973d"
+          "sourceRoot": "sha256:b99fd90ecdf14068e7dc4391d37209e862048ec85dc3a5bb977a3c83714e6601"
         },
         {
           "path": ".github/workflows/opencode-agent-repository-work.yml",
@@ -806,5 +806,5 @@
       }
     }
   ],
-  "registryRoot": "sha256:2d3febb5824968475597d3cd132db3bfc96b690fb70d50647abf68aaab9f33ad"
+  "registryRoot": "sha256:5743401db519c9c22f55108c3acc222d88fef1ebc26561ccc1fa2fc10ba67e84"
 }

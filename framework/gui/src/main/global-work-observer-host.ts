@@ -28,6 +28,7 @@ type ObserverChild = ChildProcessByStdio<null, Readable, Readable>;
 export type GlobalWorkObserverHostDeps = {
   bin: string;
   env: NodeJS.ProcessEnv;
+  argsPrefix?: string[];
   statePath: string;
   readState?: (path: string) => string;
   spawn: (
@@ -126,6 +127,7 @@ export function createGlobalWorkObserverHost(deps: GlobalWorkObserverHostDeps) {
     const launched = deps.spawn(
       deps.bin,
       [
+        ...(deps.argsPrefix ?? []),
         'workspace',
         'work',
         '--scope',

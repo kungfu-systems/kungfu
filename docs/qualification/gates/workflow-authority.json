@@ -587,7 +587,7 @@
           "authority": "qualification",
           "publication": "none",
           "receipt": "diagnostic",
-          "definitionDigest": "sha256:bb015648cc59bbcbba8c03bc2284f76e31ec1699d3eb4f64b4c6e68e96e6ea6b",
+          "definitionDigest": "sha256:95fb4fe1ca3779245386eba26dad91d3911aaa5f9fe3bb59f7da66168b54bb3c",
           "credentials": {"githubToken":"read","oidc":false,"repositorySecrets":[],"inheritedSecrets":false,"environment":null},
           "externalActions": ["actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0","actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e","actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093","actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02"],
           "steps": [
@@ -877,9 +877,9 @@
           "authority": "qualification",
           "publication": "none",
           "receipt": "qualifying",
-          "definitionDigest": "sha256:b3cd0cd1aa94021dff3ed084ece1e28f949d9f0bcd656a7bcdc6011fb3ddb3c0",
+          "definitionDigest": "sha256:086ad5ce8ca79833fd68ff356e3b068056bafc443c129e103450f154905d8e82",
           "credentials": {"githubToken":"read","oidc":false,"repositorySecrets":[],"inheritedSecrets":false,"environment":null},
-          "externalActions": ["kungfu-systems/buildchain/.github/workflows/.auditable-demo.yml@2123ee9c76013f09888d3a01543e66762a6b5819"],
+          "externalActions": ["kungfu-systems/buildchain/.github/workflows/.auditable-demo.yml@de1a1cbb1176810ebee91d1e872b441d7113305a"],
           "steps": []
         },
         {
@@ -887,7 +887,7 @@
           "authority": "qualification",
           "publication": "none",
           "receipt": "qualifying",
-          "definitionDigest": "sha256:801aaac67b08daa0bb13ae53af3f9bfea92adaf1ce0f3d7069ee57f224322341",
+          "definitionDigest": "sha256:8f1e8e5564ccee350d28875905630e748ea035f32ef7e9181305b6e5d6a6b551",
           "credentials": {"githubToken":"read","oidc":false,"repositorySecrets":[],"inheritedSecrets":false,"environment":null},
           "externalActions": ["actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0","actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd","actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a"],
           "steps": [
@@ -905,7 +905,7 @@
               "index": 3,
               "label": "name:Write exact auditable demo Release Passport",
               "authority": "evidence-publication",
-              "definitionDigest": "sha256:5d7b9d801a80b08279e6bc5f50c34ccdfd613be7091ffe1b0e4c2e46afa309e4"
+              "definitionDigest": "sha256:4c887417d714e27f1ab2ca5fc9b10a19f67f61f19b74ce2a02f7d0e7ead79a82"
             },
             {
               "index": 4,
@@ -920,7 +920,7 @@
           "authority": "qualification",
           "publication": "none",
           "receipt": "qualifying",
-          "definitionDigest": "sha256:2e2784811c52b855886178e167372a9669ee42ce7dfae6f973fac5bae75c3f31",
+          "definitionDigest": "sha256:c4910c077460721daec067765aabd394217e2b0c50caf4c98e6f3184fef3b114",
           "credentials": {"githubToken":"write","oidc":true,"repositorySecrets":["BUILDCHAIN_ARTIFACT_RELAY_S3_DOWNLOAD_ROLE_ARN","BUILDCHAIN_ARTIFACT_RELAY_S3_ROLE_ARN","BUILDCHAIN_ARTIFACT_RELAY_S3_UPLOAD_ROLE_ARN","KUNGFU_GITHUB_TOKEN"],"inheritedSecrets":false,"environment":null},
           "externalActions": ["kungfu-systems/buildchain/.github/workflows/.build.yml@4716fc9d963f73c890f04cd3b91e59569de4fc38"],
           "steps": []
@@ -1770,14 +1770,14 @@
     {
       "path": ".github/workflows/kungfu-agent-patrol.yml",
       "authority": "qualification",
-      "definitionDigest": "sha256:383a26ee97c69c803d51d77dd709d7e45711a30148a0f7af6801043a9a9bc1fc",
+      "definitionDigest": "sha256:3c50b45eb56f34f88eb3f1407b4cf469224894f5a7726e5003ce26db2dd4ab5e",
       "jobs": [
         {
           "id": "patrol",
           "authority": "qualification",
           "publication": "none",
           "receipt": "diagnostic",
-          "definitionDigest": "sha256:d20bbcfb8bc6fa41e3d00274537abdfa16b181376bb1b3ed3b325609113fca32",
+          "definitionDigest": "sha256:5b6183fa0007097274fadcbf8fa4097fbc83b89135c53aedcfd9e2acea7f5f3b",
           "credentials": {"githubToken":"read","oidc":false,"repositorySecrets":[],"inheritedSecrets":false,"environment":null},
           "externalActions": ["actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0","actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02"],
           "steps": [
@@ -1798,29 +1798,35 @@
             },
             {
               "index": 4,
-              "label": "name:Run bounded repository-work experiment",
-              "definitionDigest": "sha256:bc41e7329ddf176b5b55b7e81e8f30efedabdc34f4f7dadd8d5f67b83e99d994"
+              "label": "name:Select bounded Patrol plan",
+              "definitionDigest": "sha256:07e94217d605a7ea42dd95af957ad859d101f727067cb4e9fcc713ed03068f1e"
             },
             {
               "index": 5,
-              "label": "name:Classify bounded outcome",
-              "definitionDigest": "sha256:1e998c6fd0b3d9b8caed2d54fe19ee1a8e1beabd56771eca31f6aa20d4299772"
+              "label": "name:Run bounded repository-work experiments",
+              "definitionDigest": "sha256:9f6798817fa55908789d5c938c30db7842c6ee936ee249439c7fcbd1de28fdd9"
             },
             {
               "index": 6,
-              "label": "name:Capture or deduplicate native Dogfood Finding",
-              "definitionDigest": "sha256:653ed067fd57cff2c6f6ea66463209cec472d8483448ebf68d4f8c80baed06c0"
+              "label": "name:Classify bounded outcomes",
+              "definitionDigest": "sha256:b50b4f1fcf14af84df58711e0f730e04cecd7e95dd457d21cb1438be3d761071"
             },
             {
               "index": 7,
-              "label": "name:Enforce infrastructure and evidence integrity",
-              "definitionDigest": "sha256:532688cc7f28e3aaf4b41748496592f5becf691c6f1f3fdb6d062bfb48ac800a"
+              "label": "name:Capture or deduplicate native Dogfood Findings",
+              "definitionDigest": "sha256:ae11f433abbbf6093d7116802d4081db5db645fe3d0c12e36c1a4c62ceb8bc46"
             },
             {
               "index": 8,
+              "label": "name:Enforce infrastructure and evidence integrity",
+              "authority": "evidence-publication",
+              "definitionDigest": "sha256:7b2371cde4bcdf1b0ee56a070ba790e9040e6bd2c49d7eea936cb25d4cf2c48f"
+            },
+            {
+              "index": 9,
               "label": "name:Upload bounded Patrol evidence",
               "authority": "evidence-publication",
-              "definitionDigest": "sha256:0d703a621007119b0b6e0f92b4edb4d4b3b57f1d289ec98144ba2b1721e4944f"
+              "definitionDigest": "sha256:bc1d87aaecf76f845b0739fd113342e55f501c6f0a01cc61622910b048c1444e"
             }
           ]
         }

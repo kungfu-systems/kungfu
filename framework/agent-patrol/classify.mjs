@@ -179,7 +179,12 @@ export function classifyReport(
         error: [category, `fingerprint:${fingerprintRoot.slice(7, 23)}`],
         build: [`source:${report.sourceHead}`],
         platform: ['linux-x64', 'agent-121'],
-        tag: ['opencode', 'qwen3-coder', blocking ? 'blocking' : 'advisory'],
+        tag: [
+          'opencode',
+          'qwen3-coder',
+          `fixture:${report.fixture.id}`,
+          blocking ? 'blocking' : 'advisory',
+        ],
         evidence: ['bounded-report'],
       },
       privacy: 'internal',

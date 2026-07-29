@@ -6,7 +6,7 @@ repository repair. It is deliberately separate from Auditable Demo,
 Qualification Lab, release Gates, public capability claims, and model ranking.
 
 ```text
-49-file / 2433-line Python fixture with a seeded defect
+49-file Python fixture selected from a three-entry seeded-defect catalog
 -> fresh Agent A investigates under a read-only Warrant
 -> deterministic assessment accepts only a bounded partial Claim
 -> Kungfu admits a content-rooted continuation envelope
@@ -18,6 +18,19 @@ Qualification Lab, release Gates, public capability claims, and model ranking.
 The fixture implements an append-only incident board. Its seeded defect permits
 an expired lease to complete work and counts historical retry completions more
 than once after restart. The repository uses only the Python standard library.
+
+The catalog derives three byte-bounded fixtures from that repository:
+
+| Fixture | Seeded boundary | Writable Warrant |
+| --- | --- | --- |
+| `incident-board-lease-v1` | expired-lease completion authorization | `incident_board/lease.py` |
+| `incident-board-recovery-v1` | duplicate-completion restart replay | `incident_board/replay.py` |
+| `incident-board-replay-v1` | combined lease, command, and replay repair | three production modules |
+
+Each derived fixture pre-applies the independent reference repair outside its
+seeded boundary. The visible and hidden external oracle still checks the full
+repository behavior, so a focused repair cannot pass by regressing another
+boundary.
 
 ## Trust boundaries
 
@@ -74,7 +87,8 @@ For a direct trusted-host invocation:
   --output /tmp/kungfu-agent-repository-work \
   --image ghcr.io/kungfu-systems/build-images/opencode-ci@sha256:4083ee089fa9a419f4915505094a6c1bcce433ff77455605ce8993af3b684ed3 \
   --model qwen3-coder:30b-opencode-64k \
-  --base-url http://host.docker.internal:11435/v1
+  --base-url http://host.docker.internal:11435/v1 \
+  --fixture incident-board-lease-v1
 ```
 
 The resulting `agent-repository-work-report.json` records execution,
@@ -101,5 +115,5 @@ privacy, deduplication, authority, and activation boundaries.
 This experiment does not establish multi-day durability, concurrent editing,
 arbitrary repository competence, provider superiority, production safety,
 GUI/TUI parity, cross-machine Dogfood replication, or release readiness. A
-single passing run is evidence that the tested path bore this workload; it is
-not a generalized product claim.
+passing run is evidence that the selected fixture, runtime, and runner bore that
+workload; it is not a generalized product claim.

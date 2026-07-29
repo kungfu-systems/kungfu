@@ -96,7 +96,7 @@ jobs:
       artifact-paths: |
         product/release
       github-artifact-attestation-subject-path: product/release/cli/kungfu-episodes-cli-linux-x64.tar.gz
-      github-artifact-attestation-signer-sha: ad57ae0fee5072a1de7a0b0182f70c0c41e45abb
+      github-artifact-attestation-signer-sha: 375b2d4b8a904776453773a33b4c4e4556c8c999
       github-artifact-attestation-platform-id: linux-x64
       credential-island-macos-app-path: product/dist/desktop/mac-arm64/Kungfu Episodes.app
       credential-island-caller-owned: true
@@ -368,13 +368,13 @@ jobs:
     permissions:
       actions: read
       contents: read
-    uses: kungfu-systems/buildchain/.github/workflows/.auditable-demo.yml@2123ee9c76013f09888d3a01543e66762a6b5819 # v3.0.2-alpha.5 auditable demo + Linux GitHub Artifact Attestation
+    uses: kungfu-systems/buildchain/.github/workflows/.auditable-demo.yml@de1a1cbb1176810ebee91d1e872b441d7113305a # PR #2030 bounded terminal capture admission
     with:
       source-ref: ${{ needs.build.outputs.publish-source-sha }}
       source-artifact-name: ${{ needs.resolve-auditable-demo-source.outputs.artifact-name }}
       source-artifact-digest: ${{ needs.resolve-auditable-demo-source.outputs.artifact-digest }}
       adapter-path: scripts/auditable-demo-adapter.py
-      renderer-image: ghcr.io/kungfu-systems/build-images/demo-renderer@sha256:cb5e1dec368d21c7d4e8baded99ac75f12f7eff0d19505751888cf974086efa6
+      renderer-image: ghcr.io/kungfu-systems/build-images/demo-renderer@sha256:8ba9a614f22e6cfe459d2dcc60bc82f0218e278c6a09ffeee5bda6bc3cbf33b9
       render-media: ${{ (github.event_name == 'workflow_dispatch' && inputs.render-auditable-demo) || (github.event_name == 'pull_request' && startsWith(github.base_ref, 'alpha/')) }}
       artifact-retention-days: 14
       require-trusted-event: true
@@ -503,8 +503,8 @@ jobs:
           MEDIA_ARTIFACT_URL: ${{ needs.auditable-demo.outputs.media-artifact-url }}
           MEDIA_ARTIFACT_EXPIRES_AT: ${{ steps.artifact-expiry.outputs.media-artifact-expires-at }}
           MEDIA_ROOT: ${{ needs.auditable-demo.outputs.media-root }}
-          BUILDCHAIN_SHA: 2123ee9c76013f09888d3a01543e66762a6b5819
-          RENDERER_IMAGE: ghcr.io/kungfu-systems/build-images/demo-renderer@sha256:cb5e1dec368d21c7d4e8baded99ac75f12f7eff0d19505751888cf974086efa6
+          BUILDCHAIN_SHA: de1a1cbb1176810ebee91d1e872b441d7113305a
+          RENDERER_IMAGE: ghcr.io/kungfu-systems/build-images/demo-renderer@sha256:8ba9a614f22e6cfe459d2dcc60bc82f0218e278c6a09ffeee5bda6bc3cbf33b9
         run: ./shifu node scripts/auditable-demo-passport.mjs write --output auditable-demo-release-passport.json
 
       - name: Upload exact auditable demo Release Passport

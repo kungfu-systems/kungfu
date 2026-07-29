@@ -452,13 +452,27 @@ def gate(
 
 @dogfood.command(help="show aging, recurrence, deferral, and release blockers")
 @_identity_options
+@click.option(
+    "--scope", type=click.Choice(["local", "related", "all"]), default="local"
+)
 @click.option("--now", default="")
 @dogfood_context
 @_guard
-def starvation(ctx, workspace_root, home, now):
+def starvation(ctx, workspace_root, home, scope, now):
     del ctx
-    _, runtime_dir, _ = _runtime(workspace_root, home, write=False)
-    _emit(dogfood_api.read(runtime_dir, "starvation", {"now": now}))
+    identity, runtime_dir, _ = _runtime(workspace_root, home, write=False)
+    _emit(
+        dogfood_api.read(
+            runtime_dir,
+            "starvation",
+            {
+                "workspaceRoot": identity.workspace_root or "",
+                "home": home,
+                "scope": scope,
+                "now": now,
+            },
+        )
+    )
 
 
 @dogfood.command(

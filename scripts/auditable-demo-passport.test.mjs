@@ -59,6 +59,29 @@ test('writes and verifies a Gate-only exact-output passport', () => {
   assert.equal(passport.source.artifact.expiresAt, '2026-08-08T12:00:00.000Z');
   assert.equal(passport.gate.artifact.expiresAt, '2026-08-08T12:00:00.000Z');
   assert.equal(passport.authority.productionDeployment, false);
+  assert.equal(
+    passport.authority.evidenceClass,
+    'exact-installed-artifact-agent-work-lab-autoplay/v1',
+  );
+  assert.equal(passport.authority.authorization.status, 'not-granted-by-demo');
+  assert.deepEqual(passport.authority.authorization.requiredSources, [
+    'exact-release-passport',
+    'core-policy',
+    'work-or-warrant',
+    'explicit-capability-grant',
+    'runtime-isolation',
+  ]);
+  assert.deepEqual(passport.authority.authorization.nonAuthorities, [
+    'first-party-identity',
+    'system-identity',
+    'kfd-compliance',
+    'product-system-metadata',
+    'local-bundle-presence',
+    'package-metadata',
+    'registry-history',
+    'scan-output',
+    'standalone-generation',
+  ]);
   assert.match(passport.root.value, /^sha256:[0-9a-f]{64}$/u);
   assert.deepEqual(verifyPassport(JSON.parse(stableJson(passport))), passport);
 });

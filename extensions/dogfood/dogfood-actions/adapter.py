@@ -53,7 +53,7 @@ def _action(domain, operation: str, runtime_dir: str, values: Mapping[str, Any])
             privacy=str(values.get("privacy") or "internal"),
             actor=str(values.get("actor") or ""),
             observed_at=str(values.get("observedAt") or ""),
-            impact=str(values.get("impact") or "normal"),
+            impact=str(values.get("impact") or "medium"),
             hard_class=str(values.get("hardClass") or ""),
             recurrence=int(values.get("recurrence") or 1),
         )
@@ -65,7 +65,7 @@ def _action(domain, operation: str, runtime_dir: str, values: Mapping[str, Any])
             title=str(values.get("title") or ""),
             owner=str(values.get("owner") or ""),
             finding_roots=values.get("findingRoots") or [],
-            impact=str(values.get("impact") or "normal"),
+            impact=str(values.get("impact") or "medium"),
             hard_class=str(values.get("hardClass") or ""),
             verification_criteria=values.get("verificationCriteria") or [],
             actor=str(values.get("actor") or ""),
@@ -188,7 +188,17 @@ def invoke(
             now=str(values.get("now") or ""),
         )
     if operation == "starvation":
-        return domain.evaluate_starvation(runtime_dir, now=str(values.get("now") or ""))
+        if not values.get("workspaceRoot") and not values.get("home"):
+            return domain.evaluate_starvation(
+                runtime_dir,
+                now=str(values.get("now") or ""),
+            )
+        return domain.starvation_projection(
+            _workspace(values),
+            scope=str(values.get("scope") or "local"),
+            config_home=str(values.get("configHome") or "") or None,
+            now=str(values.get("now") or ""),
+        )
     if operation == "migration-plan":
         return domain.atlas_migration_plan(str(values.get("sourcePath") or ""))
     if operation == "migration-verify":

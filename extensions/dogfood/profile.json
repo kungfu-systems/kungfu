@@ -64,7 +64,7 @@
   "views": {
     "registry": {
       "path": "views/registry.json",
-      "sha256": "aeaf9f3df6753f4d2cde39a41832830a098e237ed2f1177ed51aa9b203512104"
+      "sha256": "8477b746073e63d231c19de9bf4f9f525a748be608991626f2347d40e1387bb7"
     }
   },
   "migrations": {

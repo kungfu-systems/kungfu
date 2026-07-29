@@ -15,10 +15,15 @@ import {
 } from '../framework/agent-repository-work/opencode-docker-proxy.mjs';
 import {
   parseInvestigationClaim,
+  parseArgs as parseRepositoryWorkArgs,
   runExperiment,
   runtimeProfile,
   validateExperimentReport,
 } from '../framework/agent-repository-work/run.mjs';
+import {
+  REPOSITORY_WORK_FIXTURES,
+  getRepositoryWorkFixture,
+} from '../tests/qualification/agent-repository-work/fixture-catalog.mjs';
 import {
   applyIncidentBoardReferenceRepair,
   materializeIncidentBoardFixture,
@@ -85,6 +90,58 @@ test('fixture contract pins a moderate deterministic repository', () => {
   assert.equal(contract.oracle.sourceRoot, fileRoot(oraclePath));
   assert.equal(contract.oracle.referenceRoot, fileRoot(referencePath));
   assert.equal(contract.oracle.mountedIntoAgentWorkspace, false);
+  assert.deepEqual(
+    contract.fixtureCatalog.entries.map(({ id }) => id).sort(),
+    REPOSITORY_WORK_FIXTURES.map(({ id }) => id).sort(),
+  );
+});
+
+test('fixture catalog exposes three independently seeded bounded repairs', () => {
+  assert.equal(REPOSITORY_WORK_FIXTURES.length, 3);
+  assert.equal(
+    new Set(REPOSITORY_WORK_FIXTURES.map(({ id }) => id)).size,
+    REPOSITORY_WORK_FIXTURES.length,
+  );
+  for (const fixture of REPOSITORY_WORK_FIXTURES) {
+    const seeded = qualifySeededIncidentBoardFixture(fixture);
+    assert.equal(seeded.passed, true, fixture.id);
+    assert.deepEqual(
+      seeded.expectedFailures,
+      fixture.investigation.expectedFailures,
+    );
+    const reference = qualifyReferenceIncidentBoardRepair(fixture);
+    assert.equal(reference.passed, true, fixture.id);
+    assert.deepEqual(
+      reference.changedPaths,
+      fixture.warrants.agentB.writablePaths.slice().sort(),
+    );
+  }
+});
+
+test('repository-work CLI selects one declared fixture explicitly', () => {
+  const parsed = parseRepositoryWorkArgs([
+    '--',
+    '--fixture',
+    'incident-board-lease-v1',
+    '--opencode',
+    mockOpenCodePath,
+  ]);
+  assert.equal(parsed.fixture, 'incident-board-lease-v1');
+  assert.equal(
+    getRepositoryWorkFixture(parsed.fixture).warrants.agentB.writablePaths
+      .length,
+    1,
+  );
+  assert.throws(
+    () =>
+      parseRepositoryWorkArgs([
+        '--fixture',
+        'unknown-fixture',
+        '--opencode',
+        mockOpenCodePath,
+      ]),
+    /unknown repository-work fixture/u,
+  );
 });
 
 test('seeded defect fails and independent reference repair passes', () => {

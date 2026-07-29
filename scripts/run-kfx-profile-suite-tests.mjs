@@ -88,7 +88,13 @@ if (agentWorkLabOnly) {
   for (const [label, file] of [
     ['API capability adapter', 'framework/api/tests/agent-work-lab.test.ts'],
     ['TUI experience', 'framework/tui/src/agent-work-lab-view.test.ts'],
+    ['TUI workbench framework', 'framework/tui/src/profile-shell.test.ts'],
+    ['Product TUI demo entry', 'product/scripts/product.test.mjs'],
     ['GUI experience', 'framework/gui/src/agent-work-lab.test.ts'],
+    [
+      'GUI source CLI fallback',
+      'framework/gui/src/main/kungfu-cli-invocation.test.ts',
+    ],
     ['KFX Manifest discovery', 'framework/kfx/src/profile-suite.test.ts'],
   ]) {
     run(label, 'pnpm', [
@@ -118,6 +124,7 @@ if (agentWorkLabOnly) {
         'framework/core/src/python/kungfu/cli/commands/agent_work_lab.py',
       ),
       path.join(root, 'framework/core/tests/python/test_agent_work_lab.py'),
+      path.join(root, 'framework/core/tests/python/test_project_template.py'),
     ],
     { ...process.env, PYTHONPATH: pythonPath },
   );
@@ -133,6 +140,7 @@ if (agentWorkLabOnly) {
       'pytest',
       '-q',
       path.join(root, 'framework/core/tests/python/test_agent_work_lab.py'),
+      path.join(root, 'framework/core/tests/python/test_project_template.py'),
     ],
     { ...process.env, PYTHONPATH: pythonPath },
   );

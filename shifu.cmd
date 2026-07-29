@@ -123,7 +123,7 @@ if not "%~3"=="" (
 :xinfaqualityrun
 where fnm >nul 2>nul && (
   fnm install >nul 2>nul
-  fnm exec --using-file -- node "%~dp0scripts\qualify-xinfa-context-quality.mjs" "%_XINFA_QUALITY_MODE%"
+  fnm exec -- node "%~dp0scripts\qualify-xinfa-context-quality.mjs" "%_XINFA_QUALITY_MODE%"
   exit /b !errorlevel!
 )
 where node >nul 2>nul && (
@@ -137,7 +137,7 @@ exit /b 127
 if /i not "%~1"=="project-cut" goto sourceacceptance
 where fnm >nul 2>nul && (
   fnm install >nul 2>nul
-  fnm exec --using-file -- node "%~dp0scripts\run-project-cut-entry.mjs" %*
+  fnm exec -- node "%~dp0scripts\run-project-cut-entry.mjs" %*
   exit /b !errorlevel!
 )
 where node >nul 2>nul && (
@@ -153,7 +153,7 @@ set "KUNGFU_ACTION_LAYOUT=source"
 where fnm >nul 2>nul && (
   fnm install >nul 2>nul
   rem Keep the leading action token; action.mjs drops it without cmd re-expansion.
-  fnm exec --using-file -- node "%~dp0framework\action\action.mjs" %*
+  fnm exec -- node "%~dp0framework\action\action.mjs" %*
   exit /b !errorlevel!
 )
 where node >nul 2>nul && (
@@ -186,7 +186,7 @@ exit /b 127
 :assignmentcapture
 where fnm >nul 2>nul && (
   fnm install >nul 2>nul
-  fnm exec --using-file -- node "%~dp0framework\assignment-capture\assignment-capture.mjs" !_KFC_WORK_ARGS!
+  fnm exec -- node "%~dp0framework\assignment-capture\assignment-capture.mjs" !_KFC_WORK_ARGS!
   exit /b !errorlevel!
 )
 where node >nul 2>nul && (
@@ -269,7 +269,7 @@ if /i "%_XINFA_TASK%"=="xinfa:standalone" set "_XINFA_TASK=standalone"
 shift
 where fnm >nul 2>nul && (
   fnm install >nul 2>nul
-  fnm exec --using-file -- node "%~dp0crates\xinfa\tooling\task.mjs" "%_XINFA_TASK%" %*
+  fnm exec -- node "%~dp0crates\xinfa\tooling\task.mjs" "%_XINFA_TASK%" %*
   exit /b !errorlevel!
 )
 where node >nul 2>nul && (
@@ -283,7 +283,7 @@ exit /b 127
 if /i not "%~1"=="docs:check:readonly" goto native
 where fnm >nul 2>nul && (
   fnm install >nul 2>nul
-  fnm exec --using-file -- node "%~dp0scripts\run-docs-readonly.mjs"
+  fnm exec -- node "%~dp0scripts\run-docs-readonly.mjs"
   exit /b !errorlevel!
 )
 where node >nul 2>nul && (
@@ -299,7 +299,7 @@ set "_KFC_FORWARD_ARGS=%*"
 set "_KFC_FORWARD_ARGS=%_KFC_FORWARD_ARGS:* =%"
 where fnm >nul 2>nul && (
   fnm install >nul 2>nul
-  fnm exec --using-file -- node "%~dp0scripts\adr-release-gate.mjs" %_KFC_FORWARD_ARGS%
+  fnm exec -- node "%~dp0scripts\adr-release-gate.mjs" %_KFC_FORWARD_ARGS%
   exit /b !errorlevel!
 )
 where node >nul 2>nul && (
@@ -531,7 +531,7 @@ goto bootstrap
 :delegate
 where fnm >nul 2>nul && (
   fnm install >nul 2>nul
-  fnm exec --using-file -- node "%~dp0shifu.mjs" %*
+  fnm exec -- node "%~dp0shifu.mjs" %*
   exit /b !errorlevel!
 )
 where node >nul 2>nul && (
@@ -557,5 +557,5 @@ fnm install >nul 2>nul
 rem Under the pinned node, run the packageManager-pinned pnpm via corepack.
 rem NOTE: use corepack.cmd (not bare "corepack"): fnm exec spawns the program directly
 rem without applying PATHEXT, so bare "corepack" is not found on Windows (only corepack.cmd is).
-fnm exec --using-file -- corepack.cmd pnpm %*
+fnm exec -- corepack.cmd pnpm %*
 exit /b !errorlevel!
