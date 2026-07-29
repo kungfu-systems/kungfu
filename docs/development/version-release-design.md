@@ -56,7 +56,11 @@ fixes use an explicit ADR-neutral path. The expensive, un-cheatable trust
 pipeline and weak-centralization described below begin at `dev → alpha`, where
 the first real-binary prerelease is produced. This separates *fast development
 integration* from *release qualification* without allowing half-described
-architecture work to accumulate silently.
+architecture work to accumulate silently. The same light gate validates the
+common deprecation authority on `dev`; protected Alpha and stable candidates
+also fail when an applicable entry is removal-due without qualified removal,
+restored support, or one exact bounded Warrant. See
+[`deprecation-lifecycle.md`](deprecation-lifecycle.md).
 
 **2. The git tag is the artifact; the `package.json` version is a downstream projection.**
 What carries meaning is the tag — an immutable object pinning a commit, representing "this
@@ -269,6 +273,15 @@ does not replace semantic review: reviewers decide whether code fulfills the
 ADR and whether residual risk deserves a waiver. See
 [KF-ADR-019f86da-4f90-7b6b-ae6d-76cea57487f2](../adr/KF-ADR-019f86da-4f90-7b6b-ae6d-76cea57487f2.md)
 and the [document metadata contract](document-metadata.md).
+
+The gate also evaluates
+`framework/deprecation/deprecation-registry.json`. ADR delivery waivers do not
+waive deprecation debt. At the first eligible Alpha or stable release, an
+applicable entry must have qualified removal evidence, explicit restored
+support, or an exact native Warrant projection whose date and release bounds
+cover that candidate. The definition of eligibility, surface defaults, and
+history-retention rules are in the
+[deprecation lifecycle](deprecation-lifecycle.md).
 
 ### Side-effect-free promotion rehearsal
 

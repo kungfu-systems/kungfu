@@ -1,6 +1,6 @@
 {
   "schema": "kungfu.core-review-routes/v1",
-  "authorityRoot": "sha256:5fc5908ef362aae5a9b7423e81fbedda142bd110cbdb7827ab42aa2ce27e02a6",
+  "authorityRoot": "sha256:31473c591a9a740d698eda4cba42324ae0f05ad76083057bb10d370af40d81e4",
   "fallbackAccount": "@dongkeren",
   "routes": [
     {
