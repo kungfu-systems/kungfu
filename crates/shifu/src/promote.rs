@@ -32,6 +32,10 @@ use crate::artifact_catalog::{
 };
 use crate::{envfile, native_update, util};
 
+#[path = "promote_desktop.rs"]
+mod promote_desktop;
+use promote_desktop::{complete_atomic_target, DesktopCommit};
+
 struct BuildEntry {
     slot: PathBuf,
     name: String,
@@ -458,7 +462,7 @@ fn write_installed_receipt(
     entry: &BuildEntry,
     installed: &Path,
     context: &InstalledReceiptContext<'_>,
-) {
+) -> Result<(), String> {
     let text = format!(
         "KUNGFU_ARTIFACT_SCHEMA='shifu.local-artifact/v1'\n\
          KUNGFU_INSTALLED_SHA='{}'\n\
@@ -504,17 +508,17 @@ fn write_installed_receipt(
         context.rollback_sha,
         context.rollback_release_cut_root,
     );
-    let path = installed_receipt_path();
-    let staged = path.with_extension("tmp");
-    if fs::write(&staged, text).is_ok() {
-        if let Err(error) = fs::rename(&staged, &path) {
+    write_installed_receipt_at(&installed_receipt_path(), &text)
+}
+
+fn write_installed_receipt_at(path: &Path, text: &str) -> Result<(), String> {
+    let staged = path.with_extension(format!("tmp-{}", std::process::id()));
+    fs::write(&staged, text)
+        .and_then(|()| fs::rename(&staged, path))
+        .map_err(|error| {
             let _ = fs::remove_file(&staged);
-            eprintln!(
-                "   {}",
-                style::yellow(&format!("could not write promotion receipt: {error}"))
-            );
-        }
-    }
+            format!("cannot persist installed promotion receipt: {error}")
+        })
 }
 
 fn native_target(entry: &BuildEntry) -> native_update::ApplyTarget<'_> {
@@ -649,6 +653,30 @@ fn read_pending_transaction_at(path: &Path) -> Result<Option<PendingTransaction>
     }))
 }
 
+fn advance_desktop_phase_at<Commit>(
+    pending: &mut PendingTransaction,
+    entry: &BuildEntry,
+    marker_path: &Path,
+    commit: Commit,
+) -> Result<(), String>
+where
+    Commit: FnOnce(&BuildEntry, bool) -> Result<DesktopCommit, String>,
+{
+    if pending.state != "desktop-commit-pending" {
+        return Ok(());
+    }
+    let desktop = commit(entry, pending.force)?;
+    pending.installed_path = desktop.installed.display().to_string();
+    pending.desktop_backup_path = desktop
+        .backup
+        .as_ref()
+        .map(|path| path.display().to_string())
+        .unwrap_or_default();
+    pending.state = "native-commit-pending".to_string();
+    write_pending_transaction_at(marker_path, pending)
+        .map_err(|error| format!("cannot retain committed desktop phase: {error}"))
+}
+
 fn finish_pending_transaction(
     entries: &[BuildEntry],
     entry: &BuildEntry,
@@ -680,7 +708,12 @@ fn finish_pending_transaction(
             native_updater: updater,
             mode: installed_mode,
         },
-    );
+    )
+    .unwrap_or_else(|error| {
+        util::die(&format!(
+            "{error}; exact promotion transaction and desktop backup remain pending"
+        ))
+    });
     write_promotion_receipt(
         &registry_dir(),
         "kungfu",
@@ -740,17 +773,14 @@ fn resume_pending_transaction(entries: &[BuildEntry], check: bool) {
         .unwrap_or_else(|| {
             util::die("pending promotion target is absent or its Release Cut coordinate changed")
         });
-    if pending.state == "desktop-commit-pending" {
-        let desktop = commit_desktop(entry, pending.force);
-        pending.installed_path = desktop.installed.display().to_string();
-        pending.desktop_backup_path = desktop
-            .backup
-            .as_ref()
-            .map(|path| path.display().to_string())
-            .unwrap_or_default();
-        pending.state = "native-commit-pending".to_string();
-        write_pending_transaction(&pending);
-    }
+    let marker_path = pending_transaction_path();
+    advance_desktop_phase_at(&mut pending, entry, &marker_path, commit_desktop).unwrap_or_else(
+        |error| {
+            util::die(&format!(
+                "desktop promotion remains recoverable and pending: {error}"
+            ))
+        },
+    );
     let target = native_target(entry);
     let updater = native_update::updater(&target).unwrap_or_else(|| {
         util::die("native Kungfu updater is unavailable while resuming promotion")
@@ -1011,17 +1041,12 @@ fn install_dir(default: PathBuf, user_fallback: PathBuf) -> PathBuf {
     user_fallback
 }
 
-struct DesktopCommit {
-    installed: PathBuf,
-    backup: Option<PathBuf>,
-}
-
-fn commit_desktop(entry: &BuildEntry, force: bool) -> DesktopCommit {
+fn commit_desktop(entry: &BuildEntry, force: bool) -> Result<DesktopCommit, String> {
     match entry.kind.as_str() {
         "app" => promote_app(entry, force),
         "installer" => promote_installer(entry),
         "appimage" => promote_appimage(entry),
-        other => util::die(&format!("unknown artifact kind in stash: {other}")),
+        other => Err(format!("unknown artifact kind in stash: {other}")),
     }
 }
 
@@ -1059,14 +1084,13 @@ fn dir_writable(dir: &Path) -> bool {
 
 /// macOS: copy the stashed .app over the installed one (rename dance — the
 /// old app is only removed after the new copy fully landed next to it).
-fn promote_app(entry: &BuildEntry, force: bool) -> DesktopCommit {
+fn promote_app(entry: &BuildEntry, force: bool) -> Result<DesktopCommit, String> {
     let target_dir = install_dir(
         PathBuf::from("/Applications"),
         host::home_dir().join("Applications"),
     );
-    if let Err(e) = fs::create_dir_all(&target_dir) {
-        util::die(&format!("cannot create {}: {e}", target_dir.display()));
-    }
+    fs::create_dir_all(&target_dir)
+        .map_err(|error| format!("cannot create {}: {error}", target_dir.display()))?;
     let target = target_dir.join(&entry.artifact);
 
     if product_running(&entry.artifact) {
@@ -1076,53 +1100,31 @@ fn promote_app(entry: &BuildEntry, force: bool) -> DesktopCommit {
                 style::yellow("app is running; replacing anyway (--force)")
             );
         } else {
-            util::die(&format!(
+            return Err(format!(
                 "{} is running — quit it first, or pass --force to replace it anyway",
                 entry.artifact
             ));
         }
     }
 
-    let staged = target_dir.join(format!(".{}.new-{}", entry.artifact, std::process::id()));
-    let _ = fs::remove_dir_all(&staged);
-    let status = Command::new("ditto")
-        .arg(entry.slot.join(&entry.artifact))
-        .arg(&staged)
-        .status();
-    match status {
-        Ok(s) if s.success() => {}
-        Ok(s) => util::die(&format!("ditto failed (exit {:?})", s.code())),
-        Err(e) => util::die(&format!("failed to run ditto: {e}")),
-    }
+    let source = entry.slot.join(&entry.artifact);
+    let staged = target_dir.join(format!(".{}.shifu-next", entry.artifact));
     let backup = target_dir.join(format!(".{}.shifu-previous", entry.artifact));
-    if backup.exists() && product_app_manifests_valid(&target, &entry.sha) {
-        return DesktopCommit {
-            installed: target,
-            backup: Some(backup),
-        };
-    }
-    if backup.exists() {
-        util::die(&format!(
-            "unresolved desktop transaction backup requires recovery: {}",
-            backup.display()
-        ));
-    }
-    if target.exists() {
-        if let Err(e) = fs::rename(&target, &backup) {
-            let _ = fs::remove_dir_all(&staged);
-            util::die(&format!("cannot stage previous {}: {e}", target.display()));
-        }
-    }
-    if let Err(e) = fs::rename(&staged, &target) {
-        if backup.exists() {
-            let _ = fs::rename(&backup, &target);
-        }
-        util::die(&format!("cannot place {}: {e}", target.display()));
-    }
-    DesktopCommit {
-        installed: target,
-        backup: backup.exists().then_some(backup),
-    }
+    complete_atomic_target(
+        &source,
+        &target,
+        &backup,
+        &staged,
+        |from, to| {
+            let status = Command::new("ditto").arg(from).arg(to).status();
+            match status {
+                Ok(result) if result.success() => Ok(()),
+                Ok(result) => Err(format!("ditto failed (exit {:?})", result.code())),
+                Err(error) => Err(format!("failed to run ditto: {error}")),
+            }
+        },
+        |path| product_app_manifests_valid(path, &entry.sha),
+    )
 }
 
 /// Is the product app currently running? (macOS: match the executable path
@@ -1138,7 +1140,7 @@ fn product_running(app_name: &str) -> bool {
 
 /// Windows: the stashed artifact is the self-contained nsis installer; run it
 /// silently.
-fn promote_installer(entry: &BuildEntry) -> DesktopCommit {
+fn promote_installer(entry: &BuildEntry) -> Result<DesktopCommit, String> {
     let installer = entry.slot.join(&entry.artifact);
     eprintln!(
         "   {}",
@@ -1146,64 +1148,53 @@ fn promote_installer(entry: &BuildEntry) -> DesktopCommit {
     );
     let status = Command::new(&installer).arg("/S").status();
     match status {
-        Ok(s) if s.success() => DesktopCommit {
+        Ok(result) if result.success() => Ok(DesktopCommit {
             installed: installer,
             backup: None,
-        },
-        Ok(s) => util::die(&format!("installer failed (exit {:?})", s.code())),
-        Err(e) => util::die(&format!("failed to run the installer: {e}")),
+        }),
+        Ok(result) => Err(format!("installer failed (exit {:?})", result.code())),
+        Err(error) => Err(format!("failed to run the installer: {error}")),
     }
 }
 
 /// Linux: place the AppImage on the user's PATH under a stable name.
-fn promote_appimage(entry: &BuildEntry) -> DesktopCommit {
+fn promote_appimage(entry: &BuildEntry) -> Result<DesktopCommit, String> {
     let target_dir = install_dir(
         host::home_dir().join(".local").join("bin"),
         host::home_dir().join(".local").join("bin"),
     );
-    if let Err(e) = fs::create_dir_all(&target_dir) {
-        util::die(&format!("cannot create {}: {e}", target_dir.display()));
-    }
+    fs::create_dir_all(&target_dir)
+        .map_err(|error| format!("cannot create {}: {error}", target_dir.display()))?;
     let target = target_dir.join("kungfu-dev.AppImage");
     let source = entry.slot.join(&entry.artifact);
+    let staged = target_dir.join(".kungfu-dev.AppImage.shifu-next");
     let backup = target_dir.join(".kungfu-dev.AppImage.shifu-previous");
-    if backup.exists()
-        && bootstrap::sha256_file(&source).ok() == bootstrap::sha256_file(&target).ok()
-    {
-        return DesktopCommit {
-            installed: target,
-            backup: Some(backup),
-        };
-    }
-    if backup.exists() {
-        util::die(&format!(
-            "unresolved AppImage transaction backup requires recovery: {}",
-            backup.display()
-        ));
-    }
-    if target.exists() {
-        fs::rename(&target, &backup).unwrap_or_else(|error| {
-            util::die(&format!(
-                "cannot stage previous {}: {error}",
-                target.display()
-            ))
-        });
-    }
-    if let Err(e) = fs::copy(&source, &target) {
-        if backup.exists() {
-            let _ = fs::rename(&backup, &target);
-        }
-        util::die(&format!("cannot place {}: {e}", target.display()));
-    }
-    #[cfg(unix)]
-    {
-        use std::os::unix::fs::PermissionsExt;
-        let _ = fs::set_permissions(&target, fs::Permissions::from_mode(0o755));
-    }
-    DesktopCommit {
-        installed: target,
-        backup: backup.exists().then_some(backup),
-    }
+    let source_digest = bootstrap::sha256_file(&source)
+        .map_err(|error| format!("cannot hash {}: {error}", source.display()))?;
+    complete_atomic_target(
+        &source,
+        &target,
+        &backup,
+        &staged,
+        |from, to| {
+            fs::copy(from, to)
+                .map(|_| ())
+                .map_err(|error| format!("cannot stage {}: {error}", to.display()))?;
+            #[cfg(unix)]
+            {
+                use std::os::unix::fs::PermissionsExt;
+                fs::set_permissions(to, fs::Permissions::from_mode(0o755))
+                    .map_err(|error| format!("cannot make staged AppImage executable: {error}"))?;
+            }
+            Ok(())
+        },
+        |path| {
+            path.is_file()
+                && bootstrap::sha256_file(path)
+                    .map(|digest| digest == source_digest)
+                    .unwrap_or(false)
+        },
+    )
 }
 
 #[cfg(windows)]

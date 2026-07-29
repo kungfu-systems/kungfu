@@ -135,51 +135,105 @@ fn rollback_coordinate_requires_exact_retained_artifact() {
 }
 
 #[test]
-fn pending_transaction_retains_recovery_state_across_native_failure() {
-    let root = shifu_core::host::unique_temp_dir("promote-pending").unwrap();
+fn desktop_phase_resumes_after_backup_and_before_target_placement() {
+    let root = shifu_core::host::unique_temp_dir("promote-desktop-resume").unwrap();
+    let source = root.join("source.AppImage");
+    fs::write(&source, b"new desktop").unwrap();
+    for partial_target in [false, true] {
+        let case = root.join(if partial_target { "partial" } else { "missing" });
+        fs::create_dir_all(&case).unwrap();
+        let target = case.join("kungfu-dev.AppImage");
+        let backup = case.join(".kungfu-dev.AppImage.shifu-previous");
+        let staged = case.join(".kungfu-dev.AppImage.shifu-next");
+        fs::write(&target, b"old desktop").unwrap();
+        fs::write(&staged, b"new desktop").unwrap();
+        fs::rename(&target, &backup).unwrap();
+        if partial_target {
+            fs::write(&target, b"partial desktop").unwrap();
+        }
+        let marker = case.join("promotion-pending.json");
+        let mut pending = PendingTransaction {
+            state: "desktop-commit-pending".into(),
+            action: "promote".into(),
+            artifact_id: "target-build".into(),
+            target_release_cut_root: format!("sha256:{}", "a".repeat(64)),
+            cut_transition_root: format!("sha256:{}", "b".repeat(64)),
+            native_receipt_root: String::new(),
+            previous_build_id: "previous-build".into(),
+            previous_sha: "1".repeat(40),
+            previous_release_cut_root: format!("sha256:{}", "c".repeat(64)),
+            installed_path: String::new(),
+            desktop_backup_path: String::new(),
+            force: false,
+            launch: false,
+        };
+        write_pending_transaction_at(&marker, &pending).unwrap();
+        let entry = qualified_app(&case);
+        advance_desktop_phase_at(&mut pending, &entry, &marker, |_, _| {
+            complete_atomic_target(
+                &source,
+                &target,
+                &backup,
+                &staged,
+                |from, to| {
+                    fs::copy(from, to)
+                        .map(|_| ())
+                        .map_err(|error| error.to_string())
+                },
+                |path| fs::read(path).ok().as_deref() == Some(b"new desktop"),
+            )
+        })
+        .unwrap();
+        let recovered = read_pending_transaction_at(&marker).unwrap().unwrap();
+        assert_eq!(recovered.state, "native-commit-pending");
+        assert_eq!(fs::read(&target).unwrap(), b"new desktop");
+        assert_eq!(fs::read(&backup).unwrap(), b"old desktop");
+        assert_eq!(recovered.installed_path, target.display().to_string());
+        assert_eq!(recovered.desktop_backup_path, backup.display().to_string());
+    }
+    let _ = fs::remove_dir_all(root);
+}
+
+#[test]
+fn receipt_persistence_failure_retains_pending_recovery_material() {
+    let root = shifu_core::host::unique_temp_dir("promote-receipt-failure").unwrap();
     let marker = root.join("promotion-pending.json");
     let backup = root.join("Kungfu.previous");
-    fs::write(&backup, "previous desktop").unwrap();
-    let mut pending = PendingTransaction {
-        state: "desktop-commit-pending".into(),
+    fs::write(&backup, b"previous desktop").unwrap();
+    let pending = PendingTransaction {
+        state: "receipt-commit-pending".into(),
         action: "promote".into(),
         artifact_id: "target-build".into(),
         target_release_cut_root: format!("sha256:{}", "a".repeat(64)),
         cut_transition_root: format!("sha256:{}", "b".repeat(64)),
-        native_receipt_root: String::new(),
+        native_receipt_root: format!("sha256:{}", "d".repeat(64)),
         previous_build_id: "previous-build".into(),
         previous_sha: "1".repeat(40),
         previous_release_cut_root: format!("sha256:{}", "c".repeat(64)),
-        installed_path: String::new(),
-        desktop_backup_path: String::new(),
+        installed_path: root.join("Kungfu.app").display().to_string(),
+        desktop_backup_path: backup.display().to_string(),
         force: false,
         launch: false,
     };
     write_pending_transaction_at(&marker, &pending).unwrap();
-    let recovered = read_pending_transaction_at(&marker).unwrap().unwrap();
-    assert_eq!(recovered.state, "desktop-commit-pending");
-
-    pending.state = "native-commit-pending".into();
-    pending.installed_path = root.join("Kungfu.app").display().to_string();
-    pending.desktop_backup_path = backup.display().to_string();
-    write_pending_transaction_at(&marker, &pending).unwrap();
-    let recovered = read_pending_transaction_at(&marker).unwrap().unwrap();
-    assert_eq!(recovered.state, "native-commit-pending");
-    assert_eq!(recovered.desktop_backup_path, backup.display().to_string());
+    let missing_parent = root.join("missing/installed.meta.env");
+    assert!(write_installed_receipt_at(&missing_parent, "receipt").is_err());
+    let rename_target = root.join("installed.meta.env");
+    fs::create_dir(&rename_target).unwrap();
+    assert!(write_installed_receipt_at(&rename_target, "receipt").is_err());
     assert!(
-        backup.exists(),
-        "native failure must retain desktop rollback"
+        marker.exists(),
+        "pending marker must survive receipt failure"
     );
-
-    pending.state = "receipt-commit-pending".into();
-    pending.native_receipt_root = format!("sha256:{}", "d".repeat(64));
-    write_pending_transaction_at(&marker, &pending).unwrap();
-    let recovered = read_pending_transaction_at(&marker).unwrap().unwrap();
-    assert_eq!(recovered.state, "receipt-commit-pending");
-    assert!(valid_root(&recovered.native_receipt_root));
     assert!(
         backup.exists(),
-        "receipt failure must retain desktop rollback"
+        "desktop backup must survive receipt failure"
+    );
+    assert!(
+        !rename_target
+            .with_extension(format!("tmp-{}", std::process::id()))
+            .exists(),
+        "failed staged receipt must not become a second authority"
     );
     let _ = fs::remove_dir_all(root);
 }
