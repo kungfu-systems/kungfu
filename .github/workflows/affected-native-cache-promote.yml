@@ -25,7 +25,7 @@ jobs:
   promote:
     name: Promote qualified merge-group cache
     runs-on: ubuntu-24.04
-    timeout-minutes: 15
+    timeout-minutes: 95
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
@@ -371,4 +371,131 @@ jobs:
             echo "- delivery binding: \`${{ steps.payload-source.outputs.delivery-binding-root }}\`"
             echo "- authority: exact source-tree proof plus complete partition receipts and payload digests"
             echo "- validation: current-source configure/build/CTest remains mandatory on restore"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Locate one exact completed producer authority
+        if: ${{ github.ref_protected == true }}
+        id: qualified_core_producer
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TARGET_SHA: ${{ steps.target.outputs.sha }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          producer_run=""
+          attempt=1
+          while [ "$attempt" -le 180 ]; do
+            authorities=""
+            runs="$(
+              gh api --method GET \
+                "repos/${GITHUB_REPOSITORY}/actions/workflows/affected-native-pr.yml/runs" \
+                -f event=merge_group \
+                -f head_sha="$TARGET_SHA" \
+                -f per_page=20 \
+                --jq '.workflow_runs | sort_by(.created_at) | reverse | .[].id'
+            )"
+            for run_id in $runs; do
+              gate_count="$(
+                gh api --method GET \
+                  "repos/${GITHUB_REPOSITORY}/actions/runs/${run_id}/jobs" \
+                  -f filter=latest \
+                  -f per_page=100 \
+                  --jq '[.jobs[] | select(.name == "affected-native / linux" and .status == "completed" and .conclusion == "success")] | length'
+              )"
+              [ "$gate_count" -eq 1 ] || continue
+              artifact_state="$(
+                gh api \
+                  "repos/${GITHUB_REPOSITORY}/actions/runs/${run_id}/artifacts?per_page=100" \
+                  --jq "[.artifacts[] | select(.expired == false and (.name == \"qualified-assignment-core-candidate-${TARGET_SHA}\" or .name == \"core-affected-native-delivery-attempt-${TARGET_SHA}\")) | .name] | sort | if length == 2 and .[0] != .[1] then \"complete\" elif length == 0 then \"absent\" else \"ambiguous\" end"
+              )"
+              if [ "$artifact_state" = complete ]; then
+                authorities="${authorities}${run_id}"$'\n'
+              elif [ "$artifact_state" = ambiguous ]; then
+                echo "Qualified Core transport is ambiguous in run ${run_id}." >&2
+                exit 1
+              fi
+            done
+            authorities="$(printf '%s' "$authorities" | sed '/^$/d')"
+            authority_count="$(printf '%s\n' "$authorities" | sed '/^$/d' | wc -l | tr -d ' ')"
+            if [ "$authority_count" -gt 1 ]; then
+              echo "Multiple Qualified Core producer authorities exist for ${TARGET_SHA}." >&2
+              exit 1
+            fi
+            if [ "$authority_count" -eq 1 ]; then
+              producer_run="$authorities"
+              break
+            fi
+            sleep 30
+            attempt=$((attempt + 1))
+          done
+          if [ -z "$producer_run" ]; then
+            echo "available=false" >> "$GITHUB_OUTPUT"
+            echo "No exact Qualified Core producer became available; source build remains authoritative."
+            exit 0
+          fi
+          {
+            echo "available=true"
+            echo "run-id=${producer_run}"
+          } >> "$GITHUB_OUTPUT"
+          gh run download "$producer_run" \
+            --repo "$GITHUB_REPOSITORY" \
+            --name "qualified-assignment-core-candidate-${TARGET_SHA}" \
+            --dir product/qualification/qualified-core/candidate
+          gh run download "$producer_run" \
+            --repo "$GITHUB_REPOSITORY" \
+            --name "core-affected-native-delivery-attempt-${TARGET_SHA}" \
+            --dir product/qualification/qualified-core/delivery
+      - name: Install pinned Qualified Core verifier
+        if: ${{ steps.qualified_core_producer.outputs.available == 'true' }}
+        shell: bash
+        run: ./shifu install --frozen-lockfile
+      - name: Promote exact Qualified Core artifact
+        if: ${{ steps.qualified_core_producer.outputs.available == 'true' }}
+        id: qualified_core_promotion
+        env:
+          TARGET_SHA: ${{ steps.target.outputs.sha }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          git diff --quiet
+          git diff --cached --quiet
+          test -z "$(git status --porcelain --untracked-files=no)"
+          # Promotion runs only on an exact protected-dev push.
+          # shifu-entry-contract: allow binding the verified merge-group delivery after Gate
+          node framework/release/qualified-assignment-core-artifact.mjs promote \
+            --repository-root . \
+            --bundle product/qualification/qualified-core/candidate \
+            --output-dir product/qualification/qualified-core/promoted \
+            --repository "$GITHUB_REPOSITORY" \
+            --target-commit "$TARGET_SHA" \
+            --target-tree "$(git rev-parse "${TARGET_SHA}^{tree}")" \
+            --protected-ref "$GITHUB_REF" \
+            --merge-group-run-id "${{ steps.qualified_core_producer.outputs.run-id }}" \
+            --delivery-attempt product/qualification/qualified-core/delivery/delivery-attempt.json \
+            --github-output "$GITHUB_OUTPUT"
+      - name: Upload qualified artifact transport
+        if: ${{ steps.qualified_core_producer.outputs.available == 'true' }}
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: qualified-assignment-core-${{ steps.target.outputs.sha }}
+          path: product/qualification/qualified-core/promoted
+          if-no-files-found: error
+          retention-days: 14
+          compression-level: 0
+      - name: Summarize Qualified Core promotion
+        if: ${{ steps.qualified_core_producer.outputs.available == 'true' }}
+        env:
+          TARGET_SHA: ${{ steps.target.outputs.sha }}
+        shell: bash
+        run: |
+          {
+            echo "### Qualified Assignment Core"
+            echo
+            echo "- protected source: \`$TARGET_SHA\`"
+            echo "- merge-group producer: \`${{ steps.qualified_core_producer.outputs.run-id }}\`"
+            echo "- manifest: \`${{ steps.qualified_core_promotion.outputs.manifest-root }}\`"
+            echo "- payload: \`${{ steps.qualified_core_promotion.outputs.artifact-root }}\`"
+            echo "- qualification: \`${{ steps.qualified_core_promotion.outputs.qualification-receipt-root }}\`"
+            echo "- promotion: \`${{ steps.qualified_core_promotion.outputs.promotion-authority-root }}\`"
+            echo "- transport: replaceable and non-authoritative"
           } >> "$GITHUB_STEP_SUMMARY"
