@@ -175,6 +175,8 @@ jobs:
           if errorlevel 1 "%CARGO_HOME%\bin\rustup.exe" toolchain install "1.96.0" --profile minimal --component rustfmt --component clippy
           if errorlevel 1 exit /b %errorlevel%
           "%CARGO_HOME%\bin\rustup.exe" run "1.96.0" rustc --version
+          "%CARGO_HOME%\bin\rustup.exe" target add "wasm32-unknown-unknown" --toolchain "1.96.0"
+          if errorlevel 1 exit /b %errorlevel%
           echo %CARGO_HOME%\bin>>"%GITHUB_PATH%"
           echo CARGO_HOME=%CARGO_HOME%>>"%GITHUB_ENV%"
           echo RUSTUP_HOME=%RUSTUP_HOME%>>"%GITHUB_ENV%"
@@ -194,6 +196,7 @@ jobs:
             "$rustup_bin" toolchain install 1.96.0 --profile minimal --component rustfmt --component clippy
           fi
           "$rustup_bin" run 1.96.0 rustc --version
+          "$rustup_bin" target add wasm32-unknown-unknown --toolchain 1.96.0
           printf '%s\n' "$cargo_bin" >>"$GITHUB_PATH"
           printf 'RUSTUP_TOOLCHAIN=1.96.0\n' >>"$GITHUB_ENV"
 
