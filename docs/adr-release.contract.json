@@ -4,6 +4,11 @@
   "manifestMarker": "kungfu-adr-release:v1",
   "repository": "kungfu-systems/kungfu",
   "adrRoots": ["docs/adr"],
+  "deprecationLifecycle": {
+    "contract": "framework/deprecation/deprecation-lifecycle.contract.json",
+    "registry": "framework/deprecation/deprecation-registry.json",
+    "candidateVersionFile": "framework/core/package.json"
+  },
   "dev": {
     "featureBranchPattern": "^feature/",
     "deliveryIntents": ["stage-ready", "implemented"],

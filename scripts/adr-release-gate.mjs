@@ -7,6 +7,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+import { auditDeprecations } from '../framework/deprecation/deprecation-lifecycle.mjs';
 import { classifyAdrIdentity, inspectAdrRecordPath } from './adr-identity.mjs';
 import {
   readMetadataContract,
@@ -374,6 +375,17 @@ export function validateStaticContract(options) {
       message: 'contract must declare ADR roots',
     });
   }
+  if (contract.deprecationLifecycle) {
+    for (const field of ['contract', 'registry', 'candidateVersionFile']) {
+      const value = String(contract.deprecationLifecycle[field] || '');
+      if (!value || !fs.existsSync(path.join(root, value))) {
+        findings.push({
+          code: 'deprecation-authority',
+          message: `deprecationLifecycle.${field} is missing or unresolved`,
+        });
+      }
+    }
+  }
   const approvers = stringList(contract.stable?.waiverApprovers);
   if (approvers.length === 0) {
     findings.push({
@@ -721,6 +733,43 @@ export function evaluateReleaseGate(options) {
     });
   }
 
+  let deprecations = null;
+  if (contract.deprecationLifecycle) {
+    const candidateVersion =
+      mode === 'stable'
+        ? String(manifest?.release || '')
+        : mode === 'alpha'
+          ? String(
+              readJson(
+                path.join(
+                  root,
+                  contract.deprecationLifecycle.candidateVersionFile,
+                ),
+              ).version || '',
+            )
+          : '';
+    deprecations =
+      options.deprecationReport ||
+      auditDeprecations({
+        root,
+        contractPath: contract.deprecationLifecycle.contract,
+        registryPath: contract.deprecationLifecycle.registry,
+        release: candidateVersion || undefined,
+        releaseDate: options.releaseDate,
+        channel: ['alpha', 'stable'].includes(mode) ? mode : 'audit',
+        strictDue: ['alpha', 'stable'].includes(mode),
+      });
+    for (const finding of deprecations.findings || []) {
+      findings.push({
+        code: finding.code || 'deprecation-release',
+        adr: undefined,
+        message: finding.entry
+          ? `${finding.entry}: ${finding.message}`
+          : finding.message,
+      });
+    }
+  }
+
   return {
     schema: 'kungfu.adr-release-report/v1',
     mode,
@@ -740,6 +789,7 @@ export function evaluateReleaseGate(options) {
     admitted,
     waived,
     blocked,
+    deprecations,
     findings,
   };
 }

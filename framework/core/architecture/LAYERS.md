@@ -121,11 +121,14 @@ toolchain ABI; source-embedding-only does not promise a shared library.
 | binding:`electron` | `experimental` | `libkungfu-in-process-contracts` | `full` |
 | binding:`wasm` | `experimental` | `libkungfu-in-process-contracts` | `full` |
 
-### Deprecation ledger
+### Deprecation authority
 
-| Surface | Replacement | Minimum window | Removal condition |
-| --- | --- | --- | --- |
-| `yijinjing-boolean-mmap-adapters` | mapping_policy and explicit page_open_policy overloads | one complete minor release after all known consumers migrate | No production call sites, retained migration fixture remains green, and release notes name the removal. |
+Core contributes governed surfaces to the repository-wide lifecycle
+authority; this architecture contract does not own a second ledger.
+
+| Contract | Registry | Contributed entries |
+| --- | --- | --- |
+| `../deprecation/deprecation-lifecycle.contract.json` | `../deprecation/deprecation-registry.json` | `core.yijinjing.boolean-mmap-adapters` |
 
 ## Navigation
 
