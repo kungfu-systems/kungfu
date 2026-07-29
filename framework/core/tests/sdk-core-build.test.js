@@ -25,6 +25,7 @@ test('SDK Core build freezes the minimum installed-artifact target closure', () 
   assert.equal(plan.runtime, 'node');
   assert.equal(plan.target, 'kungfu_node');
   assert.deepEqual(plan.cmake_definitions, {
+    CMAKE_CXX_SCAN_FOR_MODULES: 'OFF',
     KUNGFU_WITH_CORE_TESTS: 'OFF',
   });
   assert.deepEqual(plan.required_artifacts.common, [
@@ -50,6 +51,7 @@ test('SDK Core build freezes the minimum installed-artifact target closure', () 
     'production-libwasm-dual-engine-build',
     'pykungfu-binding-stubs-and-wheel',
     'public-header-self-compilation',
+    'unused-cxx-module-dependency-scans',
   ]);
 });
 

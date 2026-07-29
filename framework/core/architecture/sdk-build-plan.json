@@ -4,6 +4,7 @@
   "runtime": "node",
   "target": "kungfu_node",
   "cmake_definitions": {
+    "CMAKE_CXX_SCAN_FOR_MODULES": "OFF",
     "KUNGFU_WITH_CORE_TESTS": "OFF"
   },
   "required_artifacts": {
@@ -32,6 +33,7 @@
     "node-runtime-host",
     "production-libwasm-dual-engine-build",
     "pykungfu-binding-stubs-and-wheel",
-    "public-header-self-compilation"
+    "public-header-self-compilation",
+    "unused-cxx-module-dependency-scans"
   ]
 }
