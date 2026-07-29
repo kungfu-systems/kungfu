@@ -4,10 +4,50 @@
   "decision": "docs/adr/SHIFU-ADR-019f86da-4f90-7885-9597-bfdcb4fd4453.md",
   "catalogSchema": "docs/shifu/schema/local-artifact-catalog-v1.schema.json",
   "promotionReceiptSchema": "docs/shifu/schema/local-promotion-receipt-v1.schema.json",
+  "qualifiedAssignmentCore": {
+    "status": "development",
+    "decision": "docs/adr/SHIFU-ADR-019fab1a-2853-737e-8c67-a9b1aa9035aa.md",
+    "manifestSchema": "docs/shifu/schema/qualified-assignment-core-artifact-v1.schema.json",
+    "qualificationReceiptSchema": "docs/shifu/schema/qualified-assignment-core-qualification-v1.schema.json",
+    "schemaIds": {
+      "manifest": "https://libkungfu.dev/schemas/shifu/qualified-assignment-core-artifact-v1.schema.json",
+      "qualificationReceipt": "https://libkungfu.dev/schemas/shifu/qualified-assignment-core-qualification-v1.schema.json"
+    },
+    "rootPreimages": {
+      "canonicalization": "UTF-8 JSON, recursively lexicographic object keys, original array order, JSON.stringify scalar encoding, and no insignificant whitespace",
+      "artifactRoot": "canonical payload entries under shifu.qualified-assignment-core-payload/v1",
+      "manifestRoot": "canonical manifest fields except manifestRoot, qualificationReceiptRoot, and promotionAuthorityRoot",
+      "promotionAuthorityRoot": "canonical promotionAuthority object",
+      "qualificationReceiptRoot": "canonical qualification receipt except receiptRoot"
+    },
+    "compatibility": {
+      "exactCommit": "producer commit must equal target commit and equivalenceReceiptRoot must be null",
+      "explicitEquivalence": "producer and target identities remain distinct and an immutable equivalenceReceiptRoot is required",
+      "producerMetadataRewrite": "forbidden",
+      "unknownFields": "rejected",
+      "unsupportedMajor": "rejected"
+    },
+    "consumerSafety": {
+      "staging": "outside-target",
+      "paths": "bounded-relative-posix-only",
+      "entryTypes": ["regular-file", "safe-relative-symlink"],
+      "digestAndSizeVerification": "required-before-publication",
+      "cleanCheckout": "required",
+      "publication": "atomic-replace",
+      "partialStateRunnable": false
+    },
+    "authority": {
+      "artifactBytes": "content-addressed-payload-only",
+      "qualification": "immutable-receipt",
+      "promotion": "single-active-protected-authority",
+      "transport": "replaceable-non-authoritative"
+    }
+  },
   "consumers": [
     "shifu self-update",
     "shifu builds",
-    "shifu promote"
+    "shifu promote",
+    "qualified Assignment Core producers and consumers"
   ],
   "selection": {
     "automatic": ["same", "descendant"],

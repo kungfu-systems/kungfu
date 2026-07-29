@@ -17,12 +17,276 @@ const ROOT = path.resolve(
 const CONTRACT_PATH = 'docs/evolution/evolution-map.contract.json';
 const ERA_ROOT = 'docs/evolution/eras';
 const STAGE_ROOT = 'docs/evolution/stages';
+const CANDIDATE_ROOT = 'docs/evolution/candidates';
 const OUTPUTS = {
   map: 'docs/evolution/map.json',
   timeline: 'docs/evolution/timeline.md',
   authority: 'docs/evolution/current-authority.md',
   routes: 'docs/evolution/reader-routes.md',
+  candidates: 'docs/evolution/candidates.md',
 };
+
+function candidateObject(value, label) {
+  if (!value || typeof value !== 'object' || Array.isArray(value))
+    throw new Error(`${label} must be an object`);
+  return value;
+}
+
+function candidateString(value, label) {
+  if (typeof value !== 'string' || !value.trim())
+    throw new Error(`${label} must be non-empty text`);
+  return value.trim();
+}
+
+function candidateArray(value, label) {
+  if (!Array.isArray(value)) throw new Error(`${label} must be an array`);
+  return value;
+}
+
+function emptyCandidateResolution() {
+  return {
+    kind: '',
+    canonicalEra: '',
+    initialStage: '',
+    foldedIntoStage: '',
+    mergedIntoCandidate: '',
+  };
+}
+
+function emptyCandidateAuthorization() {
+  return { kind: '', ref: '' };
+}
+
+function uniqueCandidateReferences(previous, additions) {
+  const result = [];
+  const seen = new Set();
+  for (const item of [...previous, ...additions]) {
+    const key = JSON.stringify(item);
+    if (!seen.has(key)) result.push(item);
+    seen.add(key);
+  }
+  return result;
+}
+
+function candidateMarkdown(record) {
+  return `# Era Candidate: ${record.title}\n\nThis is an immutable, non-authoritative Era Candidate revision. Canonical Era\nand Stage records remain the historical authority.\n\n\`\`\`json kungfu-evolution-era-candidate\n${JSON.stringify(record, null, 2)}\n\`\`\`\n`;
+}
+
+export function planCandidate(inputValue, source) {
+  const input = candidateObject(inputValue, 'input');
+  const operation = candidateString(input.operation, 'input.operation');
+  if (!['open', 'advance'].includes(operation))
+    throw new Error('input.operation must be open or advance');
+  const id = candidateString(input.id, 'input.id');
+  const recordedAt = candidateString(input.recordedAt, 'input.recordedAt');
+  const existing = source.candidates.filter((item) => item.id === id);
+  const previous = existing
+    .sort((left, right) => left.revision - right.revision)
+    .at(-1);
+  let record;
+  if (operation === 'open') {
+    if (previous) throw new Error(`candidate already exists: ${id}`);
+    record = {
+      schema: source.contract.candidateSchema,
+      id,
+      revision: 1,
+      recordedAt,
+      title: candidateString(input.title, 'input.title'),
+      status: 'observed',
+      currentEra: candidateString(input.currentEra, 'input.currentEra'),
+      thesis: candidateString(input.thesis, 'input.thesis'),
+      currentEraInsufficiency: candidateString(
+        input.currentEraInsufficiency,
+        'input.currentEraInsufficiency',
+      ),
+      compressionSignals: candidateArray(
+        input.compressionSignals,
+        'input.compressionSignals',
+      ),
+      downstreamStageHypotheses: candidateArray(
+        input.downstreamStageHypotheses,
+        'input.downstreamStageHypotheses',
+      ),
+      evidence: candidateArray(input.evidence, 'input.evidence'),
+      counterEvidence: candidateArray(
+        input.counterEvidence || [],
+        'input.counterEvidence',
+      ),
+      confidence: candidateString(
+        input.confidence || 'low',
+        'input.confidence',
+      ),
+      previousRevisionRoot: '',
+      transition: {
+        fromStatus: '',
+        reason: candidateString(input.reason, 'input.reason'),
+      },
+      resolution: emptyCandidateResolution(),
+      authorization: emptyCandidateAuthorization(),
+    };
+  } else {
+    if (!previous) throw new Error(`candidate does not exist: ${id}`);
+    const { file: _previousFile, ...previousRecord } = previous;
+    const expectedPreviousRoot = candidateString(
+      input.expectedPreviousRoot,
+      'input.expectedPreviousRoot',
+    );
+    const previousRoot = candidateRevisionRoot(previous);
+    if (expectedPreviousRoot !== previousRoot)
+      throw new Error(
+        `stale candidate revision: expected ${previousRoot}, got ${expectedPreviousRoot}`,
+      );
+    record = {
+      ...previousRecord,
+      revision: previous.revision + 1,
+      recordedAt,
+      title: input.title
+        ? candidateString(input.title, 'input.title')
+        : previous.title,
+      status: candidateString(input.status || previous.status, 'input.status'),
+      thesis: input.thesis
+        ? candidateString(input.thesis, 'input.thesis')
+        : previous.thesis,
+      currentEraInsufficiency: input.currentEraInsufficiency
+        ? candidateString(
+            input.currentEraInsufficiency,
+            'input.currentEraInsufficiency',
+          )
+        : previous.currentEraInsufficiency,
+      compressionSignals: input.compressionSignals
+        ? candidateArray(input.compressionSignals, 'input.compressionSignals')
+        : previous.compressionSignals,
+      downstreamStageHypotheses: input.downstreamStageHypotheses
+        ? candidateArray(
+            input.downstreamStageHypotheses,
+            'input.downstreamStageHypotheses',
+          )
+        : previous.downstreamStageHypotheses,
+      evidence: uniqueCandidateReferences(
+        previous.evidence,
+        candidateArray(input.addEvidence || [], 'input.addEvidence'),
+      ),
+      counterEvidence: uniqueCandidateReferences(
+        previous.counterEvidence,
+        candidateArray(
+          input.addCounterEvidence || [],
+          'input.addCounterEvidence',
+        ),
+      ),
+      confidence: input.confidence
+        ? candidateString(input.confidence, 'input.confidence')
+        : previous.confidence,
+      previousRevisionRoot: previousRoot,
+      transition: {
+        fromStatus: previous.status,
+        reason: candidateString(input.reason, 'input.reason'),
+      },
+      resolution: input.resolution
+        ? candidateObject(input.resolution, 'input.resolution')
+        : emptyCandidateResolution(),
+      authorization: input.authorization
+        ? candidateObject(input.authorization, 'input.authorization')
+        : emptyCandidateAuthorization(),
+    };
+  }
+  const revision = String(record.revision).padStart(4, '0');
+  const file = `${CANDIDATE_ROOT}/${id}/${revision}-${recordedAt}.md`;
+  const withFile = { ...record, file };
+  buildEraCandidates(
+    [...source.candidates, withFile],
+    source.contract,
+    source.root,
+    source.map.eras,
+    source.map.stages,
+  );
+  return {
+    schema: 'kungfu.evolution-era-candidate-plan/v1',
+    operation,
+    candidateId: id,
+    revision: record.revision,
+    previousRevisionRoot: record.previousRevisionRoot,
+    revisionRoot: candidateRevisionRoot(record),
+    file,
+    content: candidateMarkdown(record),
+    sharedWrites: [],
+  };
+}
+
+export function loadCandidateSource(root = ROOT) {
+  const contract = JSON.parse(
+    fs.readFileSync(path.join(root, CONTRACT_PATH), 'utf8'),
+  );
+  const map = JSON.parse(fs.readFileSync(path.join(root, OUTPUTS.map), 'utf8'));
+  const candidates = readCandidateRecords(
+    root,
+    CANDIDATE_ROOT,
+    contract.recordFences.candidate,
+  );
+  return { root, contract, map, candidates };
+}
+
+export function writeCandidate(root, plan) {
+  const target = path.join(root, plan.file);
+  fs.mkdirSync(path.dirname(target), { recursive: true });
+  let descriptor;
+  try {
+    descriptor = fs.openSync(target, 'wx');
+    fs.writeFileSync(descriptor, plan.content, 'utf8');
+  } catch (error) {
+    if (
+      error &&
+      typeof error === 'object' &&
+      'code' in error &&
+      error.code === 'EEXIST'
+    )
+      throw new Error(`candidate revision already exists: ${plan.file}`);
+    throw error;
+  } finally {
+    if (descriptor !== undefined) fs.closeSync(descriptor);
+  }
+  return target;
+}
+
+function parseCandidateArgs(argv) {
+  const args = { input: '', write: false };
+  for (let index = 0; index < argv.length; index += 1) {
+    const arg = argv[index];
+    if (arg === '--') continue;
+    if (arg === '--input') args.input = argv[++index] || '';
+    else if (arg === '--write') args.write = true;
+    else throw new Error(`unknown argument: ${arg}`);
+  }
+  if (!args.input) throw new Error('--input is required');
+  return args;
+}
+
+function candidateMain(argv) {
+  const args = parseCandidateArgs(argv);
+  const input = JSON.parse(fs.readFileSync(path.resolve(args.input), 'utf8'));
+  const source = loadCandidateSource(ROOT);
+  const plan = planCandidate(input, source);
+  const outputPath = args.write ? writeCandidate(ROOT, plan) : '';
+  process.stdout.write(
+    `${JSON.stringify(
+      {
+        ...plan,
+        mode: args.write ? 'write' : 'dry-run',
+        writeReceipt: args.write
+          ? {
+              schema: 'kungfu.evolution-era-candidate-write-receipt/v1',
+              file: plan.file,
+              outputPath,
+              revisionRoot: plan.revisionRoot,
+              previousRevisionRoot: plan.previousRevisionRoot,
+            }
+          : null,
+        content: undefined,
+      },
+      null,
+      2,
+    )}\n`,
+  );
+}
 
 function invariant(condition, message) {
   if (!condition) throw new Error(message);
@@ -61,10 +325,19 @@ function canonical(value) {
   return value;
 }
 
-function digest(value) {
+export function digest(value) {
   return `sha256:${createHash('sha256')
     .update(`${JSON.stringify(canonical(value))}\n`)
     .digest('hex')}`;
+}
+
+function exactKeys(value, expected, label) {
+  const actual = Object.keys(value).sort();
+  const allowed = [...expected].sort();
+  invariant(
+    JSON.stringify(actual) === JSON.stringify(allowed),
+    `${label} fields must be exactly: ${allowed.join(', ')}`,
+  );
 }
 
 export function parseEvolutionRecord(text, kind, file = '<memory>') {
@@ -101,12 +374,15 @@ function period(value, label) {
     invariant(value.start <= value.end, `${label} must not run backwards`);
 }
 
-function validateReference(ref, label, contract, root) {
+function validateReference(
+  ref,
+  label,
+  contract,
+  root,
+  evidenceKinds = contract.evidenceKinds,
+) {
   invariant(ref && typeof ref === 'object', `${label} must be an object`);
-  invariant(
-    contract.evidenceKinds.includes(ref.kind),
-    `${label}.kind is not supported`,
-  );
+  invariant(evidenceKinds.includes(ref.kind), `${label}.kind is not supported`);
   nonEmptyText(ref.ref, `${label}.ref`);
   nonEmptyText(ref.label, `${label}.label`);
   if (ref.kind === 'pull-request')
@@ -121,7 +397,7 @@ function validateReference(ref, label, contract, root) {
       /^[0-9a-f]{40}$/.test(ref.ref),
       `${label}.ref must be a full commit SHA`,
     );
-  if (['adr', 'document'].includes(ref.kind)) {
+  if (['adr', 'document', 'contract', 'qualification'].includes(ref.kind)) {
     invariant(
       !path.isAbsolute(ref.ref) && !ref.ref.includes('..'),
       `${label}.ref must be repository-relative`,
@@ -131,6 +407,11 @@ function validateReference(ref, label, contract, root) {
       `${label}.ref does not exist: ${ref.ref}`,
     );
   }
+  if (['assignment', 'fact', 'episode', 'warrant'].includes(ref.kind))
+    invariant(
+      /^sha256:[0-9a-f]{64}$/.test(ref.ref),
+      `${label}.ref must be a sha256 content root`,
+    );
 }
 
 function validateEra(era, file, contract) {
@@ -241,11 +522,399 @@ function validateStage(stage, file, contract, root) {
     );
 }
 
+const CANDIDATE_FIELDS = [
+  'schema',
+  'id',
+  'revision',
+  'recordedAt',
+  'title',
+  'status',
+  'currentEra',
+  'thesis',
+  'currentEraInsufficiency',
+  'compressionSignals',
+  'downstreamStageHypotheses',
+  'evidence',
+  'counterEvidence',
+  'confidence',
+  'previousRevisionRoot',
+  'transition',
+  'resolution',
+  'authorization',
+];
+
+const CANDIDATE_TRANSITIONS = {
+  observed: new Set([
+    'observed',
+    'accumulating',
+    'review-ready',
+    'folded-back',
+    'rejected',
+  ]),
+  accumulating: new Set([
+    'accumulating',
+    'review-ready',
+    'folded-back',
+    'rejected',
+  ]),
+  'review-ready': new Set([
+    'review-ready',
+    'accumulating',
+    'promoted',
+    'folded-back',
+    'rejected',
+  ]),
+};
+
+function referenceKey(value) {
+  return JSON.stringify(canonical(value));
+}
+
+function includesEveryReference(next, prior) {
+  const values = new Set(next.map(referenceKey));
+  return prior.every((item) => values.has(referenceKey(item)));
+}
+
+function distinctEvidenceIdentities(values) {
+  return new Set(values.map((item) => `${item.kind}:${item.ref}`)).size;
+}
+
+function candidateNextActions(status) {
+  if (status === 'observed') return ['append-evidence', 'fold-back', 'reject'];
+  if (status === 'accumulating')
+    return ['append-evidence', 'mark-review-ready', 'fold-back', 'reject'];
+  if (status === 'review-ready')
+    return [
+      'append-counter-evidence',
+      'return-to-accumulating',
+      'promote-with-authority',
+      'fold-back',
+      'reject',
+    ];
+  return [];
+}
+
+export function candidateRevisionRoot(candidate) {
+  const { file: _file, ...record } = candidate;
+  return digest(record);
+}
+
+function validateCandidate(candidate, file, contract, root) {
+  invariant(
+    candidate && typeof candidate === 'object',
+    `${file} must be an object`,
+  );
+  const { file: _file, ...record } = candidate;
+  exactKeys(record, CANDIDATE_FIELDS, file);
+  invariant(
+    candidate.schema === contract.candidateSchema,
+    `${file} has the wrong candidate schema`,
+  );
+  identifier(candidate.id, `${file}.id`);
+  invariant(
+    Number.isInteger(candidate.revision) && candidate.revision > 0,
+    `${file}.revision must be positive`,
+  );
+  invariant(
+    /^\d{4}-\d{2}-\d{2}$/.test(candidate.recordedAt),
+    `${file}.recordedAt must be YYYY-MM-DD`,
+  );
+  const expectedFile = `${CANDIDATE_ROOT}/${candidate.id}/${String(candidate.revision).padStart(4, '0')}-${candidate.recordedAt}.md`;
+  invariant(
+    file === expectedFile,
+    `${file} must match candidate identity path ${expectedFile}`,
+  );
+  for (const field of ['title', 'thesis', 'currentEraInsufficiency'])
+    nonEmptyText(candidate[field], `${file}.${field}`);
+  identifier(candidate.currentEra, `${file}.currentEra`);
+  invariant(
+    contract.candidateStatuses.includes(candidate.status),
+    `${file}.status is not supported`,
+  );
+  invariant(
+    contract.candidateConfidence.includes(candidate.confidence),
+    `${file}.confidence is not supported`,
+  );
+  textArray(candidate.compressionSignals, `${file}.compressionSignals`);
+  textArray(
+    candidate.downstreamStageHypotheses,
+    `${file}.downstreamStageHypotheses`,
+  );
+  invariant(
+    candidate.downstreamStageHypotheses.length >= 2,
+    `${file}.downstreamStageHypotheses must describe at least two possible Stages`,
+  );
+  invariant(
+    Array.isArray(candidate.evidence) && candidate.evidence.length > 0,
+    `${file}.evidence must not be empty`,
+  );
+  candidate.evidence.forEach((ref, index) =>
+    validateReference(
+      ref,
+      `${file}.evidence[${index}]`,
+      contract,
+      root,
+      contract.candidateEvidenceKinds,
+    ),
+  );
+  invariant(
+    distinctEvidenceIdentities(candidate.evidence) ===
+      candidate.evidence.length,
+    `${file}.evidence must not repeat a kind/ref identity`,
+  );
+  invariant(
+    Array.isArray(candidate.counterEvidence),
+    `${file}.counterEvidence must be an array`,
+  );
+  candidate.counterEvidence.forEach((ref, index) =>
+    validateReference(
+      ref,
+      `${file}.counterEvidence[${index}]`,
+      contract,
+      root,
+      contract.candidateEvidenceKinds,
+    ),
+  );
+  invariant(
+    distinctEvidenceIdentities(candidate.counterEvidence) ===
+      candidate.counterEvidence.length,
+    `${file}.counterEvidence must not repeat a kind/ref identity`,
+  );
+  invariant(
+    typeof candidate.previousRevisionRoot === 'string',
+    `${file}.previousRevisionRoot must be a string`,
+  );
+  invariant(
+    candidate.transition && typeof candidate.transition === 'object',
+    `${file}.transition must be an object`,
+  );
+  exactKeys(
+    candidate.transition,
+    ['fromStatus', 'reason'],
+    `${file}.transition`,
+  );
+  invariant(
+    typeof candidate.transition.fromStatus === 'string',
+    `${file}.transition.fromStatus must be a string`,
+  );
+  nonEmptyText(candidate.transition.reason, `${file}.transition.reason`);
+  invariant(
+    candidate.resolution && typeof candidate.resolution === 'object',
+    `${file}.resolution must be an object`,
+  );
+  exactKeys(
+    candidate.resolution,
+    [
+      'kind',
+      'canonicalEra',
+      'initialStage',
+      'foldedIntoStage',
+      'mergedIntoCandidate',
+    ],
+    `${file}.resolution`,
+  );
+  for (const field of [
+    'kind',
+    'canonicalEra',
+    'initialStage',
+    'foldedIntoStage',
+    'mergedIntoCandidate',
+  ])
+    invariant(
+      typeof candidate.resolution[field] === 'string',
+      `${file}.resolution.${field} must be a string`,
+    );
+  invariant(
+    candidate.authorization && typeof candidate.authorization === 'object',
+    `${file}.authorization must be an object`,
+  );
+  exactKeys(candidate.authorization, ['kind', 'ref'], `${file}.authorization`);
+  invariant(
+    typeof candidate.authorization.kind === 'string' &&
+      typeof candidate.authorization.ref === 'string',
+    `${file}.authorization fields must be strings`,
+  );
+}
+
+export function buildEraCandidates(
+  candidatesInput,
+  contract,
+  root = ROOT,
+  eras = [],
+  stages = [],
+) {
+  const records = candidatesInput
+    .map((item) => ({ ...item }))
+    .sort(
+      (left, right) =>
+        left.id.localeCompare(right.id) ||
+        left.revision - right.revision ||
+        left.file.localeCompare(right.file),
+    );
+  const eraIds = new Set(eras.map((item) => item.id));
+  const stageById = new Map(stages.map((item) => [item.id, item]));
+  const byId = new Map();
+  for (const record of records) {
+    validateCandidate(record, record.file, contract, root);
+    invariant(
+      eraIds.has(record.currentEra),
+      `${record.file}.currentEra is not a canonical Era: ${record.currentEra}`,
+    );
+    const revisions = byId.get(record.id) || [];
+    const previous = revisions.at(-1);
+    invariant(
+      record.revision === revisions.length + 1,
+      `${record.id} revisions must start at 1 and remain contiguous`,
+    );
+    if (!previous) {
+      invariant(
+        record.previousRevisionRoot === '',
+        `${record.file}.previousRevisionRoot must be empty for revision 1`,
+      );
+      invariant(
+        record.transition.fromStatus === '',
+        `${record.file}.transition.fromStatus must be empty for revision 1`,
+      );
+      invariant(
+        record.status === 'observed',
+        `${record.file} revision 1 must start observed`,
+      );
+    } else {
+      invariant(
+        record.currentEra === previous.currentEra,
+        `${record.file}.currentEra cannot change across revisions`,
+      );
+      invariant(
+        record.previousRevisionRoot === candidateRevisionRoot(previous),
+        `${record.file}.previousRevisionRoot does not match revision ${previous.revision}`,
+      );
+      invariant(
+        record.transition.fromStatus === previous.status,
+        `${record.file}.transition.fromStatus must equal ${previous.status}`,
+      );
+      invariant(
+        !['promoted', 'folded-back', 'rejected'].includes(previous.status),
+        `${record.id} cannot append after terminal status ${previous.status}`,
+      );
+      invariant(
+        CANDIDATE_TRANSITIONS[previous.status]?.has(record.status),
+        `${record.id} cannot transition from ${previous.status} to ${record.status}`,
+      );
+      invariant(
+        includesEveryReference(record.evidence, previous.evidence),
+        `${record.file}.evidence cannot remove earlier evidence`,
+      );
+      invariant(
+        includesEveryReference(
+          record.counterEvidence,
+          previous.counterEvidence,
+        ),
+        `${record.file}.counterEvidence cannot remove earlier counter-evidence`,
+      );
+    }
+    revisions.push(record);
+    byId.set(record.id, revisions);
+  }
+  const candidateIds = new Set(byId.keys());
+  for (const revisions of byId.values()) {
+    const latest = revisions.at(-1);
+    const resolution = latest.resolution;
+    const authorization = latest.authorization;
+    if (!['promoted', 'folded-back', 'rejected'].includes(latest.status)) {
+      invariant(
+        Object.values(resolution).every((value) => value === ''),
+        `${latest.file} cannot resolve a non-terminal candidate`,
+      );
+      invariant(
+        authorization.kind === '' && authorization.ref === '',
+        `${latest.file} cannot authorize a non-terminal candidate`,
+      );
+    }
+    if (latest.status === 'review-ready')
+      invariant(
+        latest.evidence.length >= 2,
+        `${latest.file} review-ready status requires at least two evidence references`,
+      );
+    if (latest.status === 'promoted') {
+      invariant(
+        resolution.kind === 'promoted',
+        `${latest.file} promoted status requires resolution.kind=promoted`,
+      );
+      invariant(
+        eraIds.has(resolution.canonicalEra),
+        `${latest.file} promoted canonicalEra must exist`,
+      );
+      invariant(
+        stageById.has(resolution.initialStage),
+        `${latest.file} promoted initialStage must exist`,
+      );
+      invariant(
+        stageById.get(resolution.initialStage).era === resolution.canonicalEra,
+        `${latest.file} initialStage must belong to canonicalEra`,
+      );
+      invariant(
+        ['maintainer', 'warrant'].includes(authorization.kind) &&
+          authorization.ref,
+        `${latest.file} promotion requires maintainer or Warrant authorization`,
+      );
+      if (authorization.kind === 'maintainer')
+        invariant(
+          /^https:\/\/github\.com\/kungfu-systems\/kungfu\/pull\/\d+$/.test(
+            authorization.ref,
+          ),
+          `${latest.file} maintainer authorization must be a canonical Kungfu pull request URL`,
+        );
+      if (authorization.kind === 'warrant')
+        invariant(
+          /^sha256:[0-9a-f]{64}$/.test(authorization.ref),
+          `${latest.file} Warrant authorization must be a sha256 content root`,
+        );
+    }
+    if (latest.status === 'folded-back') {
+      invariant(
+        resolution.kind === 'folded-into-stage' ||
+          resolution.kind === 'merged-duplicate',
+        `${latest.file} folded-back status requires a fold or duplicate resolution`,
+      );
+      if (resolution.kind === 'folded-into-stage')
+        invariant(
+          stageById.has(resolution.foldedIntoStage),
+          `${latest.file} foldedIntoStage must exist`,
+        );
+      if (resolution.kind === 'merged-duplicate')
+        invariant(
+          resolution.mergedIntoCandidate !== latest.id &&
+            candidateIds.has(resolution.mergedIntoCandidate),
+          `${latest.file} mergedIntoCandidate must identify another candidate`,
+        );
+    }
+    if (latest.status === 'rejected')
+      invariant(
+        resolution.kind === 'rejected',
+        `${latest.file} rejected status requires resolution.kind=rejected`,
+      );
+  }
+  return [...byId.entries()].map(([id, revisions]) => ({
+    id,
+    latest: revisions.at(-1),
+    nextActions: candidateNextActions(revisions.at(-1).status),
+    revisionRoots: revisions.map(candidateRevisionRoot),
+    revisions: revisions.map((record) => ({
+      revision: record.revision,
+      status: record.status,
+      recordedAt: record.recordedAt,
+      file: record.file,
+      revisionRoot: candidateRevisionRoot(record),
+    })),
+  }));
+}
+
 export function buildEvolutionMap(
   erasInput,
   stagesInput,
   contract,
   root = ROOT,
+  candidatesInput = [],
 ) {
   const eras = erasInput
     .map((item) => ({ ...item }))
@@ -330,11 +999,19 @@ export function buildEvolutionMap(
   const currentAuthority = [...authority.values()].sort((left, right) =>
     left.subject.localeCompare(right.subject),
   );
-  const source = { eras, stages };
+  const eraCandidates = buildEraCandidates(
+    candidatesInput,
+    contract,
+    root,
+    eras,
+    stages,
+  );
+  const source = { eras, stages, eraCandidates };
   return {
     schema: contract.projectionSchema,
     generatedFrom: {
-      authority: 'append-only Era and Stage records under docs/evolution',
+      authority:
+        'append-only canonical Era and Stage records plus non-authoritative Era Candidate revisions under docs/evolution',
       semanticGraphAuthority:
         'Xinfa Atlas; this projection never creates current runtime authority',
       sourceRoot: digest(source),
@@ -347,9 +1024,15 @@ export function buildEvolutionMap(
         0,
       ),
       authoritySubjects: currentAuthority.length,
+      eraCandidates: eraCandidates.length,
+      unresolvedEraCandidates: eraCandidates.filter(
+        (item) =>
+          !['promoted', 'folded-back', 'rejected'].includes(item.latest.status),
+      ).length,
     },
     eras,
     stages,
+    eraCandidates,
     currentAuthority,
   };
 }
@@ -460,7 +1143,50 @@ export function renderReaderRoutes(projection) {
   return lines.join('\n');
 }
 
-function readRecords(root, relativeRoot, fence) {
+export function renderCandidates(projection) {
+  const lines = [
+    '# Era Candidate Ledger',
+    '',
+    'This generated ledger holds hypotheses that the current Era thesis may no longer',
+    'compress the work. Candidates are evidence packets, not canonical Eras: they do',
+    'not allocate an Era sequence, change current authority, or settle history.',
+    '',
+    `Open candidates: **${projection.summary.unresolvedEraCandidates}** · Total retained candidates: **${projection.summary.eraCandidates}**.`,
+    '',
+  ];
+  if (projection.eraCandidates.length === 0) {
+    lines.push('No Era Candidate has been recorded.', '');
+  }
+  for (const candidate of projection.eraCandidates) {
+    const latest = candidate.latest;
+    lines.push(
+      `## ${latest.title}`,
+      '',
+      `**Candidate:** \`${candidate.id}\` · **Status:** ${latest.status} · **Confidence:** ${latest.confidence} · **Revision:** ${latest.revision}`,
+      '',
+      `**Thesis:** ${latest.thesis}`,
+      '',
+      `**Why the current Era may be insufficient:** ${latest.currentEraInsufficiency}`,
+      '',
+      `Latest immutable revision: ${markdownLink(OUTPUTS.candidates, latest.file, candidateRevisionRoot(latest))}.`,
+      '',
+      `**Next actions:** ${candidate.nextActions.length > 0 ? candidate.nextActions.map((action) => `\`${action}\``).join(', ') : 'none; terminal history is retained'}.`,
+      '',
+    );
+  }
+  lines.push(
+    '## Next action',
+    '',
+    'Agents should do nothing when ordinary Stage extension explains the change. When',
+    'the candidate threshold is met, prepare a dry-run with `./shifu evolution:candidate`;',
+    'only append with `--write` after reviewing the exact file and predecessor root.',
+    'Promotion requires an explicit maintainer decision or appropriately scoped Warrant.',
+    '',
+  );
+  return lines.join('\n');
+}
+
+export function readRecords(root, relativeRoot, fence) {
   const directory = path.join(root, relativeRoot);
   return fs
     .readdirSync(directory)
@@ -468,6 +1194,29 @@ function readRecords(root, relativeRoot, fence) {
     .sort()
     .map((file) => {
       const relative = path.posix.join(relativeRoot, file);
+      return {
+        ...parseEvolutionRecord(
+          fs.readFileSync(path.join(root, relative), 'utf8'),
+          fence,
+          relative,
+        ),
+        file: relative,
+      };
+    });
+}
+
+export function readCandidateRecords(root, relativeRoot, fence) {
+  const directory = path.join(root, relativeRoot);
+  if (!fs.existsSync(directory)) return [];
+  return fs
+    .readdirSync(directory, { recursive: true })
+    .filter((file) => file.endsWith('.md'))
+    .sort()
+    .map((file) => {
+      const relative = path.posix.join(
+        relativeRoot,
+        file.split(path.sep).join('/'),
+      );
       return {
         ...parseEvolutionRecord(
           fs.readFileSync(path.join(root, relative), 'utf8'),
@@ -506,20 +1255,33 @@ function checkHistoricalIntegrity() {
     '--',
     ERA_ROOT,
     STAGE_ROOT,
+    CANDIDATE_ROOT,
   ]);
-  for (const line of changed.split('\n').filter(Boolean)) {
-    const [status, file] = line.split('\t');
-    if (!['M', 'D'].includes(status)) continue;
-    const existed =
+  const violations = findHistoricalMutationViolations(
+    changed.split('\n').filter(Boolean),
+    (file) =>
       spawnSync('git', ['cat-file', '-e', `${base}:${file}`], {
         cwd: ROOT,
         stdio: 'ignore',
-      }).status === 0;
-    invariant(
-      !existed,
-      `${file} is settled history on ${base}; add an amendment or successor Stage instead of ${status === 'D' ? 'deleting' : 'editing'} it`,
+      }).status === 0,
+  );
+  invariant(violations.length === 0, violations.join('; '));
+}
+
+export function findHistoricalMutationViolations(lines, existedAtBase) {
+  const violations = [];
+  for (const line of lines) {
+    const [status, file] = line.split('\t');
+    if (!['M', 'D'].includes(status)) continue;
+    if (!existedAtBase(file)) continue;
+    const action = status === 'D' ? 'deleting' : 'editing';
+    violations.push(
+      file.startsWith(`${CANDIDATE_ROOT}/`)
+        ? `${file} is immutable candidate history; append a new candidate revision instead of ${action} it`
+        : `${file} is settled history; add an amendment or successor Stage instead of ${action} it`,
     );
   }
+  return violations;
 }
 
 function checkPullRequestTemplate(contract) {
@@ -579,7 +1341,18 @@ function outputs() {
   );
   const eras = readRecords(ROOT, ERA_ROOT, contract.recordFences.era);
   const stages = readRecords(ROOT, STAGE_ROOT, contract.recordFences.stage);
-  const projection = buildEvolutionMap(eras, stages, contract, ROOT);
+  const candidates = readCandidateRecords(
+    ROOT,
+    CANDIDATE_ROOT,
+    contract.recordFences.candidate,
+  );
+  const projection = buildEvolutionMap(
+    eras,
+    stages,
+    contract,
+    ROOT,
+    candidates,
+  );
   checkHistoricalIntegrity();
   checkPullRequestTemplate(contract);
   checkEvolutionMapNavigation();
@@ -588,10 +1361,15 @@ function outputs() {
     [OUTPUTS.timeline, renderTimeline(projection)],
     [OUTPUTS.authority, renderAuthority(projection)],
     [OUTPUTS.routes, renderReaderRoutes(projection)],
+    [OUTPUTS.candidates, renderCandidates(projection)],
   ]);
 }
 
 function main(argv) {
+  if (argv[0] === '--candidate') {
+    candidateMain(argv.slice(1));
+    return;
+  }
   const check = argv.includes('--check');
   const write = argv.includes('--write') || !check;
   if (argv.some((arg) => !['--check', '--write'].includes(arg)))

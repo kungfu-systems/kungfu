@@ -53,6 +53,13 @@
       "sources": ["local-files", "user-decision"],
       "last_reviewed": "2026-07-28"
     },
+    "docs/evolution/candidates.md": {
+      "metadata_schema": "kungfu.document-metadata/v1",
+      "document_status": "active",
+      "doc_type": "evolution-projection",
+      "review_state": "self-reviewed",
+      "sensitivity": "public"
+    },
     "docs/evolution/current-authority.md": {
       "metadata_schema": "kungfu.document-metadata/v1",
       "document_status": "active",
