@@ -1,0 +1,46 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kungfu.link/schema/work-design-advice-verification-v1.schema.json",
+  "title": "Independent work-design advice verification receipt v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "adviceRoot", "inputRoot", "checks", "diagnostics", "ok", "verificationRoot"],
+  "properties": {
+    "schema": { "const": "kungfu.work-design.advice-verification/v1" },
+    "adviceRoot": { "$ref": "#/$defs/nullableRoot" },
+    "inputRoot": { "$ref": "#/$defs/nullableRoot" },
+    "checks": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schemaValid", "exactInputBinding", "bounded", "dependencyClosure", "acceptanceCoverage", "evidenceCoverage", "authoritySafe"],
+      "properties": {
+        "schemaValid": { "type": "boolean" },
+        "exactInputBinding": { "type": "boolean" },
+        "bounded": { "type": "boolean" },
+        "dependencyClosure": { "type": "boolean" },
+        "acceptanceCoverage": { "type": "boolean" },
+        "evidenceCoverage": { "type": "boolean" },
+        "authoritySafe": { "type": "boolean" }
+      }
+    },
+    "diagnostics": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["code", "path", "message"],
+        "properties": {
+          "code": { "type": "string" },
+          "path": { "type": "string" },
+          "message": { "type": "string" }
+        }
+      }
+    },
+    "ok": { "type": "boolean" },
+    "verificationRoot": { "$ref": "#/$defs/root" }
+  },
+  "$defs": {
+    "root": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" },
+    "nullableRoot": { "oneOf": [{ "$ref": "#/$defs/root" }, { "type": "null" }] }
+  }
+}
