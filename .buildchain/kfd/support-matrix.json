@@ -203,7 +203,7 @@
         "evidenceRoots": [
           {
             "path": "docs/qualification/evidence/kfd-4-perspective/d73cab0d69/report.json",
-        "sha256": "sha256:e64d1337b78f4940f35fc9e80ea93222c7932acaa7fdc1c73ee881e456c97bc1"
+            "sha256": "sha256:e64d1337b78f4940f35fc9e80ea93222c7932acaa7fdc1c73ee881e456c97bc1"
           },
           {
             "path": "framework/core/tests/python/test_kfd4_perspective.py",
