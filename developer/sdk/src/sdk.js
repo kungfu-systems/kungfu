@@ -3466,7 +3466,7 @@ function registryCapabilityQuery(registry, registryPath, warning = '') {
       kfd1: 'registry-facts',
       kfd2: 'release-passport-required',
       kfd3: 'declared',
-      kfd4: 'schema-only',
+      kfd4: 'verified-candidate-not-shipped',
     },
   };
 }
@@ -3530,7 +3530,7 @@ async function kfdAggregate(options) {
       kfd1: 'registry-and-upstream-facts',
       kfd2: 'release-passport-required',
       kfd3: 'declared-and-aggregated',
-      kfd4: 'schema-only',
+      kfd4: 'verified-candidate-not-shipped',
     },
   };
 }
