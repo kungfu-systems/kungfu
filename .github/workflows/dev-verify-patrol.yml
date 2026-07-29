@@ -41,7 +41,7 @@ jobs:
       # ref. Checkout
       # cache hits are optional: every source/runtime checkout verifies the
       # locked SHA and falls back to GitHub when a retained bundle is stale.
-      buildchain-ref: ${{ inputs.buildchain-ref || 'f8ef93be41b0badd75eb35cc1506c2be12198984' }}
+      buildchain-ref: ${{ github.event_name == 'workflow_dispatch' && inputs.buildchain-ref || '' }}
       checkout-cache-mode: auto
       checkout-cache-fallback: github
       rust-toolchain: "1.96.0"
