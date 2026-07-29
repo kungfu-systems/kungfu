@@ -216,7 +216,6 @@
       "KF-ADR-019f86da-4f90-7153-a6c1-ab7a0a3cf481": "Managed session host placement spans legacy history not yet reconstructed.",
       "KF-ADR-019f86da-4f90-76a1-8eda-6e49fa70e7d5": "Source synchronization implementation spans legacy history not yet reconstructed.",
       "KF-ADR-019f86da-4f90-7c8c-b8ef-5b46308541bf": "Agent action timeline implementation spans legacy history not yet reconstructed.",
-      "KF-ADR-019f86da-4f90-704e-9488-a793b1c4bf48": "Timeline projection implementation spans legacy history not yet reconstructed.",
       "KF-ADR-019f86da-4f90-70f3-9a0e-d502826fbc81": "Core action recording implementation spans legacy history not yet reconstructed.",
       "KF-ADR-019f86da-4f90-7d72-bf9f-1d5913bbb0d5": "Frame integrity gate implementation spans legacy history not yet reconstructed.",
       "KF-ADR-019f86da-4f90-71ac-bb91-32456981141a": "Location and journal policy implementation spans legacy history not yet reconstructed.",
