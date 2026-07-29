@@ -7,6 +7,8 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+import { evaluateDeprecationEnrollment } from './deprecation-surface-discovery.mjs';
+
 const ROOT = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
   '..',
@@ -15,6 +17,8 @@ const ROOT = path.resolve(
 const DEFAULT_CONTRACT =
   'framework/deprecation/deprecation-lifecycle.contract.json';
 const DEFAULT_REGISTRY = 'framework/deprecation/deprecation-registry.json';
+const DEFAULT_DISCOVERY =
+  'framework/deprecation/deprecation-discovery.contract.json';
 const SEMVER =
   /^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(?:-([0-9A-Za-z.-]+))?$/u;
 const DATE = /^\d{4}-\d{2}-\d{2}$/u;
@@ -262,6 +266,15 @@ export function validateDeprecationAuthority(options) {
   }
   if (registry.contract !== DEFAULT_CONTRACT) {
     findings.push(`registry must bind ${DEFAULT_CONTRACT}`);
+  }
+  if (
+    fs.existsSync(path.join(root, DEFAULT_DISCOVERY)) &&
+    (contract.discoveryContract !== DEFAULT_DISCOVERY ||
+      registry.discoveryContract !== DEFAULT_DISCOVERY)
+  ) {
+    findings.push(
+      `lifecycle contract and registry must bind ${DEFAULT_DISCOVERY}`,
+    );
   }
   if (!parseSemver(String(registry.productVersion || ''))) {
     findings.push('registry productVersion must be semantic version');
@@ -703,7 +716,7 @@ export function evaluateDeprecationEntry(
 }
 
 /**
- * @param {{root?: string, contract?: any, registry?: any, contractPath?: string, registryPath?: string, release?: string, releaseDate?: string, channel?: string, strictDue?: boolean}} options
+ * @param {{root?: string, contract?: any, registry?: any, discovery?: any, contractPath?: string, registryPath?: string, discoveryPath?: string, changedFiles?: string[], release?: string, releaseDate?: string, channel?: string, strictDue?: boolean}} options
  */
 export function auditDeprecations(options = {}) {
   const root = path.resolve(options.root || ROOT);
@@ -713,6 +726,13 @@ export function auditDeprecations(options = {}) {
   const registry =
     options.registry ||
     readJson(path.join(root, options.registryPath || DEFAULT_REGISTRY));
+  const discoveryPath = path.join(
+    root,
+    options.discoveryPath || DEFAULT_DISCOVERY,
+  );
+  const discovery =
+    options.discovery ||
+    (fs.existsSync(discoveryPath) ? readJson(discoveryPath) : null);
   const release = String(options.release || '');
   const releaseDate = String(
     options.releaseDate || new Date().toISOString().slice(0, 10),
@@ -720,6 +740,15 @@ export function auditDeprecations(options = {}) {
   const channel = String(options.channel || 'audit');
   const authority = validateDeprecationAuthority({ root, contract, registry });
   const findings = [...authority.findings];
+  const enrollment = discovery
+    ? evaluateDeprecationEnrollment({
+        root,
+        contract: discovery,
+        registry,
+        changedFiles: options.changedFiles,
+      })
+    : null;
+  if (enrollment) findings.push(...enrollment.findings);
   if (release && !parseSemver(release)) {
     findings.push({
       code: 'deprecation-release',
@@ -808,6 +837,15 @@ export function auditDeprecations(options = {}) {
     },
     entries,
     blockers: due,
+    inventory: enrollment
+      ? {
+          ...enrollment.inventory,
+          roots: {
+            lifecycle: authority.roots.contract,
+            ...enrollment.inventory.roots,
+          },
+        }
+      : null,
     findings,
   };
 }
@@ -821,6 +859,8 @@ function parseArgs(argv) {
     releaseDate: '',
     contractPath: DEFAULT_CONTRACT,
     registryPath: DEFAULT_REGISTRY,
+    discoveryPath: DEFAULT_DISCOVERY,
+    changedFiles: [],
     report: '',
   };
   for (let index = 0; index < argv.length; index += 1) {
@@ -834,6 +874,9 @@ function parseArgs(argv) {
       args.releaseDate = argv[++index] || '';
     else if (arg === '--contract') args.contractPath = argv[++index] || '';
     else if (arg === '--registry') args.registryPath = argv[++index] || '';
+    else if (arg === '--discovery') args.discoveryPath = argv[++index] || '';
+    else if (arg === '--changed-file')
+      args.changedFiles.push(argv[++index] || '');
     else if (arg === '--report') args.report = argv[++index] || '';
     else throw new Error(`unknown argument: ${arg}`);
   }
@@ -845,6 +888,7 @@ function humanReport(report) {
   const lines = [
     '[deprecation-audit] canonical authority: framework/deprecation/deprecation-registry.json',
     `[deprecation-audit] entries=${report.summary.entries} not-due=${report.summary.dispositions['not-due'] || 0} due=${report.summary.dispositions.due || 0} removed=${report.summary.dispositions.removed || 0} extended=${report.summary.dispositions['extended-by-warrant'] || 0}`,
+    `[deprecation-audit] inventory scope=${report.inventory?.scope || 'unavailable'} live=${report.inventory?.live.length || 0} settled=${report.inventory?.settled.length || 0} generated=${report.inventory?.classifications.generatedCode.length || 0} historical=${report.inventory?.classifications.historicalEvidence.length || 0}`,
   ];
   for (const entry of report.entries) {
     lines.push(
@@ -870,6 +914,11 @@ if (
       root: ROOT,
       contractPath: args.contractPath,
       registryPath: args.registryPath,
+      discoveryPath: args.discoveryPath,
+      changedFiles:
+        args.changedFiles.length > 0
+          ? args.changedFiles.filter(Boolean)
+          : undefined,
       release: args.release,
       releaseDate: args.releaseDate || undefined,
       channel: args.channel,

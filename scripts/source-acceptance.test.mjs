@@ -175,6 +175,7 @@ test('source plan covers representative source-only checks', () => {
   ]);
   const labels = plan.map((step) => step.label);
   assert.ok(labels.includes('changed web source format and lint'));
+  assert.ok(labels.includes('changed deprecation surface enrollment'));
   assert.ok(labels.includes('changed Python format'));
   assert.ok(labels.includes('Python type baseline'));
   assert.ok(labels.includes('changed C/C++ format'));

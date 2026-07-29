@@ -279,6 +279,17 @@ export function sourceAcceptancePlan(files, evidenceBaseCommit = '') {
       '--as-of',
       '2026-07-29',
     ],
+    ...(files.length
+      ? [
+          [
+            'changed deprecation surface enrollment',
+            'framework/deprecation/deprecation-lifecycle.mjs',
+            '--as-of',
+            '2026-07-29',
+            ...files.flatMap((file) => ['--changed-file', file]),
+          ],
+        ]
+      : []),
     ['Project Cut contract', 'scripts/check-project-cut-contract.mjs'],
     [
       'Project Cut settlement contract',
@@ -427,6 +438,7 @@ export function sourceAcceptancePlan(files, evidenceBaseCommit = '') {
         'scripts/upgrade-publication-admission.test.mjs',
         'scripts/check-agent-session-contract.test.mjs',
         'scripts/check-cli-catalog-parity.test.mjs',
+        'framework/deprecation/deprecation-surface-discovery.test.mjs',
         'scripts/check-fact-cut-kernel-contract.test.mjs',
         'scripts/check-exit-bundle-contract.test.mjs',
         'scripts/check-fact-root-canonical.test.mjs',
