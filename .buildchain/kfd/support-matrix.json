@@ -254,7 +254,7 @@
         "evidenceRoots": [
           {
             "path": "framework/primitive/kungfu-primitive-catalog.contract.json",
-            "sha256": "sha256:02ccf8d8c32a75b2b21910ba68321e13d61ce2214f4b567e803164f1682acf9a"
+            "sha256": "sha256:b65458d2b794bd1169cc2bb19128a3eb66831c3acef9f5426773016e800b7875"
           },
           {
             "path": "docs/architecture/primitive-management-plane.md",
@@ -584,7 +584,7 @@
         "evidenceRoots": [
           {
             "path": "framework/core/src/python/kungfu/assignment_orchestration.py",
-            "sha256": "sha256:ab9a38c35b0bede5f7e1aad3de74478bb5243f6f554a9c4fae1e3d53c7199228"
+            "sha256": "sha256:feb9300193e9004b1e8cec12a4cf4aadb0545b13b9ddb380775d9380c0cd727d"
           }
         ]
       },
