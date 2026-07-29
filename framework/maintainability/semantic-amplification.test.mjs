@@ -23,6 +23,12 @@ const layers = JSON.parse(
     'utf8',
   ),
 );
+const terminalMatrix = JSON.parse(
+  fs.readFileSync(
+    new URL('./terminal-evidence-matrix.json', import.meta.url),
+    'utf8',
+  ),
+);
 const clone = (value) => JSON.parse(JSON.stringify(value));
 
 test('current semantic amplification projection has one route per family', () => {
@@ -81,4 +87,37 @@ test('unknown production state fails without inflating another envelope', () => 
   broken.productionBoundaries[2].state = 'probably-green';
   const issues = validateManifest(broken, layers, new Set());
   assert.ok(issues.some((item) => item.code === 'unknown-production-state'));
+});
+
+test('sealed Assignment state and Agent-facing projection cannot diverge', () => {
+  const staleProjection = clone(manifest);
+  staleProjection.productionBoundaries[2].state = 'retained-dependency';
+  let issues = validateManifest(
+    staleProjection,
+    layers,
+    new Set(),
+    terminalMatrix,
+  );
+  assert.ok(
+    issues.some(
+      (item) => item.code === 'closed-assignment-projection-conflict',
+    ),
+  );
+
+  const reopenedNativeState = clone(terminalMatrix);
+  reopenedNativeState.rows[0].disposition = 'active';
+  issues = validateManifest(manifest, layers, new Set(), reopenedNativeState);
+  assert.ok(
+    issues.some(
+      (item) => item.code === 'projected-closure-without-native-evidence',
+    ),
+  );
+
+  const mixedRoots = clone(manifest);
+  mixedRoots.productionBoundaries[2].dependentAssignment.requestRoot =
+    'sha256:'.concat('0'.repeat(64));
+  issues = validateManifest(mixedRoots, layers, new Set(), terminalMatrix);
+  assert.ok(
+    issues.some((item) => item.code === 'terminal-assignment-root-conflict'),
+  );
 });

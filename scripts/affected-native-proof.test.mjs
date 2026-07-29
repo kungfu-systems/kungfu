@@ -211,7 +211,6 @@ function writeBundle(descriptor, value, proofProducer = producer()) {
   }
   return proof;
 }
-
 test('descriptor binds the exact tree, base, plan projection, and toolchain', () => {
   const first = createProofDescriptor(plan(HEAD), TREE, 2, TOOLCHAIN);
   const rewritten = createProofDescriptor(plan(OTHER_HEAD), TREE, 2, TOOLCHAIN);
@@ -260,7 +259,6 @@ test('descriptor binds the exact tree, base, plan projection, and toolchain', ()
     nativeToolchainIdentity(TOOLCHAIN),
   );
 });
-
 test('family delivery binding is separate from reusable qualification identity', () => {
   const { values } = deliveryFixture();
   const binding = createDeliveryBinding(values);
@@ -362,7 +360,6 @@ test('family delivery binding is separate from reusable qualification identity',
     /latest-dev replay drift/u,
   );
 });
-
 test('exact pull-request qualification proof is reusable by bound delivery', () => {
   const value = fixture();
   const { values } = deliveryFixture();
@@ -493,7 +490,6 @@ test('exact pull-request qualification proof is reusable by bound delivery', () 
   );
   fs.rmSync(value.root, { recursive: true, force: true });
 });
-
 test('delivery attempt seals the exact family, source, proof decision, and run', () => {
   const binding = createDeliveryBinding({
     ...deliveryFixture().values,
@@ -534,7 +530,6 @@ test('delivery attempt seals the exact family, source, proof decision, and run',
     /root drift/u,
   );
 });
-
 test('effective rules normalize the exact required-check set', () => {
   assert.deepEqual(
     requiredContextsFromRules([
@@ -1206,9 +1201,16 @@ test('workflow keeps one context while PR proof replaces duplicate queue builds'
     path.join(ROOT, 'scripts/affected-native-proof.mjs'),
     'utf8',
   );
-  assert.match(verifier, /head_repository_id === repositoryId/u);
+  const artifactLookup = fs.readFileSync(
+    new URL(
+      '../framework/release/affected-native-artifact-lookup.mjs',
+      import.meta.url,
+    ),
+    'utf8',
+  );
+  assert.match(artifactLookup, /head_repository_id === repositoryId/u);
   assert.match(
-    verifier,
+    artifactLookup,
     /run\.event === 'pull_request' \|\| run\.head_sha === headSha/u,
   );
   assert.match(

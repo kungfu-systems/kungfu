@@ -312,7 +312,7 @@ function deliveryAttempt(overrides = {}) {
       pullRequest: 1262,
       pullRequestHead,
       devHead: 'c'.repeat(40),
-      replayedCandidate: 'd'.repeat(40),
+      replayedCandidate: mergeGroupHead,
       replayedTree: 'e'.repeat(40),
       mergeGroupHead,
       checkout: mergeGroupHead,

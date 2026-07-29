@@ -28,6 +28,7 @@ function semanticAmplificationFixturePaths(manifest) {
     'framework/core/architecture/layers.json',
     'framework/maintainability/semantic-amplification.manifest.json',
     'framework/maintainability/semantic-amplification.mjs',
+    'framework/maintainability/terminal-evidence-matrix.json',
     manifest.reportPath,
   ]);
   for (const family of manifest.families || []) {

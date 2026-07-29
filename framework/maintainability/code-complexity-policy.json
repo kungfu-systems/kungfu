@@ -58,6 +58,34 @@
     "smallGroupPolicy": "observed-maximum",
     "minimumGroupSizeForPercentiles": 10
   },
+  "thresholdSemantics": {
+    "advisory": "calibration.soft; always reported and never presented as protected-mainline admission",
+    "protectedMainline": "calibration.hard; crossing is blocking unless an exact independently signed waiver passes",
+    "retainedAdvisoryReview": "Every retained advisory crossing requires exact-head independent cohesion review in terminal evidence"
+  },
+  "advisoryDispositions": {
+    "framework/tui/src/profile-shell.tsx": {
+      "action": "decomposed-control-state",
+      "extractedPaths": [
+        "framework/tui/src/control-plane-state.ts"
+      ],
+      "residualResponsibility": "Ink rendering and bounded product-shell composition"
+    },
+    "scripts/affected-native-proof.mjs": {
+      "action": "decomposed-remote-artifact-discovery",
+      "extractedPaths": [
+        "framework/release/affected-native-artifact-lookup.mjs"
+      ],
+      "residualResponsibility": "Affected-native proof construction, validation, sealing, and cache authority"
+    },
+    "scripts/cancel-dequeued-merge-group-runs.mjs": {
+      "action": "resolved-below-advisory",
+      "extractedPaths": [
+        "framework/maintainability/delivery-evidence.mjs"
+      ],
+      "residualResponsibility": "Exact dequeue cleanup and repair settlement"
+    }
+  },
   "antiGaming": {
     "maxNewHandwrittenFilesPerOwner": 3,
     "newGeneratedProjectionRequiresProvenance": true,

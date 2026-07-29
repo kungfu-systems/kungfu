@@ -17,6 +17,8 @@ const ROOT = path.resolve(
 );
 const MANIFEST_PATH =
   'framework/maintainability/semantic-amplification.manifest.json';
+const TERMINAL_MATRIX_PATH =
+  'framework/maintainability/terminal-evidence-matrix.json';
 const ALLOWED_STATES = new Set([
   'proved',
   'partial',
@@ -122,7 +124,12 @@ function issue(code, family, target, message) {
   return { code, family, target, message };
 }
 
-function validateManifest(manifest, layers, changed) {
+function validateManifest(
+  manifest,
+  layers,
+  changed,
+  terminalMatrix = readJson(TERMINAL_MATRIX_PATH),
+) {
   const issues = [];
   const allowedRoles = new Set(manifest.rolePolicy.allowedProjectionRoles);
   const ids = new Set();
@@ -273,6 +280,59 @@ function validateManifest(manifest, layers, changed) {
             `production boundary ${boundary.id} references missing evidence`,
           ),
         );
+    if (boundary.dependentAssignment) {
+      const row = (terminalMatrix.rows || []).find(
+        ({ assignmentId }) =>
+          assignmentId === boundary.dependentAssignment.assignmentId,
+      );
+      if (!row) {
+        issues.push(
+          issue(
+            'missing-terminal-assignment',
+            '',
+            boundary.id,
+            'projected Assignment is absent from terminal evidence',
+          ),
+        );
+      } else if (row.disposition === 'closed') {
+        if (boundary.state !== 'proved') {
+          issues.push(
+            issue(
+              'closed-assignment-projection-conflict',
+              '',
+              boundary.id,
+              `closed Assignment cannot project as '${boundary.state}'`,
+            ),
+          );
+        }
+        if (
+          boundary.dependentAssignment.requestRoot !==
+            row.nativeClosure?.requestRoot ||
+          boundary.dependentAssignment.captureReceiptRoot !==
+            row.nativeClosure?.captureReceiptRoot ||
+          boundary.closureBinding?.sealedStateRoot !==
+            terminalMatrix.predecessor?.sealedStateRoot
+        ) {
+          issues.push(
+            issue(
+              'terminal-assignment-root-conflict',
+              '',
+              boundary.id,
+              'projected Assignment roots disagree with immutable terminal closure',
+            ),
+          );
+        }
+      } else if (boundary.state === 'proved') {
+        issues.push(
+          issue(
+            'projected-closure-without-native-evidence',
+            '',
+            boundary.id,
+            'proved projection requires a closed terminal Assignment row',
+          ),
+        );
+      }
+    }
   }
   for (const record of manifest.decompositions || []) {
     for (const relative of [
@@ -295,7 +355,8 @@ function validateManifest(manifest, layers, changed) {
 
 function buildReport(manifest, layers) {
   const changed = changedPaths(manifest.baselineRef);
-  const issues = validateManifest(manifest, layers, changed);
+  const terminalMatrix = readJson(TERMINAL_MATRIX_PATH);
+  const issues = validateManifest(manifest, layers, changed, terminalMatrix);
   const families = manifest.families.map((family) => {
     const measurements = allFamilyPaths(family).map((relative) =>
       measurePath(relative, manifest.baselineRef, changed),
@@ -363,6 +424,12 @@ function buildReport(manifest, layers) {
     },
     families,
     productionBoundaries: manifest.productionBoundaries,
+    terminalEvidenceProjection: {
+      matrixPath: TERMINAL_MATRIX_PATH,
+      matrixSchema: terminalMatrix.schema,
+      predecessorAssignmentId: terminalMatrix.predecessor.assignmentId,
+      predecessorSealedStateRoot: terminalMatrix.predecessor.sealedStateRoot,
+    },
     decompositions: manifest.decompositions,
     issues,
   };

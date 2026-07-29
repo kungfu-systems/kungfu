@@ -689,6 +689,44 @@ function softBudgetWarnings(files, baseline, renamedFrom = new Map()) {
   return warnings;
 }
 
+export function dispositionSoftWarnings(warnings, files, policy) {
+  const currentByPath = new Map(files.map((file) => [file.path, file]));
+  const declared = policy.advisoryDispositions || {};
+  const active = warnings.map((warning) => {
+    const declaration = declared[warning.path] || null;
+    return {
+      ...warning,
+      thresholdClass: 'advisory',
+      protectedMainlineBudget: warning.hardBudget,
+      protectedMainlineState:
+        warning.currentLines <= warning.hardBudget
+          ? 'within-budget'
+          : 'exception-required',
+      disposition: declaration?.action || 'retained-under-mainline-budget',
+      extractedPaths: declaration?.extractedPaths || [],
+      residualResponsibility:
+        declaration?.residualResponsibility ||
+        'Retained source responsibility requires exact-head cohesion review.',
+      independentExactHeadReviewRequired: true,
+    };
+  });
+  const activePaths = new Set(active.map(({ path: pathname }) => pathname));
+  const resolved = Object.entries(declared)
+    .filter(([pathname]) => !activePaths.has(pathname))
+    .map(([pathname, declaration]) => {
+      const current = currentByPath.get(pathname);
+      return {
+        path: pathname,
+        disposition: declaration.action,
+        extractedPaths: declaration.extractedPaths || [],
+        residualResponsibility: declaration.residualResponsibility,
+        currentLines: current?.lines ?? null,
+        state: current ? 'below-advisory-or-no-new-crossing' : 'missing',
+      };
+    });
+  return { active, resolved };
+}
+
 export function renameEvidenceBase(policy) {
   const baselineRef = String(policy?.baselineRef || '').trim();
   if (!/^[0-9a-f]{40}$/u.test(baselineRef)) {
@@ -771,9 +809,10 @@ function checkCurrent(policy, layers, baseline) {
   const scopedIssues = issues.map((issue) =>
     enrichIssue(issue, baseline.files, files),
   );
-  const softWarnings = softBudgetWarnings(files, baseline, renamedFrom).map(
+  const rawSoftWarnings = softBudgetWarnings(files, baseline, renamedFrom).map(
     (issue) => enrichIssue(issue, baseline.files, files),
   );
+  const advisory = dispositionSoftWarnings(rawSoftWarnings, files, policy);
   const waived = [];
   const blocking = [];
   if (policy.baselineGovernance) {
@@ -855,16 +894,18 @@ function checkCurrent(policy, layers, baseline) {
     policyRoot: digest(policy),
     baselineRef: baseline.baselineRef,
     sourceCommit: String(git(['rev-parse', 'HEAD'])).trim(),
-    mode: 'p1-regression-ratchet',
+    mode: 'protected-mainline-budget-ratchet',
     verdict: blocking.length ? 'fail' : 'pass',
     evaluationTime: evaluationTime.toISOString(),
     requester,
     summary: summarize(files),
     groupBudgets: baseline.groups,
+    thresholdSemantics: policy.thresholdSemantics,
     baselineMeasurementRoot: baseline.measurementRoot || '',
     blocking,
     waived,
-    softWarnings,
+    softWarnings: advisory.active,
+    resolvedAdvisories: advisory.resolved,
     files,
   };
 }

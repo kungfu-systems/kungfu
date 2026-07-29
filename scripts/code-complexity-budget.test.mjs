@@ -17,6 +17,7 @@ import {
 import {
   classify,
   composeRenameEvidence,
+  dispositionSoftWarnings,
   hasGeneratedProvenance,
   ownerFor,
   percentile,
@@ -160,6 +161,39 @@ test('P1 ratchet blocks new oversize, threshold crossing, and hotspot growth', (
     'grandfathered-file-grew',
     'new-handwritten-file-over-hard-budget',
   ]);
+});
+
+test('advisory crossings are dispositioned without obscuring mainline budget', () => {
+  const warning = {
+    path: 'scripts/hotspot.mjs',
+    currentLines: 90,
+    softBudget: 80,
+    hardBudget: 100,
+  };
+  const report = dispositionSoftWarnings(
+    [warning],
+    [handwritten(warning.path, warning.currentLines)],
+    {
+      advisoryDispositions: {
+        [warning.path]: {
+          action: 'decomposed-evidence-reader',
+          extractedPaths: ['framework/maintainability/evidence-reader.mjs'],
+          residualResponsibility: 'one bounded producer',
+        },
+        'scripts/resolved.mjs': {
+          action: 'resolved-below-advisory',
+          extractedPaths: [],
+          residualResponsibility: 'one bounded command',
+        },
+      },
+    },
+  );
+  assert.equal(report.active[0].thresholdClass, 'advisory');
+  assert.equal(report.active[0].protectedMainlineBudget, 100);
+  assert.equal(report.active[0].protectedMainlineState, 'within-budget');
+  assert.equal(report.active[0].independentExactHeadReviewRequired, true);
+  assert.equal(report.active[0].disposition, 'decomposed-evidence-reader');
+  assert.equal(report.resolved[0].path, 'scripts/resolved.mjs');
 });
 
 test('anti-gaming rejects helper proliferation and generated laundering', () => {
