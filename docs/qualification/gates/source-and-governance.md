@@ -199,10 +199,12 @@ Each section is bound to the registry id by the catalog meta gate.
   inadvertent direct position-two entry from changing the proof base and turning
   an exact PR proof into a full native queue rebuild; it does not weaken proof
   verification when source, plan, or toolchain identity changes.
-- **Dequeue repair admission:** the trusted-base dequeue controller cancels
-  active work and writes one PR marker for deterministic `failed_checks`,
-  `merge_conflict`, or `invalid_merge_commit` exits. The marker binds the exact
-  pull-request head SHA. Atlas merge orchestration rejects a later enqueue of
+- **Dequeue repair admission:** the dequeue controller executes from the
+  event-selected current protected `dev/v*/v*` base ref, never from the
+  pull-request head or a stale event base SHA. It cancels active work and writes
+  one PR marker for deterministic `failed_checks`, `merge_conflict`, or
+  `invalid_merge_commit` exits. The marker binds the exact pull-request head
+  SHA. Atlas merge orchestration rejects a later enqueue of
   that same head, including from another account or thread, and observes a new
   source SHA as the only ordinary unlock. Manual dequeues remain unmarked so
   position-one serialization can yield without manufacturing a repair debt.

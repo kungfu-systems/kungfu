@@ -17,7 +17,8 @@
   "authority": {
     "pullRequestHead": "atlas-serialized-wrapper",
     "mergeGroup": ".github/workflows/queue-admission-lease.yml",
-    "dequeueRevocation": ".github/workflows/cancel-dequeued-merge-group.yml"
+    "dequeueRevocation": ".github/workflows/cancel-dequeued-merge-group.yml",
+    "dequeueControllerSource": "current-protected-pull-request-base-ref"
   },
   "admission": {
     "queueMustBeEmpty": true,

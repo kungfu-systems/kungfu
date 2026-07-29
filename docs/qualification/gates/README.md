@@ -210,12 +210,14 @@ PRs to have a non-merged exit and at least 20 completed delivery samples.
 
 `.github/workflows/cancel-dequeued-merge-group.yml` bounds waste after an
 authoritative dequeue. Its `pull_request_target: dequeued` job checks out only
-the event's trusted base SHA, does not execute pull-request code, and grants
-only the scoped permissions required to cancel Actions runs and maintain the
-PR repair marker. The controller selects active `affected-native-pr.yml`
-merge-group runs whose queue branch ends in the exact PR number and cancels
-each run once. A `409` terminal race is idempotent; unexpected API or
-permission failures remain fatal and visible. A `failed_checks`,
+the current protected base ref selected by the event's `dev/v*/v*` target,
+never the pull-request head. This avoids executing a stale controller when the
+event's immutable base SHA predates a recently merged terminal-state fix. The
+job grants only the scoped permissions required to cancel Actions runs and
+maintain the PR repair marker. The controller selects active
+`affected-native-pr.yml` merge-group runs whose queue branch ends in the exact
+PR number and cancels each run once. A `409` terminal race is idempotent;
+unexpected API or permission failures remain fatal and visible. A `failed_checks`,
 `merge_conflict`, or `invalid_merge_commit` removal also upserts one marker
 bound to the event's exact PR head. Atlas admission refuses that same head in a
 later thread; a corrected head is eligible for a fresh admission. Manual

@@ -62,6 +62,7 @@ test('dequeue workflow executes only the trusted base with least privilege', () 
     'utf8',
   );
   assert.match(workflow, /pull_request_target:\n\s+types: \[dequeued\]/u);
+  assert.match(workflow, /branches:\n\s+- dev\/v\*\/v\*/u);
   assert.match(workflow, /permissions:\n\s+actions: write\n\s+contents: read/u);
   assert.match(workflow, /\s+pull-requests: write/u);
   assert.match(workflow, /\s+statuses: write/u);
@@ -76,8 +77,9 @@ test('dequeue workflow executes only the trusted base with least privilege', () 
   );
   assert.match(
     workflow,
-    /ref: \$\{\{ github\.event\.pull_request\.base\.sha \}\}/u,
+    /ref: refs\/heads\/\$\{\{ github\.event\.pull_request\.base\.ref \}\}/u,
   );
+  assert.doesNotMatch(workflow, /pull_request\.base\.sha/u);
   assert.match(workflow, /persist-credentials: false/u);
   assert.doesNotMatch(
     workflow,
