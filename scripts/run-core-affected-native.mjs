@@ -85,6 +85,7 @@ const sdkQualificationPaths = [
   'framework/core/architecture/build-capabilities.json',
   'framework/core/architecture/layered-api-encoding-boundary.contract.json',
   'framework/core/architecture/layers.json',
+  'framework/core/architecture/sdk-build-plan.json',
   'framework/core/cmake/',
   'framework/core/conanfile.py',
   'framework/core/package.json',
@@ -1421,6 +1422,7 @@ function selfTest(authority, buildAuthority) {
   expect('public ABI and gate authority schedule SDK qualification', () => {
     for (const file of [
       'framework/core/src/libkungfu/include/kungfu/api.h',
+      'framework/core/architecture/sdk-build-plan.json',
       '.github/workflows/affected-native-pr.yml',
       'tests/qualification/layers/sdk/run.mjs',
     ]) {

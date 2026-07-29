@@ -87,6 +87,25 @@ test('dev queue impact selects Shifu and KFD from their declared source surfaces
   );
 });
 
+test('the SDK build plan is a self-qualifying SDK authority input', () => {
+  assert.deepEqual(
+    sdkQualificationImpact(
+      ['framework/core/architecture/sdk-build-plan.json'],
+      'base',
+      'head',
+    ),
+    {
+      required: true,
+      reasons: [
+        {
+          path: 'framework/core/architecture/sdk-build-plan.json',
+          kind: 'sdk-authority-or-input',
+        },
+      ],
+    },
+  );
+});
+
 test('the staged workflow remains self-qualifying under both moved gates', () => {
   const impact = devQueueQualificationImpact([
     '.github/workflows/affected-native-cache-promote.yml',
