@@ -417,15 +417,24 @@ test('adapter fails closed on missing, failed, or nonzero autoplay completion', 
 });
 
 test('adapter rejects credential-shaped terminal output before publication', () => {
-  const root = fs.mkdtempSync(
-    path.join(os.tmpdir(), 'auditable-demo-adapter-'),
-  );
-  try {
-    const { result } = run(root, { privateOutput: 'token=not-a-real-token' });
-    assert.notEqual(result.status, 0);
-    assert.match(result.stderr, /credential-shaped value/u);
-  } finally {
-    fs.rmSync(root, { recursive: true, force: true });
+  for (const privateOutput of [
+    'token=not-a-real-token',
+    '/home/private-user/project',
+    'Authorization: Bearer not-a-real-bearer',
+    `ghp_${'x'.repeat(32)}`,
+    `AKIA${'A'.repeat(16)}`,
+    '-----BEGIN PRIVATE KEY-----',
+  ]) {
+    const root = fs.mkdtempSync(
+      path.join(os.tmpdir(), 'auditable-demo-adapter-'),
+    );
+    try {
+      const { result } = run(root, { privateOutput });
+      assert.notEqual(result.status, 0);
+      assert.match(result.stderr, /private path or credential-shaped value/u);
+    } finally {
+      fs.rmSync(root, { recursive: true, force: true });
+    }
   }
 });
 
