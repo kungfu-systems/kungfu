@@ -457,6 +457,7 @@ def test_installed_regression_cases_include_one_legally_reconciled_fix(tmp_path)
         "test-owner",
     )["issue"]
     evidence = {
+        "expectedIssueRoot": in_progress["issue_root"],
         "implementationRoots": [ROOT_A],
         "protectedPrs": ["https://example.invalid/kungfu/pull/1"],
         "independentAssessmentRoot": ROOT_B,
@@ -560,6 +561,7 @@ def test_local_lookup_issue_proposal_and_reconciliation_never_mutate(tmp_path):
         {
             "issueIdentity": in_progress["issue_root"],
             "evidence": {
+                "expectedIssueRoot": in_progress["issue_root"],
                 "implementationRoots": [ROOT_A],
                 "protectedPrs": ["https://example.invalid/pull/1"],
                 "independentAssessmentRoot": ROOT_A,
@@ -580,7 +582,11 @@ def test_local_lookup_issue_proposal_and_reconciliation_never_mutate(tmp_path):
     assert owned["proposal"]["findingRoots"] == [finding["finding_root"]]
     assert incomplete["resolution_transition_eligible"] is False
     assert "independent_assessment_root" in incomplete["omissions"]
+    assert incomplete["delivery_complete"] is False
     assert complete["resolution_transition_eligible"] is True
+    assert complete["delivery_complete"] is True
+    assert complete["resolution_complete"] is False
+    assert complete["merged_code_not_resolved"] is True
     assert complete["automatic_transition"] is False
     assert storage_service.fact_state(str(runtime)) == facts_before
     current = dogfood_api.read(str(runtime), "lookup", {"identity": issue["issue_id"]})
@@ -598,6 +604,200 @@ def test_local_lookup_issue_proposal_and_reconciliation_never_mutate(tmp_path):
     assert health["counts"]["latest_logical_issues"] == 1
     assert health["counts"]["issue_replicas_or_revisions"] == 2
     assert identity.identity_root
+
+
+def test_reconciliation_requires_the_exact_current_issue_root(tmp_path):
+    _, runtime = _active_runtime(tmp_path)
+    finding = _capture(runtime)["finding"]
+    issue = _admit(runtime, finding["finding_root"])["issue"]
+    accepted = dogfood_api.action(
+        str(runtime),
+        "transition-issue",
+        {
+            "issueId": issue["issue_id"],
+            "expectedIssueRoot": issue["issue_root"],
+            "toState": "accepted",
+            "actor": "test-agent",
+            "reason": "owned",
+            "transitionedAt": "2026-07-03T00:00:00Z",
+        },
+        "test-owner",
+    )["issue"]
+    in_progress = dogfood_api.action(
+        str(runtime),
+        "transition-issue",
+        {
+            "issueId": issue["issue_id"],
+            "expectedIssueRoot": accepted["issue_root"],
+            "toState": "in-progress",
+            "actor": "test-agent",
+            "reason": "implementation started",
+            "transitionedAt": "2026-07-04T00:00:00Z",
+        },
+        "test-owner",
+    )["issue"]
+    evidence = {
+        "expectedIssueRoot": accepted["issue_root"],
+        "implementationRoots": [ROOT_A],
+        "protectedPrs": ["https://example.invalid/pull/1"],
+        "independentAssessmentRoot": ROOT_A,
+        "authorizedDecisionRoot": ROOT_B,
+        "successorFactRoot": ROOT_C,
+        "productRoot": ROOT_D,
+        "verificationEvidenceRoots": [ROOT_A],
+    }
+
+    mismatch = dogfood_api.read(
+        str(runtime),
+        "issue-reconciliation",
+        {"issueIdentity": in_progress["issue_root"], "evidence": evidence},
+    )
+    evidence["expectedIssueRoot"] = in_progress["issue_root"]
+    resolution_only = dogfood_api.read(
+        str(runtime),
+        "issue-reconciliation",
+        {
+            "issueIdentity": in_progress["issue_root"],
+            "evidence": {
+                key: value
+                for key, value in evidence.items()
+                if key not in {"implementationRoots", "protectedPrs"}
+            },
+        },
+    )
+    exact = dogfood_api.read(
+        str(runtime),
+        "issue-reconciliation",
+        {"issueIdentity": in_progress["issue_root"], "evidence": evidence},
+    )
+
+    assert mismatch["delivery_complete"] is True
+    assert mismatch["resolution"]["expected_root_matches"] is False
+    assert "expected_current_issue_root_match" in mismatch["omissions"]
+    assert mismatch["resolution_transition_eligible"] is False
+    assert resolution_only["resolution"]["evidence_complete"] is True
+    assert resolution_only["delivery_complete"] is False
+    assert resolution_only["resolution_transition_eligible"] is False
+    assert exact["resolution"]["expected_root_matches"] is True
+    assert exact["resolution"]["evidence_complete"] is True
+    assert exact["resolution_transition_eligible"] is True
+    assert exact["merged_code_not_resolved"] is True
+
+
+def test_impact_policy_normalizes_aliases_and_rejects_unknown_writes(tmp_path):
+    identity, runtime = _active_runtime(tmp_path)
+    high_friction = _capture(
+        runtime,
+        suffix="high-friction",
+        impact="high-friction",
+    )["finding"]
+    blocker_finding = _capture(
+        runtime,
+        suffix="blocker",
+        impact="workflow-blocking",
+    )["finding"]
+    blocker_issue = _admit(
+        runtime,
+        blocker_finding["finding_root"],
+        suffix="blocker",
+        impact="workflow-blocking",
+    )["issue"]
+
+    with pytest.raises(ValueError, match="canonical values"):
+        _capture(runtime, suffix="unknown-impact", impact="urgent-ish")
+
+    starvation = dogfood_api.read(
+        str(runtime),
+        "starvation",
+        {
+            "workspaceRoot": identity.workspace_root,
+            "scope": "local",
+            "now": "2026-07-03T00:00:00Z",
+        },
+    )
+
+    assert high_friction["impact"] == "high_friction"
+    assert blocker_finding["impact"] == "blocker"
+    assert blocker_issue["impact"] == "blocker"
+    projected = next(
+        row
+        for row in starvation["attention"]
+        if row["issue_root"] == blocker_issue["issue_root"]
+    )
+    assert projected["impact"] == "blocker"
+    assert "impact:blocker" in projected["reasons"]
+    assert projected["release_blocking"] is True
+    assert projected in starvation["release_blockers"]
+
+
+def test_recurrent_closeout_findings_cluster_without_rewriting_facts(tmp_path):
+    identity, runtime = _active_runtime(tmp_path)
+    findings = []
+    for index, error in enumerate(
+        (
+            "closeout-retirement-residual",
+            "closeout-unregistered-rebase",
+            "closeout-plan-root-drift",
+            "closeout-shadow-catalog-drift",
+            "closeout-stale-locator",
+        )
+    ):
+        findings.append(
+            _capture(
+                runtime,
+                suffix=f"closeout-{index}",
+                title=f"Worktree closeout failure {index}",
+                dimensions={
+                    "repository": ["kungfu"],
+                    "component": ["project-cut-closeout"],
+                    "capability": ["worktree-closeout"],
+                    "command": ["shifu project-cut closeout"],
+                    "error": [error],
+                    "platform": ["macos"],
+                },
+            )["finding"]
+        )
+
+    proposal = dogfood_api.read(
+        str(runtime),
+        "issue-proposal",
+        {
+            "findingIdentity": findings[0]["finding_root"],
+            "ownerCandidates": ["work-control"],
+        },
+    )
+    issue = _admit(
+        runtime,
+        findings[0]["finding_root"],
+        suffix="closeout-cluster",
+        owner="work-control",
+        findingRoots=proposal["proposal"]["findingRoots"],
+    )["issue"]
+    health = dogfood_api.read(
+        str(runtime),
+        "health",
+        {
+            "workspaceRoot": identity.workspace_root,
+            "scope": "local",
+            "now": "2026-08-01T00:00:00Z",
+        },
+    )
+
+    expected_roots = sorted(row["finding_root"] for row in findings)
+    assert proposal["proposal"]["findingRoots"] == expected_roots
+    assert proposal["cluster"]["finding_count"] == 5
+    assert proposal["cluster"]["recurrence"] >= 5
+    assert issue["finding_roots"] == expected_roots
+    attention = next(
+        row for row in health["attention"] if row["issue_root"] == issue["issue_root"]
+    )
+    assert attention["recurrence"] >= 5
+    for finding in findings:
+        lookup = dogfood_api.read(
+            str(runtime), "lookup", {"identity": finding["finding_root"]}
+        )
+        assert lookup["match_count"] == 1
+        assert lookup["matches"][0]["record"] == finding
 
 
 def test_relevance_is_bounded_explainable_and_consideration_fails_closed(
@@ -761,7 +961,17 @@ def test_federation_preserves_independent_component_cuts_and_unavailable_state(
         right, config_home=str(config_home), env={"HOME": str(tmp_path)}
     )
     _capture(left_runtime, "left")
-    _capture(right_runtime, "right")
+    right_finding = _capture(
+        right_runtime,
+        "right",
+        impact="workflow-blocking",
+    )["finding"]
+    right_issue = _admit(
+        right_runtime,
+        right_finding["finding_root"],
+        suffix="right",
+        impact="workflow-blocking",
+    )["issue"]
 
     result = dogfood_api.read(
         str(left_runtime),
@@ -781,6 +991,29 @@ def test_federation_preserves_independent_component_cuts_and_unavailable_state(
     assert all(row["cut_root"] for row in available)
     assert len({row["cut_root"] for row in available}) >= 2
     assert result["atomic_global_cut"] is False
+    starvation = dogfood_api.read(
+        str(left_runtime),
+        "starvation",
+        {
+            "workspaceRoot": left.workspace_root,
+            "scope": "all",
+            "configHome": str(config_home),
+            "now": "2026-07-03T00:00:00Z",
+        },
+    )
+    projected = next(
+        row
+        for row in starvation["attention"]
+        if row["issue_root"] == right_issue["issue_root"]
+    )
+    assert projected["workspace_identity_root"] == right.identity_root
+    assert projected["component_cut_root"]
+    assert projected["impact"] == "blocker"
+    assert projected["release_blocking"] is True
+    assert len(starvation["component_cuts"]) >= 2
+    assert starvation["federation_proof_root"]
+    assert starvation["atomic_global_cut"] is False
+    assert starvation["state"] == "complete"
 
     moved = tmp_path / "right-unavailable"
     Path(right.workspace_root).rename(moved)
@@ -799,6 +1032,30 @@ def test_federation_preserves_independent_component_cuts_and_unavailable_state(
     assert len(unavailable) == 1
     assert unavailable[0]["workspace"]["identity_root"] == right.identity_root
     assert degraded["proof"]["atomic_global_cut"] is False
+    degraded_starvation = dogfood_api.read(
+        str(left_runtime),
+        "starvation",
+        {
+            "workspaceRoot": left.workspace_root,
+            "scope": "all",
+            "configHome": str(config_home),
+            "now": "2026-07-03T00:00:00Z",
+        },
+    )
+    assert degraded_starvation["state"] == "partial"
+    assert degraded_starvation["omissions"] == [
+        {
+            "workspace_identity_root": right.identity_root,
+            "availability": "unavailable",
+            "stale": unavailable[0]["stale"],
+            "problems": unavailable[0]["problems"],
+            "cut_root": unavailable[0]["cut_root"],
+        }
+    ]
+    assert all(
+        row["issue_root"] != right_issue["issue_root"]
+        for row in degraded_starvation["attention"]
+    )
 
 
 def test_atlas_jsonl_import_preserves_every_revision_and_source_root(tmp_path):

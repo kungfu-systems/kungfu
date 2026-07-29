@@ -47,7 +47,15 @@ STARVATION_SCHEMA = "kungfu.dogfood-feedback.starvation/v1"
 MIGRATION_PLAN_SCHEMA = "kungfu.dogfood-feedback.migration-plan/v1"
 MIGRATION_VERIFY_SCHEMA = "kungfu.dogfood-feedback.migration-verification/v1"
 
-POLICY_VERSION = "dogfood-policy/v1"
+POLICY_VERSION = "dogfood-policy/v2"
+CANONICAL_IMPACTS = ("blocker", "high_friction", "medium", "low", "polish")
+IMPACT_ALIASES = {
+    "blocking": "blocker",
+    "high-friction": "high_friction",
+    "normal": "medium",
+    "workflow-blocking": "blocker",
+    "workflow_blocking": "blocker",
+}
 CONSIDERATION_STAGES = ("design", "admission", "kickoff", "closeout")
 ALLOWED_DISPOSITIONS = {
     "addresses",
@@ -126,6 +134,11 @@ def capabilities() -> dict[str, Any]:
             "immutable": True,
             "evidence": "episode-root-and-bounded-pointers",
             "privacy": ["public", "internal", "private-metadata-only"],
+            "impact": {
+                "canonical": list(CANONICAL_IMPACTS),
+                "legacyAliases": dict(sorted(IMPACT_ALIASES.items())),
+                "unknownWrites": "rejected",
+            },
         },
         "issue": {
             "transitions": {
@@ -168,6 +181,18 @@ def _text(value: Any, field: str) -> str:
     if not text:
         raise ValueError(f"{field} must not be empty")
     return text
+
+
+def _normalize_impact(value: Any, *, write: bool = True) -> str:
+    raw = _text(value, "impact").lower()
+    canonical = IMPACT_ALIASES.get(raw, raw)
+    if canonical in CANONICAL_IMPACTS:
+        return canonical
+    if write:
+        raise ValueError(
+            "impact must be one of the canonical values or a known legacy alias"
+        )
+    return ""
 
 
 def _utc_now() -> str:
@@ -361,7 +386,7 @@ def capture_finding(
     privacy: str = "internal",
     actor: str,
     observed_at: str = "",
-    impact: str = "normal",
+    impact: str = "medium",
     hard_class: str = "",
     recurrence: int = 1,
     system_time: int = 0,
@@ -390,7 +415,7 @@ def capture_finding(
         ),
         "dimensions": _dimension_map(dimensions),
         "privacy": privacy,
-        "impact": _text(impact, "impact"),
+        "impact": _normalize_impact(impact),
         "hard_class": hard_class,
         "recurrence": int(recurrence),
         "observed_at": recorded_at,
@@ -439,7 +464,7 @@ def admit_issue(
     title: str,
     owner: str,
     finding_roots: Iterable[str],
-    impact: str = "normal",
+    impact: str = "medium",
     hard_class: str = "",
     verification_criteria: Iterable[str] = (),
     actor: str,
@@ -475,7 +500,7 @@ def admit_issue(
         "version": 1,
         "predecessor_root": "",
         "finding_roots": finding_roots,
-        "impact": _text(impact, "impact"),
+        "impact": _normalize_impact(impact),
         "hard_class": hard_class,
         "verification_criteria": [
             _text(value, "verification_criterion") for value in verification_criteria
@@ -827,13 +852,15 @@ def propose_issue(
     ]
     if not verification:
         verification = ["independently reproduce and verify the reported behavior"]
+    cluster = _finding_cluster(runtime_dir, finding)
     proposal = {
         "issueId": f"issue-{finding_root[7:39]}",
         "title": str(finding.get("title") or ""),
         "owner": owners[0] if len(owners) == 1 else "",
         "ownerCandidates": owners,
-        "findingRoots": [finding_root],
-        "impact": str(finding.get("impact") or "normal"),
+        "findingRoots": cluster["finding_roots"],
+        "impact": _normalize_impact(finding.get("impact") or "medium", write=False)
+        or "medium",
         "hardClass": str(finding.get("hard_class") or ""),
         "dimensions": dimensions,
         "verificationCriteria": verification,
@@ -843,6 +870,7 @@ def propose_issue(
         "policy_version": POLICY_VERSION,
         "finding_root": finding_root,
         "finding_id": finding.get("finding_id"),
+        "cluster": cluster,
         "proposal": proposal,
         "admission_ready": bool(proposal["owner"]),
         "requires_explicit_authorization": True,
@@ -890,6 +918,11 @@ def reconcile_issue(
         "product_root": "productRoot",
     }
     normalized: dict[str, Any] = {
+        "expected_issue_root": (
+            _root(supplied.get("expectedIssueRoot"), "expected_issue_root")
+            if supplied.get("expectedIssueRoot")
+            else ""
+        ),
         "implementation_roots": sorted(
             {
                 _root(value, "implementation_root")
@@ -923,15 +956,32 @@ def reconcile_issue(
                     "value": value,
                 }
             )
-    required = [
+    resolution_required = [
+        "expected_issue_root",
         "independent_assessment_root",
         "authorized_decision_root",
         "successor_fact_root",
         "product_root",
         "verification_evidence_roots",
     ]
-    omissions = [field for field in required if not normalized.get(field)]
+    delivery_required = ["implementation_roots", "protected_prs"]
+    delivery_omissions = [
+        field for field in delivery_required if not normalized.get(field)
+    ]
+    resolution_omissions = [
+        field for field in resolution_required if not normalized.get(field)
+    ]
+    expected_root_matches = (
+        normalized["expected_issue_root"] == issue.get("issue_root")
+        if normalized["expected_issue_root"]
+        else False
+    )
+    if normalized["expected_issue_root"] and not expected_root_matches:
+        resolution_omissions.append("expected_current_issue_root_match")
     legal_predecessor = str(issue.get("state") or "") == "in-progress"
+    delivery_complete = not delivery_omissions
+    resolution_evidence_complete = not resolution_omissions
+    resolution_complete = str(issue.get("state") or "") == "resolved"
     body = {
         "schema": RECONCILIATION_SCHEMA,
         "policy_version": POLICY_VERSION,
@@ -940,8 +990,23 @@ def reconcile_issue(
         "issue_state": issue.get("state"),
         "candidate_evidence": normalized,
         "match_reasons": matches_by_reason,
-        "omissions": omissions,
-        "resolution_transition_eligible": legal_predecessor and not omissions,
+        "delivery": {
+            "complete": delivery_complete,
+            "omissions": delivery_omissions,
+        },
+        "resolution": {
+            "complete": resolution_complete,
+            "evidence_complete": resolution_evidence_complete,
+            "expected_root_matches": expected_root_matches,
+            "omissions": resolution_omissions,
+        },
+        "delivery_complete": delivery_complete,
+        "resolution_complete": resolution_complete,
+        "merged_code_not_resolved": delivery_complete and not resolution_complete,
+        "omissions": sorted(set(delivery_omissions + resolution_omissions)),
+        "resolution_transition_eligible": (
+            legal_predecessor and delivery_complete and resolution_evidence_complete
+        ),
         "independent_verification_required": True,
         "merge_is_not_completion_proof": True,
         "automatic_transition": False,
@@ -951,10 +1016,10 @@ def reconcile_issue(
             [
                 {
                     "action": "supply-missing-governed-evidence",
-                    "fields": omissions,
+                    "fields": sorted(set(delivery_omissions + resolution_omissions)),
                 }
             ]
-            if omissions
+            if delivery_omissions or resolution_omissions
             else (
                 [
                     {
@@ -982,6 +1047,104 @@ def _logical_finding_key(record: Mapping[str, Any]) -> str:
     if source_root and source_item_id:
         return f"atlas:{source_root}:{source_item_id}"
     return str(record.get("finding_root") or "")
+
+
+def _dimension_tokens(record: Mapping[str, Any], dimension: str) -> set[str]:
+    dimensions = _dimension_map(record.get("dimensions") or {})
+    return {
+        token
+        for value in dimensions[dimension]
+        for token in re.findall(r"[a-z0-9]+", value.lower())
+        if len(token) >= 3
+    }
+
+
+def _finding_cluster_score(
+    anchor: Mapping[str, Any], candidate: Mapping[str, Any]
+) -> tuple[int, list[dict[str, Any]]]:
+    anchor_dimensions = _dimension_map(anchor.get("dimensions") or {})
+    candidate_dimensions = _dimension_map(candidate.get("dimensions") or {})
+    repositories = sorted(
+        set(anchor_dimensions["repository"]) & set(candidate_dimensions["repository"])
+    )
+    if not repositories:
+        return 0, []
+    matches = [
+        {
+            "dimension": "repository",
+            "values": repositories,
+            "weight": DIMENSION_WEIGHTS["repository"],
+        }
+    ]
+    semantic_score = 0
+    for dimension in (
+        "component",
+        "capability",
+        "command",
+        "error",
+        "path",
+        "contract",
+        "schema",
+    ):
+        overlap = sorted(
+            _dimension_tokens(anchor, dimension)
+            & _dimension_tokens(candidate, dimension)
+        )
+        if not overlap:
+            continue
+        weight = DIMENSION_WEIGHTS[dimension]
+        semantic_score += weight * len(overlap)
+        matches.append({"dimension": dimension, "values": overlap, "weight": weight})
+    return semantic_score, matches
+
+
+def _finding_cluster(runtime_dir: str, anchor: Mapping[str, Any]) -> dict[str, Any]:
+    latest: dict[str, dict[str, Any]] = {}
+    for row in _records(runtime_dir, FINDING_SURFACE_ID):
+        record = dict(row["record"])
+        key = _logical_finding_key(record)
+        revision = int((record.get("migration") or {}).get("source_revision") or 0)
+        current = latest.get(key)
+        current_revision = int(
+            ((current or {}).get("migration") or {}).get("source_revision") or 0
+        )
+        if current is None or (
+            revision,
+            str(record.get("finding_root") or ""),
+        ) > (
+            current_revision,
+            str(current.get("finding_root") or ""),
+        ):
+            latest[key] = record
+    members = []
+    anchor_root = str(anchor.get("finding_root") or "")
+    for record in latest.values():
+        score, matches = _finding_cluster_score(anchor, record)
+        if str(record.get("finding_root") or "") == anchor_root:
+            score = max(score, 10)
+        if score < 10:
+            continue
+        members.append(
+            {
+                "finding_id": record.get("finding_id"),
+                "finding_root": record.get("finding_root"),
+                "recurrence": int(record.get("recurrence") or 1),
+                "score": score,
+                "matches": matches,
+            }
+        )
+    members.sort(key=lambda row: str(row["finding_root"]))
+    body = {
+        "algorithm": "bounded-dimension-token-overlap/v1",
+        "anchor_finding_root": anchor_root,
+        "threshold": 10,
+        "members": members,
+        "finding_roots": [str(row["finding_root"]) for row in members],
+        "finding_count": len(members),
+        "recurrence": sum(int(row["recurrence"]) for row in members),
+        "automatic_admission": False,
+    }
+    return {**body, "cluster_root": _content_root(body)}
 
 
 def health_projection(
@@ -1046,14 +1209,16 @@ def health_projection(
             str((current_row.get("record") or {}).get("finding_root") or ""),
         ):
             unique_findings[key] = row
-    issue_groups: dict[str, list[dict[str, Any]]] = {}
+    issue_groups: dict[tuple[str, str], list[dict[str, Any]]] = {}
     for row in issue_observations:
-        issue_groups.setdefault(str(row["record"].get("issue_id") or ""), []).append(
-            row
+        key = (
+            str(row.get("workspace_identity_root") or ""),
+            str(row["record"].get("issue_id") or ""),
         )
+        issue_groups.setdefault(key, []).append(row)
     latest_issues = {}
     issue_conflicts = []
-    for issue_id, rows in sorted(issue_groups.items()):
+    for (workspace_identity_root, issue_id), rows in sorted(issue_groups.items()):
         maximum = max(int(row["record"].get("version") or 0) for row in rows)
         candidates = [
             row for row in rows if int(row["record"].get("version") or 0) == maximum
@@ -1063,9 +1228,14 @@ def health_projection(
         )
         if len(roots) > 1:
             issue_conflicts.append(
-                {"issue_id": issue_id, "version": maximum, "roots": roots}
+                {
+                    "workspace_identity_root": workspace_identity_root,
+                    "issue_id": issue_id,
+                    "version": maximum,
+                    "roots": roots,
+                }
             )
-        latest_issues[issue_id] = min(
+        latest_issues[(workspace_identity_root, issue_id)] = min(
             candidates,
             key=lambda row: str(row["record"].get("issue_root") or ""),
         )
@@ -1077,7 +1247,7 @@ def health_projection(
         for row in finding_observations
     }
     attention = []
-    for issue_id, row in sorted(latest_issues.items()):
+    for (workspace_identity_root, issue_id), row in sorted(latest_issues.items()):
         issue = row["record"]
         owner = str(issue.get("owner") or "unknown")
         state = str(issue.get("state") or "unknown")
@@ -1114,17 +1284,21 @@ def health_projection(
                 ),
             }
         )
+        impact_raw = str(issue.get("impact") or "")
+        impact = _normalize_impact(impact_raw or "medium", write=False)
         attention.append(
             {
+                "workspace_identity_root": workspace_identity_root,
                 "issue_id": issue_id,
                 "issue_root": issue.get("issue_root"),
                 "owner": owner,
                 "state": state,
                 "age_days": max(0, (evaluated_at - admitted).days),
                 "deferral_count": int(issue.get("deferral_count") or 0),
-                "recurrence": max(
-                    [int(item.get("recurrence") or 1) for item in linked] or [1]
-                ),
+                "impact": impact,
+                "impact_raw": impact_raw,
+                "recurrence": sum(int(item.get("recurrence") or 1) for item in linked)
+                or 1,
             }
         )
     component_states = []
@@ -1163,7 +1337,7 @@ def health_projection(
             "cut_root": component.get("cut_root") or "",
         }
         component_states.append(projected)
-        if classification not in {"available", "active"}:
+        if classification in {"stale", "unavailable", "unknown"}:
             omissions.append(projected)
     metric_body = {
         "schema": HEALTH_SCHEMA,
@@ -1297,7 +1471,14 @@ def relevance_query(
                     "workspace_identity_root": workspace_root,
                     "score": score,
                     "matches": matches,
-                    "impact": finding["record"].get("impact"),
+                    "impact": (
+                        _normalize_impact(
+                            finding["record"].get("impact") or "medium",
+                            write=False,
+                        )
+                        or "unknown"
+                    ),
+                    "impact_raw": finding["record"].get("impact"),
                     "hard_class": finding["record"].get("hard_class"),
                     "issues": sorted(
                         issues_by_finding.get(finding_root, []),
@@ -1597,8 +1778,10 @@ def evaluate_starvation(
             for root in issue.get("finding_roots", [])
             if root in findings
         ]
-        recurrence = max([int(row.get("recurrence") or 1) for row in linked] or [1])
+        recurrence = sum(int(row.get("recurrence") or 1) for row in linked) or 1
         hard_class = str(issue.get("hard_class") or "")
+        impact_raw = str(issue.get("impact") or "")
+        impact = _normalize_impact(impact_raw or "medium", write=False)
         reasons = []
         if age >= age_days:
             reasons.append("aged")
@@ -1608,8 +1791,11 @@ def evaluate_starvation(
             reasons.append("repeated-deferral")
         if hard_class:
             reasons.append(f"hard-class:{hard_class}")
+        if impact == "blocker":
+            reasons.append("impact:blocker")
         release_blocking = bool(
-            hard_class in HARD_CLASSES
+            impact == "blocker"
+            or hard_class in HARD_CLASSES
             or issue.get("state") in {"accepted", "in-progress"}
             and "repeated-deferral" in reasons
         )
@@ -1622,6 +1808,8 @@ def evaluate_starvation(
             "recurrence": recurrence,
             "deferral_count": int(issue.get("deferral_count") or 0),
             "hard_class": hard_class,
+            "impact": impact,
+            "impact_raw": impact_raw,
             "reasons": reasons,
             "initiative_review": bool(reasons),
             "release_blocking": release_blocking,
@@ -1644,6 +1832,174 @@ def evaluate_starvation(
         "automatic_closure": False,
     }
     return {**body, "evaluation_root": _content_root(body)}
+
+
+def starvation_projection(
+    current: WorkspaceIdentity,
+    *,
+    scope: str = "local",
+    config_home: str | None = None,
+    env: Mapping[str, str] | None = None,
+    now: str = "",
+    age_days: int = 14,
+    recurrence_threshold: int = 3,
+    maximum_deferrals: int = 2,
+) -> dict[str, Any]:
+    """Evaluate starvation over independent component cuts."""
+
+    query = federated_query(
+        current,
+        scope=scope,
+        config_home=config_home,
+        env=env,
+        include_excluded=True,
+    )
+    at = _parse_time(now or _utc_now(), "now")
+    rows = []
+    release_blockers = []
+    omissions = []
+    issue_conflicts = []
+    for component in query["components"]:
+        workspace = component.get("workspace") or {}
+        workspace_root = str(workspace.get("identity_root") or "")
+        availability = str(component.get("availability") or "unknown")
+        stale = bool(component.get("stale"))
+        problems = list(component.get("problems") or [])
+        if availability == "excluded":
+            continue
+        if availability != "available" or stale:
+            omissions.append(
+                {
+                    "workspace_identity_root": workspace_root,
+                    "availability": availability,
+                    "stale": stale,
+                    "problems": problems,
+                    "cut_root": component.get("cut_root") or "",
+                }
+            )
+            continue
+        findings = {
+            str(row["record"].get("finding_root") or ""): row["record"]
+            for row in component.get("findings") or []
+        }
+        issues_by_id: dict[str, list[dict[str, Any]]] = {}
+        for issue_row in component.get("issues") or []:
+            issue = dict(issue_row["record"])
+            issues_by_id.setdefault(str(issue.get("issue_id") or ""), []).append(issue)
+        for issue_id, versions in sorted(issues_by_id.items()):
+            maximum = max(int(row.get("version") or 0) for row in versions)
+            candidates = [
+                row for row in versions if int(row.get("version") or 0) == maximum
+            ]
+            roots = sorted({str(row.get("issue_root") or "") for row in candidates})
+            if len(roots) > 1:
+                issue_conflicts.append(
+                    {
+                        "workspace_identity_root": workspace_root,
+                        "issue_id": issue_id,
+                        "version": maximum,
+                        "roots": roots,
+                    }
+                )
+            issue = min(candidates, key=lambda row: str(row.get("issue_root") or ""))
+            if issue.get("state") in {"resolved", "released"}:
+                continue
+            admitted_at = _parse_time(issue.get("admitted_at"), "admitted_at")
+            age = max(0, (at - admitted_at).days)
+            linked = [
+                findings[root]
+                for root in issue.get("finding_roots", [])
+                if root in findings
+            ]
+            recurrence = sum(int(row.get("recurrence") or 1) for row in linked) or 1
+            hard_class = str(issue.get("hard_class") or "")
+            impact_raw = str(issue.get("impact") or "")
+            impact = _normalize_impact(impact_raw or "medium", write=False)
+            reasons = []
+            if age >= age_days:
+                reasons.append("aged")
+            if recurrence >= recurrence_threshold:
+                reasons.append("recurrent")
+            if int(issue.get("deferral_count") or 0) > maximum_deferrals:
+                reasons.append("repeated-deferral")
+            if hard_class:
+                reasons.append(f"hard-class:{hard_class}")
+            if impact == "blocker":
+                reasons.append("impact:blocker")
+            release_blocking = bool(
+                impact == "blocker"
+                or hard_class in HARD_CLASSES
+                or issue.get("state") in {"accepted", "in-progress"}
+                and "repeated-deferral" in reasons
+            )
+            row = {
+                "workspace_identity_root": workspace_root,
+                "component_cut_root": component.get("cut_root") or "",
+                "issue_id": issue_id,
+                "issue_root": issue.get("issue_root"),
+                "owner": issue.get("owner"),
+                "state": issue.get("state"),
+                "age_days": age,
+                "recurrence": recurrence,
+                "deferral_count": int(issue.get("deferral_count") or 0),
+                "hard_class": hard_class,
+                "impact": impact,
+                "impact_raw": impact_raw,
+                "reasons": reasons,
+                "initiative_review": bool(reasons),
+                "release_blocking": release_blocking,
+            }
+            if reasons:
+                rows.append(row)
+            if release_blocking:
+                release_blockers.append(row)
+    body = {
+        "schema": STARVATION_SCHEMA,
+        "policy_version": POLICY_VERSION,
+        "scope": scope,
+        "evaluated_at": at.isoformat().replace("+00:00", "Z"),
+        "thresholds": {
+            "age_days": age_days,
+            "recurrence": recurrence_threshold,
+            "maximum_deferrals": maximum_deferrals,
+        },
+        "federation_proof_root": query["proof"]["proof_root"],
+        "component_cuts": query["proof"]["component_cuts"],
+        "atomic_global_cut": False,
+        "attention": sorted(
+            rows,
+            key=lambda row: (
+                str(row["workspace_identity_root"]),
+                str(row["issue_root"]),
+            ),
+        ),
+        "release_blockers": sorted(
+            release_blockers,
+            key=lambda row: (
+                str(row["workspace_identity_root"]),
+                str(row["issue_root"]),
+            ),
+        ),
+        "issue_conflicts": issue_conflicts,
+        "omissions": omissions,
+        "automatic_closure": False,
+        "writes": [],
+    }
+    return {
+        **body,
+        "state": "partial" if omissions or issue_conflicts else "complete",
+        "evaluation_root": _content_root(body),
+        "next_actions": (
+            [
+                {
+                    "action": "inspect-visible-starvation-omissions",
+                    "description": "Repair or explicitly retire unavailable and stale component evidence.",
+                }
+            ]
+            if omissions or issue_conflicts
+            else []
+        ),
+    }
 
 
 def _atlas_lines(
@@ -1787,7 +2143,7 @@ def import_atlas_jsonl(
                     "platform": [],
                     "tag": [
                         revision.get("status") or "captured",
-                        revision.get("impact") or "normal",
+                        _normalize_impact(revision.get("impact") or "medium"),
                     ],
                     "history": [item_id],
                     "evidence": [line_root],
@@ -1798,7 +2154,7 @@ def import_atlas_jsonl(
                 if revision.get("privacy_class") == "private"
                 else "internal"
             ),
-            "impact": str(revision.get("impact") or "normal"),
+            "impact": _normalize_impact(revision.get("impact") or "medium"),
             "hard_class": "",
             "recurrence": 1,
             "observed_at": str(

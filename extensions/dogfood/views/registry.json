@@ -40,6 +40,7 @@
         "member": "dogfood-actions",
         "resolutionMode": "member-resolved-definition",
         "bindings": [
+          { "name": "scope", "type": "string", "required": false },
           { "name": "now", "type": "string", "required": false }
         ]
       },
