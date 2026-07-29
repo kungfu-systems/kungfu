@@ -122,7 +122,7 @@
     {"pair": "source/remote", "decision": "keep-distinct", "evidence": ["source uses kungfu.sources.store for Atlas-style read-only storage imports with range filters", "remote uses kungfu.remote.store for host/home transport and source-scoped mirrors", "handlers, persisted schemas, and side effects differ"]},
     {"pair": "profile/kfx-profile", "decision": "keep-distinct", "evidence": ["profile authors and executes generic Profile Suite intents and receipts", "kfx manages package installation, native execution, trust, and package schemas", "kfx profile-schema is schema discovery, not a second Profile action handler"]},
     {"pair": "work/agent-work", "decision": "keep-distinct", "evidence": ["work owns the legacy journal work-item lifecycle", "agent work owns the KFD-7 Product Profile Fact/action API", "schemas and mutation authorities are intentionally separate"]},
-    {"pair": "atlas/profile-mission-control", "decision": "keep-distinct", "evidence": ["Mission Control actions exist only under kungfu profile mission-control", "Atlas bridge import/verify and KF-ADR-019f86da-4f90-710c-a3b6-5e0cb5a28ad0 capabilities/inspect/action remain only under kungfu atlas"]},
+    {"pair": "atlas/profile-mission-control-v3-compatibility", "decision": "split-canonical", "canonical": {"current-work": "kungfu work", "atlas-bridge": "kungfu atlas"}, "evidence": ["kungfu profile mission-control is hidden compatibility-only and has no KFD-3 API identity", "its removal gate is the retained v3 read/import/migration/rollback/bundle qualification plus zero installed retained-v3 observations", "Atlas bridge import/verify and KF-ADR-019f86da-4f90-710c-a3b6-5e0cb5a28ad0 capabilities/inspect/action remain only under kungfu atlas"]},
     {"pair": "developer-top-level/dev", "decision": "split-canonical", "canonical": {"engage": "kungfu dev engage", "env": "kungfu env", "schema": "kungfu dev schema", "sdk": "kungfu sdk"}, "evidence": ["each developer capability has exactly one live path", "env is dispatched by the native installed runtime", "sdk is the public application assembly and KFD/build entrypoint"]}
   ],
   "contributions": [],
@@ -136,7 +136,7 @@
   "catalogProjection": {
     "artifact": "kungfu.agent/cli_surface.catalog.json",
     "authority": "runtime-fold",
-    "expectedSurfaceRoot": "sha256:ece3e08cc2682084ab0f0ec5e6ee907139332dd759183a60d037e947b75c8643",
+    "expectedSurfaceRoot": "sha256:cd80a52dcccc8ee3c4293eba34826e89e12c372bdfe7ba8641b79c8a6e7f88b1",
     "consumers": {
       "agentCapabilities": "embed-complete",
       "agentCommands": "strict-link",

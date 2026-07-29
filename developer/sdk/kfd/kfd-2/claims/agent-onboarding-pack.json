@@ -16,7 +16,7 @@
       "pointer": {
         "kind": "file",
         "path": "framework/core/src/python/kungfu/agent/commands.json",
-        "sha256": "9f7384f508d9d356f0fc5b111be6fdc43c1e6cff65a90141f2a586da47fa2ce7"
+        "sha256": "8cf537f1870804178200e9faed3213c70d3f78aa4b911c24eba6498d18436a02"
       },
       "description": "Machine-readable command catalog and mode maturity metadata."
     },
@@ -25,7 +25,7 @@
       "pointer": {
         "kind": "file",
         "path": "framework/core/src/python/kungfu/agent/cli_surface.catalog.json",
-        "sha256": "d3b6c72f584d4512b61e7cbec6a751c770faaa7aafeeeb9d28febf28e51dcfbd"
+        "sha256": "ff992d235535768c0b98e151d3f7cc27081701c61a1182595bec6b89454ec25a"
       },
       "description": "Complete deterministic CLI surface graph shared by offline Agent capabilities and catalog parity checks."
     },
@@ -34,7 +34,7 @@
       "pointer": {
         "kind": "file",
         "path": "framework/core/src/python/kungfu/agent/mode-selection.md",
-        "sha256": "976bc789ba7248117b40c34a1065836db3a82506edde8742faaa14a94c217fdc"
+        "sha256": "0e1ef27e4c6158f5a5a8ad922ddb9b1c11df12cad934e278a23720c79b95b065"
       },
       "description": "Human and agent-readable mode selection rules."
     },
@@ -72,15 +72,15 @@
     "evidenceSha256": [
       {
         "path": "framework/core/src/python/kungfu/agent/commands.json",
-        "sha256": "9f7384f508d9d356f0fc5b111be6fdc43c1e6cff65a90141f2a586da47fa2ce7"
+        "sha256": "8cf537f1870804178200e9faed3213c70d3f78aa4b911c24eba6498d18436a02"
       },
       {
         "path": "framework/core/src/python/kungfu/agent/cli_surface.catalog.json",
-        "sha256": "d3b6c72f584d4512b61e7cbec6a751c770faaa7aafeeeb9d28febf28e51dcfbd"
+        "sha256": "ff992d235535768c0b98e151d3f7cc27081701c61a1182595bec6b89454ec25a"
       },
       {
         "path": "framework/core/src/python/kungfu/agent/mode-selection.md",
-        "sha256": "976bc789ba7248117b40c34a1065836db3a82506edde8742faaa14a94c217fdc"
+        "sha256": "0e1ef27e4c6158f5a5a8ad922ddb9b1c11df12cad934e278a23720c79b95b065"
       },
       {
         "path": "framework/core/src/python/kungfu/agent/safety.md",
@@ -102,11 +102,11 @@
       },
       {
         "path": "framework/core/src/python/kungfu/agent/commands.json",
-        "sha256": "9f7384f508d9d356f0fc5b111be6fdc43c1e6cff65a90141f2a586da47fa2ce7"
+        "sha256": "8cf537f1870804178200e9faed3213c70d3f78aa4b911c24eba6498d18436a02"
       },
       {
         "path": "framework/core/src/python/kungfu/agent/cli_surface.catalog.json",
-        "sha256": "d3b6c72f584d4512b61e7cbec6a751c770faaa7aafeeeb9d28febf28e51dcfbd"
+        "sha256": "ff992d235535768c0b98e151d3f7cc27081701c61a1182595bec6b89454ec25a"
       }
     ]
   },
@@ -120,13 +120,13 @@
     {
       "name": "agent-command-catalog",
       "path": "framework/core/src/python/kungfu/agent/commands.json",
-      "sha256": "9f7384f508d9d356f0fc5b111be6fdc43c1e6cff65a90141f2a586da47fa2ce7",
+      "sha256": "8cf537f1870804178200e9faed3213c70d3f78aa4b911c24eba6498d18436a02",
       "expectedPackagePath": "kungfu/agent/commands.json"
     },
     {
       "name": "cli-surface-catalog",
       "path": "framework/core/src/python/kungfu/agent/cli_surface.catalog.json",
-      "sha256": "d3b6c72f584d4512b61e7cbec6a751c770faaa7aafeeeb9d28febf28e51dcfbd",
+      "sha256": "ff992d235535768c0b98e151d3f7cc27081701c61a1182595bec6b89454ec25a",
       "expectedPackagePath": "kungfu/agent/cli_surface.catalog.json"
     }
   ],

@@ -25,7 +25,7 @@ const TYPED_PYTHON_ROOTS = [
   'framework/core/src/python/',
   'framework/storage/python/kungfu_sdk/',
   'framework/api/src/capability/guest-harness/',
-  'extensions/mission-control/mission-control-actions/',
+  'extensions/work-control/work-control-actions/',
 ];
 const isWin = process.platform === 'win32';
 
@@ -204,6 +204,10 @@ export function sourceAcceptancePlan(files, evidenceBaseCommit = '') {
       '--component-distribution',
     ],
     ['schema authority', 'scripts/check-schema-authority.mjs'],
+    [
+      'Work Control canonical naming boundary',
+      'scripts/check-work-control-vocabulary.test.mjs',
+    ],
     ['incubation passport governance', 'scripts/check-incubation-passport.mjs'],
     [
       'Hub Starter Docker concept',

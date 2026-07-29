@@ -4,7 +4,7 @@ This page is generated from the append-only Era and Stage corpus. It is a
 longitudinal learning path, not a replacement for current architecture, runtime,
 or qualification authority.
 
-Coverage: **5 eras**, **8 stages**, and **31 evidence references**.
+Coverage: **5 eras**, **9 stages**, and **33 evidence references**.
 
 ## Era 1: Journal substrate
 
@@ -115,6 +115,16 @@ Initiative, Assignment, Work Control, Primitive governance, and native KFX manag
 **Compression:** Kungfu's development loop is expressed through its own Fact, Episode, Profile, Project Cut, Work, review, Primitive, and KFX primitives; projections remain derived and replaceable.
 
 [Open the immutable Stage record](stages/08-native-work-control-dogfood.md) for the full capability, authority transition, downstream consumers, and evidence.
+
+### 9. Work Control canonical name
+
+**Period:** 2026-07-29 to ongoing · **Recorded status:** open
+
+**Pressure:** The native authority had cut over to Work Control while current product paths, catalogs, documentation, and generated surfaces still presented the retired name as a peer.
+
+**Compression:** One canonical name now carries the current Profile, package, CLI, GUI, TUI, Agent, documentation, build, and publication surfaces while exact historical evidence remains readable without becoming writable.
+
+[Open the immutable Stage record](stages/09-work-control-canonical-name.md) for the full capability, authority transition, downstream consumers, and evidence.
 
 ## Maintenance
 

@@ -844,12 +844,12 @@ function assembleTree(bt) {
     path.join(layout.sitePackages, 'kungfu', 'agent', 'documentation'),
     { recursive: true },
   );
-  // Assignment orchestration is an installed-product surface.  Its Mission
+  // Assignment orchestration is an installed-product surface. Its Work
   // Control Profile must therefore travel with the runtime instead of being
   // resolved from a developer checkout at admission time.
   copyFirstPartyProfile(
-    path.resolve(CORE, '..', '..', 'extensions', 'mission-control'),
-    path.join(layout.sitePackages, 'kungfu', 'profiles', 'mission-control'),
+    path.resolve(CORE, '..', '..', 'extensions', 'work-control'),
+    path.join(layout.sitePackages, 'kungfu', 'profiles', 'work-control'),
   );
   copyFirstPartyProfile(
     path.resolve(CORE, '..', '..', 'extensions', 'dogfood'),
@@ -1029,15 +1029,8 @@ function main() {
 
 if (require.main === module) main();
 
-// Test/build helper compatibility: the implementation now serves every
-// first-party Profile, while the previous Mission Control names remain valid.
-const missionControlProfileFilter = firstPartyProfileFilter;
-const copyMissionControlProfile = copyFirstPartyProfile;
-
 module.exports = {
   copyFirstPartyProfile,
-  copyMissionControlProfile,
   documentationAtlasSource,
   firstPartyProfileFilter,
-  missionControlProfileFilter,
 };

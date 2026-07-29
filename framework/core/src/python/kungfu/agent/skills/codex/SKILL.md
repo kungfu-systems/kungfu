@@ -82,7 +82,7 @@ Use the smallest mode that preserves evidence:
   interoperability, external adoption, or unobserved-platform support.
 
 - Start project-level work with `kungfu cut --repo <path> --json`, then use
-  `kungfu work --help` and `kungfu work status` against the exact workspace,
+  `kungfu work capture <request.json>` and `kungfu work status` against the exact workspace,
   Initiative, and Assignment. Treat this as the only public Work mutation
   family; older Work journals and compatibility aliases are not authorities.
 
@@ -119,8 +119,8 @@ kungfu storage repair --scope episode --episode-id <id> --fetch --out repair-mat
 kungfu storage repair --scope episode --episode-id <id> --apply --from <bundle.json> --dry-run --json
 kungfu storage verify-sync --source <source-id> --json
 kungfu atlas show import --json
-kungfu profile mission-control missions --json
-kungfu profile mission-control goals --json
+kungfu work capture <request.json>
+kungfu work status --workspace <path> --initiative-id <initiative-id> --assignment-id <assignment-id>
 kungfu atlas show markers --json
 ```
 

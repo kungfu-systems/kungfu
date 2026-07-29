@@ -158,11 +158,11 @@ The installed macOS ARM64 product has qualified an agent-authored
 Week/Day/Action Suite outside the Kungfu checkout. The qualification covered an
 optional member build, lifecycle, separately approved contract materialization,
 three admitted fact surfaces, a member-resolved query, a purpose-bound KFD-2
-assessment, coexistence with Mission Control, upgrade/rollback/removal/reinstall,
+assessment, coexistence with Work Control, upgrade/rollback/removal/reinstall,
 and full/thin source and evidence portability.
 
-Mission/Go is therefore a first-party Profile, not the required vocabulary for
-all users. The GUI Profile Manager discovers lifecycle and source health from
+Initiative/Assignment is therefore a first-party Profile, not required
+vocabulary for all users. The GUI Profile Manager discovers lifecycle and source health from
 the same public catalog and receipts used by Agents. This is still a pre-release
 surface: it is not a no-code Profile builder, marketplace, remote registry, or
 cryptographic identity provider. See [Known Limits](../qualification/known-limits.md) for the

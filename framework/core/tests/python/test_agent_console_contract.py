@@ -177,7 +177,7 @@ def test_agent_console_envelope_binds_work_and_discovery_entrypoints():
         "attemptId": "attempt:1",
         "runtimeProfileId": "codex-app",
         "provider": "codex",
-        "activeProfiles": [{"id": "kungfu.mission-control", "root": ROOT_HASH}],
+        "activeProfiles": [{"id": "kungfu.work-control", "root": ROOT_HASH}],
         "workRef": _work_ref(),
         "entrypoints": {
             "context": ["kungfu", "agent", "context", "--json"],
@@ -201,7 +201,7 @@ def test_agent_console_envelope_accepts_opencode_provider():
         "attemptId": "attempt:1",
         "runtimeProfileId": "opencode-free",
         "provider": "opencode",
-        "activeProfiles": [{"id": "kungfu.mission-control", "root": ROOT_HASH}],
+        "activeProfiles": [{"id": "kungfu.work-control", "root": ROOT_HASH}],
         "workRef": _work_ref(),
         "entrypoints": {
             "context": ["kungfu", "agent", "context", "--json"],

@@ -77,7 +77,7 @@ contract-world and fact-surface admission authority. Views resolve through
 plans. Exact Suite, catalog, member, policy, definition, proof, Episode, and
 claim-instance roots remain visible in plans and receipts.
 
-Mission Control is a first-party `kungfu.profile-suite/v1`, not a privileged
+Work Control is a first-party `kungfu.profile-suite/v1`, not a privileged
 Core path. It can coexist with independently authored Profiles in one runtime.
 Profile activation is not GUI focus, and removing a Profile does not delete its
 admitted facts or historical lifecycle events.
@@ -91,7 +91,7 @@ Fact Library bundles carry admitted evidence through their own authority.
 ## Current boundary
 
 The installed Agent SDK, runtime-discovered GUI Profile Manager, generic view
-composition, Mission Control reference Suite, and independent Week/Day/Action
+composition, Work Control reference Suite, and independent Week/Day/Action
 qualification are implemented. The current product claim is pre-release and
 qualified on macOS ARM64; it is not yet a cross-platform stable compatibility
 promise, marketplace, no-code ontology builder, remote Profile registry, or

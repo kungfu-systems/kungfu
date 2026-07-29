@@ -45,7 +45,7 @@
       "id": "complete",
       "mutates": true,
       "idempotency": "same result roots produce one claim candidate",
-      "authorityOperations": ["episode.seal", "mission-control.claim-completion"],
+      "authorityOperations": ["episode.seal", "work-control.claim-completion"],
       "output": "kungfu.work.completion-candidate/v1",
       "nextActions": ["settle", "checkpoint", "recover"]
     },
@@ -53,7 +53,7 @@
       "id": "settle",
       "mutates": true,
       "idempotency": "same accepted decision and expected-old Cut reuses the successor",
-      "authorityOperations": ["mission-control.assess", "mission-control.decide", "project-cut.prepare", "project-cut.publish"],
+      "authorityOperations": ["work-control.assess", "work-control.decide", "project-cut.prepare", "project-cut.publish"],
       "output": "kungfu.work.settlement-receipt/v1",
       "nextActions": ["resume", "export"]
     },
@@ -106,7 +106,7 @@
       "status": "available"
     },
     "tui": {
-      "projection": "mission-control-profile-shell",
+      "projection": "work-control-profile-shell",
       "capability": "workLoop",
       "status": "available"
     }

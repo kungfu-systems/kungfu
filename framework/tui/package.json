@@ -18,7 +18,7 @@
   "scripts": {
     "dev": "tsx src/main.tsx",
     "build": "tsc",
-    "test": "tsx --test src/*.test.ts",
+    "test": "tsx --test src/*.test.ts src/compatibility/*.test.ts",
     "clean": "rimraf dist",
     "bundle": "node build-bundle.mjs"
   },

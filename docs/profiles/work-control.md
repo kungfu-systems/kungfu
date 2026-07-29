@@ -99,16 +99,17 @@ WorkRef or a content-addressed Initiative admission envelope carrying the
 parent card's identity, title, intent, source authority, and immutable source
 version root. Missing, mutable, or mismatched parents fail visibly.
 
-Historical `kungfu.mission-control` worlds and receipts remain exact,
-read-only compatibility evidence. They are documented separately so their
-terminology does not define the current product.
+Historical v3 worlds and receipts remain exact, read-only compatibility
+evidence. They are documented in the
+[compatibility index](compatibility/README.md) so their terminology does not
+define the current product.
 
 ## Product surfaces
 
 ```text
-kungfu work --help
-kungfu work --help
-kungfu work status --help
+kungfu work capture <request.json>
+kungfu profile work-control --help
+kungfu work status --workspace <path> --initiative-id <initiative-id> --assignment-id <assignment-id>
 kungfu work gate --help
 ```
 

@@ -31,35 +31,35 @@ class CaptureOutput extends Writable {
   }
 }
 
-const MISSION_HOME_FIXTURE: ProfileShellModel = {
+const WORK_CONTROL_FIXTURE: ProfileShellModel = {
   profile: {
-    id: 'kungfu.mission-control',
-    title: 'Mission Control',
+    id: 'kungfu.work-control',
+    title: 'Work Control',
     version: 'Profile/KFD-3',
     suiteRoot: 'sha256:profile-suite-root',
     qualified: true,
   },
   subject: {
-    id: 'mission-a',
-    title: 'Mission A',
+    id: 'initiative-a',
+    title: 'Initiative A',
     subtitle: 'Keep public evidence and responsibility visible.',
   },
   navigation: [
-    { id: 'mission-a', label: 'Mission A', status: 'active' },
-    { id: 'mission-b', label: 'Mission B', status: 'paused' },
+    { id: 'initiative-a', label: 'Initiative A', status: 'active' },
+    { id: 'initiative-b', label: 'Initiative B', status: 'paused' },
   ],
   cards: [
     [
-      'mission-intent',
+      'initiative-intent',
       'What are we trying to achieve?',
       'declared',
-      'Mission A — keep public evidence visible.',
+      'Initiative A — keep public evidence visible.',
     ],
     [
       'observed-progress',
       'What actually happened?',
       'observed',
-      '3 Go(s) at this cut · active=2 · blocked=1',
+      '3 Assignment(s) at this cut · active=2 · blocked=1',
     ],
     [
       'evidence-at-cut',
@@ -99,19 +99,19 @@ for (const qualification of [
     columns: 80,
     rows: 24,
     mode: 'one-column',
-    digest: '0f5fca0d6800b6fe1298b22dc484227b4c786ed4e5af8930ec006a452702ad8e',
+    digest: '547348d747e23ff8158592e17d9a620aae1fbe270c75936da7e3f65ee4a304f4',
   },
   {
     columns: 120,
     rows: 36,
     mode: 'two-column',
-    digest: '40b746256cc4623a1507d33b8896624e321ced7da98a4b32c133a37f0c0d87a2',
+    digest: '6973544177af617a0bb16ed86a119f67403d55404cca81f80757d4086de60783',
   },
   {
     columns: 160,
     rows: 48,
     mode: 'three-column',
-    digest: 'd08bfff06683732a89735f3162a05566dbe07ee90d08906ad63b25f09dd80cb2',
+    digest: '6f7b80e502ad338b63f5a5ea07ee03080528532eb1044936ba4a5240178bfb6d',
   },
 ] as const) {
   test(`qualifies the ${qualification.columns}x${qualification.rows} renderer snapshot`, () => {
@@ -124,7 +124,7 @@ for (const qualification of [
       qualification.mode,
     );
     const snapshot = renderProfileShellSnapshot(
-      MISSION_HOME_FIXTURE,
+      WORK_CONTROL_FIXTURE,
       dimensions,
     );
     const lines = snapshot.split('\n');
@@ -137,7 +137,7 @@ for (const qualification of [
 
 test('empty and degraded fixtures remain deterministic and explicit', () => {
   const empty = {
-    ...MISSION_HOME_FIXTURE,
+    ...WORK_CONTROL_FIXTURE,
     navigation: [],
     cards: [],
     notice: 'empty',
@@ -176,7 +176,7 @@ test('resize crosses each responsive qualification boundary', () => {
 test('the shared Work Loop appears on the first terminal screen', () => {
   const snapshot = renderProfileShellSnapshot(
     {
-      ...MISSION_HOME_FIXTURE,
+      ...WORK_CONTROL_FIXTURE,
       workLoop: {
         status: 'active',
         confidence: 'medium',
@@ -200,16 +200,16 @@ test('the shared Work Loop appears on the first terminal screen', () => {
   assert.match(snapshot, /next checkpoint, complete/);
 });
 
-test('a Work Loop read failure stays visible without hiding Mission Control', () => {
+test('a Work Loop read failure stays visible without hiding Work Control', () => {
   const snapshot = renderProfileShellSnapshot(
     {
-      ...MISSION_HOME_FIXTURE,
+      ...WORK_CONTROL_FIXTURE,
       workLoopError: 'current Cut is ambiguous',
     },
     { columns: 80, rows: 24 },
   );
   assert.match(snapshot, /Work Loop unavailable · current Cut is ambiguous/);
-  assert.match(snapshot, /Mission A — Keep public evidence/);
+  assert.match(snapshot, /Initiative A — Keep public evidence/);
   assert.match(snapshot, /no mutation attempted/);
 });
 
@@ -217,7 +217,7 @@ test('the real Ink 80x24 first screen renders all five questions', async () => {
   const output = new CaptureOutput();
   const instance = render(
     React.createElement(ProfileShell, {
-      model: MISSION_HOME_FIXTURE,
+      model: WORK_CONTROL_FIXTURE,
       dimensions: { columns: 80, rows: 24 },
     }),
     {
@@ -231,7 +231,7 @@ test('the real Ink 80x24 first screen renders all five questions', async () => {
   instance.unmount();
   instance.cleanup();
   const rendered = output.chunks.join('');
-  for (const card of MISSION_HOME_FIXTURE.cards) {
+  for (const card of WORK_CONTROL_FIXTURE.cards) {
     assert.match(rendered, new RegExp(card.title.replace(/[?]/g, '\\?')));
   }
 });

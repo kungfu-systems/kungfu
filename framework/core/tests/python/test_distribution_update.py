@@ -1465,7 +1465,7 @@ def test_local_dogfood_residency_binds_product_mainline_profile_and_rollback(
             {
                 "entries": [
                     {
-                        "profileId": "kungfu.mission-control",
+                        "profileId": "kungfu.work-control",
                         "profileSuiteRoot": "sha256:" + "b" * 64,
                     }
                 ]

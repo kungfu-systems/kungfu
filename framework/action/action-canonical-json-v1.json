@@ -12,7 +12,7 @@
     },
     {
       "id": "kungfu.python-identity.canonical-json/v1",
-      "purpose": "Compatibility-preserving Python payload, contract, Exit Bundle, and Mission Control identities",
+      "purpose": "Compatibility-preserving Python payload, contract, Exit Bundle, and retained v3 identities",
       "objectKeyOrder": "Unicode code-point order, matching Python json.dumps(sort_keys=True)",
       "unicodeNormalization": "preserve valid UTF-8 exactly; NFC and NFD are distinct",
       "integerDomain": "arbitrary precision",

@@ -14,7 +14,7 @@ const executable = join(
   coreDist,
   process.platform === 'win32' ? 'kungfu.exe' : 'kungfu',
 );
-const missionControl = join(root, 'extensions', 'mission-control');
+const workControl = join(root, 'extensions', 'work-control');
 const dogfood = join(root, 'extensions', 'dogfood');
 const out = join(coreDist, 'profile-kfd3.json');
 const runtime = join(root, 'framework', 'gui', 'out', 'kfd3-release-runtime');
@@ -24,7 +24,7 @@ const result = spawnSync(
   [
     'profile',
     'kfd3-release-build',
-    missionControl,
+    workControl,
     dogfood,
     '--out',
     out,

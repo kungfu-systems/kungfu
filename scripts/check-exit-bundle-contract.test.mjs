@@ -457,7 +457,7 @@ test('ADR maturity and public Mission schema references cannot drift', () => {
   assert.match(episodeAdr, /^decision_status: accepted$/mu);
   assert.match(episodeAdr, /^implementation_status: implemented$/mu);
   assert.match(episodeAdr, /- Status: accepted; implemented/u);
-  const missionDoc = read('docs/profiles/mission-control.md');
+  const missionDoc = read('docs/profiles/compatibility/mission-control-v3.md');
   const missionAdr = read(
     'docs/adr/KF-ADR-019f86da-4f90-71be-a2aa-c8744fa340d8.md',
   );

@@ -21,7 +21,7 @@ from kungfu.storage import service as storage_service
 
 
 MISSION_PROFILE_SOURCE = (
-    Path(__file__).resolve().parents[4] / "extensions" / "mission-control"
+    Path(__file__).resolve().parents[4] / "extensions" / "work-control"
 )
 
 

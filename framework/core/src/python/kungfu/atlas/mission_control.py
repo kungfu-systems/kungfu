@@ -14,7 +14,7 @@ def _domain():
     package = profile_sdk.load_member_python_package(
         source, "work-control-actions", "domain"
     )
-    return package.mission_control
+    return package.work_control
 
 
 def __getattr__(name):

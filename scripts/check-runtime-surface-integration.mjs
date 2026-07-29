@@ -107,7 +107,7 @@ const operations = new Set(
   contract.operationRegistry.operations.map((operation) => operation.id),
 );
 const actionRegistry = readJson(
-  'extensions/mission-control/actions/registry.json',
+  'extensions/work-control/actions/registry.json',
 );
 for (const action of actionRegistry.actions) {
   if (action.runtimeOperation) {

@@ -1273,8 +1273,8 @@
       "legacySchemas": [
         "kungfu.mission-control.bundle/v1"
       ],
-      "owner": "Mission Control Profile domain over Episode bundles and proof-carrying queries",
-      "source": "extensions/mission-control/mission-control-actions/domain/mission_bundle.py",
+      "owner": "Work Control compatibility adapter over Episode bundles and proof-carrying queries",
+      "source": "extensions/work-control/work-control-actions/domain/compatibility/mission_control_v3_bundle.py",
       "identityRoot": "bundle_root",
       "protocol": "mission-control-portability/v2",
       "modes": [

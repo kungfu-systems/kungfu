@@ -4,8 +4,8 @@ import test from 'node:test';
 import {
   dashboardMetricVisuals,
   dashboardSnapshotVisual,
-  missionControlProfileVisual,
   profileApprovalVisual,
+  workControlProfileVisual,
 } from '../src/view/dashboard-status.ts';
 
 test('dashboard metrics use domain glyphs and unambiguous tooltips', () => {
@@ -50,11 +50,11 @@ test('snapshot state changes glyph without exposing changing prose inline', () =
 });
 
 test('Profile lifecycle state is compact while preserving exact status in tooltip', () => {
-  const setup = missionControlProfileVisual(
-    'Mission Control setup required · install',
+  const setup = workControlProfileVisual(
+    'Work Control setup required · install',
   );
   assert.equal(setup.glyph, '🧩⚠️');
-  assert.equal(setup.title, 'Mission Control setup required · install');
+  assert.equal(setup.title, 'Work Control setup required · install');
 });
 
 test('approval remains actionable when actor identity is missing', () => {

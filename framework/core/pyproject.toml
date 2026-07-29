@@ -160,7 +160,7 @@ files = [
     "src/python/kungfu",
     "../storage/python/kungfu_sdk",
     "../api/src/capability/guest-harness",
-    "../../extensions/mission-control/mission-control-actions",
+    "../../extensions/work-control/work-control-actions",
 ]
 # The native pykungfu binding is not compiled in the type-check env; type
 # consumers against committed .pyi stubs (stubs/pykungfu/, generated from the

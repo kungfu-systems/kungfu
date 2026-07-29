@@ -586,7 +586,7 @@ def test_system_profile_release_receipt_is_exact_root_and_shared_with_status(
     tmp_path, monkeypatch
 ):
     repo = Path(__file__).resolve().parents[4]
-    source = repo / "extensions" / "mission-control"
+    source = repo / "extensions" / "work-control"
     runtime = tmp_path / "runtime"
     manifest = profile_sdk.build_kfd3_release_manifest([source], runtime)
     receipt = manifest["entries"][0]["receipt"]
@@ -1098,8 +1098,8 @@ def test_semantic_diff_classifies_permission_and_requires_decision(tmp_path):
     assert result["decisionCards"][0]["kind"] == "profile-permission-change"
 
 
-def _activate_mission_control(runtime):
-    source = Path(__file__).resolve().parents[4] / "extensions" / "mission-control"
+def _activate_work_control(runtime):
+    source = Path(__file__).resolve().parents[4] / "extensions" / "work-control"
     for action in ["install", "qualify", "activate"]:
         core_plan = profile_sdk.lifecycle_plan(
             runtime,
@@ -1111,8 +1111,8 @@ def _activate_mission_control(runtime):
     return source
 
 
-def test_mission_control_exposes_only_canonical_creation_actions():
-    source = Path(__file__).resolve().parents[4] / "extensions" / "mission-control"
+def test_work_control_exposes_only_canonical_creation_actions():
+    source = Path(__file__).resolve().parents[4] / "extensions" / "work-control"
     profile = json.loads((source / "profile.json").read_text())
     registry = json.loads((source / "actions" / "registry.json").read_text())
 
@@ -1197,9 +1197,9 @@ def test_action_invoke_rechecks_active_root_and_returns_core_receipt(tmp_path):
     assert receipt["verified"] is True
 
 
-def test_mission_control_profile_action_executes_through_public_intent(tmp_path):
+def test_work_control_profile_action_executes_through_public_intent(tmp_path):
     runtime = tmp_path / "runtime"
-    source = _activate_mission_control(runtime)
+    source = _activate_work_control(runtime)
     contract = profile_composition.contract_materialization_plan(source, runtime)
     profile_composition.authorized_contract_materialize(
         runtime,
@@ -1259,7 +1259,7 @@ def test_mission_control_profile_action_executes_through_public_intent(tmp_path)
 
 def test_profile_action_rejects_tampered_runtime_execution_material(tmp_path):
     runtime = tmp_path / "runtime"
-    source = _activate_mission_control(runtime)
+    source = _activate_work_control(runtime)
     plan = profile_sdk.plan_action(
         source,
         runtime,
@@ -1287,7 +1287,7 @@ def test_profile_action_rejects_tampered_runtime_execution_material(tmp_path):
 
 def test_live_profile_action_plan_fails_without_native_evidence(tmp_path, monkeypatch):
     runtime = tmp_path / "runtime"
-    source = _activate_mission_control(runtime)
+    source = _activate_work_control(runtime)
     monkeypatch.setenv("KF_CONFIG_HOME", str(tmp_path / "config"))
 
     try:
@@ -1305,7 +1305,7 @@ def test_completion_review_plans_as_storage_append_without_native_runtime_eviden
     tmp_path, monkeypatch
 ):
     runtime = tmp_path / "runtime"
-    source = _activate_mission_control(runtime)
+    source = _activate_work_control(runtime)
     monkeypatch.setenv("KF_CONFIG_HOME", str(tmp_path / "config"))
 
     plan = profile_sdk.plan_action(
@@ -1330,7 +1330,7 @@ def test_live_profile_action_does_not_run_callback_when_broker_refuses(
     tmp_path, monkeypatch
 ):
     runtime = tmp_path / "runtime"
-    source = _activate_mission_control(runtime)
+    source = _activate_work_control(runtime)
     config_home = tmp_path / "config"
     monkeypatch.setenv("KF_CONFIG_HOME", str(config_home))
     evidence = _write_native_runtime_evidence(runtime, config_home)
@@ -1368,7 +1368,7 @@ def test_live_profile_action_runs_only_through_admitted_runtime_receipt(
     tmp_path, monkeypatch
 ):
     runtime = tmp_path / "runtime"
-    source = _activate_mission_control(runtime)
+    source = _activate_work_control(runtime)
     config_home = tmp_path / "config"
     monkeypatch.setenv("KF_CONFIG_HOME", str(config_home))
     _write_native_runtime_evidence(runtime, config_home)

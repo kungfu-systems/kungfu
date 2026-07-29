@@ -891,7 +891,7 @@ mod tests {
         .unwrap();
         fs::write(
             resources.join("kungfu/profile-kfd3.json"),
-            r#"{"schema":"kungfu.system-profile-kfd3-manifest/v1","entries":[{"id":"mission-control"}]}"#,
+            r#"{"schema":"kungfu.system-profile-kfd3-manifest/v1","entries":[{"id":"work-control"}]}"#,
         )
         .unwrap();
     }

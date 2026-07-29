@@ -11,7 +11,7 @@ const discovery: ProfileSourceDiscovery = {
   profileId: 'kungfu.work-control',
   profileSuiteRoot: 'sha256:source',
   memberRoots: {},
-  source: '/product/extensions/mission-control',
+  source: '/product/extensions/work-control',
 };
 
 function managed(
@@ -29,7 +29,7 @@ function managed(
     grantedPermissions: [],
     qualification: {},
     availableRoots: 1,
-    source: '/product/extensions/mission-control',
+    source: '/product/extensions/work-control',
     health: lifecycleState === 'activated' ? 'active' : 'inactive',
     catalog: null,
     diagnostics: [],

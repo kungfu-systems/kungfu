@@ -86,7 +86,7 @@ test('Profile plans preserve source and exact active-root intent', () => {
   });
 
   profile.catalog('/suite', true);
-  profile.discover('kungfu.mission-control');
+  profile.discover('kungfu.work-control');
   profile.queryPlan('/suite', 'week-table');
   profile.application('/suite');
   profile.kfd3Status('/suite');
@@ -97,7 +97,7 @@ test('Profile plans preserve source and exact active-root intent', () => {
 
   assert.deepEqual(calls, [
     ['profile', 'catalog', '/suite', '--require-active', '--json'],
-    ['profile', 'discover', 'kungfu.mission-control', '--json'],
+    ['profile', 'discover', 'kungfu.work-control', '--json'],
     ['profile', 'query-plan', '/suite', 'week-table', '--json'],
     ['profile', 'application', '/suite', '--json'],
     ['profile', 'kfd3-status', '/suite', '--json'],

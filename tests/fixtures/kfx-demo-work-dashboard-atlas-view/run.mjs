@@ -57,10 +57,10 @@ const fakeCaps = {
   },
   profile: {
     runtimeDir: '/tmp/kungfu-runtime',
-    discover: () => ({ source: '/profiles/mission-control' }),
+    discover: () => ({ source: '/profiles/work-control' }),
     memberCall: () => ({
       result: {
-      schema: 'kungfu.mission-control.dashboard-snapshot/v1',
+      schema: 'kungfu.work-control.dashboard-snapshot/v1',
       cut: { kind: 'system_time', system_time: '2026-07-12T12:00:00Z' },
       freshness: { status: 'fresh', basis: 'request-cut' },
       import_info: {
@@ -110,7 +110,7 @@ const fakeShell = {
 const capabilityModule = {
   WORK_STATUS_NAMES: ['active', 'blocked', 'waiting', 'ready', 'done'],
   DEFAULT_GOAL_CARD_QUERY: {
-    schema: 'kungfu.mission-control.goal-card-query/v1',
+    schema: 'kungfu.work-control.goal-card-query/v1',
     text: '',
     sections: [],
     statuses: [],

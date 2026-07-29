@@ -8,7 +8,7 @@ import {
   type GlobalWorkObserverIpc,
   subscribeGlobalWorkObserver,
 } from './global-work-observer';
-import { openWorkControlProfile } from './mission-control-profile';
+import { openWorkControlProfile } from './work-control-profile';
 
 // Preserve the qualified Profile application service without restoring its
 // retired legacy presentation. The visible Work view is intentionally

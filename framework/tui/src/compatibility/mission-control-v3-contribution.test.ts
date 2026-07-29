@@ -5,7 +5,7 @@ import test from 'node:test';
 import type { Profile } from '@kungfu-tech/api/capability';
 import type { KfxLoadPlan } from '@kungfu-tech/kfx';
 
-import { loadMissionControlContribution } from './mission-control-contribution.js';
+import { loadMissionControlContribution } from './mission-control-v3-contribution.js';
 
 function profileFixture(
   options: {

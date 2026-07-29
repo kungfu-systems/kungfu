@@ -206,19 +206,19 @@ importers:
 
   extensions/langchain-adapter: {}
 
-  extensions/mission-control:
+  extensions/work-control:
     dependencies:
       '@kungfu-tech/kfx-view-work-dashboard':
         specifier: workspace:*
         version: link:../work-dashboard
 
-  extensions/mission-control/mission-control-actions: {}
+  extensions/work-control/work-control-actions: {}
 
-  extensions/mission-control/mission-control-assessment: {}
+  extensions/work-control/work-control-assessment: {}
 
-  extensions/mission-control/mission-control-contract: {}
+  extensions/work-control/work-control-contract: {}
 
-  extensions/mission-control/mission-control-views: {}
+  extensions/work-control/work-control-views: {}
 
   extensions/rewind-inspector:
     dependencies:
@@ -671,7 +671,7 @@ importers:
         version: link:../extensions/system
       '@kungfu-tech/kfx-suite-work-control':
         specifier: workspace:*
-        version: link:../extensions/mission-control
+        version: link:../extensions/work-control
       '@kungfu-tech/kfx-view-config-manager':
         specifier: workspace:*
         version: link:../extensions/config-manager
@@ -704,16 +704,16 @@ importers:
         version: link:../extensions/work-dashboard
       '@kungfu-tech/kfx-work-control-actions':
         specifier: workspace:*
-        version: link:../extensions/mission-control/mission-control-actions
+        version: link:../extensions/work-control/work-control-actions
       '@kungfu-tech/kfx-work-control-assessment':
         specifier: workspace:*
-        version: link:../extensions/mission-control/mission-control-assessment
+        version: link:../extensions/work-control/work-control-assessment
       '@kungfu-tech/kfx-work-control-contract':
         specifier: workspace:*
-        version: link:../extensions/mission-control/mission-control-contract
+        version: link:../extensions/work-control/work-control-contract
       '@kungfu-tech/kfx-work-control-views':
         specifier: workspace:*
-        version: link:../extensions/mission-control/mission-control-views
+        version: link:../extensions/work-control/work-control-views
       '@kungfu-tech/sdk':
         specifier: workspace:*
         version: link:../developer/sdk

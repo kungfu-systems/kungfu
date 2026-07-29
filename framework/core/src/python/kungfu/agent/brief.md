@@ -153,7 +153,7 @@ another platform. Recheck retained evidence with `kungfu agent hub verify`
 instead of rerunning or paraphrasing the 20 scenarios from memory.
 
 Project-level work starts from the current Cut. `kungfu cut --repo <path>
---json` is read-only. Use `kungfu work --help` to discover the single public
+--json` is read-only. Use `kungfu work capture <request.json>` to discover the single public
 mutation family, then read one exact Assignment with `kungfu work status`.
 Every mutation returns an action receipt and appends canonical Episode and Fact
 evidence. Do not infer a second Work journal, compatibility alias, or hidden
@@ -278,8 +278,8 @@ kungfu storage repair --scope episode --episode-id <id> --fetch --out repair-mat
 kungfu storage repair --scope episode --episode-id <id> --apply --from <bundle.json> --dry-run --json
 kungfu storage verify-sync --source <source-id> --json
 kungfu atlas show import --json
-kungfu profile mission-control missions --json
-kungfu profile mission-control goals --json
+kungfu work capture <request.json>
+kungfu work status --workspace <path> --initiative-id <initiative-id> --assignment-id <assignment-id>
 kungfu atlas show markers --json
 ```
 

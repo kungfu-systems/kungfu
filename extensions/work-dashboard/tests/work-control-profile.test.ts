@@ -5,10 +5,10 @@ import type { Profile } from '../../../framework/api/src/capability/profile.ts';
 import {
   type AtlasDashboardSnapshot,
   openWorkControlProfile,
-} from '../src/view/mission-control-profile.ts';
+} from '../src/view/work-control-profile.ts';
 
 test('Work Control uses the exact-root Profile projection and intent surfaces', async () => {
-  const source = '/profiles/mission-control';
+  const source = '/profiles/work-control';
   const initiativeInput = {
     initiativeId: 'initiative-a',
     title: 'Initiative A',
@@ -41,7 +41,7 @@ test('Work Control uses the exact-root Profile projection and intent surfaces', 
     reason: 'begin the bounded execution stage',
   };
   const snapshot: AtlasDashboardSnapshot = {
-    schema: 'kungfu.mission-control.dashboard-snapshot/v1',
+    schema: 'kungfu.work-control.dashboard-snapshot/v1',
     cut: { kind: 'system_time', system_time: '42' },
     freshness: { status: 'fresh', basis: 'request-cut' },
     projection_authority: {
@@ -54,7 +54,7 @@ test('Work Control uses the exact-root Profile projection and intent surfaces', 
     },
     import_info: null,
     authority: {
-      schema: 'kungfu.mission-control.authority-status/v1',
+      schema: 'kungfu.work-control.authority-status/v1',
       state: 'pre-cutover',
       write_authority: 'atlas-adapter',
       legacy_mutation_path: 'available',
@@ -115,15 +115,15 @@ test('Work Control uses the exact-root Profile projection and intent surfaces', 
     },
   } as unknown as Profile;
 
-  const missionControl = openWorkControlProfile(profile);
-  const projected = await missionControl.dashboard();
-  await missionControl.missionHome('mission-a', { source: 'atlas' });
-  await missionControl.createInitiative('initiative-a', {
+  const workControl = openWorkControlProfile(profile);
+  const projected = await workControl.dashboard();
+  await workControl.missionHome('mission-a', { source: 'atlas' });
+  await workControl.createInitiative('initiative-a', {
     title: initiativeInput.title,
     intent: initiativeInput.intent,
     actor: initiativeInput.actor,
   });
-  await missionControl.createAssignment('initiative-a', {
+  await workControl.createAssignment('initiative-a', {
     assignmentId: assignmentInput.assignmentId,
     title: assignmentInput.title,
     objective: assignmentInput.objective,
@@ -158,8 +158,8 @@ test('Work Control uses the exact-root Profile projection and intent surfaces', 
     eventType: 'delegation-offer' as const,
     actor: 'test-owner',
   };
-  await missionControl.appendAssignmentRelationEvent(relationEventInput);
-  await missionControl.claimAssignment('initiative-a', 'assignment-a', {
+  await workControl.appendAssignmentRelationEvent(relationEventInput);
+  await workControl.claimAssignment('initiative-a', 'assignment-a', {
     owner: executionClaimInput.owner,
     agent: executionClaimInput.agent,
     slot: executionClaimInput.slot,
@@ -167,17 +167,17 @@ test('Work Control uses the exact-root Profile projection and intent surfaces', 
     leaseExpiresAt: executionClaimInput.leaseExpiresAt,
     authorizedBy: executionClaimInput.authorizedBy,
   });
-  await missionControl.advanceAssignment('initiative-a', 'assignment-a', {
+  await workControl.advanceAssignment('initiative-a', 'assignment-a', {
     toPhase: phaseTransitionInput.toPhase,
     expectedPhase: phaseTransitionInput.expectedPhase,
     actor: phaseTransitionInput.actor,
     reason: phaseTransitionInput.reason,
   });
-  await missionControl.reviewCompletion('mission-a', 'goal-a', {
+  await workControl.reviewCompletion('mission-a', 'goal-a', {
     reviewer: 'test-owner',
     reviewerSource: 'new-review-session',
   });
-  await missionControl.decideContinuation('mission-a', 'goal-a', {
+  await workControl.decideContinuation('mission-a', 'goal-a', {
     reviewId: 'review-a',
     expectedReviewRoot: 'sha256:review',
     expectedPlanRoot: 'sha256:plan-root',
@@ -187,7 +187,7 @@ test('Work Control uses the exact-root Profile projection and intent surfaces', 
   });
 
   assert.equal(projected.projection_authority.writableAuthority, false);
-  assert.equal(missionControl.currentDashboard(), projected);
+  assert.equal(workControl.currentDashboard(), projected);
   assert.deepEqual(calls, [
     { operation: 'dashboard', input: {} },
     {

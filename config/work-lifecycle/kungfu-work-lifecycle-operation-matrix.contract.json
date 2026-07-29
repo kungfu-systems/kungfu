@@ -1419,7 +1419,7 @@
       },
       "evidence": [
         "framework/agent-work/kungfu-agent-work-state.contract.json",
-        "extensions/mission-control/collaboration/interface.json"
+        "extensions/work-control/collaboration/interface.json"
       ]
     },
     {
@@ -1462,8 +1462,8 @@
         "rust": "conformant"
       },
       "evidence": [
-        "extensions/mission-control/actions/registry.json",
-        "extensions/mission-control/mission-control-actions/domain/mission_control.py"
+        "extensions/work-control/actions/registry.json",
+        "extensions/work-control/work-control-actions/domain/mission_control.py"
       ]
     },
     {
@@ -1508,7 +1508,7 @@
         "rust": "conformant"
       },
       "evidence": [
-        "extensions/mission-control/actions/registry.json"
+        "extensions/work-control/actions/registry.json"
       ]
     },
     {
@@ -1551,8 +1551,8 @@
         "rust": "conformant"
       },
       "evidence": [
-        "extensions/mission-control/actions/registry.json",
-        "extensions/mission-control/collaboration/interface.json"
+        "extensions/work-control/actions/registry.json",
+        "extensions/work-control/collaboration/interface.json"
       ]
     },
     {
@@ -1596,8 +1596,8 @@
         "rust": "conformant"
       },
       "evidence": [
-        "extensions/mission-control/actions/registry.json",
-        "extensions/mission-control/collaboration/interface.json"
+        "extensions/work-control/actions/registry.json",
+        "extensions/work-control/collaboration/interface.json"
       ]
     },
     {
@@ -1641,7 +1641,7 @@
       },
       "evidence": [
         "framework/agent-work/kungfu-agent-work-state.contract.json",
-        "extensions/mission-control/collaboration/interface.json"
+        "extensions/work-control/collaboration/interface.json"
       ]
     },
     {
@@ -1684,7 +1684,7 @@
         "rust": "conformant"
       },
       "evidence": [
-        "extensions/mission-control/actions/registry.json"
+        "extensions/work-control/actions/registry.json"
       ]
     },
     {
@@ -1728,7 +1728,7 @@
         "rust": "conformant"
       },
       "evidence": [
-        "extensions/mission-control/actions/registry.json"
+        "extensions/work-control/actions/registry.json"
       ]
     },
     {
@@ -1769,7 +1769,7 @@
         "rust": "conformant"
       },
       "evidence": [
-        "extensions/mission-control/actions/registry.json",
+        "extensions/work-control/actions/registry.json",
         "framework/agent-work/kungfu-agent-work-domain-profile.contract.json"
       ]
     },

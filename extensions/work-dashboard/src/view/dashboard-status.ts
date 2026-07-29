@@ -71,9 +71,7 @@ export function dashboardSnapshotVisual(input: {
   };
 }
 
-export function missionControlProfileVisual(
-  status: string,
-): DashboardStateVisual {
+export function workControlProfileVisual(status: string): DashboardStateVisual {
   if (status.startsWith('Profile degraded')) {
     return { glyph: '🧩❌', color: '#f48771', title: status };
   }

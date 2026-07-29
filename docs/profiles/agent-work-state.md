@@ -171,11 +171,11 @@ perspective, and authority.
 
 ## Current product mapping
 
-- Mission/Go is the first-party Pursuit projection in the Mission Control
-  Profile. It is not universal Core vocabulary.
+- Initiative/Assignment is the first-party Pursuit projection in the Work
+  Control Profile. It is not universal Core vocabulary.
 - Xinfa Atlas, Project Cut, and runtime query cuts provide current Atlas
   mappings.
-- Profile plans and authorizations plus Mission Control claim, independent
+- Profile plans and authorizations plus Work Control claim, independent
   review, and continuation decisions provide current Warrant mappings. A
   generic first-class Warrant remains incomplete.
 - Kungfu Episode is the causal-experience authority.

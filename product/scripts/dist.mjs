@@ -1852,7 +1852,7 @@ export function runInstalledKungfuAssignmentAdmissionSmoke({
           mission_id: initiativeId,
           initiative_id: initiativeId,
           title: 'Verify installed Assignment admission',
-          objective: 'Prove the packaged Mission Control Suite is closed.',
+          objective: 'Prove the packaged Work Control Suite is closed.',
           owner_agent: 'product-qualification',
           responsibility: 'installed product regression',
         },

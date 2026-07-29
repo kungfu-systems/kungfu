@@ -1,7 +1,9 @@
 import type { ProfileQueryViewSpec } from '@kungfu-tech/kfx';
 
+import { projectMissionControlV3GoalCardView } from './compatibility/mission-control-v3-query.ts';
+
 export type GoalCardQuerySpec = {
-  schema: 'kungfu.mission-control.goal-card-query/v1';
+  schema: 'kungfu.work-control.goal-card-query/v1';
   text: string;
   sections: Array<'attention' | 'in-motion' | 'delegated' | 'closed'>;
   statuses: string[];
@@ -28,20 +30,20 @@ export type GoalCardQuerySpec = {
   };
 };
 
-export type MissionControlGoalCardViewSpec = ProfileQueryViewSpec & {
-  profileId: 'kungfu.mission-control';
+export type WorkControlGoalCardViewSpec = ProfileQueryViewSpec & {
+  profileId: 'kungfu.work-control';
   memberId: 'work-control-views';
   viewId: 'goal-cards';
   spec: {
-    schema: 'kungfu.mission-control.goal-card-view/v1';
+    schema: 'kungfu.work-control.goal-card-view/v1';
     questionId: 'observed-progress';
-    reducer: 'kungfu.mission-control.five-questions';
+    reducer: 'kungfu.work-control.five-questions';
     goalCards: GoalCardQuerySpec;
   };
 };
 
 export const DEFAULT_GOAL_CARD_QUERY: GoalCardQuerySpec = {
-  schema: 'kungfu.mission-control.goal-card-query/v1',
+  schema: 'kungfu.work-control.goal-card-query/v1',
   text: '',
   sections: [],
   statuses: [],
@@ -97,7 +99,7 @@ function stringList(value: unknown, label: string): string[] {
 export function parseGoalCardQuerySpec(value: unknown): GoalCardQuerySpec {
   const query = objectValue(value) as Partial<GoalCardQuerySpec> | null;
   if (!query) throw new Error('goal card query must be an object');
-  if (query.schema !== 'kungfu.mission-control.goal-card-query/v1') {
+  if (query.schema !== 'kungfu.work-control.goal-card-query/v1') {
     throw new Error('unsupported goal card query schema');
   }
   const sections = stringList(query.sections, 'sections');
@@ -155,20 +157,20 @@ export function parseGoalCardQuerySpec(value: unknown): GoalCardQuerySpec {
   };
 }
 
-export function missionControlGoalCardView(
+export function workControlGoalCardView(
   profileVersion: string,
   goalCards: GoalCardQuerySpec,
-): MissionControlGoalCardViewSpec {
+): WorkControlGoalCardViewSpec {
   return {
     kind: 'profile',
-    profileId: 'kungfu.mission-control',
+    profileId: 'kungfu.work-control',
     profileVersion,
     memberId: 'work-control-views',
     viewId: 'goal-cards',
     spec: {
-      schema: 'kungfu.mission-control.goal-card-view/v1',
+      schema: 'kungfu.work-control.goal-card-view/v1',
       questionId: 'observed-progress',
-      reducer: 'kungfu.mission-control.five-questions',
+      reducer: 'kungfu.work-control.five-questions',
       goalCards: parseGoalCardQuerySpec(goalCards),
     },
   };
@@ -178,7 +180,10 @@ export function goalCardQueryFromView(
   value: unknown,
 ): GoalCardQuerySpec | null {
   const view = objectValue(value);
-  if (!view || view.profileId !== 'kungfu.mission-control') return null;
+  if (!view) return null;
+  const compatibility = projectMissionControlV3GoalCardView(value);
+  if (compatibility) return parseGoalCardQuerySpec(compatibility);
+  if (view.profileId !== 'kungfu.work-control') return null;
   if (view.kind === 'profile') {
     if (
       view.memberId !== 'work-control-views' ||
@@ -187,18 +192,16 @@ export function goalCardQueryFromView(
       return null;
     }
     const spec = objectValue(view.spec);
-    if (spec?.schema !== 'kungfu.mission-control.goal-card-view/v1') {
-      throw new Error('unsupported Mission Control goal-card view schema');
+    if (spec?.schema !== 'kungfu.work-control.goal-card-view/v1') {
+      throw new Error('unsupported Work Control goal-card view schema');
     }
     if (
       spec.questionId !== 'observed-progress' ||
-      spec.reducer !== 'kungfu.mission-control.five-questions'
+      spec.reducer !== 'kungfu.work-control.five-questions'
     ) {
-      throw new Error('unsupported Mission Control goal-card view contract');
+      throw new Error('unsupported Work Control goal-card view contract');
     }
     return parseGoalCardQuerySpec(spec.goalCards);
   }
-  // 4.0-alpha compatibility: legacy domain ViewSpecs remain readable and are
-  // migrated to the generic Profile envelope on the next explicit save.
-  return view.goalCards ? parseGoalCardQuerySpec(view.goalCards) : null;
+  return null;
 }

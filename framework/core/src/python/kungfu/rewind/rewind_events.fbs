@@ -202,7 +202,7 @@ table ApprovalDecision {
 // info/warn/error hint; pct is optional 0..100 completion (0 when unset);
 // detail carries optional structured JSON. signal classifies progress,
 // heartbeat, blocker, or waiting narration without claiming canonical work
-// state. The WorkRef fields bind the observation to the exact Mission Control
+// state. The WorkRef fields bind the observation to the exact Work Control
 // entity that launched the Agent Console. This is the live-observability signal
 // a human watches while an agent works; it records narration as an observation,
 // it does not drive the run or prove completion.

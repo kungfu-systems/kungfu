@@ -27,6 +27,8 @@ from kungfu.rewind import ACTION_COST_SNAPSHOT
 from kungfu.rewind import replay as rewind_replay
 from kungfu.storage import service as storage_service
 
+from .compatibility import mission_control_v3
+
 CONTRACT_WORLD_ID = "kungfu.initiative-assignment"
 CONTRACT_VERSION = "1"
 INITIATIVE_SURFACE_ID = "kungfu.initiative-assignment.initiative"
@@ -36,12 +38,12 @@ CLAIM_SURFACE_ID = "kungfu.initiative-assignment.completion-claim"
 # append-only claim surface. Reusing that sealed v1 surface avoids silently
 # changing the fact-surface register of the installed contract world.
 RELATION_SURFACE_ID = CLAIM_SURFACE_ID
-LEGACY_CONTRACT_WORLD_ID = "kungfu.mission-control"
-LEGACY_CONTRACT_VERSION = "3"
-LEGACY_CONTRACT_VERSIONS = ("1", "2", "3")
-LEGACY_MISSION_SURFACE_ID = "kungfu.mission-control.mission"
-LEGACY_GO_SURFACE_ID = "kungfu.mission-control.go"
-LEGACY_CLAIM_SURFACE_ID = "kungfu.mission-control.completion-claim"
+LEGACY_CONTRACT_WORLD_ID = mission_control_v3.CONTRACT_WORLD_ID
+LEGACY_CONTRACT_VERSION = mission_control_v3.CONTRACT_VERSION
+LEGACY_CONTRACT_VERSIONS = mission_control_v3.CONTRACT_VERSIONS
+LEGACY_MISSION_SURFACE_ID = mission_control_v3.MISSION_SURFACE_ID
+LEGACY_GO_SURFACE_ID = mission_control_v3.GO_SURFACE_ID
+LEGACY_CLAIM_SURFACE_ID = mission_control_v3.CLAIM_SURFACE_ID
 MISSION_SURFACE_ID = INITIATIVE_SURFACE_ID
 GO_SURFACE_ID = ASSIGNMENT_SURFACE_ID
 # Reviews and continuation decisions remain versioned record kinds on the
@@ -52,23 +54,19 @@ USER_FACT_SOURCE_ID = "kungfu-user"
 AGENT_FACT_SOURCE_ID = "kungfu-agent"
 
 _T = TypeVar("_T")
-_BOUND_PROFILE_SOURCE: ContextVar[str] = ContextVar(
-    "kungfu_mission_control_profile_source", default=""
+_BOUND_WORK_CONTROL_SOURCE: ContextVar[str] = ContextVar(
+    "kungfu_work_control_profile_source", default=""
 )
 
-FACT_SURFACES = (
-    MISSION_SURFACE_ID,
-    GO_SURFACE_ID,
-    CLAIM_SURFACE_ID,
-)
+FACT_SURFACES = (MISSION_SURFACE_ID, GO_SURFACE_ID, CLAIM_SURFACE_ID)
 PROGRESS_CLAIM = "initiative-progress-is-reasonable"
 PROGRESS_PURPOSE = "operator-review"
 COST_STATE_PROOF_PROFILE_ID = "kungfu.profile.delegated-work-cost-state-proof"
 COST_STATE_PROOF_PROFILE_VERSION = "1"
-MISSION_CONTROL_PROFILE_ID = "kungfu.work-control"
-MISSION_CONTROL_PROFILE_VERSION = "4.0.0"
-MISSION_CONTROL_REDUCER = "kungfu.work-control.five-questions"
-MISSION_CONTROL_QUESTIONS = (
+WORK_CONTROL_PROFILE_ID = "kungfu.work-control"
+WORK_CONTROL_PROFILE_VERSION = "4.0.0"
+WORK_CONTROL_REDUCER = "kungfu.work-control.five-questions"
+WORK_CONTROL_QUESTIONS = (
     ("initiative-intent", "What are we trying to achieve?"),
     ("observed-progress", "What actually happened?"),
     ("evidence-at-cut", "What does the evidence establish at this cut?"),
@@ -243,7 +241,7 @@ def capabilities() -> dict[str, Any]:
 
     return {
         "schema": "kungfu.initiative-assignment.capabilities/v1",
-        "profile": MISSION_CONTROL_PROFILE_ID,
+        "profile": WORK_CONTROL_PROFILE_ID,
         "contractWorld": {
             "id": CONTRACT_WORLD_ID,
             "version": CONTRACT_VERSION,
@@ -345,27 +343,27 @@ def _source_time_nanos(value: Any, fallback: int) -> int:
 
 
 def mission_control_profile_source(runtime_dir: str) -> dict[str, Any]:
-    bound = _BOUND_PROFILE_SOURCE.get()
+    bound = _BOUND_WORK_CONTROL_SOURCE.get()
     if bound:
         validated = profile_sdk.validate_source(bound, runtime_dir)
         return {
             "schema": "kungfu.profile-source-discovery/v1",
-            "profileId": MISSION_CONTROL_PROFILE_ID,
+            "profileId": WORK_CONTROL_PROFILE_ID,
             "source": str(Path(bound).resolve()),
             "profileSuiteRoot": validated["inspection"]["profile_suite_root"],
             "memberRoots": validated["source"]["memberRoots"],
         }
-    return profile_sdk.discover_source(MISSION_CONTROL_PROFILE_ID, runtime_dir)
+    return profile_sdk.discover_source(WORK_CONTROL_PROFILE_ID, runtime_dir)
 
 
 def _with_profile_source(source: str, operation: Callable[[], _T]) -> _T:
     """Keep one verified adapter invocation on its exact Suite source."""
 
-    token = _BOUND_PROFILE_SOURCE.set(str(Path(source).resolve()))
+    token = _BOUND_WORK_CONTROL_SOURCE.set(str(Path(source).resolve()))
     try:
         return operation()
     finally:
-        _BOUND_PROFILE_SOURCE.reset(token)
+        _BOUND_WORK_CONTROL_SOURCE.reset(token)
 
 
 def _profile_context(runtime_dir: str) -> dict[str, Any]:
@@ -379,7 +377,7 @@ def _profile_context(runtime_dir: str) -> dict[str, Any]:
         raise profile_sdk.ProfileSdkError(
             "profile-contract-not-materialized",
             "Work Control requires an approved Profile contract plan before facts can be read or written",
-            profileId=MISSION_CONTROL_PROFILE_ID,
+            profileId=WORK_CONTROL_PROFILE_ID,
             profileSuiteRoot=composed["profileSuiteRoot"],
             decisionCards=[materialization["decisionCard"]],
             contractPlan=materialization,
@@ -396,7 +394,7 @@ def _ensure_contract(runtime_dir: str, system_time: int = 0) -> dict[str, Any]:
     return {
         "schema": "kungfu.work-control.profile-contract/v1",
         "status": "current",
-        "profile_id": MISSION_CONTROL_PROFILE_ID,
+        "profile_id": WORK_CONTROL_PROFILE_ID,
         "profile_suite_root": context["catalog"]["profileSuiteRoot"],
         "catalog_root": context["catalog"]["catalogRoot"],
         "source": context["source"],
@@ -535,7 +533,7 @@ def _declaration_refs(runtime_dir: str, cut_system_time: int) -> tuple[dict, lis
         if row.get("id") == CONTRACT_WORLD_ID and row.get("version") == CONTRACT_VERSION
     ]
     if len(worlds) != 1:
-        raise RuntimeError("mission-control contract world is missing or ambiguous")
+        raise RuntimeError(mission_control_v3.MISSING_CONTRACT_ERROR)
     surfaces = []
     for surface_id in FACT_SURFACES:
         matches = [
@@ -545,7 +543,7 @@ def _declaration_refs(runtime_dir: str, cut_system_time: int) -> tuple[dict, lis
         ]
         if len(matches) != 1:
             raise RuntimeError(
-                f"mission-control fact surface is missing or ambiguous: {surface_id}"
+                f"{mission_control_v3.MISSING_SURFACE_ERROR}: {surface_id}"
             )
         surfaces.append(
             {
@@ -760,7 +758,7 @@ def _batched_state_query(
         for result in results
     ]
     composite_definition = {
-        "schema": "kungfu.mission-control.batched-state-query/v1",
+        "schema": mission_control_v3.BATCHED_STATE_QUERY_SCHEMA,
         "basis": definition["basis"],
         "object": definition["object"],
         "subject_keys": subjects,
@@ -874,7 +872,7 @@ def query_state(
     claims.sort(key=lambda row: str(row.get("subject_key") or ""))
     reviews.sort(key=lambda row: str(row.get("subject_key") or ""))
     return {
-        "schema": "kungfu.mission-control.state/v1",
+        "schema": mission_control_v3.STATE_SCHEMA,
         "authority_mode": "atlas-bridge",
         "mission_subject": definition["mission_control"]["mission_subject"],
         "definition": result["definition"],
@@ -1523,9 +1521,9 @@ def create_initiative(
     }
     if not record["title"] or not record["intent"] or not record["owner"]:
         raise ValueError("title, intent, and actor are required")
-    from . import work_control
+    from . import native_state
 
-    source_identity = work_control.validate_source_identity(source_identity, mission_id)
+    source_identity = native_state.validate_source_identity(source_identity, mission_id)
     if source_identity:
         record["source_identity"] = source_identity
     subject_key = f"kungfu:{mission_id}"
@@ -2156,14 +2154,14 @@ def claim_assignment_execution(
     """Append a bounded execution lease; slot identity never grants authority."""
 
     _ensure_native_write_allowed(runtime_dir)
-    from . import work_control
+    from . import native_state
 
-    state = work_control.query_state(
+    state = native_state.query_state(
         runtime_dir,
         initiative_id=initiative_id,
         storage_source_id=storage_source_id,
     )
-    assignment = work_control.assignment_row(state, assignment_id)
+    assignment = native_state.assignment_row(state, assignment_id)
     values = {
         "owner": owner.strip(),
         "agent": agent.strip(),
@@ -2177,7 +2175,7 @@ def claim_assignment_execution(
             "owner, agent, slot, lease_id, authorized_by, and grant_scope are required"
         )
     _stable_id(values["lease_id"], "lease_id")
-    expiry = work_control.parse_lease_expiry(lease_expires_at)
+    expiry = native_state.parse_lease_expiry(lease_expires_at)
     now = datetime.now(expiry.tzinfo)
     if expiry <= now:
         raise ValueError("execution lease must expire in the future")
@@ -2235,14 +2233,14 @@ def assignment_orchestration_status(
 ) -> dict[str, Any]:
     """Fold append-only orchestration facts into one deterministic Assignment phase."""
 
-    from . import work_control
+    from . import native_state
 
-    state = work_control.query_state(
+    state = native_state.query_state(
         runtime_dir,
         initiative_id=initiative_id,
         storage_source_id=storage_source_id,
     )
-    assignment = work_control.assignment_row(state, assignment_id)
+    assignment = native_state.assignment_row(state, assignment_id)
     assignment_subject = str(assignment["subject_key"])
     linked = [
         row
@@ -2258,13 +2256,13 @@ def assignment_orchestration_status(
         row for row in records if row.get("claim_type") == ASSIGNMENT_PHASE_TRANSITION
     ]
     instant = (
-        work_control.parse_lease_expiry(now) if now else datetime.now().astimezone()
+        native_state.parse_lease_expiry(now) if now else datetime.now().astimezone()
     )
     active_leases = [
         row
         for row in execution_claims
         if (
-            work_control.parse_lease_expiry(str(row.get("lease_expires_at") or ""))
+            native_state.parse_lease_expiry(str(row.get("lease_expires_at") or ""))
             > instant
         )
     ]
@@ -2275,7 +2273,7 @@ def assignment_orchestration_status(
         explicit = {str(row.get("to_phase") or "") for row in transitions}
         phase = max(explicit, key=ASSIGNMENT_PHASES.index)
     completion_claims, independent_reviews, decisions, completion_phase = (
-        work_control.fold_completion_cycle(linked)
+        native_state.fold_completion_cycle(linked)
     )
     if completion_phase:
         phase = completion_phase
@@ -3277,7 +3275,7 @@ def _mission_control_answers(
     }
     return [
         {"question_id": question_id, "question": question, **answers_by_id[question_id]}
-        for question_id, question in MISSION_CONTROL_QUESTIONS
+        for question_id, question in WORK_CONTROL_QUESTIONS
     ]
 
 
@@ -3310,9 +3308,9 @@ def build_mission_control_query_profile(
     profile = {
         "schema": "kungfu.work-control.query-profile/v1",
         "profile": {
-            "id": MISSION_CONTROL_PROFILE_ID,
-            "version": MISSION_CONTROL_PROFILE_VERSION,
-            "reducer": MISSION_CONTROL_REDUCER,
+            "id": WORK_CONTROL_PROFILE_ID,
+            "version": WORK_CONTROL_PROFILE_VERSION,
+            "reducer": WORK_CONTROL_REDUCER,
             "profile_suite_root": catalog["profileSuiteRoot"],
             "catalog_root": catalog["catalogRoot"],
             "member_roots": catalog["memberRoots"],
@@ -3369,7 +3367,7 @@ def query_mission_home(
         known_limits=known_limits,
     )
     return {
-        "schema": "kungfu.mission-control.mission-home/v1",
+        "schema": mission_control_v3.MISSION_HOME_SCHEMA,
         "mode": "read-only",
         "fitness": fitness,
         "findings": findings,
@@ -3458,7 +3456,7 @@ def assess_progress(
     purpose: str = PROGRESS_PURPOSE,
     cut_system_time: int = 0,
     executor_profile: str = "thread",
-    authorized_by: str = "kungfu-mission-control",
+    authorized_by: str = "kungfu-work-control",
 ) -> dict[str, Any]:
     """Persist and expose the first purpose-bound Mission progress report."""
 
@@ -3554,7 +3552,7 @@ def assess_completion(
     purpose: str = COMPLETION_PURPOSE,
     cut_system_time: int = 0,
     executor_profile: str = "thread",
-    authorized_by: str = "kungfu-mission-control",
+    authorized_by: str = "kungfu-work-control",
 ) -> dict[str, Any]:
     """Assess one explicit completion claim against independent Episode proof."""
 

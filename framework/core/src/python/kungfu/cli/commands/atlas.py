@@ -31,7 +31,7 @@ register_role_commands(atlas, "atlas")
 @profile.group(
     name="mission-control",
     cls=PrioritizedCommandGroup,
-    help="operate the legacy Mission Control compatibility reader",
+    help="hidden v3 compatibility reader; replacement: kungfu work",
     hidden=True,
 )
 @click.help_option("-h", "--help")
@@ -134,9 +134,9 @@ def import_cmd(ctx, repo_root, storage_source_id, since, from_time, until, as_js
         f"[atlas] imported {result['import_id']}: {result['missions']} missions, "
         f"{result['goals']} goals, {result['markers']} markers "
         f"({len(result['warnings'])} warning(s)) episode {result['episode_id']}; "
-        f"mission-control {result['mission_control']['status']} "
-        f"({result['mission_control'].get('admitted', 0)} admitted, "
-        f"{result['mission_control'].get('already_present', 0)} already present)"
+        f"work-control {result['work_control']['status']} "
+        f"({result['work_control'].get('admitted', 0)} admitted, "
+        f"{result['work_control'].get('already_present', 0)} already present)"
     )
     for warning in result["warnings"]:
         click.echo(f"  warning: {warning}", err=True)
@@ -175,6 +175,7 @@ def verify(ctx, repo_root, storage_source_id, since, from_time, until, as_json):
 @mission_control.command(
     name="authority-status",
     help="show Atlas/native Mission and Go authority parity and current writer",
+    hidden=True,
 )
 @click.option("--source", "storage_source_id", type=str, default="atlas")
 @click.option("--json", "as_json", is_flag=True, help="machine-readable output")
@@ -198,6 +199,7 @@ def authority_status_cmd(ctx, storage_source_id, as_json):
 @mission_control.command(
     name="authority-cutover",
     help="cut Mission and Go writes over to Kungfu native authority",
+    hidden=True,
 )
 @click.option("--source", "storage_source_id", type=str, default="atlas")
 @click.option("--expected-parity-root", type=str, required=True)
@@ -249,6 +251,7 @@ def authority_cutover_cmd(
 @mission_control.command(
     name="authority-rollback",
     help="roll Mission and Go writes back to Atlas without deleting native facts",
+    hidden=True,
 )
 @click.option("--expected-migration-id", type=str, required=True)
 @click.option("--actor", type=str, required=True)
@@ -292,7 +295,9 @@ def show(ctx):
     pass
 
 
-@mission_control.command(help="list admitted Atlas and Kungfu-native Missions")
+@mission_control.command(
+    help="list admitted Atlas and Kungfu-native Missions", hidden=True
+)
 @click.option("--json", "as_json", is_flag=True, help="machine-readable output")
 @atlas_command_context
 def missions(ctx, as_json):
@@ -311,7 +316,9 @@ def _mission_cards(ctx, *, cut_system_time=0):
     return _profile_read(ctx, "dashboard", {})["missions"]
 
 
-@mission_control.command(help="list admitted Atlas and Kungfu-native Go facts")
+@mission_control.command(
+    help="list admitted Atlas and Kungfu-native Go facts", hidden=True
+)
 @click.option("--status", type=str, default=None, help="filter by goal status")
 @click.option(
     "--mission", "mission_id", type=str, default=None, help="filter by mission"
@@ -343,7 +350,8 @@ def _goal_cards(ctx, *, status=None, mission_id=None, cut_system_time=0):
 
 
 @mission_control.command(
-    help="render one cut-consistent Mission Control dashboard snapshot"
+    help="render one cut-consistent Mission Control dashboard snapshot",
+    hidden=True,
 )
 @click.option("--json", "as_json", is_flag=True, help="machine-readable output")
 @atlas_command_context
@@ -371,7 +379,7 @@ def markers(ctx, as_json):
         click.echo(f"{card['branch']}  [{card['status']}]  ready={card['ready']}")
 
 
-@mission_control.command(help="show one goal by its stable goal id")
+@mission_control.command(help="show one goal by its stable goal id", hidden=True)
 @click.argument("goal_id", type=str)
 @click.option("--json", "as_json", is_flag=True, help="machine-readable output")
 @atlas_command_context
@@ -398,7 +406,7 @@ def goal(ctx, goal_id, as_json):
             click.echo(f"  {key}: {value}")
 
 
-@mission_control.command(help="show one admitted Mission and its Go facts")
+@mission_control.command(help="show one admitted Mission and its Go facts", hidden=True)
 @click.argument("mission_id", type=str)
 @click.option("--json", "as_json", is_flag=True, help="machine-readable output")
 @atlas_command_context
@@ -443,6 +451,7 @@ def import_info(ctx, as_json):
 @mission_control.command(
     name="export-mission",
     help="export a full or thin portable Mission bundle",
+    hidden=True,
 )
 @click.argument("mission_id", type=str)
 @click.option("--out", "out_path", type=str, required=True)
@@ -481,6 +490,7 @@ def export_mission_cmd(
 @mission_control.command(
     name="import-mission",
     help="verify or materialize a portable Mission bundle",
+    hidden=True,
 )
 @click.option("--from", "from_path", type=str, required=True)
 @click.option(
@@ -518,6 +528,7 @@ def import_mission_cmd(ctx, from_path, execute, as_json):
 @mission_control.command(
     name="assess-completion",
     help="assess one Go completion claim for a declared purpose",
+    hidden=True,
 )
 @click.argument("mission_id", type=str)
 @click.argument("goal_id", type=str)

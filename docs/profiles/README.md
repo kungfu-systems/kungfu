@@ -16,6 +16,5 @@ clear.
 - [Agent Work State](agent-work-state.md)
 - [Cost/State/Proof Profile](cost-state-proof-profile.md)
 - [Work Control](work-control.md)
-- [Legacy Mission Control](mission-control.md) — exact compatibility history.
-- [Legacy Mission Control Workspace Design](mission-control-workspaces.md) —
-  retained design history.
+- [Compatibility history](compatibility/README.md) — retained protocols and
+  design evidence, excluded from current product discovery.

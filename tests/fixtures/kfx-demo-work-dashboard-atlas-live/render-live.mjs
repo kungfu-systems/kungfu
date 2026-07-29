@@ -5,7 +5,7 @@ import fs from 'node:fs';
 import { createRequire } from 'node:module';
 import path from 'node:path';
 import { openProfile } from '../../../framework/api/src/capability/profile.ts';
-import { openMissionControlProfile } from '../../../extensions/work-dashboard/src/view/mission-control-profile.ts';
+import { openWorkControlProfile } from '../../../extensions/work-dashboard/src/view/work-control-profile.ts';
 import { fail, locate, tmpDir, uvPython } from '../_harness.mjs';
 
 const { fixtureDir, coreDir } = locate(import.meta.url);
@@ -38,9 +38,9 @@ if (!fs.existsSync(bundlePath)) {
 }
 
 uvPython(coreDir, [
-  path.join(fixtureDir, '..', '_activate_mission_profile.py'),
+  path.join(fixtureDir, '..', '_activate_work_control_profile.py'),
   runtimeDir,
-  path.join(repoDir, 'extensions', 'mission-control'),
+  path.join(repoDir, 'extensions', 'work-control'),
 ]);
 
 const profile = openProfile({
@@ -49,7 +49,7 @@ const profile = openProfile({
   env: { ...process.env, KUNGFU_ATLAS_REPO: sampleRoot },
   bin,
 });
-const atlas = openMissionControlProfile(profile, sampleRoot);
+const atlas = openWorkControlProfile(profile, sampleRoot);
 const imported = await atlas.importRepo(sampleRoot);
 if (imported.missions !== 1 || imported.goals !== 2 || imported.markers !== 1) {
   fail(`unexpected import counts: ${JSON.stringify(imported)}`);
@@ -86,7 +86,7 @@ const fakeShell = {
 const capabilityModule = {
   WORK_STATUS_NAMES: ['active', 'blocked', 'waiting', 'ready', 'done'],
   DEFAULT_GOAL_CARD_QUERY: {
-    schema: 'kungfu.mission-control.goal-card-query/v1',
+    schema: 'kungfu.work-control.goal-card-query/v1',
     text: '',
     sections: [],
     statuses: [],

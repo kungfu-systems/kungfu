@@ -299,6 +299,50 @@ test('one-to-one Git renames preserve the old budget without becoming helper spl
   ]);
 });
 
+test('declared owner-prefix migrations apply only to one-to-one Git renames', () => {
+  const previous = handwritten(
+    'extensions/legacy/actions/adapter.mjs',
+    80,
+    'extension/legacy/actions',
+  );
+  const current = handwritten(
+    'extensions/current/actions/adapter.mjs',
+    80,
+    'extension/current/actions',
+  );
+  const policy = {
+    antiGaming: {
+      allowedOwnerRenamePrefixes: [
+        { from: 'extension/legacy', to: 'extension/current' },
+      ],
+    },
+  };
+  assert.deepEqual(
+    regressionIssues(
+      [current],
+      { groups, files: [previous] },
+      policy,
+      new Map([[current.path, previous.path]]),
+    ),
+    [],
+  );
+  assert.ok(
+    regressionIssues(
+      [{ ...current, owner: 'extension/unrelated/actions' }],
+      { groups, files: [previous] },
+      policy,
+      new Map([[current.path, previous.path]]),
+    ).some((issue) => issue.code === 'classification-or-owner-relabeled'),
+  );
+  assert.ok(
+    regressionIssues(
+      [{ ...previous, owner: 'extension/current/actions' }],
+      { groups, files: [previous] },
+      policy,
+    ).some((issue) => issue.code === 'classification-or-owner-relabeled'),
+  );
+});
+
 test('rename evidence remains anchored to the measured baseline after a refactor merges', () => {
   const baselineRef = 'a'.repeat(40);
   assert.equal(

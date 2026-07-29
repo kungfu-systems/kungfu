@@ -26,7 +26,7 @@ const profile = {
 test('Console envelope binds exact work and launch identity', async () => {
   const workRef = await buildWorkRef({
     workspaceId: 'atlas',
-    profileId: 'kungfu.mission-control',
+    profileId: 'kungfu.work-control',
     profileRoot: `sha256:${'a'.repeat(64)}`,
     entityType: 'go',
     entityId: 'goal-1',

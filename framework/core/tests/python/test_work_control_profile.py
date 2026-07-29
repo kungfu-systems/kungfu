@@ -11,7 +11,7 @@ from kungfu import assignment_orchestration, profile_composition, profile_sdk
 from kungfu.agent import work_profile
 
 
-SOURCE = Path(__file__).resolve().parents[4] / "extensions" / "mission-control"
+SOURCE = Path(__file__).resolve().parents[4] / "extensions" / "work-control"
 
 
 def _activate(source: Path, runtime: Path) -> None:
@@ -22,7 +22,7 @@ def _activate(source: Path, runtime: Path) -> None:
 
 def _copy_source(tmp_path: Path) -> Path:
     root = tmp_path / "extensions"
-    source = root / "mission-control"
+    source = root / "work-control"
     shutil.copytree(SOURCE, source, ignore=shutil.ignore_patterns("node_modules"))
     shutil.copytree(
         SOURCE.parent / "work-dashboard",
@@ -32,7 +32,7 @@ def _copy_source(tmp_path: Path) -> Path:
     return source
 
 
-def test_first_party_mission_control_suite_closes_and_activates(tmp_path):
+def test_first_party_work_control_suite_closes_and_activates(tmp_path):
     validated = profile_sdk.validate_source(SOURCE, tmp_path / "runtime")
 
     assert validated["ok"] is True
@@ -102,9 +102,9 @@ def test_first_party_mission_control_suite_closes_and_activates(tmp_path):
     )
 
 
-def test_first_party_mission_control_suite_rejects_missing_member(tmp_path):
+def test_first_party_work_control_suite_rejects_missing_member(tmp_path):
     source = _copy_source(tmp_path)
-    shutil.rmtree(source / "mission-control-actions")
+    shutil.rmtree(source / "work-control-actions")
 
     with pytest.raises(profile_sdk.ProfileSdkError) as raised:
         profile_sdk.resolve_source(source)
@@ -115,7 +115,7 @@ def test_first_party_mission_control_suite_rejects_missing_member(tmp_path):
     )
 
 
-def test_first_party_mission_control_suite_resolves_installed_dependency(tmp_path):
+def test_first_party_work_control_suite_resolves_installed_dependency(tmp_path):
     source = _copy_source(tmp_path)
     shutil.rmtree(source / "node_modules", ignore_errors=True)
     installed_dependency = (
@@ -252,7 +252,7 @@ def test_native_initiative_bundle_roundtrip(tmp_path):
     domain = profile_sdk.load_member_python_package(
         str(SOURCE), "work-control-actions", "domain"
     )
-    domain.mission_control.create_initiative(
+    domain.work_control.create_initiative(
         str(source),
         initiative_id="native-initiative",
         title="Native Initiative",
@@ -260,7 +260,7 @@ def test_native_initiative_bundle_roundtrip(tmp_path):
         actor="test-user",
         actor_type="user",
     )
-    bundle = domain.mission_bundle.build_initiative_bundle(
+    bundle = domain.compatibility.mission_control_v3_bundle.build_initiative_bundle(
         str(source), initiative_id="native-initiative", mode="full"
     )
 
@@ -269,7 +269,7 @@ def test_native_initiative_bundle_roundtrip(tmp_path):
     assert "mission_subject" not in bundle
     assert "mission_id" not in bundle
     assert bundle["bundle_id"].startswith("initiative:")
-    imported = domain.mission_bundle.import_initiative_bundle(
+    imported = domain.compatibility.mission_control_v3_bundle.import_initiative_bundle(
         str(destination), bundle, execute=True
     )
     assert imported["schema"] == "kungfu.work-control.initiative-bundle-import/v1"
@@ -278,7 +278,7 @@ def test_native_initiative_bundle_roundtrip(tmp_path):
     assert imported["initiative_subject"] == "kungfu:native-initiative"
 
 
-def test_first_party_mission_control_suite_rejects_artifact_drift(tmp_path):
+def test_first_party_work_control_suite_rejects_artifact_drift(tmp_path):
     source = _copy_source(tmp_path)
     (source / "views" / "registry.json").write_text("{}\n", encoding="utf-8")
 
@@ -286,13 +286,13 @@ def test_first_party_mission_control_suite_rejects_artifact_drift(tmp_path):
         profile_sdk.validate_source(source, tmp_path / "runtime")
 
 
-def test_mission_control_domain_is_owned_by_the_profile_member():
-    member = SOURCE / "mission-control-actions"
+def test_work_control_domain_is_owned_by_the_profile_member():
+    member = SOURCE / "work-control-actions"
     adapter = (member / "adapter.py").read_text(encoding="utf-8")
     core = SOURCE.parents[1] / "framework" / "core" / "src" / "python" / "kungfu"
 
-    assert (member / "domain" / "mission_control.py").is_file()
-    assert (member / "domain" / "mission_bundle.py").is_file()
+    assert (member / "domain" / "work_control.py").is_file()
+    assert (member / "domain" / "compatibility" / "mission_control_v3_bundle.py").is_file()
     assert "from kungfu.atlas import mission_control" not in adapter
     assert "from kungfu.atlas import mission_bundle" not in adapter
 
@@ -311,7 +311,7 @@ def test_initiative_assignment_capabilities_preserve_legacy_identity_and_pursuit
     domain = profile_sdk.load_member_python_package(
         str(SOURCE), "work-control-actions", "domain"
     )
-    capabilities = domain.mission_control.capabilities()
+    capabilities = domain.work_control.capabilities()
     pursuit = work_profile.capabilities_python(conformance=True)
 
     assert capabilities["contractWorld"] == {
@@ -343,7 +343,7 @@ def test_family_protocol_adds_no_parent_execution_or_legacy_fact_authority():
     domain = profile_sdk.load_member_python_package(
         str(SOURCE), "work-control-actions", "domain"
     )
-    capabilities = domain.mission_control.capabilities()
+    capabilities = domain.work_control.capabilities()
     contract = assignment_orchestration.family_contract()
 
     assert contract["authority"] == {

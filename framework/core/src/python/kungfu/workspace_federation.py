@@ -1576,12 +1576,12 @@ def _load_component(
 ) -> dict[str, Any]:
     """Read one component through the root-bound Fact material protocol.
 
-    Mission Control's high-level query correctly requires its exact active
+    Work Control's high-level query correctly requires its exact active
     Profile.  A global controller must not activate or replace that Profile just
     to inspect another workspace, so federation uses the lower, read-only Fact
     material contract and binds the observed contract roots into the component
     envelope.  This is the equivalent root-bound projection: it reads no
-    workspace through the controller's active Mission Control Profile.
+    workspace through the controller's active Work Control Profile.
     """
 
     from kungfu import assignment_orchestration

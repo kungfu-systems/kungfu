@@ -10,7 +10,7 @@ from typing import Any
 
 from kungfu.storage import service as storage_service
 
-from . import mission_control
+from . import work_control
 
 
 def validate_source_identity(
@@ -55,7 +55,7 @@ def parse_lease_expiry(value: str) -> datetime:
 
 
 def assignment_row(state: dict[str, Any], assignment_id: str) -> dict[str, Any]:
-    stable_id = mission_control._stable_id(assignment_id, "assignment_id")
+    stable_id = work_control._stable_id(assignment_id, "assignment_id")
     assignments = state.get("assignments") or state.get("goals") or []
     row = next(
         (
@@ -81,11 +81,11 @@ def fold_completion_cycle(
     typed_rows: list[tuple[dict[str, Any], str]] = []
     for row in linked:
         record = row.get("payload", {}).get("record", {})
-        if record.get("claim_type") == mission_control.COMPLETION_CLAIM:
+        if record.get("claim_type") == work_control.COMPLETION_CLAIM:
             typed_rows.append((row, "completion-claimed"))
-        elif record.get("review_type") == mission_control.INDEPENDENT_REVIEW:
+        elif record.get("review_type") == work_control.INDEPENDENT_REVIEW:
             typed_rows.append((row, "independently-reviewed"))
-        elif record.get("review_type") == mission_control.CONTINUATION_DECISION:
+        elif record.get("review_type") == work_control.CONTINUATION_DECISION:
             phase = (
                 "stage-ready"
                 if record.get("action") in {"reopen", "request-evidence"}
@@ -112,9 +112,9 @@ def fold_completion_cycle(
         ]
 
     return (
-        records("claim_type", mission_control.COMPLETION_CLAIM),
-        records("review_type", mission_control.INDEPENDENT_REVIEW),
-        records("review_type", mission_control.CONTINUATION_DECISION),
+        records("claim_type", work_control.COMPLETION_CLAIM),
+        records("review_type", work_control.INDEPENDENT_REVIEW),
+        records("review_type", work_control.CONTINUATION_DECISION),
         latest_phase,
     )
 
@@ -128,13 +128,13 @@ def query_state(
 ) -> dict[str, Any]:
     """Return native Initiative/Assignment state without legacy vocabulary."""
 
-    definition = mission_control.build_state_query(
+    definition = work_control.build_state_query(
         runtime_dir,
         mission_id=initiative_id,
         storage_source_id=storage_source_id,
         cut_system_time=cut_system_time,
     )
-    result = mission_control._batched_state_query(runtime_dir, definition)
+    result = work_control._batched_state_query(runtime_dir, definition)
     materials = storage_service.fact_material_list(
         runtime_dir, cut_system_time=cut_system_time
     )
@@ -148,15 +148,15 @@ def query_state(
         body = payloads.get(str(row.get("payload_hash") or ""))
         resolved = {**row, "payload": body}
         rows.append(resolved)
-        if row.get("fact_surface_id") == mission_control.INITIATIVE_SURFACE_ID:
+        if row.get("fact_surface_id") == work_control.INITIATIVE_SURFACE_ID:
             initiative = resolved
-        elif row.get("fact_surface_id") == mission_control.ASSIGNMENT_SURFACE_ID:
+        elif row.get("fact_surface_id") == work_control.ASSIGNMENT_SURFACE_ID:
             assignments.append(resolved)
-        elif row.get("fact_surface_id") == mission_control.CLAIM_SURFACE_ID:
+        elif row.get("fact_surface_id") == work_control.CLAIM_SURFACE_ID:
             record = (body or {}).get("record", {})
             if record.get("review_type") in {
-                mission_control.INDEPENDENT_REVIEW,
-                mission_control.CONTINUATION_DECISION,
+                work_control.INDEPENDENT_REVIEW,
+                work_control.CONTINUATION_DECISION,
             }:
                 reviews.append(resolved)
             else:

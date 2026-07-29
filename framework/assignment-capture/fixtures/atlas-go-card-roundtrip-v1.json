@@ -62,8 +62,8 @@
       "role": "implementer",
       "budget": 65536,
       "subjects": ["agent", "initiative", "assignment"],
-      "required_capabilities": ["completion-review", "mission-control", "task-context"],
-      "ownership": ["mission-control", "xinfa"],
+      "required_capabilities": ["completion-review", "work-control", "task-context"],
+      "ownership": ["work-control", "xinfa"],
       "requested_route": "kungfu-mission-agent-agent",
       "requested_parity_group": "kungfu-mission-agent"
     },

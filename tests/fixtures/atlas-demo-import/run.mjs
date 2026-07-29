@@ -20,12 +20,12 @@ const missionProfile = path.resolve(
   '..',
   '..',
   'extensions',
-  'mission-control',
+  'work-control',
 );
 
 function activateMissionProfile(runtimeDir) {
   uvPython(coreDir, [
-    path.join(fixtureDir, '..', '_activate_mission_profile.py'),
+    path.join(fixtureDir, '..', '_activate_work_control_profile.py'),
     runtimeDir,
     missionProfile,
   ]);

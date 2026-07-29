@@ -4,9 +4,9 @@ import type { AgentProgressRow } from './agent-progress';
 import type {
   AtlasGoal,
   AtlasMission,
-  AtlasMissionControlReport,
-} from './mission-control-profile';
-import type { GoalCardQuerySpec } from './mission-control-query';
+  WorkControlAuthorityReport,
+} from './work-control-profile';
+import type { GoalCardQuerySpec } from './work-control-query';
 import {
   type GoalCluster,
   type GoalSection,
@@ -19,7 +19,7 @@ import {
   missionStage,
   queryGoalClusters,
   responsibilityActions,
-} from './mission-visual-model';
+} from './initiative-visual-model';
 
 const COLORS = {
   canvas: '#11161d',
@@ -262,7 +262,7 @@ export function MissionSituationOverview({
   refreshing,
 }: {
   mission: AtlasMission | null;
-  report: AtlasMissionControlReport | null;
+  report: WorkControlAuthorityReport | null;
   error: string;
   dashboardCut: string;
   refreshing: boolean;
@@ -756,7 +756,7 @@ export function GoalCardField({
     >);
   const reset = () =>
     onQueryChange({
-      schema: 'kungfu.mission-control.goal-card-query/v1',
+      schema: 'kungfu.work-control.goal-card-query/v1',
       text: '',
       sections: [],
       statuses: [],

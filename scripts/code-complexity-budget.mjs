@@ -509,11 +509,22 @@ function regressionIssues(
       previousPath === current.path
         ? [current.path]
         : [previousPath, current.path];
+    const ownerRenameAllowed =
+      previousPath !== current.path &&
+      policy.antiGaming?.allowedOwnerRenamePrefixes?.some(
+        (route) =>
+          typeof route?.from === 'string' &&
+          typeof route?.to === 'string' &&
+          (previous?.owner === route.from ||
+            previous?.owner?.startsWith(`${route.from}/`)) &&
+          current.owner ===
+            `${route.to}${previous.owner.slice(route.from.length)}`,
+      );
     if (
       previous &&
       (previous.class !== current.class ||
         previous.language !== current.language ||
-        previous.owner !== current.owner)
+        (previous.owner !== current.owner && !ownerRenameAllowed))
     )
       issues.push({
         code: 'classification-or-owner-relabeled',

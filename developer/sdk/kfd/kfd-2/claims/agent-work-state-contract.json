@@ -7,7 +7,7 @@
       "role": "claim-source",
       "kind": "file",
       "path": "framework/agent-work/kungfu-agent-work-state.contract.json",
-      "sha256": "57e388d71d9415a0215f4331c1840ab468c608995fc7385511949111849614ba"
+      "sha256": "381c75e05ed905bb31c4a5a0cedf1a08836c68f143f914522269d323eff46d96"
     }
   ],
   "machineEvidence": [
@@ -52,14 +52,14 @@
       "pointer": {
         "kind": "file",
         "path": "framework/core/src/python/kungfu/agent/kfd3_api.registry.json",
-        "sha256": "19180e9b29f9be24b2e62fc0faec38786f98ddbd40f31be9a86d8805dad4870f"
+        "sha256": "7ec21c630873f0b2ad7b95d2092f2254f328e789bd141cf66cf62e3bc06ec725"
       },
       "description": "Agent collaboration-interface registration for the work-model query."
     }
   ],
   "hashes": {
     "registrySha256": "16b878ae4ae56c97a8940bcf0090a65dadd21dede4162d27028c4d4054d9b173",
-    "sourceSha256": "57e388d71d9415a0215f4331c1840ab468c608995fc7385511949111849614ba",
+    "sourceSha256": "381c75e05ed905bb31c4a5a0cedf1a08836c68f143f914522269d323eff46d96",
     "evidenceSha256": [
       {
         "path": "docs/adr/KF-ADR-019f86da-4f90-786d-aa24-a97705e13917.md",
@@ -79,13 +79,13 @@
       },
       {
         "path": "framework/core/src/python/kungfu/agent/kfd3_api.registry.json",
-        "sha256": "19180e9b29f9be24b2e62fc0faec38786f98ddbd40f31be9a86d8805dad4870f"
+        "sha256": "7ec21c630873f0b2ad7b95d2092f2254f328e789bd141cf66cf62e3bc06ec725"
       }
     ],
     "artifactSha256": [
       {
         "path": "framework/agent-work/kungfu-agent-work-state.contract.json",
-        "sha256": "57e388d71d9415a0215f4331c1840ab468c608995fc7385511949111849614ba"
+        "sha256": "381c75e05ed905bb31c4a5a0cedf1a08836c68f143f914522269d323eff46d96"
       }
     ]
   },
@@ -93,7 +93,7 @@
     {
       "name": "agent-work-state-contract",
       "path": "framework/agent-work/kungfu-agent-work-state.contract.json",
-      "sha256": "57e388d71d9415a0215f4331c1840ab468c608995fc7385511949111849614ba",
+      "sha256": "381c75e05ed905bb31c4a5a0cedf1a08836c68f143f914522269d323eff46d96",
       "expectedPackagePath": "config/kungfu-agent-work-state.contract.json"
     }
   ],

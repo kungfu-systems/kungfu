@@ -4,7 +4,7 @@ import { execFileSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 import { openProfile } from '../../../framework/api/src/capability/profile.ts';
-import { openWorkControlProfile } from '../../../extensions/work-dashboard/src/view/mission-control-profile.ts';
+import { openWorkControlProfile } from '../../../extensions/work-dashboard/src/view/work-control-profile.ts';
 import { fail, locate, tmpDir, uvPython } from '../_harness.mjs';
 
 const { fixtureDir, coreDir } = locate(import.meta.url);
@@ -23,9 +23,9 @@ if (!fs.existsSync(bin)) {
 }
 
 uvPython(coreDir, [
-  path.join(fixtureDir, '..', '_activate_mission_profile.py'),
+  path.join(fixtureDir, '..', '_activate_work_control_profile.py'),
   runtimeDir,
-  path.join(repoDir, 'extensions', 'mission-control'),
+  path.join(repoDir, 'extensions', 'work-control'),
 ]);
 
 const profile = openProfile({

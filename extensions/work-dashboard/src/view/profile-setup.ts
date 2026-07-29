@@ -13,7 +13,6 @@ export type WorkControlProfileSetupStep = {
 };
 
 /** Explicit compatibility type alias for callers that have not migrated yet. */
-export type MissionControlProfileSetupStep = WorkControlProfileSetupStep;
 
 export function workControlProfileSetupStep(
   managed: ManagedProfile | null,
@@ -46,4 +45,3 @@ export function workControlProfileSetupStep(
 }
 
 /** Explicit compatibility alias for callers that have not migrated yet. */
-export const missionControlProfileSetupStep = workControlProfileSetupStep;

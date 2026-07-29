@@ -1569,16 +1569,16 @@
       "identityRequirement": "A stable pursuit identity must outlive any provider session and remain independently queryable.",
       "currentMappings": [
         {
-          "surface": "mission-control-profile",
+          "surface": "work-control-profile",
           "status": "implemented",
           "identity": [
             "mission_id",
             "goal_id"
           ],
-          "authority": "Mission Control Profile domain facts over Kungfu Core",
+          "authority": "Work Control Profile domain facts over Kungfu Core",
           "queries": [
-            "kungfu profile mission-control missions --json",
-            "kungfu profile mission-control goals --json"
+            "kungfu work capture <request.json>",
+            "kungfu work status --workspace <path> --initiative-id <initiative-id> --assignment-id <assignment-id>"
           ]
         }
       ],
@@ -1651,7 +1651,7 @@
           ]
         },
         {
-          "surface": "mission-control-review-and-continuation",
+          "surface": "work-control-review-and-continuation",
           "status": "partial",
           "identity": [
             "completion_claim_root",
@@ -1659,10 +1659,10 @@
             "continuation_plan_root",
             "decision_root"
           ],
-          "authority": "Mission Control claim, independent review, and exact-root continuation decisions",
+          "authority": "Work Control claim, independent review, and exact-root continuation decisions",
           "queries": [
-            "kungfu profile mission-control assess-completion <mission-id> <goal-id> --json",
-            "kungfu profile mission-control review-completion <mission-id> <goal-id> --reviewer <actor> --reviewer-source <source> --json"
+            "kungfu work claim-completion <input.json> --workspace <path> --authorized-by <actor>",
+            "kungfu work review <input.json> --workspace <path> --authorized-by <reviewer>"
           ]
         }
       ],

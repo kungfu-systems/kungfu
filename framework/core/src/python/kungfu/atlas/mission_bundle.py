@@ -10,7 +10,7 @@ def _domain():
     package = profile_sdk.load_member_python_package(
         source, "work-control-actions", "domain"
     )
-    return package.mission_bundle
+    return package.compatibility.mission_control_v3_bundle
 
 
 def __getattr__(name):

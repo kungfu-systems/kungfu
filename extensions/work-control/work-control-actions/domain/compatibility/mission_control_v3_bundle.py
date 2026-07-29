@@ -10,7 +10,7 @@ from kungfu import profile_composition, profile_sdk
 from kungfu.canonical_json import canonical_json_text
 from kungfu.storage import service as storage_service
 
-from . import mission_control
+from .. import work_control
 
 BUNDLE_SCHEMA = "kungfu.mission-control.bundle/v2"
 LEGACY_BUNDLE_SCHEMA = "kungfu.mission-control.bundle/v1"
@@ -23,7 +23,7 @@ def _canonical_json(value: Any) -> str:
 
 
 def _root(value: Any) -> str:
-    return mission_control._sha256_root(value)
+    return work_control._sha256_root(value)
 
 
 def _bundle_root(bundle: dict[str, Any]) -> str:
@@ -62,7 +62,7 @@ def _material_missing(bundle: dict[str, Any]) -> int:
 
 
 def _active_profile_binding(runtime_dir: str) -> dict[str, Any]:
-    discovered = mission_control.mission_control_profile_source(runtime_dir)
+    discovered = work_control.mission_control_profile_source(runtime_dir)
     catalog = profile_composition.catalog(
         discovered["source"], runtime_dir, require_active=True
     )
@@ -107,20 +107,20 @@ def build_mission_bundle(
     mission_id: str,
     mode: str = "full",
     storage_source_id: str = "atlas",
-    purpose: str = mission_control.PROGRESS_PURPOSE,
+    purpose: str = work_control.PROGRESS_PURPOSE,
 ) -> dict[str, Any]:
     """Build a bounded Mission closure from the Episodes that prove its state."""
 
     if mode not in BUNDLE_MODES:
         raise ValueError("Mission bundle mode must be full or thin")
-    state = mission_control.query_state(
+    state = work_control.query_state(
         runtime_dir,
         mission_id=mission_id,
         storage_source_id=storage_source_id,
     )
     report = None
     if state["goals"]:
-        report = mission_control.assess_progress(
+        report = work_control.assess_progress(
             runtime_dir,
             mission_id=mission_id,
             storage_source_id=storage_source_id,
@@ -129,7 +129,7 @@ def build_mission_bundle(
         state = report["state"]
         profile = report["profile"]
     else:
-        profile = mission_control.build_cost_state_proof_profile(
+        profile = work_control.build_cost_state_proof_profile(
             runtime_dir,
             state,
             assessment_state="not-assessed",
@@ -149,15 +149,15 @@ def build_mission_bundle(
     catalog = storage_service.fact_type_list(runtime_dir)
     for world in catalog.get("contract_worlds", []):
         if (
-            world.get("id") == mission_control.CONTRACT_WORLD_ID
-            and world.get("version") == mission_control.CONTRACT_VERSION
+            world.get("id") == work_control.CONTRACT_WORLD_ID
+            and world.get("version") == work_control.CONTRACT_VERSION
         ):
             add_episode(world.get("episode_id"), "contract-world")
     for surface in catalog.get("fact_types", []):
         if (
             surface.get("contract_world", {}).get("id")
-            == mission_control.CONTRACT_WORLD_ID
-            and surface.get("version") == mission_control.CONTRACT_VERSION
+            == work_control.CONTRACT_WORLD_ID
+            and surface.get("version") == work_control.CONTRACT_VERSION
         ):
             add_episode(surface.get("episode_id"), "fact-surface")
     for row in state["rows"]:
@@ -292,7 +292,7 @@ def build_initiative_bundle(
     initiative_id: str,
     mode: str = "full",
     storage_source_id: str = "atlas",
-    purpose: str = mission_control.PROGRESS_PURPOSE,
+    purpose: str = work_control.PROGRESS_PURPOSE,
 ) -> dict[str, Any]:
     """Build a native Initiative bundle without changing sealed Episodes."""
 
@@ -477,7 +477,7 @@ def import_mission_bundle(
     failed = [receipt for receipt in receipts if not receipt["ok"]]
     state_verification = None
     if materialize and not failed and not missing_material_count:
-        state = mission_control.query_state(
+        state = work_control.query_state(
             runtime_dir,
             mission_id=str(bundle["mission_subject"]),
         )

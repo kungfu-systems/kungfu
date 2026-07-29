@@ -38,7 +38,7 @@
       "removalCondition": "Declare a fixture authority class for the Rewind demo or remove the fixture."
     },
     {
-      "key": "identity-protocol-conformance-missing:kungfu.mission-control-l3",
+      "key": "identity-protocol-conformance-missing:kungfu.work-control-l3",
       "owner": "kungfu-core",
       "rationale": "The admitted L3 Python Domain Profile predates the reusable native admission harness and shared Root vectors.",
       "expiresOn": "2026-08-15",

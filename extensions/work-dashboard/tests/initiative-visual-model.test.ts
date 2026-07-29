@@ -3,16 +3,16 @@ import test from 'node:test';
 
 import type {
   AtlasGoal,
-  AtlasMissionControlReport,
-} from '../src/view/mission-control-profile.ts';
-import { DEFAULT_GOAL_CARD_QUERY } from '../src/view/mission-control-query.ts';
+  WorkControlAuthorityReport,
+} from '../src/view/work-control-profile.ts';
+import { DEFAULT_GOAL_CARD_QUERY } from '../src/view/work-control-query.ts';
 import {
   MISSION_CONTROL_VISUAL_SPEC,
   buildGoalClusters,
   deriveTrustVisual,
   queryGoalClusters,
   responsibilityActions,
-} from '../src/view/mission-visual-model.ts';
+} from '../src/view/initiative-visual-model.ts';
 
 const goal = (goalId: string, fields: Partial<AtlasGoal> = {}): AtlasGoal => ({
   goal_id: goalId,
@@ -21,9 +21,9 @@ const goal = (goalId: string, fields: Partial<AtlasGoal> = {}): AtlasGoal => ({
   ...fields,
 });
 
-const report = (fields: Partial<AtlasMissionControlReport> = {}) =>
+const report = (fields: Partial<WorkControlAuthorityReport> = {}) =>
   ({
-    schema: 'kungfu.mission-control.trust-report/v1',
+    schema: 'kungfu.work-control.trust-report/v1',
     fitness: 'fit',
     findings: ['progress is supported'],
     known_limits: [],
@@ -59,7 +59,7 @@ const report = (fields: Partial<AtlasMissionControlReport> = {}) =>
       state: {
         value: 'active',
         source_statuses: ['active'],
-        mapping_policy: 'mission-control',
+        mapping_policy: 'work-control',
         go_subjects: [],
       },
       proof: {
@@ -82,12 +82,12 @@ const report = (fields: Partial<AtlasMissionControlReport> = {}) =>
       goals: [],
     },
     ...fields,
-  }) as AtlasMissionControlReport;
+  }) as WorkControlAuthorityReport;
 
 test('visual spec keeps the five questions internal and forbids synthetic truth', () => {
   assert.equal(
     MISSION_CONTROL_VISUAL_SPEC.schema,
-    'kungfu.mission-control.visual-spec/v1',
+    'kungfu.work-control.visual-spec/v1',
   );
   assert.equal(
     MISSION_CONTROL_VISUAL_SPEC.disclosure.questions,
@@ -244,12 +244,12 @@ test('next actor is projected from the query answer rather than component infere
   const actions = responsibilityActions(
     report({
       query_profile: {
-        schema: 'kungfu.mission-control.query-profile/v1',
+        schema: 'kungfu.work-control.query-profile/v1',
         profile_hash: 'sha256:profile',
         profile: {
-          id: 'kungfu.mission-control',
+          id: 'kungfu.work-control',
           version: '3.0.0',
-          reducer: 'kungfu.mission-control.five-questions',
+          reducer: 'kungfu.work-control.five-questions',
           profile_suite_root: 'sha256:suite',
           catalog_root: 'sha256:catalog',
           member_roots: {},

@@ -368,7 +368,7 @@ test('resume fails closed when the recorded native binding or Profile root drift
     root: root('native-authority'),
     state: 'current',
     binding: { path: '/opt/kungfu/binding', root: root('binding') },
-    profile: { id: 'kungfu.mission-control', root: root('profile') },
+    profile: { id: 'kungfu.work-control', root: root('profile') },
   };
   fixture.ports.nativeAuthority = {
     async resolve() {

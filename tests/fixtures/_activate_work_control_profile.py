@@ -1,6 +1,6 @@
 # SPDX-License-Identifier: Apache-2.0
 
-"""Authorize the exact Mission Control Profile used by Atlas fixtures."""
+"""Authorize the exact Work Control Profile used by Atlas fixtures."""
 
 from pathlib import Path
 import sys

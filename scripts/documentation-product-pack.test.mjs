@@ -14,9 +14,9 @@ import zlib from 'node:zlib';
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const require = createRequire(import.meta.url);
 const {
-  copyMissionControlProfile,
+  copyFirstPartyProfile,
   documentationAtlasSource,
-  missionControlProfileFilter,
+  firstPartyProfileFilter,
 } = require(path.join(ROOT, 'framework', 'core', '.gyp', 'run-freeze.js'));
 const SELECTOR = JSON.parse(
   fs.readFileSync(path.join(ROOT, '.xinfa', 'product-documentation-pack.json')),
@@ -146,7 +146,7 @@ test('freeze replaces transient workspace links with stable Suite members', (t) 
     path.join(source, 'node_modules', '@kungfu-tech', 'member'),
     process.platform === 'win32' ? 'junction' : 'dir',
   );
-  copyMissionControlProfile(source, destination);
+  copyFirstPartyProfile(source, destination);
   assert.equal(fs.existsSync(path.join(destination, 'node_modules')), false);
   const installedMember = path.join(destination, 'members', 'member');
   assert.equal(fs.lstatSync(installedMember).isSymbolicLink(), false);
@@ -157,11 +157,11 @@ test('freeze replaces transient workspace links with stable Suite members', (t) 
     'member',
   );
   assert.equal(
-    missionControlProfileFilter(
+    firstPartyProfileFilter(
       path.join(
         ROOT,
         'extensions',
-        'mission-control',
+        'work-control',
         'node_modules',
         '@kungfu-tech',
         'kfx-view-work-dashboard',
@@ -170,11 +170,11 @@ test('freeze replaces transient workspace links with stable Suite members', (t) 
     false,
   );
   assert.equal(
-    missionControlProfileFilter(
+    firstPartyProfileFilter(
       path.join(
         ROOT,
         'extensions',
-        'mission-control',
+        'work-control',
         'node_modules',
         '@kungfu-tech',
         'kfx-view-work-dashboard',
@@ -186,12 +186,12 @@ test('freeze replaces transient workspace links with stable Suite members', (t) 
     false,
   );
   assert.equal(
-    missionControlProfileFilter(
+    firstPartyProfileFilter(
       path.join(
         ROOT,
         'extensions',
-        'mission-control',
-        'mission-control-actions',
+        'work-control',
+        'work-control-actions',
         '__pycache__',
         'adapter.cpython-313.pyc',
       ),
@@ -199,12 +199,12 @@ test('freeze replaces transient workspace links with stable Suite members', (t) 
     false,
   );
   assert.equal(
-    missionControlProfileFilter(
+    firstPartyProfileFilter(
       path.join(
         ROOT,
         'extensions',
-        'mission-control',
-        'mission-control-actions',
+        'work-control',
+        'work-control-actions',
         'adapter.py',
       ),
     ),
@@ -270,7 +270,7 @@ test('freeze closes a product-declared Profile when pnpm dependencies are hoiste
     })}\n`,
   );
 
-  copyMissionControlProfile(source, destination);
+  copyFirstPartyProfile(source, destination);
 
   assert.equal(
     JSON.parse(

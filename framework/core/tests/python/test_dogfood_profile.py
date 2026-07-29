@@ -34,7 +34,7 @@ INSTALLED_REGRESSION_CASES = (
     ),
     (
         "sha256:7d2d57c2a3eb89e5ae40aa3b2a59f78d6133b9d16ad434e938313135084cff97",
-        "Installed CLI package omits a declared Mission Control Suite member",
+        "Installed CLI package omits a declared Work Control Suite member",
     ),
     (
         "sha256:9de6878fe13c157c4003af332e5769cea8e12fcf1e2c1cd9188dfaf670ca26d7",

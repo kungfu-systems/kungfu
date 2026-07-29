@@ -24,7 +24,7 @@
   },
   "kfd3Enforcement": {
     "schema": "kungfu-kfd-3-release-gate-enforcement/v1",
-    "declaredSurfaceCount": 166,
+    "declaredSurfaceCount": 157,
     "enforcedSurfaceCount": 0,
     "gateBindings": [],
     "claimBoundary": "Declared means discoverable; enforced requires a retained passed hard release Gate. Merely detected or declared surfaces are not enforced."
@@ -102,7 +102,7 @@
         "evidenceRoots": [
           {
             "path": ".buildchain/kfd/kfd-2/release-claims.json",
-            "sha256": "sha256:f6c71b1d54be4e4344f2195db315bbf7563cdc274a088af441725f8ba9c38be2"
+            "sha256": "sha256:0f1db270f03726a9ed29c5c39f3ed47ea61436e4beb772cbc8b483d42ce2fcef"
           },
           {
             "path": "docs/qualification/kfd2-trust-assessment.md",
@@ -152,11 +152,11 @@
         "evidenceRoots": [
           {
             "path": ".buildchain/kfd/kfd-3/surfaces.json",
-            "sha256": "sha256:b4b61d0a8aea3b3f1cc2c52efd46689f8fbc81778938ca8f5ebfcb57847d9ee2"
+            "sha256": "sha256:99240e0d8cb5a934ce7369505bc6a499c873abc17d3065cd18cd05d90c1fb83c"
           },
           {
             "path": ".buildchain/kfd/kfd-3/capability-query.json",
-            "sha256": "sha256:25f5e25473bfd37457e2dab306d8b764dad180b59bbc0d4201ee4e921ad5debf"
+            "sha256": "sha256:cc346deba2e7f5a6095c0504016cfd066200d91caaf6c8533d707caf7ccd43a4"
           }
         ]
       },
@@ -176,7 +176,7 @@
       },
       "claimClass": "release-qualified-support",
       "knownLimitations": [
-        "Support covers the 166 product-declared surfaces accepted by the exact Buildchain registry audit."
+        "Support covers the 157 product-declared surfaces accepted by the exact Buildchain registry audit."
       ],
       "owner": "buildchain",
       "nextGate": "Publish the exact product-declared registry audit and artifact closure in the Alpha release passport."
@@ -258,7 +258,7 @@
           },
           {
             "path": "framework/core/tests/python/test_assignment_orchestration.py",
-            "sha256": "sha256:9d06ab937631f0adf4f383f35eba41b7df058ffad6ab7787362107c971c7941e"
+            "sha256": "sha256:cd2bdb647d18d559b3c1a2f820647daaf26940ed4b799314e6a136b8e6237686"
           }
         ]
       },

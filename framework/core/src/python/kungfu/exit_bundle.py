@@ -130,7 +130,7 @@ _KINDS: dict[str, dict[str, Any]] = {
         ],
     },
     "mission-control-v2": {
-        "authority": "Mission Control Profile domain over Episode bundles and proof-carrying queries",
+        "authority": "Work Control compatibility adapter over Episode bundles and proof-carrying queries",
         "schema": "kungfu.mission-control.bundle/v2",
         "protocol": "mission-control-portability/v2",
         "rank": 70,

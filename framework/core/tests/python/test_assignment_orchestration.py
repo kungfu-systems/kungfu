@@ -27,7 +27,7 @@ from kungfu.workspace_federation import (
 )
 
 
-SOURCE = Path(__file__).resolve().parents[4] / "extensions" / "mission-control"
+SOURCE = Path(__file__).resolve().parents[4] / "extensions" / "work-control"
 ASSIGNMENT_CLI = importlib.import_module("kungfu.cli.commands.assignment")
 
 

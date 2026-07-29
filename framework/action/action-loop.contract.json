@@ -17,7 +17,7 @@
       "Profile action admission and authority receipts"
     ],
     "existingAuthorities": [
-      "Mission Control owns Mission, Go, Completion Claim, assessment, independent review, and continuation",
+      "Work Control owns Initiative, Assignment, Completion Claim, assessment, independent review, and continuation",
       "Xinfa owns Atlas compile, verify, projection, and successor context",
       "Project Cut owns source, Atlas, Episode-delta, and publication settlement"
     ],
@@ -92,7 +92,7 @@
     "roleBindingRule": "Every role identity and root is explicit; no role is inferred from another role, current chat, current process, or current workspace.",
     "episodeRootRule": "episodeRoot is null only before Episode seal; sealed and later states require an exact root.",
     "projectionRule": "The envelope is a rebuildable projection over accepted authority receipts, not an authority record.",
-    "nativeAuthorityRule": "A native agent entry records one aggregate root over the loaded binding identity and active Mission Control Profile exact root; resume and settle fail closed if either changes."
+    "nativeAuthorityRule": "A native agent entry records one aggregate root over the loaded binding identity and active Work Control Profile exact root; resume and settle fail closed if either changes."
   },
   "checkpoint": {
     "schema": "kungfu.action-loop.checkpoint/v0",
@@ -248,9 +248,9 @@
         "completion claim, assessment, evidence availability, and exact roots"
       ],
       "writes": [
-        "Mission Control claim, independent review, and continuation receipts"
+        "Work Control claim, independent review, and continuation receipts"
       ],
-      "compatibility": "Mission Control completion surface"
+      "compatibility": "retained v3 completion surface"
     },
     {
       "id": "FactCommitter",

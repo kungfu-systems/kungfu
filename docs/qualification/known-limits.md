@@ -317,7 +317,7 @@ Core computes a content-bound Profile root and records append-only install,
 qualification, activation, supersession, rollback, and removal facts. The
 installed Agent SDK adds deterministic scaffold/validation, semantic diff,
 full/thin source portability, declarative actions, KFD-1 contract composition,
-[KF-ADR-019f86da-4f90-7e38-b72f-ef8829e14104](../adr/KF-ADR-019f86da-4f90-7e38-b72f-ef8829e14104.md) query families, and [KF-ADR-019f86da-4f90-7b3f-9ef3-84f5a878f302](../adr/KF-ADR-019f86da-4f90-7b3f-9ef3-84f5a878f302.md) purpose-bound assessment. Mission Control
+[KF-ADR-019f86da-4f90-7e38-b72f-ef8829e14104](../adr/KF-ADR-019f86da-4f90-7e38-b72f-ef8829e14104.md) query families, and [KF-ADR-019f86da-4f90-7b3f-9ef3-84f5a878f302](../adr/KF-ADR-019f86da-4f90-7b3f-9ef3-84f5a878f302.md) purpose-bound assessment. Work Control
 uses that public path, and an independently authored Week/Day/Action Suite has
 qualified coexistence, rollback, removal/reinstall, and portable evidence on
 macOS ARM64.

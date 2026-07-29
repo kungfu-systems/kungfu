@@ -42,4 +42,3 @@ export async function resolveWorkControlProfileRoot(
 }
 
 /** Explicit compatibility alias for callers that have not migrated yet. */
-export const resolveMissionControlProfileRoot = resolveWorkControlProfileRoot;

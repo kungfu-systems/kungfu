@@ -23,7 +23,7 @@
     },
     "incubationPassports": {
       "path": "framework/incubation/incubation-passport.registry.json",
-      "root": "sha256:60fc21984423501c16dd05a8713052fdc83b77f75218253c402aa86fb8c52587"
+      "root": "sha256:8cab184f9c708c5fd00324cb420f22972047875b0238b8bf2d10c95e36012dad"
     },
     "kfd1Contracts": {
       "path": "framework/contract/kungfu-contracts.registry.json",
@@ -35,7 +35,7 @@
     },
     "workLifecycle": {
       "path": "framework/work-lifecycle/kungfu-work-lifecycle-operation-matrix.contract.json",
-      "root": "sha256:7daf812d259e2d7c2ebef7da819d6f99bfbed5ad7da3ed2677d0876de1ce94e0"
+      "root": "sha256:bca8cf2cb144dd05250e3bea9d274394cdf47b141a7795c5a1ffc2d95bcd5ca6"
     },
     "languageBoundary": {
       "path": "framework/core/architecture/layered-api-encoding-boundary.contract.json",
@@ -53,7 +53,7 @@
         "target": "action-geometry",
         "layerBoundary": "responsibility-role-to-ontology-binding",
         "authority": {
-          "path": "extensions/mission-control/contracts/world.json",
+          "path": "extensions/work-control/contracts/world.json",
           "root": "sha256:b099ab642cdc3c350aab0ecc01060fe4fe81d3f1f1da075a44d56946b867a2d1"
         }
       },
@@ -63,7 +63,7 @@
         "target": "initiative",
         "layerBoundary": "bounded-responsibility-to-intent-responsibility",
         "authority": {
-          "path": "extensions/mission-control/contracts/world.json",
+          "path": "extensions/work-control/contracts/world.json",
           "root": "sha256:b099ab642cdc3c350aab0ecc01060fe4fe81d3f1f1da075a44d56946b867a2d1"
         }
       },
@@ -103,7 +103,7 @@
         "target": "action-geometry",
         "layerBoundary": "responsibility-role-to-ontology-binding",
         "authority": {
-          "path": "extensions/mission-control/contracts/world.json",
+          "path": "extensions/work-control/contracts/world.json",
           "root": "sha256:b099ab642cdc3c350aab0ecc01060fe4fe81d3f1f1da075a44d56946b867a2d1"
         }
       },
@@ -123,7 +123,7 @@
         "target": "episode",
         "layerBoundary": "domain-projection-to-causal-substrate",
         "authority": {
-          "path": "extensions/mission-control/contracts/world.json",
+          "path": "extensions/work-control/contracts/world.json",
           "root": "sha256:b099ab642cdc3c350aab0ecc01060fe4fe81d3f1f1da075a44d56946b867a2d1"
         }
       }
@@ -153,7 +153,7 @@
   "primitives": [
     {
       "id": "action-geometry",
-      "passportId": "kungfu.mission-control-l3",
+      "passportId": "kungfu.work-control-l3",
       "definition": {
         "identity": {
           "id": "action-geometry",
@@ -328,7 +328,7 @@
     },
     {
       "id": "assignment",
-      "passportId": "kungfu.mission-control-l3",
+      "passportId": "kungfu.work-control-l3",
       "definition": {
         "identity": {
           "id": "assignment",
@@ -345,7 +345,7 @@
         },
         "semantics": {
           "authority": {
-            "path": "extensions/mission-control/contracts/world.json",
+            "path": "extensions/work-control/contracts/world.json",
             "root": "sha256:b099ab642cdc3c350aab0ecc01060fe4fe81d3f1f1da075a44d56946b867a2d1"
           },
           "invariants": [],
@@ -365,7 +365,7 @@
             "state": "declared",
             "refs": [
               {
-                "path": "extensions/mission-control/contracts/world.json",
+                "path": "extensions/work-control/contracts/world.json",
                 "root": "sha256:b099ab642cdc3c350aab0ecc01060fe4fe81d3f1f1da075a44d56946b867a2d1"
               }
             ],
@@ -375,8 +375,8 @@
             "state": "partial",
             "refs": [
               {
-                "path": "extensions/mission-control/mission-control-actions/domain/mission_control.py",
-                "root": "sha256:0362cfb37f9bf45da3407fbf97eec4c8ccf343931e22de9e2ea25435b929f3bf"
+                "path": "extensions/work-control/work-control-actions/domain/work_control.py",
+                "root": "sha256:dd94bfa1191887385347c9f8800d02be3c0885b25d08dd43abed1655ad0488e5"
               }
             ],
             "policy": "all four language implementation references are required for complete"
@@ -395,7 +395,7 @@
             "state": "incomplete",
             "refs": [
               {
-                "path": "extensions/mission-control/contracts/world.json",
+                "path": "extensions/work-control/contracts/world.json",
                 "root": "sha256:b099ab642cdc3c350aab0ecc01060fe4fe81d3f1f1da075a44d56946b867a2d1"
               }
             ],
@@ -405,8 +405,8 @@
             "state": "observed",
             "refs": [
               {
-                "path": "extensions/mission-control/mission-control-actions/domain/mission_control.py",
-                "root": "sha256:0362cfb37f9bf45da3407fbf97eec4c8ccf343931e22de9e2ea25435b929f3bf"
+                "path": "extensions/work-control/work-control-actions/domain/work_control.py",
+                "root": "sha256:dd94bfa1191887385347c9f8800d02be3c0885b25d08dd43abed1655ad0488e5"
               }
             ],
             "policy": "implementation references are bounded operational evidence, not availability"
@@ -427,8 +427,8 @@
             "state": "implemented",
             "refs": [
               {
-                "path": "extensions/mission-control/mission-control-actions/domain/mission_control.py",
-                "root": "sha256:0362cfb37f9bf45da3407fbf97eec4c8ccf343931e22de9e2ea25435b929f3bf"
+                "path": "extensions/work-control/work-control-actions/domain/work_control.py",
+                "root": "sha256:dd94bfa1191887385347c9f8800d02be3c0885b25d08dd43abed1655ad0488e5"
               }
             ],
             "proofRefs": []
@@ -449,7 +449,7 @@
             "state": "present",
             "refs": [
               {
-                "path": "extensions/mission-control/contracts/world.json",
+                "path": "extensions/work-control/contracts/world.json",
                 "root": "sha256:b099ab642cdc3c350aab0ecc01060fe4fe81d3f1f1da075a44d56946b867a2d1"
               }
             ]
@@ -665,7 +665,7 @@
     },
     {
       "id": "domain-profile",
-      "passportId": "kungfu.mission-control-l3",
+      "passportId": "kungfu.work-control-l3",
       "definition": {
         "identity": {
           "id": "domain-profile",
@@ -1227,7 +1227,7 @@
     },
     {
       "id": "initiative",
-      "passportId": "kungfu.mission-control-l3",
+      "passportId": "kungfu.work-control-l3",
       "definition": {
         "identity": {
           "id": "initiative",
@@ -1244,7 +1244,7 @@
         },
         "semantics": {
           "authority": {
-            "path": "extensions/mission-control/contracts/world.json",
+            "path": "extensions/work-control/contracts/world.json",
             "root": "sha256:b099ab642cdc3c350aab0ecc01060fe4fe81d3f1f1da075a44d56946b867a2d1"
           },
           "invariants": [],
@@ -1264,7 +1264,7 @@
             "state": "declared",
             "refs": [
               {
-                "path": "extensions/mission-control/contracts/world.json",
+                "path": "extensions/work-control/contracts/world.json",
                 "root": "sha256:b099ab642cdc3c350aab0ecc01060fe4fe81d3f1f1da075a44d56946b867a2d1"
               }
             ],
@@ -1274,8 +1274,8 @@
             "state": "partial",
             "refs": [
               {
-                "path": "extensions/mission-control/mission-control-actions/domain/mission_control.py",
-                "root": "sha256:0362cfb37f9bf45da3407fbf97eec4c8ccf343931e22de9e2ea25435b929f3bf"
+                "path": "extensions/work-control/work-control-actions/domain/work_control.py",
+                "root": "sha256:dd94bfa1191887385347c9f8800d02be3c0885b25d08dd43abed1655ad0488e5"
               }
             ],
             "policy": "all four language implementation references are required for complete"
@@ -1294,7 +1294,7 @@
             "state": "incomplete",
             "refs": [
               {
-                "path": "extensions/mission-control/contracts/world.json",
+                "path": "extensions/work-control/contracts/world.json",
                 "root": "sha256:b099ab642cdc3c350aab0ecc01060fe4fe81d3f1f1da075a44d56946b867a2d1"
               }
             ],
@@ -1304,8 +1304,8 @@
             "state": "observed",
             "refs": [
               {
-                "path": "extensions/mission-control/mission-control-actions/domain/mission_control.py",
-                "root": "sha256:0362cfb37f9bf45da3407fbf97eec4c8ccf343931e22de9e2ea25435b929f3bf"
+                "path": "extensions/work-control/work-control-actions/domain/work_control.py",
+                "root": "sha256:dd94bfa1191887385347c9f8800d02be3c0885b25d08dd43abed1655ad0488e5"
               }
             ],
             "policy": "implementation references are bounded operational evidence, not availability"
@@ -1326,8 +1326,8 @@
             "state": "implemented",
             "refs": [
               {
-                "path": "extensions/mission-control/mission-control-actions/domain/mission_control.py",
-                "root": "sha256:0362cfb37f9bf45da3407fbf97eec4c8ccf343931e22de9e2ea25435b929f3bf"
+                "path": "extensions/work-control/work-control-actions/domain/work_control.py",
+                "root": "sha256:dd94bfa1191887385347c9f8800d02be3c0885b25d08dd43abed1655ad0488e5"
               }
             ],
             "proofRefs": []
@@ -1348,7 +1348,7 @@
             "state": "present",
             "refs": [
               {
-                "path": "extensions/mission-control/contracts/world.json",
+                "path": "extensions/work-control/contracts/world.json",
                 "root": "sha256:b099ab642cdc3c350aab0ecc01060fe4fe81d3f1f1da075a44d56946b867a2d1"
               }
             ]
@@ -1533,7 +1533,7 @@
     },
     {
       "id": "work",
-      "passportId": "kungfu.mission-control-l3",
+      "passportId": "kungfu.work-control-l3",
       "definition": {
         "identity": {
           "id": "work",
@@ -1550,7 +1550,7 @@
         },
         "semantics": {
           "authority": {
-            "path": "extensions/mission-control/contracts/world.json",
+            "path": "extensions/work-control/contracts/world.json",
             "root": "sha256:b099ab642cdc3c350aab0ecc01060fe4fe81d3f1f1da075a44d56946b867a2d1"
           },
           "invariants": [],
@@ -1570,7 +1570,7 @@
             "state": "declared",
             "refs": [
               {
-                "path": "extensions/mission-control/contracts/world.json",
+                "path": "extensions/work-control/contracts/world.json",
                 "root": "sha256:b099ab642cdc3c350aab0ecc01060fe4fe81d3f1f1da075a44d56946b867a2d1"
               }
             ],
@@ -1580,8 +1580,8 @@
             "state": "partial",
             "refs": [
               {
-                "path": "extensions/mission-control/mission-control-actions/domain/mission_control.py",
-                "root": "sha256:0362cfb37f9bf45da3407fbf97eec4c8ccf343931e22de9e2ea25435b929f3bf"
+                "path": "extensions/work-control/work-control-actions/domain/work_control.py",
+                "root": "sha256:dd94bfa1191887385347c9f8800d02be3c0885b25d08dd43abed1655ad0488e5"
               },
               {
                 "path": "framework/core/src/python/kungfu/assignment_orchestration.py",
@@ -1604,7 +1604,7 @@
             "state": "incomplete",
             "refs": [
               {
-                "path": "extensions/mission-control/contracts/world.json",
+                "path": "extensions/work-control/contracts/world.json",
                 "root": "sha256:b099ab642cdc3c350aab0ecc01060fe4fe81d3f1f1da075a44d56946b867a2d1"
               }
             ],
@@ -1614,8 +1614,8 @@
             "state": "observed",
             "refs": [
               {
-                "path": "extensions/mission-control/mission-control-actions/domain/mission_control.py",
-                "root": "sha256:0362cfb37f9bf45da3407fbf97eec4c8ccf343931e22de9e2ea25435b929f3bf"
+                "path": "extensions/work-control/work-control-actions/domain/work_control.py",
+                "root": "sha256:dd94bfa1191887385347c9f8800d02be3c0885b25d08dd43abed1655ad0488e5"
               },
               {
                 "path": "framework/core/src/python/kungfu/assignment_orchestration.py",
@@ -1640,8 +1640,8 @@
             "state": "implemented",
             "refs": [
               {
-                "path": "extensions/mission-control/mission-control-actions/domain/mission_control.py",
-                "root": "sha256:0362cfb37f9bf45da3407fbf97eec4c8ccf343931e22de9e2ea25435b929f3bf"
+                "path": "extensions/work-control/work-control-actions/domain/work_control.py",
+                "root": "sha256:dd94bfa1191887385347c9f8800d02be3c0885b25d08dd43abed1655ad0488e5"
               },
               {
                 "path": "framework/core/src/python/kungfu/assignment_orchestration.py",
@@ -1666,7 +1666,7 @@
             "state": "present",
             "refs": [
               {
-                "path": "extensions/mission-control/contracts/world.json",
+                "path": "extensions/work-control/contracts/world.json",
                 "root": "sha256:b099ab642cdc3c350aab0ecc01060fe4fe81d3f1f1da075a44d56946b867a2d1"
               }
             ]
@@ -1697,5 +1697,5 @@
       "artifacts": []
     }
   ],
-  "catalogRoot": "sha256:cfd0d6527fe755add7b783cf6eb1bc2001fa44090756c6b5243a06b35140154a"
+  "catalogRoot": "sha256:c81b8d290a5417300480fed4087a0540322177d1c133fcc68776ddcd98355ab7"
 }

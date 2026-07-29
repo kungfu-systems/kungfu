@@ -49,7 +49,7 @@ const pythonPath = [
   .join(path.delimiter);
 
 run(
-  'fresh and reused Mission Control authority receipts',
+  'fresh and reused Work Control authority receipts',
   'uv',
   [
     'run',

@@ -67,3 +67,11 @@ Historical context: [Native Work Control and recursive dogfood](stages/08-native
 Start current reading at [docs/architecture/primitive-management-plane.md](../architecture/primitive-management-plane.md).
 
 Deepen through [docs/profiles/mission-control.md](../profiles/mission-control.md), [docs/architecture/kfx-topology.md](../architecture/kfx-topology.md), [docs/architecture/agent-supply-chain.md](../architecture/agent-supply-chain.md).
+
+## Understand the sole current Work Control identity and the bounded retained-data reader
+
+Historical context: [Work Control canonical name](stages/09-work-control-canonical-name.md).
+
+Start current reading at [docs/profiles/work-control.md](../profiles/work-control.md).
+
+Deepen through [docs/architecture/kfx-topology.md](../architecture/kfx-topology.md), [docs/profiles/compatibility/README.md](../profiles/compatibility/README.md).

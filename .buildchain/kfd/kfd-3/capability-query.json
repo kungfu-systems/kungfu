@@ -9,8 +9,8 @@
   "status": "passed",
   "verificationMode": "product-declared-registry",
   "summary": {
-    "detected": 166,
-    "declared": 166,
+    "detected": 157,
+    "declared": 157,
     "enforced": 0,
     "detectedButUnregistered": 0,
     "declaredButMissing": 0
@@ -1075,144 +1075,6 @@
       "residualRisk": []
     },
     {
-      "id": "kungfu.atlas.assess-completion",
-      "kind": "cli",
-      "name": "kungfu profile mission-control assess-completion <mission-id> <goal-id> --json",
-      "state": "declared",
-      "detected": true,
-      "enforced": false,
-      "sourcePath": "framework/core/src/python/kungfu/agent/kfd3_api.registry.json",
-      "artifactPath": "framework/core/src/python/kungfu/agent/commands.json",
-      "evidencePath": "framework/core/src/python/kungfu/agent/commands.json",
-      "kfd1Basis": {
-        "registryPath": ".buildchain/kfd/kfd-3/surfaces.json",
-        "sourcePath": "framework/core/src/python/kungfu/agent/kfd3_api.registry.json",
-        "artifactPath": "framework/core/src/python/kungfu/agent/commands.json",
-        "digest": "sha256:2f6b37040728a664c545ecee55ef53c6dd11efd370f4ce60fbb5392173667899"
-      },
-      "kfd2Trust": {
-        "status": "unknown",
-        "trustImpact": "passport-claim-not-found",
-        "residualRisk": []
-      },
-      "residualRisk": []
-    },
-    {
-      "id": "kungfu.atlas.assess-mission",
-      "kind": "cli-api-gui",
-      "name": "kungfu profile mission-control assess-mission <mission-id> --json",
-      "state": "declared",
-      "detected": true,
-      "enforced": false,
-      "sourcePath": "framework/core/src/python/kungfu/agent/kfd3_api.registry.json",
-      "artifactPath": "framework/core/src/python/kungfu/agent/commands.json",
-      "evidencePath": "framework/core/src/python/kungfu/agent/commands.json",
-      "kfd1Basis": {
-        "registryPath": ".buildchain/kfd/kfd-3/surfaces.json",
-        "sourcePath": "framework/core/src/python/kungfu/agent/kfd3_api.registry.json",
-        "artifactPath": "framework/core/src/python/kungfu/agent/commands.json",
-        "digest": "sha256:6fa5d6cafde7373c42ecd3b6f3aa3338927ef9c820fcd67b08c38398f4e55208"
-      },
-      "kfd2Trust": {
-        "status": "unknown",
-        "trustImpact": "passport-claim-not-found",
-        "residualRisk": []
-      },
-      "residualRisk": []
-    },
-    {
-      "id": "kungfu.atlas.authority-cutover",
-      "kind": "cli-api-gui",
-      "name": "kungfu profile mission-control authority-cutover --expected-parity-root <root> --project-cut-root <root> --atlas-root <root> --actor <actor> --reason <reason> --json",
-      "state": "declared",
-      "detected": true,
-      "enforced": false,
-      "sourcePath": "framework/core/src/python/kungfu/agent/kfd3_api.registry.json",
-      "artifactPath": "framework/core/src/python/kungfu/agent/commands.json",
-      "evidencePath": "framework/core/src/python/kungfu/agent/commands.json",
-      "kfd1Basis": {
-        "registryPath": ".buildchain/kfd/kfd-3/surfaces.json",
-        "sourcePath": "framework/core/src/python/kungfu/agent/kfd3_api.registry.json",
-        "artifactPath": "framework/core/src/python/kungfu/agent/commands.json",
-        "digest": "sha256:4891fdecb55749a42e5af04caba021314f12138717f37df8c98e038301be32ca"
-      },
-      "kfd2Trust": {
-        "status": "unknown",
-        "trustImpact": "passport-claim-not-found",
-        "residualRisk": []
-      },
-      "residualRisk": []
-    },
-    {
-      "id": "kungfu.atlas.authority-rollback",
-      "kind": "cli-api-gui",
-      "name": "kungfu profile mission-control authority-rollback --expected-migration-id <id> --actor <actor> --reason <reason> --json",
-      "state": "declared",
-      "detected": true,
-      "enforced": false,
-      "sourcePath": "framework/core/src/python/kungfu/agent/kfd3_api.registry.json",
-      "artifactPath": "framework/core/src/python/kungfu/agent/commands.json",
-      "evidencePath": "framework/core/src/python/kungfu/agent/commands.json",
-      "kfd1Basis": {
-        "registryPath": ".buildchain/kfd/kfd-3/surfaces.json",
-        "sourcePath": "framework/core/src/python/kungfu/agent/kfd3_api.registry.json",
-        "artifactPath": "framework/core/src/python/kungfu/agent/commands.json",
-        "digest": "sha256:6e8a5a7beb8e0f497013b52457d7ad9d318b04177377d878e6307e886e90988b"
-      },
-      "kfd2Trust": {
-        "status": "unknown",
-        "trustImpact": "passport-claim-not-found",
-        "residualRisk": []
-      },
-      "residualRisk": []
-    },
-    {
-      "id": "kungfu.atlas.authority-status",
-      "kind": "cli-api-gui",
-      "name": "kungfu profile mission-control authority-status --source <source> --json",
-      "state": "declared",
-      "detected": true,
-      "enforced": false,
-      "sourcePath": "framework/core/src/python/kungfu/agent/kfd3_api.registry.json",
-      "artifactPath": "framework/core/src/python/kungfu/agent/commands.json",
-      "evidencePath": "framework/core/src/python/kungfu/agent/commands.json",
-      "kfd1Basis": {
-        "registryPath": ".buildchain/kfd/kfd-3/surfaces.json",
-        "sourcePath": "framework/core/src/python/kungfu/agent/kfd3_api.registry.json",
-        "artifactPath": "framework/core/src/python/kungfu/agent/commands.json",
-        "digest": "sha256:fa1f5d311828c8c1c74bef8cea397993bcfd9d0167fb1a6f4fbdd87d2cef91cf"
-      },
-      "kfd2Trust": {
-        "status": "unknown",
-        "trustImpact": "passport-claim-not-found",
-        "residualRisk": []
-      },
-      "residualRisk": []
-    },
-    {
-      "id": "kungfu.atlas.export-mission",
-      "kind": "cli",
-      "name": "kungfu profile mission-control export-mission <mission-id> --out <bundle.json> --mode <full|thin> --json",
-      "state": "declared",
-      "detected": true,
-      "enforced": false,
-      "sourcePath": "framework/core/src/python/kungfu/agent/kfd3_api.registry.json",
-      "artifactPath": "framework/core/src/python/kungfu/agent/commands.json",
-      "evidencePath": "framework/core/src/python/kungfu/agent/commands.json",
-      "kfd1Basis": {
-        "registryPath": ".buildchain/kfd/kfd-3/surfaces.json",
-        "sourcePath": "framework/core/src/python/kungfu/agent/kfd3_api.registry.json",
-        "artifactPath": "framework/core/src/python/kungfu/agent/commands.json",
-        "digest": "sha256:af3ff58d915c08639993f0b3e6774323287fa2a4e4e34eab94fe2e617993d6b8"
-      },
-      "kfd2Trust": {
-        "status": "unknown",
-        "trustImpact": "passport-claim-not-found",
-        "residualRisk": []
-      },
-      "residualRisk": []
-    },
-    {
       "id": "kungfu.atlas.import",
       "kind": "cli",
       "name": "kungfu atlas import --repo <atlas-repo> --json",
@@ -1227,52 +1089,6 @@
         "sourcePath": "framework/core/src/python/kungfu/agent/kfd3_api.registry.json",
         "artifactPath": "framework/core/src/python/kungfu/agent/commands.json",
         "digest": "sha256:ab4765ab57ffd4a0a5b575a9b2fa2f3349fb661023e790230e536a5c3f709d76"
-      },
-      "kfd2Trust": {
-        "status": "unknown",
-        "trustImpact": "passport-claim-not-found",
-        "residualRisk": []
-      },
-      "residualRisk": []
-    },
-    {
-      "id": "kungfu.atlas.import-mission",
-      "kind": "cli",
-      "name": "kungfu profile mission-control import-mission --from <bundle.json> [--execute] --json",
-      "state": "declared",
-      "detected": true,
-      "enforced": false,
-      "sourcePath": "framework/core/src/python/kungfu/agent/kfd3_api.registry.json",
-      "artifactPath": "framework/core/src/python/kungfu/agent/commands.json",
-      "evidencePath": "framework/core/src/python/kungfu/agent/commands.json",
-      "kfd1Basis": {
-        "registryPath": ".buildchain/kfd/kfd-3/surfaces.json",
-        "sourcePath": "framework/core/src/python/kungfu/agent/kfd3_api.registry.json",
-        "artifactPath": "framework/core/src/python/kungfu/agent/commands.json",
-        "digest": "sha256:5d42f8d4b567fc0583324c69537726fe4c386e1d3c9ec662ba7945a7f7fca5fd"
-      },
-      "kfd2Trust": {
-        "status": "unknown",
-        "trustImpact": "passport-claim-not-found",
-        "residualRisk": []
-      },
-      "residualRisk": []
-    },
-    {
-      "id": "kungfu.atlas.show.goals",
-      "kind": "cli",
-      "name": "kungfu profile mission-control goals --json",
-      "state": "declared",
-      "detected": true,
-      "enforced": false,
-      "sourcePath": "framework/core/src/python/kungfu/agent/kfd3_api.registry.json",
-      "artifactPath": "framework/core/src/python/kungfu/agent/commands.json",
-      "evidencePath": "framework/core/src/python/kungfu/agent/commands.json",
-      "kfd1Basis": {
-        "registryPath": ".buildchain/kfd/kfd-3/surfaces.json",
-        "sourcePath": "framework/core/src/python/kungfu/agent/kfd3_api.registry.json",
-        "artifactPath": "framework/core/src/python/kungfu/agent/commands.json",
-        "digest": "sha256:7d2142fe67d3c31254f820a8ffb88a693c3a967848f0e21e6c7966fd96e36719"
       },
       "kfd2Trust": {
         "status": "unknown",
@@ -1319,29 +1135,6 @@
         "sourcePath": "framework/core/src/python/kungfu/agent/kfd3_api.registry.json",
         "artifactPath": "framework/core/src/python/kungfu/agent/commands.json",
         "digest": "sha256:4aeb9537177028bf69b919eceb4a3eba1c1bc8b6e0439ee55810b5111161778a"
-      },
-      "kfd2Trust": {
-        "status": "unknown",
-        "trustImpact": "passport-claim-not-found",
-        "residualRisk": []
-      },
-      "residualRisk": []
-    },
-    {
-      "id": "kungfu.atlas.show.missions",
-      "kind": "cli",
-      "name": "kungfu profile mission-control missions --json",
-      "state": "declared",
-      "detected": true,
-      "enforced": false,
-      "sourcePath": "framework/core/src/python/kungfu/agent/kfd3_api.registry.json",
-      "artifactPath": "framework/core/src/python/kungfu/agent/commands.json",
-      "evidencePath": "framework/core/src/python/kungfu/agent/commands.json",
-      "kfd1Basis": {
-        "registryPath": ".buildchain/kfd/kfd-3/surfaces.json",
-        "sourcePath": "framework/core/src/python/kungfu/agent/kfd3_api.registry.json",
-        "artifactPath": "framework/core/src/python/kungfu/agent/commands.json",
-        "digest": "sha256:3ba0aef215847b27c5c9bb24ed9cc1d491d5d6a0c4cf9028acdb381d79427b15"
       },
       "kfd2Trust": {
         "status": "unknown",

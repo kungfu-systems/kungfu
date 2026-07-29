@@ -157,7 +157,7 @@ test('native entry resolves authority from stable Project Cut coordinates', () =
     state: 'current',
     binding: { path: '/opt/kungfu/binding', root: ROOT },
     profile: {
-      id: 'kungfu.mission-control',
+      id: 'kungfu.work-control',
       root: `sha256:${'6'.repeat(64)}`,
     },
   });

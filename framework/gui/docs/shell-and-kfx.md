@@ -76,7 +76,7 @@ without executing code:
     },
     "config": {
       "view": {
-        "title": "Mission Control",
+        "title": "Work Control",
         "capabilities": ["ledger", "work"],
         "settings": []
       }
@@ -172,7 +172,7 @@ Product assembly can recommend the first focused Profile by setting
 an absent recommendation falls back to discovery order, while a stale persisted
 id opens Profile Manager. The Shell never assigns domain meaning to the id.
 
-Mission Control uses this public path. Its Home plus the fixed Agent Console,
+Work Control uses this public path. Its Home plus the fixed Agent Console,
 Profiles and Skills entries form the primary Activity Rail. Facts live under
 Tools; Runtime Status, Config Store, Journal Inspector and Rewind Inspector
 live under Developer. Every accessible view remains available to the command

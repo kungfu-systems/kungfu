@@ -20,13 +20,7 @@ const CONTRACT = JSON.parse(
 );
 const MISSION_CONTROL_ACTIONS = JSON.parse(
   fs.readFileSync(
-    path.join(
-      ROOT,
-      'extensions',
-      'mission-control',
-      'actions',
-      'registry.json',
-    ),
+    path.join(ROOT, 'extensions', 'work-control', 'actions', 'registry.json'),
     'utf8',
   ),
 );

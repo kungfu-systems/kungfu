@@ -16,7 +16,7 @@ product/dist/desktop/mac-arm64/Kungfu Episodes.app/Contents/Resources/kungfu/kun
 `./shifu product gui build` completed the signed directory Product build and
 the bundle audit found one Kungfu runtime. The build generated a KFD-3 release
 manifest containing both `kungfu.dogfood-feedback` and
-`kungfu.mission-control`. Local notarization was skipped because notarization
+`kungfu.work-control`. Local notarization was skipped because notarization
 options were unavailable, so this record does not claim a publishable or
 notarized installer.
 

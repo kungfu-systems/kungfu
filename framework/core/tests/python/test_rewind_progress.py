@@ -24,7 +24,7 @@ def test_agent_console_progress_coordinates_come_from_explicit_env(
             {
                 "schema": "kungfu.work-ref/v1",
                 "workspaceId": "home",
-                "profileId": "kungfu.mission-control",
+                "profileId": "kungfu.work-control",
                 "profileRoot": "sha256:profile",
                 "entityType": "go",
                 "entityId": "go-1",
@@ -39,7 +39,7 @@ def test_agent_console_progress_coordinates_come_from_explicit_env(
     assert progress_contract.reported_run_id(None) == "attempt-1"
     assert progress_contract.reported_work_ref() == {
         "workspaceId": "home",
-        "profileId": "kungfu.mission-control",
+        "profileId": "kungfu.work-control",
         "profileRoot": "sha256:profile",
         "entityType": "go",
         "entityId": "go-1",
@@ -67,7 +67,7 @@ def test_run_progress_flatbuffer_preserves_live_work_ref():
         signal="heartbeat",
         next_action="review",
         workspace_id="home",
-        profile_id="kungfu.mission-control",
+        profile_id="kungfu.work-control",
         profile_root="sha256:profile",
         entity_type="go",
         entity_id="go-1",
@@ -82,7 +82,7 @@ def test_run_progress_flatbuffer_preserves_live_work_ref():
     assert progress.Signal() == b"heartbeat"
     assert progress.NextAction() == b"review"
     assert progress.WorkspaceId() == b"home"
-    assert progress.ProfileId() == b"kungfu.mission-control"
+    assert progress.ProfileId() == b"kungfu.work-control"
     assert progress.ProfileRoot() == b"sha256:profile"
     assert progress.EntityType() == b"go"
     assert progress.EntityId() == b"go-1"

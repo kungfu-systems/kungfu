@@ -1,13 +1,13 @@
 import type {
   AtlasGoal,
   AtlasMission,
-  AtlasMissionControlReport,
-} from './mission-control-profile';
-import type { GoalCardQuerySpec } from './mission-control-query';
+  WorkControlAuthorityReport,
+} from './work-control-profile';
+import type { GoalCardQuerySpec } from './work-control-query';
 
 export const MISSION_CONTROL_VISUAL_SPEC = {
-  schema: 'kungfu.mission-control.visual-spec/v1',
-  semanticOwner: 'kungfu.mission-control.query-profile/v1',
+  schema: 'kungfu.work-control.visual-spec/v1',
+  semanticOwner: 'kungfu.work-control.query-profile/v1',
   defaultMode: 'situation',
   trajectory: {
     undeclaredFuture: 'visible',
@@ -78,7 +78,7 @@ function trustFacet(
 }
 
 export function deriveTrustVisual(
-  report: AtlasMissionControlReport | null,
+  report: WorkControlAuthorityReport | null,
   error = '',
 ): TrustVisual {
   if (error) {
@@ -175,7 +175,7 @@ export type ResponsibilityAction = {
 };
 
 export function responsibilityActions(
-  report: AtlasMissionControlReport | null,
+  report: WorkControlAuthorityReport | null,
 ): ResponsibilityAction[] {
   const answer = report?.query_profile?.answers.find(
     (row) => row.question_id === 'next-responsibility',

@@ -34,8 +34,8 @@ test('type baseline covers every Python surface declared by [tool.mypy]', () => 
       '"../api/src/capability/guest-harness"',
     ],
     [
-      'extensions/mission-control/mission-control-actions/adapter.py',
-      '"../../extensions/mission-control/mission-control-actions"',
+      'extensions/work-control/work-control-actions/adapter.py',
+      '"../../extensions/work-control/work-control-actions"',
     ],
   ];
   for (const [changedFile, mypyEntry] of checked) {

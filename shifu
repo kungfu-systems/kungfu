@@ -306,7 +306,7 @@ if [ "${1:-}" = "work" ]; then
   exit 127
 fi
 
-# The agent-facing Mission Control CLI must be the executable assembled from
+# The agent-facing Work Control CLI must be the executable assembled from
 # this checkout.  Bypass pnpm here so --json remains a single JSON document and
 # cannot silently fall through to an unrelated globally installed `kungfu`.
 if [ "${1:-}" = "kungfu" ]; then

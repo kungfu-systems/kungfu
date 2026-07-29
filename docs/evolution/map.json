@@ -3,12 +3,12 @@
   "generatedFrom": {
     "authority": "append-only canonical Era and Stage records plus non-authoritative Era Candidate revisions under docs/evolution",
     "semanticGraphAuthority": "Xinfa Atlas; this projection never creates current runtime authority",
-    "sourceRoot": "sha256:ff6f0d663fa94d1cd76081f993ad8d354d64d144293452732f6cd9d5711a3fc3"
+    "sourceRoot": "sha256:daf3722ae8d5153c5b2048405e4343f081165e9a076acb8f85427b0b3817556a"
   },
   "summary": {
     "eras": 5,
-    "stages": 8,
-    "evidence": 31,
+    "stages": 9,
+    "evidence": 33,
     "authoritySubjects": 7,
     "eraCandidates": 0,
     "unresolvedEraCandidates": 0
@@ -754,6 +754,78 @@
       "amends": [],
       "supersedes": [],
       "file": "docs/evolution/stages/08-native-work-control-dogfood.md"
+    },
+    {
+      "schema": "kungfu.evolution-stage/v1",
+      "id": "work-control-canonical-name",
+      "era": "work-control-dogfood",
+      "sequence": 9,
+      "title": "Work Control canonical name",
+      "status": "open",
+      "evolutionImpact": "extends",
+      "period": {
+        "start": "2026-07-29",
+        "end": "ongoing"
+      },
+      "buildsOn": [
+        "native-work-control-recursive-dogfood"
+      ],
+      "pressure": "The native authority had cut over to Work Control while current product paths, catalogs, documentation, and generated surfaces still presented the retired name as a peer.",
+      "priorLimitation": "Two discoverable names obscured the single writer, made compatibility look current, and let generated Agent and KFD surfaces retain a second apparent action family.",
+      "localCapability": "Work Control and kungfu.work-control are the sole current product identity; retained v3 bytes, readers, migration, rollback, saved views, and bundles are isolated behind an inventoried compatibility boundary.",
+      "compression": "One canonical name now carries the current Profile, package, CLI, GUI, TUI, Agent, documentation, build, and publication surfaces while exact historical evidence remains readable without becoming writable.",
+      "authorityTransitions": [
+        {
+          "subject": "work-authority",
+          "before": "native Work Control and Assignment family state",
+          "after": "one current Work Control identity with an explicit read-only v3 compatibility boundary",
+          "authorityRefs": [
+            "docs/profiles/work-control.md",
+            "config/work-control-naming-boundary.json"
+          ]
+        }
+      ],
+      "retiredSurfaces": [
+        "retired name as a peer Profile",
+        "retired name in default CLI and Agent discovery",
+        "retired physical implementation paths"
+      ],
+      "unlockedCapabilities": [
+        "deterministic naming reverse scan",
+        "single KFD action-family discovery",
+        "installed-product current-name qualification"
+      ],
+      "downstreamConsumers": [
+        "Work Dashboard",
+        "Kungfu CLI and Agent catalogs",
+        "KFX publication inventory",
+        "Assignment family delivery"
+      ],
+      "evidence": [
+        {
+          "kind": "document",
+          "ref": "docs/profiles/work-control.md",
+          "label": "Current Work Control product contract"
+        },
+        {
+          "kind": "document",
+          "ref": "config/work-control-naming-boundary.json",
+          "label": "Classified naming boundary and removal gate"
+        }
+      ],
+      "readerRoute": {
+        "intent": "Understand the sole current Work Control identity and the bounded retained-data reader",
+        "start": "docs/profiles/work-control.md",
+        "deepen": [
+          "docs/architecture/kfx-topology.md",
+          "docs/profiles/compatibility/README.md"
+        ]
+      },
+      "amends": [
+        "native-work-control-recursive-dogfood"
+      ],
+      "supersedes": [],
+      "file": "docs/evolution/stages/09-work-control-canonical-name.md"
     }
   ],
   "eraCandidates": [],
@@ -814,11 +886,11 @@
     },
     {
       "subject": "work-authority",
-      "authority": "native Work Control and Assignment family state",
-      "sinceStage": "native-work-control-recursive-dogfood",
+      "authority": "one current Work Control identity with an explicit read-only v3 compatibility boundary",
+      "sinceStage": "work-control-canonical-name",
       "authorityRefs": [
-        "docs/profiles/mission-control.md",
-        "docs/adr/KF-ADR-019f9771-4c20-7e2c-8e7c-3f3cb3f1b9bd.md"
+        "docs/profiles/work-control.md",
+        "config/work-control-naming-boundary.json"
       ]
     }
   ]

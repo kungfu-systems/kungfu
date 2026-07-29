@@ -37,7 +37,7 @@ const runtimeAction = read(
   'framework/core/src/libkungfu/src/runtime/action/action_runtime.cpp',
 );
 const missionActions = readJson(
-  'extensions/mission-control/actions/registry.json',
+  'extensions/work-control/actions/registry.json',
 );
 
 const canonicalJson = (value) => {

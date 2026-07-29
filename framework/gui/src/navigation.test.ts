@@ -24,7 +24,7 @@ const state: ShellState = {
 const entries = [
   {
     id: 'work-dashboard',
-    title: 'Mission Control',
+    title: 'Work Control',
     product: { roles: ['profile-view' as const], icon: '🧭', order: 10 },
   },
   {
@@ -82,8 +82,8 @@ const entries = [
 ];
 
 const missionControl: ProfileManifest = {
-  id: 'kungfu.mission-control',
-  title: 'Mission Control',
+  id: 'kungfu.work-control',
+  title: 'Work Control',
   kfx: ['work-dashboard'],
   defaultView: 'work-dashboard',
 };
@@ -96,7 +96,7 @@ test('primary navigation is the four high-frequency product surfaces', () => {
       icon,
     })),
     [
-      { id: 'work-dashboard', title: 'Mission Control', icon: '🧭' },
+      { id: 'work-dashboard', title: 'Work Control', icon: '🧭' },
       { id: 'terminal', title: 'Agent Console', icon: '💬' },
       { id: 'kfx-manager', title: 'Profiles', icon: '🧩' },
       { id: 'skill-manager', title: 'Skills', icon: '🧠' },
@@ -143,7 +143,7 @@ test('missing Profile Home falls back visibly to Profiles', () => {
   assert.equal(profileHomeId(missing, entries), 'kfx-manager');
   assert.deepEqual(primaryNavigation(missing, entries)[0], {
     id: 'kfx-manager',
-    title: 'Mission Control',
+    title: 'Work Control',
     icon: '🧭',
   });
 });

@@ -19,8 +19,16 @@
       "purpose": "Read the stable public release-status contract and explain whether a qualified Kungfu release is actually available.",
       "maturity": "preview",
       "visibility": "public-agent",
-      "anchor": { "kind": "catalog", "symbol": "status_cmd" },
-      "projections": ["commands.json", "capabilities-json", "agent-pack-doc", "provider-skill"]
+      "anchor": {
+        "kind": "catalog",
+        "symbol": "status_cmd"
+      },
+      "projections": [
+        "commands.json",
+        "capabilities-json",
+        "agent-pack-doc",
+        "provider-skill"
+      ]
     },
     {
       "id": "kungfu.release.verify",
@@ -29,8 +37,16 @@
       "purpose": "Fail closed while verifying a release status, five-receipt activation set, or released-evidence index with immediately understandable human and stable JSON output.",
       "maturity": "preview",
       "visibility": "public-agent",
-      "anchor": { "kind": "catalog", "symbol": "verify_cmd" },
-      "projections": ["commands.json", "capabilities-json", "agent-pack-doc", "provider-skill"]
+      "anchor": {
+        "kind": "catalog",
+        "symbol": "verify_cmd"
+      },
+      "projections": [
+        "commands.json",
+        "capabilities-json",
+        "agent-pack-doc",
+        "provider-skill"
+      ]
     },
     {
       "id": "kungfu.release.explain",
@@ -39,8 +55,16 @@
       "purpose": "Explain what unavailable, preparation, and current-release mean and name the legal and first-use conclusions the verifier does not make.",
       "maturity": "preview",
       "visibility": "public-agent",
-      "anchor": { "kind": "catalog", "symbol": "explain_cmd" },
-      "projections": ["commands.json", "capabilities-json", "agent-pack-doc", "provider-skill"]
+      "anchor": {
+        "kind": "catalog",
+        "symbol": "explain_cmd"
+      },
+      "projections": [
+        "commands.json",
+        "capabilities-json",
+        "agent-pack-doc",
+        "provider-skill"
+      ]
     },
     {
       "id": "kungfu.agent",
@@ -1113,57 +1137,6 @@
       ]
     },
     {
-      "id": "kungfu.atlas.authority-status",
-      "surface": "cli-api-gui",
-      "name": "kungfu profile mission-control authority-status --source <source> --json",
-      "purpose": "Show exact Atlas bridge parity and the current single Mission/Go write authority.",
-      "maturity": "experimental",
-      "visibility": "public-agent",
-      "anchor": {
-        "kind": "catalog"
-      },
-      "projections": [
-        "commands.json",
-        "agent-pack-doc",
-        "provider-skill",
-        "work-dashboard-gui"
-      ]
-    },
-    {
-      "id": "kungfu.atlas.authority-cutover",
-      "surface": "cli-api-gui",
-      "name": "kungfu profile mission-control authority-cutover --expected-parity-root <root> --project-cut-root <root> --atlas-root <root> --actor <actor> --reason <reason> --json",
-      "purpose": "Append a parity-bound authority receipt and freeze Atlas Mission/Go mutation read-only.",
-      "maturity": "experimental",
-      "visibility": "public-agent",
-      "anchor": {
-        "kind": "catalog"
-      },
-      "projections": [
-        "commands.json",
-        "agent-pack-doc",
-        "provider-skill",
-        "work-dashboard-gui"
-      ]
-    },
-    {
-      "id": "kungfu.atlas.authority-rollback",
-      "surface": "cli-api-gui",
-      "name": "kungfu profile mission-control authority-rollback --expected-migration-id <id> --actor <actor> --reason <reason> --json",
-      "purpose": "Append an exact rollback receipt, restore Atlas mutation, and retain native facts read-only.",
-      "maturity": "experimental",
-      "visibility": "public-agent",
-      "anchor": {
-        "kind": "catalog"
-      },
-      "projections": [
-        "commands.json",
-        "agent-pack-doc",
-        "provider-skill",
-        "work-dashboard-gui"
-      ]
-    },
-    {
       "id": "kungfu.work.capture",
       "surface": "cli-api-gui",
       "name": "kungfu work capture <request.json>",
@@ -1185,55 +1158,6 @@
       "surface": "cli-api-gui",
       "name": "kungfu work status --workspace <path> --initiative-id <initiative-id> --assignment-id <assignment-id>",
       "purpose": "Read one proof-bound Assignment orchestration state without mutation.",
-      "maturity": "experimental",
-      "visibility": "public-agent",
-      "anchor": {
-        "kind": "catalog"
-      },
-      "projections": [
-        "commands.json",
-        "agent-pack-doc",
-        "provider-skill",
-        "work-dashboard-gui"
-      ]
-    },
-    {
-      "id": "kungfu.atlas.export-mission",
-      "surface": "cli",
-      "name": "kungfu profile mission-control export-mission <mission-id> --out <bundle.json> --mode <full|thin> --json",
-      "purpose": "Export a bounded Mission closure with proof coordinates and full or thin Episode material.",
-      "maturity": "experimental",
-      "visibility": "adjacent-agent",
-      "anchor": {
-        "kind": "catalog"
-      },
-      "projections": [
-        "commands.json",
-        "agent-pack-doc",
-        "provider-skill"
-      ]
-    },
-    {
-      "id": "kungfu.atlas.import-mission",
-      "surface": "cli",
-      "name": "kungfu profile mission-control import-mission --from <bundle.json> [--execute] --json",
-      "purpose": "Verify a portable Mission bundle and explicitly materialize full closures while thin bundles remain degraded references.",
-      "maturity": "experimental",
-      "visibility": "adjacent-agent",
-      "anchor": {
-        "kind": "catalog"
-      },
-      "projections": [
-        "commands.json",
-        "agent-pack-doc",
-        "provider-skill"
-      ]
-    },
-    {
-      "id": "kungfu.atlas.assess-mission",
-      "surface": "cli-api-gui",
-      "name": "kungfu profile mission-control assess-mission <mission-id> --json",
-      "purpose": "Query admitted Mission/Go facts and persist a purpose-bound progress TrustReport.",
       "maturity": "experimental",
       "visibility": "public-agent",
       "anchor": {
@@ -1281,22 +1205,6 @@
       ]
     },
     {
-      "id": "kungfu.atlas.assess-completion",
-      "surface": "cli",
-      "name": "kungfu profile mission-control assess-completion <mission-id> <goal-id> --json",
-      "purpose": "Assess a Go completion claim for a declared purpose and fail closed on missing evidence.",
-      "maturity": "experimental",
-      "visibility": "adjacent-agent",
-      "anchor": {
-        "kind": "catalog"
-      },
-      "projections": [
-        "commands.json",
-        "agent-pack-doc",
-        "provider-skill"
-      ]
-    },
-    {
       "id": "kungfu.work.review",
       "surface": "cli-api-gui",
       "name": "kungfu work review <input.json> --workspace <path> --authorized-by <reviewer>",
@@ -1335,38 +1243,6 @@
       "surface": "cli",
       "name": "kungfu atlas show import --json",
       "purpose": "Show the latest Atlas projection batch metadata and source repo head.",
-      "maturity": "stable",
-      "visibility": "adjacent-agent",
-      "anchor": {
-        "kind": "catalog"
-      },
-      "projections": [
-        "commands.json",
-        "agent-pack-doc",
-        "provider-skill"
-      ]
-    },
-    {
-      "id": "kungfu.atlas.show.missions",
-      "surface": "cli",
-      "name": "kungfu profile mission-control missions --json",
-      "purpose": "List admitted Atlas and Kungfu-native Mission facts from the selected data root.",
-      "maturity": "stable",
-      "visibility": "adjacent-agent",
-      "anchor": {
-        "kind": "catalog"
-      },
-      "projections": [
-        "commands.json",
-        "agent-pack-doc",
-        "provider-skill"
-      ]
-    },
-    {
-      "id": "kungfu.atlas.show.goals",
-      "surface": "cli",
-      "name": "kungfu profile mission-control goals --json",
-      "purpose": "List imported Atlas goal cards from the latest projection.",
       "maturity": "stable",
       "visibility": "adjacent-agent",
       "anchor": {

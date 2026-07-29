@@ -225,7 +225,12 @@ export function qualifyCliSurface({
     }
 
     const surfaces = observedCatalog.surfaces || [];
-    const canonicalPaths = new Set(surfaces.map((row) => row.canonical_path));
+    const discoverable = surfaces.filter(
+      (row) => row.visibility !== 'hidden-internal',
+    );
+    const canonicalPaths = new Set(
+      discoverable.map((row) => row.canonical_path),
+    );
     const aliasCount = surfaces.reduce(
       (sum, row) => sum + (row.aliases || []).length,
       0,
@@ -245,7 +250,7 @@ export function qualifyCliSurface({
       'kungfu env',
       'kungfu dev engage',
       'kungfu dev schema',
-      'kungfu profile mission-control',
+      'kungfu work',
     ]) {
       assert(
         canonicalPaths.has(canonical),
@@ -259,12 +264,27 @@ export function qualifyCliSurface({
       'kungfu schema',
       'kungfu atlas authority-status',
       'kungfu atlas show missions',
+      'kungfu profile mission-control',
     ]) {
       assert(
         !canonicalPaths.has(removed),
         `installed CLI retained removed path ${removed}`,
       );
     }
+    const legacyWorkControlRows = surfaces.filter((row) =>
+      String(row.canonical_path || '').startsWith(
+        'kungfu profile mission-control',
+      ),
+    );
+    assert(
+      legacyWorkControlRows.length > 0 &&
+        legacyWorkControlRows.every(
+          (row) =>
+            row.visibility === 'hidden-internal' &&
+            (row.kfd3_api_ids || []).length === 0,
+        ),
+      'installed v3 compatibility reader is discoverable or owns a KFD identity',
+    );
     run(['sdk', '--help'], 'kungfu sdk --help');
 
     const linkage = observedCatalog.kfd3Linkage || [];

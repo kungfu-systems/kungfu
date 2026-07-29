@@ -366,7 +366,7 @@
       }
     },
     {
-      "id": "kungfu.mission-control-l3",
+      "id": "kungfu.work-control-l3",
       "subject": "Initiative and Assignment L3 Domain Profile incubation runtime",
       "subjectKind": "domain-profile",
       "primitiveDeclarations": [
@@ -444,22 +444,22 @@
               "kind": "binds",
               "target": "action-geometry",
               "layerBoundary": "responsibility-role-to-ontology-binding",
-              "authorityRef": "extensions/mission-control/contracts/world.json"
+              "authorityRef": "extensions/work-control/contracts/world.json"
             }
           ],
-          "authorityRef": "extensions/mission-control/contracts/world.json",
+          "authorityRef": "extensions/work-control/contracts/world.json",
           "artifacts": [],
           "languageEvidence": {
             "cpp": [],
             "python": [
-              "extensions/mission-control/mission-control-actions/domain/mission_control.py"
+              "extensions/work-control/work-control-actions/domain/work_control.py"
             ],
             "node": [],
             "rust": []
           },
           "promotionEvidence": {
             "contract": [
-              "extensions/mission-control/contracts/world.json"
+              "extensions/work-control/contracts/world.json"
             ],
             "vectors": [],
             "invariants": [],
@@ -495,28 +495,28 @@
               "kind": "depends-on",
               "target": "initiative",
               "layerBoundary": "bounded-responsibility-to-intent-responsibility",
-              "authorityRef": "extensions/mission-control/contracts/world.json"
+              "authorityRef": "extensions/work-control/contracts/world.json"
             },
             {
               "kind": "binds",
               "target": "action-geometry",
               "layerBoundary": "responsibility-role-to-ontology-binding",
-              "authorityRef": "extensions/mission-control/contracts/world.json"
+              "authorityRef": "extensions/work-control/contracts/world.json"
             }
           ],
-          "authorityRef": "extensions/mission-control/contracts/world.json",
+          "authorityRef": "extensions/work-control/contracts/world.json",
           "artifacts": [],
           "languageEvidence": {
             "cpp": [],
             "python": [
-              "extensions/mission-control/mission-control-actions/domain/mission_control.py"
+              "extensions/work-control/work-control-actions/domain/work_control.py"
             ],
             "node": [],
             "rust": []
           },
           "promotionEvidence": {
             "contract": [
-              "extensions/mission-control/contracts/world.json"
+              "extensions/work-control/contracts/world.json"
             ],
             "vectors": [],
             "invariants": [],
@@ -605,15 +605,15 @@
           "kind": "depends-on",
           "target": "episode",
           "layerBoundary": "domain-projection-to-causal-substrate",
-          "authorityRef": "extensions/mission-control/contracts/world.json"
+          "authorityRef": "extensions/work-control/contracts/world.json"
         }
       ],
-      "authorityRef": "extensions/mission-control/contracts/world.json",
+      "authorityRef": "extensions/work-control/contracts/world.json",
       "artifacts": [],
       "languageEvidence": {
         "cpp": [],
         "python": [
-          "extensions/mission-control/mission-control-actions/domain/mission_control.py",
+          "extensions/work-control/work-control-actions/domain/work_control.py",
           "framework/core/src/python/kungfu/assignment_orchestration.py"
         ],
         "node": [],
@@ -621,7 +621,7 @@
       },
       "promotionEvidence": {
         "contract": [
-          "extensions/mission-control/contracts/world.json"
+          "extensions/work-control/contracts/world.json"
         ],
         "vectors": [],
         "invariants": [],
@@ -634,7 +634,7 @@
       ],
       "anchor": {
         "type": "runtime",
-        "authorityRef": "extensions/mission-control/mission-control-actions/domain/mission_control.py"
+        "authorityRef": "extensions/work-control/work-control-actions/domain/work_control.py"
       },
       "destinedAuthority": {
         "layer": "L5 native runtime",
@@ -644,8 +644,8 @@
       "incubation": {
         "state": "incubating",
         "implementationPaths": [
-          "extensions/mission-control/mission-control-actions/domain/mission_control.py",
-          "extensions/mission-control/contracts/world.json",
+          "extensions/work-control/work-control-actions/domain/work_control.py",
+          "extensions/work-control/contracts/world.json",
           "framework/action/action-canonical-json-v1.json",
           "framework/core/src/python/kungfu/canonical_json.py",
           "framework/core/src/libkungfu/src/runtime/action/action_canonical_json.cpp"
@@ -657,13 +657,13 @@
       },
       "schemaOwnership": {
         "class": "profile-contract-world",
-        "registryRef": "extensions/mission-control/contracts/world.json",
+        "registryRef": "extensions/work-control/contracts/world.json",
         "identity": "kungfu.initiative-assignment",
         "rationale": "The versioned contract world owns Initiative and Assignment fact surfaces; schema-authority.json remains reserved for Hana and FlatBuffers owners."
       },
       "persistence": {
         "policy": "native-journal-only",
-        "byteAuthority": "libyijinjing journal frames written through the Mission Control adapter",
+        "byteAuthority": "libyijinjing journal frames written through the Work Control adapter",
         "scriptLayerRole": "Python owns Domain Profile rules, validation, folds, and projections, never durable byte identity."
       },
       "identityProtocol": {
@@ -672,7 +672,7 @@
         "implementations": [
           {
             "language": "python",
-            "path": "extensions/mission-control/mission-control-actions/domain/mission_control.py"
+            "path": "extensions/work-control/work-control-actions/domain/work_control.py"
           }
         ],
         "vectors": [

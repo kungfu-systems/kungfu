@@ -43,7 +43,7 @@ test('the only public Work mutation family is kungfu work', () => {
   assert.doesNotMatch(command, /@kfc\.group\(\s*name="assignment"/u);
 
   const missionControl = read(
-    'extensions/mission-control/mission-control-actions/domain/mission_control.py',
+    'extensions/work-control/work-control-actions/domain/mission_control.py',
   );
   assert.doesNotMatch(missionControl, /^def create_mission\(/mu);
   assert.doesNotMatch(missionControl, /^def create_go\(/mu);
