@@ -1,0 +1,163 @@
+{
+  "$schema": "kungfu.deprecation-lifecycle-contract/v1",
+  "schema": "kungfu.deprecation-lifecycle.contract/v1",
+  "registrySchema": "kungfu.deprecation-registry/v1",
+  "projectionSchema": "kungfu.deprecation-audit/v1",
+  "authority": {
+    "registry": "framework/deprecation/deprecation-registry.json",
+    "decision": "docs/adr/KF-ADR-019fad41-07fe-7f1e-a37a-a2572357700c.md",
+    "localContributionPolicy": "Subsystem authorities may contribute governed entries, but lifecycle state, due calculation, Warrant projection, and release settlement are validated only by this contract."
+  },
+  "lifecycle": {
+    "authored": [
+      "active",
+      "deprecated",
+      "removed",
+      "settled"
+    ],
+    "derived": [
+      "removal-due"
+    ],
+    "transitions": {
+      "active": [
+        "deprecated"
+      ],
+      "deprecated": [
+        "active",
+        "removed"
+      ],
+      "removed": [
+        "settled"
+      ],
+      "settled": []
+    }
+  },
+  "dueDispositions": [
+    "not-due",
+    "due",
+    "removed",
+    "extended-by-warrant",
+    "invalid"
+  ],
+  "surfaceClasses": {
+    "internal-experimental": {
+      "defaultMinimumCalendarDays": 0,
+      "defaultMinimumQualifiedReleases": 0,
+      "eligibleBoundary": "any-qualified-release",
+      "gateChannels": [
+        "alpha",
+        "stable"
+      ],
+      "stableCompatibilityPromise": false
+    },
+    "public-alpha-preview": {
+      "defaultMinimumCalendarDays": 30,
+      "defaultMinimumQualifiedReleases": 1,
+      "eligibleBoundary": "pre-stable-or-major",
+      "gateChannels": [
+        "alpha",
+        "stable"
+      ],
+      "stableCompatibilityPromise": false
+    },
+    "stable-cli-sdk-public-api": {
+      "defaultMinimumCalendarDays": 90,
+      "defaultMinimumQualifiedReleases": 1,
+      "eligibleBoundary": "next-major",
+      "gateChannels": [
+        "stable"
+      ],
+      "stableCompatibilityPromise": true
+    },
+    "kfx-contribution": {
+      "defaultMinimumCalendarDays": 90,
+      "defaultMinimumQualifiedReleases": 1,
+      "eligibleBoundary": "next-major",
+      "gateChannels": [
+        "stable"
+      ],
+      "stableCompatibilityPromise": true
+    },
+    "document": {
+      "defaultMinimumCalendarDays": 30,
+      "defaultMinimumQualifiedReleases": 1,
+      "eligibleBoundary": "any-qualified-release",
+      "gateChannels": [
+        "alpha",
+        "stable"
+      ],
+      "stableCompatibilityPromise": false
+    },
+    "artifact": {
+      "defaultMinimumCalendarDays": 90,
+      "defaultMinimumQualifiedReleases": 1,
+      "eligibleBoundary": "next-major",
+      "gateChannels": [
+        "stable"
+      ],
+      "stableCompatibilityPromise": true
+    },
+    "persisted-schema-wire-protocol": {
+      "defaultMinimumCalendarDays": 180,
+      "defaultMinimumQualifiedReleases": 2,
+      "eligibleBoundary": "next-major-and-support-policy",
+      "gateChannels": [
+        "stable"
+      ],
+      "stableCompatibilityPromise": true,
+      "requiresHistoricalReaderOrMigration": true
+    }
+  },
+  "requiredEntryFields": [
+    "id",
+    "lifecycle",
+    "surfaceClass",
+    "owner",
+    "surface",
+    "replacement",
+    "migrationGuidance",
+    "deprecatedAt",
+    "knownConsumers",
+    "windows",
+    "earliestRemovalBoundary",
+    "removalConditions",
+    "retainedEvidence",
+    "zeroReferenceAudit"
+  ],
+  "warrantPolicy": {
+    "authority": "kungfu.warrant",
+    "rootPattern": "^sha256:[0-9a-f]{64}$",
+    "nonRenewingByDefault": true,
+    "maximumCalendarExtensionDays": 90,
+    "requiredProjectionFields": [
+      "authority",
+      "warrantRoot",
+      "entryId",
+      "authorizedBy",
+      "issuedAt",
+      "expiresOn",
+      "expiresAfterRelease",
+      "evidenceRef"
+    ],
+    "forbiddenProjectionFields": [
+      "renewalOf",
+      "implicitRollover"
+    ]
+  },
+  "settlementPolicy": {
+    "currentHeadZeroReferenceRequired": true,
+    "migrationQualificationRequired": true,
+    "releaseNoteRequired": true,
+    "retainedEvidenceRequired": true,
+    "historicalEvidenceIsImmutable": true,
+    "automaticDeletion": false
+  },
+  "releasePolicy": {
+    "versionSyntax": "semver-v1",
+    "candidateCountsTowardReleaseWindow": true,
+    "unknownReleaseHistory": "fail-closed",
+    "unknownSupportPolicy": "fail-closed",
+    "stableSameMinorMayNotBreak": true,
+    "preStableRemovalDoesNotCreateStableCompatibility": true
+  }
+}

@@ -847,6 +847,29 @@
         "invisible_context_boundary": "Exact hidden model checkpoint and runtime parameters are not claimed"
       }
     },
+    "docs/development/deprecation-lifecycle.md": {
+      "metadata_schema": "kungfu.document-metadata/v1",
+      "document_status": "active",
+      "doc_type": "governance-reference",
+      "review_state": "self-reviewed",
+      "sensitivity": "public",
+      "sources": [
+        "architecture-decisions",
+        "local-files",
+        "user-decision"
+      ],
+      "period": "2026-07-29",
+      "theme": "deprecation-lifecycle-governance",
+      "confidence": "high",
+      "evidence_grade": "B",
+      "last_reviewed": "2026-07-29",
+      "ai_provenance": {
+        "model_family": "OpenAI GPT-5",
+        "product": "Codex",
+        "generated_at": "2026-07-29",
+        "invisible_context_boundary": "No private material, hidden model checkpoint, runtime parameters, or unretained release evidence is claimed"
+      }
+    },
     "docs/development/buildchain.md": {
       "metadata_schema": "kungfu.document-metadata/v1",
       "document_status": "active",

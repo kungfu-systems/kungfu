@@ -269,6 +269,12 @@ export function sourceAcceptancePlan(files, evidenceBaseCommit = '') {
     ],
     ['agent session contract', 'scripts/check-agent-session-contract.mjs'],
     ['CLI catalog parity', 'scripts/check-cli-catalog-parity.mjs'],
+    [
+      'deprecation lifecycle authority',
+      'framework/deprecation/deprecation-lifecycle.mjs',
+      '--as-of',
+      '2026-07-29',
+    ],
     ['Project Cut contract', 'scripts/check-project-cut-contract.mjs'],
     [
       'Project Cut settlement contract',

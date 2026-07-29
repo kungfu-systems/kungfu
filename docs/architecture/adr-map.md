@@ -13,18 +13,18 @@ domain, then open a decision or its bounded neighborhood.
 Use browser find to search titles, themes, statuses, or compact keys. The
 full IDs stay behind links so filenames do not dominate the page.
 
-Coverage: **161 ADRs** across **8 domains**; **2 authoritative edges**.
+Coverage: **162 ADRs** across **8 domains**; **2 authoritative edges**.
 
 ## Domain overview
 
 ```mermaid
 flowchart LR
-  root["ADR corpus · 161"]
+  root["ADR corpus · 162"]
   root --> d0["Facts, storage, and replay · 42"]
   root --> d1["Agent and work control · 21"]
   root --> d2["Xinfa and documentation · 15"]
   root --> d3["Extensions, SDKs, and language boundaries · 15"]
-  root --> d4["Runtime, live services, and lifecycle · 19"]
+  root --> d4["Runtime, live services, and lifecycle · 20"]
   root --> d5["Build, distribution, and release · 6"]
   root --> d6["Product and user surfaces · 7"]
   root --> d7["Architecture and governance · 36"]
@@ -174,7 +174,7 @@ review`; evidence is the number of declared qualification references.
 </details>
 
 <details id="runtime">
-<summary><strong>Runtime, live services, and lifecycle</strong> · 19</summary>
+<summary><strong>Runtime, live services, and lifecycle</strong> · 20</summary>
 
 | Key | Decision | Theme | Status | Evidence | Nearby (navigation only) |
 |---|---|---|---|---:|---|
@@ -185,7 +185,7 @@ review`; evidence is the number of declared qualification references.
 | KF · a5fb | [agent coordination on the live runtime — same-host locks, signals, and audited Episodes](../adr/KF-ADR-019f86da-4f90-7332-a4cd-c9c9b549a5fb.md) | agent-coordination-on-live-runtime | accepted / partial / maintainer-reviewed | 0 | [KF · 3d6c](../adr/KF-ADR-019f86da-4f90-7bc8-a3ed-a7b0a6363d6c.md) (shared terms: live, runtime)<br>[KF · 59fa](../adr/KF-ADR-019f86da-4f90-7394-9953-5dbb467859fa.md) (shared terms: live, runtime)<br>[KF · 69ff](../adr/KF-ADR-019f86da-4f90-738c-b372-e509976f69ff.md) (shared terms: runtime)<br>[KF · eb1c](../adr/KF-ADR-019f86da-4f90-7a1f-a527-7bb8db2ceb1c.md) (shared terms: coordination) |
 | KF · 69ff | [a first-class content-addressed store is a runtime fact-ledger primitive, with mutable KV and fleet topology kept as separate capabilities](../adr/KF-ADR-019f86da-4f90-738c-b372-e509976f69ff.md) | runtime-content-addressed-store | accepted / implemented / self-reviewed | 4 | [KF · 3d6c](../adr/KF-ADR-019f86da-4f90-7bc8-a3ed-a7b0a6363d6c.md) (shared terms: runtime, topology)<br>[KF · a5fb](../adr/KF-ADR-019f86da-4f90-7332-a4cd-c9c9b549a5fb.md) (shared terms: runtime)<br>[KF · 231b](../adr/KF-ADR-019f86da-4f90-786d-9fd5-468c3f3d231b.md) (shared terms: topology)<br>[KF · 8ad0](../adr/KF-ADR-019f86da-4f90-710c-a3b6-5e0cb5a28ad0.md) (shared terms: primitive) |
 | KF · 59fa | [live runtime internals use reactor, peer, and coordinator](../adr/KF-ADR-019f86da-4f90-7394-9953-5dbb467859fa.md) | domain-neutral-live-runtime-terminology | accepted / staged / maintainer-reviewed | 0 | [KF · 63a8](../adr/KF-ADR-019f86da-4f90-78ca-b356-4d5d425263a8.md) (shared terms: coordinator, live, peer)<br>[KF · 3d6c](../adr/KF-ADR-019f86da-4f90-7bc8-a3ed-a7b0a6363d6c.md) (shared terms: live, neutral, runtime)<br>[KF · 00e0](../adr/KF-ADR-019f86da-4f90-72ff-a471-26c952d200e0.md) (shared terms: domain, neutral, peer)<br>[KF · a5fb](../adr/KF-ADR-019f86da-4f90-7332-a4cd-c9c9b549a5fb.md) (shared terms: live, runtime) |
-| KF · 86d0 | [Canonical ADR authority and lifecycle audit](../adr/KF-ADR-019f86da-4f90-74fb-9f80-970c3db586d0.md) | canonical-adr-authority-and-lifecycle-audit | accepted / implemented / maintainer-reviewed | 3 | [KF · e61c](../adr/KF-ADR-019f8c53-6105-71e5-8f34-53f2a81ee61c.md) (shared terms: lifecycle)<br>[KF · 63a8](../adr/KF-ADR-019f86da-4f90-78ca-b356-4d5d425263a8.md) (shared terms: authority) |
+| KF · 86d0 | [Canonical ADR authority and lifecycle audit](../adr/KF-ADR-019f86da-4f90-74fb-9f80-970c3db586d0.md) | canonical-adr-authority-and-lifecycle-audit | accepted / implemented / maintainer-reviewed | 3 | [KF · e61c](../adr/KF-ADR-019f8c53-6105-71e5-8f34-53f2a81ee61c.md) (shared terms: lifecycle)<br>[KF · 700c](../adr/KF-ADR-019fad41-07fe-7f1e-a37a-a2572357700c.md) (shared terms: lifecycle)<br>[KF · 63a8](../adr/KF-ADR-019f86da-4f90-78ca-b356-4d5d425263a8.md) (shared terms: authority) |
 | KF · 15cf | [runtime exposes a greenfield core surface, not trading typed helpers](../adr/KF-ADR-019f86da-4f90-76b5-847e-1b56562d15cf.md) | — | accepted / partial / legacy-unreviewed | 0 | [KF · 08a7](../adr/KF-ADR-019f86da-4f90-7718-8d1f-6402a87408a7.md) (shared terms: core, runtime)<br>[KF · 69ff](../adr/KF-ADR-019f86da-4f90-738c-b372-e509976f69ff.md) (shared terms: runtime)<br>[KF · a5fb](../adr/KF-ADR-019f86da-4f90-7332-a4cd-c9c9b549a5fb.md) (shared terms: runtime)<br>[KF · e61c](../adr/KF-ADR-019f8c53-6105-71e5-8f34-53f2a81ee61c.md) (shared terms: core) |
 | KF · 08a7 | [product upgrades install immutable runtimes before Core activates them](../adr/KF-ADR-019f86da-4f90-7718-8d1f-6402a87408a7.md) | versioned-product-runtime-upgrade-control-plane | accepted / staged / self-reviewed | 17 | [KF · 7005](../adr/KF-ADR-019f9ec5-fa5d-76a3-9adb-71611ee67005.md) (shared terms: immutable, product, versioned)<br>[KF · 5950](../adr/KF-ADR-019f86da-4f90-7171-9dde-411f02f55950.md) (shared terms: product, runtime)<br>[KF · 15cf](../adr/KF-ADR-019f86da-4f90-76b5-847e-1b56562d15cf.md) (shared terms: core, runtime)<br>[KF · 69ff](../adr/KF-ADR-019f86da-4f90-738c-b372-e509976f69ff.md) (shared terms: runtime) |
 | KF · 231b | [Event routes carry declared phase and state access](../adr/KF-ADR-019f86da-4f90-786d-9fd5-468c3f3d231b.md) | declared-event-route-topology | accepted / implemented / self-reviewed | 2 | [KF · 69ff](../adr/KF-ADR-019f86da-4f90-738c-b372-e509976f69ff.md) (shared terms: topology)<br>[KF · 3d6c](../adr/KF-ADR-019f86da-4f90-7bc8-a3ed-a7b0a6363d6c.md) (shared terms: topology) |
@@ -195,8 +195,9 @@ review`; evidence is the number of declared qualification references.
 | KF · a63f | [carrier type is transport metadata and business semantics live in action envelopes](../adr/KF-ADR-019f86da-4f90-7c76-bf49-3e804d3ba63f.md) | — | accepted / partial / legacy-unreviewed | 0 | [KF · eb1c](../adr/KF-ADR-019f86da-4f90-7a1f-a527-7bb8db2ceb1c.md) (shared terms: action)<br>[KF · a5fb](../adr/KF-ADR-019f86da-4f90-7332-a4cd-c9c9b549a5fb.md) (shared terms: live)<br>[KF · 8ad0](../adr/KF-ADR-019f86da-4f90-710c-a3b6-5e0cb5a28ad0.md) (shared terms: action)<br>[KF · 63a8](../adr/KF-ADR-019f86da-4f90-78ca-b356-4d5d425263a8.md) (shared terms: live) |
 | KF · cab6 | [Unified recovery is a fenced orchestrator over existing authorities](../adr/KF-ADR-019f86da-4f90-7d58-b5b3-b6d5041dcab6.md) | fenced-unified-recovery-entry | accepted / partial / self-reviewed | 5 | [KF · 8ad0](../adr/KF-ADR-019f86da-4f90-710c-a3b6-5e0cb5a28ad0.md) (shared terms: entry)<br>[KF · 63a8](../adr/KF-ADR-019f86da-4f90-78ca-b356-4d5d425263a8.md) (shared terms: fenced) |
 | KF · c416 | [Stdlib pruning policy for the assembled runtime](../adr/KF-ADR-019f86da-4f90-7ecd-9660-81f9f74dc416.md) | — | accepted / partial / legacy-unreviewed | 0 | [KF · 69ff](../adr/KF-ADR-019f86da-4f90-738c-b372-e509976f69ff.md) (shared terms: runtime)<br>[KF · a5fb](../adr/KF-ADR-019f86da-4f90-7332-a4cd-c9c9b549a5fb.md) (shared terms: runtime)<br>[KF · 5950](../adr/KF-ADR-019f86da-4f90-7171-9dde-411f02f55950.md) (shared terms: runtime)<br>[KF · 3d6c](../adr/KF-ADR-019f86da-4f90-7bc8-a3ed-a7b0a6363d6c.md) (shared terms: runtime) |
-| KF · e61c | [Core Cut is domain-neutral and Work lifecycle shares one native waist](../adr/KF-ADR-019f8c53-6105-71e5-8f34-53f2a81ee61c.md) | core-cut-and-work-lifecycle-waist | accepted / implemented / self-reviewed | 21 | [KF · 59fa](../adr/KF-ADR-019f86da-4f90-7394-9953-5dbb467859fa.md) (shared terms: domain, neutral)<br>[KF · 00e0](../adr/KF-ADR-019f86da-4f90-72ff-a471-26c952d200e0.md) (shared terms: domain, neutral)<br>[KF · 86d0](../adr/KF-ADR-019f86da-4f90-74fb-9f80-970c3db586d0.md) (shared terms: lifecycle)<br>[KF · 3d6c](../adr/KF-ADR-019f86da-4f90-7bc8-a3ed-a7b0a6363d6c.md) (shared terms: neutral) |
+| KF · e61c | [Core Cut is domain-neutral and Work lifecycle shares one native waist](../adr/KF-ADR-019f8c53-6105-71e5-8f34-53f2a81ee61c.md) | core-cut-and-work-lifecycle-waist | accepted / implemented / self-reviewed | 21 | [KF · 700c](../adr/KF-ADR-019fad41-07fe-7f1e-a37a-a2572357700c.md) (shared terms: lifecycle, one)<br>[KF · 59fa](../adr/KF-ADR-019f86da-4f90-7394-9953-5dbb467859fa.md) (shared terms: domain, neutral)<br>[KF · 00e0](../adr/KF-ADR-019f86da-4f90-72ff-a471-26c952d200e0.md) (shared terms: domain, neutral)<br>[KF · 86d0](../adr/KF-ADR-019f86da-4f90-74fb-9f80-970c3db586d0.md) (shared terms: lifecycle) |
 | KF · 7005 | [Product caches live outside immutable artifacts under one versioned cache home](../adr/KF-ADR-019f9ec5-fa5d-76a3-9adb-71611ee67005.md) | — | accepted / implemented / self-reviewed | 4 | [KF · 08a7](../adr/KF-ADR-019f86da-4f90-7718-8d1f-6402a87408a7.md) (shared terms: immutable, product, versioned)<br>[KF · a5fb](../adr/KF-ADR-019f86da-4f90-7332-a4cd-c9c9b549a5fb.md) (shared terms: live)<br>[KF · a63f](../adr/KF-ADR-019f86da-4f90-7c76-bf49-3e804d3ba63f.md) (shared terms: live)<br>[KF · e61c](../adr/KF-ADR-019f8c53-6105-71e5-8f34-53f2a81ee61c.md) (shared terms: one) |
+| KF · 700c | [Govern every deprecation through one release lifecycle](../adr/KF-ADR-019fad41-07fe-7f1e-a37a-a2572357700c.md) | deprecation-lifecycle-governance | accepted / implemented / self-reviewed | 3 | [KF · e61c](../adr/KF-ADR-019f8c53-6105-71e5-8f34-53f2a81ee61c.md) (shared terms: lifecycle, one)<br>[KF · 86d0](../adr/KF-ADR-019f86da-4f90-74fb-9f80-970c3db586d0.md) (shared terms: lifecycle)<br>[KF · 7005](../adr/KF-ADR-019f9ec5-fa5d-76a3-9adb-71611ee67005.md) (shared terms: one) |
 
 </details>
 
