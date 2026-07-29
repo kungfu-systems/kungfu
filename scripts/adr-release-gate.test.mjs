@@ -8,6 +8,12 @@ import path from 'node:path';
 import { afterEach, test } from 'node:test';
 
 import {
+  auditDeprecations,
+  compareSemver,
+  evaluateZeroReferenceAudit,
+  parseSemver,
+} from '../framework/deprecation/deprecation-lifecycle.mjs';
+import {
   changedFilesBetween,
   evaluateReleaseGate,
   loadAdrs,
@@ -16,6 +22,15 @@ import {
 } from './adr-release-gate.mjs';
 
 const REPO_ROOT = path.resolve(import.meta.dirname, '..');
+const DEPRECATION_CONTRACT = JSON.parse(
+  fs.readFileSync(
+    path.join(
+      REPO_ROOT,
+      'framework/deprecation/deprecation-lifecycle.contract.json',
+    ),
+    'utf8',
+  ),
+);
 
 const roots = [];
 
@@ -343,6 +358,62 @@ test('alpha allows an explicit no-ADR-progress settlement', () => {
   assert.equal(result.ok, true);
 });
 
+test('the release gate binds the common read-only deprecation audit', () => {
+  const repositoryContract = JSON.parse(
+    fs.readFileSync(path.join(REPO_ROOT, 'docs/adr-release.contract.json')),
+  );
+  const result = evaluateReleaseGate({
+    root: REPO_ROOT,
+    contract: repositoryContract,
+    mode: 'dev',
+    manifest: {
+      schema: repositoryContract.manifestSchema,
+      kind: 'adr-neutral',
+      reason: 'Read-only governance audit probe',
+    },
+    headRef: 'fix/deprecation-audit-probe',
+    authorityFindings: [],
+    adrs: new Map(),
+  });
+  assert.equal(result.ok, true);
+  assert.equal(result.deprecations.schema, 'kungfu.deprecation-audit/v1');
+  assert.equal(result.deprecations.readOnly, true);
+});
+
+test('an overdue deprecation blocks the protected alpha settlement path', () => {
+  const repositoryContract = JSON.parse(
+    fs.readFileSync(path.join(REPO_ROOT, 'docs/adr-release.contract.json')),
+  );
+  const result = evaluateReleaseGate({
+    root: REPO_ROOT,
+    contract: repositoryContract,
+    mode: 'alpha',
+    manifest: {
+      schema: repositoryContract.manifestSchema,
+      kind: 'alpha-settlement',
+      no_adr_progress_reason: 'Promotion contains no ADR record change',
+    },
+    authorityFindings: [],
+    adrs: new Map(),
+    deprecationReport: {
+      schema: 'kungfu.deprecation-audit/v1',
+      ok: false,
+      readOnly: true,
+      findings: [
+        {
+          code: 'deprecation-overdue',
+          entry: 'fixture.expired',
+          message: 'qualified removal or exact Warrant required',
+        },
+      ],
+    },
+  });
+  assert.equal(result.ok, false);
+  assert.ok(
+    result.findings.some((finding) => finding.code === 'deprecation-overdue'),
+  );
+});
+
 test('alpha rejects changed accepted ADRs omitted from settlement', () => {
   const root = fixture([
     {
@@ -482,4 +553,381 @@ test('implemented ADR without qualification evidence still blocks stable', () =>
     { prUrl: 'https://github.com/kungfu-systems/kungfu/pull/99' },
   );
   assert.deepEqual(result.blocked[0].conditions, ['qualification:missing']);
+});
+
+function writeDeprecationFixture(root, rel, content = 'fixture\n') {
+  const target = path.join(root, rel);
+  fs.mkdirSync(path.dirname(target), { recursive: true });
+  fs.writeFileSync(target, content);
+}
+
+function deprecationEntry(overrides = {}) {
+  return {
+    id: 'fixture.alpha-surface',
+    lifecycle: 'deprecated',
+    surfaceClass: 'public-alpha-preview',
+    owner: 'fixture/owner',
+    surface: {
+      kind: 'source-api',
+      path: 'src/surface.txt',
+      symbols: ['old_surface'],
+    },
+    replacement: 'new_surface',
+    migrationGuidance: 'docs/migration.md',
+    deprecatedAt: {
+      date: '2026-07-01',
+      productVersion: '4.0.0-alpha.1',
+      decision: 'docs/decision.md',
+    },
+    knownConsumers: [
+      {
+        id: 'fixture-consumer',
+        status: 'known',
+        evidence: 'tests/consumer.txt',
+      },
+    ],
+    windows: {
+      minimumCalendarDays: 30,
+      minimumQualifiedReleases: 1,
+    },
+    earliestRemovalBoundary: 'pre-stable-or-major',
+    removalConditions: [
+      'current-head-zero-reference',
+      'migration-qualified',
+      'release-note-published',
+      'retained-evidence-preserved',
+    ],
+    retainedEvidence: ['docs/decision.md'],
+    zeroReferenceAudit: {
+      checks: [
+        {
+          kind: 'text-absent',
+          roots: ['src'],
+          patterns: ['old_surface'],
+        },
+      ],
+    },
+    removalEvidence: null,
+    extensionWarrant: null,
+    ...overrides,
+  };
+}
+
+function deprecationFixture(selected, releaseHistory = []) {
+  const root = fs.mkdtempSync(
+    path.join(os.tmpdir(), 'kungfu-deprecation-lifecycle-'),
+  );
+  roots.push(root);
+  for (const rel of [
+    'docs/migration.md',
+    'docs/decision.md',
+    'docs/warrant.json',
+    'docs/release-note.md',
+    'docs/restoration.md',
+    'tests/consumer.txt',
+    'tests/migration.test.mjs',
+    'tests/restoration.test.mjs',
+  ]) {
+    writeDeprecationFixture(root, rel);
+  }
+  writeDeprecationFixture(root, 'src/surface.txt', 'new_surface\n');
+  return {
+    root,
+    registry: {
+      schema: 'kungfu.deprecation-registry/v1',
+      contract: 'framework/deprecation/deprecation-lifecycle.contract.json',
+      productVersion: '4.0.0-alpha.1',
+      releaseHistory,
+      entries: [selected],
+    },
+  };
+}
+
+function auditDeprecationFixture(selected, options = {}) {
+  const { root, registry } = deprecationFixture(
+    selected,
+    options.releaseHistory || [],
+  );
+  return auditDeprecations({
+    root,
+    contract: DEPRECATION_CONTRACT,
+    registry,
+    release: options.release,
+    releaseDate: options.releaseDate || '2026-07-29',
+    channel: options.channel || 'audit',
+    strictDue: options.strictDue,
+  });
+}
+
+test('checked-in deprecation authority distinguishes live debt from settled history', () => {
+  const report = auditDeprecations({
+    root: REPO_ROOT,
+    releaseDate: '2026-07-29',
+  });
+  assert.equal(report.ok, true);
+  assert.equal(report.readOnly, true);
+  assert.equal(report.summary.entries, 2);
+  assert.equal(report.summary.dispositions['not-due'], 1);
+  assert.equal(report.summary.dispositions.removed, 1);
+});
+
+test('deprecation versions preserve prerelease ordering and stable boundaries', () => {
+  assert.ok(parseSemver('4.0.0-alpha.1'));
+  assert.equal(parseSemver('4.0'), null);
+  assert.equal(compareSemver('4.0.0-alpha.1', '4.0.0-alpha.2'), -1);
+  assert.equal(compareSemver('4.0.0-alpha.2', '4.0.0'), -1);
+  assert.equal(compareSemver('5.0.0', '4.99.99'), 1);
+});
+
+test('calendar and release windows jointly select the first eligible prerelease', () => {
+  const before = auditDeprecationFixture(deprecationEntry(), {
+    release: '4.0.0-alpha.2',
+    releaseDate: '2026-07-15',
+    channel: 'alpha',
+    strictDue: true,
+  });
+  assert.equal(before.ok, true);
+  assert.equal(before.entries[0].disposition, 'not-due');
+
+  const due = auditDeprecationFixture(deprecationEntry(), {
+    release: '4.0.0-alpha.2',
+    releaseDate: '2026-07-31',
+    channel: 'alpha',
+    strictDue: true,
+  });
+  assert.equal(due.ok, false);
+  assert.equal(due.entries[0].disposition, 'due');
+  assert.equal(due.entries[0].eligibleRelease.version, '4.0.0-alpha.2');
+});
+
+test('stable API removal remains blocked until a new major', () => {
+  const stable = deprecationEntry({
+    id: 'fixture.stable-api',
+    surfaceClass: 'stable-cli-sdk-public-api',
+    deprecatedAt: {
+      date: '2026-01-01',
+      productVersion: '4.1.0',
+      decision: 'docs/decision.md',
+    },
+    windows: { minimumCalendarDays: 90, minimumQualifiedReleases: 1 },
+    earliestRemovalBoundary: 'next-major',
+  });
+  const sameMajor = auditDeprecationFixture(stable, {
+    release: '4.9.0',
+    releaseDate: '2026-07-31',
+    channel: 'stable',
+    strictDue: true,
+  });
+  assert.equal(sameMajor.ok, true);
+  assert.equal(sameMajor.entries[0].disposition, 'not-due');
+
+  const nextMajor = auditDeprecationFixture(stable, {
+    release: '5.0.0',
+    releaseDate: '2026-07-31',
+    channel: 'stable',
+    strictDue: true,
+  });
+  assert.equal(nextMajor.ok, false);
+  assert.equal(nextMajor.entries[0].disposition, 'due');
+});
+
+test('protocol removal fails closed without qualified historical support', () => {
+  const report = auditDeprecationFixture(
+    deprecationEntry({
+      id: 'fixture.protocol',
+      surfaceClass: 'persisted-schema-wire-protocol',
+      deprecatedAt: {
+        date: '2025-01-01',
+        productVersion: '4.0.0',
+        decision: 'docs/decision.md',
+      },
+      windows: { minimumCalendarDays: 180, minimumQualifiedReleases: 2 },
+      earliestRemovalBoundary: 'next-major-and-support-policy',
+    }),
+    {
+      release: '5.0.0',
+      releaseDate: '2026-07-31',
+      channel: 'stable',
+      strictDue: true,
+    },
+  );
+  assert.equal(report.ok, false);
+  assert.equal(report.entries[0].disposition, 'invalid');
+  assert.ok(
+    report.findings.some((finding) =>
+      String(finding.message).includes('qualified historical reader'),
+    ),
+  );
+});
+
+test('one exact bounded Warrant covers only its declared release and date', () => {
+  const warrant = {
+    authority: 'kungfu.warrant',
+    warrantRoot: `sha256:${'a'.repeat(64)}`,
+    entryId: 'fixture.alpha-surface',
+    authorizedBy: 'release-admin',
+    issuedAt: '2026-07-31',
+    expiresOn: '2026-08-31',
+    expiresAfterRelease: '4.0.0-alpha.2',
+    evidenceRef: 'docs/warrant.json',
+  };
+  const covered = auditDeprecationFixture(
+    deprecationEntry({ extensionWarrant: warrant }),
+    {
+      release: '4.0.0-alpha.2',
+      releaseDate: '2026-08-01',
+      channel: 'alpha',
+      strictDue: true,
+    },
+  );
+  assert.equal(covered.ok, true);
+  assert.equal(covered.entries[0].disposition, 'extended-by-warrant');
+
+  const stale = auditDeprecationFixture(
+    deprecationEntry({ extensionWarrant: warrant }),
+    {
+      release: '4.0.0-alpha.3',
+      releaseDate: '2026-09-01',
+      channel: 'alpha',
+      strictDue: true,
+    },
+  );
+  assert.equal(stale.ok, false);
+  assert.equal(stale.entries[0].disposition, 'due');
+  assert.equal(stale.entries[0].blocker, 'extension-warrant-expired-or-stale');
+});
+
+test('renewing or unbounded Warrant projections fail closed', () => {
+  const report = auditDeprecationFixture(
+    deprecationEntry({
+      extensionWarrant: {
+        authority: 'kungfu.warrant',
+        warrantRoot: `sha256:${'b'.repeat(64)}`,
+        entryId: 'fixture.alpha-surface',
+        authorizedBy: 'release-admin',
+        issuedAt: '2026-07-31',
+        expiresOn: '2027-07-31',
+        expiresAfterRelease: '4.0.0-alpha.9',
+        evidenceRef: 'docs/warrant.json',
+        renewalOf: `sha256:${'c'.repeat(64)}`,
+      },
+    }),
+  );
+  assert.equal(report.ok, false);
+  assert.equal(report.entries[0].disposition, 'invalid');
+  assert.ok(
+    report.findings.some((finding) =>
+      String(finding.message).includes('forbids renewalOf'),
+    ),
+  );
+  assert.ok(
+    report.findings.some((finding) =>
+      String(finding.message).includes('maximum calendar bound'),
+    ),
+  );
+});
+
+test('settlement requires zero current references and retained evidence', () => {
+  const selected = deprecationEntry({
+    lifecycle: 'settled',
+    removalEvidence: {
+      removedAt: {
+        date: '2026-07-31',
+        productVersion: '4.0.0-alpha.2',
+      },
+      gitCommit: '1'.repeat(40),
+      migrationQualification: ['tests/migration.test.mjs'],
+      releaseNote: 'docs/release-note.md',
+      retainedEvidence: ['docs/missing-retained.md'],
+    },
+  });
+  const { root, registry } = deprecationFixture(selected);
+  writeDeprecationFixture(root, 'src/surface.txt', 'old_surface\n');
+  const report = auditDeprecations({
+    root,
+    contract: DEPRECATION_CONTRACT,
+    registry,
+    releaseDate: '2026-07-31',
+  });
+  assert.equal(report.ok, false);
+  assert.equal(report.entries[0].disposition, 'invalid');
+  assert.ok(
+    report.findings.some((finding) =>
+      String(finding.message).includes('current-head reference'),
+    ),
+  );
+  assert.ok(
+    report.findings.some((finding) =>
+      String(finding.message).includes('settlement retained evidence'),
+    ),
+  );
+});
+
+test('zero-reference JSON audits reject a catalog with aliases', () => {
+  const root = fs.mkdtempSync(
+    path.join(os.tmpdir(), 'kungfu-deprecation-zero-ref-'),
+  );
+  roots.push(root);
+  writeDeprecationFixture(
+    root,
+    'registry.json',
+    '{"aliases":[{"path":"kungfu old"}]}\n',
+  );
+  const result = evaluateZeroReferenceAudit(root, {
+    checks: [
+      {
+        kind: 'json-array-empty',
+        path: 'registry.json',
+        pointer: '/aliases',
+      },
+    ],
+  });
+  assert.equal(result.ok, false);
+  assert.match(result.findings[0], /must be an empty array/u);
+});
+
+test('restored support needs explicit decision and qualification evidence', () => {
+  const missing = auditDeprecationFixture(
+    deprecationEntry({ lifecycle: 'active' }),
+  );
+  assert.equal(missing.ok, false);
+  assert.equal(missing.entries[0].disposition, 'invalid');
+
+  const restored = auditDeprecationFixture(
+    deprecationEntry({
+      lifecycle: 'active',
+      restorationEvidence: {
+        restoredAt: {
+          date: '2026-07-29',
+          productVersion: '4.0.0-alpha.2',
+        },
+        decision: 'docs/restoration.md',
+        qualification: ['tests/restoration.test.mjs'],
+      },
+    }),
+  );
+  assert.equal(restored.ok, true);
+  assert.equal(restored.entries[0].disposition, 'not-due');
+});
+
+test('ambiguous deprecation history and candidate versions are invalid', () => {
+  const report = auditDeprecationFixture(deprecationEntry(), {
+    release: 'next-alpha',
+    releaseDate: '2026-07-31',
+    channel: 'alpha',
+    strictDue: true,
+    releaseHistory: [
+      {
+        version: 'also-not-semver',
+        date: 'unknown',
+        channel: 'preview',
+        qualified: 'yes',
+      },
+    ],
+  });
+  assert.equal(report.ok, false);
+  assert.equal(report.entries[0].disposition, 'invalid');
+  assert.ok(
+    report.findings.some((finding) => finding.code === 'deprecation-release'),
+  );
 });

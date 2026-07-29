@@ -5,7 +5,7 @@
   "manifestPath": "framework/maintainability/semantic-amplification.manifest.json",
   "manifestRoot": "sha256:b947a743b8b8b286f60f4e0e0a30040c6da2d5faed36e6bdd0adf3efb336aca5",
   "baselineRef": "dbfed9ca1785d147b26f4f06e7e6895ac7368fee",
-  "sourceRoot": "sha256:807d35ba6a372a39b54b1f267ebde01f661804ce1c236f4bae4eb28cceb9200f",
+  "sourceRoot": "sha256:f95b44ef20e3a35d7dcc384bcef368875cd9a5fa81e2f03925dcd1050bc2038a",
   "roles": {
     "authority": "exactly one authority route per family; the route may name multiple co-owned source files",
     "allowedProjectionRoles": [
@@ -1093,9 +1093,9 @@
         },
         {
           "path": "scripts/release-promotion-rehearsal.mjs",
-          "currentLines": 767,
+          "currentLines": 771,
           "baselineLines": 713,
-          "currentRoot": "sha256:5ee7c89de69849ea64f9bb3fd852c861d0062de7516c08283fb7acb506003f8c",
+          "currentRoot": "sha256:02875445c3ba0d317c9ee7058e8301b93b59abbfc2b00f808be3df68e00ab1ac",
           "baselineRoot": "sha256:12df72a7b881c2c3c83d5a19f1ab8d4189156a4d09ef759fe1e36328f5b4ed1d",
           "changedSinceBaseline": true
         },
@@ -1127,7 +1127,7 @@
           "path": "docs/qualification/gates/release-and-promotion.md",
           "currentLines": 141,
           "baselineLines": 141,
-          "currentRoot": "sha256:5624acfe1039d90bdbfc315fa35dd97c342dff42229e35a9997973d9e3a4ad66",
+          "currentRoot": "sha256:abf1634d23f0232b52d00c0c75dff9b0e122fff47b7b01dcebc8c06109682936",
           "baselineRoot": "sha256:5eb20fe886635e0464313023daa1a2b62529ad1d6977202dce9c91c6b8aacf9e",
           "changedSinceBaseline": true
         },

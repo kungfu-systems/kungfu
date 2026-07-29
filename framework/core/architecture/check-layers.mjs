@@ -650,22 +650,41 @@ function validate(root, contract) {
       problems.push(`missing binding parity surface: ${binding}`);
     }
 
-    for (const deprecation of publicContracts.deprecations || []) {
-      for (const field of [
-        'id',
-        'surface',
-        'replacement',
-        'introduced',
-        'minimum_window',
-        'removal_condition',
-      ]) {
-        if (!deprecation[field])
-          problems.push(`deprecation entry lacks ${field}`);
+    const deprecationAuthority = publicContracts.deprecation_authority;
+    for (const field of ['contract', 'registry']) {
+      const relative = deprecationAuthority?.[field];
+      if (!relative || !fs.existsSync(path.join(root, relative))) {
+        problems.push(
+          `common deprecation ${field} is missing: ${relative || '<missing>'}`,
+        );
       }
-      if (!fs.existsSync(path.join(root, deprecation.surface || '')))
-        problems.push(`${deprecation.id}: missing deprecated surface`);
-      if (!(deprecation.known_consumers || []).length)
-        problems.push(`${deprecation.id}: known consumers required`);
+    }
+    if (
+      deprecationAuthority?.registry &&
+      fs.existsSync(path.join(root, deprecationAuthority.registry))
+    ) {
+      const registry = JSON.parse(
+        fs.readFileSync(path.join(root, deprecationAuthority.registry), 'utf8'),
+      );
+      const byId = new Map(
+        (registry.entries || []).map((entry) => [entry.id, entry]),
+      );
+      for (const id of deprecationAuthority.contributions || []) {
+        const entry = byId.get(id);
+        if (!entry) {
+          problems.push(`missing common deprecation contribution: ${id}`);
+        } else if (
+          entry.contributedFrom?.authority !==
+          'framework/core/architecture/layers.json'
+        ) {
+          problems.push(
+            `${id}: common deprecation contribution lost Core authority provenance`,
+          );
+        }
+      }
+      if (!(deprecationAuthority.contributions || []).length) {
+        problems.push('Core deprecation contributions must not be empty');
+      }
     }
   }
 
@@ -822,16 +841,18 @@ function renderMap(contract, ownership) {
     }
     lines.push(
       '',
-      '### Deprecation ledger',
+      '### Deprecation authority',
       '',
-      '| Surface | Replacement | Minimum window | Removal condition |',
-      '| --- | --- | --- | --- |',
+      'Core contributes governed surfaces to the repository-wide lifecycle',
+      'authority; this architecture contract does not own a second ledger.',
+      '',
+      '| Contract | Registry | Contributed entries |',
+      '| --- | --- | --- |',
     );
-    for (const item of contract.public_contracts.deprecations || []) {
-      lines.push(
-        `| \`${item.id}\` | ${item.replacement} | ${item.minimum_window} | ${item.removal_condition} |`,
-      );
-    }
+    const authority = contract.public_contracts.deprecation_authority;
+    lines.push(
+      `| \`${authority.contract}\` | \`${authority.registry}\` | ${(authority.contributions || []).map((item) => `\`${item}\``).join('<br>')} |`,
+    );
   }
   lines.push(
     '',
@@ -1337,12 +1358,12 @@ function selfTest() {
     ),
   );
   const incompleteDeprecation = structuredClone(production);
-  incompleteDeprecation.public_contracts.deprecations[0].minimum_window =
-    undefined;
+  incompleteDeprecation.public_contracts.deprecation_authority.registry =
+    '../deprecation/missing-registry.json';
   expect(
-    'incomplete deprecation ledger fails',
+    'missing common deprecation authority fails',
     validate(coreRoot, incompleteDeprecation).problems.some((item) =>
-      item.includes('deprecation entry lacks minimum_window'),
+      item.includes('common deprecation registry is missing'),
     ),
   );
   console.log(
