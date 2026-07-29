@@ -172,6 +172,63 @@ export type AgentWorkLabAgentPlan = {
   writeOccurred: false;
 };
 
+export type ProjectTemplatePlan = {
+  schema: 'kungfu.project-template.plan/v1';
+  templateId: string;
+  templateVersion: string;
+  templateRoot: string;
+  templateSource: string;
+  destination: string;
+  files: Array<{ path: string; contentRoot: string }>;
+  initialWork: {
+    state: 'capture-pending';
+    initiativeId: string;
+    assignmentId: string;
+    title: string;
+    acceptanceChecks: string[];
+  };
+  effects: string[];
+  skippedEffects: string[];
+  confirmationRequired: true;
+  writeOccurred: false;
+  planRoot: string;
+};
+
+export type ProjectTemplateCreationReceipt = {
+  schema: 'kungfu.project-template.creation-receipt/v1';
+  status: 'created';
+  templateId: string;
+  templateRoot: string;
+  planRoot: string;
+  destination: string;
+  actor: string;
+  files: Array<{ path: string; contentRoot: string }>;
+  verification: {
+    ok: boolean;
+    checks: Array<{
+      path: string;
+      expectedRoot: string;
+      observedRoot: string | null;
+      passed: boolean;
+    }>;
+  };
+  initialWork: {
+    state: 'captured-pending-admission';
+    initiativeId: string;
+    assignmentId: string;
+    requestRoot: string;
+    receiptRoot: string;
+    requestPath: string;
+  };
+  openAction: {
+    kind: 'select-project-workspace';
+    label: string;
+  };
+  nonClaims: string[];
+  writeOccurred: true;
+  receiptRoot: string;
+};
+
 export type AgentWorkLab = {
   inspect: () => Promise<AgentWorkLabStartupRoute>;
   inspectSync: () => AgentWorkLabStartupRoute;
@@ -191,6 +248,11 @@ export type AgentWorkLab = {
     targetProfileId: string,
     onEvent?: (event: AgentWorkLabEvent) => void,
   ) => Promise<AgentWorkLabReport>;
+  planStarterProject: (destination?: string) => Promise<ProjectTemplatePlan>;
+  createStarterProject: (
+    plan: ProjectTemplatePlan,
+    actor: string,
+  ) => Promise<ProjectTemplateCreationReceipt>;
 };
 
 type ExecOptions = {
@@ -313,5 +375,20 @@ export function openAgentWorkLab(
         [sourceProfileId, '--execute', '--target-profile', targetProfileId],
         onEvent,
       ),
+    planStarterProject: (destination) =>
+      run<ProjectTemplatePlan>(
+        'starter-plan',
+        destination ? ['--destination', destination] : [],
+      ),
+    createStarterProject: (plan, actor) =>
+      run<ProjectTemplateCreationReceipt>('starter-create', [
+        '--destination',
+        plan.destination,
+        '--expected-plan-root',
+        plan.planRoot,
+        '--actor',
+        actor,
+        '--execute',
+      ]),
   };
 }

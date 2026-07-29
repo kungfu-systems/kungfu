@@ -896,7 +896,7 @@ function printNonInteractiveDiagnostic(): void {
 async function main(): Promise<void> {
   if (process.argv.includes('--help')) {
     process.stdout.write(
-      'Kungfu Work Control TUI\n\nRun in an interactive terminal.\nOffline animation demo: `./shifu product tui demo`.\nAgent brief: `kungfu agent brief`.\n',
+      'Kungfu Work Control TUI\n\nRun in an interactive terminal.\nOffline animation demo: `kungfu agent-work-lab autoplay`.\nAgent brief: `kungfu agent brief`.\n',
     );
     return;
   }

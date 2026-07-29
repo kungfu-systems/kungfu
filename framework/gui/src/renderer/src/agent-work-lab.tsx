@@ -7,6 +7,8 @@ import type {
   AgentWorkLabEvent,
   AgentWorkLabReport,
   AgentWorkLabStartupRoute,
+  ProjectTemplateCreationReceipt,
+  ProjectTemplatePlan,
 } from '@kungfu-tech/api/capability';
 import { agentWorkLabRunProgressLabel } from '@kungfu-tech/api/capability';
 import { mono, panelStyle } from '@kungfu-tech/kfx';
@@ -942,6 +944,8 @@ function ReportDock({
   agentPlan,
   targetPlan,
   error,
+  onCreateStarter,
+  onOpenExisting,
 }: {
   report: AgentWorkLabReport | null;
   visibleFindingCount: number;
@@ -951,6 +955,8 @@ function ReportDock({
   agentPlan: AgentWorkLabAgentPlan | null;
   targetPlan: AgentWorkLabAgentPlan | null;
   error: string;
+  onCreateStarter: () => void;
+  onOpenExisting?: () => void;
 }) {
   const passed = Boolean(report && report.status !== 'failed');
   const findings = agentWorkLabBehaviorFindings(report);
@@ -1045,6 +1051,26 @@ function ReportDock({
             {error}
           </div>
         ) : null}
+        {report ? (
+          <div
+            aria-label="Continue with your own work"
+            style={{
+              display: 'flex',
+              gap: 7,
+              flexWrap: 'wrap',
+              marginTop: 8,
+            }}
+          >
+            <button type="button" onClick={onCreateStarter}>
+              Create Starter Project
+            </button>
+            {onOpenExisting ? (
+              <button type="button" onClick={onOpenExisting}>
+                Open Existing Project
+              </button>
+            ) : null}
+          </div>
+        ) : null}
       </div>
       <div
         className="kf-lab-finding-strip"
@@ -1108,10 +1134,14 @@ export function AgentWorkLabPanel({
   lab,
   startup,
   onOpenWork,
+  onOpenExistingProject,
+  onOpenStarterProject,
 }: {
   lab: AgentWorkLab;
   startup: AgentWorkLabStartupRoute;
   onOpenWork?: () => void;
+  onOpenExistingProject?: () => void;
+  onOpenStarterProject?: (destination: string) => void;
 }) {
   const [mode, setMode] = React.useState<AgentWorkLabMode>('offline-demo');
   const [agents, setAgents] = React.useState<AgentRuntimeCatalog | null>(null);
@@ -1134,6 +1164,11 @@ export function AgentWorkLabPanel({
     React.useState(false);
   const [busy, setBusy] = React.useState('');
   const [error, setError] = React.useState('');
+  const [starterPlan, setStarterPlan] =
+    React.useState<ProjectTemplatePlan | null>(null);
+  const [starterReceipt, setStarterReceipt] =
+    React.useState<ProjectTemplateCreationReceipt | null>(null);
+  const [starterBusy, setStarterBusy] = React.useState(false);
   const [runProgress, setRunProgress] = React.useState<{
     startedAt: number;
     lastEventAt: number;
@@ -1185,6 +1220,34 @@ export function AgentWorkLabPanel({
       setBusy('');
     }
   }, [lab]);
+
+  const previewStarterProject = React.useCallback(async () => {
+    setStarterBusy(true);
+    setStarterReceipt(null);
+    try {
+      setStarterPlan(await lab.planStarterProject());
+      setError('');
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : String(reason));
+    } finally {
+      setStarterBusy(false);
+    }
+  }, [lab]);
+
+  const createStarterProject = React.useCallback(async () => {
+    if (!starterPlan) return;
+    setStarterBusy(true);
+    try {
+      const receipt = await lab.createStarterProject(starterPlan, 'local-user');
+      setStarterReceipt(receipt);
+      setStarterPlan(null);
+      setError('');
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : String(reason));
+    } finally {
+      setStarterBusy(false);
+    }
+  }, [lab, starterPlan]);
 
   React.useEffect(() => {
     void discover();
@@ -1584,7 +1647,123 @@ export function AgentWorkLabPanel({
         agentPlan={agentPlan}
         targetPlan={targetPlan}
         error={error}
+        onCreateStarter={() => void previewStarterProject()}
+        onOpenExisting={onOpenExistingProject}
       />
+      {(starterPlan || starterReceipt) && typeof document !== 'undefined'
+        ? createPortal(
+            <div
+              role="presentation"
+              onMouseDown={(event) => {
+                if (event.target === event.currentTarget && !starterBusy) {
+                  setStarterPlan(null);
+                  setStarterReceipt(null);
+                }
+              }}
+              style={{
+                position: 'fixed',
+                inset: 0,
+                zIndex: 11000,
+                display: 'grid',
+                placeItems: 'center',
+                padding: 24,
+                background: 'rgba(4, 7, 9, 0.82)',
+              }}
+            >
+              <dialog
+                open
+                aria-label={
+                  starterReceipt
+                    ? 'Starter project created'
+                    : 'Create starter project'
+                }
+                style={{
+                  ...panelStyle,
+                  width: 'min(620px, calc(100vw - 48px))',
+                  padding: 20,
+                  border: '2px solid #4ec9b0',
+                  color: '#f0f0f0',
+                  background: '#101820',
+                  boxShadow: '0 18px 64px rgba(0, 0, 0, 0.75)',
+                }}
+              >
+                <div style={{ ...mono, color: '#4ec9b0', fontSize: 11 }}>
+                  {starterReceipt
+                    ? 'YOUR FIRST REAL AGENT WORK PROJECT'
+                    : 'PREVIEW BEFORE CREATE'}
+                </div>
+                <h2 style={{ margin: '8px 0', fontSize: 20 }}>
+                  {starterReceipt
+                    ? 'Starter Project created'
+                    : 'Create Agent Work Starter?'}
+                </h2>
+                <p style={{ color: '#d4d4d4', lineHeight: 1.5 }}>
+                  {starterReceipt
+                    ? `${starterReceipt.files.length} reference files were written and verified. The initial Work request is captured and remains pending explicit admission.`
+                    : `${starterPlan?.files.length ?? 0} editable files will be created. Kungfu will capture the first Work request, but it will not run an Agent, claim completion, overwrite a folder, or change Git.`}
+                </p>
+                <div
+                  style={{
+                    ...mono,
+                    padding: 10,
+                    border: '1px solid #3c3c3c',
+                    borderRadius: 5,
+                    color: '#9cdcfe',
+                    background: '#181818',
+                    overflowWrap: 'anywhere',
+                  }}
+                >
+                  {starterReceipt?.destination ?? starterPlan?.destination}
+                </div>
+                {!starterReceipt && starterPlan ? (
+                  <ul style={{ color: '#cfcfcf', lineHeight: 1.55 }}>
+                    <li>First Work: {starterPlan.initialWork.title}</li>
+                    <li>Existing destinations are refused, never merged.</li>
+                    <li>Admission and execution remain explicit next steps.</li>
+                  </ul>
+                ) : null}
+                <div
+                  style={{
+                    display: 'flex',
+                    justifyContent: 'flex-end',
+                    gap: 8,
+                    marginTop: 16,
+                  }}
+                >
+                  <button
+                    type="button"
+                    disabled={starterBusy}
+                    onClick={() => {
+                      setStarterPlan(null);
+                      setStarterReceipt(null);
+                    }}
+                  >
+                    {starterReceipt ? 'Close' : 'Cancel'}
+                  </button>
+                  {starterReceipt ? (
+                    <button
+                      type="button"
+                      onClick={() =>
+                        onOpenStarterProject?.(starterReceipt.destination)
+                      }
+                    >
+                      Open Starter Project
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      disabled={starterBusy}
+                      onClick={() => void createStarterProject()}
+                    >
+                      {starterBusy ? 'Creating…' : 'Create Project'}
+                    </button>
+                  )}
+                </div>
+              </dialog>
+            </div>,
+            document.body,
+          )
+        : null}
       {showNextRecommendation && typeof document !== 'undefined'
         ? createPortal(
             <output

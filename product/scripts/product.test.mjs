@@ -9,6 +9,7 @@ import {
   readFileSync,
   realpathSync,
   rmSync,
+  utimesSync,
   writeFileSync,
 } from 'node:fs';
 import { homedir, tmpdir } from 'node:os';
@@ -17,6 +18,7 @@ import { test } from 'node:test';
 import { fileURLToPath } from 'node:url';
 import {
   devKfdEnv,
+  devViewExtensionBuildPlan,
   devWorkspaceHomeOverride,
   instanceEnv,
   instanceHomeForWorktree,
@@ -129,6 +131,55 @@ test('builds a workspace data environment with separate config home', () => {
   assert.equal(env.KF_WORKSPACE_KIND, 'project');
   assert.equal(env.KF_WORKSPACE_STATE, 'selected-uninitialized');
   assert.equal(env.KF_INSTANCE_HOME, undefined);
+});
+
+test('development environment discovers source extensions without installation', () => {
+  const env = devKfdEnv({ PATH: '/bin' });
+  assert.equal(env.KF_EXTENSION_PATH, path.join(ROOT, 'extensions'));
+});
+
+test('plans only missing or stale source extension view bundles', () => {
+  const root = mkdtempSync(path.join(tmpdir(), 'kungfu-dev-extensions-'));
+  const extension = path.join(root, 'example-view');
+  const source = path.join(extension, 'src', 'view');
+  const bundle = path.join(extension, 'dist', 'view', 'index.js');
+  mkdirSync(source, { recursive: true });
+  writeFileSync(
+    path.join(extension, 'package.json'),
+    '{"name":"@example/view"}\n',
+  );
+  writeFileSync(
+    path.join(extension, 'kungfu.kfx.json'),
+    JSON.stringify({
+      schema: 'kungfu.kfx.manifest/v1',
+      name: '@example/view',
+      kungfuConfig: {
+        key: 'example-view',
+        config: { view: { title: 'Example' } },
+      },
+    }),
+  );
+  writeFileSync(
+    path.join(source, 'index.tsx'),
+    'export const View = () => null',
+  );
+  try {
+    let plan = devViewExtensionBuildPlan(root);
+    assert.equal(plan.length, 1);
+    assert.equal(plan[0].needsBuild, true);
+    mkdirSync(path.dirname(bundle), { recursive: true });
+    writeFileSync(bundle, 'exports.View = () => null');
+    const current = new Date(Date.now() + 2_000);
+    utimesSync(bundle, current, current);
+    plan = devViewExtensionBuildPlan(root);
+    assert.equal(plan[0].needsBuild, false);
+    const stale = new Date(Date.now() + 4_000);
+    utimesSync(path.join(source, 'index.tsx'), stale, stale);
+    plan = devViewExtensionBuildPlan(root);
+    assert.equal(plan[0].needsBuild, true);
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
 });
 
 test('derives workspace data home from nearest existing .kungfu', () => {

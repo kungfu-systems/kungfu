@@ -5,6 +5,8 @@ import type {
   AgentWorkLabEvent,
   AgentWorkLabReport,
   AgentWorkLabStartupRoute,
+  ProjectTemplateCreationReceipt,
+  ProjectTemplatePlan,
 } from '@kungfu-tech/api/capability';
 import { agentWorkLabRunProgressLabel } from '@kungfu-tech/api/capability';
 import { useApp } from 'ink';
@@ -23,6 +25,7 @@ import {
   type TerminalDimensions,
   type WorkbenchCheck,
   type WorkbenchFocus,
+  type WorkbenchGuideOverlay,
   type WorkbenchLine,
   type WorkbenchNextPrompt,
   type WorkbenchReportDetail,
@@ -45,6 +48,7 @@ export type AgentWorkLabSuiteAction =
   | 'lab-same'
   | 'lab-handoff'
   | 'lab-report'
+  | 'lab-starter'
   | 'lab-focus-next';
 
 export type AgentWorkLabActionRequest = {
@@ -98,6 +102,13 @@ export const AGENT_WORK_LAB_QUICK_COMMANDS: QuickCommand<AgentWorkLabSuiteAction
       action: 'lab-report',
     },
     {
+      id: 'lab-starter',
+      command: '/new',
+      title: 'Create Starter Project',
+      summary: 'Preview a real project and its first governed Work request.',
+      action: 'lab-starter',
+    },
+    {
       id: 'lab-focus-next',
       command: '/focus',
       title: 'Move Lab Focus',
@@ -109,7 +120,7 @@ export const AGENT_WORK_LAB_QUICK_COMMANDS: QuickCommand<AgentWorkLabSuiteAction
 export function agentWorkLabActionReturnsToControls(
   action: AgentWorkLabSuiteAction,
 ): boolean {
-  return action === 'lab-report';
+  return action === 'lab-report' || action === 'lab-starter';
 }
 
 export const nextAgentWorkLabFocus = nextWorkbenchFocus;
@@ -129,7 +140,7 @@ export function agentWorkLabNextModePrompt(
         : '';
   return {
     title: recommendation.title,
-    instruction: `${recommendation.instruction}${shortcut}`,
+    instruction: `${recommendation.instruction}${shortcut} When you are ready, run /new or press n to create your first real project.`,
   };
 }
 
@@ -307,6 +318,7 @@ export function AgentWorkLabView({
   reportDetail,
   emphasizedResult,
   autoplay,
+  guideOverlay,
 }: {
   dimensions: TerminalDimensions;
   mode: TuiAgentWorkLabMode;
@@ -329,6 +341,7 @@ export function AgentWorkLabView({
     introCountdown: number;
     phase: TuiAgentWorkLabAutoplayPhase;
   };
+  guideOverlay?: WorkbenchGuideOverlay;
 }) {
   const selectedCase = agentWorkLabCase(mode);
   const autoplayQuestion =
@@ -343,7 +356,7 @@ export function AgentWorkLabView({
       controls={
         autoplay
           ? `STEP ${autoplay.phase}/4 · ${agentWorkLabAutoplayPhaseLabel(autoplay.phase)}`
-          : '[d] demo [j/k] source [brackets] target [x] same [m] handoff [Tab] focus [?] explain [w] Work [q] quit'
+          : '[d] demo [j/k] source [brackets] target [x] same [m] handoff [n] new [Tab] focus [?] explain [w] Work [q] quit'
       }
       help={
         autoplay
@@ -370,7 +383,8 @@ export function AgentWorkLabView({
       runningSession={runningSession}
       nextPrompt={autoplay ? undefined : nextPrompt}
       guideOverlay={
-        autoplay && autoplay.introCountdown > 0
+        guideOverlay ??
+        (autoplay && autoplay.introCountdown > 0
           ? {
               heading: 'WHAT THIS DEMO PROVES',
               title: 'ONE WORK. TWO FRESH SESSIONS.',
@@ -383,7 +397,7 @@ export function AgentWorkLabView({
               ],
               footer: `No action needed · starts automatically in ${autoplay.introCountdown} seconds.`,
             }
-          : undefined
+          : undefined)
       }
       reportDetail={reportDetail}
       emphasizedResult={emphasizedResult}
@@ -448,6 +462,9 @@ export function AgentWorkLabHost({
   const [showHelp, setShowHelp] = React.useState(false);
   const [busy, setBusy] = React.useState('');
   const [error, setError] = React.useState('');
+  const [starterPlan, setStarterPlan] = React.useState<ProjectTemplatePlan>();
+  const [starterReceipt, setStarterReceipt] =
+    React.useState<ProjectTemplateCreationReceipt>();
   const [runProgress, setRunProgress] = React.useState<{
     startedAt: number;
     lastEventAt: number;
@@ -644,6 +661,40 @@ export function AgentWorkLabHost({
     },
     [autoplay],
   );
+  const previewStarterProject = React.useCallback(() => {
+    if (busy) {
+      setError('Wait for the current Lab action to finish.');
+      return;
+    }
+    setBusy('planning starter project');
+    setStarterReceipt(undefined);
+    void lab
+      .planStarterProject()
+      .then((plan) => {
+        setStarterPlan(plan);
+        setNextPrompt(undefined);
+        setError('');
+      })
+      .catch((reason) => {
+        setError(reason instanceof Error ? reason.message : String(reason));
+      })
+      .finally(() => setBusy(''));
+  }, [busy, lab]);
+  const confirmStarterProject = React.useCallback(() => {
+    if (!starterPlan || busy) return;
+    setBusy('creating starter project');
+    void lab
+      .createStarterProject(starterPlan, 'local-user')
+      .then((receipt) => {
+        setStarterReceipt(receipt);
+        setStarterPlan(undefined);
+        setError('');
+      })
+      .catch((reason) => {
+        setError(reason instanceof Error ? reason.message : String(reason));
+      })
+      .finally(() => setBusy(''));
+  }, [busy, lab, starterPlan]);
   const performSuiteAction = React.useCallback(
     (action: AgentWorkLabSuiteAction) => {
       if (action === 'lab-focus-next') {
@@ -663,6 +714,10 @@ export function AgentWorkLabHost({
         setActiveFocus(detail);
         setReportDetail(detail);
         setError('');
+        return;
+      }
+      if (action === 'lab-starter') {
+        previewStarterProject();
         return;
       }
       if (busy) {
@@ -699,7 +754,16 @@ export function AgentWorkLabHost({
         lab.runMigration(source.id, destination.id, onEvent),
       );
     },
-    [busy, lab, profiles, report, runAgentWorkLabCase, selected, target],
+    [
+      busy,
+      lab,
+      previewStarterProject,
+      profiles,
+      report,
+      runAgentWorkLabCase,
+      selected,
+      target,
+    ],
   );
   React.useEffect(() => {
     if (!actionRequest || actionRequest.id <= handledActionRequest.current)
@@ -735,6 +799,20 @@ export function AgentWorkLabHost({
     const onData = (chunk: Buffer | string) => {
       if (isInputCaptured()) return;
       const input = String(chunk);
+      if (starterReceipt && isAgentWorkLabReportReturnInput(input)) {
+        return setStarterReceipt(undefined);
+      }
+      if (starterPlan) {
+        if (input === '\r' || input === '\n') {
+          confirmStarterProject();
+          return;
+        }
+        if (isAgentWorkLabReportReturnInput(input)) {
+          setStarterPlan(undefined);
+          setError('');
+        }
+        return;
+      }
       if (reportDetail && isAgentWorkLabReportReturnInput(input)) {
         return setReportDetail(undefined);
       }
@@ -785,6 +863,7 @@ export function AgentWorkLabHost({
       if (input === 'd') return performSuiteAction('lab-demo');
       if (input === 'x') return performSuiteAction('lab-same');
       if (input === 'm') return performSuiteAction('lab-handoff');
+      if (input === 'n') return performSuiteAction('lab-starter');
     };
     process.stdin.on('data', onData);
     return () => {
@@ -792,6 +871,7 @@ export function AgentWorkLabHost({
     };
   }, [
     activeFocus,
+    confirmStarterProject,
     exit,
     isInputCaptured,
     onOpenWork,
@@ -799,6 +879,8 @@ export function AgentWorkLabHost({
     profiles,
     report,
     reportDetail,
+    starterPlan,
+    starterReceipt,
   ]);
   const sourceLabel =
     mode === 'offline-demo' ? '' : profiles[selected]?.label || '';
@@ -845,6 +927,34 @@ export function AgentWorkLabHost({
       }
       runningSession={runningSession}
       nextPrompt={nextPrompt}
+      guideOverlay={
+        starterReceipt
+          ? {
+              heading: 'STARTER PROJECT CREATED',
+              title: starterReceipt.destination,
+              lines: [
+                `${starterReceipt.files.length} reference files written and verified.`,
+                'Initial Work request captured with canonical Assignment authority.',
+                'Its state is pending admission: no Agent run or completion is claimed.',
+                'Open this folder as a Kungfu project to begin the real Work.',
+              ],
+              footer:
+                'Press Esc or Enter to close · run /work to inspect Work.',
+            }
+          : starterPlan
+            ? {
+                heading: 'START YOUR OWN WORK',
+                title: 'CREATE AGENT WORK STARTER?',
+                lines: [
+                  `Destination: ${starterPlan.destination}`,
+                  `${starterPlan.files.length} files · first Work: ${starterPlan.initialWork.title}`,
+                  'Existing folders are never overwritten. Git is not changed.',
+                  'The Work request is captured now; admission remains explicit.',
+                ],
+                footer: 'Enter creates · Esc cancels.',
+              }
+            : undefined
+      }
       reportDetail={reportDetail}
       emphasizedResult={emphasizedResult}
       autoplay={

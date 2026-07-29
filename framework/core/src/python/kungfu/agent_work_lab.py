@@ -457,6 +457,16 @@ def catalog(
                 "mutation": "isolated-agent-processes-after-explicit-confirmation",
                 "resultSchema": AGENT_REPORT_SCHEMA,
             },
+            {
+                "id": "agent-work-lab.starter-project.plan",
+                "mutation": "none",
+                "resultSchema": "kungfu.project-template.plan/v1",
+            },
+            {
+                "id": "agent-work-lab.starter-project.create",
+                "mutation": "new-project-files-and-captured-work-request-after-explicit-confirmation",
+                "resultSchema": "kungfu.project-template.creation-receipt/v1",
+            },
         ],
         "authority": {
             "startup": "Core read-only resolver",

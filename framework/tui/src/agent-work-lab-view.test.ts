@@ -47,6 +47,12 @@ test('generic workbench has no product-specific test or oracle vocabulary', () =
   );
 });
 
+test('TUI help advertises the public Kungfu autoplay command', () => {
+  const source = readFileSync(new URL('./main.tsx', import.meta.url), 'utf8');
+  assert.match(source, /kungfu agent-work-lab autoplay/);
+  assert.doesNotMatch(source, /Offline animation demo: `\.\/shifu/);
+});
+
 test('generic playback serializes events before the verdict boundary', async () => {
   const calls: string[] = [];
   const delays: number[] = [];
@@ -389,10 +395,12 @@ test('Suite commands and Lab control keys share one action vocabulary', () => {
       { command: '/same', action: 'lab-same' },
       { command: '/handoff', action: 'lab-handoff' },
       { command: '/report', action: 'lab-report' },
+      { command: '/new', action: 'lab-starter' },
       { command: '/focus', action: 'lab-focus-next' },
     ],
   );
   assert.equal(agentWorkLabActionReturnsToControls('lab-report'), true);
+  assert.equal(agentWorkLabActionReturnsToControls('lab-starter'), true);
   assert.equal(agentWorkLabActionReturnsToControls('lab-demo'), false);
 });
 
@@ -683,6 +691,39 @@ test('report cards, coaching popup and detail page are visible at 80x24', async 
   assert.match(detailFrame, /Esc \/ Enter \/ Backspace \/ b/);
   assert.match(detailFrame, /Two genuinely fresh processes/);
   assert.match(detailFrame, /Session 2 received no copied chat/);
+});
+
+test('Starter Project confirmation uses the opaque workbench guide panel', async () => {
+  const output = new CaptureOutput();
+  const instance = render(
+    React.createElement(AgentWorkLabView, {
+      ...viewProps,
+      guideOverlay: {
+        heading: 'START YOUR OWN WORK',
+        title: 'CREATE AGENT WORK STARTER?',
+        lines: [
+          'Destination: /projects/agent-work-starter',
+          'Existing folders are never overwritten. Git is not changed.',
+        ],
+        footer: 'Enter creates · Esc cancels.',
+      },
+    }),
+    {
+      stdout: output as unknown as NodeJS.WriteStream,
+      exitOnCtrlC: false,
+      patchConsole: false,
+      debug: true,
+    },
+  );
+  await new Promise<void>((resolve) => setTimeout(resolve, 80));
+  const frame = output.chunks.join('');
+  instance.unmount();
+  instance.cleanup();
+
+  assert.match(frame, /START YOUR OWN WORK/);
+  assert.match(frame, /CREATE AGENT WORK STARTER/);
+  assert.match(frame, /Existing folders are never overwritten/);
+  assert.match(frame, /Enter creates · Esc cancels/);
 });
 
 test('autoplay explains the experiment, states the value, then opens its acceptance report', async () => {

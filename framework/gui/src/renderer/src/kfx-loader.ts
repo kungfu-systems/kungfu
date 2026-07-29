@@ -35,6 +35,7 @@ export type KfxLoadFailure = {
 };
 
 export type KfxLoadResult = {
+  discoveredKfxCount: number;
   entries: KfxEntry[];
   suites: Record<string, KfxSuiteDecl>;
   profiles: ProfileManifest[];
@@ -156,6 +157,7 @@ export function loadKfx(
     }
   }
   return {
+    discoveredKfxCount: plan.entries.length,
     entries,
     suites: plan.suites,
     profiles: plan.profiles,
