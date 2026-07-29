@@ -10,7 +10,11 @@ import path from 'node:path';
 import test from 'node:test';
 import { fileURLToPath } from 'node:url';
 
-import { checkShifuCacheContract } from './check-shifu-cache-contract.mjs';
+import {
+  checkShifuCacheContract,
+  qualifiedAssignmentCoreRoot,
+  verifyQualifiedAssignmentCoreArtifact,
+} from './check-shifu-cache-contract.mjs';
 import {
   cacheDoctor,
   cacheStatus,
@@ -27,6 +31,189 @@ function platformId() {
   if (process.platform === 'darwin') return `darwin-${process.arch}`;
   if (process.platform === 'win32') return `windows-${process.arch}`;
   return `${process.platform}-${process.arch}`;
+}
+
+const root = (character) => `sha256:${character.repeat(64)}`;
+const commit = (character) => character.repeat(40);
+
+function qualifiedCoreFixture(mode = 'exact-commit') {
+  const exactMode =
+    mode === 'exact-commit' || mode === 'cross-repository-exact';
+  const compatibilityMode = exactMode ? 'exact-commit' : 'explicit-equivalence';
+  const producerCommit = commit('a');
+  const targetCommit =
+    exactMode || mode === 'cross-repository-equivalence'
+      ? producerCommit
+      : commit('b');
+  const targetRepository =
+    mode === 'cross-repository-equivalence' || mode === 'cross-repository-exact'
+      ? 'kungfu-systems/kungfu-fork'
+      : 'kungfu-systems/kungfu';
+  const regularPath = 'pykungfu.cpython-313-darwin.so';
+  const linkPath = 'current/pykungfu.so';
+  const linkTarget = `../${regularPath}`;
+  const regularBytes = Buffer.from('qualified Assignment Core payload');
+  const linkBytes = Buffer.from(linkTarget);
+  const entries = [
+    {
+      path: linkPath,
+      type: 'symlink',
+      sizeBytes: linkBytes.byteLength,
+      digest: `sha256:${crypto
+        .createHash('sha256')
+        .update(linkBytes)
+        .digest('hex')}`,
+      mode: '0777',
+      linkTarget,
+    },
+    {
+      path: regularPath,
+      type: 'regular-file',
+      sizeBytes: regularBytes.byteLength,
+      digest: `sha256:${crypto
+        .createHash('sha256')
+        .update(regularBytes)
+        .digest('hex')}`,
+      mode: '0755',
+      linkTarget: null,
+    },
+  ];
+  const artifactRoot = qualifiedAssignmentCoreRoot({
+    schema: 'shifu.qualified-assignment-core-payload/v1',
+    entries,
+  });
+  const equivalenceReceiptRoot = exactMode ? null : root('9');
+  const manifestBody = {
+    schema: 'shifu.qualified-assignment-core-artifact/v1',
+    producer: {
+      repository: 'kungfu-systems/kungfu',
+      commit: producerCommit,
+      sourceTreeRoot: root('1'),
+    },
+    target: {
+      repository: targetRepository,
+      commit: targetCommit,
+    },
+    compatibility: {
+      mode: compatibilityMode,
+      equivalenceReceiptRoot,
+    },
+    build: {
+      nativeInputRoot: root('2'),
+      operatingSystem: 'darwin',
+      architecture: 'arm64',
+      pythonAbi: 'cp313',
+      profile: 'release',
+      toolchainDigest: root('3'),
+      dependencyLockDigest: root('4'),
+    },
+    contracts: {
+      artifactContractVersion: 1,
+      qualificationContractVersion: 1,
+      shifu: {
+        version: '4.0.0-alpha.1',
+        root: root('5'),
+      },
+      buildchain: {
+        version: '4.0.0-alpha.1',
+        root: root('6'),
+      },
+    },
+    payload: {
+      artifactRoot,
+      entries,
+    },
+    consumer: {
+      targetRoot: 'framework/core/dist/kungfu',
+      staging: 'outside-target',
+      cleanCheckoutRequired: true,
+      publication: 'atomic-replace',
+      partialStateRunnable: false,
+    },
+  };
+  const manifestRoot = qualifiedAssignmentCoreRoot(manifestBody);
+  const promotionAuthority = {
+    schema: 'kungfu.qualified-assignment-core-promotion-authority/v1',
+    mode: exactMode ? 'protected-dev-direct' : 'protected-dev-reused-proof',
+    repository: targetRepository,
+    targetCommit,
+    protectedRef: 'refs/heads/dev/v4/v4.0',
+    deliveryEvidenceRoot: root('7'),
+    authorityCandidates: [root('8')],
+    status: 'active',
+    validFrom: '2026-07-28T00:00:00Z',
+    validThrough: '2026-07-30T00:00:00Z',
+  };
+  const promotionAuthorityRoot =
+    qualifiedAssignmentCoreRoot(promotionAuthority);
+  const qualificationBody = {
+    schema: 'shifu.qualified-assignment-core-qualification/v1',
+    manifestRoot,
+    artifactRoot,
+    identity: {
+      producerRepository: 'kungfu-systems/kungfu',
+      producerCommit,
+      targetRepository,
+      targetCommit,
+      compatibilityMode,
+      equivalenceReceiptRoot,
+    },
+    targetCheckout: {
+      commit: targetCommit,
+      clean: true,
+    },
+    checks: {
+      artifactDigest: 'pass',
+      boundedPaths: 'pass',
+      safeSymlinks: 'pass',
+      platformAndAbi: 'pass',
+      buildIdentity: 'pass',
+      sourceIdentity: 'pass',
+      checkoutCleanliness: 'pass',
+    },
+    promotionAuthority,
+    promotionAuthorityRoot,
+  };
+  const receiptRoot = qualifiedAssignmentCoreRoot(qualificationBody);
+  return {
+    manifest: {
+      ...manifestBody,
+      manifestRoot,
+      qualificationReceiptRoot: receiptRoot,
+      promotionAuthorityRoot,
+    },
+    qualification: {
+      ...qualificationBody,
+      receiptRoot,
+    },
+    payloads: {
+      [linkPath]: linkTarget,
+      [regularPath]: regularBytes,
+    },
+    expected: {
+      producerRepository: 'kungfu-systems/kungfu',
+      targetRepository,
+      producerCommit,
+      targetCommit,
+      sourceTreeRoot: root('1'),
+      nativeInputRoot: root('2'),
+      operatingSystem: 'darwin',
+      architecture: 'arm64',
+      pythonAbi: 'cp313',
+      profile: 'release',
+      toolchainDigest: root('3'),
+      dependencyLockDigest: root('4'),
+      shifuContractVersion: '4.0.0-alpha.1',
+      shifuContractRoot: root('5'),
+      buildchainContractVersion: '4.0.0-alpha.1',
+      buildchainContractRoot: root('6'),
+      targetRoot: 'framework/core/dist/kungfu',
+      checkoutClean: true,
+      protectedRef: 'refs/heads/dev/v4/v4.0',
+      promotionAuthorityCandidates: [root('8')],
+      now: '2026-07-29T00:00:00Z',
+    },
+  };
 }
 
 function shellHarness(t) {
@@ -136,9 +323,145 @@ test('cache contract schemas accept valid fixtures and reject unsafe policy', as
     resolutionSchema: 'docs/shifu/schema/cache-resolution-v1.schema.json',
     diagnosticSchema: 'docs/shifu/schema/cache-diagnostic-v1.schema.json',
     configPlanSchema: 'docs/shifu/schema/cache-config-plan-v1.schema.json',
+    artifactContract: 'docs/shifu/artifact-contract.json',
+    qualifiedArtifactSchema:
+      'docs/shifu/schema/qualified-assignment-core-artifact-v1.schema.json',
+    qualifiedQualificationSchema:
+      'docs/shifu/schema/qualified-assignment-core-qualification-v1.schema.json',
     validFixtures: counts[0],
     rejectedFixtures: counts[1],
   });
+});
+
+test('qualified Assignment Core verifies exact and explicit-equivalence identities', async () => {
+  for (const mode of [
+    'exact-commit',
+    'explicit-equivalence',
+    'cross-repository-equivalence',
+  ]) {
+    const fixture = qualifiedCoreFixture(mode);
+    const result = await verifyQualifiedAssignmentCoreArtifact(fixture);
+    assert.equal(result.ok, true);
+    assert.equal(
+      result.compatibilityMode,
+      mode === 'exact-commit' ? 'exact-commit' : 'explicit-equivalence',
+    );
+    assert.equal(result.transportAuthority, false);
+    assert.equal(result.currentSourceFallbackRequired, false);
+  }
+});
+
+test('qualified Assignment Core rejects unknown fields and transport authority', async () => {
+  for (const field of ['unknownField', 'transport']) {
+    const fixture = qualifiedCoreFixture();
+    fixture.manifest[field] = {
+      provider: 'github-actions-cache',
+      available: true,
+    };
+    await assert.rejects(
+      verifyQualifiedAssignmentCoreArtifact(fixture),
+      /manifest does not satisfy its schema.*additional properties/iu,
+    );
+  }
+});
+
+test('qualified Assignment Core rejects payload digest tamper', async () => {
+  const fixture = qualifiedCoreFixture();
+  fixture.payloads['pykungfu.cpython-313-darwin.so'] =
+    Buffer.from('tampered payload');
+  await assert.rejects(
+    verifyQualifiedAssignmentCoreArtifact(fixture),
+    /size drift|digest drift/u,
+  );
+});
+
+test('qualified Assignment Core rejects traversal and escaping symlinks', async () => {
+  const traversal = qualifiedCoreFixture();
+  traversal.manifest.payload.entries[0].path = '../escape';
+  await assert.rejects(
+    verifyQualifiedAssignmentCoreArtifact(traversal),
+    /manifest does not satisfy its schema/iu,
+  );
+
+  const symlink = qualifiedCoreFixture();
+  symlink.manifest.payload.entries[0].linkTarget = '../../escape';
+  symlink.payloads['current/pykungfu.so'] = '../../escape';
+  await assert.rejects(
+    verifyQualifiedAssignmentCoreArtifact(symlink),
+    /symlink escapes the payload/u,
+  );
+
+  const dangling = qualifiedCoreFixture();
+  dangling.manifest.payload.entries[0].linkTarget = '../missing.so';
+  dangling.payloads['current/pykungfu.so'] = '../missing.so';
+  await assert.rejects(
+    verifyQualifiedAssignmentCoreArtifact(dangling),
+    /symlink target is absent from the payload/u,
+  );
+});
+
+test('qualified Assignment Core rejects current identity mismatches', async () => {
+  for (const [field, value, message] of [
+    ['sourceTreeRoot', root('a'), /source tree root/u],
+    ['nativeInputRoot', root('b'), /native input root/u],
+    ['operatingSystem', 'linux', /operating system/u],
+    ['architecture', 'x64', /architecture/u],
+    ['pythonAbi', 'cp312', /Python ABI/u],
+    ['profile', 'debug', /build profile/u],
+    ['toolchainDigest', root('c'), /toolchain digest/u],
+    ['dependencyLockDigest', root('d'), /dependency lock digest/u],
+    ['shifuContractVersion', '4.1.0', /Shifu contract version/u],
+    ['buildchainContractVersion', '4.1.0', /Buildchain contract version/u],
+  ]) {
+    const fixture = qualifiedCoreFixture();
+    fixture.expected[field] = value;
+    await assert.rejects(
+      verifyQualifiedAssignmentCoreArtifact(fixture),
+      message,
+    );
+  }
+});
+
+test('qualified Assignment Core rejects a dirty target checkout', async () => {
+  const fixture = qualifiedCoreFixture();
+  fixture.expected.checkoutClean = false;
+  await assert.rejects(
+    verifyQualifiedAssignmentCoreArtifact(fixture),
+    /current target checkout cleanliness/u,
+  );
+});
+
+test('qualified Assignment Core rejects stale or ambiguous promotion authority', async () => {
+  const stale = qualifiedCoreFixture();
+  stale.expected.now = '2026-08-01T00:00:00Z';
+  await assert.rejects(
+    verifyQualifiedAssignmentCoreArtifact(stale),
+    /promotion authority is stale/u,
+  );
+
+  const ambiguous = qualifiedCoreFixture();
+  ambiguous.qualification.promotionAuthority.authorityCandidates.push(
+    root('a'),
+  );
+  await assert.rejects(
+    verifyQualifiedAssignmentCoreArtifact(ambiguous),
+    /qualification receipt does not satisfy its schema/iu,
+  );
+});
+
+test('qualified Assignment Core rejects producer metadata impersonation', async () => {
+  const fixture = qualifiedCoreFixture('explicit-equivalence');
+  fixture.expected.producerCommit = fixture.expected.targetCommit;
+  await assert.rejects(
+    verifyQualifiedAssignmentCoreArtifact(fixture),
+    /producer commit does not match the current consumer/u,
+  );
+
+  const repository = qualifiedCoreFixture('cross-repository-exact');
+  await assert.rejects(
+    verifyQualifiedAssignmentCoreArtifact(repository),
+    /exact-commit producer repository identity/u,
+  );
 });
 
 test('portable-off qualification profiles cover every native Build lane', () => {

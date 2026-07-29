@@ -10,6 +10,7 @@
     "resolutionSchema": "docs/shifu/schema/cache-resolution-v1.schema.json",
     "diagnosticSchema": "docs/shifu/schema/cache-diagnostic-v1.schema.json",
     "configPlanSchema": "docs/shifu/schema/cache-config-plan-v1.schema.json",
+    "artifactContract": "docs/shifu/artifact-contract.json",
     "decision": "docs/adr/SHIFU-ADR-019f86da-4f90-7222-b238-9683f61e7288.md"
   },
   "schemaIds": {
@@ -57,6 +58,16 @@
   "integrity": {
     "profileDigest": "sha256-of-source-profile-bytes",
     "schemaOutput": "exact-checked-in-bytes"
+  },
+  "qualifiedAssignmentCoreTransport": {
+    "artifactAuthority": "docs/shifu/artifact-contract.json#qualifiedAssignmentCore",
+    "providers": ["github-actions-cache", "github-workflow-artifact"],
+    "availability": "optimization-only",
+    "cacheHit": "requires-independent-manifest-receipt-and-promotion-verification",
+    "cacheMissOrRejection": "current-source-build",
+    "eviction": "does-not-invalidate-retained-roots-or-receipts",
+    "mergeCorrectness": "must-not-depend-on-transport-availability",
+    "sharedPromotion": "requires-one-active-protected-dev-authority"
   },
   "commands": {
     "contract": "shifu cache contract",

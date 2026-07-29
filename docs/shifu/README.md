@@ -15,6 +15,11 @@ execution; Shifu owns how the task is executed after source checkout.
 - [`artifact-contract.json`](artifact-contract.json) is the machine-readable
   discovery root for local build provenance and safe promotion semantics shared
   by `self-update` and `builds/promote`.
+- [`schema/qualified-assignment-core-artifact-v1.schema.json`](schema/qualified-assignment-core-artifact-v1.schema.json)
+  and
+  [`schema/qualified-assignment-core-qualification-v1.schema.json`](schema/qualified-assignment-core-qualification-v1.schema.json)
+  define the fail-closed manifest and receipt used to qualify reusable
+  Assignment Core payloads.
 - [Gate control plane](gates.md) explains the project-independent registry,
   explicit profile matrix, validation, deterministic planning, bounded
   execution, and source-bound receipt contract.
@@ -149,6 +154,51 @@ self-review: Atlas `go` binds the receipt root into the native Completion Claim
 as a proof root, and only the independent exact-claim review may close it.
 Project Cut v1 remains unchanged and never becomes a second documentation
 authority.
+
+## Qualified Assignment Core artifacts
+
+A reusable native Core payload is authoritative only as the composition of
+four content-addressed objects: its manifest, payload entry set, qualification
+receipt, and one current promotion-authority receipt. The manifest binds the
+producer repository, commit and source tree; the intended target revision; all
+native inputs; operating system, architecture and Python ABI; build profile,
+toolchain and dependency locks; and exact Shifu and Buildchain contract
+versions and roots. Roots use UTF-8 JSON with recursively sorted object keys,
+preserved array order, `JSON.stringify` scalar encoding, and no insignificant
+whitespace.
+
+The consumer verifies every declared byte, mode, bounded POSIX path and safe
+relative symlink while staging outside the target. It then verifies all current
+target expectations and publishes by atomic replacement. A rejected, partial,
+or unqualified payload is never runnable. The target checkout must be clean.
+Exact mode requires the producer commit to equal the target commit. Explicit
+equivalence keeps those identities distinct, requires an immutable equivalence
+receipt root, and forbids rewriting producer metadata.
+
+The boundaries are deliberately separate:
+
+- Shifu defines schema, canonical roots, local verification, safe staging, and
+  publication semantics.
+- Buildchain supplies the exact build/toolchain/dependency identities and
+  delivery evidence; it does not reinterpret Shifu roots.
+- Assignment supplies the requested producer and target context; it does not
+  make payload bytes qualified by naming them.
+- CAS retains bytes by verified content root. A CAS hit is storage evidence,
+  not qualification or promotion authority.
+- Qualification receipts prove the declared checks for one exact manifest and
+  payload. A receipt cannot select itself for reuse.
+- The single active protected-development promotion receipt selects the one
+  currently admissible candidate. Stale, missing, or ambiguous authority fails
+  closed.
+- GitHub Actions cache and workflow artifacts are replaceable transport only.
+  A cache miss, eviction, or rejected candidate falls back to a current-source
+  build and cannot affect merge correctness.
+
+`scripts/check-shifu-cache-contract.mjs` exports the contract verifier used by
+the conformance fixtures. It rejects unsupported or unknown fields, byte and
+metadata tamper, traversal, escaping symlinks, platform/ABI and build identity
+drift, dirty targets, and stale or ambiguous promotion authority.
+
 Buildchain receives the separate project-owned
 `.buildchain/kfd/kfd-1/documentation-pack.witness.json`. It binds the release
 passport target SHA and packaged bytes to the same Atlas, Context Pack, cut,
