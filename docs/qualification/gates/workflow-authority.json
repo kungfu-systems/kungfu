@@ -1777,14 +1777,14 @@
           "authority": "qualification",
           "publication": "none",
           "receipt": "diagnostic",
-          "definitionDigest": "sha256:5b6183fa0007097274fadcbf8fa4097fbc83b89135c53aedcfd9e2acea7f5f3b",
+          "definitionDigest": "sha256:eb88c534da283957e4f74a932ac9177884d3870272b7b135e52c56d6023e77ad",
           "credentials": {"githubToken":"read","oidc":false,"repositorySecrets":[],"inheritedSecrets":false,"environment":null},
           "externalActions": ["actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0","actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02"],
           "steps": [
             {
               "index": 1,
               "label": "name:Check out exact protected source",
-              "definitionDigest": "sha256:c29587b518fd5f52b5410a7d54bffb493087c11abc943c5aa5e31ea62b3ad212"
+              "definitionDigest": "sha256:f59a8bf2f2ec268be4a505dfc794e8872e7f5173cd61e8c1f5b5a0cfcd84cabe"
             },
             {
               "index": 2,

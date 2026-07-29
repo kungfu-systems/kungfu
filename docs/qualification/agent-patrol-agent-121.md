@@ -26,6 +26,11 @@ off agent-120, which remains the Dev build primary.
   rootless daemon uses container `0:0`, which maps back to the unprivileged
   runner account and preserves writable bind-mount ownership. Rootful daemons
   continue to use the invoking host UID/GID.
+- Checkout transport: the exact protected-source checkout forces Git HTTP/1.1
+  through step-scoped environment configuration. This avoids reproducible
+  HTTP/2 stream cancellation and early-EOF failures observed on agent-121
+  without changing the source ref, credentials, runner-global Git config, or
+  any later Patrol step.
 - Concurrency: one Patrol run at a time
 - Credentials: none admitted to the model or Dogfood payload
 

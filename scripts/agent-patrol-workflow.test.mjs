@@ -40,6 +40,17 @@ test('Agent Patrol is isolated to the dedicated agent-121 runner', () => {
   assert.match(workflow, /timeout-minutes: 90/);
 });
 
+test('Agent Patrol bounds the protected-source checkout transport', () => {
+  assert.match(
+    workflow,
+    /- name: Check out exact protected source\n {8}uses: actions\/checkout@[0-9a-f]{40}[^\n]*\n {8}env:\n {10}GIT_CONFIG_COUNT: "1"\n {10}GIT_CONFIG_KEY_0: http\.version\n {10}GIT_CONFIG_VALUE_0: HTTP\/1\.1\n {8}with:/,
+  );
+  assert.match(workflow, /ref: \$\{\{ github\.sha \}\}/);
+  assert.match(workflow, /fetch-depth: 1/);
+  assert.match(workflow, /persist-credentials: false/);
+  assert.doesNotMatch(workflow, /git config --global/u);
+});
+
 test('Agent Patrol pins its local-model runtime and retains bounded evidence', () => {
   assert.match(
     workflow,
