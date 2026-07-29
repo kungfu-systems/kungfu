@@ -26,6 +26,7 @@ import {
 } from './libwasm-artifact.mjs';
 import { normalizeCopiedSymlinks } from './portable-symlinks.mjs';
 import { productReleaseChannelConfig } from './release-channel-trust.mjs';
+import { readTrunkRuntimePinSnapshot } from './runtime-pin-snapshot.mjs';
 import {
   buildBundledUpgradeManifest,
   finalizeCliUpgradeManifest,
@@ -876,7 +877,7 @@ function assertCoreFrozen() {
 // env/package surface) ships next to the frozen binary, together with its
 // runtime-pins manifest. UV_VERSION in the manifest must equal the repo's
 // .uv-version so the product and the dev launcher pull the same pinned uv.
-function stageTrunk() {
+function stageTrunk(runtimePinSnapshot) {
   // KF-ADR-019f86da-4f90-73ff-9543-f0a4f0beef05 stage 3 productionization: link the embedding membrane and ship the
   // real embedding-backed doctor on every platform. POSIX links the SHARED
   // libkungfu from build/<type>; Windows links the single-export
@@ -914,19 +915,12 @@ function stageTrunk() {
   if (!fs.existsSync(trunkBin)) {
     throw new Error(`cargo did not produce ${rel(trunkBin)}`);
   }
-  const uvPin = (fs
-    .readFileSync(RUNTIME_PINS, 'utf8')
-    .match(/^UV_VERSION=(.+)$/m) || [])[1]?.trim();
-  const repoPin = fs
-    .readFileSync(path.join(ROOT, '.uv-version'), 'utf8')
-    .trim();
-  if (uvPin !== repoPin) {
-    throw new Error(
-      `runtime-pins.env pins uv ${uvPin} but .uv-version pins ${repoPin}; update product/runtime-pins.env (version and checksums) alongside .uv-version`,
-    );
-  }
   fs.copyFileSync(trunkBin, path.join(CORE_DIST, path.basename(trunkBin)));
-  fs.copyFileSync(RUNTIME_PINS, path.join(CORE_DIST, 'runtime-pins.env'));
+  fs.writeFileSync(
+    path.join(CORE_DIST, 'runtime-pins.env'),
+    runtimePinSnapshot.runtimePins,
+    'utf8',
+  );
   console.log(
     '[product] kungfu-trunk + runtime-pins.env staged into core dist',
   );
@@ -2301,6 +2295,10 @@ function buildCliProduct(esbuildRuntime) {
 }
 
 function main() {
+  const trunkRuntimePinSnapshot = readTrunkRuntimePinSnapshot({
+    runtimePinsPath: RUNTIME_PINS,
+    repoPinPath: path.join(ROOT, '.uv-version'),
+  });
   buildchainLogger.spanSync(
     'product.dist',
     {
@@ -2369,7 +2367,7 @@ function main() {
         },
       );
       assertCoreFrozen();
-      stageTrunk();
+      stageTrunk(trunkRuntimePinSnapshot);
       runPnpm(
         'pack core npm artifacts',
         ['--filter', '@kungfu-tech/core', 'run', 'pack-platform'],

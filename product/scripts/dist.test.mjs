@@ -29,6 +29,7 @@ import {
   productReleaseChannelConfig,
   releaseChannelKeyId,
 } from './release-channel-trust.mjs';
+import { readTrunkRuntimePinSnapshot } from './runtime-pin-snapshot.mjs';
 
 const require = createRequire(import.meta.url);
 const workDashboardPackage = require('../../extensions/work-dashboard/kungfu.kfx.json');
@@ -38,6 +39,55 @@ const {
   esmEntrypointArgs,
   toEsmEntrypointSpecifier,
 } = require('../../framework/gui/scripts/before-pack.cjs');
+
+test('trunk staging retains one source-authoritative runtime pin snapshot', () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'kungfu-pin-test-'));
+  const runtimePinsPath = path.join(root, 'runtime-pins.env');
+  const repoPinPath = path.join(root, '.uv-version');
+  try {
+    fs.writeFileSync(
+      runtimePinsPath,
+      '# source pin\nUV_VERSION=0.11.23\n',
+      'utf8',
+    );
+    fs.writeFileSync(repoPinPath, '0.11.23\n', 'utf8');
+    const snapshot = readTrunkRuntimePinSnapshot({
+      runtimePinsPath,
+      repoPinPath,
+    });
+
+    fs.rmSync(runtimePinsPath);
+    fs.rmSync(repoPinPath);
+    assert.deepEqual(snapshot, {
+      runtimePins: '# source pin\nUV_VERSION=0.11.23\n',
+      uvPin: '0.11.23',
+      repoPin: '0.11.23',
+    });
+    assert.equal(Object.isFrozen(snapshot), true);
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test('trunk runtime pin snapshot rejects source drift', () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'kungfu-pin-test-'));
+  const runtimePinsPath = path.join(root, 'runtime-pins.env');
+  const repoPinPath = path.join(root, '.uv-version');
+  try {
+    fs.writeFileSync(runtimePinsPath, 'UV_VERSION=0.11.24\n', 'utf8');
+    fs.writeFileSync(repoPinPath, '0.11.23\n', 'utf8');
+    assert.throws(
+      () =>
+        readTrunkRuntimePinSnapshot({
+          runtimePinsPath,
+          repoPinPath,
+        }),
+      /runtime-pins\.env pins uv 0\.11\.24 but \.uv-version pins 0\.11\.23/u,
+    );
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
 
 test('installed KFD smoke accepts only release-qualified shipped support', () => {
   assert.equal(isShippedKfdSupport({ status: 'supported' }), true);
