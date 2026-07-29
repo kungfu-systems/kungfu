@@ -233,6 +233,7 @@ test('declared discovery routes are zero-write in a cold read-only fixture', (t)
     'scripts/check-fact-cut-kernel-contract.test.mjs',
     'scripts/check-git-episode-provider.test.mjs',
     'scripts/check-work-history-selector.test.mjs',
+    'scripts/check-work-design-advisor.test.mjs',
     'scripts/documentation-product-pack.test.mjs',
     'scripts/docs-markdown-readonly.mjs',
     'scripts/kungfu-gate-workflow-facts.mjs',
@@ -296,6 +297,14 @@ test('declared discovery routes are zero-write in a cold read-only fixture', (t)
     'framework/work-history-selector/tooling/check-work-history-selector.mjs',
     'framework/work-history-selector/tooling/work-history-selector-contract.mjs',
     'framework/work-history-selector/work-history-selector.contract.json',
+    'framework/work-design-advisor/schema/work-design-advice-request-v1.schema.json',
+    'framework/work-design-advisor/schema/work-design-advice-v1.schema.json',
+    'framework/work-design-advisor/schema/work-design-advice-verification-v1.schema.json',
+    'framework/work-design-advisor/schema/work-design-disposition-v1.schema.json',
+    'framework/work-design-advisor/src/work-design-advisor.mjs',
+    'framework/work-design-advisor/tooling/check-work-design-advisor.mjs',
+    'framework/work-design-advisor/tooling/work-design-advisor-contract.mjs',
+    'framework/work-design-advisor/work-design-advisor.contract.json',
   ])
     copyFile(ROOT, fixture, relative);
   const amplificationManifest = JSON.parse(

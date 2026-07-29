@@ -466,7 +466,7 @@
       "adapter": {
         "type": "buildchain-heavy-build",
         "kind": "job-uses",
-        "uses": "kungfu-systems/buildchain/.github/workflows/.build.yml@4716fc9d963f73c890f04cd3b91e59569de4fc38",
+        "uses": "kungfu-systems/buildchain/.github/workflows/.build.yml@2de64d5e216c8adaaaaeda12da7771b4814bf809",
         "job": {
           "needs": "preflight",
           "secrets": {
@@ -479,7 +479,7 @@
         "with": {
           "runner-preset": "${{ inputs.platforms-json && 'custom' || 'kungfu-v4-native' }}",
           "github-artifact-attestation-subject-path": "product/release/cli/kungfu-episodes-cli-linux-x64.tar.gz",
-          "github-artifact-attestation-signer-sha": "ad57ae0fee5072a1de7a0b0182f70c0c41e45abb",
+          "github-artifact-attestation-signer-sha": "375b2d4b8a904776453773a33b4c4e4556c8c999",
           "github-artifact-attestation-platform-id": "linux-x64",
           "credential-island-macos-app-path": "product/dist/desktop/mac-arm64/Kungfu Episodes.app",
           "credential-island-caller-owned": true,
@@ -596,14 +596,14 @@
       "adapter": {
         "type": "buildchain-release-admission",
         "kind": "job-uses",
-        "uses": "kungfu-systems/buildchain/.github/workflows/release-candidate-promote.yml@4716fc9d963f73c890f04cd3b91e59569de4fc38",
+        "uses": "kungfu-systems/buildchain/.github/workflows/release-candidate-promote.yml@2de64d5e216c8adaaaaeda12da7771b4814bf809",
         "job": {
           "needs": "promotion-contract",
           "if": "${{ github.event_name == 'workflow_dispatch' || github.event.pull_request.merged == true }}"
         },
         "with": {
           "channel": "${{ startsWith(inputs.target-ref || github.event.pull_request.base.ref, 'alpha/') && 'alpha' || 'release' }}",
-          "buildchain-ref": "4716fc9d963f73c890f04cd3b91e59569de4fc38",
+          "buildchain-ref": "2de64d5e216c8adaaaaeda12da7771b4814bf809",
           "target-sha": "${{ inputs.target-sha || github.event.pull_request.merge_commit_sha || github.sha }}",
           "required-status-check": "build / Finalize build controller evidence",
           "publication-auto-admission": true,
