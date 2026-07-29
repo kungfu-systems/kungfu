@@ -19,7 +19,6 @@
 // existing KUNGFU_PRODUCT_INSTALL_DIR surface.
 
 use std::env;
-use std::ffi::OsString;
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::Command;
@@ -31,7 +30,7 @@ use crate::artifact_catalog::{
     select_unique_automatic, short_sha, state_for, write_promotion_receipt, GitRelation,
     SelectionError,
 };
-use crate::{envfile, util};
+use crate::{envfile, native_update, util};
 
 struct BuildEntry {
     slot: PathBuf,
@@ -446,6 +445,7 @@ struct InstalledReceiptContext<'a> {
     rollback_sha: &'a str,
     rollback_release_cut_root: &'a str,
     cut_transition_root: &'a str,
+    native_receipt_root: &'a str,
     native_updater: &'a Path,
     mode: &'a str,
 }
@@ -473,6 +473,7 @@ fn write_installed_receipt(
          KUNGFU_INSTALLED_RELEASE_CUT_ROOT='{}'\n\
          KUNGFU_INSTALLED_PLATFORM_SLICE_ROOT='{}'\n\
          KUNGFU_INSTALLED_CUT_TRANSITION_ROOT='{}'\n\
+         KUNGFU_INSTALLED_NATIVE_RECEIPT_ROOT='{}'\n\
          KUNGFU_INSTALLED_NATIVE_UPDATER='{}'\n\
          KUNGFU_ROLLBACK_BUILD_ID='{}'\n\
          KUNGFU_ROLLBACK_SHA='{}'\n\
@@ -493,6 +494,7 @@ fn write_installed_receipt(
         entry.release_cut_root,
         entry.platform_slice_root,
         context.cut_transition_root,
+        context.native_receipt_root,
         context.native_updater.display(),
         context.rollback_build_id,
         context.rollback_sha,
@@ -511,176 +513,69 @@ fn write_installed_receipt(
     }
 }
 
-const LEGACY_BOOTSTRAP_ROOT: &str =
-    "sha256:ec51232534d89e75615d44f41ed6af0b2e9978e7bf6655bf231e7f35cefd13fc";
-
-struct NativeUpdateResult {
-    updater: PathBuf,
-    transition_root: String,
+fn native_target(entry: &BuildEntry) -> native_update::ApplyTarget<'_> {
+    native_update::ApplyTarget {
+        kind: &entry.kind,
+        slot: &entry.slot,
+        artifact: &entry.artifact,
+        manifest: &entry.upgrade_manifest,
+        archive: &entry.cli_archive,
+        archive_digest: &entry.cli_archive_digest,
+        manifest_digest: &entry.upgrade_manifest_digest,
+        product_version: &entry.product_version,
+        release_cut_root: &entry.release_cut_root,
+    }
 }
 
-fn native_updater(entry: &BuildEntry) -> Option<PathBuf> {
-    if let Ok(value) = env::var("KUNGFU_NATIVE_UPDATER") {
-        let path = PathBuf::from(value);
-        if path.is_file() {
-            return Some(path);
-        }
-    }
-    if entry.kind == "app" {
-        let candidate = entry
-            .slot
-            .join(&entry.artifact)
-            .join("Contents/Resources/kungfu/kungfu");
-        if candidate.is_file() {
-            return Some(candidate);
-        }
-    }
-    util::find_on_path(if cfg!(windows) {
-        "kungfu.exe"
-    } else {
-        "kungfu"
-    })
-}
-
-fn native_apply_args(
+fn run_native(
     entry: &BuildEntry,
-    current_cut: &str,
-    current_version: &str,
+    rollback: bool,
     execute: bool,
-) -> Vec<OsString> {
-    let mut args = vec![
-        "update".into(),
-        "shifu-apply".into(),
-        entry.slot.join(&entry.upgrade_manifest).into_os_string(),
-        entry.slot.join(&entry.cli_archive).into_os_string(),
-        "--expected-digest".into(),
-        entry.cli_archive_digest.clone().into(),
-        "--evidence-root".into(),
-        entry.cli_archive_digest.clone().into(),
-        "--evidence-root".into(),
-        entry.upgrade_manifest_digest.clone().into(),
-        "--json".into(),
-    ];
-    if current_cut.is_empty() {
-        args.extend([
-            "--bootstrap-release-cut-root".into(),
-            LEGACY_BOOTSTRAP_ROOT.into(),
-            "--bootstrap-version".into(),
-            if current_version.is_empty() {
-                entry.product_version.clone().into()
-            } else {
-                current_version.into()
-            },
-        ]);
-    }
-    if execute {
-        args.push("--yes".into());
-    }
-    args
-}
-
-fn run_native_apply(entry: &BuildEntry, execute: bool) -> NativeUpdateResult {
-    let updater = native_updater(entry).unwrap_or_else(|| {
-        util::die(
-            "native Kungfu updater is unavailable; set KUNGFU_NATIVE_UPDATER to \
-             one exact shipped kungfu executable",
-        )
-    });
+) -> Result<native_update::NativeUpdateResult, String> {
     let current_cut = installed_value("KUNGFU_INSTALLED_RELEASE_CUT_ROOT");
     let current_version = installed_value("KUNGFU_INSTALLED_PRODUCT_VERSION");
-    let mut command = Command::new(&updater);
-    command.args(native_apply_args(
-        entry,
-        &current_cut,
-        &current_version,
-        execute,
-    ));
-    let output = command
-        .output()
-        .unwrap_or_else(|error| util::die(&format!("failed to run native updater: {error}")));
-    if !output.status.success() {
-        let stderr = String::from_utf8_lossy(&output.stderr);
-        util::die(&format!(
-            "native updater rejected Shifu selection (exit {:?}): {}",
-            output.status.code(),
-            stderr.trim()
-        ));
-    }
-    let receipt = json::parse(&String::from_utf8_lossy(&output.stdout)).unwrap_or_else(|error| {
-        util::die(&format!("native updater returned invalid JSON: {error}"))
-    });
-    let expected_state = if execute {
-        "complete"
+    let target = native_target(entry);
+    if rollback {
+        let rollback_cut = installed_value("KUNGFU_ROLLBACK_RELEASE_CUT_ROOT");
+        let updater = native_update::updater(&target).ok_or_else(|| {
+            "native Kungfu updater is unavailable; set KUNGFU_NATIVE_UPDATER to one exact shipped kungfu executable".to_string()
+        })?;
+        native_update::rollback(&updater, &current_cut, &rollback_cut, execute)
     } else {
-        "action-required"
-    };
-    if receipt.str_of("state") != expected_state
-        || receipt.str_of("targetReleaseCutRoot") != entry.release_cut_root
-        || !valid_root(receipt.str_of("cutTransitionRoot"))
-    {
-        util::die("native updater receipt does not bind the selected Release Cut");
-    }
-    NativeUpdateResult {
-        updater,
-        transition_root: receipt.str_of("cutTransitionRoot").to_string(),
+        native_update::apply(&target, &current_cut, &current_version, execute)
     }
 }
 
-fn run_native_rollback(entry: &BuildEntry, execute: bool) -> NativeUpdateResult {
-    let updater = native_updater(entry).unwrap_or_else(|| {
-        util::die(
-            "native Kungfu updater is unavailable; set KUNGFU_NATIVE_UPDATER to \
-             one exact shipped kungfu executable",
-        )
-    });
-    let current_cut = installed_value("KUNGFU_INSTALLED_RELEASE_CUT_ROOT");
-    let rollback_cut = installed_value("KUNGFU_ROLLBACK_RELEASE_CUT_ROOT");
-    if !valid_root(&current_cut) || !valid_root(&rollback_cut) {
-        util::die("installed Product has no exact native Cut rollback coordinate");
-    }
-    let mut command = Command::new(&updater);
-    command
-        .arg("update")
-        .arg("shifu-rollback")
-        .arg("--expected-current-release-cut-root")
-        .arg(&current_cut)
-        .arg("--expected-rollback-release-cut-root")
-        .arg(&rollback_cut)
-        .arg("--evidence-root")
-        .arg(&current_cut)
-        .arg("--json");
-    if execute {
-        command.arg("--yes");
-    }
-    let output = command
-        .output()
-        .unwrap_or_else(|error| util::die(&format!("failed to run native rollback: {error}")));
-    if !output.status.success() {
-        let stderr = String::from_utf8_lossy(&output.stderr);
-        util::die(&format!(
-            "native updater rejected rollback (exit {:?}): {}",
-            output.status.code(),
-            stderr.trim()
-        ));
-    }
-    let receipt = json::parse(&String::from_utf8_lossy(&output.stdout)).unwrap_or_else(|error| {
-        util::die(&format!("native updater returned invalid JSON: {error}"))
-    });
-    let expected_state = if execute {
-        "complete"
-    } else {
-        "action-required"
-    };
-    if receipt.str_of("state") != expected_state
-        || receipt.str_of("targetReleaseCutRoot") != rollback_cut
-        || !valid_root(receipt.str_of("cutTransitionRoot"))
-    {
-        util::die("native updater rollback receipt does not bind the retained Release Cut");
-    }
-    NativeUpdateResult {
-        updater,
-        transition_root: receipt.str_of("cutTransitionRoot").to_string(),
-    }
+fn pending_transaction_path() -> PathBuf {
+    registry_dir().join("promotion-pending.json")
+}
+
+fn write_pending_transaction(
+    entry: &BuildEntry,
+    action: &str,
+    native: &native_update::NativeUpdateResult,
+) {
+    let path = pending_transaction_path();
+    let staged = path.with_extension("tmp");
+    let value = format!(
+        "{{\"schema\":\"shifu.local-promotion-transaction/v1\",\
+         \"state\":\"desktop-commit-pending\",\
+         \"action\":\"{}\",\"artifactId\":\"{}\",\
+         \"targetReleaseCutRoot\":\"{}\",\
+         \"cutTransitionRoot\":\"{}\"}}\n",
+        json_escape(action),
+        json_escape(&entry.name),
+        json_escape(&entry.release_cut_root),
+        json_escape(&native.transition_root),
+    );
+    fs::write(&staged, value)
+        .and_then(|()| fs::rename(&staged, &path))
+        .unwrap_or_else(|error| {
+            let _ = fs::remove_file(&staged);
+            util::die(&format!(
+                "cannot retain pending promotion transaction: {error}"
+            ))
+        });
 }
 
 pub fn run_builds(args: &[String]) -> ! {
@@ -823,6 +718,8 @@ pub fn run_promote(args: &[String]) -> ! {
     } else {
         "promote"
     };
+    let native_plan = run_native(entry, rollback, false)
+        .unwrap_or_else(|error| util::die(&format!("native updater preflight failed: {error}")));
     if check {
         println!(
             "{{\"schema\":\"shifu.local-promotion-plan/v1\",\"ok\":true,\
@@ -831,6 +728,7 @@ pub fn run_promote(args: &[String]) -> ! {
              \"mainlineCommit\":\"{}\",\"qualified\":{},\"integrated\":{},\
              \"currentCommit\":\"{}\",\"currentReleaseCutRoot\":\"{}\",\
              \"targetReleaseCutRoot\":\"{}\",\"platformSliceRoot\":\"{}\",\
+             \"cutTransitionRoot\":\"{}\",\
              \"wouldWrite\":false}}",
             action,
             json_escape(&entry.name),
@@ -843,6 +741,7 @@ pub fn run_promote(args: &[String]) -> ! {
             json_escape(&previous_release_cut_root),
             json_escape(&entry.release_cut_root),
             json_escape(&entry.platform_slice_root),
+            json_escape(&native_plan.transition_root),
         );
         std::process::exit(0);
     }
@@ -863,25 +762,20 @@ pub fn run_promote(args: &[String]) -> ! {
         ))
     );
 
-    // The dry run verifies the exact archive, local trust boundary, current
-    // native selection, and Cut Transition before either authority mutates.
-    if rollback {
-        let _ = run_native_rollback(entry, false);
-    } else {
-        let _ = run_native_apply(entry, false);
-    }
-    let native = if rollback {
-        run_native_rollback(entry, true)
-    } else {
-        run_native_apply(entry, true)
-    };
-
+    // The native dry run above proves the exact Cut Transition. Retain a
+    // durable pending coordinate, place the desktop surface, then advance the
+    // native selection. If desktop placement fails the native authority has
+    // not moved; if native commit fails, retrying this exact transaction is
+    // safe and uses the still-current installed receipt.
+    write_pending_transaction(entry, action, &native_plan);
     let installed = match entry.kind.as_str() {
         "app" => promote_app(entry, force),
         "installer" => promote_installer(entry),
         "appimage" => promote_appimage(entry),
         other => util::die(&format!("unknown artifact kind in stash: {other}")),
     };
+    let native = run_native(entry, rollback, true)
+        .unwrap_or_else(|error| util::die(&format!("native updater commit failed: {error}")));
 
     eprintln!(
         "\u{2705} {} {}",
@@ -909,6 +803,7 @@ pub fn run_promote(args: &[String]) -> ! {
             rollback_sha: &previous_sha,
             rollback_release_cut_root: &previous_release_cut_root,
             cut_transition_root: &native.transition_root,
+            native_receipt_root: &native.receipt_root,
             native_updater: &native.updater,
             mode: installed_mode,
         },
@@ -927,6 +822,7 @@ pub fn run_promote(args: &[String]) -> ! {
             style::yellow(&format!("could not write promotion receipt: {error}"))
         );
     }
+    let _ = fs::remove_file(pending_transaction_path());
     // Retain every prior slot: the installed receipt names the exact rollback
     // coordinate, and a safe dogfood promotion must not erase it as a side
     // effect of advancing.
@@ -1247,40 +1143,6 @@ mod tests {
             "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
         )
         .is_none());
-        let _ = fs::remove_dir_all(root);
-    }
-
-    #[test]
-    fn native_apply_adapter_binds_exact_slot_evidence_and_explicit_bootstrap() {
-        let root = shifu_core::host::unique_temp_dir("native-apply-args").unwrap();
-        let entry = qualified_app(&root);
-        let bootstrap = native_apply_args(&entry, "", "", false);
-        let bootstrap: Vec<_> = bootstrap
-            .iter()
-            .map(|value| value.to_string_lossy().into_owned())
-            .collect();
-        assert_eq!(bootstrap[0..2], ["update", "shifu-apply"]);
-        assert!(bootstrap.contains(
-            &entry
-                .slot
-                .join(&entry.upgrade_manifest)
-                .display()
-                .to_string()
-        ));
-        assert!(bootstrap.contains(&entry.slot.join(&entry.cli_archive).display().to_string()));
-        assert!(bootstrap.contains(&entry.cli_archive_digest));
-        assert!(bootstrap.contains(&entry.upgrade_manifest_digest));
-        assert!(bootstrap.contains(&LEGACY_BOOTSTRAP_ROOT.to_string()));
-        assert!(!bootstrap.contains(&"--yes".to_string()));
-
-        let current_cut = format!("sha256:{}", "e".repeat(64));
-        let successor = native_apply_args(&entry, &current_cut, "4.0.0-alpha.0", true);
-        let successor: Vec<_> = successor
-            .iter()
-            .map(|value| value.to_string_lossy().into_owned())
-            .collect();
-        assert!(!successor.contains(&"--bootstrap-release-cut-root".to_string()));
-        assert!(successor.contains(&"--yes".to_string()));
         let _ = fs::remove_dir_all(root);
     }
 }

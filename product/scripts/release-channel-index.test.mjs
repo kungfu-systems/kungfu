@@ -54,6 +54,61 @@ function manifest(overrides = {}) {
   };
 }
 
+function cutAwareManifest(platform, architecture, seed) {
+  const value = manifest({
+    platform,
+    architecture,
+    runtimeBuildId: `runtime-${platform}-${architecture}`,
+    frontendBuildId: `frontend-${platform}-${architecture}`,
+  });
+  const manifestIdentityRoot = contentRoot(
+    Object.fromEntries(
+      Object.entries(value).filter(
+        ([key]) => !['artifacts', 'qualificationEvidenceRef'].includes(key),
+      ),
+    ),
+  );
+  const slice = {
+    schema: 'kungfu.product-release-platform-slice/v1',
+    platform,
+    architecture,
+    manifestIdentityRoot,
+    artifactRoot: contentRoot(value.artifacts),
+    qualificationEvidenceRoots: [`sha256:${'a'.repeat(64)}`],
+    signingEvidenceRoots: [`sha256:${seed.repeat(64)}`],
+  };
+  slice.platformSliceRoot = contentRoot(slice);
+  const releaseCut = {
+    schema: 'kungfu.product-release-cut/v1',
+    productVersion: value.productVersion,
+    parentReleaseCutRoots: [],
+    sourceSettlementRoot: `sha256:${'3'.repeat(64)}`,
+    semanticIdentityRoot: `sha256:${seed.repeat(64)}`,
+    productAssemblyRoot: `sha256:${seed.repeat(64)}`,
+    compatibilityContractRoot: `sha256:${'4'.repeat(64)}`,
+    migrationContractRoot: `sha256:${'5'.repeat(64)}`,
+    platformSlices: [slice],
+    qualificationEvidenceRoots: [`sha256:${'a'.repeat(64)}`],
+    signingEvidenceRoots: [`sha256:${seed.repeat(64)}`],
+    publicationPolicy: {
+      trustDomain: 'public',
+      publicationEligible: true,
+      immutable: true,
+      eligibleChannels: ['alpha'],
+    },
+    omissionRoots: [],
+    waiverRoots: [],
+  };
+  releaseCut.releaseCutRoot = contentRoot(releaseCut);
+  return {
+    ...value,
+    manifestIdentityRoot,
+    releaseCut,
+    releaseCutRoot: releaseCut.releaseCutRoot,
+    platformSliceRoot: slice.platformSliceRoot,
+  };
+}
+
 function fixture() {
   const directory = fs.mkdtempSync(
     path.join(os.tmpdir(), 'kungfu-release-channel-'),
@@ -254,6 +309,56 @@ test('release admission can bind the final Buildchain release passport', () => {
     assert.equal(
       spec.releasePassport.root,
       contentRoot(JSON.parse(fs.readFileSync(releasePassportPath, 'utf8'))),
+    );
+  } finally {
+    fs.rmSync(value.directory, { recursive: true, force: true });
+  }
+});
+
+test('release admission assembles every platform into one Product Release Cut', () => {
+  const value = fixture();
+  try {
+    const targets = [
+      ['darwin', 'arm64', '6'],
+      ['linux', 'x64', '7'],
+      ['win32', 'x64', '8'],
+    ];
+    const manifests = targets.map(([platform, architecture, seed]) => {
+      const manifestPath = path.join(
+        value.directory,
+        `${platform}-${architecture}.json`,
+      );
+      fs.writeFileSync(
+        manifestPath,
+        `${JSON.stringify(cutAwareManifest(platform, architecture, seed))}\n`,
+      );
+      return { platform, architecture, manifestPath };
+    });
+    const passportPath = path.join(value.directory, 'passport.json');
+    fs.writeFileSync(
+      passportPath,
+      `${JSON.stringify({ source: { headSha: sourceCommit } })}\n`,
+    );
+    const spec = channelSpecFromAdmission({
+      admission: { manifests },
+      releaseCandidatePassportPath: passportPath,
+      channel: 'alpha',
+      keyId: value.spec.keyId,
+      generatedAt: value.spec.generatedAt,
+      expiresAt: value.spec.expiresAt,
+    });
+    const roots = new Set(
+      spec.entries.map((entry) => entry.manifest.releaseCutRoot),
+    );
+    assert.equal(roots.size, 1);
+    assert.equal(spec.entries[0].manifest.releaseCut.platformSlices.length, 3);
+    const index = buildChannelIndex({
+      spec,
+      privateKeyPem: value.privateKeyPem,
+    });
+    assert.equal(
+      new Set(index.entries.map((entry) => entry.releaseCutRoot)).size,
+      1,
     );
   } finally {
     fs.rmSync(value.directory, { recursive: true, force: true });

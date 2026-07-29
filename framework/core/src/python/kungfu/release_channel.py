@@ -15,7 +15,9 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-from kungfu import release_cut, runtime_upgrade
+from kungfu import runtime_upgrade
+
+release_cut = runtime_upgrade
 
 
 CHANNEL_INDEX_SCHEMA = "kungfu.release-channel-index/v1"
@@ -317,6 +319,10 @@ def validate_signed_index(
             "channel-index-malformed", "release channel entries are missing"
         )
     identities: set[tuple[str, str, str, str]] = set()
+    cut_roots: set[str] = set()
+    cut_targets: set[tuple[str, str]] = set()
+    common_cut: dict[str, Any] | None = None
+    cut_entry_count = 0
     for entry in entries:
         if not isinstance(entry, Mapping):
             raise ReleaseChannelError(
@@ -418,6 +424,7 @@ def validate_signed_index(
                 "release channel entry and manifest identity differ",
             )
         if cut_aware:
+            cut_entry_count += 1
             if entry.get("releaseCutRoot") != manifest.get(
                 "releaseCutRoot"
             ) or entry.get("platformSliceRoot") != manifest.get("platformSliceRoot"):
@@ -439,6 +446,30 @@ def validate_signed_index(
                         "channel-cut-transition-mismatch",
                         "release channel Cut Transition targets another Release Cut",
                     )
+            cut_roots.add(str(manifest["releaseCutRoot"]))
+            cut_targets.add((platform_name, architecture))
+            if common_cut is None:
+                common_cut = copy.deepcopy(dict(manifest["releaseCut"]))
+            elif common_cut != manifest["releaseCut"]:
+                raise ReleaseChannelError(
+                    "channel-release-cut-diverged",
+                    "release channel entries do not carry one Product Release Cut",
+                )
+    if cut_roots:
+        if cut_entry_count != len(entries) or len(cut_roots) != 1 or common_cut is None:
+            raise ReleaseChannelError(
+                "channel-release-cut-diverged",
+                "release channel entries do not share one Product Release Cut",
+            )
+        declared_targets = {
+            (item["platform"], item["architecture"])
+            for item in common_cut["platformSlices"]
+        }
+        if declared_targets != cut_targets:
+            raise ReleaseChannelError(
+                "channel-release-cut-slices-incomplete",
+                "Product Release Cut slices do not match signed channel targets",
+            )
     return value
 
 
@@ -801,7 +832,14 @@ def verify_bootstrap_candidate(
             "product-manifest-mismatch",
             "staged product manifest does not describe this archive target",
         )
-    identity_fields = (
+    try:
+        bundled = runtime_upgrade.validate_manifest(bundled)
+    except (TypeError, runtime_upgrade.UpgradeError) as error:
+        raise ReleaseChannelError(
+            "product-manifest-mismatch",
+            "staged bundled release identity is invalid",
+        ) from error
+    identity_fields = [
         "schema",
         "productVersion",
         "releaseChannel",
@@ -811,14 +849,9 @@ def verify_bootstrap_candidate(
         "frontendBuildId",
         "platform",
         "architecture",
-    )
+    ]
     if "releaseCutRoot" in manifest:
-        identity_fields += (
-            "manifestIdentityRoot",
-            "releaseCut",
-            "releaseCutRoot",
-            "platformSliceRoot",
-        )
+        identity_fields.append("manifestIdentityRoot")
     if any(bundled.get(field) != manifest.get(field) for field in identity_fields):
         raise ReleaseChannelError(
             "product-manifest-mismatch",
@@ -847,6 +880,7 @@ def verify_bootstrap_candidate(
             {
                 "releaseCutRoot": manifest["releaseCutRoot"],
                 "platformSliceRoot": manifest["platformSliceRoot"],
+                "bundledManifestIdentityRoot": bundled["manifestIdentityRoot"],
             }
         )
     receipt["receiptRoot"] = content_root(receipt)

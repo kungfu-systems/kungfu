@@ -115,6 +115,119 @@ function requirePublicHttps(value, label) {
   return value;
 }
 
+function sortedUnique(values) {
+  return [...new Set(values)].sort();
+}
+
+function canonicalKey(value) {
+  return canonicalBytes(value).toString('ascii');
+}
+
+function assemblePublicReleaseCut(manifests) {
+  const aware = manifests.filter((manifest) => manifest.releaseCut);
+  if (aware.length === 0) return manifests;
+  if (aware.length !== manifests.length) {
+    throw new Error(
+      'admitted release manifests mix Cut-aware and legacy identities',
+    );
+  }
+  const first = manifests[0];
+  const firstCut = first.releaseCut;
+  if (
+    firstCut?.publicationPolicy?.trustDomain !== 'public' ||
+    firstCut.publicationPolicy.publicationEligible !== true
+  ) {
+    throw new Error('public channel admission requires a public Release Cut');
+  }
+  const commonFields = [
+    'schema',
+    'productVersion',
+    'parentReleaseCutRoots',
+    'sourceSettlementRoot',
+    'compatibilityContractRoot',
+    'migrationContractRoot',
+    'publicationPolicy',
+    'omissionRoots',
+    'waiverRoots',
+  ];
+  const slices = manifests
+    .map((manifest) => {
+      const cut = manifest.releaseCut;
+      if (
+        cut?.publicationPolicy?.trustDomain !== 'public' ||
+        commonFields.some(
+          (field) =>
+            canonicalKey(cut?.[field]) !== canonicalKey(firstCut[field]),
+        )
+      ) {
+        throw new Error(
+          'admitted release manifests do not share one public Cut contract',
+        );
+      }
+      const matches = (cut.platformSlices || []).filter(
+        (slice) =>
+          slice.platform === manifest.platform &&
+          slice.architecture === manifest.architecture &&
+          slice.platformSliceRoot === manifest.platformSliceRoot &&
+          slice.manifestIdentityRoot === manifest.manifestIdentityRoot,
+      );
+      if (matches.length !== 1) {
+        throw new Error(
+          'admitted release manifest is not bound to one exact platform slice',
+        );
+      }
+      return matches[0];
+    })
+    .sort((left, right) =>
+      `${left.platform}/${left.architecture}`.localeCompare(
+        `${right.platform}/${right.architecture}`,
+      ),
+    );
+  const targets = slices.map(
+    (slice) => `${slice.platform}/${slice.architecture}`,
+  );
+  if (targets.length !== new Set(targets).size) {
+    throw new Error('admitted release manifests duplicate a platform slice');
+  }
+  const memberRoots = slices.map((slice) => ({
+    platform: slice.platform,
+    architecture: slice.architecture,
+    manifestIdentityRoot: slice.manifestIdentityRoot,
+    artifactRoot: slice.artifactRoot,
+    platformSliceRoot: slice.platformSliceRoot,
+  }));
+  const { releaseCutRoot: _individualRoot, ...cutContract } = firstCut;
+  const releaseCut = {
+    ...cutContract,
+    semanticIdentityRoot: contentRoot({
+      productVersion: first.productVersion,
+      releaseChannel: first.releaseChannel,
+      sourceCommit: first.sourceCommit,
+      platformMembers: memberRoots.map(
+        ({ platform, architecture, manifestIdentityRoot }) => ({
+          platform,
+          architecture,
+          manifestIdentityRoot,
+        }),
+      ),
+    }),
+    productAssemblyRoot: contentRoot(memberRoots),
+    platformSlices: slices,
+    qualificationEvidenceRoots: sortedUnique(
+      slices.flatMap((slice) => slice.qualificationEvidenceRoots),
+    ),
+    signingEvidenceRoots: sortedUnique(
+      slices.flatMap((slice) => slice.signingEvidenceRoots),
+    ),
+  };
+  releaseCut.releaseCutRoot = contentRoot(releaseCut);
+  return manifests.map((manifest) => ({
+    ...manifest,
+    releaseCut,
+    releaseCutRoot: releaseCut.releaseCutRoot,
+  }));
+}
+
 export function channelSpecFromAdmission({
   admission,
   releaseCandidatePassportPath,
@@ -138,12 +251,12 @@ export function channelSpecFromAdmission({
   if (!Array.isArray(installSources) || installSources.length === 0) {
     throw new Error('at least one install source is required');
   }
-  const manifests = admission.manifests.map((entry) => ({
+  const admitted = admission.manifests.map((entry) => ({
     ...entry,
     manifest: readJson(entry.manifestPath, 'admitted release manifest'),
   }));
   const sourceCommits = new Set(
-    manifests.map((entry) => entry.manifest.sourceCommit),
+    admitted.map((entry) => entry.manifest.sourceCommit),
   );
   if (sourceCommits.size !== 1) {
     throw new Error(
@@ -158,6 +271,9 @@ export function channelSpecFromAdmission({
     `buildchain:${
       releasePassportPath ? 'release-passport' : 'release-candidate-passport'
     }/${sourceCommit}`;
+  const assembled = assemblePublicReleaseCut(
+    admitted.map((entry) => entry.manifest),
+  );
   return {
     keyId,
     generatedAt,
@@ -167,13 +283,14 @@ export function channelSpecFromAdmission({
       ref: passportRef,
       root: contentRoot(passport),
     },
-    entries: manifests.flatMap(({ manifestPath, manifest }) =>
+    entries: admitted.flatMap(({ manifestPath }, index) =>
       installSources.map((installSource) => ({
         channel,
         installSource,
         rollout: 'current',
         manifestPath,
-        documentationUrl: manifest.documentationUrl,
+        manifest: assembled[index],
+        documentationUrl: assembled[index].documentationUrl,
       })),
     ),
   };
@@ -200,10 +317,29 @@ export function buildChannelIndex({
   if (!Array.isArray(spec.entries) || spec.entries.length === 0) {
     throw new Error('at least one release channel entry is required');
   }
+  const sourceManifests = new Map();
+  for (const entry of spec.entries) {
+    const manifestPath = path.resolve(baseDirectory, entry.manifestPath);
+    if (!sourceManifests.has(manifestPath)) {
+      sourceManifests.set(
+        manifestPath,
+        entry.manifest || readJson(manifestPath, 'release manifest'),
+      );
+    }
+  }
+  const assembledManifests = assemblePublicReleaseCut([
+    ...sourceManifests.values(),
+  ]);
+  const manifestByPath = new Map(
+    [...sourceManifests.keys()].map((manifestPath, index) => [
+      manifestPath,
+      assembledManifests[index],
+    ]),
+  );
   const identities = new Set();
   const entries = spec.entries.map((entry) => {
     const manifestPath = path.resolve(baseDirectory, entry.manifestPath);
-    const manifest = readJson(manifestPath, 'release manifest');
+    const manifest = manifestByPath.get(manifestPath);
     if (!['alpha', 'stable'].includes(entry.channel)) {
       throw new Error(`release channel is invalid: ${entry.channel}`);
     }
@@ -284,6 +420,39 @@ export function buildChannelIndex({
         ].join('/'),
       ),
   );
+  const cutEntries = entries.filter((entry) => entry.releaseCutRoot);
+  if (cutEntries.length > 0) {
+    if (cutEntries.length !== entries.length) {
+      throw new Error(
+        'release channel cannot mix Cut-aware and legacy entries',
+      );
+    }
+    const releaseCutRoots = new Set(
+      cutEntries.map((entry) => entry.releaseCutRoot),
+    );
+    if (releaseCutRoots.size !== 1) {
+      throw new Error(
+        'release channel entries do not share one Product Release Cut',
+      );
+    }
+    const cut = cutEntries[0].manifest.releaseCut;
+    const admittedTargets = new Set(
+      cutEntries.map((entry) => `${entry.platform}/${entry.architecture}`),
+    );
+    const cutTargets = new Set(
+      cut.platformSlices.map(
+        (slice) => `${slice.platform}/${slice.architecture}`,
+      ),
+    );
+    if (
+      admittedTargets.size !== cutTargets.size ||
+      [...admittedTargets].some((target) => !cutTargets.has(target))
+    ) {
+      throw new Error(
+        'Product Release Cut platform slices do not match channel entries',
+      );
+    }
+  }
   const payload = {
     schema: CHANNEL_INDEX_SCHEMA,
     generatedAt,

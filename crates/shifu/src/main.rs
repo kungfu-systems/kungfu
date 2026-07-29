@@ -11,7 +11,6 @@
 //   shifu --version | -v | -V     launcher version + build identity
 //   shifu self-version            this binary's crate version (machine readable)
 //   shifu / -h / --help           launcher usage (pnpm's own help: `shifu help`)
-//
 // plus the capability the scripts could only ask the user for: when fnm / uv
 // are missing it bootstraps them from prebuilt release binaries into a
 // user-global cache (no compiler, no package manager, no admin required).
@@ -41,6 +40,7 @@ mod envfile;
 mod invocation;
 #[cfg(windows)]
 mod msvc;
+mod native_update;
 mod promote;
 mod registrar;
 mod self_update;

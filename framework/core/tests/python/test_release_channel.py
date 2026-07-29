@@ -28,7 +28,8 @@ def _install_fake_pykungfu() -> None:
 
 _install_fake_pykungfu()
 
-from kungfu import distribution_update, release_channel, release_cut  # noqa: E402
+from kungfu import distribution_update, release_channel  # noqa: E402
+from kungfu import runtime_upgrade as release_cut  # noqa: E402
 
 
 ROOT = Path(__file__).parents[4]
@@ -202,10 +203,6 @@ process.stdout.write(der.subarray(der.length - 32).toString('base64'));
         "rollout": "current",
         "manifestPath": manifest_path.name,
     }
-    if cut_transition is not None:
-        transition_path = tmp_path / "cut-transition.json"
-        transition_path.write_text(json.dumps(cut_transition), "utf-8")
-        entry["cutTransitionPath"] = transition_path.name
     spec = {
         "keyId": "fixture-2026",
         "generatedAt": "2026-07-23T00:00:00Z",
@@ -218,25 +215,43 @@ process.stdout.write(der.subarray(der.length - 32).toString('base64'));
         "entries": [entry],
     }
     spec_path = tmp_path / "spec.json"
-    spec_path.write_text(json.dumps(spec), "utf-8")
     output = tmp_path / "channel.json"
-    subprocess.run(
-        [
-            "node",
-            str(ROOT / "product/scripts/release-channel-index.mjs"),
-            "--spec",
-            str(spec_path),
-            "--private-key",
-            str(private_key),
-            "--output",
-            str(output),
-        ],
-        cwd=ROOT,
-        check=True,
-        capture_output=True,
-        text=True,
-    )
-    return json.loads(output.read_text("utf-8")), {"fixture-2026": key}
+
+    def build() -> dict:
+        spec_path.write_text(json.dumps(spec), "utf-8")
+        subprocess.run(
+            [
+                "node",
+                str(ROOT / "product/scripts/release-channel-index.mjs"),
+                "--spec",
+                str(spec_path),
+                "--private-key",
+                str(private_key),
+                "--output",
+                str(output),
+            ],
+            cwd=ROOT,
+            check=True,
+            capture_output=True,
+            text=True,
+        )
+        return json.loads(output.read_text("utf-8"))
+
+    index = build()
+    if cut_transition is not None:
+        final_manifest = index["entries"][0]["manifest"]
+        transition = {
+            **cut_transition,
+            "toReleaseCutRoot": final_manifest["releaseCutRoot"],
+            "toProductVersion": final_manifest["productVersion"],
+        }
+        transition.pop("cutTransitionRoot", None)
+        transition = release_cut.finish_cut_transition(transition)
+        transition_path = tmp_path / "cut-transition.json"
+        transition_path.write_text(json.dumps(transition), "utf-8")
+        entry["cutTransitionPath"] = transition_path.name
+        index = build()
+    return index, {"fixture-2026": key}
 
 
 def _assert_error(code: str, action) -> None:
@@ -308,7 +323,10 @@ def test_signed_channel_authorizes_same_semver_release_cut_supersession(
         current_release_cut_root=current_manifest["releaseCutRoot"],
     )
     assert selection["targetVersion"] == selection["currentVersion"]
-    assert selection["targetReleaseCutRoot"] == target_manifest["releaseCutRoot"]
+    assert (
+        selection["targetReleaseCutRoot"]
+        == index["entries"][0]["manifest"]["releaseCutRoot"]
+    )
     assert selection["cutDecision"]["outcome"] == "verified-successor"
     assert selection["cutDecision"]["updateAllowed"] is True
 
@@ -645,7 +663,15 @@ def test_bootstrap_verifier_binds_staged_archive_product_and_channel(
         "utf-8",
     )
     (candidate / "upgrade" / "kungfu-release-manifest.json").write_text(
-        json.dumps(manifest),
+        json.dumps(
+            _cut_aware_manifest(
+                artifacts=[
+                    artifact
+                    for artifact in manifest["artifacts"]
+                    if artifact["kind"] == "runtime"
+                ]
+            )
+        ),
         "utf-8",
     )
     entry = index["entries"][0]
@@ -667,8 +693,12 @@ def test_bootstrap_verifier_binds_staged_archive_product_and_channel(
     assert receipt["state"] == "verified"
     assert receipt["artifactDigest"] == digest
     assert receipt["channelPayloadRoot"] == index["payloadRoot"]
-    assert receipt["releaseCutRoot"] == manifest["releaseCutRoot"]
-    assert receipt["platformSliceRoot"] == manifest["platformSliceRoot"]
+    assert receipt["releaseCutRoot"] == entry["manifest"]["releaseCutRoot"]
+    assert receipt["platformSliceRoot"] == entry["manifest"]["platformSliceRoot"]
+    assert (
+        receipt["bundledManifestIdentityRoot"]
+        == entry["manifest"]["manifestIdentityRoot"]
+    )
     (candidate / "install").mkdir()
     (candidate / "install" / "bootstrap-receipt.json").write_text(
         json.dumps(receipt),

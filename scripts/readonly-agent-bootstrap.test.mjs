@@ -241,11 +241,27 @@ test('declared discovery routes are zero-write in a cold read-only fixture', (t)
     'docs/shifu/qualified-assignment-core-platform-matrix.json',
     'docs/shifu/schema/qualified-assignment-core-platform-matrix-v1.schema.json',
     'product/package.json',
+    'product/scripts/release-channel-index.mjs',
+    'product/scripts/release-channel-index.test.mjs',
+    'product/scripts/upgrade-manifest.test.mjs',
     'crates/shifu/src/artifact_catalog.rs',
+    'crates/shifu/src/main.rs',
+    'crates/shifu/src/native_update.rs',
     'crates/shifu/src/promote.rs',
     'crates/shifu/src/registrar.rs',
+    'config/kungfu-contracts.registry.json',
     'framework/core/src/python/kungfu/distribution_update.py',
+    'framework/core/src/python/kungfu/release_channel.py',
+    'framework/core/src/python/kungfu/runtime_upgrade.py',
+    'framework/core/tests/python/test_distribution_release_cut.py',
     'framework/core/tests/python/test_distribution_update.py',
+    'framework/core/tests/python/test_release_channel.py',
+    'framework/core/tests/python/test_release_cut.py',
+    'framework/primitive/kungfu-primitive-catalog.contract.json',
+    'framework/registry/contract.registry-envelope.json',
+    'docs/adr/KF-ADR-019fabb5-62a0-7b8d-8f8d-6505efdbc239.md',
+    'docs/architecture/adr-map.json',
+    'docs/architecture/adr-map.md',
     'scripts/candidate-timeline-events.cjs',
     'scripts/check-carrier-action-envelope.mjs',
     'scripts/check-project-cut-composition-gate.mjs',
@@ -396,6 +412,10 @@ test('declared discovery routes are zero-write in a cold read-only fixture', (t)
     'framework/work-design-open-card/work-design-open-card.contract.json',
   ])
     copyFile(ROOT, fixture, relative);
+  fs.rmSync(
+    path.join(fixture, 'framework/core/src/python/kungfu/release_cut.py'),
+    { force: true },
+  );
   const amplificationManifest = JSON.parse(
     fs.readFileSync(
       path.join(

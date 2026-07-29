@@ -378,10 +378,17 @@ fn plan_at(root: &Path, path: &Path, task: &str) -> Option<DistributionPlan> {
             .get("tasks")
             .and_then(json::Json::as_array)
             .unwrap_or(&[]);
-        if !tasks.iter().any(|t| t.as_str() == Some(task)) {
+        if !tasks.iter().any(|item| {
+            item.as_str().is_some_and(|candidate| {
+                candidate == task
+                    || candidate
+                        .strip_suffix('*')
+                        .is_some_and(|prefix| task.starts_with(prefix))
+            })
+        }) {
             continue;
         }
-        let artifacts: Vec<DeclaredArtifact> = dist
+        let mut artifacts: Vec<DeclaredArtifact> = dist
             .get("artifacts")
             .and_then(json::Json::as_array)
             .unwrap_or(&[])
@@ -394,6 +401,30 @@ fn plan_at(root: &Path, path: &Path, task: &str) -> Option<DistributionPlan> {
             })
             .filter(|a| !a.kind.is_empty() && !a.path_glob.is_empty())
             .collect();
+        if dist.str_of("releaseCompanions") == "standard" {
+            let runtime = match env::consts::OS {
+                "macos" => "darwin",
+                "windows" => "win32",
+                other => other,
+            };
+            let archive = if env::consts::OS == "windows" {
+                "zip"
+            } else {
+                "tar.gz"
+            };
+            artifacts.extend([
+                DeclaredArtifact {
+                    kind: "cli-archive".to_string(),
+                    path_glob: format!("product/release/cli/*cli-{runtime}-*.{archive}"),
+                    sha256: String::new(),
+                },
+                DeclaredArtifact {
+                    kind: "upgrade-manifest".to_string(),
+                    path_glob: format!("product/release/cli/*upgrade-*-{runtime}-*.json"),
+                    sha256: String::new(),
+                },
+            ]);
+        }
         if artifacts.is_empty() {
             continue;
         }

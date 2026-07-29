@@ -721,11 +721,11 @@ function sdkAndProductSurfaces() {
       // Build-output facts for the shifu registrar: when one of these tasks
       // succeeds under shifu, the launcher stashes the host platform's
       // artifact user-globally for `shifu builds` / `shifu promote`
-      // (crates/shifu/src/registrar.rs). Declaration, not script — a repo
-      // onboards its artifacts by stating them here.
+      // A repo onboards its artifacts here; crates/shifu/src/registrar.rs consumes it.
       distribution: {
         registrar: 'shifu',
-        tasks: ['dist', 'dist:dir', 'package'],
+        tasks: ['dist*', 'package'],
+        releaseCompanions: 'standard',
         artifacts: [
           {
             kind: 'app',
@@ -741,36 +741,6 @@ function sdkAndProductSurfaces() {
             kind: 'appimage',
             platform: 'linux',
             pathGlob: 'product/dist/desktop/*.AppImage',
-          },
-          {
-            kind: 'cli-archive',
-            platform: 'macos',
-            pathGlob: 'product/release/cli/kungfu-episodes-cli-darwin-*.tar.gz',
-          },
-          {
-            kind: 'cli-archive',
-            platform: 'windows',
-            pathGlob: 'product/release/cli/kungfu-episodes-cli-win32-*.zip',
-          },
-          {
-            kind: 'cli-archive',
-            platform: 'linux',
-            pathGlob: 'product/release/cli/kungfu-episodes-cli-linux-*.tar.gz',
-          },
-          {
-            kind: 'upgrade-manifest',
-            platform: 'macos',
-            pathGlob: 'product/release/cli/kungfu-upgrade-*-darwin-*.json',
-          },
-          {
-            kind: 'upgrade-manifest',
-            platform: 'windows',
-            pathGlob: 'product/release/cli/kungfu-upgrade-*-win32-*.json',
-          },
-          {
-            kind: 'upgrade-manifest',
-            platform: 'linux',
-            pathGlob: 'product/release/cli/kungfu-upgrade-*-linux-*.json',
           },
         ],
       },

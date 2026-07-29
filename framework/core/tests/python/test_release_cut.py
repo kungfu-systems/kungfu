@@ -21,7 +21,7 @@ def _install_fake_pykungfu() -> None:
 
 _install_fake_pykungfu()
 
-from kungfu import release_cut  # noqa: E402
+from kungfu import runtime_upgrade as release_cut  # noqa: E402
 
 
 def _root(seed: str) -> str:
@@ -81,6 +81,8 @@ def _transition(
     *,
     relation: str = "verified-successor",
     kind: str = "signed-lineage",
+    compatibility: dict | None = None,
+    active_work_policy: str = "keep-pinned",
 ) -> dict:
     public = target["publicationPolicy"]["trustDomain"] == "public"
     return release_cut.finish_cut_transition(
@@ -97,7 +99,8 @@ def _transition(
                 "publicationEligible": public,
                 "evidenceRoots": [_root("c")],
             },
-            "compatibility": {
+            "compatibility": compatibility
+            or {
                 "controlProtocol": True,
                 "peerWireProtocol": True,
                 "journalReadable": True,
@@ -107,7 +110,7 @@ def _transition(
             },
             "migrationPlanRoot": _root("d"),
             "rollbackPlanRoot": _root("e"),
-            "activeWorkPolicy": "keep-pinned",
+            "activeWorkPolicy": active_work_policy,
             "evidenceRoots": [_root("f")],
             "diagnostics": [],
         }
@@ -210,6 +213,64 @@ def test_non_successor_relations_never_implicitly_update(
     assert decision["reasonCode"] == reason
     assert decision["updateAllowed"] is False
     assert decision["approvalRequired"] is (relation == "recovery")
+
+
+@pytest.mark.parametrize(
+    ("compatibility_update", "active_work_policy", "reason"),
+    [
+        (
+            {"migrationClass": "irreversible"},
+            "keep-pinned",
+            "irreversible-migration-needs-approval",
+        ),
+        (
+            {"rollbackClass": "none"},
+            "keep-pinned",
+            "rollback-unavailable",
+        ),
+        (
+            {"rollbackClass": "manual"},
+            "keep-pinned",
+            "manual-rollback-needs-approval",
+        ),
+        (
+            {"providerResumeRequired": True},
+            "provider-resume",
+            "provider-resume-required",
+        ),
+        ({}, "defer-until-idle", "active-work-must-be-idle"),
+    ],
+)
+def test_successor_policy_never_grants_unsafe_automatic_movement(
+    compatibility_update: dict,
+    active_work_policy: str,
+    reason: str,
+) -> None:
+    current = _cut()
+    target = _cut(parent=current["releaseCutRoot"], seed="0")
+    compatibility = {
+        "controlProtocol": True,
+        "peerWireProtocol": True,
+        "journalReadable": True,
+        "migrationClass": "none",
+        "rollbackClass": "automatic",
+        "providerResumeRequired": False,
+        **compatibility_update,
+    }
+    decision = release_cut.decide_cut_transition(
+        current_release_cut_root=current["releaseCutRoot"],
+        current_version=current["productVersion"],
+        target_cut=target,
+        transition=_transition(
+            current,
+            target,
+            compatibility=compatibility,
+            active_work_policy=active_work_policy,
+        ),
+    )
+    assert decision["reasonCode"] == reason
+    assert decision["updateAllowed"] is False
+    assert decision["approvalRequired"] is True
 
 
 def test_shifu_local_successor_is_explicitly_publication_ineligible() -> None:

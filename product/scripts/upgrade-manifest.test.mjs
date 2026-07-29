@@ -187,15 +187,11 @@ test('Product Release Cut roots verify identically in Node and Python', () => {
       architecture: 'x64',
       revision: '1'.repeat(40),
     });
-    const modulePath = path.join(
-      repoRoot,
-      'framework/core/src/python/kungfu/release_cut.py',
-    );
+    const modulePath = path.join(repoRoot, 'framework/core/src/python');
     const script = `
-import importlib.util, json, sys
-spec = importlib.util.spec_from_file_location("release_cut_cross_language", sys.argv[1])
-module = importlib.util.module_from_spec(spec)
-spec.loader.exec_module(module)
+import json, sys
+sys.path.insert(0, sys.argv[1])
+from kungfu import runtime_upgrade as module
 manifest = json.load(sys.stdin)
 cut = module.validate_release_cut(manifest["releaseCut"])
 print(json.dumps({

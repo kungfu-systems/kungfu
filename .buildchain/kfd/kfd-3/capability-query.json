@@ -1985,7 +1985,7 @@
         "registryPath": ".buildchain/kfd/kfd-3/surfaces.json",
         "sourcePath": "product/scripts/dist.mjs",
         "artifactPath": "product/package.json",
-        "digest": "sha256:20fc421116696ee9ed2b79e021b00f50885a1b97d14b8e09fb1570bb87f23e4e"
+        "digest": "sha256:7798519296bde48895727fa3f9abf32443fbd256bc254c7f2dcc3f7de6424571"
       },
       "kfd2Trust": {
         "status": "unknown",

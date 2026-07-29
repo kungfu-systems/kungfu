@@ -23,8 +23,10 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-from kungfu import release_cut, runtime_upgrade
+from kungfu import runtime_upgrade
 from kungfu.coordination import locks as coordination_locks
+
+release_cut = runtime_upgrade
 
 
 CHECK_SCHEMA = "kungfu.product-update-check/v1"
@@ -1057,6 +1059,7 @@ def plan_update(
             "channel-selection-invalid",
             "release channel selection is incomplete",
         )
+    assert isinstance(entry, Mapping)
     if (
         selection.get("channel") != manifest.get("releaseChannel")
         or selection.get("installSource") != source.get("source")
@@ -2177,6 +2180,22 @@ def _read_cli_selection(
         raise DistributionUpdateError(
             "cli-selection-invalid", "CLI selection and image evidence disagree"
         )
+    transition = selection.get("cutTransition")
+    if transition is not None:
+        try:
+            verified_transition = release_cut.validate_cut_transition(transition)
+        except (TypeError, release_cut.ReleaseCutError) as error:
+            raise DistributionUpdateError(
+                "cli-selection-invalid",
+                "CLI selection Cut Transition evidence is invalid",
+            ) from error
+        if verified_transition["cutTransitionRoot"] != selection.get(
+            "cutTransitionRoot"
+        ):
+            raise DistributionUpdateError(
+                "cli-selection-invalid",
+                "CLI selection Cut Transition root disagrees with retained evidence",
+            )
     return selection, image
 
 
@@ -2185,6 +2204,7 @@ def _select_cli_image(
     *,
     config_home: str | Path,
     cut_decision: Mapping[str, Any] | None = None,
+    cut_transition: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
     lock_root = _cli_inventory_root(config_home) / "locks"
     with _CLI_SELECTION_PROCESS_LOCK:
@@ -2281,6 +2301,11 @@ def _select_cli_image(
                         "cutTransitionRoot": (
                             cut_decision.get("cutTransitionRoot")
                             if isinstance(cut_decision, Mapping)
+                            else None
+                        ),
+                        "cutTransition": (
+                            copy.deepcopy(dict(cut_transition))
+                            if cut_transition is not None
                             else None
                         ),
                     }
@@ -2664,6 +2689,7 @@ def apply_archive(
             frontend_image,
             config_home=config_home,
             cut_decision=verified_cut_decision or cut_decision,
+            cut_transition=cut_transition,
         )
     receipt = {
         "schema": APPLY_SCHEMA,
@@ -2870,6 +2896,7 @@ def rollback_shifu_local_cli(
                 "releaseCutRoot": target_image["releaseCutRoot"],
                 "platformSliceRoot": target_image["platformSliceRoot"],
                 "cutTransitionRoot": transition["cutTransitionRoot"],
+                "cutTransition": transition,
                 "previousFrontendBuildId": current_image["frontendBuildId"],
                 "rollback": {
                     "frontendBuildId": current_image["frontendBuildId"],

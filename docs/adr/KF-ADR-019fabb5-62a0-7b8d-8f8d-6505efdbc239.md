@@ -3,11 +3,9 @@ metadata_schema: kungfu.document-metadata/v1
 doc_type: architecture-decision
 adr_id: KF-ADR-019fabb5-62a0-7b8d-8f8d-6505efdbc239
 decision_status: accepted
-implementation_status: implemented
-implementation_commits: [1fd38891ef22e516ea716bcb54597652c15f7a0d]
+implementation_status: staged
 implementation_prs: [https://github.com/kungfu-systems/kungfu/pull/1817]
-closure_pr: https://github.com/kungfu-systems/kungfu/pull/1817
-qualification_refs: [framework/core/tests/python/test_release_cut.py, framework/core/tests/python/test_distribution_update.py, framework/core/tests/python/test_release_channel.py, product/scripts/upgrade-manifest.test.mjs, product/scripts/bootstrap-installer.test.mjs, crates/shifu/src/promote.rs, crates/shifu/src/registrar.rs, scripts/kfd-support-matrix.test.mjs]
+qualification_refs: [framework/core/tests/python/test_release_cut.py, framework/core/tests/python/test_distribution_release_cut.py, framework/core/tests/python/test_release_channel.py, product/scripts/upgrade-manifest.test.mjs, product/scripts/release-channel-index.test.mjs, product/scripts/bootstrap-installer.test.mjs, crates/shifu/src/native_update.rs, crates/shifu/src/promote.rs, crates/shifu/src/registrar.rs, scripts/kfd-support-matrix.test.mjs]
 review_state: self-reviewed
 sensitivity: public
 last_reviewed: 2026-07-29
@@ -21,7 +19,7 @@ ai_provenance: GPT-5 via Codex on 2026-07-29; based on the admitted Assignment, 
 
 # KF-ADR-019fabb5-62a0-7b8d-8f8d-6505efdbc239: Product Release Cut is the exact updater identity
 
-- Status: accepted and implemented; public publication remains separately authorized
+- Status: accepted and staged in PR #1817; public publication remains separately authorized
 - Date: 2026-07-29
 
 ## Context
@@ -62,10 +60,15 @@ relations never advance implicitly. Recovery requires an explicit recovery
 transition.
 
 The final release manifest and signed channel carry the Cut and platform-slice
-roots. Bootstrap receipts, installed image records, selection records, update
-plans, and rollback receipts preserve those roots. Runtime images may be reused
-when their own immutable runtime identity is unchanged; the selected frontend
-image still carries the exact current Cut.
+roots. Public channel admission assembles all admitted macOS, Linux, and
+Windows slices into one shared Product Release Cut before signing; a signed
+channel with divergent per-platform Cuts fails closed. The archive-bundled
+manifest carries a cut-independent identity, while the external signed
+manifest binds the archive digest and final cross-platform Cut, avoiding an
+impossible self-hash. Bootstrap receipts, installed image records, selection
+records, update plans, and rollback receipts preserve those roots. Runtime
+images may be reused when their own immutable runtime identity is unchanged;
+the selected frontend image still carries the exact current Cut.
 
 KFD-3 registers the desktop artifact, CLI archive, and final upgrade manifest
 in one Shifu provenance slot. `shifu promote` remains the local selector and
@@ -73,7 +76,12 @@ desktop adapter. It performs a native-updater dry run and hands the exact
 manifest/archive/evidence roots to the shipped `kungfu` updater. Native Core
 alone installs and selects side-by-side CLI images and owns rollback. The
 installed inventory, not Shifu source cache availability, is rollback
-authority.
+authority. Shifu preflights the native transition, retains a pending
+transaction coordinate, places the desktop surface, and only then asks the
+native updater to commit CLI selection. A desktop failure therefore cannot
+advance native authority; a later native failure remains safely retryable from
+the still-current installed receipt. Native selection retains the full Cut
+Transition evidence, and the Shifu receipt binds the native receipt root.
 
 The first adoption of a legacy local installation uses one explicit,
 publication-ineligible bootstrap transition from the standardized legacy
@@ -97,9 +105,9 @@ Costs:
 - manifests and channel entries carry additional roots and must agree exactly;
 - first local adoption must name the legacy bootstrap boundary;
 - release tooling must produce a transition for same-SemVer supersession; and
-- desktop promotion and native CLI selection remain two visible adapters, so a
-  failure after one commits is diagnosable and recoverable rather than falsely
-  reported as one atomic cross-platform filesystem transaction.
+- desktop promotion and native CLI selection remain two visible adapters, with
+  a durable retry coordinate rather than a false atomic cross-platform
+  filesystem claim.
 
 This decision is falsified if an accepted path can select a different Cut
 without a verified transition, publish a `shifu-local` Cut, roll back only
