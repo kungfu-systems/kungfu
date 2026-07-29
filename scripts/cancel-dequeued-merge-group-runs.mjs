@@ -5,10 +5,13 @@
 import { spawnSync } from 'node:child_process';
 import crypto from 'node:crypto';
 import fs from 'node:fs';
+import os from 'node:os';
 import path from 'node:path';
 import process from 'node:process';
 import { pathToFileURL } from 'node:url';
 
+import { affectedNativeEvidenceBinding as bindAffectedNativeEvidence } from '../framework/maintainability/delivery-evidence.mjs';
+import { verifyCachePromotionAuthority } from './affected-native-proof.mjs';
 import {
   parseFamilyQueueLeaseMarker,
   releaseFamilyQueueLease,
@@ -61,6 +64,223 @@ function semanticDigest(value) {
     .createHash('sha256')
     .update(JSON.stringify(ordered(value)))
     .digest('hex')}`;
+}
+
+export function affectedNativeArtifactSelection(artifacts, sourceSha) {
+  const artifactPrefix = `core-affected-native-${sourceSha}`;
+  const partitionPattern = new RegExp(
+    `^${artifactPrefix}-partition-(\\d+)-of-(\\d+)$`,
+  );
+  const selected = (artifacts || [])
+    .filter(
+      ({ name, expired }) =>
+        !expired && (name === artifactPrefix || partitionPattern.test(name)),
+    )
+    .sort((left, right) => left.name.localeCompare(right.name));
+  const legacy = selected.filter(({ name }) => name === artifactPrefix);
+  const partitions = selected
+    .map((artifact) => {
+      const match = artifact.name.match(partitionPattern);
+      return match
+        ? {
+            artifact,
+            index: Number(match[1]),
+            count: Number(match[2]),
+          }
+        : null;
+    })
+    .filter(Boolean);
+  if (legacy.length > 1 || (legacy.length && partitions.length)) {
+    throw new Error('affected-native artifact set is ambiguous');
+  }
+  if (partitions.length) {
+    const counts = new Set(partitions.map(({ count }) => count));
+    const indexes = partitions.map(({ index }) => index).sort((a, b) => a - b);
+    const expected = Array.from(
+      { length: partitions[0].count },
+      (_value, index) => index,
+    );
+    if (
+      counts.size !== 1 ||
+      JSON.stringify(indexes) !== JSON.stringify(expected)
+    ) {
+      throw new Error('affected-native partition artifact set is incomplete');
+    }
+  }
+  return selected;
+}
+
+function verifiedCachePromotionAuthority(archive, options) {
+  const temporary = fs.mkdtempSync(
+    path.join(os.tmpdir(), 'kungfu-cache-promotion-authority-'),
+  );
+  const archivePath = path.join(temporary, 'artifact.zip');
+  const extracted = path.join(temporary, 'extracted');
+  try {
+    fs.writeFileSync(archivePath, archive);
+    const listing = spawnSync('unzip', ['-Z1', archivePath], {
+      encoding: 'utf8',
+      shell: false,
+    });
+    if (listing.status !== 0) {
+      throw new Error('cannot list cache promotion authority artifact');
+    }
+    const entries = listing.stdout.split('\n').filter(Boolean);
+    if (
+      entries.some(
+        (entry) =>
+          path.isAbsolute(entry) || entry.split(/[\\/]/u).includes('..'),
+      )
+    ) {
+      throw new Error('cache promotion authority artifact path is unsafe');
+    }
+    const unpacked = spawnSync('unzip', ['-q', archivePath, '-d', extracted], {
+      encoding: 'utf8',
+      shell: false,
+    });
+    if (unpacked.status !== 0) {
+      throw new Error('cannot extract cache promotion authority artifact');
+    }
+    const rawAuthority = JSON.parse(
+      fs.readFileSync(path.join(extracted, 'authority.json'), 'utf8'),
+    );
+    const authority = verifyCachePromotionAuthority(extracted, {
+      ...options,
+      now: rawAuthority.producer?.createdAt,
+    });
+    const proof = JSON.parse(
+      fs.readFileSync(path.join(extracted, 'proof', 'proof.json'), 'utf8'),
+    );
+    return { authority, proof };
+  } finally {
+    fs.rmSync(temporary, { recursive: true, force: true });
+  }
+}
+
+export async function resolveAffectedNativeArtifacts({
+  repository,
+  runId,
+  expectedSourceSha,
+  artifacts,
+  token,
+  githubJson,
+  githubBytes,
+}) {
+  const direct = affectedNativeArtifactSelection(artifacts, expectedSourceSha);
+  if (direct.length) {
+    return {
+      artifacts: direct,
+      evidenceSourceSha: expectedSourceSha,
+      evidenceRunId: runId,
+      proofPartitions: null,
+      sourceRelation: 'workflow-source',
+    };
+  }
+  const promotionName = `core-affected-native-cache-promotion-authority-${runId}`;
+  const promotionArtifacts = (artifacts || []).filter(
+    ({ name, expired }) => !expired && name === promotionName,
+  );
+  if (promotionArtifacts.length !== 1) {
+    throw new Error(
+      promotionArtifacts.length
+        ? 'cache promotion authority artifact is ambiguous'
+        : 'affected-native artifact and cache promotion authority are missing',
+    );
+  }
+  const [commit, archive] = await Promise.all([
+    githubJson(`/repos/${repository}/git/commits/${expectedSourceSha}`, token),
+    githubBytes(
+      `/repos/${repository}/actions/artifacts/${promotionArtifacts[0].id}/zip`,
+      token,
+    ),
+  ]);
+  const { authority, proof } = verifiedCachePromotionAuthority(archive, {
+    targetRepository: repository,
+    targetRunId: runId,
+    targetHeadSha: expectedSourceSha,
+    targetSourceTree: commit.tree?.sha,
+  });
+  if (
+    authority.producer?.repository !== repository ||
+    authority.payloadSourceSha !== authority.producer?.checkoutSha
+  ) {
+    throw new Error('cache promotion producer repository or source drift');
+  }
+  const producerPayload = await githubJson(
+    `/repos/${repository}/actions/runs/${authority.producer.runId}/artifacts?per_page=100`,
+    token,
+  );
+  const producerArtifacts = affectedNativeArtifactSelection(
+    producerPayload.artifacts,
+    authority.payloadSourceSha,
+  );
+  if (
+    !producerArtifacts.length ||
+    producerArtifacts.length !== authority.partitionCount ||
+    proof.partitions?.length !== authority.partitionCount
+  ) {
+    throw new Error('cache promotion producer partition set is incomplete');
+  }
+  return {
+    artifacts: producerArtifacts,
+    evidenceSourceSha: authority.payloadSourceSha,
+    evidenceRunId: authority.producer.runId,
+    proofPartitions: proof.partitions,
+    sourceRelation: 'verified-proof-producer',
+  };
+}
+
+export function resolvedAffectedNativeEvidenceBinding({
+  resolved,
+  members,
+  cache,
+  native,
+  classification,
+  expectedSourceSha,
+  pullSourceSha,
+}) {
+  if (!resolved.proofPartitions) {
+    return bindAffectedNativeEvidence(
+      cache,
+      native,
+      classification,
+      expectedSourceSha,
+      pullSourceSha,
+    );
+  }
+  const proofPartition = resolved.proofPartitions.find(
+    ({ index }) => index === native.executionPartition?.index,
+  );
+  if (
+    !proofPartition ||
+    semanticDigest(JSON.parse(members['receipt.json'])) !==
+      proofPartition.receiptDigest ||
+    native.source?.head !== resolved.evidenceSourceSha ||
+    cache.layers.some(
+      ({ sourceSha }) => sourceSha !== resolved.evidenceSourceSha,
+    )
+  ) {
+    throw new Error(
+      'cache promotion producer evidence does not match verified proof',
+    );
+  }
+  return {
+    sourceRelation: resolved.sourceRelation,
+    planRelation: 'verified-proof-authority',
+  };
+}
+
+export function combinedAffectedNativeEvidenceBinding(bindings) {
+  const planRelation = bindings.some(
+    ({ planRelation }) => planRelation === 'verified-proof-authority',
+  )
+    ? 'verified-proof-authority'
+    : bindings.some(
+          ({ planRelation }) => planRelation === 'merge-group-coalesced',
+        )
+      ? 'merge-group-coalesced'
+      : 'exact';
+  return { sourceRelation: bindings[0].sourceRelation, planRelation };
 }
 
 export function createDequeueEvidence({
