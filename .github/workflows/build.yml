@@ -76,7 +76,7 @@ jobs:
 
   build:
     needs: preflight
-    uses: kungfu-systems/buildchain/.github/workflows/.build.yml@2de64d5e216c8adaaaaeda12da7771b4814bf809 # protected artifact-signing authority
+    uses: kungfu-systems/buildchain/.github/workflows/.build.yml@8ec8ef36421fc363ebfb24146ca1d0a2fee4ae7b # protected artifact-signing authority
     secrets:
       BUILDCHAIN_PROMOTION_TOKEN: ${{ secrets.KUNGFU_GITHUB_TOKEN }}
       BUILDCHAIN_ARTIFACT_RELAY_S3_ROLE_ARN: ${{ secrets.BUILDCHAIN_ARTIFACT_RELAY_S3_ROLE_ARN }}
