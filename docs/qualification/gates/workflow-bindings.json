@@ -479,7 +479,7 @@
         "with": {
           "runner-preset": "${{ inputs.platforms-json && 'custom' || 'kungfu-v4-native' }}",
           "github-artifact-attestation-subject-path": "product/release/cli/kungfu-episodes-cli-linux-x64.tar.gz",
-          "github-artifact-attestation-signer-sha": "ad57ae0fee5072a1de7a0b0182f70c0c41e45abb",
+          "github-artifact-attestation-signer-sha": "375b2d4b8a904776453773a33b4c4e4556c8c999",
           "github-artifact-attestation-platform-id": "linux-x64",
           "credential-island-macos-app-path": "product/dist/desktop/mac-arm64/Kungfu Episodes.app",
           "credential-island-caller-owned": true,
