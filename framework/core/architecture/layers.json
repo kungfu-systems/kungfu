@@ -602,19 +602,13 @@
         ]
       }
     ],
-    "deprecations": [
-      {
-        "id": "yijinjing-boolean-mmap-adapters",
-        "surface": "src/libyijinjing/include/kungfu/yijinjing/platform/mmap.h",
-        "replacement": "mapping_policy and explicit page_open_policy overloads",
-        "introduced": "KF-ADR-019f86da-4f90-7f8a-9bff-e4f7683da35f",
-        "minimum_window": "one complete minor release after all known consumers migrate",
-        "known_consumers": [
-          "in-repository compatibility tests"
-        ],
-        "removal_condition": "No production call sites, retained migration fixture remains green, and release notes name the removal."
-      }
-    ]
+    "deprecation_authority": {
+      "contract": "../deprecation/deprecation-lifecycle.contract.json",
+      "registry": "../deprecation/deprecation-registry.json",
+      "contributions": [
+        "core.yijinjing.boolean-mmap-adapters"
+      ]
+    }
   },
   "layers": [
     {

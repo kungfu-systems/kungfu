@@ -247,7 +247,7 @@
       "targetKind": "implementation",
       "targetPath": "scripts/check-docs.mjs",
       "relation": "explains",
-      "expectedRevision": "sha256:b8c8fc8d972bcb813b32026d5572fe4bfb7f47b5508bd9c1c9813a8d54d806a4"
+      "expectedRevision": "sha256:e01175396f0b1fa19cf4a771706364f24340ab6e18b12cf499387241365ec815"
     },
     {
       "id": "docs-protocol-implementation",
@@ -274,7 +274,7 @@
       "targetKind": "evidence",
       "targetPath": "framework/core/src/python/kungfu/agent/commands.json",
       "relation": "explains",
-      "expectedRevision": "sha256:63d9f38b97a4b134d19aae73734228fb5c1a87654d4aadb0e29b331902f8c10d"
+      "expectedRevision": "sha256:9f7384f508d9d356f0fc5b111be6fdc43c1e6cff65a90141f2a586da47fa2ce7"
     },
     {
       "id": "xinfa-compiler-implementation",
@@ -319,7 +319,7 @@
       "targetKind": "probe",
       "targetPath": "scripts/buildchain-kfd-evidence.mjs",
       "relation": "explains",
-      "expectedRevision": "sha256:273d6db277e0278c2dc0d41047f266dba3c80948694797430857980bf97b22e7"
+      "expectedRevision": "sha256:0876e14442807ffd82ffc8f3d4f30e4469ddfe6952ece4b41f2a0a77168efe4f"
     }
   ],
   "routes": [

@@ -25,11 +25,11 @@ all platform lanes running.
 ## ADR delivery admissibility (`governance.adr-delivery`)
 
 - **Problem:** Checks the applicable ADR delivery and promotion declaration.
-- **Protects:** release regressions from becoming an unexplained green profile or release claim.
+- **Protects:** release regressions or due, invalid, or unexplained deprecation debt from becoming an unexplained green profile or release claim.
 - **Action:** `./shifu adr:release:gate -- --allow-non-pr --github-event --report product/release/qualification/adr-release-admissibility.json`
 - **Dependencies:** none.
 - **Platforms and runner:** linux, macos, windows; capabilities `node`.
-- **Pass:** the structured action exits successfully, required artifacts exist, and the Gate receipt remains current for the source and definition.
+- **Pass:** the structured action exits successfully, required artifacts exist, the deprecation registry is valid, applicable protected candidates have no unresolved due entry, and the Gate receipt remains current for the source and definition.
 - **Failure or skip:** action failure, timeout, unsupported required capability, dependency failure, or missing required artifact is non-qualifying; advisory mode remains visible.
 - **Evidence:** unified Gate receipt; artifacts `product/release/qualification/adr-release-admissibility.json`.
 - **Diagnosis:** `./shifu gate explain governance.adr-delivery --profile <profile>`; reproduce with `./shifu gate run governance.adr-delivery` on a capable runner.

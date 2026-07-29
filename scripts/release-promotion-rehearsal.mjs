@@ -494,6 +494,10 @@ export function evaluatePromotionFixture(file, adrContract) {
     const contract = {
       ...adrContract,
       adrRoots: ['adr'],
+      // These fixtures isolate the ADR manifest state machine. The common
+      // deprecation authority has its own fail-closed fixture suite and is
+      // evaluated against the real repository below.
+      deprecationLifecycle: undefined,
       stable: {
         ...adrContract.stable,
         waiverFile: 'docs/adr-release-waivers.json',
