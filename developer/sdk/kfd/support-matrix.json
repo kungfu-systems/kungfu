@@ -258,7 +258,7 @@
           },
           {
             "path": "framework/core/tests/python/test_assignment_orchestration.py",
-            "sha256": "sha256:a6fda23e05c59e53a04b7a1a06c3e8c921a6a5c782509f510629e26a356604df"
+            "sha256": "sha256:9d06ab937631f0adf4f383f35eba41b7df058ffad6ab7787362107c971c7941e"
           }
         ]
       },
@@ -584,7 +584,7 @@
         "evidenceRoots": [
           {
             "path": "framework/core/src/python/kungfu/assignment_orchestration.py",
-            "sha256": "sha256:9ad60f72c47ac2ba226a8b10c86998fc2c3822263447052d28445d88eeaaa975"
+            "sha256": "sha256:0543901da508a83d0181a0e016976765c5311dc514bb4be2b419f904ca88e6ac"
           }
         ]
       },

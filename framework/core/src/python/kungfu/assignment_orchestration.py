@@ -1358,6 +1358,11 @@ def _write_exact(path: Path, content: bytes) -> bool:
             pass
 
 
+def _read_text_exact(path: Path) -> str:
+    with open(_filesystem_path(path), encoding="utf-8") as source:
+        return source.read()
+
+
 def capture_assignment_request(request: Any, target: Any) -> dict[str, Any]:
     request = validate_assignment_request(request)
     request_root = semantic_root(request)
@@ -1436,7 +1441,7 @@ def capture_assignment_request(request: Any, target: Any) -> dict[str, Any]:
 
 def load_captured_request(request_file: str | Path) -> dict[str, Any]:
     path = Path(request_file).expanduser().resolve()
-    request = json.loads(path.read_text(encoding="utf-8"))
+    request = json.loads(_read_text_exact(path))
     if not isinstance(request, dict) or request.get("schema") != REQUEST_SCHEMA:
         raise ValueError(f"request must use {REQUEST_SCHEMA}")
     if set(request) != {"schema", "source", "retention", "workDefinition"}:
@@ -1449,10 +1454,17 @@ def load_captured_request(request_file: str | Path) -> dict[str, Any]:
         raise ValueError("captured request path does not match its semantic root")
     receipt_dir = path.parent / "receipts" / "sha256"
     receipt_roots = []
-    if not receipt_dir.is_dir():
+    filesystem_receipt_dir = _filesystem_path(receipt_dir)
+    if not os.path.isdir(filesystem_receipt_dir):
         raise ValueError("captured request has no capture receipt")
-    for receipt_path in sorted(receipt_dir.glob("*.json")):
-        receipt = json.loads(receipt_path.read_text(encoding="utf-8"))
+    receipt_names = sorted(
+        entry.name
+        for entry in os.scandir(filesystem_receipt_dir)
+        if entry.name.endswith(".json")
+    )
+    for receipt_name in receipt_names:
+        receipt_path = receipt_dir / receipt_name
+        receipt = json.loads(_read_text_exact(receipt_path))
         declared = str(receipt.pop("receiptRoot", ""))
         if (
             receipt.get("schema") != CAPTURE_RECEIPT_SCHEMA

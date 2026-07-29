@@ -49,6 +49,42 @@ def test_assignment_atomic_paths_use_windows_extended_namespace():
     assert network == (r"\\?\UNC\server\share\workspace\.kungfu\request.json")
 
 
+def test_captured_request_reads_all_paths_through_filesystem_namespace(
+    tmp_path, monkeypatch
+):
+    request = {
+        "schema": "kungfu.assignment-request/v1",
+        "source": {"kind": "atlas-go-card"},
+        "retention": {
+            "policy": "explicit-expiry-retain-bytes-v1",
+            "expiresAt": None,
+        },
+        "workDefinition": {"goal_id": "filesystem-namespace-read"},
+    }
+    target = resolve_workspace_target(
+        "capture-only", str(tmp_path), cwd=str(tmp_path), env={"HOME": str(tmp_path)}
+    )
+    response = assignment_orchestration.capture_assignment_request(request, target)
+    observed = []
+    original = assignment_orchestration._filesystem_path
+
+    def observe(path, *, platform=None):
+        observed.append(Path(path))
+        return original(path) if platform is None else original(path, platform=platform)
+
+    monkeypatch.setattr(assignment_orchestration, "_filesystem_path", observe)
+
+    captured = assignment_orchestration.load_captured_request(response["requestPath"])
+
+    request_path = Path(response["requestPath"]).resolve()
+    receipt_dir = request_path.parent / "receipts" / "sha256"
+    receipt_path = Path(response["receiptPath"]).resolve()
+    assert captured["request_root"] == response["requestRoot"]
+    assert request_path in observed
+    assert receipt_dir in observed
+    assert receipt_path in observed
+
+
 def _activate(runtime):
     for action in ("install", "qualify", "activate"):
         plan = profile_sdk.lifecycle_plan(
