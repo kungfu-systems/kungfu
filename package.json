@@ -265,6 +265,7 @@
     "layers:gate:surfaces": "node scripts/require-shifu.mjs layers:gate:surfaces && node scripts/run-layer-artifact-gate.mjs surfaces",
     "kfd:buildchain": "node scripts/require-shifu.mjs kfd:buildchain && node scripts/buildchain-kfd-evidence.mjs --write",
     "kfd:buildchain:check": "node scripts/require-shifu.mjs kfd:buildchain:check && node scripts/buildchain-kfd-evidence.mjs --check",
+    "test:kfd4-perspective": "node scripts/require-shifu.mjs test:kfd4-perspective && PYTHONPATH=framework/core/src/python:${KUNGFU_NATIVE_PATH:-framework/core/build/Release} uv run --project framework/core --frozen pytest -q framework/core/tests/python/test_kfd4_perspective.py",
     "kfd:support-matrix": "node scripts/require-shifu.mjs kfd:support-matrix && node scripts/kfd-support-matrix.mjs --write",
     "kfd:support-matrix:check": "node scripts/require-shifu.mjs kfd:support-matrix:check && node scripts/kfd-support-matrix.mjs --source-check --json && node --test scripts/kfd-support-matrix.test.mjs",
     "kfd:query": "node scripts/require-shifu.mjs kfd:query && node scripts/kfd-support-matrix.mjs --source-query --json",
