@@ -279,6 +279,129 @@ test('dequeue settlement still revokes the lease when other cleanup fails', asyn
   ]);
 });
 
+test('merged dequeue preserves the successful exact-head queue admission lease', async () => {
+  const headSha = 'e'.repeat(40);
+  const requests = [];
+  const request = async (url, init = {}) => {
+    requests.push({
+      url,
+      method: init.method || 'GET',
+      body: init.body ? JSON.parse(init.body) : null,
+    });
+    if (url.endsWith('/graphql')) {
+      return response(200, {
+        data: {
+          repository: {
+            pullRequest: {
+              timelineItems: {
+                nodes: [
+                  {
+                    createdAt: '2026-07-29T00:26:29Z',
+                    reason: 'MERGED',
+                  },
+                ],
+              },
+            },
+          },
+        },
+      });
+    }
+    if (url.includes('/actions/workflows/affected-native-pr.yml/runs?')) {
+      return response(200, { workflow_runs: [] });
+    }
+    throw new Error(`merged dequeue must not write status: ${url}`);
+  };
+  const settlement = await settleDequeuedMergeGroup({
+    repository: 'kungfu-systems/kungfu',
+    pullRequest: 1798,
+    headSha,
+    workflow: 'affected-native-pr.yml',
+    context: 'Queue admission lease',
+    token: 'test-token',
+    request,
+  });
+  assert.deepEqual(settlement.queueAdmissionLease, {
+    headSha,
+    context: 'Queue admission lease',
+    state: 'preserved',
+    reason: 'merged',
+  });
+  assert.equal(settlement.repairMarker.repairRequired, false);
+  assert.equal(settlement.evidence.dequeue.reason, 'merged');
+  assert.equal(
+    requests.filter(({ url }) => url.endsWith(`/statuses/${headSha}`)).length,
+    0,
+  );
+});
+
+test('non-merged dequeue still revokes the exact-head queue admission lease', async () => {
+  const headSha = 'f'.repeat(40);
+  const requests = [];
+  const request = async (url, init = {}) => {
+    requests.push({
+      url,
+      method: init.method || 'GET',
+      body: init.body ? JSON.parse(init.body) : null,
+    });
+    if (url.endsWith('/graphql')) {
+      return response(200, {
+        data: {
+          repository: {
+            pullRequest: {
+              timelineItems: {
+                nodes: [
+                  {
+                    createdAt: '2026-07-29T00:30:00Z',
+                    reason: 'MANUAL',
+                  },
+                ],
+              },
+            },
+          },
+        },
+      });
+    }
+    if (url.includes('/actions/workflows/affected-native-pr.yml/runs?')) {
+      return response(200, { workflow_runs: [] });
+    }
+    if (url.endsWith(`/statuses/${headSha}`)) return response(201);
+    throw new Error(`unexpected request ${url}`);
+  };
+  const settlement = await settleDequeuedMergeGroup({
+    repository: 'kungfu-systems/kungfu',
+    pullRequest: 1799,
+    headSha,
+    workflow: 'affected-native-pr.yml',
+    context: 'Queue admission lease',
+    token: 'test-token',
+    request,
+  });
+  assert.deepEqual(settlement.queueAdmissionLease, {
+    headSha,
+    context: 'Queue admission lease',
+    state: 'failure',
+  });
+  assert.equal(settlement.repairMarker.repairRequired, false);
+  assert.equal(settlement.evidence.dequeue.reason, 'manual');
+  assert.equal(
+    requests.filter(({ url }) => url.endsWith('/graphql')).length,
+    1,
+  );
+  assert.deepEqual(
+    requests
+      .filter(({ url }) => url.endsWith(`/statuses/${headSha}`))
+      .map(({ body }) => body),
+    [
+      {
+        state: 'failure',
+        context: 'Queue admission lease',
+        description:
+          'Lease revoked after merge-queue dequeue; use the serialized wrapper',
+      },
+    ],
+  );
+});
+
 test('failed or conflicting dequeue records one exact-head repair marker', async () => {
   const requests = [];
   const headSha = 'a'.repeat(40);

@@ -36,6 +36,14 @@ test('queue admission lease has distinct PR-head and merge-group authorities', (
   assert.equal(CONTRACT.admission.queueMustBeEmpty, true);
   assert.equal(CONTRACT.admission.requiredPosition, 1);
   assert.equal(CONTRACT.admission.freshProjectCutReplay, true);
+  assert.equal(
+    CONTRACT.revocation.dequeue,
+    'failure-status-on-exact-pr-head-for-non-merged-removal',
+  );
+  assert.equal(
+    CONTRACT.revocation.merged,
+    'preserve-success-status-on-exact-pr-head',
+  );
   assert.equal(CONTRACT.revocation.sameHeadRetry, 'forbidden-after-revocation');
   assert.equal(CONTRACT.admittedFamily.minimumMajor, 4);
   assert.deepEqual(CONTRACT.admittedFamily.include, ['refs/heads/dev/v*/v*']);

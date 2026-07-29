@@ -190,13 +190,15 @@ Each section is bound to the registry id by the catalog meta gate.
   wrapper issues that status after observing an empty queue and replaying the
   Project Cut against the latest base; it then accepts only position one. A
   merge-group-only workflow continues the same required context on the exact
-  synthetic SHA without satisfying it on ordinary PR events. Every dequeue
-  revokes the exact-head lease and forbids retrying that head; a new head
-  cannot inherit an older status. The bounded contract is
-  `docs/qualification/gates/dev-queue-admission.contract.json`. This prevents
-  an inadvertent direct position-two entry from changing the proof base and
-  turning an exact PR proof into a full native queue rebuild; it does not
-  weaken proof verification when source, plan, or toolchain identity changes.
+  synthetic SHA without satisfying it on ordinary PR events. Every non-merged
+  dequeue revokes the exact-head lease and forbids retrying that head; a normal
+  `merged` removal preserves the successful terminal lease instead of replacing
+  it with a misleading failure. A new head cannot inherit an older status. The
+  bounded contract is
+  `docs/qualification/gates/dev-queue-admission.contract.json`. This prevents an
+  inadvertent direct position-two entry from changing the proof base and turning
+  an exact PR proof into a full native queue rebuild; it does not weaken proof
+  verification when source, plan, or toolchain identity changes.
 - **Dequeue repair admission:** the trusted-base dequeue controller cancels
   active work and writes one PR marker for deterministic `failed_checks`,
   `merge_conflict`, or `invalid_merge_commit` exits. The marker binds the exact

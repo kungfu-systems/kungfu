@@ -220,7 +220,10 @@ permission failures remain fatal and visible. A `failed_checks`,
 bound to the event's exact PR head. Atlas admission refuses that same head in a
 later thread; a corrected head is eligible for a fresh admission. Manual
 dequeues do not mint the marker, so a serialized position race can safely
-yield and retry.
+yield and retry. Every non-merged removal revokes the exact-head queue
+admission lease. A normal `merged` removal still releases any family lease and
+bounds leftover work, but preserves the successful terminal queue-admission
+status instead of manufacturing a post-merge failure.
 
 Before expensive pull-request qualification starts, candidate preflight also
 replays the pull request's first-parent commit series onto the exact protected

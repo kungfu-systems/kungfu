@@ -732,6 +732,75 @@
       ]
     },
     {
+      "path": ".github/workflows/aws-us-windows-burst-qualification.yml",
+      "authority": "qualification",
+      "definitionDigest": "sha256:e925eda66d0b6255f16b916e107957e9fb52ad56794bb4b4c196746426ab79ab",
+      "jobs": [
+        {
+          "id": "cleanup-exercise",
+          "authority": "qualification",
+          "publication": "none",
+          "receipt": "diagnostic",
+          "definitionDigest": "sha256:88da612bd391529048ff81f3f1bc00d1beceed86b770b78de0557fef2b890b0d",
+          "credentials": {"githubToken":"write","oidc":false,"repositorySecrets":[],"inheritedSecrets":false,"environment":null},
+          "externalActions": [],
+          "steps": [
+            {
+              "index": 1,
+              "label": "name:Confirm exact JIT runner identity",
+              "definitionDigest": "sha256:115bfd9234736a1da607e61a0bb1be98a191d35f0da57ad4bb419a447069b9d2"
+            },
+            {
+              "index": 2,
+              "label": "name:Hold until the declared cleanup trigger",
+              "definitionDigest": "sha256:ebc15529c500b6f0e216a2a2ede2ade66d1f685f9b824e67cf3a5382af07cf84"
+            }
+          ]
+        },
+        {
+          "id": "full",
+          "authority": "qualification",
+          "publication": "none",
+          "receipt": "diagnostic",
+          "definitionDigest": "sha256:692b6f39dfd98c7343f8ca18c14a67458a910cc762693c9b016cc9c1155d1627",
+          "credentials": {"githubToken":"write","oidc":false,"repositorySecrets":[],"inheritedSecrets":false,"environment":null},
+          "externalActions": ["kungfu-systems/buildchain/.github/workflows/.build.yml@train/v2/v2.3/aws-us-elastic-runner-burst-plane"],
+          "steps": []
+        },
+        {
+          "id": "smoke",
+          "authority": "qualification",
+          "publication": "none",
+          "receipt": "diagnostic",
+          "definitionDigest": "sha256:5b3675b305cc27790052577719d9dbef5acd621412a447b23be2cc4f0983a186",
+          "credentials": {"githubToken":"write","oidc":false,"repositorySecrets":[],"inheritedSecrets":false,"environment":null},
+          "externalActions": ["kungfu-systems/buildchain/.github/workflows/.build.yml@train/v2/v2.3/aws-us-elastic-runner-burst-plane"],
+          "steps": []
+        },
+        {
+          "id": "trust",
+          "authority": "qualification",
+          "publication": "none",
+          "receipt": "diagnostic",
+          "definitionDigest": "sha256:0ab3755153f464566cfd91816f58d3abb1bbd9d2ea4a45ea6e328bebcc70020f",
+          "credentials": {"githubToken":"read","oidc":false,"repositorySecrets":[],"inheritedSecrets":false,"environment":null},
+          "externalActions": ["actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd"],
+          "steps": [
+            {
+              "index": 1,
+              "label": "name:Require canonical repository, mode, label, and reviewed train",
+              "definitionDigest": "sha256:4e46e0fffd538e23ae01e63788a115e079e81318b2ce724060155d77a2012d70"
+            },
+            {
+              "index": 2,
+              "label": "name:Require write-capable actor",
+              "definitionDigest": "sha256:3430783a3e543bfdbe6f96ad0be249927e372191c7e2cc5d8c540c14be66d68f"
+            }
+          ]
+        }
+      ]
+    },
+    {
       "path": ".github/workflows/build.yml",
       "authority": "product-publication",
       "definitionDigest": "sha256:aadbb97771ffd89eaec3f3ed67ef3925e1730472a5a722c1a8b956c8ee71b6c1",
