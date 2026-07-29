@@ -119,9 +119,10 @@ Each section is bound to the registry id by the catalog meta gate.
   Exact or compatible restores still run the current configure/build/CTest
   closure. Misses run and record the cold path; per-run ccache statistics are
   retained beside the provider receipts so an exact restore cannot be confused
-  with effective compiler hits. The dev-only affected-native configure disables
-  C++ module dependency scanning because the current closure declares no module
-  sources; this avoids uncached scan work without changing alpha/release build
+  with effective compiler hits. The dev-only affected-native native closure and
+  SDK build plan disable C++ module dependency scanning because the current
+  closure declares no module sources; this avoids uncached scan and compile work
+  without weakening installed SDK qualification or changing alpha/release build
   semantics. Contradictory or foreign-key evidence fails closed. Successful
   queue candidates may restore a compatible base-branch baseline while
   retaining source-bound exact keys and always rerunning configure/build/CTest.
