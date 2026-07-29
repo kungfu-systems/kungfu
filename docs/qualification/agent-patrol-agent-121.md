@@ -7,8 +7,13 @@ off agent-120, which remains the Dev build primary.
 ## Execution contract
 
 - Workflow: `.github/workflows/kungfu-agent-patrol.yml`
-- Schedule: Monday 02:00 Asia/Shanghai (`0 18 * * 0` UTC)
-- Manual trigger: `workflow_dispatch` on the protected default branch only
+- Schedule: one run at 02:00 Asia/Shanghai every day
+- Daily lightweight slot: Tuesday through Sunday
+  (`0 18 * * 1-6` UTC), one fixed fixture
+- Weekly deeper slot: Monday (`0 18 * * 0` UTC), two fixtures selected from
+  the three-fixture catalog
+- Manual trigger: `workflow_dispatch` with an explicit `light` or `deep` mode
+  on the protected default branch only
 - Runner: `agent-121-kungfu-systems`
 - Required labels: `agent-121`, `kungfu-agent-patrol`
 - Image:
@@ -23,6 +28,22 @@ off agent-120, which remains the Dev build primary.
   continue to use the invoking host UID/GID.
 - Concurrency: one Patrol run at a time
 - Credentials: none admitted to the model or Dogfood payload
+
+`framework/agent-patrol/select.mjs` owns the trigger-to-plan contract. The
+lightweight mode always runs `incident-board-lease-v1` with a 600-second
+per-session timeout. The deeper mode runs two fixtures with a 900-second
+per-session timeout and rotates the starting fixture from the stable GitHub
+workflow run number:
+
+```text
+lease + recovery
+recovery + combined replay
+combined replay + lease
+```
+
+Rerunning one workflow attempt preserves the same rotation key and suite. The
+shared non-cancelling concurrency group serializes scheduled and manual runs,
+so the two modes cannot contend for agent-121.
 
 The workflow is classified as `qualification` authority with a `diagnostic`
 receipt. It cannot publish a product, move a release channel, become a required
@@ -62,10 +83,10 @@ The owning authority is the persistent project workspace:
 $HOME/.local/state/kungfu-agent-patrol/.kungfu
 ```
 
-The workflow uploads only the bounded repository-work report, classification,
-and capture receipt. It does not upload provider transcripts, raw prompts,
-credentials, signed URLs, the native Fact store, or the generated capture
-intent.
+The workflow uploads only the bounded Patrol plan, per-fixture repository-work
+reports, classifications, and capture receipts. It does not upload provider
+transcripts, raw prompts, credentials, signed URLs, the native Fact store, or
+generated capture intents.
 
 The native Dogfood Inbox is a federated projection, not one atomic global
 database. A consumer that needs to inspect this runner-owned Finding must
@@ -104,10 +125,12 @@ Local deterministic and native temporary-workspace coverage:
 
 After activation, dispatch the protected-branch workflow and verify:
 
-1. the job ran on `agent-121-kungfu-systems`;
-2. the exact image, model, source commit, and endpoint were bound;
-3. a passing report produced `not-required`;
-4. a controlled failure produced `captured`;
-5. replaying that failure produced `deduplicated` with the same Finding root;
-6. `issueAdmitted` remained `false`; and
-7. a controlled runner-integrity failure left the job red.
+1. a manual `light` dispatch ran only `incident-board-lease-v1`;
+2. a manual `deep` dispatch ran the exact two-fixture suite in `plan.json`;
+3. both jobs ran on `agent-121-kungfu-systems`;
+4. the exact image, model, source commit, endpoint, and fixture IDs were bound;
+5. a passing report produced `not-required`;
+6. a controlled failure produced `captured`;
+7. replaying that failure produced `deduplicated` with the same Finding root;
+8. every receipt retained `issueAdmitted: false`; and
+9. a controlled runner-integrity failure left the job red.

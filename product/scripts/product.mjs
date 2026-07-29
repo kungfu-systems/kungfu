@@ -6,7 +6,14 @@
 
 import { spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
-import { copyFileSync, existsSync, mkdirSync } from 'node:fs';
+import {
+  copyFileSync,
+  existsSync,
+  mkdirSync,
+  readFileSync,
+  readdirSync,
+  statSync,
+} from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -27,12 +34,13 @@ const KFD_UPSTREAM_AGGREGATE = path.join(
   'upstream-aggregate.json',
 );
 const SDK_ENTRY = path.join(ROOT, 'developer', 'sdk', 'src', 'sdk.js');
+const EXTENSIONS_ROOT = path.join(ROOT, 'extensions');
 
 function usage(code) {
   process.stdout.write(
     [
       'usage: ./shifu product gui dev|build|pack|dist [--dry-run] [--instance-home <path>] [--no-instance-home]',
-      '       ./shifu product tui dev|build|bundle|dist [--dry-run] [--instance-home <path>] [--no-instance-home]',
+      '       ./shifu product tui dev|demo|build|bundle|dist [--dry-run] [--instance-home <path>] [--no-instance-home]',
       '       ./shifu product cli dist [--dry-run] [--instance-home <path>] [--no-instance-home]',
       '',
       'gui build/pack  -> desktop product unpacked app under product/dist/desktop',
@@ -180,7 +188,7 @@ function shouldAutoInstanceHome(parsed, surface, verb, env = process.env) {
       !parsed.instanceHome &&
       !env.KF_INSTANCE_HOME &&
       !env.KF_HOME &&
-      verb === 'dev' &&
+      (verb === 'dev' || (surface === 'tui' && verb === 'demo')) &&
       (surface === 'gui' || surface === 'tui') &&
       isLinkedGitWorktree(ROOT),
   );
@@ -192,7 +200,7 @@ function shouldAutoWorkspaceHome(parsed, surface, verb, env = process.env) {
       !parsed.instanceHome &&
       !env.KF_INSTANCE_HOME &&
       !env.KF_HOME &&
-      verb === 'dev' &&
+      (verb === 'dev' || (surface === 'tui' && verb === 'demo')) &&
       (surface === 'gui' || surface === 'tui') &&
       workspaceDataHomeForCwd(ROOT),
   );
@@ -209,7 +217,7 @@ function devWorkspaceHomeOverride(parsed, surface, verb, env = process.env) {
     !parsed.instanceHome &&
     !env.KF_INSTANCE_HOME &&
     !env.KF_HOME &&
-    verb === 'dev' &&
+    (verb === 'dev' || (surface === 'tui' && verb === 'demo')) &&
     (surface === 'gui' || surface === 'tui')
     ? path.resolve(expandHomePath(raw))
     : '';
@@ -248,6 +256,9 @@ function workspaceEnv(workspaceHome, baseEnv = process.env) {
 
 function devKfdEnv(baseEnv = process.env) {
   const env = { ...baseEnv };
+  if (!env.KF_EXTENSION_PATH && existsSync(EXTENSIONS_ROOT)) {
+    env.KF_EXTENSION_PATH = EXTENSIONS_ROOT;
+  }
   if (!env.KUNGFU_SDK_ENTRY && existsSync(SDK_ENTRY)) {
     env.KUNGFU_SDK_ENTRY = SDK_ENTRY;
   }
@@ -261,6 +272,81 @@ function devKfdEnv(baseEnv = process.env) {
     env.KUNGFU_KFD_UPSTREAM_AGGREGATE = KFD_UPSTREAM_AGGREGATE;
   }
   return env;
+}
+
+function newestMtimeMs(target) {
+  if (!existsSync(target)) return 0;
+  const stat = statSync(target);
+  if (!stat.isDirectory()) return stat.mtimeMs;
+  let newest = stat.mtimeMs;
+  for (const entry of readdirSync(target, { withFileTypes: true })) {
+    newest = Math.max(newest, newestMtimeMs(path.join(target, entry.name)));
+  }
+  return newest;
+}
+
+function devViewExtensionBuildPlan(extensionsRoot = EXTENSIONS_ROOT) {
+  const plan = [];
+  const visit = (directory, depth) => {
+    if (depth > 2 || !existsSync(directory)) return;
+    const packagePath = path.join(directory, 'package.json');
+    const manifestPath = path.join(directory, 'kungfu.kfx.json');
+    if (existsSync(packagePath) && existsSync(manifestPath)) {
+      const manifest = JSON.parse(readFileSync(manifestPath, 'utf8'));
+      const view = manifest?.kungfuConfig?.config?.view;
+      if (view) {
+        const bundlePath = path.join(
+          directory,
+          view.entry || 'dist/view/index.js',
+        );
+        const inputMtime = Math.max(
+          newestMtimeMs(packagePath),
+          newestMtimeMs(manifestPath),
+          newestMtimeMs(path.join(directory, 'src', 'view')),
+        );
+        const bundleMtime = newestMtimeMs(bundlePath);
+        plan.push({
+          name: manifest.name || manifest.kungfuConfig.key,
+          directory,
+          bundlePath,
+          needsBuild: bundleMtime === 0 || inputMtime > bundleMtime,
+        });
+      }
+    }
+    if (depth === 2) return;
+    for (const entry of readdirSync(directory, { withFileTypes: true })) {
+      if (!entry.isDirectory() || entry.name === 'node_modules') continue;
+      visit(path.join(directory, entry.name), depth + 1);
+    }
+  };
+  visit(extensionsRoot, 0);
+  return plan.sort((left, right) => left.name.localeCompare(right.name));
+}
+
+function prepareDevViewExtensions(options = {}) {
+  const env = options.env || process.env;
+  const pending = devViewExtensionBuildPlan(
+    options.extensionsRoot || EXTENSIONS_ROOT,
+  ).filter((entry) => entry.needsBuild);
+  if (pending.length === 0) {
+    process.stdout.write('[dev] source extension views are current\n');
+    return;
+  }
+  process.stdout.write(
+    `[dev] preparing ${pending.length} missing or stale source extension view${pending.length === 1 ? '' : 's'}\n`,
+  );
+  for (const entry of pending) {
+    run(
+      `build source extension ${entry.name}`,
+      process.execPath,
+      [SDK_ENTRY, 'kfx', 'build'],
+      {
+        dryRun: options.dryRun,
+        cwd: entry.directory,
+        env,
+      },
+    );
+  }
 }
 
 function parseArgs(argv) {
@@ -345,7 +431,7 @@ function run(label, cmd, args, options = {}) {
   // ensure gate; the launcher must not initialize <workspace>/.kungfu merely
   // because a user opened or developed the product against that workspace.
   const result = spawnSync(cmd, args, {
-    cwd: ROOT,
+    cwd: options.cwd || ROOT,
     env: options.env || process.env,
     stdio: 'inherit',
     shell: isWin,
@@ -373,7 +459,8 @@ function main(argv = process.argv.slice(2)) {
   const workspaceHome = instanceHome ? '' : autoWorkspaceHome;
   const baseEnv = workspaceEnv(workspaceHome, instanceEnv(instanceHome));
   const env =
-    verb === 'dev' && (surface === 'gui' || surface === 'tui')
+    (verb === 'dev' || (surface === 'tui' && verb === 'demo')) &&
+    (surface === 'gui' || surface === 'tui')
       ? devKfdEnv(baseEnv)
       : baseEnv;
 
@@ -381,6 +468,7 @@ function main(argv = process.argv.slice(2)) {
 
   if (surface === 'gui') {
     if (verb === 'dev') {
+      prepareDevViewExtensions({ dryRun, env });
       pnpm('gui dev', ['--filter', '@kungfu-tech/gui', 'run', 'dev'], {
         dryRun,
         env,
@@ -430,6 +518,26 @@ function main(argv = process.argv.slice(2)) {
         workspaceHome,
         autoWorkspaceHome,
       });
+    } else if (verb === 'demo') {
+      pnpm(
+        'tui offline demo',
+        [
+          '--filter',
+          '@kungfu-tech/tui',
+          'run',
+          'dev',
+          '--',
+          '--agent-work-lab-autoplay',
+        ],
+        {
+          dryRun,
+          env,
+          instanceHome,
+          autoInstanceHome,
+          workspaceHome,
+          autoWorkspaceHome,
+        },
+      );
     } else if (verb === 'build') {
       pnpm('tui build', ['--filter', '@kungfu-tech/tui', 'run', 'build'], {
         dryRun,
@@ -449,7 +557,7 @@ function main(argv = process.argv.slice(2)) {
         autoWorkspaceHome,
       });
     } else {
-      fail('unknown tui command (supported: dev, build, bundle, dist)');
+      fail('unknown tui command (supported: dev, demo, build, bundle, dist)');
     }
   } else if (surface === 'cli') {
     if (verb === 'dist') {
@@ -480,12 +588,14 @@ if (process.argv[1] && path.resolve(process.argv[1]) === __filename) {
 
 export {
   devKfdEnv,
+  devViewExtensionBuildPlan,
   devWorkspaceHomeOverride,
   instanceEnv,
   instanceHomeForWorktree,
   isLinkedGitWorktree,
   main,
   parseArgs,
+  prepareDevViewExtensions,
   resolveInstanceHome,
   seedInstanceConfig,
   shouldAutoInstanceHome,

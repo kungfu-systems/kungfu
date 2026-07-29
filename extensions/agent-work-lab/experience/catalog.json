@@ -94,6 +94,7 @@
     "demo-retry": "Start a new offline demo; never repair or reuse a failed fixture directory."
   },
   "timing": {
+    "autoplayIntroDurationMs": 5000,
     "eventIntervalMs": 1000,
     "verdictIntervalMs": 520,
     "recommendationDurationMs": 5000,

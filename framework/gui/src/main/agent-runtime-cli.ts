@@ -18,6 +18,7 @@ export type AgentRuntimeCliDeps = {
   bin: string;
   env: NodeJS.ProcessEnv;
   execFile: AgentRuntimeCliExec;
+  argsPrefix?: string[];
 };
 
 export async function executeAgentRuntimeCli(
@@ -37,7 +38,7 @@ export async function executeAgentRuntimeCli(
   return await new Promise<AgentRuntimeCliResult>((resolve) => {
     deps.execFile(
       deps.bin,
-      args,
+      [...(deps.argsPrefix ?? []), ...args],
       {
         encoding: 'utf8',
         env: deps.env,

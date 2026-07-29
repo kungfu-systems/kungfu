@@ -18,6 +18,8 @@ import {
   agentWorkLabModeNeeds,
   agentWorkLabPlaybackLines,
   agentWorkLabSessionStories,
+  shouldOpenAgentWorkLab,
+  unavailableKfxMessage,
 } from './renderer/src/agent-work-lab';
 
 const qualifiedReport = {
@@ -66,6 +68,20 @@ test('the Lab exposes one explicit selector for all three experiment modes', () 
   assert.equal(
     agentWorkLabRecommendation('offline-demo').nextCase,
     'same-agent',
+  );
+});
+
+test('the shell falls back to Agent Work Lab when no KFX is admitted', () => {
+  assert.equal(shouldOpenAgentWorkLab('work-graph', 0), true);
+  assert.equal(shouldOpenAgentWorkLab('agent-work-lab', 10), true);
+  assert.equal(shouldOpenAgentWorkLab('work-graph', 10), false);
+  assert.equal(
+    unavailableKfxMessage(10),
+    '10 extensions discovered, but none admitted for GUI execution',
+  );
+  assert.equal(
+    unavailableKfxMessage(0),
+    'no extensions found on the extension path',
   );
 });
 
@@ -262,6 +278,12 @@ test('the visual contract keeps a fixed frame with independently scrolling sessi
     /gridTemplateColumns: 'repeat\(2, minmax\(320px, 1fr\)\)'/,
   );
   assert.match(source, /kf-lab-report-dock/);
+  assert.match(source, /Create Starter Project/);
+  assert.match(source, /PREVIEW BEFORE CREATE/);
+  assert.doesNotMatch(source, /Not now/);
+  assert.match(source, /lab\.planStarterProject\(\)/);
+  assert.match(source, /lab\.createStarterProject/);
+  assert.match(source, /captured and remains pending explicit admission/);
   assert.match(source, /role="tooltip"/);
   assert.match(source, /WHAT TO TRY NEXT/);
   assert.match(source, /recommendationDurationMs/);
@@ -286,8 +308,22 @@ test('the GUI shell uses the shared startup surface policy', () => {
     new URL('./renderer/src/main.tsx', import.meta.url),
     'utf8',
   );
+  const mainSource = readFileSync(
+    new URL('./main/index.ts', import.meta.url),
+    'utf8',
+  );
 
   assert.match(source, /agentWorkLabStartupSurface\(startup\)/);
   assert.match(source, /startupSurface === 'work-graph'/);
-  assert.match(source, /startupSurface === 'agent-work-lab'/);
+  assert.match(
+    source,
+    /shouldOpenAgentWorkLab\(startupSurface, loaded\.entries\.length\)/,
+  );
+  assert.match(source, /WORKSPACE_SELECT_PATH_CHANNEL/);
+  assert.match(source, /onOpenStarterProject/);
+  assert.match(mainSource, /ipcMain\.handle\(WORKSPACE_SELECT_PATH_CHANNEL/);
+  assert.match(mainSource, /transition: 'renderer-reload'/);
+  assert.match(mainSource, /shellWindow\.webContents\.reload\(\)/);
+  assert.match(mainSource, /realpathSync\(requestedPath\)/);
+  assert.match(mainSource, /statSync\(workspaceRoot\)\.isDirectory\(\)/);
 });

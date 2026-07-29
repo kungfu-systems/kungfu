@@ -102,6 +102,68 @@ test('GUI and TUI adapter invokes only the canonical public CLI authority', asyn
   ]);
 });
 
+test('Starter Project uses one preview-confirm-create authority path', async () => {
+  const calls: string[][] = [];
+  const plan = {
+    schema: 'kungfu.project-template.plan/v1',
+    templateId: 'kungfu.agent-work-starter',
+    templateVersion: '1',
+    templateRoot: `sha256:${'a'.repeat(64)}`,
+    templateSource: '/product/starter-project.json',
+    destination: '/projects/agent-work-starter',
+    files: [{ path: 'README.md', contentRoot: `sha256:${'b'.repeat(64)}` }],
+    initialWork: {
+      state: 'capture-pending',
+      initiativeId: 'agent-work-starter',
+      assignmentId: 'create-launch-brief',
+      title: 'Create launch brief',
+      acceptanceChecks: ['Use evidence'],
+    },
+    effects: ['Create files'],
+    skippedEffects: ['No overwrite'],
+    confirmationRequired: true,
+    writeOccurred: false,
+    planRoot: `sha256:${'c'.repeat(64)}`,
+  } as const;
+  const receipt = {
+    schema: 'kungfu.project-template.creation-receipt/v1',
+    status: 'created',
+    destination: plan.destination,
+    writeOccurred: true,
+  };
+  const lab = openAgentWorkLab({
+    runtimeDir: '/runtime',
+    bin: '/product/kungfu',
+    execFile: async (_file, args) => {
+      calls.push(args);
+      return JSON.stringify(args[1] === 'starter-plan' ? plan : receipt);
+    },
+    execFileSync: () => JSON.stringify(startup),
+  });
+
+  const reviewed = await lab.planStarterProject();
+  assert.equal(reviewed.writeOccurred, false);
+  assert.equal(
+    (await lab.createStarterProject(reviewed, 'local-user')).writeOccurred,
+    true,
+  );
+  assert.deepEqual(calls, [
+    ['agent-work-lab', 'starter-plan', '--json'],
+    [
+      'agent-work-lab',
+      'starter-create',
+      '--destination',
+      '/projects/agent-work-starter',
+      '--expected-plan-root',
+      `sha256:${'c'.repeat(64)}`,
+      '--actor',
+      'local-user',
+      '--execute',
+      '--json',
+    ],
+  ]);
+});
+
 test('the adapter streams safe milestones before returning the canonical report', async () => {
   const received: string[] = [];
   const event = {

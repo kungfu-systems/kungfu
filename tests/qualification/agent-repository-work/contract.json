@@ -14,6 +14,41 @@
       "test_legacy_duplicate_log_has_stable_restart_summary"
     ]
   },
+  "fixtureCatalog": {
+    "selection": "explicit-id",
+    "entries": [
+      {
+        "id": "incident-board-lease-v1",
+        "seededFailures": [
+          "test_expired_lease_cannot_complete"
+        ],
+        "writablePaths": [
+          "incident_board/lease.py"
+        ]
+      },
+      {
+        "id": "incident-board-recovery-v1",
+        "seededFailures": [
+          "test_legacy_duplicate_log_has_stable_restart_summary"
+        ],
+        "writablePaths": [
+          "incident_board/replay.py"
+        ]
+      },
+      {
+        "id": "incident-board-replay-v1",
+        "seededFailures": [
+          "test_expired_lease_cannot_complete",
+          "test_legacy_duplicate_log_has_stable_restart_summary"
+        ],
+        "writablePaths": [
+          "incident_board/commands.py",
+          "incident_board/lease.py",
+          "incident_board/replay.py"
+        ]
+      }
+    ]
+  },
   "sessions": {
     "count": 2,
     "agentA": {
@@ -36,7 +71,7 @@
     "externalVerifierAuthoritative": true
   },
   "oracle": {
-    "sourceRoot": "sha256:74b1ec3cd7dcd4f27e4db981fa7d869119b6fc208fd890547576ad00f524349f",
+    "sourceRoot": "sha256:56da03c640d1bc4c76f4f53b4e26c701bab079770a72f654ce282af236b71132",
     "referenceRoot": "sha256:9c55e48f2d0cbcc5fe88c8a0a8e1a0f9dd242bf12f955519e5738c1b7d6fd634",
     "mountedIntoAgentWorkspace": false,
     "visibleAndHiddenTestsRequired": true

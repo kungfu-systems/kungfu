@@ -52,6 +52,23 @@ declare global {
 
 export const APP_NAME = 'reference_app';
 
+export function guiKungfuCliArgs(
+  env: Record<string, string | undefined>,
+  args: string[],
+): string[] {
+  const encoded = env.KUNGFU_CLI_ARGS_PREFIX;
+  if (!encoded) return args;
+  try {
+    const prefix = JSON.parse(encoded) as unknown;
+    return Array.isArray(prefix) &&
+      prefix.every((value) => typeof value === 'string')
+      ? [...prefix, ...args]
+      : args;
+  } catch {
+    return args;
+  }
+}
+
 // A non-interactive shell must not rely on a `tmux` shell-function shim, so we
 // resolve an absolute binary. Candidates cover Homebrew (arm64/x86) and system
 // paths; `KF_TMUX_BIN` overrides. Returns null when no tmux is available, in
@@ -211,17 +228,22 @@ export function openRendererAgentWorkLab(): AgentWorkLab {
     bin,
     env,
     execFileSync: (file, args, options) =>
-      childProcess.execFileSync(file, args, options),
+      childProcess.execFileSync(file, guiKungfuCliArgs(env, args), options),
     execFile: (file, args, options) =>
       new Promise<string>((resolve, reject) => {
-        childProcess.execFile(file, args, options, (error, stdout, stderr) => {
-          if (error) reject(new Error(stderr.trim() || error.message));
-          else resolve(stdout);
-        });
+        childProcess.execFile(
+          file,
+          guiKungfuCliArgs(env, args),
+          options,
+          (error, stdout, stderr) => {
+            if (error) reject(new Error(stderr.trim() || error.message));
+            else resolve(stdout);
+          },
+        );
       }),
     execFileEvents: (file, args, options, onLine) =>
       new Promise<void>((resolve, reject) => {
-        const child = childProcess.spawn(file, args, {
+        const child = childProcess.spawn(file, guiKungfuCliArgs(env, args), {
           env: options.env,
           stdio: ['ignore', 'pipe', 'pipe'],
         });
@@ -466,7 +488,16 @@ function createRuntime(): Runtime {
     ).ipcRenderer;
     const cliOptions = {
       runtimeDir,
-      execFileSync: childProcess.execFileSync,
+      execFileSync: (
+        file: string,
+        args: string[],
+        options: {
+          encoding: 'utf8';
+          env: Record<string, string | undefined>;
+          maxBuffer?: number;
+        },
+      ) =>
+        childProcess.execFileSync(file, guiKungfuCliArgs(env, args), options),
       env: window.process.env as Record<string, string | undefined>,
       bin:
         env.KUNGFU_CLI_BIN ||
