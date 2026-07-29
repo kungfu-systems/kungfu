@@ -49,11 +49,31 @@ function collectFiles(root) {
       if (entry.isDirectory()) {
         visit(full);
       } else if (entry.isFile() || entry.isSymbolicLink()) {
-        const stat = fs.statSync(full);
+        const stat = fs.lstatSync(full);
+        let link = '';
+        if (entry.isSymbolicLink()) {
+          link = fs.readlinkSync(full);
+          if (path.isAbsolute(link) || /^[a-zA-Z]:/.test(link)) {
+            throw new Error(
+              `archive symlink must be relative: ${normalizePath(path.relative(root, full))}`,
+            );
+          }
+          const resolved = path.resolve(path.dirname(full), link);
+          const archiveRoot = path.resolve(root);
+          if (
+            resolved !== archiveRoot &&
+            !resolved.startsWith(`${archiveRoot}${path.sep}`)
+          ) {
+            throw new Error(
+              `archive symlink escapes source: ${normalizePath(path.relative(root, full))}`,
+            );
+          }
+        }
         files.push({
           full,
           rel: normalizePath(path.relative(root, full)),
           stat,
+          link,
         });
       }
     }
@@ -91,10 +111,16 @@ function tarHeader(file) {
   writeOctal(header, file.stat.mode & 0o777, 100, 8);
   writeOctal(header, 0, 108, 8);
   writeOctal(header, 0, 116, 8);
-  writeOctal(header, file.stat.size, 124, 12);
+  writeOctal(header, file.link ? 0 : file.stat.size, 124, 12);
   writeOctal(header, Math.floor(file.stat.mtimeMs / 1000), 136, 12);
   header.fill(0x20, 148, 156);
-  header.write('0', 156, 1, 'ascii');
+  header.write(file.link ? '2' : '0', 156, 1, 'ascii');
+  if (file.link) {
+    if (Buffer.byteLength(file.link) > 100) {
+      throw new Error(`tar symlink target too long: ${file.rel}`);
+    }
+    header.write(file.link, 157, 100, 'utf8');
+  }
   header.write('ustar', 257, 6, 'ascii');
   header.write('00', 263, 2, 'ascii');
   if (names.prefix) header.write(names.prefix, 345, 155, 'utf8');
@@ -113,7 +139,7 @@ function tarPad(size) {
 export function writeTarGz({ sourceDir, outputFile }) {
   const chunks = [];
   for (const file of collectFiles(sourceDir)) {
-    const body = fs.readFileSync(file.full);
+    const body = file.link ? Buffer.alloc(0) : fs.readFileSync(file.full);
     chunks.push(tarHeader(file), body, tarPad(body.length));
   }
   chunks.push(Buffer.alloc(TAR_BLOCK * 2, 0));
@@ -165,6 +191,23 @@ export function extractTarGz({ archiveFile, targetDir }) {
     const target = extractPath(targetDir, entryName);
     if (type === '5') {
       fs.mkdirSync(target, { recursive: true });
+      continue;
+    }
+    if (type === '2') {
+      const link = readTarString(header, 157, 100);
+      if (!link || path.isAbsolute(link) || /^[a-zA-Z]:/.test(link)) {
+        throw new Error(`unsafe tar symlink for ${entryName}`);
+      }
+      const resolvedLink = path.resolve(path.dirname(target), link);
+      const targetRoot = path.resolve(targetDir);
+      if (
+        resolvedLink !== targetRoot &&
+        !resolvedLink.startsWith(`${targetRoot}${path.sep}`)
+      ) {
+        throw new Error(`tar symlink escapes target: ${entryName}`);
+      }
+      fs.mkdirSync(path.dirname(target), { recursive: true });
+      fs.symlinkSync(link, target);
       continue;
     }
     if (type !== '0') {
@@ -255,6 +298,11 @@ export function writeZip({ sourceDir, outputFile }) {
   const central = [];
   let offset = 0;
   for (const file of collectFiles(sourceDir)) {
+    if (file.link) {
+      throw new Error(
+        `zip product archives do not support symbolic links: ${file.rel}`,
+      );
+    }
     const body = fs.readFileSync(file.full);
     const entry = localZipHeader({ name: file.rel, body, stat: file.stat });
     local.push(entry.header, entry.nameBuf, body);

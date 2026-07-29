@@ -79,6 +79,53 @@ test('tar.gz archives round-trip the product layout', () => {
   }
 });
 
+test('tar.gz archives preserve portable internal symbolic links', (t) => {
+  if (process.platform === 'win32') {
+    t.skip('POSIX symlink contract');
+    return;
+  }
+  const parent = fs.mkdtempSync(path.join(os.tmpdir(), 'kungfu-archive-test-'));
+  try {
+    const { sourceDir, productRoot } = makeFixture(parent);
+    fs.symlinkSync('kungfu', path.join(productRoot, 'kungfu', 'python'));
+    const archiveFile = path.join(parent, 'product.tar.gz');
+    const targetDir = path.join(parent, 'tar-out');
+    writeTarGz({ sourceDir, outputFile: archiveFile });
+    extractTarGz({ archiveFile, targetDir });
+    const link = path.join(targetDir, 'kungfu-cli-test', 'kungfu', 'python');
+    assert.equal(fs.lstatSync(link).isSymbolicLink(), true);
+    assert.equal(fs.readlinkSync(link), 'kungfu');
+  } finally {
+    fs.rmSync(parent, { recursive: true, force: true });
+  }
+});
+
+test('tar.gz archive creation rejects absolute and escaping symbolic links', (t) => {
+  if (process.platform === 'win32') {
+    t.skip('POSIX symlink contract');
+    return;
+  }
+  for (const link of ['/tmp/outside', '../../../outside']) {
+    const parent = fs.mkdtempSync(
+      path.join(os.tmpdir(), 'kungfu-archive-test-'),
+    );
+    try {
+      const { sourceDir, productRoot } = makeFixture(parent);
+      fs.symlinkSync(link, path.join(productRoot, 'kungfu', 'python'));
+      assert.throws(
+        () =>
+          writeTarGz({
+            sourceDir,
+            outputFile: path.join(parent, 'product.tar.gz'),
+          }),
+        /archive symlink (?:must be relative|escapes source)/u,
+      );
+    } finally {
+      fs.rmSync(parent, { recursive: true, force: true });
+    }
+  }
+});
+
 test('zip archives round-trip the product layout', () => {
   const parent = fs.mkdtempSync(path.join(os.tmpdir(), 'kungfu-archive-test-'));
   try {

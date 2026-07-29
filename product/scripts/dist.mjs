@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
-// Build distributable Kungfu products from source in one command:
-// dependency sync -> core rebuild -> freeze -> all product-declared KFX ->
-// product assembly -> TUI bundle -> desktop installer and/or CLI archive under
-// product/release.
+// Build distributable products: sync -> core -> freeze -> KFX -> assembly ->
+// TUI -> desktop installer and/or CLI archive under product/release.
 // Run through the repo entrypoint so Node is pinned:
 //   ./shifu dist
 
@@ -26,6 +24,7 @@ import {
   runLibwasmArtifactSelfTest,
   runLibwasmExecutionQualification,
 } from './libwasm-artifact.mjs';
+import { normalizeCopiedSymlinks } from './portable-symlinks.mjs';
 import { productReleaseChannelConfig } from './release-channel-trust.mjs';
 import {
   buildBundledUpgradeManifest,
@@ -948,7 +947,7 @@ function platformId() {
   return `${platform}-${arch}`;
 }
 
-function copyTree(source, target, options = {}) {
+export function copyTree(source, target, options = {}) {
   if (!fs.existsSync(source)) {
     if (options.optional) return false;
     throw new Error(`required product input not found: ${rel(source)}`);
@@ -965,6 +964,7 @@ function copyTree(source, target, options = {}) {
       );
     },
   });
+  normalizeCopiedSymlinks({ source, target });
   return true;
 }
 

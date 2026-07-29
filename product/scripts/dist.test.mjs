@@ -11,6 +11,7 @@ import { cliLauncherContent } from './cli-launcher.mjs';
 import {
   cliArchiveBase,
   cliArchiveLayout,
+  copyTree,
   desktopUpdaterArtifact,
   esbuildPlatformBinaryPath,
   installedKungfuInvocation,
@@ -152,6 +153,31 @@ test('CLI archive keeps the launcher distinct from its runtime tree', () => {
   });
   assert.match(cliLauncherContent('darwin'), /exec "\$here\/runtime\/kungfu"/);
   assert.match(cliLauncherContent('win32'), /%~dp0runtime\\kungfu\.exe/);
+});
+
+test('product staging rewrites internal absolute symlinks as portable relative links', (t) => {
+  if (process.platform === 'win32') {
+    t.skip('POSIX symlink contract');
+    return;
+  }
+  const parent = fs.mkdtempSync(path.join(os.tmpdir(), 'kungfu-dist-test-'));
+  try {
+    const source = path.join(parent, 'source');
+    const target = path.join(parent, 'target');
+    fs.mkdirSync(path.join(source, 'bin'), { recursive: true });
+    fs.writeFileSync(path.join(source, 'bin', 'python3'), 'runtime');
+    fs.symlinkSync(
+      path.join(source, 'bin', 'python3'),
+      path.join(source, 'bin', 'python'),
+    );
+    copyTree(source, target);
+    const copied = path.join(target, 'bin', 'python');
+    assert.equal(fs.lstatSync(copied).isSymbolicLink(), true);
+    assert.equal(fs.readlinkSync(copied), 'python3');
+    assert.equal(fs.readFileSync(copied, 'utf8'), 'runtime');
+  } finally {
+    fs.rmSync(parent, { recursive: true, force: true });
+  }
 });
 
 test('product staging excludes every Python bytecode form', () => {

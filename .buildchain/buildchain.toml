@@ -72,3 +72,11 @@ kfd_3 = "declared"
 kfd_4 = "declared"
 platforms = ["macOS", "Linux", "Windows"]
 workflows = ["source-acceptance.yml", "buildchain-validate.yml", "dco.yml"]
+
+[[signing.artifacts]]
+id = "kungfu-cli-macos-arm64"
+path = "product/release/cli/kungfu-episodes-cli-darwin-arm64.tar.gz"
+profile = "auto"
+kind = "archive"
+platforms = ["macos-arm64"]
+required = true

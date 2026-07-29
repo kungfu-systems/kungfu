@@ -396,7 +396,7 @@ test('refreshing digests cannot give qualification jobs inherited secrets or an 
   fs.writeFileSync(
     workflow,
     original.replace(
-      / {4}secrets:\n(?: {6}BUILDCHAIN_ARTIFACT_RELAY_S3_[A-Z_]+:.*\n){3}/,
+      / {4}secrets:\n(?: {6}(?:BUILDCHAIN_PROMOTION_TOKEN|BUILDCHAIN_ARTIFACT_RELAY_S3_[A-Z_]+):.*\n){4}/,
       '    secrets: inherit\n',
     ),
   );

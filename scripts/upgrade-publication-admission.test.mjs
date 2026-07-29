@@ -18,7 +18,7 @@ import {
 const VERSION = '4.0.0-alpha.1';
 const SOURCE = 'a'.repeat(40);
 const RUNTIME = 'd'.repeat(40);
-const CERTIFICATE_SHA1 = '31c5f3444a2b04870a9fcc78bafc49954cc55862';
+const CERTIFICATE_SHA1 = 'c5d8ff5100e8f3cd6c30da6c88495d4c03e5b43f';
 const CONTRACT = loadUpgradeQualificationContract();
 const RELEASE_CANDIDATE_PASSPORT = {
   contract: 'kungfu-buildchain-release-candidate-passport',
@@ -319,8 +319,8 @@ function credentialFixture(root) {
     identity: {
       certificateSha1: CERTIFICATE_SHA1,
       certificateSubject:
-        'Developer ID Application: Beijing Kungfu Technology Co., Ltd. (ZDL5TK5LL4)',
-      teamId: 'ZDL5TK5LL4',
+        'Developer ID Application: Kungfu Technology (Hong Kong) Limited (RYNFD6L6DK)',
+      teamId: 'RYNFD6L6DK',
       entitlementsProfile: 'electron-desktop-v1',
       entitlementsSha256: `sha256:${'3'.repeat(64)}`,
     },

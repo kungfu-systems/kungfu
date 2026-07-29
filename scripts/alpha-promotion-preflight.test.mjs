@@ -114,6 +114,30 @@ test('custom Linux-only builds do not start the macOS credential island', () => 
   );
 });
 
+test('macOS products use Buildchain signing and the HK compatibility authority', () => {
+  const workflow = fs.readFileSync(
+    path.join(process.cwd(), '.github/workflows/build.yml'),
+    'utf8',
+  );
+  const config = fs.readFileSync(
+    path.join(process.cwd(), '.buildchain/buildchain.toml'),
+    'utf8',
+  );
+  assert.match(
+    workflow,
+    /BUILDCHAIN_PROMOTION_TOKEN: \$\{\{ secrets\.KUNGFU_GITHUB_TOKEN \}\}/u,
+  );
+  assert.match(
+    workflow,
+    /credential-island-macos:[\s\S]*name: alpha-macos-signing-hk/u,
+  );
+  assert.doesNotMatch(workflow, /name: alpha-macos-signing\s*$/mu);
+  assert.match(
+    config,
+    /\[\[signing\.artifacts\]\][\s\S]*id = "kungfu-cli-macos-arm64"[\s\S]*kind = "archive"[\s\S]*platforms = \["macos-arm64"\]/u,
+  );
+});
+
 test('workflow uses setup-node for platform receipts and clean Shifu argv for aggregation', () => {
   const workflow = fs.readFileSync(
     path.join(process.cwd(), '.github/workflows/alpha-promotion-preflight.yml'),
