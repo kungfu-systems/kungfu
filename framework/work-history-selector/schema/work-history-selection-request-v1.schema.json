@@ -1,0 +1,189 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kungfu.link/schema/work-history-selection-request-v1.schema.json",
+  "title": "Advisory work-history selection request v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "objectiveRoot",
+    "xinfaRoot",
+    "asOf",
+    "indexSnapshot",
+    "policy",
+    "candidates"
+  ],
+  "properties": {
+    "schema": { "const": "kungfu.work-history.selection-request/v1" },
+    "objectiveRoot": { "$ref": "#/$defs/root" },
+    "xinfaRoot": { "$ref": "#/$defs/root" },
+    "asOf": { "$ref": "#/$defs/timestamp" },
+    "indexSnapshot": { "$ref": "#/$defs/indexSnapshot" },
+    "policy": { "$ref": "#/$defs/policy" },
+    "candidates": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/candidate" }
+    }
+  },
+  "$defs": {
+    "root": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "id": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:/-]*$"
+    },
+    "timestamp": {
+      "type": "string",
+      "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(?:\\.[0-9]{3})?Z$"
+    },
+    "rootSet": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": { "$ref": "#/$defs/root" }
+    },
+    "idSet": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": { "$ref": "#/$defs/id" }
+    },
+    "indexSnapshot": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schema", "snapshotRoot", "capturedAt", "sourceCutRoot"],
+      "properties": {
+        "schema": { "const": "kungfu.work-history.index-snapshot/v1" },
+        "snapshotRoot": { "$ref": "#/$defs/root" },
+        "capturedAt": { "$ref": "#/$defs/timestamp" },
+        "sourceCutRoot": { "$ref": "#/$defs/root" }
+      }
+    },
+    "policy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema",
+        "id",
+        "version",
+        "policyRoot",
+        "maxSelected",
+        "recentWindowSeconds",
+        "maximumIndexAgeSeconds",
+        "allowedAuthorityRoots",
+        "allowedRecordSchemas",
+        "allowedSourceIds",
+        "allowedVisibilities"
+      ],
+      "properties": {
+        "schema": { "const": "kungfu.work-history.selection-policy/v1" },
+        "id": { "$ref": "#/$defs/id" },
+        "version": { "type": "integer", "minimum": 1 },
+        "policyRoot": { "$ref": "#/$defs/root" },
+        "maxSelected": { "type": "integer", "minimum": 1 },
+        "recentWindowSeconds": { "type": "integer", "minimum": 0 },
+        "maximumIndexAgeSeconds": { "type": "integer", "minimum": 0 },
+        "allowedAuthorityRoots": { "$ref": "#/$defs/rootSet" },
+        "allowedRecordSchemas": { "$ref": "#/$defs/idSet" },
+        "allowedSourceIds": { "$ref": "#/$defs/idSet" },
+        "allowedVisibilities": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": { "enum": ["public", "internal"] }
+        }
+      }
+    },
+    "candidate": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema",
+        "candidateRoot",
+        "recordSchema",
+        "authority",
+        "source",
+        "temporal",
+        "supersession",
+        "invalidation",
+        "applicability",
+        "evidenceRoots",
+        "ranking"
+      ],
+      "properties": {
+        "schema": { "const": "kungfu.work-history.candidate/v1" },
+        "candidateRoot": { "$ref": "#/$defs/root" },
+        "recordSchema": { "$ref": "#/$defs/id" },
+        "authority": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["root", "status"],
+          "properties": {
+            "root": { "$ref": "#/$defs/root" },
+            "status": { "enum": ["current", "ambiguous", "unknown"] }
+          }
+        },
+        "source": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["id", "root", "status", "visibility"],
+          "properties": {
+            "id": { "$ref": "#/$defs/id" },
+            "root": { "$ref": "#/$defs/root" },
+            "status": { "enum": ["current", "stale", "missing"] },
+            "visibility": { "enum": ["public", "internal", "private-raw"] }
+          }
+        },
+        "temporal": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["availableAt", "indexedAt", "completedAt"],
+          "properties": {
+            "availableAt": { "$ref": "#/$defs/timestamp" },
+            "indexedAt": { "$ref": "#/$defs/timestamp" },
+            "completedAt": { "$ref": "#/$defs/timestamp" }
+          }
+        },
+        "supersession": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["status", "at", "replacementRoot"],
+          "properties": {
+            "status": { "enum": ["active", "superseded", "unknown"] },
+            "at": {
+              "oneOf": [{ "$ref": "#/$defs/timestamp" }, { "type": "null" }]
+            },
+            "replacementRoot": {
+              "oneOf": [{ "$ref": "#/$defs/root" }, { "type": "null" }]
+            }
+          }
+        },
+        "invalidation": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["status", "at", "evidenceRoot"],
+          "properties": {
+            "status": { "enum": ["valid", "invalidated", "unknown"] },
+            "at": {
+              "oneOf": [{ "$ref": "#/$defs/timestamp" }, { "type": "null" }]
+            },
+            "evidenceRoot": {
+              "oneOf": [{ "$ref": "#/$defs/root" }, { "type": "null" }]
+            }
+          }
+        },
+        "applicability": {
+          "enum": ["current-objective", "comparable", "precedent", "unknown"]
+        },
+        "evidenceRoots": { "$ref": "#/$defs/rootSet" },
+        "ranking": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["score"],
+          "properties": {
+            "score": { "type": "integer", "minimum": 0 }
+          }
+        }
+      }
+    }
+  }
+}

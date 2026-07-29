@@ -102,6 +102,22 @@ Integration Episode. Reconciliation returns N:M Cut and Episode publication
 maps and distinguishes superseded, archived, and orphaned bindings. It never
 locks unrelated worktrees or mutates a ref.
 
+The build-free Work History Selector is a separate read-only advisory
+projection. It selects only rooted, source-referenced, temporally available
+history from an exact index Cut, using the fixed gate order authority,
+temporal, schema, source, supersession, invalidation, applicability, and
+ranking. Its manifest binds the objective, Xinfa context, as-of time, index
+Cut, policy, candidates, exclusions, gaps, and confidence. Stale indexes return
+an incomplete zero-selection manifest; invalid roots or shapes are rejected
+without a manifest. Private raw corpus and payload bodies are outside the input
+schema, and the selector never writes Fact, Episode, Assignment, Work Control,
+Git, or repository state.
+
+```sh
+./shifu check:work-history-selector
+./shifu test:work-history-selector
+```
+
 Merge-safe composition is a third, separate rooted layer described by
 [KF-ADR-019f86da-4f90-7b77-a360-0725f23aad30](../../docs/adr/KF-ADR-019f86da-4f90-7b77-a360-0725f23aad30.md).
 It discovers the publication commit for every Cut changed between an exact

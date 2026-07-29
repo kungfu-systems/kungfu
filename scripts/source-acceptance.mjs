@@ -276,6 +276,10 @@ export function sourceAcceptancePlan(files, evidenceBaseCommit = '') {
     ],
     ['Project Cut history contract', 'scripts/check-project-cut-history.mjs'],
     [
+      'Work history selector contract',
+      'framework/work-history-selector/tooling/check-work-history-selector.mjs',
+    ],
+    [
       'Project Cut composition contract',
       'scripts/check-project-cut-composition.mjs',
     ],
@@ -426,6 +430,7 @@ export function sourceAcceptancePlan(files, evidenceBaseCommit = '') {
         'scripts/check-git-episode-provider.test.mjs',
         'scripts/check-project-cut-settlement.test.mjs',
         'scripts/check-project-cut-history.test.mjs',
+        'scripts/check-work-history-selector.test.mjs',
         'scripts/check-project-cut-composition.test.mjs',
         ...(settlementPublicationPresent
           ? ['scripts/check-project-cut-publication.test.mjs']
