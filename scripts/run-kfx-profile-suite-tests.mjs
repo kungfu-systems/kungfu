@@ -88,6 +88,8 @@ if (agentWorkLabOnly) {
   for (const [label, file] of [
     ['API capability adapter', 'framework/api/tests/agent-work-lab.test.ts'],
     ['TUI experience', 'framework/tui/src/agent-work-lab-view.test.ts'],
+    ['TUI workbench framework', 'framework/tui/src/profile-shell.test.ts'],
+    ['Product TUI demo entry', 'product/scripts/product.test.mjs'],
     ['GUI experience', 'framework/gui/src/agent-work-lab.test.ts'],
     ['KFX Manifest discovery', 'framework/kfx/src/profile-suite.test.ts'],
   ]) {

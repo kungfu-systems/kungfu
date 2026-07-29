@@ -4,10 +4,11 @@ import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
 import { Writable } from 'node:stream';
 import test from 'node:test';
-import { render } from 'ink';
+import { Box, render } from 'ink';
 import React from 'react';
 
 import {
+  PlaybackBar,
   ProfileShell,
   type ProfileShellModel,
   renderProfileShellSnapshot,
@@ -233,4 +234,33 @@ test('the real Ink 80x24 first screen renders all five questions', async () => {
   for (const card of MISSION_HOME_FIXTURE.cards) {
     assert.match(rendered, new RegExp(card.title.replace(/[?]/g, '\\?')));
   }
+});
+
+test('playback bar is explicitly non-interactive', async () => {
+  const output = new CaptureOutput();
+  const instance = render(
+    React.createElement(
+      Box,
+      { width: 80, height: 24 },
+      React.createElement(PlaybackBar, {
+        dimensions: { columns: 80, rows: 24 },
+        label: 'DEMO PLAYBACK',
+        status: 'Agent Work Lab · Offline continuity',
+        hint: 'Automatic · No input required · exits after the final result',
+      }),
+    ),
+    {
+      stdout: output as unknown as NodeJS.WriteStream,
+      exitOnCtrlC: false,
+      patchConsole: false,
+      debug: true,
+    },
+  );
+  await new Promise<void>((resolve) => setImmediate(resolve));
+  instance.unmount();
+  instance.cleanup();
+  const rendered = output.chunks.join('');
+  assert.match(rendered, /DEMO PLAYBACK/);
+  assert.match(rendered, /No input required/);
+  assert.doesNotMatch(rendered, /Type a message/);
 });

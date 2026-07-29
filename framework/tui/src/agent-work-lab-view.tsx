@@ -38,6 +38,7 @@ export type TuiAgentWorkLabFocus = WorkbenchFocus;
 export type TuiAgentWorkLabReportDetail = WorkbenchReportDetail;
 export type TuiAgentWorkLabNextPrompt = WorkbenchNextPrompt;
 export type TuiAgentWorkLabLine = WorkbenchLine;
+export type TuiAgentWorkLabAutoplayPhase = 1 | 2 | 3 | 4;
 
 export type AgentWorkLabSuiteAction =
   | 'lab-demo'
@@ -49,6 +50,21 @@ export type AgentWorkLabSuiteAction =
 export type AgentWorkLabActionRequest = {
   id: number;
   action: AgentWorkLabSuiteAction;
+};
+
+export type AgentWorkLabAutoplayResult =
+  | {
+      state: 'completed';
+      report: AgentWorkLabReport;
+    }
+  | {
+      state: 'failed';
+      message: string;
+    };
+
+export type AgentWorkLabAutoplay = {
+  onSettled: (result: AgentWorkLabAutoplayResult) => void;
+  wait?: (milliseconds: number) => Promise<void>;
 };
 
 export const AGENT_WORK_LAB_QUICK_COMMANDS: QuickCommand<AgentWorkLabSuiteAction>[] =
@@ -123,6 +139,24 @@ export function agentWorkLabEventRunningSession(
   if (event.step.includes('session-1')) return 1;
   if (event.step.includes('session-2')) return 2;
   return undefined;
+}
+
+export function agentWorkLabAutoplayPhase(
+  event: AgentWorkLabEvent,
+): TuiAgentWorkLabAutoplayPhase {
+  if (event.step === 'assessment') return 4;
+  if (event.step.includes('session-2')) return 3;
+  if (event.step.includes('session-1')) return 2;
+  return 1;
+}
+
+export function agentWorkLabAutoplayPhaseLabel(
+  phase: TuiAgentWorkLabAutoplayPhase,
+): string {
+  if (phase === 1) return 'Seal one exact Work identity';
+  if (phase === 2) return 'Session 1 makes bounded progress and exits';
+  if (phase === 3) return 'Fresh Session 2 recovers and completes the Work';
+  return 'Kungfu verifies continuity from evidence';
 }
 
 function eventSession(event: AgentWorkLabEvent): 1 | 2 {
@@ -272,6 +306,7 @@ export function AgentWorkLabView({
   nextPrompt,
   reportDetail,
   emphasizedResult,
+  autoplay,
 }: {
   dimensions: TerminalDimensions;
   mode: TuiAgentWorkLabMode;
@@ -290,8 +325,14 @@ export function AgentWorkLabView({
   nextPrompt?: TuiAgentWorkLabNextPrompt;
   reportDetail?: TuiAgentWorkLabReportDetail;
   emphasizedResult?: TuiAgentWorkLabReportDetail;
+  autoplay?: {
+    introCountdown: number;
+    phase: TuiAgentWorkLabAutoplayPhase;
+  };
 }) {
   const selectedCase = agentWorkLabCase(mode);
+  const autoplayQuestion =
+    'QUESTION · Can a fresh Session continue the same Work without the old chat?';
   return (
     <SessionWorkbench
       dimensions={dimensions}
@@ -299,8 +340,16 @@ export function AgentWorkLabView({
       collectionLabel={AGENT_WORK_LAB_SUITE.collection.title}
       caseLabel={selectedCase.title}
       relationship="→ governed Work →"
-      controls="[d] demo [j/k] source [brackets] target [x] same [m] handoff [Tab] focus [?] explain [w] Work [q] quit"
-      help={`${selectedCase.description} Good: a fresh Session 2 finds the same Work and continues. Bad: restart, copied chat, or lost identity.`}
+      controls={
+        autoplay
+          ? `STEP ${autoplay.phase}/4 · ${agentWorkLabAutoplayPhaseLabel(autoplay.phase)}`
+          : '[d] demo [j/k] source [brackets] target [x] same [m] handoff [Tab] focus [?] explain [w] Work [q] quit'
+      }
+      help={
+        autoplay
+          ? autoplayQuestion
+          : `${selectedCase.description} Good: a fresh Session 2 finds the same Work and continues. Bad: restart, copied chat, or lost identity.`
+      }
       sourceLabel={sourceLabel || 'Bundled Demo Agent'}
       targetLabel={targetLabel || 'Fresh Demo Agent'}
       lines={lines}
@@ -309,18 +358,36 @@ export function AgentWorkLabView({
       reportPassed={Boolean(report && report.status !== 'failed')}
       verdictSuccess="WORK CONTINUITY PROVED"
       verdictFailure="WORK CONTINUITY NOT PROVED"
+      verdictDetail={autoplay ? 'THE CHAT ENDED. THE WORK DID NOT.' : undefined}
       detailCaption="Canonical Work continuity checks · sensitive internals remain hidden"
       busy={busy}
       progress={progress}
       error={error}
       activeFocus={activeFocus}
       scrollBack={scrollBack}
-      showHelp={showHelp}
+      showHelp={showHelp || Boolean(autoplay)}
       activityFrame={activityFrame}
       runningSession={runningSession}
-      nextPrompt={nextPrompt}
+      nextPrompt={autoplay ? undefined : nextPrompt}
+      guideOverlay={
+        autoplay && autoplay.introCountdown > 0
+          ? {
+              heading: 'WHAT THIS DEMO PROVES',
+              title: 'ONE WORK. TWO FRESH SESSIONS.',
+              lines: [
+                'Can a brand-new Agent Session continue the same Work',
+                'without receiving the previous chat?',
+                'S1 saves progress → KUNGFU WORK restores it → S2',
+                'Session 1 does part of the task, records progress, and exits.',
+                'Session 2 starts fresh and finishes without copied chat.',
+              ],
+              footer: `No action needed · starts automatically in ${autoplay.introCountdown} seconds.`,
+            }
+          : undefined
+      }
       reportDetail={reportDetail}
       emphasizedResult={emphasizedResult}
+      interactive={!autoplay}
     />
   );
 }
@@ -343,6 +410,7 @@ export function AgentWorkLabHost({
   isInputCaptured = () => false,
   actionRequest,
   onActionHandled,
+  autoplay,
 }: {
   lab: AgentWorkLab;
   startup: AgentWorkLabStartupRoute;
@@ -351,6 +419,7 @@ export function AgentWorkLabHost({
   isInputCaptured?: () => boolean;
   actionRequest?: AgentWorkLabActionRequest;
   onActionHandled?: (id: number) => void;
+  autoplay?: AgentWorkLabAutoplay;
 }) {
   const { exit } = useApp();
   const [size, setSize] = React.useState(dimensions.get());
@@ -387,8 +456,21 @@ export function AgentWorkLabHost({
   }>();
   const [runningSession, setRunningSession] = React.useState<1 | 2>();
   const [progressNow, setProgressNow] = React.useState(() => Date.now());
+  const [autoplayIntroCountdown, setAutoplayIntroCountdown] = React.useState(
+    () =>
+      autoplay
+        ? Math.ceil(
+            AGENT_WORK_LAB_SUITE.timing.autoplayIntroDurationMs /
+              AGENT_WORK_LAB_SUITE.timing.quietProgressIntervalMs,
+          )
+        : 0,
+  );
+  const [autoplayPhase, setAutoplayPhase] =
+    React.useState<TuiAgentWorkLabAutoplayPhase>(1);
   const playbackGeneration = React.useRef(0);
   const handledActionRequest = React.useRef(0);
+  const autoplayStarted = React.useRef(false);
+  const autoplaySettled = React.useRef(false);
   const profiles = React.useMemo(
     () =>
       Array.from(
@@ -413,8 +495,9 @@ export function AgentWorkLabHost({
     }
   }, [lab]);
   React.useEffect(() => {
+    if (autoplay) return;
     void discover();
-  }, [discover]);
+  }, [autoplay, discover]);
   React.useEffect(
     () => dimensions.subscribe((next) => setSize(next)),
     [dimensions],
@@ -468,8 +551,14 @@ export function AgentWorkLabHost({
       const playback = createIncrementalPlayback<AgentWorkLabEvent>({
         timing: AGENT_WORK_LAB_SUITE.timing,
         isCurrent: () => playbackGeneration.current === generation,
+        wait: autoplay?.wait,
         onEvent: (event) => {
-          setRunningSession(agentWorkLabEventRunningSession(event));
+          const session = agentWorkLabEventRunningSession(event);
+          setRunningSession(session);
+          if (autoplay) {
+            setAutoplayPhase(agentWorkLabAutoplayPhase(event));
+            if (session) setActiveFocus(`session-${session}`);
+          }
           setLines((current) => [...current, ...agentWorkLabEventLines(event)]);
           setRunProgress((current) =>
             current
@@ -483,6 +572,7 @@ export function AgentWorkLabHost({
         },
         onAssessing: () => {
           setRunningSession(undefined);
+          if (autoplay) setAutoplayPhase(4);
           setRunProgress((current) =>
             current ? { ...current, phase: 'assessing' } : current,
           );
@@ -494,19 +584,55 @@ export function AgentWorkLabHost({
           setReport(value);
           setActiveFocus('correct');
           setEmphasizedResult('correct');
-          await wait(AGENT_WORK_LAB_SUITE.timing.verdictIntervalMs);
+          await (autoplay?.wait ?? wait)(
+            AGENT_WORK_LAB_SUITE.timing.verdictIntervalMs,
+          );
           if (playbackGeneration.current !== generation) return;
           setEmphasizedResult('failed');
-          await wait(AGENT_WORK_LAB_SUITE.timing.verdictIntervalMs);
+          await (autoplay?.wait ?? wait)(
+            AGENT_WORK_LAB_SUITE.timing.verdictIntervalMs,
+          );
           if (playbackGeneration.current !== generation) return;
           setEmphasizedResult(undefined);
-          setNextPrompt(agentWorkLabNextModePrompt(nextMode));
+          if (autoplay) {
+            setReportDetail(value.status === 'failed' ? 'failed' : 'correct');
+          } else {
+            setNextPrompt(agentWorkLabNextModePrompt(nextMode));
+          }
           setError('');
+          if (autoplay && !autoplaySettled.current) {
+            void (autoplay.wait ?? wait)(
+              AGENT_WORK_LAB_SUITE.timing.recommendationDurationMs,
+            ).then(() => {
+              if (
+                playbackGeneration.current === generation &&
+                !autoplaySettled.current
+              ) {
+                autoplaySettled.current = true;
+                autoplay.onSettled({ state: 'completed', report: value });
+              }
+            });
+          }
         })
         .catch((reason) => {
           playback.cancel();
           if (playbackGeneration.current !== generation) return;
-          setError(reason instanceof Error ? reason.message : String(reason));
+          const message =
+            reason instanceof Error ? reason.message : String(reason);
+          setError(message);
+          if (autoplay && !autoplaySettled.current) {
+            void (autoplay.wait ?? wait)(
+              AGENT_WORK_LAB_SUITE.timing.recommendationDurationMs,
+            ).then(() => {
+              if (
+                playbackGeneration.current === generation &&
+                !autoplaySettled.current
+              ) {
+                autoplaySettled.current = true;
+                autoplay.onSettled({ state: 'failed', message });
+              }
+            });
+          }
         })
         .finally(() => {
           if (playbackGeneration.current === generation) {
@@ -516,7 +642,7 @@ export function AgentWorkLabHost({
           }
         });
     },
-    [],
+    [autoplay],
   );
   const performSuiteAction = React.useCallback(
     (action: AgentWorkLabSuiteAction) => {
@@ -582,6 +708,29 @@ export function AgentWorkLabHost({
     performSuiteAction(actionRequest.action);
     onActionHandled?.(actionRequest.id);
   }, [actionRequest, onActionHandled, performSuiteAction]);
+  const performSuiteActionRef = React.useRef(performSuiteAction);
+  performSuiteActionRef.current = performSuiteAction;
+  React.useEffect(() => {
+    if (!autoplay || autoplayStarted.current) return;
+    autoplayStarted.current = true;
+    let active = true;
+    const interval = AGENT_WORK_LAB_SUITE.timing.quietProgressIntervalMs;
+    const total = Math.ceil(
+      AGENT_WORK_LAB_SUITE.timing.autoplayIntroDurationMs / interval,
+    );
+    setAutoplayIntroCountdown(total);
+    void (async () => {
+      for (let remaining = total; remaining > 0; remaining -= 1) {
+        await (autoplay.wait ?? wait)(interval);
+        if (!active) return;
+        setAutoplayIntroCountdown(remaining - 1);
+      }
+      performSuiteActionRef.current('lab-demo');
+    })();
+    return () => {
+      active = false;
+    };
+  }, [autoplay]);
   React.useEffect(() => {
     const onData = (chunk: Buffer | string) => {
       if (isInputCaptured()) return;
@@ -698,6 +847,14 @@ export function AgentWorkLabHost({
       nextPrompt={nextPrompt}
       reportDetail={reportDetail}
       emphasizedResult={emphasizedResult}
+      autoplay={
+        autoplay
+          ? {
+              introCountdown: autoplayIntroCountdown,
+              phase: autoplayPhase,
+            }
+          : undefined
+      }
     />
   );
 }

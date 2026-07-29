@@ -5,6 +5,7 @@ import { EventEmitter } from 'node:events';
 import { readFileSync } from 'node:fs';
 import test from 'node:test';
 import type {
+  AgentWorkLab,
   AgentWorkLabEvent,
   AgentWorkLabReport,
 } from '@kungfu-tech/api/capability';
@@ -12,8 +13,11 @@ import { render } from 'ink';
 import React from 'react';
 import {
   AGENT_WORK_LAB_QUICK_COMMANDS,
+  AgentWorkLabHost,
   AgentWorkLabView,
   agentWorkLabActionReturnsToControls,
+  agentWorkLabAutoplayPhase,
+  agentWorkLabAutoplayPhaseLabel,
   agentWorkLabEventLines,
   agentWorkLabEventRunningSession,
   agentWorkLabNextModePrompt,
@@ -289,6 +293,47 @@ test('running state follows only the Session named by an event', () => {
   );
 });
 
+test('autoplay maps admitted events onto a four-step viewer narrative', () => {
+  assert.equal(
+    agentWorkLabAutoplayPhase({
+      schema: 'kungfu.agent-work-lab.event/v1',
+      step: 'plan',
+      status: 'ready',
+      root: `sha256:${'1'.repeat(64)}`,
+    }),
+    1,
+  );
+  assert.equal(
+    agentWorkLabAutoplayPhase({
+      schema: 'kungfu.agent-work-lab.event/v1',
+      step: 'session-1-activity',
+      status: 'running',
+      root: `sha256:${'2'.repeat(64)}`,
+    }),
+    2,
+  );
+  assert.equal(
+    agentWorkLabAutoplayPhase({
+      schema: 'kungfu.agent-work-lab.event/v1',
+      step: 'session-2-start',
+      status: 'running',
+      root: `sha256:${'3'.repeat(64)}`,
+    }),
+    3,
+  );
+  assert.equal(
+    agentWorkLabAutoplayPhase({
+      schema: 'kungfu.agent-work-lab.event/v1',
+      step: 'assessment',
+      status: 'qualified',
+      root: `sha256:${'4'.repeat(64)}`,
+    }),
+    4,
+  );
+  assert.match(agentWorkLabAutoplayPhaseLabel(2), /Session 1.*exits/i);
+  assert.match(agentWorkLabAutoplayPhaseLabel(4), /verifies continuity/i);
+});
+
 test('coaching popup rows are bounded and fully paintable', () => {
   const rows = agentWorkLabPromptRows(
     'Offline complete · now test your real agent · Press x to test same-agent continuity.',
@@ -392,6 +437,10 @@ test('TUI host streams events and preserves the one-second rhythm', () => {
   assert.match(hostSource, /nextAgentWorkLabFocus/);
   assert.match(hostSource, /isAgentWorkLabReportReturnInput/);
   assert.match(hostSource, /setReportDetail\(activeFocus\)/);
+  assert.match(
+    hostSource,
+    /setReportDetail\(\s*value\.status === 'failed' \? 'failed' : 'correct',?\s*\)/,
+  );
   assert.match(hostSource, /performSuiteAction\('lab-demo'\)/);
   assert.match(hostSource, /performSuiteAction\('lab-same'\)/);
   assert.match(hostSource, /performSuiteAction\('lab-handoff'\)/);
@@ -407,6 +456,80 @@ test('TUI host streams events and preserves the one-second rhythm', () => {
     mainSource,
     /setRunProgress|setNextPrompt|setReportDetail/,
   );
+});
+
+test('TUI autoplay runs the complete offline case once and settles with its report', async () => {
+  const output = new CaptureOutput();
+  const calls: string[] = [];
+  const settled = new Promise<AgentWorkLabReport>((resolve, reject) => {
+    const lab = {
+      discoverAgents: async () => {
+        calls.push('discover');
+        return { configured: [], discovered: [] };
+      },
+      runDemo: async (onEvent?: (event: AgentWorkLabEvent) => void) => {
+        calls.push('demo');
+        onEvent?.({
+          schema: 'kungfu.agent-work-lab.event/v1',
+          step: 'session-1-start',
+          status: 'running',
+          root: `sha256:${'4'.repeat(64)}`,
+        });
+        onEvent?.({
+          schema: 'kungfu.agent-work-lab.event/v1',
+          step: 'session-2-start',
+          status: 'running',
+          root: `sha256:${'5'.repeat(64)}`,
+        });
+        onEvent?.({
+          schema: 'kungfu.agent-work-lab.event/v1',
+          step: 'assessment',
+          status: 'qualified',
+          root: `sha256:${'6'.repeat(64)}`,
+        });
+        return qualifiedReport;
+      },
+    } as unknown as AgentWorkLab;
+    const instance = render(
+      React.createElement(AgentWorkLabHost, {
+        lab,
+        startup: {
+          schema: 'kungfu.agent-work-lab.startup-route/v1',
+          state: 'verified-empty',
+          route: 'agent-work-lab',
+          reasonCode: 'autoplay',
+          message: 'Autoplay owns the startup surface.',
+          runtimeDir: '/tmp/kungfu-autoplay',
+          workGraphPresent: false,
+          evidence: [],
+          writeOccurred: false,
+        },
+        dimensions: {
+          get: () => ({ columns: 80, rows: 20 }),
+          subscribe: () => () => undefined,
+        },
+        autoplay: {
+          wait: async () => undefined,
+          onSettled: (result) => {
+            instance.unmount();
+            instance.cleanup();
+            process.stdin.pause();
+            if (result.state === 'completed') resolve(result.report);
+            else reject(new Error(result.message));
+          },
+        },
+      }),
+      {
+        stdout: output as unknown as NodeJS.WriteStream,
+        exitOnCtrlC: false,
+        patchConsole: false,
+        debug: true,
+      },
+    );
+  });
+
+  assert.equal(await settled, qualifiedReport);
+  assert.deepEqual(calls, ['demo']);
 });
 
 test('state updates use incremental terminal painting instead of clearTerminal', async () => {
@@ -560,6 +683,65 @@ test('report cards, coaching popup and detail page are visible at 80x24', async 
   assert.match(detailFrame, /Esc \/ Enter \/ Backspace \/ b/);
   assert.match(detailFrame, /Two genuinely fresh processes/);
   assert.match(detailFrame, /Session 2 received no copied chat/);
+});
+
+test('autoplay explains the experiment, states the value, then opens its acceptance report', async () => {
+  const output = new CaptureOutput();
+  const instance = render(
+    React.createElement(AgentWorkLabView, {
+      ...viewProps,
+      showHelp: true,
+      autoplay: { introCountdown: 5, phase: 1 },
+    }),
+    {
+      stdout: output as unknown as NodeJS.WriteStream,
+      exitOnCtrlC: false,
+      patchConsole: false,
+      debug: true,
+    },
+  );
+  await new Promise<void>((resolve) => setTimeout(resolve, 80));
+  const introFrame = output.chunks.join('');
+  instance.rerender(
+    React.createElement(AgentWorkLabView, {
+      ...viewProps,
+      showHelp: true,
+      report: qualifiedReport,
+      activeFocus: 'correct',
+      autoplay: { introCountdown: 0, phase: 4 },
+    }),
+  );
+  await new Promise<void>((resolve) => setTimeout(resolve, 80));
+  const finalFrame = output.chunks.at(-1) ?? '';
+  instance.rerender(
+    React.createElement(AgentWorkLabView, {
+      ...viewProps,
+      showHelp: true,
+      report: qualifiedReport,
+      activeFocus: 'correct',
+      reportDetail: 'correct',
+      autoplay: { introCountdown: 0, phase: 4 },
+    }),
+  );
+  await new Promise<void>((resolve) => setTimeout(resolve, 80));
+  const reportFrame = output.chunks.at(-1) ?? '';
+  instance.unmount();
+  instance.cleanup();
+
+  assert.match(introFrame, /WHAT THIS DEMO PROVES/);
+  assert.match(introFrame, /ONE WORK\. TWO FRESH SESSIONS\./);
+  assert.match(introFrame, /without receiving the previous chat/i);
+  assert.match(introFrame, /No action needed.*5 seconds/i);
+  assert.match(finalFrame, /WORK CONTINUITY PROVED/);
+  assert.match(finalFrame, /THE CHAT ENDED\. THE WORK DID NOT\./);
+  assert.match(finalFrame, /STEP 4\/4/);
+  assert.doesNotMatch(finalFrame, /WHAT TO TRY NEXT/);
+  assert.doesNotMatch(finalFrame, /Enter details/);
+  assert.match(reportFrame, /ACCEPTANCE REPORT · 3\/4 CHECKS PASSED/);
+  assert.match(reportFrame, /Two genuinely fresh processes/);
+  assert.match(reportFrame, /Session 2 received no copied chat/);
+  assert.match(reportFrame, /This acceptance report closes automatically/);
+  assert.doesNotMatch(reportFrame, /RETURN TO RESULT CARDS/);
 });
 
 test('Tab focus repaints only the shared title-bar row', async () => {

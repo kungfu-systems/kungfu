@@ -411,6 +411,12 @@ export type IncrementalPlayback<TEvent> = {
 export type WorkbenchFocus = 'session-1' | 'session-2' | 'correct' | 'failed';
 export type WorkbenchReportDetail = 'correct' | 'failed';
 export type WorkbenchNextPrompt = { title: string; instruction: string };
+export type WorkbenchGuideOverlay = {
+  heading: string;
+  title: string;
+  lines: string[];
+  footer: string;
+};
 export type WorkbenchLine = {
   session: 1 | 2;
   source: string;
@@ -569,6 +575,7 @@ function WorkbenchSessionPane({
   running,
   titleBarColumns,
   activityFrame,
+  footer,
 }: {
   session: 1 | 2;
   title: string;
@@ -579,6 +586,7 @@ function WorkbenchSessionPane({
   running: boolean;
   titleBarColumns: number;
   activityFrame: number;
+  footer: string;
 }) {
   const sessionLines = lines.filter((line) => line.session === session);
   const liveStart = Math.max(0, sessionLines.length - viewportRows);
@@ -631,10 +639,7 @@ function WorkbenchSessionPane({
         ))}
       </Box>
       <Box paddingX={1}>
-        <Text dimColor>
-          ↑↓ scroll focused Session · Tab switch ·{' '}
-          {scrollBack > 0 ? `${scrollBack} lines back` : 'following live'}
-        </Text>
+        <Text dimColor>{footer}</Text>
       </Box>
     </Box>
   );
@@ -645,11 +650,13 @@ function WorkbenchReportDetail({
   checks,
   detail,
   caption,
+  interactive,
 }: {
   dimensions: TerminalDimensions;
   checks: WorkbenchCheck[];
   detail: WorkbenchReportDetail;
   caption: string;
+  interactive: boolean;
 }) {
   const rows = checks.filter(
     (check) => (detail === 'correct') === check.passed,
@@ -666,7 +673,11 @@ function WorkbenchReportDetail({
       overflow="hidden"
     >
       <Text bold color={correct ? 'green' : 'red'}>
-        {correct ? '✓ CORRECT CHECKS' : '× FAILED CHECKS'} · {rows.length}
+        {interactive
+          ? `${correct ? '✓ CORRECT CHECKS' : '× FAILED CHECKS'} · ${rows.length}`
+          : correct
+            ? `✓ ACCEPTANCE REPORT · ${rows.length}/${checks.length} CHECKS PASSED`
+            : `× ACCEPTANCE REPORT · ${rows.length} FAILED CHECKS`}
       </Text>
       <Text dimColor>{caption}</Text>
       <Box flexDirection="column" flexGrow={1} minHeight={0} marginTop={1}>
@@ -689,7 +700,9 @@ function WorkbenchReportDetail({
       </Box>
       <Box borderStyle="round" borderColor="cyan" paddingX={1}>
         <Text bold color="cyan" wrap="truncate-end">
-          ← RETURN TO RESULT CARDS · Esc / Enter / Backspace / b
+          {interactive
+            ? '← RETURN TO RESULT CARDS · Esc / Enter / Backspace / b'
+            : 'DEMO COMPLETE · This acceptance report closes automatically'}
         </Text>
       </Box>
     </Box>
@@ -702,12 +715,14 @@ function WorkbenchResultCard({
   active,
   available,
   emphasized,
+  interactive,
 }: {
   kind: WorkbenchReportDetail;
   count: number;
   active: boolean;
   available: boolean;
   emphasized: boolean;
+  interactive: boolean;
 }) {
   const correct = kind === 'correct';
   const tone = correct || count === 0 ? 'green' : 'red';
@@ -724,7 +739,11 @@ function WorkbenchResultCard({
       <Text bold color={cardColor} wrap="truncate-end">
         {active ? '> ' : '  '}
         {correct ? '✓' : '×'} {count} {correct ? 'CORRECT' : 'FAILED'}
-        {available ? ' · Enter details' : ' · waiting'}
+        {available
+          ? interactive
+            ? ' · Enter details'
+            : ' · verified'
+          : ' · waiting'}
       </Text>
     </Box>
   );
@@ -750,6 +769,7 @@ export type SessionWorkbenchProps = {
   reportPassed: boolean;
   verdictSuccess: string;
   verdictFailure: string;
+  verdictDetail?: string;
   detailCaption: string;
   busy: string;
   progress: string;
@@ -760,8 +780,10 @@ export type SessionWorkbenchProps = {
   activityFrame: number;
   runningSession?: 1 | 2;
   nextPrompt?: WorkbenchNextPrompt;
+  guideOverlay?: WorkbenchGuideOverlay;
   reportDetail?: WorkbenchReportDetail;
   emphasizedResult?: WorkbenchReportDetail;
+  interactive?: boolean;
 };
 
 export function SessionWorkbench(props: SessionWorkbenchProps) {
@@ -781,6 +803,7 @@ export function SessionWorkbench(props: SessionWorkbenchProps) {
     reportPassed,
     verdictSuccess,
     verdictFailure,
+    verdictDetail,
     detailCaption,
     busy,
     progress,
@@ -791,8 +814,10 @@ export function SessionWorkbench(props: SessionWorkbenchProps) {
     activityFrame,
     runningSession,
     nextPrompt,
+    guideOverlay,
     reportDetail,
     emphasizedResult,
+    interactive = true,
   } = props;
   if (reportAvailable && reportDetail) {
     return (
@@ -801,6 +826,7 @@ export function SessionWorkbench(props: SessionWorkbenchProps) {
         checks={checks}
         detail={reportDetail}
         caption={detailCaption}
+        interactive={interactive}
       />
     );
   }
@@ -811,7 +837,7 @@ export function SessionWorkbench(props: SessionWorkbenchProps) {
   const chromeRows =
     4 +
     (showHelp ? 1 : 0) +
-    6 +
+    (verdictDetail ? 7 : 6) +
     2 +
     1 +
     wrappedRows('PUBLIC ACTIVITY · SENSITIVE INTERNALS HIDDEN') +
@@ -833,6 +859,23 @@ export function SessionWorkbench(props: SessionWorkbenchProps) {
         Math.max(1, promptColumns - 2),
       )
     : [];
+  const guideWidth = Math.min(
+    dimensions.columns,
+    Math.min(88, Math.max(32, dimensions.columns - 8)),
+  );
+  const guideColumns = Math.max(1, guideWidth - 2);
+  const guideRows =
+    guideOverlay?.lines.flatMap((line) =>
+      boundedPromptRows(line, Math.max(1, guideColumns - 2)),
+    ) ?? [];
+  const sessionFooter = (session: 1 | 2) =>
+    interactive
+      ? `↑↓ scroll focused Session · Tab switch · ${
+          scrollBack[session] > 0
+            ? `${scrollBack[session]} lines back`
+            : 'following live'
+        }`
+      : 'Following admitted public activity one event at a time.';
   return (
     <Box
       width={dimensions.columns}
@@ -870,6 +913,7 @@ export function SessionWorkbench(props: SessionWorkbenchProps) {
           running={Boolean(progress) && runningSession === 1}
           titleBarColumns={titleColumns}
           activityFrame={activityFrame}
+          footer={sessionFooter(1)}
         />
         <WorkbenchSessionPane
           session={2}
@@ -881,10 +925,11 @@ export function SessionWorkbench(props: SessionWorkbenchProps) {
           running={Boolean(progress) && runningSession === 2}
           titleBarColumns={titleColumns}
           activityFrame={activityFrame}
+          footer={sessionFooter(2)}
         />
       </Box>
       <Box
-        height={6}
+        height={verdictDetail ? 7 : 6}
         borderStyle="round"
         borderColor={
           reportAvailable ? (reportPassed ? 'green' : 'red') : 'gray'
@@ -904,20 +949,27 @@ export function SessionWorkbench(props: SessionWorkbenchProps) {
               : verdictFailure
             : error || busy || progress || 'Ready · choose a test case'}
         </Text>
+        {reportAvailable && verdictDetail ? (
+          <Text color={reportPassed ? 'green' : 'red'} bold wrap="truncate-end">
+            {verdictDetail}
+          </Text>
+        ) : null}
         <Box>
           <WorkbenchResultCard
             kind="correct"
             count={passedCount}
-            active={activeFocus === 'correct'}
+            active={interactive && activeFocus === 'correct'}
             available={reportAvailable}
             emphasized={emphasizedResult === 'correct'}
+            interactive={interactive}
           />
           <WorkbenchResultCard
             kind="failed"
             count={failedCount}
-            active={activeFocus === 'failed'}
+            active={interactive && activeFocus === 'failed'}
             available={reportAvailable}
             emphasized={emphasizedResult === 'failed'}
+            interactive={interactive}
           />
         </Box>
       </Box>
@@ -949,6 +1001,43 @@ export function SessionWorkbench(props: SessionWorkbenchProps) {
               ' Closes automatically in 5 seconds.',
               promptColumns,
             )}
+          </Text>
+        </Box>
+      ) : null}
+      {guideOverlay ? (
+        <Box
+          position="absolute"
+          width={guideWidth}
+          height={Math.min(
+            terminalCanvasRows(dimensions.rows) - 4,
+            guideRows.length + 5,
+          )}
+          marginTop={Math.max(
+            2,
+            Math.floor((dimensions.rows - guideRows.length - 5) / 2),
+          )}
+          marginLeft={Math.max(
+            2,
+            Math.floor((dimensions.columns - guideWidth) / 2),
+          )}
+          borderStyle="double"
+          borderColor="cyan"
+          flexDirection="column"
+          overflow="hidden"
+        >
+          <Text bold color="black" backgroundColor="cyan">
+            {opaqueWorkbenchLine(` ${guideOverlay.heading}`, guideColumns)}
+          </Text>
+          <Text bold color="cyan" backgroundColor="black">
+            {opaqueWorkbenchLine(` ${guideOverlay.title}`, guideColumns)}
+          </Text>
+          {guideRows.map((row, index) => (
+            <Text key={`${index}-${row}`} color="white" backgroundColor="black">
+              {opaqueWorkbenchLine(` ${row}`, guideColumns)}
+            </Text>
+          ))}
+          <Text bold color="cyan" backgroundColor="black">
+            {opaqueWorkbenchLine(` ${guideOverlay.footer}`, guideColumns)}
           </Text>
         </Box>
       ) : null}
@@ -1576,6 +1665,43 @@ export function ControlPlaneBar({
         dimColor={!state.notice}
         wrap="truncate-end"
       >
+        {hint}
+      </Text>
+    </Box>
+  );
+}
+
+export function PlaybackBar({
+  dimensions,
+  label,
+  status,
+  hint,
+}: {
+  dimensions: TerminalDimensions;
+  label: string;
+  status: string;
+  hint: string;
+}) {
+  return (
+    <Box
+      position="absolute"
+      marginTop={Math.max(0, terminalCanvasRows(dimensions.rows) - 4)}
+      width={dimensions.columns}
+      height={4}
+      flexDirection="column"
+      borderStyle="round"
+      borderColor="cyan"
+      paddingX={1}
+      overflow="hidden"
+    >
+      <Text color="cyan" wrap="truncate-end">
+        <Text bold color="black" backgroundColor="cyan">
+          {' '}
+          {label}{' '}
+        </Text>{' '}
+        <Text bold>▶</Text> {status}
+      </Text>
+      <Text color="white" dimColor wrap="truncate-end">
         {hint}
       </Text>
     </Box>

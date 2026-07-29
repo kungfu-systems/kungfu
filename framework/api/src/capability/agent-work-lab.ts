@@ -87,6 +87,7 @@ export type AgentWorkLabCatalog = {
       string
     >;
     timing: {
+      autoplayIntroDurationMs: number;
       eventIntervalMs: number;
       verdictIntervalMs: number;
       recommendationDurationMs: number;

@@ -43,6 +43,7 @@ export type AgentWorkLabSuite = {
     string
   >;
   timing: {
+    autoplayIntroDurationMs: number;
     eventIntervalMs: number;
     verdictIntervalMs: number;
     recommendationDurationMs: number;

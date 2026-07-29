@@ -260,6 +260,24 @@ test('dry-run shows instance env without creating the home', () => {
   }
 });
 
+test('one-command TUI demo launches the interactive offline autoplay', () => {
+  const result = spawnSync(
+    process.execPath,
+    [__filename.replace(/\.test\.mjs$/, '.mjs'), 'tui', 'demo', '--dry-run'],
+    {
+      encoding: 'utf8',
+      env: { HOME: homedir(), PATH: process.env.PATH || '' },
+    },
+  );
+  assert.equal(result.status, 0, result.stderr || result.stdout);
+  assert.match(
+    result.stdout,
+    /pnpm --filter @kungfu-tech\/tui run dev -- --agent-work-lab-autoplay/,
+  );
+  assert.match(result.stdout, /KF_HOME=/);
+  assert.match(result.stdout, /KUNGFU_SDK_ENTRY=/);
+});
+
 test('dry-run auto-selects workspace .kungfu for gui dev', () => {
   const result = spawnSync(
     process.execPath,
