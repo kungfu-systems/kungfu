@@ -3,10 +3,20 @@
 name: Kungfu Agent Patrol
 
 on:
-  # Monday 02:00 Asia/Shanghai. Scheduled workflows run from the default branch.
+  # One run at 02:00 Asia/Shanghai every day. Monday is the deeper weekly slot.
   schedule:
+    - cron: "0 18 * * 1-6"
     - cron: "0 18 * * 0"
   workflow_dispatch:
+    inputs:
+      mode:
+        description: Bounded Patrol mode
+        required: true
+        type: choice
+        default: light
+        options:
+          - light
+          - deep
 
 permissions:
   contents: read
@@ -26,7 +36,7 @@ jobs:
     runs-on:
       - agent-121
       - kungfu-agent-patrol
-    timeout-minutes: 75
+    timeout-minutes: 90
     env:
       OPENCODE_IMAGE: ghcr.io/kungfu-systems/build-images/opencode-ci@sha256:4083ee089fa9a419f4915505094a6c1bcce433ff77455605ce8993af3b684ed3
       OPENCODE_MODEL: qwen3-coder:30b-opencode-64k
@@ -61,54 +71,92 @@ jobs:
           ./shifu build:core
           ./shifu test:agent-patrol
 
-      - name: Run bounded repository-work experiment
+      - name: Select bounded Patrol plan
         shell: bash
+        env:
+          PATROL_EVENT_NAME: ${{ github.event_name }}
+          PATROL_SCHEDULE: ${{ github.event.schedule || '' }}
+          PATROL_MANUAL_MODE: ${{ inputs.mode || 'light' }}
+          PATROL_ROTATION_KEY: ${{ github.run_number }}
         run: |
           set -euo pipefail
           evidence_dir="$RUNNER_TEMP/kungfu-agent-patrol-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT"
           mkdir -p "$evidence_dir"
           printf 'KUNGFU_AGENT_PATROL_EVIDENCE=%s\n' "$evidence_dir" >>"$GITHUB_ENV"
-          runner_exit=0
-          ./shifu qualify:agent-repository-work -- \
-            --output "$evidence_dir/repository-work" \
-            --image "$OPENCODE_IMAGE" \
-            --model "$OPENCODE_MODEL" \
-            --base-url "$OPENCODE_BASE_URL" \
-            --source-head "$GITHUB_SHA" \
-            --timeout-seconds 900 || runner_exit=$?
-          printf '%s\n' "$runner_exit" >"$evidence_dir/runner-exit"
+          ./shifu agent-patrol:select -- \
+            --event-name "$PATROL_EVENT_NAME" \
+            --schedule "$PATROL_SCHEDULE" \
+            --manual-mode "$PATROL_MANUAL_MODE" \
+            --rotation-key "$PATROL_ROTATION_KEY" \
+            --output "$evidence_dir/plan.json"
 
-      - name: Classify bounded outcome
+      - name: Run bounded repository-work experiments
         shell: bash
         run: |
           set -euo pipefail
-          ./shifu agent-patrol:classify -- \
-            --report "$KUNGFU_AGENT_PATROL_EVIDENCE/repository-work/agent-repository-work-report.json" \
-            --output "$KUNGFU_AGENT_PATROL_EVIDENCE/classification.json" \
-            --runner-exit "$(cat "$KUNGFU_AGENT_PATROL_EVIDENCE/runner-exit")" \
-            --source-head "$GITHUB_SHA" \
-            --model "$OPENCODE_MODEL" \
-            --image "$OPENCODE_IMAGE" \
-            --runner "$RUNNER_NAME"
+          timeout_seconds="$(jq -r '.timeoutSeconds' \
+            "$KUNGFU_AGENT_PATROL_EVIDENCE/plan.json")"
+          while IFS= read -r fixture; do
+            fixture_dir="$KUNGFU_AGENT_PATROL_EVIDENCE/repository-work/$fixture"
+            mkdir -p "$fixture_dir"
+            runner_exit=0
+            ./shifu qualify:agent-repository-work -- \
+              --output "$fixture_dir/evidence" \
+              --image "$OPENCODE_IMAGE" \
+              --model "$OPENCODE_MODEL" \
+              --base-url "$OPENCODE_BASE_URL" \
+              --source-head "$GITHUB_SHA" \
+              --fixture "$fixture" \
+              --timeout-seconds "$timeout_seconds" || runner_exit=$?
+            printf '%s\n' "$runner_exit" >"$fixture_dir/runner-exit"
+          done < <(jq -r '.fixtures[]' \
+            "$KUNGFU_AGENT_PATROL_EVIDENCE/plan.json")
 
-      - name: Capture or deduplicate native Dogfood Finding
+      - name: Classify bounded outcomes
         shell: bash
         run: |
           set -euo pipefail
-          ./shifu agent-patrol:dogfood-capture -- \
-            --classification "$KUNGFU_AGENT_PATROL_EVIDENCE/classification.json" \
-            --intent "$KUNGFU_AGENT_PATROL_EVIDENCE/dogfood-finding-intent.json" \
-            --output "$KUNGFU_AGENT_PATROL_EVIDENCE/dogfood-capture-receipt.json" \
-            --workspace "$HOME/.local/state/kungfu-agent-patrol"
+          mkdir -p "$KUNGFU_AGENT_PATROL_EVIDENCE/classification"
+          while IFS= read -r fixture; do
+            fixture_dir="$KUNGFU_AGENT_PATROL_EVIDENCE/repository-work/$fixture"
+            ./shifu agent-patrol:classify -- \
+              --report "$fixture_dir/evidence/agent-repository-work-report.json" \
+              --output "$KUNGFU_AGENT_PATROL_EVIDENCE/classification/$fixture.json" \
+              --runner-exit "$(cat "$fixture_dir/runner-exit")" \
+              --source-head "$GITHUB_SHA" \
+              --model "$OPENCODE_MODEL" \
+              --image "$OPENCODE_IMAGE" \
+              --runner "$RUNNER_NAME"
+          done < <(jq -r '.fixtures[]' \
+            "$KUNGFU_AGENT_PATROL_EVIDENCE/plan.json")
+
+      - name: Capture or deduplicate native Dogfood Findings
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p \
+            "$KUNGFU_AGENT_PATROL_EVIDENCE/dogfood-intent" \
+            "$KUNGFU_AGENT_PATROL_EVIDENCE/dogfood-receipt"
+          while IFS= read -r fixture; do
+            ./shifu agent-patrol:dogfood-capture -- \
+              --classification "$KUNGFU_AGENT_PATROL_EVIDENCE/classification/$fixture.json" \
+              --intent "$KUNGFU_AGENT_PATROL_EVIDENCE/dogfood-intent/$fixture.json" \
+              --output "$KUNGFU_AGENT_PATROL_EVIDENCE/dogfood-receipt/$fixture.json" \
+              --workspace "$HOME/.local/state/kungfu-agent-patrol"
+          done < <(jq -r '.fixtures[]' \
+            "$KUNGFU_AGENT_PATROL_EVIDENCE/plan.json")
 
       - name: Enforce infrastructure and evidence integrity
         shell: bash
         run: |
           set -euo pipefail
-          jq -e '.issueAdmitted == false' \
-            "$KUNGFU_AGENT_PATROL_EVIDENCE/dogfood-capture-receipt.json" >/dev/null
-          test "$(jq -r '.blocking' \
-            "$KUNGFU_AGENT_PATROL_EVIDENCE/classification.json")" = "false"
+          while IFS= read -r fixture; do
+            jq -e '.issueAdmitted == false' \
+              "$KUNGFU_AGENT_PATROL_EVIDENCE/dogfood-receipt/$fixture.json" >/dev/null
+            test "$(jq -r '.blocking' \
+              "$KUNGFU_AGENT_PATROL_EVIDENCE/classification/$fixture.json")" = "false"
+          done < <(jq -r '.fixtures[]' \
+            "$KUNGFU_AGENT_PATROL_EVIDENCE/plan.json")
 
       - name: Upload bounded Patrol evidence
         if: ${{ always() }}
@@ -116,8 +164,9 @@ jobs:
         with:
           name: kungfu-agent-patrol-${{ github.run_id }}-${{ github.run_attempt }}
           path: |
-            ${{ runner.temp }}/kungfu-agent-patrol-${{ github.run_id }}-${{ github.run_attempt }}/repository-work/agent-repository-work-report.json
-            ${{ runner.temp }}/kungfu-agent-patrol-${{ github.run_id }}-${{ github.run_attempt }}/classification.json
-            ${{ runner.temp }}/kungfu-agent-patrol-${{ github.run_id }}-${{ github.run_attempt }}/dogfood-capture-receipt.json
+            ${{ runner.temp }}/kungfu-agent-patrol-${{ github.run_id }}-${{ github.run_attempt }}/plan.json
+            ${{ runner.temp }}/kungfu-agent-patrol-${{ github.run_id }}-${{ github.run_attempt }}/repository-work/*/evidence/agent-repository-work-report.json
+            ${{ runner.temp }}/kungfu-agent-patrol-${{ github.run_id }}-${{ github.run_attempt }}/classification/*.json
+            ${{ runner.temp }}/kungfu-agent-patrol-${{ github.run_id }}-${{ github.run_attempt }}/dogfood-receipt/*.json
           if-no-files-found: warn
           retention-days: 14

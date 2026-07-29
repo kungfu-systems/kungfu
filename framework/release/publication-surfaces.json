@@ -240,7 +240,7 @@
           "classification": "non-publication",
           "owner": "kungfu-ci",
           "surfaceIds": [],
-          "sourceRoot": "sha256:fb701486e6006ffc60567756d1bb11117fbb6a6c85abd1e8ed8581a516ac973d"
+          "sourceRoot": "sha256:b99fd90ecdf14068e7dc4391d37209e862048ec85dc3a5bb977a3c83714e6601"
         },
         {
           "path": ".github/workflows/opencode-agent-repository-work.yml",
@@ -806,5 +806,5 @@
       }
     }
   ],
-  "registryRoot": "sha256:7e79b009491fd09fbcc4e77a8e16746c9f40944ce06e88d0bab89349cd534f32"
+  "registryRoot": "sha256:6e52701e975dae66b382116a7f42c4cd13b28722340d0e7e08b32ca35993caf0"
 }

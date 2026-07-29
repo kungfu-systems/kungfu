@@ -10,10 +10,13 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const workflowPath = '.github/workflows/kungfu-agent-patrol.yml';
 const workflow = fs.readFileSync(path.join(root, workflowPath), 'utf8');
 
-test('Agent Patrol is weekly or manual only on the protected default branch', () => {
+test('Agent Patrol is daily-light, weekly-deep, or trusted manual only', () => {
   assert.match(workflow, /^on:\n {2}[\s\S]*schedule:/m);
+  assert.match(workflow, /cron: "0 18 \* \* 1-6"/);
   assert.match(workflow, /cron: "0 18 \* \* 0"/);
-  assert.match(workflow, /^ {2}workflow_dispatch:\s*$/m);
+  assert.match(workflow, /^ {2}workflow_dispatch:\n {4}inputs:/m);
+  assert.match(workflow, /default: light/);
+  assert.match(workflow, /(?:\n {10}- light)(?:\n {10}- deep)/);
   assert.doesNotMatch(workflow, /^\s+(?:pull_request|push):/m);
   assert.match(workflow, /github\.repository == 'kungfu-systems\/kungfu'/);
   assert.match(
@@ -34,7 +37,7 @@ test('Agent Patrol is isolated to the dedicated agent-121 runner', () => {
   assert.match(workflow, /test "\$\(id -u\)" = "996"/);
   assert.match(workflow, /DOCKER_HOST=%s\\n' "\$docker_host" >>"\$GITHUB_ENV"/);
   assert.match(workflow, /group: kungfu-agent-patrol-agent-121/);
-  assert.match(workflow, /timeout-minutes: 75/);
+  assert.match(workflow, /timeout-minutes: 90/);
 });
 
 test('Agent Patrol pins its local-model runtime and retains bounded evidence', () => {
@@ -58,6 +61,17 @@ test('Agent Patrol pins its local-model runtime and retains bounded evidence', (
     /actions\/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02/,
   );
   assert.match(workflow, /retention-days: 14/);
+  assert.match(workflow, /\/plan\.json/);
+  assert.match(workflow, /repository-work\/\*\/evidence/);
+});
+
+test('Agent Patrol selects and serially executes bounded fixture suites', () => {
+  assert.match(workflow, /\.\/shifu agent-patrol:select --/);
+  assert.match(workflow, /--rotation-key "\$PATROL_ROTATION_KEY"/);
+  assert.match(workflow, /--fixture "\$fixture"/);
+  assert.match(workflow, /jq -r '\.fixtures\[\]'/);
+  assert.match(workflow, /group: kungfu-agent-patrol-agent-121/);
+  assert.match(workflow, /cancel-in-progress: false/);
 });
 
 test('Agent Patrol captures deduplicated Findings but can never admit Issues', () => {
