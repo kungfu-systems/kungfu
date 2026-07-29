@@ -27,9 +27,12 @@ fn qualified_app(slot: &Path) -> BuildEntry {
 }
 
 fn write_app_manifests(entry: &BuildEntry) {
-    let resources = entry.slot.join(&entry.artifact).join("Contents/Resources");
+    let contents = entry.slot.join(&entry.artifact).join("Contents");
+    let resources = contents.join("Resources");
     fs::create_dir_all(resources.join("kungfu")).unwrap();
     fs::create_dir_all(resources.join("upgrade")).unwrap();
+    fs::create_dir_all(contents.join("MacOS")).unwrap();
+    fs::write(contents.join("MacOS/Kungfu Episodes"), "executable").unwrap();
     fs::write(
         resources.join("kungfu/kungfubuildinfo.json"),
         format!(r#"{{"git":{{"revision":"{}"}}}}"#, entry.sha),
@@ -59,6 +62,22 @@ fn qualified_app_requires_exact_product_manifests() {
     write_app_manifests(&entry);
     assert!(build_valid(&entry));
 
+    fs::remove_file(
+        entry
+            .slot
+            .join(&entry.artifact)
+            .join("Contents/MacOS/Kungfu Episodes"),
+    )
+    .unwrap();
+    assert!(!build_valid(&entry));
+    fs::write(
+        entry
+            .slot
+            .join(&entry.artifact)
+            .join("Contents/MacOS/Kungfu Episodes"),
+        "executable",
+    )
+    .unwrap();
     fs::write(
         entry
             .slot
@@ -180,7 +199,7 @@ fn desktop_phase_resumes_after_backup_and_before_target_placement() {
                         .map(|_| ())
                         .map_err(|error| error.to_string())
                 },
-                |path| fs::read(path).ok().as_deref() == Some(b"new desktop"),
+                |path| Ok(fs::read(path).ok().as_deref() == Some(b"new desktop")),
             )
         })
         .unwrap();
@@ -191,6 +210,68 @@ fn desktop_phase_resumes_after_backup_and_before_target_placement() {
         assert_eq!(recovered.installed_path, target.display().to_string());
         assert_eq!(recovered.desktop_backup_path, backup.display().to_string());
     }
+    let _ = fs::remove_dir_all(root);
+}
+
+#[test]
+fn macos_shaped_partial_bundle_is_rejected_and_recovered() {
+    fn copy_tree(source: &Path, target: &Path) -> Result<(), String> {
+        fs::create_dir_all(target).map_err(|error| error.to_string())?;
+        for entry in fs::read_dir(source)
+            .map_err(|error| error.to_string())?
+            .collect::<Result<Vec<_>, _>>()
+            .map_err(|error| error.to_string())?
+        {
+            let from = entry.path();
+            let to = target.join(entry.file_name());
+            if from.is_dir() {
+                copy_tree(&from, &to)?;
+            } else {
+                fs::copy(&from, &to).map_err(|error| error.to_string())?;
+            }
+        }
+        Ok(())
+    }
+
+    let root = shifu_core::host::unique_temp_dir("promote-partial-app").unwrap();
+    let source_entry = qualified_app(&root.join("slot"));
+    write_app_manifests(&source_entry);
+    let source = source_entry.slot.join(&source_entry.artifact);
+    fs::create_dir_all(source.join("Contents/Frameworks")).unwrap();
+    fs::write(
+        source.join("Contents/Frameworks/Kungfu Framework"),
+        "required framework",
+    )
+    .unwrap();
+    let install = root.join("install");
+    let target = install.join(&source_entry.artifact);
+    let staged = install.join(".Kungfu Episodes.app.shifu-next");
+    let backup = install.join(".Kungfu Episodes.app.shifu-previous");
+    fs::create_dir_all(staged.join("Contents")).unwrap();
+    copy_tree(
+        &source.join("Contents/Resources"),
+        &staged.join("Contents/Resources"),
+    )
+    .unwrap();
+    copy_tree(
+        &source.join("Contents/MacOS"),
+        &staged.join("Contents/MacOS"),
+    )
+    .unwrap();
+    assert!(
+        product_app_manifests_valid(&staged, &source_entry.sha),
+        "partial bundle has the old shallow success signals"
+    );
+    assert!(!tree_exact(&source, &staged).unwrap());
+
+    complete_atomic_target(&source, &target, &backup, &staged, copy_tree, |candidate| {
+        tree_exact(&source, candidate)
+    })
+    .unwrap();
+    assert!(tree_exact(&source, &target).unwrap());
+    assert!(target
+        .join("Contents/Frameworks/Kungfu Framework")
+        .is_file());
     let _ = fs::remove_dir_all(root);
 }
 

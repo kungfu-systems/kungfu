@@ -34,7 +34,7 @@ use crate::{envfile, native_update, util};
 
 #[path = "promote_desktop.rs"]
 mod promote_desktop;
-use promote_desktop::{complete_atomic_target, DesktopCommit};
+use promote_desktop::{complete_atomic_target, contains_file, tree_exact, DesktopCommit};
 
 struct BuildEntry {
     slot: PathBuf,
@@ -238,6 +238,7 @@ fn product_manifests_valid(entry: &BuildEntry) -> bool {
 fn product_app_manifests_valid(app: &Path, expected_sha: &str) -> bool {
     let resources = app.join("Contents/Resources");
     let runtime = resources.join("kungfu");
+    let executable_present = contains_file(&app.join("Contents/MacOS"));
     let build = fs::read_to_string(runtime.join("kungfubuildinfo.json"))
         .ok()
         .and_then(|text| json::parse(&text).ok());
@@ -262,7 +263,8 @@ fn product_app_manifests_valid(app: &Path, expected_sha: &str) -> bool {
         .and_then(json::Json::as_array)
         .map(<[_]>::len)
         .unwrap_or(0);
-    build_revision == expected_sha
+    executable_present
+        && build_revision == expected_sha
         && release_revision == expected_sha
         && profiles
             .as_ref()
@@ -1123,7 +1125,12 @@ fn promote_app(entry: &BuildEntry, force: bool) -> Result<DesktopCommit, String>
                 Err(error) => Err(format!("failed to run ditto: {error}")),
             }
         },
-        |path| product_app_manifests_valid(path, &entry.sha),
+        |path| {
+            if !product_app_manifests_valid(path, &entry.sha) {
+                return Ok(false);
+            }
+            tree_exact(&source, path)
+        },
     )
 }
 
@@ -1189,10 +1196,12 @@ fn promote_appimage(entry: &BuildEntry) -> Result<DesktopCommit, String> {
             Ok(())
         },
         |path| {
-            path.is_file()
-                && bootstrap::sha256_file(path)
-                    .map(|digest| digest == source_digest)
-                    .unwrap_or(false)
+            if !path.is_file() {
+                return Ok(false);
+            }
+            bootstrap::sha256_file(path)
+                .map(|digest| digest == source_digest)
+                .map_err(|error| format!("cannot verify {}: {error}", path.display()))
         },
     )
 }
