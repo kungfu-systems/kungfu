@@ -13,6 +13,7 @@ import {
   formatCandidateTimelineReport,
 } from '@kungfu-tech/buildchain-alpha/candidate-timeline';
 import {
+  affectedNativeClassification,
   collectDeliveryAttemptFromArtifacts,
   collectFinalDevAncestry,
   combinedAffectedNativeEvidenceBinding,
@@ -22,9 +23,11 @@ import {
   queueAdmissionRequiredContexts,
   readZipMembers,
   resolveAffectedNativeArtifacts,
+  resolveHistoricalPlanClassification,
   resolvedAffectedNativeEvidenceBinding,
   roundAttempt,
   summarizeDeliveryEvidence,
+  unknownAffectedNativeClassification as unknownClassification,
   validateDevRequiredLatencyBaseline,
 } from './cancel-dequeued-merge-group-runs.mjs';
 import {
@@ -1007,16 +1010,6 @@ async function collectAffectedNativeEvidence(
   pullSourceSha,
   requiredContexts,
 ) {
-  if (classification.kind === 'non-native') {
-    return {
-      cache: cacheEvidenceFromMembers({}, classification),
-      native: nativeEvidenceFromMembers({}, classification),
-      deliveryAttempt: missingDeliveryAttempt(
-        'affected-native-delivery-attempt-artifact',
-        'delivery attempt is not emitted for non-native qualification',
-      ),
-    };
-  }
   if (!runId) {
     return {
       cache: {
@@ -1038,6 +1031,26 @@ async function collectAffectedNativeEvidence(
       `/repos/${repository}/actions/runs/${runId}/artifacts?per_page=100`,
       token,
     );
+    Object.assign(
+      classification,
+      await resolveHistoricalPlanClassification({
+        repository,
+        artifacts: payload.artifacts,
+        expectedSourceSha,
+        token,
+        githubBytes,
+        githubJson: (route) => githubJson(route, token),
+      }),
+    );
+    if (classification.kind === 'non-native')
+      return {
+        cache: cacheEvidenceFromMembers({}, classification),
+        native: nativeEvidenceFromMembers({}, classification),
+        deliveryAttempt: missingDeliveryAttempt(
+          'affected-native-delivery-attempt-artifact',
+          'delivery attempt is not emitted for non-native qualification',
+        ),
+      };
     const deliveryAttempt = await collectDeliveryAttemptFromArtifacts({
       artifacts: payload.artifacts,
       expectedSourceSha,
@@ -1108,6 +1121,7 @@ async function collectAffectedNativeEvidence(
       deliveryAttempt,
     };
   } catch (error) {
+    Object.assign(classification, unknownClassification(error.message));
     return {
       cache: {
         outcome: 'unknown',
@@ -1311,26 +1325,13 @@ async function collectSample(
         .filter(Boolean),
     ),
   ].sort();
-  let classification = {
-    kind: 'unknown',
-    reason: 'planner did not run',
-    planDigest: null,
-  };
+  let classification;
   try {
-    const plan = planAffectedPaths(changedPaths, pull.base.sha, sha);
-    classification = {
-      kind: plan.closureComponents.length ? 'native' : 'non-native',
-      reason: plan.platformTier,
-      planDigest: plan.planDigest,
-      changedPaths: plan.changedPaths,
-      authority: plan.authority,
-    };
+    classification = affectedNativeClassification(
+      planAffectedPaths(changedPaths, pull.base.sha, sha),
+    );
   } catch (error) {
-    classification = {
-      kind: 'unknown',
-      reason: error.message,
-      planDigest: null,
-    };
+    classification = unknownClassification(error.message);
   }
   const requiredWindow = requiredMergeQueueWindow(requiredContexts, mergeQueue);
   if (requiredWindow.status !== 'observed') {

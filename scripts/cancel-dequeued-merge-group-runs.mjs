@@ -10,7 +10,10 @@ import path from 'node:path';
 import process from 'node:process';
 import { pathToFileURL } from 'node:url';
 
-import { affectedNativeEvidenceBinding as bindAffectedNativeEvidence } from '../framework/maintainability/delivery-evidence.mjs';
+import {
+  affectedNativeEvidenceBinding as bindAffectedNativeEvidence,
+  readZipMembers,
+} from '../framework/maintainability/delivery-evidence.mjs';
 import { verifyCachePromotionAuthority } from './affected-native-proof.mjs';
 import {
   parseFamilyQueueLeaseMarker,
@@ -64,6 +67,130 @@ function semanticDigest(value) {
     .createHash('sha256')
     .update(JSON.stringify(ordered(value)))
     .digest('hex')}`;
+}
+
+export function unknownAffectedNativeClassification(reason) {
+  return { kind: 'unknown', reason, planDigest: null };
+}
+
+export function affectedNativeClassification(
+  plan,
+  classificationAuthority = 'current-source-planner',
+) {
+  return {
+    kind: plan.closureComponents.length ? 'native' : 'non-native',
+    reason: plan.platformTier,
+    baseSha: plan.base,
+    sourceSha: plan.head,
+    planDigest: plan.planDigest,
+    changedPaths: plan.changedPaths,
+    authority: plan.authority,
+    classificationAuthority,
+  };
+}
+
+export function devCandidatePlanArtifactSelection(artifacts, sourceSha) {
+  const name = `dev-candidate-plan-${sourceSha}`;
+  const selected = (artifacts || []).filter(
+    (artifact) => !artifact.expired && artifact.name === name,
+  );
+  if (selected.length !== 1) {
+    throw new Error(
+      selected.length
+        ? 'dev candidate plan artifact is ambiguous'
+        : 'dev candidate plan artifact is missing',
+    );
+  }
+  return selected[0];
+}
+
+export function affectedNativeComparedPaths(files) {
+  return [
+    ...new Set(
+      files
+        .filter((file) => file.status !== 'removed')
+        .map((file) => file.filename)
+        .filter(Boolean),
+    ),
+  ].sort();
+}
+
+export function classificationFromPlanMembers(
+  members,
+  { expectedSourceSha, expectedBaseSha, changedPaths },
+) {
+  if (!members['plan.json']) {
+    throw new Error('dev candidate plan.json is missing');
+  }
+  const plan = JSON.parse(members['plan.json']);
+  const { planDigest, ...planWithoutDigest } = plan;
+  if (
+    plan.schema !== 'kungfu.core-affected-native-plan/v1' ||
+    plan.head !== expectedSourceSha ||
+    (expectedBaseSha && plan.base !== expectedBaseSha) ||
+    planDigest !== semanticDigest(planWithoutDigest)
+  ) {
+    throw new Error('dev candidate plan identity or digest drift');
+  }
+  if (
+    (changedPaths &&
+      JSON.stringify(plan.changedPaths) !== JSON.stringify(changedPaths)) ||
+    !Array.isArray(plan.closureComponents) ||
+    !/^[0-9a-f]{40}$/u.test(plan.base) ||
+    !/^sha256:[0-9a-f]{64}$/u.test(plan.authority?.layers || '') ||
+    !/^sha256:[0-9a-f]{64}$/u.test(plan.authority?.buildCapabilities || '')
+  ) {
+    throw new Error('dev candidate plan source or authority drift');
+  }
+  const native = plan.closureComponents.length > 0;
+  if (
+    (native && plan.platformTier !== 'github-hosted-linux-native-pr') ||
+    (!native && plan.platformTier !== 'none')
+  ) {
+    throw new Error('dev candidate plan classification drift');
+  }
+  return affectedNativeClassification(plan, 'source-bound-dev-candidate-plan');
+}
+
+export async function resolveHistoricalPlanClassification({
+  repository,
+  artifacts,
+  expectedSourceSha,
+  token,
+  githubBytes,
+  githubJson,
+}) {
+  const artifact = devCandidatePlanArtifactSelection(
+    artifacts,
+    expectedSourceSha,
+  );
+  const archive = await githubBytes(
+    `/repos/${repository}/actions/artifacts/${artifact.id}/zip`,
+    token,
+  );
+  const classification = classificationFromPlanMembers(
+    readZipMembers(archive, ['plan.json']),
+    {
+      expectedSourceSha,
+    },
+  );
+  const comparison = await githubJson(
+    `/repos/${repository}/compare/${classification.baseSha}...${expectedSourceSha}`,
+  );
+  if (
+    comparison.merge_base_commit?.sha !== classification.baseSha ||
+    !['ahead', 'identical'].includes(comparison.status)
+  ) {
+    throw new Error('dev candidate plan base ancestry drift');
+  }
+  const comparedPaths = affectedNativeComparedPaths(comparison.files);
+  if (
+    JSON.stringify(classification.changedPaths) !==
+    JSON.stringify(comparedPaths)
+  ) {
+    throw new Error('dev candidate plan compared paths drift');
+  }
+  return classification;
 }
 
 export function affectedNativeArtifactSelection(artifacts, sourceSha) {
