@@ -123,7 +123,6 @@ if (agentWorkLabOnly) {
         root,
         'framework/core/src/python/kungfu/cli/commands/agent_work_lab.py',
       ),
-      path.join(root, 'framework/core/src/python/kungfu/project_template.py'),
       path.join(root, 'framework/core/tests/python/test_agent_work_lab.py'),
       path.join(root, 'framework/core/tests/python/test_project_template.py'),
     ],

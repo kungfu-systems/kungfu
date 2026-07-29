@@ -137,7 +137,7 @@
         },
         {
           "path": "framework/core/src/python/kungfu/agent/cli_surface.catalog.json",
-          "currentLines": 920,
+          "currentLines": 926,
           "baselineLines": 33927,
           "currentRoot": "sha256:3911d1ec827fe82e542322cf74d17e201dc9e481af8d2e9216d6b1597a4feb6d",
           "baselineRoot": "sha256:9f2f17fca5aa4e4daa28a276c1e3a153fa263e791b497f7ea83a93796f7aeb1f",
@@ -544,9 +544,9 @@
         },
         {
           "path": "extensions/agent-work-lab/experience/src/index.ts",
-          "currentLines": 76,
+          "currentLines": 80,
           "baselineLines": null,
-          "currentRoot": "sha256:397d66c7f1b81f8ebcf88a1824a985575e2e3d01f9c49342fedf9a70c27e2f34",
+          "currentRoot": "sha256:e34a32ae96ca38b6f2374aa95a008c2375c4ab90b8ad76d1fbfa6c442c906edb",
           "baselineRoot": null,
           "changedSinceBaseline": true
         },
@@ -584,9 +584,9 @@
         },
         {
           "path": "scripts/run-kfx-profile-suite-tests.mjs",
-          "currentLines": 209,
+          "currentLines": 217,
           "baselineLines": 89,
-          "currentRoot": "sha256:631945bd6ea29f4596f1e1046d12cc08762b5bffd73c536422dc1c33a700b7ea",
+          "currentRoot": "sha256:ca0d2956bc0488d3419cf92d5c20870dda00c2d8b7b5f6a7aa60841a0257153f",
           "baselineRoot": "sha256:d7d0cd90cf794bd7f9240f0f9a2a8ed1757eb42e20179396f6268bee7c1bc035",
           "changedSinceBaseline": true
         },

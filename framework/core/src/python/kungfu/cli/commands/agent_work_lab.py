@@ -6,7 +6,6 @@ from pathlib import Path
 import click
 
 from kungfu import agent_work_lab as lab
-from kungfu import project_template
 from kungfu.agent.kfd3 import kfd3_api
 from kungfu.agent import runtime_profiles
 from kungfu.cli.commands import PrioritizedCommandGroup, kfc
@@ -123,7 +122,7 @@ def demo(output, events_json, as_json):
 @agent_work_lab.command(
     help="launch the guided offline autoplay in the shipped TUI",
 )
-@kfd3_api("kungfu.agent-work-lab.autoplay")
+@kfd3_api("kungfu.agent-work-lab")
 @kfc.pass_context()
 def autoplay(ctx):
     from kungfu.cli.tui_runtime import run_tui
@@ -138,11 +137,11 @@ def autoplay(ctx):
 @click.option("--destination", type=click.Path(path_type=Path))
 @click.option("--parent", type=click.Path(path_type=Path))
 @click.option("--json", "as_json", is_flag=True, help="machine-readable output")
-@kfd3_api("kungfu.agent-work-lab.starter-plan")
+@kfd3_api("kungfu.agent-work-lab")
 def starter_plan(destination, parent, as_json):
     try:
-        payload = project_template.plan_project_template(
-            project_template.DEFAULT_TEMPLATE_ID,
+        payload = lab.plan_project_template(
+            lab.DEFAULT_TEMPLATE_ID,
             destination,
             parent=parent,
         )
@@ -173,15 +172,15 @@ def starter_plan(destination, parent, as_json):
     help="confirm creation of the reviewed project and captured Work request",
 )
 @click.option("--json", "as_json", is_flag=True, help="machine-readable output")
-@kfd3_api("kungfu.agent-work-lab.starter-create")
+@kfd3_api("kungfu.agent-work-lab")
 def starter_create(destination, expected_plan_root, actor, execute, as_json):
     if not execute:
         raise click.ClickException(
             "starter-create requires --execute after reviewing starter-plan"
         )
     try:
-        payload = project_template.create_project_template(
-            project_template.DEFAULT_TEMPLATE_ID,
+        payload = lab.create_project_template(
+            lab.DEFAULT_TEMPLATE_ID,
             destination,
             expected_plan_root=expected_plan_root,
             actor=actor,

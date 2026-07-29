@@ -12,16 +12,14 @@ import {
   agentWorkLabRecommendation,
 } from '../../../extensions/agent-work-lab/experience/src/index.js';
 import {
-  shouldOpenAgentWorkLab,
-  unavailableKfxMessage,
-} from './kfx-availability';
-import {
   AGENT_WORK_LAB_MODES,
   AGENT_WORK_LAB_PLAYBACK_TIMING,
   agentWorkLabBehaviorFindings,
   agentWorkLabModeNeeds,
   agentWorkLabPlaybackLines,
   agentWorkLabSessionStories,
+  shouldOpenAgentWorkLab,
+  unavailableKfxMessage,
 } from './renderer/src/agent-work-lab';
 
 const qualifiedReport = {

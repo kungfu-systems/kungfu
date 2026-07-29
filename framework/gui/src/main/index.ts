@@ -76,13 +76,15 @@ import {
   installKungfuCliToPath,
   uninstallKungfuCliFromPath,
 } from './installCli';
-import { resolveGuiKungfuCliInvocation } from './kungfu-cli-invocation';
 import {
   PRODUCT_NAME,
   productAboutPanelOptions,
   versionFirstLine,
 } from './product-identity';
-import { executeProfileCli } from './profile-cli';
+import {
+  executeProfileCli,
+  resolveGuiKungfuCliInvocation,
+} from './profile-cli';
 import {
   backupAndResetRuntime,
   stopRuntimeForRecovery,

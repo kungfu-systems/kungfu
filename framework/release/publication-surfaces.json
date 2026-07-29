@@ -114,7 +114,7 @@
             "product-stable",
             "product-binaries"
           ],
-          "sourceRoot": "sha256:af9319edd8c232c24ce2e944ba309fe5d3fe29a715a984a93d774f2cfee5bbfe"
+          "sourceRoot": "sha256:1110fd654aab5ae0329ef8ede54bc7fc33f2533dbd45dd1f1ddbe73e39a1071c"
         },
         {
           "path": ".github/workflows/buildchain-validate.yml",

@@ -7,7 +7,7 @@ from pathlib import Path
 
 import pytest
 
-from kungfu import project_template
+from kungfu import agent_work_lab as project_template
 
 
 def _template(tmp_path: Path) -> Path:

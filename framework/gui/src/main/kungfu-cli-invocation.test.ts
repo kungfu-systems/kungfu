@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import path from 'node:path';
 import test from 'node:test';
-import { resolveGuiKungfuCliInvocation } from './kungfu-cli-invocation.ts';
+import { resolveGuiKungfuCliInvocation } from './profile-cli.ts';
 
 const coreDir = path.resolve('/workspace/framework/core');
 const runtimeDir = path.join(coreDir, 'dist', 'kungfu');

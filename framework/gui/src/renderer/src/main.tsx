@@ -35,10 +35,6 @@ import React from 'react';
 import * as ReactDOM from 'react-dom';
 import { createRoot } from 'react-dom/client';
 import * as jsxRuntime from 'react/jsx-runtime';
-import {
-  shouldOpenAgentWorkLab,
-  unavailableKfxMessage,
-} from '../../kfx-availability';
 import type { SessionWindowLaunchAuthorization } from '../../main/session-windows';
 import {
   accessibleEntries,
@@ -77,7 +73,11 @@ import {
 } from '../../sandbox/channels';
 import { publishRefresh } from '../../sandbox/refresh';
 import { createKfxSharedModules } from '../shared-modules';
-import { AgentWorkLabPanel } from './agent-work-lab';
+import {
+  AgentWorkLabPanel,
+  shouldOpenAgentWorkLab,
+  unavailableKfxMessage,
+} from './agent-work-lab';
 import {
   loadKungfuConfig,
   normalizedUiConfig,
