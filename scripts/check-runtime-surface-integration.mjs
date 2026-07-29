@@ -78,7 +78,10 @@ assert.match(guiMain, /stopRuntimeForRecovery/);
 
 const guiRecovery = read('framework/gui/src/main/runtime-recovery.ts');
 assert.match(guiRecovery, /shared public CLI/);
-assert.match(guiRecovery, /\['runtime', 'stop'\]/);
+assert.match(
+  guiRecovery,
+  /\[\.\.\.\(options\.argsPrefix \?\? \[\]\), 'runtime', 'stop'\]/,
+);
 for (const command of fixture.ordinaryLifecycleCommands.filter(
   (item) => item !== 'stop',
 )) {
