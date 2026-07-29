@@ -88,7 +88,7 @@ function fixture(
     source = SOURCE_SHA,
     coordinateSource = source,
     sourceEvidence = null,
-    unsafeArchive = false,
+    archiveSymlinkTarget = '',
     safeArchiveLinks = false,
     unsupportedArchiveMember = false,
     stdoutLineCount = 0,
@@ -203,8 +203,11 @@ function fixture(
     platform: 'linux',
     architecture: 'x64',
   });
-  if (unsafeArchive) {
-    fs.symlinkSync('/tmp', path.join(productRoot, 'escape'));
+  if (archiveSymlinkTarget) {
+    const pythonBin = path.join(productRoot, 'runtime', 'python', 'bin');
+    fs.mkdirSync(pythonBin, { recursive: true });
+    fs.writeFileSync(path.join(pythonBin, 'python3'), '#!/bin/sh\nexit 0\n');
+    fs.symlinkSync(archiveSymlinkTarget, path.join(pythonBin, 'python'));
   }
   if (safeArchiveLinks) {
     const pythonRoot = path.join(productRoot, 'runtime', 'python', 'bin');
@@ -413,16 +416,30 @@ test('adapter accepts bounded internal symlink and hardlink members', () => {
   }
 });
 
-test('adapter rejects symlink members that escape the archive root', () => {
+test('adapter accepts a bounded relative symlink to a regular archive member', () => {
   const root = fs.mkdtempSync(
     path.join(os.tmpdir(), 'auditable-demo-adapter-'),
   );
   try {
-    const { result } = run(root, { unsafeArchive: true });
-    assert.notEqual(result.status, 0);
-    assert.match(result.stderr, /unsafe CLI archive link target/);
+    const { result } = run(root, { archiveSymlinkTarget: 'python3' });
+    assert.equal(result.status, 0, result.stderr);
   } finally {
     fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test('adapter rejects absolute and escaping archive symlinks before extraction', () => {
+  for (const archiveSymlinkTarget of ['/tmp', '../../../../outside']) {
+    const root = fs.mkdtempSync(
+      path.join(os.tmpdir(), 'auditable-demo-adapter-'),
+    );
+    try {
+      const { result } = run(root, { archiveSymlinkTarget });
+      assert.notEqual(result.status, 0);
+      assert.match(result.stderr, /unsafe CLI archive link target/);
+    } finally {
+      fs.rmSync(root, { recursive: true, force: true });
+    }
   }
 });
 

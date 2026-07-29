@@ -16,6 +16,14 @@ test('Dev Patrol runs at 04:00 Asia/Shanghai with an explicit UTC contract', () 
   assert.match(source, /04:00 Asia\/Shanghai/u);
   assert.match(source, /cron: "0 20 \* \* \*"/u);
   assert.doesNotMatch(source, /cron: "23 3 \* \* \*"/u);
+  assert.match(
+    source,
+    /buildchain-ref: \$\{\{ github\.event_name == 'workflow_dispatch' && inputs\.buildchain-ref \|\| '' \}\}/u,
+  );
+  assert.doesNotMatch(
+    source,
+    /buildchain-ref: \$\{\{ inputs\.buildchain-ref \|\| '[0-9a-f]{40}' \}\}/u,
+  );
 });
 
 test('candidate patrol is a thin Buildchain caller with exact channel and evidence inputs', () => {

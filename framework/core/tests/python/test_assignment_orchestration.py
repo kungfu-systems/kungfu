@@ -35,6 +35,20 @@ def _sha256(marker):
     return "sha256:" + marker * 64
 
 
+def test_assignment_profile_source_prefers_native_source_layout(tmp_path, monkeypatch):
+    package = tmp_path / "package" / "kungfu"
+    package.mkdir(parents=True)
+    checkout = tmp_path / "checkout"
+    native = checkout / "extensions" / "work-control"
+    native.mkdir(parents=True)
+    monkeypatch.setattr(assignment_orchestration, "__file__", package / "module.py")
+    monkeypatch.setattr(
+        assignment_orchestration, "source_root", lambda *_starts: checkout
+    )
+
+    assert ASSIGNMENT_CLI._profile_source() == native
+
+
 def test_assignment_atomic_paths_use_windows_extended_namespace():
     local = assignment_orchestration._filesystem_path(
         Path(r"C:\Users\Administrator\workspace\.kungfu\request.json"),
@@ -47,6 +61,22 @@ def test_assignment_atomic_paths_use_windows_extended_namespace():
 
     assert local == (r"\\?\C:\Users\Administrator\workspace\.kungfu\request.json")
     assert network == (r"\\?\UNC\server\share\workspace\.kungfu\request.json")
+
+
+def test_assignment_admit_defers_request_path_validation_to_orchestration():
+    request_argument = next(
+        parameter
+        for parameter in ASSIGNMENT_CLI.admit.params
+        if parameter.name == "request_file"
+    )
+    request_path = (
+        Path("C:/actions-runner/_work/kungfu/kungfu/.buildchain/tmp")
+        / ("long-assignment-path-" + "x" * 240)
+        / "request.json"
+    )
+
+    assert request_argument.type.exists is False
+    assert request_argument.type.convert(str(request_path), None, None) == request_path
 
 
 def test_captured_request_reads_all_paths_through_filesystem_namespace(

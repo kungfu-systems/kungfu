@@ -638,6 +638,54 @@ test('consumer leaves no GitHub artifact bytes after retry exhaustion', async (t
   assert.deepEqual(fs.readdirSync(temporary), []);
 });
 
+test('consumer keeps an extracted archive alive through async retention', async (t) => {
+  const temporary = fs.mkdtempSync(
+    path.join(os.tmpdir(), 'qualified-core-archive-lifetime-'),
+  );
+  t.after(() => fs.rmSync(temporary, { recursive: true, force: true }));
+  const { bundleRoot } = await promotedConsumerFixture(temporary);
+  const archive = path.join(temporary, 'qualified-core.zip');
+  const zip = spawnSync(
+    'python3',
+    [
+      '-c',
+      [
+        'import os, sys, zipfile',
+        'source, target = sys.argv[1:]',
+        "with zipfile.ZipFile(target, 'w', zipfile.ZIP_STORED) as archive:",
+        '  for root, _, files in os.walk(source):',
+        '    for name in sorted(files):',
+        '      path = os.path.join(root, name)',
+        '      archive.write(path, os.path.relpath(path, source))',
+      ].join('\n'),
+      bundleRoot,
+      archive,
+    ],
+    { encoding: 'utf8' },
+  );
+  assert.equal(zip.status, 0, zip.stderr);
+  const previousBundle = process.env.KUNGFU_QUALIFIED_CORE_BUNDLE;
+  process.env.KUNGFU_QUALIFIED_CORE_BUNDLE = archive;
+  try {
+    const result = await consumeQualifiedCoreForCheckout({
+      repositoryRoot: ROOT,
+      publicationRoot: path.join(temporary, 'checkout'),
+      cacheRoot: path.join(temporary, 'cache'),
+      now: CONSUMER_NOW,
+      checkout: consumerCheckout(),
+      platform: 'darwin',
+      architecture: 'arm64',
+    });
+    assert.equal(result.status, 'materialized');
+  } finally {
+    if (previousBundle === undefined) {
+      Reflect.deleteProperty(process.env, 'KUNGFU_QUALIFIED_CORE_BUNDLE');
+    } else {
+      process.env.KUNGFU_QUALIFIED_CORE_BUNDLE = previousBundle;
+    }
+  }
+});
+
 test('consumer rejects two locally retained authorities for one exact checkout', async (t) => {
   const temporary = fs.mkdtempSync(
     path.join(os.tmpdir(), 'qualified-core-consumer-ambiguous-'),

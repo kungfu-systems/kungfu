@@ -343,7 +343,7 @@
       "invocation": {
         "uses": "kungfu-systems/buildchain/.github/workflows/.gate-profile.yml@f8ef93be41b0badd75eb35cc1506c2be12198984",
         "with": {
-          "buildchain-ref": "${{ inputs.buildchain-ref || 'f8ef93be41b0badd75eb35cc1506c2be12198984' }}",
+          "buildchain-ref": "${{ github.event_name == 'workflow_dispatch' && inputs.buildchain-ref || '' }}",
           "cargo-registry-index": "${{ vars.BUILDCHAIN_CARGO_REGISTRY_INDEX }}",
           "checkout-cache-fallback": "github",
           "checkout-cache-mode": "auto",

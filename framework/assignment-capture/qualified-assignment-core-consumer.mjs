@@ -782,7 +782,7 @@ export async function consumeQualifiedCoreForCheckout({
     } else {
       throw new QualifiedCoreUnavailable('qualified-core-cache-miss');
     }
-    return materializeQualifiedCoreBundle({
+    return await materializeQualifiedCoreBundle({
       ...discovered,
       repositoryRoot,
       publicationRoot,

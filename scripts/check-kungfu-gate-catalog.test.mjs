@@ -1063,7 +1063,7 @@ test('direct Gate arguments and profile inputs fail closed on drift', () => {
     fs
       .readFileSync(profileRuntimeWorkflow, 'utf8')
       .replace(
-        "buildchain-ref: ${{ inputs.buildchain-ref || 'f8ef93be41b0badd75eb35cc1506c2be12198984' }}",
+        "buildchain-ref: ${{ github.event_name == 'workflow_dispatch' && inputs.buildchain-ref || '' }}",
         "buildchain-ref: ${{ inputs.buildchain-ref || '' }}",
       ),
   );

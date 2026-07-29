@@ -117,11 +117,11 @@ def _profile_source():
         packaged = profiles / profile_name
         if packaged.is_dir():
             return packaged
-    source = (
-        orchestration.source_root() / "extensions" / "mission-control"
-    )  # compatibility source layout
-    if source.is_dir():
-        return source
+    extensions = orchestration.source_root() / "extensions"
+    for profile_name in ("work-control", "mission-control"):  # compatibility path
+        source = extensions / profile_name
+        if source.is_dir():
+            return source
     raise ValueError("Work Control Profile is absent from this Kungfu product")
 
 
@@ -239,9 +239,7 @@ def capture(ctx, request_value, workspace_root, home, cwd, json_output):
 
 
 @assignment.command(help="admit one verified captured request into this workspace")
-@click.argument(
-    "request_file", type=click.Path(exists=True, dir_okay=False, path_type=Path)
-)
+@click.argument("request_file", type=click.Path(dir_okay=False, path_type=Path))
 @click.option("--workspace", "workspace_root", type=click.Path(file_okay=False))
 @click.option("--home", is_flag=True, help="admit into the logical Home Workspace")
 @click.option("--initiative-id", default="")

@@ -434,6 +434,11 @@ def extract_cli(archive_path: Path, target: Path) -> Path:
                         "CLI archive symlink must resolve inside the extracted "
                         f"product: {member.name!r} -> {member.linkname!r}"
                     )
+                if not resolved.is_file():
+                    fail(
+                        "CLI archive symlink must resolve to a regular file: "
+                        f"{member.name!r} -> {member.linkname!r}"
+                    )
     except (tarfile.TarError, OSError) as error:
         fail(f"cannot extract CLI archive: {error}")
     return target / ARCHIVE_ROOT
