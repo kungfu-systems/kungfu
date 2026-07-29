@@ -1,0 +1,587 @@
+{
+  "candidateOnly": true,
+  "contrastiveReplay": {
+    "document": {
+      "contract": "kfd-4-perspective-replay",
+      "contrast": {
+        "dimensions": [
+          "evidence-boundary",
+          "consequence"
+        ],
+        "mismatches": [
+          {
+            "observation": "Concurrent facts retain observer-relative order while causal edges remain fixed.",
+            "primitiveSignal": "inconclusive",
+            "sourceViewIds": [
+              "kungfu-perspective-runtime-a",
+              "kungfu-perspective-runtime-b"
+            ]
+          }
+        ]
+      },
+      "mode": "contrastive",
+      "reconstruction": {
+        "declaredLoss": [
+          "consumer-local display state is outside the retained source cut"
+        ],
+        "degradedState": "none",
+        "policyVersion": "kungfu-observer-timeline/v1",
+        "preservedElements": [
+          "observer",
+          "accepted-fact-cut",
+          "causal-order",
+          "natural-objects",
+          "consequences",
+          "evidence-boundary",
+          "known-gaps"
+        ],
+        "sharedContext": "sha256:6c115bc338f42d92980ae11331dac02ba20b861ca3610cd4b7ac712fce00579e"
+      },
+      "replayId": "kungfu-contrastive-replay",
+      "replayObserver": {
+        "id": "buildchain",
+        "kind": "service",
+        "purpose": "Verify perspective preservation."
+      },
+      "schemaVersion": 1,
+      "sourceViews": [
+        {
+          "acceptedFactCut": "sha256:14653da319664fbcf3bb0bf4765e90b423b1ac3a447c318203db6bb80ecd4996",
+          "consequences": [
+            "accepted by maintainer",
+            "accepted by reviewer",
+            "blocked until review"
+          ],
+          "coordinate": "kungfu-perspective://kungfu-perspective-runtime-a@sha256:c8a3daf3492d9f7e2f872fe762ecf4b74e6d09fd5eccf7b93b954eee3bec8f28",
+          "id": "kungfu-perspective-runtime-a",
+          "kind": "observer-view",
+          "knownGaps": [],
+          "naturalObjects": [
+            "assignment",
+            "release gate",
+            "review"
+          ],
+          "observer": "runtime-a",
+          "perspective": "A deterministic view over accepted Kungfu source facts.",
+          "sha256": "c8a3daf3492d9f7e2f872fe762ecf4b74e6d09fd5eccf7b93b954eee3bec8f28"
+        },
+        {
+          "acceptedFactCut": "sha256:740718c2e4e112d0e51e2fe16cc6ae741c7db825f1b46a311ec2123e8dbdf865",
+          "consequences": [
+            "accepted by maintainer",
+            "accepted by reviewer",
+            "blocked until review"
+          ],
+          "coordinate": "kungfu-perspective://kungfu-perspective-runtime-b@sha256:63d07386431b5c7e37b9071d6950c0da47f3387655984ad422ef1421809aec8d",
+          "id": "kungfu-perspective-runtime-b",
+          "kind": "observer-view",
+          "knownGaps": [],
+          "naturalObjects": [
+            "assignment",
+            "release gate",
+            "review"
+          ],
+          "observer": "runtime-b",
+          "perspective": "A deterministic view over accepted Kungfu source facts.",
+          "sha256": "63d07386431b5c7e37b9071d6950c0da47f3387655984ad422ef1421809aec8d"
+        }
+      ],
+      "standard": "kfd-4",
+      "verification": {
+        "evidence": [
+          "sha256:d080f1047fcc76d220ec4741ace761fe3a1c434c01827611f3a7a9ae0a0cc147"
+        ],
+        "notes": "Replay verification is derived from retained source view roots and declared loss.",
+        "result": "pass"
+      }
+    },
+    "fsck": {
+      "issues": [],
+      "root": "sha256:d080f1047fcc76d220ec4741ace761fe3a1c434c01827611f3a7a9ae0a0cc147",
+      "schema": "kungfu.kfd-4-replay-fsck/v1",
+      "status": "passed"
+    }
+  },
+  "native": {
+    "authority": "yijinjing-journal",
+    "build": {
+      "git": {
+        "branch": "dev/v4/v4.0",
+        "pristine": true,
+        "revision": "83c15cdeac2e77a8b43568d789066b7f5efca71d",
+        "tag": "shifu-v4.0.0-alpha.1-197-g83c15cdeac"
+      },
+      "pythonVersion": "3.13.14",
+      "version": "4.0.0-alpha.1"
+    },
+    "factAdmissions": [
+      {
+        "observationId": "fact-a1",
+        "outcome": "admitted",
+        "payloadRoot": "sha256:bb8b5f21f497358294c6c9d3ae2009fca81bbe0a4750ff88e43abe347c33c9a4",
+        "receiptRoot": "sha256:dc2abaf232b4e6ae04120efe9b05f219b56bbd89b8f84b8fbcf356a0293aba4d",
+        "sourceId": "runtime-a"
+      },
+      {
+        "observationId": "fact-b1",
+        "outcome": "admitted",
+        "payloadRoot": "sha256:3d3bb4bef7dc92728ca46de7ef820ed99391c3236f4ddd4f64115b62247e9ec8",
+        "receiptRoot": "sha256:13ae8b21c565851a115392a690484dcad074a360ed9c5417c260b604fb08ac3c",
+        "sourceId": "runtime-b"
+      },
+      {
+        "observationId": "fact-a2",
+        "outcome": "admitted",
+        "payloadRoot": "sha256:8769d9b7bb379003989977111e3b3f52ec155ec58104e9ab53b68144689de202",
+        "receiptRoot": "sha256:3b5bd8950b63fc0a5620e2d10e882b22c79aa97f81592919b13cc9c3b63bcde6",
+        "sourceId": "runtime-a"
+      }
+    ],
+    "sourceRegistryFsck": {
+      "checked": {
+        "source_registry_records": 6,
+        "sources": 2
+      },
+      "ok": true,
+      "projectionStatus": "ok",
+      "root": "sha256:d8e16e907d77119df59c0ffcde381004f9e25c9276b668ce04636b90debce676",
+      "status": "ok"
+    },
+    "sourceRegistryRebuild": {
+      "ok": true,
+      "rows": {
+        "accepted_range_recorded": 2,
+        "source_head_updated": 2,
+        "source_registered": 2
+      }
+    }
+  },
+  "negativeCases": [
+    {
+      "expected": "failed",
+      "id": "causal-inversion",
+      "issueCodes": [
+        "causal-inversion",
+        "view-root-drift"
+      ],
+      "observed": "failed"
+    },
+    {
+      "expected": "failed",
+      "id": "undeclared-fact-cut",
+      "issueCodes": [
+        "undeclared-fact-cut"
+      ],
+      "observed": "failed"
+    },
+    {
+      "expected": "failed",
+      "id": "unknown-policy-version",
+      "issueCodes": [
+        "unknown-policy-version"
+      ],
+      "observed": "failed"
+    },
+    {
+      "expected": "failed",
+      "id": "missing-evidence",
+      "issueCodes": [
+        "missing-evidence"
+      ],
+      "observed": "failed"
+    },
+    {
+      "expected": "failed",
+      "id": "flattened-observer",
+      "issueCodes": [
+        "observer-flattened",
+        "observer-substitution"
+      ],
+      "observed": "failed"
+    },
+    {
+      "expected": "failed",
+      "id": "undeclared-replay-loss",
+      "issueCodes": [
+        "undeclared-loss"
+      ],
+      "observed": "failed"
+    }
+  ],
+  "nonClaims": [
+    "This first-party report does not establish universal perspective completeness or observer equivalence.",
+    "A passed Buildchain gate does not independently qualify, activate, or ship KFD-4 support."
+  ],
+  "perspectivePreservingReplay": {
+    "document": {
+      "contract": "kfd-4-perspective-replay",
+      "mode": "perspective-preserving",
+      "reconstruction": {
+        "declaredLoss": [
+          "consumer-local display state is outside the retained source cut"
+        ],
+        "degradedState": "none",
+        "policyVersion": "kungfu-observer-timeline/v1",
+        "preservedElements": [
+          "observer",
+          "accepted-fact-cut",
+          "causal-order",
+          "natural-objects",
+          "consequences",
+          "evidence-boundary",
+          "known-gaps"
+        ],
+        "sharedContext": "sha256:6c115bc338f42d92980ae11331dac02ba20b861ca3610cd4b7ac712fce00579e"
+      },
+      "replayId": "kungfu-perspective-preserving-replay",
+      "replayObserver": {
+        "id": "kungfu-rewind",
+        "kind": "service",
+        "purpose": "Verify perspective preservation."
+      },
+      "schemaVersion": 1,
+      "sourceViews": [
+        {
+          "acceptedFactCut": "sha256:14653da319664fbcf3bb0bf4765e90b423b1ac3a447c318203db6bb80ecd4996",
+          "consequences": [
+            "accepted by maintainer",
+            "accepted by reviewer",
+            "blocked until review"
+          ],
+          "coordinate": "kungfu-perspective://kungfu-perspective-runtime-a@sha256:c8a3daf3492d9f7e2f872fe762ecf4b74e6d09fd5eccf7b93b954eee3bec8f28",
+          "id": "kungfu-perspective-runtime-a",
+          "kind": "observer-view",
+          "knownGaps": [],
+          "naturalObjects": [
+            "assignment",
+            "release gate",
+            "review"
+          ],
+          "observer": "runtime-a",
+          "perspective": "A deterministic view over accepted Kungfu source facts.",
+          "sha256": "c8a3daf3492d9f7e2f872fe762ecf4b74e6d09fd5eccf7b93b954eee3bec8f28"
+        }
+      ],
+      "standard": "kfd-4",
+      "verification": {
+        "evidence": [
+          "sha256:d080f1047fcc76d220ec4741ace761fe3a1c434c01827611f3a7a9ae0a0cc147"
+        ],
+        "notes": "Replay verification is derived from retained source view roots and declared loss.",
+        "result": "pass"
+      }
+    },
+    "fsck": {
+      "issues": [],
+      "root": "sha256:d080f1047fcc76d220ec4741ace761fe3a1c434c01827611f3a7a9ae0a0cc147",
+      "schema": "kungfu.kfd-4-replay-fsck/v1",
+      "status": "passed"
+    }
+  },
+  "perspectives": [
+    {
+      "acceptedCuts": [
+        {
+          "firstFrameUid": 10,
+          "head": "head-a",
+          "lastFrameUid": 30,
+          "manifestId": "manifest-runtime-a",
+          "sourceId": "runtime-a",
+          "status": "ok"
+        },
+        {
+          "firstFrameUid": 20,
+          "head": "head-b",
+          "lastFrameUid": 40,
+          "manifestId": "manifest-runtime-b",
+          "sourceId": "runtime-b",
+          "status": "ok"
+        }
+      ],
+      "facts": [
+        {
+          "causalParents": [],
+          "consequence": "accepted by maintainer",
+          "evidenceRoot": "sha256:bb8b5f21f497358294c6c9d3ae2009fca81bbe0a4750ff88e43abe347c33c9a4",
+          "frameUid": 10,
+          "id": "fact-a1",
+          "naturalObject": "assignment",
+          "sourceId": "runtime-a",
+          "sourceLocalOrder": 1
+        },
+        {
+          "causalParents": [],
+          "consequence": "accepted by reviewer",
+          "evidenceRoot": "sha256:3d3bb4bef7dc92728ca46de7ef820ed99391c3236f4ddd4f64115b62247e9ec8",
+          "frameUid": 20,
+          "id": "fact-b1",
+          "naturalObject": "review",
+          "sourceId": "runtime-b",
+          "sourceLocalOrder": 1
+        },
+        {
+          "causalParents": [
+            "fact-b1"
+          ],
+          "consequence": "blocked until review",
+          "evidenceRoot": "sha256:8769d9b7bb379003989977111e3b3f52ec155ec58104e9ab53b68144689de202",
+          "frameUid": 30,
+          "id": "fact-a2",
+          "naturalObject": "release gate",
+          "sourceId": "runtime-a",
+          "sourceLocalOrder": 2
+        }
+      ],
+      "fsck": {
+        "checks": [
+          "observer-identity",
+          "accepted-fact-cuts",
+          "causal-dominance",
+          "deterministic-order",
+          "evidence-boundary",
+          "content-root"
+        ],
+        "issues": [],
+        "root": "sha256:92934aef87128c465a6e830f5129abde32c271c264b9f8a28a98202e0e5c671b",
+        "schema": "kungfu.kfd-4-projection-fsck/v1",
+        "status": "passed"
+      },
+      "order": [
+        "fact-a1",
+        "fact-b1",
+        "fact-a2"
+      ],
+      "perspective": {
+        "acceptedFacts": [
+          {
+            "acceptedRange": "sha256:ed693dc8b89f91d31aa2692167f5ffe74943e5b82f19abf7b2380ad1900f60a3",
+            "freshness": "current",
+            "location": "3430316088",
+            "manifest": "manifest-runtime-a",
+            "provenance": "kungfu://runtime-a",
+            "sourceId": "runtime-a",
+            "sourceKind": "remote-runtime",
+            "watermark": "head-a"
+          },
+          {
+            "acceptedRange": "sha256:939e4a99a00e3d450f97413b1342a0db6f32561a2a4e4e840ab086a156a66d51",
+            "freshness": "current",
+            "location": "3430316088",
+            "manifest": "manifest-runtime-b",
+            "provenance": "kungfu://runtime-b",
+            "sourceId": "runtime-b",
+            "sourceKind": "remote-runtime",
+            "watermark": "head-b"
+          }
+        ],
+        "causalConstraints": [
+          {
+            "after": "fact-a2",
+            "basis": "causal-parent",
+            "before": "fact-b1",
+            "evidence": "sha256:8769d9b7bb379003989977111e3b3f52ec155ec58104e9ab53b68144689de202"
+          }
+        ],
+        "contract": "kfd-4-observer-perspective",
+        "degradedEvidence": [],
+        "id": "kungfu-perspective-runtime-a",
+        "observer": {
+          "description": "Kungfu observer",
+          "id": "runtime-a",
+          "kind": "runtime-location",
+          "location": "runtime-a"
+        },
+        "projectionPolicy": {
+          "causalDominance": true,
+          "concurrentOrdering": "observer source priority, then source-local order",
+          "observerLocation": "runtime-a",
+          "policyVersion": "kungfu-observer-timeline/v1",
+          "sourcePriority": [
+            "runtime-a",
+            "runtime-b"
+          ],
+          "tieBreaker": "source-id+frame-uid+fact-id"
+        },
+        "schemaVersion": 1,
+        "standard": "kfd-4",
+        "verification": {
+          "command": "./shifu test:kfd4-perspective",
+          "notes": "Projection content is accepted only when the attached fsck passes.",
+          "result": "pass"
+        },
+        "viewSubject": {
+          "description": "A deterministic view over accepted Kungfu source facts.",
+          "kind": "mixed-source-work-state"
+        }
+      },
+      "replayLoss": [
+        "consumer-local display state is outside the retained source cut"
+      ],
+      "viewRoot": "sha256:c8a3daf3492d9f7e2f872fe762ecf4b74e6d09fd5eccf7b93b954eee3bec8f28"
+    },
+    {
+      "acceptedCuts": [
+        {
+          "firstFrameUid": 20,
+          "head": "head-b",
+          "lastFrameUid": 40,
+          "manifestId": "manifest-runtime-b",
+          "sourceId": "runtime-b",
+          "status": "ok"
+        },
+        {
+          "firstFrameUid": 10,
+          "head": "head-a",
+          "lastFrameUid": 30,
+          "manifestId": "manifest-runtime-a",
+          "sourceId": "runtime-a",
+          "status": "ok"
+        }
+      ],
+      "facts": [
+        {
+          "causalParents": [],
+          "consequence": "accepted by reviewer",
+          "evidenceRoot": "sha256:3d3bb4bef7dc92728ca46de7ef820ed99391c3236f4ddd4f64115b62247e9ec8",
+          "frameUid": 20,
+          "id": "fact-b1",
+          "naturalObject": "review",
+          "sourceId": "runtime-b",
+          "sourceLocalOrder": 1
+        },
+        {
+          "causalParents": [],
+          "consequence": "accepted by maintainer",
+          "evidenceRoot": "sha256:bb8b5f21f497358294c6c9d3ae2009fca81bbe0a4750ff88e43abe347c33c9a4",
+          "frameUid": 10,
+          "id": "fact-a1",
+          "naturalObject": "assignment",
+          "sourceId": "runtime-a",
+          "sourceLocalOrder": 1
+        },
+        {
+          "causalParents": [
+            "fact-b1"
+          ],
+          "consequence": "blocked until review",
+          "evidenceRoot": "sha256:8769d9b7bb379003989977111e3b3f52ec155ec58104e9ab53b68144689de202",
+          "frameUid": 30,
+          "id": "fact-a2",
+          "naturalObject": "release gate",
+          "sourceId": "runtime-a",
+          "sourceLocalOrder": 2
+        }
+      ],
+      "fsck": {
+        "checks": [
+          "observer-identity",
+          "accepted-fact-cuts",
+          "causal-dominance",
+          "deterministic-order",
+          "evidence-boundary",
+          "content-root"
+        ],
+        "issues": [],
+        "root": "sha256:92934aef87128c465a6e830f5129abde32c271c264b9f8a28a98202e0e5c671b",
+        "schema": "kungfu.kfd-4-projection-fsck/v1",
+        "status": "passed"
+      },
+      "order": [
+        "fact-b1",
+        "fact-a1",
+        "fact-a2"
+      ],
+      "perspective": {
+        "acceptedFacts": [
+          {
+            "acceptedRange": "sha256:939e4a99a00e3d450f97413b1342a0db6f32561a2a4e4e840ab086a156a66d51",
+            "freshness": "current",
+            "location": "3430316088",
+            "manifest": "manifest-runtime-b",
+            "provenance": "kungfu://runtime-b",
+            "sourceId": "runtime-b",
+            "sourceKind": "remote-runtime",
+            "watermark": "head-b"
+          },
+          {
+            "acceptedRange": "sha256:ed693dc8b89f91d31aa2692167f5ffe74943e5b82f19abf7b2380ad1900f60a3",
+            "freshness": "current",
+            "location": "3430316088",
+            "manifest": "manifest-runtime-a",
+            "provenance": "kungfu://runtime-a",
+            "sourceId": "runtime-a",
+            "sourceKind": "remote-runtime",
+            "watermark": "head-a"
+          }
+        ],
+        "causalConstraints": [
+          {
+            "after": "fact-a2",
+            "basis": "causal-parent",
+            "before": "fact-b1",
+            "evidence": "sha256:8769d9b7bb379003989977111e3b3f52ec155ec58104e9ab53b68144689de202"
+          }
+        ],
+        "contract": "kfd-4-observer-perspective",
+        "degradedEvidence": [],
+        "id": "kungfu-perspective-runtime-b",
+        "observer": {
+          "description": "Kungfu observer",
+          "id": "runtime-b",
+          "kind": "runtime-location",
+          "location": "runtime-b"
+        },
+        "projectionPolicy": {
+          "causalDominance": true,
+          "concurrentOrdering": "observer source priority, then source-local order",
+          "observerLocation": "runtime-b",
+          "policyVersion": "kungfu-observer-timeline/v1",
+          "sourcePriority": [
+            "runtime-b",
+            "runtime-a"
+          ],
+          "tieBreaker": "source-id+frame-uid+fact-id"
+        },
+        "schemaVersion": 1,
+        "standard": "kfd-4",
+        "verification": {
+          "command": "./shifu test:kfd4-perspective",
+          "notes": "Projection content is accepted only when the attached fsck passes.",
+          "result": "pass"
+        },
+        "viewSubject": {
+          "description": "A deterministic view over accepted Kungfu source facts.",
+          "kind": "mixed-source-work-state"
+        }
+      },
+      "replayLoss": [
+        "consumer-local display state is outside the retained source cut"
+      ],
+      "viewRoot": "sha256:63d07386431b5c7e37b9071d6950c0da47f3387655984ad422ef1421809aec8d"
+    }
+  ],
+  "qualificationRoot": "sha256:c3d363844e58b55ab8eb677dfd3d579364580c701dbe385957b38fc6b06efdf2",
+  "schema": "kungfu.kfd-4-perspective-qualification/v1",
+  "source": {
+    "bindings": [
+      {
+        "path": "framework/core/src/python/kungfu/rewind/perspective.py",
+        "sha256": "sha256:638c21946d445f0497637476891f0255cfae07c4666a76fc32b55e56e28310c8"
+      },
+      {
+        "path": "framework/core/tests/python/test_kfd4_perspective.py",
+        "sha256": "sha256:e07a44456d83bed34b83df02ab94e9562c5c5b4cf52b3f7ae3562370a36d3460"
+      }
+    ],
+    "implementationRevision": "d73cab0d69b77a14c546d063bf89760d846d49a9",
+    "repository": "kungfu-systems/kungfu"
+  },
+  "standard": "kfd-4",
+  "verdict": {
+    "qualifying": false,
+    "releaseQualification": "not-qualified",
+    "selfCertified": false,
+    "shippedSupport": false,
+    "status": "passed"
+  }
+}

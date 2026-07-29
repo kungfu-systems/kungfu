@@ -1,6 +1,6 @@
 {
   "schema": "kungfu.core-review-routes/v1",
-  "authorityRoot": "sha256:5fc5908ef362aae5a9b7423e81fbedda142bd110cbdb7827ab42aa2ce27e02a6",
+  "authorityRoot": "sha256:3fb6e0ce13bee2c3e5c25cd35260c3fc4922b935174b00cb27b304dcd5380fdd",
   "fallbackAccount": "@dongkeren",
   "routes": [
     {
@@ -72,7 +72,8 @@
         "src/libkungfu/src/runtime/query/",
         "src/libkungfu/src/runtime/state_cache/",
         "src/libkungfu/src/runtime/state_service.cpp",
-        "src/libkungfu/src/runtime/state_shadow.cpp"
+        "src/libkungfu/src/runtime/state_shadow.cpp",
+        "src/python/kungfu/rewind/perspective.py"
       ],
       "ownerRole": "core/runtime-state-query",
       "backupRole": "core/architecture",
