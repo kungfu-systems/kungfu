@@ -4,9 +4,25 @@ use std::fs;
 use std::io::{self, Read};
 use std::path::{Path, PathBuf};
 
+use shifu_core::json;
+
 pub(crate) struct DesktopCommit {
     pub(crate) installed: PathBuf,
     pub(crate) backup: Option<PathBuf>,
+}
+
+impl DesktopCommit {
+    pub(crate) fn finish_backup(&self) -> Result<(), String> {
+        if let Some(backup) = &self.backup {
+            remove_path(backup).map_err(|error| {
+                format!(
+                    "cannot finalize previous desktop backup {}: {error}",
+                    backup.display()
+                )
+            })?;
+        }
+        Ok(())
+    }
 }
 
 fn remove_path(path: &Path) -> std::io::Result<()> {
@@ -28,6 +44,70 @@ fn path_exists(path: &Path) -> io::Result<bool> {
         Err(error) if error.kind() == io::ErrorKind::NotFound => Ok(false),
         Err(error) => Err(error),
     }
+}
+
+pub(crate) fn regular_file(path: &Path) -> Result<bool, String> {
+    match fs::symlink_metadata(path) {
+        Ok(metadata) => Ok(metadata.file_type().is_file()),
+        Err(error) if error.kind() == io::ErrorKind::NotFound => Ok(false),
+        Err(error) => Err(format!("cannot inspect {}: {error}", path.display())),
+    }
+}
+
+fn read_document(path: &Path) -> Result<Option<json::Json>, String> {
+    let text = match fs::read_to_string(path) {
+        Ok(text) => text,
+        Err(error) if error.kind() == io::ErrorKind::NotFound => return Ok(None),
+        Err(error) => return Err(format!("cannot read {}: {error}", path.display())),
+    };
+    Ok(json::parse(&text).ok())
+}
+
+fn contains_regular_file(path: &Path) -> Result<bool, String> {
+    let entries = match fs::read_dir(path) {
+        Ok(entries) => entries,
+        Err(error) if error.kind() == io::ErrorKind::NotFound => return Ok(false),
+        Err(error) => return Err(format!("cannot read {}: {error}", path.display())),
+    };
+    for entry in entries {
+        let entry = entry.map_err(|error| format!("cannot read {}: {error}", path.display()))?;
+        if regular_file(&entry.path())? {
+            return Ok(true);
+        }
+    }
+    Ok(false)
+}
+
+pub(crate) fn product_app_manifests_valid(app: &Path, expected_sha: &str) -> Result<bool, String> {
+    let resources = app.join("Contents/Resources");
+    let runtime = resources.join("kungfu");
+    let executable_present = contains_regular_file(&app.join("Contents/MacOS"))?;
+    let build = read_document(&runtime.join("kungfubuildinfo.json"))?;
+    let release = read_document(&resources.join("upgrade/kungfu-release-manifest.json"))?;
+    let profiles = read_document(&runtime.join("profile-kfd3.json"))?;
+    let build_revision = build
+        .as_ref()
+        .and_then(|doc| doc.get("git"))
+        .map(|git| git.str_of("revision"))
+        .unwrap_or("");
+    let release_revision = release
+        .as_ref()
+        .map(|doc| doc.str_of("sourceCommit"))
+        .unwrap_or("");
+    let profile_count = profiles
+        .as_ref()
+        .and_then(|doc| doc.get("entries"))
+        .and_then(json::Json::as_array)
+        .map(<[_]>::len)
+        .unwrap_or(0);
+    Ok(executable_present
+        && build_revision == expected_sha
+        && release_revision == expected_sha
+        && profiles
+            .as_ref()
+            .map(|doc| doc.str_of("schema") == "kungfu.system-profile-kfd3-manifest/v1")
+            .unwrap_or(false)
+        && profile_count > 0)
 }
 
 fn files_equal(left: &Path, right: &Path) -> Result<bool, String> {
@@ -58,17 +138,6 @@ fn sorted_entries(path: &Path) -> Result<Vec<fs::DirEntry>, String> {
         .map_err(|error| error.to_string())?;
     entries.sort_by_key(fs::DirEntry::file_name);
     Ok(entries)
-}
-
-pub(crate) fn contains_file(path: &Path) -> bool {
-    fs::read_dir(path)
-        .ok()
-        .map(|entries| {
-            entries
-                .filter_map(Result::ok)
-                .any(|entry| entry.path().is_file())
-        })
-        .unwrap_or(false)
 }
 
 /// Verify a copied desktop tree against its immutable registry source without

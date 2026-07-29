@@ -34,7 +34,9 @@ use crate::{envfile, native_update, util};
 
 #[path = "promote_desktop.rs"]
 mod promote_desktop;
-use promote_desktop::{complete_atomic_target, contains_file, tree_exact, DesktopCommit};
+use promote_desktop::{
+    complete_atomic_target, product_app_manifests_valid, regular_file, tree_exact, DesktopCommit,
+};
 
 struct BuildEntry {
     slot: PathBuf,
@@ -232,45 +234,7 @@ fn product_manifests_valid(entry: &BuildEntry) -> bool {
     if entry.kind != "app" {
         return true;
     }
-    product_app_manifests_valid(&entry.slot.join(&entry.artifact), &entry.sha)
-}
-
-fn product_app_manifests_valid(app: &Path, expected_sha: &str) -> bool {
-    let resources = app.join("Contents/Resources");
-    let runtime = resources.join("kungfu");
-    let executable_present = contains_file(&app.join("Contents/MacOS"));
-    let build = fs::read_to_string(runtime.join("kungfubuildinfo.json"))
-        .ok()
-        .and_then(|text| json::parse(&text).ok());
-    let release = fs::read_to_string(resources.join("upgrade/kungfu-release-manifest.json"))
-        .ok()
-        .and_then(|text| json::parse(&text).ok());
-    let profiles = fs::read_to_string(runtime.join("profile-kfd3.json"))
-        .ok()
-        .and_then(|text| json::parse(&text).ok());
-    let build_revision = build
-        .as_ref()
-        .and_then(|doc| doc.get("git"))
-        .map(|git| git.str_of("revision"))
-        .unwrap_or("");
-    let release_revision = release
-        .as_ref()
-        .map(|doc| doc.str_of("sourceCommit"))
-        .unwrap_or("");
-    let profile_count = profiles
-        .as_ref()
-        .and_then(|doc| doc.get("entries"))
-        .and_then(json::Json::as_array)
-        .map(<[_]>::len)
-        .unwrap_or(0);
-    executable_present
-        && build_revision == expected_sha
-        && release_revision == expected_sha
-        && profiles
-            .as_ref()
-            .map(|doc| doc.str_of("schema") == "kungfu.system-profile-kfd3-manifest/v1")
-            .unwrap_or(false)
-        && profile_count > 0
+    product_app_manifests_valid(&entry.slot.join(&entry.artifact), &entry.sha).unwrap_or(false)
 }
 
 fn rollback_entry_valid(registry: &Path, build_id: &str, sha: &str) -> bool {
@@ -622,8 +586,15 @@ fn read_pending_transaction() -> Result<Option<PendingTransaction>, String> {
 }
 
 fn read_pending_transaction_at(path: &Path) -> Result<Option<PendingTransaction>, String> {
-    let Ok(text) = fs::read_to_string(path) else {
-        return Ok(None);
+    let text = match fs::read_to_string(path) {
+        Ok(text) => text,
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => return Ok(None),
+        Err(error) => {
+            return Err(format!(
+                "cannot read pending promotion transaction {}: {error}",
+                path.display()
+            ))
+        }
     };
     let value = json::parse(&text)
         .map_err(|error| format!("pending promotion transaction is invalid: {error}"))?;
@@ -730,11 +701,13 @@ fn finish_pending_transaction(
             "cannot finalize pending Shifu promotion receipt: {error}"
         ))
     });
-    finish_desktop_commit(&DesktopCommit {
+    DesktopCommit {
         installed: installed.clone(),
         backup: (!pending.desktop_backup_path.is_empty())
             .then(|| PathBuf::from(&pending.desktop_backup_path)),
-    });
+    }
+    .finish_backup()
+    .unwrap_or_else(|error| util::die(&error));
     fs::remove_file(pending_transaction_path()).unwrap_or_else(|error| {
         util::die(&format!(
             "promotion completed but pending transaction could not be cleared: {error}"
@@ -1052,24 +1025,6 @@ fn commit_desktop(entry: &BuildEntry, force: bool) -> Result<DesktopCommit, Stri
     }
 }
 
-fn finish_desktop_commit(commit: &DesktopCommit) {
-    if let Some(backup) = &commit.backup {
-        if backup.exists() {
-            let removed = if backup.is_dir() {
-                fs::remove_dir_all(backup)
-            } else {
-                fs::remove_file(backup)
-            };
-            removed.unwrap_or_else(|error| {
-                util::die(&format!(
-                    "cannot finalize previous desktop backup {}: {error}",
-                    backup.display()
-                ))
-            });
-        }
-    }
-}
-
 fn dir_writable(dir: &Path) -> bool {
     if !dir.is_dir() {
         return false;
@@ -1126,7 +1081,7 @@ fn promote_app(entry: &BuildEntry, force: bool) -> Result<DesktopCommit, String>
             }
         },
         |path| {
-            if !product_app_manifests_valid(path, &entry.sha) {
+            if !product_app_manifests_valid(path, &entry.sha)? {
                 return Ok(false);
             }
             tree_exact(&source, path)
@@ -1196,7 +1151,7 @@ fn promote_appimage(entry: &BuildEntry) -> Result<DesktopCommit, String> {
             Ok(())
         },
         |path| {
-            if !path.is_file() {
+            if !regular_file(path)? {
                 return Ok(false);
             }
             bootstrap::sha256_file(path)

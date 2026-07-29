@@ -259,7 +259,7 @@ fn macos_shaped_partial_bundle_is_rejected_and_recovered() {
     )
     .unwrap();
     assert!(
-        product_app_manifests_valid(&staged, &source_entry.sha),
+        product_app_manifests_valid(&staged, &source_entry.sha).unwrap(),
         "partial bundle has the old shallow success signals"
     );
     assert!(!tree_exact(&source, &staged).unwrap());
@@ -272,6 +272,34 @@ fn macos_shaped_partial_bundle_is_rejected_and_recovered() {
     assert!(target
         .join("Contents/Frameworks/Kungfu Framework")
         .is_file());
+    let _ = fs::remove_dir_all(root);
+}
+
+#[test]
+fn pending_transaction_io_error_is_not_absence() {
+    let root = shifu_core::host::unique_temp_dir("promote-pending-read-error").unwrap();
+    let marker = root.join("promotion-pending.json");
+    fs::create_dir(&marker).unwrap();
+    let error = match read_pending_transaction_at(&marker) {
+        Ok(_) => panic!("pending transaction read error was treated as absence"),
+        Err(error) => error,
+    };
+    assert!(error.contains("cannot read pending promotion transaction"));
+    let _ = fs::remove_dir_all(root);
+}
+
+#[test]
+fn product_manifest_io_error_is_not_corruption() {
+    let root = shifu_core::host::unique_temp_dir("promote-manifest-read-error").unwrap();
+    let entry = qualified_app(&root);
+    write_app_manifests(&entry);
+    let build_info = entry
+        .slot
+        .join(&entry.artifact)
+        .join("Contents/Resources/kungfu/kungfubuildinfo.json");
+    fs::remove_file(&build_info).unwrap();
+    fs::create_dir(&build_info).unwrap();
+    assert!(product_app_manifests_valid(&entry.slot.join(&entry.artifact), &entry.sha).is_err());
     let _ = fs::remove_dir_all(root);
 }
 
