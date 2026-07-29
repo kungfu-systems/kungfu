@@ -245,7 +245,7 @@ fi
 if [ "${1:-}" = "project-cut" ]; then
   if command -v fnm >/dev/null 2>&1; then
     fnm install >/dev/null 2>&1 || true
-    exec fnm exec --using-file -- node ./scripts/run-project-cut-entry.mjs "$@"
+    exec fnm exec -- node ./scripts/run-project-cut-entry.mjs "$@"
   elif command -v node >/dev/null 2>&1; then
     exec node ./scripts/run-project-cut-entry.mjs "$@"
   else
@@ -262,7 +262,7 @@ if [ "${1:-}" = "action" ]; then
   export KUNGFU_ACTION_LAYOUT=source
   if command -v fnm >/dev/null 2>&1; then
     fnm install >/dev/null 2>&1 || true
-    exec fnm exec --using-file -- node ./framework/action/action.mjs "$@"
+    exec fnm exec -- node ./framework/action/action.mjs "$@"
   elif command -v node >/dev/null 2>&1; then
     exec node ./framework/action/action.mjs "$@"
   else
@@ -278,7 +278,7 @@ if [ "${1:-}" = "work" ]; then
   if [ "${1:-}" = "capture" ] || [ "${1:-}" = "cleanup" ]; then
     if command -v fnm >/dev/null 2>&1; then
       fnm install >/dev/null 2>&1 || true
-      exec fnm exec --using-file -- node ./framework/assignment-capture/assignment-capture.mjs "$@"
+      exec fnm exec -- node ./framework/assignment-capture/assignment-capture.mjs "$@"
     elif command -v node >/dev/null 2>&1; then
       exec node ./framework/assignment-capture/assignment-capture.mjs "$@"
     else
@@ -358,7 +358,7 @@ case "${1:-}" in
     shift
     if command -v fnm >/dev/null 2>&1; then
       fnm install >/dev/null 2>&1 || true
-      exec fnm exec --using-file -- node ./scripts/qualify-xinfa-context-quality.mjs "$@"
+      exec fnm exec -- node ./scripts/qualify-xinfa-context-quality.mjs "$@"
     elif command -v node >/dev/null 2>&1; then
       exec node ./scripts/qualify-xinfa-context-quality.mjs "$@"
     else
@@ -372,7 +372,7 @@ case "${1:-}" in
     shift
     if command -v fnm >/dev/null 2>&1; then
       fnm install >/dev/null 2>&1 || true
-      exec fnm exec --using-file -- node ./crates/xinfa/tooling/task.mjs "$_xinfa_task" "$@"
+      exec fnm exec -- node ./crates/xinfa/tooling/task.mjs "$_xinfa_task" "$@"
     elif command -v node >/dev/null 2>&1; then
       exec node ./crates/xinfa/tooling/task.mjs "$_xinfa_task" "$@"
     else
@@ -390,7 +390,7 @@ esac
 if [ "${1:-}" = "cache" ]; then
   if command -v fnm >/dev/null 2>&1; then
     fnm install >/dev/null 2>&1 || true
-    exec fnm exec --using-file -- node ./shifu.mjs "$@"
+    exec fnm exec -- node ./shifu.mjs "$@"
   elif command -v node >/dev/null 2>&1; then
     exec node ./shifu.mjs "$@"
   else
@@ -406,7 +406,7 @@ fi
 if [ "${1:-}" = "docs:check:readonly" ]; then
   if command -v fnm >/dev/null 2>&1; then
     fnm install >/dev/null 2>&1 || true
-    exec fnm exec --using-file -- node ./scripts/run-docs-readonly.mjs
+    exec fnm exec -- node ./scripts/run-docs-readonly.mjs
   elif command -v node >/dev/null 2>&1; then
     exec node ./scripts/run-docs-readonly.mjs
   else
@@ -422,7 +422,7 @@ if [ "${1:-}" = "adr:release:gate" ]; then
   shift
   if command -v fnm >/dev/null 2>&1; then
     fnm install >/dev/null 2>&1 || true
-    exec fnm exec --using-file -- node ./scripts/adr-release-gate.mjs "$@"
+    exec fnm exec -- node ./scripts/adr-release-gate.mjs "$@"
   elif command -v node >/dev/null 2>&1; then
     exec node ./scripts/adr-release-gate.mjs "$@"
   else
@@ -533,7 +533,7 @@ case "${1:-}" in
   build | rebuild | cache | docs | gate | proxy | config)
     if command -v fnm >/dev/null 2>&1; then
       fnm install >/dev/null 2>&1 || true
-      exec fnm exec --using-file -- node ./shifu.mjs "$@"
+      exec fnm exec -- node ./shifu.mjs "$@"
     elif command -v node >/dev/null 2>&1; then
       exec node ./shifu.mjs "$@"
     else
@@ -558,4 +558,4 @@ fi
 fnm install >/dev/null 2>&1 || true
 
 # Under the pinned node, run the pnpm pinned by packageManager via corepack
-exec fnm exec --using-file -- corepack pnpm "$@"
+exec fnm exec -- corepack pnpm "$@"

@@ -23,6 +23,7 @@ import React from 'react';
 import {
   AGENT_WORK_LAB_QUICK_COMMANDS,
   type AgentWorkLabActionRequest,
+  type AgentWorkLabAutoplayResult,
   AgentWorkLabHost,
   type AgentWorkLabSuiteAction,
   agentWorkLabActionReturnsToControls,
@@ -33,6 +34,7 @@ import {
   ControlPlaneBar,
   ControlPlaneOverlay,
   type ControlPlaneState,
+  PlaybackBar,
   ProfileShell,
   type ProfileShellModel,
   QUICK_COMMANDS,
@@ -68,18 +70,19 @@ function cliEnvironment(): NodeJS.ProcessEnv {
 }
 
 function runtimePaths() {
+  const coreDir = path.dirname(
+    nodeRequire.resolve('@kungfu-tech/core/package.json'),
+  );
   const kungfuDir =
-    process.env.KUNGFU_DIR ||
-    path.join(
-      path.dirname(nodeRequire.resolve('@kungfu-tech/core/package.json')),
-      'dist',
-      'kungfu',
-    );
+    process.env.KUNGFU_DIR || path.join(coreDir, 'dist', 'kungfu');
   const packagedBin = path.join(
     kungfuDir,
     process.platform === 'win32' ? 'kungfu.exe' : 'kungfu',
   );
+  const configuredBin =
+    process.env.KUNGFU_CLI_BIN || process.env.KUNGFU_BIN || '';
   return {
+    coreDir,
     runtimeDir: resolveTuiRuntimeDir({
       env: process.env,
       cwd: process.cwd(),
@@ -91,31 +94,46 @@ function runtimePaths() {
     }),
     configHome:
       process.env.KF_CONFIG_HOME || path.join(homedir(), '.kungfu-config'),
-    bin:
-      process.env.KUNGFU_CLI_BIN ||
-      process.env.KUNGFU_BIN ||
-      (fs.existsSync(packagedBin) ? packagedBin : 'kungfu'),
+    bin: configuredBin || (fs.existsSync(packagedBin) ? packagedBin : 'kungfu'),
+    sourceCliFallback: !configuredBin && !fs.existsSync(packagedBin),
   };
 }
 
 function openTuiAgentWorkLab(): AgentWorkLab {
   const paths = runtimePaths();
+  const sourceCliPrefix = paths.sourceCliFallback
+    ? ['run', '--project', paths.coreDir, '--frozen', 'python', '-m', 'kungfu']
+    : [];
+  const bin = paths.sourceCliFallback ? 'uv' : paths.bin;
+  const env = cliEnvironment();
+  if (paths.sourceCliFallback) {
+    env.PYTHONPATH = [
+      path.join(paths.coreDir, 'src', 'python'),
+      process.env.KUNGFU_NATIVE_PATH ||
+        path.join(paths.coreDir, 'build', 'Release'),
+      env.PYTHONPATH,
+    ]
+      .filter(Boolean)
+      .join(path.delimiter);
+  }
+  const args = (values: string[]) => [...sourceCliPrefix, ...values];
   return openAgentWorkLab({
     runtimeDir: paths.runtimeDir,
-    bin: paths.bin,
-    env: cliEnvironment(),
-    execFileSync: (file, args, options) => execFileSync(file, args, options),
-    execFile: (file, args, options) =>
+    bin,
+    env,
+    execFileSync: (file, values, options) =>
+      execFileSync(file, args(values), options),
+    execFile: (file, values, options) =>
       new Promise<string>((resolve, reject) => {
-        execFile(file, args, options, (error, stdout, stderr) => {
+        execFile(file, args(values), options, (error, stdout, stderr) => {
           if (error)
             reject(new Error(describeCliFailure(error, stdout, stderr)));
           else resolve(stdout);
         });
       }),
-    execFileEvents: (file, args, options, onLine) =>
+    execFileEvents: (file, values, options, onLine) =>
       new Promise<void>((resolve, reject) => {
-        const child = spawn(file, args, {
+        const child = spawn(file, args(values), {
           env: options.env,
           stdio: ['ignore', 'pipe', 'pipe'],
         });
@@ -425,14 +443,22 @@ function StartingHost({
 function ProductHost({
   lab,
   dimensions,
+  autoDemo = false,
+  onAutoDemoSettled,
 }: {
   lab: AgentWorkLab;
   dimensions: DimensionStore;
+  autoDemo?: boolean;
+  onAutoDemoSettled?: (result: AgentWorkLabAutoplayResult) => void;
 }) {
   const { exit } = useApp();
   const [size, setSize] = React.useState(dimensions.get());
-  const [startup, setStartup] = React.useState<AgentWorkLabStartupRoute>();
-  const [surface, setSurface] = React.useState<'auto' | 'lab' | 'work'>('auto');
+  const [startup, setStartup] = React.useState<
+    AgentWorkLabStartupRoute | undefined
+  >(autoDemo ? PENDING_STARTUP : undefined);
+  const [surface, setSurface] = React.useState<'auto' | 'lab' | 'work'>(
+    autoDemo ? 'lab' : 'auto',
+  );
   const [labActionRequest, setLabActionRequest] =
     React.useState<AgentWorkLabActionRequest>();
   const nextLabActionId = React.useRef(0);
@@ -455,7 +481,9 @@ function ProductHost({
     ProductSearchDocument[]
   >([]);
   const [catalogStatus, setCatalogStatus] = React.useState(
-    'Loading governed command catalog',
+    autoDemo
+      ? 'Offline demo automation owns this run'
+      : 'Loading governed command catalog',
   );
   const contentDimensions = React.useMemo(
     () => new InsetDimensionSource(dimensions, 4),
@@ -463,6 +491,7 @@ function ProductHost({
   );
   React.useEffect(() => dimensions.subscribe(setSize), [dimensions]);
   React.useEffect(() => {
+    if (autoDemo) return;
     let active = true;
     const paths = runtimePaths();
     void loadCliHelpSearchDocuments({
@@ -495,8 +524,9 @@ function ProductHost({
     return () => {
       active = false;
     };
-  }, []);
+  }, [autoDemo]);
   React.useEffect(() => {
+    if (autoDemo) return;
     let active = true;
     void lab
       .inspect()
@@ -520,7 +550,19 @@ function ProductHost({
     return () => {
       active = false;
     };
-  }, [lab]);
+  }, [autoDemo, lab]);
+  const autoplay = React.useMemo(
+    () =>
+      autoDemo
+        ? {
+            onSettled: (result: AgentWorkLabAutoplayResult) => {
+              onAutoDemoSettled?.(result);
+              exit();
+            },
+          }
+        : undefined,
+    [autoDemo, exit, onAutoDemoSettled],
+  );
 
   const resolvedStartup = startup ?? PENDING_STARTUP;
   const startupSurface = agentWorkLabStartupSurface(resolvedStartup);
@@ -726,10 +768,11 @@ function ProductHost({
   const activateControlRef = React.useRef(activateControl);
   activateControlRef.current = activateControl;
   const isInputCaptured = React.useCallback(
-    () => inputFence.isCaptured(),
-    [inputFence],
+    () => autoDemo || inputFence.isCaptured(),
+    [autoDemo, inputFence],
   );
   React.useEffect(() => {
+    if (autoDemo) return;
     const onData = (chunk: Buffer | string) => {
       const current = controlRef.current;
       const itemCount =
@@ -752,7 +795,7 @@ function ProductHost({
     return () => {
       process.stdin.off('data', onData);
     };
-  }, [dispatchLabAction, exit, inputFence, labOpen, setControlNow]);
+  }, [autoDemo, dispatchLabAction, exit, inputFence, labOpen, setControlNow]);
 
   let content: React.ReactNode;
   if (!startup && surface !== 'lab' && !cachedGlobalWorkPresent) {
@@ -772,6 +815,7 @@ function ProductHost({
         isInputCaptured={isInputCaptured}
         actionRequest={labActionRequest}
         onActionHandled={acknowledgeLabAction}
+        autoplay={autoplay}
         onOpenWork={
           startupSurface === 'work-graph' ? () => setSurface('work') : undefined
         }
@@ -802,25 +846,36 @@ function ProductHost({
       overflow="hidden"
     >
       {content}
-      <ControlPlaneOverlay
-        dimensions={contentDimensions.get()}
-        state={control}
-        searchResults={searchResults}
-        quickCommands={quickCommands}
-        catalogStatus={catalogStatus}
-      />
-      <ControlPlaneBar
-        dimensions={size}
-        state={control}
-        resultCount={resultCount}
-        surfaceLabel={labOpen ? 'Agent Work Lab' : 'Work Control'}
-        controlsLabel={labOpen ? 'LAB CONTROLS' : 'WORK CONTROLS'}
-        controlsHint={
-          labOpen
-            ? 'd Demo · x Same · m Handoff · Tab Focus'
-            : 'Work navigation is active'
-        }
-      />
+      {autoDemo ? (
+        <PlaybackBar
+          dimensions={size}
+          label="DEMO PLAYBACK"
+          status="Agent Work Lab · Offline continuity"
+          hint="Automatic · No input required · exits after the final result"
+        />
+      ) : (
+        <>
+          <ControlPlaneOverlay
+            dimensions={contentDimensions.get()}
+            state={control}
+            searchResults={searchResults}
+            quickCommands={quickCommands}
+            catalogStatus={catalogStatus}
+          />
+          <ControlPlaneBar
+            dimensions={size}
+            state={control}
+            resultCount={resultCount}
+            surfaceLabel={labOpen ? 'Agent Work Lab' : 'Work Control'}
+            controlsLabel={labOpen ? 'LAB CONTROLS' : 'WORK CONTROLS'}
+            controlsHint={
+              labOpen
+                ? 'd Demo · x Same · m Handoff · Tab Focus'
+                : 'Work navigation is active'
+            }
+          />
+        </>
+      )}
     </Box>
   );
 }
@@ -841,11 +896,12 @@ function printNonInteractiveDiagnostic(): void {
 async function main(): Promise<void> {
   if (process.argv.includes('--help')) {
     process.stdout.write(
-      'Kungfu Work Control TUI\n\nRun in an interactive terminal.\nAgent brief: `kungfu agent brief`.\n',
+      'Kungfu Work Control TUI\n\nRun in an interactive terminal.\nOffline animation demo: `./shifu product tui demo`.\nAgent brief: `kungfu agent brief`.\n',
     );
     return;
   }
   const lab = openTuiAgentWorkLab();
+  const autoDemo = process.argv.includes('--agent-work-lab-autoplay');
   if (process.argv.includes('--agent-work-lab-demo')) {
     const report = await lab.runDemo();
     for (const event of report.events) {
@@ -861,6 +917,7 @@ async function main(): Promise<void> {
     process.stdout.isTTY !== true
   ) {
     printNonInteractiveDiagnostic();
+    if (autoDemo) process.exitCode = 2;
     return;
   }
 
@@ -872,6 +929,7 @@ async function main(): Promise<void> {
   const dimensions = new DimensionStore(lifecycle.dimensions());
   const terminalOutput = new IncrementalTerminalOutput(process.stdout);
   let instance: ReturnType<typeof render> | undefined;
+  let autoDemoResult: AgentWorkLabAutoplayResult | undefined;
   let terminating = false;
   await lifecycle.run(
     {
@@ -884,17 +942,54 @@ async function main(): Promise<void> {
     },
     async () => {
       if (terminating) return;
-      instance = render(<ProductHost lab={lab} dimensions={dimensions} />, {
-        stdin: process.stdin,
-        stdout: terminalOutput as unknown as NodeJS.WriteStream,
-        stderr: process.stderr,
-        exitOnCtrlC: false,
-        patchConsole: false,
-        debug: true,
-      });
+      instance = render(
+        <ProductHost
+          lab={lab}
+          dimensions={dimensions}
+          autoDemo={autoDemo}
+          onAutoDemoSettled={(result) => {
+            autoDemoResult = result;
+          }}
+        />,
+        {
+          stdin: process.stdin,
+          stdout: terminalOutput as unknown as NodeJS.WriteStream,
+          stderr: process.stderr,
+          exitOnCtrlC: false,
+          patchConsole: false,
+          debug: true,
+        },
+      );
       await instance.waitUntilExit();
     },
   );
+  if (autoDemo) {
+    if (!autoDemoResult) {
+      throw new Error('Agent Work Lab autoplay exited without a result');
+    }
+    const completion =
+      autoDemoResult.state === 'completed'
+        ? {
+            schema: 'kungfu.agent-work-lab.tui-autoplay/v1',
+            status: autoDemoResult.report.status,
+            reportRoot: autoDemoResult.report.reportRoot,
+            eventCount: autoDemoResult.report.events.length,
+          }
+        : {
+            schema: 'kungfu.agent-work-lab.tui-autoplay/v1',
+            status: 'failed',
+            message: autoDemoResult.message,
+          };
+    process.stdout.write(
+      `KUNGFU_TUI_DEMO_COMPLETE ${JSON.stringify(completion)}\n`,
+    );
+    if (
+      autoDemoResult.state === 'failed' ||
+      autoDemoResult.report.status === 'failed'
+    ) {
+      process.exitCode = 1;
+    }
+  }
 }
 
 void main()

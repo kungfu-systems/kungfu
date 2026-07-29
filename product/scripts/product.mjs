@@ -32,7 +32,7 @@ function usage(code) {
   process.stdout.write(
     [
       'usage: ./shifu product gui dev|build|pack|dist [--dry-run] [--instance-home <path>] [--no-instance-home]',
-      '       ./shifu product tui dev|build|bundle|dist [--dry-run] [--instance-home <path>] [--no-instance-home]',
+      '       ./shifu product tui dev|demo|build|bundle|dist [--dry-run] [--instance-home <path>] [--no-instance-home]',
       '       ./shifu product cli dist [--dry-run] [--instance-home <path>] [--no-instance-home]',
       '',
       'gui build/pack  -> desktop product unpacked app under product/dist/desktop',
@@ -180,7 +180,7 @@ function shouldAutoInstanceHome(parsed, surface, verb, env = process.env) {
       !parsed.instanceHome &&
       !env.KF_INSTANCE_HOME &&
       !env.KF_HOME &&
-      verb === 'dev' &&
+      (verb === 'dev' || (surface === 'tui' && verb === 'demo')) &&
       (surface === 'gui' || surface === 'tui') &&
       isLinkedGitWorktree(ROOT),
   );
@@ -192,7 +192,7 @@ function shouldAutoWorkspaceHome(parsed, surface, verb, env = process.env) {
       !parsed.instanceHome &&
       !env.KF_INSTANCE_HOME &&
       !env.KF_HOME &&
-      verb === 'dev' &&
+      (verb === 'dev' || (surface === 'tui' && verb === 'demo')) &&
       (surface === 'gui' || surface === 'tui') &&
       workspaceDataHomeForCwd(ROOT),
   );
@@ -209,7 +209,7 @@ function devWorkspaceHomeOverride(parsed, surface, verb, env = process.env) {
     !parsed.instanceHome &&
     !env.KF_INSTANCE_HOME &&
     !env.KF_HOME &&
-    verb === 'dev' &&
+    (verb === 'dev' || (surface === 'tui' && verb === 'demo')) &&
     (surface === 'gui' || surface === 'tui')
     ? path.resolve(expandHomePath(raw))
     : '';
@@ -373,7 +373,8 @@ function main(argv = process.argv.slice(2)) {
   const workspaceHome = instanceHome ? '' : autoWorkspaceHome;
   const baseEnv = workspaceEnv(workspaceHome, instanceEnv(instanceHome));
   const env =
-    verb === 'dev' && (surface === 'gui' || surface === 'tui')
+    (verb === 'dev' || (surface === 'tui' && verb === 'demo')) &&
+    (surface === 'gui' || surface === 'tui')
       ? devKfdEnv(baseEnv)
       : baseEnv;
 
@@ -430,6 +431,26 @@ function main(argv = process.argv.slice(2)) {
         workspaceHome,
         autoWorkspaceHome,
       });
+    } else if (verb === 'demo') {
+      pnpm(
+        'tui offline demo',
+        [
+          '--filter',
+          '@kungfu-tech/tui',
+          'run',
+          'dev',
+          '--',
+          '--agent-work-lab-autoplay',
+        ],
+        {
+          dryRun,
+          env,
+          instanceHome,
+          autoInstanceHome,
+          workspaceHome,
+          autoWorkspaceHome,
+        },
+      );
     } else if (verb === 'build') {
       pnpm('tui build', ['--filter', '@kungfu-tech/tui', 'run', 'build'], {
         dryRun,
@@ -449,7 +470,7 @@ function main(argv = process.argv.slice(2)) {
         autoWorkspaceHome,
       });
     } else {
-      fail('unknown tui command (supported: dev, build, bundle, dist)');
+      fail('unknown tui command (supported: dev, demo, build, bundle, dist)');
     }
   } else if (surface === 'cli') {
     if (verb === 'dist') {
