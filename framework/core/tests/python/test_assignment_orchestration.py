@@ -35,6 +35,20 @@ def _sha256(marker):
     return "sha256:" + marker * 64
 
 
+def test_assignment_atomic_paths_use_windows_extended_namespace():
+    local = assignment_orchestration._filesystem_path(
+        Path(r"C:\Users\Administrator\workspace\.kungfu\request.json"),
+        platform="nt",
+    )
+    network = assignment_orchestration._filesystem_path(
+        Path(r"\\server\share\workspace\.kungfu\request.json"),
+        platform="nt",
+    )
+
+    assert local == (r"\\?\C:\Users\Administrator\workspace\.kungfu\request.json")
+    assert network == (r"\\?\UNC\server\share\workspace\.kungfu\request.json")
+
+
 def _activate(runtime):
     for action in ("install", "qualify", "activate"):
         plan = profile_sdk.lifecycle_plan(

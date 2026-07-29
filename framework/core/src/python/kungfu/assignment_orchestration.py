@@ -6,6 +6,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import ntpath
 import os
 import re
 import subprocess
@@ -1313,28 +1314,48 @@ def validate_assignment_request(value: Any) -> dict[str, Any]:
     return value
 
 
+def _filesystem_path(path: Path, *, platform: str = os.name) -> str:
+    value = os.fspath(path)
+    if platform != "nt":
+        return value
+    absolute = os.path.abspath(value) if os.name == "nt" else ntpath.abspath(value)
+    if absolute.startswith("\\\\?\\"):
+        return absolute
+    if absolute.startswith("\\\\"):
+        return "\\\\?\\UNC\\" + absolute[2:]
+    return "\\\\?\\" + absolute
+
+
 def _write_exact(path: Path, content: bytes) -> bool:
-    if path.exists():
-        if path.read_bytes() != content:
+    filesystem_path = _filesystem_path(path)
+    if os.path.exists(filesystem_path):
+        with open(filesystem_path, "rb") as source:
+            existing = source.read()
+        if existing != content:
             raise ValueError(f"content-addressed file differs: {path}")
         return False
-    path.parent.mkdir(parents=True, exist_ok=True)
+    parent = os.path.dirname(filesystem_path)
+    os.makedirs(parent, exist_ok=True)
     descriptor, temporary_value = tempfile.mkstemp(
-        prefix=f".{path.name}.", suffix=".tmp", dir=path.parent
+        prefix=f".{path.name}.", suffix=".tmp", dir=parent
     )
-    temporary = Path(temporary_value)
     try:
         with os.fdopen(descriptor, "wb") as output:
             output.write(content)
         try:
-            os.link(temporary, path)
+            os.link(temporary_value, filesystem_path)
         except FileExistsError:
-            if path.read_bytes() != content:
+            with open(filesystem_path, "rb") as source:
+                existing = source.read()
+            if existing != content:
                 raise ValueError(f"content-addressed file differs: {path}")
             return False
         return True
     finally:
-        temporary.unlink(missing_ok=True)
+        try:
+            os.unlink(temporary_value)
+        except FileNotFoundError:
+            pass
 
 
 def capture_assignment_request(request: Any, target: Any) -> dict[str, Any]:
