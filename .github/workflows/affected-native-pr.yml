@@ -767,7 +767,7 @@ jobs:
       - name: Verify product-owned fixtures
         run: ./shifu kfd:verify-owned-fixtures
 
-  affected-native:
+  affected_native:
     name: affected-native / linux
     if: ${{ always() }}
     needs:
@@ -1069,13 +1069,13 @@ jobs:
     name: Qualified Core candidate / macOS ARM64
     needs:
       - candidate_preflight
-      - affected-native
+      - affected_native
     if: >-
       ${{
         github.event_name == 'merge_group' &&
         needs.candidate_preflight.result == 'success' &&
         needs.candidate_preflight.outputs.native-required == 'true' &&
-        needs['affected-native'].result == 'success'
+        needs.affected_native.result == 'success'
       }}
     continue-on-error: true
     runs-on: macos-15

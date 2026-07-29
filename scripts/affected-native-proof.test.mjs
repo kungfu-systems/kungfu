@@ -1117,7 +1117,7 @@ test('workflow keeps one context while PR proof replaces duplicate queue builds'
     workflow,
     /name: Download current proof descriptor[\s\S]*name: Revalidate exact affected-native source binding[\s\S]*cmp "\$descriptor" "\$admission\/recomputed-descriptor\.json"/u,
   );
-  const aggregate = workflow.slice(workflow.indexOf('  affected-native:\n'));
+  const aggregate = workflow.slice(workflow.indexOf('  affected_native:\n'));
   assert.doesNotMatch(aggregate, /affected-native-proof\.mjs toolchain/u);
   assert.match(
     workflow,
@@ -1182,7 +1182,7 @@ test('workflow keeps one context while PR proof replaces duplicate queue builds'
   assert.match(workflow, /^\s{2}kfd_verifier:$/mu);
   const kfdVerifier = workflow.slice(
     workflow.indexOf('  kfd_verifier:\n'),
-    workflow.indexOf('  affected-native:\n'),
+    workflow.indexOf('  affected_native:\n'),
   );
   assert.match(
     kfdVerifier,

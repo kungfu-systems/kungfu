@@ -364,7 +364,7 @@ test('workflows keep candidate and promotion outside untrusted PR authority', ()
   );
   assert.match(
     candidateJob,
-    /github\.event_name == 'merge_group'[\s\S]*native-required == 'true'[\s\S]*needs\['affected-native'\]\.result == 'success'[\s\S]*continue-on-error: true[\s\S]*runs-on: macos-15/u,
+    /github\.event_name == 'merge_group'[\s\S]*native-required == 'true'[\s\S]*needs\.affected_native\.result == 'success'[\s\S]*continue-on-error: true[\s\S]*runs-on: macos-15/u,
   );
   assert.match(
     candidateJob,

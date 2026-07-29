@@ -171,6 +171,88 @@
       "definitionDigest": "sha256:b6ea11581e16d1792b6ed57f1d1d3736b9a21eb3746ec3cb9f77b559901b1d6b",
       "jobs": [
         {
+          "id": "affected_native",
+          "authority": "qualification",
+          "publication": "none",
+          "receipt": "diagnostic",
+          "definitionDigest": "sha256:c958d72e270c4ad12788ee7c19e857b8c6514893c132560fc3dea66f221123d7",
+          "credentials": {"githubToken":"read","oidc":false,"repositorySecrets":[],"inheritedSecrets":false,"environment":null},
+          "externalActions": ["actions/checkout@v4","actions/setup-node@v6.4.0","actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093","actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093","actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093","actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02","actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02","actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02"],
+          "steps": [
+            {
+              "index": 1,
+              "label": "uses:actions/checkout@v4",
+              "definitionDigest": "sha256:013f3e07e00504e33bda746183e505021d945acc2dfb178cf1d094ef09ea5c8f"
+            },
+            {
+              "index": 2,
+              "label": "uses:actions/setup-node@v6.4.0",
+              "definitionDigest": "sha256:789e56d63991440fb89fffa3b2795c1cab043e6b7df6237a0c830c5c89759690"
+            },
+            {
+              "index": 3,
+              "label": "name:Admit staged candidate dependency graph",
+              "definitionDigest": "sha256:e1190d35b582e2200e0f25a7a5066cc6c86f44f3ef6193a84443cd2fb84045a2"
+            },
+            {
+              "index": 4,
+              "label": "name:Download current proof descriptor",
+              "authority": "evidence-publication",
+              "definitionDigest": "sha256:a622dea0e3fb312d92a2fdec4a8727bf051757beeedf4fd11e45ecc62a4946eb"
+            },
+            {
+              "index": 5,
+              "label": "name:Revalidate exact affected-native source binding",
+              "definitionDigest": "sha256:e8be03cb0e8a42bb6d6730149d07ce812db43ed41fe25a9811806b79f290ae98"
+            },
+            {
+              "index": 6,
+              "label": "name:Download admitted producer proof",
+              "authority": "evidence-publication",
+              "definitionDigest": "sha256:c6b84878600569041c7b0dabc910113f680d57237ecbb737b0c5114371d88c87"
+            },
+            {
+              "index": 7,
+              "label": "name:Download current partition evidence",
+              "authority": "evidence-publication",
+              "definitionDigest": "sha256:4b57bb62fe678978688b21349fe0af530202dfa888fb586f3fc2b7f008c5f324"
+            },
+            {
+              "index": 8,
+              "label": "id:admit",
+              "definitionDigest": "sha256:8c96b54df7d092b5becf327ee3b0b7cb8ec87bc06c321a9ed30f61cbd463cc4d"
+            },
+            {
+              "index": 9,
+              "label": "name:Seal reconstructable family delivery attempt",
+              "definitionDigest": "sha256:aeeccf8bc63598280cfce17191571adcdd7ae7836aeacfb38c9863a0b0681869"
+            },
+            {
+              "index": 10,
+              "label": "name:Upload reconstructable family delivery attempt",
+              "authority": "evidence-publication",
+              "definitionDigest": "sha256:96fd3d33843182611d0ad1af3546c3995d607049647a4300befd0ac87605cbdf"
+            },
+            {
+              "index": 11,
+              "label": "name:Seal reused-proof cache promotion authority",
+              "definitionDigest": "sha256:dba0908dcde9277b704c7690eb25ecabac31f48a4dc98ce3a8a26d54b354c241"
+            },
+            {
+              "index": 12,
+              "label": "name:Upload authoritative producer proof",
+              "authority": "evidence-publication",
+              "definitionDigest": "sha256:fe1606def564bd546877397a1b84e548fd45f241c958dbed56376fc448d85336"
+            },
+            {
+              "index": 13,
+              "label": "name:Upload reused-proof cache promotion authority",
+              "authority": "evidence-publication",
+              "definitionDigest": "sha256:cd6594bf6e2bcb1ebbcbe1aa42683ef6488bb31e68ddc1eb0a060ce6cc749d5f"
+            }
+          ]
+        },
+        {
           "id": "affected_native_shards",
           "authority": "qualification",
           "publication": "none",
@@ -294,92 +376,6 @@
               "label": "name:Upload raw plan, receipt, and logs",
               "authority": "evidence-publication",
               "definitionDigest": "sha256:e658c08749a4041fa584bfea835e1b1df8233ef908bddc87cc0a565a45118220"
-            }
-          ]
-        },
-        {
-          "id": "affected-native",
-          "authority": "qualification",
-          "publication": "none",
-          "receipt": "diagnostic",
-          "definitionDigest": "sha256:c958d72e270c4ad12788ee7c19e857b8c6514893c132560fc3dea66f221123d7",
-          "credentials": {"githubToken":"read","oidc":false,"repositorySecrets":[],"inheritedSecrets":false,"environment":null},
-          "externalActions": ["actions/checkout@v4","actions/setup-node@v6.4.0","actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093","actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093","actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093","actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02","actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02","actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02"],
-          "steps": [
-            {
-              "index": 1,
-              "label": "uses:actions/checkout@v4",
-              "definitionDigest": "sha256:013f3e07e00504e33bda746183e505021d945acc2dfb178cf1d094ef09ea5c8f"
-            },
-            {
-              "index": 2,
-              "label": "uses:actions/setup-node@v6.4.0",
-              "definitionDigest": "sha256:789e56d63991440fb89fffa3b2795c1cab043e6b7df6237a0c830c5c89759690"
-            },
-            {
-              "index": 3,
-              "label": "name:Admit staged candidate dependency graph",
-              "definitionDigest": "sha256:e1190d35b582e2200e0f25a7a5066cc6c86f44f3ef6193a84443cd2fb84045a2"
-            },
-            {
-              "index": 4,
-              "label": "name:Download current proof descriptor",
-              "authority": "evidence-publication",
-              "definitionDigest": "sha256:a622dea0e3fb312d92a2fdec4a8727bf051757beeedf4fd11e45ecc62a4946eb"
-            },
-            {
-              "index": 5,
-              "label": "name:Revalidate exact affected-native source binding",
-              "authority": "evidence-publication",
-              "definitionDigest": "sha256:e8be03cb0e8a42bb6d6730149d07ce812db43ed41fe25a9811806b79f290ae98"
-            },
-            {
-              "index": 6,
-              "label": "name:Download admitted producer proof",
-              "authority": "evidence-publication",
-              "definitionDigest": "sha256:c6b84878600569041c7b0dabc910113f680d57237ecbb737b0c5114371d88c87"
-            },
-            {
-              "index": 7,
-              "label": "name:Download current partition evidence",
-              "authority": "evidence-publication",
-              "definitionDigest": "sha256:4b57bb62fe678978688b21349fe0af530202dfa888fb586f3fc2b7f008c5f324"
-            },
-            {
-              "index": 8,
-              "label": "id:admit",
-              "authority": "evidence-publication",
-              "definitionDigest": "sha256:8c96b54df7d092b5becf327ee3b0b7cb8ec87bc06c321a9ed30f61cbd463cc4d"
-            },
-            {
-              "index": 9,
-              "label": "name:Seal reconstructable family delivery attempt",
-              "authority": "evidence-publication",
-              "definitionDigest": "sha256:aeeccf8bc63598280cfce17191571adcdd7ae7836aeacfb38c9863a0b0681869"
-            },
-            {
-              "index": 10,
-              "label": "name:Upload reconstructable family delivery attempt",
-              "authority": "evidence-publication",
-              "definitionDigest": "sha256:96fd3d33843182611d0ad1af3546c3995d607049647a4300befd0ac87605cbdf"
-            },
-            {
-              "index": 11,
-              "label": "name:Seal reused-proof cache promotion authority",
-              "authority": "evidence-publication",
-              "definitionDigest": "sha256:dba0908dcde9277b704c7690eb25ecabac31f48a4dc98ce3a8a26d54b354c241"
-            },
-            {
-              "index": 12,
-              "label": "name:Upload authoritative producer proof",
-              "authority": "evidence-publication",
-              "definitionDigest": "sha256:fe1606def564bd546877397a1b84e548fd45f241c958dbed56376fc448d85336"
-            },
-            {
-              "index": 13,
-              "label": "name:Upload reused-proof cache promotion authority",
-              "authority": "evidence-publication",
-              "definitionDigest": "sha256:cd6594bf6e2bcb1ebbcbe1aa42683ef6488bb31e68ddc1eb0a060ce6cc749d5f"
             }
           ]
         },
@@ -591,7 +587,7 @@
           "authority": "qualification",
           "publication": "none",
           "receipt": "diagnostic",
-          "definitionDigest": "sha256:ef18ddd171d545cf5801ae15fce672fe146df67df7ebea3ca29db6af36417806",
+          "definitionDigest": "sha256:83bbc30cba3edf537d35fa769510804d4e08b16f65789f6ad5b35c82f7756ad4",
           "credentials": {"githubToken":"read","oidc":false,"repositorySecrets":[],"inheritedSecrets":false,"environment":null},
           "externalActions": ["actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0","actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e","actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093","actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02"],
           "steps": [
