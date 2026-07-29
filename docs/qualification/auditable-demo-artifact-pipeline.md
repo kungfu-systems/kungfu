@@ -39,8 +39,8 @@ disables the Gate.
 
 | Component | Immutable coordinate |
 | --- | --- |
-| Demo renderer | Pending the protected build-images Alpha publication containing merge `195772e6df007c7ab35b10fc82cf452eaa33c825`; the previous Alpha digest cannot admit the terminal capture and is not a valid final coordinate |
-| Renderer release | Pending the same protected Alpha publication; a local image id or PR qualification image is not release authority |
+| Demo renderer | `ghcr.io/kungfu-systems/build-images/demo-renderer@sha256:8ba9a614f22e6cfe459d2dcc60bc82f0218e278c6a09ffeee5bda6bc3cbf33b9` |
+| Renderer release | [`v1.3.0-alpha.17`](https://github.com/kungfu-systems/build-images/releases/tag/v1.3.0-alpha.17), exact source `dead4fa2403afcac6c11b3b320a644a4e5f7be3d`, containing protected merge `195772e6df007c7ab35b10fc82cf452eaa33c825` |
 | Buildchain Gate | `de1a1cbb1176810ebee91d1e872b441d7113305a` (merged Buildchain PR `#2030`, bounded terminal-capture admission) |
 | Consumer adapter | `scripts/auditable-demo-adapter.py` from the exact qualified Kungfu source SHA |
 
