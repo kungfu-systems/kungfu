@@ -258,7 +258,7 @@
           },
           {
             "path": "framework/core/tests/python/test_assignment_orchestration.py",
-            "sha256": "sha256:cd2bdb647d18d559b3c1a2f820647daaf26940ed4b799314e6a136b8e6237686"
+            "sha256": "sha256:f04fc2c7da17d57c2fd38c6a9a81ffe53f1422ab30d9ae179d95bb0837f0dffc"
           }
         ]
       },

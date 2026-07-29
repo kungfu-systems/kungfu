@@ -35,6 +35,20 @@ def _sha256(marker):
     return "sha256:" + marker * 64
 
 
+def test_assignment_profile_source_prefers_native_source_layout(tmp_path, monkeypatch):
+    package = tmp_path / "package" / "kungfu"
+    package.mkdir(parents=True)
+    checkout = tmp_path / "checkout"
+    native = checkout / "extensions" / "work-control"
+    native.mkdir(parents=True)
+    monkeypatch.setattr(assignment_orchestration, "__file__", package / "module.py")
+    monkeypatch.setattr(
+        assignment_orchestration, "source_root", lambda *_starts: checkout
+    )
+
+    assert ASSIGNMENT_CLI._profile_source() == native
+
+
 def test_assignment_atomic_paths_use_windows_extended_namespace():
     local = assignment_orchestration._filesystem_path(
         Path(r"C:\Users\Administrator\workspace\.kungfu\request.json"),

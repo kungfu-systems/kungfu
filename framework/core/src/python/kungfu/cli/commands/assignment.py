@@ -117,11 +117,11 @@ def _profile_source():
         packaged = profiles / profile_name
         if packaged.is_dir():
             return packaged
-    source = (
-        orchestration.source_root() / "extensions" / "mission-control"
-    )  # compatibility source layout
-    if source.is_dir():
-        return source
+    extensions = orchestration.source_root() / "extensions"
+    for profile_name in ("work-control", "mission-control"):  # compatibility path
+        source = extensions / profile_name
+        if source.is_dir():
+            return source
     raise ValueError("Work Control Profile is absent from this Kungfu product")
 
 
