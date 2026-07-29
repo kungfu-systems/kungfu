@@ -411,6 +411,19 @@ export async function revokeQueueAdmissionLease({
   return { headSha, context, state: 'failure' };
 }
 
+export function preserveQueueAdmissionLease({ headSha, context, reason }) {
+  required(headSha, 'head sha', /^[0-9a-f]{40}$/u);
+  required(
+    context,
+    'queue admission context',
+    /^[A-Za-z0-9][A-Za-z0-9 ._/-]{0,99}$/u,
+  );
+  if (reason !== 'merged') {
+    throw new Error('queue admission lease can be preserved only after merge');
+  }
+  return { headSha, context, state: 'preserved', reason };
+}
+
 export async function releaseDequeuedFamilyQueueLease({
   repository,
   pullRequest,
@@ -494,6 +507,12 @@ export async function settleDequeuedMergeGroup({
   token,
   request = fetch,
 }) {
+  const removalPromise = latestMergeQueueRemoval({
+    repository,
+    pullRequest,
+    token,
+    request,
+  });
   const results = await Promise.allSettled([
     cancelDequeuedMergeGroupRuns({
       repository,
@@ -502,29 +521,62 @@ export async function settleDequeuedMergeGroup({
       token,
       request,
     }),
-    recordDequeuedRepairMarker({
-      repository,
-      pullRequest,
-      headSha,
-      token,
-      request,
-    }),
-    revokeQueueAdmissionLease({
-      repository,
-      headSha,
-      context,
-      token,
-      request,
-    }),
-    releaseDequeuedFamilyQueueLease({
-      repository,
-      pullRequest,
-      headSha,
-      body: pullRequestBody,
-      reason: '',
-      token,
-      request,
-    }),
+    removalPromise.then((observedRemoval) =>
+      recordDequeuedRepairMarker({
+        repository,
+        pullRequest,
+        headSha,
+        removal: observedRemoval,
+        token,
+        request,
+      }),
+    ),
+    removalPromise.then(
+      (observedRemoval) =>
+        observedRemoval.reason === 'merged'
+          ? preserveQueueAdmissionLease({
+              headSha,
+              context,
+              reason: observedRemoval.reason,
+            })
+          : revokeQueueAdmissionLease({
+              repository,
+              headSha,
+              context,
+              token,
+              request,
+            }),
+      () =>
+        revokeQueueAdmissionLease({
+          repository,
+          headSha,
+          context,
+          token,
+          request,
+        }),
+    ),
+    removalPromise.then(
+      (observedRemoval) =>
+        releaseDequeuedFamilyQueueLease({
+          repository,
+          pullRequest,
+          headSha,
+          body: pullRequestBody,
+          reason: observedRemoval.reason,
+          token,
+          request,
+        }),
+      () =>
+        releaseDequeuedFamilyQueueLease({
+          repository,
+          pullRequest,
+          headSha,
+          body: pullRequestBody,
+          reason: '',
+          token,
+          request,
+        }),
+    ),
   ]);
   const failures = results
     .map((result, index) =>
