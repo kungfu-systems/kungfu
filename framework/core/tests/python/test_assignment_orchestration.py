@@ -63,6 +63,22 @@ def test_assignment_atomic_paths_use_windows_extended_namespace():
     assert network == (r"\\?\UNC\server\share\workspace\.kungfu\request.json")
 
 
+def test_assignment_admit_defers_request_path_validation_to_orchestration():
+    request_argument = next(
+        parameter
+        for parameter in ASSIGNMENT_CLI.admit.params
+        if parameter.name == "request_file"
+    )
+    request_path = (
+        Path("C:/actions-runner/_work/kungfu/kungfu/.buildchain/tmp")
+        / ("long-assignment-path-" + "x" * 240)
+        / "request.json"
+    )
+
+    assert request_argument.type.exists is False
+    assert request_argument.type.convert(str(request_path), None, None) == request_path
+
+
 def test_captured_request_reads_all_paths_through_filesystem_namespace(
     tmp_path, monkeypatch
 ):

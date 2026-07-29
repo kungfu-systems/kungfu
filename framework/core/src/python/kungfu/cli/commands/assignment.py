@@ -239,9 +239,7 @@ def capture(ctx, request_value, workspace_root, home, cwd, json_output):
 
 
 @assignment.command(help="admit one verified captured request into this workspace")
-@click.argument(
-    "request_file", type=click.Path(exists=True, dir_okay=False, path_type=Path)
-)
+@click.argument("request_file", type=click.Path(dir_okay=False, path_type=Path))
 @click.option("--workspace", "workspace_root", type=click.Path(file_okay=False))
 @click.option("--home", is_flag=True, help="admit into the logical Home Workspace")
 @click.option("--initiative-id", default="")
