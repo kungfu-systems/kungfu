@@ -368,7 +368,7 @@ test('workflows keep candidate and promotion outside untrusted PR authority', ()
   );
   assert.match(
     candidateJob,
-    /Build and seal minimum relocatable Assignment Core candidate[\s\S]*RUNNER_OS[\s\S]*RUNNER_ARCH[\s\S]*rebuild:core[\s\S]*framework\/release\/qualified-assignment-core-artifact\.mjs seal/u,
+    /KUNGFU_BUILDCHAIN_SOURCE_BUILD: "1"[\s\S]*Build and seal minimum relocatable Assignment Core candidate[\s\S]*RUNNER_OS[\s\S]*RUNNER_ARCH[\s\S]*rebuild:core[\s\S]*framework\/release\/qualified-assignment-core-artifact\.mjs seal/u,
   );
   assert.doesNotMatch(candidateJob, /pull_request/);
 
