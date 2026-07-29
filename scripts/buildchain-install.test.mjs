@@ -230,3 +230,22 @@ test('AWS Linux burst workflow is trusted exact-train qualification only', () =>
     /secrets:|notar|signing|npm-publish|release-new-version|deploy/,
   );
 });
+
+test('AWS Windows JIT qualification is trusted, exact-label, and non-publication', () => {
+  const workflow = fs.readFileSync(
+    path.join(
+      repositoryRoot,
+      '.github/workflows/aws-us-windows-burst-qualification.yml',
+    ),
+    'utf8',
+  );
+  assert.match(workflow, /workflow_dispatch:/);
+  assert.doesNotMatch(workflow, /\n {2}pull_request:|\n {2}push:/);
+  assert.match(workflow, /needs: trust/);
+  assert.match(workflow, /aws-us-ec2-windows-jit-\$\{QUALIFICATION_ID\}/);
+  assert.match(workflow, /runner-preset: aws-us-ec2-windows-jit/);
+  assert.match(workflow, /publish-channel: none/);
+  assert.match(workflow, /release-candidate: false/);
+  assert.match(workflow, /win-cancel:cancellation\|win-timeout:timeout/);
+  assert.doesNotMatch(workflow, /\b(?:id-token|packages):\s*write/);
+});

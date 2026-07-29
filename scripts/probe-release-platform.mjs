@@ -3,6 +3,7 @@
 // @ts-check
 
 import childProcess from 'node:child_process';
+import crypto from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
@@ -38,6 +39,114 @@ function run(command, args, root = ROOT) {
       ).trim()}`,
     );
   }
+}
+
+function capture(command, args) {
+  const result = childProcess.spawnSync(command, args, {
+    encoding: 'utf8',
+    windowsHide: true,
+  });
+  if (result.error || result.status !== 0) {
+    fail(
+      `${command} ${args.join(' ')} failed: ${String(
+        result.stderr || result.stdout || result.error?.message || '',
+      ).trim()}`,
+    );
+  }
+  return String(result.stdout || '').trim();
+}
+
+function exact(value, pattern, label) {
+  const normalized = String(value || '').trim();
+  if (!pattern.test(normalized)) fail(`${label} is invalid or missing`);
+  return normalized;
+}
+
+export function probeAwsWindowsJitRunner({
+  root = ROOT,
+  platform = process.platform,
+  env = process.env,
+  runCommand = capture,
+}) {
+  if (platform !== 'win32')
+    fail('AWS Windows JIT runner profile requires Windows');
+
+  const labels = JSON.parse(env.BUILDCHAIN_RUNNER_LABELS_JSON || '[]');
+  for (const required of ['self-hosted', 'Windows', 'X64']) {
+    if (!labels.includes(required))
+      fail(`runner labels are missing ${required}`);
+  }
+  const runnerLabel = labels.find((label) =>
+    String(label).startsWith('aws-us-ec2-windows-jit-'),
+  );
+  exact(
+    runnerLabel,
+    /^aws-us-ec2-windows-jit-[a-z0-9][a-z0-9-]{0,31}$/,
+    'runner label',
+  );
+
+  const vcvars = 'C:\\BuildTools\\VC\\Auxiliary\\Build\\vcvars64.bat';
+  if (!fs.existsSync(vcvars))
+    fail(`MSVC environment entrypoint is missing: ${vcvars}`);
+
+  const report = {
+    schemaVersion: 1,
+    contract: 'kungfu.aws-windows-jit-runner-profile/v1',
+    provider: 'aws-ec2',
+    sourceSha: exact(env.GITHUB_SHA, /^[0-9a-f]{40}$/, 'source SHA'),
+    githubRunId: exact(env.GITHUB_RUN_ID, /^\d+$/, 'GitHub run id'),
+    githubRunAttempt: exact(
+      env.GITHUB_RUN_ATTEMPT,
+      /^\d+$/,
+      'GitHub run attempt',
+    ),
+    runner: {
+      name: String(env.RUNNER_NAME || ''),
+      os: platform,
+      architecture: process.arch,
+      labels: [...labels].sort(),
+    },
+    aws: {
+      instanceId: exact(
+        env.AWS_EC2_INSTANCE_ID,
+        /^i-[0-9a-f]+$/,
+        'instance id',
+      ),
+      instanceType: exact(
+        env.AWS_EC2_INSTANCE_TYPE,
+        /^[a-z0-9.]+$/,
+        'instance type',
+      ),
+      amiId: exact(env.AWS_EC2_AMI_ID, /^ami-[0-9a-f]+$/, 'AMI id'),
+      amiName: String(env.AWS_EC2_AMI_NAME || ''),
+      availabilityZone: String(env.AWS_EC2_AVAILABILITY_ZONE || ''),
+      launchedAt: String(env.AWS_EC2_LAUNCHED_AT || ''),
+    },
+    toolchain: {
+      git: runCommand('git.exe', ['--version']),
+      node: runCommand('node.exe', ['--version']),
+      rustc: runCommand('rustc.exe', ['--version']),
+      cargo: runCommand('cargo.exe', ['--version']),
+      vcvars64: vcvars,
+    },
+    cacheMode: 'off',
+    observedAt: new Date().toISOString(),
+  };
+  report.digest = `sha256:${crypto
+    .createHash('sha256')
+    .update(JSON.stringify(report))
+    .digest('hex')}`;
+
+  const output = path.join(
+    root,
+    'product',
+    'release',
+    'qualification',
+    'aws-windows-jit-smoke.json',
+  );
+  fs.mkdirSync(path.dirname(output), { recursive: true });
+  fs.writeFileSync(output, `${JSON.stringify(report, null, 2)}\n`);
+  return { report, output };
 }
 
 function findApplications(root) {
@@ -157,6 +266,11 @@ if (
   process.argv[1] &&
   import.meta.url === pathToFileURL(process.argv[1]).href
 ) {
+  if (process.argv.includes('--aws-windows-jit')) {
+    const { output } = probeAwsWindowsJitRunner({});
+    process.stdout.write(`${path.relative(ROOT, output)}\n`);
+    process.exit(0);
+  }
   const report = probeReleasePlatform({});
   process.stdout.write(`${JSON.stringify(report)}\n`);
 }
