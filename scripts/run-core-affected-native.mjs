@@ -628,6 +628,13 @@ export function planFromChanged(
     'scripts/affected-native-proof.mjs',
     '.github/workflows/affected-native-cache-promote.yml',
     '.github/workflows/affected-native-pr.yml',
+    'framework/release/qualified-assignment-core-artifact.mjs',
+    'framework/assignment-capture/qualified-assignment-core-consumer.mjs',
+    'scripts/check-shifu-cache-contract.mjs',
+    'docs/shifu/artifact-contract.json',
+    'docs/shifu/cache-contract.json',
+    'docs/shifu/schema/qualified-assignment-core-artifact-v1.schema.json',
+    'docs/shifu/schema/qualified-assignment-core-qualification-v1.schema.json',
     'shifu.gates.json',
     'docs/qualification/gates/',
     'package.json',
@@ -1738,15 +1745,27 @@ function selfTest(authority, buildAuthority) {
     }
   });
   expect('authority dependency change expands globally', () => {
-    const plan = planFromChanged(
-      ['framework/core/architecture/layers.json'],
-      authority,
-      buildAuthority,
-      'base',
-      'head',
-    );
-    if (plan.closureComponents.length !== authority.components.length)
-      throw new Error('closure incomplete');
+    for (const file of [
+      'framework/core/architecture/layers.json',
+      'framework/release/qualified-assignment-core-artifact.mjs',
+      'framework/assignment-capture/qualified-assignment-core-consumer.mjs',
+      'scripts/check-shifu-cache-contract.mjs',
+      'docs/shifu/artifact-contract.json',
+      'docs/shifu/cache-contract.json',
+      'docs/shifu/schema/qualified-assignment-core-artifact-v1.schema.json',
+      'docs/shifu/schema/qualified-assignment-core-qualification-v1.schema.json',
+    ]) {
+      const plan = planFromChanged(
+        [file],
+        authority,
+        buildAuthority,
+        'base',
+        'head',
+      );
+      if (plan.closureComponents.length !== authority.components.length)
+        throw new Error(`${file}: closure incomplete`);
+      if (!plan.profile) throw new Error(`${file}: native profile missing`);
+    }
   });
   expect('Core native build support changes expand globally', () => {
     const plan = planFromChanged(
