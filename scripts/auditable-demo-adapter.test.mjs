@@ -89,6 +89,8 @@ function fixture(
     coordinateSource = source,
     sourceEvidence = null,
     unsafeArchive = false,
+    safeArchiveLinks = false,
+    unsupportedArchiveMember = false,
     stdoutLineCount = 0,
     completionStatus = 'passed',
     omitSentinel = false,
@@ -203,6 +205,21 @@ function fixture(
   });
   if (unsafeArchive) {
     fs.symlinkSync('/tmp', path.join(productRoot, 'escape'));
+  }
+  if (safeArchiveLinks) {
+    const pythonRoot = path.join(productRoot, 'runtime', 'python', 'bin');
+    fs.mkdirSync(pythonRoot, { recursive: true });
+    const python3 = path.join(pythonRoot, 'python3');
+    fs.writeFileSync(python3, '#!/bin/sh\nexit 0\n');
+    fs.chmodSync(python3, 0o755);
+    fs.symlinkSync('python3', path.join(pythonRoot, 'python'));
+    fs.linkSync(python3, path.join(pythonRoot, 'python-copy'));
+  }
+  if (unsupportedArchiveMember) {
+    const fifo = spawnSync('mkfifo', [
+      path.join(productRoot, 'runtime', 'unsupported-fifo'),
+    ]);
+    assert.equal(fifo.status, 0, fifo.stderr?.toString());
   }
   const archive = path.join(
     artifact,
@@ -384,12 +401,37 @@ test('adapter rejects tree-equivalence evidence outside a pull merge ref', () =>
   }
 });
 
-test('adapter rejects symlink members before extraction', () => {
+test('adapter accepts bounded internal symlink and hardlink members', () => {
+  const root = fs.mkdtempSync(
+    path.join(os.tmpdir(), 'auditable-demo-adapter-'),
+  );
+  try {
+    const { result } = run(root, { safeArchiveLinks: true });
+    assert.equal(result.status, 0, result.stderr);
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test('adapter rejects symlink members that escape the archive root', () => {
   const root = fs.mkdtempSync(
     path.join(os.tmpdir(), 'auditable-demo-adapter-'),
   );
   try {
     const { result } = run(root, { unsafeArchive: true });
+    assert.notEqual(result.status, 0);
+    assert.match(result.stderr, /unsafe CLI archive link target/);
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test('adapter rejects unsupported archive member types', () => {
+  const root = fs.mkdtempSync(
+    path.join(os.tmpdir(), 'auditable-demo-adapter-'),
+  );
+  try {
+    const { result } = run(root, { unsupportedArchiveMember: true });
     assert.notEqual(result.status, 0);
     assert.match(result.stderr, /unsupported CLI archive member type/);
   } finally {
