@@ -347,10 +347,33 @@ def validate_member(member: tarfile.TarInfo) -> None:
         or parts[0] != ARCHIVE_ROOT
     ):
         fail(f"unsafe CLI archive member path: {name!r}")
-    if not (member.isfile() or member.isdir()):
+    if not (member.isfile() or member.isdir() or member.issym() or member.islnk()):
         fail(f"unsupported CLI archive member type: {name!r}")
+    if member.issym() or member.islnk():
+        linkname = member.linkname
+        link_parts = PurePosixPath(linkname).parts
+        if (
+            not linkname
+            or linkname.startswith("/")
+            or "\\" in linkname
+            or ".." in link_parts
+        ):
+            fail(f"unsafe CLI archive link target: {name!r} -> {linkname!r}")
+        if member.islnk() and (not link_parts or link_parts[0] != ARCHIVE_ROOT):
+            fail(f"unsafe CLI archive hardlink target: {name!r} -> {linkname!r}")
     if member.size < 0 or member.size > MAX_MEMBER_BYTES:
         fail(f"CLI archive member exceeds the bounded size: {name!r}")
+
+
+def member_path(target: Path, name: str) -> Path:
+    return target.joinpath(*PurePosixPath(name).parts)
+
+
+def link_target_path(target: Path, member: tarfile.TarInfo) -> Path:
+    link_parts = PurePosixPath(member.linkname).parts
+    if member.issym():
+        return member_path(target, member.name).parent.joinpath(*link_parts)
+    return target.joinpath(*link_parts)
 
 
 def extract_cli(archive_path: Path, target: Path) -> Path:
@@ -370,9 +393,11 @@ def extract_cli(archive_path: Path, target: Path) -> Path:
             if extracted_bytes > MAX_EXTRACTED_BYTES:
                 fail("CLI archive exceeds the bounded extracted size")
             for member in members:
-                destination = target.joinpath(*PurePosixPath(member.name).parts)
+                destination = member_path(target, member.name)
                 if member.isdir():
                     destination.mkdir(parents=True, exist_ok=True)
+                    continue
+                if member.issym() or member.islnk():
                     continue
                 destination.parent.mkdir(parents=True, exist_ok=True)
                 source = archive.extractfile(member)
@@ -381,6 +406,34 @@ def extract_cli(archive_path: Path, target: Path) -> Path:
                 with destination.open("xb") as output:
                     shutil.copyfileobj(source, output, length=1024 * 1024)
                 os.chmod(destination, member.mode & 0o777)
+            for member in members:
+                if not (member.issym() or member.islnk()):
+                    continue
+                destination = member_path(target, member.name)
+                destination.parent.mkdir(parents=True, exist_ok=True)
+                source = link_target_path(target, member)
+                if member.issym():
+                    os.symlink(member.linkname, destination)
+                    continue
+                if source.is_symlink() or not source.is_file():
+                    fail(
+                        "CLI archive hardlink target must be an extracted regular "
+                        f"file: {member.name!r} -> {member.linkname!r}"
+                    )
+                os.link(source, destination)
+            archive_root = (target / ARCHIVE_ROOT).resolve()
+            for member in members:
+                if not member.issym():
+                    continue
+                destination = member_path(target, member.name)
+                try:
+                    resolved = destination.resolve(strict=True)
+                    resolved.relative_to(archive_root)
+                except (FileNotFoundError, RuntimeError, ValueError):
+                    fail(
+                        "CLI archive symlink must resolve inside the extracted "
+                        f"product: {member.name!r} -> {member.linkname!r}"
+                    )
     except (tarfile.TarError, OSError) as error:
         fail(f"cannot extract CLI archive: {error}")
     return target / ARCHIVE_ROOT
