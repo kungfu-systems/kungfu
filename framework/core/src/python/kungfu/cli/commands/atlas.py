@@ -130,13 +130,18 @@ def import_cmd(ctx, repo_root, storage_source_id, since, from_time, until, as_js
     if as_json:
         _echo_json(result)
         return
+    work_control = result.get("work_control") or result.get("mission_control")
+    if not isinstance(work_control, dict):
+        raise click.ClickException(
+            "Atlas import omitted Work Control admission evidence"
+        )
     click.echo(
         f"[atlas] imported {result['import_id']}: {result['missions']} missions, "
         f"{result['goals']} goals, {result['markers']} markers "
         f"({len(result['warnings'])} warning(s)) episode {result['episode_id']}; "
-        f"work-control {result['work_control']['status']} "
-        f"({result['work_control'].get('admitted', 0)} admitted, "
-        f"{result['work_control'].get('already_present', 0)} already present)"
+        f"work-control {work_control['status']} "
+        f"({work_control.get('admitted', 0)} admitted, "
+        f"{work_control.get('already_present', 0)} already present)"
     )
     for warning in result["warnings"]:
         click.echo(f"  warning: {warning}", err=True)
