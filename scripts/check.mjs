@@ -696,11 +696,16 @@ function touchesBuildchainKfdEvidence(files) {
       file === 'developer/sdk/kfd/support-matrix.json' ||
       file === 'developer/sdk/src/sdk.js' ||
       file === 'scripts/buildchain-kfd-evidence.mjs' ||
+      file === 'scripts/kfd4-perspective-qualification.mjs' ||
+      file === 'scripts/kfd4-perspective-qualification.test.mjs' ||
       file === 'scripts/kfd-support-matrix.mjs' ||
       file === 'scripts/kfd-support-matrix.test.mjs' ||
       file === '.buildchain/kfd/kfd-2/registry.json' ||
       file.startsWith('framework/core/src/python/kungfu/agent/') ||
+      file === 'framework/core/src/python/kungfu/rewind/perspective.py' ||
+      file === 'framework/core/tests/python/test_kfd4_perspective.py' ||
       file.startsWith('.github/workflows/') ||
+      file.startsWith('docs/qualification/evidence/kfd-4-perspective/') ||
       file.startsWith('docs/kfd-') ||
       file === 'docs/qualification/kfd-support-matrix.md',
   );
@@ -714,6 +719,13 @@ function checkBuildchainKfdEvidence(files = [], { force = false } = {}) {
   run('Buildchain KFD evidence check', 'node', [
     path.join('scripts', 'buildchain-kfd-evidence.mjs'),
     '--check',
+  ]);
+  run('KFD-4 perspective qualification', 'node', [
+    path.join('scripts', 'kfd4-perspective-qualification.mjs'),
+  ]);
+  run('KFD-4 perspective qualification negative fixtures', 'node', [
+    '--test',
+    path.join('scripts', 'kfd4-perspective-qualification.test.mjs'),
   ]);
   run('KFD support matrix check', 'node', [
     path.join('scripts', 'kfd-support-matrix.mjs'),

@@ -10,8 +10,8 @@
   "sourceRegistry": {
     "id": "kungfu",
     "path": ".buildchain/kfd/kfd-3/surfaces.json",
-    "sha256": "b4b61d0a8aea3b3f1cc2c52efd46689f8fbc81778938ca8f5ebfcb57847d9ee2",
-    "digest": "sha256:3239328bcefec4bfd102c7e834d1b234e9e485c23af309d9ab89384f11b7819f"
+    "sha256": "be95975485a26e995878d01bb14c677161da52fe6e51223557564d6a0baed32b",
+    "digest": "sha256:325cc2c1c6ce12ca9dc5a67926dc853d8a48db06c2b0e3a476fbf222de9341ae"
   },
   "upstreamKfd": {
     "aggregatePath": "developer/sdk/kfd/upstream-aggregate.json",
@@ -26,9 +26,9 @@
       "libnode": "22.22.3-kf.5-alpha.3",
       "buildchain": "3.0.0"
     },
-    "digest": "sha256:5776dcbc5a1d4796a5dd613fab235c7fe49a73b6fee70362a64dd2ef2c09d7d7"
+    "digest": "sha256:601a90c4b52a18b590ee3a77b9c5697a8f9c424421b6e0cec59a8e186adf7b11"
   },
-  "collaborationInterfaceDigest": "sha256:0813b77b27c376f146f7defdca7974854b61357f63281401b5aa5399d2523465",
+  "collaborationInterfaceDigest": "sha256:36922398f5a56d78de7daeb2859d604d755cd490f2f2456de6cd5391ecd0700a",
   "exposedSurfaces": [
     {
       "id": "kungfu.agent",

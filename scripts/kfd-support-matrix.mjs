@@ -243,6 +243,22 @@ function validateMatrix(matrix, { verifyInstalledKfd = true } = {}) {
       );
     }
   }
+  const kfd4 = byKey['kfd-4'];
+  const expectedKfd4Surfaces = [
+    'framework/core/src/python/kungfu/rewind/perspective.py',
+    'scripts/kfd4-perspective-qualification.mjs',
+  ];
+  const expectedKfd4Evidence = [
+    'docs/qualification/evidence/kfd-4-perspective/c55a0d1c7f/report.json',
+    'framework/core/tests/python/test_kfd4_perspective.py',
+  ];
+  if (
+    kfd4.implementation.surfaces.join(',') !== expectedKfd4Surfaces.join(',') ||
+    kfd4.verification.evidenceRoots.map((entry) => entry.path).join(',') !==
+      expectedKfd4Evidence.join(',')
+  ) {
+    fail('KFD-4 perspective qualification evidence drifted');
+  }
   for (const key of [
     'kfd-8',
     'kfd-9',
