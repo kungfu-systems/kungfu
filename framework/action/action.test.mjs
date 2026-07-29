@@ -14,6 +14,7 @@ import {
   canonicalJson,
   contractResponse,
   parseSingleJsonDocument,
+  verifyPackage,
 } from './action.mjs';
 
 const ACTION_DIR = path.dirname(fileURLToPath(import.meta.url));
@@ -31,6 +32,14 @@ function runAction(args, env = {}) {
 function digest(file) {
   return `sha256:${createHash('sha256').update(fs.readFileSync(file)).digest('hex')}`;
 }
+
+test('source Action package manifest matches tracked bytes', () => {
+  const manifest = verifyPackage(ACTION_DIR);
+  assert.equal(manifest.schema, 'kungfu.action.package-manifest/v1');
+  assert.ok(
+    manifest.files.some((entry) => entry.path === 'action-loop.contract.json'),
+  );
+});
 
 test('development Node and embedded libnode hosts retain one semantic root', () => {
   const request = JSON.stringify({

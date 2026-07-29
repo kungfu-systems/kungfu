@@ -61,10 +61,15 @@
   },
   "qualifiedAssignmentCoreTransport": {
     "artifactAuthority": "docs/shifu/artifact-contract.json#qualifiedAssignmentCore",
-    "providers": ["github-actions-cache", "github-workflow-artifact"],
+    "consumer": "framework/assignment-capture/qualified-assignment-core-consumer.mjs",
+    "automaticEntry": "./shifu work",
+    "localCas": "${KUNGFU_QUALIFIED_CORE_CACHE_ROOT:-${XDG_CACHE_HOME:-$HOME/.cache}/kungfu/qualified-core/v1}",
+    "providers": ["local-content-addressed-store", "github-workflow-artifact"],
     "availability": "optimization-only",
     "cacheHit": "requires-independent-manifest-receipt-and-promotion-verification",
     "cacheMissOrRejection": "current-source-build",
+    "targetPublication": "outside-target-stage-then-atomic-rename",
+    "installedKungfuMutation": "forbidden",
     "eviction": "does-not-invalidate-retained-roots-or-receipts",
     "mergeCorrectness": "must-not-depend-on-transport-availability",
     "sharedPromotion": "requires-one-active-protected-dev-authority"

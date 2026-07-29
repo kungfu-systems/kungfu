@@ -286,26 +286,26 @@ if [ "${1:-}" = "work" ]; then
       exit 127
     fi
   fi
-  _kungfu_checkout_binding=""
-  for _candidate in \
-    ./framework/core/dist/kungfu/pykungfu*.so \
-    ./framework/core/dist/kungfu/pykungfu*.pyd; do
-    if [ -f "$_candidate" ]; then
-      _kungfu_checkout_binding="$_candidate"
-      break
-    fi
-  done
+  kungfu_checkout_binding() {
+    for _candidate in ./framework/core/dist/kungfu/pykungfu*.so ./framework/core/dist/kungfu/pykungfu*.pyd; do
+      [ -f "$_candidate" ] && { printf '%s\n' "$_candidate"; return; }
+    done; return 0
+  }
+  _kungfu_checkout_binding="$(kungfu_checkout_binding)"
   _kungfu_checkout_build_info="./framework/core/dist/kungfu/kungfubuildinfo.json"
-  if [ -n "$_kungfu_checkout_binding" ] \
-    && [ -f "$_kungfu_checkout_build_info" ] \
-    && command -v uv >/dev/null 2>&1; then
+  if [ -z "$_kungfu_checkout_binding" ] \
+    && [ "$(uname -s 2>/dev/null || true)/$(uname -m 2>/dev/null || true)" = "Darwin/arm64" ] \
+    && command -v node >/dev/null 2>&1 && [ -f "./framework/assignment-capture/qualified-assignment-core-consumer.mjs" ]; then
+    node ./framework/assignment-capture/qualified-assignment-core-consumer.mjs materialize --repository-root "$PWD" || exit $?
+    _kungfu_checkout_binding="$(kungfu_checkout_binding)"
+  fi
+  if [ -n "$_kungfu_checkout_binding" ] && [ -f "$_kungfu_checkout_build_info" ] && command -v uv >/dev/null 2>&1; then
     cd ./framework/core
     exec uv run --frozen python .devtools/kungfu_cli.py work "$@"
   fi
   printf '%s\n' '{"schema":"kungfu.assignment-orchestration.diagnosis/v1","ok":false,"code":"assignment-current-checkout-binding-missing","message":"Assignment admission requires pykungfu from the current checkout","next_actions":[{"action":"build-core","command":"./shifu build:core","description":"Assemble pykungfu from the current checkout"}]}'
   exit 127
 fi
-
 # The agent-facing Work Control CLI must be the executable assembled from
 # this checkout.  Bypass pnpm here so --json remains a single JSON document and
 # cannot silently fall through to an unrelated globally installed `kungfu`.
