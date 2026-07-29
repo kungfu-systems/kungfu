@@ -112,6 +112,11 @@ caller supplies the same coordinates under
 `kungfu.delivery-evidence.expectation/v1`; their canonical root is the
 idempotency key.
 
+For Merge Queue delivery, the accepted chronology is validation run completion,
+then the protected-branch merge, then observation. GitHub qualifies the
+synthetic merge-group commit before advancing it onto the protected branch;
+the adapter measures admission lag and freshness from that protected merge.
+
 [`delivery_evidence.py`](../../framework/core/src/python/kungfu/delivery_evidence.py)
 strictly rejects missing, malformed, stale, cross-repository, PR-head, merge,
 run, receipt, artifact, schema, and queue mismatches. Missing evidence is a

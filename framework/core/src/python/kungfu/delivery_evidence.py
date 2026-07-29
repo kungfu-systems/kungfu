@@ -295,13 +295,17 @@ def verify_envelope(
         key: _timestamp(timestamps[key], f"$.timestamps.{key}")
         for key in ("mergedAt", "runCompletedAt", "observedAt")
     }
-    if parsed["mergedAt"] > parsed["runCompletedAt"]:
+    # GitHub Merge Queue validates the synthetic merge-group commit before it
+    # advances that commit onto the protected branch.  The protected merge is
+    # therefore the later event; reversing this order would admit a run that
+    # had not actually qualified the delivered commit.
+    if parsed["runCompletedAt"] > parsed["mergedAt"]:
         raise EvidenceValidationError(
             "delivery-evidence-malformed",
             "$.timestamps",
             retryable=False,
         )
-    if parsed["runCompletedAt"] > parsed["observedAt"]:
+    if parsed["mergedAt"] > parsed["observedAt"]:
         raise EvidenceValidationError(
             "delivery-evidence-malformed",
             "$.timestamps.observedAt",
@@ -310,10 +314,10 @@ def verify_envelope(
     current = (now or datetime.now(timezone.utc)).astimezone(timezone.utc)
     if max_age_seconds <= 0:
         raise ValueError("max_age_seconds must be positive")
-    if (current - parsed["runCompletedAt"]).total_seconds() > max_age_seconds:
+    if (current - parsed["mergedAt"]).total_seconds() > max_age_seconds:
         raise EvidenceValidationError(
             "delivery-evidence-stale",
-            "$.timestamps.runCompletedAt",
+            "$.timestamps.mergedAt",
             retryable=False,
         )
     _mismatch(
@@ -670,9 +674,9 @@ def ingest(
     episode_id, episode_root = _admit_episode(
         runtime_dir, verification, actor=actor.strip()
     )
-    completed_at = _timestamp(
-        verification["envelope"]["timestamps"]["runCompletedAt"],
-        "$.timestamps.runCompletedAt",
+    merged_at = _timestamp(
+        verification["envelope"]["timestamps"]["mergedAt"],
+        "$.timestamps.mergedAt",
     )
     state = {
         "schema": STATE_SCHEMA,
@@ -685,7 +689,7 @@ def ingest(
         "firstSeenAt": (previous or {}).get("firstSeenAt") or _iso(current),
         "latestAttemptAt": _iso(current),
         "admittedAt": _iso(current),
-        "lagSeconds": max(0, int((current - completed_at).total_seconds())),
+        "lagSeconds": max(0, int((current - merged_at).total_seconds())),
         "latestErrorCode": "",
         "latestErrorRoot": "",
         "episodeId": str(episode_id),

@@ -217,8 +217,8 @@ function fixture(t) {
         attempt: 1,
       },
       timestamps: {
-        mergedAt: '2026-07-29T01:00:00Z',
-        runCompletedAt: '2026-07-29T01:00:05Z',
+        mergedAt: '2026-07-29T01:00:05Z',
+        runCompletedAt: '2026-07-29T01:00:00Z',
         observedAt: '2026-07-29T01:00:10Z',
       },
       ingestionLagSeconds: 5,
@@ -315,6 +315,16 @@ test('missing and inexact evidence fail visibly', (t) => {
   assert.equal(result.ok, false);
   assert.ok(
     result.diagnostics.some((entry) => entry.code === 'runtime-cache-present'),
+  );
+
+  const reversedDelivery = structuredClone(manifest);
+  reversedDelivery.delivery.timestamps.runCompletedAt = '2026-07-29T01:00:06Z';
+  result = verifyNativeLoopQualification(seeded.root, reversedDelivery);
+  assert.equal(result.ok, false);
+  assert.ok(
+    result.diagnostics.some(
+      (entry) => entry.code === 'delivery-timestamp-order-mismatch',
+    ),
   );
 });
 
