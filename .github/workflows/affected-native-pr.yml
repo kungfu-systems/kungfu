@@ -1072,6 +1072,7 @@ jobs:
       - affected_native
     if: >-
       ${{
+        always() &&
         github.event_name == 'merge_group' &&
         needs.candidate_preflight.result == 'success' &&
         needs.candidate_preflight.outputs.native-required == 'true' &&
