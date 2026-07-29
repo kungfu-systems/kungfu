@@ -1244,6 +1244,61 @@ def test_apply_rejects_unsafe_archive_before_inventory_write(tmp_path: Path) -> 
     assert not (tmp_path / "config").exists()
 
 
+def test_tar_archive_accepts_internal_relative_symlink(tmp_path: Path) -> None:
+    candidate = tmp_path / "portable.tar.gz"
+    with tarfile.open(candidate, "w:gz") as output:
+        directory = tarfile.TarInfo("product/runtime/bin")
+        directory.type = tarfile.DIRTYPE
+        output.addfile(directory)
+        payload = b"runtime"
+        executable = tarfile.TarInfo("product/runtime/bin/python3")
+        executable.size = len(payload)
+        output.addfile(executable, io.BytesIO(payload))
+        link = tarfile.TarInfo("product/runtime/bin/python")
+        link.type = tarfile.SYMTYPE
+        link.linkname = "python3"
+        output.addfile(link)
+
+    archive_type, members = distribution_update._validate_archive(
+        candidate,
+        archive_size=candidate.stat().st_size,
+    )
+    target = tmp_path / "extracted"
+    target.mkdir()
+    distribution_update._extract_archive(
+        candidate,
+        target,
+        archive_type=archive_type,
+        members=members,
+    )
+
+    installed_link = target / "product/runtime/bin/python"
+    assert installed_link.is_symlink()
+    assert installed_link.readlink() == Path("python3")
+    assert installed_link.read_bytes() == payload
+
+
+@pytest.mark.parametrize("link_name", ["/tmp/escape", "../../../../escape"])
+def test_tar_archive_rejects_escaping_symlink(
+    tmp_path: Path,
+    link_name: str,
+) -> None:
+    candidate = tmp_path / "unsafe-link.tar.gz"
+    with tarfile.open(candidate, "w:gz") as output:
+        link = tarfile.TarInfo("product/runtime/bin/python")
+        link.type = tarfile.SYMTYPE
+        link.linkname = link_name
+        output.addfile(link)
+
+    with pytest.raises(distribution_update.DistributionUpdateError) as error:
+        distribution_update._validate_archive(
+            candidate,
+            archive_size=candidate.stat().st_size,
+        )
+
+    assert error.value.code == "archive-entry-unsupported"
+
+
 def test_duplicate_frontend_build_id_rejects_different_archive_bytes(
     tmp_path: Path,
 ) -> None:

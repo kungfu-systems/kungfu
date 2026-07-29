@@ -96,10 +96,22 @@ def tree_digest(root: str | Path) -> str:
     rows: list[str] = []
     for path in sorted(resolved.rglob("*"), key=lambda item: item.as_posix()):
         if path.is_symlink():
-            raise UpgradeError(
-                "artifact-symlink-unsupported",
-                f"runtime image contains an unsupported symlink: {path}",
-            )
+            target = os.readlink(path)
+            try:
+                target_real = path.resolve(strict=True)
+                target_real.relative_to(resolved)
+            except (OSError, ValueError) as error:
+                raise UpgradeError(
+                    "artifact-symlink-unsupported",
+                    f"runtime image contains an unsupported symlink: {path}",
+                ) from error
+            if os.path.isabs(target):
+                raise UpgradeError(
+                    "artifact-symlink-unsupported",
+                    f"runtime image contains an unsupported symlink: {path}",
+                )
+            rows.append(f"{path.relative_to(resolved).as_posix()}\0symlink:{target}")
+            continue
         if not path.is_file():
             continue
         digest = hashlib.sha256(path.read_bytes()).hexdigest()
@@ -366,7 +378,7 @@ def install_image(
             / f".{build_id}.{os.getpid()}.{time.time_ns()}.partial"
         )
         try:
-            shutil.copytree(current["sourceRoot"], staging)
+            shutil.copytree(current["sourceRoot"], staging, symlinks=True)
             if tree_digest(staging) != manifest["runtimeArtifactDigest"]:
                 quarantine = _quarantine_record(
                     config_home, current, "copied-artifact-digest-mismatch"

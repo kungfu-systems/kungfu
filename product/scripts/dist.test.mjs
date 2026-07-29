@@ -9,7 +9,9 @@ import path from 'node:path';
 import { test } from 'node:test';
 import { readElectronBuilderProjection } from '../../framework/maintainability/semantic-amplification.mjs';
 import { cliLauncherContent } from './cli-launcher.mjs';
+import { sha256Tree } from './compatibility.mjs';
 import {
+  buildCliUpgradeManifest,
   cliArchiveBase,
   cliArchiveLayout,
   copyTree,
@@ -283,6 +285,41 @@ test('product staging rejects an absolute symlink outside its source tree', (t) 
     fs.writeFileSync(outside, 'outside');
     fs.symlinkSync(outside, path.join(source, 'bin', 'python'));
     assert.throws(() => copyTree(source, target), /escaping symlink/);
+  } finally {
+    fs.rmSync(parent, { recursive: true, force: true });
+  }
+});
+
+test('CLI upgrade identity binds the filtered staged runtime', (t) => {
+  if (process.platform === 'win32') {
+    t.skip('POSIX symlink contract');
+    return;
+  }
+  const parent = fs.mkdtempSync(path.join(os.tmpdir(), 'kungfu-dist-test-'));
+  try {
+    const source = path.join(parent, 'source');
+    const stageRoot = path.join(parent, 'stage');
+    const runtime = path.join(stageRoot, 'runtime');
+    fs.mkdirSync(path.join(source, 'bin'), { recursive: true });
+    fs.writeFileSync(path.join(source, 'kungfu'), 'runtime');
+    fs.writeFileSync(path.join(source, 'bin', 'python3'), 'interpreter');
+    fs.writeFileSync(path.join(source, 'bin', 'ignored.pyc'), 'bytecode');
+    fs.symlinkSync('python3', path.join(source, 'bin', 'python'));
+    copyTree(source, runtime);
+
+    const manifest = buildCliUpgradeManifest({
+      stageRoot,
+      layout: cliArchiveLayout(),
+    });
+
+    assert.equal(
+      manifest.runtimeArtifactDigest,
+      `sha256:${sha256Tree(runtime)}`,
+    );
+    assert.notEqual(
+      manifest.runtimeArtifactDigest,
+      `sha256:${sha256Tree(source)}`,
+    );
   } finally {
     fs.rmSync(parent, { recursive: true, force: true });
   }

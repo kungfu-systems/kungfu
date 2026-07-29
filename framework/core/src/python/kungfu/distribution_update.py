@@ -20,7 +20,7 @@ import urllib.request
 import zipfile
 from collections.abc import Mapping
 from datetime import datetime, timezone
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 from typing import Any
 
 from kungfu import runtime_upgrade
@@ -1834,11 +1834,27 @@ def _assert_zip_member(info: zipfile.ZipInfo) -> None:
 
 
 def _assert_tar_member(member: tarfile.TarInfo) -> None:
+    safe_symlink = False
+    if member.issym():
+        link_name = member.linkname.replace("\\", "/")
+        target = PurePosixPath(member.name).parent / PurePosixPath(link_name)
+        depth = 0
+        safe_symlink = bool(link_name) and not link_name.startswith("/")
+        for part in target.parts:
+            if part in ("", "."):
+                continue
+            if part == "..":
+                depth -= 1
+                if depth < 0:
+                    safe_symlink = False
+                    break
+            else:
+                depth += 1
     if (
         not _safe_member(member.name)
-        or member.issym()
         or member.islnk()
-        or not (member.isfile() or member.isdir())
+        or (member.issym() and not safe_symlink)
+        or not (member.isfile() or member.isdir() or member.issym())
     ):
         raise DistributionUpdateError(
             "archive-entry-unsupported",

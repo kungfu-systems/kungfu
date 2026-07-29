@@ -1114,6 +1114,17 @@ export function cliArchiveLayout(platform = process.platform) {
   };
 }
 
+export function buildCliUpgradeManifest({
+  stageRoot,
+  layout = cliArchiveLayout(),
+  root = ROOT,
+}) {
+  return buildBundledUpgradeManifest({
+    root,
+    runtimeRoot: path.join(stageRoot, layout.runtimeDirectory),
+  });
+}
+
 function writeCliLauncher(stageRoot, layout) {
   const output = path.join(stageRoot, layout.launcherName);
   fs.writeFileSync(output, cliLauncherContent(), 'utf8');
@@ -2213,9 +2224,9 @@ function buildCliProduct(esbuildRuntime) {
       copyTree(ASSEMBLED_EXTENSIONS, path.join(stageRoot, 'extensions'));
       copyTree(path.join(TUI_DIR, 'dist'), path.join(stageRoot, 'tui'));
       bundleSdkForCli(stageRoot, esbuildRuntime);
-      const bundledUpgradeManifest = buildBundledUpgradeManifest({
-        root: ROOT,
-        runtimeRoot: CORE_DIST,
+      const bundledUpgradeManifest = buildCliUpgradeManifest({
+        stageRoot,
+        layout,
       });
       const bundledUpgradePath = path.join(
         stageRoot,

@@ -262,6 +262,40 @@ def test_install_is_side_by_side_verified_and_idempotent(tmp_path):
     assert runtime_upgrade.list_images(tmp_path / "config") == [image]
 
 
+def test_install_preserves_internal_relative_symlink(tmp_path):
+    source = _source(tmp_path, "runtime-links")
+    (source / "bin" / "python3").write_text("runtime", "utf-8")
+    (source / "bin" / "python").symlink_to("python3")
+    manifest = _manifest(source, "runtime-links")
+    plan = runtime_upgrade.plan_install(
+        manifest, source, tmp_path / "config", clock_ns=1
+    )
+
+    image = runtime_upgrade.install_image(
+        plan,
+        expected_plan_id=plan["planId"],
+        config_home=tmp_path / "config",
+        clock_ns=2,
+    )
+
+    installed_link = Path(image["artifactRoot"]) / "bin" / "python"
+    assert installed_link.is_symlink()
+    assert installed_link.readlink() == Path("python3")
+    assert installed_link.read_text("utf-8") == "runtime"
+
+
+def test_tree_digest_rejects_escaping_symlink(tmp_path):
+    source = _source(tmp_path, "runtime-escape")
+    outside = tmp_path / "outside"
+    outside.write_text("outside", "utf-8")
+    (source / "bin" / "python").symlink_to(outside)
+
+    with pytest.raises(runtime_upgrade.UpgradeError) as error:
+        runtime_upgrade.tree_digest(source)
+
+    assert error.value.code == "artifact-symlink-unsupported"
+
+
 def test_cli_exposes_one_welded_upgrade_contract_and_inventory(tmp_path):
     runner = CliRunner()
     home = tmp_path / "home"
