@@ -840,6 +840,7 @@
         "src/libkungfu/src/runtime/state_cache/"
       ],
       "include_files": [
+        "src/python/kungfu/rewind/perspective.py",
         "src/libkungfu/src/runtime/state_service.cpp",
         "src/libkungfu/src/runtime/state_shadow.cpp"
       ],
