@@ -68,7 +68,7 @@
             "product-stable",
             "product-binaries"
           ],
-          "sourceRoot": "sha256:d3f9402a07853643403c2471475f6cb90c888aaedcb2aaffd39cdd94ccf6a2d0"
+          "sourceRoot": "sha256:ceb9079f407ceecc7770ce2c5fba0601abec61fe546b97b28193d2666c997e37"
         },
         {
           "path": ".github/workflows/affected-native-pr.yml",
@@ -806,5 +806,5 @@
       }
     }
   ],
-  "registryRoot": "sha256:a4de98d8854ae6cbd9a8a8780e5bf71e0953995cf863936b4cb3040c762084c6"
+  "registryRoot": "sha256:4489c233586262a7dc20a9a74652488d054682aaae9376f69c00757d43ef1eee"
 }

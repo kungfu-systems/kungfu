@@ -928,6 +928,17 @@ export function validateDeliveryAttempt(attempt) {
   return attempt;
 }
 
+export function deliveryAttemptGithubOutputs(attempt) {
+  return {
+    'attempt-root': attempt.attemptRoot,
+    'delivery-binding-root': attempt.deliveryBindingRoot,
+    'family-lease-root': attempt.family?.leaseRoot || '',
+    'delivery-class': attempt.family?.deliveryClass || '',
+    'pull-request-head': attempt.source.pullRequestHead,
+    'proof-decision': attempt.proof.decision,
+  };
+}
+
 export function createCachePromotionAuthority(
   descriptor,
   proofBundleDir,
@@ -1325,14 +1336,10 @@ async function main() {
     ) {
       throw new Error('affected-native delivery attempt target drift');
     }
-    appendGithubOutput(options['github-output'], {
-      'attempt-root': attempt.attemptRoot,
-      'delivery-binding-root': attempt.deliveryBindingRoot,
-      'family-lease-root': attempt.family?.leaseRoot || '',
-      'delivery-class': attempt.family?.deliveryClass || '',
-      'pull-request-head': attempt.source.pullRequestHead,
-      'proof-decision': attempt.proof.decision,
-    });
+    appendGithubOutput(
+      options['github-output'],
+      deliveryAttemptGithubOutputs(attempt),
+    );
     console.log(
       JSON.stringify(
         {

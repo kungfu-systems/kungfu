@@ -13,6 +13,7 @@ import {
   createPortableDevCacheReceipt,
 } from '@kungfu-tech/buildchain/portable-dev-cache';
 
+import { deliveryAttemptGithubOutputs } from './affected-native-proof.mjs';
 import { partitionAffectedNativePlan } from './run-core-affected-native.mjs';
 import {
   affectedNativeCompilerPlanDigest,
@@ -43,6 +44,26 @@ function writeJson(file, value) {
   fs.mkdirSync(path.dirname(file), { recursive: true });
   fs.writeFileSync(file, `${JSON.stringify(value, null, 2)}\n`);
 }
+
+test('non-family delivery attempt projects empty family outputs', () => {
+  assert.deepEqual(
+    deliveryAttemptGithubOutputs({
+      attemptRoot: 'attempt-root',
+      deliveryBindingRoot: 'binding-root',
+      family: null,
+      source: { pullRequestHead: 'pull-request-head' },
+      proof: { decision: 'reused' },
+    }),
+    {
+      'attempt-root': 'attempt-root',
+      'delivery-binding-root': 'binding-root',
+      'family-lease-root': '',
+      'delivery-class': '',
+      'pull-request-head': 'pull-request-head',
+      'proof-decision': 'reused',
+    },
+  );
+});
 
 function createPlan() {
   const body = {

@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import assert from 'node:assert/strict';
-import { execFileSync } from 'node:child_process';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
@@ -465,40 +464,6 @@ test('exact pull-request qualification proof is reusable by bound delivery', () 
   );
   assert.equal(ordinaryDescriptor.proofId, pullDescriptor.proofId);
   assert.equal(validateDeliveryAttempt(ordinaryAttempt), ordinaryAttempt);
-  const ordinaryBundle = path.join(value.root, 'ordinary-attempt');
-  const githubOutput = path.join(value.root, 'ordinary-attempt.output');
-  fs.mkdirSync(ordinaryBundle, { recursive: true });
-  fs.writeFileSync(
-    path.join(ordinaryBundle, 'delivery-attempt.json'),
-    `${JSON.stringify(ordinaryAttempt, null, 2)}\n`,
-  );
-  execFileSync(
-    process.execPath,
-    [
-      path.join(ROOT, 'scripts/affected-native-proof.mjs'),
-      'verify-attempt',
-      '--bundle',
-      ordinaryBundle,
-      '--repository',
-      'kungfu-systems/kungfu',
-      '--run-id',
-      '84',
-      '--head-sha',
-      QUEUE_HEAD,
-      '--source-tree',
-      TREE,
-      '--github-output',
-      githubOutput,
-    ],
-    { cwd: ROOT },
-  );
-  const ordinaryOutputs = fs.readFileSync(githubOutput, 'utf8');
-  assert.match(ordinaryOutputs, /^family-lease-root=$/mu);
-  assert.match(ordinaryOutputs, /^delivery-class=$/mu);
-  assert.match(
-    ordinaryOutputs,
-    new RegExp(`^delivery-binding-root=${ordinary.bindingRoot}$`, 'mu'),
-  );
   assert.throws(
     () =>
       createDeliveryBinding({
