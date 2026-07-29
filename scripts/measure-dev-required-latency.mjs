@@ -13,14 +13,16 @@ import {
   formatCandidateTimelineReport,
 } from '@kungfu-tech/buildchain-alpha/candidate-timeline';
 import {
-  affectedNativeEvidenceBinding,
   collectDeliveryAttemptFromArtifacts,
   collectFinalDevAncestry,
+  combinedAffectedNativeEvidenceBinding,
   deliveryEvidenceForSample,
   deliveryTimelineEvent,
   missingDeliveryAttempt,
   queueAdmissionRequiredContexts,
   readZipMembers,
+  resolveAffectedNativeArtifacts,
+  resolvedAffectedNativeEvidenceBinding,
   roundAttempt,
   summarizeDeliveryEvidence,
   validateDevRequiredLatencyBaseline,
@@ -1036,10 +1038,6 @@ async function collectAffectedNativeEvidence(
       `/repos/${repository}/actions/runs/${runId}/artifacts?per_page=100`,
       token,
     );
-    const artifactPrefix = `core-affected-native-${expectedSourceSha}`;
-    const partitionPattern = new RegExp(
-      `^${artifactPrefix}-partition-(\\d+)-of-(\\d+)$`,
-    );
     const deliveryAttempt = await collectDeliveryAttemptFromArtifacts({
       artifacts: payload.artifacts,
       expectedSourceSha,
@@ -1050,18 +1048,18 @@ async function collectAffectedNativeEvidence(
       token,
       githubBytes,
     });
-    const artifacts = (payload.artifacts || [])
-      .filter(
-        ({ name, expired }) =>
-          !expired && (name === artifactPrefix || partitionPattern.test(name)),
-      )
-      .sort((left, right) => left.name.localeCompare(right.name));
-    if (!artifacts.length) {
-      throw new Error('affected-native artifact missing or expired');
-    }
+    const resolved = await resolveAffectedNativeArtifacts({
+      repository,
+      runId,
+      expectedSourceSha,
+      artifacts: payload.artifacts,
+      token,
+      githubJson,
+      githubBytes,
+    });
     const entries = [];
     const evidenceBindings = [];
-    for (const artifact of artifacts) {
+    for (const artifact of resolved.artifacts) {
       const archive = await githubBytes(
         `/repos/${repository}/actions/artifacts/${artifact.id}/zip`,
         token,
@@ -1077,39 +1075,35 @@ async function collectAffectedNativeEvidence(
       const cache = cacheEvidenceFromMembers(members, classification);
       const native = nativeEvidenceFromMembers(members, classification);
       evidenceBindings.push(
-        affectedNativeEvidenceBinding(
+        resolvedAffectedNativeEvidenceBinding({
+          resolved,
+          members,
           cache,
           native,
           classification,
           expectedSourceSha,
           pullSourceSha,
-        ),
+        }),
       );
       entries.push({ cache, native, artifact });
     }
     const combined = aggregatePartitionEvidence(entries, classification);
-    const artifactIds = artifacts.map(({ id }) => id);
-    const artifactNames = artifacts.map(({ name }) => name);
+    const artifactIds = resolved.artifacts.map(({ id }) => id);
+    const artifactNames = resolved.artifacts.map(({ name }) => name);
     return {
       cache: {
         ...combined.cache,
         artifactIds,
         artifactNames,
-        workflowRunId: runId,
+        workflowRunId: resolved.evidenceRunId,
       },
       native: {
         ...combined.native,
         artifactIds,
         artifactNames,
-        evidenceBinding: {
-          sourceRelation: evidenceBindings[0].sourceRelation,
-          planRelation: evidenceBindings.some(
-            ({ planRelation }) => planRelation === 'merge-group-coalesced',
-          )
-            ? 'merge-group-coalesced'
-            : 'exact',
-        },
-        workflowRunId: runId,
+        evidenceBinding:
+          combinedAffectedNativeEvidenceBinding(evidenceBindings),
+        workflowRunId: resolved.evidenceRunId,
       },
       deliveryAttempt,
     };
