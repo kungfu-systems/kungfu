@@ -90,6 +90,10 @@ function fixture(
     sourceEvidence = null,
     unsafeArchive = false,
     stdoutLineCount = 0,
+    completionStatus = 'passed',
+    omitSentinel = false,
+    exitCode = 0,
+    privateOutput = '',
   } = {},
 ) {
   const artifact = path.join(root, 'artifact', 'product', 'release');
@@ -143,18 +147,34 @@ function fixture(
   fs.mkdirSync(path.join(productRoot, 'runtime'), { recursive: true });
   fs.mkdirSync(path.join(productRoot, 'upgrade'), { recursive: true });
   const launcher = path.join(productRoot, 'kungfu');
-  const launcherBody =
+  const outputLines =
     stdoutLineCount > 0
       ? [
-          '#!/bin/sh',
           'index=1',
           `while [ "$index" -le ${stdoutLineCount} ]; do`,
-          '  printf "brief-line-%03d\\n" "$index"',
+          '  printf "brief-line-%03d\\r\\n" "$index"',
           '  index=$((index + 1))',
           'done',
-          '',
-        ].join('\n')
-      : '#!/bin/sh\nprintf "Kungfu agent brief fixture\\nFacts before trust.\\n"\n';
+        ]
+      : [
+          'printf "\\033[2J\\033[HKungfu Agent Work Lab fixture\\r\\n"',
+          'printf "Fresh process continues from governed Work.\\r\\n"',
+        ];
+  const sentinel = omitSentinel
+    ? []
+    : [
+        `printf 'KUNGFU_TUI_DEMO_COMPLETE {"schema":"kungfu.agent-work-lab.tui-autoplay/v1","status":"${completionStatus}","reportRoot":"sha256:${'a'.repeat(64)}","eventCount":4}\\r\\n'`,
+      ];
+  const launcherBody = [
+    '#!/bin/sh',
+    '[ "$1" = "agent-work-lab" ] && [ "$2" = "autoplay" ] || exit 7',
+    '[ -t 0 ] && [ -t 1 ] || exit 8',
+    ...outputLines,
+    ...(privateOutput ? [`printf '%s\\r\\n' '${privateOutput}'`] : []),
+    ...sentinel,
+    `exit ${exitCode}`,
+    '',
+  ].join('\n');
   fs.writeFileSync(launcher, launcherBody);
   fs.chmodSync(launcher, 0o755);
   json(path.join(productRoot, 'product.json'), {
@@ -221,7 +241,7 @@ function run(root, options = {}) {
   return { result, output };
 }
 
-test('adapter executes only the exact installed archive and emits three declared files', () => {
+test('adapter executes only the exact installed archive in a PTY and emits the declared capture', () => {
   const root = fs.mkdtempSync(
     path.join(os.tmpdir(), 'auditable-demo-adapter-'),
   );
@@ -232,12 +252,13 @@ test('adapter executes only the exact installed archive and emits three declared
       'complete-transcript.txt',
       'public-projection.json',
       'scene.json',
+      'terminal-capture.json',
     ]);
     const transcript = fs.readFileSync(
       path.join(output, 'complete-transcript.txt'),
       'utf8',
     );
-    assert.match(transcript, /Kungfu agent brief fixture/);
+    assert.match(transcript, /Kungfu Agent Work Lab fixture/);
     assert.match(transcript, /exit\.status=0/);
     assert.doesNotMatch(transcript, new RegExp(root));
     const projection = JSON.parse(
@@ -245,9 +266,35 @@ test('adapter executes only the exact installed archive and emits three declared
     );
     assert.equal(
       projection.evidenceClass,
-      'exact-installed-artifact-agent-brief/v1',
+      'exact-installed-artifact-agent-work-lab-autoplay/v1',
     );
-    assert.match(projection.claimBoundary, /does not prove continuity/);
+    assert.match(
+      projection.claimBoundary,
+      /Terminal bytes are observation only/,
+    );
+    const capture = JSON.parse(
+      fs.readFileSync(path.join(output, 'terminal-capture.json'), 'utf8'),
+    );
+    assert.equal(capture.command, 'kungfu agent-work-lab autoplay');
+    assert.deepEqual(capture.dimensions, { columns: 120, rows: 36 });
+    assert.equal(capture.completion.status, 'passed');
+    assert.deepEqual(capture.authority.grants, []);
+    assert.deepEqual(capture.authority.nonAuthorities, [
+      'first-party-identity',
+      'system-identity',
+      'kfd-compliance',
+      'product-system-metadata',
+      'package-metadata',
+      'registry-history',
+      'scan-output',
+      'standalone-generation',
+    ]);
+    assert.equal(capture.events[0].atMs, 0);
+    assert.ok(
+      capture.events.every((event) =>
+        /^[A-Za-z0-9+/]+={0,2}$/u.test(event.data),
+      ),
+    );
   } finally {
     fs.rmSync(root, { recursive: true, force: true });
   }
@@ -350,6 +397,38 @@ test('adapter rejects symlink members before extraction', () => {
   }
 });
 
+test('adapter fails closed on missing, failed, or nonzero autoplay completion', () => {
+  for (const [options, expected] of [
+    [{ omitSentinel: true }, /must emit exactly one/u],
+    [{ completionStatus: 'failed' }, /completion sentinel did not pass/u],
+    [{ exitCode: 9 }, /failed with exit status 9/u],
+  ]) {
+    const root = fs.mkdtempSync(
+      path.join(os.tmpdir(), 'auditable-demo-adapter-'),
+    );
+    try {
+      const { result } = run(root, options);
+      assert.notEqual(result.status, 0);
+      assert.match(result.stderr, expected);
+    } finally {
+      fs.rmSync(root, { recursive: true, force: true });
+    }
+  }
+});
+
+test('adapter rejects credential-shaped terminal output before publication', () => {
+  const root = fs.mkdtempSync(
+    path.join(os.tmpdir(), 'auditable-demo-adapter-'),
+  );
+  try {
+    const { result } = run(root, { privateOutput: 'token=not-a-real-token' });
+    assert.notEqual(result.status, 0);
+    assert.match(result.stderr, /credential-shaped value/u);
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
 test('adapter bounds each visual cue while retaining a complete long transcript', () => {
   const root = fs.mkdtempSync(
     path.join(os.tmpdir(), 'auditable-demo-adapter-'),
@@ -368,8 +447,8 @@ test('adapter bounds each visual cue while retaining a complete long transcript'
     );
     assert.equal(projection.cues[1].transcriptLines.length, 80);
     assert.equal(projection.cues[2].transcriptLines.length, 80);
-    assert.equal(projection.cues[1].transcriptLines[0], 13);
-    assert.equal(projection.cues[2].transcriptLines.at(-1), 193);
+    assert.equal(projection.cues[1].transcriptLines[0], 20);
+    assert.equal(projection.cues[2].transcriptLines.at(-1), 202);
   } finally {
     fs.rmSync(root, { recursive: true, force: true });
   }
