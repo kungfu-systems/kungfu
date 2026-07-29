@@ -388,6 +388,7 @@ export function sourceAcceptancePlan(files, evidenceBaseCommit = '') {
         'scripts/check-kungfu-gate-catalog.test.mjs',
         'scripts/linux-arm64-alpha-qualification-workflow.test.mjs',
         'scripts/affected-native-proof.test.mjs',
+        'scripts/qualified-assignment-core-artifact.test.mjs',
         'scripts/verify-kungfu-release-admission.test.mjs',
         'scripts/release-publication-control-plane.test.mjs',
         'crates/xinfa/tooling/check-boundary.test.mjs',

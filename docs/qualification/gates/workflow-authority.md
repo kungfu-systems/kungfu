@@ -40,7 +40,7 @@ without changing and refreshing the manifest fails the Gate catalog check.
 | Workflow | Job | Authority | Publication | Receipt | Credentials | Environment | Steps |
 | --- | --- | --- | --- | --- | --- | --- | ---: |
 | `.github/workflows/adr-release-gate.yml` | `adr-release` | qualification | none | diagnostic | token:read | none | 2 |
-| `.github/workflows/affected-native-cache-promote.yml` | `promote` | qualification | none | diagnostic | token:write | none | 17 |
+| `.github/workflows/affected-native-cache-promote.yml` | `promote` | qualification | none | diagnostic | token:write | none | 22 |
 | `.github/workflows/affected-native-pr.yml` | `affected_native_shards` | qualification | none | diagnostic | token:read | none | 23 |
 | `.github/workflows/affected-native-pr.yml` | `affected-native` | qualification | none | diagnostic | token:read | none | 13 |
 | `.github/workflows/affected-native-pr.yml` | `cancel_after_source_failure` | qualification | none | diagnostic | token:write | none | 1 |
@@ -49,6 +49,7 @@ without changing and refreshing the manifest fails the Gate catalog check.
 | `.github/workflows/affected-native-pr.yml` | `dco` | qualification | none | diagnostic | token:read | none | 2 |
 | `.github/workflows/affected-native-pr.yml` | `kfd_verifier` | qualification | none | diagnostic | token:read | none | 4 |
 | `.github/workflows/affected-native-pr.yml` | `proof_probe` | qualification | none | diagnostic | token:read | none | 10 |
+| `.github/workflows/affected-native-pr.yml` | `qualified_core_candidate` | qualification | none | diagnostic | token:read | none | 5 |
 | `.github/workflows/affected-native-pr.yml` | `shifu_workspace` | qualification | none | diagnostic | token:read | none | 3 |
 | `.github/workflows/affected-native-pr.yml` | `source_acceptance` | qualification | none | diagnostic | token:read | none | 0 |
 | `.github/workflows/alpha-promotion-preflight.yml` | `aggregate` | qualification | none | diagnostic | token:read | none | 4 |

@@ -1528,6 +1528,16 @@ def atlas_assignment_projection(
     initiative_admission: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
     work = dict(captured["request"]["workDefinition"])
+    request_source = captured["request"].get("source") or {}
+    hierarchy = work.get("hierarchy") or {}
+    family_initiative_child = bool(
+        isinstance(request_source, dict)
+        and request_source.get("kind") == "kungfu-assignment-family-child"
+        and isinstance(hierarchy, dict)
+        and hierarchy.get("role") == "initiative-child"
+        and str(hierarchy.get("parent_assignment_id") or "")
+        == str(work.get("initiative_id") or "")
+    )
     resource = work.get("resource_plan")
     resource = resource if isinstance(resource, dict) else {}
     dependencies = resource.get("depends_on") or work.get("depends_on") or []
@@ -1582,7 +1592,6 @@ def atlas_assignment_projection(
             raise ValueError(
                 "Initiative source identity does not match requested identity"
             )
-    request_source = captured["request"].get("source") or {}
     atlas_request = (
         isinstance(request_source, dict)
         and request_source.get("kind") == "atlas-go-card"
@@ -1615,7 +1624,12 @@ def atlas_assignment_projection(
         "assignment_id": assignment,
         "title": str(work.get("title") or assignment),
         "objective": str(work.get("objective") or work.get("summary") or assignment),
-        "parent_assignment_id": str(work.get("parent_goal") or ""),
+        # Family child cards retain the inert Initiative parent in their
+        # lossless work definition. It is not a workspace-local Assignment
+        # shorthand; only an exact parent_assignment_ref may add that edge.
+        "parent_assignment_id": (
+            "" if family_initiative_child else str(work.get("parent_goal") or "")
+        ),
         "depends_on": [str(row) for row in dependencies],
         "initiative_ref": initiative_ref,
         "parent_assignment_ref": parent_assignment_ref,

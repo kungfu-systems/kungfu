@@ -1241,6 +1241,35 @@ def test_atlas_mission_parent_goal_can_accompany_an_exact_parent_work_ref():
     assert projected["parent_assignment_ref"] == parent_ref
 
 
+def test_family_initiative_child_parent_stays_advisory_at_assignment_admission():
+    work_definition = {
+        "goal_id": "family-child",
+        "initiative_id": "family-initiative",
+        "parent_goal": "family-initiative",
+        "depends_on": ["prior-child"],
+        "hierarchy": {
+            "role": "initiative-child",
+            "parent_assignment_id": "family-initiative",
+        },
+        "objective": "Admit the child without inventing a local parent Assignment",
+    }
+    captured = {
+        "request": {
+            "source": {"kind": "kungfu-assignment-family-child"},
+            "workDefinition": work_definition,
+        },
+        "request_root": "sha256:" + "a" * 64,
+        "capture_receipt_roots": ["sha256:" + "b" * 64],
+    }
+
+    projected = assignment_orchestration.atlas_assignment_projection(captured)
+
+    assert projected["parent_assignment_id"] == ""
+    assert projected["parent_assignment_ref"] == {}
+    assert projected["depends_on"] == ["prior-child"]
+    assert projected["work_definition"] == work_definition
+
+
 def test_captured_request_admits_losslessly_and_drives_bounded_execution(tmp_path):
     request = {
         "schema": "kungfu.assignment-request/v1",

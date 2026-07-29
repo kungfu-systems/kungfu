@@ -40,9 +40,9 @@
           "authority": "qualification",
           "publication": "none",
           "receipt": "diagnostic",
-          "definitionDigest": "sha256:0b1d0393206b95172bb59f4949caf303c12069688ef49b036264dfb8df15a4f6",
+          "definitionDigest": "sha256:eed825492970d4265e4ae99407416107f04de67f1c6601979655fdfed0189f5a",
           "credentials": {"githubToken":"write","oidc":false,"repositorySecrets":[],"inheritedSecrets":false,"environment":null},
-          "externalActions": ["actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0","actions/setup-node@v6.4.0","actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093","actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093","actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093","actions/cache/save@0057852bfaa89a56745cba8c7296529d2fc39830","actions/cache/save@0057852bfaa89a56745cba8c7296529d2fc39830"],
+          "externalActions": ["actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0","actions/setup-node@v6.4.0","actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093","actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093","actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093","actions/cache/save@0057852bfaa89a56745cba8c7296529d2fc39830","actions/cache/save@0057852bfaa89a56745cba8c7296529d2fc39830","actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02"],
           "steps": [
             {
               "index": 1,
@@ -134,6 +134,36 @@
               "index": 17,
               "label": "name:Summarize promotion",
               "definitionDigest": "sha256:1841810f876ea99443ccab4d6aa22001bf95a9ef9fb194d9f56e311582718a67"
+            },
+            {
+              "index": 18,
+              "label": "id:producer",
+              "authority": "evidence-publication",
+              "definitionDigest": "sha256:ac986b8ba59e20c0df5f233f08c5537a18785771dd424d16bd12f71a7653014a"
+            },
+            {
+              "index": 19,
+              "label": "name:Install pinned Qualified Core verifier",
+              "authority": "evidence-publication",
+              "definitionDigest": "sha256:e303c8adeac926446a8ec8dd607591495f8d7f6c914cb3dbac80af8a4f576b78"
+            },
+            {
+              "index": 20,
+              "label": "id:promotion",
+              "authority": "evidence-publication",
+              "definitionDigest": "sha256:8774110d758c9b6efdf1e6a5060395925c8ef3c43b1974e865c570c9aa58a359"
+            },
+            {
+              "index": 21,
+              "label": "name:Upload qualified artifact transport",
+              "authority": "evidence-publication",
+              "definitionDigest": "sha256:ed0dc245598dfc13c366dd0f273ab0fd869c4e0d13a3b2bcb4c7fdcd6b1bea27"
+            },
+            {
+              "index": 22,
+              "label": "name:Summarize Qualified Core promotion",
+              "authority": "evidence-publication",
+              "definitionDigest": "sha256:ef7f5f7bc3f56945b7383d77ae2324bf4bc3103b122137bf6b31f27fde9090e0"
             }
           ]
         }
@@ -557,6 +587,45 @@
               "index": 10,
               "label": "id:decision",
               "definitionDigest": "sha256:2a011137ae2b9242a86196d0b22fbc3cc6e70536f2a199a99fd4807f0c0c7625"
+            }
+          ]
+        },
+        {
+          "id": "qualified_core_candidate",
+          "authority": "qualification",
+          "publication": "none",
+          "receipt": "diagnostic",
+          "definitionDigest": "sha256:7d0a48b72551589d234dd50002a8d9414b6c9a3dd8b5b2e3aed4472ce407d8a2",
+          "credentials": {"githubToken":"read","oidc":false,"repositorySecrets":[],"inheritedSecrets":false,"environment":null},
+          "externalActions": ["actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0","actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e","actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093","actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02"],
+          "steps": [
+            {
+              "index": 1,
+              "label": "name:Check out exact merge-group source",
+              "definitionDigest": "sha256:c42c4ea90d9c83ea751980100ccdf2cbc59194027887c0ed13c218e13e13685e"
+            },
+            {
+              "index": 2,
+              "label": "uses:actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e",
+              "definitionDigest": "sha256:a869cc671103a9106dc90b4275a4148de9a5d18cd3578a2642d8ae8076d8dbf0"
+            },
+            {
+              "index": 3,
+              "label": "name:Download exact native-impact plan",
+              "authority": "evidence-publication",
+              "definitionDigest": "sha256:e8f21ff7b55633a854378c10cb3ba49d73ef6034c4fcf21ed0b2952a17375bcf"
+            },
+            {
+              "index": 4,
+              "label": "id:candidate",
+              "authority": "evidence-publication",
+              "definitionDigest": "sha256:8702b6ef68f058c69e850e8c5f691b46dc470a3ac767cafc51ae2efe0c8ec65d"
+            },
+            {
+              "index": 5,
+              "label": "name:Upload non-authoritative candidate transport",
+              "authority": "evidence-publication",
+              "definitionDigest": "sha256:d6b2a4eb7dc0a3769b88ad6e66f1406fd1926c026845b5f450891d4c8ca3664b"
             }
           ]
         },
