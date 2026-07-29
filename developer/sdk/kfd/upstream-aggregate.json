@@ -174,13 +174,18 @@
       "queryCommand": "kungfu sdk kfd query --json"
     },
     "kfd4": {
-      "status": "schema-only",
-      "mode": "schema-only",
-      "source": "@kungfu-tech/kfd/standards.json",
+      "status": "candidate",
+      "mode": "perspective-product-qualification",
+      "source": "docs/qualification/evidence/kfd-4-perspective/d73cab0d69/report.json",
       "schemaCount": 3,
       "schemaCommand": "kungfu sdk kfd 4 schema --json",
+      "qualificationCommand": "node framework/core/tests/qualification/kfd4-perspective.mjs",
+      "qualificationRoot": "sha256:c3d363844e58b55ab8eb677dfd3d579364580c701dbe385957b38fc6b06efdf2",
+      "releaseQualification": "not-qualified",
+      "shippedSupport": false,
       "residualRisk": [
-        "Buildchain exposes KFD-4 as schema-only; no release verification protocol is claimed."
+        "Kungfu retains one bounded first-party KFD-4 qualification; independent adopter evidence and an explicit release decision are still required.",
+        "A passed Buildchain gate does not independently qualify, activate, or ship KFD-4 support."
       ]
     }
   },
