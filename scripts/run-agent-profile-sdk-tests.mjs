@@ -48,7 +48,7 @@ const result = spawnSync(
       'core',
       'tests',
       'python',
-      'test_mission_control_profile.py',
+      'test_work_control_profile.py',
     ),
     '-q',
   ],
