@@ -1,0 +1,49 @@
+{
+  "schema": "kungfu.work-design.advisor-contract/v1",
+  "version": 1,
+  "status": "pre-release",
+  "requestSchema": "kungfu.work-design.advice-request/v1",
+  "adviceSchema": "kungfu.work-design.advice/v1",
+  "verificationSchema": "kungfu.work-design.advice-verification/v1",
+  "dispositionSchema": "kungfu.work-design.disposition/v1",
+  "rootAlgorithm": "sha256-project-cut-canonical-json-v1",
+  "authority": {
+    "mode": "advisory-only",
+    "fact": false,
+    "episode": false,
+    "assignment": false,
+    "workControl": false,
+    "capture": false,
+    "claim": false,
+    "dispatch": false,
+    "execute": false,
+    "approve": false,
+    "merge": false,
+    "close": false
+  },
+  "verificationChecks": [
+    "schema-valid",
+    "exact-input-binding",
+    "bounded",
+    "dependency-closure",
+    "acceptance-coverage",
+    "evidence-coverage",
+    "authority-safe"
+  ],
+  "dispositions": ["accepted", "adapted", "overridden", "insufficient-history"],
+  "historyPolicy": {
+    "advisoryImplementationMinimumSamples": 0,
+    "defaultPolicyPromotion": "out-of-scope",
+    "insufficientHistory": "emit-no-slices-and-require-human-disposition"
+  },
+  "schemaBundle": {
+    "files": [
+      "schema/work-design-advice-request-v1.schema.json",
+      "schema/work-design-advice-v1.schema.json",
+      "schema/work-design-advice-verification-v1.schema.json",
+      "schema/work-design-disposition-v1.schema.json"
+    ],
+    "schemaRoot": "sha256:4436fc655d603e15556e326a9a09cbeea09697551832426734f8af2ba19de82c"
+  },
+  "contractRoot": "sha256:858012907f5cc329820d57c4bb8d0bd724db863a8c81078da2ee0a51d945f149"
+}
