@@ -150,6 +150,7 @@ def _archive(
     platform: str | None = None,
     architecture: str | None = None,
     product_version: str = "4.0.0-alpha.1",
+    runtime_symlink: bool = False,
 ) -> tuple[Path, dict]:
     current_platform, current_architecture = distribution_update._normalize_platform()
     platform = platform or current_platform
@@ -158,6 +159,8 @@ def _archive(
     runtime_root = source / "kungfu"
     runtime_root.mkdir(parents=True)
     (runtime_root / "kungfu").write_text("#!/bin/sh\necho fixture\n", "utf-8")
+    if runtime_symlink:
+        (runtime_root / "kungfu-alias").symlink_to("kungfu")
     internal = _manifest(
         runtime_root,
         platform=platform,
@@ -1072,6 +1075,68 @@ def test_apply_installs_runtime_and_selects_versioned_cli_on_next_command(
     assert applied["frontendSelection"]["previousFrontendBuildId"] is None
 
 
+def test_apply_preserves_and_verifies_runtime_symlinks_in_selected_cli_image(
+    tmp_path: Path,
+) -> None:
+    archive, manifest = _archive(tmp_path, runtime_symlink=True)
+    applied = distribution_update.apply_archive(
+        manifest,
+        archive,
+        current_version="4.0.0-alpha.0",
+        config_home=tmp_path / "config",
+        expected_digest=manifest["artifacts"][1]["digest"],
+        execute=True,
+    )
+
+    frontend_runtime = Path(applied["frontendImage"]["productRoot"]) / "kungfu"
+    alias = frontend_runtime / "kungfu-alias"
+    assert alias.is_symlink()
+    assert alias.readlink() == Path("kungfu")
+    assert (
+        runtime_upgrade.tree_digest(frontend_runtime)
+        == manifest["runtimeArtifactDigest"]
+    )
+    selected = distribution_update.selected_cli_command(
+        {
+            "KUNGFU_INSTALL_SOURCE": "archive",
+            "KF_CONFIG_HOME": str(tmp_path / "config"),
+        },
+        current_executable=tmp_path / "original" / "kungfu",
+    )
+    assert selected is not None
+    assert Path(selected[0][0]) == frontend_runtime / "kungfu"
+
+
+def test_apply_rejects_staged_cli_runtime_digest_drift(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    archive, manifest = _archive(tmp_path)
+    copytree = distribution_update.shutil.copytree
+
+    def copytree_with_drift(source, target, *args, **kwargs):
+        copied = copytree(source, target, *args, **kwargs)
+        if (Path(source) / "product.json").is_file():
+            (Path(target) / "kungfu" / "kungfu").write_text("tampered\n", "utf-8")
+        return copied
+
+    monkeypatch.setattr(distribution_update.shutil, "copytree", copytree_with_drift)
+    with pytest.raises(distribution_update.DistributionUpdateError) as error:
+        distribution_update.apply_archive(
+            manifest,
+            archive,
+            current_version="4.0.0-alpha.0",
+            config_home=tmp_path / "config",
+            expected_digest=manifest["artifacts"][1]["digest"],
+            execute=True,
+        )
+
+    assert error.value.code == "runtime-artifact-invalid"
+    assert not (
+        tmp_path / "config" / "product" / "cli" / "images" / manifest["frontendBuildId"]
+    ).exists()
+
+
 def test_cli_inventory_retains_stale_partial_and_reports_rollback_coordinates(
     tmp_path: Path,
 ) -> None:
@@ -1278,7 +1343,17 @@ def test_tar_archive_accepts_internal_relative_symlink(tmp_path: Path) -> None:
     assert installed_link.read_bytes() == payload
 
 
-@pytest.mark.parametrize("link_name", ["/tmp/escape", "../../../../escape"])
+@pytest.mark.parametrize(
+    "link_name",
+    [
+        "/tmp/escape",
+        "../../../../escape",
+        "C:/escape",
+        "C:escape",
+        r"C:\escape",
+        "//server/share",
+    ],
+)
 def test_tar_archive_rejects_escaping_symlink(
     tmp_path: Path,
     link_name: str,

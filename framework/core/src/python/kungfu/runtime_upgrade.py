@@ -94,7 +94,7 @@ def tree_digest(root: str | Path) -> str:
             "artifact-missing", f"runtime image is not a directory: {resolved}"
         )
     rows: list[str] = []
-    for path in sorted(resolved.rglob("*"), key=lambda item: item.as_posix()):
+    for path in resolved.rglob("*"):
         if path.is_symlink():
             target = os.readlink(path)
             try:
@@ -116,6 +116,7 @@ def tree_digest(root: str | Path) -> str:
             continue
         digest = hashlib.sha256(path.read_bytes()).hexdigest()
         rows.append(f"{path.relative_to(resolved).as_posix()}\0{digest}")
+    rows.sort(key=lambda row: row.encode("utf-8"))
     return (
         f"sha256:{hashlib.sha256((chr(10).join(rows) + chr(10)).encode()).hexdigest()}"
     )

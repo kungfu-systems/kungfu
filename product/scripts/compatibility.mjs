@@ -49,6 +49,9 @@ export function sha256Tree(root) {
     }
   };
   visit(root);
+  rows.sort((left, right) =>
+    Buffer.compare(Buffer.from(left, 'utf8'), Buffer.from(right, 'utf8')),
+  );
   return sha256Buffer(`${rows.join('\n')}\n`);
 }
 

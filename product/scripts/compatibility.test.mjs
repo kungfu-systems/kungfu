@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import assert from 'node:assert/strict';
+import { spawnSync } from 'node:child_process';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
@@ -66,6 +67,45 @@ test('compatibility tree hash is path-stable and content-sensitive', () => {
     assert.equal(first, second);
     fs.writeFileSync(path.join(root, 'a.txt'), 'changed\n');
     assert.notEqual(sha256Tree(root), first);
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test('compatibility tree hash matches the Python runtime digest', (t) => {
+  if (process.platform === 'win32') {
+    t.skip('fixture requires a POSIX symlink');
+    return;
+  }
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'kungfu-tree-digest-'));
+  try {
+    fs.mkdirSync(path.join(root, 'nested'));
+    fs.writeFileSync(path.join(root, 'nested', 'z.txt'), 'z\n');
+    fs.writeFileSync(path.join(root, 'A.txt'), 'upper\n');
+    fs.writeFileSync(path.join(root, 'ä.txt'), 'unicode\n');
+    fs.symlinkSync('../A.txt', path.join(root, 'nested', 'alias'));
+    const python = spawnSync(
+      process.env.PYTHON || 'python3',
+      [
+        '-c',
+        [
+          'import sys',
+          'from kungfu import runtime_upgrade',
+          'print(runtime_upgrade.tree_digest(sys.argv[1]))',
+        ].join(';'),
+        root,
+      ],
+      {
+        cwd: repoRoot,
+        encoding: 'utf8',
+        env: {
+          ...process.env,
+          PYTHONPATH: path.join(repoRoot, 'framework/core/src/python'),
+        },
+      },
+    );
+    assert.equal(python.status, 0, python.stderr);
+    assert.equal(python.stdout.trim(), `sha256:${sha256Tree(root)}`);
   } finally {
     fs.rmSync(root, { recursive: true, force: true });
   }

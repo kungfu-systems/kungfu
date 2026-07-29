@@ -1839,7 +1839,11 @@ def _assert_tar_member(member: tarfile.TarInfo) -> None:
         link_name = member.linkname.replace("\\", "/")
         target = PurePosixPath(member.name).parent / PurePosixPath(link_name)
         depth = 0
-        safe_symlink = bool(link_name) and not link_name.startswith("/")
+        safe_symlink = (
+            bool(link_name)
+            and not link_name.startswith("/")
+            and re.match(r"^[A-Za-z]:", link_name) is None
+        )
         for part in target.parts:
             if part in ("", "."):
                 continue
@@ -2092,7 +2096,7 @@ def _install_cli_image(
             f".{frontend_build_id}.{os.getpid()}.{time.time_ns()}.partial"
         )
         try:
-            shutil.copytree(product_root, staging)
+            shutil.copytree(product_root, staging, symlinks=True)
             executable = (staging / executable_relative).resolve()
             bundled_manifest = (staging / manifest_relative).resolve()
             if (
@@ -2104,6 +2108,16 @@ def _install_cli_image(
                 raise DistributionUpdateError(
                     "product-layout-invalid",
                     "CLI executable or bundled upgrade manifest escapes the product image",
+                )
+            runtime_root = (staging / executable_relative).parent
+            try:
+                observed_runtime_digest = runtime_upgrade.tree_digest(runtime_root)
+            except runtime_upgrade.UpgradeError as error:
+                raise DistributionUpdateError(error.code, str(error)) from error
+            if observed_runtime_digest != manifest["runtimeArtifactDigest"]:
+                raise DistributionUpdateError(
+                    "runtime-artifact-invalid",
+                    "staged CLI runtime digest does not match the release manifest",
                 )
             _write_object(bundled_manifest, manifest)
             record = {
