@@ -6,9 +6,15 @@ on:
   push:
     branches:
       - dev/v*/v*
+  workflow_dispatch:
+    inputs:
+      target_sha:
+        description: Exact merged dev commit whose immutable cache evidence should be recovered
+        required: true
+        type: string
 
 concurrency:
-  group: affected-native-cache-promote-${{ github.sha }}
+  group: affected-native-cache-promote-${{ github.event.inputs.target_sha || github.sha }}
   cancel-in-progress: false
 
 permissions:
@@ -28,10 +34,43 @@ jobs:
       - uses: actions/setup-node@v6.4.0
         with:
           node-version: "24"
+      - name: Resolve exact cache promotion target
+        id: target
+        env:
+          REQUESTED_TARGET_SHA: ${{ github.event.inputs.target_sha || github.sha }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ ! "$REQUESTED_TARGET_SHA" =~ ^[0-9a-f]{40}$ ]]; then
+            echo "Cache promotion target must be one exact lowercase commit SHA." >&2
+            exit 1
+          fi
+          target_sha="$(git rev-parse "${REQUESTED_TARGET_SHA}^{commit}")"
+          if [ "$GITHUB_EVENT_NAME" = "workflow_dispatch" ]; then
+            case "$GITHUB_REF_NAME" in
+              dev/v*/v*) ;;
+              *)
+                echo "Cache recovery must run from a protected dev channel ref." >&2
+                exit 1
+                ;;
+            esac
+            git merge-base --is-ancestor "$target_sha" HEAD || {
+              echo "Recovery target is not an ancestor of the selected dev head." >&2
+              exit 1
+            }
+          elif [ "$target_sha" != "$(git rev-parse HEAD)" ]; then
+            echo "Push-triggered promotion target drifted from the checked-out dev head." >&2
+            exit 1
+          fi
+          {
+            echo "sha=${target_sha}"
+            echo "tree=$(git rev-parse "${target_sha}^{tree}")"
+          } >> "$GITHUB_OUTPUT"
       - name: Locate an exact successful merge-group producer
         id: producer
         env:
           GH_TOKEN: ${{ github.token }}
+          TARGET_SHA: ${{ steps.target.outputs.sha }}
         shell: bash
         run: |
           set -euo pipefail
@@ -44,7 +83,7 @@ jobs:
               gh api --method GET \
                 "repos/${GITHUB_REPOSITORY}/actions/workflows/affected-native-pr.yml/runs" \
                 -f event=merge_group \
-                -f head_sha="$GITHUB_SHA" \
+                -f head_sha="$TARGET_SHA" \
                 -f per_page=20 \
                 --jq '.workflow_runs | sort_by(.created_at) | reverse | .[].id'
             )"
@@ -63,7 +102,7 @@ jobs:
               direct_state="$(
                 gh api \
                   "repos/${GITHUB_REPOSITORY}/actions/runs/${run_id}/artifacts?per_page=100" \
-                  --jq "[.artifacts[] | select(.expired == false and (.name | startswith(\"core-affected-native-${GITHUB_SHA}-partition-\"))) | (.name | capture(\"-partition-(?<index>[0-9]+)-of-(?<count>[0-9]+)$\"))] | if length == 0 then \"absent\" elif ((map(.count) | unique | length) == 1 and (.[0].count | tonumber) == length and (map(.index | tonumber) | sort) == [range(0; (.[0].count | tonumber))]) then \"complete\" else \"partial\" end"
+                  --jq "[.artifacts[] | select(.expired == false and (.name | startswith(\"core-affected-native-${TARGET_SHA}-partition-\"))) | (.name | capture(\"-partition-(?<index>[0-9]+)-of-(?<count>[0-9]+)$\"))] | if length == 0 then \"absent\" elif ((map(.count) | unique | length) == 1 and (.[0].count | tonumber) == length and (map(.index | tonumber) | sort) == [range(0; (.[0].count | tonumber))]) then \"complete\" else \"partial\" end"
               )"
               authority_count="$(
                 gh api \
@@ -123,7 +162,7 @@ jobs:
               echo "run-id="
               echo "mode="
             } >> "$GITHUB_OUTPUT"
-            echo "No unambiguous cache promotion authority exists for merged source $GITHUB_SHA."
+            echo "No unambiguous cache promotion authority exists for merged source $TARGET_SHA."
             exit 0
           fi
           {
@@ -148,7 +187,7 @@ jobs:
           repository: ${{ github.repository }}
           run-id: ${{ steps.producer.outputs.run-id }}
           github-token: ${{ github.token }}
-          name: core-affected-native-delivery-attempt-${{ github.sha }}
+          name: core-affected-native-delivery-attempt-${{ steps.target.outputs.sha }}
           path: product/qualification/cache-promotion/delivery-attempt
       - name: Verify reused-proof promotion authority
         if: ${{ steps.producer.outputs.mode == 'reused-proof' }}
@@ -161,8 +200,8 @@ jobs:
             --bundle product/qualification/cache-promotion/authority \
             --repository "$GITHUB_REPOSITORY" \
             --target-run-id "${{ steps.producer.outputs.run-id }}" \
-            --target-head-sha "$GITHUB_SHA" \
-            --target-source-tree "$(git rev-parse 'HEAD^{tree}')" \
+            --target-head-sha "${{ steps.target.outputs.sha }}" \
+            --target-source-tree "${{ steps.target.outputs.tree }}" \
             --github-output "$GITHUB_OUTPUT"
       - name: Verify exact family delivery attempt
         if: ${{ steps.producer.outputs.available == 'true' }}
@@ -177,8 +216,8 @@ jobs:
             --bundle product/qualification/cache-promotion/delivery-attempt \
             --repository "$GITHUB_REPOSITORY" \
             --run-id "${{ steps.producer.outputs.run-id }}" \
-            --head-sha "$GITHUB_SHA" \
-            --source-tree "$(git rev-parse 'HEAD^{tree}')" \
+            --head-sha "${{ steps.target.outputs.sha }}" \
+            --source-tree "${{ steps.target.outputs.tree }}" \
             --github-output "$GITHUB_OUTPUT"
           attempt_binding="$(
             jq -r '.deliveryBindingRoot' \
@@ -203,13 +242,14 @@ jobs:
           AUTHORIZED_PAYLOAD_SOURCE: ${{ steps.authority.outputs.payload-source-sha }}
           DELIVERY_ATTEMPT_ROOT: ${{ steps.delivery.outputs.attempt-root }}
           DELIVERY_BINDING_ROOT: ${{ steps.delivery.outputs.delivery-binding-root }}
+          TARGET_SHA: ${{ steps.target.outputs.sha }}
         run: |
           set -euo pipefail
           if [ "$MODE" = "direct" ]; then
             producer_run_id="$MERGE_GROUP_RUN_ID"
             producer_event=merge_group
-            producer_trigger_head="$GITHUB_SHA"
-            payload_source_sha="$GITHUB_SHA"
+            producer_trigger_head="$TARGET_SHA"
+            payload_source_sha="$TARGET_SHA"
             authority_digest=""
           else
             producer_run_id="$AUTHORIZED_RUN_ID"
@@ -281,7 +321,7 @@ jobs:
           # shifu-entry-contract: allow verifying post-merge cache transport evidence outside the candidate Gate
           node scripts/write-affected-native-cache-manifests.mjs promote \
             --artifacts-dir product/qualification/cache-promotion/artifacts \
-            --expected-target-head-sha "$GITHUB_SHA" \
+            --expected-target-head-sha "${{ steps.target.outputs.sha }}" \
             --expected-merge-group-run-id "${{ steps.producer.outputs.run-id }}" \
             --expected-payload-head-sha "${{ steps.payload-source.outputs.payload-source-sha }}" \
             --expected-producer-run-id "${{ steps.payload-source.outputs.producer-run-id }}" \
@@ -323,7 +363,7 @@ jobs:
           {
             echo "### Affected-native cache promotion"
             echo
-            echo "- merged source: \`$GITHUB_SHA\`"
+            echo "- merged source: \`${{ steps.target.outputs.sha }}\`"
             echo "- merge-group authority: \`${{ steps.producer.outputs.run-id }}\`"
             echo "- payload producer: \`${{ steps.payload-source.outputs.producer-run-id }}\` (\`${{ steps.payload-source.outputs.producer-event }}\`)"
             echo "- authority mode: \`${{ steps.producer.outputs.mode }}\`"

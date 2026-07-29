@@ -271,7 +271,18 @@ test('push promotion waits for the exact required Gate instead of whole-run comp
     '.github/workflows/affected-native-cache-promote.yml',
     'utf8',
   );
-  assert.match(workflow, /head_sha="\$GITHUB_SHA"/u);
+  assert.match(workflow, /workflow_dispatch:[\s\S]*?target_sha:/u);
+  assert.match(workflow, /dev\/v\*\/v\*\) ;;/u);
+  assert.match(workflow, /git merge-base --is-ancestor "\$target_sha" HEAD/u);
+  assert.match(workflow, /head_sha="\$TARGET_SHA"/u);
+  assert.match(
+    workflow,
+    /--target-head-sha "\$\{\{ steps\.target\.outputs\.sha \}\}"/u,
+  );
+  assert.match(
+    workflow,
+    /--target-source-tree "\$\{\{ steps\.target\.outputs\.tree \}\}"/u,
+  );
   assert.match(workflow, /actions\/runs\/\$\{run_id\}\/jobs/u);
   assert.match(workflow, /\.name == "affected-native \/ linux"/u);
   assert.match(workflow, /direct_state.*complete/su);
