@@ -243,27 +243,27 @@
         "documentSha256": "sha256:47e3c8f6633e84b798719f76ca4ed19ddf93eeb54b321b98db552e111a697a3e"
       },
       "implementation": {
-        "status": "partial",
+        "status": "implemented-candidate-profile",
         "surfaces": [
-          "framework/primitive/kungfu-primitive-catalog.contract.json",
-          "docs/architecture/primitive-management-plane.md"
+          "framework/core/src/python/kungfu/assignment_orchestration.py",
+          "docs/qualification/evidence/assignment-organization-rollout/7aae2c562a/report.json"
         ]
       },
       "verification": {
-        "status": "blocked-product-qualification",
+        "status": "passed",
         "evidenceRoots": [
           {
-            "path": "framework/primitive/kungfu-primitive-catalog.contract.json",
-            "sha256": "sha256:d1d49735909cf110a8a9ffde13afe06cd261507fd79d58e8272f3d6338ec9964"
+            "path": "docs/qualification/evidence/assignment-organization-rollout/7aae2c562a/report.json",
+            "sha256": "sha256:b852b810293452b277edd79033c71adbdea341aba082c0380bdc60e0e90d0ca4"
           },
           {
-            "path": "docs/architecture/primitive-management-plane.md",
-            "sha256": "sha256:487177ad3247adbfed6fd1ccdecf7c31a7a6c93387bfba98af41cf1256426bcb"
+            "path": "framework/core/tests/python/test_assignment_orchestration.py",
+            "sha256": "sha256:a6fda23e05c59e53a04b7a1a06c3e8c921a6a5c782509f510629e26a356604df"
           }
         ]
       },
       "buildchain": {
-        "gateStatus": "failed",
+        "gateStatus": "passed",
         "protocol": "kungfu-buildchain-kfd-product-gate/v1"
       },
       "exposure": {
@@ -278,11 +278,11 @@
       },
       "claimClass": "adoption-candidate",
       "knownLimitations": [
-        "The retained product gate fails because minimum-closure, deletion, fusion, and dogfood evidence are absent.",
-        "Existing primitive catalog controls are not equivalent to KFD-5 qualification."
+        "The evidence is bounded to Kungfu's first-party Assignment profile; it does not prove universal primitive need or independent adoption.",
+        "A passed Buildchain gate does not self-qualify, activate, or ship KFD-5 support."
       ],
       "owner": "kungfu-primitive",
-      "nextGate": "Complete and retain one product-specific primitive genesis, falsification, dogfood, and acceptance cut."
+      "nextGate": "Retain the exact-source gate and release passport, then obtain independent adopter evidence and an explicit release decision before changing shipped support."
     },
     {
       "id": "KFD-6",

@@ -10,7 +10,7 @@ Source implementation is not the same as released support. Verification, Buildch
 | KFD-2 | active r3 | source-supported | implemented | passed | passed | alpha-release-passport | yes | Publish and retain all KFD-2 claim evaluations in the Alpha release passport. |
 | KFD-3 | active r5 | source-supported | implemented | passed | passed | alpha-release-passport | yes | Publish the exact product-declared registry audit and artifact closure in the Alpha release passport. |
 | KFD-4 | active r10 | candidate | implemented-candidate-profile | passed | passed | not-qualified | no | Admit a product release decision before changing KFD-4 from candidate to shipped support. |
-| KFD-5 | active r7 | candidate | partial | blocked-product-qualification | failed | not-qualified | no | Complete and retain one product-specific primitive genesis, falsification, dogfood, and acceptance cut. |
+| KFD-5 | active r7 | candidate | implemented-candidate-profile | passed | passed | not-qualified | no | Retain the exact-source gate and release passport, then obtain independent adopter evidence and an explicit release decision before changing shipped support. |
 | KFD-6 | draft r10 | unsupported | not-implemented | none | not-applicable | not-qualified | no | Keep unsupported unless a separately admitted causal-experience discovery initiative is approved. |
 | KFD-7 | active r8 | source-supported | implemented | passed | passed | alpha-release-passport | yes | Publish and retain the exact KFD-7 product gate and support projection in the Alpha release passport. |
 | KFD-8 | draft r2 | draft-adopter-evidence | partial | non-conforming-evidence | not-applicable-draft | forbidden-while-draft | no | Keep evidence non-conforming until KFD-8 activation and an adopter qualification contract exist. |
@@ -25,7 +25,7 @@ Source implementation is not the same as released support. Verification, Buildch
 - KFD-1, KFD-2, KFD-3, and KFD-7 are the bounded shipped-support set for the current Alpha release declaration.
 - KFD-3 uses Buildchain's product-declared registry audit directly. It currently has 166 declared surfaces and 0 release-Gate-enforced surfaces. Declaration is discoverability; it is not enforcement.
 - KFD-4 passes one bounded observer/contrastive-replay product gate but remains a non-shipped adoption candidate.
-- KFD-5 remains a non-shipped adoption candidate and its retained product gate fails on missing qualification evidence.
+- KFD-5 passes the bounded Assignment adopter gate but remains a non-shipped candidate; Buildchain does not self-qualify or activate it.
 - KFD-6 is explicitly unsupported.
 - KFD-8 through KFD-13 expose only non-conforming draft adopter evidence. They are not shipped support.
 

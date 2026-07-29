@@ -364,7 +364,7 @@ test('workflows keep candidate and promotion outside untrusted PR authority', ()
   );
   assert.match(
     candidateJob,
-    /github\.event_name == 'merge_group'[\s\S]*native-required == 'true'[\s\S]*continue-on-error: true[\s\S]*runs-on: macos-15/u,
+    /github\.event_name == 'merge_group'[\s\S]*native-required == 'true'[\s\S]*needs\['affected-native'\]\.result == 'success'[\s\S]*continue-on-error: true[\s\S]*runs-on: macos-15/u,
   );
   assert.match(
     candidateJob,
@@ -384,5 +384,9 @@ test('workflows keep candidate and promotion outside untrusted PR authority', ()
   assert.match(
     promotionWorkflow,
     /No exact Qualified Core producer became available; source build remains authoritative/u,
+  );
+  assert.match(
+    promotionWorkflow,
+    /run_status[\s\S]*length <= 1 then \\"incomplete\\"[\s\S]*pending_run=true[\s\S]*Completed producer run[\s\S]*observed_run[\s\S]*pending_run/u,
   );
 });

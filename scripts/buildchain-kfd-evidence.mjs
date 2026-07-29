@@ -1371,124 +1371,59 @@ function kfd4GateInput({ workspace, sourceSha, checkedAt, standards }) {
 }
 
 function kfd5GateInput({ workspace, sourceSha, checkedAt, standards }) {
-  const discovery = {
-    schemaVersion: 3,
-    contract: 'kfd-5-primitive-discovery',
-    standard: 'kfd-5',
-    candidate: {
-      id: 'kungfu-primitive-management-plane',
-      title: 'Primitive management plane',
-      problemStatement:
-        'Kungfu has a primitive catalog, but has not retained one complete KFD-5 genesis and qualification cut.',
-      scope: 'Kungfu primitive catalog and promotion governance',
-    },
-    genesis: {
-      methods: ['direct-situated-judgment'],
-      observationPerspective: {
-        id: 'kungfu-primitive-maintainer',
-        bearer: 'Kungfu maintainer',
-        role: 'primitive catalog custodian',
-        proximity: 'source and release governance',
-        consequences: ['primitive admission or rejection'],
-        naturalObjects: ['primitive catalog', 'qualification gate'],
-      },
-      currentOntology: ['primitive catalog', 'release gate'],
-      observation:
-        'Existing controls do not retain one complete candidate genesis and qualification record.',
-      candidateObject: 'primitive discovery and promotion cut',
-      claimBoundary:
-        'This record identifies the missing qualification cut and does not accept the candidate.',
-      methodEvidence: [
-        {
-          kind: 'file',
-          coordinate:
-            'framework/primitive/kungfu-primitive-catalog.contract.json',
-          observer: 'Kungfu primitive maintainer',
-        },
-      ],
-    },
-    grounding: {
-      pressure: [
-        'Primitive changes require inspectable qualification history.',
-      ],
-      factSources: [
-        {
-          kind: 'file',
-          coordinate:
-            'framework/primitive/kungfu-primitive-catalog.contract.json',
-          observer: 'Kungfu primitive maintainer',
-        },
-      ],
-      evidenceBoundary:
-        'The catalog and architecture exist; a complete KFD-5 qualification cut does not.',
-      knownGaps: [
-        'minimum-closure evidence',
-        'deletion and fuse evidence',
-        'dogfood evidence',
-      ],
-    },
-    participants: [
-      {
-        id: 'kungfu-primitive-maintainer',
-        kind: 'human',
-        functions: ['perspective-declaration', 'evidence-custody', 'decision'],
-      },
-      {
-        id: 'buildchain',
-        kind: 'agent',
-        functions: ['verification'],
-      },
-    ],
-    alternatives: [
-      {
-        name: 'Retain catalog-only governance',
-        disposition: 'retained',
-        reason:
-          'It remains the current behavior until KFD-5 evidence is complete.',
-      },
-    ],
-    contractModel: {
-      identity: 'candidate primitive qualification cut',
-      boundary: 'Kungfu primitive catalog and product release',
-      authority: 'Kungfu primitive maintainers',
-      lifecycle: 'proposed -> qualified or rejected -> promoted',
-      operations: ['propose', 'qualify', 'reject', 'promote'],
-    },
-    tests: {
-      minimumClosure: {
-        result: 'not-run',
-        evidence: [],
-        notes: 'No retained KFD-5 minimum-closure result.',
-      },
-      deletion: {
-        result: 'not-run',
-        evidence: [],
-        notes: 'No retained deletion result.',
-      },
-      fuse: {
-        result: 'not-run',
-        evidence: [],
-        notes: 'No retained fusion result.',
-      },
-      falsifiers: [
-        'The candidate adds no distinct responsibility beyond the current catalog.',
-      ],
-      dogfood: {
-        result: 'not-run',
-        evidence: [],
-        notes: 'No retained product dogfood result.',
-      },
-    },
-    decision: {
-      outcome: 'provisional',
-      owner: 'kungfu-primitive',
-      reason:
-        'The product-specific KFD-5 qualification evidence is incomplete.',
-      residualRisks: [
-        'Treating catalog presence as primitive qualification would widen the claim.',
-      ],
-    },
-  };
+  const discovery = requireAsset(
+    '@kungfu-tech/kfd',
+    'cases/live/software-work-perspective-settlement/cuts/0001-assignment.json',
+    __filename,
+  ).parsed;
+  const repoPath = (relativePath) => path.join(ROOT, relativePath);
+  const primitiveCatalogRelativePath =
+    'framework/primitive/kungfu-primitive-catalog.contract.json';
+  const primitiveCatalogPath = repoPath(primitiveCatalogRelativePath);
+  const catalog = readJson(primitiveCatalogPath);
+  const assignment = catalog.primitives?.find(({ id }) => id === 'assignment');
+  if (
+    catalog.schema !== 'kungfu.primitive-catalog/v2' ||
+    assignment?.definition?.lifecycle?.state !== 'active' ||
+    assignment?.admission?.summary?.state !== 'experimental' ||
+    assignment?.admission?.vector?.qualification?.state !== 'incomplete' ||
+    assignment?.admission?.vector?.artifactShipment?.state !== 'not-shipped'
+  ) {
+    throw new Error(
+      'KFD-5 Assignment candidate must remain an active, experimental, incomplete, and not-shipped Primitive catalog entry',
+    );
+  }
+  const dogfoodReportPath = repoPath(
+    'docs/qualification/evidence/assignment-organization-rollout/7aae2c562a/report.json',
+  );
+  const dogfoodReport = readJson(dogfoodReportPath);
+  const phaseGates = new Map(
+    (dogfoodReport.phaseGates || []).map((entry) => [entry.id, entry]),
+  );
+  const failureMatrix = new Map(
+    (dogfoodReport.failureMatrix || []).map((entry) => [entry.case, entry]),
+  );
+  if (
+    dogfoodReport.schema !==
+      'kungfu.assignment.organization-dogfood-report/v1' ||
+    phaseGates.get('phase-1-single-repository-shadow-dogfood')?.verdict !==
+      'pass' ||
+    phaseGates.get('phase-2-home-parent-cross-workspace-closure')?.verdict !==
+      'pass' ||
+    failureMatrix.get('worktree-deletion')?.verdict !== 'pass' ||
+    failureMatrix.get('tamper')?.verdict !== 'fail-closed-as-designed' ||
+    dogfoodReport.rolloutDecision?.defaultOn !== true ||
+    dogfoodReport.rolloutDecision?.stableReleaseAuthorized !== false ||
+    dogfoodReport.verdict?.organizationDogfood !== 'qualified' ||
+    dogfoodReport.verdict?.generalProductRelease !== 'not-qualified'
+  ) {
+    throw new Error(
+      'KFD-5 Assignment product evidence must retain passed dogfood, cross-workspace closure, worktree-deletion, tamper, and non-release qualification boundaries',
+    );
+  }
+  const assignmentTestPath = repoPath(
+    'framework/core/tests/python/test_assignment_orchestration.py',
+  );
   const records = [
     {
       role: 'primitive-discovery',
@@ -1500,6 +1435,63 @@ function kfd5GateInput({ workspace, sourceSha, checkedAt, standards }) {
     },
   ];
   const evidence = [
+    gateEvidence(
+      workspace,
+      'assignment-primitive-catalog-context',
+      'candidate-context',
+      primitiveCatalogPath,
+    ),
+    gateEvidence(
+      workspace,
+      'assignment-organization-dogfood',
+      'product-dogfood',
+      dogfoodReportPath,
+    ),
+    gateEvidence(
+      workspace,
+      'assignment-minimum-closure',
+      'minimum-closure',
+      repoPath(
+        'framework/assignment-capture/fixtures/atlas-go-card-roundtrip-v1.json',
+      ),
+    ),
+    gateEvidence(
+      workspace,
+      'assignment-native-lifecycle',
+      'native-lifecycle',
+      repoPath('framework/work-lifecycle/work-lifecycle-native.contract.json'),
+    ),
+    {
+      id: 'assignment-orchestration-qualification',
+      kind: 'product-qualification',
+      ...writeGateJson(
+        workspace,
+        gateRelativePath(
+          'evidence',
+          'assignment-orchestration-qualification.json',
+        ),
+        {
+          schema: 'kungfu.kfd-5-assignment-qualification-source/v1',
+          source: {
+            repository: 'kungfu-systems/kungfu',
+            sha: sourceSha,
+            path: rel(assignmentTestPath),
+            sha256: `sha256:${sha256File(assignmentTestPath)}`,
+          },
+          covers: [
+            'minimum-closure',
+            'portable-seal',
+            'worktree-deletion',
+            'workspace-transfer',
+            'tamper-fail-closed',
+          ],
+          nonClaims: [
+            'This source binding is first-party product evidence, not an independent adopter result.',
+            'A passed Buildchain gate does not activate or ship KFD-5 support.',
+          ],
+        },
+      ),
+    },
     {
       id: 'kfd-5-negative',
       kind: 'negative-fixture',
@@ -1523,8 +1515,9 @@ function kfd5GateInput({ workspace, sourceSha, checkedAt, standards }) {
     records,
     evidence,
     nonClaims: [
-      'The existing primitive catalog is not itself a qualified KFD-5 primitive-discovery record.',
-      'This failed gate is retained evidence of the missing product qualification work.',
+      'The upstream Assignment cut remains the KFD authority; Kungfu contributes bounded first-party adopter evidence only.',
+      'This gate does not establish independent adoption, a universal primitive need, KFD-11 activation, or shipped KFD-5 support.',
+      'The existing primitive catalog is not itself KFD-5 qualification evidence.',
     ],
   });
 }
@@ -1696,6 +1689,11 @@ async function buildProductGates({ write }) {
       if (!validation.valid) {
         throw new Error(
           `${input.standard} product-gate result is invalid: ${JSON.stringify(validation.issues)}`,
+        );
+      }
+      if (gate.status !== 'passed') {
+        throw new Error(
+          `${input.standard} product gate must pass for the checked-in exact-source evidence cut: ${JSON.stringify(gate.issues)}`,
         );
       }
       gates.push(gate);

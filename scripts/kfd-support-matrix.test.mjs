@@ -64,6 +64,29 @@ test('validates the exact KFD-1 through KFD-13 authority', (t) => {
   const result = validateFixture(t, BASE);
   assert.equal(result.status, 0, result.stderr);
   assert.equal(JSON.parse(result.stdout).rowCount, 13);
+  const kfd5 = BASE.rows.find((row) => row.key === 'kfd-5');
+  assert.equal(kfd5.supportStatus, 'candidate');
+  assert.equal(kfd5.verification.status, 'passed');
+  assert.equal(kfd5.buildchain.gateStatus, 'passed');
+  assert.equal(kfd5.releaseQualification.shippedSupport, false);
+  assert.deepEqual(
+    kfd5.verification.evidenceRoots.map((entry) => entry.path),
+    [
+      'docs/qualification/evidence/assignment-organization-rollout/7aae2c562a/report.json',
+      'framework/core/tests/python/test_assignment_orchestration.py',
+    ],
+  );
+});
+
+test('fails closed when the KFD-5 candidate loses its passed product gate', (t) => {
+  const matrix = clone(BASE);
+  matrix.rows[4].buildchain.gateStatus = 'failed';
+  const result = validateFixture(t, matrix);
+  assert.equal(result.status, 1);
+  assert.match(
+    result.stderr,
+    /kfd-5 must remain a verified, Buildchain-gated, non-shipped candidate/,
+  );
 });
 
 test('fails closed when a KFD row is omitted', (t) => {

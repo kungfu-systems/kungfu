@@ -111,13 +111,12 @@ facts; `upstream` shows the SDK-packaged KFD aggregate for Kungfu plus KFD,
 libnode, and Buildchain; `aggregate` joins both views for an agent that wants
 the final product plus upstream trust surface in one response.
 
-KFD-1 and KFD-2 have source support. KFD-3 is source-implemented but its
-Buildchain app-kind query gate is blocked. KFD-4 and KFD-5 are candidates,
-KFD-6 is explicitly unsupported, and KFD-7 is source-supported with stale,
-non-qualifying release evidence. KFD-8 through KFD-13 expose only
-non-conforming draft adopter evidence. None of these source claims implies
-shipped support until a current release passport qualifies it. The generated
-repository-wide boundary is
+KFD-1, KFD-2, KFD-3, and KFD-7 have bounded source support. KFD-4 and KFD-5
+pass their product gates but remain non-shipped candidates; Buildchain does not
+self-qualify, activate, or ship either adoption. KFD-6 is explicitly
+unsupported. KFD-8 through KFD-13 expose only non-conforming draft adopter
+evidence. Every shipped claim remains bound to an exact release passport. The
+generated repository-wide boundary is
 [`docs/qualification/kfd-support-matrix.md`](../../docs/qualification/kfd-support-matrix.md).
 
 KFD-1 is exposed as the actual Buildchain contract-world witness, release gate,

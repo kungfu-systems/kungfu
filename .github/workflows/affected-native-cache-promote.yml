@@ -386,6 +386,8 @@ jobs:
           attempt=1
           while [ "$attempt" -le 180 ]; do
             authorities=""
+            observed_run=false
+            pending_run=false
             runs="$(
               gh api --method GET \
                 "repos/${GITHUB_REPOSITORY}/actions/workflows/affected-native-pr.yml/runs" \
@@ -395,6 +397,12 @@ jobs:
                 --jq '.workflow_runs | sort_by(.created_at) | reverse | .[].id'
             )"
             for run_id in $runs; do
+              observed_run=true
+              run_status="$(
+                gh api --method GET \
+                  "repos/${GITHUB_REPOSITORY}/actions/runs/${run_id}" \
+                  --jq '.status'
+              )"
               gate_count="$(
                 gh api --method GET \
                   "repos/${GITHUB_REPOSITORY}/actions/runs/${run_id}/jobs" \
@@ -406,13 +414,17 @@ jobs:
               artifact_state="$(
                 gh api \
                   "repos/${GITHUB_REPOSITORY}/actions/runs/${run_id}/artifacts?per_page=100" \
-                  --jq "[.artifacts[] | select(.expired == false and (.name == \"qualified-assignment-core-candidate-${TARGET_SHA}\" or .name == \"core-affected-native-delivery-attempt-${TARGET_SHA}\")) | .name] | sort | if length == 2 and .[0] != .[1] then \"complete\" elif length == 0 then \"absent\" else \"ambiguous\" end"
+                  --jq "[.artifacts[] | select(.expired == false and (.name == \"qualified-assignment-core-candidate-${TARGET_SHA}\" or .name == \"core-affected-native-delivery-attempt-${TARGET_SHA}\")) | .name] | sort | if length == 2 and (unique | length) == 2 then \"complete\" elif length <= 1 then \"incomplete\" else \"ambiguous\" end"
               )"
               if [ "$artifact_state" = complete ]; then
                 authorities="${authorities}${run_id}"$'\n'
               elif [ "$artifact_state" = ambiguous ]; then
                 echo "Qualified Core transport is ambiguous in run ${run_id}." >&2
                 exit 1
+              elif [ "$run_status" != completed ]; then
+                pending_run=true
+              else
+                echo "Completed producer run ${run_id} has no complete Qualified Core transport; source build remains authoritative."
               fi
             done
             authorities="$(printf '%s' "$authorities" | sed '/^$/d')"
@@ -424,6 +436,11 @@ jobs:
             if [ "$authority_count" -eq 1 ]; then
               producer_run="$authorities"
               break
+            fi
+            if [ "$observed_run" = true ] && [ "$pending_run" = false ]; then
+              echo "available=false" >> "$GITHUB_OUTPUT"
+              echo "No exact Qualified Core producer became available; source build remains authoritative."
+              exit 0
             fi
             sleep 30
             attempt=$((attempt + 1))
