@@ -232,6 +232,7 @@ test('declared discovery routes are zero-write in a cold read-only fixture', (t)
     'scripts/check-exit-bundle-contract.test.mjs',
     'scripts/check-fact-cut-kernel-contract.test.mjs',
     'scripts/check-git-episode-provider.test.mjs',
+    'scripts/check-work-history-selector.test.mjs',
     'scripts/documentation-product-pack.test.mjs',
     'scripts/docs-markdown-readonly.mjs',
     'scripts/kungfu-gate-workflow-facts.mjs',
@@ -289,6 +290,12 @@ test('declared discovery routes are zero-write in a cold read-only fixture', (t)
     'framework/maintainability/semantic-amplification-report.json',
     'framework/maintainability/semantic-amplification.mjs',
     'framework/maintainability/waivers/README.md',
+    'framework/work-history-selector/schema/work-history-selection-manifest-v1.schema.json',
+    'framework/work-history-selector/schema/work-history-selection-request-v1.schema.json',
+    'framework/work-history-selector/src/work-history-selector.mjs',
+    'framework/work-history-selector/tooling/check-work-history-selector.mjs',
+    'framework/work-history-selector/tooling/work-history-selector-contract.mjs',
+    'framework/work-history-selector/work-history-selector.contract.json',
   ])
     copyFile(ROOT, fixture, relative);
   const amplificationManifest = JSON.parse(

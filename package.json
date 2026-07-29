@@ -106,6 +106,8 @@
     "test:project-cut-settlement:integration": "node scripts/require-shifu.mjs test:project-cut-settlement:integration && node crates/xinfa/tooling/task.mjs build && node --test scripts/check-project-cut-settlement-integration.test.mjs",
     "check:project-cut-history": "node scripts/require-shifu.mjs check:project-cut-history && node scripts/check-project-cut-history.mjs",
     "test:project-cut-history": "node scripts/require-shifu.mjs test:project-cut-history && node --test scripts/check-project-cut-history.test.mjs",
+    "check:work-history-selector": "node scripts/require-shifu.mjs check:work-history-selector && node framework/work-history-selector/tooling/check-work-history-selector.mjs",
+    "test:work-history-selector": "node scripts/require-shifu.mjs test:work-history-selector && node --test scripts/check-work-history-selector.test.mjs",
     "check:project-cut-composition": "node scripts/require-shifu.mjs check:project-cut-composition && node scripts/check-project-cut-composition.mjs",
     "test:project-cut-composition": "node scripts/require-shifu.mjs test:project-cut-composition && node --test scripts/check-project-cut-composition.test.mjs",
     "check:project-cut-publication": "node scripts/require-shifu.mjs check:project-cut-publication && node framework/project-cut/bin/project-cut.mjs publication-contract-check --json",
