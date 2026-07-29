@@ -27,7 +27,7 @@
     },
     "kfd1Contracts": {
       "path": "framework/contract/kungfu-contracts.registry.json",
-      "root": "sha256:c87f9d840552709ade4cbb23f01b46fe12ea43cab971d898d22e392b8fd21c1f"
+      "root": "sha256:7262c225b4ad78abfbe12066037c30989f9b385b5cd5a4213ff98753a8aa9d98"
     },
     "invariants": {
       "path": "framework/invariant/kungfu-invariant.registry.json",
@@ -1697,5 +1697,5 @@
       "artifacts": []
     }
   ],
-  "catalogRoot": "sha256:78dd7708e7693b7b28544f6d213d6093387b7b7194e30f73ea125150fff897d3"
+  "catalogRoot": "sha256:73fdfef06138b7f2e923d48b691f2d0bd6f9b2b4f9dd8beae953ef392d50f537"
 }

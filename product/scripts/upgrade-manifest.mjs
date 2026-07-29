@@ -269,6 +269,17 @@ export function buildBundledUpgradeManifest({
   });
 }
 
+export function buildCliUpgradeManifest({
+  stageRoot,
+  layout,
+  root = path.resolve(import.meta.dirname, '..', '..'),
+}) {
+  return buildBundledUpgradeManifest({
+    root,
+    runtimeRoot: path.join(stageRoot, layout.runtimeDirectory),
+  });
+}
+
 export function writeBundledUpgradeManifest(options) {
   const manifest = buildBundledUpgradeManifest(options);
   fs.mkdirSync(path.dirname(options.output), { recursive: true });

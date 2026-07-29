@@ -37,7 +37,7 @@ import {
   runProductAssembly,
 } from './runtime-pin-snapshot.mjs';
 import {
-  buildBundledUpgradeManifest,
+  buildCliUpgradeManifest,
   finalizeCliUpgradeManifest,
   finalizeDesktopUpgradeManifest,
   platformUpgradeManifestName,
@@ -1112,17 +1112,6 @@ export function cliArchiveLayout(platform = process.platform) {
     }`,
     compatibility: `${runtimeDirectory}/product-compatibility.json`,
   };
-}
-
-export function buildCliUpgradeManifest({
-  stageRoot,
-  layout = cliArchiveLayout(),
-  root = ROOT,
-}) {
-  return buildBundledUpgradeManifest({
-    root,
-    runtimeRoot: path.join(stageRoot, layout.runtimeDirectory),
-  });
 }
 
 function writeCliLauncher(stageRoot, layout) {

@@ -11,7 +11,6 @@ import { readElectronBuilderProjection } from '../../framework/maintainability/s
 import { cliLauncherContent } from './cli-launcher.mjs';
 import { sha256Tree } from './compatibility.mjs';
 import {
-  buildCliUpgradeManifest,
   cliArchiveBase,
   cliArchiveLayout,
   copyTree,
@@ -37,6 +36,7 @@ import {
   PRODUCT_ASSEMBLY_STAGE_IDS,
   readTrunkRuntimePinSnapshot,
 } from './runtime-pin-snapshot.mjs';
+import { buildCliUpgradeManifest } from './upgrade-manifest.mjs';
 
 const require = createRequire(import.meta.url);
 const workDashboardPackage = require('../../extensions/work-dashboard/kungfu.kfx.json');

@@ -1,16 +1,16 @@
-# Stage 9: Product Release Cut and Updater Convergence
+# Stage 10: Product Release Cut and Updater Convergence
 
 ```json kungfu-evolution-stage
 {
   "schema": "kungfu.evolution-stage/v1",
   "id": "product-release-cut-updater-convergence",
   "era": "work-control-dogfood",
-  "sequence": 9,
+  "sequence": 10,
   "title": "Product Release Cut and updater convergence",
   "status": "open",
   "evolutionImpact": "opens",
   "period": { "start": "2026-07-29", "end": "ongoing" },
-  "buildsOn": ["native-work-control-recursive-dogfood"],
+  "buildsOn": ["work-control-canonical-name"],
   "pressure": "Release channels, immutable images, KFD-3 local artifacts, and Shifu promotion existed, but SemVer and per-artifact roots did not identify one exact product world or authorize movement between same-label builds.",
   "priorLimitation": "Shifu could select local desktop builds while native archive installation and rollback used separate coordinates; same-SemVer descendants and public supersession had no shared exact identity.",
   "localCapability": "Product Release Cut and Cut Transition bind exact public and local release worlds, KFD-3 registers desktop plus CLI plus final manifest in one slot, and Shifu delegates installation and rollback to the native updater.",

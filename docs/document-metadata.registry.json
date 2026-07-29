@@ -1010,6 +1010,13 @@
         "invisible_context_boundary": "unobserved deployed runtimes and private retained payload bodies are not claimed"
       }
     },
+    "docs/evolution/stages/10-product-release-cut-updater.md": {
+      "metadata_schema": "kungfu.document-metadata/v1",
+      "document_status": "active",
+      "doc_type": "evolution-stage",
+      "review_state": "self-reviewed",
+      "sensitivity": "public"
+    },
     "docs/evolution/timeline.md": {
       "metadata_schema": "kungfu.document-metadata/v1",
       "document_status": "active",
