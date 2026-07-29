@@ -244,6 +244,10 @@ test('AWS Windows JIT qualification is trusted, exact-label, and non-publication
   assert.match(workflow, /needs: trust/);
   assert.match(workflow, /aws-us-ec2-windows-jit-\$\{QUALIFICATION_ID\}/);
   assert.match(workflow, /runner-preset: aws-us-ec2-windows-jit/);
+  assert.match(
+    workflow,
+    /require-verify: true\n {6}verify-command: node scripts\/probe-release-platform\.mjs --aws-windows-jit/,
+  );
   assert.match(workflow, /publish-channel: none/);
   assert.match(workflow, /release-candidate: false/);
   assert.match(workflow, /win-cancel:cancellation\|win-timeout:timeout/);

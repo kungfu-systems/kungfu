@@ -100,7 +100,8 @@ jobs:
       require-install: false
       require-build: true
       build-command: node scripts/probe-release-platform.mjs --aws-windows-jit
-      require-verify: false
+      require-verify: true
+      verify-command: node scripts/probe-release-platform.mjs --aws-windows-jit
       lifecycle-timeout-minutes: 30
       requested-parallelism: 1
       artifact-transfer-mode: github-artifacts
