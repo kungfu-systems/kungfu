@@ -152,7 +152,7 @@
         "evidenceRoots": [
           {
             "path": ".buildchain/kfd/kfd-3/surfaces.json",
-            "sha256": "sha256:b4b61d0a8aea3b3f1cc2c52efd46689f8fbc81778938ca8f5ebfcb57847d9ee2"
+            "sha256": "sha256:65128b04b5c27dfb4a16a6e6f346a77a25a8e16e7c776d2c1ce80763c8e61313"
           },
           {
             "path": ".buildchain/kfd/kfd-3/capability-query.json",
@@ -194,19 +194,20 @@
       "implementation": {
         "status": "implemented-candidate-profile",
         "surfaces": [
-          "framework/core/src/python/kungfu/rewind/replay.py"
+          "framework/core/src/python/kungfu/rewind/perspective.py",
+          "scripts/kfd4-perspective-qualification.mjs"
         ]
       },
       "verification": {
         "status": "passed",
         "evidenceRoots": [
           {
-            "path": "framework/agent-work/evidence/kfd-7/atlas-staleness-loss.json",
-            "sha256": "sha256:dee2962750bfd9620a23799b3710476eaf95c5040caf15a2ca9edf0ef2944341"
+            "path": "docs/qualification/evidence/kfd-4-perspective/aab867e99d/report.json",
+            "sha256": "sha256:d4a387bb39021c9ec3fc01b40020f2d7ea9d189c50b564236ec4f3a9ef8facd8"
           },
           {
-            "path": "framework/core/src/python/kungfu/rewind/replay.py",
-            "sha256": "sha256:803aa247d8c2db687811bc6ada8bec992c3e8c6a18afd061be227043159b3bee"
+            "path": "framework/core/tests/python/test_kfd4_perspective.py",
+            "sha256": "sha256:e07a44456d83bed34b83df02ab94e9562c5c5b4cf52b3f7ae3562370a36d3460"
           }
         ]
       },
@@ -226,11 +227,11 @@
       },
       "claimClass": "adoption-candidate",
       "knownLimitations": [
-        "The gate proves one bounded observer/contrastive-replay profile; it does not establish universal perspective completeness.",
-        "A passed Buildchain gate does not activate or ship this candidate."
+        "The retained report proves one bounded two-source observer/contrastive-replay profile; it does not establish universal perspective completeness or observer equivalence.",
+        "A passed Buildchain gate does not independently qualify, activate, or ship KFD-4 support."
       ],
       "owner": "kungfu-core",
-      "nextGate": "Admit a product release decision before changing KFD-4 from candidate to shipped support."
+      "nextGate": "Retain the exact-source gate and release passport, then obtain independent adopter evidence and an explicit release decision before changing shipped support."
     },
     {
       "id": "KFD-5",

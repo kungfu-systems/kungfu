@@ -311,6 +311,10 @@ export function sourceAcceptancePlan(files, evidenceBaseCommit = '') {
       '--check',
     ],
     [
+      'KFD-4 perspective qualification',
+      'scripts/kfd4-perspective-qualification.mjs',
+    ],
+    [
       'release publication control plane',
       'framework/release/publication-control-plane.mjs',
       'check',
@@ -320,6 +324,11 @@ export function sourceAcceptancePlan(files, evidenceBaseCommit = '') {
       'KFD support matrix negative fixtures',
       '--test',
       'scripts/kfd-support-matrix.test.mjs',
+    ],
+    [
+      'KFD-4 perspective qualification negative fixtures',
+      '--test',
+      'scripts/kfd4-perspective-qualification.test.mjs',
     ],
     ['Shifu version sync', 'scripts/sync-shifu-version.mjs', '--check'],
     ['layered SDK projections', 'scripts/generate-layered-sdk.mjs', '--check'],
