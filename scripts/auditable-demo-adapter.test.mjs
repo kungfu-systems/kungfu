@@ -205,10 +205,7 @@ function fixture(
     const pythonBin = path.join(productRoot, 'runtime', 'python', 'bin');
     fs.mkdirSync(pythonBin, { recursive: true });
     fs.writeFileSync(path.join(pythonBin, 'python3'), '#!/bin/sh\nexit 0\n');
-    fs.symlinkSync(
-      archiveSymlinkTarget,
-      path.join(pythonBin, 'python'),
-    );
+    fs.symlinkSync(archiveSymlinkTarget, path.join(pythonBin, 'python'));
   }
   const archive = path.join(
     artifact,
