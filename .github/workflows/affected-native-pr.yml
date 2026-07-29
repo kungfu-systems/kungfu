@@ -1085,6 +1085,7 @@ jobs:
       actions: read
       contents: read
     env:
+      KUNGFU_BUILDCHAIN_SOURCE_BUILD: "1"
       KUNGFU_BUILD_PROFILE: full
     steps:
       - name: Check out exact merge-group source
