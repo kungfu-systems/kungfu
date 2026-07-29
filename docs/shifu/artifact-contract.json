@@ -31,6 +31,12 @@
       "staging": "outside-target",
       "paths": "bounded-relative-posix-only",
       "entryTypes": ["regular-file", "safe-relative-symlink"],
+      "macosArm64Cp313RuntimeClosure": [
+        "kungfubuildinfo.json",
+        "one pykungfu.cpython-313-darwin.so",
+        "one versioned libnode dylib",
+        "libkungfu_runtime.dylib"
+      ],
       "digestAndSizeVerification": "required-before-publication",
       "cleanCheckout": "required",
       "publication": "atomic-replace",
@@ -40,6 +46,7 @@
       "artifactBytes": "content-addressed-payload-only",
       "qualification": "immutable-receipt",
       "promotion": "single-active-protected-authority",
+      "protectedRefPolicy": "github-default-branch",
       "transport": "replaceable-non-authoritative"
     }
   },

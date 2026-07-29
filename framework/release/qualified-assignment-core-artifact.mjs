@@ -41,6 +41,7 @@ const SHIFU_CONTRACTS = [
   'docs/shifu/schema/qualified-assignment-core-artifact-v1.schema.json',
   'docs/shifu/schema/qualified-assignment-core-qualification-v1.schema.json',
   'scripts/check-shifu-cache-contract.mjs',
+  'framework/assignment-capture/qualified-assignment-core-consumer.mjs',
 ];
 const BUILDCHAIN_CONTRACTS = [
   '.buildchain/buildchain.toml',
@@ -122,20 +123,76 @@ function fileSetRoot(repositoryRoot, relativePaths, schema) {
   return qualifiedAssignmentCoreRoot({ schema, entries });
 }
 
+export function qualifiedCoreCheckoutRoots(repositoryRoot, candidate) {
+  const sourceTreeRoot = qualifiedAssignmentCoreRoot({
+    schema: 'kungfu.git-source-tree/v1',
+    tree: candidate.source.tree,
+  });
+  const dependencyLockDigest = fileSetRoot(
+    repositoryRoot,
+    LOCKS,
+    'kungfu.qualified-assignment-core-dependency-locks/v1',
+  );
+  const shifuContractRoot = fileSetRoot(
+    repositoryRoot,
+    SHIFU_CONTRACTS,
+    'kungfu.qualified-assignment-core-shifu-contract/v1',
+  );
+  const buildchainContractRoot = fileSetRoot(
+    repositoryRoot,
+    BUILDCHAIN_CONTRACTS,
+    'kungfu.qualified-assignment-core-buildchain-contract/v1',
+  );
+  const toolchainDigest = qualifiedAssignmentCoreRoot({
+    schema: 'kungfu.qualified-assignment-core-toolchain/v1',
+    toolchain: candidate.build.toolchain,
+  });
+  const nativeInputRoot = qualifiedAssignmentCoreRoot({
+    schema: 'kungfu.qualified-assignment-core-native-input/v1',
+    commit: candidate.source.commit,
+    sourceTreeRoot,
+    planDigest: candidate.qualification.planRoot,
+    dependencyLockDigest,
+    shifuContractRoot,
+    buildchainContractRoot,
+    profile: candidate.build.profile,
+  });
+  return {
+    sourceTreeRoot,
+    dependencyLockDigest,
+    shifuContractRoot,
+    buildchainContractRoot,
+    toolchainDigest,
+    nativeInputRoot,
+  };
+}
+
 function payloadNames(payloadRoot) {
-  const names = fs
-    .readdirSync(payloadRoot)
-    .filter(
-      (name) =>
-        name === 'kungfubuildinfo.json' ||
-        /^pykungfu(?:[._-][A-Za-z0-9._-]+)?\.(?:so|pyd)$/u.test(name),
-    )
-    .sort();
-  if (!names.includes('kungfubuildinfo.json')) {
-    throw new Error('qualified Core build metadata is absent');
-  }
-  if (!names.some((name) => name !== 'kungfubuildinfo.json')) {
-    throw new Error('qualified Core pykungfu payload is absent');
+  const names = fs.readdirSync(payloadRoot).filter((name) => {
+    return (
+      name === 'kungfubuildinfo.json' ||
+      name === 'libkungfu_runtime.dylib' ||
+      /^libnode\.[0-9]+\.dylib$/u.test(name) ||
+      /^pykungfu(?:[._-][A-Za-z0-9._-]+)?\.so$/u.test(name)
+    );
+  });
+  names.sort();
+  const pykungfu = names.filter((name) =>
+    /^pykungfu(?:[._-][A-Za-z0-9._-]+)?\.so$/u.test(name),
+  );
+  const libnode = names.filter((name) =>
+    /^libnode\.[0-9]+\.dylib$/u.test(name),
+  );
+  if (
+    !names.includes('kungfubuildinfo.json') ||
+    !names.includes('libkungfu_runtime.dylib') ||
+    pykungfu.length !== 1 ||
+    libnode.length !== 1 ||
+    names.length !== 4
+  ) {
+    throw new Error(
+      'qualified Core macOS runtime payload must contain build metadata, one pykungfu binding, one versioned libnode, and libkungfu_runtime',
+    );
   }
   return names;
 }
@@ -254,6 +311,60 @@ export function validateQualifiedCoreCandidate(
   if (candidate?.schema !== QUALIFIED_CORE_CANDIDATE_SCHEMA) {
     throw new Error('qualified Core candidate schema is unsupported');
   }
+  const exactKeys = (value, keys, label) => {
+    if (
+      !value ||
+      typeof value !== 'object' ||
+      Array.isArray(value) ||
+      JSON.stringify(Object.keys(value).sort()) !==
+        JSON.stringify([...keys].sort())
+    ) {
+      throw new Error(`qualified Core candidate ${label} fields are invalid`);
+    }
+  };
+  exactKeys(
+    candidate,
+    [
+      'schema',
+      'source',
+      'producer',
+      'build',
+      'contracts',
+      'payload',
+      'consumer',
+      'qualification',
+      'candidateRoot',
+    ],
+    'top-level',
+  );
+  exactKeys(
+    candidate.source,
+    ['repository', 'commit', 'tree', 'sourceTreeRoot'],
+    'source',
+  );
+  exactKeys(
+    candidate.producer,
+    ['runId', 'event', 'workflowPath', 'runner', 'createdAt'],
+    'producer',
+  );
+  exactKeys(
+    candidate.build,
+    [
+      'operatingSystem',
+      'architecture',
+      'pythonAbi',
+      'profile',
+      'toolchain',
+      'toolchainDigest',
+      'dependencyLockDigest',
+      'nativeInputRoot',
+      'buildInfo',
+    ],
+    'build',
+  );
+  exactKeys(candidate.contracts, ['shifu', 'buildchain'], 'contracts');
+  exactKeys(candidate.payload, ['artifactRoot', 'entries'], 'payload');
+  exactKeys(candidate.consumer, ['targetRoot'], 'consumer');
   const { candidateRoot: _candidateRoot, ...body } = candidate;
   if (
     candidate.candidateRoot !== qualifiedAssignmentCoreRoot(body) ||
@@ -294,15 +405,19 @@ export function validateQualifiedCoreCandidate(
   }
   const entries = candidate.payload?.entries || [];
   const names = entries.map(({ path: entryPath }) => entryPath);
+  const pykungfu = names.filter((name) =>
+    /^pykungfu(?:[._-][A-Za-z0-9._-]+)?\.so$/u.test(name),
+  );
+  const libnode = names.filter((name) =>
+    /^libnode\.[0-9]+\.dylib$/u.test(name),
+  );
   if (
     JSON.stringify(names) !== JSON.stringify([...new Set(names)].sort()) ||
     !names.includes('kungfubuildinfo.json') ||
-    !names.some((name) => /^pykungfu.*\.(?:so|pyd)$/u.test(name)) ||
-    names.some(
-      (name) =>
-        name !== 'kungfubuildinfo.json' &&
-        !/^pykungfu(?:[._-][A-Za-z0-9._-]+)?\.(?:so|pyd)$/u.test(name),
-    )
+    !names.includes('libkungfu_runtime.dylib') ||
+    pykungfu.length !== 1 ||
+    libnode.length !== 1 ||
+    names.length !== 4
   ) {
     throw new Error('qualified Core candidate path set is unauthorized');
   }
@@ -361,6 +476,77 @@ export function validateQualifiedCoreCandidate(
   for (const [field, value] of Object.entries(candidate.qualification)) {
     if (!SHA256_ROOT.test(value)) {
       throw new Error(`qualified Core candidate ${field} root is absent`);
+    }
+  }
+  const checkoutRoots = qualifiedCoreCheckoutRoots(ROOT, candidate);
+  const buildInfo = candidate.build.buildInfo || {};
+  if (
+    buildInfo.git?.revision !== candidate.source.commit ||
+    buildInfo.git?.pristine !== true ||
+    pythonAbi(buildInfo) !== candidate.build.pythonAbi ||
+    !String(buildInfo.build?.osVersion || '').startsWith('macOS-') ||
+    !String(buildInfo.build?.osVersion || '').includes('-arm64-')
+  ) {
+    throw new Error('qualified Core candidate build metadata drift');
+  }
+  for (const [actual, wanted, label] of [
+    [
+      candidate.source.sourceTreeRoot,
+      checkoutRoots.sourceTreeRoot,
+      'source tree',
+    ],
+    [
+      candidate.build.dependencyLockDigest,
+      checkoutRoots.dependencyLockDigest,
+      'checkout dependency lock',
+    ],
+    [
+      candidate.build.dependencyLockDigest,
+      candidate.qualification.dependencyLockDigest,
+      'dependency lock',
+    ],
+    [
+      candidate.contracts.shifu.root,
+      checkoutRoots.shifuContractRoot,
+      'checkout Shifu contract',
+    ],
+    [
+      candidate.contracts.shifu.root,
+      candidate.qualification.shifuContractRoot,
+      'Shifu contract',
+    ],
+    [
+      candidate.contracts.buildchain.root,
+      checkoutRoots.buildchainContractRoot,
+      'checkout Buildchain contract',
+    ],
+    [
+      candidate.contracts.buildchain.root,
+      candidate.qualification.buildchainContractRoot,
+      'Buildchain contract',
+    ],
+    [
+      candidate.build.toolchainDigest,
+      checkoutRoots.toolchainDigest,
+      'toolchain',
+    ],
+    [
+      candidate.build.nativeInputRoot,
+      qualifiedAssignmentCoreRoot({
+        schema: 'kungfu.qualified-assignment-core-native-input/v1',
+        commit: candidate.source.commit,
+        sourceTreeRoot: candidate.source.sourceTreeRoot,
+        planDigest: candidate.qualification.planRoot,
+        dependencyLockDigest: candidate.build.dependencyLockDigest,
+        shifuContractRoot: candidate.contracts.shifu.root,
+        buildchainContractRoot: candidate.contracts.buildchain.root,
+        profile: candidate.build.profile,
+      }),
+      'native input',
+    ],
+  ]) {
+    if (actual !== wanted) {
+      throw new Error(`qualified Core candidate ${label} root drift`);
     }
   }
   return { candidate, payloads };

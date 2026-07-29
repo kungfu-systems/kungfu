@@ -1,12 +1,17 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import assert from 'node:assert/strict';
+import { spawnSync } from 'node:child_process';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
 import { fileURLToPath } from 'node:url';
 
+import {
+  consumeQualifiedCoreForCheckout,
+  materializeQualifiedCoreBundle,
+} from '../framework/assignment-capture/qualified-assignment-core-consumer.mjs';
 import {
   promoteQualifiedCoreCandidate,
   sealQualifiedCoreCandidate,
@@ -26,6 +31,7 @@ const HEAD = '2'.repeat(40);
 const OTHER_HEAD = '3'.repeat(40);
 const TREE = '4'.repeat(40);
 const QUEUE_HEAD = '5'.repeat(40);
+const CONSUMER_NOW = '2026-07-29T06:00:00Z';
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const TOOLCHAIN = {
   compiler: 'g++-14 (Ubuntu 14.2.0) 14.2.0',
@@ -133,6 +139,14 @@ function writeBuild(payloadRoot, commit = QUEUE_HEAD) {
     'real native bytes',
     { mode: 0o755 },
   );
+  fs.writeFileSync(path.join(payloadRoot, 'libnode.127.dylib'), 'node bytes', {
+    mode: 0o755,
+  });
+  fs.writeFileSync(
+    path.join(payloadRoot, 'libkungfu_runtime.dylib'),
+    'runtime bytes',
+    { mode: 0o755 },
+  );
 }
 
 function sealFixture(temporary, commit = QUEUE_HEAD) {
@@ -167,6 +181,39 @@ function sealFixture(temporary, commit = QUEUE_HEAD) {
   return { payloadRoot, candidateRoot, candidate };
 }
 
+async function promotedConsumerFixture(temporary) {
+  const { candidateRoot, candidate } = sealFixture(temporary);
+  const bundleRoot = path.join(temporary, 'promoted-consumer');
+  await promoteQualifiedCoreCandidate({
+    candidateRoot,
+    outputRoot: bundleRoot,
+    repository: 'kungfu-systems/kungfu',
+    targetCommit: QUEUE_HEAD,
+    targetTree: TREE,
+    protectedRef: 'refs/heads/dev/v4/v4.0',
+    deliveryEvidenceRoot: digest({
+      schema: 'test-delivery/v1',
+      commit: QUEUE_HEAD,
+    }),
+    validFrom: '2026-07-29T05:00:00Z',
+    validThrough: '2026-07-30T05:00:00Z',
+    now: CONSUMER_NOW,
+    allowLocal: true,
+    root: ROOT,
+  });
+  return { bundleRoot, candidate };
+}
+
+function consumerCheckout(overrides = {}) {
+  return {
+    repository: 'kungfu-systems/kungfu',
+    commit: QUEUE_HEAD,
+    tree: TREE,
+    clean: true,
+    ...overrides,
+  };
+}
+
 test('producer seals minimum macOS ARM64 bytes and protected promotion', async (t) => {
   const temporary = fs.mkdtempSync(
     path.join(os.tmpdir(), 'qualified-core-producer-'),
@@ -175,7 +222,12 @@ test('producer seals minimum macOS ARM64 bytes and protected promotion', async (
   const { candidateRoot, candidate } = sealFixture(temporary);
   assert.deepEqual(
     candidate.payload.entries.map(({ path: entryPath }) => entryPath),
-    ['kungfubuildinfo.json', 'pykungfu.cpython-313-darwin.so'],
+    [
+      'kungfubuildinfo.json',
+      'libkungfu_runtime.dylib',
+      'libnode.127.dylib',
+      'pykungfu.cpython-313-darwin.so',
+    ],
   );
   assert.equal(candidate.build.pythonAbi, 'cp313');
   validateQualifiedCoreCandidate(candidate, candidateRoot, {
@@ -323,6 +375,14 @@ test('producer rejects wrong runner, stale source, unsafe links, and missing roo
     path.join(payloadRoot, 'kungfubuildinfo.json'),
     path.join(unsafeRoot, 'kungfubuildinfo.json'),
   );
+  fs.copyFileSync(
+    path.join(payloadRoot, 'libnode.127.dylib'),
+    path.join(unsafeRoot, 'libnode.127.dylib'),
+  );
+  fs.copyFileSync(
+    path.join(payloadRoot, 'libkungfu_runtime.dylib'),
+    path.join(unsafeRoot, 'libkungfu_runtime.dylib'),
+  );
   fs.symlinkSync(
     '../../escape',
     path.join(unsafeRoot, 'pykungfu.cpython-313-darwin.so'),
@@ -351,6 +411,207 @@ test('producer rejects wrong runner, stale source, unsafe links, and missing roo
         toolchain: { compiler: 'Apple clang' },
       }),
     /symlink is unsafe/u,
+  );
+});
+
+test('consumer materializes an exact runtime closure and repeats idempotently', async (t) => {
+  const temporary = fs.mkdtempSync(
+    path.join(os.tmpdir(), 'qualified-core-consumer-hit-'),
+  );
+  t.after(() => fs.rmSync(temporary, { recursive: true, force: true }));
+  const { bundleRoot, candidate } = await promotedConsumerFixture(temporary);
+  const publicationRoot = path.join(temporary, 'checkout');
+  const cacheRoot = path.join(temporary, 'cache');
+  const first = await materializeQualifiedCoreBundle({
+    bundleRoot,
+    repositoryRoot: ROOT,
+    publicationRoot,
+    checkout: consumerCheckout(),
+    cacheRoot,
+    now: CONSUMER_NOW,
+  });
+  assert.equal(first.status, 'materialized');
+  assert.deepEqual(
+    fs
+      .readdirSync(path.join(publicationRoot, 'framework/core/dist/kungfu'))
+      .sort(),
+    [
+      '.qualified-core-materialization.json',
+      ...candidate.payload.entries.map((entry) => entry.path),
+    ].sort(),
+  );
+  const second = await materializeQualifiedCoreBundle({
+    bundleRoot,
+    repositoryRoot: ROOT,
+    publicationRoot,
+    checkout: consumerCheckout(),
+    cacheRoot,
+    now: CONSUMER_NOW,
+  });
+  assert.equal(second.status, 'already-materialized');
+  assert.equal(second.objectRoot, first.objectRoot);
+
+  const concurrentRoot = path.join(temporary, 'concurrent-checkout');
+  const concurrentCache = path.join(temporary, 'concurrent-cache');
+  const results = await Promise.all([
+    materializeQualifiedCoreBundle({
+      bundleRoot,
+      repositoryRoot: ROOT,
+      publicationRoot: concurrentRoot,
+      checkout: consumerCheckout(),
+      cacheRoot: concurrentCache,
+      now: CONSUMER_NOW,
+    }),
+    materializeQualifiedCoreBundle({
+      bundleRoot,
+      repositoryRoot: ROOT,
+      publicationRoot: concurrentRoot,
+      checkout: consumerCheckout(),
+      cacheRoot: concurrentCache,
+      now: CONSUMER_NOW,
+    }),
+  ]);
+  assert.deepEqual(results.map((result) => result.status).sort(), [
+    'already-materialized',
+    'materialized',
+  ]);
+  assert.equal(
+    fs
+      .readdirSync(path.join(concurrentRoot, 'framework/core/dist'))
+      .some((name) => name.includes('.qualified-core-stage-')),
+    false,
+  );
+});
+
+test('consumer rejects tamper, identity drift, expiry, and dirty target without partial output', async (t) => {
+  const temporary = fs.mkdtempSync(
+    path.join(os.tmpdir(), 'qualified-core-consumer-reject-'),
+  );
+  t.after(() => fs.rmSync(temporary, { recursive: true, force: true }));
+  const { bundleRoot } = await promotedConsumerFixture(temporary);
+  const tampered = path.join(temporary, 'tampered');
+  fs.cpSync(bundleRoot, tampered, { recursive: true });
+  fs.writeFileSync(
+    path.join(tampered, 'payload', 'pykungfu.cpython-313-darwin.so'),
+    'tampered',
+  );
+  const tamperedPublication = path.join(temporary, 'tampered-checkout');
+  await assert.rejects(
+    materializeQualifiedCoreBundle({
+      bundleRoot: tampered,
+      repositoryRoot: ROOT,
+      publicationRoot: tamperedPublication,
+      checkout: consumerCheckout(),
+      cacheRoot: path.join(temporary, 'tampered-cache'),
+      now: CONSUMER_NOW,
+    }),
+    /payload drift|digest drift/u,
+  );
+  assert.equal(
+    fs.existsSync(path.join(tamperedPublication, 'framework/core/dist/kungfu')),
+    false,
+  );
+  await assert.rejects(
+    materializeQualifiedCoreBundle({
+      bundleRoot,
+      repositoryRoot: ROOT,
+      publicationRoot: path.join(temporary, 'identity-checkout'),
+      checkout: consumerCheckout({ commit: 'f'.repeat(40) }),
+      cacheRoot: path.join(temporary, 'identity-cache'),
+      now: CONSUMER_NOW,
+    }),
+    /stale|commit/u,
+  );
+  await assert.rejects(
+    materializeQualifiedCoreBundle({
+      bundleRoot,
+      repositoryRoot: ROOT,
+      publicationRoot: path.join(temporary, 'expired-checkout'),
+      checkout: consumerCheckout(),
+      cacheRoot: path.join(temporary, 'expired-cache'),
+      now: '2026-08-01T00:00:00Z',
+    }),
+    /stale|active/u,
+  );
+  const dirtyPublication = path.join(temporary, 'dirty-checkout');
+  const dirtyTarget = path.join(dirtyPublication, 'framework/core/dist/kungfu');
+  fs.mkdirSync(dirtyTarget, { recursive: true });
+  fs.writeFileSync(path.join(dirtyTarget, 'user-build'), 'keep');
+  await assert.rejects(
+    materializeQualifiedCoreBundle({
+      bundleRoot,
+      repositoryRoot: ROOT,
+      publicationRoot: dirtyPublication,
+      checkout: consumerCheckout(),
+      cacheRoot: path.join(temporary, 'dirty-cache'),
+      now: CONSUMER_NOW,
+    }),
+    /target-dirty/u,
+  );
+  assert.equal(
+    fs.readFileSync(path.join(dirtyTarget, 'user-build'), 'utf8'),
+    'keep',
+  );
+});
+
+test('consumer CLI emits one source-build diagnosis when reuse is unavailable', () => {
+  const result = spawnSync(
+    process.execPath,
+    [
+      'framework/assignment-capture/qualified-assignment-core-consumer.mjs',
+      'materialize',
+      '--repository-root',
+      ROOT,
+    ],
+    {
+      cwd: ROOT,
+      encoding: 'utf8',
+      env: {
+        ...process.env,
+        KUNGFU_QUALIFIED_CORE_CACHE_ROOT: path.join(
+          os.tmpdir(),
+          `qualified-core-empty-${process.pid}`,
+        ),
+        KUNGFU_QUALIFIED_CORE_GITHUB: '0',
+      },
+    },
+  );
+  assert.equal(result.status, 127);
+  assert.equal(result.stderr, '');
+  const output = JSON.parse(result.stdout);
+  assert.equal(output.code, 'qualified-core-reuse-unavailable');
+  assert.equal(output.next_actions[0].command, './shifu build:core');
+});
+
+test('consumer rejects two locally retained authorities for one exact checkout', async (t) => {
+  const temporary = fs.mkdtempSync(
+    path.join(os.tmpdir(), 'qualified-core-consumer-ambiguous-'),
+  );
+  t.after(() => fs.rmSync(temporary, { recursive: true, force: true }));
+  const { bundleRoot } = await promotedConsumerFixture(temporary);
+  const cacheRoot = path.join(temporary, 'cache');
+  for (const provider of ['fixture-a', 'fixture-b']) {
+    await materializeQualifiedCoreBundle({
+      bundleRoot,
+      repositoryRoot: ROOT,
+      publicationRoot: path.join(temporary, provider),
+      checkout: consumerCheckout(),
+      cacheRoot,
+      now: CONSUMER_NOW,
+      transport: { provider },
+    });
+  }
+  await assert.rejects(
+    consumeQualifiedCoreForCheckout({
+      repositoryRoot: ROOT,
+      publicationRoot: path.join(temporary, 'consumer-checkout'),
+      cacheRoot,
+      now: CONSUMER_NOW,
+      checkout: consumerCheckout(),
+      platform: 'darwin',
+      architecture: 'arm64',
+    }),
+    /ambiguous-local-authority/u,
   );
 });
 

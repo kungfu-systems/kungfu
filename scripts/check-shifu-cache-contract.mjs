@@ -133,6 +133,172 @@ function exactExpected(actual, expected, field) {
   );
 }
 
+function exactObject(value, keys, label) {
+  assert.ok(
+    value && typeof value === 'object' && !Array.isArray(value),
+    `${label} must be an object`,
+  );
+  assert.deepEqual(
+    Object.keys(value).sort(),
+    [...keys].sort(),
+    `${label} fields are unsupported or incomplete`,
+  );
+}
+
+function validateQualifiedCoreDocumentShape(manifest, qualification) {
+  exactObject(
+    manifest,
+    [
+      'schema',
+      'producer',
+      'target',
+      'compatibility',
+      'build',
+      'contracts',
+      'payload',
+      'consumer',
+      'manifestRoot',
+      'qualificationReceiptRoot',
+      'promotionAuthorityRoot',
+    ],
+    'qualified Core manifest',
+  );
+  exactObject(
+    manifest.producer,
+    ['repository', 'commit', 'sourceTreeRoot'],
+    'qualified Core manifest producer',
+  );
+  exactObject(
+    manifest.target,
+    ['repository', 'commit'],
+    'qualified Core manifest target',
+  );
+  exactObject(
+    manifest.compatibility,
+    ['mode', 'equivalenceReceiptRoot'],
+    'qualified Core manifest compatibility',
+  );
+  exactObject(
+    manifest.build,
+    [
+      'nativeInputRoot',
+      'operatingSystem',
+      'architecture',
+      'pythonAbi',
+      'profile',
+      'toolchainDigest',
+      'dependencyLockDigest',
+    ],
+    'qualified Core manifest build',
+  );
+  exactObject(
+    manifest.contracts,
+    [
+      'artifactContractVersion',
+      'qualificationContractVersion',
+      'shifu',
+      'buildchain',
+    ],
+    'qualified Core manifest contracts',
+  );
+  for (const name of ['shifu', 'buildchain']) {
+    exactObject(
+      manifest.contracts[name],
+      ['version', 'root'],
+      `qualified Core manifest ${name} contract`,
+    );
+  }
+  exactObject(
+    manifest.payload,
+    ['artifactRoot', 'entries'],
+    'qualified Core manifest payload',
+  );
+  assert.ok(
+    Array.isArray(manifest.payload.entries) &&
+      manifest.payload.entries.length > 0,
+    'qualified Core manifest payload entries are absent',
+  );
+  for (const entry of manifest.payload.entries) {
+    exactObject(
+      entry,
+      ['path', 'type', 'sizeBytes', 'digest', 'mode', 'linkTarget'],
+      'qualified Core manifest payload entry',
+    );
+  }
+  exactObject(
+    manifest.consumer,
+    [
+      'targetRoot',
+      'staging',
+      'cleanCheckoutRequired',
+      'publication',
+      'partialStateRunnable',
+    ],
+    'qualified Core manifest consumer',
+  );
+  exactObject(
+    qualification,
+    [
+      'schema',
+      'manifestRoot',
+      'artifactRoot',
+      'identity',
+      'targetCheckout',
+      'checks',
+      'promotionAuthority',
+      'promotionAuthorityRoot',
+      'receiptRoot',
+    ],
+    'qualified Core qualification',
+  );
+  exactObject(
+    qualification.identity,
+    [
+      'producerRepository',
+      'producerCommit',
+      'targetRepository',
+      'targetCommit',
+      'compatibilityMode',
+      'equivalenceReceiptRoot',
+    ],
+    'qualified Core qualification identity',
+  );
+  exactObject(
+    qualification.targetCheckout,
+    ['commit', 'clean'],
+    'qualified Core qualification target checkout',
+  );
+  exactObject(
+    qualification.checks,
+    [
+      'artifactDigest',
+      'boundedPaths',
+      'safeSymlinks',
+      'platformAndAbi',
+      'buildIdentity',
+      'sourceIdentity',
+      'checkoutCleanliness',
+    ],
+    'qualified Core qualification checks',
+  );
+  exactObject(
+    qualification.promotionAuthority,
+    [
+      'schema',
+      'mode',
+      'repository',
+      'targetCommit',
+      'protectedRef',
+      'deliveryEvidenceRoot',
+      'authorityCandidates',
+      'status',
+      'validFrom',
+      'validThrough',
+    ],
+    'qualified Core promotion authority',
+  );
+}
+
 export async function verifyQualifiedAssignmentCoreArtifact({
   manifest,
   qualification,
@@ -143,18 +309,21 @@ export async function verifyQualifiedAssignmentCoreArtifact({
   const cacheContract = readJson(path.join(root, rel(CONTRACT_PATH)));
   const paths = qualifiedArtifactPaths(root, cacheContract);
   const Ajv2020 = await loadAjv2020();
-  assert.ok(Ajv2020, 'Ajv is required for qualified Core verification');
-  const ajv = ajv2020(Ajv2020);
-  validateOrThrow(
-    ajv.compile(readJson(paths.manifestSchemaPath)),
-    manifest,
-    'qualified Assignment Core manifest',
-  );
-  validateOrThrow(
-    ajv.compile(readJson(paths.qualificationSchemaPath)),
-    qualification,
-    'qualified Assignment Core qualification receipt',
-  );
+  if (Ajv2020) {
+    const ajv = ajv2020(Ajv2020);
+    validateOrThrow(
+      ajv.compile(readJson(paths.manifestSchemaPath)),
+      manifest,
+      'qualified Assignment Core manifest',
+    );
+    validateOrThrow(
+      ajv.compile(readJson(paths.qualificationSchemaPath)),
+      qualification,
+      'qualified Assignment Core qualification receipt',
+    );
+  } else {
+    validateQualifiedCoreDocumentShape(manifest, qualification);
+  }
 
   const entries = manifest.payload.entries;
   const declaredPaths = entries.map((entry) => entry.path);
