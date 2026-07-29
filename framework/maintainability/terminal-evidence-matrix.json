@@ -40,7 +40,7 @@
       "macos-arm64",
       "windows-x64"
     ],
-    "artifactIdentityRule": "Every platform run and artifact resolves to the live protected commit, and every declared sha256 root recomputes from retained bytes.",
+    "artifactIdentityRule": "Every platform run and artifact resolves to the live protected commit. Raw artifact roots recompute from retained bytes; native Assignment and normalized delivery roots recompute with their declared canonical-JSON protocol and are checked against role-specific fields.",
     "reviewRule": {
       "reviewer": "kungfu-origin",
       "decision": "APPROVED",
@@ -48,7 +48,7 @@
       "freshContext": true,
       "maximumOpenSeverity": "no P0, no P1, and no material P2 in scope"
     },
-    "assignmentRule": "The current Assignment request, accepted completion decision, and sealed state are retained and exact-head bound. Predecessor rows are closed projections of the listed immutable predecessor seal, not actionable work."
+    "assignmentRule": "The current Assignment request, capture receipt, exact-head completion claim, fit independent native review, accepted close decision, and sealed state are retained under their native canonical roots. Predecessor rows are closed projections of the listed immutable predecessor seal, not actionable work."
   },
   "exceptions": [],
   "rows": [

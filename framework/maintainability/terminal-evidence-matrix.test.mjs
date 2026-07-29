@@ -6,6 +6,7 @@ import path from 'node:path';
 import test from 'node:test';
 import { fileURLToPath } from 'node:url';
 
+import { semanticRoot } from '../project-cut/src/project-cut.mjs';
 import { digestBytes, verifyTerminalEvidence } from './terminal-evidence.mjs';
 
 const ROOT = path.resolve(
@@ -38,29 +39,125 @@ function fixture() {
   const fixtureMatrix = clone(matrix);
   const retainedBytes = new Map();
   const retainedObjects = [];
-  const retain = (id) => {
-    const bytes = Buffer.from(`retained:${id}`);
-    const root = digestBytes(bytes);
+  const retain = (
+    id,
+    value,
+    kind,
+    rootProtocol = 'canonical-json',
+    rootField = undefined,
+  ) => {
+    const document = Buffer.isBuffer(value) ? undefined : clone(value);
+    let root;
+    if (rootProtocol === 'raw-bytes') {
+      root = digestBytes(value);
+    } else if (rootProtocol === 'canonical-json') {
+      root = semanticRoot(document);
+    } else {
+      const preimage = { ...document };
+      delete preimage[rootField];
+      root = semanticRoot(preimage);
+      document[rootField] = root;
+    }
+    const bytes =
+      rootProtocol === 'raw-bytes'
+        ? value
+        : Buffer.from(`${JSON.stringify(document)}\n`);
     const pathname = `${id}.json`;
     retainedBytes.set(pathname, bytes);
-    retainedObjects.push({ root, path: pathname });
+    retainedObjects.push({
+      root,
+      path: pathname,
+      kind,
+      rootProtocol,
+      ...(rootField ? { rootField } : {}),
+    });
     return root;
   };
   const platforms = fixtureMatrix.terminalEvidence.requiredProductPlatforms.map(
-    (platform, index) => ({
-      platform,
-      commit: HEAD,
-      runId: index + 101,
-      conclusion: 'success',
-      evidenceRoot: retain(`${platform}-run`),
-      artifacts: [
-        {
-          name: `${platform}-product`,
-          root: retain(`${platform}-product`),
-        },
-      ],
-    }),
+    (platform, index) => {
+      const run = {
+        schema: 'kungfu.terminal-platform-run-snapshot/v1',
+        platform,
+        commit: HEAD,
+        runId: index + 101,
+        conclusion: 'success',
+      };
+      return {
+        platform,
+        commit: HEAD,
+        runId: index + 101,
+        conclusion: 'success',
+        evidenceRoot: retain(`${platform}-run`, run, 'platform-run'),
+        artifacts: [
+          {
+            name: `${platform}-product`,
+            root: retain(
+              `${platform}-product`,
+              Buffer.from(`artifact:${platform}`),
+              'artifact-bytes',
+              'raw-bytes',
+            ),
+          },
+        ],
+      };
+    },
   );
+  const request = {
+    schema: 'kungfu.assignment-request/v1',
+    retention: {
+      expiresAt: null,
+      policy: 'explicit-expiry-retain-bytes-v1',
+    },
+    source: { kind: 'atlas-go-card', sourceId: fixtureMatrix.goalId },
+    workDefinition: { goal_id: fixtureMatrix.goalId },
+  };
+  const requestRoot = retain(
+    'assignment-request',
+    request,
+    'assignment-request',
+  );
+  const capture = {
+    schema: 'kungfu.assignment-capture.receipt/v1',
+    requestRoot,
+  };
+  const captureReceiptRoot = retain(
+    'assignment-capture',
+    capture,
+    'assignment-capture',
+    'canonical-json-without-root-field',
+    'receiptRoot',
+  );
+  const decision = {
+    decision_id: `decision-${'c'.repeat(24)}`,
+    action: 'close',
+  };
+  const completionClaim = {
+    claim_id: `completion-${'d'.repeat(24)}`,
+    claim_type: 'task-completed',
+    git_commit: HEAD,
+    go_set: [fixtureMatrix.goalId],
+    known_gaps: [],
+  };
+  const nativeReview = {
+    review_id: `review-${'e'.repeat(24)}`,
+    review_type: 'independent-completion-review',
+    claim_id: completionClaim.claim_id,
+    claimant: 'codex/pro-7011/root',
+    reviewer: 'kungfu-origin',
+    verdict: 'fit',
+  };
+  const independentReviewRoot = semanticRoot(nativeReview);
+  decision.review_root = independentReviewRoot;
+  const assignmentSeal = {
+    schema: 'kungfu.assignment-orchestration.sealed-state/v1',
+    assignment: { assignment_id: fixtureMatrix.goalId },
+    phase: 'continuation-decided',
+  };
+  const predecessorSeal = {
+    schema: 'kungfu.assignment-orchestration.sealed-state/v1',
+    assignment: { assignment_id: fixtureMatrix.predecessor.assignmentId },
+    phase: 'continuation-decided',
+  };
   const evidence = {
     schema: fixtureMatrix.terminalEvidence.schema,
     goalId: fixtureMatrix.goalId,
@@ -73,26 +170,67 @@ function fixture() {
       pullRequest: 2001,
       mergeCommit: HEAD,
       state: 'MERGED',
-      evidenceRoot: retain('delivery'),
+      evidenceRoot: retain(
+        'delivery',
+        {
+          schema: 'kungfu.terminal-delivery-snapshot/v1',
+          pullRequest: 2001,
+          mergeCommit: HEAD,
+          state: 'MERGED',
+        },
+        'delivery-snapshot',
+      ),
     },
     review: {
       reviewer: 'kungfu-origin',
       decision: 'APPROVED',
       commit: HEAD,
       freshContext: true,
-      root: retain('review'),
+      root: retain(
+        'review',
+        {
+          schema: 'kungfu.terminal-review-snapshot/v1',
+          reviewer: 'kungfu-origin',
+          decision: 'APPROVED',
+          commit: HEAD,
+          freshContext: true,
+        },
+        'review-snapshot',
+      ),
     },
     assignment: {
       assignmentId: fixtureMatrix.goalId,
       gitCommit: HEAD,
-      requestRoot: retain('assignment-request'),
-      captureReceiptRoot: retain('assignment-capture'),
-      completionDecisionRoot: retain('assignment-decision'),
-      sealedStateRoot: retain('assignment-seal'),
+      requestRoot,
+      captureReceiptRoot,
+      completionClaimRoot: retain(
+        'assignment-claim',
+        completionClaim,
+        'assignment-claim',
+      ),
+      independentReviewRoot: retain(
+        'assignment-native-review',
+        nativeReview,
+        'assignment-review',
+      ),
+      completionDecisionRoot: retain(
+        'assignment-decision',
+        decision,
+        'assignment-decision',
+      ),
+      sealedStateRoot: retain(
+        'assignment-seal',
+        assignmentSeal,
+        'assignment-seal',
+      ),
     },
     predecessor: {
       assignmentId: fixtureMatrix.predecessor.assignmentId,
-      sealedStateRoot: retain('predecessor-seal'),
+      sealedStateRoot: retain(
+        'predecessor-seal',
+        predecessorSeal,
+        'predecessor-seal',
+      ),
     },
     platforms,
     retainedObjects,
@@ -106,7 +244,11 @@ function fixture() {
       {
         head: HEAD,
         protectedCommit: HEAD,
-        delivery: { pullRequest: 2001, mergeCommit: HEAD },
+        delivery: {
+          pullRequest: 2001,
+          mergeCommit: HEAD,
+          state: 'MERGED',
+        },
         ...live,
       },
       (relative) => {
@@ -185,16 +327,35 @@ test('live HEAD, protected PR, merge, and review identities fail closed', () => 
   assert.ok(
     issueCodes(
       verify(evidence, {
-        delivery: { pullRequest: 2002, mergeCommit: HEAD },
+        delivery: {
+          pullRequest: 2002,
+          mergeCommit: HEAD,
+          state: 'MERGED',
+        },
       }),
     ).has('delivery-pr-mismatch'),
   );
   assert.ok(
     issueCodes(
       verify(evidence, {
-        delivery: { pullRequest: 2001, mergeCommit: OTHER_HEAD },
+        delivery: {
+          pullRequest: 2001,
+          mergeCommit: OTHER_HEAD,
+          state: 'MERGED',
+        },
       }),
     ).has('delivery-merge-mismatch'),
+  );
+  assert.ok(
+    issueCodes(
+      verify(evidence, {
+        delivery: {
+          pullRequest: 2001,
+          mergeCommit: HEAD,
+          state: 'OPEN',
+        },
+      }),
+    ).has('delivery-state-mismatch'),
   );
   const wrongReview = clone(evidence);
   wrongReview.review.reviewer = 'dongkeren';
@@ -204,7 +365,7 @@ test('live HEAD, protected PR, merge, and review identities fail closed', () => 
   assert.ok(issueCodes(verify(staleReview)).has('review-head-mismatch'));
 });
 
-test('Assignment roots, platform runs, and artifact bytes fail closed', () => {
+test('retained semantic roles, platform runs, and artifact bytes fail closed', () => {
   const { evidence, retainedBytes, verify } = fixture();
   const wrongAssignment = clone(evidence);
   wrongAssignment.assignment.requestRoot = digestBytes(
