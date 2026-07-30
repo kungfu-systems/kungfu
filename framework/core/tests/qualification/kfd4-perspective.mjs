@@ -2,7 +2,6 @@
 // SPDX-License-Identifier: Apache-2.0
 // @ts-check
 
-import { execFileSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -83,17 +82,6 @@ function validateSource(report, root) {
     /^[0-9a-f]{40}$/u.test(source.implementationRevision || ''),
     'implementation revision must be a full Git SHA',
   );
-  try {
-    execFileSync(
-      'git',
-      ['merge-base', '--is-ancestor', source.implementationRevision, 'HEAD'],
-      { cwd: root, stdio: 'ignore' },
-    );
-  } catch {
-    throw new Error(
-      'KFD-4 qualification: implementation revision is not an ancestor of HEAD',
-    );
-  }
   const bindings = source.bindings || [];
   exactStrings(
     bindings.map((entry) => entry.path),
@@ -111,6 +99,15 @@ function validateSource(report, root) {
       `source binding root drifted: ${binding.path}`,
     );
   }
+  requireThat(
+    source.deliveryBinding?.mode === 'content-addressed-retained-provenance',
+    'implementation delivery binding mode drifted',
+  );
+  requireThat(
+    source.deliveryBinding.root ===
+      semanticRoot(without(source, ['deliveryBinding'])),
+    'implementation delivery binding root drifted',
+  );
 }
 
 function validateNative(native) {

@@ -152,7 +152,7 @@
         "evidenceRoots": [
           {
             "path": ".buildchain/kfd/kfd-3/surfaces.json",
-            "sha256": "sha256:cfd7ecf63227e08bb9be43b14b685e539e9ecf0a98631f9097f87561c95d3ea7"
+            "sha256": "sha256:78defdb47b0f25674d2f74ca5bdb9d797048c6a681bb030a8865ca1ee41bc15e"
           },
           {
             "path": ".buildchain/kfd/kfd-3/capability-query.json",
@@ -203,7 +203,7 @@
         "evidenceRoots": [
           {
             "path": "docs/qualification/evidence/kfd-4-perspective/d73cab0d69/report.json",
-            "sha256": "sha256:e64d1337b78f4940f35fc9e80ea93222c7932acaa7fdc1c73ee881e456c97bc1"
+            "sha256": "sha256:c086e9588f3bde00105c91080e4e3e00d558b8ea560486ae0b7df685b967b2e8"
           },
           {
             "path": "framework/core/tests/python/test_kfd4_perspective.py",

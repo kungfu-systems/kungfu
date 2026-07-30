@@ -180,7 +180,7 @@
       "schemaCount": 3,
       "schemaCommand": "kungfu sdk kfd 4 schema --json",
       "qualificationCommand": "node framework/core/tests/qualification/kfd4-perspective.mjs",
-      "qualificationRoot": "sha256:c3d363844e58b55ab8eb677dfd3d579364580c701dbe385957b38fc6b06efdf2",
+      "qualificationRoot": "sha256:bd0efd4ce44e3347a6185b5b31029dc066de0bad924d33b19548ae753d9fdc4b",
       "releaseQualification": "not-qualified",
       "shippedSupport": false,
       "residualRisk": [

@@ -46,6 +46,18 @@ test('source binding drift fails closed', () => {
   }, /source binding root drifted/);
 });
 
+test('retained implementation provenance remains content-addressed', () => {
+  rejects((report) => {
+    report.source.implementationRevision = '0'.repeat(40);
+  }, /implementation delivery binding root drifted/);
+  rejects((report) => {
+    report.source.deliveryBinding.mode = 'ancestry-only';
+  }, /implementation delivery binding mode drifted/);
+  rejects((report) => {
+    report.source.deliveryBinding.root = `sha256:${'f'.repeat(64)}`;
+  }, /implementation delivery binding root drifted/);
+});
+
 test('self-certification or shipped support widening fails closed', () => {
   rejects((report) => {
     report.verdict.selfCertified = true;

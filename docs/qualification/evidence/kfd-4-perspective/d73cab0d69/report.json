@@ -560,7 +560,7 @@
       "viewRoot": "sha256:63d07386431b5c7e37b9071d6950c0da47f3387655984ad422ef1421809aec8d"
     }
   ],
-  "qualificationRoot": "sha256:c3d363844e58b55ab8eb677dfd3d579364580c701dbe385957b38fc6b06efdf2",
+  "qualificationRoot": "sha256:bd0efd4ce44e3347a6185b5b31029dc066de0bad924d33b19548ae753d9fdc4b",
   "schema": "kungfu.kfd-4-perspective-qualification/v1",
   "source": {
     "bindings": [
@@ -573,6 +573,10 @@
         "sha256": "sha256:e07a44456d83bed34b83df02ab94e9562c5c5b4cf52b3f7ae3562370a36d3460"
       }
     ],
+    "deliveryBinding": {
+      "mode": "content-addressed-retained-provenance",
+      "root": "sha256:dbd309f54701dd10f4901bba7d4ec0a9f47d8ccf80f52320323a128c89041606"
+    },
     "implementationRevision": "d73cab0d69b77a14c546d063bf89760d846d49a9",
     "repository": "kungfu-systems/kungfu"
   },
