@@ -644,11 +644,10 @@ export function validateQualifiedCoreCandidate(
     buildInfo.git?.revision !== candidate.source.commit ||
     buildInfo.git?.pristine !== true ||
     pythonAbi(buildInfo) !== candidate.build.pythonAbi ||
+    buildInfo.build?.operatingSystem !== row.operatingSystem ||
+    buildInfo.build?.architecture !== row.architecture ||
     !String(buildInfo.build?.osVersion || '').startsWith(
       row.buildInfo.osVersionPrefix,
-    ) ||
-    !String(buildInfo.build?.osVersion || '').includes(
-      row.buildInfo.architectureToken,
     )
   ) {
     throw new Error('qualified Core candidate build metadata drift');
@@ -783,11 +782,10 @@ export function sealQualifiedCoreCandidate({
     throw new Error('qualified Core build metadata is stale or impure');
   }
   if (
+    buildInfo.build?.operatingSystem !== row.operatingSystem ||
+    buildInfo.build?.architecture !== row.architecture ||
     !String(buildInfo.build?.osVersion || '').startsWith(
       row.buildInfo.osVersionPrefix,
-    ) ||
-    !String(buildInfo.build?.osVersion || '').includes(
-      row.buildInfo.architectureToken,
     )
   ) {
     throw new Error(`qualified Core build metadata does not match ${row.id}`);

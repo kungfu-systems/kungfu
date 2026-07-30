@@ -180,6 +180,7 @@ function writeBuild(
   rowId = 'darwin-arm64-cp313',
 ) {
   const fixture = ROW_FIXTURES[rowId];
+  const row = qualifiedCorePlatformRow(rowId, ROOT);
   assert.ok(fixture, `missing row fixture ${rowId}`);
   fs.mkdirSync(payloadRoot, { recursive: true });
   fs.writeFileSync(
@@ -187,7 +188,11 @@ function writeBuild(
     `${JSON.stringify({
       version: '4.0.0-alpha.1',
       pythonVersion: '3.13.14',
-      build: { osVersion: fixture.osVersion },
+      build: {
+        osVersion: fixture.osVersion,
+        operatingSystem: row.operatingSystem,
+        architecture: row.architecture,
+      },
       git: { revision: commit, pristine: true },
     })}\n`,
   );
@@ -679,6 +684,15 @@ test('producer rejects wrong runner, stale source, unsafe links, and missing roo
       }),
     /source is stale/u,
   );
+  const wrongBuildIdentity = structuredClone(candidate);
+  wrongBuildIdentity.build.buildInfo.build.architecture = 'x64';
+  const { candidateRoot: _wrongBuildIdentityRoot, ...wrongBuildIdentityBody } =
+    wrongBuildIdentity;
+  wrongBuildIdentity.candidateRoot = digest(wrongBuildIdentityBody);
+  assert.throws(
+    () => validateQualifiedCoreCandidate(wrongBuildIdentity, candidateRoot),
+    /build metadata drift/u,
+  );
   const missingRoot = structuredClone(candidate);
   const { planRoot: _planRoot, ...remainingQualification } =
     missingRoot.qualification;
@@ -911,6 +925,69 @@ test('Linux x86_64 consumer materializes a protected bundle and reuses local CAS
     discoverRemote: async () => {
       assert.fail(
         'the second Linux checkout must reuse the retained local CAS',
+      );
+    },
+  });
+  assert.equal(second.status, 'materialized');
+  assert.equal(second.objectRoot, first.objectRoot);
+  const summary = summarizeQualifiedCoreUsage(cacheRoot);
+  assert.equal(summary.counts.reasons['remote-hit'], 1);
+  assert.equal(summary.counts.reasons['local-cas-hit'], 1);
+});
+
+test('Windows x86_64 consumer materializes a protected bundle and reuses local CAS in a second checkout', async (t) => {
+  const temporary = fs.mkdtempSync(
+    path.join(os.tmpdir(), 'qualified-core-windows-consumer-'),
+  );
+  t.after(() => fs.rmSync(temporary, { recursive: true, force: true }));
+  const { bundleRoot, candidate } = await promotedConsumerFixture(
+    temporary,
+    'windows-x86_64-cp313',
+  );
+  const cacheRoot = path.join(temporary, 'cache');
+  const first = await consumeQualifiedCoreForCheckout({
+    repositoryRoot: ROOT,
+    publicationRoot: path.join(temporary, 'checkout-one'),
+    cacheRoot,
+    now: CONSUMER_NOW,
+    checkout: consumerCheckout(),
+    platform: 'win32',
+    architecture: 'x64',
+    discoverRemote: async (_checkout, _temporary, options) => {
+      assert.equal(options.platformRowId, 'windows-x86_64-cp313');
+      return {
+        bundleRoot,
+        transport: {
+          provider: 'github-workflow-artifact',
+          artifactId: 44,
+          artifactName: `qualified-assignment-core-${QUEUE_HEAD}-windows-x86_64-cp313`,
+          runId: 45,
+          workflowPath: '.github/workflows/affected-native-cache-promote.yml',
+          event: 'push',
+          protectedRef: 'refs/heads/dev/v4/v4.0',
+          headSha: QUEUE_HEAD,
+          platformRow: 'windows-x86_64-cp313',
+        },
+      };
+    },
+  });
+  assert.equal(first.status, 'materialized');
+  assert.deepEqual(
+    candidate.payload.entries.map(({ path: entryPath }) => entryPath),
+    ['kungfubuildinfo.json', 'libnode.dll', 'pykungfu.cp313-win_amd64.pyd'],
+  );
+
+  const second = await consumeQualifiedCoreForCheckout({
+    repositoryRoot: ROOT,
+    publicationRoot: path.join(temporary, 'checkout-two'),
+    cacheRoot,
+    now: '2026-07-29T06:00:01Z',
+    checkout: consumerCheckout(),
+    platform: 'win32',
+    architecture: 'x64',
+    discoverRemote: async () => {
+      assert.fail(
+        'the second Windows checkout must reuse the retained local CAS',
       );
     },
   });

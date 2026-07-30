@@ -40,6 +40,7 @@ const ROOT_HASH = /^sha256:[0-9a-f]{64}$/u;
 const ACTIVE_CONSUMER_ROWS = new Set([
   'darwin-arm64-cp313',
   'linux-x86_64-cp313',
+  'windows-x86_64-cp313',
 ]);
 const TOOL_CACHE_TARGETS = {
   'darwin-arm64': 'macos-aarch64',

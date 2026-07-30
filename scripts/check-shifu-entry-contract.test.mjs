@@ -215,6 +215,12 @@ test('Windows cold source Work failure carries the same diagnosis', () => {
   assert.match(windows, /"action":"build-core"/u);
   assert.match(windows, /"command":"shifu\.cmd build:core"/u);
   assert.match(windows, /kungfubuildinfo\.json/u);
+  assert.match(
+    windows,
+    /qualified-assignment-core-consumer\.mjs" materialize/u,
+  );
+  assert.match(windows, /resolve-cached-tool uv/u);
+  assert.match(windows, /set "_KFC_UV=/u);
 });
 
 test('cache execution boundaries distinguish gate run and source acceptance', () => {
