@@ -20,6 +20,7 @@ test('latency Patrol covers every contract-compatible dev family', () => {
   assert.match(workflow, /\.\/shifu dev-gate-latency-patrol:select --/);
   assert.match(workflow, /jq -r '\.branches\[\]'/);
   assert.match(workflow, /--limit 30/);
+  assert.match(workflow, /--latency-only/);
 });
 
 test('latency Patrol is read-only and cannot become a required gate', () => {
@@ -41,7 +42,11 @@ test('latency Patrol captures native Findings in persistent agent-121 state', ()
     workflow,
     /actions\/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093/,
   );
-  assert.match(workflow, /KUNGFU_DOGFOOD_COMMAND: \/usr\/local\/bin\/kungfu/);
+  assert.doesNotMatch(workflow, /KUNGFU_DOGFOOD_COMMAND:/);
+  assert.match(
+    workflow,
+    /Prepare native Dogfood runtime only for anomalies[\s\S]*?\.captureRequired == true[\s\S]*?\.\/shifu build:core/u,
+  );
   assert.match(
     workflow,
     /\$HOME\/\.local\/state\/kungfu-dev-gate-latency-patrol/,
@@ -60,10 +65,6 @@ test('latency Patrol captures native Findings in persistent agent-121 state', ()
 });
 
 test('latency Patrol uses runner context only inside steps', () => {
-  assert.doesNotMatch(
-    workflow,
-    /timeout-minutes: 15\n {4}env:\n {6}KUNGFU_DOGFOOD_COMMAND:[^\n]+\n {6}KUNGFU_DEV_GATE_PATROL_EVIDENCE:.*runner\.temp/u,
-  );
   assert.match(
     workflow,
     /Capture or deduplicate native Dogfood Findings[\s\S]*?env:\n {10}KUNGFU_DEV_GATE_PATROL_EVIDENCE:.*runner\.temp/u,

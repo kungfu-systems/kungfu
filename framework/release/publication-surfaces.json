@@ -176,7 +176,7 @@
           "classification": "non-publication",
           "owner": "kungfu-ci",
           "surfaceIds": [],
-          "sourceRoot": "sha256:9d1aa5a229a44dac6a66f1c3b68b487f66799b0524a01a3da11227c018858fd5"
+          "sourceRoot": "sha256:639f670a1fa0f6418fc142c01e82a024ff2ce530b0ebd6db9857e63944ac9117"
         },
         {
           "path": ".github/workflows/stable-candidate-patrol.yml",
@@ -820,5 +820,5 @@
       }
     }
   ],
-  "registryRoot": "sha256:c5fc3770c7ba6410c10f6b6ac42e49f65af2c90b8d2e01584cc21d1a3e547337"
+  "registryRoot": "sha256:6b54323735a8a79da0eb84f0a970422612d92cc19f360f791155a6b07351224e"
 }

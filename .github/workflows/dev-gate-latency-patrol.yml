@@ -89,6 +89,7 @@ jobs:
             ./shifu gate:latency:measure \
               --branch "$branch" \
               --limit 30 \
+              --latency-only \
               --output "$KUNGFU_DEV_GATE_PATROL_EVIDENCE/reports/$slug.json" \
               >"$KUNGFU_DEV_GATE_PATROL_EVIDENCE/collector/$slug.stdout" \
               2>"$KUNGFU_DEV_GATE_PATROL_EVIDENCE/collector/$slug.stderr" ||
@@ -168,9 +169,7 @@ jobs:
       - agent-121
       - kungfu-agent-patrol
     continue-on-error: true
-    timeout-minutes: 15
-    env:
-      KUNGFU_DOGFOOD_COMMAND: /usr/local/bin/kungfu
+    timeout-minutes: 90
     steps:
       - name: Check out exact protected source
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
@@ -189,7 +188,29 @@ jobs:
           name: dev-gate-latency-patrol-${{ github.run_id }}-${{ github.run_attempt }}
           path: ${{ runner.temp }}/dev-gate-latency-patrol-${{ github.run_id }}-${{ github.run_attempt }}
 
+      - name: Prepare native Dogfood runtime only for anomalies
+        continue-on-error: true
+        shell: bash
+        env:
+          KUNGFU_DEV_GATE_PATROL_EVIDENCE: ${{ runner.temp }}/dev-gate-latency-patrol-${{ github.run_id }}-${{ github.run_attempt }}
+        run: |
+          set -euo pipefail
+          capture_required=false
+          for classification in "$KUNGFU_DEV_GATE_PATROL_EVIDENCE"/classification/*.json; do
+            test -f "$classification" || continue
+            if jq -e '.captureRequired == true' "$classification" >/dev/null; then
+              capture_required=true
+              break
+            fi
+          done
+          printf 'KUNGFU_DEV_GATE_PATROL_CAPTURE_REQUIRED=%s\n' "$capture_required" >>"$GITHUB_ENV"
+          if test "$capture_required" = "true"; then
+            ./shifu install --frozen-lockfile
+            ./shifu build:core
+          fi
+
       - name: Capture or deduplicate native Dogfood Findings
+        if: ${{ always() }}
         continue-on-error: true
         shell: bash
         env:

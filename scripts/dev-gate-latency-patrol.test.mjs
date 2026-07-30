@@ -135,6 +135,29 @@ test('required latency and merge delivery regressions classify separately', () =
   ]);
 });
 
+test('latency-only monitoring skips cache artifacts without hiding SLO regressions', () => {
+  const value = report({
+    collection: {
+      evidenceMode: 'latency-only',
+      nativeArtifacts: 'skipped',
+      retainedBaselineEligible: false,
+    },
+    cache: { unknownCount: 20 },
+  });
+  const healthy = classifyLatencyReport(value, {
+    repository: value.repository,
+    branch: value.branch,
+  });
+  assert.deepEqual(healthy.categories, []);
+
+  value.statistics.native.p95Ms = 700_000;
+  const regressed = classifyLatencyReport(value, {
+    repository: value.repository,
+    branch: value.branch,
+  });
+  assert.deepEqual(regressed.categories, ['required-latency-slo']);
+});
+
 test('unknown and insufficient evidence stay distinct from collector failure', () => {
   const value = report();
   value.statistics.all.sampleCount = 9;

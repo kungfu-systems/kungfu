@@ -142,6 +142,11 @@ export function classifyLatencyReport(report, { repository, branch }) {
   const queue = report.mergeQueueDelivery || {};
   const enoughRequired = all.sampleCount >= 20 && native.sampleCount >= 10;
   const enoughQueue = queue.statistics?.sampleCount >= 20;
+  const latencyOnly =
+    report.collection?.evidenceMode === 'latency-only' &&
+    report.collection?.nativeArtifacts === 'skipped';
+  const attributionIncomplete =
+    unknown.sampleCount > 0 || (!latencyOnly && report.cache?.unknownCount > 0);
 
   if (
     !enoughRequired ||
@@ -151,16 +156,10 @@ export function classifyLatencyReport(report, { repository, branch }) {
     queue.runnerEvidenceObservedCount < queue.queueObservedCount
   )
     categories.push('insufficient-evidence');
-  if (
-    unknown.sampleCount > 0 ||
-    report.cache?.unknownCount > 0 ||
-    report.collection?.nativeArtifacts !== 'required'
-  )
-    categories.push('unknown-attribution');
+  if (attributionIncomplete) categories.push('unknown-attribution');
   if (
     enoughRequired &&
-    unknown.sampleCount === 0 &&
-    report.cache?.unknownCount === 0 &&
+    !attributionIncomplete &&
     (Math.max(all.p50Ms, native.p50Ms) > 300_000 ||
       Math.max(all.p95Ms, native.p95Ms) > 600_000)
   )
