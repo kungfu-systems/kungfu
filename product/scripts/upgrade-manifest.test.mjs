@@ -17,6 +17,7 @@ import {
 } from '../../scripts/upgrade-qualification.mjs';
 import {
   UNQUALIFIED_RELEASE_EVIDENCE,
+  assertUpgradeIdentityConverged,
   assertUpgradePublicationEligible,
   buildBundledUpgradeManifest,
   finalizeCliUpgradeManifest,
@@ -165,6 +166,18 @@ test('bundled manifest binds exact runtime bytes and source product identity', (
     assert.match(manifest.frontendBuildId, /^product-4\.0\.0-alpha\.1-/);
     assert.equal(manifest.runtimeEntrypoint, 'kungfu');
     assert.equal(manifest.artifacts[0].signature, UNQUALIFIED_RELEASE_EVIDENCE);
+    fs.mkdirSync(path.join(f.runtimeRoot, '__pycache__'));
+    fs.writeFileSync(
+      path.join(f.runtimeRoot, '__pycache__', 'runtime.pyc'),
+      'bytecode',
+    );
+    const bytecodeChanged = buildBundledUpgradeManifest({
+      ...f,
+      platform: 'darwin',
+      architecture: 'arm64',
+      revision: '1'.repeat(40),
+    });
+    assert.equal(bytecodeChanged.runtimeBuildId, manifest.runtimeBuildId);
     fs.writeFileSync(path.join(f.runtimeRoot, 'kungfu'), 'changed');
     const changed = buildBundledUpgradeManifest({
       ...f,
@@ -176,6 +189,24 @@ test('bundled manifest binds exact runtime bytes and source product identity', (
   } finally {
     fs.rmSync(f.root, { recursive: true, force: true });
   }
+});
+
+test('combined release rejects a CLI and desktop identity split', () => {
+  const root = `sha256:${'1'.repeat(64)}`;
+  assert.doesNotThrow(() =>
+    assertUpgradeIdentityConverged(
+      { manifestIdentityRoot: root },
+      { manifestIdentityRoot: root },
+    ),
+  );
+  assert.throws(
+    () =>
+      assertUpgradeIdentityConverged(
+        { manifestIdentityRoot: root },
+        { manifestIdentityRoot: `sha256:${'2'.repeat(64)}` },
+      ),
+    /divergent upgrade identities/u,
+  );
 });
 
 test('Product Release Cut roots verify identically in Node and Python', () => {

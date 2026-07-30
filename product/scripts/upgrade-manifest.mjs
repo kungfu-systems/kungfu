@@ -12,7 +12,11 @@ import {
   loadUpgradeQualificationContract,
   verifyUpgradeQualificationEvidence,
 } from '../../scripts/upgrade-qualification.mjs';
-import { internalSymlinkTarget, sha256Tree } from './compatibility.mjs';
+import {
+  internalSymlinkTarget,
+  isPythonBytecodePath,
+  sha256Tree,
+} from './compatibility.mjs';
 import { contentRoot } from './release-channel-index.mjs';
 
 export const UNQUALIFIED_RELEASE_EVIDENCE = 'unqualified-local-build';
@@ -46,11 +50,14 @@ function sourceCommit(root) {
   return result.stdout.trim();
 }
 
+const releaseRuntimePath = (file) => !isPythonBytecodePath(file);
+
 function treeSize(root) {
   let size = 0;
   const visit = (dir) => {
     for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
       const full = path.join(dir, entry.name);
+      if (!releaseRuntimePath(full)) continue;
       if (entry.isDirectory()) visit(full);
       else if (entry.isFile()) size += fs.statSync(full).size;
       else if (entry.isSymbolicLink()) {
@@ -216,6 +223,17 @@ export function platformUpgradeManifestName(version, platform, architecture) {
   return `kungfu-upgrade-${version}-${platform}-${architecture}.json`;
 }
 
+export function assertUpgradeIdentityConverged(bundled, releaseBase) {
+  if (
+    !bundled?.manifestIdentityRoot ||
+    bundled.manifestIdentityRoot !== releaseBase?.manifestIdentityRoot
+  ) {
+    throw new Error(
+      'CLI archive and desktop release base have divergent upgrade identities',
+    );
+  }
+}
+
 export function buildBundledUpgradeManifest({
   root,
   runtimeRoot,
@@ -233,7 +251,9 @@ export function buildBundledUpgradeManifest({
     throw new Error(`runtime root is not a directory: ${runtimeRoot}`);
   }
   const version = readJson(path.join(root, 'product', 'package.json')).version;
-  const runtimeDigest = sha256Tree(runtimeRoot);
+  const runtimeDigest = sha256Tree(runtimeRoot, {
+    filter: releaseRuntimePath,
+  });
   const runtimeBuildId = `runtime-${version}-${runtimeDigest.slice(0, 16)}`;
   const frontendBuildId = `product-${version}-${revision.slice(0, 16)}`;
   return bindProductReleaseCut({
@@ -325,6 +345,7 @@ export function finalizeDesktopUpgradeManifest({
 
 export function finalizeCliUpgradeManifest({
   bundledManifest,
+  embeddedManifest = bundledManifest,
   cliArtifact,
   artifactUrl,
   artifactSignature = process.env.KF_CLI_ARTIFACT_SIGNATURE ||
@@ -333,6 +354,7 @@ export function finalizeCliUpgradeManifest({
     bundledManifest.qualificationEvidenceRef,
   output,
 }) {
+  assertUpgradeIdentityConverged(embeddedManifest, bundledManifest);
   if (!fs.statSync(cliArtifact).isFile()) {
     throw new Error(`CLI artifact is not a file: ${cliArtifact}`);
   }

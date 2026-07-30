@@ -18,7 +18,10 @@ import {
 import { extractTarGz, extractZip, writeTarGz, writeZip } from './archive.mjs';
 import { cliLauncherContent } from './cli-launcher.mjs';
 import { qualifyCliSurface } from './cli-surface-qualification.mjs';
-import { writeCompatibilityManifest } from './compatibility.mjs';
+import {
+  isPythonBytecodePath,
+  writeCompatibilityManifest,
+} from './compatibility.mjs';
 import {
   installedKungfuInvocation,
   runInstalledKungfuCommand,
@@ -619,9 +622,6 @@ function assertSafeGeneratedDir(dir) {
     throw new Error(`refusing to clean unexpected directory: ${resolved}`);
   }
 }
-
-export const isPythonBytecodePath = (value) =>
-  /(^|\/)__pycache__(\/|$)|\.pyc$/i.test(value.replaceAll('\\', '/'));
 
 function copyPackageDir(source, target) {
   fs.mkdirSync(path.dirname(target), { recursive: true });
@@ -2261,6 +2261,7 @@ function buildCliProduct(esbuildRuntime) {
       const combinedManifestPath = path.join(CLI_RELEASE_DIR, outputName);
       finalizeCliUpgradeManifest({
         bundledManifest: releaseBase,
+        embeddedManifest: bundledUpgradeManifest,
         cliArtifact: archivePath,
         artifactUrl,
         output: combinedManifestPath,

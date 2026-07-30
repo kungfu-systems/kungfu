@@ -9,7 +9,7 @@ import path from 'node:path';
 import { test } from 'node:test';
 import { readElectronBuilderProjection } from '../../framework/maintainability/semantic-amplification.mjs';
 import { cliLauncherContent } from './cli-launcher.mjs';
-import { sha256Tree } from './compatibility.mjs';
+import { isPythonBytecodePath, sha256Tree } from './compatibility.mjs';
 import {
   cliArchiveBase,
   cliArchiveLayout,
@@ -17,7 +17,6 @@ import {
   desktopUpdaterArtifact,
   esbuildPlatformBinaryPath,
   installedKungfuInvocation,
-  isPythonBytecodePath,
   isShippedKfdSupport,
   kfxBundleExternalModules,
   requiresManagedEsbuildPlatform,
@@ -316,9 +315,11 @@ test('CLI upgrade identity binds the filtered staged runtime', (t) => {
       manifest.runtimeArtifactDigest,
       `sha256:${sha256Tree(runtime)}`,
     );
-    assert.notEqual(
+    assert.equal(
       manifest.runtimeArtifactDigest,
-      `sha256:${sha256Tree(source)}`,
+      `sha256:${sha256Tree(source, {
+        filter: (file) => !isPythonBytecodePath(file),
+      })}`,
     );
   } finally {
     fs.rmSync(parent, { recursive: true, force: true });

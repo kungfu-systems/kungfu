@@ -7,7 +7,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { test } from 'node:test';
 import { fileURLToPath } from 'node:url';
-import { sha256Tree } from './compatibility.mjs';
+import { isPythonBytecodePath, sha256Tree } from './compatibility.mjs';
 import {
   assertLibwasmArtifact,
   libwasmArtifactPaths,
@@ -67,6 +67,23 @@ test('compatibility tree hash is path-stable and content-sensitive', () => {
     assert.equal(first, second);
     fs.writeFileSync(path.join(root, 'a.txt'), 'changed\n');
     assert.notEqual(sha256Tree(root), first);
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test('tree hash can project the bytecode-free release runtime', () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'kungfu-release-tree-'));
+  try {
+    fs.mkdirSync(path.join(root, '__pycache__'));
+    fs.writeFileSync(path.join(root, 'runtime.py'), 'source\n');
+    fs.writeFileSync(path.join(root, '__pycache__', 'runtime.pyc'), 'first');
+    const filter = (file) => !isPythonBytecodePath(file);
+    const first = sha256Tree(root, { filter });
+    fs.writeFileSync(path.join(root, '__pycache__', 'runtime.pyc'), 'changed');
+    assert.equal(sha256Tree(root, { filter }), first);
+    fs.writeFileSync(path.join(root, 'runtime.py'), 'changed\n');
+    assert.notEqual(sha256Tree(root, { filter }), first);
   } finally {
     fs.rmSync(root, { recursive: true, force: true });
   }
