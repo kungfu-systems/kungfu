@@ -312,6 +312,19 @@ test('patrol, normal Alpha builds and sentinels keep one controller authority', 
     build,
     /needs: \[preflight, windows-fast-sentinel, auditable-demo-fast-sentinel\]/u,
   );
+  assert.match(
+    build,
+    /fast-sentinels-only:[\s\S]*Run only the source-bound Windows and auditable-demo fast sentinels/u,
+  );
+  assert.match(
+    build,
+    /preflight:[\s\S]*if: \$\{\{ github\.event_name != 'workflow_dispatch' \|\| !inputs\.fast-sentinels-only \}\}/u,
+  );
+  assert.match(
+    build,
+    /windows-fast-sentinel:[\s\S]*always\(\)[\s\S]*inputs\.fast-sentinels-only[\s\S]*needs\.preflight\.result == 'skipped'/u,
+  );
+  assert.match(build, /build:[\s\S]*!inputs\.fast-sentinels-only/u);
   const preBuild = build.slice(0, build.indexOf('\n  build:'));
   assert.doesNotMatch(
     preBuild,

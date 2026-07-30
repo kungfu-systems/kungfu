@@ -254,7 +254,7 @@
     {
       "path": ".github/workflows/build.yml",
       "authority": "product-publication",
-      "definitionDigest": "sha256:f59a9a4985ef2706b6550f38359b584874d817fc249b20b6667b58e11824888c",
+      "definitionDigest": "sha256:09589d1c2d1d08c15d1e3c55520f956709cccbc2862b5508442122da2e23f47b",
       "jobs": [
         {
           "id": "auditable-demo",
@@ -271,7 +271,7 @@
           "authority": "qualification",
           "publication": "none",
           "receipt": "diagnostic",
-          "definitionDigest": "sha256:5bf87892b530faf158b92bf510918439cdd79515743b661962ab5749e74d891d",
+          "definitionDigest": "sha256:5789a7261baee8de3dfaa359cdb65086bfc36fc70735267ff6ba9700ad24f7a1",
           "credentials": {"githubToken":"read","oidc":false,"repositorySecrets":[],"inheritedSecrets":false,"environment":null},
           "externalActions": ["actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0"],
           "steps": [{"index":1,"label":"name:Check out exact candidate source","definitionDigest":"sha256:90b7875c1b8263fc6ee031b6f446decfc1fe5eb289f08dbc3d506c4bce43f113"},{"index":2,"label":"name:Reject known-invalid auditable demo contracts","definitionDigest":"sha256:6680331f1967c56036aac5897f6b2275dfe45149d40cfcea537e8d16a13d94fc"}]
@@ -291,7 +291,7 @@
           "authority": "qualification",
           "publication": "none",
           "receipt": "qualifying",
-          "definitionDigest": "sha256:20a39c5d5315cd33b783b8701e5dd1ba630c2b1da712b767b4a3a16b97651f0d",
+          "definitionDigest": "sha256:8a838e8caf605fee5b7a55dc9c00d200cdf450bc516aa62a55b18a3cd749cbd8",
           "credentials": {"githubToken":"write","oidc":true,"repositorySecrets":["BUILDCHAIN_ARTIFACT_RELAY_S3_DOWNLOAD_ROLE_ARN","BUILDCHAIN_ARTIFACT_RELAY_S3_ROLE_ARN","BUILDCHAIN_ARTIFACT_RELAY_S3_UPLOAD_ROLE_ARN","KUNGFU_GITHUB_TOKEN"],"inheritedSecrets":false,"environment":null},
           "externalActions": ["kungfu-systems/buildchain/.github/workflows/.build.yml@2522e79e4c00233a5d15f887360547ed1034c39e"],
           "steps": []
@@ -341,7 +341,7 @@
           "authority": "qualification",
           "publication": "none",
           "receipt": "diagnostic",
-          "definitionDigest": "sha256:a0a907e296f43d063b77e4e43e508e664a65b214d4db91707d3fe0d8d84c9eae",
+          "definitionDigest": "sha256:e69c4a3c073f9dff53924eae6e646ce855aa6bb29dafbf4692290d4d5d440fd0",
           "credentials": {"githubToken":"write","oidc":true,"repositorySecrets":["KUNGFU_GITHUB_TOKEN"],"inheritedSecrets":false,"environment":null},
           "externalActions": ["actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0"],
           "steps": [{"index":1,"label":"name:Check out exact candidate source","definitionDigest":"sha256:90b7875c1b8263fc6ee031b6f446decfc1fe5eb289f08dbc3d506c4bce43f113"},{"index":2,"label":"id:receipt","definitionDigest":"sha256:49dbd179361e6e926d6eab7b762bfa7bb7292e2f3c452a3b7ddd2d8bd626b623"}]
@@ -361,7 +361,7 @@
           "authority": "qualification",
           "publication": "none",
           "receipt": "diagnostic",
-          "definitionDigest": "sha256:375f3a9381a01dc0b24df420d3be463252f49c67f372e8b5ca7c2861a2225881",
+          "definitionDigest": "sha256:bce62fa5a7da528dc1ff453cb140e5b8de976daca0ddc1019f0232bdbfd5b5b4",
           "credentials": {"githubToken":"read","oidc":false,"repositorySecrets":[],"inheritedSecrets":false,"environment":null},
           "externalActions": ["actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0"],
           "steps": [{"index":1,"label":"name:Check out exact candidate source","definitionDigest":"sha256:90b7875c1b8263fc6ee031b6f446decfc1fe5eb289f08dbc3d506c4bce43f113"},{"index":2,"label":"name:Reject known-invalid Windows entry contracts","definitionDigest":"sha256:ebf365cac4ac6f116e8c4befa7efbdbb54d86a142e6576ab47a868d57914047f"}]

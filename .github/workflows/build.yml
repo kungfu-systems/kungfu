@@ -35,6 +35,11 @@ on:
         required: false
         type: boolean
         default: false
+      fast-sentinels-only:
+        description: "Run only the source-bound Windows and auditable-demo fast sentinels"
+        required: false
+        type: boolean
+        default: false
       render-auditable-demo:
         description: "Render full media after the exact Linux artifact passes the required auditable-demo Gate"
         required: false
@@ -59,6 +64,7 @@ concurrency:
 jobs:
   preflight:
     name: Require exact-source Alpha preflight
+    if: ${{ github.event_name != 'workflow_dispatch' || !inputs.fast-sentinels-only }}
     runs-on: ubuntu-24.04
     timeout-minutes: ${{ fromJSON(inputs.macos-overflow-request-json || '{}').mode == 'control' && 360 || 10 }}
     outputs:
@@ -85,7 +91,7 @@ jobs:
   windows-fast-sentinel:
     name: Windows exact-source fast sentinel
     needs: preflight
-    if: ${{ needs.preflight.result == 'success' && fromJSON(inputs.macos-overflow-request-json || '{}').mode != 'control' }}
+    if: ${{ always() && (needs.preflight.result == 'success' || (github.event_name == 'workflow_dispatch' && inputs.fast-sentinels-only && needs.preflight.result == 'skipped')) && fromJSON(inputs.macos-overflow-request-json || '{}').mode != 'control' }}
     runs-on: windows-2025
     timeout-minutes: 10
     permissions:
@@ -107,7 +113,7 @@ jobs:
   auditable-demo-fast-sentinel:
     name: Auditable demo exact-source fast sentinel
     needs: preflight
-    if: ${{ needs.preflight.result == 'success' && fromJSON(inputs.macos-overflow-request-json || '{}').mode != 'control' }}
+    if: ${{ always() && (needs.preflight.result == 'success' || (github.event_name == 'workflow_dispatch' && inputs.fast-sentinels-only && needs.preflight.result == 'skipped')) && fromJSON(inputs.macos-overflow-request-json || '{}').mode != 'control' }}
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     permissions:
@@ -127,7 +133,7 @@ jobs:
 
   build:
     needs: [preflight, windows-fast-sentinel, auditable-demo-fast-sentinel]
-    if: ${{ needs.preflight.result == 'success' && needs.windows-fast-sentinel.result == 'success' && needs.auditable-demo-fast-sentinel.result == 'success' && fromJSON(inputs.macos-overflow-request-json || '{}').mode != 'control' }}
+    if: ${{ needs.preflight.result == 'success' && needs.windows-fast-sentinel.result == 'success' && needs.auditable-demo-fast-sentinel.result == 'success' && !inputs.fast-sentinels-only && fromJSON(inputs.macos-overflow-request-json || '{}').mode != 'control' }}
     uses: kungfu-systems/buildchain/.github/workflows/.build.yml@2522e79e4c00233a5d15f887360547ed1034c39e # protected artifact-signing authority
     secrets:
       BUILDCHAIN_PROMOTION_TOKEN: ${{ secrets.KUNGFU_GITHUB_TOKEN }}
