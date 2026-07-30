@@ -1830,11 +1830,11 @@ test('workflows keep candidate and promotion outside untrusted PR authority', ()
   );
   assert.match(
     candidateJob,
-    /always\(\)[\s\S]*github\.event_name == 'merge_group'[\s\S]*native-required == 'true'[\s\S]*needs\.affected_native\.result == 'success'[\s\S]*continue-on-error: true[\s\S]*fail-fast: false[\s\S]*darwin-arm64-cp313[\s\S]*runner: macos-15[\s\S]*darwin-x86_64-cp313[\s\S]*runner: macos-15-intel[\s\S]*linux-x86_64-cp313[\s\S]*runner: ubuntu-24\.04[\s\S]*windows-x86_64-cp313[\s\S]*runner: windows-2022[\s\S]*runs-on: \$\{\{ matrix\.runner \}\}/u,
+    /always\(\)[\s\S]*github\.event_name == 'merge_group'[\s\S]*native-required == 'true'[\s\S]*needs\.affected_native\.result == 'success'[\s\S]*continue-on-error: true[\s\S]*fail-fast: false[\s\S]*darwin-arm64-cp313[\s\S]*runner: macos-15[\s\S]*darwin-x86_64-cp313[\s\S]*runner: macos-15-intel[\s\S]*linux-x86_64-cp313[\s\S]*runner: ubuntu-24\.04[\s\S]*cc: gcc-14[\s\S]*cxx: g\+\+-14[\s\S]*windows-x86_64-cp313[\s\S]*runner: windows-2022[\s\S]*runs-on: \$\{\{ matrix\.runner \}\}/u,
   );
   assert.match(
     candidateJob,
-    /KUNGFU_BUILDCHAIN_SOURCE_BUILD: "1"[\s\S]*Build and seal minimum relocatable Assignment Core candidate[\s\S]*uses: \.\/\.github\/actions\/qualified-core-candidate-build[\s\S]*row: \$\{\{ matrix\.row \}\}[\s\S]*runner-label: \$\{\{ matrix\.runner \}\}[\s\S]*qualified-assignment-core-candidate-\$\{\{ github\.sha \}\}-\$\{\{ matrix\.row \}\}/u,
+    /KUNGFU_BUILDCHAIN_SOURCE_BUILD: "1"[\s\S]*Build and seal minimum relocatable Assignment Core candidate[\s\S]*uses: \.\/\.github\/actions\/qualified-core-candidate-build[\s\S]*row: \$\{\{ matrix\.row \}\}[\s\S]*runner-label: \$\{\{ matrix\.runner \}\}[\s\S]*cc: \$\{\{ matrix\.cc \}\}[\s\S]*cxx: \$\{\{ matrix\.cxx \}\}[\s\S]*qualified-assignment-core-candidate-\$\{\{ github\.sha \}\}-\$\{\{ matrix\.row \}\}/u,
   );
   assert.doesNotMatch(candidateJob, /pull_request/);
   const candidateAction = fs.readFileSync(
@@ -1846,7 +1846,7 @@ test('workflows keep candidate and promotion outside untrusted PR authority', ()
   );
   assert.match(
     candidateAction,
-    /runner\.os != 'Windows'[\s\S]*RUNNER_OS[\s\S]*RUNNER_ARCH[\s\S]*process\.platform[\s\S]*process\.arch[\s\S]*\.\/shifu rebuild:core[\s\S]*qualified-assignment-core-artifact\.mjs seal[\s\S]*--platform-row "\$\{\{ inputs\.row \}\}"[\s\S]*runner\.os == 'Windows'[\s\S]*shifu\.cmd rebuild:core[\s\S]*qualified-assignment-core-artifact\.mjs seal/u,
+    /runner\.os != 'Windows'[\s\S]*RUNNER_OS[\s\S]*RUNNER_ARCH[\s\S]*process\.platform[\s\S]*process\.arch[\s\S]*command -v "\$\{\{ inputs\.cc \}\}"[\s\S]*export CC="\$\{\{ inputs\.cc \}\}"[\s\S]*export CXX="\$\{\{ inputs\.cxx \}\}"[\s\S]*\.\/shifu rebuild:core[\s\S]*qualified-assignment-core-artifact\.mjs seal[\s\S]*--platform-row "\$\{\{ inputs\.row \}\}"[\s\S]*runner\.os == 'Windows'[\s\S]*shifu\.cmd rebuild:core[\s\S]*qualified-assignment-core-artifact\.mjs seal/u,
   );
 
   const promotionWorkflow = fs.readFileSync(
