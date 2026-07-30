@@ -305,6 +305,10 @@ export function sourceAcceptancePlan(files, evidenceBaseCommit = '') {
       'framework/work-design-advisor/tooling/check-work-design-advisor.mjs',
     ],
     [
+      'Work design policy replay contract',
+      'framework/work-design-policy-replay/tooling/check-work-design-policy-replay.mjs',
+    ],
+    [
       'Project Cut composition contract',
       'scripts/check-project-cut-composition.mjs',
     ],
@@ -467,6 +471,7 @@ export function sourceAcceptancePlan(files, evidenceBaseCommit = '') {
         'scripts/check-project-cut-history.test.mjs',
         'scripts/check-work-history-selector.test.mjs',
         'scripts/check-work-design-advisor.test.mjs',
+        'scripts/check-work-design-policy-replay.test.mjs',
         'scripts/check-project-cut-composition.test.mjs',
         ...(settlementPublicationPresent
           ? ['scripts/check-project-cut-publication.test.mjs']

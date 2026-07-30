@@ -244,6 +244,7 @@ test('declared discovery routes are zero-write in a cold read-only fixture', (t)
     'scripts/check-git-episode-provider.test.mjs',
     'scripts/check-work-history-selector.test.mjs',
     'scripts/check-work-design-advisor.test.mjs',
+    'scripts/check-work-design-policy-replay.test.mjs',
     'scripts/documentation-product-pack.test.mjs',
     'scripts/docs-markdown-readonly.mjs',
     'scripts/kungfu-gate-workflow-facts.mjs',
@@ -329,6 +330,14 @@ test('declared discovery routes are zero-write in a cold read-only fixture', (t)
     'framework/work-design-advisor/tooling/check-work-design-advisor.mjs',
     'framework/work-design-advisor/tooling/work-design-advisor-contract.mjs',
     'framework/work-design-advisor/work-design-advisor.contract.json',
+    'framework/work-design-policy-replay/schema/work-design-promotion-artifact-v1.schema.json',
+    'framework/work-design-policy-replay/schema/work-design-replay-policy-v1.schema.json',
+    'framework/work-design-policy-replay/schema/work-design-replay-report-v1.schema.json',
+    'framework/work-design-policy-replay/schema/work-design-replay-request-v1.schema.json',
+    'framework/work-design-policy-replay/src/work-design-policy-replay.mjs',
+    'framework/work-design-policy-replay/tooling/check-work-design-policy-replay.mjs',
+    'framework/work-design-policy-replay/tooling/work-design-policy-replay-contract.mjs',
+    'framework/work-design-policy-replay/work-design-policy-replay.contract.json',
   ])
     copyFile(ROOT, fixture, relative);
   const amplificationManifest = JSON.parse(
