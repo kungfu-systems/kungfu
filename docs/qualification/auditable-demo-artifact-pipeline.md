@@ -152,6 +152,35 @@ Each blocking signal was repaired at its owning boundary rather than bypassed:
   coordinate. [Kungfu issue #1579](https://github.com/kungfu-systems/kungfu/issues/1579)
   retained the provider-representation defect; no Passport artifact was
   admitted.
+- Run `30482879859` rejected an unsupported archive symlink before executing
+  the installed Agent Work Lab autoplay command. The adapter repair admitted
+  only bounded internal links, retained the closed-world member policy, and
+  continued to reject absolute, escaping, dangling, special, or cyclic
+  archive members.
+- Run `30487194091` attempts 1 and 2 were externally cancelled while the
+  self-hosted Linux runner was verifying the exact artifact. In both cases the
+  runner service remained healthy and a separately governed Dev or Alpha job
+  immediately occupied the shared runner. No cancelled attempt was treated as
+  Gate, media, or Passport evidence.
+- Run `30493581324` attempt 1 completed the GitHub-hosted exact Linux build,
+  full release verification, S3 relay, and source artifact upload, then was
+  externally cancelled while downstream demo jobs were still pending. Its
+  failed-job rerun exposed two independent fail-closed boundaries: the demo
+  resolver originally required the retained producer coordinate to come from
+  the current attempt, and the separately requested Phase B consumer rejected
+  an archive symlink. The resolver now admits an exact producer coordinate
+  only from the same run and a positive attempt no later than the current
+  attempt. Phase B remains outside the animation qualification and is disabled
+  for the final autoplay evidence run.
+- Run `30500101593` completed the exact GitHub-hosted Linux build, full release
+  verification, S3 relay, source artifact upload, and same-run coordinate
+  resolution. The required Gate then rejected the real Python terminfo symlink
+  `runtime/python/share/terminfo/1/1178 -> ../a/adm1178` before execution.
+  Diagnostic artifact `8744879954` retained the exact failure. The adapter now
+  resolves a symlink target from its member directory, admits parent-relative
+  targets only when their lexical normalization remains under the single
+  archive root, and still performs a strict post-extraction root and
+  regular-file check.
 
 The corresponding repairs landed through independently approved protected PRs
 `#1492`, `#1497`, `#1500`, `#1503`, `#1504`, `#1505`, `#1506`, `#1507`,

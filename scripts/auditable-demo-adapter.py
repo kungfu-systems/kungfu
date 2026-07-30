@@ -335,6 +335,25 @@ def validate_reports(release_root: Path, expected_source: str) -> list[dict[str,
     return evidence
 
 
+def normalized_symlink_target(member: tarfile.TarInfo) -> tuple[str, ...]:
+    parts = list(PurePosixPath(member.name).parent.parts)
+    for part in PurePosixPath(member.linkname).parts:
+        if part in ("", "."):
+            continue
+        if part == "..":
+            if not parts:
+                fail(
+                    "unsafe CLI archive link target: "
+                    f"{member.name!r} -> {member.linkname!r}"
+                )
+            parts.pop()
+            continue
+        parts.append(part)
+    if not parts or parts[0] != ARCHIVE_ROOT:
+        fail(f"unsafe CLI archive link target: {member.name!r} -> {member.linkname!r}")
+    return tuple(parts)
+
+
 def validate_member(member: tarfile.TarInfo) -> None:
     name = member.name
     parts = PurePosixPath(name).parts
@@ -352,14 +371,11 @@ def validate_member(member: tarfile.TarInfo) -> None:
     if member.issym() or member.islnk():
         linkname = member.linkname
         link_parts = PurePosixPath(linkname).parts
-        if (
-            not linkname
-            or linkname.startswith("/")
-            or "\\" in linkname
-            or ".." in link_parts
-        ):
+        if not linkname or linkname.startswith("/") or "\\" in linkname:
             fail(f"unsafe CLI archive link target: {name!r} -> {linkname!r}")
-        if member.islnk() and (not link_parts or link_parts[0] != ARCHIVE_ROOT):
+        if member.issym():
+            normalized_symlink_target(member)
+        elif ".." in link_parts or not link_parts or link_parts[0] != ARCHIVE_ROOT:
             fail(f"unsafe CLI archive hardlink target: {name!r} -> {linkname!r}")
     if member.size < 0 or member.size > MAX_MEMBER_BYTES:
         fail(f"CLI archive member exceeds the bounded size: {name!r}")

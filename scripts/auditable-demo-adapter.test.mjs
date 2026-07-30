@@ -89,6 +89,7 @@ function fixture(
     coordinateSource = source,
     sourceEvidence = null,
     archiveSymlinkTarget = '',
+    parentRelativeArchiveSymlink = false,
     safeArchiveLinks = false,
     unsupportedArchiveMember = false,
     stdoutLineCount = 0,
@@ -217,6 +218,19 @@ function fixture(
     fs.chmodSync(python3, 0o755);
     fs.symlinkSync('python3', path.join(pythonRoot, 'python'));
     fs.linkSync(python3, path.join(pythonRoot, 'python-copy'));
+  }
+  if (parentRelativeArchiveSymlink) {
+    const terminfoRoot = path.join(
+      productRoot,
+      'runtime',
+      'python',
+      'share',
+      'terminfo',
+    );
+    fs.mkdirSync(path.join(terminfoRoot, '1'), { recursive: true });
+    fs.mkdirSync(path.join(terminfoRoot, 'a'), { recursive: true });
+    fs.writeFileSync(path.join(terminfoRoot, 'a', 'adm1178'), 'terminfo\n');
+    fs.symlinkSync('../a/adm1178', path.join(terminfoRoot, '1', '1178'));
   }
   if (unsupportedArchiveMember) {
     const fifo = spawnSync('mkfifo', [
@@ -422,6 +436,18 @@ test('adapter accepts a bounded relative symlink to a regular archive member', (
   );
   try {
     const { result } = run(root, { archiveSymlinkTarget: 'python3' });
+    assert.equal(result.status, 0, result.stderr);
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test('adapter accepts a parent-relative symlink that remains inside the archive root', () => {
+  const root = fs.mkdtempSync(
+    path.join(os.tmpdir(), 'auditable-demo-adapter-'),
+  );
+  try {
+    const { result } = run(root, { parentRelativeArchiveSymlink: true });
     assert.equal(result.status, 0, result.stderr);
   } finally {
     fs.rmSync(root, { recursive: true, force: true });
