@@ -110,7 +110,7 @@
           "classification": "non-publication",
           "owner": "kungfu-ci",
           "surfaceIds": [],
-          "sourceRoot": "sha256:2523b4d9dcae899ffa6c7bf493ce76a96338150a049798cd701f581f4b740457"
+          "sourceRoot": "sha256:b562998febe443a87d3a14b16e90acfa9232d30ad350a1e11af219d09d287aff"
         },
         {
           "path": ".github/workflows/build.yml",
@@ -820,5 +820,5 @@
       }
     }
   ],
-  "registryRoot": "sha256:c42bc56a0a7c457455df4d8611e19367931d850b82169661a35848e7f0a97881"
+  "registryRoot": "sha256:8531b5bc22ccaf91c6dcb2b39ff7ab051db68a7b96b5ec80eb6e67e4ff9bdb56"
 }

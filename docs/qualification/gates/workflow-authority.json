@@ -230,11 +230,21 @@
           "steps": [{"index":1,"label":"name:Confirm exact JIT runner identity","definitionDigest":"sha256:115bfd9234736a1da607e61a0bb1be98a191d35f0da57ad4bb419a447069b9d2"},{"index":2,"label":"name:Hold until the declared cleanup trigger","definitionDigest":"sha256:ebc15529c500b6f0e216a2a2ede2ade66d1f685f9b824e67cf3a5382af07cf84"}]
         },
         {
-          "id": "qualify",
+          "id": "full",
           "authority": "qualification",
           "publication": "none",
           "receipt": "diagnostic",
-          "definitionDigest": "sha256:b1b8acba5a911418f36bb609b4f6af0976bae94216673fd9c736c95f6e542f68",
+          "definitionDigest": "sha256:1781e076386a9744ed42fbc21a6ad24219b69f8280de35ae6a005fa946dbbb51",
+          "credentials": {"githubToken":"read","oidc":false,"repositorySecrets":[],"inheritedSecrets":false,"environment":null},
+          "externalActions": ["kungfu-systems/buildchain/.github/workflows/.build.yml@407445c43df4888bb4464e91aef0debdc62aa0e6"],
+          "steps": []
+        },
+        {
+          "id": "smoke",
+          "authority": "qualification",
+          "publication": "none",
+          "receipt": "diagnostic",
+          "definitionDigest": "sha256:d60abc0f730c10871219dc930db7e8937b912a15b5b9936467049eb7a25ffaaf",
           "credentials": {"githubToken":"read","oidc":false,"repositorySecrets":[],"inheritedSecrets":false,"environment":null},
           "externalActions": ["kungfu-systems/buildchain/.github/workflows/.build.yml@407445c43df4888bb4464e91aef0debdc62aa0e6"],
           "steps": []
@@ -244,10 +254,10 @@
           "authority": "qualification",
           "publication": "none",
           "receipt": "diagnostic",
-          "definitionDigest": "sha256:251dde9611e29eb95ca21d3b1c6024d96cc5d78a56a434c3197771b09e1562d5",
+          "definitionDigest": "sha256:e7b8a1634e100d5628adb348fa8524fba6e1f5c48a2ddb8a5f4c271910a85647",
           "credentials": {"githubToken":"read","oidc":false,"repositorySecrets":[],"inheritedSecrets":false,"environment":null},
           "externalActions": ["actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd"],
-          "steps": [{"index":1,"label":"id:contract","definitionDigest":"sha256:4f234e58e391cc7b8cc7d23b1e5b700ead3aa413c9c062ea5017dabd4bbbdbe0"},{"index":2,"label":"name:Require write-capable actor","definitionDigest":"sha256:3430783a3e543bfdbe6f96ad0be249927e372191c7e2cc5d8c540c14be66d68f"}]
+          "steps": [{"index":1,"label":"name:Require canonical repository, mode, and label","definitionDigest":"sha256:c79ae3993e76974650848389ab59d62f355ae08734717d349c6ea7e144182999"},{"index":2,"label":"name:Require write-capable actor","definitionDigest":"sha256:3430783a3e543bfdbe6f96ad0be249927e372191c7e2cc5d8c540c14be66d68f"}]
         }
       ]
     },
