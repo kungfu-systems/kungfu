@@ -88,13 +88,13 @@
       "standard": "KFD-1",
       "standardKey": "kfd-1",
       "result": "passed",
-      "preBuildWitnessSha256": "eeebab1db27cffc5cd512f2f662b845a9cc5a4f44aa8fec522b79a653051e550",
+      "preBuildWitnessSha256": "51bff13debc1c2df2ce0ec3cdad4609e7e4b60eba4d164694080a36daeb7beb9",
       "sourceHashes": {
-        "sha256": "6d0a2c5f765cecb2a44215de3eca3db39a7969ce52e3279cc2ce3ae85143081c",
+        "sha256": "d2afd2683679a9c7ecb6a146b351f3b66caed61f3353c93a8b1333384b8f7d20",
         "surfaceCount": 21
       },
       "artifactHashes": {
-        "sha256": "d7db75d081d8354cfca9705b53897b3cb2f0bed7379a248712dd00743ef21178",
+        "sha256": "3a543b1027a8fa53c689dd98ec2015706a77a13e1df4230d700886e87354e8be",
         "surfaceCount": 21
       },
       "witness": {
@@ -134,7 +134,7 @@
         "sourceVerificationRequired": true,
         "canonicalPolicy": {
           "path": "framework/contract/kungfu-agent-first-canonical-policy.json",
-          "sha256": "de0de7f1362a3ae601554525ea46fcac01187bccf330ef8a998ba441720724d0"
+          "sha256": "57939fb2018e684b18c07acd3ed8c43fe33d62e6493554c46377a118aa94b7cd"
         },
         "registry": {
           "path": "framework/contract/kungfu-contracts.registry.json",
@@ -192,9 +192,9 @@
           {
             "name": "kungfu-product-upgrade",
             "sourcePath": "framework/upgrade/kungfu-upgrade.contract.json",
-            "sourceSha256": "52d450b0eccbe5c299c3e4a4f344eb1b542911fb502a882a98eb860631f919bc",
+            "sourceSha256": "95e348646666932df649ab227b3e00bb0ad90ad89f6f09e0051ae545f77b72df",
             "artifactPath": "config/kungfu-upgrade.contract.json",
-            "expectedSha256": "52d450b0eccbe5c299c3e4a4f344eb1b542911fb502a882a98eb860631f919bc",
+            "expectedSha256": "95e348646666932df649ab227b3e00bb0ad90ad89f6f09e0051ae545f77b72df",
             "byteForByte": true
           },
           {
@@ -437,8 +437,8 @@
           {
             "name": "kungfu-product-upgrade",
             "sourcePath": "framework/upgrade/kungfu-upgrade.contract.json",
-            "expectedSha256": "52d450b0eccbe5c299c3e4a4f344eb1b542911fb502a882a98eb860631f919bc",
-            "actualSha256": "52d450b0eccbe5c299c3e4a4f344eb1b542911fb502a882a98eb860631f919bc",
+            "expectedSha256": "95e348646666932df649ab227b3e00bb0ad90ad89f6f09e0051ae545f77b72df",
+            "actualSha256": "95e348646666932df649ab227b3e00bb0ad90ad89f6f09e0051ae545f77b72df",
             "status": "passed",
             "reason": ""
           },
@@ -629,10 +629,10 @@
           {
             "name": "kungfu-product-upgrade",
             "sourcePath": "framework/upgrade/kungfu-upgrade.contract.json",
-            "sourceSha256": "52d450b0eccbe5c299c3e4a4f344eb1b542911fb502a882a98eb860631f919bc",
+            "sourceSha256": "95e348646666932df649ab227b3e00bb0ad90ad89f6f09e0051ae545f77b72df",
             "artifactPath": "config/kungfu-upgrade.contract.json",
-            "expectedSha256": "52d450b0eccbe5c299c3e4a4f344eb1b542911fb502a882a98eb860631f919bc",
-            "actualSha256": "52d450b0eccbe5c299c3e4a4f344eb1b542911fb502a882a98eb860631f919bc",
+            "expectedSha256": "95e348646666932df649ab227b3e00bb0ad90ad89f6f09e0051ae545f77b72df",
+            "actualSha256": "95e348646666932df649ab227b3e00bb0ad90ad89f6f09e0051ae545f77b72df",
             "byteForByte": true,
             "status": "passed",
             "reason": ""

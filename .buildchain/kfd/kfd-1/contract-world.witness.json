@@ -35,7 +35,7 @@
   "sourceVerificationRequired": false,
   "canonicalPolicy": {
     "path": "framework/contract/kungfu-agent-first-canonical-policy.json",
-    "sha256": "de0de7f1362a3ae601554525ea46fcac01187bccf330ef8a998ba441720724d0"
+    "sha256": "57939fb2018e684b18c07acd3ed8c43fe33d62e6493554c46377a118aa94b7cd"
   },
   "registry": {
     "path": "framework/contract/kungfu-contracts.registry.json",
@@ -93,9 +93,9 @@
     {
       "name": "kungfu-product-upgrade",
       "sourcePath": "framework/upgrade/kungfu-upgrade.contract.json",
-      "sourceSha256": "52d450b0eccbe5c299c3e4a4f344eb1b542911fb502a882a98eb860631f919bc",
+      "sourceSha256": "95e348646666932df649ab227b3e00bb0ad90ad89f6f09e0051ae545f77b72df",
       "artifactPath": "config/kungfu-upgrade.contract.json",
-      "expectedSha256": "52d450b0eccbe5c299c3e4a4f344eb1b542911fb502a882a98eb860631f919bc",
+      "expectedSha256": "95e348646666932df649ab227b3e00bb0ad90ad89f6f09e0051ae545f77b72df",
       "byteForByte": true
     },
     {
