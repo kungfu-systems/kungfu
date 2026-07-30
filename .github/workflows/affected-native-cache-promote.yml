@@ -648,6 +648,56 @@ jobs:
             );
           ' "$root/matrix-index-body.json" "$root/matrix-index.json"
           echo "matrix_available=true" >> "$GITHUB_OUTPUT"
+      - name: Qualify Linux x86_64 consumer remote and local-CAS paths
+        if: ${{ steps.qualified_core_promotion.outputs.linux_x86_64_cp313_available == 'true' }}
+        env:
+          TARGET_SHA: ${{ steps.target.outputs.sha }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          bundle="$GITHUB_WORKSPACE/product/qualification/qualified-core/promoted/linux-x86_64-cp313"
+          cache_root="$RUNNER_TEMP/qualified-core-linux-consumer-cache"
+          first_checkout="$RUNNER_TEMP/qualified-core-linux-consumer-first"
+          second_checkout="$RUNNER_TEMP/qualified-core-linux-consumer-second"
+          git worktree add --detach "$first_checkout" "$TARGET_SHA"
+          git worktree add --detach "$second_checkout" "$TARGET_SHA"
+          (
+            cd "$first_checkout"
+            # shifu-entry-contract: allow direct consumer qualification before its cached Core can activate Shifu Work Control
+            env KUNGFU_QUALIFIED_CORE_BUNDLE="$bundle" KUNGFU_QUALIFIED_CORE_CACHE_ROOT="$cache_root" node framework/assignment-capture/qualified-assignment-core-consumer.mjs \
+                materialize --repository-root "$PWD"
+            file framework/core/dist/kungfu/pykungfu.cpython-313-x86_64-linux-gnu.so |
+              grep -q 'ELF 64-bit'
+            test "$(stat -c '%a' framework/core/dist/kungfu/kungfubuildinfo.json)" = 644
+            test "$(stat -c '%a' framework/core/dist/kungfu/libkungfu_runtime.so)" = 755
+            test "$(stat -c '%a' framework/core/dist/kungfu/libnode.so.127)" = 755
+            test "$(stat -c '%a' framework/core/dist/kungfu/pykungfu.cpython-313-x86_64-linux-gnu.so)" = 755
+            jq -e '
+              .complete == true
+              and (.manifestRoot | startswith("sha256:"))
+              and (.artifactRoot | startswith("sha256:"))
+              and (.qualificationReceiptRoot | startswith("sha256:"))
+              and (.promotionAuthorityRoot | startswith("sha256:"))
+              and (.receiptRoot | startswith("sha256:"))
+            ' framework/core/dist/kungfu/.qualified-core-materialization.json
+            ./shifu work --help >/dev/null
+          )
+          (
+            cd "$second_checkout"
+            # shifu-entry-contract: allow direct local-CAS qualification before its cached Core can activate Shifu Work Control
+            env KUNGFU_QUALIFIED_CORE_CACHE_ROOT="$cache_root" KUNGFU_QUALIFIED_CORE_GITHUB=0 node framework/assignment-capture/qualified-assignment-core-consumer.mjs \
+                materialize --repository-root "$PWD"
+            ./shifu work --help >/dev/null
+            # shifu-entry-contract: allow direct post-activation observation of the bounded consumer qualification cache
+            env KUNGFU_QUALIFIED_CORE_CACHE_ROOT="$cache_root" node framework/assignment-capture/qualified-assignment-core-consumer.mjs \
+                status --repository-root "$PWD" --json |
+              jq -e '
+                .currentCheckout.eligible == true
+                and .totals.observations == 2
+                and .counts.reasons["explicit-bundle-hit"] == 1
+                and .counts.reasons["local-cas-hit"] == 1
+              '
+          )
       - name: Upload Qualified Core matrix transports
         if: ${{ steps.qualified_core_promotion.outputs.matrix_available == 'true' }}
         uses: ./.github/actions/upload-qualified-core-matrix

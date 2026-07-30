@@ -294,7 +294,7 @@ if [ "${1:-}" = "work" ]; then
   _kungfu_checkout_binding="$(kungfu_checkout_binding)"
   _kungfu_checkout_build_info="./framework/core/dist/kungfu/kungfubuildinfo.json"
   if [ -z "$_kungfu_checkout_binding" ] \
-    && [ "$(uname -s 2>/dev/null || true)/$(uname -m 2>/dev/null || true)" = "Darwin/arm64" ] \
+    && { [ "$(kungfu_native_platform)" = "macos-arm64" ] || [ "$(kungfu_native_platform)" = "linux-x64" ]; } \
     && command -v node >/dev/null 2>&1 && [ -f "./framework/assignment-capture/qualified-assignment-core-consumer.mjs" ]; then
     node ./framework/assignment-capture/qualified-assignment-core-consumer.mjs materialize --repository-root "$PWD" || exit $?
     _kungfu_checkout_binding="$(kungfu_checkout_binding)"
