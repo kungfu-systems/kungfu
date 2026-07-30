@@ -242,8 +242,24 @@ test('reactivated AWS burst workflows pin one reviewed Buildchain v3 source', ()
     assert.doesNotMatch(workflow, /train\/v2|buildchain-ref:\s*[\r\n]/);
     assert.doesNotMatch(
       workflow,
-      /secrets:\s*inherit|id-token:\s*write|notar|signing|npm-publish|release-new-version|deploy/,
+      /secrets:\s*inherit|notar|signing|npm-publish|release-new-version|deploy/,
     );
+    if (name === 'aws-us-windows-burst-qualification.yml') {
+      assert.doesNotMatch(
+        workflow,
+        /permissions:\n {2}actions: read\n {2}contents: read\n {2}issues: write\n {2}id-token: write/,
+      );
+      assert.equal(
+        (
+          workflow.match(
+            /permissions:\n {6}actions: read\n {6}contents: read\n {6}issues: write\n {6}id-token: write/g,
+          ) || []
+        ).length,
+        2,
+      );
+    } else {
+      assert.doesNotMatch(workflow, /id-token:\s*write/);
+    }
   }
 });
 
@@ -272,6 +288,22 @@ test('AWS Windows burst workflow preserves bounded full and cleanup exercises', 
   );
   assert.match(workflow, /name: AWS US Windows Burst Qualification/);
   assert.match(workflow, /permissions:\n {2}contents: read/);
+  assert.equal(
+    (
+      workflow.match(
+        /permissions:\n {6}actions: read\n {6}contents: read\n {6}issues: write\n {6}id-token: write/g,
+      ) || []
+    ).length,
+    2,
+  );
+  assert.match(
+    workflow,
+    /\n {2}trust:[\s\S]*?\n {4}permissions:\n {6}contents: read\n/,
+  );
+  assert.match(
+    workflow,
+    /\n {2}cleanup-exercise:[\s\S]*?\n {4}permissions:\n {6}contents: read\n/,
+  );
   assert.match(workflow, /runner-preset: aws-us-ec2-windows-jit/);
   assert.match(workflow, /win-full-0\[1-3\]:full/);
   assert.match(workflow, /win-cancel:cancellation/);

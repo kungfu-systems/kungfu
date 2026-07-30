@@ -40,6 +40,8 @@ jobs:
   trust:
     name: Reject non-canonical or untrusted dispatch
     runs-on: ubuntu-24.04
+    permissions:
+      contents: read
     steps:
       - name: Require canonical repository, mode, and label
         shell: bash
@@ -75,6 +77,11 @@ jobs:
     name: Windows JIT runner profile smoke
     needs: trust
     if: ${{ inputs.mode == 'smoke' }}
+    permissions:
+      actions: read
+      contents: read
+      issues: write
+      id-token: write
     uses: kungfu-systems/buildchain/.github/workflows/.build.yml@407445c43df4888bb4464e91aef0debdc62aa0e6
     with:
       buildchain-ref: 407445c43df4888bb4464e91aef0debdc62aa0e6
@@ -109,6 +116,11 @@ jobs:
     name: Trusted exact-source full Windows qualification
     needs: trust
     if: ${{ inputs.mode == 'full' }}
+    permissions:
+      actions: read
+      contents: read
+      issues: write
+      id-token: write
     uses: kungfu-systems/buildchain/.github/workflows/.build.yml@407445c43df4888bb4464e91aef0debdc62aa0e6
     with:
       buildchain-ref: 407445c43df4888bb4464e91aef0debdc62aa0e6
@@ -144,6 +156,8 @@ jobs:
     name: ${{ inputs.mode == 'cancellation' && 'Cancellation cleanup exercise' || 'Timeout cleanup exercise' }}
     needs: trust
     if: ${{ inputs.mode == 'cancellation' || inputs.mode == 'timeout' }}
+    permissions:
+      contents: read
     runs-on:
       - self-hosted
       - Windows
