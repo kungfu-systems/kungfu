@@ -448,7 +448,8 @@
       "job": "build",
       "profiles": [
         "alpha-pr",
-        "release-pr"
+        "release-pr",
+        "measurement"
       ],
       "gates": [
         "gate.catalog",
@@ -462,7 +463,7 @@
         "episode.smoke",
         "episode.release"
       ],
-      "activation": "alpha or release pull request",
+      "activation": "alpha or release pull request, or a manual exact-source publish-none macOS candidate under the queue-aware overflow controller",
       "adapter": {
         "type": "buildchain-heavy-build",
         "kind": "job-uses",
@@ -477,19 +478,21 @@
           }
         },
         "with": {
-          "runner-preset": "${{ inputs.platforms-json && 'custom' || 'kungfu-v4-native' }}",
+          "runner-preset": "${{ (fromJSON(inputs.macos-overflow-request-json || '{}').mode == 'self-hosted' || fromJSON(inputs.macos-overflow-request-json || '{}').mode == 'github-hosted') && 'custom' || (inputs.platforms-json && 'custom' || 'kungfu-v4-native') }}",
+          "platforms-json": "${{ fromJSON(inputs.macos-overflow-request-json || '{}').mode == 'self-hosted' && '[{\"id\":\"macos-arm64\",\"name\":\"macOS ARM64 self-hosted primary\",\"platform\":\"macos\",\"runner\":\"[\\\"self-hosted\\\",\\\"macOS\\\",\\\"ARM64\\\",\\\"kungfu-build-v4-macos-arm64\\\"]\",\"capabilities\":[\"native-toolchain\",\"node\",\"product-artifacts\",\"rust\"]}]' || (fromJSON(inputs.macos-overflow-request-json || '{}').mode == 'github-hosted' && '[{\"id\":\"macos-arm64\",\"name\":\"macOS ARM64 GitHub-hosted overflow\",\"platform\":\"macos\",\"runner\":\"[\\\"macos-15\\\"]\",\"capabilities\":[\"native-toolchain\",\"node\",\"product-artifacts\",\"rust\"]}]' || (inputs.platforms-json || '')) }}",
+          "install-command": "${{ fromJSON(inputs.macos-overflow-request-json || '{}').mode == 'self-hosted' && format('node .github/actions/require-alpha-preflight/alpha-macos-overflow.mjs health --route self-hosted --health-mode {0} && node scripts/buildchain-install.mjs', fromJSON(inputs.macos-overflow-request-json).healthMode || 'auto') || fromJSON(inputs.macos-overflow-request-json || '{}').mode == 'github-hosted' && 'node .github/actions/require-alpha-preflight/alpha-macos-overflow.mjs health --route github-hosted --health-mode auto && node scripts/buildchain-install.mjs' || '' }}",
           "github-artifact-attestation-subject-path": "product/release/cli/kungfu-episodes-cli-linux-x64.tar.gz",
           "github-artifact-attestation-signer-sha": "375b2d4b8a904776453773a33b4c4e4556c8c999",
           "github-artifact-attestation-platform-id": "linux-x64",
-          "credential-island-macos-app-path": "product/dist/desktop/mac-arm64/Kungfu Episodes.app",
-          "credential-island-caller-owned": true,
+          "credential-island-macos-app-path": "${{ (fromJSON(inputs.macos-overflow-request-json || '{}').mode != 'self-hosted' && fromJSON(inputs.macos-overflow-request-json || '{}').mode != 'github-hosted') && 'product/dist/desktop/mac-arm64/Kungfu Episodes.app' || '' }}",
+          "credential-island-caller-owned": "${{ fromJSON(inputs.macos-overflow-request-json || '{}').mode != 'self-hosted' && fromJSON(inputs.macos-overflow-request-json || '{}').mode != 'github-hosted' }}",
           "credential-island-macos-platform-id": "macos-arm64",
           "require-install": true,
           "require-build": true,
           "require-verify": true,
           "verify-command": "node scripts/run-release-qualification.mjs --execution-profile ${{ startsWith(github.base_ref, 'release/') && 'release-candidate' || 'alpha' }} --native-upgrade-policy skip",
           "release-candidate": true,
-          "publish-channel": "${{ github.event_name == 'pull_request' && (startsWith(github.base_ref, 'release/') && 'release' || 'alpha') || 'none' }}",
+          "publish-channel": "${{ (fromJSON(inputs.macos-overflow-request-json || '{}').mode == 'self-hosted' || fromJSON(inputs.macos-overflow-request-json || '{}').mode == 'github-hosted') && 'none' || (github.event_name == 'pull_request' && (startsWith(github.base_ref, 'release/') && 'release' || 'alpha') || 'none') }}",
           "artifact-transfer-mode": "s3-to-github-artifacts",
           "shifu-cache-profile-ref": "docs/shifu/qualification-portable-off.cache-profile.json",
           "buildchain-contract-lock-path": ".buildchain/contract-lock.json",

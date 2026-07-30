@@ -33,6 +33,7 @@ const ROOT_FILES = [
   'package.json',
   'pnpm-lock.yaml',
   'scripts/alpha-promotion-preflight.mjs',
+  '.github/actions/require-alpha-preflight/alpha-macos-overflow.mjs',
   'scripts/alpha-publication-tail-plan.mjs',
   'scripts/alpha-cache-evidence.mjs',
   'scripts/alpha-release-timeline.mjs',
