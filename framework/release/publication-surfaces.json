@@ -121,7 +121,7 @@
             "product-stable",
             "product-binaries"
           ],
-          "sourceRoot": "sha256:52731f6ad20b5c738a259910bc23436ce06e9e35449bf4dd1979f435677ae3fc"
+          "sourceRoot": "sha256:307fe898ecaa1c4512438f3715bdbc037b06f89797f55a65ec10f22ae02dde75"
         },
         {
           "path": ".github/workflows/buildchain-validate.yml",
@@ -169,7 +169,7 @@
             "product-alpha",
             "product-binaries"
           ],
-          "sourceRoot": "sha256:15777b210457731881da12af84b5007a8246b5a41e6a30a76997b167d6eeabfd"
+          "sourceRoot": "sha256:5dbafeda2b8f802e7b0944c40412f269bd0028280873ba96735b078d918a4de4"
         },
         {
           "path": ".github/workflows/dev-gate-latency-patrol.yml",
@@ -820,5 +820,5 @@
       }
     }
   ],
-  "registryRoot": "sha256:4309c415bbc4dca3c4c70bb1ac1b046dbbf5b72c3e8cc6741ffda0c6493b9a16"
+  "registryRoot": "sha256:c42bc56a0a7c457455df4d8611e19367931d850b82169661a35848e7f0a97881"
 }
