@@ -373,7 +373,7 @@ jobs:
             echo "- validation: current-source configure/build/CTest remains mandatory on restore"
           } >> "$GITHUB_STEP_SUMMARY"
 
-      - name: Locate one exact completed producer authority
+      - name: Locate one exact completed matrix delivery authority
         if: ${{ github.ref_protected == true }}
         id: qualified_core_producer
         env:
@@ -411,20 +411,20 @@ jobs:
                   --jq '[.jobs[] | select(.name == "affected-native / linux" and .status == "completed" and .conclusion == "success")] | length'
               )"
               [ "$gate_count" -eq 1 ] || continue
-              artifact_state="$(
+              delivery_count="$(
                 gh api \
                   "repos/${GITHUB_REPOSITORY}/actions/runs/${run_id}/artifacts?per_page=100" \
-                  --jq "[.artifacts[] | select(.expired == false and (.name == \"qualified-assignment-core-candidate-${TARGET_SHA}\" or .name == \"core-affected-native-delivery-attempt-${TARGET_SHA}\")) | .name] | sort | if length == 2 and (unique | length) == 2 then \"complete\" elif length <= 1 then \"incomplete\" else \"ambiguous\" end"
+                  --jq "[.artifacts[] | select(.expired == false and .name == \"core-affected-native-delivery-attempt-${TARGET_SHA}\")] | length"
               )"
-              if [ "$artifact_state" = complete ]; then
+              if [ "$delivery_count" -eq 1 ]; then
                 authorities="${authorities}${run_id}"$'\n'
-              elif [ "$artifact_state" = ambiguous ]; then
-                echo "Qualified Core transport is ambiguous in run ${run_id}." >&2
+              elif [ "$delivery_count" -gt 1 ]; then
+                echo "Qualified Core delivery authority is ambiguous in run ${run_id}." >&2
                 exit 1
               elif [ "$run_status" != completed ]; then
                 pending_run=true
               else
-                echo "Completed producer run ${run_id} has no complete Qualified Core transport; source build remains authoritative."
+                echo "Completed producer run ${run_id} has no delivery authority; every matrix row remains unqualified."
               fi
             done
             authorities="$(printf '%s' "$authorities" | sed '/^$/d')"
@@ -456,17 +456,13 @@ jobs:
           } >> "$GITHUB_OUTPUT"
           gh run download "$producer_run" \
             --repo "$GITHUB_REPOSITORY" \
-            --name "qualified-assignment-core-candidate-${TARGET_SHA}" \
-            --dir product/qualification/qualified-core/candidate
-          gh run download "$producer_run" \
-            --repo "$GITHUB_REPOSITORY" \
             --name "core-affected-native-delivery-attempt-${TARGET_SHA}" \
             --dir product/qualification/qualified-core/delivery
       - name: Install pinned Qualified Core verifier
         if: ${{ github.ref_protected == true }}
         shell: bash
         run: ./shifu install --frozen-lockfile
-      - name: Promote or resolve one compatible Qualified Core object
+      - name: Promote or resolve the exact Qualified Core platform matrix
         if: ${{ github.ref_protected == true }}
         id: qualified_core_promotion
         env:
@@ -478,98 +474,177 @@ jobs:
           git diff --quiet
           git diff --cached --quiet
           test -z "$(git status --porcelain --untracked-files=no)"
-          if [ "${{ steps.qualified_core_producer.outputs.available }}" = true ]; then
-            # Promotion runs only on an exact protected-dev push.
-            # shifu-entry-contract: allow binding the verified merge-group delivery after Gate
-            node framework/release/qualified-assignment-core-artifact.mjs promote \
-              --repository-root . \
-              --bundle product/qualification/qualified-core/candidate \
-              --output-dir product/qualification/qualified-core/promoted \
-              --repository "$GITHUB_REPOSITORY" \
-              --target-commit "$TARGET_SHA" \
-              --target-tree "$(git rev-parse "${TARGET_SHA}^{tree}")" \
-              --protected-ref "$GITHUB_REF" \
-              --merge-group-run-id "${{ steps.qualified_core_producer.outputs.run-id }}" \
-              --delivery-attempt product/qualification/qualified-core/delivery/delivery-attempt.json \
-              --github-output "$GITHUB_OUTPUT"
-            echo "available=true" >> "$GITHUB_OUTPUT"
-            exit 0
-          fi
-          root="product/qualification/qualified-core/reuse"
-          mkdir -p "$root"
-          matched_authority=""
-          matched_dir=""
-          matched_output=""
-          candidates="$(
-            gh api \
-              "repos/${GITHUB_REPOSITORY}/actions/artifacts?per_page=100" \
-              --jq '.artifacts
-                | map(select(
-                    .expired == false
-                    and (.name | startswith("qualified-assignment-core-"))
-                    and .name != ("qualified-assignment-core-" + env.TARGET_SHA)
-                  ))
-                | sort_by(.created_at)
-                | reverse
-                | .[]
-                | [.id, .name]
-                | @tsv'
-          )"
-          while IFS=$'\t' read -r artifact_id artifact_name; do
-            [ -n "${artifact_id:-}" ] || continue
-            candidate="$root/$artifact_id"
-            mkdir -p "$candidate/bundle"
-            if ! gh api \
-              "repos/${GITHUB_REPOSITORY}/actions/artifacts/${artifact_id}/zip" \
-              > "$candidate/artifact.zip"; then
-              echo "Qualified Core transport ${artifact_id} became unavailable."
-              continue
+          root="product/qualification/qualified-core"
+          promoted_root="$root/promoted"
+          status_root="$root/matrix-status"
+          mkdir -p "$promoted_root" "$status_root"
+          rows=(
+            darwin-arm64-cp313
+            darwin-x86_64-cp313
+            linux-x86_64-cp313
+            windows-x86_64-cp313
+          )
+          for row in "${rows[@]}"; do
+            key="${row//-/_}"
+            output="$promoted_root/$row"
+            row_output="$status_root/$row.output"
+            source_mode=""
+            exact_name="qualified-assignment-core-candidate-${TARGET_SHA}-${row}"
+            exact_count=0
+            if [ "${{ steps.qualified_core_producer.outputs.available }}" = true ]; then
+              exact_count="$(
+                gh api \
+                  "repos/${GITHUB_REPOSITORY}/actions/runs/${{ steps.qualified_core_producer.outputs.run-id }}/artifacts?per_page=100" \
+                  --jq "[.artifacts[] | select(.expired == false and .name == \"${exact_name}\")] | length"
+              )"
             fi
-            if ! unzip -qq "$candidate/artifact.zip" -d "$candidate/bundle"; then
-              echo "Qualified Core transport ${artifact_id} is not a bounded zip."
-              continue
-            fi
-            output="$candidate/promoted"
-            github_output="$candidate/output"
-            if ! node framework/release/qualified-assignment-core-artifact.mjs reuse \
-              --repository-root . \
-              --bundle "$candidate/bundle" \
-              --output-dir "$output" \
-              --repository "$GITHUB_REPOSITORY" \
-              --current-commit "$TARGET_SHA" \
-              --github-output "$github_output"; then
-              continue
-            fi
-            authority_identity="$(sed -n -e 's/^manifest-root=manifest:/p' -e 's/^qualification-receipt-root=qualification:/p' -e 's/^promotion-authority-root=promotion:/p' "$github_output" | paste -sd '|' -)"
-            if [ -n "$matched_authority" ] && [ "$authority_identity" != "$matched_authority" ]; then
-              echo "Multiple distinct compatible Qualified Core authorities are active." >&2
+            if [ "$exact_count" -gt 1 ]; then
+              echo "Qualified Core candidate authority is ambiguous for ${row}." >&2
               exit 1
             fi
-            matched_authority="$authority_identity"
-            matched_dir="$output"
-            matched_output="$github_output"
-            echo "Compatible transport: ${artifact_name} (${artifact_id})."
-          done <<< "$candidates"
-          if [ -z "$matched_dir" ]; then
-            echo "available=false" >> "$GITHUB_OUTPUT"
-            echo "No prior compatible Qualified Core object is active; source build remains authoritative."
-            exit 0
-          fi
-          mkdir -p product/qualification/qualified-core/promoted
-          cp -R "$matched_dir"/. product/qualification/qualified-core/promoted/
-          cat "$matched_output" >> "$GITHUB_OUTPUT"
-          echo "available=true" >> "$GITHUB_OUTPUT"
-      - name: Upload qualified artifact transport
-        if: ${{ steps.qualified_core_promotion.outputs.available == 'true' }}
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+            if [ "$exact_count" -eq 1 ]; then
+              candidate="$root/candidate/$row"
+              gh run download "${{ steps.qualified_core_producer.outputs.run-id }}" \
+                --repo "$GITHUB_REPOSITORY" \
+                --name "$exact_name" \
+                --dir "$candidate"
+              # Promotion runs only on an exact protected-dev push.
+              # shifu-entry-contract: allow binding the verified merge-group delivery after Gate
+              node framework/release/qualified-assignment-core-artifact.mjs promote \
+                --repository-root . \
+                --bundle "$candidate" \
+                --output-dir "$output" \
+                --repository "$GITHUB_REPOSITORY" \
+                --target-commit "$TARGET_SHA" \
+                --target-tree "$(git rev-parse "${TARGET_SHA}^{tree}")" \
+                --protected-ref "$GITHUB_REF" \
+                --merge-group-run-id "${{ steps.qualified_core_producer.outputs.run-id }}" \
+                --delivery-attempt "$root/delivery/delivery-attempt.json" \
+                --github-output "$row_output"
+              source_mode=exact-producer
+            else
+              reuse_root="$root/reuse/$row"
+              mkdir -p "$reuse_root"
+              matched_authority=""
+              matched_dir=""
+              matched_output=""
+              candidates="$(
+                gh api \
+                  "repos/${GITHUB_REPOSITORY}/actions/artifacts?per_page=100" |
+                  jq -r \
+                    --arg row "$row" \
+                    --arg exact "qualified-assignment-core-${TARGET_SHA}-${row}" \
+                    '.artifacts
+                      | map(select(
+                          .expired == false
+                          and .name != $exact
+                          and (
+                            (.name | test("^qualified-assignment-core-[0-9a-f]{40}-" + $row + "$"))
+                            or (
+                              $row == "darwin-arm64-cp313"
+                              and (.name | test("^qualified-assignment-core-[0-9a-f]{40}$"))
+                            )
+                          )
+                        ))
+                      | sort_by(.created_at)
+                      | reverse
+                      | .[]
+                      | [.id, .name]
+                      | @tsv'
+              )"
+              while IFS=$'\t' read -r artifact_id artifact_name; do
+                [ -n "${artifact_id:-}" ] || continue
+                candidate="$reuse_root/$artifact_id"
+                mkdir -p "$candidate/bundle"
+                if ! gh api \
+                  "repos/${GITHUB_REPOSITORY}/actions/artifacts/${artifact_id}/zip" \
+                  > "$candidate/artifact.zip"; then
+                  echo "Qualified Core transport ${artifact_id} became unavailable."
+                  continue
+                fi
+                if ! unzip -qq "$candidate/artifact.zip" -d "$candidate/bundle"; then
+                  echo "Qualified Core transport ${artifact_id} is not a bounded zip."
+                  continue
+                fi
+                reusable="$candidate/promoted"
+                reusable_output="$candidate/output"
+                if ! node framework/release/qualified-assignment-core-artifact.mjs reuse \
+                  --repository-root . \
+                  --bundle "$candidate/bundle" \
+                  --output-dir "$reusable" \
+                  --repository "$GITHUB_REPOSITORY" \
+                  --current-commit "$TARGET_SHA" \
+                  --github-output "$reusable_output"; then
+                  continue
+                fi
+                authority_identity="$(sed -n -e 's/^manifest-root=manifest:/p' -e 's/^qualification-receipt-root=qualification:/p' -e 's/^promotion-authority-root=promotion:/p' "$reusable_output" | paste -sd '|' -)"
+                if [ -n "$matched_authority" ] && [ "$authority_identity" != "$matched_authority" ]; then
+                  echo "Multiple distinct compatible Qualified Core authorities are active for ${row}." >&2
+                  exit 1
+                fi
+                matched_authority="$authority_identity"
+                matched_dir="$reusable"
+                matched_output="$reusable_output"
+                echo "Compatible ${row} transport: ${artifact_name} (${artifact_id})."
+              done <<< "$candidates"
+              if [ -n "$matched_dir" ]; then
+                mkdir -p "$output"
+                cp -R "$matched_dir"/. "$output"/
+                cp "$matched_output" "$row_output"
+                source_mode=compatible-reuse
+              fi
+            fi
+            if [ -n "$source_mode" ]; then
+              manifest_root="$(sed -n 's/^manifest-root=//p' "$row_output")"
+              artifact_root="$(sed -n 's/^artifact-root=//p' "$row_output")"
+              qualification_root="$(sed -n 's/^qualification-receipt-root=//p' "$row_output")"
+              promotion_root="$(sed -n 's/^promotion-authority-root=//p' "$row_output")"
+              jq -n \
+                --arg row "$row" \
+                --arg source "$source_mode" \
+                --arg manifest "$manifest_root" \
+                --arg artifact "$artifact_root" \
+                --arg qualification "$qualification_root" \
+                --arg promotion "$promotion_root" \
+                '{row:$row,status:"qualified",source:$source,manifestRoot:$manifest,artifactRoot:$artifact,qualificationReceiptRoot:$qualification,promotionAuthorityRoot:$promotion}' \
+                > "$status_root/$row.json"
+              echo "${key}_available=true" >> "$GITHUB_OUTPUT"
+            else
+              jq -n \
+                --arg row "$row" \
+                '{row:$row,status:"unqualified",reason:"no-exact-or-compatible-authority"}' \
+                > "$status_root/$row.json"
+              echo "${key}_available=false" >> "$GITHUB_OUTPUT"
+              echo "Qualified Core row ${row} is unqualified; source build remains authoritative."
+            fi
+          done
+          jq -s \
+            --arg target "$TARGET_SHA" \
+            '{schema:"shifu.qualified-assignment-core-matrix-index/v1",targetCommit:$target,rows:(sort_by(.row))}' \
+            "$status_root"/*.json > "$root/matrix-index-body.json"
+          # shifu-entry-contract: allow sealing the non-authoritative matrix transport index after per-row verification
+          node --input-type=module --eval '
+            import fs from "node:fs";
+            import { qualifiedAssignmentCoreRoot } from "./scripts/check-shifu-cache-contract.mjs";
+            const [source, destination] = process.argv.slice(1);
+            const body = JSON.parse(fs.readFileSync(source, "utf8"));
+            fs.writeFileSync(
+              destination,
+              `${JSON.stringify({...body, matrixRoot: qualifiedAssignmentCoreRoot(body)}, null, 2)}\n`,
+            );
+          ' "$root/matrix-index-body.json" "$root/matrix-index.json"
+          echo "matrix_available=true" >> "$GITHUB_OUTPUT"
+      - name: Upload Qualified Core matrix transports
+        if: ${{ steps.qualified_core_promotion.outputs.matrix_available == 'true' }}
+        uses: ./.github/actions/upload-qualified-core-matrix
         with:
-          name: qualified-assignment-core-${{ steps.target.outputs.sha }}
-          path: product/qualification/qualified-core/promoted
-          if-no-files-found: error
-          retention-days: 14
-          compression-level: 0
+          target-sha: ${{ steps.target.outputs.sha }}
+          darwin-arm64-available: ${{ steps.qualified_core_promotion.outputs.darwin_arm64_cp313_available }}
+          darwin-x86-64-available: ${{ steps.qualified_core_promotion.outputs.darwin_x86_64_cp313_available }}
+          linux-x86-64-available: ${{ steps.qualified_core_promotion.outputs.linux_x86_64_cp313_available }}
+          windows-x86-64-available: ${{ steps.qualified_core_promotion.outputs.windows_x86_64_cp313_available }}
       - name: Summarize Qualified Core promotion
-        if: ${{ steps.qualified_core_promotion.outputs.available == 'true' }}
+        if: ${{ steps.qualified_core_promotion.outputs.matrix_available == 'true' }}
         env:
           TARGET_SHA: ${{ steps.target.outputs.sha }}
         shell: bash
@@ -578,10 +653,8 @@ jobs:
             echo "### Qualified Assignment Core"
             echo
             echo "- protected source: \`$TARGET_SHA\`"
-            echo "- merge-group producer: \`${{ steps.qualified_core_producer.outputs.run-id || 'retained-compatible-object' }}\`"
-            echo "- manifest: \`${{ steps.qualified_core_promotion.outputs.manifest-root }}\`"
-            echo "- payload: \`${{ steps.qualified_core_promotion.outputs.artifact-root }}\`"
-            echo "- qualification: \`${{ steps.qualified_core_promotion.outputs.qualification-receipt-root }}\`"
-            echo "- promotion: \`${{ steps.qualified_core_promotion.outputs.promotion-authority-root }}\`"
+            echo "- merge-group delivery: \`${{ steps.qualified_core_producer.outputs.run-id || 'no-current-delivery' }}\`"
+            jq -r '.rows[] | "- " + .row + ": `" + .status + "`" + (if .source then " (`" + .source + "`)" else "" end)' \
+              product/qualification/qualified-core/matrix-index.json
             echo "- transport: replaceable and non-authoritative"
           } >> "$GITHUB_STEP_SUMMARY"

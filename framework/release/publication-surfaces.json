@@ -68,7 +68,7 @@
             "product-stable",
             "product-binaries"
           ],
-          "sourceRoot": "sha256:936dfd9d60090a070d2a96bfe810517c18455c43a4538043d72e356c7ff038e7"
+          "sourceRoot": "sha256:e481e0e23a46c6775f8302fc2df458e51b4848cacb3a479a78cf0667f563f8e4"
         },
         {
           "path": ".github/workflows/affected-native-pr.yml",
@@ -79,7 +79,7 @@
             "product-stable",
             "product-binaries"
           ],
-          "sourceRoot": "sha256:32c64460a994dcc872c9257b03b885ebb838992e0ea485eb7ad220940c9fdaeb"
+          "sourceRoot": "sha256:432b2dbe40538a0f9a4b131a6922f2601d9dadc4718595793d1af8d0da8fc7cb"
         },
         {
           "path": ".github/workflows/alpha-promotion-preflight.yml",
@@ -806,5 +806,5 @@
       }
     }
   ],
-  "registryRoot": "sha256:3fb93eb1f19566d7efb02f61e97ce7aa26e0d3bc77c2da7cf723e15f24873b76"
+  "registryRoot": "sha256:6d199c1baf9e4e60780b405cd6817873fa34908d8c1b3b33e686c050aecafe6c"
 }

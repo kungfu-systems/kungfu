@@ -22,6 +22,11 @@ import {
   qualifiedCoreUsageObservation,
   summarizeQualifiedCoreUsage,
 } from './qualified-assignment-core-observability.mjs';
+import {
+  qualifiedCoreArtifactName,
+  qualifiedCorePlatformRowForHost,
+  qualifiedCorePlatformRowForIdentity,
+} from './qualified-assignment-core-platform-matrix.mjs';
 
 const TARGET_ROOT = 'framework/core/dist/kungfu';
 const RECEIPT = '.qualified-core-materialization.json';
@@ -165,8 +170,20 @@ function verificationExpectation({
   qualifiedTargetCommit,
   protectedRef,
   now,
+  transport,
 }) {
   const roots = qualifiedCoreCheckoutRoots(repositoryRoot, candidate);
+  const platformRow = qualifiedCorePlatformRowForIdentity(
+    {
+      operatingSystem: candidate.build.operatingSystem,
+      architecture: candidate.build.architecture,
+      pythonAbi: candidate.build.pythonAbi,
+    },
+    repositoryRoot,
+  );
+  if (transport.platformRow && transport.platformRow !== platformRow.id) {
+    throw new QualifiedCoreUnavailable('platform-row-substitution');
+  }
   if (
     artifactContract(repositoryRoot).authority.protectedRefPolicy !==
       'github-default-branch' ||
@@ -239,6 +256,7 @@ async function verifyBundle(
     qualifiedTargetCommit: qualification.identity.targetCommit,
     protectedRef,
     now,
+    transport,
   });
   const verification = await verifyQualifiedCoreBundle(
     bundleRoot,
@@ -794,7 +812,7 @@ export async function downloadHttpArtifact({
   throw new QualifiedCoreUnavailable('http-artifact-download-failed');
 }
 
-function transferState(cacheRoot, checkout, artifact) {
+function transferState(cacheRoot, checkout, artifact, platformRowId) {
   if (
     !Number.isSafeInteger(artifact.id) ||
     artifact.id < 1 ||
@@ -815,6 +833,7 @@ function transferState(cacheRoot, checkout, artifact) {
     repository: checkout.repository,
     artifactId: artifact.id,
     artifactName: artifact.name,
+    platformRow: platformRowId,
     expectedBytes: artifact.size_in_bytes,
   };
   const identity = {
@@ -843,10 +862,15 @@ export async function discoverGithubBundle(
     githubJson = ghJson,
     downloadHttp = downloadHttpArtifact,
     downloadGithub = downloadGithubArtifact,
+    platformRowId = 'darwin-arm64-cp313',
   } = {},
 ) {
   const discoveryStarted = clock();
-  const name = `qualified-assignment-core-${checkout.commit}`;
+  const name = qualifiedCoreArtifactName(
+    'promoted',
+    checkout.commit,
+    platformRowId,
+  );
   const listing = githubJson(
     `repos/${checkout.repository}/actions/artifacts?name=${name}&per_page=100`,
   );
@@ -878,7 +902,12 @@ export async function discoverGithubBundle(
     throw new QualifiedCoreUnavailable('untrusted-github-workflow');
   }
   const discovery = elapsed(discoveryStarted, clock);
-  const transferRoot = transferState(cacheRoot, checkout, artifact);
+  const transferRoot = transferState(
+    cacheRoot,
+    checkout,
+    artifact,
+    platformRowId,
+  );
   let zip = '';
   const transferStarted = clock();
   let provider = 'github-workflow-artifact';
@@ -927,6 +956,7 @@ export async function discoverGithubBundle(
       event: workflowRun.event,
       protectedRef: `refs/heads/${workflowRun.head_branch}`,
       headSha: workflowRun.head_sha,
+      platformRow: platformRowId,
     },
   };
 }
@@ -1173,12 +1203,20 @@ export async function consumeQualifiedCoreForCheckout({
   let phaseStarted = started;
   const phases = {};
   let checkout = suppliedCheckout;
+  let platformRow = null;
   let recorded = false;
   try {
     checkout ||= observeQualifiedCoreCheckout(repositoryRoot);
     phases.checkout = elapsed(phaseStarted, clock);
     phaseStarted = clock();
-    if (platform !== 'darwin' || architecture !== 'arm64') {
+    try {
+      platformRow = qualifiedCorePlatformRowForHost(platform, architecture);
+    } catch {
+      throw new QualifiedCoreUnavailable('unsupported-host');
+    }
+    // This card establishes the shared producer contract. Consumer activation
+    // for the other three rows remains owned by their dedicated Assignments.
+    if (platformRow.id !== 'darwin-arm64-cp313') {
       throw new QualifiedCoreUnavailable('unsupported-host');
     }
     const local = await discoverLocal({
@@ -1236,6 +1274,7 @@ export async function consumeQualifiedCoreForCheckout({
         discovered = await discoverRemote(checkout, temporary, {
           cacheRoot,
           clock,
+          platformRowId: platformRow.id,
         });
       } else {
         throw new QualifiedCoreUnavailable('qualified-core-cache-miss');
@@ -1325,13 +1364,21 @@ export function qualifiedCoreUsageStatus({
   architecture = process.arch,
 }) {
   const checkout = observeQualifiedCoreCheckout(repositoryRoot);
+  let eligible = false;
+  try {
+    eligible =
+      qualifiedCorePlatformRowForHost(platform, architecture).id ===
+      'darwin-arm64-cp313';
+  } catch {
+    eligible = false;
+  }
   return summarizeQualifiedCoreUsage(cacheRoot, {
     repository: checkout.repository,
     sourceCommit: checkout.commit,
     platform,
     architecture,
     pythonAbi: 'cp313',
-    eligible: platform === 'darwin' && architecture === 'arm64',
+    eligible,
   });
 }
 

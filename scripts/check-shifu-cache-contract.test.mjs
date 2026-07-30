@@ -328,6 +328,10 @@ test('cache contract schemas accept valid fixtures and reject unsafe policy', as
       'docs/shifu/schema/qualified-assignment-core-artifact-v2.schema.json',
     qualifiedQualificationSchema:
       'docs/shifu/schema/qualified-assignment-core-qualification-v2.schema.json',
+    qualifiedPlatformMatrix:
+      'docs/shifu/qualified-assignment-core-platform-matrix.json',
+    qualifiedPlatformMatrixSchema:
+      'docs/shifu/schema/qualified-assignment-core-platform-matrix-v1.schema.json',
     validFixtures: counts[0],
     rejectedFixtures: counts[1],
   });

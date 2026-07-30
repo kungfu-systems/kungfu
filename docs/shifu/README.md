@@ -15,6 +15,11 @@ execution; Shifu owns how the task is executed after source checkout.
 - [`artifact-contract.json`](artifact-contract.json) is the machine-readable
   discovery root for local build provenance and safe promotion semantics shared
   by `self-update` and `builds/promote`.
+- [`qualified-assignment-core-platform-matrix.json`](qualified-assignment-core-platform-matrix.json)
+  and its
+  [`v1 schema`](schema/qualified-assignment-core-platform-matrix-v1.schema.json)
+  bind the initial Qualified Core producer rows, hosted runner identities,
+  payload closures, artifact names, and per-row promotion policy.
 - [`schema/qualified-assignment-core-artifact-v1.schema.json`](schema/qualified-assignment-core-artifact-v1.schema.json)
   and
   [`schema/qualified-assignment-core-qualification-v1.schema.json`](schema/qualified-assignment-core-qualification-v1.schema.json)
@@ -166,6 +171,15 @@ toolchain and dependency locks; and exact Shifu and Buildchain contract
 versions and roots. Roots use UTF-8 JSON with recursively sorted object keys,
 preserved array order, `JSON.stringify` scalar encoding, and no insignificant
 whitespace.
+
+The initial production matrix contains four isolated CPython 3.13 rows:
+macOS ARM64, macOS x86_64, Linux x86_64, and Windows x86_64. Candidate and
+promoted transport names bind both the exact source commit and row identity.
+Each row has its own runner, build identity, payload closure, and single active
+promotion authority. An absent row is reported as `unqualified`; another
+platform's bytes can never substitute for it. The current automatic checkout
+consumer remains intentionally limited to macOS ARM64 until the dedicated
+platform consumer Assignments qualify the other three rows.
 
 The consumer verifies every declared byte, mode, bounded POSIX path and safe
 relative symlink while staging outside the target. It then verifies all current

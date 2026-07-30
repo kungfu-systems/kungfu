@@ -40,9 +40,9 @@
           "authority": "qualification",
           "publication": "none",
           "receipt": "diagnostic",
-          "definitionDigest": "sha256:0782c8ce641ac36af5df8cd5bbdd8bebce4bd5c5c900d9a979fe6b809584f2e2",
+          "definitionDigest": "sha256:334711c661ba4fd72f99e23539319e0296232edd85dfbd8e00834bef7511957d",
           "credentials": {"githubToken":"write","oidc":false,"repositorySecrets":[],"inheritedSecrets":false,"environment":null},
-          "externalActions": ["actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0","actions/setup-node@v6.4.0","actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093","actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093","actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093","actions/cache/save@0057852bfaa89a56745cba8c7296529d2fc39830","actions/cache/save@0057852bfaa89a56745cba8c7296529d2fc39830","actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02"],
+          "externalActions": ["actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0","actions/setup-node@v6.4.0","actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093","actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093","actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093","actions/cache/save@0057852bfaa89a56745cba8c7296529d2fc39830","actions/cache/save@0057852bfaa89a56745cba8c7296529d2fc39830"],
           "steps": [
             {
               "index": 1,
@@ -138,7 +138,7 @@
             {
               "index": 18,
               "label": "id:qualified_core_producer",
-              "definitionDigest": "sha256:d5a04bcebf2539305e92f44a81b5dad6084132fe4f269b758ec0264bccc391bd"
+              "definitionDigest": "sha256:88c85ebc8258f1e71d2a5090de5d2693dc779db31edb25032cc43917185b135c"
             },
             {
               "index": 19,
@@ -148,19 +148,19 @@
             {
               "index": 20,
               "label": "id:qualified_core_promotion",
-              "definitionDigest": "sha256:cf3034566ccc2efcfed10ff2ea5f7b4e1a34ece467dcf0e855f7c37d1afb0af7"
+              "definitionDigest": "sha256:4451a337b40e660ea2d9f139a2acaf8d511ea8ee1c570e9b4878f0130cbb1db1"
             },
             {
               "index": 21,
-              "label": "name:Upload qualified artifact transport",
+              "label": "name:Upload Qualified Core matrix transports",
               "authority": "evidence-publication",
-              "definitionDigest": "sha256:c3ce9b378632022f632cfc1366f087c064e6e705067b84e3bce597d915801acc"
+              "definitionDigest": "sha256:70015c2e976cb3fc5016506748c0cb1268486566c215dbe5ce635c4026a9c4d1"
             },
             {
               "index": 22,
               "label": "name:Summarize Qualified Core promotion",
               "authority": "evidence-publication",
-              "definitionDigest": "sha256:febcf1278beac0f3ec9e45f94effb5ab030851f23439085b4718b518b0da201e"
+              "definitionDigest": "sha256:9d26c53f19db6af00476c431a8adadbeec418b381d2cdd944c9f28d690ad55dc"
             }
           ]
         }
@@ -588,7 +588,7 @@
           "authority": "qualification",
           "publication": "none",
           "receipt": "diagnostic",
-          "definitionDigest": "sha256:95fb4fe1ca3779245386eba26dad91d3911aaa5f9fe3bb59f7da66168b54bb3c",
+          "definitionDigest": "sha256:497e05b23f04918d56c6373d9f9cb6b117bbf59653e174c7a3549fb9cb379d65",
           "credentials": {"githubToken":"read","oidc":false,"repositorySecrets":[],"inheritedSecrets":false,"environment":null},
           "externalActions": ["actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0","actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e","actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093","actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02"],
           "steps": [
@@ -610,14 +610,14 @@
             },
             {
               "index": 4,
-              "label": "id:candidate",
-              "definitionDigest": "sha256:8702b6ef68f058c69e850e8c5f691b46dc470a3ac767cafc51ae2efe0c8ec65d"
+              "label": "name:Build and seal minimum relocatable Assignment Core candidate",
+              "definitionDigest": "sha256:d5caf81afa2da8e05421ac655ce2d8713bdc60ff946772459bd4dad645634835"
             },
             {
               "index": 5,
               "label": "name:Upload non-authoritative candidate transport",
               "authority": "evidence-publication",
-              "definitionDigest": "sha256:d6b2a4eb7dc0a3769b88ad6e66f1406fd1926c026845b5f450891d4c8ca3664b"
+              "definitionDigest": "sha256:b50d68272be72adb6881fa7f3b4d145273c845df03b9620de73c12c17b5cc701"
             }
           ]
         },
