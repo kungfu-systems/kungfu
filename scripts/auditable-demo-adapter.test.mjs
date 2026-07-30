@@ -160,8 +160,8 @@ function fixture(
           'done',
         ]
       : [
-          'printf "\\033[2J\\033[HKungfu Agent Work Lab fixture\\r\\n"',
-          'printf "Fresh process continues from governed Work.\\r\\n"',
+          'printf "\\033[2J\\033[H\\033[1;36mKungfu Agent Work Lab fixture\\033[0m\\r\\n"',
+          'printf "\\033[38;2;103;232;165mFresh process continues from governed Work.\\033[0m\\r\\n"',
         ];
   const sentinel = omitSentinel
     ? []
@@ -172,6 +172,10 @@ function fixture(
     '#!/bin/sh',
     '[ "$1" = "agent-work-lab" ] && [ "$2" = "autoplay" ] || exit 7',
     '[ -t 0 ] && [ -t 1 ] || exit 8',
+    '[ "${FORCE_COLOR:-}" = "3" ] || exit 9',
+    '[ -z "${NO_COLOR+x}" ] || exit 10',
+    '[ "${TERM:-}" = "xterm-256color" ] || exit 11',
+    '[ "${COLORTERM:-}" = "truecolor" ] || exit 12',
     ...outputLines,
     ...(privateOutput ? [`printf '%s\\r\\n' '${privateOutput}'`] : []),
     ...sentinel,
@@ -336,7 +340,7 @@ test('adapter executes only the exact installed archive in a PTY and emits the d
       fs.readFileSync(path.join(output, 'terminal-capture.json'), 'utf8'),
     );
     assert.equal(capture.command, 'kungfu agent-work-lab autoplay');
-    assert.deepEqual(capture.dimensions, { columns: 120, rows: 36 });
+    assert.deepEqual(capture.dimensions, { columns: 150, rows: 36 });
     assert.equal(capture.completion.status, 'qualified');
     assert.deepEqual(capture.authority.grants, []);
     assert.deepEqual(capture.authority.nonAuthorities, [
@@ -355,6 +359,11 @@ test('adapter executes only the exact installed archive in a PTY and emits the d
         /^[A-Za-z0-9+/]+={0,2}$/u.test(event.data),
       ),
     );
+    const terminalBytes = Buffer.concat(
+      capture.events.map((event) => Buffer.from(event.data, 'base64')),
+    ).toString('utf8');
+    assert.ok(terminalBytes.includes('\u001b[1;36m'));
+    assert.ok(terminalBytes.includes('\u001b[38;2;103;232;165m'));
   } finally {
     fs.rmSync(root, { recursive: true, force: true });
   }

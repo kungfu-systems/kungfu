@@ -38,7 +38,7 @@ MAX_MEMBERS = 100_000
 EPISODE_RELEASE_EVIDENCE = "qualification/episode-release-evidence.json"
 PULL_MERGE_REF = re.compile(r"^refs/pull/[1-9][0-9]*/merge$")
 COMPLETION_SENTINEL = re.compile(r"KUNGFU_TUI_DEMO_COMPLETE ([^\r\n]+)")
-TERMINAL_COLUMNS = 120
+TERMINAL_COLUMNS = 150
 TERMINAL_ROWS = 36
 TERMINAL_TIMEOUT_SECONDS = 60
 TERMINAL_EVENT_QUANTUM_MS = 20
@@ -570,7 +570,7 @@ def isolated_environment(home: Path) -> dict[str, str]:
         "TZ": "UTC",
         "CI": "true",
         "SOURCE_DATE_EPOCH": "0",
-        "NO_COLOR": "0",
+        "FORCE_COLOR": "3",
         "TERM": "xterm-256color",
         "COLORTERM": "truecolor",
     }
