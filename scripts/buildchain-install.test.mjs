@@ -277,6 +277,27 @@ test('AWS Windows burst workflow preserves bounded full and cleanup exercises', 
   assert.match(workflow, /win-cancel:cancellation/);
   assert.match(workflow, /win-timeout:timeout/);
   assert.match(workflow, /timeout-minutes:/);
+  assert.match(
+    workflow,
+    /runner_label: \$\{\{ steps\.contract\.outputs\.runner_label \}\}/,
+  );
+  assert.match(workflow, /id: contract/);
+  assert.match(
+    workflow,
+    /aws-ec2-windows-runner-label: \$\{\{ needs\.trust\.outputs\.runner_label \}\}/,
+  );
+  assert.match(
+    workflow,
+    /require-install: \$\{\{ fromJSON\(needs\.trust\.outputs\.require_install\) \}\}/,
+  );
+  assert.match(
+    workflow,
+    /lifecycle-timeout-minutes: \$\{\{ fromJSON\(needs\.trust\.outputs\.lifecycle_timeout_minutes\) \}\}/,
+  );
+  assert.doesNotMatch(
+    workflow,
+    /artifact-paths: \$\{\{ inputs\.|expected-artifacts-json: \$\{\{ inputs\.|build-command: \$\{\{ inputs\.|verify-command: \$\{\{ inputs\./,
+  );
 });
 
 test('AWS macOS burst workflow requires three sequential one-job JIT slots', () => {

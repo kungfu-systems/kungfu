@@ -40,8 +40,21 @@ jobs:
   trust:
     name: Reject non-canonical or untrusted dispatch
     runs-on: ubuntu-24.04
+    outputs:
+      runner_label: ${{ steps.contract.outputs.runner_label }}
+      artifact_name: ${{ steps.contract.outputs.artifact_name }}
+      artifact_paths: ${{ steps.contract.outputs.artifact_paths }}
+      expected_artifacts_json: ${{ steps.contract.outputs.expected_artifacts_json }}
+      require_install: ${{ steps.contract.outputs.require_install }}
+      build_command: ${{ steps.contract.outputs.build_command }}
+      verify_command: ${{ steps.contract.outputs.verify_command }}
+      lifecycle_timeout_minutes: ${{ steps.contract.outputs.lifecycle_timeout_minutes }}
+      requested_parallelism: ${{ steps.contract.outputs.requested_parallelism }}
+      shifu_cache_profile_ref: ${{ steps.contract.outputs.shifu_cache_profile_ref }}
+      shifu_cache_profile_digest: ${{ steps.contract.outputs.shifu_cache_profile_digest }}
     steps:
       - name: Require canonical repository, mode, and label
+        id: contract
         shell: bash
         env:
           EXPECTED_REPOSITORY: kungfu-systems/kungfu
@@ -57,6 +70,31 @@ jobs:
             *) exit 1 ;;
           esac
           test "${RUNNER_LABEL}" = "aws-us-ec2-windows-jit-${QUALIFICATION_ID}"
+          {
+            printf 'runner_label=%s\n' "${RUNNER_LABEL}"
+            printf 'artifact_name=kungfu-aws-windows-%s\n' "${QUALIFICATION_ID}"
+            if [ "${MODE}" = "smoke" ]; then
+              printf 'artifact_paths=product/release/qualification/aws-windows-jit-smoke.json\n'
+              printf 'expected_artifacts_json=%s\n' '{"minFiles":1,"minTotalBytes":1,"requiredPaths":["product/release/qualification/aws-windows-jit-smoke.json"]}'
+              printf 'require_install=false\n'
+              printf 'build_command=node scripts/probe-release-platform.mjs --aws-windows-jit\n'
+              printf 'verify_command=node scripts/probe-release-platform.mjs --aws-windows-jit\n'
+              printf 'lifecycle_timeout_minutes=30\n'
+              printf 'requested_parallelism=1\n'
+              printf 'shifu_cache_profile_ref=\n'
+              printf 'shifu_cache_profile_digest=\n'
+            else
+              printf 'artifact_paths=product/release\n'
+              printf 'expected_artifacts_json=%s\n' '{"minFiles":3,"minTotalBytes":1,"requiredPaths":["product/release/qualification/layer-qualification-summary.json"]}'
+              printf 'require_install=true\n'
+              printf 'build_command=\n'
+              printf 'verify_command=node scripts/run-release-qualification.mjs --execution-profile alpha --native-upgrade-policy skip\n'
+              printf 'lifecycle_timeout_minutes=150\n'
+              printf 'requested_parallelism=8\n'
+              printf 'shifu_cache_profile_ref=docs/shifu/qualification-portable-off.cache-profile.json\n'
+              printf 'shifu_cache_profile_digest=sha256:d7002041716ea1e5ad703492815c9557576d5679227743541c13d42b6ea9de5c\n'
+            fi
+          } >> "${GITHUB_OUTPUT}"
 
       - name: Require write-capable actor
         uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8
@@ -79,26 +117,26 @@ jobs:
     with:
       buildchain-ref: 407445c43df4888bb4464e91aef0debdc62aa0e6
       runner-preset: aws-us-ec2-windows-jit
-      aws-ec2-windows-runner-label: ${{ inputs.runner-label }}
+      aws-ec2-windows-runner-label: ${{ needs.trust.outputs.runner_label }}
       setup-rust: true
       rust-toolchain: "1.96.0"
-      artifact-name: kungfu-aws-windows-${{ inputs.qualification-id }}
-      artifact-paths: ${{ inputs.mode == 'smoke' && 'product/release/qualification/aws-windows-jit-smoke.json' || 'product/release' }}
-      expected-artifacts-json: ${{ inputs.mode == 'smoke' && '{"minFiles":1,"minTotalBytes":1,"requiredPaths":["product/release/qualification/aws-windows-jit-smoke.json"]}' || '{"minFiles":3,"minTotalBytes":1,"requiredPaths":["product/release/qualification/layer-qualification-summary.json"]}' }}
-      require-install: ${{ inputs.mode == 'full' }}
+      artifact-name: ${{ needs.trust.outputs.artifact_name }}
+      artifact-paths: ${{ needs.trust.outputs.artifact_paths }}
+      expected-artifacts-json: ${{ needs.trust.outputs.expected_artifacts_json }}
+      require-install: ${{ fromJSON(needs.trust.outputs.require_install) }}
       require-build: true
-      build-command: ${{ inputs.mode == 'smoke' && 'node scripts/probe-release-platform.mjs --aws-windows-jit' || '' }}
+      build-command: ${{ needs.trust.outputs.build_command }}
       require-verify: true
-      verify-command: ${{ inputs.mode == 'smoke' && 'node scripts/probe-release-platform.mjs --aws-windows-jit' || 'node scripts/run-release-qualification.mjs --execution-profile alpha --native-upgrade-policy skip' }}
-      lifecycle-timeout-minutes: ${{ inputs.mode == 'smoke' && 30 || 150 }}
-      requested-parallelism: ${{ inputs.mode == 'smoke' && 1 || 8 }}
+      verify-command: ${{ needs.trust.outputs.verify_command }}
+      lifecycle-timeout-minutes: ${{ fromJSON(needs.trust.outputs.lifecycle_timeout_minutes) }}
+      requested-parallelism: ${{ fromJSON(needs.trust.outputs.requested_parallelism) }}
       artifact-transfer-mode: github-artifacts
       artifact-retention-days: 14
       checkout-cache-mode: off
       checkout-cache-fallback: github
       checkout-cache-github-timeout-seconds: 1200
-      shifu-cache-profile-ref: ${{ inputs.mode == 'full' && 'docs/shifu/qualification-portable-off.cache-profile.json' || '' }}
-      shifu-cache-profile-digest: ${{ inputs.mode == 'full' && 'sha256:d7002041716ea1e5ad703492815c9557576d5679227743541c13d42b6ea9de5c' || '' }}
+      shifu-cache-profile-ref: ${{ needs.trust.outputs.shifu_cache_profile_ref }}
+      shifu-cache-profile-digest: ${{ needs.trust.outputs.shifu_cache_profile_digest }}
       publish-channel: none
       release-candidate: false
       buildchain-contract-lock-path: .buildchain/contract-lock.json

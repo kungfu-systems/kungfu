@@ -234,7 +234,7 @@
           "authority": "qualification",
           "publication": "none",
           "receipt": "diagnostic",
-          "definitionDigest": "sha256:51b1809ef470f1bc0c17898b200dccbb389553a8af5ba6e93359ac1400bf9b94",
+          "definitionDigest": "sha256:b1b8acba5a911418f36bb609b4f6af0976bae94216673fd9c736c95f6e542f68",
           "credentials": {"githubToken":"read","oidc":false,"repositorySecrets":[],"inheritedSecrets":false,"environment":null},
           "externalActions": ["kungfu-systems/buildchain/.github/workflows/.build.yml@407445c43df4888bb4464e91aef0debdc62aa0e6"],
           "steps": []
@@ -244,10 +244,10 @@
           "authority": "qualification",
           "publication": "none",
           "receipt": "diagnostic",
-          "definitionDigest": "sha256:e7b8a1634e100d5628adb348fa8524fba6e1f5c48a2ddb8a5f4c271910a85647",
+          "definitionDigest": "sha256:251dde9611e29eb95ca21d3b1c6024d96cc5d78a56a434c3197771b09e1562d5",
           "credentials": {"githubToken":"read","oidc":false,"repositorySecrets":[],"inheritedSecrets":false,"environment":null},
           "externalActions": ["actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd"],
-          "steps": [{"index":1,"label":"name:Require canonical repository, mode, and label","definitionDigest":"sha256:c79ae3993e76974650848389ab59d62f355ae08734717d349c6ea7e144182999"},{"index":2,"label":"name:Require write-capable actor","definitionDigest":"sha256:3430783a3e543bfdbe6f96ad0be249927e372191c7e2cc5d8c540c14be66d68f"}]
+          "steps": [{"index":1,"label":"id:contract","definitionDigest":"sha256:4f234e58e391cc7b8cc7d23b1e5b700ead3aa413c9c062ea5017dabd4bbbdbe0"},{"index":2,"label":"name:Require write-capable actor","definitionDigest":"sha256:3430783a3e543bfdbe6f96ad0be249927e372191c7e2cc5d8c540c14be66d68f"}]
         }
       ]
     },
