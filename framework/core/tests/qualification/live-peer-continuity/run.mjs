@@ -184,8 +184,17 @@ function runSuite(suite, outputDir) {
     result.error ? `${result.error.name}: ${result.error.message}\n` : ''
   }`;
   const rawLog = `${suite.id}.log`;
-  fs.writeFileSync(path.join(outputDir, rawLog), output, { flag: 'wx' });
+  const rawLogPath = path.join(outputDir, rawLog);
+  fs.writeFileSync(rawLogPath, output, { flag: 'wx' });
   const passed = !result.error && result.status === 0;
+  if (!passed) {
+    const tail = boundedDiagnosticTail(rawLogPath);
+    if (tail) {
+      console.error(
+        `[live-peer-continuity] suite-log-tail-start suite=${suite.id}\n${tail}\n[live-peer-continuity] suite-log-tail-end suite=${suite.id}`,
+      );
+    }
+  }
   if (!passed && suite.id === 'native-cross-process-restart') {
     const campaign = nativeCampaignReport(outputDir);
     const detail =
