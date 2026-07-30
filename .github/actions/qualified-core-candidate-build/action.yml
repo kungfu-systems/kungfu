@@ -22,6 +22,14 @@ inputs:
   node-arch:
     description: Expected Node architecture.
     required: true
+  cc:
+    description: Optional exact C compiler command required by this row.
+    required: false
+    default: ""
+  cxx:
+    description: Optional exact C++ compiler command required by this row.
+    required: false
+    default: ""
 
 runs:
   using: composite
@@ -35,6 +43,14 @@ runs:
         test "$RUNNER_ARCH" = "${{ inputs.runner-arch }}"
         test "$(node -p process.platform)" = "${{ inputs.node-platform }}"
         test "$(node -p process.arch)" = "${{ inputs.node-arch }}"
+        if [ -n "${{ inputs.cc }}" ] || [ -n "${{ inputs.cxx }}" ]; then
+          test -n "${{ inputs.cc }}"
+          test -n "${{ inputs.cxx }}"
+          command -v "${{ inputs.cc }}" >/dev/null
+          command -v "${{ inputs.cxx }}" >/dev/null
+          export CC="${{ inputs.cc }}"
+          export CXX="${{ inputs.cxx }}"
+        fi
         ./shifu install --frozen-lockfile
         ./shifu rebuild:core
         node framework/release/qualified-assignment-core-artifact.mjs seal \
