@@ -1,93 +1,26 @@
 # SPDX-License-Identifier: Apache-2.0
 
-name: AWS US Linux Burst Qualification
+# The bounded v2 CodeBuild campaign is complete. Keep this dispatchable
+# tombstone so stale operator bookmarks fail before any burst runner or cloud
+# work. Reactivation is governed by the machine-readable contract below.
+name: AWS US Linux Burst Qualification (Retired)
 
 on:
   workflow_dispatch:
-    inputs:
-      qualification-id:
-        description: "Auditable slot label for this bounded PoC run"
-        required: true
-      buildchain-ref:
-        description: "Exact reviewed Buildchain train for this campaign"
-        required: true
-        default: "train/v2/v2.3/aws-us-elastic-runner-burst-plane"
 
 permissions:
   contents: read
-  issues: write
-
-concurrency:
-  group: aws-us-linux-burst-${{ github.run_id }}
-  cancel-in-progress: false
 
 jobs:
-  trust:
-    name: Reject non-canonical or untrusted dispatch
+  retired:
+    name: Reject retired AWS Linux burst campaign
     runs-on: ubuntu-24.04
-    permissions:
-      contents: read
     steps:
-      - name: Require canonical repository and reviewed train
+      - name: Fail closed before burst runner or cloud work
         shell: bash
         env:
-          EXPECTED_REPOSITORY: kungfu-systems/kungfu
-          EXPECTED_BUILDCHAIN_REF: train/v2/v2.3/aws-us-elastic-runner-burst-plane
-          REQUESTED_BUILDCHAIN_REF: ${{ inputs.buildchain-ref }}
-          QUALIFICATION_ID: ${{ inputs.qualification-id }}
+          RETIREMENT_CONTRACT: docs/qualification/gates/aws-burst-retirement.json
         run: |
           set -euo pipefail
-          test "${GITHUB_EVENT_NAME}" = "workflow_dispatch"
-          test "${GITHUB_REPOSITORY}" = "${EXPECTED_REPOSITORY}"
-          test "${REQUESTED_BUILDCHAIN_REF}" = "${EXPECTED_BUILDCHAIN_REF}"
-          [[ "${QUALIFICATION_ID}" =~ ^poc-(0[1-9]|1[0-7])$ ]]
-
-      - name: Require write-capable actor
-        uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8
-        with:
-          script: |
-            const permission = await github.rest.repos.getCollaboratorPermissionLevel({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              username: context.actor,
-            });
-            if (!["admin", "maintain", "write"].includes(permission.data.permission || "")) {
-              core.setFailed(`actor permission ${permission.data.permission || "none"} cannot allocate a burst runner`);
-            }
-
-  qualify:
-    name: Exact-source Linux core qualification
-    needs: trust
-    uses: kungfu-systems/buildchain/.github/workflows/.build.yml@train/v2/v2.3/aws-us-elastic-runner-burst-plane
-    with:
-      buildchain-ref: train/v2/v2.3/aws-us-elastic-runner-burst-plane
-      runner-preset: aws-us-codebuild-linux
-      aws-codebuild-project: kungfu-buildchain-linux-burst-poc
-      setup-rust: true
-      rust-toolchain: "1.96.0"
-      rustup-dist-server: https://rsproxy.cn
-      rustup-update-root: https://rsproxy.cn/rustup
-      cargo-registry-index: sparse+https://index.crates.io/
-      artifact-name: kungfu-aws-linux-burst-${{ inputs.qualification-id }}
-      artifact-paths: |
-        product/release/qualification/aws-codebuild-linux.json
-      expected-artifacts-json: >-
-        {"minFiles":1,"minTotalBytes":1,"requiredPaths":["product/release/qualification/aws-codebuild-linux.json"]}
-      require-install: true
-      install-command: node scripts/buildchain-install.mjs
-      require-build: true
-      build-command: KUNGFU_BUILD_JOBS=4 ./shifu build:core && node scripts/buildchain-install.mjs qualify-codebuild record
-      requested-parallelism: 4
-      require-verify: true
-      verify-command: node scripts/buildchain-install.mjs qualify-codebuild verify
-      lifecycle-timeout-minutes: 105
-      artifact-transfer-mode: github-artifacts
-      artifact-retention-days: 14
-      checkout-cache-mode: off
-      checkout-cache-fallback: github
-      checkout-cache-github-timeout-seconds: 1200
-      publish-channel: none
-      release-candidate: false
-      buildchain-contract-lock-path: .buildchain/contract-lock.json
-      buildchain-contract-compatibility-policy: allow-additive
-      buildchain-contract-drift-issue-mode: off
+          echo "::error title=AWS Linux burst campaign retired::See ${RETIREMENT_CONTRACT} for the evidence and v3 reactivation contract."
+          exit 1

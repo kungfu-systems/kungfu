@@ -764,36 +764,21 @@
     {
       "path": ".github/workflows/aws-us-linux-burst-qualification.yml",
       "authority": "qualification",
-      "definitionDigest": "sha256:2ceb58f323b6d996b5b7a9a80c2ab652059db3aa6186f2bfd0b8944236928cfb",
+      "definitionDigest": "sha256:b1b4ff62755b16ce738106c39208d455b528663caf7ffb7302fca519e366dd4e",
       "jobs": [
         {
-          "id": "qualify",
+          "id": "retired",
           "authority": "qualification",
           "publication": "none",
           "receipt": "diagnostic",
-          "definitionDigest": "sha256:644f282b34d334d136bfd353a94686c857493b811636ef045ec6290151ac66bb",
-          "credentials": {"githubToken":"write","oidc":false,"repositorySecrets":[],"inheritedSecrets":false,"environment":null},
-          "externalActions": ["kungfu-systems/buildchain/.github/workflows/.build.yml@train/v2/v2.3/aws-us-elastic-runner-burst-plane"],
-          "steps": []
-        },
-        {
-          "id": "trust",
-          "authority": "qualification",
-          "publication": "none",
-          "receipt": "diagnostic",
-          "definitionDigest": "sha256:c4f5796c26eafa948658ce4b8d412bd20d1801e3c99e03ddff4893588d0b7a00",
+          "definitionDigest": "sha256:4097ebd030b518547c6b3c9917a4cf04a07f457f402854220b284c2ae521c25c",
           "credentials": {"githubToken":"read","oidc":false,"repositorySecrets":[],"inheritedSecrets":false,"environment":null},
-          "externalActions": ["actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd"],
+          "externalActions": [],
           "steps": [
             {
               "index": 1,
-              "label": "name:Require canonical repository and reviewed train",
-              "definitionDigest": "sha256:1f7dcb35de9fe34c43b4d544588ece4228538d8e8c052d3f7ff8f514d264294e"
-            },
-            {
-              "index": 2,
-              "label": "name:Require write-capable actor",
-              "definitionDigest": "sha256:3430783a3e543bfdbe6f96ad0be249927e372191c7e2cc5d8c540c14be66d68f"
+              "label": "name:Fail closed before burst runner or cloud work",
+              "definitionDigest": "sha256:99576e82368555b05f5ac71698ac04dbfe706f2299aad30ca344ef994f56af01"
             }
           ]
         }
@@ -802,67 +787,21 @@
     {
       "path": ".github/workflows/aws-us-windows-burst-qualification.yml",
       "authority": "qualification",
-      "definitionDigest": "sha256:e925eda66d0b6255f16b916e107957e9fb52ad56794bb4b4c196746426ab79ab",
+      "definitionDigest": "sha256:12f4da71712f6393c5446d790d8e7ae1cf6109f7ee9dfb127a0abd05b6faa352",
       "jobs": [
         {
-          "id": "cleanup-exercise",
+          "id": "retired",
           "authority": "qualification",
           "publication": "none",
           "receipt": "diagnostic",
-          "definitionDigest": "sha256:88da612bd391529048ff81f3f1bc00d1beceed86b770b78de0557fef2b890b0d",
-          "credentials": {"githubToken":"write","oidc":false,"repositorySecrets":[],"inheritedSecrets":false,"environment":null},
+          "definitionDigest": "sha256:4c6dd524dcbd49a8ef7706ea6013fcde52ba2785726dffc9a4704ce710d81db0",
+          "credentials": {"githubToken":"read","oidc":false,"repositorySecrets":[],"inheritedSecrets":false,"environment":null},
           "externalActions": [],
           "steps": [
             {
               "index": 1,
-              "label": "name:Confirm exact JIT runner identity",
-              "definitionDigest": "sha256:115bfd9234736a1da607e61a0bb1be98a191d35f0da57ad4bb419a447069b9d2"
-            },
-            {
-              "index": 2,
-              "label": "name:Hold until the declared cleanup trigger",
-              "definitionDigest": "sha256:ebc15529c500b6f0e216a2a2ede2ade66d1f685f9b824e67cf3a5382af07cf84"
-            }
-          ]
-        },
-        {
-          "id": "full",
-          "authority": "qualification",
-          "publication": "none",
-          "receipt": "diagnostic",
-          "definitionDigest": "sha256:692b6f39dfd98c7343f8ca18c14a67458a910cc762693c9b016cc9c1155d1627",
-          "credentials": {"githubToken":"write","oidc":false,"repositorySecrets":[],"inheritedSecrets":false,"environment":null},
-          "externalActions": ["kungfu-systems/buildchain/.github/workflows/.build.yml@train/v2/v2.3/aws-us-elastic-runner-burst-plane"],
-          "steps": []
-        },
-        {
-          "id": "smoke",
-          "authority": "qualification",
-          "publication": "none",
-          "receipt": "diagnostic",
-          "definitionDigest": "sha256:59e0cef37723c0658648a83e8e7b7b9facf3117fad6c4ef8d3eebcc008ce4165",
-          "credentials": {"githubToken":"write","oidc":false,"repositorySecrets":[],"inheritedSecrets":false,"environment":null},
-          "externalActions": ["kungfu-systems/buildchain/.github/workflows/.build.yml@train/v2/v2.3/aws-us-elastic-runner-burst-plane"],
-          "steps": []
-        },
-        {
-          "id": "trust",
-          "authority": "qualification",
-          "publication": "none",
-          "receipt": "diagnostic",
-          "definitionDigest": "sha256:0ab3755153f464566cfd91816f58d3abb1bbd9d2ea4a45ea6e328bebcc70020f",
-          "credentials": {"githubToken":"read","oidc":false,"repositorySecrets":[],"inheritedSecrets":false,"environment":null},
-          "externalActions": ["actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd"],
-          "steps": [
-            {
-              "index": 1,
-              "label": "name:Require canonical repository, mode, label, and reviewed train",
-              "definitionDigest": "sha256:4e46e0fffd538e23ae01e63788a115e079e81318b2ce724060155d77a2012d70"
-            },
-            {
-              "index": 2,
-              "label": "name:Require write-capable actor",
-              "definitionDigest": "sha256:3430783a3e543bfdbe6f96ad0be249927e372191c7e2cc5d8c540c14be66d68f"
+              "label": "name:Fail closed before burst runner or cloud work",
+              "definitionDigest": "sha256:c363b114c46cc6cbf0bfd4ccaa7dc533390c7c56b614819eec48fbccddb43831"
             }
           ]
         }
@@ -1812,12 +1751,12 @@
               "label": "name:Classify bounded outcomes",
               "definitionDigest": "sha256:8cce1484f56a0abc478ec75f3373e4e812aee51778f5ed78850cd8345ff66b2f"
             },
-        {
-          "index": 7,
-          "label": "name:Produce and enforce bounded Patrol evidence",
-          "authority": "evidence-publication",
-          "definitionDigest": "sha256:d1159245a243daf8a37dd9cce3c1c59bf811df11d5cd81c012f4a89fcc6c2edc"
-        },
+            {
+              "index": 7,
+              "label": "name:Produce and enforce bounded Patrol evidence",
+              "authority": "evidence-publication",
+              "definitionDigest": "sha256:d1159245a243daf8a37dd9cce3c1c59bf811df11d5cd81c012f4a89fcc6c2edc"
+            },
             {
               "index": 8,
               "label": "name:Assemble and audit retained evidence",
