@@ -847,6 +847,79 @@ def test_windows_stop_supervisor_terminates_verified_process_tree(monkeypatch):
     assert delivered == [(4242, "recorded-start")]
 
 
+def test_windows_supervisor_breaks_away_from_parent_job(tmp_path, monkeypatch):
+    spawned = []
+
+    class _FakeProcess:
+        pid = 4242
+
+    def _spawn(command, **kwargs):
+        spawned.append((command, kwargs))
+        return _FakeProcess()
+
+    monkeypatch.setattr(runtime_service.platform, "system", lambda: "Windows")
+    monkeypatch.setattr(runtime_service.subprocess, "Popen", _spawn)
+    monkeypatch.setattr(runtime_service, "command_env", lambda *args, **kwargs: {})
+    monkeypatch.setattr(
+        runtime_service, "supervisor_command", lambda *args, **kwargs: ["supervisor"]
+    )
+    monkeypatch.setattr(
+        runtime_service, "_process_start_identity", lambda pid: f"start-{pid}"
+    )
+
+    host = runtime_service.ProcessRuntimeHost(
+        config_home=str(tmp_path / "config"), runtime_image={}
+    )
+    child, _ = host.spawn_supervisor(str(tmp_path / "home"), str(tmp_path / "runtime"))
+
+    expected = (
+        getattr(runtime_service.subprocess, "DETACHED_PROCESS", 0x00000008)
+        | getattr(runtime_service.subprocess, "CREATE_NEW_PROCESS_GROUP", 0x00000200)
+        | getattr(runtime_service.subprocess, "CREATE_BREAKAWAY_FROM_JOB", 0x01000000)
+    )
+    assert child.pid == 4242
+    assert spawned[0][1]["creationflags"] == expected
+
+
+def test_windows_supervisor_falls_back_when_job_forbids_breakaway(
+    tmp_path, monkeypatch
+):
+    spawned = []
+
+    class _FakeProcess:
+        pid = 4242
+
+    def _spawn(command, **kwargs):
+        spawned.append((command, kwargs))
+        if len(spawned) == 1:
+            error = OSError("job forbids breakaway")
+            error.winerror = 5
+            raise error
+        return _FakeProcess()
+
+    monkeypatch.setattr(runtime_service.platform, "system", lambda: "Windows")
+    monkeypatch.setattr(runtime_service.subprocess, "Popen", _spawn)
+    monkeypatch.setattr(runtime_service, "command_env", lambda *args, **kwargs: {})
+    monkeypatch.setattr(
+        runtime_service, "supervisor_command", lambda *args, **kwargs: ["supervisor"]
+    )
+    monkeypatch.setattr(
+        runtime_service, "_process_start_identity", lambda pid: f"start-{pid}"
+    )
+
+    host = runtime_service.ProcessRuntimeHost(
+        config_home=str(tmp_path / "config"), runtime_image={}
+    )
+    child, _ = host.spawn_supervisor(str(tmp_path / "home"), str(tmp_path / "runtime"))
+
+    expected = getattr(
+        runtime_service.subprocess, "DETACHED_PROCESS", 0x00000008
+    ) | getattr(runtime_service.subprocess, "CREATE_NEW_PROCESS_GROUP", 0x00000200)
+    assert child.pid == 4242
+    assert len(spawned) == 2
+    assert spawned[1][1]["creationflags"] == expected
+
+
 def test_runtime_demand_status_reaches_drain_after_idle_grace(tmp_path):
     fixture = LEASE_FIXTURES["adoption"]
     config_home = tmp_path / "config"

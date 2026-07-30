@@ -105,8 +105,21 @@ function waitForRunning(home, configHome) {
     if (runtimeReady(latest.payload)) return latest;
     Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 100);
   }
+  const logs = [
+    path.join(configHome, 'runtime', 'supervisor', 'supervisor.log'),
+    path.join(home, 'runtime', 'coordinator', 'coordinator.log'),
+  ]
+    .map((logPath) => {
+      try {
+        const content = fs.readFileSync(logPath, 'utf8');
+        return `${logPath}:\n${content.slice(-16_384)}`;
+      } catch (error) {
+        return `${logPath}: unavailable (${error.code || error.message})`;
+      }
+    })
+    .join('\n');
   throw new Error(
-    `product runtime did not become running: ${JSON.stringify(latest?.payload)}`,
+    `product runtime did not become running: ${JSON.stringify(latest?.payload)}\n${logs}`,
   );
 }
 

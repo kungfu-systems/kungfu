@@ -1536,10 +1536,28 @@ class ProcessRuntimeHost:
                 new_process_group = getattr(
                     subprocess, "CREATE_NEW_PROCESS_GROUP", 0x00000200
                 )
-                kwargs["creationflags"] = detached_process | new_process_group
+                breakaway_from_job = getattr(
+                    subprocess, "CREATE_BREAKAWAY_FROM_JOB", 0x01000000
+                )
+                kwargs["creationflags"] = (
+                    detached_process | new_process_group | breakaway_from_job
+                )
             else:
                 kwargs["start_new_session"] = True
-            child = subprocess.Popen(command, **kwargs)
+            try:
+                child = subprocess.Popen(command, **kwargs)
+            except OSError as error:
+                # Some Windows service managers place clients in a job that
+                # explicitly forbids breakaway. Preserve the existing resident
+                # process behavior there, while allowing CI and other
+                # kill-on-close jobs to release the supervisor when permitted.
+                if (
+                    platform.system() != "Windows"
+                    or getattr(error, "winerror", None) != 5
+                ):
+                    raise
+                kwargs["creationflags"] = detached_process | new_process_group
+                child = subprocess.Popen(command, **kwargs)
         write_pid(supervisor_pid_path(self.config_home), child.pid)
         _json_write(
             supervisor_state_path(self.config_home),
