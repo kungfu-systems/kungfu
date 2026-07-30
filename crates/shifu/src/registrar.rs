@@ -44,7 +44,10 @@ use std::time::{SystemTime, UNIX_EPOCH};
 use shifu_core::{bootstrap, host, json, style};
 
 use crate::artifact_catalog::product_mainline_ref;
-use crate::native_update::{artifact_sha256, installed_release_cut_root, valid_sha256_root};
+use crate::native_update::{
+    artifact_sha256, artifact_size, declared_artifact_size, installed_release_cut_root,
+    valid_sha256_root,
+};
 
 /// The buildchain self-describe contract shifu asks for the repo's KFD-3
 /// registry location. shifu holds no copy of that layout path: the layout is
@@ -675,8 +678,10 @@ fn local_release_evidence(
     } else {
         "file"
     };
+    let local_size = artifact_size(local_path)?;
     if local.str_of("kind") != "desktop-local"
         || local.str_of("format") != expected_format
+        || declared_artifact_size(local.get("size")) != Some(local_size)
         || local.str_of("digest") != format!("sha256:{local_sha}")
         || !matches!(
             local_declaration.kind.as_str(),
@@ -684,7 +689,7 @@ fn local_release_evidence(
         )
     {
         return Err(
-            "local desktop artifact digest differs from its Product Release Cut".to_string(),
+            "local desktop artifact identity differs from its Product Release Cut".to_string(),
         );
     }
     let cli_digest = document
@@ -972,11 +977,10 @@ mod tests {
         fs::write(root.join("out/app.bin"), b"artifact-bytes").unwrap();
         fs::write(root.join("out/cli.tar.gz"), b"cli-archive").unwrap();
         let app_sha = bootstrap::sha256_file(&root.join("out/app.bin")).unwrap();
+        let app_size = fs::metadata(root.join("out/app.bin")).unwrap().len();
         let cli_sha = bootstrap::sha256_file(&root.join("out/cli.tar.gz")).unwrap();
-        fs::write(
-            root.join("out/upgrade.json"),
-            format!(
-                r#"{{
+        let upgrade_manifest = format!(
+            r#"{{
                   "schema": "kungfu.product-upgrade.manifest/v1",
                   "productVersion": "4.0.0-alpha.1",
                   "releaseCutRoot": "sha256:{cut}",
@@ -991,22 +995,37 @@ mod tests {
                   "localArtifact": {{
                     "kind": "desktop-local",
                     "format": "file",
+                    "size": {app_size},
                     "digest": "sha256:{app_sha}"
                   }},
                   "artifacts": [
                     {{"kind": "cli", "digest": "sha256:{cli_sha}"}}
                   ]
                 }}"#,
-                cut = "c".repeat(64),
-                slice = "d".repeat(64),
+            cut = "c".repeat(64),
+            slice = "d".repeat(64),
+        );
+        fs::write(root.join("out/upgrade.json"), &upgrade_manifest).unwrap();
+
+        let plan = plan_at(&root, &kfd.join("surfaces.json"), "dist").expect("plan");
+        fs::write(
+            root.join("out/upgrade.json"),
+            upgrade_manifest.replace(
+                &format!(r#""size": {app_size}"#),
+                &format!(r#""size": {}"#, app_size + 1),
             ),
         )
         .unwrap();
+        register(&root, &plan);
+        let registry = cache.join("kungfu/product").join(host::os_arch());
+        assert!(
+            !registry.is_dir() || fs::read_dir(&registry).unwrap().next().is_none(),
+            "a mismatched manifest artifact size must not register a slot"
+        );
 
-        let plan = plan_at(&root, &kfd.join("surfaces.json"), "dist").expect("plan");
+        fs::write(root.join("out/upgrade.json"), &upgrade_manifest).unwrap();
         register(&root, &plan);
 
-        let registry = cache.join("kungfu/product").join(host::os_arch());
         let slots: Vec<_> = fs::read_dir(&registry).unwrap().flatten().collect();
         assert_eq!(slots.len(), 1, "exactly one slot registered");
         let slot = slots[0].path();

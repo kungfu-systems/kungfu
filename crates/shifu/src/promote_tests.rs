@@ -54,11 +54,12 @@ fn write_app_manifests(entry: &mut BuildEntry) {
         "sha256:{}",
         bootstrap::sha256_file(&entry.slot.join(&entry.cli_archive)).unwrap()
     );
+    let artifact_size = artifact_size(&entry.slot.join(&entry.artifact)).unwrap();
     fs::write(
         entry.slot.join(&entry.upgrade_manifest),
         format!(
-            r#"{{"schema":"kungfu.product-upgrade.manifest/v1","releaseCutRoot":"{}","platformSliceRoot":"{}","localArtifact":{{"kind":"desktop-local","format":"directory","digest":"sha256:{}"}}}}"#,
-            entry.release_cut_root, entry.platform_slice_root, entry.digest
+            r#"{{"schema":"kungfu.product-upgrade.manifest/v1","releaseCutRoot":"{}","platformSliceRoot":"{}","localArtifact":{{"kind":"desktop-local","format":"directory","size":{},"digest":"sha256:{}"}}}}"#,
+            entry.release_cut_root, entry.platform_slice_root, artifact_size, entry.digest
         ),
     )
     .unwrap();
@@ -75,6 +76,24 @@ fn qualified_app_requires_exact_product_manifests() {
     fs::create_dir_all(entry.slot.join(&entry.artifact)).unwrap();
     assert!(!build_valid(&entry));
 
+    write_app_manifests(&mut entry);
+    assert!(build_valid(&entry));
+
+    let manifest_path = entry.slot.join(&entry.upgrade_manifest);
+    let manifest = fs::read_to_string(&manifest_path).unwrap();
+    let exact_size = artifact_size(&entry.slot.join(&entry.artifact)).unwrap();
+    let wrong_size_manifest = manifest.replace(
+        &format!(r#""size":{exact_size}"#),
+        &format!(r#""size":{}"#, exact_size + 1),
+    );
+    assert_ne!(wrong_size_manifest, manifest);
+    fs::write(&manifest_path, wrong_size_manifest).unwrap();
+    entry.upgrade_manifest_digest =
+        format!("sha256:{}", bootstrap::sha256_file(&manifest_path).unwrap());
+    assert!(
+        !build_valid(&entry),
+        "promotion must reject a self-consistent manifest digest with a false artifact size"
+    );
     write_app_manifests(&mut entry);
     assert!(build_valid(&entry));
 

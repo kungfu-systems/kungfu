@@ -334,6 +334,81 @@ pub(crate) fn artifact_sha256(path: &Path) -> Result<String, String> {
     digest
 }
 
+pub(crate) fn artifact_size(path: &Path) -> Result<u64, String> {
+    if path.is_file() {
+        return fs::metadata(path)
+            .map(|metadata| metadata.len())
+            .map_err(|error| format!("cannot inspect {}: {error}", path.display()));
+    }
+    if !path.is_dir() {
+        return Err(format!(
+            "artifact is not a regular file or directory: {}",
+            path.display()
+        ));
+    }
+    fn visit(root: &Path, current: &Path) -> Result<u64, String> {
+        let mut size = 0_u64;
+        for entry in fs::read_dir(current)
+            .map_err(|error| format!("cannot read {}: {error}", current.display()))?
+        {
+            let entry =
+                entry.map_err(|error| format!("cannot read {}: {error}", current.display()))?;
+            let candidate = entry.path();
+            let metadata = fs::symlink_metadata(&candidate)
+                .map_err(|error| format!("cannot inspect {}: {error}", candidate.display()))?;
+            if metadata.file_type().is_symlink() {
+                let target = fs::read_link(&candidate)
+                    .map_err(|error| format!("cannot read {}: {error}", candidate.display()))?;
+                if target.is_absolute() {
+                    return Err(format!(
+                        "artifact has an absolute symlink: {}",
+                        candidate.display()
+                    ));
+                }
+                let resolved = candidate
+                    .parent()
+                    .unwrap_or(root)
+                    .join(&target)
+                    .canonicalize()
+                    .map_err(|error| format!("cannot resolve {}: {error}", candidate.display()))?;
+                let canonical_root = root
+                    .canonicalize()
+                    .map_err(|error| format!("cannot resolve {}: {error}", root.display()))?;
+                if !resolved.starts_with(&canonical_root) {
+                    return Err(format!(
+                        "artifact has an escaping symlink: {}",
+                        candidate.display()
+                    ));
+                }
+                size = size
+                    .checked_add(target.to_string_lossy().len() as u64)
+                    .ok_or_else(|| "artifact size overflow".to_string())?;
+            } else if metadata.is_dir() {
+                size = size
+                    .checked_add(visit(root, &candidate)?)
+                    .ok_or_else(|| "artifact size overflow".to_string())?;
+            } else if metadata.is_file() {
+                size = size
+                    .checked_add(metadata.len())
+                    .ok_or_else(|| "artifact size overflow".to_string())?;
+            }
+        }
+        Ok(size)
+    }
+    visit(path, path)
+}
+
+pub(crate) fn declared_artifact_size(value: Option<&json::Json>) -> Option<u64> {
+    let json::Json::Number(number) = value? else {
+        return None;
+    };
+    if !number.is_finite() || *number < 0.0 || number.fract() != 0.0 || *number > u64::MAX as f64 {
+        return None;
+    }
+    let size = *number as u64;
+    ((size as f64) == *number).then_some(size)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
