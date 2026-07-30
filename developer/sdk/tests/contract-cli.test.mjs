@@ -431,7 +431,7 @@ test('kfd check verifies the packaged KFD-3 registry projection', () => {
   assert.equal(data.supportMatrix.rowCount, 13);
   assert.match(data.supportMatrix.sha256, /^sha256:[0-9a-f]{64}$/);
   assert.equal(data.query.kfd.kfd3, 'declared');
-  assert.equal(data.query.kfd.kfd4, 'schema-only');
+  assert.equal(data.query.kfd.kfd4, 'verified-candidate-not-shipped');
   assert.equal(data.standards['kfd-1'].status, 'source-supported');
   assert.equal(data.standards['kfd-2'].status, 'source-supported');
   assert.equal(data.standards['kfd-3'].status, 'source-supported');
@@ -564,7 +564,9 @@ test('kfd upstream exposes aggregated upstream KFD package facts', () => {
   );
   assert.equal(data.ownKfd.kfd1.status, 'supported');
   assert.equal(data.ownKfd.kfd2.claimCount, sdkKfd2ClaimCount);
-  assert.equal(data.ownKfd.kfd4.status, 'schema-only');
+  assert.equal(data.ownKfd.kfd4.status, 'candidate');
+  assert.equal(data.ownKfd.kfd4.releaseQualification, 'not-qualified');
+  assert.equal(data.ownKfd.kfd4.shippedSupport, false);
 });
 
 test('kfd aggregate joins own KFD-3 query facts with upstream KFD facts', () => {
@@ -573,7 +575,7 @@ test('kfd aggregate joins own KFD-3 query facts with upstream KFD facts', () => 
   assert.equal(data.own.surfaceCount >= 1, true);
   assert.equal(data.upstream.summary.upstreamCount, 3);
   assert.equal(data.kfd.kfd3, 'declared-and-aggregated');
-  assert.equal(data.kfd.kfd4, 'schema-only');
+  assert.equal(data.kfd.kfd4, 'verified-candidate-not-shipped');
   assert.match(data.source.upstreamAggregate.sha256, /^sha256:[0-9a-f]{64}$/);
 });
 
