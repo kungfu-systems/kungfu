@@ -245,6 +245,7 @@ test('declared discovery routes are zero-write in a cold read-only fixture', (t)
     'scripts/check-work-history-selector.test.mjs',
     'scripts/check-work-design-advisor.test.mjs',
     'scripts/check-work-design-policy-replay.test.mjs',
+    'scripts/check-work-design-open-card.test.mjs',
     'scripts/documentation-product-pack.test.mjs',
     'scripts/docs-markdown-readonly.mjs',
     'scripts/kungfu-gate-workflow-facts.mjs',
@@ -338,6 +339,10 @@ test('declared discovery routes are zero-write in a cold read-only fixture', (t)
     'framework/work-design-policy-replay/tooling/check-work-design-policy-replay.mjs',
     'framework/work-design-policy-replay/tooling/work-design-policy-replay-contract.mjs',
     'framework/work-design-policy-replay/work-design-policy-replay.contract.json',
+    'framework/work-design-open-card/src/work-design-open-card.mjs',
+    'framework/work-design-open-card/tooling/check-work-design-open-card.mjs',
+    'framework/work-design-open-card/tooling/open-card-preflight.mjs',
+    'framework/work-design-open-card/work-design-open-card.contract.json',
   ])
     copyFile(ROOT, fixture, relative);
   const amplificationManifest = JSON.parse(
