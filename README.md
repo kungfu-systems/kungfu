@@ -7,6 +7,9 @@ it all again. It does this from declared project sources, makes missing or
 conflicting context visible, and preserves enough structure to continue without
 reconstructing everything from conversation history.
 
+> **Kungfu UNGFU™** · Never Guess. Facts Unfold. [Why this signature
+> exists](docs/concepts/why-kungfu.md).
+
 The intended first-release path is:
 
 ```sh
