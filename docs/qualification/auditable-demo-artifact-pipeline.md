@@ -200,6 +200,14 @@ Each blocking signal was repaired at its owning boundary rather than bypassed:
   status zero and a bounded, control-code-stripped PTY tail. The TUI now treats
   its already established `KUNGFU_DIR` as the packaged runtime authority before
   consulting any source-workspace package.
+- Run `30515043301` completed exact-source preflight `30514867268`, the Linux
+  build, full release verification, S3 relay, source artifact `8749855057`,
+  controller finalization, and same-run coordinate resolution. The required
+  Gate then exposed the Linux PTY EOF convention: after the final slave closed,
+  `os.read` returned `EIO` before `process.poll()` observed child exit.
+  Diagnostic artifact `8749886414` retained the failure. The adapter now maps
+  only `errno.EIO` at the PTY read boundary to EOF and continues to propagate
+  every other I/O error.
 
 The corresponding repairs landed through independently approved protected PRs
 `#1492`, `#1497`, `#1500`, `#1503`, `#1504`, `#1505`, `#1506`, `#1507`,

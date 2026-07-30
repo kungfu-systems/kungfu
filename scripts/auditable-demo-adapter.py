@@ -22,6 +22,7 @@ import tarfile
 import tempfile
 import termios
 import time
+from collections.abc import Callable
 from pathlib import Path, PurePosixPath
 from typing import Any
 
@@ -626,6 +627,21 @@ def terminal_failure_excerpt(decoded: str) -> str:
     return visible[-MAX_FAILURE_EXCERPT_CHARS:]
 
 
+def read_pty_chunk(
+    master_fd: int,
+    reader: Callable[[int, int], bytes] = os.read,
+) -> bytes:
+    try:
+        return reader(master_fd, 65_536)
+    except OSError as error:
+        # Linux PTY masters report EIO, rather than b"", after the final slave
+        # descriptor closes. That is the terminal EOF boundary even when
+        # process.poll() has not observed child exit yet.
+        if error.errno == errno.EIO:
+            return b""
+        raise
+
+
 def run_autoplay(launcher: Path, home: Path) -> tuple[dict[str, Any], bytes, int]:
     environment = isolated_environment(home)
     master_fd, slave_fd = pty.openpty()
@@ -661,44 +677,36 @@ def run_autoplay(launcher: Path, home: Path) -> tuple[dict[str, Any], bytes, int
                 break
             readable, _, _ = select.select([master_fd], [], [], 0.05)
             if readable:
-                try:
-                    chunk = os.read(master_fd, 65_536)
-                except OSError as error:
-                    if error.errno == errno.EIO and process.poll() is not None:
-                        break
-                    raise
-                if not chunk and process.poll() is not None:
+                chunk = read_pty_chunk(master_fd)
+                if not chunk:
                     break
-                if chunk:
-                    if first_output_at is None:
-                        first_output_at = time.monotonic()
-                    raw.extend(chunk)
-                    if len(raw) > MAX_TERMINAL_BYTES:
-                        terminate_process_group(process)
-                        fail(
-                            "installed kungfu autoplay exceeded the 4 MiB capture bound"
-                        )
-                    observed_ms = max(
-                        0,
-                        int((time.monotonic() - first_output_at) * 1000),
+                if first_output_at is None:
+                    first_output_at = time.monotonic()
+                raw.extend(chunk)
+                if len(raw) > MAX_TERMINAL_BYTES:
+                    terminate_process_group(process)
+                    fail("installed kungfu autoplay exceeded the 4 MiB capture bound")
+                observed_ms = max(
+                    0,
+                    int((time.monotonic() - first_output_at) * 1000),
+                )
+                at_ms = (
+                    observed_ms // TERMINAL_EVENT_QUANTUM_MS
+                ) * TERMINAL_EVENT_QUANTUM_MS
+                encoded = base64.b64encode(chunk).decode("ascii")
+                if events and events[-1]["atMs"] == at_ms:
+                    previous = base64.b64decode(events[-1]["data"], validate=True)
+                    events[-1]["data"] = base64.b64encode(previous + chunk).decode(
+                        "ascii"
                     )
-                    at_ms = (
-                        observed_ms // TERMINAL_EVENT_QUANTUM_MS
-                    ) * TERMINAL_EVENT_QUANTUM_MS
-                    encoded = base64.b64encode(chunk).decode("ascii")
-                    if events and events[-1]["atMs"] == at_ms:
-                        previous = base64.b64decode(events[-1]["data"], validate=True)
-                        events[-1]["data"] = base64.b64encode(previous + chunk).decode(
-                            "ascii"
-                        )
-                    else:
-                        events.append({"atMs": at_ms, "data": encoded})
-                    if len(events) > MAX_TERMINAL_EVENTS:
-                        terminate_process_group(process)
-                        fail(
-                            "installed kungfu autoplay exceeded the 10000-event "
-                            "capture bound"
-                        )
+                else:
+                    events.append({"atMs": at_ms, "data": encoded})
+                if len(events) > MAX_TERMINAL_EVENTS:
+                    terminate_process_group(process)
+                    fail(
+                        "installed kungfu autoplay exceeded the 10000-event "
+                        "capture bound"
+                    )
             if process.poll() is not None and not readable:
                 break
         if timed_out:

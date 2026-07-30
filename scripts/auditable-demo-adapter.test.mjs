@@ -275,6 +275,32 @@ function run(root, options = {}) {
   return { result, output };
 }
 
+test('adapter maps only Linux PTY EIO onto terminal EOF', () => {
+  const probe = [
+    'import errno',
+    'import importlib.util',
+    'import sys',
+    'spec = importlib.util.spec_from_file_location("adapter", sys.argv[1])',
+    'module = importlib.util.module_from_spec(spec)',
+    'spec.loader.exec_module(module)',
+    'def eio(_fd, _size):',
+    '    raise OSError(errno.EIO, "pty eof")',
+    'def eperm(_fd, _size):',
+    '    raise OSError(errno.EPERM, "real failure")',
+    'assert module.read_pty_chunk(7, eio) == b""',
+    'try:',
+    '    module.read_pty_chunk(7, eperm)',
+    'except OSError as error:',
+    '    assert error.errno == errno.EPERM',
+    'else:',
+    '    raise AssertionError("non-EIO failure was swallowed")',
+  ].join('\n');
+  const result = spawnSync('python3', ['-c', probe, ADAPTER], {
+    encoding: 'utf8',
+  });
+  assert.equal(result.status, 0, result.stderr);
+});
+
 test('adapter executes only the exact installed archive in a PTY and emits the declared capture', () => {
   const root = fs.mkdtempSync(
     path.join(os.tmpdir(), 'auditable-demo-adapter-'),
