@@ -461,6 +461,19 @@ class GitHubClient {
       `/repos/${this.repository}/actions/runs/${runId}/cancel`,
     );
   }
+
+  async runners() {
+    const runners = [];
+    for (let page = 1; ; page += 1) {
+      const payload = await this.request(
+        'GET',
+        `/repos/${this.repository}/actions/runners?per_page=100&page=${page}`,
+      );
+      const rows = Array.isArray(payload.runners) ? payload.runners : [];
+      runners.push(...rows);
+      if (rows.length < 100) return runners;
+    }
+  }
 }
 
 async function sleep(millisecondsToWait) {
@@ -471,6 +484,59 @@ async function snapshot(client, { requestId, route, sourceSha, notBefore }) {
   const run = await client.findRun({ requestId, route, sourceSha, notBefore });
   const jobs = run ? await client.jobs(run.id) : [];
   return summarizeCandidate({ route, run, jobs });
+}
+
+export async function observeRunnerAvailability({
+  repository,
+  token = '',
+  apiUrl,
+  now = () => Date.now(),
+  client = null,
+}) {
+  if (!client && !String(token || '').trim()) {
+    return normalizeRunnerAvailability({
+      schema: RUNNER_AVAILABILITY_SCHEMA,
+      status: 'unavailable',
+      reason: 'runner-inventory-token-not-projected',
+    });
+  }
+  const inventory =
+    client ||
+    new GitHubClient({
+      repository,
+      token,
+      apiUrl,
+    });
+  try {
+    const runners = await inventory.runners();
+    const matching = runners.filter((runner) => {
+      const labels = new Set(
+        (runner.labels || []).map((label) => String(label.name || label)),
+      );
+      return REQUIRED_SELF_HOSTED_LABELS.every((label) => labels.has(label));
+    });
+    const online = matching.filter((runner) => runner.status === 'online');
+    return normalizeRunnerAvailability({
+      schema: RUNNER_AVAILABILITY_SCHEMA,
+      status: online.length > 0 ? 'online' : 'offline',
+      requiredLabels: REQUIRED_SELF_HOSTED_LABELS,
+      matchingRunnerCount: matching.length,
+      onlineRunnerCount: online.length,
+      busyOnlineRunnerCount: online.filter((runner) => runner.busy).length,
+      observedAt: new Date(now()).toISOString(),
+      source: 'github-actions-repository-runners-api',
+    });
+  } catch {
+    process.stdout.write(
+      '[alpha-macos-overflow] runner inventory unavailable; retaining queue threshold\n',
+    );
+    return normalizeRunnerAvailability({
+      schema: RUNNER_AVAILABILITY_SCHEMA,
+      status: 'unavailable',
+      reason: 'repository-runner-inventory-unavailable',
+      observedAt: new Date(now()).toISOString(),
+    });
+  }
 }
 
 export async function controlOverflow({
@@ -485,17 +551,15 @@ export async function controlOverflow({
   predictedRemainingQueueMinutes = null,
   predictionRoot = '',
   healthMode = 'auto',
-  runnerAvailability = {
-    schema: RUNNER_AVAILABILITY_SCHEMA,
-    status: 'unavailable',
-    reason: 'not-supplied',
-  },
+  runnerAvailability = null,
+  runnerInventoryToken = '',
   diagnosticMode = false,
   pollSeconds = 15,
   timeoutMinutes = 300,
   out,
   now = () => Date.now(),
   client = null,
+  inventoryClient = null,
 }) {
   const exactSourceSha = exactSha(sourceSha);
   const exactRequestId = required(requestId, 'request id');
@@ -513,7 +577,6 @@ export async function controlOverflow({
     throw new Error('health mode must be auto or unhealthy');
   if (healthMode !== 'auto' && !diagnosticMode)
     throw new Error('forced health mode requires diagnostic mode');
-  const availability = normalizeRunnerAvailability(runnerAvailability);
   let prediction = null;
   if (
     predictedRemainingQueueMinutes !== null &&
@@ -537,6 +600,15 @@ export async function controlOverflow({
       token,
       apiUrl,
     });
+  const availability = runnerAvailability
+    ? normalizeRunnerAvailability(runnerAvailability)
+    : await observeRunnerAvailability({
+        repository,
+        token: runnerInventoryToken,
+        apiUrl,
+        now,
+        client: inventoryClient,
+      });
   const startedAt = new Date(now()).toISOString();
   const deadline = now() + Number(timeoutMinutes) * 60 * 1000;
   const events = [];
@@ -731,12 +803,8 @@ async function main(argv = process.argv.slice(2)) {
       request.runnerAvailabilityFixture &&
       (request.diagnosticMode === true || options['diagnostic-mode'] === 'true')
         ? request.runnerAvailabilityFixture
-        : options['runner-availability-json'] ||
-          JSON.stringify({
-            schema: RUNNER_AVAILABILITY_SCHEMA,
-            status: 'unavailable',
-            reason: 'not-supplied',
-          }),
+        : null,
+    runnerInventoryToken: process.env.RUNNER_INVENTORY_TOKEN || '',
     diagnosticMode:
       request.diagnosticMode === true || options['diagnostic-mode'] === 'true',
     pollSeconds: options['poll-seconds'] || 15,
@@ -766,9 +834,13 @@ async function main(argv = process.argv.slice(2)) {
         publication: 'none',
         promotionAuthority: 'unchanged-existing-alpha-promotion',
         callerOwnedNotarizationTail: 'not-run-build-and-verify-candidates-only',
-        runnerAvailability: normalizeRunnerAvailability(
-          invocation.runnerAvailability,
-        ),
+        runnerAvailability: invocation.runnerAvailability
+          ? normalizeRunnerAvailability(invocation.runnerAvailability)
+          : {
+              schema: RUNNER_AVAILABILITY_SCHEMA,
+              status: 'unavailable',
+              reason: 'controller-failed-before-availability-receipt',
+            },
       },
       completedAt: new Date().toISOString(),
     };

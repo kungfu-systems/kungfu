@@ -14,6 +14,7 @@ import {
   controlOverflow,
   decideOverflow,
   normalizeRunnerAvailability,
+  observeRunnerAvailability,
   summarizeCandidate,
 } from '../.github/actions/require-alpha-preflight/alpha-macos-overflow.mjs';
 
@@ -121,6 +122,45 @@ test('unavailable runner inventory fails closed to the queue threshold', () => {
     }),
     { action: 'wait', reason: 'self-hosted-within-queue-budget' },
   );
+});
+
+test('runner inventory classifies exact-label offline, online busy, and unavailable states', async () => {
+  const observedAt = Date.parse('2026-07-30T00:00:00Z');
+  const exactLabels = REQUIRED_SELF_HOSTED_LABELS.map((name) => ({ name }));
+  const offline = await observeRunnerAvailability({
+    repository: 'kungfu-systems/kungfu',
+    client: {
+      async runners() {
+        return [{ status: 'offline', busy: false, labels: exactLabels }];
+      },
+    },
+    now: () => observedAt,
+  });
+  assert.equal(offline.status, 'offline');
+  assert.equal(offline.matchingRunnerCount, 1);
+  assert.equal(offline.onlineRunnerCount, 0);
+
+  const onlineBusy = await observeRunnerAvailability({
+    repository: 'kungfu-systems/kungfu',
+    client: {
+      async runners() {
+        return [{ status: 'online', busy: true, labels: exactLabels }];
+      },
+    },
+    now: () => observedAt,
+  });
+  assert.equal(onlineBusy.status, 'online');
+  assert.equal(onlineBusy.busyOnlineRunnerCount, 1);
+
+  const unavailable = await observeRunnerAvailability({
+    repository: 'kungfu-systems/kungfu',
+  });
+  assert.deepEqual(unavailable, {
+    schema: RUNNER_AVAILABILITY_SCHEMA,
+    status: 'unavailable',
+    reason: 'runner-inventory-token-not-projected',
+    observedAt: '',
+  });
 });
 
 test('a dispatched hosted candidate is not duplicated while run visibility lags', () => {
@@ -416,7 +456,19 @@ test('workflow contract keeps candidates exact-source, independent, and publish-
   assert.match(preflightAction, /--request-json "\$REQUEST_JSON"/u);
   assert.match(
     preflightAction,
-    /--runner-availability-json "\$RUNNER_AVAILABILITY_JSON"/u,
+    /RUNNER_INVENTORY_TOKEN: \$\{\{ inputs\.runner-inventory-token \}\}/u,
+  );
+  assert.match(
+    workflow,
+    /runner-inventory-token: \$\{\{ github\.event_name == 'workflow_dispatch' && fromJSON\(inputs\.macos-overflow-request-json \|\| '\{\}'\)\.mode == 'control' && github\.ref == format\('refs\/heads\/\{0\}', github\.event\.repository\.default_branch\) && secrets\.KUNGFU_GITHUB_TOKEN \|\| '' \}\}/u,
+  );
+  assert.match(
+    workflow,
+    /uses: kungfu-systems\/buildchain\/\.github\/workflows\/\.build\.yml@2522e79e4c00233a5d15f887360547ed1034c39e/u,
+  );
+  assert.match(
+    workflow,
+    /self-hosted-offline-fallback: \$\{\{ fromJSON\(inputs\.macos-overflow-request-json \|\| '\{\}'\)\.mode != 'self-hosted' && fromJSON\(inputs\.macos-overflow-request-json \|\| '\{\}'\)\.mode != 'github-hosted' \}\}/u,
   );
   assert.match(workflow, /release-candidate: true/u);
   assert.match(

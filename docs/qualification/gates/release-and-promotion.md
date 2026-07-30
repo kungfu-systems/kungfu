@@ -20,6 +20,29 @@ fail-fast and cancel stale runs for the same pull request. The manual Build
 workflow and preflight workflow expose an explicit diagnostic mode that keeps
 all platform lanes running.
 
+### Native self-hosted offline fallback
+
+Normal native Buildchain matrices retain the exact-label self-hosted Linux x64,
+macOS ARM64, and Windows x64 lanes while at least one matching runner is
+online. A busy online runner remains self-hosted so ordinary contention can use
+the warm workspace and toolchain caches. When no matching runner is online,
+Buildchain independently rewrites only that lane to `ubuntu-24.04`, `macos-15`,
+or `windows-2022`; the already hosted Linux ARM64 lane is unchanged.
+
+The inventory token is projected only into code checked out from the immutable
+Buildchain workflow-shell authority at
+`2522e79e4c00233a5d15f887360547ed1034c39e`. The routing output contains
+de-identified counts and decisions, not runner names. A missing token,
+permission failure, or unavailable inventory API cannot claim an outage and
+therefore preserves the original self-hosted matrix. Source identity,
+qualification, signing, publication, and promotion authority are otherwise
+unchanged.
+
+Explicit macOS overflow candidates are excluded from this matrix rewrite
+because their independent route names are evidence. Their controller performs
+the equivalent macOS offline observation and also applies the bounded queue
+policy below.
+
 ### Queue-aware macOS overflow
 
 The manual `Alpha macOS queue-aware overflow` controller keeps the self-hosted
@@ -41,12 +64,14 @@ candidate passport is requested, and the caller-owned signing/notarization tail
 is not run. The existing Alpha promotion workflow remains the only publication
 authority.
 
-The availability probe runs only from the protected default-branch workflow,
-before candidate source checkout, and passes only a de-identified observation
-to the controller. An online runner remains online while busy, so ordinary
-contention still uses the queue threshold. Missing permissions or an
-unavailable inventory API cannot assert an outage and therefore falls back to
-the existing queue policy.
+The runner-inventory credential is projected only into the protected
+default-branch controller invocation. Before using it, the controller action
+checks that the checked-out source is clean and exactly equals the workflow
+SHA. Candidate and review-ref invocations receive no inventory credential, and
+the receipt retains only the de-identified observation. An online runner
+remains online while busy, so ordinary contention still uses the queue
+threshold. Missing permissions or an unavailable inventory API cannot assert
+an outage and therefore falls back to the existing queue policy.
 
 After overflow, the controller may cancel the self-hosted candidate only while
 its platform job is still queued and only after the hosted platform job exposes
