@@ -10,7 +10,9 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 
 import {
   consumeQualifiedCoreForCheckout,
+  discoverGithubBundle,
   downloadGithubArtifact,
+  downloadHttpArtifact,
   materializeQualifiedCoreBundle,
 } from '../framework/assignment-capture/qualified-assignment-core-consumer.mjs';
 import {
@@ -1178,6 +1180,232 @@ test('consumer leaves no GitHub artifact bytes after retry exhaustion', async (t
   );
   assert.equal(observedAttempts, 3);
   assert.deepEqual(fs.readdirSync(temporary), []);
+});
+
+test('consumer resumes only an identity-bound HTTP artifact partial', async (t) => {
+  const temporary = fs.mkdtempSync(
+    path.join(os.tmpdir(), 'qualified-core-http-resume-'),
+  );
+  t.after(() => fs.rmSync(temporary, { recursive: true, force: true }));
+  const destination = path.join(temporary, 'artifact.zip');
+  const expected = Buffer.from('identity-bound-complete-archive');
+  const initial = expected.subarray(0, 11);
+  fs.writeFileSync(`${destination}.partial`, initial);
+  let range = null;
+  await downloadHttpArtifact({
+    url: 'http://cache.example.invalid/qualified-core/42.zip',
+    destination,
+    expectedBytes: expected.byteLength,
+    attempts: 1,
+    fetchImpl: async (_url, options) => {
+      range = options.headers.Range;
+      return new Response(expected.subarray(initial.byteLength), {
+        status: 206,
+        headers: {
+          'content-range': `bytes ${initial.byteLength}-${expected.byteLength - 1}/${expected.byteLength}`,
+        },
+      });
+    },
+  });
+  assert.equal(range, `bytes=${initial.byteLength}-`);
+  assert.deepEqual(fs.readFileSync(destination), expected);
+  assert.equal(fs.existsSync(`${destination}.partial`), false);
+});
+
+test('consumer retains interrupted HTTP bytes for verified resume without runnable output', async (t) => {
+  const temporary = fs.mkdtempSync(
+    path.join(os.tmpdir(), 'qualified-core-http-interruption-'),
+  );
+  t.after(() => fs.rmSync(temporary, { recursive: true, force: true }));
+  const destination = path.join(temporary, 'artifact.zip');
+  const expected = Buffer.from('resume-after-interruption');
+  await assert.rejects(
+    downloadHttpArtifact({
+      url: 'http://cache.example.invalid/qualified-core/42.zip',
+      destination,
+      expectedBytes: expected.byteLength,
+      attempts: 1,
+      fetchImpl: async () => ({
+        status: 200,
+        headers: new Headers(),
+        body: {
+          async *[Symbol.asyncIterator]() {
+            yield expected.subarray(0, 7);
+            throw new Error('simulated interruption');
+          },
+        },
+      }),
+    }),
+    /http-artifact-download-failed/u,
+  );
+  assert.equal(fs.existsSync(destination), false);
+  assert.deepEqual(
+    fs.readFileSync(`${destination}.partial`),
+    expected.subarray(0, 7),
+  );
+  await downloadHttpArtifact({
+    url: 'http://cache.example.invalid/qualified-core/42.zip',
+    destination,
+    expectedBytes: expected.byteLength,
+    attempts: 1,
+    fetchImpl: async (_url, options) => {
+      assert.equal(options.headers.Range, 'bytes=7-');
+      return new Response(expected.subarray(7), {
+        status: 206,
+        headers: {
+          'content-range': `bytes 7-${expected.byteLength - 1}/${expected.byteLength}`,
+        },
+      });
+    },
+  });
+  assert.deepEqual(fs.readFileSync(destination), expected);
+});
+
+test('consumer treats office HTTP as replaceable transport after GitHub authority discovery', async (t) => {
+  const temporary = fs.mkdtempSync(
+    path.join(os.tmpdir(), 'qualified-core-office-provider-'),
+  );
+  t.after(() => fs.rmSync(temporary, { recursive: true, force: true }));
+  const { bundleRoot } = await promotedConsumerFixture(temporary);
+  const archive = path.join(temporary, 'source.zip');
+  const zip = spawnSync(
+    'python3',
+    [
+      '-c',
+      [
+        'import os, sys, zipfile',
+        'source, target = sys.argv[1:]',
+        "with zipfile.ZipFile(target, 'w', zipfile.ZIP_STORED) as archive:",
+        '  for root, _, files in os.walk(source):',
+        '    for name in sorted(files):',
+        '      path = os.path.join(root, name)',
+        '      archive.write(path, os.path.relpath(path, source))',
+      ].join('\n'),
+      bundleRoot,
+      archive,
+    ],
+    { encoding: 'utf8' },
+  );
+  assert.equal(zip.status, 0, zip.stderr);
+  const artifactBytes = fs.readFileSync(archive);
+  const checkout = consumerCheckout();
+  const runId = 43;
+  const artifactId = 42;
+  const extractionRoot = path.join(temporary, 'extract');
+  fs.mkdirSync(extractionRoot);
+  const discovered = await discoverGithubBundle(checkout, extractionRoot, {
+    cacheRoot: path.join(temporary, 'cache'),
+    httpBaseUrl: 'http://cache.example.invalid/',
+    githubJson: (endpoint) => {
+      if (endpoint.includes('actions/artifacts?')) {
+        return {
+          artifacts: [
+            {
+              id: artifactId,
+              name: `qualified-assignment-core-${checkout.commit}`,
+              expired: false,
+              size_in_bytes: artifactBytes.byteLength,
+              workflow_run: { id: runId },
+            },
+          ],
+        };
+      }
+      if (endpoint.endsWith(`actions/runs/${runId}`)) {
+        return {
+          id: runId,
+          event: 'push',
+          status: 'completed',
+          conclusion: 'success',
+          head_sha: checkout.commit,
+          path: '.github/workflows/affected-native-cache-promote.yml',
+          head_branch: 'dev/v4/v4.0',
+        };
+      }
+      return { default_branch: 'dev/v4/v4.0' };
+    },
+    downloadHttp: async ({ url, destination }) => {
+      assert.equal(
+        url,
+        `http://cache.example.invalid/qualified-core/${artifactId}.zip`,
+      );
+      fs.copyFileSync(archive, destination);
+    },
+    downloadGithub: async () => {
+      assert.fail('GitHub byte transport must not run on an office hit');
+    },
+  });
+  assert.equal(discovered.transport.provider, 'office-http-artifact');
+  assert.equal(discovered.transport.artifactId, artifactId);
+  assert.equal(
+    discovered.transport.workflowPath,
+    '.github/workflows/affected-native-cache-promote.yml',
+  );
+  assert.deepEqual(Object.keys(discovered.phaseDurations).sort(), [
+    'discovery',
+    'transfer',
+  ]);
+  assert.equal(
+    fs.existsSync(path.join(discovered.bundleRoot, 'manifest.json')),
+    true,
+  );
+});
+
+test('consumer removes completed transport state when archive extraction rejects it', async (t) => {
+  const temporary = fs.mkdtempSync(
+    path.join(os.tmpdir(), 'qualified-core-archive-rejection-'),
+  );
+  t.after(() => fs.rmSync(temporary, { recursive: true, force: true }));
+  const checkout = consumerCheckout();
+  const cacheRoot = path.join(temporary, 'cache');
+  const artifactId = 42;
+  await assert.rejects(
+    discoverGithubBundle(checkout, path.join(temporary, 'extract'), {
+      cacheRoot,
+      httpBaseUrl: '',
+      githubJson: (endpoint) => {
+        if (endpoint.includes('actions/artifacts?')) {
+          return {
+            artifacts: [
+              {
+                id: artifactId,
+                name: `qualified-assignment-core-${checkout.commit}`,
+                expired: false,
+                size_in_bytes: 7,
+                workflow_run: { id: 43 },
+              },
+            ],
+          };
+        }
+        if (endpoint.endsWith('actions/runs/43')) {
+          return {
+            id: 43,
+            event: 'push',
+            status: 'completed',
+            conclusion: 'success',
+            head_sha: checkout.commit,
+            path: '.github/workflows/affected-native-cache-promote.yml',
+            head_branch: 'dev/v4/v4.0',
+          };
+        }
+        return { default_branch: 'dev/v4/v4.0' };
+      },
+      downloadGithub: async ({ destination }) => {
+        fs.writeFileSync(destination, 'not-zip');
+      },
+    }),
+    /invalid-zip-directory/u,
+  );
+  assert.equal(
+    fs.existsSync(
+      path.join(
+        cacheRoot,
+        'transfers',
+        ...checkout.repository.split('/'),
+        String(artifactId),
+      ),
+    ),
+    false,
+  );
 });
 
 test('consumer keeps an extracted archive alive through async retention', async (t) => {

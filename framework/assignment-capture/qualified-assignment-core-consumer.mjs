@@ -29,6 +29,7 @@ const MAX_ARCHIVE_BYTES = 512 * 1024 * 1024;
 const MAX_ENTRY_BYTES = 256 * 1024 * 1024;
 const MAX_ENTRIES = 32;
 const GITHUB_DOWNLOAD_ATTEMPTS = 3;
+const HTTP_DOWNLOAD_ATTEMPTS = 3;
 const SHA = /^[0-9a-f]{40}$/u;
 const ROOT_HASH = /^sha256:[0-9a-f]{64}$/u;
 
@@ -645,20 +646,38 @@ export async function downloadGithubArtifact({
   repository,
   artifactId,
   destination,
+  expectedBytes = null,
   attempts = GITHUB_DOWNLOAD_ATTEMPTS,
   runAttempt = runBinaryToFile,
 }) {
   if (fs.existsSync(destination)) {
-    throw new QualifiedCoreUnavailable('github-download-target-dirty');
+    if (
+      Number.isSafeInteger(expectedBytes) &&
+      expectedBytes > 0 &&
+      fs.statSync(destination).size === expectedBytes
+    ) {
+      return destination;
+    }
+    fs.rmSync(destination, { force: true });
   }
   const endpoint = `repos/${repository}/actions/artifacts/${artifactId}/zip`;
   for (let attempt = 1; attempt <= attempts; attempt += 1) {
     const partial = `${destination}.attempt-${attempt}`;
+    fs.rmSync(partial, { force: true });
     try {
       await runAttempt('gh', ['api', endpoint], partial, {
         maxBytes: MAX_ARCHIVE_BYTES + 1024,
         reason: 'github-artifact-download-failed',
       });
+      if (
+        Number.isSafeInteger(expectedBytes) &&
+        expectedBytes > 0 &&
+        fs.statSync(partial).size !== expectedBytes
+      ) {
+        throw new QualifiedCoreUnavailable(
+          'github-artifact-download-size-drift',
+        );
+      }
       fs.renameSync(partial, destination);
       return destination;
     } catch {
@@ -668,9 +687,167 @@ export async function downloadGithubArtifact({
   throw new QualifiedCoreUnavailable('github-artifact-download-failed');
 }
 
-async function discoverGithubBundle(checkout, temporary) {
+function checkedHttpProviderUrl(baseUrl, artifactId) {
+  let parsed;
+  try {
+    parsed = new URL(baseUrl);
+  } catch {
+    throw new QualifiedCoreUnavailable('invalid-http-provider-url');
+  }
+  if (
+    !['http:', 'https:'].includes(parsed.protocol) ||
+    parsed.username ||
+    parsed.password ||
+    parsed.search ||
+    parsed.hash
+  ) {
+    throw new QualifiedCoreUnavailable('invalid-http-provider-url');
+  }
+  const basePath = parsed.pathname.endsWith('/')
+    ? parsed.pathname
+    : `${parsed.pathname}/`;
+  parsed.pathname = `${basePath}qualified-core/${artifactId}.zip`;
+  return parsed.href;
+}
+
+export async function downloadHttpArtifact({
+  url,
+  destination,
+  expectedBytes,
+  attempts = HTTP_DOWNLOAD_ATTEMPTS,
+  fetchImpl = globalThis.fetch,
+}) {
+  const partial = `${destination}.partial`;
+  if (
+    !Number.isSafeInteger(expectedBytes) ||
+    expectedBytes < 1 ||
+    expectedBytes > MAX_ARCHIVE_BYTES
+  ) {
+    throw new QualifiedCoreUnavailable('http-artifact-size-invalid');
+  }
+  if (
+    fs.existsSync(destination) &&
+    fs.statSync(destination).size === expectedBytes
+  ) {
+    return destination;
+  }
+  fs.rmSync(destination, { force: true });
+  for (let attempt = 1; attempt <= attempts; attempt += 1) {
+    let offset = fs.existsSync(partial) ? fs.statSync(partial).size : 0;
+    if (offset > expectedBytes) {
+      fs.truncateSync(partial, 0);
+      offset = 0;
+    }
+    if (offset === expectedBytes) {
+      fs.renameSync(partial, destination);
+      return destination;
+    }
+    try {
+      const response = await fetchImpl(url, {
+        headers: offset > 0 ? { Range: `bytes=${offset}-` } : {},
+        redirect: 'follow',
+      });
+      let append = offset > 0;
+      if (offset > 0 && response.status === 200) {
+        fs.truncateSync(partial, 0);
+        offset = 0;
+        append = false;
+      } else if (offset > 0) {
+        const contentRange = response.headers.get('content-range');
+        if (
+          response.status !== 206 ||
+          !contentRange?.startsWith(`bytes ${offset}-`) ||
+          !contentRange.endsWith(`/${expectedBytes}`)
+        ) {
+          throw new QualifiedCoreUnavailable('http-resume-rejected');
+        }
+      } else if (response.status !== 200) {
+        throw new QualifiedCoreUnavailable('http-artifact-download-failed');
+      }
+      if (!response.body) {
+        throw new QualifiedCoreUnavailable('http-artifact-download-failed');
+      }
+      const descriptor = fs.openSync(partial, append ? 'a' : 'w', 0o600);
+      let bytes = offset;
+      try {
+        for await (const chunk of response.body) {
+          bytes += chunk.byteLength;
+          if (bytes > expectedBytes || bytes > MAX_ARCHIVE_BYTES) {
+            throw new QualifiedCoreUnavailable('archive-too-large');
+          }
+          fs.writeSync(descriptor, chunk);
+        }
+      } finally {
+        fs.closeSync(descriptor);
+      }
+      if (bytes !== expectedBytes) {
+        throw new QualifiedCoreUnavailable('http-artifact-size-drift');
+      }
+      fs.renameSync(partial, destination);
+      return destination;
+    } catch {
+      if (attempt === attempts) {
+        throw new QualifiedCoreUnavailable('http-artifact-download-failed');
+      }
+    }
+  }
+  throw new QualifiedCoreUnavailable('http-artifact-download-failed');
+}
+
+function transferState(cacheRoot, checkout, artifact) {
+  if (
+    !Number.isSafeInteger(artifact.id) ||
+    artifact.id < 1 ||
+    !Number.isSafeInteger(artifact.size_in_bytes) ||
+    artifact.size_in_bytes < 1 ||
+    artifact.size_in_bytes > MAX_ARCHIVE_BYTES
+  ) {
+    throw new QualifiedCoreUnavailable('invalid-github-artifact-identity');
+  }
+  const directory = path.join(
+    cacheRoot,
+    'transfers',
+    ...checkout.repository.split('/'),
+    String(artifact.id),
+  );
+  const identityBody = {
+    schema: 'shifu.qualified-assignment-core-transfer/v1',
+    repository: checkout.repository,
+    artifactId: artifact.id,
+    artifactName: artifact.name,
+    expectedBytes: artifact.size_in_bytes,
+  };
+  const identity = {
+    ...identityBody,
+    transferRoot: qualifiedAssignmentCoreRoot(identityBody),
+  };
+  fs.mkdirSync(directory, { recursive: true });
+  const identityPath = path.join(directory, 'identity.json');
+  if (fs.existsSync(identityPath)) {
+    if (JSON.stringify(readJson(identityPath)) !== JSON.stringify(identity)) {
+      throw new QualifiedCoreUnavailable('transfer-identity-drift');
+    }
+  } else {
+    writeJson(identityPath, identity);
+  }
+  return directory;
+}
+
+export async function discoverGithubBundle(
+  checkout,
+  temporary,
+  {
+    cacheRoot,
+    clock = () => Date.now(),
+    httpBaseUrl = process.env.KUNGFU_QUALIFIED_CORE_HTTP_BASE_URL || '',
+    githubJson = ghJson,
+    downloadHttp = downloadHttpArtifact,
+    downloadGithub = downloadGithubArtifact,
+  } = {},
+) {
+  const discoveryStarted = clock();
   const name = `qualified-assignment-core-${checkout.commit}`;
-  const listing = ghJson(
+  const listing = githubJson(
     `repos/${checkout.repository}/actions/artifacts?name=${name}&per_page=100`,
   );
   const artifacts = (listing.artifacts || []).filter(
@@ -684,10 +861,10 @@ async function discoverGithubBundle(checkout, temporary) {
   }
   const artifact = artifacts[0];
   const runId = artifact.workflow_run?.id;
-  const workflowRun = ghJson(
+  const workflowRun = githubJson(
     `repos/${checkout.repository}/actions/runs/${runId}`,
   );
-  const repository = ghJson(`repos/${checkout.repository}`);
+  const repository = githubJson(`repos/${checkout.repository}`);
   if (
     workflowRun.id !== runId ||
     workflowRun.event !== 'push' ||
@@ -700,18 +877,49 @@ async function discoverGithubBundle(checkout, temporary) {
   ) {
     throw new QualifiedCoreUnavailable('untrusted-github-workflow');
   }
-  const zip = path.join(temporary, 'artifact.zip');
-  await downloadGithubArtifact({
-    repository: checkout.repository,
-    artifactId: artifact.id,
-    destination: zip,
-  });
+  const discovery = elapsed(discoveryStarted, clock);
+  const transferRoot = transferState(cacheRoot, checkout, artifact);
+  let zip = '';
+  const transferStarted = clock();
+  let provider = 'github-workflow-artifact';
+  if (httpBaseUrl) {
+    const httpZip = path.join(transferRoot, 'office-http-artifact.zip');
+    try {
+      await downloadHttp({
+        url: checkedHttpProviderUrl(httpBaseUrl, artifact.id),
+        destination: httpZip,
+        expectedBytes: artifact.size_in_bytes,
+      });
+      zip = httpZip;
+      provider = 'office-http-artifact';
+    } catch (error) {
+      if (error?.reason === 'invalid-http-provider-url') throw error;
+    }
+  }
+  if (!zip) {
+    const githubZip = path.join(transferRoot, 'github-workflow-artifact.zip');
+    await downloadGithub({
+      repository: checkout.repository,
+      artifactId: artifact.id,
+      destination: githubZip,
+      expectedBytes: artifact.size_in_bytes,
+    });
+    zip = githubZip;
+  }
+  const transfer = elapsed(transferStarted, clock);
   const bundleRoot = path.join(temporary, 'bundle');
-  extractZip(fs.readFileSync(zip), bundleRoot);
+  try {
+    extractZip(fs.readFileSync(zip), bundleRoot);
+  } catch (error) {
+    fs.rmSync(transferRoot, { recursive: true, force: true });
+    throw error;
+  }
   return {
     bundleRoot,
+    phaseDurations: { discovery, transfer },
+    transferRoot,
     transport: {
-      provider: 'github-workflow-artifact',
+      provider,
       artifactId: artifact.id,
       artifactName: artifact.name,
       runId,
@@ -1006,6 +1214,7 @@ export async function consumeQualifiedCoreForCheckout({
     const temporary = fs.mkdtempSync(
       path.join(os.tmpdir(), 'kungfu-qualified-core-consumer-'),
     );
+    let transferCleanup = null;
     try {
       let discovered;
       if (process.env.KUNGFU_QUALIFIED_CORE_BUNDLE) {
@@ -1024,22 +1233,46 @@ export async function consumeQualifiedCoreForCheckout({
           };
         }
       } else if (process.env.KUNGFU_QUALIFIED_CORE_GITHUB !== '0') {
-        discovered = await discoverRemote(checkout, temporary);
+        discovered = await discoverRemote(checkout, temporary, {
+          cacheRoot,
+          clock,
+        });
       } else {
         throw new QualifiedCoreUnavailable('qualified-core-cache-miss');
       }
       phases.remoteLookup = elapsed(phaseStarted, clock);
+      transferCleanup = discovered.transferRoot || null;
+      phases.discovery = discovered.phaseDurations?.discovery || 0;
+      phases.transfer =
+        discovered.phaseDurations?.transfer ??
+        Math.max(0, phases.remoteLookup - phases.discovery);
       phaseStarted = clock();
-      const materialization = await materializeQualifiedCoreBundle({
-        ...discovered,
+      const verified = await verifyBundle(
+        discovered.bundleRoot,
         repositoryRoot,
-        publicationRoot,
         checkout,
+        now,
+        discovered.transport,
+      );
+      phases.verification = elapsed(phaseStarted, clock);
+      phaseStarted = clock();
+      const retained = await retainBundle({
+        bundleRoot: discovered.bundleRoot,
         cacheRoot,
+        checkout,
+        verified,
+        transport: discovered.transport,
+        repositoryRoot,
         now,
       });
-      phases.verificationAndRetention = elapsed(phaseStarted, clock);
-      phases.publication = 0;
+      phases.retention = elapsed(phaseStarted, clock);
+      phases.verificationAndRetention = phases.verification + phases.retention;
+      phaseStarted = clock();
+      const materialization = {
+        ...publishTarget(publicationRoot, retained, checkout),
+        ...retained,
+      };
+      phases.publication = elapsed(phaseStarted, clock);
       phases.total = elapsed(started, clock);
       recorded = true;
       terminalUsage({
@@ -1049,15 +1282,17 @@ export async function consumeQualifiedCoreForCheckout({
         architecture,
         recordedAt: now,
         result: materialization.status,
-        reason:
-          discovered.transport.provider === 'github-workflow-artifact'
-            ? 'remote-hit'
-            : 'explicit-bundle-hit',
+        reason: discovered.transport.provider.startsWith('explicit-')
+          ? 'explicit-bundle-hit'
+          : 'remote-hit',
         phases,
         materialization,
       });
       return materialization;
     } finally {
+      if (transferCleanup) {
+        fs.rmSync(transferCleanup, { recursive: true, force: true });
+      }
       fs.rmSync(temporary, { recursive: true, force: true });
     }
   } catch (error) {
