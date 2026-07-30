@@ -254,7 +254,7 @@
     {
       "path": ".github/workflows/build.yml",
       "authority": "product-publication",
-      "definitionDigest": "sha256:a1b6d41585f46748e54b3950fab70f3c3ec01d7d37d842b26945e0be8db83923",
+      "definitionDigest": "sha256:f59a9a4985ef2706b6550f38359b584874d817fc249b20b6667b58e11824888c",
       "jobs": [
         {
           "id": "auditable-demo",
@@ -265,6 +265,16 @@
           "credentials": {"githubToken":"read","oidc":false,"repositorySecrets":[],"inheritedSecrets":false,"environment":null},
           "externalActions": ["kungfu-systems/buildchain/.github/workflows/.auditable-demo.yml@3272608ba28ef714fe710dd8da99d00fdeb4c619"],
           "steps": []
+        },
+        {
+          "id": "auditable-demo-fast-sentinel",
+          "authority": "qualification",
+          "publication": "none",
+          "receipt": "diagnostic",
+          "definitionDigest": "sha256:5bf87892b530faf158b92bf510918439cdd79515743b661962ab5749e74d891d",
+          "credentials": {"githubToken":"read","oidc":false,"repositorySecrets":[],"inheritedSecrets":false,"environment":null},
+          "externalActions": ["actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0"],
+          "steps": [{"index":1,"label":"name:Check out exact candidate source","definitionDigest":"sha256:90b7875c1b8263fc6ee031b6f446decfc1fe5eb289f08dbc3d506c4bce43f113"},{"index":2,"label":"name:Reject known-invalid auditable demo contracts","definitionDigest":"sha256:6680331f1967c56036aac5897f6b2275dfe45149d40cfcea537e8d16a13d94fc"}]
         },
         {
           "id": "auditable-demo-passport",
@@ -281,7 +291,7 @@
           "authority": "qualification",
           "publication": "none",
           "receipt": "qualifying",
-          "definitionDigest": "sha256:20e960641ca26d409e202f2541d6cb121cd82a9dcf7066c57fbfca4a98e0fec1",
+          "definitionDigest": "sha256:20a39c5d5315cd33b783b8701e5dd1ba630c2b1da712b767b4a3a16b97651f0d",
           "credentials": {"githubToken":"write","oidc":true,"repositorySecrets":["BUILDCHAIN_ARTIFACT_RELAY_S3_DOWNLOAD_ROLE_ARN","BUILDCHAIN_ARTIFACT_RELAY_S3_ROLE_ARN","BUILDCHAIN_ARTIFACT_RELAY_S3_UPLOAD_ROLE_ARN","KUNGFU_GITHUB_TOKEN"],"inheritedSecrets":false,"environment":null},
           "externalActions": ["kungfu-systems/buildchain/.github/workflows/.build.yml@2522e79e4c00233a5d15f887360547ed1034c39e"],
           "steps": []
@@ -345,6 +355,16 @@
           "credentials": {"githubToken":"read","oidc":false,"repositorySecrets":[],"inheritedSecrets":false,"environment":null},
           "externalActions": ["actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd","actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a"],
           "steps": [{"index":1,"label":"id:resolve","definitionDigest":"sha256:c7fb80856c78364e30e47cf16634ef4d0f94abcefc8af3ecb58a32a526d3828b"},{"index":2,"label":"name:Retain machine-readable inapplicable reason","authority":"evidence-publication","definitionDigest":"sha256:a7a896172c158f321b28ee061bc1048c1d616464509938d0930aafcc361c6ba6"}]
+        },
+        {
+          "id": "windows-fast-sentinel",
+          "authority": "qualification",
+          "publication": "none",
+          "receipt": "diagnostic",
+          "definitionDigest": "sha256:375f3a9381a01dc0b24df420d3be463252f49c67f372e8b5ca7c2861a2225881",
+          "credentials": {"githubToken":"read","oidc":false,"repositorySecrets":[],"inheritedSecrets":false,"environment":null},
+          "externalActions": ["actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0"],
+          "steps": [{"index":1,"label":"name:Check out exact candidate source","definitionDigest":"sha256:90b7875c1b8263fc6ee031b6f446decfc1fe5eb289f08dbc3d506c4bce43f113"},{"index":2,"label":"name:Reject known-invalid Windows entry contracts","definitionDigest":"sha256:ebf365cac4ac6f116e8c4befa7efbdbb54d86a142e6576ab47a868d57914047f"}]
         }
       ]
     },
@@ -439,7 +459,7 @@
     {
       "path": ".github/workflows/dev-alpha-candidate-patrol.yml",
       "authority": "qualification",
-      "definitionDigest": "sha256:3ff18e83f04173578323efb2bc799758d3e193465b92ca70e120f1d2df899307",
+      "definitionDigest": "sha256:43f7de2fb0199961b2242dc83bd50b09219df2e4f0ecc31268cf0eb669249bb8",
       "jobs": [
         {
           "id": "candidate",

@@ -109,7 +109,7 @@ export function validateWorkflowSources(root, contract, overrides = {}) {
   );
   requirePattern(
     extractWorkflowJob(build, 'build'),
-    /needs: preflight/,
+    /needs: (?:preflight|\[[^\]\n]*\bpreflight\b[^\]\n]*\])/,
     findings,
     'the expensive Buildchain matrix must depend on Alpha preflight admission',
   );

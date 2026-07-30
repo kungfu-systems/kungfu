@@ -469,7 +469,11 @@
         "kind": "job-uses",
         "uses": "kungfu-systems/buildchain/.github/workflows/.build.yml@2522e79e4c00233a5d15f887360547ed1034c39e",
         "job": {
-          "needs": "preflight",
+      "needs": [
+        "preflight",
+        "windows-fast-sentinel",
+        "auditable-demo-fast-sentinel"
+      ],
           "secrets": {
             "BUILDCHAIN_PROMOTION_TOKEN": "${{ secrets.KUNGFU_GITHUB_TOKEN }}",
             "BUILDCHAIN_ARTIFACT_RELAY_S3_ROLE_ARN": "${{ secrets.BUILDCHAIN_ARTIFACT_RELAY_S3_ROLE_ARN }}",

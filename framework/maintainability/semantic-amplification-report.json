@@ -5,7 +5,7 @@
   "manifestPath": "framework/maintainability/semantic-amplification.manifest.json",
   "manifestRoot": "sha256:b947a743b8b8b286f60f4e0e0a30040c6da2d5faed36e6bdd0adf3efb336aca5",
   "baselineRef": "dbfed9ca1785d147b26f4f06e7e6895ac7368fee",
-  "sourceRoot": "sha256:a2a7f2dd8d603d2dcdfdb8cf3e9b3a2a9d00265cbc6f11fd41886d9c97110632",
+  "sourceRoot": "sha256:07264b70512a156ed51c2a6871ca8a33dd859f7a68695fcda5ef27fbd7f1816e",
   "roles": {
     "authority": "exactly one authority route per family; the route may name multiple co-owned source files",
     "allowedProjectionRoles": [
@@ -1095,7 +1095,7 @@
           "path": "scripts/release-promotion-rehearsal.mjs",
           "currentLines": 771,
           "baselineLines": 713,
-          "currentRoot": "sha256:02875445c3ba0d317c9ee7058e8301b93b59abbfc2b00f808be3df68e00ab1ac",
+          "currentRoot": "sha256:1a4c9595a581c960691b98ab471928825b4019e83853f89afaee5790ad64ac43",
           "baselineRoot": "sha256:12df72a7b881c2c3c83d5a19f1ab8d4189156a4d09ef759fe1e36328f5b4ed1d",
           "changedSinceBaseline": true
         },
@@ -1109,9 +1109,9 @@
         },
         {
           "path": "docs/qualification/gates/workflow-bindings.json",
-          "currentLines": 653,
+          "currentLines": 657,
           "baselineLines": 580,
-          "currentRoot": "sha256:2aa5291412a540f5416a2ef051c0ba19861f70b880fd32a4b8e3cb450e2e266c",
+          "currentRoot": "sha256:d224d5a6fc84b6f64ce397272a7e65ce20394628b8d37ed43a0d1dfc261c95cc",
           "baselineRoot": "sha256:233cd22ebce4c9930e0e4889808b88661d77c202d5e5f73121823dcdc461576d",
           "changedSinceBaseline": true
         },

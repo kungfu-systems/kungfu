@@ -169,7 +169,7 @@
             "product-alpha",
             "product-binaries"
           ],
-          "sourceRoot": "sha256:32ec604066c03642684a8297467977924b6d2af817083359c0aac0a081f34b70"
+          "sourceRoot": "sha256:394e2237a7542ec1fbb58cbea3ad7ff682d6edc7279d3d31e8ed58667ee30f3a"
         },
         {
           "path": ".github/workflows/dev-gate-latency-patrol.yml",

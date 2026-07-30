@@ -29,6 +29,25 @@ test('the committed Buildchain promotion consumer contract is coherent', () => {
   assert.equal(result.ok, true, JSON.stringify(result.findings, null, 2));
 });
 
+test('the expensive build retains preflight when additional fast sentinels are required', () => {
+  const buildPath = CONTRACT.workflows.build;
+  const original = fs.readFileSync(path.join(ROOT, buildPath), 'utf8');
+  const drifted = original.replace(
+    'needs: [preflight, windows-fast-sentinel, auditable-demo-fast-sentinel]',
+    'needs: [windows-fast-sentinel, auditable-demo-fast-sentinel]',
+  );
+  assert.notEqual(drifted, original);
+  const result = validateWorkflowSources(ROOT, CONTRACT, {
+    build: drifted,
+  });
+  assert.equal(result.ok, false);
+  assert.ok(
+    result.findings.some((entry) =>
+      entry.message.includes('must depend on Alpha preflight admission'),
+    ),
+  );
+});
+
 test('alpha and stable promotion fixtures cover admission and fail-closed paths', () => {
   const result = runFixtureSuite(ROOT);
   assert.equal(result.ok, true);

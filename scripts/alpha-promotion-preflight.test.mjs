@@ -10,6 +10,9 @@ import { test } from 'node:test';
 import {
   aggregatePlatformReceipts,
   buildPlatformReceipt,
+  inspectAuditableDemoFastSentinel,
+  inspectWindowsFastSentinel,
+  runAlphaFastSentinel,
   verifyAggregateReceipt,
 } from './alpha-promotion-preflight.mjs';
 
@@ -245,5 +248,69 @@ test('receipt root, source commit, age and platform coverage fail closed', (t) =
         now: Date.parse('2026-08-01T00:00:00.000Z'),
       }),
     /receipt age/u,
+  );
+});
+
+test('current exact source passes both bounded pre-build sentinels', () => {
+  assert.deepEqual(runAlphaFastSentinel('windows'), []);
+  assert.deepEqual(runAlphaFastSentinel('auditable-demo'), []);
+});
+
+test('fast sentinels fail the representative recent invalid fixtures', () => {
+  const windowsIssues = inspectWindowsFastSentinel({
+    shifuCmd: '@echo off\nif /i not "%~1"=="build" goto native\n',
+    lifecycle: 'export function windowsCmdArgs() { return []; }\n',
+  });
+  assert.ok(windowsIssues.length >= 3);
+  assert.match(
+    windowsIssues.join('\n'),
+    /source gate|source-acceptance|verbatim/u,
+  );
+  const demoIssues = inspectAuditableDemoFastSentinel({
+    adapter: [
+      'COMPLETION_SENTINEL = re.compile(r"KUNGFU_TUI_DEMO_COMPLETE ([^\\\\r\\\\n]+)")',
+      'completion["status"] != "passed"',
+    ].join('\n'),
+    workflow:
+      'uses: kungfu-systems/buildchain/.github/workflows/.auditable-demo.yml@main',
+  });
+  assert.ok(demoIssues.length >= 2);
+  assert.match(
+    demoIssues.join('\n'),
+    /canonical completion verdict|exact Buildchain SHA/u,
+  );
+});
+
+test('patrol, normal Alpha builds and sentinels keep one controller authority', () => {
+  const patrol = fs.readFileSync(
+    '.github/workflows/dev-alpha-candidate-patrol.yml',
+    'utf8',
+  );
+  const build = fs.readFileSync('.github/workflows/build.yml', 'utf8');
+  assert.match(
+    patrol,
+    /group: dev-alpha-candidate-patrol-\$\{\{ github\.repository \}\}-\$\{\{ github\.event\.repository\.default_branch \}\}[\s\S]*cancel-in-progress: false/u,
+  );
+  assert.match(
+    build,
+    /format\('alpha-promotion-build-\{0\}', github\.event\.pull_request\.base\.ref \|\| github\.ref\)/u,
+  );
+  assert.doesNotMatch(
+    build,
+    /alpha-promotion-build-\{0\}'.*pull_request\.number/u,
+  );
+  assert.match(build, /windows-fast-sentinel:[\s\S]*runs-on: windows-2025/u);
+  assert.match(
+    build,
+    /auditable-demo-fast-sentinel:[\s\S]*runs-on: ubuntu-24\.04/u,
+  );
+  assert.match(
+    build,
+    /needs: \[preflight, windows-fast-sentinel, auditable-demo-fast-sentinel\]/u,
+  );
+  const preBuild = build.slice(0, build.indexOf('\n  build:'));
+  assert.doesNotMatch(
+    preBuild,
+    /actions\/upload-artifact|npm publish|gh release|git tag/iu,
   );
 });

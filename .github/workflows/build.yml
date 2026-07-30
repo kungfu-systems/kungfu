@@ -53,7 +53,7 @@ permissions:
   id-token: write
 
 concurrency:
-  group: ${{ fromJSON(inputs.macos-overflow-request-json || '{}').mode == 'control' && format('alpha-macos-overflow-{0}', fromJSON(inputs.macos-overflow-request-json).requestId) || (fromJSON(inputs.macos-overflow-request-json || '{}').mode == 'self-hosted' || fromJSON(inputs.macos-overflow-request-json || '{}').mode == 'github-hosted') && format('alpha-macos-candidate-{0}-{1}', fromJSON(inputs.macos-overflow-request-json).requestId, fromJSON(inputs.macos-overflow-request-json).mode) || format('alpha-promotion-build-{0}', github.event.pull_request.number || github.ref) }}
+  group: ${{ fromJSON(inputs.macos-overflow-request-json || '{}').mode == 'control' && format('alpha-macos-overflow-{0}', fromJSON(inputs.macos-overflow-request-json).requestId) || (fromJSON(inputs.macos-overflow-request-json || '{}').mode == 'self-hosted' || fromJSON(inputs.macos-overflow-request-json || '{}').mode == 'github-hosted') && format('alpha-macos-candidate-{0}-{1}', fromJSON(inputs.macos-overflow-request-json).requestId, fromJSON(inputs.macos-overflow-request-json).mode) || format('alpha-promotion-build-{0}', github.event.pull_request.base.ref || github.ref) }}
   cancel-in-progress: ${{ !(github.event_name == 'workflow_dispatch' && inputs.diagnostic-mode) }}
 
 jobs:
@@ -82,9 +82,52 @@ jobs:
           controller-request-json: ${{ inputs.macos-overflow-request-json || '{}' }}
           runner-inventory-token: ${{ github.event_name == 'workflow_dispatch' && fromJSON(inputs.macos-overflow-request-json || '{}').mode == 'control' && github.ref == format('refs/heads/{0}', github.event.repository.default_branch) && secrets.KUNGFU_GITHUB_TOKEN || '' }}
 
-  build:
+  windows-fast-sentinel:
+    name: Windows exact-source fast sentinel
     needs: preflight
     if: ${{ needs.preflight.result == 'success' && fromJSON(inputs.macos-overflow-request-json || '{}').mode != 'control' }}
+    runs-on: windows-2025
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - name: Check out exact candidate source
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          ref: ${{ fromJSON(inputs.macos-overflow-request-json || '{}').sourceSha || github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Reject known-invalid Windows entry contracts
+        shell: pwsh
+        env:
+          GITHUB_SHA: ${{ fromJSON(inputs.macos-overflow-request-json || '{}').sourceSha || github.event.pull_request.head.sha || github.sha }}
+        run: .\shifu.cmd node scripts/alpha-promotion-preflight.mjs fast-sentinel --kind windows --out .buildchain/fast-sentinel/windows.json
+
+  auditable-demo-fast-sentinel:
+    name: Auditable demo exact-source fast sentinel
+    needs: preflight
+    if: ${{ needs.preflight.result == 'success' && fromJSON(inputs.macos-overflow-request-json || '{}').mode != 'control' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - name: Check out exact candidate source
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          ref: ${{ fromJSON(inputs.macos-overflow-request-json || '{}').sourceSha || github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Reject known-invalid auditable demo contracts
+        env:
+          GITHUB_SHA: ${{ fromJSON(inputs.macos-overflow-request-json || '{}').sourceSha || github.event.pull_request.head.sha || github.sha }}
+        run: ./shifu node scripts/alpha-promotion-preflight.mjs fast-sentinel --kind auditable-demo --out .buildchain/fast-sentinel/auditable-demo.json
+
+  build:
+    needs: [preflight, windows-fast-sentinel, auditable-demo-fast-sentinel]
+    if: ${{ needs.preflight.result == 'success' && needs.windows-fast-sentinel.result == 'success' && needs.auditable-demo-fast-sentinel.result == 'success' && fromJSON(inputs.macos-overflow-request-json || '{}').mode != 'control' }}
     uses: kungfu-systems/buildchain/.github/workflows/.build.yml@2522e79e4c00233a5d15f887360547ed1034c39e # protected artifact-signing authority
     secrets:
       BUILDCHAIN_PROMOTION_TOKEN: ${{ secrets.KUNGFU_GITHUB_TOKEN }}

@@ -67,6 +67,102 @@ const NON_REUSABLE_EVIDENCE = [
   'publication',
   'signing',
 ];
+const EXACT_BUILDCHAIN_SHA = /^[0-9a-f]{40}$/u;
+
+function requirePattern(issues, source, pattern, message) {
+  if (!pattern.test(source)) issues.push(message);
+}
+
+export function inspectWindowsFastSentinel({ shifuCmd, lifecycle }) {
+  const issues = [];
+  requirePattern(
+    issues,
+    shifuCmd,
+    /if \/i not "%~1"=="check:source" goto native/iu,
+    'shifu.cmd no longer routes check:source through the build-free source gate',
+  );
+  requirePattern(
+    issues,
+    shifuCmd,
+    /source-acceptance\.mjs/iu,
+    'shifu.cmd no longer invokes the source-acceptance authority',
+  );
+  requirePattern(
+    issues,
+    lifecycle,
+    /export function windowsCmdArgs/iu,
+    'release qualification no longer exposes the reviewed Windows command adapter',
+  );
+  requirePattern(
+    issues,
+    lifecycle,
+    /windowsVerbatimArguments:\s*true/iu,
+    'Windows qualification no longer preserves verbatim cmd.exe arguments',
+  );
+  requirePattern(
+    issues,
+    lifecycle,
+    /\['\/d',\s*'\/s',\s*'\/c'/u,
+    'Windows qualification no longer uses the bounded cmd.exe /d /s /c entry',
+  );
+  return issues;
+}
+
+export function inspectAuditableDemoFastSentinel({ adapter, workflow }) {
+  const issues = [];
+  requirePattern(
+    issues,
+    adapter,
+    /COMPLETION_SENTINEL\s*=\s*re\.compile\(r"KUNGFU_TUI_DEMO_COMPLETE/iu,
+    'auditable-demo adapter no longer requires the installed completion sentinel',
+  );
+  requirePattern(
+    issues,
+    adapter,
+    /completion\["status"\]\s*!=\s*"qualified"/iu,
+    'auditable-demo adapter regressed to a non-canonical completion verdict',
+  );
+  const runtime = workflow.match(
+    /uses:\s*kungfu-systems\/buildchain\/\.github\/workflows\/\.auditable-demo\.yml@([0-9a-f]{40})/u,
+  );
+  if (!runtime || !EXACT_BUILDCHAIN_SHA.test(runtime[1])) {
+    issues.push(
+      'auditable-demo Gate is not pinned to one exact Buildchain SHA',
+    );
+  }
+  requirePattern(
+    issues,
+    workflow,
+    /issue #2057 canonical qualified sentinel/iu,
+    'auditable-demo Gate no longer names the reviewed qualified-sentinel correction',
+  );
+  return issues;
+}
+
+export function runAlphaFastSentinel(kind, root = ROOT) {
+  if (kind === 'windows') {
+    return inspectWindowsFastSentinel({
+      shifuCmd: fs.readFileSync(path.join(root, 'shifu.cmd'), 'utf8'),
+      lifecycle: fs.readFileSync(
+        path.join(root, 'scripts', 'run-shifu-lifecycle.mjs'),
+        'utf8',
+      ),
+    });
+  }
+  if (kind === 'auditable-demo') {
+    return inspectAuditableDemoFastSentinel({
+      adapter: fs.readFileSync(
+        path.join(root, 'scripts', 'auditable-demo-adapter.py'),
+        'utf8',
+      ),
+      workflow: fs.readFileSync(
+        path.join(root, '.github', 'workflows', 'build.yml'),
+        'utf8',
+      ),
+    });
+  }
+  throw new Error(`unknown Alpha fast sentinel: ${kind || '<empty>'}`);
+}
 
 function canonical(value) {
   if (Array.isArray(value)) return value.map(canonical);
@@ -344,6 +440,26 @@ function main(argv = process.argv.slice(2)) {
     process.stdout.write(
       `[alpha-preflight] verified ${receipt.receiptRoot} for ${receipt.binding.sourceCommit} tree ${receipt.binding.sourceTree}\n`,
     );
+    return;
+  }
+  if (command === 'fast-sentinel') {
+    if (!options.kind || !options.out)
+      throw new Error('fast-sentinel requires --kind and --out');
+    const startedAt = Date.now();
+    const issues = runAlphaFastSentinel(options.kind);
+    const result = {
+      schema: 'kungfu.alpha-fast-sentinel/v1',
+      kind: options.kind,
+      sourceSha: process.env.GITHUB_SHA || '',
+      status: issues.length ? 'failed' : 'passed',
+      issues,
+      durationMs: Date.now() - startedAt,
+      claimBoundary:
+        'source-contract-only; does not claim platform or full Alpha qualification',
+    };
+    writeJson(path.resolve(options.out), result);
+    process.stdout.write(`${JSON.stringify(result, null, 2)}\n`);
+    if (issues.length) process.exitCode = 1;
     return;
   }
   throw new Error(`unknown alpha preflight command: ${command || '<missing>'}`);
