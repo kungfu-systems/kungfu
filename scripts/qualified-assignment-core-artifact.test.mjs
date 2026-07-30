@@ -1864,6 +1864,10 @@ test('workflows keep candidate and promotion outside untrusted PR authority', ()
   );
   assert.match(
     promotionWorkflow,
+    /Install pinned Qualified Core verifier[\s\S]*Check out exact Qualified Core recovery target[\s\S]*github\.event_name == 'workflow_dispatch'[\s\S]*git checkout --detach "\$TARGET_SHA"[\s\S]*test "\$\(git rev-parse HEAD\)" = "\$TARGET_SHA"[\s\S]*Promote or resolve the exact Qualified Core platform matrix/u,
+  );
+  assert.match(
+    promotionWorkflow,
     /Promote or resolve the exact Qualified Core platform matrix[\s\S]*darwin-arm64-cp313[\s\S]*darwin-x86_64-cp313[\s\S]*linux-x86_64-cp313[\s\S]*windows-x86_64-cp313[\s\S]*qualified-assignment-core-candidate-\$\{TARGET_SHA\}-\$\{row\}[\s\S]*qualified-assignment-core-artifact\.mjs reuse[\s\S]*Multiple distinct compatible Qualified Core authorities are active for \$\{row\}[\s\S]*status:"unqualified"[\s\S]*reason:"no-exact-or-compatible-authority"[\s\S]*uses: \.\/\.github\/actions\/upload-qualified-core-matrix/u,
   );
   assert.match(

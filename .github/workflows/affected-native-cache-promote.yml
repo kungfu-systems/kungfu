@@ -465,6 +465,17 @@ jobs:
         if: ${{ github.ref_protected == true }}
         shell: bash
         run: ./shifu install --frozen-lockfile
+      - name: Check out exact Qualified Core recovery target
+        if: ${{ github.ref_protected == true && github.event_name == 'workflow_dispatch' }}
+        env:
+          TARGET_SHA: ${{ steps.target.outputs.sha }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          git checkout --detach "$TARGET_SHA"
+          test "$(git rev-parse HEAD)" = "$TARGET_SHA"
+          git diff --quiet
+          git diff --cached --quiet
       - name: Promote or resolve the exact Qualified Core platform matrix
         if: ${{ github.ref_protected == true }}
         id: qualified_core_promotion
