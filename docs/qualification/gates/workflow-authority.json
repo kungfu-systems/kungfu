@@ -870,7 +870,7 @@
     {
       "path": ".github/workflows/build.yml",
       "authority": "product-publication",
-      "definitionDigest": "sha256:aadbb97771ffd89eaec3f3ed67ef3925e1730472a5a722c1a8b956c8ee71b6c1",
+      "definitionDigest": "sha256:a1b6d41585f46748e54b3950fab70f3c3ec01d7d37d842b26945e0be8db83923",
       "jobs": [
         {
           "id": "auditable-demo",
@@ -920,7 +920,7 @@
           "authority": "qualification",
           "publication": "none",
           "receipt": "qualifying",
-          "definitionDigest": "sha256:2af5f6c373b7bcbd834ccd0ad8414937a03f9b61e1cdd8afd6ab0400512c41e4",
+          "definitionDigest": "sha256:557b4ea6bb63f4d3a716de3cf76fb8181fd19d5af6189dfba2668e3adfc826ee",
           "credentials": {"githubToken":"write","oidc":true,"repositorySecrets":["BUILDCHAIN_ARTIFACT_RELAY_S3_DOWNLOAD_ROLE_ARN","BUILDCHAIN_ARTIFACT_RELAY_S3_ROLE_ARN","BUILDCHAIN_ARTIFACT_RELAY_S3_UPLOAD_ROLE_ARN","KUNGFU_GITHUB_TOKEN"],"inheritedSecrets":false,"environment":null},
           "externalActions": ["kungfu-systems/buildchain/.github/workflows/.build.yml@67bf0346474ec4d5ccba04747fe52df9019819a8"],
           "steps": []
@@ -1056,19 +1056,19 @@
           "authority": "qualification",
           "publication": "none",
           "receipt": "diagnostic",
-          "definitionDigest": "sha256:23289f207a75e02fe3bf44916fca9a41313b1bf21b5e6bbb342ddfa6cddef72e",
+          "definitionDigest": "sha256:17842edcc9f08b0b183ffdd903440d7366fc22a1c9cba906aedea4151edd0feb",
           "credentials": {"githubToken":"write","oidc":true,"repositorySecrets":[],"inheritedSecrets":false,"environment":null},
           "externalActions": ["actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0"],
           "steps": [
             {
               "index": 1,
               "label": "name:Check out exact candidate source",
-              "definitionDigest": "sha256:bebfa1169e50702a373132a593030f24fa0ca110ec67c1e795d114f59d376195"
+              "definitionDigest": "sha256:90b7875c1b8263fc6ee031b6f446decfc1fe5eb289f08dbc3d506c4bce43f113"
             },
             {
               "index": 2,
               "label": "id:receipt",
-              "definitionDigest": "sha256:4a1aa1679e886295f7fdbfe400c3f7494164ff44aafb5741f52dc6c1ae061cca"
+              "definitionDigest": "sha256:a49c0082db42c213bcca01fc5c21697ebb73985311b7d427250566ae39b3fad5"
             }
           ]
         },

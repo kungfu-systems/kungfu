@@ -11,6 +11,10 @@ inputs:
     description: Optional exact preflight workflow run for a diagnostic replay.
     required: false
     default: ""
+  controller-request-json:
+    description: Optional exact-source queue-aware macOS controller envelope.
+    required: false
+    default: "{}"
 
 outputs:
   run-id:
@@ -37,6 +41,7 @@ runs:
   steps:
     - name: Resolve exact-source preflight run
       id: run
+      if: ${{ fromJSON(inputs.controller-request-json).mode != 'control' }}
       shell: bash
       env:
         GH_TOKEN: ${{ github.token }}
@@ -56,6 +61,7 @@ runs:
         echo "run-id=$run_id" >> "$GITHUB_OUTPUT"
 
     - name: Download exact-source aggregate receipt
+      if: ${{ fromJSON(inputs.controller-request-json).mode != 'control' }}
       uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
       with:
         github-token: ${{ github.token }}
@@ -66,6 +72,7 @@ runs:
 
     - name: Verify exact-tree receipt and reuse boundary
       id: receipt
+      if: ${{ fromJSON(inputs.controller-request-json).mode != 'control' }}
       shell: bash
       env:
         SOURCE_SHA: ${{ inputs.source-sha }}
@@ -93,3 +100,31 @@ runs:
           ].join('\n'),
         );
         NODE
+
+    - name: Run queue-aware macOS controller
+      if: ${{ fromJSON(inputs.controller-request-json).mode == 'control' }}
+      shell: bash
+      env:
+        GITHUB_TOKEN: ${{ github.token }}
+        REQUEST_JSON: ${{ inputs.controller-request-json }}
+      run: |
+        set -euo pipefail
+        test "$GITHUB_SHA" = "${{ fromJSON(inputs.controller-request-json).sourceSha }}"
+        test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+        test -z "$(git status --porcelain)"
+        ./shifu alpha:macos:overflow control \
+          --repository "$GITHUB_REPOSITORY" \
+          --ref "$GITHUB_REF_NAME" \
+          --request-json "$REQUEST_JSON" \
+          --out .buildchain/alpha-macos-overflow/receipt.json
+
+    - name: Upload queue, route, runner, and winner receipt
+      if: ${{ always() && fromJSON(inputs.controller-request-json).mode == 'control' }}
+      uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+      with:
+        name: alpha-macos-overflow-${{ fromJSON(inputs.controller-request-json).requestId }}-${{ fromJSON(inputs.controller-request-json).sourceSha }}
+        path: .buildchain/alpha-macos-overflow/receipt.json
+        if-no-files-found: error
+        retention-days: 90
+        compression-level: 0
+        overwrite: false

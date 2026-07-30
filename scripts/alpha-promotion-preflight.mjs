@@ -46,6 +46,7 @@ const ROOT_FILES = {
     'docs/qualification/gates/execution-profiles.json',
     'docs/release-promotion-rehearsal.contract.json',
     'scripts/alpha-promotion-preflight.mjs',
+    '.github/actions/require-alpha-preflight/alpha-macos-overflow.mjs',
     'scripts/alpha-publication-tail-plan.mjs',
     'scripts/alpha-cache-evidence.mjs',
     'scripts/alpha-release-timeline.mjs',
