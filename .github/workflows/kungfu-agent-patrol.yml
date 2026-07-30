@@ -17,6 +17,7 @@ on:
         options:
           - light
           - deep
+          - real-snapshot
 
 permissions:
   contents: read

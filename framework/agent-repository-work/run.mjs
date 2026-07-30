@@ -18,6 +18,12 @@ import {
   qualifySeededIncidentBoardFixture,
   verifyIncidentBoardWorkspace,
 } from '../../tests/qualification/agent-repository-work/incident-board-replay-v1-oracle.mjs';
+import {
+  materializeRealModuleSnapshot,
+  qualifySeededRealModuleSnapshot,
+  verifyRealModuleSnapshotWorkspace,
+} from '../../tests/qualification/agent-repository-work/kungfu-agent-patrol-real-module-snapshot-v1-oracle.mjs';
+import { validateExperimentReport } from './report.mjs';
 
 const ROOT = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
@@ -33,7 +39,6 @@ const CONTRACT_PATH = path.join(
 );
 const REPORT_SCHEMA = 'kungfu.agent-repository-work.report/v1';
 const PROFILE_SCHEMA = 'kungfu.agent-runtime-profile/v1';
-const ROOT_PATTERN = /^sha256:[0-9a-f]{64}$/u;
 const DEFAULT_IMAGE =
   'ghcr.io/kungfu-systems/build-images/opencode-ci@sha256:4083ee089fa9a419f4915505094a6c1bcce433ff77455605ce8993af3b684ed3';
 const DEFAULT_MODEL = 'qwen3-coder:30b-opencode-64k';
@@ -324,49 +329,8 @@ function classifyFailure(error) {
   return 'runner-environment';
 }
 
-export function validateExperimentReport(report) {
-  if (report?.schema !== REPORT_SCHEMA)
-    throw new Error('repository-work report schema is unsupported');
-  if (report.evidenceClass !== 'bounded-experiment')
-    throw new Error('repository-work evidence class must stay bounded');
-  if (report.nonClaims?.auditableDemo !== true)
-    throw new Error('Auditable Demo non-integration boundary is required');
-  if (report.nonClaims?.agentWorkLab !== true)
-    throw new Error('Qualification Lab non-integration boundary is required');
-  if (
-    report.nonClaims?.releaseGate !== true ||
-    report.nonClaims?.publicClaim !== true
-  )
-    throw new Error('release and public-claim boundaries are required');
-  if (report.passed) {
-    if (report.sessions?.distinct !== 2)
-      throw new Error('exactly two fresh provider sessions are required');
-    if (report.continuity?.priorTranscriptBytes !== 0)
-      throw new Error('Agent B must receive zero prior transcript bytes');
-    if (report.continuity?.humanRestatementCount !== 0)
-      throw new Error('Agent B must receive no human task restatement');
-    if (report.warrant?.agentAZeroModification !== true)
-      throw new Error('Agent A modified the production fixture');
-    if (report.oracle?.passed !== true || report.oracle?.authoritative !== true)
-      throw new Error('external deterministic oracle is authoritative');
-    if (
-      report.sessions.a.providerSessionId ===
-      report.sessions.b.providerSessionId
-    )
-      throw new Error('provider sessions are not fresh and distinct');
-    for (const value of [
-      report.claim?.root,
-      report.assessment?.root,
-      report.continuity?.root,
-      report.oracle?.reportRoot,
-    ])
-      if (!ROOT_PATTERN.test(value || ''))
-        throw new Error('repository-work evidence root is invalid');
-  }
-  return true;
-}
-
 function buildBaseReport(options, sourceHead, fixture) {
+  const syntheticFiles = fixture.files || null;
   return {
     schema: REPORT_SCHEMA,
     evidenceClass: 'bounded-experiment',
@@ -374,11 +338,14 @@ function buildBaseReport(options, sourceHead, fixture) {
     sourceHead,
     fixture: {
       id: fixture.id,
-      fileCount: Object.keys(fixture.files).length,
-      lineCount: Object.values(fixture.files).reduce(
-        (count, content) => count + content.split('\n').length,
-        0,
-      ),
+      kind: fixture.kind || 'synthetic',
+      fileCount: syntheticFiles ? Object.keys(syntheticFiles).length : null,
+      lineCount: syntheticFiles
+        ? Object.values(syntheticFiles).reduce(
+            (count, content) => count + content.split('\n').length,
+            0,
+          )
+        : null,
     },
     runtime: {
       provider: 'opencode',
@@ -419,6 +386,77 @@ function buildBaseReport(options, sourceHead, fixture) {
   };
 }
 
+function materializeFixture(workspace, fixture, sourceHead) {
+  if (fixture.kind === 'real-module-snapshot') {
+    const materialized = materializeRealModuleSnapshot(workspace, {
+      fixture,
+      repositoryRoot: ROOT,
+      sourceHead,
+    });
+    return {
+      ...materialized,
+      fileCount: materialized.manifest.fileCount,
+      lineCount: materialized.manifest.lineCount,
+    };
+  }
+  const initialTree = materializeIncidentBoardFixture(workspace, fixture);
+  return {
+    initialTree,
+    sourceTreeRoot: null,
+    fileCount: Object.keys(fixture.files).length,
+    lineCount: Object.values(fixture.files).reduce(
+      (count, content) => count + content.split('\n').length,
+      0,
+    ),
+  };
+}
+
+function qualifySeededFixture(fixture, sourceHead) {
+  if (fixture.kind === 'real-module-snapshot')
+    return qualifySeededRealModuleSnapshot({
+      fixture,
+      repositoryRoot: ROOT,
+      sourceHead,
+    });
+  return qualifySeededIncidentBoardFixture(fixture);
+}
+
+function verifyFixture(workspace, fixture, expectedInitialTree) {
+  if (fixture.kind === 'real-module-snapshot')
+    return verifyRealModuleSnapshotWorkspace(workspace, {
+      fixture,
+      expectedInitialTree,
+    });
+  return verifyIncidentBoardWorkspace(workspace, {
+    fixture,
+    expectedInitialTree,
+  });
+}
+
+function visibleCommand(fixture) {
+  return (
+    fixture.verification?.visibleCommand?.join(' ') ||
+    'python -m unittest discover -s tests -v'
+  );
+}
+
+function investigationPrompt(fixture) {
+  const scope =
+    fixture.kind === 'real-module-snapshot'
+      ? 'inspect the Agent Patrol failure-fingerprint normalization boundary'
+      : 'inspect the lease, command, and replay boundaries';
+  return [
+    'Investigate the repository defect without modifying any file.',
+    `Run \`${visibleCommand(fixture)}\`, ${scope}, and identify the exact bounded repair paths.`,
+    `The admitted investigation Warrant limits the candidate repair to exactly these repository-relative paths: ${fixture.warrants.agentB.writablePaths.join(', ')}.`,
+    'Confirm the seeded failures can be repaired within that Warrant; do not propose tests or any other path.',
+    'Return only one JSON object, with no prose or Markdown.',
+    `The object must contain schema "kungfu.agent-repository-work.investigation-claim/v1", investigationComplete true, failingTests containing exactly ${JSON.stringify(fixture.investigation.expectedFailures)}, repairPaths containing exactly ${JSON.stringify(fixture.warrants.agentB.writablePaths)} without leading slashes, line numbers, or fragments, remainingObligation "${fixture.investigation.remainingObligation}", and nextAction "${fixture.investigation.nextAction}".`,
+  ].join(' ');
+}
+
+export { validateExperimentReport };
+
 export function runExperiment(options = {}) {
   const normalized = {
     output:
@@ -448,9 +486,13 @@ export function runExperiment(options = {}) {
     const workspace = path.join(output, 'workspace');
     const home = path.join(output, 'kf-home');
     const configHome = path.join(output, 'kf-config');
-    const initialTree = materializeIncidentBoardFixture(workspace, fixture);
+    const materialized = materializeFixture(workspace, fixture, sourceHead);
+    const initialTree = materialized.initialTree;
+    report.fixture.fileCount = materialized.fileCount;
+    report.fixture.lineCount = materialized.lineCount;
+    report.fixture.sourceTreeRoot = materialized.sourceTreeRoot;
     const initialTreeRoot = jsonRoot(initialTree);
-    const seeded = qualifySeededIncidentBoardFixture(fixture);
+    const seeded = qualifySeededFixture(fixture, sourceHead);
     if (!seeded.passed)
       throw new Error('seeded fixture did not expose the expected failures');
     const planProfile = runtimeProfile({
@@ -500,6 +542,7 @@ export function runExperiment(options = {}) {
       contractRoot,
       fixtureId: fixture.id,
       initialTreeRoot,
+      sourceTreeRoot: materialized.sourceTreeRoot,
       warrantRoot: jsonRoot(fixture.warrants),
     };
     const currentCutRoot = jsonRoot({
@@ -520,14 +563,7 @@ export function runExperiment(options = {}) {
     };
     const workRefPath = path.join(output, 'inputs/work-ref.json');
     writeJson(workRefPath, workRef);
-    const promptA = [
-      'Investigate the repository defect without modifying any file.',
-      'Run `python -m unittest discover -s tests -v`, inspect the lease, command, and replay boundaries, and identify the exact bounded repair paths.',
-      `The admitted investigation Warrant limits the candidate repair to exactly these repository-relative paths: ${fixture.warrants.agentB.writablePaths.join(', ')}.`,
-      'Confirm the seeded failures can be repaired within that Warrant; do not propose tests, service.py, or any other path.',
-      'Return only one JSON object, with no prose or Markdown.',
-      `The object must contain schema "kungfu.agent-repository-work.investigation-claim/v1", investigationComplete true, failingTests containing exactly ${JSON.stringify(fixture.investigation.expectedFailures)}, repairPaths containing exactly ${JSON.stringify(fixture.warrants.agentB.writablePaths)} without leading slashes, line numbers, or fragments, remainingObligation "${fixture.investigation.remainingObligation}", and nextAction "${fixture.investigation.nextAction}".`,
-    ].join(' ');
+    const promptA = investigationPrompt(fixture);
     const sessionA = JSON.parse(
       pythonKungfu(
         [
@@ -578,7 +614,7 @@ export function runExperiment(options = {}) {
       initialTreeRoot,
       seededDefectRoot: jsonRoot(seeded),
       outcome: 'partial',
-      remainingObligation: `Complete ${fixture.task.title.toLowerCase()} using only ${fixture.warrants.agentB.writablePaths.join(', ')}; run python -m unittest discover -s tests -v and leave the workspace for an external hidden verifier.`,
+      remainingObligation: `Complete ${fixture.task.title.toLowerCase()} using only ${fixture.warrants.agentB.writablePaths.join(', ')}; run ${visibleCommand(fixture)} and leave the workspace for an external hidden verifier.`,
       nextAction: 'implement bounded repair and run visible tests',
     };
     const assessment = {
@@ -683,10 +719,7 @@ export function runExperiment(options = {}) {
       agentAZeroModification,
     };
     report.episodeVerification = episodeVerification;
-    const oracle = verifyIncidentBoardWorkspace(workspace, {
-      fixture,
-      expectedInitialTree: initialTree,
-    });
+    const oracle = verifyFixture(workspace, fixture, initialTree);
     report.oracle = oracle;
     report.warrant = {
       ...report.warrant,
@@ -700,7 +733,7 @@ export function runExperiment(options = {}) {
         : 'external-oracle-rejected-repair',
       scope:
         oracle.scopeViolations.length === 0
-          ? 'all-changes-within-three-file-warrant'
+          ? 'all-changes-within-bounded-warrant'
           : 'warrant-scope-violation',
       continuity: 'native-workref-and-transcript-free-continuation-admitted',
       evidence: 'content-rooted-episodes-claim-assessment-and-oracle',
@@ -712,7 +745,7 @@ export function runExperiment(options = {}) {
         sessionBUsage: sessionB.providerObservation?.usage || null,
       },
       residuals: [
-        `single deterministic Python fixture ${fixture.id}`,
+        `single deterministic fixture ${fixture.id}`,
         'single pinned local model and one trusted runner',
         'no multi-day durability or concurrent repository-edit claim',
       ],
