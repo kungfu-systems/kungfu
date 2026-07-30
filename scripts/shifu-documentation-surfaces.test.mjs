@@ -153,6 +153,7 @@ test(
         'kungfu-documentation',
         'kungfu-documentation-control',
         'kungfu-episode',
+        'kungfu-evolution-map',
         'kungfu-format-contract',
         'kungfu-gui',
         'kungfu-kfx-development',
