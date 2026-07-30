@@ -8,6 +8,7 @@ import os
 import platform
 import signal
 import subprocess
+import sys
 import threading
 import time
 from contextlib import contextmanager
@@ -558,6 +559,15 @@ def command_env(
                 }
             )
     return env
+
+
+def _independent_process_env(env: Mapping[str, str]) -> dict[str, str]:
+    """Detach a long-lived child from the current frozen application instance."""
+
+    child_env = dict(env)
+    if getattr(sys, "frozen", False):
+        child_env["PYINSTALLER_RESET_ENVIRONMENT"] = "1"
+    return child_env
 
 
 def coordinator_run_command(
@@ -1508,13 +1518,15 @@ class ProcessRuntimeHost:
         )
         with supervisor_log_path(self.config_home).open("ab") as log:
             kwargs: dict[str, Any] = {
-                "env": command_env(
-                    home,
-                    runtime_dir,
-                    self.log_level,
-                    self.config_home,
-                    runtime_generation=runtime_generation,
-                    runtime_image=self.runtime_image,
+                "env": _independent_process_env(
+                    command_env(
+                        home,
+                        runtime_dir,
+                        self.log_level,
+                        self.config_home,
+                        runtime_generation=runtime_generation,
+                        runtime_image=self.runtime_image,
+                    )
                 ),
                 "stdout": log,
                 "stderr": log,
