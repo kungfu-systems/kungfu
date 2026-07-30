@@ -569,7 +569,7 @@ def validate_completion(decoded: str) -> dict[str, Any]:
     )
     if (
         completion["schema"] != "kungfu.agent-work-lab.tui-autoplay/v1"
-        or completion["status"] != "passed"
+        or completion["status"] != "qualified"
         or not SHA256.fullmatch(str(completion["reportRoot"]))
         or not isinstance(completion["eventCount"], int)
         or isinstance(completion["eventCount"], bool)

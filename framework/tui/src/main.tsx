@@ -50,6 +50,7 @@ import {
 import {
   TerminalLifecycle,
   describeCliFailure,
+  resolveTuiCoreDir,
   resolveTuiRuntimeDir,
 } from './terminal-lifecycle.js';
 import {
@@ -70,9 +71,11 @@ function cliEnvironment(): NodeJS.ProcessEnv {
 }
 
 function runtimePaths() {
-  const coreDir = path.dirname(
-    nodeRequire.resolve('@kungfu-tech/core/package.json'),
-  );
+  const coreDir = resolveTuiCoreDir({
+    env: process.env,
+    resolveCorePackage: () =>
+      nodeRequire.resolve('@kungfu-tech/core/package.json'),
+  });
   const kungfuDir =
     process.env.KUNGFU_DIR || path.join(coreDir, 'dist', 'kungfu');
   const packagedBin = path.join(
