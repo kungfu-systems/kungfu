@@ -49,6 +49,7 @@ _MIN_ARCHIVE_EXPANDED_BYTES = 64 * 1024 * 1024
 _MAX_ARCHIVE_EXPANDED_BYTES = 8 * 1024 * 1024 * 1024
 _MAX_ARCHIVE_EXPANSION_RATIO = 200
 _CONTENT_RANGE = re.compile(r"^bytes ([0-9]+)-([0-9]+)/([0-9]+)$")
+_CLI_SELECTION_RECEIPT_NAME = re.compile(r"^generation-([0-9]{20})\.json$")
 _CLI_DOWNLOAD_PROCESS_LOCK = threading.Lock()
 _CLI_SELECTION_PROCESS_LOCK = threading.Lock()
 _SEMVER = re.compile(
@@ -369,10 +370,31 @@ def _cli_selection_path(config_home: str | Path) -> Path:
 
 
 def _cli_selection_receipt_path(config_home: str | Path, generation: int) -> Path:
+    receipts_root = _cli_inventory_root(config_home) / "receipts"
+    return receipts_root / f"generation-{generation:020d}.json"
+
+
+def _cli_selection_receipt_generations(config_home: str | Path) -> list[int]:
+    receipts_root = _cli_inventory_root(config_home) / "receipts"
+    try:
+        entries = list(receipts_root.iterdir())
+    except FileNotFoundError:
+        return []
+    except OSError as error:
+        raise DistributionUpdateError(
+            "cli-selection-receipt-io-failed",
+            "CLI selection receipt journal could not be inspected",
+        ) from error
+    return sorted(
+        int(match.group(1))
+        for entry in entries
+        if (match := _CLI_SELECTION_RECEIPT_NAME.fullmatch(entry.name)) is not None
+    )
+
+
+def _next_cli_generation(config_home: str | Path, current_generation: int) -> int:
     return (
-        _cli_inventory_root(config_home)
-        / "receipts"
-        / f"generation-{generation:020d}.json"
+        max([current_generation, *_cli_selection_receipt_generations(config_home)]) + 1
     )
 
 
@@ -424,12 +446,15 @@ def _read_cli_selection_receipt(
     if not path.is_file():
         return None
     receipt = _read_object(path)
+    receipt_selection = receipt.get("frontendSelection")
     receipt_root = receipt.get("receiptRoot")
     receipt_core = {
         key: value for key, value in receipt.items() if key != "receiptRoot"
     }
     if (
-        receipt.get("frontendSelection") != selection
+        not isinstance(receipt_selection, Mapping)
+        or int(receipt_selection.get("generation") or 0) != generation
+        or receipt_selection != selection
         or not isinstance(receipt_root, str)
         or receipt_root != _content_root(receipt_core)
     ):
@@ -2318,18 +2343,17 @@ def _select_cli_image(
         ):
 
             def finish_selection(
-                selection: dict[str, Any], *, publish: bool
+                selection: dict[str, Any],
             ) -> tuple[dict[str, Any], dict[str, Any]]:
                 receipt = receipt_factory(selection)
                 _persist_cli_selection_receipt(config_home, selection, receipt)
-                if publish:
-                    try:
-                        _write_object(_cli_selection_path(config_home), selection)
-                    except OSError as error:
-                        raise DistributionUpdateError(
-                            "selection-io-failed",
-                            "CLI selection could not be published; the prior selection remains authoritative",
-                        ) from error
+                try:
+                    _write_object(_cli_selection_path(config_home), selection)
+                except OSError as error:
+                    raise DistributionUpdateError(
+                        "selection-io-failed",
+                        "CLI selection could not be published; the prior selection remains authoritative",
+                    ) from error
                 return selection, receipt
 
             current = _read_cli_selection(config_home)
@@ -2386,7 +2410,9 @@ def _select_cli_image(
                         else:
                             return current_selection, None
             previous = current[0] if current is not None else None
-            generation = int((previous or {}).get("generation") or 0) + 1
+            generation = _next_cli_generation(
+                config_home, int((previous or {}).get("generation") or 0)
+            )
             rollback = (
                 {
                     "frontendBuildId": previous["frontendBuildId"],
@@ -2436,12 +2462,10 @@ def _select_cli_image(
                 ),
                 "rollback": rollback,
             }
-            return finish_selection(selection, publish=True)
+            return finish_selection(selection)
 
 
 def cli_inventory_fsck(config_home: str | Path) -> dict[str, Any]:
-    """Inspect the archive CLI inventory without mutating or cleaning it."""
-
     root = _cli_inventory_root(config_home)
     images_root = root / "images"
     images: list[dict[str, Any]] = []
@@ -2512,8 +2536,10 @@ def cli_inventory_fsck(config_home: str | Path) -> dict[str, Any]:
                         "path": relative,
                     }
                 )
-    selection = None
-    selected_receipt_root = None
+    selection = selected_receipt_root = None
+    retained_receipts: list[dict[str, Any]] = []
+    pending_receipts: list[dict[str, Any]] = []
+    selection_path_exists = _cli_selection_path(config_home).is_file()
     try:
         selected = _read_cli_selection(config_home)
         if selected is not None:
@@ -2539,6 +2565,59 @@ def cli_inventory_fsck(config_home: str | Path) -> dict[str, Any]:
                 "path": str(_cli_selection_path(config_home).relative_to(root)),
             }
         )
+    selected_generation = int((selection or {}).get("generation") or 0)
+    try:
+        for generation in _cli_selection_receipt_generations(config_home):
+            if generation == selected_generation:
+                continue
+            path = _cli_selection_receipt_path(config_home, generation)
+            try:
+                receipt = _read_object(path)
+                receipt_selection = receipt.get("frontendSelection")
+                receipt_root = receipt.get("receiptRoot")
+                receipt_core = {
+                    key: value for key, value in receipt.items() if key != "receiptRoot"
+                }
+                if (
+                    not isinstance(receipt_selection, Mapping)
+                    or int(receipt_selection.get("generation") or 0) != generation
+                    or not isinstance(receipt_root, str)
+                    or receipt_root != _content_root(receipt_core)
+                ):
+                    raise DistributionUpdateError(
+                        "cli-selection-receipt-invalid",
+                        "CLI selection receipt does not verify against its generation",
+                    )
+                retained = {
+                    "generation": generation,
+                    "receiptRoot": receipt_root,
+                    "frontendBuildId": receipt_selection.get("frontendBuildId"),
+                }
+                retained_receipts.append(retained)
+                if generation > selected_generation and (
+                    selection is not None or not selection_path_exists
+                ):
+                    pending_receipts.append(retained)
+                    issues.append(
+                        {
+                            "code": "cli-selection-publication-pending",
+                            "path": str(path.relative_to(root)),
+                        }
+                    )
+            except (DistributionUpdateError, OSError, TypeError, ValueError) as error:
+                issues.append(
+                    {
+                        "code": getattr(error, "code", "cli-receipt-unreadable"),
+                        "path": str(path.relative_to(root)),
+                    }
+                )
+    except DistributionUpdateError as error:
+        issues.append(
+            {
+                "code": error.code,
+                "path": "receipts",
+            }
+        )
     return {
         "schema": CLI_INVENTORY_FSCK_SCHEMA,
         "ok": not issues,
@@ -2546,6 +2625,8 @@ def cli_inventory_fsck(config_home: str | Path) -> dict[str, Any]:
         "selectedReceiptRoot": selected_receipt_root,
         "images": images,
         "retainedPartials": retained_partials,
+        "retainedReceipts": retained_receipts,
+        "pendingReceipts": pending_receipts,
         "issues": issues,
         "recoveryAction": (
             None
@@ -3019,7 +3100,9 @@ def rollback_shifu_local_cli(
                     "stale-selection",
                     "native CLI selection changed after rollback planning",
                 )
-            generation = int(selection.get("generation") or 0) + 1
+            generation = _next_cli_generation(
+                config_home, int(selection.get("generation") or 0)
+            )
             next_selection = {
                 "schema": CLI_SELECTION_SCHEMA,
                 "generation": generation,

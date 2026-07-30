@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import errno
 import hashlib
 import json
 import tarfile
@@ -249,6 +250,97 @@ def test_shifu_local_same_semver_successor_installs_side_by_side_and_rolls_back(
     inventory = distribution_update.cli_inventory_fsck(config_home)
     assert inventory["ok"] is True
     assert inventory["selectedReceiptRoot"] == rolled_back["receiptRoot"]
+
+
+def test_shifu_local_rollback_advances_past_an_unpublished_successor_receipt(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    config_home = tmp_path / "config"
+    first_archive, first_manifest = _local_cut_archive(
+        tmp_path / "first",
+        build_id="first",
+    )
+    first = distribution_update.apply_shifu_local_archive(
+        first_manifest,
+        first_archive,
+        config_home=config_home,
+        expected_digest=first_manifest["artifacts"][1]["digest"],
+        evidence_roots=[first_manifest["artifacts"][1]["digest"]],
+        bootstrap_release_cut_root=f"sha256:{'0' * 64}",
+        bootstrap_version=first_manifest["productVersion"],
+        execute=True,
+    )
+    second_archive, second_manifest = _local_cut_archive(
+        tmp_path / "second",
+        build_id="second",
+        parent_release_cut_root=first_manifest["releaseCutRoot"],
+    )
+    second = distribution_update.apply_shifu_local_archive(
+        second_manifest,
+        second_archive,
+        config_home=config_home,
+        expected_digest=second_manifest["artifacts"][1]["digest"],
+        evidence_roots=[second_manifest["artifacts"][1]["digest"]],
+        bootstrap_release_cut_root=None,
+        bootstrap_version=None,
+        execute=True,
+    )
+    third_archive, third_manifest = _local_cut_archive(
+        tmp_path / "third",
+        build_id="third",
+        parent_release_cut_root=second_manifest["releaseCutRoot"],
+    )
+    original_write = distribution_update._write_object
+
+    def interrupt_selection(path: Path, value: dict) -> None:
+        if path.name == "current.json":
+            raise OSError(errno.EIO, "simulated selection interruption")
+        original_write(path, value)
+
+    monkeypatch.setattr(distribution_update, "_write_object", interrupt_selection)
+    with pytest.raises(distribution_update.DistributionUpdateError) as error:
+        distribution_update.apply_shifu_local_archive(
+            third_manifest,
+            third_archive,
+            config_home=config_home,
+            expected_digest=third_manifest["artifacts"][1]["digest"],
+            evidence_roots=[third_manifest["artifacts"][1]["digest"]],
+            bootstrap_release_cut_root=None,
+            bootstrap_version=None,
+            execute=True,
+        )
+    assert error.value.code == "selection-io-failed"
+    interrupted = distribution_update.cli_inventory_fsck(config_home)
+    assert interrupted["ok"] is False
+    assert interrupted["pendingReceipts"][0]["generation"] == 3
+    assert interrupted["issues"] == [
+        {
+            "code": "cli-selection-publication-pending",
+            "path": "receipts/generation-00000000000000000003.json",
+        }
+    ]
+
+    monkeypatch.setattr(distribution_update, "_write_object", original_write)
+    rolled_back = distribution_update.rollback_shifu_local_cli(
+        config_home=config_home,
+        expected_current_release_cut_root=second_manifest["releaseCutRoot"],
+        expected_rollback_release_cut_root=first_manifest["releaseCutRoot"],
+        evidence_roots=[second["cutTransitionRoot"]],
+        execute=True,
+    )
+    assert rolled_back["frontendSelection"]["generation"] == 4
+    assert (
+        rolled_back["frontendSelection"]["releaseCutRoot"]
+        == first["targetReleaseCutRoot"]
+    )
+    inventory = distribution_update.cli_inventory_fsck(config_home)
+    assert inventory["ok"] is True
+    assert inventory["pendingReceipts"] == []
+    assert [receipt["generation"] for receipt in inventory["retainedReceipts"]] == [
+        1,
+        2,
+        3,
+    ]
 
 
 def test_shifu_native_cli_handoff_and_cache_independent_rollback(

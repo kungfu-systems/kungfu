@@ -1129,7 +1129,7 @@ def test_cli_selection_interruption_keeps_last_known_good_and_retry_recovers(
         )
     assert error.value.code == "selection-io-failed"
     selected = distribution_update.cli_inventory_fsck(config_home)
-    assert selected["ok"] is True
+    assert selected["ok"] is False
     assert (
         selected["selected"]["frontendBuildId"]
         == older["frontendImage"]["frontendBuildId"]
@@ -1164,7 +1164,10 @@ def test_cli_selection_interruption_keeps_last_known_good_and_retry_recovers(
         retried["frontendSelection"]["frontendBuildId"]
         == newer_manifest["frontendBuildId"]
     )
-    assert retried["frontendSelection"]["generation"] == 2
+    assert retried["frontendSelection"]["generation"] == 3
+    recovered = distribution_update.cli_inventory_fsck(config_home)
+    assert recovered["ok"] is True
+    assert recovered["pendingReceipts"] == []
 
 
 def test_cli_inventory_fsck_reports_malformed_image_without_crashing(
