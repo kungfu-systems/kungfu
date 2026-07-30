@@ -14,7 +14,9 @@
     "failureBoundary": "bounded caller inputs plus the exact Buildchain runtime's GitHub-hosted write-actor trust gate before reusable burst runners; direct Windows cleanup jobs retain their caller-local trust gate"
   },
   "evidence": {
-    "reviewedBuildchainV3Source": "407445c43df4888bb4464e91aef0debdc62aa0e6",
+    "reviewedBuildchainV3Source": "376fb92fa014102366111b9aaef4856486c1e499",
+    "windowsJitRepairPullRequest": 2083,
+    "windowsJitRepairMergeCommit": "376fb92fa014102366111b9aaef4856486c1e499",
     "v3RequiredInputs": [
       "aws-codebuild-project",
       "aws-ec2-windows-runner-label",

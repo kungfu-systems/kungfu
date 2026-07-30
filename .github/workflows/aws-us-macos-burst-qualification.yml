@@ -43,9 +43,9 @@ jobs:
           (inputs.mode == 'full' && inputs.qualification-id == 'mac-full-01')
         )
       }}
-    uses: kungfu-systems/buildchain/.github/workflows/.build.yml@407445c43df4888bb4464e91aef0debdc62aa0e6
+    uses: kungfu-systems/buildchain/.github/workflows/.build.yml@376fb92fa014102366111b9aaef4856486c1e499
     with:
-      buildchain-ref: 407445c43df4888bb4464e91aef0debdc62aa0e6
+      buildchain-ref: 376fb92fa014102366111b9aaef4856486c1e499
       runner-preset: aws-us-ec2-macos-jit
       aws-ec2-macos-runner-label: ${{ inputs.runner-label }}
       setup-rust: true

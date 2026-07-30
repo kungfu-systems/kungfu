@@ -82,9 +82,9 @@ jobs:
       contents: read
       issues: write
       id-token: write
-    uses: kungfu-systems/buildchain/.github/workflows/.build.yml@407445c43df4888bb4464e91aef0debdc62aa0e6
+    uses: kungfu-systems/buildchain/.github/workflows/.build.yml@376fb92fa014102366111b9aaef4856486c1e499
     with:
-      buildchain-ref: 407445c43df4888bb4464e91aef0debdc62aa0e6
+      buildchain-ref: 376fb92fa014102366111b9aaef4856486c1e499
       runner-preset: aws-us-ec2-windows-jit
       aws-ec2-windows-runner-label: ${{ inputs.runner-label }}
       setup-rust: true
@@ -121,9 +121,9 @@ jobs:
       contents: read
       issues: write
       id-token: write
-    uses: kungfu-systems/buildchain/.github/workflows/.build.yml@407445c43df4888bb4464e91aef0debdc62aa0e6
+    uses: kungfu-systems/buildchain/.github/workflows/.build.yml@376fb92fa014102366111b9aaef4856486c1e499
     with:
-      buildchain-ref: 407445c43df4888bb4464e91aef0debdc62aa0e6
+      buildchain-ref: 376fb92fa014102366111b9aaef4856486c1e499
       runner-preset: aws-us-ec2-windows-jit
       aws-ec2-windows-runner-label: ${{ inputs.runner-label }}
       setup-rust: true

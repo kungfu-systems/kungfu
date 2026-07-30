@@ -209,7 +209,12 @@ test('reactivated AWS burst workflows pin one reviewed Buildchain v3 source', ()
   assert.equal(retirement.runtimeSafety.burstRunnerWorkflows, 3);
   assert.match(retirement.evidence.historicalBuildchainRef, /^train\/v2\//);
   const buildchainSource = retirement.evidence.reviewedBuildchainV3Source;
-  assert.equal(buildchainSource, '407445c43df4888bb4464e91aef0debdc62aa0e6');
+  assert.equal(buildchainSource, '376fb92fa014102366111b9aaef4856486c1e499');
+  assert.equal(retirement.evidence.windowsJitRepairPullRequest, 2083);
+  assert.equal(
+    retirement.evidence.windowsJitRepairMergeCommit,
+    buildchainSource,
+  );
 
   for (const name of [
     'aws-us-linux-burst-qualification.yml',
