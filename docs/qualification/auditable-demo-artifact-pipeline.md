@@ -208,6 +208,18 @@ Each blocking signal was repaired at its owning boundary rather than bypassed:
   Diagnostic artifact `8749886414` retained the failure. The adapter now maps
   only `errno.EIO` at the PTY read boundary to EOF and continues to propagate
   every other I/O error.
+- Run `30519116408` completed the exact Linux build, full release verification,
+  S3 relay, and source artifact
+  [`8752068275`](https://github.com/kungfu-systems/kungfu/actions/runs/30519116408/artifacts/8752068275)
+  with Actions API digest
+  `sha256:6813e8de632bda3a7645e41d92dcae3713d47eb3c6a7089b4e991dda09ac2f09`.
+  The required Gate then rejected the canonical terminal completion sentinel:
+  the installed Agent Work Lab autoplay correctly reported `qualified`, while
+  the Buildchain validator still required `passed`. Diagnostic artifact
+  [`8752121487`](https://github.com/kungfu-systems/kungfu/actions/runs/30519116408/artifacts/8752121487)
+  retained that mismatch. Buildchain issue `#2057` and PR `#2059` replace that
+  stale compatibility rule with the exact `qualified` contract and retain a
+  negative fixture proving that `passed` is no longer accepted.
 
 The corresponding repairs landed through independently approved protected PRs
 `#1492`, `#1497`, `#1500`, `#1503`, `#1504`, `#1505`, `#1506`, `#1507`,
