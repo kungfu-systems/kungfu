@@ -501,6 +501,23 @@ test('adapter fails closed on missing, failed, or nonzero autoplay completion', 
   }
 });
 
+test('adapter retains a bounded sanitized PTY tail and exit status when completion is missing', () => {
+  const root = fs.mkdtempSync(
+    path.join(os.tmpdir(), 'auditable-demo-adapter-'),
+  );
+  try {
+    const { result } = run(root, { omitSentinel: true, exitCode: 23 });
+    assert.notEqual(result.status, 0);
+    assert.match(result.stderr, /must emit exactly one/u);
+    assert.match(result.stderr, /exit status 23/u);
+    assert.match(result.stderr, /Kungfu Agent Work Lab fixture/u);
+    assert.equal(result.stderr.includes(String.fromCharCode(27)), false);
+    assert.doesNotMatch(result.stderr, new RegExp(root));
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
 test('adapter rejects credential-shaped terminal output before publication', () => {
   for (const privateOutput of [
     'token=not-a-real-token',

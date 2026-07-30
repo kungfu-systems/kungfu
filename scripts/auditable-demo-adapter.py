@@ -14,8 +14,8 @@ import os
 import pty
 import re
 import select
-import signal
 import shutil
+import signal
 import struct
 import subprocess
 import tarfile
@@ -43,6 +43,7 @@ TERMINAL_TIMEOUT_SECONDS = 60
 TERMINAL_EVENT_QUANTUM_MS = 20
 MAX_TERMINAL_BYTES = 4 * 1024 * 1024
 MAX_TERMINAL_EVENTS = 10_000
+MAX_FAILURE_EXCERPT_CHARS = 4_096
 ANSI_OSC = re.compile(r"\x1b\].*?(?:\x07|\x1b\\)", re.DOTALL)
 ANSI_CSI = re.compile(r"\x1b\[[0-?]*[ -/]*[@-~]")
 ANSI_ESCAPE = re.compile(r"\x1b[@-_]")
@@ -618,6 +619,13 @@ def validate_completion(decoded: str) -> dict[str, Any]:
     return completion
 
 
+def terminal_failure_excerpt(decoded: str) -> str:
+    visible = ANSI_OSC.sub("", decoded)
+    visible = ANSI_CSI.sub("", visible)
+    visible = ANSI_ESCAPE.sub("", visible)
+    return visible[-MAX_FAILURE_EXCERPT_CHARS:]
+
+
 def run_autoplay(launcher: Path, home: Path) -> tuple[dict[str, Any], bytes, int]:
     environment = isolated_environment(home)
     master_fd, slave_fd = pty.openpty()
@@ -707,7 +715,14 @@ def run_autoplay(launcher: Path, home: Path) -> tuple[dict[str, Any], bytes, int
     if not events:
         fail("installed kungfu autoplay produced no PTY output")
     decoded = safe_terminal_output(bytes(raw))
-    completion = validate_completion(decoded)
+    try:
+        completion = validate_completion(decoded)
+    except AdapterError as error:
+        excerpt = terminal_failure_excerpt(decoded)
+        fail(
+            f"{error}; exit status {exit_code}; "
+            f"sanitized PTY tail={json.dumps(excerpt, ensure_ascii=True)}"
+        )
     if exit_code != 0:
         fail(f"installed kungfu autoplay failed with exit status {exit_code}")
     last_event_ms = events[-1]["atMs"]
