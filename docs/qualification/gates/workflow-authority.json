@@ -40,7 +40,7 @@
           "authority": "qualification",
           "publication": "none",
           "receipt": "diagnostic",
-          "definitionDigest": "sha256:e73116c5954c39f78502b1bf3394619e2f88f57d8755b486535f89b1d988de13",
+          "definitionDigest": "sha256:0782c8ce641ac36af5df8cd5bbdd8bebce4bd5c5c900d9a979fe6b809584f2e2",
           "credentials": {"githubToken":"write","oidc":false,"repositorySecrets":[],"inheritedSecrets":false,"environment":null},
           "externalActions": ["actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0","actions/setup-node@v6.4.0","actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093","actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093","actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093","actions/cache/save@0057852bfaa89a56745cba8c7296529d2fc39830","actions/cache/save@0057852bfaa89a56745cba8c7296529d2fc39830","actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02"],
           "steps": [
@@ -147,25 +147,20 @@
             },
             {
               "index": 20,
-              "label": "id:qualified_core_reuse",
-              "definitionDigest": "sha256:6ed324fad1bbd98a2caf21828cb06dfd58e6d0f8278c364069521c25b6cd72f1"
+              "label": "id:qualified_core_promotion",
+              "definitionDigest": "sha256:cf3034566ccc2efcfed10ff2ea5f7b4e1a34ece467dcf0e855f7c37d1afb0af7"
             },
             {
               "index": 21,
-              "label": "id:qualified_core_promotion",
+              "label": "name:Upload qualified artifact transport",
               "authority": "evidence-publication",
-              "definitionDigest": "sha256:730c9ed85e931f605294bcc8a80b8949149e26370597037ef4d856f81f4fdd3e"
+              "definitionDigest": "sha256:c3ce9b378632022f632cfc1366f087c064e6e705067b84e3bce597d915801acc"
             },
             {
               "index": 22,
-              "label": "name:Upload qualified artifact transport",
-              "authority": "evidence-publication",
-              "definitionDigest": "sha256:b2e3cb0686ef95f334496982af2046c72bf573c89e786ed40e263be8e6a5b6d3"
-            },
-            {
-              "index": 23,
               "label": "name:Summarize Qualified Core promotion",
-              "definitionDigest": "sha256:fb43871ac0290139a48031f12b14610fa016c096839ffc7590a91d5eba5819ad"
+              "authority": "evidence-publication",
+              "definitionDigest": "sha256:febcf1278beac0f3ec9e45f94effb5ab030851f23439085b4718b518b0da201e"
             }
           ]
         }

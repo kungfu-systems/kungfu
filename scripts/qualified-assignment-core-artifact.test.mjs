@@ -1488,7 +1488,7 @@ test('workflows keep candidate and promotion outside untrusted PR authority', ()
   );
   assert.match(
     promotionWorkflow,
-    /Resolve one prior compatible protected object[\s\S]*startswith\("qualified-assignment-core-"\)[\s\S]*qualified-assignment-core-artifact\.mjs reuse[\s\S]*Multiple distinct compatible Qualified Core authorities are active[\s\S]*No prior compatible Qualified Core object is active/u,
+    /Promote or resolve one compatible Qualified Core object[\s\S]*startswith\("qualified-assignment-core-"\)[\s\S]*qualified-assignment-core-artifact\.mjs reuse[\s\S]*Multiple distinct compatible Qualified Core authorities are active[\s\S]*No prior compatible Qualified Core object is active/u,
   );
   assert.match(
     promotionWorkflow,
