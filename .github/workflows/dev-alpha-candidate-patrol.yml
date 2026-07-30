@@ -28,6 +28,11 @@ on:
         required: false
         type: boolean
         default: true
+      reactivation-authorized:
+        description: Explicitly authorize reactivation of a tombstoned exact source
+        required: false
+        type: boolean
+        default: false
 
 permissions:
   actions: read
@@ -74,9 +79,9 @@ jobs:
       pull-requests: write
     # The reusable workflow and its runtime are pinned to the same merged,
     # immutable Buildchain source.
-    uses: kungfu-systems/buildchain/.github/workflows/dev-alpha-candidate-patrol.yml@009c00d7c0145b5991f56aa97a98d5d1bbcc350f
+    uses: kungfu-systems/buildchain/.github/workflows/dev-alpha-candidate-patrol.yml@1222846e7a21c022260775ed021737010577237b
     with:
-      buildchain-ref: ${{ inputs.buildchain-ref || '009c00d7c0145b5991f56aa97a98d5d1bbcc350f' }}
+      buildchain-ref: ${{ inputs.buildchain-ref || '1222846e7a21c022260775ed021737010577237b' }}
       source-branch: ${{ needs.resolve-channels.outputs.source-branch }}
       target-branch: ${{ needs.resolve-channels.outputs.target-branch }}
       dev-workflow-path: .github/workflows/dev-verify-patrol.yml
@@ -85,5 +90,6 @@ jobs:
       pull-request-body-prefix-renderer: scripts/adr-release-gate.mjs
       settlement-authorized: ${{ github.event_name != 'workflow_dispatch' || inputs.create-pull-request }}
       dry-run: ${{ github.event_name == 'workflow_dispatch' && inputs.dry-run }}
+      reactivation-authorized: ${{ github.event_name == 'workflow_dispatch' && inputs.create-pull-request && inputs.reactivation-authorized }}
     secrets:
       promotion-token: ${{ secrets.KUNGFU_GITHUB_TOKEN }}

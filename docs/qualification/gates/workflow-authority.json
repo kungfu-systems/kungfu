@@ -459,16 +459,16 @@
     {
       "path": ".github/workflows/dev-alpha-candidate-patrol.yml",
       "authority": "qualification",
-      "definitionDigest": "sha256:43f7de2fb0199961b2242dc83bd50b09219df2e4f0ecc31268cf0eb669249bb8",
+      "definitionDigest": "sha256:3e1f841dcea6bbf21a63e15577fc768421f7908809f238462eedd2b33ce8d99c",
       "jobs": [
         {
           "id": "candidate",
           "authority": "qualification",
           "publication": "none",
           "receipt": "diagnostic",
-          "definitionDigest": "sha256:1979ee6fe060c2d74dbbb2c1358997a1b1d7a07cd1d074a10a2688ec1bd9b73e",
+          "definitionDigest": "sha256:a20b9e9c06995e3e4605287eb503ab3dbb0451f32dcc8360be0a5243a1be37e2",
           "credentials": {"githubToken":"write","oidc":false,"repositorySecrets":["KUNGFU_GITHUB_TOKEN"],"inheritedSecrets":false,"environment":null},
-          "externalActions": ["kungfu-systems/buildchain/.github/workflows/dev-alpha-candidate-patrol.yml@009c00d7c0145b5991f56aa97a98d5d1bbcc350f"],
+          "externalActions": ["kungfu-systems/buildchain/.github/workflows/dev-alpha-candidate-patrol.yml@1222846e7a21c022260775ed021737010577237b"],
           "steps": []
         },
         {

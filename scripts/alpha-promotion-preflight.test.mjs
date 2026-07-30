@@ -292,6 +292,10 @@ test('patrol, normal Alpha builds and sentinels keep one controller authority', 
     /group: dev-alpha-candidate-patrol-\$\{\{ github\.repository \}\}-\$\{\{ github\.event\.repository\.default_branch \}\}[\s\S]*cancel-in-progress: false/u,
   );
   assert.match(
+    patrol,
+    /reactivation-authorized:\s*\$\{\{\s*github\.event_name == 'workflow_dispatch' && inputs\.create-pull-request && inputs\.reactivation-authorized\s*\}\}/u,
+  );
+  assert.match(
     build,
     /format\('alpha-promotion-build-\{0\}', github\.event\.pull_request\.base\.ref \|\| github\.ref\)/u,
   );
