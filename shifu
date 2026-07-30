@@ -520,17 +520,17 @@ if [ "${SHIFU_CACHE_ACTIVE:-}" != "1" ] \
         exec ./shifu cache apply -- ./shifu "$@"
       fi
       ;;
-    cache | docs | proxy | config | clone | self-update | self-version | promote | builds | -h | --help | -v | -V | --version) ;;
+    cache | docs | qualified-core | proxy | config | clone | self-update | self-version | promote | builds | -h | --help | -v | -V | --version) ;;
     *) exec ./shifu cache apply -- ./shifu "$@" ;;
   esac
 fi
 
 # ── In-script bootstrap (requires fnm + uv installed once) ───────────────────
-# Rich subcommands (build | rebuild | cache | docs | gate | proxy | config) delegate to L2 node (not passed to pnpm). L2 is pure node builtins and version-agnostic:
+# Rich subcommands (build | rebuild | cache | docs | gate | proxy | config; plus qualified-core) delegate to L2 node (not passed to pnpm). L2 is pure node builtins and version-agnostic:
 # prefer fnm-managed node when available (the normal path once bootstrap is ready); fall back to system node when fnm is
 # not ready, so a developer can still use L2 config first (e.g. set a mirror to in turn help fnm); error only if neither exists.
 case "${1:-}" in
-  build | rebuild | cache | docs | gate | proxy | config)
+  build | rebuild | cache | docs | gate | qualified-core | proxy | config)
     if command -v fnm >/dev/null 2>&1; then
       fnm install >/dev/null 2>&1 || true
       exec fnm exec -- node ./shifu.mjs "$@"

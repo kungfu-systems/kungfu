@@ -36,12 +36,15 @@ const LOCKS = [
   'pnpm-lock.yaml',
 ];
 const SHIFU_CONTRACTS = [
+  'shifu',
+  'shifu.mjs',
   'docs/shifu/artifact-contract.json',
   'docs/shifu/cache-contract.json',
   'docs/shifu/schema/qualified-assignment-core-artifact-v1.schema.json',
   'docs/shifu/schema/qualified-assignment-core-qualification-v1.schema.json',
   'scripts/check-shifu-cache-contract.mjs',
   'framework/assignment-capture/qualified-assignment-core-consumer.mjs',
+  'framework/assignment-capture/qualified-assignment-core-observability.mjs',
 ];
 const BUILDCHAIN_CONTRACTS = [
   '.buildchain/buildchain.toml',
