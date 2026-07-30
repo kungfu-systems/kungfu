@@ -118,6 +118,25 @@ Git, or repository state.
 ./shifu test:work-history-selector
 ```
 
+Work Design policy replay is a fourth, non-authoritative offline projection
+over a caller-supplied exact qualified cohort. It compares immutable baseline
+and candidate policy versions across selection, advice, disposition, outcome,
+and coverage roots; reports classified drift and regression; and binds the
+result to the declared `as_of`, cohort root, and policy roots. One qualified
+sample is sufficient only for advisory replay. Default-policy promotion fails
+closed below 30 qualified samples or when cohort, evidence, drift, regression,
+or exact rollback checks fail.
+
+Replay reports, candidate policies, and promotion artifacts grant no
+Assignment, Work Control, repository, protected-branch, or active-default
+authority. Even an eligible artifact records `activated: false`; activation
+requires a separately authorized native decision outside this contract.
+
+```sh
+./shifu check:work-design-policy-replay
+./shifu test:work-design-policy-replay
+```
+
 Merge-safe composition is a third, separate rooted layer described by
 [KF-ADR-019f86da-4f90-7b77-a360-0725f23aad30](../../docs/adr/KF-ADR-019f86da-4f90-7b77-a360-0725f23aad30.md).
 It discovers the publication commit for every Cut changed between an exact
