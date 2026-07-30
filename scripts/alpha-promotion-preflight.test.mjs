@@ -135,6 +135,11 @@ test('macOS products use Buildchain signing through the formal environment', () 
     workflow,
     /credential-island-macos:[\s\S]*name: buildchain-artifact-signing/u,
   );
+  assert.doesNotMatch(
+    workflow,
+    /BUILDCHAIN_MACOS_EXPECTED_BUNDLE_ID/u,
+    'consumer workflows must derive application identity through Buildchain',
+  );
   assert.doesNotMatch(workflow, /name: alpha-macos-signing\s*$/mu);
   assert.match(
     config,

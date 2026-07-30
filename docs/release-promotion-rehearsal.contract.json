@@ -6,7 +6,7 @@
     "validation": ".github/workflows/buildchain-validate.yml"
   },
   "buildchain": {
-    "workflow_shell_sha": "2522e79e4c00233a5d15f887360547ed1034c39e",
+    "workflow_shell_sha": "ea0d13ac2ccfbb3dc3a11a94e8eb83ab04b936b8",
     "alpha": {
       "workflow_ref": "v3-alpha",
       "contract_lock": ".buildchain/alpha-contract-lock.json",
