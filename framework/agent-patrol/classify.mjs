@@ -21,7 +21,7 @@ const FAILURE_CATEGORIES = new Set([
   'model-tool-runtime',
   'runner-environment',
 ]);
-const BLOCKING_CATEGORIES = new Set(['runner-environment']);
+const BLOCKING_CATEGORIES = new Set(['runner-environment', 'warrant-scope']);
 
 function canonical(value) {
   if (Array.isArray(value)) return value.map(canonical);

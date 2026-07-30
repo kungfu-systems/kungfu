@@ -84,7 +84,7 @@ jobs:
   build:
     needs: preflight
     if: ${{ needs.preflight.result == 'success' && fromJSON(inputs.macos-overflow-request-json || '{}').mode != 'control' }}
-    uses: kungfu-systems/buildchain/.github/workflows/.build.yml@67bf0346474ec4d5ccba04747fe52df9019819a8 # protected artifact-signing authority
+    uses: kungfu-systems/buildchain/.github/workflows/.build.yml@bb55d20799d23c78b61a8a46765b2edd8c192aa9 # protected artifact-signing authority
     secrets:
       BUILDCHAIN_PROMOTION_TOKEN: ${{ secrets.KUNGFU_GITHUB_TOKEN }}
       BUILDCHAIN_ARTIFACT_RELAY_S3_ROLE_ARN: ${{ secrets.BUILDCHAIN_ARTIFACT_RELAY_S3_ROLE_ARN }}
@@ -579,7 +579,7 @@ jobs:
     runs-on: macos-15
     timeout-minutes: 90
     environment:
-      name: alpha-macos-signing-hk
+      name: buildchain-artifact-signing
     permissions:
       actions: read
       contents: read

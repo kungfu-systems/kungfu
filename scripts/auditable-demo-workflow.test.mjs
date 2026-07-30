@@ -167,8 +167,8 @@ test('every produced Linux artifact enters the required exact-output Gate', () =
   );
   assert.equal(
     build.uses,
-    'kungfu-systems/buildchain/.github/workflows/.build.yml@67bf0346474ec4d5ccba04747fe52df9019819a8',
-    'the build runtime must be the protected Buildchain authority with split signing transport',
+    'kungfu-systems/buildchain/.github/workflows/.build.yml@bb55d20799d23c78b61a8a46765b2edd8c192aa9',
+    'the build runtime must be the protected Buildchain authority with hosted signing finalization',
   );
   assert.equal(
     build.with['artifact-signing-request-upload-no-proxy'],

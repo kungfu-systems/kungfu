@@ -196,6 +196,78 @@ function treeRows(workspace) {
   return rows.sort((left, right) => left.path.localeCompare(right.path));
 }
 
+function lineCount(content) {
+  if (content.length === 0) return 0;
+  return content.toString('utf8').split('\n').length;
+}
+
+function symbols(content, relative) {
+  const text = content.toString('utf8');
+  const pattern = relative.endsWith('.py')
+    ? /^(?:async\s+)?(?:def|class)\s+([A-Za-z_][A-Za-z0-9_]*)/gmu
+    : /(?:^|\n)(?:export\s+)?(?:async\s+)?(?:function|class)\s+([A-Za-z_$][A-Za-z0-9_$]*)/gu;
+  return [...text.matchAll(pattern)].map((match) => match[1]).sort();
+}
+
+function metricRows(workspace) {
+  return treeRows(workspace).map((row) => {
+    const content = fs.readFileSync(path.join(workspace, row.path));
+    return {
+      ...row,
+      lines: lineCount(content),
+      symbolRoot: jsonRoot(symbols(content, row.path)),
+    };
+  });
+}
+
+function changeSignals(before, after, writablePaths) {
+  const beforeByPath = new Map(before.map((row) => [row.path, row]));
+  const afterByPath = new Map(after.map((row) => [row.path, row]));
+  const changedPaths = [
+    ...new Set([...beforeByPath.keys(), ...afterByPath.keys()]),
+  ]
+    .filter(
+      (relative) =>
+        beforeByPath.get(relative)?.root !== afterByPath.get(relative)?.root,
+    )
+    .sort();
+  let lineDeltaAbs = 0;
+  let byteDeltaAbs = 0;
+  for (const relative of changedPaths) {
+    const initial = beforeByPath.get(relative);
+    const current = afterByPath.get(relative);
+    lineDeltaAbs += Math.abs((current?.lines || 0) - (initial?.lines || 0));
+    byteDeltaAbs += Math.abs((current?.bytes || 0) - (initial?.bytes || 0));
+  }
+  const structuralRows = changedPaths.map((relative) => {
+    const initial = beforeByPath.get(relative);
+    const current = afterByPath.get(relative);
+    return {
+      pathRoot: jsonRoot(relative),
+      beforeBytes: initial?.bytes || 0,
+      beforeLines: initial?.lines || 0,
+      afterBytes: current?.bytes || 0,
+      afterLines: current?.lines || 0,
+    };
+  });
+  const symbolRows = changedPaths.map((relative) => ({
+    pathRoot: jsonRoot(relative),
+    beforeSymbolRoot: beforeByPath.get(relative)?.symbolRoot || null,
+    afterSymbolRoot: afterByPath.get(relative)?.symbolRoot || null,
+  }));
+  return {
+    changedPathCount: changedPaths.length,
+    changedFileCount: changedPaths.length,
+    lineDeltaAbs,
+    byteDeltaAbs,
+    expectedMutationSiteContact: changedPaths.some((relative) =>
+      writablePaths.includes(relative),
+    ),
+    structuralFingerprintRoot: jsonRoot(structuralRows),
+    symbolFingerprintRoot: jsonRoot(symbolRows),
+  };
+}
+
 export function runtimeProfile({
   id,
   mode,
@@ -382,6 +454,7 @@ function buildBaseReport(options, sourceHead, fixture) {
       publicClaim: true,
       modelRanking: true,
     },
+    changeSignals: null,
     failure: null,
   };
 }
@@ -479,15 +552,18 @@ export function runExperiment(options = {}) {
   const sourceHead = normalized.sourceHead || currentHead();
   const report = buildBaseReport(normalized, sourceHead, fixture);
   const started = process.hrtime.bigint();
+  let workspace = null;
+  let initialMetrics = null;
   try {
     if (!fs.existsSync(CONTRACT_PATH))
       throw new Error('agent repository work contract is missing');
     const contract = JSON.parse(fs.readFileSync(CONTRACT_PATH, 'utf8'));
-    const workspace = path.join(output, 'workspace');
+    workspace = path.join(output, 'workspace');
     const home = path.join(output, 'kf-home');
     const configHome = path.join(output, 'kf-config');
     const materialized = materializeFixture(workspace, fixture, sourceHead);
     const initialTree = materialized.initialTree;
+    initialMetrics = metricRows(workspace);
     report.fixture.fileCount = materialized.fileCount;
     report.fixture.lineCount = materialized.lineCount;
     report.fixture.sourceTreeRoot = materialized.sourceTreeRoot;
@@ -726,6 +802,11 @@ export function runExperiment(options = {}) {
       changedPaths: oracle.changedPaths,
       scopeViolations: oracle.scopeViolations,
     };
+    report.changeSignals = changeSignals(
+      initialMetrics,
+      metricRows(workspace),
+      fixture.warrants.agentB.writablePaths,
+    );
     report.dimensions = {
       execution: 'two-fresh-opencode-processes-completed',
       correctness: oracle.passed
@@ -765,6 +846,12 @@ export function runExperiment(options = {}) {
         (process.hrtime.bigint() - started) / 1_000_000n,
       ),
     };
+    if (workspace && initialMetrics && fs.existsSync(workspace))
+      report.changeSignals = changeSignals(
+        initialMetrics,
+        metricRows(workspace),
+        fixture.warrants.agentB.writablePaths,
+      );
   }
   writeJson(reportPath, report);
   return { output, reportPath, report };

@@ -541,7 +541,13 @@ function createRuntime(): Runtime {
         return result.stdout;
       },
     });
-    const agentSession = createAgentSessionProxy(cliIpc);
+    // Installer qualification is intentionally one-shot. Do not expose the
+    // durable Agent Session capability there: its worker outlives Electron and
+    // would keep the temporary installation active during the uninstall gate.
+    const agentSession =
+      env.KF_QUALIFICATION_MODE === '1'
+        ? null
+        : createAgentSessionProxy(cliIpc);
     const workspace = openWorkspaceGuidance(cliOptions);
     const remoteWork = openRemoteWork({
       binding,
