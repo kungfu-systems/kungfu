@@ -9,6 +9,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
+import { qualifiedCorePlatformMatrix } from '../framework/assignment-capture/qualified-assignment-core-platform-matrix.mjs';
 import { publicUvLockViolations } from './shifu-uv-cache-adapter.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -98,6 +99,8 @@ function qualifiedArtifactPaths(root, cacheContract) {
       root,
       qualified.qualificationReceiptSchema,
     ),
+    platformMatrixPath: path.join(root, qualified.platformMatrix),
+    platformMatrixSchemaPath: path.join(root, qualified.platformMatrixSchema),
     legacyManifestSchemaPath: path.join(
       root,
       'docs/shifu/schema/qualified-assignment-core-artifact-v1.schema.json',
@@ -905,6 +908,8 @@ export async function checkShifuCacheContract(root = ROOT) {
     qualified.artifactContractPath,
     qualified.manifestSchemaPath,
     qualified.qualificationSchemaPath,
+    qualified.platformMatrixPath,
+    qualified.platformMatrixSchemaPath,
     qualified.decisionPath,
   ]) {
     assert.ok(
@@ -921,6 +926,10 @@ export async function checkShifuCacheContract(root = ROOT) {
   const qualifiedQualificationSchema = readJson(
     qualified.qualificationSchemaPath,
   );
+  const qualifiedPlatformMatrixSchema = readJson(
+    qualified.platformMatrixSchemaPath,
+  );
+  const qualifiedPlatformMatrix = qualifiedCorePlatformMatrix(root);
   assert.equal(profileSchema.$id, contract.schemaIds.profile);
   assert.equal(resolutionSchema.$id, contract.schemaIds.resolution);
   assert.equal(diagnosticSchema.$id, contract.schemaIds.diagnostic);
@@ -932,6 +941,10 @@ export async function checkShifuCacheContract(root = ROOT) {
   assert.equal(
     qualifiedQualificationSchema.$id,
     qualified.qualified.schemaIds.qualificationReceipt,
+  );
+  assert.equal(
+    qualifiedPlatformMatrixSchema.$id,
+    qualified.qualified.schemaIds.platformMatrix,
   );
 
   const dispatchMarkers = [
@@ -967,6 +980,11 @@ export async function checkShifuCacheContract(root = ROOT) {
     const validateResolution = ajv.compile(resolutionSchema);
     ajv.compile(qualifiedManifestSchema);
     ajv.compile(qualifiedQualificationSchema);
+    validateOrThrow(
+      ajv.compile(qualifiedPlatformMatrixSchema),
+      qualifiedPlatformMatrix,
+      'qualified Assignment Core platform matrix',
+    );
     for (const name of [
       'development.cache-profile.json',
       'self-hosted-runner.cache-profile.json',
@@ -1049,6 +1067,8 @@ export async function checkShifuCacheContract(root = ROOT) {
     artifactContract: rel(qualified.artifactContractPath),
     qualifiedArtifactSchema: rel(qualified.manifestSchemaPath),
     qualifiedQualificationSchema: rel(qualified.qualificationSchemaPath),
+    qualifiedPlatformMatrix: rel(qualified.platformMatrixPath),
+    qualifiedPlatformMatrixSchema: rel(qualified.platformMatrixSchemaPath),
     validFixtures,
     rejectedFixtures,
   };

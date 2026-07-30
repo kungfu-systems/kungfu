@@ -9,9 +9,12 @@
     "decision": "docs/adr/SHIFU-ADR-019fab1a-2853-737e-8c67-a9b1aa9035aa.md",
     "manifestSchema": "docs/shifu/schema/qualified-assignment-core-artifact-v2.schema.json",
     "qualificationReceiptSchema": "docs/shifu/schema/qualified-assignment-core-qualification-v2.schema.json",
+    "platformMatrix": "docs/shifu/qualified-assignment-core-platform-matrix.json",
+    "platformMatrixSchema": "docs/shifu/schema/qualified-assignment-core-platform-matrix-v1.schema.json",
     "schemaIds": {
       "manifest": "https://libkungfu.dev/schemas/shifu/qualified-assignment-core-artifact-v2.schema.json",
-      "qualificationReceipt": "https://libkungfu.dev/schemas/shifu/qualified-assignment-core-qualification-v2.schema.json"
+      "qualificationReceipt": "https://libkungfu.dev/schemas/shifu/qualified-assignment-core-qualification-v2.schema.json",
+      "platformMatrix": "https://libkungfu.dev/schemas/shifu/qualified-assignment-core-platform-matrix-v1.schema.json"
     },
     "rootPreimages": {
       "canonicalization": "UTF-8 JSON, recursively lexicographic object keys, original array order, JSON.stringify scalar encoding, and no insignificant whitespace",
@@ -39,12 +42,7 @@
       "staging": "outside-target",
       "paths": "bounded-relative-posix-only",
       "entryTypes": ["regular-file", "safe-relative-symlink"],
-      "macosArm64Cp313RuntimeClosure": [
-        "kungfubuildinfo.json",
-        "one pykungfu.cpython-313-darwin.so",
-        "one versioned libnode dylib",
-        "libkungfu_runtime.dylib"
-      ],
+      "runtimeClosures": "exactly the row-specific entries and executable metadata declared by platformMatrix",
       "digestAndSizeVerification": "required-before-publication",
       "cleanCheckout": "required",
       "publication": "atomic-replace",
@@ -55,7 +53,21 @@
       "qualification": "immutable-receipt",
       "promotion": "single-active-protected-authority",
       "protectedRefPolicy": "github-default-branch",
-      "transport": "replaceable-non-authoritative"
+      "transport": "replaceable-non-authoritative",
+      "platformRow": "exact operating-system, architecture, CPython ABI, runner, payload, qualification, and promotion identity",
+      "crossRowSubstitution": "forbidden"
+    },
+    "matrix": {
+      "initialRows": [
+        "darwin-arm64-cp313",
+        "darwin-x86_64-cp313",
+        "linux-x86_64-cp313",
+        "windows-x86_64-cp313"
+      ],
+      "artifactNaming": "exact source commit plus platform row",
+      "missingOrUnavailableRow": "unqualified",
+      "promotionIsolation": "one active protected authority per row",
+      "legacySourceOnlyArtifactName": "read-only Darwin ARM64 migration transport; never cross-row authority"
     }
   },
   "consumers": [

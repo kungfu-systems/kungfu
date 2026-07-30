@@ -1066,7 +1066,7 @@ jobs:
           retention-days: 14
 
   qualified_core_candidate:
-    name: Qualified Core candidate / macOS ARM64
+    name: Qualified Core candidate / ${{ matrix.row }}
     needs:
       - candidate_preflight
       - affected_native
@@ -1079,7 +1079,35 @@ jobs:
         needs.affected_native.result == 'success'
       }}
     continue-on-error: true
-    runs-on: macos-15
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - row: darwin-arm64-cp313
+            runner: macos-15
+            runner_os: macOS
+            runner_arch: ARM64
+            node_platform: darwin
+            node_arch: arm64
+          - row: darwin-x86_64-cp313
+            runner: macos-15-intel
+            runner_os: macOS
+            runner_arch: X64
+            node_platform: darwin
+            node_arch: x64
+          - row: linux-x86_64-cp313
+            runner: ubuntu-24.04
+            runner_os: Linux
+            runner_arch: X64
+            node_platform: linux
+            node_arch: x64
+          - row: windows-x86_64-cp313
+            runner: windows-2022
+            runner_os: Windows
+            runner_arch: X64
+            node_platform: win32
+            node_arch: x64
+    runs-on: ${{ matrix.runner }}
     timeout-minutes: 90
     permissions:
       actions: read
@@ -1102,37 +1130,18 @@ jobs:
           name: dev-candidate-plan-${{ github.sha }}
           path: product/qualification/qualified-core/input
       - name: Build and seal minimum relocatable Assignment Core candidate
-        id: candidate
-        shell: bash
-        run: |
-          set -euo pipefail
-          test "$RUNNER_OS" = macOS
-          test "$RUNNER_ARCH" = ARM64
-          test "$(uname -m)" = arm64
-          ./shifu install --frozen-lockfile
-          ./shifu rebuild:core
-          # required merge-group gate has already admitted this exact source.
-          # shifu-entry-contract: allow sealing immutable post-build Qualified Core bytes
-          node framework/release/qualified-assignment-core-artifact.mjs seal \
-            --repository-root . \
-            --payload-root framework/core/dist/kungfu \
-            --plan product/qualification/qualified-core/input/plan.json \
-            --output-dir product/qualification/qualified-core/candidate \
-            --repository "$GITHUB_REPOSITORY" \
-            --run-id "$GITHUB_RUN_ID" \
-            --event merge_group \
-            --workflow-path .github/workflows/affected-native-pr.yml \
-            --runner-environment github-hosted \
-            --runner-os "$RUNNER_OS" \
-            --runner-arch "$RUNNER_ARCH" \
-            --runner-image-os "${ImageOS:-}" \
-            --runner-image-version "${ImageVersion:-}" \
-            --profile "$KUNGFU_BUILD_PROFILE" \
-            --github-output "$GITHUB_OUTPUT"
+        uses: ./.github/actions/qualified-core-candidate-build
+        with:
+          row: ${{ matrix.row }}
+          runner-label: ${{ matrix.runner }}
+          runner-os: ${{ matrix.runner_os }}
+          runner-arch: ${{ matrix.runner_arch }}
+          node-platform: ${{ matrix.node_platform }}
+          node-arch: ${{ matrix.node_arch }}
       - name: Upload non-authoritative candidate transport
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
-          name: qualified-assignment-core-candidate-${{ github.sha }}
+          name: qualified-assignment-core-candidate-${{ github.sha }}-${{ matrix.row }}
           path: product/qualification/qualified-core/candidate
           if-no-files-found: error
           retention-days: 14

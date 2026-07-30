@@ -21,6 +21,12 @@ import {
   summarizeQualifiedCoreUsage,
 } from '../framework/assignment-capture/qualified-assignment-core-observability.mjs';
 import {
+  REQUIRED_ROWS,
+  qualifiedCoreArtifactName,
+  qualifiedCorePlatformMatrix,
+  qualifiedCorePlatformRow,
+} from '../framework/assignment-capture/qualified-assignment-core-platform-matrix.mjs';
+import {
   promoteQualifiedCoreCandidate,
   qualifiedCoreCheckoutRoots,
   reuseQualifiedCoreBundle,
@@ -133,36 +139,81 @@ function deliveryBinding() {
   });
 }
 
-function writeBuild(payloadRoot, commit = QUEUE_HEAD) {
+const ROW_FIXTURES = {
+  'darwin-arm64-cp313': {
+    osVersion: 'macOS-26.5.2-arm64-arm-64bit-Mach-O',
+    files: [
+      ['pykungfu.cpython-313-darwin.so', '0755'],
+      ['libnode.127.dylib', '0755'],
+      ['libkungfu_runtime.dylib', '0755'],
+    ],
+  },
+  'darwin-x86_64-cp313': {
+    osVersion: 'macOS-15.7.2-x86_64-i386-64bit',
+    files: [
+      ['pykungfu.cpython-313-darwin.so', '0755'],
+      ['libnode.127.dylib', '0755'],
+      ['libkungfu_runtime.dylib', '0755'],
+    ],
+  },
+  'linux-x86_64-cp313': {
+    osVersion: 'Linux-6.11.0-x86_64-with-glibc2.39',
+    files: [
+      ['pykungfu.cpython-313-x86_64-linux-gnu.so', '0755'],
+      ['libnode.so.127', '0755'],
+      ['libkungfu_runtime.so', '0755'],
+    ],
+  },
+  'windows-x86_64-cp313': {
+    osVersion: 'Windows-Server-2022-10.0.20348-SP0-AMD64',
+    files: [
+      ['pykungfu.cp313-win_amd64.pyd', '0644'],
+      ['libnode.dll', '0644'],
+    ],
+  },
+};
+
+function writeBuild(
+  payloadRoot,
+  commit = QUEUE_HEAD,
+  rowId = 'darwin-arm64-cp313',
+) {
+  const fixture = ROW_FIXTURES[rowId];
+  assert.ok(fixture, `missing row fixture ${rowId}`);
   fs.mkdirSync(payloadRoot, { recursive: true });
   fs.writeFileSync(
     path.join(payloadRoot, 'kungfubuildinfo.json'),
     `${JSON.stringify({
       version: '4.0.0-alpha.1',
       pythonVersion: '3.13.14',
-      build: { osVersion: 'macOS-26.5.2-arm64-arm-64bit-Mach-O' },
+      build: { osVersion: fixture.osVersion },
       git: { revision: commit, pristine: true },
     })}\n`,
   );
-  fs.writeFileSync(
-    path.join(payloadRoot, 'pykungfu.cpython-313-darwin.so'),
-    'real native bytes',
-    { mode: 0o755 },
-  );
-  fs.writeFileSync(path.join(payloadRoot, 'libnode.127.dylib'), 'node bytes', {
-    mode: 0o755,
-  });
-  fs.writeFileSync(
-    path.join(payloadRoot, 'libkungfu_runtime.dylib'),
-    'runtime bytes',
-    { mode: 0o755 },
-  );
+  for (const [name, mode] of fixture.files) {
+    fs.writeFileSync(path.join(payloadRoot, name), `${name} bytes`, {
+      mode: mode === '0755' ? 0o755 : 0o644,
+    });
+  }
 }
 
-function sealFixture(temporary, commit = QUEUE_HEAD) {
+function sealFixture(
+  temporary,
+  commit = QUEUE_HEAD,
+  rowId = 'darwin-arm64-cp313',
+) {
   const payloadRoot = path.join(temporary, 'dist');
   const candidateRoot = path.join(temporary, 'candidate');
-  writeBuild(payloadRoot, commit);
+  const row = qualifiedCorePlatformRow(rowId, ROOT);
+  const producerRunner = {
+    label: row.runner.label,
+    environment: 'github-hosted',
+    os: row.runner.os,
+    arch: row.runner.arch,
+    imageOS: row.runner.label.replaceAll('-', ''),
+    imageVersion: '20260729.1',
+  };
+  writeBuild(payloadRoot, commit, rowId);
   fs.writeFileSync(path.join(payloadRoot, 'unrelated.dylib'), 'not authorized');
   const candidate = sealQualifiedCoreCandidate({
     repositoryRoot: ROOT,
@@ -176,17 +227,17 @@ function sealFixture(temporary, commit = QUEUE_HEAD) {
       runId: 42,
       event: 'merge_group',
       workflowPath: '.github/workflows/affected-native-pr.yml',
-      runner: {
-        environment: 'github-hosted',
-        os: 'macOS',
-        arch: 'ARM64',
-        imageOS: 'macos15',
-        imageVersion: '20260729.1',
-      },
+      runner: producerRunner,
       createdAt: '2026-07-29T00:00:00Z',
     },
-    toolchain: { compiler: 'Apple clang 17', cmake: '4.1', ninja: '1.13' },
+    toolchain: {
+      compiler: 'fixture compiler 17',
+      cmake: '4.1',
+      ninja: '1.13',
+      runner: producerRunner,
+    },
     profile: 'full',
+    platformRowId: rowId,
   });
   return { payloadRoot, candidateRoot, candidate };
 }
@@ -246,6 +297,10 @@ function compatibilityCheckoutFixture(temporary) {
   const repositoryRoot = path.join(temporary, 'compatibility-checkout');
   fs.mkdirSync(repositoryRoot, { recursive: true });
   const pathspecs = [
+    '.github/actions/qualified-core-candidate-build/action.yml',
+    '.github/actions/upload-qualified-core-matrix/action.yml',
+    '.github/workflows/affected-native-cache-promote.yml',
+    '.github/workflows/affected-native-pr.yml',
     'framework/core',
     '.buildchain/contract-lock.json',
     '.buildchain/buildchain.toml',
@@ -258,10 +313,13 @@ function compatibilityCheckoutFixture(temporary) {
     'docs/shifu/schema/qualified-assignment-core-qualification-v1.schema.json',
     'docs/shifu/schema/qualified-assignment-core-artifact-v2.schema.json',
     'docs/shifu/schema/qualified-assignment-core-qualification-v2.schema.json',
+    'docs/shifu/schema/qualified-assignment-core-platform-matrix-v1.schema.json',
+    'docs/shifu/qualified-assignment-core-platform-matrix.json',
     'scripts/check-shifu-cache-contract.mjs',
     'framework/assignment-capture/qualified-assignment-core-consumer.mjs',
     'framework/assignment-capture/qualified-assignment-core-observability.mjs',
     'framework/release/qualified-assignment-core-artifact.mjs',
+    'framework/assignment-capture/qualified-assignment-core-platform-matrix.mjs',
   ];
   const listed = spawnSync('git', ['ls-files', '-z', '--', ...pathspecs], {
     cwd: ROOT,
@@ -295,6 +353,70 @@ function compatibilityCheckoutFixture(temporary) {
   }
   return repositoryRoot;
 }
+
+test('platform matrix binds exactly four collision-free producer rows', (t) => {
+  const matrix = qualifiedCorePlatformMatrix(ROOT);
+  assert.deepEqual(
+    matrix.rows.map(({ id }) => id),
+    [
+      'darwin-arm64-cp313',
+      'darwin-x86_64-cp313',
+      'linux-x86_64-cp313',
+      'windows-x86_64-cp313',
+    ],
+  );
+  assert.deepEqual(matrix.shared.toolchainFacts, [
+    'compiler',
+    'cmake',
+    'ninja',
+    'runner',
+  ]);
+  assert.equal(matrix.shared.qualificationPolicy.missingRow, 'unqualified');
+  assert.equal(matrix.shared.qualificationPolicy.substitution, 'forbidden');
+  const candidateNames = matrix.rows.map(({ id }) =>
+    qualifiedCoreArtifactName('candidate', QUEUE_HEAD, id, ROOT),
+  );
+  const promotedNames = matrix.rows.map(({ id }) =>
+    qualifiedCoreArtifactName('promoted', QUEUE_HEAD, id, ROOT),
+  );
+  assert.equal(new Set(candidateNames).size, 4);
+  assert.equal(new Set(promotedNames).size, 4);
+  assert.equal(
+    qualifiedCoreArtifactName('matrixIndex', QUEUE_HEAD, '', ROOT),
+    `qualified-assignment-core-matrix-${QUEUE_HEAD}`,
+  );
+
+  const temporary = fs.mkdtempSync(
+    path.join(os.tmpdir(), 'qualified-core-platform-matrix-'),
+  );
+  t.after(() => fs.rmSync(temporary, { recursive: true, force: true }));
+  for (const row of matrix.rows) {
+    const { candidateRoot, candidate } = sealFixture(
+      path.join(temporary, row.id),
+      QUEUE_HEAD,
+      row.id,
+    );
+    assert.equal(candidate.build.operatingSystem, row.operatingSystem);
+    assert.equal(candidate.build.architecture, row.architecture);
+    assert.equal(candidate.build.pythonAbi, row.pythonAbi);
+    assert.equal(candidate.producer.runner.label, row.runner.label);
+    assert.deepEqual(
+      candidate.payload.entries.map(({ path: entryPath }) => entryPath),
+      ROW_FIXTURES[row.id].files
+        .map(([name]) => name)
+        .concat('kungfubuildinfo.json')
+        .sort(),
+    );
+    validateQualifiedCoreCandidate(candidate, candidateRoot, {
+      shared: true,
+      repository: 'kungfu-systems/kungfu',
+      commit: QUEUE_HEAD,
+      runId: 42,
+      event: 'merge_group',
+      repositoryRoot: ROOT,
+    });
+  }
+});
 
 test('producer seals minimum macOS ARM64 bytes and protected promotion', async (t) => {
   const temporary = fs.mkdtempSync(
@@ -498,7 +620,7 @@ test('producer rejects wrong runner, stale source, unsafe links, and missing roo
   wrongRunner.candidateRoot = digest(wrongBody);
   assert.throws(
     () => validateQualifiedCoreCandidate(wrongRunner, candidateRoot),
-    /macOS ARM64 runner/u,
+    /platform row darwin-arm64-cp313/u,
   );
   assert.throws(
     () =>
@@ -525,7 +647,7 @@ test('producer rejects wrong runner, stale source, unsafe links, and missing roo
   duplicatePath.candidateRoot = digest(duplicateBody);
   assert.throws(
     () => validateQualifiedCoreCandidate(duplicatePath, candidateRoot),
-    /path set is unauthorized/u,
+    /path set is unauthorized|exactly one python-binding/u,
   );
 
   const substituted = path.join(
@@ -573,15 +695,30 @@ test('producer rejects wrong runner, stale source, unsafe links, and missing roo
           event: 'merge_group',
           workflowPath: '.github/workflows/affected-native-pr.yml',
           runner: {
+            label: 'macos-15',
             environment: 'github-hosted',
             os: 'macOS',
             arch: 'ARM64',
+            imageOS: 'macos15',
+            imageVersion: '20260729.1',
           },
           createdAt: '2026-07-29T00:00:00Z',
         },
-        toolchain: { compiler: 'Apple clang' },
+        toolchain: {
+          compiler: 'Apple clang',
+          cmake: '4.1',
+          ninja: '1.13',
+          runner: {
+            label: 'macos-15',
+            environment: 'github-hosted',
+            os: 'macOS',
+            arch: 'ARM64',
+            imageOS: 'macos15',
+            imageVersion: '20260729.1',
+          },
+        },
       }),
-    /symlink is unsafe/u,
+    /symlink is unsafe|executable metadata drift/u,
   );
 });
 
@@ -1302,7 +1439,7 @@ test('consumer treats office HTTP as replaceable transport after GitHub authorit
           artifacts: [
             {
               id: artifactId,
-              name: `qualified-assignment-core-${checkout.commit}`,
+              name: `qualified-assignment-core-${checkout.commit}-darwin-arm64-cp313`,
               expired: false,
               size_in_bytes: artifactBytes.byteLength,
               workflow_run: { id: runId },
@@ -1368,7 +1505,7 @@ test('consumer removes completed transport state when archive extraction rejects
             artifacts: [
               {
                 id: artifactId,
-                name: `qualified-assignment-core-${checkout.commit}`,
+                name: `qualified-assignment-core-${checkout.commit}-darwin-arm64-cp313`,
                 expired: false,
                 size_in_bytes: 7,
                 workflow_run: { id: 43 },
@@ -1492,7 +1629,7 @@ test('consumer records a trusted remote hit with bounded artifact identity', asy
       transport: {
         provider: 'github-workflow-artifact',
         artifactId: 42,
-        artifactName: `qualified-assignment-core-${QUEUE_HEAD}`,
+        artifactName: `qualified-assignment-core-${QUEUE_HEAD}-darwin-arm64-cp313`,
         runId: 43,
         workflowPath: '.github/workflows/affected-native-cache-promote.yml',
         event: 'push',
@@ -1693,13 +1830,24 @@ test('workflows keep candidate and promotion outside untrusted PR authority', ()
   );
   assert.match(
     candidateJob,
-    /always\(\)[\s\S]*github\.event_name == 'merge_group'[\s\S]*native-required == 'true'[\s\S]*needs\.affected_native\.result == 'success'[\s\S]*continue-on-error: true[\s\S]*runs-on: macos-15/u,
+    /always\(\)[\s\S]*github\.event_name == 'merge_group'[\s\S]*native-required == 'true'[\s\S]*needs\.affected_native\.result == 'success'[\s\S]*continue-on-error: true[\s\S]*fail-fast: false[\s\S]*darwin-arm64-cp313[\s\S]*runner: macos-15[\s\S]*darwin-x86_64-cp313[\s\S]*runner: macos-15-intel[\s\S]*linux-x86_64-cp313[\s\S]*runner: ubuntu-24\.04[\s\S]*windows-x86_64-cp313[\s\S]*runner: windows-2022[\s\S]*runs-on: \$\{\{ matrix\.runner \}\}/u,
   );
   assert.match(
     candidateJob,
-    /KUNGFU_BUILDCHAIN_SOURCE_BUILD: "1"[\s\S]*Build and seal minimum relocatable Assignment Core candidate[\s\S]*RUNNER_OS[\s\S]*RUNNER_ARCH[\s\S]*rebuild:core[\s\S]*framework\/release\/qualified-assignment-core-artifact\.mjs seal/u,
+    /KUNGFU_BUILDCHAIN_SOURCE_BUILD: "1"[\s\S]*Build and seal minimum relocatable Assignment Core candidate[\s\S]*uses: \.\/\.github\/actions\/qualified-core-candidate-build[\s\S]*row: \$\{\{ matrix\.row \}\}[\s\S]*runner-label: \$\{\{ matrix\.runner \}\}[\s\S]*qualified-assignment-core-candidate-\$\{\{ github\.sha \}\}-\$\{\{ matrix\.row \}\}/u,
   );
   assert.doesNotMatch(candidateJob, /pull_request/);
+  const candidateAction = fs.readFileSync(
+    path.join(
+      ROOT,
+      '.github/actions/qualified-core-candidate-build/action.yml',
+    ),
+    'utf8',
+  );
+  assert.match(
+    candidateAction,
+    /runner\.os != 'Windows'[\s\S]*RUNNER_OS[\s\S]*RUNNER_ARCH[\s\S]*process\.platform[\s\S]*process\.arch[\s\S]*\.\/shifu rebuild:core[\s\S]*qualified-assignment-core-artifact\.mjs seal[\s\S]*--platform-row "\$\{\{ inputs\.row \}\}"[\s\S]*runner\.os == 'Windows'[\s\S]*shifu\.cmd rebuild:core[\s\S]*qualified-assignment-core-artifact\.mjs seal/u,
+  );
 
   const promotionWorkflow = fs.readFileSync(
     path.join(ROOT, '.github/workflows/affected-native-cache-promote.yml'),
@@ -1716,10 +1864,27 @@ test('workflows keep candidate and promotion outside untrusted PR authority', ()
   );
   assert.match(
     promotionWorkflow,
-    /Promote or resolve one compatible Qualified Core object[\s\S]*startswith\("qualified-assignment-core-"\)[\s\S]*qualified-assignment-core-artifact\.mjs reuse[\s\S]*Multiple distinct compatible Qualified Core authorities are active[\s\S]*No prior compatible Qualified Core object is active/u,
+    /Promote or resolve the exact Qualified Core platform matrix[\s\S]*darwin-arm64-cp313[\s\S]*darwin-x86_64-cp313[\s\S]*linux-x86_64-cp313[\s\S]*windows-x86_64-cp313[\s\S]*qualified-assignment-core-candidate-\$\{TARGET_SHA\}-\$\{row\}[\s\S]*qualified-assignment-core-artifact\.mjs reuse[\s\S]*Multiple distinct compatible Qualified Core authorities are active for \$\{row\}[\s\S]*status:"unqualified"[\s\S]*reason:"no-exact-or-compatible-authority"[\s\S]*uses: \.\/\.github\/actions\/upload-qualified-core-matrix/u,
   );
   assert.match(
     promotionWorkflow,
-    /run_status[\s\S]*length <= 1 then \\"incomplete\\"[\s\S]*pending_run=true[\s\S]*Completed producer run[\s\S]*observed_run[\s\S]*pending_run/u,
+    /run_status[\s\S]*delivery_count[\s\S]*pending_run=true[\s\S]*Completed producer run[\s\S]*every matrix row remains unqualified[\s\S]*observed_run[\s\S]*pending_run/u,
+  );
+  const matrixUpload = fs.readFileSync(
+    path.join(ROOT, '.github/actions/upload-qualified-core-matrix/action.yml'),
+    'utf8',
+  );
+  for (const row of REQUIRED_ROWS) {
+    assert.match(
+      matrixUpload,
+      new RegExp(
+        `qualified-assignment-core-\\$\\{\\{ inputs\\.target-sha \\}\\}-${row}`,
+        'u',
+      ),
+    );
+  }
+  assert.match(
+    matrixUpload,
+    /qualified-assignment-core-matrix-\$\{\{ inputs\.target-sha \}\}[\s\S]*actions\/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02/u,
   );
 });

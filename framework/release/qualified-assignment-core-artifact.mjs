@@ -14,6 +14,11 @@ import {
   qualifiedAssignmentCoreRoot,
   verifyQualifiedAssignmentCoreArtifact,
 } from '../../scripts/check-shifu-cache-contract.mjs';
+import {
+  qualifiedCorePlatformMatrix,
+  qualifiedCorePlatformRow,
+  qualifiedCorePlatformRowForIdentity,
+} from '../assignment-capture/qualified-assignment-core-platform-matrix.mjs';
 import { requireSha } from './affected-native-artifact-lookup.mjs';
 
 export const QUALIFIED_CORE_CANDIDATE_SCHEMA =
@@ -34,12 +39,7 @@ const ROOT = path.resolve(
   '..',
   '..',
 );
-const LOCKS = [
-  '.buildchain/contract-lock.json',
-  'framework/core/conanfile.py',
-  'framework/core/uv.lock',
-  'pnpm-lock.yaml',
-];
+const LOCKS = qualifiedCorePlatformMatrix(ROOT).shared.dependencyLocks;
 const SHIFU_CONTRACTS = [
   'shifu',
   'shifu.mjs',
@@ -49,16 +49,26 @@ const SHIFU_CONTRACTS = [
   'docs/shifu/schema/qualified-assignment-core-qualification-v1.schema.json',
   'docs/shifu/schema/qualified-assignment-core-artifact-v2.schema.json',
   'docs/shifu/schema/qualified-assignment-core-qualification-v2.schema.json',
+  'docs/shifu/schema/qualified-assignment-core-platform-matrix-v1.schema.json',
+  'docs/shifu/qualified-assignment-core-platform-matrix.json',
   'scripts/check-shifu-cache-contract.mjs',
   'framework/assignment-capture/qualified-assignment-core-consumer.mjs',
   'framework/assignment-capture/qualified-assignment-core-observability.mjs',
+  'framework/assignment-capture/qualified-assignment-core-platform-matrix.mjs',
 ];
 const COMPATIBILITY_POLICY = [
+  '.github/actions/qualified-core-candidate-build/action.yml',
+  '.github/actions/upload-qualified-core-matrix/action.yml',
+  '.github/workflows/affected-native-cache-promote.yml',
+  '.github/workflows/affected-native-pr.yml',
   'docs/shifu/artifact-contract.json',
   'docs/shifu/schema/qualified-assignment-core-artifact-v2.schema.json',
   'docs/shifu/schema/qualified-assignment-core-qualification-v2.schema.json',
+  'docs/shifu/schema/qualified-assignment-core-platform-matrix-v1.schema.json',
+  'docs/shifu/qualified-assignment-core-platform-matrix.json',
   'scripts/check-shifu-cache-contract.mjs',
   'framework/release/qualified-assignment-core-artifact.mjs',
+  'framework/assignment-capture/qualified-assignment-core-platform-matrix.mjs',
   'framework/assignment-capture/qualified-assignment-core-consumer.mjs',
 ];
 const BUILDCHAIN_CONTRACTS = [
@@ -274,37 +284,38 @@ export function qualifiedCoreCheckoutRoots(repositoryRoot, candidate) {
   };
 }
 
-function payloadNames(payloadRoot) {
-  const names = fs.readdirSync(payloadRoot).filter((name) => {
-    return (
-      name === 'kungfubuildinfo.json' ||
-      name === 'libkungfu_runtime.dylib' ||
-      /^libnode\.[0-9]+\.dylib$/u.test(name) ||
-      /^pykungfu(?:[._-][A-Za-z0-9._-]+)?\.so$/u.test(name)
-    );
-  });
-  names.sort();
-  const pykungfu = names.filter((name) =>
-    /^pykungfu(?:[._-][A-Za-z0-9._-]+)?\.so$/u.test(name),
-  );
-  const libnode = names.filter((name) =>
-    /^libnode\.[0-9]+\.dylib$/u.test(name),
-  );
-  if (
-    !names.includes('kungfubuildinfo.json') ||
-    !names.includes('libkungfu_runtime.dylib') ||
-    pykungfu.length !== 1 ||
-    libnode.length !== 1 ||
-    names.length !== 4
-  ) {
+function payloadRules(row, names) {
+  const matches = new Map();
+  for (const rule of row.payload.entries) {
+    const pattern = new RegExp(rule.pathPattern, 'u');
+    const exact = names.filter((name) => pattern.test(name));
+    if (exact.length !== 1 || matches.has(exact[0])) {
+      throw new Error(
+        `qualified Core ${row.id} runtime payload must contain exactly one ${rule.role}`,
+      );
+    }
+    matches.set(exact[0], rule);
+  }
+  if (matches.size !== names.length) {
     throw new Error(
-      'qualified Core macOS runtime payload must contain build metadata, one pykungfu binding, one versioned libnode, and libkungfu_runtime',
+      `qualified Core ${row.id} runtime payload contains an unauthorized path`,
     );
   }
+  return matches;
+}
+
+function payloadNames(payloadRoot, row) {
+  const allNames = fs.readdirSync(payloadRoot).sort();
+  const names = allNames.filter((name) =>
+    row.payload.entries.some((rule) =>
+      new RegExp(rule.pathPattern, 'u').test(name),
+    ),
+  );
+  payloadRules(row, names);
   return names;
 }
 
-function payloadEntry(payloadRoot, name) {
+function payloadEntry(payloadRoot, name, rule) {
   if (
     path.posix.normalize(name) !== name ||
     path.isAbsolute(name) ||
@@ -317,6 +328,11 @@ function payloadEntry(payloadRoot, name) {
   const source = path.join(payloadRoot, name);
   const stat = fs.lstatSync(source);
   if (stat.isSymbolicLink()) {
+    if (rule.type !== 'symlink' || rule.mode !== '0777') {
+      throw new Error(
+        `qualified Core payload executable metadata drift: ${name}`,
+      );
+    }
     const linkTarget = fs.readlinkSync(source);
     if (
       path.posix.isAbsolute(linkTarget) ||
@@ -342,7 +358,7 @@ function payloadEntry(payloadRoot, name) {
     throw new Error(`qualified Core payload entry is not a file: ${name}`);
   }
   const bytes = fs.readFileSync(source);
-  return {
+  const entry = {
     path: name,
     type: 'regular-file',
     sizeBytes: bytes.byteLength,
@@ -350,6 +366,12 @@ function payloadEntry(payloadRoot, name) {
     mode: stat.mode & 0o111 ? '0755' : '0644',
     linkTarget: null,
   };
+  if (entry.type !== rule.type || entry.mode !== rule.mode) {
+    throw new Error(
+      `qualified Core payload executable metadata drift: ${name}`,
+    );
+  }
+  return entry;
 }
 
 function readPayloads(bundleRoot, entries) {
@@ -395,13 +417,16 @@ function pythonAbi(buildInfo) {
   return `cp${match[1]}${match[2]}`;
 }
 
-function validateRunner(runner, { shared }) {
+function validateRunner(runner, { shared, row }) {
   if (
-    runner?.os !== 'macOS' ||
-    runner?.arch !== 'ARM64' ||
+    runner?.label !== row.runner.label ||
+    runner?.os !== row.runner.os ||
+    runner?.arch !== row.runner.arch ||
     !['github-hosted', 'canonical-local'].includes(runner?.environment)
   ) {
-    throw new Error('qualified Core producer must be a macOS ARM64 runner');
+    throw new Error(
+      `qualified Core producer must match platform row ${row.id}`,
+    );
   }
   if (shared && runner.environment !== 'github-hosted') {
     throw new Error(
@@ -461,6 +486,11 @@ export function validateQualifiedCoreCandidate(
     'producer',
   );
   exactKeys(
+    candidate.producer.runner,
+    ['label', 'environment', 'os', 'arch', 'imageOS', 'imageVersion'],
+    'producer runner',
+  );
+  exactKeys(
     candidate.build,
     compatibilityCandidate
       ? [
@@ -498,16 +528,21 @@ export function validateQualifiedCoreCandidate(
   ) {
     throw new Error('qualified Core candidate root drift');
   }
-  validateRunner(candidate.producer?.runner, {
-    shared: expected.shared === true,
-  });
-  if (
-    candidate.build?.operatingSystem !== 'darwin' ||
-    candidate.build?.architecture !== 'arm64' ||
-    !/^cp[0-9]{2,4}$/u.test(candidate.build?.pythonAbi || '')
-  ) {
+  if (!/^cp[0-9]{2,4}$/u.test(candidate.build?.pythonAbi || '')) {
     throw new Error('qualified Core candidate platform identity is invalid');
   }
+  const row = qualifiedCorePlatformRowForIdentity(
+    {
+      operatingSystem: candidate.build.operatingSystem,
+      architecture: candidate.build.architecture,
+      pythonAbi: candidate.build.pythonAbi,
+    },
+    expected.repositoryRoot || ROOT,
+  );
+  validateRunner(candidate.producer?.runner, {
+    shared: expected.shared === true,
+    row,
+  });
   if (
     expected.repository &&
     candidate.source?.repository !== expected.repository
@@ -531,27 +566,20 @@ export function validateQualifiedCoreCandidate(
   }
   const entries = candidate.payload?.entries || [];
   const names = entries.map(({ path: entryPath }) => entryPath);
-  const pykungfu = names.filter((name) =>
-    /^pykungfu(?:[._-][A-Za-z0-9._-]+)?\.so$/u.test(name),
-  );
-  const libnode = names.filter((name) =>
-    /^libnode\.[0-9]+\.dylib$/u.test(name),
-  );
+  const rules = payloadRules(row, names);
   if (
     JSON.stringify(names) !== JSON.stringify([...new Set(names)].sort()) ||
-    !names.includes('kungfubuildinfo.json') ||
-    !names.includes('libkungfu_runtime.dylib') ||
-    pykungfu.length !== 1 ||
-    libnode.length !== 1 ||
-    names.length !== 4
+    names.length !== row.payload.entries.length
   ) {
     throw new Error('qualified Core candidate path set is unauthorized');
   }
   const payloads = readPayloads(bundleRoot, entries);
   for (const entry of entries) {
+    const rule = rules.get(entry.path);
     if (
-      !['regular-file', 'symlink'].includes(entry.type) ||
-      !['0644', '0755', '0777'].includes(entry.mode) ||
+      !rule ||
+      entry.type !== rule.type ||
+      entry.mode !== rule.mode ||
       (entry.type === 'regular-file' &&
         (entry.linkTarget !== null || entry.mode === '0777')) ||
       (entry.type === 'symlink' &&
@@ -616,10 +644,22 @@ export function validateQualifiedCoreCandidate(
     buildInfo.git?.revision !== candidate.source.commit ||
     buildInfo.git?.pristine !== true ||
     pythonAbi(buildInfo) !== candidate.build.pythonAbi ||
-    !String(buildInfo.build?.osVersion || '').startsWith('macOS-') ||
-    !String(buildInfo.build?.osVersion || '').includes('-arm64-')
+    !String(buildInfo.build?.osVersion || '').startsWith(
+      row.buildInfo.osVersionPrefix,
+    ) ||
+    !String(buildInfo.build?.osVersion || '').includes(
+      row.buildInfo.architectureToken,
+    )
   ) {
     throw new Error('qualified Core candidate build metadata drift');
+  }
+  if (
+    JSON.stringify(Object.keys(candidate.build.toolchain || {}).sort()) !==
+      JSON.stringify(['cmake', 'compiler', 'ninja', 'runner']) ||
+    JSON.stringify(candidate.build.toolchain.runner) !==
+      JSON.stringify(candidate.producer.runner)
+  ) {
+    throw new Error('qualified Core candidate toolchain runner drift');
   }
   for (const [actual, wanted, label] of [
     [
@@ -725,6 +765,7 @@ export function sealQualifiedCoreCandidate({
   producer,
   toolchain,
   profile = 'release',
+  platformRowId = 'darwin-arm64-cp313',
 }) {
   const exactRepository = requireRepository(
     repository,
@@ -732,7 +773,8 @@ export function sealQualifiedCoreCandidate({
   );
   const exactCommit = requireSha(commit, 'qualified Core commit');
   const exactTree = requireSha(tree, 'qualified Core tree');
-  validateRunner(producer.runner, { shared: false });
+  const row = qualifiedCorePlatformRow(platformRowId, repositoryRoot);
+  validateRunner(producer.runner, { shared: false, row });
   const buildInfo = readJson(path.join(payloadRoot, 'kungfubuildinfo.json'));
   if (
     buildInfo.git?.revision !== exactCommit ||
@@ -741,13 +783,27 @@ export function sealQualifiedCoreCandidate({
     throw new Error('qualified Core build metadata is stale or impure');
   }
   if (
-    !String(buildInfo.build?.osVersion || '').startsWith('macOS-') ||
-    !String(buildInfo.build?.osVersion || '').includes('-arm64-')
+    !String(buildInfo.build?.osVersion || '').startsWith(
+      row.buildInfo.osVersionPrefix,
+    ) ||
+    !String(buildInfo.build?.osVersion || '').includes(
+      row.buildInfo.architectureToken,
+    )
   ) {
-    throw new Error('qualified Core build metadata is not macOS ARM64');
+    throw new Error(`qualified Core build metadata does not match ${row.id}`);
   }
-  const entries = payloadNames(payloadRoot).map((name) =>
-    payloadEntry(payloadRoot, name),
+  if (
+    pythonAbi(buildInfo) !== row.pythonAbi ||
+    JSON.stringify(Object.keys(toolchain || {}).sort()) !==
+      JSON.stringify(['cmake', 'compiler', 'ninja', 'runner']) ||
+    JSON.stringify(toolchain.runner) !== JSON.stringify(producer.runner)
+  ) {
+    throw new Error(`qualified Core toolchain does not match ${row.id}`);
+  }
+  const names = payloadNames(payloadRoot, row);
+  const rules = payloadRules(row, names);
+  const entries = names.map((name) =>
+    payloadEntry(payloadRoot, name, rules.get(name)),
   );
   const sourceTreeRoot = qualifiedAssignmentCoreRoot({
     schema: 'kungfu.git-source-tree/v1',
@@ -788,8 +844,8 @@ export function sealQualifiedCoreCandidate({
   );
   const exactCompatibilityRoot = compatibilityRoot({
     nativeClosureRoot,
-    operatingSystem: 'darwin',
-    architecture: 'arm64',
+    operatingSystem: row.operatingSystem,
+    architecture: row.architecture,
     pythonAbi: pythonAbi(buildInfo),
     toolchainDigest,
     dependencyLockDigest,
@@ -819,9 +875,9 @@ export function sealQualifiedCoreCandidate({
       createdAt: producer.createdAt,
     },
     build: {
-      operatingSystem: 'darwin',
-      architecture: 'arm64',
-      pythonAbi: pythonAbi(buildInfo),
+      operatingSystem: row.operatingSystem,
+      architecture: row.architecture,
+      pythonAbi: row.pythonAbi,
       profile: requireIdentifier(profile, 'qualified Core build profile'),
       toolchain,
       toolchainDigest,
@@ -1292,18 +1348,28 @@ function commandFact(command, args = ['--version']) {
   return fact;
 }
 
-function observeToolchain() {
+function observeCompiler(payloadRoot) {
+  const buildIdentity = readJson(
+    path.join(payloadRoot, 'kungfu-core-build-identity.json'),
+  );
+  if (
+    buildIdentity.schema !== 'kungfu.core-build-identity/v1' ||
+    typeof buildIdentity.compiler !== 'string' ||
+    !buildIdentity.compiler ||
+    typeof buildIdentity.compiler_version !== 'string' ||
+    !buildIdentity.compiler_version
+  ) {
+    throw new Error('qualified Core compiler build identity is unavailable');
+  }
+  return `${buildIdentity.compiler} ${buildIdentity.compiler_version}`;
+}
+
+function observeToolchain(runner, payloadRoot) {
   return {
-    compiler: commandFact(process.env.CXX || 'c++'),
+    compiler: observeCompiler(payloadRoot),
     cmake: commandFact('cmake'),
     ninja: commandFact('ninja'),
-    runner: {
-      environment: process.env.RUNNER_ENVIRONMENT || 'local',
-      os: process.env.RUNNER_OS || process.platform,
-      arch: process.env.RUNNER_ARCH || process.arch,
-      imageOS: process.env.ImageOS || null,
-      imageVersion: process.env.ImageVersion || null,
-    },
+    runner,
   };
 }
 
@@ -1342,11 +1408,20 @@ async function main() {
   const options = parseArgs(process.argv.slice(2));
   if (options.command === 'seal') {
     const repositoryRoot = path.resolve(options['repository-root'] || '.');
+    const payloadRoot = path.resolve(
+      options['payload-root'] || path.join(repositoryRoot, TARGET_ROOT),
+    );
+    const producerRunner = {
+      label: options['runner-label'],
+      environment: options['runner-environment'],
+      os: options['runner-os'],
+      arch: options['runner-arch'],
+      imageOS: options['runner-image-os'] || '',
+      imageVersion: options['runner-image-version'] || '',
+    };
     const candidate = sealQualifiedCoreCandidate({
       repositoryRoot,
-      payloadRoot: path.resolve(
-        options['payload-root'] || path.join(repositoryRoot, TARGET_ROOT),
-      ),
+      payloadRoot,
       outputRoot: path.resolve(options['output-dir']),
       repository: options.repository,
       commit: options.commit || git('rev-parse', 'HEAD'),
@@ -1356,22 +1431,25 @@ async function main() {
         runId: options['run-id'],
         event: options.event,
         workflowPath: options['workflow-path'],
-        runner: {
-          environment: options['runner-environment'],
-          os: options['runner-os'],
-          arch: options['runner-arch'],
-          imageOS: options['runner-image-os'] || '',
-          imageVersion: options['runner-image-version'] || '',
-        },
+        runner: producerRunner,
         createdAt: options['created-at'] || new Date().toISOString(),
       },
-      toolchain: observeToolchain(),
+      toolchain: observeToolchain(producerRunner, payloadRoot),
       profile: options.profile || 'release',
+      platformRowId: options['platform-row'],
     });
     appendGithubOutput(options['github-output'], {
       'candidate-root': candidate.candidateRoot,
       'artifact-root': candidate.payload.artifactRoot,
       'python-abi': candidate.build.pythonAbi,
+      'platform-row': qualifiedCorePlatformRowForIdentity(
+        {
+          operatingSystem: candidate.build.operatingSystem,
+          architecture: candidate.build.architecture,
+          pythonAbi: candidate.build.pythonAbi,
+        },
+        repositoryRoot,
+      ).id,
     });
     console.log(JSON.stringify(candidate, null, 2));
     return;

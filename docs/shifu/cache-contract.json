@@ -61,6 +61,7 @@
   },
   "qualifiedAssignmentCoreTransport": {
     "artifactAuthority": "docs/shifu/artifact-contract.json#qualifiedAssignmentCore",
+    "platformMatrix": "docs/shifu/qualified-assignment-core-platform-matrix.json",
     "consumer": "framework/assignment-capture/qualified-assignment-core-consumer.mjs",
     "usageLedger": "framework/assignment-capture/qualified-assignment-core-observability.mjs",
     "automaticEntry": "./shifu work",
@@ -87,7 +88,9 @@
     "installedKungfuMutation": "forbidden",
     "eviction": "does-not-invalidate-retained-roots-or-receipts",
     "mergeCorrectness": "must-not-depend-on-transport-availability",
-    "sharedPromotion": "requires-one-active-protected-dev-authority"
+    "sharedPromotion": "requires-one-active-protected-dev-authority",
+    "platformDiscovery": "exact source commit plus exact platform row",
+    "crossPlatformSubstitution": "forbidden"
   },
   "commands": {
     "contract": "shifu cache contract",
