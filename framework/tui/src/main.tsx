@@ -2,7 +2,6 @@
 
 import { execFile, execFileSync, spawn } from 'node:child_process';
 import fs from 'node:fs';
-import { createRequire } from 'node:module';
 import { constants as osConstants } from 'node:os';
 import { homedir } from 'node:os';
 import path from 'node:path';
@@ -29,6 +28,7 @@ import {
   agentWorkLabActionReturnsToControls,
 } from './agent-work-lab-view.js';
 import { boundedIndex, decodeShellKey } from './navigation.js';
+import { resolveTuiProductPaths } from './product-paths.js';
 import {
   CLOSED_CONTROL_PLANE,
   ControlPlaneBar,
@@ -59,8 +59,6 @@ import {
   startGlobalWorkObserver,
 } from './work-control-contribution.js';
 
-const nodeRequire = createRequire(import.meta.url);
-
 function cliEnvironment(): NodeJS.ProcessEnv {
   const env = { ...process.env };
   // This process is running inside embedded libnode. Child `kungfu` calls must
@@ -70,32 +68,22 @@ function cliEnvironment(): NodeJS.ProcessEnv {
 }
 
 function runtimePaths() {
-  const coreDir = path.dirname(
-    nodeRequire.resolve('@kungfu-tech/core/package.json'),
-  );
-  const kungfuDir =
-    process.env.KUNGFU_DIR || path.join(coreDir, 'dist', 'kungfu');
-  const packagedBin = path.join(
-    kungfuDir,
-    process.platform === 'win32' ? 'kungfu.exe' : 'kungfu',
-  );
-  const configuredBin =
-    process.env.KUNGFU_CLI_BIN || process.env.KUNGFU_BIN || '';
+  const productPaths = resolveTuiProductPaths({ env: process.env });
   return {
-    coreDir,
+    coreDir: productPaths.coreDir,
     runtimeDir: resolveTuiRuntimeDir({
       env: process.env,
       cwd: process.cwd(),
       contractPath: path.join(
-        kungfuDir,
+        productPaths.kungfuDir,
         'config',
         'kungfu-config.contract.json',
       ),
     }),
     configHome:
       process.env.KF_CONFIG_HOME || path.join(homedir(), '.kungfu-config'),
-    bin: configuredBin || (fs.existsSync(packagedBin) ? packagedBin : 'kungfu'),
-    sourceCliFallback: !configuredBin && !fs.existsSync(packagedBin),
+    bin: productPaths.bin,
+    sourceCliFallback: productPaths.sourceCliFallback,
   };
 }
 
