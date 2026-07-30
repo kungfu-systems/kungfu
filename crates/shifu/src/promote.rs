@@ -32,7 +32,7 @@ use crate::artifact_catalog::{
     select_unique_automatic, short_sha, state_for, write_promotion_receipt, GitRelation,
     SelectionError,
 };
-use crate::native_update::{artifact_sha256, artifact_size, declared_artifact_size};
+use crate::native_update::{artifact_sha256, local_artifact_identity_valid};
 use crate::{envfile, native_update, util};
 
 #[path = "promote_desktop.rs"]
@@ -290,17 +290,7 @@ fn local_release_evidence_valid(entry: &BuildEntry) -> bool {
         && document.str_of("releaseCutRoot") == entry.release_cut_root
         && document.str_of("platformSliceRoot") == entry.platform_slice_root
         && local
-            .map(|value| {
-                value.str_of("kind") == "desktop-local"
-                    && value.str_of("digest") == format!("sha256:{}", entry.digest)
-                    && declared_artifact_size(value.get("size")) == artifact_size(&artifact).ok()
-                    && value.str_of("format")
-                        == if artifact.is_dir() {
-                            "directory"
-                        } else {
-                            "file"
-                        }
-            })
+            .map(|value| local_artifact_identity_valid(&artifact, &entry.digest, value))
             .unwrap_or(false)
 }
 

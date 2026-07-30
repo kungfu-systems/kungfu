@@ -409,6 +409,17 @@ pub(crate) fn declared_artifact_size(value: Option<&json::Json>) -> Option<u64> 
     ((size as f64) == *number).then_some(size)
 }
 
+pub(crate) fn local_artifact_identity_valid(
+    path: &Path,
+    actual_sha256: &str,
+    declared: &json::Json,
+) -> bool {
+    declared.str_of("kind") == "desktop-local"
+        && declared.str_of("format") == if path.is_dir() { "directory" } else { "file" }
+        && declared.str_of("digest") == format!("sha256:{actual_sha256}")
+        && declared_artifact_size(declared.get("size")) == artifact_size(path).ok()
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

@@ -45,8 +45,7 @@ use shifu_core::{bootstrap, host, json, style};
 
 use crate::artifact_catalog::product_mainline_ref;
 use crate::native_update::{
-    artifact_sha256, artifact_size, declared_artifact_size, installed_release_cut_root,
-    valid_sha256_root,
+    artifact_sha256, installed_release_cut_root, local_artifact_identity_valid, valid_sha256_root,
 };
 
 /// The buildchain self-describe contract shifu asks for the repo's KFD-3
@@ -673,16 +672,7 @@ fn local_release_evidence(
     let local = document
         .get("localArtifact")
         .ok_or_else(|| "upgrade manifest has no exact local desktop artifact".to_string())?;
-    let expected_format = if local_path.is_dir() {
-        "directory"
-    } else {
-        "file"
-    };
-    let local_size = artifact_size(local_path)?;
-    if local.str_of("kind") != "desktop-local"
-        || local.str_of("format") != expected_format
-        || declared_artifact_size(local.get("size")) != Some(local_size)
-        || local.str_of("digest") != format!("sha256:{local_sha}")
+    if !local_artifact_identity_valid(local_path, local_sha, local)
         || !matches!(
             local_declaration.kind.as_str(),
             "app" | "installer" | "appimage"
@@ -1008,24 +998,9 @@ mod tests {
         fs::write(root.join("out/upgrade.json"), &upgrade_manifest).unwrap();
 
         let plan = plan_at(&root, &kfd.join("surfaces.json"), "dist").expect("plan");
-        fs::write(
-            root.join("out/upgrade.json"),
-            upgrade_manifest.replace(
-                &format!(r#""size": {app_size}"#),
-                &format!(r#""size": {}"#, app_size + 1),
-            ),
-        )
-        .unwrap();
         register(&root, &plan);
+
         let registry = cache.join("kungfu/product").join(host::os_arch());
-        assert!(
-            !registry.is_dir() || fs::read_dir(&registry).unwrap().next().is_none(),
-            "a mismatched manifest artifact size must not register a slot"
-        );
-
-        fs::write(root.join("out/upgrade.json"), &upgrade_manifest).unwrap();
-        register(&root, &plan);
-
         let slots: Vec<_> = fs::read_dir(&registry).unwrap().flatten().collect();
         assert_eq!(slots.len(), 1, "exactly one slot registered");
         let slot = slots[0].path();

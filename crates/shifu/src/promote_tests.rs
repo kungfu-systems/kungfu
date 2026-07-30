@@ -1,4 +1,5 @@
 use super::*;
+use crate::native_update::artifact_size;
 
 fn qualified_app(slot: &Path) -> BuildEntry {
     BuildEntry {
