@@ -62,6 +62,7 @@
   "qualifiedAssignmentCoreTransport": {
     "artifactAuthority": "docs/shifu/artifact-contract.json#qualifiedAssignmentCore",
     "consumer": "framework/assignment-capture/qualified-assignment-core-consumer.mjs",
+    "usageLedger": "framework/assignment-capture/qualified-assignment-core-observability.mjs",
     "automaticEntry": "./shifu work",
     "localCas": "${KUNGFU_QUALIFIED_CORE_CACHE_ROOT:-${XDG_CACHE_HOME:-$HOME/.cache}/kungfu/qualified-core/v1}",
     "providers": ["local-content-addressed-store", "github-workflow-artifact"],
@@ -85,6 +86,7 @@
     "doctor": "shifu cache doctor --json [--probe]",
     "use": "shifu cache use --profile REF --digest SHA256 [--execute]",
     "unset": "shifu cache unset [--execute]",
+    "qualifiedCoreUsage": "./shifu qualified-core status --json",
     "repositoryCheck": "./shifu check"
   }
 }

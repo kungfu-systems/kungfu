@@ -17,6 +17,11 @@ import {
   validateQualifiedCoreCandidate,
   verifyQualifiedCoreBundle,
 } from '../release/qualified-assignment-core-artifact.mjs';
+import {
+  appendQualifiedCoreUsage,
+  qualifiedCoreUsageObservation,
+  summarizeQualifiedCoreUsage,
+} from './qualified-assignment-core-observability.mjs';
 
 const TARGET_ROOT = 'framework/core/dist/kungfu';
 const RECEIPT = '.qualified-core-materialization.json';
@@ -28,9 +33,10 @@ const SHA = /^[0-9a-f]{40}$/u;
 const ROOT_HASH = /^sha256:[0-9a-f]{64}$/u;
 
 class QualifiedCoreUnavailable extends Error {
-  constructor(reason, detail = '') {
+  constructor(reason, detail = '', context = null) {
     super(detail ? `${reason}: ${detail}` : reason);
     this.reason = reason;
+    this.context = context;
   }
 }
 
@@ -126,10 +132,7 @@ export function observeQualifiedCoreCheckout(repositoryRoot) {
   if (!SHA.test(commit) || !SHA.test(tree)) {
     throw new QualifiedCoreUnavailable('invalid-checkout-identity');
   }
-  if (git(repositoryRoot, 'status', '--porcelain', '--untracked-files=no')) {
-    throw new QualifiedCoreUnavailable('tracked-checkout-dirty');
-  }
-  return {
+  const checkout = {
     repository: repositoryFromRemote(
       git(repositoryRoot, 'remote', 'get-url', 'origin'),
     ),
@@ -137,6 +140,12 @@ export function observeQualifiedCoreCheckout(repositoryRoot) {
     tree,
     clean: true,
   };
+  if (git(repositoryRoot, 'status', '--porcelain', '--untracked-files=no')) {
+    throw new QualifiedCoreUnavailable('tracked-checkout-dirty', '', {
+      checkout,
+    });
+  }
+  return checkout;
 }
 
 function artifactContract(repositoryRoot) {
@@ -330,7 +339,12 @@ async function retainBundle({
       fs.rmSync(temporary, { force: true });
     }
   }
-  return { bundleRoot: retained, verified: retainedVerification, objectRoot };
+  return {
+    bundleRoot: retained,
+    verified: retainedVerification,
+    objectRoot,
+    transport: retainedTransport.transport,
+  };
 }
 
 async function discoverLocal({ cacheRoot, checkout, repositoryRoot, now }) {
@@ -371,7 +385,12 @@ async function discoverLocal({ cacheRoot, checkout, repositoryRoot, now }) {
   ) {
     throw new QualifiedCoreUnavailable('local-object-root-drift');
   }
-  return { bundleRoot, verified, objectRoot: index.objectRoot };
+  return {
+    bundleRoot,
+    verified,
+    objectRoot: index.objectRoot,
+    transport: transport.transport,
+  };
 }
 
 function extractZip(bytes, destination) {
@@ -734,6 +753,77 @@ export async function materializeQualifiedCoreBundle({
   return { ...publishTarget(publicationRoot, retained, checkout), ...retained };
 }
 
+function elapsed(start, clock) {
+  return Math.max(0, Math.round(clock() - start));
+}
+
+function usageArtifact(result) {
+  if (!result?.verified || !result?.objectRoot) return null;
+  return {
+    transportProvider: result.transport?.provider || 'unknown',
+    artifactId:
+      Number.isSafeInteger(result.transport?.artifactId) &&
+      result.transport.artifactId > 0
+        ? result.transport.artifactId
+        : null,
+    artifactRoot: result.verified.verification.artifactRoot || null,
+    manifestRoot: result.verified.verification.manifestRoot || null,
+    objectRoot: result.objectRoot,
+  };
+}
+
+function terminalUsage({
+  cacheRoot,
+  checkout,
+  platform,
+  architecture,
+  recordedAt,
+  result,
+  reason,
+  phases,
+  materialization = null,
+}) {
+  return appendQualifiedCoreUsage(
+    cacheRoot,
+    qualifiedCoreUsageObservation({
+      recordedAt,
+      result,
+      reason,
+      phases,
+      repository: checkout.repository,
+      sourceCommit: checkout.commit,
+      compatibilityIdentity: null,
+      platform,
+      architecture,
+      pythonAbi: 'cp313',
+      artifact: usageArtifact(materialization),
+      fallback: {
+        required: ['fallback-required', 'rejected'].includes(result),
+        command: ['fallback-required', 'rejected'].includes(result)
+          ? './shifu build:core'
+          : '',
+      },
+    }),
+  );
+}
+
+function terminalResult(error) {
+  if (
+    error instanceof QualifiedCoreUnavailable &&
+    [
+      'github-artifact-download-failed',
+      'github-artifact-miss',
+      'github-unavailable',
+      'qualified-core-cache-miss',
+      'tracked-checkout-dirty',
+      'unsupported-host',
+    ].includes(error.reason)
+  ) {
+    return 'fallback-required';
+  }
+  return 'rejected';
+}
+
 export async function consumeQualifiedCoreForCheckout({
   repositoryRoot,
   publicationRoot = repositoryRoot,
@@ -742,57 +832,172 @@ export async function consumeQualifiedCoreForCheckout({
   checkout: suppliedCheckout = null,
   platform = process.platform,
   architecture = process.arch,
+  clock = () => Date.now(),
+  discoverRemote = discoverGithubBundle,
 }) {
-  if (platform !== 'darwin' || architecture !== 'arm64') {
-    throw new QualifiedCoreUnavailable('unsupported-host');
-  }
-  const checkout =
-    suppliedCheckout || observeQualifiedCoreCheckout(repositoryRoot);
-  const local = await discoverLocal({
-    cacheRoot,
-    checkout,
-    repositoryRoot,
-    now,
-  });
-  if (local)
-    return { ...publishTarget(publicationRoot, local, checkout), ...local };
-
-  const temporary = fs.mkdtempSync(
-    path.join(os.tmpdir(), 'kungfu-qualified-core-consumer-'),
-  );
+  const started = clock();
+  let phaseStarted = started;
+  const phases = {};
+  let checkout = suppliedCheckout;
+  let recorded = false;
   try {
-    let discovered;
-    if (process.env.KUNGFU_QUALIFIED_CORE_BUNDLE) {
-      const source = path.resolve(process.env.KUNGFU_QUALIFIED_CORE_BUNDLE);
-      if (fs.statSync(source).isDirectory()) {
-        discovered = {
-          bundleRoot: source,
-          transport: { provider: 'explicit-local-bundle' },
-        };
-      } else {
-        const bundleRoot = path.join(temporary, 'bundle');
-        extractZip(fs.readFileSync(source), bundleRoot);
-        discovered = {
-          bundleRoot,
-          transport: { provider: 'explicit-local-archive' },
-        };
-      }
-    } else if (process.env.KUNGFU_QUALIFIED_CORE_GITHUB !== '0') {
-      discovered = await discoverGithubBundle(checkout, temporary);
-    } else {
-      throw new QualifiedCoreUnavailable('qualified-core-cache-miss');
+    checkout ||= observeQualifiedCoreCheckout(repositoryRoot);
+    phases.checkout = elapsed(phaseStarted, clock);
+    phaseStarted = clock();
+    if (platform !== 'darwin' || architecture !== 'arm64') {
+      throw new QualifiedCoreUnavailable('unsupported-host');
     }
-    return await materializeQualifiedCoreBundle({
-      ...discovered,
-      repositoryRoot,
-      publicationRoot,
-      checkout,
+    const local = await discoverLocal({
       cacheRoot,
+      checkout,
+      repositoryRoot,
       now,
     });
-  } finally {
-    fs.rmSync(temporary, { recursive: true, force: true });
+    phases.localLookup = elapsed(phaseStarted, clock);
+    phaseStarted = clock();
+    if (local) {
+      const materialization = {
+        ...publishTarget(publicationRoot, local, checkout),
+        ...local,
+      };
+      phases.publication = elapsed(phaseStarted, clock);
+      phases.total = elapsed(started, clock);
+      recorded = true;
+      terminalUsage({
+        cacheRoot,
+        checkout,
+        platform,
+        architecture,
+        recordedAt: now,
+        result: materialization.status,
+        reason: 'local-cas-hit',
+        phases,
+        materialization,
+      });
+      return materialization;
+    }
+
+    const temporary = fs.mkdtempSync(
+      path.join(os.tmpdir(), 'kungfu-qualified-core-consumer-'),
+    );
+    try {
+      let discovered;
+      if (process.env.KUNGFU_QUALIFIED_CORE_BUNDLE) {
+        const source = path.resolve(process.env.KUNGFU_QUALIFIED_CORE_BUNDLE);
+        if (fs.statSync(source).isDirectory()) {
+          discovered = {
+            bundleRoot: source,
+            transport: { provider: 'explicit-local-bundle' },
+          };
+        } else {
+          const bundleRoot = path.join(temporary, 'bundle');
+          extractZip(fs.readFileSync(source), bundleRoot);
+          discovered = {
+            bundleRoot,
+            transport: { provider: 'explicit-local-archive' },
+          };
+        }
+      } else if (process.env.KUNGFU_QUALIFIED_CORE_GITHUB !== '0') {
+        discovered = await discoverRemote(checkout, temporary);
+      } else {
+        throw new QualifiedCoreUnavailable('qualified-core-cache-miss');
+      }
+      phases.remoteLookup = elapsed(phaseStarted, clock);
+      phaseStarted = clock();
+      const materialization = await materializeQualifiedCoreBundle({
+        ...discovered,
+        repositoryRoot,
+        publicationRoot,
+        checkout,
+        cacheRoot,
+        now,
+      });
+      phases.verificationAndRetention = elapsed(phaseStarted, clock);
+      phases.publication = 0;
+      phases.total = elapsed(started, clock);
+      recorded = true;
+      terminalUsage({
+        cacheRoot,
+        checkout,
+        platform,
+        architecture,
+        recordedAt: now,
+        result: materialization.status,
+        reason:
+          discovered.transport.provider === 'github-workflow-artifact'
+            ? 'remote-hit'
+            : 'explicit-bundle-hit',
+        phases,
+        materialization,
+      });
+      return materialization;
+    } finally {
+      fs.rmSync(temporary, { recursive: true, force: true });
+    }
+  } catch (error) {
+    checkout ||= error?.context?.checkout || null;
+    if (!recorded && checkout) {
+      phases.total = elapsed(started, clock);
+      recorded = true;
+      terminalUsage({
+        cacheRoot,
+        checkout,
+        platform,
+        architecture,
+        recordedAt: now,
+        result: terminalResult(error),
+        reason:
+          error instanceof QualifiedCoreUnavailable
+            ? error.reason
+            : 'verification-failed',
+        phases,
+      });
+    }
+    throw error;
   }
+}
+
+export function qualifiedCoreUsageStatus({
+  repositoryRoot,
+  cacheRoot = cacheRootFromEnvironment(),
+  platform = process.platform,
+  architecture = process.arch,
+}) {
+  const checkout = observeQualifiedCoreCheckout(repositoryRoot);
+  return summarizeQualifiedCoreUsage(cacheRoot, {
+    repository: checkout.repository,
+    sourceCommit: checkout.commit,
+    platform,
+    architecture,
+    pythonAbi: 'cp313',
+    eligible: platform === 'darwin' && architecture === 'arm64',
+  });
+}
+
+export function runQualifiedCoreUsageStatusCommand(
+  args,
+  { defaultRepositoryRoot = '.' } = {},
+) {
+  if (args[0] !== 'status') {
+    throw new QualifiedCoreUnavailable('invalid-command');
+  }
+  let repositoryRoot = defaultRepositoryRoot;
+  let cacheRoot;
+  for (let index = 1; index < args.length; index += 1) {
+    if (args[index] === '--json') {
+      // The status surface is always JSON; retain the flag for CLI symmetry.
+    } else if (args[index] === '--repository-root' && args[index + 1]) {
+      repositoryRoot = args[++index];
+    } else if (args[index] === '--cache-root' && args[index + 1]) {
+      cacheRoot = args[++index];
+    } else {
+      throw new QualifiedCoreUnavailable('invalid-argument');
+    }
+  }
+  return qualifiedCoreUsageStatus({
+    repositoryRoot: path.resolve(repositoryRoot),
+    cacheRoot: cacheRoot ? path.resolve(cacheRoot) : undefined,
+  });
 }
 
 function diagnosis(error) {
@@ -819,18 +1024,40 @@ function diagnosis(error) {
 
 async function main() {
   const [command, ...args] = process.argv.slice(2);
-  if (command !== 'materialize') {
+  if (!['materialize', 'status'].includes(command)) {
     throw new QualifiedCoreUnavailable('invalid-command');
   }
   let repositoryRoot = '.';
+  let cacheRoot;
   for (let index = 0; index < args.length; index += 1) {
-    if (args[index] !== '--repository-root' || !args[index + 1]) {
+    if (args[index] === '--json') {
+      // The status surface is always JSON; retain the flag for CLI symmetry.
+    } else if (args[index] === '--repository-root' && args[index + 1]) {
+      repositoryRoot = args[++index];
+    } else if (args[index] === '--cache-root' && args[index + 1]) {
+      cacheRoot = args[++index];
+    } else {
       throw new QualifiedCoreUnavailable('invalid-argument');
     }
-    repositoryRoot = args[++index];
+  }
+  if (command === 'status') {
+    console.log(
+      JSON.stringify(
+        runQualifiedCoreUsageStatusCommand([
+          'status',
+          '--repository-root',
+          repositoryRoot,
+          ...(cacheRoot ? ['--cache-root', cacheRoot] : []),
+        ]),
+        null,
+        2,
+      ),
+    );
+    return;
   }
   await consumeQualifiedCoreForCheckout({
     repositoryRoot: path.resolve(repositoryRoot),
+    cacheRoot: cacheRoot ? path.resolve(cacheRoot) : undefined,
   });
 }
 

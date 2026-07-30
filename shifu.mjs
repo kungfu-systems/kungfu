@@ -480,9 +480,29 @@ async function main() {
     process.exitCode = await runGateCommand(argv.slice(1), { root: __dirname });
     return;
   }
+  if (cmd === 'qualified-core') {
+    const { runQualifiedCoreUsageStatusCommand } = await import(
+      pathToFileURL(
+        path.join(
+          __dirname,
+          'framework/assignment-capture/qualified-assignment-core-consumer.mjs',
+        ),
+      ).href
+    );
+    console.log(
+      JSON.stringify(
+        runQualifiedCoreUsageStatusCommand(argv.slice(1), {
+          defaultRepositoryRoot: __dirname,
+        }),
+        null,
+        2,
+      ),
+    );
+    return;
+  }
   if (cmd !== 'proxy' && cmd !== 'config') {
     console.error(
-      `shifu.mjs: unknown command ${cmd || '(empty)'} (supported: build/rebuild/cache/docs/gate/proxy/config)`,
+      `shifu.mjs: unknown command ${cmd || '(empty)'} (supported: build/rebuild/cache/docs/gate/qualified-core/proxy/config)`,
     );
     process.exit(2);
   }

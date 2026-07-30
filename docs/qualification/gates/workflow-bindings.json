@@ -466,7 +466,7 @@
       "adapter": {
         "type": "buildchain-heavy-build",
         "kind": "job-uses",
-        "uses": "kungfu-systems/buildchain/.github/workflows/.build.yml@8ec8ef36421fc363ebfb24146ca1d0a2fee4ae7b",
+        "uses": "kungfu-systems/buildchain/.github/workflows/.build.yml@67bf0346474ec4d5ccba04747fe52df9019819a8",
         "job": {
           "needs": "preflight",
           "secrets": {
@@ -596,14 +596,14 @@
       "adapter": {
         "type": "buildchain-release-admission",
         "kind": "job-uses",
-        "uses": "kungfu-systems/buildchain/.github/workflows/release-candidate-promote.yml@8ec8ef36421fc363ebfb24146ca1d0a2fee4ae7b",
+        "uses": "kungfu-systems/buildchain/.github/workflows/release-candidate-promote.yml@67bf0346474ec4d5ccba04747fe52df9019819a8",
         "job": {
           "needs": "promotion-contract",
           "if": "${{ github.event_name == 'workflow_dispatch' || github.event.pull_request.merged == true }}"
         },
         "with": {
           "channel": "${{ startsWith(inputs.target-ref || github.event.pull_request.base.ref, 'alpha/') && 'alpha' || 'release' }}",
-          "buildchain-ref": "8ec8ef36421fc363ebfb24146ca1d0a2fee4ae7b",
+          "buildchain-ref": "67bf0346474ec4d5ccba04747fe52df9019819a8",
           "target-sha": "${{ inputs.target-sha || github.event.pull_request.merge_commit_sha || github.sha }}",
           "required-status-check": "build / Finalize build controller evidence",
           "publication-auto-admission": true,

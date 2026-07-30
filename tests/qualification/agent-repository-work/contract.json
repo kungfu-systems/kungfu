@@ -49,6 +49,20 @@
       }
     ]
   },
+  "realModuleSnapshot": {
+    "id": "kungfu-agent-patrol-real-module-snapshot-v1",
+    "status": "manual-qualification",
+    "manifestRoot": "sha256:4bb28a90ec1ee548c7280de2fbc32485708ad30f61fd5e343f4a5d0984689944",
+    "treeRoot": "sha256:17be376f3b5639dcc0dd32405d29bba2d0d4c96267b68b39e6d165a058d341d3",
+    "fileCount": 8,
+    "lineCount": 3102,
+    "seededFailure": "volatile numeric failure identifiers share one Finding identity",
+    "writablePaths": [
+      "framework/agent-patrol/classify.mjs"
+    ],
+    "sourcePolicy": "exact-commit-tracked-regular-files",
+    "weeklyScheduleEnabled": false
+  },
   "sessions": {
     "count": 2,
     "agentA": {
