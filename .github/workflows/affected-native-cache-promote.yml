@@ -463,9 +463,82 @@ jobs:
             --name "core-affected-native-delivery-attempt-${TARGET_SHA}" \
             --dir product/qualification/qualified-core/delivery
       - name: Install pinned Qualified Core verifier
-        if: ${{ steps.qualified_core_producer.outputs.available == 'true' }}
+        if: ${{ github.ref_protected == true }}
         shell: bash
         run: ./shifu install --frozen-lockfile
+      - name: Resolve one prior compatible protected object
+        if: ${{ steps.qualified_core_producer.outputs.available != 'true' }}
+        id: qualified_core_reuse
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TARGET_SHA: ${{ steps.target.outputs.sha }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          root="product/qualification/qualified-core/reuse"
+          mkdir -p "$root"
+          matched_root=""
+          matched_dir=""
+          candidates="$(
+            gh api \
+              "repos/${GITHUB_REPOSITORY}/actions/artifacts?per_page=100" \
+              --jq '.artifacts
+                | map(select(
+                    .expired == false
+                    and (.name | startswith("qualified-assignment-core-"))
+                    and .name != ("qualified-assignment-core-" + env.TARGET_SHA)
+                  ))
+                | sort_by(.created_at)
+                | reverse
+                | .[]
+                | [.id, .name]
+                | @tsv'
+          )"
+          while IFS=$'\t' read -r artifact_id artifact_name; do
+            [ -n "${artifact_id:-}" ] || continue
+            candidate="$root/$artifact_id"
+            mkdir -p "$candidate/bundle"
+            if ! gh api \
+              "repos/${GITHUB_REPOSITORY}/actions/artifacts/${artifact_id}/zip" \
+              > "$candidate/artifact.zip"; then
+              echo "Qualified Core transport ${artifact_id} became unavailable."
+              continue
+            fi
+            if ! unzip -qq "$candidate/artifact.zip" -d "$candidate/bundle"; then
+              echo "Qualified Core transport ${artifact_id} is not a bounded zip."
+              continue
+            fi
+            output="$candidate/promoted"
+            github_output="$candidate/output"
+            if ! node framework/release/qualified-assignment-core-artifact.mjs reuse \
+              --repository-root . \
+              --bundle "$candidate/bundle" \
+              --output-dir "$output" \
+              --repository "$GITHUB_REPOSITORY" \
+              --current-commit "$TARGET_SHA" \
+              --github-output "$github_output"; then
+              continue
+            fi
+            manifest_root="$(sed -n 's/^manifest-root=//p' "$github_output")"
+            if [ -n "$matched_root" ] && [ "$manifest_root" != "$matched_root" ]; then
+              echo "Multiple distinct compatible Qualified Core authorities are active." >&2
+              exit 1
+            fi
+            matched_root="$manifest_root"
+            matched_dir="$output"
+            echo "Compatible transport: ${artifact_name} (${artifact_id})."
+          done <<< "$candidates"
+          if [ -z "$matched_dir" ]; then
+            echo "available=false" >> "$GITHUB_OUTPUT"
+            echo "No prior compatible Qualified Core object is active; source build remains authoritative."
+            exit 0
+          fi
+          mkdir -p product/qualification/qualified-core/promoted
+          cp -R "$matched_dir"/. product/qualification/qualified-core/promoted/
+          {
+            echo "available=true"
+            echo "manifest-root=${matched_root}"
+          } >> "$GITHUB_OUTPUT"
       - name: Promote exact Qualified Core artifact
         if: ${{ steps.qualified_core_producer.outputs.available == 'true' }}
         id: qualified_core_promotion
@@ -491,7 +564,11 @@ jobs:
             --delivery-attempt product/qualification/qualified-core/delivery/delivery-attempt.json \
             --github-output "$GITHUB_OUTPUT"
       - name: Upload qualified artifact transport
-        if: ${{ steps.qualified_core_producer.outputs.available == 'true' }}
+        if: >-
+          ${{
+            steps.qualified_core_producer.outputs.available == 'true' ||
+            steps.qualified_core_reuse.outputs.available == 'true'
+          }}
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: qualified-assignment-core-${{ steps.target.outputs.sha }}
@@ -500,7 +577,11 @@ jobs:
           retention-days: 14
           compression-level: 0
       - name: Summarize Qualified Core promotion
-        if: ${{ steps.qualified_core_producer.outputs.available == 'true' }}
+        if: >-
+          ${{
+            steps.qualified_core_producer.outputs.available == 'true' ||
+            steps.qualified_core_reuse.outputs.available == 'true'
+          }}
         env:
           TARGET_SHA: ${{ steps.target.outputs.sha }}
         shell: bash
@@ -509,10 +590,10 @@ jobs:
             echo "### Qualified Assignment Core"
             echo
             echo "- protected source: \`$TARGET_SHA\`"
-            echo "- merge-group producer: \`${{ steps.qualified_core_producer.outputs.run-id }}\`"
-            echo "- manifest: \`${{ steps.qualified_core_promotion.outputs.manifest-root }}\`"
-            echo "- payload: \`${{ steps.qualified_core_promotion.outputs.artifact-root }}\`"
-            echo "- qualification: \`${{ steps.qualified_core_promotion.outputs.qualification-receipt-root }}\`"
-            echo "- promotion: \`${{ steps.qualified_core_promotion.outputs.promotion-authority-root }}\`"
+            echo "- merge-group producer: \`${{ steps.qualified_core_producer.outputs.run-id || 'retained-compatible-object' }}\`"
+            echo "- manifest: \`${{ steps.qualified_core_promotion.outputs.manifest-root || steps.qualified_core_reuse.outputs.manifest-root }}\`"
+            echo "- payload: \`${{ steps.qualified_core_promotion.outputs.artifact-root || 'verified-retained' }}\`"
+            echo "- qualification: \`${{ steps.qualified_core_promotion.outputs.qualification-receipt-root || 'verified-retained' }}\`"
+            echo "- promotion: \`${{ steps.qualified_core_promotion.outputs.promotion-authority-root || 'verified-retained' }}\`"
             echo "- transport: replaceable and non-authoritative"
           } >> "$GITHUB_STEP_SUMMARY"

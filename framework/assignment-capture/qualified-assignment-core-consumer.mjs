@@ -70,14 +70,17 @@ function safeRelative(value, label) {
 
 function exactBundleTree(bundleRoot) {
   const top = fs.readdirSync(bundleRoot).sort();
-  const expected = [
+  const base = [
     'candidate.json',
     'manifest.json',
     'payload',
     'qualification.json',
     'verification.json',
   ];
-  if (JSON.stringify(top) !== JSON.stringify(expected)) {
+  const expected = fs.existsSync(path.join(bundleRoot, 'equivalence.json'))
+    ? [...base, 'equivalence.json'].sort()
+    : base;
+  if (JSON.stringify(top) !== JSON.stringify([...expected].sort())) {
     throw new QualifiedCoreUnavailable(
       'unsupported-bundle-shape',
       top.join(','),
@@ -158,6 +161,7 @@ function verificationExpectation({
   repositoryRoot,
   candidate,
   checkout,
+  qualifiedTargetCommit,
   protectedRef,
   now,
 }) {
@@ -169,19 +173,31 @@ function verificationExpectation({
   ) {
     throw new QualifiedCoreUnavailable('untrusted-protected-ref');
   }
+  const targetSourceTreeRoot =
+    candidate.source.commit === qualifiedTargetCommit
+      ? candidate.source.sourceTreeRoot
+      : qualifiedAssignmentCoreRoot({
+          schema: 'kungfu.git-source-tree/v1',
+          tree: git(
+            repositoryRoot,
+            'rev-parse',
+            `${qualifiedTargetCommit}^{tree}`,
+          ),
+        });
   return {
-    producerRepository: checkout.repository,
+    producerRepository: candidate.source.repository,
     targetRepository: checkout.repository,
-    producerCommit: checkout.commit,
-    targetCommit: checkout.commit,
-    sourceTreeRoot: qualifiedAssignmentCoreRoot({
-      schema: 'kungfu.git-source-tree/v1',
-      tree: checkout.tree,
-    }),
+    producerCommit: candidate.source.commit,
+    targetCommit: qualifiedTargetCommit,
+    sourceTreeRoot: candidate.source.sourceTreeRoot,
+    targetSourceTreeRoot,
     nativeInputRoot: roots.nativeInputRoot,
-    operatingSystem: 'darwin',
-    architecture: 'arm64',
-    pythonAbi: 'cp313',
+    compatibilityRoot: roots.compatibilityRoot,
+    nativeClosureRoot: roots.nativeClosureRoot,
+    compatibilityPolicyRoot: roots.compatibilityPolicyRoot,
+    operatingSystem: candidate.build.operatingSystem,
+    architecture: candidate.build.architecture,
+    pythonAbi: candidate.build.pythonAbi,
     profile: candidate.build.profile,
     toolchainDigest: roots.toolchainDigest,
     dependencyLockDigest: roots.dependencyLockDigest,
@@ -212,12 +228,14 @@ async function verifyBundle(
   validateQualifiedCoreCandidate(candidate, bundleRoot, {
     shared: true,
     repository: checkout.repository,
-    commit: checkout.commit,
+    commit: candidate.source.commit,
+    repositoryRoot,
   });
   const expectation = verificationExpectation({
     repositoryRoot,
     candidate,
     checkout,
+    qualifiedTargetCommit: qualification.identity.targetCommit,
     protectedRef,
     now,
   });
@@ -238,6 +256,16 @@ function cacheRootFromEnvironment() {
 }
 
 function objectIdentity(verified, transport) {
+  if (verified.verification.compatibilityIdentity) {
+    return qualifiedAssignmentCoreRoot({
+      schema: 'shifu.qualified-assignment-core-local-object/v2',
+      manifestRoot: verified.verification.manifestRoot,
+      artifactRoot: verified.verification.artifactRoot,
+      qualificationReceiptRoot: verified.verification.qualificationReceiptRoot,
+      promotionAuthorityRoot: verified.verification.promotionAuthorityRoot,
+      compatibilityRoot: verified.verification.compatibilityIdentity,
+    });
+  }
   return qualifiedAssignmentCoreRoot({
     schema: 'shifu.qualified-assignment-core-local-object/v1',
     manifestRoot: verified.verification.manifestRoot,
@@ -253,12 +281,27 @@ function objectPath(cacheRoot, objectRoot) {
   return path.join(cacheRoot, 'objects', 'sha256', hex.slice(0, 2), hex);
 }
 
-function indexPath(cacheRoot, checkout, objectRoot) {
+function legacyIndexPath(cacheRoot, checkout, objectRoot) {
   return path.join(
     cacheRoot,
     'indexes',
     ...checkout.repository.split('/'),
     checkout.commit,
+    `${objectRoot.slice('sha256:'.length)}.json`,
+  );
+}
+
+function compatibilityIndexPath(
+  cacheRoot,
+  repository,
+  compatibilityRoot,
+  objectRoot,
+) {
+  return path.join(
+    cacheRoot,
+    'indexes-v2',
+    ...repository.split('/'),
+    compatibilityRoot.slice('sha256:'.length),
     `${objectRoot.slice('sha256:'.length)}.json`,
   );
 }
@@ -319,17 +362,39 @@ async function retainBundle({
   ) {
     throw new QualifiedCoreUnavailable('local-object-root-drift');
   }
-  const index = indexPath(cacheRoot, checkout, objectRoot);
+  const compatibilityIdentity =
+    retainedVerification.verification.compatibilityIdentity || null;
+  const index = compatibilityIdentity
+    ? compatibilityIndexPath(
+        cacheRoot,
+        checkout.repository,
+        compatibilityIdentity,
+        objectRoot,
+      )
+    : legacyIndexPath(cacheRoot, checkout, objectRoot);
   fs.mkdirSync(path.dirname(index), { recursive: true });
   if (!fs.existsSync(index)) {
     const temporary = `${index}.stage-${process.pid}-${crypto.randomUUID()}`;
     try {
-      writeJson(temporary, {
-        schema: 'shifu.qualified-assignment-core-index/v1',
-        repository: checkout.repository,
-        commit: checkout.commit,
-        objectRoot,
-      });
+      writeJson(
+        temporary,
+        compatibilityIdentity
+          ? {
+              schema: 'shifu.qualified-assignment-core-index/v2',
+              repository: checkout.repository,
+              producerCommit: retainedVerification.candidate.source.commit,
+              qualifiedTargetCommit:
+                retainedVerification.qualification.identity.targetCommit,
+              compatibilityRoot: compatibilityIdentity,
+              objectRoot,
+            }
+          : {
+              schema: 'shifu.qualified-assignment-core-index/v1',
+              repository: checkout.repository,
+              commit: checkout.commit,
+              objectRoot,
+            },
+      );
       try {
         fs.renameSync(temporary, index);
       } catch (error) {
@@ -348,49 +413,94 @@ async function retainBundle({
 }
 
 async function discoverLocal({ cacheRoot, checkout, repositoryRoot, now }) {
-  const directory = path.dirname(
-    indexPath(cacheRoot, checkout, `sha256:${'0'.repeat(64)}`),
+  const candidates = [];
+  const legacyDirectory = path.dirname(
+    legacyIndexPath(cacheRoot, checkout, `sha256:${'0'.repeat(64)}`),
   );
-  if (!fs.existsSync(directory)) return null;
-  const indexes = fs.readdirSync(directory).sort();
-  if (indexes.some((name) => !/^[0-9a-f]{64}\.json$/u.test(name))) {
-    throw new QualifiedCoreUnavailable('local-index-drift');
+  if (fs.existsSync(legacyDirectory)) {
+    for (const name of fs.readdirSync(legacyDirectory).sort()) {
+      if (!/^[0-9a-f]{64}\.json$/u.test(name)) {
+        throw new QualifiedCoreUnavailable('local-index-drift');
+      }
+      candidates.push(path.join(legacyDirectory, name));
+    }
   }
-  if (indexes.length > 1) {
+  const compatibilityDirectory = path.join(
+    cacheRoot,
+    'indexes-v2',
+    ...checkout.repository.split('/'),
+  );
+  if (fs.existsSync(compatibilityDirectory)) {
+    for (const rootName of fs.readdirSync(compatibilityDirectory).sort()) {
+      if (!/^[0-9a-f]{64}$/u.test(rootName)) {
+        throw new QualifiedCoreUnavailable('local-index-drift');
+      }
+      const rootDirectory = path.join(compatibilityDirectory, rootName);
+      for (const name of fs.readdirSync(rootDirectory).sort()) {
+        if (!/^[0-9a-f]{64}\.json$/u.test(name)) {
+          throw new QualifiedCoreUnavailable('local-index-drift');
+        }
+        candidates.push(path.join(rootDirectory, name));
+      }
+    }
+  }
+  const matches = [];
+  for (const indexFile of candidates) {
+    const index = readJson(indexFile);
+    if (
+      ![
+        'shifu.qualified-assignment-core-index/v1',
+        'shifu.qualified-assignment-core-index/v2',
+      ].includes(index.schema) ||
+      index.repository !== checkout.repository ||
+      !ROOT_HASH.test(index.objectRoot) ||
+      (index.schema.endsWith('/v1') && index.commit !== checkout.commit) ||
+      (index.schema.endsWith('/v2') && !ROOT_HASH.test(index.compatibilityRoot))
+    ) {
+      throw new QualifiedCoreUnavailable('local-index-drift');
+    }
+    const destination = objectPath(cacheRoot, index.objectRoot);
+    const transport = readJson(path.join(destination, 'transport.json'));
+    const bundleRoot = path.join(destination, 'bundle');
+    if (index.schema.endsWith('/v2')) {
+      const candidate = readJson(path.join(bundleRoot, 'candidate.json'));
+      const currentCompatibility = qualifiedCoreCheckoutRoots(
+        repositoryRoot,
+        candidate,
+      ).compatibilityRoot;
+      if (
+        candidate.build?.compatibilityRoot !== index.compatibilityRoot ||
+        currentCompatibility !== index.compatibilityRoot
+      ) {
+        continue;
+      }
+    }
+    const verified = await verifyBundle(
+      bundleRoot,
+      repositoryRoot,
+      checkout,
+      now,
+      transport.transport,
+    );
+    if (
+      transport.objectRoot !== index.objectRoot ||
+      objectIdentity(verified, transport.transport) !== index.objectRoot ||
+      (index.schema.endsWith('/v2') &&
+        verified.verification.compatibilityIdentity !== index.compatibilityRoot)
+    ) {
+      throw new QualifiedCoreUnavailable('local-object-root-drift');
+    }
+    matches.push({
+      bundleRoot,
+      verified,
+      objectRoot: index.objectRoot,
+      transport: transport.transport,
+    });
+  }
+  if (matches.length > 1) {
     throw new QualifiedCoreUnavailable('ambiguous-local-authority');
   }
-  if (indexes.length === 0) return null;
-  const index = readJson(path.join(directory, indexes[0]));
-  if (
-    index.schema !== 'shifu.qualified-assignment-core-index/v1' ||
-    index.repository !== checkout.repository ||
-    index.commit !== checkout.commit ||
-    !ROOT_HASH.test(index.objectRoot)
-  ) {
-    throw new QualifiedCoreUnavailable('local-index-drift');
-  }
-  const destination = objectPath(cacheRoot, index.objectRoot);
-  const transport = readJson(path.join(destination, 'transport.json'));
-  const bundleRoot = path.join(destination, 'bundle');
-  const verified = await verifyBundle(
-    bundleRoot,
-    repositoryRoot,
-    checkout,
-    now,
-    transport.transport,
-  );
-  if (
-    transport.objectRoot !== index.objectRoot ||
-    objectIdentity(verified, transport.transport) !== index.objectRoot
-  ) {
-    throw new QualifiedCoreUnavailable('local-object-root-drift');
-  }
-  return {
-    bundleRoot,
-    verified,
-    objectRoot: index.objectRoot,
-    transport: transport.transport,
-  };
+  return matches[0] || null;
 }
 
 function extractZip(bytes, destination) {
@@ -629,8 +739,12 @@ function verifyTarget(target, candidate, objectRoot) {
   }
   const receipt = readJson(path.join(target, RECEIPT));
   const { receiptRoot, ...receiptBody } = receipt;
+  const supportedReceipt = [
+    'shifu.qualified-assignment-core-materialization/v1',
+    'shifu.qualified-assignment-core-materialization/v2',
+  ].includes(receipt.schema);
   if (
-    receipt.schema !== 'shifu.qualified-assignment-core-materialization/v1' ||
+    !supportedReceipt ||
     receipt.objectRoot !== objectRoot ||
     receiptRoot !== qualifiedAssignmentCoreRoot(receiptBody) ||
     receipt.complete !== true
@@ -689,9 +803,20 @@ function publishTarget(repositoryRoot, retained, checkout) {
       }
     }
     const receiptBody = {
-      schema: 'shifu.qualified-assignment-core-materialization/v1',
+      schema: retained.verified.verification.compatibilityIdentity
+        ? 'shifu.qualified-assignment-core-materialization/v2'
+        : 'shifu.qualified-assignment-core-materialization/v1',
       repository: checkout.repository,
       commit: checkout.commit,
+      ...(retained.verified.verification.compatibilityIdentity
+        ? {
+            producerCommit: retained.verified.candidate.source.commit,
+            qualifiedTargetCommit:
+              retained.verified.qualification.identity.targetCommit,
+            compatibilityRoot:
+              retained.verified.verification.compatibilityIdentity,
+          }
+        : {}),
       objectRoot: retained.objectRoot,
       manifestRoot: retained.verified.verification.manifestRoot,
       artifactRoot: retained.verified.verification.artifactRoot,
@@ -792,7 +917,8 @@ function terminalUsage({
       phases,
       repository: checkout.repository,
       sourceCommit: checkout.commit,
-      compatibilityIdentity: null,
+      compatibilityIdentity:
+        materialization?.verified?.verification?.compatibilityIdentity || null,
       platform,
       architecture,
       pythonAbi: 'cp313',

@@ -17,11 +17,16 @@ import {
 import { requireSha } from './affected-native-artifact-lookup.mjs';
 
 export const QUALIFIED_CORE_CANDIDATE_SCHEMA =
-  'kungfu.qualified-assignment-core-candidate/v1';
-const ARTIFACT_SCHEMA = 'shifu.qualified-assignment-core-artifact/v1';
-const QUALIFICATION_SCHEMA = 'shifu.qualified-assignment-core-qualification/v1';
+  'kungfu.qualified-assignment-core-candidate/v2';
+const LEGACY_CANDIDATE_SCHEMA = 'kungfu.qualified-assignment-core-candidate/v1';
+const ARTIFACT_SCHEMA = 'shifu.qualified-assignment-core-artifact/v2';
+const QUALIFICATION_SCHEMA = 'shifu.qualified-assignment-core-qualification/v2';
 const PROMOTION_SCHEMA =
   'kungfu.qualified-assignment-core-promotion-authority/v1';
+const COMPATIBILITY_SCHEMA =
+  'kungfu.qualified-assignment-core-compatibility/v2';
+const EQUIVALENCE_SCHEMA =
+  'kungfu.qualified-assignment-core-equivalence-receipt/v1';
 const SHA256_ROOT = /^sha256:[0-9a-f]{64}$/u;
 const TARGET_ROOT = 'framework/core/dist/kungfu';
 const ROOT = path.resolve(
@@ -42,9 +47,19 @@ const SHIFU_CONTRACTS = [
   'docs/shifu/cache-contract.json',
   'docs/shifu/schema/qualified-assignment-core-artifact-v1.schema.json',
   'docs/shifu/schema/qualified-assignment-core-qualification-v1.schema.json',
+  'docs/shifu/schema/qualified-assignment-core-artifact-v2.schema.json',
+  'docs/shifu/schema/qualified-assignment-core-qualification-v2.schema.json',
   'scripts/check-shifu-cache-contract.mjs',
   'framework/assignment-capture/qualified-assignment-core-consumer.mjs',
   'framework/assignment-capture/qualified-assignment-core-observability.mjs',
+];
+const COMPATIBILITY_POLICY = [
+  'docs/shifu/artifact-contract.json',
+  'docs/shifu/schema/qualified-assignment-core-artifact-v2.schema.json',
+  'docs/shifu/schema/qualified-assignment-core-qualification-v2.schema.json',
+  'scripts/check-shifu-cache-contract.mjs',
+  'framework/release/qualified-assignment-core-artifact.mjs',
+  'framework/assignment-capture/qualified-assignment-core-consumer.mjs',
 ];
 const BUILDCHAIN_CONTRACTS = [
   '.buildchain/buildchain.toml',
@@ -56,6 +71,12 @@ const QUALIFICATION_FIELDS = [
   'planRoot',
   'shifuContractRoot',
   'sourceTreeRoot',
+];
+const QUALIFICATION_V2_FIELDS = [
+  ...QUALIFICATION_FIELDS,
+  'compatibilityPolicyRoot',
+  'compatibilityRoot',
+  'nativeClosureRoot',
 ];
 
 const readJson = (file) => JSON.parse(fs.readFileSync(file, 'utf8'));
@@ -126,6 +147,53 @@ function fileSetRoot(repositoryRoot, relativePaths, schema) {
   return qualifiedAssignmentCoreRoot({ schema, entries });
 }
 
+function trackedFileSetRoot(repositoryRoot, relativePaths, schema) {
+  const listed = spawnSync('git', ['ls-files', '-z', '--', ...relativePaths], {
+    cwd: repositoryRoot,
+    encoding: 'utf8',
+    shell: false,
+  });
+  if (listed.status !== 0) {
+    throw new Error(
+      listed.stderr.trim() || 'qualified Core tracked closure is unavailable',
+    );
+  }
+  const paths = listed.stdout.split('\0').filter(Boolean).sort();
+  if (paths.length === 0) {
+    throw new Error('qualified Core tracked closure is empty');
+  }
+  return fileSetRoot(repositoryRoot, paths, schema);
+}
+
+function compatibilityRoot({
+  nativeClosureRoot,
+  operatingSystem,
+  architecture,
+  pythonAbi: abi,
+  toolchainDigest,
+  dependencyLockDigest,
+  profile,
+  shifuContractRoot,
+  buildchainContractRoot,
+  compatibilityPolicyRoot,
+  artifactRoot,
+}) {
+  return qualifiedAssignmentCoreRoot({
+    schema: COMPATIBILITY_SCHEMA,
+    nativeClosureRoot,
+    operatingSystem,
+    architecture,
+    pythonAbi: abi,
+    toolchainDigest,
+    dependencyLockDigest,
+    profile,
+    shifuContractRoot,
+    buildchainContractRoot,
+    compatibilityPolicyRoot,
+    artifactRoot,
+  });
+}
+
 export function qualifiedCoreCheckoutRoots(repositoryRoot, candidate) {
   const sourceTreeRoot = qualifiedAssignmentCoreRoot({
     schema: 'kungfu.git-source-tree/v1',
@@ -150,6 +218,42 @@ export function qualifiedCoreCheckoutRoots(repositoryRoot, candidate) {
     schema: 'kungfu.qualified-assignment-core-toolchain/v1',
     toolchain: candidate.build.toolchain,
   });
+  if (candidate.schema === QUALIFIED_CORE_CANDIDATE_SCHEMA) {
+    const nativeClosureRoot = trackedFileSetRoot(
+      repositoryRoot,
+      ['framework/core'],
+      'kungfu.qualified-assignment-core-native-closure/v2',
+    );
+    const compatibilityPolicyRoot = fileSetRoot(
+      repositoryRoot,
+      COMPATIBILITY_POLICY,
+      'kungfu.qualified-assignment-core-compatibility-policy/v2',
+    );
+    const exactCompatibilityRoot = compatibilityRoot({
+      nativeClosureRoot,
+      operatingSystem: candidate.build.operatingSystem,
+      architecture: candidate.build.architecture,
+      pythonAbi: candidate.build.pythonAbi,
+      toolchainDigest,
+      dependencyLockDigest,
+      profile: candidate.build.profile,
+      shifuContractRoot,
+      buildchainContractRoot,
+      compatibilityPolicyRoot,
+      artifactRoot: candidate.payload.artifactRoot,
+    });
+    return {
+      sourceTreeRoot,
+      dependencyLockDigest,
+      shifuContractRoot,
+      buildchainContractRoot,
+      toolchainDigest,
+      nativeClosureRoot,
+      compatibilityPolicyRoot,
+      compatibilityRoot: exactCompatibilityRoot,
+      nativeInputRoot: exactCompatibilityRoot,
+    };
+  }
   const nativeInputRoot = qualifiedAssignmentCoreRoot({
     schema: 'kungfu.qualified-assignment-core-native-input/v1',
     commit: candidate.source.commit,
@@ -311,9 +415,15 @@ export function validateQualifiedCoreCandidate(
   bundleRoot,
   expected = {},
 ) {
-  if (candidate?.schema !== QUALIFIED_CORE_CANDIDATE_SCHEMA) {
+  if (
+    ![QUALIFIED_CORE_CANDIDATE_SCHEMA, LEGACY_CANDIDATE_SCHEMA].includes(
+      candidate?.schema,
+    )
+  ) {
     throw new Error('qualified Core candidate schema is unsupported');
   }
+  const compatibilityCandidate =
+    candidate.schema === QUALIFIED_CORE_CANDIDATE_SCHEMA;
   const exactKeys = (value, keys, label) => {
     if (
       !value ||
@@ -352,17 +462,30 @@ export function validateQualifiedCoreCandidate(
   );
   exactKeys(
     candidate.build,
-    [
-      'operatingSystem',
-      'architecture',
-      'pythonAbi',
-      'profile',
-      'toolchain',
-      'toolchainDigest',
-      'dependencyLockDigest',
-      'nativeInputRoot',
-      'buildInfo',
-    ],
+    compatibilityCandidate
+      ? [
+          'operatingSystem',
+          'architecture',
+          'pythonAbi',
+          'profile',
+          'toolchain',
+          'toolchainDigest',
+          'dependencyLockDigest',
+          'nativeInputRoot',
+          'compatibilityRoot',
+          'buildInfo',
+        ]
+      : [
+          'operatingSystem',
+          'architecture',
+          'pythonAbi',
+          'profile',
+          'toolchain',
+          'toolchainDigest',
+          'dependencyLockDigest',
+          'nativeInputRoot',
+          'buildInfo',
+        ],
     'build',
   );
   exactKeys(candidate.contracts, ['shifu', 'buildchain'], 'contracts');
@@ -468,9 +591,12 @@ export function validateQualifiedCoreCandidate(
   if (candidate.payload.artifactRoot !== artifactRoot) {
     throw new Error('qualified Core candidate artifact root drift');
   }
+  const qualificationFields = compatibilityCandidate
+    ? QUALIFICATION_V2_FIELDS
+    : QUALIFICATION_FIELDS;
   if (
     JSON.stringify(Object.keys(candidate.qualification || {}).sort()) !==
-    JSON.stringify(QUALIFICATION_FIELDS)
+    JSON.stringify([...qualificationFields].sort())
   ) {
     throw new Error(
       'qualified Core candidate qualification roots are incomplete',
@@ -481,7 +607,10 @@ export function validateQualifiedCoreCandidate(
       throw new Error(`qualified Core candidate ${field} root is absent`);
     }
   }
-  const checkoutRoots = qualifiedCoreCheckoutRoots(ROOT, candidate);
+  const checkoutRoots = qualifiedCoreCheckoutRoots(
+    expected.repositoryRoot || ROOT,
+    candidate,
+  );
   const buildInfo = candidate.build.buildInfo || {};
   if (
     buildInfo.git?.revision !== candidate.source.commit ||
@@ -533,20 +662,50 @@ export function validateQualifiedCoreCandidate(
       checkoutRoots.toolchainDigest,
       'toolchain',
     ],
-    [
-      candidate.build.nativeInputRoot,
-      qualifiedAssignmentCoreRoot({
-        schema: 'kungfu.qualified-assignment-core-native-input/v1',
-        commit: candidate.source.commit,
-        sourceTreeRoot: candidate.source.sourceTreeRoot,
-        planDigest: candidate.qualification.planRoot,
-        dependencyLockDigest: candidate.build.dependencyLockDigest,
-        shifuContractRoot: candidate.contracts.shifu.root,
-        buildchainContractRoot: candidate.contracts.buildchain.root,
-        profile: candidate.build.profile,
-      }),
-      'native input',
-    ],
+    ...(compatibilityCandidate
+      ? [
+          [
+            candidate.qualification.nativeClosureRoot,
+            checkoutRoots.nativeClosureRoot,
+            'native closure',
+          ],
+          [
+            candidate.qualification.compatibilityPolicyRoot,
+            checkoutRoots.compatibilityPolicyRoot,
+            'compatibility policy',
+          ],
+          [
+            candidate.build.compatibilityRoot,
+            checkoutRoots.compatibilityRoot,
+            'compatibility',
+          ],
+          [
+            candidate.qualification.compatibilityRoot,
+            checkoutRoots.compatibilityRoot,
+            'qualification compatibility',
+          ],
+          [
+            candidate.build.nativeInputRoot,
+            checkoutRoots.compatibilityRoot,
+            'native input',
+          ],
+        ]
+      : [
+          [
+            candidate.build.nativeInputRoot,
+            qualifiedAssignmentCoreRoot({
+              schema: 'kungfu.qualified-assignment-core-native-input/v1',
+              commit: candidate.source.commit,
+              sourceTreeRoot: candidate.source.sourceTreeRoot,
+              planDigest: candidate.qualification.planRoot,
+              dependencyLockDigest: candidate.build.dependencyLockDigest,
+              shifuContractRoot: candidate.contracts.shifu.root,
+              buildchainContractRoot: candidate.contracts.buildchain.root,
+              profile: candidate.build.profile,
+            }),
+            'native input',
+          ],
+        ]),
   ]) {
     if (actual !== wanted) {
       throw new Error(`qualified Core candidate ${label} root drift`);
@@ -613,20 +772,34 @@ export function sealQualifiedCoreCandidate({
     schema: 'kungfu.qualified-assignment-core-toolchain/v1',
     toolchain,
   });
-  const nativeInputRoot = qualifiedAssignmentCoreRoot({
-    schema: 'kungfu.qualified-assignment-core-native-input/v1',
-    commit: exactCommit,
-    sourceTreeRoot,
-    planDigest: requireRoot(plan.planDigest, 'affected-native plan digest'),
-    dependencyLockDigest,
-    shifuContractRoot,
-    buildchainContractRoot,
-    profile,
-  });
   const artifactRoot = qualifiedAssignmentCoreRoot({
     schema: 'shifu.qualified-assignment-core-payload/v1',
     entries,
   });
+  const nativeClosureRoot = trackedFileSetRoot(
+    repositoryRoot,
+    ['framework/core'],
+    'kungfu.qualified-assignment-core-native-closure/v2',
+  );
+  const compatibilityPolicyRoot = fileSetRoot(
+    repositoryRoot,
+    COMPATIBILITY_POLICY,
+    'kungfu.qualified-assignment-core-compatibility-policy/v2',
+  );
+  const exactCompatibilityRoot = compatibilityRoot({
+    nativeClosureRoot,
+    operatingSystem: 'darwin',
+    architecture: 'arm64',
+    pythonAbi: pythonAbi(buildInfo),
+    toolchainDigest,
+    dependencyLockDigest,
+    profile,
+    shifuContractRoot,
+    buildchainContractRoot,
+    compatibilityPolicyRoot,
+    artifactRoot,
+  });
+  requireRoot(plan.planDigest, 'affected-native plan digest');
   const body = {
     schema: QUALIFIED_CORE_CANDIDATE_SCHEMA,
     source: {
@@ -653,7 +826,8 @@ export function sealQualifiedCoreCandidate({
       toolchain,
       toolchainDigest,
       dependencyLockDigest,
-      nativeInputRoot,
+      nativeInputRoot: exactCompatibilityRoot,
+      compatibilityRoot: exactCompatibilityRoot,
       buildInfo,
     },
     contracts: {
@@ -668,6 +842,9 @@ export function sealQualifiedCoreCandidate({
       dependencyLockDigest,
       shifuContractRoot,
       buildchainContractRoot,
+      nativeClosureRoot,
+      compatibilityPolicyRoot,
+      compatibilityRoot: exactCompatibilityRoot,
     },
   };
   const candidate = {
@@ -677,12 +854,14 @@ export function sealQualifiedCoreCandidate({
   fs.mkdirSync(outputRoot, { recursive: true });
   copyPayload(payloadRoot, path.join(outputRoot, 'payload'), entries);
   writeJson(path.join(outputRoot, 'candidate.json'), candidate);
-  validateQualifiedCoreCandidate(candidate, outputRoot);
+  validateQualifiedCoreCandidate(candidate, outputRoot, { repositoryRoot });
   return candidate;
 }
 
-function manifestAndQualification(candidate, promotion) {
+function manifestAndQualification(candidate, promotion, equivalence) {
   const promotionAuthorityRoot = qualifiedAssignmentCoreRoot(promotion);
+  const mode = equivalence ? 'explicit-equivalence' : 'exact-commit';
+  const equivalenceReceiptRoot = equivalence?.receiptRoot || null;
   const manifestBody = {
     schema: ARTIFACT_SCHEMA,
     producer: {
@@ -695,8 +874,10 @@ function manifestAndQualification(candidate, promotion) {
       commit: promotion.targetCommit,
     },
     compatibility: {
-      mode: 'exact-commit',
-      equivalenceReceiptRoot: null,
+      schema: COMPATIBILITY_SCHEMA,
+      root: candidate.build.compatibilityRoot,
+      mode,
+      equivalenceReceiptRoot,
     },
     build: {
       nativeInputRoot: candidate.build.nativeInputRoot,
@@ -706,10 +887,12 @@ function manifestAndQualification(candidate, promotion) {
       profile: candidate.build.profile,
       toolchainDigest: candidate.build.toolchainDigest,
       dependencyLockDigest: candidate.build.dependencyLockDigest,
+      nativeClosureRoot: candidate.qualification.nativeClosureRoot,
+      compatibilityPolicyRoot: candidate.qualification.compatibilityPolicyRoot,
     },
     contracts: {
-      artifactContractVersion: 1,
-      qualificationContractVersion: 1,
+      artifactContractVersion: 2,
+      qualificationContractVersion: 2,
       shifu: candidate.contracts.shifu,
       buildchain: candidate.contracts.buildchain,
     },
@@ -732,8 +915,9 @@ function manifestAndQualification(candidate, promotion) {
       producerCommit: candidate.source.commit,
       targetRepository: promotion.repository,
       targetCommit: promotion.targetCommit,
-      compatibilityMode: 'exact-commit',
-      equivalenceReceiptRoot: null,
+      compatibilityRoot: candidate.build.compatibilityRoot,
+      compatibilityMode: mode,
+      equivalenceReceiptRoot,
     },
     targetCheckout: {
       commit: promotion.targetCommit,
@@ -746,6 +930,7 @@ function manifestAndQualification(candidate, promotion) {
       platformAndAbi: 'pass',
       buildIdentity: 'pass',
       sourceIdentity: 'pass',
+      compatibilityIdentity: 'pass',
       checkoutCleanliness: 'pass',
     },
     promotionAuthority: promotion,
@@ -764,14 +949,23 @@ function manifestAndQualification(candidate, promotion) {
   return { manifest, qualification };
 }
 
-function verificationExpectation(candidate, promotion, now) {
+function verificationExpectation(
+  candidate,
+  promotion,
+  now,
+  targetSourceTreeRoot = candidate.source.sourceTreeRoot,
+) {
   return {
     producerRepository: candidate.source.repository,
     targetRepository: promotion.repository,
     producerCommit: candidate.source.commit,
     targetCommit: promotion.targetCommit,
     sourceTreeRoot: candidate.source.sourceTreeRoot,
+    targetSourceTreeRoot,
     nativeInputRoot: candidate.build.nativeInputRoot,
+    compatibilityRoot: candidate.build.compatibilityRoot,
+    nativeClosureRoot: candidate.qualification.nativeClosureRoot,
+    compatibilityPolicyRoot: candidate.qualification.compatibilityPolicyRoot,
     operatingSystem: candidate.build.operatingSystem,
     architecture: candidate.build.architecture,
     pythonAbi: candidate.build.pythonAbi,
@@ -821,23 +1015,90 @@ export async function promoteQualifiedCoreCandidate({
     tree: exactTree,
   });
   const shared = !allowLocal;
+  if (shared) {
+    const head = spawnSync('git', ['rev-parse', 'HEAD', 'HEAD^{tree}'], {
+      cwd: root,
+      encoding: 'utf8',
+      shell: false,
+    });
+    const status = spawnSync(
+      'git',
+      ['status', '--porcelain', '--untracked-files=no'],
+      {
+        cwd: root,
+        encoding: 'utf8',
+        shell: false,
+      },
+    );
+    const [checkoutCommit, checkoutTree] = head.stdout.trim().split('\n');
+    if (
+      head.status !== 0 ||
+      status.status !== 0 ||
+      status.stdout.trim() ||
+      checkoutCommit !== exactTargetCommit ||
+      checkoutTree !== exactTree
+    ) {
+      throw new Error(
+        'qualified Core promotion requires the exact clean protected target checkout',
+      );
+    }
+  }
   const validated = validateQualifiedCoreCandidate(candidate, candidateRoot, {
     shared,
     repository: exactRepository,
-    commit: exactTargetCommit,
-    sourceTreeRoot,
+    repositoryRoot: root,
     runId: shared ? mergeGroupRunId : undefined,
     event: shared ? 'merge_group' : undefined,
   });
+  const targetRoots = qualifiedCoreCheckoutRoots(root, candidate);
+  if (targetRoots.compatibilityRoot !== candidate.build.compatibilityRoot) {
+    throw new Error(
+      'qualified Core target compatibility identity does not match producer',
+    );
+  }
+  const reused = candidate.source.commit !== exactTargetCommit;
+  const equivalenceBody = reused
+    ? {
+        schema: EQUIVALENCE_SCHEMA,
+        producer: {
+          repository: candidate.source.repository,
+          commit: candidate.source.commit,
+          tree: candidate.source.tree,
+          sourceTreeRoot: candidate.source.sourceTreeRoot,
+          compatibilityRoot: candidate.build.compatibilityRoot,
+        },
+        target: {
+          repository: exactRepository,
+          commit: exactTargetCommit,
+          tree: exactTree,
+          sourceTreeRoot,
+          compatibilityRoot: targetRoots.compatibilityRoot,
+        },
+        comparison: {
+          method: 'independent-native-closure-recomputation',
+          nativeClosureRoot: targetRoots.nativeClosureRoot,
+          dependencyLockDigest: targetRoots.dependencyLockDigest,
+          shifuContractRoot: targetRoots.shifuContractRoot,
+          buildchainContractRoot: targetRoots.buildchainContractRoot,
+          compatibilityPolicyRoot: targetRoots.compatibilityPolicyRoot,
+        },
+      }
+    : null;
+  const equivalence = equivalenceBody
+    ? {
+        ...equivalenceBody,
+        receiptRoot: qualifiedAssignmentCoreRoot(equivalenceBody),
+      }
+    : null;
   let exactDeliveryRoot = deliveryEvidenceRoot;
   if (shared) {
     const attempt = validateDeliveryAttempt(deliveryAttempt);
     if (
       attempt.workflow.repository !== exactRepository ||
       attempt.workflow.runId !== Number(mergeGroupRunId) ||
-      attempt.source.mergeGroupHead !== exactTargetCommit ||
-      attempt.source.checkout !== exactTargetCommit ||
-      attempt.source.replayedTree !== exactTree
+      attempt.source.mergeGroupHead !== candidate.source.commit ||
+      attempt.source.checkout !== candidate.source.commit ||
+      attempt.source.replayedTree !== candidate.source.tree
     ) {
       throw new Error('qualified Core delivery authority drift');
     }
@@ -846,7 +1107,7 @@ export async function promoteQualifiedCoreCandidate({
   requireRoot(exactDeliveryRoot, 'qualified Core delivery evidence root');
   const promotion = {
     schema: PROMOTION_SCHEMA,
-    mode: 'protected-dev-direct',
+    mode: reused ? 'protected-dev-reused-proof' : 'protected-dev-direct',
     repository: exactRepository,
     targetCommit: exactTargetCommit,
     protectedRef,
@@ -859,12 +1120,19 @@ export async function promoteQualifiedCoreCandidate({
   const { manifest, qualification } = manifestAndQualification(
     candidate,
     promotion,
+    equivalence,
   );
   const verification = await verifyQualifiedAssignmentCoreArtifact({
     manifest,
     qualification,
+    equivalence,
     payloads: validated.payloads,
-    expected: verificationExpectation(candidate, promotion, now),
+    expected: verificationExpectation(
+      candidate,
+      promotion,
+      now,
+      sourceTreeRoot,
+    ),
     root,
   });
   fs.mkdirSync(outputRoot, { recursive: true });
@@ -876,6 +1144,9 @@ export async function promoteQualifiedCoreCandidate({
   writeJson(path.join(outputRoot, 'candidate.json'), candidate);
   writeJson(path.join(outputRoot, 'manifest.json'), manifest);
   writeJson(path.join(outputRoot, 'qualification.json'), qualification);
+  if (equivalence) {
+    writeJson(path.join(outputRoot, 'equivalence.json'), equivalence);
+  }
   writeJson(path.join(outputRoot, 'verification.json'), verification);
   return { manifest, qualification, verification, candidate };
 }
@@ -886,14 +1157,130 @@ export async function verifyQualifiedCoreBundle(bundleRoot, expected, root) {
     repository: expected.producerRepository,
     commit: expected.producerCommit,
     sourceTreeRoot: expected.sourceTreeRoot,
+    repositoryRoot: root,
   });
+  const equivalencePath = path.join(bundleRoot, 'equivalence.json');
   return verifyQualifiedAssignmentCoreArtifact({
     manifest: readJson(path.join(bundleRoot, 'manifest.json')),
     qualification: readJson(path.join(bundleRoot, 'qualification.json')),
+    equivalence: fs.existsSync(equivalencePath)
+      ? readJson(equivalencePath)
+      : null,
     payloads: readPayloads(bundleRoot, candidate.payload.entries),
     expected,
     root,
   });
+}
+
+export async function reuseQualifiedCoreBundle({
+  bundleRoot,
+  outputRoot,
+  repositoryRoot,
+  repository,
+  currentCommit,
+  now,
+}) {
+  const checkoutCommit = spawnSync('git', ['rev-parse', 'HEAD'], {
+    cwd: repositoryRoot,
+    encoding: 'utf8',
+    shell: false,
+  });
+  const checkoutStatus = spawnSync(
+    'git',
+    ['status', '--porcelain', '--untracked-files=no'],
+    {
+      cwd: repositoryRoot,
+      encoding: 'utf8',
+      shell: false,
+    },
+  );
+  if (
+    checkoutCommit.status !== 0 ||
+    checkoutStatus.status !== 0 ||
+    checkoutCommit.stdout.trim() !== currentCommit ||
+    checkoutStatus.stdout.trim()
+  ) {
+    throw new Error(
+      'qualified Core reuse requires the exact clean consuming checkout',
+    );
+  }
+  const candidate = readJson(path.join(bundleRoot, 'candidate.json'));
+  const qualification = readJson(path.join(bundleRoot, 'qualification.json'));
+  let targetSourceTreeRoot = candidate.source.sourceTreeRoot;
+  if (qualification.identity.targetCommit !== candidate.source.commit) {
+    const qualifiedTargetTree = spawnSync(
+      'git',
+      ['rev-parse', `${qualification.identity.targetCommit}^{tree}`],
+      {
+        cwd: repositoryRoot,
+        encoding: 'utf8',
+        shell: false,
+      },
+    );
+    if (
+      qualifiedTargetTree.status !== 0 ||
+      !/^[0-9a-f]{40}$/u.test(qualifiedTargetTree.stdout.trim())
+    ) {
+      throw new Error(
+        'qualified Core protected target source tree is unavailable',
+      );
+    }
+    targetSourceTreeRoot = qualifiedAssignmentCoreRoot({
+      schema: 'kungfu.git-source-tree/v1',
+      tree: qualifiedTargetTree.stdout.trim(),
+    });
+  }
+  const roots = qualifiedCoreCheckoutRoots(repositoryRoot, candidate);
+  const verification = await verifyQualifiedCoreBundle(
+    bundleRoot,
+    {
+      producerRepository: candidate.source.repository,
+      targetRepository: qualification.identity.targetRepository,
+      producerCommit: candidate.source.commit,
+      targetCommit: qualification.identity.targetCommit,
+      sourceTreeRoot: candidate.source.sourceTreeRoot,
+      targetSourceTreeRoot,
+      nativeInputRoot: roots.nativeInputRoot,
+      compatibilityRoot: roots.compatibilityRoot,
+      nativeClosureRoot: roots.nativeClosureRoot,
+      compatibilityPolicyRoot: roots.compatibilityPolicyRoot,
+      operatingSystem: candidate.build.operatingSystem,
+      architecture: candidate.build.architecture,
+      pythonAbi: candidate.build.pythonAbi,
+      profile: candidate.build.profile,
+      toolchainDigest: roots.toolchainDigest,
+      dependencyLockDigest: roots.dependencyLockDigest,
+      shifuContractVersion: candidate.contracts.shifu.version,
+      shifuContractRoot: roots.shifuContractRoot,
+      buildchainContractVersion: candidate.contracts.buildchain.version,
+      buildchainContractRoot: roots.buildchainContractRoot,
+      targetRoot: candidate.consumer.targetRoot,
+      checkoutClean: true,
+      protectedRef: qualification.promotionAuthority.protectedRef,
+      promotionAuthorityCandidates: [candidate.candidateRoot],
+      now,
+    },
+    repositoryRoot,
+  );
+  requireRepository(repository, 'qualified Core reuse repository');
+  requireSha(currentCommit, 'qualified Core consuming commit');
+  if (
+    repository !== candidate.source.repository ||
+    !verification.compatibilityIdentity
+  ) {
+    throw new Error('qualified Core reusable identity is unavailable');
+  }
+  fs.cpSync(bundleRoot, outputRoot, {
+    recursive: true,
+    errorOnExist: true,
+    force: false,
+  });
+  return {
+    verification,
+    candidate,
+    qualifiedTargetCommit: qualification.identity.targetCommit,
+    currentCommit,
+  };
 }
 
 function commandFact(command, args = ['--version']) {
@@ -1020,8 +1407,32 @@ async function main() {
     console.log(JSON.stringify(result.verification, null, 2));
     return;
   }
+  if (options.command === 'reuse') {
+    const repositoryRoot = path.resolve(options['repository-root'] || '.');
+    const now = options.now || new Date().toISOString();
+    const result = await reuseQualifiedCoreBundle({
+      bundleRoot: path.resolve(options.bundle),
+      outputRoot: path.resolve(options['output-dir']),
+      repositoryRoot,
+      repository: options.repository,
+      currentCommit: options['current-commit'] || git('rev-parse', 'HEAD'),
+      now,
+    });
+    appendGithubOutput(options['github-output'], {
+      'manifest-root': result.verification.manifestRoot,
+      'artifact-root': result.verification.artifactRoot,
+      'qualification-receipt-root':
+        result.verification.qualificationReceiptRoot,
+      'promotion-authority-root': result.verification.promotionAuthorityRoot,
+      'compatibility-root': result.verification.compatibilityIdentity,
+      'producer-commit': result.candidate.source.commit,
+      'qualified-target-commit': result.qualifiedTargetCommit,
+    });
+    console.log(JSON.stringify(result.verification, null, 2));
+    return;
+  }
   throw new Error(
-    'usage: qualified-assignment-core-artifact.mjs <seal|promote>',
+    'usage: qualified-assignment-core-artifact.mjs <seal|promote|reuse>',
   );
 }
 

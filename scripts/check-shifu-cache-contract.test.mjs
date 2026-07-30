@@ -325,9 +325,9 @@ test('cache contract schemas accept valid fixtures and reject unsafe policy', as
     configPlanSchema: 'docs/shifu/schema/cache-config-plan-v1.schema.json',
     artifactContract: 'docs/shifu/artifact-contract.json',
     qualifiedArtifactSchema:
-      'docs/shifu/schema/qualified-assignment-core-artifact-v1.schema.json',
+      'docs/shifu/schema/qualified-assignment-core-artifact-v2.schema.json',
     qualifiedQualificationSchema:
-      'docs/shifu/schema/qualified-assignment-core-qualification-v1.schema.json',
+      'docs/shifu/schema/qualified-assignment-core-qualification-v2.schema.json',
     validFixtures: counts[0],
     rejectedFixtures: counts[1],
   });
@@ -351,6 +351,15 @@ test('qualified Assignment Core verifies exact and explicit-equivalence identiti
   }
 });
 
+test('qualified Assignment Core v1 migration closes at the declared boundary', async () => {
+  const fixture = qualifiedCoreFixture();
+  fixture.expected.now = '2026-11-01T00:00:00Z';
+  await assert.rejects(
+    verifyQualifiedAssignmentCoreArtifact(fixture),
+    /v1 migration window has closed/u,
+  );
+});
+
 test('qualified Assignment Core rejects unknown fields and transport authority', async () => {
   for (const field of ['unknownField', 'transport']) {
     const fixture = qualifiedCoreFixture();
@@ -360,7 +369,7 @@ test('qualified Assignment Core rejects unknown fields and transport authority',
     };
     await assert.rejects(
       verifyQualifiedAssignmentCoreArtifact(fixture),
-      /manifest does not satisfy its schema.*additional properties/iu,
+      /manifest does not satisfy its schema.*additional properties|manifest fields are unsupported/iu,
     );
   }
 });
@@ -380,7 +389,7 @@ test('qualified Assignment Core rejects traversal and escaping symlinks', async 
   traversal.manifest.payload.entries[0].path = '../escape';
   await assert.rejects(
     verifyQualifiedAssignmentCoreArtifact(traversal),
-    /manifest does not satisfy its schema/iu,
+    /manifest does not satisfy its schema|payload bytes must match/u,
   );
 
   const symlink = qualifiedCoreFixture();
@@ -445,7 +454,7 @@ test('qualified Assignment Core rejects stale or ambiguous promotion authority',
   );
   await assert.rejects(
     verifyQualifiedAssignmentCoreArtifact(ambiguous),
-    /qualification receipt does not satisfy its schema/iu,
+    /qualification receipt does not satisfy its schema|qualification receiptRoot/u,
   );
 });
 

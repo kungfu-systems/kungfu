@@ -1,0 +1,314 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://libkungfu.dev/schemas/shifu/qualified-assignment-core-artifact-v2.schema.json",
+  "title": "Shifu qualified Assignment Core artifact manifest v2",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "producer",
+    "target",
+    "compatibility",
+    "build",
+    "contracts",
+    "payload",
+    "consumer",
+    "manifestRoot",
+    "qualificationReceiptRoot",
+    "promotionAuthorityRoot"
+  ],
+  "properties": {
+    "schema": {
+      "const": "shifu.qualified-assignment-core-artifact/v2"
+    },
+    "producer": {
+      "$ref": "#/$defs/revisionIdentity"
+    },
+    "target": {
+      "$ref": "#/$defs/targetIdentity"
+    },
+    "compatibility": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema",
+        "root",
+        "mode",
+        "equivalenceReceiptRoot"
+      ],
+      "properties": {
+        "schema": {
+          "const": "kungfu.qualified-assignment-core-compatibility/v2"
+        },
+        "root": {
+          "$ref": "#/$defs/root"
+        },
+        "mode": {
+          "enum": [
+            "exact-commit",
+            "explicit-equivalence"
+          ]
+        },
+        "equivalenceReceiptRoot": {
+          "oneOf": [
+            {
+              "$ref": "#/$defs/root"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      }
+    },
+    "build": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "nativeInputRoot",
+        "operatingSystem",
+        "architecture",
+        "pythonAbi",
+        "profile",
+        "toolchainDigest",
+        "dependencyLockDigest",
+        "nativeClosureRoot",
+        "compatibilityPolicyRoot"
+      ],
+      "properties": {
+        "nativeInputRoot": {
+          "$ref": "#/$defs/root"
+        },
+        "operatingSystem": {
+          "enum": [
+            "darwin",
+            "linux",
+            "windows"
+          ]
+        },
+        "architecture": {
+          "enum": [
+            "arm64",
+            "x64"
+          ]
+        },
+        "pythonAbi": {
+          "type": "string",
+          "pattern": "^cp[0-9]{2,4}$"
+        },
+        "profile": {
+          "type": "string",
+          "pattern": "^[a-z0-9][a-z0-9._-]*$"
+        },
+        "toolchainDigest": {
+          "$ref": "#/$defs/root"
+        },
+        "dependencyLockDigest": {
+          "$ref": "#/$defs/root"
+        },
+        "nativeClosureRoot": {
+          "$ref": "#/$defs/root"
+        },
+        "compatibilityPolicyRoot": {
+          "$ref": "#/$defs/root"
+        }
+      }
+    },
+    "contracts": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "artifactContractVersion",
+        "qualificationContractVersion",
+        "shifu",
+        "buildchain"
+      ],
+      "properties": {
+        "artifactContractVersion": {
+          "const": 2
+        },
+        "qualificationContractVersion": {
+          "const": 2
+        },
+        "shifu": {
+          "$ref": "#/$defs/versionedContract"
+        },
+        "buildchain": {
+          "$ref": "#/$defs/versionedContract"
+        }
+      }
+    },
+    "payload": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "artifactRoot",
+        "entries"
+      ],
+      "properties": {
+        "artifactRoot": {
+          "$ref": "#/$defs/root"
+        },
+        "entries": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/payloadEntry"
+          }
+        }
+      }
+    },
+    "consumer": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "targetRoot",
+        "staging",
+        "cleanCheckoutRequired",
+        "publication",
+        "partialStateRunnable"
+      ],
+      "properties": {
+        "targetRoot": {
+          "$ref": "#/$defs/relativePath"
+        },
+        "staging": {
+          "const": "outside-target"
+        },
+        "cleanCheckoutRequired": {
+          "const": true
+        },
+        "publication": {
+          "const": "atomic-replace"
+        },
+        "partialStateRunnable": {
+          "const": false
+        }
+      }
+    },
+    "manifestRoot": {
+      "$ref": "#/$defs/root"
+    },
+    "qualificationReceiptRoot": {
+      "$ref": "#/$defs/root"
+    },
+    "promotionAuthorityRoot": {
+      "$ref": "#/$defs/root"
+    }
+  },
+  "$defs": {
+    "root": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "commit": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{40}$"
+    },
+    "repository": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$"
+    },
+    "relativePath": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "^(?!/)(?!.*(?:^|/)\\.\\.(?:/|$))(?!.*\\\\)(?!.*//)[^\\u0000]+$"
+    },
+    "revisionIdentity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "repository",
+        "commit",
+        "sourceTreeRoot"
+      ],
+      "properties": {
+        "repository": {
+          "$ref": "#/$defs/repository"
+        },
+        "commit": {
+          "$ref": "#/$defs/commit"
+        },
+        "sourceTreeRoot": {
+          "$ref": "#/$defs/root"
+        }
+      }
+    },
+    "targetIdentity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "repository",
+        "commit"
+      ],
+      "properties": {
+        "repository": {
+          "$ref": "#/$defs/repository"
+        },
+        "commit": {
+          "$ref": "#/$defs/commit"
+        }
+      }
+    },
+    "versionedContract": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "version",
+        "root"
+      ],
+      "properties": {
+        "version": {
+          "type": "string",
+          "minLength": 1
+        },
+        "root": {
+          "$ref": "#/$defs/root"
+        }
+      }
+    },
+    "payloadEntry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "path",
+        "type",
+        "sizeBytes",
+        "digest",
+        "mode",
+        "linkTarget"
+      ],
+      "properties": {
+        "path": {
+          "$ref": "#/$defs/relativePath"
+        },
+        "type": {
+          "enum": [
+            "regular-file",
+            "symlink"
+          ]
+        },
+        "sizeBytes": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "digest": {
+          "$ref": "#/$defs/root"
+        },
+        "mode": {
+          "enum": [
+            "0644",
+            "0755",
+            "0777"
+          ]
+        },
+        "linkTarget": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      }
+    }
+  }
+}
