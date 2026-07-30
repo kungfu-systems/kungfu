@@ -26,6 +26,9 @@ jobs:
     name: Promote qualified merge-group cache
     runs-on: ubuntu-24.04
     timeout-minutes: 95
+    outputs:
+      target_sha: ${{ steps.target.outputs.sha }}
+      windows_x86_64_available: ${{ steps.qualified_core_promotion.outputs.windows_x86_64_cp313_available }}
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
@@ -722,3 +725,111 @@ jobs:
               product/qualification/qualified-core/matrix-index.json
             echo "- transport: replaceable and non-authoritative"
           } >> "$GITHUB_STEP_SUMMARY"
+
+  qualify_windows_x86_64_consumer:
+    name: Qualify Windows x86_64 consumer
+    needs: promote
+    if: ${{ needs.promote.outputs.windows_x86_64_available == 'true' }}
+    runs-on: windows-2022
+    timeout-minutes: 30
+    permissions:
+      actions: read
+      contents: read
+    env:
+      TARGET_SHA: ${{ needs.promote.outputs.target_sha }}
+    steps:
+      - name: Check out exact protected source
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          ref: ${{ needs.promote.outputs.target_sha }}
+          fetch-depth: 1
+          persist-credentials: false
+      - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
+        with:
+          node-version: "24"
+      - name: Download exact promoted Windows transport
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: qualified-assignment-core-${{ needs.promote.outputs.target_sha }}-windows-x86_64-cp313
+          path: product/qualification/qualified-core/windows-x86_64-cp313
+      - name: Provision the repository-pinned Shifu toolchain
+        shell: pwsh
+        run: |
+          cmd /d /c shifu.cmd install --frozen-lockfile --no-optional
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Qualify remote and local-CAS consumer paths
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          $bundle = Join-Path $env:GITHUB_WORKSPACE "product\qualification\qualified-core\windows-x86_64-cp313"
+          $cacheRoot = Join-Path $env:RUNNER_TEMP "qualified-core-windows-consumer-cache"
+          $firstCheckout = Join-Path $env:RUNNER_TEMP "qualified-core-windows-consumer-first"
+          $secondCheckout = Join-Path $env:RUNNER_TEMP "qualified-core-windows-consumer-second"
+          git worktree add --detach $firstCheckout $env:TARGET_SHA
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          git worktree add --detach $secondCheckout $env:TARGET_SHA
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+          Push-Location $firstCheckout
+          try {
+            $env:KUNGFU_QUALIFIED_CORE_BUNDLE = $bundle
+            $env:KUNGFU_QUALIFIED_CORE_CACHE_ROOT = $cacheRoot
+            # shifu-entry-contract: allow direct consumer qualification before its cached Core can activate Shifu Work Control
+            node framework\assignment-capture\qualified-assignment-core-consumer.mjs materialize --repository-root $firstCheckout
+            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+            $runtime = Join-Path $firstCheckout "framework\core\dist\kungfu"
+            $nativeFiles = @(
+              Get-ChildItem -Path (Join-Path $runtime "pykungfu*.pyd"), (Join-Path $runtime "*.dll") -File
+            )
+            if ($nativeFiles.Count -lt 3) {
+              throw "Qualified Windows runtime closure is incomplete."
+            }
+            foreach ($nativeFile in $nativeFiles) {
+              $bytes = [System.IO.File]::ReadAllBytes($nativeFile.FullName)
+              if ($bytes.Length -lt 2 -or $bytes[0] -ne 0x4d -or $bytes[1] -ne 0x5a) {
+                throw "Qualified Windows native payload is not a PE image: $($nativeFile.Name)"
+              }
+            }
+            $receipt = Get-Content -Raw (Join-Path $runtime ".qualified-core-materialization.json") | ConvertFrom-Json
+            if (
+              -not $receipt.complete -or
+              $receipt.manifestRoot -notmatch "^sha256:[0-9a-f]{64}$" -or
+              $receipt.artifactRoot -notmatch "^sha256:[0-9a-f]{64}$" -or
+              $receipt.qualificationReceiptRoot -notmatch "^sha256:[0-9a-f]{64}$" -or
+              $receipt.promotionAuthorityRoot -notmatch "^sha256:[0-9a-f]{64}$" -or
+              $receipt.receiptRoot -notmatch "^sha256:[0-9a-f]{64}$"
+            ) {
+              throw "Qualified Windows materialization receipt is incomplete."
+            }
+            cmd /d /c shifu.cmd work --help
+            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          } finally {
+            Pop-Location
+            Remove-Item Env:KUNGFU_QUALIFIED_CORE_BUNDLE -ErrorAction SilentlyContinue
+          }
+
+          Push-Location $secondCheckout
+          try {
+            $env:KUNGFU_QUALIFIED_CORE_CACHE_ROOT = $cacheRoot
+            $env:KUNGFU_QUALIFIED_CORE_GITHUB = "0"
+            # shifu-entry-contract: allow direct local-CAS qualification before its cached Core can activate Shifu Work Control
+            node framework\assignment-capture\qualified-assignment-core-consumer.mjs materialize --repository-root $secondCheckout
+            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+            cmd /d /c shifu.cmd work --help
+            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+            # shifu-entry-contract: allow direct post-activation observation of the bounded consumer qualification cache
+            $statusJson = node framework\assignment-capture\qualified-assignment-core-consumer.mjs status --repository-root $secondCheckout --json
+            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+            $status = $statusJson | ConvertFrom-Json
+            if (
+              -not $status.currentCheckout.eligible -or
+              $status.totals.observations -ne 2 -or
+              $status.counts.reasons."explicit-bundle-hit" -ne 1 -or
+              $status.counts.reasons."local-cas-hit" -ne 1
+            ) {
+              throw "Qualified Windows consumer observations do not prove remote and local-CAS paths."
+            }
+          } finally {
+            Pop-Location
+            Remove-Item Env:KUNGFU_QUALIFIED_CORE_GITHUB -ErrorAction SilentlyContinue
+          }

@@ -164,33 +164,19 @@ echo shifu: action needs node 1>&2
 exit /b 127
 
 :assignment
-set "_KFC_WORK_ARGS=%*"
-set "_KFC_WORK_ARGS=!_KFC_WORK_ARGS:* =!"
-if /i "%~2"=="capture" goto assignmentcapture
-if /i "%~2"=="cleanup" goto assignmentcapture
-if not exist "%~dp0framework\core\dist\kungfu\pykungfu*.pyd" (
-  where node >nul 2>nul
-  if not errorlevel 1 if exist "%~dp0framework\assignment-capture\qualified-assignment-core-consumer.mjs" (
-    node "%~dp0framework\assignment-capture\qualified-assignment-core-consumer.mjs" materialize --repository-root "%~dp0."
-    if errorlevel 1 exit /b !errorlevel!
-  )
-)
-set "_KFC_UV="
-for /f "delims=" %%u in ('where uv 2^>nul') do if not defined _KFC_UV set "_KFC_UV=%%u"
-if not defined _KFC_UV (
-  where node >nul 2>nul
-  if not errorlevel 1 if exist "%~dp0framework\assignment-capture\qualified-assignment-core-consumer.mjs" (
-    for /f "usebackq delims=" %%u in (`node "%~dp0framework\assignment-capture\qualified-assignment-core-consumer.mjs" resolve-cached-tool uv 2^>nul`) do if not defined _KFC_UV set "_KFC_UV=%%u"
-  )
-)
+set "_KFC_WORK_ARGS=%*" & set "_KFC_WORK_ARGS=!_KFC_WORK_ARGS:* =!"
+if /i "%~2"=="capture" goto assignmentcapture & if /i "%~2"=="cleanup" goto assignmentcapture
+ver >nul & if not exist "%~dp0framework\core\dist\kungfu\pykungfu*.pyd" if exist "%~dp0framework\assignment-capture\qualified-assignment-core-consumer.mjs" where node >nul 2>nul && node "%~dp0framework\assignment-capture\qualified-assignment-core-consumer.mjs" materialize --repository-root "%~dp0."
+if !errorlevel! equ 127 exit /b 127
+set "_KFC_UV=" & for /f "delims=" %%u in ('where uv 2^>nul') do if not defined _KFC_UV set "_KFC_UV=%%u"
+if not defined _KFC_UV if exist "%~dp0framework\assignment-capture\qualified-assignment-core-consumer.mjs" where node >nul 2>nul && for /f "usebackq delims=" %%u in (`node "%~dp0framework\assignment-capture\qualified-assignment-core-consumer.mjs" resolve-cached-tool uv 2^>nul`) do if not defined _KFC_UV set "_KFC_UV=%%u"
 if exist "%~dp0framework\core\dist\kungfu\pykungfu*.pyd" (
   if exist "%~dp0framework\core\dist\kungfu\kungfubuildinfo.json" (
     if defined _KFC_UV (
       pushd "%~dp0framework\core"
       "!_KFC_UV!" run --frozen python .devtools\kungfu_cli.py work !_KFC_WORK_ARGS!
       set "_KFC_WORK_ERROR=!errorlevel!"
-      popd
-      exit /b !_KFC_WORK_ERROR!
+      popd & exit /b !_KFC_WORK_ERROR!
     )
   )
 )

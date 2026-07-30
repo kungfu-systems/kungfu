@@ -41,6 +41,7 @@ without changing and refreshing the manifest fails the Gate catalog check.
 | --- | --- | --- | --- | --- | --- | --- | ---: |
 | `.github/workflows/adr-release-gate.yml` | `adr-release` | qualification | none | diagnostic | token:read | none | 2 |
 | `.github/workflows/affected-native-cache-promote.yml` | `promote` | qualification | none | diagnostic | token:write | none | 24 |
+| `.github/workflows/affected-native-cache-promote.yml` | `qualify_windows_x86_64_consumer` | qualification | none | diagnostic | token:read | none | 5 |
 | `.github/workflows/affected-native-pr.yml` | `affected_native` | qualification | none | diagnostic | token:read | none | 13 |
 | `.github/workflows/affected-native-pr.yml` | `affected_native_shards` | qualification | none | diagnostic | token:read | none | 23 |
 | `.github/workflows/affected-native-pr.yml` | `cancel_after_source_failure` | qualification | none | diagnostic | token:write | none | 1 |
