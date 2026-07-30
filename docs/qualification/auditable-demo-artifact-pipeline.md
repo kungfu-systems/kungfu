@@ -39,8 +39,8 @@ disables the Gate.
 
 | Component | Immutable coordinate |
 | --- | --- |
-| Demo renderer | `ghcr.io/kungfu-systems/build-images/demo-renderer@sha256:8ba9a614f22e6cfe459d2dcc60bc82f0218e278c6a09ffeee5bda6bc3cbf33b9` |
-| Renderer release | [`v1.3.0-alpha.17`](https://github.com/kungfu-systems/build-images/releases/tag/v1.3.0-alpha.17), exact source `dead4fa2403afcac6c11b3b320a644a4e5f7be3d`, containing protected merge `195772e6df007c7ab35b10fc82cf452eaa33c825` |
+| Demo renderer | `ghcr.io/kungfu-systems/build-images/demo-renderer@sha256:880b07771b04aedfbfa215185a3e3a62984fcd107fecae3c4ce5012636b2024e` |
+| Renderer release | [`v1.3.0-alpha.18`](https://github.com/kungfu-systems/build-images/releases/tag/v1.3.0-alpha.18), exact source `8605faf2651252a427679757c5667de027481ace`, containing protected merge `24aff5eb17a07ce13b1a3b518ee94557f7f94074` |
 | Buildchain Gate | `3272608ba28ef714fe710dd8da99d00fdeb4c619` (Buildchain issue `#2057`, canonical `qualified` autoplay sentinel admission) |
 | Consumer adapter | `scripts/auditable-demo-adapter.py` from the exact qualified Kungfu source SHA |
 
@@ -220,6 +220,20 @@ Each blocking signal was repaired at its owning boundary rather than bypassed:
   retained that mismatch. Buildchain issue `#2057` and PR `#2059` replace that
   stale compatibility rule with the exact `qualified` contract and retain a
   negative fixture proving that `passed` is no longer accepted.
+- Run `30525890727` completed exact-source preflight `30525658876`, the Linux
+  build, full release verification, S3 relay, source artifact
+  [`8755155597`](https://github.com/kungfu-systems/kungfu/actions/runs/30525890727/artifacts/8755155597),
+  and the required Gate. The Gate retained artifact
+  [`8755230406`](https://github.com/kungfu-systems/kungfu/actions/runs/30525890727/artifacts/8755230406)
+  with Actions API digest
+  `sha256:4dce3d82e90801048e2c3014f4d9a086d81d5213cd6494d4ac075b8ab7cf74d1`
+  and canonical root
+  `sha256:393366f8598963f15590ea3b73d3703520edb259a7060edd7727b28928e0d61b`.
+  Selective rendering then failed closed because the independently released
+  renderer still required the retired `passed` sentinel. Build-images issue
+  `#331` and PRs `#332`, `#333`, and `#334` aligned the renderer and its
+  negative fixture, promoted the repair, and finalized
+  `v1.3.0-alpha.18`; the immutable digest above is the qualified replacement.
 
 The corresponding repairs landed through independently approved protected PRs
 `#1492`, `#1497`, `#1500`, `#1503`, `#1504`, `#1505`, `#1506`, `#1507`,
