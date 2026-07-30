@@ -1868,7 +1868,7 @@ test('workflows keep candidate and promotion outside untrusted PR authority', ()
   );
   assert.match(
     promotionWorkflow,
-    /run_status[\s\S]*delivery_count[\s\S]*pending_run=true[\s\S]*Completed producer run[\s\S]*every matrix row remains unqualified[\s\S]*observed_run[\s\S]*pending_run/u,
+    /run_status[\s\S]*delivery_count[\s\S]*delivery_count" -eq 1 \] &&[\s\S]*run_status" = completed[\s\S]*authorities=.*run_id[\s\S]*elif \[ "\$delivery_count" -eq 1 \]; then[\s\S]*pending_run=true[\s\S]*Completed producer run[\s\S]*every matrix row remains unqualified[\s\S]*observed_run[\s\S]*pending_run/u,
   );
   const matrixUpload = fs.readFileSync(
     path.join(ROOT, '.github/actions/upload-qualified-core-matrix/action.yml'),
