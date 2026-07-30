@@ -183,6 +183,11 @@ function initialJobPolicy(workflowPath, jobId) {
   if (workflowPath.endsWith('/dev-verify-patrol.yml') && jobId === 'report')
     return ['diagnostic', 'none', 'none'];
   if (
+    workflowPath.endsWith('/dev-gate-latency-patrol.yml') &&
+    ['capture', 'collect'].includes(jobId)
+  )
+    return ['diagnostic', 'evidence', 'diagnostic'];
+  if (
     (workflowPath.endsWith('/dev-verify-patrol.yml') && jobId === 'verify') ||
     (workflowPath.endsWith('/gate-measurement.yml') && jobId === 'measure') ||
     (workflowPath.endsWith('/kfd-verifier-drift.yml') &&
@@ -302,6 +307,27 @@ export function serializeWorkflowAuthority(document) {
   const lines = JSON.stringify(document, null, 2).split('\n');
   const rendered = [];
   for (let index = 0; index < lines.length; index += 1) {
+    const stepsMatch = lines[index].match(/^(\s*)"steps": \[$/);
+    if (stepsMatch) {
+      const indent = stepsMatch[1];
+      const arrayLines = ['['];
+      let closed = false;
+      let suffix = '';
+      for (index += 1; index < lines.length; index += 1) {
+        if (lines[index] === `${indent}]` || lines[index] === `${indent}],`) {
+          closed = true;
+          suffix = lines[index].endsWith(',') ? ',' : '';
+          break;
+        }
+        arrayLines.push(lines[index].slice(indent.length));
+      }
+      if (!closed) throw new Error('unterminated steps serialization');
+      arrayLines.push(']');
+      rendered.push(
+        `${indent}"steps": ${JSON.stringify(JSON.parse(arrayLines.join('\n')))}${suffix}`,
+      );
+      continue;
+    }
     const credentialsMatch = lines[index].match(/^(\s*)"credentials": \{$/);
     if (credentialsMatch) {
       const indent = credentialsMatch[1];
