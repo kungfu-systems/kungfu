@@ -242,8 +242,15 @@ function sealFixture(
   return { payloadRoot, candidateRoot, candidate };
 }
 
-async function promotedConsumerFixture(temporary) {
-  const { candidateRoot, candidate } = sealFixture(temporary);
+async function promotedConsumerFixture(
+  temporary,
+  rowId = 'darwin-arm64-cp313',
+) {
+  const { candidateRoot, candidate } = sealFixture(
+    temporary,
+    QUEUE_HEAD,
+    rowId,
+  );
   const bundleRoot = path.join(temporary, 'promoted-consumer');
   await promoteQualifiedCoreCandidate({
     candidateRoot,
@@ -791,6 +798,86 @@ test('consumer materializes an exact runtime closure and repeats idempotently', 
   );
 });
 
+test('Linux x86_64 consumer materializes a protected bundle and reuses local CAS in a second checkout', async (t) => {
+  const temporary = fs.mkdtempSync(
+    path.join(os.tmpdir(), 'qualified-core-linux-consumer-'),
+  );
+  t.after(() => fs.rmSync(temporary, { recursive: true, force: true }));
+  const { bundleRoot, candidate } = await promotedConsumerFixture(
+    temporary,
+    'linux-x86_64-cp313',
+  );
+  const cacheRoot = path.join(temporary, 'cache');
+  const first = await consumeQualifiedCoreForCheckout({
+    repositoryRoot: ROOT,
+    publicationRoot: path.join(temporary, 'checkout-one'),
+    cacheRoot,
+    now: CONSUMER_NOW,
+    checkout: consumerCheckout(),
+    platform: 'linux',
+    architecture: 'x64',
+    discoverRemote: async (_checkout, _temporary, options) => {
+      assert.equal(options.platformRowId, 'linux-x86_64-cp313');
+      return {
+        bundleRoot,
+        transport: {
+          provider: 'github-workflow-artifact',
+          artifactId: 42,
+          artifactName: `qualified-assignment-core-${QUEUE_HEAD}-linux-x86_64-cp313`,
+          runId: 43,
+          workflowPath: '.github/workflows/affected-native-cache-promote.yml',
+          event: 'push',
+          protectedRef: 'refs/heads/dev/v4/v4.0',
+          headSha: QUEUE_HEAD,
+          platformRow: 'linux-x86_64-cp313',
+        },
+      };
+    },
+  });
+  assert.equal(first.status, 'materialized');
+  assert.deepEqual(
+    candidate.payload.entries.map(({ path: entryPath }) => entryPath),
+    [
+      'kungfubuildinfo.json',
+      'libkungfu_runtime.so',
+      'libnode.so.127',
+      'pykungfu.cpython-313-x86_64-linux-gnu.so',
+    ],
+  );
+  for (const entry of candidate.payload.entries) {
+    const installed = path.join(
+      temporary,
+      'checkout-one',
+      'framework/core/dist/kungfu',
+      entry.path,
+    );
+    assert.equal(
+      fs.statSync(installed).mode & 0o777,
+      entry.mode === '0755' ? 0o755 : 0o644,
+    );
+  }
+
+  const second = await consumeQualifiedCoreForCheckout({
+    repositoryRoot: ROOT,
+    publicationRoot: path.join(temporary, 'checkout-two'),
+    cacheRoot,
+    now: '2026-07-29T06:00:01Z',
+    checkout: consumerCheckout(),
+    platform: 'linux',
+    architecture: 'x64',
+    discoverRemote: async () => {
+      assert.fail(
+        'the second Linux checkout must reuse the retained local CAS',
+      );
+    },
+  });
+  assert.equal(second.status, 'materialized');
+  assert.equal(second.objectRoot, first.objectRoot);
+  const summary = summarizeQualifiedCoreUsage(cacheRoot);
+  assert.equal(summary.counts.reasons['remote-hit'], 1);
+  assert.equal(summary.counts.reasons['local-cas-hit'], 1);
+});
+
 test('compatibility identity is stable for three non-native commits and rejects native input drift', (t) => {
   const temporary = fs.mkdtempSync(
     path.join(os.tmpdir(), 'qualified-core-compatibility-'),
@@ -1122,7 +1209,8 @@ test('usage status reads only the bounded cache root and reports current checkou
   assert.equal(summary.currentCheckout.repository, 'kungfu-systems/kungfu');
   assert.equal(
     summary.currentCheckout.eligible,
-    process.platform === 'darwin' && process.arch === 'arm64',
+    (process.platform === 'darwin' && process.arch === 'arm64') ||
+      (process.platform === 'linux' && process.arch === 'x64'),
   );
   assert.equal(summary.totals.observations, 1);
 });
@@ -1259,7 +1347,8 @@ test('consumer CLI emits one source-build diagnosis and durable fallback observa
   assert.equal(summary.totals.observations, 1);
   assert.equal(summary.counts.results['fallback-required'], 1);
   const expectedReason =
-    process.platform === 'darwin' && process.arch === 'arm64'
+    (process.platform === 'darwin' && process.arch === 'arm64') ||
+    (process.platform === 'linux' && process.arch === 'x64')
       ? 'qualified-core-cache-miss'
       : 'unsupported-host';
   assert.equal(summary.counts.reasons[expectedReason], 1);
@@ -1709,7 +1798,7 @@ test('consumer records verification rejection without retaining provider bytes',
   assert.equal(ledgerBytes.includes('must-not-survive'), false);
 });
 
-test('consumer retains unsupported-host outcome without claiming platform support', async (t) => {
+test('consumer retains unsupported-architecture outcome without claiming platform support', async (t) => {
   const temporary = fs.mkdtempSync(
     path.join(os.tmpdir(), 'qualified-core-unsupported-host-'),
   );
@@ -1723,7 +1812,7 @@ test('consumer retains unsupported-host outcome without claiming platform suppor
       now: CONSUMER_NOW,
       checkout: consumerCheckout(),
       platform: 'linux',
-      architecture: 'x64',
+      architecture: 'arm64',
     }),
     /unsupported-host/u,
   );
@@ -1869,6 +1958,10 @@ test('workflows keep candidate and promotion outside untrusted PR authority', ()
   assert.match(
     promotionWorkflow,
     /Promote or resolve the exact Qualified Core platform matrix[\s\S]*darwin-arm64-cp313[\s\S]*darwin-x86_64-cp313[\s\S]*linux-x86_64-cp313[\s\S]*windows-x86_64-cp313[\s\S]*qualified-assignment-core-candidate-\$\{TARGET_SHA\}-\$\{row\}[\s\S]*qualified-assignment-core-artifact\.mjs reuse[\s\S]*Multiple distinct compatible Qualified Core authorities are active for \$\{row\}[\s\S]*status:"unqualified"[\s\S]*reason:"no-exact-or-compatible-authority"[\s\S]*uses: \.\/\.github\/actions\/upload-qualified-core-matrix/u,
+  );
+  assert.match(
+    promotionWorkflow,
+    /Qualify Linux x86_64 consumer remote and local-CAS paths[\s\S]*linux_x86_64_cp313_available[\s\S]*git worktree add --detach "\$first_checkout" "\$TARGET_SHA"[\s\S]*KUNGFU_QUALIFIED_CORE_BUNDLE="\$bundle"[\s\S]*pykungfu\.cpython-313-x86_64-linux-gnu\.so[\s\S]*ELF 64-bit[\s\S]*\.\/shifu work --help[\s\S]*KUNGFU_QUALIFIED_CORE_GITHUB=0[\s\S]*local-cas-hit/u,
   );
   assert.match(
     promotionWorkflow,

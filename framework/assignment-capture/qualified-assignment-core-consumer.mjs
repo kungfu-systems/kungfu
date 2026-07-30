@@ -37,6 +37,10 @@ const GITHUB_DOWNLOAD_ATTEMPTS = 3;
 const HTTP_DOWNLOAD_ATTEMPTS = 3;
 const SHA = /^[0-9a-f]{40}$/u;
 const ROOT_HASH = /^sha256:[0-9a-f]{64}$/u;
+const ACTIVE_CONSUMER_ROWS = new Set([
+  'darwin-arm64-cp313',
+  'linux-x86_64-cp313',
+]);
 
 class QualifiedCoreUnavailable extends Error {
   constructor(reason, detail = '', context = null) {
@@ -1214,9 +1218,9 @@ export async function consumeQualifiedCoreForCheckout({
     } catch {
       throw new QualifiedCoreUnavailable('unsupported-host');
     }
-    // This card establishes the shared producer contract. Consumer activation
-    // for the other three rows remains owned by their dedicated Assignments.
-    if (platformRow.id !== 'darwin-arm64-cp313') {
+    // Consumer activation is admitted one platform Assignment at a time even
+    // though all rows share the same producer and verification contracts.
+    if (!ACTIVE_CONSUMER_ROWS.has(platformRow.id)) {
       throw new QualifiedCoreUnavailable('unsupported-host');
     }
     const local = await discoverLocal({
@@ -1366,9 +1370,9 @@ export function qualifiedCoreUsageStatus({
   const checkout = observeQualifiedCoreCheckout(repositoryRoot);
   let eligible = false;
   try {
-    eligible =
-      qualifiedCorePlatformRowForHost(platform, architecture).id ===
-      'darwin-arm64-cp313';
+    eligible = ACTIVE_CONSUMER_ROWS.has(
+      qualifiedCorePlatformRowForHost(platform, architecture).id,
+    );
   } catch {
     eligible = false;
   }
