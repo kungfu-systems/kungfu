@@ -336,6 +336,11 @@ fn promotion_lock_has_one_live_writer_and_releases_exactly() {
     let root = shifu_core::host::unique_temp_dir("promote-lock").unwrap();
     let path = root.join("promotion.lock");
     let lock = acquire_promotion_lock_at(&path).unwrap();
+    assert_eq!(
+        fs::read_to_string(&path).unwrap(),
+        std::process::id().to_string(),
+        "the public lock must never expose an uninitialized owner"
+    );
     assert!(acquire_promotion_lock_at(&path)
         .unwrap_err()
         .contains("another shifu promote process owns"));
@@ -343,7 +348,7 @@ fn promotion_lock_has_one_live_writer_and_releases_exactly() {
     let replacement = acquire_promotion_lock_at(&path).unwrap();
     replacement.release().unwrap();
     assert!(!path.exists());
-    fs::write(&path, u32::MAX.to_string()).unwrap();
+    fs::write(&path, (i32::MAX as u32).to_string()).unwrap();
     let recovered = acquire_promotion_lock_at(&path).unwrap();
     recovered.release().unwrap();
     assert!(!path.exists());
@@ -636,17 +641,24 @@ mod unix {
         fs::remove_dir(&removed_source_slot).unwrap();
 
         let command = |check: bool| {
-            let mut command = Command::new(
-                std::env::current_exe()
-                    .unwrap()
-                    .parent()
-                    .unwrap()
-                    .parent()
-                    .unwrap()
-                    .join("shifu"),
-            );
+            let workspace = Path::new(env!("CARGO_MANIFEST_DIR")).parent().unwrap();
+            let mut command =
+                Command::new(std::env::var_os("CARGO").unwrap_or_else(|| "cargo".into()));
             command
-                .args(["promote", "--rollback"])
+                .current_dir(workspace)
+                .args([
+                    "run",
+                    "--quiet",
+                    "--locked",
+                    "--offline",
+                    "-p",
+                    "shifu",
+                    "--bin",
+                    "shifu",
+                    "--",
+                    "promote",
+                    "--rollback",
+                ])
                 .env("XDG_CACHE_HOME", &cache)
                 .env("FAKE_STATE", &state)
                 .env("CURRENT_RECEIPT", &current_receipt)

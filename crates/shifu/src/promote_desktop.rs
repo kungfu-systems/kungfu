@@ -3,6 +3,7 @@
 use std::fs;
 use std::io::{self, Read};
 use std::path::{Path, PathBuf};
+use std::time::{SystemTime, UNIX_EPOCH};
 
 use shifu_core::json;
 
@@ -626,15 +627,24 @@ pub(super) fn process_alive(pid: u32) -> bool {
 
 pub(super) fn acquire_promotion_lock_at(path: &Path) -> Result<PromotionLock, String> {
     let create = || -> Result<PromotionLock, String> {
+        let nonce = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .map_err(|error| format!("cannot timestamp promotion lock owner: {error}"))?
+            .as_nanos();
+        let candidate = path.with_extension(format!("owner-{}-{nonce}", std::process::id()));
         let mut file = OpenOptions::new()
             .write(true)
             .create_new(true)
-            .open(path)
+            .open(&candidate)
             .map_err(|error| error.to_string())?;
         file.write_all(std::process::id().to_string().as_bytes())
             .map_err(|error| format!("cannot record promotion lock owner: {error}"))?;
         file.sync_all()
             .map_err(|error| format!("cannot sync promotion lock owner: {error}"))?;
+        drop(file);
+        let publish = fs::hard_link(&candidate, path);
+        let _ = fs::remove_file(&candidate);
+        publish.map_err(|error| error.to_string())?;
         Ok(PromotionLock {
             path: path.to_path_buf(),
         })
