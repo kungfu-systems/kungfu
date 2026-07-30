@@ -91,7 +91,13 @@ function evidence() {
 
 test('renders one exact source, run, Gate, media, and Passport boundary', () => {
   const block = renderAuditableDemoBlock(evidence());
-  assert.match(block, /^## Auditable exact-output demo$/mu);
+  assert.match(block, /^## See a fresh Agent continue the same Work$/mu);
+  assert.match(
+    block,
+    /One Work\. Two fresh Agent processes\. No copied chat\./u,
+  );
+  assert.match(block, /Session 1 stops with a partial result/u);
+  assert.match(block, /Session 2 starts without the previous.*conversation/su);
   assert.match(block, new RegExp(SHA, 'u'));
   assert.match(
     block,
@@ -102,11 +108,15 @@ test('renders one exact source, run, Gate, media, and Passport boundary', () => 
   );
   assert.match(
     block,
-    /Animated Kungfu terminal demo produced from the exact installed Linux artifact/u,
+    /Kungfu Agent Work Lab showing a fresh Agent continuing the same Work without copied chat/u,
   );
   assert.match(
     block,
-    /\[Read the method and evidence\]\(docs\/qualification\/auditable-demo-artifact-pipeline\.md\)/u,
+    /<summary>How this exact installed-artifact demo was verified<\/summary>/u,
+  );
+  assert.match(
+    block,
+    /\[Method and evidence\]\(docs\/qualification\/auditable-demo-artifact-pipeline\.md\)/u,
   );
   assert.match(block, /exact.*installed-artifact autoplay/su);
   assert.match(block, /agent-work-lab autoplay/u);
