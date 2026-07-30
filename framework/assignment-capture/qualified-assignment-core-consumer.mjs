@@ -41,6 +41,14 @@ const ACTIVE_CONSUMER_ROWS = new Set([
   'darwin-arm64-cp313',
   'linux-x86_64-cp313',
 ]);
+const TOOL_CACHE_TARGETS = {
+  'darwin-arm64': 'macos-aarch64',
+  'darwin-x64': 'macos-x86_64',
+  'linux-arm64': 'linux-aarch64',
+  'linux-x64': 'linux-x86_64',
+  'win32-x64': 'windows-x86_64',
+};
+const SAFE_CACHE_SEGMENT = /^[A-Za-z0-9._-]+$/u;
 
 class QualifiedCoreUnavailable extends Error {
   constructor(reason, detail = '', context = null) {
@@ -56,6 +64,47 @@ function writeJson(file, value) {
   fs.writeFileSync(file, `${JSON.stringify(value, null, 2)}\n`, {
     flag: 'wx',
   });
+}
+
+export function resolveShifuCachedTool({
+  tool,
+  repositoryRoot = process.cwd(),
+  platform = process.platform,
+  architecture = process.arch,
+  env = process.env,
+}) {
+  if (tool !== 'uv') return '';
+  const pin = path.join(repositoryRoot, '.uv-version');
+  const version = String(
+    env.KUNGFU_UV_VERSION ||
+      (fs.existsSync(pin)
+        ? fs
+            .readFileSync(pin, 'utf8')
+            .split(/\r?\n/u)
+            .map((line) => line.trim())
+            .find(Boolean)
+        : '') ||
+      '',
+  ).trim();
+  const target = TOOL_CACHE_TARGETS[`${platform}-${architecture}`] || '';
+  if (!SAFE_CACHE_SEGMENT.test(version) || !SAFE_CACHE_SEGMENT.test(target)) {
+    return '';
+  }
+  const binary = path.join(
+    env.XDG_CACHE_HOME || path.join(os.homedir(), '.cache'),
+    'kungfu',
+    'tools',
+    tool,
+    version,
+    target,
+    platform === 'win32' ? `${tool}.exe` : tool,
+  );
+  if (!fs.existsSync(binary)) return '';
+  const stat = fs.statSync(binary);
+  if (!stat.isFile() || (platform !== 'win32' && !(stat.mode & 0o111))) {
+    return '';
+  }
+  return binary;
 }
 
 function bytesRoot(bytes) {
@@ -1436,6 +1485,12 @@ function diagnosis(error) {
 
 async function main() {
   const [command, ...args] = process.argv.slice(2);
+  if (command === 'resolve-cached-tool') {
+    const resolved =
+      args.length === 1 ? resolveShifuCachedTool({ tool: args[0] }) : '';
+    if (resolved) process.stdout.write(`${resolved}\n`);
+    return;
+  }
   if (!['materialize', 'status'].includes(command)) {
     throw new QualifiedCoreUnavailable('invalid-command');
   }

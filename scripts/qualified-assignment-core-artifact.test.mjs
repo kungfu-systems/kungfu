@@ -14,6 +14,7 @@ import {
   downloadGithubArtifact,
   downloadHttpArtifact,
   materializeQualifiedCoreBundle,
+  resolveShifuCachedTool,
 } from '../framework/assignment-capture/qualified-assignment-core-consumer.mjs';
 import {
   appendQualifiedCoreUsage,
@@ -360,6 +361,48 @@ function compatibilityCheckoutFixture(temporary) {
   }
   return repositoryRoot;
 }
+
+test('cached Shifu tool resolution binds pin, platform, and executable file', (t) => {
+  const root = fs.mkdtempSync(
+    path.join(os.tmpdir(), 'qualified-core-cached-tool-'),
+  );
+  t.after(() => fs.rmSync(root, { recursive: true, force: true }));
+  const cache = path.join(root, 'cache');
+  const uv = path.join(
+    cache,
+    'kungfu',
+    'tools',
+    'uv',
+    '0.11.23',
+    'linux-x86_64',
+    'uv',
+  );
+  fs.mkdirSync(path.dirname(uv), { recursive: true });
+  fs.writeFileSync(path.join(root, '.uv-version'), '0.11.23\n');
+  fs.writeFileSync(uv, '');
+  fs.chmodSync(uv, 0o755);
+  const options = {
+    tool: 'uv',
+    repositoryRoot: root,
+    platform: 'linux',
+    architecture: 'x64',
+    env: { XDG_CACHE_HOME: cache },
+  };
+  assert.equal(resolveShifuCachedTool(options), uv);
+  assert.equal(
+    resolveShifuCachedTool({
+      ...options,
+      env: {
+        KUNGFU_UV_VERSION: '../0.11.23',
+        XDG_CACHE_HOME: cache,
+      },
+    }),
+    '',
+  );
+  fs.chmodSync(uv, 0o644);
+  assert.equal(resolveShifuCachedTool(options), '');
+  assert.equal(resolveShifuCachedTool({ ...options, tool: 'fnm' }), '');
+});
 
 test('platform matrix binds exactly four collision-free producer rows', (t) => {
   const matrix = qualifiedCorePlatformMatrix(ROOT);

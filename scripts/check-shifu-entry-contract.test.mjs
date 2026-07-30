@@ -112,6 +112,100 @@ test('partial Core assembly cannot masquerade as Work readiness', (t) => {
   );
 });
 
+test('cached pinned uv activates Work after Qualified Core materialization', (t) => {
+  if (process.platform === 'win32') {
+    t.skip('POSIX launcher contract');
+    return;
+  }
+  const cacheTargets = {
+    'darwin-arm64': 'macos-aarch64',
+    'darwin-x64': 'macos-x86_64',
+    'linux-arm64': 'linux-aarch64',
+    'linux-x64': 'linux-x86_64',
+  };
+  const cacheTarget = cacheTargets[`${process.platform}-${process.arch}`];
+  if (!cacheTarget) {
+    t.skip('unsupported Shifu bootstrap target');
+    return;
+  }
+  const temp = fs.mkdtempSync(
+    path.join(os.tmpdir(), 'kungfu-shifu-cached-uv-'),
+  );
+  t.after(() => fs.rmSync(temp, { recursive: true, force: true }));
+  const launcher = path.join(temp, 'shifu');
+  const capture = path.join(temp, 'framework', 'assignment-capture');
+  const core = path.join(temp, 'framework', 'core');
+  const dist = path.join(core, 'dist', 'kungfu');
+  const cache = path.join(temp, 'cache');
+  const uv = path.join(
+    cache,
+    'kungfu',
+    'tools',
+    'uv',
+    '0.11.23',
+    cacheTarget,
+    'uv',
+  );
+  const callLog = path.join(temp, 'uv-call.txt');
+  fs.mkdirSync(dist, { recursive: true });
+  fs.mkdirSync(capture, { recursive: true });
+  fs.mkdirSync(path.dirname(uv), { recursive: true });
+  fs.copyFileSync(path.join(ROOT, 'shifu'), launcher);
+  fs.writeFileSync(
+    path.join(capture, 'qualified-assignment-core-consumer.mjs'),
+    [
+      "import fs from 'node:fs';",
+      "import path from 'node:path';",
+      "const binary = path.join(process.env.XDG_CACHE_HOME, 'kungfu', 'tools', 'uv', '0.11.23', process.env.SHIFU_TEST_CACHE_TARGET, 'uv');",
+      "if (process.argv[2] === 'resolve-cached-tool' && fs.existsSync(binary)) console.log(binary);",
+      '',
+    ].join('\n'),
+  );
+  fs.chmodSync(launcher, 0o755);
+  fs.writeFileSync(path.join(temp, '.uv-version'), '0.11.23\n');
+  fs.writeFileSync(path.join(dist, 'pykungfu.cached.so'), '');
+  fs.writeFileSync(path.join(dist, 'kungfubuildinfo.json'), '{}\n');
+  fs.writeFileSync(
+    uv,
+    ['#!/bin/sh', 'echo "$PWD|$*" > "$UV_CALL_LOG"', ''].join('\n'),
+  );
+  fs.chmodSync(uv, 0o755);
+
+  const result = spawnSync(launcher, ['work', '--help'], {
+    encoding: 'utf8',
+    env: {
+      ...process.env,
+      HOME: temp,
+      PATH: `${path.dirname(process.execPath)}:/usr/bin:/bin`,
+      SHIFU_TEST_CACHE_TARGET: cacheTarget,
+      UV_CALL_LOG: callLog,
+      XDG_CACHE_HOME: cache,
+      XDG_CONFIG_HOME: path.join(temp, 'config'),
+    },
+  });
+  assert.equal(result.status, 0, result.stderr || result.stdout);
+  assert.equal(
+    fs.readFileSync(callLog, 'utf8'),
+    `${core}|run --frozen python .devtools/kungfu_cli.py work --help\n`,
+  );
+  fs.rmSync(callLog);
+  const rejected = spawnSync(launcher, ['work', '--help'], {
+    encoding: 'utf8',
+    env: {
+      ...process.env,
+      HOME: temp,
+      KUNGFU_UV_VERSION: '../0.11.23',
+      PATH: `${path.dirname(process.execPath)}:/usr/bin:/bin`,
+      SHIFU_TEST_CACHE_TARGET: 'invalid-target',
+      UV_CALL_LOG: callLog,
+      XDG_CACHE_HOME: cache,
+      XDG_CONFIG_HOME: path.join(temp, 'config'),
+    },
+  });
+  assert.equal(rejected.status, 127);
+  assert.equal(fs.existsSync(callLog), false);
+});
+
 test('Windows cold source Work failure carries the same diagnosis', () => {
   const windows = fs.readFileSync(path.join(ROOT, 'shifu.cmd'), 'utf8');
   assert.match(

@@ -293,15 +293,15 @@ if [ "${1:-}" = "work" ]; then
   }
   _kungfu_checkout_binding="$(kungfu_checkout_binding)"
   _kungfu_checkout_build_info="./framework/core/dist/kungfu/kungfubuildinfo.json"
+  _kungfu_uv="$(command -v uv || { command -v node >/dev/null 2>&1 && node ./framework/assignment-capture/qualified-assignment-core-consumer.mjs resolve-cached-tool uv 2>/dev/null; } || true)"
   if [ -z "$_kungfu_checkout_binding" ] \
     && { [ "$(kungfu_native_platform)" = "macos-arm64" ] || [ "$(kungfu_native_platform)" = "linux-x64" ]; } \
     && command -v node >/dev/null 2>&1 && [ -f "./framework/assignment-capture/qualified-assignment-core-consumer.mjs" ]; then
     node ./framework/assignment-capture/qualified-assignment-core-consumer.mjs materialize --repository-root "$PWD" || exit $?
     _kungfu_checkout_binding="$(kungfu_checkout_binding)"
   fi
-  if [ -n "$_kungfu_checkout_binding" ] && [ -f "$_kungfu_checkout_build_info" ] && command -v uv >/dev/null 2>&1; then
-    cd ./framework/core
-    exec uv run --frozen python .devtools/kungfu_cli.py work "$@"
+  if [ -n "$_kungfu_checkout_binding" ] && [ -f "$_kungfu_checkout_build_info" ] && [ -n "$_kungfu_uv" ]; then
+    cd ./framework/core && exec "$_kungfu_uv" run --frozen python .devtools/kungfu_cli.py work "$@"
   fi
   printf '%s\n' '{"schema":"kungfu.assignment-orchestration.diagnosis/v1","ok":false,"code":"assignment-current-checkout-binding-missing","message":"Assignment admission requires pykungfu from the current checkout","next_actions":[{"action":"build-core","command":"./shifu build:core","description":"Assemble pykungfu from the current checkout"}]}'
   exit 127
