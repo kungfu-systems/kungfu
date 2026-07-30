@@ -65,10 +65,25 @@ export function pathRemovalDiagnostics(
 ) {
   const diagnostics = { remaining_entries: [], processes_under_root: [] };
   try {
-    diagnostics.remaining_entries = fs
-      .readdirSync(target, { withFileTypes: true })
-      .slice(0, 24)
-      .map((entry) => `${entry.isDirectory() ? 'dir' : 'file'}:${entry.name}`);
+    const remainingEntries = [];
+    const visit = (dir, relativeDir = '') => {
+      for (const entry of fs
+        .readdirSync(dir, { withFileTypes: true })
+        .sort((left, right) => left.name.localeCompare(right.name))) {
+        if (remainingEntries.length >= 48) return;
+        const relative = path.join(relativeDir, entry.name);
+        const kind = entry.isSymbolicLink()
+          ? 'link'
+          : entry.isDirectory()
+            ? 'dir'
+            : 'file';
+        remainingEntries.push(`${kind}:${relative}`);
+        if (entry.isDirectory() && !entry.isSymbolicLink())
+          visit(path.join(dir, entry.name), relative);
+      }
+    };
+    visit(target);
+    diagnostics.remaining_entries = remainingEntries;
   } catch (error) {
     diagnostics.remaining_entries = [
       `unreadable:${error instanceof Error ? error.message : String(error)}`,
@@ -123,6 +138,36 @@ export function pathRemovalDiagnostics(
   return diagnostics;
 }
 
+export function removeEmptyDirectoryShells(target) {
+  if (!fs.existsSync(target)) return true;
+  const stat = fs.lstatSync(target);
+  if (!stat.isDirectory() || stat.isSymbolicLink()) return false;
+
+  for (const entry of fs.readdirSync(target, { withFileTypes: true })) {
+    const child = path.join(target, entry.name);
+    if (
+      entry.isSymbolicLink() ||
+      !entry.isDirectory() ||
+      !removeEmptyDirectoryShells(child)
+    )
+      return false;
+  }
+
+  try {
+    fs.rmdirSync(target);
+  } catch (error) {
+    if (error?.code === 'ENOENT') return true;
+    if (
+      error?.code === 'EBUSY' ||
+      error?.code === 'ENOTEMPTY' ||
+      error?.code === 'EPERM'
+    )
+      return false;
+    throw error;
+  }
+  return !fs.existsSync(target);
+}
+
 export async function waitForPathRemoval(
   target,
   {
@@ -133,6 +178,10 @@ export async function waitForPathRemoval(
 ) {
   const deadline = Date.now() + timeoutMs;
   while (fs.existsSync(target)) {
+    // NSIS can finish after removing every installed file while leaving empty
+    // directory shells behind. Qualification may remove only those shells:
+    // any file, link, or locked directory keeps the uninstall fail-closed.
+    if (removeEmptyDirectoryShells(target)) return;
     if (Date.now() >= deadline)
       fail(
         `timed out waiting for uninstall to remove ${target}; diagnostics=${JSON.stringify(
