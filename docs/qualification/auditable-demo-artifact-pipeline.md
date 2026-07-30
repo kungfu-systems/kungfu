@@ -41,7 +41,7 @@ disables the Gate.
 | --- | --- |
 | Demo renderer | `ghcr.io/kungfu-systems/build-images/demo-renderer@sha256:8ba9a614f22e6cfe459d2dcc60bc82f0218e278c6a09ffeee5bda6bc3cbf33b9` |
 | Renderer release | [`v1.3.0-alpha.17`](https://github.com/kungfu-systems/build-images/releases/tag/v1.3.0-alpha.17), exact source `dead4fa2403afcac6c11b3b320a644a4e5f7be3d`, containing protected merge `195772e6df007c7ab35b10fc82cf452eaa33c825` |
-| Buildchain Gate | `de1a1cbb1176810ebee91d1e872b441d7113305a` (merged Buildchain PR `#2030`, bounded terminal-capture admission) |
+| Buildchain Gate | `3272608ba28ef714fe710dd8da99d00fdeb4c619` (Buildchain issue `#2057`, canonical `qualified` autoplay sentinel admission) |
 | Consumer adapter | `scripts/auditable-demo-adapter.py` from the exact qualified Kungfu source SHA |
 
 Buildchain's reusable build emits

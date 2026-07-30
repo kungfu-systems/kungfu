@@ -373,7 +373,7 @@ jobs:
     permissions:
       actions: read
       contents: read
-    uses: kungfu-systems/buildchain/.github/workflows/.auditable-demo.yml@de1a1cbb1176810ebee91d1e872b441d7113305a # PR #2030 bounded terminal capture admission
+    uses: kungfu-systems/buildchain/.github/workflows/.auditable-demo.yml@3272608ba28ef714fe710dd8da99d00fdeb4c619 # issue #2057 canonical qualified sentinel
     with:
       source-ref: ${{ needs.build.outputs.publish-source-sha }}
       source-artifact-name: ${{ needs.resolve-auditable-demo-source.outputs.artifact-name }}
@@ -508,7 +508,7 @@ jobs:
           MEDIA_ARTIFACT_URL: ${{ needs.auditable-demo.outputs.media-artifact-url }}
           MEDIA_ARTIFACT_EXPIRES_AT: ${{ steps.artifact-expiry.outputs.media-artifact-expires-at }}
           MEDIA_ROOT: ${{ needs.auditable-demo.outputs.media-root }}
-          BUILDCHAIN_SHA: de1a1cbb1176810ebee91d1e872b441d7113305a
+          BUILDCHAIN_SHA: 3272608ba28ef714fe710dd8da99d00fdeb4c619
           RENDERER_IMAGE: ghcr.io/kungfu-systems/build-images/demo-renderer@sha256:8ba9a614f22e6cfe459d2dcc60bc82f0218e278c6a09ffeee5bda6bc3cbf33b9
         run: ./shifu node scripts/auditable-demo-passport.mjs write --output auditable-demo-release-passport.json
 

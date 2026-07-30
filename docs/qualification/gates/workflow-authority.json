@@ -877,9 +877,9 @@
           "authority": "qualification",
           "publication": "none",
           "receipt": "qualifying",
-          "definitionDigest": "sha256:086ad5ce8ca79833fd68ff356e3b068056bafc443c129e103450f154905d8e82",
+          "definitionDigest": "sha256:e3339af2fcbca434dfa3680b1c51532ad7f036c07caff8cf7001a9c47e004c13",
           "credentials": {"githubToken":"read","oidc":false,"repositorySecrets":[],"inheritedSecrets":false,"environment":null},
-          "externalActions": ["kungfu-systems/buildchain/.github/workflows/.auditable-demo.yml@de1a1cbb1176810ebee91d1e872b441d7113305a"],
+          "externalActions": ["kungfu-systems/buildchain/.github/workflows/.auditable-demo.yml@3272608ba28ef714fe710dd8da99d00fdeb4c619"],
           "steps": []
         },
         {
@@ -887,7 +887,7 @@
           "authority": "qualification",
           "publication": "none",
           "receipt": "qualifying",
-          "definitionDigest": "sha256:8f1e8e5564ccee350d28875905630e748ea035f32ef7e9181305b6e5d6a6b551",
+          "definitionDigest": "sha256:0b15d2cd4f4ec023d4ff0bf2e34b60e455c3f39a5c87ac538f5ea63ce7507695",
           "credentials": {"githubToken":"read","oidc":false,"repositorySecrets":[],"inheritedSecrets":false,"environment":null},
           "externalActions": ["actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0","actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd","actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a"],
           "steps": [
@@ -905,7 +905,7 @@
               "index": 3,
               "label": "name:Write exact auditable demo Release Passport",
               "authority": "evidence-publication",
-              "definitionDigest": "sha256:4c887417d714e27f1ab2ca5fc9b10a19f67f61f19b74ce2a02f7d0e7ead79a82"
+              "definitionDigest": "sha256:5febc41e19449e4740e3e485759b6eec16d360bc46bb258eb15c437056b2a3dc"
             },
             {
               "index": 4,
