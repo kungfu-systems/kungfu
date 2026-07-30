@@ -1,0 +1,118 @@
+# SPDX-License-Identifier: Apache-2.0
+
+name: Linux ARM64 Alpha Qualification
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+    branches:
+      - alpha/v*/v*
+      - release/v*/v*
+  workflow_dispatch:
+    inputs:
+      buildchain-ref:
+        description: "Temporary Buildchain train or exact SHA for trusted manual validation"
+        required: false
+        default: ""
+      preflight-run-id:
+        description: "Optional exact Alpha preflight run for a trusted diagnostic replay"
+        required: false
+        default: ""
+      diagnostic-mode:
+        description: "Retain diagnostics instead of cancelling a stale manual run"
+        required: false
+        type: boolean
+        default: false
+
+permissions:
+  actions: read
+  contents: read
+  pull-requests: read
+  issues: write
+  id-token: write
+
+concurrency:
+  group: linux-arm64-alpha-qualification-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ !(github.event_name == 'workflow_dispatch' && inputs.diagnostic-mode) }}
+
+jobs:
+  preflight:
+    name: Require exact-source Alpha preflight
+    runs-on: ubuntu-24.04
+    outputs:
+      dependency-lock-root: ${{ steps.receipt.outputs.dependency-lock-root }}
+      toolchain-root: ${{ steps.receipt.outputs.toolchain-root }}
+      policy-root: ${{ steps.receipt.outputs.policy-root }}
+    steps:
+      - name: Check out exact candidate source
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Admit reusable source and platform probes
+        id: receipt
+        uses: ./.github/actions/require-alpha-preflight
+        with:
+          source-sha: ${{ github.event.pull_request.head.sha || github.sha }}
+          receipt-run-id: ${{ inputs.preflight-run-id || '' }}
+
+  artifact:
+    name: Qualify Hub CLI artifact on native Linux ARM64
+    needs: preflight
+    uses: kungfu-systems/buildchain/.github/workflows/.build.yml@bfe43b0fe5577f15d2af01bc542de8a8ce587457 # v3.0.2-alpha.1 with cross-attempt artifact recovery
+    secrets:
+      BUILDCHAIN_ARTIFACT_RELAY_S3_ROLE_ARN: ${{ secrets.BUILDCHAIN_ARTIFACT_RELAY_S3_ROLE_ARN }}
+      BUILDCHAIN_ARTIFACT_RELAY_S3_UPLOAD_ROLE_ARN: ${{ secrets.BUILDCHAIN_ARTIFACT_RELAY_S3_UPLOAD_ROLE_ARN }}
+      BUILDCHAIN_ARTIFACT_RELAY_S3_DOWNLOAD_ROLE_ARN: ${{ secrets.BUILDCHAIN_ARTIFACT_RELAY_S3_DOWNLOAD_ROLE_ARN }}
+    with:
+      buildchain-ref: ${{ inputs.buildchain-ref || '' }}
+      runner-preset: custom
+      platforms-json: >-
+        [{"id":"linux-arm64","name":"Linux ARM64 Hub CLI","platform":"linux","runner":"[\"ubuntu-24.04-arm\"]","capabilities":["native-toolchain","node","product-artifacts","publication-evidence","rust"]}]
+      setup-rust: true
+      rust-toolchain: "1.96.0"
+      rustup-dist-server: https://rsproxy.cn
+      rustup-update-root: https://rsproxy.cn/rustup
+      cargo-registry-index: ${{ vars.BUILDCHAIN_CARGO_REGISTRY_INDEX }}
+      artifact-name: kungfu-hub-cli
+      artifact-paths: |
+        product/release/cli/kungfu-episodes-cli-linux-arm64.tar.gz
+        product/release/cli/kungfu-episodes-cli-linux-arm64.qualification.json
+      expected-artifacts-json: >-
+        {"minFiles":2,"minTotalBytes":1,"requiredPaths":["product/release/cli/kungfu-episodes-cli-linux-arm64.tar.gz","product/release/cli/kungfu-episodes-cli-linux-arm64.qualification.json"]}
+      require-install: true
+      install-command: >-
+        sudo apt-get update -y &&
+        sudo apt-get install -y gcc-14 g++-14 &&
+        printf 'CC=gcc-14\nCXX=g++-14\n' >> "$GITHUB_ENV" &&
+        CC=gcc-14 CXX=g++-14 node scripts/buildchain-install.mjs
+      require-build: true
+      build-command: node scripts/run-shifu-lifecycle.mjs cache-apply dist:cli
+      require-verify: true
+      verify-command: >-
+        node product/scripts/verify-cli-surface-qualification.mjs
+        --qualification product/release/cli/kungfu-episodes-cli-linux-arm64.qualification.json
+        --archive product/release/cli/kungfu-episodes-cli-linux-arm64.tar.gz
+        --platform linux-arm64
+      # GitHub-hosted ARM64 has a cold VM and no persistent workspace cache.
+      # Keep this budget independent from the self-hosted common matrix until
+      # enough queue/run samples exist to ratchet it down.
+      lifecycle-timeout-minutes: 240
+      release-candidate: true
+      publish-channel: ${{ github.event_name == 'pull_request' && (startsWith(github.base_ref, 'release/') && 'release' || 'alpha') || 'none' }}
+      artifact-transfer-mode: s3-to-github-artifacts
+      artifact-retention-days: 14
+      checkout-cache-mode: auto
+      checkout-cache-fallback: github
+      checkout-cache-timeout-seconds: 60
+      checkout-cache-github-timeout-seconds: 1200
+      shifu-cache-profile-ref: docs/shifu/linux-arm64-qualification-portable-off.cache-profile.json
+      shifu-cache-profile-digest: sha256:92b19f65a4e75c16cf11f43f37a1778f6ab61db62a68fc849e51f7d3aaac65f5
+      cache-dependency-lock-root: ${{ needs.preflight.outputs.dependency-lock-root }}
+      cache-toolchain-root: ${{ needs.preflight.outputs.toolchain-root }}
+      cache-policy-root: ${{ needs.preflight.outputs.policy-root }}
+      buildchain-contract-lock-path: .buildchain/contract-lock.json
+      buildchain-contract-compatibility-policy: major-compatible
+      buildchain-contract-drift-issue-mode: compatible-and-breaking

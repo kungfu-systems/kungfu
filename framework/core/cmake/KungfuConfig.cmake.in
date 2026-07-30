@@ -1,0 +1,63 @@
+# SPDX-License-Identifier: Apache-2.0
+
+@PACKAGE_INIT@
+
+if(TARGET Kungfu::kungfu)
+  return()
+endif()
+
+set(_kungfu_include_dir "${PACKAGE_PREFIX_DIR}/@CMAKE_INSTALL_INCLUDEDIR@")
+
+if(WIN32)
+  find_library(_kungfu_import_library
+    NAMES kungfu_abi
+    PATHS "${PACKAGE_PREFIX_DIR}/@CMAKE_INSTALL_LIBDIR@"
+    NO_DEFAULT_PATH
+  )
+  find_file(_kungfu_runtime_library
+    NAMES kungfu.dll
+    PATHS "${PACKAGE_PREFIX_DIR}/@CMAKE_INSTALL_BINDIR@"
+    NO_DEFAULT_PATH
+  )
+  if(NOT _kungfu_import_library OR NOT _kungfu_runtime_library)
+    set(Kungfu_FOUND FALSE)
+    set(Kungfu_NOT_FOUND_MESSAGE "Kungfu import or runtime library is missing from ${PACKAGE_PREFIX_DIR}")
+    return()
+  endif()
+  add_library(Kungfu::kungfu SHARED IMPORTED)
+  set_target_properties(Kungfu::kungfu PROPERTIES
+    IMPORTED_IMPLIB "${_kungfu_import_library}"
+    IMPORTED_LOCATION "${_kungfu_runtime_library}"
+    INTERFACE_INCLUDE_DIRECTORIES "${_kungfu_include_dir}"
+  )
+else()
+  find_library(_kungfu_public_library
+    NAMES kungfu
+    PATHS "${PACKAGE_PREFIX_DIR}/@CMAKE_INSTALL_LIBDIR@"
+    NO_DEFAULT_PATH
+  )
+  find_library(_kungfu_private_runtime_library
+    NAMES kungfu_runtime
+    PATHS "${PACKAGE_PREFIX_DIR}/@CMAKE_INSTALL_LIBDIR@"
+    NO_DEFAULT_PATH
+  )
+  if(NOT _kungfu_public_library OR NOT _kungfu_private_runtime_library)
+    set(Kungfu_FOUND FALSE)
+    set(Kungfu_NOT_FOUND_MESSAGE "Kungfu public facade or private runtime is missing from ${PACKAGE_PREFIX_DIR}")
+    return()
+  endif()
+  add_library(Kungfu::runtime SHARED IMPORTED)
+  set_target_properties(Kungfu::runtime PROPERTIES
+    IMPORTED_LOCATION "${_kungfu_private_runtime_library}"
+  )
+  add_library(Kungfu::kungfu SHARED IMPORTED)
+  set_target_properties(Kungfu::kungfu PROPERTIES
+    IMPORTED_LOCATION "${_kungfu_public_library}"
+    INTERFACE_INCLUDE_DIRECTORIES "${_kungfu_include_dir}"
+    INTERFACE_LINK_LIBRARIES "Kungfu::runtime"
+  )
+endif()
+
+set(Kungfu_VERSION "@KUNGFU_SDK_VERSION@")
+set(Kungfu_ABI_VERSION 1)
+check_required_components(Kungfu)

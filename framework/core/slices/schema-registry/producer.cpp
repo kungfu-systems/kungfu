@@ -31,8 +31,8 @@
 
 using namespace kungfu::yijinjing;
 using kungfu::slices::sha256;
-namespace longfist = kungfu::longfist;
-using longfist::enums::FrameDataType;
+namespace schema = kungfu::yijinjing;
+using schema::enums::FrameDataType;
 
 namespace {
 // docs/msg-type-ranges.md, capability-slice range
@@ -63,19 +63,19 @@ int main(int argc, char **argv) {
   const std::string bfbs_path = argv[4];
 
   auto locator = std::make_shared<data::locator>(root);
-  auto location = data::location::make_shared(longfist::enums::mode::LIVE, longfist::enums::category::SYSTEM,
+  auto location = data::location::make_shared(schema::enums::mode::LIVE, schema::enums::location_role::SYSTEM,
                                               "schema_registry_slice", "producer", locator);
   auto bus = std::make_shared<journal::bus>(false);
   auto publisher = std::make_shared<journal::noop_publisher>();
-  auto writer = std::make_shared<journal::writer>(location, data::location::PUBLIC, /*lazy=*/true, publisher,
+  auto writer = std::make_shared<journal::writer>(location, data::location::PUBLIC, publisher,
                                                   /*low_latency=*/false, bus);
 
   uint64_t prev_uid = 0;
   int64_t prev_gen_time = 0;
-  auto append = [&](int32_t msg_type, FrameDataType data_type, const void *bytes, std::size_t len) {
+  auto append = [&](int32_t carrier_type, FrameDataType data_type, const void *bytes, std::size_t len) {
     bus->set_trigger_frame_uid(prev_uid);
     const int64_t gen_time = time::now_in_nano();
-    auto frame = writer->open_frame(prev_gen_time, msg_type, len, STREAM_ID);
+    auto frame = writer->open_frame(prev_gen_time, carrier_type, len, STREAM_ID);
     frame->set_data_type(data_type);
     std::memcpy(const_cast<void *>(frame->data_address()), bytes, len);
     prev_uid = writer->current_frame_uid();
@@ -89,8 +89,8 @@ int main(int argc, char **argv) {
     if (version == 1) {
       fbb.Finish(slices::demo::v1::CreateSmokeEventDirect(fbb, static_cast<uint32_t>(i), kind_for(i).c_str()));
     } else {
-      fbb.Finish(slices::demo::v2::CreateSmokeEventDirect(fbb, static_cast<uint32_t>(i), kind_for(i).c_str(),
-                                                          "added in v2"));
+      fbb.Finish(
+          slices::demo::v2::CreateSmokeEventDirect(fbb, static_cast<uint32_t>(i), kind_for(i).c_str(), "added in v2"));
     }
     append(MSG_DEMO_FB, FrameDataType::Raw, fbb.GetBufferPointer(), fbb.GetSize());
   }
@@ -110,15 +110,15 @@ int main(int argc, char **argv) {
     out.write(bfbs.data(), static_cast<std::streamsize>(bfbs.size()));
   }
 
-  // Run manifest with the per-run schema bindings. One msg_type binds to one
+  // Run manifest with the per-run schema bindings. One carrier_type binds to one
   // schema per run; evolution happens between runs.
   nlohmann::json manifest = {
       {"spec_version", "0.1"},
       {"source",
        {{"root", root},
         {"mode", "LIVE"},
-        {"category", "SYSTEM"},
-        {"group", "schema_registry_slice"},
+        {"role", "SYSTEM"},
+        {"namespace", "schema_registry_slice"},
         {"name", "producer"},
         {"dest", data::location::PUBLIC}}},
       {"hash_algorithm", "sha256"},
@@ -128,18 +128,16 @@ int main(int argc, char **argv) {
           {"name", "SmokeEvent"},
           {"schema_version", version},
           {"schema_hash", schema_hash}}},
-        {std::to_string(MSG_DEMO_JSON),
-         {{"schema_kind", "json"}, {"name", "RunSummary"}, {"schema_version", 1}}}}},
-      {"capture_boundary",
-       "schema bindings cover this run's FB and Json events only; legacy closed-set POD frames "
-       "are not decodable from the bundle and are out of scope by design"},
+        {std::to_string(MSG_DEMO_JSON), {{"schema_kind", "json"}, {"name", "RunSummary"}, {"schema_version", 1}}}}},
+      {"capture_boundary", "schema bindings cover this run's FB and Json events only; legacy closed-set POD frames "
+                           "are not decodable from the bundle and are out of scope by design"},
   };
   {
     std::ofstream out(bundle / "manifest.json");
     out << manifest.dump(2) << std::endl;
   }
 
-  std::cout << "OK: wrote " << FB_EVENT_COUNT << " FB events (schema v" << version
-            << ", hash " << schema_hash.substr(0, 12) << "...) + 1 Json event; bundle at " << bundle << std::endl;
+  std::cout << "OK: wrote " << FB_EVENT_COUNT << " FB events (schema v" << version << ", hash "
+            << schema_hash.substr(0, 12) << "...) + 1 Json event; bundle at " << bundle << std::endl;
   return 0;
 }

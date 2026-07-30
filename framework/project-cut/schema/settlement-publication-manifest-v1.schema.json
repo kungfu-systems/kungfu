@@ -1,0 +1,122 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kungfu.tech/schema/settlement-publication-manifest-v1.schema.json",
+  "title": "Kungfu Settlement Publication Manifest v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "authority",
+    "generatedBy",
+    "noRecursion",
+    "batchInput",
+    "batchRoot",
+    "repository",
+    "sourceBranch",
+    "sourceCommit",
+    "selection",
+    "files",
+    "bounds",
+    "runtimeContinuation",
+    "manifestRoot"
+  ],
+  "properties": {
+    "schema": {
+      "const": "kungfu.settlement-publication.manifest/v1"
+    },
+    "authority": {
+      "const": "projection-of-kungfu-native-settlement"
+    },
+    "generatedBy": {
+      "const": "kungfu-settlement-publication/v1"
+    },
+    "noRecursion": {
+      "type": "object"
+    },
+    "batchInput": {
+      "type": "object"
+    },
+    "batchRoot": {
+      "$ref": "#/$defs/root"
+    },
+    "repository": {
+      "type": "object"
+    },
+    "sourceBranch": {
+      "type": "string",
+      "pattern": "^machine-ledger/settlement/[0-9a-f]{64}$"
+    },
+    "sourceCommit": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{40,64}$"
+    },
+    "selection": {
+      "type": "object"
+    },
+    "files": {
+      "type": "array",
+      "maxItems": 1024,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "path",
+          "digest",
+          "bytes",
+          "kind",
+          "root"
+        ],
+        "properties": {
+          "path": {
+            "type": "string"
+          },
+          "digest": {
+            "$ref": "#/$defs/root"
+          },
+          "bytes": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "kind": {
+            "type": "string"
+          },
+          "root": {
+            "$ref": "#/$defs/root"
+          }
+        }
+      }
+    },
+    "bounds": {
+      "type": "object"
+    },
+    "runtimeContinuation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "authority",
+        "blockedByPublication",
+        "publicationIsAuthority"
+      ],
+      "properties": {
+        "authority": {
+          "const": "kungfu-work-control"
+        },
+        "blockedByPublication": {
+          "const": false
+        },
+        "publicationIsAuthority": {
+          "const": false
+        }
+      }
+    },
+    "manifestRoot": {
+      "$ref": "#/$defs/root"
+    }
+  },
+  "$defs": {
+    "root": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    }
+  }
+}

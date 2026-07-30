@@ -1,0 +1,91 @@
+{
+  "schema": "xinfa.repository-onboarding-qualification/v1",
+  "verdict": "pass",
+  "platform": "darwin-arm64",
+  "date": "2026-07-21",
+  "protocol": {
+    "stages": ["discover", "candidate", "explain", "accept", "compile"],
+    "rulesVersion": "xinfa.repository-onboarding-rules/v1",
+    "schemaSetRoot": "sha256:f2ea013553fd9c3b7ba62ca850030103b2753c49ab0cacef12ce88426fb63e0c",
+    "atlasSchemaSetRoot": "sha256:1c3519689b9f5f9db531f497408c93baaf9a068877bdbf505e042eb5c02d8fdb"
+  },
+  "corpus": {
+    "path": "fixtures/onboarding/ecosystem-corpus-v1.json",
+    "sha256": "sha256:2fc75cbf6aa0277cb404ba14f3e0ad6bb9d6176ca69b8e84ad466d1dd0bcfb1b",
+    "repositoryShapes": ["rust-cargo", "node", "python", "cmake-cpp", "go", "documentation", "monorepo"],
+    "shapeCount": 7,
+    "adversarialCount": 8,
+    "adversarialCodes": ["sensitive-path", "generated-or-vendor", "xinfa-control-plane", "symlink", "unsupported-encoding", "source-too-large", "index-conflict", "untracked"]
+  },
+  "realConsumers": [
+    {
+      "id": "hua-labs-tap",
+      "ecosystem": "node",
+      "sourceHead": "1c258e31e52e427085433307d03d6198cd83c460",
+      "inventoryRoot": "sha256:914b78d6dada6b89aecbb82648f6bc94109461b51a0c541f5aee643a1bb35ad7",
+      "candidateRoot": "sha256:7bfe96c80ae6df65cbf2b038cfa78d195b44c3dc30a3c89741d18206745c2d66",
+      "proposalCount": 96,
+      "projectRoot": "sha256:f5f69e1f3e80ad0c280bce765363cda8dc2fba46517ba4c3dccf42ffcabf763c",
+      "atlasRoot": "sha256:b396bbffddfa86637fcbe9561fff8e5311bee4ad1a7c6d7e6bb37fdb8bd82002",
+      "acceptReceiptRoot": "sha256:52b39b825f6fcdf9cc24fba2e0dcf2feb76e58bebbb81e812f082e6100bbc745",
+      "dryRunNoWrite": true,
+      "executeInDisposableClone": true,
+      "compileVerified": true
+    },
+    {
+      "id": "jiayigeng-caid",
+      "ecosystem": "python",
+      "sourceHead": "f364d9e95727c2e2ba3dbf23f2d6de52c5f3d5fa",
+      "inventoryRoot": "sha256:7f7383dda0482f5ae0a7c48b9a28c71ef90b30e65b192c8f3f2891fe5c9abed7",
+      "candidateRoot": "sha256:24fbd8188e982b7402c6a4496506c2f0ffc8a94500187c127bcd696ddc5ed8ac",
+      "proposalCount": 15,
+      "projectRoot": "sha256:6a9187bb992ed01e7d83ae2a87a75e0d82dc6c0dba69de8f7712d25449324c0f",
+      "atlasRoot": "sha256:942c507b19acfca4e9dd76f3e1d3ce66b2f2a57a745059935355985c6c48b54b",
+      "acceptReceiptRoot": "sha256:f28c6a51ba307d0b148e5c57e1d041e03672cff2247092ca0e4e52ef1d643617",
+      "dryRunNoWrite": true,
+      "executeInDisposableClone": true,
+      "compileVerified": true
+    }
+  ],
+  "budgets": {
+    "maxFileBytes": 4194304,
+    "maxFiles": 4096,
+    "maxUntrackedPaths": 256,
+    "maxCandidateProposals": 96,
+    "requiredHumanDecisionClasses": 4,
+    "falseAuthorityPromotion": 0,
+    "repositoryCodeExecutions": 0,
+    "secretContentReads": 0
+  },
+  "properties": {
+    "inventoryDeterministic": true,
+    "candidateDeterministicAcrossInputReferences": true,
+    "nonAuthoritativeUntilExecute": true,
+    "partialAcceptanceCompiled": true,
+    "staleCandidateRejected": true,
+    "existingProjectRequiresExactRoot": true,
+    "compileBeforeWrite": true,
+    "failureLeavesNoPartialControlPlane": true,
+    "nativeWasmReceiptEquivalent": true,
+    "nativeWasmProjectBytesEquivalent": true,
+    "sourceRepositoriesUnchanged": true
+  },
+  "wasm": {
+    "sourceTreeHash": "sha256:6d7e50a97c7fca4bca2bf294a1fd1220ca9fda287577993b7b3da545064881ee",
+    "wasmSha256": "sha256:9c7f2ffa368bdd31885d842f592c042243b79ced669b460f9cd2d4fff354d2a6",
+    "size": 946053
+  },
+  "proofBoundary": {
+    "qualifying": false,
+    "selfCertified": false,
+    "certifiesEveryRepository": false,
+    "dynamicEcosystemAdaptersDeferred": true,
+    "networkAndLlmInferenceExcluded": true
+  },
+  "commands": [
+    "cargo test --manifest-path crates/xinfa/Cargo.toml",
+    "./shifu xinfa:wasm:check",
+    "./shifu xinfa:check",
+    "./shifu xinfa:standalone"
+  ]
+}

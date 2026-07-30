@@ -1,0 +1,57 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kungfu.tech/schema/settlement-publication-observation-v1.schema.json",
+  "title": "Kungfu Settlement Publication Pull Request Observation v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "batchRoot",
+    "number",
+    "url",
+    "head",
+    "base",
+    "state",
+    "mergeCommit"
+  ],
+  "properties": {
+    "schema": {
+      "const": "kungfu.settlement-publication.pull-request-observation/v1"
+    },
+    "batchRoot": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "number": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "url": {
+      "type": "string"
+    },
+    "head": {
+      "type": "string"
+    },
+    "base": {
+      "type": "string"
+    },
+    "state": {
+      "enum": [
+        "open",
+        "merged",
+        "closed"
+      ]
+    },
+    "mergeCommit": {
+      "oneOf": [
+        {
+          "type": "string",
+          "pattern": "^[0-9a-f]{40,64}$"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    }
+  }
+}

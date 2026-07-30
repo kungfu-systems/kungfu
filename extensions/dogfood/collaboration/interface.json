@@ -1,0 +1,148 @@
+{
+  "schema": "kungfu.profile-collaboration/v1",
+  "profileId": "kungfu.dogfood-feedback",
+  "value": {
+    "summary": "Make dogfood evidence, ownership, relevance, and settlement operable through one exact Profile API for humans and agents.",
+    "participantBenefits": [
+      {
+        "participantKind": "human",
+        "description": "Inspect the generic Dogfood Inbox and authorize ownership, disposition, and settlement decisions."
+      },
+      {
+        "participantKind": "agent",
+        "description": "Capture, query, consider, and verify the same rooted records through stable CLI and Python APIs."
+      }
+    ]
+  },
+  "participants": [
+    {
+      "id": "dogfood-owner",
+      "kind": "human",
+      "title": "Dogfood owner",
+      "authorityClasses": [
+        "dogfood-finding-author",
+        "dogfood-issue-owner",
+        "assignment-execution-owner",
+        "dogfood-migration-operator"
+      ]
+    },
+    {
+      "id": "delegated-agent",
+      "kind": "agent",
+      "title": "Delegated agent",
+      "authorityClasses": [
+        "dogfood-finding-author",
+        "dogfood-issue-owner",
+        "assignment-execution-owner",
+        "dogfood-migration-operator"
+      ]
+    }
+  ],
+  "intents": [
+    {
+      "id": "capture-finding",
+      "title": "Capture immutable dogfood Finding",
+      "actionId": "capture-finding",
+      "inspectViewId": "dogfood-inbox",
+      "verifyViewId": "dogfood-inbox",
+      "requiredAuthority": "dogfood-finding-author",
+      "requiredCapabilities": ["storage"],
+      "material": true,
+      "protocol": {
+        "mode": "shared-api",
+        "apiId": "kungfu.profile.application",
+        "guiMember": "work-dashboard",
+        "guiMethod": "intentPlan"
+      }
+    },
+    {
+      "id": "admit-issue",
+      "title": "Admit owned dogfood Issue",
+      "actionId": "admit-issue",
+      "inspectViewId": "dogfood-inbox",
+      "verifyViewId": "dogfood-starvation",
+      "requiredAuthority": "dogfood-issue-owner",
+      "requiredCapabilities": ["storage"],
+      "material": true,
+      "protocol": {
+        "mode": "shared-api",
+        "apiId": "kungfu.profile.application",
+        "guiMember": "work-dashboard",
+        "guiMethod": "intentPlan"
+      }
+    },
+    {
+      "id": "transition-issue",
+      "title": "Append authorized Issue lifecycle successor",
+      "actionId": "transition-issue",
+      "inspectViewId": "dogfood-inbox",
+      "verifyViewId": "dogfood-starvation",
+      "requiredAuthority": "dogfood-issue-owner",
+      "requiredCapabilities": ["storage"],
+      "material": true,
+      "protocol": {
+        "mode": "shared-api",
+        "apiId": "kungfu.profile.application",
+        "guiMember": "work-dashboard",
+        "guiMethod": "intentPlan"
+      }
+    },
+    {
+      "id": "record-consideration",
+      "title": "Record Assignment dogfood consideration",
+      "actionId": "record-consideration",
+      "inspectViewId": "dogfood-inbox",
+      "verifyViewId": "dogfood-starvation",
+      "requiredAuthority": "assignment-execution-owner",
+      "requiredCapabilities": ["storage"],
+      "material": true,
+      "protocol": {
+        "mode": "shared-api",
+        "apiId": "kungfu.profile.application",
+        "guiMember": "work-dashboard",
+        "guiMethod": "intentPlan"
+      }
+    },
+    {
+      "id": "import-atlas-jsonl",
+      "title": "Import append-only Atlas dogfood history",
+      "actionId": "import-atlas-jsonl",
+      "inspectViewId": "dogfood-inbox",
+      "verifyViewId": "dogfood-inbox",
+      "requiredAuthority": "dogfood-migration-operator",
+      "requiredCapabilities": ["storage"],
+      "material": true,
+      "protocol": {
+        "mode": "shared-api",
+        "apiId": "kungfu.profile.application",
+        "guiMember": "work-dashboard",
+        "guiMethod": "intentPlan"
+      }
+    }
+  ],
+  "constraints": [
+    {
+      "id": "no-auto-scope-or-closure",
+      "description": "Relevance never expands Assignment scope and no record is closed without the declared independent evidence and decision roots.",
+      "enforcement": "runtime",
+      "appliesTo": ["*"]
+    },
+    {
+      "id": "bounded-evidence",
+      "description": "Secrets, raw private prompts, credentials, and signed URLs are rejected from admitted records.",
+      "enforcement": "runtime",
+      "appliesTo": ["capture-finding", "import-atlas-jsonl"]
+    }
+  ],
+  "knownLimits": [
+    {
+      "id": "non-atomic-federation",
+      "description": "Federated queries retain independently observed component cuts and never claim one global atomic snapshot.",
+      "effect": "external-verification-required"
+    }
+  ],
+  "presentation": {
+    "mode": "generic",
+    "homeViewId": "dogfood-inbox"
+  }
+}

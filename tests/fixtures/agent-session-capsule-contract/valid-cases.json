@@ -1,0 +1,187 @@
+[
+  {
+    "id": "semantic-instruction-plan",
+    "target": "sessionPlan",
+    "value": {
+      "schema": "kungfu.agent-session.plan/v1",
+      "planRoot": "sha256:1111111111111111111111111111111111111111111111111111111111111111",
+      "operation": "instruct",
+      "actorId": "agent-codex-root",
+      "workConsoleId": "console-go-42",
+      "sessionAttemptId": "attempt-go-42-1",
+      "preconditions": {
+        "capsuleGeneration": "7",
+        "sessionStreamEpoch": "3",
+        "controllerLeaseId": "lease-agent-codex-root",
+        "expectedForeground": {
+          "provider": "codex",
+          "profileRoot": "sha256:2222222222222222222222222222222222222222222222222222222222222222",
+          "executable": "/opt/kungfu/providers/codex",
+          "argv": ["--profile", "durable-agent"],
+          "state": "running"
+        }
+      },
+      "payload": {
+        "kind": "text",
+        "mode": "when-ready",
+        "text": "Continue the claimed stage."
+      }
+    }
+  },
+  {
+    "id": "ready-instruction-action",
+    "target": "sessionAction",
+    "value": {
+      "schema": "kungfu.agent-session.action/v1",
+      "actionId": "action-instruct-1",
+      "inputId": "input-1",
+      "planRoot": "sha256:1111111111111111111111111111111111111111111111111111111111111111",
+      "operation": "instruct",
+      "actorId": "agent-codex-root",
+      "sessionAttemptId": "attempt-go-42-1",
+      "capsuleGeneration": "7",
+      "coordinatorEpoch": "9",
+      "sessionStreamEpoch": "3",
+      "expectedSessionStreamEpoch": "3",
+      "controllerLease": {
+        "leaseId": "lease-agent-codex-root",
+        "holderId": "agent-codex-root",
+        "capsuleGeneration": "7",
+        "state": "active"
+      },
+      "foreground": {
+        "provider": "codex",
+        "profileRoot": "sha256:2222222222222222222222222222222222222222222222222222222222222222",
+        "executable": "/opt/kungfu/providers/codex",
+        "argv": ["--profile", "durable-agent"],
+        "state": "running"
+      },
+      "interactionState": "ready",
+      "admissionDecision": "written",
+      "automatic": true,
+      "payload": {
+        "kind": "text",
+        "mode": "when-ready",
+        "text": "Continue the claimed stage.",
+        "key": null
+      }
+    }
+  },
+  {
+    "id": "single-authoritative-capsule",
+    "target": "sessionTopology",
+    "value": {
+      "schema": "kungfu.agent-session.topology/v1",
+      "sessionAttemptId": "attempt-go-42-1",
+      "activeCapsuleGeneration": "7",
+      "capsules": [
+        {
+          "capsuleId": "capsule-go-42-1",
+          "sessionAttemptId": "attempt-go-42-1",
+          "capsuleGeneration": "7",
+          "sessionStreamEpoch": "3",
+          "authorityState": "authoritative",
+          "ptyOwner": true
+        }
+      ]
+    }
+  },
+  {
+    "id": "running-session-status",
+    "target": "sessionStatus",
+    "value": {
+      "schema": "kungfu.agent-session.status/v1",
+      "workConsoleId": "console-go-42",
+      "sessionAttemptId": "attempt-go-42-1",
+      "capsuleId": "capsule-go-42-1",
+      "capsuleGeneration": "7",
+      "coordinatorEpoch": "9",
+      "sessionStreamEpoch": "3",
+      "lifecycleState": "ready",
+      "interactionState": "ready",
+      "foreground": {
+        "provider": "codex",
+        "profileRoot": "sha256:2222222222222222222222222222222222222222222222222222222222222222",
+        "executable": "/opt/kungfu/providers/codex",
+        "argv": ["--profile", "durable-agent"],
+        "state": "running"
+      },
+      "inputAdmission": "open",
+      "output": {
+        "earliestSequence": 100,
+        "nextSequence": 140,
+        "latestSnapshotSequence": 138
+      }
+    }
+  },
+  {
+    "id": "written-delivery-only",
+    "target": "deliveryReceipt",
+    "value": {
+      "schema": "kungfu.agent-session.delivery-receipt/v1",
+      "inputId": "input-1",
+      "actionId": "action-instruct-1",
+      "sessionAttemptId": "attempt-go-42-1",
+      "capsuleGeneration": "7",
+      "sessionStreamEpoch": "3",
+      "status": "written",
+      "writtenOffset": 81,
+      "proves": "validated-input-written-to-pty-only",
+      "semanticOutcome": null,
+      "workState": null
+    }
+  },
+  {
+    "id": "idempotent-input-ledger",
+    "target": "inputLedger",
+    "value": {
+      "schema": "kungfu.agent-session.input-ledger/v1",
+      "receipts": [
+        {
+          "schema": "kungfu.agent-session.delivery-receipt/v1",
+          "inputId": "input-1",
+          "actionId": "action-instruct-1",
+          "sessionAttemptId": "attempt-go-42-1",
+          "capsuleGeneration": "7",
+          "sessionStreamEpoch": "3",
+          "status": "written",
+          "writtenOffset": 81,
+          "proves": "validated-input-written-to-pty-only",
+          "semanticOutcome": null,
+          "workState": null
+        },
+        {
+          "schema": "kungfu.agent-session.delivery-receipt/v1",
+          "inputId": "input-1",
+          "actionId": "action-instruct-1-retry",
+          "sessionAttemptId": "attempt-go-42-1",
+          "capsuleGeneration": "7",
+          "sessionStreamEpoch": "3",
+          "status": "duplicate",
+          "writtenOffset": null,
+          "proves": "validated-input-written-to-pty-only",
+          "semanticOutcome": null,
+          "workState": null
+        }
+      ]
+    }
+  },
+  {
+    "id": "explicit-bounded-replay-gap",
+    "target": "outputReadReceipt",
+    "value": {
+      "schema": "kungfu.agent-session.output-read-receipt/v1",
+      "sessionAttemptId": "attempt-go-42-1",
+      "sessionStreamEpoch": "3",
+      "requestedSequence": 80,
+      "earliestAvailableSequence": 100,
+      "nextSequence": 140,
+      "gap": {
+        "fromSequence": 80,
+        "toSequence": 99,
+        "reason": "bounded-retention-overflow"
+      },
+      "snapshotSequence": 138
+    }
+  }
+]

@@ -1,0 +1,38 @@
+{
+  "schema": "kungfu.storage-sdk.contract/v1",
+  "native_abi": {
+    "id": "kungfu/api.h",
+    "version": 1,
+    "sha256": "84d9265adbdc3d117b0d9d01ee36510985f974892e7430fbdcd5e1da530d1c19"
+  },
+  "semantic_fixture": {
+    "id": "kungfu.layer-qualification.sdk-semantic-fixture/v1",
+    "sha256": "52a727000f59455184b53a02ff5f7be9845870796c497225c678a52e14d0a816"
+  },
+  "wire_fixture": {
+    "id": "kungfu.layer-qualification.sdk-wire-fixture/v1",
+    "sha256": "495a5e6a5425123af7a85bc2ea2342c15109b7f58d98cdc004217f398ed114c8"
+  },
+  "operations": [
+    "episode_begin",
+    "episode_end",
+    "fact_query",
+    "fsck",
+    "export_bundle",
+    "fact_contract",
+    "fact_declare_world",
+    "fact_declare_surface",
+    "fact_observe",
+    "fact_state",
+    "assessment_contract",
+    "assessment_request",
+    "assessment_execute",
+    "assessment_status",
+    "assessment_list",
+    "assessment_invalidate",
+    "trust_require",
+    "fact_kernel",
+    "runtime_action_wire",
+    "runtime_action_geometry_root"
+  ]
+}

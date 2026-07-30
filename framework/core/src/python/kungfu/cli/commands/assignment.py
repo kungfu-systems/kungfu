@@ -1,0 +1,1076 @@
+# SPDX-License-Identifier: Apache-2.0
+
+"""`kungfu work` — the native Work authority and orchestration surface."""
+
+from __future__ import annotations
+
+import json
+import os
+from pathlib import Path
+
+import click
+
+from kungfu import assignment_orchestration as orchestration
+from kungfu import dogfood as dogfood_api
+from kungfu import profile_composition, profile_sdk
+from kungfu.cli.commands import PrioritizedCommandGroup, kfc
+from kungfu.cli.surface_contract import surface
+from kungfu.storage import service as storage_service
+from kungfu.workspace import prepare_workspace_write, resolve_workspace_target
+
+assignment_context = kfc.pass_context()
+
+
+@kfc.group(
+    name="work",
+    cls=PrioritizedCommandGroup,
+    help_priority=2,
+    help="capture, admit, execute, and inspect Work through native authority",
+)
+@click.help_option("-h", "--help")
+@kfc.pass_context()
+def assignment(ctx):
+    pass
+
+
+def _emit(payload):
+    click.echo(json.dumps(payload, indent=2, sort_keys=True))
+
+
+def _write_immutable_json(path, value):
+    if path is None:
+        return None
+    output = path.expanduser().resolve()
+    content = (orchestration.canonical_json(value) + "\n").encode("utf-8")
+    if output.exists() and output.read_bytes() != content:
+        raise ValueError("immutable output exists with different bytes")
+    output.parent.mkdir(parents=True, exist_ok=True)
+    if not output.exists():
+        output.write_bytes(content)
+    return str(output)
+
+
+def _failure(code, error, next_actions=None):
+    _emit(
+        {
+            "schema": "kungfu.assignment-orchestration.diagnosis/v1",
+            "ok": False,
+            "code": code,
+            "message": str(error),
+            "next_actions": next_actions or [],
+        }
+    )
+
+
+def _run(operation):
+    try:
+        return operation()
+    except click.exceptions.Exit:
+        raise
+    except (OSError, RuntimeError, ValueError, json.JSONDecodeError) as error:
+        _failure("assignment-operation-failed", error)
+        raise click.exceptions.Exit(2) from error
+
+
+def _runtime(workspace_root="", home=False, operation_class="semantic-write"):
+    target = resolve_workspace_target(
+        operation_class,
+        workspace_root or None,
+        home=home,
+        cwd=os.getcwd(),
+    )
+    identity = target.identity
+    if identity.workspace_kind not in {"project", "home"}:
+        raise ValueError("Assignment orchestration requires --workspace or --home")
+    if operation_class == "read-only":
+        if not identity.initialized:
+            raise ValueError("Assignment workspace is uninitialized")
+        receipt = {
+            "schema": "kungfu.workspace.target-receipt/v1",
+            "operation_class": "read-only",
+            "workspace_id": identity.workspace_id,
+            "workspace_kind": identity.workspace_kind,
+            "initialized": False,
+            "created_paths": [],
+            "git_effects": [],
+        }
+    else:
+        receipt = prepare_workspace_write(target, "assignment-orchestration")
+        target = resolve_workspace_target(
+            operation_class,
+            workspace_root or None,
+            home=home,
+            cwd=os.getcwd(),
+        )
+        identity = target.identity
+        if (
+            not identity.initialized
+            or identity.identity_root != receipt["workspace_identity_root"]
+        ):
+            raise RuntimeError("Assignment workspace identity did not stabilize")
+    return identity, target.runtime_dir, receipt
+
+
+def _profile_source():
+    profiles = Path(orchestration.__file__).resolve().parent / "profiles"
+    for profile_name in ("work-control", "mission-control"):  # compatibility path
+        packaged = profiles / profile_name
+        if packaged.is_dir():
+            return packaged
+    extensions = orchestration.source_root() / "extensions"
+    for profile_name in ("work-control", "mission-control"):  # compatibility path
+        source = extensions / profile_name
+        if source.is_dir():
+            return source
+    raise ValueError("Work Control Profile is absent from this Kungfu product")
+
+
+def _ensure_profile(runtime_dir, authorized_by):
+    source = _profile_source()
+    receipts = []
+    validated = profile_sdk.validate_source(source, runtime_dir)
+    inspection = validated["inspection"]
+    profile_id = inspection["profile"]["id"]
+    desired_root = inspection["profile_suite_root"]
+    lifecycle = storage_service.profile_lifecycle(
+        runtime_dir, "list", include_removed=True
+    )
+    state = next(
+        (
+            row
+            for row in lifecycle.get("profiles", [])
+            if row.get("profile_id") == profile_id and not row.get("removed")
+        ),
+        None,
+    )
+    if state is None:
+        actions = ["install", "qualify", "activate"]
+    elif state.get("profile_suite_root") != desired_root:
+        actions = ["upgrade", "qualify", "activate"]
+    else:
+        actions = []
+        if not state.get("qualified"):
+            actions.append("qualify")
+        if not state.get("activated"):
+            actions.append("activate")
+    for action in actions:
+        values = {"granted_permissions": ["storage"]} if action == "activate" else {}
+        plan = profile_sdk.lifecycle_plan(runtime_dir, action, source, **values)
+        answer = profile_sdk.answer_decision(
+            plan["decisionCard"], "approve", authorized_by
+        )
+        receipts.append(
+            profile_sdk.authorized_lifecycle_apply(runtime_dir, plan, answer)
+        )
+    contract = profile_composition.contract_materialization_plan(source, runtime_dir)
+    if contract["operations"]:
+        answer = profile_sdk.answer_decision(
+            contract["decisionCard"], "approve", authorized_by
+        )
+        receipts.append(
+            profile_composition.authorized_contract_materialize(
+                runtime_dir, contract, answer
+            )
+        )
+    return receipts
+
+
+def _profile_read(runtime_dir, operation, values):
+    return profile_sdk.invoke_member_adapter(
+        str(_profile_source()),
+        runtime_dir,
+        "work-control-actions",
+        operation,
+        values,
+    )["result"]
+
+
+def _profile_action(runtime_dir, intent_id, values, authorized_by):
+    source = str(_profile_source())
+    plan = profile_sdk.intent_plan(source, runtime_dir, intent_id, values)
+    answer = profile_sdk.answer_decision(plan["decisionCard"], "approve", authorized_by)
+    receipt = profile_sdk.intent_apply(runtime_dir, plan, answer)
+    return receipt["actionReceipt"]["coreReceipt"]
+
+
+def _status(runtime_dir, initiative_id, assignment_id, now=""):
+    result = _profile_read(
+        runtime_dir,
+        "assignment-status",
+        {
+            "initiativeId": initiative_id,
+            "assignmentId": assignment_id,
+            "source": "atlas",
+            "now": now,
+        },
+    )
+    result["initiative_id"] = initiative_id
+    result["assignment_id"] = assignment_id
+    result["next_actions"] = orchestration.next_actions(result)
+    return result
+
+
+@assignment.command(help="capture one canonical request without runtime admission")
+@click.option("--request", "request_value", required=True, help="request file or -")
+@click.option("--workspace", "workspace_root", type=click.Path(file_okay=False))
+@click.option("--home", is_flag=True, help="capture into the logical Home Workspace")
+@click.option("--cwd", type=click.Path(exists=True, file_okay=False))
+@click.option("--json", "json_output", is_flag=True, help="machine-readable output")
+@assignment_context
+@surface(id="kungfu.work.capture")
+def capture(ctx, request_value, workspace_root, home, cwd, json_output):
+    def operation():
+        if request_value == "-":
+            request = json.load(click.get_text_stream("stdin"))
+        else:
+            request = json.loads(
+                Path(request_value).expanduser().read_text(encoding="utf-8")
+            )
+        target = resolve_workspace_target(
+            "capture-only",
+            workspace_root or None,
+            home=home,
+            cwd=cwd or os.getcwd(),
+        )
+        return orchestration.capture_assignment_request(request, target)
+
+    _ = json_output
+    _emit(_run(operation))
+
+
+@assignment.command(help="admit one verified captured request into this workspace")
+@click.argument("request_file", type=click.Path(dir_okay=False, path_type=Path))
+@click.option("--workspace", "workspace_root", type=click.Path(file_okay=False))
+@click.option("--home", is_flag=True, help="admit into the logical Home Workspace")
+@click.option("--initiative-id", default="")
+@click.option("--assignment-id", default="")
+@click.option(
+    "--initiative-admission",
+    type=str,
+    help="exact parent Initiative admission JSON",
+)
+@click.option("--actor", required=True)
+@click.option("--actor-type", type=click.Choice(["user", "agent"]), default="agent")
+@click.option(
+    "--allow-foreign-binding",
+    is_flag=True,
+    help="explicit recovery/testing override; reported as degraded provenance",
+)
+@assignment_context
+def admit(
+    ctx,
+    request_file,
+    workspace_root,
+    home,
+    initiative_id,
+    assignment_id,
+    initiative_admission,
+    actor,
+    actor_type,
+    allow_foreign_binding,
+):
+    def operation():
+        binding = orchestration.binding_provenance(allow_foreign=allow_foreign_binding)
+        if not binding["ok"]:
+            _emit(
+                {
+                    "schema": "kungfu.assignment-orchestration.admission/v1",
+                    "ok": False,
+                    "status": "degraded",
+                    "admitted": False,
+                    "binding": binding,
+                    "next_actions": [
+                        {
+                            "action": "build-core",
+                            "command": "./shifu build:core",
+                            "description": "Assemble pykungfu from the current checkout",
+                        }
+                    ],
+                }
+            )
+            raise click.exceptions.Exit(3)
+        captured = orchestration.load_captured_request(request_file)
+        promoted = None
+        if initiative_admission:
+            stdin_text = (
+                click.get_text_stream("stdin").read()
+                if initiative_admission == "-"
+                else ""
+            )
+            promoted = orchestration.load_initiative_admission(
+                initiative_admission, stdin_text=stdin_text
+            )
+        projected = orchestration.atlas_assignment_projection(
+            captured,
+            initiative_id=initiative_id,
+            assignment_id=assignment_id,
+            initiative_admission=promoted,
+        )
+        identity, runtime_dir, workspace_receipt = _runtime(workspace_root, home)
+        lifecycle = _ensure_profile(runtime_dir, actor)
+        initiative_receipt = None
+        if not projected["initiative_ref"]:
+            initiative_receipt = _profile_action(
+                runtime_dir,
+                "create-initiative",
+                {
+                    "initiativeId": projected["initiative_id"],
+                    "title": projected["initiative_title"],
+                    "intent": projected["initiative_intent"],
+                    "actor": actor,
+                    "actorType": actor_type,
+                    "status": "active",
+                    "horizon": "long-term",
+                    "sourceIdentity": projected["initiative_source_identity"],
+                },
+                actor,
+            )
+        assignment_receipt = _profile_action(
+            runtime_dir,
+            "create-assignment",
+            {
+                "initiativeId": projected["initiative_id"],
+                "assignmentId": projected["assignment_id"],
+                "title": projected["title"],
+                "objective": projected["objective"],
+                "actor": actor,
+                "actorType": actor_type,
+                # The Initiative above is created under Kungfu-native authority.
+                # Select that same source family when linking the Assignment;
+                # capture roots preserve the Atlas request provenance.
+                "source": "kungfu",
+                "status": "active",
+                "parentAssignmentId": projected["parent_assignment_id"],
+                "dependsOn": projected["depends_on"],
+                "owningWorkspaceIdentityRoot": identity.identity_root,
+                "initiativeRef": projected["initiative_ref"],
+                "parentAssignmentRef": projected["parent_assignment_ref"],
+                "dependencyRefs": projected["dependency_refs"],
+                "responsibility": projected["responsibility"],
+                "acceptanceRoot": "",
+                "atlasRoot": "",
+                "contextBinding": projected["context_binding"],
+                "projectCutRoot": projected["project_cut_root"],
+                "evidenceEpisodeRoots": projected["evidence_episode_roots"],
+                "requestRoot": projected["request_root"],
+                "captureReceiptRoots": projected["capture_receipt_roots"],
+                "workDefinition": projected["work_definition"],
+            },
+            actor,
+        )
+        status = _status(
+            runtime_dir, projected["initiative_id"], projected["assignment_id"]
+        )
+        dogfood_receipts = [
+            dogfood_api.consider_assignment(
+                runtime_dir,
+                workspace_root=identity.workspace_root or "",
+                home=home,
+                assignment=status["assignment"],
+                stage=stage,
+                actor=actor,
+            )
+            for stage in ("design", "admission")
+        ]
+        return {
+            "schema": "kungfu.assignment-orchestration.admission/v1",
+            "ok": True,
+            "status": "admitted",
+            "admitted": True,
+            "binding": binding,
+            "workspace": identity.as_dict(),
+            "workspace_receipt": workspace_receipt,
+            "request_root": projected["request_root"],
+            "capture_receipt_roots": projected["capture_receipt_roots"],
+            "initiative_receipt": initiative_receipt,
+            "assignment_receipt": assignment_receipt,
+            "dogfood_consideration_roots": [
+                row["consideration"]["receipt_root"] for row in dogfood_receipts
+            ],
+            "profile_lifecycle_receipt_count": len(lifecycle),
+            "phase": status["phase"],
+            "next_actions": status["next_actions"],
+        }
+
+    result = _run(operation)
+    if result is not None:
+        _emit(result)
+
+
+@assignment.command(
+    name="relation-event",
+    help="append one retryable workspace-routed Assignment relation event",
+)
+@click.option("--workspace", "workspace_root", type=click.Path(file_okay=False))
+@click.option(
+    "--relation",
+    "relation_file",
+    required=True,
+    type=click.Path(exists=True, dir_okay=False, path_type=Path),
+)
+@click.option(
+    "--event",
+    "event_type",
+    required=True,
+    type=click.Choice(
+        [
+            "delegation-offer",
+            "destination-acceptance",
+            "source-observation",
+            "child-contribution",
+            "parent-admission",
+            "parent-assessment",
+            "parent-decision",
+        ]
+    ),
+)
+@click.option("--actor", required=True)
+@click.option("--predecessor-root", "predecessor_roots", multiple=True)
+@click.option("--evidence-root", "evidence_roots", multiple=True)
+@assignment_context
+def relation_event(
+    ctx,
+    workspace_root,
+    relation_file,
+    event_type,
+    actor,
+    predecessor_roots,
+    evidence_roots,
+):
+    def operation():
+        identity, runtime_dir = _runtime(workspace_root)
+        _ensure_profile(runtime_dir, actor)
+        relation = json.loads(relation_file.read_text(encoding="utf-8"))
+        if isinstance(relation, dict) and isinstance(relation.get("relation"), dict):
+            relation = relation["relation"]
+        if not isinstance(relation, dict):
+            raise ValueError("relation file must contain one relation object")
+        receipt = _profile_action(
+            runtime_dir,
+            "append-assignment-relation-event",
+            {
+                "workspaceIdentityRoot": identity.identity_root,
+                "relation": relation,
+                "eventType": event_type,
+                "actor": actor,
+                "actorType": "agent",
+                "predecessorEventRoots": list(predecessor_roots),
+                "evidenceRoots": list(evidence_roots),
+                "knownRelations": [],
+            },
+            actor,
+        )
+        return {
+            **receipt,
+            "workspace": identity.as_dict(),
+        }
+
+    result = _run(operation)
+    if result is not None:
+        _emit(result)
+
+
+def _identity_options(function):
+    for decorator in reversed(
+        [
+            click.option(
+                "--workspace", "workspace_root", type=click.Path(file_okay=False)
+            ),
+            click.option("--home", is_flag=True),
+            click.option("--initiative-id", required=True),
+            click.option("--assignment-id", required=True),
+        ]
+    ):
+        function = decorator(function)
+    return function
+
+
+@assignment.command(
+    name="claim", help="claim execution with a bounded owner/agent lease"
+)
+@_identity_options
+@click.option("--owner", required=True)
+@click.option("--agent", required=True)
+@click.option("--slot", required=True)
+@click.option("--lease-id", required=True)
+@click.option("--lease-expires-at", required=True)
+@click.option("--authorized-by", required=True)
+@click.option("--grant-scope", default="assignment-execution")
+@click.option("--actor-type", type=click.Choice(["user", "agent"]), default="agent")
+@assignment_context
+def claim(
+    ctx,
+    workspace_root,
+    home,
+    initiative_id,
+    assignment_id,
+    owner,
+    agent,
+    slot,
+    lease_id,
+    lease_expires_at,
+    authorized_by,
+    grant_scope,
+    actor_type,
+):
+    def operation():
+        _, runtime_dir, _ = _runtime(workspace_root, home)
+        _ensure_profile(runtime_dir, authorized_by)
+        receipt = _profile_action(
+            runtime_dir,
+            "claim-assignment",
+            {
+                "initiativeId": initiative_id,
+                "assignmentId": assignment_id,
+                "owner": owner,
+                "agent": agent,
+                "slot": slot,
+                "leaseId": lease_id,
+                "leaseExpiresAt": lease_expires_at,
+                "authorizedBy": authorized_by,
+                "grantScope": grant_scope,
+                "actorType": actor_type,
+                "source": "atlas",
+            },
+            authorized_by,
+        )
+        return {**receipt, "status": _status(runtime_dir, initiative_id, assignment_id)}
+
+    _emit(_run(operation))
+
+
+def _advance(
+    workspace_root, home, initiative_id, assignment_id, to_phase, actor, reason
+):
+    identity, runtime_dir, _ = _runtime(workspace_root, home)
+    _ensure_profile(runtime_dir, actor)
+    current = _status(runtime_dir, initiative_id, assignment_id)
+    dogfood_receipt = None
+    if to_phase == "executing":
+        dogfood_receipt = dogfood_api.consider_assignment(
+            runtime_dir,
+            workspace_root=identity.workspace_root or "",
+            home=home,
+            assignment=current["assignment"],
+            stage="kickoff",
+            actor=actor,
+        )
+    receipt = _profile_action(
+        runtime_dir,
+        "advance-assignment",
+        {
+            "initiativeId": initiative_id,
+            "assignmentId": assignment_id,
+            "toPhase": to_phase,
+            "expectedPhase": current["phase"],
+            "actor": actor,
+            "actorType": "agent",
+            "reason": reason,
+            "source": "atlas",
+        },
+        actor,
+    )
+    return {
+        **receipt,
+        "dogfood_consideration_root": (
+            dogfood_receipt["consideration"]["receipt_root"]
+            if dogfood_receipt is not None
+            else None
+        ),
+        "status": _status(runtime_dir, initiative_id, assignment_id),
+    }
+
+
+@assignment.command(help="enter executing phase under the active lease")
+@_identity_options
+@click.option("--actor", required=True)
+@click.option("--reason", required=True)
+@assignment_context
+def kickoff(ctx, workspace_root, home, initiative_id, assignment_id, actor, reason):
+    _emit(
+        _run(
+            lambda: _advance(
+                workspace_root,
+                home,
+                initiative_id,
+                assignment_id,
+                "executing",
+                actor,
+                reason,
+            )
+        )
+    )
+
+
+@assignment.command(help="record the stage-ready boundary")
+@_identity_options
+@click.option("--actor", required=True)
+@click.option("--reason", required=True)
+@assignment_context
+def stage(ctx, workspace_root, home, initiative_id, assignment_id, actor, reason):
+    _emit(
+        _run(
+            lambda: _advance(
+                workspace_root,
+                home,
+                initiative_id,
+                assignment_id,
+                "stage-ready",
+                actor,
+                reason,
+            )
+        )
+    )
+
+
+@assignment.command(help="show the proof-bound orchestration state")
+@_identity_options
+@click.option("--now", default="", help="ISO-8601 cut used to test lease expiry")
+@assignment_context
+def status(ctx, workspace_root, home, initiative_id, assignment_id, now):
+    def operation():
+        _, runtime_dir, _ = _runtime(workspace_root, home, "read-only")
+        return _status(runtime_dir, initiative_id, assignment_id, now)
+
+    _emit(_run(operation))
+
+
+@assignment.command(
+    name="family-contract",
+    help="show the versioned native Initiative-family protocol",
+)
+@assignment_context
+def family_contract_command(ctx):
+    _emit(orchestration.family_contract())
+
+
+@assignment.command(
+    name="family-create",
+    help="create one rooted inert-parent and bounded-Wave family state",
+)
+@click.argument(
+    "blueprint_file",
+    type=click.Path(exists=True, dir_okay=False, path_type=Path),
+)
+@click.option("--out", type=click.Path(dir_okay=False, path_type=Path))
+@assignment_context
+def family_create(ctx, blueprint_file, out):
+    def operation():
+        blueprint = json.loads(blueprint_file.read_text(encoding="utf-8"))
+        state = orchestration.create_family_state(blueprint)
+        return {
+            "schema": "kungfu.work-control.initiative-family-create/v1",
+            "state": state,
+            "stateRoot": state["stateRoot"],
+            "outputPath": _write_immutable_json(out, state),
+            "verification": orchestration.verify_family_state(state),
+        }
+
+    _emit(_run(operation))
+
+
+@assignment.command(
+    name="family-transition",
+    help="append one expected-root terminal or acceptance transition",
+)
+@click.argument(
+    "state_file",
+    type=click.Path(exists=True, dir_okay=False, path_type=Path),
+)
+@click.argument(
+    "transition_file",
+    type=click.Path(exists=True, dir_okay=False, path_type=Path),
+)
+@click.option("--out", type=click.Path(dir_okay=False, path_type=Path))
+@assignment_context
+def family_transition(ctx, state_file, transition_file, out):
+    def operation():
+        state = json.loads(state_file.read_text(encoding="utf-8"))
+        transition = json.loads(transition_file.read_text(encoding="utf-8"))
+        successor = orchestration.transition_family_state(state, transition)
+        return {
+            "schema": "kungfu.work-control.initiative-family-transition-result/v1",
+            "state": successor,
+            "stateRoot": successor["stateRoot"],
+            "previousStateRoot": successor["previousStateRoot"],
+            "outputPath": _write_immutable_json(out, successor),
+            "verification": orchestration.verify_family_state(successor),
+        }
+
+    _emit(_run(operation))
+
+
+@assignment.command(
+    name="family-verify",
+    help="verify one native Initiative-family state without runtime mutation",
+)
+@click.argument(
+    "state_file",
+    type=click.Path(exists=True, dir_okay=False, path_type=Path),
+)
+@assignment_context
+def family_verify(ctx, state_file):
+    def operation():
+        state = json.loads(state_file.read_text(encoding="utf-8"))
+        return orchestration.verify_family_state(state)
+
+    _emit(_run(operation))
+
+
+@assignment.command(
+    name="family-contract-v2",
+    help="show the additive typed Initiative-family envelope protocol",
+)
+@assignment_context
+def family_contract_v2_command(ctx):
+    _emit(orchestration.family_contract_v2())
+
+
+@assignment.command(
+    name="family-upgrade-v2",
+    help="explicitly bind one immutable v1 state into a typed v2 envelope",
+)
+@click.argument(
+    "state_file",
+    type=click.Path(exists=True, dir_okay=False, path_type=Path),
+)
+@click.argument(
+    "binding_file",
+    type=click.Path(exists=True, dir_okay=False, path_type=Path),
+)
+@click.option("--out", type=click.Path(dir_okay=False, path_type=Path))
+@assignment_context
+def family_upgrade_v2(ctx, state_file, binding_file, out):
+    def operation():
+        state = json.loads(state_file.read_text(encoding="utf-8"))
+        bindings = json.loads(binding_file.read_text(encoding="utf-8"))
+        upgrade = orchestration.upgrade_family_state_v2(state, bindings)
+        successor = upgrade["successorState"]
+        return {
+            **upgrade,
+            "outputPath": _write_immutable_json(out, successor),
+            "verification": orchestration.verify_family_state_v2(successor),
+        }
+
+    _emit(_run(operation))
+
+
+@assignment.command(
+    name="family-transition-v2",
+    help="advance a typed family state with an exact v1 transition and bindings",
+)
+@click.argument(
+    "state_file",
+    type=click.Path(exists=True, dir_okay=False, path_type=Path),
+)
+@click.argument(
+    "transition_file",
+    type=click.Path(exists=True, dir_okay=False, path_type=Path),
+)
+@click.option("--out", type=click.Path(dir_okay=False, path_type=Path))
+@assignment_context
+def family_transition_v2(ctx, state_file, transition_file, out):
+    def operation():
+        state = json.loads(state_file.read_text(encoding="utf-8"))
+        transition = json.loads(transition_file.read_text(encoding="utf-8"))
+        successor = orchestration.transition_family_state_v2(state, transition)
+        return {
+            "schema": "kungfu.work-control.initiative-family-transition-result/v2",
+            "state": successor,
+            "stateRoot": successor["stateRoot"],
+            "previousStateRoot": successor["previousStateRoot"],
+            "v1ProjectionRoot": successor["v1ProjectionRoot"],
+            "typedBindingRoot": successor["typedBindingRoot"],
+            "outputPath": _write_immutable_json(out, successor),
+            "verification": orchestration.verify_family_state_v2(successor),
+        }
+
+    _emit(_run(operation))
+
+
+@assignment.command(
+    name="family-verify-v2",
+    help="read v1 as under-typed or verify one complete typed v2 state",
+)
+@click.argument(
+    "state_file",
+    type=click.Path(exists=True, dir_okay=False, path_type=Path),
+)
+@assignment_context
+def family_verify_v2(ctx, state_file):
+    def operation():
+        state = json.loads(state_file.read_text(encoding="utf-8"))
+        return orchestration.verify_family_state_v2(state)
+
+    _emit(_run(operation))
+
+
+@assignment.command(help="evaluate the native run or closeout gate")
+@_identity_options
+@click.option("--target", type=click.Choice(["run", "closeout"]), required=True)
+@assignment_context
+def gate(ctx, workspace_root, home, initiative_id, assignment_id, target):
+    def operation():
+        _, runtime_dir, _ = _runtime(workspace_root, home, "read-only")
+        status_value = _status(runtime_dir, initiative_id, assignment_id)
+        orchestration_gate = orchestration.gate(status_value, target)
+        required_stages = (
+            ["design", "admission", "kickoff"]
+            if target == "run"
+            else ["design", "admission", "kickoff", "closeout"]
+        )
+        dogfood_gate = dogfood_api.consideration_gate(
+            runtime_dir,
+            assignment_definition_root=status_value["assignment"][
+                "work_definition_root"
+            ],
+            target=target,
+            required_stages=required_stages,
+        )
+        return {
+            **orchestration_gate,
+            "ok": bool(orchestration_gate["ok"] and dogfood_gate["ok"]),
+            "dogfood": dogfood_gate,
+            "next_actions": [
+                *orchestration_gate.get("next_actions", []),
+                *dogfood_gate.get("next_actions", []),
+            ],
+        }
+
+    result = _run(operation)
+    _emit(result)
+    if not result["ok"]:
+        raise click.exceptions.Exit(4)
+
+
+def _json_action(name, intent_id):
+    @assignment.command(
+        name=name, help=f"run the native {name} intent from a JSON input"
+    )
+    @click.argument(
+        "input_file", type=click.Path(exists=True, dir_okay=False, path_type=Path)
+    )
+    @click.option("--workspace", "workspace_root", type=click.Path(file_okay=False))
+    @click.option("--home", is_flag=True)
+    @click.option("--authorized-by", required=True)
+    @assignment_context
+    @surface(id=f"kungfu.work.{name.replace('-', '.')}")
+    def command(ctx, input_file, workspace_root, home, authorized_by):
+        def operation():
+            values = json.loads(input_file.read_text(encoding="utf-8"))
+            _, runtime_dir, _ = _runtime(workspace_root, home)
+            _ensure_profile(runtime_dir, authorized_by)
+            receipt = _profile_action(runtime_dir, intent_id, values, authorized_by)
+            initiative = str(
+                values.get("initiativeId") or values.get("missionId") or ""
+            )
+            assignment_id = str(
+                values.get("assignmentId") or values.get("goalId") or ""
+            )
+            current = _status(runtime_dir, initiative, assignment_id)
+            return {
+                **receipt,
+                "status": current,
+                "next_actions": current["next_actions"],
+            }
+
+        _emit(_run(operation))
+
+    return command
+
+
+claim_completion = _json_action("claim-completion", "claim-completion")
+review = _json_action("review", "review-completion")
+decide = _json_action("decide", "decide-continuation")
+
+
+@assignment.command(
+    name="binding-create",
+    help="build one path-free cross-workspace parent/child binding from receipts",
+)
+@click.option(
+    "--parent-admission",
+    type=click.Path(exists=True, dir_okay=False, path_type=Path),
+    required=True,
+)
+@click.option(
+    "--parent-status",
+    type=click.Path(exists=True, dir_okay=False, path_type=Path),
+    required=True,
+)
+@click.option(
+    "--child-admission",
+    type=click.Path(exists=True, dir_okay=False, path_type=Path),
+    required=True,
+)
+@click.option(
+    "--child-status",
+    type=click.Path(exists=True, dir_okay=False, path_type=Path),
+    required=True,
+)
+@click.option("--out", type=click.Path(dir_okay=False, path_type=Path))
+@assignment_context
+def binding_create(
+    ctx,
+    parent_admission,
+    parent_status,
+    child_admission,
+    child_status,
+    out,
+):
+    def operation():
+        binding = orchestration.cross_workspace_binding(
+            json.loads(parent_admission.read_text(encoding="utf-8")),
+            json.loads(parent_status.read_text(encoding="utf-8")),
+            json.loads(child_admission.read_text(encoding="utf-8")),
+            json.loads(child_status.read_text(encoding="utf-8")),
+        )
+        output_path = None
+        if out is not None:
+            output_path = out.expanduser().resolve()
+            content = (orchestration.canonical_json(binding) + "\n").encode("utf-8")
+            if output_path.exists() and output_path.read_bytes() != content:
+                raise ValueError("binding output exists with different bytes")
+            output_path.parent.mkdir(parents=True, exist_ok=True)
+            if not output_path.exists():
+                output_path.write_bytes(content)
+        return {
+            "schema": "kungfu.assignment-orchestration.cross-workspace-binding-create/v1",
+            "binding": binding,
+            "bindingRoot": binding["bindingRoot"],
+            "outputPath": str(output_path) if output_path else None,
+            "next_actions": [
+                {
+                    "action": "bind",
+                    "description": "admit the exact binding in both endpoint workspaces",
+                }
+            ],
+        }
+
+    _emit(_run(operation))
+
+
+@assignment.command(
+    name="bind",
+    help="plan or admit one exact cross-workspace binding in this endpoint",
+)
+@click.argument(
+    "binding_file", type=click.Path(exists=True, dir_okay=False, path_type=Path)
+)
+@_identity_options
+@click.option("--execute", is_flag=True)
+@click.option("--expected-binding-root", default="")
+@assignment_context
+def bind(
+    ctx,
+    binding_file,
+    workspace_root,
+    home,
+    initiative_id,
+    assignment_id,
+    execute,
+    expected_binding_root,
+):
+    def operation():
+        binding = json.loads(binding_file.read_text(encoding="utf-8"))
+        identity, runtime_dir, _ = _runtime(workspace_root, home, "read-only")
+        current = _status(runtime_dir, initiative_id, assignment_id)
+        plan = orchestration.cross_workspace_binding_plan(
+            identity.workspace_root or identity.data_home,
+            identity.as_dict(),
+            current,
+            binding,
+        )
+        if not execute:
+            return {
+                **plan,
+                "next_actions": [
+                    {
+                        "action": "bind",
+                        "expected_binding_root": plan["bindingRoot"],
+                    }
+                ],
+            }
+        return orchestration.apply_cross_workspace_binding(
+            plan, binding, expected_binding_root
+        )
+
+    _emit(_run(operation))
+
+
+@assignment.command(
+    name="verify-binding",
+    help="verify a local cross-workspace binding receipt without a live runtime",
+)
+@click.option(
+    "--binding",
+    "binding_file",
+    type=click.Path(exists=True, dir_okay=False, path_type=Path),
+    required=True,
+)
+@click.option(
+    "--receipt",
+    "receipt_file",
+    type=click.Path(exists=True, dir_okay=False, path_type=Path),
+    required=True,
+)
+@assignment_context
+def verify_binding(ctx, binding_file, receipt_file):
+    result = _run(
+        lambda: orchestration.verify_cross_workspace_binding_receipt(
+            binding_file, receipt_file
+        )
+    )
+    _emit(result)
+    if not result["ok"]:
+        raise click.exceptions.Exit(5)
+
+
+@assignment.command(help="plan or write a portable content-addressed state snapshot")
+@_identity_options
+@click.option("--execute", is_flag=True)
+@click.option("--expected-state-root", default="")
+@assignment_context
+def seal(
+    ctx,
+    workspace_root,
+    home,
+    initiative_id,
+    assignment_id,
+    execute,
+    expected_state_root,
+):
+    def operation():
+        identity, runtime_dir, _ = _runtime(workspace_root, home)
+        _ensure_profile(runtime_dir, "assignment-seal")
+        current = _status(runtime_dir, initiative_id, assignment_id)
+        plan = orchestration.sealed_state_plan(
+            identity.workspace_root or identity.data_home,
+            current,
+            workspace_identity=identity.as_dict(),
+        )
+        if not execute:
+            return {
+                **plan,
+                "executed": False,
+                "next_actions": [
+                    {"action": "seal", "expected_state_root": plan["state_root"]}
+                ],
+            }
+        return orchestration.apply_sealed_state(plan, expected_state_root)
+
+    _emit(_run(operation))
+
+
+@assignment.command(
+    name="verify-seal", help="verify sealed state without a live runtime"
+)
+@click.argument(
+    "state_file", type=click.Path(exists=True, dir_okay=False, path_type=Path)
+)
+@assignment_context
+def verify_seal(ctx, state_file):
+    result = _run(lambda: orchestration.verify_sealed_state(state_file))
+    _emit(result)
+    if not result["ok"]:
+        raise click.exceptions.Exit(5)

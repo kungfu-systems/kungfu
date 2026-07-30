@@ -1,0 +1,8 @@
+{
+  "schema_version": 1,
+  "authorities": [],
+  "non_authorities": [],
+  "json_edges": [
+    {"path":"service.h","surface":"core-service","direction":"internal","reason":"semantic request currency","remove_when":"never"}
+  ]
+}

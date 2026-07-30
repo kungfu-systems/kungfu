@@ -20,6 +20,9 @@ import {
   kfc,
   assertContains,
   fail,
+  extractPackedKfx,
+  kfxQualificationAuthorityFile,
+  kfxRemovalAuthorityFile,
 } from '../_harness.mjs';
 
 const { coreDir } = locate(import.meta.url);
@@ -61,10 +64,13 @@ if (!fs.existsSync(bundle)) fail('kungfu sdk kfx build produced no bundle');
 // the load contract, asserted the way the shell loads it: CommonJS-wrap with
 // a require shim; only shell-provided modules may be required; the bundle
 // must export a View component function
+const providedModules = JSON.parse(
+  fs.readFileSync(path.join(repoDir, 'framework', 'kfx', 'shared-modules.json')),
+).modules;
 const loadContract = `
 const fs = require("node:fs");
 const code = fs.readFileSync(process.argv[1], "utf8");
-const provided = ["react", "react/jsx-runtime", "react-dom", "@kungfu-tech/api", "@kungfu-tech/api/capability"];
+const provided = ${JSON.stringify(providedModules)};
 const m = { exports: {} };
 new Function("require", "module", "exports", code)(
   (id) => { if (provided.includes(id)) return {}; throw new Error("unexpected require: " + id); },
@@ -80,11 +86,24 @@ const tgzName = packed.stdout.trim().split(/\r?\n/).pop();
 const tgz = path.join(packdir, tgzName);
 if (!fs.existsSync(tgz)) fail('npm pack produced no tgz');
 
-k(['kfx', 'install', tgz]);
+const authority = kfxQualificationAuthorityFile(
+  coreDir,
+  home,
+  extractPackedKfx(coreDir, tgz),
+  'my-view',
+);
+k(['kfx', 'install', tgz, '--authority-file', authority]);
 assertContains(k(['kfx', 'list']), 'my-view', 'installed kfx not listed');
 if (!fs.existsSync(path.join(home, 'extensions', 'my-view', 'dist', 'view', 'index.js'))) {
   fail('bundle missing from install root');
 }
-k(['kfx', 'remove', 'my-view']);
+const removalAuthority = kfxRemovalAuthorityFile(coreDir, home, 'my-view');
+k([
+  'kfx',
+  'remove',
+  'my-view',
+  '--authority-file',
+  removalAuthority,
+]);
 if (fs.existsSync(path.join(home, 'extensions', 'my-view'))) fail('not removed');
 console.log('[kfx-demo-scaffold] scaffold-to-install ok');

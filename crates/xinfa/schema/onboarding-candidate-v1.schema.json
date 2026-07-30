@@ -1,0 +1,44 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://xinfa.dev/schema/onboarding-candidate-v1.schema.json",
+  "title": "Xinfa non-authoritative repository onboarding candidate v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["$schema", "schema", "authoritative", "authorityState", "source", "inventoryRoot", "repository", "discoveryPolicy", "rulesVersion", "proposals", "conflicts", "omissions", "excludedEvidence", "requiredDecisions", "coverage", "candidateRoot"],
+  "properties": {
+    "$schema": { "const": "https://xinfa.dev/schema/onboarding-candidate-v1.schema.json" },
+    "schema": { "const": "xinfa.repository-onboarding-candidate/v1" },
+    "authoritative": { "const": false },
+    "authorityState": { "const": "proposal-only" },
+    "source": { "type": "string", "minLength": 1 },
+    "inventoryRoot": { "$ref": "#/$defs/root" },
+    "repository": { "type": "object" },
+    "discoveryPolicy": { "$ref": "repository-discovery-request-v1.schema.json" },
+    "rulesVersion": { "const": "xinfa.repository-onboarding-rules/v1" },
+    "proposals": { "type": "array", "items": { "$ref": "#/$defs/proposal" } },
+    "conflicts": { "type": "array", "items": { "type": "object" } },
+    "omissions": { "type": "array", "items": { "type": "object" } },
+    "excludedEvidence": { "type": "array", "items": { "type": "object" } },
+    "requiredDecisions": { "type": "array", "minItems": 4, "items": { "type": "object" } },
+    "coverage": { "type": "object" },
+    "candidateRoot": { "$ref": "#/$defs/root" }
+  },
+  "$defs": {
+    "root": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" },
+    "proposal": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "type", "authorityState", "path", "observed", "inference", "proposal", "explanation"],
+      "properties": {
+        "id": { "type": "string", "pattern": "^[a-z][a-z0-9]*(?:[._-][a-z0-9]+)*$" },
+        "type": { "const": "source-unit" },
+        "authorityState": { "const": "proposal" },
+        "path": { "type": "string", "minLength": 1 },
+        "observed": { "type": "object" },
+        "inference": { "type": "object" },
+        "proposal": { "type": "object" },
+        "explanation": { "type": "object" }
+      }
+    }
+  }
+}

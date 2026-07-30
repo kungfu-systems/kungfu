@@ -1,4 +1,4 @@
-// The C++ runtime lane of the service-facet vertical cut (ADR-0017): prove the
+// The C++ runtime lane of the service-facet vertical cut (KF-ADR-019f86da-4f90-7afa-a1e1-0510f00916be): prove the
 // NEW C++ guest end (framework/core/src/capability/guest.hpp) speaks the same
 // capability relay the node/python guests do, from inside the OS sandbox, and
 // that the sandbox membrane confines a C++ service exactly as it confines a node
@@ -9,7 +9,7 @@
 // that loads a source facet. A C++ service has no interpreter: the SAME source
 // (./cpp-service.cpp) is compiled once into a prebuilt binary, and the host
 // launches THAT binary directly — `runtime.command = <binary>`, `args = []`, no
-// bootstrap. This is the prebuilt-artifact cpp entry ADR-0017 resolves, run end
+// bootstrap. This is the prebuilt-artifact cpp entry KF-ADR-019f86da-4f90-7afa-a1e1-0510f00916be resolves, run end
 // to end against the real trusted host.
 //
 // The SAME binary runs under two profiles, never branching on which:
@@ -101,7 +101,9 @@ const CELLS: Cell[] = [
 ];
 
 async function main() {
-  console.log('\nkfx service-facet vertical cut — C++ runtime lane (ADR-0017)');
+  console.log(
+    '\nkfx service-facet vertical cut — C++ runtime lane (KF-ADR-019f86da-4f90-7afa-a1e1-0510f00916be)',
+  );
   console.log(`  network target: ${NET_URL}\n`);
 
   if (!cppBuildAvailable()) {

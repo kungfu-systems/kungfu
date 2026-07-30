@@ -4,13 +4,58 @@ import click
 import kungfu
 import platform
 import os
+import sys
 import typing
 from click.globals import get_current_context
 from functools import update_wrapper
-from kungfu.config import default_runtime_home
+from kungfu.config import default_config_home, default_runtime_home
+from kungfu.product_identity import version_banner
 
 # click 8.1.7+ 移除了私有 TypeVar F；CLI 仅用于装饰器类型标注，改本地定义不依赖 click 内部符号。
 CLI = typing.TypeVar("CLI", bound=typing.Callable[..., typing.Any])
+
+
+def initialize_runtime_context(ctx) -> None:
+    """Materialize the legacy runtime context after an intent has selected it."""
+    os.environ["KF_CONFIG_HOME"] = ctx.config_home
+    os.environ["KF_HOME"] = ctx.home
+    os.environ["KF_LOG_LEVEL"] = ctx.log_level
+
+    def ensure_dir(path):
+        os.makedirs(path, exist_ok=True)
+        return path
+
+    ctx.runtime_dir = ensure_dir(ctx.runtime_dir)
+    os.environ["KF_RUNTIME_DIR"] = ctx.runtime_dir
+    ctx.dataset_dir = ensure_dir(ctx.dataset_dir)
+    ctx.backtest_dir = ensure_dir(ctx.backtest_dir)
+    ctx.inbox_dir = ensure_dir(ctx.inbox_dir)
+
+    lf = kungfu.__binding__.yijinjing
+    yjj = kungfu.__binding__.runtime
+    ctx.runtime_locator = yjj.locator(ctx.runtime_dir)
+    ctx.backtest_locator = yjj.locator(lf.enums.mode.BACKTEST)
+    ctx.config_location = yjj.location(
+        lf.enums.mode.LIVE,
+        lf.enums.location_role.SYSTEM,
+        "etc",
+        "kungfu",
+        ctx.runtime_locator,
+    )
+    ctx.console_location = yjj.location(
+        lf.enums.mode.LIVE,
+        lf.enums.location_role.SYSTEM,
+        "service",
+        "console",
+        ctx.runtime_locator,
+    )
+    ctx.index_location = yjj.location(
+        lf.enums.mode.LIVE,
+        lf.enums.location_role.SYSTEM,
+        "journal",
+        "index",
+        ctx.runtime_locator,
+    )
 
 
 class PrioritizedCommandGroup(click.Group):
@@ -91,12 +136,13 @@ class PrioritizedCommandGroup(click.Group):
 
                 for key in [
                     "name",
+                    "config_home",
                     "home",
                     "extension_path",
                     "log_level",
                     "runtime_dir",
-                    "archive_dir",
                     "dataset_dir",
+                    "backtest_dir",
                     "inbox_dir",
                     "runtime_locator",
                     "backtest_locator",
@@ -105,7 +151,14 @@ class PrioritizedCommandGroup(click.Group):
                     "index_location",
                     "stage",
                 ] + list(keys):
-                    ctx.__dict__[key] = ctx.parent.__dict__[key]
+                    ancestor = ctx.parent
+                    while ancestor is not None and key not in ancestor.__dict__:
+                        ancestor = ancestor.parent
+                    if ancestor is None:
+                        raise click.ClickException(
+                            f"Kungfu command context field is unavailable: {key}"
+                        )
+                    ctx.__dict__[key] = ancestor.__dict__[key]
                 return f(ctx, *args, **kwargs)
 
             return typing.cast(CLI, update_wrapper(new_func, f))
@@ -113,7 +166,51 @@ class PrioritizedCommandGroup(click.Group):
         return copy_from_parent
 
 
-@click.group("kungfu", invoke_without_command=True, cls=PrioritizedCommandGroup)
+class ProgressiveHelpGroup(PrioritizedCommandGroup):
+    """Render root discovery from the governed surface projection."""
+
+    def get_help(self, ctx):
+        from kungfu.cli import help_projection
+
+        try:
+            projection = help_projection.build(self)
+            return help_projection.render_human(
+                projection,
+                self,
+                version=kungfu.__version__,
+                width=ctx.terminal_width,
+            ).rstrip("\n")
+        except help_projection.ProjectionError as error:
+            raise click.UsageError(str(error), ctx) from error
+
+
+def _progressive_help(ctx, param, value):
+    if not value or ctx.resilient_parsing:
+        return
+    from kungfu.cli import help_projection
+
+    try:
+        projection = help_projection.build(ctx.command)
+        if param.name == "help_json":
+            click.echo(help_projection.render_json(projection), nl=False)
+        else:
+            click.echo(
+                help_projection.render_human(
+                    projection,
+                    ctx.command,
+                    version=kungfu.__version__,
+                    mode="full" if param.name == "help_all" else "section",
+                    section=value if param.name == "help_section" else None,
+                    width=ctx.terminal_width,
+                ),
+                nl=False,
+            )
+    except help_projection.ProjectionError as error:
+        raise click.UsageError(str(error), ctx) from error
+    ctx.exit()
+
+
+@click.group("kungfu", invoke_without_command=True, cls=ProgressiveHelpGroup)
 @click.option(
     "-H",
     "--home",
@@ -146,74 +243,125 @@ class PrioritizedCommandGroup(click.Group):
     required=False,
     help="verify location_uid and change seed regenerate if clash ",
 )
+@click.option(
+    "--help-all",
+    is_flag=True,
+    is_eager=True,
+    expose_value=False,
+    callback=_progressive_help,
+    help="expand every governed command family and exit",
+)
+@click.option(
+    "--help-section",
+    metavar="SECTION",
+    is_eager=True,
+    expose_value=False,
+    callback=_progressive_help,
+    help="expand one governed help section and exit",
+)
+@click.option(
+    "--help-json",
+    is_flag=True,
+    is_eager=True,
+    expose_value=False,
+    callback=_progressive_help,
+    help="emit the offline discovery contract as JSON and exit",
+)
+@click.option(
+    "--agent-work-lab-demo",
+    is_flag=True,
+    help="run the deterministic Agent Work Lab demo in the TUI",
+)
 @click.help_option("-h", "--help")
-@click.version_option(kungfu.__version__, "--version", message=kungfu.__version__)
+@click.version_option(
+    kungfu.__version__, "--version", message=version_banner(kungfu.__version__)
+)
 @click.pass_context
-def kfc(ctx, home, extension_path, log_level, name, stage, env_verify_location):
+def kfc(
+    ctx,
+    home,
+    extension_path,
+    log_level,
+    name,
+    stage,
+    env_verify_location,
+    agent_work_lab_demo,
+):
     if env_verify_location:
         os.environ["KF_VERIFY_LOCATION"] = "KF_VERIFY_LOCATION"
 
     runtime_dir_override = os.environ.get("KF_RUNTIME_DIR") if not home else None
     home = default_runtime_home() if not home else home
+    config_home = default_config_home()
     ctx.extension_path = extension_path
-
-    os.environ["KF_HOME"] = ctx.home = home
-    os.environ["KF_LOG_LEVEL"] = ctx.log_level = log_level
-
-    def ensure_dir(ctx, name):
-        target = os.path.join(ctx.home, name)
-        if not os.path.exists(target):
-            os.makedirs(target)
-        return target
-
-    if runtime_dir_override:
-        ctx.runtime_dir = os.path.abspath(os.path.expanduser(runtime_dir_override))
-        if not os.path.exists(ctx.runtime_dir):
-            os.makedirs(ctx.runtime_dir)
-    else:
-        ctx.runtime_dir = ensure_dir(ctx, "runtime")
-    os.environ["KF_RUNTIME_DIR"] = ctx.runtime_dir
-    ctx.archive_dir = ensure_dir(ctx, "archive")
-    ctx.dataset_dir = ensure_dir(ctx, "dataset")
-    ctx.backtest_dir = ensure_dir(ctx, "backtest")
-    ctx.inbox_dir = ensure_dir(ctx, "inbox")
-
-    lf = kungfu.__binding__.longfist
-    yjj = kungfu.__binding__.yijinjing
-
-    # have to keep locator alive from python side
-    # https://github.com/pybind/pybind11/issues/1546
-    ctx.runtime_locator = yjj.locator(ctx.runtime_dir)
-    ctx.backtest_locator = yjj.locator(lf.enums.mode.BACKTEST)
-    ctx.config_location = yjj.location(
-        lf.enums.mode.LIVE,
-        lf.enums.category.SYSTEM,
-        "etc",
-        "kungfu",
-        ctx.runtime_locator,
+    ctx.config_home = config_home
+    ctx.home = home
+    ctx.log_level = log_level
+    ctx.runtime_dir = os.path.abspath(
+        os.path.expanduser(runtime_dir_override or os.path.join(ctx.home, "runtime"))
     )
-    ctx.console_location = yjj.location(
-        lf.enums.mode.LIVE,
-        lf.enums.category.SYSTEM,
-        "service",
-        "console",
-        ctx.runtime_locator,
-    )
-    ctx.index_location = yjj.location(
-        lf.enums.mode.LIVE,
-        lf.enums.category.SYSTEM,
-        "journal",
-        "index",
-        ctx.runtime_locator,
-    )
+    ctx.dataset_dir = os.path.join(ctx.home, "dataset")
+    ctx.backtest_dir = os.path.join(ctx.home, "backtest")
+    ctx.inbox_dir = os.path.join(ctx.home, "inbox")
+    ctx.runtime_locator = None
+    ctx.backtest_locator = None
+    ctx.config_location = None
+    ctx.console_location = None
+    ctx.index_location = None
+    ctx.name = name or ctx.invoked_subcommand
+    ctx.stage = stage or "prod"
 
-    ctx.name = name if name else ctx.invoked_subcommand
-    ctx.stage = stage if stage else "prod"
+    if agent_work_lab_demo:
+        if ctx.invoked_subcommand is not None:
+            raise click.UsageError(
+                "--agent-work-lab-demo cannot be combined with a command"
+            )
+        from kungfu.cli.tui_runtime import run_tui
 
+        run_tui(ctx, ("--agent-work-lab-demo",))
+        return
+
+    # Bare interactive invocation enters the Product TUI. Automation, pipes,
+    # CI, and TERM=dumb preserve governed offline help and exit zero.
     if ctx.invoked_subcommand is None:
-        click.echo(kfc.get_help(ctx))
+        interactive = (
+            sys.stdin.isatty()
+            and sys.stdout.isatty()
+            and os.environ.get("TERM", "").lower() != "dumb"
+            and not os.environ.get("CI")
+        )
+        if interactive:
+            from kungfu.cli.tui_runtime import run_tui
 
-    pass
+            run_tui(ctx)
+            return
+        click.echo(kfc.get_help(ctx))
+        return
+
+    # Workspace/control-plane commands must inspect uninitialized candidates
+    # without the root callback rewriting their resolution evidence first.
+    if ctx.invoked_subcommand in {
+        "workspace",
+        "managed-run",
+        "run",
+        "storage",
+        "health",
+        "recover",
+        "action",
+        "dogfood",
+        "agent",
+        "shifu",
+        "xinfa",
+        "pursuit",
+        "warrant",
+        "episode",
+        "exit",
+        "cut",
+        "work",
+        "agent-work-lab",
+    }:
+        return
+    initialize_runtime_context(ctx)
 
 
 def main(**kwargs):

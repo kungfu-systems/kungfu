@@ -1,0 +1,86 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kungfu.tech/schema/work-design-promotion-artifact-v1.schema.json",
+  "title": "Non-authoritative Work Design policy promotion artifact",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "reportRoot",
+    "cohortRoot",
+    "activePolicyRoot",
+    "candidatePolicyRoot",
+    "candidateVersion",
+    "eligibility",
+    "activation",
+    "rollback",
+    "authority",
+    "promotionRoot"
+  ],
+  "properties": {
+    "schema": { "const": "kungfu.work-design.promotion-artifact/v1" },
+    "reportRoot": { "$ref": "#/$defs/root" },
+    "cohortRoot": { "$ref": "#/$defs/root" },
+    "activePolicyRoot": { "$ref": "#/$defs/root" },
+    "candidatePolicyRoot": { "$ref": "#/$defs/root" },
+    "candidateVersion": { "type": "integer", "minimum": 1 },
+    "eligibility": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "sampleCount",
+        "minimumQualifiedSamples",
+        "sampleThresholdSatisfied",
+        "evidenceComplete",
+        "driftQualified",
+        "regressionWithinThreshold",
+        "cohortExact",
+        "rollbackVerified",
+        "eligible"
+      ],
+      "properties": {
+        "sampleCount": { "type": "integer", "minimum": 0 },
+        "minimumQualifiedSamples": { "const": 30 },
+        "sampleThresholdSatisfied": { "type": "boolean" },
+        "evidenceComplete": { "type": "boolean" },
+        "driftQualified": { "type": "boolean" },
+        "regressionWithinThreshold": { "type": "boolean" },
+        "cohortExact": { "type": "boolean" },
+        "rollbackVerified": { "type": "boolean" },
+        "eligible": { "type": "boolean" }
+      }
+    },
+    "activation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["mode", "targetPolicyRoot", "activated"],
+      "properties": {
+        "mode": {
+          "const": "separately-authorized-native-decision-required"
+        },
+        "targetPolicyRoot": { "$ref": "#/$defs/root" },
+        "activated": { "const": false }
+      }
+    },
+    "rollback": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["fromPolicyRoot", "toPolicyRoot", "verified"],
+      "properties": {
+        "fromPolicyRoot": { "$ref": "#/$defs/root" },
+        "toPolicyRoot": { "$ref": "#/$defs/root" },
+        "verified": { "type": "boolean" }
+      }
+    },
+    "authority": {
+      "$ref": "https://kungfu.tech/schema/work-design-replay-report-v1.schema.json#/$defs/authority"
+    },
+    "promotionRoot": { "$ref": "#/$defs/root" }
+  },
+  "$defs": {
+    "root": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    }
+  }
+}

@@ -1,0 +1,27 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kungfu.link/schema/project-cut-settlement-action-receipt-v1.schema.json",
+  "title": "Project Cut settlement action receipt v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "action", "outcome", "planRoot", "cutRoot", "sourceProjectionRoot", "atlasRoot", "indexTreeOid", "observedCommitOid", "effects", "diagnostics", "receiptRoot"],
+  "properties": {
+    "schema": { "const": "project.cut.settlement-action-receipt/v1" },
+    "action": { "enum": ["prepare", "verify", "commit-observe", "reconcile"] },
+    "outcome": { "enum": ["planned", "applied", "verified", "rejected", "published", "incomplete", "reconciled"] },
+    "planRoot": { "$ref": "#/$defs/nullableRoot" },
+    "cutRoot": { "$ref": "#/$defs/nullableRoot" },
+    "sourceProjectionRoot": { "$ref": "#/$defs/nullableRoot" },
+    "atlasRoot": { "$ref": "#/$defs/nullableRoot" },
+    "indexTreeOid": { "oneOf": [{ "$ref": "#/$defs/oid" }, { "type": "null" }] },
+    "observedCommitOid": { "oneOf": [{ "$ref": "#/$defs/oid" }, { "type": "null" }] },
+    "effects": { "type": "array" },
+    "diagnostics": { "type": "array" },
+    "receiptRoot": { "$ref": "#/$defs/root" }
+  },
+  "$defs": {
+    "root": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" },
+    "nullableRoot": { "oneOf": [{ "$ref": "#/$defs/root" }, { "type": "null" }] },
+    "oid": { "type": "string", "pattern": "^[0-9a-f]{40,64}$" }
+  }
+}

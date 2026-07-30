@@ -1,0 +1,31 @@
+# SPDX-License-Identifier: Apache-2.0
+
+name: Queue admission lease
+
+on:
+  merge_group:
+    types: [checks_requested]
+
+permissions: {}
+
+jobs:
+  admission:
+    name: Queue admission lease
+    runs-on: ubuntu-24.04
+    timeout-minutes: 2
+    steps:
+      - name: Continue the wrapper-issued lease on the exact merge group
+        shell: bash
+        env:
+          MERGE_GROUP_HEAD_SHA: ${{ github.event.merge_group.head_sha }}
+        run: |
+          set -euo pipefail
+          if [ "$GITHUB_EVENT_NAME" != "merge_group" ]; then
+            echo "Queue admission lease accepts only merge_group events." >&2
+            exit 1
+          fi
+          if [ -z "$MERGE_GROUP_HEAD_SHA" ] || [ "$MERGE_GROUP_HEAD_SHA" != "$GITHUB_SHA" ]; then
+            echo "Merge-group head does not match the checked execution source." >&2
+            exit 1
+          fi
+          echo "Wrapper-issued queue admission continues on exact merge group $GITHUB_SHA."

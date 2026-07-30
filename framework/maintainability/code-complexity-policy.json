@@ -1,0 +1,178 @@
+{
+  "schema": "kungfu.code-complexity-budget-policy/v1",
+  "status": "p1-trusted-governance",
+  "baselineRef": "a7605d74513867b94851a6763c51fcdc803e5d30",
+  "baselinePath": "framework/maintainability/code-complexity-baseline.json",
+  "waiverDirectory": "framework/maintainability/waivers",
+  "classificationOrder": [
+    "retained-evidence",
+    "vendored-source",
+    "generated-projection",
+    "test-or-fixture",
+    "declarative-schema-or-table",
+    "public-header-or-entrypoint",
+    "first-party-handwritten-implementation"
+  ],
+  "eligibleExtensions": [
+    ".c",
+    ".cc",
+    ".cjs",
+    ".cmake",
+    ".cmd",
+    ".cpp",
+    ".cxx",
+    ".fbs",
+    ".gyp",
+    ".gypi",
+    ".h",
+    ".hh",
+    ".hpp",
+    ".hxx",
+    ".js",
+    ".json",
+    ".jsonc",
+    ".lock",
+    ".mjs",
+    ".proto",
+    ".ps1",
+    ".py",
+    ".rs",
+    ".sh",
+    ".toml",
+    ".ts",
+    ".tsx",
+    ".yaml",
+    ".yml"
+  ],
+  "specialEligibleNames": [
+    "CMakeLists.txt",
+    "shifu"
+  ],
+  "calibration": {
+    "groupBy": [
+      "class",
+      "language"
+    ],
+    "softPercentile": 0.9,
+    "hardPercentile": 0.99,
+    "smallGroupPolicy": "observed-maximum",
+    "minimumGroupSizeForPercentiles": 10
+  },
+  "thresholdSemantics": {
+    "advisory": "calibration.soft; always reported and never presented as protected-mainline admission",
+    "protectedMainline": "calibration.hard; crossing is blocking unless an exact independently signed waiver passes",
+    "retainedAdvisoryReview": "Every retained advisory crossing requires exact-head independent cohesion review in terminal evidence"
+  },
+  "advisoryDispositions": {
+    "framework/tui/src/profile-shell.tsx": {
+      "action": "decomposed-control-state",
+      "extractedPaths": [
+        "framework/tui/src/control-plane-state.ts"
+      ],
+      "residualResponsibility": "Ink rendering and bounded product-shell composition"
+    },
+    "scripts/affected-native-proof.mjs": {
+      "action": "decomposed-remote-artifact-discovery",
+      "extractedPaths": [
+        "framework/release/affected-native-artifact-lookup.mjs"
+      ],
+      "residualResponsibility": "Affected-native proof construction, validation, sealing, and cache authority"
+    },
+    "scripts/cancel-dequeued-merge-group-runs.mjs": {
+      "action": "resolved-below-advisory",
+      "extractedPaths": [
+        "framework/maintainability/delivery-evidence.mjs"
+      ],
+      "residualResponsibility": "Exact dequeue cleanup and repair settlement"
+    }
+  },
+  "antiGaming": {
+    "maxNewHandwrittenFilesPerOwner": 3,
+    "newGeneratedProjectionRequiresProvenance": true,
+    "allowedOwnerRenamePrefixes": [
+      {
+        "from": "extension/mission-control/mission-control-actions",
+        "to": "extension/work-control/work-control-actions"
+      },
+      {
+        "from": "extension/mission-control/mission-control-assessment",
+        "to": "extension/work-control/work-control-assessment"
+      },
+      {
+        "from": "extension/mission-control/mission-control-contract",
+        "to": "extension/work-control/work-control-contract"
+      },
+      {
+        "from": "extension/mission-control/mission-control-views",
+        "to": "extension/work-control/work-control-views"
+      },
+      {
+        "from": "extension/mission-control",
+        "to": "extension/work-control"
+      }
+    ],
+    "blockClassificationOrOwnerRelabeling": true,
+    "blockResponsibilityPreservingSplit": true,
+    "blockGeneratedOrVendorLaundering": true
+  },
+  "blocking": {
+    "p0": [
+      "unknown-classification",
+      "unknown-owner",
+      "invalid-policy",
+      "invalid-baseline",
+      "non-read-only"
+    ],
+    "p1": [
+      "new-handwritten-file-over-hard-budget",
+      "existing-file-crossed-hard-budget",
+      "grandfathered-file-grew",
+      "new-helper-proliferation",
+      "unproven-generated-projection",
+      "classification-or-owner-relabeled",
+      "responsibility-preserving-split",
+      "generated-or-vendor-laundering",
+      "forged-baseline-measurement",
+      "unauthorized-baseline-transition"
+    ]
+  },
+  "baselineGovernance": {
+    "schema": "kungfu.code-complexity-baseline-governance/v1",
+    "protectedRef": "origin/HEAD",
+    "protectedRefEnv": "KUNGFU_COMPLEXITY_PROTECTED_REF",
+    "transitionDirectory": "framework/maintainability/baseline-transitions",
+    "transitionSchema": "kungfu.code-complexity-baseline-transition/v1",
+    "requiresExpectedOldRoot": true,
+    "requiresIndependentSignedReceipt": true,
+    "maxChangedMeasurements": 256,
+    "maxAggregateLineDelta": 20000
+  },
+  "waiver": {
+    "schema": "kungfu.code-complexity-budget-waiver/v2",
+    "approvalReceiptSchema": "kungfu.code-complexity-budget-approval-receipt/v1",
+    "maxApprovalAgeDays": 30,
+    "trustedAuthorities": [],
+    "emptyTrustSetReason": "No standing waiver or baseline-transition signer is provisioned; protected independent review must provision a scoped key before an exception can pass.",
+    "requiredFields": [
+      "schema",
+      "issue_root",
+      "issue_kind",
+      "paths_or_scope",
+      "budget_classes",
+      "baseline_measurement",
+      "current_measurement",
+      "allowed_delta",
+      "owner",
+      "responsibility_boundary",
+      "cohesion_rationale",
+      "rejected_split_alternatives",
+      "affected_tests_and_qualification",
+      "requested_by",
+      "approval_receipt",
+      "retirement_or_decomposition_ref"
+    ],
+    "independentApproval": true,
+    "mutatesBaseline": false,
+    "reusableForUnrelatedGrowth": false
+  }
+}

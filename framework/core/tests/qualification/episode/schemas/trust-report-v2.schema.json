@@ -1,0 +1,252 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kungfu.tech/schemas/episode-trust-report-v2.schema.json",
+  "title": "Kungfu Episode Trust Report v2",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "source_revision",
+    "source_dirty",
+    "episode_contract",
+    "profile",
+    "platform",
+    "hardware",
+    "backend_capabilities",
+    "workload",
+    "fault_coverage",
+    "correctness",
+    "semantic_evidence",
+    "performance",
+    "gaps",
+    "qualified"
+  ],
+  "$defs": {
+    "dimension": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "status",
+        "cases_executed",
+        "violations",
+        "evidence",
+        "reason"
+      ],
+      "properties": {
+        "status": {
+          "enum": ["passed", "failed", "not_exercised"]
+        },
+        "cases_executed": { "type": "integer", "minimum": 0 },
+        "violations": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["case", "message"],
+            "properties": {
+              "case": { "type": "string", "minLength": 1 },
+              "message": { "type": "string", "minLength": 1 }
+            }
+          }
+        },
+        "evidence": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "reason": {
+          "type": ["string", "null"]
+        }
+      }
+    }
+  },
+  "properties": {
+    "schema": { "const": "kungfu.episode.trust-report/v2" },
+    "source_revision": { "type": "string", "minLength": 7 },
+    "source_dirty": { "type": "boolean" },
+    "episode_contract": { "const": "kungfu.episode.manifest/v1" },
+    "profile": { "type": "string", "minLength": 1 },
+    "platform": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["os", "arch", "node"],
+      "properties": {
+        "os": { "type": "string" },
+        "arch": { "type": "string" },
+        "node": { "type": "string" }
+      }
+    },
+    "hardware": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["logical_cpus", "total_memory_bytes"],
+      "properties": {
+        "logical_cpus": { "type": "integer", "minimum": 1 },
+        "total_memory_bytes": { "type": "integer", "minimum": 1 }
+      }
+    },
+    "backend_capabilities": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "manifest_authority",
+        "writer_ownership",
+        "payload_profile",
+        "query_profile",
+        "retry_policy"
+      ],
+      "properties": {
+        "manifest_authority": { "const": "yijinjing-journal" },
+        "writer_ownership": { "const": "one-logical-manifest-writer-per-data-root" },
+        "payload_profile": { "type": "string" },
+        "query_profile": { "type": "string" },
+        "retry_policy": { "type": "object" }
+      }
+    },
+    "workload": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["profile", "seeds", "duration_seconds", "scenarios"],
+      "properties": {
+        "profile": { "type": "string" },
+        "seeds": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "type": "integer", "minimum": 0 }
+        },
+        "duration_seconds": { "type": "number", "minimum": 0 },
+        "scenarios": {
+          "type": "array",
+          "items": { "type": "object" }
+        }
+      }
+    },
+    "fault_coverage": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "writer_contention_exercised",
+        "writer_contention_observed",
+        "fresh_process_readback",
+        "clean_recovery",
+        "interrupted_open_recovery",
+        "missing_content_and_hash_rejection",
+        "dependency_failure_containment",
+        "projection_drift_and_rebuild"
+      ],
+      "properties": {
+        "writer_contention_exercised": { "type": "boolean" },
+        "writer_contention_observed": { "type": "boolean" },
+        "fresh_process_readback": { "type": "boolean" },
+        "clean_recovery": { "type": "boolean" },
+        "interrupted_open_recovery": { "type": "boolean" },
+        "missing_content_and_hash_rejection": { "type": "boolean" },
+        "dependency_failure_containment": { "type": "boolean" },
+        "projection_drift_and_rebuild": { "type": "boolean" }
+      }
+    },
+    "correctness": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "count_mismatches",
+        "readback_mismatches",
+        "fsck_failures",
+        "recovery_mismatches",
+        "retry_exhausted",
+        "unexpected_errors",
+        "progress_timeouts"
+      ],
+      "properties": {
+        "count_mismatches": { "type": "integer", "minimum": 0 },
+        "readback_mismatches": { "type": "integer", "minimum": 0 },
+        "fsck_failures": { "type": "integer", "minimum": 0 },
+        "recovery_mismatches": { "type": "integer", "minimum": 0 },
+        "retry_exhausted": { "type": "integer", "minimum": 0 },
+        "unexpected_errors": { "type": "integer", "minimum": 0 },
+        "progress_timeouts": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "semantic_evidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "oracle",
+        "oracle_check",
+        "required_dimensions",
+        "dimensions",
+        "cases",
+        "process"
+      ],
+      "properties": {
+        "oracle": { "const": "kungfu.episode.semantic-oracle/v1" },
+        "oracle_check": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["status", "histories_checked", "violation"],
+          "properties": {
+            "status": {
+              "enum": ["passed", "failed", "not_exercised"]
+            },
+            "histories_checked": { "type": "integer", "minimum": 0 },
+            "violation": { "type": ["string", "null"] }
+          }
+        },
+        "required_dimensions": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 },
+          "uniqueItems": true
+        },
+        "dimensions": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "lifecycle_safety",
+            "capability_soundness",
+            "useful_degradation",
+            "repair_monotonicity",
+            "dependency_containment",
+            "projection_derivation",
+            "publication_recovery",
+            "content_integrity",
+            "portable_identity"
+          ],
+          "properties": {
+            "lifecycle_safety": { "$ref": "#/$defs/dimension" },
+            "capability_soundness": { "$ref": "#/$defs/dimension" },
+            "useful_degradation": { "$ref": "#/$defs/dimension" },
+            "repair_monotonicity": { "$ref": "#/$defs/dimension" },
+            "dependency_containment": { "$ref": "#/$defs/dimension" },
+            "projection_derivation": { "$ref": "#/$defs/dimension" },
+            "publication_recovery": { "$ref": "#/$defs/dimension" },
+            "content_integrity": { "$ref": "#/$defs/dimension" },
+            "portable_identity": { "$ref": "#/$defs/dimension" }
+          }
+        },
+        "cases": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["name", "dimensions", "status", "violations", "evidence"]
+          }
+        },
+        "process": { "type": ["object", "null"] }
+      }
+    },
+    "performance": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["scenarios"],
+      "properties": {
+        "scenarios": {
+          "type": "array",
+          "items": { "type": "object" }
+        }
+      }
+    },
+    "gaps": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "qualified": { "type": "boolean" }
+  }
+}

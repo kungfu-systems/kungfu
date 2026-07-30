@@ -1,0 +1,5 @@
+{
+  "operation": "drop-surface",
+  "path": "kungfu sample read",
+  "expectedCode": "orphan-click-command"
+}

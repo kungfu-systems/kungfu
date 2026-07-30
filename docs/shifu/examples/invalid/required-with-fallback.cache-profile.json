@@ -1,0 +1,49 @@
+{
+  "$schema": "../../schema/cache-profile-v1.schema.json",
+  "schema": "shifu.cache-profile/v1",
+  "profileId": "invalid.required-fallback",
+  "revision": 1,
+  "generatedAt": "2026-07-12T00:00:00Z",
+  "authority": {
+    "owner": "example-inventory",
+    "sourceRef": "inventory/cache-services.json",
+    "sourceDigest": "sha256:6666666666666666666666666666666666666666666666666666666666666666"
+  },
+  "subject": {
+    "principal": "runner:invalid",
+    "platforms": ["linux-x64"],
+    "scopes": ["ci"]
+  },
+  "policy": {
+    "mode": "require",
+    "onUnavailable": "fallback",
+    "allowPublicFallback": false,
+    "secretPolicy": "references-only"
+  },
+  "services": {
+    "node-distribution": {
+      "kind": "distribution",
+      "endpoint": {
+        "type": "http",
+        "url": "https://cache.example.invalid/node/"
+      },
+      "bindings": [
+        {
+          "kind": "environment",
+          "key": "FNM_NODE_DIST_MIRROR",
+          "valueFrom": "endpoint.url"
+        }
+      ],
+      "fallback": {
+        "mode": "fail"
+      },
+      "verification": {
+        "method": "upstream-checksum"
+      }
+    }
+  },
+  "evidence": {
+    "enabled": true,
+    "redaction": "credentials-userinfo-query-fragment"
+  }
+}

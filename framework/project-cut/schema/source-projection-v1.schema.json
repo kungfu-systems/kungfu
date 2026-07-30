@@ -1,0 +1,55 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kungfu.link/schema/source-projection-v1.schema.json",
+  "title": "Project source projection v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "projectId", "policyRoot", "entries", "omissions", "root"],
+  "properties": {
+    "schema": { "const": "project.source-projection/v1" },
+    "projectId": {
+      "type": "string",
+      "pattern": "^[a-z0-9](?:[a-z0-9._/-]*[a-z0-9])?$"
+    },
+    "policyRoot": { "$ref": "#/$defs/root" },
+    "entries": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["path", "kind", "visibility", "digest", "size"],
+        "properties": {
+          "path": { "$ref": "#/$defs/path" },
+          "kind": { "enum": ["source", "authority"] },
+          "visibility": { "enum": ["public", "internal", "restricted"] },
+          "digest": { "$ref": "#/$defs/root" },
+          "size": { "type": "integer", "minimum": 0, "maximum": 9007199254740991 }
+        }
+      }
+    },
+    "omissions": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["path", "reason", "visibility"],
+        "properties": {
+          "path": { "$ref": "#/$defs/path" },
+          "reason": { "type": "string", "minLength": 1 },
+          "visibility": { "enum": ["public", "internal", "restricted"] }
+        }
+      }
+    },
+    "root": { "$ref": "#/$defs/root" }
+  },
+  "$defs": {
+    "root": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" },
+    "path": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "^(?!/)(?!.*(?:^|/)\\.\\.?(/|$))(?!.*\\\\).+[^/]$"
+    }
+  }
+}

@@ -1,0 +1,47 @@
+{
+  "$schema": "https://xinfa.dev/schema/project-v1.schema.json",
+  "schema": "xinfa.project/v1",
+  "project": { "id": "small", "title": "Small Repository Fixture" },
+  "cut": { "id": "small.main", "revision": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" },
+  "roots": [{ "id": "repository", "path": ".", "visibility": "public" }],
+  "providers": [{
+    "id": "small.files", "kind": "exact-file-manifest", "authority": "project", "visibility": "public", "root": "repository",
+    "paths": ["AGENTS.md", "docs/guide.md", "evidence/runtime.json", "src/runtime.rs"],
+    "revision": "sha256:27182b067086595c68dc961b8854332000ed6803299a3d0f5eab337bb294ccc4"
+  }],
+  "nodes": [
+    {
+      "id": "small.doc.guide", "kind": "document", "visibility": "public", "revision": "sha256:1111111111111111111111111111111111111111111111111111111111111111",
+      "provenance": { "kind": "project-source", "authority": "small" }, "source": { "provider": "small.files", "path": "docs/guide.md" },
+      "verification": { "mode": "mixed", "status": "mixed", "waiver": null, "dependencies": [{ "node": "small.claim.greeting", "expectedRevision": "sha256:2222222222222222222222222222222222222222222222222222222222222222" }] }
+    },
+    {
+      "id": "small.claim.greeting", "kind": "claim", "visibility": "public", "revision": "sha256:2222222222222222222222222222222222222222222222222222222222222222",
+      "provenance": { "kind": "project-source", "authority": "small" }, "source": { "provider": "small.files", "path": "docs/guide.md" },
+      "verification": { "mode": "machine", "status": "machine-proved", "waiver": null, "dependencies": [
+        { "node": "small.evidence.runtime", "expectedRevision": "sha256:4444444444444444444444444444444444444444444444444444444444444444" },
+        { "node": "small.impl.runtime", "expectedRevision": "sha256:5555555555555555555555555555555555555555555555555555555555555555" }
+      ] }
+    },
+    {
+      "id": "small.impl.runtime", "kind": "implementation", "visibility": "public", "revision": "sha256:5555555555555555555555555555555555555555555555555555555555555555",
+      "provenance": { "kind": "project-source", "authority": "small" }, "source": { "provider": "small.files", "path": "src/runtime.rs" },
+      "verification": { "mode": "machine", "status": "machine-proved", "waiver": null, "dependencies": [] }
+    },
+    {
+      "id": "small.evidence.runtime", "kind": "evidence", "visibility": "public", "revision": "sha256:4444444444444444444444444444444444444444444444444444444444444444",
+      "provenance": { "kind": "provider-derived", "authority": "small" }, "source": { "provider": "small.files", "path": "evidence/runtime.json" },
+      "verification": { "mode": "machine", "status": "machine-proved", "waiver": null, "dependencies": [] }
+    }
+  ],
+  "edges": [
+    { "from": "small.doc.guide", "relation": "explains", "to": "small.claim.greeting" },
+    { "from": "small.claim.greeting", "relation": "implements", "to": "small.impl.runtime" },
+    { "from": "small.evidence.runtime", "relation": "proves", "to": "small.claim.greeting" }
+  ],
+  "routes": [
+    { "id": "small.agent", "audience": "agent", "parityGroup": "small.contributor", "visibility": "public", "nodes": ["small.doc.guide", "small.claim.greeting", "small.impl.runtime", "small.evidence.runtime"], "entrypoints": ["AGENTS.md"] },
+    { "id": "small.human", "audience": "human", "parityGroup": "small.contributor", "visibility": "public", "nodes": ["small.doc.guide", "small.claim.greeting", "small.impl.runtime", "small.evidence.runtime"], "entrypoints": ["docs/guide.md"] }
+  ],
+  "policies": { "unknownFields": "reject", "pathSemantics": "repository-relative-posix", "visibility": "fail-closed", "dualFirstParity": "required", "verification": "declared-dependencies" }
+}

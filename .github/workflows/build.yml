@@ -1,34 +1,734 @@
 # SPDX-License-Identifier: Apache-2.0
 
 name: Build
+run-name: ${{ fromJSON(inputs.macos-overflow-request-json || '{}').mode == 'control' && format('macOS overflow / {0} / {1}', fromJSON(inputs.macos-overflow-request-json).requestId, fromJSON(inputs.macos-overflow-request-json).sourceSha) || (fromJSON(inputs.macos-overflow-request-json || '{}').mode == 'self-hosted' || fromJSON(inputs.macos-overflow-request-json || '{}').mode == 'github-hosted') && format('macOS candidate / {0} / {1}', fromJSON(inputs.macos-overflow-request-json).requestId, fromJSON(inputs.macos-overflow-request-json).mode) || 'Build' }}
 
 on:
   pull_request:
-    types: [opened, reopened, ready_for_review]
+    types: [opened, synchronize, reopened, ready_for_review]
     branches:
       - alpha/v*/v*
       - release/v*/v*
+  # Manual runs validate lifecycle changes (e.g. the ./shifu entrypoint
+  # switch) on the full platform matrix without waiting for an alpha PR.
+  workflow_dispatch:
+    inputs:
+      buildchain-ref:
+        description: "Temporary Buildchain train or exact SHA for trusted manual validation"
+        required: false
+        default: ""
+      platforms-json:
+        description: "Optional custom platform matrix for isolated qualification reruns"
+        required: false
+        default: ""
+      run-kungfu-phase-b:
+        description: "Qualify the Linux CLI package with the reviewed build-images Phase B consumer"
+        required: false
+        type: boolean
+        default: false
+      preflight-run-id:
+        description: "Optional exact Alpha preflight run for a trusted diagnostic replay"
+        required: false
+        default: ""
+      diagnostic-mode:
+        description: "Retain all platform diagnostics instead of cancelling a stale manual run"
+        required: false
+        type: boolean
+        default: false
+      render-auditable-demo:
+        description: "Render full media after the exact Linux artifact passes the required auditable-demo Gate"
+        required: false
+        type: boolean
+        default: false
+      macos-overflow-request-json:
+        description: "Exact-source queue policy envelope; omitted for normal Build runs"
+        required: false
+        default: "{}"
 
 permissions:
+  actions: write
   contents: read
   pull-requests: read
   issues: write
   id-token: write
 
+concurrency:
+  group: ${{ fromJSON(inputs.macos-overflow-request-json || '{}').mode == 'control' && format('alpha-macos-overflow-{0}', fromJSON(inputs.macos-overflow-request-json).requestId) || (fromJSON(inputs.macos-overflow-request-json || '{}').mode == 'self-hosted' || fromJSON(inputs.macos-overflow-request-json || '{}').mode == 'github-hosted') && format('alpha-macos-candidate-{0}-{1}', fromJSON(inputs.macos-overflow-request-json).requestId, fromJSON(inputs.macos-overflow-request-json).mode) || format('alpha-promotion-build-{0}', github.event.pull_request.number || github.ref) }}
+  cancel-in-progress: ${{ !(github.event_name == 'workflow_dispatch' && inputs.diagnostic-mode) }}
+
 jobs:
+  preflight:
+    name: Require exact-source Alpha preflight
+    runs-on: ubuntu-24.04
+    timeout-minutes: ${{ fromJSON(inputs.macos-overflow-request-json || '{}').mode == 'control' && 360 || 10 }}
+    outputs:
+      dependency-lock-root: ${{ steps.receipt.outputs.dependency-lock-root }}
+      toolchain-root: ${{ steps.receipt.outputs.toolchain-root }}
+      policy-root: ${{ steps.receipt.outputs.policy-root }}
+    steps:
+      - name: Check out exact candidate source
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          ref: ${{ fromJSON(inputs.macos-overflow-request-json || '{}').sourceSha || github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Admit reusable source and platform probes
+        id: receipt
+        uses: ./.github/actions/require-alpha-preflight
+        with:
+          source-sha: ${{ fromJSON(inputs.macos-overflow-request-json || '{}').sourceSha || github.event.pull_request.head.sha || github.sha }}
+          receipt-run-id: ${{ fromJSON(inputs.macos-overflow-request-json || '{}').preflightRunId || inputs.preflight-run-id || '' }}
+          controller-request-json: ${{ inputs.macos-overflow-request-json || '{}' }}
+          runner-inventory-token: ${{ github.event_name == 'workflow_dispatch' && fromJSON(inputs.macos-overflow-request-json || '{}').mode == 'control' && github.ref == format('refs/heads/{0}', github.event.repository.default_branch) && secrets.KUNGFU_GITHUB_TOKEN || '' }}
+
   build:
-    uses: kungfu-systems/buildchain/.github/workflows/.build.yml@v2
-    secrets: inherit
+    needs: preflight
+    if: ${{ needs.preflight.result == 'success' && fromJSON(inputs.macos-overflow-request-json || '{}').mode != 'control' }}
+    uses: kungfu-systems/buildchain/.github/workflows/.build.yml@2522e79e4c00233a5d15f887360547ed1034c39e # protected artifact-signing authority
+    secrets:
+      BUILDCHAIN_PROMOTION_TOKEN: ${{ secrets.KUNGFU_GITHUB_TOKEN }}
+      BUILDCHAIN_ARTIFACT_RELAY_S3_ROLE_ARN: ${{ secrets.BUILDCHAIN_ARTIFACT_RELAY_S3_ROLE_ARN }}
+      BUILDCHAIN_ARTIFACT_RELAY_S3_UPLOAD_ROLE_ARN: ${{ secrets.BUILDCHAIN_ARTIFACT_RELAY_S3_UPLOAD_ROLE_ARN }}
+      BUILDCHAIN_ARTIFACT_RELAY_S3_DOWNLOAD_ROLE_ARN: ${{ secrets.BUILDCHAIN_ARTIFACT_RELAY_S3_DOWNLOAD_ROLE_ARN }}
     with:
-      runner-preset: kungfu-v4-self-hosted
+      buildchain-ref: ${{ inputs.buildchain-ref || '' }}
+      runner-preset: ${{ (fromJSON(inputs.macos-overflow-request-json || '{}').mode == 'self-hosted' || fromJSON(inputs.macos-overflow-request-json || '{}').mode == 'github-hosted') && 'custom' || (inputs.platforms-json && 'custom' || 'kungfu-v4-native') }}
+      platforms-json: ${{ fromJSON(inputs.macos-overflow-request-json || '{}').mode == 'self-hosted' && '[{"id":"macos-arm64","name":"macOS ARM64 self-hosted primary","platform":"macos","runner":"[\"self-hosted\",\"macOS\",\"ARM64\",\"kungfu-build-v4-macos-arm64\"]","capabilities":["native-toolchain","node","product-artifacts","rust"]}]' || (fromJSON(inputs.macos-overflow-request-json || '{}').mode == 'github-hosted' && '[{"id":"macos-arm64","name":"macOS ARM64 GitHub-hosted overflow","platform":"macos","runner":"[\"macos-15\"]","capabilities":["native-toolchain","node","product-artifacts","rust"]}]' || (inputs.platforms-json || '')) }}
+      # Normal native builds route each exact-label self-hosted lane to its
+      # GitHub-hosted counterpart only when no matching runner is online.
+      # Explicit macOS overflow candidates retain their declared route because
+      # the queue controller owns their independent candidate identities.
+      self-hosted-offline-fallback: ${{ fromJSON(inputs.macos-overflow-request-json || '{}').mode != 'self-hosted' && fromJSON(inputs.macos-overflow-request-json || '{}').mode != 'github-hosted' }}
+      install-command: ${{ fromJSON(inputs.macos-overflow-request-json || '{}').mode == 'self-hosted' && format('node .github/actions/require-alpha-preflight/alpha-macos-overflow.mjs health --route self-hosted --health-mode {0} && node scripts/buildchain-install.mjs', fromJSON(inputs.macos-overflow-request-json).healthMode || 'auto') || fromJSON(inputs.macos-overflow-request-json || '{}').mode == 'github-hosted' && 'node .github/actions/require-alpha-preflight/alpha-macos-overflow.mjs health --route github-hosted --health-mode auto && node scripts/buildchain-install.mjs' || '' }}
+      fail-fast: ${{ github.event_name == 'pull_request' || !inputs.diagnostic-mode }}
+      setup-rust: true
+      rust-toolchain: "1.96.0"
+      rustup-dist-server: https://rsproxy.cn
+      rustup-update-root: https://rsproxy.cn/rustup
+      cargo-registry-index: ${{ vars.BUILDCHAIN_CARGO_REGISTRY_INDEX }}
       artifact-name: kungfu
       artifact-paths: |
-        artifact/dist
+        product/release
+      github-artifact-attestation-subject-path: product/release/cli/kungfu-episodes-cli-linux-x64.tar.gz
+      github-artifact-attestation-signer-sha: 375b2d4b8a904776453773a33b4c4e4556c8c999
+      github-artifact-attestation-platform-id: linux-x64
+      artifact-signing-request-upload-no-proxy: ${{ vars.BUILDCHAIN_ARTIFACT_SIGNING_REQUEST_UPLOAD_NO_PROXY }}
+      credential-island-macos-app-path: ${{ (fromJSON(inputs.macos-overflow-request-json || '{}').mode != 'self-hosted' && fromJSON(inputs.macos-overflow-request-json || '{}').mode != 'github-hosted') && 'product/dist/desktop/mac-arm64/Kungfu Episodes.app' || '' }}
+      credential-island-caller-owned: ${{ fromJSON(inputs.macos-overflow-request-json || '{}').mode != 'self-hosted' && fromJSON(inputs.macos-overflow-request-json || '{}').mode != 'github-hosted' }}
+      credential-island-macos-platform-id: macos-arm64
       expected-artifacts-json: >-
-        {"minFiles":1,"minTotalBytes":1}
+        {"minFiles":3,"minTotalBytes":1,"requiredPaths":["product/release/qualification/layer-qualification-summary.json"]}
+      # Every lane must retain its source-bound qualification summary. The
+      # three full-product lanes also fail closed inside lifecycle.verify on
+      # their runtime, desktop, invariant, and layer reports; Linux ARM64 is a
+      # deliberately bounded Core-only lane and retains its exact npm receipt.
       require-install: true
       require-build: true
       require-verify: true
+      # The complete Windows build plus the three retained runtime/product
+      # qualification campaigns exceeds Buildchain's 120-minute default.
+      # Keep the full gate intact and give the slowest supported platform a
+      # bounded completion window instead of cancelling during final evidence.
+      lifecycle-timeout-minutes: 180
+      # This workflow only fires on alpha/release PRs, so it is the recurring
+      # heavy gate (kungfu has no nightly). Override the default lifecycle verify
+      # (.buildchain/buildchain.toml runs quick `verify`) with the kungfu::view
+      # memory-safety long-run: `--fuzz` adds the libFuzzer stage over the three
+      # FlatBuffers access entries under ASan/UBSan (KF-ADR-019f86da-4f90-7a66-b427-f4bcd638d8bc residual risk); a
+      # new crash fails verify and blocks the alpha. The ASan/UBSan corpus-replay
+      # tier runs on every platform (MSVC /fsanitize=address on Windows); the
+      # libFuzzer long-run is the Linux gate and soft-skips where libFuzzer is
+      # absent. KUNGFU_FUZZ_SECONDS bounds the per-target run.
+      #
+      # An explicit verify command runs under the platform default shell and
+      # does not inherit [lifecycle.env]. This Node implementation adapter sets
+      # the same environment, applies the Shifu cache profile, and enters the
+      # canonical shifu/shifu.cmd shim for every qualification stage without
+      # assuming bash exists on Windows. The alpha/release Buildchain verify
+      # gate also runs the complete runtime activation qualification and retains
+      # its report plus compressed raw logs under product/release/qualification.
+      # A final cross-layer desktop gate then binds those runtime/live-Peer
+      # reports to Agent Session and frontend recovery tests, retaining its own
+      # report and compressed raw logs beside the component evidence.
+      # Exact layer artifacts enter through the registered layers.format,
+      # layers.sdk, and layers.surfaces Gates and emit a source-bound receipt.
+      # On Linux it qualifies Episodes before running the ADR
+      # release-admissibility gate.
+      # shifu-entry-contract: allow cross-platform release qualification dispatch into the canonical shifu shim
+      # Functional native qualification stays credential-free. Buildchain seals
+      # the exact unsigned macOS app after this lifecycle, then a separate
+      # protected GitHub-hosted credential island signs and notarizes it.
+      verify-command: node scripts/run-release-qualification.mjs --execution-profile ${{ startsWith(github.base_ref, 'release/') && 'release-candidate' || 'alpha' }} --native-upgrade-policy skip
       release-candidate: true
+      publish-channel: ${{ (fromJSON(inputs.macos-overflow-request-json || '{}').mode == 'self-hosted' || fromJSON(inputs.macos-overflow-request-json || '{}').mode == 'github-hosted') && 'none' || (github.event_name == 'pull_request' && (startsWith(github.base_ref, 'release/') && 'release' || 'alpha') || 'none') }}
+      # Alpha and release evidence always crosses the configured S3 relay,
+      # including manual diagnostic runs. Keep this literal so a dispatch
+      # cannot silently fall back to direct GitHub artifact transfer.
       artifact-transfer-mode: s3-to-github-artifacts
       artifact-retention-days: 14
+      checkout-cache-mode: auto
+      checkout-cache-mirror-url-template: ${{ vars.BUILDCHAIN_CHECKOUT_CACHE_MIRROR_URL_TEMPLATE }}
+      checkout-cache-reference-repository-template: ${{ vars.BUILDCHAIN_CHECKOUT_CACHE_REFERENCE_REPOSITORY_TEMPLATE }}
+      checkout-cache-fallback: github
+      checkout-cache-timeout-seconds: 60
+      # Alpha/release PRs intentionally qualify GitHub's synthetic merge tree
+      # rather than locking the head ref early. The merge ref is absent from
+      # the LAN mirror and this repository can exceed Buildchain's 600-second
+      # fallback default, so retain a bounded 20-minute GitHub fetch window.
+      checkout-cache-github-timeout-seconds: 1200
+      # The default native matrix now mixes hosted Linux ARM64 with the three
+      # self-hosted lanes. Never project a private-LAN cache profile onto a
+      # hosted runner; the explicit-off profile keeps all four legs auditable.
+      shifu-cache-profile-ref: docs/shifu/qualification-portable-off.cache-profile.json
+      shifu-cache-profile-digest: sha256:d7002041716ea1e5ad703492815c9557576d5679227743541c13d42b6ea9de5c
+      cache-dependency-lock-root: ${{ needs.preflight.outputs.dependency-lock-root }}
+      cache-toolchain-root: ${{ needs.preflight.outputs.toolchain-root }}
+      cache-policy-root: ${{ needs.preflight.outputs.policy-root }}
+      buildchain-contract-lock-path: .buildchain/contract-lock.json
+      buildchain-contract-compatibility-policy: major-compatible
+      buildchain-contract-drift-issue-mode: compatible-and-breaking
+
+  resolve-auditable-demo-source:
+    name: Resolve exact auditable demo artifact
+    needs: build
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      actions: read
+      contents: read
+    outputs:
+      applicable: ${{ steps.resolve.outputs.applicable }}
+      reason: ${{ steps.resolve.outputs.reason }}
+      artifact-id: ${{ steps.resolve.outputs.artifact-id }}
+      artifact-name: ${{ steps.resolve.outputs.artifact-name }}
+      artifact-digest: ${{ steps.resolve.outputs.artifact-digest }}
+      artifact-url: ${{ steps.resolve.outputs.artifact-url }}
+      artifact-expires-at: ${{ steps.resolve.outputs.artifact-expires-at }}
+    steps:
+      - name: Resolve exact same-run Linux artifact
+        id: resolve
+        uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8
+        env:
+          SOURCE_SHA: ${{ needs.build.outputs.publish-source-sha }}
+          PLATFORMS_JSON: ${{ needs.build.outputs.platforms-json }}
+          ARTIFACT_COORDINATES_JSON: ${{ needs.build.outputs.artifact-coordinates-json }}
+        with:
+          script: |
+            const fs = require("fs");
+            const sourceSha = process.env.SOURCE_SHA || "";
+            if (!/^[0-9a-f]{40}$/.test(sourceSha)) {
+              throw new Error("build did not expose one exact publish source SHA");
+            }
+            let platforms;
+            try {
+              platforms = JSON.parse(process.env.PLATFORMS_JSON || "[]");
+            } catch {
+              throw new Error("build platforms-json is not valid JSON");
+            }
+            const rows = Array.isArray(platforms)
+              ? platforms
+              : Array.isArray(platforms.platforms)
+                ? platforms.platforms
+                : [];
+            if (!rows.length) {
+              throw new Error("build platforms-json has no declared platform rows");
+            }
+            const hasLinux = rows.some((row) => row && row.id === "linux-x64");
+            const name = `kungfu-linux-x64-${sourceSha}`;
+            let coordinateSet;
+            try {
+              coordinateSet = JSON.parse(
+                process.env.ARTIFACT_COORDINATES_JSON || "{}",
+              );
+            } catch {
+              throw new Error(
+                "build artifact-coordinates-json is not valid JSON",
+              );
+            }
+            const currentAttempt =
+              String(process.env.GITHUB_RUN_ATTEMPT || "");
+            const producerAttempt = String(coordinateSet.runAttempt || "");
+            if (
+              coordinateSet.schema !==
+                "buildchain.github-artifact-coordinate-set/v1" ||
+              coordinateSet.repository !== context.repo.owner + "/" + context.repo.repo ||
+              coordinateSet.runId !== String(context.runId) ||
+              !/^[1-9][0-9]*$/.test(currentAttempt) ||
+              !/^[1-9][0-9]*$/.test(producerAttempt) ||
+              BigInt(producerAttempt) > BigInt(currentAttempt) ||
+              coordinateSet.sourceSha !== sourceSha ||
+              !Array.isArray(coordinateSet.artifacts)
+            ) {
+              throw new Error(
+                "build artifact coordinate set is not bound to this exact source run",
+              );
+            }
+            const declaredLinux = coordinateSet.artifacts.filter(
+              (artifact) => artifact && artifact.platformId === "linux-x64",
+            );
+            const artifacts = await github.paginate(
+              github.rest.actions.listWorkflowRunArtifacts,
+              {
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                run_id: context.runId,
+                per_page: 100,
+              },
+            );
+            if (!hasLinux) {
+              if (declaredLinux.length) {
+                throw new Error(
+                  "producer coordinate set declares Linux outside the resolved build matrix",
+                );
+              }
+              const matches = artifacts.filter(
+                (artifact) => artifact.name === name && !artifact.expired,
+              );
+              if (matches.length) {
+                throw new Error(
+                  "undeclared Linux artifact exists outside the resolved build matrix",
+                );
+              }
+              const diagnosis = {
+                schema: "kungfu.auditable-demo.inapplicable/v1",
+                status: "inapplicable",
+                reason: "linux-x64-not-produced",
+                sourceSha,
+                runId: String(context.runId),
+                runAttempt: String(process.env.GITHUB_RUN_ATTEMPT || ""),
+              };
+              fs.writeFileSync(
+                "auditable-demo-inapplicable.json",
+                JSON.stringify(diagnosis, null, 2) + "\n",
+              );
+              core.setOutput("applicable", "false");
+              core.setOutput("reason", diagnosis.reason);
+              await core.summary
+                .addHeading("Auditable demo Gate")
+                .addRaw("Inapplicable: this explicit matrix did not produce linux-x64.")
+                .write();
+              return;
+            }
+            if (declaredLinux.length !== 1) {
+              throw new Error(
+                `expected one producer-owned Linux coordinate, found ${declaredLinux.length}`,
+              );
+            }
+            const declared = declaredLinux[0];
+            const canonicalExpiry = (value, label) => {
+              const milliseconds = Date.parse(value || "");
+              if (!Number.isFinite(milliseconds)) {
+                throw new Error(`${label} is not a valid artifact expiry`);
+              }
+              return new Date(milliseconds).toISOString();
+            };
+            if (
+              !/^[1-9][0-9]*$/.test(declared.id || "") ||
+              declared.name !== name ||
+              !/^sha256:[0-9a-f]{64}$/.test(declared.digest || "") ||
+              declared.url !==
+                `https://github.com/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}/artifacts/${declared.id}` ||
+              !declared.expiresAt
+            ) {
+              throw new Error(
+                "producer-owned Linux coordinate is incomplete or malformed",
+              );
+            }
+            const declaredExpiry = canonicalExpiry(
+              declared.expiresAt,
+              "producer-owned Linux coordinate expiry",
+            );
+            const matches = artifacts.filter(
+              (artifact) =>
+                String(artifact.id) === declared.id && !artifact.expired,
+            );
+            if (matches.length !== 1) {
+              throw new Error(
+                `expected one live same-run artifact id ${declared.id}, found ${matches.length}`,
+              );
+            }
+            const observed = matches[0];
+            const observedExpiry = canonicalExpiry(
+              observed.expires_at,
+              "live Linux artifact expiry",
+            );
+            if (
+              observed.name !== declared.name ||
+              observed.digest !== declared.digest ||
+              observedExpiry !== declaredExpiry
+            ) {
+              throw new Error(
+                "live Linux artifact drifted from the producer-owned coordinate",
+              );
+            }
+            core.setOutput("applicable", "true");
+            core.setOutput("reason", "linux-x64-exact-artifact");
+            core.setOutput("artifact-id", declared.id);
+            core.setOutput("artifact-name", declared.name);
+            core.setOutput("artifact-digest", declared.digest);
+            core.setOutput("artifact-url", declared.url);
+            core.setOutput("artifact-expires-at", declared.expiresAt);
+
+      - name: Retain machine-readable inapplicable reason
+        if: ${{ steps.resolve.outputs.applicable == 'false' }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: auditable-demo-inapplicable-${{ github.run_id }}-${{ github.run_attempt }}
+          path: auditable-demo-inapplicable.json
+          if-no-files-found: error
+          retention-days: 14
+          compression-level: 0
+          overwrite: false
+
+  auditable-demo:
+    name: Required auditable demo Gate
+    needs: [build, resolve-auditable-demo-source]
+    if: ${{ needs.resolve-auditable-demo-source.outputs.applicable == 'true' }}
+    permissions:
+      actions: read
+      contents: read
+    uses: kungfu-systems/buildchain/.github/workflows/.auditable-demo.yml@3272608ba28ef714fe710dd8da99d00fdeb4c619 # issue #2057 canonical qualified sentinel
+    with:
+      source-ref: ${{ needs.build.outputs.publish-source-sha }}
+      source-artifact-name: ${{ needs.resolve-auditable-demo-source.outputs.artifact-name }}
+      source-artifact-digest: ${{ needs.resolve-auditable-demo-source.outputs.artifact-digest }}
+      adapter-path: scripts/auditable-demo-adapter.py
+      renderer-image: ghcr.io/kungfu-systems/build-images/demo-renderer@sha256:06141e3d01a13e6d44766d3acc115ca07c58443f59840f313ecd938b2b0c138c
+      render-media: ${{ (github.event_name == 'workflow_dispatch' && inputs.render-auditable-demo) || (github.event_name == 'pull_request' && startsWith(github.base_ref, 'alpha/')) }}
+      artifact-retention-days: 14
+      require-trusted-event: true
+
+  auditable-demo-passport:
+    name: Bind auditable demo Release Passport
+    needs:
+      [build, resolve-auditable-demo-source, auditable-demo]
+    if: ${{ needs.auditable-demo.result == 'success' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      actions: read
+      contents: read
+    steps:
+      - name: Check out exact qualified source
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          ref: ${{ needs.build.outputs.publish-source-sha }}
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Bind Gate and media expiry to this workflow run
+        id: artifact-expiry
+        uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8
+        env:
+          GATE_ARTIFACT_ID: ${{ needs.auditable-demo.outputs.gate-artifact-id }}
+          GATE_ARTIFACT_NAME: ${{ needs.auditable-demo.outputs.gate-artifact-name }}
+          GATE_ARTIFACT_DIGEST: ${{ needs.auditable-demo.outputs.gate-artifact-digest }}
+          MEDIA_ARTIFACT_ID: ${{ needs.auditable-demo.outputs.media-artifact-id }}
+          MEDIA_ARTIFACT_NAME: ${{ needs.auditable-demo.outputs.media-artifact-name }}
+          MEDIA_ARTIFACT_DIGEST: ${{ needs.auditable-demo.outputs.media-artifact-digest }}
+        with:
+          script: |
+            const declared = [
+              {
+                kind: "gate",
+                id: process.env.GATE_ARTIFACT_ID || "",
+                name: process.env.GATE_ARTIFACT_NAME || "",
+                digest: process.env.GATE_ARTIFACT_DIGEST || "",
+                required: true,
+              },
+              {
+                kind: "media",
+                id: process.env.MEDIA_ARTIFACT_ID || "",
+                name: process.env.MEDIA_ARTIFACT_NAME || "",
+                digest: process.env.MEDIA_ARTIFACT_DIGEST || "",
+                required: false,
+              },
+            ];
+            const artifacts = await github.paginate(
+              github.rest.actions.listWorkflowRunArtifacts,
+              {
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                run_id: context.runId,
+                per_page: 100,
+              },
+            );
+            const byId = new Map(
+              artifacts.map((artifact) => [String(artifact.id), artifact]),
+            );
+            for (const coordinate of declared) {
+              if (/^[0-9a-f]{64}$/.test(coordinate.digest)) {
+                coordinate.digest = `sha256:${coordinate.digest}`;
+              }
+              const present = [coordinate.id, coordinate.name, coordinate.digest]
+                .filter(Boolean).length;
+              if (!coordinate.required && present === 0) {
+                core.setOutput(`${coordinate.kind}-artifact-digest`, "");
+                core.setOutput(`${coordinate.kind}-artifact-expires-at`, "");
+                continue;
+              }
+              if (
+                present !== 3 ||
+                !/^[1-9][0-9]*$/.test(coordinate.id) ||
+                !/^sha256:[0-9a-f]{64}$/.test(coordinate.digest)
+              ) {
+                throw new Error(`${coordinate.kind} artifact coordinate is partial or invalid`);
+              }
+              const artifact = byId.get(coordinate.id);
+              if (!artifact) {
+                throw new Error(
+                  `${coordinate.kind} artifact ${coordinate.id} is not retained by run ${context.runId}`,
+                );
+              }
+              if (
+                artifact.name !== coordinate.name ||
+                artifact.digest !== coordinate.digest
+              ) {
+                throw new Error(
+                  `${coordinate.kind} artifact name or digest differs from the retained artifact`,
+                );
+              }
+              const expiresAt = Date.parse(artifact.expires_at || "");
+              if (artifact.expired || !Number.isFinite(expiresAt) || expiresAt <= Date.now()) {
+                throw new Error(`${coordinate.kind} artifact is expired or has no live expiry`);
+              }
+              core.setOutput(
+                `${coordinate.kind}-artifact-digest`,
+                artifact.digest,
+              );
+              core.setOutput(
+                `${coordinate.kind}-artifact-expires-at`,
+                new Date(expiresAt).toISOString(),
+              );
+            }
+
+      - name: Write exact auditable demo Release Passport
+        env:
+          SOURCE_SHA: ${{ needs.build.outputs.publish-source-sha }}
+          SOURCE_ARTIFACT_ID: ${{ needs.resolve-auditable-demo-source.outputs.artifact-id }}
+          SOURCE_ARTIFACT_NAME: ${{ needs.resolve-auditable-demo-source.outputs.artifact-name }}
+          SOURCE_ARTIFACT_DIGEST: ${{ needs.resolve-auditable-demo-source.outputs.artifact-digest }}
+          SOURCE_ARTIFACT_URL: ${{ needs.resolve-auditable-demo-source.outputs.artifact-url }}
+          SOURCE_ARTIFACT_EXPIRES_AT: ${{ needs.resolve-auditable-demo-source.outputs.artifact-expires-at }}
+          GATE_ARTIFACT_ID: ${{ needs.auditable-demo.outputs.gate-artifact-id }}
+          GATE_ARTIFACT_NAME: ${{ needs.auditable-demo.outputs.gate-artifact-name }}
+          GATE_ARTIFACT_DIGEST: ${{ steps.artifact-expiry.outputs.gate-artifact-digest }}
+          GATE_ARTIFACT_URL: ${{ needs.auditable-demo.outputs.gate-artifact-url }}
+          GATE_ARTIFACT_EXPIRES_AT: ${{ steps.artifact-expiry.outputs.gate-artifact-expires-at }}
+          GATE_ROOT: ${{ needs.auditable-demo.outputs.gate-root }}
+          MEDIA_ARTIFACT_ID: ${{ needs.auditable-demo.outputs.media-artifact-id }}
+          MEDIA_ARTIFACT_NAME: ${{ needs.auditable-demo.outputs.media-artifact-name }}
+          MEDIA_ARTIFACT_DIGEST: ${{ steps.artifact-expiry.outputs.media-artifact-digest }}
+          MEDIA_ARTIFACT_URL: ${{ needs.auditable-demo.outputs.media-artifact-url }}
+          MEDIA_ARTIFACT_EXPIRES_AT: ${{ steps.artifact-expiry.outputs.media-artifact-expires-at }}
+          MEDIA_ROOT: ${{ needs.auditable-demo.outputs.media-root }}
+          BUILDCHAIN_SHA: 3272608ba28ef714fe710dd8da99d00fdeb4c619
+          RENDERER_IMAGE: ghcr.io/kungfu-systems/build-images/demo-renderer@sha256:06141e3d01a13e6d44766d3acc115ca07c58443f59840f313ecd938b2b0c138c
+        run: ./shifu node scripts/auditable-demo-passport.mjs write --output auditable-demo-release-passport.json
+
+      - name: Upload exact auditable demo Release Passport
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: kungfu-auditable-demo-passport-${{ needs.build.outputs.publish-source-sha }}-${{ github.run_id }}-${{ github.run_attempt }}
+          path: auditable-demo-release-passport.json
+          if-no-files-found: error
+          retention-days: 14
+          compression-level: 0
+          overwrite: false
+
+  precompute-alpha-publication-tail:
+    name: Precompute non-secret Alpha publication tail
+    needs: build
+    if: ${{ needs.build.result == 'success' && startsWith(github.base_ref, 'alpha/') }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    steps:
+      - name: Check out exact qualified source
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          ref: ${{ needs.build.outputs.publish-source-sha }}
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Set up pinned Node.js
+        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
+        with:
+          node-version-file: .node-version
+          check-latest: false
+
+      - name: Write and verify source-bound publication tail plan
+        env:
+          SOURCE_SHA: ${{ needs.build.outputs.publish-source-sha }}
+          SOURCE_TREE_SHA: ${{ needs.build.outputs.publish-source-tree-sha }}
+        run: |
+          ./shifu alpha:publication:tail write \
+            --source-commit "${SOURCE_SHA}" \
+            --source-tree "${SOURCE_TREE_SHA}" \
+            --out alpha-publication-tail-plan.json
+          ./shifu alpha:publication:tail verify \
+            --plan alpha-publication-tail-plan.json \
+            --source-commit "${SOURCE_SHA}"
+
+      - name: Upload immutable publication tail plan
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: kungfu-alpha-publication-tail-${{ needs.build.outputs.publish-source-sha }}
+          path: alpha-publication-tail-plan.json
+          if-no-files-found: error
+          retention-days: 14
+          compression-level: 0
+          overwrite: false
+
+  credential-island-macos:
+    name: Sign and notarize sealed macOS application
+    needs: build
+    if: ${{ needs.build.result == 'success' && fromJSON(inputs.macos-overflow-request-json || '{}').mode != 'self-hosted' && fromJSON(inputs.macos-overflow-request-json || '{}').mode != 'github-hosted' && (!inputs.platforms-json || contains(inputs.platforms-json, 'macos-arm64')) }}
+    runs-on: macos-15
+    timeout-minutes: 90
+    environment:
+      name: buildchain-artifact-signing
+    permissions:
+      actions: read
+      contents: read
+    outputs:
+      artifact-name: ${{ steps.names.outputs.artifact-name }}
+      manifest-artifact-name: ${{ steps.names.outputs.manifest-artifact-name }}
+      evidence-path: ${{ steps.credential-island.outputs.evidence-path }}
+    steps:
+      - name: Resolve signed artifact names
+        id: names
+        shell: bash
+        env:
+          SOURCE_SHA: ${{ needs.build.outputs.publish-source-sha }}
+        run: |
+          {
+            echo "artifact-name=kungfu-macos-credential-${SOURCE_SHA}"
+            echo "manifest-artifact-name=kungfu-manifest-macos-credential-${SOURCE_SHA}"
+          } >> "${GITHUB_OUTPUT}"
+
+      - name: Download immutable credential-island runtime
+        uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
+        with:
+          name: kungfu-credential-island-runtime-${{ needs.build.outputs.buildchain-runtime-sha }}
+          path: .buildchain/runtime/actions/macos-credential-island
+
+      - name: Download source-bound sealed application input
+        uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
+        with:
+          name: kungfu-credential-island-input-macos-arm64-${{ needs.build.outputs.publish-source-sha }}
+          path: .buildchain/credential-island-input
+
+      - name: Sign, notarize, staple, and verify
+        id: credential-island
+        uses: ./.buildchain/runtime/actions/macos-credential-island
+        with:
+          input-root: .buildchain/credential-island-input
+          output-root: .buildchain/credential-island-output
+          source-repository: ${{ github.repository }}
+          source-sha: ${{ needs.build.outputs.publish-source-sha }}
+          source-tree-sha: ${{ needs.build.outputs.publish-source-tree-sha }}
+          source-ref: ${{ needs.build.outputs.publish-source-ref || github.ref }}
+          buildchain-runtime-sha: ${{ needs.build.outputs.buildchain-runtime-sha }}
+          artifact-name: ${{ steps.names.outputs.artifact-name }}
+          platform-id: macos-arm64-credential
+          artifact-relative-output: product/release
+          expected-bundle-id: ${{ vars.BUILDCHAIN_MACOS_EXPECTED_BUNDLE_ID }}
+          expected-team-id: ${{ vars.BUILDCHAIN_MACOS_EXPECTED_TEAM_ID }}
+          certificate-sha1: ${{ vars.BUILDCHAIN_MACOS_CERTIFICATE_SHA1 }}
+          certificate-p12-base64: ${{ secrets.BUILDCHAIN_MACOS_CERTIFICATE_P12_BASE64 }}
+          certificate-password: ${{ secrets.BUILDCHAIN_MACOS_CERTIFICATE_PASSWORD }}
+          notary-api-key-p8-base64: ${{ secrets.BUILDCHAIN_MACOS_NOTARY_API_KEY_P8_BASE64 }}
+          notary-api-key-id: ${{ secrets.BUILDCHAIN_MACOS_NOTARY_API_KEY_ID }}
+          notary-api-issuer: ${{ secrets.BUILDCHAIN_MACOS_NOTARY_API_ISSUER }}
+
+      - name: Upload authoritative signed macOS payload
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: ${{ steps.names.outputs.artifact-name }}
+          path: ${{ steps.credential-island.outputs.artifact-root }}
+          if-no-files-found: error
+          retention-days: 14
+          compression-level: 0
+
+      - name: Upload authoritative signed macOS manifest
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: ${{ steps.names.outputs.manifest-artifact-name }}
+          path: ${{ steps.credential-island.outputs.manifest-path }}
+          if-no-files-found: error
+          retention-days: 14
+
+  phase-b-package:
+    name: Prepare Kungfu Phase B package
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.run-kungfu-phase-b }}
+    needs: build
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    permissions:
+      actions: read
+      contents: read
+    outputs:
+      artifact-name: ${{ steps.artifact.outputs.name }}
+      package-sha256: ${{ steps.identity.outputs.package_sha256 }}
+      package-version: ${{ steps.identity.outputs.package_version }}
+      source-sha: ${{ steps.identity.outputs.source_sha }}
+    steps:
+      - name: Check out the exact package source
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+
+      - name: Download the Linux package build
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          pattern: kungfu-linux-x64-*
+          path: phase-b-build-input
+          merge-multiple: true
+
+      - name: Resolve package identity
+        id: identity
+        env:
+          EXPECTED_SOURCE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          set -euo pipefail
+          # shifu-entry-contract: allow read-only package version resolution before the package identity gate
+          expected_version=$(node -p "require('./lerna.json').version")
+          python3 scripts/prepare_kungfu_phase_b_package.py \
+            --input-root phase-b-build-input \
+            --output-dir phase-b-package-output \
+            --expected-source-sha "${EXPECTED_SOURCE_SHA}" \
+            --expected-version "${expected_version}" \
+            --build-images-ref "v1.2.4-alpha.30" \
+            --build-images-sha "3056c23e70b83f5bb63062f04027a93e79039e4b"
+
+      - name: Resolve retained artifact name
+        id: artifact
+        run: echo "name=kungfu-phase-b-package-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}" >> "${GITHUB_OUTPUT}"
+
+      - name: Retain the exact package input
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: ${{ steps.artifact.outputs.name }}
+          path: phase-b-package-output
+          if-no-files-found: error
+          retention-days: 30
+
+  kungfu-phase-b:
+    name: Qualify Kungfu package with build-images
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.run-kungfu-phase-b }}
+    needs: [build, phase-b-package]
+    permissions:
+      actions: read
+      contents: read
+    uses: kungfu-systems/build-images/.github/workflows/comparator-kungfu-package-smoke.yml@3056c23e70b83f5bb63062f04027a93e79039e4b # v1.2.4-alpha.30
+    with:
+      package_artifact_name: ${{ needs.phase-b-package.outputs.artifact-name }}
+      package_sha256: ${{ needs.phase-b-package.outputs.package-sha256 }}
+      package_version: ${{ needs.phase-b-package.outputs.package-version }}
+      source_sha: ${{ needs.phase-b-package.outputs.source-sha }}
+      build_images_ref: v1.2.4-alpha.30
+      build_images_sha: 3056c23e70b83f5bb63062f04027a93e79039e4b

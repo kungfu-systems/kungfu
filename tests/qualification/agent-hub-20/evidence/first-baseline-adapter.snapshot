@@ -1,0 +1,94 @@
+#!/usr/bin/env node
+// SPDX-License-Identifier: Apache-2.0
+
+import childProcess from "node:child_process";
+import path from "node:path";
+import process from "node:process";
+import readline from "node:readline";
+
+const ADAPTER = {
+  id: "kungfu-work-agent-hub",
+  version: "0.1.0-alpha.1",
+  topology: "local-peer",
+};
+
+function options(argv) {
+  const selected = {
+    kungfu: "/usr/local/bin/kungfu",
+  };
+  for (let index = 0; index < argv.length; index += 1) {
+    const flag = argv[index];
+    const value = argv[index + 1];
+    if (flag === "--kungfu" && value) {
+      selected.kungfu = path.resolve(value);
+      index += 1;
+    } else if (flag === "--qualification-root" && value) {
+      selected.qualificationRoot = path.resolve(value);
+      index += 1;
+    } else {
+      throw new Error(`unsupported or incomplete argument: ${flag}`);
+    }
+  }
+  if (!selected.qualificationRoot) {
+    throw new Error("--qualification-root is required");
+  }
+  return selected;
+}
+
+function productResponse(selected, request) {
+  const sourceHome = path.join(selected.qualificationRoot, "hub-alpha", ".kungfu");
+  const targetHome = path.join(selected.qualificationRoot, "hub-beta", ".kungfu");
+  const encoded = Buffer.from(JSON.stringify(request), "utf8").toString("base64");
+  const result = childProcess.spawnSync(
+    selected.kungfu,
+    [
+      "agent",
+      "hub",
+      "handle",
+      "--input-base64",
+      encoded,
+      "--source-home",
+      sourceHome,
+      "--target-home",
+      targetHome,
+      "--qualification-root",
+      selected.qualificationRoot,
+      "--json",
+    ],
+    {
+      encoding: "utf8",
+      env: {
+        ...process.env,
+        KFD_AGENT_HUB_OFFLINE: "1",
+        KF_HOME: targetHome,
+      },
+      maxBuffer: 8 * 1024 * 1024,
+    },
+  );
+  if (result.status === 0) {
+    return JSON.parse(result.stdout);
+  }
+  return {
+    schemaVersion: 1,
+    contract: "kfd.agent-hub-adapter-response/v1",
+    requestId: String(request.requestId ?? "unknown"),
+    adapter: ADAPTER,
+    status: "error",
+    code: "product-surface-unavailable",
+    verdict: "not-applicable",
+    observations: {
+      productExecutable: selected.kungfu,
+      productExitCode: result.status,
+      productSignal: result.signal,
+      productSurface: "kungfu agent hub handle",
+      productSurfaceAvailable: false,
+    },
+  };
+}
+
+const selected = options(process.argv.slice(2));
+const lines = readline.createInterface({ input: process.stdin, crlfDelay: Infinity });
+for await (const line of lines) {
+  const request = JSON.parse(line);
+  process.stdout.write(`${JSON.stringify(productResponse(selected, request))}\n`);
+}

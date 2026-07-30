@@ -1,0 +1,55 @@
+{
+  "$schema": "https://xinfa.dev/schema/project-v1.schema.json",
+  "schema": "xinfa.project/v1",
+  "project": { "id": "beta", "title": "Beta Operations Handbook" },
+  "cut": { "id": "beta.week-29", "revision": "sha256:1212121212121212121212121212121212121212121212121212121212121212" },
+  "roots": [
+    { "id": "handbook", "path": "handbook", "visibility": "internal" },
+    { "id": "receipts", "path": "receipts", "visibility": "internal" }
+  ],
+  "providers": [
+    {
+      "id": "beta.handbook-provider", "kind": "external-adapter", "authority": "human-review", "visibility": "internal", "root": "handbook",
+      "paths": ["handbook/week.md"], "revision": "sha256:2323232323232323232323232323232323232323232323232323232323232323"
+    },
+    {
+      "id": "beta.receipt-provider", "kind": "exact-file-manifest", "authority": "shifu", "visibility": "internal", "root": "receipts",
+      "paths": ["receipts/review.json"], "revision": "sha256:3434343434343434343434343434343434343434343434343434343434343434"
+    }
+  ],
+  "nodes": [
+    {
+      "id": "beta.doc.week", "kind": "document", "visibility": "internal",
+      "revision": "sha256:4545454545454545454545454545454545454545454545454545454545454545",
+      "provenance": { "kind": "project-source", "authority": "beta" },
+      "source": { "provider": "beta.handbook-provider", "path": "handbook/week.md" },
+      "verification": { "mode": "human", "status": "human-reviewed", "waiver": null, "dependencies": [{ "node": "beta.claim.plan", "expectedRevision": "sha256:5656565656565656565656565656565656565656565656565656565656565656" }] }
+    },
+    {
+      "id": "beta.claim.plan", "kind": "claim", "visibility": "internal",
+      "revision": "sha256:5656565656565656565656565656565656565656565656565656565656565656",
+      "provenance": { "kind": "human-review", "authority": "beta" },
+      "source": { "provider": "beta.handbook-provider", "path": "handbook/week.md" },
+      "verification": { "mode": "human", "status": "human-reviewed", "waiver": null, "dependencies": [{ "node": "beta.evidence.review", "expectedRevision": "sha256:6767676767676767676767676767676767676767676767676767676767676767" }] }
+    },
+    {
+      "id": "beta.evidence.review", "kind": "evidence", "visibility": "internal",
+      "revision": "sha256:6767676767676767676767676767676767676767676767676767676767676767",
+      "provenance": { "kind": "provider-derived", "authority": "beta" },
+      "source": { "provider": "beta.receipt-provider", "path": "receipts/review.json" },
+      "verification": { "mode": "human", "status": "human-reviewed", "waiver": null, "dependencies": [] }
+    }
+  ],
+  "edges": [
+    { "from": "beta.doc.week", "relation": "explains", "to": "beta.claim.plan" },
+    { "from": "beta.evidence.review", "relation": "proves", "to": "beta.claim.plan" }
+  ],
+  "routes": [
+    { "id": "beta.agent", "audience": "agent", "parityGroup": "beta.operator", "visibility": "internal", "nodes": ["beta.doc.week", "beta.claim.plan", "beta.evidence.review"], "entrypoints": ["handbook/week.md"] },
+    { "id": "beta.human", "audience": "human", "parityGroup": "beta.operator", "visibility": "internal", "nodes": ["beta.doc.week", "beta.claim.plan", "beta.evidence.review"], "entrypoints": ["handbook/week.md"] }
+  ],
+  "policies": {
+    "unknownFields": "reject", "pathSemantics": "repository-relative-posix", "visibility": "fail-closed",
+    "dualFirstParity": "required", "verification": "declared-dependencies"
+  }
+}

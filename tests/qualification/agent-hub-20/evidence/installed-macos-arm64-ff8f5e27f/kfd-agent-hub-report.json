@@ -1,0 +1,1722 @@
+{
+  "schemaVersion": 1,
+  "contract": "kfd.agent-hub-report/v1",
+  "sourceCut": {
+    "repository": "kungfu-systems/kfd",
+    "package": "@kungfu-tech/kfd",
+    "packageVersion": "1.0.0-alpha.46",
+    "packageManifestDigest": "sha256:9938a1c824b45fbd16da3bd118f236f2b866a48b9699186fe8bb5f11ba06befe",
+    "releaseAnchorDigest": "sha256:4a2dfe0eec038f3d1635839cab9c851ac5addce8ade9c2b15091dce903c95062"
+  },
+  "profile": {
+    "id": "kfd-agent-hub-conformance",
+    "version": "0.1.0-alpha.1",
+    "manifestDigest": "sha256:2bffc69e3238b20eea3362e6bd96a7944aea480e095520cf351721b85c04fc2d"
+  },
+  "protocol": {
+    "id": "kfd-agent-hub",
+    "version": "0.1.0-alpha.1",
+    "manifestDigest": "sha256:dab4e93d2a662092eb51e29171dfc8bd0c400daa99899f074e69608b45cc7a59"
+  },
+  "suite": {
+    "id": "kfd-agent-hub-20",
+    "version": "0.1.0-alpha.1",
+    "vectorCount": 20,
+    "vectorRoot": "sha256:f1be3a10121fbd5389204b6e1ca70ea3920d9ba13ad20bb9f83fac078339c6b2",
+    "inventoryRoot": "sha256:616df582900189eea35a3ca701d100a1aa123b89f424fba4090cf656286a74be"
+  },
+  "verifier": {
+    "contract": "kfd.agent-hub-report-verifier/v1",
+    "artifactDigest": "sha256:252e9576123b464055cda1eef4294ba9e670330b5d294407bf1e542eec7d04cf",
+    "failureInventoryRoot": "sha256:616df582900189eea35a3ca701d100a1aa123b89f424fba4090cf656286a74be"
+  },
+  "adapter": {
+    "id": "kungfu-work-agent-hub",
+    "version": "0.1.0-alpha.1",
+    "topology": "local-peer",
+    "artifactDigest": "sha256:70a53630b9f9df9e11727740b142a956fe5389dfbb14ae2ecd7504f3564fd4a2",
+    "sourceCommit": "ff8f5e27f85fcdb23dc1f7d7ac6a3011d586d9fd",
+    "handshake": {
+      "adapter": {
+        "id": "kungfu-work-agent-hub",
+        "topology": "local-peer",
+        "version": "0.1.0-alpha.1"
+      },
+      "code": "adapter-ready",
+      "contract": "kfd.agent-hub-adapter-response/v1",
+      "hubs": [
+        {
+          "capabilities": {
+            "$schema": "https://kfd.libkungfu.dev/schemas/kfd-agent-hub/capabilities.schema.json",
+            "authorityRoots": [
+              "sha256:818d21a975dc88d251ff83b201391928c0d38e37d06eafd0633ee0f129e78e27"
+            ],
+            "bindings": [
+              {
+                "authentication": "local-process",
+                "duplicateDelivery": "at-least-once",
+                "id": "jsonl-stdio",
+                "mediaTypes": [
+                  "application/json"
+                ],
+                "transportReceipts": true
+              }
+            ],
+            "contract": "kfd-agent-hub-capabilities",
+            "disclosureModes": [
+              "full",
+              "partial",
+              "redacted",
+              "reference-only",
+              "intentionally-withheld"
+            ],
+            "failureCodes": [
+              "profile-version-unsupported",
+              "profile-root-mismatch",
+              "required-feature-unsupported",
+              "identity-unresolved",
+              "authority-unresolved",
+              "authority-expired",
+              "authority-revoked",
+              "authority-amplification",
+              "fact-cut-unavailable",
+              "causal-gap",
+              "payload-digest-mismatch",
+              "idempotency-conflict",
+              "conflict-visible",
+              "disclosure-insufficient",
+              "required-field-withheld",
+              "completion-unproved",
+              "local-policy-rejected"
+            ],
+            "identity": {
+              "actorId": "kungfu-work/hub-alpha-actor",
+              "hubId": "kungfu-work/hub-alpha",
+              "nodeId": "kungfu-work/hub-alpha-node",
+              "workspaceId": "workspace:22d7b7ed-143d-41f8-934a-8627114e4d3e"
+            },
+            "issuedAt": "2026-07-24T00:00:00.000Z",
+            "limits": {
+              "maxEnvelopeBytes": 1048576,
+              "maxInlineBytes": 65536
+            },
+            "operations": [
+              "capability-advertisement",
+              "responsibility-proposal",
+              "fact-admission",
+              "supersession",
+              "completion-assessment",
+              "warrant-revocation"
+            ],
+            "optionalFeatures": [
+              "offline-reconnect"
+            ],
+            "profileVersions": [
+              "0.1.0-alpha.1"
+            ],
+            "requiredFeatures": [
+              "transport-receipts"
+            ],
+            "schemaVersion": 1,
+            "topologies": [
+              "local-peer"
+            ]
+          },
+          "capabilityRoot": "sha256:dd7e64fa79ae6dcc127e755cb257a9d1e41ac3141a3459ed21d22c5e361b9da4",
+          "hubId": "kungfu-work/hub-alpha"
+        },
+        {
+          "capabilities": {
+            "$schema": "https://kfd.libkungfu.dev/schemas/kfd-agent-hub/capabilities.schema.json",
+            "authorityRoots": [
+              "sha256:20863b9b0caffad21f1e88c0624962a9014c62b2ff8036820e44b8af873463b4"
+            ],
+            "bindings": [
+              {
+                "authentication": "local-process",
+                "duplicateDelivery": "at-least-once",
+                "id": "jsonl-stdio",
+                "mediaTypes": [
+                  "application/json"
+                ],
+                "transportReceipts": true
+              }
+            ],
+            "contract": "kfd-agent-hub-capabilities",
+            "disclosureModes": [
+              "full",
+              "partial",
+              "redacted",
+              "reference-only",
+              "intentionally-withheld"
+            ],
+            "failureCodes": [
+              "profile-version-unsupported",
+              "profile-root-mismatch",
+              "required-feature-unsupported",
+              "identity-unresolved",
+              "authority-unresolved",
+              "authority-expired",
+              "authority-revoked",
+              "authority-amplification",
+              "fact-cut-unavailable",
+              "causal-gap",
+              "payload-digest-mismatch",
+              "idempotency-conflict",
+              "conflict-visible",
+              "disclosure-insufficient",
+              "required-field-withheld",
+              "completion-unproved",
+              "local-policy-rejected"
+            ],
+            "identity": {
+              "actorId": "kungfu-work/hub-beta-actor",
+              "hubId": "kungfu-work/hub-beta",
+              "nodeId": "kungfu-work/hub-beta-node",
+              "workspaceId": "workspace:e82dc65e-532a-4a4f-b72a-50f49019830e"
+            },
+            "issuedAt": "2026-07-24T00:00:00.000Z",
+            "limits": {
+              "maxEnvelopeBytes": 1048576,
+              "maxInlineBytes": 65536
+            },
+            "operations": [
+              "capability-advertisement",
+              "responsibility-proposal",
+              "fact-admission",
+              "supersession",
+              "completion-assessment",
+              "warrant-revocation"
+            ],
+            "optionalFeatures": [
+              "offline-reconnect"
+            ],
+            "profileVersions": [
+              "0.1.0-alpha.1"
+            ],
+            "requiredFeatures": [
+              "transport-receipts"
+            ],
+            "schemaVersion": 1,
+            "topologies": [
+              "local-peer"
+            ]
+          },
+          "capabilityRoot": "sha256:0efe4559421b2609fd8f1eb897be53e0c373f39e156b810e2c59d615d797a017",
+          "hubId": "kungfu-work/hub-beta"
+        }
+      ],
+      "observations": {
+        "authorityDomainsDistinct": true,
+        "binding": "jsonl-stdio/v1",
+        "minimumHubCount": 2,
+        "productSurface": "kungfu agent hub handle",
+        "sourceDomainRoot": "sha256:818d21a975dc88d251ff83b201391928c0d38e37d06eafd0633ee0f129e78e27",
+        "sourceWorkspace": {
+          "resultingState": "live-runtime",
+          "workspaceId": "project:a30e829609a5ecba",
+          "workspaceIdentityRoot": "sha256:a30e829609a5ecbaabd3fb32379ccdec17f061f2f92019b864bc5e2c7f5c02a4",
+          "workspaceKind": "project"
+        },
+        "targetDomainRoot": "sha256:20863b9b0caffad21f1e88c0624962a9014c62b2ff8036820e44b8af873463b4",
+        "targetWorkspace": {
+          "resultingState": "live-runtime",
+          "workspaceId": "project:55b5b2087c9789ee",
+          "workspaceIdentityRoot": "sha256:55b5b2087c9789ee4ac4b15e6194380a3af8b2ccc454432f4cb50d3774234111",
+          "workspaceKind": "project"
+        }
+      },
+      "requestId": "handshake",
+      "schemaVersion": 1,
+      "status": "accepted",
+      "verdict": "not-applicable"
+    },
+    "handshakeRoot": "sha256:b5844618ffc197c16b589e8fb6b06f755e66efe0537e83632ade8b5f391e42af"
+  },
+  "capabilities": [
+    {
+      "hubId": "kungfu-work/hub-alpha",
+      "root": "sha256:dd7e64fa79ae6dcc127e755cb257a9d1e41ac3141a3459ed21d22c5e361b9da4",
+      "document": {
+        "$schema": "https://kfd.libkungfu.dev/schemas/kfd-agent-hub/capabilities.schema.json",
+        "authorityRoots": [
+          "sha256:818d21a975dc88d251ff83b201391928c0d38e37d06eafd0633ee0f129e78e27"
+        ],
+        "bindings": [
+          {
+            "authentication": "local-process",
+            "duplicateDelivery": "at-least-once",
+            "id": "jsonl-stdio",
+            "mediaTypes": [
+              "application/json"
+            ],
+            "transportReceipts": true
+          }
+        ],
+        "contract": "kfd-agent-hub-capabilities",
+        "disclosureModes": [
+          "full",
+          "partial",
+          "redacted",
+          "reference-only",
+          "intentionally-withheld"
+        ],
+        "failureCodes": [
+          "profile-version-unsupported",
+          "profile-root-mismatch",
+          "required-feature-unsupported",
+          "identity-unresolved",
+          "authority-unresolved",
+          "authority-expired",
+          "authority-revoked",
+          "authority-amplification",
+          "fact-cut-unavailable",
+          "causal-gap",
+          "payload-digest-mismatch",
+          "idempotency-conflict",
+          "conflict-visible",
+          "disclosure-insufficient",
+          "required-field-withheld",
+          "completion-unproved",
+          "local-policy-rejected"
+        ],
+        "identity": {
+          "actorId": "kungfu-work/hub-alpha-actor",
+          "hubId": "kungfu-work/hub-alpha",
+          "nodeId": "kungfu-work/hub-alpha-node",
+          "workspaceId": "workspace:22d7b7ed-143d-41f8-934a-8627114e4d3e"
+        },
+        "issuedAt": "2026-07-24T00:00:00.000Z",
+        "limits": {
+          "maxEnvelopeBytes": 1048576,
+          "maxInlineBytes": 65536
+        },
+        "operations": [
+          "capability-advertisement",
+          "responsibility-proposal",
+          "fact-admission",
+          "supersession",
+          "completion-assessment",
+          "warrant-revocation"
+        ],
+        "optionalFeatures": [
+          "offline-reconnect"
+        ],
+        "profileVersions": [
+          "0.1.0-alpha.1"
+        ],
+        "requiredFeatures": [
+          "transport-receipts"
+        ],
+        "schemaVersion": 1,
+        "topologies": [
+          "local-peer"
+        ]
+      }
+    },
+    {
+      "hubId": "kungfu-work/hub-beta",
+      "root": "sha256:0efe4559421b2609fd8f1eb897be53e0c373f39e156b810e2c59d615d797a017",
+      "document": {
+        "$schema": "https://kfd.libkungfu.dev/schemas/kfd-agent-hub/capabilities.schema.json",
+        "authorityRoots": [
+          "sha256:20863b9b0caffad21f1e88c0624962a9014c62b2ff8036820e44b8af873463b4"
+        ],
+        "bindings": [
+          {
+            "authentication": "local-process",
+            "duplicateDelivery": "at-least-once",
+            "id": "jsonl-stdio",
+            "mediaTypes": [
+              "application/json"
+            ],
+            "transportReceipts": true
+          }
+        ],
+        "contract": "kfd-agent-hub-capabilities",
+        "disclosureModes": [
+          "full",
+          "partial",
+          "redacted",
+          "reference-only",
+          "intentionally-withheld"
+        ],
+        "failureCodes": [
+          "profile-version-unsupported",
+          "profile-root-mismatch",
+          "required-feature-unsupported",
+          "identity-unresolved",
+          "authority-unresolved",
+          "authority-expired",
+          "authority-revoked",
+          "authority-amplification",
+          "fact-cut-unavailable",
+          "causal-gap",
+          "payload-digest-mismatch",
+          "idempotency-conflict",
+          "conflict-visible",
+          "disclosure-insufficient",
+          "required-field-withheld",
+          "completion-unproved",
+          "local-policy-rejected"
+        ],
+        "identity": {
+          "actorId": "kungfu-work/hub-beta-actor",
+          "hubId": "kungfu-work/hub-beta",
+          "nodeId": "kungfu-work/hub-beta-node",
+          "workspaceId": "workspace:e82dc65e-532a-4a4f-b72a-50f49019830e"
+        },
+        "issuedAt": "2026-07-24T00:00:00.000Z",
+        "limits": {
+          "maxEnvelopeBytes": 1048576,
+          "maxInlineBytes": 65536
+        },
+        "operations": [
+          "capability-advertisement",
+          "responsibility-proposal",
+          "fact-admission",
+          "supersession",
+          "completion-assessment",
+          "warrant-revocation"
+        ],
+        "optionalFeatures": [
+          "offline-reconnect"
+        ],
+        "profileVersions": [
+          "0.1.0-alpha.1"
+        ],
+        "requiredFeatures": [
+          "transport-receipts"
+        ],
+        "schemaVersion": 1,
+        "topologies": [
+          "local-peer"
+        ]
+      }
+    }
+  ],
+  "platform": {
+    "os": "darwin",
+    "arch": "arm64",
+    "runtime": "node-22.22.3"
+  },
+  "execution": {
+    "startedAt": "2026-07-24T00:06:14.820Z",
+    "finishedAt": "2026-07-24T00:06:20.835Z",
+    "offline": true,
+    "requestCount": 21,
+    "transcriptRoot": "sha256:b5071593f969191ff7221fa8f58695e7ba7a097dacc33be804ab94473abfaeb5",
+    "resultRoot": "sha256:9789b0d18d4725fe31cb4ed09e781f53d7d9820848709cec241897386ff88276"
+  },
+  "coverage": {
+    "total": 20,
+    "passed": 20,
+    "failed": 0,
+    "categories": {
+      "authority": {
+        "total": 3,
+        "passed": 3,
+        "failed": 0
+      },
+      "completion": {
+        "total": 1,
+        "passed": 1,
+        "failed": 0
+      },
+      "conflict": {
+        "total": 2,
+        "passed": 2,
+        "failed": 0
+      },
+      "delivery": {
+        "total": 5,
+        "passed": 5,
+        "failed": 0
+      },
+      "knowledge": {
+        "total": 3,
+        "passed": 3,
+        "failed": 0
+      },
+      "negotiation": {
+        "total": 3,
+        "passed": 3,
+        "failed": 0
+      },
+      "portability": {
+        "total": 2,
+        "passed": 2,
+        "failed": 0
+      },
+      "recovery": {
+        "total": 1,
+        "passed": 1,
+        "failed": 0
+      }
+    }
+  },
+  "valid": true,
+  "qualifying": false,
+  "certification": false,
+  "results": [
+    {
+      "id": "hub-001-negotiate-exact-profile",
+      "category": "negotiation",
+      "status": "pass",
+      "expected": {
+        "status": "accepted",
+        "code": "capability-negotiated",
+        "verdict": "admitted"
+      },
+      "actual": {
+        "status": "accepted",
+        "code": "capability-negotiated",
+        "verdict": "admitted"
+      },
+      "response": {
+        "adapter": {
+          "id": "kungfu-work-agent-hub",
+          "topology": "local-peer",
+          "version": "0.1.0-alpha.1"
+        },
+        "code": "capability-negotiated",
+        "contract": "kfd.agent-hub-adapter-response/v1",
+        "observations": {
+          "authorityDomainsDistinct": true,
+          "negotiatedFeatures": [
+            "transport-receipts"
+          ],
+          "productSurface": "kungfu agent hub handle",
+          "profile": "0.1.0-alpha.1",
+          "profileRoot": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "sourceDomain": {
+            "_identityRoot": "sha256:a30e829609a5ecbaabd3fb32379ccdec17f061f2f92019b864bc5e2c7f5c02a4",
+            "actorId": "kungfu-work/hub-alpha-actor",
+            "hubId": "kungfu-work/hub-alpha",
+            "nodeId": "kungfu-work/hub-alpha-node",
+            "workspaceId": "workspace:22d7b7ed-143d-41f8-934a-8627114e4d3e"
+          },
+          "sourceWorkspace": {
+            "resultingState": "live-runtime",
+            "workspaceId": "project:a30e829609a5ecba",
+            "workspaceIdentityRoot": "sha256:a30e829609a5ecbaabd3fb32379ccdec17f061f2f92019b864bc5e2c7f5c02a4",
+            "workspaceKind": "project"
+          },
+          "targetDomain": {
+            "_identityRoot": "sha256:55b5b2087c9789ee4ac4b15e6194380a3af8b2ccc454432f4cb50d3774234111",
+            "actorId": "kungfu-work/hub-beta-actor",
+            "hubId": "kungfu-work/hub-beta",
+            "nodeId": "kungfu-work/hub-beta-node",
+            "workspaceId": "workspace:e82dc65e-532a-4a4f-b72a-50f49019830e"
+          },
+          "targetWorkspace": {
+            "resultingState": "live-runtime",
+            "workspaceId": "project:55b5b2087c9789ee",
+            "workspaceIdentityRoot": "sha256:55b5b2087c9789ee4ac4b15e6194380a3af8b2ccc454432f4cb50d3774234111",
+            "workspaceKind": "project"
+          }
+        },
+        "requestId": "hub-001-negotiate-exact-profile",
+        "schemaVersion": 1,
+        "status": "accepted",
+        "verdict": "admitted"
+      },
+      "responseRoot": "sha256:8d563d9a3fbf16ee5a18056c73adc8fe8df953a39cfc1198a640204d9c26a336"
+    },
+    {
+      "id": "hub-002-reject-unknown-required-feature",
+      "category": "negotiation",
+      "status": "pass",
+      "expected": {
+        "status": "rejected",
+        "code": "required-feature-unsupported",
+        "verdict": "rejected"
+      },
+      "actual": {
+        "status": "rejected",
+        "code": "required-feature-unsupported",
+        "verdict": "rejected"
+      },
+      "response": {
+        "adapter": {
+          "id": "kungfu-work-agent-hub",
+          "topology": "local-peer",
+          "version": "0.1.0-alpha.1"
+        },
+        "code": "required-feature-unsupported",
+        "contract": "kfd.agent-hub-adapter-response/v1",
+        "observations": {
+          "authorityDomainsDistinct": true,
+          "productSurface": "kungfu agent hub handle",
+          "sourceDomain": {
+            "_identityRoot": "sha256:a30e829609a5ecbaabd3fb32379ccdec17f061f2f92019b864bc5e2c7f5c02a4",
+            "actorId": "kungfu-work/hub-alpha-actor",
+            "hubId": "kungfu-work/hub-alpha",
+            "nodeId": "kungfu-work/hub-alpha-node",
+            "workspaceId": "workspace:22d7b7ed-143d-41f8-934a-8627114e4d3e"
+          },
+          "sourceWorkspace": {
+            "resultingState": "live-runtime",
+            "workspaceId": "project:a30e829609a5ecba",
+            "workspaceIdentityRoot": "sha256:a30e829609a5ecbaabd3fb32379ccdec17f061f2f92019b864bc5e2c7f5c02a4",
+            "workspaceKind": "project"
+          },
+          "targetDomain": {
+            "_identityRoot": "sha256:55b5b2087c9789ee4ac4b15e6194380a3af8b2ccc454432f4cb50d3774234111",
+            "actorId": "kungfu-work/hub-beta-actor",
+            "hubId": "kungfu-work/hub-beta",
+            "nodeId": "kungfu-work/hub-beta-node",
+            "workspaceId": "workspace:e82dc65e-532a-4a4f-b72a-50f49019830e"
+          },
+          "targetWorkspace": {
+            "resultingState": "live-runtime",
+            "workspaceId": "project:55b5b2087c9789ee",
+            "workspaceIdentityRoot": "sha256:55b5b2087c9789ee4ac4b15e6194380a3af8b2ccc454432f4cb50d3774234111",
+            "workspaceKind": "project"
+          },
+          "unsupportedFeatures": [
+            "future-normative-feature"
+          ]
+        },
+        "requestId": "hub-002-reject-unknown-required-feature",
+        "schemaVersion": 1,
+        "status": "rejected",
+        "verdict": "rejected"
+      },
+      "responseRoot": "sha256:9b52731904adfdd954d1445fe397ebb6d836167e626fe161fc80fed5b858ef35"
+    },
+    {
+      "id": "hub-003-reject-profile-root-drift",
+      "category": "negotiation",
+      "status": "pass",
+      "expected": {
+        "status": "rejected",
+        "code": "profile-root-mismatch",
+        "verdict": "rejected"
+      },
+      "actual": {
+        "status": "rejected",
+        "code": "profile-root-mismatch",
+        "verdict": "rejected"
+      },
+      "response": {
+        "adapter": {
+          "id": "kungfu-work-agent-hub",
+          "topology": "local-peer",
+          "version": "0.1.0-alpha.1"
+        },
+        "code": "profile-root-mismatch",
+        "contract": "kfd.agent-hub-adapter-response/v1",
+        "observations": {
+          "authorityDomainsDistinct": true,
+          "localProfileRoot": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "productSurface": "kungfu agent hub handle",
+          "remoteProfileRoot": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+          "sourceDomain": {
+            "_identityRoot": "sha256:a30e829609a5ecbaabd3fb32379ccdec17f061f2f92019b864bc5e2c7f5c02a4",
+            "actorId": "kungfu-work/hub-alpha-actor",
+            "hubId": "kungfu-work/hub-alpha",
+            "nodeId": "kungfu-work/hub-alpha-node",
+            "workspaceId": "workspace:22d7b7ed-143d-41f8-934a-8627114e4d3e"
+          },
+          "sourceWorkspace": {
+            "resultingState": "live-runtime",
+            "workspaceId": "project:a30e829609a5ecba",
+            "workspaceIdentityRoot": "sha256:a30e829609a5ecbaabd3fb32379ccdec17f061f2f92019b864bc5e2c7f5c02a4",
+            "workspaceKind": "project"
+          },
+          "targetDomain": {
+            "_identityRoot": "sha256:55b5b2087c9789ee4ac4b15e6194380a3af8b2ccc454432f4cb50d3774234111",
+            "actorId": "kungfu-work/hub-beta-actor",
+            "hubId": "kungfu-work/hub-beta",
+            "nodeId": "kungfu-work/hub-beta-node",
+            "workspaceId": "workspace:e82dc65e-532a-4a4f-b72a-50f49019830e"
+          },
+          "targetWorkspace": {
+            "resultingState": "live-runtime",
+            "workspaceId": "project:55b5b2087c9789ee",
+            "workspaceIdentityRoot": "sha256:55b5b2087c9789ee4ac4b15e6194380a3af8b2ccc454432f4cb50d3774234111",
+            "workspaceKind": "project"
+          }
+        },
+        "requestId": "hub-003-reject-profile-root-drift",
+        "schemaVersion": 1,
+        "status": "rejected",
+        "verdict": "rejected"
+      },
+      "responseRoot": "sha256:75c1682ffb9d24322750efb0db03446cbad05d454f65cb108f2839ddf2df5591"
+    },
+    {
+      "id": "hub-004-record-delivery-without-admission",
+      "category": "delivery",
+      "status": "pass",
+      "expected": {
+        "status": "accepted",
+        "code": "delivery-recorded",
+        "verdict": "not-applicable"
+      },
+      "actual": {
+        "status": "accepted",
+        "code": "delivery-recorded",
+        "verdict": "not-applicable"
+      },
+      "response": {
+        "adapter": {
+          "id": "kungfu-work-agent-hub",
+          "topology": "local-peer",
+          "version": "0.1.0-alpha.1"
+        },
+        "code": "delivery-recorded",
+        "contract": "kfd.agent-hub-adapter-response/v1",
+        "observations": {
+          "authorityDomainsDistinct": true,
+          "deliveryRecorded": true,
+          "productSurface": "kungfu agent hub handle",
+          "semanticAdmission": false,
+          "sourceDomain": {
+            "_identityRoot": "sha256:a30e829609a5ecbaabd3fb32379ccdec17f061f2f92019b864bc5e2c7f5c02a4",
+            "actorId": "kungfu-work/hub-alpha-actor",
+            "hubId": "kungfu-work/hub-alpha",
+            "nodeId": "kungfu-work/hub-alpha-node",
+            "workspaceId": "workspace:22d7b7ed-143d-41f8-934a-8627114e4d3e"
+          },
+          "sourceWorkspace": {
+            "resultingState": "live-runtime",
+            "workspaceId": "project:a30e829609a5ecba",
+            "workspaceIdentityRoot": "sha256:a30e829609a5ecbaabd3fb32379ccdec17f061f2f92019b864bc5e2c7f5c02a4",
+            "workspaceKind": "project"
+          },
+          "storeRoot": "sha256:5e8e6c19e3240dfecb4dc848ca8a145af5fb9cfc2005dcc6e75ef68b4da6673f",
+          "targetDomain": {
+            "_identityRoot": "sha256:55b5b2087c9789ee4ac4b15e6194380a3af8b2ccc454432f4cb50d3774234111",
+            "actorId": "kungfu-work/hub-beta-actor",
+            "hubId": "kungfu-work/hub-beta",
+            "nodeId": "kungfu-work/hub-beta-node",
+            "workspaceId": "workspace:e82dc65e-532a-4a4f-b72a-50f49019830e"
+          },
+          "targetWorkspace": {
+            "resultingState": "live-runtime",
+            "workspaceId": "project:55b5b2087c9789ee",
+            "workspaceIdentityRoot": "sha256:55b5b2087c9789ee4ac4b15e6194380a3af8b2ccc454432f4cb50d3774234111",
+            "workspaceKind": "project"
+          }
+        },
+        "requestId": "hub-004-record-delivery-without-admission",
+        "schemaVersion": 1,
+        "status": "accepted",
+        "verdict": "not-applicable"
+      },
+      "responseRoot": "sha256:6c8d5144296d63420bac30f3c3b4e7fd53bfed849bd49606e2aa4ec2a4881461"
+    },
+    {
+      "id": "hub-005-preserve-identical-duplicate",
+      "category": "delivery",
+      "status": "pass",
+      "expected": {
+        "status": "accepted",
+        "code": "duplicate-preserved",
+        "verdict": "not-applicable"
+      },
+      "actual": {
+        "status": "accepted",
+        "code": "duplicate-preserved",
+        "verdict": "not-applicable"
+      },
+      "response": {
+        "adapter": {
+          "id": "kungfu-work-agent-hub",
+          "topology": "local-peer",
+          "version": "0.1.0-alpha.1"
+        },
+        "code": "duplicate-preserved",
+        "contract": "kfd.agent-hub-adapter-response/v1",
+        "observations": {
+          "authorityDomainsDistinct": true,
+          "idempotencyKey": "delivery-5",
+          "payloadRoot": "sha256:dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+          "productSurface": "kungfu agent hub handle",
+          "sourceAuthorityRoot": "sha256:a30e829609a5ecbaabd3fb32379ccdec17f061f2f92019b864bc5e2c7f5c02a4",
+          "sourceDomain": {
+            "_identityRoot": "sha256:a30e829609a5ecbaabd3fb32379ccdec17f061f2f92019b864bc5e2c7f5c02a4",
+            "actorId": "kungfu-work/hub-alpha-actor",
+            "hubId": "kungfu-work/hub-alpha",
+            "nodeId": "kungfu-work/hub-alpha-node",
+            "workspaceId": "workspace:22d7b7ed-143d-41f8-934a-8627114e4d3e"
+          },
+          "sourceWorkspace": {
+            "resultingState": "live-runtime",
+            "workspaceId": "project:a30e829609a5ecba",
+            "workspaceIdentityRoot": "sha256:a30e829609a5ecbaabd3fb32379ccdec17f061f2f92019b864bc5e2c7f5c02a4",
+            "workspaceKind": "project"
+          },
+          "storeRoot": "sha256:840352fcc390cf483b17c0a3652b9aff9a89144d4824e48aef85246fe11d17e3",
+          "targetDomain": {
+            "_identityRoot": "sha256:55b5b2087c9789ee4ac4b15e6194380a3af8b2ccc454432f4cb50d3774234111",
+            "actorId": "kungfu-work/hub-beta-actor",
+            "hubId": "kungfu-work/hub-beta",
+            "nodeId": "kungfu-work/hub-beta-node",
+            "workspaceId": "workspace:e82dc65e-532a-4a4f-b72a-50f49019830e"
+          },
+          "targetWorkspace": {
+            "resultingState": "live-runtime",
+            "workspaceId": "project:55b5b2087c9789ee",
+            "workspaceIdentityRoot": "sha256:55b5b2087c9789ee4ac4b15e6194380a3af8b2ccc454432f4cb50d3774234111",
+            "workspaceKind": "project"
+          }
+        },
+        "requestId": "hub-005-preserve-identical-duplicate",
+        "schemaVersion": 1,
+        "status": "accepted",
+        "verdict": "not-applicable"
+      },
+      "responseRoot": "sha256:d8c729aacde74a899a176244071983517b573f9287713bed48172072b0b77534"
+    },
+    {
+      "id": "hub-006-reject-idempotency-conflict",
+      "category": "delivery",
+      "status": "pass",
+      "expected": {
+        "status": "rejected",
+        "code": "idempotency-conflict",
+        "verdict": "rejected"
+      },
+      "actual": {
+        "status": "rejected",
+        "code": "idempotency-conflict",
+        "verdict": "rejected"
+      },
+      "response": {
+        "adapter": {
+          "id": "kungfu-work-agent-hub",
+          "topology": "local-peer",
+          "version": "0.1.0-alpha.1"
+        },
+        "code": "idempotency-conflict",
+        "contract": "kfd.agent-hub-adapter-response/v1",
+        "observations": {
+          "authorityDomainsDistinct": true,
+          "idempotencyKey": "delivery-6",
+          "productSurface": "kungfu agent hub handle",
+          "proposedPayloadRoot": "sha256:eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+          "retainedPayloadRoot": "sha256:dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+          "sourceAuthorityRoot": "sha256:a30e829609a5ecbaabd3fb32379ccdec17f061f2f92019b864bc5e2c7f5c02a4",
+          "sourceDomain": {
+            "_identityRoot": "sha256:a30e829609a5ecbaabd3fb32379ccdec17f061f2f92019b864bc5e2c7f5c02a4",
+            "actorId": "kungfu-work/hub-alpha-actor",
+            "hubId": "kungfu-work/hub-alpha",
+            "nodeId": "kungfu-work/hub-alpha-node",
+            "workspaceId": "workspace:22d7b7ed-143d-41f8-934a-8627114e4d3e"
+          },
+          "sourceWorkspace": {
+            "resultingState": "live-runtime",
+            "workspaceId": "project:a30e829609a5ecba",
+            "workspaceIdentityRoot": "sha256:a30e829609a5ecbaabd3fb32379ccdec17f061f2f92019b864bc5e2c7f5c02a4",
+            "workspaceKind": "project"
+          },
+          "storeRoot": "sha256:9c2453ee1d929b66f0a0e22569e1678a1052fe17f178f5d66886815a12f32681",
+          "targetDomain": {
+            "_identityRoot": "sha256:55b5b2087c9789ee4ac4b15e6194380a3af8b2ccc454432f4cb50d3774234111",
+            "actorId": "kungfu-work/hub-beta-actor",
+            "hubId": "kungfu-work/hub-beta",
+            "nodeId": "kungfu-work/hub-beta-node",
+            "workspaceId": "workspace:e82dc65e-532a-4a4f-b72a-50f49019830e"
+          },
+          "targetWorkspace": {
+            "resultingState": "live-runtime",
+            "workspaceId": "project:55b5b2087c9789ee",
+            "workspaceIdentityRoot": "sha256:55b5b2087c9789ee4ac4b15e6194380a3af8b2ccc454432f4cb50d3774234111",
+            "workspaceKind": "project"
+          }
+        },
+        "requestId": "hub-006-reject-idempotency-conflict",
+        "schemaVersion": 1,
+        "status": "rejected",
+        "verdict": "rejected"
+      },
+      "responseRoot": "sha256:06409d74ecb2c477245ffbb718b812deb3a38b8209099ea79da26f5500da3726"
+    },
+    {
+      "id": "hub-007-admit-under-local-authority",
+      "category": "delivery",
+      "status": "pass",
+      "expected": {
+        "status": "accepted",
+        "code": "admission-accepted",
+        "verdict": "admitted"
+      },
+      "actual": {
+        "status": "accepted",
+        "code": "admission-accepted",
+        "verdict": "admitted"
+      },
+      "response": {
+        "adapter": {
+          "id": "kungfu-work-agent-hub",
+          "topology": "local-peer",
+          "version": "0.1.0-alpha.1"
+        },
+        "code": "admission-accepted",
+        "contract": "kfd.agent-hub-adapter-response/v1",
+        "observations": {
+          "authorityDomainsDistinct": true,
+          "delivery": true,
+          "productSurface": "kungfu agent hub handle",
+          "semanticAdmission": true,
+          "sourceDomain": {
+            "_identityRoot": "sha256:a30e829609a5ecbaabd3fb32379ccdec17f061f2f92019b864bc5e2c7f5c02a4",
+            "actorId": "kungfu-work/hub-alpha-actor",
+            "hubId": "kungfu-work/hub-alpha",
+            "nodeId": "kungfu-work/hub-alpha-node",
+            "workspaceId": "workspace:22d7b7ed-143d-41f8-934a-8627114e4d3e"
+          },
+          "sourceWorkspace": {
+            "resultingState": "live-runtime",
+            "workspaceId": "project:a30e829609a5ecba",
+            "workspaceIdentityRoot": "sha256:a30e829609a5ecbaabd3fb32379ccdec17f061f2f92019b864bc5e2c7f5c02a4",
+            "workspaceKind": "project"
+          },
+          "storeRoot": "sha256:1f6573e891f71c30e2994a8022c8319f82de8631b05d142ab9388f2b0e94c1c2",
+          "targetDomain": {
+            "_identityRoot": "sha256:55b5b2087c9789ee4ac4b15e6194380a3af8b2ccc454432f4cb50d3774234111",
+            "actorId": "kungfu-work/hub-beta-actor",
+            "hubId": "kungfu-work/hub-beta",
+            "nodeId": "kungfu-work/hub-beta-node",
+            "workspaceId": "workspace:e82dc65e-532a-4a4f-b72a-50f49019830e"
+          },
+          "targetWorkspace": {
+            "resultingState": "live-runtime",
+            "workspaceId": "project:55b5b2087c9789ee",
+            "workspaceIdentityRoot": "sha256:55b5b2087c9789ee4ac4b15e6194380a3af8b2ccc454432f4cb50d3774234111",
+            "workspaceKind": "project"
+          }
+        },
+        "requestId": "hub-007-admit-under-local-authority",
+        "schemaVersion": 1,
+        "status": "accepted",
+        "verdict": "admitted"
+      },
+      "responseRoot": "sha256:7d40bc04831fb51addf4d3ac2cb2b836e95991b5237687944dbddab216792dfe"
+    },
+    {
+      "id": "hub-008-retain-delayed-delivery",
+      "category": "delivery",
+      "status": "pass",
+      "expected": {
+        "status": "accepted",
+        "code": "delivery-recorded",
+        "verdict": "not-applicable"
+      },
+      "actual": {
+        "status": "accepted",
+        "code": "delivery-recorded",
+        "verdict": "not-applicable"
+      },
+      "response": {
+        "adapter": {
+          "id": "kungfu-work-agent-hub",
+          "topology": "local-peer",
+          "version": "0.1.0-alpha.1"
+        },
+        "code": "delivery-recorded",
+        "contract": "kfd.agent-hub-adapter-response/v1",
+        "observations": {
+          "authorityDomainsDistinct": true,
+          "deliveryRecorded": true,
+          "productSurface": "kungfu agent hub handle",
+          "semanticAdmission": false,
+          "sourceDomain": {
+            "_identityRoot": "sha256:a30e829609a5ecbaabd3fb32379ccdec17f061f2f92019b864bc5e2c7f5c02a4",
+            "actorId": "kungfu-work/hub-alpha-actor",
+            "hubId": "kungfu-work/hub-alpha",
+            "nodeId": "kungfu-work/hub-alpha-node",
+            "workspaceId": "workspace:22d7b7ed-143d-41f8-934a-8627114e4d3e"
+          },
+          "sourceWorkspace": {
+            "resultingState": "live-runtime",
+            "workspaceId": "project:a30e829609a5ecba",
+            "workspaceIdentityRoot": "sha256:a30e829609a5ecbaabd3fb32379ccdec17f061f2f92019b864bc5e2c7f5c02a4",
+            "workspaceKind": "project"
+          },
+          "storeRoot": "sha256:31fc386f0f26c1473d48a6d4b8e0575939ed3386256c0b3d9732993fdd710f9c",
+          "targetDomain": {
+            "_identityRoot": "sha256:55b5b2087c9789ee4ac4b15e6194380a3af8b2ccc454432f4cb50d3774234111",
+            "actorId": "kungfu-work/hub-beta-actor",
+            "hubId": "kungfu-work/hub-beta",
+            "nodeId": "kungfu-work/hub-beta-node",
+            "workspaceId": "workspace:e82dc65e-532a-4a4f-b72a-50f49019830e"
+          },
+          "targetWorkspace": {
+            "resultingState": "live-runtime",
+            "workspaceId": "project:55b5b2087c9789ee",
+            "workspaceIdentityRoot": "sha256:55b5b2087c9789ee4ac4b15e6194380a3af8b2ccc454432f4cb50d3774234111",
+            "workspaceKind": "project"
+          }
+        },
+        "requestId": "hub-008-retain-delayed-delivery",
+        "schemaVersion": 1,
+        "status": "accepted",
+        "verdict": "not-applicable"
+      },
+      "responseRoot": "sha256:947e610cc86fe4849f7d404a590af9b6a67d2cb2df55a577d776e92ed9f7e96d"
+    },
+    {
+      "id": "hub-009-attenuate-delegated-authority",
+      "category": "authority",
+      "status": "pass",
+      "expected": {
+        "status": "accepted",
+        "code": "authority-attenuated",
+        "verdict": "admitted"
+      },
+      "actual": {
+        "status": "accepted",
+        "code": "authority-attenuated",
+        "verdict": "admitted"
+      },
+      "response": {
+        "adapter": {
+          "id": "kungfu-work-agent-hub",
+          "topology": "local-peer",
+          "version": "0.1.0-alpha.1"
+        },
+        "code": "authority-attenuated",
+        "contract": "kfd.agent-hub-adapter-response/v1",
+        "observations": {
+          "actionsNarrowed": true,
+          "authorityDomainsDistinct": true,
+          "productSurface": "kungfu agent hub handle",
+          "sourceDomain": {
+            "_identityRoot": "sha256:a30e829609a5ecbaabd3fb32379ccdec17f061f2f92019b864bc5e2c7f5c02a4",
+            "actorId": "kungfu-work/hub-alpha-actor",
+            "hubId": "kungfu-work/hub-alpha",
+            "nodeId": "kungfu-work/hub-alpha-node",
+            "workspaceId": "workspace:22d7b7ed-143d-41f8-934a-8627114e4d3e"
+          },
+          "sourceWorkspace": {
+            "resultingState": "live-runtime",
+            "workspaceId": "project:a30e829609a5ecba",
+            "workspaceIdentityRoot": "sha256:a30e829609a5ecbaabd3fb32379ccdec17f061f2f92019b864bc5e2c7f5c02a4",
+            "workspaceKind": "project"
+          },
+          "storeRoot": "sha256:b09edf587dd9fe795f45c4faaeb416e591351bfb8fd8c0d81be20f978d1cd524",
+          "targetDomain": {
+            "_identityRoot": "sha256:55b5b2087c9789ee4ac4b15e6194380a3af8b2ccc454432f4cb50d3774234111",
+            "actorId": "kungfu-work/hub-beta-actor",
+            "hubId": "kungfu-work/hub-beta",
+            "nodeId": "kungfu-work/hub-beta-node",
+            "workspaceId": "workspace:e82dc65e-532a-4a4f-b72a-50f49019830e"
+          },
+          "targetWorkspace": {
+            "resultingState": "live-runtime",
+            "workspaceId": "project:55b5b2087c9789ee",
+            "workspaceIdentityRoot": "sha256:55b5b2087c9789ee4ac4b15e6194380a3af8b2ccc454432f4cb50d3774234111",
+            "workspaceKind": "project"
+          },
+          "timeNarrowed": true
+        },
+        "requestId": "hub-009-attenuate-delegated-authority",
+        "schemaVersion": 1,
+        "status": "accepted",
+        "verdict": "admitted"
+      },
+      "responseRoot": "sha256:6b5988b001f304a348b9381189438f36cea7fa3645412d00b3caa0bc6aaa741b"
+    },
+    {
+      "id": "hub-010-reject-authority-amplification",
+      "category": "authority",
+      "status": "pass",
+      "expected": {
+        "status": "rejected",
+        "code": "authority-amplification",
+        "verdict": "rejected"
+      },
+      "actual": {
+        "status": "rejected",
+        "code": "authority-amplification",
+        "verdict": "rejected"
+      },
+      "response": {
+        "adapter": {
+          "id": "kungfu-work-agent-hub",
+          "topology": "local-peer",
+          "version": "0.1.0-alpha.1"
+        },
+        "code": "authority-amplification",
+        "contract": "kfd.agent-hub-adapter-response/v1",
+        "observations": {
+          "addedActions": [
+            "delete"
+          ],
+          "authorityDomainsDistinct": true,
+          "childExpiresAt": 150,
+          "parentExpiresAt": 200,
+          "productSurface": "kungfu agent hub handle",
+          "sourceDomain": {
+            "_identityRoot": "sha256:a30e829609a5ecbaabd3fb32379ccdec17f061f2f92019b864bc5e2c7f5c02a4",
+            "actorId": "kungfu-work/hub-alpha-actor",
+            "hubId": "kungfu-work/hub-alpha",
+            "nodeId": "kungfu-work/hub-alpha-node",
+            "workspaceId": "workspace:22d7b7ed-143d-41f8-934a-8627114e4d3e"
+          },
+          "sourceWorkspace": {
+            "resultingState": "live-runtime",
+            "workspaceId": "project:a30e829609a5ecba",
+            "workspaceIdentityRoot": "sha256:a30e829609a5ecbaabd3fb32379ccdec17f061f2f92019b864bc5e2c7f5c02a4",
+            "workspaceKind": "project"
+          },
+          "targetDomain": {
+            "_identityRoot": "sha256:55b5b2087c9789ee4ac4b15e6194380a3af8b2ccc454432f4cb50d3774234111",
+            "actorId": "kungfu-work/hub-beta-actor",
+            "hubId": "kungfu-work/hub-beta",
+            "nodeId": "kungfu-work/hub-beta-node",
+            "workspaceId": "workspace:e82dc65e-532a-4a4f-b72a-50f49019830e"
+          },
+          "targetWorkspace": {
+            "resultingState": "live-runtime",
+            "workspaceId": "project:55b5b2087c9789ee",
+            "workspaceIdentityRoot": "sha256:55b5b2087c9789ee4ac4b15e6194380a3af8b2ccc454432f4cb50d3774234111",
+            "workspaceKind": "project"
+          }
+        },
+        "requestId": "hub-010-reject-authority-amplification",
+        "schemaVersion": 1,
+        "status": "rejected",
+        "verdict": "rejected"
+      },
+      "responseRoot": "sha256:e598257a8c48a04b4a040fef25dfebd0e1f14c7c85d29d1fe999990f7540ba5b"
+    },
+    {
+      "id": "hub-011-reject-revoked-warrant",
+      "category": "authority",
+      "status": "pass",
+      "expected": {
+        "status": "rejected",
+        "code": "authority-revoked",
+        "verdict": "rejected"
+      },
+      "actual": {
+        "status": "rejected",
+        "code": "authority-revoked",
+        "verdict": "rejected"
+      },
+      "response": {
+        "adapter": {
+          "id": "kungfu-work-agent-hub",
+          "topology": "local-peer",
+          "version": "0.1.0-alpha.1"
+        },
+        "code": "authority-revoked",
+        "contract": "kfd.agent-hub-adapter-response/v1",
+        "observations": {
+          "authorityDomainsDistinct": true,
+          "productSurface": "kungfu agent hub handle",
+          "sourceDomain": {
+            "_identityRoot": "sha256:a30e829609a5ecbaabd3fb32379ccdec17f061f2f92019b864bc5e2c7f5c02a4",
+            "actorId": "kungfu-work/hub-alpha-actor",
+            "hubId": "kungfu-work/hub-alpha",
+            "nodeId": "kungfu-work/hub-alpha-node",
+            "workspaceId": "workspace:22d7b7ed-143d-41f8-934a-8627114e4d3e"
+          },
+          "sourceWorkspace": {
+            "resultingState": "live-runtime",
+            "workspaceId": "project:a30e829609a5ecba",
+            "workspaceIdentityRoot": "sha256:a30e829609a5ecbaabd3fb32379ccdec17f061f2f92019b864bc5e2c7f5c02a4",
+            "workspaceKind": "project"
+          },
+          "storeRoot": "sha256:2be601dadc132142167e93051d2be71acf57ee1e4df791620aa976d5fada3b6c",
+          "targetDomain": {
+            "_identityRoot": "sha256:55b5b2087c9789ee4ac4b15e6194380a3af8b2ccc454432f4cb50d3774234111",
+            "actorId": "kungfu-work/hub-beta-actor",
+            "hubId": "kungfu-work/hub-beta",
+            "nodeId": "kungfu-work/hub-beta-node",
+            "workspaceId": "workspace:e82dc65e-532a-4a4f-b72a-50f49019830e"
+          },
+          "targetWorkspace": {
+            "resultingState": "live-runtime",
+            "workspaceId": "project:55b5b2087c9789ee",
+            "workspaceIdentityRoot": "sha256:55b5b2087c9789ee4ac4b15e6194380a3af8b2ccc454432f4cb50d3774234111",
+            "workspaceKind": "project"
+          },
+          "warrantStatus": "revoked"
+        },
+        "requestId": "hub-011-reject-revoked-warrant",
+        "schemaVersion": 1,
+        "status": "rejected",
+        "verdict": "rejected"
+      },
+      "responseRoot": "sha256:88a2dbd5c7471344a97a93eeae61d0ed644052ac326e5e9c36495ee997f43827"
+    },
+    {
+      "id": "hub-012-surface-concurrent-conflict",
+      "category": "conflict",
+      "status": "pass",
+      "expected": {
+        "status": "conflicted",
+        "code": "conflict-visible",
+        "verdict": "conflicted"
+      },
+      "actual": {
+        "status": "conflicted",
+        "code": "conflict-visible",
+        "verdict": "conflicted"
+      },
+      "response": {
+        "adapter": {
+          "id": "kungfu-work-agent-hub",
+          "topology": "local-peer",
+          "version": "0.1.0-alpha.1"
+        },
+        "code": "conflict-visible",
+        "contract": "kfd.agent-hub-adapter-response/v1",
+        "observations": {
+          "authorityDomainsDistinct": true,
+          "clockRelation": "concurrent",
+          "productSurface": "kungfu agent hub handle",
+          "resolutionPolicy": "retain-conflict",
+          "sourceDomain": {
+            "_identityRoot": "sha256:a30e829609a5ecbaabd3fb32379ccdec17f061f2f92019b864bc5e2c7f5c02a4",
+            "actorId": "kungfu-work/hub-alpha-actor",
+            "hubId": "kungfu-work/hub-alpha",
+            "nodeId": "kungfu-work/hub-alpha-node",
+            "workspaceId": "workspace:22d7b7ed-143d-41f8-934a-8627114e4d3e"
+          },
+          "sourceWorkspace": {
+            "resultingState": "live-runtime",
+            "workspaceId": "project:a30e829609a5ecba",
+            "workspaceIdentityRoot": "sha256:a30e829609a5ecbaabd3fb32379ccdec17f061f2f92019b864bc5e2c7f5c02a4",
+            "workspaceKind": "project"
+          },
+          "targetDomain": {
+            "_identityRoot": "sha256:55b5b2087c9789ee4ac4b15e6194380a3af8b2ccc454432f4cb50d3774234111",
+            "actorId": "kungfu-work/hub-beta-actor",
+            "hubId": "kungfu-work/hub-beta",
+            "nodeId": "kungfu-work/hub-beta-node",
+            "workspaceId": "workspace:e82dc65e-532a-4a4f-b72a-50f49019830e"
+          },
+          "targetWorkspace": {
+            "resultingState": "live-runtime",
+            "workspaceId": "project:55b5b2087c9789ee",
+            "workspaceIdentityRoot": "sha256:55b5b2087c9789ee4ac4b15e6194380a3af8b2ccc454432f4cb50d3774234111",
+            "workspaceKind": "project"
+          }
+        },
+        "requestId": "hub-012-surface-concurrent-conflict",
+        "schemaVersion": 1,
+        "status": "conflicted",
+        "verdict": "conflicted"
+      },
+      "responseRoot": "sha256:f9203a3d90586f803e5767c28550656d940c2fae1de914b732e273810e51a5c8"
+    },
+    {
+      "id": "hub-013-reject-hidden-last-write-wins",
+      "category": "conflict",
+      "status": "pass",
+      "expected": {
+        "status": "rejected",
+        "code": "conflict-visible",
+        "verdict": "rejected"
+      },
+      "actual": {
+        "status": "rejected",
+        "code": "conflict-visible",
+        "verdict": "rejected"
+      },
+      "response": {
+        "adapter": {
+          "id": "kungfu-work-agent-hub",
+          "topology": "local-peer",
+          "version": "0.1.0-alpha.1"
+        },
+        "code": "conflict-visible",
+        "contract": "kfd.agent-hub-adapter-response/v1",
+        "observations": {
+          "authorityDomainsDistinct": true,
+          "conflictRoots": [
+            "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+          ],
+          "productSurface": "kungfu agent hub handle",
+          "rejectedPolicy": "last-write-wins",
+          "sourceDomain": {
+            "_identityRoot": "sha256:a30e829609a5ecbaabd3fb32379ccdec17f061f2f92019b864bc5e2c7f5c02a4",
+            "actorId": "kungfu-work/hub-alpha-actor",
+            "hubId": "kungfu-work/hub-alpha",
+            "nodeId": "kungfu-work/hub-alpha-node",
+            "workspaceId": "workspace:22d7b7ed-143d-41f8-934a-8627114e4d3e"
+          },
+          "sourceWorkspace": {
+            "resultingState": "live-runtime",
+            "workspaceId": "project:a30e829609a5ecba",
+            "workspaceIdentityRoot": "sha256:a30e829609a5ecbaabd3fb32379ccdec17f061f2f92019b864bc5e2c7f5c02a4",
+            "workspaceKind": "project"
+          },
+          "targetDomain": {
+            "_identityRoot": "sha256:55b5b2087c9789ee4ac4b15e6194380a3af8b2ccc454432f4cb50d3774234111",
+            "actorId": "kungfu-work/hub-beta-actor",
+            "hubId": "kungfu-work/hub-beta",
+            "nodeId": "kungfu-work/hub-beta-node",
+            "workspaceId": "workspace:e82dc65e-532a-4a4f-b72a-50f49019830e"
+          },
+          "targetWorkspace": {
+            "resultingState": "live-runtime",
+            "workspaceId": "project:55b5b2087c9789ee",
+            "workspaceIdentityRoot": "sha256:55b5b2087c9789ee4ac4b15e6194380a3af8b2ccc454432f4cb50d3774234111",
+            "workspaceKind": "project"
+          }
+        },
+        "requestId": "hub-013-reject-hidden-last-write-wins",
+        "schemaVersion": 1,
+        "status": "rejected",
+        "verdict": "rejected"
+      },
+      "responseRoot": "sha256:4f89b28fcb20c64544e0f689e47382caae52ee40353662f26aabb427bd202c99"
+    },
+    {
+      "id": "hub-014-retain-partial-knowledge",
+      "category": "knowledge",
+      "status": "pass",
+      "expected": {
+        "status": "accepted",
+        "code": "partial-knowledge-retained",
+        "verdict": "not-applicable"
+      },
+      "actual": {
+        "status": "accepted",
+        "code": "partial-knowledge-retained",
+        "verdict": "not-applicable"
+      },
+      "response": {
+        "adapter": {
+          "id": "kungfu-work-agent-hub",
+          "topology": "local-peer",
+          "version": "0.1.0-alpha.1"
+        },
+        "code": "partial-knowledge-retained",
+        "contract": "kfd.agent-hub-adapter-response/v1",
+        "observations": {
+          "authorityDomainsDistinct": true,
+          "disclosure": "partial",
+          "knownFields": [
+            "status"
+          ],
+          "omittedFields": [
+            "evidence"
+          ],
+          "productSurface": "kungfu agent hub handle",
+          "reason": null,
+          "sourceDomain": {
+            "_identityRoot": "sha256:a30e829609a5ecbaabd3fb32379ccdec17f061f2f92019b864bc5e2c7f5c02a4",
+            "actorId": "kungfu-work/hub-alpha-actor",
+            "hubId": "kungfu-work/hub-alpha",
+            "nodeId": "kungfu-work/hub-alpha-node",
+            "workspaceId": "workspace:22d7b7ed-143d-41f8-934a-8627114e4d3e"
+          },
+          "sourceWorkspace": {
+            "resultingState": "live-runtime",
+            "workspaceId": "project:a30e829609a5ecba",
+            "workspaceIdentityRoot": "sha256:a30e829609a5ecbaabd3fb32379ccdec17f061f2f92019b864bc5e2c7f5c02a4",
+            "workspaceKind": "project"
+          },
+          "targetDomain": {
+            "_identityRoot": "sha256:55b5b2087c9789ee4ac4b15e6194380a3af8b2ccc454432f4cb50d3774234111",
+            "actorId": "kungfu-work/hub-beta-actor",
+            "hubId": "kungfu-work/hub-beta",
+            "nodeId": "kungfu-work/hub-beta-node",
+            "workspaceId": "workspace:e82dc65e-532a-4a4f-b72a-50f49019830e"
+          },
+          "targetWorkspace": {
+            "resultingState": "live-runtime",
+            "workspaceId": "project:55b5b2087c9789ee",
+            "workspaceIdentityRoot": "sha256:55b5b2087c9789ee4ac4b15e6194380a3af8b2ccc454432f4cb50d3774234111",
+            "workspaceKind": "project"
+          }
+        },
+        "requestId": "hub-014-retain-partial-knowledge",
+        "schemaVersion": 1,
+        "status": "accepted",
+        "verdict": "not-applicable"
+      },
+      "responseRoot": "sha256:3898a62e2ca7b9cdb013f134d95d303a3bf47737a2408c7d727c378a5df53c73"
+    },
+    {
+      "id": "hub-015-retain-intentionally-withheld",
+      "category": "knowledge",
+      "status": "pass",
+      "expected": {
+        "status": "accepted",
+        "code": "partial-knowledge-retained",
+        "verdict": "intentionally-withheld"
+      },
+      "actual": {
+        "status": "accepted",
+        "code": "partial-knowledge-retained",
+        "verdict": "intentionally-withheld"
+      },
+      "response": {
+        "adapter": {
+          "id": "kungfu-work-agent-hub",
+          "topology": "local-peer",
+          "version": "0.1.0-alpha.1"
+        },
+        "code": "partial-knowledge-retained",
+        "contract": "kfd.agent-hub-adapter-response/v1",
+        "observations": {
+          "authorityDomainsDistinct": true,
+          "disclosure": "intentionally-withheld",
+          "knownFields": [],
+          "omittedFields": [],
+          "productSurface": "kungfu agent hub handle",
+          "reason": "local-policy",
+          "sourceDomain": {
+            "_identityRoot": "sha256:a30e829609a5ecbaabd3fb32379ccdec17f061f2f92019b864bc5e2c7f5c02a4",
+            "actorId": "kungfu-work/hub-alpha-actor",
+            "hubId": "kungfu-work/hub-alpha",
+            "nodeId": "kungfu-work/hub-alpha-node",
+            "workspaceId": "workspace:22d7b7ed-143d-41f8-934a-8627114e4d3e"
+          },
+          "sourceWorkspace": {
+            "resultingState": "live-runtime",
+            "workspaceId": "project:a30e829609a5ecba",
+            "workspaceIdentityRoot": "sha256:a30e829609a5ecbaabd3fb32379ccdec17f061f2f92019b864bc5e2c7f5c02a4",
+            "workspaceKind": "project"
+          },
+          "targetDomain": {
+            "_identityRoot": "sha256:55b5b2087c9789ee4ac4b15e6194380a3af8b2ccc454432f4cb50d3774234111",
+            "actorId": "kungfu-work/hub-beta-actor",
+            "hubId": "kungfu-work/hub-beta",
+            "nodeId": "kungfu-work/hub-beta-node",
+            "workspaceId": "workspace:e82dc65e-532a-4a4f-b72a-50f49019830e"
+          },
+          "targetWorkspace": {
+            "resultingState": "live-runtime",
+            "workspaceId": "project:55b5b2087c9789ee",
+            "workspaceIdentityRoot": "sha256:55b5b2087c9789ee4ac4b15e6194380a3af8b2ccc454432f4cb50d3774234111",
+            "workspaceKind": "project"
+          }
+        },
+        "requestId": "hub-015-retain-intentionally-withheld",
+        "schemaVersion": 1,
+        "status": "accepted",
+        "verdict": "intentionally-withheld"
+      },
+      "responseRoot": "sha256:5543b2580d996a9c73a7b9a9df2128ea71002cd6206aee6fc41579f2b7c9c0be"
+    },
+    {
+      "id": "hub-016-retain-unavailable",
+      "category": "knowledge",
+      "status": "pass",
+      "expected": {
+        "status": "accepted",
+        "code": "partial-knowledge-retained",
+        "verdict": "unavailable"
+      },
+      "actual": {
+        "status": "accepted",
+        "code": "partial-knowledge-retained",
+        "verdict": "unavailable"
+      },
+      "response": {
+        "adapter": {
+          "id": "kungfu-work-agent-hub",
+          "topology": "local-peer",
+          "version": "0.1.0-alpha.1"
+        },
+        "code": "partial-knowledge-retained",
+        "contract": "kfd.agent-hub-adapter-response/v1",
+        "observations": {
+          "authorityDomainsDistinct": true,
+          "disclosure": "unavailable",
+          "knownFields": [],
+          "omittedFields": [],
+          "productSurface": "kungfu agent hub handle",
+          "reason": "offline-source",
+          "sourceDomain": {
+            "_identityRoot": "sha256:a30e829609a5ecbaabd3fb32379ccdec17f061f2f92019b864bc5e2c7f5c02a4",
+            "actorId": "kungfu-work/hub-alpha-actor",
+            "hubId": "kungfu-work/hub-alpha",
+            "nodeId": "kungfu-work/hub-alpha-node",
+            "workspaceId": "workspace:22d7b7ed-143d-41f8-934a-8627114e4d3e"
+          },
+          "sourceWorkspace": {
+            "resultingState": "live-runtime",
+            "workspaceId": "project:a30e829609a5ecba",
+            "workspaceIdentityRoot": "sha256:a30e829609a5ecbaabd3fb32379ccdec17f061f2f92019b864bc5e2c7f5c02a4",
+            "workspaceKind": "project"
+          },
+          "targetDomain": {
+            "_identityRoot": "sha256:55b5b2087c9789ee4ac4b15e6194380a3af8b2ccc454432f4cb50d3774234111",
+            "actorId": "kungfu-work/hub-beta-actor",
+            "hubId": "kungfu-work/hub-beta",
+            "nodeId": "kungfu-work/hub-beta-node",
+            "workspaceId": "workspace:e82dc65e-532a-4a4f-b72a-50f49019830e"
+          },
+          "targetWorkspace": {
+            "resultingState": "live-runtime",
+            "workspaceId": "project:55b5b2087c9789ee",
+            "workspaceIdentityRoot": "sha256:55b5b2087c9789ee4ac4b15e6194380a3af8b2ccc454432f4cb50d3774234111",
+            "workspaceKind": "project"
+          }
+        },
+        "requestId": "hub-016-retain-unavailable",
+        "schemaVersion": 1,
+        "status": "accepted",
+        "verdict": "unavailable"
+      },
+      "responseRoot": "sha256:db63c64845f276590f08d7c8cfa883f6d2eaa9c3ed523c057749074cc7ae3a08"
+    },
+    {
+      "id": "hub-017-reject-call-success-as-completion",
+      "category": "completion",
+      "status": "pass",
+      "expected": {
+        "status": "rejected",
+        "code": "completion-unproved",
+        "verdict": "rejected"
+      },
+      "actual": {
+        "status": "rejected",
+        "code": "completion-unproved",
+        "verdict": "rejected"
+      },
+      "response": {
+        "adapter": {
+          "id": "kungfu-work-agent-hub",
+          "topology": "local-peer",
+          "version": "0.1.0-alpha.1"
+        },
+        "code": "completion-unproved",
+        "contract": "kfd.agent-hub-adapter-response/v1",
+        "observations": {
+          "authorityDomainsDistinct": true,
+          "callSucceeded": true,
+          "completionVerdict": "unproved",
+          "productSurface": "kungfu agent hub handle",
+          "sourceDomain": {
+            "_identityRoot": "sha256:a30e829609a5ecbaabd3fb32379ccdec17f061f2f92019b864bc5e2c7f5c02a4",
+            "actorId": "kungfu-work/hub-alpha-actor",
+            "hubId": "kungfu-work/hub-alpha",
+            "nodeId": "kungfu-work/hub-alpha-node",
+            "workspaceId": "workspace:22d7b7ed-143d-41f8-934a-8627114e4d3e"
+          },
+          "sourceWorkspace": {
+            "resultingState": "live-runtime",
+            "workspaceId": "project:a30e829609a5ecba",
+            "workspaceIdentityRoot": "sha256:a30e829609a5ecbaabd3fb32379ccdec17f061f2f92019b864bc5e2c7f5c02a4",
+            "workspaceKind": "project"
+          },
+          "targetDomain": {
+            "_identityRoot": "sha256:55b5b2087c9789ee4ac4b15e6194380a3af8b2ccc454432f4cb50d3774234111",
+            "actorId": "kungfu-work/hub-beta-actor",
+            "hubId": "kungfu-work/hub-beta",
+            "nodeId": "kungfu-work/hub-beta-node",
+            "workspaceId": "workspace:e82dc65e-532a-4a4f-b72a-50f49019830e"
+          },
+          "targetWorkspace": {
+            "resultingState": "live-runtime",
+            "workspaceId": "project:55b5b2087c9789ee",
+            "workspaceIdentityRoot": "sha256:55b5b2087c9789ee4ac4b15e6194380a3af8b2ccc454432f4cb50d3774234111",
+            "workspaceKind": "project"
+          }
+        },
+        "requestId": "hub-017-reject-call-success-as-completion",
+        "schemaVersion": 1,
+        "status": "rejected",
+        "verdict": "rejected"
+      },
+      "responseRoot": "sha256:f75527198594c1367f678e4782a39ad0943604fb6368269f602b4a6c5f20d5e6"
+    },
+    {
+      "id": "hub-018-surface-offline-reconnect-conflict",
+      "category": "recovery",
+      "status": "pass",
+      "expected": {
+        "status": "conflicted",
+        "code": "conflict-visible",
+        "verdict": "conflicted"
+      },
+      "actual": {
+        "status": "conflicted",
+        "code": "conflict-visible",
+        "verdict": "conflicted"
+      },
+      "response": {
+        "adapter": {
+          "id": "kungfu-work-agent-hub",
+          "topology": "local-peer",
+          "version": "0.1.0-alpha.1"
+        },
+        "code": "conflict-visible",
+        "contract": "kfd.agent-hub-adapter-response/v1",
+        "observations": {
+          "authorityDomainsDistinct": true,
+          "divergentRoots": [
+            "sha256:eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+            "sha256:ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"
+          ],
+          "lastWriteWinsApplied": false,
+          "productSurface": "kungfu agent hub handle",
+          "sourceDomain": {
+            "_identityRoot": "sha256:a30e829609a5ecbaabd3fb32379ccdec17f061f2f92019b864bc5e2c7f5c02a4",
+            "actorId": "kungfu-work/hub-alpha-actor",
+            "hubId": "kungfu-work/hub-alpha",
+            "nodeId": "kungfu-work/hub-alpha-node",
+            "workspaceId": "workspace:22d7b7ed-143d-41f8-934a-8627114e4d3e"
+          },
+          "sourceWorkspace": {
+            "resultingState": "live-runtime",
+            "workspaceId": "project:a30e829609a5ecba",
+            "workspaceIdentityRoot": "sha256:a30e829609a5ecbaabd3fb32379ccdec17f061f2f92019b864bc5e2c7f5c02a4",
+            "workspaceKind": "project"
+          },
+          "targetDomain": {
+            "_identityRoot": "sha256:55b5b2087c9789ee4ac4b15e6194380a3af8b2ccc454432f4cb50d3774234111",
+            "actorId": "kungfu-work/hub-beta-actor",
+            "hubId": "kungfu-work/hub-beta",
+            "nodeId": "kungfu-work/hub-beta-node",
+            "workspaceId": "workspace:e82dc65e-532a-4a4f-b72a-50f49019830e"
+          },
+          "targetWorkspace": {
+            "resultingState": "live-runtime",
+            "workspaceId": "project:55b5b2087c9789ee",
+            "workspaceIdentityRoot": "sha256:55b5b2087c9789ee4ac4b15e6194380a3af8b2ccc454432f4cb50d3774234111",
+            "workspaceKind": "project"
+          }
+        },
+        "requestId": "hub-018-surface-offline-reconnect-conflict",
+        "schemaVersion": 1,
+        "status": "conflicted",
+        "verdict": "conflicted"
+      },
+      "responseRoot": "sha256:712e7d0cc802ba0552ca883370164aabd4c901d02146c207396a1469245b125b"
+    },
+    {
+      "id": "hub-019-preserve-export-import-roots",
+      "category": "portability",
+      "status": "pass",
+      "expected": {
+        "status": "accepted",
+        "code": "export-import-preserved",
+        "verdict": "admitted"
+      },
+      "actual": {
+        "status": "accepted",
+        "code": "export-import-preserved",
+        "verdict": "admitted"
+      },
+      "response": {
+        "adapter": {
+          "id": "kungfu-work-agent-hub",
+          "topology": "local-peer",
+          "version": "0.1.0-alpha.1"
+        },
+        "code": "export-import-preserved",
+        "contract": "kfd.agent-hub-adapter-response/v1",
+        "observations": {
+          "authorityDomainsDistinct": true,
+          "bundleRoot": "sha256:9fb0c4855bff13b7afae5e13e5b9d260db7db33a84489f14e6228812ac526b88",
+          "productSurface": "kungfu agent hub handle",
+          "sourceDomain": {
+            "_identityRoot": "sha256:a30e829609a5ecbaabd3fb32379ccdec17f061f2f92019b864bc5e2c7f5c02a4",
+            "actorId": "kungfu-work/hub-alpha-actor",
+            "hubId": "kungfu-work/hub-alpha",
+            "nodeId": "kungfu-work/hub-alpha-node",
+            "workspaceId": "workspace:22d7b7ed-143d-41f8-934a-8627114e4d3e"
+          },
+          "sourceStoreRoot": "sha256:723b99ebe98274da6acb413d1c8d9f1f957b482b18f208096a8546ba4f205516",
+          "sourceWorkspace": {
+            "resultingState": "live-runtime",
+            "workspaceId": "project:a30e829609a5ecba",
+            "workspaceIdentityRoot": "sha256:a30e829609a5ecbaabd3fb32379ccdec17f061f2f92019b864bc5e2c7f5c02a4",
+            "workspaceKind": "project"
+          },
+          "targetDomain": {
+            "_identityRoot": "sha256:55b5b2087c9789ee4ac4b15e6194380a3af8b2ccc454432f4cb50d3774234111",
+            "actorId": "kungfu-work/hub-beta-actor",
+            "hubId": "kungfu-work/hub-beta",
+            "nodeId": "kungfu-work/hub-beta-node",
+            "workspaceId": "workspace:e82dc65e-532a-4a4f-b72a-50f49019830e"
+          },
+          "targetStoreRoot": "sha256:5ac1cf351bb8f5ce65a0bfc885ab3f3196c2dd3099186607847e4d269e510946",
+          "targetWorkspace": {
+            "resultingState": "live-runtime",
+            "workspaceId": "project:55b5b2087c9789ee",
+            "workspaceIdentityRoot": "sha256:55b5b2087c9789ee4ac4b15e6194380a3af8b2ccc454432f4cb50d3774234111",
+            "workspaceKind": "project"
+          }
+        },
+        "requestId": "hub-019-preserve-export-import-roots",
+        "schemaVersion": 1,
+        "status": "accepted",
+        "verdict": "admitted"
+      },
+      "responseRoot": "sha256:f3965a6e2a5a632acea1c39022b1c4a378c68c0aaa9f1ed7ac7d00349791204d"
+    },
+    {
+      "id": "hub-020-reject-export-import-drift",
+      "category": "portability",
+      "status": "pass",
+      "expected": {
+        "status": "rejected",
+        "code": "profile-root-mismatch",
+        "verdict": "rejected"
+      },
+      "actual": {
+        "status": "rejected",
+        "code": "profile-root-mismatch",
+        "verdict": "rejected"
+      },
+      "response": {
+        "adapter": {
+          "id": "kungfu-work-agent-hub",
+          "topology": "local-peer",
+          "version": "0.1.0-alpha.1"
+        },
+        "code": "profile-root-mismatch",
+        "contract": "kfd.agent-hub-adapter-response/v1",
+        "observations": {
+          "authorityDomainsDistinct": true,
+          "exportedProfileRoot": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "importedProfileRoot": "sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+          "productSurface": "kungfu agent hub handle",
+          "sourceDomain": {
+            "_identityRoot": "sha256:a30e829609a5ecbaabd3fb32379ccdec17f061f2f92019b864bc5e2c7f5c02a4",
+            "actorId": "kungfu-work/hub-alpha-actor",
+            "hubId": "kungfu-work/hub-alpha",
+            "nodeId": "kungfu-work/hub-alpha-node",
+            "workspaceId": "workspace:22d7b7ed-143d-41f8-934a-8627114e4d3e"
+          },
+          "sourceWorkspace": {
+            "resultingState": "live-runtime",
+            "workspaceId": "project:a30e829609a5ecba",
+            "workspaceIdentityRoot": "sha256:a30e829609a5ecbaabd3fb32379ccdec17f061f2f92019b864bc5e2c7f5c02a4",
+            "workspaceKind": "project"
+          },
+          "targetDomain": {
+            "_identityRoot": "sha256:55b5b2087c9789ee4ac4b15e6194380a3af8b2ccc454432f4cb50d3774234111",
+            "actorId": "kungfu-work/hub-beta-actor",
+            "hubId": "kungfu-work/hub-beta",
+            "nodeId": "kungfu-work/hub-beta-node",
+            "workspaceId": "workspace:e82dc65e-532a-4a4f-b72a-50f49019830e"
+          },
+          "targetWorkspace": {
+            "resultingState": "live-runtime",
+            "workspaceId": "project:55b5b2087c9789ee",
+            "workspaceIdentityRoot": "sha256:55b5b2087c9789ee4ac4b15e6194380a3af8b2ccc454432f4cb50d3774234111",
+            "workspaceKind": "project"
+          }
+        },
+        "requestId": "hub-020-reject-export-import-drift",
+        "schemaVersion": 1,
+        "status": "rejected",
+        "verdict": "rejected"
+      },
+      "responseRoot": "sha256:52e9381c16acbe06b453292e1f52ad0eb3e1d86b881c041a3d66bab2a7618030"
+    }
+  ],
+  "residualRisk": [
+    "The fixed suite is finite and does not prove complete interoperability.",
+    "A passing report binds only the named adapter artifact, capability documents, package cut, platform, and execution.",
+    "Offline verification detects report drift but does not independently attest the process execution.",
+    "This experimental profile is not KFD certification, a security assessment, or production fitness evidence."
+  ]
+}

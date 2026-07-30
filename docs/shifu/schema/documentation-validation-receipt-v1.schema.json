@@ -1,0 +1,54 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://libkungfu.dev/schemas/shifu/documentation-validation-receipt-v1.schema.json",
+  "title": "Shifu Documentation Protocol validation receipt v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["$schema", "schema", "submission", "project", "valid", "qualifying", "selfCertified", "roots", "diagnostics"],
+  "properties": {
+    "$schema": { "const": "https://libkungfu.dev/schemas/shifu/documentation-validation-receipt-v1.schema.json" },
+    "schema": { "const": "shifu.documentation-validation-receipt/v1" },
+    "submission": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["ref", "digest"],
+      "properties": {
+        "ref": { "type": "string", "minLength": 1 },
+        "digest": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" }
+      }
+    },
+    "project": { "type": ["string", "null"] },
+    "valid": { "type": "boolean" },
+    "qualifying": { "const": false },
+    "selfCertified": { "const": false },
+    "roots": {
+      "oneOf": [
+        { "type": "null" },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["algorithm", "contract", "content", "submission"],
+          "properties": {
+            "algorithm": { "const": "sha256" },
+            "contract": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" },
+            "content": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" },
+            "submission": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" }
+          }
+        }
+      ]
+    },
+    "diagnostics": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["code", "path", "message"],
+        "properties": {
+          "code": { "type": "string", "minLength": 1 },
+          "path": { "type": "string", "minLength": 1 },
+          "message": { "type": "string", "minLength": 1 }
+        }
+      }
+    }
+  }
+}

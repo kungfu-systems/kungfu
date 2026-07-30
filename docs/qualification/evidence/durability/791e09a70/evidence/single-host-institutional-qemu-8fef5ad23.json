@@ -1,0 +1,412 @@
+{
+  "schema": "kungfu.durability.single-host-institutional-qemu-report/v1",
+  "verdict": "passed",
+  "source": {
+    "revision": "8fef5ad233ccb50c6fae7bb8ee167294f47a35db",
+    "tree": "5ee4fb3d0b6d7923c04bceb04c1639b3f6cdb9ca",
+    "dirty": false
+  },
+  "host": {
+    "hostname": "agent-120",
+    "platform": "linux",
+    "arch": "x64",
+    "release": "6.8.0-134-generic",
+    "qemu": "QEMU emulator version 8.2.2 (Debian 1:8.2.2+ds-0ubuntu1.16)",
+    "workspace_filesystem": "ext2/ext3"
+  },
+  "execution": {
+    "schema": "kungfu.durability.institutional-qemu-execution-plan/v1",
+    "mode": "execute",
+    "source_revision": "8fef5ad233ccb50c6fae7bb8ee167294f47a35db",
+    "workspace": "/data/qualification/kungfu/durability/791e09a70-linux-ext4-fault-v2",
+    "rootfs_base": "/data/qualification/kungfu/durability/791e09a70-linux-ext4-fault-v2/rootfs-base.ext4",
+    "backup_dir": "/data/qualification/kungfu/backups/791e09a70-linux-ext4-fault-v2",
+    "report": "/data/qualification/kungfu/durability/791e09a70-linux-ext4-fault-v2/evidence/single-host-institutional-qemu-8fef5ad23.json",
+    "github_workflow": false,
+    "physical_device_write": false,
+    "physical_host_restart": false
+  },
+  "claims": {
+    "real_enospc_no_false_ack_qualified": true,
+    "clean_unmount_whole_guest_reopen_qualified": true,
+    "repeated_whole_guest_recovery_qualified": true,
+    "offline_external_path_backup_restore_qualified": true,
+    "physical_host_restart_qualified": false,
+    "off_host_backup_qualified": false,
+    "independent_backup_failure_domain_qualified": false,
+    "production_profile_eligible": false
+  },
+  "results": {
+    "clean_write_and_unmount": {
+      "id": "clean-write",
+      "child": {
+        "pid": 419712,
+        "executable": "/usr/bin/qemu-system-x86_64",
+        "command_line": [
+          "qemu-system-x86_64",
+          "-enable-kvm",
+          "-cpu",
+          "host",
+          "-m",
+          "2048",
+          "-smp",
+          "2",
+          "-nographic",
+          "-no-reboot",
+          "-nic",
+          "none",
+          "-kernel",
+          "/data/qualification/kungfu/durability/791e09a70-linux-ext4-fault-v2/kernel/boot/vmlinuz-6.8.0-134-generic",
+          "-initrd",
+          "/data/qualification/kungfu/durability/791e09a70-linux-ext4-fault-v2/initrd.img",
+          "-append",
+          "root=/dev/vda rw rootwait console=ttyS0 panic=-1 init=/opt/kungfu/powercut_guest_init kf_mode=write kf_profile=durable_sync kf_fault=none",
+          "-drive",
+          "if=virtio,format=qcow2,file=/data/qualification/kungfu/durability/791e09a70-linux-ext4-fault-v2/clean-write-rootfs.qcow2",
+          "-drive",
+          "if=virtio,format=raw,cache=none,aio=native,file=/data/qualification/kungfu/durability/791e09a70-linux-ext4-fault-v2/institutional-data.ext4"
+        ]
+      },
+      "exit": {
+        "code": 0,
+        "signal": null
+      },
+      "serial_log": "evidence/clean-write.serial.log",
+      "serial_log_sha256": "6aeeff94dc27e767f941b1e68a0728280b27112b67830a9030d58589a1ea2f86"
+    },
+    "repeated_whole_guest_recovery": [
+      {
+        "id": "recovery-1",
+        "child": {
+          "pid": 419749,
+          "executable": "/usr/bin/qemu-system-x86_64",
+          "command_line": [
+            "qemu-system-x86_64",
+            "-enable-kvm",
+            "-cpu",
+            "host",
+            "-m",
+            "2048",
+            "-smp",
+            "2",
+            "-nographic",
+            "-no-reboot",
+            "-nic",
+            "none",
+            "-kernel",
+            "/data/qualification/kungfu/durability/791e09a70-linux-ext4-fault-v2/kernel/boot/vmlinuz-6.8.0-134-generic",
+            "-initrd",
+            "/data/qualification/kungfu/durability/791e09a70-linux-ext4-fault-v2/initrd.img",
+            "-append",
+            "root=/dev/vda rw rootwait console=ttyS0 panic=-1 init=/opt/kungfu/powercut_guest_init kf_mode=verify kf_min=1 kf_max=1",
+            "-drive",
+            "if=virtio,format=qcow2,file=/data/qualification/kungfu/durability/791e09a70-linux-ext4-fault-v2/recovery-1-rootfs.qcow2",
+            "-drive",
+            "if=virtio,format=raw,cache=none,aio=native,file=/data/qualification/kungfu/durability/791e09a70-linux-ext4-fault-v2/institutional-data.ext4"
+          ]
+        },
+        "exit": {
+          "code": 0,
+          "signal": null
+        },
+        "serial_log": "evidence/recovery-1.serial.log",
+        "serial_log_sha256": "e02e5b16da7bb4d463477f8a393056781ba1c86a0b40d788f173c217774afd4a",
+        "verification": {
+          "available": true,
+          "contiguous": true,
+          "durable_record_count": 1,
+          "durable_sequence": 1,
+          "expected_max_sequence": 1,
+          "expected_min_sequence": 1,
+          "last_error": "none",
+          "passed": true,
+          "requires_reopen": false,
+          "schema": "kungfu.durability.powercut-verification/v1",
+          "unacknowledged_tail_bytes": 0,
+          "unacknowledged_tail_integrity": "none"
+        }
+      },
+      {
+        "id": "recovery-2",
+        "child": {
+          "pid": 419784,
+          "executable": "/usr/bin/qemu-system-x86_64",
+          "command_line": [
+            "qemu-system-x86_64",
+            "-enable-kvm",
+            "-cpu",
+            "host",
+            "-m",
+            "2048",
+            "-smp",
+            "2",
+            "-nographic",
+            "-no-reboot",
+            "-nic",
+            "none",
+            "-kernel",
+            "/data/qualification/kungfu/durability/791e09a70-linux-ext4-fault-v2/kernel/boot/vmlinuz-6.8.0-134-generic",
+            "-initrd",
+            "/data/qualification/kungfu/durability/791e09a70-linux-ext4-fault-v2/initrd.img",
+            "-append",
+            "root=/dev/vda rw rootwait console=ttyS0 panic=-1 init=/opt/kungfu/powercut_guest_init kf_mode=verify kf_min=1 kf_max=1",
+            "-drive",
+            "if=virtio,format=qcow2,file=/data/qualification/kungfu/durability/791e09a70-linux-ext4-fault-v2/recovery-2-rootfs.qcow2",
+            "-drive",
+            "if=virtio,format=raw,cache=none,aio=native,file=/data/qualification/kungfu/durability/791e09a70-linux-ext4-fault-v2/institutional-data.ext4"
+          ]
+        },
+        "exit": {
+          "code": 0,
+          "signal": null
+        },
+        "serial_log": "evidence/recovery-2.serial.log",
+        "serial_log_sha256": "81b993e6289d379cace3d4f7e25a80d4b8d0b0107bb8036334368afa58f6794d",
+        "verification": {
+          "available": true,
+          "contiguous": true,
+          "durable_record_count": 1,
+          "durable_sequence": 1,
+          "expected_max_sequence": 1,
+          "expected_min_sequence": 1,
+          "last_error": "none",
+          "passed": true,
+          "requires_reopen": false,
+          "schema": "kungfu.durability.powercut-verification/v1",
+          "unacknowledged_tail_bytes": 0,
+          "unacknowledged_tail_integrity": "none"
+        }
+      },
+      {
+        "id": "recovery-3",
+        "child": {
+          "pid": 419811,
+          "executable": "/usr/bin/qemu-system-x86_64",
+          "command_line": [
+            "qemu-system-x86_64",
+            "-enable-kvm",
+            "-cpu",
+            "host",
+            "-m",
+            "2048",
+            "-smp",
+            "2",
+            "-nographic",
+            "-no-reboot",
+            "-nic",
+            "none",
+            "-kernel",
+            "/data/qualification/kungfu/durability/791e09a70-linux-ext4-fault-v2/kernel/boot/vmlinuz-6.8.0-134-generic",
+            "-initrd",
+            "/data/qualification/kungfu/durability/791e09a70-linux-ext4-fault-v2/initrd.img",
+            "-append",
+            "root=/dev/vda rw rootwait console=ttyS0 panic=-1 init=/opt/kungfu/powercut_guest_init kf_mode=verify kf_min=1 kf_max=1",
+            "-drive",
+            "if=virtio,format=qcow2,file=/data/qualification/kungfu/durability/791e09a70-linux-ext4-fault-v2/recovery-3-rootfs.qcow2",
+            "-drive",
+            "if=virtio,format=raw,cache=none,aio=native,file=/data/qualification/kungfu/durability/791e09a70-linux-ext4-fault-v2/institutional-data.ext4"
+          ]
+        },
+        "exit": {
+          "code": 0,
+          "signal": null
+        },
+        "serial_log": "evidence/recovery-3.serial.log",
+        "serial_log_sha256": "3c554b2ec77185bbb9cbeaa7bf8261574379cedf9371058c5113512e391b956b",
+        "verification": {
+          "available": true,
+          "contiguous": true,
+          "durable_record_count": 1,
+          "durable_sequence": 1,
+          "expected_max_sequence": 1,
+          "expected_min_sequence": 1,
+          "last_error": "none",
+          "passed": true,
+          "requires_reopen": false,
+          "schema": "kungfu.durability.powercut-verification/v1",
+          "unacknowledged_tail_bytes": 0,
+          "unacknowledged_tail_integrity": "none"
+        }
+      }
+    ],
+    "backup_restore": {
+      "backup_cut": "quiesced_after_durable_sequence_1_and_clean_unmount",
+      "maximum_observed_rpo_records": 0,
+      "external_backup_path": "/data/qualification/kungfu/backups/791e09a70-linux-ext4-fault-v2/institutional-data.ext4",
+      "backup_sha256": "c25abf250a937fed00b66ec2f93153afa7baa40339f9dc4dfa5a67b3f52dc82a",
+      "restored_empty_device": "restored-empty-device.ext4",
+      "restored_sha256": "c25abf250a937fed00b66ec2f93153afa7baa40339f9dc4dfa5a67b3f52dc82a",
+      "before_backup_fsck": {
+        "command": [
+          "e2fsck",
+          "-fn",
+          "/data/qualification/kungfu/durability/791e09a70-linux-ext4-fault-v2/institutional-data.ext4"
+        ],
+        "status": 0,
+        "output": "Pass 1: Checking inodes, blocks, and sizes\nPass 2: Checking directory structure\nPass 3: Checking directory connectivity\nPass 4: Checking reference counts\nPass 5: Checking group summary information\nKFDATA: 22/65536 files (0.0% non-contiguous), 8279/65536 blocks\ne2fsck 1.47.0 (5-Feb-2023)"
+      },
+      "after_restore_fsck": {
+        "command": [
+          "e2fsck",
+          "-fn",
+          "/data/qualification/kungfu/durability/791e09a70-linux-ext4-fault-v2/restored-empty-device.ext4"
+        ],
+        "status": 0,
+        "output": "Pass 1: Checking inodes, blocks, and sizes\nPass 2: Checking directory structure\nPass 3: Checking directory connectivity\nPass 4: Checking reference counts\nPass 5: Checking group summary information\nKFDATA: 22/65536 files (0.0% non-contiguous), 8279/65536 blocks\ne2fsck 1.47.0 (5-Feb-2023)"
+      },
+      "restore_boot": {
+        "id": "backup-restore",
+        "child": {
+          "pid": 419851,
+          "executable": "/usr/bin/qemu-system-x86_64",
+          "command_line": [
+            "qemu-system-x86_64",
+            "-enable-kvm",
+            "-cpu",
+            "host",
+            "-m",
+            "2048",
+            "-smp",
+            "2",
+            "-nographic",
+            "-no-reboot",
+            "-nic",
+            "none",
+            "-kernel",
+            "/data/qualification/kungfu/durability/791e09a70-linux-ext4-fault-v2/kernel/boot/vmlinuz-6.8.0-134-generic",
+            "-initrd",
+            "/data/qualification/kungfu/durability/791e09a70-linux-ext4-fault-v2/initrd.img",
+            "-append",
+            "root=/dev/vda rw rootwait console=ttyS0 panic=-1 init=/opt/kungfu/powercut_guest_init kf_mode=verify kf_min=1 kf_max=1",
+            "-drive",
+            "if=virtio,format=qcow2,file=/data/qualification/kungfu/durability/791e09a70-linux-ext4-fault-v2/backup-restore-rootfs.qcow2",
+            "-drive",
+            "if=virtio,format=raw,cache=none,aio=native,file=/data/qualification/kungfu/durability/791e09a70-linux-ext4-fault-v2/restored-empty-device.ext4"
+          ]
+        },
+        "exit": {
+          "code": 0,
+          "signal": null
+        },
+        "serial_log": "evidence/backup-restore.serial.log",
+        "serial_log_sha256": "b6afb594cf5b5492eed0986f4fa397d7db6e237bbfb526178091bea3d7863b46",
+        "verification": {
+          "available": true,
+          "contiguous": true,
+          "durable_record_count": 1,
+          "durable_sequence": 1,
+          "expected_max_sequence": 1,
+          "expected_min_sequence": 1,
+          "last_error": "none",
+          "passed": true,
+          "requires_reopen": false,
+          "schema": "kungfu.durability.powercut-verification/v1",
+          "unacknowledged_tail_bytes": 0,
+          "unacknowledged_tail_integrity": "none"
+        }
+      }
+    },
+    "real_enospc": {
+      "id": "real-enospc",
+      "child": {
+        "pid": 419884,
+        "executable": "/usr/bin/qemu-system-x86_64",
+        "command_line": [
+          "qemu-system-x86_64",
+          "-enable-kvm",
+          "-cpu",
+          "host",
+          "-m",
+          "2048",
+          "-smp",
+          "2",
+          "-nographic",
+          "-no-reboot",
+          "-nic",
+          "none",
+          "-kernel",
+          "/data/qualification/kungfu/durability/791e09a70-linux-ext4-fault-v2/kernel/boot/vmlinuz-6.8.0-134-generic",
+          "-initrd",
+          "/data/qualification/kungfu/durability/791e09a70-linux-ext4-fault-v2/initrd.img",
+          "-append",
+          "root=/dev/vda rw rootwait console=ttyS0 panic=-1 init=/opt/kungfu/powercut_guest_init kf_mode=enospc kf_profile=durable_sync",
+          "-drive",
+          "if=virtio,format=qcow2,file=/data/qualification/kungfu/durability/791e09a70-linux-ext4-fault-v2/real-enospc-rootfs.qcow2",
+          "-drive",
+          "if=virtio,format=raw,cache=none,aio=native,file=/data/qualification/kungfu/durability/791e09a70-linux-ext4-fault-v2/real-enospc-data.ext4"
+        ]
+      },
+      "exit": {
+        "code": 0,
+        "signal": null
+      },
+      "serial_log": "evidence/real-enospc.serial.log",
+      "serial_log_sha256": "95037e73f2077c9044ae328f0ca57796d933038d4ac200005fdc59abae38a2ad",
+      "verification": {
+        "append_threw": false,
+        "barrier_error": "io_error",
+        "durable_watermark_emitted": false,
+        "exception": "",
+        "filler_removed": true,
+        "passed": true,
+        "pending_records": 1,
+        "profile": "durable_sync",
+        "receipt_status": "unknown",
+        "requires_reopen": false,
+        "schema": "kungfu.durability.real-enospc-verification/v1",
+        "status_error": "io_error"
+      }
+    },
+    "real_enospc_reopen": {
+      "id": "real-enospc-reopen",
+      "child": {
+        "pid": 419907,
+        "executable": "/usr/bin/qemu-system-x86_64",
+        "command_line": [
+          "qemu-system-x86_64",
+          "-enable-kvm",
+          "-cpu",
+          "host",
+          "-m",
+          "2048",
+          "-smp",
+          "2",
+          "-nographic",
+          "-no-reboot",
+          "-nic",
+          "none",
+          "-kernel",
+          "/data/qualification/kungfu/durability/791e09a70-linux-ext4-fault-v2/kernel/boot/vmlinuz-6.8.0-134-generic",
+          "-initrd",
+          "/data/qualification/kungfu/durability/791e09a70-linux-ext4-fault-v2/initrd.img",
+          "-append",
+          "root=/dev/vda rw rootwait console=ttyS0 panic=-1 init=/opt/kungfu/powercut_guest_init kf_mode=verify kf_min=0 kf_max=0",
+          "-drive",
+          "if=virtio,format=qcow2,file=/data/qualification/kungfu/durability/791e09a70-linux-ext4-fault-v2/real-enospc-reopen-rootfs.qcow2",
+          "-drive",
+          "if=virtio,format=raw,cache=none,aio=native,file=/data/qualification/kungfu/durability/791e09a70-linux-ext4-fault-v2/real-enospc-data.ext4"
+        ]
+      },
+      "exit": {
+        "code": 0,
+        "signal": null
+      },
+      "serial_log": "evidence/real-enospc-reopen.serial.log",
+      "serial_log_sha256": "1228556b562022c838dc274d4c5069f00e53aabd0c714a5cebc281e872637ee1",
+      "verification": {
+        "available": true,
+        "contiguous": true,
+        "durable_record_count": 0,
+        "durable_sequence": 0,
+        "expected_max_sequence": 0,
+        "expected_min_sequence": 0,
+        "last_error": "none",
+        "passed": true,
+        "requires_reopen": false,
+        "schema": "kungfu.durability.powercut-verification/v1",
+        "unacknowledged_tail_bytes": 263,
+        "unacknowledged_tail_integrity": "complete_records"
+      }
+    }
+  }
+}

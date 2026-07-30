@@ -1,0 +1,6 @@
+{
+  "identityRoot": "sha256:55b5b2087c9789ee4ac4b15e6194380a3af8b2ccc454432f4cb50d3774234111",
+  "schema": "kungfu.workspace.identity-material/v1",
+  "workspaceKey": "workspace:e82dc65e-532a-4a4f-b72a-50f49019830e",
+  "workspaceKind": "project"
+}

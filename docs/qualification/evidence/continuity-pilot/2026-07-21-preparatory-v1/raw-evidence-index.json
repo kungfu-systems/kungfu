@@ -1,0 +1,25 @@
+{
+  "schema": "kungfu.continuity-raw-evidence-index/v1",
+  "runIdentity": {
+    "id": "2026-07-21-preparatory-v1",
+    "protocol": "kungfu-continuity-pilot-v1"
+  },
+  "entries": [
+    {
+      "path": "baseline-report.json",
+      "root": "sha256:a21a6ef0098d1b4909a5b6ab8b00e8eb6bc5257dc14dcd2215763d370d9abce4"
+    },
+    {
+      "path": "kungfu-report.json",
+      "root": "sha256:9e65aea2701534dee02c822b7f07d0e7c3f30e7a9bab34b66c557f650816e736"
+    },
+    {
+      "path": "raw/baseline-events.json",
+      "root": "sha256:b069ee046ce420be8fb45a48a5efdb3beabc422e55a94f63166e878e28527dbd"
+    },
+    {
+      "path": "raw/kungfu-events.json",
+      "root": "sha256:460c299dcd25f5eaf4193c4e3905b0e427514cd4456257bb36c38ecc02f75354"
+    }
+  ]
+}

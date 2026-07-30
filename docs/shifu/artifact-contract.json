@@ -1,0 +1,104 @@
+{
+  "schema": "shifu.local-artifact-contract/v1",
+  "owner": "shifu",
+  "decision": "docs/adr/SHIFU-ADR-019f86da-4f90-7885-9597-bfdcb4fd4453.md",
+  "catalogSchema": "docs/shifu/schema/local-artifact-catalog-v1.schema.json",
+  "promotionReceiptSchema": "docs/shifu/schema/local-promotion-receipt-v1.schema.json",
+  "qualifiedAssignmentCore": {
+    "status": "development",
+    "decision": "docs/adr/SHIFU-ADR-019fab1a-2853-737e-8c67-a9b1aa9035aa.md",
+    "manifestSchema": "docs/shifu/schema/qualified-assignment-core-artifact-v2.schema.json",
+    "qualificationReceiptSchema": "docs/shifu/schema/qualified-assignment-core-qualification-v2.schema.json",
+    "platformMatrix": "docs/shifu/qualified-assignment-core-platform-matrix.json",
+    "platformMatrixSchema": "docs/shifu/schema/qualified-assignment-core-platform-matrix-v1.schema.json",
+    "schemaIds": {
+      "manifest": "https://libkungfu.dev/schemas/shifu/qualified-assignment-core-artifact-v2.schema.json",
+      "qualificationReceipt": "https://libkungfu.dev/schemas/shifu/qualified-assignment-core-qualification-v2.schema.json",
+      "platformMatrix": "https://libkungfu.dev/schemas/shifu/qualified-assignment-core-platform-matrix-v1.schema.json"
+    },
+    "rootPreimages": {
+      "canonicalization": "UTF-8 JSON, recursively lexicographic object keys, original array order, JSON.stringify scalar encoding, and no insignificant whitespace",
+      "artifactRoot": "canonical payload entries under shifu.qualified-assignment-core-payload/v1",
+      "manifestRoot": "canonical manifest fields except manifestRoot, qualificationReceiptRoot, and promotionAuthorityRoot",
+      "promotionAuthorityRoot": "canonical promotionAuthority object",
+      "qualificationReceiptRoot": "canonical qualification receipt except receiptRoot",
+      "compatibilityRoot": "canonical v2 native closure, platform, architecture, Python ABI, toolchain, dependency locks, build profile, Shifu and Buildchain contracts, compatibility policy, and payload identity",
+      "equivalenceReceiptRoot": "canonical exact producer and protected target provenance plus independently recomputed compatibility comparison"
+    },
+    "compatibility": {
+      "exactCommit": "producer commit must equal target commit and equivalenceReceiptRoot must be null",
+      "explicitEquivalence": "producer and target identities remain distinct and an immutable equivalenceReceiptRoot is required",
+      "v1Migration": "retained exact-commit v1 bundles remain readable through the v2 verifier but cannot enter compatibility-index reuse",
+      "producerMetadataRewrite": "forbidden",
+      "unknownFields": "rejected",
+      "unsupportedMajor": "rejected"
+    },
+    "migration": {
+      "v1ExactCommitReadThrough": "2026-10-31T23:59:59Z",
+      "v1CompatibilityIndexReuse": false,
+      "postWindowBehavior": "reject-v1-and-fall-back-to-current-source"
+    },
+    "consumerSafety": {
+      "staging": "outside-target",
+      "paths": "bounded-relative-posix-only",
+      "entryTypes": ["regular-file", "safe-relative-symlink"],
+      "runtimeClosures": "exactly the row-specific entries and executable metadata declared by platformMatrix",
+      "digestAndSizeVerification": "required-before-publication",
+      "cleanCheckout": "required",
+      "publication": "atomic-replace",
+      "partialStateRunnable": false
+    },
+    "authority": {
+      "artifactBytes": "content-addressed-payload-only",
+      "qualification": "immutable-receipt",
+      "promotion": "single-active-protected-authority",
+      "protectedRefPolicy": "github-default-branch",
+      "transport": "replaceable-non-authoritative",
+      "platformRow": "exact operating-system, architecture, CPython ABI, runner, payload, qualification, and promotion identity",
+      "crossRowSubstitution": "forbidden"
+    },
+    "matrix": {
+      "initialRows": [
+        "darwin-arm64-cp313",
+        "darwin-x86_64-cp313",
+        "linux-x86_64-cp313",
+        "windows-x86_64-cp313"
+      ],
+      "artifactNaming": "exact source commit plus platform row",
+      "missingOrUnavailableRow": "unqualified",
+      "promotionIsolation": "one active protected authority per row",
+      "legacySourceOnlyArtifactName": "read-only Darwin ARM64 migration transport; never cross-row authority"
+    }
+  },
+  "consumers": [
+    "shifu self-update",
+    "shifu builds",
+    "shifu promote",
+    "qualified Assignment Core producers and consumers"
+  ],
+  "selection": {
+    "automatic": ["same", "descendant"],
+    "manual": ["ancestor", "diverged", "unknown"],
+    "rollbackOnlyIsCandidate": false,
+    "recencyIsAuthority": false,
+    "productQualificationRequired": true,
+    "productMainlineRef": "origin/HEAD",
+    "productSourceMustEqualMainline": true,
+    "localPreview": {
+      "explicitBuildIdRequired": true,
+      "cleanSourceRequired": true,
+      "productManifestSourceMustEqualArtifactCommit": true,
+      "mainlineQualificationClaimed": false,
+      "rollbackCoordinateRequired": true,
+      "installedMode": "preview"
+    },
+    "priorInstalledSlotRetainedForRollback": true,
+    "priorInstalledSlotRequiredBeforePromotion": true,
+    "macProductManifestsRequired": [
+      "kungfubuildinfo.json",
+      "kungfu-release-manifest.json",
+      "profile-kfd3.json"
+    ],
+    "productManifestSourceMustEqualArtifactCommit": true
+  }
+}

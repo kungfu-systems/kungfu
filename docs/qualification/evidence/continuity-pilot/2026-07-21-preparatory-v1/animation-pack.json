@@ -1,0 +1,58 @@
+{
+  "schema": "kungfu.continuity-animation-pack/v1",
+  "sourceProjectionRoot": "sha256:8073546fc5c3247ef4b7cec3b5725469cc80342a196b29f003978b8da1bb3ed3",
+  "durationSeconds": 32,
+  "storyboard": [
+    {
+      "id": "task",
+      "from": 0,
+      "to": 5,
+      "data": "$.observed.task"
+    },
+    {
+      "id": "inspection",
+      "from": 5,
+      "to": 11,
+      "annotation": "Both paths inspect the same tiny repository."
+    },
+    {
+      "id": "reset",
+      "from": 11,
+      "to": 18,
+      "data": "$.observed.reset"
+    },
+    {
+      "id": "continuation",
+      "from": 18,
+      "to": 26,
+      "data": "$.observed"
+    },
+    {
+      "id": "boundary",
+      "from": 26,
+      "to": 32,
+      "data": "$.limitations"
+    }
+  ],
+  "redactionRules": [
+    "Do not expose absolute paths, environment variables, private logs, transcripts, provider credentials, or session identifiers.",
+    "Use only values present in public-projection.json.",
+    "Label design annotations separately from observed evidence."
+  ],
+  "framing": {
+    "desktop": "16:9 split path with reset centered and evidence boundary footer",
+    "mobile": "9:16 stacked path with the same scene order and persistent preparatory label"
+  },
+  "staticFallback": "In a local deterministic fixture, the Kungfu path continued from one durable fact after reset; the baseline path had no continuation input. This validates the evidence pipeline, not product or long-task performance.",
+  "howThisWasTested": {
+    "command": "./shifu qualify:continuity-pilot -- --output <disposable-output>",
+    "sourceHead": "70467db1ad6ba2f61248369523ca91670228e1e8",
+    "fixtureRoot": "sha256:f0d7851680393c4cc38e0a6334058bf7edb17df71997d666169b4cfe42adac2a",
+    "reportRoots": {
+      "baselineReportRoot": "sha256:d8e41d4ad3d5477d3f752e65327760c67251abb630c787c2af7e8702f9bc2fc2",
+      "kungfuReportRoot": "sha256:5890e470e17d7e0ae1a76c5b40387804d24c0a9fec0be170611a6839aecec8c9",
+      "rawIndexRoot": "sha256:4c801f8c668713df3b534212eeb38e5ab773725ff99d857b711d6225701fc0fc"
+    },
+    "evidenceClass": "preparatory"
+  }
+}

@@ -1,0 +1,759 @@
+{
+  "schema": "kungfu.kfd-agent-hub-20-qualification/v1",
+  "claim": "installed-kungfu-local-peer-kfd-agent-hub-20",
+  "qualifyingBoundary": {
+    "product": "Kungfu Work installed macOS arm64 artifact",
+    "topology": "two isolated local-peer Hub authority domains",
+    "suite": "KFD Agent Hub 20 experimental alpha profile",
+    "portability": "content-bound local export/import observation",
+    "excludes": [
+      "KFD certification",
+      "external vendor adoption",
+      "production fitness",
+      "network transport interoperability",
+      "stable or public release",
+      "unobserved platforms"
+    ]
+  },
+  "kfd": {
+    "lock": {
+      "schema": "kungfu.kfd-agent-hub-package-lock/v1",
+      "package": "@kungfu-tech/kfd",
+      "version": "1.0.0-alpha.46",
+      "registryGitHead": "65ff3e54e6bcbeee76b75354b4064ebbd5892a1a",
+      "integrity": "sha512-2Pp9fDY3wWtnuYj3UuT9ijwPeX8gQALD8RIYXLS/GMUb7MkoYZSdB3mh9un3Ky3q6m4tSsHiu5tdcUnQsmSl4g==",
+      "shasum": "f93a8ecc00aed02e3f1a54bbdba84bda126d16c0",
+      "packageManifestDigest": "sha256:9938a1c824b45fbd16da3bd118f236f2b866a48b9699186fe8bb5f11ba06befe",
+      "profileManifestDigest": "sha256:2bffc69e3238b20eea3362e6bd96a7944aea480e095520cf351721b85c04fc2d",
+      "protocolManifestDigest": "sha256:dab4e93d2a662092eb51e29171dfc8bd0c400daa99899f074e69608b45cc7a59",
+      "suiteVectorRoot": "sha256:f1be3a10121fbd5389204b6e1ca70ea3920d9ba13ad20bb9f83fac078339c6b2",
+      "failureInventoryRoot": "sha256:616df582900189eea35a3ca701d100a1aa123b89f424fba4090cf656286a74be",
+      "verifierArtifactDigest": "sha256:252e9576123b464055cda1eef4294ba9e670330b5d294407bf1e542eec7d04cf"
+    },
+    "observed": {
+      "package": "@kungfu-tech/kfd",
+      "version": "1.0.0-alpha.46",
+      "packageManifestDigest": "sha256:9938a1c824b45fbd16da3bd118f236f2b866a48b9699186fe8bb5f11ba06befe",
+      "profileManifestDigest": "sha256:2bffc69e3238b20eea3362e6bd96a7944aea480e095520cf351721b85c04fc2d",
+      "protocolManifestDigest": "sha256:dab4e93d2a662092eb51e29171dfc8bd0c400daa99899f074e69608b45cc7a59",
+      "suiteVectorRoot": "sha256:f1be3a10121fbd5389204b6e1ca70ea3920d9ba13ad20bb9f83fac078339c6b2",
+      "failureInventoryRoot": "sha256:616df582900189eea35a3ca701d100a1aa123b89f424fba4090cf656286a74be",
+      "verifierArtifactDigest": "sha256:252e9576123b464055cda1eef4294ba9e670330b5d294407bf1e542eec7d04cf"
+    }
+  },
+  "adapter": {
+    "path": "tests/qualification/agent-hub-20/adapter.mjs",
+    "artifactDigest": "sha256:70a53630b9f9df9e11727740b142a956fe5389dfbb14ae2ecd7504f3564fd4a2",
+    "sourceClassification": "product-command-forwarder",
+    "semanticAuthority": "installed Kungfu agent hub handle command"
+  },
+  "product": {
+    "installedEntrypoint": "/usr/local/bin/kungfu",
+    "resolvedExecutable": "/Applications/Kungfu Episodes.app/Contents/Resources/cli/kungfu",
+    "artifactDigest": "sha256:29b5a3a378d323e5a8c7ad8910f481c35f92265e63f867167bc7005c021c34ce",
+    "runtimeArtifactDigest": "sha256:3d5e4eaf3124d9015d97cd40e60efa87642f405cfa3c90b3539b906b8c849e04",
+    "buildInfoDigest": "sha256:5166edb699aa5c2981b04dc39328ae6dfa292e4770d7975deddb9d08b65e2253",
+    "releaseManifestDigest": "sha256:3191e0ecd64235cfd48d5727290d27b295621b20ecf876381f0ea04d5dd4096c",
+    "sourceCommit": "ff8f5e27f85fcdb23dc1f7d7ac6a3011d586d9fd",
+    "sourceBranch": "feature/kfd-agent-hub-20-qualification",
+    "sourcePristine": true,
+    "releaseManifestSourceCommit": "ff8f5e27f85fcdb23dc1f7d7ac6a3011d586d9fd",
+    "version": "4.0.0-alpha.1\nKungfu UNGFU™ · Never Guess. Facts Unfold.",
+    "platform": {
+      "os": "darwin",
+      "arch": "arm64"
+    },
+    "provenance": "installed-product"
+  },
+  "isolation": {
+    "qualificationRootClass": "retained-disposable-dual-hub-root",
+    "sourceHomeClass": "domains/hub-alpha/.kungfu",
+    "targetHomeClass": "domains/hub-beta/.kungfu",
+    "homesDistinct": true,
+    "sourceStorePresent": true,
+    "targetStorePresent": true,
+    "realHomeBefore": {
+      "pathClass": "user-kungfu-home",
+      "exists": true,
+      "counts": {
+        "file": 101,
+        "directory": 177,
+        "symlink": 0,
+        "other": 0,
+        "totalBytes": 100945124
+      },
+      "metadataRoot": "sha256:c85fb26e23d02b06facc537fd02997659912bf16d605f959ecdfc5f363e78023",
+      "contentRead": false
+    },
+    "realHomeAfter": {
+      "pathClass": "user-kungfu-home",
+      "exists": true,
+      "counts": {
+        "file": 101,
+        "directory": 177,
+        "symlink": 0,
+        "other": 0,
+        "totalBytes": 100945124
+      },
+      "metadataRoot": "sha256:c85fb26e23d02b06facc537fd02997659912bf16d605f959ecdfc5f363e78023",
+      "contentRead": false
+    },
+    "realHomeUnchanged": true
+  },
+  "report": {
+    "path": "kfd-agent-hub-report.json",
+    "digest": "sha256:937d157559f2035fe7aed4fc18ac6890ebb8f4238dc69d8b9fe6398ad8f81110",
+    "transcriptRoot": "sha256:b5071593f969191ff7221fa8f58695e7ba7a097dacc33be804ab94473abfaeb5",
+    "resultRoot": "sha256:9789b0d18d4725fe31cb4ed09e781f53d7d9820848709cec241897386ff88276",
+    "coverage": {
+      "total": 20,
+      "passed": 20,
+      "failed": 0,
+      "categories": {
+        "authority": {
+          "total": 3,
+          "passed": 3,
+          "failed": 0
+        },
+        "completion": {
+          "total": 1,
+          "passed": 1,
+          "failed": 0
+        },
+        "conflict": {
+          "total": 2,
+          "passed": 2,
+          "failed": 0
+        },
+        "delivery": {
+          "total": 5,
+          "passed": 5,
+          "failed": 0
+        },
+        "knowledge": {
+          "total": 3,
+          "passed": 3,
+          "failed": 0
+        },
+        "negotiation": {
+          "total": 3,
+          "passed": 3,
+          "failed": 0
+        },
+        "portability": {
+          "total": 2,
+          "passed": 2,
+          "failed": 0
+        },
+        "recovery": {
+          "total": 1,
+          "passed": 1,
+          "failed": 0
+        }
+      }
+    },
+    "valid": true
+  },
+  "verifier": {
+    "schemaVersion": 1,
+    "contract": "kfd.agent-hub-report-verifier/v1",
+    "valid": true,
+    "reportDigest": "sha256:937d157559f2035fe7aed4fc18ac6890ebb8f4238dc69d8b9fe6398ad8f81110",
+    "checks": [
+      {
+        "id": "report-contract",
+        "passed": true,
+        "code": "ok"
+      },
+      {
+        "id": "source-cut",
+        "passed": true,
+        "code": "ok"
+      },
+      {
+        "id": "profile-root",
+        "passed": true,
+        "code": "ok"
+      },
+      {
+        "id": "protocol-root",
+        "passed": true,
+        "code": "ok"
+      },
+      {
+        "id": "suite-root",
+        "passed": true,
+        "code": "ok"
+      },
+      {
+        "id": "inventory-root",
+        "passed": true,
+        "code": "ok"
+      },
+      {
+        "id": "verifier-artifact",
+        "passed": true,
+        "code": "ok"
+      },
+      {
+        "id": "manifest-closure",
+        "passed": true,
+        "code": "ok"
+      },
+      {
+        "id": "adapter-handshake",
+        "passed": true,
+        "code": "ok"
+      },
+      {
+        "id": "dual-hub-capabilities",
+        "passed": true,
+        "code": "ok"
+      },
+      {
+        "id": "capability-handshake-roots",
+        "passed": true,
+        "code": "ok"
+      },
+      {
+        "id": "result-closure",
+        "passed": true,
+        "code": "ok"
+      },
+      {
+        "id": "expectation:hub-001-negotiate-exact-profile",
+        "passed": true,
+        "code": "ok"
+      },
+      {
+        "id": "response-envelope:hub-001-negotiate-exact-profile",
+        "passed": true,
+        "code": "ok"
+      },
+      {
+        "id": "response-root:hub-001-negotiate-exact-profile",
+        "passed": true,
+        "code": "ok"
+      },
+      {
+        "id": "actual:hub-001-negotiate-exact-profile",
+        "passed": true,
+        "code": "ok"
+      },
+      {
+        "id": "outcome:hub-001-negotiate-exact-profile",
+        "passed": true,
+        "code": "ok"
+      },
+      {
+        "id": "expectation:hub-002-reject-unknown-required-feature",
+        "passed": true,
+        "code": "ok"
+      },
+      {
+        "id": "response-envelope:hub-002-reject-unknown-required-feature",
+        "passed": true,
+        "code": "ok"
+      },
+      {
+        "id": "response-root:hub-002-reject-unknown-required-feature",
+        "passed": true,
+        "code": "ok"
+      },
+      {
+        "id": "actual:hub-002-reject-unknown-required-feature",
+        "passed": true,
+        "code": "ok"
+      },
+      {
+        "id": "outcome:hub-002-reject-unknown-required-feature",
+        "passed": true,
+        "code": "ok"
+      },
+      {
+        "id": "expectation:hub-003-reject-profile-root-drift",
+        "passed": true,
+        "code": "ok"
+      },
+      {
+        "id": "response-envelope:hub-003-reject-profile-root-drift",
+        "passed": true,
+        "code": "ok"
+      },
+      {
+        "id": "response-root:hub-003-reject-profile-root-drift",
+        "passed": true,
+        "code": "ok"
+      },
+      {
+        "id": "actual:hub-003-reject-profile-root-drift",
+        "passed": true,
+        "code": "ok"
+      },
+      {
+        "id": "outcome:hub-003-reject-profile-root-drift",
+        "passed": true,
+        "code": "ok"
+      },
+      {
+        "id": "expectation:hub-004-record-delivery-without-admission",
+        "passed": true,
+        "code": "ok"
+      },
+      {
+        "id": "response-envelope:hub-004-record-delivery-without-admission",
+        "passed": true,
+        "code": "ok"
+      },
+      {
+        "id": "response-root:hub-004-record-delivery-without-admission",
+        "passed": true,
+        "code": "ok"
+      },
+      {
+        "id": "actual:hub-004-record-delivery-without-admission",
+        "passed": true,
+        "code": "ok"
+      },
+      {
+        "id": "outcome:hub-004-record-delivery-without-admission",
+        "passed": true,
+        "code": "ok"
+      },
+      {
+        "id": "expectation:hub-005-preserve-identical-duplicate",
+        "passed": true,
+        "code": "ok"
+      },
+      {
+        "id": "response-envelope:hub-005-preserve-identical-duplicate",
+        "passed": true,
+        "code": "ok"
+      },
+      {
+        "id": "response-root:hub-005-preserve-identical-duplicate",
+        "passed": true,
+        "code": "ok"
+      },
+      {
+        "id": "actual:hub-005-preserve-identical-duplicate",
+        "passed": true,
+        "code": "ok"
+      },
+      {
+        "id": "outcome:hub-005-preserve-identical-duplicate",
+        "passed": true,
+        "code": "ok"
+      },
+      {
+        "id": "expectation:hub-006-reject-idempotency-conflict",
+        "passed": true,
+        "code": "ok"
+      },
+      {
+        "id": "response-envelope:hub-006-reject-idempotency-conflict",
+        "passed": true,
+        "code": "ok"
+      },
+      {
+        "id": "response-root:hub-006-reject-idempotency-conflict",
+        "passed": true,
+        "code": "ok"
+      },
+      {
+        "id": "actual:hub-006-reject-idempotency-conflict",
+        "passed": true,
+        "code": "ok"
+      },
+      {
+        "id": "outcome:hub-006-reject-idempotency-conflict",
+        "passed": true,
+        "code": "ok"
+      },
+      {
+        "id": "expectation:hub-007-admit-under-local-authority",
+        "passed": true,
+        "code": "ok"
+      },
+      {
+        "id": "response-envelope:hub-007-admit-under-local-authority",
+        "passed": true,
+        "code": "ok"
+      },
+      {
+        "id": "response-root:hub-007-admit-under-local-authority",
+        "passed": true,
+        "code": "ok"
+      },
+      {
+        "id": "actual:hub-007-admit-under-local-authority",
+        "passed": true,
+        "code": "ok"
+      },
+      {
+        "id": "outcome:hub-007-admit-under-local-authority",
+        "passed": true,
+        "code": "ok"
+      },
+      {
+        "id": "expectation:hub-008-retain-delayed-delivery",
+        "passed": true,
+        "code": "ok"
+      },
+      {
+        "id": "response-envelope:hub-008-retain-delayed-delivery",
+        "passed": true,
+        "code": "ok"
+      },
+      {
+        "id": "response-root:hub-008-retain-delayed-delivery",
+        "passed": true,
+        "code": "ok"
+      },
+      {
+        "id": "actual:hub-008-retain-delayed-delivery",
+        "passed": true,
+        "code": "ok"
+      },
+      {
+        "id": "outcome:hub-008-retain-delayed-delivery",
+        "passed": true,
+        "code": "ok"
+      },
+      {
+        "id": "expectation:hub-009-attenuate-delegated-authority",
+        "passed": true,
+        "code": "ok"
+      },
+      {
+        "id": "response-envelope:hub-009-attenuate-delegated-authority",
+        "passed": true,
+        "code": "ok"
+      },
+      {
+        "id": "response-root:hub-009-attenuate-delegated-authority",
+        "passed": true,
+        "code": "ok"
+      },
+      {
+        "id": "actual:hub-009-attenuate-delegated-authority",
+        "passed": true,
+        "code": "ok"
+      },
+      {
+        "id": "outcome:hub-009-attenuate-delegated-authority",
+        "passed": true,
+        "code": "ok"
+      },
+      {
+        "id": "expectation:hub-010-reject-authority-amplification",
+        "passed": true,
+        "code": "ok"
+      },
+      {
+        "id": "response-envelope:hub-010-reject-authority-amplification",
+        "passed": true,
+        "code": "ok"
+      },
+      {
+        "id": "response-root:hub-010-reject-authority-amplification",
+        "passed": true,
+        "code": "ok"
+      },
+      {
+        "id": "actual:hub-010-reject-authority-amplification",
+        "passed": true,
+        "code": "ok"
+      },
+      {
+        "id": "outcome:hub-010-reject-authority-amplification",
+        "passed": true,
+        "code": "ok"
+      },
+      {
+        "id": "expectation:hub-011-reject-revoked-warrant",
+        "passed": true,
+        "code": "ok"
+      },
+      {
+        "id": "response-envelope:hub-011-reject-revoked-warrant",
+        "passed": true,
+        "code": "ok"
+      },
+      {
+        "id": "response-root:hub-011-reject-revoked-warrant",
+        "passed": true,
+        "code": "ok"
+      },
+      {
+        "id": "actual:hub-011-reject-revoked-warrant",
+        "passed": true,
+        "code": "ok"
+      },
+      {
+        "id": "outcome:hub-011-reject-revoked-warrant",
+        "passed": true,
+        "code": "ok"
+      },
+      {
+        "id": "expectation:hub-012-surface-concurrent-conflict",
+        "passed": true,
+        "code": "ok"
+      },
+      {
+        "id": "response-envelope:hub-012-surface-concurrent-conflict",
+        "passed": true,
+        "code": "ok"
+      },
+      {
+        "id": "response-root:hub-012-surface-concurrent-conflict",
+        "passed": true,
+        "code": "ok"
+      },
+      {
+        "id": "actual:hub-012-surface-concurrent-conflict",
+        "passed": true,
+        "code": "ok"
+      },
+      {
+        "id": "outcome:hub-012-surface-concurrent-conflict",
+        "passed": true,
+        "code": "ok"
+      },
+      {
+        "id": "expectation:hub-013-reject-hidden-last-write-wins",
+        "passed": true,
+        "code": "ok"
+      },
+      {
+        "id": "response-envelope:hub-013-reject-hidden-last-write-wins",
+        "passed": true,
+        "code": "ok"
+      },
+      {
+        "id": "response-root:hub-013-reject-hidden-last-write-wins",
+        "passed": true,
+        "code": "ok"
+      },
+      {
+        "id": "actual:hub-013-reject-hidden-last-write-wins",
+        "passed": true,
+        "code": "ok"
+      },
+      {
+        "id": "outcome:hub-013-reject-hidden-last-write-wins",
+        "passed": true,
+        "code": "ok"
+      },
+      {
+        "id": "expectation:hub-014-retain-partial-knowledge",
+        "passed": true,
+        "code": "ok"
+      },
+      {
+        "id": "response-envelope:hub-014-retain-partial-knowledge",
+        "passed": true,
+        "code": "ok"
+      },
+      {
+        "id": "response-root:hub-014-retain-partial-knowledge",
+        "passed": true,
+        "code": "ok"
+      },
+      {
+        "id": "actual:hub-014-retain-partial-knowledge",
+        "passed": true,
+        "code": "ok"
+      },
+      {
+        "id": "outcome:hub-014-retain-partial-knowledge",
+        "passed": true,
+        "code": "ok"
+      },
+      {
+        "id": "expectation:hub-015-retain-intentionally-withheld",
+        "passed": true,
+        "code": "ok"
+      },
+      {
+        "id": "response-envelope:hub-015-retain-intentionally-withheld",
+        "passed": true,
+        "code": "ok"
+      },
+      {
+        "id": "response-root:hub-015-retain-intentionally-withheld",
+        "passed": true,
+        "code": "ok"
+      },
+      {
+        "id": "actual:hub-015-retain-intentionally-withheld",
+        "passed": true,
+        "code": "ok"
+      },
+      {
+        "id": "outcome:hub-015-retain-intentionally-withheld",
+        "passed": true,
+        "code": "ok"
+      },
+      {
+        "id": "expectation:hub-016-retain-unavailable",
+        "passed": true,
+        "code": "ok"
+      },
+      {
+        "id": "response-envelope:hub-016-retain-unavailable",
+        "passed": true,
+        "code": "ok"
+      },
+      {
+        "id": "response-root:hub-016-retain-unavailable",
+        "passed": true,
+        "code": "ok"
+      },
+      {
+        "id": "actual:hub-016-retain-unavailable",
+        "passed": true,
+        "code": "ok"
+      },
+      {
+        "id": "outcome:hub-016-retain-unavailable",
+        "passed": true,
+        "code": "ok"
+      },
+      {
+        "id": "expectation:hub-017-reject-call-success-as-completion",
+        "passed": true,
+        "code": "ok"
+      },
+      {
+        "id": "response-envelope:hub-017-reject-call-success-as-completion",
+        "passed": true,
+        "code": "ok"
+      },
+      {
+        "id": "response-root:hub-017-reject-call-success-as-completion",
+        "passed": true,
+        "code": "ok"
+      },
+      {
+        "id": "actual:hub-017-reject-call-success-as-completion",
+        "passed": true,
+        "code": "ok"
+      },
+      {
+        "id": "outcome:hub-017-reject-call-success-as-completion",
+        "passed": true,
+        "code": "ok"
+      },
+      {
+        "id": "expectation:hub-018-surface-offline-reconnect-conflict",
+        "passed": true,
+        "code": "ok"
+      },
+      {
+        "id": "response-envelope:hub-018-surface-offline-reconnect-conflict",
+        "passed": true,
+        "code": "ok"
+      },
+      {
+        "id": "response-root:hub-018-surface-offline-reconnect-conflict",
+        "passed": true,
+        "code": "ok"
+      },
+      {
+        "id": "actual:hub-018-surface-offline-reconnect-conflict",
+        "passed": true,
+        "code": "ok"
+      },
+      {
+        "id": "outcome:hub-018-surface-offline-reconnect-conflict",
+        "passed": true,
+        "code": "ok"
+      },
+      {
+        "id": "expectation:hub-019-preserve-export-import-roots",
+        "passed": true,
+        "code": "ok"
+      },
+      {
+        "id": "response-envelope:hub-019-preserve-export-import-roots",
+        "passed": true,
+        "code": "ok"
+      },
+      {
+        "id": "response-root:hub-019-preserve-export-import-roots",
+        "passed": true,
+        "code": "ok"
+      },
+      {
+        "id": "actual:hub-019-preserve-export-import-roots",
+        "passed": true,
+        "code": "ok"
+      },
+      {
+        "id": "outcome:hub-019-preserve-export-import-roots",
+        "passed": true,
+        "code": "ok"
+      },
+      {
+        "id": "expectation:hub-020-reject-export-import-drift",
+        "passed": true,
+        "code": "ok"
+      },
+      {
+        "id": "response-envelope:hub-020-reject-export-import-drift",
+        "passed": true,
+        "code": "ok"
+      },
+      {
+        "id": "response-root:hub-020-reject-export-import-drift",
+        "passed": true,
+        "code": "ok"
+      },
+      {
+        "id": "actual:hub-020-reject-export-import-drift",
+        "passed": true,
+        "code": "ok"
+      },
+      {
+        "id": "outcome:hub-020-reject-export-import-drift",
+        "passed": true,
+        "code": "ok"
+      },
+      {
+        "id": "result-root",
+        "passed": true,
+        "code": "ok"
+      },
+      {
+        "id": "transcript-root",
+        "passed": true,
+        "code": "ok"
+      },
+      {
+        "id": "coverage",
+        "passed": true,
+        "code": "ok"
+      },
+      {
+        "id": "scope",
+        "passed": true,
+        "code": "ok"
+      },
+      {
+        "id": "declared-validity",
+        "passed": true,
+        "code": "ok"
+      },
+      {
+        "id": "adapter-artifact",
+        "passed": true,
+        "code": "ok"
+      }
+    ],
+    "issues": [],
+    "adapterArtifactChecked": true
+  },
+  "releaseGateInput": true,
+  "valid": true
+}

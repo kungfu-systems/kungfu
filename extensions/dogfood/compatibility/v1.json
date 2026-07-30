@@ -1,0 +1,7 @@
+{
+  "schema": "kungfu.profile-compatibility/v1",
+  "runtimeContracts": [
+    "kungfu.profile-lifecycle/v1",
+    "kungfu.workspace-federation.query/v1"
+  ]
+}

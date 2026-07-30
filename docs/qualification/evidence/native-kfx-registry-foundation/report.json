@@ -1,0 +1,264 @@
+{
+  "schema": "kungfu.native-kfx-registry-foundation.qualification-report/v1",
+  "metadata": {
+    "metadataSchema": "kungfu.document-metadata/v1",
+    "documentStatus": "active",
+    "period": "2026-07-28",
+    "theme": "native-kfx-registry-foundation",
+    "documentType": "engineering-evidence",
+    "sources": [
+      "local-files",
+      "executable-probe",
+      "official-upstream"
+    ],
+    "confidence": "high",
+    "sensitivity": "public",
+    "evidenceGrade": "B",
+    "reviewState": "self-reviewed",
+    "lastReviewed": "2026-07-28",
+    "aiProvenance": {
+      "modelFamily": "GPT-5",
+      "product": "Codex",
+      "generatedAt": "2026-07-28",
+      "visibleEvidence": [
+        "checked-in Kungfu source",
+        "current-dev local Shifu builds and tests",
+        "PR 1624 source net change and conflict reconciliation",
+        "regenerated contract, KFD, documentation and semantic-amplification evidence"
+      ],
+      "unseenOrUnclaimed": [
+        "unexecuted platforms",
+        "notarization",
+        "publication",
+        "physical sudden-power-loss qualification",
+        "universal host rendering parity",
+        "deferred Qualification Lab cutover"
+      ]
+    }
+  },
+  "verdict": "current-dev-reconciled-foundation",
+  "source": {
+    "baseCommit": "d4ccae814c435d4442ffb64d7b88d7f8dbc606a8",
+    "sourceMergeBase": "626f98d5d08fa9cf4901c45492051ca8151d08e8",
+    "sourcePullRequest": 1624,
+    "replacementPullRequest": 1704,
+    "sourceHead": "9ea1a09080a9f59d0113ca94e95ab3dbd182bb22",
+    "sourcePatchId": "ca97d3d1e2b285095fa87e6851178ac5aa6e622d",
+    "sourcePathCount": 148,
+    "implementationBranch": "feature/pr-1624-final-reconciliation-review-merge",
+    "platform": "darwin-arm64",
+    "qualificationBasis": "current-dev reconciliation tree followed by clean committed-head readback"
+  },
+  "isolation": {
+    "replacementBase": "d4ccae814c435d4442ffb64d7b88d7f8dbc606a8",
+    "qualificationLabProtectedMerge": "1f7cfe58cc7699ac27106241430d77f6938eadcd",
+    "qualificationLabProtectedPathChanges": 0,
+    "historicalBranchRewritten": false,
+    "linearReplacement": true
+  },
+  "qualifiedBoundary": {
+    "authorityStatus": "manifest-fact-work-control-foundation-qualified",
+    "manifestAuthority": {
+      "semanticAuthority": "kungfu.kfx.json",
+      "transportMetadataOnly": "package.json",
+      "registryHistoryAuthority": "native Fact and Work lifecycle"
+    },
+    "semanticGraph": [
+      "providers",
+      "extension-points",
+      "contributions",
+      "required-dependencies",
+      "uses-if-present-dependencies",
+      "version-constraints",
+      "trust-constraints",
+      "capability-constraints",
+      "typed-active-dormant-degraded-states"
+    ],
+    "lifecycle": {
+      "authority": "one-libkungfu-writer-per-runtime-directory",
+      "workControl": [
+        "Fact Cut",
+        "Work",
+        "Warrant",
+        "Episode",
+        "Settlement",
+        "CAS"
+      ],
+      "fences": [
+        "generation",
+        "registry-root",
+        "graph-root",
+        "plan-root",
+        "trust-root",
+        "package-root"
+      ],
+      "operations": [
+        "install",
+        "update",
+        "remove",
+        "enable",
+        "disable",
+        "activate"
+      ],
+      "receipts": [
+        "applied",
+        "refused"
+      ],
+      "payloadRetention": "content-addressed-no-gc",
+      "replacement": "staged-atomic-rename-with-bounded-rollback"
+    },
+    "controlSuite": {
+      "authority": "public KFX Fact and Work lifecycle",
+      "dogfood": "recursive first-party Control Suite",
+      "independentGenerationAuthority": false
+    },
+    "hostProjection": {
+      "authority": "core-owned-experience-flow-descriptor",
+      "hosts": [
+        "gui",
+        "tui",
+        "cli",
+        "agent"
+      ],
+      "rendering": "host-native"
+    },
+    "cliMutation": "delegated-to-native-lifecycle"
+  },
+  "canonicalRoots": {
+    "semanticGraph": "sha256:18955819ef0c42e541666d88f5f6f951485f47034f5d137f34cd2bb5be21e6fd",
+    "semanticPlan": "sha256:23abcb9530839f169f7ea757c1f055a91d2ea5e13be5b6b8f611e9f907c1c708",
+    "semanticHostReceiptDependency": "sha256:a7d75ec5b794070541dd41069a26e032b8ef347e3a8f5a7cde0aa49e8e296bec",
+    "lifecycleRegistry": "sha256:7be373f60bbad5fc9dea25623e5d94ffbddc7cf426bcce0682c3f91e8b27cfd2",
+    "lifecycleGraph": "sha256:500a0bb57f4040c66f86e60fc454d10e9ebd7778d8acf7608308716e28825b56",
+    "lifecyclePlan": "sha256:40925a540ec5bb98c922f05e1cb89009a5e271f626ab095235b0001eb2b2cf96",
+    "lifecycleReceiptDependency": "sha256:683bbc2f5d8d6bbbaa6acefba35681b0999c7b80b1d83a9e6d7d633863dfc33f"
+  },
+  "checks": [
+    {
+      "command": "./shifu build:core",
+      "status": "passed",
+      "scope": "Core, Node, Electron, Python, KFD Agent Runtime, production libwasm"
+    },
+    {
+      "command": "./shifu test:native-kfx-admission",
+      "status": "passed",
+      "counts": {
+        "ctestTargets": 2,
+        "pythonTests": 14,
+        "apiAndHostTests": 7,
+        "nativeNodeTests": 2,
+        "incubationTests": 5,
+        "layeredBoundaryTests": 9
+      },
+      "additionalGates": [
+        "typescript",
+        "schema-authority",
+        "qualification-lab-isolation-from-d4ccae814c435d4442ffb64d7b88d7f8dbc606a8"
+      ]
+    },
+    {
+      "command": "./shifu test:kfx-profile-suite",
+      "status": "passed",
+      "tests": 63
+    },
+    {
+      "command": "./shifu exec node developer/sdk/src/sdk.js contract policy --check --json",
+      "status": "passed",
+      "root": "sha256:e811c09021362458ce0450a7bca6cc8536904225efa90b93fcab71acb5755718"
+    },
+    {
+      "command": "./shifu kfd:buildchain:check",
+      "status": "passed",
+      "counts": {
+        "kfd1Witnesses": 1,
+        "kfd2Claims": 5,
+        "kfd3Surfaces": 166
+      }
+    },
+    {
+      "command": "./shifu exec node framework/maintainability/semantic-amplification.mjs --check --json",
+      "status": "passed",
+      "manifestRoot": "sha256:89d2b6cbecb61fbb9dae7be05af7606cd367e35e2754b82c072a0b330a43e410",
+      "sourceRoot": "sha256:3c65a9448bf460a8e0d10997b113c585e84ae418d01824353fcfd0c828c364e8",
+      "blockingIssues": 0
+    },
+    {
+      "command": "./shifu check:source",
+      "status": "passed",
+      "changedPaths": 151,
+      "sourceAcceptanceContractTests": {
+        "passed": 690,
+        "skipped": 10
+      },
+      "coldReadOnlyDiscovery": "passed"
+    },
+    {
+      "command": "./shifu docs:check",
+      "status": "passed",
+      "tests": 107
+    }
+  ],
+  "product": {
+    "currentHeadCoreBuild": true,
+    "currentHeadProductBuild": false,
+    "notarized": false,
+    "publishableUpdateArtifact": false,
+    "claimBoundary": "Current-head source and native Core qualification only; no installed or released product inference."
+  },
+  "nonClaims": [
+    "linux-or-windows-native-product-qualification",
+    "macos-notarization-or-production-release",
+    "sudden-power-loss-receipt-durability",
+    "retained-content-garbage-collection",
+    "stale-writer-lock-recovery",
+    "distributed-writers-replication-or-consensus",
+    "universal-host-rendering-parity",
+    "qualification-lab-registry-cutover"
+  ],
+  "reconciliation": {
+    "sourceNetChange": {
+      "mergeBase": "626f98d5d08fa9cf4901c45492051ca8151d08e8",
+      "head": "9ea1a09080a9f59d0113ca94e95ab3dbd182bb22",
+      "pathCount": 148,
+      "patchId": "ca97d3d1e2b285095fa87e6851178ac5aa6e622d"
+    },
+    "replacementBase": "d4ccae814c435d4442ffb64d7b88d7f8dbc606a8",
+    "replacementPathCount": 151,
+    "conflictPaths": [
+      ".buildchain/kfd/kfd-1/contract-world.witness.json",
+      ".buildchain/kfd/kfd-1/release-gate.json",
+      ".buildchain/kfd/kfd-3/collaboration-interface.prebuild.json",
+      "developer/sdk/kfd/kfd-1/contract-world.witness.json",
+      "developer/sdk/kfd/kfd-1/release-gate.json",
+      "framework/contract/kungfu-agent-first-canonical-policy.json",
+      "framework/core/src/python/kungfu/cli/commands/kfx.py",
+      "framework/maintainability/semantic-amplification-report.json"
+    ],
+    "currentDevAdvanceConflicts": [
+      "framework/maintainability/semantic-amplification-report.json",
+      "framework/maintainability/semantic-amplification.test.mjs"
+    ],
+    "manualResolution": {
+      "path": "framework/core/src/python/kungfu/cli/commands/kfx.py",
+      "preserved": [
+        "native Fact Cut install, update and remove",
+        "native registry-backed listing",
+        "current-dev direct kfx_contract API"
+      ]
+    },
+    "regeneratedEvidence": [
+      "framework/contract/kungfu-agent-first-canonical-policy.json",
+      "config/kungfu-agent-first-canonical-policy.json",
+      ".buildchain/kfd/kfd-1/contract-world.witness.json",
+      ".buildchain/kfd/kfd-1/release-gate.json",
+      ".buildchain/kfd/kfd-3/collaboration-interface.prebuild.json",
+      "developer/sdk/kfd/kfd-1/contract-world.witness.json",
+      "developer/sdk/kfd/kfd-1/release-gate.json",
+      "framework/maintainability/semantic-amplification-report.json"
+    ],
+    "deliveryCoordinates": "bound by the protected replacement PR and exact dev merge receipt"
+  },
+  "deferredBoundary": {
+    "qualificationLabCutover": "separate downstream Assignment after this foundation merge"
+  }
+}

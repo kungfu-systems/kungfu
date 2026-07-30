@@ -1,0 +1,16 @@
+{
+  "backup_cut": {
+    "container_epoch": 1,
+    "frame_uid": 720100003,
+    "sequence": 3,
+    "stream_id": 7201
+  },
+  "bundle_id": "640162412e0a06ccb7b3951a9af33e4456aac85a84a9fe7a923e2282bc9bb654",
+  "complete": true,
+  "durable_record_count": 3,
+  "episode_count": 1,
+  "file_count": 5,
+  "manifest_sha256": "049aa86a0d63be989c54261ec2b246dada8d97fd10751e45232ebc56c6e9d42e",
+  "mode": "verify",
+  "schema": "kungfu.offhost-backup-fixture-report/v1"
+}

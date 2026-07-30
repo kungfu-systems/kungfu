@@ -1,0 +1,6 @@
+{
+  "schema": "shifu.documentation-negative-fixture/v1",
+  "base": "shifu.documentation.json",
+  "mutation": { "op": "replace", "path": "/policies/receiptAuthority", "value": "project" },
+  "expect": "self-certified-receipt"
+}

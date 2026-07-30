@@ -1,0 +1,11 @@
+[episode-qualify] profile=mvp-smoke-v1 mode=all seeds=42042
+[episode-qualify] accumulation seed=42042 checkpoints=1000
+[episode-qualify] contention seed=42042 workers=1 episodes=1000
+[episode-qualify] contention seed=42042 workers=2 episodes=1000
+[episode-qualify] contention seed=42042 workers=5 episodes=1000
+[episode-qualify] contention seed=42042 workers=10 episodes=1000
+[episode-qualify] semantic oracle and production comparisons
+[episode-qualify] report=/tmp/kf-episode-qualification-re3MNt/episode-trust-report.json
+[episode-qualify] scenarios=5 passed=5 busy=114828 qualified=true
+warning: --using-file is deprecated. This is now the default.
+$ node scripts/require-shifu.mjs episode:qualify && node framework/core/tests/qualification/episode/run.mjs -- --profile mvp-smoke-v1 --mode all

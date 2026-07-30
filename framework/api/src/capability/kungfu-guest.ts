@@ -1,4 +1,4 @@
-// The binding-less guest host (ADR-0014): the production caller the ADR-0013
+// The binding-less guest host (KF-ADR-019f86da-4f90-7789-8b48-620aa694acf9): the production caller the KF-ADR-019f86da-4f90-79f1-8716-aca36b142847
 // runtime-plane primitives were built for. It composes the OS-sandbox launcher
 // (./sandbox-launcher), the child-process relay transport (./subprocess), and a
 // per-runtime guest proxy (./guest-node for Node, capability/guest.py for
@@ -10,11 +10,11 @@
 //
 //   - Trusted, co-resident: createInProcessAsyncCaps short-circuits every call
 //     in-process against the real capabilities and returns their results BY
-//     REFERENCE — the zero-copy trusted channel of ADR-0013, wrapped only in an
+//     REFERENCE — the zero-copy trusted channel of KF-ADR-019f86da-4f90-79f1-8716-aca36b142847, wrapped only in an
 //     immediately-resolved promise so the surface matches the sandbox tier.
 //   - Default, sandboxed: launchSandboxedGuest runs the guest in an OS sandbox
 //     and serves its declared capabilities over the stdio relay, which returns
-//     serialized copies. The performance split ADR-0013 cut along the trust axis
+//     serialized copies. The performance split KF-ADR-019f86da-4f90-79f1-8716-aca36b142847 cut along the trust axis
 //     is preserved; only the surface is unified.
 //
 // The host never hands the guest the native binding: it addresses only the
@@ -99,11 +99,11 @@ export type SpawnFn = (
   options: { stdio: ['pipe', 'pipe', 'inherit']; env: NodeJS.ProcessEnv },
 ) => GuestChild;
 
-// The Windows launch seam (ADR-0014): on win32 the confinement is not a command
+// The Windows launch seam (KF-ADR-019f86da-4f90-7789-8b48-620aa694acf9): on win32 the confinement is not a command
 // wrapper Node can spawn — an AppContainer must be applied by a native
 // CreateProcess. The host injects this launcher (backed by libkungfu
 // `spawn_app_container`; see guest-windows.ts) so kungfu-guest stays binding-less
-// and the injection point mirrors ADR-0011's capability injection. It returns a
+// and the injection point mirrors KF-ADR-019f86da-4f90-7e5e-ae22-2a8fc24086f1's capability injection. It returns a
 // GuestChild (the same structural shape the relay serves over), so everything
 // downstream is unchanged.
 export type WindowsSandboxSpawn = (
@@ -128,7 +128,7 @@ export type SandboxedGuestOptions = {
   caps: Record<string, Record<string, unknown>>;
   // the capability keys this guest declared; only these are reachable
   declared: readonly string[];
-  // OS sandbox profile; defaults to the ADR-0014 permissive first-delivery
+  // OS sandbox profile; defaults to the KF-ADR-019f86da-4f90-7789-8b48-620aa694acf9 permissive first-delivery
   // profile — able to run, not yet restricted. Turn a knob on to narrow it.
   profile?: SandboxProfile;
   // injectable for tests; defaults to node:child_process spawn (unix path)

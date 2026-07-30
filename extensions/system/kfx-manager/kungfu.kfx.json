@@ -1,0 +1,26 @@
+{
+  "schema": "kungfu.kfx.manifest/v1",
+  "name": "@kungfu-tech/kfx-view-kfx-manager",
+  "version": "4.0.0-alpha.1",
+  "kungfuConfig": {
+    "key": "kfx-manager",
+    "name": "Profiles",
+    "product": {
+      "roles": [
+        "system-management",
+        "boot-critical"
+      ],
+      "icon": "🧩",
+      "order": 30
+    },
+    "config": {
+      "view": {
+        "title": "Profiles",
+        "capabilities": [
+          "kfxControl",
+          "profile"
+        ]
+      }
+    }
+  }
+}

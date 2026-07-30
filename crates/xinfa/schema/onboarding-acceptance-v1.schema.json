@@ -1,0 +1,23 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://xinfa.dev/schema/onboarding-acceptance-v1.schema.json",
+  "title": "Xinfa repository onboarding acceptance receipt v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["$schema", "schema", "mode", "status", "authoritative", "candidateRoot", "inventoryRoot", "repositoryRoot", "selectionRoot", "reviewer", "reviewerClaim", "projectRoot", "atlasRoot", "plan", "qualification", "writes", "receiptRoot"],
+  "properties": {
+    "$schema": { "const": "https://xinfa.dev/schema/onboarding-acceptance-v1.schema.json" },
+    "schema": { "const": "xinfa.repository-onboarding-acceptance/v1" },
+    "mode": { "enum": ["dry-run", "execute"] },
+    "status": { "enum": ["planned", "accepted"] },
+    "authoritative": { "type": "boolean" },
+    "candidateRoot": { "$ref": "#/$defs/root" }, "inventoryRoot": { "$ref": "#/$defs/root" },
+    "repositoryRoot": { "$ref": "#/$defs/root" }, "selectionRoot": { "$ref": "#/$defs/root" },
+    "reviewer": { "type": "string", "minLength": 1 }, "reviewerClaim": { "type": "string", "minLength": 1 },
+    "projectRoot": { "$ref": "#/$defs/root" }, "atlasRoot": { "$ref": "#/$defs/root" },
+    "plan": { "type": "object" }, "qualification": { "type": "object" },
+    "writes": { "type": "array", "maxItems": 1, "items": { "const": ".xinfa/project.json" } },
+    "receiptRoot": { "$ref": "#/$defs/root" }
+  },
+  "$defs": { "root": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" } }
+}

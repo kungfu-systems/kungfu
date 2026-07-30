@@ -1,0 +1,50 @@
+{
+  "schema": "kungfu.dev-queue-admission/v1",
+  "branchPattern": "dev/v*/v*",
+  "admittedFamily": {
+    "minimumMajor": 4,
+    "include": [
+      "refs/heads/dev/v*/v*"
+    ],
+    "exclude": [
+      "refs/heads/dev/v1/v*",
+      "refs/heads/dev/v2/v*",
+      "refs/heads/dev/v3/v*"
+    ],
+    "legacyExclusionReason": "Legacy v1-v3 branches do not emit the queue admission lease and must not inherit an unsatisfiable required context."
+  },
+  "requiredContext": "Queue admission lease",
+  "authority": {
+    "pullRequestHead": "atlas-serialized-wrapper",
+    "mergeGroup": ".github/workflows/queue-admission-lease.yml",
+    "dequeueRevocation": ".github/workflows/cancel-dequeued-merge-group.yml",
+    "dequeueControllerSource": "current-protected-pull-request-base-ref"
+  },
+  "admission": {
+    "queueMustBeEmpty": true,
+    "requiredPosition": 1,
+    "freshProjectCutReplay": true,
+    "leaseAfterReplay": true
+  },
+  "revocation": {
+    "dequeue": "failure-status-on-exact-pr-head-for-non-merged-removal",
+    "merged": "preserve-success-status-on-exact-pr-head",
+    "headChange": "lease-does-not-transfer",
+    "sameHeadRetry": "forbidden-after-revocation"
+  },
+  "rulesetActivation": {
+    "required": true,
+    "rulesetId": 19057118,
+    "rulesetName": "Buildchain dev merge queue: admitted default dev channel",
+    "target": {
+      "include": [
+        "~DEFAULT_BRANCH"
+      ],
+      "exclude": []
+    },
+    "providerConstraint": "GitHub merge queue rulesets reject wildcard ref targets. The repository default branch is the moving authority pointer, and resolveDevBranch admits it only when it belongs to the v4+ dev family.",
+    "expectedSource": "any",
+    "reason": "The pull-request lease is a user-authored commit status while the merge-group continuation is a GitHub Actions check."
+  },
+  "threatBoundary": "Prevents inadvertent direct queue admission. A write actor that deliberately forges the named status is outside this operational safety boundary."
+}

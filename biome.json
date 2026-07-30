@@ -6,14 +6,17 @@
     "useIgnoreFile": true
   },
   "files": {
+    "maxSize": 2097152,
     "ignore": [
       "**/node_modules/**",
+      "**/.venv/**",
       "**/out/**",
       "**/dist/**",
       "**/build/**",
       "**/.deps/**",
       "**/generated/**",
-      "**/fixtures/**"
+      "**/fixtures/**",
+      "framework/gui/public/config/defaultInstruments.json"
     ]
   },
   "formatter": {

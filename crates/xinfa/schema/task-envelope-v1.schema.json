@@ -1,0 +1,48 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://xinfa.dev/schema/task-envelope-v1.schema.json",
+  "title": "Xinfa task envelope v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "kind", "objective", "audience", "role", "visibility", "mission", "acceptance", "subjects", "claims", "ownership", "dependencies", "required_capabilities", "required_authority", "requested_route", "requested_parity_group", "atlas"],
+  "properties": {
+    "schema": { "const": "xinfa.task-envelope/v1" },
+    "kind": { "const": "xinfa.task-envelope/v1" },
+    "objective": { "type": "string", "minLength": 1 },
+    "audience": { "const": "agent" },
+    "role": { "type": "string", "minLength": 1 },
+    "visibility": { "enum": ["public", "internal", "private"] },
+    "mission": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "lens", "track"],
+      "properties": {
+        "id": { "type": "string", "minLength": 1 },
+        "lens": { "type": "string", "minLength": 1 },
+        "track": { "type": "string", "minLength": 1 }
+      }
+    },
+    "acceptance": { "$ref": "#/$defs/strings" },
+    "subjects": { "$ref": "#/$defs/strings" },
+    "claims": { "$ref": "#/$defs/strings" },
+    "ownership": { "$ref": "#/$defs/strings" },
+    "dependencies": { "$ref": "#/$defs/strings" },
+    "required_capabilities": { "$ref": "#/$defs/strings" },
+    "required_authority": { "$ref": "#/$defs/strings" },
+    "requested_route": { "type": ["string", "null"] },
+    "requested_parity_group": { "type": ["string", "null"] },
+    "atlas": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["atlas_root", "cut_root"],
+      "properties": {
+        "atlas_root": { "$ref": "#/$defs/root" },
+        "cut_root": { "$ref": "#/$defs/root" }
+      }
+    }
+  },
+  "$defs": {
+    "strings": { "type": "array", "uniqueItems": true, "items": { "type": "string", "minLength": 1 } },
+    "root": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" }
+  }
+}

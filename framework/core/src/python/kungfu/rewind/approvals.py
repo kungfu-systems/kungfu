@@ -4,7 +4,7 @@
 # journal fact, and tell the session driver what to do to the process.
 #
 # Recording and executing are kept separate on purpose. This module owns the
-# fact (an ApprovalDecision event, msg_type 30009) and the *intent* (a
+# fact (a rewind.approval.decision event) and the *intent* (a
 # ControlAction); the caller — the GUI terminal capability or a pty session
 # driver — performs the actual write/kill. That split keeps the decision
 # auditable even if execution is out of this process (the GUI holds the pty),
@@ -23,7 +23,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Callable, Optional
 
-from kungfu.rewind import MSG_APPROVAL_DECISION, events
+from kungfu.rewind import ACTION_APPROVAL_DECISION, events
 from kungfu.rewind.fb.Decision import Decision
 
 
@@ -65,7 +65,7 @@ def _action_for(
 
 
 def apply_decision(
-    emit: Callable[[int, bytes], None],
+    emit: Callable[[str, bytes], None],
     run_id: str,
     decision: int,
     *,
@@ -81,8 +81,9 @@ def apply_decision(
     """Record an ApprovalDecision fact and return the control action to apply.
 
     The fact is recorded first — a human's decision is a fact whether or not the
-    process is still there to receive it. `emit`'s (msg_type, bytes) signature is
-    Supervisor.enqueue, so the decision lands on the same journal as the run.
+    process is still there to receive it. `emit`'s (action_type, bytes)
+    signature is Supervisor.enqueue, so the decision lands on the same journal
+    as the run.
     The returned ControlAction tells the session driver what to do: signal the
     process (Interrupt) or write input (Approve/Deny/Resume).
     """
@@ -95,5 +96,5 @@ def apply_decision(
         detail=detail,
         reason=reason,
     )
-    emit(MSG_APPROVAL_DECISION, payload)
+    emit(ACTION_APPROVAL_DECISION, payload)
     return _action_for(decision, approve_input, deny_input, resume_input)

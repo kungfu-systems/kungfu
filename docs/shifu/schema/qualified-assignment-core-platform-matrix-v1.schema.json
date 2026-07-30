@@ -1,0 +1,208 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://libkungfu.dev/schemas/shifu/qualified-assignment-core-platform-matrix-v1.schema.json",
+  "title": "Qualified Assignment Core platform matrix",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "status", "owner", "shared", "rows"],
+  "properties": {
+    "schema": {
+      "const": "shifu.qualified-assignment-core-platform-matrix/v1"
+    },
+    "status": {
+      "const": "development"
+    },
+    "owner": {
+      "const": "shifu"
+    },
+    "shared": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "dependencyLocks",
+        "toolchainFacts",
+        "artifactNaming",
+        "qualificationPolicy",
+        "promotionPolicy"
+      ],
+      "properties": {
+        "dependencyLocks": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {"$ref": "#/$defs/path"}
+        },
+        "toolchainFacts": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "enum": ["compiler", "cmake", "ninja", "runner"]
+          }
+        },
+        "artifactNaming": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["candidate", "promoted", "matrixIndex"],
+          "properties": {
+            "candidate": {
+              "const": "qualified-assignment-core-candidate-{commit}-{row}"
+            },
+            "promoted": {
+              "const": "qualified-assignment-core-{commit}-{row}"
+            },
+            "matrixIndex": {
+              "const": "qualified-assignment-core-matrix-{commit}"
+            }
+          }
+        },
+        "qualificationPolicy": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "candidateWorkflow",
+            "event",
+            "sourceBinding",
+            "missingRow",
+            "substitution"
+          ],
+          "properties": {
+            "candidateWorkflow": {
+              "const": ".github/workflows/affected-native-pr.yml"
+            },
+            "event": {"const": "merge_group"},
+            "sourceBinding": {"const": "exact-commit-and-tree"},
+            "missingRow": {"const": "unqualified"},
+            "substitution": {"const": "forbidden"}
+          }
+        },
+        "promotionPolicy": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "controllerWorkflow",
+            "protectedRefPolicy",
+            "authorityCardinality",
+            "isolation"
+          ],
+          "properties": {
+            "controllerWorkflow": {
+              "const": ".github/workflows/affected-native-cache-promote.yml"
+            },
+            "protectedRefPolicy": {"const": "github-default-branch"},
+            "authorityCardinality": {"const": "one-active-per-row"},
+            "isolation": {"const": "platform-row"}
+          }
+        }
+      }
+    },
+    "rows": {
+      "type": "array",
+      "minItems": 4,
+      "maxItems": 4,
+      "items": {"$ref": "#/$defs/row"}
+    }
+  },
+  "$defs": {
+    "path": {
+      "type": "string",
+      "pattern": "^(?!/)(?!.*(?:^|/)\\.\\.(?:/|$))(?!.*\\\\)[^\\u0000]+$"
+    },
+    "row": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "operatingSystem",
+        "architecture",
+        "pythonAbi",
+        "runner",
+        "buildInfo",
+        "payload"
+      ],
+      "properties": {
+        "id": {
+          "enum": [
+            "darwin-arm64-cp313",
+            "darwin-x86_64-cp313",
+            "linux-x86_64-cp313",
+            "windows-x86_64-cp313"
+          ]
+        },
+        "operatingSystem": {
+          "enum": ["darwin", "linux", "windows"]
+        },
+        "architecture": {
+          "enum": ["arm64", "x64"]
+        },
+        "pythonAbi": {"const": "cp313"},
+        "runner": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["label", "environment", "os", "arch", "shell"],
+          "properties": {
+            "label": {
+              "enum": [
+                "macos-15",
+                "macos-15-intel",
+                "ubuntu-24.04",
+                "windows-2022"
+              ]
+            },
+            "environment": {"const": "github-hosted"},
+            "os": {"enum": ["macOS", "Linux", "Windows"]},
+            "arch": {"enum": ["ARM64", "X64"]},
+            "shell": {"enum": ["bash", "pwsh"]}
+          }
+        },
+        "buildInfo": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["osVersionPrefix", "architectureToken"],
+          "properties": {
+            "osVersionPrefix": {
+              "enum": ["macOS-", "Linux-", "Windows-"]
+            },
+            "architectureToken": {
+              "enum": ["arm64", "x86_64", "AMD64"]
+            }
+          }
+        },
+        "payload": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["targetRoot", "entries"],
+          "properties": {
+            "targetRoot": {"const": "framework/core/dist/kungfu"},
+            "entries": {
+              "type": "array",
+              "minItems": 3,
+              "maxItems": 4,
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["role", "pathPattern", "type", "mode"],
+                "properties": {
+                  "role": {
+                    "enum": [
+                      "build-metadata",
+                      "python-binding",
+                      "node-runtime",
+                      "kungfu-runtime"
+                    ]
+                  },
+                  "pathPattern": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "type": {"const": "regular-file"},
+                  "mode": {"enum": ["0644", "0755"]}
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

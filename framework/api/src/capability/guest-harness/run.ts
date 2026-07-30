@@ -1,4 +1,4 @@
-// The guest-host harness: prove the ADR-0014 execution contract on the current
+// The guest-host harness: prove the KF-ADR-019f86da-4f90-7789-8b48-620aa694acf9 execution contract on the current
 // platform. It runs the SAME facet source per language across both trust tiers
 // and checks that a facet never branches on the tier while the transport
 // property is exactly as designed — the trusted co-resident tier returns a
@@ -153,7 +153,7 @@ async function main() {
   const os = platform();
   console.log(`\nkfx guest-host contract harness — platform: ${os}\n`);
   console.log('  cell            tier      genTime type   result');
-  console.log('  ' + '-'.repeat(52));
+  console.log(`  ${'-'.repeat(52)}`);
   let failed = 0;
   for (const cell of CELLS) {
     let report: Report = null;
@@ -171,10 +171,10 @@ async function main() {
       `  ${cell.name.padEnd(14)}  ${cell.tier.padEnd(8)}  ${String(got).padEnd(13)}  ${status}`,
     );
   }
-  console.log('  ' + '-'.repeat(52));
+  console.log(`  ${'-'.repeat(52)}`);
   console.log(
-    `\n  zero-copy proof: trusted returns genTime by reference (native ` +
-      `bigint / int); sandbox returns the serialized string copy over the relay.`,
+    '\n  zero-copy proof: trusted returns genTime by reference (native ' +
+      'bigint / int); sandbox returns the serialized string copy over the relay.',
   );
   console.log(
     `\n  ${failed === 0 ? 'ALL CELLS GREEN' : `${failed} CELL(S) FAILED`}\n`,

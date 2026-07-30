@@ -1,0 +1,144 @@
+{
+  "schema": "kungfu.fact-kernel.dogfood-report/v1",
+  "qualified_at": "2026-07-18",
+  "status": "qualified-with-residuals",
+  "work_item": "2026-07-18-kungfu-generic-fact-kernel",
+  "authority": "disposable-yijinjing-hana-pod-journal",
+  "source_cut_root": "sha256:1f840487c8a8510795336452be471314cf49dd11720af0e737abbd2b00e8faee",
+  "successor_cut_root": "sha256:392167567435c1d441354e54a2de12158224812b13bfa2cf5bade3f7bb37409c",
+  "role_identities": {
+    "atlas": "fact:9d4bf1ba3d049db9f0b0b352adbce521",
+    "episode": "fact:e77aa1390b00f17cef6a754d3a92be14",
+    "pursuit": "fact:8f2268ad93fd17ec5c80031649390b42",
+    "warrant": "fact:339d389b5af52cc698bfcb3f92c69c9c"
+  },
+  "relation_roots": {
+    "authorized-by": "sha256:1b92fb4c869cbcf6a832978bc8a32904b036fbc35da7e0f4c2ab48ba07fe472b",
+    "observed-under": "sha256:d442a3f997d08cf817e6df511e94e9f96db1dc4a8837b49829c107291e49a31a",
+    "recorded-in": "sha256:dc942c6d4eb381c722112b53420dfb3a68c57580816aa458e0066834e2554230",
+    "uses-atlas": "sha256:0b60aa4e2dd750b27b2e8a24437134a8af7863201831ddc734413bb6d8ddce93"
+  },
+  "actors": [
+    {
+      "id": "A",
+      "process": "independent",
+      "result": "sha256:1fe35a504521ead5020c27006bcbf76be4e8381ed87ad92a0a125e8542457466"
+    },
+    {
+      "id": "B",
+      "process": "independent",
+      "result": "sha256:06e8967030219e43ffeb6b0980d83a76cc115e85162fb28d681736a275fa1743"
+    },
+    {
+      "id": "C",
+      "process": "independent",
+      "result": "sha256:ff5ed0f3762333bfab33c39cd3e42896504b0f197d58181086154bb74b91abf5"
+    }
+  ],
+  "handoff": {
+    "human_relay_count": 0,
+    "chat_inputs": 0,
+    "required_retained_inputs": ["handoff.json", "bundle.json"],
+    "exact_roots": [
+      "sha256:1fe35a504521ead5020c27006bcbf76be4e8381ed87ad92a0a125e8542457466",
+      "sha256:2b01f18d8960245de4cbde660f433dbb5909e6c572f0312a20af6bc5140a1398"
+    ]
+  },
+  "fault_matrix": [
+    {
+      "id": "missing-atlas",
+      "observed": ["missing-atlas"],
+      "status": "typed-gap"
+    },
+    {
+      "id": "expired-warrant",
+      "observed": true,
+      "status": "refused"
+    },
+    {
+      "id": "revoked-warrant",
+      "observed": "sha256:ca2efcc5a934823a4740094f02e7b4edca180b905f10b52a0dc765970e2e3fe5",
+      "status": "refused"
+    },
+    {
+      "id": "descendant-scope",
+      "observed": true,
+      "status": "refused"
+    },
+    {
+      "id": "role-substitution",
+      "observed": true,
+      "status": "refused"
+    },
+    {
+      "id": "sealed-episode",
+      "observed": "sealed",
+      "status": "visible"
+    },
+    {
+      "id": "stale-ref",
+      "observed": "stale-ref",
+      "status": "refused-without-write"
+    },
+    {
+      "id": "projection-loss",
+      "status": "rebuildable-read-only",
+      "observed": "sha256:37df56403eb7d120c8273853b8c95b8ff5b1bcd5dc8df00c1e721681bd3a19d9"
+    },
+    {
+      "id": "backend-reopen",
+      "status": "passed",
+      "observed": "sha256:37df56403eb7d120c8273853b8c95b8ff5b1bcd5dc8df00c1e721681bd3a19d9"
+    }
+  ],
+  "recovery": {
+    "clean_runtime": true,
+    "exact_cut_preserved": true,
+    "fsck_root": "sha256:df987860b187b2463b583b8882bd702a46a7fb17f00ce3138d8cae689616cf48",
+    "semantic_roots_match": true,
+    "destructive_repair_or_gc": false
+  },
+  "measurements": {
+    "total_ceremony": {
+      "actor_processes": 3,
+      "retained_handoff_inputs": 2,
+      "human_relays": 0
+    },
+    "reconstruction_cost": {
+      "chat_bytes": 0,
+      "exact_root_inputs": 2
+    },
+    "failure_visibility": "9/9 named faults or recovery boundaries retained",
+    "human_agent_parity": "same machine report and public Agent Work contract; GUI/TUI parity remains residual"
+  },
+  "rival_simpler_model": {
+    "model": "one mutable task row with implicit context, authority, and run state",
+    "verdict": "falsified-for-this-work-item",
+    "witnesses": [
+      "atlas can be missing independently",
+      "warrant relation can be revoked independently",
+      "episode remains separately sealed and queryable"
+    ]
+  },
+  "p17": {
+    "status": "not-qualified",
+    "checks": {
+      "FO1": "qualified",
+      "FO2": "qualified",
+      "FO3": "partial",
+      "FO4": "pending",
+      "FO5": "partial",
+      "FO6": "qualified",
+      "FO7": "partial",
+      "FO8": "partial"
+    }
+  },
+  "decision": "continue-shadow",
+  "decision_reason": "Identity, no-chat recovery, and failure visibility hold, but sustained dogfood, GUI/TUI parity, generic Warrant qualification, and release evidence remain incomplete.",
+  "non_claims": [
+    "No authority cutover was performed.",
+    "No real user runtime was modified.",
+    "P17 and universal four-role ontology remain unqualified."
+  ],
+  "report_root": "sha256:35f7f9757b769c219c6989cb4727215355dcbbc48728687ec189881c2b3a5941"
+}

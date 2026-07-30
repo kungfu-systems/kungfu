@@ -1,0 +1,16 @@
+{
+  "schema": "kungfu.profile-reducer/v1",
+  "id": "kungfu.work-control.five-questions",
+  "version": "1",
+  "member": "work-control-views",
+  "input": "resolved KF-ADR-019f86da-4f90-7e38-b72f-ef8829e14104 fact-state plus purpose-bound KF-ADR-019f86da-4f90-7b3f-9ef3-84f5a878f302 TrustReport",
+  "questions": [
+    "initiative-intent",
+    "observed-progress",
+    "evidence-at-cut",
+    "fitness-for-purpose",
+    "next-responsibility"
+  ],
+  "authority": "presentation-only",
+  "persistsSavedQueries": false
+}

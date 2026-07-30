@@ -1,0 +1,30 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://xinfa.dev/schema/gui-view-v1.schema.json",
+  "title": "Xinfa GUI View v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "kind", "surface", "atlas_root", "cut_root", "intent", "policy", "policy_root", "parity", "status", "summary", "detail", "metrics", "omissions", "uncertainty", "expansion_handles", "materialization", "derived", "projection_root"],
+  "properties": {
+    "schema": { "const": "xinfa.gui-view/v1" },
+    "kind": { "const": "xinfa.gui-view/v1" },
+    "surface": { "const": "gui" },
+    "atlas_root": { "$ref": "#/$defs/root" },
+    "cut_root": { "$ref": "#/$defs/root" },
+    "intent": { "type": "string", "minLength": 1 },
+    "policy": { "type": "object" },
+    "policy_root": { "$ref": "#/$defs/root" },
+    "parity": { "type": "object" },
+    "status": { "enum": ["complete", "degraded"] },
+    "summary": { "type": "object", "required": ["nodes", "count"] },
+    "detail": { "type": "object", "required": ["relationships"] },
+    "metrics": { "type": "object", "required": ["max_expansion_hops", "hops_used"] },
+    "omissions": { "type": "array" },
+    "uncertainty": { "type": "object" },
+    "expansion_handles": { "type": "array" },
+    "materialization": { "type": "object" },
+    "derived": { "const": true },
+    "projection_root": { "$ref": "#/$defs/root" }
+  },
+  "$defs": { "root": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" } }
+}

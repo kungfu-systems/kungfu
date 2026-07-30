@@ -10,7 +10,7 @@
  * @param {{ silent?: boolean, tolerant?: boolean, help?: boolean, version?: boolean }} [opts]
  * @returns {any} the configured sywac cli instance
  */
-module.exports = function (module, setup, opts = {}) {
+module.exports = (module, setup, opts = {}) => {
   /** @type {any} sywac has no bundled types */
   const cli = require('sywac').strict();
   /** @param {any} result */

@@ -6,16 +6,18 @@
 
 #include <sstream>
 
+#include <kungfu/runtime/util/stacktrace.h>
+
 #include "history.h"
 #include "io.h"
 #include "operators.h"
 
 using namespace kungfu::rx;
-using namespace kungfu::longfist;
-using namespace kungfu::longfist::enums;
-using namespace kungfu::longfist::types;
-using namespace kungfu::cache;
 using namespace kungfu::yijinjing;
+using namespace kungfu::yijinjing::enums;
+using namespace kungfu::yijinjing::types;
+using namespace kungfu::runtime::state_cache;
+using namespace kungfu::runtime;
 using namespace kungfu::yijinjing::data;
 
 namespace kungfu::node {
@@ -23,8 +25,8 @@ Napi::FunctionReference History::constructor = {};
 
 History::History(const Napi::CallbackInfo &info)
     : ObjectWrap(info), locator_(IODevice::ExtractRuntimeLocatorByIndex(info, 0)),
-      ledger_location_(location::make_shared(mode::LIVE, category::SYSTEM, "service", "ledger", locator_)),
-      renderer_location_(location::make_shared(mode::LIVE, category::SYSTEM, "node", "renderer-app", locator_)),
+      ledger_location_(location::make_shared(mode::LIVE, location_role::SYSTEM, "service", "ledger", locator_)),
+      renderer_location_(location::make_shared(mode::LIVE, location_role::SYSTEM, "node", "renderer-app", locator_)),
       profile_(locator_) {}
 
 Napi::Value History::SelectPeriod(const Napi::CallbackInfo &info) {
@@ -46,7 +48,7 @@ Napi::Value History::SelectPeriod(const Napi::CallbackInfo &info) {
     return result_ref.Value();
   } catch (const std::exception &ex) {
     SPDLOG_ERROR("failed to select: {}", ex.what());
-    yijinjing::util::print_stack_trace();
+    runtime::util::print_stack_trace();
     return Napi::Boolean::New(info.Env(), false);
   }
 }

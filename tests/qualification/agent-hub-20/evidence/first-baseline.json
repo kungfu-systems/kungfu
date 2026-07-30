@@ -1,0 +1,400 @@
+{
+  "schema": "kungfu.kfd-agent-hub-first-baseline/v1",
+  "retained": true,
+  "replacementAllowed": false,
+  "kfd": {
+    "lock": {
+      "schema": "kungfu.kfd-agent-hub-package-lock/v1",
+      "package": "@kungfu-tech/kfd",
+      "version": "1.0.0-alpha.46",
+      "registryGitHead": "65ff3e54e6bcbeee76b75354b4064ebbd5892a1a",
+      "integrity": "sha512-2Pp9fDY3wWtnuYj3UuT9ijwPeX8gQALD8RIYXLS/GMUb7MkoYZSdB3mh9un3Ky3q6m4tSsHiu5tdcUnQsmSl4g==",
+      "shasum": "f93a8ecc00aed02e3f1a54bbdba84bda126d16c0",
+      "packageManifestDigest": "sha256:9938a1c824b45fbd16da3bd118f236f2b866a48b9699186fe8bb5f11ba06befe",
+      "profileManifestDigest": "sha256:2bffc69e3238b20eea3362e6bd96a7944aea480e095520cf351721b85c04fc2d",
+      "protocolManifestDigest": "sha256:dab4e93d2a662092eb51e29171dfc8bd0c400daa99899f074e69608b45cc7a59",
+      "suiteVectorRoot": "sha256:f1be3a10121fbd5389204b6e1ca70ea3920d9ba13ad20bb9f83fac078339c6b2",
+      "failureInventoryRoot": "sha256:616df582900189eea35a3ca701d100a1aa123b89f424fba4090cf656286a74be",
+      "verifierArtifactDigest": "sha256:252e9576123b464055cda1eef4294ba9e670330b5d294407bf1e542eec7d04cf"
+    },
+    "observed": {
+      "package": "@kungfu-tech/kfd",
+      "version": "1.0.0-alpha.46",
+      "packageManifestDigest": "sha256:9938a1c824b45fbd16da3bd118f236f2b866a48b9699186fe8bb5f11ba06befe",
+      "profileManifestDigest": "sha256:2bffc69e3238b20eea3362e6bd96a7944aea480e095520cf351721b85c04fc2d",
+      "protocolManifestDigest": "sha256:dab4e93d2a662092eb51e29171dfc8bd0c400daa99899f074e69608b45cc7a59",
+      "suiteVectorRoot": "sha256:f1be3a10121fbd5389204b6e1ca70ea3920d9ba13ad20bb9f83fac078339c6b2",
+      "failureInventoryRoot": "sha256:616df582900189eea35a3ca701d100a1aa123b89f424fba4090cf656286a74be",
+      "verifierArtifactDigest": "sha256:252e9576123b464055cda1eef4294ba9e670330b5d294407bf1e542eec7d04cf"
+    }
+  },
+  "adapter": {
+    "path": "tests/qualification/agent-hub-20/adapter.mjs",
+    "artifactDigest": "sha256:7ed6acf8eb52999156f170dd1e394078b25d9da839c41e10fabcbad957777958",
+    "sourceClassification": "product-command-forwarder"
+  },
+  "product": {
+    "installedEntrypoint": "/usr/local/bin/kungfu",
+    "resolvedExecutable": "/Applications/Kungfu Episodes.app/Contents/Resources/cli/kungfu",
+    "artifactDigest": "sha256:29b5a3a378d323e5a8c7ad8910f481c35f92265e63f867167bc7005c021c34ce",
+    "version": "4.0.0-alpha.1\nKungfu UNGFU™ · Never Guess. Facts Unfold.",
+    "platform": {
+      "os": "darwin",
+      "arch": "arm64"
+    },
+    "provenance": "installed-product"
+  },
+  "isolation": {
+    "qualificationRootClass": "disposable-dual-hub-root",
+    "sourceHomeClass": "hub-alpha/.kungfu",
+    "targetHomeClass": "hub-beta/.kungfu",
+    "homesDistinct": true,
+    "realHomeBefore": {
+      "pathClass": "user-kungfu-home",
+      "exists": true,
+      "counts": {
+        "file": 93,
+        "directory": 161,
+        "symlink": 0,
+        "other": 0,
+        "totalBytes": 100907495
+      },
+      "metadataRoot": "sha256:6c4b3ece48288513c1ce67228eab01ddc808539ce4129b057f72f66d51e2332b",
+      "contentRead": false
+    },
+    "realHomeAfter": {
+      "pathClass": "user-kungfu-home",
+      "exists": true,
+      "counts": {
+        "file": 93,
+        "directory": 161,
+        "symlink": 0,
+        "other": 0,
+        "totalBytes": 100907495
+      },
+      "metadataRoot": "sha256:6c4b3ece48288513c1ce67228eab01ddc808539ce4129b057f72f66d51e2332b",
+      "contentRead": false
+    },
+    "realHomeUnchanged": true
+  },
+  "execution": {
+    "offline": true,
+    "requestCount": 21,
+    "responseCount": 21,
+    "transcriptRoot": "sha256:337efe73d5ec038b29b39669d5dc687b123ffcda2bfa6aeb58af0406a413941a",
+    "resultRoot": "sha256:d978545a5499b0b4e0274656941e0251f6e21f71eaaf60cbd8935c6a9fe776f6"
+  },
+  "coverage": {
+    "total": 20,
+    "passed": 0,
+    "failed": 20
+  },
+  "valid": false,
+  "results": [
+    {
+      "id": "hub-001-negotiate-exact-profile",
+      "expected": {
+        "status": "accepted",
+        "code": "capability-negotiated",
+        "verdict": "admitted"
+      },
+      "actual": {
+        "status": "error",
+        "code": "product-surface-unavailable",
+        "verdict": "not-applicable"
+      },
+      "status": "fail",
+      "responseRoot": "sha256:9fa616e3d87df1070e606d85fb5628c9c9ef5f0de42464377cb1bb58290fdbdf"
+    },
+    {
+      "id": "hub-002-reject-unknown-required-feature",
+      "expected": {
+        "status": "rejected",
+        "code": "required-feature-unsupported",
+        "verdict": "rejected"
+      },
+      "actual": {
+        "status": "error",
+        "code": "product-surface-unavailable",
+        "verdict": "not-applicable"
+      },
+      "status": "fail",
+      "responseRoot": "sha256:2995f086388948ab78eb1bc9b1eb0c5c72884bf46cf62804e2c1f86ca2ef9e6a"
+    },
+    {
+      "id": "hub-003-reject-profile-root-drift",
+      "expected": {
+        "status": "rejected",
+        "code": "profile-root-mismatch",
+        "verdict": "rejected"
+      },
+      "actual": {
+        "status": "error",
+        "code": "product-surface-unavailable",
+        "verdict": "not-applicable"
+      },
+      "status": "fail",
+      "responseRoot": "sha256:420a67e40a2c84934cdd9a16c2ae0c4b85115c7a17c2b68b7b01ae89dce043f4"
+    },
+    {
+      "id": "hub-004-record-delivery-without-admission",
+      "expected": {
+        "status": "accepted",
+        "code": "delivery-recorded",
+        "verdict": "not-applicable"
+      },
+      "actual": {
+        "status": "error",
+        "code": "product-surface-unavailable",
+        "verdict": "not-applicable"
+      },
+      "status": "fail",
+      "responseRoot": "sha256:38cd18a87a0e74ace365ab4bf48a0f0972f5a63150da863b0c26ff81a0d1e8f4"
+    },
+    {
+      "id": "hub-005-preserve-identical-duplicate",
+      "expected": {
+        "status": "accepted",
+        "code": "duplicate-preserved",
+        "verdict": "not-applicable"
+      },
+      "actual": {
+        "status": "error",
+        "code": "product-surface-unavailable",
+        "verdict": "not-applicable"
+      },
+      "status": "fail",
+      "responseRoot": "sha256:26a0b59524b742569b2bfa747835d2632617cf25e90b3637596ef664c878fe4a"
+    },
+    {
+      "id": "hub-006-reject-idempotency-conflict",
+      "expected": {
+        "status": "rejected",
+        "code": "idempotency-conflict",
+        "verdict": "rejected"
+      },
+      "actual": {
+        "status": "error",
+        "code": "product-surface-unavailable",
+        "verdict": "not-applicable"
+      },
+      "status": "fail",
+      "responseRoot": "sha256:d82d03902ffe4f2f7c7579790a76f7a02e6a25d21f0202907dc4a6aff9b0a4c0"
+    },
+    {
+      "id": "hub-007-admit-under-local-authority",
+      "expected": {
+        "status": "accepted",
+        "code": "admission-accepted",
+        "verdict": "admitted"
+      },
+      "actual": {
+        "status": "error",
+        "code": "product-surface-unavailable",
+        "verdict": "not-applicable"
+      },
+      "status": "fail",
+      "responseRoot": "sha256:79ec85cbf305ed491496266a469da523f9bca0c560bed986ab30b3f8f8e373b4"
+    },
+    {
+      "id": "hub-008-retain-delayed-delivery",
+      "expected": {
+        "status": "accepted",
+        "code": "delivery-recorded",
+        "verdict": "not-applicable"
+      },
+      "actual": {
+        "status": "error",
+        "code": "product-surface-unavailable",
+        "verdict": "not-applicable"
+      },
+      "status": "fail",
+      "responseRoot": "sha256:4a91c5566a1b2e5f16850e499597b2fc0a4d29eaad37fee0aa63625bca515aa7"
+    },
+    {
+      "id": "hub-009-attenuate-delegated-authority",
+      "expected": {
+        "status": "accepted",
+        "code": "authority-attenuated",
+        "verdict": "admitted"
+      },
+      "actual": {
+        "status": "error",
+        "code": "product-surface-unavailable",
+        "verdict": "not-applicable"
+      },
+      "status": "fail",
+      "responseRoot": "sha256:c1796bb7f2cb71cdca1e45248f75030a70cda8c0ca9c9b98db25c038d75d9343"
+    },
+    {
+      "id": "hub-010-reject-authority-amplification",
+      "expected": {
+        "status": "rejected",
+        "code": "authority-amplification",
+        "verdict": "rejected"
+      },
+      "actual": {
+        "status": "error",
+        "code": "product-surface-unavailable",
+        "verdict": "not-applicable"
+      },
+      "status": "fail",
+      "responseRoot": "sha256:d19d5ddcaa8e9cb9e7641e2953e5c7ac4408db33206afcda90ae40838742c3ec"
+    },
+    {
+      "id": "hub-011-reject-revoked-warrant",
+      "expected": {
+        "status": "rejected",
+        "code": "authority-revoked",
+        "verdict": "rejected"
+      },
+      "actual": {
+        "status": "error",
+        "code": "product-surface-unavailable",
+        "verdict": "not-applicable"
+      },
+      "status": "fail",
+      "responseRoot": "sha256:830281e232c9af90ca7f70a58ff9296f03cadd074b014c66b200d0f5db5358a2"
+    },
+    {
+      "id": "hub-012-surface-concurrent-conflict",
+      "expected": {
+        "status": "conflicted",
+        "code": "conflict-visible",
+        "verdict": "conflicted"
+      },
+      "actual": {
+        "status": "error",
+        "code": "product-surface-unavailable",
+        "verdict": "not-applicable"
+      },
+      "status": "fail",
+      "responseRoot": "sha256:9316de3b595fc8b9c8b075edfdc0738282661bf7b8f99ee135532e7b880cd5d7"
+    },
+    {
+      "id": "hub-013-reject-hidden-last-write-wins",
+      "expected": {
+        "status": "rejected",
+        "code": "conflict-visible",
+        "verdict": "rejected"
+      },
+      "actual": {
+        "status": "error",
+        "code": "product-surface-unavailable",
+        "verdict": "not-applicable"
+      },
+      "status": "fail",
+      "responseRoot": "sha256:e824b82b0c686c86e708ecd840e99e91af9a6737cc2d7b7a9ec39a1ae0a23d19"
+    },
+    {
+      "id": "hub-014-retain-partial-knowledge",
+      "expected": {
+        "status": "accepted",
+        "code": "partial-knowledge-retained",
+        "verdict": "not-applicable"
+      },
+      "actual": {
+        "status": "error",
+        "code": "product-surface-unavailable",
+        "verdict": "not-applicable"
+      },
+      "status": "fail",
+      "responseRoot": "sha256:948ddcd04ec89b4a1f56dd43334ac29ea6e745c3db893e98e856722626fd0a94"
+    },
+    {
+      "id": "hub-015-retain-intentionally-withheld",
+      "expected": {
+        "status": "accepted",
+        "code": "partial-knowledge-retained",
+        "verdict": "intentionally-withheld"
+      },
+      "actual": {
+        "status": "error",
+        "code": "product-surface-unavailable",
+        "verdict": "not-applicable"
+      },
+      "status": "fail",
+      "responseRoot": "sha256:9280f137a466fb38ac9de65a83c27fc84a22ac62b5d004ae03d82f41e5291232"
+    },
+    {
+      "id": "hub-016-retain-unavailable",
+      "expected": {
+        "status": "accepted",
+        "code": "partial-knowledge-retained",
+        "verdict": "unavailable"
+      },
+      "actual": {
+        "status": "error",
+        "code": "product-surface-unavailable",
+        "verdict": "not-applicable"
+      },
+      "status": "fail",
+      "responseRoot": "sha256:a4e061307e5bc48be6db5264a8eff05d4a78071d863495368fcb7430752d65f6"
+    },
+    {
+      "id": "hub-017-reject-call-success-as-completion",
+      "expected": {
+        "status": "rejected",
+        "code": "completion-unproved",
+        "verdict": "rejected"
+      },
+      "actual": {
+        "status": "error",
+        "code": "product-surface-unavailable",
+        "verdict": "not-applicable"
+      },
+      "status": "fail",
+      "responseRoot": "sha256:ee6f12dbbcac4c1137afc7ddf5caa065874e7c2267d39203366c22cd1ed1d457"
+    },
+    {
+      "id": "hub-018-surface-offline-reconnect-conflict",
+      "expected": {
+        "status": "conflicted",
+        "code": "conflict-visible",
+        "verdict": "conflicted"
+      },
+      "actual": {
+        "status": "error",
+        "code": "product-surface-unavailable",
+        "verdict": "not-applicable"
+      },
+      "status": "fail",
+      "responseRoot": "sha256:4ebcf813fbc58c345ae1ad8ebc33ccd18411a3dbe897657798267c634c783b04"
+    },
+    {
+      "id": "hub-019-preserve-export-import-roots",
+      "expected": {
+        "status": "accepted",
+        "code": "export-import-preserved",
+        "verdict": "admitted"
+      },
+      "actual": {
+        "status": "error",
+        "code": "product-surface-unavailable",
+        "verdict": "not-applicable"
+      },
+      "status": "fail",
+      "responseRoot": "sha256:51e3c7932e6056bab2a291500db25507277752a12e9b87ca32873ea778cfdb50"
+    },
+    {
+      "id": "hub-020-reject-export-import-drift",
+      "expected": {
+        "status": "rejected",
+        "code": "profile-root-mismatch",
+        "verdict": "rejected"
+      },
+      "actual": {
+        "status": "error",
+        "code": "product-surface-unavailable",
+        "verdict": "not-applicable"
+      },
+      "status": "fail",
+      "responseRoot": "sha256:794c11e6988044b1d52f3f530651e0fc3708f37711862c7648a774923687d578"
+    }
+  ],
+  "risk": [
+    "The installed product did not yet expose the product-owned Agent Hub handle surface.",
+    "This retained failure baseline is not a KFD conformance report and cannot qualify or promote a release.",
+    "The baseline proves only that the exact adapter attempted every fixed request against the installed product without touching the real Kungfu home."
+  ]
+}

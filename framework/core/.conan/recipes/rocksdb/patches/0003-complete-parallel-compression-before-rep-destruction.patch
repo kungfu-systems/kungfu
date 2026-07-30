@@ -1,0 +1,39 @@
+diff --git a/table/block_based/block_based_table_builder.cc b/table/block_based/block_based_table_builder.cc
+index 8c571aa1c..22024832c 100644
+--- a/table/block_based/block_based_table_builder.cc
++++ b/table/block_based/block_based_table_builder.cc
+@@ -331,7 +331,11 @@ struct BlockBasedTableBuilder::Rep {
+   std::unique_ptr<FlushBlockPolicy> flush_block_policy;
+ 
+   std::vector<std::unique_ptr<IntTblPropCollector>> table_properties_collectors;
+ 
+-  std::unique_ptr<ParallelCompressionRep> pc_rep;
++  struct ParallelCompressionRepDeleter {
++    void operator()(ParallelCompressionRep* value) const;
++  };
++  std::unique_ptr<ParallelCompressionRep, ParallelCompressionRepDeleter>
++      pc_rep;
+ 
+   uint64_t get_offset() { return offset.load(std::memory_order_relaxed); }
+@@ -543,6 +547,7 @@ struct BlockBasedTableBuilder::Rep {
+ 
+   Rep(const Rep&) = delete;
+   Rep& operator=(const Rep&) = delete;
++  ~Rep();
+ 
+  private:
+   // Synchronize status & io_status accesses across threads from main thread,
+@@ -863,6 +868,13 @@ struct BlockBasedTableBuilder::ParallelCompressionRep {
+   }
+ };
+ 
++void BlockBasedTableBuilder::Rep::ParallelCompressionRepDeleter::operator()(
++    BlockBasedTableBuilder::ParallelCompressionRep* value) const {
++  delete value;
++}
++
++BlockBasedTableBuilder::Rep::~Rep() = default;
++
+ BlockBasedTableBuilder::BlockBasedTableBuilder(
+     const BlockBasedTableOptions& table_options, const TableBuilderOptions& tbo,
+     WritableFileWriter* file) {

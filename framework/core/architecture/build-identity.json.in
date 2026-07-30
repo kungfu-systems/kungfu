@@ -1,0 +1,17 @@
+{
+  "schema": "kungfu.core-build-identity/v1",
+  "authority_version": 1,
+  "profile": "@KUNGFU_BUILD_PROFILE@",
+  "components": @KUNGFU_BUILD_IDENTITY_COMPONENTS@,
+  "providers": @KUNGFU_BUILD_IDENTITY_PROVIDERS@,
+  "projections": @KUNGFU_BUILD_IDENTITY_PROJECTIONS@,
+  "bindings": @KUNGFU_BUILD_IDENTITY_BINDINGS@,
+  "dependency_roots": @KUNGFU_BUILD_IDENTITY_DEPENDENCY_ROOTS@,
+  "live_capability": @KUNGFU_BUILD_IDENTITY_LIVE_CAPABILITY@,
+  "build_root": "@KUNGFU_BUILD_IDENTITY_BUILD_ROOT@",
+  "source_revision": "@KUNGFU_BUILD_SOURCE_REVISION@",
+  "compiler": "@CMAKE_CXX_COMPILER_ID@",
+  "compiler_version": "@CMAKE_CXX_COMPILER_VERSION@",
+  "platform": "@CMAKE_SYSTEM_NAME@",
+  "architecture": "@CMAKE_SYSTEM_PROCESSOR@"
+}

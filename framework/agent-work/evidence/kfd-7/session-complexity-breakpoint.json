@@ -1,0 +1,25 @@
+{
+  "schemaVersion": 1,
+  "contract": "kungfu-buildchain-kfd-7-evidence-report",
+  "profileId": "kungfu-kfd-7-action-profile",
+  "profileVersion": "0.1.0",
+  "stateMachineVersion": "0.1.0",
+  "sourceSha": "91a7a2b6f406e996b0b1d69421af260d69be3878",
+  "category": "session-complexity-breakpoint",
+  "outcome": "pass",
+  "matchedExpectation": true,
+  "checks": [
+    { "id": "pursuit-alternatives-break-compression", "status": "pass" },
+    { "id": "atlas-staleness-breaks-compression", "status": "pass" },
+    { "id": "warrant-revocation-breaks-compression", "status": "pass" },
+    { "id": "multiple-episodes-break-compression", "status": "pass" },
+    { "id": "fact-branches-break-compression", "status": "pass" },
+    { "id": "lossy-projection-rejected", "status": "pass" }
+  ],
+  "observations": {
+    "suite": "framework/core/tests/python/test_agent_work_state_contract.py",
+    "revealedRoles": ["fact", "episode", "pursuit", "atlas", "warrant"],
+    "failureCode": "session-complexity-breakpoint",
+    "projectionWrites": 0
+  }
+}

@@ -1,0 +1,7 @@
+{
+  "$schema": "https://libkungfu.dev/schemas/shifu/gate-registry-v1.schema.json",
+  "schema": "shifu.gate-registry/v2",
+  "project": { "id": "bad-schema", "title": "Bad schema" },
+  "gates": [],
+  "profiles": []
+}

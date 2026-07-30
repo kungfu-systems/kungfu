@@ -16,8 +16,8 @@
 //   verifyWindowsSymbols(path.join(CORE, 'dist', 'kungfu'));
 // @ts-check
 
-const fs = require('fs');
-const path = require('path');
+const fs = require('node:fs');
+const path = require('node:path');
 
 // Natives kungfu compiles from source and therefore owns the PDBs for. The
 // C++ core (libkungfu / libyijinjing, including the stackwalker) is linked
@@ -29,6 +29,7 @@ const REQUIRED = [
   /^kungfu_electron\.node$/i,
   /^drone\.node$/i,
   /^pykungfu.*\.pyd$/i,
+  /^kungfu\.dll$/i,
 ];
 
 // The linker PDB is named after the target's output base, so accept
@@ -41,7 +42,7 @@ const REQUIRED = [
  */
 function hasSiblingPdb(dir, binName, pdbNames) {
   const stem = binName
-    .replace(/\.(node|pyd)$/i, '')
+    .replace(/\.(node|pyd|dll)$/i, '')
     .split('.')[0]
     .toLowerCase();
   return pdbNames.some((p) => p.toLowerCase().startsWith(stem));
@@ -60,11 +61,7 @@ function verifyWindowsSymbols(distKfc) {
   }
   if (missing.length) {
     console.error(
-      `[verify-windows-symbols] FAIL: native(s) shipped without a PDB in ${distKfc}:\n` +
-        missing.map((m) => `  - ${m}`).join('\n') +
-        '\nWindows crash reports for these cannot be symbolized. Build with debug ' +
-        'info (/Z7 + /DEBUG, see .cmake/compiler.cmake) and ship the PDB alongside ' +
-        'the binary. See docs/windows-crash-symbols.md.',
+      `[verify-windows-symbols] FAIL: native(s) shipped without a PDB in ${distKfc}:\n${missing.map((m) => `  - ${m}`).join('\n')}\nWindows crash reports for these cannot be symbolized. Build with debug info (/Z7 + /DEBUG, see .cmake/compiler.cmake) and ship the PDB alongside the binary. See docs/windows-crash-symbols.md.`,
     );
     process.exit(1);
   }

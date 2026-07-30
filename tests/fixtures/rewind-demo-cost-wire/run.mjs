@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 // Cost-wire fixture. Proves the parse-layer CostSnapshot becomes a rewind
-// open-layer journal event (msg_type 30008) that decodes without the runtime
+// action-envelope payload that decodes without the runtime
 // that wrote it: the serializer + parse->wire bridge round-trip, the honesty
 // invariant (unknown cost never becomes 0.0), and the pinned rewind_events.bfbs
 // carrying the CostSnapshot shape for schema-only decode.

@@ -1,0 +1,82 @@
+{
+  "authorization": {
+    "nonAuthorities": [
+      "first-party-identity",
+      "system-identity",
+      "kfd-compliance",
+      "product-system-metadata",
+      "local-bundle-presence",
+      "package-metadata",
+      "registry-history",
+      "scan-output",
+      "standalone-generation"
+    ],
+    "requiredSources": [
+      "exact-release-passport",
+      "core-policy",
+      "work-or-warrant",
+      "explicit-capability-grant",
+      "runtime-isolation"
+    ],
+    "status": "not-granted-by-demo"
+  },
+  "buildchainSha": "3272608ba28ef714fe710dd8da99d00fdeb4c619",
+  "claims": [
+    "The exact retained Linux artifact executed its installed kungfu agent-work-lab autoplay command in a bounded PTY.",
+    "The autoplay completion sentinel passed with exit status zero.",
+    "The exact terminal capture, transcript, public projection, and scene passed the Buildchain Gate and bound the rendered media."
+  ],
+  "evidenceClass": "exact-installed-artifact-agent-work-lab-autoplay/v1",
+  "gate": {
+    "artifact": {
+      "digest": "sha256:44f9b3ec57447b8c6f5e314945791a97de52f176fbd1e1724ad1e9af6e8d6bf9",
+      "expiresAt": "2026-08-13T12:31:14.000Z",
+      "id": "8759425334",
+      "name": "auditable-demo-gate-b48d30166e26-31a259eccd3a4f09",
+      "url": "https://github.com/kungfu-systems/kungfu/actions/runs/30536659808/artifacts/8759425334"
+    },
+    "root": "sha256:31a259eccd3a4f093eaad2be01bc6def399b1653a010a6949c0bf8fa903bd54b",
+    "status": "passed"
+  },
+  "media": {
+    "artifact": {
+      "digest": "sha256:92ca003632a2c0fdc2584d2d6ec928f4ced045a58a30400f792dfb0da1bc51d4",
+      "expiresAt": "2026-08-13T12:32:52.000Z",
+      "id": "8759470968",
+      "name": "auditable-demo-media-b48d30166e26-7fafb048c7133291",
+      "url": "https://github.com/kungfu-systems/kungfu/actions/runs/30536659808/artifacts/8759470968"
+    },
+    "root": "sha256:7fafb048c7133291602643beeb702bea58763863e533d696d6bc962f66e5981b",
+    "status": "rendered"
+  },
+  "nonClaims": [
+    "cross-run continuity",
+    "provider migration",
+    "macOS execution",
+    "durability",
+    "performance",
+    "FO10",
+    "authorization from first-party or System identity",
+    "authorization from KFD compliance or Product System metadata",
+    "authorization from local bundle presence, package metadata, registry history, scan output, or standalone generation"
+  ],
+  "passport": {
+    "artifact": {
+      "digest": "sha256:72c1169f8d21e2ad5c2975507e14990b552a2419961e56883f231e6e0c0172f8",
+      "expiresAt": "2026-08-13T12:33:30.000Z",
+      "id": "8759489175",
+      "name": "kungfu-auditable-demo-passport-b48d30166e26dfceb873d1057e1db3c3e00c3385-30536659808-1",
+      "url": "https://github.com/kungfu-systems/kungfu/actions/runs/30536659808/artifacts/8759489175"
+    },
+    "root": "sha256:0ff4cc1ef018544ad752eb08cf2fec205fe8d1bbedeb41b0111566732919b5e7"
+  },
+  "readmeMedia": {
+    "digest": "sha256:cbfa9a2ebab61136e0153bf22bdc092b461ded3619dd42474b33b0f65e5ab1ac",
+    "path": "docs/qualification/evidence/auditable-demo/0ff4cc1ef018544ad752eb08cf2fec205fe8d1bbedeb41b0111566732919b5e7/demo.gif"
+  },
+  "rendererImage": "ghcr.io/kungfu-systems/build-images/demo-renderer@sha256:880b07771b04aedfbfa215185a3e3a62984fcd107fecae3c4ce5012636b2024e",
+  "schema": "kungfu.auditable-demo.public-evidence/v1",
+  "sourceSha": "b48d30166e26dfceb873d1057e1db3c3e00c3385",
+  "status": "qualified",
+  "workflowUrl": "https://github.com/kungfu-systems/kungfu/actions/runs/30536659808"
+}

@@ -1,0 +1,141 @@
+{
+  "schemaVersion": 1,
+  "contract": "kungfu-buildchain-kfd-7-release-gate-input",
+  "standard": "kfd-7",
+  "profile": {
+    "id": "kungfu-kfd-7-action-profile",
+    "version": "0.1.0",
+    "stateMachineVersion": "0.1.0",
+    "actionContract": {
+      "path": "framework/agent-work/kungfu-kfd-7-action-contract.json",
+      "sha256": "b3d788344e93518bb4fecac6fea05a6fea87707c6325e50bcf01980492309ce0"
+    },
+    "verifierReport": {
+      "path": "framework/agent-work/evidence/kfd-7/kfd-verifier.json",
+      "sha256": "dc1742cd0192870c4dd20a0f519ba2b1717149ab66cbd55d1deaacc1e7f3e4d2"
+    }
+  },
+  "source": {
+    "sha": "91a7a2b6f406e996b0b1d69421af260d69be3878"
+  },
+  "surfaces": [
+    {
+      "id": "agent-work-state-contract",
+      "sourcePath": "framework/agent-work/kungfu-agent-work-state.contract.json",
+      "artifactPath": "config/kungfu-agent-work-state.contract.json",
+      "sha256": "e89bdbeef7b3015869e27b7a5fb010fd2a697a925f4690cc8dadafd55cf83b20"
+    }
+  ],
+  "testEvidence": [
+    {
+      "id": "native-bootstrap",
+      "kind": "positive",
+      "expectedOutcome": "pass",
+      "path": "framework/agent-work/evidence/kfd-7/positive-native-bootstrap.json",
+      "sha256": "d9b2b2b53a522a153d26b8970476f8585b2d6496e08ed77c0f124c1c18070152"
+    },
+    {
+      "id": "invalid-transition",
+      "kind": "negative",
+      "expectedOutcome": "fail",
+      "path": "framework/agent-work/evidence/kfd-7/negative-invalid-transition.json",
+      "sha256": "462246bd0724e4bc965bf51baae3a8b98398eaaed059fbd672c52d4269b80283"
+    }
+  ],
+  "experiments": [
+    {
+      "id": "export-import-rebuild",
+      "category": "export-import-rebuild",
+      "expectedOutcome": "pass",
+      "path": "framework/agent-work/evidence/kfd-7/export-import-rebuild.json",
+      "sha256": "aca5911ae2d8dd4e552c278195dff5fbbc72832dd904808fa11df62bdf3ac19e"
+    },
+    {
+      "id": "backend-migration",
+      "category": "backend-migration",
+      "expectedOutcome": "pass",
+      "path": "framework/agent-work/evidence/kfd-7/backend-migration.json",
+      "sha256": "b86e6639df2312b74c0d76b63c98e09dd21b28e2a24d065eb49fc5d3ef40dd80"
+    },
+    {
+      "id": "cold-start-continuation",
+      "category": "cold-start-continuation",
+      "expectedOutcome": "pass",
+      "path": "framework/agent-work/evidence/kfd-7/cold-start-continuation.json",
+      "sha256": "0bfa131c66264269f31350ddbbe98088a6f44242d2a5e0b34d33b7925b7b9d93"
+    },
+    {
+      "id": "role-deletion-or-fusion",
+      "category": "role-deletion-or-fusion",
+      "expectedOutcome": "pass",
+      "path": "framework/agent-work/evidence/kfd-7/role-deletion-or-fusion.json",
+      "sha256": "cf0e8d3b86893ce8f8dd4fc767f9e3b2d836b53427d62f07b5d30b40f3d05b8a"
+    },
+    {
+      "id": "warrant-decay-revocation",
+      "category": "warrant-decay-revocation",
+      "expectedOutcome": "pass",
+      "path": "framework/agent-work/evidence/kfd-7/warrant-decay-revocation.json",
+      "sha256": "0af2b521111d6ce905f8bc72663eee34ad15a0b5255a6577ecd2bc11333f2ce4"
+    },
+    {
+      "id": "atlas-staleness-loss",
+      "category": "atlas-staleness-loss",
+      "expectedOutcome": "pass",
+      "path": "framework/agent-work/evidence/kfd-7/atlas-staleness-loss.json",
+      "sha256": "dee2962750bfd9620a23799b3710476eaf95c5040caf15a2ca9edf0ef2944341"
+    },
+    {
+      "id": "pursuit-continuity-settlement",
+      "category": "pursuit-continuity-settlement",
+      "expectedOutcome": "pass",
+      "path": "framework/agent-work/evidence/kfd-7/pursuit-continuity-settlement.json",
+      "sha256": "1c5c9753f23000362c0f64adc9fe45d37f7cb7e1ef5f596d84c9b3d636d46c98"
+    },
+    {
+      "id": "episode-replay-contraction",
+      "category": "episode-replay-contraction",
+      "expectedOutcome": "pass",
+      "path": "framework/agent-work/evidence/kfd-7/episode-replay-contraction.json",
+      "sha256": "c9aadf59dc91654ddf8376455e3346efc6c16fd6d9f65f15aa395a505ca7d2a4"
+    },
+    {
+      "id": "concurrency-retry-compensation",
+      "category": "concurrency-retry-compensation",
+      "expectedOutcome": "pass",
+      "path": "framework/agent-work/evidence/kfd-7/concurrency-retry-compensation.json",
+      "sha256": "27ae67f3878dede97f4b4ca049684d0179a5981606897384f2c2322117bc14fe"
+    },
+    {
+      "id": "session-round-trip-refinement",
+      "category": "session-round-trip-refinement",
+      "expectedOutcome": "pass",
+      "path": "framework/agent-work/evidence/kfd-7/session-round-trip-refinement.json",
+      "sha256": "08cf2160a6358a64a7490838da92b5ec7978a46a5e38afd847b511bd71836db6"
+    },
+    {
+      "id": "session-complexity-breakpoint",
+      "category": "session-complexity-breakpoint",
+      "expectedOutcome": "pass",
+      "path": "framework/agent-work/evidence/kfd-7/session-complexity-breakpoint.json",
+      "sha256": "6f7e2e62c3c1e496c07fe237c178cfbea9cd6dc0a630608d6a505a303c737add"
+    },
+    {
+      "id": "context-insufficiency-counterexample",
+      "category": "context-insufficiency-counterexample",
+      "expectedOutcome": "pass",
+      "path": "framework/agent-work/evidence/kfd-7/context-insufficiency-counterexample.json",
+      "sha256": "5b84f5eedaa926f0a0767125612f01f7ee6fed738a4d8e736ceba7c621725e06"
+    }
+  ],
+  "residualRisk": [],
+  "responsibility": {
+    "profileOwner": "kungfu-systems/kungfu",
+    "evidenceOwner": "Kungfu runtime and product test suites",
+    "proofOwner": "@kungfu-tech/buildchain release passport"
+  },
+  "nonClaims": [
+    "A passing evidence-closure check does not prove real-world work quality.",
+    "Activation is bounded to the declared Kungfu Product Profile and does not establish universal KFD-7 minimality."
+  ]
+}

@@ -1,0 +1,53 @@
+{
+  "schema": "kungfu.work-history.selector-contract/v1",
+  "version": 1,
+  "status": "pre-release",
+  "requestSchema": "kungfu.work-history.selection-request/v1",
+  "manifestSchema": "kungfu.work-history.selection-manifest/v1",
+  "rootAlgorithm": "sha256-project-cut-canonical-json-v1",
+  "authority": {
+    "mode": "advisory-read-only-projection",
+    "fact": false,
+    "episode": false,
+    "assignment": false,
+    "workControl": false,
+    "repositoryMutation": false
+  },
+  "gateOrder": [
+    "authority",
+    "temporal",
+    "schema",
+    "source",
+    "supersession",
+    "invalidation",
+    "applicability",
+    "ranking"
+  ],
+  "classes": [
+    "current-authority",
+    "recent-comparable",
+    "historical-precedent",
+    "superseded-or-invalidated",
+    "unknown-applicability"
+  ],
+  "privacy": {
+    "inputMode": "roots-references-enums-and-timestamps-only",
+    "privateRawCorpus": "always-denied",
+    "payloadBodies": "not-in-schema"
+  },
+  "failurePolicy": {
+    "invalidShapeOrRoot": "reject-without-manifest",
+    "staleIndex": "incomplete-manifest-with-zero-selection",
+    "unknownApplicability": "explicit-exclusion",
+    "postIndexInvalidation": "explicit-exclusion-and-coverage-gap",
+    "ambiguousAuthority": "explicit-exclusion"
+  },
+  "schemaBundle": {
+    "files": [
+      "schema/work-history-selection-manifest-v1.schema.json",
+      "schema/work-history-selection-request-v1.schema.json"
+    ],
+    "schemaRoot": "sha256:1132ca79daee81f9410c727a21139bafdfcf2865b4661980786f0c956ce53ae4"
+  },
+  "contractRoot": "sha256:00ec68d415fae4672f947f233594135825af20dd3ea6584bc42b122478bc5950"
+}

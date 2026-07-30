@@ -1,0 +1,457 @@
+{
+  "schema": "kungfu.codex-app-server.adapter-contract/v1",
+  "id": "kungfu-codex-app-server",
+  "version": 1,
+  "description": "Exact-version Codex App Server direct-stdio mapping into the provider-neutral Agent Interaction Port.",
+  "authority": {
+    "provider": "codex",
+    "structuredAttempt": "structured-events-are-control-and-lifecycle-authority",
+    "sharedInteractionPort": "kungfu.agent-session.contract/v1",
+    "ptyFallback": "new-attempt-human-recovery-only",
+    "hotSwitch": false,
+    "textInference": false
+  },
+  "surfacePin": {
+    "cliVersion": "0.144.3",
+    "deployment": "local-runtime",
+    "platform": "macos-arm64",
+    "transport": "stdio-jsonl",
+    "listen": "stdio://",
+    "websocketAuthority": false,
+    "experimentalApi": false,
+    "schemaManifest": "schemas/codex-app-server/codex-v0.144.3-stable-schema-manifest.json",
+    "schemaBundleAlgorithm": "sha256-path-nul-canonical-json-size-nul-canonical-json-sha256-lf/v1",
+    "schemaBundleFileCount": 267,
+    "schemaBundleSha256": "db6486174d318cc61d0ea100b5cfc9f6c3441d3a7c402382f971477802d11af7",
+    "maturity": "development-surface-with-stable-schema-subset",
+    "authClass": "official-ambient-codex-cli-auth",
+    "credentialPolicy": "adapter-spawns-codex-and-never-reads-auth-storage"
+  },
+  "capabilitySnapshot": {
+    "classification": "structured-hybrid",
+    "required": [
+      "initialize-once",
+      "thread-start-read-resume",
+      "turn-start-steer-interrupt",
+      "thread-turn-item-lifecycle",
+      "approval-request-response",
+      "tool-lifecycle",
+      "token-usage",
+      "typed-protocol-error"
+    ],
+    "observedButNotAdmitted": ["thread-fork"],
+    "knownMissing": [
+      "reconnect-cursor-or-event-replay",
+      "provider-at-most-once-input-admission",
+      "stdio-slow-consumer-backpressure-contract"
+    ],
+    "requiredKungfuGuards": [
+      "new-attempt-on-runtime-loss",
+      "kungfu-owned-idempotency-journal",
+      "continuous-reader-with-bounded-consumer-queue",
+      "close-admission-before-hard-bound"
+    ]
+  },
+  "identityMapping": {
+    "runtimeAttemptId": "kungfu-owned-and-never-derived-from-provider-session",
+    "providerSessionId": "params.threadId-or-result.thread.id",
+    "providerTurnId": "params.turn.id-from-turn-started",
+    "providerItemId": "params.item.id-or-params.itemId",
+    "providerControlRequestId": "request.id",
+    "providerOrdering": "attempt-local-receive-sequence-only",
+    "replayContinuity": false
+  },
+  "mappingPolicy": {
+    "source": "codex-0.144.3-generated-stable-json-schema",
+    "officialSource": "https://developers.openai.com/codex/app-server",
+    "admission": "exact-allowlist",
+    "unknownMethod": "fail-closed-requalification-required",
+    "unknownRequiredField": "schema-bundle-drift-fail-closed",
+    "messageValidation": "generated-stable-schema-before-normalization",
+    "unmappedStableMethod": "provider-extension-not-admitted",
+    "rawPointerRequired": true,
+    "rawStorage": "private-append-only-retention-bounded",
+    "publicStorage": "method-ids-counts-hashes-and-redacted-typed-summaries-only"
+  },
+  "methodMappings": [
+    {
+      "direction": "client-request",
+      "method": "initialize",
+      "schemaFile": "v1/InitializeParams.json",
+      "responseSchemaFile": "v1/InitializeResponse.json",
+      "normalizedSemantic": "adapter-handshake",
+      "interactionOperation": null,
+      "requiredPaths": ["/id", "/params/clientInfo"],
+      "rawRetention": "metadata-only",
+      "authority": "connection-capability"
+    },
+    {
+      "direction": "client-notification",
+      "method": "initialized",
+      "schemaFile": "ClientNotification.json",
+      "normalizedSemantic": "adapter-ready",
+      "interactionOperation": "status",
+      "requiredPaths": [],
+      "rawRetention": "metadata-only",
+      "authority": "connection-lifecycle"
+    },
+    {
+      "direction": "client-request",
+      "method": "thread/start",
+      "schemaFile": "v2/ThreadStartParams.json",
+      "responseSchemaFile": "v2/ThreadStartResponse.json",
+      "normalizedSemantic": "session-start-admission",
+      "interactionOperation": "start",
+      "requiredPaths": ["/id", "/params"],
+      "rawRetention": "control-private-bounded",
+      "authority": "admission-request"
+    },
+    {
+      "direction": "client-request",
+      "method": "thread/read",
+      "schemaFile": "v2/ThreadReadParams.json",
+      "responseSchemaFile": "v2/ThreadReadResponse.json",
+      "normalizedSemantic": "provider-session-snapshot",
+      "interactionOperation": "snapshot",
+      "requiredPaths": ["/id", "/params/threadId"],
+      "rawRetention": "metadata-only",
+      "authority": "recovery-observation-not-replay"
+    },
+    {
+      "direction": "client-request",
+      "method": "thread/resume",
+      "schemaFile": "v2/ThreadResumeParams.json",
+      "responseSchemaFile": "v2/ThreadResumeResponse.json",
+      "normalizedSemantic": "provider-session-resume-new-attempt",
+      "interactionOperation": "start",
+      "requiredPaths": ["/id", "/params/threadId"],
+      "rawRetention": "control-private-bounded",
+      "authority": "new-attempt-only"
+    },
+    {
+      "direction": "client-request",
+      "method": "turn/start",
+      "schemaFile": "v2/TurnStartParams.json",
+      "responseSchemaFile": "v2/TurnStartResponse.json",
+      "normalizedSemantic": "instruction-admission",
+      "interactionOperation": "instruct",
+      "requiredPaths": ["/id", "/params/threadId", "/params/input"],
+      "rawRetention": "control-private-bounded",
+      "authority": "request-only-until-turn-started"
+    },
+    {
+      "direction": "client-request",
+      "method": "turn/steer",
+      "schemaFile": "v2/TurnSteerParams.json",
+      "responseSchemaFile": "v2/TurnSteerResponse.json",
+      "normalizedSemantic": "instruction-steer-admission",
+      "interactionOperation": "instruct",
+      "requiredPaths": ["/id", "/params/threadId", "/params/expectedTurnId", "/params/input"],
+      "rawRetention": "control-private-bounded",
+      "authority": "exact-active-turn-precondition"
+    },
+    {
+      "direction": "client-request",
+      "method": "turn/interrupt",
+      "schemaFile": "v2/TurnInterruptParams.json",
+      "responseSchemaFile": "v2/TurnInterruptResponse.json",
+      "normalizedSemantic": "interrupt-admission",
+      "interactionOperation": "interrupt",
+      "requiredPaths": ["/id", "/params/threadId", "/params/turnId"],
+      "rawRetention": "control-private-bounded",
+      "authority": "exact-turn-control"
+    },
+    {
+      "direction": "server-request",
+      "method": "item/commandExecution/requestApproval",
+      "schemaFile": "CommandExecutionRequestApprovalParams.json",
+      "responseSchemaFile": "CommandExecutionRequestApprovalResponse.json",
+      "normalizedSemantic": "approval-needed-command",
+      "interactionOperation": "status",
+      "requiredPaths": ["/id", "/params/threadId", "/params/turnId", "/params/itemId", "/params/startedAtMs"],
+      "rawRetention": "control-private-bounded",
+      "authority": "approval-request"
+    },
+    {
+      "direction": "server-request",
+      "method": "item/fileChange/requestApproval",
+      "schemaFile": "FileChangeRequestApprovalParams.json",
+      "responseSchemaFile": "FileChangeRequestApprovalResponse.json",
+      "normalizedSemantic": "approval-needed-file-change",
+      "interactionOperation": "status",
+      "requiredPaths": ["/id", "/params/threadId", "/params/turnId", "/params/itemId", "/params/startedAtMs"],
+      "rawRetention": "control-private-bounded",
+      "authority": "approval-request"
+    },
+    {
+      "direction": "server-request",
+      "method": "item/permissions/requestApproval",
+      "schemaFile": "PermissionsRequestApprovalParams.json",
+      "responseSchemaFile": "PermissionsRequestApprovalResponse.json",
+      "normalizedSemantic": "approval-needed-permissions",
+      "interactionOperation": "status",
+      "requiredPaths": ["/id", "/params/threadId", "/params/turnId", "/params/itemId", "/params/permissions"],
+      "rawRetention": "control-private-bounded",
+      "authority": "approval-request"
+    },
+    {
+      "direction": "server-request",
+      "method": "item/tool/requestUserInput",
+      "schemaFile": "ToolRequestUserInputParams.json",
+      "responseSchemaFile": "ToolRequestUserInputResponse.json",
+      "normalizedSemantic": "provider-user-input-request",
+      "interactionOperation": "status",
+      "requiredPaths": ["/id", "/params/threadId", "/params/turnId", "/params/itemId", "/params/questions"],
+      "rawRetention": "control-private-bounded",
+      "authority": "control-request"
+    },
+    {
+      "direction": "server-request",
+      "method": "item/tool/call",
+      "schemaFile": "DynamicToolCallParams.json",
+      "responseSchemaFile": "DynamicToolCallResponse.json",
+      "normalizedSemantic": "provider-tool-request",
+      "interactionOperation": "status",
+      "requiredPaths": ["/id", "/params/threadId", "/params/turnId", "/params/callId", "/params/tool"],
+      "rawRetention": "control-private-bounded",
+      "authority": "tool-request"
+    },
+    {
+      "direction": "server-notification",
+      "method": "account/rateLimits/updated",
+      "schemaFile": "v2/AccountRateLimitsUpdatedNotification.json",
+      "normalizedSemantic": "provider-rate-limit-telemetry",
+      "interactionOperation": "status",
+      "requiredPaths": [
+        "/params/rateLimits"
+      ],
+      "rawRetention": "typed-summary",
+      "authority": "quota-telemetry-not-work-fact"
+    },
+    {
+      "direction": "server-notification",
+      "method": "mcpServer/startupStatus/updated",
+      "schemaFile": "v2/McpServerStatusUpdatedNotification.json",
+      "normalizedSemantic": "provider-extension-startup-telemetry",
+      "interactionOperation": "status",
+      "requiredPaths": [
+        "/params/name",
+        "/params/status"
+      ],
+      "rawRetention": "metadata-only",
+      "authority": "provider-extension-telemetry-not-work-fact"
+    },
+    {
+      "direction": "server-notification",
+      "method": "remoteControl/status/changed",
+      "schemaFile": "v2/RemoteControlStatusChangedNotification.json",
+      "normalizedSemantic": "provider-connection-telemetry",
+      "interactionOperation": "status",
+      "requiredPaths": [
+        "/params/installationId",
+        "/params/serverName",
+        "/params/status"
+      ],
+      "rawRetention": "metadata-only",
+      "authority": "connection-telemetry-not-session-fact"
+    },
+    {
+      "direction": "server-notification",
+      "method": "thread/started",
+      "schemaFile": "v2/ThreadStartedNotification.json",
+      "normalizedSemantic": "session-started",
+      "interactionOperation": "status",
+      "requiredPaths": ["/params/thread/id"],
+      "rawRetention": "metadata-only",
+      "authority": "session-lifecycle"
+    },
+    {
+      "direction": "server-notification",
+      "method": "thread/status/changed",
+      "schemaFile": "v2/ThreadStatusChangedNotification.json",
+      "normalizedSemantic": "session-status",
+      "interactionOperation": "status",
+      "requiredPaths": ["/params/threadId", "/params/status"],
+      "rawRetention": "metadata-only",
+      "authority": "session-lifecycle"
+    },
+    {
+      "direction": "server-notification",
+      "method": "thread/closed",
+      "schemaFile": "v2/ThreadClosedNotification.json",
+      "normalizedSemantic": "session-ended",
+      "interactionOperation": "end",
+      "requiredPaths": ["/params/threadId"],
+      "rawRetention": "metadata-only",
+      "authority": "session-terminal"
+    },
+    {
+      "direction": "server-notification",
+      "method": "thread/tokenUsage/updated",
+      "schemaFile": "v2/ThreadTokenUsageUpdatedNotification.json",
+      "normalizedSemantic": "usage-updated",
+      "interactionOperation": "status",
+      "requiredPaths": ["/params/threadId", "/params/turnId", "/params/tokenUsage"],
+      "rawRetention": "typed-summary",
+      "authority": "usage-observation"
+    },
+    {
+      "direction": "server-notification",
+      "method": "turn/started",
+      "schemaFile": "v2/TurnStartedNotification.json",
+      "normalizedSemantic": "turn-started",
+      "interactionOperation": "status",
+      "requiredPaths": ["/params/threadId", "/params/turn/id"],
+      "rawRetention": "metadata-only",
+      "authority": "turn-identity-and-lifecycle"
+    },
+    {
+      "direction": "server-notification",
+      "method": "turn/completed",
+      "schemaFile": "v2/TurnCompletedNotification.json",
+      "normalizedSemantic": "turn-terminal",
+      "interactionOperation": "status",
+      "requiredPaths": ["/params/threadId", "/params/turn/id", "/params/turn/status"],
+      "rawRetention": "typed-summary",
+      "authority": "single-turn-terminal-boundary"
+    },
+    {
+      "direction": "server-notification",
+      "method": "item/started",
+      "schemaFile": "v2/ItemStartedNotification.json",
+      "normalizedSemantic": "item-started",
+      "interactionOperation": "status",
+      "requiredPaths": ["/params/threadId", "/params/turnId", "/params/item/id"],
+      "rawRetention": "typed-summary",
+      "authority": "item-lifecycle"
+    },
+    {
+      "direction": "server-notification",
+      "method": "item/completed",
+      "schemaFile": "v2/ItemCompletedNotification.json",
+      "normalizedSemantic": "item-terminal",
+      "interactionOperation": "status",
+      "requiredPaths": ["/params/threadId", "/params/turnId", "/params/item/id"],
+      "rawRetention": "typed-summary",
+      "authority": "item-lifecycle"
+    },
+    {
+      "direction": "server-notification",
+      "method": "item/agentMessage/delta",
+      "schemaFile": "v2/AgentMessageDeltaNotification.json",
+      "normalizedSemantic": "presentation-delta",
+      "interactionOperation": "snapshot",
+      "requiredPaths": ["/params/threadId", "/params/turnId", "/params/itemId", "/params/delta"],
+      "rawRetention": "delta-private-bounded",
+      "authority": "presentation-only"
+    },
+    {
+      "direction": "server-notification",
+      "method": "item/commandExecution/outputDelta",
+      "schemaFile": "v2/CommandExecutionOutputDeltaNotification.json",
+      "normalizedSemantic": "tool-output-delta",
+      "interactionOperation": "snapshot",
+      "requiredPaths": ["/params/threadId", "/params/turnId", "/params/itemId", "/params/delta"],
+      "rawRetention": "delta-private-bounded",
+      "authority": "presentation-only"
+    },
+    {
+      "direction": "server-notification",
+      "method": "item/commandExecution/terminalInteraction",
+      "schemaFile": "v2/TerminalInteractionNotification.json",
+      "normalizedSemantic": "tool-terminal-event",
+      "interactionOperation": "status",
+      "requiredPaths": ["/params/threadId", "/params/turnId", "/params/itemId", "/params/processId"],
+      "rawRetention": "control-private-bounded",
+      "authority": "tool-control-event"
+    },
+    {
+      "direction": "server-notification",
+      "method": "item/fileChange/outputDelta",
+      "schemaFile": "v2/FileChangeOutputDeltaNotification.json",
+      "normalizedSemantic": "file-change-delta",
+      "interactionOperation": "snapshot",
+      "requiredPaths": ["/params/threadId", "/params/turnId", "/params/itemId", "/params/delta"],
+      "rawRetention": "delta-private-bounded",
+      "authority": "presentation-only"
+    },
+    {
+      "direction": "server-notification",
+      "method": "serverRequest/resolved",
+      "schemaFile": "v2/ServerRequestResolvedNotification.json",
+      "normalizedSemantic": "control-request-resolved",
+      "interactionOperation": "status",
+      "requiredPaths": ["/params/requestId", "/params/threadId"],
+      "rawRetention": "control-private-bounded",
+      "authority": "control-resolution"
+    },
+    {
+      "direction": "server-notification",
+      "method": "error",
+      "schemaFile": "v2/ErrorNotification.json",
+      "normalizedSemantic": "typed-provider-error",
+      "interactionOperation": "status",
+      "requiredPaths": ["/params/threadId", "/params/turnId", "/params/error", "/params/willRetry"],
+      "rawRetention": "typed-summary",
+      "authority": "error-lifecycle"
+    }
+  ],
+  "responseMappings": [
+    {
+      "direction": "server-response",
+      "requestDirection": "client-request",
+      "outcome": "result",
+      "schemaFile": "JSONRPCResponse.json",
+      "normalizedSemantic": "provider-request-response",
+      "requiredPaths": ["/id", "/result"],
+      "rawRetention": "control-private-bounded",
+      "authority": "request-correlated-response"
+    },
+    {
+      "direction": "server-response",
+      "requestDirection": "client-request",
+      "outcome": "error",
+      "schemaFile": "JSONRPCError.json",
+      "normalizedSemantic": "typed-provider-error",
+      "requiredPaths": ["/id", "/error"],
+      "rawRetention": "typed-summary",
+      "authority": "request-correlated-error"
+    },
+    {
+      "direction": "client-response",
+      "requestDirection": "server-request",
+      "outcome": "result",
+      "schemaFile": "JSONRPCResponse.json",
+      "normalizedSemantic": "provider-control-response",
+      "requiredPaths": ["/id", "/result"],
+      "rawRetention": "control-private-bounded",
+      "authority": "request-correlated-control-decision"
+    },
+    {
+      "direction": "client-response",
+      "requestDirection": "server-request",
+      "outcome": "error",
+      "schemaFile": "JSONRPCError.json",
+      "normalizedSemantic": "provider-control-response-error",
+      "requiredPaths": ["/id", "/error"],
+      "rawRetention": "typed-summary",
+      "authority": "request-correlated-control-error"
+    }
+  ],
+  "responsePolicy": {
+    "requestIdCorrelation": "exact",
+    "approvalDefault": "deny",
+    "approvalTarget": "server-request-id-plus-thread-turn-item",
+    "duplicateResponse": "reject",
+    "unknownResponse": "fail-closed",
+    "deliveryReceiptProof": "provider-request-or-response-observed-only",
+    "semanticOutcomeProof": "typed-provider-terminal-event-or-profile-kfd-action"
+  },
+  "recoveryBoundary": {
+    "disconnectBeforeTerminal": "mark-old-attempt-unknown-or-interrupted",
+    "resume": "thread-read-then-thread-resume-in-new-attempt",
+    "eventReplay": false,
+    "blindInputRetry": false,
+    "clientUserMessageIdIdempotency": false
+  }
+}

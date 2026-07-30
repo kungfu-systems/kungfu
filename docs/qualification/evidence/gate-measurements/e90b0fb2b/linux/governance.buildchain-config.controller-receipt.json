@@ -1,0 +1,44 @@
+{
+  "$schema": "https://libkungfu.dev/schemas/shifu/gate-controller-receipt-v1.schema.json",
+  "schema": "kungfu.gate-controller-receipt/v1",
+  "gateId": "governance.buildchain-config",
+  "definitionDigest": "sha256:cff3a42c0a27d8bc188d2eb8b8057ea46f04f426110f68f0a9a0e558eef89df9",
+  "source": {
+    "sha": "e90b0fb2badac3836e63aa4d0b3301b087c31ef2",
+    "dirty": false
+  },
+  "registry": {
+    "ref": "shifu.gates.json",
+    "digest": "sha256:b254723f076b4dc4bdeefb900ccdbaf786703f0422a980330d326d76fb1b492a",
+    "projectId": "kungfu"
+  },
+  "environment": {
+    "platform": "linux",
+    "runnerName": "GitHub Actions 1000031029",
+    "runnerLabels": [
+      "ubuntu-latest"
+    ]
+  },
+  "binding": {
+    "id": "channel-buildchain-config",
+    "workflow": ".github/workflows/buildchain-validate.yml",
+    "job": "validate",
+    "adapterDigest": "sha256:ec128d5f0580fc2dc2e4ae9741b42d44f97de58e46c6b9cf028776901656c525"
+  },
+  "run": {
+    "repository": "kungfu-systems/kungfu",
+    "workflowRunId": 29375659561,
+    "jobId": 87228448025,
+    "event": "pull_request",
+    "url": "https://github.com/kungfu-systems/kungfu/actions/runs/29375659561/job/87228448025"
+  },
+  "startedAt": "2026-07-14T23:17:02Z",
+  "finishedAt": "2026-07-14T23:17:11Z",
+  "durationMs": 9000,
+  "status": "pass",
+  "attempted": true,
+  "conclusion": "success",
+  "integrity": {
+    "digest": "sha256:bac8af6b99ab82355d602a9c95de6fb1527f8019e9f861e4cdbdb240abef6faa"
+  }
+}

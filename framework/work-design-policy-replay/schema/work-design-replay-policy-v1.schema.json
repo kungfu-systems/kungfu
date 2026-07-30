@@ -1,0 +1,35 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kungfu.tech/schema/work-design-replay-policy-v1.schema.json",
+  "title": "Immutable Work Design replay policy version",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "id",
+    "version",
+    "advisorPolicyRoot",
+    "maximumRegressionRateBps",
+    "minimumQualifiedSamples",
+    "policyRoot"
+  ],
+  "properties": {
+    "schema": { "const": "kungfu.work-design.replay-policy/v1" },
+    "id": { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._:/-]*$" },
+    "version": { "type": "integer", "minimum": 1 },
+    "advisorPolicyRoot": { "$ref": "#/$defs/root" },
+    "maximumRegressionRateBps": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 10000
+    },
+    "minimumQualifiedSamples": { "const": 30 },
+    "policyRoot": { "$ref": "#/$defs/root" }
+  },
+  "$defs": {
+    "root": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    }
+  }
+}

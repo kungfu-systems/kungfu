@@ -1,0 +1,41 @@
+{
+  "schema": "kungfu.profile-assessment-policies/v1",
+  "policies": [
+    {
+      "id": "dogfood-starvation-v1",
+      "version": "1",
+      "claimId": "issue-resolution",
+      "purposes": ["operator-review", "release-review"],
+      "requiredEvidence": [
+        "query-proof",
+        "sealed-work-episode",
+        "canonical-facts",
+        "independent-observation"
+      ],
+      "responsibility": "The Issue owner supplies an exact predecessor; independent assessment, authorized decision, successor Fact, and exact product evidence establish resolution.",
+      "residualRisks": [
+        "aging and recurrence expose neglect but never auto-close an Issue",
+        "a release decision remains outside this assessment"
+      ],
+      "executorProfile": "thread"
+    },
+    {
+      "id": "dogfood-release-v1",
+      "version": "1",
+      "claimId": "assignment-consideration-complete",
+      "purposes": ["assignment-settlement", "release-review"],
+      "requiredEvidence": [
+        "query-proof",
+        "canonical-facts",
+        "independent-observation"
+      ]
+      ,
+      "responsibility": "The Assignment owner accounts for every relevant Issue against exact component cuts; the gate rejects missing, stale, partial, or unaccounted evidence.",
+      "residualRisks": [
+        "consideration does not expand Assignment scope or Warrant",
+        "federated component cuts do not create a global atomic snapshot"
+      ],
+      "executorProfile": "thread"
+    }
+  ]
+}

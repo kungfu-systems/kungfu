@@ -1,4 +1,4 @@
-// The service-facet vertical cut (ADR-0017 stage 2b): prove that the ALREADY
+// The service-facet vertical cut (KF-ADR-019f86da-4f90-7afa-a1e1-0510f00916be stage 2b): prove that the ALREADY
 // verified runtime-plane primitives compose into a real background service — an
 // untrusted, networked child confined by the OS sandbox, reaching the host only
 // over the stdio relay. The guest-host contract harness (./run.ts) proved the
@@ -12,7 +12,7 @@
 //   net-denied    permissive + denyNetwork → external egress is REFUSED, relay STILL flows
 //
 // The second cell is the load-bearing one: turning the network knob on must cut
-// the untrusted service's egress (default-deny, ADR-0013) WITHOUT cutting the
+// the untrusted service's egress (default-deny, KF-ADR-019f86da-4f90-79f1-8716-aca36b142847) WITHOUT cutting the
 // capability relay, because the relay rides the child's stdio, not the network.
 // If both held, the OS sandbox is a real membrane for a networked service and the
 // relay is genuinely orthogonal to it — the stage-2b unknown, resolved on real

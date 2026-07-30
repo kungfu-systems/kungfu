@@ -1,0 +1,71 @@
+{
+  "schema": "xinfa.route-root-authority-fixture/v1",
+  "sourceProject": "fixtures/repository-small/project.json",
+  "workedExample": {
+    "route": {
+      "audience": "agent",
+      "entrypoints": ["AGENTS.md"],
+      "id": "small.agent",
+      "nodes": [
+        "small.claim.greeting",
+        "small.doc.guide",
+        "small.evidence.runtime",
+        "small.impl.runtime"
+      ],
+      "parityGroup": "small.contributor",
+      "visibility": "public"
+    },
+    "selected": [
+      {
+        "id": "small.claim.greeting",
+        "revision": "sha256:2222222222222222222222222222222222222222222222222222222222222222",
+        "status": "machine-proved"
+      },
+      {
+        "id": "small.doc.guide",
+        "revision": "sha256:1111111111111111111111111111111111111111111111111111111111111111",
+        "status": "mixed"
+      },
+      {
+        "id": "small.evidence.runtime",
+        "revision": "sha256:4444444444444444444444444444444444444444444444444444444444444444",
+        "status": "machine-proved"
+      },
+      {
+        "id": "small.impl.runtime",
+        "revision": "sha256:3333333333333333333333333333333333333333333333333333333333333333",
+        "status": "machine-proved"
+      }
+    ],
+    "routeRoot": "sha256:aa3ed7294a0cdb67d0750c32cb3db87bf3812d2537e3997fd31aa3d34e859319",
+    "authorityRoot": "sha256:3cda8d11d732f5394caf4077c2242f182da46e9d3e46d7b45e5ed19aef532335"
+  },
+  "cases": [
+    {
+      "id": "ordering",
+      "operation": "reverse-routes-nodes-and-entrypoints",
+      "expected": "same-route-and-authority-roots"
+    },
+    {
+      "id": "exclusion",
+      "operation": "remove-small.evidence.runtime-from-both-parity-routes",
+      "expectedRouteRoot": "sha256:8e831d3b8c5220e3882b2c9abe123e77f50ed82968555dade9c888f066cc40c0",
+      "expectedAuthorityRoot": "sha256:13cd0913fc5c7b33e177454e8de3617ab5fe3c5c33c38e6f56b267c0cbfdc81a"
+    },
+    {
+      "id": "missing-node",
+      "operation": "append-small.missing-to-agent-route",
+      "expectedCode": "unknown-node"
+    },
+    {
+      "id": "conflicting-authority",
+      "operation": "remove-small.evidence.runtime-from-human-route-only",
+      "expectedCode": "route-parity"
+    },
+    {
+      "id": "duplicate-node",
+      "operation": "append-small.claim.greeting-to-agent-route",
+      "expectedCode": "duplicate-route-node"
+    }
+  ]
+}

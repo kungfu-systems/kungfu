@@ -1,0 +1,117 @@
+{
+  "schema": "kungfu.durability.slo-profile/v1",
+  "id": "linux-ext4-agent120-slo-v1",
+  "host": "agent-120",
+  "platform": "linux",
+  "arch": "x64",
+  "filesystem": "ext4",
+  "device_class": "nvme",
+  "qualification_profile": "candidate/linux-ext4-agent120-slo-v1",
+  "workloads": [
+    {
+      "id": "latency-durable-group",
+      "durability_profile": "durable_group",
+      "records": 2000,
+      "payload_bytes": 256,
+      "batch_size": 1,
+      "segment_bytes": 8388608,
+      "duration_seconds": 0,
+      "target_rate": 0,
+      "thresholds": {"append_p999_ns_max": 20000000, "receipt_p999_ns_max": 250000000, "records_per_second_min": 20}
+    },
+    {
+      "id": "latency-durable-sync",
+      "durability_profile": "durable_sync",
+      "records": 1000,
+      "payload_bytes": 256,
+      "batch_size": 1,
+      "segment_bytes": 8388608,
+      "duration_seconds": 0,
+      "target_rate": 0,
+      "thresholds": {"append_p999_ns_max": 20000000, "receipt_p999_ns_max": 500000000, "records_per_second_min": 10}
+    },
+    {
+      "id": "throughput-durable-group",
+      "durability_profile": "durable_group",
+      "records": 20000,
+      "payload_bytes": 1024,
+      "batch_size": 32,
+      "segment_bytes": 8388608,
+      "duration_seconds": 0,
+      "target_rate": 0,
+      "thresholds": {"append_p999_ns_max": 20000000, "receipt_p999_ns_max": 100000000, "records_per_second_min": 500}
+    },
+    {
+      "id": "throughput-durable-sync",
+      "durability_profile": "durable_sync",
+      "records": 10000,
+      "payload_bytes": 1024,
+      "batch_size": 16,
+      "segment_bytes": 8388608,
+      "duration_seconds": 0,
+      "target_rate": 0,
+      "thresholds": {"append_p999_ns_max": 20000000, "receipt_p999_ns_max": 250000000, "records_per_second_min": 100}
+    },
+    {
+      "id": "rollover-durable-group",
+      "durability_profile": "durable_group",
+      "records": 4096,
+      "payload_bytes": 4096,
+      "batch_size": 16,
+      "segment_bytes": 65536,
+      "duration_seconds": 0,
+      "target_rate": 0,
+      "thresholds": {"append_p999_ns_max": 30000000, "receipt_p999_ns_max": 250000000, "records_per_second_min": 100}
+    },
+    {
+      "id": "rollover-durable-sync",
+      "durability_profile": "durable_sync",
+      "records": 2048,
+      "payload_bytes": 4096,
+      "batch_size": 8,
+      "segment_bytes": 65536,
+      "duration_seconds": 0,
+      "target_rate": 0,
+      "thresholds": {"append_p999_ns_max": 30000000, "receipt_p999_ns_max": 500000000, "records_per_second_min": 50}
+    },
+    {
+      "id": "soak-durable-group",
+      "durability_profile": "durable_group",
+      "records": 0,
+      "payload_bytes": 512,
+      "batch_size": 32,
+      "segment_bytes": 8388608,
+      "duration_seconds": 900,
+      "target_rate": 500,
+      "thresholds": {"append_p999_ns_max": 20000000, "receipt_p999_ns_max": 100000000, "records_per_second_min": 400}
+    },
+    {
+      "id": "soak-durable-sync",
+      "durability_profile": "durable_sync",
+      "records": 0,
+      "payload_bytes": 512,
+      "batch_size": 16,
+      "segment_bytes": 8388608,
+      "duration_seconds": 900,
+      "target_rate": 250,
+      "thresholds": {"append_p999_ns_max": 20000000, "receipt_p999_ns_max": 250000000, "records_per_second_min": 180}
+    }
+  ],
+  "global_thresholds": {
+    "recovery_ns_max": 10000000000,
+    "projection_rebuild_ns_max": 10000000000,
+    "projection_bootstrap_ns_max": 5000000000,
+    "backup_ns_max": 30000000000,
+    "restore_ns_max": 30000000000,
+    "max_rss_kib_max": 2097152,
+    "fixture_bytes_max": 4294967296
+  },
+  "claims": {
+    "absolute_candidate_slo": true,
+    "comparator_used": false,
+    "cross_platform_qualified": false,
+    "physical_power_loss_qualified": false,
+    "off_host_backup_qualified": false,
+    "production_eligible": false
+  }
+}

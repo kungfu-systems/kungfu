@@ -1,0 +1,59 @@
+#!/bin/sh
+# SPDX-License-Identifier: Apache-2.0
+
+set -eu
+
+value_from_cmdline() {
+  key="$1"
+  # Kernel parameters are whitespace-separated words, not input lines.
+  # shellcheck disable=SC2013
+  for token in $(cat /proc/cmdline); do
+    case "$token" in
+      "$key="*) printf '%s\n' "${token#*=}"; return 0 ;;
+    esac
+  done
+  return 1
+}
+
+mount -t proc proc /proc 2>/dev/null || true
+mount -t sysfs sysfs /sys 2>/dev/null || true
+mkdir -p /data
+mount -t ext4 /dev/vdb /data
+
+mode="$(value_from_cmdline kf_mode)"
+fixture=/opt/kungfu/kungfu_durability_powercut_fixture
+export KUNGFU_DURABILITY_QUALIFICATION=disposable-powercut
+
+status=64
+case "$mode" in
+  write)
+    profile="$(value_from_cmdline kf_profile)"
+    fault="$(value_from_cmdline kf_fault)"
+    "$fixture" write /data "$profile" "$fault" || status=$?
+    ;;
+  verify)
+    minimum="$(value_from_cmdline kf_min)"
+    maximum="$(value_from_cmdline kf_max)"
+    "$fixture" verify /data "$minimum" "$maximum" || status=$?
+    ;;
+  enospc)
+    profile="$(value_from_cmdline kf_profile)"
+    "$fixture" enospc /data "$profile" || status=$?
+    ;;
+  *)
+    printf 'KF_GUEST_ERROR invalid mode=%s\n' "$mode" >&2
+    ;;
+esac
+
+if [ "$status" -eq 64 ]; then
+  status=0
+fi
+sync
+umount /data
+printf 'KF_DATA_UNMOUNTED mode=%s\n' "$mode"
+printf 'KF_GUEST_EXIT mode=%s status=%s\n' "$mode" "$status"
+# PID 1 must not exit. The host runner observes this exact marker, then
+# terminates only its direct QEMU child.
+while :; do
+  sleep 86400
+done

@@ -7,15 +7,15 @@
 #include "operators.h"
 
 using namespace kungfu::rx;
-using namespace kungfu::longfist;
-using namespace kungfu::longfist::enums;
-using namespace kungfu::longfist::types;
 using namespace kungfu::yijinjing;
+using namespace kungfu::yijinjing::enums;
+using namespace kungfu::yijinjing::types;
+using namespace kungfu::runtime;
 using namespace kungfu::yijinjing::data;
-using namespace kungfu::practice;
+using namespace kungfu::runtime::live;
 
 namespace kungfu::node::serialize {
-JsResetCache::JsResetCache(apprentice &app, Napi::ObjectReference &state) : app_(app), state_(state) {}
+JsResetCache::JsResetCache(peer &app, Napi::ObjectReference &state) : app_(app), state_(state) {}
 
 void JsResetCache::operator()(const state<CacheReset> &state) {
   auto source = state.source;
@@ -23,7 +23,7 @@ void JsResetCache::operator()(const state<CacheReset> &state) {
   const auto &request = state.data;
   boost::hana::for_each(StateDataTypes, [&](auto it) {
     using DataType = typename decltype(+boost::hana::second(it))::type;
-    if (DataType::tag == request.msg_type) {
+    if (DataType::tag == request.carrier_type) {
       auto type_name = DataType::type_name.c_str();
       auto table = state_.Get(type_name).ToObject();
       auto names = table.GetPropertyNames();

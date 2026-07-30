@@ -1,0 +1,9 @@
+{
+  "lifecycleGraphRoot": "sha256:7cb9bcb2def111c9fb5e1a45ff82c8ef87e8adad25c4b696df4dba8bbb41f337",
+  "lifecyclePlanRoot": "sha256:d43f521243b752e7ab39649edd0f6c99a5e7257a68615daa1bbe5bcb3fecd62a",
+  "lifecycleReceiptDependencyRoot": "sha256:683bbc2f5d8d6bbbaa6acefba35681b0999c7b80b1d83a9e6d7d633863dfc33f",
+  "lifecycleRegistryRoot": "sha256:1b9dc85250629996785ef335cd24a0f274bb033af4502eefa4d080da46a6e377",
+  "semanticGraphRoot": "sha256:73c812c0dd01017ddf275355efbb4e5b0e6994e42063477a484b974800aa5d9f",
+  "semanticHostReceiptDependencyRoot": "sha256:e66cbaf1b713679ffc920fa7ef89cd7fbd1f58e3e6525b9d39c77b59211d2cc7",
+  "semanticPlanRoot": "sha256:420aa3bcf42908d48b1724ca62f3e16de1921e98b02941998c1bbbe6bce76074"
+}

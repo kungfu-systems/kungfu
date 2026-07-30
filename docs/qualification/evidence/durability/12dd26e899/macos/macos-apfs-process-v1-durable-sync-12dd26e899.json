@@ -1,0 +1,225 @@
+{
+  "schema": "kungfu.durability.qualification-report/v1",
+  "run_id": "macos-apfs-process-v1-durable_sync-2026-07-13T14:29:24.770Z",
+  "mode": "execute",
+  "source": {
+    "revision": "12dd26e8992b012067d0fd54da42d17ae93a68a2",
+    "tree": "a41d11a7354b827ec0acbd911381219a7e98e726",
+    "dirty": false
+  },
+  "profile": {
+    "name": "macos-apfs-process-v1",
+    "digest_sha256": "d8a093e7119dbbe0f78df636929218062a22525e0f277b0514d04a3bb9e7fa12",
+    "evidence_tier": "process-crash-proxy"
+  },
+  "durability_profile": "durable_sync",
+  "platform": {
+    "os": "darwin",
+    "arch": "arm64",
+    "release": "25.5.0",
+    "filesystem": "apfs",
+    "filesystem_evidence": "operator-declared"
+  },
+  "toolchain": {
+    "node": "v22.22.3",
+    "doctor_status": "passed",
+    "doctor_sha256": "e317427aaddac29c434abd064b6bb0d516742fabc00e846916e8a394a2b97123",
+    "doctor": {
+      "schema_version": 1,
+      "contract": "/Users/dkr/Worktrees/kungfu/feature/durability-qualification-final/toolchain.contract.json",
+      "compiler": "Apple clang version 21.0.0 (clang-2100.1.1.101)",
+      "standard_library": "libc++",
+      "cmake": "cmake version 4.3.2",
+      "ninja": "1.13.0.git.kitware.jobserver-pipe-1",
+      "conan": "Conan version 2.30.0",
+      "linker": "@(#)PROGRAM:ld PROJECT:ld-1267",
+      "cache": "ccache version 4.13.6",
+      "profile_cache": {
+        "state": "absent",
+        "scope": "development",
+        "diagnostic": "./shifu cache doctor"
+      },
+      "sdk": "26.5",
+      "runtimes": {
+        "node": "22.22.3",
+        "electron": "^42.5.0",
+        "python": ">=3.13,<3.14"
+      }
+    }
+  },
+  "suites": [
+    {
+      "id": "durable-ingest",
+      "command": [
+        "./shifu",
+        "test:durable-ingest"
+      ],
+      "required_markers": [
+        "[durable-ingest-test] cross-process writer attestation passed",
+        "ok - data sync without checkpoint never acknowledges",
+        "ok - unknown after checkpoint publish resolves on restart",
+        "ok - injected sync I/O error has no false acknowledgement",
+        "ok - checkpoint rename error has no false acknowledgement"
+      ],
+      "status": "passed",
+      "exit_code": 0,
+      "duration_ms": 916,
+      "missing_markers": [],
+      "raw_log": "macos-apfs-process-v1-durable-sync-12dd26e899.raw/durable-ingest.log",
+      "raw_sha256": "25f357f8b73f98bd95be8faf99ca58b4aa9708b1abb1fed8a96ebcb0891c98e0"
+    },
+    {
+      "id": "projection-bootstrap",
+      "command": [
+        "./shifu",
+        "test:projection-bootstrap"
+      ],
+      "required_markers": [
+        "[projection-bootstrap-test] cross-process restart passed",
+        "[projection-bootstrap-test] snapshot/replay contracts passed"
+      ],
+      "status": "passed",
+      "exit_code": 0,
+      "duration_ms": 823,
+      "missing_markers": [],
+      "raw_log": "macos-apfs-process-v1-durable-sync-12dd26e899.raw/projection-bootstrap.log",
+      "raw_sha256": "0884f82993d0cc0a64159388a1f1004540353cc7f9423e53cf918f0205ac192a"
+    },
+    {
+      "id": "crash-recovery",
+      "command": [
+        "./shifu",
+        "test:crash-recovery"
+      ],
+      "required_markers": [
+        "[crash-recovery-test] whole-data-root process restart passed",
+        "[crash-recovery-test] recovery completion contracts passed"
+      ],
+      "status": "passed",
+      "exit_code": 0,
+      "duration_ms": 3793,
+      "missing_markers": [],
+      "raw_log": "macos-apfs-process-v1-durable-sync-12dd26e899.raw/crash-recovery.log",
+      "raw_sha256": "1fd0ac516fc42dbb9a563251cc8d8b271ab30b9ca430afc6534ebd174d54b2f6"
+    },
+    {
+      "id": "episode-mvp-smoke",
+      "command": [
+        "./shifu",
+        "episode:qualify",
+        "--",
+        "--profile",
+        "mvp-smoke-v1",
+        "--mode",
+        "all"
+      ],
+      "required_markers": [
+        "[episode-qualify] semantic oracle and production comparisons",
+        "scenarios=5 passed=5",
+        "qualified=true"
+      ],
+      "status": "passed",
+      "exit_code": 0,
+      "duration_ms": 17613,
+      "missing_markers": [],
+      "raw_log": "macos-apfs-process-v1-durable-sync-12dd26e899.raw/episode-mvp-smoke.log",
+      "raw_sha256": "4168ae98cb7c4b7c91894b191e3fd4012b26a224ef89a1d9a1bbf980a57aeb21"
+    }
+  ],
+  "fault_coverage": [
+    {
+      "id": "append-outcome-unknown",
+      "evidence_suites": [
+        "durable-ingest"
+      ],
+      "status": "passed"
+    },
+    {
+      "id": "barrier-checkpoint-ordering",
+      "evidence_suites": [
+        "durable-ingest"
+      ],
+      "status": "passed"
+    },
+    {
+      "id": "torn-or-corrupt-tail",
+      "evidence_suites": [
+        "durable-ingest",
+        "crash-recovery"
+      ],
+      "status": "passed"
+    },
+    {
+      "id": "rollover-ordering",
+      "evidence_suites": [
+        "durable-ingest"
+      ],
+      "status": "passed"
+    },
+    {
+      "id": "storage-error-propagation",
+      "evidence_suites": [
+        "durable-ingest"
+      ],
+      "status": "passed"
+    },
+    {
+      "id": "ownership-fencing",
+      "evidence_suites": [
+        "durable-ingest",
+        "crash-recovery"
+      ],
+      "status": "passed"
+    },
+    {
+      "id": "projection-loss-rebuild",
+      "evidence_suites": [
+        "projection-bootstrap",
+        "crash-recovery"
+      ],
+      "status": "passed"
+    },
+    {
+      "id": "episode-capability-oracle",
+      "evidence_suites": [
+        "episode-mvp-smoke"
+      ],
+      "status": "passed"
+    },
+    {
+      "id": "whole-data-root-reopen",
+      "evidence_suites": [
+        "crash-recovery"
+      ],
+      "status": "passed"
+    },
+    {
+      "id": "verified-backup-restore",
+      "evidence_suites": [
+        "crash-recovery"
+      ],
+      "status": "passed"
+    },
+    {
+      "id": "service-restart-order",
+      "evidence_suites": [
+        "crash-recovery"
+      ],
+      "status": "passed"
+    }
+  ],
+  "claims": {
+    "declared_process_envelope_qualified": true,
+    "power_loss_qualified": false,
+    "production_profile_eligible": false
+  },
+  "non_claims": [
+    "sudden power loss or controller-cache persistence",
+    "real ENOSPC or physical-device I/O failure",
+    "production durable profile activation",
+    "latency, throughput, soak, or resource ceilings",
+    "replication, high availability, or malicious-admin resistance"
+  ],
+  "violations": [],
+  "verdict": "passed"
+}

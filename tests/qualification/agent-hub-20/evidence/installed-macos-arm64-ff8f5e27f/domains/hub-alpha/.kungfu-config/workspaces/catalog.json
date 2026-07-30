@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "available": true,
+      "data_home": "/Users/dkr/Worktrees/kungfu/feature/kfd-agent-hub-20-qualification/tests/qualification/agent-hub-20/evidence/installed-macos-arm64-ff8f5e27f/domains/hub-alpha/.kungfu",
+      "identity_root": "sha256:a30e829609a5ecbaabd3fb32379ccdec17f061f2f92019b864bc5e2c7f5c02a4",
+      "identity_state": "qualified",
+      "locator": "/Users/dkr/Worktrees/kungfu/feature/kfd-agent-hub-20-qualification/tests/qualification/agent-hub-20/evidence/installed-macos-arm64-ff8f5e27f/domains/hub-alpha",
+      "locator_key": "sha256:000674f332683a34ce1cdc90b66bb88b65881f5ed1712bb054e21f361613b76a",
+      "observed_at": "2026-07-24T00:06:20.793868Z",
+      "schema": "kungfu.workspace.locator-entry/v1",
+      "workspace_id": "project:a30e829609a5ecba",
+      "workspace_kind": "project"
+    }
+  ],
+  "schema": "kungfu.workspace.locator-catalog/v1",
+  "updated_at": "2026-07-24T00:06:20.793868Z"
+}

@@ -1,0 +1,28 @@
+{
+  "schema": "kungfu.code-complexity-budget-waiver/v1",
+  "paths_or_scope": [
+    "docs/qualification/gates/workflow-authority.json"
+  ],
+  "file_class": "declarative-schema-or-table",
+  "baseline_measurement": 2605,
+  "requested_measurement": 2632,
+  "allowed_delta": 27,
+  "owner": "kungfu/docs",
+  "responsibility_boundary": "The single closed-world manifest projects every GitHub workflow, job, credential surface, immutable external action, and authority classification.",
+  "cohesion_rationale": "The Dev-to-Alpha candidate patrol and its repository-owned promotion credential are one governed workflow. Their 27 projected lines belong in the same closed-world authority manifest so omission and cross-file substitution remain fail-closed.",
+  "rejected_split_alternatives": [
+    "Splitting one workflow into a second manifest would weaken the single-inventory comparison and add composition authority solely to avoid a line-count threshold.",
+    "Dropping credential, digest, action, or receipt fields would weaken the existing authority contract.",
+    "Raising or recalibrating the frozen baseline would authorize unrelated future growth."
+  ],
+  "affected_tests_and_qualification": [
+    "./shifu check:gate-catalog",
+    "./shifu test:alpha-promotion-preflight",
+    "./shifu check:source"
+  ],
+  "requested_by": "codex/pro-9598/root",
+  "approved_by": "dongkeren",
+  "approved_at": "2026-07-27T05:57:08Z",
+  "expires_at_or_review_by": "2026-10-31T00:00:00Z",
+  "retirement_or_decomposition_ref": "docs/qualification/gates/workflow-authority.md#change-procedure"
+}

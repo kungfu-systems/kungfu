@@ -1,0 +1,160 @@
+{
+  "schema": "kungfu.profile-views/v1",
+  "views": [
+    {
+      "id": "initiative-state",
+      "title": "Initiative state",
+      "factSurfaces": [
+        "kungfu.initiative-assignment.initiative",
+        "kungfu.initiative-assignment.assignment",
+        "kungfu.initiative-assignment.completion-claim"
+      ],
+      "queryFamily": {
+        "id": "initiative-state-at-cut",
+        "member": "work-control-views",
+        "resolutionMode": "member-resolved-definition",
+        "bindings": [
+          { "name": "initiativeId", "type": "string", "required": true },
+          { "name": "storageSourceId", "type": "string", "required": true },
+          { "name": "cutSystemTime", "type": "integer", "required": false }
+        ]
+      },
+      "view": {
+        "kind": "table",
+        "columns": ["subject_key", "fact_surface_id", "source_id", "system_time"]
+      }
+    },
+    {
+      "id": "initiative-timeline",
+      "title": "Initiative timeline",
+      "factSurfaces": [
+        "kungfu.initiative-assignment.initiative",
+        "kungfu.initiative-assignment.assignment",
+        "kungfu.initiative-assignment.completion-claim"
+      ],
+      "queryFamily": {
+        "id": "initiative-state-at-cut",
+        "member": "work-control-views",
+        "resolutionMode": "member-resolved-definition",
+        "bindings": [
+          { "name": "initiativeId", "type": "string", "required": true },
+          { "name": "storageSourceId", "type": "string", "required": true },
+          { "name": "cutSystemTime", "type": "integer", "required": false }
+        ]
+      },
+      "view": {
+        "kind": "timeline",
+        "timeField": "system_time",
+        "laneField": "fact_surface_id",
+        "labelField": "subject_key"
+      }
+    },
+    {
+      "id": "initiative-diff",
+      "title": "Initiative change",
+      "factSurfaces": [
+        "kungfu.initiative-assignment.initiative",
+        "kungfu.initiative-assignment.assignment",
+        "kungfu.initiative-assignment.completion-claim"
+      ],
+      "queryFamily": {
+        "id": "initiative-state-at-cut",
+        "member": "work-control-views",
+        "resolutionMode": "member-resolved-definition",
+        "bindings": [
+          { "name": "initiativeId", "type": "string", "required": true },
+          { "name": "storageSourceId", "type": "string", "required": true },
+          { "name": "cutSystemTime", "type": "integer", "required": false }
+        ]
+      },
+      "view": {
+        "kind": "diff",
+        "keyField": "subject_key",
+        "fields": ["fact_surface_id", "source_id", "system_time", "payload_hash"]
+      }
+    },
+    {
+      "id": "initiative-causal-graph",
+      "title": "Initiative causal graph",
+      "factSurfaces": [
+        "kungfu.initiative-assignment.initiative",
+        "kungfu.initiative-assignment.assignment",
+        "kungfu.initiative-assignment.completion-claim"
+      ],
+      "queryFamily": {
+        "id": "initiative-state-at-cut",
+        "member": "work-control-views",
+        "resolutionMode": "member-resolved-definition",
+        "bindings": [
+          { "name": "initiativeId", "type": "string", "required": true },
+          { "name": "storageSourceId", "type": "string", "required": true },
+          { "name": "cutSystemTime", "type": "integer", "required": false }
+        ]
+      },
+      "view": {
+        "kind": "causal-graph",
+        "idField": "observation_id",
+        "parentField": "causal_parent_observation_id",
+        "labelField": "subject_key"
+      }
+    },
+    {
+      "id": "initiative-attention",
+      "title": "Initiative attention",
+      "factSurfaces": [
+        "kungfu.initiative-assignment.initiative",
+        "kungfu.initiative-assignment.assignment",
+        "kungfu.initiative-assignment.completion-claim"
+      ],
+      "queryFamily": {
+        "id": "initiative-state-at-cut",
+        "member": "work-control-views",
+        "resolutionMode": "member-resolved-definition",
+        "bindings": [
+          { "name": "initiativeId", "type": "string", "required": true },
+          { "name": "storageSourceId", "type": "string", "required": true },
+          { "name": "cutSystemTime", "type": "integer", "required": false }
+        ]
+      },
+      "view": {
+        "kind": "attention",
+        "partitionField": "subject_key",
+        "repeatField": "observation_id",
+        "elapsedField": "system_time",
+        "attributionField": "source_id",
+        "evidenceField": "payload_hash"
+      }
+    },
+    {
+      "id": "assignment-cards",
+      "title": "Assignment cards",
+      "factSurfaces": [
+        "kungfu.initiative-assignment.initiative",
+        "kungfu.initiative-assignment.assignment",
+        "kungfu.initiative-assignment.completion-claim"
+      ],
+      "queryFamily": {
+        "id": "initiative-state-at-cut",
+        "member": "work-control-views",
+        "resolutionMode": "member-resolved-definition",
+        "bindings": [
+          { "name": "initiativeId", "type": "string", "required": true },
+          { "name": "storageSourceId", "type": "string", "required": true },
+          { "name": "cutSystemTime", "type": "integer", "required": false }
+        ]
+      },
+      "view": {
+        "kind": "profile",
+        "profileId": "kungfu.work-control",
+        "profileVersion": "3.1.0",
+        "memberId": "work-control-views",
+        "viewId": "assignment-cards",
+        "spec": {
+          "schema": "kungfu.work-control.goal-card-view/v1",
+          "questionId": "observed-progress",
+          "reducer": "kungfu.work-control.five-questions"
+        }
+      }
+    }
+  ]
+}

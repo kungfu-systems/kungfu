@@ -1,0 +1,8 @@
+{
+  "schema": "kungfu.reference.contract-world/v1",
+  "profile": {
+    "path": "domain-profile.json",
+    "sha256": "4d50257e275199010ad26546662e6b13c589ad53fff1634e10763f2a8c16994f"
+  },
+  "authority": "declarative-only"
+}

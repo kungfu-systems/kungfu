@@ -7,10 +7,12 @@
 #include "config_store.h"
 #include "io.h"
 
-using namespace kungfu::longfist;
-using namespace kungfu::longfist::types;
-using namespace kungfu::longfist::enums;
+#include <kungfu/runtime/util/stacktrace.h>
+
 using namespace kungfu::yijinjing;
+using namespace kungfu::yijinjing::types;
+using namespace kungfu::yijinjing::enums;
+using namespace kungfu::runtime;
 using namespace kungfu::yijinjing::data;
 
 namespace kungfu::node {
@@ -40,7 +42,7 @@ Napi::Value ConfigStore::SetConfig(const Napi::CallbackInfo &info) {
     profile_.set(config);
   } catch (const std::exception &ex) {
     SPDLOG_ERROR("failed to SetConfig {}", ex.what());
-    yijinjing::util::print_stack_trace();
+    runtime::util::print_stack_trace();
     return Napi::Boolean::New(info.Env(), false);
   }
   return Napi::Boolean::New(info.Env(), true);
@@ -53,7 +55,7 @@ Napi::Value ConfigStore::GetConfig(const Napi::CallbackInfo &info) {
     set(config, result);
   } catch (const std::exception &ex) {
     SPDLOG_ERROR("failed to GetConfig {}", ex.what());
-    yijinjing::util::print_stack_trace();
+    runtime::util::print_stack_trace();
     return Napi::Boolean::New(info.Env(), false);
   }
   return result;
@@ -70,7 +72,7 @@ Napi::Value ConfigStore::GetAllConfig(const Napi::CallbackInfo &info) {
     }
   } catch (const std::exception &ex) {
     SPDLOG_ERROR("failed to GetAllConfig {}", ex.what());
-    yijinjing::util::print_stack_trace();
+    runtime::util::print_stack_trace();
     return Napi::Boolean::New(info.Env(), false);
   }
 
@@ -82,7 +84,7 @@ Napi::Value ConfigStore::RemoveConfig(const Napi::CallbackInfo &info) {
     profile_.remove(profile_.get(getConfigFromJs(info, locator_)));
   } catch (const std::exception &ex) {
     SPDLOG_ERROR("failed to RemoveConfig {}", ex.what());
-    yijinjing::util::print_stack_trace();
+    runtime::util::print_stack_trace();
     return Napi::Boolean::New(info.Env(), false);
   }
   return Napi::Boolean::New(info.Env(), true);

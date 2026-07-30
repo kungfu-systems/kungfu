@@ -1,0 +1,31 @@
+# SPDX-License-Identifier: Apache-2.0
+
+name: Docs Check
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  docs-check:
+    name: Markdown structure + contracts
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+
+      - name: Run blocking documentation Gate closure
+        env:
+          KUNGFU_ADR_EVIDENCE_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          KUNGFU_DOCS_TOOL_CACHE: ${{ runner.temp }}/kungfu-docs-tools
+        run: ./shifu gate run docs.prose --capability docker
+
+      - name: Report advisory prose policy
+        env:
+          KUNGFU_VALE_REPORT: ${{ runner.temp }}/kungfu-vale-report.json
+        run: ./shifu docs:prose -- --github-annotations

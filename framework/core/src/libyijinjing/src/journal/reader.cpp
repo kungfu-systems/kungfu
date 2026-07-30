@@ -1,24 +1,64 @@
 // SPDX-License-Identifier: Apache-2.0
 
+#include <ranges>
+
 #include <kungfu/yijinjing/journal/journal.h>
 #include <kungfu/yijinjing/journal/page.h>
 #include <kungfu/yijinjing/time.h>
 
 namespace kungfu::yijinjing::journal {
 reader::~reader() {
-  for (auto &iter : journals_) {
-    iter.second->release_page();
+  auto journals = journal_snapshot();
+  {
+    std::lock_guard<std::mutex> lock(journals_mtx_);
+    journals_.clear();
+    current_ = nullptr;
   }
-  journals_.clear();
+  for (const auto &journal : journals) {
+    journal->release_page();
+  }
+}
+
+void reader::assert_cursor_thread(bool claim) const {
+#ifndef NDEBUG
+  std::lock_guard<std::mutex> lock(cursor_owner_mtx_);
+  const auto this_thread = std::this_thread::get_id();
+  if (cursor_owner_thread_ == std::thread::id{}) {
+    if (claim) {
+      cursor_owner_thread_ = this_thread;
+    }
+    return;
+  }
+  assert(cursor_owner_thread_ == this_thread && "reader cursor is single-consumer and thread-affine");
+#else
+  (void)claim;
+#endif
+}
+
+JournalMap reader::get_journals() const {
+  std::lock_guard<std::mutex> lock(journals_mtx_);
+  return journals_;
+}
+
+std::vector<journal_ptr> reader::journal_snapshot() const {
+  std::vector<journal_ptr> snapshot;
+  std::lock_guard<std::mutex> lock(journals_mtx_);
+  snapshot.reserve(journals_.size());
+  std::transform(journals_.begin(), journals_.end(), std::back_inserter(snapshot),
+                 [](const auto &pair) { return pair.second; });
+  return snapshot;
 }
 
 void reader::join(const data::location_ptr &location, uint32_t dest_id, const int64_t from_time, uint64_t page_size,
-                  longfist::enums::Priority priority) {
+                  yijinjing::enums::Priority priority) {
+  assert_cursor_thread(false);
   SPDLOG_TRACE("join location: {}, dest_id: {}, page_size: {} ", location->to_string(), dest_id, page_size);
   auto key = journal_key(location, dest_id);
-  auto size = lazy_ ? find_page_size(location, dest_id) : page::find_page_size(location, dest_id, page_size);
+  auto size = policy_.discover_page_size ? find_page_size(location, dest_id)
+                                         : page::find_page_size(location, dest_id, page_size);
+  std::lock_guard<std::mutex> lock(journals_mtx_);
   auto result = journals_.try_emplace(
-      key, std::make_shared<journal>(location, dest_id, false, lazy_, low_latency_, bus_, size, priority));
+      key, std::make_shared<journal>(location, dest_id, policy_.journal, low_latency_, bus_, size, priority));
   if (result.second) {
     journals_.at(key)->seek_to_time(from_time);
   }
@@ -29,6 +69,8 @@ void reader::join(const data::location_ptr &location, uint32_t dest_id, const in
 }
 
 void reader::disjoin_channel(const data::location_ptr &location, uint32_t dest_id) {
+  assert_cursor_thread(false);
+  std::lock_guard<std::mutex> lock(journals_mtx_);
   auto key = journal_key(location, dest_id);
   journals_.erase(key);
   current_ = nullptr;
@@ -36,6 +78,8 @@ void reader::disjoin_channel(const data::location_ptr &location, uint32_t dest_i
 }
 
 void reader::disjoin(const data::location_ptr &location) {
+  assert_cursor_thread(false);
+  std::lock_guard<std::mutex> lock(journals_mtx_);
   for (auto it = journals_.begin(); it != journals_.end();) {
     if (it->first.location_uid != location->location_uid or it->first.locator_uid != location->locator->locator_uid) {
       it++;
@@ -48,11 +92,14 @@ void reader::disjoin(const data::location_ptr &location) {
 }
 
 bool reader::data_available() {
+  assert_cursor_thread(true);
   sort();
   return current_ != nullptr && current_frame()->has_data();
 }
 
 void reader::seek_to_time(int64_t nanotime) {
+  assert_cursor_thread(true);
+  std::lock_guard<std::mutex> lock(journals_mtx_);
   for (auto &pair : journals_) {
     pair.second->seek_to_time(nanotime);
   }
@@ -60,6 +107,7 @@ void reader::seek_to_time(int64_t nanotime) {
 }
 
 void reader::next() {
+  assert_cursor_thread(true);
   if (current_ != nullptr) {
     current_->next();
   }
@@ -68,43 +116,37 @@ void reader::next() {
 
 void reader::sort_without_buffer() {
   buffer_built_ = false;
-  // those could be refacted to std::ranges after cxx==20
-  std::vector<journal_ptr> has_data_journals;
-  for (auto &pair : journals_) {
-    auto &journal = pair.second;
-    if (journal->current_frame()->has_data()) {
-      has_data_journals.push_back(journal);
-    }
-  }
-  auto min_journal_it = std::max_element(has_data_journals.cbegin(), has_data_journals.cend(), later{});
-  if (min_journal_it != has_data_journals.end()) {
-    current_ = *min_journal_it;
+  auto has_data_journals = journals_ | std::views::values | std::views::filter([](const journal_ptr &journal) {
+                             return journal->current_frame()->has_data();
+                           });
+  auto next_journal_it = std::ranges::min_element(has_data_journals, reads_before{});
+  if (next_journal_it != std::ranges::end(has_data_journals)) {
+    current_ = *next_journal_it;
   }
 }
 
 void reader::sort() {
+  assert_cursor_thread(true);
   if (not buffer_built_) {
     build_buffer();
   }
-  int64_t min_time = INT64_MAX;
-  no_data_journals_buffer_.erase(std::remove_if(no_data_journals_buffer_.begin(), no_data_journals_buffer_.end(),
-                                                [this](const auto &journal_ptr) {
-                                                  const bool has_data = journal_ptr->current_frame()->has_data();
-                                                  if (has_data) {
-                                                    has_data_journals_heap_.push(journal_ptr);
-                                                  }
-                                                  return has_data;
-                                                }),
-                                 no_data_journals_buffer_.end());
+  // Admit every journal that has produced data since the last pass into the heap.
+  std::erase_if(no_data_journals_buffer_, [this](const journal_ptr &journal) {
+    const bool has_data = journal->current_frame()->has_data();
+    if (has_data) {
+      has_data_journals_heap_.push(journal);
+    }
+    return has_data;
+  });
   if (has_data_journals_heap_.empty()) {
     return;
   }
-  auto min_journal = has_data_journals_heap_.top();
-  if (min_journal->current_frame()->gen_time() <= min_time) {
-    current_ = min_journal;
-    has_data_journals_heap_.pop();
-    no_data_journals_buffer_.push_back(current_);
-  }
+  // Hand the front of the merge to current_ and park it back in the buffer: the
+  // caller advances current_, and reads_after compares gen_time lazily, so a
+  // journal must never sit in the heap while its cursor can move.
+  current_ = has_data_journals_heap_.top();
+  has_data_journals_heap_.pop();
+  no_data_journals_buffer_.push_back(current_);
 }
 
 void reader::build_buffer() {
@@ -116,35 +158,37 @@ void reader::build_buffer() {
 }
 
 void reader::release_page() {
-  for (auto &iter : journals_) {
-    iter.second->release_page();
+  for (const auto &journal : journal_snapshot()) {
+    journal->release_page();
   }
 }
 
 void reader::preload_next_page() {
-  for (auto &iter : journals_) {
-    iter.second->preload_next_page();
+  for (const auto &journal : journal_snapshot()) {
+    journal->preload_next_page();
   }
 }
 
-reader::reader(const reader &other) : lazy_(other.lazy_), low_latency_(other.low_latency_), bus_(other.bus_) {
+reader::reader(const reader &other) : policy_(other.policy_), low_latency_(other.low_latency_), bus_(other.bus_) {
+  std::lock_guard<std::mutex> lock(other.journals_mtx_);
   for (auto &j : other.journals_) {
     journals_.emplace(j.first, j.second);
-    if (other.current_->get_source() == j.second->get_source() and other.current_->get_dest() == j.second->get_dest()) {
+    if (other.current_ != nullptr && other.current_->get_source() == j.second->get_source() &&
+        other.current_->get_dest() == j.second->get_dest()) {
       current_ = journals_.find(j.first)->second;
     }
   }
 }
 
-journal_ptr reader::get_journal(const data::location_ptr &location, uint32_t dest_id) {
+journal_lookup_result reader::get_journal(const data::location_ptr &location, uint32_t dest_id) {
   auto key = journal_key(location, dest_id);
+  std::lock_guard<std::mutex> lock(journals_mtx_);
   auto iter = journals_.find(key);
   if (iter != journals_.end()) {
     return iter->second;
   }
 
-  SPDLOG_ERROR("no journal found for location: {}, dest_id: {}", location->uname, dest_id);
-  return nullptr;
+  return std::unexpected(journal_lookup_error::not_joined);
 }
 
 uint64_t reader::find_page_size(const data::location_ptr &location, uint32_t dest_id) {
@@ -155,11 +199,11 @@ uint64_t reader::find_page_size(const data::location_ptr &location, uint32_t des
   }
 
   auto page_id = page_ids.front();
-  auto page = page::load_header_and_1st_frame_header(location, dest_id, page_id, false, true);
+  auto page = page::load_header_and_1st_frame_header(location, dest_id, page_id, page_open_policy::header_probe());
   auto page_size = page->get_page_size();
   if (page_size == 0) {
     const std::string msg = fmt::format("open a page never init page_header for {}", location->uname,
-                                        page::get_page_path(location, dest_id, page_id));
+                                        page::resolve_page_path(location, dest_id, page_id, false));
     SPDLOG_ERROR(msg);
     throw journal_error(msg);
   }
@@ -167,16 +211,18 @@ uint64_t reader::find_page_size(const data::location_ptr &location, uint32_t des
 }
 
 void reader::clear() {
+  assert_cursor_thread(false);
+  std::lock_guard<std::mutex> lock(journals_mtx_);
   journals_.clear();
   current_ = nullptr;
   sort_without_buffer();
 }
 
-bool reader::later::operator()(const journal_ptr &lhs, const journal_ptr &rhs) const {
+bool reader::reads_before::operator()(const journal_ptr &lhs, const journal_ptr &rhs) const {
   if (lhs->priority_ == rhs->priority_) {
-    return lhs->current_frame()->gen_time() > rhs->current_frame()->gen_time();
+    return lhs->current_frame()->gen_time() < rhs->current_frame()->gen_time();
   }
-  return lhs->priority_ < rhs->priority_;
+  return lhs->priority_ > rhs->priority_;
 }
 
 } // namespace kungfu::yijinjing::journal

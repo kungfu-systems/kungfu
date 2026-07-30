@@ -13,14 +13,14 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import {
-  locate,
-  findBin,
-  fail,
-  tmpDir,
-  run,
-  jsonField,
   assertContains,
   assertNotContains,
+  fail,
+  findBin,
+  jsonField,
+  locate,
+  run,
+  tmpDir,
 } from '../_harness.mjs';
 
 const { buildDir } = locate(import.meta.url);

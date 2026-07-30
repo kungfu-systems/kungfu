@@ -1,4 +1,4 @@
-// Main-process managed session host (ADR-0016 stage 1). The durable session
+// Main-process managed session host (KF-ADR-019f86da-4f90-7153-a6c1-ab7a0a3cf481 stage 1). The durable session
 // host — node-pty plus the tmux backend — runs here, in the app-lifetime main
 // process, so it outlives any single window and (later) is reachable from every
 // window. Renderers reach it over a terminal-specific relay (see
@@ -115,7 +115,7 @@ type SubscribeMethod = 'onData' | 'onExit';
 // subId is minted by the guest, so stop() on the guest maps back to one stream.
 //
 // Subscriptions are keyed by `<clientKey>:<subId>`, not by subId alone: since
-// ADR-0016 stage 3 the shell and each per-session OS window are separate guest
+// KF-ADR-019f86da-4f90-7153-a6c1-ab7a0a3cf481 stage 3 the shell and each per-session OS window are separate guest
 // renderers reaching this one host, and each mints its own subId sequence from
 // scratch. Keyed by subId alone, the second guest's subId 1 would evict the
 // first guest's subId 1 (the defensive replace below), silently killing an
@@ -177,7 +177,7 @@ export function createTerminalRelay(host: Terminal) {
 
 type TerminalInvokeEvent = {
   // The subscribing renderer's webContents. `id` namespaces this guest's subId
-  // sequence in the relay (ADR-0016 stage 3 gives the shell and every session
+  // sequence in the relay (KF-ADR-019f86da-4f90-7153-a6c1-ab7a0a3cf481 stage 3 gives the shell and every session
   // window their own sequence); `isDestroyed`/`once('destroyed')` let the host
   // stop emitting into — and release the streams of — a window that closed.
   sender: {

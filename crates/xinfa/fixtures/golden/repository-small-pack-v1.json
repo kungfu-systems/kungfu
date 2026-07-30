@@ -1,0 +1,14 @@
+{
+  "schema": "xinfa.context-pack-golden/v1",
+  "fixture": "fixtures/repository-small/project.json",
+  "visibility": "public",
+  "packRoot": "sha256:7a237656ee7eee66715fc043b0376f6f5bfefd9e876783a587b79ac19a2be858",
+  "sourceRoot": "sha256:eeab29ac55b2ee5bd42e2869c574e7542569c035d64173bd4e5837e9d36b42ec",
+  "policyRoot": "sha256:78aeb0a9d5429aec779f5d0ddfe3ba8e992fe17f2c08339e6ac6252c354911f6",
+  "cutRoot": "sha256:43e26d3383c20defb7d0f66a0a992b89d5a5279b1430da2ab5c4a3c93f3be654",
+  "authorityRoot": "sha256:df4bc471e2ccc0baa627b764a365a4aea0b2f9b0807b8a1ba52ef30b02a838f7",
+  "coverageRoot": "sha256:9a32a11da66e7b23accbd2b2e1254d84d0faf9a081381ae1008cfa3a42186652",
+  "manifestRoot": "sha256:73e8cc5b53b5803fd7583a6a13e4e725903e382b436cf70b0298bf7c6d8dcedd",
+  "receiptRoot": "sha256:1a6945b8e55586bf66d464a5a2805c313e0e02545ca35953bea5ed4bbb3486ca",
+  "counts": { "sources": 4, "nodes": 4, "edges": 3, "routes": 2 }
+}

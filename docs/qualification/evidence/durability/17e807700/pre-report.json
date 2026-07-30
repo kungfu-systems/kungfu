@@ -1,0 +1,93 @@
+{
+  "backup_cut": {
+    "container_epoch": 1,
+    "frame_uid": 720100003,
+    "sequence": 3,
+    "stream_id": 7201
+  },
+  "bundle_id": "fe2a0c09489c6427dd7fc4aa141be900c222226f1312734bdaa80f05d71ffbfa",
+  "clean_host_restart_qualified": false,
+  "durable_record_count": 3,
+  "episode_count": 1,
+  "episode_payload_sha256": "sha256:d89d3be0714d2a8e751f852ae37a1fdc136721ac442966340902d590ce6b7bf8",
+  "file_count": 5,
+  "fresh_process_reopen_verified": false,
+  "independent_failure_domain_qualified": false,
+  "manifest_sha256": "0040b5904884277bb484f0941b68923187ea6936e8b5ccb0e7ff460130142ec1",
+  "mode": "export",
+  "off_host_verified": false,
+  "ownership": {
+    "service": {
+      "generation": 1,
+      "owned": true,
+      "owner_pid": 506512,
+      "recovered_stale_owner": false,
+      "resource_id": "state-service",
+      "scope": "data_root_service"
+    },
+    "writer": {
+      "generation": 1,
+      "owned": true,
+      "owner_pid": 506512,
+      "recovered_stale_owner": false,
+      "resource_id": "offhost-backup-writer",
+      "scope": "stream_writer"
+    }
+  },
+  "package_path": "/data/qualification/kungfu/clean-host-restart/17e807700-agent120-clean-restart-v1/package-store/fe2a0c09489c6427dd7fc4aa141be900c222226f1312734bdaa80f05d71ffbfa",
+  "physical_power_loss_qualified": false,
+  "production_eligible": false,
+  "projection_cut": {
+    "container_epoch": 1,
+    "frame_uid": 720100003,
+    "sequence": 3,
+    "stream_id": 7201
+  },
+  "projection_integrity_sha256": "3a5b18e5492f519535b419592b73a3c77eeb6102fd0ba8e973901ca7101c7a9f",
+  "projection_state": {
+    "account": "42",
+    "position": "17",
+    "risk": "bounded"
+  },
+  "qualification_profile": "candidate/linux-ext4-agent120-ubuntu222-offhost-v1",
+  "records": [
+    {
+      "carrier_type": 7201,
+      "payload": "account=42",
+      "payload_sha256": "01065f4dd3bd2c88d4012f65bc76fd83c8888234883b0983a71eab05b70fde19",
+      "position": {
+        "container_epoch": 1,
+        "frame_uid": 720100001,
+        "sequence": 1,
+        "stream_id": 7201
+      },
+      "record_sha256": "29501519b8f7def11c39385d700ad839b16a52ad914945e39910fc3bd26ae643"
+    },
+    {
+      "carrier_type": 7201,
+      "payload": "position=17",
+      "payload_sha256": "a3ef0acf3059334986e3c699970f450dd09f5095e05b5c7ed97c7e8725581b94",
+      "position": {
+        "container_epoch": 1,
+        "frame_uid": 720100002,
+        "sequence": 2,
+        "stream_id": 7201
+      },
+      "record_sha256": "a4dea48bc98a7390e07c6c771ae27d3ebf6a850089cf4f7a9b4b8a43d0d13b9b"
+    },
+    {
+      "carrier_type": 7201,
+      "payload": "risk=bounded",
+      "payload_sha256": "220d47457ad75a0facaaee3b464f83a9535073165cd5811065f78a44b57eefdb",
+      "position": {
+        "container_epoch": 1,
+        "frame_uid": 720100003,
+        "sequence": 3,
+        "stream_id": 7201
+      },
+      "record_sha256": "efcc9b83e5d9ea216b8d490908cd5242bb6f2a119cca67fdbe3a8bdfb8ad49bb"
+    }
+  ],
+  "schema": "kungfu.offhost-backup-fixture-report/v1",
+  "total_bytes": 16778459
+}

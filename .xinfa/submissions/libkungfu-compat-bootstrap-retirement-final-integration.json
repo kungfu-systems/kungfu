@@ -1,0 +1,36 @@
+{
+  "schema": "xinfa.episode-provider-submission/v1",
+  "provider": "git-workspace-jsonl/v1",
+  "providerId": "kungfu.libkungfu-compat-bootstrap-retirement-final-integration",
+  "root": "repository",
+  "beforeAtlasRoot": "sha256:584c9c2c02510af8beeb28d5ad7376e34ea79ae20c07078a69fb867c005d204e",
+  "resultCut": {
+    "id": "kungfu.libkungfu-compat-bootstrap-retirement-final-integrated"
+  },
+  "episodes": [
+    {
+      "id": "episode.libkungfu-compat-bootstrap-retirement-final-integration-20260721",
+      "manifestPath": ".kungfu/episodes/sealed/sha256/39/39c2087f0cffce62886e3061c4749916722fba1eb0573953f73d27183064ce21/manifest.json",
+      "claimsPath": ".kungfu/episodes/sealed/sha256/39/39c2087f0cffce62886e3061c4749916722fba1eb0573953f73d27183064ce21/claims.jsonl",
+      "qualificationPath": ".kungfu/episodes/sealed/sha256/39/39c2087f0cffce62886e3061c4749916722fba1eb0573953f73d27183064ce21/qualification.json",
+      "semanticRoot": "sha256:39c2087f0cffce62886e3061c4749916722fba1eb0573953f73d27183064ce21",
+      "providerRoot": "sha256:a12fdb5ff699f0ff0dfa9097447742f2f1f8906d485bd9b8253f2bc337cb5705",
+      "qualificationRoot": "sha256:b346c3fb9adc1f39fa8c3b24dbfa2500a46bf11cf993d2b7eacbec098bf9583f",
+      "visibility": "public"
+    }
+  ],
+  "units": [
+    {
+      "id": "kungfu.evidence.libkungfu-compat-bootstrap-retirement-final-integration",
+      "type": "proof-ref",
+      "episode": "episode.libkungfu-compat-bootstrap-retirement-final-integration-20260721",
+      "recordIndex": 1,
+      "dependsOn": [],
+      "routes": [
+        "kungfu-core-development-agent",
+        "kungfu-core-development-human"
+      ]
+    }
+  ],
+  "edges": []
+}

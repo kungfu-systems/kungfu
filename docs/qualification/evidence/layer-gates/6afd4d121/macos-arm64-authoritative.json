@@ -1,0 +1,113 @@
+{
+  "schema": "kungfu.layer-gate-timing-baseline/v1",
+  "status": "authoritative-host-sample",
+  "source": {
+    "sha": "6afd4d121b3658b1d37e1b3fffc43d54dd2ddd31",
+    "dirty": false
+  },
+  "identity": {
+    "gate_registry_digest": "sha256:26716c1b1979fa3789f35caf5db97dae103462a7e02aebd4f4026b0ea2923526",
+    "cache_profile_digest": "sha256:251ecdb33a34b770a6fbd40b0b05c5c8c0d629a06d9144e6d2d89c9c8e70258b",
+    "buildchain_contract_lock_digest": "sha256:19dd7c50cb86936d2ce009a92eb33b18b35919a481831d323089523ad44e8c4a"
+  },
+  "host": {
+    "platform": "macos",
+    "os_version": "26.5.2",
+    "os_build": "25F84",
+    "architecture": "arm64",
+    "hardware_model": "Mac13,2",
+    "logical_cpus": 20,
+    "memory_bytes": 137438953472
+  },
+  "toolchain": {
+    "node": "22.22.3",
+    "fnm": "1.39.0",
+    "uv": "0.11.23",
+    "buildchain": "2.12.1-alpha.4",
+    "apple_clang": "21",
+    "cmake": "4.3.2",
+    "conan": "2.29.1",
+    "cargo": "1.95.0"
+  },
+  "cache": {
+    "classification": "cold-repository-outputs-warm-global-download-caches",
+    "compiler_cache_disabled": true,
+    "full_network_cold": false,
+    "install_packages_reused": 949,
+    "install_packages_downloaded": 0
+  },
+  "profile": {
+    "optional_dependencies": false,
+    "buildchain_source_build": true,
+    "native": true,
+    "require_msvc": true,
+    "fuzz_seconds_per_target": 90
+  },
+  "durations_seconds": {
+    "install": 9.32,
+    "distribution_build": 372.42,
+    "verify_fuzz": 326.74,
+    "layer_gate_run": 45.332,
+    "measured_compute_sum": 753.812,
+    "gates": {
+      "gate.catalog": 0.660,
+      "layers.contract": 0.764,
+      "layers.format": 4.525,
+      "layers.sdk": 15.918,
+      "layers.surfaces": 23.464
+    }
+  },
+  "outcome": {
+    "install": "pass",
+    "distribution_build": "pass",
+    "verify_fuzz": "pass-39-of-39",
+    "gate_run": "pass",
+    "gate_run_qualifying": false
+  },
+  "artifacts": [
+    {
+      "kind": "cli-tar-gz",
+      "size_bytes": 139889166
+    },
+    {
+      "kind": "desktop-dmg",
+      "size_bytes": 245201893
+    },
+    {
+      "kind": "desktop-zip",
+      "size_bytes": 246271420
+    }
+  ],
+  "evidence": {
+    "raw_root": "docs/qualification/evidence/layer-gates/6afd4d121/macos-arm64.raw",
+    "raw_logs": [
+      {
+        "path": "docs/qualification/evidence/layer-gates/6afd4d121/macos-arm64.raw/install.log",
+        "sha256": "d74cc4bad32f4538b9650c4c0f529109271b668e1e54bf694eeda71289d3f189"
+      },
+      {
+        "path": "docs/qualification/evidence/layer-gates/6afd4d121/macos-arm64.raw/build.log",
+        "sha256": "01c09fa15e29f29e95bc02f8f3a7eb4ec1a72b2fc5e6b33f59a4cdf6c28ef95e"
+      },
+      {
+        "path": "docs/qualification/evidence/layer-gates/6afd4d121/macos-arm64.raw/verify-fuzz.log",
+        "sha256": "ed9f793b66f6c3fbbdc844f39ec5247b439e29e236f7892abeb3952165effd54"
+      },
+      {
+        "path": "docs/qualification/evidence/layer-gates/6afd4d121/macos-arm64.raw/layer-gates.log",
+        "sha256": "a61a65ed79db633ee8193b998454af368236ef3b826bc46a561249174c03c5e3"
+      }
+    ],
+    "receipt": {
+      "path": "product/release/qualification/layer-artifact-gate-receipt.json",
+      "run_id": "gate-6dc6f5cf-8cc7-4acc-bd42-be3a40200c17",
+      "sha256": "d3d95d712313ec89ba56c94acbcad652e820a76a0e298075c9d2b0c34658e84d",
+      "integrity_digest": "sha256:be37e310cda8f613c2a13988b3f024e40aea9da1add4caef7c56ad083041b5ed"
+    },
+    "reports": {
+      "format_sha256": "585f9667a486a23ac41ebefbe2ab1e68335a19eec1f47b62bd5938c56e7766d9",
+      "sdk_sha256": "a6b0a80e3ae3850c6ae4c43e2edaf00b1ed362d740b902eb05ce90c0fc65bd70",
+      "surfaces_sha256": "6c74d9059a3cb457001b462688f085cf74a9673de1afe2bd7d23bf7d9bf15851"
+    }
+  }
+}

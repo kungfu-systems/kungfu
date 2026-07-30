@@ -1,0 +1,161 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kungfu.tech/schemas/episode-trust-report-v1.schema.json",
+  "title": "Kungfu Episode Trust Report v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "source_revision",
+    "source_dirty",
+    "episode_contract",
+    "profile",
+    "platform",
+    "hardware",
+    "backend_capabilities",
+    "workload",
+    "fault_coverage",
+    "correctness",
+    "performance",
+    "gaps",
+    "qualified"
+  ],
+  "properties": {
+    "schema": {
+      "const": "kungfu.episode.trust-report/v1"
+    },
+    "source_revision": {
+      "type": "string",
+      "minLength": 7
+    },
+    "source_dirty": {
+      "type": "boolean"
+    },
+    "episode_contract": {
+      "const": "kungfu.episode.manifest/v1"
+    },
+    "profile": {
+      "type": "string",
+      "minLength": 1
+    },
+    "platform": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["os", "arch", "node"],
+      "properties": {
+        "os": { "type": "string" },
+        "arch": { "type": "string" },
+        "node": { "type": "string" }
+      }
+    },
+    "hardware": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["logical_cpus", "total_memory_bytes"],
+      "properties": {
+        "logical_cpus": { "type": "integer", "minimum": 1 },
+        "total_memory_bytes": { "type": "integer", "minimum": 1 }
+      }
+    },
+    "backend_capabilities": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "manifest_authority",
+        "writer_ownership",
+        "payload_profile",
+        "query_profile",
+        "retry_policy"
+      ],
+      "properties": {
+        "manifest_authority": { "const": "yijinjing-journal" },
+        "writer_ownership": { "const": "one-logical-manifest-writer-per-data-root" },
+        "payload_profile": { "type": "string" },
+        "query_profile": { "type": "string" },
+        "retry_policy": { "type": "object" }
+      }
+    },
+    "workload": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["profile", "seeds", "duration_seconds", "scenarios"],
+      "properties": {
+        "profile": { "type": "string" },
+        "seeds": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "type": "integer", "minimum": 0 }
+        },
+        "duration_seconds": { "type": "number", "minimum": 0 },
+        "scenarios": {
+          "type": "array",
+          "items": { "type": "object" }
+        }
+      }
+    },
+    "fault_coverage": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "writer_contention_exercised",
+        "writer_contention_observed",
+        "fresh_process_readback",
+        "clean_recovery"
+      ],
+      "properties": {
+        "writer_contention_exercised": { "type": "boolean" },
+        "writer_contention_observed": { "type": "boolean" },
+        "fresh_process_readback": { "type": "boolean" },
+        "clean_recovery": { "type": "boolean" }
+      }
+    },
+    "correctness": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "silent_invalid",
+        "capability_violations",
+        "containment_violations",
+        "repair_monotonicity_violations",
+        "count_mismatches",
+        "readback_mismatches",
+        "fsck_failures",
+        "recovery_mismatches",
+        "retry_exhausted",
+        "unexpected_errors",
+        "progress_timeouts"
+      ],
+      "properties": {
+        "silent_invalid": { "type": "integer", "minimum": 0 },
+        "capability_violations": { "type": "integer", "minimum": 0 },
+        "containment_violations": { "type": "integer", "minimum": 0 },
+        "repair_monotonicity_violations": { "type": "integer", "minimum": 0 },
+        "count_mismatches": { "type": "integer", "minimum": 0 },
+        "readback_mismatches": { "type": "integer", "minimum": 0 },
+        "fsck_failures": { "type": "integer", "minimum": 0 },
+        "recovery_mismatches": { "type": "integer", "minimum": 0 },
+        "retry_exhausted": { "type": "integer", "minimum": 0 },
+        "unexpected_errors": { "type": "integer", "minimum": 0 },
+        "progress_timeouts": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "performance": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["scenarios"],
+      "properties": {
+        "scenarios": {
+          "type": "array",
+          "items": { "type": "object" }
+        }
+      }
+    },
+    "gaps": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "qualified": {
+      "type": "boolean"
+    }
+  }
+}

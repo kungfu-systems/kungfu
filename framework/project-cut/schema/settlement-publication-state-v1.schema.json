@@ -1,0 +1,110 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kungfu.tech/schema/settlement-publication-state-v1.schema.json",
+  "title": "Kungfu Settlement Publication State v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "batchRoot",
+    "manifestRoot",
+    "planRoot",
+    "repository",
+    "sourceBranch",
+    "projectCutCount",
+    "phase",
+    "retryCount",
+    "firstObservedAt",
+    "lastAttemptAt",
+    "sourceHead",
+    "pullRequest",
+    "latestFailureRoot",
+    "runtimeContinuationBlocked",
+    "stateRoot"
+  ],
+  "properties": {
+    "schema": {
+      "const": "kungfu.settlement-publication.state/v1"
+    },
+    "batchRoot": {
+      "$ref": "#/$defs/root"
+    },
+    "manifestRoot": {
+      "$ref": "#/$defs/root"
+    },
+    "planRoot": {
+      "$ref": "#/$defs/root"
+    },
+    "repository": {
+      "type": "object"
+    },
+    "sourceBranch": {
+      "type": "string"
+    },
+    "projectCutCount": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 256
+    },
+    "phase": {
+      "enum": [
+        "planned",
+        "source-published",
+        "pull-request-open",
+        "merged"
+      ]
+    },
+    "retryCount": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "firstObservedAt": {
+      "type": "string"
+    },
+    "lastAttemptAt": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "sourceHead": {
+      "oneOf": [
+        {
+          "type": "string",
+          "pattern": "^[0-9a-f]{40,64}$"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "pullRequest": {
+      "type": [
+        "object",
+        "null"
+      ]
+    },
+    "latestFailureRoot": {
+      "oneOf": [
+        {
+          "$ref": "#/$defs/root"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "runtimeContinuationBlocked": {
+      "const": false
+    },
+    "stateRoot": {
+      "$ref": "#/$defs/root"
+    }
+  },
+  "$defs": {
+    "root": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    }
+  }
+}

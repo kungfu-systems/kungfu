@@ -1,0 +1,96 @@
+{
+  "schema": "kungfu.kfd7.profile-action/v1",
+  "actionId": "kfd-7-real-dogfood-bootstrap",
+  "refName": "profiles/kfd-7/dogfood",
+  "basis": {
+    "cutRoot": null,
+    "revision": 0
+  },
+  "ref": {
+    "cutRoot": null,
+    "revision": 0
+  },
+  "subject": {
+    "role": "fact",
+    "operation": "create",
+    "fromState": "absent",
+    "toState": "declared"
+  },
+  "responsibilities": {
+    "fact": {
+      "objectId": "fact:00000000000000000000000000000001",
+      "expectedVersionRoot": null
+    },
+    "episode": {
+      "objectId": "fact:00000000000000000000000000000002",
+      "expectedVersionRoot": null
+    },
+    "pursuit": {
+      "objectId": "fact:00000000000000000000000000000003",
+      "expectedVersionRoot": null
+    },
+    "atlas": {
+      "objectId": "fact:00000000000000000000000000000004",
+      "expectedVersionRoot": null
+    },
+    "warrant": {
+      "objectId": "fact:00000000000000000000000000000005",
+      "expectedVersionRoot": null
+    }
+  },
+  "roleInputs": {
+    "fact": {
+      "state": "declared",
+      "details": {
+        "cutKind": "retained-runtime-evidence"
+      }
+    },
+    "episode": {
+      "state": "open",
+      "details": {
+        "episodeId": "episode:kfd-7-real-dogfood"
+      }
+    },
+    "pursuit": {
+      "state": "active",
+      "details": {
+        "success": "KFD-7 Profile survives native Fact storage and independent release verification"
+      }
+    },
+    "atlas": {
+      "state": "current",
+      "details": {
+        "validThroughRevision": 10
+      }
+    },
+    "warrant": {
+      "state": "issued",
+      "details": {
+        "validThroughRevision": 10,
+        "allowedOperations": [
+          "*"
+        ]
+      }
+    }
+  },
+  "relations": [
+    {
+      "relationId": "fact:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "relationType": "pursuit-uses-atlas",
+      "sourceRole": "pursuit",
+      "targetRole": "atlas",
+      "attributesRoot": "sha256:2222222222222222222222222222222222222222222222222222222222222222"
+    }
+  ],
+  "support": {
+    "createdByReceiptRoot": "sha256:1111111111111111111111111111111111111111111111111111111111111111",
+    "schemaRoot": "sha256:3333333333333333333333333333333333333333333333333333333333333333",
+    "declarationRoots": [
+      "sha256:4444444444444444444444444444444444444444444444444444444444444444"
+    ],
+    "admissionRoots": [
+      "sha256:5555555555555555555555555555555555555555555555555555555555555555"
+    ],
+    "reasonRoot": "sha256:6666666666666666666666666666666666666666666666666666666666666666"
+  }
+}

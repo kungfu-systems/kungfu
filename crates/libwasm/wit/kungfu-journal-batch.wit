@@ -1,0 +1,10 @@
+// SPDX-License-Identifier: Apache-2.0
+
+package kungfu:journal@1.0.0;
+
+world batch {
+  /// A bounded batch copied from the host capability membrane. The first
+  /// production lowering is core Wasm and does not grant ambient WASI.
+  export control: func() -> s32;
+  export consume: func(payload: list<u8>) -> u64;
+}

@@ -1,0 +1,223 @@
+{
+  "schema": "kungfu.durability.qualification-report/v1",
+  "run_id": "linux-ext4-process-v1-durable_group-2026-07-13T14:39:38.128Z",
+  "mode": "execute",
+  "source": {
+    "revision": "12dd26e8992b012067d0fd54da42d17ae93a68a2",
+    "tree": "a41d11a7354b827ec0acbd911381219a7e98e726",
+    "dirty": false
+  },
+  "profile": {
+    "name": "linux-ext4-process-v1",
+    "digest_sha256": "f643a1321d62c9331fe68193138e5139c7dac5847e105a8f05575a1b847cc950",
+    "evidence_tier": "process-crash-proxy"
+  },
+  "durability_profile": "durable_group",
+  "platform": {
+    "os": "linux",
+    "arch": "x64",
+    "release": "6.8.0-134-generic",
+    "filesystem": "ext4",
+    "filesystem_evidence": "operator-declared"
+  },
+  "toolchain": {
+    "node": "v22.22.3",
+    "doctor_status": "passed",
+    "doctor_sha256": "ef8c8564ea8a0e5b830044c1657982779d42b9b12d3a597db000b19590f63f31",
+    "doctor": {
+      "schema_version": 1,
+      "contract": "/data/worktrees/kungfu/feature/durability-qualification-final/toolchain.contract.json",
+      "compiler": "c++ (Ubuntu 14.2.0-4ubuntu2~24.04.1) 14.2.0",
+      "standard_library": "libstdc++",
+      "cmake": "cmake version 3.28.3",
+      "ninja": "1.13.0.git.kitware.jobserver-pipe-1",
+      "conan": "Conan version 2.30.0",
+      "linker": "GNU ld (GNU Binutils for Ubuntu) 2.42",
+      "cache": "ccache version 4.9.1",
+      "profile_cache": {
+        "state": "absent",
+        "scope": "development",
+        "diagnostic": "./shifu cache doctor"
+      },
+      "sdk": "ldd (Ubuntu GLIBC 2.39-0ubuntu8.7) 2.39",
+      "runtimes": {
+        "node": "22.22.3",
+        "electron": "^42.5.0",
+        "python": ">=3.13,<3.14"
+      }
+    }
+  },
+  "suites": [
+    {
+      "id": "durable-ingest",
+      "command": [
+        "./shifu",
+        "test:durable-ingest"
+      ],
+      "required_markers": [
+        "[durable-ingest-test] cross-process writer attestation passed",
+        "ok - group barrier survives verified restart",
+        "ok - rollover preserves order and checkpoint"
+      ],
+      "status": "passed",
+      "exit_code": 0,
+      "duration_ms": 12581,
+      "missing_markers": [],
+      "raw_log": "linux-ext4-process-v1-durable-group-12dd26e899.raw/durable-ingest.log",
+      "raw_sha256": "d0cb28bec009165daaaa340d2ca4e75d5bb90375778b379b883e2203aee8a546"
+    },
+    {
+      "id": "projection-bootstrap",
+      "command": [
+        "./shifu",
+        "test:projection-bootstrap"
+      ],
+      "required_markers": [
+        "[projection-bootstrap-test] cross-process restart passed",
+        "[projection-bootstrap-test] snapshot/replay contracts passed"
+      ],
+      "status": "passed",
+      "exit_code": 0,
+      "duration_ms": 1894,
+      "missing_markers": [],
+      "raw_log": "linux-ext4-process-v1-durable-group-12dd26e899.raw/projection-bootstrap.log",
+      "raw_sha256": "a8a13fb7b66fb746d1fc0b51d355a9d9efaa1fcd1dc0ea82680be49ae4b15fce"
+    },
+    {
+      "id": "crash-recovery",
+      "command": [
+        "./shifu",
+        "test:crash-recovery"
+      ],
+      "required_markers": [
+        "[crash-recovery-test] whole-data-root process restart passed",
+        "[crash-recovery-test] recovery completion contracts passed"
+      ],
+      "status": "passed",
+      "exit_code": 0,
+      "duration_ms": 12377,
+      "missing_markers": [],
+      "raw_log": "linux-ext4-process-v1-durable-group-12dd26e899.raw/crash-recovery.log",
+      "raw_sha256": "5c3510e65912bf6b4f47cea3410e0b1d555630b58ba4f4868e4c0db77a76e714"
+    },
+    {
+      "id": "episode-mvp-smoke",
+      "command": [
+        "./shifu",
+        "episode:qualify",
+        "--",
+        "--profile",
+        "mvp-smoke-v1",
+        "--mode",
+        "all"
+      ],
+      "required_markers": [
+        "[episode-qualify] semantic oracle and production comparisons",
+        "scenarios=5 passed=5",
+        "qualified=true"
+      ],
+      "status": "passed",
+      "exit_code": 0,
+      "duration_ms": 952325,
+      "missing_markers": [],
+      "raw_log": "linux-ext4-process-v1-durable-group-12dd26e899.raw/episode-mvp-smoke.log",
+      "raw_sha256": "2ddcd15d0a6102538a117a2267dda1997794fc700b89bd5549a90af644ce1951"
+    }
+  ],
+  "fault_coverage": [
+    {
+      "id": "append-outcome-unknown",
+      "evidence_suites": [
+        "durable-ingest"
+      ],
+      "status": "passed"
+    },
+    {
+      "id": "barrier-checkpoint-ordering",
+      "evidence_suites": [
+        "durable-ingest"
+      ],
+      "status": "passed"
+    },
+    {
+      "id": "torn-or-corrupt-tail",
+      "evidence_suites": [
+        "durable-ingest",
+        "crash-recovery"
+      ],
+      "status": "passed"
+    },
+    {
+      "id": "rollover-ordering",
+      "evidence_suites": [
+        "durable-ingest"
+      ],
+      "status": "passed"
+    },
+    {
+      "id": "storage-error-propagation",
+      "evidence_suites": [
+        "durable-ingest"
+      ],
+      "status": "passed"
+    },
+    {
+      "id": "ownership-fencing",
+      "evidence_suites": [
+        "durable-ingest",
+        "crash-recovery"
+      ],
+      "status": "passed"
+    },
+    {
+      "id": "projection-loss-rebuild",
+      "evidence_suites": [
+        "projection-bootstrap",
+        "crash-recovery"
+      ],
+      "status": "passed"
+    },
+    {
+      "id": "episode-capability-oracle",
+      "evidence_suites": [
+        "episode-mvp-smoke"
+      ],
+      "status": "passed"
+    },
+    {
+      "id": "whole-data-root-reopen",
+      "evidence_suites": [
+        "crash-recovery"
+      ],
+      "status": "passed"
+    },
+    {
+      "id": "verified-backup-restore",
+      "evidence_suites": [
+        "crash-recovery"
+      ],
+      "status": "passed"
+    },
+    {
+      "id": "service-restart-order",
+      "evidence_suites": [
+        "crash-recovery"
+      ],
+      "status": "passed"
+    }
+  ],
+  "claims": {
+    "declared_process_envelope_qualified": true,
+    "power_loss_qualified": false,
+    "production_profile_eligible": false
+  },
+  "non_claims": [
+    "sudden power loss or controller-cache persistence",
+    "real ENOSPC or physical-device I/O failure",
+    "production durable profile activation",
+    "latency, throughput, soak, or resource ceilings",
+    "replication, high availability, or malicious-admin resistance"
+  ],
+  "violations": [],
+  "verdict": "passed"
+}

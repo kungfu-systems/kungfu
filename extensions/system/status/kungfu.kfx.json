@@ -1,0 +1,26 @@
+{
+  "schema": "kungfu.kfx.manifest/v1",
+  "name": "@kungfu-tech/kfx-view-status",
+  "version": "4.0.0-alpha.1",
+  "kungfuConfig": {
+    "key": "system-status",
+    "name": "Status",
+    "product": {
+      "roles": [
+        "devtool",
+        "boot-critical"
+      ],
+      "icon": "🩺",
+      "order": 10
+    },
+    "config": {
+      "view": {
+        "title": "Status",
+        "capabilities": [
+          "ledger",
+          "storage"
+        ]
+      }
+    }
+  }
+}

@@ -1,0 +1,19 @@
+{
+  "schema": "kungfu.exit-verifier.corpus/v1",
+  "version": 1,
+  "description": "Mutation corpus applied to a deterministic source-built full or thin Exit package and replayed through source and packaged verifiers.",
+  "cases": [
+    {"id": "complete-full", "fixture": "full", "mutation": "none", "verdict": "verified", "failureCode": null},
+    {"id": "honest-thin", "fixture": "thin", "mutation": "none", "verdict": "degraded", "failureCode": null},
+    {"id": "single-byte-tamper", "fixture": "full", "mutation": "material-byte", "verdict": "rejected", "failureCode": "package-root-mismatch"},
+    {"id": "unknown-package-schema", "fixture": "full", "mutation": "package-schema", "verdict": "rejected", "failureCode": "package-schema-invalid"},
+    {"id": "unknown-member-protocol", "fixture": "full", "mutation": "member-protocol", "verdict": "rejected", "failureCode": "unsupported-member-protocol"},
+    {"id": "missing-required-member", "fixture": "full", "mutation": "missing-member", "verdict": "rejected", "failureCode": "required-member-missing"},
+    {"id": "duplicate-member-identity", "fixture": "full", "mutation": "duplicate-member", "verdict": "rejected", "failureCode": "duplicate-member-identity"},
+    {"id": "thin-full-mismatch", "fixture": "thin", "mutation": "thin-overclaim", "verdict": "rejected", "failureCode": "thin-capability-overclaim"},
+    {"id": "required-redaction-loss", "fixture": "full", "mutation": "required-redaction", "verdict": "rejected", "failureCode": "required-omission"},
+    {"id": "package-byte-bound", "fixture": "generated", "mutation": "oversize-package", "verdict": "rejected", "failureCode": "package-size-limit-exceeded"},
+    {"id": "member-count-bound", "fixture": "generated", "mutation": "member-count", "verdict": "rejected", "failureCode": "package-member-limit-exceeded"},
+    {"id": "json-depth-bound", "fixture": "generated", "mutation": "json-depth", "verdict": "rejected", "failureCode": "package-depth-limit-exceeded"}
+  ]
+}

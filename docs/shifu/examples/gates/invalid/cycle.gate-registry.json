@@ -1,0 +1,10 @@
+{
+  "$schema": "https://libkungfu.dev/schemas/shifu/gate-registry-v1.schema.json",
+  "schema": "shifu.gate-registry/v1",
+  "project": { "id": "cycle", "title": "Cycle" },
+  "gates": [
+    { "id": "cycle.a", "title": "A", "summary": "A.", "category": "source", "documentation": "docs/shifu/gates.md", "dependencies": ["cycle.b"], "platforms": ["linux"], "runner": { "capabilities": [] }, "cost": { "class": "light", "timeoutSeconds": 10 }, "action": { "kind": "task", "task": "a" }, "artifacts": [], "receipt": { "expectation": "none" } },
+    { "id": "cycle.b", "title": "B", "summary": "B.", "category": "source", "documentation": "docs/shifu/gates.md", "dependencies": ["cycle.a"], "platforms": ["linux"], "runner": { "capabilities": [] }, "cost": { "class": "light", "timeoutSeconds": 10 }, "action": { "kind": "task", "task": "b" }, "artifacts": [], "receipt": { "expectation": "none" } }
+  ],
+  "profiles": [{ "id": "default", "title": "Default", "decisions": { "cycle.a": { "mode": "required", "reason": "Required." }, "cycle.b": { "mode": "required", "reason": "Required." } } }]
+}

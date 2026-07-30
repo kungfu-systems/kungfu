@@ -1,0 +1,81 @@
+{
+  "schema": "kungfu.profile-suite/v1",
+  "id": "example-profile",
+  "title": "Example Profile",
+  "version": "1.0.0",
+  "members": {
+    "required": [
+      "required-service"
+    ],
+    "optional": [
+      "optional-view"
+    ]
+  },
+  "kfd1": {
+    "contractWorld": {
+      "path": "contract-world.json",
+      "sha256": "90220f1ea4a10cffc329598c5d512c777fe3006da410e25fd32a612e4aff13dc"
+    },
+    "factSurfaces": [
+      {
+        "path": "fact-surface.json",
+        "sha256": "2cce81d5e39304b90693f296e6d5c4abebe4e0b7852a9248f0e41c0633ac7a99"
+      }
+    ],
+    "reducers": [],
+    "compatibility": {
+      "path": "compatibility.json",
+      "sha256": "594a72ef70815ea8e43b74571775ad5e8cc6f341642c335328642f7cc3c16dd2"
+    }
+  },
+  "kfd2": {
+    "claims": [
+      {
+        "path": "claim.json",
+        "sha256": "5b6ac48bb3ab158781c13af76c8731ebc63e77483353588c3792d4b1282b43ca"
+      }
+    ],
+    "purposes": [
+      "parity"
+    ],
+    "policies": [
+      {
+        "path": "policy.json",
+        "sha256": "2af1e88248246e6b10f7d5506e812f4fe1be65e07c2a6277441ad1dff93dab26"
+      }
+    ]
+  },
+  "actions": {
+    "registry": {
+      "path": "action.json",
+      "sha256": "7bc32c92d4a76bcac811b29b7bae80c2a93357b265754604cc6470eba222fe3c"
+    }
+  },
+  "views": {
+    "registry": {
+      "path": "view.json",
+      "sha256": "612f592a05438650dfc89a0dd2c5f08328dc4bb1974442a4bdce67574175f16e"
+    }
+  },
+  "migrations": {
+    "registry": {
+      "path": "migration.json",
+      "sha256": "a54e38f094d928b211f23c51c9ea3e214775ce81170e312d111b71caa7396232"
+    }
+  },
+  "permissions": {
+    "registry": {
+      "path": "permission.json",
+      "sha256": "784a5de0412040217a8d8add4b4f67d9d6bfef9f26ff584777b8a2ae18961eed"
+    }
+  },
+  "qualification": {
+    "profile": {
+      "path": "qualification.json",
+      "sha256": "8777599d180d8dd934b4aea0b03a2670cd870e0eee25c6aa658af1b21f2ab6a9"
+    }
+  },
+  "experience": {
+    "homeView": "optional-view"
+  }
+}

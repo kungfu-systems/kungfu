@@ -2,12 +2,12 @@
 
 import json
 import os
-import sys
 
 import click
 
 from kungfu.cli.commands import kfc, PrioritizedCommandGroup
 from kungfu.rewind import reporting
+from kungfu.rewind import progress as progress_contract
 
 report_command_context = kfc.pass_context()
 
@@ -27,24 +27,6 @@ def _json(payload):
     click.echo(json.dumps(payload, indent=2, sort_keys=True))
 
 
-def _require_work(runtime_dir, work_id):
-    if not work_id:
-        return
-    from kungfu.work import store
-
-    if work_id not in store.load(runtime_dir):
-        click.echo(f"[report] unknown work item: {work_id}", err=True)
-        sys.exit(1)
-
-
-def _link_work(runtime_dir, work_id, run_id):
-    if not work_id:
-        return
-    from kungfu.work.store import WorkStore
-
-    WorkStore(runtime_dir).link_run(work_id, run_id)
-
-
 @report.group(help="report a non-managed run lifecycle")
 @report_command_context
 def run(ctx):
@@ -60,7 +42,6 @@ def run(ctx):
 @click.option("--json", "as_json", is_flag=True, help="machine-readable output")
 @report_command_context
 def begin(ctx, work_id, provider, cwd, run_id, command, as_json):
-    _require_work(ctx.runtime_dir, work_id)
     actual_run_id = run_id or reporting.new_run_id()
     manifest = reporting.begin_run(
         ctx.runtime_dir,
@@ -70,7 +51,6 @@ def begin(ctx, work_id, provider, cwd, run_id, command, as_json):
         work_id=work_id,
         command=command,
     )
-    _link_work(ctx.runtime_dir, work_id, actual_run_id)
     payload = {
         "schema": "kungfu.report-run-begin/v1",
         "run_id": actual_run_id,
@@ -159,7 +139,6 @@ def cost(
     raw_ref,
     as_json,
 ):
-    _require_work(ctx.runtime_dir, work_id)
     manifest = reporting.report_cost(
         ctx.runtime_dir,
         run_id=run_id,
@@ -191,6 +170,76 @@ def cost(
         _json(payload)
     else:
         click.echo(f"[report] cost recorded for run {run_id} ({attribution})")
+
+
+@report.command(help="report a live progress narration for a run")
+@click.option(
+    "--run",
+    "run_id",
+    type=str,
+    default=None,
+    help="run id; defaults to KUNGFU_AGENT_ATTEMPT_ID in Agent Console",
+)
+@click.option("--message", required=True, type=str, help="progress narration line")
+@click.option("--phase", type=str, default=None, help="phase or milestone grouping")
+@click.option(
+    "--severity",
+    type=click.Choice(["info", "warn", "error"]),
+    default="info",
+    help="progress severity hint",
+)
+@click.option("--pct", type=int, default=0, help="optional 0..100 completion")
+@click.option(
+    "--signal",
+    type=click.Choice(["progress", "heartbeat", "blocker", "waiting"]),
+    default="progress",
+    help="observation kind; never claims canonical Go state",
+)
+@click.option("--next-action", type=str, default=None, help="declared next action")
+@click.option(
+    "--detail", type=str, default=None, help="optional structured JSON detail"
+)
+@click.option("--json", "as_json", is_flag=True, help="machine-readable output")
+@report_command_context
+def progress(
+    ctx, run_id, message, phase, severity, pct, signal, next_action, detail, as_json
+):
+    try:
+        actual_run_id = progress_contract.reported_run_id(run_id)
+        work_ref = progress_contract.reported_work_ref()
+    except ValueError as exc:
+        raise click.UsageError(str(exc)) from exc
+    runtime_dir = progress_contract.report_runtime_dir(ctx.runtime_dir)
+    manifest = reporting.report_progress(
+        runtime_dir,
+        run_id=actual_run_id,
+        message=message,
+        phase=phase,
+        severity=severity,
+        pct=pct,
+        detail=detail,
+        signal=signal,
+        next_action=next_action,
+        work_ref=work_ref,
+    )
+    payload = {
+        "schema": "kungfu.report-progress/v1",
+        "run_id": actual_run_id,
+        "phase": phase,
+        "severity": severity,
+        "pct": pct,
+        "signal": signal,
+        "work_ref": work_ref,
+        "runtime_role": "control"
+        if os.environ.get(progress_contract.CONTROL_RUNTIME_ENV, "").strip()
+        else "current",
+        "manifest": manifest,
+    }
+    if as_json:
+        _json(payload)
+    else:
+        label = f"{phase}: " if phase else ""
+        click.echo(f"[report] {signal} for run {actual_run_id} — {label}{message}")
 
 
 @report.command(help="report an approval decision fact for a run")

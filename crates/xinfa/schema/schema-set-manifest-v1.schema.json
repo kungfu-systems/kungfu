@@ -1,0 +1,75 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://xinfa.dev/schema/schema-set-manifest-v1.schema.json",
+  "title": "Xinfa schema-set manifest",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "product",
+    "hashAlgorithm",
+    "memberDigestAlgorithm",
+    "canonicalization",
+    "schemaSetRoot",
+    "members",
+    "rootSets"
+  ],
+  "properties": {
+    "schema": { "const": "xinfa.schema-set-manifest/v1" },
+    "product": { "const": "xinfa" },
+    "hashAlgorithm": { "const": "sha256" },
+    "memberDigestAlgorithm": { "const": "sha256-file-bytes/v1" },
+    "canonicalization": {
+      "const": "utf8-json-object-keys-byte-sorted-no-insignificant-whitespace-lf/v1"
+    },
+    "schemaSetRoot": { "$ref": "#/$defs/root" },
+    "members": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/member" }
+    },
+    "rootSets": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/rootSet" }
+    }
+  },
+  "$defs": {
+    "root": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" },
+    "path": { "type": "string", "pattern": "^schema/[a-z0-9-]+-v[0-9]+\\.schema\\.json$" },
+    "member": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path", "uri", "sha256"],
+      "properties": {
+        "path": { "$ref": "#/$defs/path" },
+        "uri": { "type": "string", "pattern": "^https://xinfa\\.dev/schema/[a-z0-9-]+-v[0-9]+\\.schema\\.json$" },
+        "sha256": { "$ref": "#/$defs/root" }
+      }
+    },
+    "rootSetEntry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["key", "path"],
+      "properties": {
+        "key": { "type": "string", "pattern": "^[a-z][a-z0-9_]*$" },
+        "path": { "$ref": "#/$defs/path" }
+      }
+    },
+    "rootSet": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "rootAlgorithm", "root", "entries"],
+      "properties": {
+        "id": { "type": "string", "pattern": "^xinfa\\.[a-z0-9-]+-schema-set/v[0-9]+$" },
+        "rootAlgorithm": { "const": "sha256-canonical-json-object-v1" },
+        "root": { "$ref": "#/$defs/root" },
+        "entries": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/rootSetEntry" }
+        }
+      }
+    }
+  }
+}

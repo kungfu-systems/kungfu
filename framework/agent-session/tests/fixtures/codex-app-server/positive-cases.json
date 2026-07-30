@@ -1,0 +1,139 @@
+[
+  {
+    "id": "initialize-stable-capabilities",
+    "direction": "client-request",
+    "message": {
+      "id": 1,
+      "method": "initialize",
+      "params": {"clientInfo": {"name": "kungfu", "version": "4.0.0-alpha.1"}}
+    },
+    "expectedSemantic": "adapter-handshake"
+  },
+  {
+    "id": "thread-start-is-session-admission",
+    "direction": "client-request",
+    "message": {"id": 2, "method": "thread/start", "params": {}},
+    "expectedSemantic": "session-start-admission"
+  },
+  {
+    "id": "turn-start-is-not-yet-turn-identity",
+    "direction": "client-request",
+    "message": {
+      "id": 3,
+      "method": "turn/start",
+      "params": {"threadId": "thread-1", "input": [{"type": "text", "text": "redacted"}]}
+    },
+    "expectedSemantic": "instruction-admission"
+  },
+  {
+    "id": "turn-started-establishes-provider-turn-id",
+    "direction": "server-notification",
+    "message": {
+      "method": "turn/started",
+      "params": {"threadId": "thread-1", "turn": {"id": "turn-1", "status": "inProgress", "items": []}}
+    },
+    "expectedSemantic": "turn-started"
+  },
+  {
+    "id": "remote-control-status-is-connection-telemetry-only",
+    "direction": "server-notification",
+    "message": {
+      "method": "remoteControl/status/changed",
+      "params": {
+        "installationId": "redacted-installation",
+        "serverName": "redacted-server",
+        "status": "disabled"
+      }
+    },
+    "expectedSemantic": "provider-connection-telemetry"
+  },
+  {
+    "id": "account-rate-limits-are-provider-telemetry-only",
+    "direction": "server-notification",
+    "message": {
+      "method": "account/rateLimits/updated",
+      "params": {
+        "rateLimits": {
+          "primary": null,
+          "secondary": null
+        }
+      }
+    },
+    "expectedSemantic": "provider-rate-limit-telemetry"
+  },
+  {
+    "id": "mcp-startup-status-is-extension-telemetry-only",
+    "direction": "server-notification",
+    "message": {
+      "method": "mcpServer/startupStatus/updated",
+      "params": {
+        "name": "redacted-server",
+        "status": "ready"
+      }
+    },
+    "expectedSemantic": "provider-extension-startup-telemetry"
+  },
+  {
+    "id": "command-approval-keeps-exact-control-target",
+    "direction": "server-request",
+    "message": {
+      "id": "approval-1",
+      "method": "item/commandExecution/requestApproval",
+      "params": {
+        "threadId": "thread-1",
+        "turnId": "turn-1",
+        "itemId": "item-1",
+        "startedAtMs": 1,
+        "command": "redacted"
+      }
+    },
+    "expectedSemantic": "approval-needed-command"
+  },
+  {
+    "id": "usage-is-typed-observation",
+    "direction": "server-notification",
+    "message": {
+      "method": "thread/tokenUsage/updated",
+      "params": {"threadId": "thread-1", "turnId": "turn-1", "tokenUsage": {"total": {}}}
+    },
+    "expectedSemantic": "usage-updated"
+  },
+  {
+    "id": "turn-completed-is-single-terminal-boundary",
+    "direction": "server-notification",
+    "message": {
+      "method": "turn/completed",
+      "params": {"threadId": "thread-1", "turn": {"id": "turn-1", "status": "completed", "items": []}}
+    },
+    "expectedSemantic": "turn-terminal"
+  },
+  {
+    "id": "typed-error-retains-retry-state",
+    "direction": "server-notification",
+    "message": {
+      "method": "error",
+      "params": {"threadId": "thread-1", "turnId": "turn-1", "error": {"message": "redacted"}, "willRetry": false}
+    },
+    "expectedSemantic": "typed-provider-error"
+  },
+  {
+    "id": "protocol-error-requires-request-ledger-correlation",
+    "direction": "server-response",
+    "requestMethod": "thread/read",
+    "message": {
+      "id": 12,
+      "error": {"code": -32600, "message": "redacted"}
+    },
+    "expectedSemantic": "typed-provider-error"
+  },
+  {
+    "id": "approval-decision-is-correlated-control-response",
+    "direction": "client-response",
+    "requestMethod": "item/commandExecution/requestApproval",
+    "message": {
+      "id": "approval-1",
+      "result": {"decision": "decline"}
+    },
+    "expectedSemantic": "provider-control-response"
+  }
+]

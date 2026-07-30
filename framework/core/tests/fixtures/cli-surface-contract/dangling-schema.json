@@ -1,0 +1,7 @@
+{
+  "operation": "set-field",
+  "path": "kungfu sample read",
+  "field": "schema_refs",
+  "value": ["missing://schema"],
+  "expectedCode": "dangling-schema-ref"
+}

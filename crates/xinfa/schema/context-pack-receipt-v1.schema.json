@@ -1,0 +1,21 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://xinfa.dev/schema/context-pack-receipt-v1.schema.json",
+  "title": "Xinfa Repository Context Pack compile receipt v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "verdict", "packRoot", "qualifying", "selfCertified", "writesCache", "diagnostics", "compiler"],
+  "properties": {
+    "schema": { "const": "xinfa.context-pack-compile-receipt/v1" },
+    "verdict": { "enum": ["pass", "fail"] },
+    "packRoot": { "oneOf": [{ "type": "null" }, { "$ref": "#/$defs/root" }] },
+    "manifestRoot": { "$ref": "#/$defs/root" },
+    "receiptRoot": { "$ref": "#/$defs/root" },
+    "qualifying": { "const": false },
+    "selfCertified": { "const": false },
+    "writesCache": { "const": false },
+    "diagnostics": { "type": "array" },
+    "compiler": { "type": "object" }
+  },
+  "$defs": { "root": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" } }
+}

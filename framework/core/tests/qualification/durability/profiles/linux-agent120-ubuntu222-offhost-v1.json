@@ -1,0 +1,37 @@
+{
+  "schema": "kungfu.durability-offhost-profile/v1",
+  "id": "linux-agent120-ubuntu222-offhost-v1",
+  "source": {
+    "hostname": "agent-120",
+    "platform": "linux",
+    "arch": "x86_64",
+    "filesystem": "ext4",
+    "device_class": "nvme"
+  },
+  "target": {
+    "ssh": "192.168.100.222",
+    "hostname": "Kerens-MoreFine",
+    "root": "/data/qualification/kungfu/offhost-backup-restore",
+    "sentinel": ".kungfu-offhost-backup-target",
+    "sentinel_contents": "kungfu.durability.offhost-backup-target/v1\n",
+    "filesystem": "ext4",
+    "device_class": "nvme",
+    "same_office": true
+  },
+  "transport": {
+    "tool": "rsync",
+    "bwlimit_kib_per_second": 32768,
+    "delete_allowed": false,
+    "partial_directory_retained": true
+  },
+  "limits": {
+    "max_package_bytes": 1073741824,
+    "max_restore_bytes": 1073741824
+  },
+  "claims": {
+    "off_host_verified": true,
+    "independent_failure_domain_qualified": false,
+    "physical_power_loss_qualified": false,
+    "production_eligible": false
+  }
+}

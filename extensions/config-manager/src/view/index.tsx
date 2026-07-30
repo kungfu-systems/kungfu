@@ -1,15 +1,15 @@
 // Default kfx: configuration management. Location-scoped CRUD through the
 // capability SDK's domain-state handle — real SQLite writes via libkungfu.
 import type { ConfigEntry } from '@kungfu-tech/api/capability';
-import React from 'react';
 import type { KfxCapabilities, Shell } from '@kungfu-tech/kfx';
 import { headingStyle, inputStyle, mono, panelStyle } from '@kungfu-tech/kfx';
+import React from 'react';
 
 function ConfigManagerView({ caps }: { caps: KfxCapabilities; shell: Shell }) {
   const { domain } = caps;
   const [entries, setEntries] = React.useState<ConfigEntry[]>([]);
-  const [category, setCategory] = React.useState('system');
-  const [group, setGroup] = React.useState('demo');
+  const [role, setRole] = React.useState('system');
+  const [namespace, setNamespace] = React.useState('demo');
   const [name, setName] = React.useState('hello');
   const [mode, setMode] = React.useState('live');
   const [value, setValue] = React.useState('{"from":"config manager kfx"}');
@@ -31,7 +31,7 @@ function ConfigManagerView({ caps }: { caps: KfxCapabilities; shell: Shell }) {
   const save = () => {
     try {
       JSON.parse(value);
-      domain.setConfig({ category, group, name, mode }, value);
+      domain.setConfig({ role, namespace, name, mode }, value);
       refresh();
     } catch (e) {
       setError((e as Error).message);
@@ -54,15 +54,15 @@ function ConfigManagerView({ caps }: { caps: KfxCapabilities; shell: Shell }) {
       </h2>
       <div style={{ display: 'flex', gap: 6, marginBottom: 8 }}>
         <input
-          value={category}
-          onChange={(e) => setCategory(e.target.value)}
-          placeholder="category"
+          value={role}
+          onChange={(e) => setRole(e.target.value)}
+          placeholder="role"
           style={{ ...inputStyle, width: 80 }}
         />
         <input
-          value={group}
-          onChange={(e) => setGroup(e.target.value)}
-          placeholder="group"
+          value={namespace}
+          onChange={(e) => setNamespace(e.target.value)}
+          placeholder="namespace"
           style={{ ...inputStyle, width: 80 }}
         />
         <input
@@ -95,7 +95,7 @@ function ConfigManagerView({ caps }: { caps: KfxCapabilities; shell: Shell }) {
       <table style={{ ...mono, borderCollapse: 'collapse', width: '100%' }}>
         <tbody>
           {entries.map((entry) => {
-            const key = `${entry.location.category}/${entry.location.group}/${entry.location.name}/${entry.location.mode}`;
+            const key = `${entry.location.role}/${entry.location.namespace}/${entry.location.name}/${entry.location.mode}`;
             return (
               <tr key={key} style={{ borderTop: '1px solid #3c3c3c' }}>
                 <td style={{ padding: '4px 8px', color: '#858585' }}>{key}</td>

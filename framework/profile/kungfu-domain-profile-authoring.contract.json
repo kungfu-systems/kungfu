@@ -1,0 +1,938 @@
+{
+  "schema": "kungfu.domain-profile-authoring.contract/v1",
+  "id": "kungfu-domain-profile-authoring",
+  "version": 1,
+  "weldedSurface": "domain-profile-authoring-contract",
+  "status": "pre-release",
+  "description": "Public declarative authoring contract for third-party Domain Profiles over Action Geometry and the existing KFX Profile Suite lifecycle.",
+  "contractSchema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "required": [
+      "schema",
+      "id",
+      "version",
+      "weldedSurface",
+      "status",
+      "description",
+      "contractSchema",
+      "declarationSchema",
+      "lifecycle",
+      "authority",
+      "qualification",
+      "referenceProfile",
+      "nonClaims"
+    ],
+    "properties": {
+      "schema": {
+        "const": "kungfu.domain-profile-authoring.contract/v1"
+      },
+      "id": {
+        "const": "kungfu-domain-profile-authoring"
+      },
+      "version": {
+        "const": 1
+      },
+      "weldedSurface": {
+        "const": "domain-profile-authoring-contract"
+      },
+      "status": {
+        "const": "pre-release"
+      },
+      "description": {
+        "type": "string",
+        "minLength": 1
+      },
+      "contractSchema": {
+        "type": "object"
+      },
+      "declarationSchema": {
+        "type": "object"
+      },
+      "lifecycle": {
+        "type": "object"
+      },
+      "authority": {
+        "type": "object"
+      },
+      "qualification": {
+        "type": "object"
+      },
+      "referenceProfile": {
+        "type": "object"
+      },
+      "nonClaims": {
+        "type": "array",
+        "minItems": 4,
+        "items": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    }
+  },
+  "declarationSchema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$id": "https://kungfu.link/schema/domain-profile-declaration-v1.json",
+    "type": "object",
+    "additionalProperties": false,
+    "required": [
+      "schema",
+      "id",
+      "title",
+      "version",
+      "package",
+      "dependencies",
+      "capabilities",
+      "compatibility",
+      "objects",
+      "responsibilityMappings",
+      "workflows",
+      "operations",
+      "policies",
+      "settlement",
+      "cutProjection",
+      "migrations"
+    ],
+    "properties": {
+      "schema": {
+        "const": "kungfu.domain-profile-declaration/v1"
+      },
+      "id": {
+        "$ref": "#/$defs/id"
+      },
+      "title": {
+        "type": "string",
+        "minLength": 1
+      },
+      "version": {
+        "$ref": "#/$defs/semver"
+      },
+      "package": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "profileSuiteId",
+          "publisher",
+          "license",
+          "distribution"
+        ],
+        "properties": {
+          "profileSuiteId": {
+            "$ref": "#/$defs/id"
+          },
+          "publisher": {
+            "$ref": "#/$defs/id"
+          },
+          "license": {
+            "type": "string",
+            "minLength": 1
+          },
+          "distribution": {
+            "enum": [
+              "source-bundle",
+              "signed-package"
+            ]
+          }
+        }
+      },
+      "dependencies": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "id",
+            "versionRange",
+            "root"
+          ],
+          "properties": {
+            "id": {
+              "$ref": "#/$defs/id"
+            },
+            "versionRange": {
+              "type": "string",
+              "minLength": 1
+            },
+            "root": {
+              "$ref": "#/$defs/root"
+            }
+          }
+        }
+      },
+      "capabilities": {
+        "type": "array",
+        "minItems": 1,
+        "uniqueItems": true,
+        "items": {
+          "$ref": "#/$defs/id"
+        }
+      },
+      "compatibility": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "core",
+          "actionGeometrySchema",
+          "unknownFields"
+        ],
+        "properties": {
+          "core": {
+            "type": "string",
+            "minLength": 1
+          },
+          "actionGeometrySchema": {
+            "const": "kungfu.action-geometry.contract/v1"
+          },
+          "unknownFields": {
+            "const": "reject"
+          }
+        }
+      },
+      "objects": {
+        "type": "array",
+        "minItems": 5,
+        "items": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "id",
+            "responsibility",
+            "schema",
+            "relations",
+            "states"
+          ],
+          "properties": {
+            "id": {
+              "$ref": "#/$defs/id"
+            },
+            "responsibility": {
+              "$ref": "#/$defs/responsibility"
+            },
+            "schema": {
+              "$ref": "#/$defs/contentRef"
+            },
+            "relations": {
+              "type": "array",
+              "uniqueItems": true,
+              "items": {
+                "$ref": "#/$defs/id"
+              }
+            },
+            "states": {
+              "type": "array",
+              "minItems": 1,
+              "uniqueItems": true,
+              "items": {
+                "$ref": "#/$defs/id"
+              }
+            }
+          }
+        }
+      },
+      "responsibilityMappings": {
+        "type": "array",
+        "minItems": 5,
+        "items": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "responsibility",
+            "object",
+            "authority"
+          ],
+          "properties": {
+            "responsibility": {
+              "$ref": "#/$defs/responsibility"
+            },
+            "object": {
+              "$ref": "#/$defs/id"
+            },
+            "authority": {
+              "enum": [
+                "fact-reference",
+                "episode-reference",
+                "domain-policy"
+              ]
+            }
+          }
+        }
+      },
+      "workflows": {
+        "type": "array",
+        "minItems": 1,
+        "items": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "id",
+            "object",
+            "initial",
+            "terminal",
+            "transitions"
+          ],
+          "properties": {
+            "id": {
+              "$ref": "#/$defs/id"
+            },
+            "object": {
+              "$ref": "#/$defs/id"
+            },
+            "initial": {
+              "$ref": "#/$defs/id"
+            },
+            "terminal": {
+              "type": "array",
+              "minItems": 1,
+              "uniqueItems": true,
+              "items": {
+                "$ref": "#/$defs/id"
+              }
+            },
+            "transitions": {
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "from",
+                  "operation",
+                  "to",
+                  "requires"
+                ],
+                "properties": {
+                  "from": {
+                    "$ref": "#/$defs/id"
+                  },
+                  "operation": {
+                    "$ref": "#/$defs/id"
+                  },
+                  "to": {
+                    "$ref": "#/$defs/id"
+                  },
+                  "requires": {
+                    "type": "array",
+                    "minItems": 1,
+                    "uniqueItems": true,
+                    "items": {
+                      "$ref": "#/$defs/responsibility"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "operations": {
+        "type": "array",
+        "minItems": 1,
+        "items": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "id",
+            "object",
+            "capability",
+            "requires",
+            "result"
+          ],
+          "properties": {
+            "id": {
+              "$ref": "#/$defs/id"
+            },
+            "object": {
+              "$ref": "#/$defs/id"
+            },
+            "capability": {
+              "$ref": "#/$defs/id"
+            },
+            "requires": {
+              "type": "array",
+              "minItems": 1,
+              "uniqueItems": true,
+              "items": {
+                "$ref": "#/$defs/responsibility"
+              }
+            },
+            "result": {
+              "enum": [
+                "fact-proposal",
+                "episode-proposal",
+                "domain-projection"
+              ]
+            }
+          }
+        }
+      },
+      "policies": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "claim",
+          "assessment",
+          "decision",
+          "admission"
+        ],
+        "properties": {
+          "claim": {
+            "$ref": "#/$defs/policy"
+          },
+          "assessment": {
+            "$ref": "#/$defs/policy"
+          },
+          "decision": {
+            "$ref": "#/$defs/policy"
+          },
+          "admission": {
+            "$ref": "#/$defs/policy"
+          }
+        }
+      },
+      "settlement": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "requires",
+          "success",
+          "residualRisk"
+        ],
+        "properties": {
+          "requires": {
+            "type": "array",
+            "minItems": 2,
+            "uniqueItems": true,
+            "items": {
+              "$ref": "#/$defs/responsibility"
+            }
+          },
+          "success": {
+            "type": "string",
+            "minLength": 1
+          },
+          "residualRisk": {
+            "type": "array",
+            "minItems": 1,
+            "uniqueItems": true,
+            "items": {
+              "$ref": "#/$defs/id"
+            }
+          }
+        }
+      },
+      "cutProjection": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "objects",
+          "omissions",
+          "evidence"
+        ],
+        "properties": {
+          "objects": {
+            "type": "array",
+            "minItems": 1,
+            "uniqueItems": true,
+            "items": {
+              "$ref": "#/$defs/id"
+            }
+          },
+          "omissions": {
+            "type": "array",
+            "minItems": 1,
+            "uniqueItems": true,
+            "items": {
+              "$ref": "#/$defs/id"
+            }
+          },
+          "evidence": {
+            "type": "array",
+            "minItems": 1,
+            "uniqueItems": true,
+            "items": {
+              "$ref": "#/$defs/id"
+            }
+          }
+        }
+      },
+      "migrations": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "from",
+            "to",
+            "kind",
+            "preserves",
+            "rollback"
+          ],
+          "properties": {
+            "from": {
+              "$ref": "#/$defs/semver"
+            },
+            "to": {
+              "$ref": "#/$defs/semver"
+            },
+            "kind": {
+              "enum": [
+                "compatible",
+                "breaking"
+              ]
+            },
+            "preserves": {
+              "type": "array",
+              "minItems": 3,
+              "uniqueItems": true,
+              "items": {
+                "enum": [
+                  "fact-identity",
+                  "episode-identity",
+                  "responsibility-separation",
+                  "historical-cut-interpretation"
+                ]
+              }
+            },
+            "rollback": {
+              "enum": [
+                "required",
+                "unsupported"
+              ]
+            }
+          }
+        }
+      }
+    },
+    "$defs": {
+      "id": {
+        "type": "string",
+        "minLength": 1,
+        "pattern": "^[a-z0-9](?:[a-z0-9.-]*[a-z0-9])?$"
+      },
+      "semver": {
+        "type": "string",
+        "pattern": "^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)(?:-[0-9A-Za-z.-]+)?(?:\\+[0-9A-Za-z.-]+)?$"
+      },
+      "root": {
+        "type": "string",
+        "pattern": "^sha256:[0-9a-f]{64}$"
+      },
+      "contentRef": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "path",
+          "sha256"
+        ],
+        "properties": {
+          "path": {
+            "type": "string",
+            "minLength": 1,
+            "pattern": "^(?!/)(?!.*(?:^|/)\\.\\.(?:/|$))[A-Za-z0-9._/-]+$"
+          },
+          "sha256": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{64}$"
+          }
+        }
+      },
+      "responsibility": {
+        "enum": [
+          "fact",
+          "episode",
+          "pursuit",
+          "atlas",
+          "warrant"
+        ]
+      },
+      "policy": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "owner",
+          "artifact"
+        ],
+        "properties": {
+          "owner": {
+            "$ref": "#/$defs/responsibility"
+          },
+          "artifact": {
+            "$ref": "#/$defs/contentRef"
+          }
+        }
+      }
+    }
+  },
+  "lifecycle": {
+    "states": [
+      "authored",
+      "validated",
+      "registered",
+      "qualified",
+      "installed",
+      "active",
+      "inactive",
+      "superseded",
+      "rolled-back",
+      "removed"
+    ],
+    "operations": [
+      "inspect",
+      "validate",
+      "register",
+      "qualify",
+      "install",
+      "activate",
+      "deactivate",
+      "upgrade",
+      "rollback",
+      "export",
+      "import"
+    ],
+    "receipts": {
+      "validation": "kungfu.domain-profile-validation-receipt/v1",
+      "registration": "kungfu.domain-profile-registration-receipt/v1",
+      "qualification": "kungfu.profile-qualification-receipt/v1",
+      "mutation": "kungfu.profile-lifecycle-receipt/v1",
+      "distribution": "kungfu.profile-source-export-receipt/v1"
+    },
+    "activationAdmission": [
+      "exact-declaration-root",
+      "exact-profile-suite-root",
+      "valid-supply-chain-signature",
+      "fresh-qualification-receipt",
+      "compatible-migration-path",
+      "explicit-capability-grants"
+    ]
+  },
+  "authority": {
+    "authoringOwner": "kfx-profile-authoring",
+    "runtimeOwner": "libkungfu-profile-lifecycle",
+    "computedRoots": [
+      "domainProfileRoot",
+      "profileSuiteRoot",
+      "qualificationRoot",
+      "lifecycleReceiptRoot"
+    ],
+    "consumedAuthorities": [
+      "fact",
+      "episode",
+      "action-geometry",
+      "kfx-profile-suite",
+      "project-cut"
+    ],
+    "forbiddenClaims": [
+      "fact-or-episode-identity-authority",
+      "new-cross-domain-primitive",
+      "private-storage-layout",
+      "self-issued-qualification",
+      "unsigned-or-unqualified-activation",
+      "warrant-or-admission-bypass",
+      "core-specific-domain-symbol"
+    ]
+  },
+  "qualification": {
+    "semanticChecks": [
+      "unique-object-and-operation-ids",
+      "exact-five-responsibility-mappings",
+      "no-role-fusion",
+      "declared-object-and-operation-references",
+      "acyclic-dependencies",
+      "closed-workflow-states",
+      "claim-assessment-decision-admission-separation",
+      "settlement-binds-episode-and-warrant",
+      "cut-projection-declares-omissions",
+      "migration-preserves-authority-and-history"
+    ],
+    "negativeFixtures": [
+      "role-fusion",
+      "undeclared-authority",
+      "cyclic-dependency",
+      "schema-root-drift",
+      "incompatible-migration",
+      "unsigned-activation",
+      "unqualified-activation"
+    ],
+    "targetSurfaces": [
+      "cpp",
+      "python",
+      "node",
+      "rust",
+      "cli",
+      "agent",
+      "gui",
+      "tui"
+    ]
+  },
+  "referenceProfile": {
+    "schema": "kungfu.domain-profile-declaration/v1",
+    "id": "kungfu.reference.course-production",
+    "title": "Course Production",
+    "version": "1.0.0",
+    "package": {
+      "profileSuiteId": "kungfu.reference.course-production-suite",
+      "publisher": "kungfu.reference",
+      "license": "Apache-2.0",
+      "distribution": "source-bundle"
+    },
+    "dependencies": [
+      {
+        "id": "kungfu-action-geometry",
+        "versionRange": "1.x",
+        "root": "sha256:4fafb63f42b849b7f4c8d3840b023e71cf2ea47b47b882fe266f237433a2ce74"
+      }
+    ],
+    "capabilities": [
+      "course.inspect",
+      "course.plan",
+      "course.review",
+      "course.admit",
+      "course.settle"
+    ],
+    "compatibility": {
+      "core": ">=4.0.0 <5.0.0",
+      "actionGeometrySchema": "kungfu.action-geometry.contract/v1",
+      "unknownFields": "reject"
+    },
+    "objects": [
+      {
+        "id": "course-brief",
+        "responsibility": "fact",
+        "schema": {
+          "path": "schemas/course-brief.schema.json",
+          "sha256": "a12254a994d2676a475223977d02f0d8e40df9a2ab4b83f2fc71a74606480ec7"
+        },
+        "relations": [
+          "course-goal"
+        ],
+        "states": [
+          "observed"
+        ]
+      },
+      {
+        "id": "production-session",
+        "responsibility": "episode",
+        "schema": {
+          "path": "schemas/production-session.schema.json",
+          "sha256": "1d08a0fb91180867c33991f690e4185d71416e131526683b0a842bba825aea46"
+        },
+        "relations": [
+          "course-brief"
+        ],
+        "states": [
+          "open",
+          "sealed"
+        ]
+      },
+      {
+        "id": "course-goal",
+        "responsibility": "pursuit",
+        "schema": {
+          "path": "schemas/course-goal.schema.json",
+          "sha256": "3f0b9aad8f7c06e5c12533e309f535c6dee2a136107747af94d99f307785b527"
+        },
+        "relations": [
+          "course-map"
+        ],
+        "states": [
+          "proposed",
+          "active",
+          "satisfied",
+          "abandoned"
+        ]
+      },
+      {
+        "id": "course-map",
+        "responsibility": "atlas",
+        "schema": {
+          "path": "schemas/course-map.schema.json",
+          "sha256": "3247a5bfecc9995437c1bebe0bd6f8a46ada7707523243380c2908df1a9b646d"
+        },
+        "relations": [
+          "course-goal"
+        ],
+        "states": [
+          "draft",
+          "reviewed",
+          "published"
+        ]
+      },
+      {
+        "id": "release-approval",
+        "responsibility": "warrant",
+        "schema": {
+          "path": "schemas/release-approval.schema.json",
+          "sha256": "132d2a638e6535a00483991fc2676378c440a8a70058a6b8c488eac4e7612bc2"
+        },
+        "relations": [
+          "course-map"
+        ],
+        "states": [
+          "pending",
+          "approved",
+          "denied"
+        ]
+      }
+    ],
+    "responsibilityMappings": [
+      {
+        "responsibility": "fact",
+        "object": "course-brief",
+        "authority": "fact-reference"
+      },
+      {
+        "responsibility": "episode",
+        "object": "production-session",
+        "authority": "episode-reference"
+      },
+      {
+        "responsibility": "pursuit",
+        "object": "course-goal",
+        "authority": "domain-policy"
+      },
+      {
+        "responsibility": "atlas",
+        "object": "course-map",
+        "authority": "domain-policy"
+      },
+      {
+        "responsibility": "warrant",
+        "object": "release-approval",
+        "authority": "domain-policy"
+      }
+    ],
+    "workflows": [
+      {
+        "id": "course-release",
+        "object": "course-map",
+        "initial": "draft",
+        "terminal": [
+          "published"
+        ],
+        "transitions": [
+          {
+            "from": "draft",
+            "operation": "review-course",
+            "to": "reviewed",
+            "requires": [
+              "atlas",
+              "warrant"
+            ]
+          },
+          {
+            "from": "reviewed",
+            "operation": "publish-course",
+            "to": "published",
+            "requires": [
+              "episode",
+              "warrant"
+            ]
+          }
+        ]
+      }
+    ],
+    "operations": [
+      {
+        "id": "review-course",
+        "object": "course-map",
+        "capability": "course.review",
+        "requires": [
+          "atlas",
+          "warrant"
+        ],
+        "result": "domain-projection"
+      },
+      {
+        "id": "publish-course",
+        "object": "course-map",
+        "capability": "course.admit",
+        "requires": [
+          "episode",
+          "warrant"
+        ],
+        "result": "fact-proposal"
+      }
+    ],
+    "policies": {
+      "claim": {
+        "owner": "pursuit",
+        "artifact": {
+          "path": "policies/claim.json",
+          "sha256": "6c56be3a93c9161708232ca60f7845178718c68d9fc51468dd193fa36bc9ffaa"
+        }
+      },
+      "assessment": {
+        "owner": "atlas",
+        "artifact": {
+          "path": "policies/assessment.json",
+          "sha256": "d79ea3a516f0c7271d13b5026e44e3f5accb7a8c1b52adcd4091ddd12e9d3010"
+        }
+      },
+      "decision": {
+        "owner": "warrant",
+        "artifact": {
+          "path": "policies/decision.json",
+          "sha256": "db108349e03d622a919102a90c663bc57f310a3b22c6192f813667b5b4f9b25d"
+        }
+      },
+      "admission": {
+        "owner": "warrant",
+        "artifact": {
+          "path": "policies/admission.json",
+          "sha256": "2d7a87ca59b2c7b0e8d3c7127d9a5abecdc4c4c24714115be714260139cce14b"
+        }
+      }
+    },
+    "settlement": {
+      "requires": [
+        "episode",
+        "warrant"
+      ],
+      "success": "A sealed production Episode and an admitted release decision bind the published course Cut.",
+      "residualRisk": [
+        "learner-outcome-not-proved",
+        "distribution-availability-not-proved"
+      ]
+    },
+    "cutProjection": {
+      "objects": [
+        "course-brief",
+        "production-session",
+        "course-goal",
+        "course-map",
+        "release-approval"
+      ],
+      "omissions": [
+        "learner-private-data",
+        "raw-recording-media"
+      ],
+      "evidence": [
+        "episode-seal",
+        "warrant-decision",
+        "profile-suite-root"
+      ]
+    },
+    "migrations": [
+      {
+        "from": "0.9.0",
+        "to": "1.0.0",
+        "kind": "compatible",
+        "preserves": [
+          "fact-identity",
+          "episode-identity",
+          "responsibility-separation",
+          "historical-cut-interpretation"
+        ],
+        "rollback": "required"
+      }
+    ]
+  },
+  "nonClaims": [
+    "A declaration is an installed or active Profile Suite.",
+    "The reference package carries a real package signature or qualification receipt.",
+    "A Domain Profile may mint Fact, Episode, Action Geometry, or Project Cut authority.",
+    "The authoring verifier proves business outcomes or supply-chain safety.",
+    "Current language bindings already expose equal Domain Profile lifecycle coverage."
+  ]
+}

@@ -6,10 +6,10 @@
 
 #include "io.h"
 
-using namespace kungfu::longfist;
-using namespace kungfu::longfist::enums;
-using namespace kungfu::longfist::types;
 using namespace kungfu::yijinjing;
+using namespace kungfu::yijinjing::enums;
+using namespace kungfu::yijinjing::types;
+using namespace kungfu::runtime;
 using namespace kungfu::yijinjing::data;
 
 namespace kungfu::node {
@@ -17,8 +17,8 @@ namespace kungfu::node {
 Napi::FunctionReference IODevice::constructor = {};
 
 IODevice::IODevice(const Napi::CallbackInfo &info)
-    : ObjectWrap(info),
-      io_device(ExtractLocation(info, 0, IODevice::ExtractRuntimeLocatorByIndex(info, 1)), false, true) {
+    : ObjectWrap(info), io_device(ExtractLocation(info, 0, IODevice::ExtractRuntimeLocatorByIndex(info, 1)), false,
+                                  io_mapping_policy::peer()) {
   Napi::Env env = info.Env();
   Napi::HandleScope scope(env);
 }
@@ -54,8 +54,8 @@ Napi::Value IODevice::GetAllLocations(const Napi::CallbackInfo &info) {
   for (auto location : locator->list_locations(".*", ".*", ".*", ".*")) {
     auto uid = fmt::format("{:016x}", location->uid);
     auto locationObj = Napi::Object::New(info.Env());
-    locationObj.Set("category", Napi::String::New(info.Env(), get_category_name(location->category)));
-    locationObj.Set("group", Napi::String::New(info.Env(), location->group));
+    locationObj.Set("role", Napi::String::New(info.Env(), get_location_role_name(location->role)));
+    locationObj.Set("namespace", Napi::String::New(info.Env(), location->namespace_));
     locationObj.Set("name", Napi::String::New(info.Env(), location->name));
     locationObj.Set("mode", Napi::String::New(info.Env(), get_mode_name(location->mode)));
     locationObj.Set("uname", Napi::String::New(info.Env(), location->uname));
@@ -70,13 +70,14 @@ location_ptr IODevice::ExtractLocation(const Napi::CallbackInfo &info, int index
   try {
     if (info[index].IsObject()) {
       auto obj = info[index].ToObject();
+      auto namespace_value = obj.Has("namespace") ? obj.Get("namespace") : obj.Get("group");
       return location::make_shared(get_mode_by_name(obj.Get("mode").ToString().Utf8Value()),
-                                   get_category_by_name(obj.Get("category").ToString().Utf8Value()),
-                                   obj.Get("group").ToString().Utf8Value(), obj.Get("name").ToString().Utf8Value(),
+                                   get_location_role_by_name(obj.Get("role").ToString().Utf8Value()),
+                                   namespace_value.ToString().Utf8Value(), obj.Get("name").ToString().Utf8Value(),
                                    locator);
     } else {
       return location::make_shared(get_mode_by_name(info[index + 3].As<Napi::String>().Utf8Value()),
-                                   get_category_by_name(info[index].As<Napi::String>().Utf8Value()),
+                                   get_location_role_by_name(info[index].As<Napi::String>().Utf8Value()),
                                    info[index + 1].As<Napi::String>().Utf8Value(),
                                    info[index + 2].As<Napi::String>().Utf8Value(), locator);
     }

@@ -1,0 +1,264 @@
+{
+  "schema": "kungfu.runtime.peer-lifecycle-contract/v1",
+  "id": "kungfu-peer-lifecycle",
+  "version": 1,
+  "weldedSurface": "peer-process-lifecycle-control-plane",
+  "description": "A per-Peer, topology-local process host with explicit recovery declarations and generation plus process-identity fencing.",
+  "contractSchema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "additionalProperties": false,
+    "required": [
+      "schema",
+      "id",
+      "version",
+      "weldedSurface",
+      "description",
+      "contractSchema",
+      "authority",
+      "operations",
+      "states",
+      "fences",
+      "recoveryClasses",
+      "readiness",
+      "nonClaims",
+      "specSchema"
+    ],
+    "properties": {
+      "schema": {
+        "const": "kungfu.runtime.peer-lifecycle-contract/v1"
+      },
+      "id": {
+        "const": "kungfu-peer-lifecycle"
+      },
+      "version": {
+        "type": "integer",
+        "minimum": 1
+      },
+      "weldedSurface": {
+        "const": "peer-process-lifecycle-control-plane"
+      },
+      "description": {
+        "type": "string",
+        "minLength": 1
+      },
+      "contractSchema": {
+        "type": "object"
+      },
+      "authority": {
+        "type": "object"
+      },
+      "operations": {
+        "type": "array",
+        "minItems": 7,
+        "uniqueItems": true
+      },
+      "states": {
+        "type": "array",
+        "minItems": 10,
+        "uniqueItems": true
+      },
+      "fences": {
+        "type": "array",
+        "minItems": 4,
+        "uniqueItems": true
+      },
+      "recoveryClasses": {
+        "type": "object"
+      },
+      "readiness": {
+        "type": "object"
+      },
+      "nonClaims": {
+        "type": "array",
+        "minItems": 1
+      },
+      "specSchema": {
+        "type": "object"
+      }
+    }
+  },
+  "authority": {
+    "runtimeSemantics": "CoordinatorEngine",
+    "processPlacement": "one independent Peer host per declaration",
+    "rule": "A Peer host never becomes a global runtime authority and never broadens Coordinator authority."
+  },
+  "operations": [
+    "plan",
+    "start",
+    "ensure",
+    "status",
+    "health",
+    "stop",
+    "restart"
+  ],
+  "states": [
+    "stopped",
+    "starting",
+    "registering",
+    "ready",
+    "degraded",
+    "orphaned",
+    "ownership-unknown",
+    "crash-loop",
+    "ended",
+    "lost-control"
+  ],
+  "fences": [
+    "hostGeneration",
+    "hostPid+hostStartIdentity",
+    "peerGeneration",
+    "peerPid+peerStartIdentity+readyToken"
+  ],
+  "recoveryClasses": {
+    "restartable": {
+      "processExit": "restart",
+      "requiresDurableState": true,
+      "rule": "Restart is bounded by maxRestarts within windowSeconds and is forbidden unless durableState is declared."
+    },
+    "process-continuity-required": {
+      "processExit": "lost-control",
+      "requiresDurableState": false,
+      "rule": "A surviving Peer may be fenced-adopted after host loss; Peer process loss is terminal and must create a new higher-level attempt."
+    }
+  },
+  "readiness": {
+    "protocol": "file-handshake",
+    "schema": "kungfu.runtime.peer-ready/v1",
+    "requiredBindings": [
+      "peerId",
+      "hostGeneration",
+      "peerGeneration",
+      "readyToken",
+      "pid",
+      "processStartIdentity"
+    ],
+    "rule": "PID liveness alone never proves Ready or adoptability."
+  },
+  "nonClaims": [
+    "cross-host high availability",
+    "physical power-loss continuity",
+    "recovery of in-memory state not named by the Peer declaration",
+    "transparent PTY recovery after the owning Capsule process exits"
+  ],
+  "specSchema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$id": "https://kungfu.link/schema/runtime/peer-lifecycle-spec-v1.json",
+    "type": "object",
+    "additionalProperties": false,
+    "required": [
+      "schema",
+      "peerId",
+      "command",
+      "recovery"
+    ],
+    "properties": {
+      "schema": {
+        "const": "kungfu.runtime.peer-lifecycle-spec/v1"
+      },
+      "peerId": {
+        "type": "string",
+        "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$"
+      },
+      "command": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "argv"
+        ],
+        "properties": {
+          "argv": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "cwd": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
+      },
+      "readiness": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "kind": {
+            "const": "file-handshake"
+          },
+          "timeoutSeconds": {
+            "type": "number",
+            "exclusiveMinimum": 0
+          }
+        }
+      },
+      "recovery": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "schema",
+          "processExit",
+          "durableState",
+          "guidance"
+        ],
+        "allOf": [
+          {
+            "if": {
+              "properties": {
+                "processExit": {
+                  "const": "restart"
+                }
+              },
+              "required": [
+                "processExit"
+              ]
+            },
+            "then": {
+              "properties": {
+                "durableState": {
+                  "const": "declared"
+                }
+              }
+            }
+          }
+        ],
+        "properties": {
+          "schema": {
+            "const": "kungfu.runtime.peer-recovery/v1"
+          },
+          "processExit": {
+            "enum": [
+              "restart",
+              "lost-control"
+            ]
+          },
+          "durableState": {
+            "enum": [
+              "declared",
+              "none"
+            ]
+          },
+          "maxRestarts": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "windowSeconds": {
+            "type": "number",
+            "exclusiveMinimum": 0
+          },
+          "guidance": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      },
+      "metadata": {
+        "type": "object"
+      }
+    }
+  }
+}

@@ -1,0 +1,14 @@
+{
+  "schema": "kungfu.agent-work-profile/v1",
+  "profileId": "warrant-amplification",
+  "evaluatedAt": "2026-07-18T08:00:00Z",
+  "factCut": {"id": "cut-1", "root": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"},
+  "pursuits": [{"id": "pursuit-1", "root": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb", "state": "active", "direction": "Inspect docs.", "advancementScope": ["inspect"], "progressConditions": [], "successConditions": [], "relations": []}],
+  "atlases": [{"id": "atlas-1", "root": "sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc", "state": "current", "observer": "agent", "scope": "repo", "supportScope": ["inspect"], "sources": ["repo"], "cutRoot": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", "omissions": [], "conflicts": [], "freshness": "current", "declaredLoss": [], "contextPayloadRoot": "sha256:ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"}],
+  "warrants": [
+    {"id": "parent", "root": "sha256:dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd", "state": "active", "issuer": "owner", "holder": "lead", "actionScope": ["inspect"], "resourceScope": ["docs"], "targetRoots": ["sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"], "preconditions": [], "consequenceCeiling": 1, "validFrom": "2026-07-18T01:00:00Z", "validUntil": "2026-07-18T12:00:00Z", "residualResponsibility": ["owner"]},
+    {"id": "child", "root": "sha256:eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee", "state": "attenuated", "issuer": "lead", "holder": "agent", "actionScope": ["inspect", "edit"], "resourceScope": ["docs", "core"], "targetRoots": ["sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", "sha256:9999999999999999999999999999999999999999999999999999999999999999"], "preconditions": [], "consequenceCeiling": 2, "validFrom": "2026-07-18T00:00:00Z", "validUntil": "2026-07-19T00:00:00Z", "parentRoot": "sha256:dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd", "residualResponsibility": ["owner", "lead"]}
+  ],
+  "actionBindings": [{"id": "binding-1", "factCutRoot": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", "pursuitRoot": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb", "atlasRoot": "sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc", "warrantRoot": "sha256:dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd", "candidateAction": "inspect", "resource": "docs", "decision": "valid", "reasons": []}],
+  "episodeRefs": []
+}

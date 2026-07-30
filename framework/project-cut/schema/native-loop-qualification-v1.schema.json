@@ -1,0 +1,267 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kungfu.tech/schema/native-loop-qualification-v1.schema.json",
+  "title": "Kungfu native delivery-loop qualification manifest",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "assignment",
+    "delivery",
+    "native",
+    "settlement",
+    "ledger",
+    "faults",
+    "cleanClone",
+    "policy",
+    "authorities",
+    "status"
+  ],
+  "properties": {
+    "schema": {
+      "const": "kungfu.native-loop-qualification.manifest/v1"
+    },
+    "assignment": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "initiativeId",
+        "assignmentId",
+        "requestRoot",
+        "captureReceiptRoots",
+        "workDefinitionRoot",
+        "executionClaimId",
+        "executionLeaseId"
+      ],
+      "properties": {
+        "initiativeId": { "type": "string", "minLength": 1 },
+        "assignmentId": { "type": "string", "minLength": 1 },
+        "requestRoot": { "$ref": "#/$defs/root" },
+        "captureReceiptRoots": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": { "$ref": "#/$defs/root" }
+        },
+        "workDefinitionRoot": { "$ref": "#/$defs/root" },
+        "executionClaimId": { "type": "string", "pattern": "^execution-[0-9a-f]{24}$" },
+        "executionLeaseId": { "type": "string", "minLength": 1 }
+      }
+    },
+    "delivery": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "evidenceClass",
+        "repository",
+        "sourceCommit",
+        "pullRequest",
+        "workflow",
+        "buildchain",
+        "mergeQueue",
+        "timestamps",
+        "ingestionLagSeconds"
+      ],
+      "properties": {
+        "evidenceClass": { "const": "real-protected-run" },
+        "repository": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["id", "fullName", "targetBranch"],
+          "properties": {
+            "id": { "type": "string", "minLength": 1 },
+            "fullName": { "type": "string", "pattern": "^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$" },
+            "targetBranch": { "type": "string", "minLength": 1 }
+          }
+        },
+        "sourceCommit": { "$ref": "#/$defs/oid" },
+        "pullRequest": { "$ref": "#/$defs/pullRequest" },
+        "workflow": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["name", "runId", "attempt"],
+          "properties": {
+            "name": { "type": "string", "minLength": 1 },
+            "runId": { "type": "string", "pattern": "^[1-9][0-9]*$" },
+            "attempt": { "type": "integer", "minimum": 1 }
+          }
+        },
+        "buildchain": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["receiptRoot", "artifactRoots", "schemaRoots"],
+          "properties": {
+            "receiptRoot": { "$ref": "#/$defs/root" },
+            "artifactRoots": {
+              "type": "array",
+              "minItems": 1,
+              "uniqueItems": true,
+              "items": { "$ref": "#/$defs/root" }
+            },
+            "schemaRoots": {
+              "type": "array",
+              "minItems": 1,
+              "uniqueItems": true,
+              "items": { "$ref": "#/$defs/root" }
+            }
+          }
+        },
+        "mergeQueue": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["attemptRoot", "headSha", "runId", "attempt"],
+          "properties": {
+            "attemptRoot": { "$ref": "#/$defs/root" },
+            "headSha": { "$ref": "#/$defs/oid" },
+            "runId": { "type": "string", "pattern": "^[1-9][0-9]*$" },
+            "attempt": { "type": "integer", "minimum": 1 }
+          }
+        },
+        "timestamps": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["mergedAt", "runCompletedAt", "observedAt"],
+          "properties": {
+            "mergedAt": { "type": "string", "format": "date-time" },
+            "runCompletedAt": { "type": "string", "format": "date-time" },
+            "observedAt": { "type": "string", "format": "date-time" }
+          }
+        },
+        "ingestionLagSeconds": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "native": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "authority",
+        "coordinateRoot",
+        "evidenceRoot",
+        "factPayloadRoot",
+        "episodeId",
+        "episodeRoot"
+      ],
+      "properties": {
+        "authority": { "const": "yijinjing-journal" },
+        "coordinateRoot": { "$ref": "#/$defs/root" },
+        "evidenceRoot": { "$ref": "#/$defs/root" },
+        "factPayloadRoot": { "$ref": "#/$defs/root" },
+        "episodeId": { "type": "string", "pattern": "^[1-9][0-9]*$" },
+        "episodeRoot": { "$ref": "#/$defs/root" }
+      }
+    },
+    "settlement": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["projectCutRoot", "receiptRoot"],
+      "properties": {
+        "projectCutRoot": { "$ref": "#/$defs/root" },
+        "receiptRoot": { "$ref": "#/$defs/root" }
+      }
+    },
+    "ledger": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "batchRoot",
+        "manifestRoot",
+        "publicationLagSeconds",
+        "pullRequest",
+        "protectedCommit"
+      ],
+      "properties": {
+        "batchRoot": { "$ref": "#/$defs/root" },
+        "manifestRoot": { "$ref": "#/$defs/root" },
+        "publicationLagSeconds": { "type": "integer", "minimum": 0 },
+        "pullRequest": { "$ref": "#/$defs/pullRequest" },
+        "protectedCommit": { "$ref": "#/$defs/oid" }
+      }
+    },
+    "faults": {
+      "type": "array",
+      "minItems": 8,
+      "maxItems": 8,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "mode", "status", "evidenceRoot"],
+        "properties": {
+          "id": { "type": "string", "minLength": 1 },
+          "mode": { "const": "deterministic-fault" },
+          "status": { "const": "qualified" },
+          "evidenceRoot": { "$ref": "#/$defs/root" }
+        }
+      }
+    },
+    "cleanClone": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "source",
+        "protectedCommit",
+        "publicationVerificationRoot",
+        "continuationPlanRoot",
+        "verificationRoot",
+        "runtimeCachePresent"
+      ],
+      "properties": {
+        "source": { "const": "fresh-protected-clone" },
+        "protectedCommit": { "$ref": "#/$defs/oid" },
+        "publicationVerificationRoot": { "$ref": "#/$defs/root" },
+        "continuationPlanRoot": { "$ref": "#/$defs/root" },
+        "verificationRoot": { "$ref": "#/$defs/root" },
+        "runtimeCachePresent": { "const": false }
+      }
+    },
+    "policy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "sampleCount",
+        "minimumDefaultPromotionSamples",
+        "advisoryModeEligible",
+        "defaultPromotionEligible"
+      ],
+      "properties": {
+        "sampleCount": { "type": "integer", "minimum": 0 },
+        "minimumDefaultPromotionSamples": { "const": 30 },
+        "advisoryModeEligible": { "const": true },
+        "defaultPromotionEligible": { "type": "boolean" }
+      }
+    },
+    "authorities": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["workControl", "buildchain", "github", "projectCut", "git", "atlas"],
+      "properties": {
+        "workControl": { "const": "kungfu-native-runtime" },
+        "buildchain": { "const": "evidence-producer" },
+        "github": { "const": "protected-delivery-transport" },
+        "projectCut": { "const": "portable-settlement-projection" },
+        "git": { "const": "qualified-git-shadow" },
+        "atlas": { "const": "client-coordinate-mirror" }
+      }
+    },
+    "status": { "const": "qualified" }
+  },
+  "$defs": {
+    "root": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "oid": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{40}$"
+    },
+    "pullRequest": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["number", "headSha", "mergeCommitSha"],
+      "properties": {
+        "number": { "type": "integer", "minimum": 1 },
+        "headSha": { "$ref": "#/$defs/oid" },
+        "mergeCommitSha": { "$ref": "#/$defs/oid" }
+      }
+    }
+  }
+}

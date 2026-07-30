@@ -1,0 +1,13 @@
+{
+  "deliveries": {},
+  "events": [
+    {
+      "evidence": {
+        "bundleRoot": "sha256:9fb0c4855bff13b7afae5e13e5b9d260db7db33a84489f14e6228812ac526b88"
+      },
+      "operation": "export",
+      "requestId": "hub-019-preserve-export-import-roots"
+    }
+  ],
+  "schema": "kungfu.agent-hub-exchange-store/v1"
+}

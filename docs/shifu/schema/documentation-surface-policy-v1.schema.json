@@ -1,0 +1,45 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://libkungfu.dev/schemas/shifu/documentation-surface-policy-v1.schema.json",
+  "title": "Deprecated Shifu documentation policy alias",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "status",
+    "canonical",
+    "owner",
+    "parityGate",
+    "retirementCondition"
+  ],
+  "properties": {
+    "schema": {
+      "const": "shifu.documentation-surface-policy-alias/v1"
+    },
+    "status": {
+      "const": "compatibility-alias"
+    },
+    "canonical": {
+      "const": ".xinfa/project.json"
+    },
+    "semanticAuthority": {
+      "const": "xinfa"
+    },
+    "materializer": {
+      "const": "xinfa project materialize"
+    },
+    "owner": {
+      "const": "kungfu-docs"
+    },
+    "parityGate": {
+      "const": "./shifu docs:check"
+    },
+    "retirementCondition": {
+      "type": "string",
+      "minLength": 1
+    },
+    "message": {
+      "type": "string"
+    }
+  }
+}

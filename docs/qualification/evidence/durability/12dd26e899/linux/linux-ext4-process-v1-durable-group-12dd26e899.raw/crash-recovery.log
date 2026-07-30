@@ -1,0 +1,21 @@
+ninja: no work to do.
+[crash-recovery-test] running /data/worktrees/kungfu/feature/durability-qualification-final/framework/core/build/Release/kungfu_crash_recovery_tests
+ok - clean frontier is ready and repeatable
+ok - complete unknown tail is degraded without promotion
+ok - interrupted Episode reuses typed qualification without mutation
+ok - invalid interrupted Episode blocks recovery
+ok - closed Episode does not degrade recovery
+ok - closed dependency failure is contained and named
+ok - torn tail is degraded at checkpoint frontier
+ok - no provable checkpoint is blocked
+ok - quarantine retains exact evidence idempotently
+ok - quarantine rejects a stale preview
+ok - quarantine requires exclusive ownership
+ok - quarantine resumes exact partial packages and rejects extras
+ok - consistent backup rejects unacknowledged tail
+ok - consistent backup rejects missing Episode payload
+ok - consistent backup restores empty root and rebuilds projection
+[crash-recovery-test] whole-data-root process restart passed
+[crash-recovery-test] recovery completion contracts passed
+warning: --using-file is deprecated. This is now the default.
+$ node scripts/require-shifu.mjs test:crash-recovery && node scripts/run-crash-recovery-tests.mjs

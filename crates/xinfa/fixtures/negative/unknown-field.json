@@ -1,0 +1,6 @@
+{
+  "schema": "xinfa.negative-fixture/v1",
+  "base": "project-alpha.json",
+  "mutations": [{ "pointer": "/project", "value": { "id": "alpha", "title": "Alpha Runtime", "domain": "runtime" } }],
+  "expectedCode": "unknown-field"
+}

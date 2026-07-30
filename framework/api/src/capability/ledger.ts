@@ -1,4 +1,4 @@
-// Ledger-domain capability handles (ADR-0011): open a ledger, iterate
+// Ledger-domain capability handles (KF-ADR-019f86da-4f90-7e5e-ae22-2a8fc24086f1): open a ledger, iterate
 // ordered records, subscribe to live updates, obtain replay anchors, and
 // query live-bus health. Factory-style, no import-time side effects.
 import {
@@ -9,8 +9,6 @@ import {
   type RecordFilter,
   type ReplayAnchor,
   type Subscription,
-  categoryName,
-  modeName,
   resolveRuntimeDir,
 } from './types.js';
 
@@ -35,6 +33,11 @@ export type Ledger = {
   formatNanos: (nanos: bigint, format?: string) => string;
 };
 
+// Fact/Episode is the public semantic name. Ledger remains as the compatibility
+// and native ABI vocabulary while existing consumers migrate.
+export type OpenFactEpisodeReaderOptions = OpenLedgerOptions;
+export type FactEpisodeReader = Ledger;
+
 const SCAN_HARD_LIMIT = 1_000_000;
 
 export function openLedger(options: OpenLedgerOptions): Ledger {
@@ -45,17 +48,8 @@ export function openLedger(options: OpenLedgerOptions): Ledger {
   let joined = false;
   if (options.join) {
     // Constructing a watcher initializes the runtime home layout; starting
-    // it makes it join a live master when one is running.
-    watcher = new binding.Watcher(
-      runtimeDir,
-      options.join.name,
-      true,
-      true,
-      true,
-      false,
-      true,
-      50,
-    );
+    // it makes it join a live coordinator when one is running.
+    watcher = new binding.Watcher(runtimeDir, options.join.name, true, 50);
     if (!watcher.isStarted()) watcher.start();
     joined = true;
   }
@@ -67,18 +61,24 @@ export function openLedger(options: OpenLedgerOptions): Ledger {
     while (assemble.dataAvailable() && result.length < limit) {
       const frame = assemble.currentFrame();
       const genTime = frame.genTime();
-      const msgType = frame.msgType();
+      const carrierType = frame.carrierType();
       const wanted =
-        (filter?.msgType === undefined || msgType === filter.msgType) &&
+        (filter?.carrierType === undefined ||
+          carrierType === filter.carrierType) &&
         (filter?.sinceNanos === undefined || genTime > filter.sinceNanos);
       if (wanted) {
         result.push({
           genTime,
           triggerTime: frame.triggerTime(),
-          msgType,
+          frameUid: frame.frameUid(),
+          triggerFrameUid: frame.triggerFrameUid(),
+          streamId: frame.streamId(),
+          carrierType,
           source: frame.source(),
+          initialSource: frame.initialSource(),
           dest: frame.dest(),
           dataLength: frame.dataLength(),
+          dataType: frame.dataType(),
         });
       }
       assemble.next();
@@ -106,25 +106,25 @@ export function openLedger(options: OpenLedgerOptions): Ledger {
   };
 
   const replayAnchors = (): ReplayAnchor[] => {
-    const store = new binding.SessionStore(
-      { category: 'system', group: 'capability', name: 'ledger', mode: 'live' },
-      runtimeDir,
-    );
-    const all = store.getAllSessions();
-    const rows = Array.isArray(all) ? all : Object.values(all ?? {});
+    const rows = binding.storageEpisodeListTyped(runtimeDir, {
+      limit: SCAN_HARD_LIMIT,
+    }).episodes;
     return rows.map((row) => {
       const record = row as Record<string, unknown>;
+      const open = record.open as Record<string, unknown>;
+      const close = record.close as Record<string, unknown>;
+      const closed = Boolean(record.closed);
       return {
-        location: {
-          category: categoryName(record.category as number),
-          group: String(record.group),
-          name: String(record.name),
-          mode: modeName(record.mode as number),
-        },
-        beginTime: BigInt((record.begin_time as bigint | string) ?? 0),
-        endTime: BigInt((record.end_time as bigint | string) ?? 0),
-        frameCount: BigInt((record.frame_count as bigint | string) ?? 0),
-        dataSize: BigInt((record.data_size as bigint | string) ?? 0),
+        episodeId: BigInt((record.episode_id as bigint | string) ?? 0),
+        locationUid: Number(open.location_uid ?? 0),
+        beginTime: BigInt((open.begin_time as bigint | string) ?? 0),
+        endTime: BigInt(
+          ((closed ? close.end_time : record.update_time) as bigint | string) ??
+            0,
+        ),
+        frameCount: BigInt((record.unique_frame_count as bigint | string) ?? 0),
+        lastFrameUid: BigInt((record.last_frame_uid as bigint | string) ?? 0),
+        closed,
       };
     });
   };
@@ -153,3 +153,5 @@ export function openLedger(options: OpenLedgerOptions): Ledger {
 
   return { runtimeDir, records, subscribe, replayAnchors, health, formatNanos };
 }
+
+export const openFactEpisodeReader = openLedger;

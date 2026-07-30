@@ -1,0 +1,176 @@
+{
+  "schema": "kungfu.assignment.organization-dogfood-report/v1",
+  "goalId": "2026-07-23-kungfu-systems-organization-wide-dogfood-rollout",
+  "generatedAt": "2026-07-23T11:55:00Z",
+  "scope": {
+    "organization": "kungfu-systems",
+    "platform": "macos-aarch64",
+    "repositories": [
+      "kungfu-systems/kfd",
+      "kungfu-systems/buildchain"
+    ],
+    "workspaceKinds": [
+      "home",
+      "project"
+    ]
+  },
+  "installedProduct": {
+    "version": "4.0.0-alpha.1",
+    "buildId": "20260723T114827Z-7aae2c562",
+    "sourceCommit": "7aae2c562a1cee9a1cab9e94c95971d23f4820b1",
+    "runtimeArtifactDigest": "sha256:586eb5cde28ceb475b4f2cb6a1e8326aa7b7d0838e6b6d1755bd98d9bc58f467",
+    "agentInterfaceVerified": true,
+    "documentationAtlasVerified": true
+  },
+  "phaseGates": [
+    {
+      "id": "phase-0-installed-product-parity",
+      "verdict": "pass",
+      "evidence": [
+        "installed agent catalog: 166 entries, no missing or hidden runtime anchors",
+        "installed documentation Atlas: sha256:a59d5ff50ac80f8046b656c692f53f43a181ff5de9563448cbedd86c8ddfedd8",
+        "promoted manifest source: 7aae2c562a1cee9a1cab9e94c95971d23f4820b1"
+      ]
+    },
+    {
+      "id": "phase-1-single-repository-shadow-dogfood",
+      "verdict": "pass",
+      "evidence": [
+        "KFD execution Episode: 10178028858314713685",
+        "KFD sealed Assignment state: sha256:65a3a63b235f6eb70162b7ac49feb172cfa7303697151d549aca06fe7333c210",
+        "KFD worktree removed while common-dir seal and binding remained verifiable"
+      ]
+    },
+    {
+      "id": "phase-2-home-parent-cross-workspace-closure",
+      "verdict": "pass",
+      "evidence": [
+        "Home parent sealed state: sha256:9709fa9002dfcb103e19696b2d2b6c7af8966394c13c49a346f0fda4328f2cf1",
+        "KFD child binding: sha256:063bf95cb8220aea25a6a361d6fea3b1e0d759a7f8c7f5a8cda4b1904235cb25",
+        "Buildchain child binding: sha256:a4f5ac49320474877cb462787ada557658172f94b76f5abf1eb64976ff7e0193",
+        "Cut-bound continuation binding: sha256:801a798f9b4f5f36f47885971c715107d5bc57979e0897c746d0c2178ba90309"
+      ]
+    },
+    {
+      "id": "phase-3-organization-wide-default-on",
+      "verdict": "pass-with-bounded-scope",
+      "evidence": [
+        "Buildchain full check passed: 554 tests plus action builds",
+        "Buildchain Project Cut: sha256:c6c1786d968a90c211cb8fe9d6b389588869ffb3fcc5fb208f8e2c39728e90c6",
+        "Buildchain continuation seal: sha256:fb3f0695408b3645a000301467f8fd934e94dcb0966a8a09501ef43ed1d4f965",
+        "new-task rollout only; historical migration forbidden"
+      ]
+    },
+    {
+      "id": "phase-4-release-readiness-assessment",
+      "verdict": "not-release-qualified",
+      "evidence": [
+        "organization dogfood is qualified on one macOS arm64 host",
+        "stable release, cross-platform parity, GUI/TUI parity, and real-user migration were not claimed"
+      ]
+    }
+  ],
+  "projectCut": {
+    "repository": "kungfu-systems/buildchain",
+    "publicationCommit": "2324a4a607001501d9f72c9217de0b2233769ae7",
+    "cutRoot": "sha256:c6c1786d968a90c211cb8fe9d6b389588869ffb3fcc5fb208f8e2c39728e90c6",
+    "receiptRoot": "sha256:2aa1400a08f444b323f25ec8f65800818e7cf4a89cc556776303bca4bad609b4",
+    "sourceProjectionRoot": "sha256:ab08c5375def46be120bc016b859e1acb6d709d6f830c6cbc99faedd0a230f5a",
+    "atlasRoot": "sha256:2321cb7918a8aa9a5d50e1d68d61483c817f26d4e967ce8907f2f1a7f48b73b1",
+    "episodeSemanticRoot": "sha256:bd6c510b0d4499ec94696b3dbb144c826e12994ba152274ea0bee3b913afa40d",
+    "episodeProviderRoot": "sha256:3caa5972b71a5366bc1e5834dc8d12fab716141bde7463fa6b23e8328e4ad4dd",
+    "reconcileVerified": true,
+    "installedReadModel": "current-high-confidence"
+  },
+  "failureMatrix": [
+    {
+      "case": "fresh-install",
+      "verdict": "pass",
+      "detail": "promoted signed directory build exposes capture and full Assignment lifecycle without building the target repository"
+    },
+    {
+      "case": "restart-and-new-process",
+      "verdict": "pass",
+      "detail": "separate installed CLI processes recovered Cut, Assignment, seal, and binding state"
+    },
+    {
+      "case": "new-agent-context",
+      "verdict": "pass",
+      "detail": "continuation and independent-review identities reconstructed exact roots without transcript authority"
+    },
+    {
+      "case": "concurrent-worktree",
+      "verdict": "pass",
+      "detail": "KFD canonical and probe worktrees resolved distinct stable workspace identities"
+    },
+    {
+      "case": "source-product-mismatch",
+      "verdict": "fail-closed-as-designed",
+      "detail": "a different exact Profile root was rejected instead of silently reading or upgrading authority"
+    },
+    {
+      "case": "home-unavailable",
+      "verdict": "fail-closed-as-designed",
+      "detail": "a fresh uninitialized Home returned exit 2 and runtimeInitialized=false"
+    },
+    {
+      "case": "workspace-transfer",
+      "verdict": "pass",
+      "detail": "byte-preserved seal and binding verified after relocation to arbitrary paths"
+    },
+    {
+      "case": "worktree-deletion",
+      "verdict": "pass",
+      "detail": "clean KFD task worktree was removed; common-dir state and receipts still verified"
+    },
+    {
+      "case": "tamper",
+      "verdict": "fail-closed-as-designed",
+      "detail": "mutated Assignment state exited 5 and forged binding exited 2"
+    }
+  ],
+  "rolloutDecision": {
+    "defaultOn": true,
+    "appliesTo": "new kungfu-systems Agent tasks admitted after this report",
+    "historicalMigration": false,
+    "stableReleaseAuthorized": false,
+    "stopConditions": [
+      "data corruption",
+      "privacy or secret leakage",
+      "unverifiable authority widening",
+      "no safe continuation path"
+    ]
+  },
+  "residualRisks": [
+    {
+      "id": "installed-project-cut-write-surface",
+      "severity": "high-friction",
+      "status": "open",
+      "detail": "installed kungfu inspects Project Cuts but source Shifu remains required to publish one"
+    },
+    {
+      "id": "xinfa-brief-command-drift",
+      "severity": "medium",
+      "status": "open",
+      "detail": "installed Agent brief advertises a workspace shorthand not accepted by the linked Xinfa CLI"
+    },
+    {
+      "id": "baseline-material-status",
+      "severity": "high-friction",
+      "status": "open",
+      "detail": "local Xinfa baseline bodies require exact local excludes to avoid untracked Git status"
+    },
+    {
+      "id": "platform-and-surface-scope",
+      "severity": "release-blocking",
+      "status": "open",
+      "detail": "Windows, Linux, GUI, TUI, multi-user, and public installer campaigns were not executed"
+    }
+  ],
+  "verdict": {
+    "organizationDogfood": "qualified",
+    "newTaskDefaultOn": "approved",
+    "generalProductRelease": "not-qualified",
+    "stableRelease": "not-authorized"
+  }
+}

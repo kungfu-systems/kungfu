@@ -1,0 +1,7 @@
+{
+  "operation": "set-field",
+  "path": "kungfu sample read",
+  "field": "mutation_class",
+  "value": "launch",
+  "expectedCode": "unknown-mutation-class"
+}

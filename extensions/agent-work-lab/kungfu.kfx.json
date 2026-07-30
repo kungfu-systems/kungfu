@@ -1,0 +1,28 @@
+{
+  "schema": "kungfu.kfx.manifest/v1",
+  "name": "@kungfu-tech/kfx-suite-agent-work-lab",
+  "version": "4.0.0-alpha.1",
+  "kungfuConfig": {
+    "key": "kungfu.agent-work-lab",
+    "name": "Agent Work Lab",
+    "suite": {
+      "title": "Agent Work Lab",
+      "members": [
+        "agent-work-lab-experience"
+      ]
+    },
+    "registry": {
+      "extensionPoints": [
+        {
+          "id": "kungfu.agent-work-lab.experience",
+          "version": "1",
+          "surface": "experience",
+          "capabilities": [
+            "agentRuntime",
+            "work"
+          ]
+        }
+      ]
+    }
+  }
+}

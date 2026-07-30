@@ -1,0 +1,42 @@
+{
+  "schema": "xinfa.source-bound-cargo-run-qualification/v1",
+  "captured_at": "2026-07-18T15:38:16Z",
+  "source": {
+    "base_commit": "d6fb3879c8f495b6b4e4a1a619ce78358291a6e1",
+    "entry": "./shifu xinfa --version",
+    "target_mode": "fresh temporary XINFA_CARGO_TARGET_DIR"
+  },
+  "runs": [
+    {
+      "path": "cold",
+      "real_seconds": 6.91,
+      "stdout": "xinfa 0.1.0",
+      "exit_code": 0
+    },
+    {
+      "path": "warm",
+      "real_seconds": 0.41,
+      "stdout": "xinfa 0.1.0",
+      "exit_code": 0
+    },
+    {
+      "path": "single-source-mtime-change",
+      "real_seconds": 1.01,
+      "stdout": "xinfa 0.1.0",
+      "exit_code": 0,
+      "content_changed": false
+    }
+  ],
+  "contract_tests": {
+    "argv": "pass",
+    "stdin": "pass",
+    "stdout": "pass",
+    "stderr": "pass",
+    "exit_code": "pass",
+    "signal": "pass"
+  },
+  "notes": [
+    "Times are single-host macOS observations and are not release performance claims.",
+    "The source-change leg updates only source mtime, proves Cargo re-evaluation, and leaves tracked bytes unchanged."
+  ]
+}

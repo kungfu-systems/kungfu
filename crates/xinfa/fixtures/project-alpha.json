@@ -1,0 +1,87 @@
+{
+  "$schema": "https://xinfa.dev/schema/project-v1.schema.json",
+  "schema": "xinfa.project/v1",
+  "project": { "id": "alpha", "title": "Alpha Runtime" },
+  "cut": { "id": "alpha.main", "revision": "sha256:0000000000000000000000000000000000000000000000000000000000000000" },
+  "roots": [
+    { "id": "repository", "path": ".", "visibility": "public" }
+  ],
+  "providers": [
+    {
+      "id": "alpha.manifest",
+      "kind": "exact-file-manifest",
+      "authority": "project",
+      "visibility": "public",
+      "root": "repository",
+      "paths": ["docs/guide.md", "docs/readme.md", "evidence/runtime.json", "src/runtime.rs"],
+      "revision": "sha256:1111111111111111111111111111111111111111111111111111111111111111"
+    }
+  ],
+  "nodes": [
+    {
+      "id": "alpha.doc.guide", "kind": "document", "visibility": "public",
+      "revision": "sha256:9999999999999999999999999999999999999999999999999999999999999999",
+      "provenance": { "kind": "project-source", "authority": "alpha" },
+      "source": { "provider": "alpha.manifest", "path": "docs/guide.md" },
+      "verification": {
+        "mode": "mixed", "status": "mixed", "waiver": null,
+        "dependencies": [{ "node": "alpha.claim.runtime", "expectedRevision": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" }]
+      }
+    },
+    {
+      "id": "alpha.claim.runtime", "kind": "claim", "visibility": "public",
+      "revision": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "provenance": { "kind": "project-source", "authority": "alpha" },
+      "source": { "provider": "alpha.manifest", "path": "docs/guide.md" },
+      "verification": {
+        "mode": "machine", "status": "machine-proved", "waiver": null,
+        "dependencies": [
+          { "node": "alpha.evidence.runtime", "expectedRevision": "sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc" },
+          { "node": "alpha.impl.runtime", "expectedRevision": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb" }
+        ]
+      }
+    },
+    {
+      "id": "alpha.impl.runtime", "kind": "implementation", "visibility": "public",
+      "revision": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      "provenance": { "kind": "project-source", "authority": "alpha" },
+      "source": { "provider": "alpha.manifest", "path": "src/runtime.rs" },
+      "verification": { "mode": "machine", "status": "machine-proved", "waiver": null, "dependencies": [] }
+    },
+    {
+      "id": "alpha.doc.readme", "kind": "document", "visibility": "public",
+      "revision": "sha256:dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+      "provenance": { "kind": "project-source", "authority": "alpha" },
+      "source": { "provider": "alpha.manifest", "path": "docs/readme.md" },
+      "verification": { "mode": "non-claim", "status": "non-claim", "waiver": null, "dependencies": [] }
+    },
+    {
+      "id": "alpha.evidence.runtime", "kind": "evidence", "visibility": "public",
+      "revision": "sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+      "provenance": { "kind": "provider-derived", "authority": "alpha" },
+      "source": { "provider": "alpha.manifest", "path": "evidence/runtime.json" },
+      "verification": { "mode": "machine", "status": "machine-proved", "waiver": null, "dependencies": [] }
+    }
+  ],
+  "edges": [
+    { "from": "alpha.doc.guide", "relation": "explains", "to": "alpha.claim.runtime" },
+    { "from": "alpha.claim.runtime", "relation": "implements", "to": "alpha.impl.runtime" },
+    { "from": "alpha.evidence.runtime", "relation": "proves", "to": "alpha.claim.runtime" }
+  ],
+  "routes": [
+    {
+      "id": "alpha.agent", "audience": "agent", "parityGroup": "alpha.contributor", "visibility": "public",
+      "nodes": ["alpha.doc.guide", "alpha.doc.readme", "alpha.claim.runtime", "alpha.impl.runtime", "alpha.evidence.runtime"],
+      "entrypoints": ["AGENTS.md"]
+    },
+    {
+      "id": "alpha.human", "audience": "human", "parityGroup": "alpha.contributor", "visibility": "public",
+      "nodes": ["alpha.doc.guide", "alpha.doc.readme", "alpha.claim.runtime", "alpha.impl.runtime", "alpha.evidence.runtime"],
+      "entrypoints": ["docs/readme.md"]
+    }
+  ],
+  "policies": {
+    "unknownFields": "reject", "pathSemantics": "repository-relative-posix", "visibility": "fail-closed",
+    "dualFirstParity": "required", "verification": "declared-dependencies"
+  }
+}

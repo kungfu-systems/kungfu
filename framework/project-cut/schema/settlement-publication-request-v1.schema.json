@@ -1,0 +1,139 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kungfu.tech/schema/settlement-publication-request-v1.schema.json",
+  "title": "Kungfu Settlement Publication Request v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "batch",
+    "repository",
+    "episodes",
+    "projectCuts",
+    "trigger"
+  ],
+  "properties": {
+    "schema": {
+      "const": "kungfu.settlement-publication.request/v1"
+    },
+    "batch": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "kind",
+        "id"
+      ],
+      "properties": {
+        "kind": {
+          "enum": [
+            "wave",
+            "batch"
+          ]
+        },
+        "id": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "repository": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "targetBranch"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$"
+        },
+        "targetBranch": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "episodes": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 256,
+      "uniqueItems": true,
+      "items": {
+        "$ref": "#/$defs/root"
+      }
+    },
+    "projectCuts": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 256,
+      "uniqueItems": true,
+      "items": {
+        "$ref": "#/$defs/root"
+      }
+    },
+    "trigger": {
+      "$ref": "#/$defs/trigger"
+    }
+  },
+  "$defs": {
+    "root": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "trigger": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema",
+        "source",
+        "eventKind",
+        "headBranch",
+        "labels",
+        "generatedBy",
+        "publicationRoot"
+      ],
+      "properties": {
+        "schema": {
+          "const": "kungfu.settlement-publication.trigger/v1"
+        },
+        "source": {
+          "type": "string",
+          "minLength": 1
+        },
+        "eventKind": {
+          "type": "string",
+          "minLength": 1
+        },
+        "headBranch": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "labels": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "generatedBy": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "publicationRoot": {
+          "oneOf": [
+            {
+              "$ref": "#/$defs/root"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,63 @@
+{
+  "schema": "xinfa.product-contract/v1",
+  "product": {
+    "id": "xinfa",
+    "name": "Xinfa",
+    "description": "The Verified Context Compiler for Human-Agent Software Development"
+  },
+  "authority": {
+    "owns": [
+      "xinfa.project/v1",
+      "xinfa.context-ir/v1",
+      "xinfa.context-pack/v1",
+      "xinfa.atlas/v1",
+      "xinfa.atlas-view/v1",
+      "xinfa.atlas-manifest/v1",
+      "xinfa.atlas-compile-receipt/v1",
+      "xinfa.human-view/v1",
+      "xinfa.task-envelope/v1",
+      "xinfa.route-resolution/v1",
+      "xinfa.route-root-authority/v1",
+      "xinfa.task-chart/v1",
+      "xinfa.gui-view/v1",
+      "xinfa.projection-recipe/v1",
+      "xinfa.episode-provider-submission/v1",
+      "xinfa.review-chart/v1",
+      "xinfa.schema-set-manifest/v1",
+      "context graph and impact semantics",
+      "context selection and provenance",
+      "deterministic task-to-route resolution and fail-visible ambiguity receipts",
+      "dual-first human and Agent route parity",
+      "bounded-hop and bounded-token projection contracts",
+      "immutable Atlas identity and generated-output exclusion"
+    ],
+    "doesNotOwn": [
+      "project source truth",
+      "project submission protocol conformance",
+      "product runtime facts",
+      "Kungfu Episode identity, fold, qualification, or provider roots",
+      "build and release attestation"
+    ]
+  },
+  "namespace": {
+    "cli": "xinfa",
+    "protocolPrefix": "xinfa.",
+    "rustPackage": "xinfa"
+  },
+  "artifacts": {
+    "binary": "xinfa-{target}",
+    "releaseTag": "xinfa-v{version}",
+    "versionSource": "Cargo.toml"
+  },
+  "state": {
+    "workspaceDefault": ".xinfa",
+    "stateOverride": "XINFA_STATE_HOME",
+    "cacheDefault": ".xinfa/cache",
+    "cacheOverride": "XINFA_CACHE_HOME"
+  },
+  "incubation": {
+    "sourceLocationIsAuthority": false,
+    "extractionManifest": "extraction-manifest.json",
+    "boundaryContract": "boundary.contract.json"
+  }
+}

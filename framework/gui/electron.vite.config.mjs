@@ -77,7 +77,7 @@ function nodeBuiltinRequireShim() {
 // - renderer: react; keep electron and the native binding external so the
 //   trusted renderer require()s them at runtime under nodeIntegration. Three html
 //   entries: the shell (index), the isolated sandboxed-view harness, and the
-//   per-session OS window (session-window, ADR-0016 stage 3).
+//   per-session OS window (session-window, KF-ADR-019f86da-4f90-7153-a6c1-ab7a0a3cf481 stage 3).
 export default defineConfig({
   main: {
     plugins: [
@@ -113,7 +113,7 @@ export default defineConfig({
             rootDir,
             'src/renderer/sandbox-view-harness/index.html',
           ),
-          // per-session OS window (ADR-0016 stage 3); node-integrated like the
+          // per-session OS window (KF-ADR-019f86da-4f90-7153-a6c1-ab7a0a3cf481 stage 3); node-integrated like the
           // shell, mounts the terminal view against one runId over the relay
           'session-window': resolve(
             rootDir,

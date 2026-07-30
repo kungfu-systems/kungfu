@@ -1,0 +1,1020 @@
+{
+  "schema": "kungfu.fact-cut-kernel.contract/v1",
+  "id": "kungfu-fact-cut-kernel",
+  "version": 1,
+  "weldedSurface": "fact-cut-kernel-contract",
+  "description": "Backend-neutral identity, immutable version, typed relation, Fact Cut, named ref, compare-and-swap, and receipt semantics for the Kungfu fact kernel.",
+  "status": {
+    "specification": "accepted",
+    "authoritativeWriter": "implemented",
+    "runtimeProjection": "implemented",
+    "releaseQualification": "not-qualified"
+  },
+  "contractSchema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "additionalProperties": false,
+    "required": [
+      "schema",
+      "id",
+      "version",
+      "weldedSurface",
+      "description",
+      "status",
+      "contractSchema",
+      "identity",
+      "boundaries",
+      "recordFamilies",
+      "rootCanonical",
+      "cut",
+      "relations",
+      "refs",
+      "durableAdmission",
+      "ownership",
+      "compatibility",
+      "failureTaxonomy",
+      "publicQueryBoundary",
+      "falsifiers",
+      "qualification",
+      "nonClaims"
+    ],
+    "properties": {
+      "schema": {
+        "const": "kungfu.fact-cut-kernel.contract/v1"
+      },
+      "id": {
+        "const": "kungfu-fact-cut-kernel"
+      },
+      "version": {
+        "const": 1
+      },
+      "weldedSurface": {
+        "const": "fact-cut-kernel-contract"
+      },
+      "description": {
+        "type": "string",
+        "minLength": 1
+      },
+      "status": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "specification",
+          "authoritativeWriter",
+          "runtimeProjection",
+          "releaseQualification"
+        ],
+        "properties": {
+          "specification": {
+            "const": "accepted"
+          },
+          "authoritativeWriter": {
+            "enum": [
+              "not-implemented",
+              "implemented"
+            ]
+          },
+          "runtimeProjection": {
+            "enum": [
+              "not-implemented",
+              "shadow",
+              "implemented"
+            ]
+          },
+          "releaseQualification": {
+            "const": "not-qualified"
+          }
+        }
+      },
+      "contractSchema": {
+        "type": "object"
+      },
+      "identity": {
+        "type": "object"
+      },
+      "boundaries": {
+        "type": "array",
+        "minItems": 6
+      },
+      "recordFamilies": {
+        "type": "array",
+        "minItems": 6
+      },
+      "rootCanonical": {
+        "type": "object"
+      },
+      "cut": {
+        "type": "object"
+      },
+      "relations": {
+        "type": "object"
+      },
+      "refs": {
+        "type": "object"
+      },
+      "durableAdmission": {
+        "type": "object"
+      },
+      "ownership": {
+        "type": "object"
+      },
+      "compatibility": {
+        "type": "object"
+      },
+      "failureTaxonomy": {
+        "type": "array",
+        "minItems": 12,
+        "items": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "code",
+            "meaning",
+            "writeOccurred"
+          ],
+          "properties": {
+            "code": {
+              "type": "string",
+              "pattern": "^[a-z0-9-]+$"
+            },
+            "meaning": {
+              "type": "string",
+              "minLength": 1
+            },
+            "writeOccurred": {
+              "type": "boolean"
+            }
+          }
+        }
+      },
+      "publicQueryBoundary": {
+        "type": "object"
+      },
+      "falsifiers": {
+        "type": "array",
+        "minItems": 10,
+        "items": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "id",
+            "rule",
+            "expectedFailure"
+          ],
+          "properties": {
+            "id": {
+              "type": "string",
+              "pattern": "^[a-z0-9-]+$"
+            },
+            "rule": {
+              "type": "string",
+              "minLength": 1
+            },
+            "expectedFailure": {
+              "type": "string",
+              "pattern": "^[a-z0-9-]+$"
+            }
+          }
+        }
+      },
+      "qualification": {
+        "type": "object"
+      },
+      "nonClaims": {
+        "type": "array",
+        "minItems": 5,
+        "items": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    }
+  },
+  "identity": {
+    "logicalId": {
+      "syntax": "fact:<32-lowercase-hex>",
+      "pattern": "^fact:[0-9a-f]{32}$",
+      "semantics": "Opaque stable identity minted independently from every storage, process, product, and projection coordinate.",
+      "minting": "cryptographically-random-128-bit/v1",
+      "externalImport": "External identities are bound by an explicit mapping receipt; they are not reused as the logical id.",
+      "forbiddenDerivations": [
+        "filesystem-path",
+        "git-ref-or-commit",
+        "database-key",
+        "process-or-thread-id",
+        "gui-route",
+        "wall-clock"
+      ]
+    },
+    "contentRoot": {
+      "syntax": "sha256:<64-lowercase-hex>",
+      "pattern": "^sha256:[0-9a-f]{64}$",
+      "semantics": "Immutable identity of exact bytes or an exact canonical record preimage.",
+      "algorithm": "sha256"
+    },
+    "separation": "A logical id names continuity across immutable versions; no content root, ref name, backend key, or projection coordinate may replace it."
+  },
+  "boundaries": [
+    {
+      "kind": "observation",
+      "authority": "An append-only source claim that may precede admission.",
+      "notEquivalentTo": [
+        "admission-record",
+        "fact-object",
+        "fact-version",
+        "fact-cut",
+        "episode",
+        "projection"
+      ]
+    },
+    {
+      "kind": "admission-record",
+      "authority": "A replayable decision binding one observation to exact declarations, policy, outcome, and evidence.",
+      "notEquivalentTo": [
+        "observation",
+        "fact-object",
+        "fact-version",
+        "fact-cut",
+        "episode",
+        "projection"
+      ]
+    },
+    {
+      "kind": "fact-object",
+      "authority": "Stable logical continuity independent of any one state or body.",
+      "notEquivalentTo": [
+        "observation",
+        "admission-record",
+        "fact-version",
+        "fact-cut",
+        "episode",
+        "projection"
+      ]
+    },
+    {
+      "kind": "fact-version",
+      "authority": "One immutable admitted state of one Fact object with exact body, schema, ancestry, declaration, and admission roots.",
+      "notEquivalentTo": [
+        "observation",
+        "admission-record",
+        "fact-object",
+        "fact-cut",
+        "episode",
+        "projection"
+      ]
+    },
+    {
+      "kind": "fact-cut",
+      "authority": "One immutable, reproducible state boundary over admitted object versions, active relations, declarations, admissions, Episode frontier, omissions, and conflicts.",
+      "notEquivalentTo": [
+        "observation",
+        "admission-record",
+        "fact-object",
+        "fact-version",
+        "episode",
+        "projection"
+      ]
+    },
+    {
+      "kind": "episode",
+      "authority": "A separately identified bounded causal occurrence whose sealed frontier may be referenced by a Fact Cut.",
+      "notEquivalentTo": [
+        "observation",
+        "admission-record",
+        "fact-object",
+        "fact-version",
+        "fact-cut",
+        "projection"
+      ]
+    },
+    {
+      "kind": "projection",
+      "authority": "A rebuildable query, storage, language, CLI, GUI, or Git representation of authoritative records.",
+      "notEquivalentTo": [
+        "observation",
+        "admission-record",
+        "fact-object",
+        "fact-version",
+        "fact-cut",
+        "episode"
+      ]
+    }
+  ],
+  "recordFamilies": [
+    {
+      "schema": "kungfu.fact.object/v1",
+      "authority": "hana-pod-journal",
+      "requiredFields": [
+        "objectId",
+        "objectType",
+        "createdByReceiptRoot"
+      ],
+      "rootFields": [
+        "schema",
+        "objectId",
+        "objectType",
+        "createdByReceiptRoot"
+      ],
+      "mutation": "append-only"
+    },
+    {
+      "schema": "kungfu.fact.version/v1",
+      "authority": "hana-pod-journal-plus-content-store",
+      "requiredFields": [
+        "objectId",
+        "bodyRoot",
+        "schemaRoot",
+        "parentVersionRoots",
+        "declarationRoots",
+        "admissionRoots"
+      ],
+      "rootFields": [
+        "schema",
+        "objectId",
+        "bodyRoot",
+        "schemaRoot",
+        "parentVersionRoots",
+        "declarationRoots",
+        "admissionRoots"
+      ],
+      "mutation": "immutable"
+    },
+    {
+      "schema": "kungfu.fact.relation-add/v1",
+      "authority": "hana-pod-journal",
+      "requiredFields": [
+        "relationId",
+        "relationType",
+        "source",
+        "target",
+        "attributesRoot",
+        "admissionRoots"
+      ],
+      "rootFields": [
+        "schema",
+        "relationId",
+        "relationType",
+        "source",
+        "target",
+        "attributesRoot",
+        "admissionRoots"
+      ],
+      "mutation": "append-only"
+    },
+    {
+      "schema": "kungfu.fact.relation-revoke/v1",
+      "authority": "hana-pod-journal",
+      "requiredFields": [
+        "relationRoot",
+        "reasonRoot"
+      ],
+      "rootFields": [
+        "schema",
+        "relationRoot",
+        "reasonRoot"
+      ],
+      "mutation": "append-only"
+    },
+    {
+      "schema": "kungfu.fact.cut/v1",
+      "authority": "hana-pod-journal",
+      "requiredFields": [
+        "parentCutRoots",
+        "objectVersions",
+        "activeRelationRoots",
+        "declarationRoots",
+        "admissionRoots",
+        "episodeFrontier",
+        "omissionRoots",
+        "conflictRoots"
+      ],
+      "rootFields": [
+        "schema",
+        "parentCutRoots",
+        "objectVersions",
+        "activeRelationRoots",
+        "declarationRoots",
+        "admissionRoots",
+        "episodeFrontier",
+        "omissionRoots",
+        "conflictRoots"
+      ],
+      "mutation": "immutable"
+    },
+    {
+      "schema": "kungfu.fact.ref-transition/v1",
+      "authority": "hana-pod-journal",
+      "requiredFields": [
+        "transitionId",
+        "refName",
+        "expectedOldCutRoot",
+        "expectedOldRevision",
+        "newCutRoot",
+        "kind",
+        "reasonRoot"
+      ],
+      "rootFields": [
+        "schema",
+        "transitionId",
+        "refName",
+        "expectedOldCutRoot",
+        "expectedOldRevision",
+        "newCutRoot",
+        "kind",
+        "reasonRoot"
+      ],
+      "mutation": "append-only-cas"
+    },
+    {
+      "schema": "kungfu.fact.operation-receipt/v1",
+      "authority": "hana-pod-journal",
+      "requiredFields": [
+        "operationId",
+        "operation",
+        "status",
+        "failureCode",
+        "recordRoot",
+        "priorCutRoot",
+        "currentCutRoot",
+        "priorRevision",
+        "currentRevision"
+      ],
+      "rootFields": [
+        "schema",
+        "operationId",
+        "operation",
+        "status",
+        "failureCode",
+        "recordRoot",
+        "priorCutRoot",
+        "currentCutRoot",
+        "priorRevision",
+        "currentRevision"
+      ],
+      "mutation": "append-only"
+    }
+  ],
+  "rootCanonical": {
+    "legacy": {
+      "id": "sha256-length-framed-fields-v1",
+      "status": "required-legacy-reader",
+      "writerDefault": false,
+      "portable": false,
+      "rule": "Existing roots retain their exact historical preimage and meaning; v1 is never normalized, reserialized, or relabeled as v2."
+    },
+    "portable": {
+      "id": "kungfu.fact-root.canonical/v2",
+      "status": "authoritative-writer",
+      "writerDefault": true,
+      "writerAuthority": "framework/fact/kungfu-fact-writer-authority-v2.json",
+      "contract": "framework/fact/kungfu-fact-root-canonical-v2.json",
+      "corpus": "tests/fixtures/fact-root-canonical/vectors.json",
+      "gate": "scripts/check-fact-root-canonical.test.mjs",
+      "implementations": [
+        "libkungfu-cpp",
+        "independent-python"
+      ],
+      "comparison": [
+        "canonical-bytes-hex",
+        "sha256-root",
+        "stable-failure-code"
+      ]
+    },
+    "migration": "A successor Root uses a successor schema and an explicit kungfu.fact.root-mapping-receipt/v1; the receipt binds both protocol labels, roots, and admission Root without claiming byte equality."
+  },
+  "cut": {
+    "schema": "kungfu.fact.cut/v1",
+    "rootAlgorithm": {
+      "id": "sha256-length-framed-fields-v1",
+      "protocolTag": "kungfu.fact.cut/v1",
+      "integerEncoding": "unsigned-64-bit-big-endian",
+      "atomEncoding": "utf8-length-prefixed-by-unsigned-64-bit-big-endian",
+      "sequenceEncoding": "item-count-followed-by-items",
+      "setOrder": "utf8-bytewise-over-normalized-tuples",
+      "duplicateItems": "rejected",
+      "unicode": "legacy-library-json-spelling; no portability or NFC-enforcement claim",
+      "excludedFields": [
+        "wallClock",
+        "storagePath",
+        "databaseKey",
+        "gitRef",
+        "processId",
+        "guiRoute"
+      ]
+    },
+    "composition": {
+      "parentCutRoots": "Sorted unique set; zero for a root Cut, one for ordinary succession, two or more for an explicit merge-view Cut.",
+      "objectVersions": "Sorted unique tuples of logical object id and immutable version root; at most one active version per object id.",
+      "activeRelationRoots": "Sorted unique roots of relation-add records not revoked at this Cut.",
+      "declarationRoots": "Sorted unique exact declaration roots governing interpretation.",
+      "admissionRoots": "Sorted unique exact admission-decision roots supporting included versions and relations.",
+      "episodeFrontier": "Sorted unique tuples of Episode identity, sealed content root, and accepted manifest frame uid.",
+      "omissionRoots": "Sorted unique content roots of explicit omission descriptors.",
+      "conflictRoots": "Sorted unique content roots of explicit unresolved-conflict descriptors."
+    },
+    "identityExcludes": [
+      "wall-clock",
+      "creation-time",
+      "writer-process",
+      "backend-sequence",
+      "projection-head"
+    ],
+    "validation": [
+      "Every referenced root exists and verifies before Cut admission.",
+      "Every object version belongs to its declared logical object id.",
+      "Every active relation endpoint resolves under the Cut or is explicitly declared external.",
+      "Every included version and relation is supported by the pinned declaration and admission roots.",
+      "Every omission and conflict is explicit; neither may be silently dropped.",
+      "A Cut never mutates after its root is admitted."
+    ]
+  },
+  "relations": {
+    "cardinality": "many-to-many",
+    "endpointKinds": [
+      "logical-object",
+      "pinned-version",
+      "external-identity-with-mapping-receipt"
+    ],
+    "inheritance": "none",
+    "add": "A typed relation is introduced by one immutable relation-add root.",
+    "revoke": "Revocation appends a relation-revoke record; it does not delete or rewrite the add record.",
+    "cutRule": "A relation is active only when its add root is included and no accepted revoke applies at the Cut.",
+    "forbiddenInference": "A relation never copies identity, state, admission, trust, authority, completion, or another relation to either endpoint."
+  },
+  "refs": {
+    "namePattern": "^[a-z][a-z0-9._/-]{0,127}$",
+    "meaning": "A mutable discoverability name for an immutable Fact Cut root; the name is never Cut identity.",
+    "transitionKinds": [
+      "create",
+      "advance",
+      "fork",
+      "merge-view",
+      "rollback"
+    ],
+    "cas": {
+      "required": true,
+      "createExpectedOld": null,
+      "existingExpectedOld": "exact current Cut root and exact current revision",
+      "staleCaller": "reject-without-write",
+      "idempotency": "Replaying the same transitionId with byte-identical input returns the original receipt; reusing it with different input fails.",
+      "atomicity": "The ref transition and its accepted receipt are one logical append decision."
+    },
+    "fork": "Create a new ref with expected-old null and a known Cut root; the source ref does not move.",
+    "mergeView": "Create an immutable Cut with two or more parent Cut roots, then CAS a named ref to it; moving a ref alone never merges state.",
+    "rollback": "CAS a ref to a known earlier Cut using kind rollback and an explicit reason root; history and intervening Cuts remain intact.",
+    "receiptBoundary": "A receipt proves the kernel decision and observed ref transition, not external truth, completion, provider durability beyond its declared profile, or distributed consensus."
+  },
+  "durableAdmission": {
+    "schema": "kungfu.fact.durable-admission-contract/v1",
+    "profile": "fact-durable-admission/current-hardware-candidate-v1",
+    "activation": "explicit-ref-cas-only",
+    "defaultEnabled": false,
+    "productionEligible": false,
+    "profiles": {
+      "requested": [
+        "durable_group",
+        "durable_sync"
+      ],
+      "admitted": "exact requested profile only when every required subpath is qualified",
+      "effective": "minimum of content provider, journal sync, and durable-ingest checkpoint",
+      "achieved": "returned only from the checkpoint-covered durability receipt; success requires achieved equals requested"
+    },
+    "contentClosure": {
+      "schema": "kungfu.fact.content-closure/v1",
+      "target": "exact Cut root and revision",
+      "stored": [
+        "transitive parent Cut metadata roots",
+        "selected version metadata roots",
+        "selected immutable body roots",
+        "active relation metadata roots",
+        "ref transition root",
+        "operation receipt root"
+      ],
+      "declaredExternal": [
+        "schema roots",
+        "declaration roots",
+        "admission roots",
+        "Episode sealed roots",
+        "omission roots",
+        "conflict roots"
+      ],
+      "rule": "Every stored root is verified before admission; declared external roots remain explicitly separate and are never represented as locally durable content."
+    },
+    "journalFrontier": {
+      "authority": "yijinjing-hana-pod-journal",
+      "pairing": "exact record sequence followed by adjacent accepted receipt sequence",
+      "sync": "all Fact journal pages plus the journal directory are synchronized before the durable-ingest checkpoint",
+      "checkpointBinding": [
+        "operation id",
+        "request root",
+        "record and receipt sequence",
+        "record and receipt root",
+        "transition root",
+        "target Cut root",
+        "target revision",
+        "content closure root",
+        "authority bundle root"
+      ]
+    },
+    "providers": {
+      "content-addressed-file": {
+        "profile": "yijinjing-file/v1",
+        "durability": "fsync-on-publish",
+        "admitted": true
+      },
+      "rocksdb": {
+        "profile": "rocksdb/v1",
+        "durability": "wal-os-buffered",
+        "admitted": false,
+        "reason": "wal-os-buffered is weaker than durable_group and durable_sync"
+      }
+    },
+    "reconciliation": {
+      "action": "durability-reconcile",
+      "identity": "original operation id",
+      "freshReopen": true,
+      "missingCheckpoint": "unknown",
+      "verifiedCheckpoint": "return the original accepted result and receipt only after closure, adjacent journal pair, ref Cut, and revision verify"
+    },
+    "qualificationFaults": [
+      "before-journal-sync",
+      "after-journal-sync",
+      "before-record-write",
+      "after-record-write",
+      "before-data-sync",
+      "after-data-sync",
+      "before-checkpoint-write",
+      "before-checkpoint-rename",
+      "after-checkpoint-rename",
+      "before-directory-sync",
+      "after-directory-sync"
+    ],
+    "releaseGate": {
+      "gateId": "durability.contracts",
+      "task": "test:durability-contract",
+      "report": "docs/qualification/evidence/fact-durable-admission/current-hardware-candidate-v1/report.json",
+      "rule": "Fail closed when contract, source, report, provider profile, qualification envelope, or fresh-reopen fault evidence drifts."
+    }
+  },
+  "ownership": {
+    "closedKernelMetadata": {
+      "owner": "hana-pod-journal",
+      "scope": [
+        "object identity",
+        "version root references",
+        "relation add/revoke",
+        "Cut membership",
+        "ref CAS",
+        "receipts"
+      ],
+      "rule": "Fixed, closed, replay-critical metadata has one typed journal authority."
+    },
+    "domainTypedBodies": {
+      "owner": "flatbuffers-single-schema-owner",
+      "rule": "Open or evolving domain bodies and typed relation attributes retain one registered FlatBuffers owner."
+    },
+    "opaqueBodies": {
+      "owner": "content-store",
+      "namespace": "fact-bodies",
+      "rule": "Immutable bytes are addressed by SHA-256; paths and backend keys are implementation details."
+    },
+    "json": {
+      "owner": "edge-projection-only",
+      "rule": "JSON may render contracts, queries, receipts, and diagnostics; it is not a second record authority."
+    },
+    "sqliteAndIndexes": {
+      "owner": "rebuildable-projection-only",
+      "rule": "Tables, indexes, caches, and GUI stores rebuild from journal and content roots."
+    }
+  },
+  "compatibility": {
+    "logicalIdentity": "never-reinterpreted",
+    "contentRoots": "never-reinterpreted",
+    "recordSchema": "unknown major versions fail closed",
+    "additiveFields": "require a successor schema version unless explicitly excluded from identity by that version",
+    "rootAlgorithm": "a changed preimage or encoding requires a new protocol tag and schema version",
+    "migration": "Import emits mapping and acceptance receipts; it never rewrites old roots in place.",
+    "backendReplacement": "Allowed only when authority scan, roots, CAS outcomes, and receipts remain equivalent."
+  },
+  "failureTaxonomy": [
+    {
+      "code": "invalid-identity",
+      "meaning": "A logical id, root, ref name, or transition id is malformed or derived from a forbidden coordinate.",
+      "writeOccurred": false
+    },
+    {
+      "code": "unsupported-version",
+      "meaning": "A record or root protocol version is unknown or incompatible.",
+      "writeOccurred": false
+    },
+    {
+      "code": "unknown-object",
+      "meaning": "The referenced Fact object identity has not been admitted.",
+      "writeOccurred": false
+    },
+    {
+      "code": "unknown-version",
+      "meaning": "The immutable Fact version root is unavailable.",
+      "writeOccurred": false
+    },
+    {
+      "code": "unknown-relation",
+      "meaning": "A relation add root targeted by a revoke or Cut is unavailable.",
+      "writeOccurred": false
+    },
+    {
+      "code": "unknown-cut",
+      "meaning": "A parent, target, or expected-old Fact Cut root is unavailable.",
+      "writeOccurred": false
+    },
+    {
+      "code": "body-missing",
+      "meaning": "A referenced immutable body is absent from the declared content namespace.",
+      "writeOccurred": false
+    },
+    {
+      "code": "root-mismatch",
+      "meaning": "Bytes or canonical record fields do not reproduce the declared root.",
+      "writeOccurred": false
+    },
+    {
+      "code": "corrupt-content",
+      "meaning": "Stored bytes fail content verification.",
+      "writeOccurred": false
+    },
+    {
+      "code": "schema-missing",
+      "meaning": "The exact schema owner or schema root required to interpret a body is unavailable.",
+      "writeOccurred": false
+    },
+    {
+      "code": "incompatible-schema",
+      "meaning": "The body or record cannot be interpreted under the pinned schema version.",
+      "writeOccurred": false
+    },
+    {
+      "code": "admission-missing",
+      "meaning": "A version or relation lacks exact admitted declaration and admission support.",
+      "writeOccurred": false
+    },
+    {
+      "code": "relation-endpoint-invalid",
+      "meaning": "A relation endpoint is absent, ambiguous, or not explicitly external.",
+      "writeOccurred": false
+    },
+    {
+      "code": "relation-already-revoked",
+      "meaning": "The relation has already been revoked under the accepted history.",
+      "writeOccurred": false
+    },
+    {
+      "code": "invalid-cut",
+      "meaning": "Cut membership, parents, frontier, omissions, conflicts, order, or uniqueness violates the contract.",
+      "writeOccurred": false
+    },
+    {
+      "code": "expected-old-required",
+      "meaning": "A transition for an existing ref omitted exact expected-old root or revision.",
+      "writeOccurred": false
+    },
+    {
+      "code": "stale-ref",
+      "meaning": "The current ref root or revision differs from expected-old; no transition is appended.",
+      "writeOccurred": false
+    },
+    {
+      "code": "transition-id-reused",
+      "meaning": "A transition id was replayed with non-identical input.",
+      "writeOccurred": false
+    },
+    {
+      "code": "outcome-unknown",
+      "meaning": "A durable ref operation wrote visible authority but did not return success; callers must reconcile the original operation id without guessing or changing identity.",
+      "writeOccurred": true
+    },
+    {
+      "code": "backend-failure",
+      "meaning": "The provider could not complete the logical append decision under its declared profile.",
+      "writeOccurred": false
+    },
+    {
+      "code": "import-interrupted",
+      "meaning": "Authority import stopped after one or more complete logical append decisions; the response identifies the exact committed prefix and same-bundle retry boundary.",
+      "writeOccurred": true
+    },
+    {
+      "code": "durability-unqualified",
+      "meaning": "The requested durability claim exceeds the active provider's qualified evidence.",
+      "writeOccurred": false
+    },
+    {
+      "code": "canonical-invalid-descriptor",
+      "meaning": "The typed KFR2 logical input does not match its closed descriptor shape or canonical transport spelling.",
+      "writeOccurred": false
+    },
+    {
+      "code": "canonical-integer-range",
+      "meaning": "A KFR2 integer exceeds its declared signed or unsigned 64-bit range.",
+      "writeOccurred": false
+    },
+    {
+      "code": "canonical-non-finite-float",
+      "meaning": "A KFR2 float is NaN or infinity; positive and negative finite zero remain distinct.",
+      "writeOccurred": false
+    },
+    {
+      "code": "canonical-invalid-unicode",
+      "meaning": "KFR2 text is malformed UTF-8, non-shortest UTF-8, or contains a surrogate instead of Unicode scalar values.",
+      "writeOccurred": false
+    },
+    {
+      "code": "canonical-duplicate-item",
+      "meaning": "A KFR2 set contains two values with equal canonical preimages.",
+      "writeOccurred": false
+    },
+    {
+      "code": "canonical-duplicate-key",
+      "meaning": "A KFR2 map contains two equal canonical text keys.",
+      "writeOccurred": false
+    },
+    {
+      "code": "canonical-unknown-field",
+      "meaning": "A schema-bound KFR2 record contains a field id absent from the closed schema.",
+      "writeOccurred": false
+    },
+    {
+      "code": "canonical-duplicate-field",
+      "meaning": "A schema-bound KFR2 record repeats one stable field id.",
+      "writeOccurred": false
+    },
+    {
+      "code": "canonical-unknown-schema",
+      "meaning": "A KFR2 record names a schema absent from the frozen schema registry.",
+      "writeOccurred": false
+    },
+    {
+      "code": "canonical-invalid-hex",
+      "meaning": "An exact byte or binary64 transport uses malformed or non-lowercase hexadecimal text.",
+      "writeOccurred": false
+    },
+    {
+      "code": "canonical-unsupported-type",
+      "meaning": "A typed KFR2 input names a value type absent from the frozen protocol.",
+      "writeOccurred": false
+    },
+    {
+      "code": "canonical-absent",
+      "meaning": "Absent was supplied as a value even though only a schema may omit a field; null remains an explicit value.",
+      "writeOccurred": false
+    }
+  ],
+  "publicQueryBoundary": {
+    "input": "An exact Fact Cut root, or a named ref resolved to an exact Cut root plus ref-resolution receipt.",
+    "basis": [
+      "cutRoot",
+      "declarationRoots",
+      "admissionRoots",
+      "episodeFrontier",
+      "policyVersions"
+    ],
+    "output": [
+      "logical object ids",
+      "immutable version roots",
+      "immutable bodies and explicit availability when requested",
+      "active relation roots",
+      "omissions",
+      "conflicts",
+      "lineage"
+    ],
+    "headRule": "head is syntactic sugar that must resolve to and report an exact ref revision and Cut root.",
+    "projectionRule": "Authority scan defines semantics; SQLite, graph, search, GUI, and language projections must prove equivalent roots and visible gaps.",
+    "failureRule": "Missing, corrupt, incompatible, omitted, conflicting, or unverifiable inputs remain explicit and cannot be converted into an apparently complete result."
+  },
+  "falsifiers": [
+    {
+      "id": "path-as-object-identity",
+      "rule": "A filesystem path cannot mint or replace a logical Fact object id.",
+      "expectedFailure": "invalid-identity"
+    },
+    {
+      "id": "git-ref-as-cut-identity",
+      "rule": "A Git ref or commit cannot replace a Fact Cut root.",
+      "expectedFailure": "invalid-identity"
+    },
+    {
+      "id": "database-key-as-version-identity",
+      "rule": "A database row or key cannot replace an immutable Fact version root.",
+      "expectedFailure": "invalid-identity"
+    },
+    {
+      "id": "process-as-ref-authority",
+      "rule": "A PID, thread, or process lifetime cannot satisfy expected-old CAS.",
+      "expectedFailure": "expected-old-required"
+    },
+    {
+      "id": "gui-route-as-ref-authority",
+      "rule": "A GUI route or current screen cannot satisfy expected-old CAS.",
+      "expectedFailure": "expected-old-required"
+    },
+    {
+      "id": "wall-clock-in-cut-root",
+      "rule": "Wall clock fields cannot enter Fact Cut identity.",
+      "expectedFailure": "invalid-cut"
+    },
+    {
+      "id": "observation-as-admitted-version",
+      "rule": "A recorded observation cannot replace an admitted immutable Fact version.",
+      "expectedFailure": "admission-missing"
+    },
+    {
+      "id": "episode-as-cut",
+      "rule": "An Episode identity or sealed root cannot replace a Fact Cut root.",
+      "expectedFailure": "invalid-cut"
+    },
+    {
+      "id": "projection-as-authority",
+      "rule": "A projection row cannot replace journal and content-root authority.",
+      "expectedFailure": "invalid-identity"
+    },
+    {
+      "id": "silent-relation-inheritance",
+      "rule": "Relations never silently copy state, trust, authority, or another relation.",
+      "expectedFailure": "invalid-cut"
+    },
+    {
+      "id": "ref-move-without-expected-old",
+      "rule": "An existing named ref cannot move without exact expected-old root and revision.",
+      "expectedFailure": "expected-old-required"
+    },
+    {
+      "id": "stale-ref-writer",
+      "rule": "A stale expected-old must fail without a write.",
+      "expectedFailure": "stale-ref"
+    },
+    {
+      "id": "rollback-by-history-rewrite",
+      "rule": "Rollback cannot delete or rewrite Cut or ref-transition history.",
+      "expectedFailure": "invalid-cut"
+    }
+  ],
+  "qualification": {
+    "status": "fact-durable-current-hardware-candidate",
+    "fixture": "tests/fixtures/fact-cut-kernel-contract/cases.json",
+    "test": "scripts/check-fact-cut-kernel-contract.test.mjs",
+    "requiredNextEvidence": [
+      "physical-power-loss-on-exact-Fact-composed-path",
+      "independent-failure-domain-restore",
+      "production-profile-admission"
+    ],
+    "completedEvidence": [
+      {
+        "id": "rebuild-and-replaceable-backend-parity",
+        "test": "framework/core/tests/python/test_fact_kernel_integrity.py::test_rebuild_retention_and_backend_switch_preserve_semantic_roots"
+      },
+      {
+        "id": "fsck-portable-export-import-root-preservation",
+        "test": "framework/core/tests/python/test_fact_kernel_integrity.py::test_fsck_export_import_preserves_exact_cut_and_ref"
+      },
+      {
+        "id": "portable-kfr2-independent-conformance",
+        "test": "scripts/check-fact-root-canonical.test.mjs"
+      },
+      {
+        "id": "positive-and-negative-cas-concurrency",
+        "test": "framework/core/tests/python/test_fact_kernel_characterization.py::test_fact_kernel_ref_cas_converges_under_multiprocess_contention"
+      },
+      {
+        "id": "legacy-v1-exact-replay-and-reader-retention",
+        "test": "framework/core/tests/python/test_fact_kernel_characterization.py::test_legacy_v1_bundle_replays_exactly_and_remains_readable"
+      },
+      {
+        "id": "kfr2-writer-mapping-rollback-and-exact-candidate",
+        "test": "framework/core/tests/python/test_fact_kernel_characterization.py::test_fact_kernel_kfr2_writer_behavior_characterization"
+      },
+      {
+        "id": "fact-durable-success-replay-and-fresh-reopen-reconciliation",
+        "test": "framework/core/tests/python/test_fact_kernel_characterization.py::test_fact_kernel_ref_cas_durable_admission_closes_and_reconciles"
+      },
+      {
+        "id": "fact-durable-profile-and-provider-fail-closed",
+        "test": "framework/core/tests/python/test_fact_kernel_characterization.py::test_fact_kernel_ref_cas_rejects_unqualified_durability_before_write"
+      },
+      {
+        "id": "fact-durable-cut-point-fault-matrix",
+        "test": "framework/core/tests/python/test_fact_kernel_characterization.py::test_fact_kernel_ref_cas_durable_fault_frontier"
+      },
+      {
+        "id": "fact-durable-retained-candidate-report",
+        "test": "scripts/check-fact-durable-admission.test.mjs"
+      }
+    ]
+  },
+  "nonClaims": [
+    "The default native writer or the explicit Fact current-hardware candidate is release-qualified for production durability or distributed operation.",
+    "A long-term fleet backend is selected.",
+    "Distributed consensus, replication, or high availability is provided.",
+    "A receipt proves universal external truth or work completion.",
+    "Physical-power-loss durability or production eligibility is qualified.",
+    "A projection, Git repository, database, process, or GUI is fact authority."
+  ]
+}

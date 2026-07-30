@@ -1,0 +1,60 @@
+{
+  "schema": "kungfu.layer-gate-timing-evidence/v1",
+  "source": {
+    "sha": "c4ba70d9542d42bbd75ddd9dd4c7ff079f4570fa",
+    "dirty": false
+  },
+  "platform": "linux-x64",
+  "cacheBoundary": "cold-repository-outputs-cold-repository-conan-home-warm-global-download-caches",
+  "temporaryStorage": ".buildchain/tmp",
+  "parameters": {
+    "fuzzSecondsPerTarget": 90,
+    "compilerCache": false,
+    "buildJobs": 12
+  },
+  "durationsSeconds": {
+    "install": 1.83,
+    "distribution": 671.3,
+    "verifyFuzz": 372.21,
+    "episodeReleaseObserved": 1872.53,
+    "adrAdmission": 0.15,
+    "layerGates": 24.23,
+    "successfulStagesWithoutEpisode": 1069.72
+  },
+  "episodeRelease": {
+    "profile": "mvp-baseline-v1",
+    "declaredGateCeilingSeconds": 1800,
+    "exit": 1,
+    "completed": false,
+    "censored": true,
+    "observation": "The ceiling snapshot still showed the first seed's 10000-to-100000 accumulation writer. The workload was terminated after the declared Gate ceiling; no completion time is inferred."
+  },
+  "artifactSet": {
+    "files": 9,
+    "bytes": 545983965
+  },
+  "receipt": {
+    "path": "linux-x64.raw/layer-artifact-gate-receipt.json",
+    "sha256": "814f77cf062e78c16e7d11c2c65722a6d8a08bc4450cd25f9659dd291c8651c8",
+    "status": "pass",
+    "durationMs": 23966,
+    "gates": {
+      "gate.catalog": 433,
+      "layers.contract": 387,
+      "layers.format": 2660,
+      "layers.sdk": 10505,
+      "layers.surfaces": 9979
+    }
+  },
+  "rawEvidence": {
+    "directory": "linux-x64.raw",
+    "preflightLogSha256": "cf39c67299ff07cd30572657d3688739babe4008d465cffade979cf85c80bbf3",
+    "distributionLogSha256": "581afb582817f1498358e99f2d44563f31b4e48a3f53b4b2e95854ea7035a1c2",
+    "verifyLogSha256": "a885dd19a70a482e59f74c8de66a595cf923dac68a9dd9a5365395bce047820f",
+    "episodeLogSha256": "419be0e9c76433ff2997b6c742980289a79f26fe365d25aa465202d4228411d7",
+    "alphaBudgetSnapshotSha256": "d0603d5456b0ec62d5cb4baf5b93d803ad5fdb2af43d4c6b047fc8959a77d5a8",
+    "gateCeilingSnapshotSha256": "9f23d6831ed2650c7cebd6a724623cc97ef574ba82ef8d61e2d2d4c921a73b38",
+    "gateLogSha256": "d8c8637949cacca9d078e50532551c7bb80abb8b7fb779c5913b1c2e366a62d2"
+  },
+  "outcome": "episode-release-censored-over-budget"
+}

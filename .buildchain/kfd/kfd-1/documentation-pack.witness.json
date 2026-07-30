@@ -1,0 +1,151 @@
+{
+  "schemaVersion": 1,
+  "contract": "kfd-1-witness",
+  "id": "kungfu-documentation-pack",
+  "standard": "kfd-1",
+  "contractWorld": {
+    "schemaId": "https://kfd.libkungfu.dev/schemas/kfd-1/contract-world.schema.json",
+    "digest": "sha256:4c266a6475362f8a95d65102954e0bc7fb5dd8e08b3ff25610ec2c85bcccf7d3"
+  },
+  "compatibilityImpactClasses": [
+    "breaking",
+    "additive",
+    "none",
+    "unclassifiable"
+  ],
+  "sourceBinding": {
+    "mode": "release-passport-target-sha",
+    "immutableFullShaRequired": true,
+    "mutableRefAllowed": false,
+    "xinfaSourceRoot": "sha256:b1a3240c616dccbc43af16b52edbcf616d1c380b21772fd9bad04a8bcfa4f8db"
+  },
+  "documentationRoots": {
+    "atlasRoot": "sha256:a59d5ff50ac80f8046b656c692f53f43a181ff5de9563448cbedd86c8ddfedd8",
+    "packRoot": "sha256:70f584ba2d28b01d2b76b9fc76582deb791b88dba8eff2f0a5212ed6e941be9b",
+    "cutRoot": "sha256:b9ea3037494e3e4b6461488a768940a9de510dd884b3a38f62338d947af6c4fa",
+    "claimGraphRoot": "sha256:3e25dffcd23d12e8b9b986dc36dbdf8a30b962fce048b35d30fa0a33574cdddf",
+    "manifestRoot": "sha256:57ac8ca0cae9dec54a742e003253e617cbe5f94da1c6d931eb2b69236479239a",
+    "compileReceiptRoot": "sha256:dc33928ca472cbfcabb96b1247fa78b5a48a8312cd04fa8169959bf387666382",
+    "qualificationRoot": "sha256:f206b36cc568a6d4cedf4391afd5af9ecad32efce8552171ebefd795a461406e"
+  },
+  "responsibility": {
+    "compiler": "xinfa",
+    "orchestration": "shifu",
+    "attestation": "buildchain-release-passport",
+    "runtime": "kungfu-read-only"
+  },
+  "replayPolicy": {
+    "bindTargetSha": true,
+    "bindArtifactDigest": true,
+    "requireCurrentQualification": true,
+    "staleWitness": "reject"
+  },
+  "surfaces": [
+    {
+      "name": "documentation-atlas",
+      "class": "cross-time",
+      "classes": [
+        "integration-time",
+        "cross-time"
+      ],
+      "description": "Canonical public Xinfa Documentation Atlas",
+      "weldRationale": "Buildchain attests exact bytes while Xinfa remains the documentation compiler authority.",
+      "sourcePath": ".xinfa/baselines/sha256/a59d5ff50ac80f8046b656c692f53f43a181ff5de9563448cbedd86c8ddfedd8/atlas.json",
+      "artifactPath": "agent/documentation/atlas.json",
+      "sourceSha256": "3bc5f984221cd6088675c7286b5175c754b52638ddea7221210297173e1ad292",
+      "expectedSha256": "3bc5f984221cd6088675c7286b5175c754b52638ddea7221210297173e1ad292",
+      "byteForByte": true,
+      "impactProjection": {
+        "breaking": "root mismatch or missing packaged bytes rejects the old passport",
+        "additive": "successor Atlas requires a successor witness and passport",
+        "none": "byte-identical artifact retains the declared root",
+        "unclassifiable": "fail closed pending a new Xinfa qualification"
+      }
+    },
+    {
+      "name": "documentation-context-pack",
+      "class": "cross-time",
+      "classes": [
+        "integration-time",
+        "cross-time"
+      ],
+      "description": "Compatibility Context Pack embedded by the canonical Atlas",
+      "weldRationale": "Buildchain attests exact bytes while Xinfa remains the documentation compiler authority.",
+      "sourcePath": ".xinfa/baselines/sha256/a59d5ff50ac80f8046b656c692f53f43a181ff5de9563448cbedd86c8ddfedd8/compatibility/context-pack-v1/pack.json",
+      "artifactPath": "agent/documentation/compatibility/context-pack-v1/pack.json",
+      "sourceSha256": "3e102839cd16ec8b993b7b5db195d3c226dd42f3fcb44aa84a7697acfe25aa87",
+      "expectedSha256": "3e102839cd16ec8b993b7b5db195d3c226dd42f3fcb44aa84a7697acfe25aa87",
+      "byteForByte": true,
+      "impactProjection": {
+        "breaking": "root mismatch or missing packaged bytes rejects the old passport",
+        "additive": "successor Atlas requires a successor witness and passport",
+        "none": "byte-identical artifact retains the declared root",
+        "unclassifiable": "fail closed pending a new Xinfa qualification"
+      }
+    },
+    {
+      "name": "documentation-atlas-manifest",
+      "class": "cross-time",
+      "classes": [
+        "integration-time",
+        "cross-time"
+      ],
+      "description": "Manifest binding every packaged Atlas artifact byte",
+      "weldRationale": "Buildchain attests exact bytes while Xinfa remains the documentation compiler authority.",
+      "sourcePath": ".xinfa/baselines/sha256/a59d5ff50ac80f8046b656c692f53f43a181ff5de9563448cbedd86c8ddfedd8/manifest.json",
+      "artifactPath": "agent/documentation/manifest.json",
+      "sourceSha256": "08d7401190832cc673cabe6c75b509ae99de045c386779e8f30fa9a2ae033ca8",
+      "expectedSha256": "08d7401190832cc673cabe6c75b509ae99de045c386779e8f30fa9a2ae033ca8",
+      "byteForByte": true,
+      "impactProjection": {
+        "breaking": "root mismatch or missing packaged bytes rejects the old passport",
+        "additive": "successor Atlas requires a successor witness and passport",
+        "none": "byte-identical artifact retains the declared root",
+        "unclassifiable": "fail closed pending a new Xinfa qualification"
+      }
+    },
+    {
+      "name": "documentation-pack-selector",
+      "class": "cross-time",
+      "classes": [
+        "integration-time",
+        "cross-time"
+      ],
+      "description": "Product-owned immutable selector for the shipped Atlas root",
+      "weldRationale": "Buildchain attests exact bytes while Xinfa remains the documentation compiler authority.",
+      "sourcePath": ".xinfa/product-documentation-pack.json",
+      "artifactPath": "agent/documentation-selector.json",
+      "sourceSha256": "cf79c48d1896d5554037cc03c138f604ff9344b180ab855920a26dcd5fc7fbee",
+      "expectedSha256": "cf79c48d1896d5554037cc03c138f604ff9344b180ab855920a26dcd5fc7fbee",
+      "byteForByte": true,
+      "impactProjection": {
+        "breaking": "root mismatch or missing packaged bytes rejects the old passport",
+        "additive": "successor Atlas requires a successor witness and passport",
+        "none": "byte-identical artifact retains the declared root",
+        "unclassifiable": "fail closed pending a new Xinfa qualification"
+      }
+    }
+  ],
+  "evidence": [
+    {
+      "kind": "xinfa-atlas-receipt",
+      "path": ".xinfa/baselines/sha256/a59d5ff50ac80f8046b656c692f53f43a181ff5de9563448cbedd86c8ddfedd8/receipt.json"
+    },
+    {
+      "kind": "product-pack-selector",
+      "path": ".xinfa/product-documentation-pack.json"
+    },
+    {
+      "kind": "runtime-verifier",
+      "path": "framework/core/src/python/kungfu/agent/documentation.py"
+    },
+    {
+      "kind": "qualification-matrix",
+      "path": "docs/qualification/documentation-control-plane.json"
+    },
+    {
+      "kind": "qualification-receipt",
+      "path": "docs/qualification/documentation-control-plane.receipt.json"
+    }
+  ]
+}

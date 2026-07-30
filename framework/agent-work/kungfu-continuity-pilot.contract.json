@@ -1,0 +1,57 @@
+{
+  "schema": "kungfu.continuity-pilot.contract/v1",
+  "id": "kungfu-continuity-pilot-v1",
+  "version": 1,
+  "purpose": "Exercise the continuity evidence pipeline with one bounded disposable fixture without claiming a long-task product comparison.",
+  "evidenceClass": "preparatory",
+  "publicOutcome": "Keep the work when the chat ends.",
+  "budget": {
+    "wallTimeSeconds": 60,
+    "attemptsPerPath": 1,
+    "fixtureFamilies": 1
+  },
+  "paths": ["baseline", "kungfu"],
+  "resetBoundary": {
+    "method": "fresh deterministic worker invocation over a disposable copy",
+    "hiddenTranscriptAllowed": false,
+    "privateSessionStoreAllowed": false,
+    "baselineContinuationInput": "none",
+    "kungfuContinuationInput": "one public durable continuation fact produced before reset"
+  },
+  "requiredReportFields": [
+    "schema",
+    "runIdentity",
+    "artifactSource",
+    "fixture",
+    "path",
+    "provider",
+    "reset",
+    "measurements",
+    "oracle",
+    "evidenceCitations",
+    "limitations",
+    "evidenceClass",
+    "verdict"
+  ],
+  "verdicts": ["pass", "fail", "degraded", "unsupported"],
+  "animation": {
+    "durationSeconds": {"minimum": 25, "maximum": 40},
+    "inputs": ["public-safe projection", "raw evidence index"],
+    "requiredOutputs": ["storyboard", "timing", "data bindings", "redaction rules", "static fallback", "desktop framing", "mobile framing", "How this was tested"],
+    "noDataBehavior": "fail closed to the truthful static fallback"
+  },
+  "negativeRules": [
+    "reject hidden transcript injection",
+    "reject different task or initial tree roots",
+    "reject missing baseline identity",
+    "reject missing oracle",
+    "reject fabricated public metric",
+    "reject one-minute smoke evidence presented as FO10"
+  ],
+  "nonClaims": [
+    "No model or provider performance advantage is measured.",
+    "No full matched long-task comparison is run.",
+    "No FO10 pass, market leadership, retention improvement, or production recovery is claimed.",
+    "The deterministic worker proves the fixture, reset, report, projection, and animation-input chain only."
+  ]
+}

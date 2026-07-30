@@ -1,5 +1,5 @@
-import { defineConfig, externalizeDepsPlugin } from 'electron-vite';
 import react from '@vitejs/plugin-react';
+import { defineConfig, externalizeDepsPlugin } from 'electron-vite';
 
 // - main: externalize deps so the native binding is never bundled; it is loaded
 //   via require() at runtime from kungfu-core's dist/kungfu.

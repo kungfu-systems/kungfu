@@ -1,0 +1,22 @@
+{
+  "schema": "kungfu.surface-qualification.fixture/v1",
+  "cli": {
+    "required_steps": ["init", "record", "query", "verify", "export", "agent_discovery"],
+    "forbidden_entries": ["@kungfu-tech/gui", "electron"]
+  },
+  "gui": {
+    "operations": [
+      { "id": "inspect", "capability": "storage.inspectEpisode", "lower_expression": "kungfu storage episode inspect" },
+      { "id": "timeline", "capability": "storage.episodes", "lower_expression": "kungfu storage episode list" },
+      { "id": "query", "capability": "storage.query", "lower_expression": "kungfu storage query" },
+      { "id": "repair", "capability": "storage.repairPlan", "lower_expression": "kungfu storage repair --plan --dry-run" },
+      { "id": "export", "capability": "storage.exportBundle", "lower_expression": "kungfu storage export" }
+    ],
+    "authority": "native storage service"
+  },
+  "assembled": {
+    "compatibility_schema": "kungfu.product.compatibility/v1",
+    "required_components": ["native_contract", "native_build", "sdk_contract", "sdk_fixture", "tui_bundle", "extensions", "gui_bundle"],
+    "preserved_lower_contracts": ["layer_matrix", "surface_fixture"]
+  }
+}

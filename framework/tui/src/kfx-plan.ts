@@ -1,4 +1,4 @@
-// The TUI host's half of dual-entry kfx loading (ADR-0017): discover + decide
+// The TUI host's half of dual-entry kfx loading (KF-ADR-019f86da-4f90-7afa-a1e1-0510f00916be): discover + decide
 // with the SAME host-agnostic planKfx the gui uses, so both hosts reach an
 // identical trust/tier verdict for the same kfx — the "one load rule, two hosts"
 // the ADR pins. The only difference from the gui is where the fs/path/crypto

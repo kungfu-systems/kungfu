@@ -1,5 +1,5 @@
 // Reflection decoder for open-layer schemas. A kfx author compiles a `.fbs`
-// into a `.bfbs` at runtime (`kungfu schema compile`) and registers it into a
+// into a `.bfbs` at runtime (`kungfu dev schema compile`) and registers it into a
 // run; on this side there is no generated accessor for that schema, so events
 // are decoded by walking the `.bfbs` reflection schema over the raw payload —
 // the TS analogue of the core's Python BundleDecoder. Same fact, third surface:

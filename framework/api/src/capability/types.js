@@ -2,7 +2,7 @@
 // TypeScript resolves `./types.js` to `types.ts`; Node needs a real JS module.
 export {
   bigintSafe,
-  categoryName,
+  roleName,
   modeName,
   resolveRuntimeDir,
   toSerializable,

@@ -1,0 +1,61 @@
+{
+  "schema": "kungfu.agent-work-profile-fixtures/v1",
+  "cases": [
+    {
+      "path": "valid/simple-session.json",
+      "ok": true
+    },
+    {
+      "path": "valid/attenuated-warrant.json",
+      "ok": true
+    },
+    {
+      "path": "valid/context-insufficiency-authorized.json",
+      "ok": true
+    },
+    {
+      "path": "valid/context-insufficiency-denied.json",
+      "ok": true
+    },
+    {
+      "path": "invalid/revoked-warrant-valid-binding.json",
+      "ok": false,
+      "codes": ["binding-warrant-not-active"]
+    },
+    {
+      "path": "invalid/stale-atlas-valid-binding.json",
+      "ok": false,
+      "codes": ["binding-atlas-not-current"]
+    },
+    {
+      "path": "invalid/missing-root-binding.json",
+      "ok": false,
+      "codes": ["binding-pursuit-root-missing"]
+    },
+    {
+      "path": "invalid/warrant-amplification.json",
+      "ok": false,
+      "codes": [
+        "warrant-action-amplification",
+        "warrant-resource-amplification",
+        "warrant-target-amplification",
+        "warrant-time-amplification",
+        "warrant-consequence-amplification"
+      ]
+    },
+    {
+      "path": "invalid/non-advancing-valid-binding.json",
+      "ok": false,
+      "codes": ["binding-action-not-advancing"]
+    },
+    {
+      "path": "invalid/unsupported-valid-binding.json",
+      "ok": false,
+      "codes": ["binding-action-unsupported"]
+    }
+  ],
+  "contextInsufficiencyPair": [
+    "valid/context-insufficiency-authorized.json",
+    "valid/context-insufficiency-denied.json"
+  ]
+}

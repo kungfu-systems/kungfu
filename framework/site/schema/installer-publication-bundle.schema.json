@@ -1,0 +1,85 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://core.libkungfu.dev/schema/installer-publication-bundle-v1.json",
+  "title": "Kungfu installer publication bundle",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "package",
+    "identity",
+    "distribution",
+    "routes",
+    "cachePolicy",
+    "assets",
+    "bundleRoot"
+  ],
+  "properties": {
+    "schema": {
+      "const": "kungfu.installer-publication-bundle/v1"
+    },
+    "package": {
+      "type": "object",
+      "required": ["name", "version"]
+    },
+    "identity": {
+      "type": "object",
+      "required": [
+        "channel",
+        "version",
+        "sourceCommit",
+        "releaseSha",
+        "releaseTag",
+        "channelPayloadRoot",
+        "channelFileDigest",
+        "releasePassport"
+      ]
+    },
+    "routes": {
+      "type": "object",
+      "required": ["friendly", "immutablePath"]
+    },
+    "distribution": {
+      "type": "object",
+      "required": ["repository", "releaseBaseUrl", "manifestAsset"]
+    },
+    "cachePolicy": {
+      "type": "object",
+      "required": ["friendly", "immutable"]
+    },
+    "assets": {
+      "type": "array",
+      "minItems": 7,
+      "maxItems": 7,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "path",
+          "role",
+          "contentType",
+          "size",
+          "digest",
+          "releaseAsset",
+          "releaseUrl"
+        ],
+        "properties": {
+          "path": { "type": "string", "minLength": 1 },
+          "role": { "type": "string", "minLength": 1 },
+          "contentType": { "type": "string", "minLength": 1 },
+          "size": { "type": "integer", "minimum": 1 },
+          "digest": {
+            "type": "string",
+            "pattern": "^sha256:[a-f0-9]{64}$"
+          },
+          "releaseAsset": { "type": "string", "minLength": 1 },
+          "releaseUrl": { "type": "string", "format": "uri" }
+        }
+      }
+    },
+    "bundleRoot": {
+      "type": "string",
+      "pattern": "^sha256:[a-f0-9]{64}$"
+    }
+  }
+}

@@ -7,6 +7,7 @@ import re
 import sys
 import tokenize
 
+from kungfu import host
 from kungfu.cli import bridging
 
 
@@ -153,7 +154,8 @@ def main(argv, **options):
     if argv:
         sys.argv = [sys.executable, *argv[1:]]
         __file__ = str(os.path.abspath(argv[0]))
-        dist_root = str(os.path.dirname(sys.executable))
+        root = host.product_root()
+        dist_root = str(root) if root is not None else os.path.dirname(sys.executable)
         if __file__.startswith(dist_root):
             module_name = (
                 __file__.replace(dist_root, "")

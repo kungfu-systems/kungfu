@@ -1,0 +1,21 @@
+{
+  "schema": "kungfu.continuity-pilot-fixture/v1",
+  "id": "tiny-inventory-repository-v1",
+  "task": "Inspect the repository inventory, preserve the completed inspection across a reset, then write inventory-summary.md with the exact oracle text.",
+  "initialTree": {
+    "inventory/items.json": "{\n  \"items\": [\"alpha\", \"beta\", \"gamma\"]\n}\n",
+    "README.md": "# Tiny inventory fixture\n\nUse inventory/items.json as the only inventory authority.\n"
+  },
+  "phaseOne": {
+    "durableFact": {
+      "schema": "kungfu.continuity-pilot-fact/v1",
+      "completed": "inventory-inspected",
+      "itemCount": 3,
+      "nextAction": "write-inventory-summary"
+    }
+  },
+  "oracle": {
+    "path": "inventory-summary.md",
+    "content": "# Inventory summary\n\nItems: alpha, beta, gamma\nCount: 3\n"
+  }
+}

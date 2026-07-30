@@ -1,0 +1,7 @@
+{
+  "schema": "kungfu.profile-qualification/v1",
+  "checks": [
+    "content-closure",
+    "runtime-contract"
+  ]
+}

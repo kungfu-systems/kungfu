@@ -13,11 +13,6 @@ macro(use_node_addon_api)
   message(STATUS "Include node-addon-api headers from [${NODE_ADDON_API_DIR}]")
   message(STATUS "Include node-js headers from [${CMAKE_JS_INC}]")
 
-  include_directories(${NODE_ADDON_API_DIR})
-  include_directories(${CMAKE_JS_INC})
-
-  add_compile_definitions(NAPI_EXPERIMENTAL)
-  add_compile_definitions(NAPI_VERSION=8)
 endmacro(use_node_addon_api)
 
 macro(use_libnode)
@@ -41,9 +36,6 @@ macro(use_libnode)
 
   message(STATUS "Include libnode headers from ${LIBNODE_INCLUDE_DIR}")
 
-  include_directories(${LIBNODE_INCLUDE_DIR})
-  link_directories(${LIBNODE_LIB_DIR})
-
   if (WIN32)
     set(LIBNODE "libnode")
   else()
@@ -55,11 +47,20 @@ macro(build_node_binding BINDING_NAME BINDING_SOURCE_FILES)
   message(STATUS "Configuring for node binding ${BINDING_NAME}")
   add_library(${BINDING_NAME} SHARED ${BINDING_SOURCE_FILES})
   set_target_properties(${BINDING_NAME} PROPERTIES PREFIX "" SUFFIX ".node")
+  target_include_directories(${BINDING_NAME} SYSTEM PRIVATE
+    ${NODE_ADDON_API_DIR} ${CMAKE_JS_INC} ${LIBNODE_INCLUDE_DIR})
+  target_compile_definitions(${BINDING_NAME} PRIVATE
+    NAPI_EXPERIMENTAL NAPI_VERSION=8 NODE_ADDON_API_CPP_EXCEPTIONS)
+  target_compile_options(${BINDING_NAME} PRIVATE
+    "$<$<CONFIG:Release>:${COMPILER_OPTIMIZE_OFF_OPTIONS}>")
+  target_link_directories(${BINDING_NAME} PRIVATE ${LIBNODE_LIB_DIR})
   # optional link libs passed as ${ARGN}
-  target_link_libraries(${BINDING_NAME} ${LIBKUNGFU_NAME} ${CMAKE_JS_LIB} ${ARGN})
+  target_link_libraries(${BINDING_NAME} PRIVATE
+    ${LIBKUNGFU_NAME} kungfu_compile_contract ${CMAKE_JS_LIB} ${ARGN})
+  kungfu_strip_release_local_symbols(${BINDING_NAME})
   if (WIN32)
     # /DELAYLOAD:NODE.EXE needs the delay-load helper (__delayLoadHelper2) from delayimp.lib;
     # without it the electron-runtime binding (drone.node) fails to link (LNK2001).
-    target_link_libraries(${BINDING_NAME} delayimp)
+    target_link_libraries(${BINDING_NAME} PRIVATE delayimp)
   endif ()
 endmacro(build_node_binding)

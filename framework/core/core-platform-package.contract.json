@@ -1,0 +1,93 @@
+{
+  "schema": "kungfu.core-platform-package/v1",
+  "package": "@kungfu-tech/core",
+  "platformPackages": [
+    {
+      "key": "darwin-arm64",
+      "name": "@kungfu-tech/core-darwin-arm64",
+      "os": ["darwin"],
+      "cpu": ["arm64"]
+    },
+    {
+      "key": "linux-x64",
+      "name": "@kungfu-tech/core-linux-x64",
+      "os": ["linux"],
+      "cpu": ["x64"]
+    },
+    {
+      "key": "linux-arm64",
+      "name": "@kungfu-tech/core-linux-arm64",
+      "os": ["linux"],
+      "cpu": ["arm64"]
+    },
+    {
+      "key": "win32-x64",
+      "name": "@kungfu-tech/core-win32-x64",
+      "os": ["win32"],
+      "cpu": ["x64"]
+    }
+  ],
+  "mainPackage": {
+    "platformNeutralOnly": true,
+    "compressedHardCeilingBytes": 102400,
+    "requiredPaths": [
+      "lib/index.js",
+      "lib/index.d.ts",
+      "lib/kungfu-cli.js",
+      "lib/platform-packages.js",
+      "package.json"
+    ]
+  },
+  "platformPayload": {
+    "authorityPath": "dist/kungfu",
+    "requiredPathPatterns": [
+      "^dist/kungfu/kungfu(?:\\.exe)?$",
+      "^dist/kungfu/kungfu_node\\.node$",
+      "^dist/kungfu/(?:lib)?kungfu(?:_runtime)?\\.(?:dylib|so|dll)$",
+      "^dist/kungfu/libnode(?:(?:\\.[0-9]+)?\\.dylib|\\.so(?:\\.[0-9]+)?|\\.dll)$",
+      "^dist/kungfu/config/kungfu-runtime\\.contract\\.json$",
+      "^dist/kungfu/python/kungfu-host\\.json$",
+      "^dist/kungfu/python/(?:bin/python3|python\\.exe)$",
+      "^dist/kungfu/libwasm/contract\\.json$"
+    ],
+    "retainedOptionalPaths": [
+      "dist/kungfu/kungfu_electron.node",
+      "dist/kungfu/kungfu-kfd-agent-runtime",
+      "dist/kungfu/kungfu-kfd-agent-runtime.exe",
+      "dist/kungfu/kungfu-trunk",
+      "dist/kungfu/kungfu-trunk.exe",
+      "dist/kungfu/kungfu-wasm-host",
+      "dist/kungfu/kungfu-wasm-host.exe",
+      "dist/kungfu/runtime-pins.env"
+    ],
+    "excludedPathPrefixes": [
+      "dist/kungfu/wheels/"
+    ],
+    "excludedPathSegments": [
+      "__pycache__",
+      "tests"
+    ],
+    "excludedBasenamePatterns": [
+      "^pykungfu(?:\\.|$)",
+      "\\.whl$",
+      "\\.pyc$",
+      "\\.pdb$",
+      "\\.dSYM$",
+      "\\.(?:a|exp|lib|o|obj)$",
+      "^BUILD$"
+    ]
+  },
+  "sizePolicy": {
+    "compressedHardCeilingBytes": 104857600,
+    "compressedNormalCeilingBytes": 89128960,
+    "compressedOptimizationTargetBytes": 73400320,
+    "hardCeilingExceptionRequiresReview": true
+  },
+  "publication": {
+    "sourceDirectoryPublishAllowed": false,
+    "installTimeDownloadAllowed": false,
+    "installTimeSourceBuildAllowed": false,
+    "artifactAuthority": "exact-staged-buildchain-tarball-by-sha256",
+    "authentication": "npm-trusted-publishing-oidc"
+  }
+}

@@ -1,0 +1,36 @@
+{
+  "schema": "xinfa.episode-provider-submission/v1",
+  "provider": "git-workspace-jsonl/v1",
+  "providerId": "kungfu.agent-progress-live-observability",
+  "root": "repository",
+  "beforeAtlasRoot": "sha256:9b61b25bd0f7fc1f047f89c4be4e30472616eda903e2fbe8c4d32f9c4d45d132",
+  "resultCut": {
+    "id": "kungfu.dev-v4-v4.0.agent-progress-live-observability"
+  },
+  "episodes": [
+    {
+      "id": "episode.agent-progress-live-observability",
+      "manifestPath": ".kungfu/episodes/sealed/sha256/78/78dd0a006e32a6b709f0b0d2e0749567ff62be08c4f00f97ef7f4b525932a556/manifest.json",
+      "claimsPath": ".kungfu/episodes/sealed/sha256/78/78dd0a006e32a6b709f0b0d2e0749567ff62be08c4f00f97ef7f4b525932a556/claims.jsonl",
+      "qualificationPath": ".kungfu/episodes/sealed/sha256/78/78dd0a006e32a6b709f0b0d2e0749567ff62be08c4f00f97ef7f4b525932a556/qualification.json",
+      "semanticRoot": "sha256:78dd0a006e32a6b709f0b0d2e0749567ff62be08c4f00f97ef7f4b525932a556",
+      "providerRoot": "sha256:f89fa4281955396638727f2ee841c600077008e5d110b9a7068fc7eb1c72aa8a",
+      "qualificationRoot": "sha256:bc593854a588fd9531d3e7c57f5b39fb8b2478735f5bf5f748dd467ff673aae7",
+      "visibility": "public"
+    }
+  ],
+  "units": [
+    {
+      "id": "kungfu.evidence.agent-progress-live-observability",
+      "type": "proof-ref",
+      "episode": "episode.agent-progress-live-observability",
+      "recordIndex": 1,
+      "dependsOn": [],
+      "routes": [
+        "kungfu-xinfa-dogfood.agent",
+        "kungfu-xinfa-dogfood.human"
+      ]
+    }
+  ],
+  "edges": []
+}

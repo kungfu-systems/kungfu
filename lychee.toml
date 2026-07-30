@@ -1,0 +1,6 @@
+cache = true
+max_cache_age = "1d"
+max_retries = 3
+timeout = 20
+exclude_all_private = true
+exclude_path = ["framework/core/.deps", "node_modules"]

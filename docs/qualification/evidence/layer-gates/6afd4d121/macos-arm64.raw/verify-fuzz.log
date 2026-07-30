@@ -1,0 +1,141 @@
+warning: --using-file is deprecated. This is now the default.
+warning: --using-file is deprecated. This is now the default.
+warning: --using-file is deprecated. This is now the default.
+$ node scripts/require-shifu.mjs verify && node scripts/verify.mjs --fuzz
+[verify] kungfu build-chain verification — expected version 4.0.0-alpha.0
+[verify] mode: quick (assert existing artifacts only) + Episode qualification
+
+[verify] stage 0: Shifu entry contract
+  ✅ Shifu entry contract — participant commands enter through Shifu
+
+[verify] stage 0a: no-bash script guard
+  ✅ no-bash script guard — gates are Node-only (cross-platform)
+\n[verify] stage 0aa: Kungfu Gate catalog
+  ✅ Kungfu Gate catalog — registry, docs, matrix and workflows align
+
+[verify] stage 0b: python type check (mypy)
+  ✅ python type check — mypy baseline clean
+
+[verify] stage 0c: agent onboarding pack
+  ✅ agent onboarding pack — ok (13 files, 128 commands)
+
+[verify] stage 0d: KFD-2 release claims registry
+  ✅ KFD-2 release claims registry — kfd 2 product-claims check: ok (3 claims, current)
+
+[verify] stage 0e: Buildchain KFD release evidence
+  ✅ Buildchain KFD release evidence — [kfd] ok: KFD-1 witness, 3 KFD-2 claim(s), 113 KFD-3 surface(s)
+
+[verify] stage 0: toolchain preflight
+  ✅ uv available — uv 0.11.23 (Homebrew 2026-06-19 aarch64-apple-darwin)
+  ✅ node version pinned — v22.22.3
+
+[verify] stage 2: kungfu artifact assertions
+  ✅ dist/kungfu directory exists — framework/core/dist/kungfu
+  ✅ contract registry artifact hash — framework/core/dist/kungfu/config/kungfu-contracts.registry.json sha256:19c8d64633b14b805bebb7f7028ddfb69062564b939dd97cd22fe86b5e93422d
+  ✅ agent-first canonical policy artifact hash — framework/core/dist/kungfu/config/kungfu-agent-first-canonical-policy.json sha256:d282e928dce9bc825199a8f4a0165774cffb664c7fbb4638f07bbd3b91125212
+  ✅ config contract artifact hash — framework/core/dist/kungfu/config/kungfu-config.contract.json sha256:6039f76c32cdfd83ac88de1b5457641ff6d2f05cad56d51e509c1f03b09c9180
+  ✅ kfx contract artifact hash — framework/core/dist/kungfu/config/kungfu-kfx.contract.json sha256:fd5e7cac22b448f7b50ae38b72e445b41facffc6b4c7f540ee5f459e7a14bf04
+  ✅ skill contract artifact hash — framework/core/dist/kungfu/config/kungfu-skill.contract.json sha256:fb6fbc59557ac8448226f5ed8b97fd71fcf202742e896bb06e2831abeedc2a52
+  ✅ skill source schema artifact hash — framework/core/dist/kungfu/config/skill/schema/skill.schema.json sha256:e472b12d3f478c9d6d50947f51d609dc282d897171c5919905e42c0fb68e3648
+  ✅ skill catalog schema artifact hash — framework/core/dist/kungfu/config/skill/schema/skill-catalog.schema.json sha256:d2989217be6d039ef9545d1d7c04dc5fd9eb9c40662d0e1a9f39e3a08cb6f033
+  ✅ skill context schema artifact hash — framework/core/dist/kungfu/config/skill/schema/skill-context.schema.json sha256:bedaf677ba0287e2c5d4e4288a72d8d041c2c20b909563947d0c2c17eb6d41fa
+  ✅ skill dependency schema artifact hash — framework/core/dist/kungfu/config/skill/schema/skill-dependencies.schema.json sha256:d372b9804e752d2ad5d1e9a1ada0f5adf826c11a6bb988ca59f1b13f64e8cf05
+  ✅ skill manager schema artifact hash — framework/core/dist/kungfu/config/skill/schema/skill-manager.schema.json sha256:f6ca473c9104f1f34dbabe29973da4e7734181c5ce9dba8919a8f3fd89e8f106
+  ✅ production libwasm artifact — 6 required files
+  ✅ production libwasm metering — wasmtime=0 wasmer=0
+  ✅ production libwasm execution receipts — wasmtime=1 wasmer=1
+  ✅ kungfu executable exists — framework/core/dist/kungfu/kungfu
+  ✅ assembled runtime tree well-formed — framework/core/dist/kungfu/python
+
+[verify] stage 2b: C++ extension probe artifact
+  (skipped: no cpp probe artifact; build it with 'pnpm --filter @kungfu-tech/examples-probe-cpp run build' or --full)
+
+[verify] stage 2c: Python AOT extension probe artifact
+  (skipped: no python probe artifact; build it with 'pnpm --filter @kungfu-tech/examples-probe-python run build' or --full)
+
+[verify] stage 3: kungfu runtime smoke (kungfu --version)
+  ✅ kungfu runtime smoke — --version contains 4.0.0-alpha.0
+  ✅ kungfu config contract smoke — sha256:6039f76c32cdfd83ac88de1b5457641ff6d2f05cad56d51e509c1f03b09c9180
+  ✅ kungfu kfx contract smoke — sha256:fd5e7cac22b448f7b50ae38b72e445b41facffc6b4c7f540ee5f459e7a14bf04
+  ✅ kungfu skill contract smoke — sha256:fb6fbc59557ac8448226f5ed8b97fd71fcf202742e896bb06e2831abeedc2a52
+  ✅ kungfu contract registry smoke — 3 contracts verified
+
+[verify] stage 3b: Episode qualification (mvp-smoke-v1)
+  ✅ Episode qualification smoke — 5/5 scale scenarios; 9/9 required semantic dimensions; busy=1304; qualified=true
+
+[verify] stage 7: kungfu::view memory safety (ASan/UBSan + fuzz)
+-- The CXX compiler identification is AppleClang 21.0.0.21000101
+-- Detecting CXX compiler ABI info
+-- Detecting CXX compiler ABI info - done
+-- Check for working CXX compiler: /usr/bin/c++ - skipped
+-- Detecting CXX compile features
+-- Detecting CXX compile features - done
+-- Conan: Component target declared 'flatbuffers::libflatbuffers'
+-- Conan: Target declared 'flatbuffers::flatbuffers'
+-- Conan: Including build module from '/Users/dkr/.conan2/p/b/flatb8b96de27f05d9/p/lib/cmake/FlatcTargets.cmake'
+-- Conan: Including build module from '/Users/dkr/.conan2/p/b/flatb8b96de27f05d9/p/lib/cmake/BuildFlatBuffers.cmake'
+-- Found flatbuffers: 25.9.23 (found version "25.9.23")
+-- Conan: Component target declared 'SQLite::SQLite3'
+-- Found SQLite3: 3.39.2 (found version "3.39.2")
+-- Configuring done (0.5s)
+-- Generating done (0.0s)
+-- Build files have been written to: /Users/dkr/Worktrees/kungfu/review/codex/layer-gate-budget-macos-authoritative/framework/core/build-sanitize
+[  8%] Building CXX object CMakeFiles/fuzz_compile_schema_sanitize.dir/fuzz_compile_schema.cpp.o
+[ 16%] Building CXX object CMakeFiles/fuzz_compile_schema_sanitize.dir/StandaloneFuzzMain.cpp.o
+[ 25%] Building CXX object CMakeFiles/fuzz_compile_schema_sanitize.dir/Users/dkr/Worktrees/kungfu/review/codex/layer-gate-budget-macos-authoritative/framework/core/src/libkungfu/src/view/schema.cpp.o
+[ 33%] Linking CXX executable fuzz_compile_schema_sanitize
+[ 33%] Built target fuzz_compile_schema_sanitize
+[ 41%] Building CXX object CMakeFiles/fuzz_from_bytes_sanitize.dir/fuzz_from_bytes.cpp.o
+[ 50%] Building CXX object CMakeFiles/fuzz_from_bytes_sanitize.dir/StandaloneFuzzMain.cpp.o
+[ 58%] Building CXX object CMakeFiles/fuzz_from_bytes_sanitize.dir/Users/dkr/Worktrees/kungfu/review/codex/layer-gate-budget-macos-authoritative/framework/core/src/libkungfu/src/view/schema.cpp.o
+[ 66%] Linking CXX executable fuzz_from_bytes_sanitize
+[ 66%] Built target fuzz_from_bytes_sanitize
+[ 75%] Building CXX object CMakeFiles/fuzz_bind_frame_sanitize.dir/fuzz_bind_frame.cpp.o
+[ 83%] Building CXX object CMakeFiles/fuzz_bind_frame_sanitize.dir/StandaloneFuzzMain.cpp.o
+[ 91%] Building CXX object CMakeFiles/fuzz_bind_frame_sanitize.dir/Users/dkr/Worktrees/kungfu/review/codex/layer-gate-budget-macos-authoritative/framework/core/src/libkungfu/src/view/schema.cpp.o
+[100%] Linking CXX executable fuzz_bind_frame_sanitize
+[100%] Built target fuzz_bind_frame_sanitize
+  ✅ view ASan/UBSan build — KUNGFU_WITH_SANITIZERS=ON
+  ✅ view ASan replay bind_frame — corpus clean under ASan+UBSan
+  ✅ view ASan replay compile_schema — corpus clean under ASan+UBSan
+  ✅ view ASan replay from_bytes — corpus clean under ASan+UBSan
+-- The CXX compiler identification is Clang 22.1.6
+-- Detecting CXX compiler ABI info
+-- Detecting CXX compiler ABI info - done
+-- Check for working CXX compiler: /opt/homebrew/opt/llvm/bin/clang++ - skipped
+-- Detecting CXX compile features
+-- Detecting CXX compile features - done
+-- Conan: Component target declared 'flatbuffers::libflatbuffers'
+-- Conan: Target declared 'flatbuffers::flatbuffers'
+-- Conan: Including build module from '/Users/dkr/.conan2/p/b/flatb8b96de27f05d9/p/lib/cmake/FlatcTargets.cmake'
+-- Conan: Including build module from '/Users/dkr/.conan2/p/b/flatb8b96de27f05d9/p/lib/cmake/BuildFlatBuffers.cmake'
+-- Found flatbuffers: 25.9.23 (found version "25.9.23")
+-- Conan: Component target declared 'SQLite::SQLite3'
+-- Found SQLite3: 3.39.2 (found version "3.39.2")
+-- Performing Test KUNGFU_LIBFUZZER_OK
+-- Performing Test KUNGFU_LIBFUZZER_OK - Success
+-- Configuring done (1.1s)
+-- Generating done (0.0s)
+-- Build files have been written to: /Users/dkr/Worktrees/kungfu/review/codex/layer-gate-budget-macos-authoritative/framework/core/build-fuzz
+[ 11%] Building CXX object CMakeFiles/fuzz_compile_schema.dir/fuzz_compile_schema.cpp.o
+[ 22%] Building CXX object CMakeFiles/fuzz_compile_schema.dir/Users/dkr/Worktrees/kungfu/review/codex/layer-gate-budget-macos-authoritative/framework/core/src/libkungfu/src/view/schema.cpp.o
+[ 33%] Linking CXX executable fuzz_compile_schema
+[ 33%] Built target fuzz_compile_schema
+[ 44%] Building CXX object CMakeFiles/fuzz_from_bytes.dir/fuzz_from_bytes.cpp.o
+[ 55%] Building CXX object CMakeFiles/fuzz_from_bytes.dir/Users/dkr/Worktrees/kungfu/review/codex/layer-gate-budget-macos-authoritative/framework/core/src/libkungfu/src/view/schema.cpp.o
+[ 66%] Linking CXX executable fuzz_from_bytes
+[ 66%] Built target fuzz_from_bytes
+[ 77%] Building CXX object CMakeFiles/fuzz_bind_frame.dir/fuzz_bind_frame.cpp.o
+[ 88%] Building CXX object CMakeFiles/fuzz_bind_frame.dir/Users/dkr/Worktrees/kungfu/review/codex/layer-gate-budget-macos-authoritative/framework/core/src/libkungfu/src/view/schema.cpp.o
+[100%] Linking CXX executable fuzz_bind_frame
+[100%] Built target fuzz_bind_frame
+  ✅ view fuzz build — KUNGFU_WITH_FUZZ=ON (3/3 targets)
+  ✅ view fuzz bind_frame — 90s, no crash
+  ✅ view fuzz compile_schema — 90s, no crash
+  ✅ view fuzz from_bytes — 90s, no crash
+
+[verify] result: 39/39 passed
+[verify] ✅ build-chain end-to-end verification passed
+real 326.74
+user 288.24
+sys 22.39

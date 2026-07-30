@@ -15,7 +15,7 @@ inline size_t get_total_size(const py::args &args) {
   return total_size;
 }
 
-void run(const py::args &args, const py::kwargs &kwargs) {
+int run(const py::args &args, const py::kwargs &kwargs) {
   size_t argv_pos = 0;
   size_t argc = args.size();
   char **argv = new char *[argc];
@@ -29,10 +29,11 @@ void run(const py::args &args, const py::kwargs &kwargs) {
     argv_pos += arg.length() + 1;
   }
 
-  node::Start(static_cast<int>(argc), argv);
+  int status = node::Start(static_cast<int>(argc), argv);
 
   delete[] argv_buffer;
   delete[] argv;
+  return status;
 }
 
 void bind(py::module &&m) { m.def("run", &run); }

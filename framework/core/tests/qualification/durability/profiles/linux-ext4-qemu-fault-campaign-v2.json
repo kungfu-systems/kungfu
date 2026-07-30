@@ -1,0 +1,40 @@
+{
+  "schema": "kungfu.durability.fault-campaign-profile/v2",
+  "id": "linux-ext4-qemu-fault-campaign-v2",
+  "host": "agent-120",
+  "platform": "linux",
+  "arch": "x64",
+  "filesystem": "ext4",
+  "durability_profiles": ["durable_group", "durable_sync"],
+  "faults": [
+    {"name": "before_record_write", "minimum": 0, "maximum": 0},
+    {"name": "after_record_write", "minimum": 0, "maximum": 0},
+    {"name": "before_data_sync", "minimum": 0, "maximum": 0},
+    {"name": "after_data_sync", "minimum": 0, "maximum": 0},
+    {"name": "before_checkpoint_write", "minimum": 0, "maximum": 0},
+    {"name": "before_checkpoint_rename", "minimum": 0, "maximum": 0},
+    {"name": "after_checkpoint_rename", "minimum": 0, "maximum": 1},
+    {"name": "before_directory_sync", "minimum": 0, "maximum": 1},
+    {"name": "after_directory_sync", "minimum": 1, "maximum": 1},
+    {"name": "after_receipt", "minimum": 1, "maximum": 1}
+  ],
+  "device_envelopes": [
+    {"id": "raw-none", "data_format": "raw", "cache_mode": "none", "aio_mode": "native"},
+    {"id": "raw-writethrough", "data_format": "raw", "cache_mode": "writethrough", "aio_mode": "threads"},
+    {"id": "raw-writeback", "data_format": "raw", "cache_mode": "writeback", "aio_mode": "threads"},
+    {"id": "qcow2-none", "data_format": "qcow2", "cache_mode": "none", "aio_mode": "native"},
+    {"id": "qcow2-writethrough", "data_format": "qcow2", "cache_mode": "writethrough", "aio_mode": "threads"},
+    {"id": "qcow2-writeback", "data_format": "qcow2", "cache_mode": "writeback", "aio_mode": "threads"}
+  ],
+  "seeds": [104729, 130363, 155921],
+  "required_cycles": 3,
+  "expected_trial_count": 360,
+  "failure_policy": "record-and-continue-without-reusing-workspace",
+  "claims": {
+    "disposable_vm_device_model_campaign": true,
+    "fresh_verification_boot_per_trial": true,
+    "physical_power_loss": false,
+    "physical_device_cache": false,
+    "production_profile_eligible": false
+  }
+}

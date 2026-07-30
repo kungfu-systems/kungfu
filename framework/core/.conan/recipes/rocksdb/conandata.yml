@@ -1,0 +1,21 @@
+sources:
+  "6.29.5":
+    url: "https://codeload.github.com/facebook/rocksdb/tar.gz/da11a59034584ea2d0911268b8136e5249d6b692"
+    tag: "v6.29.5"
+    commit: "da11a59034584ea2d0911268b8136e5249d6b692"
+    sha256: "60cb39e36c463d5c725f3ef254b0ebbaca29ec1a6a3036623bc8aa63746a42a9"
+patches:
+  "6.29.5":
+    - patch_file: "patches/0001-add-include-cstdint-for-gcc-13.patch"
+      patch_description: "include cstdint for GCC 13"
+      patch_type: "portability"
+      patch_source: "https://github.com/facebook/rocksdb/pull/11118"
+    - patch_file: "patches/0002-exclude-thirdparty.patch"
+      patch_description: "do not include vendored third-party configuration"
+      patch_type: "portability"
+    - patch_file: "patches/0003-complete-parallel-compression-before-rep-destruction.patch"
+      patch_description: "instantiate Rep destruction after ParallelCompressionRep is complete"
+      patch_type: "portability"
+    - patch_file: "patches/0004-complete-write-batch-types-before-iterator-destruction.patch"
+      patch_description: "instantiate BaseDeltaIterator destruction after internal iterator types are complete"
+      patch_type: "portability"

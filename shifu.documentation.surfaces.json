@@ -1,0 +1,11 @@
+{
+  "schema": "shifu.documentation-surface-policy-alias/v1",
+  "status": "compatibility-alias",
+  "canonical": ".xinfa/project.json",
+  "semanticAuthority": "xinfa",
+  "materializer": "xinfa project materialize",
+  "owner": "kungfu-docs",
+  "parityGate": "./shifu docs:check",
+  "retirementCondition": "Remove after shifu.documentation.json and every documented consumer select .xinfa/project.json directly for one full v4 prerelease window.",
+  "message": "Deprecated compatibility alias only; this file is not an authority surface. Use the canonical Xinfa semantic project declaration."
+}

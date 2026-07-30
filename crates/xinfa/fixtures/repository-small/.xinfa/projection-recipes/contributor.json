@@ -1,0 +1,15 @@
+{
+  "$schema": "https://xinfa.dev/schema/projection-recipe-v1.schema.json",
+  "schema": "xinfa.projection-recipe/v1",
+  "id": "small.contributor",
+  "surface": "task-chart",
+  "route": "small.agent",
+  "intent": "change and verify the runtime greeting",
+  "role": "implementer",
+  "budget": { "max_tokens": 2048, "max_expansion_hops": 1 },
+  "materialize": {
+    "owned_path": ".xinfa/generated/small.contributor.json",
+    "overwrite_human_prose": false,
+    "provider_input": "excluded"
+  }
+}

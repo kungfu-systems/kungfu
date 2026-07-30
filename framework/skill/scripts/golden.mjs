@@ -93,8 +93,42 @@ assert.equal(resolvedConfig.configHome, configHome);
 assert.equal(resolvedConfig.config.ui.fontSize, 14);
 assert.equal(resolvedConfig.config.ui.scale, 1.0);
 assert.equal(
+  resolvedConfig.config.storage.durability.defaultProfile,
+  'visible',
+);
+assert.match(resolvedConfig.digests.storageDurability, /^sha256:[a-f0-9]{64}$/);
+assert.equal(
   resolvedConfig.config.agent.entrypoint,
   'kungfu agent context --json',
+);
+const workspaceRoot = mkdtempSync(join(tmpdir(), 'kungfu-workspace-config-'));
+const workspaceHome = join(workspaceRoot, '.kungfu');
+mkdirSync(workspaceHome, { recursive: true });
+writeFileSync(
+  join(configHome, 'config.json'),
+  `${JSON.stringify({ storage: { durability: { defaultProfile: 'durable_group' } } })}\n`,
+  'utf8',
+);
+writeFileSync(
+  join(workspaceHome, 'config.json'),
+  `${JSON.stringify({ storage: { durability: { defaultProfile: 'durable_sync' } } })}\n`,
+  'utf8',
+);
+const workspaceResolved = resolveKungfuConfig({
+  runtimeHome: workspaceHome,
+  configHome,
+  env: { PWD: workspaceRoot },
+});
+assert.equal(workspaceResolved.workspaceDataHome, workspaceHome);
+assert.equal(
+  workspaceResolved.config.storage.durability.defaultProfile,
+  'durable_sync',
+);
+assert.equal(workspaceResolved.sources.at(-1)?.type, 'workspace');
+assert.equal(workspaceResolved.sources.at(-1)?.exists, true);
+assert.notEqual(
+  workspaceResolved.digests.storageDurability,
+  resolvedConfig.digests.storageDurability,
 );
 const contractPath = join(root, '..', 'config', 'kungfu-config.contract.json');
 const brokenContract = JSON.parse(readFileSync(contractPath, 'utf8'));
@@ -128,11 +162,12 @@ const home = mkdtempSync(join(tmpdir(), 'kungfu-skill-manager-'));
 const rewindInspectorRoot = join(home, 'extensions', 'rewind-inspector');
 mkdirSync(rewindInspectorRoot, { recursive: true });
 writeFileSync(
-  join(rewindInspectorRoot, 'package.json'),
+  join(rewindInspectorRoot, 'kungfu.kfx.json'),
   `${JSON.stringify(
     {
+      schema: 'kungfu.kfx.manifest/v1',
       name: '@kungfu-tech/kfx-view-rewind-inspector',
-      version: '4.0.0-alpha.0',
+      version: '4.0.0-alpha.1',
       kungfuConfig: {
         key: 'rewind-inspector',
         config: { view: { title: 'Rewind', capabilities: [] } },

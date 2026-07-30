@@ -12,14 +12,14 @@
 
 import fs from 'node:fs';
 import {
-  locate,
-  findBin,
+  assertNoExtraDylibs,
   fail,
-  tmpDir,
+  findBin,
+  jsonField,
+  locate,
   run,
   sha256,
-  jsonField,
-  assertNoExtraDylibs,
+  tmpDir,
 } from '../_harness.mjs';
 
 const { buildDir } = locate(import.meta.url);
@@ -27,10 +27,15 @@ const eventCount = process.argv[3] || '5';
 
 const hostBin = findBin(buildDir, 'fact_ledger_host', 'slices/fact-ledger');
 const exportBin = findBin(buildDir, 'fact_ledger_export', 'slices/fact-ledger');
-if (!hostBin || !exportBin) {
+const actionRecorderBin = findBin(
+  buildDir,
+  'fact_ledger_action_recorder',
+  'slices/fact-ledger',
+);
+if (!hostBin || !exportBin || !actionRecorderBin) {
   fail(
-    `fact_ledger_host / fact_ledger_export not found under ${buildDir}\n` +
-      `build first, e.g.:\n  cmake --build ${buildDir} --target fact_ledger_host fact_ledger_export`,
+    `fact_ledger_host / fact_ledger_export / fact_ledger_action_recorder not found under ${buildDir}\n` +
+      `build first, e.g.:\n  cmake --build ${buildDir} --target fact_ledger_host fact_ledger_export fact_ledger_action_recorder`,
   );
 }
 
@@ -45,12 +50,17 @@ console.log(`== journal root: ${work}`);
 console.log(`== step 1: host writes ${eventCount} events, then exits`);
 run(hostBin, [work, eventCount], { inherit: true });
 
-console.log('\n== step 2: independent export tool reopens the directory');
+console.log(
+  '\n== step 2: action recorder writes and verifies receipt checksums',
+);
+run(actionRecorderBin, [work, eventCount], { inherit: true });
+
+console.log('\n== step 3: independent export tool reopens the host directory');
 run(exportBin, [work, 'fact_ledger_slice', 'host', `${work}/export`], {
   inherit: true,
 });
 
-console.log('\n== step 3: verify whole-segment checksum with a pure-Node hash');
+console.log('\n== step 4: verify whole-segment checksum with a pure-Node hash');
 const declared = jsonField(
   `${work}/export.manifest.json`,
   'event_log',

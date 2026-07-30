@@ -1,0 +1,30 @@
+[
+  {
+    "sequence": 1,
+    "event": "initial-tree-materialized"
+  },
+  {
+    "sequence": 2,
+    "event": "inventory-inspected",
+    "itemCount": 3
+  },
+  {
+    "sequence": 3,
+    "event": "durable-continuation-fact-written",
+    "factRoot": "sha256:42d6d0611b1497de22a98e2e9d292e1edf28e1a68a15c755f260f22429a39bd8"
+  },
+  {
+    "sequence": 4,
+    "event": "fresh-worker-started",
+    "transcriptInjected": false
+  },
+  {
+    "sequence": 5,
+    "event": "continued-from-durable-fact"
+  },
+  {
+    "sequence": 6,
+    "event": "oracle-evaluated",
+    "passed": true
+  }
+]

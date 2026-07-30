@@ -1,0 +1,28 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kungfu.tech/schema/agent-work/warrant-role-v2.json",
+  "title": "Kungfu Agent Work Warrant role body",
+  "type": "object",
+  "required": ["schema", "role", "state", "details", "bindings"],
+  "properties": {
+    "schema": {"const": "kungfu.agent-work.warrant-role/v2"},
+    "role": {"const": "warrant"},
+    "state": {"enum": ["issued", "attenuated", "expired", "revoked", "denied"]},
+    "details": {"type": "object"},
+    "bindings": {"$ref": "#/$defs/bindings"}
+  },
+  "additionalProperties": true,
+  "$defs": {
+    "root": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+    "bindings": {
+      "type": "object",
+      "required": ["actionGeometryRoot", "domainProfileRoot", "roleSchemaRoot"],
+      "properties": {
+        "actionGeometryRoot": {"$ref": "#/$defs/root"},
+        "domainProfileRoot": {"$ref": "#/$defs/root"},
+        "roleSchemaRoot": {"$ref": "#/$defs/root"}
+      },
+      "additionalProperties": false
+    }
+  }
+}

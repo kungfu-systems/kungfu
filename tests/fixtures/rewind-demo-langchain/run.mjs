@@ -29,10 +29,13 @@ import {
   uvPython,
   run,
   fail,
+  extractPackedKfx,
+  kfxQualificationAuthorityFile,
 } from '../_harness.mjs';
 
 const PY = process.platform === 'win32' ? 'python' : 'python3';
 const { fixtureDir, coreDir } = locate(import.meta.url);
+const repoDir = path.resolve(coreDir, '..', '..');
 
 // ── provision the real framework (cached across runs) ────────────────
 const venv = path.join(fixtureDir, '.venv-langchain');
@@ -69,14 +72,25 @@ background(PY, [path.join(fixtureDir, 'mock_model.py'), portFile]);
 const port = waitForFile(portFile);
 const openaiBaseUrl = `http://127.0.0.1:${port}/v1`;
 
-// The LangChain adapter is NOT in core — it is the kfx package under
-// extensions/langchain-adapter. Point the extension root at the workspace
-// extensions tree so the supervisor discovers and injects it; capture of an
-// unmodified langchain run therefore comes from the package, not the kernel.
-const extRoot = path.resolve(coreDir, '..', '..', 'extensions');
-const kfExtensionPath = process.env.KF_EXTENSION_PATH
-  ? `${extRoot}${path.delimiter}${process.env.KF_EXTENSION_PATH}`
-  : extRoot;
+// The LangChain adapter is NOT in core. Pack and extract it exactly as a
+// distributable KFX, then admit those bytes into this qualification home's
+// native Fact Cut before tracing. Capture of an unmodified LangChain run
+// therefore comes from the installed, authorized package rather than the
+// kernel, a workspace identity shortcut, or a caller-provided descriptor.
+const packDir = tmpDir('rewind-langchain-pack-');
+const adapterSource = path.join(repoDir, 'extensions', 'langchain-adapter');
+const packed = run('npm', ['pack', '--pack-destination', packDir], { cwd: adapterSource });
+const tgzName = packed.stdout.trim().split(/\r?\n/).pop();
+const tgz = path.join(packDir, tgzName);
+if (!fs.existsSync(tgz)) fail('npm pack produced no LangChain adapter tgz');
+const packedRoot = extractPackedKfx(coreDir, tgz);
+const authorityFile = kfxQualificationAuthorityFile(
+  coreDir,
+  home,
+  packedRoot,
+  'langchain-adapter',
+);
+kfc(coreDir, home, ['kfx', 'install', packedRoot, '--authority-file', authorityFile]);
 
 kfc(
   coreDir,
@@ -88,7 +102,10 @@ kfc(
       // the openai SDK refuses to construct a client without a key; the proxy
       // never forwards request headers, so this dummy never leaves the machine
       OPENAI_API_KEY: 'sk-langchain-fixture',
-      KF_EXTENSION_PATH: kfExtensionPath,
+      // The qualification installs one exact admitted package into this
+      // temporary home. A workspace discovery path conveys no runtime
+      // authority and must not participate in this proof.
+      KF_EXTENSION_PATH: '',
     },
   },
 );

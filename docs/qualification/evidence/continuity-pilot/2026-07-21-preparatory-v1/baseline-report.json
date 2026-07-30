@@ -1,0 +1,59 @@
+{
+  "schema": "kungfu.continuity-pilot-report/v1",
+  "profile": "one-minute-continuity-smoke",
+  "claimClass": "preparatory-smoke",
+  "runIdentity": {
+    "id": "2026-07-21-preparatory-v1",
+    "protocol": "kungfu-continuity-pilot-v1"
+  },
+  "artifactSource": {
+    "repository": "kungfu-systems/kungfu",
+    "sourceHead": "70467db1ad6ba2f61248369523ca91670228e1e8",
+    "runnerRoot": "sha256:ca337b3203722bd90e89bc5bee6532f13d8cb3405da0a1237c153fc4dbcb42f5",
+    "contractRoot": "sha256:8ee6f138bb9bed3a0fda3582b7e8bf512695c3f16a08056c03df0c86f27e6c91",
+    "fixtureRoot": "sha256:f0d7851680393c4cc38e0a6334058bf7edb17df71997d666169b4cfe42adac2a"
+  },
+  "fixture": {
+    "id": "tiny-inventory-repository-v1",
+    "taskRoot": "sha256:41187d80db24ffdf95556058784ca34ce9df271a25ad63bf2f49e14d9de8ebaa",
+    "initialTreeRoot": "sha256:ca703c52472f57aa92f20d3b3ab20cf7f57332f563c52d2f22547fc668eead00"
+  },
+  "path": "baseline",
+  "provider": {
+    "agent": "local-deterministic-fixture-worker",
+    "version": "v1",
+    "configRoot": "sha256:a2a57326b35c46da7c87da4cc311167cb758dbdb42923635859501b554a1fde9"
+  },
+  "reset": {
+    "boundary": "fresh deterministic worker invocation",
+    "hiddenTranscriptInjected": false,
+    "privateSessionStoreRead": false,
+    "continuationSource": "none"
+  },
+  "measurements": {
+    "wallTimeMs": 1.332,
+    "attempts": 1,
+    "toolCalls": 0,
+    "humanReExplanation": 0,
+    "duplicateWork": 1
+  },
+  "oracle": {
+    "root": "sha256:812510c0aeeaf3316a8909a68d5238fe31f0324c189d8972efa012d95ccddf38",
+    "passed": false
+  },
+  "evidenceCitations": [
+    "events.json#1",
+    "events.json#2",
+    "events.json#3",
+    "events.json#4",
+    "events.json#5",
+    "events.json#6"
+  ],
+  "limitations": [
+    "The worker is deterministic fixture code, not a hosted or native model agent.",
+    "The baseline has no continuation mechanism; this run validates the pipeline, not a provider performance comparison.",
+    "Durability, multi-hour recovery, user retention, and FO10 remain untested."
+  ],
+  "evidenceClass": "preparatory",
+  "verdict": "unsupported"
+}

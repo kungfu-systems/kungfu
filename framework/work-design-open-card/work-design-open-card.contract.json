@@ -1,0 +1,49 @@
+{
+  "schema": "kungfu.work-design.open-card-contract/v1",
+  "version": 1,
+  "status": "pre-release",
+  "requestSchema": "kungfu.work-design.open-card-preflight-request/v1",
+  "resultSchema": "kungfu.work-design.open-card-preflight/v1",
+  "rootAlgorithm": "sha256-project-cut-canonical-json-v1",
+  "authority": {
+    "mode": "capture-preflight-only",
+    "fact": false,
+    "episode": false,
+    "assignment": false,
+    "workControl": false,
+    "capture": false,
+    "claim": false,
+    "dispatch": false,
+    "execute": false,
+    "approve": false,
+    "merge": false,
+    "close": false
+  },
+  "cardState": {
+    "captureOnly": true,
+    "pointerOnly": true,
+    "status": "paused",
+    "claimed": false,
+    "dispatched": false
+  },
+  "dispositions": [
+    "accepted",
+    "adapted",
+    "overridden",
+    "insufficient-history"
+  ],
+  "fallbackReasons": [
+    "advisor-failed",
+    "advisor-timeout",
+    "advisor-unavailable",
+    "advice-root-mismatch",
+    "disposition-status-mismatch",
+    "protocol-invalid",
+    "selection-root-mismatch",
+    "selector-failed",
+    "selector-timeout",
+    "selector-unavailable",
+    "stale-manifest"
+  ],
+  "contractRoot": "sha256:082ae7484fda4d6c76339bf6be34a084d09abeef384bdfa46b1881e17bccf26b"
+}

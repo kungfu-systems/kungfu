@@ -10,11 +10,11 @@
 #include "common.h"
 #include "journal.h"
 
-#include <kungfu/yijinjing/io.h>
+#include <kungfu/runtime/io.h>
 
 namespace kungfu::node {
 
-class IODevice : public Napi::ObjectWrap<IODevice>, public yijinjing::io_device {
+class IODevice : public Napi::ObjectWrap<IODevice>, public kungfu::runtime::io_device {
 public:
   explicit IODevice(const Napi::CallbackInfo &info);
 

@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: Apache-2.0
 // @ts-check
 
-const { spawnSync } = require('child_process');
-const fs = require('fs');
-const os = require('os');
-const path = require('path');
+const { spawnSync } = require('node:child_process');
+const fs = require('node:fs');
+const os = require('node:os');
+const path = require('node:path');
 
 const GithubBinaryHost = 'https://prebuilt.libkungfu.io';
 /**
@@ -17,33 +17,30 @@ const defined = (e) => e;
 
 const utils = {
   /** @param {unknown} error */
-  exitOnError: function (error) {
+  exitOnError: (error) => {
     console.error(error);
     process.exit(-1);
   },
 
   /** @param {string} npmConfigValue @returns {string} */
-  getScope: function (npmConfigValue) {
-    return npmConfigValue === 'undefined' ? '[package.json]' : '[user]';
-  },
+  getScope: (npmConfigValue) =>
+    npmConfigValue === 'undefined' ? '[package.json]' : '[user]',
 
   /** @param {string} cmd @param {string[]} argv @param {{ silent?: boolean }} opts */
-  trace: function (cmd, argv, opts) {
+  trace: (cmd, argv, opts) => {
     if (!opts.silent) {
       console.log(`$ ${cmd} ${argv.join(' ')}`);
     }
   },
 
-  getCoreGypDir: function () {
+  getCoreGypDir: () => {
     const local = process.cwd().toString() === path.dirname(__dirname);
     return local ? '.gyp' : path.resolve(__dirname);
   },
 
   /** @param {string} key @returns {string} */
-  getNpmConfigValue: function (key) {
-    return shell.runAndCollect('npm', ['config', 'get', key], { silent: true })
-      .out;
-  },
+  getNpmConfigValue: (key) =>
+    shell.runAndCollect('npm', ['config', 'get', key], { silent: true }).out,
 
   /**
    * Collect the package names in a package.json's dependency maps that
@@ -51,13 +48,13 @@ const utils = {
    * @param {any} packageJson a parsed package.json (untyped shape)
    * @returns {string[]}
    */
-  findBinaryDependency: function (packageJson) {
+  findBinaryDependency: (packageJson) => {
     /** @param {Record<string, string>} deps */
     const hasBinary = (deps) =>
       Object.keys(deps)
         .map((key) => {
           const dependency = shell.getPackageJson(key);
-          if (dependency && dependency.binary) {
+          if (dependency?.binary) {
             return dependency.name;
           }
         })
@@ -68,12 +65,11 @@ const utils = {
       packageJson.devDependencies || {},
     ]
       .filter(defined)
-      .map(hasBinary)
-      .flat();
+      .flatMap(hasBinary);
   },
 
   /** @param {string} [packageName] */
-  setBinaryHostConfig: function (packageName) {
+  setBinaryHostConfig: (packageName) => {
     const packageJson = shell.getPackageJson(packageName);
     if (!packageJson) {
       return;
@@ -81,14 +77,14 @@ const utils = {
     if (packageJson.binary) {
       const key = `${packageJson.binary.module_name}_binary_host_mirror`;
       const binaryGithub = packageJson.binaryGithub;
-      const override = binaryGithub && binaryGithub.host;
+      const override = binaryGithub?.host;
       const value = override ? binaryGithub.host : GithubBinaryHost;
       shell.npmCall(['config', 'set', key, value]);
     }
   },
 
   /** @param {string} key */
-  showProjectConfig: function (key) {
+  showProjectConfig: (key) => {
     const packageJson = shell.getPackageJson();
     const projectName = packageJson.name;
     const npmConfigKey = `${projectName}:${key}`;
@@ -101,7 +97,7 @@ const utils = {
   },
 
   /** @param {string} [packageName] */
-  showBinaryHostConfig: function (packageName) {
+  showBinaryHostConfig: (packageName) => {
     const packageJson = shell.getPackageJson(packageName);
     if (!packageJson) {
       return;
@@ -121,7 +117,7 @@ const utils = {
 
 const shell = {
   /** @returns {string | undefined} */
-  getElectronArch: function () {
+  getElectronArch: () => {
     try {
       /** @type {any} electron's main-process require has no bundled types here */
       const electron = require('electron');
@@ -150,7 +146,7 @@ const shell = {
   },
 
   /** @returns {string} */
-  getTargetArch: function () {
+  getTargetArch: () => {
     // tracing-foundation Phase 1: config.arch 未显式设置时回退到宿主架构(process.arch)。
     // 原 config 硬编码 'x64'(x64 时代),在 arm64 机器上会误判;回退使本机构建自动匹配
     // (Mac arm64 / Linux·Win x64),同时保留显式 config.arch 以支持交叉编译目标。
@@ -165,7 +161,7 @@ const shell = {
    * @param {string} [packageName]
    * @returns {any} parsed package.json, or undefined if the named one is unresolvable
    */
-  getPackageJson: function (packageName) {
+  getPackageJson: (packageName) => {
     /** @param {string} filepath */
     const toJSON = (filepath) => {
       return JSON.parse(fs.readFileSync(filepath, 'utf8').toString());
@@ -181,16 +177,12 @@ const shell = {
   },
 
   /** @param {string} name @returns {string | undefined} */
-  getConfigValue: function (name) {
-    return process.env[`npm_package_config_${name}`];
-  },
+  getConfigValue: (name) => process.env[`npm_package_config_${name}`],
 
   /** @param {string[]} npmArgs */
-  npmCall: function (npmArgs) {
-    return shell.run('npm', npmArgs);
-  },
+  npmCall: (npmArgs) => shell.run('npm', npmArgs),
 
-  verifyElectron: function () {
+  verifyElectron: () => {
     const electronArch = shell.getElectronArch();
     const targetArch = shell.getTargetArch();
     if (electronArch === targetArch) {
@@ -242,7 +234,7 @@ const shell = {
    * @param {Pick<import('child_process').SpawnSyncReturns<unknown>, 'status' | 'signal'>} result
    * @returns {number}
    */
-  exitCode: function (result) {
+  exitCode: (result) => {
     if (result.status !== null && result.status !== undefined) {
       return result.status;
     }
@@ -262,7 +254,7 @@ const shell = {
    * @param {import('child_process').SpawnSyncOptions & { silent?: boolean, tolerant?: boolean }} [opts]
    * @returns {import('child_process').SpawnSyncReturns<string | Buffer>}
    */
-  run: function (cmd, argv = [], check = true, opts = {}) {
+  run: (cmd, argv = [], check = true, opts = {}) => {
     const real_cwd = fs.realpathSync(path.resolve(process.cwd().toString()));
     utils.trace(cmd, argv, opts);
     const result = spawnSync(cmd, argv, {
@@ -289,7 +281,7 @@ const shell = {
    * @param {import('child_process').SpawnSyncOptions & { silent?: boolean }} [opts]
    * @returns {import('child_process').SpawnSyncReturns<string | Buffer> & { out: string }}
    */
-  runAndCollect: function (cmd, argv = [], opts = {}) {
+  runAndCollect: (cmd, argv = [], opts = {}) => {
     utils.trace(cmd, argv, opts);
     const result = spawnSync(cmd, argv, {
       shell: true,
@@ -308,7 +300,7 @@ const shell = {
    * @param {string[]} [argv]
    * @param {import('child_process').SpawnSyncOptions & { silent?: boolean, tolerant?: boolean }} [opts]
    */
-  runAndExit: function (cmd, argv = [], opts = {}) {
+  runAndExit: (cmd, argv = [], opts = {}) => {
     const result = shell.run(cmd, argv, false, opts);
     if (result.status === 0) {
       process.exit(0);
@@ -316,21 +308,21 @@ const shell = {
     return result;
   },
 
-  setAutoConfig: function () {
+  setAutoConfig: () => {
     const isGithubEnv = () => process.env.CI && process.env.GITHUB_ACTIONS;
     if (!isGithubEnv()) {
       return;
     }
     const packageJson = shell.getPackageJson();
     if (packageJson.configGithub) {
-      Object.keys(packageJson.configGithub).forEach((key) => {
+      for (const key of Object.keys(packageJson.configGithub)) {
         shell.npmCall([
           'config',
           'set',
           `${packageJson.name}:${key}`,
           packageJson.configGithub[key],
         ]);
-      });
+      }
     }
     if (packageJson.binary) {
       utils.setBinaryHostConfig();
@@ -338,7 +330,7 @@ const shell = {
     utils.findBinaryDependency(packageJson).map(utils.setBinaryHostConfig);
   },
 
-  showAutoConfig: function () {
+  showAutoConfig: () => {
     const packageJson = shell.getPackageJson();
     if (packageJson.config) {
       Object.keys(packageJson.config).map(utils.showProjectConfig);
@@ -350,7 +342,7 @@ const shell = {
   },
 
   /** @param {string} filename @param {string} [dirname] */
-  touch: function (filename, dirname = process.cwd().toString()) {
+  touch: (filename, dirname = process.cwd().toString()) => {
     const now = new Date();
     const filepath = path.resolve(dirname, filename);
     fs.utimesSync(filepath, now, now);

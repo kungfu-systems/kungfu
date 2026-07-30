@@ -1,0 +1,39 @@
+// SPDX-License-Identifier: Apache-2.0
+// Core-owned lifecycle facts for content-bound KFX Profile Suites. JSON fields
+// retain versioned edge artifacts; the event identity and lifecycle kind are
+// typed here and recorded through ActionEnvelope + Episode.
+
+namespace kungfu.profile.fb;
+
+enum ProfileLifecycleKind : byte {
+  Installed = 0,
+  Qualified = 1,
+  Activated = 2,
+  Superseded = 3,
+  RolledBack = 4,
+  Removed = 5,
+  Kfd3Qualified = 6
+}
+
+table ProfileLifecycleEvent {
+  schema_version:uint;
+  event_id:string;
+  profile_id:string;
+  profile_version:string;
+  profile_suite_root:string;
+  revision:ulong;
+  kind:ProfileLifecycleKind;
+  system_time:long;
+  previous_root:string;
+  plan_id:string;
+  authorization_id:string;
+  closure_json:string;
+  member_roots_json:string;
+  contract_world_root:string;
+  granted_permissions_json:string;
+  qualification_json:string;
+  runtime_compatibility_json:string;
+  source_contract_root:string;
+}
+
+root_type ProfileLifecycleEvent;

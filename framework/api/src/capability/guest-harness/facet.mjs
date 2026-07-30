@@ -1,5 +1,5 @@
 // A JavaScript facet — a real extension written once against the uniform
-// asynchronous capability surface (ADR-0014). This exact source runs unchanged
+// asynchronous capability surface (KF-ADR-019f86da-4f90-7789-8b48-620aa694acf9). This exact source runs unchanged
 // in both trust tiers: co-resident (in-process, zero-copy) and sandboxed (an
 // OS-sandboxed child reaching the host over the stdio relay). It never branches
 // on which tier it is running in.

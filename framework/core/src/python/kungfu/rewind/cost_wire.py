@@ -5,9 +5,9 @@
 # cost/ is the parse layer — pure-stdlib dataclasses with no journal and no
 # flatbuffers (see cost/__init__.py). This module is the wire-side bridge that
 # crosses that boundary: it takes a cost/model.CostSnapshot and produces the
-# (msg_type, bytes) an open-layer CostSnapshot event rides on. Keeping the bridge
-# here, not inside cost/, is deliberate — the parse layer must stay importable
-# and testable without flatbuffers or the native binding.
+# (action_type, bytes) a CostSnapshot action-envelope event rides on. Keeping the
+# bridge here, not inside cost/, is deliberate — the parse layer must stay
+# importable and testable without flatbuffers or the native binding.
 #
 # "One place decides the fields": cost/model.py drafts the contract, and this
 # bridge is the single mapping from that dataclass to the wire event. The two
@@ -16,7 +16,7 @@
 
 from __future__ import annotations
 
-from kungfu.rewind import MSG_COST_SNAPSHOT, events
+from kungfu.rewind import ACTION_COST_SNAPSHOT, events
 from kungfu.rewind.cost.model import AttributionLevel, CostSnapshot
 from kungfu.rewind.fb.Attribution import Attribution
 from kungfu.rewind.fb.CaptureLayer import CaptureLayer
@@ -42,13 +42,13 @@ def attribution_to_fb(level: AttributionLevel) -> int:
 
 def snapshot_to_event(
     snapshot: CostSnapshot, layer: int = CaptureLayer.Adapter
-) -> tuple[int, bytes]:
+) -> tuple[str, bytes]:
     """Serialize a parse-layer CostSnapshot into a journal event.
 
-    Returns (msg_type, event_bytes) ready for the supervisor's
-    writer.write_bytes(...). `layer` records which capture layer produced the
-    fact; cost adapters default to Adapter, a supervisor that parsed a run it
-    launched can pass Supervisor.
+    Returns (action_type, event_bytes) ready for the supervisor's envelope
+    writer. `layer` records which capture layer produced the fact; cost
+    adapters default to Adapter, a supervisor that parsed a run it launched can
+    pass Supervisor.
 
     cost_usd is None on tokens-only providers (Codex exec reports no dollars).
     That None becomes cost_usd_known=False with a 0.0 placeholder — the honesty
@@ -76,4 +76,4 @@ def snapshot_to_event(
         ambiguous_attribution=snapshot.ambiguous_attribution,
         raw_ref=snapshot.raw_ref,
     )
-    return MSG_COST_SNAPSHOT, payload
+    return ACTION_COST_SNAPSHOT, payload

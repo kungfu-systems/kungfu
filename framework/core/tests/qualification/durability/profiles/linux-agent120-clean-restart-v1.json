@@ -1,0 +1,25 @@
+{
+  "schema": "kungfu.durability-clean-host-restart-profile/v1",
+  "id": "linux-agent120-clean-restart-v1",
+  "host": {
+    "hostname": "agent-120",
+    "platform": "linux",
+    "arch": "x86_64",
+    "filesystem": "ext4",
+    "device_class": "nvme"
+  },
+  "target": {
+    "root": "/data/qualification/kungfu/clean-host-restart",
+    "sentinel": ".kungfu-clean-host-restart-target",
+    "sentinel_contents": "kungfu.durability.clean-host-restart-target/v1\n"
+  },
+  "limits": {
+    "max_run_bytes": 1073741824,
+    "max_restart_seconds": 600
+  },
+  "claims": {
+    "clean_host_restart_qualified": true,
+    "physical_power_loss_qualified": false,
+    "production_eligible": false
+  }
+}

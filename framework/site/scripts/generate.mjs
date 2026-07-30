@@ -1,0 +1,459 @@
+#!/usr/bin/env node
+// SPDX-License-Identifier: Apache-2.0
+// @ts-check
+
+import { execFileSync } from 'node:child_process';
+import fs from 'node:fs';
+import path from 'node:path';
+
+import {
+  ADR_MAP_PATH,
+  AGENT_INDEX_PATH,
+  BUNDLE_PATH,
+  DIST_ROOT,
+  FORMAT_MANIFEST_PATH,
+  FORMAT_ROOT,
+  FORMAT_ROUTE_ARTIFACTS,
+  PACKAGE_ROOT,
+  REPO_ROOT,
+  SOURCE_PATH,
+  SPEC_DIST_ROOT,
+  SPEC_MANIFEST_PATH,
+  assertRelativeSourcePath,
+  canonicalJson,
+  fileRoot,
+  internalContentRoot,
+  readJson,
+  sha256,
+  writeJson,
+} from './lib.mjs';
+
+const MATURITIES = new Set([
+  'coming-soon',
+  'implemented',
+  'qualified',
+  'staged',
+  'qualified-shadow',
+  'historical-proof',
+  'current-focus',
+  'future-derivative',
+  'not-claimed',
+]);
+const CLAIM_CLASSES = new Set([
+  'product-framing',
+  'current-contract',
+  'implemented-source',
+  'qualified-source',
+  'historical-proof',
+  'future-horizon',
+  'not-claimed',
+]);
+const SOURCE_ROLES = new Set([
+  'semantic-authority',
+  'machine-contract',
+  'qualification-evidence',
+  'navigation-projection',
+  'release-policy',
+  'product-framing',
+]);
+const REPOSITORY = 'https://github.com/kungfu-systems/kungfu';
+
+function git(...args) {
+  return execFileSync('git', args, {
+    cwd: REPO_ROOT,
+    encoding: 'utf8',
+  }).trim();
+}
+
+function assertUnique(items, field, label) {
+  const values = items.map((item) => item[field]);
+  if (new Set(values).size !== values.length) {
+    throw new Error(`${label} contains duplicate ${field}`);
+  }
+}
+
+function validateSourceDeclaration(source) {
+  if (source.contract !== 'kungfu.site-bundle-source/v1') {
+    throw new Error('unexpected site bundle source contract');
+  }
+  assertUnique(source.sources, 'id', 'sources');
+  assertUnique(source.surfaces, 'id', 'surfaces');
+  assertUnique(source.surfaces, 'route', 'surfaces');
+  assertUnique(source.adoptionLayers, 'id', 'adoptionLayers');
+  const sourceIds = new Set(source.sources.map((entry) => entry.id));
+  for (const entry of source.sources) {
+    if (!SOURCE_ROLES.has(entry.role)) {
+      throw new Error(`source ${entry.id} has invalid role ${entry.role}`);
+    }
+    assertRelativeSourcePath(entry.path);
+  }
+  for (const [kind, entries] of [
+    ['surface', source.surfaces],
+    ['adoption layer', source.adoptionLayers],
+  ]) {
+    for (const entry of entries) {
+      if (!MATURITIES.has(entry.maturity)) {
+        throw new Error(
+          `${kind} ${entry.id} has invalid maturity ${entry.maturity}`,
+        );
+      }
+      if (kind === 'surface' && !CLAIM_CLASSES.has(entry.claimClass)) {
+        throw new Error(
+          `${kind} ${entry.id} has invalid claim class ${entry.claimClass}`,
+        );
+      }
+      if (!entry.sourceIds?.length) {
+        throw new Error(`${kind} ${entry.id} has no sourceIds`);
+      }
+      for (const sourceId of entry.sourceIds) {
+        if (!sourceIds.has(sourceId)) {
+          throw new Error(
+            `${kind} ${entry.id} references unknown source ${sourceId}`,
+          );
+        }
+      }
+    }
+  }
+  for (const sourceId of source.positioning.sourceIds || []) {
+    if (!sourceIds.has(sourceId)) {
+      throw new Error(`positioning references unknown source ${sourceId}`);
+    }
+  }
+  const experience = source.siteExperienceDefaults;
+  if (experience?.contract !== 'kungfu.site-experience-defaults/v1') {
+    throw new Error('site experience defaults contract is missing');
+  }
+  if (
+    experience.brand?.signature !== 'Kungfu UNGFU™' ||
+    experience.brand?.productName !== 'Kungfu' ||
+    !experience.brand?.boundary?.includes('not a second product or runtime')
+  ) {
+    throw new Error('site experience brand boundary drifted');
+  }
+  if (
+    experience.firstScreen?.humanFirst !== true ||
+    experience.progressiveDisclosure?.technicalDefault !== 'collapsed' ||
+    experience.navigation?.machineEntriesInPrimary !== false ||
+    experience.kfd3?.standard !== 'KFD-3' ||
+    experience.kfd3?.machineEntry !== 'agentIndex'
+  ) {
+    throw new Error('site reader experience invariant drifted');
+  }
+  for (const sourceId of [
+    ...(experience.sourceIds || []),
+    ...(experience.kfd3?.sourceIds || []),
+  ]) {
+    if (!sourceIds.has(sourceId)) {
+      throw new Error(
+        `site experience defaults reference unknown source ${sourceId}`,
+      );
+    }
+  }
+}
+
+function assertSpecRelativePath(relative) {
+  if (
+    !relative ||
+    path.isAbsolute(relative) ||
+    relative.split(/[\\/]/).includes('..')
+  ) {
+    throw new Error(`invalid Spec bundle path: ${relative}`);
+  }
+  const absolute = path.resolve(SPEC_DIST_ROOT, relative);
+  if (!absolute.startsWith(`${SPEC_DIST_ROOT}${path.sep}`)) {
+    throw new Error(`Spec bundle path escapes package root: ${relative}`);
+  }
+  return absolute;
+}
+
+function projectFormatAuthority(revision) {
+  if (!fs.existsSync(SPEC_MANIFEST_PATH)) {
+    throw new Error(
+      'missing @kungfu-tech/spec dist/manifest.json; build the Spec package first',
+    );
+  }
+  const manifest = readJson(SPEC_MANIFEST_PATH);
+  if (
+    manifest.manifest_version !== '1' ||
+    manifest.package?.name !== '@kungfu-tech/spec'
+  ) {
+    throw new Error('unexpected @kungfu-tech/spec manifest contract');
+  }
+  if (manifest.normative?.status !== 'pre-release') {
+    throw new Error(
+      `unsupported format promotion: expected pre-release, got ${manifest.normative?.status}`,
+    );
+  }
+  for (const [id, descriptor] of Object.entries(manifest.artifacts || {})) {
+    const artifact = assertSpecRelativePath(descriptor.path);
+    if (!fs.existsSync(artifact)) {
+      throw new Error(`Spec artifact is missing: ${id} (${descriptor.path})`);
+    }
+    if (fileRoot(artifact) !== descriptor.artifact_root) {
+      throw new Error(`Spec artifact root mismatch: ${id}`);
+    }
+    if (fs.statSync(artifact).size !== descriptor.byte_length) {
+      throw new Error(`Spec artifact byte length mismatch: ${id}`);
+    }
+  }
+  const journeyDescriptor = manifest.reader_journey;
+  if (!journeyDescriptor) {
+    throw new Error('Spec manifest lacks the progressive reader journey');
+  }
+  const journeyPath = assertSpecRelativePath(journeyDescriptor.path);
+  if (
+    fileRoot(journeyPath) !== journeyDescriptor.content_root ||
+    fs.statSync(journeyPath).size !== journeyDescriptor.byte_length
+  ) {
+    throw new Error('Spec reader journey index root mismatch');
+  }
+  const journey = readJson(journeyPath);
+  if (journey.schema !== journeyDescriptor.schema) {
+    throw new Error('Spec reader journey schema mismatch');
+  }
+  for (const guide of journey.guides || []) {
+    const guidePath = assertSpecRelativePath(guide.path);
+    if (
+      fileRoot(guidePath) !== guide.content_root ||
+      fs.statSync(guidePath).size !== guide.byte_length
+    ) {
+      throw new Error(`Spec reader guide root mismatch: ${guide.id}`);
+    }
+  }
+
+  fs.cpSync(SPEC_DIST_ROOT, FORMAT_ROOT, { recursive: true });
+  const routes = {};
+  for (const [routeId, artifactId] of Object.entries(FORMAT_ROUTE_ARTIFACTS)) {
+    const descriptor = manifest.artifacts[artifactId];
+    if (!descriptor) {
+      throw new Error(`Spec manifest lacks route artifact: ${artifactId}`);
+    }
+    routes[routeId] = {
+      path: `format/${descriptor.path}`,
+      artifactRoot: descriptor.artifact_root,
+      byteLength: descriptor.byte_length,
+      schema: descriptor.schema,
+      status: descriptor.status,
+    };
+  }
+  const vectors = readJson(
+    path.join(FORMAT_ROOT, manifest.artifacts.conformance_vectors.path),
+  );
+  return {
+    contract: 'kungfu.site-format-authority-projection/v1',
+    projectionPolicy: 'exact-byte-copy-from-verified-@kungfu-tech/spec/v1',
+    package: manifest.package,
+    pickup: {
+      coordinate: `${manifest.package.name}@${manifest.package.version}`,
+      packageEntry: manifest.package.name,
+      manifestExport: 'manifestPath',
+      bundledPath: 'format/manifest.json',
+      manifestRoot: fileRoot(FORMAT_MANIFEST_PATH),
+      protocol: 'sha256:opaque-bytes/v1',
+    },
+    formatNamespace: manifest.format_namespace,
+    specVersion: manifest.spec_version,
+    status: manifest.normative.status,
+    normativeRoot: manifest.normative.root,
+    rootProtocol: manifest.normative.root_protocol,
+    reproducibility: manifest.normative.reproducibility,
+    conformance: {
+      status: vectors.status,
+      release: vectors.latest_release,
+      releaseRoot: vectors.latest_release_root,
+      vectorCount: vectors.vectors?.length || 0,
+    },
+    readerJourney: {
+      path: `format/${journeyDescriptor.path}`,
+      contentRoot: journeyDescriptor.content_root,
+      byteLength: journeyDescriptor.byte_length,
+      schema: journeyDescriptor.schema,
+      title: journey.title,
+      summary: journey.summary,
+      entryGuideId: journey.guides[0].id,
+      levels: journey.levels.map(({ id, label, purpose, guide_ids }) => ({
+        id,
+        label,
+        purpose,
+        guideIds: guide_ids,
+      })),
+      guides: journey.guides.map((guide) => ({
+        id: guide.id,
+        level: guide.level,
+        order: guide.order,
+        title: guide.title,
+        summary: guide.summary,
+        path: `format/${guide.path}`,
+        contentRoot: guide.content_root,
+        byteLength: guide.byte_length,
+        previous: guide.previous,
+        next: guide.next,
+        related: guide.related,
+      })),
+    },
+    docsUrl: `${REPOSITORY}/blob/${revision}/framework/spec/CONSUMING.md`,
+    routes,
+    nonClaims: manifest.normative.non_claims,
+  };
+}
+
+function main() {
+  const source = readJson(SOURCE_PATH);
+  const pkg = readJson(path.join(PACKAGE_ROOT, 'package.json'));
+  validateSourceDeclaration(source);
+  const revision =
+    process.env.KUNGFU_SITE_SOURCE_REVISION || git('rev-parse', 'HEAD');
+  if (!/^[0-9a-f]{40}$/.test(revision)) {
+    throw new Error(
+      `source revision must be a 40-character Git SHA: ${revision}`,
+    );
+  }
+  const treeDirty = git('status', '--porcelain=v1').length > 0;
+  const sources = source.sources.map((entry) => {
+    const absolute = assertRelativeSourcePath(entry.path);
+    const bytes = fs.readFileSync(absolute);
+    return {
+      ...entry,
+      packagePath: `sources/${entry.id}/${path.basename(entry.path)}`,
+      contentRoot: fileRoot(absolute),
+      byteLength: bytes.length,
+      url: `${REPOSITORY}/blob/${revision}/${entry.path}`,
+    };
+  });
+  const sourceRoot = sha256(
+    canonicalJson(
+      sources.map(
+        ({
+          id,
+          path: sourcePath,
+          packagePath,
+          role,
+          contentRoot,
+          byteLength,
+        }) => ({
+          id,
+          path: sourcePath,
+          packagePath,
+          role,
+          contentRoot,
+          byteLength,
+        }),
+      ),
+    ),
+  );
+  const adrSource = sources.find((entry) => entry.id === 'adr-map');
+  if (!adrSource) throw new Error('adr-map source is required');
+  const adrMap = readJson(path.resolve(REPO_ROOT, adrSource.path));
+  if (adrMap.schema !== 'kungfu.adr-navigation-projection/v1') {
+    throw new Error('unexpected ADR navigation projection contract');
+  }
+  fs.rmSync(DIST_ROOT, { recursive: true, force: true });
+  fs.mkdirSync(DIST_ROOT, { recursive: true });
+  for (const packagedSource of sources) {
+    const target = path.join(DIST_ROOT, packagedSource.packagePath);
+    fs.mkdirSync(path.dirname(target), { recursive: true });
+    fs.copyFileSync(assertRelativeSourcePath(packagedSource.path), target);
+  }
+  const formatAuthority = projectFormatAuthority(revision);
+  writeJson(ADR_MAP_PATH, adrMap);
+  const bundle = {
+    contract: 'kungfu.site-bundle/v1',
+    schemaVersion: 1,
+    package: {
+      name: pkg.name,
+      version: pkg.version,
+    },
+    source: {
+      repository: REPOSITORY,
+      revision,
+      treeDirty,
+      authorityPolicy:
+        'composition-only; exact upstream paths and content roots remain authoritative',
+      reproducible: true,
+    },
+    sourceRoot,
+    positioning: Object.fromEntries(
+      Object.entries(source.positioning).filter(([key]) => key !== 'sourceIds'),
+    ),
+    siteExperienceDefaults: Object.fromEntries(
+      Object.entries(source.siteExperienceDefaults).filter(
+        ([key]) => key !== 'sourceIds',
+      ),
+    ),
+    adoptionLayers: source.adoptionLayers,
+    surfaces: source.surfaces,
+    sources,
+    adrMap: {
+      contract: adrMap.schema,
+      path: 'adr-map.json',
+      contentRoot: fileRoot(ADR_MAP_PATH),
+      summary: adrMap.summary,
+      authorityBoundary:
+        'Only ADR-frontmatter relations are authoritative; domains and nearby links are deterministic navigation-only projections.',
+    },
+    formatAuthority,
+    machineEntries: {
+      bundle: 'site-bundle.json',
+      agentIndex: 'agent-index.json',
+      adrMap: 'adr-map.json',
+      formatAuthority: 'format/manifest.json',
+      formatReaderJourney: formatAuthority.readerJourney.path,
+      schema: 'schema/site-bundle.schema.json',
+    },
+    nonClaims: source.nonClaims,
+  };
+  bundle.contentRoot = internalContentRoot(bundle);
+  writeJson(BUNDLE_PATH, bundle);
+  const sourceById = new Map(sources.map((entry) => [entry.id, entry]));
+  const agentIndex = {
+    contract: 'kungfu.site-agent-index/v1',
+    package: bundle.package,
+    sourceRevision: revision,
+    sourceRoot,
+    bundleContentRoot: bundle.contentRoot,
+    promise: bundle.positioning.promise,
+    firstReleaseOutcome: bundle.positioning.firstReleaseOutcome,
+    siteExperienceDefaults: bundle.siteExperienceDefaults,
+    formatAuthority: {
+      package: formatAuthority.package,
+      pickup: formatAuthority.pickup,
+      formatNamespace: formatAuthority.formatNamespace,
+      specVersion: formatAuthority.specVersion,
+      status: formatAuthority.status,
+      normativeRoot: formatAuthority.normativeRoot,
+      conformance: formatAuthority.conformance,
+      readerJourney: formatAuthority.readerJourney,
+      docsUrl: formatAuthority.docsUrl,
+      routes: formatAuthority.routes,
+      nonClaims: formatAuthority.nonClaims,
+    },
+    readingOrder: bundle.surfaces.map((surface) => ({
+      id: surface.id,
+      route: surface.route,
+      headline: surface.headline,
+      claimClass: surface.claimClass,
+      maturity: surface.maturity,
+      knownLimits: surface.knownLimits,
+      authorities: surface.sourceIds.map((id) => {
+        const authority = sourceById.get(id);
+        return {
+          id,
+          role: authority.role,
+          path: authority.path,
+          packagePath: authority.packagePath,
+          contentRoot: authority.contentRoot,
+          byteLength: authority.byteLength,
+          url: authority.url,
+        };
+      }),
+    })),
+    nonClaims: bundle.nonClaims,
+    machineEntries: bundle.machineEntries,
+  };
+  writeJson(AGENT_INDEX_PATH, agentIndex);
+  console.log(
+    `[site:generate] ${bundle.surfaces.length} surfaces, ${sources.length} exact sources, contentRoot=${bundle.contentRoot}`,
+  );
+}
+
+main();

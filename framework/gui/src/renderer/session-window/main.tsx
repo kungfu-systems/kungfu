@@ -1,4 +1,4 @@
-// Per-session OS window renderer (ADR-0016 stage 3). A separate BrowserWindow
+// Per-session OS window renderer (KF-ADR-019f86da-4f90-7153-a6c1-ab7a0a3cf481 stage 3). A separate BrowserWindow
 // renderer that mounts the terminal view against a single runId, reaching the
 // durable session host in the main process over the terminal relay — the same
 // host the shell's grid uses, so a session renders identically in the grid and
@@ -7,11 +7,15 @@
 // terminal proxy, because a session window renders one live terminal and nothing
 // else. The stage-2 placeholder page is replaced by this entry.
 import * as capability from '@kungfu-tech/api/capability';
+import * as query from '@kungfu-tech/api/query';
 import type { KfxCapabilities, KfxEntry, Shell } from '@kungfu-tech/kfx';
 import React from 'react';
 import * as ReactDOM from 'react-dom';
 import { createRoot } from 'react-dom/client';
 import * as jsxRuntime from 'react/jsx-runtime';
+import type { SessionWindowLaunchAuthorization } from '../../main/session-windows';
+import { SESSION_WINDOW_AUTHORIZATION_CHANNEL } from '../../sandbox/channels';
+import { createKfxSharedModules } from '../shared-modules';
 import { loadKfx } from '../src/kfx-loader';
 import {
   type IpcRendererLike,
@@ -19,14 +23,16 @@ import {
 } from '../src/terminal-proxy';
 
 // The externals contract `kungfu sdk kfx build` injects into every kfx bundle:
-// one React instance and one capability surface (see renderer/src/main.tsx).
-const SHARED_MODULES = {
+// one React instance and the public API surfaces (see renderer/src/main.tsx).
+const SHARED_MODULES = createKfxSharedModules({
   react: React,
-  'react/jsx-runtime': jsxRuntime,
-  'react-dom': ReactDOM,
-  '@kungfu-tech/api': capability,
-  '@kungfu-tech/api/capability': capability,
-};
+  jsxRuntime,
+  reactDom: ReactDOM,
+  reactDomClient: { createRoot },
+  api: capability,
+  capability,
+  query,
+});
 
 // Render a plain failure line into #root. A session window has no shell chrome
 // to fall back to, so a misconfigured launch should still say why.
@@ -41,14 +47,15 @@ function fail(message: string): void {
   );
 }
 
-function main(): void {
+async function main(): Promise<void> {
   const runId = new URLSearchParams(window.location.search).get('runId');
-  if (!runId) {
-    fail('session window opened without a runId');
+  const windowId = new URLSearchParams(window.location.search).get('windowId');
+  if (!runId || !windowId) {
+    fail('session window opened without an exact window or session identity');
     return;
   }
 
-  // The durable host runs in the main process (ADR-0016); a window can only reach
+  // The durable host runs in the main process (KF-ADR-019f86da-4f90-7153-a6c1-ab7a0a3cf481); a window can only reach
   // it over ipc, so this renderer is always a relay client and never owns an
   // in-renderer host.
   let ipc: IpcRendererLike;
@@ -60,14 +67,26 @@ function main(): void {
     return;
   }
   const terminal = createTerminalProxy(ipc);
+  let launch: SessionWindowLaunchAuthorization;
+  try {
+    launch = (await ipc.invoke(SESSION_WINDOW_AUTHORIZATION_CHANNEL, {
+      windowId,
+    })) as SessionWindowLaunchAuthorization;
+  } catch (error) {
+    fail(`session window authorization failed: ${(error as Error).message}`);
+    return;
+  }
 
   // Load the terminal kfx the same way the shell does, so its code and its CSS
   // (injected by loadKfx) match the grid exactly; the single-session branch is
   // selected by shell.params.sessionWindowRunId below.
-  const loaded = loadKfx(window.process.env, SHARED_MODULES);
+  const loaded = loadKfx(window.process.env, SHARED_MODULES, launch.descriptor);
   const entry = loaded.entries.find(
     (e: KfxEntry) =>
-      e.tier === 'node-integrated' && e.capabilities.includes('terminal'),
+      e.id === launch.packageKey &&
+      e.authorizationRoot === launch.authorizationRoot &&
+      e.tier === 'node-integrated' &&
+      e.capabilities.includes('terminal'),
   );
   if (!entry) {
     fail('terminal view not found on the extension path');
@@ -86,4 +105,4 @@ function main(): void {
   );
 }
 
-main();
+void main();

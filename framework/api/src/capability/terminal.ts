@@ -1,6 +1,6 @@
 // Terminal-domain capability handle: a PTY host that owns managed agent
 // processes and binds each to a run. Factory-style, no import-time side
-// effects, same shape as the other capability handles (ADR-0011).
+// effects, same shape as the other capability handles (KF-ADR-019f86da-4f90-7e5e-ae22-2a8fc24086f1).
 //
 // Trust/placement: this handle lives in the trusted renderer (it needs node +
 // a native addon — node-pty — exactly like the kungfu binding). A sandboxed

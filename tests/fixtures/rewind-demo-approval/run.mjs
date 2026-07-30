@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 // Approval-bridge fixture. Proves a human control decision on a managed run
-// becomes a journal fact (ApprovalDecision, msg_type 30009) and yields the right
+// becomes a journal fact (ApprovalDecision action) and yields the right
 // process control action (SIGINT for interrupt, input for approve/deny/resume),
 // plus schema-only decode of the pinned .bfbs. No real terminal, no native
 // journal writer.

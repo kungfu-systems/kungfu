@@ -1,0 +1,6 @@
+{
+  "schema": "kungfu.reference.course-production-policy/v1",
+  "kind": "admission",
+  "owner": "warrant",
+  "effect": "declarative-only"
+}

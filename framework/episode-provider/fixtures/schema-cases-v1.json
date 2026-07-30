@@ -1,0 +1,15 @@
+{
+  "schema": "kungfu.episode.git-workspace-schema-cases/v1",
+  "positive": ["provider-contract", "sealed-manifest", "qualification", "claims-jsonl-rows"],
+  "adversarial": [
+    { "id": "manifest-extra-field", "schema": "manifest" },
+    { "id": "segment-negative-index", "schema": "segment" },
+    { "id": "qualification-wrong-policy", "schema": "qualification" },
+    { "id": "provider-authority-widened", "schema": "provider-contract" },
+    { "id": "provider-schema-path-substitution", "schema": "provider-contract" },
+    { "id": "dependency-unsafe-integer", "schema": "manifest" },
+    { "id": "content-ref-order", "rule": "unique-root-utf8-order/v1" },
+    { "id": "uint64-overflow-string", "rule": "uint64-decimal-string-above-safe-range/v1" },
+    { "id": "uint64-unsafe-number", "rule": "uint64-decimal-string-above-safe-range/v1" }
+  ]
+}

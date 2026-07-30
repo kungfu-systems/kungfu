@@ -28,7 +28,7 @@ public:
 
   static void set_trigger_dest_id(uint32_t dest_id);
 
-  static void set_trigger_msg_type(int32_t msg_type);
+  static void set_trigger_carrier_type(int32_t carrier_type);
 
   static uint64_t get_trigger_frame_uid();
 
@@ -38,7 +38,7 @@ public:
 
   static uint32_t get_trigger_dest_id();
 
-  static int32_t get_trigger_msg_type();
+  static int32_t get_trigger_carrier_type();
 
 private:
   std::condition_variable cv_{};
@@ -49,7 +49,7 @@ private:
   inline static thread_local uint32_t trigger_source_id_ = 0;
   inline static thread_local uint32_t trigger_initial_source_id_ = 0;
   inline static thread_local uint32_t trigger_dest_id_ = 0;
-  inline static thread_local int32_t trigger_msg_type_ = 0;
+  inline static thread_local int32_t trigger_carrier_type_ = 0;
 };
 
 DECLARE_PTR(bus);

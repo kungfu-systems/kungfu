@@ -1,0 +1,85 @@
+{
+  "schema": "kungfu.workspace-federation.qualification/v1",
+  "qualificationId": "home-two-heterogeneous-kungfu-systems-repositories-2026-07-23",
+  "status": "passed",
+  "observedAt": "2026-07-23T11:42:17Z",
+  "sourceMode": "git-archive-of-clean-committed-head",
+  "sourceRepositories": [
+    {
+      "repository": "kungfu-trader/action-approve",
+      "commit": "21eaa1a1d1e9c7cbaf8df3023c369280db31d770",
+      "projectKind": "typescript",
+      "sourceMarker": "package.json",
+      "sourceWorkspaceMutated": false
+    },
+    {
+      "repository": "kungfu-trader/qlib",
+      "commit": "a04a454740cabeaf205820d6e0f94e39388e626d",
+      "projectKind": "python",
+      "sourceMarker": "pyproject.toml",
+      "sourceWorkspaceMutated": false
+    }
+  ],
+  "home": {
+    "workspaceIdentityRoot": "sha256:603348d46d8de63ef78edf956cce38741d231d3deb92c1095382f8cf00843e84",
+    "initiativeWorkRef": {
+      "schema": "kungfu.assignment-graph.work-ref/v1",
+      "workspace_identity_root": "sha256:603348d46d8de63ef78edf956cce38741d231d3deb92c1095382f8cf00843e84",
+      "object_kind": "initiative",
+      "subject": "kungfu:real-repository-qualification",
+      "version_root": "sha256:916dedc68b5f9bc012735737de2b2f88afc733435ad6a15532e3133984b87cc8",
+      "cut_root": "sha256:c38af5372369403be20a6fb3486e810c13a44b437f1a171d882da75b5c77bfe4"
+    }
+  },
+  "projects": [
+    {
+      "repository": "kungfu-trader/action-approve",
+      "workspaceIdentityRoot": "sha256:19b1a91f5c3806e11bafe2aa6fd8ee69e0dea07a06f74f5c152b12016d4a117e",
+      "assignmentSubject": "kungfu:qualify-action-approve",
+      "assignmentVersionRoot": "sha256:8cbb3371cbec2ba60ae3b5536fc0248bd049a148e93de49c5401fbb014595c48",
+      "relationRoot": "sha256:b9948a46610319130f4a9db9cd41579fd88ba55996afc7876ba7b8f7f043b026",
+      "projectCutRoot": "sha256:dcffa0ba3a05423fa02b19856275347b68d711d747e3554ea354d4ac55500c2d",
+      "projectCutReceiptRoot": "sha256:246889b367e845998dd7b4d2c9fe52794102ea3e2be1933b5016f163c1fc84da",
+      "independentReviewRoot": "sha256:ad67e76d01dc544b0d9fa8d3fb41ad6deeff509454a1440f71ccdf88350d7bc2",
+      "continuationDecisionId": "decision-9a8a26fe134a4ff26ff3ccfd",
+      "portfolioState": "completed",
+      "handshakeEventCount": 7,
+      "duplicateLocalInitiativeCount": 0
+    },
+    {
+      "repository": "kungfu-trader/qlib",
+      "workspaceIdentityRoot": "sha256:60a94ef92586b72fbd39cd72298986b53a86330233729364c865180b63f336bf",
+      "assignmentSubject": "kungfu:qualify-qlib",
+      "assignmentVersionRoot": "sha256:7b0f4a3224982e9ef1227953c42cc48f3df22fdda6cebd7aed9e83604c17c784",
+      "relationRoot": "sha256:057bab6a5d2c4ef3d32298120ed1b21285b3791df3edf48d55b9a43336b65210",
+      "projectCutRoot": "sha256:29866205c8dbb60358ecbf53d9e12ff63bdd9d6deeaf4bd34afba3551039413e",
+      "projectCutReceiptRoot": "sha256:6bf8e3a20f49ee028042e46639129dec2e0b1e4c0a29762b1fadb7bf17c7a76a",
+      "independentReviewRoot": "sha256:3440fd66545e90981fde86767cbe10bd753fbec81602215ba7250c4a53d94c17",
+      "continuationDecisionId": "decision-f119e4f3f23d74650738930a",
+      "portfolioState": "completed",
+      "handshakeEventCount": 7,
+      "duplicateLocalInitiativeCount": 0
+    }
+  ],
+  "checks": {
+    "homePlusTwoComponentCount": 3,
+    "componentObservationTimesPresent": true,
+    "atomicGlobalCutClaimed": false,
+    "federatedReadWrites": [],
+    "pathMovePreservedIdentity": true,
+    "catalogExactIdentityRebindPassed": true,
+    "unavailableWorkspaceProjectedOnce": true,
+    "crossProcessEventRetryReusedObservation": true,
+    "projectInitiativeDuplicationAbsent": true,
+    "independentCompletionReviewsPassed": 2,
+    "projectCutSettlementReceiptsVerified": 2,
+    "globallyCompletedOnlyAfterDecisionAndSettlement": true,
+    "parentAssessmentAndDecisionEventsCarrySettlementEvidence": true,
+    "realSourceRepositoriesRemainedClean": true
+  },
+  "currentBoundary": {
+    "persistentAdoption": "The qualification used exact committed repository snapshots so the source repositories remained read-only.",
+    "crossMachineTransport": "Not implemented in v1; Catalog locators remain machine-local.",
+    "globalCompletion": "Both project Assignments reached completed only after independent review, an approving Decision, and paired Project Cut root plus settlement receipt evidence; relation handshake completion alone still does not imply work completion."
+  }
+}

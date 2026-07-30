@@ -1,0 +1,613 @@
+{
+  "schema": "kungfu.semantic-amplification-manifest/v1",
+  "status": "navigation-projection-input",
+  "baselineRef": "dbfed9ca1785d147b26f4f06e7e6895ac7368fee",
+  "reportPath": "framework/maintainability/semantic-amplification-report.json",
+  "rolePolicy": {
+    "authority": "exactly one authority route per family; the route may name multiple co-owned source files",
+    "allowedProjectionRoles": [
+      "generated-projection",
+      "thin-binding",
+      "compatibility-reader",
+      "conformance-oracle",
+      "test",
+      "documentation",
+      "package-release",
+      "retained-evidence"
+    ],
+    "unknownRole": "blocking",
+    "unmappedChangedSemanticSurface": "blocking"
+  },
+  "families": [
+    {
+      "id": "cli-agent-surface",
+      "owner": "core",
+      "identityTokens": [
+        "kungfu.cli-surface-registry/v1",
+        "kungfu.cli-surface-catalog/v1"
+      ],
+      "discoveryRoots": [
+        "framework/core/src/python/kungfu/cli/",
+        "framework/core/src/python/kungfu/agent/",
+        "product/scripts/",
+        "scripts/"
+      ],
+      "authority": {
+        "id": "live-click-tree-and-cli-surface-registry",
+        "sources": [
+          "framework/core/src/python/kungfu/cli/surface_contract.registry.json",
+          "framework/core/src/python/kungfu/cli/commands/__registry__.py"
+        ]
+      },
+      "surfaces": [
+        {
+          "path": "framework/core/src/python/kungfu/cli/catalog_projection.py",
+          "role": "generated-projection"
+        },
+        {
+          "path": "framework/core/src/python/kungfu/agent/cli_surface.catalog.json",
+          "role": "generated-projection",
+          "generator": "framework/core/src/python/kungfu/cli/catalog_projection.py"
+        },
+        {
+          "path": "framework/core/src/python/kungfu/agent/commands.json",
+          "role": "generated-projection",
+          "generator": "framework/core/src/python/kungfu/agent/kfd3.py"
+        },
+        {
+          "path": "framework/core/src/python/kungfu/cli/help_projection.py",
+          "role": "thin-binding"
+        },
+        {
+          "path": "scripts/check-cli-catalog-parity.mjs",
+          "role": "conformance-oracle"
+        },
+        {
+          "path": "framework/core/tests/python/test_cli_surface_contract.py",
+          "role": "test"
+        },
+        {
+          "path": "product/scripts/cli-surface-qualification.mjs",
+          "role": "package-release"
+        },
+        {
+          "path": "product/scripts/verify-cli-surface-qualification.mjs",
+          "role": "conformance-oracle"
+        },
+        {
+          "path": "product/scripts/cli-surface-qualification.test.mjs",
+          "role": "test"
+        },
+        {
+          "path": "docs/architecture/overview.md",
+          "role": "documentation"
+        }
+      ],
+      "knownLimits": [
+        "docs/qualification/known-limits.md"
+      ],
+      "recovery": "Run the CLI catalog parity and product CLI qualification checks; edit live Click registration or the declared surface registry, never generated catalogs."
+    },
+    {
+      "id": "work-profile-lifecycle",
+      "owner": "core/runtime-action",
+      "identityTokens": [
+        "kungfu.work-lifecycle.native-contract/v1",
+        "kungfu.work-lifecycle.operation-matrix/v1"
+      ],
+      "discoveryRoots": [
+        "framework/work-lifecycle/",
+        "framework/core/src/libkungfu/src/runtime/action/",
+        "framework/core/src/libkungfu/src/runtime/profile/",
+        "framework/core/src/python/kungfu/",
+        "framework/storage/",
+        "crates/kungfu-sdk/",
+        "scripts/"
+      ],
+      "authority": {
+        "id": "native-work-lifecycle-authority-membrane",
+        "sources": [
+          "framework/work-lifecycle/work-lifecycle-native.contract.json",
+          "framework/work-lifecycle/kungfu-work-lifecycle-operation-matrix.contract.json",
+          "framework/core/src/libkungfu/src/runtime/action/action_runtime.cpp",
+          "framework/core/src/libkungfu/src/runtime/profile/profile_lifecycle.cpp"
+        ]
+      },
+      "surfaces": [
+        {
+          "path": "scripts/materialize-work-lifecycle-operation-matrix.mjs",
+          "role": "generated-projection"
+        },
+        {
+          "path": "scripts/generate-work-lifecycle-sdk.mjs",
+          "role": "generated-projection"
+        },
+        {
+          "path": "crates/kungfu-sdk/src/generated/work_lifecycle_v1.rs",
+          "role": "generated-projection",
+          "generator": "scripts/generate-work-lifecycle-sdk.mjs"
+        },
+        {
+          "path": "framework/storage/generated/work-lifecycle-v1.js",
+          "role": "generated-projection",
+          "generator": "scripts/generate-work-lifecycle-sdk.mjs"
+        },
+        {
+          "path": "framework/storage/python/kungfu_sdk/generated/work_lifecycle_v1.py",
+          "role": "generated-projection",
+          "generator": "scripts/generate-work-lifecycle-sdk.mjs"
+        },
+        {
+          "path": "framework/core/src/python/kungfu/assignment_orchestration.py",
+          "role": "thin-binding"
+        },
+        {
+          "path": "framework/core/src/python/kungfu/profile_sdk.py",
+          "role": "thin-binding"
+        },
+        {
+          "path": "scripts/check-work-lifecycle-native.test.mjs",
+          "role": "conformance-oracle"
+        },
+        {
+          "path": "scripts/check-work-lifecycle-differential.test.mjs",
+          "role": "compatibility-reader"
+        },
+        {
+          "path": "scripts/check-work-lifecycle-operation-matrix.test.mjs",
+          "role": "test"
+        },
+        {
+          "path": "docs/architecture/work-lifecycle-operation-matrix.md",
+          "role": "documentation"
+        }
+      ],
+      "knownLimits": [
+        "docs/qualification/known-limits.md"
+      ],
+      "recovery": "Inspect native work status and operation roots, regenerate declared SDK projections, and keep Python/Rust/Node clients lossless rather than semantic."
+    },
+    {
+      "id": "kfx-package-profile",
+      "owner": "core/runtime-kfx",
+      "identityTokens": [
+        "kungfu.kfx.contract/v1",
+        "kfx-contract"
+      ],
+      "discoveryRoots": [
+        "framework/kfx/",
+        "framework/core/src/libkungfu/src/runtime/kfx/",
+        "framework/core/src/python/kungfu/",
+        "framework/gui/",
+        "scripts/"
+      ],
+      "authority": {
+        "id": "native-kfx-contract",
+        "sources": [
+          "framework/kfx/kungfu-kfx.contract.json",
+          "framework/core/src/libkungfu/src/runtime/kfx/native_contract.cpp",
+          "framework/core/src/libkungfu/src/runtime/kfx/native_registry.cpp"
+        ]
+      },
+      "surfaces": [
+        {
+          "path": "framework/kfx/src/index.ts",
+          "role": "thin-binding"
+        },
+        {
+          "path": "extensions/agent-work-lab/experience/src/index.ts",
+          "role": "thin-binding"
+        },
+        {
+          "path": "framework/core/src/python/kungfu/kfx_contract.py",
+          "role": "thin-binding"
+        },
+        {
+          "path": "framework/core/src/python/kungfu/profile_sdk.py",
+          "role": "thin-binding"
+        },
+        {
+          "path": "framework/core/src/python/kungfu/cli/commands/kfx.py",
+          "role": "thin-binding"
+        },
+        {
+          "path": "scripts/run-native-kfx-admission-tests.mjs",
+          "role": "conformance-oracle"
+        },
+        {
+          "path": "scripts/run-kfx-profile-suite-tests.mjs",
+          "role": "test"
+        },
+        {
+          "path": "docs/qualification/kfd-native-sdk-release-gates.md",
+          "role": "documentation"
+        },
+        {
+          "path": "framework/gui/docs/shell-and-kfx.md",
+          "role": "documentation"
+        },
+        {
+          "path": "product/scripts/dist.mjs",
+          "role": "package-release"
+        }
+      ],
+      "knownLimits": [
+        "docs/qualification/known-limits.md"
+      ],
+      "recovery": "Query the native KFX registry, verify the exact contract and package roots, and retain explicit unavailable/degraded results when installed product evidence is absent."
+    },
+    {
+      "id": "fact-episode",
+      "owner": "core/runtime-storage",
+      "identityTokens": [
+        "kungfu.fact-cut-kernel.contract/v1",
+        "kungfu.episode-invariants"
+      ],
+      "discoveryRoots": [
+        "framework/fact/",
+        "framework/episode/",
+        "framework/core/src/libkungfu/src/runtime/storage/",
+        "framework/core/src/python/kungfu/storage/",
+        "scripts/"
+      ],
+      "authority": {
+        "id": "fact-cut-and-episode-journal-authority",
+        "sources": [
+          "framework/fact/kungfu-fact-cut-kernel.contract.json",
+          "framework/episode/kungfu-episode-invariants.contract.json",
+          "framework/core/src/libkungfu/src/runtime/storage/fact_authority.cpp",
+          "framework/core/src/libkungfu/src/runtime/storage/episode_control.cpp"
+        ]
+      },
+      "surfaces": [
+        {
+          "path": "framework/fact/kungfu-fact-invariant-model-v1.json",
+          "role": "generated-projection"
+        },
+        {
+          "path": "framework/core/src/python/kungfu/storage/fact_root_canonical.py",
+          "role": "compatibility-reader"
+        },
+        {
+          "path": "framework/core/src/libkungfu/src/runtime/storage/fact_protocol.cpp",
+          "role": "thin-binding"
+        },
+        {
+          "path": "scripts/check-fact-cut-kernel-contract.test.mjs",
+          "role": "conformance-oracle"
+        },
+        {
+          "path": "framework/core/tests/python/test_episode_control.py",
+          "role": "test"
+        },
+        {
+          "path": "docs/architecture/fact-episode-action-runtime.md",
+          "role": "documentation"
+        },
+        {
+          "path": "docs/qualification/evidence/fact-durable-admission/current-hardware-candidate-v1/report.json",
+          "role": "retained-evidence"
+        }
+      ],
+      "knownLimits": [
+        "docs/qualification/known-limits.md"
+      ],
+      "recovery": "Verify content roots and journal-backed receipts, replay retained characterization fixtures, and never infer Fact authority from JSON projections."
+    },
+    {
+      "id": "storage-query",
+      "owner": "core/runtime-storage",
+      "identityTokens": [
+        "kungfu.storage-sdk.contract/v1",
+        "kf_maintenance_api_v1"
+      ],
+      "discoveryRoots": [
+        "framework/storage/",
+        "framework/core/src/libkungfu/src/runtime/storage/",
+        "framework/core/src/python/kungfu/storage/",
+        "scripts/"
+      ],
+      "authority": {
+        "id": "native-storage-api-and-component",
+        "sources": [
+          "framework/storage/kungfu-storage.contract.json",
+          "framework/core/src/libkungfu/include/kungfu/api.h",
+          "framework/core/src/libkungfu/src/runtime/storage/service.cpp"
+        ]
+      },
+      "surfaces": [
+        {
+          "path": "framework/storage/index.js",
+          "role": "thin-binding"
+        },
+        {
+          "path": "framework/core/src/python/kungfu/storage/service.py",
+          "role": "thin-binding"
+        },
+        {
+          "path": "framework/core/src/libkungfu/src/runtime/storage/json_compat.cpp",
+          "role": "compatibility-reader"
+        },
+        {
+          "path": "framework/core/src/libkungfu/src/runtime/storage/query_render.cpp",
+          "role": "generated-projection"
+        },
+        {
+          "path": "framework/storage/generated/work-lifecycle-v1.js",
+          "role": "generated-projection",
+          "generator": "scripts/generate-work-lifecycle-sdk.mjs"
+        },
+        {
+          "path": "framework/storage/python/kungfu_sdk/generated/work_lifecycle_v1.py",
+          "role": "generated-projection",
+          "generator": "scripts/generate-work-lifecycle-sdk.mjs"
+        },
+        {
+          "path": "scripts/check-work-lifecycle-operation-matrix.test.mjs",
+          "role": "test"
+        },
+        {
+          "path": "framework/core/tests/storage-node-binding.test.js",
+          "role": "conformance-oracle"
+        },
+        {
+          "path": "docs/qualification/fact-storage-authority.md",
+          "role": "documentation"
+        },
+        {
+          "path": "docs/qualification/evidence/durability/production-candidate-v1/README.md",
+          "role": "retained-evidence"
+        }
+      ],
+      "knownLimits": [
+        "docs/qualification/known-limits.md"
+      ],
+      "recovery": "Use native maintenance plans and exact provider receipts; preserve JSON as an edge projection and retain physical durability as a separate claim."
+    },
+    {
+      "id": "release-product-claim",
+      "owner": "product/release",
+      "identityTokens": [
+        "kungfu.trademark-public-use/v1",
+        "kungfu.release-admission"
+      ],
+      "discoveryRoots": [
+        "framework/release/",
+        "product/",
+        "scripts/",
+        ".github/workflows/",
+        "docs/qualification/gates/"
+      ],
+      "authority": {
+        "id": "kungfu-gate-catalog-and-release-claim-contract",
+        "sources": [
+          "shifu.gates.json",
+          "framework/release/kungfu-trademark-public-use.contract.json",
+          "product/release-channel-trust.json",
+          "docs/qualification/gates/release-admission-policy.json"
+        ]
+      },
+      "surfaces": [
+        {
+          "path": "scripts/verify-kungfu-release-admission.mjs",
+          "role": "conformance-oracle"
+        },
+        {
+          "path": "scripts/prepare-ungfu-release-evidence.mjs",
+          "role": "generated-projection"
+        },
+        {
+          "path": "scripts/release-promotion-rehearsal.mjs",
+          "role": "conformance-oracle"
+        },
+        {
+          "path": "scripts/kungfu-release-qualification.mjs",
+          "role": "package-release"
+        },
+        {
+          "path": "docs/qualification/gates/workflow-bindings.json",
+          "role": "thin-binding"
+        },
+        {
+          "path": ".github/workflows/release-new-version.yml",
+          "role": "package-release"
+        },
+        {
+          "path": "docs/qualification/gates/release-and-promotion.md",
+          "role": "documentation"
+        },
+        {
+          "path": "docs/qualification/gates/release-admission.md",
+          "role": "documentation"
+        },
+        {
+          "path": "framework/release/kungfu-ungfu-release-evidence.candidate.json",
+          "role": "retained-evidence"
+        }
+      ],
+      "knownLimits": [
+        "docs/qualification/known-limits.md"
+      ],
+      "recovery": "Recompute source-bound release admission and exact platform passports; preparation, dry-run, or one-platform evidence never becomes a public release claim."
+    }
+  ],
+  "productionBoundaries": [
+    {
+      "id": "source-and-readonly-discovery",
+      "state": "proved",
+      "evidence": [
+        "scripts/readonly-agent-bootstrap.test.mjs",
+        "scripts/code-complexity-budget.test.mjs"
+      ],
+      "claimBoundary": "Source and protected-checkout behavior only."
+    },
+    {
+      "id": "native-macos-current-checkout",
+      "state": "partial",
+      "evidence": [
+        "framework/core/architecture/ARCHITECTURE_HEALTH.md"
+      ],
+      "claimBoundary": "Buildable current source; no installed or released artifact inference."
+    },
+    {
+      "id": "semantic-authority-convergence",
+      "state": "proved",
+      "evidence": [
+        "framework/maintainability/terminal-evidence-matrix.json"
+      ],
+      "dependentAssignment": {
+        "assignmentId": "2026-07-26-kungfu-authority-convergence",
+        "requestRoot": "sha256:3c21a18843d601a08012bce640fa6c184358179cc9f82999d7420b80d7806b97",
+        "captureReceiptRoot": "sha256:e9668f6ac8cf97bb59db87c1c5ec04076dd14b4d294abc1a25408c2d2dfb552b"
+      },
+      "closureBinding": {
+        "sealedStateRoot": "sha256:41449544ae9f64f6a6e6e7ae69f24c0fd9049e38beef4bba2bbed3e3e730e98c",
+        "matrixRow": "2026-07-26-kungfu-authority-convergence"
+      },
+      "claimBoundary": "The predecessor seal closes this Assignment; the current report remains a navigation projection over the declared authorities."
+    },
+    {
+      "id": "responsibility-hotspot-decomposition",
+      "state": "proved",
+      "evidence": [
+        "framework/maintainability/terminal-evidence-matrix.json"
+      ],
+      "dependentAssignment": {
+        "assignmentId": "2026-07-26-kungfu-responsibility-hotspot-decomposition",
+        "requestRoot": "sha256:5f71d58aac57e46f268dd1953473249aab182e0e3f8061a7d75929c3f81be9ee",
+        "captureReceiptRoot": "sha256:9694edded6e090e588c56286ebf9c957718ecfb14b3e92b8b74e7ffbcace2bde"
+      },
+      "closureBinding": {
+        "sealedStateRoot": "sha256:41449544ae9f64f6a6e6e7ae69f24c0fd9049e38beef4bba2bbed3e3e730e98c",
+        "matrixRow": "2026-07-26-kungfu-responsibility-hotspot-decomposition"
+      },
+      "claimBoundary": "The predecessor seal closes the prior decomposition Assignment; newly discovered hotspots remain governed by the current exact-head terminal review."
+    },
+    {
+      "id": "linux-native-and-product",
+      "state": "proved",
+      "evidence": [
+        "framework/maintainability/terminal-evidence-matrix.json"
+      ],
+      "dependentAssignment": {
+        "assignmentId": "2026-07-26-kungfu-linux-product-qualification",
+        "requestRoot": "sha256:abfb20e87a7c06437431c133b4e32c5cb72a8c1ca4c7e5ddb8917b7eb77e0a4f",
+        "captureReceiptRoot": "sha256:91305cbc2255ed4ef18e2f7966be6f9acbc7ea68544b1535c261a70cebfa8974"
+      },
+      "closureBinding": {
+        "sealedStateRoot": "sha256:41449544ae9f64f6a6e6e7ae69f24c0fd9049e38beef4bba2bbed3e3e730e98c",
+        "matrixRow": "2026-07-26-kungfu-linux-product-qualification"
+      },
+      "claimBoundary": "The predecessor seal closes the prior Linux Assignment; each later terminal cut must still provide its own exact-head platform evidence."
+    },
+    {
+      "id": "windows-native-and-product",
+      "state": "proved",
+      "evidence": [
+        "framework/maintainability/terminal-evidence-matrix.json"
+      ],
+      "dependentAssignment": {
+        "assignmentId": "2026-07-26-kungfu-windows-product-qualification",
+        "requestRoot": "sha256:2abb9fb07ac8c09ca1658388731b23a1fd47bbe8115ec284cc24c54e93b2157c",
+        "captureReceiptRoot": "sha256:bc649a491246506f2e0067b089af5539136ebce8972270c2783650ca8f7b1b04"
+      },
+      "closureBinding": {
+        "sealedStateRoot": "sha256:41449544ae9f64f6a6e6e7ae69f24c0fd9049e38beef4bba2bbed3e3e730e98c",
+        "matrixRow": "2026-07-26-kungfu-windows-product-qualification"
+      },
+      "claimBoundary": "The predecessor seal closes the prior Windows Assignment; static parity never substitutes for exact-head Windows execution on a later cut."
+    },
+    {
+      "id": "physical-durability",
+      "state": "retained-dependency",
+      "evidence": [
+        "docs/qualification/evidence/durability/production-candidate-v1/README.md"
+      ],
+      "claimBoundary": "Current hardware candidate is not physical power-loss proof."
+    },
+    {
+      "id": "public-release",
+      "state": "retained-dependency",
+      "evidence": [
+        "framework/release/kungfu-trademark-public-use.contract.json"
+      ],
+      "claimBoundary": "Release evidence remains pending and no public release claim is made."
+    }
+  ],
+  "decompositions": [
+    {
+      "id": "readonly-shifu-routing",
+      "original": [
+        "shifu",
+        "shifu.cmd"
+      ],
+      "boundary": "Cross-platform selection stays in the platform shim; command-to-reader dispatch and stable execution move to one Node built-in route.",
+      "target": "scripts/shifu-readonly-entry.mjs",
+      "owner": "shifu/source-tooling",
+      "dependencyInvariant": "The route may use only the existing Node executable and checked-in files; no installer, package manager, cache, network, or diagnostics writer.",
+      "tests": [
+        "scripts/check-shifu-entry-contract.test.mjs",
+        "scripts/readonly-agent-bootstrap.test.mjs"
+      ],
+      "rollback": "Remove the direct route and wrapper together; protected-checkout discovery then returns to the reproduced explicit failure."
+    },
+    {
+      "id": "invariant-discovery-projection",
+      "original": [
+        "scripts/kungfu-invariant.mjs"
+      ],
+      "boundary": "Registry-to-discovery projection is pure and build-free; full verification retains authority-root and qualification behavior.",
+      "target": "scripts/kungfu-invariant-discovery.mjs",
+      "owner": "shifu/source-tooling",
+      "dependencyInvariant": "Both discovery and full verification consume the same invariant registry and projection function.",
+      "tests": [
+        "scripts/readonly-agent-bootstrap.test.mjs"
+      ],
+      "rollback": "Restore the projection function in the full verifier and remove the read-only invariant route."
+    },
+    {
+      "id": "tui-control-plane-state",
+      "original": [
+        "framework/tui/src/profile-shell.tsx"
+      ],
+      "boundary": "Input transitions, quick-action matching, and focus fencing are pure state authority; Ink rendering remains in the profile shell.",
+      "target": "framework/tui/src/control-plane-state.ts",
+      "owner": "framework/tui",
+      "dependencyInvariant": "The state module imports no Ink or React runtime and the profile shell preserves its public exports.",
+      "tests": [
+        "framework/tui/src/control-plane.test.ts",
+        "framework/tui/src/profile-shell.test.ts"
+      ],
+      "rollback": "Restore the pure state declarations in profile-shell.tsx and remove the compatibility re-export."
+    },
+    {
+      "id": "affected-native-artifact-lookup",
+      "original": [
+        "scripts/affected-native-proof.mjs"
+      ],
+      "boundary": "GitHub artifact discovery and producer selection are release-evidence reads; proof construction and sealing remain in the affected-native authority.",
+      "target": "framework/release/affected-native-artifact-lookup.mjs",
+      "owner": "framework/release",
+      "dependencyInvariant": "Discovery admits only exact repository identities, trusted workflow events, successful runs, bounded age, and exact merge-group heads.",
+      "tests": [
+        "scripts/affected-native-proof.test.mjs"
+      ],
+      "rollback": "Move the remote lookup functions back without changing their public affected-native exports."
+    },
+    {
+      "id": "merge-queue-delivery-evidence",
+      "original": [
+        "scripts/cancel-dequeued-merge-group-runs.mjs"
+      ],
+      "boundary": "Dequeue settlement mutates queue cleanup state; retained delivery evidence reconstruction is a read-only maintainability projection.",
+      "target": "framework/maintainability/delivery-evidence.mjs",
+      "owner": "framework/maintainability",
+      "dependencyInvariant": "The evidence reader consumes validated affected-native attempts and GitHub observations without owning dequeue mutation.",
+      "tests": [
+        "scripts/candidate-timeline-events.test.mjs",
+        "scripts/cancel-dequeued-merge-group-runs.test.mjs"
+      ],
+      "rollback": "Move the read-only evidence helpers back and preserve the existing re-export surface."
+    }
+  ]
+}

@@ -1,0 +1,39 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kungfu.tech/schemas/episode-provider/git-workspace-segment-v1.schema.json",
+  "title": "Kungfu Git Workspace Episode JSONL Row v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "index", "record"],
+  "properties": {
+    "schema": { "const": "kungfu.episode.git-workspace-segment/v1" },
+    "index": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 9007199254740991
+    },
+    "record": { "$ref": "#/$defs/value" }
+  },
+  "$defs": {
+    "value": {
+      "oneOf": [
+        { "type": "null" },
+        { "type": "boolean" },
+        { "type": "string" },
+        {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991
+        },
+        {
+          "type": "array",
+          "items": { "$ref": "#/$defs/value" }
+        },
+        {
+          "type": "object",
+          "additionalProperties": { "$ref": "#/$defs/value" }
+        }
+      ]
+    }
+  }
+}

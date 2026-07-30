@@ -1,0 +1,92 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kungfu.tech/schemas/registry-envelope-v1.schema.json",
+  "title": "Kungfu registry envelope v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "id", "version", "registry", "projections"],
+  "$defs": {
+    "path": {
+      "type": "string",
+      "pattern": "^(?!/)(?!.*(?:^|/)\\.\\.(?:/|$)).+"
+    },
+    "root": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "projection": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "source", "artifact", "root"],
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9-]*$"
+        },
+        "source": {
+          "$ref": "#/$defs/path"
+        },
+        "artifact": {
+          "$ref": "#/$defs/path"
+        },
+        "root": {
+          "$ref": "#/$defs/root"
+        }
+      }
+    }
+  },
+  "properties": {
+    "schema": {
+      "const": "kungfu.registry-envelope/v1"
+    },
+    "id": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9-]*$"
+    },
+    "version": {
+      "const": 1
+    },
+    "registry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "source",
+        "schemaPath",
+        "schemaRoot",
+        "entriesPointer",
+        "uniqueFields"
+      ],
+      "properties": {
+        "source": {
+          "$ref": "#/$defs/path"
+        },
+        "schemaPath": {
+          "$ref": "#/$defs/path"
+        },
+        "schemaRoot": {
+          "$ref": "#/$defs/root"
+        },
+        "entriesPointer": {
+          "type": "string",
+          "pattern": "^/"
+        },
+        "uniqueFields": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "pattern": "^[A-Za-z][A-Za-z0-9]*$"
+          }
+        }
+      }
+    },
+    "projections": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/projection"
+      }
+    }
+  }
+}

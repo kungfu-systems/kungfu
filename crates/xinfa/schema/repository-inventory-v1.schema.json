@@ -1,0 +1,50 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://xinfa.dev/schema/repository-inventory-v1.schema.json",
+  "title": "Xinfa evidence-only repository inventory v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["$schema", "schema", "authoritative", "source", "repository", "policy", "ecosystems", "included", "excluded", "summary", "inventoryRoot"],
+  "properties": {
+    "$schema": { "const": "https://xinfa.dev/schema/repository-inventory-v1.schema.json" },
+    "schema": { "const": "xinfa.repository-inventory/v1" },
+    "authoritative": { "const": false },
+    "source": { "type": "string", "minLength": 1 },
+    "repository": { "type": "object" },
+    "policy": { "$ref": "repository-discovery-request-v1.schema.json" },
+    "ecosystems": { "type": "array", "items": { "type": "object" } },
+    "included": { "type": "array", "items": { "$ref": "#/$defs/included" } },
+    "excluded": { "type": "array", "items": { "$ref": "#/$defs/excluded" } },
+    "summary": { "type": "object" },
+    "inventoryRoot": { "$ref": "#/$defs/root" }
+  },
+  "$defs": {
+    "root": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" },
+    "path": { "type": "string", "minLength": 1, "pattern": "^(?!/)(?!.*(?:^|/)\\.\\.(?:/|$))(?!.*\\\\).+$" },
+    "included": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path", "kind", "reason", "sourceEvidence", "contentRoot", "size"],
+      "properties": {
+        "path": { "$ref": "#/$defs/path" },
+        "kind": { "enum": ["manifest", "guidance", "decision-record", "documentation", "ci", "test", "source", "unknown"] },
+        "reason": { "const": "safe-tracked-utf8" },
+        "sourceEvidence": { "type": "array", "minItems": 1, "items": { "type": "string" } },
+        "contentRoot": { "$ref": "#/$defs/root" },
+        "size": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "excluded": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path", "kind", "reason", "sourceEvidence", "digest"],
+      "properties": {
+        "path": { "$ref": "#/$defs/path" },
+        "kind": { "const": "excluded" },
+        "reason": { "type": "string", "minLength": 1 },
+        "sourceEvidence": { "type": "array", "minItems": 1, "items": { "type": "string" } },
+        "digest": { "$ref": "#/$defs/root" }
+      }
+    }
+  }
+}

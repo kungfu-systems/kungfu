@@ -1,0 +1,61 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kungfu.tech/schemas/durability-qualification-profile-v1.schema.json",
+  "title": "Kungfu Durability Qualification Profile v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "name",
+    "evidence_tier",
+    "platform",
+    "durability_profiles",
+    "required_suites",
+    "required_faults",
+    "non_claims"
+  ],
+  "properties": {
+    "schema": { "const": "kungfu.durability.qualification-profile/v1" },
+    "name": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]*$" },
+    "evidence_tier": { "const": "process-crash-proxy" },
+    "platform": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["node_platform", "architectures", "filesystem"],
+      "properties": {
+        "node_platform": { "enum": ["darwin", "linux", "win32"] },
+        "architectures": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": { "enum": ["arm64", "x64"] }
+        },
+        "filesystem": { "enum": ["apfs", "ext4", "ntfs"] }
+      }
+    },
+    "durability_profiles": {
+      "type": "array",
+      "minItems": 2,
+      "uniqueItems": true,
+      "items": { "enum": ["durable_group", "durable_sync"] }
+    },
+    "required_suites": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": { "type": "string", "minLength": 1 }
+    },
+    "required_faults": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": { "type": "string", "minLength": 1 }
+    },
+    "non_claims": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": { "type": "string", "minLength": 1 }
+    }
+  }
+}

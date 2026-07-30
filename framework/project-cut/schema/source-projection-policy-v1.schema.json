@@ -1,0 +1,38 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kungfu.link/schema/source-projection-policy-v1.schema.json",
+  "title": "Project source projection policy v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "id",
+    "pathNormalization",
+    "entryOrder",
+    "excludePrefixes",
+    "privacyDenyPrefixes",
+    "protocolOutputPrefixes",
+    "policyRoot"
+  ],
+  "properties": {
+    "schema": { "const": "project.source-projection-policy/v1" },
+    "id": {
+      "type": "string",
+      "pattern": "^[a-z0-9](?:[a-z0-9._/-]*[a-z0-9])?$"
+    },
+    "pathNormalization": { "const": "utf8-nfc-posix-relative/v1" },
+    "entryOrder": { "const": "utf8-bytewise-path/v1" },
+    "excludePrefixes": { "$ref": "#/$defs/paths" },
+    "privacyDenyPrefixes": { "$ref": "#/$defs/paths" },
+    "protocolOutputPrefixes": { "$ref": "#/$defs/paths" },
+    "policyRoot": { "$ref": "#/$defs/root" }
+  },
+  "$defs": {
+    "root": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" },
+    "paths": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": { "type": "string", "minLength": 1 }
+    }
+  }
+}

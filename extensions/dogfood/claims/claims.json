@@ -1,0 +1,22 @@
+{
+  "schema": "kungfu.profile-claims/v1",
+  "claims": [
+    {
+      "id": "issue-resolution",
+      "type": "kungfu.dogfood-feedback.issue-resolution/v1",
+      "factSurfaces": [
+        "kungfu.dogfood-feedback.finding",
+        "kungfu.dogfood-feedback.issue"
+      ]
+    },
+    {
+      "id": "assignment-consideration-complete",
+      "type": "kungfu.dogfood-feedback.assignment-consideration/v1",
+      "factSurfaces": [
+        "kungfu.dogfood-feedback.issue",
+        "kungfu.dogfood-feedback.consideration"
+      ]
+    }
+  ],
+  "evidenceStrength": "independently-observed"
+}

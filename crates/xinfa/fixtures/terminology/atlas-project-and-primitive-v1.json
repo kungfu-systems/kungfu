@@ -1,0 +1,10 @@
+{
+  "schema": "xinfa.terminology-contract/v1",
+  "projectTerm": "Atlas project",
+  "primitiveTerm": "Xinfa Atlas",
+  "canonicalSentence": "The Atlas project compiles a Xinfa Atlas",
+  "forbiddenEquivalences": [
+    ["Atlas project", "Xinfa Atlas"],
+    ["Atlas repository", "xinfa.atlas/v1"]
+  ]
+}

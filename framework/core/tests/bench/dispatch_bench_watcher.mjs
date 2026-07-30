@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: Apache-2.0
 //
-// Event-dispatch latency baseline, node watcher form (ADR-0005 evidence).
+// Event-dispatch latency baseline, node watcher form (KF-ADR-019f86da-4f90-7f7b-90be-c002b024d412 evidence).
 //
-// Starts a master, attaches the real node Watcher under plain node
+// Starts a coordinator, attaches the real node Watcher under plain node
 // (dispatch_watcher_bench.js), drives typed Quote load through a registered
-// apprentice, then prints the probe reports collected on the watcher side.
+// peer, then prints the probe reports collected on the watcher side.
 // Requires the core dev environment (built dist/kungfu) and the repo-pinned
-// node — run under ./kungfu-code or fnm so process.execPath (used to spawn the
+// node — run under ./shifu or fnm so process.execPath (used to spawn the
 // watcher) matches the ABI of the built kungfu_node.node binding.
 //
 // Usage: node tests/bench/dispatch_bench_watcher.mjs [event-count]
@@ -24,7 +24,7 @@ import {
   probeEnv,
   runLoad,
   sleep,
-  startMaster,
+  startCoordinator,
   waitExit,
 } from './_bench.mjs';
 
@@ -38,12 +38,14 @@ const home = benchHome();
 console.log(`bench home: ${home}`);
 
 const env = probeEnv(coreDir);
-const master = startMaster(coreDir, home, env);
+const coordinator = startCoordinator(coreDir, home, env);
 
 await sleep(3000);
-if (!alive(master)) {
-  console.error('master failed to start:');
-  process.stderr.write(fs.readFileSync(path.join(home, 'master.out'), 'utf8'));
+if (!alive(coordinator)) {
+  console.error('coordinator failed to start:');
+  process.stderr.write(
+    fs.readFileSync(path.join(home, 'coordinator.out'), 'utf8'),
+  );
   process.exit(1);
 }
 

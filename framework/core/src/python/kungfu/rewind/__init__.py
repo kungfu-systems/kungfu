@@ -19,32 +19,46 @@
 #                       run manifest with per-run schema bindings
 #   supervisor.py       the `kungfu trace` supervisor (single journal writer)
 
-# Open-layer msg_type allocation — docs/msg-type-ranges.md, 30001-30099.
-MSG_RUN_BEGIN = 30001
-MSG_RUN_END = 30002
-MSG_MODEL_REQUEST = 30003
-MSG_MODEL_RESPONSE = 30004
-MSG_TOOL_CALL = 30005
-MSG_TOOL_RESULT = 30006
-MSG_RETRY_MARKER = 30007
-MSG_COST_SNAPSHOT = 30008
-MSG_APPROVAL_DECISION = 30009
+from kungfu.action_envelope import CARRIER_ACTION_ENVELOPE
+
+CARRIER_REWIND_ACTION = CARRIER_ACTION_ENVELOPE
+
+ACTION_RUN_BEGIN = "rewind.run.begin"
+ACTION_RUN_END = "rewind.run.end"
+ACTION_MODEL_REQUEST = "rewind.model.request"
+ACTION_MODEL_RESPONSE = "rewind.model.response"
+ACTION_TOOL_CALL = "rewind.tool.call"
+ACTION_TOOL_RESULT = "rewind.tool.result"
+ACTION_RETRY_MARKER = "rewind.retry.marker"
+ACTION_COST_SNAPSHOT = "rewind.cost.snapshot"
+ACTION_APPROVAL_DECISION = "rewind.approval.decision"
+ACTION_RUN_PROGRESS = "rewind.run.progress"
 
 # Event-model version marker carried in RunBegin (belt and braces beside the
 # bundle's schema binding, which remains the decode authority). Bumped on each
-# additive append: 1->2 added CostSnapshot (30008), 2->3 added ApprovalDecision
-# (30009). Existing tables are untouched and old runs still decode through their
-# own pinned blob.
-SCHEMA_VERSION = 3
+# additive append: 1->2 added CostSnapshot, 2->3 added ApprovalDecision,
+# 3->4 added RunProgress. Existing tables are untouched and old runs still
+# decode through their own pinned blob.
+SCHEMA_VERSION = 4
 
-MSG_TYPE_NAMES = {
-    MSG_RUN_BEGIN: "RunBegin",
-    MSG_RUN_END: "RunEnd",
-    MSG_MODEL_REQUEST: "ModelRequest",
-    MSG_MODEL_RESPONSE: "ModelResponse",
-    MSG_TOOL_CALL: "ToolCall",
-    MSG_TOOL_RESULT: "ToolResult",
-    MSG_RETRY_MARKER: "RetryMarker",
-    MSG_COST_SNAPSHOT: "CostSnapshot",
-    MSG_APPROVAL_DECISION: "ApprovalDecision",
+ACTION_TYPE_NAMES = {
+    ACTION_RUN_BEGIN: "RunBegin",
+    ACTION_RUN_END: "RunEnd",
+    ACTION_MODEL_REQUEST: "ModelRequest",
+    ACTION_MODEL_RESPONSE: "ModelResponse",
+    ACTION_TOOL_CALL: "ToolCall",
+    ACTION_TOOL_RESULT: "ToolResult",
+    ACTION_RETRY_MARKER: "RetryMarker",
+    ACTION_COST_SNAPSHOT: "CostSnapshot",
+    ACTION_APPROVAL_DECISION: "ApprovalDecision",
+    ACTION_RUN_PROGRESS: "RunProgress",
+}
+
+ACTION_SCHEMA_REFS = {
+    action_type: {"id": f"kungfu.rewind.{name}", "version": SCHEMA_VERSION}
+    for action_type, name in ACTION_TYPE_NAMES.items()
+}
+
+TABLE_ACTION_TYPES = {
+    name: action_type for action_type, name in ACTION_TYPE_NAMES.items()
 }

@@ -1,0 +1,1618 @@
+{
+  "schema": "kungfu.diagnostics.contract/v1",
+  "id": "kungfu-diagnostics",
+  "version": 2,
+  "weldedSurface": "product-diagnostics-contract",
+  "description": "One health, preflight, and fenced recovery-planning vocabulary over runtime, Peer, storage, and Episode authority surfaces.",
+  "contractSchema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "additionalProperties": false,
+    "required": [
+      "schema",
+      "id",
+      "version",
+      "weldedSurface",
+      "description",
+      "contractSchema",
+      "authority",
+      "statuses",
+      "exitCodes",
+      "modes",
+      "preflightProfiles",
+      "recoveryClassifications",
+      "recoveryActions",
+      "problemSchema",
+      "reportSchema",
+      "preflightSchema",
+      "recoveryPlanSchema",
+      "recoveryReceiptSchema",
+      "problemCatalog",
+      "guarantees",
+      "nonClaims"
+    ],
+    "properties": {
+      "schema": {
+        "const": "kungfu.diagnostics.contract/v1"
+      },
+      "id": {
+        "const": "kungfu-diagnostics"
+      },
+      "version": {
+        "type": "integer",
+        "minimum": 1
+      },
+      "weldedSurface": {
+        "const": "product-diagnostics-contract"
+      },
+      "description": {
+        "type": "string",
+        "minLength": 1
+      },
+      "contractSchema": {
+        "type": "object"
+      },
+      "authority": {
+        "type": "object"
+      },
+      "statuses": {
+        "type": "array",
+        "const": [
+          "ready",
+          "degraded",
+          "action-required",
+          "blocked"
+        ]
+      },
+      "exitCodes": {
+        "type": "object"
+      },
+      "modes": {
+        "type": "object"
+      },
+      "preflightProfiles": {
+        "type": "object",
+        "minProperties": 1,
+        "additionalProperties": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "areas",
+            "mode",
+            "freshness",
+            "cacheAllowed",
+            "statusPolicy"
+          ],
+          "properties": {
+            "areas": {
+              "type": "array",
+              "minItems": 1,
+              "maxItems": 4,
+              "uniqueItems": true,
+              "items": {
+                "enum": [
+                  "runtime",
+                  "peer",
+                  "storage",
+                  "episode"
+                ]
+              }
+            },
+            "mode": {
+              "const": "fast"
+            },
+            "freshness": {
+              "const": "command"
+            },
+            "cacheAllowed": {
+              "const": false
+            },
+            "statusPolicy": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "ready",
+                "degraded",
+                "action-required",
+                "blocked"
+              ],
+              "properties": {
+                "ready": {
+                  "const": "allow"
+                },
+                "degraded": {
+                  "enum": [
+                    "allow",
+                    "warn",
+                    "block"
+                  ]
+                },
+                "action-required": {
+                  "enum": [
+                    "allow",
+                    "warn",
+                    "block"
+                  ]
+                },
+                "blocked": {
+                  "enum": [
+                    "warn",
+                    "block"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      },
+      "recoveryClassifications": {
+        "type": "array",
+        "const": [
+          "automatic-safe",
+          "confirmation-required",
+          "manual-blocked"
+        ]
+      },
+      "recoveryActions": {
+        "type": "object",
+        "minProperties": 5
+      },
+      "problemSchema": {
+        "type": "object"
+      },
+      "reportSchema": {
+        "type": "object"
+      },
+      "preflightSchema": {
+        "type": "object"
+      },
+      "recoveryPlanSchema": {
+        "type": "object"
+      },
+      "recoveryReceiptSchema": {
+        "type": "object"
+      },
+      "problemCatalog": {
+        "type": "object",
+        "minProperties": 10
+      },
+      "guarantees": {
+        "type": "array",
+        "minItems": 4
+      },
+      "nonClaims": {
+        "type": "array",
+        "minItems": 1
+      }
+    }
+  },
+  "authority": {
+    "runtime": "kungfu.runtime.status/v2 and kungfu.runtime.product-status/v1",
+    "peer": "kungfu.runtime.peer-lifecycle-status/v1",
+    "storage": "the typed Storage service status and fsck projections",
+    "episode": "the yijinjing Episode manifest fold and fenced recovery plan",
+    "rule": "Diagnostics project existing facts. They never become a second lifecycle, storage, or recovery authority."
+  },
+  "statuses": [
+    "ready",
+    "degraded",
+    "action-required",
+    "blocked"
+  ],
+  "exitCodes": {
+    "ready": 0,
+    "degraded": 1,
+    "action-required": 2,
+    "blocked": 3
+  },
+  "modes": {
+    "fast": {
+      "bounded": true,
+      "storageFsck": false,
+      "episodeLimit": 100
+    },
+    "deep": {
+      "bounded": false,
+      "storageFsck": true,
+      "episodeLimit": 0
+    }
+  },
+  "preflightProfiles": {
+    "runtime-activation": {
+      "areas": [
+        "runtime"
+      ],
+      "mode": "fast",
+      "freshness": "command",
+      "cacheAllowed": false,
+      "statusPolicy": {
+        "ready": "allow",
+        "degraded": "warn",
+        "action-required": "warn",
+        "blocked": "block"
+      }
+    },
+    "peer-activation": {
+      "areas": [
+        "runtime",
+        "peer"
+      ],
+      "mode": "fast",
+      "freshness": "command",
+      "cacheAllowed": false,
+      "statusPolicy": {
+        "ready": "allow",
+        "degraded": "warn",
+        "action-required": "warn",
+        "blocked": "block"
+      }
+    },
+    "episode-write": {
+      "areas": [
+        "storage"
+      ],
+      "mode": "fast",
+      "freshness": "command",
+      "cacheAllowed": false,
+      "statusPolicy": {
+        "ready": "allow",
+        "degraded": "warn",
+        "action-required": "block",
+        "blocked": "block"
+      }
+    },
+    "episode-recovery": {
+      "areas": [
+        "storage",
+        "episode"
+      ],
+      "mode": "fast",
+      "freshness": "command",
+      "cacheAllowed": false,
+      "statusPolicy": {
+        "ready": "allow",
+        "degraded": "warn",
+        "action-required": "warn",
+        "blocked": "warn"
+      }
+    }
+  },
+  "recoveryClassifications": [
+    "automatic-safe",
+    "confirmation-required",
+    "manual-blocked"
+  ],
+  "recoveryActions": {
+    "runtime.ensure": {
+      "classification": "automatic-safe",
+      "authority": "ProcessRuntimeHost",
+      "rule": "Activation revalidates process-start identity and runtime ownership at the execution point."
+    },
+    "peer.ensure": {
+      "classification": "confirmation-required",
+      "authority": "PeerLifecycleHost",
+      "rule": "The saved declaration, plan id, generation, and process-start identity remain authoritative."
+    },
+    "peer.restart": {
+      "classification": "confirmation-required",
+      "authority": "PeerLifecycleHost",
+      "rule": "Restart uses the expected host generation and never signals a process by PID alone."
+    },
+    "storage.rebuild-projection": {
+      "classification": "automatic-safe",
+      "authority": "StorageService",
+      "rule": "Only declared derived projections may be rebuilt from current authoritative journals."
+    },
+    "episode.abort-stale": {
+      "classification": "confirmation-required",
+      "authority": "EpisodeRecoveryPlanner",
+      "rule": "Execution reacquires the writer lease and compares the current manifest position before appending an abort record."
+    },
+    "manual-review": {
+      "classification": "manual-blocked",
+      "authority": "underlying problem authority",
+      "rule": "Unknown ownership, writer, or authoritative data outcomes have no executable recovery action."
+    }
+  },
+  "problemSchema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$id": "https://kungfu.link/schema/diagnostics/problem-v1.json",
+    "type": "object",
+    "additionalProperties": false,
+    "required": [
+      "schema",
+      "code",
+      "sourceCode",
+      "area",
+      "severity",
+      "statusImpact",
+      "summary",
+      "message",
+      "retryable",
+      "actionRequired",
+      "technicalDetail",
+      "subject",
+      "actions"
+    ],
+    "properties": {
+      "schema": {
+        "const": "kungfu.diagnostic.problem/v1"
+      },
+      "code": {
+        "type": "string",
+        "minLength": 1
+      },
+      "sourceCode": {
+        "type": "string",
+        "minLength": 1
+      },
+      "area": {
+        "enum": [
+          "runtime",
+          "peer",
+          "storage",
+          "episode"
+        ]
+      },
+      "severity": {
+        "enum": [
+          "info",
+          "warning",
+          "error",
+          "critical"
+        ]
+      },
+      "statusImpact": {
+        "enum": [
+          "degraded",
+          "action-required",
+          "blocked"
+        ]
+      },
+      "summary": {
+        "type": "string",
+        "minLength": 1
+      },
+      "message": {
+        "type": "string",
+        "minLength": 1
+      },
+      "retryable": {
+        "type": "boolean"
+      },
+      "actionRequired": {
+        "type": "boolean"
+      },
+      "technicalDetail": {
+        "type": [
+          "string",
+          "null"
+        ]
+      },
+      "subject": {
+        "type": "object"
+      },
+      "actions": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "id",
+            "label",
+            "command",
+            "requiresConfirmation",
+            "destructive"
+          ],
+          "properties": {
+            "id": {
+              "type": "string",
+              "minLength": 1
+            },
+            "label": {
+              "type": "string",
+              "minLength": 1
+            },
+            "command": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "requiresConfirmation": {
+              "type": "boolean"
+            },
+            "destructive": {
+              "type": "boolean"
+            }
+          }
+        }
+      }
+    }
+  },
+  "reportSchema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$id": "https://kungfu.link/schema/diagnostics/health-report-v1.json",
+    "type": "object",
+    "additionalProperties": false,
+    "required": [
+      "schema",
+      "mode",
+      "status",
+      "exitCode",
+      "readOnly",
+      "generatedAt",
+      "home",
+      "runtimeDir",
+      "checks",
+      "problemCount",
+      "problems"
+    ],
+    "properties": {
+      "schema": {
+        "const": "kungfu.health-report/v1"
+      },
+      "mode": {
+        "enum": [
+          "fast",
+          "deep"
+        ]
+      },
+      "status": {
+        "enum": [
+          "ready",
+          "degraded",
+          "action-required",
+          "blocked"
+        ]
+      },
+      "exitCode": {
+        "enum": [
+          0,
+          1,
+          2,
+          3
+        ]
+      },
+      "readOnly": {
+        "const": true
+      },
+      "generatedAt": {
+        "type": "string",
+        "minLength": 1
+      },
+      "home": {
+        "type": "string",
+        "minLength": 1
+      },
+      "runtimeDir": {
+        "type": "string",
+        "minLength": 1
+      },
+      "checks": {
+        "type": "array",
+        "minItems": 4,
+        "maxItems": 4,
+        "items": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "area",
+            "status",
+            "summary",
+            "facts",
+            "problems"
+          ],
+          "properties": {
+            "area": {
+              "enum": [
+                "runtime",
+                "peer",
+                "storage",
+                "episode"
+              ]
+            },
+            "status": {
+              "enum": [
+                "ready",
+                "degraded",
+                "action-required",
+                "blocked"
+              ]
+            },
+            "summary": {
+              "type": "string",
+              "minLength": 1
+            },
+            "facts": {
+              "type": "object"
+            },
+            "problems": {
+              "type": "array",
+              "items": {
+                "$ref": "https://kungfu.link/schema/diagnostics/problem-v1.json"
+              }
+            }
+          }
+        }
+      },
+      "problemCount": {
+        "type": "integer",
+        "minimum": 0
+      },
+      "problems": {
+        "type": "array",
+        "items": {
+          "$ref": "https://kungfu.link/schema/diagnostics/problem-v1.json"
+        }
+      }
+    },
+    "$defs": {
+      "problem": {
+        "type": "object"
+      }
+    }
+  },
+  "preflightSchema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$id": "https://kungfu.link/schema/diagnostics/health-preflight-v1.json",
+    "type": "object",
+    "additionalProperties": false,
+    "required": [
+      "schema",
+      "profile",
+      "mode",
+      "areas",
+      "freshness",
+      "cacheAllowed",
+      "cached",
+      "status",
+      "decision",
+      "exitCode",
+      "readOnly",
+      "generatedAt",
+      "checks",
+      "problemCount",
+      "problems"
+    ],
+    "properties": {
+      "schema": {
+        "const": "kungfu.health-preflight/v1"
+      },
+      "profile": {
+        "type": "string",
+        "minLength": 1
+      },
+      "mode": {
+        "const": "fast"
+      },
+      "areas": {
+        "type": "array",
+        "minItems": 1,
+        "maxItems": 4,
+        "uniqueItems": true,
+        "items": {
+          "enum": [
+            "runtime",
+            "peer",
+            "storage",
+            "episode"
+          ]
+        }
+      },
+      "freshness": {
+        "const": "command"
+      },
+      "cacheAllowed": {
+        "const": false
+      },
+      "cached": {
+        "const": false
+      },
+      "status": {
+        "enum": [
+          "ready",
+          "degraded",
+          "action-required",
+          "blocked"
+        ]
+      },
+      "decision": {
+        "enum": [
+          "allow",
+          "warn",
+          "block"
+        ]
+      },
+      "exitCode": {
+        "enum": [
+          0,
+          1,
+          2,
+          3
+        ]
+      },
+      "readOnly": {
+        "const": true
+      },
+      "generatedAt": {
+        "type": "string",
+        "minLength": 1
+      },
+      "checks": {
+        "type": "array",
+        "minItems": 1,
+        "maxItems": 4,
+        "items": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "area",
+            "status",
+            "summary",
+            "facts",
+            "problems"
+          ],
+          "properties": {
+            "area": {
+              "enum": [
+                "runtime",
+                "peer",
+                "storage",
+                "episode"
+              ]
+            },
+            "status": {
+              "enum": [
+                "ready",
+                "degraded",
+                "action-required",
+                "blocked"
+              ]
+            },
+            "summary": {
+              "type": "string",
+              "minLength": 1
+            },
+            "facts": {
+              "type": "object"
+            },
+            "problems": {
+              "type": "array",
+              "items": {
+                "$ref": "https://kungfu.link/schema/diagnostics/problem-v1.json"
+              }
+            }
+          }
+        }
+      },
+      "problemCount": {
+        "type": "integer",
+        "minimum": 0
+      },
+      "problems": {
+        "type": "array",
+        "items": {
+          "$ref": "https://kungfu.link/schema/diagnostics/problem-v1.json"
+        }
+      }
+    }
+  },
+  "recoveryPlanSchema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$id": "https://kungfu.link/schema/diagnostics/recovery-plan-v1.json",
+    "type": "object",
+    "additionalProperties": false,
+    "required": [
+      "schema",
+      "planId",
+      "status",
+      "readOnly",
+      "generatedAt",
+      "home",
+      "runtimeDir",
+      "healthStatus",
+      "healthExitCode",
+      "summary",
+      "actions",
+      "health"
+    ],
+    "properties": {
+      "schema": {
+        "const": "kungfu.recovery-plan/v1"
+      },
+      "planId": {
+        "type": "string",
+        "pattern": "^sha256:[0-9a-f]{64}$"
+      },
+      "status": {
+        "enum": [
+          "ready",
+          "recoverable",
+          "blocked"
+        ]
+      },
+      "readOnly": {
+        "const": true
+      },
+      "generatedAt": {
+        "type": "string",
+        "minLength": 1
+      },
+      "home": {
+        "type": "string",
+        "minLength": 1
+      },
+      "runtimeDir": {
+        "type": "string",
+        "minLength": 1
+      },
+      "healthStatus": {
+        "enum": [
+          "ready",
+          "degraded",
+          "action-required",
+          "blocked"
+        ]
+      },
+      "healthExitCode": {
+        "enum": [
+          0,
+          1,
+          2,
+          3
+        ]
+      },
+      "summary": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "automatic-safe",
+          "confirmation-required",
+          "manual-blocked"
+        ],
+        "properties": {
+          "automatic-safe": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "confirmation-required": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "manual-blocked": {
+            "type": "integer",
+            "minimum": 0
+          }
+        }
+      },
+      "actions": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "actionId",
+            "problemCode",
+            "sourceCode",
+            "area",
+            "operation",
+            "classification",
+            "label",
+            "target",
+            "expected",
+            "preconditions",
+            "executable"
+          ],
+          "properties": {
+            "actionId": {
+              "type": "string",
+              "minLength": 1
+            },
+            "problemCode": {
+              "type": "string",
+              "minLength": 1
+            },
+            "sourceCode": {
+              "type": "string",
+              "minLength": 1
+            },
+            "area": {
+              "enum": [
+                "runtime",
+                "peer",
+                "storage",
+                "episode"
+              ]
+            },
+            "operation": {
+              "enum": [
+                "runtime.ensure",
+                "peer.ensure",
+                "peer.restart",
+                "storage.rebuild-projection",
+                "episode.abort-stale",
+                "manual-review"
+              ]
+            },
+            "classification": {
+              "enum": [
+                "automatic-safe",
+                "confirmation-required",
+                "manual-blocked"
+              ]
+            },
+            "label": {
+              "type": "string",
+              "minLength": 1
+            },
+            "target": {
+              "type": "object"
+            },
+            "expected": {
+              "type": "object"
+            },
+            "preconditions": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1
+              }
+            },
+            "executable": {
+              "type": "boolean"
+            }
+          }
+        }
+      },
+      "health": {
+        "type": "object"
+      }
+    }
+  },
+  "recoveryReceiptSchema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$id": "https://kungfu.link/schema/diagnostics/recovery-receipt-v1.json",
+    "type": "object",
+    "additionalProperties": false,
+    "required": [
+      "schema",
+      "planId",
+      "ok",
+      "status",
+      "executedAt",
+      "selectedActionIds",
+      "actions",
+      "postflight"
+    ],
+    "properties": {
+      "schema": {
+        "const": "kungfu.recovery-receipt/v1"
+      },
+      "planId": {
+        "type": "string",
+        "pattern": "^sha256:[0-9a-f]{64}$"
+      },
+      "ok": {
+        "type": "boolean"
+      },
+      "status": {
+        "enum": [
+          "succeeded",
+          "action-required",
+          "blocked",
+          "failed"
+        ]
+      },
+      "executedAt": {
+        "type": "string",
+        "minLength": 1
+      },
+      "selectedActionIds": {
+        "type": "array",
+        "uniqueItems": true,
+        "items": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "actions": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "schema",
+            "actionId",
+            "operation",
+            "status",
+            "ok",
+            "result",
+            "error"
+          ],
+          "properties": {
+            "schema": {
+              "const": "kungfu.recovery-action-receipt/v1"
+            },
+            "actionId": {
+              "type": "string",
+              "minLength": 1
+            },
+            "operation": {
+              "type": "string",
+              "minLength": 1
+            },
+            "status": {
+              "enum": [
+                "succeeded",
+                "failed",
+                "not-run"
+              ]
+            },
+            "ok": {
+              "type": "boolean"
+            },
+            "result": {
+              "type": [
+                "object",
+                "null"
+              ]
+            },
+            "error": {
+              "type": [
+                "object",
+                "null"
+              ]
+            }
+          }
+        }
+      },
+      "postflight": {
+        "type": "object"
+      }
+    }
+  },
+  "problemCatalog": {
+    "diagnostic_check_failed": {
+      "area": "runtime",
+      "severity": "critical",
+      "statusImpact": "blocked",
+      "summary": "Kungfu could not verify this part of the workspace",
+      "message": "The check failed before Kungfu could prove the state is safe. Keep the current data unchanged and rerun with --verbose or --json for the technical detail.",
+      "retryable": false,
+      "actionRequired": true,
+      "actions": [
+        {
+          "id": "run-deep-health",
+          "label": "Run the complete read-only check",
+          "command": [
+            "kungfu",
+            "health",
+            "--deep",
+            "--verbose"
+          ],
+          "requiresConfirmation": false,
+          "destructive": false
+        }
+      ]
+    },
+    "runtime_not_ready": {
+      "area": "runtime",
+      "severity": "error",
+      "statusImpact": "action-required",
+      "summary": "The workspace runtime is not ready",
+      "message": "Kungfu cannot currently provide the runtime capabilities requested by this workspace. Check the detailed status before retrying the business command.",
+      "retryable": true,
+      "actionRequired": true,
+      "actions": [
+        {
+          "id": "runtime-status",
+          "label": "Inspect the runtime status",
+          "command": [
+            "kungfu",
+            "runtime",
+            "status",
+            "--json"
+          ],
+          "requiresConfirmation": false,
+          "destructive": false
+        }
+      ]
+    },
+    "runtime_route_stale": {
+      "area": "runtime",
+      "severity": "warning",
+      "statusImpact": "degraded",
+      "summary": "The recorded runtime route is stale",
+      "message": "The workspace is usable without an always-on daemon, but its previous resident-runtime route no longer has a fresh lease. An ordinary runtime-requiring command may reactivate it safely.",
+      "retryable": true,
+      "actionRequired": false,
+      "actions": [
+        {
+          "id": "runtime-status",
+          "label": "Inspect the runtime route",
+          "command": [
+            "kungfu",
+            "runtime",
+            "status",
+            "--json"
+          ],
+          "requiresConfirmation": false,
+          "destructive": false
+        }
+      ]
+    },
+    "runtime_identity_unverified": {
+      "area": "runtime",
+      "severity": "critical",
+      "statusImpact": "blocked",
+      "summary": "A running {process} process cannot be matched to its recorded identity",
+      "message": "Kungfu will not control this process by PID alone because the PID may have been reused. Inspect the runtime status before any restart or stop action.",
+      "retryable": false,
+      "actionRequired": true,
+      "actions": [
+        {
+          "id": "runtime-status",
+          "label": "Inspect process identity evidence",
+          "command": [
+            "kungfu",
+            "runtime",
+            "status",
+            "--json"
+          ],
+          "requiresConfirmation": false,
+          "destructive": false
+        }
+      ]
+    },
+    "peer_not_ready": {
+      "area": "peer",
+      "severity": "error",
+      "statusImpact": "action-required",
+      "summary": "Peer {peerId} is not ready",
+      "message": "Peer {peerId} is in state {state}. Inspect its fenced lifecycle status before deciding whether to restart it.",
+      "retryable": true,
+      "actionRequired": true,
+      "actions": [
+        {
+          "id": "peer-status",
+          "label": "Inspect this Peer",
+          "command": [
+            "kungfu",
+            "runtime",
+            "peer",
+            "status",
+            "{peerId}",
+            "--json"
+          ],
+          "requiresConfirmation": false,
+          "destructive": false
+        }
+      ]
+    },
+    "peer_degraded": {
+      "area": "peer",
+      "severity": "warning",
+      "statusImpact": "degraded",
+      "summary": "Peer {peerId} has stopped reporting fresh health",
+      "message": "The Peer process identity is fenced, but its health heartbeat is stale. Inspect the Peer before relying on new work from it.",
+      "retryable": true,
+      "actionRequired": false,
+      "actions": [
+        {
+          "id": "peer-status",
+          "label": "Inspect this Peer",
+          "command": [
+            "kungfu",
+            "runtime",
+            "peer",
+            "status",
+            "{peerId}",
+            "--json"
+          ],
+          "requiresConfirmation": false,
+          "destructive": false
+        }
+      ]
+    },
+    "peer_orphaned": {
+      "area": "peer",
+      "severity": "error",
+      "statusImpact": "action-required",
+      "summary": "Peer {peerId} outlived its host",
+      "message": "The Peer still has a verified process identity, but its lifecycle host is gone. Use the declared recovery policy to decide whether fenced adoption is allowed.",
+      "retryable": true,
+      "actionRequired": true,
+      "actions": [
+        {
+          "id": "peer-status",
+          "label": "Review adoption evidence",
+          "command": [
+            "kungfu",
+            "runtime",
+            "peer",
+            "status",
+            "{peerId}",
+            "--json"
+          ],
+          "requiresConfirmation": false,
+          "destructive": false
+        }
+      ]
+    },
+    "peer_ownership_unknown": {
+      "area": "peer",
+      "severity": "critical",
+      "statusImpact": "blocked",
+      "summary": "Kungfu cannot prove ownership of Peer {peerId}",
+      "message": "A PID exists, but it does not match the recorded creation identity. Kungfu will not signal or adopt that process automatically.",
+      "retryable": false,
+      "actionRequired": true,
+      "actions": [
+        {
+          "id": "peer-status",
+          "label": "Inspect ownership evidence",
+          "command": [
+            "kungfu",
+            "runtime",
+            "peer",
+            "status",
+            "{peerId}",
+            "--json"
+          ],
+          "requiresConfirmation": false,
+          "destructive": false
+        }
+      ]
+    },
+    "peer_lost_control": {
+      "area": "peer",
+      "severity": "error",
+      "statusImpact": "action-required",
+      "summary": "Peer {peerId} requires a new higher-level attempt",
+      "message": "This Peer declared process continuity as required, so Kungfu will not pretend it can reconstruct the lost in-memory session.",
+      "retryable": false,
+      "actionRequired": true,
+      "actions": [
+        {
+          "id": "peer-status",
+          "label": "Review the declared recovery policy",
+          "command": [
+            "kungfu",
+            "runtime",
+            "peer",
+            "status",
+            "{peerId}",
+            "--json"
+          ],
+          "requiresConfirmation": false,
+          "destructive": false
+        }
+      ]
+    },
+    "peer_crash_loop": {
+      "area": "peer",
+      "severity": "critical",
+      "statusImpact": "blocked",
+      "summary": "Peer {peerId} exceeded its restart budget",
+      "message": "Automatic restarts stopped after repeated exits. Review the Peer log and declaration before starting another attempt.",
+      "retryable": false,
+      "actionRequired": true,
+      "actions": [
+        {
+          "id": "peer-status",
+          "label": "Inspect restart evidence",
+          "command": [
+            "kungfu",
+            "runtime",
+            "peer",
+            "status",
+            "{peerId}",
+            "--json"
+          ],
+          "requiresConfirmation": false,
+          "destructive": false
+        }
+      ]
+    },
+    "storage_status_failed": {
+      "area": "storage",
+      "severity": "error",
+      "statusImpact": "action-required",
+      "summary": "Kungfu could not read the storage catalog",
+      "message": "Keep the workspace unchanged and run the complete read-only integrity check to identify the affected source or projection.",
+      "retryable": false,
+      "actionRequired": true,
+      "actions": [
+        {
+          "id": "storage-fsck",
+          "label": "Run storage integrity checks",
+          "command": [
+            "kungfu",
+            "storage",
+            "fsck",
+            "--scope",
+            "all",
+            "--json"
+          ],
+          "requiresConfirmation": false,
+          "destructive": false
+        }
+      ]
+    },
+    "manifest_missing": {
+      "area": "storage",
+      "severity": "error",
+      "statusImpact": "action-required",
+      "summary": "Source {sourceId} has no accepted storage manifest",
+      "message": "The source is registered, but Kungfu cannot find the manifest that describes its accepted facts. Do not rebuild or delete data until the integrity report is reviewed.",
+      "retryable": false,
+      "actionRequired": true,
+      "actions": [
+        {
+          "id": "storage-fsck",
+          "label": "Inspect storage integrity",
+          "command": [
+            "kungfu",
+            "storage",
+            "fsck",
+            "--scope",
+            "all",
+            "--json"
+          ],
+          "requiresConfirmation": false,
+          "destructive": false
+        }
+      ]
+    },
+    "storage_integrity_failed": {
+      "area": "storage",
+      "severity": "critical",
+      "statusImpact": "blocked",
+      "summary": "Storage integrity could not be proved",
+      "message": "At least one authoritative storage check failed. Preserve the workspace and review a dry-run repair plan before authorizing any write.",
+      "retryable": false,
+      "actionRequired": true,
+      "actions": [
+        {
+          "id": "repair-plan",
+          "label": "Create a read-only repair plan",
+          "command": [
+            "kungfu",
+            "storage",
+            "repair",
+            "--scope",
+            "all",
+            "--plan",
+            "--dry-run",
+            "--json"
+          ],
+          "requiresConfirmation": false,
+          "destructive": false
+        }
+      ]
+    },
+    "source_missing": {
+      "area": "storage",
+      "severity": "error",
+      "statusImpact": "action-required",
+      "summary": "A requested storage source is missing",
+      "message": "Kungfu cannot verify facts for a source that is not present in the authoritative source registry.",
+      "retryable": false,
+      "actionRequired": true,
+      "actions": []
+    },
+    "source_registry_drift": {
+      "area": "storage",
+      "severity": "critical",
+      "statusImpact": "blocked",
+      "summary": "The source registry and accepted manifest disagree",
+      "message": "Two authoritative storage views report different source heads. Preserve both and inspect the integrity evidence before repair.",
+      "retryable": false,
+      "actionRequired": true,
+      "actions": []
+    },
+    "projection_absent": {
+      "area": "storage",
+      "severity": "info",
+      "statusImpact": "degraded",
+      "summary": "A rebuildable storage projection is absent",
+      "message": "Authoritative journal facts remain available, but one derived query index has not been built. Rebuild is optional unless a query needs it.",
+      "retryable": true,
+      "actionRequired": false,
+      "actions": [
+        {
+          "id": "repair-plan",
+          "label": "Preview projection repair",
+          "command": [
+            "kungfu",
+            "storage",
+            "repair",
+            "--scope",
+            "all",
+            "--plan",
+            "--dry-run",
+            "--json"
+          ],
+          "requiresConfirmation": false,
+          "destructive": false
+        }
+      ]
+    },
+    "projection_drift": {
+      "area": "storage",
+      "severity": "warning",
+      "statusImpact": "degraded",
+      "summary": "A rebuildable storage projection has drifted",
+      "message": "The derived index does not match its authoritative journal facts. Preview the repair before rebuilding it.",
+      "retryable": true,
+      "actionRequired": false,
+      "actions": [
+        {
+          "id": "repair-plan",
+          "label": "Preview projection repair",
+          "command": [
+            "kungfu",
+            "storage",
+            "repair",
+            "--scope",
+            "all",
+            "--plan",
+            "--dry-run",
+            "--json"
+          ],
+          "requiresConfirmation": false,
+          "destructive": false
+        }
+      ]
+    },
+    "orphan_payload": {
+      "area": "storage",
+      "severity": "info",
+      "statusImpact": "degraded",
+      "summary": "An unreferenced payload was found",
+      "message": "No retained manifest currently references this payload. Kungfu will not delete it during health checks.",
+      "retryable": true,
+      "actionRequired": false,
+      "actions": [
+        {
+          "id": "gc-plan",
+          "label": "Preview unreachable payloads",
+          "command": [
+            "kungfu",
+            "storage",
+            "gc",
+            "--scope",
+            "all",
+            "--dry-run",
+            "--json"
+          ],
+          "requiresConfirmation": false,
+          "destructive": false
+        }
+      ]
+    },
+    "episode_stale_recoverable": {
+      "area": "episode",
+      "severity": "error",
+      "statusImpact": "action-required",
+      "summary": "Episode {episodeId} is stale and eligible for fenced recovery",
+      "message": "The Episode is still open, no terminal record exists, and its writer is proven inactive. Review the plan before authorizing an abort record.",
+      "retryable": false,
+      "actionRequired": true,
+      "actions": [
+        {
+          "id": "episode-recovery-plan",
+          "label": "Review the recovery plan",
+          "command": [
+            "kungfu",
+            "storage",
+            "episode",
+            "recover",
+            "--episode-id",
+            "{episodeId}",
+            "--plan",
+            "--json"
+          ],
+          "requiresConfirmation": false,
+          "destructive": false
+        }
+      ]
+    },
+    "episode_writer_liveness_unknown": {
+      "area": "episode",
+      "severity": "critical",
+      "statusImpact": "blocked",
+      "summary": "Kungfu cannot prove whether Episode {episodeId} still has a writer",
+      "message": "Recovery is blocked because an unknown writer outcome must never be treated as inactive. Preserve the Episode and inspect its ownership evidence.",
+      "retryable": false,
+      "actionRequired": true,
+      "actions": [
+        {
+          "id": "episode-recovery-plan",
+          "label": "Inspect the fenced recovery blockers",
+          "command": [
+            "kungfu",
+            "storage",
+            "episode",
+            "recover",
+            "--episode-id",
+            "{episodeId}",
+            "--plan",
+            "--json"
+          ],
+          "requiresConfirmation": false,
+          "destructive": false
+        }
+      ]
+    },
+    "episode_age_unknown": {
+      "area": "episode",
+      "severity": "critical",
+      "statusImpact": "blocked",
+      "summary": "Kungfu cannot establish the age of Episode {episodeId}",
+      "message": "Without a reliable manifest time or heartbeat, Kungfu cannot classify the open Episode as stale and will not recover it automatically.",
+      "retryable": false,
+      "actionRequired": true,
+      "actions": [
+        {
+          "id": "episode-inspect",
+          "label": "Inspect the Episode facts",
+          "command": [
+            "kungfu",
+            "storage",
+            "episode",
+            "inspect",
+            "--episode-id",
+            "{episodeId}",
+            "--json"
+          ],
+          "requiresConfirmation": false,
+          "destructive": false
+        }
+      ]
+    },
+    "episode_open_recent": {
+      "area": "episode",
+      "severity": "warning",
+      "statusImpact": "degraded",
+      "summary": "Episode {episodeId} is open without a live writer, but is not stale yet",
+      "message": "This may be a process that just exited. Kungfu will wait for the stale threshold before offering fenced recovery.",
+      "retryable": true,
+      "actionRequired": false,
+      "actions": [
+        {
+          "id": "episode-inspect",
+          "label": "Inspect the Episode",
+          "command": [
+            "kungfu",
+            "storage",
+            "episode",
+            "inspect",
+            "--episode-id",
+            "{episodeId}",
+            "--json"
+          ],
+          "requiresConfirmation": false,
+          "destructive": false
+        }
+      ]
+    },
+    "episode_scan_truncated": {
+      "area": "episode",
+      "severity": "info",
+      "statusImpact": "degraded",
+      "summary": "The fast Episode scan reached its 100-item bound",
+      "message": "Run deep health when you need a complete scan of all recorded Episodes.",
+      "retryable": true,
+      "actionRequired": false,
+      "actions": [
+        {
+          "id": "deep-health",
+          "label": "Run the complete read-only check",
+          "command": [
+            "kungfu",
+            "health",
+            "--deep"
+          ],
+          "requiresConfirmation": false,
+          "destructive": false
+        }
+      ]
+    },
+    "episode_unknown_records": {
+      "area": "episode",
+      "severity": "critical",
+      "statusImpact": "blocked",
+      "summary": "The Episode manifest contains records this runtime cannot interpret",
+      "message": "Do not rewrite the manifest. Use a compatible Kungfu runtime or inspect the raw qualification evidence first.",
+      "retryable": false,
+      "actionRequired": true,
+      "actions": []
+    },
+    "episode_state_inconsistent": {
+      "area": "episode",
+      "severity": "critical",
+      "statusImpact": "blocked",
+      "summary": "An Episode state is internally inconsistent",
+      "message": "Kungfu cannot safely translate this state into an automatic recovery decision. Preserve the manifest and inspect the deep health report.",
+      "retryable": false,
+      "actionRequired": true,
+      "actions": [
+        {
+          "id": "deep-health",
+          "label": "Run the complete read-only check",
+          "command": [
+            "kungfu",
+            "health",
+            "--deep",
+            "--json"
+          ],
+          "requiresConfirmation": false,
+          "destructive": false
+        }
+      ]
+    },
+    "episode_writer_busy_timeout": {
+      "area": "episode",
+      "severity": "warning",
+      "statusImpact": "degraded",
+      "summary": "Another process kept the Episode manifest writer busy",
+      "message": "Kungfu stopped after a bounded retry window and did not assume the write succeeded. Check the Episode state before retrying the business operation.",
+      "retryable": false,
+      "actionRequired": false,
+      "actions": [
+        {
+          "id": "episode-list",
+          "label": "Check the current Episode state",
+          "command": [
+            "kungfu",
+            "storage",
+            "episode",
+            "list",
+            "--json"
+          ],
+          "requiresConfirmation": false,
+          "destructive": false
+        }
+      ]
+    },
+    "episode_recovery_not_eligible": {
+      "area": "episode",
+      "severity": "error",
+      "statusImpact": "action-required",
+      "summary": "The Episode recovery preconditions are not satisfied",
+      "message": "Kungfu did not write an abort record. Review the plan blockers and resolve the underlying condition first.",
+      "retryable": false,
+      "actionRequired": true,
+      "actions": []
+    },
+    "episode_recovery_writer_active": {
+      "area": "episode",
+      "severity": "critical",
+      "statusImpact": "blocked",
+      "summary": "Episode recovery lost the writer fence",
+      "message": "A writer became active after planning, so Kungfu stopped recovery without writing a terminal record.",
+      "retryable": false,
+      "actionRequired": true,
+      "actions": []
+    }
+  },
+  "guarantees": [
+    "kungfu health never starts, stops, or restarts a process",
+    "kungfu health never repairs a runtime route or storage projection",
+    "kungfu health never writes an Episode terminal record",
+    "unknown process, writer, or I/O outcomes fail closed",
+    "fast mode never invokes storage fsck",
+    "kungfu recover is read-only unless --execute binds an exact current plan id",
+    "every recovery action reuses the underlying execution-point fence and returns a per-action receipt",
+    "manual-blocked actions are never executable through the unified recovery entry"
+  ],
+  "nonClaims": [
+    "cross-host availability",
+    "unfenced or unattended repair of unknown authority state",
+    "one global transaction across independent runtime, Peer, storage, and Episode actions",
+    "power-loss recovery beyond the underlying durability qualification",
+    "business-level correctness of Profile or KFX logic"
+  ]
+}

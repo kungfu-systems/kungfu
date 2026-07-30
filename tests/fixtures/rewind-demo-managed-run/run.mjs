@@ -4,7 +4,7 @@
 // cost wire event into one managed act: launch a provider, parse its
 // structured output, and emit a CostSnapshot journal event bound to the run.
 // Drives run_managed with an injected fake process runner and a list-collecting
-// emit sink (the same (msg_type, bytes) signature the supervisor exposes), so it
+// emit sink (the same (action_type, bytes) signature the supervisor exposes), so it
 // spawns no real CLI and needs no native journal writer.
 //
 // Runs under `uv run --frozen python` for flatbuffers; stubs the top-level

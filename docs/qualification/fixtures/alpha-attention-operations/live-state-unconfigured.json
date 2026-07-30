@@ -1,0 +1,21 @@
+{
+  "schema": "kungfu.alpha-attention-observed-github-state/v1",
+  "organizationDefaultRepository": {
+    "exists": false,
+    "files": []
+  },
+  "repository": {
+    "hasIssues": true,
+    "hasDiscussions": false
+  },
+  "discussionCategories": [],
+  "labels": [],
+  "privateVulnerabilityReporting": true,
+  "activeRulesets": [
+    {
+      "name": "Buildchain dev merge queue: admitted dev channel family",
+      "enforcement": "active"
+    }
+  ],
+  "interactionLimit": null
+}

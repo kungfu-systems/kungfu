@@ -1,0 +1,182 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kungfu.tech/schemas/runtime-activation-qualification-report-v1.schema.json",
+  "title": "Kungfu Runtime Activation Qualification Report v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "run_id",
+    "mode",
+    "product_mode",
+    "source",
+    "platform",
+    "suites",
+    "coverage",
+    "claims",
+    "non_claims",
+    "violations",
+    "verdict"
+  ],
+  "properties": {
+    "schema": { "const": "kungfu.runtime-activation.qualification-report/v1" },
+    "run_id": { "type": "string", "minLength": 1 },
+    "mode": { "enum": ["dry-run", "execute"] },
+    "product_mode": { "enum": ["omitted", "required"] },
+    "source": { "$ref": "#/$defs/source" },
+    "platform": { "$ref": "#/$defs/platform" },
+    "suites": {
+      "type": "array",
+      "minItems": 8,
+      "items": { "$ref": "#/$defs/suite" }
+    },
+    "coverage": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/coverage" }
+    },
+    "claims": { "$ref": "#/$defs/claims" },
+    "non_claims": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": { "type": "string", "minLength": 1 }
+    },
+    "artifacts": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["log_bundle"],
+      "properties": {
+        "log_bundle": { "$ref": "#/$defs/logBundle" }
+      }
+    },
+    "violations": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 }
+    },
+    "verdict": { "enum": ["planned", "passed", "failed", "unqualified"] }
+  },
+  "$defs": {
+    "source": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["revision", "tree", "dirty"],
+      "properties": {
+        "revision": { "type": "string", "minLength": 1 },
+        "tree": { "type": "string", "minLength": 1 },
+        "dirty": { "type": "boolean" }
+      }
+    },
+    "platform": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["os", "arch", "release"],
+      "properties": {
+        "os": { "enum": ["darwin", "linux", "win32"] },
+        "arch": { "enum": ["arm64", "x64"] },
+        "release": { "type": "string", "minLength": 1 }
+      }
+    },
+    "suite": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "command",
+        "required",
+        "status",
+        "exit_code",
+        "duration_ms",
+        "raw_log",
+        "raw_sha256"
+      ],
+      "properties": {
+        "id": { "type": "string", "minLength": 1 },
+        "command": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "required": { "type": "boolean" },
+        "status": { "enum": ["planned", "passed", "failed", "skipped"] },
+        "exit_code": { "type": ["integer", "null"] },
+        "duration_ms": { "type": "integer", "minimum": 0 },
+        "raw_log": { "type": ["string", "null"] },
+        "raw_sha256": {
+          "anyOf": [
+            { "type": "null" },
+            { "type": "string", "pattern": "^[0-9a-f]{64}$" }
+          ]
+        }
+      }
+    },
+    "coverage": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "evidence_suites", "status"],
+      "properties": {
+        "id": { "type": "string", "minLength": 1 },
+        "evidence_suites": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "status": { "enum": ["planned", "passed", "failed", "unqualified"] }
+      }
+    },
+    "logBundle": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "path",
+        "media_type",
+        "content_encoding",
+        "sha256",
+        "bytes",
+        "entries"
+      ],
+      "properties": {
+        "path": { "const": "raw-logs.jsonl.gz" },
+        "media_type": { "const": "application/x-ndjson" },
+        "content_encoding": { "const": "gzip" },
+        "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+        "bytes": { "type": "integer", "minimum": 1 },
+        "entries": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["suite_id", "path", "sha256", "bytes"],
+            "properties": {
+              "suite_id": { "type": "string", "minLength": 1 },
+              "path": { "type": "string", "pattern": "^[^/\\\\]+\\.log$" },
+              "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+              "bytes": { "type": "integer", "minimum": 0 }
+            }
+          }
+        }
+      }
+    },
+    "claims": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "daemonless_storage_operations",
+        "direct_no_fork_coordinator",
+        "process_crash_recovery",
+        "native_readiness_publication",
+        "product_artifacts_verified",
+        "embedded_runtime_host"
+      ],
+      "properties": {
+        "daemonless_storage_operations": { "type": "boolean" },
+        "direct_no_fork_coordinator": { "type": "boolean" },
+        "process_crash_recovery": { "type": "boolean" },
+        "native_readiness_publication": { "type": "boolean" },
+        "product_artifacts_verified": { "type": "boolean" },
+        "embedded_runtime_host": { "const": false }
+      }
+    }
+  }
+}

@@ -1,0 +1,76 @@
+{
+  "schema": "kungfu.profile-suite/v1",
+  "id": "kungfu.reference.course-production-suite",
+  "title": "Course Production",
+  "version": "1.0.0",
+  "members": {
+    "required": [
+      "course-production-domain"
+    ],
+    "optional": []
+  },
+  "kfd1": {
+    "contractWorld": {
+      "path": "contracts/world.json",
+      "sha256": "d90c2ffb0e74094142b269813bf7745d236c968d5cd7c1853d35e13b32749ded"
+    },
+    "factSurfaces": [
+      {
+        "path": "contracts/course-production.json",
+        "sha256": "94b2baa755c2ed4e88f2a322d543efac7e10fe714119904d7056386a54ce6de4"
+      }
+    ],
+    "reducers": [],
+    "compatibility": {
+      "path": "compatibility/v1.json",
+      "sha256": "c2e5087191c4cd5e243deeeb6d830ab4e4c523bc1c7dedccae40f3970ddc27f4"
+    }
+  },
+  "kfd2": {
+    "claims": [
+      {
+        "path": "claims/release-ready.json",
+        "sha256": "5d50d450156c4b1b17c994f631efeae478bbcef3dcd553ab6e78c6730b1b77da"
+      }
+    ],
+    "purposes": [
+      "course-release"
+    ],
+    "policies": [
+      {
+        "path": "assessments/release-ready.json",
+        "sha256": "eb852afbe2d73f95e218108fe5110fbca78c265166d66958494c1cfa2ce5dc9a"
+      }
+    ]
+  },
+  "actions": {
+    "registry": {
+      "path": "actions/registry.json",
+      "sha256": "27123a364efa23eaff3c606c53fac7c70f59583f32924dbc8aeae937971a27de"
+    }
+  },
+  "views": {
+    "registry": {
+      "path": "views/registry.json",
+      "sha256": "c5e76ea5a65c550506bdeb1a2d0796bb2d98eb3cce5449551dc7bd7b73bb8303"
+    }
+  },
+  "migrations": {
+    "registry": {
+      "path": "migrations/registry.json",
+      "sha256": "27596979db8ffeebe50ba2a1e64b7a32fedb8a939994a2e3462132c5f43d68ee"
+    }
+  },
+  "permissions": {
+    "registry": {
+      "path": "permissions.json",
+      "sha256": "f7a906c193e8fd7829034fd36e0df77090e0f270836ee07390805c85cbe51c44"
+    }
+  },
+  "qualification": {
+    "profile": {
+      "path": "qualification/profile.json",
+      "sha256": "c0e0746b9a2be87bf8c59f84e873a45b6f8f62ee6624bf4a6caff2675e7ce201"
+    }
+  }
+}

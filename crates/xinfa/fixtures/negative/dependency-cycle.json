@@ -1,0 +1,16 @@
+{
+  "schema": "xinfa.negative-fixture/v1",
+  "base": "project-alpha.json",
+  "mutations": [
+    {
+      "pointer": "/nodes/2/verification/dependencies",
+      "value": [
+        {
+          "node": "alpha.doc.guide",
+          "expectedRevision": "sha256:9999999999999999999999999999999999999999999999999999999999999999"
+        }
+      ]
+    }
+  ],
+  "expectedCode": "cycle"
+}

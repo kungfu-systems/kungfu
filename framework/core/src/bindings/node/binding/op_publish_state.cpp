@@ -7,21 +7,21 @@
 #include "operators.h"
 
 using namespace kungfu::rx;
-using namespace kungfu::longfist;
-using namespace kungfu::longfist::enums;
-using namespace kungfu::longfist::types;
 using namespace kungfu::yijinjing;
+using namespace kungfu::yijinjing::enums;
+using namespace kungfu::yijinjing::types;
+using namespace kungfu::runtime;
 using namespace kungfu::yijinjing::data;
-using namespace kungfu::practice;
+using namespace kungfu::runtime::live;
 
 namespace kungfu::node::serialize {
-JsPublishState::JsPublishState(apprentice &app, Napi::ObjectReference &state) : app_(app), state_(state) {}
+JsPublishState::JsPublishState(peer &app, Napi::ObjectReference &state) : app_(app), state_(state) {}
 
 void JsPublishState::operator()(Napi::Object object) {
   auto now = yijinjing::time::now_in_nano();
   auto location = app_.get_live_home();
   auto type_name = object.Get("type").ToString().Utf8Value();
-  boost::hana::for_each(longfist::StateDataTypes, [&](auto it) {
+  boost::hana::for_each(yijinjing::StateDataTypes, [&](auto it) {
     using DataType = typename decltype(+boost::hana::second(it))::type;
     if (strcmp(DataType::type_name.c_str(), type_name.c_str()) == 0) {
       DataType data{};

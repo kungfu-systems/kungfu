@@ -2,18 +2,28 @@
 
 from .resources import (
     choose_mode,
+    cli_surface_catalog,
     commands,
     document_text,
     index,
     pack_root,
+    profile_sdk_contract,
+    registry,
+    registry_schema,
     skill_path,
 )
+from . import documentation
 
 __all__ = [
     "choose_mode",
+    "cli_surface_catalog",
     "commands",
     "document_text",
     "index",
     "pack_root",
+    "profile_sdk_contract",
+    "registry",
+    "registry_schema",
     "skill_path",
+    "documentation",
 ]

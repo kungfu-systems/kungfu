@@ -1,0 +1,18 @@
+{
+  "schema": "kungfu.code-complexity-budget-waiver/v1",
+  "paths_or_scope": ["docs/qualification/gates/workflow-authority.json"],
+  "file_class": "declarative-schema-or-table",
+  "baseline_measurement": 2605,
+  "requested_measurement": 2627,
+  "allowed_delta": 22,
+  "owner": "kungfu/docs",
+  "responsibility_boundary": "Generated workflow authority projection for the dedicated native Linux ARM64 Hub CLI qualification job.",
+  "cohesion_rationale": "The job must remain in the single canonical workflow authority projection so reviewers can audit credentials, reusable workflow binding, and publication authority together.",
+  "rejected_split_alternatives": ["A second authority registry would create competing workflow truth sources.", "Dropping job detail would weaken credential and reusable-workflow auditability."],
+  "affected_tests_and_qualification": ["node scripts/workflow-authority.test.mjs", "./shifu check:source", "GitHub Actions Build workflow native linux-arm64 qualification"],
+  "requested_by": "dongkeren",
+  "approved_by": "kungfu-origin",
+  "approved_at": "2026-07-27T07:06:00+08:00",
+  "expires_at_or_review_by": "2026-10-31T23:59:59+08:00",
+  "retirement_or_decomposition_ref": "KF-ADR-019f9388-a139-7355-b9f2-f6dd9aa91042"
+}

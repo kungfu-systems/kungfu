@@ -1,16 +1,17 @@
-// Electron glue for the per-session OS window registry (ADR-0016 stage 2). The
+// Electron glue for the per-session OS window registry (KF-ADR-019f86da-4f90-7153-a6c1-ab7a0a3cf481 stage 2). The
 // lifecycle logic is electron-free in session-windows; this is the thin shell
 // that supplies real BrowserWindows and `screen` displays and wires the ipcMain
 // channels — the same pure-core / glue split terminal-host uses.
 //
 // Gated by KF_SESSION_WINDOWS (see index.ts): default off keeps the single-window
 // app exactly as it is (parity by construction); the multi-window path is
-// exercised by flipping the flag on a real machine, the discipline ADR-0016
+// exercised by flipping the flag on a real machine, the discipline KF-ADR-019f86da-4f90-7153-a6c1-ab7a0a3cf481
 // stage 1 used for the main-process host.
 import path from 'node:path';
 import { BrowserWindow, type IpcMain, screen } from 'electron';
 
 import {
+  SESSION_WINDOW_AUTHORIZATION_CHANNEL,
   SESSION_WINDOW_CLOSE_CHANNEL,
   SESSION_WINDOW_OPEN_CHANNEL,
   SESSION_WINDOW_RESTORE_CHANNEL,
@@ -18,7 +19,9 @@ import {
 } from '../sandbox/channels';
 import {
   type SessionWindow,
+  type SessionWindowLaunchAuthorization,
   type SessionWindowRegistry,
+  authorizeSessionWindowLaunch,
   createSessionWindowRegistry,
 } from './session-windows';
 import {
@@ -48,11 +51,16 @@ function sessionWindowEntry(runId: string, windowId: string): string {
       )}${query}`;
 }
 
-function createSessionWindow(args: {
-  windowId: string;
-  runId: string;
-  bounds: Rect;
-}): SessionWindow {
+function createSessionWindow(
+  args: {
+    windowId: string;
+    runId: string;
+    bounds: Rect;
+  },
+  launch: SessionWindowLaunchAuthorization,
+  onCreated: (win: BrowserWindow) => void,
+): SessionWindow {
+  authorizeSessionWindowLaunch(launch);
   const win = new BrowserWindow({
     x: args.bounds.x,
     y: args.bounds.y,
@@ -62,15 +70,16 @@ function createSessionWindow(args: {
     backgroundColor: '#1e1e1e',
     title: `Session ${args.runId}`,
     webPreferences: {
-      // ADR-0016 stage 3: the window renderer mounts the terminal view and
+      // KF-ADR-019f86da-4f90-7153-a6c1-ab7a0a3cf481 stage 3: the window renderer mounts the terminal view and
       // reaches the main-process host over the relay via ipcRenderer, so it runs
-      // node-integrated like the shell (a first-party window loading a
-      // first-party bundle) rather than the stage-2 sandboxed placeholder.
+      // node-integrated only after an exact Core authorization rather than by
+      // window or bundle origin.
       nodeIntegration: true,
       contextIsolation: false,
       sandbox: false,
     },
   });
+  onCreated(win);
   win.on('ready-to-show', () => win.show());
   void win.loadURL(sessionWindowEntry(args.runId, args.windowId));
   return {
@@ -96,9 +105,14 @@ export function bindSessionWindows(opts: {
   ipcMain: IpcMain;
   getShellWindow: () => BrowserWindow | null;
   // true once the app is quitting: window closes during shutdown must not be
-  // persisted, or they would wipe the set that restore needs (ADR-0016 stage 2).
+  // persisted, or they would wipe the set that restore needs (KF-ADR-019f86da-4f90-7153-a6c1-ab7a0a3cf481 stage 2).
   isQuitting?: () => boolean;
 }): SessionWindowRegistry {
+  const pendingLaunches = new Map<string, SessionWindowLaunchAuthorization>();
+  const launchesByWebContents = new Map<
+    number,
+    SessionWindowLaunchAuthorization
+  >();
   const registry = createSessionWindowRegistry({
     displays: () => ({
       list: screen.getAllDisplays().map(toDisplayInfo),
@@ -106,7 +120,20 @@ export function bindSessionWindows(opts: {
     }),
     displayKeyForBounds: (bounds) =>
       displayKey(screen.getDisplayMatching(bounds)),
-    createWindow: createSessionWindow,
+    createWindow: (args) => {
+      const launch = pendingLaunches.get(args.windowId);
+      if (!launch) {
+        throw new Error(
+          'KF_KFX_HOST_NOT_AUTHORIZED: session window launch descriptor missing',
+        );
+      }
+      return createSessionWindow(args, launch, (win) => {
+        launchesByWebContents.set(win.webContents.id, launch);
+        win.on('closed', () => {
+          launchesByWebContents.delete(win.webContents.id);
+        });
+      });
+    },
     onChange: (snapshot) => {
       // On app quit every window closes, which would emit an empty snapshot and
       // overwrite the persisted set; skip persistence during shutdown so the
@@ -120,23 +147,58 @@ export function bindSessionWindows(opts: {
     now: () => Date.now(),
   });
 
+  const openAuthorized = (
+    spec: { windowId: string; runId: string; saved?: Placement },
+    launch: SessionWindowLaunchAuthorization,
+  ) => {
+    authorizeSessionWindowLaunch(launch);
+    pendingLaunches.set(spec.windowId, launch);
+    try {
+      return registry.open(spec);
+    } finally {
+      pendingLaunches.delete(spec.windowId);
+    }
+  };
+
+  opts.ipcMain.handle(SESSION_WINDOW_AUTHORIZATION_CHANNEL, (event) => {
+    const launch = launchesByWebContents.get(event.sender.id);
+    if (!launch) {
+      throw new Error(
+        'KF_KFX_HOST_NOT_AUTHORIZED: session window has no bound Core descriptor',
+      );
+    }
+    return authorizeSessionWindowLaunch(launch);
+  });
+
   // Fresh pop-out from the shell grid; returns where the window actually landed.
   opts.ipcMain.handle(SESSION_WINDOW_OPEN_CHANNEL, (_e, payload) => {
-    const { windowId, runId } = payload as { windowId: string; runId: string };
-    return registry.open({ windowId, runId });
+    const { windowId, runId, launch } = payload as {
+      windowId: string;
+      runId: string;
+      launch: SessionWindowLaunchAuthorization;
+    };
+    return openAuthorized({ windowId, runId }, launch);
   });
   // Restore the persisted window set on boot; each saved rectangle is clamped
   // back onto a present display (F7).
   opts.ipcMain.handle(SESSION_WINDOW_RESTORE_CHANNEL, (_e, payload) => {
     const { windows } = payload as {
-      windows: Array<{ windowId: string; runId: string; saved: Placement }>;
+      windows: Array<{
+        windowId: string;
+        runId: string;
+        saved: Placement;
+        launch: SessionWindowLaunchAuthorization;
+      }>;
     };
     return windows.map((entry) =>
-      registry.open({
-        windowId: entry.windowId,
-        runId: entry.runId,
-        saved: entry.saved,
-      }),
+      openAuthorized(
+        {
+          windowId: entry.windowId,
+          runId: entry.runId,
+          saved: entry.saved,
+        },
+        entry.launch,
+      ),
     );
   });
   opts.ipcMain.on(SESSION_WINDOW_CLOSE_CHANNEL, (_e, payload) => {

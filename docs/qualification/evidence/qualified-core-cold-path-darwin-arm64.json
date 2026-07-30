@@ -1,0 +1,146 @@
+{
+  "schema": "kungfu.qualified-assignment-core-cold-path-benchmark/v1",
+  "authority": "optimization-evidence-only",
+  "generatedAt": "2026-07-30T10:13:58.331Z",
+  "source": {
+    "repository": "kungfu-systems/kungfu",
+    "commit": "f2d0df9cdf31b6eeda43a35b87a009662f00eb0e",
+    "consumerModuleRoot": "sha256:2e66ca81b5b25a0957562dd5c68402e73316191e3b2e6aa970bce0cfd75a6962"
+  },
+  "host": {
+    "platform": "darwin",
+    "architecture": "arm64",
+    "osRelease": "25.5.0",
+    "node": "v24.16.0"
+  },
+  "provider": {
+    "kind": "office-http-artifact",
+    "authority": "transport-only",
+    "endpointRetained": false
+  },
+  "thresholdsMs": {
+    "coldMedian": 600000,
+    "warmEach": 10000
+  },
+  "runs": {
+    "cold": [
+      {
+        "label": "cold-checkout-1",
+        "status": "materialized",
+        "reason": "remote-hit",
+        "transportProvider": "office-http-artifact",
+        "artifactId": 8754025216,
+        "observationRoot": "sha256:171698cbff95c87ffb22b9063158d9f250cfbab3910eda9e3d502a69d58b485b",
+        "phasesMs": {
+          "checkout": 109,
+          "localLookup": 1,
+          "remoteLookup": 2481,
+          "discovery": 1989,
+          "transfer": 410,
+          "verification": 543,
+          "retention": 544,
+          "verificationAndRetention": 1087,
+          "publication": 185,
+          "total": 3863
+        },
+        "wallElapsedMs": 3871
+      },
+      {
+        "label": "cold-checkout-2",
+        "status": "materialized",
+        "reason": "remote-hit",
+        "transportProvider": "office-http-artifact",
+        "artifactId": 8754025216,
+        "observationRoot": "sha256:7722d660c35f4e09e53666e8d98ca5e1d55e9ef6b7a6119de912ffcb7bc1a811",
+        "phasesMs": {
+          "checkout": 108,
+          "localLookup": 0,
+          "remoteLookup": 3222,
+          "discovery": 2771,
+          "transfer": 396,
+          "verification": 483,
+          "retention": 568,
+          "verificationAndRetention": 1051,
+          "publication": 169,
+          "total": 4550
+        },
+        "wallElapsedMs": 4557
+      },
+      {
+        "label": "cold-checkout-3",
+        "status": "materialized",
+        "reason": "remote-hit",
+        "transportProvider": "office-http-artifact",
+        "artifactId": 8754025216,
+        "observationRoot": "sha256:b2a047d70d6687dd27297ad4948e78d336a8ba3f8348a4f85972c7177b33d627",
+        "phasesMs": {
+          "checkout": 109,
+          "localLookup": 0,
+          "remoteLookup": 2998,
+          "discovery": 2556,
+          "transfer": 397,
+          "verification": 489,
+          "retention": 524,
+          "verificationAndRetention": 1013,
+          "publication": 182,
+          "total": 4302
+        },
+        "wallElapsedMs": 4310
+      }
+    ],
+    "retainedLocalCas": [
+      {
+        "label": "warm-checkout-1",
+        "status": "materialized",
+        "reason": "local-cas-hit",
+        "transportProvider": "office-http-artifact",
+        "artifactId": 8754025216,
+        "observationRoot": "sha256:cc61a02ead8e2d7b528d78459a911b5ec978dfca93df798eba58e7a33b9db66e",
+        "phasesMs": {
+          "checkout": 360,
+          "localLookup": 549,
+          "publication": 129,
+          "total": 1038
+        },
+        "wallElapsedMs": 1039
+      },
+      {
+        "label": "warm-checkout-2",
+        "status": "materialized",
+        "reason": "local-cas-hit",
+        "transportProvider": "office-http-artifact",
+        "artifactId": 8754025216,
+        "observationRoot": "sha256:e7d086922e9548a0523642bf717d6073eb58082a3c4012498769c636eb6f11cb",
+        "phasesMs": {
+          "checkout": 108,
+          "localLookup": 564,
+          "publication": 132,
+          "total": 804
+        },
+        "wallElapsedMs": 806
+      },
+      {
+        "label": "warm-checkout-3",
+        "status": "materialized",
+        "reason": "local-cas-hit",
+        "transportProvider": "office-http-artifact",
+        "artifactId": 8754025216,
+        "observationRoot": "sha256:693026265fbe6cf260237d34f1f7defcfb4fc30b2320f253828df56c15217d70",
+        "phasesMs": {
+          "checkout": 160,
+          "localLookup": 583,
+          "publication": 132,
+          "total": 875
+        },
+        "wallElapsedMs": 876
+      }
+    ]
+  },
+  "result": {
+    "coldMedianMs": 4310,
+    "coldQualified": true,
+    "warmMaximumMs": 1039,
+    "warmQualified": true
+  },
+  "evidenceRoot": "sha256:362737f6ca7617ef89b7d163d2e1855ff1bc6f8af071ef8226bd3c4cbc941057"
+}

@@ -1,0 +1,48 @@
+{
+  "schema": "xinfa.repository-pack-qualification/v1",
+  "verdict": "pass",
+  "platform": "macos",
+  "protocol": "xinfa.context-pack/v1",
+  "golden": "fixtures/golden/repository-small-pack-v1.json",
+  "roots": {
+    "pack": "sha256:7a237656ee7eee66715fc043b0376f6f5bfefd9e876783a587b79ac19a2be858",
+    "source": "sha256:eeab29ac55b2ee5bd42e2869c574e7542569c035d64173bd4e5837e9d36b42ec",
+    "policy": "sha256:78aeb0a9d5429aec779f5d0ddfe3ba8e992fe17f2c08339e6ac6252c354911f6",
+    "cut": "sha256:43e26d3383c20defb7d0f66a0a992b89d5a5279b1430da2ab5c4a3c93f3be654",
+    "authority": "sha256:df4bc471e2ccc0baa627b764a365a4aea0b2f9b0807b8a1ba52ef30b02a838f7",
+    "coverage": "sha256:9a32a11da66e7b23accbd2b2e1254d84d0faf9a081381ae1008cfa3a42186652",
+    "manifest": "sha256:73e8cc5b53b5803fd7583a6a13e4e725903e382b436cf70b0298bf7c6d8dcedd",
+    "receipt": "sha256:1a6945b8e55586bf66d464a5a2805c313e0e02545ca35953bea5ed4bbb3486ca"
+  },
+  "fixtures": {
+    "small": "fixtures/repository-small/project.json",
+    "smallNext": "fixtures/repository-small-next/project.json",
+    "medium": "fixtures/repository-medium/project.json",
+    "malicious": "fixtures/repository-malicious/project.json"
+  },
+  "properties": {
+    "cleanRepeatDeterminism": true,
+    "portableOfflineVerify": true,
+    "atomicNoOverwritePublication": true,
+    "cacheIsDerivedState": true,
+    "publicInternalVisibilityClosure": true,
+    "dualReaderParity": true,
+    "bidirectionalCoverage": true,
+    "implementationImpactClosure": true,
+    "singleSourceChangedScope": true,
+    "nonClaimFalsePositiveGuard": true,
+    "providerDriftRejected": true,
+    "sensitivePathRejected": true,
+    "unsupportedProviderRejected": true,
+    "repositoryTextExecuted": false
+  },
+  "proofBoundary": {
+    "qualifying": false,
+    "selfCertified": false,
+    "executesProviders": false,
+    "executesProbes": false,
+    "certifiesRealWorldPurpose": false,
+    "attestsRelease": false
+  },
+  "commands": ["./shifu xinfa:check", "./shifu xinfa:standalone", "./shifu docs:check:readonly"]
+}
