@@ -35,6 +35,19 @@ export type ProcessSignals = {
   off: (event: string, listener: Listener) => unknown;
 };
 
+export function resolveTuiCoreDir({
+  env,
+  resolveCorePackage,
+}: {
+  env: NodeJS.ProcessEnv;
+  resolveCorePackage: () => string;
+}): string {
+  const packagedRuntime = env.KUNGFU_DIR;
+  return packagedRuntime
+    ? path.dirname(path.resolve(packagedRuntime))
+    : path.dirname(resolveCorePackage());
+}
+
 type RuntimeResolution = {
   runtimeHomeEnv?: string;
   defaultRuntimeHome?: Record<string, string>;

@@ -14,6 +14,7 @@ import {
   type TerminalInput,
   TerminalLifecycle,
   type TerminalOutput,
+  resolveTuiCoreDir,
 } from './terminal-lifecycle.js';
 
 class FakeOutput extends EventEmitter implements TerminalOutput {
@@ -26,6 +27,31 @@ class FakeOutput extends EventEmitter implements TerminalOutput {
     return true;
   }
 }
+
+test('packaged runtime resolution does not require the source core package', () => {
+  let sourceResolutionCalled = false;
+  assert.equal(
+    resolveTuiCoreDir({
+      env: { KUNGFU_DIR: '/opt/kungfu/product/runtime' },
+      resolveCorePackage: () => {
+        sourceResolutionCalled = true;
+        throw new Error('source package is not installed');
+      },
+    }),
+    path.resolve('/opt/kungfu/product'),
+  );
+  assert.equal(sourceResolutionCalled, false);
+});
+
+test('source runtime resolution keeps the workspace package fallback', () => {
+  assert.equal(
+    resolveTuiCoreDir({
+      env: {},
+      resolveCorePackage: () => '/workspace/framework/core/package.json',
+    }),
+    '/workspace/framework/core',
+  );
+});
 
 test('owns alternate screen, raw mode, resize, and idempotent restoration', () => {
   const output = new FakeOutput();

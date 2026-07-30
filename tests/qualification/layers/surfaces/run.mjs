@@ -320,7 +320,7 @@ async function exactQualification(options, fixture) {
     if (!guiMemory.stdout.includes('KF_GUI_QUALIFICATION_READY'))
       fail('packaged GUI did not reach qualification-ready state');
     const installedDesktopBytes = directoryBytes(desktopInstall.installRoot);
-    desktopInstall.uninstall();
+    await desktopInstall.uninstall();
     if (fs.existsSync(desktopInstall.installRoot))
       fail('GUI install root survived uninstall');
 

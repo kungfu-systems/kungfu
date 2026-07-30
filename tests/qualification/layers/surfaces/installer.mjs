@@ -52,6 +52,25 @@ export function copyMacApplication(source, destination) {
   run('ditto', [source, destination]);
 }
 
+export function nsisUninstallArgs() {
+  // Keep the standard NSIS temporary-copy behavior. The _?= override runs the
+  // uninstaller from $INSTDIR, where electron-builder's process check can
+  // mistake the uninstaller itself for a packaged application process.
+  return ['/S'];
+}
+
+export async function waitForPathRemoval(
+  target,
+  { timeoutMs = 60_000, pollIntervalMs = 100 } = {},
+) {
+  const deadline = Date.now() + timeoutMs;
+  while (fs.existsSync(target)) {
+    if (Date.now() >= deadline)
+      fail(`timed out waiting for uninstall to remove ${target}`);
+    await new Promise((resolve) => setTimeout(resolve, pollIntervalMs));
+  }
+}
+
 export function installDesktopArtifact(installer, tempRoot) {
   const kind = installerKind(installer);
   const installRoot = path.join(tempRoot, 'installed-desktop');
@@ -88,7 +107,7 @@ export function installDesktopArtifact(installer, tempRoot) {
   return {
     kind,
     installRoot,
-    uninstall() {
+    async uninstall() {
       if (kind === 'nsis') {
         const uninstaller = findOne(
           installRoot,
@@ -96,7 +115,9 @@ export function installDesktopArtifact(installer, tempRoot) {
             entry.isFile() && /uninstall.*\.exe$/i.test(path.basename(target)),
           'NSIS uninstaller',
         );
-        run(uninstaller, ['/S', `_?=${installRoot}`]);
+        run(uninstaller, nsisUninstallArgs());
+        await waitForPathRemoval(installRoot);
+        return;
       }
       if (fs.existsSync(installRoot))
         fs.rmSync(installRoot, { recursive: true, force: true });

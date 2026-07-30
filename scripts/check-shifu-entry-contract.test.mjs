@@ -349,7 +349,7 @@ test('runtime guard rejects a direct task and accepts Shifu provenance', () => {
   assert.equal(accepted.status, 0);
 });
 
-test('package manager cannot run a guarded root task without Shifu', () => {
+test('package manager cannot run a guarded root task without a canonical Shifu correction', () => {
   const corepack = process.platform === 'win32' ? 'corepack.cmd' : 'corepack';
   const direct = spawnSync(corepack, ['pnpm', 'run', 'check:entry-contract'], {
     cwd: ROOT,
@@ -357,13 +357,12 @@ test('package manager cannot run a guarded root task without Shifu', () => {
     env: { ...process.env, SHIFU_ENTRYPOINT: '' },
     shell: process.platform === 'win32',
   });
+  const output = `${direct.stdout}\n${direct.stderr}`;
   assert.equal(direct.status, 1);
+  assert.match(output, /Direct package-manager invocation is unsupported/);
   assert.match(
-    `${direct.stdout}\n${direct.stderr}`,
-    /Direct package-manager invocation is unsupported/,
+    output,
+    /\[shifu-entry\] Run: \.\/shifu (?:install|check:entry-contract)(?:\r?\n|$)/,
   );
-  assert.match(
-    `${direct.stdout}\n${direct.stderr}`,
-    /\.\/shifu check:entry-contract/,
-  );
+  assert.doesNotMatch(output, /\[shifu-entry\] Run: (?:corepack|node|pnpm)\b/);
 });

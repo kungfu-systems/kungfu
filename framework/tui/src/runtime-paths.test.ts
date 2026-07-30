@@ -6,35 +6,7 @@ import os from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
 
-import { resolveTuiProductPaths } from './product-paths.js';
 import { resolveTuiRuntimeDir } from './terminal-lifecycle.js';
-
-test('installed runtime root is authoritative without a workspace package graph', () => {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'kungfu-tui-product-'));
-  try {
-    const runtime = path.join(root, 'runtime');
-    const bin = path.join(
-      runtime,
-      process.platform === 'win32' ? 'kungfu.exe' : 'kungfu',
-    );
-    fs.mkdirSync(runtime, { recursive: true });
-    fs.writeFileSync(bin, 'installed runtime\n');
-    const paths = resolveTuiProductPaths({
-      env: { KUNGFU_DIR: runtime },
-      resolveCorePackage: () => {
-        throw new Error('workspace package graph must not be consulted');
-      },
-    });
-    assert.deepEqual(paths, {
-      coreDir: '',
-      kungfuDir: runtime,
-      bin,
-      sourceCliFallback: false,
-    });
-  } finally {
-    fs.rmSync(root, { recursive: true, force: true });
-  }
-});
 
 test('preserves CLI runtime-root precedence without booting Python', () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'kungfu-tui-runtime-'));
