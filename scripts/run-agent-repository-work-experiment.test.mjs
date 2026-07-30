@@ -14,6 +14,7 @@ import {
   validateDockerHost,
 } from '../framework/agent-repository-work/opencode-docker-proxy.mjs';
 import {
+  classifyFailure,
   parseInvestigationClaim,
   parseArgs as parseRepositoryWorkArgs,
   runExperiment,
@@ -338,6 +339,18 @@ test('Agent A claim and final report require deterministic continuity evidence',
     nextAction: 'repair-seeded-completion-idempotency',
   };
   assert.deepEqual(parseInvestigationClaim(JSON.stringify(claim)), claim);
+  assert.throws(
+    () => parseInvestigationClaim('javascript\nnot-json'),
+    (error) => {
+      assert.equal(
+        error.message,
+        'Agent A returned invalid JSON investigation output',
+      );
+      assert.equal(error.failureCategory, 'model-tool-runtime');
+      assert.equal(classifyFailure(error), 'model-tool-runtime');
+      return true;
+    },
+  );
   const report = {
     schema: 'kungfu.agent-repository-work.report/v1',
     evidenceClass: 'bounded-experiment',

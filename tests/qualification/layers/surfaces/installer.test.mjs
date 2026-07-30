@@ -12,6 +12,7 @@ import {
   installerKind,
   nsisUninstallArgs,
   pathRemovalDiagnostics,
+  removeEmptyDirectoryShells,
   waitForPathRemoval,
 } from './installer.mjs';
 
@@ -37,9 +38,33 @@ test('waits for a detached NSIS uninstaller to remove its install root', async (
   assert.equal(fs.existsSync(root), false);
 });
 
+test('removes only empty directory shells left by NSIS', async () => {
+  const root = fs.mkdtempSync(
+    path.join(os.tmpdir(), 'kungfu-uninstall-empty-'),
+  );
+  fs.mkdirSync(path.join(root, 'resources', 'app'), { recursive: true });
+  await waitForPathRemoval(root, { timeoutMs: 50, pollIntervalMs: 1 });
+  assert.equal(fs.existsSync(root), false);
+});
+
+test('does not remove a file or link while cleaning empty directory shells', () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'kungfu-uninstall-file-'));
+  const resource = path.join(root, 'resources', 'app');
+  fs.mkdirSync(resource, { recursive: true });
+  fs.writeFileSync(path.join(resource, 'package.json'), '{}');
+  try {
+    assert.equal(removeEmptyDirectoryShells(root), false);
+    assert.equal(fs.existsSync(path.join(resource, 'package.json')), true);
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
 test('reports bounded removal diagnostics instead of hiding an uninstall lock', async () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'kungfu-uninstall-lock-'));
-  fs.writeFileSync(path.join(root, 'locked.exe'), 'fixture');
+  const resource = path.join(root, 'resources');
+  fs.mkdirSync(resource);
+  fs.writeFileSync(path.join(resource, 'locked.exe'), 'fixture');
   try {
     await assert.rejects(
       waitForPathRemoval(root, {
@@ -48,7 +73,7 @@ test('reports bounded removal diagnostics instead of hiding an uninstall lock', 
         diagnostics: (target) =>
           pathRemovalDiagnostics(target, { platform: 'linux' }),
       }),
-      /diagnostics=.*file:locked\.exe/,
+      /diagnostics=.*dir:resources.*file:resources[/\\]+locked\.exe/,
     );
   } finally {
     fs.rmSync(root, { recursive: true, force: true });

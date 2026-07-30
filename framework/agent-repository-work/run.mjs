@@ -369,7 +369,16 @@ export function parseInvestigationClaim(
   const fenced = text.match(/```(?:json)?\s*([\s\S]*?)```/iu);
   const source =
     fenced?.[1] || text.slice(text.indexOf('{'), text.lastIndexOf('}') + 1);
-  const value = JSON.parse(source);
+  let value;
+  try {
+    value = JSON.parse(source);
+  } catch {
+    const error = new Error(
+      'Agent A returned invalid JSON investigation output',
+    );
+    error.failureCategory = 'model-tool-runtime';
+    throw error;
+  }
   const expectedFailures = [...fixture.investigation.expectedFailures].sort();
   const expectedPaths = [...fixture.warrants.agentB.writablePaths].sort();
   if (
@@ -388,7 +397,9 @@ export function parseInvestigationClaim(
   return value;
 }
 
-function classifyFailure(error) {
+export function classifyFailure(error) {
+  if (error?.failureCategory === 'model-tool-runtime')
+    return 'model-tool-runtime';
   const message = String(error?.message || error);
   if (/oracle|visible|hidden|seeded|test/iu.test(message)) return 'verifier';
   if (/scope|symlink|writable|tree|modified/iu.test(message))

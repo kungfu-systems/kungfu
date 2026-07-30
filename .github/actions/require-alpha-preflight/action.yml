@@ -15,6 +15,10 @@ inputs:
     description: Optional exact-source queue-aware macOS controller envelope.
     required: false
     default: "{}"
+  runner-inventory-token:
+    description: Optional trusted token for repository runner inventory.
+    required: false
+    default: ""
 
 outputs:
   run-id:
@@ -107,6 +111,7 @@ runs:
       env:
         GITHUB_TOKEN: ${{ github.token }}
         REQUEST_JSON: ${{ inputs.controller-request-json }}
+        RUNNER_INVENTORY_TOKEN: ${{ inputs.runner-inventory-token }}
       run: |
         set -euo pipefail
         test "$GITHUB_SHA" = "${{ fromJSON(inputs.controller-request-json).sourceSha }}"
