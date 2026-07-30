@@ -10,6 +10,10 @@ import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
+  KFD4_QUALIFICATION_PATH,
+  loadKfd4PerspectiveQualification,
+} from '../framework/core/tests/qualification/kfd4-perspective.mjs';
+import {
   BUILDCHAIN_KFD1_CONTRACT_WORLD_WITNESS_PATH,
   BUILDCHAIN_KFD1_RELEASE_GATE_PATH,
   BUILDCHAIN_KFD1_VERIFY_RESULT_PATH,
@@ -342,6 +346,7 @@ function buildOwnKfdFacts() {
     'standards.json',
     SDK_CLI_PATH,
   )?.parsed?.standards?.['kfd-4'];
+  const kfd4Qualification = loadKfd4PerspectiveQualification({ root: ROOT });
   return {
     kfd1: {
       status: 'supported',
@@ -382,13 +387,19 @@ function buildOwnKfdFacts() {
       queryCommand: 'kungfu sdk kfd query --json',
     },
     kfd4: {
-      status: 'schema-only',
-      mode: 'schema-only',
-      source: '@kungfu-tech/kfd/standards.json',
+      status: 'candidate',
+      mode: 'perspective-product-qualification',
+      source: KFD4_QUALIFICATION_PATH,
       schemaCount: Object.keys(kfd4Schemas?.schemaPaths || {}).length,
       schemaCommand: 'kungfu sdk kfd 4 schema --json',
+      qualificationCommand:
+        'node framework/core/tests/qualification/kfd4-perspective.mjs',
+      qualificationRoot: kfd4Qualification.report.qualificationRoot,
+      releaseQualification: 'not-qualified',
+      shippedSupport: false,
       residualRisk: [
-        'Buildchain exposes KFD-4 as schema-only; no release verification protocol is claimed.',
+        'Kungfu retains one bounded first-party KFD-4 qualification; independent adopter evidence and an explicit release decision are still required.',
+        'A passed Buildchain gate does not independently qualify, activate, or ship KFD-4 support.',
       ],
     },
   };
@@ -1214,110 +1225,10 @@ function productGateEnvelope({
 }
 
 function kfd4GateInput({ workspace, sourceSha, checkedAt, standards }) {
-  const perspective = {
-    schemaVersion: 1,
-    contract: 'kfd-4-observer-perspective',
-    standard: 'kfd-4',
-    id: 'kungfu-release-maintainer-view',
-    observer: {
-      id: 'kungfu-release-maintainer',
-      kind: 'human',
-      description: 'Maintains the source-bound Kungfu release candidate.',
-    },
-    acceptedFacts: [
-      {
-        sourceId: 'kungfu-release-source',
-        sourceKind: 'repository',
-        acceptedRange: sourceSha,
-        provenance: 'kungfu-systems/kungfu',
-      },
-    ],
-    projectionPolicy: {
-      policyVersion: '1',
-      causalDominance: true,
-      tieBreaker: 'source-coordinate',
-    },
-    verification: {
-      result: 'pass',
-    },
-  };
-  const replay = {
-    schemaVersion: 1,
-    contract: 'kfd-4-perspective-replay',
-    standard: 'kfd-4',
-    replayId: 'kungfu-release-product-contrast',
-    mode: 'contrastive',
-    sourceViews: [
-      {
-        id: 'maintainer',
-        kind: 'observer-view',
-        coordinate: `git://kungfu-systems/kungfu@${sourceSha}`,
-        observer: 'kungfu-release-maintainer',
-        perspective: 'source-and-release-integrity',
-        acceptedFactCut: sourceSha,
-        naturalObjects: ['source tree', 'release gate', 'support matrix'],
-        consequences: ['published Kungfu release candidate'],
-        knownGaps: ['consumer-local runtime state'],
-      },
-      {
-        id: 'consumer',
-        kind: 'observer-view',
-        coordinate: 'release-passport://kungfu-alpha',
-        observer: 'kungfu-release-consumer',
-        perspective: 'installed-product-capability',
-        acceptedFactCut: 'published release passport and artifacts',
-        naturalObjects: ['release artifact', 'capability surface'],
-        consequences: ['installed and queried Kungfu product'],
-        knownGaps: ['unpublished source-only behavior'],
-      },
-    ],
-    replayObserver: {
-      id: 'buildchain',
-      kind: 'service',
-      purpose:
-        'Preserve maintainer and consumer evidence boundaries during release qualification.',
-    },
-    reconstruction: {
-      policyVersion: '1',
-      sharedContext: 'same source-bound Kungfu Alpha release',
-      preservedElements: [
-        'observer',
-        'accepted-fact-cut',
-        'causal-order',
-        'consequences',
-        'evidence-boundary',
-        'known-gaps',
-      ],
-      declaredLoss: ['consumer-local runtime state'],
-      degradedState: 'none',
-    },
-    contrast: {
-      dimensions: ['evidence-boundary', 'consequence'],
-      mismatches: [
-        {
-          sourceViewIds: ['maintainer', 'consumer'],
-          observation:
-            'Source implementation and shipped product support have different evidence custody.',
-          primitiveSignal: 'inconclusive',
-        },
-      ],
-    },
-    verification: {
-      result: 'pass',
-      evidence: [
-        gateRelativePath('evidence', 'support-matrix.json'),
-        gateRelativePath('evidence', 'kfd-4-negative.json'),
-      ],
-      notes:
-        'Contrastive replay preserves the source/release distinction without flattening either observer.',
-    },
-  };
-  const invalidPerspective = {
-    schemaVersion: 1,
-    contract: 'kfd-4-observer-perspective',
-    standard: 'kfd-4',
-    id: 'invalid-absolute-observer',
-  };
+  const qualification = loadKfd4PerspectiveQualification({ root: ROOT });
+  const report = qualification.report;
+  const perspective = report.perspectives[0].perspective;
+  const replay = report.contrastiveReplay.document;
   const records = [
     {
       role: 'observer-perspective',
@@ -1340,10 +1251,19 @@ function kfd4GateInput({ workspace, sourceSha, checkedAt, standards }) {
     {
       id: 'projection-fsck',
       kind: 'projection-fsck',
-      ...copyGateJson(
+      ...writeGateJson(
         workspace,
-        KFD_SUPPORT_MATRIX_PATH,
         gateRelativePath('evidence', 'support-matrix.json'),
+        {
+          schema: 'kungfu.kfd-4-projection-set-fsck/v1',
+          qualificationRoot: report.qualificationRoot,
+          projections: report.perspectives.map((projection) => ({
+            id: projection.perspective.id,
+            observer: projection.perspective.observer.id,
+            viewRoot: projection.viewRoot,
+            fsck: projection.fsck,
+          })),
+        },
       ),
     },
     {
@@ -1352,9 +1272,20 @@ function kfd4GateInput({ workspace, sourceSha, checkedAt, standards }) {
       ...writeGateJson(
         workspace,
         gateRelativePath('evidence', 'kfd-4-negative.json'),
-        invalidPerspective,
+        {
+          schema: 'kungfu.kfd-4-negative-qualification/v1',
+          qualificationRoot: report.qualificationRoot,
+          cases: report.negativeCases,
+        },
       ),
     },
+    gateEvidence(
+      workspace,
+      'kfd-4-product-qualification',
+      'product-qualification',
+      qualification.path,
+      'kfd-4-product-qualification',
+    ),
   ];
   return productGateEnvelope({
     standard: 'kfd-4',
@@ -1363,10 +1294,7 @@ function kfd4GateInput({ workspace, sourceSha, checkedAt, standards }) {
     checkedAt,
     records,
     evidence,
-    nonClaims: [
-      'This gate qualifies retained observer and replay evidence, not universal perspective completeness.',
-      'KFD-4 remains a non-shipped adoption candidate until an explicit product release decision changes the matrix.',
-    ],
+    nonClaims: report.nonClaims,
   });
 }
 

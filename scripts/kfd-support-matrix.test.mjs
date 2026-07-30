@@ -64,6 +64,22 @@ test('validates the exact KFD-1 through KFD-13 authority', (t) => {
   const result = validateFixture(t, BASE);
   assert.equal(result.status, 0, result.stderr);
   assert.equal(JSON.parse(result.stdout).rowCount, 13);
+  const kfd4 = BASE.rows.find((row) => row.key === 'kfd-4');
+  assert.equal(kfd4.supportStatus, 'candidate');
+  assert.equal(kfd4.verification.status, 'passed');
+  assert.equal(kfd4.buildchain.gateStatus, 'passed');
+  assert.equal(kfd4.releaseQualification.shippedSupport, false);
+  assert.deepEqual(kfd4.implementation.surfaces, [
+    'framework/core/src/python/kungfu/rewind/perspective.py',
+    'framework/core/tests/qualification/kfd4-perspective.mjs',
+  ]);
+  assert.deepEqual(
+    kfd4.verification.evidenceRoots.map((entry) => entry.path),
+    [
+      'docs/qualification/evidence/kfd-4-perspective/d73cab0d69/report.json',
+      'framework/core/tests/python/test_kfd4_perspective.py',
+    ],
+  );
   const kfd5 = BASE.rows.find((row) => row.key === 'kfd-5');
   assert.equal(kfd5.supportStatus, 'candidate');
   assert.equal(kfd5.verification.status, 'passed');
@@ -127,6 +143,17 @@ test('fails closed when a KFD-4 candidate becomes shipped support', (t) => {
   const result = validateFixture(t, matrix);
   assert.equal(result.status, 1);
   assert.match(result.stderr, /shipped support must remain exactly/);
+});
+
+test('fails closed when KFD-4 loses its retained perspective qualification', (t) => {
+  const matrix = clone(BASE);
+  matrix.rows[3].verification.evidenceRoots = [];
+  const result = validateFixture(t, matrix);
+  assert.equal(result.status, 1);
+  assert.match(
+    result.stderr,
+    /KFD-4 perspective qualification evidence drifted/,
+  );
 });
 
 test('fails closed when a supported release claim is omitted', (t) => {
