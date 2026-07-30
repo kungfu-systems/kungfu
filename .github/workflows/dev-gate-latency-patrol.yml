@@ -171,7 +171,6 @@ jobs:
     timeout-minutes: 15
     env:
       KUNGFU_DOGFOOD_COMMAND: /usr/local/bin/kungfu
-      KUNGFU_DEV_GATE_PATROL_EVIDENCE: ${{ runner.temp }}/dev-gate-latency-patrol-${{ github.run_id }}-${{ github.run_attempt }}
     steps:
       - name: Check out exact protected source
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
@@ -193,6 +192,8 @@ jobs:
       - name: Capture or deduplicate native Dogfood Findings
         continue-on-error: true
         shell: bash
+        env:
+          KUNGFU_DEV_GATE_PATROL_EVIDENCE: ${{ runner.temp }}/dev-gate-latency-patrol-${{ github.run_id }}-${{ github.run_attempt }}
         run: |
           set -u
           mkdir -p \

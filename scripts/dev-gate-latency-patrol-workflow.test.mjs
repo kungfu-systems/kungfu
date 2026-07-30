@@ -58,3 +58,14 @@ test('latency Patrol captures native Findings in persistent agent-121 state', ()
   assert.match(workflow, /GITHUB_STEP_SUMMARY/);
   assert.match(workflow, /reportRoot/);
 });
+
+test('latency Patrol uses runner context only inside steps', () => {
+  assert.doesNotMatch(
+    workflow,
+    /timeout-minutes: 15\n {4}env:\n {6}KUNGFU_DOGFOOD_COMMAND:[^\n]+\n {6}KUNGFU_DEV_GATE_PATROL_EVIDENCE:.*runner\.temp/u,
+  );
+  assert.match(
+    workflow,
+    /Capture or deduplicate native Dogfood Findings[\s\S]*?env:\n {10}KUNGFU_DEV_GATE_PATROL_EVIDENCE:.*runner\.temp/u,
+  );
+});
