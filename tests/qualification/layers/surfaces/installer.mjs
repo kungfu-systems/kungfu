@@ -52,6 +52,97 @@ export function copyMacApplication(source, destination) {
   run('ditto', [source, destination]);
 }
 
+export function nsisUninstallArgs() {
+  // Keep the standard NSIS temporary-copy behavior. The _?= override runs the
+  // uninstaller from $INSTDIR, where electron-builder's process check can
+  // mistake the uninstaller itself for a packaged application process.
+  return ['/S'];
+}
+
+export function pathRemovalDiagnostics(
+  target,
+  { platform = process.platform } = {},
+) {
+  const diagnostics = { remaining_entries: [], processes_under_root: [] };
+  try {
+    diagnostics.remaining_entries = fs
+      .readdirSync(target, { withFileTypes: true })
+      .slice(0, 24)
+      .map((entry) => `${entry.isDirectory() ? 'dir' : 'file'}:${entry.name}`);
+  } catch (error) {
+    diagnostics.remaining_entries = [
+      `unreadable:${error instanceof Error ? error.message : String(error)}`,
+    ];
+  }
+  if (platform !== 'win32') return diagnostics;
+
+  const script = [
+    '$root = [IO.Path]::GetFullPath($env:KF_QUALIFICATION_INSTALL_ROOT)',
+    '$matches = @(Get-CimInstance -ClassName Win32_Process | Where-Object {',
+    '  $_.ExecutablePath -and $_.ExecutablePath.StartsWith($root, [StringComparison]::OrdinalIgnoreCase)',
+    '} | Select-Object ProcessId, Name, ExecutablePath)',
+    '$matches | ConvertTo-Json -Compress',
+  ].join('\n');
+  const result = spawnSync(
+    'powershell.exe',
+    ['-NoProfile', '-NonInteractive', '-Command', script],
+    {
+      encoding: 'utf8',
+      windowsHide: true,
+      env: { ...process.env, KF_QUALIFICATION_INSTALL_ROOT: target },
+    },
+  );
+  if (result.status !== 0) {
+    diagnostics.processes_under_root = [
+      {
+        diagnostic_error: (
+          result.stderr ||
+          result.error?.message ||
+          'PowerShell failed'
+        ).trim(),
+      },
+    ];
+    return diagnostics;
+  }
+  try {
+    const parsed = JSON.parse(result.stdout || '[]');
+    diagnostics.processes_under_root = Array.isArray(parsed)
+      ? parsed
+      : parsed
+        ? [parsed]
+        : [];
+  } catch (error) {
+    diagnostics.processes_under_root = [
+      {
+        diagnostic_error: `invalid PowerShell JSON: ${
+          error instanceof Error ? error.message : String(error)
+        }`,
+      },
+    ];
+  }
+  return diagnostics;
+}
+
+export async function waitForPathRemoval(
+  target,
+  {
+    timeoutMs = 60_000,
+    pollIntervalMs = 100,
+    diagnostics = pathRemovalDiagnostics,
+  } = {},
+) {
+  const deadline = Date.now() + timeoutMs;
+  while (fs.existsSync(target)) {
+    if (Date.now() >= deadline)
+      fail(
+        `timed out waiting for uninstall to remove ${target}; diagnostics=${JSON.stringify(
+          diagnostics(target),
+        )}`,
+      );
+    await new Promise((resolve) => setTimeout(resolve, pollIntervalMs));
+  }
+}
+
 export function installDesktopArtifact(installer, tempRoot) {
   const kind = installerKind(installer);
   const installRoot = path.join(tempRoot, 'installed-desktop');
@@ -88,7 +179,7 @@ export function installDesktopArtifact(installer, tempRoot) {
   return {
     kind,
     installRoot,
-    uninstall() {
+    async uninstall() {
       if (kind === 'nsis') {
         const uninstaller = findOne(
           installRoot,
@@ -96,7 +187,9 @@ export function installDesktopArtifact(installer, tempRoot) {
             entry.isFile() && /uninstall.*\.exe$/i.test(path.basename(target)),
           'NSIS uninstaller',
         );
-        run(uninstaller, ['/S', `_?=${installRoot}`]);
+        run(uninstaller, nsisUninstallArgs());
+        await waitForPathRemoval(installRoot);
+        return;
       }
       if (fs.existsSync(installRoot))
         fs.rmSync(installRoot, { recursive: true, force: true });

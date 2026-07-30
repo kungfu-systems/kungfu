@@ -463,13 +463,14 @@ jobs:
             --name "core-affected-native-delivery-attempt-${TARGET_SHA}" \
             --dir product/qualification/qualified-core/delivery
       - name: Install pinned Qualified Core verifier
-        if: ${{ steps.qualified_core_producer.outputs.available == 'true' }}
+        if: ${{ github.ref_protected == true }}
         shell: bash
         run: ./shifu install --frozen-lockfile
-      - name: Promote exact Qualified Core artifact
-        if: ${{ steps.qualified_core_producer.outputs.available == 'true' }}
+      - name: Promote or resolve one compatible Qualified Core object
+        if: ${{ github.ref_protected == true }}
         id: qualified_core_promotion
         env:
+          GH_TOKEN: ${{ github.token }}
           TARGET_SHA: ${{ steps.target.outputs.sha }}
         shell: bash
         run: |
@@ -477,21 +478,89 @@ jobs:
           git diff --quiet
           git diff --cached --quiet
           test -z "$(git status --porcelain --untracked-files=no)"
-          # Promotion runs only on an exact protected-dev push.
-          # shifu-entry-contract: allow binding the verified merge-group delivery after Gate
-          node framework/release/qualified-assignment-core-artifact.mjs promote \
-            --repository-root . \
-            --bundle product/qualification/qualified-core/candidate \
-            --output-dir product/qualification/qualified-core/promoted \
-            --repository "$GITHUB_REPOSITORY" \
-            --target-commit "$TARGET_SHA" \
-            --target-tree "$(git rev-parse "${TARGET_SHA}^{tree}")" \
-            --protected-ref "$GITHUB_REF" \
-            --merge-group-run-id "${{ steps.qualified_core_producer.outputs.run-id }}" \
-            --delivery-attempt product/qualification/qualified-core/delivery/delivery-attempt.json \
-            --github-output "$GITHUB_OUTPUT"
+          if [ "${{ steps.qualified_core_producer.outputs.available }}" = true ]; then
+            # Promotion runs only on an exact protected-dev push.
+            # shifu-entry-contract: allow binding the verified merge-group delivery after Gate
+            node framework/release/qualified-assignment-core-artifact.mjs promote \
+              --repository-root . \
+              --bundle product/qualification/qualified-core/candidate \
+              --output-dir product/qualification/qualified-core/promoted \
+              --repository "$GITHUB_REPOSITORY" \
+              --target-commit "$TARGET_SHA" \
+              --target-tree "$(git rev-parse "${TARGET_SHA}^{tree}")" \
+              --protected-ref "$GITHUB_REF" \
+              --merge-group-run-id "${{ steps.qualified_core_producer.outputs.run-id }}" \
+              --delivery-attempt product/qualification/qualified-core/delivery/delivery-attempt.json \
+              --github-output "$GITHUB_OUTPUT"
+            echo "available=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          root="product/qualification/qualified-core/reuse"
+          mkdir -p "$root"
+          matched_authority=""
+          matched_dir=""
+          matched_output=""
+          candidates="$(
+            gh api \
+              "repos/${GITHUB_REPOSITORY}/actions/artifacts?per_page=100" \
+              --jq '.artifacts
+                | map(select(
+                    .expired == false
+                    and (.name | startswith("qualified-assignment-core-"))
+                    and .name != ("qualified-assignment-core-" + env.TARGET_SHA)
+                  ))
+                | sort_by(.created_at)
+                | reverse
+                | .[]
+                | [.id, .name]
+                | @tsv'
+          )"
+          while IFS=$'\t' read -r artifact_id artifact_name; do
+            [ -n "${artifact_id:-}" ] || continue
+            candidate="$root/$artifact_id"
+            mkdir -p "$candidate/bundle"
+            if ! gh api \
+              "repos/${GITHUB_REPOSITORY}/actions/artifacts/${artifact_id}/zip" \
+              > "$candidate/artifact.zip"; then
+              echo "Qualified Core transport ${artifact_id} became unavailable."
+              continue
+            fi
+            if ! unzip -qq "$candidate/artifact.zip" -d "$candidate/bundle"; then
+              echo "Qualified Core transport ${artifact_id} is not a bounded zip."
+              continue
+            fi
+            output="$candidate/promoted"
+            github_output="$candidate/output"
+            if ! node framework/release/qualified-assignment-core-artifact.mjs reuse \
+              --repository-root . \
+              --bundle "$candidate/bundle" \
+              --output-dir "$output" \
+              --repository "$GITHUB_REPOSITORY" \
+              --current-commit "$TARGET_SHA" \
+              --github-output "$github_output"; then
+              continue
+            fi
+            authority_identity="$(sed -n -e 's/^manifest-root=manifest:/p' -e 's/^qualification-receipt-root=qualification:/p' -e 's/^promotion-authority-root=promotion:/p' "$github_output" | paste -sd '|' -)"
+            if [ -n "$matched_authority" ] && [ "$authority_identity" != "$matched_authority" ]; then
+              echo "Multiple distinct compatible Qualified Core authorities are active." >&2
+              exit 1
+            fi
+            matched_authority="$authority_identity"
+            matched_dir="$output"
+            matched_output="$github_output"
+            echo "Compatible transport: ${artifact_name} (${artifact_id})."
+          done <<< "$candidates"
+          if [ -z "$matched_dir" ]; then
+            echo "available=false" >> "$GITHUB_OUTPUT"
+            echo "No prior compatible Qualified Core object is active; source build remains authoritative."
+            exit 0
+          fi
+          mkdir -p product/qualification/qualified-core/promoted
+          cp -R "$matched_dir"/. product/qualification/qualified-core/promoted/
+          cat "$matched_output" >> "$GITHUB_OUTPUT"
+          echo "available=true" >> "$GITHUB_OUTPUT"
       - name: Upload qualified artifact transport
-        if: ${{ steps.qualified_core_producer.outputs.available == 'true' }}
+        if: ${{ steps.qualified_core_promotion.outputs.available == 'true' }}
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: qualified-assignment-core-${{ steps.target.outputs.sha }}
@@ -500,7 +569,7 @@ jobs:
           retention-days: 14
           compression-level: 0
       - name: Summarize Qualified Core promotion
-        if: ${{ steps.qualified_core_producer.outputs.available == 'true' }}
+        if: ${{ steps.qualified_core_promotion.outputs.available == 'true' }}
         env:
           TARGET_SHA: ${{ steps.target.outputs.sha }}
         shell: bash
@@ -509,7 +578,7 @@ jobs:
             echo "### Qualified Assignment Core"
             echo
             echo "- protected source: \`$TARGET_SHA\`"
-            echo "- merge-group producer: \`${{ steps.qualified_core_producer.outputs.run-id }}\`"
+            echo "- merge-group producer: \`${{ steps.qualified_core_producer.outputs.run-id || 'retained-compatible-object' }}\`"
             echo "- manifest: \`${{ steps.qualified_core_promotion.outputs.manifest-root }}\`"
             echo "- payload: \`${{ steps.qualified_core_promotion.outputs.artifact-root }}\`"
             echo "- qualification: \`${{ steps.qualified_core_promotion.outputs.qualification-receipt-root }}\`"

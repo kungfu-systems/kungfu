@@ -68,7 +68,7 @@
             "product-stable",
             "product-binaries"
           ],
-          "sourceRoot": "sha256:490d40fa0ab6adaf75981e6288df09a916e224d40be3b79a98f1517d93ce03a2"
+          "sourceRoot": "sha256:936dfd9d60090a070d2a96bfe810517c18455c43a4538043d72e356c7ff038e7"
         },
         {
           "path": ".github/workflows/affected-native-pr.yml",
@@ -114,7 +114,7 @@
             "product-stable",
             "product-binaries"
           ],
-          "sourceRoot": "sha256:334995f07d7d29794b51ba205b8a9e0090d99210834734b602c9bb95f2a94040"
+          "sourceRoot": "sha256:e12acd63348160ffdca7398ecc68446766f359aa0d4c04a846a487e87cb4398c"
         },
         {
           "path": ".github/workflows/buildchain-validate.yml",
@@ -247,7 +247,7 @@
           "classification": "non-publication",
           "owner": "kungfu-ci",
           "surfaceIds": [],
-          "sourceRoot": "sha256:e6ceee0413754541cd3ca63f12838edc2989e75c4b5e52a5c531feac82f39a03"
+          "sourceRoot": "sha256:1b794361886172331eaf1da4599b2442dcb0cced622026cfb454ef51c87f0c01"
         },
         {
           "path": ".github/workflows/opencode-agent-repository-work.yml",
@@ -283,7 +283,7 @@
             "product-stable",
             "product-binaries"
           ],
-          "sourceRoot": "sha256:a1bc18fbee179aeb151bf05d866a6535975c97525989238a36b810d9b8dd936d"
+          "sourceRoot": "sha256:d4330609355630fea59e6794f7e3638fad0078a0e85ecb0a085f0421e7eb28f1"
         },
         {
           "path": ".github/workflows/release-shifu.yml",
@@ -318,7 +318,7 @@
     "buildchain": {
       "repository": "kungfu-systems/buildchain",
       "owner": "kungfu-systems/buildchain",
-      "sourceRevision": "8ec8ef36421fc363ebfb24146ca1d0a2fee4ae7b",
+      "sourceRevision": "bb55d20799d23c78b61a8a46765b2edd8c192aa9",
       "version": "3.0.2-alpha.2",
       "compatibilityMode": "stable-v3-contract-plus-exact-additive-runtime",
       "stableContractLock": ".buildchain/contract-lock.json",
@@ -813,5 +813,5 @@
       }
     }
   ],
-  "registryRoot": "sha256:e6bc1bab8b04f87625b5cc3e8030d0cfdff7433d2eb3f4f44871436eea4c1a98"
+  "registryRoot": "sha256:963edf86966e822aeff7b28ad2f33c73033321351958c24a3a8a56c25ae7a7b5"
 }

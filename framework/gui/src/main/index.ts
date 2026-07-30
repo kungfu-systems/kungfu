@@ -1255,13 +1255,19 @@ app.whenReady().then(() => {
       console.log(`KF_TERMINAL_HOST_MAIN_FAIL ${(e as Error).message}`);
     }
   }
-  try {
-    const agentSessionHost = createMainAgentSessionHost(
-      process.env.KF_RUNTIME_DIR || app.getPath('userData'),
-    );
-    bindElectronAgentSessionHost(ipcMain, agentSessionHost);
-  } catch (e) {
-    console.log(`KF_AGENT_SESSION_HOST_FAIL ${(e as Error).message}`);
+  // The detached host deliberately survives the Electron main process. An
+  // installer qualification immediately uninstalls its temporary application,
+  // so starting that durable worker would leave an executable under $INSTDIR
+  // while NSIS is proving removal. Normal product launches retain the host.
+  if (!qualificationMode) {
+    try {
+      const agentSessionHost = createMainAgentSessionHost(
+        process.env.KF_RUNTIME_DIR || app.getPath('userData'),
+      );
+      bindElectronAgentSessionHost(ipcMain, agentSessionHost);
+    } catch (e) {
+      console.log(`KF_AGENT_SESSION_HOST_FAIL ${(e as Error).message}`);
+    }
   }
   // KF-ADR-019f86da-4f90-7153-a6c1-ab7a0a3cf481 stage 2 (flagged): let a session pop out of the in-shell grid into
   // its own restorable OS window. The handlers are global, so bind once; the

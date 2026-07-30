@@ -31,12 +31,13 @@ function preflight() {
   return aggregatePlatformReceipts({
     root: ROOT,
     generatedAt: GENERATED_AT,
-    receipts: ['linux-x64', 'macos-arm64', 'windows-x64'].map((platform) =>
-      buildPlatformReceipt({
-        root: ROOT,
-        platform,
-        generatedAt: GENERATED_AT,
-      }),
+    receipts: ['linux-x64', 'linux-arm64', 'macos-arm64', 'windows-x64'].map(
+      (platform) =>
+        buildPlatformReceipt({
+          root: ROOT,
+          platform,
+          generatedAt: GENERATED_AT,
+        }),
     ),
   });
 }
@@ -225,7 +226,7 @@ test('timeline accounts for queue, execution, structured cache, retries and side
   assert.equal(receipt.status, 'observed');
   assert.equal(receipt.timing.externalQueueMs, 4 * 60 * 1000);
   assert.equal(receipt.timing.retries, 0);
-  assert.equal(receipt.cacheEvidence.summary.outcomes.unavailable, 6);
+  assert.equal(receipt.cacheEvidence.summary.outcomes.unavailable, 8);
   assert.equal(
     receipt.timing.runs
       .flatMap(({ phases }) => phases)

@@ -194,6 +194,35 @@ The boundaries are deliberately separate:
   A cache miss, eviction, or rejected candidate falls back to a current-source
   build and cannot affect merge correctness.
 
+The consumer may use
+`KUNGFU_QUALIFIED_CORE_HTTP_BASE_URL=http://cache.example/` to fetch the exact
+artifact bytes from a closer HTTP cache after GitHub has supplied and validated
+the unique artifact, successful protected-branch workflow run, source commit,
+and workflow path. The HTTP endpoint never grants qualification or promotion
+authority. Failed HTTP transport falls back to GitHub transport; all downloaded
+bytes still pass the same manifest, receipt, payload, compatibility, and
+promotion verification.
+
+Interrupted HTTP bytes live only under the local cache's artifact-identity-bound
+`transfers/` root. A retry resumes only when the server returns the exact
+`Content-Range`; a server that ignores Range causes a verified restart from
+byte zero. No partial is published as a runnable Core. Successful or rejected
+verification removes the completed transfer staging root. Usage observations
+attribute `discovery`, `transfer`, `verification`, `retention`, and
+`publication` separately while preserving the earlier aggregate phase names
+for existing readers.
+
+The reference harness runs three independent cold CAS/checkouts followed by
+three fresh checkouts against one retained verified CAS object:
+
+```sh
+node tests/qualification/qualified-assignment-core/cold-path-benchmark.mjs \
+  --source-repository /path/to/kungfu \
+  --commit <qualified-commit> \
+  --http-base-url http://cache.example/ \
+  --output /tmp/qualified-core-cold-path.json
+```
+
 `scripts/check-shifu-cache-contract.mjs` exports the contract verifier used by
 the conformance fixtures. It rejects unsupported or unknown fields, byte and
 metadata tamper, traversal, escaping symlinks, platform/ABI and build identity

@@ -7,7 +7,7 @@ import path from 'node:path';
 import process from 'node:process';
 import { fileURLToPath } from 'node:url';
 
-import { validateExperimentReport } from '../agent-repository-work/run.mjs';
+import { validateExperimentReport } from '../agent-repository-work/report.mjs';
 
 const CLASSIFICATION_SCHEMA = 'kungfu.agent-patrol.classification/v1';
 const FINDING_INTENT_SCHEMA = 'kungfu.agent-patrol.finding-intent/v1';
@@ -21,7 +21,7 @@ const FAILURE_CATEGORIES = new Set([
   'model-tool-runtime',
   'runner-environment',
 ]);
-const BLOCKING_CATEGORIES = new Set(['runner-environment']);
+const BLOCKING_CATEGORIES = new Set(['runner-environment', 'warrant-scope']);
 
 function canonical(value) {
   if (Array.isArray(value)) return value.map(canonical);

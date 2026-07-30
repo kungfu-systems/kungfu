@@ -20,6 +20,36 @@ fail-fast and cancel stale runs for the same pull request. The manual Build
 workflow and preflight workflow expose an explicit diagnostic mode that keeps
 all platform lanes running.
 
+### Queue-aware macOS overflow
+
+The manual `Alpha macOS queue-aware overflow` controller keeps the self-hosted
+macOS ARM64 lane as the primary hot-cache route and starts a GitHub-hosted
+candidate only when one of three source-bound conditions holds:
+
+- the retained self-hosted workspace contains an existing signing-result import
+  destination that would make the Buildchain import non-idempotent;
+- the observed macOS queue exceeds the initial 25-minute budget; or
+- a supplied predicted remaining queue exceeds that budget and is accompanied
+  by an exact `sha256` prediction root.
+
+The two candidates have independent concurrency identities and both run the
+same exact source SHA with the same exact Alpha preflight receipt. They are
+build-and-verify candidates only: `publish-channel` is always `none`, no release
+candidate passport is requested, and the caller-owned signing/notarization tail
+is not run. The existing Alpha promotion workflow remains the only publication
+authority.
+
+After overflow, the controller may cancel the self-hosted candidate only while
+its platform job is still queued and only after the hosted platform job exposes
+a real runner name. A self-hosted platform job that has acquired a runner is
+allowed to finish. The final
+`kungfu.alpha-macos-overflow-receipt/v1` records source and preflight identity,
+queue and acquisition times, runner labels, workspace-health result, fallback
+reason, candidate conclusions, cancellation ordering, and the selected
+publish-none winner. Diagnostic mode may shorten the threshold or force an
+unhealthy fixture for bounded workflow qualification; production dispatches
+retain the 25-minute default.
+
 <a id="governance-adr-delivery"></a>
 <!-- gate-doc:governance.adr-delivery -->
 ## ADR delivery admissibility (`governance.adr-delivery`)
@@ -34,7 +64,7 @@ all platform lanes running.
 - **Evidence:** unified Gate receipt; artifacts `product/release/qualification/adr-release-admissibility.json`.
 - **Diagnosis:** `./shifu gate explain governance.adr-delivery --profile <profile>`; reproduce with `./shifu gate run governance.adr-delivery` on a capable runner.
 - **Cost:** light; timeout 180 seconds.
-- **Current source:** .github/workflows/affected-native-pr.yml (candidate_preflight; every dev pull request and merge-group candidate before any expensive queue job); .github/workflows/build.yml (build; alpha or release pull request). The standalone .github/workflows/adr-release-gate.yml remains manual-only diagnostic evidence.
+- **Current source:** .github/workflows/affected-native-pr.yml (candidate_preflight; every dev pull request and merge-group candidate before any expensive queue job); .github/workflows/build.yml (build; alpha or release pull request, or a manual exact-source publish-none macOS candidate under the queue-aware overflow controller). The standalone .github/workflows/adr-release-gate.yml remains manual-only diagnostic evidence.
 - **Retirement:** remove only after every selecting profile and workflow binding is migrated or explicitly replaced, with the registry and matrix changed in the same review.
 <!-- /gate-doc:governance.adr-delivery -->
 

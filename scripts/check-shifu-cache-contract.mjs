@@ -98,6 +98,14 @@ function qualifiedArtifactPaths(root, cacheContract) {
       root,
       qualified.qualificationReceiptSchema,
     ),
+    legacyManifestSchemaPath: path.join(
+      root,
+      'docs/shifu/schema/qualified-assignment-core-artifact-v1.schema.json',
+    ),
+    legacyQualificationSchemaPath: path.join(
+      root,
+      'docs/shifu/schema/qualified-assignment-core-qualification-v1.schema.json',
+    ),
     decisionPath: path.join(root, qualified.decision),
   };
 }
@@ -146,6 +154,8 @@ function exactObject(value, keys, label) {
 }
 
 function validateQualifiedCoreDocumentShape(manifest, qualification) {
+  const compatibilityV2 =
+    manifest.schema === 'shifu.qualified-assignment-core-artifact/v2';
   exactObject(
     manifest,
     [
@@ -175,20 +185,34 @@ function validateQualifiedCoreDocumentShape(manifest, qualification) {
   );
   exactObject(
     manifest.compatibility,
-    ['mode', 'equivalenceReceiptRoot'],
+    compatibilityV2
+      ? ['schema', 'root', 'mode', 'equivalenceReceiptRoot']
+      : ['mode', 'equivalenceReceiptRoot'],
     'qualified Core manifest compatibility',
   );
   exactObject(
     manifest.build,
-    [
-      'nativeInputRoot',
-      'operatingSystem',
-      'architecture',
-      'pythonAbi',
-      'profile',
-      'toolchainDigest',
-      'dependencyLockDigest',
-    ],
+    compatibilityV2
+      ? [
+          'nativeInputRoot',
+          'operatingSystem',
+          'architecture',
+          'pythonAbi',
+          'profile',
+          'toolchainDigest',
+          'dependencyLockDigest',
+          'nativeClosureRoot',
+          'compatibilityPolicyRoot',
+        ]
+      : [
+          'nativeInputRoot',
+          'operatingSystem',
+          'architecture',
+          'pythonAbi',
+          'profile',
+          'toolchainDigest',
+          'dependencyLockDigest',
+        ],
     'qualified Core manifest build',
   );
   exactObject(
@@ -253,14 +277,24 @@ function validateQualifiedCoreDocumentShape(manifest, qualification) {
   );
   exactObject(
     qualification.identity,
-    [
-      'producerRepository',
-      'producerCommit',
-      'targetRepository',
-      'targetCommit',
-      'compatibilityMode',
-      'equivalenceReceiptRoot',
-    ],
+    compatibilityV2
+      ? [
+          'producerRepository',
+          'producerCommit',
+          'targetRepository',
+          'targetCommit',
+          'compatibilityRoot',
+          'compatibilityMode',
+          'equivalenceReceiptRoot',
+        ]
+      : [
+          'producerRepository',
+          'producerCommit',
+          'targetRepository',
+          'targetCommit',
+          'compatibilityMode',
+          'equivalenceReceiptRoot',
+        ],
     'qualified Core qualification identity',
   );
   exactObject(
@@ -270,15 +304,26 @@ function validateQualifiedCoreDocumentShape(manifest, qualification) {
   );
   exactObject(
     qualification.checks,
-    [
-      'artifactDigest',
-      'boundedPaths',
-      'safeSymlinks',
-      'platformAndAbi',
-      'buildIdentity',
-      'sourceIdentity',
-      'checkoutCleanliness',
-    ],
+    compatibilityV2
+      ? [
+          'artifactDigest',
+          'boundedPaths',
+          'safeSymlinks',
+          'platformAndAbi',
+          'buildIdentity',
+          'sourceIdentity',
+          'compatibilityIdentity',
+          'checkoutCleanliness',
+        ]
+      : [
+          'artifactDigest',
+          'boundedPaths',
+          'safeSymlinks',
+          'platformAndAbi',
+          'buildIdentity',
+          'sourceIdentity',
+          'checkoutCleanliness',
+        ],
     'qualified Core qualification checks',
   );
   exactObject(
@@ -302,22 +347,42 @@ function validateQualifiedCoreDocumentShape(manifest, qualification) {
 export async function verifyQualifiedAssignmentCoreArtifact({
   manifest,
   qualification,
+  equivalence = null,
   payloads,
   expected,
   root = ROOT,
 }) {
   const cacheContract = readJson(path.join(root, rel(CONTRACT_PATH)));
   const paths = qualifiedArtifactPaths(root, cacheContract);
+  const legacy =
+    manifest.schema === 'shifu.qualified-assignment-core-artifact/v1';
+  if (
+    legacy &&
+    Date.parse(expected.now) >
+      Date.parse(paths.qualified.migration.v1ExactCommitReadThrough)
+  ) {
+    throw new Error('qualified Assignment Core v1 migration window has closed');
+  }
   const Ajv2020 = await loadAjv2020();
   if (Ajv2020) {
     const ajv = ajv2020(Ajv2020);
     validateOrThrow(
-      ajv.compile(readJson(paths.manifestSchemaPath)),
+      ajv.compile(
+        readJson(
+          legacy ? paths.legacyManifestSchemaPath : paths.manifestSchemaPath,
+        ),
+      ),
       manifest,
       'qualified Assignment Core manifest',
     );
     validateOrThrow(
-      ajv.compile(readJson(paths.qualificationSchemaPath)),
+      ajv.compile(
+        readJson(
+          legacy
+            ? paths.legacyQualificationSchemaPath
+            : paths.qualificationSchemaPath,
+        ),
+      ),
       qualification,
       'qualified Assignment Core qualification receipt',
     );
@@ -470,6 +535,40 @@ export async function verifyQualifiedAssignmentCoreArtifact({
     manifest.compatibility.equivalenceReceiptRoot,
     'qualification equivalenceReceiptRoot',
   );
+  const compatibilityV2 =
+    manifest.schema === 'shifu.qualified-assignment-core-artifact/v2';
+  if (compatibilityV2) {
+    exactExpected(
+      manifest.compatibility.schema,
+      'kungfu.qualified-assignment-core-compatibility/v2',
+      'compatibility schema',
+    );
+    exactExpected(
+      identity.compatibilityRoot,
+      manifest.compatibility.root,
+      'qualification compatibilityRoot',
+    );
+    exactExpected(
+      manifest.build.nativeInputRoot,
+      manifest.compatibility.root,
+      'v2 native input compatibility root',
+    );
+    exactExpected(
+      manifest.compatibility.root,
+      expected.compatibilityRoot,
+      'current compatibility root',
+    );
+    exactExpected(
+      manifest.build.nativeClosureRoot,
+      expected.nativeClosureRoot,
+      'native closure root',
+    );
+    exactExpected(
+      manifest.build.compatibilityPolicyRoot,
+      expected.compatibilityPolicyRoot,
+      'compatibility policy root',
+    );
+  }
   if (manifest.compatibility.mode === 'exact-commit') {
     exactExpected(
       manifest.producer.repository,
@@ -491,6 +590,7 @@ export async function verifyQualifiedAssignmentCoreArtifact({
       'protected-dev-direct',
       'exact-commit promotion mode',
     );
+    exactExpected(equivalence, null, 'exact-commit equivalence document');
   } else {
     assert.ok(
       manifest.producer.repository !== manifest.target.repository ||
@@ -507,6 +607,147 @@ export async function verifyQualifiedAssignmentCoreArtifact({
       'protected-dev-reused-proof',
       'explicit-equivalence promotion mode',
     );
+    if (compatibilityV2) {
+      assert.ok(equivalence, 'explicit equivalence document is absent');
+      exactObject(
+        equivalence,
+        ['schema', 'producer', 'target', 'comparison', 'receiptRoot'],
+        'qualified Core equivalence receipt',
+      );
+      exactObject(
+        equivalence.producer,
+        ['repository', 'commit', 'tree', 'sourceTreeRoot', 'compatibilityRoot'],
+        'qualified Core equivalence producer',
+      );
+      exactObject(
+        equivalence.target,
+        ['repository', 'commit', 'tree', 'sourceTreeRoot', 'compatibilityRoot'],
+        'qualified Core equivalence target',
+      );
+      exactObject(
+        equivalence.comparison,
+        [
+          'method',
+          'nativeClosureRoot',
+          'dependencyLockDigest',
+          'shifuContractRoot',
+          'buildchainContractRoot',
+          'compatibilityPolicyRoot',
+        ],
+        'qualified Core equivalence comparison',
+      );
+      const { receiptRoot: _receiptRoot, ...equivalenceBody } = equivalence;
+      exactExpected(
+        equivalence.schema,
+        'kungfu.qualified-assignment-core-equivalence-receipt/v1',
+        'equivalence schema',
+      );
+      exactExpected(
+        equivalence.receiptRoot,
+        qualifiedAssignmentCoreRoot(equivalenceBody),
+        'equivalence receipt root',
+      );
+      exactExpected(
+        equivalence.receiptRoot,
+        manifest.compatibility.equivalenceReceiptRoot,
+        'manifest equivalence receipt root',
+      );
+      exactExpected(
+        equivalence.producer.repository,
+        manifest.producer.repository,
+        'equivalence producer repository',
+      );
+      exactExpected(
+        equivalence.producer.commit,
+        manifest.producer.commit,
+        'equivalence producer commit',
+      );
+      exactExpected(
+        equivalence.producer.sourceTreeRoot,
+        manifest.producer.sourceTreeRoot,
+        'equivalence producer source tree',
+      );
+      exactExpected(
+        equivalence.producer.sourceTreeRoot,
+        qualifiedAssignmentCoreRoot({
+          schema: 'kungfu.git-source-tree/v1',
+          tree: equivalence.producer.tree,
+        }),
+        'equivalence producer tree preimage',
+      );
+      exactExpected(
+        equivalence.producer.compatibilityRoot,
+        manifest.compatibility.root,
+        'equivalence producer compatibility',
+      );
+      exactExpected(
+        equivalence.target.repository,
+        manifest.target.repository,
+        'equivalence target repository',
+      );
+      exactExpected(
+        equivalence.target.commit,
+        manifest.target.commit,
+        'equivalence target commit',
+      );
+      exactExpected(
+        equivalence.target.compatibilityRoot,
+        manifest.compatibility.root,
+        'equivalence target compatibility',
+      );
+      exactExpected(
+        equivalence.target.sourceTreeRoot,
+        qualifiedAssignmentCoreRoot({
+          schema: 'kungfu.git-source-tree/v1',
+          tree: equivalence.target.tree,
+        }),
+        'equivalence target tree preimage',
+      );
+      exactExpected(
+        equivalence.target.sourceTreeRoot,
+        expected.targetSourceTreeRoot,
+        'current equivalence target source tree',
+      );
+      exactExpected(
+        equivalence.target.commit,
+        expected.targetCommit,
+        'current equivalence target commit',
+      );
+      exactExpected(
+        equivalence.comparison.method,
+        'independent-native-closure-recomputation',
+        'equivalence comparison method',
+      );
+      for (const [actual, wanted, field] of [
+        [
+          equivalence.comparison.nativeClosureRoot,
+          expected.nativeClosureRoot,
+          'equivalence native closure',
+        ],
+        [
+          equivalence.comparison.dependencyLockDigest,
+          expected.dependencyLockDigest,
+          'equivalence dependency locks',
+        ],
+        [
+          equivalence.comparison.shifuContractRoot,
+          expected.shifuContractRoot,
+          'equivalence Shifu contract',
+        ],
+        [
+          equivalence.comparison.buildchainContractRoot,
+          expected.buildchainContractRoot,
+          'equivalence Buildchain contract',
+        ],
+        [
+          equivalence.comparison.compatibilityPolicyRoot,
+          expected.compatibilityPolicyRoot,
+          'equivalence compatibility policy',
+        ],
+      ]) {
+        exactExpected(actual, wanted, field);
+      }
+    }
   }
 
   exactExpected(
@@ -629,6 +870,7 @@ export async function verifyQualifiedAssignmentCoreArtifact({
     qualificationReceiptRoot: qualification.receiptRoot,
     promotionAuthorityRoot: qualification.promotionAuthorityRoot,
     compatibilityMode: manifest.compatibility.mode,
+    compatibilityIdentity: compatibilityV2 ? manifest.compatibility.root : null,
     transportAuthority: false,
     currentSourceFallbackRequired: false,
   };

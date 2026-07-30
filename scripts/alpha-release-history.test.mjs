@@ -14,7 +14,7 @@ import {
   verifyAlphaReleaseHistory,
 } from './alpha-release-history.mjs';
 
-const PLATFORMS = ['linux-x64', 'macos-arm64', 'windows-x64'];
+const PLATFORMS = ['linux-x64', 'linux-arm64', 'macos-arm64', 'windows-x64'];
 
 function cacheEvidence(candidate) {
   const binding = {
