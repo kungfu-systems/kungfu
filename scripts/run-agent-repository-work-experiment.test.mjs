@@ -22,6 +22,7 @@ import {
 } from '../framework/agent-repository-work/run.mjs';
 import {
   REPOSITORY_WORK_FIXTURES,
+  SYNTHETIC_REPOSITORY_WORK_FIXTURES,
   getRepositoryWorkFixture,
 } from '../tests/qualification/agent-repository-work/fixture-catalog.mjs';
 import {
@@ -32,6 +33,13 @@ import {
   verifyIncidentBoardWorkspace,
 } from '../tests/qualification/agent-repository-work/incident-board-replay-v1-oracle.mjs';
 import { INCIDENT_BOARD_FIXTURE } from '../tests/qualification/agent-repository-work/incident-board-replay-v1.mjs';
+import {
+  applyRealModuleSnapshotReferenceRepair,
+  materializeRealModuleSnapshot,
+  qualifyReferenceRealModuleSnapshot,
+  qualifySeededRealModuleSnapshot,
+  verifyRealModuleSnapshotWorkspace,
+} from '../tests/qualification/agent-repository-work/kungfu-agent-patrol-real-module-snapshot-v1-oracle.mjs';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const contractPath = path.join(
@@ -92,17 +100,18 @@ test('fixture contract pins a moderate deterministic repository', () => {
   assert.equal(contract.oracle.mountedIntoAgentWorkspace, false);
   assert.deepEqual(
     contract.fixtureCatalog.entries.map(({ id }) => id).sort(),
-    REPOSITORY_WORK_FIXTURES.map(({ id }) => id).sort(),
+    SYNTHETIC_REPOSITORY_WORK_FIXTURES.map(({ id }) => id).sort(),
   );
+  assert.equal(REPOSITORY_WORK_FIXTURES.length, 4);
 });
 
-test('fixture catalog exposes three independently seeded bounded repairs', () => {
-  assert.equal(REPOSITORY_WORK_FIXTURES.length, 3);
+test('fixture catalog exposes three independently seeded synthetic repairs', () => {
+  assert.equal(SYNTHETIC_REPOSITORY_WORK_FIXTURES.length, 3);
   assert.equal(
-    new Set(REPOSITORY_WORK_FIXTURES.map(({ id }) => id)).size,
-    REPOSITORY_WORK_FIXTURES.length,
+    new Set(SYNTHETIC_REPOSITORY_WORK_FIXTURES.map(({ id }) => id)).size,
+    SYNTHETIC_REPOSITORY_WORK_FIXTURES.length,
   );
-  for (const fixture of REPOSITORY_WORK_FIXTURES) {
+  for (const fixture of SYNTHETIC_REPOSITORY_WORK_FIXTURES) {
     const seeded = qualifySeededIncidentBoardFixture(fixture);
     assert.equal(seeded.passed, true, fixture.id);
     assert.deepEqual(
@@ -115,6 +124,49 @@ test('fixture catalog exposes three independently seeded bounded repairs', () =>
       reference.changedPaths,
       fixture.warrants.agentB.writablePaths.slice().sort(),
     );
+  }
+});
+
+test('real module snapshot is content-rooted, seeded, and independently repairable', () => {
+  const fixture = getRepositoryWorkFixture(
+    'kungfu-agent-patrol-real-module-snapshot-v1',
+  );
+  const seeded = qualifySeededRealModuleSnapshot({ fixture });
+  assert.equal(seeded.passed, true, JSON.stringify(seeded));
+  assert.match(seeded.sourceTreeRoot, /^sha256:[0-9a-f]{64}$/u);
+  const reference = qualifyReferenceRealModuleSnapshot({ fixture });
+  assert.equal(reference.passed, true);
+  assert.deepEqual(reference.changedPaths, [
+    'framework/agent-patrol/classify.mjs',
+  ]);
+  assert.equal(reference.checks.visible.passed, true);
+  assert.equal(reference.checks.hidden.passed, true);
+});
+
+test('real module snapshot external oracle rejects protected-path changes', () => {
+  const fixture = getRepositoryWorkFixture(
+    'kungfu-agent-patrol-real-module-snapshot-v1',
+  );
+  const workspace = fs.mkdtempSync(
+    path.join(os.tmpdir(), 'agent-patrol-real-snapshot-scope.'),
+  );
+  try {
+    const materialized = materializeRealModuleSnapshot(workspace, { fixture });
+    applyRealModuleSnapshotReferenceRepair(workspace);
+    fs.appendFileSync(
+      path.join(workspace, 'framework/agent-patrol/select.mjs'),
+      '\n// out-of-scope mutation\n',
+    );
+    const report = verifyRealModuleSnapshotWorkspace(workspace, {
+      fixture,
+      expectedInitialTree: materialized.initialTree,
+    });
+    assert.equal(report.passed, false);
+    assert.deepEqual(report.scopeViolations, [
+      'framework/agent-patrol/select.mjs',
+    ]);
+  } finally {
+    fs.rmSync(workspace, { recursive: true, force: true });
   }
 });
 

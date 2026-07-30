@@ -10,13 +10,16 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const workflowPath = '.github/workflows/kungfu-agent-patrol.yml';
 const workflow = fs.readFileSync(path.join(root, workflowPath), 'utf8');
 
-test('Agent Patrol is daily-light, weekly-deep, or trusted manual only', () => {
+test('Agent Patrol is scheduled synthetic or trusted manual only', () => {
   assert.match(workflow, /^on:\n {2}[\s\S]*schedule:/m);
   assert.match(workflow, /cron: "0 18 \* \* 1-6"/);
   assert.match(workflow, /cron: "0 18 \* \* 0"/);
   assert.match(workflow, /^ {2}workflow_dispatch:\n {4}inputs:/m);
   assert.match(workflow, /default: light/);
-  assert.match(workflow, /(?:\n {10}- light)(?:\n {10}- deep)/);
+  assert.match(
+    workflow,
+    /(?:\n {10}- light)(?:\n {10}- deep)(?:\n {10}- real-snapshot)/,
+  );
   assert.doesNotMatch(workflow, /^\s+(?:pull_request|push):/m);
   assert.match(workflow, /github\.repository == 'kungfu-systems\/kungfu'/);
   assert.match(

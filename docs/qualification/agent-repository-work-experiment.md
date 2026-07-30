@@ -32,6 +32,28 @@ seeded boundary. The visible and hidden external oracle still checks the full
 repository behavior, so a focused repair cannot pass by regressing another
 boundary.
 
+## Real Kungfu module snapshot
+
+The manual `real-snapshot` Patrol mode adds a separate fixture without replacing
+the synthetic catalog. Its committed manifest binds an eight-file, 3,102-line
+dependency-closed slice of the actual Agent Patrol classifier, selector,
+Dogfood capture adapter, report validator, fixture catalog, and tests.
+
+The exact protected commit is the byte source. The materializer accepts only
+tracked regular files whose mode, size, line count, and SHA256 match the
+manifest, verifies a canonical tree root, copies the slice into a disposable
+workspace without Git metadata, and applies one deterministic mutation:
+large numeric failure identifiers stop being normalized in
+`framework/agent-patrol/classify.mjs`.
+
+The visible regression checks that two failures differing only in volatile run
+IDs resolve to one Finding identity. The external hidden verifier repeats that
+boundary with different identifiers and paths. Agent A receives a read-only
+mount; Agent B may modify only `framework/agent-patrol/classify.mjs`; the
+reference root and all other snapshot paths remain protected. This makes the
+result evidence about a real Kungfu module slice while retaining deterministic
+completion authority.
+
 ## Trust boundaries
 
 - Agent A runs with a read-only workspace mount. A byte-level tree comparison
@@ -109,6 +131,11 @@ existing immutable Finding before any write. Passing runs create no Finding,
 and the Patrol has no automatic Issue admission path. See the
 [agent-121 Patrol runbook](agent-patrol-agent-121.md) for the exact trigger,
 privacy, deduplication, authority, and activation boundaries.
+
+The real snapshot begins as a protected-branch manual qualification only. Its
+weekly schedule is enabled in a later protected change only after agent-121
+proves the pinned OpenCode image, local model, Node runtime, bounded two-session
+repair, and external oracle end to end.
 
 ## Residual limitations
 

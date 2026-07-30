@@ -1770,7 +1770,7 @@
     {
       "path": ".github/workflows/kungfu-agent-patrol.yml",
       "authority": "qualification",
-      "definitionDigest": "sha256:3c50b45eb56f34f88eb3f1407b4cf469224894f5a7726e5003ce26db2dd4ab5e",
+      "definitionDigest": "sha256:0741a12a129837e613ebebbaa0db4e9538cb4109d70b2ffc2a336e4c09d5a34d",
       "jobs": [
         {
           "id": "patrol",

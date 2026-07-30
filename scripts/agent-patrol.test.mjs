@@ -72,6 +72,19 @@ test('weekly deep Patrol rotates two-fixture suites across the catalog', () => {
   assert.equal(new Set(suites.flat()).size, 3);
 });
 
+test('manual real-snapshot Patrol selects only the real Kungfu module slice', () => {
+  const plan = selectPatrolPlan({
+    eventName: 'workflow_dispatch',
+    manualMode: 'real-snapshot',
+    rotationKey: 1,
+  });
+  assert.equal(plan.mode, 'real-snapshot');
+  assert.deepEqual(plan.fixtures, [
+    'kungfu-agent-patrol-real-module-snapshot-v1',
+  ]);
+  assert.equal(plan.timeoutSeconds, 900);
+});
+
 test('Patrol selector rejects undeclared schedules and untrusted events', () => {
   assert.throws(
     () =>
@@ -230,6 +243,19 @@ test('same normalized failure deduplicates across run roots and source commits',
   assert.notEqual(first.reportRoot, second.reportRoot);
   assert.equal(first.blocking, false);
   assert.equal(first.outcome, 'advisory-failure');
+});
+
+test('volatile numeric failure identifiers share one Finding identity', () => {
+  const firstReport = baseReport();
+  firstReport.failure.message =
+    'OpenCode run 1234567 failed after 7654321 milliseconds';
+  const secondReport = baseReport();
+  secondReport.failure.message =
+    'OpenCode run 9876543 failed after 8765432 milliseconds';
+  const first = classifyReport(firstReport, options());
+  const second = classifyReport(secondReport, options());
+  assert.equal(first.messageRoot, second.messageRoot);
+  assert.equal(first.findingIntent.findingId, second.findingIntent.findingId);
 });
 
 test('runner environment failure is captured and remains blocking', () => {
