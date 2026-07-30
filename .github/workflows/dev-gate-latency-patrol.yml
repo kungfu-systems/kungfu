@@ -86,7 +86,7 @@ jobs:
           while IFS= read -r branch; do
             slug="${branch//\//_}"
             collector_exit=0
-            ./shifu gate:latency:measure -- \
+            ./shifu gate:latency:measure \
               --branch "$branch" \
               --limit 30 \
               --output "$KUNGFU_DEV_GATE_PATROL_EVIDENCE/reports/$slug.json" \

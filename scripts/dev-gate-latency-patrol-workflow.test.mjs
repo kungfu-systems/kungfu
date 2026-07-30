@@ -69,3 +69,11 @@ test('latency Patrol uses runner context only inside steps', () => {
     /Capture or deduplicate native Dogfood Findings[\s\S]*?env:\n {10}KUNGFU_DEV_GATE_PATROL_EVIDENCE:.*runner\.temp/u,
   );
 });
+
+test('latency Patrol passes collector arguments through Shifu once', () => {
+  assert.match(
+    workflow,
+    /\.\/shifu gate:latency:measure \\\n {14}--branch "\$branch"/u,
+  );
+  assert.doesNotMatch(workflow, /\.\/shifu gate:latency:measure -- \\/u);
+});
