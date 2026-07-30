@@ -93,7 +93,7 @@ function fixture(
     safeArchiveLinks = false,
     unsupportedArchiveMember = false,
     stdoutLineCount = 0,
-    completionStatus = 'passed',
+    completionStatus = 'qualified',
     omitSentinel = false,
     exitCode = 0,
     privateOutput = '',
@@ -311,7 +311,7 @@ test('adapter executes only the exact installed archive in a PTY and emits the d
     );
     assert.equal(capture.command, 'kungfu agent-work-lab autoplay');
     assert.deepEqual(capture.dimensions, { columns: 120, rows: 36 });
-    assert.equal(capture.completion.status, 'passed');
+    assert.equal(capture.completion.status, 'qualified');
     assert.deepEqual(capture.authority.grants, []);
     assert.deepEqual(capture.authority.nonAuthorities, [
       'first-party-identity',
@@ -482,10 +482,11 @@ test('adapter rejects unsupported archive member types', () => {
   }
 });
 
-test('adapter fails closed on missing, failed, or nonzero autoplay completion', () => {
+test('adapter fails closed on missing, non-qualified, or nonzero autoplay completion', () => {
   for (const [options, expected] of [
     [{ omitSentinel: true }, /must emit exactly one/u],
     [{ completionStatus: 'failed' }, /completion sentinel did not pass/u],
+    [{ completionStatus: 'passed' }, /completion sentinel did not pass/u],
     [{ exitCode: 9 }, /failed with exit status 9/u],
   ]) {
     const root = fs.mkdtempSync(
