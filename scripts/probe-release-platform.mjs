@@ -149,6 +149,95 @@ export function probeAwsWindowsJitRunner({
   return { report, output };
 }
 
+export function probeAwsMacosJitRunner({
+  root = ROOT,
+  platform = process.platform,
+  env = process.env,
+  runCommand = capture,
+}) {
+  if (platform !== 'darwin')
+    fail('AWS macOS JIT runner profile requires macOS');
+
+  const labels = JSON.parse(env.BUILDCHAIN_RUNNER_LABELS_JSON || '[]');
+  for (const required of ['self-hosted', 'macOS', 'ARM64']) {
+    if (!labels.includes(required))
+      fail(`runner labels are missing ${required}`);
+  }
+  const runnerLabel = labels.find((label) =>
+    String(label).startsWith('aws-us-ec2-macos-jit-'),
+  );
+  exact(
+    runnerLabel,
+    /^aws-us-ec2-macos-jit-[a-z0-9][a-z0-9-]{0,31}$/,
+    'runner label',
+  );
+
+  const report = {
+    schemaVersion: 1,
+    contract: 'kungfu.aws-macos-jit-runner-profile/v1',
+    provider: 'aws-ec2-macos-jit',
+    sourceSha: exact(env.GITHUB_SHA, /^[0-9a-f]{40}$/, 'source SHA'),
+    githubRunId: exact(env.GITHUB_RUN_ID, /^\d+$/, 'GitHub run id'),
+    githubRunAttempt: exact(
+      env.GITHUB_RUN_ATTEMPT,
+      /^\d+$/,
+      'GitHub run attempt',
+    ),
+    runner: {
+      name: String(env.RUNNER_NAME || ''),
+      os: platform,
+      architecture: process.arch,
+      labels: [...labels].sort(),
+    },
+    aws: {
+      hostId: exact(
+        env.AWS_EC2_MAC_HOST_ID,
+        /^h-[0-9a-f]+$/,
+        'Dedicated Host id',
+      ),
+      hostAllocatedAt: String(env.AWS_EC2_MAC_HOST_ALLOCATED_AT || ''),
+      instanceId: exact(
+        env.AWS_EC2_INSTANCE_ID,
+        /^i-[0-9a-f]+$/,
+        'instance id',
+      ),
+      instanceType: exact(
+        env.AWS_EC2_INSTANCE_TYPE,
+        /^mac2\.metal$/,
+        'instance type',
+      ),
+      amiId: exact(env.AWS_EC2_AMI_ID, /^ami-[0-9a-f]+$/, 'AMI id'),
+      amiName: String(env.AWS_EC2_AMI_NAME || ''),
+      availabilityZone: String(env.AWS_EC2_AVAILABILITY_ZONE || ''),
+      launchedAt: String(env.AWS_EC2_LAUNCHED_AT || ''),
+    },
+    toolchain: {
+      git: runCommand('git', ['--version']),
+      node: runCommand('node', ['--version']),
+      rustc: runCommand('rustc', ['--version']),
+      cargo: runCommand('cargo', ['--version']),
+      xcodebuild: runCommand('xcodebuild', ['-version']),
+    },
+    cacheMode: 'off',
+    observedAt: new Date().toISOString(),
+  };
+  report.digest = `sha256:${crypto
+    .createHash('sha256')
+    .update(JSON.stringify(report))
+    .digest('hex')}`;
+
+  const output = path.join(
+    root,
+    'product',
+    'release',
+    'qualification',
+    'aws-macos-jit-smoke.json',
+  );
+  fs.mkdirSync(path.dirname(output), { recursive: true });
+  fs.writeFileSync(output, `${JSON.stringify(report, null, 2)}\n`);
+  return { report, output };
+}
+
 function findApplications(root) {
   const matches = [];
   const visit = (directory) => {
@@ -266,6 +355,11 @@ if (
   process.argv[1] &&
   import.meta.url === pathToFileURL(process.argv[1]).href
 ) {
+  if (process.argv.includes('--aws-macos-jit')) {
+    const { output } = probeAwsMacosJitRunner({});
+    process.stdout.write(`${path.relative(ROOT, output)}\n`);
+    process.exit(0);
+  }
   if (process.argv.includes('--aws-windows-jit')) {
     const { output } = probeAwsWindowsJitRunner({});
     process.stdout.write(`${path.relative(ROOT, output)}\n`);

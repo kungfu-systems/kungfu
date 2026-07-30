@@ -96,14 +96,21 @@
           "classification": "non-publication",
           "owner": "kungfu-ci",
           "surfaceIds": [],
-          "sourceRoot": "sha256:5e40d0996245db21d259cbdf7cb8434bbd3726143e55d7bc387d776b5aec1c9f"
+          "sourceRoot": "sha256:f00fdb448f4954fc0344ee6ce0eb6c3e6a0c051b66f1738ec14376aae449e3f5"
+        },
+        {
+          "path": ".github/workflows/aws-us-macos-burst-qualification.yml",
+          "classification": "non-publication",
+          "owner": "kungfu-ci",
+          "surfaceIds": [],
+          "sourceRoot": "sha256:e80feb249d6e67528439726ecb2f6639c949cd2d6178b8fac37c6535d1b81850"
         },
         {
           "path": ".github/workflows/aws-us-windows-burst-qualification.yml",
           "classification": "non-publication",
           "owner": "kungfu-ci",
           "surfaceIds": [],
-          "sourceRoot": "sha256:3e2a287e852069714f7717405ef8f40e89c973c38a13b1d6e4061a52aec4c1c7"
+          "sourceRoot": "sha256:f0ae651f01660daf3253a0ffa7588c34d1e37307c304606536c74f6780cb4333"
         },
         {
           "path": ".github/workflows/build.yml",
@@ -813,5 +820,5 @@
       }
     }
   ],
-  "registryRoot": "sha256:bff35f83dd8cd4817cc0f8c532a0fc769f39ee8c7e4112a13dfe2819a0931ddf"
+  "registryRoot": "sha256:762a9aa4a79a409a5ceb811906579b0beb4c7b188cf105cf2b725b72fc0892e5"
 }

@@ -191,7 +191,7 @@ test('AWS CodeBuild qualification rejects static and release credentials', () =>
   }
 });
 
-test('retired AWS burst workflows fail closed before runner or cloud work', () => {
+test('reactivated AWS burst workflows pin one reviewed Buildchain v3 source', () => {
   const retirement = JSON.parse(
     fs.readFileSync(
       path.join(
@@ -201,21 +201,20 @@ test('retired AWS burst workflows fail closed before runner or cloud work', () =
       'utf8',
     ),
   );
-  assert.equal(retirement.status, 'retired');
+  assert.equal(retirement.status, 'reactivated-v3');
   assert.equal(retirement.owner, 'kungfu-ci');
   assert.equal(retirement.runtimeSafety.workflowShellReferencesV2, false);
   assert.equal(retirement.runtimeSafety.buildchainRefInputsV2, false);
-  assert.equal(retirement.runtimeSafety.burstRunnerJobs, 0);
-  assert.equal(retirement.runtimeSafety.cloudJobs, 0);
+  assert.equal(retirement.runtimeSafety.operatorSuppliedBuildchainRef, false);
+  assert.equal(retirement.runtimeSafety.burstRunnerWorkflows, 3);
   assert.match(retirement.evidence.historicalBuildchainRef, /^train\/v2\//);
-  assert.match(
-    retirement.evidence.reviewedBuildchainV3Source,
-    /^[0-9a-f]{40}$/,
-  );
+  const buildchainSource = retirement.evidence.reviewedBuildchainV3Source;
+  assert.equal(buildchainSource, '407445c43df4888bb4464e91aef0debdc62aa0e6');
 
   for (const name of [
     'aws-us-linux-burst-qualification.yml',
     'aws-us-windows-burst-qualification.yml',
+    'aws-us-macos-burst-qualification.yml',
   ]) {
     const workflow = fs.readFileSync(
       path.join(repositoryRoot, '.github/workflows', name),
@@ -223,21 +222,32 @@ test('retired AWS burst workflows fail closed before runner or cloud work', () =
     );
     assert.match(workflow, /workflow_dispatch:/);
     assert.doesNotMatch(workflow, /\n {2}pull_request:|\n {2}push:/);
-    assert.match(workflow, /jobs:\n {2}retired:/);
-    assert.match(workflow, /runs-on: ubuntu-24\.04/);
-    assert.match(
-      workflow,
-      /docs\/qualification\/gates\/aws-burst-retirement\.json/,
-    );
-    assert.match(workflow, /exit 1/);
+    if (name === 'aws-us-windows-burst-qualification.yml') {
+      assert.match(workflow, /jobs:\n {2}trust:/);
+      assert.match(workflow, /runs-on: ubuntu-24\.04/);
+      assert.match(workflow, /Require write-capable actor/);
+    }
+    const shellPins =
+      workflow.match(
+        new RegExp(
+          `uses: kungfu-systems/buildchain/\\.github/workflows/\\.build\\.yml@${buildchainSource}`,
+          'g',
+        ),
+      ) || [];
+    const runtimePins =
+      workflow.match(new RegExp(`buildchain-ref: ${buildchainSource}`, 'g')) ||
+      [];
+    assert.ok(shellPins.length >= 1);
+    assert.equal(runtimePins.length, shellPins.length);
+    assert.doesNotMatch(workflow, /train\/v2|buildchain-ref:\s*[\r\n]/);
     assert.doesNotMatch(
       workflow,
-      /train\/v2|kungfu-systems\/buildchain|runner-preset|aws-codebuild-project|aws-ec2-windows-runner-label|issues:\s*write|id-token:\s*write/,
+      /secrets:\s*inherit|id-token:\s*write|notar|signing|npm-publish|release-new-version|deploy/,
     );
   }
 });
 
-test('retired AWS Linux burst workflow preserves no runnable v2 caller', () => {
+test('AWS Linux burst workflow is a manual-only CodeBuild v3 caller', () => {
   const workflow = fs.readFileSync(
     path.join(
       repositoryRoot,
@@ -245,15 +255,14 @@ test('retired AWS Linux burst workflow preserves no runnable v2 caller', () => {
     ),
     'utf8',
   );
-  assert.match(workflow, /AWS US Linux Burst Qualification \(Retired\)/);
+  assert.match(workflow, /name: AWS US Linux Burst Qualification/);
   assert.match(workflow, /permissions:\n {2}contents: read/);
-  assert.doesNotMatch(
-    workflow,
-    /uses:|secrets:|notar|signing|npm-publish|release-new-version|deploy/,
-  );
+  assert.match(workflow, /runner-preset: aws-us-codebuild-linux/);
+  assert.match(workflow, /aws-codebuild-project:/);
+  assert.doesNotMatch(workflow, /\n {2}pull_request:|\n {2}push:/);
 });
 
-test('retired AWS Windows burst workflow preserves no runnable v2 caller', () => {
+test('AWS Windows burst workflow preserves bounded full and cleanup exercises', () => {
   const workflow = fs.readFileSync(
     path.join(
       repositoryRoot,
@@ -261,10 +270,32 @@ test('retired AWS Windows burst workflow preserves no runnable v2 caller', () =>
     ),
     'utf8',
   );
-  assert.match(workflow, /AWS US Windows Burst Qualification \(Retired\)/);
+  assert.match(workflow, /name: AWS US Windows Burst Qualification/);
   assert.match(workflow, /permissions:\n {2}contents: read/);
-  assert.doesNotMatch(
-    workflow,
-    /uses:|secrets:|notar|signing|npm-publish|release-new-version|deploy/,
+  assert.match(workflow, /runner-preset: aws-us-ec2-windows-jit/);
+  assert.match(workflow, /win-full-0\[1-3\]:full/);
+  assert.match(workflow, /win-cancel:cancellation/);
+  assert.match(workflow, /win-timeout:timeout/);
+  assert.match(workflow, /timeout-minutes:/);
+});
+
+test('AWS macOS burst workflow requires three sequential one-job JIT slots', () => {
+  const workflow = fs.readFileSync(
+    path.join(
+      repositoryRoot,
+      '.github/workflows/aws-us-macos-burst-qualification.yml',
+    ),
+    'utf8',
   );
+  assert.match(workflow, /runner-preset: aws-us-ec2-macos-jit/);
+  assert.match(workflow, /inputs\.qualification-id == 'mac-smoke-01'/);
+  assert.match(workflow, /inputs\.qualification-id == 'mac-smoke-02'/);
+  assert.match(workflow, /inputs\.qualification-id == 'mac-full-01'/);
+  assert.match(
+    workflow,
+    /inputs\.runner-label == format\('aws-us-ec2-macos-jit-\{0\}', inputs\.qualification-id\)/,
+  );
+  assert.match(workflow, /group: aws-us-macos-burst/);
+  assert.match(workflow, /aws-ec2-macos-runner-label:/);
+  assert.doesNotMatch(workflow, /\n {2}trust:/);
 });
