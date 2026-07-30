@@ -933,9 +933,6 @@ mod tests {
 
     #[test]
     fn register_stashes_declared_artifact() {
-        // The only test that touches XDG_CACHE_HOME: registration must land
-        // in the isolated cache, write a promote-compatible meta.env, and
-        // record the artifact's content hash.
         let root = shifu_core::host::unique_temp_dir("registrar-register").unwrap();
         let cache = root.join("cache");
         env::set_var("XDG_CACHE_HOME", &cache);
@@ -998,9 +995,17 @@ mod tests {
         fs::write(root.join("out/upgrade.json"), &upgrade_manifest).unwrap();
 
         let plan = plan_at(&root, &kfd.join("surfaces.json"), "dist").expect("plan");
-        register(&root, &plan);
-
         let registry = cache.join("kungfu/product").join(host::os_arch());
+        let wrong_size = upgrade_manifest.replacen(
+            &format!("\"size\": {app_size}"),
+            &format!("\"size\": {}", app_size + 1),
+            1,
+        );
+        fs::write(root.join("out/upgrade.json"), wrong_size).unwrap();
+        register(&root, &plan);
+        assert!(!registry.is_dir(), "wrong artifact size must not register");
+        fs::write(root.join("out/upgrade.json"), &upgrade_manifest).unwrap();
+        register(&root, &plan);
         let slots: Vec<_> = fs::read_dir(&registry).unwrap().flatten().collect();
         assert_eq!(slots.len(), 1, "exactly one slot registered");
         let slot = slots[0].path();
