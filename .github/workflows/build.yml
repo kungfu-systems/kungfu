@@ -394,7 +394,7 @@ jobs:
       source-artifact-name: ${{ needs.resolve-auditable-demo-source.outputs.artifact-name }}
       source-artifact-digest: ${{ needs.resolve-auditable-demo-source.outputs.artifact-digest }}
       adapter-path: scripts/auditable-demo-adapter.py
-      renderer-image: ghcr.io/kungfu-systems/build-images/demo-renderer@sha256:880b07771b04aedfbfa215185a3e3a62984fcd107fecae3c4ce5012636b2024e
+      renderer-image: ghcr.io/kungfu-systems/build-images/demo-renderer@sha256:06141e3d01a13e6d44766d3acc115ca07c58443f59840f313ecd938b2b0c138c
       render-media: ${{ (github.event_name == 'workflow_dispatch' && inputs.render-auditable-demo) || (github.event_name == 'pull_request' && startsWith(github.base_ref, 'alpha/')) }}
       artifact-retention-days: 14
       require-trusted-event: true
@@ -524,7 +524,7 @@ jobs:
           MEDIA_ARTIFACT_EXPIRES_AT: ${{ steps.artifact-expiry.outputs.media-artifact-expires-at }}
           MEDIA_ROOT: ${{ needs.auditable-demo.outputs.media-root }}
           BUILDCHAIN_SHA: 3272608ba28ef714fe710dd8da99d00fdeb4c619
-          RENDERER_IMAGE: ghcr.io/kungfu-systems/build-images/demo-renderer@sha256:880b07771b04aedfbfa215185a3e3a62984fcd107fecae3c4ce5012636b2024e
+          RENDERER_IMAGE: ghcr.io/kungfu-systems/build-images/demo-renderer@sha256:06141e3d01a13e6d44766d3acc115ca07c58443f59840f313ecd938b2b0c138c
         run: ./shifu node scripts/auditable-demo-passport.mjs write --output auditable-demo-release-passport.json
 
       - name: Upload exact auditable demo Release Passport

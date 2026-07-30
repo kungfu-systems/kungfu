@@ -39,8 +39,8 @@ disables the Gate.
 
 | Component | Immutable coordinate |
 | --- | --- |
-| Demo renderer | `ghcr.io/kungfu-systems/build-images/demo-renderer@sha256:880b07771b04aedfbfa215185a3e3a62984fcd107fecae3c4ce5012636b2024e` |
-| Renderer release | [`v1.3.0-alpha.18`](https://github.com/kungfu-systems/build-images/releases/tag/v1.3.0-alpha.18), exact source `8605faf2651252a427679757c5667de027481ace`, containing protected merge `24aff5eb17a07ce13b1a3b518ee94557f7f94074` |
+| Demo renderer | `ghcr.io/kungfu-systems/build-images/demo-renderer@sha256:06141e3d01a13e6d44766d3acc115ca07c58443f59840f313ecd938b2b0c138c` |
+| Renderer release | [`v1.3.0-alpha.19`](https://github.com/kungfu-systems/build-images/releases/tag/v1.3.0-alpha.19), exact source `0dc471bfdec50e06afd12493a279d3c0056dae1f`, containing protected merge `f6bccf6ecb5753386a502a335748c6a0b1ecb7a9` |
 | Buildchain Gate | `3272608ba28ef714fe710dd8da99d00fdeb4c619` (Buildchain issue `#2057`, canonical `qualified` autoplay sentinel admission) |
 | Consumer adapter | `scripts/auditable-demo-adapter.py` from the exact qualified Kungfu source SHA |
 
@@ -57,9 +57,12 @@ The adapter opens exactly one release qualification root, rejects unsafe or
 unbounded archive members, validates the retained layer, live-Peer, runtime
 activation, zero-burden, and invariant reports, and executes the installed
 archive's declared launcher with `kungfu agent-work-lab autoplay` in a
-disposable home directory and a real `120x36` PTY. The capture is limited to
-60 seconds, 4 MiB, and 10,000 quantized events. A successful result requires
-one valid `KUNGFU_TUI_DEMO_COMPLETE` payload and exit status zero.
+disposable home directory and a real `150x36` PTY. The isolated process removes
+`NO_COLOR`, sets `FORCE_COLOR=3`, and declares `TERM=xterm-256color` plus
+`COLORTERM=truecolor` so the capture retains the installed TUI's ANSI styling.
+The capture is limited to 60 seconds, 4 MiB, and 10,000 quantized events. A
+successful result requires one valid `KUNGFU_TUI_DEMO_COMPLETE` payload and
+exit status zero.
 
 Its public evidence class is
 `exact-installed-artifact-agent-work-lab-autoplay/v1`. It claims only that the
