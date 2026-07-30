@@ -255,7 +255,7 @@ export function buildBundledUpgradeManifest({
     filter: releaseRuntimePath,
   });
   const runtimeBuildId = `runtime-${version}-${runtimeDigest.slice(0, 16)}`;
-  const frontendBuildId = `product-${version}-${revision.slice(0, 16)}`;
+  const frontendBuildId = `product-${version}-${revision.slice(0, 12)}-${runtimeDigest.slice(0, 16)}`;
   return bindProductReleaseCut({
     schema: RELEASE_SCHEMA,
     productVersion: version,

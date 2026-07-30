@@ -108,7 +108,7 @@ fn parse_receipt(
         return Err(format!(
             "native updater rejected {action} (exit {:?}): {}",
             output.status.code(),
-            String::from_utf8_lossy(&output.stderr).trim()
+            failure_detail(&output.stderr, &output.stdout)
         ));
     }
     let receipt = json::parse(&String::from_utf8_lossy(&output.stdout))
@@ -128,6 +128,20 @@ fn parse_receipt(
         transition_root: transition_root.to_string(),
         receipt_root: receipt_root.to_string(),
     })
+}
+
+fn failure_detail(stderr: &[u8], stdout: &[u8]) -> String {
+    let error = String::from_utf8_lossy(stderr);
+    let error = error.trim();
+    if !error.is_empty() {
+        return error.to_string();
+    }
+    let receipt = String::from_utf8_lossy(stdout);
+    let receipt = receipt.trim();
+    if !receipt.is_empty() {
+        return receipt.to_string();
+    }
+    "no diagnostic output".to_string()
 }
 
 pub fn apply(
@@ -249,5 +263,18 @@ mod tests {
         assert!(!successor.contains(&OsString::from("--bootstrap-release-cut-root")));
         assert!(successor.contains(&OsString::from("--yes")));
         let _ = std::fs::remove_dir_all(root);
+    }
+
+    #[test]
+    fn native_failure_uses_machine_readable_stdout_when_stderr_is_empty() {
+        assert_eq!(
+            failure_detail(b"", br#"{"reasonCode":"frontend-build-id-collision"}"#),
+            r#"{"reasonCode":"frontend-build-id-collision"}"#
+        );
+        assert_eq!(
+            failure_detail(b"explicit stderr", b"ignored stdout"),
+            "explicit stderr"
+        );
+        assert_eq!(failure_detail(b"", b""), "no diagnostic output");
     }
 }

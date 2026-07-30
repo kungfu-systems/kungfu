@@ -178,6 +178,7 @@ test('bundled manifest binds exact runtime bytes and source product identity', (
       revision: '1'.repeat(40),
     });
     assert.equal(bytecodeChanged.runtimeBuildId, manifest.runtimeBuildId);
+    assert.equal(bytecodeChanged.frontendBuildId, manifest.frontendBuildId);
     fs.writeFileSync(path.join(f.runtimeRoot, 'kungfu'), 'changed');
     const changed = buildBundledUpgradeManifest({
       ...f,
@@ -186,6 +187,7 @@ test('bundled manifest binds exact runtime bytes and source product identity', (
       revision: '1'.repeat(40),
     });
     assert.notEqual(changed.runtimeBuildId, manifest.runtimeBuildId);
+    assert.notEqual(changed.frontendBuildId, manifest.frontendBuildId);
   } finally {
     fs.rmSync(f.root, { recursive: true, force: true });
   }
