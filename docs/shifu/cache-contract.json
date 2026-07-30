@@ -65,7 +65,21 @@
     "usageLedger": "framework/assignment-capture/qualified-assignment-core-observability.mjs",
     "automaticEntry": "./shifu work",
     "localCas": "${KUNGFU_QUALIFIED_CORE_CACHE_ROOT:-${XDG_CACHE_HOME:-$HOME/.cache}/kungfu/qualified-core/v1}",
-    "providers": ["local-content-addressed-store", "github-workflow-artifact"],
+    "providers": [
+      "local-content-addressed-store",
+      "office-http-artifact",
+      "github-workflow-artifact"
+    ],
+    "httpProvider": "${KUNGFU_QUALIFIED_CORE_HTTP_BASE_URL:-disabled}",
+    "providerAuthority": "transport-only-after-trusted-github-workflow-discovery",
+    "partialTransfer": "artifact-identity-bound-and-safely-resumed-or-verified-restarted",
+    "phaseAttribution": [
+      "discovery",
+      "transfer",
+      "verification",
+      "retention",
+      "publication"
+    ],
     "availability": "optimization-only",
     "cacheHit": "requires-independent-manifest-receipt-and-promotion-verification",
     "cacheMissOrRejection": "current-source-build",
