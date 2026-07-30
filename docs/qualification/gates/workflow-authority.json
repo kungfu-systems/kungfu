@@ -436,10 +436,10 @@
           "authority": "diagnostic",
           "publication": "evidence",
           "receipt": "diagnostic",
-          "definitionDigest": "sha256:ea7c9b9be3c6729864eef0c844a36ebe3130b05bf6b01fcd038f2ab6369657f8",
+          "definitionDigest": "sha256:c7e4771588d479aed6190dd8b189ca35396424ba670c153a3e1a84be636fcb99",
           "credentials": {"githubToken":"read","oidc":false,"repositorySecrets":[],"inheritedSecrets":false,"environment":null},
           "externalActions": ["actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0","actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093","actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02"],
-          "steps": [{"index":1,"label":"name:Check out exact protected source","authority":"diagnostic-write","definitionDigest":"sha256:f59a8bf2f2ec268be4a505dfc794e8872e7f5173cd61e8c1f5b5a0cfcd84cabe"},{"index":2,"label":"name:Download bounded diagnostic evidence","authority":"diagnostic-write","definitionDigest":"sha256:6c9f4bfe7f3fc025f06b4faab39ec0a1272640e4b8904ea8bb6c8336cbf3b4f5"},{"index":3,"label":"name:Capture or deduplicate native Dogfood Findings","authority":"diagnostic-write","definitionDigest":"sha256:c8e53b4c6ad73b9ed86364f1814f280578e9e9e8b0a449d2546f33d9621beb09"},{"index":4,"label":"name:Upload bounded native capture receipts","authority":"diagnostic-write","definitionDigest":"sha256:e6ca34479b56d23183578848874e015ec05165197630f0c73cf4ef41a7ba1fdb"}]
+          "steps": [{"index":1,"label":"name:Check out exact protected source","authority":"diagnostic-write","definitionDigest":"sha256:f59a8bf2f2ec268be4a505dfc794e8872e7f5173cd61e8c1f5b5a0cfcd84cabe"},{"index":2,"label":"name:Download bounded diagnostic evidence","authority":"diagnostic-write","definitionDigest":"sha256:6c9f4bfe7f3fc025f06b4faab39ec0a1272640e4b8904ea8bb6c8336cbf3b4f5"},{"index":3,"label":"name:Capture or deduplicate native Dogfood Findings","authority":"diagnostic-write","definitionDigest":"sha256:f3bf35aa19463de3b328141c16d74d7c7c5f45eccfaec2496d490d78f750d5bf"},{"index":4,"label":"name:Upload bounded native capture receipts","authority":"diagnostic-write","definitionDigest":"sha256:e6ca34479b56d23183578848874e015ec05165197630f0c73cf4ef41a7ba1fdb"}]
         },
         {
           "id": "collect",
