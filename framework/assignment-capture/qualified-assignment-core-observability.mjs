@@ -17,10 +17,14 @@ const REPOSITORY = /^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/u;
 const IDENTIFIER = /^[A-Za-z0-9][A-Za-z0-9._-]{0,99}$/u;
 const PHASES = new Set([
   'checkout',
+  'discovery',
   'localLookup',
   'publication',
   'remoteLookup',
+  'retention',
   'total',
+  'transfer',
+  'verification',
   'verificationAndRetention',
 ]);
 const MAX_OBSERVATION_FILES = 10_000;
