@@ -1,0 +1,52 @@
+{
+  "schema": "kungfu.work-design.policy-replay-contract/v1",
+  "version": 1,
+  "status": "pre-release",
+  "rootAlgorithm": "sha256-project-cut-canonical-json-v1",
+  "mode": "offline-advisory",
+  "minimumDefaultPromotionSamples": 30,
+  "comparisonDimensions": [
+    "selection",
+    "advice",
+    "disposition",
+    "outcome",
+    "coverage"
+  ],
+  "promotionGates": [
+    "exact-cohort",
+    "complete-evidence",
+    "classified-drift",
+    "regression-within-threshold",
+    "minimum-qualified-samples",
+    "exact-rollback"
+  ],
+  "authority": {
+    "assignment": false,
+    "workControl": false,
+    "repository": false,
+    "protectedBranch": false,
+    "activeDefaultPolicy": false,
+    "mutation": false
+  },
+  "activation": "separately-authorized-native-decision-required",
+  "failurePolicy": {
+    "asOfLeakage": "reject-without-report",
+    "cohortRootMismatch": "reject-without-report",
+    "missingOutcome": "reject-without-report",
+    "policyDrift": "reject-without-report",
+    "unclassifiedDrift": "report-and-deny-promotion",
+    "regressionThreshold": "report-and-deny-promotion",
+    "insufficientSamples": "report-and-deny-promotion",
+    "rollbackMismatch": "artifact-and-deny-promotion"
+  },
+  "schemaBundle": {
+    "files": [
+      "schema/work-design-promotion-artifact-v1.schema.json",
+      "schema/work-design-replay-policy-v1.schema.json",
+      "schema/work-design-replay-report-v1.schema.json",
+      "schema/work-design-replay-request-v1.schema.json"
+    ],
+    "schemaRoot": "sha256:2e3f79c55c8b1082d307f1c802d54cf2d3c173d8998af3af47a0a7f4eb6ccd3d"
+  },
+  "contractRoot": "sha256:1dd69058c9a940e6596ea27877dd0fe55954911161b4b11b1522654d3f13b97c"
+}

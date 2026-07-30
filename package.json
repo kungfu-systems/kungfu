@@ -116,6 +116,8 @@
     "test:work-history-selector": "node scripts/require-shifu.mjs test:work-history-selector && node --test scripts/check-work-history-selector.test.mjs",
     "check:work-design-advisor": "node scripts/require-shifu.mjs check:work-design-advisor && node framework/work-design-advisor/tooling/check-work-design-advisor.mjs",
     "test:work-design-advisor": "node scripts/require-shifu.mjs test:work-design-advisor && node --test scripts/check-work-design-advisor.test.mjs",
+    "check:work-design-policy-replay": "node scripts/require-shifu.mjs check:work-design-policy-replay && node framework/work-design-policy-replay/tooling/check-work-design-policy-replay.mjs",
+    "test:work-design-policy-replay": "node scripts/require-shifu.mjs test:work-design-policy-replay && node --test scripts/check-work-design-policy-replay.test.mjs",
     "check:project-cut-composition": "node scripts/require-shifu.mjs check:project-cut-composition && node scripts/check-project-cut-composition.mjs",
     "test:project-cut-composition": "node scripts/require-shifu.mjs test:project-cut-composition && node --test scripts/check-project-cut-composition.test.mjs",
     "check:project-cut-publication": "node scripts/require-shifu.mjs check:project-cut-publication && node framework/project-cut/bin/project-cut.mjs publication-contract-check --json",
