@@ -167,6 +167,8 @@ export function sourceAcceptancePlan(files, evidenceBaseCommit = '') {
   const settlementPublicationPresent = fs.existsSync(
     path.join(ROOT, 'framework/project-cut/publication.contract.json'),
   );
+  const coldReadOnlySourceAcceptance =
+    process.env.KUNGFU_READONLY_NESTED_SOURCE_ACCEPTANCE === '1';
   const nodeChecks = [
     ['no Bash scripts', 'scripts/no-bash-guard.mjs'],
     ['Shifu entry contract', 'scripts/check-shifu-entry-contract.mjs'],
@@ -351,6 +353,25 @@ export function sourceAcceptancePlan(files, evidenceBaseCommit = '') {
       'scripts/buildchain-kfd-evidence.mjs',
       '--check',
     ],
+    ...(coldReadOnlySourceAcceptance
+      ? []
+      : [
+          [
+            'agent-first canonical policy',
+            'developer/sdk/src/sdk.js',
+            'contract',
+            'policy',
+            '--check',
+            '--json',
+          ],
+          [
+            'agent-first contract audit',
+            'developer/sdk/src/sdk.js',
+            'contract',
+            'audit',
+            '--json',
+          ],
+        ]),
     [
       'KFD-4 perspective qualification',
       'framework/core/tests/qualification/kfd4-perspective.mjs',
@@ -423,7 +444,7 @@ export function sourceAcceptancePlan(files, evidenceBaseCommit = '') {
         'scripts/code-complexity-budget.test.mjs',
         'framework/maintainability/semantic-amplification.test.mjs',
         'framework/maintainability/terminal-evidence-matrix.test.mjs',
-        ...(process.env.KUNGFU_READONLY_NESTED_SOURCE_ACCEPTANCE === '1'
+        ...(coldReadOnlySourceAcceptance
           ? []
           : ['scripts/readonly-agent-bootstrap.test.mjs']),
         'scripts/check-readonly-source-routes.test.mjs',
@@ -555,7 +576,7 @@ export function sourceAcceptancePlan(files, evidenceBaseCommit = '') {
       command: process.execPath,
       args: ['scripts/run-desktop-update-tests.mjs'],
     },
-    ...(process.env.KUNGFU_READONLY_NESTED_SOURCE_ACCEPTANCE === '1'
+    ...(coldReadOnlySourceAcceptance
       ? []
       : [
           {
@@ -592,10 +613,7 @@ export function sourceAcceptancePlan(files, evidenceBaseCommit = '') {
   const guiTypeScript = files.filter(
     (file) => file.startsWith('framework/gui/src/') && /\.tsx?$/.test(file),
   );
-  if (
-    guiTypeScript.length &&
-    process.env.KUNGFU_READONLY_NESTED_SOURCE_ACCEPTANCE !== '1'
-  ) {
+  if (guiTypeScript.length && !coldReadOnlySourceAcceptance) {
     plan.push({
       label: 'changed GUI TypeScript check',
       command: process.execPath,

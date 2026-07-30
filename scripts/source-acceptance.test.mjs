@@ -193,12 +193,33 @@ test('source plan covers representative source-only checks', () => {
   assert.ok(labels.includes('Project Cut scoped composition admission'));
   assert.ok(labels.includes('durability production-candidate admission'));
   assert.ok(labels.includes('Buildchain KFD release evidence'));
+  assert.ok(labels.includes('agent-first canonical policy'));
+  assert.ok(labels.includes('agent-first contract audit'));
   const kfdEvidence = plan.find(
     (step) => step.label === 'Buildchain KFD release evidence',
   );
   assert.deepEqual(kfdEvidence.args, [
     'scripts/buildchain-kfd-evidence.mjs',
     '--check',
+  ]);
+  const canonicalPolicy = plan.find(
+    (step) => step.label === 'agent-first canonical policy',
+  );
+  assert.deepEqual(canonicalPolicy.args, [
+    'developer/sdk/src/sdk.js',
+    'contract',
+    'policy',
+    '--check',
+    '--json',
+  ]);
+  const contractAudit = plan.find(
+    (step) => step.label === 'agent-first contract audit',
+  );
+  assert.deepEqual(contractAudit.args, [
+    'developer/sdk/src/sdk.js',
+    'contract',
+    'audit',
+    '--json',
   ]);
   const typeBaseline = plan.find(
     (step) => step.label === 'Python type baseline',
@@ -460,7 +481,7 @@ test('changed GUI TypeScript receives a file-scoped semantic check', () => {
   ]);
 });
 
-test('cold read-only source acceptance skips dependency-backed GUI TypeScript', () => {
+test('cold read-only source acceptance skips dependency-backed checks', () => {
   const previous = process.env.KUNGFU_READONLY_NESTED_SOURCE_ACCEPTANCE;
   process.env.KUNGFU_READONLY_NESTED_SOURCE_ACCEPTANCE = '1';
   try {
@@ -469,6 +490,14 @@ test('cold read-only source acceptance skips dependency-backed GUI TypeScript', 
     ]);
     assert.equal(
       plan.some((step) => step.label === 'changed GUI TypeScript check'),
+      false,
+    );
+    assert.equal(
+      plan.some((step) => step.label === 'agent-first canonical policy'),
+      false,
+    );
+    assert.equal(
+      plan.some((step) => step.label === 'agent-first contract audit'),
       false,
     );
   } finally {
