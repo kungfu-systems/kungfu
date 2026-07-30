@@ -115,7 +115,7 @@ test('custom Linux-only builds do not start the macOS credential island', () => 
   );
 });
 
-test('macOS products use Buildchain signing and the HK compatibility authority', () => {
+test('macOS products use Buildchain signing through the formal environment', () => {
   const workflow = fs.readFileSync(
     path.join(process.cwd(), '.github/workflows/build.yml'),
     'utf8',
@@ -130,7 +130,7 @@ test('macOS products use Buildchain signing and the HK compatibility authority',
   );
   assert.match(
     workflow,
-    /credential-island-macos:[\s\S]*name: alpha-macos-signing-hk/u,
+    /credential-island-macos:[\s\S]*name: buildchain-artifact-signing/u,
   );
   assert.doesNotMatch(workflow, /name: alpha-macos-signing\s*$/mu);
   assert.match(

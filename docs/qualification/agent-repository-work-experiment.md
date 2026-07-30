@@ -34,10 +34,10 @@ boundary.
 
 ## Real Kungfu module snapshot
 
-The manual `real-snapshot` Patrol mode adds a separate fixture without replacing
-the synthetic catalog. Its committed manifest binds an eight-file, 3,102-line
-dependency-closed slice of the actual Agent Patrol classifier, selector,
-Dogfood capture adapter, report validator, fixture catalog, and tests.
+The `real-snapshot` Patrol mode adds a separate fixture without replacing the
+synthetic catalog. Its committed manifest binds a dependency-closed slice of
+the actual Agent Patrol classifier, selector, Dogfood capture adapter, report
+validator, fixture catalog, and tests.
 
 The exact protected commit is the byte source. The materializer accepts only
 tracked regular files whose mode, size, line count, and SHA256 match the
@@ -132,10 +132,13 @@ and the Patrol has no automatic Issue admission path. See the
 [agent-121 Patrol runbook](agent-patrol-agent-121.md) for the exact trigger,
 privacy, deduplication, authority, and activation boundaries.
 
-The real snapshot begins as a protected-branch manual qualification only. Its
-weekly schedule is enabled in a later protected change only after agent-121
-proves the pinned OpenCode image, local model, Node runtime, bounded two-session
-repair, and external oracle end to end.
+The qualified real snapshot runs once each Thursday at 04:00 Asia/Shanghai as
+an advisory observation. A strict monthly plan and a protected-default-branch
+post-merge candidate plan each repeat it three times. Every trial emits a
+privacy-bounded, content-addressed Capability Receipt. Append-only receipt
+history feeds bounded 14-day and 30-day trends and a deterministic
+`qualified`, `hold`, or `insufficient-history` decision without making the
+probabilistic result a Dev or release gate.
 
 ## Residual limitations
 

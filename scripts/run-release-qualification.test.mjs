@@ -105,7 +105,7 @@ function writeCredentialIslandPolicy(root, overrides = {}) {
     JSON.stringify({
       schema: 'kungfu.macos-credential-island-policy/v1',
       repository: 'kungfu-systems/kungfu',
-      environment: 'alpha-macos-signing-hk',
+      environment: 'buildchain-artifact-signing',
       platformId: 'macos-arm64',
       app: { bundleId: 'com.kungfu.app', architecture: 'arm64' },
       identity: {

@@ -7,25 +7,33 @@
   "qualifiedAssignmentCore": {
     "status": "development",
     "decision": "docs/adr/SHIFU-ADR-019fab1a-2853-737e-8c67-a9b1aa9035aa.md",
-    "manifestSchema": "docs/shifu/schema/qualified-assignment-core-artifact-v1.schema.json",
-    "qualificationReceiptSchema": "docs/shifu/schema/qualified-assignment-core-qualification-v1.schema.json",
+    "manifestSchema": "docs/shifu/schema/qualified-assignment-core-artifact-v2.schema.json",
+    "qualificationReceiptSchema": "docs/shifu/schema/qualified-assignment-core-qualification-v2.schema.json",
     "schemaIds": {
-      "manifest": "https://libkungfu.dev/schemas/shifu/qualified-assignment-core-artifact-v1.schema.json",
-      "qualificationReceipt": "https://libkungfu.dev/schemas/shifu/qualified-assignment-core-qualification-v1.schema.json"
+      "manifest": "https://libkungfu.dev/schemas/shifu/qualified-assignment-core-artifact-v2.schema.json",
+      "qualificationReceipt": "https://libkungfu.dev/schemas/shifu/qualified-assignment-core-qualification-v2.schema.json"
     },
     "rootPreimages": {
       "canonicalization": "UTF-8 JSON, recursively lexicographic object keys, original array order, JSON.stringify scalar encoding, and no insignificant whitespace",
       "artifactRoot": "canonical payload entries under shifu.qualified-assignment-core-payload/v1",
       "manifestRoot": "canonical manifest fields except manifestRoot, qualificationReceiptRoot, and promotionAuthorityRoot",
       "promotionAuthorityRoot": "canonical promotionAuthority object",
-      "qualificationReceiptRoot": "canonical qualification receipt except receiptRoot"
+      "qualificationReceiptRoot": "canonical qualification receipt except receiptRoot",
+      "compatibilityRoot": "canonical v2 native closure, platform, architecture, Python ABI, toolchain, dependency locks, build profile, Shifu and Buildchain contracts, compatibility policy, and payload identity",
+      "equivalenceReceiptRoot": "canonical exact producer and protected target provenance plus independently recomputed compatibility comparison"
     },
     "compatibility": {
       "exactCommit": "producer commit must equal target commit and equivalenceReceiptRoot must be null",
       "explicitEquivalence": "producer and target identities remain distinct and an immutable equivalenceReceiptRoot is required",
+      "v1Migration": "retained exact-commit v1 bundles remain readable through the v2 verifier but cannot enter compatibility-index reuse",
       "producerMetadataRewrite": "forbidden",
       "unknownFields": "rejected",
       "unsupportedMajor": "rejected"
+    },
+    "migration": {
+      "v1ExactCommitReadThrough": "2026-10-31T23:59:59Z",
+      "v1CompatibilityIndexReuse": false,
+      "postWindowBehavior": "reject-v1-and-fall-back-to-current-source"
     },
     "consumerSafety": {
       "staging": "outside-target",
