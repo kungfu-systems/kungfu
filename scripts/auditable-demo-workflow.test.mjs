@@ -23,7 +23,12 @@ test('Alpha and release builds rerun when candidate source is synchronized', () 
   ]);
 });
 
-async function runResolver({ declaredExpiry, observedExpiry }) {
+async function runResolver({
+  declaredExpiry,
+  observedExpiry,
+  producerAttempt = '1',
+  currentAttempt = '1',
+}) {
   const resolver = WORKFLOW.jobs['resolve-auditable-demo-source'];
   const script = resolver.steps.find(({ id }) => id === 'resolve').with.script;
   const sourceSha = '1'.repeat(40);
@@ -56,7 +61,7 @@ async function runResolver({ declaredExpiry, observedExpiry }) {
           schema: 'buildchain.github-artifact-coordinate-set/v1',
           repository: 'kungfu-systems/kungfu',
           runId,
-          runAttempt: '1',
+          runAttempt: producerAttempt,
           sourceSha,
           artifacts: [
             {
@@ -69,7 +74,7 @@ async function runResolver({ declaredExpiry, observedExpiry }) {
             },
           ],
         }),
-        GITHUB_RUN_ATTEMPT: '1',
+        GITHUB_RUN_ATTEMPT: currentAttempt,
       },
     },
     {
@@ -203,6 +208,25 @@ test('resolver accepts GitHub expiry precision normalization without weakening t
       observedExpiry: '2026-08-09T01:47:52Z',
     }),
     /live Linux artifact drifted from the producer-owned coordinate/u,
+  );
+});
+
+test('resolver admits a retained producer coordinate from an earlier run attempt only', async () => {
+  const outputs = await runResolver({
+    declaredExpiry: '2026-08-12T23:18:49.000Z',
+    observedExpiry: '2026-08-12T23:18:49Z',
+    producerAttempt: '1',
+    currentAttempt: '2',
+  });
+  assert.equal(outputs.get('applicable'), 'true');
+  await assert.rejects(
+    runResolver({
+      declaredExpiry: '2026-08-12T23:18:49.000Z',
+      observedExpiry: '2026-08-12T23:18:49Z',
+      producerAttempt: '2',
+      currentAttempt: '1',
+    }),
+    /build artifact coordinate set is not bound to this exact source run/u,
   );
 });
 

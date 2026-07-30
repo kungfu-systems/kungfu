@@ -5,6 +5,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { test } from 'node:test';
+import { fileURLToPath } from 'node:url';
 
 import {
   invokeAfterIdentitySettlement,
@@ -21,6 +22,39 @@ import {
   suiteInvocation,
   validateReport,
 } from './run.mjs';
+
+const ROOT = path.resolve(
+  path.dirname(fileURLToPath(import.meta.url)),
+  '..',
+  '..',
+  '..',
+  '..',
+  '..',
+);
+
+test('profile admission runner references current tracked profile suites', () => {
+  const runner = fs.readFileSync(
+    path.join(ROOT, 'scripts', 'run-agent-profile-sdk-tests.mjs'),
+    'utf8',
+  );
+  const suites = [
+    'test_agent_profile_sdk.py',
+    'test_profile_composition.py',
+    'test_work_control_profile.py',
+  ];
+
+  assert.doesNotMatch(runner, /test_mission_control_profile\.py/u);
+  for (const suite of suites) {
+    assert.match(runner, new RegExp(suite.replace('.', '\\.'), 'u'));
+    assert.equal(
+      fs.existsSync(
+        path.join(ROOT, 'framework', 'core', 'tests', 'python', suite),
+      ),
+      true,
+      `${suite} must remain tracked`,
+    );
+  }
+});
 
 test('failed suites print only a bounded normalized log tail', () => {
   assert.equal(

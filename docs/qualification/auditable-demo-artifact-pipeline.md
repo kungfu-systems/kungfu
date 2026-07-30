@@ -9,7 +9,7 @@ confidence: high
 sensitivity: public
 evidence_grade: A
 review_state: self-reviewed
-last_reviewed: 2026-07-29
+last_reviewed: 2026-07-30
 ai_provenance: GPT-5 via Codex on 2026-07-25; based on checked-in Kungfu, Buildchain, and build-images source plus protected GitHub workflow evidence visible to this task; no production deployment or unobserved runtime is claimed
 ---
 
@@ -39,9 +39,9 @@ disables the Gate.
 
 | Component | Immutable coordinate |
 | --- | --- |
-| Demo renderer | Pending the protected build-images Alpha publication containing merge `195772e6df007c7ab35b10fc82cf452eaa33c825`; the previous Alpha digest cannot admit the terminal capture and is not a valid final coordinate |
-| Renderer release | Pending the same protected Alpha publication; a local image id or PR qualification image is not release authority |
-| Buildchain Gate | `de1a1cbb1176810ebee91d1e872b441d7113305a` (merged Buildchain PR `#2030`, bounded terminal-capture admission) |
+| Demo renderer | `ghcr.io/kungfu-systems/build-images/demo-renderer@sha256:880b07771b04aedfbfa215185a3e3a62984fcd107fecae3c4ce5012636b2024e` |
+| Renderer release | [`v1.3.0-alpha.18`](https://github.com/kungfu-systems/build-images/releases/tag/v1.3.0-alpha.18), exact source `8605faf2651252a427679757c5667de027481ace`, containing protected merge `24aff5eb17a07ce13b1a3b518ee94557f7f94074` |
+| Buildchain Gate | `3272608ba28ef714fe710dd8da99d00fdeb4c619` (Buildchain issue `#2057`, canonical `qualified` autoplay sentinel admission) |
 | Consumer adapter | `scripts/auditable-demo-adapter.py` from the exact qualified Kungfu source SHA |
 
 Buildchain's reusable build emits
@@ -152,6 +152,88 @@ Each blocking signal was repaired at its owning boundary rather than bypassed:
   coordinate. [Kungfu issue #1579](https://github.com/kungfu-systems/kungfu/issues/1579)
   retained the provider-representation defect; no Passport artifact was
   admitted.
+- Run `30482879859` rejected an unsupported archive symlink before executing
+  the installed Agent Work Lab autoplay command. The adapter repair admitted
+  only bounded internal links, retained the closed-world member policy, and
+  continued to reject absolute, escaping, dangling, special, or cyclic
+  archive members.
+- Run `30487194091` attempts 1 and 2 were externally cancelled while the
+  self-hosted Linux runner was verifying the exact artifact. In both cases the
+  runner service remained healthy and a separately governed Dev or Alpha job
+  immediately occupied the shared runner. No cancelled attempt was treated as
+  Gate, media, or Passport evidence.
+- Run `30493581324` attempt 1 completed the GitHub-hosted exact Linux build,
+  full release verification, S3 relay, and source artifact upload, then was
+  externally cancelled while downstream demo jobs were still pending. Its
+  failed-job rerun exposed two independent fail-closed boundaries: the demo
+  resolver originally required the retained producer coordinate to come from
+  the current attempt, and the separately requested Phase B consumer rejected
+  an archive symlink. The resolver now admits an exact producer coordinate
+  only from the same run and a positive attempt no later than the current
+  attempt. Phase B remains outside the animation qualification and is disabled
+  for the final autoplay evidence run.
+- Run `30500101593` completed the exact GitHub-hosted Linux build, full release
+  verification, S3 relay, source artifact upload, and same-run coordinate
+  resolution. The required Gate then rejected the real Python terminfo symlink
+  `runtime/python/share/terminfo/1/1178 -> ../a/adm1178` before execution.
+  Diagnostic artifact `8744879954` retained the exact failure. The adapter now
+  resolves a symlink target from its member directory, admits parent-relative
+  targets only when their lexical normalization remains under the single
+  archive root, and still performs a strict post-extraction root and
+  regular-file check.
+- Run `30505553839` attempt 1 failed closed while the exact Linux build was
+  fetching the pinned Rust toolchain from `rsproxy.cn`. Attempt 2 completed the
+  build, release verification, S3 relay, source artifact `8746696896`, and
+  same-run coordinate resolution, then rejected the installed autoplay because
+  it emitted no completion sentinel. Diagnostic artifact `8746723862`
+  preserved the bounded failure independently from the 663 MB source payload.
+- Run `30510623806` was cancelled before heavy qualification after a local
+  installed-runtime probe proved that the canonical Agent Work Lab result is
+  `qualified`, not `passed`. The adapter and its negative fixtures were
+  corrected before another source-bound build was allowed to mint evidence.
+- Run `30510920125` completed exact-source preflight `30510802683`, the Linux
+  build, full release verification, S3 relay, source artifact `8748304680`,
+  controller finalization, and same-run coordinate resolution. The required
+  Gate then rejected the installed TUI before rendering because its bundle
+  resolved `@kungfu-tech/core/package.json`, a workspace-only package graph
+  absent from the CLI archive. Diagnostic artifact `8748335784` retained exit
+  status zero and a bounded, control-code-stripped PTY tail. The TUI now treats
+  its already established `KUNGFU_DIR` as the packaged runtime authority before
+  consulting any source-workspace package.
+- Run `30515043301` completed exact-source preflight `30514867268`, the Linux
+  build, full release verification, S3 relay, source artifact `8749855057`,
+  controller finalization, and same-run coordinate resolution. The required
+  Gate then exposed the Linux PTY EOF convention: after the final slave closed,
+  `os.read` returned `EIO` before `process.poll()` observed child exit.
+  Diagnostic artifact `8749886414` retained the failure. The adapter now maps
+  only `errno.EIO` at the PTY read boundary to EOF and continues to propagate
+  every other I/O error.
+- Run `30519116408` completed the exact Linux build, full release verification,
+  S3 relay, and source artifact
+  [`8752068275`](https://github.com/kungfu-systems/kungfu/actions/runs/30519116408/artifacts/8752068275)
+  with Actions API digest
+  `sha256:6813e8de632bda3a7645e41d92dcae3713d47eb3c6a7089b4e991dda09ac2f09`.
+  The required Gate then rejected the canonical terminal completion sentinel:
+  the installed Agent Work Lab autoplay correctly reported `qualified`, while
+  the Buildchain validator still required `passed`. Diagnostic artifact
+  [`8752121487`](https://github.com/kungfu-systems/kungfu/actions/runs/30519116408/artifacts/8752121487)
+  retained that mismatch. Buildchain issue `#2057` and PR `#2059` replace that
+  stale compatibility rule with the exact `qualified` contract and retain a
+  negative fixture proving that `passed` is no longer accepted.
+- Run `30525890727` completed exact-source preflight `30525658876`, the Linux
+  build, full release verification, S3 relay, source artifact
+  [`8755155597`](https://github.com/kungfu-systems/kungfu/actions/runs/30525890727/artifacts/8755155597),
+  and the required Gate. The Gate retained artifact
+  [`8755230406`](https://github.com/kungfu-systems/kungfu/actions/runs/30525890727/artifacts/8755230406)
+  with Actions API digest
+  `sha256:4dce3d82e90801048e2c3014f4d9a086d81d5213cd6494d4ac075b8ab7cf74d1`
+  and canonical root
+  `sha256:393366f8598963f15590ea3b73d3703520edb259a7060edd7727b28928e0d61b`.
+  Selective rendering then failed closed because the independently released
+  renderer still required the retired `passed` sentinel. Build-images issue
+  `#331` and PRs `#332`, `#333`, and `#334` aligned the renderer and its
+  negative fixture, promoted the repair, and finalized
+  `v1.3.0-alpha.18`; the immutable digest above is the qualified replacement.
 
 The corresponding repairs landed through independently approved protected PRs
 `#1492`, `#1497`, `#1500`, `#1503`, `#1504`, `#1505`, `#1506`, `#1507`,
@@ -186,6 +268,36 @@ macOS runner timed out downloading the pinned Rust toolchain from
 `rsproxy.cn`; Linux, Windows, and all early source contracts had passed. Its
 failed-job rerun retained the same run id and source SHA, then passed all three
 platform probes and the aggregate exact-source receipt.
+
+## Current qualified Agent Work Lab autoplay run
+
+Protected source `b48d30166e26dfceb873d1057e1db3c3e00c3385` passed
+four-platform exact-source Alpha preflight run
+[`30536447336`](https://github.com/kungfu-systems/kungfu/actions/runs/30536447336).
+Manual Build run
+[`30536659808`](https://github.com/kungfu-systems/kungfu/actions/runs/30536659808)
+then used exact Buildchain source
+`3272608ba28ef714fe710dd8da99d00fdeb4c619`, completed the Linux release
+build and full verification, transferred the payload through the governed S3
+relay, passed the required Agent Work Lab autoplay Gate, rendered the selective
+media with the immutable renderer above, and bound one Release Passport.
+
+| Evidence | Exact coordinate | Content root |
+| --- | --- | --- |
+| Linux source artifact | [`8759349858`](https://github.com/kungfu-systems/kungfu/actions/runs/30536659808/artifacts/8759349858), `sha256:90beda7586eac4dc0745f20e98d6f9b694b237fe159f81b45a316f3fe3645612` | producer-owned release artifact |
+| Required Gate | [`8759425334`](https://github.com/kungfu-systems/kungfu/actions/runs/30536659808/artifacts/8759425334), `sha256:44f9b3ec57447b8c6f5e314945791a97de52f176fbd1e1724ad1e9af6e8d6bf9` | `sha256:31a259eccd3a4f093eaad2be01bc6def399b1653a010a6949c0bf8fa903bd54b` |
+| Selective media | [`8759470968`](https://github.com/kungfu-systems/kungfu/actions/runs/30536659808/artifacts/8759470968), `sha256:92ca003632a2c0fdc2584d2d6ec928f4ced045a58a30400f792dfb0da1bc51d4` | `sha256:7fafb048c7133291602643beeb702bea58763863e533d696d6bc962f66e5981b` |
+| Release Passport | [`8759489175`](https://github.com/kungfu-systems/kungfu/actions/runs/30536659808/artifacts/8759489175), `sha256:72c1169f8d21e2ad5c2975507e14990b552a2419961e56883f231e6e0c0172f8` | `sha256:0ff4cc1ef018544ad752eb08cf2fec205fe8d1bbedeb41b0111566732919b5e7` |
+
+The downloaded Gate, media, and Passport ZIPs matched their Actions API
+digests. Every Gate and media member matched its retained checksum; the Gate
+and media checksum-file roots matched the Passport; and the Passport canonical
+payload root independently verified. The committed README GIF and public
+evidence projection were materialized only from those verified bytes. The
+Passport grants no execution or publication authority from first-party or
+System identity, KFD compliance, Product System metadata, package metadata,
+registry history, scan output, or standalone generation, and records
+`productionDeployment: false`.
 
 ## Historical qualified exact-output run
 

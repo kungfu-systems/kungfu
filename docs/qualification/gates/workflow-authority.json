@@ -817,9 +817,9 @@
           "authority": "qualification",
           "publication": "none",
           "receipt": "qualifying",
-          "definitionDigest": "sha256:086ad5ce8ca79833fd68ff356e3b068056bafc443c129e103450f154905d8e82",
+          "definitionDigest": "sha256:e28198fc3f5c129c77ff94be033014f69f25b52ab41920faaf3364bb3231b7ad",
           "credentials": {"githubToken":"read","oidc":false,"repositorySecrets":[],"inheritedSecrets":false,"environment":null},
-          "externalActions": ["kungfu-systems/buildchain/.github/workflows/.auditable-demo.yml@de1a1cbb1176810ebee91d1e872b441d7113305a"],
+          "externalActions": ["kungfu-systems/buildchain/.github/workflows/.auditable-demo.yml@3272608ba28ef714fe710dd8da99d00fdeb4c619"],
           "steps": []
         },
         {
@@ -827,7 +827,7 @@
           "authority": "qualification",
           "publication": "none",
           "receipt": "qualifying",
-          "definitionDigest": "sha256:8f1e8e5564ccee350d28875905630e748ea035f32ef7e9181305b6e5d6a6b551",
+          "definitionDigest": "sha256:1231d76e7254baca3622e21a67791a27a2a3c051f3029a99b8261e981d616985",
           "credentials": {"githubToken":"read","oidc":false,"repositorySecrets":[],"inheritedSecrets":false,"environment":null},
           "externalActions": ["actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0","actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd","actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a"],
           "steps": [
@@ -845,7 +845,7 @@
               "index": 3,
               "label": "name:Write exact auditable demo Release Passport",
               "authority": "evidence-publication",
-              "definitionDigest": "sha256:4c887417d714e27f1ab2ca5fc9b10a19f67f61f19b74ce2a02f7d0e7ead79a82"
+              "definitionDigest": "sha256:dea19e83ea0cd9f14dcc5b5fb088765072a719d5a4eca4d22b28cf2780b793d5"
             },
             {
               "index": 4,
@@ -1017,14 +1017,14 @@
           "authority": "qualification",
           "publication": "none",
           "receipt": "diagnostic",
-          "definitionDigest": "sha256:0fb00bc8eb417ddd3ff8ff7bc0c3a7bc4bb42cfe7e81e71d917fdc3b8ac80d49",
+          "definitionDigest": "sha256:6f21a7dfe16deedab6047bd80b8279e7aa67b5ff116daa08b123fbaae62c31dd",
           "credentials": {"githubToken":"read","oidc":false,"repositorySecrets":[],"inheritedSecrets":false,"environment":null},
           "externalActions": ["actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd","actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a"],
           "steps": [
             {
               "index": 1,
               "label": "id:resolve",
-              "definitionDigest": "sha256:6929254306abf28805fd0930ea21895c8416c0ebbc6bef90d1675f0ce8d8f004"
+              "definitionDigest": "sha256:c7fb80856c78364e30e47cf16634ef4d0f94abcefc8af3ecb58a32a526d3828b"
             },
             {
               "index": 2,

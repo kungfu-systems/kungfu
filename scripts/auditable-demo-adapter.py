@@ -11,18 +11,18 @@ import fcntl
 import hashlib
 import json
 import os
-import posixpath
 import pty
 import re
 import select
-import signal
 import shutil
+import signal
 import struct
 import subprocess
 import tarfile
 import tempfile
 import termios
 import time
+from collections.abc import Callable
 from pathlib import Path, PurePosixPath
 from typing import Any
 
@@ -44,6 +44,7 @@ TERMINAL_TIMEOUT_SECONDS = 60
 TERMINAL_EVENT_QUANTUM_MS = 20
 MAX_TERMINAL_BYTES = 4 * 1024 * 1024
 MAX_TERMINAL_EVENTS = 10_000
+MAX_FAILURE_EXCERPT_CHARS = 4_096
 ANSI_OSC = re.compile(r"\x1b\].*?(?:\x07|\x1b\\)", re.DOTALL)
 ANSI_CSI = re.compile(r"\x1b\[[0-?]*[ -/]*[@-~]")
 ANSI_ESCAPE = re.compile(r"\x1b[@-_]")
@@ -336,6 +337,25 @@ def validate_reports(release_root: Path, expected_source: str) -> list[dict[str,
     return evidence
 
 
+def normalized_symlink_target(member: tarfile.TarInfo) -> tuple[str, ...]:
+    parts = list(PurePosixPath(member.name).parent.parts)
+    for part in PurePosixPath(member.linkname).parts:
+        if part in ("", "."):
+            continue
+        if part == "..":
+            if not parts:
+                fail(
+                    "unsafe CLI archive link target: "
+                    f"{member.name!r} -> {member.linkname!r}"
+                )
+            parts.pop()
+            continue
+        parts.append(part)
+    if not parts or parts[0] != ARCHIVE_ROOT:
+        fail(f"unsafe CLI archive link target: {member.name!r} -> {member.linkname!r}")
+    return tuple(parts)
+
+
 def validate_member(member: tarfile.TarInfo) -> None:
     name = member.name
     parts = PurePosixPath(name).parts
@@ -348,23 +368,30 @@ def validate_member(member: tarfile.TarInfo) -> None:
         or parts[0] != ARCHIVE_ROOT
     ):
         fail(f"unsafe CLI archive member path: {name!r}")
-    if not (member.isfile() or member.isdir() or member.issym()):
+    if not (member.isfile() or member.isdir() or member.issym() or member.islnk()):
         fail(f"unsupported CLI archive member type: {name!r}")
-    if member.issym():
+    if member.issym() or member.islnk():
         linkname = member.linkname
+        link_parts = PurePosixPath(linkname).parts
         if not linkname or linkname.startswith("/") or "\\" in linkname:
-            fail(f"unsafe CLI archive symlink target: {name!r} -> {linkname!r}")
-        normalized = PurePosixPath(
-            posixpath.normpath(str(PurePosixPath(name).parent / linkname))
-        )
-        if (
-            not normalized.parts
-            or normalized.parts[0] != ARCHIVE_ROOT
-            or ".." in normalized.parts
-        ):
-            fail(f"unsafe CLI archive symlink target: {name!r} -> {linkname!r}")
+            fail(f"unsafe CLI archive link target: {name!r} -> {linkname!r}")
+        if member.issym():
+            normalized_symlink_target(member)
+        elif ".." in link_parts or not link_parts or link_parts[0] != ARCHIVE_ROOT:
+            fail(f"unsafe CLI archive hardlink target: {name!r} -> {linkname!r}")
     if member.size < 0 or member.size > MAX_MEMBER_BYTES:
         fail(f"CLI archive member exceeds the bounded size: {name!r}")
+
+
+def member_path(target: Path, name: str) -> Path:
+    return target.joinpath(*PurePosixPath(name).parts)
+
+
+def link_target_path(target: Path, member: tarfile.TarInfo) -> Path:
+    link_parts = PurePosixPath(member.linkname).parts
+    if member.issym():
+        return member_path(target, member.name).parent.joinpath(*link_parts)
+    return target.joinpath(*link_parts)
 
 
 def extract_cli(archive_path: Path, target: Path) -> Path:
@@ -383,14 +410,12 @@ def extract_cli(archive_path: Path, target: Path) -> Path:
             extracted_bytes = sum(member.size for member in members)
             if extracted_bytes > MAX_EXTRACTED_BYTES:
                 fail("CLI archive exceeds the bounded extracted size")
-            symlinks = []
             for member in members:
-                destination = target.joinpath(*PurePosixPath(member.name).parts)
+                destination = member_path(target, member.name)
                 if member.isdir():
                     destination.mkdir(parents=True, exist_ok=True)
                     continue
-                if member.issym():
-                    symlinks.append((member, destination))
+                if member.issym() or member.islnk():
                     continue
                 destination.parent.mkdir(parents=True, exist_ok=True)
                 source = archive.extractfile(member)
@@ -399,18 +424,33 @@ def extract_cli(archive_path: Path, target: Path) -> Path:
                 with destination.open("xb") as output:
                     shutil.copyfileobj(source, output, length=1024 * 1024)
                 os.chmod(destination, member.mode & 0o777)
-            for member, destination in symlinks:
+            for member in members:
+                if not (member.issym() or member.islnk()):
+                    continue
+                destination = member_path(target, member.name)
                 destination.parent.mkdir(parents=True, exist_ok=True)
-                destination.symlink_to(member.linkname)
-            extracted_root = (target / ARCHIVE_ROOT).resolve()
-            for member, destination in symlinks:
+                source = link_target_path(target, member)
+                if member.issym():
+                    os.symlink(member.linkname, destination)
+                    continue
+                if source.is_symlink() or not source.is_file():
+                    fail(
+                        "CLI archive hardlink target must be an extracted regular "
+                        f"file: {member.name!r} -> {member.linkname!r}"
+                    )
+                os.link(source, destination)
+            archive_root = (target / ARCHIVE_ROOT).resolve()
+            for member in members:
+                if not member.issym():
+                    continue
+                destination = member_path(target, member.name)
                 try:
                     resolved = destination.resolve(strict=True)
-                    resolved.relative_to(extracted_root)
-                except (OSError, RuntimeError, ValueError):
+                    resolved.relative_to(archive_root)
+                except (FileNotFoundError, RuntimeError, ValueError):
                     fail(
-                        "CLI archive symlink does not resolve inside the product: "
-                        f"{member.name!r} -> {member.linkname!r}"
+                        "CLI archive symlink must resolve inside the extracted "
+                        f"product: {member.name!r} -> {member.linkname!r}"
                     )
                 if not resolved.is_file():
                     fail(
@@ -580,6 +620,28 @@ def validate_completion(decoded: str) -> dict[str, Any]:
     return completion
 
 
+def terminal_failure_excerpt(decoded: str) -> str:
+    visible = ANSI_OSC.sub("", decoded)
+    visible = ANSI_CSI.sub("", visible)
+    visible = ANSI_ESCAPE.sub("", visible)
+    return visible[-MAX_FAILURE_EXCERPT_CHARS:]
+
+
+def read_pty_chunk(
+    master_fd: int,
+    reader: Callable[[int, int], bytes] = os.read,
+) -> bytes:
+    try:
+        return reader(master_fd, 65_536)
+    except OSError as error:
+        # Linux PTY masters report EIO, rather than b"", after the final slave
+        # descriptor closes. That is the terminal EOF boundary even when
+        # process.poll() has not observed child exit yet.
+        if error.errno == errno.EIO:
+            return b""
+        raise
+
+
 def run_autoplay(launcher: Path, home: Path) -> tuple[dict[str, Any], bytes, int]:
     environment = isolated_environment(home)
     master_fd, slave_fd = pty.openpty()
@@ -615,44 +677,36 @@ def run_autoplay(launcher: Path, home: Path) -> tuple[dict[str, Any], bytes, int
                 break
             readable, _, _ = select.select([master_fd], [], [], 0.05)
             if readable:
-                try:
-                    chunk = os.read(master_fd, 65_536)
-                except OSError as error:
-                    if error.errno == errno.EIO and process.poll() is not None:
-                        break
-                    raise
-                if not chunk and process.poll() is not None:
+                chunk = read_pty_chunk(master_fd)
+                if not chunk:
                     break
-                if chunk:
-                    if first_output_at is None:
-                        first_output_at = time.monotonic()
-                    raw.extend(chunk)
-                    if len(raw) > MAX_TERMINAL_BYTES:
-                        terminate_process_group(process)
-                        fail(
-                            "installed kungfu autoplay exceeded the 4 MiB capture bound"
-                        )
-                    observed_ms = max(
-                        0,
-                        int((time.monotonic() - first_output_at) * 1000),
+                if first_output_at is None:
+                    first_output_at = time.monotonic()
+                raw.extend(chunk)
+                if len(raw) > MAX_TERMINAL_BYTES:
+                    terminate_process_group(process)
+                    fail("installed kungfu autoplay exceeded the 4 MiB capture bound")
+                observed_ms = max(
+                    0,
+                    int((time.monotonic() - first_output_at) * 1000),
+                )
+                at_ms = (
+                    observed_ms // TERMINAL_EVENT_QUANTUM_MS
+                ) * TERMINAL_EVENT_QUANTUM_MS
+                encoded = base64.b64encode(chunk).decode("ascii")
+                if events and events[-1]["atMs"] == at_ms:
+                    previous = base64.b64decode(events[-1]["data"], validate=True)
+                    events[-1]["data"] = base64.b64encode(previous + chunk).decode(
+                        "ascii"
                     )
-                    at_ms = (
-                        observed_ms // TERMINAL_EVENT_QUANTUM_MS
-                    ) * TERMINAL_EVENT_QUANTUM_MS
-                    encoded = base64.b64encode(chunk).decode("ascii")
-                    if events and events[-1]["atMs"] == at_ms:
-                        previous = base64.b64decode(events[-1]["data"], validate=True)
-                        events[-1]["data"] = base64.b64encode(previous + chunk).decode(
-                            "ascii"
-                        )
-                    else:
-                        events.append({"atMs": at_ms, "data": encoded})
-                    if len(events) > MAX_TERMINAL_EVENTS:
-                        terminate_process_group(process)
-                        fail(
-                            "installed kungfu autoplay exceeded the 10000-event "
-                            "capture bound"
-                        )
+                else:
+                    events.append({"atMs": at_ms, "data": encoded})
+                if len(events) > MAX_TERMINAL_EVENTS:
+                    terminate_process_group(process)
+                    fail(
+                        "installed kungfu autoplay exceeded the 10000-event "
+                        "capture bound"
+                    )
             if process.poll() is not None and not readable:
                 break
         if timed_out:
@@ -669,7 +723,14 @@ def run_autoplay(launcher: Path, home: Path) -> tuple[dict[str, Any], bytes, int
     if not events:
         fail("installed kungfu autoplay produced no PTY output")
     decoded = safe_terminal_output(bytes(raw))
-    completion = validate_completion(decoded)
+    try:
+        completion = validate_completion(decoded)
+    except AdapterError as error:
+        excerpt = terminal_failure_excerpt(decoded)
+        fail(
+            f"{error}; exit status {exit_code}; "
+            f"sanitized PTY tail={json.dumps(excerpt, ensure_ascii=True)}"
+        )
     if exit_code != 0:
         fail(f"installed kungfu autoplay failed with exit status {exit_code}")
     last_event_ms = events[-1]["atMs"]

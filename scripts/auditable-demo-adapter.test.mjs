@@ -89,6 +89,9 @@ function fixture(
     coordinateSource = source,
     sourceEvidence = null,
     archiveSymlinkTarget = '',
+    parentRelativeArchiveSymlink = false,
+    safeArchiveLinks = false,
+    unsupportedArchiveMember = false,
     stdoutLineCount = 0,
     completionStatus = 'qualified',
     omitSentinel = false,
@@ -207,6 +210,34 @@ function fixture(
     fs.writeFileSync(path.join(pythonBin, 'python3'), '#!/bin/sh\nexit 0\n');
     fs.symlinkSync(archiveSymlinkTarget, path.join(pythonBin, 'python'));
   }
+  if (safeArchiveLinks) {
+    const pythonRoot = path.join(productRoot, 'runtime', 'python', 'bin');
+    fs.mkdirSync(pythonRoot, { recursive: true });
+    const python3 = path.join(pythonRoot, 'python3');
+    fs.writeFileSync(python3, '#!/bin/sh\nexit 0\n');
+    fs.chmodSync(python3, 0o755);
+    fs.symlinkSync('python3', path.join(pythonRoot, 'python'));
+    fs.linkSync(python3, path.join(pythonRoot, 'python-copy'));
+  }
+  if (parentRelativeArchiveSymlink) {
+    const terminfoRoot = path.join(
+      productRoot,
+      'runtime',
+      'python',
+      'share',
+      'terminfo',
+    );
+    fs.mkdirSync(path.join(terminfoRoot, '1'), { recursive: true });
+    fs.mkdirSync(path.join(terminfoRoot, 'a'), { recursive: true });
+    fs.writeFileSync(path.join(terminfoRoot, 'a', 'adm1178'), 'terminfo\n');
+    fs.symlinkSync('../a/adm1178', path.join(terminfoRoot, '1', '1178'));
+  }
+  if (unsupportedArchiveMember) {
+    const fifo = spawnSync('mkfifo', [
+      path.join(productRoot, 'runtime', 'unsupported-fifo'),
+    ]);
+    assert.equal(fifo.status, 0, fifo.stderr?.toString());
+  }
   const archive = path.join(
     artifact,
     'cli',
@@ -243,6 +274,32 @@ function run(root, options = {}) {
   );
   return { result, output };
 }
+
+test('adapter maps only Linux PTY EIO onto terminal EOF', () => {
+  const probe = [
+    'import errno',
+    'import importlib.util',
+    'import sys',
+    'spec = importlib.util.spec_from_file_location("adapter", sys.argv[1])',
+    'module = importlib.util.module_from_spec(spec)',
+    'spec.loader.exec_module(module)',
+    'def eio(_fd, _size):',
+    '    raise OSError(errno.EIO, "pty eof")',
+    'def eperm(_fd, _size):',
+    '    raise OSError(errno.EPERM, "real failure")',
+    'assert module.read_pty_chunk(7, eio) == b""',
+    'try:',
+    '    module.read_pty_chunk(7, eperm)',
+    'except OSError as error:',
+    '    assert error.errno == errno.EPERM',
+    'else:',
+    '    raise AssertionError("non-EIO failure was swallowed")',
+  ].join('\n');
+  const result = spawnSync('python3', ['-c', probe, ADAPTER], {
+    encoding: 'utf8',
+  });
+  assert.equal(result.status, 0, result.stderr);
+});
 
 test('adapter executes only the exact installed archive in a PTY and emits the declared capture', () => {
   const root = fs.mkdtempSync(
@@ -387,12 +444,36 @@ test('adapter rejects tree-equivalence evidence outside a pull merge ref', () =>
   }
 });
 
+test('adapter accepts bounded internal symlink and hardlink members', () => {
+  const root = fs.mkdtempSync(
+    path.join(os.tmpdir(), 'auditable-demo-adapter-'),
+  );
+  try {
+    const { result } = run(root, { safeArchiveLinks: true });
+    assert.equal(result.status, 0, result.stderr);
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
 test('adapter accepts a bounded relative symlink to a regular archive member', () => {
   const root = fs.mkdtempSync(
     path.join(os.tmpdir(), 'auditable-demo-adapter-'),
   );
   try {
     const { result } = run(root, { archiveSymlinkTarget: 'python3' });
+    assert.equal(result.status, 0, result.stderr);
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test('adapter accepts a parent-relative symlink that remains inside the archive root', () => {
+  const root = fs.mkdtempSync(
+    path.join(os.tmpdir(), 'auditable-demo-adapter-'),
+  );
+  try {
+    const { result } = run(root, { parentRelativeArchiveSymlink: true });
     assert.equal(result.status, 0, result.stderr);
   } finally {
     fs.rmSync(root, { recursive: true, force: true });
@@ -407,17 +488,31 @@ test('adapter rejects absolute and escaping archive symlinks before extraction',
     try {
       const { result } = run(root, { archiveSymlinkTarget });
       assert.notEqual(result.status, 0);
-      assert.match(result.stderr, /unsafe CLI archive symlink target/);
+      assert.match(result.stderr, /unsafe CLI archive link target/);
     } finally {
       fs.rmSync(root, { recursive: true, force: true });
     }
   }
 });
 
-test('adapter fails closed on missing, failed, or nonzero autoplay completion', () => {
+test('adapter rejects unsupported archive member types', () => {
+  const root = fs.mkdtempSync(
+    path.join(os.tmpdir(), 'auditable-demo-adapter-'),
+  );
+  try {
+    const { result } = run(root, { unsupportedArchiveMember: true });
+    assert.notEqual(result.status, 0);
+    assert.match(result.stderr, /unsupported CLI archive member type/);
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test('adapter fails closed on missing, non-qualified, or nonzero autoplay completion', () => {
   for (const [options, expected] of [
     [{ omitSentinel: true }, /must emit exactly one/u],
     [{ completionStatus: 'failed' }, /completion sentinel did not pass/u],
+    [{ completionStatus: 'passed' }, /completion sentinel did not pass/u],
     [{ exitCode: 9 }, /failed with exit status 9/u],
   ]) {
     const root = fs.mkdtempSync(
@@ -430,6 +525,23 @@ test('adapter fails closed on missing, failed, or nonzero autoplay completion', 
     } finally {
       fs.rmSync(root, { recursive: true, force: true });
     }
+  }
+});
+
+test('adapter retains a bounded sanitized PTY tail and exit status when completion is missing', () => {
+  const root = fs.mkdtempSync(
+    path.join(os.tmpdir(), 'auditable-demo-adapter-'),
+  );
+  try {
+    const { result } = run(root, { omitSentinel: true, exitCode: 23 });
+    assert.notEqual(result.status, 0);
+    assert.match(result.stderr, /must emit exactly one/u);
+    assert.match(result.stderr, /exit status 23/u);
+    assert.match(result.stderr, /Kungfu Agent Work Lab fixture/u);
+    assert.equal(result.stderr.includes(String.fromCharCode(27)), false);
+    assert.doesNotMatch(result.stderr, new RegExp(root));
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
   }
 });
 
