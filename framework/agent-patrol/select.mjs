@@ -9,7 +9,8 @@ import { fileURLToPath } from 'node:url';
 
 import {
   LIGHT_REPOSITORY_WORK_FIXTURE_ID,
-  REPOSITORY_WORK_FIXTURES,
+  REAL_MODULE_SNAPSHOT_FIXTURE_ID,
+  SYNTHETIC_REPOSITORY_WORK_FIXTURES,
 } from '../../tests/qualification/agent-repository-work/fixture-catalog.mjs';
 
 export const DAILY_LIGHT_SCHEDULE = '0 18 * * 1-6';
@@ -34,7 +35,7 @@ function jsonRoot(value) {
 }
 
 function deepFixtures(rotationKey) {
-  const ids = REPOSITORY_WORK_FIXTURES.map(({ id }) => id);
+  const ids = SYNTHETIC_REPOSITORY_WORK_FIXTURES.map(({ id }) => id);
   const start = (rotationKey - 1) % ids.length;
   return [ids[start], ids[(start + 1) % ids.length]];
 }
@@ -53,8 +54,8 @@ export function selectPatrolPlan({
     else if (schedule === WEEKLY_DEEP_SCHEDULE) mode = 'deep';
     else throw new Error(`unrecognized protected schedule: ${schedule}`);
   } else if (eventName === 'workflow_dispatch') {
-    if (!['light', 'deep'].includes(manualMode))
-      throw new Error('manual mode must be light or deep');
+    if (!['light', 'deep', 'real-snapshot'].includes(manualMode))
+      throw new Error('manual mode must be light, deep, or real-snapshot');
     mode = manualMode;
   } else {
     throw new Error(`untrusted Patrol event: ${eventName}`);
@@ -70,7 +71,9 @@ export function selectPatrolPlan({
     fixtures:
       mode === 'light'
         ? [LIGHT_REPOSITORY_WORK_FIXTURE_ID]
-        : deepFixtures(rotationKey),
+        : mode === 'real-snapshot'
+          ? [REAL_MODULE_SNAPSHOT_FIXTURE_ID]
+          : deepFixtures(rotationKey),
     timeoutSeconds: mode === 'light' ? 600 : 900,
     issueAdmission: 'prohibited',
     requiredGate: false,

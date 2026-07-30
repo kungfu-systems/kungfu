@@ -6,6 +6,8 @@ import { INCIDENT_BOARD_FIXTURE } from './incident-board-replay-v1.mjs';
 const FULL_FIXTURE_ID = 'incident-board-replay-v1';
 const LEASE_FIXTURE_ID = 'incident-board-lease-v1';
 const REPLAY_FIXTURE_ID = 'incident-board-recovery-v1';
+export const REAL_MODULE_SNAPSHOT_FIXTURE_ID =
+  'kungfu-agent-patrol-real-module-snapshot-v1';
 
 function subset(value, paths) {
   return Object.freeze(
@@ -98,13 +100,56 @@ const replay = derivedFixture({
   nextAction: 'repair-duplicate-completion-replay',
 });
 
+const realModuleSnapshot = Object.freeze({
+  id: REAL_MODULE_SNAPSHOT_FIXTURE_ID,
+  kind: 'real-module-snapshot',
+  defect: {
+    id: 'agent-patrol-volatile-numeric-fingerprint-regression',
+  },
+  task: {
+    title: 'Restore stable Agent Patrol Finding fingerprints',
+  },
+  warrants: {
+    agentA: {
+      mode: 'investigation-only',
+      writablePaths: [],
+    },
+    agentB: {
+      mode: 'bounded-repair',
+      writablePaths: ['framework/agent-patrol/classify.mjs'],
+    },
+  },
+  investigation: {
+    expectedFailures: [
+      'volatile numeric failure identifiers share one Finding identity',
+    ],
+    remainingObligation:
+      'implement-and-verify-stable-fingerprint-normalization',
+    nextAction: 'repair-volatile-numeric-fingerprint-normalization',
+  },
+  verification: {
+    visibleCommand: [
+      'node',
+      '--test',
+      '--test-name-pattern',
+      'volatile numeric failure identifiers share one Finding identity',
+      'scripts/agent-patrol.test.mjs',
+    ],
+  },
+});
+
 export const DEFAULT_REPOSITORY_WORK_FIXTURE_ID = FULL_FIXTURE_ID;
 export const LIGHT_REPOSITORY_WORK_FIXTURE_ID = LEASE_FIXTURE_ID;
 
-export const REPOSITORY_WORK_FIXTURES = Object.freeze([
+export const SYNTHETIC_REPOSITORY_WORK_FIXTURES = Object.freeze([
   lease,
   replay,
   combined,
+]);
+
+export const REPOSITORY_WORK_FIXTURES = Object.freeze([
+  ...SYNTHETIC_REPOSITORY_WORK_FIXTURES,
+  realModuleSnapshot,
 ]);
 
 export function getRepositoryWorkFixture(id) {

@@ -12,8 +12,8 @@ off agent-120, which remains the Dev build primary.
   (`0 18 * * 1-6` UTC), one fixed fixture
 - Weekly deeper slot: Monday (`0 18 * * 0` UTC), two fixtures selected from
   the three-fixture catalog
-- Manual trigger: `workflow_dispatch` with an explicit `light` or `deep` mode
-  on the protected default branch only
+- Manual trigger: `workflow_dispatch` with an explicit `light`, `deep`, or
+  `real-snapshot` mode on the protected default branch only
 - Runner: `agent-121-kungfu-systems`
 - Required labels: `agent-121`, `kungfu-agent-patrol`
 - Image:
@@ -49,6 +49,28 @@ combined replay + lease
 Rerunning one workflow attempt preserves the same rotation key and suite. The
 shared non-cancelling concurrency group serializes scheduled and manual runs,
 so the two modes cannot contend for agent-121.
+
+The `real-snapshot` mode is a separate manual qualification lane. It selects
+only `kungfu-agent-patrol-real-module-snapshot-v1`: an eight-file, 3,102-line
+slice of the checked-out Kungfu Agent Patrol implementation and tests. Its
+committed manifest binds every tracked regular file by mode, bytes, lines, and
+SHA256 plus one canonical tree root. The materializer reads the exact protected
+commit through Git, verifies the manifest, copies no `.git` metadata, and then
+applies one deterministic regression to
+`framework/agent-patrol/classify.mjs`.
+
+Agent A remains read-only. Agent B may change only that one module. The visible
+test checks stable Finding identity across volatile large numeric run IDs; a
+second variant is executed by an external hidden verifier that is never copied
+into the agent workspace. The reference repair, protected-path negative test,
+symlink rejection, exact initial tree, and source tree root are deterministic
+local contracts.
+
+The real-snapshot weekly schedule is intentionally absent during initial
+qualification. Enable it only in a later protected change after a manual
+protected-branch run on agent-121 proves the pinned image can execute Node 24
+inside the disposable workspace and produces a valid bounded report. Synthetic
+daily and weekly schedules remain unchanged.
 
 The workflow is classified as `qualification` authority with a `diagnostic`
 receipt. It cannot publish a product, move a release channel, become a required
@@ -139,3 +161,12 @@ After activation, dispatch the protected-branch workflow and verify:
 7. replaying that failure produced `deduplicated` with the same Finding root;
 8. every receipt retained `issueAdmitted: false`; and
 9. a controlled runner-integrity failure left the job red.
+
+For the real module lane, also verify:
+
+1. `mode=real-snapshot` selected exactly one fixture;
+2. the report bound the protected `sourceHead` and committed `sourceTreeRoot`;
+3. the OpenCode image ran the visible Node test in both fresh sessions;
+4. only `framework/agent-patrol/classify.mjs` changed;
+5. visible and hidden checks passed; and
+6. no weekly real-snapshot schedule was enabled before this qualification.
