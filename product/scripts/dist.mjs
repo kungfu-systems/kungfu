@@ -835,7 +835,7 @@ function finalizeDesktopReleaseManifest() {
   return manifest;
 }
 
-function assertCoreFrozen() {
+function assertCoreAssembled() {
   const kungfuBin = path.join(CORE_DIST, isWin ? 'kungfu.exe' : 'kungfu');
   if (!fs.existsSync(kungfuBin)) {
     throw new Error(`freeze did not produce ${rel(kungfuBin)}`);
@@ -2352,7 +2352,7 @@ function main() {
       compatibilityManifest: COMPATIBILITY_MANIFEST,
     },
     operations: {
-      assertCoreFrozen,
+      assertCoreAssembled,
       assertDeclaredKfx,
       assertKfxBundleExternals,
       assembleKfx,

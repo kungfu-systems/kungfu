@@ -20,7 +20,7 @@
 //   ./shifu verify --help
 //
 // Assertion targets (all grounded in the build scripts, not guessed):
-//   - framework/core/dist/kungfu/                     product core dist (run-freeze.js target; frozen or assembled form)
+//   - framework/core/dist/kungfu/                     assembled product core dist (run-freeze.js target)
 //   - framework/core/dist/kungfu/kungfu[.exe]           kungfu executable (path resolved by lib/executable.js)
 //   - `kungfu --version` exits 0 and output contains the expected version   product Python runtime runs end to end (runtime smoke)
 //   - framework/gui/out/                           (--with-app) build:app electron-vite artifact
@@ -561,7 +561,7 @@ function main() {
     // Assembled form (KF-ADR-019f86da-4f90-73ff-9543-f0a4f0beef05 stage 2): when the dist carries the
     // interpreter tree, it must be well-formed — the host marker declares
     // the form and the tree's python3 is the real sys.executable the entry
-    // execs. A frozen dist has no python/ tree and skips this assertion.
+    // execs. The interpreter tree is mandatory for every supported product.
     const assembledTree = path.join(distDir, 'python');
     if (fs.existsSync(assembledTree)) {
       // The tree's interpreter is at python.exe on Windows, bin/python3 on
@@ -587,6 +587,11 @@ function main() {
           `missing ${missing.map((p) => path.relative(ROOT, p)).join(', ')}`,
         );
       }
+    } else {
+      fail(
+        'assembled runtime tree well-formed',
+        `missing ${path.relative(ROOT, assembledTree)}`,
+      );
     }
   } else {
     fail(

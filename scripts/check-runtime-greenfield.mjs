@@ -89,6 +89,47 @@ const RETIRED_PRE_V4_FAST_HASH_RE = new RegExp(
   `\\b(Mur${'mur'}Hash3|mur${'mur'}3)\\b`,
   'gi',
 );
+const PACKAGER_NAME = ['Py', 'Installer'].join('');
+const RESET_ENVIRONMENT = ['PY', 'INSTALLER', '_RESET_ENVIRONMENT'].join('');
+const BOOTLOADER_PREFIX = ['_', 'PYI', '_'].join('');
+const RETIREMENT_EXCLUDED_ROOTS = [
+  '.kungfu/',
+  '.xinfa/',
+  'docs/qualification/evidence/',
+  'framework/maintainability/',
+];
+const RETIREMENT_SELF_DESCRIPTION_FILES = new Set([
+  'scripts/check-runtime-greenfield.mjs',
+  'scripts/check-product-packager-retirement.test.mjs',
+]);
+const HISTORICAL_TERMINOLOGY_ROOTS = ['crates/host-spike/', 'docs/research/'];
+const HISTORICAL_TERMINOLOGY_FILES = new Set([
+  'docs/adr/KF-ADR-019f86da-4f90-73ff-9543-f0a4f0beef05.md',
+  'docs/adr/SHIFU-ADR-019f86da-4f90-7b07-b137-378fb5533b13.md',
+]);
+const RETIREMENT_LEDGER = 'docs/development/buildchain.md';
+const LEDGER_ALLOWLIST = [
+  /the Nuitka\/PyInstaller freeze legs were retired 2026-07-11/u,
+  /run-freeze\.js` pyinstaller fallback leg/iu,
+  /__run_pyinstaller` \+ PyInstaller import/u,
+  /Nuitka \/ PyInstaller pins.*pyinstaller pin retired 2026-07-11/u,
+];
+const RETIRED_SIGNATURES = [
+  ['product host constant', ['FORM', 'FROZEN'].join('_')],
+  ['interpreter product-host probe', ['sys', 'frozen'].join('.')],
+  ['bootloader reset environment', RESET_ENVIRONMENT],
+  ['bootloader process-state prefix', BOOTLOADER_PREFIX],
+];
+const RETIRED_PRODUCT_TERMINOLOGY = [
+  'frozen product',
+  'frozen runtime',
+  'frozen binary',
+  'frozen host',
+  'frozen dist',
+  'frozen cli',
+  'nuitka-frozen',
+  'assertcorefrozen',
+];
 
 const RULES = [
   {
@@ -268,6 +309,126 @@ function isFile(rel) {
   } catch {
     return false;
   }
+}
+
+function portable(relative) {
+  return relative.split(path.sep).join('/');
+}
+
+function retirementExcluded(relative) {
+  return (
+    RETIREMENT_SELF_DESCRIPTION_FILES.has(relative) ||
+    RETIREMENT_EXCLUDED_ROOTS.some((root) => relative.startsWith(root))
+  );
+}
+
+function historicalTerminology(relative) {
+  return (
+    relative === RETIREMENT_LEDGER ||
+    HISTORICAL_TERMINOLOGY_FILES.has(relative) ||
+    HISTORICAL_TERMINOLOGY_ROOTS.some((root) => relative.startsWith(root))
+  );
+}
+
+function allowedLedgerLine(line) {
+  return LEDGER_ALLOWLIST.some((pattern) => pattern.test(line));
+}
+
+/**
+ * @param {{path: string, text: string}[]} entries
+ * @param {{enforceContracts?: boolean}} [options]
+ */
+export function retirementIssues(entries, { enforceContracts = false } = {}) {
+  const issues = [];
+  const byPath = new Map(entries.map((entry) => [entry.path, entry.text]));
+  for (const entry of entries) {
+    const relative = portable(entry.path);
+    if (retirementExcluded(relative)) continue;
+    if (
+      /(?:^|\/)(?:pyi-hooks)(?:\/|$)/iu.test(relative) ||
+      /(?:^|\/)[^/]+\.spec$/iu.test(relative) ||
+      relative.toLowerCase().includes(PACKAGER_NAME.toLowerCase())
+    ) {
+      issues.push(`${relative}: retired product-packager path exists`);
+    }
+
+    const lines = entry.text.split(/\r?\n/u);
+    for (let index = 0; index < lines.length; index += 1) {
+      const line = lines[index];
+      const location = `${relative}:${index + 1}`;
+      if (line.toLowerCase().includes(PACKAGER_NAME.toLowerCase())) {
+        if (relative !== RETIREMENT_LEDGER || !allowedLedgerLine(line)) {
+          issues.push(`${location}: retired product-packager name is active`);
+        }
+      }
+      for (const [label, signature] of RETIRED_SIGNATURES) {
+        if (line.includes(signature)) {
+          issues.push(`${location}: ${label} re-entered`);
+        }
+      }
+      if (!historicalTerminology(relative)) {
+        const lower = line.toLowerCase();
+        for (const phrase of RETIRED_PRODUCT_TERMINOLOGY) {
+          if (lower.includes(phrase)) {
+            issues.push(`${location}: retired product term ${phrase}`);
+          }
+        }
+      }
+    }
+  }
+
+  if (!enforceContracts) return issues;
+  const requireText = (relative, fragments) => {
+    const text = byPath.get(relative) || '';
+    for (const fragment of fragments) {
+      if (!text.includes(fragment)) {
+        issues.push(
+          `${relative}: required retirement contract missing ${fragment}`,
+        );
+      }
+    }
+  };
+  requireText('framework/core/.gyp/run-freeze.js', [
+    'requireAssemblySelector(assemblySelector())',
+    "selector !== 'assemble'",
+    "form: 'assembled'",
+    "'kungfu-trunk'",
+  ]);
+  requireText(
+    'framework/core/tests/qualification/runtime-activation/product_smoke.mjs',
+    [
+      'inspectProductLayout',
+      "kind: 'rust-trunk'",
+      "kind: 'python-build-standalone'",
+      'retiredPackagerEnvironmentKeys: []',
+    ],
+  );
+  requireText('framework/core/pyproject.toml', ['"nuitka~=4.1.0"']);
+  requireText('framework/core/uv.lock', ['name = "nuitka"']);
+  requireText(
+    'framework/core/src/python/kungfu/cli/bridging/nuitka/__init__.py',
+    ['from nuitka.__main__ import main as nuitka_main'],
+  );
+  requireText('developer/sdk/src/sdk.js', ["'nuitka'"]);
+  requireText('framework/core/src/python/kungfu/runtime_service.py', [
+    'CREATE_BREAKAWAY_FROM_JOB',
+    'getattr(error, "winerror", None) != 5',
+  ]);
+  requireText('framework/core/tests/python/test_runtime_service.py', [
+    'test_windows_supervisor_breaks_away_from_parent_job',
+    'test_windows_supervisor_falls_back_when_job_forbids_breakaway',
+  ]);
+  return issues;
+}
+
+function trackedRetirementEntries() {
+  return splitLines(git(['ls-files'])).flatMap((relative) => {
+    const absolute = path.join(ROOT, relative);
+    if (!isFile(relative)) return [];
+    const body = fs.readFileSync(absolute);
+    if (body.includes(0)) return [];
+    return [{ path: portable(relative), text: body.toString('utf8') }];
+  });
 }
 
 function mergeBase() {
@@ -593,4 +754,15 @@ if (hits.length) {
   process.exit(1);
 }
 
-console.log('[runtime-greenfield] gate passed');
+const retirementViolations = retirementIssues(trackedRetirementEntries(), {
+  enforceContracts: true,
+});
+if (retirementViolations.length) {
+  console.error('[runtime-greenfield] product-packager retirement violations:');
+  for (const issue of retirementViolations) console.error(`  - ${issue}`);
+  process.exit(1);
+}
+
+console.log(
+  '[runtime-greenfield] gate passed; assembled product clean; KFX AOT and Windows Job Object contracts retained',
+);

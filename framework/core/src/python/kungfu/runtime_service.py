@@ -1355,15 +1355,13 @@ class ProcessRuntimeHost:
         )
         with supervisor_log_path(self.config_home).open("ab") as log:
             kwargs: dict[str, Any] = {
-                "env": _independent_process_env(
-                    command_env(
-                        home,
-                        runtime_dir,
-                        self.log_level,
-                        self.config_home,
-                        runtime_generation=runtime_generation,
-                        runtime_image=self.runtime_image,
-                    )
+                "env": command_env(
+                    home,
+                    runtime_dir,
+                    self.log_level,
+                    self.config_home,
+                    runtime_generation=runtime_generation,
+                    runtime_image=self.runtime_image,
                 ),
                 "stdout": log,
                 "stderr": log,

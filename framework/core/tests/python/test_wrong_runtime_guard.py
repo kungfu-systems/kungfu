@@ -19,23 +19,10 @@ BUILT_FOR = "3.13.14"
 BLESSED_PREFIX = "/home/u/.cache/kungfu/python/cpython-3.13.14-linux-x86_64-none"
 
 
-def test_frozen_host_is_blessed_unconditionally():
-    assert (
-        _runtime_violation(
-            BUILT_FOR,
-            frozen=True,
-            base_prefix="/opt/anything",
-            running_version="3.12.1",
-        )
-        is None
-    )
-
-
 def test_managed_matching_interpreter_is_blessed():
     assert (
         _runtime_violation(
             BUILT_FOR,
-            frozen=False,
             base_prefix=BLESSED_PREFIX,
             running_version="3.13.2",
         )
@@ -46,7 +33,6 @@ def test_managed_matching_interpreter_is_blessed():
 def test_foreign_prefix_is_named():
     violation = _runtime_violation(
         BUILT_FOR,
-        frozen=False,
         base_prefix="/opt/homebrew/Frameworks/Python.framework/Versions/3.13",
         running_version="3.13.14",
     )
@@ -57,7 +43,6 @@ def test_foreign_prefix_is_named():
 def test_feature_version_mismatch_is_named():
     violation = _runtime_violation(
         BUILT_FOR,
-        frozen=False,
         base_prefix=BLESSED_PREFIX,
         running_version="3.12.8",
     )
@@ -69,7 +54,6 @@ def test_missing_buildinfo_version_judges_prefix_only():
     assert (
         _runtime_violation(
             "",
-            frozen=False,
             base_prefix=BLESSED_PREFIX,
             running_version="3.99.0",
         )

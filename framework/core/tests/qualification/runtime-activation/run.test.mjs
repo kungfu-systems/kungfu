@@ -8,6 +8,7 @@ import { test } from 'node:test';
 import { fileURLToPath } from 'node:url';
 
 import {
+  inspectProductLayout,
   invokeAfterIdentitySettlement,
   runtimeReady,
 } from './product_smoke.mjs';
@@ -212,6 +213,68 @@ test('product smoke does not report runtime readiness before both identities set
       coordinator: { running: true, identityVerified: true },
     }),
     true,
+  );
+});
+
+test('product smoke proves the assembled marker, Rust entry, and real CPython layout', (t) => {
+  const product = fs.mkdtempSync(
+    path.join(os.tmpdir(), 'kungfu-product-layout-'),
+  );
+  t.after(() => fs.rmSync(product, { recursive: true, force: true }));
+  const pythonRoot = path.join(product, 'python');
+  fs.mkdirSync(path.join(pythonRoot, 'bin'), { recursive: true });
+  const trunkBytes = Buffer.from('rust-trunk-entry');
+  fs.writeFileSync(path.join(product, 'kungfu'), trunkBytes);
+  fs.writeFileSync(path.join(product, 'kungfu-trunk'), trunkBytes);
+  fs.writeFileSync(path.join(pythonRoot, 'bin', 'python3'), 'cpython');
+  fs.writeFileSync(
+    path.join(pythonRoot, 'kungfu-host.json'),
+    JSON.stringify({
+      schema: 'kungfu.host/v1',
+      form: 'assembled',
+      product_root: '..',
+    }),
+  );
+
+  const layout = inspectProductLayout(product, {
+    platform: 'darwin',
+    environment: {},
+  });
+
+  assert.equal(layout.host.form, 'assembled');
+  assert.equal(layout.entry.kind, 'rust-trunk');
+  assert.equal(layout.python.interpreter, 'python/bin/python3');
+  assert.deepEqual(layout.retiredPackagerEnvironmentKeys, []);
+});
+
+test('product smoke rejects retired packager process state', (t) => {
+  const product = fs.mkdtempSync(
+    path.join(os.tmpdir(), 'kungfu-product-state-'),
+  );
+  t.after(() => fs.rmSync(product, { recursive: true, force: true }));
+  const pythonRoot = path.join(product, 'python');
+  fs.mkdirSync(path.join(pythonRoot, 'bin'), { recursive: true });
+  for (const name of ['kungfu', 'kungfu-trunk']) {
+    fs.writeFileSync(path.join(product, name), 'rust-trunk-entry');
+  }
+  fs.writeFileSync(path.join(pythonRoot, 'bin', 'python3'), 'cpython');
+  fs.writeFileSync(
+    path.join(pythonRoot, 'kungfu-host.json'),
+    JSON.stringify({
+      schema: 'kungfu.host/v1',
+      form: 'assembled',
+      product_root: '..',
+    }),
+  );
+  const retiredKey = ['PY', 'INSTALLER', '_RESET_ENVIRONMENT'].join('');
+
+  assert.throws(
+    () =>
+      inspectProductLayout(product, {
+        platform: 'darwin',
+        environment: { [retiredKey]: '1' },
+      }),
+    /retired product packager state is present/u,
   );
 });
 

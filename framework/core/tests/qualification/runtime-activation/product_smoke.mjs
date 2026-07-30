@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import { spawnSync } from 'node:child_process';
+import { createHash } from 'node:crypto';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
@@ -23,6 +24,74 @@ const EXECUTABLE = path.join(
   'kungfu',
   process.platform === 'win32' ? 'kungfu.exe' : 'kungfu',
 );
+
+const RETIRED_ENVIRONMENT_PREFIX = ['_', 'PYI', '_'].join('');
+const RETIRED_RESET_ENVIRONMENT = [
+  'PY',
+  'INSTALLER',
+  '_RESET_ENVIRONMENT',
+].join('');
+
+function fileSha256(file) {
+  return `sha256:${createHash('sha256').update(fs.readFileSync(file)).digest('hex')}`;
+}
+
+export function inspectProductLayout(
+  productRoot,
+  { platform = process.platform, environment = process.env } = {},
+) {
+  const entry = path.join(
+    productRoot,
+    platform === 'win32' ? 'kungfu.exe' : 'kungfu',
+  );
+  const trunk = path.join(
+    productRoot,
+    platform === 'win32' ? 'kungfu-trunk.exe' : 'kungfu-trunk',
+  );
+  const pythonRoot = path.join(productRoot, 'python');
+  const interpreter =
+    platform === 'win32'
+      ? path.join(pythonRoot, 'python.exe')
+      : path.join(pythonRoot, 'bin', 'python3');
+  const markerPath = path.join(pythonRoot, 'kungfu-host.json');
+  for (const required of [entry, trunk, interpreter, markerPath]) {
+    if (!fs.existsSync(required)) {
+      throw new Error(`assembled product path is missing: ${required}`);
+    }
+  }
+  const marker = JSON.parse(fs.readFileSync(markerPath, 'utf8'));
+  if (
+    marker.schema !== 'kungfu.host/v1' ||
+    marker.form !== 'assembled' ||
+    marker.product_root !== '..'
+  ) {
+    throw new Error(`assembled host marker is invalid: ${markerPath}`);
+  }
+  const entryRoot = fileSha256(entry);
+  const trunkRoot = fileSha256(trunk);
+  if (entryRoot !== trunkRoot) {
+    throw new Error('product entry bytes do not identify the Rust trunk');
+  }
+  const retiredEnvironmentKeys = Object.keys(environment).filter(
+    (key) =>
+      key === RETIRED_RESET_ENVIRONMENT ||
+      key.startsWith(RETIRED_ENVIRONMENT_PREFIX),
+  );
+  if (retiredEnvironmentKeys.length) {
+    throw new Error(
+      `retired product packager state is present: ${retiredEnvironmentKeys.join(', ')}`,
+    );
+  }
+  return {
+    host: marker,
+    entry: { kind: 'rust-trunk', sha256: entryRoot },
+    python: {
+      kind: 'python-build-standalone',
+      interpreter: path.relative(productRoot, interpreter),
+    },
+    retiredPackagerEnvironmentKeys: [],
+  };
+}
 
 function invoke(home, configHome, args) {
   const started = process.hrtime.bigint();
@@ -125,8 +194,9 @@ function waitForRunning(home, configHome) {
 
 function main() {
   if (!fs.existsSync(EXECUTABLE)) {
-    throw new Error(`frozen product executable is missing: ${EXECUTABLE}`);
+    throw new Error(`assembled product executable is missing: ${EXECUTABLE}`);
   }
+  const productLayout = inspectProductLayout(path.dirname(EXECUTABLE));
   const temporary = fs.mkdtempSync(
     path.join(os.tmpdir(), 'kungfu-runtime-product-smoke-'),
   );
@@ -183,6 +253,7 @@ function main() {
           schema: 'kungfu.runtime-activation.product-smoke/v1',
           platform: { os: process.platform, arch: process.arch },
           envelope: 'temporary-product-workspace-process-live-v1',
+          productLayout,
           outcomes: {
             daemonlessStatus: before.payload.product,
             coldChanged: cold.payload.changed,

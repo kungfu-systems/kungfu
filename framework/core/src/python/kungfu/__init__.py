@@ -34,8 +34,8 @@ class WrongRuntimeError(RuntimeError):
     """Raised when the kungfu package runs on a foreign interpreter.
 
     Packages only resolve against kungfu's own pinned runtime (KF-ADR-019f86da-4f90-73ff-9543-f0a4f0beef05):
-    outside the frozen host, the blessed interpreter is the kungfu-managed
-    python-build-standalone that `kungfu env` derives environments from.
+    the blessed interpreter is the kungfu-managed python-build-standalone that
+    `kungfu env` derives environments from.
     Running anywhere else turns into this named error instead of a mystery
     native-import failure three layers deeper.
     """
@@ -44,7 +44,6 @@ class WrongRuntimeError(RuntimeError):
 def _runtime_violation(
     python_version: str,
     *,
-    frozen: bool,
     base_prefix: str,
     running_version: str,
     assembled: bool = False,
@@ -52,14 +51,14 @@ def _runtime_violation(
     """Judge interpreter blessedness; None means blessed.
 
     Pure so both verdicts unit-test without staging real interpreters. The
-    frozen host is blessed by construction, and so is the assembled host —
-    the shipped python-build-standalone tree IS the product runtime
+    assembled host is blessed by construction: the shipped
+    python-build-standalone tree IS the product runtime
     (KF-ADR-019f86da-4f90-73ff-9543-f0a4f0beef05 stage 2). A satellite is blessed when its feature version
     matches the one the binding was built for and it runs from a
     kungfu-managed python-build-standalone install (whose prefix directory
     is named cpython-<version>-<platform>).
     """
-    if frozen or assembled:
+    if assembled:
         return None
     expected_feature = ".".join(python_version.split(".")[:2])
     running_feature = ".".join(running_version.split(".")[:2])
@@ -98,7 +97,6 @@ def _verify_blessed_runtime(binding: Any) -> None:
     running = ".".join(str(v) for v in sys.version_info[:3])
     violation = _runtime_violation(
         python_version,
-        frozen="__compiled__" in globals() or bool(getattr(sys, "frozen", False)),
         base_prefix=sys.base_prefix,
         running_version=running,
         assembled=host.host_form() == host.FORM_ASSEMBLED,
@@ -149,11 +147,10 @@ def __getattr__(name: str) -> Any:
 def schema_data_path(module_file: str, name: str) -> str:
     """Resolve a package data file (e.g. a *.bfbs schema blob) in both layouts.
 
-    In a source checkout the file sits next to its module; in the frozen
-    standalone runtime the module is compiled into the executable (so
-    ``dirname(__file__)`` is not a real directory) and data files are shipped
-    flat next to the binding — the same place ``kungfubuildinfo.json`` lands.
-    Try the source layout first, then fall back to the binding directory.
+    In a source checkout the file sits next to its module. In the assembled
+    runtime, generated data also ships next to the binding — the same place
+    ``kungfubuildinfo.json`` lands. Try the source layout first, then fall back
+    to the binding directory.
     """
     beside_module = os.path.join(os.path.dirname(module_file), name)
     if os.path.exists(beside_module):

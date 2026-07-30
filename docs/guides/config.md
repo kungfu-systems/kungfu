@@ -69,15 +69,15 @@ That contract contains:
   placeholder expansion, workspace data home discovery, user/workspace
   precedence, and merge behavior.
 
-Python, Node, and the frozen product load the same contract. The frozen product
+Python, Node, and the assembled product load the same contract. The product
 ships it at:
 
 ```text
 dist/kungfu/config/kungfu-config.contract.json
 ```
 
-`shifu verify` checks that the frozen artifact contract hash matches the
-repo contract hash, then runs the frozen `kungfu config show --json` and checks
+`shifu verify` checks that the assembled artifact contract hash matches the
+repo contract hash, then runs the assembled `kungfu config show --json` and checks
 that the runtime-reported contract hash is the same. Defaults, resolution rules,
 and schema must not be redefined in Python, Node, GUI, or other feature
 modules.

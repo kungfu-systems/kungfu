@@ -32,6 +32,7 @@
     "check:version-line-authority": "node scripts/require-shifu.mjs check:version-line-authority && node framework/version-line/check-version-line-authority.mjs && node --test scripts/version-line-authority.test.mjs",
     "version-line:write": "node scripts/require-shifu.mjs version-line:write && node framework/version-line/version-line-authority.mjs write",
     "version-line:resolve": "node scripts/require-shifu.mjs version-line:resolve && node framework/version-line/version-line-authority.mjs resolve",
+    "check:product-packager-retirement": "node scripts/require-shifu.mjs check:product-packager-retirement && node scripts/check-runtime-greenfield.mjs --all && node --test scripts/check-product-packager-retirement.test.mjs",
     "ungfu:evidence": "node scripts/require-shifu.mjs ungfu:evidence && node scripts/prepare-ungfu-release-evidence.mjs",
     "check:incubation-passport": "node scripts/require-shifu.mjs check:incubation-passport && node scripts/check-incubation-passport.mjs",
     "check:hub-starter-docker": "node scripts/require-shifu.mjs check:hub-starter-docker && node scripts/check-hub-starter-docker-concept.mjs && node --test scripts/check-hub-starter-docker-concept.test.mjs",

@@ -1,17 +1,15 @@
 #  SPDX-License-Identifier: Apache-2.0
 """The host-neutral seam: form detection, product root, re-entry command.
 
-Each host form is staged without real product builds: frozen via sys.frozen,
-assembled via a marker file under a faked sys.base_prefix, source as the live
-test interpreter itself (a uv-managed dev interpreter has no marker and is
-not frozen).
+Each host form is staged without real product builds: assembled via a marker
+file under a faked sys.base_prefix, source as the live test interpreter itself
+(a uv-managed dev interpreter has no marker).
 """
 
 import json
 import os
 import stat
 import sys
-from pathlib import Path
 
 from kungfu import _runtime_violation, host
 
@@ -33,12 +31,6 @@ def _write_marker(prefix, body=None):
 def test_source_form_on_the_dev_interpreter():
     assert host.host_form() == host.FORM_SOURCE
     assert host.product_root() is None
-
-
-def test_frozen_form_detects_and_roots_at_the_executable(monkeypatch):
-    monkeypatch.setattr(sys, "frozen", True, raising=False)
-    assert host.host_form() == host.FORM_FROZEN
-    assert host.product_root() == Path(sys.executable).resolve().parent
 
 
 def test_assembled_form_detects_marker_and_resolves_root(monkeypatch, tmp_path):
@@ -94,7 +86,6 @@ def test_assembled_host_is_blessed_unconditionally():
     assert (
         _runtime_violation(
             "3.13.14",
-            frozen=False,
             base_prefix="/opt/kungfu/python",
             running_version="3.13.14",
             assembled=True,

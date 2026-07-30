@@ -88,7 +88,7 @@ declarations fail closed. Field reference source of truth is
 [`../framework/kfx/kungfu-kfx.contract.json`](../../framework/kfx/kungfu-kfx.contract.json);
 TypeScript types in [`../framework/kfx/src/index.ts`](../../framework/kfx/src/index.ts)
 must follow that contract. The SDK resolves the same contract from
-`KUNGFU_KFX_CONTRACT`, a monorepo checkout, frozen runtime config, or an
+`KUNGFU_KFX_CONTRACT`, a monorepo checkout, bundled runtime config, or an
 extension project's installed `node_modules/@kungfu-tech/kfx` package:
 
 | Field | Meaning |
@@ -109,7 +109,7 @@ extension project's installed `node_modules/@kungfu-tech/kfx` package:
 
 The manifest is a welded surface. Do not invent fields: `kungfu kfx install`,
 `kungfu kfx inspect`, `@kungfu-tech/kfx`, the GUI/TUI loaders, Skill dependency
-binding, and frozen artifact verification all validate against the same KFX
+binding, and assembled artifact verification all validate against the same KFX
 contract. The `service` facet is present in the contract as a draft facet while
 [KF-ADR-019f86da-4f90-7afa-a1e1-0510f00916be](../adr/KF-ADR-019f86da-4f90-7afa-a1e1-0510f00916be.md)'s process-hosting path hardens.
 

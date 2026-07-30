@@ -440,32 +440,6 @@ def test_route_projects_runtime_generation_into_coordinator_environment(tmp_path
     assert env["KF_RUNTIME_GENERATION"] == "17"
 
 
-def test_independent_process_env_resets_frozen_application_instance(monkeypatch):
-    source_env = {
-        "KF_HOME": "/tmp/kungfu",
-        "PYINSTALLER_RESET_ENVIRONMENT": "0",
-    }
-    monkeypatch.setattr(runtime_service.sys, "frozen", True, raising=False)
-
-    child_env = runtime_service._independent_process_env(source_env)
-
-    assert child_env == {
-        "KF_HOME": "/tmp/kungfu",
-        "PYINSTALLER_RESET_ENVIRONMENT": "1",
-    }
-    assert source_env["PYINSTALLER_RESET_ENVIRONMENT"] == "0"
-
-
-def test_independent_process_env_preserves_source_runtime_without_freezing(monkeypatch):
-    source_env = {"KF_HOME": "/tmp/kungfu"}
-    monkeypatch.delattr(runtime_service.sys, "frozen", raising=False)
-
-    child_env = runtime_service._independent_process_env(source_env)
-
-    assert child_env == source_env
-    assert child_env is not source_env
-
-
 def test_coordinator_authority_persists_epoch_and_rejects_stale_generation(
     tmp_path,
 ):
@@ -664,7 +638,6 @@ def test_concurrent_activation_spawns_one_supervisor(tmp_path, monkeypatch):
         spawned.append((args, kwargs))
         return _FakeProcess()
 
-    monkeypatch.setattr(runtime_service.sys, "frozen", True, raising=False)
     monkeypatch.setattr(runtime_service.subprocess, "Popen", _spawn)
     monkeypatch.setattr(
         runtime_service, "_process_start_identity", lambda pid: f"start-{pid}"
@@ -688,7 +661,7 @@ def test_concurrent_activation_spawns_one_supervisor(tmp_path, monkeypatch):
         )
 
     assert len(spawned) == 1
-    assert spawned[0][1]["env"]["PYINSTALLER_RESET_ENVIRONMENT"] == "1"
+    assert spawned[0][1]["env"]["KF_RUNTIME_GENERATION"] == "17"
     assert sum(result["changed"] is True for result in results) == 1
     assert (
         runtime_service.read_pid(runtime_service.supervisor_pid_path(str(config_home)))

@@ -329,7 +329,7 @@ export function auditRepository() {
     'utf8',
   );
   if (!freeze.includes('agentPackDataArgs()'))
-    issues.push('frozen CLI does not include the complete Agent pack');
+    issues.push('assembled CLI does not include the complete Agent pack');
   return { ok: issues.length === 0, issues };
 }
 

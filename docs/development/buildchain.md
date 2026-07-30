@@ -51,6 +51,13 @@ gone; only the `assemble` leg ships. What was removed, and what stays and why:
 | `engage nuitka` / `engage pdm` bridges | **kept, deliberately** — their consumer is the Python-AOT kfx build contract (`kungfu sdk kfx build` for py extensions), not the freeze chain; retirement follows the [KF-ADR-019f86da-4f90-7d41-a4a0-e6b01d4b31c6](../adr/KF-ADR-019f86da-4f90-7d41-a4a0-e6b01d4b31c6.md) execution-profile line, not this ledger |
 | Nuitka / PyInstaller pins in dev deps | **pyinstaller pin retired 2026-07-11**; **nuitka pin kept** — now resolved only by the `engage nuitka` bridge ([KF-ADR-019f86da-4f90-7d41-a4a0-e6b01d4b31c6](../adr/KF-ADR-019f86da-4f90-7d41-a4a0-e6b01d4b31c6.md)), no longer by any freeze leg |
 
+`scripts/check-runtime-greenfield.mjs` owns the executable negative ratchet. It
+permits the exact historical ledger rows above, rejects the retired runtime
+signatures and product-host vocabulary everywhere active, requires
+assembled-only selection and installed layout evidence, and separately pins the
+KFX Nuitka AOT and Windows Job Object contracts that this retirement must not
+erase.
+
 The assembled form's own policy record is
 [KF-ADR-019f86da-4f90-7ecd-9660-81f9f74dc416](../adr/KF-ADR-019f86da-4f90-7ecd-9660-81f9f74dc416.md)
 (stdlib pruning); the target architecture is
