@@ -569,14 +569,14 @@ def validate_completion(decoded: str) -> dict[str, Any]:
     )
     if (
         completion["schema"] != "kungfu.agent-work-lab.tui-autoplay/v1"
-        or completion["status"] != "passed"
+        or completion["status"] != "qualified"
         or not SHA256.fullmatch(str(completion["reportRoot"]))
         or not isinstance(completion["eventCount"], int)
         or isinstance(completion["eventCount"], bool)
         or completion["eventCount"] < 1
         or completion["eventCount"] > 100_000
     ):
-        fail("installed kungfu autoplay completion sentinel did not pass")
+        fail("installed kungfu autoplay completion sentinel did not qualify")
     return completion
 
 

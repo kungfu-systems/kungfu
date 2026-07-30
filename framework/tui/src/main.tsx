@@ -4,7 +4,6 @@ import { execFile, execFileSync, spawn } from 'node:child_process';
 import fs from 'node:fs';
 import { createRequire } from 'node:module';
 import { constants as osConstants } from 'node:os';
-import { homedir } from 'node:os';
 import path from 'node:path';
 import {
   type AgentWorkLab,
@@ -43,15 +42,12 @@ import {
   quickCommandMatches,
   reduceControlPlaneInput,
 } from './profile-shell.js';
+import { resolveTuiRuntimePaths } from './runtime-paths.js';
 import {
   IncrementalTerminalOutput,
   terminalCanvasRows,
 } from './terminal-canvas.js';
-import {
-  TerminalLifecycle,
-  describeCliFailure,
-  resolveTuiRuntimeDir,
-} from './terminal-lifecycle.js';
+import { TerminalLifecycle, describeCliFailure } from './terminal-lifecycle.js';
 import {
   degradedGlobalWorkModel,
   globalWorkContribution,
@@ -70,33 +66,13 @@ function cliEnvironment(): NodeJS.ProcessEnv {
 }
 
 function runtimePaths() {
-  const coreDir = path.dirname(
-    nodeRequire.resolve('@kungfu-tech/core/package.json'),
-  );
-  const kungfuDir =
-    process.env.KUNGFU_DIR || path.join(coreDir, 'dist', 'kungfu');
-  const packagedBin = path.join(
-    kungfuDir,
-    process.platform === 'win32' ? 'kungfu.exe' : 'kungfu',
-  );
-  const configuredBin =
-    process.env.KUNGFU_CLI_BIN || process.env.KUNGFU_BIN || '';
-  return {
-    coreDir,
-    runtimeDir: resolveTuiRuntimeDir({
-      env: process.env,
-      cwd: process.cwd(),
-      contractPath: path.join(
-        kungfuDir,
-        'config',
-        'kungfu-config.contract.json',
-      ),
-    }),
-    configHome:
-      process.env.KF_CONFIG_HOME || path.join(homedir(), '.kungfu-config'),
-    bin: configuredBin || (fs.existsSync(packagedBin) ? packagedBin : 'kungfu'),
-    sourceCliFallback: !configuredBin && !fs.existsSync(packagedBin),
-  };
+  return resolveTuiRuntimePaths({
+    env: process.env,
+    cwd: process.cwd(),
+    platform: process.platform,
+    resolveCorePackagePath: () =>
+      nodeRequire.resolve('@kungfu-tech/core/package.json'),
+  });
 }
 
 function openTuiAgentWorkLab(): AgentWorkLab {

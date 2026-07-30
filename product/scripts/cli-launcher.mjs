@@ -6,6 +6,7 @@ export function cliLauncherContent(platform = process.platform) {
       '@echo off',
       'set "KUNGFU_PRODUCT_MANIFEST=%~dp0product.json"',
       'set "KUNGFU_UPGRADE_MANIFEST=%~dp0upgrade\\kungfu-release-manifest.json"',
+      'if not defined KF_BUNDLED_EXTENSION_ROOT set "KF_BUNDLED_EXTENSION_ROOT=%~dp0extensions"',
       '"%~dp0runtime\\kungfu.exe" %*',
       '',
     ].join('\r\n');
@@ -23,6 +24,8 @@ done
 here=$(cd "$(dirname "$target")" && pwd)
 export KUNGFU_PRODUCT_MANIFEST="$here/product.json"
 export KUNGFU_UPGRADE_MANIFEST="$here/upgrade/kungfu-release-manifest.json"
+: "\${KF_BUNDLED_EXTENSION_ROOT:=$here/extensions}"
+export KF_BUNDLED_EXTENSION_ROOT
 exec "$here/runtime/kungfu" "$@"
 `;
 }
