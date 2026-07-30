@@ -1,0 +1,61 @@
+{
+  "schema": "kungfu.aws-burst-campaign-retirement/v1",
+  "status": "retired",
+  "owner": "kungfu-ci",
+  "retiredAt": "2026-07-30",
+  "reason": "The bounded AWS burst proof-of-concept campaigns used Buildchain v2-only runner presets and controller inputs. The reviewed Buildchain v3 authority intentionally exposes neither contract, so keeping the callers runnable would preserve an unintended v2 execution path.",
+  "runtimeSafety": {
+    "workflowShellReferencesV2": false,
+    "buildchainRefInputsV2": false,
+    "burstRunnerJobs": 0,
+    "cloudJobs": 0,
+    "failureBoundary": "github-hosted tombstone before burst runner or cloud work"
+  },
+  "evidence": {
+    "reviewedBuildchainV3Source": "9d74fb4557e71992db3516b5ba750d57cb9f3521",
+    "v3UnsupportedInputs": [
+      "aws-codebuild-project",
+      "aws-ec2-windows-runner-label"
+    ],
+    "v3UnsupportedRunnerPresets": [
+      "aws-us-codebuild-linux",
+      "aws-us-ec2-windows-jit"
+    ],
+    "historicalBuildchainRef": "train/v2/v2.3/aws-us-elastic-runner-burst-plane",
+    "historicalRuns": {
+      "linux": {
+        "latestSuccessfulRun": 30408889144,
+        "latestSuccessfulAt": "2026-07-28T23:43:38Z",
+        "caller": "dongkeren",
+        "result": "success"
+      },
+      "windows": {
+        "latestSuccessfulRun": 30418721314,
+        "latestSuccessfulAt": "2026-07-29T03:07:48Z",
+        "caller": "dongkeren",
+        "result": "success"
+      },
+      "observedFinalCampaignRun": {
+        "run": 30533043881,
+        "startedAt": "2026-07-30T10:01:24Z",
+        "caller": "dongkeren",
+        "observedStateAtDecision": "in_progress"
+      }
+    }
+  },
+  "historyPolicy": {
+    "v2TrainRef": "retained-immutable-history",
+    "priorRuns": "retained-immutable-history",
+    "currentWorkflowAuthority": "fail-closed-tombstone"
+  },
+  "reactivation": {
+    "automatic": false,
+    "requirements": [
+      "Admit a new protected Assignment owned by kungfu-ci and Buildchain maintainers.",
+      "Land the required runner preset and controller inputs in a reviewed Buildchain v3 commit.",
+      "Pin both reusable workflow shell and buildchain-ref to the same immutable reviewed v3 commit.",
+      "Restore bounded trust, label, non-publication, timeout, cancellation, and cleanup assertions with targeted tests.",
+      "Qualify the restored campaign through protected review without changing AWS, IAM, secret, billing, or runner-registration policy implicitly."
+    ]
+  }
+}

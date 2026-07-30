@@ -191,7 +191,53 @@ test('AWS CodeBuild qualification rejects static and release credentials', () =>
   }
 });
 
-test('AWS Linux burst workflow is trusted exact-train qualification only', () => {
+test('retired AWS burst workflows fail closed before runner or cloud work', () => {
+  const retirement = JSON.parse(
+    fs.readFileSync(
+      path.join(
+        repositoryRoot,
+        'docs/qualification/gates/aws-burst-retirement.json',
+      ),
+      'utf8',
+    ),
+  );
+  assert.equal(retirement.status, 'retired');
+  assert.equal(retirement.owner, 'kungfu-ci');
+  assert.equal(retirement.runtimeSafety.workflowShellReferencesV2, false);
+  assert.equal(retirement.runtimeSafety.buildchainRefInputsV2, false);
+  assert.equal(retirement.runtimeSafety.burstRunnerJobs, 0);
+  assert.equal(retirement.runtimeSafety.cloudJobs, 0);
+  assert.match(retirement.evidence.historicalBuildchainRef, /^train\/v2\//);
+  assert.match(
+    retirement.evidence.reviewedBuildchainV3Source,
+    /^[0-9a-f]{40}$/,
+  );
+
+  for (const name of [
+    'aws-us-linux-burst-qualification.yml',
+    'aws-us-windows-burst-qualification.yml',
+  ]) {
+    const workflow = fs.readFileSync(
+      path.join(repositoryRoot, '.github/workflows', name),
+      'utf8',
+    );
+    assert.match(workflow, /workflow_dispatch:/);
+    assert.doesNotMatch(workflow, /\n {2}pull_request:|\n {2}push:/);
+    assert.match(workflow, /jobs:\n {2}retired:/);
+    assert.match(workflow, /runs-on: ubuntu-24\.04/);
+    assert.match(
+      workflow,
+      /docs\/qualification\/gates\/aws-burst-retirement\.json/,
+    );
+    assert.match(workflow, /exit 1/);
+    assert.doesNotMatch(
+      workflow,
+      /train\/v2|kungfu-systems\/buildchain|runner-preset|aws-codebuild-project|aws-ec2-windows-runner-label|issues:\s*write|id-token:\s*write/,
+    );
+  }
+});
+
+test('retired AWS Linux burst workflow preserves no runnable v2 caller', () => {
   const workflow = fs.readFileSync(
     path.join(
       repositoryRoot,
@@ -199,39 +245,15 @@ test('AWS Linux burst workflow is trusted exact-train qualification only', () =>
     ),
     'utf8',
   );
-  assert.match(workflow, /workflow_dispatch:/);
-  assert.doesNotMatch(workflow, /\n {2}pull_request:|\n {2}push:/);
-  assert.match(workflow, /needs: trust/);
-  assert.match(workflow, /train\/v2\/v2\.3\/aws-us-elastic-runner-burst-plane/);
-  assert.match(workflow, /runner-preset: aws-us-codebuild-linux/);
-  assert.match(
-    workflow,
-    /aws-codebuild-project: kungfu-buildchain-linux-burst-poc/,
-  );
-  assert.match(
-    workflow,
-    /build-command: KUNGFU_BUILD_JOBS=4 \.\/shifu build:core/,
-  );
-  assert.match(workflow, /requested-parallelism: 4/);
+  assert.match(workflow, /AWS US Linux Burst Qualification \(Retired\)/);
   assert.match(workflow, /permissions:\n {2}contents: read/);
-  assert.doesNotMatch(workflow, /\b(?:id-token|packages):\s*write/);
-  assert.match(workflow, /publish-channel: none/);
-  assert.match(workflow, /release-candidate: false/);
-  assert.match(workflow, /artifact-transfer-mode: github-artifacts/);
-  assert.match(workflow, /checkout-cache-mode: off/);
-  assert.doesNotMatch(workflow, /checkout-cache-mode: (?:auto|require|github)/);
-  assert.match(
-    workflow,
-    /cargo-registry-index: sparse\+https:\/\/index\.crates\.io\//,
-  );
-  assert.doesNotMatch(workflow, /BUILDCHAIN_CARGO_REGISTRY_INDEX/);
   assert.doesNotMatch(
     workflow,
-    /secrets:|notar|signing|npm-publish|release-new-version|deploy/,
+    /uses:|secrets:|notar|signing|npm-publish|release-new-version|deploy/,
   );
 });
 
-test('AWS Windows JIT qualification is trusted, exact-label, and non-publication', () => {
+test('retired AWS Windows burst workflow preserves no runnable v2 caller', () => {
   const workflow = fs.readFileSync(
     path.join(
       repositoryRoot,
@@ -239,17 +261,10 @@ test('AWS Windows JIT qualification is trusted, exact-label, and non-publication
     ),
     'utf8',
   );
-  assert.match(workflow, /workflow_dispatch:/);
-  assert.doesNotMatch(workflow, /\n {2}pull_request:|\n {2}push:/);
-  assert.match(workflow, /needs: trust/);
-  assert.match(workflow, /aws-us-ec2-windows-jit-\$\{QUALIFICATION_ID\}/);
-  assert.match(workflow, /runner-preset: aws-us-ec2-windows-jit/);
-  assert.match(
+  assert.match(workflow, /AWS US Windows Burst Qualification \(Retired\)/);
+  assert.match(workflow, /permissions:\n {2}contents: read/);
+  assert.doesNotMatch(
     workflow,
-    /require-verify: true\n {6}verify-command: node scripts\/probe-release-platform\.mjs --aws-windows-jit/,
+    /uses:|secrets:|notar|signing|npm-publish|release-new-version|deploy/,
   );
-  assert.match(workflow, /publish-channel: none/);
-  assert.match(workflow, /release-candidate: false/);
-  assert.match(workflow, /win-cancel:cancellation\|win-timeout:timeout/);
-  assert.doesNotMatch(workflow, /\b(?:id-token|packages):\s*write/);
 });
