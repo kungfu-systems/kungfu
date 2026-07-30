@@ -24,8 +24,10 @@ all platform lanes running.
 
 The manual `Alpha macOS queue-aware overflow` controller keeps the self-hosted
 macOS ARM64 lane as the primary hot-cache route and starts a GitHub-hosted
-candidate only when one of three source-bound conditions holds:
+candidate only when one of four source-bound conditions holds:
 
+- a trusted repository runner inventory observation reports no exact-label
+  self-hosted runner online;
 - the retained self-hosted workspace contains an existing signing-result import
   destination that would make the Buildchain import non-idempotent;
 - the observed macOS queue exceeds the initial 25-minute budget; or
@@ -38,6 +40,13 @@ build-and-verify candidates only: `publish-channel` is always `none`, no release
 candidate passport is requested, and the caller-owned signing/notarization tail
 is not run. The existing Alpha promotion workflow remains the only publication
 authority.
+
+The availability probe runs only from the protected default-branch workflow,
+before candidate source checkout, and passes only a de-identified observation
+to the controller. An online runner remains online while busy, so ordinary
+contention still uses the queue threshold. Missing permissions or an
+unavailable inventory API cannot assert an outage and therefore falls back to
+the existing queue policy.
 
 After overflow, the controller may cancel the self-hosted candidate only while
 its platform job is still queued and only after the hosted platform job exposes

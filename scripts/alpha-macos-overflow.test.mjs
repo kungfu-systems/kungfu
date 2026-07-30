@@ -2,12 +2,18 @@
 
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
 import { test } from 'node:test';
 
 import {
   DEFAULT_THRESHOLD_MINUTES,
+  REQUIRED_SELF_HOSTED_LABELS,
+  RUNNER_AVAILABILITY_SCHEMA,
   checkWorkspaceHealth,
+  controlOverflow,
   decideOverflow,
+  normalizeRunnerAvailability,
   summarizeCandidate,
 } from '../.github/actions/require-alpha-preflight/alpha-macos-overflow.mjs';
 
@@ -54,6 +60,178 @@ test('observed queue crossing dispatches the hosted candidate', () => {
       reason: 'observed-queue-exceeds-threshold',
     },
   );
+});
+
+test('trusted offline inventory dispatches hosted without waiting for the queue budget', () => {
+  const runnerAvailability = normalizeRunnerAvailability({
+    schema: RUNNER_AVAILABILITY_SCHEMA,
+    status: 'offline',
+    requiredLabels: REQUIRED_SELF_HOSTED_LABELS,
+    matchingRunnerCount: 1,
+    onlineRunnerCount: 0,
+    busyOnlineRunnerCount: 0,
+    observedAt: '2026-07-30T00:00:00Z',
+    source: 'github-actions-repository-runners-api',
+  });
+  assert.deepEqual(
+    decideOverflow({
+      self: queuedSelf,
+      runnerAvailability,
+      now: Date.parse('2026-07-30T00:02:00Z'),
+    }),
+    {
+      action: 'dispatch-hosted',
+      reason: 'self-hosted-fleet-offline',
+    },
+  );
+});
+
+test('a busy online runner remains online and keeps the queue threshold', () => {
+  const runnerAvailability = normalizeRunnerAvailability({
+    schema: RUNNER_AVAILABILITY_SCHEMA,
+    status: 'online',
+    requiredLabels: REQUIRED_SELF_HOSTED_LABELS,
+    matchingRunnerCount: 1,
+    onlineRunnerCount: 1,
+    busyOnlineRunnerCount: 1,
+    observedAt: '2026-07-30T00:00:00Z',
+    source: 'github-actions-repository-runners-api',
+  });
+  assert.deepEqual(
+    decideOverflow({
+      self: queuedSelf,
+      runnerAvailability,
+      now: Date.parse('2026-07-30T00:20:00Z'),
+    }),
+    { action: 'wait', reason: 'self-hosted-within-queue-budget' },
+  );
+});
+
+test('unavailable runner inventory fails closed to the queue threshold', () => {
+  const runnerAvailability = normalizeRunnerAvailability({
+    schema: RUNNER_AVAILABILITY_SCHEMA,
+    status: 'unavailable',
+    reason: 'repository-runner-inventory-unavailable',
+  });
+  assert.deepEqual(
+    decideOverflow({
+      self: queuedSelf,
+      runnerAvailability,
+      now: Date.parse('2026-07-30T00:20:00Z'),
+    }),
+    { action: 'wait', reason: 'self-hosted-within-queue-budget' },
+  );
+});
+
+test('a dispatched hosted candidate is not duplicated while run visibility lags', () => {
+  assert.deepEqual(
+    decideOverflow({
+      self: queuedSelf,
+      hosted: summarizeCandidate({
+        route: 'github-hosted',
+        run: null,
+        jobs: [],
+      }),
+      hostedDispatched: true,
+      runnerAvailability: normalizeRunnerAvailability({
+        schema: RUNNER_AVAILABILITY_SCHEMA,
+        status: 'offline',
+        requiredLabels: REQUIRED_SELF_HOSTED_LABELS,
+        matchingRunnerCount: 0,
+        onlineRunnerCount: 0,
+        busyOnlineRunnerCount: 0,
+        observedAt: '2026-07-30T00:00:00Z',
+        source: 'github-actions-repository-runners-api',
+      }),
+    }),
+    { action: 'wait', reason: 'hosted-run-not-visible' },
+  );
+});
+
+test('controller dispatches hosted immediately after self when the trusted fleet is offline', async () => {
+  const dispatches = [];
+  const client = {
+    async dispatch({ route }) {
+      dispatches.push(route);
+    },
+    async findRun({ route }) {
+      return route === 'self-hosted'
+        ? {
+            id: 70,
+            status: 'completed',
+            conclusion: 'cancelled',
+            created_at: '2026-07-30T00:00:00Z',
+            updated_at: '2026-07-30T00:00:10Z',
+          }
+        : {
+            id: 80,
+            status: 'completed',
+            conclusion: 'success',
+            created_at: '2026-07-30T00:00:01Z',
+            updated_at: '2026-07-30T00:01:00Z',
+          };
+    },
+    async jobs(runId) {
+      return runId === 70
+        ? [
+            {
+              id: 71,
+              name: 'build / macOS ARM64 self-hosted primary',
+              status: 'completed',
+              conclusion: 'cancelled',
+              runner_name: '',
+              labels: [
+                'self-hosted',
+                'macOS',
+                'ARM64',
+                'kungfu-build-v4-macos-arm64',
+              ],
+            },
+          ]
+        : [
+            {
+              id: 81,
+              name: 'build / macOS ARM64 GitHub-hosted overflow',
+              status: 'completed',
+              conclusion: 'success',
+              runner_name: 'GitHub Actions 103',
+              labels: ['macos-15'],
+              completed_at: '2026-07-30T00:01:00Z',
+            },
+          ];
+    },
+    async cancel() {
+      throw new Error('terminal self candidate must not be cancelled');
+    },
+  };
+  const output = path.join(
+    fs.mkdtempSync(path.join(os.tmpdir(), 'kungfu-offline-overflow-')),
+    'receipt.json',
+  );
+  const receipt = await controlOverflow({
+    repository: 'kungfu-systems/kungfu',
+    token: 'fixture-token',
+    ref: 'dev/v4/v4.0',
+    sourceSha: 'a'.repeat(40),
+    preflightRunId: '123',
+    requestId: 'offline-fixture',
+    runnerAvailability: {
+      schema: RUNNER_AVAILABILITY_SCHEMA,
+      status: 'offline',
+      requiredLabels: REQUIRED_SELF_HOSTED_LABELS,
+      matchingRunnerCount: 0,
+      onlineRunnerCount: 0,
+      busyOnlineRunnerCount: 0,
+      observedAt: '2026-07-30T00:00:00Z',
+      source: 'github-actions-repository-runners-api',
+    },
+    out: output,
+    client,
+    now: () => Date.parse('2026-07-30T00:00:00Z'),
+  });
+  assert.deepEqual(dispatches, ['self-hosted', 'github-hosted']);
+  assert.equal(receipt.decision.fallbackReason, 'self-hosted-fleet-offline');
+  assert.equal(receipt.decision.winner, 'github-hosted');
 });
 
 test('source-proven predicted remaining queue can dispatch early', () => {
@@ -236,6 +414,10 @@ test('workflow contract keeps candidates exact-source, independent, and publish-
     /ref: \$\{\{ fromJSON\(inputs\.macos-overflow-request-json \|\| '\{\}'\)\.sourceSha/u,
   );
   assert.match(preflightAction, /--request-json "\$REQUEST_JSON"/u);
+  assert.match(
+    preflightAction,
+    /--runner-availability-json "\$RUNNER_AVAILABILITY_JSON"/u,
+  );
   assert.match(workflow, /release-candidate: true/u);
   assert.match(
     workflow,
@@ -244,5 +426,13 @@ test('workflow contract keeps candidates exact-source, independent, and publish-
   assert.match(
     workflow,
     /credential-island-macos-app-path: \$\{\{ \(fromJSON\(inputs\.macos-overflow-request-json \|\| '\{\}'\)\.mode != 'self-hosted'/u,
+  );
+  assert.match(
+    workflow,
+    /github\.ref == format\('refs\/heads\/\{0\}', github\.event\.repository\.default_branch\)/u,
+  );
+  assert.match(
+    workflow,
+    /credential-island-macos:[\s\S]*if: \$\{\{ needs\.build\.result == 'success' && fromJSON\(inputs\.macos-overflow-request-json \|\| '\{\}'\)\.mode != 'self-hosted' && fromJSON\(inputs\.macos-overflow-request-json \|\| '\{\}'\)\.mode != 'github-hosted'/u,
   );
 });

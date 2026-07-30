@@ -8,8 +8,15 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 export const OVERFLOW_RECEIPT_SCHEMA = 'kungfu.alpha-macos-overflow-receipt/v1';
+export const RUNNER_AVAILABILITY_SCHEMA = 'kungfu.runner-availability/v1';
 export const DEFAULT_THRESHOLD_MINUTES = 25;
 export const CANDIDATE_WORKFLOW = 'build.yml';
+export const REQUIRED_SELF_HOSTED_LABELS = Object.freeze([
+  'self-hosted',
+  'macOS',
+  'ARM64',
+  'kungfu-build-v4-macos-arm64',
+]);
 const SHA_PATTERN = /^[0-9a-f]{40}$/u;
 const ROOT_PATTERN = /^sha256:[0-9a-f]{64}$/u;
 const TERMINAL_RUN_STATUSES = new Set(['completed']);
@@ -46,6 +53,88 @@ function parseArgs(argv) {
     options[flag.slice(2)] = rest[index + 1];
   }
   return { command, options };
+}
+
+export function normalizeRunnerAvailability(value) {
+  let parsed = value;
+  if (typeof value === 'string') {
+    try {
+      parsed = JSON.parse(value);
+    } catch {
+      throw new Error('runner availability must be valid JSON');
+    }
+  }
+  if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed))
+    throw new Error('runner availability must be an object');
+  if (parsed.schema !== RUNNER_AVAILABILITY_SCHEMA)
+    throw new Error(
+      `runner availability schema must be ${RUNNER_AVAILABILITY_SCHEMA}`,
+    );
+  if (parsed.status === 'unavailable') {
+    return {
+      schema: RUNNER_AVAILABILITY_SCHEMA,
+      status: 'unavailable',
+      reason: String(parsed.reason || 'unspecified'),
+      observedAt: String(parsed.observedAt || ''),
+    };
+  }
+  if (!['online', 'offline'].includes(parsed.status))
+    throw new Error(
+      'runner availability status must be online, offline, or unavailable',
+    );
+  const requiredLabels = Array.isArray(parsed.requiredLabels)
+    ? parsed.requiredLabels.map(String)
+    : [];
+  if (
+    requiredLabels.length !== REQUIRED_SELF_HOSTED_LABELS.length ||
+    REQUIRED_SELF_HOSTED_LABELS.some((label) => !requiredLabels.includes(label))
+  )
+    throw new Error(
+      'runner availability labels do not match the required self-hosted lane',
+    );
+  const matchingRunnerCount = boundedNumber(
+    parsed.matchingRunnerCount,
+    'matching runner count',
+    { min: 0, max: 10_000 },
+  );
+  const onlineRunnerCount = boundedNumber(
+    parsed.onlineRunnerCount,
+    'online runner count',
+    { min: 0, max: matchingRunnerCount },
+  );
+  const busyOnlineRunnerCount = boundedNumber(
+    parsed.busyOnlineRunnerCount,
+    'busy online runner count',
+    { min: 0, max: onlineRunnerCount },
+  );
+  if (
+    ![matchingRunnerCount, onlineRunnerCount, busyOnlineRunnerCount].every(
+      Number.isInteger,
+    )
+  )
+    throw new Error('runner availability counts must be integers');
+  if (parsed.status === 'online' && onlineRunnerCount === 0)
+    throw new Error('online runner availability requires an online runner');
+  if (parsed.status === 'offline' && onlineRunnerCount !== 0)
+    throw new Error(
+      'offline runner availability cannot contain an online runner',
+    );
+  const observedAt = required(
+    parsed.observedAt,
+    'runner availability observedAt',
+  );
+  if (!Number.isFinite(Date.parse(observedAt)))
+    throw new Error('runner availability observedAt must be an ISO timestamp');
+  return {
+    schema: RUNNER_AVAILABILITY_SCHEMA,
+    status: parsed.status,
+    requiredLabels: [...REQUIRED_SELF_HOSTED_LABELS],
+    matchingRunnerCount,
+    onlineRunnerCount,
+    busyOnlineRunnerCount,
+    observedAt,
+    source: required(parsed.source, 'runner availability source'),
+  };
 }
 
 function candidateTitle(requestId, route) {
@@ -149,12 +238,27 @@ function chooseWinner(self, hosted) {
 export function decideOverflow({
   self,
   hosted = null,
+  hostedDispatched = false,
+  runnerAvailability = normalizeRunnerAvailability({
+    schema: RUNNER_AVAILABILITY_SCHEMA,
+    status: 'unavailable',
+    reason: 'not-supplied',
+  }),
   now = Date.now(),
   thresholdMinutes = DEFAULT_THRESHOLD_MINUTES,
   predictedRemainingQueueMinutes = null,
   predictionRoot = '',
 }) {
   if (!self?.run) return { action: 'wait', reason: 'self-run-not-visible' };
+  if (hostedDispatched && !hosted?.run)
+    return { action: 'wait', reason: 'hosted-run-not-visible' };
+
+  if (!hosted?.run && runnerAvailability.status === 'offline') {
+    return {
+      action: 'dispatch-hosted',
+      reason: 'self-hosted-fleet-offline',
+    };
+  }
 
   if (
     predictedRemainingQueueMinutes !== null &&
@@ -381,6 +485,11 @@ export async function controlOverflow({
   predictedRemainingQueueMinutes = null,
   predictionRoot = '',
   healthMode = 'auto',
+  runnerAvailability = {
+    schema: RUNNER_AVAILABILITY_SCHEMA,
+    status: 'unavailable',
+    reason: 'not-supplied',
+  },
   diagnosticMode = false,
   pollSeconds = 15,
   timeoutMinutes = 300,
@@ -404,6 +513,7 @@ export async function controlOverflow({
     throw new Error('health mode must be auto or unhealthy');
   if (healthMode !== 'auto' && !diagnosticMode)
     throw new Error('forced health mode requires diagnostic mode');
+  const availability = normalizeRunnerAvailability(runnerAvailability);
   let prediction = null;
   if (
     predictedRemainingQueueMinutes !== null &&
@@ -454,6 +564,19 @@ export async function controlOverflow({
     healthMode,
   });
   record('dispatch-self', 'self-hosted-primary');
+  if (availability.status === 'offline') {
+    await github.dispatch({
+      ref,
+      requestId: exactRequestId,
+      route: 'github-hosted',
+      sourceSha: exactSourceSha,
+      preflightRunId,
+      healthMode: 'auto',
+    });
+    hostedDispatched = true;
+    fallbackReason = 'self-hosted-fleet-offline';
+    record('dispatch-hosted', fallbackReason);
+  }
 
   while (now() < deadline) {
     const self = await snapshot(github, {
@@ -473,6 +596,8 @@ export async function controlOverflow({
     const decision = decideOverflow({
       self,
       hosted,
+      hostedDispatched,
+      runnerAvailability: availability,
       now: now(),
       thresholdMinutes: threshold,
       predictedRemainingQueueMinutes: prediction,
@@ -526,6 +651,7 @@ export async function controlOverflow({
           thresholdMinutes: threshold,
           diagnosticMode: Boolean(diagnosticMode),
           healthMode,
+          runnerAvailability: availability,
           predictedRemainingQueueMinutes: prediction,
           predictionRoot: prediction ? predictionRoot : '',
           cancellation:
@@ -601,6 +727,16 @@ async function main(argv = process.argv.slice(2)) {
       null,
     predictionRoot: request.predictionRoot || options['prediction-root'] || '',
     healthMode: request.healthMode || options['health-mode'] || 'auto',
+    runnerAvailability:
+      request.runnerAvailabilityFixture &&
+      (request.diagnosticMode === true || options['diagnostic-mode'] === 'true')
+        ? request.runnerAvailabilityFixture
+        : options['runner-availability-json'] ||
+          JSON.stringify({
+            schema: RUNNER_AVAILABILITY_SCHEMA,
+            status: 'unavailable',
+            reason: 'not-supplied',
+          }),
     diagnosticMode:
       request.diagnosticMode === true || options['diagnostic-mode'] === 'true',
     pollSeconds: options['poll-seconds'] || 15,
@@ -630,6 +766,9 @@ async function main(argv = process.argv.slice(2)) {
         publication: 'none',
         promotionAuthority: 'unchanged-existing-alpha-promotion',
         callerOwnedNotarizationTail: 'not-run-build-and-verify-candidates-only',
+        runnerAvailability: normalizeRunnerAvailability(
+          invocation.runnerAvailability,
+        ),
       },
       completedAt: new Date().toISOString(),
     };

@@ -15,6 +15,10 @@ inputs:
     description: Optional exact-source queue-aware macOS controller envelope.
     required: false
     default: "{}"
+  runner-availability-json:
+    description: Trusted, de-identified repository runner inventory observation.
+    required: false
+    default: '{"schema":"kungfu.runner-availability/v1","status":"unavailable","reason":"probe-not-run"}'
 
 outputs:
   run-id:
@@ -107,6 +111,7 @@ runs:
       env:
         GITHUB_TOKEN: ${{ github.token }}
         REQUEST_JSON: ${{ inputs.controller-request-json }}
+        RUNNER_AVAILABILITY_JSON: ${{ inputs.runner-availability-json }}
       run: |
         set -euo pipefail
         test "$GITHUB_SHA" = "${{ fromJSON(inputs.controller-request-json).sourceSha }}"
@@ -116,6 +121,7 @@ runs:
           --repository "$GITHUB_REPOSITORY" \
           --ref "$GITHUB_REF_NAME" \
           --request-json "$REQUEST_JSON" \
+          --runner-availability-json "$RUNNER_AVAILABILITY_JSON" \
           --out .buildchain/alpha-macos-overflow/receipt.json
 
     - name: Upload queue, route, runner, and winner receipt

@@ -870,7 +870,7 @@
           "authority": "product-publication",
           "publication": "product",
           "receipt": "none",
-          "definitionDigest": "sha256:5c8d2a89774a40c3cc38dec1e51bd711f76068a6e066a84887e7db402e01c9bd",
+          "definitionDigest": "sha256:83500b86f875c133a8a2ad673e5e0e9fbab0a83daa767d0bef2e23e0d5ca09d3",
           "credentials": {"githubToken":"read","oidc":false,"repositorySecrets":["BUILDCHAIN_MACOS_CERTIFICATE_P12_BASE64","BUILDCHAIN_MACOS_CERTIFICATE_PASSWORD","BUILDCHAIN_MACOS_NOTARY_API_ISSUER","BUILDCHAIN_MACOS_NOTARY_API_KEY_ID","BUILDCHAIN_MACOS_NOTARY_API_KEY_P8_BASE64"],"inheritedSecrets":false,"environment":"buildchain-artifact-signing"},
           "externalActions": ["actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131","actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131","actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a","actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a"],
           "steps": [
@@ -996,19 +996,24 @@
           "authority": "qualification",
           "publication": "none",
           "receipt": "diagnostic",
-          "definitionDigest": "sha256:17842edcc9f08b0b183ffdd903440d7366fc22a1c9cba906aedea4151edd0feb",
-          "credentials": {"githubToken":"write","oidc":true,"repositorySecrets":[],"inheritedSecrets":false,"environment":null},
-          "externalActions": ["actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0"],
+          "definitionDigest": "sha256:8d40c1e6683b43c2560a24c9dd8581fc96b1e140dcae8844b340c24ac2c69039",
+          "credentials": {"githubToken":"write","oidc":true,"repositorySecrets":["KUNGFU_GITHUB_TOKEN"],"inheritedSecrets":false,"environment":null},
+          "externalActions": ["actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd","actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0"],
           "steps": [
             {
               "index": 1,
+              "label": "id:macos-runner-availability",
+              "definitionDigest": "sha256:d894a219fdcd2f88c86ff28e7cba92b8993027e477c4e83bad5bcc3b7c0bd53e"
+            },
+            {
+              "index": 2,
               "label": "name:Check out exact candidate source",
               "definitionDigest": "sha256:90b7875c1b8263fc6ee031b6f446decfc1fe5eb289f08dbc3d506c4bce43f113"
             },
             {
-              "index": 2,
+              "index": 3,
               "label": "id:receipt",
-              "definitionDigest": "sha256:a49c0082db42c213bcca01fc5c21697ebb73985311b7d427250566ae39b3fad5"
+              "definitionDigest": "sha256:cc963d0248e120318fcf7abc14bfae70dcd6377c0ccc2becd07493802508fb0d"
             }
           ]
         },

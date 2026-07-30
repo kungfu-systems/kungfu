@@ -66,6 +66,62 @@ jobs:
       toolchain-root: ${{ steps.receipt.outputs.toolchain-root }}
       policy-root: ${{ steps.receipt.outputs.policy-root }}
     steps:
+      - name: Observe exact-label self-hosted macOS availability
+        id: macos-runner-availability
+        if: ${{ github.event_name == 'workflow_dispatch' && fromJSON(inputs.macos-overflow-request-json || '{}').mode == 'control' && github.ref == format('refs/heads/{0}', github.event.repository.default_branch) }}
+        uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8
+        with:
+          github-token: ${{ secrets.KUNGFU_GITHUB_TOKEN }}
+          result-encoding: string
+          script: |
+            const requiredLabels = [
+              "self-hosted",
+              "macOS",
+              "ARM64",
+              "kungfu-build-v4-macos-arm64",
+            ];
+            const observedAt = new Date().toISOString();
+            try {
+              const runners = await github.paginate(
+                github.rest.actions.listSelfHostedRunnersForRepo,
+                {
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  per_page: 100,
+                },
+              );
+              const matching = runners.filter((runner) => {
+                const labels = new Set(
+                  (runner.labels || []).map((label) => label.name),
+                );
+                return requiredLabels.every((label) => labels.has(label));
+              });
+              const online = matching.filter(
+                (runner) => runner.status === "online",
+              );
+              return JSON.stringify({
+                schema: "kungfu.runner-availability/v1",
+                status: online.length > 0 ? "online" : "offline",
+                requiredLabels,
+                matchingRunnerCount: matching.length,
+                onlineRunnerCount: online.length,
+                busyOnlineRunnerCount: online.filter((runner) => runner.busy)
+                  .length,
+                observedAt,
+                source: "github-actions-repository-runners-api",
+              });
+            } catch (error) {
+              core.warning(
+                `Self-hosted runner inventory unavailable; retaining the queue threshold (status ${error.status || "unknown"}).`,
+              );
+              return JSON.stringify({
+                schema: "kungfu.runner-availability/v1",
+                status: "unavailable",
+                reason: "repository-runner-inventory-unavailable",
+                observedAt,
+              });
+            }
+
       - name: Check out exact candidate source
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
@@ -80,6 +136,7 @@ jobs:
           source-sha: ${{ fromJSON(inputs.macos-overflow-request-json || '{}').sourceSha || github.event.pull_request.head.sha || github.sha }}
           receipt-run-id: ${{ fromJSON(inputs.macos-overflow-request-json || '{}').preflightRunId || inputs.preflight-run-id || '' }}
           controller-request-json: ${{ inputs.macos-overflow-request-json || '{}' }}
+          runner-availability-json: ${{ steps.macos-runner-availability.outputs.result || '{"schema":"kungfu.runner-availability/v1","status":"unavailable","reason":"probe-not-run"}' }}
 
   build:
     needs: preflight
@@ -575,7 +632,7 @@ jobs:
   credential-island-macos:
     name: Sign and notarize sealed macOS application
     needs: build
-    if: ${{ needs.build.result == 'success' && (!inputs.platforms-json || contains(inputs.platforms-json, 'macos-arm64')) }}
+    if: ${{ needs.build.result == 'success' && fromJSON(inputs.macos-overflow-request-json || '{}').mode != 'self-hosted' && fromJSON(inputs.macos-overflow-request-json || '{}').mode != 'github-hosted' && (!inputs.platforms-json || contains(inputs.platforms-json, 'macos-arm64')) }}
     runs-on: macos-15
     timeout-minutes: 90
     environment:
