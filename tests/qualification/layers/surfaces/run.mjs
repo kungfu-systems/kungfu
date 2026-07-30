@@ -34,6 +34,19 @@ function fail(message) {
   throw new Error(message);
 }
 
+export function surfaceQualificationTempRoot(
+  platform = process.platform,
+  env = process.env,
+  fallback = os.tmpdir(),
+) {
+  const hostTemporary = String(env.KUNGFU_QUALIFICATION_HOST_TEMP || '').trim();
+  // Release qualification redirects generic temp files into the checkout for
+  // cleanup, but that makes deeply nested NSIS payload paths exceed legacy
+  // Windows deletion limits. Keep installer qualification on the short runner
+  // temp that the release driver preserved before applying that redirect.
+  return platform === 'win32' && hostTemporary ? hostTemporary : fallback;
+}
+
 function parseArgs(argv) {
   const options = {
     validateOnly: false,
@@ -239,8 +252,10 @@ function directoryBytes(root) {
 }
 
 async function exactQualification(options, fixture) {
+  const tempRoot = surfaceQualificationTempRoot();
+  fs.mkdirSync(tempRoot, { recursive: true });
   const temp = fs.mkdtempSync(
-    path.join(os.tmpdir(), 'kungfu-surface-qualification-'),
+    path.join(tempRoot, 'kungfu-surface-qualification-'),
   );
   try {
     if (options.cliArchive.endsWith('.zip'))

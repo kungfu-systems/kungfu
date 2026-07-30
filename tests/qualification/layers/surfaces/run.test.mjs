@@ -9,7 +9,7 @@ import { test } from 'node:test';
 import { fileURLToPath } from 'node:url';
 
 import { guiQualificationArgs } from './installer.mjs';
-import { findArtifact } from './run.mjs';
+import { findArtifact, surfaceQualificationTempRoot } from './run.mjs';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const runner = path.join(here, 'run.mjs');
@@ -23,6 +23,33 @@ test('surface qualification source contract validates without artifacts', () => 
   assert.equal(result.status, 0, result.stderr || result.stdout);
   assert.match(result.stdout, /source-valid/);
   assert.match(result.stdout, /does not qualify installed artifacts/);
+});
+
+test('Windows installer qualification uses the preserved short host temp', () => {
+  assert.equal(
+    surfaceQualificationTempRoot(
+      'win32',
+      { KUNGFU_QUALIFICATION_HOST_TEMP: 'D:\\a\\_temp' },
+      'D:\\a\\kungfu\\kungfu\\.buildchain\\tmp',
+    ),
+    'D:\\a\\_temp',
+  );
+  assert.equal(
+    surfaceQualificationTempRoot(
+      'win32',
+      { KUNGFU_QUALIFICATION_HOST_TEMP: '  ' },
+      'D:\\fallback',
+    ),
+    'D:\\fallback',
+  );
+  assert.equal(
+    surfaceQualificationTempRoot(
+      'linux',
+      { KUNGFU_QUALIFICATION_HOST_TEMP: '/runner/temp' },
+      '/repo/.buildchain/tmp',
+    ),
+    '/repo/.buildchain/tmp',
+  );
 });
 
 test('desktop discovery treats a matched app bundle as one artifact root', () => {
