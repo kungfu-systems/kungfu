@@ -9,7 +9,7 @@ confidence: high
 sensitivity: public
 evidence_grade: A
 review_state: self-reviewed
-last_reviewed: 2026-07-29
+last_reviewed: 2026-07-30
 ai_provenance: GPT-5 via Codex on 2026-07-25; based on checked-in Kungfu, Buildchain, and build-images source plus protected GitHub workflow evidence visible to this task; no production deployment or unobserved runtime is claimed
 ---
 
@@ -181,6 +181,25 @@ Each blocking signal was repaired at its owning boundary rather than bypassed:
   targets only when their lexical normalization remains under the single
   archive root, and still performs a strict post-extraction root and
   regular-file check.
+- Run `30505553839` attempt 1 failed closed while the exact Linux build was
+  fetching the pinned Rust toolchain from `rsproxy.cn`. Attempt 2 completed the
+  build, release verification, S3 relay, source artifact `8746696896`, and
+  same-run coordinate resolution, then rejected the installed autoplay because
+  it emitted no completion sentinel. Diagnostic artifact `8746723862`
+  preserved the bounded failure independently from the 663 MB source payload.
+- Run `30510623806` was cancelled before heavy qualification after a local
+  installed-runtime probe proved that the canonical Agent Work Lab result is
+  `qualified`, not `passed`. The adapter and its negative fixtures were
+  corrected before another source-bound build was allowed to mint evidence.
+- Run `30510920125` completed exact-source preflight `30510802683`, the Linux
+  build, full release verification, S3 relay, source artifact `8748304680`,
+  controller finalization, and same-run coordinate resolution. The required
+  Gate then rejected the installed TUI before rendering because its bundle
+  resolved `@kungfu-tech/core/package.json`, a workspace-only package graph
+  absent from the CLI archive. Diagnostic artifact `8748335784` retained exit
+  status zero and a bounded, control-code-stripped PTY tail. The TUI now treats
+  its already established `KUNGFU_DIR` as the packaged runtime authority before
+  consulting any source-workspace package.
 
 The corresponding repairs landed through independently approved protected PRs
 `#1492`, `#1497`, `#1500`, `#1503`, `#1504`, `#1505`, `#1506`, `#1507`,
