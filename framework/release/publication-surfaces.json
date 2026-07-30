@@ -165,6 +165,13 @@
           "sourceRoot": "sha256:32ec604066c03642684a8297467977924b6d2af817083359c0aac0a081f34b70"
         },
         {
+          "path": ".github/workflows/dev-gate-latency-patrol.yml",
+          "classification": "non-publication",
+          "owner": "kungfu-ci",
+          "surfaceIds": [],
+          "sourceRoot": "sha256:aa967c21532e4e06aec2d1ece3f9c76a3573d02ccb6a60162e0aaf50c819b870"
+        },
+        {
           "path": ".github/workflows/stable-candidate-patrol.yml",
           "classification": "qualification",
           "owner": "kungfu-release",
@@ -806,5 +813,5 @@
       }
     }
   ],
-  "registryRoot": "sha256:25faaeeb2408b4e59b474dbc06c86e2bc700c4df8c51523caed23b8ee0fef621"
+  "registryRoot": "sha256:e6bc1bab8b04f87625b5cc3e8030d0cfdff7433d2eb3f4f44871436eea4c1a98"
 }
