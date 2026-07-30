@@ -1,26 +1,54 @@
 # SPDX-License-Identifier: Apache-2.0
 
-# The bounded v2 CodeBuild campaign is complete. Keep this dispatchable
-# tombstone so stale operator bookmarks fail before any burst runner or cloud
-# work. Reactivation is governed by the machine-readable contract below.
-name: AWS US Linux Burst Qualification (Retired)
+name: AWS US Linux Burst Qualification
 
 on:
   workflow_dispatch:
+    inputs:
+      qualification-id:
+        description: "Auditable slot label for this bounded campaign"
+        required: true
 
 permissions:
   contents: read
 
+concurrency:
+  group: aws-us-linux-burst-${{ github.run_id }}
+  cancel-in-progress: false
+
 jobs:
-  retired:
-    name: Reject retired AWS Linux burst campaign
-    runs-on: ubuntu-24.04
-    steps:
-      - name: Fail closed before burst runner or cloud work
-        shell: bash
-        env:
-          RETIREMENT_CONTRACT: docs/qualification/gates/aws-burst-retirement.json
-        run: |
-          set -euo pipefail
-          echo "::error title=AWS Linux burst campaign retired::See ${RETIREMENT_CONTRACT} for the evidence and v3 reactivation contract."
-          exit 1
+  qualify:
+    name: Exact-source Linux core qualification after Buildchain trust gate
+    uses: kungfu-systems/buildchain/.github/workflows/.build.yml@407445c43df4888bb4464e91aef0debdc62aa0e6
+    with:
+      buildchain-ref: 407445c43df4888bb4464e91aef0debdc62aa0e6
+      runner-preset: aws-us-codebuild-linux
+      aws-codebuild-project: kungfu-buildchain-linux-burst-poc
+      setup-rust: true
+      rust-toolchain: "1.96.0"
+      rustup-dist-server: https://rsproxy.cn
+      rustup-update-root: https://rsproxy.cn/rustup
+      cargo-registry-index: sparse+https://index.crates.io/
+      artifact-name: kungfu-aws-linux-burst-${{ inputs.qualification-id }}
+      artifact-paths: |
+        product/release/qualification/aws-codebuild-linux.json
+      expected-artifacts-json: >-
+        {"minFiles":1,"minTotalBytes":1,"requiredPaths":["product/release/qualification/aws-codebuild-linux.json"]}
+      require-install: true
+      install-command: node scripts/buildchain-install.mjs
+      require-build: true
+      build-command: KUNGFU_BUILD_JOBS=4 ./shifu build:core && node scripts/buildchain-install.mjs qualify-codebuild record
+      requested-parallelism: 4
+      require-verify: true
+      verify-command: node scripts/buildchain-install.mjs qualify-codebuild verify
+      lifecycle-timeout-minutes: 105
+      artifact-transfer-mode: github-artifacts
+      artifact-retention-days: 14
+      checkout-cache-mode: off
+      checkout-cache-fallback: github
+      checkout-cache-github-timeout-seconds: 1200
+      publish-channel: none
+      release-candidate: false
+      buildchain-contract-lock-path: .buildchain/contract-lock.json
+      buildchain-contract-compatibility-policy: allow-additive
+      buildchain-contract-drift-issue-mode: off

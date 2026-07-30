@@ -54,8 +54,11 @@ without changing and refreshing the manifest fails the Gate catalog check.
 | `.github/workflows/affected-native-pr.yml` | `source_acceptance` | qualification | none | diagnostic | token:read | none | 0 |
 | `.github/workflows/alpha-promotion-preflight.yml` | `aggregate` | qualification | none | diagnostic | token:read | none | 4 |
 | `.github/workflows/alpha-promotion-preflight.yml` | `probe` | qualification | none | diagnostic | token:read | none | 10 |
-| `.github/workflows/aws-us-linux-burst-qualification.yml` | `retired` | qualification | none | diagnostic | token:read | none | 1 |
-| `.github/workflows/aws-us-windows-burst-qualification.yml` | `retired` | qualification | none | diagnostic | token:read | none | 1 |
+| `.github/workflows/aws-us-linux-burst-qualification.yml` | `qualify` | qualification | none | diagnostic | token:read | none | 0 |
+| `.github/workflows/aws-us-macos-burst-qualification.yml` | `qualify` | qualification | none | diagnostic | token:read | none | 0 |
+| `.github/workflows/aws-us-windows-burst-qualification.yml` | `cleanup-exercise` | qualification | none | diagnostic | token:read | none | 2 |
+| `.github/workflows/aws-us-windows-burst-qualification.yml` | `qualify` | qualification | none | diagnostic | token:read | none | 0 |
+| `.github/workflows/aws-us-windows-burst-qualification.yml` | `trust` | qualification | none | diagnostic | token:read | none | 2 |
 | `.github/workflows/build.yml` | `auditable-demo` | qualification | none | qualifying | token:read | none | 0 |
 | `.github/workflows/build.yml` | `auditable-demo-passport` | qualification | none | qualifying | token:read | none | 4 |
 | `.github/workflows/build.yml` | `build` | qualification | none | qualifying | token:write, oidc, repo-secret:BUILDCHAIN_ARTIFACT_RELAY_S3_DOWNLOAD_ROLE_ARN+BUILDCHAIN_ARTIFACT_RELAY_S3_ROLE_ARN+BUILDCHAIN_ARTIFACT_RELAY_S3_UPLOAD_ROLE_ARN+KUNGFU_GITHUB_TOKEN | none | 0 |

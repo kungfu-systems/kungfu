@@ -8,7 +8,10 @@ import os from 'node:os';
 import path from 'node:path';
 import { test } from 'node:test';
 
-import { probeReleasePlatform } from './probe-release-platform.mjs';
+import {
+  probeAwsMacosJitRunner,
+  probeReleasePlatform,
+} from './probe-release-platform.mjs';
 import {
   loadExecutionProfile,
   parseExecutionProfile,
@@ -155,6 +158,42 @@ test('cheap platform probe runs before every expensive qualification stage', () 
       'release:probe:platform',
     );
   }
+});
+
+test('AWS macOS JIT probe binds the host, instance, source, and toolchain', (t) => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'kungfu-macos-jit-'));
+  t.after(() => fs.rmSync(root, { recursive: true, force: true }));
+  const { report, output } = probeAwsMacosJitRunner({
+    root,
+    platform: 'darwin',
+    env: {
+      BUILDCHAIN_RUNNER_LABELS_JSON: JSON.stringify([
+        'self-hosted',
+        'macOS',
+        'ARM64',
+        'aws-us-ec2-macos-jit-mac-smoke-01',
+      ]),
+      GITHUB_SHA: 'a'.repeat(40),
+      GITHUB_RUN_ID: '1234',
+      GITHUB_RUN_ATTEMPT: '1',
+      RUNNER_NAME: 'mac-jit',
+      AWS_EC2_MAC_HOST_ID: 'h-0123abc',
+      AWS_EC2_MAC_HOST_ALLOCATED_AT: '2026-07-30T00:00:00Z',
+      AWS_EC2_INSTANCE_ID: 'i-0123abc',
+      AWS_EC2_INSTANCE_TYPE: 'mac2.metal',
+      AWS_EC2_AMI_ID: 'ami-0123abc',
+      AWS_EC2_AMI_NAME: 'amzn-ec2-macos-15.7.7',
+      AWS_EC2_AVAILABILITY_ZONE: 'us-east-1a',
+      AWS_EC2_LAUNCHED_AT: '2026-07-30T00:05:00Z',
+    },
+    runCommand: (command, args) => `${command} ${args.join(' ')}`,
+  });
+  assert.equal(report.contract, 'kungfu.aws-macos-jit-runner-profile/v1');
+  assert.equal(report.aws.hostId, 'h-0123abc');
+  assert.equal(report.aws.instanceId, 'i-0123abc');
+  assert.equal(report.sourceSha, 'a'.repeat(40));
+  assert.match(report.digest, /^sha256:[0-9a-f]{64}$/);
+  assert.equal(fs.existsSync(output), true);
 });
 
 test('Linux ARM64 release qualification is bounded to the exact Core artifact', () => {

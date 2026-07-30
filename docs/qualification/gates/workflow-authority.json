@@ -183,34 +183,71 @@
     {
       "path": ".github/workflows/aws-us-linux-burst-qualification.yml",
       "authority": "qualification",
-      "definitionDigest": "sha256:b1b4ff62755b16ce738106c39208d455b528663caf7ffb7302fca519e366dd4e",
+      "definitionDigest": "sha256:8212f64f7e581d9752bd8ca1d5056120caca56f32e9cda326e5ab0dd70f5e052",
       "jobs": [
         {
-          "id": "retired",
+          "id": "qualify",
           "authority": "qualification",
           "publication": "none",
           "receipt": "diagnostic",
-          "definitionDigest": "sha256:4097ebd030b518547c6b3c9917a4cf04a07f457f402854220b284c2ae521c25c",
+          "definitionDigest": "sha256:acd77bbf6e02e67a87538804a8f6676331eb05e8161a40b26acd09e328ae6919",
           "credentials": {"githubToken":"read","oidc":false,"repositorySecrets":[],"inheritedSecrets":false,"environment":null},
-          "externalActions": [],
-          "steps": [{"index":1,"label":"name:Fail closed before burst runner or cloud work","definitionDigest":"sha256:99576e82368555b05f5ac71698ac04dbfe706f2299aad30ca344ef994f56af01"}]
+          "externalActions": ["kungfu-systems/buildchain/.github/workflows/.build.yml@407445c43df4888bb4464e91aef0debdc62aa0e6"],
+          "steps": []
+        }
+      ]
+    },
+    {
+      "path": ".github/workflows/aws-us-macos-burst-qualification.yml",
+      "authority": "qualification",
+      "definitionDigest": "sha256:60dabb0032b528ed54ee32c48f15f19e60998fc9740d572d752fead4063a573b",
+      "jobs": [
+        {
+          "id": "qualify",
+          "authority": "qualification",
+          "publication": "none",
+          "receipt": "diagnostic",
+          "definitionDigest": "sha256:36a9c8008d54206e8537426fefd68556ff852b149eaf3480f5226f6f48ad78dd",
+          "credentials": {"githubToken":"read","oidc":false,"repositorySecrets":[],"inheritedSecrets":false,"environment":null},
+          "externalActions": ["kungfu-systems/buildchain/.github/workflows/.build.yml@407445c43df4888bb4464e91aef0debdc62aa0e6"],
+          "steps": []
         }
       ]
     },
     {
       "path": ".github/workflows/aws-us-windows-burst-qualification.yml",
       "authority": "qualification",
-      "definitionDigest": "sha256:12f4da71712f6393c5446d790d8e7ae1cf6109f7ee9dfb127a0abd05b6faa352",
+      "definitionDigest": "sha256:41b31b1b94638c5dfdc1b0961c5fa7f7a439444f856ecc71ca14c45f30a53172",
       "jobs": [
         {
-          "id": "retired",
+          "id": "cleanup-exercise",
           "authority": "qualification",
           "publication": "none",
           "receipt": "diagnostic",
-          "definitionDigest": "sha256:4c6dd524dcbd49a8ef7706ea6013fcde52ba2785726dffc9a4704ce710d81db0",
+          "definitionDigest": "sha256:88da612bd391529048ff81f3f1bc00d1beceed86b770b78de0557fef2b890b0d",
           "credentials": {"githubToken":"read","oidc":false,"repositorySecrets":[],"inheritedSecrets":false,"environment":null},
           "externalActions": [],
-          "steps": [{"index":1,"label":"name:Fail closed before burst runner or cloud work","definitionDigest":"sha256:c363b114c46cc6cbf0bfd4ccaa7dc533390c7c56b614819eec48fbccddb43831"}]
+          "steps": [{"index":1,"label":"name:Confirm exact JIT runner identity","definitionDigest":"sha256:115bfd9234736a1da607e61a0bb1be98a191d35f0da57ad4bb419a447069b9d2"},{"index":2,"label":"name:Hold until the declared cleanup trigger","definitionDigest":"sha256:ebc15529c500b6f0e216a2a2ede2ade66d1f685f9b824e67cf3a5382af07cf84"}]
+        },
+        {
+          "id": "qualify",
+          "authority": "qualification",
+          "publication": "none",
+          "receipt": "diagnostic",
+          "definitionDigest": "sha256:51b1809ef470f1bc0c17898b200dccbb389553a8af5ba6e93359ac1400bf9b94",
+          "credentials": {"githubToken":"read","oidc":false,"repositorySecrets":[],"inheritedSecrets":false,"environment":null},
+          "externalActions": ["kungfu-systems/buildchain/.github/workflows/.build.yml@407445c43df4888bb4464e91aef0debdc62aa0e6"],
+          "steps": []
+        },
+        {
+          "id": "trust",
+          "authority": "qualification",
+          "publication": "none",
+          "receipt": "diagnostic",
+          "definitionDigest": "sha256:e7b8a1634e100d5628adb348fa8524fba6e1f5c48a2ddb8a5f4c271910a85647",
+          "credentials": {"githubToken":"read","oidc":false,"repositorySecrets":[],"inheritedSecrets":false,"environment":null},
+          "externalActions": ["actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd"],
+          "steps": [{"index":1,"label":"name:Require canonical repository, mode, and label","definitionDigest":"sha256:c79ae3993e76974650848389ab59d62f355ae08734717d349c6ea7e144182999"},{"index":2,"label":"name:Require write-capable actor","definitionDigest":"sha256:3430783a3e543bfdbe6f96ad0be249927e372191c7e2cc5d8c540c14be66d68f"}]
         }
       ]
     },

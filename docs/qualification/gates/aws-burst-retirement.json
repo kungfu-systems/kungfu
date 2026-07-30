@@ -1,25 +1,29 @@
 {
-  "schema": "kungfu.aws-burst-campaign-retirement/v1",
-  "status": "retired",
+  "schema": "kungfu.aws-burst-campaign-reactivation/v1",
+  "status": "reactivated-v3",
   "owner": "kungfu-ci",
   "retiredAt": "2026-07-30",
-  "reason": "The bounded AWS burst proof-of-concept campaigns used Buildchain v2-only runner presets and controller inputs. The reviewed Buildchain v3 authority intentionally exposes neither contract, so keeping the callers runnable would preserve an unintended v2 execution path.",
+  "reactivatedAt": "2026-07-30",
+  "reason": "The v2 callers were retired until the bounded Linux, Windows, and macOS providers landed in reviewed Buildchain v3 authority. Reactivation now fixes both the reusable workflow shell and buildchain-ref to that one immutable reviewed commit.",
   "runtimeSafety": {
     "workflowShellReferencesV2": false,
     "buildchainRefInputsV2": false,
-    "burstRunnerJobs": 0,
-    "cloudJobs": 0,
-    "failureBoundary": "github-hosted tombstone before burst runner or cloud work"
+    "operatorSuppliedBuildchainRef": false,
+    "burstRunnerWorkflows": 3,
+    "cloudJobs": "manual-dispatch-only-after-github-hosted-trust",
+    "failureBoundary": "bounded caller inputs plus the exact Buildchain runtime's GitHub-hosted write-actor trust gate before reusable burst runners; direct Windows cleanup jobs retain their caller-local trust gate"
   },
   "evidence": {
-    "reviewedBuildchainV3Source": "9d74fb4557e71992db3516b5ba750d57cb9f3521",
-    "v3UnsupportedInputs": [
+    "reviewedBuildchainV3Source": "407445c43df4888bb4464e91aef0debdc62aa0e6",
+    "v3RequiredInputs": [
       "aws-codebuild-project",
-      "aws-ec2-windows-runner-label"
+      "aws-ec2-windows-runner-label",
+      "aws-ec2-macos-runner-label"
     ],
-    "v3UnsupportedRunnerPresets": [
+    "v3RunnerPresets": [
       "aws-us-codebuild-linux",
-      "aws-us-ec2-windows-jit"
+      "aws-us-ec2-windows-jit",
+      "aws-us-ec2-macos-jit"
     ],
     "historicalBuildchainRef": "train/v2/v2.3/aws-us-elastic-runner-burst-plane",
     "historicalRuns": {
@@ -46,16 +50,19 @@
   "historyPolicy": {
     "v2TrainRef": "retained-immutable-history",
     "priorRuns": "retained-immutable-history",
-    "currentWorkflowAuthority": "fail-closed-tombstone"
+    "currentWorkflowAuthority": "reviewed-v3-exact-sha"
   },
   "reactivation": {
     "automatic": false,
-    "requirements": [
-      "Admit a new protected Assignment owned by kungfu-ci and Buildchain maintainers.",
-      "Land the required runner preset and controller inputs in a reviewed Buildchain v3 commit.",
-      "Pin both reusable workflow shell and buildchain-ref to the same immutable reviewed v3 commit.",
-      "Restore bounded trust, label, non-publication, timeout, cancellation, and cleanup assertions with targeted tests.",
-      "Qualify the restored campaign through protected review without changing AWS, IAM, secret, billing, or runner-registration policy implicitly."
+    "assignment": "2026-07-28-kungfu-aws-us-elastic-runner-burst-plane",
+    "buildchainPullRequest": 2072,
+    "buildchainMergeCommit": "407445c43df4888bb4464e91aef0debdc62aa0e6",
+    "requirementsSatisfied": [
+      "Protected Assignment remains owned by kungfu-ci and Buildchain maintainers.",
+      "Required runner presets and controller inputs landed in reviewed Buildchain v3.",
+      "Reusable workflow shell and buildchain-ref are pinned to the same immutable reviewed v3 commit.",
+      "Bounded trust, label, non-publication, timeout, cancellation, and cleanup assertions are restored with targeted tests.",
+      "Provider policy changes remain outside the caller reactivation."
     ]
   }
 }

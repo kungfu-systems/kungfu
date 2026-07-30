@@ -23,14 +23,15 @@ export function normalizeCopiedSymlinks({ source, target }) {
       const sourcePath = path.join(sourceRoot, relativePath);
       const link = fs.readlinkSync(sourcePath);
       const resolvedSource = path.resolve(path.dirname(sourcePath), link);
-      if (!pathInside(sourceRoot, resolvedSource)) {
+      const canonicalSource = fs.realpathSync(resolvedSource);
+      if (!pathInside(sourceRoot, canonicalSource)) {
         throw new Error(
           `product input contains an escaping symlink: ${sourcePath}`,
         );
       }
       const resolvedTarget = path.join(
         target,
-        path.relative(sourceRoot, resolvedSource),
+        path.relative(sourceRoot, canonicalSource),
       );
       const portableLink =
         path.relative(path.dirname(targetPath), resolvedTarget) || '.';

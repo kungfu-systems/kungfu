@@ -230,6 +230,25 @@ test('product staging rewrites internal absolute symlinks as portable relative l
   }
 });
 
+test('product staging rejects an absolute symlink outside its source tree', (t) => {
+  if (process.platform === 'win32') {
+    t.skip('POSIX symlink contract');
+    return;
+  }
+  const parent = fs.mkdtempSync(path.join(os.tmpdir(), 'kungfu-dist-test-'));
+  try {
+    const source = path.join(parent, 'source');
+    const target = path.join(parent, 'target');
+    const outside = path.join(parent, 'outside');
+    fs.mkdirSync(path.join(source, 'bin'), { recursive: true });
+    fs.writeFileSync(outside, 'outside');
+    fs.symlinkSync(outside, path.join(source, 'bin', 'python'));
+    assert.throws(() => copyTree(source, target), /escaping symlink/);
+  } finally {
+    fs.rmSync(parent, { recursive: true, force: true });
+  }
+});
+
 test('product staging excludes every Python bytecode form', () => {
   assert.equal(
     isPythonBytecodePath('/runtime/pkg/__pycache__/module.pyc'),

@@ -1,0 +1,74 @@
+# SPDX-License-Identifier: Apache-2.0
+
+name: AWS US macOS Burst Qualification
+
+on:
+  workflow_dispatch:
+    inputs:
+      qualification-id:
+        description: "One bounded macOS JIT qualification slot"
+        required: true
+        type: choice
+        options:
+          - mac-smoke-01
+          - mac-smoke-02
+          - mac-full-01
+      mode:
+        description: "Qualification exercise selected by the operator"
+        required: true
+        type: choice
+        options:
+          - smoke
+          - full
+      runner-label:
+        description: "Exact unique JIT label created for this run"
+        required: true
+
+permissions:
+  contents: read
+
+concurrency:
+  group: aws-us-macos-burst
+  cancel-in-progress: false
+
+jobs:
+  qualify:
+    name: ${{ inputs.mode == 'smoke' && 'macOS JIT runner profile smoke' || 'Trusted exact-source full macOS qualification' }}
+    if: >-
+      ${{
+        github.repository == 'kungfu-systems/kungfu' &&
+        inputs.runner-label == format('aws-us-ec2-macos-jit-{0}', inputs.qualification-id) &&
+        (
+          (inputs.mode == 'smoke' && (inputs.qualification-id == 'mac-smoke-01' || inputs.qualification-id == 'mac-smoke-02')) ||
+          (inputs.mode == 'full' && inputs.qualification-id == 'mac-full-01')
+        )
+      }}
+    uses: kungfu-systems/buildchain/.github/workflows/.build.yml@407445c43df4888bb4464e91aef0debdc62aa0e6
+    with:
+      buildchain-ref: 407445c43df4888bb4464e91aef0debdc62aa0e6
+      runner-preset: aws-us-ec2-macos-jit
+      aws-ec2-macos-runner-label: ${{ inputs.runner-label }}
+      setup-rust: true
+      rust-toolchain: "1.96.0"
+      artifact-name: kungfu-aws-macos-${{ inputs.qualification-id }}
+      artifact-paths: ${{ inputs.mode == 'smoke' && 'product/release/qualification/aws-macos-jit-smoke.json' || 'product/release' }}
+      expected-artifacts-json: ${{ inputs.mode == 'smoke' && '{"minFiles":1,"minTotalBytes":1,"requiredPaths":["product/release/qualification/aws-macos-jit-smoke.json"]}' || '{"minFiles":3,"minTotalBytes":1,"requiredPaths":["product/release/qualification/layer-qualification-summary.json"]}' }}
+      require-install: ${{ inputs.mode == 'full' }}
+      require-build: true
+      build-command: ${{ inputs.mode == 'smoke' && 'node scripts/probe-release-platform.mjs --aws-macos-jit' || '' }}
+      require-verify: true
+      verify-command: ${{ inputs.mode == 'smoke' && 'node scripts/probe-release-platform.mjs --aws-macos-jit' || 'node scripts/run-release-qualification.mjs --execution-profile alpha --native-upgrade-policy skip' }}
+      lifecycle-timeout-minutes: ${{ inputs.mode == 'smoke' && 30 || 150 }}
+      requested-parallelism: ${{ inputs.mode == 'smoke' && 1 || 8 }}
+      artifact-transfer-mode: github-artifacts
+      artifact-retention-days: 14
+      checkout-cache-mode: off
+      checkout-cache-fallback: github
+      checkout-cache-github-timeout-seconds: 1200
+      shifu-cache-profile-ref: ${{ inputs.mode == 'full' && 'docs/shifu/qualification-portable-off.cache-profile.json' || '' }}
+      shifu-cache-profile-digest: ${{ inputs.mode == 'full' && 'sha256:d7002041716ea1e5ad703492815c9557576d5679227743541c13d42b6ea9de5c' || '' }}
+      publish-channel: none
+      release-candidate: false
+      buildchain-contract-lock-path: .buildchain/contract-lock.json
+      buildchain-contract-compatibility-policy: allow-additive
+      buildchain-contract-drift-issue-mode: off
