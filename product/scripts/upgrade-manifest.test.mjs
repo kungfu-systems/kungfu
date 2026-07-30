@@ -307,6 +307,12 @@ test('desktop finalization binds installer bytes and stays fail-closed locally',
     });
     assert.equal(release.artifacts.at(-1).size, 9);
     assert.match(release.artifacts.at(-1).digest, /^sha256:[a-f0-9]{64}$/);
+    assert.deepEqual(release.localArtifact, {
+      kind: 'desktop-local',
+      format: 'file',
+      size: 9,
+      digest: release.artifacts.at(-1).digest,
+    });
     assert.throws(
       () => assertUpgradePublicationEligible(release),
       /qualification evidence/,
@@ -328,6 +334,43 @@ test('desktop finalization binds installer bytes and stays fail-closed locally',
       ),
       eligible,
     );
+  } finally {
+    fs.rmSync(f.root, { recursive: true, force: true });
+  }
+});
+
+test('desktop local tree bytes are part of the exact Release Cut', () => {
+  const f = fixture();
+  try {
+    const bundledManifest = buildBundledUpgradeManifest({
+      ...f,
+      platform: 'darwin',
+      architecture: 'arm64',
+      revision: '4'.repeat(40),
+    });
+    const updater = path.join(f.root, 'Kungfu Episodes.zip');
+    const app = path.join(f.root, 'Kungfu Episodes.app');
+    fs.writeFileSync(updater, 'desktop-updater');
+    fs.mkdirSync(path.join(app, 'Contents'), { recursive: true });
+    fs.writeFileSync(path.join(app, 'Contents', 'product.bin'), 'first');
+    const first = finalizeDesktopUpgradeManifest({
+      bundledManifest,
+      desktopArtifact: updater,
+      localArtifact: app,
+      artifactUrl: 'https://example.invalid/Kungfu-Episodes.zip',
+      output: path.join(f.root, 'first.json'),
+    });
+    fs.writeFileSync(path.join(app, 'Contents', 'product.bin'), 'second');
+    const second = finalizeDesktopUpgradeManifest({
+      bundledManifest,
+      desktopArtifact: updater,
+      localArtifact: app,
+      artifactUrl: 'https://example.invalid/Kungfu-Episodes.zip',
+      output: path.join(f.root, 'second.json'),
+    });
+    assert.equal(first.localArtifact.format, 'directory');
+    assert.notEqual(first.localArtifact.digest, second.localArtifact.digest);
+    assert.notEqual(first.releaseCutRoot, second.releaseCutRoot);
   } finally {
     fs.rmSync(f.root, { recursive: true, force: true });
   }

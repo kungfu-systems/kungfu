@@ -41,10 +41,13 @@ import {
 } from './runtime-pin-snapshot.mjs';
 import {
   buildCliUpgradeManifest,
+  desktopUpdaterArtifact,
   finalizeCliUpgradeManifest,
   finalizeDesktopUpgradeManifest,
   platformUpgradeManifestName,
+  resolveDesktopLocalArtifact,
 } from './upgrade-manifest.mjs';
+export { desktopUpdaterArtifact };
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -787,24 +790,6 @@ function stageDesktopRelease() {
   });
 }
 
-export function desktopUpdaterArtifact(files, platform = process.platform) {
-  const suffix = {
-    darwin: '.zip',
-    win32: '.exe',
-    linux: '.AppImage',
-  }[platform];
-  if (!suffix) throw new Error(`unsupported desktop platform: ${platform}`);
-  const matches = files
-    .filter((file) => file.endsWith(suffix))
-    .sort((left, right) => left.localeCompare(right));
-  if (matches.length !== 1) {
-    throw new Error(
-      `expected one ${platform} desktop updater artifact, found: ${matches.join(', ') || 'none'}`,
-    );
-  }
-  return matches[0];
-}
-
 function finalizeDesktopReleaseManifest() {
   if (builderArgs.includes('--dir')) {
     console.log(
@@ -814,6 +799,10 @@ function finalizeDesktopReleaseManifest() {
   }
   const files = fs.readdirSync(DESKTOP_DIST_DIR);
   const artifactName = desktopUpdaterArtifact(files);
+  const localArtifact = resolveDesktopLocalArtifact(
+    DESKTOP_DIST_DIR,
+    artifactName,
+  );
   const metadata = files.filter(
     (file) => file.endsWith('.yml') || file.endsWith('.yaml'),
   );
@@ -833,6 +822,7 @@ function finalizeDesktopReleaseManifest() {
   const manifest = finalizeDesktopUpgradeManifest({
     bundledManifest,
     desktopArtifact: path.join(DESKTOP_DIST_DIR, artifactName),
+    localArtifact,
     artifactUrl,
     output: path.join(DESKTOP_DIST_DIR, outputName),
   });

@@ -26,7 +26,7 @@ fn qualified_app(slot: &Path) -> BuildEntry {
     }
 }
 
-fn write_app_manifests(entry: &BuildEntry) {
+fn write_app_manifests(entry: &mut BuildEntry) {
     let contents = entry.slot.join(&entry.artifact).join("Contents");
     let resources = contents.join("Resources");
     fs::create_dir_all(resources.join("kungfu")).unwrap();
@@ -49,17 +49,57 @@ fn write_app_manifests(entry: &BuildEntry) {
     )
     .unwrap();
     fs::write(entry.slot.join(&entry.cli_archive), "cli archive").unwrap();
-    fs::write(entry.slot.join(&entry.upgrade_manifest), "{}").unwrap();
+    entry.digest = artifact_sha256(&entry.slot.join(&entry.artifact)).unwrap();
+    entry.cli_archive_digest = format!(
+        "sha256:{}",
+        bootstrap::sha256_file(&entry.slot.join(&entry.cli_archive)).unwrap()
+    );
+    fs::write(
+        entry.slot.join(&entry.upgrade_manifest),
+        format!(
+            r#"{{"schema":"kungfu.product-upgrade.manifest/v1","releaseCutRoot":"{}","platformSliceRoot":"{}","localArtifact":{{"kind":"desktop-local","format":"directory","digest":"sha256:{}"}}}}"#,
+            entry.release_cut_root, entry.platform_slice_root, entry.digest
+        ),
+    )
+    .unwrap();
+    entry.upgrade_manifest_digest = format!(
+        "sha256:{}",
+        bootstrap::sha256_file(&entry.slot.join(&entry.upgrade_manifest)).unwrap()
+    );
 }
 
 #[test]
 fn qualified_app_requires_exact_product_manifests() {
     let root = shifu_core::host::unique_temp_dir("promote-manifests").unwrap();
-    let entry = qualified_app(&root);
+    let mut entry = qualified_app(&root);
     fs::create_dir_all(entry.slot.join(&entry.artifact)).unwrap();
     assert!(!build_valid(&entry));
 
-    write_app_manifests(&entry);
+    write_app_manifests(&mut entry);
+    assert!(build_valid(&entry));
+
+    fs::write(
+        entry
+            .slot
+            .join(&entry.artifact)
+            .join("Contents/MacOS/Kungfu Episodes"),
+        "tampered executable",
+    )
+    .unwrap();
+    assert!(!build_valid(&entry));
+    fs::write(
+        entry
+            .slot
+            .join(&entry.artifact)
+            .join("Contents/MacOS/Kungfu Episodes"),
+        "executable",
+    )
+    .unwrap();
+    assert!(build_valid(&entry));
+
+    fs::write(entry.slot.join(&entry.cli_archive), "tampered cli").unwrap();
+    assert!(!build_valid(&entry));
+    write_app_manifests(&mut entry);
     assert!(build_valid(&entry));
 
     fs::remove_file(
@@ -99,7 +139,7 @@ fn preview_keeps_mainline_qualification_separate_from_exact_product_provenance()
     entry.qualified = false;
     entry.mainline_sha = "2222222222222222222222222222222222222222".into();
     fs::create_dir_all(entry.slot.join(&entry.artifact)).unwrap();
-    write_app_manifests(&entry);
+    write_app_manifests(&mut entry);
 
     assert!(build_previewable(&entry));
     assert!(!build_valid(&entry));
@@ -134,22 +174,6 @@ fn rollback_coordinate_requires_exact_retained_artifact() {
         "prior-build",
         "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
     ));
-    let mut entry = qualified_app(&slot);
-    entry.name = "prior-build".into();
-    entry.sha = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa".into();
-    let entries = vec![entry];
-    assert!(rollback_build(
-        &entries,
-        "prior-build",
-        "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
-    )
-    .is_some());
-    assert!(rollback_build(
-        &entries,
-        "prior",
-        "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
-    )
-    .is_none());
     let _ = fs::remove_dir_all(root);
 }
 
@@ -253,8 +277,8 @@ fn macos_shaped_partial_bundle_is_rejected_and_recovered() {
     }
 
     let root = shifu_core::host::unique_temp_dir("promote-partial-app").unwrap();
-    let source_entry = qualified_app(&root.join("slot"));
-    write_app_manifests(&source_entry);
+    let mut source_entry = qualified_app(&root.join("slot"));
+    write_app_manifests(&mut source_entry);
     let source = source_entry.slot.join(&source_entry.artifact);
     fs::create_dir_all(source.join("Contents/Frameworks")).unwrap();
     fs::write(
@@ -308,10 +332,114 @@ fn pending_transaction_io_error_is_not_absence() {
 }
 
 #[test]
+fn promotion_lock_has_one_live_writer_and_releases_exactly() {
+    let root = shifu_core::host::unique_temp_dir("promote-lock").unwrap();
+    let path = root.join("promotion.lock");
+    let lock = acquire_promotion_lock_at(&path).unwrap();
+    assert!(acquire_promotion_lock_at(&path)
+        .unwrap_err()
+        .contains("another shifu promote process owns"));
+    lock.release().unwrap();
+    let replacement = acquire_promotion_lock_at(&path).unwrap();
+    replacement.release().unwrap();
+    assert!(!path.exists());
+    fs::write(&path, u32::MAX.to_string()).unwrap();
+    let recovered = acquire_promotion_lock_at(&path).unwrap();
+    recovered.release().unwrap();
+    assert!(!path.exists());
+    let _ = fs::remove_dir_all(root);
+}
+
+#[test]
+fn retained_rollback_uses_installed_state_after_source_slot_removal() {
+    let root = shifu_core::host::unique_temp_dir("retained-product-rollback").unwrap();
+    let installed = root.join("kungfu-dev.AppImage");
+    let rollback = root.join(".kungfu-dev.AppImage.previous-cut");
+    fs::write(&installed, b"current").unwrap();
+    fs::write(&rollback, b"previous").unwrap();
+    let source_slot = root.join("source-slot");
+    fs::create_dir(&source_slot).unwrap();
+    fs::remove_dir(&source_slot).unwrap();
+
+    let current_digest = artifact_sha256(&installed).unwrap();
+    let previous_digest = artifact_sha256(&rollback).unwrap();
+    swap_retained_desktop(
+        &installed,
+        &rollback,
+        &current_digest,
+        &previous_digest,
+        artifact_sha256,
+    )
+    .unwrap();
+    assert_eq!(fs::read(&installed).unwrap(), b"previous");
+    assert_eq!(fs::read(&rollback).unwrap(), b"current");
+    swap_retained_desktop(
+        &installed,
+        &rollback,
+        &current_digest,
+        &previous_digest,
+        artifact_sha256,
+    )
+    .unwrap();
+    assert_eq!(fs::read(&installed).unwrap(), b"previous");
+    assert_eq!(fs::read(&rollback).unwrap(), b"current");
+
+    let interrupted_installed = root.join("interrupted-current.AppImage");
+    let interrupted_rollback = root.join(".interrupted-previous.AppImage");
+    fs::write(&interrupted_installed, b"current").unwrap();
+    fs::write(&interrupted_rollback, b"previous").unwrap();
+    let interrupted_stage = interrupted_rollback.with_extension("shifu-swap-pending");
+    fs::rename(&interrupted_installed, &interrupted_stage).unwrap();
+    swap_retained_desktop(
+        &interrupted_installed,
+        &interrupted_rollback,
+        &current_digest,
+        &previous_digest,
+        artifact_sha256,
+    )
+    .unwrap();
+    assert_eq!(fs::read(&interrupted_installed).unwrap(), b"previous");
+    assert_eq!(fs::read(&interrupted_rollback).unwrap(), b"current");
+    assert!(!interrupted_stage.exists());
+
+    let installed_receipt = root.join("installed.meta.env");
+    let rollback_receipt = root.join("rollback.meta.env");
+    fs::write(
+        &installed_receipt,
+        format!(
+            "KUNGFU_INSTALLED_RELEASE_CUT_ROOT='sha256:{}'\n",
+            "a".repeat(64)
+        ),
+    )
+    .unwrap();
+    let pending = PendingTransaction {
+        state: "receipt-commit-pending".into(),
+        action: "promote".into(),
+        artifact_id: "next".into(),
+        target_release_cut_root: format!("sha256:{}", "b".repeat(64)),
+        cut_transition_root: format!("sha256:{}", "c".repeat(64)),
+        native_receipt_root: String::new(),
+        previous_build_id: "previous".into(),
+        previous_sha: "1".repeat(40),
+        previous_release_cut_root: format!("sha256:{}", "a".repeat(64)),
+        installed_path: installed.display().to_string(),
+        desktop_backup_path: rollback.display().to_string(),
+        force: false,
+        launch: false,
+    };
+    retain_previous_installed_receipt_at(&installed_receipt, &rollback_receipt, &pending).unwrap();
+    assert_eq!(
+        fs::read_to_string(&rollback_receipt).unwrap(),
+        fs::read_to_string(&installed_receipt).unwrap()
+    );
+    let _ = fs::remove_dir_all(root);
+}
+
+#[test]
 fn product_manifest_io_error_is_not_corruption() {
     let root = shifu_core::host::unique_temp_dir("promote-manifest-read-error").unwrap();
-    let entry = qualified_app(&root);
-    write_app_manifests(&entry);
+    let mut entry = qualified_app(&root);
+    write_app_manifests(&mut entry);
     let build_info = entry
         .slot
         .join(&entry.artifact)
@@ -364,4 +492,197 @@ fn receipt_persistence_failure_retains_pending_recovery_material() {
         "failed staged receipt must not become a second authority"
     );
     let _ = fs::remove_dir_all(root);
+}
+
+#[cfg(unix)]
+mod unix {
+    use std::fs;
+    use std::os::unix::fs::PermissionsExt;
+    use std::path::Path;
+    use std::process::Command;
+
+    use shifu_core::{bootstrap, host};
+
+    fn root(byte: char) -> String {
+        format!("sha256:{}", byte.to_string().repeat(64))
+    }
+
+    struct ReceiptFixture<'a> {
+        path: &'a Path,
+        installed: &'a Path,
+        rollback: &'a Path,
+        updater: &'a Path,
+        installed_digest: &'a str,
+        updater_digest: &'a str,
+        current_cut: &'a str,
+        rollback_cut: &'a str,
+        build: &'a str,
+    }
+
+    fn write_receipt(fixture: ReceiptFixture<'_>) {
+        fs::write(
+            fixture.path,
+            format!(
+                "KUNGFU_ARTIFACT_SCHEMA='shifu.local-artifact/v1'\n\
+                 KUNGFU_INSTALLED_SHA='{}'\n\
+                 KUNGFU_INSTALLED_BUILD_ID='{}'\n\
+                 KUNGFU_INSTALLED_ARTIFACT='{}'\n\
+                 KUNGFU_INSTALLED_KIND='appimage'\n\
+                 KUNGFU_INSTALLED_DIGEST='{}'\n\
+                 KUNGFU_INSTALLED_PRODUCT_VERSION='4.0.0-alpha.0'\n\
+                 KUNGFU_INSTALLED_RELEASE_CUT_ROOT='{}'\n\
+                 KUNGFU_INSTALLED_NATIVE_UPDATER='{}'\n\
+                 KUNGFU_INSTALLED_NATIVE_UPDATER_DIGEST='{}'\n\
+                 KUNGFU_ROLLBACK_BUILD_ID='other'\n\
+                 KUNGFU_ROLLBACK_SHA='{}'\n\
+                 KUNGFU_ROLLBACK_RELEASE_CUT_ROOT='{}'\n\
+                 KUNGFU_ROLLBACK_DESKTOP_PATH='{}'\n",
+                if fixture.build == "current" {
+                    "2".repeat(40)
+                } else {
+                    "1".repeat(40)
+                },
+                fixture.build,
+                fixture.installed.display(),
+                fixture.installed_digest,
+                fixture.current_cut,
+                fixture.updater.display(),
+                fixture.updater_digest,
+                if fixture.build == "current" {
+                    "1".repeat(40)
+                } else {
+                    "2".repeat(40)
+                },
+                fixture.rollback_cut,
+                fixture.rollback.display(),
+            ),
+        )
+        .unwrap();
+    }
+
+    #[test]
+    fn product_rollback_survives_source_slot_removal() {
+        let root_dir = host::unique_temp_dir("shifu-product-rollback-e2e").unwrap();
+        let cache = root_dir.join("cache");
+        let registry = cache.join("kungfu").join("product").join(host::os_arch());
+        fs::create_dir_all(&registry).unwrap();
+        let installed = root_dir.join("kungfu-dev.AppImage");
+        let rollback = root_dir.join(".kungfu-dev.AppImage.previous");
+        fs::write(&installed, b"current desktop").unwrap();
+        fs::write(&rollback, b"previous desktop").unwrap();
+        let current_digest = bootstrap::sha256_file(&installed).unwrap();
+        let rollback_digest = bootstrap::sha256_file(&rollback).unwrap();
+
+        let current_cut = root('a');
+        let rollback_cut = root('b');
+        let current_receipt = root('c');
+        let rollback_native_receipt = root('d');
+        let transition = root('e');
+        let state = root_dir.join("native-state");
+        fs::write(&state, &current_cut).unwrap();
+        let updater = root_dir.join("kungfu");
+        fs::write(
+            &updater,
+            format!(
+                "#!/bin/sh\n\
+                 if [ \"$2\" = \"status\" ]; then\n\
+                   selected=$(cat \"$FAKE_STATE\")\n\
+                   receipt=\"$CURRENT_RECEIPT\"\n\
+                   if [ \"$selected\" = \"$ROLLBACK_CUT\" ]; then receipt=\"$ROLLBACK_RECEIPT\"; fi\n\
+                   printf '{{\"frontendInventory\":{{\"selected\":{{\"releaseCutRoot\":\"%s\"}}}},\"nativeReceiptRoot\":\"%s\"}}\\n' \"$selected\" \"$receipt\"\n\
+                   exit 0\n\
+                 fi\n\
+                 yes=false\n\
+                 for arg in \"$@\"; do if [ \"$arg\" = \"--yes\" ]; then yes=true; fi; done\n\
+                 state=action-required\n\
+                 receipt=''\n\
+                 if [ \"$yes\" = true ]; then\n\
+                   printf '%s' \"$ROLLBACK_CUT\" > \"$FAKE_STATE\"\n\
+                   state=complete\n\
+                   receipt=\"$ROLLBACK_RECEIPT\"\n\
+                 fi\n\
+                 printf '{{\"state\":\"%s\",\"targetReleaseCutRoot\":\"%s\",\"cutTransitionRoot\":\"{}\",\"receiptRoot\":\"%s\"}}\\n' \"$state\" \"$ROLLBACK_CUT\" \"$receipt\"\n",
+                transition
+            ),
+        )
+        .unwrap();
+        fs::set_permissions(&updater, fs::Permissions::from_mode(0o755)).unwrap();
+        let updater_digest = bootstrap::sha256_file(&updater).unwrap();
+
+        write_receipt(ReceiptFixture {
+            path: &registry.join("installed.meta.env"),
+            installed: &installed,
+            rollback: &rollback,
+            updater: &updater,
+            installed_digest: &current_digest,
+            updater_digest: &updater_digest,
+            current_cut: &current_cut,
+            rollback_cut: &rollback_cut,
+            build: "current",
+        });
+        write_receipt(ReceiptFixture {
+            path: &registry.join("rollback.meta.env"),
+            installed: &installed,
+            rollback: &rollback,
+            updater: &updater,
+            installed_digest: &rollback_digest,
+            updater_digest: &updater_digest,
+            current_cut: &rollback_cut,
+            rollback_cut: &current_cut,
+            build: "previous",
+        });
+        let removed_source_slot = registry.join("removed-source-slot");
+        fs::create_dir(&removed_source_slot).unwrap();
+        fs::remove_dir(&removed_source_slot).unwrap();
+
+        let command = |check: bool| {
+            let mut command = Command::new(
+                std::env::current_exe()
+                    .unwrap()
+                    .parent()
+                    .unwrap()
+                    .parent()
+                    .unwrap()
+                    .join("shifu"),
+            );
+            command
+                .args(["promote", "--rollback"])
+                .env("XDG_CACHE_HOME", &cache)
+                .env("FAKE_STATE", &state)
+                .env("CURRENT_RECEIPT", &current_receipt)
+                .env("ROLLBACK_RECEIPT", &rollback_native_receipt)
+                .env("CURRENT_CUT", &current_cut)
+                .env("ROLLBACK_CUT", &rollback_cut);
+            if check {
+                command.arg("--check");
+            }
+            command.output().unwrap()
+        };
+        let plan = command(true);
+        assert!(
+            plan.status.success(),
+            "{}",
+            String::from_utf8_lossy(&plan.stderr)
+        );
+        assert_eq!(fs::read(&installed).unwrap(), b"current desktop");
+        assert_eq!(fs::read_to_string(&state).unwrap(), current_cut);
+
+        let applied = command(false);
+        assert!(
+            applied.status.success(),
+            "{}",
+            String::from_utf8_lossy(&applied.stderr)
+        );
+        assert_eq!(fs::read(&installed).unwrap(), b"previous desktop");
+        assert_eq!(fs::read(&rollback).unwrap(), b"current desktop");
+        assert_eq!(fs::read_to_string(&state).unwrap(), rollback_cut);
+        let receipt = fs::read_to_string(registry.join("installed.meta.env")).unwrap();
+        assert!(receipt.contains(&format!(
+            "KUNGFU_INSTALLED_RELEASE_CUT_ROOT='{rollback_cut}'"
+        )));
+        assert!(!registry.join("promotion-pending.json").exists());
+        assert!(!registry.join("promotion.lock").exists());
+        assert!(!removed_source_slot.exists());
+        let _ = fs::remove_dir_all(root_dir);
+    }
 }

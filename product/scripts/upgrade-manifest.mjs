@@ -52,12 +52,12 @@ function sourceCommit(root) {
 
 const releaseRuntimePath = (file) => !isPythonBytecodePath(file);
 
-function treeSize(root) {
+function treeSize(root, { filter = () => true } = {}) {
   let size = 0;
   const visit = (dir) => {
     for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
       const full = path.join(dir, entry.name);
-      if (!releaseRuntimePath(full)) continue;
+      if (!filter(full, entry)) continue;
       if (entry.isDirectory()) visit(full);
       else if (entry.isFile()) size += fs.statSync(full).size;
       else if (entry.isSymbolicLink()) {
@@ -71,6 +71,71 @@ function treeSize(root) {
 
 function sha256File(file) {
   return createHash('sha256').update(fs.readFileSync(file)).digest('hex');
+}
+
+function localArtifactIdentity(artifact) {
+  const stat = fs.statSync(artifact);
+  if (!stat.isFile() && !stat.isDirectory()) {
+    throw new Error(
+      `local desktop artifact is not a file or directory: ${artifact}`,
+    );
+  }
+  return {
+    kind: 'desktop-local',
+    format: stat.isDirectory() ? 'directory' : 'file',
+    size: stat.isDirectory() ? treeSize(artifact) : stat.size,
+    digest: `sha256:${
+      stat.isDirectory() ? sha256Tree(artifact) : sha256File(artifact)
+    }`,
+  };
+}
+
+export function resolveDesktopLocalArtifact(
+  desktopDistDir,
+  updaterName,
+  platform = process.platform,
+) {
+  if (platform !== 'darwin') return path.join(desktopDistDir, updaterName);
+  const apps = fs
+    .readdirSync(desktopDistDir, { withFileTypes: true })
+    .filter((entry) => entry.isDirectory() && entry.name.startsWith('mac'))
+    .flatMap((entry) =>
+      fs
+        .readdirSync(path.join(desktopDistDir, entry.name), {
+          withFileTypes: true,
+        })
+        .filter(
+          (candidate) =>
+            candidate.isDirectory() && candidate.name.endsWith('.app'),
+        )
+        .map((candidate) =>
+          path.join(desktopDistDir, entry.name, candidate.name),
+        ),
+    );
+  if (apps.length !== 1) {
+    throw new Error(
+      `expected one local macOS app artifact, found: ${apps.join(', ') || 'none'}`,
+    );
+  }
+  return apps[0];
+}
+
+export function desktopUpdaterArtifact(files, platform = process.platform) {
+  const suffix = {
+    darwin: '.zip',
+    win32: '.exe',
+    linux: '.AppImage',
+  }[platform];
+  if (!suffix) throw new Error(`unsupported desktop platform: ${platform}`);
+  const matches = files
+    .filter((file) => file.endsWith(suffix))
+    .sort((left, right) => left.localeCompare(right));
+  if (matches.length !== 1) {
+    throw new Error(
+      `expected one ${platform} desktop updater artifact, found: ${matches.join(', ') || 'none'}`,
+    );
+  }
+  return matches[0];
 }
 
 function assertPlatform(platform, architecture) {
@@ -158,7 +223,10 @@ export function bindProductReleaseCut(
     platform: base.platform,
     architecture: base.architecture,
     manifestIdentityRoot,
-    artifactRoot: contentRoot((base.artifacts || []).map(artifactIdentity)),
+    artifactRoot: contentRoot({
+      releaseArtifacts: (base.artifacts || []).map(artifactIdentity),
+      localArtifact: base.localArtifact || null,
+    }),
     qualificationEvidenceRoots,
     signingEvidenceRoots,
   };
@@ -193,6 +261,7 @@ export function bindProductReleaseCut(
     productAssemblyRoot: contentRoot({
       runtimeArtifactDigest: base.runtimeArtifactDigest,
       artifacts: (base.artifacts || []).map(artifactIdentity),
+      localArtifact: base.localArtifact || null,
     }),
     compatibilityContractRoot: contentRoot(compatibility),
     migrationContractRoot: contentRoot(migration),
@@ -279,7 +348,7 @@ export function buildBundledUpgradeManifest({
       {
         kind: 'runtime',
         url: 'app-resource://kungfu',
-        size: treeSize(runtimeRoot),
+        size: treeSize(runtimeRoot, { filter: releaseRuntimePath }),
         digest: `sha256:${runtimeDigest}`,
         signature: runtimeSignature,
       },
@@ -314,6 +383,7 @@ export function writeBundledUpgradeManifest(options) {
 export function finalizeDesktopUpgradeManifest({
   bundledManifest,
   desktopArtifact,
+  localArtifact = desktopArtifact,
   artifactUrl,
   artifactSignature = process.env.KF_DESKTOP_ARTIFACT_SIGNATURE ||
     UNQUALIFIED_RELEASE_EVIDENCE,
@@ -326,6 +396,7 @@ export function finalizeDesktopUpgradeManifest({
   }
   const manifest = bindProductReleaseCut({
     ...bundledManifest,
+    localArtifact: localArtifactIdentity(localArtifact),
     artifacts: [
       ...bundledManifest.artifacts.filter((item) => item.kind !== 'desktop'),
       {

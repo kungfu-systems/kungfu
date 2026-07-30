@@ -20,8 +20,10 @@
 
 use std::env;
 use std::fs;
+use std::fs::OpenOptions;
+use std::io::Write;
 use std::path::{Path, PathBuf};
-use std::process::Command;
+use std::process::{Command, Stdio};
 
 use shifu_core::{bootstrap, host, json, style};
 
@@ -30,13 +32,12 @@ use crate::artifact_catalog::{
     select_unique_automatic, short_sha, state_for, write_promotion_receipt, GitRelation,
     SelectionError,
 };
+use crate::native_update::artifact_sha256;
 use crate::{envfile, native_update, util};
 
 #[path = "promote_desktop.rs"]
 mod promote_desktop;
-use promote_desktop::{
-    complete_atomic_target, product_app_manifests_valid, regular_file, tree_exact, DesktopCommit,
-};
+use promote_desktop::*;
 
 struct BuildEntry {
     slot: PathBuf,
@@ -154,6 +155,14 @@ fn installed_receipt_path() -> PathBuf {
     registry_dir().join("installed.meta.env")
 }
 
+fn rollback_receipt_path() -> PathBuf {
+    registry_dir().join("rollback.meta.env")
+}
+
+fn rollback_target_receipt_path() -> PathBuf {
+    registry_dir().join("rollback-target.meta.env")
+}
+
 fn installed_sha() -> String {
     let Ok(text) = fs::read_to_string(installed_receipt_path()) else {
         return String::new();
@@ -174,6 +183,34 @@ fn installed_value(key: &str) -> String {
         .find(|(candidate, _)| *candidate == key)
         .map(|(_, value)| value.to_string())
         .unwrap_or_default()
+}
+
+fn receipt_value(text: &str, key: &str) -> String {
+    text.lines()
+        .filter_map(envfile::parse_line)
+        .find(|(candidate, _)| *candidate == key)
+        .map(|(_, value)| value.to_string())
+        .unwrap_or_default()
+}
+
+fn set_receipt_value(text: &str, key: &str, value: &str) -> String {
+    let prefix = format!("{key}=");
+    let mut replaced = false;
+    let mut lines: Vec<String> = text
+        .lines()
+        .map(|line| {
+            if line.starts_with(&prefix) {
+                replaced = true;
+                format!("{key}='{}'", value.replace('\'', ""))
+            } else {
+                line.to_string()
+            }
+        })
+        .collect();
+    if !replaced {
+        lines.push(format!("{key}='{}'", value.replace('\'', "")));
+    }
+    format!("{}\n", lines.join("\n"))
 }
 
 fn build_relation(entry: &BuildEntry, installed: &str, entry_count: usize) -> GitRelation {
@@ -208,7 +245,7 @@ fn build_previewable(entry: &BuildEntry) -> bool {
         && entry.sha != "unknown"
         && !entry.sha.ends_with("-dirty")
         && matches!(entry.kind.as_str(), "app" | "installer" | "appimage")
-        && entry.slot.join(&entry.artifact).exists()
+        && local_release_evidence_valid(entry)
         && !entry.cli_archive.is_empty()
         && valid_root(&entry.cli_archive_digest)
         && entry.slot.join(&entry.cli_archive).is_file()
@@ -220,6 +257,50 @@ fn build_previewable(entry: &BuildEntry) -> bool {
         && valid_root(&entry.platform_slice_root)
         && entry.mainline_ref == product_mainline_ref()
         && product_manifests_valid(entry)
+}
+
+fn local_release_evidence_valid(entry: &BuildEntry) -> bool {
+    let artifact = entry.slot.join(&entry.artifact);
+    let archive = entry.slot.join(&entry.cli_archive);
+    let manifest = entry.slot.join(&entry.upgrade_manifest);
+    if entry.digest.len() != 64
+        || !entry.digest.bytes().all(|byte| byte.is_ascii_hexdigit())
+        || artifact_sha256(&artifact).ok().as_deref() != Some(entry.digest.as_str())
+        || bootstrap::sha256_file(&archive)
+            .ok()
+            .map(|digest| format!("sha256:{digest}"))
+            .as_deref()
+            != Some(entry.cli_archive_digest.as_str())
+        || bootstrap::sha256_file(&manifest)
+            .ok()
+            .map(|digest| format!("sha256:{digest}"))
+            .as_deref()
+            != Some(entry.upgrade_manifest_digest.as_str())
+    {
+        return false;
+    }
+    let Ok(text) = fs::read_to_string(manifest) else {
+        return false;
+    };
+    let Ok(document) = json::parse(&text) else {
+        return false;
+    };
+    let local = document.get("localArtifact");
+    document.str_of("schema") == "kungfu.product-upgrade.manifest/v1"
+        && document.str_of("releaseCutRoot") == entry.release_cut_root
+        && document.str_of("platformSliceRoot") == entry.platform_slice_root
+        && local
+            .map(|value| {
+                value.str_of("kind") == "desktop-local"
+                    && value.str_of("digest") == format!("sha256:{}", entry.digest)
+                    && value.str_of("format")
+                        == if artifact.is_dir() {
+                            "directory"
+                        } else {
+                            "file"
+                        }
+            })
+            .unwrap_or(false)
 }
 
 fn valid_root(value: &str) -> bool {
@@ -249,16 +330,6 @@ fn rollback_entry_valid(registry: &Path, build_id: &str, sha: &str) -> bool {
     meta_get(&meta, "KUNGFU_BUILD_SHA") == sha
         && !artifact.is_empty()
         && slot.join(artifact).exists()
-}
-
-fn rollback_build<'a>(
-    entries: &'a [BuildEntry],
-    build_id: &str,
-    sha: &str,
-) -> Option<&'a BuildEntry> {
-    entries
-        .iter()
-        .find(|entry| entry.name == build_id && entry.sha == sha)
 }
 
 fn schema_kind(entry: &BuildEntry) -> &str {
@@ -414,404 +485,6 @@ fn print_builds_json(entries: &[BuildEntry]) {
     println!("}}");
 }
 
-struct InstalledReceiptContext<'a> {
-    rollback_build_id: &'a str,
-    rollback_sha: &'a str,
-    rollback_release_cut_root: &'a str,
-    cut_transition_root: &'a str,
-    native_receipt_root: &'a str,
-    native_updater: &'a Path,
-    mode: &'a str,
-}
-
-fn write_installed_receipt(
-    entry: &BuildEntry,
-    installed: &Path,
-    context: &InstalledReceiptContext<'_>,
-) -> Result<(), String> {
-    let text = format!(
-        "KUNGFU_ARTIFACT_SCHEMA='shifu.local-artifact/v1'\n\
-         KUNGFU_INSTALLED_SHA='{}'\n\
-         KUNGFU_INSTALLED_BRANCH='{}'\n\
-         KUNGFU_INSTALLED_REPO='{}'\n\
-         KUNGFU_INSTALLED_BUILD_ID='{}'\n\
-         KUNGFU_INSTALLED_WORKTREE='{}'\n\
-         KUNGFU_INSTALLED_ARTIFACT='{}'\n\
-         KUNGFU_INSTALLED_DIGEST='{}'\n\
-         KUNGFU_INSTALLED_MAINLINE_REF='{}'\n\
-         KUNGFU_INSTALLED_MAINLINE_SHA='{}'\n\
-         KUNGFU_INSTALLED_INTEGRATED='{}'\n\
-         KUNGFU_INSTALLED_QUALIFIED='{}'\n\
-         KUNGFU_INSTALLED_MODE='{}'\n\
-         KUNGFU_INSTALLED_PRODUCT_VERSION='{}'\n\
-         KUNGFU_INSTALLED_RELEASE_CUT_ROOT='{}'\n\
-         KUNGFU_INSTALLED_PLATFORM_SLICE_ROOT='{}'\n\
-         KUNGFU_INSTALLED_CUT_TRANSITION_ROOT='{}'\n\
-         KUNGFU_INSTALLED_NATIVE_RECEIPT_ROOT='{}'\n\
-         KUNGFU_INSTALLED_NATIVE_UPDATER='{}'\n\
-         KUNGFU_ROLLBACK_BUILD_ID='{}'\n\
-         KUNGFU_ROLLBACK_SHA='{}'\n\
-         KUNGFU_ROLLBACK_RELEASE_CUT_ROOT='{}'\n",
-        entry.sha,
-        entry.branch.replace('\'', ""),
-        entry.repo.replace('\'', ""),
-        entry.name,
-        entry.worktree.replace('\'', ""),
-        installed.display(),
-        entry.digest,
-        entry.mainline_ref,
-        entry.mainline_sha,
-        entry.integrated,
-        entry.qualified,
-        context.mode,
-        entry.product_version,
-        entry.release_cut_root,
-        entry.platform_slice_root,
-        context.cut_transition_root,
-        context.native_receipt_root,
-        context.native_updater.display(),
-        context.rollback_build_id,
-        context.rollback_sha,
-        context.rollback_release_cut_root,
-    );
-    write_installed_receipt_at(&installed_receipt_path(), &text)
-}
-
-fn write_installed_receipt_at(path: &Path, text: &str) -> Result<(), String> {
-    let staged = path.with_extension(format!("tmp-{}", std::process::id()));
-    fs::write(&staged, text)
-        .and_then(|()| fs::rename(&staged, path))
-        .map_err(|error| {
-            let _ = fs::remove_file(&staged);
-            format!("cannot persist installed promotion receipt: {error}")
-        })
-}
-
-fn native_target(entry: &BuildEntry) -> native_update::ApplyTarget<'_> {
-    native_update::ApplyTarget {
-        kind: &entry.kind,
-        slot: &entry.slot,
-        artifact: &entry.artifact,
-        manifest: &entry.upgrade_manifest,
-        archive: &entry.cli_archive,
-        archive_digest: &entry.cli_archive_digest,
-        manifest_digest: &entry.upgrade_manifest_digest,
-        product_version: &entry.product_version,
-        release_cut_root: &entry.release_cut_root,
-    }
-}
-
-fn run_native(
-    entry: &BuildEntry,
-    rollback: bool,
-    execute: bool,
-) -> Result<native_update::NativeUpdateResult, String> {
-    let current_cut = installed_value("KUNGFU_INSTALLED_RELEASE_CUT_ROOT");
-    let current_version = installed_value("KUNGFU_INSTALLED_PRODUCT_VERSION");
-    let target = native_target(entry);
-    if rollback {
-        let rollback_cut = installed_value("KUNGFU_ROLLBACK_RELEASE_CUT_ROOT");
-        let updater = native_update::updater(&target).ok_or_else(|| {
-            "native Kungfu updater is unavailable; set KUNGFU_NATIVE_UPDATER to one exact shipped kungfu executable".to_string()
-        })?;
-        native_update::rollback(&updater, &current_cut, &rollback_cut, execute)
-    } else {
-        native_update::apply(&target, &current_cut, &current_version, execute)
-    }
-}
-
-fn pending_transaction_path() -> PathBuf {
-    registry_dir().join("promotion-pending.json")
-}
-
-struct PendingTransaction {
-    state: String,
-    action: String,
-    artifact_id: String,
-    target_release_cut_root: String,
-    cut_transition_root: String,
-    native_receipt_root: String,
-    previous_build_id: String,
-    previous_sha: String,
-    previous_release_cut_root: String,
-    installed_path: String,
-    desktop_backup_path: String,
-    force: bool,
-    launch: bool,
-}
-
-fn write_pending_transaction(pending: &PendingTransaction) {
-    let path = pending_transaction_path();
-    write_pending_transaction_at(&path, pending).unwrap_or_else(|error| {
-        util::die(&format!(
-            "cannot retain pending promotion transaction: {error}"
-        ))
-    });
-}
-
-fn write_pending_transaction_at(path: &Path, pending: &PendingTransaction) -> Result<(), String> {
-    let staged = path.with_extension("tmp");
-    let value = format!(
-        "{{\"schema\":\"shifu.local-promotion-transaction/v1\",\
-         \"state\":\"{}\",\"action\":\"{}\",\"artifactId\":\"{}\",\
-         \"targetReleaseCutRoot\":\"{}\",\
-         \"cutTransitionRoot\":\"{}\",\"nativeReceiptRoot\":\"{}\",\
-         \"previousBuildId\":\"{}\",\"previousSha\":\"{}\",\
-         \"previousReleaseCutRoot\":\"{}\",\"installedPath\":\"{}\",\
-         \"desktopBackupPath\":\"{}\",\"force\":\"{}\",\"launch\":\"{}\"}}\n",
-        json_escape(&pending.state),
-        json_escape(&pending.action),
-        json_escape(&pending.artifact_id),
-        json_escape(&pending.target_release_cut_root),
-        json_escape(&pending.cut_transition_root),
-        json_escape(&pending.native_receipt_root),
-        json_escape(&pending.previous_build_id),
-        json_escape(&pending.previous_sha),
-        json_escape(&pending.previous_release_cut_root),
-        json_escape(&pending.installed_path),
-        json_escape(&pending.desktop_backup_path),
-        pending.force,
-        pending.launch,
-    );
-    fs::write(&staged, value)
-        .and_then(|()| fs::rename(&staged, path))
-        .map_err(|error| {
-            let _ = fs::remove_file(&staged);
-            error.to_string()
-        })
-}
-
-fn read_pending_transaction() -> Result<Option<PendingTransaction>, String> {
-    read_pending_transaction_at(&pending_transaction_path())
-}
-
-fn read_pending_transaction_at(path: &Path) -> Result<Option<PendingTransaction>, String> {
-    let text = match fs::read_to_string(path) {
-        Ok(text) => text,
-        Err(error) if error.kind() == std::io::ErrorKind::NotFound => return Ok(None),
-        Err(error) => {
-            return Err(format!(
-                "cannot read pending promotion transaction {}: {error}",
-                path.display()
-            ))
-        }
-    };
-    let value = json::parse(&text)
-        .map_err(|error| format!("pending promotion transaction is invalid: {error}"))?;
-    if value.str_of("schema") != "shifu.local-promotion-transaction/v1" {
-        return Err("pending promotion transaction schema is unsupported".to_string());
-    }
-    let required = |field: &str| -> Result<String, String> {
-        let item = value.str_of(field);
-        if item.is_empty() {
-            Err(format!("pending promotion transaction has no {field}"))
-        } else {
-            Ok(item.to_string())
-        }
-    };
-    Ok(Some(PendingTransaction {
-        state: required("state")?,
-        action: required("action")?,
-        artifact_id: required("artifactId")?,
-        target_release_cut_root: required("targetReleaseCutRoot")?,
-        cut_transition_root: required("cutTransitionRoot")?,
-        native_receipt_root: value.str_of("nativeReceiptRoot").to_string(),
-        previous_build_id: value.str_of("previousBuildId").to_string(),
-        previous_sha: value.str_of("previousSha").to_string(),
-        previous_release_cut_root: value.str_of("previousReleaseCutRoot").to_string(),
-        installed_path: value.str_of("installedPath").to_string(),
-        desktop_backup_path: value.str_of("desktopBackupPath").to_string(),
-        force: value.str_of("force") == "true",
-        launch: value.str_of("launch") == "true",
-    }))
-}
-
-fn advance_desktop_phase_at<Commit>(
-    pending: &mut PendingTransaction,
-    entry: &BuildEntry,
-    marker_path: &Path,
-    commit: Commit,
-) -> Result<(), String>
-where
-    Commit: FnOnce(&BuildEntry, bool) -> Result<DesktopCommit, String>,
-{
-    if pending.state != "desktop-commit-pending" {
-        return Ok(());
-    }
-    let desktop = commit(entry, pending.force)?;
-    pending.installed_path = desktop.installed.display().to_string();
-    pending.desktop_backup_path = desktop
-        .backup
-        .as_ref()
-        .map(|path| path.display().to_string())
-        .unwrap_or_default();
-    pending.state = "native-commit-pending".to_string();
-    write_pending_transaction_at(marker_path, pending)
-        .map_err(|error| format!("cannot retain committed desktop phase: {error}"))
-}
-
-fn finish_pending_transaction(
-    entries: &[BuildEntry],
-    entry: &BuildEntry,
-    pending: &PendingTransaction,
-    updater: &Path,
-) -> ! {
-    let installed = PathBuf::from(&pending.installed_path);
-    if !installed.exists()
-        || !valid_root(&pending.cut_transition_root)
-        || !valid_root(&pending.native_receipt_root)
-    {
-        util::die("pending promotion transaction has incomplete desktop or native evidence");
-    }
-    let relation = build_relation(entry, &pending.previous_sha, entries.len());
-    let installed_mode = if build_valid(entry) {
-        "qualified"
-    } else {
-        "preview"
-    };
-    write_installed_receipt(
-        entry,
-        &installed,
-        &InstalledReceiptContext {
-            rollback_build_id: &pending.previous_build_id,
-            rollback_sha: &pending.previous_sha,
-            rollback_release_cut_root: &pending.previous_release_cut_root,
-            cut_transition_root: &pending.cut_transition_root,
-            native_receipt_root: &pending.native_receipt_root,
-            native_updater: updater,
-            mode: installed_mode,
-        },
-    )
-    .unwrap_or_else(|error| {
-        util::die(&format!(
-            "{error}; exact promotion transaction and desktop backup remain pending"
-        ))
-    });
-    write_promotion_receipt(
-        &registry_dir(),
-        "kungfu",
-        &pending.action,
-        &entry.name,
-        &pending.previous_sha,
-        &entry.sha,
-        relation,
-    )
-    .unwrap_or_else(|error| {
-        util::die(&format!(
-            "cannot finalize pending Shifu promotion receipt: {error}"
-        ))
-    });
-    DesktopCommit {
-        installed: installed.clone(),
-        backup: (!pending.desktop_backup_path.is_empty())
-            .then(|| PathBuf::from(&pending.desktop_backup_path)),
-    }
-    .finish_backup()
-    .unwrap_or_else(|error| util::die(&error));
-    fs::remove_file(pending_transaction_path()).unwrap_or_else(|error| {
-        util::die(&format!(
-            "promotion completed but pending transaction could not be cleared: {error}"
-        ))
-    });
-    eprintln!(
-        "\u{2705} {} {}",
-        style::green(match pending.action.as_str() {
-            "rollback" => "rolled back",
-            "preview" => "previewed",
-            _ => "promoted",
-        }),
-        style::bold(&installed.display().to_string())
-    );
-    if pending.launch {
-        launch_product(&installed);
-    }
-    std::process::exit(0)
-}
-
-fn resume_pending_transaction(entries: &[BuildEntry], check: bool) {
-    let Some(mut pending) = read_pending_transaction().unwrap_or_else(|error| util::die(&error))
-    else {
-        return;
-    };
-    if check {
-        util::die(&format!(
-            "promotion transaction {} is pending for {}; rerun promote without --check to resume",
-            pending.state, pending.artifact_id
-        ));
-    }
-    let entry = entries
-        .iter()
-        .find(|candidate| {
-            candidate.name == pending.artifact_id
-                && candidate.release_cut_root == pending.target_release_cut_root
-        })
-        .unwrap_or_else(|| {
-            util::die("pending promotion target is absent or its Release Cut coordinate changed")
-        });
-    let marker_path = pending_transaction_path();
-    advance_desktop_phase_at(&mut pending, entry, &marker_path, commit_desktop).unwrap_or_else(
-        |error| {
-            util::die(&format!(
-                "desktop promotion remains recoverable and pending: {error}"
-            ))
-        },
-    );
-    let target = native_target(entry);
-    let updater = native_update::updater(&target).unwrap_or_else(|| {
-        util::die("native Kungfu updater is unavailable while resuming promotion")
-    });
-    if pending.state == "native-commit-pending" {
-        let selected =
-            native_update::selected_release_cut(&updater).unwrap_or_else(|error| util::die(&error));
-        if selected.release_cut_root == pending.target_release_cut_root {
-            pending.native_receipt_root =
-                recovered_native_receipt_root(&selected, &pending.target_release_cut_root)
-                    .unwrap_or_else(|error| util::die(&error));
-        } else {
-            let native =
-                run_native(entry, pending.action == "rollback", true).unwrap_or_else(|error| {
-                    util::die(&format!(
-                        "native updater resume failed; exact transaction remains pending: {error}"
-                    ))
-                });
-            pending.cut_transition_root = native.transition_root;
-            pending.native_receipt_root = native.receipt_root;
-        }
-        pending.state = "receipt-commit-pending".to_string();
-        write_pending_transaction(&pending);
-    }
-    if pending.state != "receipt-commit-pending" {
-        util::die("pending promotion transaction state is unsupported");
-    }
-    let selected =
-        native_update::selected_release_cut(&updater).unwrap_or_else(|error| util::die(&error));
-    if selected.release_cut_root != pending.target_release_cut_root {
-        util::die("native selection does not match the pending promotion target");
-    }
-    if pending.native_receipt_root.is_empty() {
-        util::die("native selection has no exact persisted apply or rollback receipt");
-    }
-    if selected.receipt_root != pending.native_receipt_root {
-        util::die("native selection receipt does not match the pending promotion receipt");
-    }
-    finish_pending_transaction(entries, entry, &pending, &updater)
-}
-
-fn recovered_native_receipt_root(
-    selected: &native_update::NativeSelection,
-    target_release_cut_root: &str,
-) -> Result<String, String> {
-    if selected.release_cut_root != target_release_cut_root {
-        return Err("native selection does not match the pending promotion target".to_string());
-    }
-    if !valid_root(&selected.receipt_root) {
-        return Err(
-            "native selection has no exact persisted apply or rollback receipt".to_string(),
-        );
-    }
-    Ok(selected.receipt_root.clone())
-}
-
 pub fn run_builds(args: &[String]) -> ! {
     let mut options = ListOptions::default();
     for arg in args {
@@ -908,30 +581,32 @@ pub fn run_promote(args: &[String]) -> ! {
         }
     }
 
+    let _lock = if check {
+        None
+    } else {
+        Some(
+            acquire_promotion_lock_at(&promotion_lock_path())
+                .unwrap_or_else(|error| util::die(&error)),
+        )
+    };
     let entries = entries();
+    resume_pending_transaction(&entries, check);
+    if rollback {
+        if build_arg.is_some() || allow_nonlinear || preview || force {
+            util::die(
+                "--rollback identifies the exact retained Product; do not combine it with \
+                 --build, --preview, --allow-nonlinear, or --force",
+            );
+        }
+        start_retained_rollback(check, launch);
+    }
     if entries.is_empty() {
         no_builds_hint();
     }
-    resume_pending_transaction(&entries, check);
     let installed = installed_sha();
     let previous_build_id = installed_value("KUNGFU_INSTALLED_BUILD_ID");
     let previous_release_cut_root = installed_value("KUNGFU_INSTALLED_RELEASE_CUT_ROOT");
-    let rollback_build_id = installed_value("KUNGFU_ROLLBACK_BUILD_ID");
-    let rollback_sha = installed_value("KUNGFU_ROLLBACK_SHA");
-    if rollback && (build_arg.is_some() || allow_nonlinear || preview) {
-        util::die(
-            "--rollback identifies the exact retained Product; do not combine it with \
-             --build, --preview, or --allow-nonlinear",
-        );
-    }
-    let entry = if rollback {
-        if !rollback_entry_valid(&registry_dir(), &rollback_build_id, &rollback_sha) {
-            util::die("installed Product has no verified rollback coordinate");
-        }
-        rollback_build(&entries, &rollback_build_id, &rollback_sha).unwrap_or_else(|| {
-            util::die("verified rollback Product is absent from the local registry")
-        })
-    } else if preview {
+    let entry = if preview {
         if !rollback_entry_valid(&registry_dir(), &previous_build_id, &installed) {
             util::die(
                 "installed Product has no verified rollback coordinate; refusing dogfood promotion",
@@ -946,14 +621,8 @@ pub fn run_promote(args: &[String]) -> ! {
         }
         select_product_build(&entries, &installed, build_arg.as_deref(), allow_nonlinear)
     };
-    let action = if rollback {
-        "rollback"
-    } else if preview {
-        "preview"
-    } else {
-        "promote"
-    };
-    let native_plan = run_native(entry, rollback, false)
+    let action = if preview { "preview" } else { "promote" };
+    let native_plan = run_native(entry, false, false)
         .unwrap_or_else(|error| util::die(&format!("native updater preflight failed: {error}")));
     if check {
         println!(
@@ -1044,6 +713,15 @@ fn commit_desktop(entry: &BuildEntry, force: bool) -> Result<DesktopCommit, Stri
     }
 }
 
+fn retained_backup_path(directory: &Path, name: &str) -> PathBuf {
+    let current = installed_value("KUNGFU_INSTALLED_RELEASE_CUT_ROOT");
+    let identity = current
+        .strip_prefix("sha256:")
+        .and_then(|value| value.get(..12))
+        .unwrap_or("legacy");
+    directory.join(format!(".{name}.shifu-previous-{identity}"))
+}
+
 fn dir_writable(dir: &Path) -> bool {
     if !dir.is_dir() {
         return false;
@@ -1085,7 +763,7 @@ fn promote_app(entry: &BuildEntry, force: bool) -> Result<DesktopCommit, String>
 
     let source = entry.slot.join(&entry.artifact);
     let staged = target_dir.join(format!(".{}.shifu-next", entry.artifact));
-    let backup = target_dir.join(format!(".{}.shifu-previous", entry.artifact));
+    let backup = retained_backup_path(&target_dir, &entry.artifact);
     complete_atomic_target(
         &source,
         &target,
@@ -1122,17 +800,38 @@ fn product_running(app_name: &str) -> bool {
 /// Windows: the stashed artifact is the self-contained nsis installer; run it
 /// silently.
 fn promote_installer(entry: &BuildEntry) -> Result<DesktopCommit, String> {
-    let installer = entry.slot.join(&entry.artifact);
+    let source = entry.slot.join(&entry.artifact);
+    let retained = registry_dir().join("installed-desktop");
+    fs::create_dir_all(&retained)
+        .map_err(|error| format!("cannot create {}: {error}", retained.display()))?;
+    let installer = retained.join("kungfu-current-installer.exe");
+    let backup = retained_backup_path(&retained, "kungfu-current-installer.exe");
+    let staged = retained.join(format!(".kungfu-installer-next-{}", std::process::id()));
+    let digest = entry.digest.clone();
+    let desktop = complete_atomic_target(
+        &source,
+        &installer,
+        &backup,
+        &staged,
+        |from, to| {
+            fs::copy(from, to)
+                .map(|_| ())
+                .map_err(|error| format!("cannot retain Windows installer: {error}"))
+        },
+        |candidate| {
+            if !regular_file(candidate)? {
+                return Ok(false);
+            }
+            artifact_sha256(candidate).map(|value| value == digest)
+        },
+    )?;
     eprintln!(
         "   {}",
         style::dim("running the nsis installer silently (/S)")
     );
     let status = Command::new(&installer).arg("/S").status();
     match status {
-        Ok(result) if result.success() => Ok(DesktopCommit {
-            installed: installer,
-            backup: None,
-        }),
+        Ok(result) if result.success() => Ok(desktop),
         Ok(result) => Err(format!("installer failed (exit {:?})", result.code())),
         Err(error) => Err(format!("failed to run the installer: {error}")),
     }
@@ -1149,7 +848,7 @@ fn promote_appimage(entry: &BuildEntry) -> Result<DesktopCommit, String> {
     let target = target_dir.join("kungfu-dev.AppImage");
     let source = entry.slot.join(&entry.artifact);
     let staged = target_dir.join(".kungfu-dev.AppImage.shifu-next");
-    let backup = target_dir.join(".kungfu-dev.AppImage.shifu-previous");
+    let backup = retained_backup_path(&target_dir, "kungfu-dev.AppImage");
     let source_digest = bootstrap::sha256_file(&source)
         .map_err(|error| format!("cannot hash {}: {error}", source.display()))?;
     complete_atomic_target(

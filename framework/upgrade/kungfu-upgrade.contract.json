@@ -376,6 +376,34 @@
           }
         }
       },
+      "localArtifact": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "kind",
+          "format",
+          "size",
+          "digest"
+        ],
+        "properties": {
+          "kind": {
+            "const": "desktop-local"
+          },
+          "format": {
+            "enum": [
+              "file",
+              "directory"
+            ]
+          },
+          "size": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "digest": {
+            "$ref": "#/$defs/contentRoot"
+          }
+        }
+      },
       "releaseManifest": {
         "type": "object",
         "additionalProperties": false,
@@ -488,6 +516,9 @@
             "items": {
               "$ref": "#/$defs/artifact"
             }
+          },
+          "localArtifact": {
+            "$ref": "#/$defs/localArtifact"
           },
           "qualificationEvidenceRef": {
             "type": "string",

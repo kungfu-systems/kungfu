@@ -44,7 +44,7 @@ use std::time::{SystemTime, UNIX_EPOCH};
 use shifu_core::{bootstrap, host, json, style};
 
 use crate::artifact_catalog::product_mainline_ref;
-use crate::envfile;
+use crate::native_update::{artifact_sha256, installed_release_cut_root, valid_sha256_root};
 
 /// The buildchain self-describe contract shifu asks for the repo's KFD-3
 /// registry location. shifu holds no copy of that layout path: the layout is
@@ -248,16 +248,6 @@ pub struct DistributionPlan {
     artifacts: Vec<DeclaredArtifact>,
 }
 
-fn installed_release_cut_root(text: &str) -> Option<String> {
-    let root = text
-        .lines()
-        .filter_map(envfile::parse_line)
-        .find(|(key, _)| *key == "KUNGFU_INSTALLED_RELEASE_CUT_ROOT")
-        .map(|(_, value)| value.to_string())
-        .unwrap_or_default();
-    valid_sha256_root(&root).then_some(root)
-}
-
 /// Project the native updater's exact installed Cut into the next product
 /// build. This gives the generated local Cut an explicit parent without making
 /// the build script inspect Shifu's cache or invent a second selector.
@@ -290,7 +280,6 @@ struct LocalReleaseEvidence {
     release_cut_root: String,
     platform_slice_root: String,
 }
-
 /// Read the repo's KFD-3 registry and return the registration plan for
 /// `task`, if any surface declares one for the host platform. A repo without
 /// a registry, or without a matching declaration, simply has no plan — that
@@ -458,33 +447,33 @@ pub fn register(root: &Path, plan: &DistributionPlan) {
                 path.display()
             ));
         }
-        // Content hash: single-file artifacts are hashed (and must match a
-        // pinned declaration); directory artifacts (the unpacked .app) carry
-        // no whole-content hash — recording a fake one would be worse than
-        // recording none.
-        let mut sha256 = String::new();
-        if path.is_file() {
-            match bootstrap::sha256_file(&path) {
-                Ok(actual) => {
-                    let pinned = artifact.sha256.trim().to_lowercase();
-                    if !pinned.is_empty() && pinned != actual {
-                        warn(&format!(
-                            "sha256 mismatch for {} (declared {pinned}, built {actual}); not registering it",
-                            path.display()
-                        ));
-                        continue;
-                    }
-                    sha256 = actual;
-                }
-                Err(e) => warn(&format!("cannot hash {}: {e}", path.display())),
-            }
-        } else if !artifact.sha256.trim().is_empty() {
+        // File and directory artifacts both receive one exact content
+        // identity. Directory hashes use the same path/file/symlink rows as
+        // the product manifest generator.
+        if path.is_dir() && !artifact.sha256.trim().is_empty() {
             warn(&format!(
                 "declared sha256 on directory artifact {} cannot be verified; not registering it",
                 path.display()
             ));
             continue;
         }
+        let sha256 = match artifact_sha256(&path) {
+            Ok(actual) => {
+                let pinned = artifact.sha256.trim().to_lowercase();
+                if !pinned.is_empty() && pinned != actual {
+                    warn(&format!(
+                        "sha256 mismatch for {} (declared {pinned}, built {actual}); not registering it",
+                        path.display()
+                    ));
+                    continue;
+                }
+                actual
+            }
+            Err(error) => {
+                warn(&format!("cannot hash {}: {error}", path.display()));
+                continue;
+            }
+        };
         resolved.push((path, artifact, sha256));
     }
     let Some((primary_path, primary, primary_sha)) = resolved.first() else {
@@ -633,6 +622,9 @@ fn local_release_evidence(
     let manifest = resolved
         .iter()
         .find(|(_, artifact, _)| artifact.kind == "upgrade-manifest");
+    let local_artifact = resolved.iter().find(|(_, artifact, _)| {
+        matches!(artifact.kind.as_str(), "app" | "installer" | "appimage")
+    });
     let (Some((archive_path, _, archive_sha)), Some((manifest_path, _, manifest_sha))) =
         (archive, manifest)
     else {
@@ -673,6 +665,28 @@ fn local_release_evidence(
     {
         return Err("registered dev build is not publication-ineligible".to_string());
     }
+    let (local_path, local_declaration, local_sha) = local_artifact
+        .ok_or_else(|| "registered dev build has no local desktop artifact".to_string())?;
+    let local = document
+        .get("localArtifact")
+        .ok_or_else(|| "upgrade manifest has no exact local desktop artifact".to_string())?;
+    let expected_format = if local_path.is_dir() {
+        "directory"
+    } else {
+        "file"
+    };
+    if local.str_of("kind") != "desktop-local"
+        || local.str_of("format") != expected_format
+        || local.str_of("digest") != format!("sha256:{local_sha}")
+        || !matches!(
+            local_declaration.kind.as_str(),
+            "app" | "installer" | "appimage"
+        )
+    {
+        return Err(
+            "local desktop artifact digest differs from its Product Release Cut".to_string(),
+        );
+    }
     let cli_digest = document
         .get("artifacts")
         .and_then(json::Json::as_array)
@@ -699,14 +713,6 @@ fn local_release_evidence(
         release_cut_root: release_cut_root.to_string(),
         platform_slice_root: platform_slice_root.to_string(),
     }))
-}
-
-fn valid_sha256_root(value: &str) -> bool {
-    value.len() == 71
-        && value.starts_with("sha256:")
-        && value[7..]
-            .bytes()
-            .all(|byte| byte.is_ascii_digit() || (b'a'..=b'f').contains(&byte))
 }
 
 /// The kungfu product keeps its historical registry path (existing `builds` /
@@ -965,6 +971,7 @@ mod tests {
         fs::create_dir_all(root.join("out")).unwrap();
         fs::write(root.join("out/app.bin"), b"artifact-bytes").unwrap();
         fs::write(root.join("out/cli.tar.gz"), b"cli-archive").unwrap();
+        let app_sha = bootstrap::sha256_file(&root.join("out/app.bin")).unwrap();
         let cli_sha = bootstrap::sha256_file(&root.join("out/cli.tar.gz")).unwrap();
         fs::write(
             root.join("out/upgrade.json"),
@@ -980,6 +987,11 @@ mod tests {
                       "trustDomain": "shifu-local",
                       "publicationEligible": false
                     }}
+                  }},
+                  "localArtifact": {{
+                    "kind": "desktop-local",
+                    "format": "file",
+                    "digest": "sha256:{app_sha}"
                   }},
                   "artifacts": [
                     {{"kind": "cli", "digest": "sha256:{cli_sha}"}}

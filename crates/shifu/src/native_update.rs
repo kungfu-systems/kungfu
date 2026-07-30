@@ -4,11 +4,16 @@
 // build; this module delegates Cut verification, CLI installation, selection,
 // and rollback to the shipped Kungfu updater.
 
+use std::env;
 use std::ffi::OsString;
+use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::Command;
+use std::time::{SystemTime, UNIX_EPOCH};
 
-use shifu_core::{host, json};
+use shifu_core::{bootstrap, host, json};
+
+use crate::envfile;
 
 const LEGACY_BOOTSTRAP_ROOT: &str =
     "sha256:ec51232534d89e75615d44f41ed6af0b2e9978e7bf6655bf231e7f35cefd13fc";
@@ -236,6 +241,97 @@ pub fn selected_release_cut(updater: &Path) -> Result<NativeSelection, String> {
         release_cut_root,
         receipt_root,
     })
+}
+
+pub(crate) fn installed_release_cut_root(text: &str) -> Option<String> {
+    let root = text
+        .lines()
+        .filter_map(envfile::parse_line)
+        .find(|(key, _)| *key == "KUNGFU_INSTALLED_RELEASE_CUT_ROOT")
+        .map(|(_, value)| value.to_string())
+        .unwrap_or_default();
+    valid_sha256_root(&root).then_some(root)
+}
+
+pub(crate) fn valid_sha256_root(value: &str) -> bool {
+    value.len() == 71
+        && value.starts_with("sha256:")
+        && value[7..]
+            .bytes()
+            .all(|byte| byte.is_ascii_digit() || (b'a'..=b'f').contains(&byte))
+}
+
+pub(crate) fn artifact_sha256(path: &Path) -> Result<String, String> {
+    if path.is_file() {
+        return bootstrap::sha256_file(path);
+    }
+    if !path.is_dir() {
+        return Err(format!(
+            "artifact is not a regular file or directory: {}",
+            path.display()
+        ));
+    }
+    fn visit(root: &Path, current: &Path, rows: &mut Vec<String>) -> Result<(), String> {
+        let mut entries = fs::read_dir(current)
+            .map_err(|error| format!("cannot read {}: {error}", current.display()))?
+            .collect::<Result<Vec<_>, _>>()
+            .map_err(|error| format!("cannot read {}: {error}", current.display()))?;
+        entries.sort_by_key(fs::DirEntry::file_name);
+        for entry in entries {
+            let candidate = entry.path();
+            let metadata = fs::symlink_metadata(&candidate)
+                .map_err(|error| format!("cannot inspect {}: {error}", candidate.display()))?;
+            let relative = candidate
+                .strip_prefix(root)
+                .map_err(|error| error.to_string())?
+                .to_string_lossy()
+                .replace('\\', "/");
+            if metadata.file_type().is_symlink() {
+                let target = fs::read_link(&candidate)
+                    .map_err(|error| format!("cannot read {}: {error}", candidate.display()))?;
+                if target.is_absolute() {
+                    return Err(format!("artifact has an absolute symlink: {relative}"));
+                }
+                let resolved = candidate
+                    .parent()
+                    .unwrap_or(root)
+                    .join(&target)
+                    .canonicalize()
+                    .map_err(|error| format!("cannot resolve {relative}: {error}"))?;
+                let canonical_root = root
+                    .canonicalize()
+                    .map_err(|error| format!("cannot resolve {}: {error}", root.display()))?;
+                if !resolved.starts_with(&canonical_root) {
+                    return Err(format!("artifact has an escaping symlink: {relative}"));
+                }
+                rows.push(format!("{relative}\0symlink:{}", target.to_string_lossy()));
+            } else if metadata.is_dir() {
+                visit(root, &candidate, rows)?;
+            } else if metadata.is_file() {
+                rows.push(format!(
+                    "{relative}\0{}",
+                    bootstrap::sha256_file(&candidate)?
+                ));
+            }
+        }
+        Ok(())
+    }
+    let mut rows = Vec::new();
+    visit(path, path, &mut rows)?;
+    rows.sort_by(|left, right| left.as_bytes().cmp(right.as_bytes()));
+    let temporary = env::temp_dir().join(format!(
+        "shifu-artifact-tree-{}-{}.txt",
+        std::process::id(),
+        SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap_or_default()
+            .as_nanos()
+    ));
+    fs::write(&temporary, format!("{}\n", rows.join("\n")))
+        .map_err(|error| format!("cannot stage artifact tree identity: {error}"))?;
+    let digest = bootstrap::sha256_file(&temporary);
+    let _ = fs::remove_file(&temporary);
+    digest
 }
 
 #[cfg(test)]
