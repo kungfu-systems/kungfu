@@ -25,18 +25,21 @@ public artifact is available today.
 ## Auditable exact-output demo
 
 A selectively rendered demo now comes from one exact retained Linux build artifact:
-the installed `kungfu` launcher produced the transcript, the required Buildchain Gate
-qualified it, and full media rendered only from that passing Gate.
+the installed `kungfu agent-work-lab autoplay` command ran in a bounded PTY,
+the required Buildchain Gate qualified its exact capture, and full media rendered
+only from that passing Gate.
 
-[![Animated Kungfu terminal demo produced from the exact installed Linux artifact](docs/qualification/evidence/auditable-demo/0c44a9618fd4114340ca460a6fd7e3a391ada4c7a540d76b4136c3173373391e/demo.gif)](docs/qualification/auditable-demo-artifact-pipeline.md)
+[![Animated Kungfu terminal demo produced from the exact installed Linux artifact](docs/qualification/evidence/auditable-demo/0ff4cc1ef018544ad752eb08cf2fec205fe8d1bbedeb41b0111566732919b5e7/demo.gif)](docs/qualification/auditable-demo-artifact-pipeline.md)
 
-[Read the method and evidence](docs/qualification/auditable-demo-artifact-pipeline.md) · [source `0c584fc0e644`](https://github.com/kungfu-systems/kungfu/commit/0c584fc0e6446a07a5bdb1462738ffab47dddadb) · [workflow run](https://github.com/kungfu-systems/kungfu/actions/runs/30230901970)
+[Read the method and evidence](docs/qualification/auditable-demo-artifact-pipeline.md) · [source `b48d30166e26`](https://github.com/kungfu-systems/kungfu/commit/b48d30166e26dfceb873d1057e1db3c3e00c3385) · [workflow run](https://github.com/kungfu-systems/kungfu/actions/runs/30536659808)
 
-[Gate bundle](https://github.com/kungfu-systems/kungfu/actions/runs/30230901970/artifacts/8640731842) `sha256:7587c9bc315f49f88e11152d5387ff13a4fe606ef6ba97be8f70c5995aebf2d6` · [media bundle](https://github.com/kungfu-systems/kungfu/actions/runs/30230901970/artifacts/8640746864) `sha256:ee95e4c65effd4edea98a4355595fe8c9eb3291f1966cb6e46f6fad6a8caab21` · [Release Passport](https://github.com/kungfu-systems/kungfu/actions/runs/30230901970/artifacts/8640755422) `sha256:0c44a9618fd4114340ca460a6fd7e3a391ada4c7a540d76b4136c3173373391e`
+[Gate bundle](https://github.com/kungfu-systems/kungfu/actions/runs/30536659808/artifacts/8759425334) `sha256:31a259eccd3a4f093eaad2be01bc6def399b1653a010a6949c0bf8fa903bd54b` · [media bundle](https://github.com/kungfu-systems/kungfu/actions/runs/30536659808/artifacts/8759470968) `sha256:7fafb048c7133291602643beeb702bea58763863e533d696d6bc962f66e5981b` · [Release Passport](https://github.com/kungfu-systems/kungfu/actions/runs/30536659808/artifacts/8759489175) `sha256:0ff4cc1ef018544ad752eb08cf2fec205fe8d1bbedeb41b0111566732919b5e7`
 
-This proves exact installed-artifact execution and the named Gate/render path only.
-It is not a continuity, provider-migration, macOS, durability, performance, FO10,
-or production-deployment claim.
+Evidence class: `exact-installed-artifact-agent-work-lab-autoplay/v1`. This proves only the exact
+installed-artifact autoplay and named Gate/render path. The demo grants no
+authorization from first-party/System identity, KFD compliance, Product System
+metadata, local bundle presence, package metadata, registry history, scan output,
+or standalone generation, and makes no production-deployment claim.
 <!-- kungfu:auditable-demo:end -->
 
 ## The first-release experience

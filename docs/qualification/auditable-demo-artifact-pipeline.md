@@ -269,6 +269,36 @@ macOS runner timed out downloading the pinned Rust toolchain from
 failed-job rerun retained the same run id and source SHA, then passed all three
 platform probes and the aggregate exact-source receipt.
 
+## Current qualified Agent Work Lab autoplay run
+
+Protected source `b48d30166e26dfceb873d1057e1db3c3e00c3385` passed
+four-platform exact-source Alpha preflight run
+[`30536447336`](https://github.com/kungfu-systems/kungfu/actions/runs/30536447336).
+Manual Build run
+[`30536659808`](https://github.com/kungfu-systems/kungfu/actions/runs/30536659808)
+then used exact Buildchain source
+`3272608ba28ef714fe710dd8da99d00fdeb4c619`, completed the Linux release
+build and full verification, transferred the payload through the governed S3
+relay, passed the required Agent Work Lab autoplay Gate, rendered the selective
+media with the immutable renderer above, and bound one Release Passport.
+
+| Evidence | Exact coordinate | Content root |
+| --- | --- | --- |
+| Linux source artifact | [`8759349858`](https://github.com/kungfu-systems/kungfu/actions/runs/30536659808/artifacts/8759349858), `sha256:90beda7586eac4dc0745f20e98d6f9b694b237fe159f81b45a316f3fe3645612` | producer-owned release artifact |
+| Required Gate | [`8759425334`](https://github.com/kungfu-systems/kungfu/actions/runs/30536659808/artifacts/8759425334), `sha256:44f9b3ec57447b8c6f5e314945791a97de52f176fbd1e1724ad1e9af6e8d6bf9` | `sha256:31a259eccd3a4f093eaad2be01bc6def399b1653a010a6949c0bf8fa903bd54b` |
+| Selective media | [`8759470968`](https://github.com/kungfu-systems/kungfu/actions/runs/30536659808/artifacts/8759470968), `sha256:92ca003632a2c0fdc2584d2d6ec928f4ced045a58a30400f792dfb0da1bc51d4` | `sha256:7fafb048c7133291602643beeb702bea58763863e533d696d6bc962f66e5981b` |
+| Release Passport | [`8759489175`](https://github.com/kungfu-systems/kungfu/actions/runs/30536659808/artifacts/8759489175), `sha256:72c1169f8d21e2ad5c2975507e14990b552a2419961e56883f231e6e0c0172f8` | `sha256:0ff4cc1ef018544ad752eb08cf2fec205fe8d1bbedeb41b0111566732919b5e7` |
+
+The downloaded Gate, media, and Passport ZIPs matched their Actions API
+digests. Every Gate and media member matched its retained checksum; the Gate
+and media checksum-file roots matched the Passport; and the Passport canonical
+payload root independently verified. The committed README GIF and public
+evidence projection were materialized only from those verified bytes. The
+Passport grants no execution or publication authority from first-party or
+System identity, KFD compliance, Product System metadata, package metadata,
+registry history, scan output, or standalone generation, and records
+`productionDeployment: false`.
+
 ## Historical qualified exact-output run
 
 The following retained run proves the earlier
