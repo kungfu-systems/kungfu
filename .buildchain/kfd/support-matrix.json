@@ -102,7 +102,7 @@
         "evidenceRoots": [
           {
             "path": ".buildchain/kfd/kfd-2/release-claims.json",
-            "sha256": "sha256:878a588324430d729582ddb11da65463aad3ee1b62f73c9b9548937fd28213d3"
+        "sha256": "sha256:d6465a2d858ad86909e61f08d13cdb2434d6ab07f51b6818d7cde34915760f6e"
           },
           {
             "path": "docs/qualification/kfd2-trust-assessment.md",
