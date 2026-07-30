@@ -10,17 +10,23 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const workflowPath = '.github/workflows/kungfu-agent-patrol.yml';
 const workflow = fs.readFileSync(path.join(root, workflowPath), 'utf8');
 
-test('Agent Patrol is scheduled synthetic or trusted manual only', () => {
+test('Agent Patrol exposes protected layered schedules and manual modes', () => {
   assert.match(workflow, /^on:\n {2}[\s\S]*schedule:/m);
   assert.match(workflow, /cron: "0 18 \* \* 1-6"/);
   assert.match(workflow, /cron: "0 18 \* \* 0"/);
+  assert.match(workflow, /cron: "0 20 \* \* 3"/);
+  assert.match(workflow, /cron: "0 20 \* \* 0"/);
   assert.match(workflow, /^ {2}workflow_dispatch:\n {4}inputs:/m);
   assert.match(workflow, /default: light/);
   assert.match(
     workflow,
-    /(?:\n {10}- light)(?:\n {10}- deep)(?:\n {10}- real-snapshot)/,
+    /(?:\n {10}- light)(?:\n {10}- deep)(?:\n {10}- real-snapshot)(?:\n {10}- qualification)(?:\n {10}- candidate)/,
   );
-  assert.doesNotMatch(workflow, /^\s+(?:pull_request|push):/m);
+  assert.doesNotMatch(workflow, /^\s+pull_request:/m);
+  assert.match(workflow, /^ {2}push:\n {4}paths:/m);
+  assert.doesNotMatch(workflow, /^ {4}branches:/m);
+  assert.match(workflow, /framework\/agent-patrol\/\*\*/);
+  assert.match(workflow, /framework\/agent-repository-work\/\*\*/);
   assert.match(workflow, /github\.repository == 'kungfu-systems\/kungfu'/);
   assert.match(
     workflow,
@@ -40,7 +46,7 @@ test('Agent Patrol is isolated to the dedicated agent-121 runner', () => {
   assert.match(workflow, /test "\$\(id -u\)" = "996"/);
   assert.match(workflow, /DOCKER_HOST=%s\\n' "\$docker_host" >>"\$GITHUB_ENV"/);
   assert.match(workflow, /group: kungfu-agent-patrol-agent-121/);
-  assert.match(workflow, /timeout-minutes: 90/);
+  assert.match(workflow, /&& 240 \|\| 90/);
 });
 
 test('Agent Patrol bounds the protected-source checkout transport', () => {
@@ -75,23 +81,43 @@ test('Agent Patrol pins its local-model runtime and retains bounded evidence', (
     /actions\/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02/,
   );
   assert.match(workflow, /retention-days: 14/);
-  assert.match(workflow, /\/plan\.json/);
-  assert.match(workflow, /repository-work\/\*\/evidence/);
+  assert.match(workflow, /\/retained/);
+  assert.match(workflow, /agent-patrol:capability -- audit-artifacts/);
+  assert.match(workflow, /artifact-audit\.json/);
 });
 
 test('Agent Patrol selects and serially executes bounded fixture suites', () => {
   assert.match(workflow, /\.\/shifu agent-patrol:select --/);
   assert.match(workflow, /--rotation-key "\$PATROL_ROTATION_KEY"/);
   assert.match(workflow, /--fixture "\$fixture"/);
+  assert.match(workflow, /trialsPerFixture/);
+  assert.match(workflow, /for trial in \$\(seq 1 "\$trials_per_fixture"\)/);
   assert.match(workflow, /jq -r '\.fixtures\[\]'/);
   assert.match(workflow, /group: kungfu-agent-patrol-agent-121/);
   assert.match(workflow, /cancel-in-progress: false/);
+});
+
+test('Agent Patrol persists immutable receipts and emits bounded trends', () => {
+  assert.match(workflow, /agent-patrol:capability -- create/);
+  assert.match(workflow, /agent-patrol:capability -- store/);
+  assert.match(
+    workflow,
+    /--state-root "\$HOME\/\.local\/state\/kungfu-agent-patrol"/,
+  );
+  assert.match(workflow, /for days in 14 30/);
+  assert.match(workflow, /agent-patrol:capability -- qualify/);
+  assert.match(workflow, /git rev-parse "\$GITHUB_SHA\^\{tree\}"/);
+  assert.doesNotMatch(
+    workflow,
+    /(?:rm|unlink|truncate)\s+[^\n]*capability-receipts/iu,
+  );
 });
 
 test('Agent Patrol captures deduplicated Findings but can never admit Issues', () => {
   assert.match(workflow, /\.\/shifu agent-patrol:classify --/);
   assert.match(workflow, /\.\/shifu agent-patrol:dogfood-capture --/);
   assert.match(workflow, /\.issueAdmitted == false/);
+  assert.match(workflow, /\.overwritten == false and \.deleted == false/);
   assert.doesNotMatch(workflow, /dogfood (?:admit|transition)/);
   assert.doesNotMatch(
     workflow,

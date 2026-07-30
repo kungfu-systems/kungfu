@@ -1771,14 +1771,14 @@
     {
       "path": ".github/workflows/kungfu-agent-patrol.yml",
       "authority": "qualification",
-      "definitionDigest": "sha256:0741a12a129837e613ebebbaa0db4e9538cb4109d70b2ffc2a336e4c09d5a34d",
+      "definitionDigest": "sha256:a0b849745a905d9028b21a6298fbce2907e62cf80becd8bbfdfcde1f608ef033",
       "jobs": [
         {
           "id": "patrol",
           "authority": "qualification",
           "publication": "none",
           "receipt": "diagnostic",
-          "definitionDigest": "sha256:eb88c534da283957e4f74a932ac9177884d3870272b7b135e52c56d6023e77ad",
+          "definitionDigest": "sha256:62272a695b3022acbe0bdc7d62bf07901c9b7494e1b361550d0190f4e8c1ae34",
           "credentials": {"githubToken":"read","oidc":false,"repositorySecrets":[],"inheritedSecrets":false,"environment":null},
           "externalActions": ["actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0","actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02"],
           "steps": [
@@ -1794,40 +1794,41 @@
             },
             {
               "index": 3,
-              "label": "name:Build exact source and deterministic Patrol contracts",
-              "definitionDigest": "sha256:6ae33b692c50c24b2d2c483559594153e69f7ceb7d0a7e66ba131a8b58464fae"
+              "label": "name:Install dependencies and select bounded Patrol plan",
+              "definitionDigest": "sha256:244133c1058fe3c340fcf2062588595e9be0ebe01f20dda1ab43f083048db763"
             },
             {
               "index": 4,
-              "label": "name:Select bounded Patrol plan",
-              "definitionDigest": "sha256:07e94217d605a7ea42dd95af957ad859d101f727067cb4e9fcc713ed03068f1e"
+              "label": "name:Build exact source and deterministic Patrol contracts",
+              "definitionDigest": "sha256:7299b625d00fd0d5d8328739af67cc7fc64706909430858298bc319e9e95be7f"
             },
             {
               "index": 5,
               "label": "name:Run bounded repository-work experiments",
-              "definitionDigest": "sha256:9f6798817fa55908789d5c938c30db7842c6ee936ee249439c7fcbd1de28fdd9"
+              "definitionDigest": "sha256:4b656bc69a7af0ae6c2e8d0c3ed200772586e2552ddba9fe2a3ce25afbac4203"
             },
             {
               "index": 6,
               "label": "name:Classify bounded outcomes",
-              "definitionDigest": "sha256:b50b4f1fcf14af84df58711e0f730e04cecd7e95dd457d21cb1438be3d761071"
+              "definitionDigest": "sha256:8cce1484f56a0abc478ec75f3373e4e812aee51778f5ed78850cd8345ff66b2f"
             },
-            {
-              "index": 7,
-              "label": "name:Capture or deduplicate native Dogfood Findings",
-              "definitionDigest": "sha256:ae11f433abbbf6093d7116802d4081db5db645fe3d0c12e36c1a4c62ceb8bc46"
-            },
+        {
+          "index": 7,
+          "label": "name:Produce and enforce bounded Patrol evidence",
+          "authority": "evidence-publication",
+          "definitionDigest": "sha256:d1159245a243daf8a37dd9cce3c1c59bf811df11d5cd81c012f4a89fcc6c2edc"
+        },
             {
               "index": 8,
-              "label": "name:Enforce infrastructure and evidence integrity",
+              "label": "name:Assemble and audit retained evidence",
               "authority": "evidence-publication",
-              "definitionDigest": "sha256:7b2371cde4bcdf1b0ee56a070ba790e9040e6bd2c49d7eea936cb25d4cf2c48f"
+              "definitionDigest": "sha256:d3f35aa488a697e5335b61db5e1e6d04d1cb51d1851c315324ff28987dbef3a9"
             },
             {
               "index": 9,
               "label": "name:Upload bounded Patrol evidence",
               "authority": "evidence-publication",
-              "definitionDigest": "sha256:bc1d87aaecf76f845b0739fd113342e55f501c6f0a01cc61622910b048c1444e"
+              "definitionDigest": "sha256:08aeae628961cf75bcb0b1c0eeb21c0837dce96fe18a6bd2b111dd04067ff981"
             }
           ]
         }

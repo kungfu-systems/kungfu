@@ -17,7 +17,9 @@ import {
 } from '../framework/agent-patrol/dogfood-capture.mjs';
 import {
   DAILY_LIGHT_SCHEDULE,
+  MONTHLY_QUALIFICATION_SCHEDULE,
   WEEKLY_DEEP_SCHEDULE,
+  WEEKLY_REAL_SNAPSHOT_SCHEDULE,
   parseArgs as parseSelectionArgs,
   selectPatrolPlan,
 } from '../framework/agent-patrol/select.mjs';
@@ -40,7 +42,9 @@ test('Patrol selector maps the two protected schedules to bounded modes', () => 
   assert.equal(light.mode, 'light');
   assert.deepEqual(light.fixtures, ['incident-board-lease-v1']);
   assert.equal(light.timeoutSeconds, 600);
+  assert.equal(light.trialsPerFixture, 1);
   assert.match(light.planRoot, /^sha256:[0-9a-f]{64}$/u);
+  assert.equal(light.schema, 'kungfu.agent-patrol.plan/v2');
 
   const deep = selectPatrolPlan({
     eventName: 'schedule',
@@ -53,6 +57,47 @@ test('Patrol selector maps the two protected schedules to bounded modes', () => 
     'incident-board-recovery-v1',
   ]);
   assert.equal(deep.timeoutSeconds, 900);
+});
+
+test('Patrol selector maps protected observation, monthly, and push lanes', () => {
+  const observation = selectPatrolPlan({
+    eventName: 'schedule',
+    schedule: WEEKLY_REAL_SNAPSHOT_SCHEDULE,
+    rotationKey: 1,
+    triggerAt: '2026-07-29T20:00:00Z',
+  });
+  assert.equal(observation.mode, 'real-snapshot');
+  assert.equal(observation.trialsPerFixture, 1);
+  assert.equal(observation.qualification.requested, false);
+
+  const monthly = selectPatrolPlan({
+    eventName: 'schedule',
+    schedule: MONTHLY_QUALIFICATION_SCHEDULE,
+    rotationKey: 1,
+    triggerAt: '2026-08-02T20:00:00Z',
+  });
+  assert.equal(monthly.mode, 'qualification');
+  assert.equal(monthly.trialsPerFixture, 3);
+  assert.equal(monthly.qualification.requested, true);
+
+  const guarded = selectPatrolPlan({
+    eventName: 'schedule',
+    schedule: MONTHLY_QUALIFICATION_SCHEDULE,
+    rotationKey: 1,
+    triggerAt: '2026-08-09T20:00:00Z',
+  });
+  assert.equal(guarded.mode, 'monthly-skip');
+  assert.deepEqual(guarded.fixtures, []);
+  assert.equal(guarded.skipReason, 'outside-first-utc-sunday-window');
+
+  const candidate = selectPatrolPlan({
+    eventName: 'push',
+    rotationKey: 9,
+    triggerAt: '2026-07-30T04:00:00Z',
+  });
+  assert.equal(candidate.mode, 'candidate');
+  assert.equal(candidate.trialsPerFixture, 3);
+  assert.equal(candidate.requiredGate, false);
 });
 
 test('weekly deep Patrol rotates two-fixture suites across the catalog', () => {
@@ -103,6 +148,16 @@ test('Patrol selector rejects undeclared schedules and untrusted events', () => 
         rotationKey: 1,
       }),
     /untrusted Patrol event/u,
+  );
+  assert.throws(
+    () =>
+      selectPatrolPlan({
+        eventName: 'schedule',
+        schedule: MONTHLY_QUALIFICATION_SCHEDULE,
+        rotationKey: 1,
+        triggerAt: 'not-a-time',
+      }),
+    /UTC trigger time/u,
   );
   const parsed = parseSelectionArgs([
     '--',
@@ -271,6 +326,15 @@ test('runner environment failure is captured and remains blocking', () => {
     JSON.stringify(classification).includes(report.failure.message),
     false,
   );
+});
+
+test('Warrant scope failure blocks while model-quality failures stay advisory', () => {
+  const report = baseReport();
+  report.failure.category = 'warrant-scope';
+  report.failure.message = 'candidate changed a protected path';
+  const classification = classifyReport(report, options());
+  assert.equal(classification.blocking, true);
+  assert.equal(classification.outcome, 'blocking-failure');
 });
 
 test('report identity mismatch fails closed before capture', () => {

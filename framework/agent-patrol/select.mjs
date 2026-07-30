@@ -15,6 +15,16 @@ import {
 
 export const DAILY_LIGHT_SCHEDULE = '0 18 * * 1-6';
 export const WEEKLY_DEEP_SCHEDULE = '0 18 * * 0';
+export const WEEKLY_REAL_SNAPSHOT_SCHEDULE = '0 20 * * 3';
+export const MONTHLY_QUALIFICATION_SCHEDULE = '0 20 * * 0';
+
+const MANUAL_MODES = new Set([
+  'light',
+  'deep',
+  'real-snapshot',
+  'qualification',
+  'candidate',
+]);
 
 function canonical(value) {
   if (Array.isArray(value)) return value.map(canonical);
@@ -45,6 +55,7 @@ export function selectPatrolPlan({
   schedule = '',
   manualMode = '',
   rotationKey,
+  triggerAt = '',
 }) {
   if (!Number.isInteger(rotationKey) || rotationKey < 1)
     throw new Error('rotation key must be a positive integer');
@@ -52,29 +63,65 @@ export function selectPatrolPlan({
   if (eventName === 'schedule') {
     if (schedule === DAILY_LIGHT_SCHEDULE) mode = 'light';
     else if (schedule === WEEKLY_DEEP_SCHEDULE) mode = 'deep';
-    else throw new Error(`unrecognized protected schedule: ${schedule}`);
+    else if (schedule === WEEKLY_REAL_SNAPSHOT_SCHEDULE) mode = 'real-snapshot';
+    else if (schedule === MONTHLY_QUALIFICATION_SCHEDULE) {
+      const instant = new Date(triggerAt);
+      if (!triggerAt || Number.isNaN(instant.valueOf()))
+        throw new Error('monthly qualification requires a UTC trigger time');
+      const scheduledSunday = new Date(instant);
+      scheduledSunday.setUTCDate(
+        scheduledSunday.getUTCDate() - scheduledSunday.getUTCDay(),
+      );
+      mode =
+        scheduledSunday.getUTCDate() <= 7 ? 'qualification' : 'monthly-skip';
+    } else throw new Error(`unrecognized protected schedule: ${schedule}`);
   } else if (eventName === 'workflow_dispatch') {
-    if (!['light', 'deep', 'real-snapshot'].includes(manualMode))
-      throw new Error('manual mode must be light, deep, or real-snapshot');
+    if (!MANUAL_MODES.has(manualMode))
+      throw new Error(
+        'manual mode must be light, deep, real-snapshot, qualification, or candidate',
+      );
     mode = manualMode;
+  } else if (eventName === 'push') {
+    mode = 'candidate';
   } else {
     throw new Error(`untrusted Patrol event: ${eventName}`);
   }
 
+  const realSnapshot = ['real-snapshot', 'qualification', 'candidate'].includes(
+    mode,
+  );
+  const qualificationRequested = ['qualification', 'candidate'].includes(mode);
   const body = {
-    schema: 'kungfu.agent-patrol.plan/v1',
+    schema: 'kungfu.agent-patrol.plan/v2',
     evidenceClass: 'bounded-experiment',
     mode,
     trigger: eventName,
     schedule: eventName === 'schedule' ? schedule : null,
+    triggerAt: triggerAt || null,
     rotationKey,
     fixtures:
       mode === 'light'
         ? [LIGHT_REPOSITORY_WORK_FIXTURE_ID]
-        : mode === 'real-snapshot'
+        : realSnapshot
           ? [REAL_MODULE_SNAPSHOT_FIXTURE_ID]
-          : deepFixtures(rotationKey),
-    timeoutSeconds: mode === 'light' ? 600 : 900,
+          : mode === 'deep'
+            ? deepFixtures(rotationKey)
+            : [],
+    timeoutSeconds: mode === 'light' ? 600 : mode === 'monthly-skip' ? 0 : 900,
+    trialsPerFixture: qualificationRequested
+      ? 3
+      : mode === 'monthly-skip'
+        ? 0
+        : 1,
+    qualification: {
+      requested: qualificationRequested,
+      minimumTrials: 3,
+      authority: qualificationRequested ? 'advisory-model-capability' : null,
+    },
+    advisoryModelQuality: true,
+    protectedSourceRequired: true,
+    skipReason:
+      mode === 'monthly-skip' ? 'outside-first-utc-sunday-window' : null,
     issueAdmission: 'prohibited',
     requiredGate: false,
   };
@@ -87,6 +134,7 @@ export function parseArgs(argv) {
     schedule: '',
     manualMode: '',
     rotationKey: null,
+    triggerAt: '',
     output: '',
   };
   for (let index = 0; index < argv.length; index += 1) {
@@ -97,6 +145,7 @@ export function parseArgs(argv) {
     else if (arg === '--manual-mode') result.manualMode = argv[++index] || '';
     else if (arg === '--rotation-key')
       result.rotationKey = Number.parseInt(argv[++index] || '', 10);
+    else if (arg === '--trigger-at') result.triggerAt = argv[++index] || '';
     else if (arg === '--output') result.output = argv[++index] || '';
     else throw new Error(`unknown argument: ${arg}`);
   }

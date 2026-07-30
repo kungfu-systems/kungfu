@@ -51,17 +51,17 @@
   },
   "realModuleSnapshot": {
     "id": "kungfu-agent-patrol-real-module-snapshot-v1",
-    "status": "manual-qualification",
-    "manifestRoot": "sha256:4bb28a90ec1ee548c7280de2fbc32485708ad30f61fd5e343f4a5d0984689944",
-    "treeRoot": "sha256:17be376f3b5639dcc0dd32405d29bba2d0d4c96267b68b39e6d165a058d341d3",
+    "status": "scheduled-observation",
+    "manifestRoot": "sha256:2807a02c0bb2efcaa5b23ec7b219d0cca253de2afdd2913d5248316e3958f273",
+    "treeRoot": "sha256:6bb34887b52f1696570b4b2208f61f0ae45b1a48de9804d5732a3a4792f3cb31",
     "fileCount": 8,
-    "lineCount": 3102,
+    "lineCount": 4001,
     "seededFailure": "volatile numeric failure identifiers share one Finding identity",
     "writablePaths": [
       "framework/agent-patrol/classify.mjs"
     ],
     "sourcePolicy": "exact-commit-tracked-regular-files",
-    "weeklyScheduleEnabled": false
+    "weeklyScheduleEnabled": true
   },
   "sessions": {
     "count": 2,
@@ -104,6 +104,7 @@
     "correctness",
     "scope",
     "continuity",
+    "exactness",
     "evidence",
     "efficiency",
     "residuals"
