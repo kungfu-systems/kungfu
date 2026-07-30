@@ -674,7 +674,10 @@ test('usage status reads only the bounded cache root and reports current checkou
     'shifu.qualified-assignment-core-usage-summary/v1',
   );
   assert.equal(summary.currentCheckout.repository, 'kungfu-systems/kungfu');
-  assert.equal(summary.currentCheckout.eligible, true);
+  assert.equal(
+    summary.currentCheckout.eligible,
+    process.platform === 'darwin' && process.arch === 'arm64',
+  );
   assert.equal(summary.totals.observations, 1);
 });
 
@@ -807,7 +810,11 @@ test('consumer CLI emits one source-build diagnosis and durable fallback observa
   assert.equal(summary.ok, true);
   assert.equal(summary.totals.observations, 1);
   assert.equal(summary.counts.results['fallback-required'], 1);
-  assert.equal(summary.counts.reasons['qualified-core-cache-miss'], 1);
+  const expectedReason =
+    process.platform === 'darwin' && process.arch === 'arm64'
+      ? 'qualified-core-cache-miss'
+      : 'unsupported-host';
+  assert.equal(summary.counts.reasons[expectedReason], 1);
 });
 
 test('consumer streams GitHub artifacts through bounded retries and removes partials', async (t) => {
