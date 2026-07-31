@@ -7,10 +7,12 @@
 #ifndef KUNGFU_NODE_WATCHER_H
 #define KUNGFU_NODE_WATCHER_H
 
+#include <atomic>
 #include <napi.h>
-#include <uv.h>
 
 #include <deque>
+#include <thread>
+#include <unordered_set>
 
 #include "common.h"
 #include "io.h"
@@ -62,6 +64,8 @@ public:
 
   Napi::Value DrainCustomData(const Napi::CallbackInfo &info);
 
+  Napi::Value GetRuntimeStats(const Napi::CallbackInfo &info);
+
   Napi::Value IssueMark(const Napi::CallbackInfo &info);
 
   Napi::Value Start(const Napi::CallbackInfo &info);
@@ -94,16 +98,40 @@ protected:
 
 private:
   static Napi::FunctionReference constructor;
-  static void cleanup() {
-    SPDLOG_INFO("Watcher reset");
-    Watcher::constructor.Reset();
-  }
+  static std::mutex instances_mutex_;
+  static std::unordered_set<Watcher *> instances_;
+  static void cleanup();
 
-  uv_work_t uv_work_ = {};
-  bool uv_work_live_ = false;
-  bool quit_ = false;
+  enum class bridge_event_kind { snapshot_ready, worker_stopped };
+  struct bridge_event {
+    Watcher *watcher;
+    bridge_event_kind kind;
+  };
+
+  std::thread worker_thread_;
+  Napi::ThreadSafeFunction worker_bridge_;
+  std::atomic<bool> worker_live_{false};
+  std::atomic<bool> quit_{false};
+  std::atomic<bool> environment_closing_{false};
+  std::atomic<bool> snapshot_pending_{false};
   bool capture_custom_ = false;
   std::exception_ptr worker_error_ = nullptr;
+  std::mutex worker_error_mutex_;
+
+  std::atomic<uint64_t> step_count_{0};
+  std::atomic<uint64_t> step_total_nanos_{0};
+  std::atomic<uint64_t> step_max_nanos_{0};
+  std::atomic<uint64_t> worker_lock_wait_total_nanos_{0};
+  std::atomic<uint64_t> worker_lock_wait_max_nanos_{0};
+  std::atomic<uint64_t> snapshot_lock_wait_total_nanos_{0};
+  std::atomic<uint64_t> snapshot_lock_wait_max_nanos_{0};
+  std::atomic<uint64_t> snapshot_hold_total_nanos_{0};
+  std::atomic<uint64_t> snapshot_hold_max_nanos_{0};
+  std::atomic<uint64_t> snapshot_lock_samples_{0};
+  std::atomic<uint64_t> snapshot_requests_{0};
+  std::atomic<uint64_t> snapshot_deliveries_{0};
+  std::atomic<uint64_t> snapshot_coalesced_{0};
+  std::atomic<uint64_t> bridge_failures_{0};
 
   struct custom_frame_record {
     int64_t gen_time;
@@ -163,7 +191,23 @@ private:
 
   void CancelWorker();
 
+  void RunWorker();
+
+  void QueueSnapshot();
+
+  void QueueWorkerStopped();
+
+  void HandleBridgeEvent(Napi::Env env, bridge_event_kind kind);
+
+  void SyncSnapshot();
+
+  void StopAndJoinForCleanup();
+
+  static void ObserveDuration(std::atomic<uint64_t> &total, std::atomic<uint64_t> &maximum, uint64_t nanos);
+
   void RecordWorkerError(const std::exception_ptr &error);
+
+  bool HasWorkerError();
 
   std::exception_ptr TakeWorkerError();
 

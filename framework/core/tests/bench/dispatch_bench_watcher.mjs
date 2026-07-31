@@ -9,7 +9,7 @@
 // node — run under ./shifu or fnm so process.execPath (used to spawn the
 // watcher) matches the ABI of the built kungfu_node.node binding.
 //
-// Usage: node tests/bench/dispatch_bench_watcher.mjs [event-count]
+// Usage: node tests/bench/dispatch_bench_watcher.mjs [event-count] [carrier-type]
 
 import { spawn } from 'node:child_process';
 import fs from 'node:fs';
@@ -33,6 +33,7 @@ const coreDir = path.resolve(benchDir, '..', '..'); // framework/core
 const repoDir = path.resolve(coreDir, '..', '..'); // repo root
 
 const count = Number.parseInt(process.argv[2] || '200000', 10);
+const carrierType = process.argv[3] || '601';
 
 const home = benchHome();
 console.log(`bench home: ${home}`);
@@ -69,7 +70,7 @@ if (!alive(watcher)) {
   process.exit(1);
 }
 
-runLoad(benchDir, home, count, 'quote', env);
+runLoad(benchDir, home, count, carrierType, env);
 
 // the watcher self-exits after its 40s window (+ unwind); wait it out
 await waitExit(watcher, 90000);

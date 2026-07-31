@@ -48,6 +48,21 @@ setTimeout(() => {
   clearInterval(sync);
   console.log('watcher bench window done, quitting');
   watcher.quit();
-  // give the uv worker a moment to unwind before process exit
-  setTimeout(() => process.exit(0), 2000);
+  const deadline = Date.now() + 5000;
+  const stopped = setInterval(() => {
+    const stats = watcher.runtimeStats();
+    if (!stats.running) {
+      clearInterval(stopped);
+      console.log(
+        'watcher runtime stats',
+        JSON.stringify(stats, (_key, value) =>
+          typeof value === 'bigint' ? value.toString() : value,
+        ),
+      );
+    } else if (Date.now() > deadline) {
+      clearInterval(stopped);
+      console.error('watcher did not stop within 5 seconds');
+      process.exitCode = 1;
+    }
+  }, 10);
 }, seconds * 1000);

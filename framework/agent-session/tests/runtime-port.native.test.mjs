@@ -314,5 +314,15 @@ test(
         coordinatorByteProxy: false,
       },
     );
+    assert.equal(received.runtimeStats.threadModel, 'dedicated-native-thread');
+    assert.equal(received.runtimeStats.bridgeQueueCapacity, 1);
+    assert.ok(Number(received.runtimeStats.stepCount) > 0);
+    assert.ok(Number(received.runtimeStats.stepMaxNanos) > 0);
+    assert.ok(Number(received.runtimeStats.snapshotRequests) > 0);
+    assert.ok(Number(received.runtimeStats.snapshotCoalesced) > 0);
+    assert.ok(Number(received.runtimeStats.snapshotHoldMaxNanos) > 0);
+    assert.equal(received.runtimeStats.customQueueCapacityBytes, '4194304');
+    assert.equal(received.runtimeStats.customFramesDropped, '0');
+    assert.equal(received.runtimeStats.bridgeFailures, '0');
   },
 );

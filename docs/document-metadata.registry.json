@@ -2078,6 +2078,28 @@
         "invisible_context_boundary": "unrun remote release hosts, notarization, and unpublished product state are not claimed"
       }
     },
+    "docs/qualification/node-watcher-runtime-boundary.md": {
+      "metadata_schema": "kungfu.document-metadata/v1",
+      "document_status": "active",
+      "doc_type": "qualification-evidence",
+      "review_state": "self-reviewed",
+      "sensitivity": "public",
+      "sources": [
+        "executable-probe",
+        "local-files"
+      ],
+      "period": "2026-07-31",
+      "theme": "node-watcher-runtime-boundary",
+      "confidence": "high",
+      "evidence_grade": "B",
+      "last_reviewed": "2026-07-31",
+      "ai_provenance": {
+        "model_family": "OpenAI GPT-5",
+        "product": "Codex",
+        "generated_at": "2026-07-31",
+        "invisible_context_boundary": "Exact hidden model checkpoint and future platform qualification results are not claimed"
+      }
+    },
     "docs/qualification/organization-wide-assignment-dogfood.md": {
       "metadata_schema": "kungfu.document-metadata/v1",
       "document_status": "active",

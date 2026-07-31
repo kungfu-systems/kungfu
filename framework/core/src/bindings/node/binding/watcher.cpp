@@ -7,6 +7,7 @@
 #include "watcher.h"
 #include "config_store.h"
 #include "history.h"
+#include <chrono>
 #include <kungfu/runtime/state_cache/manager.h>
 #include <kungfu/view/action_envelope.h>
 #include <sstream>
@@ -29,6 +30,8 @@ constexpr uint32_t STEP_INTERVAL = 10;
 inline std::string format(uint32_t uid) { return fmt::format("{:08x}", uid); }
 
 Napi::FunctionReference Watcher::constructor = {};
+std::mutex Watcher::instances_mutex_ = {};
+std::unordered_set<Watcher *> Watcher::instances_ = {};
 
 inline location_ptr GetWatcherLocation(const Napi::CallbackInfo &info) {
   if (not IsValid(info, 0, &Napi::Value::IsString)) {
@@ -80,6 +83,10 @@ Watcher::Watcher(const Napi::CallbackInfo &info) try
       config_ref_(Napi::ObjectReference::New(ConfigStore::NewInstance({info[0]}).ToObject(), 1)), //
       update_ledger(ledger_ref_),                                                                 //
       reset_cache(*this, ledger_ref_) {                                                           //
+  {
+    std::lock_guard<std::mutex> guard(instances_mutex_);
+    instances_.insert(this);
+  }
 
   serialize::InitStateMap(info, ledger_ref_, "ledger");
 
@@ -113,7 +120,11 @@ Watcher::Watcher(const Napi::CallbackInfo &info) try
 
 Watcher::~Watcher() {
   SPDLOG_INFO("~Watcher");
-  uv_work_.data = nullptr;
+  StopAndJoinForCleanup();
+  {
+    std::lock_guard<std::mutex> guard(instances_mutex_);
+    instances_.erase(this);
+  }
   config_ref_.Reset();
   app_states_ref_.Reset();
   ledger_ref_.Reset();
@@ -275,6 +286,56 @@ Napi::Value Watcher::DrainCustomData(const Napi::CallbackInfo &info) {
   return result;
 }
 
+Napi::Value Watcher::GetRuntimeStats(const Napi::CallbackInfo &info) {
+  size_t custom_queue_bytes = 0;
+  size_t custom_queue_frames = 0;
+  uint64_t custom_frames_dropped = 0;
+  {
+    std::lock_guard<std::mutex> guard(custom_frames_mutex_);
+    custom_queue_bytes = custom_frames_bytes_;
+    custom_queue_frames = custom_frames_.size();
+    custom_frames_dropped = custom_frames_dropped_;
+  }
+
+  const auto step_count = step_count_.load();
+  const auto snapshot_deliveries = snapshot_deliveries_.load();
+  const auto snapshot_lock_samples = snapshot_lock_samples_.load();
+  auto result = Napi::Object::New(info.Env());
+  result.Set("schema", Napi::String::New(info.Env(), "kungfu.node-watcher-runtime-stats/v1"));
+  result.Set("threadModel", Napi::String::New(info.Env(), "dedicated-native-thread"));
+  result.Set("running", Napi::Boolean::New(info.Env(), worker_live_.load()));
+  result.Set("stopRequested", Napi::Boolean::New(info.Env(), quit_.load()));
+  result.Set("bridgeQueueCapacity", Napi::Number::New(info.Env(), 1));
+  result.Set("bridgeQueueDepth", Napi::Number::New(info.Env(), snapshot_pending_.load() ? 1 : 0));
+  result.Set("stepCount", Napi::BigInt::New(info.Env(), step_count));
+  result.Set("stepMeanNanos",
+             Napi::BigInt::New(info.Env(), step_count == 0 ? 0 : step_total_nanos_.load() / step_count));
+  result.Set("stepMaxNanos", Napi::BigInt::New(info.Env(), step_max_nanos_.load()));
+  result.Set("workerLockWaitMeanNanos",
+             Napi::BigInt::New(info.Env(), step_count == 0 ? 0 : worker_lock_wait_total_nanos_.load() / step_count));
+  result.Set("workerLockWaitMaxNanos", Napi::BigInt::New(info.Env(), worker_lock_wait_max_nanos_.load()));
+  result.Set("snapshotLockWaitMeanNanos",
+             Napi::BigInt::New(info.Env(), snapshot_lock_samples == 0
+                                               ? 0
+                                               : snapshot_lock_wait_total_nanos_.load() / snapshot_lock_samples));
+  result.Set("snapshotLockWaitMaxNanos", Napi::BigInt::New(info.Env(), snapshot_lock_wait_max_nanos_.load()));
+  result.Set("snapshotHoldMeanNanos",
+             Napi::BigInt::New(info.Env(), snapshot_lock_samples == 0
+                                               ? 0
+                                               : snapshot_hold_total_nanos_.load() / snapshot_lock_samples));
+  result.Set("snapshotHoldMaxNanos", Napi::BigInt::New(info.Env(), snapshot_hold_max_nanos_.load()));
+  result.Set("snapshotRequests", Napi::BigInt::New(info.Env(), snapshot_requests_.load()));
+  result.Set("snapshotDeliveries", Napi::BigInt::New(info.Env(), snapshot_deliveries));
+  result.Set("snapshotCoalesced", Napi::BigInt::New(info.Env(), snapshot_coalesced_.load()));
+  result.Set("bridgeFailures", Napi::BigInt::New(info.Env(), bridge_failures_.load()));
+  result.Set("customQueueBytes", Napi::BigInt::New(info.Env(), static_cast<uint64_t>(custom_queue_bytes)));
+  result.Set("customQueueFrames", Napi::BigInt::New(info.Env(), static_cast<uint64_t>(custom_queue_frames)));
+  result.Set("customQueueCapacityBytes",
+             Napi::BigInt::New(info.Env(), static_cast<uint64_t>(CUSTOM_FRAME_QUEUE_BYTES)));
+  result.Set("customFramesDropped", Napi::BigInt::New(info.Env(), custom_frames_dropped));
+  return result;
+}
+
 Napi::Value Watcher::IssueMark(const Napi::CallbackInfo &info) {
   SPDLOG_INFO("issue mark");
   uint32_t tag = GetNumber(info, 0);
@@ -306,6 +367,7 @@ void Watcher::Init(Napi::Env env, Napi::Object exports) {
                                         InstanceMethod("issueRawPublic", &Watcher::IssueRawPublic),               //
                                         InstanceMethod("requestReadFromPublic", &Watcher::RequestReadFromPublic), //
                                         InstanceMethod("drainCustomData", &Watcher::DrainCustomData),             //
+                                        InstanceMethod("runtimeStats", &Watcher::GetRuntimeStats),                //
                                         InstanceMethod("issueMark", &Watcher::IssueMark),                         //
                                         InstanceMethod("start", &Watcher::Start),                                 //
                                         InstanceMethod("sync", &Watcher::Sync),                                   //
@@ -388,10 +450,18 @@ Napi::Value Watcher::Start(const Napi::CallbackInfo &info) {
 }
 
 void Watcher::Sync(const Napi::CallbackInfo &info) {
-  std::lock_guard<std::mutex> guard(feed_mutex_);
+  const auto waiting_at = std::chrono::steady_clock::now();
+  std::unique_lock<std::mutex> guard(feed_mutex_);
+  const auto acquired_at = std::chrono::steady_clock::now();
   SyncEventCache();
   SyncAppStates();
   SyncLedger();
+  const auto completed_at = std::chrono::steady_clock::now();
+  ObserveDuration(snapshot_lock_wait_total_nanos_, snapshot_lock_wait_max_nanos_,
+                  std::chrono::duration_cast<std::chrono::nanoseconds>(acquired_at - waiting_at).count());
+  ObserveDuration(snapshot_hold_total_nanos_, snapshot_hold_max_nanos_,
+                  std::chrono::duration_cast<std::chrono::nanoseconds>(completed_at - acquired_at).count());
+  ++snapshot_lock_samples_;
 }
 
 void Watcher::SyncLedger() {
@@ -499,129 +569,260 @@ void Watcher::OnDeregister(int64_t trigger_time, const Deregister &deregister_da
 }
 
 void Watcher::StartWorker() {
-  uv_work_.data = static_cast<void *>(this);
-  uv_work_live_ = true;
-  auto worker = [](uv_work_t *req) {
-    auto watcher = static_cast<Watcher *>(req->data);
-    while (req->data && watcher->uv_work_live_) {
-      // An exception escaping this uv worker thread cannot be caught by any
-      // frame above us and terminates the whole process. Storage contention
-      // (e.g. SQLITE_BUSY when another process holds a write lock past the
-      // busy timeout) is transient by nature: log, back off, and retry on
-      // the next tick instead of dying.
-      try {
-        if (not watcher->is_live() and not watcher->is_started() and watcher->is_usable()) {
-          watcher->setup();
-        }
-        while (watcher->is_live()) {
-          std::lock_guard<std::mutex> guard(watcher->feed_mutex_);
+  if (quit_.load()) {
+    throw Napi::Error::New(ledger_ref_.Env(), "cannot restart a watcher after quit");
+  }
+  if (worker_live_.load() || worker_thread_.joinable()) {
+    throw Napi::Error::New(ledger_ref_.Env(), "watcher worker is already running");
+  }
 
-          if (not watcher->is_step_continually()) {
-            break;
-          }
-
-          watcher->step(STEP_INTERVAL);
-        }
-      } catch (const std::exception &ex) {
-        if (watcher->get_loop_error()) {
-          SPDLOG_ERROR("watcher event loop failed: {}", ex.what());
-          watcher->RecordWorkerError(std::current_exception());
-          watcher->signal_stop();
-          watcher->uv_work_live_ = false;
-          break;
-        }
-        SPDLOG_ERROR("watcher worker error, backing off: {}", ex.what());
-      } catch (...) {
-        if (watcher->get_loop_error()) {
-          SPDLOG_ERROR("watcher event loop failed with a non-standard exception");
-          watcher->RecordWorkerError(std::current_exception());
-          watcher->signal_stop();
-          watcher->uv_work_live_ = false;
-          break;
-        }
-        SPDLOG_ERROR("watcher worker got a transient non-standard error, backing off");
-      }
-      std::this_thread::sleep_for(std::chrono::microseconds(watcher->milliseconds_sleep_after_step_));
-    }
-    watcher->signal_stop();
-    watcher->pause();
-    SPDLOG_INFO("Watcher uv loop stopped");
-  };
-  auto after = [](uv_work_t *req, int status) {
-    SPDLOG_INFO("Watcher uv loop completed");
-    auto watcher = static_cast<Watcher *>(req->data);
-    if (auto error = watcher->TakeWorkerError()) {
-      auto env = watcher->ledger_ref_.Env();
-      try {
-        std::rethrow_exception(error);
-      } catch (const yijinjing::journal::replay_exhausted &ex) {
-        auto js_error = Napi::Error::New(env, ex.what());
-        js_error.Value().Set("name", Napi::String::New(env, "ReplayExhaustedError"));
-        js_error.Value().Set("carrierType", Napi::Number::New(env, ex.carrier_type()));
-        js_error.Value().Set("triggerTime", Napi::BigInt::New(env, ex.trigger_time()));
-        js_error.ThrowAsJavaScriptException();
-      } catch (const std::exception &ex) {
-        auto js_error = Napi::Error::New(env, ex.what());
-        js_error.Value().Set("name", Napi::String::New(env, "KungfuRuntimeError"));
-        js_error.Value().Set("nativeType", Napi::String::New(env, typeid(ex).name()));
-        js_error.ThrowAsJavaScriptException();
-      } catch (...) {
-        Napi::Error::New(env, "kungfu watcher failed with a non-standard exception").ThrowAsJavaScriptException();
-      }
-      watcher->Unref();
-      return;
-    }
-    // have to be at this position, for deleting old journal securitily
-    auto env = watcher->ledger_ref_.Env();
-    Napi::HandleScope scope(env);
-
-    if (watcher->quit_) {
-      SPDLOG_INFO("watcher quit");
-      watcher->Unref();
-      return;
-    } else {
-      // Wait until the coordinator is fully down before reconnecting.
-      std::this_thread::sleep_for(std::chrono::milliseconds(1000));
-    }
-
-    watcher->AfterCoordinatorDown(env);
-    watcher->set_begin_time(yijinjing::time::now_in_nano());
-    SPDLOG_INFO("Restart watcher uv loop");
-    // The coordinator may quit while the watcher is running; restart the UV
-    // loop after its deregistration has been observed.
-    try {
-      watcher->StartWorker();
-    } catch (const Napi::Error &error) {
-      error.ThrowAsJavaScriptException();
-    } catch (const std::exception &error) {
-      Napi::Error::New(watcher->ledger_ref_.Env(), error.what()).ThrowAsJavaScriptException();
-    }
-    watcher->Unref();
-  };
-
+  worker_live_ = true;
+  snapshot_pending_ = false;
   Ref();
-  const auto rc = uv_queue_work(uv_default_loop(), &uv_work_, worker, after);
-  if (rc != 0) {
+  bool bridge_created = false;
+  try {
+    worker_bridge_ = Napi::ThreadSafeFunction::New(
+        ledger_ref_.Env(), Napi::Function::New(ledger_ref_.Env(), [](const Napi::CallbackInfo &) {}),
+        "KungfuWatcherBridge", 1, 1);
+    bridge_created = true;
+    worker_thread_ = std::thread(&Watcher::RunWorker, this);
+  } catch (...) {
+    worker_live_ = false;
+    if (bridge_created) {
+      worker_bridge_.Abort();
+    }
     Unref();
-    uv_work_live_ = false;
-    throw Napi::Error::New(ledger_ref_.Env(), fmt::format("failed to queue watcher worker: {}", uv_strerror(rc)));
+    throw;
   }
 }
 
-void Watcher::CancelWorker() { uv_work_live_ = false; }
+void Watcher::CancelWorker() { worker_live_ = false; }
+
+void Watcher::RunWorker() {
+  while (worker_live_.load() && not environment_closing_.load()) {
+    // An exception escaping this dedicated thread terminates the process.
+    // Transient storage contention is retried after the bounded backoff.
+    try {
+      if (not is_live() and not is_started() and is_usable()) {
+        setup();
+      }
+      while (worker_live_.load() && is_live()) {
+        const auto waiting_at = std::chrono::steady_clock::now();
+        std::unique_lock<std::mutex> guard(feed_mutex_);
+        const auto acquired_at = std::chrono::steady_clock::now();
+        if (not is_step_continually()) {
+          break;
+        }
+        step(STEP_INTERVAL);
+        const auto completed_at = std::chrono::steady_clock::now();
+        ObserveDuration(worker_lock_wait_total_nanos_, worker_lock_wait_max_nanos_,
+                        std::chrono::duration_cast<std::chrono::nanoseconds>(acquired_at - waiting_at).count());
+        ObserveDuration(step_total_nanos_, step_max_nanos_,
+                        std::chrono::duration_cast<std::chrono::nanoseconds>(completed_at - acquired_at).count());
+        ++step_count_;
+        guard.unlock();
+        QueueSnapshot();
+      }
+    } catch (const std::exception &ex) {
+      if (get_loop_error()) {
+        SPDLOG_ERROR("watcher event loop failed: {}", ex.what());
+        RecordWorkerError(std::current_exception());
+        signal_stop();
+        worker_live_ = false;
+        break;
+      }
+      SPDLOG_ERROR("watcher worker error, backing off: {}", ex.what());
+    } catch (...) {
+      if (get_loop_error()) {
+        SPDLOG_ERROR("watcher event loop failed with a non-standard exception");
+        RecordWorkerError(std::current_exception());
+        signal_stop();
+        worker_live_ = false;
+        break;
+      }
+      SPDLOG_ERROR("watcher worker got a transient non-standard error, backing off");
+    }
+    std::this_thread::sleep_for(std::chrono::microseconds(milliseconds_sleep_after_step_));
+  }
+  signal_stop();
+  pause();
+  worker_live_ = false;
+
+  // Coordinator reconnect backoff belongs on the dedicated native thread, not
+  // the Node event loop. Quit and fatal-error paths complete immediately.
+  if (not quit_.load() && not environment_closing_.load() && not HasWorkerError()) {
+    std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+  }
+  QueueWorkerStopped();
+  SPDLOG_INFO("Watcher dedicated loop stopped");
+}
+
+void Watcher::QueueSnapshot() {
+  ++snapshot_requests_;
+  if (snapshot_pending_.exchange(true)) {
+    ++snapshot_coalesced_;
+    return;
+  }
+  auto event = new bridge_event{this, bridge_event_kind::snapshot_ready};
+  const auto status = worker_bridge_.NonBlockingCall(event, [](Napi::Env env, Napi::Function, bridge_event *event) {
+    event->watcher->HandleBridgeEvent(env, event->kind);
+    delete event;
+  });
+  if (status != napi_ok) {
+    delete event;
+    snapshot_pending_ = false;
+    ++bridge_failures_;
+  }
+}
+
+void Watcher::QueueWorkerStopped() {
+  if (environment_closing_.load()) {
+    worker_bridge_.Release();
+    return;
+  }
+  auto event = new bridge_event{this, bridge_event_kind::worker_stopped};
+  napi_status status = napi_queue_full;
+  while (status == napi_queue_full && not environment_closing_.load()) {
+    status = worker_bridge_.NonBlockingCall(event, [](Napi::Env env, Napi::Function, bridge_event *event) {
+      event->watcher->HandleBridgeEvent(env, event->kind);
+      delete event;
+    });
+    if (status == napi_queue_full) {
+      std::this_thread::sleep_for(std::chrono::milliseconds(1));
+    }
+  }
+  if (status != napi_ok) {
+    delete event;
+    ++bridge_failures_;
+  }
+  worker_bridge_.Release();
+}
+
+void Watcher::HandleBridgeEvent(Napi::Env env, bridge_event_kind kind) {
+  if (kind == bridge_event_kind::snapshot_ready) {
+    if (not quit_.load() && not environment_closing_.load()) {
+      try {
+        SyncSnapshot();
+      } catch (...) {
+        RecordWorkerError(std::current_exception());
+        CancelWorker();
+      }
+    } else {
+      snapshot_pending_ = false;
+    }
+    return;
+  }
+
+  SPDLOG_INFO("Watcher dedicated loop completed");
+  if (worker_thread_.joinable()) {
+    worker_thread_.join();
+  }
+  if (auto error = TakeWorkerError()) {
+    try {
+      std::rethrow_exception(error);
+    } catch (const yijinjing::journal::replay_exhausted &ex) {
+      auto js_error = Napi::Error::New(env, ex.what());
+      js_error.Value().Set("name", Napi::String::New(env, "ReplayExhaustedError"));
+      js_error.Value().Set("carrierType", Napi::Number::New(env, ex.carrier_type()));
+      js_error.Value().Set("triggerTime", Napi::BigInt::New(env, ex.trigger_time()));
+      js_error.ThrowAsJavaScriptException();
+    } catch (const std::exception &ex) {
+      auto js_error = Napi::Error::New(env, ex.what());
+      js_error.Value().Set("name", Napi::String::New(env, "KungfuRuntimeError"));
+      js_error.Value().Set("nativeType", Napi::String::New(env, typeid(ex).name()));
+      js_error.ThrowAsJavaScriptException();
+    } catch (...) {
+      Napi::Error::New(env, "kungfu watcher failed with a non-standard exception").ThrowAsJavaScriptException();
+    }
+    Unref();
+    return;
+  }
+
+  if (quit_.load()) {
+    SPDLOG_INFO("watcher quit");
+    Unref();
+    return;
+  }
+
+  AfterCoordinatorDown(env);
+  set_begin_time(yijinjing::time::now_in_nano());
+  SPDLOG_INFO("Restart watcher dedicated loop");
+  try {
+    StartWorker();
+  } catch (const Napi::Error &error) {
+    error.ThrowAsJavaScriptException();
+  } catch (const std::exception &error) {
+    Napi::Error::New(env, error.what()).ThrowAsJavaScriptException();
+  }
+  Unref();
+}
+
+void Watcher::SyncSnapshot() {
+  const auto waiting_at = std::chrono::steady_clock::now();
+  std::unique_lock<std::mutex> guard(feed_mutex_);
+  const auto acquired_at = std::chrono::steady_clock::now();
+  SyncEventCache();
+  SyncAppStates();
+  SyncLedger();
+  snapshot_pending_ = false;
+  const auto completed_at = std::chrono::steady_clock::now();
+  ++snapshot_deliveries_;
+  ObserveDuration(snapshot_lock_wait_total_nanos_, snapshot_lock_wait_max_nanos_,
+                  std::chrono::duration_cast<std::chrono::nanoseconds>(acquired_at - waiting_at).count());
+  ObserveDuration(snapshot_hold_total_nanos_, snapshot_hold_max_nanos_,
+                  std::chrono::duration_cast<std::chrono::nanoseconds>(completed_at - acquired_at).count());
+  ++snapshot_lock_samples_;
+}
+
+void Watcher::StopAndJoinForCleanup() {
+  environment_closing_ = true;
+  worker_live_ = false;
+  if (worker_thread_.joinable()) {
+    worker_thread_.join();
+  }
+}
+
+void Watcher::ObserveDuration(std::atomic<uint64_t> &total, std::atomic<uint64_t> &maximum, uint64_t nanos) {
+  total.fetch_add(nanos);
+  auto observed = maximum.load();
+  while (observed < nanos && not maximum.compare_exchange_weak(observed, nanos)) {
+  }
+}
+
+void Watcher::cleanup() {
+  SPDLOG_INFO("Watcher reset");
+  std::vector<Watcher *> watchers;
+  {
+    std::lock_guard<std::mutex> guard(instances_mutex_);
+    watchers.assign(instances_.begin(), instances_.end());
+  }
+  for (auto watcher : watchers) {
+    watcher->StopAndJoinForCleanup();
+  }
+  Watcher::constructor.Reset();
+}
 
 void Watcher::RecordWorkerError(const std::exception_ptr &error) {
+  std::lock_guard<std::mutex> guard(worker_error_mutex_);
   if (not worker_error_) {
     worker_error_ = error;
   }
 }
 
-std::exception_ptr Watcher::TakeWorkerError() { return std::exchange(worker_error_, nullptr); }
+bool Watcher::HasWorkerError() {
+  std::lock_guard<std::mutex> guard(worker_error_mutex_);
+  return static_cast<bool>(worker_error_);
+}
+
+std::exception_ptr Watcher::TakeWorkerError() {
+  std::lock_guard<std::mutex> guard(worker_error_mutex_);
+  return std::exchange(worker_error_, nullptr);
+}
 
 void Watcher::Quit(const Napi::CallbackInfo &info) {
   RequestDeregister();
   quit_ = true;
-  uv_work_live_ = false;
+  worker_live_ = false;
 }
 
 void Watcher::RequestDeregister() {
