@@ -59,9 +59,10 @@ candidate only when one of four source-bound conditions holds:
 
 The two candidates have independent concurrency identities and both run the
 same exact source SHA with the same exact Alpha preflight receipt. They are
-build-and-verify candidates only: `publish-channel` is always `none`, no release
-candidate passport is requested, and the caller-owned signing/notarization tail
-is not run. The existing Alpha promotion workflow remains the only publication
+build-and-verify candidates only: `publish-channel` is always `none` and no
+release-candidate passport is requested. Any declared signing request remains
+owned by Buildchain's protected authority; Kungfu has no caller-owned signing
+tail. The existing Alpha promotion workflow remains the only publication
 authority.
 
 The runner-inventory credential is projected only into the protected
