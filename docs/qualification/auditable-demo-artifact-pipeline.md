@@ -9,8 +9,8 @@ confidence: high
 sensitivity: public
 evidence_grade: A
 review_state: self-reviewed
-last_reviewed: 2026-07-30
-ai_provenance: GPT-5 via Codex on 2026-07-25; based on checked-in Kungfu, Buildchain, and build-images source plus protected GitHub workflow evidence visible to this task; no production deployment or unobserved runtime is claimed
+last_reviewed: 2026-07-31
+ai_provenance: GPT-5 via Codex on 2026-07-31; based on checked-in Kungfu, Buildchain, and build-images source plus protected GitHub workflow evidence visible to this task; this update adds the multi-demo capture-selection contract and v2 Passport projection without claiming production deployment or unobserved runtime
 ---
 
 # Auditable Demo Artifact Pipeline
@@ -35,13 +35,39 @@ Full MP4, WebM, GIF, and poster rendering is a second, selective job. It can
 start only from the exact passing Gate bundle. Disabling full rendering never
 disables the Gate.
 
+## Multi-demo capture catalog
+
+`framework/auditable-demo/catalog.json` is the checked-in capture-selection
+contract. It declares a bounded exact argv, terminal dimensions and timeout,
+completion sentinel, scene, evidence class, publication slug, claims, and
+non-claims for each demo id. The adapter accepts `--demo-id ID`; omitting it
+selects `agent-work-lab`, so the existing workflow and README hero remain
+compatible. A manual Build workflow selects a registered command by setting
+`auditable-demo-id` and enables media with `render-auditable-demo`; the workflow
+passes the selected id as a literal bounded adapter argument and binds the same
+id into the Release Passport.
+
+The catalog is not a Release Passport, Work, Warrant, capability grant, or
+runtime authority. Its own authority block declares an empty grant set. The
+adapter executes the installed launcher with the selected argv directly,
+without a shell, and the Passport binds both the complete catalog root and the
+selected descriptor root. A new command is admissible only when it is
+non-interactive, deterministic under the isolated environment, credential-free,
+bounded to at most 60 seconds, and emits its declared completion sentinel.
+
+Additional demos use a distinct id, evidence class, scene id, and site slug.
+Exactly one catalog entry may be README-featured. Other qualified demos
+materialize below
+`docs/qualification/evidence/auditable-demo/<site-slug>/<passport-root>/`;
+they cannot replace the README managed block.
+
 ## Frozen toolchain boundary
 
 | Component | Immutable coordinate |
 | --- | --- |
 | Demo renderer | `ghcr.io/kungfu-systems/build-images/demo-renderer@sha256:06141e3d01a13e6d44766d3acc115ca07c58443f59840f313ecd938b2b0c138c` |
 | Renderer release | [`v1.3.0-alpha.19`](https://github.com/kungfu-systems/build-images/releases/tag/v1.3.0-alpha.19), exact source `0dc471bfdec50e06afd12493a279d3c0056dae1f`, containing protected merge `f6bccf6ecb5753386a502a335748c6a0b1ecb7a9` |
-| Buildchain Gate | `3272608ba28ef714fe710dd8da99d00fdeb4c619` (Buildchain issue `#2057`, canonical `qualified` autoplay sentinel admission) |
+| Buildchain Gate | `d43e6574432bc0b1ae9d1d0557f8ccc4785fa2e4` (Buildchain PR `#2092`, bounded literal multi-demo adapter arguments) |
 | Consumer adapter | `scripts/auditable-demo-adapter.py` from the exact qualified Kungfu source SHA |
 
 Buildchain's reusable build emits
@@ -55,9 +81,10 @@ coordinate.
 
 The adapter opens exactly one release qualification root, rejects unsafe or
 unbounded archive members, validates the retained layer, live-Peer, runtime
-activation, zero-burden, and invariant reports, and executes the installed
-archive's declared launcher with `kungfu agent-work-lab autoplay` in a
-disposable home directory and a real `150x36` PTY. The isolated process removes
+activation, zero-burden, and invariant reports, resolves one catalog demo, and
+executes the installed archive's declared launcher with the selected exact argv
+in a disposable home directory and a real catalog-bounded PTY. The default
+selection remains `kungfu agent-work-lab autoplay` at `150x36`. The isolated process removes
 `NO_COLOR`, sets `FORCE_COLOR=3`, and declares `TERM=xterm-256color` plus
 `COLORTERM=truecolor` so the capture retains the installed TUI's ANSI styling.
 The capture is limited to 60 seconds, 4 MiB, and 10,000 quantized events. A
@@ -88,9 +115,11 @@ isolation.
 
 The Gate and optional media are ordinary GitHub Artifacts with explicit ids,
 names, archive digests, URLs, roots, and expiries. A separate
-`kungfu.auditable-demo.release-passport/v1` document binds those coordinates
-to the exact source SHA, Buildchain SHA, renderer digest, workflow run, claim
-boundary, and a canonical payload root.
+`kungfu.auditable-demo.release-passport/v2` document binds those coordinates
+to the exact source SHA, Buildchain SHA, renderer digest, workflow run, selected
+demo id, catalog and descriptor roots, claim boundary, and a canonical payload
+root. Historical v1 public evidence remains readable; new materialization emits
+`kungfu.auditable-demo.public-evidence/v2`.
 
 ## Fail-closed qualification record
 

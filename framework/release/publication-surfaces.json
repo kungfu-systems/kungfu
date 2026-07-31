@@ -68,7 +68,7 @@
             "product-stable",
             "product-binaries"
           ],
-          "sourceRoot": "sha256:49981aaf1fde55de4422bd6d3d3b6d3f14c37737e5d5e6abbf70af7ddcd5a186"
+          "sourceRoot": "sha256:b99fbeb61e0d99e8116c48078e099867cbb80794331e387f16ace2fd02cf7ff6"
         },
         {
           "path": ".github/workflows/affected-native-pr.yml",
@@ -121,7 +121,7 @@
             "product-stable",
             "product-binaries"
           ],
-          "sourceRoot": "sha256:e057ff9da8582651d9840e3a378295cdc7fbde057cf47328ff87e755cc6651ee"
+          "sourceRoot": "sha256:c3cb0b77aca2f56862b20b2b63b00fa6b91f0f78ec8dd2c43d84af0e0d7cecc0"
         },
         {
           "path": ".github/workflows/buildchain-validate.yml",
@@ -820,5 +820,5 @@
       }
     }
   ],
-  "registryRoot": "sha256:f76f480c4a29cf6967d45ff365ab3b0cf3f5fb760547bb3b9ab08b90d077e3f7"
+  "registryRoot": "sha256:883f9045c90e53c911cfab86abd84a97baafbba16091c74e4d0d11598acd9151"
 }

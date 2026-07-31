@@ -12,7 +12,8 @@ const END = '<!-- kungfu:auditable-demo:end -->';
 const INSERT_BEFORE = '## Kungfu in the Agent Supply Chain';
 const SHA_PATTERN = /^[0-9a-f]{40}$/u;
 const DIGEST_PATTERN = /^sha256:[0-9a-f]{64}$/u;
-const EVIDENCE_CLASS = 'exact-installed-artifact-agent-work-lab-autoplay/v1';
+const DEMO_ID_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/u;
+const EVIDENCE_CLASS_PATTERN = /^[a-z0-9][a-z0-9._/-]*\/v[1-9][0-9]*$/u;
 const REQUIRED_AUTHORIZATION_SOURCES = [
   'exact-release-passport',
   'core-policy',
@@ -119,12 +120,73 @@ function exactArtifact(value, label) {
 }
 
 export function validatePublicEvidence(value) {
+  const version =
+    value?.schema === 'kungfu.auditable-demo.public-evidence/v2' ? 2 : 1;
   if (
     !value ||
-    value.schema !== 'kungfu.auditable-demo.public-evidence/v1' ||
+    ![
+      'kungfu.auditable-demo.public-evidence/v1',
+      'kungfu.auditable-demo.public-evidence/v2',
+    ].includes(value.schema) ||
     value.status !== 'qualified'
   ) {
     fail('public evidence schema or status is invalid');
+  }
+  const demo =
+    version === 2
+      ? {
+          id: requiredString(value.demo?.id, 'demo id', DEMO_ID_PATTERN),
+          catalogRoot: requiredString(
+            value.demo?.catalogRoot,
+            'demo catalog root',
+            DIGEST_PATTERN,
+          ),
+          descriptorRoot: requiredString(
+            value.demo?.descriptorRoot,
+            'demo descriptor root',
+            DIGEST_PATTERN,
+          ),
+          commandLabel: requiredString(
+            value.demo?.commandLabel,
+            'demo command label',
+            /^kungfu [^\r\n]+$/u,
+          ),
+          evidenceClass: requiredString(
+            value.demo?.evidenceClass,
+            'demo evidence class',
+            EVIDENCE_CLASS_PATTERN,
+          ),
+          sceneId: requiredString(
+            value.demo?.sceneId,
+            'demo scene id',
+            DEMO_ID_PATTERN,
+          ),
+          publication: {
+            readmeFeatured: value.demo?.publication?.readmeFeatured,
+            siteSlug: requiredString(
+              value.demo?.publication?.siteSlug,
+              'demo site slug',
+              DEMO_ID_PATTERN,
+            ),
+          },
+        }
+      : {
+          id: 'agent-work-lab',
+          catalogRoot: null,
+          descriptorRoot: null,
+          commandLabel: 'kungfu agent-work-lab autoplay',
+          evidenceClass: 'exact-installed-artifact-agent-work-lab-autoplay/v1',
+          sceneId: 'kungfu-agent-work-lab-autoplay',
+          publication: {
+            readmeFeatured: true,
+            siteSlug: 'agent-work-lab',
+          },
+        };
+  if (
+    typeof demo.publication.readmeFeatured !== 'boolean' ||
+    (version === 2 && demo.evidenceClass !== value.evidenceClass)
+  ) {
+    fail('demo publication or evidence-class binding is invalid');
   }
   const sourceSha = requiredString(value.sourceSha, 'source SHA', SHA_PATTERN);
   const workflowUrl = requiredString(
@@ -160,8 +222,12 @@ export function validatePublicEvidence(value) {
   const gateArtifact = exactArtifact(value.gate?.artifact, 'Gate');
   const mediaArtifact = exactArtifact(value.media?.artifact, 'media');
   const passportArtifact = exactArtifact(value.passport?.artifact, 'Passport');
-  const evidenceClass = requiredString(value.evidenceClass, 'evidence class');
-  if (evidenceClass !== EVIDENCE_CLASS) {
+  const evidenceClass = requiredString(
+    value.evidenceClass,
+    'evidence class',
+    EVIDENCE_CLASS_PATTERN,
+  );
+  if (evidenceClass !== demo.evidenceClass) {
     fail('evidence class is invalid');
   }
   if (
@@ -198,7 +264,7 @@ export function validatePublicEvidence(value) {
     path: requiredString(
       value.readmeMedia?.path,
       'README media path',
-      /^docs\/qualification\/evidence\/auditable-demo\/[0-9a-f]{64}\/demo\.gif$/u,
+      /^docs\/qualification\/evidence\/auditable-demo\/(?:[a-z0-9]+(?:-[a-z0-9]+)*\/)?[0-9a-f]{64}\/demo\.gif$/u,
     ),
     digest: requiredString(
       value.readmeMedia?.digest,
@@ -206,7 +272,13 @@ export function validatePublicEvidence(value) {
       DIGEST_PATTERN,
     ),
   };
-  const expectedMediaPath = `docs/qualification/evidence/auditable-demo/${passportRoot.slice(7)}/demo.gif`;
+  const mediaPrefix =
+    demo.id === 'agent-work-lab' && demo.publication.readmeFeatured
+      ? ''
+      : `${demo.publication.siteSlug}/`;
+  const expectedMediaPath =
+    `docs/qualification/evidence/auditable-demo/${mediaPrefix}` +
+    `${passportRoot.slice(7)}/demo.gif`;
   if (readmeMedia.path !== expectedMediaPath) {
     fail('README media path is not bound to the Passport root');
   }
@@ -224,6 +296,7 @@ export function validatePublicEvidence(value) {
     gate: { root: gateRoot, artifact: gateArtifact },
     media: { root: mediaRoot, artifact: mediaArtifact },
     passport: { root: passportRoot, artifact: passportArtifact },
+    demo,
     evidenceClass,
     claims: value.claims,
     nonClaims: value.nonClaims,
@@ -324,8 +397,12 @@ export function buildPublicEvidence({
     fail('Passport does not contain rendered media');
   }
   const exactPassportArtifact = exactArtifact(passportArtifact, 'Passport');
+  const passportNamePrefix =
+    passport.demo.id === 'agent-work-lab'
+      ? 'kungfu-auditable-demo-passport'
+      : `kungfu-auditable-demo-passport-${passport.demo.id}`;
   const expectedName =
-    `kungfu-auditable-demo-passport-${passport.source.sha}-` +
+    `${passportNamePrefix}-${passport.source.sha}-` +
     `${passport.workflow.runId}-${passport.workflow.runAttempt}`;
   if (
     exactPassportArtifact.name !== expectedName ||
@@ -336,10 +413,16 @@ export function buildPublicEvidence({
   }
   const gif = verifyMediaBundle(mediaDirectory, passport);
   const rootName = passport.root.value.slice(7);
+  const mediaPrefix =
+    passport.demo.id === 'agent-work-lab' &&
+    passport.demo.publication.readmeFeatured
+      ? ''
+      : `${passport.demo.publication.siteSlug}/`;
   return {
     evidence: {
-      schema: 'kungfu.auditable-demo.public-evidence/v1',
+      schema: 'kungfu.auditable-demo.public-evidence/v2',
       status: 'qualified',
+      demo: passport.demo,
       sourceSha: passport.source.sha,
       workflowUrl: passport.workflow.url,
       buildchainSha: passport.toolchain.buildchainSha,
@@ -355,7 +438,9 @@ export function buildPublicEvidence({
       nonClaims: passport.authority.nonClaims,
       authorization: passport.authority.authorization,
       readmeMedia: {
-        path: `docs/qualification/evidence/auditable-demo/${rootName}/demo.gif`,
+        path:
+          `docs/qualification/evidence/auditable-demo/${mediaPrefix}` +
+          `${rootName}/demo.gif`,
         digest: sha256(gif),
       },
     },
@@ -392,10 +477,8 @@ export function materializePublicEvidence({
     passportArtifact,
     mediaDirectory,
   });
-  const directory = path.resolve(
-    repoRoot,
-    'docs/qualification/evidence/auditable-demo',
-    passport.root.value.slice(7),
+  const directory = path.dirname(
+    path.resolve(repoRoot, projected.evidence.readmeMedia.path),
   );
   if (!directory.startsWith(`${path.resolve(repoRoot)}${path.sep}`)) {
     fail('content-addressed evidence path escapes the repository');
@@ -435,6 +518,9 @@ export function verifyReadmeMediaFile(repoRoot, value) {
 
 export function renderAuditableDemoBlock(value) {
   const evidence = validatePublicEvidence(value);
+  if (!evidence.demo.publication.readmeFeatured) {
+    fail('only the catalog-selected README demo can update the managed block');
+  }
   const shortSource = evidence.sourceSha.slice(0, 12);
   return [
     START,
@@ -451,7 +537,7 @@ export function renderAuditableDemoBlock(value) {
     '<summary>How this exact installed-artifact demo was verified</summary>',
     '',
     'This selectively rendered demo comes from one exact retained Linux build artifact.',
-    'The installed `kungfu agent-work-lab autoplay` command ran in a bounded PTY, the',
+    `The installed \`${evidence.demo.commandLabel}\` command ran in a bounded PTY, the`,
     'required Buildchain Gate qualified its exact capture, and full media rendered only',
     'from that passing Gate.',
     '',

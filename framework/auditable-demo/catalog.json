@@ -1,0 +1,73 @@
+{
+  "schema": "kungfu.auditable-demo.catalog/v1",
+  "authority": {
+    "classification": "capture-selection-input",
+    "grants": [],
+    "nonAuthorities": [
+      "publication-authority",
+      "runtime-authority",
+      "first-party-identity",
+      "system-identity",
+      "kfd-compliance",
+      "product-system-metadata",
+      "package-metadata",
+      "registry-history",
+      "scan-output",
+      "standalone-generation"
+    ]
+  },
+  "defaultDemoId": "agent-work-lab",
+  "demos": [
+    {
+      "id": "agent-work-lab",
+      "argv": [
+        "agent-work-lab",
+        "autoplay"
+      ],
+      "commandLabel": "kungfu agent-work-lab autoplay",
+      "evidenceClass": "exact-installed-artifact-agent-work-lab-autoplay/v1",
+      "terminal": {
+        "columns": 150,
+        "rows": 36,
+        "timeoutSeconds": 60
+      },
+      "completion": {
+        "sentinel": "KUNGFU_TUI_DEMO_COMPLETE ",
+        "schema": "kungfu.agent-work-lab.tui-autoplay/v1",
+        "status": "qualified",
+        "digestField": "reportRoot",
+        "countField": "eventCount"
+      },
+      "scene": {
+        "id": "kungfu-agent-work-lab-autoplay",
+        "width": 1280,
+        "height": 720,
+        "fps": 15,
+        "title": "Kungfu Agent Work Lab — exact installed artifact",
+        "background": "#0B1020",
+        "accent": "#67E8A5"
+      },
+      "publication": {
+        "readmeFeatured": true,
+        "siteSlug": "agent-work-lab"
+      },
+      "claimBoundary": "This proves one exact retained Linux x64 artifact completed the bundled offline Agent Work Lab autoplay inside a bounded, credential-free PTY. Terminal bytes are observation only and grant no authority. It does not prove hosted provider behavior, general production continuity, signed macOS behavior, performance, FO10, or production deployment.",
+      "claims": [
+        "The exact retained Linux artifact executed its installed kungfu agent-work-lab autoplay command in a bounded PTY.",
+        "The autoplay completion sentinel passed with exit status zero.",
+        "The exact terminal capture, transcript, public projection, and scene passed the Buildchain Gate and bound the rendered media."
+      ],
+      "nonClaims": [
+        "cross-run continuity",
+        "provider migration",
+        "macOS execution",
+        "durability",
+        "performance",
+        "FO10",
+        "authorization from first-party or System identity",
+        "authorization from KFD compliance or Product System metadata",
+        "authorization from local bundle presence, package metadata, registry history, scan output, or standalone generation"
+      ]
+    }
+  ]
+}

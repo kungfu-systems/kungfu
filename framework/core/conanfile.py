@@ -48,6 +48,25 @@ def _candidate_timeline_attempt():
     return result
 
 
+def _qualified_core_host_identity():
+    operating_system = platform.system().lower()
+    if operating_system == "darwin":
+        operating_system = "darwin"
+    elif operating_system == "windows":
+        operating_system = "windows"
+    elif operating_system == "linux":
+        operating_system = "linux"
+
+    machine = platform.machine().lower()
+    if machine in ("amd64", "x86_64"):
+        architecture = "x64"
+    elif machine in ("aarch64", "arm64"):
+        architecture = "arm64"
+    else:
+        architecture = machine
+    return operating_system, architecture
+
+
 @contextmanager
 def _candidate_timeline_stage(stage, phase, runtime, target=None):
     output = os.environ.get("KUNGFU_CANDIDATE_TIMELINE_EVENTS", "")
@@ -472,12 +491,15 @@ class KungfuCoreConan(ConanFile):
 
     def __gen_build_info(self, build_type):
         now = datetime.datetime.now()
+        operating_system, architecture = _qualified_core_host_identity()
         build_info = {
             "version": self.version,
             "pythonVersion": platform.python_version(),
             "build": {
                 "user": getpass.getuser(),
                 "osVersion": platform.platform(),
+                "operatingSystem": operating_system,
+                "architecture": architecture,
                 "timestamp": now.strftime("%Y/%m/%d %H:%M:%S"),
             },
         }

@@ -160,6 +160,31 @@ test('rejects partial markers and cross-run artifacts', () => {
   );
 });
 
+test('validates a secondary demo path while preventing it from replacing the README hero', () => {
+  const value = evidence();
+  value.schema = 'kungfu.auditable-demo.public-evidence/v2';
+  value.demo = {
+    id: 'status-snapshot',
+    catalogRoot: `sha256:${'7'.repeat(64)}`,
+    descriptorRoot: `sha256:${'8'.repeat(64)}`,
+    commandLabel: 'kungfu status --snapshot --no-interaction',
+    evidenceClass: 'exact-installed-artifact-status-snapshot/v1',
+    sceneId: 'kungfu-status-snapshot',
+    publication: {
+      readmeFeatured: false,
+      siteSlug: 'status-snapshot',
+    },
+  };
+  value.evidenceClass = value.demo.evidenceClass;
+  value.readmeMedia.path = `docs/qualification/evidence/auditable-demo/status-snapshot/${'f'.repeat(64)}/demo.gif`;
+  const validated = validatePublicEvidence(value);
+  assert.equal(validated.demo.id, 'status-snapshot');
+  assert.throws(
+    () => renderAuditableDemoBlock(value),
+    /only the catalog-selected README demo/u,
+  );
+});
+
 test('verifies the committed README GIF against its public evidence digest', () => {
   const repoRoot = fs.mkdtempSync(
     path.join(os.tmpdir(), 'auditable-demo-readme-'),

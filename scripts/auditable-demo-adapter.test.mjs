@@ -8,8 +8,11 @@ import os from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
 
+import { loadAuditableDemo } from '../framework/auditable-demo/catalog.mjs';
+
 const ROOT = path.resolve(import.meta.dirname, '..');
 const ADAPTER = path.join(ROOT, 'scripts', 'auditable-demo-adapter.py');
+const CATALOG = path.join(ROOT, 'framework', 'auditable-demo', 'catalog.json');
 const SOURCE_SHA = '1'.repeat(40);
 const DIGEST = `sha256:${'2'.repeat(64)}`;
 const SOURCE_TREE = '4'.repeat(40);
@@ -261,8 +264,12 @@ function fixture(
 }
 
 function run(root, options = {}) {
-  const { artifact, coordinate } = fixture(root, options);
+  const { demoCatalog = '', demoId = '', ...fixtureOptions } = options;
+  const { artifact, coordinate } = fixture(root, fixtureOptions);
   const output = path.join(root, 'output');
+  const demoArguments = [];
+  if (demoCatalog) demoArguments.push('--demo-catalog', demoCatalog);
+  if (demoId) demoArguments.push('--demo-id', demoId);
   const result = spawnSync(
     'python3',
     [
@@ -273,6 +280,7 @@ function run(root, options = {}) {
       output,
       '--source-coordinate',
       coordinate,
+      ...demoArguments,
     ],
     { encoding: 'utf8' },
   );
@@ -303,6 +311,90 @@ test('adapter maps only Linux PTY EIO onto terminal EOF', () => {
     encoding: 'utf8',
   });
   assert.equal(result.status, 0, result.stderr);
+});
+
+test('adapter selects a second catalog demo without changing the capture engine', () => {
+  const root = fs.mkdtempSync(
+    path.join(os.tmpdir(), 'auditable-demo-adapter-'),
+  );
+  try {
+    const catalog = JSON.parse(fs.readFileSync(CATALOG, 'utf8'));
+    catalog.demos.push({
+      ...structuredClone(catalog.demos[0]),
+      id: 'agent-work-lab-secondary',
+      evidenceClass:
+        'exact-installed-artifact-agent-work-lab-secondary-autoplay/v1',
+      scene: {
+        ...catalog.demos[0].scene,
+        id: 'kungfu-agent-work-lab-secondary-autoplay',
+        title: 'Kungfu Agent Work Lab — secondary capture simulation',
+      },
+      publication: {
+        readmeFeatured: false,
+        siteSlug: 'agent-work-lab-secondary',
+      },
+    });
+    const demoCatalog = path.join(root, 'catalog.json');
+    json(demoCatalog, catalog);
+    const { result, output } = run(root, {
+      demoCatalog,
+      demoId: 'agent-work-lab-secondary',
+    });
+    assert.equal(result.status, 0, result.stderr);
+    const scene = JSON.parse(
+      fs.readFileSync(path.join(output, 'scene.json'), 'utf8'),
+    );
+    const projection = JSON.parse(
+      fs.readFileSync(path.join(output, 'public-projection.json'), 'utf8'),
+    );
+    assert.equal(scene.id, 'kungfu-agent-work-lab-secondary-autoplay');
+    assert.equal(
+      projection.evidenceClass,
+      'exact-installed-artifact-agent-work-lab-secondary-autoplay/v1',
+    );
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test('adapter fails closed when a selected demo is not declared', () => {
+  const root = fs.mkdtempSync(
+    path.join(os.tmpdir(), 'auditable-demo-adapter-'),
+  );
+  try {
+    const { result } = run(root, { demoId: 'missing-demo' });
+    assert.notEqual(result.status, 0);
+    assert.match(result.stderr, /selected demo id is not declared/u);
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test('catalog rejects shell-shaped arguments and duplicate publication identities', () => {
+  for (const mutate of [
+    (value) => {
+      value.demos[0].argv = ['agent-work-lab', 'autoplay\nwhoami'];
+    },
+    (value) => {
+      value.demos.push(structuredClone(value.demos[0]));
+    },
+  ]) {
+    const root = fs.mkdtempSync(
+      path.join(os.tmpdir(), 'auditable-demo-catalog-'),
+    );
+    try {
+      const value = JSON.parse(fs.readFileSync(CATALOG, 'utf8'));
+      mutate(value);
+      const catalogPath = path.join(root, 'catalog.json');
+      json(catalogPath, value);
+      assert.throws(
+        () => loadAuditableDemo({ catalogPath }),
+        /argument vector|demo ids must be unique/u,
+      );
+    } finally {
+      fs.rmSync(root, { recursive: true, force: true });
+    }
+  }
 });
 
 test('adapter executes only the exact installed archive in a PTY and emits the declared capture', () => {

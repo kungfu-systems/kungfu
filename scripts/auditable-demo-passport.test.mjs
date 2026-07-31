@@ -1,6 +1,9 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
 import test from 'node:test';
 
 import {
@@ -101,6 +104,55 @@ test('binds a selectively rendered media artifact to its exact root', () => {
   assert.equal(passport.media.status, 'rendered');
   assert.equal(passport.media.root, MEDIA_ROOT);
   assert.equal(passport.media.artifact.expiresAt, '2026-08-08T12:00:00.000Z');
+});
+
+test('binds an explicitly selected second demo to its catalog descriptor roots', () => {
+  const root = fs.mkdtempSync(
+    path.join(os.tmpdir(), 'auditable-demo-passport-'),
+  );
+  try {
+    const sourcePath = path.join(
+      import.meta.dirname,
+      '..',
+      'framework',
+      'auditable-demo',
+      'catalog.json',
+    );
+    const catalog = JSON.parse(fs.readFileSync(sourcePath, 'utf8'));
+    catalog.demos.push({
+      ...structuredClone(catalog.demos[0]),
+      id: 'agent-work-lab-secondary',
+      evidenceClass:
+        'exact-installed-artifact-agent-work-lab-secondary-autoplay/v1',
+      scene: {
+        ...catalog.demos[0].scene,
+        id: 'kungfu-agent-work-lab-secondary-autoplay',
+        title: 'Kungfu Agent Work Lab secondary simulation',
+      },
+      publication: {
+        readmeFeatured: false,
+        siteSlug: 'agent-work-lab-secondary',
+      },
+    });
+    const catalogPath = path.join(root, 'catalog.json');
+    fs.writeFileSync(catalogPath, `${JSON.stringify(catalog, null, 2)}\n`);
+    const passport = buildPassport(validEnv(), {
+      catalogPath,
+      demoId: 'agent-work-lab-secondary',
+    });
+    assert.equal(passport.schema, 'kungfu.auditable-demo.release-passport/v2');
+    assert.equal(passport.demo.id, 'agent-work-lab-secondary');
+    assert.equal(passport.demo.publication.readmeFeatured, false);
+    assert.equal(
+      passport.authority.evidenceClass,
+      'exact-installed-artifact-agent-work-lab-secondary-autoplay/v1',
+    );
+    assert.match(passport.demo.catalogRoot, /^sha256:[0-9a-f]{64}$/u);
+    assert.match(passport.demo.descriptorRoot, /^sha256:[0-9a-f]{64}$/u);
+    assert.deepEqual(verifyPassport(passport), passport);
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
 });
 
 test('rejects partial media coordinates', () => {
