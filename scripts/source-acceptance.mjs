@@ -205,6 +205,16 @@ export function assertKfdEvidenceSourceBinding({
   return sourceSha;
 }
 
+export function selectKfdEvidenceSourceSha({
+  write,
+  configured,
+  committed,
+  headSha,
+}) {
+  if (write) return configured || headSha;
+  return committed || configured;
+}
+
 export function resolveKfdProductGateCheckedAt({
   write,
   now,

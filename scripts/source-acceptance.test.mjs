@@ -10,6 +10,7 @@ import {
   assertKfdEvidenceSourceBinding,
   findGitTreeEquivalentAncestor,
   resolveKfdProductGateCheckedAt,
+  selectKfdEvidenceSourceSha,
   sourceAcceptancePlan,
   sourceClangFormatCommand,
   sourceMypyCommand,
@@ -46,6 +47,29 @@ test('KFD evidence accepts an exact tree-equivalent ancestor after queue rebase'
       },
     }),
     sourceSha,
+  );
+});
+
+test('KFD evidence checks the committed witness binding under an exact CI source', () => {
+  const committed = 'a'.repeat(40);
+  const configured = 'b'.repeat(40);
+  assert.equal(
+    selectKfdEvidenceSourceSha({
+      write: false,
+      configured,
+      committed,
+      headSha: configured,
+    }),
+    committed,
+  );
+  assert.equal(
+    selectKfdEvidenceSourceSha({
+      write: true,
+      configured,
+      committed,
+      headSha: 'c'.repeat(40),
+    }),
+    configured,
   );
 });
 
