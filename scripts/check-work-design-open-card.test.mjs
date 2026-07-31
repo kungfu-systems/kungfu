@@ -97,7 +97,7 @@ function designPolicy() {
   });
 }
 
-function proposal(insufficient = false) {
+function proposal(insufficient = false, overrides = {}) {
   if (insufficient)
     return {
       authority,
@@ -141,8 +141,8 @@ function proposal(insufficient = false) {
         },
       },
     ],
-    confidence: 'high',
-    gapIds: [],
+    confidence: overrides.confidence ?? 'high',
+    gapIds: overrides.gapIds ?? [],
     humanOverride,
   };
 }
@@ -173,20 +173,24 @@ function request(action, overrides = {}) {
       xinfaRoot: XINFA_ROOT,
       asOf: AS_OF,
       policy: designPolicy(),
-      proposal: proposal(insufficient),
-    },
-    disposition: {
-      action,
-      decisionAuthority: 'human',
-      rationaleRoot: RATIONALE_ROOT,
-      ...(overrides.expectedAdviceRoot
-        ? { expectedAdviceRoot: overrides.expectedAdviceRoot }
-        : {}),
+      proposal: proposal(insufficient, overrides),
     },
     availability: {
       selector: 'available',
       advisor: overrides.advisor ?? 'available',
     },
+    ...(action === undefined
+      ? {}
+      : {
+          disposition: {
+            action,
+            decisionAuthority: 'human',
+            rationaleRoot: RATIONALE_ROOT,
+            ...(overrides.expectedAdviceRoot
+              ? { expectedAdviceRoot: overrides.expectedAdviceRoot }
+              : {}),
+          },
+        }),
   };
 }
 
@@ -320,7 +324,7 @@ test('Shifu dispatches open-card preflight without package lifecycle bootstrap',
   t.after(() => fs.rmSync(directory, { recursive: true, force: true }));
   const input = path.join(directory, 'input.json');
   const history = path.join(directory, 'history.json');
-  fs.writeFileSync(input, `${JSON.stringify(request('accepted'))}\n`);
+  fs.writeFileSync(input, `${JSON.stringify(request())}\n`);
   fs.writeFileSync(history, `${JSON.stringify(globalWorkQuery())}\n`);
   const result = spawnSync(
     path.resolve('shifu'),
@@ -338,7 +342,26 @@ test('Shifu dispatches open-card preflight without package lifecycle bootstrap',
   assert.equal(preflight.schema, OPEN_CARD_PREFLIGHT_SCHEMA);
   assert.equal(preflight.history.source.complete, false);
   assert.ok(preflight.advice.advice.gapIds.includes('global-work-partial'));
+  assert.equal(preflight.outcome, 'advisory-auto-adopted');
+  assert.equal(preflight.adoption.mode, 'policy-auto-adopted');
+  assert.equal(preflight.disposition.action, 'policy-accepted');
   assert.doesNotMatch(`${result.stdout}\n${result.stderr}`, /pnpm|install/u);
+});
+
+test('verified bounded advice auto-adopts without a human disposition', () => {
+  const input = request();
+  const result = runOpenCardPreflight(input);
+  assertCaptureBoundary(result);
+  assert.equal(result.outcome, 'advisory-auto-adopted');
+  assert.equal(result.disposition.action, 'policy-accepted');
+  assert.equal(result.disposition.evaluation.eligible, true);
+  assert.deepEqual(result.disposition.evaluation.escalationReasons, []);
+  assert.equal(result.adoption.adopted, true);
+  assert.equal(result.adoption.mode, 'policy-auto-adopted');
+  assert.equal(
+    result.humanAuthorization.finalWorkDefinitionRoot,
+    input.humanWorkDefinitionRoot,
+  );
 });
 
 for (const action of ['accepted', 'adapted', 'overridden']) {
@@ -372,6 +395,50 @@ test('insufficient-history records the human disposition and permits manual capt
   assert.equal(result.advice.advice.status, 'insufficient-history');
   assert.equal(result.adoption.adopted, false);
   assert.equal(result.fallback.reason, 'insufficient-history');
+});
+
+test('insufficient history requires a human decision when no disposition exists', () => {
+  const result = runOpenCardPreflight(
+    request(undefined, { insufficient: true }),
+  );
+  assertCaptureBoundary(result);
+  assert.equal(result.outcome, 'human-decision-required');
+  assert.equal(result.disposition, null);
+  assert.equal(result.adoption.adopted, false);
+  assert.equal(result.escalation.required, true);
+  assert.ok(result.escalation.reasons.includes('advice-not-ready'));
+  assert.ok(result.escalation.reasons.includes('history-not-complete'));
+  assert.ok(result.escalation.reasons.includes('no-selected-history'));
+  assert.ok(result.escalation.reasons.includes('confidence-below-policy'));
+});
+
+test('low-confidence advice requires a human decision', () => {
+  const result = runOpenCardPreflight(
+    request(undefined, { confidence: 'low' }),
+  );
+  assertCaptureBoundary(result);
+  assert.equal(result.outcome, 'human-decision-required');
+  assert.deepEqual(result.escalation.reasons, ['confidence-below-policy']);
+});
+
+test('an unapproved advice gap requires a human decision', () => {
+  const result = runOpenCardPreflight(
+    request(undefined, { gapIds: ['requires-human-judgment'] }),
+  );
+  assertCaptureBoundary(result);
+  assert.equal(result.outcome, 'human-decision-required');
+  assert.deepEqual(result.escalation.reasons, [
+    'unresolved-gap:requires-human-judgment',
+  ]);
+});
+
+test('policy disposition tampering fails preflight verification', () => {
+  const result = runOpenCardPreflight(request());
+  result.disposition.evaluation.selectedCount += 1;
+  assert.deepEqual(verifyOpenCardPreflight(result), {
+    ok: false,
+    reason: 'preflight-root-mismatch',
+  });
 });
 
 test('stale-manifest explicitly falls back without invoking unsafe advice', () => {

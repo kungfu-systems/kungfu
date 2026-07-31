@@ -6,7 +6,10 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { semanticRoot } from '../../project-cut/src/project-cut.mjs';
-import { openCardAuthorityBoundary } from '../src/work-design-open-card.mjs';
+import {
+  openCardAuthorityBoundary,
+  openCardAutoAdoptionPolicy,
+} from '../src/work-design-open-card.mjs';
 
 const root = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
@@ -35,4 +38,9 @@ if (
   JSON.stringify(boundary.cardState) !== JSON.stringify(contract.cardState)
 )
   throw new Error('open-card authority or card-state boundary drifted');
+if (
+  JSON.stringify(openCardAutoAdoptionPolicy()) !==
+  JSON.stringify(contract.autoAdoption)
+)
+  throw new Error('open-card auto-adoption policy drifted');
 console.log(`[work-design-open-card] contract=${actualRoot}`);
