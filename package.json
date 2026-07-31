@@ -314,6 +314,7 @@
     "test:agent-session-peer-transport": "node scripts/require-shifu.mjs test:agent-session-peer-transport && node --test framework/agent-session/tests/peer-transport.test.mjs framework/agent-session/tests/runtime-port.test.mjs",
     "test:agent-session-peer-transport:native": "node scripts/require-shifu.mjs test:agent-session-peer-transport:native && node --test framework/agent-session/tests/runtime-port.native.test.mjs",
     "test:agent-session-interaction-adapters": "node scripts/require-shifu.mjs test:agent-session-interaction-adapters && node --test framework/agent-session/tests/provider-adapters.test.mjs framework/agent-session/tests/interaction-port.test.mjs",
+    "test:agent-session-work-attention": "node scripts/require-shifu.mjs test:agent-session-work-attention && node --test framework/agent-session/tests/mock-provider.test.mjs framework/agent-session/tests/work-attention.test.mjs",
     "test:agent-session-interaction-adapters:native": "node scripts/require-shifu.mjs test:agent-session-interaction-adapters:native && node --test framework/agent-session/tests/provider-version.native.test.mjs",
     "test:codex-app-server-contract": "node scripts/require-shifu.mjs test:codex-app-server-contract && node --test framework/agent-session/tests/codex-app-server-contract.test.mjs",
     "test:codex-app-server-contract:native": "node scripts/require-shifu.mjs test:codex-app-server-contract:native && node --test framework/agent-session/tests/codex-app-server-schema.native.test.mjs",

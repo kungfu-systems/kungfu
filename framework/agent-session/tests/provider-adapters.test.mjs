@@ -210,6 +210,6 @@ test('version probe returns metadata only and never claims private-state inspect
   assert.equal(probe.inspectedPrivateState, false);
   assert.deepEqual(
     providerAdapterMatrix().map((entry) => entry.provider),
-    ['codex', 'claude'],
+    ['codex', 'claude', 'synthetic'],
   );
 });

@@ -1,4 +1,5 @@
 import { createHash, randomUUID } from 'node:crypto';
+import { projectWorkAgentState } from './work-attention.mjs';
 import {
   WORK_CONSOLE_REGISTRY_SCHEMA,
   WorkConsoleRegistry,
@@ -127,7 +128,7 @@ export function agentSessionProductState({
 function publicStatus(session) {
   const status = session.port.status();
   const controller = status.controllerLease;
-  return {
+  const statusProjection = {
     schema: 'kungfu.agent-session.surface-status/v1',
     live: true,
     workConsoleId: status.workConsoleId,
@@ -174,6 +175,10 @@ function publicStatus(session) {
           attemptBoundary: status.attemptBoundary,
         }
       : {}),
+  };
+  return {
+    ...statusProjection,
+    workAgent: projectWorkAgentState(statusProjection),
   };
 }
 
