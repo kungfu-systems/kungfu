@@ -314,6 +314,27 @@ fn source_registry_hint_allowed(value: Option<&std::ffi::OsStr>) -> bool {
     value == Some(std::ffi::OsStr::new("1"))
 }
 
+fn standard_companion_globs(platform: &str) -> (String, String) {
+    let archive_platform = match platform {
+        "macos" => "darwin",
+        other => other,
+    };
+    let manifest_platform = match platform {
+        "macos" => "darwin",
+        "windows" => "win32",
+        other => other,
+    };
+    let archive = if platform == "windows" {
+        "zip"
+    } else {
+        "tar.gz"
+    };
+    (
+        format!("product/release/cli/*cli-{archive_platform}-*.{archive}"),
+        format!("product/release/cli/*upgrade-*-{manifest_platform}-*.json"),
+    )
+}
+
 /// Parse a distribution plan from a specific registry path. Split from
 /// `plan_for_task` so parsing is exercised without a live buildchain to answer
 /// the layout query.
@@ -394,25 +415,16 @@ fn plan_at(root: &Path, path: &Path, task: &str) -> Option<DistributionPlan> {
             .filter(|a| !a.kind.is_empty() && !a.path_glob.is_empty())
             .collect();
         if dist.str_of("releaseCompanions") == "standard" {
-            let (runtime, upgrade_runtime) = match env::consts::OS {
-                "macos" => ("darwin", "darwin"),
-                "windows" => ("windows", "win32"),
-                other => (other, other),
-            };
-            let archive = if env::consts::OS == "windows" {
-                "zip"
-            } else {
-                "tar.gz"
-            };
+            let (archive_glob, manifest_glob) = standard_companion_globs(env::consts::OS);
             artifacts.extend([
                 DeclaredArtifact {
                     kind: "cli-archive".to_string(),
-                    path_glob: format!("product/release/cli/*cli-{runtime}-*.{archive}"),
+                    path_glob: archive_glob,
                     sha256: String::new(),
                 },
                 DeclaredArtifact {
                     kind: "upgrade-manifest".to_string(),
-                    path_glob: format!("product/release/cli/*upgrade-*-{upgrade_runtime}-*.json"),
+                    path_glob: manifest_glob,
                     sha256: String::new(),
                 },
             ]);
@@ -1142,6 +1154,31 @@ mod tests {
         assert!(plan_at(&dir, &reg, "package").is_some());
         assert!(plan_at(&dir, &reg, "verify").is_none());
         let _ = fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn standard_release_companions_preserve_archive_and_manifest_platform_names() {
+        assert_eq!(
+            standard_companion_globs("windows"),
+            (
+                "product/release/cli/*cli-windows-*.zip".to_string(),
+                "product/release/cli/*upgrade-*-win32-*.json".to_string(),
+            )
+        );
+        assert_eq!(
+            standard_companion_globs("macos"),
+            (
+                "product/release/cli/*cli-darwin-*.tar.gz".to_string(),
+                "product/release/cli/*upgrade-*-darwin-*.json".to_string(),
+            )
+        );
+        assert_eq!(
+            standard_companion_globs("linux"),
+            (
+                "product/release/cli/*cli-linux-*.tar.gz".to_string(),
+                "product/release/cli/*upgrade-*-linux-*.json".to_string(),
+            )
+        );
     }
 
     #[test]
