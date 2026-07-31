@@ -30,22 +30,22 @@ that will make the post-stable v4 compatibility promise mechanically checkable
 is pending. Before v4 stable, verify against the current layout; after v4 stable,
 schema changes need an explicit compatibility or migration path.
 
-## The control / event axis is unmodernized, with open questions
+## The remaining control / event axis limit is the Node watcher snapshot model
 
-v4 de-risked the data axis (declared schema layout, transport modernization). The
-control and event axes carry recorded, **unscheduled** design questions:
+The Python coroutine private-API limit is resolved by the standards-compatible
+bridge and process-isolated service runtime in
+[KF-ADR-019fb64f-ba63-7620-a384-063adec7af2f](../adr/KF-ADR-019fb64f-ba63-7620-a384-063adec7af2f.md).
+Its exact boundary is machine-readable in the
+[Python KFX asyncio runtime contract](python-kfx-asyncio-runtime.contract.json).
+Journal/replay ordering remains Core-owned; live service scheduling uses
+CPython's standard asyncio loop.
 
-- the Python coroutine integration couples to private `asyncio` internals and is
-  incomplete
-  ([KF-ADR-019f86da-4f90-7a30-8697-5c648120053d](../adr/KF-ADR-019f86da-4f90-7a30-8697-5c648120053d.md));
-- the Node watcher snapshot model has a state-scale consideration (a whole-state
-  copy under lock) that becomes relevant at large state sizes, not at current
-  scale
-  ([KF-ADR-019f86da-4f90-7fb3-a803-393d3bbe6704](../adr/KF-ADR-019f86da-4f90-7fb3-a803-393d3bbe6704.md));
-- whether v4 should touch this axis at all is itself an open meta-decision
-  ([KF-ADR-019f86da-4f90-7f7b-90be-c002b024d412](../adr/KF-ADR-019f86da-4f90-7f7b-90be-c002b024d412.md)).
+One recorded limit remains: the Node watcher snapshot model makes a whole-state
+copy under lock. That becomes relevant at large state sizes, not at current
+scale
+([KF-ADR-019f86da-4f90-7fb3-a803-393d3bbe6704](../adr/KF-ADR-019f86da-4f90-7fb3-a803-393d3bbe6704.md)).
 
-These are identified and tracked, not silently shipped. They do not affect the
+This is identified and tracked, not silently shipped. It does not affect the
 data-plane correctness covered by
 [KF-ADR-019f86da-4f90-7179-a900-c40bdb498910](../adr/KF-ADR-019f86da-4f90-7179-a900-c40bdb498910.md).
 

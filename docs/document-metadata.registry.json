@@ -2037,7 +2037,13 @@
       "theme": "qualification-known-limits",
       "confidence": "high",
       "evidence_grade": "B",
-      "last_reviewed": "2026-07-14"
+      "last_reviewed": "2026-07-31",
+      "ai_provenance": {
+        "model_family": "OpenAI GPT-5",
+        "product": "Codex",
+        "generated_at": "2026-07-31",
+        "invisible_context_boundary": "unobserved platform qualification, protected review, and future release evidence are not claimed"
+      }
     },
     "docs/qualification/layer-product-release-qualification.md": {
       "metadata_schema": "kungfu.document-metadata/v1",
