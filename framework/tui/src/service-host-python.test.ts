@@ -86,7 +86,7 @@ test('Python runtime resolution carries exact rooted metadata', () => {
     },
   );
   assert.equal(runtime.command, '/qualified/python');
-  assert.deepEqual(runtime.args, ['-m', 'kungfu.kfx_service']);
+  assert.deepEqual(runtime.args, ['-m', 'kungfu.kfx_host']);
   assert.equal(runtime.env.KFX_SERVICE_ENTRY, join(FIXTURE_DIR, PYTHON_ENTRY));
   assert.equal(
     runtime.env.KFX_SERVICE_AUTHORIZATION_ROOT,

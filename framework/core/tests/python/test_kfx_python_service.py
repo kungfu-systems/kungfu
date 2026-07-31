@@ -29,7 +29,7 @@ import pytest
 )
 def test_ambient_effect_without_grant_fails_closed(tmp_path, operation, source):
     program = (
-        "from kungfu.kfx_service import install_ambient_capability_audit\n"
+        "from kungfu.kfx_host import install_ambient_capability_audit\n"
         "install_ambient_capability_audit(set())\n"
         f"{source}\n"
     )
@@ -51,7 +51,7 @@ def test_ambient_effect_without_grant_fails_closed(tmp_path, operation, source):
 def test_storage_write_with_exact_grant_succeeds(tmp_path):
     target = tmp_path / "allowed-write.txt"
     program = (
-        "from kungfu.kfx_service import install_ambient_capability_audit\n"
+        "from kungfu.kfx_host import install_ambient_capability_audit\n"
         "install_ambient_capability_audit({'storage'})\n"
         f"open({str(target)!r}, 'w', encoding='utf-8').write('ok')\n"
     )

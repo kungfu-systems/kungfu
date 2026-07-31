@@ -33,11 +33,11 @@ class _Channel:
         self._write = write_stream
         self._write_lock = threading.Lock()
         self._cond = threading.Condition()
-        self._results: dict[Any, dict[str, Any]] = {}
+        self._results: dict[int, dict[str, Any]] = {}
         self._async_waiters: dict[
-            Any, tuple[asyncio.AbstractEventLoop, asyncio.Future[dict[str, Any]]]
+            int, tuple[asyncio.AbstractEventLoop, asyncio.Future[dict[str, Any]]]
         ] = {}
-        self._abandoned_async_ids: set[Any] = set()
+        self._abandoned_async_ids: set[int] = set()
         self._seq = 0
         self._callbacks: dict[
             int, tuple[Callable[..., Any], asyncio.AbstractEventLoop | None]
@@ -93,6 +93,8 @@ class _Channel:
 
     def _accept_result(self, msg: dict[str, Any]) -> None:
         ident = msg.get("id")
+        if isinstance(ident, bool) or not isinstance(ident, int):
+            return
         with self._cond:
             waiter = self._async_waiters.pop(ident, None)
             if waiter is None:
@@ -113,8 +115,11 @@ class _Channel:
             future.set_result(msg)
 
     def _accept_event(self, msg: dict[str, Any]) -> None:
+        callback_id = msg.get("callback")
+        if isinstance(callback_id, bool) or not isinstance(callback_id, int):
+            return
         with self._cond:
-            registered = self._callbacks.get(msg.get("callback"))
+            registered = self._callbacks.get(callback_id)
         if registered is None:
             return
         callback, loop = registered

@@ -549,23 +549,8 @@
       "metadata_schema": "kungfu.document-metadata/v1",
       "document_status": "active",
       "doc_type": "public-document",
-      "review_state": "self-reviewed",
-      "sensitivity": "public",
-      "sources": [
-        "architecture-decisions",
-        "local-files"
-      ],
-      "period": "ongoing",
-      "theme": "kungfu-implementation-concepts",
-      "confidence": "high",
-      "evidence_grade": "B",
-      "last_reviewed": "2026-07-31",
-      "ai_provenance": {
-        "model_family": "OpenAI GPT-5",
-        "product": "Codex",
-        "generated_at": "2026-07-31",
-        "invisible_context_boundary": "unobserved platform qualification, protected review, and private runtime state are not claimed"
-      }
+      "review_state": "unreviewed",
+      "sensitivity": "public"
     },
     "docs/concepts/product-layers.md": {
       "metadata_schema": "kungfu.document-metadata/v1",
