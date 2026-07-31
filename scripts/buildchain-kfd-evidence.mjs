@@ -24,6 +24,7 @@ import {
   checkColdBuildchainKfd,
   loadBuildchainKfdRuntime,
 } from '../framework/release/buildchain-kfd-runtime.mjs';
+import { prepareGateMeasurementHistory } from './prepare-gate-measurement-history.mjs';
 import {
   assertKfdEvidenceSourceBinding,
   findGitTreeEquivalentAncestor,
@@ -577,6 +578,7 @@ function isGitAncestor(sourceSha, headSha) {
 }
 
 function resolveKfdEvidenceSourceSha({ write }) {
+  if (!write) prepareGateMeasurementHistory(ROOT);
   const headSha = gitValue(['rev-parse', 'HEAD']);
   const configured =
     process.env.BUILDCHAIN_SOURCE_SHA || process.env.KUNGFU_KFD_SOURCE_SHA;
