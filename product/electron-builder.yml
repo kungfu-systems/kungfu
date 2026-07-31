@@ -104,6 +104,9 @@
       "AppImage"
     ]
   },
+  "nsis": {
+    "include": "resources/installer.nsh"
+  },
   "win": {
     "target": [
       "dir",

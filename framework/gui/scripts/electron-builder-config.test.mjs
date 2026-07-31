@@ -44,6 +44,7 @@ test('product overlay preserves common policy and owns only product resources', 
     'files',
     'mac',
     'linux',
+    'nsis',
     'win',
   ]) {
     assert.deepEqual(product[key], framework[key], key);
@@ -72,4 +73,18 @@ test('product overlay preserves common policy and owns only product resources', 
     'kungfu-codex-app-server.contract.json',
     'schemas/**/*',
   ]);
+});
+
+test('Windows uninstall retries the owned native runtime subtree', () => {
+  const framework = readProjection('framework/gui/electron-builder.yml');
+  assert.equal(framework.nsis.include, 'resources/installer.nsh');
+
+  const include = fs.readFileSync(
+    new URL('../resources/installer.nsh', import.meta.url),
+    'utf8',
+  );
+  assert.match(include, /!macro customUnInstall/);
+  assert.match(include, /RMDir \/r "\$INSTDIR\\resources\\kungfu"/);
+  assert.match(include, /StrCpy \$R8 60/);
+  assert.doesNotMatch(include, /RMDir \/r "?\$INSTDIR"?\s*$/m);
 });
