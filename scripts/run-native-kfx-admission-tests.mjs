@@ -55,6 +55,24 @@ function checkIdentityNeutralAuthority() {
   assert.equal(native.coreCapabilityPolicy.originAuthority, false);
   assert.equal(native.coreCapabilityPolicy.productAssemblyAuthority, false);
   assert.equal(native.coreCapabilityPolicy.kfdAuthority, 'eligibility-only');
+  const coreCapabilityCeiling = new Set(
+    native.coreCapabilityPolicy.allowedCapabilities,
+  );
+  for (const manifestPath of git(['ls-files', 'extensions/**/kungfu.kfx.json'])
+    .split('\n')
+    .filter(Boolean)) {
+    const manifest = json(manifestPath);
+    const config = manifest.kungfuConfig?.config ?? {};
+    for (const facet of ['view', 'adapter', 'service']) {
+      for (const capability of config[facet]?.capabilities ?? []) {
+        assert.equal(
+          coreCapabilityCeiling.has(capability),
+          true,
+          `${manifestPath} ${facet} capability is outside the embedded Core policy ceiling: ${capability}`,
+        );
+      }
+    }
+  }
   assert.deepEqual(native.runtimeTiers, [
     'isolated',
     'integrated-explicit',

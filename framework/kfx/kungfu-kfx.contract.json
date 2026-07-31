@@ -1,7 +1,7 @@
 {
   "schema": "kungfu.kfx.contract/v1",
   "id": "kungfu-kfx",
-  "version": 12,
+  "version": 13,
   "weldedSurface": "kfx-contract",
   "description": "Single source for KFX package manifests, discovery rules, trust inputs, and build detection.",
   "contractSchema": {
@@ -877,6 +877,7 @@
         "ledger",
         "process",
         "profile",
+        "projects",
         "rewind",
         "storage",
         "terminal",
