@@ -6,6 +6,8 @@ import { createRequire } from 'node:module';
 import { constants as osConstants } from 'node:os';
 import { homedir } from 'node:os';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { createDetachedAgentSessionHost } from '@kungfu-tech/agent-session/product-client';
 import {
   type AgentWorkLab,
   type AgentWorkLabStartupRoute,
@@ -117,6 +119,61 @@ import {
 } from './work-window/index.js';
 
 const nodeRequire = createRequire(import.meta.url);
+let tuiAgentSessionEndpoint = '';
+let tuiAgentSessionReady: Promise<string> | undefined;
+
+function ensureTuiAgentSession(runtimeDir: string): Promise<string> {
+  if (tuiAgentSessionReady) return tuiAgentSessionReady;
+  const packagedWorker = fileURLToPath(
+    new URL('./agent-session-worker.mjs', import.meta.url),
+  );
+  const packagedMock = fileURLToPath(
+    new URL('./mock-agent.mjs', import.meta.url),
+  );
+  const packageRoot = path.dirname(
+    path.dirname(
+      nodeRequire.resolve('@kungfu-tech/agent-session/product-client'),
+    ),
+  );
+  const workerPath = fs.existsSync(packagedWorker)
+    ? packagedWorker
+    : path.join(packageRoot, 'src', 'product-worker.mjs');
+  const mockPath = fs.existsSync(packagedMock)
+    ? packagedMock
+    : path.join(packageRoot, 'src', 'mock-provider.mjs');
+  const packagedPty = path.join(
+    path.dirname(workerPath),
+    'node_modules',
+    'node-pty',
+    'lib',
+    'index.js',
+  );
+  const sourcePty = path.join(
+    packageRoot,
+    'node_modules',
+    'node-pty',
+    'lib',
+    'index.js',
+  );
+  process.env.KUNGFU_AGENT_SESSION_NODE_PTY_MODULE = fs.existsSync(packagedPty)
+    ? packagedPty
+    : sourcePty;
+  process.env.KUNGFU_AGENT_SESSION_WORKER = workerPath;
+  process.env.KUNGFU_MOCK_AGENT_EXECUTABLE = process.execPath;
+  process.env.KUNGFU_MOCK_AGENT_SCRIPT = mockPath;
+  process.env.KUNGFU_PROJECT_WORK_AGENT_SESSION = '1';
+  const host = createDetachedAgentSessionHost({
+    runtimeDir,
+    workerPath,
+    env: process.env,
+  });
+  tuiAgentSessionEndpoint = host.endpoint;
+  process.env.KUNGFU_AGENT_SESSION_ENDPOINT = host.endpoint;
+  tuiAgentSessionReady = Promise.resolve(
+    host.invoke({ operation: 'capabilities' }),
+  ).then(() => host.endpoint);
+  return tuiAgentSessionReady;
+}
 
 function cliEnvironment(): NodeJS.ProcessEnv {
   const env = { ...process.env };
@@ -260,6 +317,7 @@ function openTuiAgentWorkLab(): AgentWorkLab {
 
 function openTuiProjects() {
   const paths = runtimePaths();
+  const agentSessionReady = ensureTuiAgentSession(paths.runtimeDir);
   const cli = tuiCliInvocation(paths);
   const machineConfigHome = process.env.KF_PROJECTS_CONFIG_HOME;
   return openProjects({
@@ -326,8 +384,9 @@ function openTuiProjects() {
         });
         child.stdin.end(input);
       }),
-    execFileEvents: (file, values, options, onLine) =>
-      new Promise<void>((resolve, reject) => {
+    execFileEvents: async (file, values, options, onLine) => {
+      await agentSessionReady;
+      return new Promise<void>((resolve, reject) => {
         const child = spawn(file, cli.args(values), {
           env: options.env,
           stdio: ['ignore', 'pipe', 'pipe'],
@@ -389,7 +448,8 @@ function openTuiProjects() {
           settled = true;
           resolve();
         });
-      }),
+      });
+    },
   });
 }
 

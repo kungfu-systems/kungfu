@@ -23,6 +23,7 @@
     "bundle": "node build-bundle.mjs"
   },
   "dependencies": {
+    "@kungfu-tech/agent-session": "workspace:*",
     "@kungfu-tech/api": "workspace:*",
     "@kungfu-tech/core": "workspace:*",
     "@kungfu-tech/kfx": "workspace:*",

@@ -1,0 +1,167 @@
+import assert from 'node:assert/strict';
+import { spawn } from 'node:child_process';
+import { chmodSync, cpSync, statSync } from 'node:fs';
+import { mkdtemp, rm } from 'node:fs/promises';
+import { createRequire } from 'node:module';
+import os from 'node:os';
+import path from 'node:path';
+import test from 'node:test';
+import { setTimeout as delay } from 'node:timers/promises';
+import { fileURLToPath } from 'node:url';
+import { createDetachedAgentSessionHost } from '../src/product-client.mjs';
+
+const MOCK = fileURLToPath(
+  new URL('../src/mock-provider.mjs', import.meta.url),
+);
+const PROFILE_ROOT = `sha256:${'7'.repeat(64)}`;
+const require = createRequire(import.meta.url);
+
+function preparedNodePty(root) {
+  const source = path.dirname(require.resolve('node-pty/package.json'));
+  const target = path.join(root, 'node-pty');
+  cpSync(source, target, { recursive: true });
+  if (process.platform === 'darwin') {
+    const helper = path.join(
+      target,
+      'prebuilds',
+      `${process.platform}-${process.arch}`,
+      'spawn-helper',
+    );
+    chmodSync(helper, (statSync(helper).mode & 0o777) | 0o111);
+  }
+  return path.join(target, 'lib', 'index.js');
+}
+
+async function eventually(probe, label) {
+  const deadline = Date.now() + 5000;
+  while (Date.now() < deadline) {
+    const value = await probe();
+    if (value) return value;
+    await delay(25);
+  }
+  throw new Error(`${label} did not converge`);
+}
+
+async function control(host, session, operation, payload, automatic = true) {
+  const plan = await host.invoke({
+    operation: 'plan-control',
+    controlOperation: operation,
+    session,
+    payload,
+  });
+  return host.invoke({
+    operation,
+    actorId: 'mock-qualification',
+    client: 'cli',
+    plan,
+    expectedPlanRoot: plan.root,
+    payload,
+    automatic,
+  });
+}
+
+test('deterministic Mock Agent traverses answer, approval, review, and exit in the detached product runtime', async (t) => {
+  const runtimeDir = await mkdtemp(
+    path.join(os.tmpdir(), 'kungfu-mock-product-session-'),
+  );
+  const ptyModule = preparedNodePty(runtimeDir);
+  const workers = [];
+  const host = createDetachedAgentSessionHost({
+    runtimeDir,
+    env: {
+      ...process.env,
+      KUNGFU_AGENT_SESSION_NODE_PTY_MODULE: ptyModule,
+    },
+    unrefWorker: false,
+    spawnProcess: (command, args, options) => {
+      const child = spawn(command, args, { ...options, detached: false });
+      workers.push(child);
+      return child;
+    },
+  });
+  t.after(async () => {
+    for (const child of workers) {
+      if (child.exitCode === null && child.signalCode === null) {
+        child.kill('SIGTERM');
+        await new Promise((resolve) => child.once('exit', resolve));
+      }
+    }
+    await rm(runtimeDir, { recursive: true, force: true });
+  });
+
+  const session = {
+    workConsoleId: 'work:kungfu.work-control:assignment:mock-flow',
+    sessionAttemptId: 'attempt:mock-flow:1',
+  };
+  const input = {
+    ...session,
+    workspaceId: 'workspace:mock-flow',
+    provider: 'synthetic',
+    providerVersion: '1.0.0',
+    profileRoot: PROFILE_ROOT,
+    executable: process.execPath,
+    argv: [MOCK, '--scenario', 'multi-step'],
+    cwd: runtimeDir,
+    env: { PATH: process.env.PATH ?? '' },
+    runtimeProfileId: 'kungfu.mock-agent.multi-step',
+    binding: {
+      kind: 'work',
+      workRef: {
+        workspaceId: 'workspace:mock-flow',
+        profileId: 'kungfu.work-control',
+        entityType: 'assignment',
+        entityId: 'mock-flow',
+      },
+    },
+  };
+  const plan = await host.invoke({ operation: 'plan-start', input });
+  await host.invoke({
+    operation: 'start',
+    actorId: 'mock-qualification',
+    client: 'cli',
+    plan,
+    expectedPlanRoot: plan.root,
+    attachment: { attachmentId: 'mock-view', presentation: 'qualification' },
+    execution: { env: input.env, cols: 100, rows: 30 },
+  });
+
+  await eventually(async () => {
+    const status = await host.invoke({ operation: 'status', session });
+    return status.interactionState === 'ready' ? status : null;
+  }, 'initial ready state');
+  await control(host, session, 'instruct', { text: 'perform bounded Work' });
+  const answer = await eventually(async () => {
+    const status = await host.invoke({ operation: 'status', session });
+    return status.workAgent?.attention?.kind === 'needs-answer' ? status : null;
+  }, 'answer attention');
+  assert.equal(answer.workAgent.attempt, 'waiting');
+
+  await control(host, session, 'instruct', { text: 'alpha' });
+  const approval = await eventually(async () => {
+    const status = await host.invoke({ operation: 'status', session });
+    return status.workAgent?.attention?.kind === 'needs-approval'
+      ? status
+      : null;
+  }, 'approval attention');
+  assert.equal(approval.product.state, 'action-required');
+
+  await control(host, session, 'send-key', { key: 'y' }, false);
+  await control(host, session, 'send-key', { key: 'Enter' }, false);
+  const review = await eventually(async () => {
+    const status = await host.invoke({ operation: 'status', session });
+    return status.interactionState === 'ready' ? status : null;
+  }, 'review boundary');
+  assert.equal(review.workAgent.attention.kind, 'needs-answer');
+  const snapshot = await host.invoke({
+    operation: 'snapshot',
+    session,
+    requestedSequence: 0,
+  });
+  assert.match(snapshot.terminal.vt.lines.join('\n'), /READY FOR REVIEW/u);
+
+  await control(host, session, 'end', {});
+  await eventually(async () => {
+    const status = await host.invoke({ operation: 'status', session });
+    return status.lifecycleState === 'ended';
+  }, 'ended state');
+});

@@ -47,7 +47,12 @@ export function projectWorkAgentState(session = {}) {
     };
   }
 
-  if (!live && ['ended', 'exited'].includes(attemptStatus || lifecycle)) {
+  if (
+    lifecycle === 'ended' ||
+    lifecycle === 'exited' ||
+    attemptStatus === 'ended' ||
+    attemptStatus === 'exited'
+  ) {
     if (exitCode !== null && exitCode !== 0) {
       return {
         schema: 'kungfu.project-work-agent-state/v1',
