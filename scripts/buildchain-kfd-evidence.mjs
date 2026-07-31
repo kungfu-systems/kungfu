@@ -574,13 +574,14 @@ function isGitAncestor(sourceSha, headSha) {
   );
 }
 function resolveKfdEvidenceSourceSha({ write }) {
-  if (!write) prepareGateMeasurementHistory(ROOT);
-  const headSha = gitValue(['rev-parse', 'HEAD']);
-  const configured =
-    process.env.BUILDCHAIN_SOURCE_SHA || process.env.KUNGFU_KFD_SOURCE_SHA;
   const committed = write
     ? ''
     : String(readJson(KFD3_PREBUILD_WITNESS_PATH).source?.sourceSha || '');
+  if (!write)
+    prepareGateMeasurementHistory(ROOT, { requiredCommit: committed });
+  const headSha = gitValue(['rev-parse', 'HEAD']);
+  const configured =
+    process.env.BUILDCHAIN_SOURCE_SHA || process.env.KUNGFU_KFD_SOURCE_SHA;
   return assertKfdEvidenceSourceBinding({
     sourceSha: selectKfdEvidenceSourceSha({
       write,
@@ -1959,7 +1960,6 @@ async function runCheckOrWrite(options) {
       `[kfd] ok: KFD-1 witness, ${summary.kfd2.claimCount} KFD-2 claim(s), ${summary.kfd3.surfaceCount} KFD-3 surface(s)\n`,
     );
 }
-
 async function runQuery(options) {
   const upstreamAggregate = buildUpstreamKfdAggregate();
   const registry = buildKfd3Registry(upstreamAggregate);

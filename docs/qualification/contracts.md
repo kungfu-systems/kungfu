@@ -446,9 +446,10 @@ prebuild witness and require it to be an ancestor of the checked source (or to
 have an exact first-parent tree-equivalent ancestor after a protected rebase).
 An exact `BUILDCHAIN_SOURCE_SHA` from the release controller identifies the
 checkout being verified; it does not silently rewrite the committed witness in
-memory. Write mode still binds newly generated evidence to its configured or
-current source SHA. A missing, malformed, unrelated, or non-equivalent binding
-fails closed.
+memory. The checker restores the exact committed witness object when a shallow
+or protected-rebase checkout does not already contain it. Write mode still
+binds newly generated evidence to its configured or current source SHA. A
+missing, malformed, unrelated, or non-equivalent binding fails closed.
 
 **Verify.** Run:
 

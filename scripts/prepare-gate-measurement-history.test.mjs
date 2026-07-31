@@ -134,3 +134,40 @@ test('restores the source-acceptance base ref after local history recovery', () 
     fs.rmSync(root, { recursive: true, force: true });
   }
 });
+
+test('fetches the exact required witness commit outside the checked branch', () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'gate-history-witness-'));
+  try {
+    const origin = makeRepository(root);
+    const primaryBranch = git(origin, 'branch', '--show-current');
+    git(origin, 'switch', '-c', 'witness', 'HEAD~1');
+    fs.writeFileSync(path.join(origin, 'witness.txt'), 'witness\n');
+    git(origin, 'add', 'witness.txt');
+    git(origin, 'commit', '-m', 'witness');
+    const requiredCommit = git(origin, 'rev-parse', 'HEAD');
+    git(origin, 'switch', primaryBranch);
+
+    const checkout = path.join(root, 'checkout');
+    execFileSync(
+      'git',
+      [
+        'clone',
+        '--single-branch',
+        '--branch',
+        primaryBranch,
+        `file://${origin}`,
+        checkout,
+      ],
+      { stdio: 'ignore' },
+    );
+    assert.throws(() => git(checkout, 'cat-file', '-e', requiredCommit));
+
+    assert.equal(
+      prepareGateMeasurementHistory(checkout, { requiredCommit }),
+      'already-complete',
+    );
+    assert.equal(git(checkout, 'cat-file', '-t', requiredCommit), 'commit');
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});

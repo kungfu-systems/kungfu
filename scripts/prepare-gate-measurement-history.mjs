@@ -105,9 +105,36 @@ function ensureRemoteBaseRef(cwd, baseRef) {
   throw new Error(`cannot fetch measurement base ref: ${baseRef}`);
 }
 
+function ensureCommitObject(cwd, requiredCommit) {
+  if (!requiredCommit) return;
+  if (!/^[0-9a-f]{40}$/u.test(requiredCommit)) {
+    throw new Error(`invalid required measurement commit: ${requiredCommit}`);
+  }
+  const present = git(cwd, ['cat-file', '-e', `${requiredCommit}^{commit}`], {
+    stdio: ['ignore', 'ignore', 'ignore'],
+  });
+  if (present.status === 0) return;
+  const sources = ['origin', rewrittenBundleOrigin(cwd)].filter(Boolean);
+  for (const source of sources) {
+    const fetched = git(cwd, ['fetch', '--no-tags', source, requiredCommit], {
+      stdio: 'inherit',
+    });
+    if (fetched.status !== 0) continue;
+    const verified = git(
+      cwd,
+      ['cat-file', '-e', `${requiredCommit}^{commit}`],
+      { stdio: ['ignore', 'ignore', 'ignore'] },
+    );
+    if (verified.status === 0) return;
+  }
+  throw new Error(
+    `cannot fetch required measurement commit: ${requiredCommit}`,
+  );
+}
+
 export function prepareGateMeasurementHistory(
   cwd = process.cwd(),
-  { baseRef = '' } = {},
+  { baseRef = '', requiredCommit = '' } = {},
 ) {
   const shallow = git(cwd, ['rev-parse', '--is-shallow-repository'], {
     encoding: 'utf8',
@@ -119,6 +146,7 @@ export function prepareGateMeasurementHistory(
   }
   if (shallow.stdout.trim() === 'false') {
     ensureRemoteBaseRef(cwd, baseRef);
+    ensureCommitObject(cwd, requiredCommit);
     return 'already-complete';
   }
 
@@ -128,6 +156,7 @@ export function prepareGateMeasurementHistory(
   // to GitHub; restore the marker unchanged when that proof fails.
   if (recoverCompleteLocalHistory(cwd)) {
     ensureRemoteBaseRef(cwd, baseRef);
+    ensureCommitObject(cwd, requiredCommit);
     return 'recovered-local';
   }
 
@@ -153,5 +182,6 @@ export function prepareGateMeasurementHistory(
     throw new Error('cannot fetch complete measurement source history');
   }
   ensureRemoteBaseRef(cwd, baseRef);
+  ensureCommitObject(cwd, requiredCommit);
   return 'fetched-origin';
 }
