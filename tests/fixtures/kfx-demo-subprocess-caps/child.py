@@ -21,6 +21,9 @@ _guest_path = os.path.join(
 )
 _spec = importlib.util.spec_from_file_location("_kungfu_capability_guest", _guest_path)
 _guest = importlib.util.module_from_spec(_spec)
+# Match import machinery semantics before executing decorators. Python 3.14's
+# dataclasses resolve annotations through sys.modules[cls.__module__].
+sys.modules[_spec.name] = _guest
 _spec.loader.exec_module(_guest)
 connect = _guest.connect
 
