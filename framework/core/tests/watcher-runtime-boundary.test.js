@@ -18,6 +18,12 @@ const watcherSource = path.join(
   'binding',
   'watcher.cpp',
 );
+const watcherBench = path.join(__dirname, 'bench', 'dispatch_watcher_bench.js');
+const watcherBenchDriver = path.join(
+  __dirname,
+  'bench',
+  'dispatch_bench_watcher.mjs',
+);
 const nativeTest = {
   skip: fs.existsSync(bindingPath)
     ? false
@@ -55,6 +61,16 @@ test('watcher source does not reserve a libuv worker-pool job', () => {
     /"KungfuWatcherBridge", 1, 1/,
     'the native-to-Node bridge must remain single-slot and single-producer',
   );
+});
+
+test('watcher dispatch bench follows and proves the load peer carrier', () => {
+  const peer = fs.readFileSync(watcherBench, 'utf8');
+  const driver = fs.readFileSync(watcherBenchDriver, 'utf8');
+  assert.match(peer, /true, \/\/ captureCustom:/);
+  assert.match(peer, /requestReadFromPublic\(loadLocation, 0n\)/);
+  assert.match(driver, /watcher observed \$\{observed\} requested carrier/);
+  assert.match(driver, /if \(observed < count\)/);
+  assert.match(driver, /coordinator\.kill\(\)/);
 });
 
 test(

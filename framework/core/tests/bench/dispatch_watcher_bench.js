@@ -37,15 +37,43 @@ const watcher = new binding.Watcher(
   'dispatch_bench',
   true, // bypassRestore
   2, // millisecondsSleepAfterStep
+  true, // captureCustom: enables the explicit public-journal follow contract
 );
+
+const loadLocation = {
+  mode: 'live',
+  role: 'actor',
+  namespace: 'bench',
+  name: 'dispatch_load',
+};
+let followingLoad = false;
 
 console.log('watcher created, starting uv pump for', seconds, 'seconds');
 watcher.start();
 
+// Registering with the same coordinator does not implicitly join another
+// peer's PUBLIC journal. Wait until the load peer is in the live registry,
+// then request the exact source journal from the beginning so the dispatch
+// probe measures the requested carrier instead of coordinator control frames.
+const follow = setInterval(() => {
+  if (followingLoad || !watcher.isLive()) return;
+  const loadUid = watcher.getLocationUID(loadLocation);
+  if (!watcher.getLocation(loadUid)) return;
+  if (!watcher.requestReadFromPublic(loadLocation, 0n)) return;
+  followingLoad = true;
+  clearInterval(follow);
+  console.log('watcher following dispatch_load public journal');
+}, 10);
+
 const sync = setInterval(() => watcher.sync(), 1000);
 
 setTimeout(() => {
+  clearInterval(follow);
   clearInterval(sync);
+  if (!followingLoad) {
+    console.error('watcher never followed dispatch_load public journal');
+    process.exitCode = 1;
+  }
   console.log('watcher bench window done, quitting');
   watcher.quit();
   const deadline = Date.now() + 5000;
