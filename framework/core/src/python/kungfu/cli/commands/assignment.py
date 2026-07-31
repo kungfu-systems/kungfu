@@ -692,6 +692,7 @@ def _agent_report_summary(agent_report):
         "providerSessionIds": list(observation.get("providerSessionIds") or []),
         "work": agent_report["work"],
         "episode": agent_report["episode"],
+        "session": agent_report.get("session"),
     }
 
 
@@ -998,11 +999,19 @@ def start_work(
                 event_sink=on_agent_activity,
             )
             exit_code = int(agent_report["launch"]["exitCode"])
+            session_value = agent_report.get("session") or {}
+            session_live = session_value.get("live") is True
             event(
                 stage,
-                "completed" if exit_code == 0 else "failed",
+                "waiting"
+                if session_live
+                else "completed"
+                if exit_code == 0
+                else "failed",
                 (
-                    "Agent process finished; independent assessment is still required."
+                    "Agent Session needs your attention; Work remains executing."
+                    if session_live
+                    else "Agent process finished; independent assessment is still required."
                     if exit_code == 0
                     else f"Agent process exited {exit_code}; Work remains executing."
                 ),
@@ -1011,7 +1020,13 @@ def start_work(
             body = {
                 "schema": "kungfu.work-start.receipt/v1",
                 "ok": exit_code == 0,
-                "status": "agent-finished" if exit_code == 0 else "agent-failed",
+                "status": (
+                    "agent-waiting"
+                    if session_live
+                    else "agent-finished"
+                    if exit_code == 0
+                    else "agent-failed"
+                ),
                 "planRoot": plan["planRoot"],
                 "workPhase": last_status["phase"],
                 "workspace": admission["workspace"],
@@ -1021,7 +1036,15 @@ def start_work(
                 "agentReport": _agent_report_summary(agent_report),
                 "authorityReceipts": receipts,
                 "nextActions": (
-                    [
+                    list(
+                        (
+                            (session_value.get("workAgent") or {}).get("attention")
+                            or {}
+                        ).get("nextActions")
+                        or ["inspect-agent-session"]
+                    )
+                    if session_live
+                    else [
                         "review-project-changes",
                         "run-independent-assessment",
                         "claim-completion-only-with-evidence",

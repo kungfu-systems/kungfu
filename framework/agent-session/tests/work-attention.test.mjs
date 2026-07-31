@@ -57,6 +57,15 @@ test('ended and unrecoverable attempts lead to review or recovery without claimi
   assert.equal(ended.attention.kind, 'ready-for-review');
   assert.doesNotMatch(JSON.stringify(ended), /completed/u);
 
+  const endedRuntimeProjection = projectWorkAgentState({
+    live: true,
+    lifecycleState: 'ended',
+    attempt: { status: 'exited' },
+    exit: { exitCode: 0 },
+  });
+  assert.equal(endedRuntimeProjection.attempt, 'ended');
+  assert.equal(endedRuntimeProjection.attention.kind, 'ready-for-review');
+
   const crashed = projectWorkAgentState({
     live: false,
     lifecycleState: 'ended',
