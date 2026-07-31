@@ -126,6 +126,7 @@
     "journal.read.batch",
     "kfxControl",
     "ledger",
+    "network",
     "process",
     "profile",
     "projects",
@@ -876,6 +877,7 @@
         "journal.read.batch",
         "kfxControl",
         "ledger",
+        "network",
         "process",
         "profile",
         "projects",
@@ -897,6 +899,7 @@
       "highConsequenceCapabilities": [
         "agentRuntime",
         "kfxControl",
+        "network",
         "process",
         "storage"
       ],
