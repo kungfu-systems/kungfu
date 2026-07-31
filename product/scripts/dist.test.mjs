@@ -23,6 +23,7 @@ import {
   runInstalledKungfuAgentHubSmoke,
   runInstalledKungfuAssignmentAdmissionSmoke,
   runInstalledKungfuCommand,
+  runInstalledTuiBootstrapSmoke,
   stageXinfaContract,
   verifyProductObservabilityEvents,
 } from './dist.mjs';
@@ -43,6 +44,40 @@ const {
   esmEntrypointArgs,
   toEsmEntrypointSpecifier,
 } = require('../../framework/gui/scripts/before-pack.cjs');
+
+test('installed TUI binds child CLI calls to the manifest runtime entry', () => {
+  const installRoot = path.resolve('installed-product');
+  const kungfuBin = path.join(installRoot, 'kungfu.cmd');
+  const runtimeEntry = path.join(installRoot, 'runtime', 'kungfu.exe');
+  const tuiEntry = path.join(installRoot, 'tui', 'tui.mjs');
+  let invocation;
+
+  runInstalledTuiBootstrapSmoke(
+    {
+      installRoot,
+      kungfuBin,
+      runtimeEntry,
+      tuiEntry,
+      env: {},
+    },
+    {
+      spawn(command, args, options) {
+        invocation = { command, args, options };
+        return {
+          status: 0,
+          signal: null,
+          stdout: '{"schema":"kungfu.agent-work-lab.report/v1"}\n',
+          stderr: '',
+        };
+      },
+    },
+  );
+
+  assert.equal(invocation.command, kungfuBin);
+  assert.deepEqual(invocation.args, [tuiEntry, '--agent-work-lab-demo']);
+  assert.equal(invocation.options.env.KUNGFU_DIR, path.dirname(runtimeEntry));
+  assert.notEqual(invocation.options.env.KUNGFU_DIR, path.dirname(kungfuBin));
+});
 
 test('trunk staging retains one source-authoritative runtime pin snapshot', () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'kungfu-pin-test-'));

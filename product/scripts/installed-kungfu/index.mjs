@@ -50,29 +50,29 @@ export function spawnInstalledKungfu(kungfuBin, args, options) {
   });
 }
 
-export function runInstalledTuiBootstrapSmoke({
-  installRoot,
-  kungfuBin,
-  tuiEntry,
-  env,
-  home = path.join(installRoot, '.tui-qualification-home'),
-}) {
-  const result = spawnInstalledKungfu(
+export function runInstalledTuiBootstrapSmoke(
+  {
+    installRoot,
     kungfuBin,
-    [tuiEntry, '--agent-work-lab-demo'],
-    {
-      cwd: installRoot,
-      env: {
-        ...env,
-        KUNGFU_AS_VARIANT: 'node',
-        KUNGFU_DIR: path.dirname(kungfuBin),
-        KUNGFU_TUI_ENTRY: tuiEntry,
-        KF_HOME: home,
-        KF_RUNTIME_DIR: path.join(home, 'runtime'),
-      },
-      encoding: 'utf8',
+    runtimeEntry,
+    tuiEntry,
+    env,
+    home = path.join(installRoot, '.tui-qualification-home'),
+  },
+  { spawn = spawnInstalledKungfu } = {},
+) {
+  const result = spawn(kungfuBin, [tuiEntry, '--agent-work-lab-demo'], {
+    cwd: installRoot,
+    env: {
+      ...env,
+      KUNGFU_AS_VARIANT: 'node',
+      KUNGFU_DIR: path.dirname(runtimeEntry),
+      KUNGFU_TUI_ENTRY: tuiEntry,
+      KF_HOME: home,
+      KF_RUNTIME_DIR: path.join(home, 'runtime'),
     },
-  );
+    encoding: 'utf8',
+  });
   if (result.status !== 0) {
     throw new Error(
       [

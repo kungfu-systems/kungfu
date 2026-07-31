@@ -1916,6 +1916,11 @@ export function smokeCliProductArchive({ archivePath, archiveBase }) {
         }
 
         const kungfuBin = entryPath(installRoot, manifest.entries, 'kungfu');
+        const runtimeEntry = entryPath(
+          installRoot,
+          manifest.entries,
+          'runtime',
+        );
         const compatibility = entryPath(
           installRoot,
           manifest.entries,
@@ -2021,6 +2026,7 @@ export function smokeCliProductArchive({ archivePath, archiveBase }) {
           'upgradeManifest',
         );
         assertFile(kungfuBin, 'installed kungfu runtime');
+        assertFile(runtimeEntry, 'installed assembled runtime entry');
         assertFile(upgradeManifest, 'installed product upgrade manifest');
         const upgradeIdentity = readJson(upgradeManifest);
         if (upgradeIdentity.schema !== 'kungfu.product-upgrade.manifest/v1') {
@@ -2141,6 +2147,7 @@ export function smokeCliProductArchive({ archivePath, archiveBase }) {
         runInstalledTuiBootstrapSmoke({
           installRoot,
           kungfuBin,
+          runtimeEntry,
           tuiEntry,
           env: smokeEnv,
         });
