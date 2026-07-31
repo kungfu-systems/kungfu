@@ -166,6 +166,7 @@ export function findGitTreeEquivalentAncestor(
   headSha,
   gitRead = gitMaybe,
 ) {
+  if (gitRead(['cat-file', '-t', sourceSha]) !== 'commit') return '';
   const sourceTree = gitRead(['rev-parse', `${sourceSha}^{tree}`]);
   if (!/^[0-9a-f]{40}$/u.test(sourceTree)) return '';
   for (const line of gitRead([

@@ -58,16 +58,30 @@ test('KFD tree-equivalence lookup stays first-parent and bounded', () => {
   assert.equal(
     findGitTreeEquivalentAncestor(sourceSha, headSha, (args) => {
       calls.push(args);
-      return args[0] === 'rev-parse'
-        ? treeSha
-        : `${headSha} ${'e'.repeat(40)}\n${replayedSha} ${treeSha}`;
+      if (args[0] === 'cat-file') return 'commit';
+      if (args[0] === 'rev-parse') return treeSha;
+      return `${headSha} ${'e'.repeat(40)}\n${replayedSha} ${treeSha}`;
     }),
     replayedSha,
   );
   assert.deepEqual(calls, [
+    ['cat-file', '-t', sourceSha],
     ['rev-parse', `${sourceSha}^{tree}`],
     ['log', '--first-parent', '--max-count=4096', '--format=%H %T', headSha],
   ]);
+});
+
+test('KFD tree-equivalence rejects non-commit Git objects', () => {
+  const sourceSha = 'a'.repeat(40);
+  const calls = [];
+  assert.equal(
+    findGitTreeEquivalentAncestor(sourceSha, 'b'.repeat(40), (args) => {
+      calls.push(args);
+      return 'tree';
+    }),
+    '',
+  );
+  assert.deepEqual(calls, [['cat-file', '-t', sourceSha]]);
 });
 
 test('KFD product gates remain checkable without ignored runtime outputs', () => {
