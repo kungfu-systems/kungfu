@@ -58,6 +58,11 @@ function route(command, args) {
       'framework/work-design-open-card/tooling/open-card-preflight.mjs',
       args,
     ];
+  if (command === 'work-design:feedback')
+    return [
+      'framework/work-design-policy-replay/tooling/check-work-design-policy-replay.mjs',
+      ['feedback', ...args],
+    ];
   return null;
 }
 

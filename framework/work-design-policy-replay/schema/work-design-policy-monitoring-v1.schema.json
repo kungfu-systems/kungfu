@@ -1,0 +1,18 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kungfu.tech/schema/work-design-policy-monitoring-v1.schema.json",
+  "title": "Rooted Work Design policy monitoring observation",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "observedAt", "policyRoot", "qualifiedSampleCount", "regressionRateBps", "evidenceRoots", "monitoringRoot"],
+  "properties": {
+    "schema": { "const": "kungfu.work-design.policy-monitoring/v1" },
+    "observedAt": { "type": "string", "format": "date-time" },
+    "policyRoot": { "$ref": "#/$defs/root" },
+    "qualifiedSampleCount": { "type": "integer", "minimum": 0 },
+    "regressionRateBps": { "type": "integer", "minimum": 0, "maximum": 10000 },
+    "evidenceRoots": { "type": "array", "uniqueItems": true, "items": { "$ref": "#/$defs/root" } },
+    "monitoringRoot": { "$ref": "#/$defs/root" }
+  },
+  "$defs": { "root": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" } }
+}

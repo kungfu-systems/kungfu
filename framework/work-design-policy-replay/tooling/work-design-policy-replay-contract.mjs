@@ -60,6 +60,10 @@ export function checkWorkDesignPolicyReplayContract(root = DEFAULT_ROOT) {
       `policy replay contract root mismatch: expected ${roots.contract.contractRoot}, got ${roots.contractRoot}`,
     );
   if (
+    roots.contract.schema !== 'kungfu.work-design.policy-replay-contract/v2' ||
+    roots.contract.version !== 2 ||
+    roots.contract.predecessorContractRoot !==
+      'sha256:1dd69058c9a940e6596ea27877dd0fe55954911161b4b11b1522654d3f13b97c' ||
     roots.contract.mode !== 'offline-advisory' ||
     roots.contract.minimumDefaultPromotionSamples !== 30 ||
     roots.contract.activation !==
@@ -67,6 +71,23 @@ export function checkWorkDesignPolicyReplayContract(root = DEFAULT_ROOT) {
     Object.values(roots.contract.authority).some((value) => value !== false)
   )
     throw new Error('policy replay authority or promotion floor drifted');
+  const feedback = roots.contract.outcomeFeedback;
+  if (
+    feedback?.shadowThresholds?.observationOnlyMaximum !== 9 ||
+    feedback?.shadowThresholds?.tentativeTrendMinimum !== 10 ||
+    feedback?.shadowThresholds?.tentativeTrendMaximum !== 29 ||
+    feedback?.shadowThresholds?.promotionEligibilityMinimum !== 30 ||
+    feedback?.activation !== 'native-versioned-bounded-parameter-envelope' ||
+    feedback?.outOfEnvelope !== 'human-decision-required' ||
+    feedback?.concurrency !== 'expected-state-root-fenced' ||
+    feedback?.rollback !== 'automatic-exact-previous-policy-root' ||
+    feedback?.unknownEvidence !== 'remain-unknown-and-block-affected-cohort' ||
+    feedback?.privacyBoundary !==
+      'roots-enums-timestamps-and-sanitized-identifiers-only'
+  )
+    throw new Error(
+      'outcome feedback thresholds or activation boundary drifted',
+    );
   const expectedDimensions = [
     'selection',
     'advice',

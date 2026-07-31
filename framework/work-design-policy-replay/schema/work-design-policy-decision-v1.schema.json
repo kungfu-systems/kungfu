@@ -1,0 +1,23 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kungfu.tech/schema/work-design-policy-decision-v1.schema.json",
+  "title": "Fenced native Work Design activation or rollback decision",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "observedAt", "expectedStateRoot", "envelopeRoot", "action", "status", "reason", "fromPolicyRoot", "toPolicyRoot", "evidenceRoots", "authority", "decisionRoot"],
+  "properties": {
+    "schema": { "const": "kungfu.work-design.policy-decision/v1" },
+    "observedAt": { "type": "string", "format": "date-time" },
+    "expectedStateRoot": { "$ref": "#/$defs/root" },
+    "envelopeRoot": { "$ref": "#/$defs/root" },
+    "action": { "enum": ["none", "start-canary", "promote", "rollback"] },
+    "status": { "enum": ["authorized", "blocked", "human-decision-required", "observe"] },
+    "reason": { "type": "string", "minLength": 1 },
+    "fromPolicyRoot": { "$ref": "#/$defs/root" },
+    "toPolicyRoot": { "anyOf": [{ "$ref": "#/$defs/root" }, { "type": "null" }] },
+    "evidenceRoots": { "type": "array", "uniqueItems": true, "items": { "$ref": "#/$defs/root" } },
+    "authority": { "$ref": "https://kungfu.tech/schema/work-design-activation-envelope-v1.schema.json#/$defs/authority" },
+    "decisionRoot": { "$ref": "#/$defs/root" }
+  },
+  "$defs": { "root": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" } }
+}
