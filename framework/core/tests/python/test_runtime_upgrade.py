@@ -167,6 +167,17 @@ def test_user_message_answers_product_questions_and_links_exact_reason() -> None
     assert fallback["documentationUrl"].endswith("#troubleshooting")
 
 
+def test_release_check_impact_marks_generic_action_required() -> None:
+    assert runtime_upgrade.release_check_impact(
+        "cut-diverged",
+        state="action-required",
+    ) == {
+        "activeWorkContinues": True,
+        "activationTiming": "after-required-action",
+        "userActionRequired": True,
+    }
+
+
 def test_runtime_reference_discovery_projects_live_core_facts(tmp_path):
     source = _source(tmp_path, "runtime-a")
     current = _install(tmp_path / "config", source, _manifest(source, "runtime-a"), 1)

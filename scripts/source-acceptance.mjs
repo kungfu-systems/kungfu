@@ -159,6 +159,25 @@ export function sourceChangedFiles() {
   return [...files];
 }
 
+export function assertKfdEvidenceSourceBinding({
+  sourceSha,
+  headSha,
+  isAncestor,
+}) {
+  const gitSha = /^[0-9a-f]{40}$/u;
+  if (!gitSha.test(sourceSha) || !gitSha.test(headSha)) {
+    throw new Error(
+      `KFD evidence requires exact 40-hex Git coordinates, got source=${sourceSha || '<empty>'} head=${headSha || '<empty>'}`,
+    );
+  }
+  if (!isAncestor(sourceSha, headSha)) {
+    throw new Error(
+      `KFD evidence source ${sourceSha} is not an ancestor of checked head ${headSha}; regenerate the evidence after rebasing`,
+    );
+  }
+  return sourceSha;
+}
+
 /**
  * @param {string[]} files
  * @param {string} [evidenceBaseCommit]

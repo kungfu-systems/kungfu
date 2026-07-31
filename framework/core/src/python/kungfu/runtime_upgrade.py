@@ -291,14 +291,27 @@ def is_public_release_cut(value: Mapping[str, Any] | None) -> bool:
     ) == ("public", True)
 
 
-def release_check_impact(reason_code: str) -> dict[str, Any]:
-    waits_for_idle = reason_code == "active-work-must-be-idle"
+def release_check_impact(
+    reason_code: str,
+    *,
+    state: str | None = None,
+) -> dict[str, Any]:
+    action_timing = {
+        "active-work-must-be-idle": "after-current-work-is-idle",
+        "provider-resume-required": "after-provider-resume",
+        "irreversible-migration-needs-approval": "after-recovery-evidence-and-approval",
+        "rollback-unavailable": "after-recovery-path-is-approved",
+        "manual-rollback-needs-approval": "after-manual-rollback-is-approved",
+        "cut-recovery-approval-required": "after-recovery-is-approved",
+    }
+    user_action_required = state == "action-required" or reason_code in action_timing
     return {
         "activeWorkContinues": True,
-        "activationTiming": (
-            "after-current-work-is-idle" if waits_for_idle else "after-core-readiness"
+        "activationTiming": action_timing.get(
+            reason_code,
+            "after-required-action" if user_action_required else "after-core-readiness",
         ),
-        "userActionRequired": waits_for_idle,
+        "userActionRequired": user_action_required,
     }
 
 

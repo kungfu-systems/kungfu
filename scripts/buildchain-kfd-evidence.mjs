@@ -24,6 +24,7 @@ import {
   checkColdBuildchainKfd,
   loadBuildchainKfdRuntime,
 } from '../framework/release/buildchain-kfd-runtime.mjs';
+import { assertKfdEvidenceSourceBinding } from './source-acceptance.mjs';
 
 let runtime;
 
@@ -99,6 +100,9 @@ const KFD_PRODUCT_GATE_RUNTIME_DIR = path.join(
 const KFD_PRODUCT_GATE_STANDARDS = ['kfd-4', 'kfd-5', 'kfd-7'];
 const KFD_PRODUCT_GATE_PATHS = KFD_PRODUCT_GATE_STANDARDS.map((standard) =>
   path.join(KFD_PRODUCT_GATE_RUNTIME_DIR, standard, 'gate.json'),
+);
+const KFD_PRODUCT_GATE_INPUT_PATHS = KFD_PRODUCT_GATE_STANDARDS.map(
+  (standard) => path.join(KFD_PRODUCT_GATE_RUNTIME_DIR, standard, 'input.json'),
 );
 const KFD_SUPPORT_PROJECTION_PATH = path.join(
   KFD_PRODUCT_GATE_RUNTIME_DIR,
@@ -560,6 +564,29 @@ function gitValue(args) {
   }
 }
 
+function isGitAncestor(sourceSha, headSha) {
+  return (
+    spawnSync('git', ['merge-base', '--is-ancestor', sourceSha, headSha], {
+      cwd: ROOT,
+      stdio: 'ignore',
+    }).status === 0
+  );
+}
+
+function resolveKfdEvidenceSourceSha({ write }) {
+  const headSha = gitValue(['rev-parse', 'HEAD']);
+  const configured =
+    process.env.BUILDCHAIN_SOURCE_SHA || process.env.KUNGFU_KFD_SOURCE_SHA;
+  const committed = write
+    ? ''
+    : String(readJson(KFD3_PREBUILD_WITNESS_PATH).source?.sourceSha || '');
+  return assertKfdEvidenceSourceBinding({
+    sourceSha: configured || (write ? headSha : committed),
+    headSha,
+    isAncestor: isGitAncestor,
+  });
+}
+
 function runNodeScript(args, { expectJson = true } = {}) {
   const result = spawnSync(process.execPath, args, {
     cwd: ROOT,
@@ -965,7 +992,7 @@ function buildCollaborationInterface(registry) {
   };
 }
 
-function buildKfd3PrebuildWitness(registry) {
+function buildKfd3PrebuildWitness(registry, sourceSha) {
   const collaborationInterface = buildCollaborationInterface(registry);
   return {
     schemaVersion: 1,
@@ -975,7 +1002,7 @@ function buildKfd3PrebuildWitness(registry) {
     supportLevel: 'release',
     source: {
       cwd: '.',
-      sourceSha: gitValue(['rev-parse', 'HEAD']) || '',
+      sourceSha,
       registryPath: KFD3_DEFAULT_REGISTRY_PATH,
       registryDigest: `sha256:${sha256Json(registry)}`,
     },
@@ -1058,6 +1085,10 @@ function assertCurrent(filePath, value, label) {
   if (current !== rendered) {
     throw new Error(`${label} is stale: ${rel(filePath)}`);
   }
+}
+
+function assertCurrentIfPresent(filePath, value, label) {
+  if (fs.existsSync(filePath)) assertCurrent(filePath, value, label);
 }
 
 function buildKfd1Witness() {
@@ -1574,17 +1605,7 @@ function kfd7GateInput({ workspace, sourceSha, checkedAt, standards }) {
   });
 }
 
-async function buildProductGates({ write }) {
-  const sourceSha =
-    process.env.BUILDCHAIN_SOURCE_SHA ||
-    process.env.KUNGFU_KFD_SOURCE_SHA ||
-    gitValue(['rev-parse', 'HEAD']);
-  if (!/^[0-9a-f]{40}(?:[0-9a-f]{24})?$/.test(sourceSha)) {
-    throw new Error(
-      `KFD product gates require an exact 40- or 64-hex source SHA, got ${sourceSha || '<empty>'}`,
-    );
-  }
-  const checkedAt = new Date().toISOString();
+async function buildProductGates({ write, sourceSha, checkedAt }) {
   const workspace = write
     ? ROOT
     : fs.mkdtempSync(path.join(os.tmpdir(), 'kungfu-kfd-product-gates-'));
@@ -1658,6 +1679,7 @@ async function buildProductGates({ write }) {
     return {
       sourceSha,
       checkedAt,
+      inputs,
       gates,
       projection,
     };
@@ -1835,12 +1857,20 @@ async function runCheckOrWrite(options) {
   }
   const strictAudit = buildStrictBuildchainAudit(registry);
   assertStrictBuildchainAudit(strictAudit);
-  const prebuildWitness = buildKfd3PrebuildWitness(registry);
+  const sourceSha = resolveKfdEvidenceSourceSha({ write: options.write });
+  const checkedAt = options.write
+    ? new Date().toISOString()
+    : String(readJson(KFD_PRODUCT_GATE_PATHS[0]).checkedAt || '');
+  const prebuildWitness = buildKfd3PrebuildWitness(registry, sourceSha);
   const artifactWitness = buildKfd3ArtifactWitness(registry, {
     runVerify: true,
   });
   const query = await buildQuery(registry);
-  const productGates = await buildProductGates({ write: options.write });
+  const productGates = await buildProductGates({
+    write: options.write,
+    sourceSha,
+    checkedAt,
+  });
   const summary = buildSummary({
     registry,
     upstreamAggregate,
@@ -1861,6 +1891,40 @@ async function runCheckOrWrite(options) {
     writeJson(KFD3_ARTIFACT_WITNESS_PATH, artifactWitness);
     writeJson(KFD3_QUERY_PATH, query);
     writeJson(SUMMARY_PATH, summary);
+  } else {
+    assertCurrent(
+      KFD3_PREBUILD_WITNESS_PATH,
+      prebuildWitness,
+      'Buildchain KFD-3 prebuild witness',
+    );
+    assertCurrent(
+      KFD3_ARTIFACT_WITNESS_PATH,
+      artifactWitness,
+      'Buildchain KFD-3 artifact witness',
+    );
+    assertCurrent(KFD3_QUERY_PATH, query, 'Buildchain KFD-3 capability query');
+    for (let index = 0; index < productGates.gates.length; index += 1) {
+      assertCurrentIfPresent(
+        KFD_PRODUCT_GATE_INPUT_PATHS[index],
+        productGates.inputs[index],
+        `${KFD_PRODUCT_GATE_STANDARDS[index]} product-gate input`,
+      );
+      assertCurrentIfPresent(
+        KFD_PRODUCT_GATE_PATHS[index],
+        productGates.gates[index],
+        `${KFD_PRODUCT_GATE_STANDARDS[index]} product gate`,
+      );
+    }
+    assertCurrentIfPresent(
+      KFD_SUPPORT_PROJECTION_PATH,
+      productGates.projection,
+      'Buildchain KFD support projection',
+    );
+    assertCurrentIfPresent(
+      SUMMARY_PATH,
+      summary,
+      'Buildchain KFD evidence summary',
+    );
   }
 
   const output = {

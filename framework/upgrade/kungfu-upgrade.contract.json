@@ -100,6 +100,7 @@
     "provider-resume-unsupported",
     "irreversible-migration-needs-approval",
     "rollback-unavailable",
+    "manual-rollback-needs-approval",
     "stale-generation",
     "readiness-failed",
     "unknown-image-reference",
@@ -207,6 +208,15 @@
         "activation": "The update remains action-required.",
         "userAction": "Follow the documented recovery path before proceeding.",
         "dataAndSessions": "Rollback never deletes workspace, Episode, or session facts.",
+        "documentationAnchor": "#rollback-and-recovery"
+      },
+      "manual-rollback-needs-approval": {
+        "title": "Manual rollback approval is required",
+        "whatHappened": "This release requires an explicit manual rollback plan.",
+        "activeWork": "Current work remains on its pinned runtime.",
+        "activation": "Activation waits until the manual rollback path is reviewed and approved.",
+        "userAction": "Review and approve the documented manual rollback path before proceeding.",
+        "dataAndSessions": "No runtime route, workspace, Episode, or session fact changes before approval.",
         "documentationAnchor": "#rollback-and-recovery"
       },
       "stale-generation": {

@@ -1005,7 +1005,7 @@ def check_release(
         "message": runtime_upgrade.user_message(
             reason_code,
             documentation_url=value["documentationUrl"],
-            impact=runtime_upgrade.release_check_impact(reason_code),
+            impact=runtime_upgrade.release_check_impact(reason_code, state=state),
         ),
         "manifest": value,
         "cutDecision": copy.deepcopy(cut_decision),

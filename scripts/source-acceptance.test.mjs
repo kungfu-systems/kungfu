@@ -7,6 +7,7 @@ import { test } from 'node:test';
 import { fileURLToPath } from 'node:url';
 
 import {
+  assertKfdEvidenceSourceBinding,
   sourceAcceptancePlan,
   sourceClangFormatCommand,
   sourceMypyCommand,
@@ -14,6 +15,18 @@ import {
 } from './source-acceptance.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+
+test('KFD evidence rejects a source SHA whose ancestry was removed by rebase', () => {
+  assert.throws(
+    () =>
+      assertKfdEvidenceSourceBinding({
+        sourceSha: 'a'.repeat(40),
+        headSha: 'b'.repeat(40),
+        isAncestor: () => false,
+      }),
+    /not an ancestor of checked head.*regenerate the evidence after rebasing/u,
+  );
+});
 
 test('type baseline covers every Python surface declared by [tool.mypy]', () => {
   // The three siblings of the core package are small but load-bearing

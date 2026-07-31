@@ -199,7 +199,60 @@ def test_public_release_check_rejects_publication_ineligible_local_cut(
     assert captured.value.code == "release-publication-policy-mismatch"
 
 
-def test_deferred_cut_successor_reports_exact_idle_wait_impact(tmp_path: Path) -> None:
+@pytest.mark.parametrize(
+    (
+        "compatibility_update",
+        "active_work_policy",
+        "reason_code",
+        "activation_timing",
+        "user_action",
+    ),
+    [
+        (
+            {"migrationClass": "irreversible"},
+            "keep-pinned",
+            "irreversible-migration-needs-approval",
+            "after-recovery-evidence-and-approval",
+            "Create and verify backup or restore evidence, then approve explicitly.",
+        ),
+        (
+            {"rollbackClass": "none"},
+            "keep-pinned",
+            "rollback-unavailable",
+            "after-recovery-path-is-approved",
+            "Follow the documented recovery path before proceeding.",
+        ),
+        (
+            {"rollbackClass": "manual"},
+            "keep-pinned",
+            "manual-rollback-needs-approval",
+            "after-manual-rollback-is-approved",
+            "Review and approve the documented manual rollback path before proceeding.",
+        ),
+        (
+            {"providerResumeRequired": True},
+            "provider-resume",
+            "provider-resume-required",
+            "after-provider-resume",
+            "End at a safe point and use the provider resume action.",
+        ),
+        (
+            {},
+            "defer-until-idle",
+            "active-work-must-be-idle",
+            "after-current-work-is-idle",
+            "Finish the current work; do not force a restart for the update.",
+        ),
+    ],
+)
+def test_cut_policy_refusals_report_exact_user_action(
+    tmp_path: Path,
+    compatibility_update: dict,
+    active_work_policy: str,
+    reason_code: str,
+    activation_timing: str,
+    user_action: str,
+) -> None:
     _archive_path, manifest = _archive(tmp_path)
     current_root = f"sha256:{'0' * 64}"
     target_manifest = _bind_local_cut(
@@ -219,10 +272,11 @@ def test_deferred_cut_successor_reports_exact_idle_wait_impact(tmp_path: Path) -
             "migrationClass": "none",
             "rollbackClass": "automatic",
             "providerResumeRequired": False,
+            **compatibility_update,
         },
         migration_plan_root=f"sha256:{'1' * 64}",
         rollback_plan_root=f"sha256:{'2' * 64}",
-        active_work_policy="defer-until-idle",
+        active_work_policy=active_work_policy,
         evidence_roots=[f"sha256:{'3' * 64}"],
     )
 
@@ -236,15 +290,12 @@ def test_deferred_cut_successor_reports_exact_idle_wait_impact(tmp_path: Path) -
     )
 
     assert checked["state"] == "action-required"
-    assert checked["reasonCode"] == "active-work-must-be-idle"
-    assert checked["message"]["messageReasonCode"] == "active-work-must-be-idle"
-    assert (
-        checked["message"]["userAction"]
-        == "Finish the current work; do not force a restart for the update."
-    )
+    assert checked["reasonCode"] == reason_code
+    assert checked["message"]["messageReasonCode"] == reason_code
+    assert checked["message"]["userAction"] == user_action
     assert checked["message"]["impact"] == {
         "activeWorkContinues": True,
-        "activationTiming": "after-current-work-is-idle",
+        "activationTiming": activation_timing,
         "userActionRequired": True,
     }
 
