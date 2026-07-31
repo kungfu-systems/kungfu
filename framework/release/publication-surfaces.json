@@ -227,7 +227,7 @@
             "product-alpha",
             "product-stable"
           ],
-          "sourceRoot": "sha256:d855b0bed551c031f314b8223d45729d2a4609737bacf573ac1683188227b1fe"
+          "sourceRoot": "sha256:f5f95d955cf38bee6b92c81cb2e9a3c012e0a96243d1c0e579378c27c8d1e756"
         },
         {
           "path": ".github/workflows/kfd-verifier-drift.yml",
@@ -821,5 +821,5 @@
       }
     }
   ],
-  "registryRoot": "sha256:e9e359e797c909cff4f0fc094cd2998d72380739d64119de58f996e80e8c0b4b"
+  "registryRoot": "sha256:852c7aa3118920d66acdf876a5c52f2facf85c871bc8e196a5860a5a503dcd50"
 }
