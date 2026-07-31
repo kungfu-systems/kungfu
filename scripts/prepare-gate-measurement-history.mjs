@@ -25,6 +25,22 @@ export function bundleFetchUrl(value, platform = process.platform) {
   return value;
 }
 
+export function githubRepositoryFetchUrl({ repository, serverUrl } = {}) {
+  const normalizedRepository = String(repository || '').trim();
+  if (!/^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/u.test(normalizedRepository)) {
+    return '';
+  }
+  let normalizedServer;
+  try {
+    normalizedServer = new URL(String(serverUrl || 'https://github.com'));
+  } catch {
+    return '';
+  }
+  if (!['http:', 'https:'].includes(normalizedServer.protocol)) return '';
+  normalizedServer.pathname = normalizedServer.pathname.replace(/\/+$/u, '');
+  return `${normalizedServer.toString().replace(/\/+$/u, '')}/${normalizedRepository}.git`;
+}
+
 function rewrittenBundleOrigin(cwd) {
   const remote = git(cwd, ['remote', 'get-url', 'origin'], {
     encoding: 'utf8',
@@ -55,6 +71,18 @@ function rewrittenBundleOrigin(cwd) {
   return match ? bundleFetchUrl(match.rewritten) : '';
 }
 
+function fetchSources(cwd, sourceRepositoryUrl = '') {
+  const sources = [];
+  const origin = git(cwd, ['remote', 'get-url', 'origin'], {
+    encoding: 'utf8',
+  });
+  if (origin.status === 0 && origin.stdout.trim()) sources.push('origin');
+  const bundle = rewrittenBundleOrigin(cwd);
+  if (bundle) sources.push(bundle);
+  if (sourceRepositoryUrl) sources.push(sourceRepositoryUrl);
+  return [...new Set(sources)];
+}
+
 function recoverCompleteLocalHistory(cwd) {
   const shallowPathResult = git(cwd, ['rev-parse', '--git-path', 'shallow'], {
     encoding: 'utf8',
@@ -80,32 +108,25 @@ function recoverCompleteLocalHistory(cwd) {
   return false;
 }
 
-function ensureRemoteBaseRef(cwd, baseRef) {
+function ensureRemoteBaseRef(cwd, baseRef, sources) {
   if (!baseRef) return;
   const remoteRef = `refs/remotes/origin/${baseRef}`;
   const current = git(cwd, ['rev-parse', '--verify', remoteRef], {
     stdio: ['ignore', 'ignore', 'ignore'],
   });
   if (current.status === 0) return;
-  const fetched = git(
-    cwd,
-    ['fetch', '--no-tags', 'origin', `+refs/heads/${baseRef}:${remoteRef}`],
-    { stdio: 'inherit' },
-  );
-  if (fetched.status === 0) return;
-  const bundle = rewrittenBundleOrigin(cwd);
-  if (bundle) {
-    const recovered = git(
+  for (const source of sources) {
+    const fetched = git(
       cwd,
-      ['fetch', '--no-tags', bundle, `+refs/heads/${baseRef}:${remoteRef}`],
+      ['fetch', '--no-tags', source, `+refs/heads/${baseRef}:${remoteRef}`],
       { stdio: 'inherit' },
     );
-    if (recovered.status === 0) return;
+    if (fetched.status === 0) return;
   }
   throw new Error(`cannot fetch measurement base ref: ${baseRef}`);
 }
 
-function ensureCommitObject(cwd, requiredCommit) {
+function ensureCommitObject(cwd, requiredCommit, sources) {
   if (!requiredCommit) return;
   if (!/^[0-9a-f]{40}$/u.test(requiredCommit)) {
     throw new Error(`invalid required measurement commit: ${requiredCommit}`);
@@ -114,7 +135,6 @@ function ensureCommitObject(cwd, requiredCommit) {
     stdio: ['ignore', 'ignore', 'ignore'],
   });
   if (present.status === 0) return;
-  const sources = ['origin', rewrittenBundleOrigin(cwd)].filter(Boolean);
   for (const source of sources) {
     const fetched = git(cwd, ['fetch', '--no-tags', source, requiredCommit], {
       stdio: 'inherit',
@@ -134,8 +154,18 @@ function ensureCommitObject(cwd, requiredCommit) {
 
 export function prepareGateMeasurementHistory(
   cwd = process.cwd(),
-  { baseRef = '', requiredCommit = '' } = {},
+  {
+    baseRef = '',
+    requiredCommit = '',
+    sourceRepositoryUrl = githubRepositoryFetchUrl({
+      repository:
+        process.env.BUILDCHAIN_SOURCE_REPOSITORY ||
+        process.env.GITHUB_REPOSITORY,
+      serverUrl: process.env.GITHUB_SERVER_URL,
+    }),
+  } = {},
 ) {
+  const sources = fetchSources(cwd, sourceRepositoryUrl);
   const shallow = git(cwd, ['rev-parse', '--is-shallow-repository'], {
     encoding: 'utf8',
   });
@@ -145,8 +175,8 @@ export function prepareGateMeasurementHistory(
     );
   }
   if (shallow.stdout.trim() === 'false') {
-    ensureRemoteBaseRef(cwd, baseRef);
-    ensureCommitObject(cwd, requiredCommit);
+    ensureRemoteBaseRef(cwd, baseRef, sources);
+    ensureCommitObject(cwd, requiredCommit, sources);
     return 'already-complete';
   }
 
@@ -155,8 +185,8 @@ export function prepareGateMeasurementHistory(
   // store. Prove connectivity without the shallow boundary before reaching out
   // to GitHub; restore the marker unchanged when that proof fails.
   if (recoverCompleteLocalHistory(cwd)) {
-    ensureRemoteBaseRef(cwd, baseRef);
-    ensureCommitObject(cwd, requiredCommit);
+    ensureRemoteBaseRef(cwd, baseRef, sources);
+    ensureCommitObject(cwd, requiredCommit, sources);
     return 'recovered-local';
   }
 
@@ -166,22 +196,29 @@ export function prepareGateMeasurementHistory(
   if (head.status !== 0 || !head.stdout.trim()) {
     throw new Error('cannot resolve measurement source head');
   }
-  const fetched = git(
-    cwd,
-    [
-      'fetch',
-      '--unshallow',
-      '--filter=blob:none',
-      '--no-tags',
-      'origin',
-      head.stdout.trim(),
-    ],
-    { stdio: 'inherit' },
-  );
-  if (fetched.status !== 0) {
+  let fetched = false;
+  for (const source of sources) {
+    const result = git(
+      cwd,
+      [
+        'fetch',
+        '--unshallow',
+        '--filter=blob:none',
+        '--no-tags',
+        source,
+        head.stdout.trim(),
+      ],
+      { stdio: 'inherit' },
+    );
+    if (result.status === 0) {
+      fetched = true;
+      break;
+    }
+  }
+  if (!fetched) {
     throw new Error('cannot fetch complete measurement source history');
   }
-  ensureRemoteBaseRef(cwd, baseRef);
-  ensureCommitObject(cwd, requiredCommit);
+  ensureRemoteBaseRef(cwd, baseRef, sources);
+  ensureCommitObject(cwd, requiredCommit, sources);
   return 'fetched-origin';
 }

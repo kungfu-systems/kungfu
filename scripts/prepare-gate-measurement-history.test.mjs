@@ -9,6 +9,7 @@ import test from 'node:test';
 
 import {
   bundleFetchUrl,
+  githubRepositoryFetchUrl,
   prepareGateMeasurementHistory,
 } from './prepare-gate-measurement-history.mjs';
 
@@ -38,6 +39,30 @@ test('normalizes a Windows bundle path to an unambiguous file URL', () => {
   assert.equal(
     bundleFetchUrl('/runner/cache/kungfu.bundle', 'linux'),
     '/runner/cache/kungfu.bundle',
+  );
+});
+
+test('derives only a valid HTTP GitHub repository fetch URL', () => {
+  assert.equal(
+    githubRepositoryFetchUrl({
+      repository: 'kungfu-systems/kungfu',
+      serverUrl: 'https://github.example.test/',
+    }),
+    'https://github.example.test/kungfu-systems/kungfu.git',
+  );
+  assert.equal(
+    githubRepositoryFetchUrl({
+      repository: 'not-a-repository',
+      serverUrl: 'https://github.com',
+    }),
+    '',
+  );
+  assert.equal(
+    githubRepositoryFetchUrl({
+      repository: 'kungfu-systems/kungfu',
+      serverUrl: 'file:///tmp/source',
+    }),
+    '',
   );
 });
 
@@ -167,6 +192,72 @@ test('fetches the exact required witness commit outside the checked branch', () 
       'already-complete',
     );
     assert.equal(git(checkout, 'cat-file', '-t', requiredCommit), 'commit');
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test('fetches the exact witness from an explicit source when origin is absent', () => {
+  const root = fs.mkdtempSync(
+    path.join(os.tmpdir(), 'gate-history-no-origin-'),
+  );
+  try {
+    const origin = makeRepository(root);
+    const primaryBranch = git(origin, 'branch', '--show-current');
+    git(origin, 'switch', '-c', 'witness', 'HEAD~1');
+    fs.writeFileSync(path.join(origin, 'witness.txt'), 'witness\n');
+    git(origin, 'add', 'witness.txt');
+    git(origin, 'commit', '-m', 'witness');
+    const requiredCommit = git(origin, 'rev-parse', 'HEAD');
+    git(origin, 'switch', primaryBranch);
+
+    const checkout = path.join(root, 'checkout');
+    execFileSync(
+      'git',
+      [
+        'clone',
+        '--single-branch',
+        '--branch',
+        primaryBranch,
+        `file://${origin}`,
+        checkout,
+      ],
+      { stdio: 'ignore' },
+    );
+    git(checkout, 'remote', 'remove', 'origin');
+    assert.throws(() => git(checkout, 'cat-file', '-e', requiredCommit));
+
+    assert.equal(
+      prepareGateMeasurementHistory(checkout, {
+        requiredCommit,
+        sourceRepositoryUrl: `file://${origin}`,
+      }),
+      'already-complete',
+    );
+    assert.equal(git(checkout, 'cat-file', '-t', requiredCommit), 'commit');
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test('fails closed when a required witness is absent and no source exists', () => {
+  const root = fs.mkdtempSync(
+    path.join(os.tmpdir(), 'gate-history-no-source-'),
+  );
+  try {
+    const origin = makeRepository(root);
+    const checkout = path.join(root, 'checkout');
+    execFileSync('git', ['clone', `file://${origin}`, checkout], {
+      stdio: 'ignore',
+    });
+    git(checkout, 'remote', 'remove', 'origin');
+    assert.throws(
+      () =>
+        prepareGateMeasurementHistory(checkout, {
+          requiredCommit: 'f'.repeat(40),
+        }),
+      /cannot fetch required measurement commit/u,
+    );
   } finally {
     fs.rmSync(root, { recursive: true, force: true });
   }
