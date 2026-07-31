@@ -60,6 +60,7 @@ export type ProductQuickCommandAction =
   | 'help'
   | 'search'
   | 'health'
+  | 'new-work'
   | 'work'
   | 'projects'
   | 'lab'
@@ -89,6 +90,14 @@ export const QUICK_COMMANDS: QuickCommand<ProductQuickCommandAction>[] = [
     summary:
       'Describe the read-only runtime, Peer, storage, and Episode health command.',
     action: 'health',
+  },
+  {
+    id: 'new-work',
+    command: '/new',
+    title: 'Create Work',
+    summary:
+      'Create Work in the current Project, or choose a Project when none is open.',
+    action: 'new-work',
   },
   {
     id: 'work',

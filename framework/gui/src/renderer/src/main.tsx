@@ -36,6 +36,7 @@ import React from 'react';
 import * as ReactDOM from 'react-dom';
 import { createRoot } from 'react-dom/client';
 import * as jsxRuntime from 'react/jsx-runtime';
+import { ProjectWorkControlView } from '../../../../../extensions/work-dashboard/src/view/index';
 import {
   actionableKfxFailures,
   shouldOpenAgentWorkLab,
@@ -88,6 +89,10 @@ import {
   setKungfuConfigValue,
   unsetKungfuConfigValue,
 } from './gui-config';
+import {
+  kfxNativePlanArgs,
+  resolveKfxHostDescriptor,
+} from './kfx-host-descriptor';
 import { type KfxLoadResult, loadKfx } from './kfx-loader';
 import { ProductNavigation } from './product-navigation';
 import { ProjectsPanel, openRendererProjects } from './projects-panel';
@@ -1037,7 +1042,22 @@ function App() {
   const [agentWorkLab] = React.useState(openRendererAgentWorkLab);
   const [projects] = React.useState(openRendererProjects);
   const workspaceBridge = React.useMemo(workspaceIpc, []);
+  const initialProjectsOpen =
+    window.process.env.KFE_INITIAL_SURFACE === 'projects';
   const [startup] = React.useState<AgentWorkLabStartupRoute>(() => {
+    if (initialProjectsOpen) {
+      return {
+        schema: 'kungfu.agent-work-lab.startup-route/v1',
+        state: 'diagnostic',
+        route: 'diagnostic',
+        reasonCode: 'project-control-requested',
+        message: 'Project control starts without Agent Work Lab inspection.',
+        runtimeDir: window.process.env.KF_RUNTIME_DIR || '',
+        workGraphPresent: null,
+        evidence: [],
+        writeOccurred: false,
+      };
+    }
     try {
       return agentWorkLab.inspectSync();
     } catch (error) {
@@ -1056,7 +1076,7 @@ function App() {
   });
   const startupSurface = capability.agentWorkLabStartupSurface(startup);
   const [runtime] = React.useState(() =>
-    startupSurface === 'work-graph'
+    !initialProjectsOpen && startupSurface === 'work-graph'
       ? bootRuntime()
       : deferredRuntime(
           agentWorkLab,
@@ -1066,31 +1086,71 @@ function App() {
   runtime.projects = projects;
   const [kfxDescriptor] = React.useState<KfxExperienceFlowDescriptor | null>(
     () => {
-      try {
-        const plan = runtime.storage?.kfxRegistry('plan', {});
-        return (
-          (plan?.hostContract as unknown as KfxExperienceFlowDescriptor) ?? null
-        );
-      } catch {
-        return null;
-      }
+      if (initialProjectsOpen) return null;
+      const env = window.process.env as Record<string, string | undefined>;
+      return resolveKfxHostDescriptor({
+        nativePlan: () => runtime.storage?.kfxRegistry('plan', {}),
+        cliPlan: () => {
+          const childProcess = window.require('node:child_process') as {
+            execFileSync: (
+              file: string,
+              args: string[],
+              options: {
+                encoding: 'utf8';
+                env: Record<string, string | undefined>;
+                maxBuffer: number;
+              },
+            ) => string;
+          };
+          const path = window.require('node:path') as {
+            delimiter: string;
+            dirname: (value: string) => string;
+            resolve: (...values: string[]) => string;
+          };
+          const fs = window.require('node:fs') as {
+            existsSync: (value: string) => boolean;
+          };
+          const bin = env.KUNGFU_CLI_BIN || env.KUNGFU_BIN;
+          if (!bin) throw new Error('Kungfu CLI is unavailable');
+          const raw = childProcess.execFileSync(
+            bin,
+            guiKungfuCliArgs(env, kfxNativePlanArgs(env, path, fs.existsSync)),
+            { encoding: 'utf8', env, maxBuffer: 4 * 1024 * 1024 },
+          );
+          return JSON.parse(raw) as unknown;
+        },
+      });
     },
   );
   const [loaded] = React.useState<KfxLoadResult>(() =>
     loadKfx(window.process.env, SHARED_MODULES, kfxDescriptor),
   );
+  React.useEffect(() => {
+    if (
+      window.process.env.KUNGFU_GUI_DEV_SUPERVISOR === '1' &&
+      loaded.failures.length > 0
+    ) {
+      console.error(
+        `KF_GUI_KFX_FAILURES ${JSON.stringify(
+          loaded.failures.map((failure) => ({
+            dir: failure.dir,
+            error: failure.error,
+          })),
+        )}`,
+      );
+    }
+  }, [loaded.failures]);
   const visibleKfxFailures = React.useMemo(
     () => actionableKfxFailures(loaded.failures, kfxDescriptor !== null),
     [kfxDescriptor, loaded.failures],
   );
-  const initialProjectsOpen =
-    window.process.env.KFE_INITIAL_SURFACE === 'projects';
   const [labOpen, setLabOpen] = React.useState(() =>
     initialProjectsOpen
       ? false
       : shouldOpenAgentWorkLab(startupSurface, loaded.entries.length),
   );
   const [projectsOpen, setProjectsOpen] = React.useState(initialProjectsOpen);
+  const [coreWorkOpen, setCoreWorkOpen] = React.useState(false);
   const [focusedProjectPath, setFocusedProjectPath] = React.useState(
     window.process.env.KFE_FOCUSED_PROJECT_PATH || '',
   );
@@ -1395,6 +1455,7 @@ function App() {
     (kfxId: string, nextParams?: Record<string, string>) => {
       setLabOpen(false);
       setProjectsOpen(false);
+      setCoreWorkOpen(false);
       setParams(nextParams ?? {});
       setActive(kfxId);
     },
@@ -1729,9 +1790,29 @@ function App() {
   const workEntry =
     productRoleEntry(enabled, 'profile-view') ??
     enabled.find((entry) => entry.id === profileHomeId(profile, enabled));
+  const openCoreWork = React.useCallback(
+    (nextParams: Record<string, string> = {}) => {
+      setLabOpen(false);
+      setProjectsOpen(false);
+      setParams(nextParams);
+      setCoreWorkOpen(true);
+    },
+    [],
+  );
+  const restoreProjectWork = React.useCallback(
+    (projectPath: string, section: 'files' | 'work'): boolean => {
+      if (workEntry) {
+        openKfx(workEntry.id, { projectPath, projectSection: section });
+      } else {
+        openCoreWork({ projectPath, projectSection: section });
+      }
+      return true;
+    },
+    [openCoreWork, openKfx, workEntry],
+  );
   const publicNav = workEntry
     ? [{ id: workEntry.id, title: 'All Work', icon: '◎' }]
-    : [];
+    : [{ id: 'core-work', title: 'All Work', icon: '◎' }];
   const advancedNav = primaryNav.filter(
     (item) => !publicNav.some((publicItem) => publicItem.id === item.id),
   );
@@ -2322,6 +2403,7 @@ function App() {
                 onCatalog={handleProjectsCatalog}
                 onOpenProject={handleOpenProject}
                 onOpenExistingProject={() => void workspaceBridge.open()}
+                onRestoreProject={restoreProjectWork}
                 onOpenWork={(project, section = 'work') => {
                   if (workEntry) {
                     openKfx(workEntry.id, {

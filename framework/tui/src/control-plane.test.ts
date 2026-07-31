@@ -24,6 +24,8 @@ import {
 import {
   PROJECTS_QUICK_COMMANDS,
   PROJECT_WORK_QUICK_COMMANDS,
+  projectWorkQuickCommandAvailable,
+  selectVisibleProjectWorkRun,
 } from './projects-view/index.js';
 import {
   globalWorkContribution,
@@ -263,8 +265,19 @@ test('keeps a closing key captured for the rest of its synchronous input emissio
 test('keeps quick commands bounded to declared product actions', () => {
   assert.deepEqual(
     QUICK_COMMANDS.map((row) => row.action),
-    ['help', 'search', 'health', 'work', 'projects', 'lab', 'home', 'quit'],
+    [
+      'help',
+      'search',
+      'health',
+      'new-work',
+      'work',
+      'projects',
+      'lab',
+      'home',
+      'quit',
+    ],
   );
+  assert.equal(quickCommandMatches('/new')[0]?.action, 'new-work');
   assert.equal(quickCommandMatches('/rm -rf').length, 0);
 });
 
@@ -393,6 +406,45 @@ test('gives /new a Work meaning inside an opened Project', () => {
     'project-work-new',
   );
   assert.match(projectWorkCommands[0]?.summary ?? '', /acceptance criterion/);
+});
+
+test('keeps /new available after completed Project Work but not during active review', () => {
+  assert.equal(
+    projectWorkQuickCommandAvailable({
+      surface: 'project-assignment',
+      hasOpenedProject: true,
+      completedWork: true,
+    }),
+    true,
+  );
+  assert.equal(
+    projectWorkQuickCommandAvailable({
+      surface: 'project-assignment',
+      hasOpenedProject: true,
+      completedWork: false,
+    }),
+    false,
+  );
+  assert.equal(
+    projectWorkQuickCommandAvailable({
+      surface: 'project-work',
+      hasOpenedProject: true,
+      completedWork: false,
+    }),
+    true,
+  );
+});
+
+test('completed Project Work does not retain the previous Agent run as a new-Work blocker', () => {
+  const retained = [{ id: 'old-run', workspace: '/tmp/project' }];
+  assert.equal(
+    selectVisibleProjectWorkRun(retained, '/tmp/project', false)?.id,
+    'old-run',
+  );
+  assert.equal(
+    selectVisibleProjectWorkRun(retained, '/tmp/project', true),
+    null,
+  );
 });
 
 test('startup opens only the current .kungfu Project and otherwise shows All Work', () => {

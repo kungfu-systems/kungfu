@@ -97,16 +97,21 @@ export function applyDesktopWorkspaceEnvironment(
   Object.assign(env, desktopWorkspaceEnvironment(selection));
 }
 
-export function desktopWorkspaceTransitionMode(options: {
-  isPackaged: boolean;
-  rendererUrl: string;
-  shellWindowAvailable: boolean;
-}): 'renderer-reload' | 'application-relaunch' {
-  return !options.isPackaged &&
-    options.rendererUrl.length > 0 &&
-    options.shellWindowAvailable
-    ? 'renderer-reload'
-    : 'application-relaunch';
+export function prepareDesktopWorkspaceEnvironmentForRelaunch(
+  env: Record<string, string | undefined>,
+  selection: DesktopWorkspaceSelection,
+  registryManaged: boolean,
+): void {
+  if (registryManaged) {
+    clearDesktopWorkspaceEnvForRelaunch(env);
+    return;
+  }
+  // An explicit development instance pins KF_HOME before the registry is
+  // consulted. Once the user selects a Project, carry that exact workspace
+  // into the replacement process instead of allowing KF_INSTANCE_HOME to
+  // overwrite it during startup.
+  Reflect.deleteProperty(env, 'KF_INSTANCE_HOME');
+  applyDesktopWorkspaceEnvironment(env, selection);
 }
 
 export function workspaceRegistryPath(configHome: string): string {

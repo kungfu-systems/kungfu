@@ -344,8 +344,12 @@ test('the GUI shell uses the shared startup surface policy', () => {
   assert.match(source, /WORKSPACE_SELECT_PATH_CHANNEL/);
   assert.match(source, /onOpenStarterProject/);
   assert.match(mainSource, /ipcMain\.handle\(WORKSPACE_SELECT_PATH_CHANNEL/);
-  assert.match(mainSource, /transition: 'renderer-reload'/);
-  assert.match(mainSource, /shellWindow\.webContents\.reload\(\)/);
+  assert.match(mainSource, /transition: 'development-supervisor-restart'/);
+  assert.match(mainSource, /transition: 'application-relaunch'/);
+  assert.match(mainSource, /prepareDesktopWorkspaceEnvironmentForRelaunch/);
+  assert.match(mainSource, /KUNGFU_GUI_DEV_USER_DATA/);
+  assert.match(mainSource, /app\.setPath\('userData', developmentUserData\)/);
+  assert.doesNotMatch(mainSource, /shellWindow\.webContents\.reload\(\)/);
   assert.match(mainSource, /realpathSync\(requestedPath\)/);
   assert.match(mainSource, /statSync\(workspaceRoot\)\.isDirectory\(\)/);
 });
@@ -369,7 +373,8 @@ test('Projects and Work use the shared exact-plan Agent session surface', () => 
     assert.match(source, /expectedPlanRoot/);
   }
   assert.match(projects, /Opening Project/);
-  assert.match(projects, /onOpenWork\(openedProject, 'files'\)/);
+  assert.match(projects, /onRestoreProject\(focusedPath, 'files'\)/);
+  assert.match(projects, /forwardedProject\.current = focusedPath/);
   assert.match(projects, /Open Project…/);
   assert.match(projects, /New Project/);
   assert.match(projects, /New Work/);

@@ -79,6 +79,8 @@ import {
   type ProjectsActionRequest,
   ProjectsHost,
   type ProjectsQuickAction,
+  projectWorkQuickCommandAvailable,
+  selectVisibleProjectWorkRun,
 } from './projects-view/index.js';
 import {
   type OpenedStarterProject,
@@ -827,6 +829,7 @@ function ProjectWorkHost({
   onActionHandled,
   isInputCaptured,
   initialWorkReceipt,
+  allowNewWorkOverRetainedRun = false,
 }: {
   projects: Projects;
   project: ProjectWorkspaceSelection;
@@ -845,6 +848,7 @@ function ProjectWorkHost({
   onActionHandled?: (id: number) => void;
   isInputCaptured: () => boolean;
   initialWorkReceipt?: WorkStartReceipt;
+  allowNewWorkOverRetainedRun?: boolean;
 }) {
   const { exit } = useApp();
   const [size, setSize] = React.useState(dimensions.get());
@@ -905,9 +909,11 @@ function ProjectWorkHost({
     };
   }, [composerActive, onInputModeChange]);
 
-  const visibleRun =
-    runs.find((candidate) => candidate.workspace === project.workspace_root) ??
-    null;
+  const visibleRun = selectVisibleProjectWorkRun(
+    runs,
+    project.workspace_root,
+    allowNewWorkOverRetainedRun,
+  );
   const session = visibleRun?.session;
   const attention = session?.attention;
   React.useEffect(() => {
@@ -1946,10 +1952,14 @@ function ProductHost({
         ? [...AGENT_WORK_LAB_QUICK_COMMANDS, ...QUICK_COMMANDS]
         : surface === 'projects'
           ? [...PROJECTS_QUICK_COMMANDS, ...QUICK_COMMANDS]
-          : surface === 'project-work' && openedProject
+          : projectWorkQuickCommandAvailable({
+                surface,
+                hasOpenedProject: Boolean(openedProject),
+                completedWork: starterCloseReceipt?.status === 'completed',
+              })
             ? [...PROJECT_WORK_QUICK_COMMANDS, ...QUICK_COMMANDS]
             : QUICK_COMMANDS,
-    [labOpen, openedProject, surface],
+    [labOpen, openedProject, starterCloseReceipt?.status, surface],
   );
   const viewDocuments = React.useMemo<ProductSearchDocument[]>(
     () => [
@@ -2201,6 +2211,19 @@ function ProductHost({
           selected: 0,
           detail: health,
         });
+      } else if (command.action === 'new-work') {
+        if (openedProject) {
+          setSurface('project-work');
+          dispatchProjectWorkAction('project-work-new');
+          setControlNow({ ...CLOSED_CONTROL_PLANE, focus: 'workspace' });
+        } else {
+          setSurface('projects');
+          setControlNow({
+            ...CLOSED_CONTROL_PLANE,
+            focus: 'workspace',
+            notice: 'Choose a Project before creating Work.',
+          });
+        }
       } else if (command.action === 'work') {
         openGlobalWork();
         closeControl('workspace');
@@ -2295,6 +2318,7 @@ function ProductHost({
     openGlobalWork,
     openHome,
     openProject,
+    openedProject,
     projects,
     setControlNow,
   ]);
@@ -2573,6 +2597,9 @@ function ProductHost({
         }
         loadingWork={projectWorkLoading}
         initialWorkReceipt={starterWorkReceipt}
+        allowNewWorkOverRetainedRun={
+          starterCloseReceipt?.status === 'completed'
+        }
         actionRequest={projectWorkActionRequest}
         onActionHandled={acknowledgeProjectWorkAction}
         isInputCaptured={isInputCaptured}
@@ -2700,7 +2727,7 @@ function ProductHost({
                         : 't Files · Enter Run · /new New Work · p Projects'
                       : `f Active/Completed/All · s Sort · j/k Work · [2] ${
                           openedProject ? 'Project' : 'Projects'
-                        }`
+                        } · /new Work`
             }
           />
         </>
