@@ -30,9 +30,7 @@ import {
   findGitTreeEquivalentAncestor,
   resolveKfdProductGateCheckedAt,
 } from './source-acceptance.mjs';
-
 let runtime;
-
 const KFD3_SURFACE_REGISTRY_CONTRACT =
   'kungfu-buildchain-kfd-3-surface-registry';
 
