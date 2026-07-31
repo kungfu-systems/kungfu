@@ -282,6 +282,27 @@ test('build-free read-only routes bypass launcher bootstrap on both shims', () =
   assert.doesNotMatch(windowsFloor, /fnm install|pnpm|diagnostics/u);
 });
 
+test('open-card Work Design preflight is build-free on both shims', () => {
+  const posix = fs.readFileSync(path.join(ROOT, 'shifu'), 'utf8');
+  const windows = fs.readFileSync(path.join(ROOT, 'shifu.cmd'), 'utf8');
+  const readonly = fs.readFileSync(
+    path.join(ROOT, 'scripts/shifu-readonly-entry.mjs'),
+    'utf8',
+  );
+  for (const entrypoint of [posix, windows]) {
+    assert.match(entrypoint, /work-design:open-card-preflight/u);
+    assert.match(entrypoint, /shifu-readonly-entry\.mjs/u);
+  }
+  assert.match(
+    readonly,
+    /framework[\\/]work-design-open-card[\\/]tooling[\\/]open-card-preflight\.mjs/u,
+  );
+  assert.doesNotMatch(
+    readonly,
+    /fnm install|pnpm|\.buildchain[\\/]diagnostics/u,
+  );
+});
+
 test('Xinfa product tasks bypass unrelated Kungfu dependency caches', () => {
   const posix = fs.readFileSync(path.join(ROOT, 'shifu'), 'utf8');
   const windows = fs.readFileSync(path.join(ROOT, 'shifu.cmd'), 'utf8');

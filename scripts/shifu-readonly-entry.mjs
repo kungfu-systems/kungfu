@@ -53,6 +53,11 @@ function route(command, args) {
       'framework/maintainability/semantic-amplification.mjs',
       command === 'maintainability:query' ? ['--query', ...args] : args,
     ];
+  if (command === 'work-design:open-card-preflight')
+    return [
+      'framework/work-design-open-card/tooling/open-card-preflight.mjs',
+      args,
+    ];
   return null;
 }
 

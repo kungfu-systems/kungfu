@@ -5,6 +5,16 @@
   "requestSchema": "kungfu.work-design.open-card-preflight-request/v1",
   "resultSchema": "kungfu.work-design.open-card-preflight/v1",
   "rootAlgorithm": "sha256-project-cut-canonical-json-v1",
+  "historySource": {
+    "schema": "kungfu.work-design.open-card-history-source/v1",
+    "querySchema": "kungfu.workspace-federation.query/v1",
+    "recordSchema": "kungfu.assignment-orchestration.sealed-work-coordinate/v1",
+    "sourceId": "kungfu.workspace-federation.sealed-work-index",
+    "portableSettledOnly": true,
+    "replicaDeduplicationKey": "state_root",
+    "callerSuppliedCandidates": false,
+    "partialCoverageDisclosed": true
+  },
   "authority": {
     "mode": "capture-preflight-only",
     "fact": false,
@@ -45,5 +55,5 @@
     "selector-unavailable",
     "stale-manifest"
   ],
-  "contractRoot": "sha256:082ae7484fda4d6c76339bf6be34a084d09abeef384bdfa46b1881e17bccf26b"
+  "contractRoot": "sha256:f2074c617daa84e4b491d84a4f7d69df441574812b25bb9c2388edd248f24d8b"
 }

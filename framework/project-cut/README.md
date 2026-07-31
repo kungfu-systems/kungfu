@@ -118,6 +118,21 @@ Git, or repository state.
 ./shifu test:work-history-selector
 ```
 
+The open-card preflight can compile Selector input directly from the installed
+controller's verified global Work query. Only settled portable sealed-work
+coordinates enter the candidate set; replicas are deduplicated by immutable
+state root, partial global coverage remains explicit in the advice gaps, and a
+caller-supplied candidate list is never treated as history evidence. The Shifu
+route dispatches through checked-in Node protocol code without package install,
+build output, or checkout-local cache writes:
+
+```sh
+kungfu workspace work --home --scope all --include-settled \
+  --details components --json > global-work.json
+./shifu work-design:open-card-preflight --input request.json \
+  --history-query global-work.json
+```
+
 Work Design policy replay is a fourth, non-authoritative offline projection
 over a caller-supplied exact qualified cohort. It compares immutable baseline
 and candidate policy versions across selection, advice, disposition, outcome,
