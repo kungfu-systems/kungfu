@@ -8,6 +8,7 @@ import os
 import platform
 import signal
 import subprocess
+import tempfile
 import threading
 import time
 from contextlib import contextmanager
@@ -177,17 +178,34 @@ def _now() -> float:
 
 def _json_write(path: Path, payload: dict[str, Any]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
-    tmp = path.with_suffix(path.suffix + ".tmp")
-    tmp.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", "utf-8")
-    replace_attempts = 20 if platform.system() == "Windows" else 1
-    for attempt in range(replace_attempts):
-        try:
-            os.replace(tmp, path)
-            return
-        except PermissionError:
-            if attempt == replace_attempts - 1:
-                raise
-            time.sleep(0.05)
+    temporary: Path | None = None
+    try:
+        with tempfile.NamedTemporaryFile(
+            mode="w",
+            encoding="utf-8",
+            newline="\n",
+            dir=path.parent,
+            prefix=f".{path.name}.",
+            suffix=".tmp",
+            delete=False,
+        ) as output:
+            temporary = Path(output.name)
+            output.write(json.dumps(payload, indent=2, sort_keys=True) + "\n")
+        replace_attempts = 20 if platform.system() == "Windows" else 1
+        for attempt in range(replace_attempts):
+            try:
+                os.replace(temporary, path)
+                return
+            except PermissionError:
+                if attempt == replace_attempts - 1:
+                    raise
+                time.sleep(0.05)
+    finally:
+        if temporary is not None:
+            try:
+                temporary.unlink()
+            except FileNotFoundError:
+                pass
 
 
 def _json_read(path: Path) -> dict[str, Any]:

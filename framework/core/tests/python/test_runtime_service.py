@@ -115,6 +115,26 @@ def test_windows_json_write_retries_transient_replace_lock(tmp_path, monkeypatch
     assert sleeps == [0.05]
 
 
+def test_json_write_is_atomic_across_interleaved_writers(tmp_path, monkeypatch):
+    target = tmp_path / "runtime" / "state.json"
+    original_replace = runtime_service.os.replace
+    interleaved = False
+
+    def replace_with_interleaved_writer(source, destination):
+        nonlocal interleaved
+        if not interleaved:
+            interleaved = True
+            runtime_service._json_write(target, {"writer": "nested"})
+        original_replace(source, destination)
+
+    monkeypatch.setattr(runtime_service.os, "replace", replace_with_interleaved_writer)
+
+    runtime_service._json_write(target, {"writer": "outer"})
+
+    assert runtime_service._json_read(target) == {"writer": "outer"}
+    assert list(target.parent.glob(f".{target.name}.*.tmp")) == []
+
+
 def test_adopted_coordinator_kill_uses_portable_hard_signal(monkeypatch):
     delivered = []
     monkeypatch.setattr(
