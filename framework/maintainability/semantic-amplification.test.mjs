@@ -49,10 +49,10 @@ test('current semantic amplification projection has one route per family', () =>
     'kungfu.abstraction-integrity-report/v1',
   );
   assert.equal(report.integrity.metrics.topologies, 5);
-  assert.equal(report.integrity.metrics.findings, 2);
-  assert.equal(report.integrity.metrics.weightedDebt, 13);
-  assert.equal(report.integrity.baselineComparison.findingDelta, -1);
-  assert.equal(report.integrity.baselineComparison.weightedDebtDelta, -5);
+  assert.equal(report.integrity.metrics.findings, 0);
+  assert.equal(report.integrity.metrics.weightedDebt, 0);
+  assert.equal(report.integrity.baselineComparison.findingDelta, -3);
+  assert.equal(report.integrity.baselineComparison.weightedDebtDelta, -18);
   assert.equal(report.integrity.baselineComparison.ratchet, 'pass');
   assert.deepEqual(report.issues, []);
 });
@@ -113,10 +113,11 @@ test('integrity task graph resolves a declared durability adapter', () => {
     ['core-durability'],
   );
   assert.ok(
-    graph.integrityTopologies[0].findings.some(
-      (finding) => finding.class === 'leaking-platform-branch',
+    graph.integrityTopologies[0].adapters.some(
+      (adapter) => adapter.id === 'native-file-durability-platform-adapter',
     ),
   );
+  assert.deepEqual(graph.integrityTopologies[0].findings, []);
 });
 
 test('task graph explains legal runner variants without making a second authority', () => {
@@ -186,8 +187,21 @@ test('adversarial integrity fixtures classify fragmentation independently', () =
     const result = evaluateIntegrity(policy, {
       exists: (relative) =>
         fs.existsSync(new URL(`../../${relative}`, import.meta.url)),
-      readText: (relative) =>
-        fs.readFileSync(new URL(`../../${relative}`, import.meta.url), 'utf8'),
+      readText: (relative) => {
+        if (
+          fixture.mutation === 'token-spread' &&
+          [
+            'framework/core/src/libkungfu/src/runtime/durable_ingest.cpp',
+            'framework/core/src/libkungfu/src/runtime/storage/backend_switch.cpp',
+          ].includes(relative)
+        ) {
+          return 'synthetic platform branch uses ::fsync directly';
+        }
+        return fs.readFileSync(
+          new URL(`../../${relative}`, import.meta.url),
+          'utf8',
+        );
+      },
       now: () => new Date('2026-07-31T00:00:00Z'),
     });
     assert.ok(
@@ -201,6 +215,9 @@ test('adversarial integrity fixtures classify fragmentation independently', () =
 
 test('integrity ratchet blocks weighted debt regression', () => {
   const broken = clone(manifest);
+  broken.integrityPolicy.ratchet.baseline.findings = 0;
+  broken.integrityPolicy.ratchet.baseline.weightedDebt = 0;
+  broken.integrityPolicy.ratchet.baseline.findingIds = [];
   const runner = broken.integrityPolicy.topologies.find(
     (topology) => topology.id === 'runner-lifecycle',
   );

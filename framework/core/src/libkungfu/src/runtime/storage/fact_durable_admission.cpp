@@ -15,16 +15,7 @@
 #include <system_error>
 #include <utility>
 
-#ifdef _WIN32
-#ifndef NOMINMAX
-#define NOMINMAX
-#endif
-#include <windows.h>
-#else
-#include <fcntl.h>
-#include <unistd.h>
-#endif
-
+#include "io/durability.h"
 #include <kungfu/common.h>
 #include <kungfu/runtime/durable_ingest.h>
 #include <kungfu/runtime/storage/fact_kernel.h>
@@ -38,6 +29,7 @@ namespace kungfu::runtime::storage_service_api::fact_kernel_internal {
 
 namespace fs = std::filesystem;
 namespace durable = kungfu::runtime::durability;
+namespace platform_durability = kungfu::yijinjing::io::durability;
 namespace yy_storage = kungfu::yijinjing::storage;
 using kungfu::yijinjing::ownership::lease;
 
@@ -224,59 +216,6 @@ nlohmann::json journal_location(const std::string &runtime_dir) {
   return {{"directory", location->locator->layout_dir(location, kungfu::yijinjing::enums::layout::JOURNAL, false)}};
 }
 
-void sync_file(const fs::path &path) {
-#ifdef _WIN32
-  const auto handle =
-      CreateFileW(path.wstring().c_str(), GENERIC_WRITE, FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
-                  nullptr, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, nullptr);
-  if (handle == INVALID_HANDLE_VALUE) {
-    throw std::system_error(static_cast<int>(GetLastError()), std::system_category(), "open Fact journal page");
-  }
-  const auto result = FlushFileBuffers(handle);
-  const auto error = GetLastError();
-  CloseHandle(handle);
-  if (result == 0) {
-    throw std::system_error(static_cast<int>(error), std::system_category(), "sync Fact journal page");
-  }
-#else
-  const auto descriptor = ::open(path.c_str(), O_RDONLY | O_CLOEXEC);
-  if (descriptor < 0) {
-    throw std::system_error(errno, std::generic_category(), "open Fact journal page");
-  }
-  const auto result = ::fsync(descriptor);
-  const auto error = errno;
-  ::close(descriptor);
-  if (result != 0) {
-    throw std::system_error(error, std::generic_category(), "sync Fact journal page");
-  }
-#endif
-}
-
-void sync_directory(const fs::path &directory) {
-#ifdef _WIN32
-  // FlushFileBuffers does not accept a directory handle.  File contents are
-  // committed above; keep the unsupported directory-fsync claim explicit in
-  // the returned evidence instead of treating ERROR_INVALID_HANDLE as an
-  // ingest failure or pretending that Windows supplied a POSIX primitive.
-  std::error_code error;
-  if (!fs::is_directory(directory, error) || error) {
-    throw std::system_error(error ? error : std::make_error_code(std::errc::not_a_directory),
-                            "validate Fact journal directory");
-  }
-#else
-  const auto descriptor = ::open(directory.c_str(), O_RDONLY | O_DIRECTORY | O_CLOEXEC);
-  if (descriptor < 0) {
-    throw std::system_error(errno, std::generic_category(), "open Fact journal directory");
-  }
-  const auto result = ::fsync(descriptor);
-  const auto error = errno;
-  ::close(descriptor);
-  if (result != 0) {
-    throw std::system_error(error, std::generic_category(), "sync Fact journal directory");
-  }
-#endif
-}
-
 nlohmann::json sync_fact_journal(const std::string &runtime_dir) {
   const auto directory = fs::path(journal_location(runtime_dir).at("directory").get<std::string>());
   size_t page_count = 0;
@@ -284,20 +223,15 @@ nlohmann::json sync_fact_journal(const std::string &runtime_dir) {
     if (!entry.is_regular_file() || entry.path().extension() != ".journal") {
       continue;
     }
-    sync_file(entry.path());
+    platform_durability::sync_file(entry.path());
     ++page_count;
   }
   if (page_count == 0) {
     throw std::runtime_error("Fact journal has no authority pages to synchronize");
   }
-  sync_directory(directory);
-#ifdef _WIN32
-  constexpr auto method = "file-sync-without-directory-flush";
-  constexpr bool directory_synced = false;
-#else
-  constexpr auto method = "file-sync-plus-directory-sync";
-  constexpr bool directory_synced = true;
-#endif
+  const auto directory_status = platform_durability::sync_directory(directory);
+  const bool directory_synced = directory_status == platform_durability::directory_sync_status::synchronized;
+  const auto *method = directory_synced ? "file-sync-plus-directory-sync" : "file-sync-without-directory-flush";
   return {{"schema", "kungfu.fact.journal-durable-sync/v1"},
           {"authority", "yijinjing-hana-pod-journal"},
           {"method", method},

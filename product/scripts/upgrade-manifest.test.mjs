@@ -7,6 +7,7 @@ import os from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
 import { fileURLToPath } from 'node:url';
+import { readElectronBuilderProjection } from '../../framework/maintainability/semantic-amplification.mjs';
 import {
   artifactSignatureStatement,
   loadUpgradeQualificationContract,
@@ -315,12 +316,15 @@ test('both desktop builders retain the bundled upgrade identity outside runtime'
     'framework/gui/electron-builder.yml',
     'product/electron-builder.yml',
   ]) {
-    const config = fs.readFileSync(path.join(repoRoot, relative), 'utf8');
-    assert.match(
-      config,
-      /dist\/update\/kungfu-release-manifest\.json\n\s+to: upgrade\/kungfu-release-manifest\.json/,
+    const config = readElectronBuilderProjection(path.join(repoRoot, relative));
+    assert.ok(
+      config.extraResources.some(
+        (resource) =>
+          resource.from === 'dist/update/kungfu-release-manifest.json' &&
+          resource.to === 'upgrade/kungfu-release-manifest.json',
+      ),
     );
-    assert.match(config, /generateUpdatesFilesForAllChannels: true/);
-    assert.match(config, /channel: alpha/);
+    assert.equal(config.generateUpdatesFilesForAllChannels, true);
+    assert.equal(config.publish[0].channel, 'alpha');
   }
 });

@@ -11,13 +11,12 @@
 #include <system_error>
 #include <utility>
 
+#include "io/durability.h"
 #include <kungfu/yijinjing/storage/content_hash.h>
 
 #ifdef _WIN32
-#include <io.h>
 #include <process.h>
 #else
-#include <fcntl.h>
 #include <unistd.h>
 #endif
 
@@ -26,6 +25,7 @@ namespace kungfu::yijinjing::storage {
 namespace {
 
 namespace fs = std::filesystem;
+namespace platform_durability = kungfu::yijinjing::io::durability;
 
 constexpr const char *FILE_STORE_PROFILE = "yijinjing-file/v1";
 constexpr const char *TEMP_DIR_NAME = "tmp";
@@ -59,25 +59,7 @@ bool flush_to_disk(std::FILE *file) {
   if (std::fflush(file) != 0) {
     return false;
   }
-#ifdef _WIN32
-  return _commit(_fileno(file)) == 0;
-#else
-  return ::fsync(fileno(file)) == 0;
-#endif
-}
-
-// Publication is only durable once the directory entry is too; best-effort on
-// platforms without directory fsync.
-void sync_directory(const fs::path &dir) {
-#ifndef _WIN32
-  const int fd = ::open(dir.c_str(), O_RDONLY);
-  if (fd >= 0) {
-    ::fsync(fd);
-    ::close(fd);
-  }
-#else
-  (void)dir;
-#endif
+  return platform_durability::try_sync_file(file);
 }
 
 content_store_error read_file_bytes(const fs::path &path, std::string &bytes, std::string &message) {
@@ -309,7 +291,9 @@ content_store_result file_content_store::put_if_absent(const std::string &conten
     return result;
   }
   if (options_.fsync_on_publish) {
-    sync_directory(final_path.parent_path());
+    // Publication remains explicitly best-effort for directory metadata on
+    // platforms that cannot provide the POSIX guarantee.
+    platform_durability::best_effort_sync_directory(final_path.parent_path());
   }
   return result;
 }
