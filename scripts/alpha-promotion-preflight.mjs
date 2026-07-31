@@ -108,19 +108,43 @@ export function inspectWindowsFastSentinel({ shifuCmd, lifecycle }) {
   return issues;
 }
 
-export function inspectAuditableDemoFastSentinel({ adapter, workflow }) {
+export function inspectAuditableDemoFastSentinel({
+  adapter,
+  workflow,
+  catalog,
+}) {
   const issues = [];
+  let catalogValue;
+  try {
+    catalogValue = typeof catalog === 'string' ? JSON.parse(catalog) : catalog;
+  } catch {
+    issues.push('auditable-demo catalog is not valid JSON');
+  }
+  const defaultDemo = catalogValue?.demos?.find(
+    (demo) => demo?.id === catalogValue?.defaultDemoId,
+  );
+  if (
+    catalogValue?.schema !== 'kungfu.auditable-demo.catalog/v1' ||
+    !defaultDemo ||
+    defaultDemo.completion?.status !== 'qualified' ||
+    typeof defaultDemo.completion?.sentinel !== 'string' ||
+    defaultDemo.completion.sentinel.length === 0
+  ) {
+    issues.push(
+      'auditable-demo catalog no longer declares one qualified default completion sentinel',
+    );
+  }
   requirePattern(
     issues,
     adapter,
-    /COMPLETION_SENTINEL\s*=\s*re\.compile\(r"KUNGFU_TUI_DEMO_COMPLETE/iu,
-    'auditable-demo adapter no longer requires the installed completion sentinel',
+    /completion_contract\s*=\s*demo\["completion"\][\s\S]*re\.compile\(re\.escape\(completion_contract\["sentinel"\]\)/iu,
+    'auditable-demo adapter no longer compiles the catalog completion sentinel',
   );
   requirePattern(
     issues,
     adapter,
-    /completion\["status"\]\s*!=\s*"qualified"/iu,
-    'auditable-demo adapter regressed to a non-canonical completion verdict',
+    /completion\["status"\]\s*!=\s*completion_contract\["status"\]/iu,
+    'auditable-demo adapter no longer enforces the catalog completion verdict',
   );
   const runtime = workflow.match(
     /uses:\s*kungfu-systems\/buildchain\/\.github\/workflows\/\.auditable-demo\.yml@([0-9a-f]{40})/u,
@@ -133,8 +157,8 @@ export function inspectAuditableDemoFastSentinel({ adapter, workflow }) {
   requirePattern(
     issues,
     workflow,
-    /issue #2057 canonical qualified sentinel/iu,
-    'auditable-demo Gate no longer names the reviewed qualified-sentinel correction',
+    /adapter-path:\s*scripts\/auditable-demo-adapter\.py[\s\S]*adapter-arguments-json:\s*\$\{\{\s*format\('\["--demo-id",\{0\}\]'/iu,
+    'auditable-demo Gate no longer passes one bounded catalog demo id',
   );
   return issues;
 }
@@ -157,6 +181,10 @@ export function runAlphaFastSentinel(kind, root = ROOT) {
       ),
       workflow: fs.readFileSync(
         path.join(root, '.github', 'workflows', 'build.yml'),
+        'utf8',
+      ),
+      catalog: fs.readFileSync(
+        path.join(root, 'framework', 'auditable-demo', 'catalog.json'),
         'utf8',
       ),
     });

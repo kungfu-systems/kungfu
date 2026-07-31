@@ -7,6 +7,7 @@ import { createRequire } from 'node:module';
 import os from 'node:os';
 import path from 'node:path';
 import { test } from 'node:test';
+import { readElectronBuilderProjection } from '../../framework/maintainability/semantic-amplification.mjs';
 import { cliLauncherContent } from './cli-launcher.mjs';
 import {
   cliArchiveBase,
@@ -264,12 +265,14 @@ test('product staging excludes every Python bytecode form', () => {
     '../electron-builder.yml',
     '../../framework/gui/electron-builder.yml',
   ]) {
-    const config = fs.readFileSync(
+    const config = readElectronBuilderProjection(
       new URL(configPath, import.meta.url),
-      'utf8',
     );
-    assert.match(config, /!\*\*\/__pycache__\/\*\*/u);
-    assert.match(config, /!\*\*\/\*\.pyc/u);
+    const filters = config.extraResources.flatMap(
+      (resource) => resource.filter ?? [],
+    );
+    assert.ok(filters.includes('!**/__pycache__/**'));
+    assert.ok(filters.includes('!**/*.pyc'));
   }
 });
 
@@ -609,38 +612,47 @@ test('product kfx gate sees bundle externals but ignores window.require', () => 
 });
 
 test('desktop product carries the installed Agent authoring runtime', () => {
-  const config = fs.readFileSync(
+  const config = readElectronBuilderProjection(
     new URL('../electron-builder.yml', import.meta.url),
-    'utf8',
   );
   for (const target of ['sdk', 'kfd', 'templates', 'node_modules']) {
-    assert.match(
-      config,
-      new RegExp(`desktop-authoring/${target}\\n\\s+to: ${target}`),
+    assert.ok(
+      config.extraResources.some(
+        (resource) =>
+          resource.from === `../../product/dist/desktop-authoring/${target}` &&
+          resource.to === target,
+      ),
     );
   }
 });
 
 test('desktop product carries the externalized Agent Session runtime', () => {
-  const config = fs.readFileSync(
+  const config = readElectronBuilderProjection(
     new URL('../electron-builder.yml', import.meta.url),
-    'utf8',
   );
-  assert.match(config, /from: \.\.\/agent-session/);
-  assert.match(config, /to: app\/node_modules\/@kungfu-tech\/agent-session/);
+  assert.ok(
+    config.extraResources.some(
+      (resource) =>
+        resource.from === '../agent-session' &&
+        resource.to === 'app/node_modules/@kungfu-tech/agent-session',
+    ),
+  );
 });
 
 test('desktop product declares prerelease update metadata without implicit publishing', () => {
-  const config = fs.readFileSync(
+  const config = readElectronBuilderProjection(
     new URL('../electron-builder.yml', import.meta.url),
-    'utf8',
   );
-  assert.match(config, /publish:\n\s+- provider: github/);
-  assert.match(config, /owner: kungfu-systems/);
-  assert.match(config, /repo: kungfu/);
-  assert.match(config, /channel: alpha/);
-  assert.match(config, /releaseType: prerelease/);
-  assert.match(config, /generateUpdatesFilesForAllChannels: true/);
+  assert.deepEqual(config.publish, [
+    {
+      provider: 'github',
+      owner: 'kungfu-systems',
+      repo: 'kungfu',
+      channel: 'alpha',
+      releaseType: 'prerelease',
+    },
+  ]);
+  assert.equal(config.generateUpdatesFilesForAllChannels, true);
   const launcher = fs.readFileSync(
     new URL(
       '../../framework/gui/scripts/run-electron-builder.mjs',
@@ -649,9 +661,12 @@ test('desktop product declares prerelease update metadata without implicit publi
     'utf8',
   );
   assert.match(launcher, /--publish=never/);
-  assert.match(
-    config,
-    /dist\/update\/kungfu-release-manifest\.json\n\s+to: upgrade\/kungfu-release-manifest\.json/,
+  assert.ok(
+    config.extraResources.some(
+      (resource) =>
+        resource.from === 'dist/update/kungfu-release-manifest.json' &&
+        resource.to === 'upgrade/kungfu-release-manifest.json',
+    ),
   );
 });
 

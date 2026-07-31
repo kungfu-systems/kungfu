@@ -273,16 +273,27 @@ test('fast sentinels fail the representative recent invalid fixtures', () => {
   );
   const demoIssues = inspectAuditableDemoFastSentinel({
     adapter: [
-      'COMPLETION_SENTINEL = re.compile(r"KUNGFU_TUI_DEMO_COMPLETE ([^\\\\r\\\\n]+)")',
-      'completion["status"] != "passed"',
+      'completion_contract = demo["completion"]',
+      'sentinel = re.compile(re.escape(completion_contract["sentinel"]) + r"([^\\\\r\\\\n]+)")',
+      'completion["status"] != completion_contract["status"]',
     ].join('\n'),
     workflow:
       'uses: kungfu-systems/buildchain/.github/workflows/.auditable-demo.yml@main',
+    catalog: {
+      schema: 'kungfu.auditable-demo.catalog/v1',
+      defaultDemoId: 'fixture',
+      demos: [
+        {
+          id: 'fixture',
+          completion: { sentinel: 'FIXTURE_COMPLETE ', status: 'passed' },
+        },
+      ],
+    },
   });
   assert.ok(demoIssues.length >= 2);
   assert.match(
     demoIssues.join('\n'),
-    /canonical completion verdict|exact Buildchain SHA/u,
+    /qualified default completion sentinel|exact Buildchain SHA/u,
   );
 });
 

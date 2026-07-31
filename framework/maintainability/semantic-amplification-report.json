@@ -3,7 +3,7 @@
   "verdict": "pass",
   "authoritySemantics": "navigation-only-projection-over-existing-authorities",
   "manifestPath": "framework/maintainability/semantic-amplification.manifest.json",
-  "manifestRoot": "sha256:4efa0c343d3f52d1fee2616ff664ebb9e720858b0e2ac0c68a8c7dc85d7deaaa",
+  "manifestRoot": "sha256:bb27f12a23178b9775e61fcf6c91804636d687153cdd9199f5fe76bfe9793299",
   "baselineRef": "dbfed9ca1785d147b26f4f06e7e6895ac7368fee",
   "sourceRoot": "sha256:e60175693acad5c259ff79de659a46507f3b9db613170cf2cce0443238c470fb",
   "roles": {
@@ -1384,12 +1384,12 @@
     "metrics": {
       "topologies": 5,
       "legalAxes": 8,
-      "adapters": 16,
-      "projections": 6,
-      "qualificationRoutes": 9,
-      "exceptionDebt": 3,
-      "findings": 2,
-      "weightedDebt": 13
+      "adapters": 15,
+      "projections": 9,
+      "qualificationRoutes": 11,
+      "exceptionDebt": 2,
+      "findings": 0,
+      "weightedDebt": 0
     },
     "baseline": {
       "sourceRef": "1b77dbe8a0e669f3ec086f76c63eac07ec6e2a0d",
@@ -1403,8 +1403,8 @@
       ]
     },
     "baselineComparison": {
-      "findingDelta": -1,
-      "weightedDebtDelta": -5,
+      "findingDelta": -3,
+      "weightedDebtDelta": -18,
       "ratchet": "pass"
     },
     "topologies": [
@@ -1628,14 +1628,15 @@
           "id": "electron-builder-surface-policy",
           "kind": "repository-source",
           "sources": [
-            "framework/gui/electron-builder.yml",
-            "product/electron-builder.yml"
+            "framework/gui/electron-builder.base.json",
+            "product/electron-builder.overlay.json"
           ]
         },
         "legalAxes": {
           "surface": [
             "framework-gui",
-            "assembled-product"
+            "assembled-product",
+            "projection-generator"
           ]
         },
         "adapters": [
@@ -1645,7 +1646,7 @@
               "surface": "framework-gui"
             },
             "paths": [
-              "framework/gui/electron-builder.yml"
+              "framework/gui/electron-builder.base.json"
             ],
             "authorityBinding": "electron-builder-surface-policy"
           },
@@ -1655,7 +1656,17 @@
               "surface": "assembled-product"
             },
             "paths": [
-              "product/electron-builder.yml"
+              "product/electron-builder.overlay.json"
+            ],
+            "authorityBinding": "electron-builder-surface-policy"
+          },
+          {
+            "id": "electron-builder-projection-generator",
+            "axes": {
+              "surface": "projection-generator"
+            },
+            "paths": [
+              "framework/maintainability/semantic-amplification.mjs"
             ],
             "authorityBinding": "electron-builder-surface-policy"
           }
@@ -1674,6 +1685,10 @@
           {
             "path": "product/scripts/dist.test.mjs",
             "role": "config-contract"
+          },
+          {
+            "path": "framework/gui/scripts/electron-builder-config.test.mjs",
+            "role": "base-overlay-projection-drift"
           }
         ],
         "detectors": [
@@ -1682,23 +1697,17 @@
             "kind": "normalized-line-overlap",
             "findingClass": "config-duplication",
             "paths": [
-              "framework/gui/electron-builder.yml",
-              "product/electron-builder.yml"
+              "framework/gui/electron-builder.base.json",
+              "product/electron-builder.overlay.json"
             ],
             "minimumLineLength": 4,
-            "maximumSharedLines": 40,
-            "remediation": "Move shared packaging policy behind one validated base/overlay mechanism when electron-builder qualification can prove identical merged output."
+            "maximumSharedLines": 9,
+            "thresholdRationale": "The product overlay must restate nine resource/filter lines because electron-builder replaces extraResources arrays instead of merging their entries; any additional shared policy line is a regression.",
+            "remediation": "Keep shared packaging policy in the canonical base, product-only assembly in the overlay, and both generated projections drift-checked."
           }
         ],
-        "exceptions": [
-          {
-            "id": "electron-yaml-overlay-not-yet-qualified",
-            "expiresAt": "2026-10-31",
-            "rationale": "The two checked-in YAML surfaces remain independently executable; changing inheritance before exact platform packaging would risk installer behavior.",
-            "remediation": "Qualify a merged-config renderer on macOS, Linux, and Windows, then reduce normalized overlap without deleting product-only resources."
-          }
-        ],
-        "recovery": "Treat common keys as debt, preserve product-only resources, and require exact-platform package qualification before consolidation."
+        "exceptions": [],
+        "recovery": "Edit the executable base or product overlay, regenerate both projections, run the drift and product config contracts, then qualify packaging on every claimed platform."
       },
       {
         "id": "core-durability",
@@ -1716,6 +1725,8 @@
           "kind": "repository-source",
           "sources": [
             "framework/core/src/libkungfu/include/kungfu/runtime/durable_ingest.h",
+            "framework/core/src/libyijinjing/src/io/durability.h",
+            "framework/core/src/libyijinjing/include/kungfu/yijinjing/platform/mmap.h",
             "framework/storage/kungfu-storage.contract.json"
           ]
         },
@@ -1733,31 +1744,15 @@
         },
         "adapters": [
           {
-            "id": "durable-ingest-os-adapter",
+            "id": "native-file-durability-platform-adapter",
             "axes": {
               "durability-semantics": "strict-file-and-metadata"
             },
             "paths": [
-              "framework/core/src/libkungfu/src/runtime/durable_ingest.cpp"
-            ],
-            "authorityBinding": "native-durability-contract-and-storage-authority"
-          },
-          {
-            "id": "fact-journal-os-adapter",
-            "axes": {
-              "durability-semantics": "strict-file-and-metadata"
-            },
-            "paths": [
-              "framework/core/src/libkungfu/src/runtime/storage/fact_durable_admission.cpp"
-            ],
-            "authorityBinding": "native-durability-contract-and-storage-authority"
-          },
-          {
-            "id": "backend-switch-os-adapter",
-            "axes": {
-              "durability-semantics": "strict-file-and-metadata"
-            },
-            "paths": [
+              "framework/core/src/libyijinjing/src/io/durability.h",
+              "framework/core/src/libyijinjing/src/io/durability.cpp",
+              "framework/core/src/libkungfu/src/runtime/durable_ingest.cpp",
+              "framework/core/src/libkungfu/src/runtime/storage/fact_durable_admission.cpp",
               "framework/core/src/libkungfu/src/runtime/storage/backend_switch.cpp"
             ],
             "authorityBinding": "native-durability-contract-and-storage-authority"
@@ -1786,6 +1781,18 @@
         ],
         "projections": [
           {
+            "path": "framework/core/src/libkungfu/src/runtime/durable_ingest.cpp",
+            "role": "strict-durable-ingest-consumer"
+          },
+          {
+            "path": "framework/core/src/libkungfu/src/runtime/storage/fact_durable_admission.cpp",
+            "role": "strict-fact-journal-consumer"
+          },
+          {
+            "path": "framework/core/src/libkungfu/src/runtime/storage/backend_switch.cpp",
+            "role": "strict-backend-authority-consumer"
+          },
+          {
             "path": "docs/qualification/fact-storage-authority.md",
             "role": "qualification-documentation"
           }
@@ -1794,6 +1801,10 @@
           {
             "path": "framework/core/src/libkungfu/tests/durable_ingest_tests.cpp",
             "role": "native-contract"
+          },
+          {
+            "path": "framework/core/src/libyijinjing/tests/durability_tests.cpp",
+            "role": "cross-platform-primitive-contract"
           },
           {
             "path": "framework/core/tests/qualification/durability/product_contract.test.mjs",
@@ -1806,6 +1817,7 @@
             "kind": "token-spread",
             "findingClass": "leaking-platform-branch",
             "paths": [
+              "framework/core/src/libyijinjing/src/io/durability.cpp",
               "framework/core/src/libkungfu/src/runtime/durable_ingest.cpp",
               "framework/core/src/libkungfu/src/runtime/storage/fact_durable_admission.cpp",
               "framework/core/src/libkungfu/src/runtime/storage/backend_switch.cpp",
@@ -1819,7 +1831,7 @@
               "_commit("
             ],
             "maximumPaths": 2,
-            "remediation": "Converge only equivalent strict durability primitives behind a native OS adapter; retain content-store and provider semantics as explicit variants."
+            "remediation": "Keep equivalent strict primitives in the native file durability adapter; retain content-store best effort, mapping policy, and provider-owned WAL as explicit variants."
           }
         ],
         "exceptions": [
@@ -1830,7 +1842,7 @@
             "remediation": "Keep the weaker capability explicit; consolidate only after its public contract and power-loss evidence are upgraded."
           }
         ],
-        "recovery": "Inspect the declared durability semantics before moving OS code; never turn Windows metadata barriers, POSIX directory fsync, content-store best effort, and provider WAL into one false guarantee."
+        "recovery": "Inspect the declared durability semantics, use the platform adapter for strict file and metadata operations, preserve mapping policy, content-store best effort, and provider WAL as distinct contracts, then run native crash-recovery qualification."
       },
       {
         "id": "integrity-governance",
@@ -1916,155 +1928,22 @@
         "detector": "electron-config-overlap",
         "topology": "desktop-packaging",
         "kind": "normalized-line-overlap",
-        "status": "finding",
-        "metric": 54,
-        "threshold": 40,
-        "finding": {
-          "id": "desktop-packaging:electron-config-overlap",
-          "class": "config-duplication",
-          "topology": "desktop-packaging",
-          "target": "framework/gui/electron-builder.yml,product/electron-builder.yml",
-          "message": "54 normalized policy lines are duplicated across framework/gui/electron-builder.yml and product/electron-builder.yml",
-          "evidence": {
-            "sharedLineCount": 54,
-            "maximumSharedLines": 40,
-            "sample": [
-              "- \"!**/*.pyc\"",
-              "- \"!**/__pycache__/**\"",
-              "- \"!node_modules/@kungfu-tech/**/.venv{,/**}\"",
-              "- \"!node_modules/@kungfu-tech/**/build{,/**}\"",
-              "- \"!node_modules/@kungfu-tech/**/dist/kungfu{,/**}\"",
-              "- \"!node_modules/@kungfu-tech/**/node_modules/@kungfu-tech/core{,/**}\"",
-              "- \"!node_modules/@kungfu-tech/core{,/**}\"",
-              "- \"**/*\"",
-              "- AppImage",
-              "- dir",
-              "- dmg",
-              "- from: ../agent-session"
-            ]
-          }
-        }
+        "status": "remediated",
+        "metric": 9,
+        "threshold": 9,
+        "finding": null
       },
       {
         "detector": "durability-platform-primitive-spread",
         "topology": "core-durability",
         "kind": "token-spread",
-        "status": "finding",
-        "metric": 4,
+        "status": "remediated",
+        "metric": 1,
         "threshold": 2,
-        "finding": {
-          "id": "core-durability:durability-platform-primitive-spread",
-          "class": "leaking-platform-branch",
-          "topology": "core-durability",
-          "target": "framework/core/src/libkungfu/src/runtime/durable_ingest.cpp,framework/core/src/libkungfu/src/runtime/storage/fact_durable_admission.cpp,framework/core/src/libkungfu/src/runtime/storage/backend_switch.cpp,framework/core/src/libyijinjing/src/storage/content_store.cpp,framework/core/src/libkungfu/src/runtime/storage/provider.cpp",
-          "message": "4 files carry the same platform primitive family; the governed maximum is 2",
-          "evidence": {
-            "matchedPaths": [
-              {
-                "path": "framework/core/src/libkungfu/src/runtime/durable_ingest.cpp",
-                "tokens": [
-                  "FlushFileBuffers",
-                  "MoveFileEx",
-                  "::fsync"
-                ]
-              },
-              {
-                "path": "framework/core/src/libkungfu/src/runtime/storage/fact_durable_admission.cpp",
-                "tokens": [
-                  "FlushFileBuffers",
-                  "::fsync"
-                ]
-              },
-              {
-                "path": "framework/core/src/libkungfu/src/runtime/storage/backend_switch.cpp",
-                "tokens": [
-                  "MoveFileEx",
-                  "::fsync",
-                  "_commit("
-                ]
-              },
-              {
-                "path": "framework/core/src/libyijinjing/src/storage/content_store.cpp",
-                "tokens": [
-                  "::fsync",
-                  "_commit("
-                ]
-              }
-            ],
-            "maximumPaths": 2
-          }
-        }
+        "finding": null
       }
     ],
-    "findings": [
-      {
-        "id": "desktop-packaging:electron-config-overlap",
-        "class": "config-duplication",
-        "topology": "desktop-packaging",
-        "target": "framework/gui/electron-builder.yml,product/electron-builder.yml",
-        "message": "54 normalized policy lines are duplicated across framework/gui/electron-builder.yml and product/electron-builder.yml",
-        "evidence": {
-          "sharedLineCount": 54,
-          "maximumSharedLines": 40,
-          "sample": [
-            "- \"!**/*.pyc\"",
-            "- \"!**/__pycache__/**\"",
-            "- \"!node_modules/@kungfu-tech/**/.venv{,/**}\"",
-            "- \"!node_modules/@kungfu-tech/**/build{,/**}\"",
-            "- \"!node_modules/@kungfu-tech/**/dist/kungfu{,/**}\"",
-            "- \"!node_modules/@kungfu-tech/**/node_modules/@kungfu-tech/core{,/**}\"",
-            "- \"!node_modules/@kungfu-tech/core{,/**}\"",
-            "- \"**/*\"",
-            "- AppImage",
-            "- dir",
-            "- dmg",
-            "- from: ../agent-session"
-          ]
-        }
-      },
-      {
-        "id": "core-durability:durability-platform-primitive-spread",
-        "class": "leaking-platform-branch",
-        "topology": "core-durability",
-        "target": "framework/core/src/libkungfu/src/runtime/durable_ingest.cpp,framework/core/src/libkungfu/src/runtime/storage/fact_durable_admission.cpp,framework/core/src/libkungfu/src/runtime/storage/backend_switch.cpp,framework/core/src/libyijinjing/src/storage/content_store.cpp,framework/core/src/libkungfu/src/runtime/storage/provider.cpp",
-        "message": "4 files carry the same platform primitive family; the governed maximum is 2",
-        "evidence": {
-          "matchedPaths": [
-            {
-              "path": "framework/core/src/libkungfu/src/runtime/durable_ingest.cpp",
-              "tokens": [
-                "FlushFileBuffers",
-                "MoveFileEx",
-                "::fsync"
-              ]
-            },
-            {
-              "path": "framework/core/src/libkungfu/src/runtime/storage/fact_durable_admission.cpp",
-              "tokens": [
-                "FlushFileBuffers",
-                "::fsync"
-              ]
-            },
-            {
-              "path": "framework/core/src/libkungfu/src/runtime/storage/backend_switch.cpp",
-              "tokens": [
-                "MoveFileEx",
-                "::fsync",
-                "_commit("
-              ]
-            },
-            {
-              "path": "framework/core/src/libyijinjing/src/storage/content_store.cpp",
-              "tokens": [
-                "::fsync",
-                "_commit("
-              ]
-            }
-          ],
-          "maximumPaths": 2
-        }
-      }
-    ]
+    "findings": []
   },
   "issues": []
 }
