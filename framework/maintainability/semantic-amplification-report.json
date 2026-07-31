@@ -5,7 +5,7 @@
   "manifestPath": "framework/maintainability/semantic-amplification.manifest.json",
   "manifestRoot": "sha256:c6861ec9dc5215720094b0f317fcc0d909d2ae4a138a23f1690316408acde161",
   "baselineRef": "dbfed9ca1785d147b26f4f06e7e6895ac7368fee",
-  "sourceRoot": "sha256:c3b28dd07580a8471aec1b786e4586facf0e83ae9e3d778cfb58d75913f87789",
+  "sourceRoot": "sha256:03a3f3400842bfa7f05ce3805c88a35033e37bfbf8785cd2cbdc196b8e196dc9",
   "roles": {
     "authority": "exactly one authority route per family; the route may name multiple co-owned source files",
     "allowedProjectionRoles": [
@@ -518,9 +518,9 @@
       "measurements": [
         {
           "path": "framework/kfx/kungfu-kfx.contract.json",
-          "currentLines": 1483,
+          "currentLines": 1486,
           "baselineLines": 1244,
-          "currentRoot": "sha256:d157e2749808ece583f793845ea7a1547eaab720a230cb00a2e7095fa498a3e0",
+          "currentRoot": "sha256:5df5537fa161de8a210b1facac7cec5cf054b3a5eff4096fb27fec4370fd9e6c",
           "baselineRoot": "sha256:09461dda185e075d08137b51d8fcada3e862ff8e4f3cecd725ec7410021bbb99",
           "changedSinceBaseline": true
         },
@@ -542,9 +542,9 @@
         },
         {
           "path": "framework/kfx/src/index.ts",
-          "currentLines": 1536,
+          "currentLines": 1541,
           "baselineLines": 1622,
-          "currentRoot": "sha256:db555d0e74a764ffa9c0f8241b8362fcd781f66b45406d1b9519ed1225af8b32",
+          "currentRoot": "sha256:9ad09822a03a893f20defd3167247e63d053582652d2c5bcefe1ccff54d5b65f",
           "baselineRoot": "sha256:c27078f816d82f9d6aceb9d681f387ab1ee5ccdb806f0570e1b8959f8f2fadf8",
           "changedSinceBaseline": true
         },
@@ -582,9 +582,9 @@
         },
         {
           "path": "scripts/run-native-kfx-admission-tests.mjs",
-          "currentLines": 358,
+          "currentLines": 408,
           "baselineLines": 99,
-          "currentRoot": "sha256:e513967e3be6fc61f2580a998278fdceb91fdac79ff6a3959488970e930eeef2",
+          "currentRoot": "sha256:4f8ed2f419f4247092e28c356a3d6aa4d8b9167d243476837bd090d659eeb1e3",
           "baselineRoot": "sha256:32bb3806ac0541fd4230c78febce26efcfb85b56ef8ce19b4a374d0a07f1c4a4",
           "changedSinceBaseline": true
         },
