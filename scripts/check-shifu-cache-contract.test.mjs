@@ -15,6 +15,7 @@ import {
   qualifiedAssignmentCoreRoot,
   verifyQualifiedAssignmentCoreArtifact,
 } from './check-shifu-cache-contract.mjs';
+import './ensure-windows-sccache.test.mjs';
 import {
   cacheDoctor,
   cacheStatus,
@@ -497,6 +498,32 @@ test('portable-off qualification profiles cover every native Build lane', () => 
     'utf8',
   );
   assert.equal(buildWorkflow.split(`sha256:${digest}`).length - 1, 1);
+
+  const sccacheProfilePath = path.join(
+    ROOT,
+    'docs/shifu/windows-alpha-sccache.cache-profile.json',
+  );
+  const sccacheProfileText = fs.readFileSync(sccacheProfilePath, 'utf8');
+  const sccacheProfile = JSON.parse(sccacheProfileText);
+  assert.deepEqual(sccacheProfile.subject.platforms, profile.subject.platforms);
+  assert.equal(sccacheProfile.policy.mode, 'prefer');
+  assert.equal(
+    sccacheProfile.services['compiler-cache'].bindings[0].key,
+    'KUNGFU_WINDOWS_ALPHA_SCCACHE_DIR',
+  );
+  const sccacheDigest = crypto
+    .createHash('sha256')
+    .update(sccacheProfileText)
+    .digest('hex');
+  assert.equal(buildWorkflow.split(`sha256:${sccacheDigest}`).length - 1, 1);
+  assert.match(
+    buildWorkflow,
+    /compiler-cache-provider: \$\{\{ github\.event_name == 'workflow_dispatch' && inputs\.windows-compiler-cache-mode == 'off' && 'none' \|\| 'sccache' \}\}/u,
+  );
+  assert.match(
+    buildWorkflow,
+    /compiler-cache-platforms-json: \$\{\{[\s\S]*?'\["windows-x64"\]'/u,
+  );
 
   const linuxArm64ProfilePath = path.join(
     ROOT,

@@ -21,6 +21,14 @@ on:
         description: "Optional custom platform matrix for isolated qualification reruns"
         required: false
         default: ""
+      windows-compiler-cache-mode:
+        description: "Windows Alpha compiler cache mode for same-source qualification"
+        required: false
+        type: choice
+        options:
+          - sccache
+          - off
+        default: sccache
       run-kungfu-phase-b:
         description: "Qualify the Linux CLI package with the reviewed build-images Phase B consumer"
         required: false
@@ -134,7 +142,7 @@ jobs:
   build:
     needs: [preflight, windows-fast-sentinel, auditable-demo-fast-sentinel]
     if: ${{ needs.preflight.result == 'success' && needs.windows-fast-sentinel.result == 'success' && needs.auditable-demo-fast-sentinel.result == 'success' && !inputs.fast-sentinels-only && fromJSON(inputs.macos-overflow-request-json || '{}').mode != 'control' }}
-    uses: kungfu-systems/buildchain/.github/workflows/.build.yml@ea0d13ac2ccfbb3dc3a11a94e8eb83ab04b936b8 # protected artifact-signing authority
+    uses: kungfu-systems/buildchain/.github/workflows/.build.yml@472bc2efc987dd8baab310f0d510e2e165875b19 # protected artifact-signing authority
     secrets:
       BUILDCHAIN_PROMOTION_TOKEN: ${{ secrets.KUNGFU_GITHUB_TOKEN }}
       BUILDCHAIN_ARTIFACT_RELAY_S3_ROLE_ARN: ${{ secrets.BUILDCHAIN_ARTIFACT_RELAY_S3_ROLE_ARN }}
@@ -149,7 +157,7 @@ jobs:
       # Explicit macOS overflow candidates retain their declared route because
       # the queue controller owns their independent candidate identities.
       self-hosted-offline-fallback: ${{ fromJSON(inputs.macos-overflow-request-json || '{}').mode != 'self-hosted' && fromJSON(inputs.macos-overflow-request-json || '{}').mode != 'github-hosted' }}
-      install-command: ${{ fromJSON(inputs.macos-overflow-request-json || '{}').mode == 'self-hosted' && format('node .github/actions/require-alpha-preflight/alpha-macos-overflow.mjs health --route self-hosted --health-mode {0} && node scripts/buildchain-install.mjs', fromJSON(inputs.macos-overflow-request-json).healthMode || 'auto') || fromJSON(inputs.macos-overflow-request-json || '{}').mode == 'github-hosted' && 'node .github/actions/require-alpha-preflight/alpha-macos-overflow.mjs health --route github-hosted --health-mode auto && node scripts/buildchain-install.mjs' || '' }}
+      install-command: ${{ fromJSON(inputs.macos-overflow-request-json || '{}').mode == 'self-hosted' && format('node .github/actions/require-alpha-preflight/alpha-macos-overflow.mjs health --route self-hosted --health-mode {0} && node .github/actions/require-alpha-preflight/windows-alpha-sccache.mjs && node scripts/buildchain-install.mjs', fromJSON(inputs.macos-overflow-request-json).healthMode || 'auto') || fromJSON(inputs.macos-overflow-request-json || '{}').mode == 'github-hosted' && 'node .github/actions/require-alpha-preflight/alpha-macos-overflow.mjs health --route github-hosted --health-mode auto && node .github/actions/require-alpha-preflight/windows-alpha-sccache.mjs && node scripts/buildchain-install.mjs' || 'node .github/actions/require-alpha-preflight/windows-alpha-sccache.mjs && node scripts/buildchain-install.mjs' }}
       fail-fast: ${{ github.event_name == 'pull_request' || !inputs.diagnostic-mode }}
       setup-rust: true
       rust-toolchain: "1.96.0"
@@ -222,15 +230,19 @@ jobs:
       checkout-cache-fallback: github
       checkout-cache-timeout-seconds: 60
       # Alpha/release PRs intentionally qualify GitHub's synthetic merge tree
-      # rather than locking the head ref early. The merge ref is absent from
-      # the LAN mirror and this repository can exceed Buildchain's 600-second
-      # fallback default, so retain a bounded 20-minute GitHub fetch window.
+      # rather than locking the head ref early. The LAN mirror is expected to
+      # advertise pull-request merge refs; retain a bounded 20-minute GitHub
+      # fallback so an independently recorded mirror miss does not strand the
+      # qualification chain.
       checkout-cache-github-timeout-seconds: 1200
-      # The default native matrix now mixes hosted Linux ARM64 with the three
-      # self-hosted lanes. Never project a private-LAN cache profile onto a
-      # hosted runner; the explicit-off profile keeps all four legs auditable.
-      shifu-cache-profile-ref: docs/shifu/qualification-portable-off.cache-profile.json
-      shifu-cache-profile-digest: sha256:d7002041716ea1e5ad703492815c9557576d5679227743541c13d42b6ea9de5c
+      # The profile is public and local-only: all lanes can resolve it, while
+      # the source adapter maps the compiler-cache binding only on Windows.
+      # Manual off runs retain the prior profile for same-source baselines.
+      shifu-cache-profile-ref: ${{ github.event_name == 'workflow_dispatch' && inputs.windows-compiler-cache-mode == 'off' && 'docs/shifu/qualification-portable-off.cache-profile.json' || 'docs/shifu/windows-alpha-sccache.cache-profile.json' }}
+      shifu-cache-profile-digest: ${{ github.event_name == 'workflow_dispatch' && inputs.windows-compiler-cache-mode == 'off' && 'sha256:d7002041716ea1e5ad703492815c9557576d5679227743541c13d42b6ea9de5c' || 'sha256:581c430b959c0b45272031cad85a3fae740a6398abf7c1051d1d43b098ee0adb' }}
+      compiler-cache-provider: ${{ github.event_name == 'workflow_dispatch' && inputs.windows-compiler-cache-mode == 'off' && 'none' || 'sccache' }}
+      compiler-cache-platforms-json: ${{ github.event_name == 'workflow_dispatch' && inputs.windows-compiler-cache-mode == 'off' && '[]' || '["windows-x64"]' }}
+      compiler-cache-required: ${{ github.event_name != 'workflow_dispatch' || inputs.windows-compiler-cache-mode != 'off' }}
       cache-dependency-lock-root: ${{ needs.preflight.outputs.dependency-lock-root }}
       cache-toolchain-root: ${{ needs.preflight.outputs.toolchain-root }}
       cache-policy-root: ${{ needs.preflight.outputs.policy-root }}

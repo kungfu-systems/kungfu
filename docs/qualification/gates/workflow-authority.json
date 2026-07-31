@@ -264,7 +264,7 @@
     {
       "path": ".github/workflows/build.yml",
       "authority": "product-publication",
-      "definitionDigest": "sha256:09589d1c2d1d08c15d1e3c55520f956709cccbc2862b5508442122da2e23f47b",
+      "definitionDigest": "sha256:5b86c66ec0daf93dfc247010ca7aad8b458413a5d04a4dc429a0dfe6f78c108b",
       "jobs": [
         {
           "id": "auditable-demo",
@@ -301,9 +301,9 @@
           "authority": "qualification",
           "publication": "none",
           "receipt": "qualifying",
-          "definitionDigest": "sha256:90bed0f130888806ec51c39fde94db0c9c212d4061ec67216609b65aa1bbb7d0",
+          "definitionDigest": "sha256:d6008c2c756562dcb8b4fd56cea817b9bc565cadbbddbe155d7b3ecb97368215",
           "credentials": {"githubToken":"write","oidc":true,"repositorySecrets":["BUILDCHAIN_ARTIFACT_RELAY_S3_DOWNLOAD_ROLE_ARN","BUILDCHAIN_ARTIFACT_RELAY_S3_ROLE_ARN","BUILDCHAIN_ARTIFACT_RELAY_S3_UPLOAD_ROLE_ARN","KUNGFU_GITHUB_TOKEN"],"inheritedSecrets":false,"environment":null},
-          "externalActions": ["kungfu-systems/buildchain/.github/workflows/.build.yml@ea0d13ac2ccfbb3dc3a11a94e8eb83ab04b936b8"],
+          "externalActions": ["kungfu-systems/buildchain/.github/workflows/.build.yml@472bc2efc987dd8baab310f0d510e2e165875b19"],
           "steps": []
         },
         {
@@ -834,9 +834,9 @@
           "authority": "release-control",
           "publication": "channel",
           "receipt": "qualifying",
-          "definitionDigest": "sha256:7abde69e385c7e88981a41e110347d7859e7291a39a0b289a577ab5e63a966a1",
+          "definitionDigest": "sha256:63866c6647d5905f10500eb73c97ede06ef9687ab93912aadaf29360096d9a5e",
           "credentials": {"githubToken":"write","oidc":true,"repositorySecrets":["BUILDCHAIN_ISSUE_APP_ID","BUILDCHAIN_ISSUE_APP_PRIVATE_KEY","KUNGFU_ALPHA_CHANNEL_SIGNING_PRIVATE_KEY","KUNGFU_GITHUB_TOKEN","KUNGFU_GOVERNANCE_AUDITOR_APP_PRIVATE_KEY"],"inheritedSecrets":false,"environment":null},
-          "externalActions": ["kungfu-systems/buildchain/.github/workflows/release-candidate-promote.yml@ea0d13ac2ccfbb3dc3a11a94e8eb83ab04b936b8"],
+          "externalActions": ["kungfu-systems/buildchain/.github/workflows/release-candidate-promote.yml@472bc2efc987dd8baab310f0d510e2e165875b19"],
           "steps": []
         },
         {

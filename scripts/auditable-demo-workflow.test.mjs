@@ -172,7 +172,7 @@ test('every produced Linux artifact enters the required exact-output Gate', () =
   );
   assert.equal(
     build.uses,
-    'kungfu-systems/buildchain/.github/workflows/.build.yml@ea0d13ac2ccfbb3dc3a11a94e8eb83ab04b936b8',
+    'kungfu-systems/buildchain/.github/workflows/.build.yml@472bc2efc987dd8baab310f0d510e2e165875b19',
     'the build runtime must be the protected Buildchain authority with hosted signing finalization',
   );
   assert.equal(

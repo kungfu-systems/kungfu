@@ -5,7 +5,7 @@
   "manifestPath": "framework/maintainability/semantic-amplification.manifest.json",
   "manifestRoot": "sha256:b947a743b8b8b286f60f4e0e0a30040c6da2d5faed36e6bdd0adf3efb336aca5",
   "baselineRef": "dbfed9ca1785d147b26f4f06e7e6895ac7368fee",
-  "sourceRoot": "sha256:8e781e035acb2d9cbca0b15d95d668c07fc12f7b617f18ef53c28ae0f0530274",
+  "sourceRoot": "sha256:c7e084f2fb84c089c4f906b32234f5026b811fd335573223931b656401ccd82c",
   "roles": {
     "authority": "exactly one authority route per family; the route may name multiple co-owned source files",
     "allowedProjectionRoles": [
@@ -1071,7 +1071,7 @@
           "path": "docs/qualification/gates/release-admission-policy.json",
           "currentLines": 49,
           "baselineLines": 41,
-          "currentRoot": "sha256:f6eda1fa4d48253ae832940ccf376c33864f21fbef362180b2db084cb1ab315b",
+          "currentRoot": "sha256:30b541580580f6da405602ce69b4a6e1ab5502a6ae1bceb170ddfdaf9a268f5f",
           "baselineRoot": "sha256:e8a0f7037f2331610f3b9c07e7cdf5e47ea701045c73d0f67bf909372e77e0ac",
           "changedSinceBaseline": true
         },
@@ -1109,9 +1109,9 @@
         },
         {
           "path": "docs/qualification/gates/workflow-bindings.json",
-          "currentLines": 657,
+          "currentLines": 661,
           "baselineLines": 580,
-          "currentRoot": "sha256:cbacb1f8235f559e0a5777e929da38f3fffa9582f56b40d50a376fb204370f89",
+          "currentRoot": "sha256:1d3b86581fad73e3e0e538fa790be50cfcf0f851e7bfda38eaadc9755a3936d5",
           "baselineRoot": "sha256:233cd22ebce4c9930e0e4889808b88661d77c202d5e5f73121823dcdc461576d",
           "changedSinceBaseline": true
         },
@@ -1119,7 +1119,7 @@
           "path": ".github/workflows/release-new-version.yml",
           "currentLines": 386,
           "baselineLines": 362,
-          "currentRoot": "sha256:c96325a74759a76b79a77bf7ea42b9402b66db1d09e59dafde77ce6666215bb4",
+          "currentRoot": "sha256:1323b4a41784a9955ef19cfb51e7469dc35ac5f542f8e5e15314e0633cc69cbf",
           "baselineRoot": "sha256:3bdd847c80a05030de1d826282cef2e76a85e31dc0904df02c7f0cdda7a5eb74",
           "changedSinceBaseline": true
         },
@@ -1127,7 +1127,7 @@
           "path": "docs/qualification/gates/release-and-promotion.md",
           "currentLines": 205,
           "baselineLines": 141,
-          "currentRoot": "sha256:6d23fec2994d9a567967370502bec80e2e48a3fb22520afa76e950f2f5107dc8",
+          "currentRoot": "sha256:ad5d5b7f69e913774c332e5dfb67ee8242b2a3ce2132faeb582cfc5f8f2992b2",
           "baselineRoot": "sha256:5eb20fe886635e0464313023daa1a2b62529ad1d6977202dce9c91c6b8aacf9e",
           "changedSinceBaseline": true
         },
@@ -1135,7 +1135,7 @@
           "path": "docs/qualification/gates/release-admission.md",
           "currentLines": 75,
           "baselineLines": 75,
-          "currentRoot": "sha256:991422ce306e8779e6a0e40f89470d288416b69289724cef5b5e8bc7bfa45e7a",
+          "currentRoot": "sha256:14199ba8a290124375b4538ecb095a0837f62609565113b28e6e623e005e2756",
           "baselineRoot": "sha256:69f293fefb3c94df44051dc86ba4435416f5ea4348f2ffb245bef19bb494a280",
           "changedSinceBaseline": true
         },

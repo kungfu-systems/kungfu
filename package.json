@@ -55,7 +55,7 @@
     "check:all": "node scripts/require-shifu.mjs check:all && node scripts/check.mjs --all",
     "check:entry-contract": "node scripts/require-shifu.mjs check:entry-contract && node scripts/check-shifu-entry-contract.mjs",
     "test:shifu-xinfa-source": "node scripts/require-shifu.mjs test:shifu-xinfa-source && node --test scripts/shifu-xinfa-source-entry.test.mjs scripts/check-shifu-entry-contract.test.mjs crates/xinfa/tooling/check-source-entry.test.mjs",
-    "check:shifu-cache-contract": "node scripts/require-shifu.mjs check:shifu-cache-contract && node scripts/check-shifu-cache-contract.mjs",
+    "check:shifu-cache-contract": "node scripts/require-shifu.mjs check:shifu-cache-contract && node scripts/check-shifu-cache-contract.mjs && node --test scripts/ensure-windows-sccache.test.mjs",
     "check:shifu-documentation-contract": "node scripts/require-shifu.mjs check:shifu-documentation-contract && node scripts/check-shifu-documentation-contract.mjs",
     "check:shifu-gate-contract": "node scripts/require-shifu.mjs check:shifu-gate-contract && node scripts/check-shifu-gate-contract.mjs",
     "check:gate-catalog": "node scripts/require-shifu.mjs check:gate-catalog && node scripts/check-kungfu-gate-catalog.mjs",
