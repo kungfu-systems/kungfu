@@ -3,7 +3,7 @@
 import type { Profile } from '@kungfu-tech/api/capability';
 import type { KfxLoadPlan } from '@kungfu-tech/kfx';
 
-import type { ProfileShellModel } from './profile-shell.js';
+import type { ProfileShellModel } from '../profile-shell.js';
 
 const PROFILE_ID = 'kungfu.mission-control';
 const MEMBER_ID = 'work-control-actions';

@@ -36,7 +36,7 @@ def _registry():
     return {
         "helpProjection": {
             "schema": "kungfu.cli-help-projection/v1",
-            "defaultVisibilities": ["start-here", "public"],
+            "defaultVisibilities": ["start-here"],
             "sections": [
                 {"id": "start-here", "title": "START HERE", "summary": "Begin."},
                 {
@@ -140,16 +140,19 @@ def test_non_catalog_contract_cannot_omit_fold_diagnostics():
         help_projection.build(sample, metadata_registry=_registry(), contract=contract)
 
 
-def test_default_help_expands_public_objects_and_collapses_advanced_sections():
+def test_default_help_exposes_only_the_first_layer_product_model():
     projection = help_projection.build(
         sample, metadata_registry=_registry(), contract=_contract()
     )
     output = help_projection.render_human(projection, sample, version="4.0.0", width=80)
 
-    for name in ("pursuit", "atlas", "warrant", "episode"):
-        assert f"  {name}" in output
-    assert "SYSTEM & MAINTENANCE  [system-maintenance]" in output
-    assert "2 command families; expand with" in output
+    assert "product model: Project → Work → Agent" in output
+    assert "  tui" in output
+    assert "--home" not in output
+    for name in ("pursuit", "atlas", "warrant", "episode", "runtime"):
+        assert f"\n  {name} " not in output
+    assert "ACTION MODEL" not in output
+    assert "SYSTEM & MAINTENANCE" not in output
     assert "profile-not-active" not in output
     assert "\x1b[" not in output
     assert all(len(line) <= 80 for line in output.splitlines())
@@ -164,6 +167,17 @@ def test_default_help_expands_public_objects_and_collapses_advanced_sections():
     )
     assert "[degraded: profile-not-active]" in expanded
     assert "ACTION MODEL" not in expanded
+
+    full = help_projection.render_human(
+        projection,
+        sample,
+        version="4.0.0",
+        mode="full",
+        width=80,
+    )
+    assert "--home" in full
+    for name in ("pursuit", "atlas", "warrant", "episode", "runtime"):
+        assert f"\n  {name} " in full
 
 
 def test_projection_fails_closed_for_unknown_or_duplicate_sections():
@@ -190,7 +204,13 @@ def test_live_root_discovery_never_materializes_runtime(monkeypatch):
 
     monkeypatch.setattr(commands, "initialize_runtime_context", fail)
     runner = CliRunner()
-    for args in ([], ["--help"], ["--help-all"], ["--help-section", "action-model"]):
+    for args in ([], ["--help"]):
+        result = runner.invoke(commands.kfc, args, color=False, terminal_width=80)
+        assert result.exit_code == 0, result.output
+        assert "product model: Project → Work → Agent" in result.output
+        assert "ACTION MODEL" not in result.output
+
+    for args in (["--help-all"], ["--help-section", "action-model"]):
         result = runner.invoke(commands.kfc, args, color=False, terminal_width=80)
         assert result.exit_code == 0, result.output
         assert "ACTION MODEL" in result.output

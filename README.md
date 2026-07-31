@@ -10,16 +10,29 @@ reconstructing everything from conversation history.
 > **Kungfu UNGFU™** · Never Guess. Facts Unfold. [Why this signature
 > exists](docs/concepts/why-kungfu.md).
 
-The intended first-release path is:
+Open the terminal product with no arguments:
+
+```sh
+kungfu
+```
+
+Start in Agent Work Lab on a fresh installation, create or import a Project,
+then run its next Assignment with an agent you already use. The scriptable path
+is:
 
 ```sh
 cd your-project
-kungfu run agent
+kungfu run codex
 ```
 
-**Status: Coming soon.** `kungfu run agent` is the target entrypoint for the
-first public CLI, which is now under qualification. Until public artifacts are
-available, you can [build the current source](#build-from-source).
+Projects can start blank, use the guided Agent Work Starter template, or safely
+remember an existing folder without changing its files.
+
+Use `kungfu run claude` or `kungfu run opencode` for another discovered
+provider. Pass a task to capture and start new Work
+(`kungfu run codex "Prepare the release notes"`), or use `--work` when more
+than one captured Assignment is eligible. A successful provider process is
+retained for independent review; it does not complete Work by itself.
 
 <!-- kungfu:auditable-demo:start -->
 ## See a fresh Agent continue the same Work
@@ -73,10 +86,11 @@ multi-day durability or retention result, or FO10 qualification.
 
 ## Keep using the agents you already have
 
-`kungfu run agent` is the golden path, not a required replacement for Codex,
-Claude Code, OpenCode, VS Code, terminals, or other agent surfaces. The same
-local contracts and work state remain available through the Kungfu CLI and APIs
-when an Agent continues to run elsewhere.
+`kungfu run <agent>` is the scriptable golden path, not a required replacement
+for Codex, Claude Code, VS Code, terminals, or other agent surfaces. The
+provider-neutral low-level launcher remains available as the advanced
+`kungfu run agent` command. The same local contracts and Work state remain
+available through the Kungfu TUI, GUI, CLI, and APIs.
 
 ## Build from source
 

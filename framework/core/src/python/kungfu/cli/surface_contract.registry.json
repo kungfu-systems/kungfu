@@ -18,9 +18,9 @@
   },
   "helpProjection": {
     "schema": "kungfu.cli-help-projection/v1",
-    "defaultVisibilities": ["start-here", "public"],
+    "defaultVisibilities": ["start-here"],
     "sections": [
-      {"id": "start-here", "title": "START HERE", "summary": "Open the product, select a workspace, and inspect readiness."},
+      {"id": "start-here", "title": "START HERE", "summary": "Open a Project, create or select Work, and run an Agent."},
       {"id": "action-model", "title": "ACTION MODEL", "summary": "Initiative, Assignment, Pursuit, Atlas, Warrant, Episode, and Xinfa control-plane objects."},
       {"id": "facts-proof", "title": "FACTS & PROOF", "summary": "Query facts, contracts, and proof-bearing interfaces."},
       {"id": "extensions", "title": "EXTENSIONS", "summary": "Discover and operate KFX packages and skills."},
@@ -30,14 +30,15 @@
     ]
   },
   "familyPolicies": {
-    "agent-work-lab": {"audience": ["human", "agent"], "visibility": "start-here", "section": "start-here", "owner": "product-assembly"},
-    "workspace": {"visibility": "start-here", "section": "start-here"},
+    "agent-work-lab": {"audience": ["human", "agent"], "visibility": "advanced", "section": "advanced", "owner": "product-assembly"},
+    "project": {"audience": ["human", "agent"], "maturity": "preview", "visibility": "start-here", "section": "start-here", "owner": "core"},
+    "workspace": {"visibility": "advanced", "section": "system-maintenance"},
     "agent": {"visibility": "start-here", "section": "start-here"},
     "run": {"audience": ["human", "agent", "operator"], "maturity": "experimental", "visibility": "start-here", "section": "start-here", "owner": "core"},
-    "profile": {"visibility": "start-here", "section": "start-here"},
+    "profile": {"visibility": "advanced", "section": "advanced"},
     "exit": {"audience": ["human", "agent", "operator"], "maturity": "experimental", "visibility": "public", "section": "system-maintenance", "owner": "core"},
     "dev": {"audience": ["developer"], "visibility": "advanced", "section": "developer", "owner": "core"},
-    "health": {"audience": ["human", "agent", "operator"], "visibility": "start-here", "section": "start-here"},
+    "health": {"audience": ["human", "agent", "operator"], "visibility": "advanced", "section": "system-maintenance"},
     "pursuit": {"visibility": "public", "section": "action-model"},
     "atlas": {"visibility": "public", "section": "action-model"},
     "assignment": {"audience": ["human", "agent", "operator"], "maturity": "preview", "visibility": "public", "section": "action-model", "owner": "core"},
@@ -136,7 +137,7 @@
   "catalogProjection": {
     "artifact": "kungfu.agent/cli_surface.catalog.json",
     "authority": "runtime-fold",
-    "expectedSurfaceRoot": "sha256:cd80a52dcccc8ee3c4293eba34826e89e12c372bdfe7ba8641b79c8a6e7f88b1",
+    "expectedSurfaceRoot": "sha256:828865fa50235c04f5867a9abcc5cd6f3049014d49ab87d41cd9148dad2f4f31",
     "consumers": {
       "agentCapabilities": "embed-complete",
       "agentCommands": "strict-link",

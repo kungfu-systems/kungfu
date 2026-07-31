@@ -6,7 +6,48 @@ import os from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
 
-import { resolveTuiRuntimeDir } from './terminal-lifecycle.js';
+import {
+  resolveTuiCliRuntime,
+  resolveTuiProductPaths,
+  resolveTuiRuntimeDir,
+} from './terminal-lifecycle.js';
+
+test('packaged TUI resolves from KUNGFU_DIR without npm package discovery', () => {
+  let packageResolutionAttempted = false;
+  const paths = resolveTuiProductPaths({
+    env: { KUNGFU_DIR: '/product/Resources/kungfu' },
+    resolveCorePackageJson: () => {
+      packageResolutionAttempted = true;
+      throw new Error('packaged TUI must not resolve development packages');
+    },
+  });
+  assert.equal(packageResolutionAttempted, false);
+  assert.deepEqual(paths, {
+    coreDir: '/product/Resources',
+    kungfuDir: '/product/Resources/kungfu',
+    packagedBin: `/product/Resources/kungfu/${
+      process.platform === 'win32' ? 'kungfu.exe' : 'kungfu'
+    }`,
+  });
+});
+
+test('TUI dev explicitly prefers the source CLI over a stale packaged build', () => {
+  const packagedBin = '/checkout/framework/core/dist/kungfu/kungfu';
+  assert.deepEqual(
+    resolveTuiCliRuntime({
+      env: { KUNGFU_TUI_SOURCE_CLI: '1' },
+      packagedBin,
+    }),
+    { bin: 'uv', sourceCliFallback: true },
+  );
+  assert.deepEqual(
+    resolveTuiCliRuntime({
+      env: { KUNGFU_TUI_SOURCE_CLI: '1', KUNGFU_CLI_BIN: '/exact/kungfu' },
+      packagedBin,
+    }),
+    { bin: '/exact/kungfu', sourceCliFallback: false },
+  );
+});
 
 test('preserves CLI runtime-root precedence without booting Python', () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'kungfu-tui-runtime-'));

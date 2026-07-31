@@ -1,0 +1,133 @@
+{
+  "schema": "kungfu.project-work-agent-product.contract/v1",
+  "id": "project-work-agent-first-layer",
+  "version": 1,
+  "status": "source-qualified",
+  "purpose": "Keep the first-use Kungfu product model small enough that an external user can act before learning the internal authority model.",
+  "firstLayer": {
+    "objectNouns": ["Project", "Work", "Agent"],
+    "definitions": {
+      "Project": "one local directory whose work and retained Kungfu evidence are managed together",
+      "Work": "one bounded outcome to create, run, review, and complete inside a Project",
+      "Agent": "the provider process selected to perform or independently review Work"
+    },
+    "machineScopes": {
+      "Projects": "the persistent machine-local library of opened or initialized Project directories",
+      "All Work": "the active, completed, or complete machine-local Work projection across every available Project"
+    },
+    "goldenPath": [
+      "New or Open Project",
+      "Create or select Work",
+      "Run Agent",
+      "Review and complete Work"
+    ]
+  },
+  "progressiveDisclosure": {
+    "firstLayerAllowedObjects": ["Project", "Work", "Agent"],
+    "detailLayerObjects": [
+      "Initiative",
+      "Assignment",
+      "Episode",
+      "Claim",
+      "Assessment",
+      "Decision",
+      "Project Cut"
+    ],
+    "rule": "Internal authority nouns may appear in evidence, diagnostics, APIs, and explain views, but not as first-layer navigation, calls to action, or prerequisites."
+  },
+  "surfaces": {
+    "tui": {
+      "entrypoint": "kungfu",
+      "requiredCopy": {
+        "framework/tui/src/main.tsx": [
+          "[1] All Work",
+          "[2] Projects",
+          "New Work",
+          "Project, Work, and Agent state"
+        ],
+      "framework/tui/src/projects-view/index.tsx": [
+          "New Project",
+          "Open Project",
+          "PROJECT OPENED"
+        ],
+      "framework/tui/src/starter-project-view/index.tsx": [
+          "Available Agents with their exact source",
+          "Work is complete"
+        ]
+      }
+    },
+    "gui": {
+      "entrypoint": "Kungfu Episodes.app",
+      "requiredCopy": {
+        "framework/gui/src/renderer/src/main.tsx": [
+          "All Work",
+          "Projects",
+          "Open Projects"
+        ],
+      "framework/gui/src/renderer/src/projects-panel/index.tsx": [
+          "New Project",
+          "Open Project",
+          "New Work",
+          "Run Codex"
+        ],
+        "extensions/work-dashboard/src/view/index.tsx": [
+          "All Work",
+          "Project Work",
+          "Run with an Agent"
+        ]
+      }
+    },
+    "cli": {
+      "entrypoint": "kungfu",
+      "defaultHelpCommands": [
+        "kungfu agent",
+        "kungfu project",
+        "kungfu run"
+      ],
+      "forbiddenDefaultHelpNouns": [
+        "Initiative",
+        "Assignment",
+        "Portfolio",
+        "Mission",
+        "Profile",
+        "Workspace",
+        "Episode"
+      ],
+      "requiredProjectCommands": [
+        "kungfu project create",
+        "kungfu project create-plan",
+        "kungfu project list",
+        "kungfu project open",
+        "kungfu project open-plan",
+        "kungfu project remove",
+        "kungfu project remove-plan",
+        "kungfu project select"
+      ],
+      "requiredRunCommands": [
+        "kungfu run claude",
+        "kungfu run codex",
+        "kungfu run opencode"
+      ],
+      "hiddenProjectCommands": ["kungfu project templates"],
+      "forbiddenPublicCommands": [
+        "kungfu project import",
+        "kungfu project import-plan",
+        "kungfu tui"
+      ]
+    }
+  },
+  "qualification": {
+    "command": "./shifu check:project-work-agent-product",
+    "gate": "scripts/check-project-work-agent-product.test.mjs",
+    "surfaceTests": [
+      "framework/core/tests/python/test_projects.py",
+      "framework/core/tests/python/test_run_product_path.py",
+      "framework/core/tests/python/test_cli_progressive_help.py",
+      "crates/trunk/src/help.rs",
+      "framework/tui/src/projects-view.test.ts",
+      "framework/tui/src/starter-project-view.test.ts",
+      "framework/gui/src/agent-work-lab.test.ts",
+      "extensions/work-dashboard/tests/work-control-profile.test.ts"
+    ]
+  }
+}

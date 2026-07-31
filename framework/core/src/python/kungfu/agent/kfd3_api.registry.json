@@ -2343,6 +2343,21 @@
       ]
     },
     {
+      "id": "kungfu.agent-work-lab.autoplay",
+      "surface": "cli-api-tui",
+      "name": "kungfu agent-work-lab autoplay",
+      "purpose": "Launch the shipped TUI directly into the guided offline Agent Work Lab autoplay for unattended viewing and animation capture.",
+      "maturity": "experimental",
+      "visibility": "public-agent",
+      "anchor": {
+        "kind": "catalog"
+      },
+      "projections": [
+        "capabilities-json",
+        "kfd-3-surfaces"
+      ]
+    },
+    {
       "id": "kungfu.agent-work-lab.agent-plan",
       "surface": "cli-api-gui",
       "name": "kungfu agent-work-lab agent-plan <profile-id> --json",
@@ -2362,6 +2377,51 @@
       "surface": "cli-api-gui",
       "name": "kungfu agent-work-lab agent-run <profile-id> --execute --json",
       "purpose": "After explicit authorization, run self-continuity or a cross-profile handoff through two fresh local provider processes and exact receipts.",
+      "maturity": "experimental",
+      "visibility": "public-agent",
+      "anchor": {
+        "kind": "catalog"
+      },
+      "projections": [
+        "capabilities-json",
+        "kfd-3-surfaces"
+      ]
+    },
+    {
+      "id": "kungfu.agent-work-lab.starter-plan",
+      "surface": "cli-api-gui-tui",
+      "name": "kungfu agent-work-lab starter-plan --json",
+      "purpose": "Preview the exact Agent Work Starter files, destination, and initial captured Work request without writing.",
+      "maturity": "experimental",
+      "visibility": "public-agent",
+      "anchor": {
+        "kind": "catalog"
+      },
+      "projections": [
+        "capabilities-json",
+        "kfd-3-surfaces"
+      ]
+    },
+    {
+      "id": "kungfu.agent-work-lab.starter-create",
+      "surface": "cli-api-gui-tui",
+      "name": "kungfu agent-work-lab starter-create --destination <path> --expected-plan-root <root> --actor <actor> --execute --json",
+      "purpose": "After explicit confirmation, create the exact reviewed Starter Project and capture its first Work request pending admission.",
+      "maturity": "experimental",
+      "visibility": "public-agent",
+      "anchor": {
+        "kind": "catalog"
+      },
+      "projections": [
+        "capabilities-json",
+        "kfd-3-surfaces"
+      ]
+    },
+    {
+      "id": "kungfu.agent-work-lab.starter-resume",
+      "surface": "cli-api-tui",
+      "name": "kungfu agent-work-lab starter-resume --workspace <path> --json",
+      "purpose": "Restore one exact retained Starter Project and its captured Work coordinates without rerunning an Agent or writing project state.",
       "maturity": "experimental",
       "visibility": "public-agent",
       "anchor": {

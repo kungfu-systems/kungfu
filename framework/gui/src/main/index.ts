@@ -101,7 +101,9 @@ import {
 } from './terminal-host';
 import { executeWorkLoopCli } from './work-loop-cli';
 import {
+  DESKTOP_PRESENTATION_ENV_KEYS,
   DESKTOP_WORKSPACE_ENV_KEYS,
+  applyDesktopProjectPresentationIntent,
   applyDesktopWorkspaceEnvironment,
   clearDesktopWorkspaceEnvForRelaunch,
   defaultHomeDesktopWorkspace,
@@ -396,6 +398,8 @@ const kungfuCliInvocation = resolveGuiKungfuCliInvocation({
   env: process.env,
   runtimeDir: path.dirname(process.env.KFE_PATH || bindingPath),
   platform: process.platform,
+  isPackaged: app.isPackaged,
+  resourcesPath: process.resourcesPath,
 });
 Object.assign(process.env, kungfuCliInvocation.env);
 process.env.KUNGFU_CLI_BIN = kungfuCliInvocation.bin;
@@ -874,12 +878,16 @@ function workspaceSnapshot() {
   };
 }
 
-async function relaunchWithWorkspaceSelection(args: string[]) {
+async function relaunchWithWorkspaceSelection(
+  args: string[],
+  projectPresentationPath: string | null = null,
+) {
   const out = execFileSync(kungfuBinPath(), kungfuCliArgs(args), {
     env: { ...process.env, KF_CONFIG_HOME: defaultConfigHome() },
     timeout: 10000,
   });
   const selected = JSON.parse(out.toString());
+  applyDesktopProjectPresentationIntent(process.env, projectPresentationPath);
   const transition = desktopWorkspaceTransitionMode({
     isPackaged: app.isPackaged,
     rendererUrl: process.env.ELECTRON_RENDERER_URL || '',
@@ -891,9 +899,19 @@ async function relaunchWithWorkspaceSelection(args: string[]) {
       throw new Error('selected project workspace could not be resolved');
     }
     applyDesktopWorkspaceEnvironment(process.env, workspace);
-    const rendererEnv = desktopWorkspaceEnvironment(workspace);
+    const rendererEnv = {
+      ...desktopWorkspaceEnvironment(workspace),
+      ...Object.fromEntries(
+        DESKTOP_PRESENTATION_ENV_KEYS.flatMap((key) =>
+          process.env[key] === undefined ? [] : [[key, process.env[key]]],
+        ),
+      ),
+    };
     const script = [
-      `for (const key of ${JSON.stringify(DESKTOP_WORKSPACE_ENV_KEYS)}) delete window.process.env[key];`,
+      `for (const key of ${JSON.stringify([
+        ...DESKTOP_WORKSPACE_ENV_KEYS,
+        ...DESKTOP_PRESENTATION_ENV_KEYS,
+      ])}) delete window.process.env[key];`,
       `Object.assign(window.process.env, ${JSON.stringify(rendererEnv)});`,
     ].join('\n');
     await shellWindow.webContents.executeJavaScript(script);
@@ -905,7 +923,10 @@ async function relaunchWithWorkspaceSelection(args: string[]) {
   }
   setImmediate(() => {
     app.relaunch();
-    app.exit(0);
+    // This app normally hides its only window instead of closing it. Mark the
+    // relaunch as a real quit first so the close guard cannot strand a
+    // windowless tray process and prevent the replacement window from opening.
+    quitGui();
   });
   return { ok: true, selected };
 }
@@ -952,7 +973,7 @@ ipcMain.handle(WORKSPACE_START_CONTINUATION_CHANNEL, () => {
   return { ok: true, receipt };
 });
 ipcMain.handle(WORKSPACE_SELECT_HOME_CHANNEL, () =>
-  relaunchWithWorkspaceSelection(['workspace', 'select-home', '--json']),
+  relaunchWithWorkspaceSelection(['workspace', 'select-home', '--json'], null),
 );
 ipcMain.handle(WORKSPACE_SELECT_PATH_CHANNEL, (_event, payload) => {
   const requestedPath = String(
@@ -965,12 +986,10 @@ ipcMain.handle(WORKSPACE_SELECT_PATH_CHANNEL, (_event, payload) => {
   if (!statSync(workspaceRoot).isDirectory()) {
     throw new Error('project workspace path is not a directory');
   }
-  return relaunchWithWorkspaceSelection([
-    'workspace',
-    'select',
+  return relaunchWithWorkspaceSelection(
+    ['workspace', 'select', workspaceRoot, '--json'],
     workspaceRoot,
-    '--json',
-  ]);
+  );
 });
 ipcMain.handle(WORKSPACE_OPEN_CHANNEL, async () => {
   const result = await dialog.showOpenDialog({
@@ -978,12 +997,10 @@ ipcMain.handle(WORKSPACE_OPEN_CHANNEL, async () => {
     properties: ['openDirectory'],
   });
   if (result.canceled || !result.filePaths[0]) return { ok: false };
-  return relaunchWithWorkspaceSelection([
-    'workspace',
-    'select',
+  return relaunchWithWorkspaceSelection(
+    ['workspace', 'select', result.filePaths[0], '--json'],
     result.filePaths[0],
-    '--json',
-  ]);
+  );
 });
 ipcMain.handle(WORKSPACE_SELECT_RECENT_CHANNEL, (_event, payload) => {
   const workspaceId = String(
@@ -994,21 +1011,18 @@ ipcMain.handle(WORKSPACE_SELECT_RECENT_CHANNEL, (_event, payload) => {
   );
   if (!selected) throw new Error('recent workspace was not found');
   if (selected.workspace_kind === 'home') {
-    return relaunchWithWorkspaceSelection([
-      'workspace',
-      'select-home',
-      '--json',
-    ]);
+    return relaunchWithWorkspaceSelection(
+      ['workspace', 'select-home', '--json'],
+      null,
+    );
   }
   if (!selected.workspace_root || !existsSync(selected.workspace_root)) {
     throw new Error('recent project workspace is unavailable');
   }
-  return relaunchWithWorkspaceSelection([
-    'workspace',
-    'select',
+  return relaunchWithWorkspaceSelection(
+    ['workspace', 'select', selected.workspace_root, '--json'],
     selected.workspace_root,
-    '--json',
-  ]);
+  );
 });
 // Application menu with the VS Code-style "Install 'kungfu' Command in PATH"
 // action, so a real user who installed Kungfu Episodes.app can use `kungfu` in a shell.
@@ -1222,11 +1236,16 @@ function createWindow() {
       setTimeout(quitGui, 250);
     });
   } else {
-    win.on('ready-to-show', () => {
+    let revealed = false;
+    const reveal = () => {
+      if (revealed || win.isDestroyed()) return;
+      revealed = true;
       win.show();
       if (process.platform === 'darwin') void app.dock?.show();
       buildTrayMenu();
-    });
+    };
+    win.once('ready-to-show', reveal);
+    win.webContents.once('did-finish-load', reveal);
   }
 
   if (process.env.ELECTRON_RENDERER_URL) {

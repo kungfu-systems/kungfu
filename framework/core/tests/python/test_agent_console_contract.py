@@ -3,6 +3,7 @@
 import copy
 from pathlib import Path
 import json
+import os
 from types import SimpleNamespace
 import sys
 
@@ -416,6 +417,115 @@ def test_run_agent_parses_opencode_jsonl_without_using_session_history():
     assert parsed["text"] == "OPENCODE_OK"
     assert parsed["usage"] == {"total": 12}
     assert parsed["cost"] == 0
+
+
+def test_run_agent_projects_credential_safe_workspace_command_preview():
+    activities = run_agent.public_activities_from_provider_line(
+        "codex",
+        json.dumps(
+            {
+                "type": "item.started",
+                "item": {
+                    "type": "command_execution",
+                    "command": "curl https://example.invalid/?token=secret",
+                },
+            }
+        ),
+    )
+    assert activities == [
+        {
+            "schema": "kungfu.agent-run.activity/v1",
+            "kind": "tool",
+            "phase": "started",
+            "text": (
+                "Workspace command started. "
+                "curl https://example.invalid/?token=<redacted>"
+            ),
+            "commandPreview": "curl https://example.invalid/?token=<redacted>",
+            "rawToolArgumentsExposed": False,
+        }
+    ]
+    assert "secret" not in json.dumps(activities)
+
+    safe = run_agent.public_activities_from_provider_line(
+        "codex",
+        json.dumps(
+            {
+                "type": "item.started",
+                "item": {
+                    "type": "command_execution",
+                    "command": "pnpm test --filter @kungfu-tech/product-kungfu",
+                },
+            }
+        ),
+    )
+    assert safe[0]["commandPreview"] == (
+        "pnpm test --filter @kungfu-tech/product-kungfu"
+    )
+
+
+def test_run_agent_default_codex_launch_supports_non_git_project_writes():
+    argv = run_agent.launch_argv(
+        {
+            "provider": "codex",
+            "launch": {
+                "executable": "/usr/bin/codex",
+                "argv": [],
+                "shellMode": False,
+            },
+        },
+        "Complete the project deliverable.",
+        workspace_root="/tmp/starter-project",
+    )
+    assert argv[:-1] == [
+        "/usr/bin/codex",
+        "exec",
+        "--json",
+        "--ephemeral",
+        "--skip-git-repo-check",
+        "--sandbox",
+        "workspace-write",
+    ]
+
+    review_argv = run_agent.launch_argv(
+        {
+            "provider": "codex",
+            "launch": {
+                "executable": "/usr/bin/codex",
+                "argv": [],
+                "shellMode": False,
+            },
+        },
+        "Review the project deliverable.",
+        workspace_root="/tmp/starter-project",
+        permission_mode="read-only",
+    )
+    assert review_argv[review_argv.index("--sandbox") + 1] == "read-only"
+
+
+def test_run_agent_process_streams_output_before_return(tmp_path):
+    script = tmp_path / "stream.py"
+    script.write_text(
+        "import sys\n"
+        "print('first', flush=True)\n"
+        "print('second', flush=True)\n"
+        "print('notice', file=sys.stderr, flush=True)\n",
+        encoding="utf-8",
+    )
+    streamed = []
+    result = run_agent.run_process(
+        [sys.executable, str(script)],
+        cwd=str(tmp_path),
+        env=os.environ,
+        timeout_seconds=5,
+        output_sink=lambda stream, line: streamed.append((stream, line.strip())),
+    )
+    assert result.exit_code == 0
+    assert result.stdout == "first\nsecond\n"
+    assert result.stderr == "notice\n"
+    assert ("stdout", "first") in streamed
+    assert ("stdout", "second") in streamed
+    assert ("stderr", "notice") in streamed
 
 
 def test_run_agent_continuation_rejects_transcript_fields_and_root_drift():

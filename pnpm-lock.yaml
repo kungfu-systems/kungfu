@@ -1,5 +1,4 @@
 lockfileVersion: '9.0'
-
 settings:
   autoInstallPeers: true
   excludeLinksFromLockfile: false
@@ -654,6 +653,7 @@ importers:
       '@kungfu-tech/kfx-adapter-langchain':
         specifier: workspace:*
         version: link:../extensions/langchain-adapter
+      '@kungfu-tech/kfx-agent-work-lab-experience': {specifier: 'workspace:*', version: 'link:../extensions/agent-work-lab/experience'}
       '@kungfu-tech/kfx-dogfood-actions':
         specifier: workspace:*
         version: link:../extensions/dogfood/dogfood-actions
@@ -663,6 +663,7 @@ importers:
       '@kungfu-tech/kfx-dogfood-contract':
         specifier: workspace:*
         version: link:../extensions/dogfood/dogfood-contract
+      '@kungfu-tech/kfx-suite-agent-work-lab': {specifier: 'workspace:*', version: 'link:../extensions/agent-work-lab'}
       '@kungfu-tech/kfx-suite-dogfood-feedback':
         specifier: workspace:*
         version: link:../extensions/dogfood

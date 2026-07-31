@@ -1255,6 +1255,55 @@ def select_workspace(
     return {**payload, "registry_path": path, "selected": selected}
 
 
+def forget_workspace(
+    workspace_id: str,
+    *,
+    config_home: str | None = None,
+    env: Mapping[str, str] | None = None,
+) -> dict[str, Any]:
+    """Forget one project locator without touching the project or its data home."""
+
+    registry = load_workspace_registry(config_home, env=env)
+    forgotten = next(
+        (
+            item
+            for item in registry["recent"]
+            if item.get("workspace_id") == workspace_id
+        ),
+        None,
+    )
+    if forgotten is None:
+        raise ValueError("project is not remembered on this machine")
+    if forgotten.get("workspace_kind") != "project":
+        raise ValueError("only project workspaces can be forgotten")
+
+    recent = [
+        item for item in registry["recent"] if item.get("workspace_id") != workspace_id
+    ]
+    last_workspace_id = registry.get("last_workspace_id")
+    if last_workspace_id == workspace_id:
+        home = next(
+            (item for item in recent if item.get("workspace_kind") == "home"),
+            None,
+        )
+        last_workspace_id = home.get("workspace_id") if home else None
+    payload = {
+        "schema": REGISTRY_SCHEMA,
+        "last_workspace_id": last_workspace_id,
+        "recent": recent,
+        "updated_at": _now(),
+    }
+    path = workspace_registry_path(config_home, env=env)
+    _write_json_atomic(path, payload)
+    return {
+        **payload,
+        "registry_path": path,
+        "forgotten": forgotten,
+        "project_files_changed": False,
+        "project_directory_deleted": False,
+    }
+
+
 def ensure_workspace_data_home(
     identity: WorkspaceIdentity,
     reason: str,

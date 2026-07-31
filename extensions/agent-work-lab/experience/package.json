@@ -9,7 +9,8 @@
   "types": "src/index.ts",
   "exports": {
     ".": "./src/index.ts",
-    "./catalog": "./catalog.json"
+    "./catalog": "./catalog.json",
+    "./package.json": "./package.json"
   },
   "files": [
     "src",

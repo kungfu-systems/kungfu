@@ -13,6 +13,7 @@ export type ControlPlaneMode =
 export type ControlPlaneState = {
   mode: ControlPlaneMode;
   focus: 'input' | 'workspace';
+  returnFocus?: 'input' | 'workspace';
   query: string;
   selected: number;
   notice?: string;
@@ -60,6 +61,7 @@ export type ProductQuickCommandAction =
   | 'search'
   | 'health'
   | 'work'
+  | 'projects'
   | 'lab'
   | 'home'
   | 'quit';
@@ -91,9 +93,16 @@ export const QUICK_COMMANDS: QuickCommand<ProductQuickCommandAction>[] = [
   {
     id: 'work',
     command: '/work',
-    title: 'Open Work',
-    summary: 'Open the current read-only Work Control projection.',
+    title: 'Open All Work',
+    summary: 'Open the cross-Project read-only Work overview.',
     action: 'work',
+  },
+  {
+    id: 'projects',
+    command: '/projects',
+    title: 'Open Projects',
+    summary: 'Choose a Project before creating or running Project Work.',
+    action: 'projects',
   },
   {
     id: 'lab',
@@ -105,8 +114,9 @@ export const QUICK_COMMANDS: QuickCommand<ProductQuickCommandAction>[] = [
   {
     id: 'home',
     command: '/home',
-    title: 'Open startup home',
-    summary: 'Return to the surface selected from current Work evidence.',
+    title: 'Return to current context',
+    summary:
+      'Return to the selected Project, or the resolved startup surface when no Project is open.',
     action: 'home',
   },
   {
@@ -124,6 +134,20 @@ export const CLOSED_CONTROL_PLANE: ControlPlaneState = {
   query: '',
   selected: 0,
 };
+
+export function resolveProductStartupSurface({
+  contextualProject,
+  openedProject,
+  projectResumeSettled,
+}: {
+  contextualProject: boolean;
+  openedProject: boolean;
+  projectResumeSettled: boolean;
+}): 'project-work' | 'all-work' | null {
+  if (!contextualProject) return 'all-work';
+  if (openedProject) return 'project-work';
+  return projectResumeSettled ? 'all-work' : null;
+}
 
 export function quickCommandMatches(
   query: string,
@@ -147,8 +171,21 @@ export function quickCommandMatches(
 function openedControlPlane(
   mode: Exclude<ControlPlaneMode, 'closed' | 'detail'>,
   query = '',
+  returnFocus: ControlPlaneState['focus'] = 'input',
 ): ControlPlaneState {
-  return { mode, focus: 'input', query, selected: 0 };
+  return {
+    mode,
+    focus: 'input',
+    query,
+    selected: 0,
+    ...(returnFocus === 'workspace' ? { returnFocus } : {}),
+  };
+}
+
+function closedControlPlane(
+  focus: ControlPlaneState['focus'] = 'input',
+): ControlPlaneState {
+  return { ...CLOSED_CONTROL_PLANE, focus };
 }
 
 export function reduceControlPlaneInput(
@@ -167,6 +204,9 @@ export function reduceControlPlaneInput(
         current.mode === 'closed' && current.focus === 'input'
           ? current.query
           : '',
+        current.mode === 'closed'
+          ? current.focus
+          : (current.returnFocus ?? 'input'),
       ),
     };
   }
@@ -179,12 +219,15 @@ export function reduceControlPlaneInput(
         };
       }
       if (input === '?') {
-        return { handled: true, state: openedControlPlane('help') };
+        return {
+          handled: true,
+          state: openedControlPlane('help', '', current.focus),
+        };
       }
       if (input === '/') {
         return {
           handled: true,
-          state: openedControlPlane('commands', '/'),
+          state: openedControlPlane('commands', '/', current.focus),
         };
       }
       return { handled: false, state: current };
@@ -229,12 +272,15 @@ export function reduceControlPlaneInput(
       };
     }
     if (input === '?' && !current.query) {
-      return { handled: true, state: openedControlPlane('help') };
+      return {
+        handled: true,
+        state: openedControlPlane('help', '', current.focus),
+      };
     }
     if (input === '/' && !current.query) {
       return {
         handled: true,
-        state: openedControlPlane('commands', '/'),
+        state: openedControlPlane('commands', '/', current.focus),
       };
     }
     if (/^[\x20-\x7e]+$/.test(input)) {
@@ -250,7 +296,10 @@ export function reduceControlPlaneInput(
     return { handled: true, state: current };
   }
   if (input === '\u001b') {
-    return { handled: true, state: CLOSED_CONTROL_PLANE };
+    return {
+      handled: true,
+      state: closedControlPlane(current.returnFocus ?? 'input'),
+    };
   }
   if (current.mode === 'help' || current.mode === 'detail') {
     if (
@@ -259,12 +308,19 @@ export function reduceControlPlaneInput(
       input === '\n' ||
       input === '\u007f'
     ) {
-      return { handled: true, state: CLOSED_CONTROL_PLANE };
+      return {
+        handled: true,
+        state: closedControlPlane(current.returnFocus ?? 'input'),
+      };
     }
     if (input === '/') {
       return {
         handled: true,
-        state: openedControlPlane('commands', '/'),
+        state: openedControlPlane(
+          'commands',
+          '/',
+          current.returnFocus ?? 'input',
+        ),
       };
     }
     return { handled: true, state: current };
@@ -293,7 +349,10 @@ export function reduceControlPlaneInput(
   if (input === '\u007f' || input === '\b') {
     const next = [...current.query].slice(0, -1).join('');
     if (current.mode === 'commands' && next === '') {
-      return { handled: true, state: CLOSED_CONTROL_PLANE };
+      return {
+        handled: true,
+        state: closedControlPlane(current.returnFocus ?? 'input'),
+      };
     }
     return {
       handled: true,

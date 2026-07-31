@@ -35,6 +35,7 @@ from . import episode
 from . import runtime
 from . import update
 from . import workspace
+from . import project
 from . import profile
 from . import primitive
 from . import lock
@@ -80,6 +81,7 @@ __all__ = [
     "runtime",
     "update",
     "workspace",
+    "project",
     "profile",
     "primitive",
     "lock",

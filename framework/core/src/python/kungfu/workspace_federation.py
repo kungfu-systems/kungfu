@@ -759,6 +759,13 @@ def _compose_global_work(
                     "next_actions": list(
                         (record.get("lifecycle") or {}).get("next_actions") or []
                     ),
+                    "updated_at": str(
+                        record.get("updated_at")
+                        or record.get("completed_at")
+                        or record.get("started_at")
+                        or record.get("created_at")
+                        or ""
+                    ),
                 }
                 body = {
                     "schema": WORK_OBSERVATION_SCHEMA,

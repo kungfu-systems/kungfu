@@ -39,6 +39,11 @@ export const DESKTOP_WORKSPACE_ENV_KEYS = [
   'KF_WORKSPACE_DIAGNOSIS',
 ] as const;
 
+export const DESKTOP_PRESENTATION_ENV_KEYS = [
+  'KFE_INITIAL_SURFACE',
+  'KFE_FOCUSED_PROJECT_PATH',
+] as const;
+
 export type RegistryWorkspace = {
   workspace_id?: string;
   workspace_kind?: 'home' | 'project';
@@ -112,6 +117,16 @@ export function clearDesktopWorkspaceEnvForRelaunch(
   env: Record<string, string | undefined>,
 ): void {
   for (const key of DESKTOP_WORKSPACE_ENV_KEYS) delete env[key];
+}
+
+export function applyDesktopProjectPresentationIntent(
+  env: Record<string, string | undefined>,
+  projectPath: string | null,
+): void {
+  for (const key of DESKTOP_PRESENTATION_ENV_KEYS) delete env[key];
+  if (!projectPath) return;
+  env.KFE_INITIAL_SURFACE = 'projects';
+  env.KFE_FOCUSED_PROJECT_PATH = canonicalPath(projectPath);
 }
 
 export function resolveLastDesktopWorkspace(

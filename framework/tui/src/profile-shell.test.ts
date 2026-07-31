@@ -11,15 +11,21 @@ import {
   PlaybackBar,
   ProfileShell,
   type ProfileShellModel,
+  profileShellCardPanelContainsPoint,
   renderProfileShellSnapshot,
   resolveProfileShellLayout,
 } from './profile-shell.js';
 
 class CaptureOutput extends Writable {
   readonly isTTY = false;
-  readonly columns = 80;
-  readonly rows = 24;
   readonly chunks: string[] = [];
+
+  constructor(
+    readonly columns = 80,
+    readonly rows = 24,
+  ) {
+    super();
+  }
 
   override _write(
     chunk: Buffer | string,
@@ -234,6 +240,131 @@ test('the real Ink 80x24 first screen renders all five questions', async () => {
   for (const card of WORK_CONTROL_FIXTURE.cards) {
     assert.match(rendered, new RegExp(card.title.replace(/[?]/g, '\\?')));
   }
+});
+
+test('compact Project mode retains visible Files and Work navigation', async () => {
+  const output = new CaptureOutput();
+  const instance = render(
+    React.createElement(ProfileShell, {
+      model: {
+        ...WORK_CONTROL_FIXTURE,
+        subject: {
+          id: 'work',
+          title: 'Work · 3',
+          subtitle: '/projects/agent-work-starter',
+        },
+        navigationTitle: 'Project',
+        navigation: [
+          { id: 'files', label: 'Files', status: 'tree' },
+          { id: 'work', label: 'Work', status: '3' },
+        ],
+        retainNavigationInCompact: true,
+      },
+      dimensions: { columns: 80, rows: 24 },
+    }),
+    {
+      stdout: output as unknown as NodeJS.WriteStream,
+      exitOnCtrlC: false,
+      patchConsole: false,
+      debug: true,
+    },
+  );
+  await new Promise<void>((resolve) => setImmediate(resolve));
+  instance.unmount();
+  instance.cleanup();
+
+  const rendered = output.chunks.join('');
+  assert.match(rendered, /Project/);
+  assert.match(rendered, /Files tree/);
+  assert.match(rendered, /› Work 3/);
+});
+
+test('the real Ink two-column All Work screen keeps card titles and summaries on separate rows', async () => {
+  const output = new CaptureOutput(120, 36);
+  const title = 'Kungfu alpha retention inventory';
+  const model: ProfileShellModel = {
+    ...WORK_CONTROL_FIXTURE,
+    profile: {
+      ...WORK_CONTROL_FIXTURE.profile,
+      title: 'All Work',
+      version: 'Machine view',
+    },
+    subject: {
+      id: 'active',
+      title: 'Active Work · 20',
+      subtitle: '20 active · 0 completed · 7 Projects known on this machine',
+    },
+    navigation: [
+      { id: 'active', label: 'Active', status: '20' },
+      { id: 'completed', label: 'Completed', status: '0' },
+      { id: 'all', label: 'All', status: '20' },
+    ],
+    cards: Array.from({ length: 20 }, (_, index) => ({
+      id: `work-${index}`,
+      title: index === 0 ? title : `Additional Work ${index}`,
+      status: 'stage-ready',
+      summary: '1 Project observation',
+    })),
+  };
+  const instance = render(
+    React.createElement(ProfileShell, {
+      model,
+      dimensions: { columns: 120, rows: 36 },
+    }),
+    {
+      stdout: output as unknown as NodeJS.WriteStream,
+      exitOnCtrlC: false,
+      patchConsole: false,
+      debug: true,
+    },
+  );
+  await new Promise<void>((resolve) => setImmediate(resolve));
+  instance.unmount();
+  instance.cleanup();
+
+  const rendered = output.chunks.join('');
+  const lines = rendered.split('\n');
+  const titleRow = lines.findIndex((line) => line.includes(title));
+  const summaryRow = lines.findIndex((line) =>
+    line.includes('1 Project observation'),
+  );
+  assert.notEqual(titleRow, -1);
+  assert.equal(summaryRow, titleRow + 1);
+  assert.doesNotMatch(rendered, /Project observationntion inventory/u);
+});
+
+test('All Work mouse hit testing admits only the visible card panel', () => {
+  const dimensions = { columns: 120, rows: 36 };
+  assert.equal(
+    profileShellCardPanelContainsPoint({
+      model: WORK_CONTROL_FIXTURE,
+      dimensions,
+      column: 60,
+      row: 10,
+      topOffset: 1,
+    }),
+    true,
+  );
+  assert.equal(
+    profileShellCardPanelContainsPoint({
+      model: WORK_CONTROL_FIXTURE,
+      dimensions,
+      column: 10,
+      row: 10,
+      topOffset: 1,
+    }),
+    false,
+  );
+  assert.equal(
+    profileShellCardPanelContainsPoint({
+      model: WORK_CONTROL_FIXTURE,
+      dimensions,
+      column: 60,
+      row: 32,
+      topOffset: 1,
+    }),
+    false,
+  );
 });
 
 test('playback bar is explicitly non-interactive', async () => {

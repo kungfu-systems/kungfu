@@ -217,8 +217,19 @@ export function qualifyCliSurface({
         helpJson.registryRoot === expectedRoots.registryRoot,
       'human help roots do not match the Agent catalog',
     );
-    for (const section of ['START HERE', 'ACTION MODEL', 'FACTS & PROOF']) {
-      assert(defaultHelp.includes(section), `default help omitted ${section}`);
+    assert(
+      defaultHelp.includes('Project → Work → Agent'),
+      'default help omitted the Project, Work, Agent product model',
+    );
+    assert(
+      defaultHelp.includes('START HERE'),
+      'default help omitted START HERE',
+    );
+    for (const hiddenSection of ['ACTION MODEL', 'FACTS & PROOF']) {
+      assert(
+        !defaultHelp.includes(hiddenSection),
+        `default help exposed advanced section ${hiddenSection}`,
+      );
     }
     for (const section of ['SYSTEM & MAINTENANCE', 'DEVELOPER']) {
       assert(fullHelp.includes(section), `full help omitted ${section}`);

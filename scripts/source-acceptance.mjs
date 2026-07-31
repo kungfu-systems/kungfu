@@ -208,6 +208,10 @@ export function sourceAcceptancePlan(files, evidenceBaseCommit = '') {
       'Work Control canonical naming boundary',
       'scripts/check-work-control-vocabulary.test.mjs',
     ],
+    [
+      'Project Work Agent first-layer product model',
+      'scripts/check-project-work-agent-product.test.mjs',
+    ],
     ['incubation passport governance', 'scripts/check-incubation-passport.mjs'],
     [
       'Hub Starter Docker concept',
@@ -466,6 +470,7 @@ export function sourceAcceptancePlan(files, evidenceBaseCommit = '') {
         'scripts/check-work-lifecycle-native.test.mjs',
         'scripts/check-work-lifecycle-operation-matrix.test.mjs',
         'scripts/check-work-control-vocabulary.test.mjs',
+        'scripts/check-project-work-agent-product.test.mjs',
         'scripts/registry-envelope.test.mjs',
         'scripts/check-kfd-agent-runtime-boundary.mjs',
         'scripts/check-fact-root-canonical.test.mjs',

@@ -9,6 +9,119 @@ export const ENTER_ALTERNATE_SCREEN = '\u001b[?1049h';
 export const LEAVE_ALTERNATE_SCREEN = '\u001b[?1049l';
 export const HIDE_CURSOR = '\u001b[?25l';
 export const SHOW_CURSOR = '\u001b[?25h';
+export const ENABLE_MOUSE_TRACKING = '\u001b[?1000h\u001b[?1002h\u001b[?1006h';
+export const DISABLE_MOUSE_TRACKING = '\u001b[?1006l\u001b[?1002l\u001b[?1000l';
+
+export type TerminalMouseEvent = {
+  kind: 'press' | 'release' | 'wheel' | 'motion';
+  button: 'left' | 'middle' | 'right' | 'wheel-up' | 'wheel-down';
+  column: number;
+  row: number;
+  shift: boolean;
+  alt: boolean;
+  control: boolean;
+};
+
+export function decodeTerminalMouseInput(
+  value: string | Buffer,
+): TerminalMouseEvent[] {
+  const input = String(value);
+  const pattern = new RegExp(
+    `${String.fromCharCode(27)}\\[<(\\d+);(\\d+);(\\d+)([Mm])`,
+    'g',
+  );
+  const events: TerminalMouseEvent[] = [];
+  let consumed = 0;
+  for (const match of input.matchAll(pattern)) {
+    if (match.index !== consumed) return [];
+    consumed += match[0].length;
+    const code = Number(match[1]);
+    const column = Number(match[2]);
+    const row = Number(match[3]);
+    if (
+      !Number.isSafeInteger(code) ||
+      !Number.isSafeInteger(column) ||
+      !Number.isSafeInteger(row) ||
+      column < 1 ||
+      row < 1
+    ) {
+      return [];
+    }
+    const wheel = (code & 64) !== 0;
+    const motion = (code & 32) !== 0;
+    const baseButton = code & 3;
+    const button = wheel
+      ? baseButton === 0
+        ? 'wheel-up'
+        : 'wheel-down'
+      : baseButton === 0
+        ? 'left'
+        : baseButton === 1
+          ? 'middle'
+          : 'right';
+    events.push({
+      kind: wheel
+        ? 'wheel'
+        : motion
+          ? 'motion'
+          : match[4] === 'm'
+            ? 'release'
+            : 'press',
+      button,
+      column,
+      row,
+      shift: (code & 4) !== 0,
+      alt: (code & 8) !== 0,
+      control: (code & 16) !== 0,
+    });
+  }
+  return consumed === input.length ? events : [];
+}
+
+export function resolveTuiCliRuntime({
+  env,
+  packagedBin,
+}: {
+  env: NodeJS.ProcessEnv;
+  packagedBin: string;
+}): { bin: string; sourceCliFallback: boolean } {
+  const configuredBin = env.KUNGFU_CLI_BIN || env.KUNGFU_BIN || '';
+  const sourceCliFallback =
+    !configuredBin &&
+    (env.KUNGFU_TUI_SOURCE_CLI === '1' || !fs.existsSync(packagedBin));
+  return {
+    bin: sourceCliFallback ? 'uv' : configuredBin || packagedBin,
+    sourceCliFallback,
+  };
+}
+
+export function resolveTuiProductPaths({
+  env,
+  resolveCorePackageJson,
+}: {
+  env: NodeJS.ProcessEnv;
+  resolveCorePackageJson: () => string;
+}): {
+  coreDir: string;
+  kungfuDir: string;
+  packagedBin: string;
+} {
+  const configuredKungfuDir = env.KUNGFU_DIR;
+  const coreDir = configuredKungfuDir
+    ? path.dirname(path.resolve(configuredKungfuDir))
+    : path.dirname(resolveCorePackageJson());
+  const kungfuDir = configuredKungfuDir
+    ? path.resolve(configuredKungfuDir)
+    : path.join(coreDir, 'dist', 'kungfu');
+  return {
+    coreDir,
+    kungfuDir,
+    packagedBin: path.join(
+      kungfuDir,
+      process.platform === 'win32' ? 'kungfu.exe' : 'kungfu',
+    ),
+  };
+}
 
 type Listener = (...args: unknown[]) => void;
 
@@ -77,7 +190,7 @@ function expandTemplate(
   return path.resolve(expanded);
 }
 
-function workspaceDataHome(
+export function existingProjectWorkspaceRoot(
   cwd: string,
   env: NodeJS.ProcessEnv,
 ): string | undefined {
@@ -89,7 +202,6 @@ function workspaceDataHome(
     env.HOME || env.USERPROFILE || '',
     '.kungfu',
   );
-  let gitWorkspace: string | undefined;
   while (true) {
     const candidate = path.join(current, '.kungfu');
     if (
@@ -97,13 +209,30 @@ function workspaceDataHome(
       fs.statSync(candidate).isDirectory() &&
       path.resolve(candidate) !== legacyUserHome
     ) {
-      return fs.realpathSync(candidate);
-    }
-    if (!gitWorkspace && fs.existsSync(path.join(current, '.git'))) {
-      gitWorkspace = candidate;
+      return fs.realpathSync(current);
     }
     const parent = path.dirname(current);
-    if (parent === current) return gitWorkspace;
+    if (parent === current) return undefined;
+    current = parent;
+  }
+}
+
+function workspaceDataHome(
+  cwd: string,
+  env: NodeJS.ProcessEnv,
+): string | undefined {
+  const existingRoot = existingProjectWorkspaceRoot(cwd, env);
+  if (existingRoot) return fs.realpathSync(path.join(existingRoot, '.kungfu'));
+  let current = path.resolve(cwd);
+  if (fs.existsSync(current) && fs.statSync(current).isFile()) {
+    current = path.dirname(current);
+  }
+  while (true) {
+    if (fs.existsSync(path.join(current, '.git'))) {
+      return path.join(current, '.kungfu');
+    }
+    const parent = path.dirname(current);
+    if (parent === current) return undefined;
     current = parent;
   }
 }
@@ -262,7 +391,9 @@ export class TerminalLifecycle {
     this.previousRaw = this.input.isRaw === true;
     this.previousFlowing = this.input.readableFlowing ?? null;
     try {
-      this.output.write(`${ENTER_ALTERNATE_SCREEN}${HIDE_CURSOR}`);
+      this.output.write(
+        `${ENTER_ALTERNATE_SCREEN}${HIDE_CURSOR}${ENABLE_MOUSE_TRACKING}`,
+      );
       this.input.setRawMode?.(true);
       this.input.resume?.();
 
@@ -315,7 +446,11 @@ export class TerminalLifecycle {
     };
     attempt(() => this.input.setRawMode?.(this.previousRaw));
     if (this.previousFlowing !== true) attempt(() => this.input.pause?.());
-    attempt(() => this.output.write(`${SHOW_CURSOR}${LEAVE_ALTERNATE_SCREEN}`));
+    attempt(() =>
+      this.output.write(
+        `${DISABLE_MOUSE_TRACKING}${SHOW_CURSOR}${LEAVE_ALTERNATE_SCREEN}`,
+      ),
+    );
     if (this.resizeListener) {
       const resizeListener = this.resizeListener;
       attempt(() => this.output.off('resize', resizeListener));

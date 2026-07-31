@@ -17,6 +17,7 @@ from pathlib import Path
 import re
 import subprocess
 import sys
+import threading
 import time
 from typing import Any, Callable, Mapping, Sequence
 import uuid
@@ -37,6 +38,11 @@ from kungfu.rewind.fb.RunStatus import RunStatus
 REPORT_SCHEMA = "kungfu.agent-run-report/v1"
 CONTINUATION_SCHEMA = "kungfu.agent-continuation-envelope/v1"
 _ROOT = re.compile(r"sha256:[0-9a-f]{64}\Z")
+_ANSI_ESCAPE = re.compile(r"\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])")
+_SENSITIVE_COMMAND_NAME = (
+    r"(?:api[-_]?key|access[-_]?key|token|secret|password|passwd|"
+    r"authorization|cookie|credential|signature)"
+)
 _COMMON_ENV_ALLOWLIST = (
     "HOME",
     "PATH",
@@ -61,7 +67,14 @@ _PROVIDER_ENV_ALLOWLIST = {
     "opencode": (),
 }
 _DEFAULT_ARGV = {
-    "codex": ["exec", "--json"],
+    "codex": [
+        "exec",
+        "--json",
+        "--ephemeral",
+        "--skip-git-repo-check",
+        "--sandbox",
+        "workspace-write",
+    ],
     "claude": ["--print", "--output-format", "json"],
     "opencode": ["run", "--pure", "--format", "json"],
 }
@@ -193,6 +206,7 @@ def launch_argv(
     work_ref: Mapping[str, Any] | None = None,
     continuation: Mapping[str, Any] | None = None,
     workspace_root: str | None = None,
+    permission_mode: str = "workspace-write",
 ) -> list[str]:
     launch = dict(profile.get("launch") or {})
     provider = str(profile.get("provider") or "")
@@ -206,6 +220,16 @@ def launch_argv(
             "kungfu run agent requires an exact executable profile; shellMode is unsupported"
         )
     prefix = [str(value) for value in launch.get("argv") or _DEFAULT_ARGV[provider]]
+    if permission_mode not in {"workspace-write", "read-only"}:
+        raise ValueError(f"unsupported Agent permission mode: {permission_mode}")
+    if provider == "codex":
+        if "--sandbox" in prefix:
+            sandbox_index = prefix.index("--sandbox")
+            if sandbox_index + 1 >= len(prefix):
+                raise ValueError("Codex --sandbox requires a value")
+            prefix[sandbox_index + 1] = permission_mode
+        else:
+            prefix.extend(["--sandbox", permission_mode])
     admitted = {
         "workRef": dict(work_ref) if work_ref is not None else None,
         "continuation": dict(continuation) if continuation is not None else None,
@@ -297,6 +321,7 @@ def run_process(
     cwd: str | None,
     env: Mapping[str, str],
     timeout_seconds: float,
+    output_sink: Callable[[str, str], None] | None = None,
 ) -> ProcessResult:
     process = subprocess.Popen(
         list(argv),
@@ -306,25 +331,186 @@ def run_process(
         stderr=subprocess.PIPE,
         text=True,
     )
+    stdout_lines: list[str] = []
+    stderr_lines: list[str] = []
+    reader_errors: list[Exception] = []
+
+    def drain(stream_name: str, stream: Any, target: list[str]) -> None:
+        for line in stream:
+            target.append(line)
+            if output_sink is not None:
+                try:
+                    output_sink(stream_name, line)
+                except Exception as error:  # pragma: no cover - host callback failure
+                    reader_errors.append(error)
+
+    assert process.stdout is not None
+    assert process.stderr is not None
+    stdout_thread = threading.Thread(
+        target=drain,
+        args=("stdout", process.stdout, stdout_lines),
+        daemon=True,
+    )
+    stderr_thread = threading.Thread(
+        target=drain,
+        args=("stderr", process.stderr, stderr_lines),
+        daemon=True,
+    )
+    stdout_thread.start()
+    stderr_thread.start()
     try:
-        stdout, stderr = process.communicate(timeout=timeout_seconds)
-        return ProcessResult(process.returncode, stdout, stderr, False, False)
+        process.wait(timeout=timeout_seconds)
+        interrupted = False
+        timed_out = False
     except subprocess.TimeoutExpired:
         process.terminate()
         try:
-            stdout, stderr = process.communicate(timeout=5)
+            process.wait(timeout=5)
         except subprocess.TimeoutExpired:
             process.kill()
-            stdout, stderr = process.communicate()
-        return ProcessResult(process.returncode or 124, stdout, stderr, True, True)
+            process.wait()
+        interrupted = True
+        timed_out = True
     except KeyboardInterrupt:
         process.terminate()
         try:
-            stdout, stderr = process.communicate(timeout=5)
+            process.wait(timeout=5)
         except subprocess.TimeoutExpired:
             process.kill()
-            stdout, stderr = process.communicate()
-        return ProcessResult(process.returncode or 130, stdout, stderr, True, False)
+            process.wait()
+        interrupted = True
+        timed_out = False
+    stdout_thread.join()
+    stderr_thread.join()
+    if reader_errors:
+        raise RuntimeError(f"Agent output stream failed: {reader_errors[0]}")
+    return ProcessResult(
+        process.returncode or (124 if timed_out else 130 if interrupted else 0),
+        "".join(stdout_lines),
+        "".join(stderr_lines),
+        interrupted,
+        timed_out,
+    )
+
+
+def public_activities_from_provider_line(
+    provider: str, line: str
+) -> list[dict[str, Any]]:
+    """Project bounded Agent/tool activity with a credential-safe command preview."""
+
+    normalized = _ANSI_ESCAPE.sub("", line).strip()
+    if not normalized or provider not in {"codex", "opencode"}:
+        return []
+    try:
+        payload = json.loads(normalized)
+    except json.JSONDecodeError:
+        return []
+    if not isinstance(payload, dict):
+        return []
+    if provider == "codex":
+        event_type = payload.get("type")
+        item = payload.get("item")
+        if event_type not in {"item.started", "item.completed"} or not isinstance(
+            item, dict
+        ):
+            return []
+        item_type = str(item.get("type") or "")
+        if item_type == "agent_message" and event_type == "item.completed":
+            text = item.get("text")
+            if not isinstance(text, str):
+                return []
+            return [
+                {
+                    "schema": "kungfu.agent-run.activity/v1",
+                    "kind": "agent",
+                    "phase": "progress",
+                    "text": value[:1000],
+                    "rawToolArgumentsExposed": False,
+                }
+                for raw in text.splitlines()
+                if (value := _ANSI_ESCAPE.sub("", raw).strip())
+            ]
+        if item_type not in {
+            "command_execution",
+            "file_change",
+            "mcp_tool_call",
+            "web_search",
+        }:
+            return []
+        phase = "started" if event_type == "item.started" else "completed"
+        label = {
+            "command_execution": "Workspace command",
+            "file_change": "Project file change",
+            "mcp_tool_call": "Connected tool",
+            "web_search": "Web search",
+        }[item_type]
+        command_preview = (
+            public_command_preview(item.get("command"))
+            if item_type == "command_execution"
+            else ""
+        )
+        text = f"{label} {phase}."
+        if command_preview:
+            text = f"{text} {command_preview}"
+        return [
+            {
+                "schema": "kungfu.agent-run.activity/v1",
+                "kind": "tool",
+                "phase": phase,
+                "text": text,
+                **({"commandPreview": command_preview} if command_preview else {}),
+                "rawToolArgumentsExposed": False,
+            }
+        ]
+    part = payload.get("part")
+    part = part if isinstance(part, dict) else {}
+    text = part.get("text")
+    if payload.get("type") == "text" and isinstance(text, str):
+        return [
+            {
+                "schema": "kungfu.agent-run.activity/v1",
+                "kind": "agent",
+                "phase": "progress",
+                "text": value[:1000],
+                "rawToolArgumentsExposed": False,
+            }
+            for raw in text.splitlines()
+            if (value := _ANSI_ESCAPE.sub("", raw).strip())
+        ]
+    return []
+
+
+def public_command_preview(command: Any) -> str:
+    """Return the actual workspace command with common credential values redacted."""
+
+    if not isinstance(command, str):
+        return ""
+    value = " ".join(_ANSI_ESCAPE.sub("", command).split())
+    if not value:
+        return ""
+    value = re.sub(
+        rf"(?i)\b([A-Z0-9_]*{_SENSITIVE_COMMAND_NAME}[A-Z0-9_]*)="
+        r"(?:\"[^\"]*\"|'[^']*'|[^\s]+)",
+        r"\1=<redacted>",
+        value,
+    )
+    value = re.sub(
+        rf"(?i)(--?{_SENSITIVE_COMMAND_NAME}(?:=|\s+))"
+        r"(?:\"[^\"]*\"|'[^']*'|[^\s]+)",
+        r"\1<redacted>",
+        value,
+    )
+    value = re.sub(
+        rf"(?i)([?&][^=\s&]*{_SENSITIVE_COMMAND_NAME}[^=\s&]*=)[^&\s]+",
+        r"\1<redacted>",
+        value,
+    )
+    value = re.sub(
+        r"(?i)(authorization\s*:\s*)(?:bearer\s+|basic\s+)?[^'\"\s]+",
+        r"\1<redacted>",
+        value,
+    )
+    return value[:1000]
 
 
 def parse_provider_output(provider: str, stdout: str) -> dict[str, Any]:
@@ -394,8 +580,10 @@ def execute(
     home: str | None = None,
     work_ref: Mapping[str, Any] | None = None,
     continuation: Mapping[str, Any] | None = None,
+    permission_mode: str = "workspace-write",
     timeout_seconds: float = 900,
     process_runner: Callable[..., ProcessResult] = run_process,
+    event_sink: Callable[[Mapping[str, Any]], None] | None = None,
 ) -> dict[str, Any]:
     from kungfu.storage.episode_lifecycle import RuntimeEpisodeLifecycle
 
@@ -426,6 +614,7 @@ def execute(
         work_ref=work,
         continuation=continuation_value,
         workspace_root=cwd,
+        permission_mode=permission_mode,
     )
     env, env_keys = _environment(
         provider,
@@ -447,6 +636,16 @@ def execute(
         source=f"agent-run:{run_id}",
     )
     started = time.monotonic_ns()
+    streamed_agent_text = False
+
+    def project_output(stream_name: str, line: str) -> None:
+        nonlocal streamed_agent_text
+        if event_sink is None or stream_name != "stdout":
+            return
+        for activity in public_activities_from_provider_line(provider, line):
+            streamed_agent_text = streamed_agent_text or activity.get("kind") == "agent"
+            event_sink(activity)
+
     with episode.guard():
         episode.record_event(
             ACTION_RUN_BEGIN,
@@ -459,7 +658,18 @@ def execute(
             ),
             run_id=run_id,
         )
-        result = process_runner(argv, cwd=cwd, env=env, timeout_seconds=timeout_seconds)
+        if process_runner is run_process:
+            result = process_runner(
+                argv,
+                cwd=cwd,
+                env=env,
+                timeout_seconds=timeout_seconds,
+                output_sink=project_output,
+            )
+        else:
+            result = process_runner(
+                argv, cwd=cwd, env=env, timeout_seconds=timeout_seconds
+            )
         status = RunStatus.Succeeded if result.exit_code == 0 else RunStatus.Failed
         episode.record_event(
             ACTION_RUN_END,
@@ -467,6 +677,23 @@ def execute(
             run_id=run_id,
         )
         parsed = parse_provider_output(provider, result.stdout)
+        if (
+            event_sink is not None
+            and not streamed_agent_text
+            and isinstance(parsed.get("text"), str)
+        ):
+            for raw in str(parsed["text"]).splitlines():
+                text = _ANSI_ESCAPE.sub("", raw).strip()
+                if text:
+                    event_sink(
+                        {
+                            "schema": "kungfu.agent-run.activity/v1",
+                            "kind": "agent",
+                            "phase": "completed",
+                            "text": text[:1000],
+                            "rawToolArgumentsExposed": False,
+                        }
+                    )
         response = {
             "schema": "kungfu.agent-run-response/v1",
             "runId": run_id,

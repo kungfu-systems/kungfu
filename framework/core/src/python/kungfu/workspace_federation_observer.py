@@ -207,6 +207,7 @@ def observe_federation(
     env: Mapping[str, str] | None = None,
     max_workers: int = 8,
     poll_interval: float = 0.5,
+    include_settled: bool = False,
     stop: Callable[[], bool] | None = None,
 ) -> Iterator[dict[str, Any]]:
     """Yield compact snapshots while preserving component-local refresh."""
@@ -223,6 +224,12 @@ def observe_federation(
         state is not None
         and state.get("catalog_cut") == catalog.get("catalog_cut")
         and (state.get("query") or {}).get("verification", {}).get("ok") is True
+        and bool(
+            ((state.get("query") or {}).get("global_work") or {})
+            .get("filter", {})
+            .get("include_settled")
+        )
+        is include_settled
     ):
         query = dict(state["query"])
         cursors = {
@@ -248,6 +255,7 @@ def observe_federation(
             config_home=config_home,
             env=env,
             max_workers=max_workers,
+            include_settled=include_settled,
         )
         cursors = {}
         signals = _signals(_runtime_rows(query))
@@ -270,6 +278,7 @@ def observe_federation(
                 config_home=config_home,
                 env=env,
                 max_workers=max_workers,
+                include_settled=include_settled,
             )
             cursors = {}
             signals = _signals(_runtime_rows(query))
@@ -302,6 +311,7 @@ def observe_federation(
                 config_home=config_home,
                 env=env,
                 max_workers=max_workers,
+                include_settled=include_settled,
                 component_cache=_component_cache(query),
                 refresh_identity_roots=signaled_roots,
             )
@@ -360,6 +370,7 @@ def observe_federation(
                     config_home=config_home,
                     env=env,
                     max_workers=max_workers,
+                    include_settled=include_settled,
                     component_cache=_component_cache(query),
                     refresh_identity_roots=raced_roots,
                 )
@@ -390,6 +401,7 @@ def observe_federation(
                 config_home=config_home,
                 env=env,
                 max_workers=max_workers,
+                include_settled=include_settled,
             )
             cursors = {}
             signals = _signals(_runtime_rows(query))
@@ -416,6 +428,7 @@ def observe_federation(
                 config_home=config_home,
                 env=env,
                 max_workers=max_workers,
+                include_settled=include_settled,
                 component_cache=_component_cache(query),
                 refresh_identity_roots=changed_roots,
             )

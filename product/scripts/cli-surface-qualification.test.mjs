@@ -114,7 +114,7 @@ function runner(observed = catalog()) {
       }
       return {
         status: 0,
-        stdout: 'START HERE\nACTION MODEL\nFACTS & PROOF\n',
+        stdout: 'Project → Work → Agent\nSTART HERE\n',
         stderr: '',
       };
     }

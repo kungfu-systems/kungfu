@@ -610,6 +610,7 @@ def test_default_portfolio_filter_normalizes_legacy_terminal_statuses(
             {
                 "title": f"Legacy {terminal_status}",
                 "status": terminal_status,
+                "updated_at": "2026-07-29T12:34:56Z",
                 "lifecycle": {
                     "portfolio_state": "open",
                     "orchestration_phase": "stage-ready",
@@ -643,6 +644,7 @@ def test_default_portfolio_filter_normalizes_legacy_terminal_statuses(
     assert display["source_status"] == terminal_status
     assert display["orchestration_phase"] == "stage-ready"
     assert display["portfolio_state"] == "open"
+    assert display["updated_at"] == "2026-07-29T12:34:56Z"
 
 
 def test_same_authority_divergent_versions_are_a_strict_conflict(tmp_path):

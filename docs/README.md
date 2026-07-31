@@ -11,6 +11,11 @@ This page is the curated route through the documentation. It is intentionally
 shorter than the exhaustive [Documentation Map](MAP.md): choose the route that
 matches your job, then go deeper only when you need to.
 
+For first use, remember only three objects: **Project, Work, and Agent**. Open
+or create a Project, describe one Work outcome, then run an Agent. The deeper
+authority model is available when evidence or recovery requires it; it is not
+a prerequisite for starting.
+
 ## Browse by responsibility
 
 | Section | What it owns |

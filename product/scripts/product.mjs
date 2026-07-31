@@ -274,6 +274,13 @@ function devKfdEnv(baseEnv = process.env) {
   return env;
 }
 
+function devTuiCliEnv(baseEnv = process.env) {
+  return {
+    ...baseEnv,
+    KUNGFU_TUI_SOURCE_CLI: baseEnv.KUNGFU_TUI_SOURCE_CLI || '1',
+  };
+}
+
 function newestMtimeMs(target) {
   if (!existsSync(target)) return 0;
   const stat = statSync(target);
@@ -390,6 +397,7 @@ function envDiff(env) {
     ['KUNGFU_SDK_ENTRY', env.KUNGFU_SDK_ENTRY],
     ['KUNGFU_KFD3_REGISTRY', env.KUNGFU_KFD3_REGISTRY],
     ['KUNGFU_KFD_UPSTREAM_AGGREGATE', env.KUNGFU_KFD_UPSTREAM_AGGREGATE],
+    ['KUNGFU_TUI_SOURCE_CLI', env.KUNGFU_TUI_SOURCE_CLI],
   ]
     .filter(([, value]) => value)
     .map(([key, value]) => `${key}=${value}`);
@@ -458,11 +466,15 @@ function main(argv = process.argv.slice(2)) {
     parsed.instanceHome || process.env.KF_INSTANCE_HOME || autoInstanceHome;
   const workspaceHome = instanceHome ? '' : autoWorkspaceHome;
   const baseEnv = workspaceEnv(workspaceHome, instanceEnv(instanceHome));
-  const env =
+  const devEnv =
     (verb === 'dev' || (surface === 'tui' && verb === 'demo')) &&
     (surface === 'gui' || surface === 'tui')
       ? devKfdEnv(baseEnv)
       : baseEnv;
+  const env =
+    surface === 'tui' && (verb === 'dev' || verb === 'demo')
+      ? devTuiCliEnv(devEnv)
+      : devEnv;
 
   if (!surface || !verb) usage(1);
 
@@ -588,6 +600,7 @@ if (process.argv[1] && path.resolve(process.argv[1]) === __filename) {
 
 export {
   devKfdEnv,
+  devTuiCliEnv,
   devViewExtensionBuildPlan,
   devWorkspaceHomeOverride,
   instanceEnv,

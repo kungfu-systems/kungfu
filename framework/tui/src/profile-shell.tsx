@@ -12,6 +12,7 @@ import {
   QUICK_COMMANDS,
   type QuickCommand,
 } from './control-plane-state.js';
+import { resolveListWindow } from './list-window/index.js';
 import { boundedIndex } from './navigation.js';
 import { terminalCanvasRows } from './terminal-canvas.js';
 import type { WorkLoopShellModel } from './work-loop-contribution.js';
@@ -22,6 +23,7 @@ export {
   createControlPlaneInputFence,
   quickCommandMatches,
   reduceControlPlaneInput,
+  resolveProductStartupSurface,
 } from './control-plane-state.js';
 export type {
   ControlPlaneInputFence,
@@ -57,6 +59,11 @@ export type ProfileShellModel = {
   workLoop?: WorkLoopShellModel;
   workLoopError?: string;
   notice?: string;
+  navigationTitle?: string;
+  subjectNoun?: string;
+  footer?: string;
+  modeLabel?: string;
+  retainNavigationInCompact?: boolean;
 };
 
 export type ProfileShellLayout = {
@@ -77,6 +84,23 @@ export function resolveProfileShellLayout(
   return { mode: 'one-column', navigationWidth: 0, evidenceWidth: 0 };
 }
 
+export function compactProfileNavigationWidth(
+  dimensions: TerminalDimensions,
+): number {
+  return Math.min(20, Math.max(16, Math.floor(dimensions.columns * 0.24)));
+}
+
+function profileShellNavigationWidth(
+  model: ProfileShellModel,
+  dimensions: TerminalDimensions,
+): number {
+  const layout = resolveProfileShellLayout(dimensions);
+  if (layout.navigationWidth > 0) return layout.navigationWidth;
+  return model.retainNavigationInCompact
+    ? compactProfileNavigationWidth(dimensions)
+    : 0;
+}
+
 function shortRoot(value: string): string {
   if (value.length <= 18) return value;
   return `${value.slice(0, 7)}…${value.slice(-10)}`;
@@ -87,6 +111,26 @@ function qualificationState(model: ProfileShellModel): string {
     return model.profile.qualified ? 'qualified' : 'not qualified';
   }
   return model.profile.qualified ? 'verified' : 'not verified';
+}
+
+function cardStatusColor(status: string): 'green' | 'yellow' | 'red' {
+  const normalized = status.toLocaleLowerCase();
+  if (
+    normalized.includes('failed') ||
+    normalized.includes('invalid') ||
+    normalized.includes('attention')
+  ) {
+    return 'red';
+  }
+  if (
+    normalized.includes('pending') ||
+    normalized.includes('captured') ||
+    normalized.includes('degraded') ||
+    normalized.includes('review required')
+  ) {
+    return 'yellow';
+  }
+  return 'green';
 }
 
 function NavigationPanel({
@@ -101,7 +145,7 @@ function NavigationPanel({
       paddingX={1}
       flexGrow={1}
     >
-      <Text bold>Subjects</Text>
+      <Text bold>{model.navigationTitle ?? 'Subjects'}</Text>
       {model.navigation.length === 0 ? (
         <Text dimColor>none admitted</Text>
       ) : null}
@@ -123,25 +167,32 @@ function CardPanel({
   selectedCard,
   active,
   maxRows,
+  height,
 }: {
   model: ProfileShellModel;
   selectedCard: number;
   active: boolean;
   maxRows: number;
+  height: number;
 }) {
-  const visibleCount = Math.max(1, Math.floor((maxRows - 8) / 2));
-  const start = Math.min(
-    Math.max(0, selectedCard - visibleCount + 1),
-    Math.max(0, model.cards.length - visibleCount),
-  );
-  const visibleCards = model.cards.slice(start, start + visibleCount);
+  const cardRows = model.cards.some((card) => card.summary.trim()) ? 2 : 1;
+  const visibleCount = Math.max(1, Math.floor((maxRows - 8) / cardRows));
+  const window = resolveListWindow({
+    selected: selectedCard,
+    itemCount: model.cards.length,
+    viewportRows: visibleCount,
+  });
+  const start = window.start;
+  const visibleCards = model.cards.slice(window.start, window.end);
   return (
     <Box
       flexDirection="column"
       borderStyle="round"
       borderColor={active ? 'cyan' : undefined}
       paddingX={1}
-      flexGrow={1}
+      height={height}
+      flexShrink={0}
+      overflow="hidden"
     >
       <Text bold>{model.subject.title}</Text>
       <Text dimColor>{model.subject.subtitle}</Text>
@@ -169,12 +220,11 @@ function CardPanel({
                 {index === selectedCard ? '› ' : '  '}
                 {index + 1}. {card.title}
               </Text>
-              <Text color={card.status === 'degraded' ? 'yellow' : 'green'}>
-                {' '}
-                [{card.status}]
-              </Text>
+              <Text color={cardStatusColor(card.status)}> [{card.status}]</Text>
             </Box>
-            <Text wrap="truncate-end"> {card.summary}</Text>
+            {card.summary.trim() ? (
+              <Text wrap="truncate-end"> {card.summary}</Text>
+            ) : null}
           </Box>
         );
       })}
@@ -185,7 +235,8 @@ function CardPanel({
 function EvidencePanel({
   model,
   active,
-}: { model: ProfileShellModel; active: boolean }) {
+  height,
+}: { model: ProfileShellModel; active: boolean; height: number }) {
   const qualificationLabel = model.profile.qualificationLabel ?? 'KFD-3';
   return (
     <Box
@@ -193,7 +244,9 @@ function EvidencePanel({
       borderStyle="round"
       borderColor={active ? 'cyan' : undefined}
       paddingX={1}
-      flexGrow={1}
+      height={height}
+      flexShrink={0}
+      overflow="hidden"
     >
       <Text bold>Exact-root evidence</Text>
       {model.evidence.map((row) => (
@@ -220,8 +273,8 @@ function CompactContext({ model }: { model: ProfileShellModel }) {
   return (
     <>
       <Text wrap="truncate-end">
-        Subject {subjectPosition}/{model.navigation.length || 0} ·{' '}
-        {model.subject.id || 'none'}
+        {model.subjectNoun ?? 'Subject'} {subjectPosition}/
+        {model.navigation.length || 0} · {model.subject.id || 'none'}
       </Text>
       <Text
         color={model.profile.qualified ? 'green' : 'yellow'}
@@ -266,6 +319,64 @@ function WorkLoopFailure({ message }: { message: string }) {
   );
 }
 
+function profileShellBodyMetrics(
+  model: ProfileShellModel,
+  dimensions: TerminalDimensions,
+) {
+  const workLoopRows = model.workLoop ? 3 : model.workLoopError ? 1 : 0;
+  const bodyHeight = Math.max(6, dimensions.rows - 4 - workLoopRows);
+  const desiredEvidenceHeight =
+    4 + model.evidence.length * 2 + (model.notice ? 1 : 0);
+  const twoColumnEvidenceHeight = Math.max(
+    6,
+    Math.min(desiredEvidenceHeight, Math.max(6, bodyHeight - 10)),
+  );
+  return {
+    workLoopRows,
+    bodyHeight,
+    twoColumnEvidenceHeight,
+    twoColumnCardHeight: bodyHeight - twoColumnEvidenceHeight,
+  };
+}
+
+export function profileShellCardPanelContainsPoint({
+  model,
+  dimensions,
+  column,
+  row,
+  topOffset = 0,
+}: {
+  model: ProfileShellModel;
+  dimensions: TerminalDimensions;
+  column: number;
+  row: number;
+  topOffset?: number;
+}): boolean {
+  const layout = resolveProfileShellLayout(dimensions);
+  const metrics = profileShellBodyMetrics(model, dimensions);
+  const localRow = row - topOffset;
+  const bodyStart = 2 + metrics.workLoopRows;
+  const bodyEnd = bodyStart + metrics.bodyHeight - 1;
+  if (
+    column < 1 ||
+    column > dimensions.columns ||
+    localRow < bodyStart ||
+    localRow > bodyEnd
+  ) {
+    return false;
+  }
+  if (layout.mode === 'one-column') {
+    const navigationWidth = profileShellNavigationWidth(model, dimensions);
+    if (navigationWidth > 0) return column > navigationWidth;
+    return localRow >= bodyStart + 2;
+  }
+  if (column <= layout.navigationWidth) return false;
+  if (layout.mode === 'three-column') {
+    return column <= dimensions.columns - layout.evidenceWidth;
+  }
+  return localRow < bodyStart + metrics.twoColumnCardHeight;
+}
+
 export function ProfileShell({
   model,
   dimensions,
@@ -280,19 +391,11 @@ export function ProfileShell({
   busy?: boolean;
 }) {
   const layout = resolveProfileShellLayout(dimensions);
-  const workLoopRows = model.workLoop ? 3 : model.workLoopError ? 1 : 0;
-  const bodyHeight = Math.max(6, dimensions.rows - 4 - workLoopRows);
-  const evidence = <EvidencePanel model={model} active={activeRegion === 2} />;
+  const navigationWidth = profileShellNavigationWidth(model, dimensions);
+  const { bodyHeight, twoColumnEvidenceHeight, twoColumnCardHeight } =
+    profileShellBodyMetrics(model, dimensions);
   const navigation = (
     <NavigationPanel model={model} active={activeRegion === 0} />
-  );
-  const cards = (
-    <CardPanel
-      model={model}
-      selectedCard={selectedCard}
-      active={activeRegion === 1}
-      maxRows={bodyHeight}
-    />
   );
 
   return (
@@ -305,7 +408,7 @@ export function ProfileShell({
         <Text bold>{model.profile.title}</Text>
         <Text dimColor>
           {model.profile.version} · {layout.mode} ·{' '}
-          {busy ? 'refreshing' : 'read-only'}
+          {busy ? 'refreshing' : (model.modeLabel ?? 'read-only')}
         </Text>
       </Box>
       {model.workLoop ? <WorkLoopContext model={model.workLoop} /> : null}
@@ -315,29 +418,73 @@ export function ProfileShell({
       {layout.mode === 'three-column' ? (
         <Box height={bodyHeight}>
           <Box width={layout.navigationWidth}>{navigation}</Box>
-          <Box flexGrow={1}>{cards}</Box>
-          <Box width={layout.evidenceWidth}>{evidence}</Box>
+          <Box flexGrow={1}>
+            <CardPanel
+              model={model}
+              selectedCard={selectedCard}
+              active={activeRegion === 1}
+              maxRows={bodyHeight}
+              height={bodyHeight}
+            />
+          </Box>
+          <Box width={layout.evidenceWidth}>
+            <EvidencePanel
+              model={model}
+              active={activeRegion === 2}
+              height={bodyHeight}
+            />
+          </Box>
         </Box>
       ) : null}
       {layout.mode === 'two-column' ? (
         <Box height={bodyHeight}>
           <Box width={layout.navigationWidth}>{navigation}</Box>
           <Box flexDirection="column" flexGrow={1}>
-            {cards}
-            {evidence}
+            <CardPanel
+              model={model}
+              selectedCard={selectedCard}
+              active={activeRegion === 1}
+              maxRows={twoColumnCardHeight}
+              height={twoColumnCardHeight}
+            />
+            <EvidencePanel
+              model={model}
+              active={activeRegion === 2}
+              height={twoColumnEvidenceHeight}
+            />
           </Box>
         </Box>
       ) : null}
-      {layout.mode === 'one-column' ? (
+      {layout.mode === 'one-column' && navigationWidth === 0 ? (
         <Box height={bodyHeight} flexDirection="column">
           <CompactContext model={model} />
-          <Box flexGrow={1}>{cards}</Box>
+          <CardPanel
+            model={model}
+            selectedCard={selectedCard}
+            active={activeRegion === 1}
+            maxRows={bodyHeight - 2}
+            height={bodyHeight - 2}
+          />
+        </Box>
+      ) : null}
+      {layout.mode === 'one-column' && navigationWidth > 0 ? (
+        <Box height={bodyHeight}>
+          <Box width={navigationWidth}>{navigation}</Box>
+          <Box flexGrow={1}>
+            <CardPanel
+              model={model}
+              selectedCard={selectedCard}
+              active={activeRegion === 1}
+              maxRows={bodyHeight}
+              height={bodyHeight}
+            />
+          </Box>
         </Box>
       ) : null}
       <Box paddingX={1}>
         <Text dimColor>
-          ↑↓/jk answer · ←→/hl subject · tab region · [a] Agent Work Lab · r
-          refresh · q quit
+          {model.footer ??
+            '↑↓/jk answer · ←→/hl subject · tab region · [a] Agent Work Lab · r refresh · q quit'}
         </Text>
       </Box>
     </Box>
@@ -359,7 +506,7 @@ export function renderProfileShellSnapshot(
   const qualificationLabel = model.profile.qualificationLabel ?? 'KFD-3';
   const lines = [
     clipped(
-      `${model.profile.title} · ${model.profile.version} · ${layout.mode} · read-only`,
+      `${model.profile.title} · ${model.profile.version} · ${layout.mode} · ${model.modeLabel ?? 'read-only'}`,
       dimensions.columns,
     ),
     ...(model.workLoop
@@ -391,7 +538,7 @@ export function renderProfileShellSnapshot(
       dimensions.columns,
     ),
     clipped(
-      `subjects ${model.navigation.map((item) => `${item.label}[${item.status}]`).join(' · ') || 'none'}`,
+      `${(model.navigationTitle ?? 'subjects').toLocaleLowerCase()} ${model.navigation.map((item) => `${item.label}[${item.status}]`).join(' · ') || 'none'}`,
       dimensions.columns,
     ),
     ...model.cards.flatMap((card, index) => [
@@ -410,7 +557,8 @@ export function renderProfileShellSnapshot(
       dimensions.columns,
     ),
     clipped(
-      '↑↓/jk answer · ←→/hl subject · tab region · [a] Agent Work Lab · r refresh · q quit',
+      model.footer ??
+        '↑↓/jk answer · ←→/hl subject · tab region · [a] Agent Work Lab · r refresh · q quit',
       dimensions.columns,
     ),
   ];
@@ -432,6 +580,10 @@ export type IncrementalPlayback<TEvent> = {
 };
 export type WorkbenchFocus = 'session-1' | 'session-2' | 'correct' | 'failed';
 export type WorkbenchReportDetail = 'correct' | 'failed';
+export type WorkbenchActionButton<Action extends string = string> = {
+  action: Action;
+  label: string;
+};
 export type WorkbenchNextPrompt = { title: string; instruction: string };
 export type WorkbenchGuideOverlay = {
   heading: string;
@@ -445,12 +597,223 @@ export type WorkbenchLine = {
   text: string;
   tone: 'normal' | 'running' | 'good' | 'bad' | 'dim';
 };
+export type WorkbenchSessionBuffers = Record<1 | 2, WorkbenchLine[]>;
+export type WorkbenchScrollBack = Record<1 | 2, number>;
 export type WorkbenchCheck = {
   id: string;
   passed: boolean;
   title: string;
   meaning: string;
 };
+
+export const WORKBENCH_SESSION_BUFFER_LIMIT = 1_000;
+
+export function emptyWorkbenchSessionBuffers(): WorkbenchSessionBuffers {
+  return { 1: [], 2: [] };
+}
+
+export function appendWorkbenchSessionLines({
+  buffers,
+  scrollBack,
+  lines,
+  limit = WORKBENCH_SESSION_BUFFER_LIMIT,
+}: {
+  buffers: WorkbenchSessionBuffers;
+  scrollBack: WorkbenchScrollBack;
+  lines: WorkbenchLine[];
+  limit?: number;
+}): {
+  buffers: WorkbenchSessionBuffers;
+  scrollBack: WorkbenchScrollBack;
+} {
+  const nextBuffers: WorkbenchSessionBuffers = {
+    1: buffers[1],
+    2: buffers[2],
+  };
+  const nextScrollBack: WorkbenchScrollBack = { ...scrollBack };
+  for (const session of [1, 2] as const) {
+    const appended = lines.filter((line) => line.session === session);
+    if (appended.length === 0) continue;
+    const combined = [...buffers[session], ...appended];
+    nextBuffers[session] = combined.slice(
+      Math.max(0, combined.length - Math.max(1, limit)),
+    );
+    if (scrollBack[session] > 0) {
+      nextScrollBack[session] = Math.min(
+        nextBuffers[session].length - 1,
+        scrollBack[session] + appended.length,
+      );
+    }
+  }
+  return { buffers: nextBuffers, scrollBack: nextScrollBack };
+}
+
+export function scrollWorkbenchSession({
+  current,
+  lineCount,
+  viewportRows,
+  delta,
+}: {
+  current: number;
+  lineCount: number;
+  viewportRows: number;
+  delta: number;
+}): number {
+  return Math.max(
+    0,
+    Math.min(
+      Math.max(0, lineCount - Math.max(1, viewportRows)),
+      current + delta,
+    ),
+  );
+}
+
+export function workbenchViewportRows({
+  dimensions,
+  showHelp,
+  verdictDetail,
+}: {
+  dimensions: TerminalDimensions;
+  showHelp: boolean;
+  verdictDetail?: string;
+}): number {
+  const titleColumns = Math.max(1, Math.floor(dimensions.columns / 2) - 2);
+  const textColumns = Math.max(1, titleColumns - 2);
+  const wrappedRows = (text: string) =>
+    Math.max(1, Math.ceil(text.length / textColumns));
+  const chromeRows =
+    4 +
+    (showHelp ? 1 : 0) +
+    (verdictDetail ? 7 : 6) +
+    2 +
+    1 +
+    wrappedRows('PUBLIC ACTIVITY · SENSITIVE INTERNALS HIDDEN') +
+    wrappedRows(
+      'Mouse wheel scrolls the Session under the pointer · ↑↓ scroll focused Session',
+    );
+  return Math.max(4, terminalCanvasRows(dimensions.rows) - chromeRows);
+}
+
+export function workbenchSessionAtPoint({
+  dimensions,
+  showHelp,
+  verdictDetail,
+  column,
+  row,
+  topOffset = 0,
+}: {
+  dimensions: TerminalDimensions;
+  showHelp: boolean;
+  verdictDetail?: string;
+  column: number;
+  row: number;
+  topOffset?: number;
+}): 1 | 2 | undefined {
+  const localRow = row - topOffset;
+  const headerRows = 3 + (showHelp ? 1 : 0);
+  const verdictRows = verdictDetail ? 7 : 6;
+  const finalSessionRow = terminalCanvasRows(dimensions.rows) - verdictRows;
+  if (
+    column < 1 ||
+    column > dimensions.columns ||
+    localRow <= headerRows ||
+    localRow > finalSessionRow
+  ) {
+    return undefined;
+  }
+  return column <= Math.floor(dimensions.columns / 2) ? 1 : 2;
+}
+
+export function workbenchActionAtPoint<Action extends string>({
+  actions,
+  column,
+  row,
+  topOffset = 0,
+}: {
+  actions: readonly WorkbenchActionButton<Action>[];
+  column: number;
+  row: number;
+  topOffset?: number;
+}): Action | undefined {
+  if (row - topOffset !== 3 || column < 1) return undefined;
+  let start = 1;
+  for (const action of actions) {
+    const end = start + action.label.length + 3;
+    if (column >= start && column <= end) return action.action;
+    start = end + 2;
+  }
+  return undefined;
+}
+
+export function horizontalPointerActionAtPoint<Action extends string>({
+  actions,
+  column,
+  row,
+  targetRow,
+  startColumn = 1,
+  gap = 1,
+}: {
+  actions: readonly WorkbenchActionButton<Action>[];
+  column: number;
+  row: number;
+  targetRow: number;
+  startColumn?: number;
+  gap?: number;
+}): Action | undefined {
+  if (row !== targetRow || column < startColumn) return undefined;
+  let start = startColumn;
+  for (const action of actions) {
+    const end = start + action.label.length - 1;
+    if (column >= start && column <= end) return action.action;
+    start = end + 1 + gap;
+  }
+  return undefined;
+}
+
+export function workbenchReportAtPoint({
+  dimensions,
+  column,
+  row,
+  topOffset = 0,
+}: {
+  dimensions: TerminalDimensions;
+  column: number;
+  row: number;
+  topOffset?: number;
+}): WorkbenchReportDetail | undefined {
+  const localRow = row - topOffset;
+  const canvasRows = terminalCanvasRows(dimensions.rows);
+  if (
+    column < 1 ||
+    column > dimensions.columns ||
+    localRow < canvasRows - 3 ||
+    localRow > canvasRows - 1
+  ) {
+    return undefined;
+  }
+  return column <= Math.floor(dimensions.columns / 2) ? 'correct' : 'failed';
+}
+
+export function workbenchReportReturnAtPoint({
+  dimensions,
+  column,
+  row,
+  topOffset = 0,
+}: {
+  dimensions: TerminalDimensions;
+  column: number;
+  row: number;
+  topOffset?: number;
+}): boolean {
+  const localRow = row - topOffset;
+  const canvasRows = terminalCanvasRows(dimensions.rows);
+  return (
+    column >= 1 &&
+    column <= dimensions.columns &&
+    localRow >= canvasRows - 2 &&
+    localRow <= canvasRows
+  );
+}
 
 export function createIncrementalPlayback<TEvent>({
   timing,
@@ -610,7 +973,7 @@ function WorkbenchSessionPane({
   activityFrame: number;
   footer: string;
 }) {
-  const sessionLines = lines.filter((line) => line.session === session);
+  const sessionLines = lines;
   const liveStart = Math.max(0, sessionLines.length - viewportRows);
   const start = Math.max(0, liveStart - scrollBack);
   const visible = sessionLines.slice(start, start + viewportRows);
@@ -763,7 +1126,7 @@ function WorkbenchResultCard({
         {correct ? '✓' : '×'} {count} {correct ? 'CORRECT' : 'FAILED'}
         {available
           ? interactive
-            ? ' · Enter details'
+            ? ' · click / Enter details'
             : ' · verified'
           : ' · waiting'}
       </Text>
@@ -782,10 +1145,11 @@ export type SessionWorkbenchProps = {
   caseLabel: string;
   relationship: string;
   controls: string;
+  controlActions?: WorkbenchActionButton[];
   help: string;
   sourceLabel: string;
   targetLabel: string;
-  lines: WorkbenchLine[];
+  buffers: WorkbenchSessionBuffers;
   checks: WorkbenchCheck[];
   reportAvailable: boolean;
   reportPassed: boolean;
@@ -797,7 +1161,7 @@ export type SessionWorkbenchProps = {
   progress: string;
   error: string;
   activeFocus: WorkbenchFocus;
-  scrollBack: Record<1 | 2, number>;
+  scrollBack: WorkbenchScrollBack;
   showHelp: boolean;
   activityFrame: number;
   runningSession?: 1 | 2;
@@ -816,10 +1180,11 @@ export function SessionWorkbench(props: SessionWorkbenchProps) {
     caseLabel,
     relationship,
     controls,
+    controlActions,
     help,
     sourceLabel,
     targetLabel,
-    lines,
+    buffers,
     checks,
     reportAvailable,
     reportPassed,
@@ -853,21 +1218,11 @@ export function SessionWorkbench(props: SessionWorkbenchProps) {
     );
   }
   const titleColumns = Math.max(1, Math.floor(dimensions.columns / 2) - 2);
-  const textColumns = Math.max(1, titleColumns - 2);
-  const wrappedRows = (text: string) =>
-    Math.max(1, Math.ceil(text.length / textColumns));
-  const chromeRows =
-    4 +
-    (showHelp ? 1 : 0) +
-    (verdictDetail ? 7 : 6) +
-    2 +
-    1 +
-    wrappedRows('PUBLIC ACTIVITY · SENSITIVE INTERNALS HIDDEN') +
-    wrappedRows('↑↓ scroll focused Session · Tab switch · 999 lines back');
-  const viewportRows = Math.max(
-    4,
-    terminalCanvasRows(dimensions.rows) - chromeRows,
-  );
+  const viewportRows = workbenchViewportRows({
+    dimensions,
+    showHelp,
+    verdictDetail,
+  });
   const passedCount = checks.filter((check) => check.passed).length;
   const failedCount = checks.length - passedCount;
   const promptWidth = Math.min(
@@ -892,7 +1247,7 @@ export function SessionWorkbench(props: SessionWorkbenchProps) {
     ) ?? [];
   const sessionFooter = (session: 1 | 2) =>
     interactive
-      ? `↑↓ scroll focused Session · Tab switch · ${
+      ? `click focus · wheel here / ↑↓ scroll · Tab switch · ${
           scrollBack[session] > 0
             ? `${scrollBack[session]} lines back`
             : 'following live'
@@ -917,6 +1272,15 @@ export function SessionWorkbench(props: SessionWorkbenchProps) {
         S1 {sourceLabel} {relationship} S2 {targetLabel}
       </Text>
       <Text dimColor wrap="truncate-end">
+        {controlActions?.map((action, index) => (
+          <React.Fragment key={action.action}>
+            {index > 0 ? ' ' : null}
+            <Text bold color="cyan">
+              [ {action.label} ]
+            </Text>
+          </React.Fragment>
+        ))}
+        {controlActions?.length ? ' · ' : null}
         {controls}
       </Text>
       {showHelp ? (
@@ -928,7 +1292,7 @@ export function SessionWorkbench(props: SessionWorkbenchProps) {
         <WorkbenchSessionPane
           session={1}
           title={sourceLabel}
-          lines={lines}
+          lines={buffers[1]}
           active={activeFocus === 'session-1'}
           scrollBack={scrollBack[1]}
           viewportRows={viewportRows}
@@ -940,7 +1304,7 @@ export function SessionWorkbench(props: SessionWorkbenchProps) {
         <WorkbenchSessionPane
           session={2}
           title={targetLabel}
-          lines={lines}
+          lines={buffers[2]}
           active={activeFocus === 'session-2'}
           scrollBack={scrollBack[2]}
           viewportRows={viewportRows}
@@ -1234,6 +1598,10 @@ export function ControlPlaneOverlay({
             <Text dimColor>
               Search covers system Help, the full governed Kungfu Command
               catalog, global Work, and available product views.
+            </Text>
+            <Text dimColor>
+              Mouse requires terminal click reporting. In iTerm2, allow mouse
+              clicks and drags for the active Profile.
             </Text>
             <Box marginTop={1} flexDirection="column">
               {quickCommands.slice(0, Math.max(1, rowBudget)).map((command) => (

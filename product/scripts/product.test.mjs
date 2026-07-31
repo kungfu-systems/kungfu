@@ -18,6 +18,7 @@ import { test } from 'node:test';
 import { fileURLToPath } from 'node:url';
 import {
   devKfdEnv,
+  devTuiCliEnv,
   devViewExtensionBuildPlan,
   devWorkspaceHomeOverride,
   instanceEnv,
@@ -136,6 +137,14 @@ test('builds a workspace data environment with separate config home', () => {
 test('development environment discovers source extensions without installation', () => {
   const env = devKfdEnv({ PATH: '/bin' });
   assert.equal(env.KF_EXTENSION_PATH, path.join(ROOT, 'extensions'));
+});
+
+test('TUI development selects the source CLI without overriding an exact choice', () => {
+  assert.equal(devTuiCliEnv({ PATH: '/bin' }).KUNGFU_TUI_SOURCE_CLI, '1');
+  assert.equal(
+    devTuiCliEnv({ KUNGFU_TUI_SOURCE_CLI: '0' }).KUNGFU_TUI_SOURCE_CLI,
+    '0',
+  );
 });
 
 test('plans only missing or stale source extension view bundles', () => {
@@ -327,6 +336,7 @@ test('one-command TUI demo launches the interactive offline autoplay', () => {
   );
   assert.match(result.stdout, /KF_HOME=/);
   assert.match(result.stdout, /KUNGFU_SDK_ENTRY=/);
+  assert.match(result.stdout, /KUNGFU_TUI_SOURCE_CLI=1/);
 });
 
 test('dry-run auto-selects workspace .kungfu for gui dev', () => {

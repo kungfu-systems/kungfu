@@ -20,6 +20,12 @@ import { cliLauncherContent } from './cli-launcher.mjs';
 import { qualifyCliSurface } from './cli-surface-qualification.mjs';
 import { writeCompatibilityManifest } from './compatibility.mjs';
 import {
+  installedKungfuInvocation,
+  runInstalledKungfuCommand,
+  runInstalledTuiBootstrapSmoke,
+  spawnInstalledKungfu,
+} from './installed-kungfu/index.mjs';
+import {
   assertLibwasmArtifact,
   runLibwasmArtifactSelfTest,
   runLibwasmExecutionQualification,
@@ -1288,50 +1294,11 @@ export function runInstalledKungfu({
   return result.stdout || '';
 }
 
-export function installedKungfuInvocation(
-  kungfuBin,
-  args,
-  { platform = process.platform, comspec = process.env.ComSpec } = {},
-) {
-  if (platform !== 'win32') {
-    return { command: kungfuBin, args };
-  }
-  return {
-    command: comspec || 'cmd.exe',
-    args: ['/d', '/s', '/c', 'call', kungfuBin, ...args],
-  };
-}
-
-export function runInstalledKungfuCommand(
-  { cli, args, env, cwd },
-  {
-    platform = process.platform,
-    comspec = process.env.ComSpec,
-    spawn = spawnSync,
-  } = {},
-) {
-  const invocation = installedKungfuInvocation(cli, args, {
-    platform,
-    comspec,
-  });
-  const result = spawn(invocation.command, invocation.args, {
-    cwd,
-    env,
-    encoding: 'utf8',
-    maxBuffer: 32 * 1024 * 1024,
-    shell: false,
-  });
-  if (result.error) throw result.error;
-  return result;
-}
-
-function spawnInstalledKungfu(kungfuBin, args, options) {
-  const invocation = installedKungfuInvocation(kungfuBin, args);
-  return spawnSync(invocation.command, invocation.args, {
-    ...options,
-    shell: false,
-  });
-}
+export {
+  installedKungfuInvocation,
+  runInstalledKungfuCommand,
+  runInstalledTuiBootstrapSmoke,
+};
 
 export function runInstalledCliSemanticSmoke({
   installRoot,
@@ -2169,6 +2136,12 @@ export function smokeCliProductArchive({ archivePath, archiveBase }) {
         runInstalledKungfuAgentHubSmoke({
           installRoot,
           kungfuBin,
+          env: smokeEnv,
+        });
+        runInstalledTuiBootstrapSmoke({
+          installRoot,
+          kungfuBin,
+          tuiEntry,
           env: smokeEnv,
         });
         runInstalledCliSemanticSmoke({

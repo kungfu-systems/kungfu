@@ -35,20 +35,6 @@ def _sha256(marker):
     return "sha256:" + marker * 64
 
 
-def test_assignment_profile_source_prefers_native_source_layout(tmp_path, monkeypatch):
-    package = tmp_path / "package" / "kungfu"
-    package.mkdir(parents=True)
-    checkout = tmp_path / "checkout"
-    native = checkout / "extensions" / "work-control"
-    native.mkdir(parents=True)
-    monkeypatch.setattr(assignment_orchestration, "__file__", package / "module.py")
-    monkeypatch.setattr(
-        assignment_orchestration, "source_root", lambda *_starts: checkout
-    )
-
-    assert ASSIGNMENT_CLI._profile_source() == native
-
-
 def test_assignment_atomic_paths_use_windows_extended_namespace():
     local = assignment_orchestration._filesystem_path(
         Path(r"C:\Users\Administrator\workspace\.kungfu\request.json"),
@@ -1520,6 +1506,108 @@ def test_atlas_mission_id_is_source_context_not_implicit_initiative_identity():
     )
     assert projected["assignment_id"] == "assignment-a"
     assert projected["work_definition"]["mission_id"] == "atlas-mission-context"
+
+
+def test_work_resume_prepare_rebinds_stale_profile_without_losing_assignment(
+    tmp_path,
+    monkeypatch,
+):
+    source = tmp_path / "work-control"
+    shutil.copytree(
+        SOURCE,
+        source,
+        ignore=shutil.ignore_patterns("__pycache__", "*.pyc", "node_modules"),
+    )
+    shutil.copytree(
+        SOURCE.parent / "work-dashboard",
+        source / "node_modules" / "@kungfu-tech" / "kfx-view-work-dashboard",
+        ignore=shutil.ignore_patterns("__pycache__", "*.pyc", "node_modules"),
+    )
+    runtime = tmp_path / ".kungfu" / "runtime"
+    for action in ("install", "qualify", "activate"):
+        plan = profile_sdk.lifecycle_plan(
+            runtime,
+            action,
+            source,
+            **({"granted_permissions": ["storage"]} if action == "activate" else {}),
+        )["corePlan"]
+        profile_sdk.lifecycle_apply(runtime, plan, f"test:{action}")
+    contract = profile_composition.contract_materialization_plan(source, runtime)
+    if contract["operations"]:
+        profile_composition.authorized_contract_materialize(
+            runtime,
+            contract,
+            profile_sdk.answer_decision(
+                contract["decisionCard"],
+                "approve",
+                "test-owner",
+            ),
+        )
+    mission_control.create_initiative(
+        str(runtime),
+        initiative_id="retained-project",
+        title="Retained Project",
+        intent="Keep Work readable across a product Profile upgrade",
+        actor="local-user",
+    )
+    mission_control.create_assignment(
+        str(runtime),
+        initiative_id="retained-project",
+        assignment_id="retained-assignment",
+        title="Retained Assignment",
+        objective="Resume the exact retained Work after upgrade",
+        actor="local-user",
+    )
+    previous_root = profile_sdk.validate_source(source, runtime)["inspection"][
+        "profile_suite_root"
+    ]
+    adapter = source / "work-control-actions" / "adapter.py"
+    adapter.write_text(
+        adapter.read_text(encoding="utf-8")
+        + "\n# Product-upgrade regression source root.\n",
+        encoding="utf-8",
+    )
+    desired_root = profile_sdk.validate_source(source, runtime)["inspection"][
+        "profile_suite_root"
+    ]
+    assert desired_root != previous_root
+    monkeypatch.setattr(ASSIGNMENT_CLI, "_profile_source", lambda: source)
+
+    with pytest.raises(
+        profile_sdk.ProfileSdkError,
+        match="active exact Profile root",
+    ):
+        ASSIGNMENT_CLI._status(
+            runtime,
+            "retained-project",
+            "retained-assignment",
+        )
+
+    prepared = ASSIGNMENT_CLI._prepare_resume_profile(
+        runtime,
+        "kungfu-product-project-resume",
+    )
+
+    assert prepared["status"] == "reconciled"
+    assert prepared["previousProfileSuiteRoot"] == previous_root
+    assert prepared["profileSuiteRoot"] == desired_root
+    assert prepared["profileLifecycleReceiptCount"] >= 3
+    assert prepared["writeOccurred"] is True
+    status = ASSIGNMENT_CLI._status(
+        runtime,
+        "retained-project",
+        "retained-assignment",
+    )
+    assert status["phase"] == "admitted"
+    assert status["assignment"]["assignment_id"] == "retained-assignment"
+
+    repeated = ASSIGNMENT_CLI._prepare_resume_profile(
+        runtime,
+        "kungfu-product-project-resume",
+    )
+    assert repeated["status"] == "ready"
+    assert repeated["profileLifecycleReceiptCount"] == 0
+    assert repeated["writeOccurred"] is False
 
 
 @pytest.mark.parametrize("action", ["reopen", "request-evidence"])

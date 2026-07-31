@@ -18,6 +18,7 @@ import type {
   KfxControl,
   Ledger,
   Profile,
+  Projects,
   Rewind,
   RuntimeProductStatus,
   Storage,
@@ -114,6 +115,10 @@ export {
   parseSavedQueryView,
   queryRows,
 } from '@kungfu-tech/api/query';
+export {
+  ProjectWorkRunConfirmation,
+  ProjectWorkRunSession,
+} from './project-work-run.js';
 
 // ── capability surface ────────────────────────────────────────────────────
 
@@ -131,6 +136,7 @@ export type KfxCapabilities = {
   agentSession?: AgentSession;
   agentWorkLab?: AgentWorkLab;
   workspace?: WorkspaceGuidance;
+  projects?: Projects;
 };
 
 export type KfxCapabilityKey = keyof KfxCapabilities;

@@ -12,6 +12,7 @@ import path from 'node:path';
 import test from 'node:test';
 
 import {
+  applyDesktopProjectPresentationIntent,
   applyDesktopWorkspaceEnvironment,
   clearDesktopWorkspaceEnvForRelaunch,
   defaultHomeDesktopWorkspace,
@@ -77,6 +78,23 @@ test('desktop workspace replacement updates every workspace-bound environment va
     KF_WORKSPACE_STATE: 'uninitialized',
     KF_WORKSPACE_DIAGNOSIS: '',
   });
+});
+
+test('desktop project selection preserves a Projects navigation intent across relaunch', () => {
+  const project = fixture('presentation');
+  const env = {
+    KFE_INITIAL_SURFACE: 'lab',
+    KFE_FOCUSED_PROJECT_PATH: '/tmp/old',
+  };
+
+  applyDesktopProjectPresentationIntent(env, project);
+  assert.deepEqual(env, {
+    KFE_INITIAL_SURFACE: 'projects',
+    KFE_FOCUSED_PROJECT_PATH: realpathSync(project),
+  });
+
+  applyDesktopProjectPresentationIntent(env, null);
+  assert.deepEqual(env, {});
 });
 
 test('development workspace selection reloads the current renderer instead of relaunching Electron', () => {

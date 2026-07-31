@@ -195,12 +195,12 @@ export function degradedWorkControlModel(error: unknown): ProfileShellModel {
 type ObserverChild = ChildProcessByStdio<null, Readable, Readable>;
 
 export type GlobalWorkContribution = {
-  model: ProfileShellModel;
   searchDocuments: ProductSearchDocument[];
 };
 
 export type GlobalWorkObserverDeps = {
   bin: string;
+  argsPrefix?: string[];
   env: NodeJS.ProcessEnv;
   statePath: string;
   spawn: (
@@ -212,102 +212,31 @@ export type GlobalWorkObserverDeps = {
   onError: (error: Error) => void;
 };
 
+export function globalWorkObserverArgs(
+  statePath: string,
+  argsPrefix: string[] = [],
+): string[] {
+  return [
+    ...argsPrefix,
+    'workspace',
+    'work',
+    '--scope',
+    'all',
+    '--max-workers',
+    '8',
+    '--include-settled',
+    '--observe',
+    '--observer-state',
+    statePath,
+    '--json',
+  ];
+}
+
 export function globalWorkContribution(
   snapshot: GlobalWorkSnapshot,
 ): GlobalWorkContribution {
-  const rows = snapshot.global_work.visible_work;
-  const initiativeCount = rows.filter(
-    (row) => row.object_kind === 'initiative',
-  ).length;
-  const assignmentCount = rows.filter(
-    (row) => row.object_kind === 'assignment',
-  ).length;
-  const state = snapshot.aggregate.state ?? 'unknown';
-  const verified = snapshot.verification?.ok === true;
   return {
-    model: {
-      profile: {
-        id: 'kungfu.global-work',
-        title: 'Work',
-        version: 'Global Portfolio',
-        suiteRoot: snapshot.global_work.projection_root ?? '',
-        qualified: verified,
-        qualificationLabel: 'Global proof',
-      },
-      subject: {
-        id: 'portfolio',
-        title: `Portfolio · ${rows.length} current work items`,
-        subtitle: `${initiativeCount} Initiatives · ${assignmentCount} Assignments · ${snapshot.aggregate.component_count ?? 0} local workspaces`,
-      },
-      navigation: [
-        {
-          id: 'portfolio',
-          label: 'Global Portfolio',
-          status: state,
-        },
-      ],
-      cards: rows.map((row) => {
-        const status =
-          row.display.status?.trim() ||
-          row.display.portfolio_state?.trim() ||
-          'open';
-        const next = (row.display.next_actions ?? []).filter(Boolean);
-        return {
-          id: row.canonical_root,
-          title: row.display.title?.trim() || row.subject || row.canonical_root,
-          status: row.conflict ? 'degraded' : status,
-          summary: [
-            row.object_kind,
-            row.subject,
-            next.length > 0 ? `Next: ${next.join(' · ')}` : '',
-          ]
-            .filter(Boolean)
-            .join(' · '),
-        };
-      }),
-      evidence: [
-        {
-          label: 'query proof',
-          value: snapshot.proof?.proof_root ?? '',
-        },
-        {
-          label: 'projection',
-          value: snapshot.global_work.projection_root ?? '',
-        },
-        {
-          label: 'available workspaces',
-          value: String(snapshot.aggregate.available_component_count ?? 0),
-        },
-      ],
-      notice:
-        state === 'complete'
-          ? undefined
-          : `${state} Portfolio · ${snapshot.aggregate.unknown_component_count ?? 0} workspace observations unknown`,
-    },
     searchDocuments: globalWorkSearchDocuments(snapshot),
-  };
-}
-
-export function degradedGlobalWorkModel(error: unknown): ProfileShellModel {
-  const message = error instanceof Error ? error.message : String(error);
-  return {
-    profile: {
-      id: 'kungfu.global-work',
-      title: 'Work',
-      version: 'Global Portfolio',
-      suiteRoot: '',
-      qualified: false,
-      qualificationLabel: 'Global proof',
-    },
-    subject: {
-      id: 'portfolio',
-      title: 'Global Portfolio unavailable',
-      subtitle: 'No mutation was attempted.',
-    },
-    navigation: [],
-    cards: [],
-    evidence: [],
-    notice: message,
   };
 }
 
@@ -367,18 +296,7 @@ export function startGlobalWorkObserver(
     let stderr = '';
     const launched = deps.spawn(
       deps.bin,
-      [
-        'workspace',
-        'work',
-        '--scope',
-        'all',
-        '--max-workers',
-        '8',
-        '--observe',
-        '--observer-state',
-        deps.statePath,
-        '--json',
-      ],
+      globalWorkObserverArgs(deps.statePath, deps.argsPrefix),
       {
         env: { ...deps.env, PYTHONDONTWRITEBYTECODE: '1' },
         stdio: ['ignore', 'pipe', 'pipe'],

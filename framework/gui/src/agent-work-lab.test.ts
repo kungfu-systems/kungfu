@@ -12,14 +12,17 @@ import {
   agentWorkLabRecommendation,
 } from '../../../extensions/agent-work-lab/experience/src/index.js';
 import {
+  actionableKfxFailures,
+  shouldOpenAgentWorkLab,
+  unavailableKfxMessage,
+} from './kfx-availability';
+import {
   AGENT_WORK_LAB_MODES,
   AGENT_WORK_LAB_PLAYBACK_TIMING,
   agentWorkLabBehaviorFindings,
   agentWorkLabModeNeeds,
   agentWorkLabPlaybackLines,
   agentWorkLabSessionStories,
-  shouldOpenAgentWorkLab,
-  unavailableKfxMessage,
 } from './renderer/src/agent-work-lab';
 
 const qualifiedReport = {
@@ -82,6 +85,19 @@ test('the shell falls back to Agent Work Lab when no KFX is admitted', () => {
   assert.equal(
     unavailableKfxMessage(0),
     'no extensions found on the extension path',
+  );
+  assert.deepEqual(
+    actionableKfxFailures(
+      [
+        {
+          error:
+            'KF_KFX_HOST_NOT_AUTHORIZED: exact Core host authorization required',
+        },
+        { error: 'bundle syntax error' },
+      ],
+      false,
+    ),
+    [{ error: 'bundle syntax error' }],
   );
 });
 
@@ -248,14 +264,20 @@ test('the shell keeps navigation outside the Lab content branch', () => {
     new URL('./renderer/src/main.tsx', import.meta.url),
     'utf8',
   );
+  const navigation = readFileSync(
+    new URL('./renderer/src/product-navigation/index.tsx', import.meta.url),
+    'utf8',
+  );
   const body = source.slice(
     source.indexOf('<div style={chromeBodyStyle}>'),
     source.indexOf('{notificationToasts}'),
   );
+  const labBranch = body.indexOf('labOpen ? (');
 
-  assert.ok(body.indexOf('<nav') >= 0);
-  assert.ok(body.indexOf('{labOpen ?') >= 0);
-  assert.ok(body.indexOf('<nav') < body.indexOf('{labOpen ?'));
+  assert.ok(navigation.indexOf('<nav') >= 0);
+  assert.ok(body.indexOf('<ProductNavigation') >= 0);
+  assert.ok(labBranch >= 0);
+  assert.ok(body.indexOf('<ProductNavigation') < labBranch);
 });
 
 test('the visual contract keeps a fixed frame with independently scrolling sessions', () => {
@@ -326,4 +348,39 @@ test('the GUI shell uses the shared startup surface policy', () => {
   assert.match(mainSource, /shellWindow\.webContents\.reload\(\)/);
   assert.match(mainSource, /realpathSync\(requestedPath\)/);
   assert.match(mainSource, /statSync\(workspaceRoot\)\.isDirectory\(\)/);
+});
+
+test('Projects and Work use the shared exact-plan Agent session surface', () => {
+  const projects = readFileSync(
+    new URL('./renderer/src/projects-panel/index.tsx', import.meta.url),
+    'utf8',
+  );
+  const work = readFileSync(
+    new URL(
+      '../../../extensions/work-dashboard/src/view/index.tsx',
+      import.meta.url,
+    ),
+    'utf8',
+  );
+
+  for (const source of [projects, work]) {
+    assert.match(source, /ProjectWorkRunConfirmation/);
+    assert.match(source, /ProjectWorkRunSession/);
+    assert.match(source, /expectedPlanRoot/);
+  }
+  assert.match(projects, /Opening Project/);
+  assert.match(projects, /onOpenWork\(openedProject, 'files'\)/);
+  assert.match(projects, /Open Project…/);
+  assert.match(projects, /New Project/);
+  assert.match(projects, /New Work/);
+  assert.match(projects, /What should the Agent do\?/);
+  assert.doesNotMatch(projects, /PROJECT OPENED/);
+  assert.doesNotMatch(projects, /Import Existing|New Starter|Assignment/);
+  assert.match(work, /All Work/);
+  assert.match(work, /ProjectNavigation/);
+  assert.match(work, /ProjectFilesView/);
+  assert.match(work, /Loading retained Project Work/);
+  assert.match(work, /Copy absolute path/);
+  assert.match(work, /projectSection/);
+  assert.doesNotMatch(work, /Portfolio ·|connecting live Portfolio/);
 });

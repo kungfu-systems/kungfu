@@ -1,11 +1,17 @@
 // SPDX-License-Identifier: Apache-2.0
 
-export type ProductSearchKind = 'help' | 'command' | 'work' | 'view';
+export type ProductSearchKind =
+  | 'help'
+  | 'command'
+  | 'work'
+  | 'project'
+  | 'view';
 
 export type ProductSearchAction =
   | { kind: 'show-help'; topicId: string }
   | { kind: 'describe-command'; command: string }
   | { kind: 'open-work'; workId: string }
+  | { kind: 'open-project'; projectPath: string }
   | { kind: 'open-view'; viewId: string };
 
 export type ProductSearchDocument = {
@@ -168,9 +174,10 @@ function normalized(value: string): string {
 
 function kindOrder(kind: ProductSearchKind): number {
   if (kind === 'work') return 0;
-  if (kind === 'command') return 1;
-  if (kind === 'help') return 2;
-  return 3;
+  if (kind === 'project') return 1;
+  if (kind === 'command') return 2;
+  if (kind === 'help') return 3;
+  return 4;
 }
 
 function scoreDocument(

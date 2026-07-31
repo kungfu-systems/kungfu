@@ -8,10 +8,14 @@ import type {
   AgentWorkLab,
   AgentWorkLabEvent,
   AgentWorkLabReport,
+  ProjectTemplateCreationReceipt,
+  ProjectTemplatePlan,
+  ProjectTemplateWorkspaceSelection,
 } from '@kungfu-tech/api/capability';
 import { render } from 'ink';
 import React from 'react';
 import {
+  AGENT_WORK_LAB_POINTER_ACTIONS,
   AGENT_WORK_LAB_QUICK_COMMANDS,
   AgentWorkLabHost,
   AgentWorkLabView,
@@ -23,13 +27,22 @@ import {
   agentWorkLabNextModePrompt,
   agentWorkLabPromptRows,
   agentWorkLabSessionTitleBar,
+  agentWorkLabStarterReceiptInput,
   isAgentWorkLabReportReturnInput,
   nextAgentWorkLabFocus,
 } from './agent-work-lab-view.js';
 import {
+  appendWorkbenchSessionLines,
   createIncrementalPlayback,
+  emptyWorkbenchSessionBuffers,
+  horizontalPointerActionAtPoint,
   nextWorkbenchFocus,
+  scrollWorkbenchSession,
   sessionTitleBar,
+  workbenchActionAtPoint,
+  workbenchReportAtPoint,
+  workbenchReportReturnAtPoint,
+  workbenchSessionAtPoint,
 } from './profile-shell.js';
 import { IncrementalTerminalOutput } from './terminal-canvas.js';
 
@@ -105,12 +118,26 @@ class CaptureOutput extends EventEmitter {
   };
 }
 
+async function waitUntil(
+  condition: () => boolean,
+  description: string,
+  timeoutMs = 3_000,
+): Promise<void> {
+  const expiresAt = Date.now() + timeoutMs;
+  while (!condition()) {
+    if (Date.now() >= expiresAt) {
+      throw new Error(`Timed out waiting for ${description}`);
+    }
+    await new Promise<void>((resolve) => setTimeout(resolve, 10));
+  }
+}
+
 const viewProps = {
   dimensions: { columns: 80, rows: 24 },
   mode: 'offline-demo' as const,
   sourceLabel: '',
   targetLabel: '',
-  lines: [],
+  buffers: emptyWorkbenchSessionBuffers(),
   report: undefined,
   busy: '',
   progress: '',
@@ -175,6 +202,153 @@ test('TUI renders admitted provider narration without raw commands', () => {
   ]);
 });
 
+test('Session buffers retain independent history and keep a scrolled anchor', () => {
+  const initial = appendWorkbenchSessionLines({
+    buffers: emptyWorkbenchSessionBuffers(),
+    scrollBack: { 1: 0, 2: 0 },
+    lines: [
+      { session: 1, source: 's1', text: 'one', tone: 'normal' },
+      { session: 2, source: 's2', text: 'two', tone: 'normal' },
+    ],
+    limit: 3,
+  });
+  const scrolled = appendWorkbenchSessionLines({
+    buffers: initial.buffers,
+    scrollBack: { 1: 1, 2: 0 },
+    lines: [
+      { session: 1, source: 's1', text: 'three', tone: 'running' },
+      { session: 1, source: 's1', text: 'four', tone: 'running' },
+    ],
+    limit: 3,
+  });
+
+  assert.deepEqual(
+    scrolled.buffers[1].map((line) => line.text),
+    ['one', 'three', 'four'],
+  );
+  assert.deepEqual(
+    scrolled.buffers[2].map((line) => line.text),
+    ['two'],
+  );
+  assert.equal(scrolled.scrollBack[1], 2);
+  assert.equal(scrolled.scrollBack[2], 0);
+  assert.equal(
+    scrollWorkbenchSession({
+      current: 0,
+      lineCount: 20,
+      viewportRows: 5,
+      delta: 99,
+    }),
+    15,
+  );
+});
+
+test('mouse coordinates select only the Session pane under the pointer', () => {
+  const dimensions = { columns: 100, rows: 30 };
+  assert.equal(
+    workbenchSessionAtPoint({
+      dimensions,
+      showHelp: false,
+      column: 10,
+      row: 8,
+      topOffset: 1,
+    }),
+    1,
+  );
+  assert.equal(
+    workbenchSessionAtPoint({
+      dimensions,
+      showHelp: false,
+      column: 80,
+      row: 8,
+      topOffset: 1,
+    }),
+    2,
+  );
+  assert.equal(
+    workbenchSessionAtPoint({
+      dimensions,
+      showHelp: false,
+      column: 80,
+      row: 30,
+      topOffset: 1,
+    }),
+    undefined,
+  );
+});
+
+test('mouse coordinates resolve visible workbench actions and report cards', () => {
+  assert.equal(
+    workbenchActionAtPoint({
+      actions: AGENT_WORK_LAB_POINTER_ACTIONS,
+      column: 5,
+      row: 4,
+      topOffset: 1,
+    }),
+    'lab-demo',
+  );
+  assert.equal(
+    workbenchActionAtPoint({
+      actions: AGENT_WORK_LAB_POINTER_ACTIONS,
+      column: 30,
+      row: 4,
+      topOffset: 1,
+    }),
+    'lab-handoff',
+  );
+  assert.equal(
+    workbenchActionAtPoint({
+      actions: AGENT_WORK_LAB_POINTER_ACTIONS,
+      column: 13,
+      row: 4,
+      topOffset: 1,
+    }),
+    undefined,
+  );
+  const dimensions = { columns: 80, rows: 20 };
+  assert.equal(
+    workbenchReportAtPoint({
+      dimensions,
+      column: 20,
+      row: 17,
+      topOffset: 1,
+    }),
+    'correct',
+  );
+  assert.equal(
+    workbenchReportAtPoint({
+      dimensions,
+      column: 60,
+      row: 17,
+      topOffset: 1,
+    }),
+    'failed',
+  );
+  assert.equal(
+    workbenchReportReturnAtPoint({
+      dimensions,
+      column: 40,
+      row: 19,
+      topOffset: 1,
+    }),
+    true,
+  );
+  assert.equal(
+    horizontalPointerActionAtPoint({
+      actions: [
+        { action: 'work', label: '[1] All Work' },
+        { action: 'projects', label: '[2] Projects' },
+      ],
+      column: 18,
+      row: 1,
+      targetRow: 1,
+      startColumn: 2,
+      gap: 2,
+    }),
+    'projects',
+  );
+});
+
 test('TUI Agent Work Lab layout keeps two Sessions and the verdict dock fixed', () => {
   const adapterSource = readFileSync(
     new URL('./agent-work-lab-view.tsx', import.meta.url),
@@ -190,7 +364,7 @@ test('TUI Agent Work Lab layout keeps two Sessions and the verdict dock fixed', 
   assert.match(frameworkSource, /SENSITIVE INTERNALS HIDDEN/);
   assert.match(adapterSource, /WORK CONTINUITY PROVED/);
   assert.match(frameworkSource, /height=\{6\}/);
-  assert.match(frameworkSource, /↑↓ scroll focused Session/);
+  assert.match(frameworkSource, /wheel here \/ ↑↓ scroll/);
   assert.match(frameworkSource, /borderColor=\{active \? 'cyan' : 'gray'\}/);
   assert.match(frameworkSource, /color=\{active \? 'black' : 'white'\}/);
   assert.match(
@@ -421,6 +595,156 @@ test('report details accept obvious return keys', () => {
   assert.equal(isAgentWorkLabReportReturnInput('\t'), false);
 });
 
+test('Starter receipt Enter opens the project while Esc only closes the receipt', () => {
+  assert.equal(agentWorkLabStarterReceiptInput('\r', true, false), 'open');
+  assert.equal(agentWorkLabStarterReceiptInput('\n', true, false), 'open');
+  assert.equal(agentWorkLabStarterReceiptInput('\r', true, true), 'none');
+  assert.equal(agentWorkLabStarterReceiptInput('\r', false, false), 'close');
+  assert.equal(agentWorkLabStarterReceiptInput('\u001b', true, false), 'close');
+  assert.equal(agentWorkLabStarterReceiptInput('x', true, false), 'none');
+});
+
+test('one creation confirmation automatically opens the selected Starter Project', async () => {
+  const output = new CaptureOutput();
+  const calls: string[] = [];
+  const plan = {
+    schema: 'kungfu.project-template.plan/v1',
+    templateId: 'kungfu.agent-work-starter',
+    templateVersion: '1',
+    templateRoot: `sha256:${'1'.repeat(64)}`,
+    templateSource: '/product/starter-project.json',
+    destination: '/projects/agent-work-starter',
+    files: [{ path: 'AGENTS.md', contentRoot: `sha256:${'2'.repeat(64)}` }],
+    initialWork: {
+      state: 'capture-pending',
+      initiativeId: 'agent-work-starter',
+      assignmentId: 'create-launch-brief',
+      title: 'Create launch brief',
+      acceptanceChecks: ['Use evidence'],
+    },
+    effects: ['Create files'],
+    skippedEffects: ['No overwrite'],
+    confirmationRequired: true,
+    writeOccurred: false,
+    planRoot: `sha256:${'3'.repeat(64)}`,
+  } satisfies ProjectTemplatePlan;
+  const receipt = {
+    schema: 'kungfu.project-template.creation-receipt/v1',
+    status: 'created',
+    templateId: plan.templateId,
+    templateRoot: plan.templateRoot,
+    planRoot: plan.planRoot,
+    destination: plan.destination,
+    actor: 'local-user',
+    files: plan.files,
+    verification: { ok: true, checks: [] },
+    initialWork: {
+      state: 'captured-pending-admission',
+      initiativeId: 'agent-work-starter',
+      assignmentId: 'create-launch-brief',
+      requestRoot: `sha256:${'4'.repeat(64)}`,
+      receiptRoot: `sha256:${'5'.repeat(64)}`,
+      requestPath: `${plan.destination}/.kungfu/inbox/request.json`,
+    },
+    openAction: {
+      kind: 'select-project-workspace',
+      label: 'Open Starter Project',
+    },
+    nonClaims: [],
+    writeOccurred: true,
+    receiptRoot: `sha256:${'6'.repeat(64)}`,
+  } satisfies ProjectTemplateCreationReceipt;
+  const workspace = {
+    schema: 'kungfu.workspace.registry/v1',
+    last_workspace_id: 'project:starter',
+    recent: [],
+    updated_at: '2026-07-29T00:00:00Z',
+    registry_path: '/config/workspaces.json',
+    selected: {
+      schema: 'kungfu.workspace.identity/v1',
+      workspace_id: 'project:starter',
+      identity_root: `sha256:${'7'.repeat(64)}`,
+      identity_state: 'qualified',
+      workspace_kind: 'project',
+      workspace_root: plan.destination,
+      display_path: plan.destination,
+      data_home: `${plan.destination}/.kungfu`,
+      runtime_dir: `${plan.destination}/.kungfu/runtime`,
+      initialized: false,
+      state: 'uninitialized',
+      resolution_reason: 'explicit-project',
+      continuation: {},
+      available: true,
+      selected_at: '2026-07-29T00:00:00Z',
+    },
+  } satisfies ProjectTemplateWorkspaceSelection;
+  let opened: ProjectTemplateWorkspaceSelection | undefined;
+  const lab = {
+    discoverAgents: async () => ({ configured: [], discovered: [] }),
+    planStarterProject: async () => {
+      calls.push('plan');
+      return plan;
+    },
+    createStarterProject: async () => {
+      calls.push('create');
+      return receipt;
+    },
+    openStarterProject: async () => {
+      calls.push('open');
+      return workspace;
+    },
+  } as unknown as AgentWorkLab;
+  const instance = render(
+    React.createElement(AgentWorkLabHost, {
+      lab,
+      startup: {
+        schema: 'kungfu.agent-work-lab.startup-route/v1',
+        state: 'verified-empty',
+        route: 'agent-work-lab',
+        reasonCode: 'test',
+        message: 'test',
+        runtimeDir: '/tmp/runtime',
+        workGraphPresent: false,
+        evidence: [],
+        writeOccurred: false,
+      },
+      dimensions: {
+        get: () => ({ columns: 80, rows: 20 }),
+        subscribe: () => () => undefined,
+      },
+      actionRequest: { id: 1, action: 'lab-starter' },
+      onOpenStarterProject: (
+        _receipt: ProjectTemplateCreationReceipt,
+        selected: ProjectTemplateWorkspaceSelection,
+      ) => {
+        opened = selected;
+      },
+    }),
+    {
+      stdout: output as unknown as NodeJS.WriteStream,
+      exitOnCtrlC: false,
+      patchConsole: false,
+      debug: true,
+    },
+  );
+
+  try {
+    await waitUntil(
+      () => output.chunks.join('').includes('CREATE AGENT WORK STARTER?'),
+      'the Starter Project confirmation panel',
+    );
+    process.stdin.emit('data', Buffer.from('\r'));
+    await waitUntil(() => Boolean(opened), 'the opened Starter Project');
+  } finally {
+    instance.unmount();
+    instance.cleanup();
+    process.stdin.pause();
+  }
+
+  assert.equal(opened?.selected.workspace_root, plan.destination);
+  assert.deepEqual(calls, ['plan', 'create', 'open']);
+});
+
 test('TUI host streams events and preserves the one-second rhythm', () => {
   const mainSource = readFileSync(
     new URL('./main.tsx', import.meta.url),
@@ -439,7 +763,9 @@ test('TUI host streams events and preserves the one-second rhythm', () => {
   assert.match(playbackSource, /wait\(timing\.eventIntervalMs\)/);
   assert.match(playbackSource, /wait\(timing\.verdictIntervalMs\)/);
   assert.match(hostSource, /agentWorkLabRunProgressLabel/);
-  assert.match(mainSource, /agentWorkLabStartupSurface/);
+  assert.match(mainSource, /existingProjectWorkspaceRoot\(process\.cwd\(\)/);
+  assert.match(mainSource, /startupProjectRoot \? 'loading' : 'all-work'/);
+  assert.match(mainSource, /surface !== 'lab'/);
   assert.match(hostSource, /quietProgressIntervalMs/);
   assert.match(hostSource, /recommendationDurationMs/);
   assert.match(hostSource, /nextAgentWorkLabFocus/);
@@ -464,6 +790,60 @@ test('TUI host streams events and preserves the one-second rhythm', () => {
     mainSource,
     /setRunProgress|setNextPrompt|setReportDetail/,
   );
+});
+
+test('clicking a visible Lab action executes the same bounded action as its key', async () => {
+  const output = new CaptureOutput();
+  const calls: string[] = [];
+  const lab = {
+    discoverAgents: async () => ({ configured: [], discovered: [] }),
+    runDemo: async () => {
+      calls.push('demo');
+      return qualifiedReport;
+    },
+  } as unknown as AgentWorkLab;
+  const instance = render(
+    React.createElement(AgentWorkLabHost, {
+      lab,
+      startup: {
+        schema: 'kungfu.agent-work-lab.startup-route/v1',
+        state: 'verified-empty',
+        route: 'agent-work-lab',
+        reasonCode: 'pointer-test',
+        message: 'Pointer action test.',
+        runtimeDir: '/tmp/kungfu-pointer-test',
+        workGraphPresent: false,
+        evidence: [],
+        writeOccurred: false,
+      },
+      dimensions: {
+        get: () => ({ columns: 80, rows: 20 }),
+        subscribe: () => () => undefined,
+      },
+    }),
+    {
+      stdout: output as unknown as NodeJS.WriteStream,
+      exitOnCtrlC: false,
+      patchConsole: false,
+      debug: true,
+    },
+  );
+
+  try {
+    await waitUntil(
+      () => output.chunks.join('').includes('Ready · choose a test case'),
+      'the clickable Lab action bar to become ready',
+    );
+    await new Promise<void>((resolve) => setTimeout(resolve, 30));
+    process.stdin.emit('data', Buffer.from('\u001b[<0;5;4M'));
+    await waitUntil(() => calls.includes('demo'), 'the clicked Demo action');
+  } finally {
+    instance.unmount();
+    instance.cleanup();
+    process.stdin.pause();
+  }
+
+  assert.deepEqual(calls, ['demo']);
 });
 
 test('TUI autoplay runs the complete offline case once and settles with its report', async () => {
@@ -554,14 +934,17 @@ test('state updates use incremental terminal painting instead of clearTerminal',
   instance.rerender(
     React.createElement(AgentWorkLabView, {
       ...viewProps,
-      lines: [
-        {
-          session: 1,
-          source: 'agent/live',
-          text: 'Inspecting the admitted Work identity.',
-          tone: 'running',
-        },
-      ],
+      buffers: {
+        1: [
+          {
+            session: 1,
+            source: 'agent/live',
+            text: 'Inspecting the admitted Work identity.',
+            tone: 'running',
+          },
+        ],
+        2: [],
+      },
     }),
   );
   await new Promise<void>((resolve) => setTimeout(resolve, 80));
@@ -681,8 +1064,8 @@ test('report cards, coaching popup and detail page are visible at 80x24', async 
   instance.unmount();
   instance.cleanup();
 
-  assert.match(frame, /> ✓ 3 CORRECT · Enter details/);
-  assert.match(frame, /× 1 FAILED · Enter details/);
+  assert.match(frame, /> ✓ 3 CORRECT · click \/ Enter det/);
+  assert.match(frame, /× 1 FAILED · click \/ Enter deta/);
   assert.match(frame, /WHAT TO TRY NEXT/);
   assert.match(frame, /Closes automatically in 5 seconds/);
   assert.match(frame, /║ WHAT TO TRY NEXT\s+║/);

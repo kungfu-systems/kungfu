@@ -6,6 +6,7 @@ from pathlib import Path
 import click
 
 from kungfu import agent_work_lab as lab
+from kungfu import project_template
 from kungfu.agent.kfd3 import kfd3_api
 from kungfu.agent import runtime_profiles
 from kungfu.cli.commands import PrioritizedCommandGroup, kfc
@@ -195,6 +196,29 @@ def starter_create(destination, expected_plan_root, actor, execute, as_json):
         "  initial Work captured and pending explicit admission: "
         f"{payload['initialWork']['requestRoot']}"
     )
+
+
+@agent_work_lab.command(
+    name="starter-resume",
+    help="resume one exact retained Agent Work Starter project without writing",
+)
+@click.option(
+    "--workspace",
+    required=True,
+    type=click.Path(path_type=Path),
+)
+@click.option("--json", "as_json", is_flag=True, help="machine-readable output")
+@kfd3_api("kungfu.agent-work-lab.starter-resume")
+def starter_resume(workspace, as_json):
+    try:
+        payload = project_template.resume_project_template(workspace)
+    except (OSError, ValueError) as error:
+        raise click.ClickException(str(error)) from error
+    if as_json:
+        _json(payload)
+        return
+    click.echo(f"Resumed Starter Project: {payload['destination']}")
+    click.echo(f"  retained Work request: {payload['initialWork']['requestRoot']}")
 
 
 @agent_work_lab.command(name="agent-plan", help="preview one exact local agent run")

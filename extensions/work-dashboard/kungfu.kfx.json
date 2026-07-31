@@ -4,7 +4,7 @@
   "version": "4.0.0-alpha.1",
   "kungfuConfig": {
     "key": "work-dashboard",
-    "name": "Work",
+    "name": "All Work",
     "product": {
       "roles": [
         "profile-view"
@@ -14,9 +14,10 @@
     },
     "config": {
       "view": {
-        "title": "Work",
+        "title": "All Work",
         "capabilities": [
-          "storage"
+          "storage",
+          "projects"
         ]
       }
     }

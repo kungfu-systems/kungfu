@@ -2,6 +2,7 @@
 
 import assert from 'node:assert/strict';
 import { EventEmitter } from 'node:events';
+import { readFileSync } from 'node:fs';
 import { Writable } from 'node:stream';
 import test from 'node:test';
 import { Box, Text, render } from 'ink';
@@ -17,10 +18,15 @@ import {
   createControlPlaneInputFence,
   quickCommandMatches,
   reduceControlPlaneInput,
+  resolveProductStartupSurface,
 } from './profile-shell.js';
 import {
-  degradedGlobalWorkModel,
+  PROJECTS_QUICK_COMMANDS,
+  PROJECT_WORK_QUICK_COMMANDS,
+} from './projects-view/index.js';
+import {
   globalWorkContribution,
+  globalWorkObserverArgs,
   loadLatestGlobalWorkCache,
   parseGlobalWorkObserverLine,
 } from './work-control-contribution.js';
@@ -43,7 +49,7 @@ const globalWorkSnapshot = {
         canonical_root: 'sha256:initiative',
         object_kind: 'initiative',
         subject: 'initiative-a',
-        display: { title: 'Initiative A', status: 'active' },
+        display: { title: 'Improve search', status: 'active' },
         observations: [{ workspace_id: 'home' }],
       },
       {
@@ -51,9 +57,21 @@ const globalWorkSnapshot = {
         object_kind: 'assignment',
         subject: 'initiative-a:assignment-a',
         display: {
-          title: 'Assignment A',
+          title: 'Unify search',
           status: 'executing',
           next_actions: ['continue'],
+        },
+        observations: [{ workspace_id: 'project:a' }],
+      },
+      {
+        canonical_root: 'sha256:completed',
+        object_kind: 'assignment',
+        subject: 'initiative-a:assignment-completed',
+        display: {
+          title: 'Completed Work',
+          status: 'completed',
+          portfolio_state: 'completed',
+          next_actions: [],
         },
         observations: [{ workspace_id: 'project:a' }],
       },
@@ -111,6 +129,34 @@ test('Esc hands focus to workspace shortcuts and i returns to input', () => {
   const focused = reduceControlPlaneInput(workspace, 'i', 0);
   assert.equal(focused.handled, true);
   assert.equal(focused.state.focus, 'input');
+});
+
+test('Help and commands return to the workspace focus that opened them', () => {
+  const workspace = { ...CLOSED_CONTROL_PLANE, focus: 'workspace' as const };
+  const help = reduceControlPlaneInput(workspace, '?', 0).state;
+  assert.equal(help.mode, 'help');
+  assert.equal(help.returnFocus, 'workspace');
+  assert.deepEqual(reduceControlPlaneInput(help, '\u001b', 0).state, workspace);
+
+  const commands = reduceControlPlaneInput(
+    workspace,
+    '/',
+    QUICK_COMMANDS.length,
+  ).state;
+  assert.equal(commands.returnFocus, 'workspace');
+  assert.deepEqual(
+    reduceControlPlaneInput(commands, '\u001b', QUICK_COMMANDS.length).state,
+    workspace,
+  );
+});
+
+test('Help opened from text entry still returns to the input', () => {
+  const help = reduceControlPlaneInput(CLOSED_CONTROL_PLANE, '?', 0).state;
+  assert.equal(help.returnFocus, undefined);
+  assert.deepEqual(
+    reduceControlPlaneInput(help, '\u001b', 0).state,
+    CLOSED_CONTROL_PLANE,
+  );
 });
 
 test('Tab enters controls and requests one bounded focus move', () => {
@@ -181,30 +227,16 @@ test('keeps a closing key captured for the rest of its synchronous input emissio
 test('keeps quick commands bounded to declared product actions', () => {
   assert.deepEqual(
     QUICK_COMMANDS.map((row) => row.action),
-    ['help', 'search', 'health', 'work', 'lab', 'home', 'quit'],
+    ['help', 'search', 'health', 'work', 'projects', 'lab', 'home', 'quit'],
   );
   assert.equal(quickCommandMatches('/rm -rf').length, 0);
 });
 
-test('projects the global Portfolio and indexes every visible Work row', () => {
+test('projects every machine Work row into product search documents', () => {
   const contribution = globalWorkContribution(globalWorkSnapshot);
-  assert.equal(contribution.model.profile.title, 'Work');
-  assert.equal(contribution.model.profile.qualificationLabel, 'Global proof');
-  assert.equal(
-    contribution.model.subject.title,
-    'Portfolio · 2 current work items',
-  );
-  assert.match(
-    contribution.model.subject.subtitle,
-    /1 Initiatives · 1 Assignments/,
-  );
   assert.deepEqual(
     contribution.searchDocuments.map((row) => row.title),
-    ['Initiative A', 'Assignment A'],
-  );
-  assert.match(
-    degradedGlobalWorkModel(new Error('observer unavailable')).notice ?? '',
-    /observer unavailable/,
+    ['Improve search', 'Unify search', 'Completed Work'],
   );
 });
 
@@ -255,6 +287,39 @@ test('reads and parses the shared GUI or TUI global Work observer state', () => 
   assert.equal(parseGlobalWorkObserverLine('not json'), null);
 });
 
+test('source CLI fallback keeps the complete uv Python prefix before global Work observation', () => {
+  const args = globalWorkObserverArgs('/tmp/global-work.json', [
+    'run',
+    '--project',
+    '/checkout/framework/core',
+    '--frozen',
+    'python',
+    '-m',
+    'kungfu',
+  ]);
+  assert.deepEqual(args.slice(0, 9), [
+    'run',
+    '--project',
+    '/checkout/framework/core',
+    '--frozen',
+    'python',
+    '-m',
+    'kungfu',
+    'workspace',
+    'work',
+  ]);
+  const source = readFileSync(new URL('./main.tsx', import.meta.url), 'utf8');
+  const observerStart = source.indexOf('return startGlobalWorkObserver({');
+  const observerEnd = source.indexOf('  }, [applySnapshot', observerStart);
+  assert.notEqual(observerStart, -1);
+  assert.notEqual(observerEnd, -1);
+  const observerCall = source.slice(observerStart, observerEnd);
+  assert.match(observerCall, /bin: cli\.bin/);
+  assert.match(observerCall, /argsPrefix: cli\.argsPrefix/);
+  assert.match(observerCall, /env: cli\.env/);
+  assert.doesNotMatch(observerCall, /paths\.bin|cliEnvironment\(\)/);
+});
+
 test('adds Suite actions only to the active Lab command catalog', () => {
   const labCommands = [...AGENT_WORK_LAB_QUICK_COMMANDS, ...QUICK_COMMANDS];
   assert.deepEqual(
@@ -265,6 +330,67 @@ test('adds Suite actions only to the active Lab command catalog', () => {
   assert.deepEqual(
     AGENT_WORK_LAB_QUICK_COMMANDS.map((row) => row.command),
     ['/demo', '/same', '/handoff', '/report', '/new', '/focus'],
+  );
+});
+
+test('adds Project actions only to the active Projects command catalog', () => {
+  const projectCommands = [...PROJECTS_QUICK_COMMANDS, ...QUICK_COMMANDS];
+  assert.deepEqual(
+    projectCommands
+      .slice(0, PROJECTS_QUICK_COMMANDS.length)
+      .map((row) => row.command),
+    ['/new', '/open', '/remove'],
+  );
+  assert.equal(
+    quickCommandMatches('/new', projectCommands)[0]?.action,
+    'project-new',
+  );
+});
+
+test('gives /new a Work meaning inside an opened Project', () => {
+  const projectWorkCommands = [
+    ...PROJECT_WORK_QUICK_COMMANDS,
+    ...QUICK_COMMANDS,
+  ];
+  assert.equal(
+    quickCommandMatches('/new', projectWorkCommands)[0]?.action,
+    'project-work-new',
+  );
+  assert.match(projectWorkCommands[0]?.summary ?? '', /acceptance criterion/);
+});
+
+test('startup opens only the current .kungfu Project and otherwise shows All Work', () => {
+  assert.equal(
+    resolveProductStartupSurface({
+      contextualProject: true,
+      openedProject: true,
+      projectResumeSettled: true,
+    }),
+    'project-work',
+  );
+  assert.equal(
+    resolveProductStartupSurface({
+      contextualProject: true,
+      openedProject: false,
+      projectResumeSettled: false,
+    }),
+    null,
+  );
+  assert.equal(
+    resolveProductStartupSurface({
+      contextualProject: true,
+      openedProject: false,
+      projectResumeSettled: true,
+    }),
+    'all-work',
+  );
+  assert.equal(
+    resolveProductStartupSurface({
+      contextualProject: false,
+      openedProject: true,
+      projectResumeSettled: false,
+    }),
+    'all-work',
   );
 });
 

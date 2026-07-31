@@ -11,6 +11,7 @@ import {
   type KfxControl,
   type Ledger,
   type Profile,
+  type Projects,
   type PtyModule,
   type RemoteWork,
   type Rewind,
@@ -165,6 +166,7 @@ export type Runtime = {
   agentSession: AgentSession | null;
   workspace: WorkspaceGuidance | null;
   agentWorkLab: AgentWorkLab;
+  projects: Projects | null;
 };
 
 export function openRendererAgentWorkLab(): AgentWorkLab {
@@ -336,6 +338,7 @@ export function deferredRuntime(
     agentSession: null,
     workspace: null,
     agentWorkLab,
+    projects: null,
   };
 }
 
@@ -389,6 +392,7 @@ function createRuntime(): Runtime {
     agentSession: null,
     workspace: null,
     agentWorkLab,
+    projects: null,
   };
   if (
     env.KF_WORKSPACE_STATE === 'uninitialized' ||

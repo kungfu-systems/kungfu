@@ -701,7 +701,8 @@ def _batched_state_query(
     for offset in range(0, len(subjects), 256):
         query = _runtime_query_definition(definition)
         query["subject_keys"] = subjects[offset : offset + 256]
-        query["limit"] = len(query["subject_keys"])
+        requested_limit = int(definition.get("limit") or 0)
+        query["limit"] = max(requested_limit, len(query["subject_keys"]))
         resolution = {
             "schema": "kungfu.profile-query-resolution/v1",
             "familyId": "initiative-state-at-cut",
