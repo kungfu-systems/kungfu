@@ -149,14 +149,6 @@ const ROW_FIXTURES = {
       ['libkungfu_runtime.dylib', '0755'],
     ],
   },
-  'darwin-x86_64-cp313': {
-    osVersion: 'macOS-15.7.2-x86_64-i386-64bit',
-    files: [
-      ['pykungfu.cpython-313-darwin.so', '0755'],
-      ['libnode.127.dylib', '0755'],
-      ['libkungfu_runtime.dylib', '0755'],
-    ],
-  },
   'linux-x86_64-cp313': {
     osVersion: 'Linux-6.11.0-x86_64-with-glibc2.39',
     files: [
@@ -409,16 +401,11 @@ test('cached Shifu tool resolution binds pin, platform, and executable file', (t
   assert.equal(resolveShifuCachedTool({ ...options, tool: 'fnm' }), '');
 });
 
-test('platform matrix binds exactly four collision-free producer rows', (t) => {
+test('platform matrix binds exactly three supported producer rows', (t) => {
   const matrix = qualifiedCorePlatformMatrix(ROOT);
   assert.deepEqual(
     matrix.rows.map(({ id }) => id),
-    [
-      'darwin-arm64-cp313',
-      'darwin-x86_64-cp313',
-      'linux-x86_64-cp313',
-      'windows-x86_64-cp313',
-    ],
+    ['darwin-arm64-cp313', 'linux-x86_64-cp313', 'windows-x86_64-cp313'],
   );
   assert.deepEqual(matrix.shared.toolchainFacts, [
     'compiler',
@@ -434,8 +421,8 @@ test('platform matrix binds exactly four collision-free producer rows', (t) => {
   const promotedNames = matrix.rows.map(({ id }) =>
     qualifiedCoreArtifactName('promoted', QUEUE_HEAD, id, ROOT),
   );
-  assert.equal(new Set(candidateNames).size, 4);
-  assert.equal(new Set(promotedNames).size, 4);
+  assert.equal(new Set(candidateNames).size, REQUIRED_ROWS.length);
+  assert.equal(new Set(promotedNames).size, REQUIRED_ROWS.length);
   assert.equal(
     qualifiedCoreArtifactName('matrixIndex', QUEUE_HEAD, '', ROOT),
     `qualified-assignment-core-matrix-${QUEUE_HEAD}`,
@@ -1918,28 +1905,39 @@ test('consumer records verification rejection without retaining provider bytes',
   assert.equal(ledgerBytes.includes('must-not-survive'), false);
 });
 
-test('consumer retains unsupported-architecture outcome without claiming platform support', async (t) => {
+test('consumer retains unsupported-platform outcomes without claiming support', async (t) => {
   const temporary = fs.mkdtempSync(
     path.join(os.tmpdir(), 'qualified-core-unsupported-host-'),
   );
   t.after(() => fs.rmSync(temporary, { recursive: true, force: true }));
   const cacheRoot = path.join(temporary, 'cache');
-  await assert.rejects(
-    consumeQualifiedCoreForCheckout({
-      repositoryRoot: ROOT,
-      publicationRoot: path.join(temporary, 'checkout'),
-      cacheRoot,
-      now: CONSUMER_NOW,
-      checkout: consumerCheckout(),
-      platform: 'linux',
-      architecture: 'arm64',
-    }),
-    /unsupported-host/u,
-  );
+  const unsupportedHosts = [
+    { platform: 'darwin', architecture: 'x64' },
+    { platform: 'linux', architecture: 'arm64' },
+  ];
+  for (const [index, host] of unsupportedHosts.entries()) {
+    await assert.rejects(
+      consumeQualifiedCoreForCheckout({
+        repositoryRoot: ROOT,
+        publicationRoot: path.join(temporary, `checkout-${index}`),
+        cacheRoot,
+        now: new Date(Date.parse(CONSUMER_NOW) + index * 1000).toISOString(),
+        checkout: consumerCheckout(),
+        ...host,
+      }),
+      /unsupported-host/u,
+    );
+  }
   const summary = summarizeQualifiedCoreUsage(cacheRoot);
-  assert.equal(summary.totals.observations, 1);
-  assert.equal(summary.counts.results['fallback-required'], 1);
-  assert.equal(summary.counts.reasons['unsupported-host'], 1);
+  assert.equal(summary.totals.observations, unsupportedHosts.length);
+  assert.equal(
+    summary.counts.results['fallback-required'],
+    unsupportedHosts.length,
+  );
+  assert.equal(
+    summary.counts.reasons['unsupported-host'],
+    unsupportedHosts.length,
+  );
 });
 
 test('consumer deduplicates transport variants of one content authority', async (t) => {
@@ -2039,7 +2037,7 @@ test('workflows keep candidate and promotion outside untrusted PR authority', ()
   );
   assert.match(
     candidateJob,
-    /always\(\)[\s\S]*github\.event_name == 'merge_group'[\s\S]*native-required == 'true'[\s\S]*needs\.affected_native\.result == 'success'[\s\S]*continue-on-error: true[\s\S]*fail-fast: false[\s\S]*darwin-arm64-cp313[\s\S]*runner: macos-15[\s\S]*darwin-x86_64-cp313[\s\S]*runner: macos-15-intel[\s\S]*linux-x86_64-cp313[\s\S]*runner: ubuntu-24\.04[\s\S]*cc: gcc-14[\s\S]*cxx: g\+\+-14[\s\S]*windows-x86_64-cp313[\s\S]*runner: windows-2022[\s\S]*runs-on: \$\{\{ matrix\.runner \}\}/u,
+    /always\(\)[\s\S]*github\.event_name == 'merge_group'[\s\S]*native-required == 'true'[\s\S]*needs\.affected_native\.result == 'success'[\s\S]*continue-on-error: true[\s\S]*fail-fast: false[\s\S]*darwin-arm64-cp313[\s\S]*runner: macos-15[\s\S]*linux-x86_64-cp313[\s\S]*runner: ubuntu-24\.04[\s\S]*cc: gcc-14[\s\S]*cxx: g\+\+-14[\s\S]*windows-x86_64-cp313[\s\S]*runner: windows-2022[\s\S]*runs-on: \$\{\{ matrix\.runner \}\}/u,
   );
   assert.match(
     candidateJob,
@@ -2077,7 +2075,7 @@ test('workflows keep candidate and promotion outside untrusted PR authority', ()
   );
   assert.match(
     promotionWorkflow,
-    /Promote or resolve the exact Qualified Core platform matrix[\s\S]*darwin-arm64-cp313[\s\S]*darwin-x86_64-cp313[\s\S]*linux-x86_64-cp313[\s\S]*windows-x86_64-cp313[\s\S]*qualified-assignment-core-candidate-\$\{TARGET_SHA\}-\$\{row\}[\s\S]*qualified-assignment-core-artifact\.mjs reuse[\s\S]*Multiple distinct compatible Qualified Core authorities are active for \$\{row\}[\s\S]*status:"unqualified"[\s\S]*reason:"no-exact-or-compatible-authority"[\s\S]*uses: \.\/\.github\/actions\/upload-qualified-core-matrix/u,
+    /Promote or resolve the exact Qualified Core platform matrix[\s\S]*darwin-arm64-cp313[\s\S]*linux-x86_64-cp313[\s\S]*windows-x86_64-cp313[\s\S]*qualified-assignment-core-candidate-\$\{TARGET_SHA\}-\$\{row\}[\s\S]*qualified-assignment-core-artifact\.mjs reuse[\s\S]*Multiple distinct compatible Qualified Core authorities are active for \$\{row\}[\s\S]*status:"unqualified"[\s\S]*reason:"no-exact-or-compatible-authority"[\s\S]*uses: \.\/\.github\/actions\/upload-qualified-core-matrix/u,
   );
   assert.match(
     promotionWorkflow,

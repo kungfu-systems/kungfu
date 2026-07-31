@@ -497,7 +497,6 @@ jobs:
           mkdir -p "$promoted_root" "$status_root"
           rows=(
             darwin-arm64-cp313
-            darwin-x86_64-cp313
             linux-x86_64-cp313
             windows-x86_64-cp313
           )
@@ -707,7 +706,6 @@ jobs:
         with:
           target-sha: ${{ steps.target.outputs.sha }}
           darwin-arm64-available: ${{ steps.qualified_core_promotion.outputs.darwin_arm64_cp313_available }}
-          darwin-x86-64-available: ${{ steps.qualified_core_promotion.outputs.darwin_x86_64_cp313_available }}
           linux-x86-64-available: ${{ steps.qualified_core_promotion.outputs.linux_x86_64_cp313_available }}
           windows-x86-64-available: ${{ steps.qualified_core_promotion.outputs.windows_x86_64_cp313_available }}
       - name: Summarize Qualified Core promotion

@@ -15,7 +15,6 @@ const MATRIX_PATH = 'docs/shifu/qualified-assignment-core-platform-matrix.json';
 // Ordered rows are part of the Assignment capture and transport identity.
 const REQUIRED_ROWS = [
   'darwin-arm64-cp313',
-  'darwin-x86_64-cp313',
   'linux-x86_64-cp313',
   'windows-x86_64-cp313',
 ];
@@ -137,7 +136,7 @@ export function qualifiedCorePlatformMatrix(repositoryRoot = ROOT) {
     JSON.stringify(rowIds) !== JSON.stringify([...new Set(rowIds)])
   ) {
     throw new Error(
-      'Qualified Core platform matrix must contain the exact ordered four rows',
+      'Qualified Core platform matrix must contain the exact ordered supported rows',
     );
   }
   const identities = matrix.rows.map(
