@@ -7,7 +7,7 @@
     "package": "@kungfu-tech/product-kungfu"
   },
   "releaseDefaults": {
-    "channel": "dev/v4/v4.0",
+    "channel": "repository-default",
     "tagPrefix": "v",
     "sourceSha": "local-dev-snapshot"
   },

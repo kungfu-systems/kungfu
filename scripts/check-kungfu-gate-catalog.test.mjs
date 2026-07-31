@@ -1040,10 +1040,7 @@ test('direct Gate arguments and profile inputs fail closed on drift', () => {
     profileInputWorkflow,
     fs
       .readFileSync(profileInputWorkflow, 'utf8')
-      .replace(
-        'runner-preset: kungfu-v4-self-hosted',
-        'runner-preset: portable',
-      ),
+      .replace('runner-preset: custom', 'runner-preset: portable'),
   );
   assert.ok(
     checkKungfuGateCatalog(profileInputRoot).issues.some((issue) =>

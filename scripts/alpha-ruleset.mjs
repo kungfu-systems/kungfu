@@ -7,14 +7,20 @@ import crypto from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import {
+  activeProjection,
+  readAuthority,
+} from '../framework/version-line/version-line-authority.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+const AUTHORITY = readAuthority();
+const { line: ACTIVE_LINE } = activeProjection(AUTHORITY);
 const CONTRACTS = new Map([
   [
     'kungfu.alpha-ruleset-contract/v1',
     {
       label: 'Alpha',
-      targetRef: 'alpha/v4/v4.0',
+      targetRef: ACTIVE_LINE.branches.alpha,
       inspectionSchema: 'kungfu.alpha-ruleset-inspection/v1',
     },
   ],
@@ -22,7 +28,7 @@ const CONTRACTS = new Map([
     'kungfu.stable-ruleset-contract/v1',
     {
       label: 'Stable',
-      targetRef: 'release/v4/v4.0',
+      targetRef: ACTIVE_LINE.branches.stable,
       inspectionSchema: 'kungfu.stable-ruleset-inspection/v1',
     },
   ],
@@ -104,6 +110,10 @@ export function validateContract(contract) {
   if (contract.repository !== 'kungfu-systems/kungfu')
     throw new Error(
       `${specification.label} ruleset repository is not admitted`,
+    );
+  if (contract.versionLineAuthorityRoot !== AUTHORITY.authorityRoot)
+    throw new Error(
+      `${specification.label} ruleset version-line authority root mismatch`,
     );
   if (contract.targetRef !== specification.targetRef)
     throw new Error(
