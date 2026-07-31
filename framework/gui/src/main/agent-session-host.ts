@@ -1,4 +1,7 @@
-import { createDetachedAgentSessionHost } from '@kungfu-tech/agent-session/product-client';
+import {
+  createDetachedAgentSessionHost,
+  prepareAgentSessionNodePty,
+} from '@kungfu-tech/agent-session/product-client';
 import type { AgentSession } from '@kungfu-tech/api/capability';
 
 import { AGENT_SESSION_CALL_CHANNEL } from '../sandbox/channels';
@@ -12,7 +15,13 @@ type IpcMainLike = {
 };
 
 export function createMainAgentSessionHost(runtimeDir: string): AgentSession {
-  const host = createDetachedAgentSessionHost({ runtimeDir });
+  const env = {
+    ...process.env,
+    KUNGFU_AGENT_SESSION_NODE_PTY_MODULE: prepareAgentSessionNodePty({
+      runtimeDir,
+    }),
+  };
+  const host = createDetachedAgentSessionHost({ runtimeDir, env });
   process.env.KUNGFU_AGENT_SESSION_ENDPOINT = host.endpoint;
   return { invoke: (request) => host.invoke(request) };
 }

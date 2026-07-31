@@ -121,20 +121,31 @@ export function ProjectWorkRunSession({
   run,
   title,
   onClose,
+  onReply,
+  onApprove,
+  onReview,
+  onRetry,
 }: {
   run: ProjectWorkRunSnapshot;
   title?: string;
   onClose?: () => void;
+  onReply?: (text: string) => void;
+  onApprove?: (approved: boolean) => void;
+  onReview?: () => void;
+  onRetry?: () => void;
 }) {
   const [now, setNow] = React.useState(() => Date.now());
+  const [reply, setReply] = React.useState('');
+  const live = run.session?.live ?? run.running;
   React.useEffect(() => {
-    if (!run.running) return undefined;
+    if (!live) return undefined;
     const timer = setInterval(() => setNow(Date.now()), 1000);
     return () => clearInterval(timer);
-  }, [run.running]);
+  }, [live]);
   const quietMs = now - run.lastEventAt;
   const spinner = ['◐', '◓', '◑', '◒'][Math.floor(now / 250) % 4];
-  const status = run.running
+  const attention = run.session?.attention;
+  const status = live
     ? `${spinner} RUNNING · ${elapsedLabel(now - run.startedAt)}${
         quietMs >= 5000 ? ` · waiting ${elapsedLabel(quietMs)}` : ''
       }`
@@ -159,7 +170,7 @@ export function ProjectWorkRunSession({
         style={{
           ...mono,
           color: '#f1f1f1',
-          background: run.running ? '#075985' : '#184b32',
+          background: live ? '#075985' : '#184b32',
           padding: '7px 10px',
           display: 'flex',
           justifyContent: 'space-between',
@@ -192,6 +203,16 @@ export function ProjectWorkRunSession({
         </span>
       </header>
       <div style={{ padding: 10, overflow: 'auto', flex: 1 }}>
+        {run.session?.terminalLines
+          .filter((line) => line.trim())
+          .map((line, index) => (
+            <div
+              key={`${index}:${line}`}
+              style={{ ...mono, color: '#cccccc', whiteSpace: 'pre-wrap' }}
+            >
+              {line}
+            </div>
+          ))}
         {run.events.length === 0 && run.running ? (
           <div style={{ ...mono, color: '#858585' }}>
             Agent process started. Waiting for the first governed public event…
@@ -223,6 +244,91 @@ export function ProjectWorkRunSession({
           </div>
         ) : null}
       </div>
+      {attention ? (
+        <footer
+          style={{
+            borderTop: `2px solid ${attention.kind === 'blocked' ? '#f48771' : '#d7ba7d'}`,
+            background: '#1b1b1d',
+            padding: 10,
+            display: 'grid',
+            gap: 8,
+          }}
+        >
+          <strong
+            style={{
+              ...mono,
+              color: attention.kind === 'blocked' ? '#f48771' : '#d7ba7d',
+            }}
+          >
+            {attention.kind.replaceAll('-', ' ').toUpperCase()}
+          </strong>
+          <span style={{ ...mono, color: '#cccccc' }}>{attention.message}</span>
+          {attention.kind === 'needs-answer' && onReply ? (
+            <form
+              style={{ display: 'flex', gap: 8 }}
+              onSubmit={(event) => {
+                event.preventDefault();
+                if (!reply.trim()) return;
+                onReply(reply.trim());
+                setReply('');
+              }}
+            >
+              <input
+                aria-label="Answer Agent"
+                value={reply}
+                onChange={(event) => setReply(event.currentTarget.value)}
+                placeholder="Answer the Agent…"
+                style={{
+                  ...mono,
+                  flex: 1,
+                  minWidth: 0,
+                  padding: '7px 9px',
+                  color: '#f1f1f1',
+                  background: '#0d1117',
+                  border: '1px solid #4fc1ff',
+                  borderRadius: 5,
+                }}
+              />
+              <button type="submit" style={actionStyle}>
+                Send
+              </button>
+              {onReview ? (
+                <button type="button" style={actionStyle} onClick={onReview}>
+                  Review changes
+                </button>
+              ) : null}
+            </form>
+          ) : null}
+          {attention.kind === 'needs-approval' && onApprove ? (
+            <div style={{ display: 'flex', gap: 8 }}>
+              <button
+                type="button"
+                style={actionStyle}
+                onClick={() => onApprove(true)}
+              >
+                Approve
+              </button>
+              <button
+                type="button"
+                style={actionStyle}
+                onClick={() => onApprove(false)}
+              >
+                Deny
+              </button>
+            </div>
+          ) : null}
+          {attention.kind === 'ready-for-review' && onReview ? (
+            <button type="button" style={actionStyle} onClick={onReview}>
+              Review project changes
+            </button>
+          ) : null}
+          {attention.kind === 'blocked' && onRetry ? (
+            <button type="button" style={actionStyle} onClick={onRetry}>
+              Start a fresh Agent attempt
+            </button>
+          ) : null}
+        </footer>
+      ) : null}
     </aside>
   );
 }

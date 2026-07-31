@@ -59,3 +59,20 @@ test('blocked and crash scenarios are explicit and stable', () => {
   assert.equal(crash.exitCode, 23);
   assert.match(crash.lines.join('\n'), /MOCK CRASH/u);
 });
+
+test('every Mock Agent scenario reaches its declared deterministic boundary', () => {
+  const expected = {
+    complete: 'ready-for-review',
+    question: 'needs-answer',
+    approval: 'needs-approval',
+    blocked: 'blocked',
+    crash: 'ended',
+    'multi-step': 'needs-answer',
+  };
+  for (const scenario of MOCK_AGENT_SCENARIOS) {
+    const machine = createMockAgentMachine({ scenario });
+    machine.start();
+    machine.input('start Work');
+    assert.equal(machine.state(), expected[scenario], scenario);
+  }
+});

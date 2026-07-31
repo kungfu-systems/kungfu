@@ -30,6 +30,11 @@ export function projectWorkAgentState(session = {}) {
   const exitCode = session.exit?.exitCode ?? session.exit?.code ?? null;
   const interactionReason =
     session.providerAdapter?.reason ?? session.interactionReason ?? null;
+  const interactionSignatures = Array.isArray(
+    session.providerAdapter?.signatureIds,
+  )
+    ? session.providerAdapter.signatureIds
+    : [];
 
   if (
     attemptStatus === 'unrecoverable' ||
@@ -100,6 +105,17 @@ export function projectWorkAgentState(session = {}) {
   }
 
   if (live && interaction === 'ready') {
+    if (interactionSignatures.includes('synthetic.ready.review')) {
+      return {
+        schema: 'kungfu.project-work-agent-state/v1',
+        attempt: 'waiting',
+        attention: attention(
+          'ready-for-review',
+          'agent-reported-review-boundary',
+          'The Agent reached the deterministic review boundary. Review the project changes before completing Work.',
+        ),
+      };
+    }
     return {
       schema: 'kungfu.project-work-agent-state/v1',
       attempt: 'waiting',

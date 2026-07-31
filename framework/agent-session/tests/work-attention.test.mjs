@@ -29,6 +29,14 @@ test('Project Work separates attempt progress from user attention', () => {
     'end-attempt',
   ]);
 
+  const mockReview = projectWorkAgentState({
+    live: true,
+    lifecycleState: 'ready',
+    interactionState: 'ready',
+    providerAdapter: { signatureIds: ['synthetic.ready.review'] },
+  });
+  assert.equal(mockReview.attention.kind, 'ready-for-review');
+
   const approval = projectWorkAgentState({
     live: true,
     lifecycleState: 'ready',

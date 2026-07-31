@@ -19,6 +19,11 @@ export function detachedAgentSessionPaths(runtimeDir: string): Omit<
   'invoke'
 >;
 
+export function prepareAgentSessionNodePty(options: {
+  runtimeDir: string;
+  modulePath?: string;
+}): string;
+
 export function createDetachedAgentSessionHost(options: {
   runtimeDir: string;
   executable?: string;
