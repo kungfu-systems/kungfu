@@ -281,6 +281,27 @@ def user_message(
     }
 
 
+def is_public_release_cut(value: Mapping[str, Any] | None) -> bool:
+    if value is None:
+        return True
+    policy = value.get("publicationPolicy")
+    return isinstance(policy, Mapping) and (
+        policy.get("trustDomain"),
+        policy.get("publicationEligible"),
+    ) == ("public", True)
+
+
+def release_check_impact(reason_code: str) -> dict[str, Any]:
+    waits_for_idle = reason_code == "active-work-must-be-idle"
+    return {
+        "activeWorkContinues": True,
+        "activationTiming": (
+            "after-current-work-is-idle" if waits_for_idle else "after-core-readiness"
+        ),
+        "userActionRequired": waits_for_idle,
+    }
+
+
 def plan_install(
     manifest: Mapping[str, Any],
     source_root: str | Path,

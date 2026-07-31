@@ -177,6 +177,78 @@ def _local_cut_archive(
     )
 
 
+def test_public_release_check_rejects_publication_ineligible_local_cut(
+    tmp_path: Path,
+) -> None:
+    _archive_path, manifest = _archive(tmp_path)
+    local_manifest = _bind_local_cut(
+        manifest,
+        parent_release_cut_root=None,
+    )
+
+    with pytest.raises(distribution_update.DistributionUpdateError) as captured:
+        distribution_update.check_release(
+            local_manifest,
+            current_version="4.0.0-alpha.0",
+            source=distribution_update.install_source(
+                {"KUNGFU_INSTALL_SOURCE": "archive"}
+            ),
+            require_publication=True,
+        )
+
+    assert captured.value.code == "release-publication-policy-mismatch"
+
+
+def test_deferred_cut_successor_reports_exact_idle_wait_impact(tmp_path: Path) -> None:
+    _archive_path, manifest = _archive(tmp_path)
+    current_root = f"sha256:{'0' * 64}"
+    target_manifest = _bind_local_cut(
+        manifest,
+        parent_release_cut_root=current_root,
+    )
+    transition = release_cut.build_shifu_local_transition(
+        current_release_cut_root=current_root,
+        current_version="4.0.0-alpha.0",
+        target_cut=target_manifest["releaseCut"],
+        relation="verified-successor",
+        authorization_kind="shifu-local-successor",
+        compatibility={
+            "controlProtocol": True,
+            "peerWireProtocol": True,
+            "journalReadable": True,
+            "migrationClass": "none",
+            "rollbackClass": "automatic",
+            "providerResumeRequired": False,
+        },
+        migration_plan_root=f"sha256:{'1' * 64}",
+        rollback_plan_root=f"sha256:{'2' * 64}",
+        active_work_policy="defer-until-idle",
+        evidence_roots=[f"sha256:{'3' * 64}"],
+    )
+
+    checked = distribution_update.check_release(
+        target_manifest,
+        current_version="4.0.0-alpha.0",
+        source=distribution_update.install_source({"KUNGFU_INSTALL_SOURCE": "archive"}),
+        current_release_cut_root=current_root,
+        cut_transition=transition,
+        require_publication=False,
+    )
+
+    assert checked["state"] == "action-required"
+    assert checked["reasonCode"] == "active-work-must-be-idle"
+    assert checked["message"]["messageReasonCode"] == "active-work-must-be-idle"
+    assert (
+        checked["message"]["userAction"]
+        == "Finish the current work; do not force a restart for the update."
+    )
+    assert checked["message"]["impact"] == {
+        "activeWorkContinues": True,
+        "activationTiming": "after-current-work-is-idle",
+        "userActionRequired": True,
+    }
+
+
 def test_shifu_local_same_semver_successor_installs_side_by_side_and_rolls_back(
     tmp_path: Path,
 ) -> None:

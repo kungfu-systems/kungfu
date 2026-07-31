@@ -432,6 +432,16 @@ def validate_signed_index(
                     "channel-release-cut-mismatch",
                     "release channel entry and manifest Cut bindings differ",
                 )
+            publication_policy = manifest["releaseCut"].get("publicationPolicy")
+            if (
+                not isinstance(publication_policy, Mapping)
+                or publication_policy.get("trustDomain") != "public"
+                or publication_policy.get("publicationEligible") is not True
+            ):
+                raise ReleaseChannelError(
+                    "channel-release-cut-publication-policy-invalid",
+                    "signed public channels require a publication-eligible public Release Cut",
+                )
             transition = entry.get("cutTransition")
             if transition is not None:
                 try:

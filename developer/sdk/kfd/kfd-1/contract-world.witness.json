@@ -93,9 +93,9 @@
     {
       "name": "kungfu-product-upgrade",
       "sourcePath": "framework/upgrade/kungfu-upgrade.contract.json",
-      "sourceSha256": "95e348646666932df649ab227b3e00bb0ad90ad89f6f09e0051ae545f77b72df",
+      "sourceSha256": "aa8a867b525978e2eb3f52e93bd137ed305cb01a05c7aeda07e9e5d21774ee41",
       "artifactPath": "config/kungfu-upgrade.contract.json",
-      "expectedSha256": "95e348646666932df649ab227b3e00bb0ad90ad89f6f09e0051ae545f77b72df",
+      "expectedSha256": "aa8a867b525978e2eb3f52e93bd137ed305cb01a05c7aeda07e9e5d21774ee41",
       "byteForByte": true
     },
     {

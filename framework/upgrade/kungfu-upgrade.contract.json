@@ -95,6 +95,7 @@
     "workspace-idle",
     "active-work-compatible",
     "active-work-incompatible",
+    "active-work-must-be-idle",
     "provider-resume-required",
     "provider-resume-unsupported",
     "irreversible-migration-needs-approval",
@@ -159,6 +160,15 @@
         "whatHappened": "The target runtime cannot safely share the active compatibility window.",
         "activeWork": "Current work continues on its pinned runtime.",
         "activation": "The new runtime waits until the workspace is idle.",
+        "userAction": "Finish the current work; do not force a restart for the update.",
+        "dataAndSessions": "No data or session is changed while the update waits.",
+        "documentationAnchor": "#updates-while-work-is-active"
+      },
+      "active-work-must-be-idle": {
+        "title": "The update is waiting for current work",
+        "whatHappened": "The selected Release Cut cannot activate while incompatible work remains active.",
+        "activeWork": "Current work continues on its pinned runtime.",
+        "activation": "The new Release Cut waits until the workspace is idle.",
         "userAction": "Finish the current work; do not force a restart for the update.",
         "dataAndSessions": "No data or session is changed while the update waits.",
         "documentationAnchor": "#updates-while-work-is-active"

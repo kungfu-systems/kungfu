@@ -883,6 +883,11 @@ def _assert_cli_publication(manifest: Mapping[str, Any]) -> None:
         raise DistributionUpdateError(
             "release-unqualified", "release has no retained qualification evidence"
         )
+    if not release_cut.is_public_release_cut(manifest.get("releaseCut")):
+        raise DistributionUpdateError(
+            "release-publication-policy-mismatch",
+            "public update requires an eligible public Release Cut",
+        )
     _artifact(manifest, "runtime")
     _artifact(manifest, "cli")
     for artifact in manifest["artifacts"]:
@@ -982,11 +987,6 @@ def check_release(
         if reason_code == "already-current"
         else "action-required"
     )
-    impact = {
-        "activeWorkContinues": True,
-        "activationTiming": "after-core-readiness",
-        "userActionRequired": False,
-    }
     return {
         "schema": CHECK_SCHEMA,
         "state": state,
@@ -1005,7 +1005,7 @@ def check_release(
         "message": runtime_upgrade.user_message(
             reason_code,
             documentation_url=value["documentationUrl"],
-            impact=impact,
+            impact=runtime_upgrade.release_check_impact(reason_code),
         ),
         "manifest": value,
         "cutDecision": copy.deepcopy(cut_decision),

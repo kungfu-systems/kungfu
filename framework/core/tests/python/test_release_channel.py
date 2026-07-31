@@ -254,6 +254,48 @@ process.stdout.write(der.subarray(der.length - 32).toString('base64'));
     return index, {"fixture-2026": key}
 
 
+def _resign_index(index: dict, tmp_path: Path) -> dict:
+    payload = {
+        key: value
+        for key, value in index.items()
+        if key not in {"payloadRoot", "signature"}
+    }
+    signed = {**payload, "payloadRoot": release_channel.content_root(payload)}
+    signed_payload = tmp_path / "signed-payload.json"
+    signed_payload.write_bytes(release_channel.canonical_json_bytes(signed))
+    signature_script = """
+const { createPrivateKey, sign } = require('node:crypto');
+const fs = require('node:fs');
+const signature = sign(
+  null,
+  fs.readFileSync(process.argv[1]),
+  createPrivateKey(fs.readFileSync(process.argv[2], 'utf8')),
+);
+process.stdout.write(signature.toString('base64'));
+"""
+    signature = subprocess.run(
+        [
+            "node",
+            "-e",
+            signature_script,
+            str(signed_payload),
+            str(tmp_path / "private.pem"),
+        ],
+        cwd=ROOT,
+        check=True,
+        capture_output=True,
+        text=True,
+    ).stdout
+    return {
+        **signed,
+        "signature": {
+            "algorithm": "ed25519",
+            "keyId": "fixture-2026",
+            "value": signature,
+        },
+    }
+
+
 def _assert_error(code: str, action) -> None:
     with pytest.raises(release_channel.ReleaseChannelError) as captured:
         action()
@@ -329,6 +371,36 @@ def test_signed_channel_authorizes_same_semver_release_cut_supersession(
     )
     assert selection["cutDecision"]["outcome"] == "verified-successor"
     assert selection["cutDecision"]["updateAllowed"] is True
+
+
+def test_signed_public_channel_rejects_publication_ineligible_local_cut(
+    tmp_path: Path,
+) -> None:
+    index, trusted = _signed_index(tmp_path, manifest=_cut_aware_manifest())
+    entry = index["entries"][0]
+    manifest = entry["manifest"]
+    local_cut_input = {
+        key: copy.deepcopy(value)
+        for key, value in manifest["releaseCut"].items()
+        if key != "releaseCutRoot"
+    }
+    local_cut_input["publicationPolicy"] = {
+        "trustDomain": "shifu-local",
+        "publicationEligible": False,
+        "immutable": True,
+        "eligibleChannels": [],
+    }
+    local_cut = release_cut.finish_release_cut(local_cut_input)
+    manifest["releaseCut"] = local_cut
+    manifest["releaseCutRoot"] = local_cut["releaseCutRoot"]
+    entry["releaseCutRoot"] = local_cut["releaseCutRoot"]
+    entry["manifestRoot"] = release_channel.content_root(manifest)
+    index = _resign_index(index, tmp_path)
+
+    _assert_error(
+        "channel-release-cut-publication-policy-invalid",
+        lambda: release_channel.validate_signed_index(index, trusted, now=NOW),
+    )
 
 
 def test_production_admission_builds_an_executable_same_semver_plan(
