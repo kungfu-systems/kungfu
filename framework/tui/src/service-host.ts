@@ -44,7 +44,7 @@ export type LaunchServiceOptions = {
   windowsSpawn?: WindowsSandboxSpawn;
   // Python's executable and import path are explicit host inputs. Production
   // installations normally need neither override; source-tree qualification
-  // supplies pythonPath so `kungfu.kfx_service` resolves from this checkout.
+  // supplies pythonPath so `kungfu.kfx_host` resolves from this checkout.
   pythonCommand?: string;
   pythonPath?: string;
   pythonShutdownTimeoutMs?: number;
@@ -72,7 +72,7 @@ const CPP_PLATFORM: Partial<
 };
 
 // Resolve the launch for a discovered service. Node runs the shipped bootstrap,
-// Python runs `kungfu.kfx_service` on the supported interpreter, and C++ has no
+// Python runs `kungfu.kfx_host` on the supported interpreter, and C++ has no
 // bootstrap: the prebuilt per-platform binary IS the guest. Every entry path is
 // resolved against the package directory planKfx recorded.
 export function resolveServiceRuntime(
@@ -127,7 +127,7 @@ export function resolveServiceRuntime(
       kind: 'python',
       command:
         python.command ?? (process.platform === 'win32' ? 'python' : 'python3'),
-      args: ['-m', 'kungfu.kfx_service'],
+      args: ['-m', 'kungfu.kfx_host'],
       env: {
         KFX_DECLARED: JSON.stringify(declared),
         KFX_SERVICE_ENTRY: join(entry.dir, entry.entry.python),
