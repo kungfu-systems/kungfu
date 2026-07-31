@@ -68,6 +68,10 @@ test('watcher dispatch bench follows and proves the load peer carrier', () => {
   const driver = fs.readFileSync(watcherBenchDriver, 'utf8');
   assert.match(peer, /true, \/\/ captureCustom:/);
   assert.match(peer, /requestReadFromPublic\(loadLocation, 0n\)/);
+  assert.match(
+    fs.readFileSync(watcherSource, 'utf8'),
+    /Watcher::RequestReadFromPublic[\s\S]*?has_writer\(get_coordinator_command_uid\(\)\)[\s\S]*?request_read_from_public/,
+  );
   assert.match(driver, /watcher observed \$\{observed\} requested carrier/);
   assert.match(driver, /if \(observed < count\)/);
   assert.match(driver, /coordinator\.kill\(\)/);
