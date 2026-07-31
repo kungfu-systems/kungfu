@@ -17,7 +17,7 @@ const PEER_FIXTURE = path.join(TEST_DIR, 'runtime-port.native-peer.mjs');
 // The child fixture admits Core's 60-second production registration window.
 // Leave five seconds for it to report the bounded failure and exit.
 const PEER_OUTPUT_TIMEOUT_MS = 65_000;
-const NATIVE_ROUNDTRIP_TIMEOUT_MS = 140_000;
+const NATIVE_ROUNDTRIP_TIMEOUT_MS = PEER_OUTPUT_TIMEOUT_MS * 2 + 10_000;
 
 function sleep(milliseconds) {
   return new Promise((resolve) => setTimeout(resolve, milliseconds));
