@@ -98,8 +98,8 @@
     },
     "rows": {
       "type": "array",
-      "minItems": 4,
-      "maxItems": 4,
+      "minItems": 3,
+      "maxItems": 3,
       "items": {"$ref": "#/$defs/row"}
     }
   },
@@ -124,7 +124,6 @@
         "id": {
           "enum": [
             "darwin-arm64-cp313",
-            "darwin-x86_64-cp313",
             "linux-x86_64-cp313",
             "windows-x86_64-cp313"
           ]
@@ -144,7 +143,6 @@
             "label": {
               "enum": [
                 "macos-15",
-                "macos-15-intel",
                 "ubuntu-24.04",
                 "windows-2022"
               ]

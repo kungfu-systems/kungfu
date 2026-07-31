@@ -77,52 +77,6 @@
       }
     },
     {
-      "id": "darwin-x86_64-cp313",
-      "operatingSystem": "darwin",
-      "architecture": "x64",
-      "pythonAbi": "cp313",
-      "runner": {
-        "label": "macos-15-intel",
-        "environment": "github-hosted",
-        "os": "macOS",
-        "arch": "X64",
-        "shell": "bash"
-      },
-      "buildInfo": {
-        "osVersionPrefix": "macOS-",
-        "architectureToken": "x86_64"
-      },
-      "payload": {
-        "targetRoot": "framework/core/dist/kungfu",
-        "entries": [
-          {
-            "role": "build-metadata",
-            "pathPattern": "^kungfubuildinfo\\.json$",
-            "type": "regular-file",
-            "mode": "0644"
-          },
-          {
-            "role": "kungfu-runtime",
-            "pathPattern": "^libkungfu_runtime\\.dylib$",
-            "type": "regular-file",
-            "mode": "0755"
-          },
-          {
-            "role": "node-runtime",
-            "pathPattern": "^libnode\\.[0-9]+\\.dylib$",
-            "type": "regular-file",
-            "mode": "0755"
-          },
-          {
-            "role": "python-binding",
-            "pathPattern": "^pykungfu\\.cpython-313-darwin\\.so$",
-            "type": "regular-file",
-            "mode": "0755"
-          }
-        ]
-      }
-    },
-    {
       "id": "linux-x86_64-cp313",
       "operatingSystem": "linux",
       "architecture": "x64",
