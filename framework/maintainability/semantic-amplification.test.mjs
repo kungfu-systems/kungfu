@@ -7,6 +7,7 @@ import test from 'node:test';
 import fs from 'node:fs';
 import {
   buildReport,
+  evaluateIntegrity,
   queryTaskGraph,
   validateManifest,
 } from './semantic-amplification.mjs';
@@ -29,6 +30,12 @@ const terminalMatrix = JSON.parse(
     'utf8',
   ),
 );
+const integrityFixtures = JSON.parse(
+  fs.readFileSync(
+    new URL('./semantic-amplification.fixtures.json', import.meta.url),
+    'utf8',
+  ),
+);
 const clone = (value) => JSON.parse(JSON.stringify(value));
 
 test('current semantic amplification projection has one route per family', () => {
@@ -36,7 +43,17 @@ test('current semantic amplification projection has one route per family', () =>
   assert.equal(report.verdict, 'pass');
   assert.equal(report.summary.families, 6);
   assert.equal(report.summary.authorities, 6);
-  assert.equal(report.summary.mappedSurfaces, 77);
+  assert.equal(report.summary.mappedSurfaces, 78);
+  assert.equal(
+    report.integrity.schema,
+    'kungfu.abstraction-integrity-report/v1',
+  );
+  assert.equal(report.integrity.metrics.topologies, 5);
+  assert.equal(report.integrity.metrics.findings, 2);
+  assert.equal(report.integrity.metrics.weightedDebt, 13);
+  assert.equal(report.integrity.baselineComparison.findingDelta, -1);
+  assert.equal(report.integrity.baselineComparison.weightedDebtDelta, -5);
+  assert.equal(report.integrity.baselineComparison.ratchet, 'pass');
   assert.deepEqual(report.issues, []);
 });
 
@@ -80,6 +97,118 @@ test('task graph resolves a path and returns authority-to-recovery closure', () 
   assert.ok(graph.families[0].affectedTests.length > 0);
   assert.ok(graph.families[0].knownLimits.length > 0);
   assert.ok(graph.families[0].recovery);
+});
+
+test('integrity task graph resolves a declared durability adapter', () => {
+  const report = buildReport(manifest, layers);
+  const graph = queryTaskGraph(
+    report,
+    manifest,
+    'framework/core/src/libkungfu/src/runtime/durable_ingest.cpp',
+    layers,
+  );
+  assert.equal(graph.verdict, 'pass');
+  assert.deepEqual(
+    graph.integrityTopologies.map((topology) => topology.id),
+    ['core-durability'],
+  );
+  assert.ok(
+    graph.integrityTopologies[0].findings.some(
+      (finding) => finding.class === 'leaking-platform-branch',
+    ),
+  );
+});
+
+test('task graph explains legal runner variants without making a second authority', () => {
+  const report = buildReport(manifest, layers);
+  const graph = queryTaskGraph(report, manifest, 'execution-topology', layers);
+  assert.equal(graph.verdict, 'pass');
+  const runner = graph.integrityTopologies.find(
+    (topology) => topology.id === 'runner-lifecycle',
+  );
+  assert.equal(runner.authority.kind, 'external-pinned-contract');
+  assert.ok(runner.legalAxes.lifecycle.includes('jit'));
+  assert.ok(
+    runner.adapters.some((adapter) => adapter.id === 'aws-ec2-windows-jit'),
+  );
+});
+
+test('synthetic provider variant stays legal when it binds the existing authority', () => {
+  const policy = clone(manifest.integrityPolicy);
+  const runner = policy.topologies.find(
+    (topology) => topology.id === 'runner-lifecycle',
+  );
+  runner.adapters.push(clone(integrityFixtures.syntheticProviderVariant));
+  const original = evaluateIntegrity(manifest.integrityPolicy);
+  const synthetic = evaluateIntegrity(policy);
+  assert.equal(synthetic.metrics.findings, original.metrics.findings);
+  assert.equal(synthetic.metrics.adapters, original.metrics.adapters + 1);
+  assert.ok(
+    !synthetic.findings.some(
+      (finding) => finding.target === 'synthetic-linux-jit',
+    ),
+  );
+});
+
+test('adversarial integrity fixtures classify fragmentation independently', () => {
+  for (const fixture of integrityFixtures.adversarial) {
+    const policy = clone(manifest.integrityPolicy);
+    const runner = policy.topologies.find(
+      (topology) => topology.id === 'runner-lifecycle',
+    );
+    if (fixture.mutation === 'additional-authority') {
+      runner.additionalAuthorities = [{ id: 'shadow-runner-registry' }];
+    } else if (fixture.mutation === 'duplicate-adapter') {
+      runner.adapters.push({
+        ...clone(runner.adapters[0]),
+        id: 'copied-hosted-policy',
+      });
+    } else if (fixture.mutation === 'token-spread') {
+      const product = policy.topologies.find(
+        (topology) => topology.id === 'product-assembly',
+      );
+      product.detectors.push({
+        id: 'fixture-platform-leak',
+        kind: 'token-spread',
+        findingClass: 'leaking-platform-branch',
+        paths: [
+          'framework/core/src/libkungfu/src/runtime/durable_ingest.cpp',
+          'framework/core/src/libkungfu/src/runtime/storage/backend_switch.cpp',
+        ],
+        tokens: ['::fsync'],
+        maximumPaths: 1,
+      });
+    } else if (fixture.mutation === 'remove-authority-binding') {
+      runner.adapters[0].authorityBinding = '';
+    } else if (fixture.mutation === 'expire-exception') {
+      runner.exceptions[0].expiresAt = '2020-01-01';
+    }
+    const result = evaluateIntegrity(policy, {
+      exists: (relative) =>
+        fs.existsSync(new URL(`../../${relative}`, import.meta.url)),
+      readText: (relative) =>
+        fs.readFileSync(new URL(`../../${relative}`, import.meta.url), 'utf8'),
+      now: () => new Date('2026-07-31T00:00:00Z'),
+    });
+    assert.ok(
+      result.findings.some(
+        (finding) => finding.class === fixture.expectedClass,
+      ),
+      fixture.id,
+    );
+  }
+});
+
+test('integrity ratchet blocks weighted debt regression', () => {
+  const broken = clone(manifest);
+  const runner = broken.integrityPolicy.topologies.find(
+    (topology) => topology.id === 'runner-lifecycle',
+  );
+  runner.additionalAuthorities = [{ id: 'shadow-runner-registry' }];
+  const issues = validateManifest(broken, layers, new Set());
+  assert.ok(
+    issues.some((item) => item.code === 'integrity-ratchet-regression'),
+  );
 });
 
 test('unknown production state fails without inflating another envelope', () => {

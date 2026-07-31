@@ -3,9 +3,9 @@
   "verdict": "pass",
   "authoritySemantics": "navigation-only-projection-over-existing-authorities",
   "manifestPath": "framework/maintainability/semantic-amplification.manifest.json",
-  "manifestRoot": "sha256:b947a743b8b8b286f60f4e0e0a30040c6da2d5faed36e6bdd0adf3efb336aca5",
+  "manifestRoot": "sha256:4efa0c343d3f52d1fee2616ff664ebb9e720858b0e2ac0c68a8c7dc85d7deaaa",
   "baselineRef": "dbfed9ca1785d147b26f4f06e7e6895ac7368fee",
-  "sourceRoot": "sha256:c7e084f2fb84c089c4f906b32234f5026b811fd335573223931b656401ccd82c",
+  "sourceRoot": "sha256:6e2172d008146e93eef1746e19212e897b0e7014e7b0c9d20b13c59f97db2d1c",
   "roles": {
     "authority": "exactly one authority route per family; the route may name multiple co-owned source files",
     "allowedProjectionRoles": [
@@ -24,8 +24,8 @@
   "summary": {
     "families": 6,
     "authorities": 6,
-    "mappedSurfaces": 77,
-    "changedMappedSurfaces": 48,
+    "mappedSurfaces": 78,
+    "changedMappedSurfaces": 49,
     "blockingIssues": 0
   },
   "families": [
@@ -445,12 +445,12 @@
         "conformance-oracle": 1,
         "test": 1,
         "documentation": 2,
-        "package-release": 1
+        "package-release": 2
       },
       "amplification": {
-        "mappedSurfaces": 13,
-        "nonAuthoritySurfaces": 10,
-        "changedSurfaces": 13,
+        "mappedSurfaces": 14,
+        "nonAuthoritySurfaces": 11,
+        "changedSurfaces": 14,
         "changedPaths": [
           "framework/kfx/kungfu-kfx.contract.json",
           "framework/core/src/libkungfu/src/runtime/kfx/native_contract.cpp",
@@ -464,7 +464,8 @@
           "scripts/run-kfx-profile-suite-tests.mjs",
           "docs/qualification/kfd-native-sdk-release-gates.md",
           "framework/gui/docs/shell-and-kfx.md",
-          "product/scripts/dist.mjs"
+          "product/scripts/dist.mjs",
+          "product/scripts/runtime-pin-snapshot.mjs"
         ]
       },
       "surfaces": [
@@ -506,6 +507,10 @@
         },
         {
           "path": "product/scripts/dist.mjs",
+          "role": "package-release"
+        },
+        {
+          "path": "product/scripts/runtime-pin-snapshot.mjs",
           "role": "package-release"
         }
       ],
@@ -608,10 +613,18 @@
         },
         {
           "path": "product/scripts/dist.mjs",
-          "currentLines": 2528,
+          "currentLines": 2409,
           "baselineLines": 2514,
-          "currentRoot": "sha256:b5008d62d82095ec7df4f483871fc01e0374fd056c8e7ab18e95e554fdb9dd47",
+          "currentRoot": "sha256:6a2f829228403bdbe5ed4cc08d25c6aa23d6a191f7233e489b0b920ef60e79f9",
           "baselineRoot": "sha256:6cfd6c55e296163ab863fb1d79a4a51198ad12943274fc0858338bb651a108da",
+          "changedSinceBaseline": true
+        },
+        {
+          "path": "product/scripts/runtime-pin-snapshot.mjs",
+          "currentLines": 211,
+          "baselineLines": null,
+          "currentRoot": "sha256:e4f903e70040428542d944456c1170245e13f96ce9fccf7a66a4656173b4de44",
+          "baselineRoot": null,
           "changedSinceBaseline": true
         }
       ],
@@ -1337,7 +1350,721 @@
         "scripts/cancel-dequeued-merge-group-runs.test.mjs"
       ],
       "rollback": "Move the read-only evidence helpers back and preserve the existing re-export surface."
+    },
+    {
+      "id": "product-assembly-lifecycle",
+      "original": [
+        "product/scripts/dist.mjs"
+      ],
+      "boundary": "Lifecycle ordering and product target guards form one pure assembly plan; product mechanics, platform adapters, and release behavior remain in dist.mjs.",
+      "target": "product/scripts/runtime-pin-snapshot.mjs",
+      "owner": "product/release",
+      "dependencyInvariant": "The plan receives all mechanics explicitly, preserves the existing Buildchain event order, and exposes no second CLI or product authority.",
+      "tests": [
+        "product/scripts/dist.test.mjs",
+        "framework/maintainability/semantic-amplification.test.mjs"
+      ],
+      "rollback": "Inline runProductAssembly into dist.mjs without changing stage order, target guards, environment projection, or Buildchain events."
     }
   ],
+  "integrity": {
+    "schema": "kungfu.abstraction-integrity-report/v1",
+    "authoritySemantics": "additive-governance-over-declared-authorities",
+    "dimensions": [
+      "language",
+      "product-surface",
+      "platform",
+      "execution-topology",
+      "lifecycle",
+      "delivery",
+      "configuration",
+      "policy",
+      "evidence"
+    ],
+    "metrics": {
+      "topologies": 5,
+      "legalAxes": 8,
+      "adapters": 16,
+      "projections": 6,
+      "qualificationRoutes": 9,
+      "exceptionDebt": 3,
+      "findings": 2,
+      "weightedDebt": 13
+    },
+    "baseline": {
+      "sourceRef": "1b77dbe8a0e669f3ec086f76c63eac07ec6e2a0d",
+      "capturedAt": "2026-07-31",
+      "findings": 3,
+      "weightedDebt": 18,
+      "findingIds": [
+        "product-assembly:product-orchestration-size",
+        "desktop-packaging:electron-config-overlap",
+        "core-durability:durability-platform-primitive-spread"
+      ]
+    },
+    "baselineComparison": {
+      "findingDelta": -1,
+      "weightedDebtDelta": -5,
+      "ratchet": "pass"
+    },
+    "topologies": [
+      {
+        "id": "runner-lifecycle",
+        "owner": "buildchain/release",
+        "dimensions": [
+          "platform",
+          "execution-topology",
+          "lifecycle",
+          "delivery",
+          "configuration",
+          "policy",
+          "evidence"
+        ],
+        "authority": {
+          "id": "pinned-buildchain-runner-preset-contract",
+          "kind": "external-pinned-contract",
+          "repository": "kungfu-systems/buildchain",
+          "pinSource": ".buildchain/contract-lock.json",
+          "sources": [
+            ".buildchain/contract-lock.json"
+          ]
+        },
+        "legalAxes": {
+          "provider": [
+            "github",
+            "kungfu-fleet",
+            "aws-codebuild",
+            "aws-ec2"
+          ],
+          "lifecycle": [
+            "hosted",
+            "persistent",
+            "jit"
+          ],
+          "platform": [
+            "linux-x64",
+            "linux-arm64",
+            "macos-arm64",
+            "windows-x64"
+          ]
+        },
+        "adapters": [
+          {
+            "id": "github-hosted",
+            "axes": {
+              "provider": "github",
+              "lifecycle": "hosted"
+            },
+            "paths": [
+              ".github/workflows/build.yml"
+            ],
+            "authorityBinding": "buildchain:runner-preset:github-hosted"
+          },
+          {
+            "id": "kungfu-v4-native",
+            "axes": {
+              "provider": "kungfu-fleet",
+              "lifecycle": "persistent"
+            },
+            "paths": [
+              ".github/workflows/build.yml"
+            ],
+            "authorityBinding": "buildchain:runner-preset:kungfu-v4-native"
+          },
+          {
+            "id": "aws-codebuild-linux",
+            "axes": {
+              "provider": "aws-codebuild",
+              "lifecycle": "jit",
+              "platform": "linux-x64"
+            },
+            "paths": [
+              ".github/workflows/aws-us-linux-burst-qualification.yml"
+            ],
+            "authorityBinding": "buildchain:runner-preset:aws-us-codebuild-linux"
+          },
+          {
+            "id": "aws-ec2-windows-jit",
+            "axes": {
+              "provider": "aws-ec2",
+              "lifecycle": "jit",
+              "platform": "windows-x64"
+            },
+            "paths": [
+              ".github/workflows/aws-us-windows-burst-qualification.yml"
+            ],
+            "authorityBinding": "buildchain:runner-preset:aws-us-ec2-windows-jit"
+          },
+          {
+            "id": "aws-ec2-macos-jit",
+            "axes": {
+              "provider": "aws-ec2",
+              "lifecycle": "jit",
+              "platform": "macos-arm64"
+            },
+            "paths": [
+              ".github/workflows/aws-us-macos-burst-qualification.yml"
+            ],
+            "authorityBinding": "buildchain:runner-preset:aws-us-ec2-macos-jit"
+          }
+        ],
+        "projections": [
+          {
+            "path": ".github/workflows/build.yml",
+            "role": "consumer-binding"
+          }
+        ],
+        "qualification": [
+          {
+            "path": ".github/workflows/aws-us-linux-burst-qualification.yml",
+            "role": "exact-provider-qualification"
+          },
+          {
+            "path": ".github/workflows/aws-us-windows-burst-qualification.yml",
+            "role": "exact-provider-qualification"
+          },
+          {
+            "path": ".github/workflows/aws-us-macos-burst-qualification.yml",
+            "role": "exact-provider-qualification"
+          }
+        ],
+        "exceptions": [
+          {
+            "id": "external-runner-authority-read",
+            "expiresAt": "2027-01-31",
+            "rationale": "The build-free Kungfu report reads the exact Buildchain contract lock, not a neighboring checkout or the network.",
+            "remediation": "Refresh the contract lock through Buildchain compatibility admission when the protected runtime changes."
+          }
+        ],
+        "recovery": "Read the pinned Buildchain contract lock, then qualify each provider adapter independently; never infer one provider from another."
+      },
+      {
+        "id": "product-assembly",
+        "owner": "product/release",
+        "dimensions": [
+          "language",
+          "product-surface",
+          "platform",
+          "lifecycle",
+          "delivery"
+        ],
+        "authority": {
+          "id": "product-dist-orchestration",
+          "kind": "repository-source",
+          "sources": [
+            "product/scripts/dist.mjs",
+            "product/scripts/runtime-pin-snapshot.mjs"
+          ]
+        },
+        "legalAxes": {
+          "product": [
+            "all",
+            "desktop",
+            "cli"
+          ]
+        },
+        "adapters": [
+          {
+            "id": "desktop-product",
+            "axes": {
+              "product": "desktop"
+            },
+            "paths": [
+              "product/scripts/dist.mjs",
+              "product/scripts/runtime-pin-snapshot.mjs"
+            ],
+            "authorityBinding": "product-dist-orchestration"
+          },
+          {
+            "id": "cli-product",
+            "axes": {
+              "product": "cli"
+            },
+            "paths": [
+              "product/scripts/dist.mjs",
+              "product/scripts/runtime-pin-snapshot.mjs"
+            ],
+            "authorityBinding": "product-dist-orchestration"
+          }
+        ],
+        "projections": [
+          {
+            "path": "product/electron-builder.yml",
+            "role": "desktop-package-policy"
+          }
+        ],
+        "qualification": [
+          {
+            "path": "product/scripts/dist.test.mjs",
+            "role": "source-and-product-contract"
+          }
+        ],
+        "detectors": [
+          {
+            "id": "product-orchestration-size",
+            "kind": "line-count",
+            "findingClass": "oversized-orchestration",
+            "paths": [
+              "product/scripts/dist.mjs"
+            ],
+            "maximum": 2450,
+            "remediation": "Keep lifecycle sequencing in a pure assembly plan and leave platform/product mechanics in owned modules."
+          }
+        ],
+        "exceptions": [],
+        "recovery": "Query the product topology, run dist source tests, and qualify desktop and CLI products separately."
+      },
+      {
+        "id": "desktop-packaging",
+        "owner": "framework/gui",
+        "dimensions": [
+          "product-surface",
+          "platform",
+          "delivery",
+          "configuration",
+          "policy"
+        ],
+        "authority": {
+          "id": "electron-builder-surface-policy",
+          "kind": "repository-source",
+          "sources": [
+            "framework/gui/electron-builder.yml",
+            "product/electron-builder.yml"
+          ]
+        },
+        "legalAxes": {
+          "surface": [
+            "framework-gui",
+            "assembled-product"
+          ]
+        },
+        "adapters": [
+          {
+            "id": "framework-gui-package",
+            "axes": {
+              "surface": "framework-gui"
+            },
+            "paths": [
+              "framework/gui/electron-builder.yml"
+            ],
+            "authorityBinding": "electron-builder-surface-policy"
+          },
+          {
+            "id": "assembled-product-package",
+            "axes": {
+              "surface": "assembled-product"
+            },
+            "paths": [
+              "product/electron-builder.yml"
+            ],
+            "authorityBinding": "electron-builder-surface-policy"
+          }
+        ],
+        "projections": [
+          {
+            "path": "framework/gui/electron-builder.yml",
+            "role": "framework-package"
+          },
+          {
+            "path": "product/electron-builder.yml",
+            "role": "product-package"
+          }
+        ],
+        "qualification": [
+          {
+            "path": "product/scripts/dist.test.mjs",
+            "role": "config-contract"
+          }
+        ],
+        "detectors": [
+          {
+            "id": "electron-config-overlap",
+            "kind": "normalized-line-overlap",
+            "findingClass": "config-duplication",
+            "paths": [
+              "framework/gui/electron-builder.yml",
+              "product/electron-builder.yml"
+            ],
+            "minimumLineLength": 4,
+            "maximumSharedLines": 40,
+            "remediation": "Move shared packaging policy behind one validated base/overlay mechanism when electron-builder qualification can prove identical merged output."
+          }
+        ],
+        "exceptions": [
+          {
+            "id": "electron-yaml-overlay-not-yet-qualified",
+            "expiresAt": "2026-10-31",
+            "rationale": "The two checked-in YAML surfaces remain independently executable; changing inheritance before exact platform packaging would risk installer behavior.",
+            "remediation": "Qualify a merged-config renderer on macOS, Linux, and Windows, then reduce normalized overlap without deleting product-only resources."
+          }
+        ],
+        "recovery": "Treat common keys as debt, preserve product-only resources, and require exact-platform package qualification before consolidation."
+      },
+      {
+        "id": "core-durability",
+        "owner": "core/runtime-storage",
+        "dimensions": [
+          "language",
+          "platform",
+          "lifecycle",
+          "configuration",
+          "policy",
+          "evidence"
+        ],
+        "authority": {
+          "id": "native-durability-contract-and-storage-authority",
+          "kind": "repository-source",
+          "sources": [
+            "framework/core/src/libkungfu/include/kungfu/runtime/durable_ingest.h",
+            "framework/storage/kungfu-storage.contract.json"
+          ]
+        },
+        "legalAxes": {
+          "durability-semantics": [
+            "strict-file-and-metadata",
+            "best-effort-content-publication",
+            "engine-owned"
+          ],
+          "platform-adapter": [
+            "windows",
+            "posix",
+            "provider"
+          ]
+        },
+        "adapters": [
+          {
+            "id": "durable-ingest-os-adapter",
+            "axes": {
+              "durability-semantics": "strict-file-and-metadata"
+            },
+            "paths": [
+              "framework/core/src/libkungfu/src/runtime/durable_ingest.cpp"
+            ],
+            "authorityBinding": "native-durability-contract-and-storage-authority"
+          },
+          {
+            "id": "fact-journal-os-adapter",
+            "axes": {
+              "durability-semantics": "strict-file-and-metadata"
+            },
+            "paths": [
+              "framework/core/src/libkungfu/src/runtime/storage/fact_durable_admission.cpp"
+            ],
+            "authorityBinding": "native-durability-contract-and-storage-authority"
+          },
+          {
+            "id": "backend-switch-os-adapter",
+            "axes": {
+              "durability-semantics": "strict-file-and-metadata"
+            },
+            "paths": [
+              "framework/core/src/libkungfu/src/runtime/storage/backend_switch.cpp"
+            ],
+            "authorityBinding": "native-durability-contract-and-storage-authority"
+          },
+          {
+            "id": "content-store-publication-adapter",
+            "axes": {
+              "durability-semantics": "best-effort-content-publication"
+            },
+            "paths": [
+              "framework/core/src/libyijinjing/src/storage/content_store.cpp"
+            ],
+            "authorityBinding": "native-durability-contract-and-storage-authority"
+          },
+          {
+            "id": "storage-provider-adapter",
+            "axes": {
+              "durability-semantics": "engine-owned",
+              "platform-adapter": "provider"
+            },
+            "paths": [
+              "framework/core/src/libkungfu/src/runtime/storage/provider.cpp"
+            ],
+            "authorityBinding": "native-durability-contract-and-storage-authority"
+          }
+        ],
+        "projections": [
+          {
+            "path": "docs/qualification/fact-storage-authority.md",
+            "role": "qualification-documentation"
+          }
+        ],
+        "qualification": [
+          {
+            "path": "framework/core/src/libkungfu/tests/durable_ingest_tests.cpp",
+            "role": "native-contract"
+          },
+          {
+            "path": "framework/core/tests/qualification/durability/product_contract.test.mjs",
+            "role": "product-contract"
+          }
+        ],
+        "detectors": [
+          {
+            "id": "durability-platform-primitive-spread",
+            "kind": "token-spread",
+            "findingClass": "leaking-platform-branch",
+            "paths": [
+              "framework/core/src/libkungfu/src/runtime/durable_ingest.cpp",
+              "framework/core/src/libkungfu/src/runtime/storage/fact_durable_admission.cpp",
+              "framework/core/src/libkungfu/src/runtime/storage/backend_switch.cpp",
+              "framework/core/src/libyijinjing/src/storage/content_store.cpp",
+              "framework/core/src/libkungfu/src/runtime/storage/provider.cpp"
+            ],
+            "tokens": [
+              "FlushFileBuffers",
+              "MoveFileEx",
+              "::fsync",
+              "_commit("
+            ],
+            "maximumPaths": 2,
+            "remediation": "Converge only equivalent strict durability primitives behind a native OS adapter; retain content-store and provider semantics as explicit variants."
+          }
+        ],
+        "exceptions": [
+          {
+            "id": "content-store-best-effort-directory-sync",
+            "expiresAt": "2026-10-31",
+            "rationale": "Content-addressed publication deliberately reports a weaker profile than strict durable ingest and cannot inherit a stronger guarantee by refactor.",
+            "remediation": "Keep the weaker capability explicit; consolidate only after its public contract and power-loss evidence are upgraded."
+          }
+        ],
+        "recovery": "Inspect the declared durability semantics before moving OS code; never turn Windows metadata barriers, POSIX directory fsync, content-store best effort, and provider WAL into one false guarantee."
+      },
+      {
+        "id": "integrity-governance",
+        "owner": "framework/maintainability",
+        "dimensions": [
+          "language",
+          "product-surface",
+          "platform",
+          "execution-topology",
+          "lifecycle",
+          "delivery",
+          "configuration",
+          "policy",
+          "evidence"
+        ],
+        "authority": {
+          "id": "semantic-amplification-manifest",
+          "kind": "additive-navigation-policy",
+          "sources": [
+            "framework/maintainability/semantic-amplification.manifest.json"
+          ]
+        },
+        "legalAxes": {
+          "surface": [
+            "report",
+            "query",
+            "fixture"
+          ]
+        },
+        "adapters": [
+          {
+            "id": "integrity-report",
+            "axes": {
+              "surface": "report"
+            },
+            "paths": [
+              "framework/maintainability/semantic-amplification.mjs"
+            ],
+            "authorityBinding": "semantic-amplification-manifest"
+          },
+          {
+            "id": "integrity-query",
+            "axes": {
+              "surface": "query"
+            },
+            "paths": [
+              "framework/maintainability/semantic-amplification.mjs"
+            ],
+            "authorityBinding": "semantic-amplification-manifest"
+          }
+        ],
+        "projections": [
+          {
+            "path": "framework/maintainability/semantic-amplification-report.json",
+            "role": "generated-report"
+          }
+        ],
+        "qualification": [
+          {
+            "path": "framework/maintainability/semantic-amplification.test.mjs",
+            "role": "adversarial-and-ratchet-fixtures"
+          },
+          {
+            "path": "framework/maintainability/semantic-amplification.fixtures.json",
+            "role": "synthetic-variant-fixtures"
+          }
+        ],
+        "exceptions": [],
+        "recovery": "Run the build-free report or task query, inspect exact findings and baseline delta, then edit the declared business authority or adapter rather than the report."
+      }
+    ],
+    "detectorOutcomes": [
+      {
+        "detector": "product-orchestration-size",
+        "topology": "product-assembly",
+        "kind": "line-count",
+        "status": "remediated",
+        "metric": 2409,
+        "threshold": 2450,
+        "finding": null
+      },
+      {
+        "detector": "electron-config-overlap",
+        "topology": "desktop-packaging",
+        "kind": "normalized-line-overlap",
+        "status": "finding",
+        "metric": 54,
+        "threshold": 40,
+        "finding": {
+          "id": "desktop-packaging:electron-config-overlap",
+          "class": "config-duplication",
+          "topology": "desktop-packaging",
+          "target": "framework/gui/electron-builder.yml,product/electron-builder.yml",
+          "message": "54 normalized policy lines are duplicated across framework/gui/electron-builder.yml and product/electron-builder.yml",
+          "evidence": {
+            "sharedLineCount": 54,
+            "maximumSharedLines": 40,
+            "sample": [
+              "- \"!**/*.pyc\"",
+              "- \"!**/__pycache__/**\"",
+              "- \"!node_modules/@kungfu-tech/**/.venv{,/**}\"",
+              "- \"!node_modules/@kungfu-tech/**/build{,/**}\"",
+              "- \"!node_modules/@kungfu-tech/**/dist/kungfu{,/**}\"",
+              "- \"!node_modules/@kungfu-tech/**/node_modules/@kungfu-tech/core{,/**}\"",
+              "- \"!node_modules/@kungfu-tech/core{,/**}\"",
+              "- \"**/*\"",
+              "- AppImage",
+              "- dir",
+              "- dmg",
+              "- from: ../agent-session"
+            ]
+          }
+        }
+      },
+      {
+        "detector": "durability-platform-primitive-spread",
+        "topology": "core-durability",
+        "kind": "token-spread",
+        "status": "finding",
+        "metric": 4,
+        "threshold": 2,
+        "finding": {
+          "id": "core-durability:durability-platform-primitive-spread",
+          "class": "leaking-platform-branch",
+          "topology": "core-durability",
+          "target": "framework/core/src/libkungfu/src/runtime/durable_ingest.cpp,framework/core/src/libkungfu/src/runtime/storage/fact_durable_admission.cpp,framework/core/src/libkungfu/src/runtime/storage/backend_switch.cpp,framework/core/src/libyijinjing/src/storage/content_store.cpp,framework/core/src/libkungfu/src/runtime/storage/provider.cpp",
+          "message": "4 files carry the same platform primitive family; the governed maximum is 2",
+          "evidence": {
+            "matchedPaths": [
+              {
+                "path": "framework/core/src/libkungfu/src/runtime/durable_ingest.cpp",
+                "tokens": [
+                  "FlushFileBuffers",
+                  "MoveFileEx",
+                  "::fsync"
+                ]
+              },
+              {
+                "path": "framework/core/src/libkungfu/src/runtime/storage/fact_durable_admission.cpp",
+                "tokens": [
+                  "FlushFileBuffers",
+                  "::fsync"
+                ]
+              },
+              {
+                "path": "framework/core/src/libkungfu/src/runtime/storage/backend_switch.cpp",
+                "tokens": [
+                  "MoveFileEx",
+                  "::fsync",
+                  "_commit("
+                ]
+              },
+              {
+                "path": "framework/core/src/libyijinjing/src/storage/content_store.cpp",
+                "tokens": [
+                  "::fsync",
+                  "_commit("
+                ]
+              }
+            ],
+            "maximumPaths": 2
+          }
+        }
+      }
+    ],
+    "findings": [
+      {
+        "id": "desktop-packaging:electron-config-overlap",
+        "class": "config-duplication",
+        "topology": "desktop-packaging",
+        "target": "framework/gui/electron-builder.yml,product/electron-builder.yml",
+        "message": "54 normalized policy lines are duplicated across framework/gui/electron-builder.yml and product/electron-builder.yml",
+        "evidence": {
+          "sharedLineCount": 54,
+          "maximumSharedLines": 40,
+          "sample": [
+            "- \"!**/*.pyc\"",
+            "- \"!**/__pycache__/**\"",
+            "- \"!node_modules/@kungfu-tech/**/.venv{,/**}\"",
+            "- \"!node_modules/@kungfu-tech/**/build{,/**}\"",
+            "- \"!node_modules/@kungfu-tech/**/dist/kungfu{,/**}\"",
+            "- \"!node_modules/@kungfu-tech/**/node_modules/@kungfu-tech/core{,/**}\"",
+            "- \"!node_modules/@kungfu-tech/core{,/**}\"",
+            "- \"**/*\"",
+            "- AppImage",
+            "- dir",
+            "- dmg",
+            "- from: ../agent-session"
+          ]
+        }
+      },
+      {
+        "id": "core-durability:durability-platform-primitive-spread",
+        "class": "leaking-platform-branch",
+        "topology": "core-durability",
+        "target": "framework/core/src/libkungfu/src/runtime/durable_ingest.cpp,framework/core/src/libkungfu/src/runtime/storage/fact_durable_admission.cpp,framework/core/src/libkungfu/src/runtime/storage/backend_switch.cpp,framework/core/src/libyijinjing/src/storage/content_store.cpp,framework/core/src/libkungfu/src/runtime/storage/provider.cpp",
+        "message": "4 files carry the same platform primitive family; the governed maximum is 2",
+        "evidence": {
+          "matchedPaths": [
+            {
+              "path": "framework/core/src/libkungfu/src/runtime/durable_ingest.cpp",
+              "tokens": [
+                "FlushFileBuffers",
+                "MoveFileEx",
+                "::fsync"
+              ]
+            },
+            {
+              "path": "framework/core/src/libkungfu/src/runtime/storage/fact_durable_admission.cpp",
+              "tokens": [
+                "FlushFileBuffers",
+                "::fsync"
+              ]
+            },
+            {
+              "path": "framework/core/src/libkungfu/src/runtime/storage/backend_switch.cpp",
+              "tokens": [
+                "MoveFileEx",
+                "::fsync",
+                "_commit("
+              ]
+            },
+            {
+              "path": "framework/core/src/libyijinjing/src/storage/content_store.cpp",
+              "tokens": [
+                "::fsync",
+                "_commit("
+              ]
+            }
+          ],
+          "maximumPaths": 2
+        }
+      }
+    ]
+  },
   "issues": []
 }

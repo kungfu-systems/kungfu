@@ -47,6 +47,18 @@ function semanticAmplificationFixturePaths(manifest) {
       ...(record.tests || []),
     ])
       if (relative) paths.add(relative);
+  for (const topology of manifest.integrityPolicy?.topologies || []) {
+    for (const relative of topology.authority?.sources || [])
+      paths.add(relative);
+    for (const adapter of topology.adapters || [])
+      for (const relative of adapter.paths || []) paths.add(relative);
+    for (const projection of topology.projections || [])
+      if (projection.path) paths.add(projection.path);
+    for (const qualification of topology.qualification || [])
+      if (qualification.path) paths.add(qualification.path);
+    for (const detector of topology.detectors || [])
+      for (const relative of detector.paths || []) paths.add(relative);
+  }
   return [...paths].sort();
 }
 

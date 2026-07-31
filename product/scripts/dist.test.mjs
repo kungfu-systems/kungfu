@@ -29,7 +29,10 @@ import {
   productReleaseChannelConfig,
   releaseChannelKeyId,
 } from './release-channel-trust.mjs';
-import { readTrunkRuntimePinSnapshot } from './runtime-pin-snapshot.mjs';
+import {
+  PRODUCT_ASSEMBLY_STAGE_IDS,
+  readTrunkRuntimePinSnapshot,
+} from './runtime-pin-snapshot.mjs';
 
 const require = createRequire(import.meta.url);
 const workDashboardPackage = require('../../extensions/work-dashboard/kungfu.kfx.json');
@@ -747,7 +750,11 @@ test('installed SDK keeps esbuild external and carries its native runtime', () =
 });
 
 test('Buildchain stages exact esbuild binaries per product surface', () => {
-  const dist = fs.readFileSync(new URL('./dist.mjs', import.meta.url), 'utf8');
+  const dist = ['./dist.mjs', './runtime-pin-snapshot.mjs']
+    .map((relative) =>
+      fs.readFileSync(new URL(relative, import.meta.url), 'utf8'),
+    )
+    .join('\n');
   for (const slot of ['sdk', 'tui', 'gui']) {
     assert.match(dist, new RegExp(`slot: '${slot}'`));
   }
@@ -770,6 +777,21 @@ test('Buildchain stages exact esbuild binaries per product surface', () => {
     dist,
     /process\.env\.ESBUILD_BINARY_PATH = buildEnv\.ESBUILD_BINARY_PATH/,
   );
+});
+
+test('product assembly stages have one ordered lifecycle owner', () => {
+  assert.deepEqual(PRODUCT_ASSEMBLY_STAGE_IDS, [
+    'discover',
+    'dependencies',
+    'core',
+    'extensions',
+    'ui',
+    'desktop',
+    'cli',
+  ]);
+  const dist = fs.readFileSync(new URL('./dist.mjs', import.meta.url), 'utf8');
+  assert.match(dist, /runProductAssembly\(\{/);
+  assert.doesNotMatch(dist, /buildchainLogger\.spanSync\(\s*'product\.dist'/);
 });
 
 test('platform package installs revalidate registry metadata', () => {

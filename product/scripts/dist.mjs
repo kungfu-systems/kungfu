@@ -26,7 +26,10 @@ import {
 } from './libwasm-artifact.mjs';
 import { normalizeCopiedSymlinks } from './portable-symlinks.mjs';
 import { productReleaseChannelConfig } from './release-channel-trust.mjs';
-import { readTrunkRuntimePinSnapshot } from './runtime-pin-snapshot.mjs';
+import {
+  readTrunkRuntimePinSnapshot,
+  runProductAssembly,
+} from './runtime-pin-snapshot.mjs';
 import {
   buildBundledUpgradeManifest,
   finalizeCliUpgradeManifest,
@@ -2295,168 +2298,46 @@ function buildCliProduct(esbuildRuntime) {
 }
 
 function main() {
-  const trunkRuntimePinSnapshot = readTrunkRuntimePinSnapshot({
-    runtimePinsPath: RUNTIME_PINS,
-    repoPinPath: path.join(ROOT, '.uv-version'),
+  runProductAssembly({
+    productTarget,
+    builderArgs,
+    logger: buildchainLogger,
+    paths: {
+      root: ROOT,
+      productDir: PRODUCT_DIR,
+      guiDir: GUI_DIR,
+      tuiDir: TUI_DIR,
+      sdkDir: SDK_DIR,
+      runtimePins: RUNTIME_PINS,
+      extensionsRoot: EXTENSIONS_ROOT,
+      assembledExtensions: ASSEMBLED_EXTENSIONS,
+      releaseDir: RELEASE_DIR,
+      npmReleaseDir: NPM_RELEASE_DIR,
+      compatibilityManifest: COMPATIBILITY_MANIFEST,
+    },
+    operations: {
+      assertCoreFrozen,
+      assertDeclaredKfx,
+      assertKfxBundleExternals,
+      assembleKfx,
+      buildCliProduct,
+      buildKfx,
+      buildchainSourceBuildEnv,
+      ensureEsbuildRuntime,
+      finalizeDesktopReleaseManifest,
+      guiEsbuildPackagePaths,
+      installArgs,
+      listKfxPackages,
+      readTrunkRuntimePinSnapshot,
+      rel,
+      run,
+      runPnpm,
+      stageDesktopAuthoringRuntime,
+      stageDesktopRelease,
+      stageTrunk,
+      writeCompatibilityManifest,
+    },
   });
-  buildchainLogger.spanSync(
-    'product.dist',
-    {
-      phase: 'package',
-      attributes: {
-        platform: process.platform,
-        arch: process.arch,
-        product: productTarget,
-        builderArgCount: builderArgs.length,
-      },
-    },
-    () => {
-      const kfxPackages = buildchainLogger.spanSync(
-        'product.kfx.discover',
-        {
-          phase: 'prepare',
-          attributes: {
-            root: rel(EXTENSIONS_ROOT),
-          },
-        },
-        () => listKfxPackages(),
-      );
-      assertDeclaredKfx(kfxPackages);
-
-      runPnpm('sync dependencies', installArgs(), {
-        phase: 'dependencies',
-        event: 'product.dependencies.sync',
-      });
-      const buildEnv = buildchainSourceBuildEnv();
-      const sdkEsbuildRuntime = ensureEsbuildRuntime({
-        slot: 'sdk',
-        paths: [SDK_DIR, ROOT],
-      });
-      const tuiEsbuildRuntime = ensureEsbuildRuntime({
-        slot: 'tui',
-        paths: [TUI_DIR, ROOT],
-      });
-      const sdkBuildEnv = {
-        ...buildEnv,
-        ESBUILD_BINARY_PATH: sdkEsbuildRuntime.binaryPath,
-      };
-      const tuiBuildEnv = {
-        ...buildEnv,
-        ESBUILD_BINARY_PATH: tuiEsbuildRuntime.binaryPath,
-      };
-      runPnpm(
-        'rebuild core',
-        ['--filter', '@kungfu-tech/core', 'run', 'rebuild'],
-        {
-          env: buildEnv,
-          phase: 'core',
-          event: 'product.core.rebuild',
-        },
-      );
-      runPnpm(
-        'freeze core runtime',
-        ['--filter', '@kungfu-tech/core', 'run', 'freeze'],
-        {
-          // The product must ship the native host; a missing one is a hard error
-          // here rather than a silent fall back to the slow Python node path /
-          // doctor stub (KF-ADR-019f86da-4f90-73ff-9543-f0a4f0beef05 S3). Dev `pnpm run freeze` leaves this unset and
-          // keeps warn-only.
-          env: { ...process.env, KF_REQUIRE_NATIVE_HOST: '1' },
-          phase: 'core',
-          event: 'product.core.freeze',
-        },
-      );
-      assertCoreFrozen();
-      stageTrunk(trunkRuntimePinSnapshot);
-      runPnpm(
-        'pack core npm artifacts',
-        ['--filter', '@kungfu-tech/core', 'run', 'pack-platform'],
-        {
-          env: {
-            ...buildEnv,
-            KF_PACKAGE_STAGE_DIR: NPM_RELEASE_DIR,
-          },
-          phase: 'package',
-          event: 'product.core.npm.pack',
-        },
-      );
-
-      buildKfx(kfxPackages, sdkBuildEnv);
-      assertKfxBundleExternals(kfxPackages);
-      assembleKfx(kfxPackages);
-
-      runPnpm('bundle tui', ['--filter', '@kungfu-tech/tui', 'run', 'bundle'], {
-        env: tuiBuildEnv,
-        phase: 'ui',
-        event: 'product.tui.bundle',
-      });
-      if (wantsDesktop()) {
-        const guiEsbuildRuntime = ensureEsbuildRuntime({
-          slot: 'gui',
-          paths: guiEsbuildPackagePaths(),
-        });
-        const guiBuildEnv = {
-          ...buildEnv,
-          ESBUILD_BINARY_PATH: guiEsbuildRuntime.binaryPath,
-        };
-        stageDesktopAuthoringRuntime(sdkEsbuildRuntime);
-        runPnpm(
-          'ensure electron',
-          ['--filter', '@kungfu-tech/gui', 'run', 'ensure-electron'],
-          {
-            env: buildEnv,
-            phase: 'ui',
-            event: 'product.gui.ensure-electron',
-          },
-        );
-        runPnpm('build gui', ['--filter', '@kungfu-tech/gui', 'run', 'build'], {
-          env: guiBuildEnv,
-          phase: 'ui',
-          event: 'product.gui.build',
-        });
-        writeCompatibilityManifest({
-          root: ROOT,
-          output: COMPATIBILITY_MANIFEST,
-          includeGui: true,
-        });
-        run(
-          'electron-builder desktop product',
-          process.execPath,
-          [
-            path.join(GUI_DIR, 'scripts', 'run-electron-builder.mjs'),
-            `--config=${path.join(PRODUCT_DIR, 'electron-builder.yml')}`,
-            ...builderArgs,
-          ],
-          {
-            cwd: GUI_DIR,
-            env: {
-              ...sdkBuildEnv,
-              KF_BUNDLED_EXTENSION_ROOT: ASSEMBLED_EXTENSIONS,
-            },
-            phase: 'package',
-            event: 'product.desktop.electron-builder',
-          },
-        );
-        finalizeDesktopReleaseManifest();
-        stageDesktopRelease();
-        // Build registration (for `shifu builds` / `shifu promote`) is not a
-        // build step: the launcher reads the KFD-3 distribution declaration
-        // and stashes the artifact after this task exits successfully.
-      }
-      if (wantsCli()) {
-        if (!wantsDesktop()) {
-          writeCompatibilityManifest({
-            root: ROOT,
-            output: COMPATIBILITY_MANIFEST,
-            includeGui: false,
-          });
-        }
-        buildCliProduct(sdkEsbuildRuntime);
-      }
-
-      console.log(`\n[product] output -> ${rel(RELEASE_DIR)}`);
-    },
-  );
 }
 
 export function verifyProductObservabilityEvents(events, target = 'all') {

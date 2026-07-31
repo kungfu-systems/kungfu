@@ -26,6 +26,11 @@ const ALLOWED_STATES = new Set([
   'invalidated',
   'retained-dependency',
 ]);
+const INTEGRITY_DETECTORS = new Set([
+  'line-count',
+  'normalized-line-overlap',
+  'token-spread',
+]);
 
 function git(args, binary = false) {
   const result = spawnSync('git', args, {
@@ -122,6 +127,327 @@ function measurePath(relative, baselineRef, changed) {
 
 function issue(code, family, target, message) {
   return { code, family, target, message };
+}
+
+function integrityFinding({
+  findingClass,
+  topology,
+  target,
+  message,
+  evidence = {},
+  detector = '',
+}) {
+  return {
+    id: [topology, detector || findingClass].filter(Boolean).join(':'),
+    class: findingClass,
+    topology,
+    target,
+    message,
+    evidence,
+  };
+}
+
+function defaultIntegrityIo() {
+  return {
+    exists: (relative) => fs.existsSync(path.join(ROOT, relative)),
+    readText: (relative) => fs.readFileSync(path.join(ROOT, relative), 'utf8'),
+    now: () => new Date(),
+  };
+}
+
+function normalizedLines(text, minimumLength = 4) {
+  return new Set(
+    String(text)
+      .split(/\r?\n/)
+      .map((line) => line.trim())
+      .filter(
+        (line) =>
+          line.length >= minimumLength &&
+          !line.startsWith('#') &&
+          !line.startsWith('//'),
+      ),
+  );
+}
+
+function evaluateDetector(topology, detector, io) {
+  const paths = detector.paths || [];
+  if (detector.kind === 'line-count') {
+    const path = paths[0];
+    const lineCount = lines(Buffer.from(io.readText(path)));
+    return {
+      detector: detector.id,
+      topology: topology.id,
+      kind: detector.kind,
+      status: lineCount > detector.maximum ? 'finding' : 'remediated',
+      metric: lineCount,
+      threshold: detector.maximum,
+      finding:
+        lineCount > detector.maximum
+          ? integrityFinding({
+              findingClass: detector.findingClass,
+              topology: topology.id,
+              target: path,
+              detector: detector.id,
+              message: `${path} has ${lineCount} lines; the governed maximum is ${detector.maximum}`,
+              evidence: { lineCount, maximum: detector.maximum },
+            })
+          : null,
+    };
+  }
+  if (detector.kind === 'normalized-line-overlap') {
+    const [leftPath, rightPath] = paths;
+    const left = normalizedLines(
+      io.readText(leftPath),
+      detector.minimumLineLength,
+    );
+    const right = normalizedLines(
+      io.readText(rightPath),
+      detector.minimumLineLength,
+    );
+    const shared = [...left].filter((line) => right.has(line)).sort();
+    return {
+      detector: detector.id,
+      topology: topology.id,
+      kind: detector.kind,
+      status:
+        shared.length > detector.maximumSharedLines ? 'finding' : 'remediated',
+      metric: shared.length,
+      threshold: detector.maximumSharedLines,
+      finding:
+        shared.length > detector.maximumSharedLines
+          ? integrityFinding({
+              findingClass: detector.findingClass,
+              topology: topology.id,
+              target: paths.join(','),
+              detector: detector.id,
+              message: `${shared.length} normalized policy lines are duplicated across ${paths.join(' and ')}`,
+              evidence: {
+                sharedLineCount: shared.length,
+                maximumSharedLines: detector.maximumSharedLines,
+                sample: shared.slice(0, 12),
+              },
+            })
+          : null,
+    };
+  }
+  if (detector.kind === 'token-spread') {
+    const matchedPaths = paths
+      .map((relative) => {
+        const text = io.readText(relative);
+        const tokens = (detector.tokens || []).filter((token) =>
+          text.includes(token),
+        );
+        return { path: relative, tokens };
+      })
+      .filter(({ tokens }) => tokens.length > 0);
+    return {
+      detector: detector.id,
+      topology: topology.id,
+      kind: detector.kind,
+      status:
+        matchedPaths.length > detector.maximumPaths ? 'finding' : 'remediated',
+      metric: matchedPaths.length,
+      threshold: detector.maximumPaths,
+      finding:
+        matchedPaths.length > detector.maximumPaths
+          ? integrityFinding({
+              findingClass: detector.findingClass,
+              topology: topology.id,
+              target: paths.join(','),
+              detector: detector.id,
+              message: `${matchedPaths.length} files carry the same platform primitive family; the governed maximum is ${detector.maximumPaths}`,
+              evidence: {
+                matchedPaths,
+                maximumPaths: detector.maximumPaths,
+              },
+            })
+          : null,
+    };
+  }
+  return {
+    detector: detector.id,
+    topology: topology.id,
+    kind: detector.kind,
+    status: 'invalid',
+    metric: null,
+    threshold: null,
+    finding: integrityFinding({
+      findingClass: 'policy-drift',
+      topology: topology.id,
+      target: detector.id || topology.id,
+      detector: detector.id,
+      message: `unknown integrity detector '${detector.kind}'`,
+    }),
+  };
+}
+
+function evaluateIntegrity(policy, io = defaultIntegrityIo()) {
+  if (!policy) {
+    return null;
+  }
+  const findings = [];
+  const outcomes = [];
+  const classes = policy.findingClasses || {};
+  const now = io.now();
+  for (const topology of policy.topologies || []) {
+    for (const authority of topology.additionalAuthorities || []) {
+      findings.push(
+        integrityFinding({
+          findingClass: 'parallel-authority',
+          topology: topology.id,
+          target: authority.id || topology.id,
+          message: 'topology declares an additional business authority',
+          evidence: { authority },
+        }),
+      );
+    }
+    const adapters = topology.adapters || [];
+    const adapterIds = new Set();
+    const adapterSignatures = new Map();
+    for (const adapter of adapters) {
+      if (!adapter.id || adapterIds.has(adapter.id)) {
+        findings.push(
+          integrityFinding({
+            findingClass: 'duplicate-policy',
+            topology: topology.id,
+            target: adapter.id || topology.id,
+            message: 'adapter ids must be present and unique',
+          }),
+        );
+      }
+      adapterIds.add(adapter.id);
+      if (!adapter.authorityBinding) {
+        findings.push(
+          integrityFinding({
+            findingClass: 'orphan-adapter',
+            topology: topology.id,
+            target: adapter.id || topology.id,
+            message: 'adapter has no declared authority binding',
+          }),
+        );
+      }
+      for (const [axis, value] of Object.entries(adapter.axes || {})) {
+        if (!(topology.legalAxes?.[axis] || []).includes(value)) {
+          findings.push(
+            integrityFinding({
+              findingClass: 'illegal-axis-value',
+              topology: topology.id,
+              target: adapter.id || topology.id,
+              message: `adapter axis ${axis}=${value} is outside the declared legal topology`,
+              evidence: {
+                axis,
+                value,
+                legalValues: topology.legalAxes?.[axis] || [],
+              },
+            }),
+          );
+        }
+      }
+      const signature = JSON.stringify(
+        ordered({
+          axes: adapter.axes || {},
+          paths: adapter.paths || [],
+        }),
+      );
+      if (adapterSignatures.has(signature)) {
+        findings.push(
+          integrityFinding({
+            findingClass: 'duplicate-policy',
+            topology: topology.id,
+            target: adapter.id || topology.id,
+            message: `adapter duplicates ${adapterSignatures.get(signature)} without a distinct variant`,
+          }),
+        );
+      } else {
+        adapterSignatures.set(signature, adapter.id);
+      }
+    }
+    if (!(topology.qualification || []).length) {
+      findings.push(
+        integrityFinding({
+          findingClass: 'missing-qualification',
+          topology: topology.id,
+          target: topology.id,
+          message: 'topology has no independent qualification route',
+        }),
+      );
+    }
+    for (const exception of topology.exceptions || []) {
+      const expiresAt = new Date(exception.expiresAt || '');
+      if (
+        !exception.rationale ||
+        !exception.remediation ||
+        !Number.isFinite(expiresAt.getTime()) ||
+        expiresAt <= now
+      ) {
+        findings.push(
+          integrityFinding({
+            findingClass: 'stale-exception',
+            topology: topology.id,
+            target: exception.id || topology.id,
+            message: 'exception is expired or lacks rationale/remediation',
+            evidence: { expiresAt: exception.expiresAt || null },
+          }),
+        );
+      }
+    }
+    for (const detector of topology.detectors || []) {
+      if ((detector.paths || []).every((relative) => io.exists(relative))) {
+        const outcome = evaluateDetector(topology, detector, io);
+        outcomes.push(outcome);
+        if (outcome.finding) findings.push(outcome.finding);
+      }
+    }
+  }
+  const weightedDebt = findings.reduce(
+    (total, finding) => total + Number(classes[finding.class]?.weight || 0),
+    0,
+  );
+  const metrics = {
+    topologies: (policy.topologies || []).length,
+    legalAxes: (policy.topologies || []).reduce(
+      (total, topology) => total + Object.keys(topology.legalAxes || {}).length,
+      0,
+    ),
+    adapters: (policy.topologies || []).reduce(
+      (total, topology) => total + (topology.adapters || []).length,
+      0,
+    ),
+    projections: (policy.topologies || []).reduce(
+      (total, topology) => total + (topology.projections || []).length,
+      0,
+    ),
+    qualificationRoutes: (policy.topologies || []).reduce(
+      (total, topology) => total + (topology.qualification || []).length,
+      0,
+    ),
+    exceptionDebt: (policy.topologies || []).reduce(
+      (total, topology) => total + (topology.exceptions || []).length,
+      0,
+    ),
+    findings: findings.length,
+    weightedDebt,
+  };
+  const baseline = policy.ratchet?.baseline || {};
+  return {
+    schema: 'kungfu.abstraction-integrity-report/v1',
+    authoritySemantics: 'additive-governance-over-declared-authorities',
+    dimensions: policy.dimensions,
+    metrics,
+    baseline,
+    baselineComparison: {
+      findingDelta: metrics.findings - Number(baseline.findings || 0),
+      weightedDebtDelta:
+        metrics.weightedDebt - Number(baseline.weightedDebt || 0),
+      ratchet:
+        metrics.weightedDebt <= Number(baseline.weightedDebt || 0)
+          ? 'pass'
+          : 'regressed',
+    },
+    topologies: policy.topologies,
+    detectorOutcomes: outcomes,
+    findings,
+  };
 }
 
 function validateManifest(
@@ -350,6 +676,79 @@ function validateManifest(
           ),
         );
   }
+  const integrity = evaluateIntegrity(manifest.integrityPolicy);
+  if (integrity) {
+    const dimensions = new Set(manifest.integrityPolicy.dimensions || []);
+    const topologyIds = new Set();
+    for (const topology of manifest.integrityPolicy.topologies || []) {
+      if (!topology.id || topologyIds.has(topology.id))
+        issues.push(
+          issue(
+            'invalid-integrity-topology-id',
+            topology.id || '',
+            MANIFEST_PATH,
+            'integrity topology ids must be present and unique',
+          ),
+        );
+      topologyIds.add(topology.id);
+      if (!topology.owner || !topology.authority?.id)
+        issues.push(
+          issue(
+            'missing-integrity-authority',
+            topology.id,
+            MANIFEST_PATH,
+            'integrity topology must declare one owner and one authority',
+          ),
+        );
+      for (const dimension of topology.dimensions || [])
+        if (!dimensions.has(dimension))
+          issues.push(
+            issue(
+              'unknown-integrity-dimension',
+              topology.id,
+              dimension,
+              'topology uses a dimension outside the versioned integrity policy',
+            ),
+          );
+      for (const relative of [
+        ...(topology.authority?.sources || []),
+        ...(topology.adapters || []).flatMap((adapter) => adapter.paths || []),
+        ...(topology.projections || []).map(({ path: relative }) => relative),
+        ...(topology.qualification || []).map(({ path: relative }) => relative),
+        ...(topology.detectors || []).flatMap(
+          (detector) => detector.paths || [],
+        ),
+      ])
+        if (!fs.existsSync(path.join(ROOT, relative)))
+          issues.push(
+            issue(
+              'missing-integrity-surface',
+              topology.id,
+              relative,
+              'integrity topology references a missing surface',
+            ),
+          );
+      for (const detector of topology.detectors || [])
+        if (!INTEGRITY_DETECTORS.has(detector.kind))
+          issues.push(
+            issue(
+              'unknown-integrity-detector',
+              topology.id,
+              detector.id || MANIFEST_PATH,
+              `unknown detector kind '${detector.kind}'`,
+            ),
+          );
+    }
+    if (integrity.baselineComparison.ratchet !== 'pass')
+      issues.push(
+        issue(
+          'integrity-ratchet-regression',
+          '',
+          MANIFEST_PATH,
+          `weighted integrity debt ${integrity.metrics.weightedDebt} exceeds baseline ${integrity.baseline.weightedDebt}`,
+        ),
+      );
+  }
   return issues;
 }
 
@@ -357,6 +756,7 @@ function buildReport(manifest, layers) {
   const changed = changedPaths(manifest.baselineRef);
   const terminalMatrix = readJson(TERMINAL_MATRIX_PATH);
   const issues = validateManifest(manifest, layers, changed, terminalMatrix);
+  const integrity = evaluateIntegrity(manifest.integrityPolicy);
   const families = manifest.families.map((family) => {
     const measurements = allFamilyPaths(family).map((relative) =>
       measurePath(relative, manifest.baselineRef, changed),
@@ -431,6 +831,7 @@ function buildReport(manifest, layers) {
       predecessorSealedStateRoot: terminalMatrix.predecessor.sealedStateRoot,
     },
     decompositions: manifest.decompositions,
+    integrity,
     issues,
   };
 }
@@ -475,9 +876,29 @@ function queryTaskGraph(report, manifest, query, layers) {
   const pathOwner = fs.existsSync(path.join(ROOT, query))
     ? ownerFor(query, layers)
     : '';
+  const integrityTopologies = (report.integrity?.topologies || []).filter(
+    (topology) =>
+      topology.id.toLowerCase().includes(query.toLowerCase()) ||
+      (topology.dimensions || []).some((dimension) =>
+        dimension.toLowerCase().includes(query.toLowerCase()),
+      ) ||
+      (topology.adapters || []).some(
+        (adapter) =>
+          adapter.id.toLowerCase().includes(query.toLowerCase()) ||
+          (adapter.paths || []).some(
+            (relative) =>
+              relative === query ||
+              relative.startsWith(`${query}/`) ||
+              query.startsWith(`${relative}/`),
+          ),
+      ),
+  );
   return {
     schema: 'kungfu.maintainability-task-graph/v1',
-    verdict: families.length || pathOwner ? 'pass' : 'unresolved',
+    verdict:
+      families.length || pathOwner || integrityTopologies.length
+        ? 'pass'
+        : 'unresolved',
     query,
     authoritySemantics: report.authoritySemantics,
     owner: pathOwner || [...new Set(families.map((family) => family.owner))],
@@ -510,16 +931,31 @@ function queryTaskGraph(report, manifest, query, layers) {
       knownLimits: family.knownLimits,
       recovery: family.recovery,
     })),
+    integrityTopologies: integrityTopologies.map((topology) => ({
+      id: topology.id,
+      owner: topology.owner,
+      authority: topology.authority,
+      legalAxes: topology.legalAxes,
+      adapters: topology.adapters,
+      projections: topology.projections,
+      qualification: topology.qualification,
+      exceptions: topology.exceptions,
+      findings: (report.integrity?.findings || []).filter(
+        (finding) => finding.topology === topology.id,
+      ),
+      recovery: topology.recovery,
+    })),
     productionBoundaries: report.productionBoundaries,
-    nextActions: families.length
-      ? [
-          'edit the existing authority route, not this navigation projection',
-          'regenerate or validate every declared projection',
-          'run affected tests, qualification, documentation, and known-limit checks independently',
-        ]
-      : [
-          'query a repository path, semantic family id, schema id, symbol, capability, or exact error token',
-        ],
+    nextActions:
+      families.length || integrityTopologies.length
+        ? [
+            'edit the existing authority route, not this navigation projection',
+            'regenerate or validate every declared projection',
+            'run affected tests, qualification, documentation, and known-limit checks independently',
+          ]
+        : [
+            'query a repository path, semantic family id, schema id, symbol, capability, or exact error token',
+          ],
   };
 }
 
@@ -587,4 +1023,10 @@ if (
   }
 }
 
-export { buildReport, findFamilies, queryTaskGraph, validateManifest };
+export {
+  buildReport,
+  evaluateIntegrity,
+  findFamilies,
+  queryTaskGraph,
+  validateManifest,
+};
