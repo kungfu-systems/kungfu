@@ -311,10 +311,10 @@
           "authority": "qualification",
           "publication": "none",
           "receipt": "diagnostic",
-          "definitionDigest": "sha256:baf4a3a4f37315e0babbc9477c2a347a0083733862e2b6b2a01e59849bce205a",
+          "definitionDigest": "sha256:db3fb0cb7b21676fd352e5dca68c014d3fe6cba6f47f115c669db56adcb694c1",
           "credentials": {"githubToken":"read","oidc":false,"repositorySecrets":[],"inheritedSecrets":false,"environment":null},
           "externalActions": ["actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0","actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e","actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a"],
-          "steps": [{"index":1,"label":"name:Check out exact qualified source","definitionDigest":"sha256:29b1db9963a2029aabffae82fe0ec406fa6ec8d3a522d80493e9e84be9967dbe"},{"index":2,"label":"name:Set up pinned Node.js","definitionDigest":"sha256:93f3675945caff80d4b510964b74f50d37e770eade12d52d8600f9da040518ad"},{"index":3,"label":"id:plan","definitionDigest":"sha256:c623e35ba06beeaf132506f560168256457d84d5f7459f5956c9b23bdec2966a"},{"index":4,"label":"name:Retain exact auditable demo trigger plan","authority":"evidence-publication","definitionDigest":"sha256:08859c3c7f88a0c633d5def10ce51b21e72fa4e4f1c868987eb1d80014b9542a"}]
+          "steps": [{"index":1,"label":"name:Check out exact qualified source","definitionDigest":"sha256:29b1db9963a2029aabffae82fe0ec406fa6ec8d3a522d80493e9e84be9967dbe"},{"index":2,"label":"name:Set up pinned Node.js","definitionDigest":"sha256:93f3675945caff80d4b510964b74f50d37e770eade12d52d8600f9da040518ad"},{"index":3,"label":"id:plan","definitionDigest":"sha256:544ea5818581dbbb37898a6cdc1217f302075ab6178f34c2d87ffcfd05dc29f5"},{"index":4,"label":"name:Retain exact auditable demo trigger plan","authority":"evidence-publication","definitionDigest":"sha256:08859c3c7f88a0c633d5def10ce51b21e72fa4e4f1c868987eb1d80014b9542a"}]
         },
         {
           "id": "build",

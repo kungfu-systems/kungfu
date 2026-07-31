@@ -20,6 +20,10 @@ const RENDERER_PATTERN =
   /^[a-z0-9][a-z0-9./_-]*@[sS][hH][aA]256:[0-9a-f]{64}$/u;
 const DEMO_ID_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/u;
 const EVIDENCE_CLASS_PATTERN = /^[a-z0-9][a-z0-9._/-]*\/v[1-9][0-9]*$/u;
+const TRIGGER_PLAN_SCHEMA = 'kungfu.auditable-demo.trigger-plan/v1';
+const DEFAULT_DEMO_ID = 'agent-work-lab';
+const PROMOTION_REF_PATTERN =
+  /^(alpha|release)\/v[1-9][0-9]*\/v[1-9][0-9]*\.[0-9]+$/u;
 const REQUIRED_AUTHORIZATION_SOURCES = [
   'exact-release-passport',
   'core-policy',
@@ -71,6 +75,100 @@ export function stableJson(value) {
 
 function sha256(value) {
   return `sha256:${crypto.createHash('sha256').update(value).digest('hex')}`;
+}
+
+function exactString(value, pattern, label) {
+  const normalized = typeof value === 'string' ? value.trim() : '';
+  if (!normalized || !pattern.test(normalized)) fail(`${label} is invalid`);
+  return normalized;
+}
+
+function boolean(value, label) {
+  if (typeof value === 'boolean') return value;
+  if (value === 'true') return true;
+  if (value === 'false' || value === '' || value === undefined) return false;
+  fail(`${label} must be true or false`);
+}
+
+export function buildAuditableDemoTriggerPlan({
+  eventName,
+  baseRef = '',
+  sourceSha,
+  requestedDemoId = '',
+  requestedRenderMedia = false,
+}) {
+  const exactSourceSha = exactString(sourceSha, SHA_PATTERN, 'source SHA');
+  const demoId = exactString(
+    requestedDemoId || DEFAULT_DEMO_ID,
+    DEMO_ID_PATTERN,
+    'demo id',
+  );
+  const manualRender = boolean(
+    requestedRenderMedia,
+    'requested render-media value',
+  );
+
+  let triggerClass;
+  let renderMedia;
+  if (eventName === 'workflow_dispatch') {
+    if (baseRef) fail('manual dispatch must not declare a promotion base ref');
+    triggerClass = 'manual';
+    renderMedia = manualRender;
+  } else if (eventName === 'pull_request') {
+    const match = PROMOTION_REF_PATTERN.exec(baseRef);
+    if (!match)
+      fail('pull request base ref is not an Alpha or Release channel');
+    if (requestedDemoId) {
+      fail('promotion events must use the catalog default demo selection');
+    }
+    if (manualRender) {
+      fail('promotion events must not carry a manual render request');
+    }
+    triggerClass = match[1];
+    renderMedia = true;
+  } else {
+    fail(`unsupported event ${eventName || '<missing>'}`);
+  }
+
+  const body = {
+    schema: TRIGGER_PLAN_SCHEMA,
+    status: 'planned',
+    sourceSha: exactSourceSha,
+    triggerClass,
+    demoId,
+    renderMedia,
+    refreshRequired: renderMedia,
+    executionContract:
+      'exact-artifact-capture-gate-passport-and-optional-media/v1',
+    publicationAuthority: false,
+  };
+  return { ...body, planRoot: sha256(stableJson(body)) };
+}
+
+export function verifyAuditableDemoTriggerPlan(plan) {
+  const { planRoot, ...body } = plan || {};
+  if (planRoot !== sha256(stableJson(body))) fail('plan root mismatch');
+  if (
+    plan.schema !== TRIGGER_PLAN_SCHEMA ||
+    plan.status !== 'planned' ||
+    !SHA_PATTERN.test(plan.sourceSha || '') ||
+    !DEMO_ID_PATTERN.test(plan.demoId || '') ||
+    !['manual', 'alpha', 'release'].includes(plan.triggerClass) ||
+    typeof plan.renderMedia !== 'boolean' ||
+    plan.refreshRequired !== plan.renderMedia ||
+    plan.executionContract !==
+      'exact-artifact-capture-gate-passport-and-optional-media/v1' ||
+    plan.publicationAuthority !== false
+  ) {
+    fail('plan fields are invalid');
+  }
+  if (
+    (plan.triggerClass === 'alpha' || plan.triggerClass === 'release') &&
+    (!plan.renderMedia || plan.demoId !== DEFAULT_DEMO_ID)
+  ) {
+    fail('promotion plan does not require the default demo media refresh');
+  }
+  return plan;
 }
 
 function exactArtifact(
@@ -314,21 +412,56 @@ export function verifyPassport(passport) {
 
 function parseCli(argv) {
   const [command, flag, value, ...rest] = argv;
+  const outputCommands = ['write', 'plan-write'];
+  const inputCommands = ['check', 'plan-verify'];
   if (
-    !['write', 'check'].includes(command) ||
-    flag !== (command === 'write' ? '--output' : '--input') ||
+    ![...outputCommands, ...inputCommands].includes(command) ||
+    flag !== (outputCommands.includes(command) ? '--output' : '--input') ||
     !value ||
     rest.length
   ) {
     fail(
-      'usage: auditable-demo-passport.mjs write --output PATH | check --input PATH',
+      'usage: auditable-demo-passport.mjs write|plan-write --output PATH | check|plan-verify --input PATH',
     );
   }
   return { command, file: path.resolve(value) };
 }
 
-function main(argv = process.argv.slice(2)) {
+function writeTriggerPlanOutputs(outputPath, plan) {
+  if (!outputPath) return;
+  fs.appendFileSync(
+    outputPath,
+    [
+      `demo-id=${plan.demoId}`,
+      `render-media=${String(plan.renderMedia)}`,
+      `refresh-required=${String(plan.refreshRequired)}`,
+      `trigger-class=${plan.triggerClass}`,
+      `plan-root=${plan.planRoot}`,
+      '',
+    ].join('\n'),
+  );
+}
+
+function main(argv = process.argv.slice(2), env = process.env) {
   const { command, file } = parseCli(argv);
+  if (command === 'plan-write') {
+    const plan = verifyAuditableDemoTriggerPlan(
+      buildAuditableDemoTriggerPlan({
+        eventName: env.GITHUB_EVENT_NAME || '',
+        baseRef: env.AUDITABLE_DEMO_BASE_REF || '',
+        sourceSha: env.AUDITABLE_DEMO_SOURCE_SHA || '',
+        requestedDemoId: env.AUDITABLE_DEMO_ID || '',
+        requestedRenderMedia: env.AUDITABLE_DEMO_RENDER_MEDIA || '',
+      }),
+    );
+    fs.writeFileSync(file, stableJson(plan), { flag: 'wx', mode: 0o644 });
+    writeTriggerPlanOutputs(env.GITHUB_OUTPUT, plan);
+    return;
+  }
+  if (command === 'plan-verify') {
+    verifyAuditableDemoTriggerPlan(JSON.parse(fs.readFileSync(file, 'utf8')));
+    return;
+  }
   if (command === 'write') {
     const passport = verifyPassport(buildPassport());
     fs.writeFileSync(file, stableJson(passport), { flag: 'wx', mode: 0o644 });

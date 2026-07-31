@@ -11,7 +11,7 @@ import { parse } from 'yaml';
 import {
   buildAuditableDemoTriggerPlan,
   verifyAuditableDemoTriggerPlan,
-} from './auditable-demo-trigger-plan.mjs';
+} from './auditable-demo-passport.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const WORKFLOW_PATH = path.join(ROOT, '.github', 'workflows', 'build.yml');

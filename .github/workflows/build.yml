@@ -480,9 +480,9 @@ jobs:
           AUDITABLE_DEMO_SOURCE_SHA: ${{ needs.build.outputs.publish-source-sha }}
         run: |
           set -euo pipefail
-          ./shifu node scripts/auditable-demo-trigger-plan.mjs write \
+          ./shifu node scripts/auditable-demo-passport.mjs plan-write \
             --output auditable-demo-trigger-plan.json
-          ./shifu node scripts/auditable-demo-trigger-plan.mjs verify \
+          ./shifu node scripts/auditable-demo-passport.mjs plan-verify \
             --input auditable-demo-trigger-plan.json
 
       - name: Retain exact auditable demo trigger plan
