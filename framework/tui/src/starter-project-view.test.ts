@@ -21,6 +21,7 @@ import {
   starterProjectModel,
   starterProjectOverviewEnterStage,
   starterWorkEventLine,
+  workReceiptHasRetainedSession,
 } from './starter-project-view/index.js';
 
 const receipt = {
@@ -467,6 +468,34 @@ test('deterministic Mock Agent selection binds the requested scenario', () => {
   assert.equal(profile.label, 'Mock Agent · approval');
   assert.equal(profile.provider, 'synthetic');
   assert.equal(profile.source, 'qualification');
+});
+
+test('retained Agent Session receipts route back to the interactive Project surface', () => {
+  const retained = {
+    schema: 'kungfu.work-start.receipt/v1',
+    ok: true,
+    status: 'agent-waiting',
+    planRoot: `sha256:${'8'.repeat(64)}`,
+    receiptRoot: `sha256:${'9'.repeat(64)}`,
+    workPhase: 'executing',
+    nextActions: ['reply'],
+    writeOccurred: true,
+    agentReport: {
+      session: {
+        workConsoleId: 'work:project:assignment:alpha',
+        sessionAttemptId: 'attempt:alpha:1',
+      },
+    },
+  } as unknown as WorkStartReceipt;
+
+  assert.equal(workReceiptHasRetainedSession(retained), true);
+  assert.equal(
+    workReceiptHasRetainedSession({
+      ...retained,
+      agentReport: undefined,
+    } as unknown as WorkStartReceipt),
+    false,
+  );
 });
 
 test('real Agent activity shows a credential-safe workspace command preview', () => {
