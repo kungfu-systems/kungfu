@@ -15,6 +15,7 @@
 //   host  -> child  { "t": "result", "id": n, "ok": true,  "value" }
 //                   { "t": "result", "id": n, "ok": false, "error" }
 //   host  -> child  { "t": "event",  "callback": n, "args" }   (a bridged callback)
+//   host  -> child  { "t": "control", "action": "shutdown" }    (graceful stop)
 //
 // Every frame crosses the relay serialized: this is the sandbox tier's defining
 // property (KF-ADR-019f86da-4f90-7789-8b48-620aa694acf9). A capability result is a copy, not a live handle — 64-bit
@@ -44,7 +45,10 @@ export type SubprocessChannel = {
   once: (event: 'exit' | 'close', cb: () => void) => void;
 };
 
-export type SubprocessHost = { dispose: () => void };
+export type SubprocessHost = {
+  dispose: () => void;
+  requestShutdown: () => void;
+};
 
 export function serveSubprocessCapabilities(
   child: SubprocessChannel,
@@ -91,5 +95,8 @@ export function serveSubprocessCapabilities(
     host.dispose();
   };
   child.once('exit', dispose);
-  return { dispose };
+  return {
+    dispose,
+    requestShutdown: () => send({ t: 'control', action: 'shutdown' }),
+  };
 }

@@ -8,6 +8,18 @@
 # marshalled over the channel, and a capability that was not declared is absent —
 # not merely un-injected, but never built.
 
-from kungfu.capability.guest import connect
+from kungfu.capability.guest import (
+    AsyncCapabilitySession,
+    CapabilityChannelClosed,
+    connect,
+    connect_async,
+    open_async_session,
+)
 
-__all__ = ["connect"]
+__all__ = [
+    "AsyncCapabilitySession",
+    "CapabilityChannelClosed",
+    "connect",
+    "connect_async",
+    "open_async_session",
+]
