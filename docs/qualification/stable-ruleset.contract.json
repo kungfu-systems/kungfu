@@ -2,6 +2,7 @@
   "schema": "kungfu.stable-ruleset-contract/v1",
   "status": "active",
   "repository": "kungfu-systems/kungfu",
+  "versionLineAuthorityRoot": "sha256:2fd580501fb77ae9ee05c8dd6a4bf141fc8cdeb77c8d4d3e9cd550133213b33d",
   "targetRef": "release/v4/v4.0",
   "ruleset": {
     "name": "Kungfu stable release authority: release/v4/v4.0",
@@ -81,5 +82,5 @@
     "allowForcePushes": false,
     "allowDeletions": false
   },
-  "contractRoot": "sha256:baed75e3efcef33e8c987bf06820758bc59c59a136079b47b11ee57405587808"
+  "contractRoot": "sha256:8677d50a8a364d47aee454036fc8cc3e358a61b66e9e4ff0370bfd770bc1d06c"
 }

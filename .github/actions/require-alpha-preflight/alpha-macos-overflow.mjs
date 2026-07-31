@@ -6,16 +6,20 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { readAuthority } from '../../../framework/version-line/version-line-authority.mjs';
 
 export const OVERFLOW_RECEIPT_SCHEMA = 'kungfu.alpha-macos-overflow-receipt/v1';
 export const RUNNER_AVAILABILITY_SCHEMA = 'kungfu.runner-availability/v1';
 export const DEFAULT_THRESHOLD_MINUTES = 25;
 export const CANDIDATE_WORKFLOW = 'build.yml';
+const MACOS_CAPABILITY =
+  readAuthority().runnerRouting.compatibilityAliases.find(
+    ({ capability }) => capability === 'macos-arm64-native',
+  );
+if (!MACOS_CAPABILITY)
+  throw new Error('macos-arm64-native runner capability is not admitted');
 export const REQUIRED_SELF_HOSTED_LABELS = Object.freeze([
-  'self-hosted',
-  'macOS',
-  'ARM64',
-  'kungfu-build-v4-macos-arm64',
+  ...MACOS_CAPABILITY.labels,
 ]);
 const SHA_PATTERN = /^[0-9a-f]{40}$/u;
 const ROOT_PATTERN = /^sha256:[0-9a-f]{64}$/u;
@@ -204,7 +208,9 @@ export function summarizeCandidate({ route, run = null, jobs = [] }) {
         String(job.name || '').startsWith('build / macOS ARM64') &&
         Array.isArray(job.labels) &&
         (job.labels.includes('macos-15') ||
-          job.labels.includes('kungfu-build-v4-macos-arm64')),
+          REQUIRED_SELF_HOSTED_LABELS.every((label) =>
+            job.labels.includes(label),
+          )),
     ) || null;
   const preflightJob =
     jobs.find((job) => job.name === 'Require exact-source Alpha preflight') ||

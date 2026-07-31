@@ -2,6 +2,7 @@
   "schema": "kungfu.alpha-ruleset-contract/v1",
   "status": "active",
   "repository": "kungfu-systems/kungfu",
+  "versionLineAuthorityRoot": "sha256:2fd580501fb77ae9ee05c8dd6a4bf141fc8cdeb77c8d4d3e9cd550133213b33d",
   "targetRef": "alpha/v4/v4.0",
   "ruleset": {
     "name": "Kungfu Alpha candidate authority: alpha/v4/v4.0",
@@ -82,5 +83,5 @@
     "allowForcePushes": false,
     "allowDeletions": false
   },
-  "contractRoot": "sha256:dc587e2c1e833e3f7d6a001b65cd8bc189029bc865b412a55a296a341b5ad7b3"
+  "contractRoot": "sha256:b655a8a0c76a17d66ec73581787c64e9b55ce666685f75ffb7b80281bb344bf0"
 }
