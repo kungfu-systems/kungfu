@@ -64,7 +64,7 @@
     "alias": "kungfu.runtime.live.event_loop.LiveEventLoop",
     "target": "JournalAsyncioBridge",
     "meaning": "source-only-name-compatibility-not-AbstractEventLoop",
-    "removalGate": "after-the-first-stable-v4-python-kfx-sdk-line-has-no-recorded-imports"
+    "removalGate": "after-the-first-stable-python-kfx-sdk-release-has-no-recorded-imports"
   },
   "forbiddenProductionCoupling": [
     "subclass-asyncio.AbstractEventLoop",
