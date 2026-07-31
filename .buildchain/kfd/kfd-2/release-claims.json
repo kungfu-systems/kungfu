@@ -9,7 +9,7 @@
   },
   "release": {
     "version": "4.0.0-alpha.1",
-    "channel": "dev/v4/v4.0",
+    "channel": "repository-default",
     "tag": "v4.0.0-alpha.1",
     "sourceSha": "local-dev-snapshot"
   },

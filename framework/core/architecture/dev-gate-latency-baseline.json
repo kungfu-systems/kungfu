@@ -1,5 +1,7 @@
 {
   "$schema": "kungfu.dev-required-latency-baseline/v1",
+  "authorityClassification": "historical-measurement",
+  "versionLineAuthorityRoot": "sha256:2fd580501fb77ae9ee05c8dd6a4bf141fc8cdeb77c8d4d3e9cd550133213b33d",
   "measuredAt": "2026-07-27T02:55:08.491Z",
   "repository": "kungfu-systems/kungfu",
   "branch": "dev/v4/v4.0",

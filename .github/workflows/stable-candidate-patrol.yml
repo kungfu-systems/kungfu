@@ -26,14 +26,29 @@ permissions:
   statuses: read
 
 jobs:
+  resolve-version-line:
+    runs-on: ubuntu-24.04
+    outputs:
+      stable-branch: ${{ steps.resolve.outputs.stable-branch }}
+      candidate-ledger: ${{ steps.resolve.outputs.candidate-ledger }}
+    steps:
+      - name: Check out version-line authority
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
+      - id: resolve
+        name: Derive exact stable runtime refs
+        run: ./shifu version-line:resolve --github-output "$GITHUB_OUTPUT"
+
   stable:
+    needs: resolve-version-line
     # The reusable workflow and runtime are pinned to the same reviewed,
     # immutable Buildchain source.
     uses: kungfu-systems/buildchain/.github/workflows/stable-candidate-patrol.yml@7629c4b499cd2d4eebf4c020fbc81637ae1dcb39
     with:
       buildchain-ref: 7629c4b499cd2d4eebf4c020fbc81637ae1dcb39
-      target-branch: release/v4/v4.0
-      ledger-ref: buildchain/candidate-ledger/v4/v4.0
+      target-branch: ${{ needs.resolve-version-line.outputs.stable-branch }}
+      ledger-ref: ${{ needs.resolve-version-line.outputs.candidate-ledger }}
       release-now: ${{ inputs.release-now }}
       auto-approve: false
       auto-merge: false

@@ -7,6 +7,7 @@ import path from 'node:path';
 import { test } from 'node:test';
 
 import { parse } from 'yaml';
+import { activeProjection } from '../framework/version-line/version-line-authority.mjs';
 
 const ROOT = process.cwd();
 const BUILD_WORKFLOW = path.join(ROOT, '.github', 'workflows', 'build.yml');
@@ -23,11 +24,19 @@ const ARM_CACHE_PROFILE = path.join(
   'linux-arm64-qualification-portable-off.cache-profile.json',
 );
 
-test('Linux ARM64 qualification is isolated from the common build matrix', () => {
+test('Linux ARM64 Hub qualification remains isolated from the authority-derived product matrix', () => {
   const common = fs.readFileSync(BUILD_WORKFLOW, 'utf8');
   const arm = parse(fs.readFileSync(ARM_WORKFLOW, 'utf8'));
 
-  assert.doesNotMatch(common, /ubuntu-24\.04-arm/u);
+  assert.match(
+    common,
+    new RegExp(
+      JSON.stringify(
+        activeProjection().projection.runnerRouting.matrices.native,
+      ).replace(/[.*+?^${}()|[\]\\]/gu, '\\$&'),
+      'u',
+    ),
+  );
   assert.doesNotMatch(common, /hub-cli-linux-arm64/u);
   assert.deepEqual(Object.keys(arm.jobs), ['preflight', 'artifact']);
   assert.equal(arm.jobs.artifact.needs, 'preflight');

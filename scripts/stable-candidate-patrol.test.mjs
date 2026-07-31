@@ -4,6 +4,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import test from 'node:test';
 
+import { activeProjection } from '../framework/version-line/version-line-authority.mjs';
 import { digest } from './alpha-ruleset.mjs';
 
 const workflow = fs.readFileSync(
@@ -17,6 +18,7 @@ const continuation = JSON.parse(
     'utf8',
   ),
 );
+const { line: activeLine } = activeProjection();
 
 test('Stable Patrol is an exact-pinned Buildchain caller with a protected target', () => {
   const reusableRef = workflow.match(
@@ -24,10 +26,17 @@ test('Stable Patrol is an exact-pinned Buildchain caller with a protected target
   )?.[1];
   assert.equal(reusableRef, '7629c4b499cd2d4eebf4c020fbc81637ae1dcb39');
   assert.match(workflow, new RegExp(`buildchain-ref: ${reusableRef}`, 'u'));
-  assert.match(workflow, /target-branch: release\/v4\/v4\.0/u);
   assert.match(
     workflow,
-    /ledger-ref: buildchain\/candidate-ledger\/v4\/v4\.0/u,
+    /target-branch: \$\{\{ needs\.resolve-version-line\.outputs\.stable-branch \}\}/u,
+  );
+  assert.match(
+    workflow,
+    /ledger-ref: \$\{\{ needs\.resolve-version-line\.outputs\.candidate-ledger \}\}/u,
+  );
+  assert.match(
+    workflow,
+    /\.\/shifu version-line:resolve --github-output "\$GITHUB_OUTPUT"/u,
   );
   assert.match(workflow, /cron: "0 19 \* \* \*"/u);
   assert.match(workflow, /release-now: \$\{\{ inputs\.release-now \}\}/u);
@@ -56,7 +65,10 @@ test('Stable policy retains independent approval and durable candidate evidence'
   assert.match(policy, /required_checks = \["alpha-release"\]/u);
   assert.match(
     policy,
-    /ledger_ref = "buildchain\/candidate-ledger\/v4\/v4\.0"/u,
+    new RegExp(
+      `ledger_ref = "${activeLine.candidateLedger.replaceAll('.', '\\.')}"`,
+      'u',
+    ),
   );
   assert.match(policy, /auto_promote = true/u);
   assert.match(policy, /auto_merge = false/u);
