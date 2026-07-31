@@ -97,7 +97,7 @@ if /i "%~1"=="invariant:verify" if /i "%~2"=="--list" goto readonlynode
 if /i "%~1"=="invariant:verify" if /i "%~2"=="--" if /i "%~3"=="--list" goto readonlynode
 if /i "%~1"=="maintainability:complexity" goto readonlynode
 if /i "%~1"=="maintainability:amplification" goto readonlynode
-if /i "%~1"=="kfd" if /i "%~2"=="status" goto readonlynode & if /i "%~1"=="kfd" if /i "%~2"=="query" goto readonlynode & if /i "%~1"=="kfd" if /i "%~2"=="check" goto readonlynode & if /i "%~1"=="kfd:query" goto readonlynode & if /i "%~1"=="kfd:support-matrix:check" goto readonlynode & if /i "%~1"=="maintainability:query" goto readonlynode & if /i "%~1"=="work-design:open-card-preflight" goto readonlynode
+if /i "%~1"=="kfd" if /i "%~2"=="status" goto readonlynode & if /i "%~1"=="kfd" if /i "%~2"=="query" goto readonlynode & if /i "%~1"=="kfd" if /i "%~2"=="check" goto readonlynode & if /i "%~1"=="kfd:query" goto readonlynode & if /i "%~1"=="kfd:support-matrix:check" goto readonlynode & if /i "%~1"=="maintainability:query" goto readonlynode & if /i "%~1"=="work-design:open-card-preflight" goto readonlynode & if /i "%~1"=="work-design:feedback" goto readonlynode
 if /i "%~1"=="docs:check:readonly" goto docsreadonly
 if /i "%~1"=="adr:release:gate" goto adrrelease
 goto projectcut
