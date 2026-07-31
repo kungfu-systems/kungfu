@@ -1,6 +1,7 @@
 {
   "schema": "kungfu.release-publication-control-plane/v1",
   "status": "active",
+  "versionLineAuthorityRoot": "sha256:2fd580501fb77ae9ee05c8dd6a4bf141fc8cdeb77c8d4d3e9cd550133213b33d",
   "protocol": {
     "schema": "kungfu.release-publication-protocol/v1",
     "authority": "adapter-only",
@@ -121,7 +122,7 @@
             "product-stable",
             "product-binaries"
           ],
-          "sourceRoot": "sha256:895f5ba57aff772adc95f20002914d95c8d89c3176f14f1e72aadb2209f82ed8"
+          "sourceRoot": "sha256:389bc7dae812b63af4a7a2cd7452491f814df2fc0565b823dec78a1a28f38110"
         },
         {
           "path": ".github/workflows/buildchain-validate.yml",
@@ -185,7 +186,7 @@
           "surfaceIds": [
             "product-stable"
           ],
-          "sourceRoot": "sha256:131e6b02eee1fbcd643a4487b55f94182851fa1ab4c6caf649a05973e221104c"
+          "sourceRoot": "sha256:e7da55b5294bffd22a6da409175c0f53626437246067249f6505db22b0564872"
         },
         {
           "path": ".github/workflows/dev-verify-patrol.yml",
@@ -195,7 +196,7 @@
             "product-alpha",
             "product-stable"
           ],
-          "sourceRoot": "sha256:80ecf6fe4554d33e1dc72146064a91094544c03739e40d0e2516071c4fde3918"
+          "sourceRoot": "sha256:d9231b9aa95aab8e6986209b194ceab7f6129c8ca4d5267b6ba2af80071966f8"
         },
         {
           "path": ".github/workflows/docs-check.yml",
@@ -290,7 +291,7 @@
             "product-stable",
             "product-binaries"
           ],
-          "sourceRoot": "sha256:7d517ac90b48bab2503bcc5ca2fdc4e1df8a278b03fc825c45a282fa1a0d2b3c"
+          "sourceRoot": "sha256:c919eeba095a47b342a91623abace7f28ddedd618146eff818745609d995ade2"
         },
         {
           "path": ".github/workflows/release-shifu.yml",
@@ -407,26 +408,26 @@
   },
   "rulesetContracts": [
     {
-      "id": "alpha-v4",
+      "id": "alpha-current",
       "channel": "alpha",
       "target": "refs/heads/alpha/v4/v4.0",
       "adapterContractPath": "docs/qualification/alpha-ruleset.contract.json",
       "requiredBeforePublication": true
     },
     {
-      "id": "stable-v4",
+      "id": "stable-current",
       "channel": "stable",
       "target": "refs/heads/release/v4/v4.0",
       "adapterContractPath": "docs/qualification/stable-ruleset.contract.json",
       "requiredBeforePublication": true
     },
     {
-      "id": "major-v4",
+      "id": "major-current",
       "channel": "major",
       "target": "refs/heads/publish-gate/major/v4/v4.0/*",
       "requiredBeforePublication": true,
       "ruleset": {
-        "name": "Kungfu major publication gate authority: v4",
+        "name": "Kungfu current major publication gate authority",
         "target": "branch",
         "enforcement": "active",
         "bypass_actors": [],
@@ -487,7 +488,7 @@
           }
         ]
       },
-      "contractRoot": "sha256:8a64372704fc3171973a33adf4150ea24d4ec4857c9e446789e9c1e63c8f8df4"
+      "contractRoot": "sha256:24936a0fb540a286f58515fad3bb544b093aae5ce5a1d2e9a66ee14be00767e7"
     }
   ],
   "surfaces": [
@@ -608,7 +609,7 @@
         ],
         "risk": "Inventing topology would create a second authority.",
         "reviewDate": "2026-08-31",
-        "sunsetCondition": "Admit one major topology under major-v4 rules and reuse Buildchain."
+        "sunsetCondition": "Admit one major topology under the current exact derived rules and reuse Buildchain."
       }
     },
     {
@@ -820,5 +821,5 @@
       }
     }
   ],
-  "registryRoot": "sha256:90bf3712fa66ab8ca99a91f1bfa68acd62732146d9bdfc218eb83ee8e2f11536"
+  "registryRoot": "sha256:9f1654ebd942d8372c4da19115a32fa0ec27ed1713d5ddf086facd13936eeb49"
 }

@@ -3,9 +3,9 @@
   "verdict": "pass",
   "authoritySemantics": "navigation-only-projection-over-existing-authorities",
   "manifestPath": "framework/maintainability/semantic-amplification.manifest.json",
-  "manifestRoot": "sha256:bb27f12a23178b9775e61fcf6c91804636d687153cdd9199f5fe76bfe9793299",
+  "manifestRoot": "sha256:c6861ec9dc5215720094b0f317fcc0d909d2ae4a138a23f1690316408acde161",
   "baselineRef": "dbfed9ca1785d147b26f4f06e7e6895ac7368fee",
-  "sourceRoot": "sha256:a2065dbf9b94929326d7a93e57fc85155f9751180dc1082aa18f7ade359f91b0",
+  "sourceRoot": "sha256:7aef11b244b247a0a9b86e0239e28d1ce17e4a82aec40efa33f2385e5af14e08",
   "roles": {
     "authority": "exactly one authority route per family; the route may name multiple co-owned source files",
     "allowedProjectionRoles": [
@@ -1123,17 +1123,17 @@
         },
         {
           "path": "docs/qualification/gates/workflow-bindings.json",
-          "currentLines": 658,
+          "currentLines": 660,
           "baselineLines": 580,
-          "currentRoot": "sha256:ab4bfa5d79733df7823ec0917f0e1514deed6454ec6765cef693f21fb30c0fad",
+          "currentRoot": "sha256:7d03e49ca1698443cf9a46b8d36611f749547207c659ee250563d59364277f8b",
           "baselineRoot": "sha256:233cd22ebce4c9930e0e4889808b88661d77c202d5e5f73121823dcdc461576d",
           "changedSinceBaseline": true
         },
         {
           "path": ".github/workflows/release-new-version.yml",
-          "currentLines": 386,
+          "currentLines": 388,
           "baselineLines": 362,
-          "currentRoot": "sha256:7d517ac90b48bab2503bcc5ca2fdc4e1df8a278b03fc825c45a282fa1a0d2b3c",
+          "currentRoot": "sha256:c919eeba095a47b342a91623abace7f28ddedd618146eff818745609d995ade2",
           "baselineRoot": "sha256:3bdd847c80a05030de1d826282cef2e76a85e31dc0904df02c7f0cdda7a5eb74",
           "changedSinceBaseline": true
         },
@@ -1385,7 +1385,7 @@
     "metrics": {
       "topologies": 5,
       "legalAxes": 8,
-      "adapters": 15,
+      "adapters": 14,
       "projections": 9,
       "qualificationRoutes": 11,
       "exceptionDebt": 2,
@@ -1460,17 +1460,6 @@
               ".github/workflows/build.yml"
             ],
             "authorityBinding": "buildchain:runner-preset:github-hosted"
-          },
-          {
-            "id": "kungfu-v4-native",
-            "axes": {
-              "provider": "kungfu-fleet",
-              "lifecycle": "persistent"
-            },
-            "paths": [
-              ".github/workflows/build.yml"
-            ],
-            "authorityBinding": "buildchain:runner-preset:kungfu-v4-native"
           },
           {
             "id": "aws-codebuild-linux",

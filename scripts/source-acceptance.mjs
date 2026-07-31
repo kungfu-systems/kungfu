@@ -360,6 +360,10 @@ export function sourceAcceptancePlan(files, evidenceBaseCommit = '') {
       'framework/release/publication-control-plane.mjs',
       'check',
     ],
+    [
+      'version-line authority',
+      'framework/version-line/check-version-line-authority.mjs',
+    ],
     ['KFD support matrix', 'scripts/kfd-support-matrix.mjs', '--check'],
     [
       'KFD support matrix negative fixtures',
@@ -441,6 +445,7 @@ export function sourceAcceptancePlan(files, evidenceBaseCommit = '') {
         'scripts/qualified-assignment-core-artifact.test.mjs',
         'scripts/verify-kungfu-release-admission.test.mjs',
         'scripts/release-publication-control-plane.test.mjs',
+        'scripts/version-line-authority.test.mjs',
         'crates/xinfa/tooling/check-boundary.test.mjs',
         'scripts/check-schema-authority.test.mjs',
         'scripts/check-incubation-passport.test.mjs',

@@ -12,6 +12,7 @@ import {
   createCandidateTimeline,
   formatCandidateTimelineReport,
 } from '@kungfu-tech/buildchain-alpha/candidate-timeline';
+import { latencyBaselineForDevBranch } from '../framework/version-line/version-line-authority.mjs';
 import {
   affectedNativeClassification,
   collectDeliveryAttemptFromArtifacts,
@@ -49,10 +50,6 @@ export {
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const MINIMUM_SAMPLE_COUNT = 20;
 const MINIMUM_NATIVE_SAMPLE_COUNT = 10;
-const BASELINE_PATH = path.join(
-  ROOT,
-  'framework/core/architecture/dev-gate-latency-baseline.json',
-);
 const QUEUE_ADMISSION_CONTRACT_PATH = path.join(
   ROOT,
   'docs/qualification/gates/dev-queue-admission.contract.json',
@@ -1982,7 +1979,7 @@ async function main() {
   if (!requiredContexts.length) throw new Error('no required contexts');
   if (!options.pulls.length) {
     validateDevRequiredLatencyBaseline(
-      JSON.parse(fs.readFileSync(BASELINE_PATH, 'utf8')),
+      latencyBaselineForDevBranch(options.branch),
       requiredContexts,
       queueAdmissionRequiredContexts(
         JSON.parse(fs.readFileSync(QUEUE_ADMISSION_CONTRACT_PATH, 'utf8')),

@@ -138,17 +138,6 @@
             "authorityBinding": "buildchain:runner-preset:github-hosted"
           },
           {
-            "id": "kungfu-v4-native",
-            "axes": {
-              "provider": "kungfu-fleet",
-              "lifecycle": "persistent"
-            },
-            "paths": [
-              ".github/workflows/build.yml"
-            ],
-            "authorityBinding": "buildchain:runner-preset:kungfu-v4-native"
-          },
-          {
             "id": "aws-codebuild-linux",
             "axes": {
               "provider": "aws-codebuild",
