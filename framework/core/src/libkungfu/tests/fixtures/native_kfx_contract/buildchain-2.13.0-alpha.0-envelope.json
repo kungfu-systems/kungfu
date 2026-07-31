@@ -226,6 +226,6 @@
   "expected": {
     "envelopeRoot": "sha256:d46314fbc2e999e31216f677d2e6f5fa7c39ff00e69f7a1687af8da90165724c",
     "kfdReportRoot": "sha256:63670117b00f6a5de4a2af48aa0aa3cc06337b2768d611a67039dbf50d8cf444",
-    "coreReportRoot": "sha256:d475e28c26e6d363a91a5c97434ff27c2390be3df6a6969736f5651822ca1f52"
+    "coreReportRoot": "sha256:4d7df9709aee396f1a538a23d26154aebfe73661ac36fe6a439d5db5942f6566"
   }
 }

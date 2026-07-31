@@ -73,6 +73,10 @@ function checkIdentityNeutralAuthority() {
       }
     }
   }
+  assert.ok(
+    sourceContract.knownCapabilities.includes('projects'),
+    'KFX capability catalog omitted the Projects application service',
+  );
   assert.deepEqual(native.runtimeTiers, [
     'isolated',
     'integrated-explicit',
