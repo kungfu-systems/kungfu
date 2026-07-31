@@ -132,6 +132,17 @@ export function reviewReceiptCanResume(receipt?: WorkReviewReceipt): boolean {
   );
 }
 
+export function workReceiptHasRetainedSession(
+  receipt?: WorkStartReceipt,
+): boolean {
+  const session = (
+    receipt?.agentReport as
+      | { session?: Record<string, unknown> | null }
+      | undefined
+  )?.session;
+  return Boolean(session?.workConsoleId && session?.sessionAttemptId);
+}
+
 function retainedWorkPresentation(work: ProjectWork): {
   status: string;
   summary: string;
@@ -440,6 +451,7 @@ export function StarterProjectHost({
   onOpenLab,
   onOpenProjects,
   onCreateNextWork,
+  onRetainedAgentSession,
   onWorkspacePointer,
   initialWorkReceipt,
   initialReviewReceipt,
@@ -452,6 +464,7 @@ export function StarterProjectHost({
   onOpenLab: () => void;
   onOpenProjects: () => void;
   onCreateNextWork: () => void;
+  onRetainedAgentSession?: (receipt: WorkStartReceipt) => void;
   onWorkspacePointer: () => void;
   initialWorkReceipt?: WorkStartReceipt;
   initialReviewReceipt?: WorkReviewReceipt;
@@ -680,14 +693,18 @@ export function StarterProjectHost({
       )
       .then((receipt) => {
         setWorkReceipt(receipt);
-        setStage('result');
+        if (workReceiptHasRetainedSession(receipt) && onRetainedAgentSession) {
+          onRetainedAgentSession(receipt);
+        } else {
+          setStage('result');
+        }
       })
       .catch((reason) => {
         setError(reason instanceof Error ? reason.message : String(reason));
         setStage('result');
       })
       .finally(() => setBusy(''));
-  }, [lab, plan]);
+  }, [lab, onRetainedAgentSession, plan]);
   const previewReview = React.useCallback(() => {
     const profile = profiles[selectedProfile];
     if (!profile || !workReceipt) return;
