@@ -10,6 +10,11 @@
       "id": "core.yijinjing.boolean-mmap-adapters",
       "lifecycle": "deprecated",
       "surfaceClass": "public-alpha-preview",
+      "classification": {
+        "authority": "framework/core/architecture/layers.json",
+        "authorityType": "core-public-contract",
+        "ruleId": "libyijinjing-source-embedding-surface"
+      },
       "owner": "core/yijinjing",
       "surface": {
         "kind": "source-api",
@@ -105,6 +110,11 @@
       "id": "core.yijinjing.journal-open-policy-adapters",
       "lifecycle": "deprecated",
       "surfaceClass": "public-alpha-preview",
+      "classification": {
+        "authority": "framework/core/architecture/layers.json",
+        "authorityType": "core-public-contract",
+        "ruleId": "libyijinjing-source-embedding-surface"
+      },
       "owner": "core/yijinjing",
       "surface": {
         "kind": "source-api",
@@ -180,6 +190,11 @@
       "id": "core.yijinjing.page-open-policy-adapters",
       "lifecycle": "deprecated",
       "surfaceClass": "public-alpha-preview",
+      "classification": {
+        "authority": "framework/core/architecture/layers.json",
+        "authorityType": "core-public-contract",
+        "ruleId": "libyijinjing-source-embedding-surface"
+      },
       "owner": "core/yijinjing",
       "surface": {
         "kind": "source-api",
@@ -255,6 +270,11 @@
       "id": "core.yijinjing.writer-split-frame-api",
       "lifecycle": "deprecated",
       "surfaceClass": "public-alpha-preview",
+      "classification": {
+        "authority": "framework/core/architecture/layers.json",
+        "authorityType": "core-public-contract",
+        "ruleId": "libyijinjing-source-embedding-surface"
+      },
       "owner": "core/yijinjing",
       "surface": {
         "kind": "source-api",
@@ -330,6 +350,11 @@
       "id": "cli.prestable-compatibility-aliases",
       "lifecycle": "settled",
       "surfaceClass": "public-alpha-preview",
+      "classification": {
+        "authority": "framework/core/src/python/kungfu/cli/surface_contract.registry.json",
+        "authorityType": "cli-surface-registry",
+        "ruleId": "defaults.maturity"
+      },
       "owner": "product/cli",
       "surface": {
         "kind": "cli-alias-set",
@@ -413,6 +438,15 @@
         "releaseNote": "docs/development/versioning.md",
         "retainedEvidence": [
           "docs/development/versioning.md"
+        ]
+      },
+      "historicalGrandfather": {
+        "authority": "framework/deprecation/deprecation-lifecycle.contract.json",
+        "recordId": "cli.prestable-compatibility-aliases",
+        "evidenceRefs": [
+          "docs/development/versioning.md",
+          "scripts/check-cli-catalog-parity.test.mjs",
+          "product/scripts/cli-surface-qualification.test.mjs"
         ]
       },
       "extensionWarrant": null,

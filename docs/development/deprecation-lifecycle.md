@@ -69,10 +69,12 @@ The release projection gives every entry one disposition:
 | `extended-by-warrant` | One exact native Warrant projection covers this candidate and date. |
 | `invalid` | Authority, version, history, evidence, or release context is ambiguous; release decisions fail closed. |
 
-## Surface defaults
+## Surface defaults and classification integrity
 
-An entry may declare a longer window than its class default. It may not use a
-shorter class to weaken a stable promise.
+The values below are executable lower bounds, not suggested defaults. An entry
+may declare a longer calendar or qualified-release window, and the projection
+preserves those stricter values. A smaller value fails with
+`deprecation-window-below-minimum`.
 
 | Surface class | Minimum days | Qualified releases | Earliest breaking boundary |
 |---|---:|---:|---|
@@ -87,6 +89,24 @@ shorter class to weaken a stable promise.
 A same-minor stable release does not gain breaking permission from elapsed
 time. A pre-stable cleanup does not create a stable compatibility promise, but
 it still follows any public alpha window already declared.
+
+Every entry also carries a `classification` projection. Core source surfaces
+bind an exact rule in `framework/core/architecture/layers.json`; CLI surfaces
+bind the CLI surface registry; other governed kinds bind the deterministic kind
+policy in the lifecycle contract. The validator resolves that authority and
+checks the current path, rule, maturity, or kind before accepting the selected
+class. It also cross-checks every live marker dialect, so changing both the
+authored kind and class cannot relabel a structured CLI, KFX, artifact,
+document, schema, or protocol marker. Stable CLI, SDK, and public API promises
+cannot become preview; KFX, artifact, document, persisted-schema, and
+wire-protocol kinds cannot be substituted for one another to obtain a faster
+window.
+
+Dates are evaluated against the audit or candidate release date. Entry and
+settlement versions may not be later than the registry's authoritative product
+version. Persisted schema and protocol support claims additionally name an
+exact authority file and non-empty qualification evidence; a boolean claim
+alone is invalid.
 
 ## “Next eligible release”
 
@@ -115,8 +135,8 @@ the protected release.
 
 ## Adding or settling an entry
 
-1. Classify the real surface and owner; do not classify by the desired removal
-   speed.
+1. Classify the real surface and owner; bind the exact existing authority or
+   deterministic kind rule, and do not classify by the desired removal speed.
 2. Record the current path and symbols, replacement, migration guide,
    deprecation date/version, known consumers, windows, boundary, conditions,
    retained evidence, and executable zero-reference checks.
@@ -129,6 +149,13 @@ the protected release.
 
 Restoring a surface uses `active` plus an explicit restoration decision and
 qualification evidence. It is not an unrecorded reset of the clock.
+
+The settled `cli.prestable-compatibility-aliases` entry preserves one historical
+pre-stable 0/0 migration fact. This is not a general exception. Its grandfather
+record is contract-reserved to that exact entry id and matches the settled
+lifecycle, surface, class, deprecation coordinates, windows, boundary, removal
+coordinates, commit, and evidence. Copying it, renaming it, or changing any
+bound value makes both the grandfather and the below-minimum windows invalid.
 
 ## Read-only audit
 
@@ -180,7 +207,8 @@ The registry distinguishes live debt from retained history:
   2026-07-12 introduction dates and enroll the six previously unregistered
   C++ markers;
 - `cli.prestable-compatibility-aliases` is settled: current alias references are
-  zero, while its migration and removal evidence remain queryable.
+  zero, while its exact non-copyable historical grandfather, migration, and
+  removal evidence remain queryable.
 
 The current full-tree inventory contains 11 live C++ markers, four live
 registry entries, one settled entry, and one explicitly classified historical

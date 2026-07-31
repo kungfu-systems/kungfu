@@ -110,10 +110,112 @@
       "requiresHistoricalReaderOrMigration": true
     }
   },
+  "classificationPolicy": {
+    "authorities": {
+      "corePublicContract": {
+        "path": "framework/core/architecture/layers.json"
+      },
+      "cliSurfaceRegistry": {
+        "path": "framework/core/src/python/kungfu/cli/surface_contract.registry.json",
+        "ruleId": "defaults.maturity",
+        "pointer": "/defaults/maturity",
+        "maturityClasses": {
+          "stable": [
+            "stable-cli-sdk-public-api"
+          ]
+        }
+      }
+    },
+    "coreLevelAllowedClasses": {
+      "stable": [
+        "stable-cli-sdk-public-api"
+      ],
+      "experimental": [
+        "public-alpha-preview",
+        "stable-cli-sdk-public-api"
+      ],
+      "source-embedding-only": [
+        "public-alpha-preview",
+        "stable-cli-sdk-public-api"
+      ],
+      "internal": [
+        "internal-experimental",
+        "public-alpha-preview",
+        "stable-cli-sdk-public-api"
+      ]
+    },
+    "kindAllowedClasses": {
+      "cli-command": [
+        "stable-cli-sdk-public-api"
+      ],
+      "cli-alias-set": [
+        "stable-cli-sdk-public-api"
+      ],
+      "sdk-api": [
+        "stable-cli-sdk-public-api"
+      ],
+      "public-api": [
+        "stable-cli-sdk-public-api"
+      ],
+      "kfx-contribution": [
+        "kfx-contribution"
+      ],
+      "artifact": [
+        "artifact"
+      ],
+      "release-artifact": [
+        "artifact"
+      ],
+      "document": [
+        "document"
+      ],
+      "persisted-schema": [
+        "persisted-schema-wire-protocol"
+      ],
+      "wire-protocol": [
+        "persisted-schema-wire-protocol"
+      ]
+    },
+    "dialectAllowedClasses": {
+      "cpp-deprecated-attribute": [
+        "internal-experimental",
+        "public-alpha-preview",
+        "stable-cli-sdk-public-api"
+      ],
+      "python-deprecation-warning": [
+        "internal-experimental",
+        "public-alpha-preview",
+        "stable-cli-sdk-public-api"
+      ],
+      "js-ts-jsdoc": [
+        "internal-experimental",
+        "public-alpha-preview",
+        "stable-cli-sdk-public-api"
+      ],
+      "persisted-schema-protocol": [
+        "persisted-schema-wire-protocol"
+      ],
+      "document-frontmatter": [
+        "document"
+      ],
+      "cli-structured-compatibility": [
+        "stable-cli-sdk-public-api"
+      ],
+      "kfx-structured-compatibility": [
+        "kfx-contribution"
+      ],
+      "artifact-structured-compatibility": [
+        "artifact"
+      ]
+    },
+    "unknownAuthority": "fail-closed",
+    "weakerOrIncompatibleClass": "fail-closed"
+  },
   "requiredEntryFields": [
     "id",
     "lifecycle",
     "surfaceClass",
+    "classification",
     "owner",
     "surface",
     "replacement",
@@ -126,6 +228,53 @@
     "retainedEvidence",
     "zeroReferenceAudit"
   ],
+  "historicalGrandfatherPolicy": {
+    "authority": "framework/deprecation/deprecation-lifecycle.contract.json",
+    "copyOrReuse": "forbidden",
+    "records": {
+      "cli.prestable-compatibility-aliases": {
+        "exactEntry": {
+          "id": "cli.prestable-compatibility-aliases",
+          "lifecycle": "settled",
+          "surfaceClass": "public-alpha-preview",
+          "surface": {
+            "kind": "cli-alias-set",
+            "path": "framework/core/src/python/kungfu/cli/surface_contract.registry.json"
+          },
+          "deprecatedAt": {
+            "date": "2026-07-20",
+            "productVersion": "4.0.0-alpha.1",
+            "decision": "docs/development/versioning.md"
+          },
+          "windows": {
+            "minimumCalendarDays": 0,
+            "minimumQualifiedReleases": 0
+          },
+          "earliestRemovalBoundary": "pre-stable-or-major",
+          "removalEvidence": {
+            "removedAt": {
+              "date": "2026-07-25",
+              "productVersion": "4.0.0-alpha.1"
+            },
+            "gitCommit": "bb93639ab0ce160a7f6321f45c9899ab4c79a714",
+            "migrationQualification": [
+              "scripts/check-cli-catalog-parity.test.mjs",
+              "product/scripts/cli-surface-qualification.test.mjs"
+            ],
+            "releaseNote": "docs/development/versioning.md",
+            "retainedEvidence": [
+              "docs/development/versioning.md"
+            ]
+          }
+        },
+        "evidenceRefs": [
+          "docs/development/versioning.md",
+          "scripts/check-cli-catalog-parity.test.mjs",
+          "product/scripts/cli-surface-qualification.test.mjs"
+        ]
+      }
+    }
+  },
   "warrantPolicy": {
     "authority": "kungfu.warrant",
     "rootPattern": "^sha256:[0-9a-f]{64}$",

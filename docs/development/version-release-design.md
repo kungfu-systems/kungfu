@@ -279,8 +279,13 @@ The gate also evaluates
 waive deprecation debt. At the first eligible Alpha or stable release, an
 applicable entry must have qualified removal evidence, explicit restored
 support, or an exact native Warrant projection whose date and release bounds
-cover that candidate. The definition of eligibility, surface defaults, and
-history-retention rules are in the
+cover that candidate. The same source and protected-release audit treats class
+defaults as lower bounds, resolves classification provenance against the Core,
+CLI, or deterministic kind authority, and rejects dates or product versions
+beyond the candidate context. The sole retained pre-stable CLI 0/0 settlement
+is exact-entry-bound historical evidence, not a reusable release exception.
+The definition of eligibility, surface defaults, and history-retention rules
+are in the
 [deprecation lifecycle](deprecation-lifecycle.md).
 
 ### Side-effect-free promotion rehearsal
