@@ -4,7 +4,6 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
 import test from 'node:test';
-import { readElectronBuilderProjection } from '../../maintainability/semantic-amplification.mjs';
 
 import {
   isMachOHeader,
@@ -13,6 +12,16 @@ import {
 } from './sign-macos.mjs';
 
 const ROOT = path.resolve(import.meta.dirname, '../../..');
+
+function readElectronBuilderProjection(file) {
+  return JSON.parse(
+    fs
+      .readFileSync(file, 'utf8')
+      .split('\n')
+      .filter((line) => !line.startsWith('#'))
+      .join('\n'),
+  );
+}
 
 test('preserves an explicit certificate hash for duplicate named identities', () => {
   assert.equal(

@@ -1,29 +1,38 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import assert from 'node:assert/strict';
+import { spawnSync } from 'node:child_process';
+import fs from 'node:fs';
 import { test } from 'node:test';
-import {
-  checkElectronBuilderProjections,
-  electronBuilderProjectionPaths,
-  materializeElectronBuilderConfigs,
-  readElectronBuilderProjection,
-} from '../../maintainability/semantic-amplification.mjs';
+import { fileURLToPath } from 'node:url';
+
+const ROOT = fileURLToPath(new URL('../../..', import.meta.url));
+
+function readProjection(relative) {
+  return JSON.parse(
+    fs
+      .readFileSync(new URL(`../../../${relative}`, import.meta.url), 'utf8')
+      .split('\n')
+      .filter((line) => !line.startsWith('#'))
+      .join('\n'),
+  );
+}
 
 test('electron-builder projections are deterministic and current', () => {
-  assert.doesNotThrow(() => checkElectronBuilderProjections());
-  const expected = materializeElectronBuilderConfigs();
-  assert.deepEqual(
-    readElectronBuilderProjection(electronBuilderProjectionPaths.framework),
-    expected.framework,
+  const result = spawnSync(
+    process.execPath,
+    [
+      'framework/maintainability/semantic-amplification.mjs',
+      '--electron-builder-config-check',
+    ],
+    { cwd: ROOT, encoding: 'utf8' },
   );
-  assert.deepEqual(
-    readElectronBuilderProjection(electronBuilderProjectionPaths.product),
-    expected.product,
-  );
+  assert.equal(result.status, 0, result.stderr);
 });
 
 test('product overlay preserves common policy and owns only product resources', () => {
-  const { framework, product } = materializeElectronBuilderConfigs();
+  const framework = readProjection('framework/gui/electron-builder.yml');
+  const product = readProjection('product/electron-builder.yml');
   for (const key of [
     'appId',
     'productName',
