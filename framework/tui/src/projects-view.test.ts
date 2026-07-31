@@ -72,7 +72,7 @@ test('All Work navigation preserves but does not reuse Project context', () => {
   assert.match(workHost, /if \(emptyState\) return undefined/);
 });
 
-test('opened Project Work offers an exact-plan Codex path and retained session output', () => {
+test('opened Project Work offers an exact-plan Agent path and recoverable session controls', () => {
   const source = readFileSync(new URL('./main.tsx', import.meta.url), 'utf8');
   const projectWork = source.slice(
     source.indexOf('function ProjectWorkHost'),
@@ -85,10 +85,16 @@ test('opened Project Work offers an exact-plan Codex path and retained session o
   assert.match(projectWork, /\.captureWork\(/);
   assert.match(projectWork, /CONFIRM WORK CAPTURE/);
   assert.match(projectWork, /No Work is admitted and no\s*Agent\s+runs yet/);
-  assert.match(projectWork, /\.planRun\('codex'/);
+  assert.match(projectWork, /\.planRun\(selectedProvider/);
+  assert.match(projectWork, /KUNGFU_MOCK_AGENT_SCENARIO/);
   assert.match(projectWork, /expectedPlanRoot: acceptedPlan\.planRoot/);
   assert.match(projectWork, /\.subscribeRuns\(setRuns\)/);
-  assert.match(projectWork, /CODEX SESSION RUNNING/);
+  assert.match(projectWork, /\.syncSessions\(/);
+  assert.match(projectWork, /\.restoreRun\(/);
+  assert.match(projectWork, /\.replyToRun\(/);
+  assert.match(projectWork, /\.approveRun\(/);
+  assert.match(projectWork, /\.endRun\(/);
+  assert.match(projectWork, /SESSION RUNNING/);
   assert.match(projectWork, /receipt\.nextActions/);
   assert.match(projectWork, /<ProjectFileTreeNavigation/);
   assert.match(projectWork, /focused=\{fileTreeFocused\}/);

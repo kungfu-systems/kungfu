@@ -125,7 +125,7 @@ def _choose_work(workspace_root, work_selector=None):
                 f"multiple Work items can start ({choices}); pass --work <work>"
             )
         row = actionable[0]
-    if row["phase"] not in {"captured", "ready", "planned"}:
+    if row["phase"] not in {"captured", "ready", "planned", "executing"}:
         next_step = (
             "review and close it"
             if row["phase"] in {"executing", "stage-ready", "completion-claimed"}

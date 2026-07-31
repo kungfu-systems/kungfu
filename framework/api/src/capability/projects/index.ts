@@ -4,6 +4,7 @@ import { createHash, randomUUID } from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 
+import type { AgentSession } from '../agent-session.js';
 import type { WorkStartReceipt } from '../agent-work-lab.js';
 import type { ProductSearchDocument } from '../product-search.js';
 
@@ -249,6 +250,8 @@ export type ProjectCommandOptions = {
     },
     onLine: (line: string) => void,
   ) => Promise<void>;
+  agentSession?: AgentSession | null;
+  agentSessionClient?: 'gui' | 'cli';
 };
 
 export function mergeProjectsCatalogs(
@@ -408,7 +411,32 @@ export type ProjectWorkRunSnapshot = {
   running: boolean;
   events: ProjectWorkRunEvent[];
   receipt?: ProjectWorkRunReceipt;
+  session?: ProjectAgentSessionSnapshot;
   error?: string;
+};
+
+export type ProjectAgentSessionRef = {
+  workConsoleId: string;
+  sessionAttemptId: string;
+};
+
+export type ProjectAgentAttention = {
+  kind: 'needs-answer' | 'needs-approval' | 'blocked' | 'ready-for-review';
+  reason: string;
+  message: string;
+  nextActions: string[];
+};
+
+export type ProjectAgentSessionSnapshot = ProjectAgentSessionRef & {
+  provider: string;
+  live: boolean;
+  lifecycleState: string;
+  interactionState: string;
+  attempt: string;
+  attention: ProjectAgentAttention | null;
+  pendingControl: { requestId: string | number } | null;
+  terminalLines: string[];
+  updatedAt: number;
 };
 
 export type Projects = {
@@ -452,6 +480,7 @@ export type Projects = {
       workspace?: string;
       work?: string;
       task?: string;
+      scenario?: string;
       expectedPlanRoot?: string;
     },
   ) => Promise<ProjectWorkRunPlan>;
@@ -461,6 +490,7 @@ export type Projects = {
       workspace?: string;
       work?: string;
       task?: string;
+      scenario?: string;
       expectedPlanRoot?: string;
     },
     onEvent?: (event: ProjectWorkRunEvent) => void,
@@ -469,6 +499,22 @@ export type Projects = {
   subscribeRuns: (
     listener: (runs: ProjectWorkRunSnapshot[]) => void,
   ) => () => void;
+  syncSessions: (options?: {
+    workspace?: string;
+    workspaceId?: string;
+    work?: string;
+  }) => Promise<ProjectWorkRunSnapshot[]>;
+  restoreRun: (
+    receipt: ProjectWorkRunReceipt,
+    workspace: string,
+  ) => Promise<ProjectWorkRunSnapshot>;
+  refreshRun: (runId: string) => Promise<ProjectWorkRunSnapshot | null>;
+  replyToRun: (runId: string, text: string) => Promise<ProjectWorkRunSnapshot>;
+  approveRun: (
+    runId: string,
+    approved: boolean,
+  ) => Promise<ProjectWorkRunSnapshot>;
+  endRun: (runId: string) => Promise<ProjectWorkRunSnapshot>;
 };
 
 function parse<T>(raw: string, schema: string): T {
@@ -581,6 +627,119 @@ export function openProjects(options: ProjectCommandOptions): Projects {
       run.id === id ? update(run) : run,
     );
     publishRuns();
+  };
+  const sessionInvoke = async (
+    request: Record<string, unknown> & { operation: string },
+  ): Promise<Record<string, unknown>> => {
+    if (!options.agentSession) {
+      throw new Error('Agent Session control is unavailable on this surface');
+    }
+    return options.agentSession.invoke(request);
+  };
+  const sessionRef = (run: ProjectWorkRunSnapshot): ProjectAgentSessionRef => {
+    const retained = run.session;
+    const reportSession = (
+      run.receipt?.agentReport as
+        | { session?: Record<string, unknown> | null }
+        | undefined
+    )?.session;
+    const workConsoleId =
+      retained?.workConsoleId ?? String(reportSession?.workConsoleId ?? '');
+    const sessionAttemptId =
+      retained?.sessionAttemptId ??
+      String(reportSession?.sessionAttemptId ?? '');
+    if (!workConsoleId || !sessionAttemptId) {
+      throw new Error('The retained Agent run has no Session reference');
+    }
+    return { workConsoleId, sessionAttemptId };
+  };
+  const projectSessionSnapshot = async (
+    ref: ProjectAgentSessionRef,
+    knownStatus?: Record<string, unknown>,
+  ): Promise<ProjectAgentSessionSnapshot> => {
+    const status =
+      knownStatus ??
+      (await sessionInvoke({ operation: 'status', session: { ...ref } }));
+    let terminalLines: string[] = [];
+    if (status.live === true) {
+      const snapshot = await sessionInvoke({
+        operation: 'snapshot',
+        session: { ...ref },
+        requestedSequence: 0,
+      });
+      const terminal = snapshot.terminal as
+        | { vt?: { lines?: unknown[] } }
+        | undefined;
+      terminalLines = (terminal?.vt?.lines ?? []).map((line) => String(line));
+    }
+    const agent = status.workAgent as
+      | {
+          attempt?: string;
+          attention?: ProjectAgentAttention | null;
+        }
+      | undefined;
+    const adapter = status.providerAdapter as { provider?: string } | undefined;
+    const structured = status.structuredControl as
+      | { pending?: Array<{ requestId?: string | number }> }
+      | undefined;
+    const pending = structured?.pending?.[0];
+    return {
+      ...ref,
+      provider: adapter?.provider ?? 'agent',
+      live: status.live === true,
+      lifecycleState: String(status.lifecycleState ?? 'unavailable'),
+      interactionState: String(status.interactionState ?? 'unavailable'),
+      attempt: String(agent?.attempt ?? 'working'),
+      attention: agent?.attention ?? null,
+      pendingControl:
+        pending?.requestId === undefined
+          ? null
+          : { requestId: pending.requestId },
+      terminalLines,
+      updatedAt: Date.now(),
+    };
+  };
+  const refreshRun = async (
+    runId: string,
+  ): Promise<ProjectWorkRunSnapshot | null> => {
+    const run = retainedRuns.find((candidate) => candidate.id === runId);
+    if (!run) return null;
+    const session = await projectSessionSnapshot(sessionRef(run));
+    updateRun(runId, (current) => ({
+      ...current,
+      lastEventAt: session.updatedAt,
+      session,
+    }));
+    return retainedRuns.find((candidate) => candidate.id === runId) ?? null;
+  };
+  const controlRun = async (
+    runId: string,
+    operation: 'instruct' | 'send-key' | 'respond-control' | 'end',
+    payload: Record<string, unknown>,
+    automatic = true,
+  ): Promise<ProjectWorkRunSnapshot> => {
+    const run = retainedRuns.find((candidate) => candidate.id === runId);
+    if (!run) throw new Error(`Agent run '${runId}' is unavailable`);
+    const ref = sessionRef(run);
+    const plan = await sessionInvoke({
+      operation: 'plan-control',
+      controlOperation: operation,
+      session: { ...ref },
+      payload,
+    });
+    await sessionInvoke({
+      operation,
+      actorId: 'kungfu-project-work',
+      client: options.agentSessionClient ?? 'gui',
+      plan,
+      expectedPlanRoot: plan.root,
+      payload,
+      automatic,
+    });
+    const refreshed = await refreshRun(runId);
+    if (!refreshed)
+      throw new Error(`Agent run '${runId}' disappeared after control`);
+    return refreshed;
   };
   const invoke = async <T>(
     args: string[],
@@ -741,6 +900,9 @@ export function openProjects(options: ProjectCommandOptions): Projects {
             ? ['--workspace', commandOptions.workspace]
             : []),
           ...(commandOptions.work ? ['--work', commandOptions.work] : []),
+          ...(commandOptions.scenario
+            ? ['--scenario', commandOptions.scenario]
+            : []),
           ...(commandOptions.expectedPlanRoot
             ? ['--expected-plan-root', commandOptions.expectedPlanRoot]
             : []),
@@ -779,6 +941,9 @@ export function openProjects(options: ProjectCommandOptions): Projects {
           ? ['--workspace', commandOptions.workspace]
           : []),
         ...(commandOptions.work ? ['--work', commandOptions.work] : []),
+        ...(commandOptions.scenario
+          ? ['--scenario', commandOptions.scenario]
+          : []),
         ...(commandOptions.expectedPlanRoot
           ? ['--expected-plan-root', commandOptions.expectedPlanRoot]
           : []),
@@ -795,6 +960,9 @@ export function openProjects(options: ProjectCommandOptions): Projects {
             lastEventAt: Date.now(),
             receipt,
           }));
+          if (receipt.status === 'agent-waiting' && options.agentSession) {
+            await refreshRun(runId);
+          }
           return receipt;
         } catch (reason) {
           updateRun(runId, (run) => ({
@@ -834,13 +1002,17 @@ export function openProjects(options: ProjectCommandOptions): Projects {
         );
         if (!receipt)
           throw new Error('Work run stream ended without a canonical receipt');
+        const finalReceipt = receipt as ProjectWorkRunReceipt;
         updateRun(runId, (run) => ({
           ...run,
           running: false,
           lastEventAt: Date.now(),
-          receipt: receipt ?? undefined,
+          receipt: finalReceipt,
         }));
-        return receipt;
+        if (finalReceipt.status === 'agent-waiting' && options.agentSession) {
+          await refreshRun(runId);
+        }
+        return finalReceipt;
       } catch (reason) {
         updateRun(runId, (run) => ({
           ...run,
@@ -860,5 +1032,123 @@ export function openProjects(options: ProjectCommandOptions): Projects {
       );
       return () => runListeners.delete(listener);
     },
+    syncSessions: async (syncOptions = {}) => {
+      if (!options.agentSession) return retainedRuns;
+      const listed = await sessionInvoke({ operation: 'list' });
+      const sessions = Array.isArray(listed.sessions)
+        ? (listed.sessions as Record<string, unknown>[])
+        : [];
+      for (const status of sessions) {
+        const binding = status.binding as
+          | { kind?: string; workRef?: Record<string, unknown> }
+          | undefined;
+        const workRef = binding?.workRef;
+        if (binding?.kind !== 'work' || !workRef) continue;
+        if (
+          syncOptions.workspaceId &&
+          workRef.workspaceId !== syncOptions.workspaceId
+        )
+          continue;
+        if (syncOptions.work && workRef.entityId !== syncOptions.work) continue;
+        const ref = {
+          workConsoleId: String(status.workConsoleId ?? ''),
+          sessionAttemptId: String(status.sessionAttemptId ?? ''),
+        };
+        if (!ref.workConsoleId || !ref.sessionAttemptId) continue;
+        const existing = retainedRuns.find(
+          (run) =>
+            run.session?.workConsoleId === ref.workConsoleId &&
+            run.session.sessionAttemptId === ref.sessionAttemptId,
+        );
+        const session = await projectSessionSnapshot(ref, status);
+        if (existing) {
+          updateRun(existing.id, (run) => ({ ...run, session }));
+          continue;
+        }
+        const now = Date.now();
+        retainedRuns = [
+          {
+            id: `session:${ref.sessionAttemptId}`,
+            provider: session.provider,
+            workspace: syncOptions.workspace ?? '',
+            work: String(workRef.entityId ?? ''),
+            startedAt: now,
+            lastEventAt: now,
+            running: false,
+            events: [],
+            session,
+          },
+          ...retainedRuns,
+        ].slice(0, 8);
+        publishRuns();
+      }
+      return retainedRuns.map((run) => ({ ...run, events: [...run.events] }));
+    },
+    restoreRun: async (receipt, workspace) => {
+      const report = receipt.agentReport as
+        | { runId?: string; session?: Record<string, unknown> | null }
+        | undefined;
+      const retained = report?.session;
+      const attemptId = String(
+        retained?.sessionAttemptId ?? report?.runId ?? receipt.receiptRoot,
+      );
+      const runId = `retained:${attemptId}`;
+      const existing = retainedRuns.find(
+        (run) =>
+          run.id === runId ||
+          (run.receipt?.receiptRoot &&
+            run.receipt.receiptRoot === receipt.receiptRoot),
+      );
+      if (!existing) {
+        const now = Date.now();
+        const provider = String(receipt.agent?.provider ?? 'agent');
+        retainedRuns = [
+          {
+            id: runId,
+            provider: provider === 'synthetic' ? 'mock' : provider,
+            workspace,
+            work: String(receipt.work?.assignmentId ?? ''),
+            startedAt: now,
+            lastEventAt: now,
+            running: false,
+            events: [],
+            receipt,
+          },
+          ...retainedRuns,
+        ].slice(0, 8);
+        publishRuns();
+      }
+      const current =
+        retainedRuns.find(
+          (run) =>
+            run.id === runId ||
+            run.receipt?.receiptRoot === receipt.receiptRoot,
+        ) ?? null;
+      if (!current) throw new Error('Retained Agent run could not be restored');
+      if (retained?.workConsoleId && options.agentSession) {
+        return (await refreshRun(current.id)) ?? current;
+      }
+      return current;
+    },
+    refreshRun,
+    replyToRun: (runId, text) => controlRun(runId, 'instruct', { text }, false),
+    approveRun: async (runId, approved) => {
+      const run = retainedRuns.find((candidate) => candidate.id === runId);
+      const pending = run?.session?.pendingControl;
+      if (pending) {
+        return controlRun(
+          runId,
+          'respond-control',
+          {
+            requestId: pending.requestId,
+            decision: approved ? 'allow' : 'deny',
+          },
+          false,
+        );
+      }
+      await controlRun(runId, 'send-key', { key: approved ? 'y' : 'n' }, false);
+      return controlRun(runId, 'send-key', { key: 'Enter' }, false);
+    },
+    endRun: (runId) => controlRun(runId, 'end', {}, false),
   };
 }

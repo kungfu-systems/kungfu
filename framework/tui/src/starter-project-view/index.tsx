@@ -41,6 +41,18 @@ type DimensionSource = {
   subscribe(listener: (dimensions: TerminalDimensions) => void): () => void;
 };
 
+type SelectableAgentProfile = Omit<
+  AgentRuntimeProfile,
+  'provider' | 'bootstrap' | 'source'
+> & {
+  provider: AgentRuntimeProfile['provider'] | 'synthetic';
+  bootstrap: {
+    adapter: AgentRuntimeProfile['provider'] | 'synthetic';
+    envelope: 'required' | 'disabled';
+  };
+  source: AgentRuntimeProfile['source'] | 'qualification';
+};
+
 export type OpenedStarterProject = {
   receipt?: ProjectTemplateCreationReceipt;
   workspace: ProjectTemplateWorkspaceSelection;
@@ -325,14 +337,37 @@ export function starterWorkEventLine(
 }
 
 export function agentProfileSourceLabel(
-  origin: 'configured' | 'discovered',
+  origin: 'configured' | 'discovered' | 'qualification',
   detail = '',
 ): string {
   if (origin === 'configured') return 'Configured · Kungfu config';
+  if (origin === 'qualification')
+    return 'Qualification fixture · deterministic and credential-free';
   const normalized = detail.replaceAll('_', ' ').trim();
   return normalized
     ? `Auto-discovered · ${normalized}`
     : 'Auto-discovered · local machine';
+}
+
+export function deterministicMockAgentSelection(
+  scenario: string,
+): SelectableAgentProfile {
+  return {
+    schema: 'kungfu.agent-runtime-profile/v1',
+    id: `kungfu.mock-agent.${scenario}`,
+    label: `Mock Agent · ${scenario}`,
+    provider: 'synthetic',
+    launch: {
+      executable: process.env.KUNGFU_MOCK_AGENT_EXECUTABLE ?? process.execPath,
+      argv: [],
+      shellMode: false,
+    },
+    cwdPolicy: 'workspace-root',
+    backendDefault: 'direct',
+    bootstrap: { adapter: 'synthetic', envelope: 'required' },
+    source: 'qualification',
+    lastVerified: null,
+  };
 }
 
 export function projectSectionNavigationAtPoint({
@@ -427,7 +462,7 @@ export function StarterProjectHost({
   const [copyNotice, setCopyNotice] = React.useState<ProjectPathCopyNotice>();
   const [activeRegion, setActiveRegion] = React.useState(1);
   const [stage, setStage] = React.useState<StarterProjectStage>('overview');
-  const [profiles, setProfiles] = React.useState<AgentRuntimeProfile[]>([]);
+  const [profiles, setProfiles] = React.useState<SelectableAgentProfile[]>([]);
   const [profileSources, setProfileSources] = React.useState<
     Record<string, string>
   >({});
@@ -558,8 +593,17 @@ export function StarterProjectHost({
       void lab
         .discoverAgents()
         .then((catalog) => {
-          const available = new Map<string, AgentRuntimeProfile>();
+          const available = new Map<string, SelectableAgentProfile>();
           const sources: Record<string, string> = {};
+          const mockScenario =
+            nextStage === 'agents'
+              ? process.env.KUNGFU_MOCK_AGENT_SCENARIO?.trim()
+              : '';
+          if (mockScenario) {
+            const mock = deterministicMockAgentSelection(mockScenario);
+            available.set(mock.id, mock);
+            sources[mock.id] = agentProfileSourceLabel('qualification');
+          }
           for (const row of catalog.discovered) {
             if (row.available) {
               available.set(row.profile.id, row.profile);
@@ -579,8 +623,9 @@ export function StarterProjectHost({
               'No supported Agent is available. Run `kungfu agent runtime discover`.',
             );
           }
-          const preferred =
-            catalog.defaultProfileId ?? catalog.recommendedProfileId ?? '';
+          const preferred = mockScenario
+            ? `kungfu.mock-agent.${mockScenario}`
+            : (catalog.defaultProfileId ?? catalog.recommendedProfileId ?? '');
           setProfiles(values);
           setSelectedProfile(
             Math.max(

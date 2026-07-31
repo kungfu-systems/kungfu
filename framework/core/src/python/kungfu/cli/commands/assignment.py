@@ -507,34 +507,58 @@ def _work_start_plan(
     work_control = profile_sdk.validate_source(
         _profile_source(), str(target.runtime_dir)
     )["inspection"]
+    current_phase = "captured"
+    if Path(target.runtime_dir).is_dir():
+        try:
+            current_phase = _status(
+                str(target.runtime_dir),
+                projected["initiative_id"],
+                projected["assignment_id"],
+            )["phase"]
+        except (OSError, RuntimeError, ValueError, json.JSONDecodeError):
+            current_phase = "captured"
+    continuing = current_phase == "executing"
     stable_verification = {
         "ok": verification["ok"],
         "available": verification["available"],
         "version": verification["version"],
         "error": verification["error"],
     }
-    effects = [
-        {
-            "stage": "admit",
-            "label": "Admit the captured Initiative and Assignment into Work Control",
-        },
-        {
-            "stage": "claim",
-            "label": "Mint a two-hour execution lease for the selected Agent",
-        },
-        {
-            "stage": "kickoff",
-            "label": "Enter the executing phase under that exact lease",
-        },
-        {
-            "stage": "run",
-            "label": "Launch one fresh Agent process in this project workspace",
-        },
-        {
-            "stage": "retain",
-            "label": "Retain the Agent Episode and report without claiming completion",
-        },
-    ]
+    effects = (
+        [
+            {
+                "stage": "admit",
+                "label": "Admit the captured Initiative and Assignment into Work Control",
+            },
+            {
+                "stage": "claim",
+                "label": "Mint a two-hour execution lease for the selected Agent",
+            },
+            {
+                "stage": "kickoff",
+                "label": "Enter the executing phase under that exact lease",
+            },
+            {
+                "stage": "run",
+                "label": "Launch one fresh Agent process in this project workspace",
+            },
+            {
+                "stage": "retain",
+                "label": "Retain the Agent Episode and report without claiming completion",
+            },
+        ]
+        if not continuing
+        else [
+            {
+                "stage": "run",
+                "label": "Launch one fresh Agent attempt under the active Work lease",
+            },
+            {
+                "stage": "retain",
+                "label": "Retain the new Agent Episode without repeating admission",
+            },
+        ]
+    )
     body = {
         "schema": "kungfu.work-start.plan/v1",
         "workspace": {
@@ -553,6 +577,7 @@ def _work_start_plan(
             "acceptanceChecks": list(
                 projected["work_definition"].get("acceptance_criteria") or []
             ),
+            "phase": current_phase,
         },
         "agent": {
             "id": selected["id"],
@@ -574,6 +599,9 @@ def _work_start_plan(
             "sourceRevision": binding["source_revision"],
         },
         "actor": actor,
+        "continuationMode": (
+            "existing-executing-work" if continuing else "first-attempt"
+        ),
         "effects": effects,
         "skippedEffects": [
             "completion-claim",
@@ -869,88 +897,118 @@ def start_work(
                 "Exact Work start plan verified.",
                 plan["planRoot"],
             )
-            stage = "admit"
-            event(stage, "started", "Admitting captured Work into native authority.")
-            admission = _admit_captured_assignment(
-                request_file=request_file,
-                workspace_root=workspace_root,
-                home=home,
-                initiative_id=plan["work"]["initiativeId"],
-                assignment_id=plan["work"]["assignmentId"],
-                initiative_admission=None,
-                actor=actor,
-                actor_type="user",
-                allow_foreign_binding=allow_foreign_binding,
-            )
-            if admission["ok"] is not True:
-                raise RuntimeError("captured Work admission did not qualify")
-            write_occurred = True
-            runtime_dir = admission["workspace"]["runtime_dir"]
-            last_status = _status(
-                runtime_dir,
-                plan["work"]["initiativeId"],
-                plan["work"]["assignmentId"],
-            )
-            receipts["admission"] = _admission_summary(admission, last_status)
-            event(
-                stage,
-                "completed",
-                "Initiative and Assignment admitted.",
-                last_status["query_proof_root"],
-            )
+            if plan["continuationMode"] == "existing-executing-work":
+                stage = "resume"
+                target = resolve_workspace_target(
+                    "read-only",
+                    workspace_root or None,
+                    home=home,
+                    cwd=os.getcwd(),
+                )
+                runtime_dir = str(target.runtime_dir)
+                last_status = _status(
+                    runtime_dir,
+                    plan["work"]["initiativeId"],
+                    plan["work"]["assignmentId"],
+                )
+                admission = {
+                    "workspace": {
+                        "workspace_id": plan["workspace"]["id"],
+                        "workspace_root": plan["workspace"]["root"],
+                        "runtime_dir": runtime_dir,
+                    }
+                }
+                event(
+                    stage,
+                    "completed",
+                    "Reusing the admitted Work and its active execution lease.",
+                    last_status["query_proof_root"],
+                )
+            else:
+                stage = "admit"
+                event(
+                    stage, "started", "Admitting captured Work into native authority."
+                )
+                admission = _admit_captured_assignment(
+                    request_file=request_file,
+                    workspace_root=workspace_root,
+                    home=home,
+                    initiative_id=plan["work"]["initiativeId"],
+                    assignment_id=plan["work"]["assignmentId"],
+                    initiative_admission=None,
+                    actor=actor,
+                    actor_type="user",
+                    allow_foreign_binding=allow_foreign_binding,
+                )
+                if admission["ok"] is not True:
+                    raise RuntimeError("captured Work admission did not qualify")
+                write_occurred = True
+                runtime_dir = admission["workspace"]["runtime_dir"]
+                last_status = _status(
+                    runtime_dir,
+                    plan["work"]["initiativeId"],
+                    plan["work"]["assignmentId"],
+                )
+                receipts["admission"] = _admission_summary(admission, last_status)
+                event(
+                    stage,
+                    "completed",
+                    "Initiative and Assignment admitted.",
+                    last_status["query_proof_root"],
+                )
 
-            stage = "claim"
-            event(stage, "started", "Minting a bounded Agent execution lease.")
-            lease_id = f"work-start-{uuid.uuid4().hex}"
-            lease_expires_at = (
-                (datetime.now(UTC) + timedelta(hours=2))
-                .isoformat()
-                .replace("+00:00", "Z")
-            )
-            claim_receipt = _profile_action(
-                runtime_dir,
-                "claim-assignment",
-                {
-                    "initiativeId": plan["work"]["initiativeId"],
-                    "assignmentId": plan["work"]["assignmentId"],
-                    "owner": actor,
-                    "agent": plan["agent"]["id"],
-                    "slot": f"project-{plan['agent']['provider']}",
-                    "leaseId": lease_id,
-                    "leaseExpiresAt": lease_expires_at,
-                    "authorizedBy": actor,
-                    "grantScope": "assignment-execution",
-                    "actorType": "user",
-                    "source": "kungfu",
-                },
-                actor,
-            )
-            last_status = _status(
-                runtime_dir,
-                plan["work"]["initiativeId"],
-                plan["work"]["assignmentId"],
-            )
-            receipts["claim"] = _claim_summary(claim_receipt, last_status)
-            event(
-                stage,
-                "completed",
-                f"Execution lease bound to {plan['agent']['label']}.",
-                last_status["query_proof_root"],
-            )
+                stage = "claim"
+                event(stage, "started", "Minting a bounded Agent execution lease.")
+                lease_id = f"work-start-{uuid.uuid4().hex}"
+                lease_expires_at = (
+                    (datetime.now(UTC) + timedelta(hours=2))
+                    .isoformat()
+                    .replace("+00:00", "Z")
+                )
+                claim_receipt = _profile_action(
+                    runtime_dir,
+                    "claim-assignment",
+                    {
+                        "initiativeId": plan["work"]["initiativeId"],
+                        "assignmentId": plan["work"]["assignmentId"],
+                        "owner": actor,
+                        "agent": plan["agent"]["id"],
+                        "slot": f"project-{plan['agent']['provider']}",
+                        "leaseId": lease_id,
+                        "leaseExpiresAt": lease_expires_at,
+                        "authorizedBy": actor,
+                        "grantScope": "assignment-execution",
+                        "actorType": "user",
+                        "source": "kungfu",
+                    },
+                    actor,
+                )
+                last_status = _status(
+                    runtime_dir,
+                    plan["work"]["initiativeId"],
+                    plan["work"]["assignmentId"],
+                )
+                receipts["claim"] = _claim_summary(claim_receipt, last_status)
+                event(
+                    stage,
+                    "completed",
+                    f"Execution lease bound to {plan['agent']['label']}.",
+                    last_status["query_proof_root"],
+                )
 
-            stage = "kickoff"
-            event(stage, "started", "Entering the executing phase.")
-            kickoff_receipt = _advance(
-                workspace_root,
-                home,
-                plan["work"]["initiativeId"],
-                plan["work"]["assignmentId"],
-                "executing",
-                actor,
-                "Start the user-selected verified Agent for this Assignment",
-            )
-            last_status = kickoff_receipt["status"]
-            receipts["kickoff"] = _kickoff_summary(kickoff_receipt)
+                stage = "kickoff"
+                event(stage, "started", "Entering the executing phase.")
+                kickoff_receipt = _advance(
+                    workspace_root,
+                    home,
+                    plan["work"]["initiativeId"],
+                    plan["work"]["assignmentId"],
+                    "executing",
+                    actor,
+                    "Start the user-selected verified Agent for this Assignment",
+                )
+                last_status = kickoff_receipt["status"]
+                receipts["kickoff"] = _kickoff_summary(kickoff_receipt)
             run_gate = orchestration.gate(last_status, "run")
             if run_gate["ok"] is not True:
                 raise RuntimeError(run_gate["reason"])

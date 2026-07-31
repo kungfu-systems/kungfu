@@ -5,6 +5,7 @@ import test from 'node:test';
 import { fileURLToPath } from 'node:url';
 
 import {
+  type ProjectWorkRunReceipt,
   mergeProjectsCatalogs,
   openProjects,
   prepareProjectWork,
@@ -377,6 +378,118 @@ test('Project Work is previewed before the exact request is captured by Core', a
   const [capture] = inputs;
   assert.ok(capture);
   assert.deepEqual(JSON.parse(capture.input), plan.request);
+});
+
+test('Project Work restores and controls one retained Agent Session through the shared surface', async () => {
+  const operations: string[] = [];
+  let interactionState = 'ready';
+  let live = true;
+  const ref = {
+    workConsoleId: 'work:qualification:assignment:alpha',
+    sessionAttemptId: 'attempt:alpha:1',
+  };
+  const projects = openProjects({
+    bin: 'kungfu',
+    env: {},
+    execFile: async () => {
+      throw new Error('no CLI call expected');
+    },
+    agentSession: {
+      invoke: async (request) => {
+        operations.push(request.operation);
+        if (request.operation === 'plan-control') {
+          return { root: `sha256:${'9'.repeat(64)}` };
+        }
+        if (request.operation === 'instruct')
+          interactionState = 'approval-needed';
+        if (
+          request.operation === 'send-key' &&
+          (request.payload as { key?: string })?.key === 'Enter'
+        ) {
+          interactionState = 'ready';
+        }
+        if (request.operation === 'end') {
+          live = false;
+          interactionState = 'ended';
+        }
+        if (request.operation === 'snapshot') {
+          return {
+            terminal: { vt: { lines: ['MOCK READY', 'mock› '] } },
+          };
+        }
+        if (request.operation === 'status') {
+          return {
+            ...ref,
+            live,
+            lifecycleState: live ? 'ready' : 'ended',
+            interactionState,
+            providerAdapter: { provider: 'synthetic' },
+            workAgent: {
+              attempt: live ? 'waiting' : 'ended',
+              attention: live
+                ? {
+                    kind:
+                      interactionState === 'approval-needed'
+                        ? 'needs-approval'
+                        : 'needs-answer',
+                    reason: 'fixture',
+                    message: 'Mock needs attention.',
+                    nextActions: ['reply'],
+                  }
+                : {
+                    kind: 'ready-for-review',
+                    reason: 'ended',
+                    message: 'Review changes.',
+                    nextActions: ['review-changes'],
+                  },
+            },
+          };
+        }
+        return { status: 'written' };
+      },
+    },
+  });
+  const receipt = {
+    schema: 'kungfu.work-start.receipt/v1' as const,
+    ok: true,
+    status: 'agent-waiting' as const,
+    planRoot: `sha256:${'1'.repeat(64)}`,
+    receiptRoot: `sha256:${'2'.repeat(64)}`,
+    workPhase: 'executing',
+    work: {
+      assignmentId: 'alpha',
+      title: 'Alpha',
+      objective: 'Exercise controls',
+      acceptanceChecks: ['all states observed'],
+    },
+    agent: { provider: 'synthetic' },
+    agentReport: { runId: 'attempt:alpha:1', session: ref },
+    nextActions: ['reply'],
+    writeOccurred: true,
+  };
+
+  const restored = await projects.restoreRun(
+    receipt as unknown as ProjectWorkRunReceipt,
+    '/project',
+  );
+  assert.deepEqual(restored.session?.terminalLines, ['MOCK READY', 'mock› ']);
+  assert.equal(restored.session?.attention?.kind, 'needs-answer');
+
+  await projects.replyToRun(restored.id, 'alpha');
+  assert.equal(projects.runs()[0]?.session?.attention?.kind, 'needs-approval');
+  await projects.approveRun(restored.id, true);
+  assert.equal(projects.runs()[0]?.session?.attention?.kind, 'needs-answer');
+  await projects.endRun(restored.id);
+  assert.equal(
+    projects.runs()[0]?.session?.attention?.kind,
+    'ready-for-review',
+  );
+  assert.deepEqual(
+    operations.filter((operation) =>
+      ['instruct', 'send-key', 'end'].includes(operation),
+    ),
+    ['instruct', 'send-key', 'send-key', 'end'],
+  );
 });
 
 test('Project Work keeps Initiative and Assignment identities distinct for non-Latin objectives', () => {
