@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import assert from 'node:assert/strict';
+import { spawnSync } from 'node:child_process';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
@@ -135,4 +136,29 @@ test('an admitted projection file rejects a narrow value absent from authority d
       },
     ],
   });
+});
+
+test('tracked source scan excludes untracked CI runtime material', () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'kungfu-version-line-'));
+  fs.mkdirSync(path.join(root, 'scripts'), { recursive: true });
+  fs.mkdirSync(path.join(root, '.buildchain/runtime'), { recursive: true });
+  fs.writeFileSync(
+    path.join(root, 'scripts/tracked-route.mjs'),
+    "export const route = 'release/v9/v9.0';\n",
+  );
+  fs.writeFileSync(
+    path.join(root, '.buildchain/runtime/transient.mjs'),
+    "export const route = 'release/v8/v8.0';\n",
+  );
+  assert.equal(spawnSync('git', ['init', '-q', root]).status, 0);
+  assert.equal(
+    spawnSync('git', ['-C', root, 'add', 'scripts/tracked-route.mjs']).status,
+    0,
+  );
+  assert.deepEqual(scanNarrowBindings(root).violations, [
+    {
+      file: 'scripts/tracked-route.mjs',
+      matches: ['release/v9/v9.0'],
+    },
+  ]);
 });
