@@ -6,7 +6,10 @@ import path from 'node:path';
 import { Box, Text, useApp } from 'ink';
 import React from 'react';
 
-import { copyTextToClipboard } from '../clipboard/index.js';
+import {
+  type ClipboardReceipt,
+  copyTextToClipboard,
+} from '../clipboard/index.js';
 import {
   resolveListWindow,
   scrollListSelection,
@@ -20,6 +23,11 @@ import {
   readProjectFileTree,
   toggleProjectFileTreeEntry,
 } from '../project-file-tree/index.js';
+import {
+  KUNGFU_EMPTY_WORK_NAV_NEBULA_PATTERN,
+  KUNGFU_PROJECT_DISCOVERY_PATTERN,
+  TerminalAmbientScene,
+} from '../terminal-animation.js';
 import { terminalCanvasRows } from '../terminal-canvas.js';
 import { decodeTerminalMouseInput } from '../terminal-lifecycle.js';
 
@@ -27,6 +35,155 @@ type DimensionSource = {
   get(): TerminalDimensions;
   subscribe(listener: (dimensions: TerminalDimensions) => void): () => void;
 };
+
+export type ProjectNavigationTab = 'work' | 'files';
+
+export type ProjectPathCopyNotice = {
+  path: string;
+  ok: boolean;
+  detail: string;
+};
+
+export function projectPathCopyNotice(
+  absolutePath: string,
+  receipt: ClipboardReceipt,
+): ProjectPathCopyNotice {
+  return {
+    path: absolutePath,
+    ok: receipt.ok,
+    detail: receipt.ok ? `Copied with ${receipt.method}.` : receipt.error,
+  };
+}
+
+export function ProjectPathCopyOverlay({
+  notice,
+  dimensions,
+}: {
+  notice: ProjectPathCopyNotice;
+  dimensions: TerminalDimensions;
+}) {
+  const canvasRows = terminalCanvasRows(dimensions.rows);
+  const panelWidth = Math.max(12, Math.min(72, dimensions.columns - 4));
+  const panelColumns = Math.max(1, panelWidth - 2);
+  const panelLine = (value: string) =>
+    ` ${value}`.slice(0, panelColumns).padEnd(panelColumns);
+  return (
+    <Box
+      position="absolute"
+      width={panelWidth}
+      height={5}
+      marginTop={Math.max(1, Math.floor((canvasRows - 5) / 2))}
+      marginLeft={Math.max(
+        1,
+        Math.floor((dimensions.columns - panelWidth) / 2),
+      )}
+      flexDirection="column"
+      borderStyle="double"
+      borderColor={notice.ok ? 'green' : 'red'}
+      overflow="hidden"
+    >
+      <Text
+        bold
+        color={notice.ok ? 'black' : 'white'}
+        backgroundColor={notice.ok ? 'green' : 'red'}
+      >
+        {panelLine(notice.ok ? 'FILE PATH COPIED' : 'COPY PATH FAILED')}
+      </Text>
+      <Text color="white" backgroundColor="blue">
+        {panelLine(notice.path)}
+      </Text>
+      <Text color="white" backgroundColor="blue">
+        {panelLine(`${notice.detail} · closes in 3.5 seconds`)}
+      </Text>
+    </Box>
+  );
+}
+
+export function projectNavigationWidth(dimensions: TerminalDimensions): number {
+  return Math.min(28, Math.max(22, Math.floor(dimensions.columns * 0.22)));
+}
+
+export function projectWorkAmbientRows(dimensions: TerminalDimensions): number {
+  return Math.max(5, terminalCanvasRows(dimensions.rows) - 12);
+}
+
+export function projectNavigationTabLabels({
+  navigationWidth,
+  workCount,
+}: {
+  navigationWidth: number;
+  workCount?: number;
+}): {
+  work: string;
+  files: string;
+  workWidth: number;
+  filesWidth: number;
+} {
+  const contentWidth = Math.max(2, navigationWidth - 4);
+  const filesWidth = Math.floor(contentWidth / 2);
+  const workWidth = contentWidth - filesWidth;
+  const boundedCount =
+    workCount === undefined ? '…' : workCount > 99 ? '99+' : String(workCount);
+  const fit = (value: string, width: number) =>
+    ` ${value} `.slice(0, width).padEnd(width);
+  return {
+    work: fit(`Work ${boundedCount}`, workWidth),
+    files: fit('Files', filesWidth),
+    workWidth,
+    filesWidth,
+  };
+}
+
+export function projectNavigationTabAtPoint({
+  column,
+  row,
+  topOffset,
+  navigationWidth,
+}: {
+  column: number;
+  row: number;
+  topOffset: number;
+  navigationWidth: number;
+}): ProjectNavigationTab | null {
+  if (row !== topOffset + 1) return null;
+  const contentColumn = column - 3;
+  const contentWidth = Math.max(2, navigationWidth - 4);
+  if (contentColumn < 0 || contentColumn >= contentWidth) return null;
+  return contentColumn < Math.floor(contentWidth / 2) ? 'files' : 'work';
+}
+
+function ProjectNavigationTabs({
+  active,
+  navigationWidth,
+  workCount,
+}: {
+  active: ProjectNavigationTab;
+  navigationWidth: number;
+  workCount?: number;
+}) {
+  const labels = projectNavigationTabLabels({
+    navigationWidth,
+    workCount,
+  });
+  return (
+    <Box flexDirection="row">
+      <Text
+        bold
+        color={active === 'files' ? 'black' : 'gray'}
+        backgroundColor={active === 'files' ? 'cyan' : undefined}
+      >
+        {labels.files}
+      </Text>
+      <Text
+        bold
+        color={active === 'work' ? 'black' : 'gray'}
+        backgroundColor={active === 'work' ? 'cyan' : undefined}
+      >
+        {labels.work}
+      </Text>
+    </Box>
+  );
+}
 
 export function ProjectFileTreeNavigation({
   root,
@@ -39,6 +196,7 @@ export function ProjectFileTreeNavigation({
   onOpenProjects,
   onOpenLab,
   onWorkspacePointer,
+  onCopyNotice,
   topOffset = 3,
 }: {
   root: string;
@@ -51,6 +209,7 @@ export function ProjectFileTreeNavigation({
   onOpenProjects: () => void;
   onOpenLab: () => void;
   onWorkspacePointer: () => void;
+  onCopyNotice: (notice: ProjectPathCopyNotice) => void;
   topOffset?: number;
 }) {
   const { exit } = useApp();
@@ -62,15 +221,12 @@ export function ProjectFileTreeNavigation({
   const [message, setMessage] = React.useState(
     'Enter expands a folder or copies a file path.',
   );
-  const navigationWidth = Math.min(
-    28,
-    Math.max(20, Math.floor(size.columns * 0.22)),
-  );
+  const navigationWidth = projectNavigationWidth(size);
   const entries = React.useMemo(
     () => readProjectFileTree(root, { expandedPaths }),
     [expandedPaths, root],
   );
-  const treeRows = Math.max(3, terminalCanvasRows(size.rows) - 13);
+  const treeRows = Math.max(3, terminalCanvasRows(size.rows) - 11);
   const treeWindow = resolveListWindow({
     selected,
     itemCount: entries.length,
@@ -110,13 +266,14 @@ export function ProjectFileTreeNavigation({
             encoding: 'utf8',
           }),
       });
+      onCopyNotice(projectPathCopyNotice(absolutePath, receipt));
       setMessage(
         receipt.ok
           ? `Copied · ${entry.name}`
           : `Copy failed · ${receipt.error}`,
       );
     },
-    [entries, root],
+    [entries, onCopyNotice, root],
   );
 
   React.useEffect(() => {
@@ -134,6 +291,20 @@ export function ProjectFileTreeNavigation({
             continue;
           }
           onWorkspacePointer();
+          const tab = projectNavigationTabAtPoint({
+            column: event.column,
+            row: event.row,
+            topOffset,
+            navigationWidth,
+          });
+          if (tab) {
+            if (event.kind === 'press' && event.button === 'left') {
+              if (tab === 'work') onOpenWork();
+              else onFocus();
+            }
+            continue;
+          }
+          if (!focused) continue;
           onFocus();
           if (event.kind === 'wheel') {
             const delta = event.button === 'wheel-up' ? -1 : 1;
@@ -147,11 +318,9 @@ export function ProjectFileTreeNavigation({
             continue;
           }
           if (event.kind !== 'press' || event.button !== 'left') continue;
-          if (event.row === topOffset + 2) {
-            onOpenWork();
-            continue;
-          }
-          const offset = event.row - (topOffset + 4);
+          const rangeVisible = entries.length > visibleEntries.length;
+          const firstTreeRow = topOffset + 2 + (rangeVisible ? 1 : 0);
+          const offset = event.row - firstTreeRow;
           if (offset < 0 || offset >= visibleEntries.length) continue;
           const index = treeWindow.start + offset;
           setSelected(index);
@@ -225,41 +394,75 @@ export function ProjectFileTreeNavigation({
       flexShrink={0}
       overflow="hidden"
     >
-      <Text bold>PROJECT</Text>
-      <Text color={focused ? undefined : 'cyan'} bold={!focused}>
-        {focused ? '  ' : '› '}Work {workCount ?? '…'}
-      </Text>
-      <Text color={focused ? 'cyan' : undefined} bold={focused}>
-        {focused ? '› ' : '  '}Files
-      </Text>
-      {entries.length > visibleEntries.length ? (
-        <Text dimColor>
-          {treeWindow.start + 1}–{treeWindow.end}/{entries.length}
-        </Text>
-      ) : null}
-      <Box flexDirection="column" flexGrow={1} overflow="hidden">
-        {visibleEntries.length > 0 ? (
-          visibleEntries.map((entry, offset) => {
-            const index = treeWindow.start + offset;
-            return (
-              <Text
-                key={entry.relativePath}
-                color={focused && index === selected ? 'cyan' : undefined}
-                bold={focused && index === selected}
-                wrap="truncate-end"
-              >
-                {focused && index === selected ? '›' : ' '}
-                {projectFileTreeLabel(entry)}
-              </Text>
-            );
-          })
-        ) : (
-          <Text dimColor>No visible files</Text>
-        )}
-      </Box>
-      <Text dimColor wrap="truncate-end">
-        {focused ? message : '[t] Files · Enter expand/copy'}
-      </Text>
+      <ProjectNavigationTabs
+        active={focused ? 'files' : 'work'}
+        navigationWidth={navigationWidth}
+        workCount={workCount}
+      />
+      {focused ? (
+        <>
+          {entries.length > visibleEntries.length ? (
+            <Text dimColor>
+              {treeWindow.start + 1}–{treeWindow.end}/{entries.length}
+            </Text>
+          ) : null}
+          <Box flexDirection="column" flexGrow={1} overflow="hidden">
+            {visibleEntries.length > 0 ? (
+              visibleEntries.map((entry, offset) => {
+                const index = treeWindow.start + offset;
+                return (
+                  <Text
+                    key={entry.relativePath}
+                    color={index === selected ? 'cyan' : undefined}
+                    bold={index === selected}
+                    wrap="truncate-end"
+                  >
+                    {index === selected ? '›' : ' '}
+                    {projectFileTreeLabel(entry)}
+                  </Text>
+                );
+              })
+            ) : (
+              <Text dimColor>No visible files</Text>
+            )}
+          </Box>
+          <Text dimColor wrap="truncate-end">
+            {message}
+          </Text>
+        </>
+      ) : (
+        <>
+          <Box flexGrow={1} alignItems="center" justifyContent="center">
+            {workCount === undefined || workCount === 0 ? (
+              <TerminalAmbientScene
+                dimensions={{
+                  columns: Math.max(1, navigationWidth - 4),
+                  rows: projectWorkAmbientRows(size),
+                }}
+                pattern={
+                  workCount === undefined
+                    ? KUNGFU_PROJECT_DISCOVERY_PATTERN
+                    : KUNGFU_EMPTY_WORK_NAV_NEBULA_PATTERN
+                }
+              />
+            ) : (
+              <Box flexDirection="column" alignItems="center">
+                <Text bold color="cyan">
+                  {workCount}
+                </Text>
+                <Text dimColor>retained Work</Text>
+              </Box>
+            )}
+          </Box>
+          <Text dimColor wrap="truncate-end">
+            {workCount === undefined
+              ? 'Discovering Work…'
+              : workCount === 0
+                ? 'No retained Work'
+                : 'Work opens in the main panel'}
+          </Text>
+        </>
+      )}
     </Box>
   );
 }

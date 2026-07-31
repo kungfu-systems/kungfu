@@ -194,6 +194,41 @@ test('real Ink Work Window keeps Project, Work, update, filters, and sort visibl
   assert.match(rendered, /Sort · Updated ↓/u);
 });
 
+test('an empty machine Work graph fills the main Work panel with a nebula', async () => {
+  const output = new CaptureOutput();
+  const emptySnapshot: GlobalWorkSnapshot = {
+    ...snapshot,
+    aggregate: { state: 'complete', component_count: 0 },
+    global_work: {
+      visible_work: [],
+      visible_work_count: 0,
+      canonical_work_count: 0,
+    },
+  };
+  const instance = render(
+    React.createElement(WorkWindow, {
+      model: buildWorkWindowModel(emptySnapshot, { projects }),
+      dimensions: { columns: 100, rows: 28 },
+      selected: 0,
+      busy: false,
+    }),
+    {
+      stdout: output as unknown as NodeJS.WriteStream,
+      exitOnCtrlC: false,
+      patchConsole: false,
+      debug: true,
+    },
+  );
+  await new Promise<void>((resolve) => setImmediate(resolve));
+  instance.unmount();
+  instance.cleanup();
+
+  const rendered = stripVTControlCharacters(output.chunks.join(''));
+  assert.match(rendered, /ALL WORK · Active · 0/u);
+  assert.match(rendered, /[•●✦]/u);
+  assert.doesNotMatch(rendered, /No Active Work/u);
+});
+
 test('Work Window keeps long crowded rows inside one fixed 80x24 frame', async () => {
   const crowdedProjects: ProjectsCatalog = {
     ...projects,

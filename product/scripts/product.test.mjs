@@ -55,6 +55,12 @@ test('parses the dev auto-instance opt-out flag', () => {
   assert.equal(parsed.noInstanceHome, true);
 });
 
+test('parses the deterministic TUI empty-state preview flag', () => {
+  const parsed = parseArgs(['tui', 'dev', '--empty-state']);
+  assert.deepEqual(parsed.positional, ['tui', 'dev']);
+  assert.equal(parsed.emptyState, true);
+});
+
 test('builds a consistent Kungfu instance environment', () => {
   const home = resolveInstanceHome('relative-kungfu-home');
   const env = instanceEnv(home, { PATH: '/bin' });
@@ -62,7 +68,22 @@ test('builds a consistent Kungfu instance environment', () => {
   assert.equal(env.KF_INSTANCE_HOME, home);
   assert.equal(env.KF_HOME, path.join(home, 'home'));
   assert.equal(env.KF_CONFIG_HOME, path.join(home, 'config'));
+  assert.equal(
+    env.KF_PROJECTS_CONFIG_HOME,
+    path.join(homedir(), '.kungfu-config'),
+  );
   assert.equal(env.KF_RUNTIME_DIR, path.join(home, 'home', 'runtime'));
+});
+
+test('instance Project discovery retains an explicitly configured machine home', () => {
+  const home = resolveInstanceHome('relative-kungfu-home');
+  const machineConfigHome = path.join(tmpdir(), 'machine-config');
+  const env = instanceEnv(home, {
+    PATH: '/bin',
+    KF_CONFIG_HOME: machineConfigHome,
+  });
+  assert.equal(env.KF_CONFIG_HOME, path.join(home, 'config'));
+  assert.equal(env.KF_PROJECTS_CONFIG_HOME, machineConfigHome);
 });
 
 test('KF_DEV_HOME pins the dev workspace data home', () => {
@@ -356,6 +377,14 @@ test('dry-run shows instance env without creating the home', () => {
     assert.match(
       result.stdout,
       new RegExp(
+        `KF_PROJECTS_CONFIG_HOME=${escapeRegExp(
+          path.join(homedir(), '.kungfu-config'),
+        )}`,
+      ),
+    );
+    assert.match(
+      result.stdout,
+      new RegExp(
         `KF_RUNTIME_DIR=${escapeRegExp(path.join(home, 'home', 'runtime'))}`,
       ),
     );
@@ -383,6 +412,28 @@ test('one-command TUI demo launches the interactive offline autoplay', () => {
   assert.match(result.stdout, /KF_HOME=/);
   assert.match(result.stdout, /KUNGFU_SDK_ENTRY=/);
   assert.match(result.stdout, /KUNGFU_TUI_SOURCE_CLI=1/);
+});
+
+test('one-command TUI empty-state preview forwards the internal surface flag', () => {
+  const result = spawnSync(
+    process.execPath,
+    [
+      __filename.replace(/\.test\.mjs$/, '.mjs'),
+      'tui',
+      'dev',
+      '--empty-state',
+      '--dry-run',
+    ],
+    {
+      encoding: 'utf8',
+      env: { HOME: homedir(), PATH: process.env.PATH || '' },
+    },
+  );
+  assert.equal(result.status, 0, result.stderr || result.stdout);
+  assert.match(
+    result.stdout,
+    /pnpm --filter @kungfu-tech\/tui run dev -- --empty-state/,
+  );
 });
 
 test('dry-run auto-selects workspace .kungfu for gui dev', () => {

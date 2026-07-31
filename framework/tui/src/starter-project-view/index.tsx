@@ -27,7 +27,13 @@ import {
   compactProfileNavigationWidth,
   resolveProfileShellLayout,
 } from '../profile-shell.js';
-import { ProjectFileTreeNavigation } from '../project-files-view/index.js';
+import {
+  ProjectFileTreeNavigation,
+  type ProjectPathCopyNotice,
+  ProjectPathCopyOverlay,
+  projectNavigationWidth,
+} from '../project-files-view/index.js';
+import { terminalCanvasRows } from '../terminal-canvas.js';
 import { decodeTerminalMouseInput } from '../terminal-lifecycle.js';
 
 type DimensionSource = {
@@ -418,6 +424,7 @@ export function StarterProjectHost({
 }) {
   const { exit } = useApp();
   const [size, setSize] = React.useState(dimensions.get());
+  const [copyNotice, setCopyNotice] = React.useState<ProjectPathCopyNotice>();
   const [activeRegion, setActiveRegion] = React.useState(1);
   const [stage, setStage] = React.useState<StarterProjectStage>('overview');
   const [profiles, setProfiles] = React.useState<AgentRuntimeProfile[]>([]);
@@ -477,6 +484,11 @@ export function StarterProjectHost({
   );
 
   React.useEffect(() => dimensions.subscribe(setSize), [dimensions]);
+  React.useEffect(() => {
+    if (!copyNotice) return;
+    const timeout = setTimeout(() => setCopyNotice(undefined), 3500);
+    return () => clearTimeout(timeout);
+  }, [copyNotice]);
   React.useEffect(() => {
     if (
       !busy &&
@@ -1550,27 +1562,39 @@ export function StarterProjectHost({
   }
 
   return (
-    <ProfileShell
-      model={model}
-      dimensions={size}
-      selectedCard={selectedCard}
-      activeRegion={activeRegion}
-      busy={Boolean(busy)}
-      navigationPanel={
-        <ProjectFileTreeNavigation
-          root={project.workspace.selected.workspace_root}
-          dimensions={dimensions}
-          workCount={works.length}
-          focused={activeRegion === 0}
-          isInputCaptured={isInputCaptured}
-          onFocus={() => setActiveRegion(0)}
-          onOpenWork={() => setActiveRegion(1)}
-          onOpenProjects={onOpenProjects}
-          onOpenLab={onOpenLab}
-          onWorkspacePointer={onWorkspacePointer}
-          topOffset={3}
-        />
-      }
-    />
+    <Box
+      width={size.columns}
+      height={terminalCanvasRows(size.rows)}
+      position="relative"
+      overflow="hidden"
+    >
+      <ProfileShell
+        model={model}
+        dimensions={size}
+        selectedCard={selectedCard}
+        activeRegion={activeRegion}
+        busy={Boolean(busy)}
+        navigationWidth={projectNavigationWidth(size)}
+        navigationPanel={
+          <ProjectFileTreeNavigation
+            root={project.workspace.selected.workspace_root}
+            dimensions={dimensions}
+            workCount={works.length}
+            focused={activeRegion === 0}
+            isInputCaptured={isInputCaptured}
+            onFocus={() => setActiveRegion(0)}
+            onOpenWork={() => setActiveRegion(1)}
+            onOpenProjects={onOpenProjects}
+            onOpenLab={onOpenLab}
+            onWorkspacePointer={onWorkspacePointer}
+            onCopyNotice={setCopyNotice}
+            topOffset={3}
+          />
+        }
+      />
+      {copyNotice ? (
+        <ProjectPathCopyOverlay notice={copyNotice} dimensions={size} />
+      ) : null}
+    </Box>
   );
 }

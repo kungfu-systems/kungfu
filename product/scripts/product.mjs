@@ -40,7 +40,7 @@ function usage(code) {
   process.stdout.write(
     [
       'usage: ./shifu product gui dev|build|pack|dist [--dry-run] [--instance-home <path>] [--no-instance-home]',
-      '       ./shifu product tui dev|demo|build|bundle|dist [--dry-run] [--instance-home <path>] [--no-instance-home]',
+      '       ./shifu product tui dev|demo|build|bundle|dist [--empty-state] [--dry-run] [--instance-home <path>] [--no-instance-home]',
       '       ./shifu product cli dist [--dry-run] [--instance-home <path>] [--no-instance-home]',
       '',
       'gui build/pack  -> desktop product unpacked app under product/dist/desktop',
@@ -54,6 +54,9 @@ function usage(code) {
       '  dev commands auto-pick a workspace data home at <workspace>/.kungfu',
       '  KF_DEV_HOME=<path> pins the dev workspace data home for local dev runs',
       '  (dev only; explicit flags and KF_INSTANCE_HOME/KF_HOME take precedence)',
+      '',
+      '--empty-state',
+      '  open `product tui dev` against a deterministic no-Work snapshot',
       '',
     ].join('\n'),
   );
@@ -246,11 +249,16 @@ function devWorkspaceHomeOverride(parsed, surface, verb, env = process.env) {
 function instanceEnv(instanceHome, baseEnv = process.env) {
   if (!instanceHome) return { ...baseEnv };
   const runtimeHome = path.join(instanceHome, 'home');
+  const projectsConfigHome =
+    baseEnv.KF_PROJECTS_CONFIG_HOME ||
+    baseEnv.KF_CONFIG_HOME ||
+    defaultConfigHome();
   return {
     ...baseEnv,
     KF_INSTANCE_HOME: instanceHome,
     KF_HOME: runtimeHome,
     KF_CONFIG_HOME: path.join(instanceHome, 'config'),
+    KF_PROJECTS_CONFIG_HOME: projectsConfigHome,
     KF_RUNTIME_DIR: path.join(runtimeHome, 'runtime'),
   };
 }
@@ -379,6 +387,7 @@ function prepareDevViewExtensions(options = {}) {
 function parseArgs(argv) {
   const parsed = {
     dryRun: false,
+    emptyState: false,
     instanceHome: '',
     noInstanceHome: false,
     positional: [],
@@ -387,6 +396,8 @@ function parseArgs(argv) {
     const arg = argv[i];
     if (arg === '--dry-run') {
       parsed.dryRun = true;
+    } else if (arg === '--empty-state') {
+      parsed.emptyState = true;
     } else if (arg === '--no-instance-home') {
       parsed.noInstanceHome = true;
     } else if (arg === '--instance-home' || arg === '--home' || arg === '-H') {
@@ -413,6 +424,7 @@ function envDiff(env) {
     ['KF_INSTANCE_HOME', env.KF_INSTANCE_HOME],
     ['KF_HOME', env.KF_HOME],
     ['KF_CONFIG_HOME', env.KF_CONFIG_HOME],
+    ['KF_PROJECTS_CONFIG_HOME', env.KF_PROJECTS_CONFIG_HOME],
     ['KF_RUNTIME_DIR', env.KF_RUNTIME_DIR],
     ['KUNGFU_SDK_ENTRY', env.KUNGFU_SDK_ENTRY],
     ['KUNGFU_KFD3_REGISTRY', env.KUNGFU_KFD3_REGISTRY],
@@ -481,6 +493,9 @@ function main(argv = process.argv.slice(2)) {
   const parsed = parseArgs(argv);
   const { dryRun, positional } = parsed;
   const [surface, verb] = positional;
+  if (parsed.emptyState && !(surface === 'tui' && verb === 'dev')) {
+    fail('--empty-state is supported only by `product tui dev`');
+  }
   const autoInstanceHome = '';
   const autoWorkspaceHome =
     devWorkspaceHomeOverride(parsed, surface, verb) ||
@@ -547,7 +562,9 @@ function main(argv = process.argv.slice(2)) {
     }
   } else if (surface === 'tui') {
     if (verb === 'dev') {
-      pnpm('tui dev', ['--filter', '@kungfu-tech/tui', 'run', 'dev'], {
+      const tuiArgs = ['--filter', '@kungfu-tech/tui', 'run', 'dev'];
+      if (parsed.emptyState) tuiArgs.push('--', '--empty-state');
+      pnpm('tui dev', tuiArgs, {
         dryRun,
         env,
         instanceHome,

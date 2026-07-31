@@ -39,6 +39,7 @@ import {
   nextWorkbenchFocus,
   scrollWorkbenchSession,
   sessionTitleBar,
+  splitHorizontalPointerActionAtPoint,
   workbenchActionAtPoint,
   workbenchReportAtPoint,
   workbenchReportReturnAtPoint,
@@ -346,6 +347,40 @@ test('mouse coordinates resolve visible workbench actions and report cards', () 
       gap: 2,
     }),
     'projects',
+  );
+  assert.equal(
+    splitHorizontalPointerActionAtPoint({
+      actions: [
+        { action: 'work', label: '[1] All Work' },
+        { action: 'projects', label: '[2] Project · a-very-long-project-name' },
+        { action: 'lab', label: '[3] Agent Work Lab' },
+      ],
+      column: 79,
+      row: 1,
+      targetRow: 1,
+      width: 80,
+      startColumn: 2,
+      endPadding: 1,
+      gap: 2,
+    }),
+    'lab',
+  );
+  assert.equal(
+    splitHorizontalPointerActionAtPoint({
+      actions: [
+        { action: 'work', label: '[1] All Work' },
+        { action: 'projects', label: '[2] Project · a-very-long-project-name' },
+        { action: 'lab', label: '[3] Agent Work Lab' },
+      ],
+      column: 58,
+      row: 1,
+      targetRow: 1,
+      width: 80,
+      startColumn: 2,
+      endPadding: 1,
+      gap: 2,
+    }),
+    undefined,
   );
 });
 
@@ -764,7 +799,12 @@ test('TUI host streams events and preserves the one-second rhythm', () => {
   assert.match(playbackSource, /wait\(timing\.verdictIntervalMs\)/);
   assert.match(hostSource, /agentWorkLabRunProgressLabel/);
   assert.match(mainSource, /existingProjectWorkspaceRoot\(process\.cwd\(\)/);
-  assert.match(mainSource, /startupProjectRoot \? 'loading' : 'all-work'/);
+  assert.match(
+    mainSource,
+    /autoDemo \? 'lab' : emptyState \? 'all-work' : 'loading'/,
+  );
+  assert.match(mainSource, /startupIntroSettled/);
+  assert.match(mainSource, /TerminalLoadingScene/);
   assert.match(mainSource, /surface !== 'lab'/);
   assert.match(hostSource, /quietProgressIntervalMs/);
   assert.match(hostSource, /recommendationDurationMs/);
@@ -785,7 +825,7 @@ test('TUI host streams events and preserves the one-second rhythm', () => {
   assert.match(hostSource, /lab\.runMigration\(/);
   assert.match(mainSource, /void lab\s*\.inspect\(\)/);
   assert.doesNotMatch(mainSource, /startup = lab\.inspectSync\(\)/);
-  assert.match(mainSource, /Terminal product is open/);
+  assert.match(mainSource, /Opening your Work control plane/);
   assert.doesNotMatch(
     mainSource,
     /setRunProgress|setNextPrompt|setReportDetail/,
