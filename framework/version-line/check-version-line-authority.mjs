@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // @ts-check
 
+import { spawnSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 import process from 'node:process';
@@ -46,6 +47,34 @@ function walk(root, relative = '') {
   return files;
 }
 
+function sourceFiles(root) {
+  const repository = spawnSync(
+    'git',
+    ['-C', root, 'rev-parse', '--show-toplevel'],
+    { encoding: 'utf8' },
+  );
+  if (
+    repository.status === 0 &&
+    fs.realpathSync(repository.stdout.trim()) === fs.realpathSync(root)
+  ) {
+    const tracked = spawnSync('git', ['-C', root, 'ls-files', '-z'], {
+      encoding: 'buffer',
+    });
+    if (tracked.status !== 0) {
+      throw new Error(
+        `cannot enumerate tracked version-line sources: ${tracked.stderr.toString('utf8').trim()}`,
+      );
+    }
+    return tracked.stdout
+      .toString('utf8')
+      .split('\0')
+      .filter(Boolean)
+      .map(posix)
+      .sort();
+  }
+  return walk(root).sort();
+}
+
 function isFixtureOrTest(file) {
   return (
     /(?:^|\/)(?:tests?|fixtures?)(?:\/|$)/u.test(file) ||
@@ -81,7 +110,7 @@ export function scanNarrowBindings(
   const immutablePrefixes = sourceBoundaries.immutableEvidencePrefixes || [];
   const violations = [];
   const admitted = [];
-  for (const file of walk(root)) {
+  for (const file of sourceFiles(root)) {
     if (
       isFixtureOrTest(file) ||
       isImmutableEvidence(file, immutablePrefixes) ||
