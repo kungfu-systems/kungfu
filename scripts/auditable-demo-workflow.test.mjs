@@ -8,6 +8,11 @@ import { fileURLToPath } from 'node:url';
 
 import { parse } from 'yaml';
 
+import {
+  buildAuditableDemoTriggerPlan,
+  verifyAuditableDemoTriggerPlan,
+} from './auditable-demo-trigger-plan.mjs';
+
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const WORKFLOW_PATH = path.join(ROOT, '.github', 'workflows', 'build.yml');
 const RELEASE_WORKFLOW_PATH = path.join(
@@ -20,6 +25,15 @@ const WORKFLOW_TEXT = fs.readFileSync(WORKFLOW_PATH, 'utf8');
 const WORKFLOW = parse(WORKFLOW_TEXT);
 const RELEASE_WORKFLOW = parse(fs.readFileSync(RELEASE_WORKFLOW_PATH, 'utf8'));
 const AsyncFunction = Object.getPrototypeOf(async () => {}).constructor;
+const SOURCE_SHA = '1'.repeat(40);
+
+function triggerPlan(overrides = {}) {
+  return buildAuditableDemoTriggerPlan({
+    eventName: 'workflow_dispatch',
+    sourceSha: SOURCE_SHA,
+    ...overrides,
+  });
+}
 
 test('Alpha and release builds rerun when candidate source is synchronized', () => {
   assert.deepEqual(WORKFLOW.on.pull_request.types, [
@@ -28,6 +42,73 @@ test('Alpha and release builds rerun when candidate source is synchronized', () 
     'reopened',
     'ready_for_review',
   ]);
+});
+
+test('manual dispatch preserves Gate-only and full-media validation modes', () => {
+  const gateOnly = triggerPlan({});
+  assert.equal(gateOnly.triggerClass, 'manual');
+  assert.equal(gateOnly.demoId, 'agent-work-lab');
+  assert.equal(gateOnly.renderMedia, false);
+  assert.equal(gateOnly.refreshRequired, false);
+
+  const refresh = triggerPlan({
+    requestedDemoId: 'agent-work-lab-secondary',
+    requestedRenderMedia: true,
+  });
+  assert.equal(refresh.demoId, 'agent-work-lab-secondary');
+  assert.equal(refresh.renderMedia, true);
+  assert.equal(refresh.refreshRequired, true);
+  assert.equal(verifyAuditableDemoTriggerPlan(refresh), refresh);
+});
+
+test('Alpha and Release promotions require the same default media refresh plan', () => {
+  const alpha = triggerPlan({
+    eventName: 'pull_request',
+    baseRef: 'alpha/v4/v4.0',
+  });
+  const release = triggerPlan({
+    eventName: 'pull_request',
+    baseRef: 'release/v4/v4.0',
+  });
+  for (const candidate of [alpha, release]) {
+    assert.equal(candidate.demoId, 'agent-work-lab');
+    assert.equal(candidate.renderMedia, true);
+    assert.equal(candidate.refreshRequired, true);
+    assert.equal(candidate.executionContract, alpha.executionContract);
+    assert.equal(candidate.publicationAuthority, false);
+  }
+  assert.equal(alpha.triggerClass, 'alpha');
+  assert.equal(release.triggerClass, 'release');
+});
+
+test('unsupported or ambiguous trigger inputs fail closed', () => {
+  assert.throws(
+    () => triggerPlan({ eventName: 'push' }),
+    /unsupported event push/u,
+  );
+  assert.throws(
+    () =>
+      triggerPlan({
+        eventName: 'pull_request',
+        baseRef: 'dev/v4/v4.0',
+      }),
+    /not an Alpha or Release channel/u,
+  );
+  assert.throws(
+    () =>
+      triggerPlan({
+        eventName: 'pull_request',
+        baseRef: 'alpha/v4/v4.0',
+        requestedDemoId: 'secondary',
+      }),
+    /must use the catalog default/u,
+  );
+  const tampered = triggerPlan({ requestedRenderMedia: true });
+  tampered.renderMedia = false;
+  assert.throws(
+    () => verifyAuditableDemoTriggerPlan(tampered),
+    /plan root mismatch/u,
+  );
 });
 
 async function runResolver({
