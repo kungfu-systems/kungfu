@@ -24,7 +24,10 @@ import {
   checkColdBuildchainKfd,
   loadBuildchainKfdRuntime,
 } from '../framework/release/buildchain-kfd-runtime.mjs';
-import { assertKfdEvidenceSourceBinding } from './source-acceptance.mjs';
+import {
+  assertKfdEvidenceSourceBinding,
+  resolveKfdProductGateCheckedAt,
+} from './source-acceptance.mjs';
 
 let runtime;
 
@@ -1858,9 +1861,14 @@ async function runCheckOrWrite(options) {
   const strictAudit = buildStrictBuildchainAudit(registry);
   assertStrictBuildchainAudit(strictAudit);
   const sourceSha = resolveKfdEvidenceSourceSha({ write: options.write });
-  const checkedAt = options.write
-    ? new Date().toISOString()
-    : String(readJson(KFD_PRODUCT_GATE_PATHS[0]).checkedAt || '');
+  const checkedAt = resolveKfdProductGateCheckedAt({
+    write: options.write,
+    now: () => new Date().toISOString(),
+    retainedGateResults: KFD_PRODUCT_GATE_PATHS.map(readOptionalJson),
+    sourceSha,
+    commitTimestamp: (commit) =>
+      gitValue(['show', '-s', '--format=%cI', commit]),
+  });
   const prebuildWitness = buildKfd3PrebuildWitness(registry, sourceSha);
   const artifactWitness = buildKfd3ArtifactWitness(registry, {
     runVerify: true,

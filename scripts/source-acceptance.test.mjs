@@ -8,6 +8,7 @@ import { fileURLToPath } from 'node:url';
 
 import {
   assertKfdEvidenceSourceBinding,
+  resolveKfdProductGateCheckedAt,
   sourceAcceptancePlan,
   sourceClangFormatCommand,
   sourceMypyCommand,
@@ -25,6 +26,38 @@ test('KFD evidence rejects a source SHA whose ancestry was removed by rebase', (
         isAncestor: () => false,
       }),
     /not an ancestor of checked head.*regenerate the evidence after rebasing/u,
+  );
+});
+
+test('KFD product gates remain checkable without ignored runtime outputs', () => {
+  const sourceSha = 'a'.repeat(40);
+  const commitCheckedAt = '2026-07-31T02:20:37+00:00';
+  assert.equal(
+    resolveKfdProductGateCheckedAt({
+      write: false,
+      now: () => {
+        throw new Error('check mode must not use the wall clock');
+      },
+      retainedGateResults: [null, null, null],
+      sourceSha,
+      commitTimestamp: (commit) => {
+        assert.equal(commit, sourceSha);
+        return commitCheckedAt;
+      },
+    }),
+    commitCheckedAt,
+  );
+  assert.equal(
+    resolveKfdProductGateCheckedAt({
+      write: false,
+      now: () => '',
+      retainedGateResults: [null, { checkedAt: '2026-07-30T00:00:00Z' }],
+      sourceSha,
+      commitTimestamp: () => {
+        throw new Error('retained evidence must preserve its timestamp');
+      },
+    }),
+    '2026-07-30T00:00:00Z',
   );
 });
 

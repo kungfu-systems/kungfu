@@ -178,6 +178,27 @@ export function assertKfdEvidenceSourceBinding({
   return sourceSha;
 }
 
+export function resolveKfdProductGateCheckedAt({
+  write,
+  now,
+  retainedGateResults,
+  sourceSha,
+  commitTimestamp,
+}) {
+  if (write) return now();
+  for (const gate of retainedGateResults) {
+    const checkedAt = String(gate?.checkedAt || '');
+    if (checkedAt) return checkedAt;
+  }
+  const checkedAt = commitTimestamp(sourceSha);
+  if (!checkedAt || Number.isNaN(Date.parse(checkedAt))) {
+    throw new Error(
+      `KFD product-gate evidence cannot resolve a checkedAt timestamp for ${sourceSha}`,
+    );
+  }
+  return checkedAt;
+}
+
 /**
  * @param {string[]} files
  * @param {string} [evidenceBaseCommit]
