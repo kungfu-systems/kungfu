@@ -1,3 +1,18 @@
+---
+metadata_schema: kungfu.document-metadata/v1
+document_status: active
+period: 2026-07-31
+theme: node-watcher-runtime-boundary
+doc_type: qualification-evidence
+sources: [executable-probe, local-files]
+confidence: high
+sensitivity: public
+evidence_grade: B
+review_state: self-reviewed
+last_reviewed: 2026-07-31
+ai_provenance: OpenAI GPT-5 via Codex on 2026-07-31; based on repository source, local executable probes, and user-authorized implementation; exact hidden model checkpoint and future protected platform results are not claimed
+---
+
 # Node Watcher Runtime Boundary Qualification
 
 ## Claim
