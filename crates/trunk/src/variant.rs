@@ -159,28 +159,49 @@ fn run_node() -> Option<i32> {
     extern "system" {
         fn LoadLibraryW(lp_lib_file_name: *const u16) -> *mut c_void;
         fn GetProcAddress(h_module: *mut c_void, lp_proc_name: *const c_char) -> *mut c_void;
+        fn FreeLibrary(h_lib_module: *mut c_void) -> i32;
     }
 
     // The host DLL ships next to this binary (dist/kungfu); the exe directory is
-    // on the default DLL search path. If we cannot resolve our own path, fall
-    // through rather than guess.
+    // not searched for the host's dependencies when the host is loaded by an
+    // absolute path on Windows. Preload the sibling libnode.dll by its exact path
+    // so loading the host cannot silently fall through to the Python variant.
+    // If we cannot resolve our own path, fall through rather than guess.
     let exe = env::current_exe().ok()?;
-    let lib_path = exe.parent()?.join(NODE_HOST_LIB);
+    let runtime_dir = exe.parent()?;
+    let libnode_path = runtime_dir.join("libnode.dll");
+    let lib_path = runtime_dir.join(NODE_HOST_LIB);
     // LoadLibraryW wants a NUL-terminated wide string.
+    let libnode_wide: Vec<u16> = libnode_path
+        .as_os_str()
+        .encode_wide()
+        .chain(std::iter::once(0))
+        .collect();
     let wide: Vec<u16> = lib_path
         .as_os_str()
         .encode_wide()
         .chain(std::iter::once(0))
         .collect();
 
-    // Absent library → not the product build → fall through to the Python path.
+    // Absent dependency or host → not a complete product build → fall through
+    // to the Python path. Release the dependency on a failed native admission;
+    // successful node::Start owns the process lifetime, as before.
+    let libnode_handle = unsafe { LoadLibraryW(libnode_wide.as_ptr()) };
+    if libnode_handle.is_null() {
+        return None;
+    }
     let handle = unsafe { LoadLibraryW(wide.as_ptr()) };
     if handle.is_null() {
+        unsafe { FreeLibrary(libnode_handle) };
         return None;
     }
     let symbol = CString::new("kungfu_node_run").unwrap();
     let entry = unsafe { GetProcAddress(handle, symbol.as_ptr()) };
     if entry.is_null() {
+        unsafe {
+            FreeLibrary(handle);
+            FreeLibrary(libnode_handle);
+        }
         return None;
     }
     let run: NodeRunFn = unsafe { std::mem::transmute(entry) };
