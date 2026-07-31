@@ -303,6 +303,7 @@ test(
     const writer = spawnPeer('writer', runtimeDir);
     peers.push(writer);
     let written;
+    // Preserve the original failure while exposing the coordinator side of startup.
     try {
       written = await waitForJsonLine(writer, 'writer-ready');
     } catch (error) {
