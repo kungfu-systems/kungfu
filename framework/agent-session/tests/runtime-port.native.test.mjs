@@ -302,7 +302,18 @@ test(
 
     const writer = spawnPeer('writer', runtimeDir);
     peers.push(writer);
-    const written = await waitForJsonLine(writer, 'writer-ready');
+    let written;
+    try {
+      written = await waitForJsonLine(writer, 'writer-ready');
+    } catch (error) {
+      const coordinatorLog = fs.readFileSync(coordinatorOutput, 'utf8');
+      throw new Error(
+        `${error instanceof Error ? error.message : String(error)}\n` +
+          `coordinatorExited=${coordinatorExited}\n` +
+          `coordinator output:\n${coordinatorLog || '<empty>'}`,
+        { cause: error },
+      );
+    }
     const reader = spawnPeer('reader', runtimeDir);
     peers.push(reader);
     const received = await waitForJsonLine(reader, 'reader-received');
