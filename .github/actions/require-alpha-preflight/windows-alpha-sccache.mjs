@@ -258,6 +258,7 @@ export async function ensureWindowsSccache({
     },
   };
   const toolRoot = digest(toolIdentity);
+  const resolvedCacheDirectory = path.resolve(cwd, WINDOWS_SCCACHE_DIR);
   const body = {
     schemaVersion: 1,
     contract: WINDOWS_SCCACHE_TOOL_CONTRACT,
@@ -276,6 +277,7 @@ export async function ensureWindowsSccache({
     bindings: {
       sourceCommit: env.BUILDCHAIN_SOURCE_SHA || env.GITHUB_SHA || '',
       cacheDirectory: WINDOWS_SCCACHE_DIR,
+      cacheDirectoryResolution: 'repository-workspace',
     },
   };
   const receipt = { ...body, root: digest(body) };
@@ -289,8 +291,8 @@ export async function ensureWindowsSccache({
   appendEnvironment(env.GITHUB_ENV, {
     BUILDCHAIN_COMPILER_CACHE_TOOL_ROOT: receipt.root,
     BUILDCHAIN_COMPILER_CACHE_TOOL_EVIDENCE_PATH: evidencePath,
-    KUNGFU_WINDOWS_ALPHA_SCCACHE_DIR: WINDOWS_SCCACHE_DIR,
-    SCCACHE_DIR: WINDOWS_SCCACHE_DIR,
+    KUNGFU_WINDOWS_ALPHA_SCCACHE_DIR: resolvedCacheDirectory,
+    SCCACHE_DIR: resolvedCacheDirectory,
   });
   return receipt;
 }
