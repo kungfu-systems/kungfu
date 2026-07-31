@@ -554,7 +554,6 @@ function buildUpstreamKfdAggregate() {
     },
   };
 }
-
 function gitValue(args) {
   try {
     return execFileSync('git', args, {
@@ -566,7 +565,6 @@ function gitValue(args) {
     return '';
   }
 }
-
 function isGitAncestor(sourceSha, headSha) {
   return (
     spawnSync('git', ['merge-base', '--is-ancestor', sourceSha, headSha], {
@@ -575,7 +573,6 @@ function isGitAncestor(sourceSha, headSha) {
     }).status === 0
   );
 }
-
 function resolveKfdEvidenceSourceSha({ write }) {
   if (!write) prepareGateMeasurementHistory(ROOT);
   const headSha = gitValue(['rev-parse', 'HEAD']);
@@ -596,7 +593,6 @@ function resolveKfdEvidenceSourceSha({ write }) {
     findTreeEquivalentAncestor: findGitTreeEquivalentAncestor,
   });
 }
-
 function runNodeScript(args, { expectJson = true } = {}) {
   const result = spawnSync(process.execPath, args, {
     cwd: ROOT,
@@ -609,7 +605,6 @@ function runNodeScript(args, { expectJson = true } = {}) {
   }
   return expectJson ? JSON.parse(result.stdout) : result.stdout;
 }
-
 function fileSurface({
   id,
   name,
