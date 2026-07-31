@@ -27,6 +27,8 @@
     "./product-worker": "./src/product-worker.mjs",
     "./work-console-registry": "./src/work-console-registry.mjs",
     "./provider-adapters": "./src/provider-adapters.mjs",
+    "./work-attention": "./src/work-attention.mjs",
+    "./mock-provider": "./src/mock-provider.mjs",
     "./runtime-port": "./src/runtime-port.mjs",
     "./worker": "./src/capsule-worker.mjs",
     "./vt-snapshot": "./src/vt-snapshot.mjs"
