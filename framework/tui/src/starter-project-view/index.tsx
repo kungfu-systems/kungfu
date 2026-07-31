@@ -27,7 +27,7 @@ import {
   compactProfileNavigationWidth,
   resolveProfileShellLayout,
 } from '../profile-shell.js';
-import { ProjectFilesHost } from '../project-files-view/index.js';
+import { ProjectFileTreeNavigation } from '../project-files-view/index.js';
 import { decodeTerminalMouseInput } from '../terminal-lifecycle.js';
 
 type DimensionSource = {
@@ -418,9 +418,6 @@ export function StarterProjectHost({
 }) {
   const { exit } = useApp();
   const [size, setSize] = React.useState(dimensions.get());
-  const [projectSection, setProjectSection] = React.useState<'work' | 'files'>(
-    'work',
-  );
   const [activeRegion, setActiveRegion] = React.useState(1);
   const [stage, setStage] = React.useState<StarterProjectStage>('overview');
   const [profiles, setProfiles] = React.useState<AgentRuntimeProfile[]>([]);
@@ -704,27 +701,12 @@ export function StarterProjectHost({
       .finally(() => setBusy(''));
   }, [closePlan, lab]);
   React.useEffect(() => {
-    if (projectSection === 'files') return;
+    if (activeRegion === 0) return;
     const onData = (chunk: Buffer | string) => {
       if (isInputCaptured()) return;
       const input = String(chunk);
       const mouseEvents = decodeTerminalMouseInput(input);
       if (mouseEvents.length > 0) {
-        for (const event of mouseEvents) {
-          if (event.kind !== 'press' || event.button !== 'left') continue;
-          const section = projectSectionNavigationAtPoint({
-            dimensions: size,
-            column: event.column,
-            row: event.row,
-          });
-          if (section === 'files') {
-            onWorkspacePointer();
-            setProjectSection('files');
-          } else if (section === 'work') {
-            onWorkspacePointer();
-            setActiveRegion(1);
-          }
-        }
         return;
       }
       const key = decodeShellKey(input);
@@ -738,7 +720,7 @@ export function StarterProjectHost({
         return;
       if (input === 'q' || input === '\u0003') return exit();
       if (stage === 'overview' && input === 't') {
-        return setProjectSection('files');
+        return setActiveRegion(0);
       }
       if (stage === 'detail') {
         if (enter || input === 's') return openAgents();
@@ -886,6 +868,7 @@ export function StarterProjectHost({
       process.stdin.off('data', onData);
     };
   }, [
+    activeRegion,
     exit,
     isInputCaptured,
     closePlan?.executable,
@@ -894,7 +877,6 @@ export function StarterProjectHost({
     onOpenLab,
     onOpenProjects,
     onCreateNextWork,
-    onWorkspacePointer,
     openAgents,
     openReviewAgents,
     plan?.executable,
@@ -902,35 +884,16 @@ export function StarterProjectHost({
     previewClose,
     previewReview,
     profiles.length,
-    projectSection,
     reviewPlan?.executable,
     reviewReceipt,
     runReview,
     selectAdjacentWork,
-    size,
     stage,
     start,
     workReceipt,
   ]);
 
   const spinner = ['◐', '◓', '◑', '◒'][activityFrame];
-  if (projectSection === 'files') {
-    return (
-      <ProjectFilesHost
-        root={project.workspace.selected.workspace_root}
-        dimensions={dimensions}
-        workCount={works.length}
-        isInputCaptured={isInputCaptured}
-        onOpenWork={() => {
-          setProjectSection('work');
-          setActiveRegion(1);
-        }}
-        onOpenProjects={onOpenProjects}
-        onOpenLab={onOpenLab}
-        onWorkspacePointer={onWorkspacePointer}
-      />
-    );
-  }
   if (stage === 'detail') {
     return (
       <StarterWorkPanel
@@ -1593,6 +1556,21 @@ export function StarterProjectHost({
       selectedCard={selectedCard}
       activeRegion={activeRegion}
       busy={Boolean(busy)}
+      navigationPanel={
+        <ProjectFileTreeNavigation
+          root={project.workspace.selected.workspace_root}
+          dimensions={dimensions}
+          workCount={works.length}
+          focused={activeRegion === 0}
+          isInputCaptured={isInputCaptured}
+          onFocus={() => setActiveRegion(0)}
+          onOpenWork={() => setActiveRegion(1)}
+          onOpenProjects={onOpenProjects}
+          onOpenLab={onOpenLab}
+          onWorkspacePointer={onWorkspacePointer}
+          topOffset={3}
+        />
+      }
     />
   );
 }

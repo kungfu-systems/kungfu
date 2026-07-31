@@ -383,18 +383,20 @@ export function ProfileShell({
   selectedCard = 0,
   activeRegion = 1,
   busy = false,
+  navigationPanel,
 }: {
   model: ProfileShellModel;
   dimensions: TerminalDimensions;
   selectedCard?: number;
   activeRegion?: number;
   busy?: boolean;
+  navigationPanel?: React.ReactNode;
 }) {
   const layout = resolveProfileShellLayout(dimensions);
   const navigationWidth = profileShellNavigationWidth(model, dimensions);
   const { bodyHeight, twoColumnEvidenceHeight, twoColumnCardHeight } =
     profileShellBodyMetrics(model, dimensions);
-  const navigation = (
+  const navigation = navigationPanel ?? (
     <NavigationPanel model={model} active={activeRegion === 0} />
   );
 

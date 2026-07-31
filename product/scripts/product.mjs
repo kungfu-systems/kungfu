@@ -128,6 +128,26 @@ function seedInstanceConfig(instanceHome, options = {}) {
   return { seeded: true, source, target };
 }
 
+function seedInstanceProjectIndex(instanceHome, options = {}) {
+  const sourceConfigHome = options.sourceConfigHome || defaultConfigHome();
+  const targetConfigHome = path.join(instanceHome, 'config');
+  const relativePaths = [
+    path.join('gui', 'workspaces.json'),
+    path.join('projects', 'library.json'),
+    path.join('workspaces', 'catalog.json'),
+  ];
+  const seeded = [];
+  for (const relativePath of relativePaths) {
+    const source = path.join(sourceConfigHome, relativePath);
+    const target = path.join(targetConfigHome, relativePath);
+    if (!existsSync(source) || existsSync(target)) continue;
+    mkdirSync(path.dirname(target), { recursive: true });
+    copyFileSync(source, target);
+    seeded.push({ source, target });
+  }
+  return seeded;
+}
+
 function nearestExistingWorkspaceHome(cwd) {
   let current = path.resolve(cwd);
   const legacyUserHome = path.join(os.homedir(), '.kungfu');
@@ -434,6 +454,11 @@ function run(label, cmd, args, options = {}) {
         `[instance-home] seeded config: ${seed.source} -> ${seed.target}\n`,
       );
     }
+    for (const projectSeed of seedInstanceProjectIndex(options.instanceHome)) {
+      process.stdout.write(
+        `[instance-home] seeded Project index: ${projectSeed.source} -> ${projectSeed.target}\n`,
+      );
+    }
   }
   // Selecting a workspace is read-only. Desktop owns the write-intent-bound
   // ensure gate; the launcher must not initialize <workspace>/.kungfu merely
@@ -611,6 +636,7 @@ export {
   prepareDevViewExtensions,
   resolveInstanceHome,
   seedInstanceConfig,
+  seedInstanceProjectIndex,
   shouldAutoInstanceHome,
   shouldAutoWorkspaceHome,
   workspaceDataHomeForCwd,
