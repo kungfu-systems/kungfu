@@ -83,6 +83,7 @@ import {
 import {
   type OpenedStarterProject,
   StarterProjectHost,
+  workReceiptHasRetainedSession,
 } from './starter-project-view/index.js';
 import {
   KUNGFU_EMPTY_WORK_NEBULA_PATTERN,
@@ -1889,7 +1890,11 @@ function ProductHost({
         setStarterWorkReceipt(resumed.workReceipt);
         setStarterReviewReceipt(resumed.reviewReceipt);
         setStarterCloseReceipt(resumed.closeReceipt);
-        setSurface('project-assignment');
+        setSurface(
+          workReceiptHasRetainedSession(resumed.workReceipt)
+            ? 'project-work'
+            : 'project-assignment',
+        );
       })
       .catch(() => undefined)
       .finally(() => {
@@ -2423,6 +2428,15 @@ function ProductHost({
           );
           setSurface('project-work');
           dispatchProjectWorkAction('project-work-new');
+          setControlNow({ ...CLOSED_CONTROL_PLANE, focus: 'workspace' });
+        }}
+        onRetainedAgentSession={(receipt) => {
+          setStarterWorkReceipt(receipt);
+          setOpenedProject(
+            starterProject.workspace
+              .selected as unknown as ProjectWorkspaceSelection,
+          );
+          setSurface('project-work');
           setControlNow({ ...CLOSED_CONTROL_PLANE, focus: 'workspace' });
         }}
         initialWorkReceipt={starterWorkReceipt}
