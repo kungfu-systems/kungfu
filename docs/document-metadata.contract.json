@@ -2,6 +2,9 @@
   "schemaVersion": 1,
   "metadataSchema": "kungfu.document-metadata/v1",
   "metadataRegistry": "docs/document-metadata.registry.json",
+  "metadataRegistryShards": [
+    "docs/evolution/document-metadata.registry.json"
+  ],
   "adrIdentity": {
     "root": "docs/adr",
     "scheme": "uuidv7",

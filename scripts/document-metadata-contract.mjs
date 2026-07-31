@@ -32,6 +32,7 @@ const ADR_PROFILE_PATTERN = '^docs/adr/(?!README\\.md$).+\\.(?:md|markdown)$';
  *   schemaVersion: number,
  *   metadataSchema: string,
  *   metadataRegistry: string,
+ *   metadataRegistryShards?: string[],
  *   adrIdentity?: {
  *     root: string,
  *     scheme: 'uuidv7',
@@ -141,20 +142,42 @@ export function readMetadataContract(
 
 /** @param {string} root @param {MetadataContract} contract */
 function readMetadataRegistry(root, contract) {
-  const registry = JSON.parse(
-    fs.readFileSync(path.join(root, contract.metadataRegistry), 'utf8'),
-  );
+  const paths = [
+    contract.metadataRegistry,
+    ...(contract.metadataRegistryShards || []),
+  ];
   if (
-    registry.schemaVersion !== 1 ||
-    registry.metadataSchema !== contract.metadataSchema ||
-    typeof registry.documents !== 'object' ||
-    Array.isArray(registry.documents)
+    paths.some((item) => typeof item !== 'string' || !item.trim()) ||
+    new Set(paths).size !== paths.length
   ) {
-    throw new Error(
-      `${contract.metadataRegistry}: invalid document metadata registry`,
-    );
+    throw new Error('document metadata registry paths must be unique strings');
   }
-  return /** @type {MetadataRegistry} */ (registry);
+  /** @type {Record<string, Record<string, string | string[]>>} */
+  const documents = {};
+  const sources = new Map();
+  for (const registryPath of paths) {
+    const registry = JSON.parse(
+      fs.readFileSync(path.join(root, registryPath), 'utf8'),
+    );
+    if (
+      registry.schemaVersion !== 1 ||
+      registry.metadataSchema !== contract.metadataSchema ||
+      typeof registry.documents !== 'object' ||
+      Array.isArray(registry.documents)
+    ) {
+      throw new Error(`${registryPath}: invalid document metadata registry`);
+    }
+    for (const [rel, entry] of Object.entries(registry.documents)) {
+      if (sources.has(rel)) {
+        throw new Error(
+          `${registryPath}: duplicate document metadata authority for ${rel}; already declared in ${sources.get(rel)}`,
+        );
+      }
+      documents[rel] = entry;
+      sources.set(rel, registryPath);
+    }
+  }
+  return { documents, paths, sources };
 }
 
 /** @param {string} rel @param {{files?: string[], patterns?: string[]}} rule */
@@ -528,6 +551,7 @@ export function validateDocumentMetadata(options) {
   const findings = [];
   const metadataRegistry = readMetadataRegistry(root, contract);
   const registered = metadataRegistry.documents;
+  const registryLabel = metadataRegistry.paths.join(', ');
   const fileSet = new Set(options.files);
   const adrIds = new Set();
   const adrRecords = new Map();
@@ -577,7 +601,7 @@ export function validateDocumentMetadata(options) {
           code: 'metadata-authority-duplicate',
           file: rel,
           line: 1,
-          message: `${profile.id} metadata belongs in ${contract.metadataRegistry}, not visible frontmatter`,
+          message: `${profile.id} metadata belongs in ${registryLabel}, not visible frontmatter`,
         });
       }
       if (!registryEntry) {
@@ -585,7 +609,7 @@ export function validateDocumentMetadata(options) {
           code: 'metadata-registry-required',
           file: rel,
           line: 1,
-          message: `${profile.id} requires one entry in ${contract.metadataRegistry}`,
+          message: `${profile.id} requires one entry in ${registryLabel}`,
         });
         continue;
       }
@@ -823,7 +847,7 @@ export function validateDocumentMetadata(options) {
     if (!fileSet.has(rel)) {
       findings.push({
         code: 'metadata-registry-orphan',
-        file: contract.metadataRegistry,
+        file: metadataRegistry.sources.get(rel) || contract.metadataRegistry,
         line: 1,
         message: `registry entry has no tracked Markdown document: ${rel}`,
       });

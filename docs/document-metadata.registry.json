@@ -800,230 +800,6 @@
       ],
       "last_reviewed": "2026-07-13"
     },
-    "docs/evolution/candidates.md": {
-      "metadata_schema": "kungfu.document-metadata/v1",
-      "document_status": "active",
-      "doc_type": "evolution-projection",
-      "review_state": "self-reviewed",
-      "sensitivity": "public"
-    },
-    "docs/evolution/current-authority.md": {
-      "metadata_schema": "kungfu.document-metadata/v1",
-      "document_status": "active",
-      "doc_type": "evolution-projection",
-      "review_state": "self-reviewed",
-      "sensitivity": "public"
-    },
-    "docs/evolution/eras/01-journal-substrate.md": {
-      "metadata_schema": "kungfu.document-metadata/v1",
-      "document_status": "active",
-      "doc_type": "evolution-era",
-      "review_state": "self-reviewed",
-      "sensitivity": "public",
-      "sources": [
-        "architecture-decisions",
-        "local-files"
-      ],
-      "last_reviewed": "2026-07-28"
-    },
-    "docs/evolution/eras/02-facts-and-episodes.md": {
-      "metadata_schema": "kungfu.document-metadata/v1",
-      "document_status": "active",
-      "doc_type": "evolution-era",
-      "review_state": "self-reviewed",
-      "sensitivity": "public",
-      "sources": [
-        "architecture-decisions",
-        "local-files"
-      ],
-      "last_reviewed": "2026-07-28"
-    },
-    "docs/evolution/eras/03-composable-continuation.md": {
-      "metadata_schema": "kungfu.document-metadata/v1",
-      "document_status": "active",
-      "doc_type": "evolution-era",
-      "review_state": "self-reviewed",
-      "sensitivity": "public",
-      "sources": [
-        "architecture-decisions",
-        "local-files"
-      ],
-      "last_reviewed": "2026-07-28"
-    },
-    "docs/evolution/eras/04-native-core-authority.md": {
-      "metadata_schema": "kungfu.document-metadata/v1",
-      "document_status": "active",
-      "doc_type": "evolution-era",
-      "review_state": "self-reviewed",
-      "sensitivity": "public",
-      "sources": [
-        "architecture-decisions",
-        "local-files"
-      ],
-      "last_reviewed": "2026-07-28"
-    },
-    "docs/evolution/eras/05-work-control-dogfood.md": {
-      "metadata_schema": "kungfu.document-metadata/v1",
-      "document_status": "active",
-      "doc_type": "evolution-era",
-      "review_state": "self-reviewed",
-      "sensitivity": "public",
-      "sources": [
-        "architecture-decisions",
-        "local-files",
-        "user-decision"
-      ],
-      "last_reviewed": "2026-07-28"
-    },
-    "docs/evolution/reader-routes.md": {
-      "metadata_schema": "kungfu.document-metadata/v1",
-      "document_status": "active",
-      "doc_type": "evolution-projection",
-      "review_state": "self-reviewed",
-      "sensitivity": "public"
-    },
-    "docs/evolution/README.md": {
-      "metadata_schema": "kungfu.document-metadata/v1",
-      "document_status": "active",
-      "doc_type": "evolution-index",
-      "review_state": "self-reviewed",
-      "sensitivity": "public",
-      "sources": [
-        "local-files",
-        "user-decision"
-      ],
-      "last_reviewed": "2026-07-28"
-    },
-    "docs/evolution/stages/01-polyglot-journal.md": {
-      "metadata_schema": "kungfu.document-metadata/v1",
-      "document_status": "active",
-      "doc_type": "evolution-stage",
-      "review_state": "self-reviewed",
-      "sensitivity": "public",
-      "sources": [
-        "architecture-decisions",
-        "local-files"
-      ],
-      "last_reviewed": "2026-07-28"
-    },
-    "docs/evolution/stages/02-rewind-fact-ledger.md": {
-      "metadata_schema": "kungfu.document-metadata/v1",
-      "document_status": "active",
-      "doc_type": "evolution-stage",
-      "review_state": "self-reviewed",
-      "sensitivity": "public",
-      "sources": [
-        "architecture-decisions",
-        "local-files"
-      ],
-      "last_reviewed": "2026-07-28"
-    },
-    "docs/evolution/stages/03-sealed-episode.md": {
-      "metadata_schema": "kungfu.document-metadata/v1",
-      "document_status": "active",
-      "doc_type": "evolution-stage",
-      "review_state": "self-reviewed",
-      "sensitivity": "public",
-      "sources": [
-        "architecture-decisions",
-        "local-files"
-      ],
-      "last_reviewed": "2026-07-28"
-    },
-    "docs/evolution/stages/04-profile-suite.md": {
-      "metadata_schema": "kungfu.document-metadata/v1",
-      "document_status": "active",
-      "doc_type": "evolution-stage",
-      "review_state": "self-reviewed",
-      "sensitivity": "public",
-      "sources": [
-        "architecture-decisions",
-        "local-files"
-      ],
-      "last_reviewed": "2026-07-28"
-    },
-    "docs/evolution/stages/05-project-cut-xinfa.md": {
-      "metadata_schema": "kungfu.document-metadata/v1",
-      "document_status": "active",
-      "doc_type": "evolution-stage",
-      "review_state": "self-reviewed",
-      "sensitivity": "public",
-      "sources": [
-        "architecture-decisions",
-        "local-files"
-      ],
-      "last_reviewed": "2026-07-28"
-    },
-    "docs/evolution/stages/06-native-fact-action.md": {
-      "metadata_schema": "kungfu.document-metadata/v1",
-      "document_status": "active",
-      "doc_type": "evolution-stage",
-      "review_state": "self-reviewed",
-      "sensitivity": "public",
-      "sources": [
-        "architecture-decisions",
-        "local-files"
-      ],
-      "last_reviewed": "2026-07-28"
-    },
-    "docs/evolution/stages/07-initiative-assignment-work.md": {
-      "metadata_schema": "kungfu.document-metadata/v1",
-      "document_status": "active",
-      "doc_type": "evolution-stage",
-      "review_state": "self-reviewed",
-      "sensitivity": "public",
-      "sources": [
-        "architecture-decisions",
-        "local-files"
-      ],
-      "last_reviewed": "2026-07-28"
-    },
-    "docs/evolution/stages/08-native-work-control-dogfood.md": {
-      "metadata_schema": "kungfu.document-metadata/v1",
-      "document_status": "active",
-      "doc_type": "evolution-stage",
-      "review_state": "self-reviewed",
-      "sensitivity": "public",
-      "sources": [
-        "architecture-decisions",
-        "local-files",
-        "user-decision"
-      ],
-      "last_reviewed": "2026-07-28"
-    },
-    "docs/evolution/stages/09-work-control-canonical-name.md": {
-      "metadata_schema": "kungfu.document-metadata/v1",
-      "document_status": "active",
-      "doc_type": "evolution-stage",
-      "review_state": "self-reviewed",
-      "sensitivity": "public",
-      "sources": ["local-files", "user-decision"],
-      "period": "2026-07-29",
-      "theme": "work-control-canonical-name",
-      "confidence": "high",
-      "evidence_grade": "B",
-      "last_reviewed": "2026-07-29",
-      "ai_provenance": {
-        "model_family": "OpenAI GPT-5",
-        "product": "Codex",
-        "generated_at": "2026-07-29",
-        "invisible_context_boundary": "unobserved deployed runtimes and private retained payload bodies are not claimed"
-      }
-    },
-    "docs/evolution/stages/10-product-release-cut-updater.md": {
-      "metadata_schema": "kungfu.document-metadata/v1",
-      "document_status": "active",
-      "doc_type": "evolution-stage",
-      "review_state": "self-reviewed",
-      "sensitivity": "public"
-    },
-    "docs/evolution/timeline.md": {
-      "metadata_schema": "kungfu.document-metadata/v1",
-      "document_status": "active",
-      "doc_type": "evolution-projection",
-      "review_state": "self-reviewed",
-      "sensitivity": "public"
-    },
     "docs/guides/alpha-status.md": {
       "metadata_schema": "kungfu.document-metadata/v1",
       "document_status": "active",
@@ -1320,7 +1096,10 @@
       "doc_type": "product-design",
       "review_state": "unreviewed",
       "sensitivity": "public",
-      "sources": ["local-files", "user-consensus"],
+      "sources": [
+        "local-files",
+        "user-consensus"
+      ],
       "period": "2026-07-11",
       "theme": "kungfu-mission-control-workspaces",
       "confidence": "high",
@@ -1333,7 +1112,10 @@
       "doc_type": "product-design",
       "review_state": "unreviewed",
       "sensitivity": "public",
-      "sources": ["local-files", "user-consensus"],
+      "sources": [
+        "local-files",
+        "user-consensus"
+      ],
       "period": "2026-07-12",
       "theme": "kungfu-mission-control",
       "confidence": "high",
@@ -1346,7 +1128,10 @@
       "doc_type": "public-document",
       "review_state": "self-reviewed",
       "sensitivity": "public",
-      "sources": ["local-files", "user-consensus"],
+      "sources": [
+        "local-files",
+        "user-consensus"
+      ],
       "period": "2026-07-29",
       "theme": "work-control-compatibility",
       "confidence": "high",
@@ -1372,7 +1157,10 @@
       "doc_type": "public-document",
       "review_state": "self-reviewed",
       "sensitivity": "public",
-      "sources": ["local-files", "user-consensus"],
+      "sources": [
+        "local-files",
+        "user-consensus"
+      ],
       "period": "2026-07-29",
       "theme": "work-control-compatibility-redirect",
       "confidence": "high",
@@ -1391,7 +1179,10 @@
       "doc_type": "public-document",
       "review_state": "self-reviewed",
       "sensitivity": "public",
-      "sources": ["local-files", "user-consensus"],
+      "sources": [
+        "local-files",
+        "user-consensus"
+      ],
       "period": "2026-07-29",
       "theme": "work-control-compatibility-redirect",
       "confidence": "high",

@@ -7,8 +7,10 @@ readers should not have to see maintenance records before the document title.
 
 The machine authority is
 [`document-metadata.contract.json`](../document-metadata.contract.json). Public
-sidecar records live in
-[`document-metadata.registry.json`](../document-metadata.registry.json). The
+sidecar records live in its ordered registry set: the main
+[`document-metadata.registry.json`](../document-metadata.registry.json) and
+bounded domain shards such as the
+[Evolution registry](../evolution/document-metadata.registry.json). The
 deterministic `./shifu docs:check` gate validates both authorities, governed
 frontmatter, ADR body projections, immutable implementation evidence, and the
 canonical ADR identity graph.
@@ -49,9 +51,10 @@ import { parseFrontmatter } from './scripts/document-metadata-contract.mjs';
 
 const files = childProcess.execFileSync('git', ['ls-files', '-z', '*.md'])
   .toString().split('\0').filter(Boolean);
-const registry = new Set(Object.keys(
-  JSON.parse(fs.readFileSync('docs/document-metadata.registry.json')).documents,
-));
+const contract = JSON.parse(fs.readFileSync('docs/document-metadata.contract.json'));
+const registry = new Set([contract.metadataRegistry,
+  ...(contract.metadataRegistryShards || [])].flatMap((file) => Object.keys(
+    JSON.parse(fs.readFileSync(file)).documents)));
 const inline = new Set(files.filter((file) =>
   parseFrontmatter(fs.readFileSync(file, 'utf8'))
     ?.fields.get('metadata_schema')?.value === 'kungfu.document-metadata/v1'));
