@@ -1,0 +1,153 @@
+{
+  "schema": "kungfu.version-line-projections/v1",
+  "authorityRoot": "sha256:2fd580501fb77ae9ee05c8dd6a4bf141fc8cdeb77c8d4d3e9cd550133213b33d",
+  "activeLine": "4.0",
+  "lines": [
+    {
+      "id": "4.0",
+      "major": 4,
+      "minor": 0,
+      "lifecycle": "active",
+      "branches": {
+        "dev": "dev/v4/v4.0",
+        "alpha": "alpha/v4/v4.0",
+        "stable": "release/v4/v4.0",
+        "majorPublicationGate": "publish-gate/major/v4/v4.0/*"
+      },
+      "candidateLedger": "buildchain/candidate-ledger/v4/v4.0",
+      "latencyBaseline": "framework/core/architecture/dev-gate-latency-baseline.json"
+    }
+  ],
+  "runnerRouting": {
+    "policy": "capability-first-cross-version",
+    "compatibilityAliases": [
+      {
+        "capability": "linux-x64-native",
+        "labels": [
+          "self-hosted",
+          "Linux",
+          "X64",
+          "kungfu-build-v4-linux-x64"
+        ],
+        "crossVersion": true
+      },
+      {
+        "capability": "macos-arm64-native",
+        "labels": [
+          "self-hosted",
+          "macOS",
+          "ARM64",
+          "kungfu-build-v4-macos-arm64"
+        ],
+        "crossVersion": true
+      },
+      {
+        "capability": "windows-x64-native",
+        "labels": [
+          "self-hosted",
+          "Windows",
+          "X64",
+          "kungfu-build-v4-windows-x64"
+        ],
+        "crossVersion": true
+      }
+    ],
+    "compatibilityBoundary": {
+      "owner": "kungfu-buildchain",
+      "rationale": "Existing physical runner registrations retain their historical labels, but the labels are cross-version capability aliases and never select a product version line.",
+      "reviewDate": "2026-10-31",
+      "sunsetCondition": "All registered runners and protected Buildchain consumers have migrated to version-neutral physical labels."
+    },
+    "matrices": {
+      "selfHosted": [
+        {
+          "id": "linux-x64",
+          "name": "Linux x64",
+          "platform": "linux",
+          "runner": "[\"self-hosted\",\"Linux\",\"X64\",\"kungfu-build-v4-linux-x64\"]",
+          "capabilities": [
+            "node",
+            "native-toolchain",
+            "product-artifacts",
+            "rust"
+          ]
+        },
+        {
+          "id": "macos-arm64",
+          "name": "macOS ARM64",
+          "platform": "macos",
+          "runner": "[\"self-hosted\",\"macOS\",\"ARM64\",\"kungfu-build-v4-macos-arm64\"]",
+          "capabilities": [
+            "node",
+            "native-toolchain",
+            "product-artifacts",
+            "rust"
+          ]
+        },
+        {
+          "id": "windows-x64",
+          "name": "Windows x64",
+          "platform": "windows",
+          "runner": "[\"self-hosted\",\"Windows\",\"X64\",\"kungfu-build-v4-windows-x64\"]",
+          "capabilities": [
+            "node",
+            "native-toolchain",
+            "product-artifacts",
+            "rust"
+          ]
+        }
+      ],
+      "native": [
+        {
+          "id": "linux-x64",
+          "name": "Linux x64",
+          "platform": "linux",
+          "runner": "[\"self-hosted\",\"Linux\",\"X64\",\"kungfu-build-v4-linux-x64\"]",
+          "capabilities": [
+            "node",
+            "native-toolchain",
+            "product-artifacts",
+            "rust"
+          ]
+        },
+        {
+          "id": "linux-arm64",
+          "name": "Linux ARM64",
+          "platform": "linux",
+          "runner": "[\"ubuntu-24.04-arm\"]",
+          "capabilities": [
+            "node",
+            "native-toolchain",
+            "product-artifacts",
+            "rust"
+          ]
+        },
+        {
+          "id": "macos-arm64",
+          "name": "macOS ARM64",
+          "platform": "macos",
+          "runner": "[\"self-hosted\",\"macOS\",\"ARM64\",\"kungfu-build-v4-macos-arm64\"]",
+          "capabilities": [
+            "node",
+            "native-toolchain",
+            "product-artifacts",
+            "rust"
+          ]
+        },
+        {
+          "id": "windows-x64",
+          "name": "Windows x64",
+          "platform": "windows",
+          "runner": "[\"self-hosted\",\"Windows\",\"X64\",\"kungfu-build-v4-windows-x64\"]",
+          "capabilities": [
+            "node",
+            "native-toolchain",
+            "product-artifacts",
+            "rust"
+          ]
+        }
+      ]
+    }
+  },
+  "projectionRoot": "sha256:abdfc04509a60644d031b7c6367281121f031f0e780f956197cf7ba4d1362813"
+}
