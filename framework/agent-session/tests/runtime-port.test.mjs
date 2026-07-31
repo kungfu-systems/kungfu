@@ -1,4 +1,7 @@
 import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
 import test from 'node:test';
 import {
   ACTION_ENVELOPE_CARRIER_TYPE,
@@ -6,8 +9,9 @@ import {
 } from '../src/runtime-port.mjs';
 
 class FakeWatcher {
-  constructor(_runtimeDir, _name, _bypass, _sleep, captureCustom) {
+  constructor(runtimeDir, _name, _bypass, _sleep, captureCustom) {
     assert.equal(captureCustom, true);
+    this.runtimeDir = runtimeDir;
     this.started = false;
     this.live = true;
     this.usable = true;
@@ -70,6 +74,33 @@ const binding = {
     return decoded;
   },
 };
+
+test('native port gives the binding a canonical data-root identity', () => {
+  const parent = fs.mkdtempSync(path.join(os.tmpdir(), 'kfas-root.'));
+  const canonicalParent = path.join(parent, 'CanonicalParent');
+  fs.mkdirSync(canonicalParent);
+  const alias =
+    process.platform === 'win32'
+      ? canonicalParent.toLowerCase()
+      : path.join(parent, 'alias');
+  if (process.platform !== 'win32')
+    fs.symlinkSync(canonicalParent, alias, 'dir');
+  const runtimeDir = path.join(alias, 'child', '..', 'runtime');
+  try {
+    const port = new NativeKungfuJournalNoticePort({
+      binding,
+      runtimeDir,
+      peerName: 'canonical-root',
+    });
+    assert.equal(
+      port.peer.runtimeDir,
+      path.join(fs.realpathSync.native(canonicalParent), 'runtime'),
+    );
+    port.close();
+  } finally {
+    fs.rmSync(parent, { recursive: true, force: true });
+  }
+});
 
 test('native port uses action envelopes on one public journal writer', () => {
   const port = new NativeKungfuJournalNoticePort({
