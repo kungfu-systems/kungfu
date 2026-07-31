@@ -8,6 +8,7 @@ import { fileURLToPath } from 'node:url';
 
 import {
   assertKfdEvidenceSourceBinding,
+  findGitTreeEquivalentAncestor,
   resolveKfdProductGateCheckedAt,
   sourceAcceptancePlan,
   sourceClangFormatCommand,
@@ -27,6 +28,46 @@ test('KFD evidence rejects a source SHA whose ancestry was removed by rebase', (
       }),
     /not an ancestor of checked head.*regenerate the evidence after rebasing/u,
   );
+});
+
+test('KFD evidence accepts an exact tree-equivalent ancestor after queue rebase', () => {
+  const sourceSha = 'a'.repeat(40);
+  const headSha = 'b'.repeat(40);
+  const replayedSha = 'c'.repeat(40);
+  assert.equal(
+    assertKfdEvidenceSourceBinding({
+      sourceSha,
+      headSha,
+      isAncestor: () => false,
+      findTreeEquivalentAncestor: (source, head) => {
+        assert.equal(source, sourceSha);
+        assert.equal(head, headSha);
+        return replayedSha;
+      },
+    }),
+    sourceSha,
+  );
+});
+
+test('KFD tree-equivalence lookup stays first-parent and bounded', () => {
+  const sourceSha = 'a'.repeat(40);
+  const headSha = 'b'.repeat(40);
+  const replayedSha = 'c'.repeat(40);
+  const treeSha = 'd'.repeat(40);
+  const calls = [];
+  assert.equal(
+    findGitTreeEquivalentAncestor(sourceSha, headSha, (args) => {
+      calls.push(args);
+      return args[0] === 'rev-parse'
+        ? treeSha
+        : `${headSha} ${'e'.repeat(40)}\n${replayedSha} ${treeSha}`;
+    }),
+    replayedSha,
+  );
+  assert.deepEqual(calls, [
+    ['rev-parse', `${sourceSha}^{tree}`],
+    ['log', '--first-parent', '--max-count=4096', '--format=%H %T', headSha],
+  ]);
 });
 
 test('KFD product gates remain checkable without ignored runtime outputs', () => {

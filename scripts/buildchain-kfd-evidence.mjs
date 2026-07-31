@@ -26,6 +26,7 @@ import {
 } from '../framework/release/buildchain-kfd-runtime.mjs';
 import {
   assertKfdEvidenceSourceBinding,
+  findGitTreeEquivalentAncestor,
   resolveKfdProductGateCheckedAt,
 } from './source-acceptance.mjs';
 
@@ -35,8 +36,7 @@ const KFD3_SURFACE_REGISTRY_CONTRACT =
   'kungfu-buildchain-kfd-3-surface-registry';
 
 const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-const ROOT = path.resolve(__dirname, '..');
+const ROOT = path.resolve(path.dirname(__filename), '..');
 const BUILDCHAIN_DIR = path.join(ROOT, '.buildchain');
 const KFD1_WITNESS_PATH = path.join(
   ROOT,
@@ -587,6 +587,7 @@ function resolveKfdEvidenceSourceSha({ write }) {
     sourceSha: configured || (write ? headSha : committed),
     headSha,
     isAncestor: isGitAncestor,
+    findTreeEquivalentAncestor: findGitTreeEquivalentAncestor,
   });
 }
 

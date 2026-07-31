@@ -159,10 +159,33 @@ export function sourceChangedFiles() {
   return [...files];
 }
 
+const KFD_REBASE_EQUIVALENCE_ANCESTOR_LIMIT = 4096;
+
+export function findGitTreeEquivalentAncestor(
+  sourceSha,
+  headSha,
+  gitRead = gitMaybe,
+) {
+  const sourceTree = gitRead(['rev-parse', `${sourceSha}^{tree}`]);
+  if (!/^[0-9a-f]{40}$/u.test(sourceTree)) return '';
+  for (const line of gitRead([
+    'log',
+    '--first-parent',
+    `--max-count=${KFD_REBASE_EQUIVALENCE_ANCESTOR_LIMIT}`,
+    '--format=%H %T',
+    headSha,
+  ]).split('\n')) {
+    const [commitSha, treeSha] = line.trim().split(/\s+/u);
+    if (treeSha === sourceTree) return commitSha;
+  }
+  return '';
+}
+
 export function assertKfdEvidenceSourceBinding({
   sourceSha,
   headSha,
   isAncestor,
+  findTreeEquivalentAncestor = () => '',
 }) {
   const gitSha = /^[0-9a-f]{40}$/u;
   if (!gitSha.test(sourceSha) || !gitSha.test(headSha)) {
@@ -170,9 +193,12 @@ export function assertKfdEvidenceSourceBinding({
       `KFD evidence requires exact 40-hex Git coordinates, got source=${sourceSha || '<empty>'} head=${headSha || '<empty>'}`,
     );
   }
-  if (!isAncestor(sourceSha, headSha)) {
+  if (
+    !isAncestor(sourceSha, headSha) &&
+    !gitSha.test(findTreeEquivalentAncestor(sourceSha, headSha))
+  ) {
     throw new Error(
-      `KFD evidence source ${sourceSha} is not an ancestor of checked head ${headSha}; regenerate the evidence after rebasing`,
+      `KFD evidence source ${sourceSha} is not an ancestor of checked head ${headSha} and has no tree-equivalent ancestor; regenerate the evidence after rebasing`,
     );
   }
   return sourceSha;
