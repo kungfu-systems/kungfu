@@ -35,7 +35,7 @@
   "sourceVerificationRequired": false,
   "canonicalPolicy": {
     "path": "framework/contract/kungfu-agent-first-canonical-policy.json",
-    "sha256": "5a1a25c0119bcdfa808216e7485ce5d73dc0ecdf4440c80ac6d5f20763cf31c0"
+    "sha256": "e33441fd91678fdfa770f5fdf6b8b534a2e6487d681b6ac35c93675b56999dc7"
   },
   "registry": {
     "path": "framework/contract/kungfu-contracts.registry.json",
