@@ -55,6 +55,7 @@ const PRODUCT_DIR = path.resolve(__dirname, '..');
 const ROOT = path.resolve(PRODUCT_DIR, '..');
 const GUI_DIR = path.join(ROOT, 'framework', 'gui');
 const TUI_DIR = path.join(ROOT, 'framework', 'tui');
+const AGENT_SESSION_DIR = path.join(ROOT, 'framework', 'agent-session');
 const CORE_DIST = path.join(ROOT, 'framework', 'core', 'dist', 'kungfu');
 const CRATES_DIR = path.join(ROOT, 'crates');
 const RUNTIME_PINS = path.join(PRODUCT_DIR, 'runtime-pins.env');
@@ -2202,6 +2203,26 @@ function buildCliProduct(esbuildRuntime) {
       copyTree(CORE_DIST, path.join(stageRoot, layout.runtimeDirectory));
       copyTree(ASSEMBLED_EXTENSIONS, path.join(stageRoot, 'extensions'));
       copyTree(path.join(TUI_DIR, 'dist'), path.join(stageRoot, 'tui'));
+      copyTree(
+        fs.realpathSync(
+          path.join(AGENT_SESSION_DIR, 'node_modules', 'node-pty'),
+        ),
+        path.join(stageRoot, 'tui', 'node_modules', 'node-pty'),
+      );
+      if (process.platform === 'darwin') {
+        fs.chmodSync(
+          path.join(
+            stageRoot,
+            'tui',
+            'node_modules',
+            'node-pty',
+            'prebuilds',
+            `${process.platform}-${process.arch}`,
+            'spawn-helper',
+          ),
+          0o755,
+        );
+      }
       bundleSdkForCli(stageRoot, esbuildRuntime);
       const bundledUpgradeManifest = buildCliUpgradeManifest({
         stageRoot,

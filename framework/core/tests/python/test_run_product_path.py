@@ -5,6 +5,7 @@ from pathlib import Path
 import pytest
 
 from kungfu import assignment_orchestration as orchestration
+from kungfu.agent import run_agent
 from kungfu.cli.commands import run
 from kungfu.workspace import resolve_workspace_target
 
@@ -65,3 +66,108 @@ def test_task_capture_creates_a_bounded_assignment_not_runtime(tmp_path):
     assert selected["initiativeId"] == "project-work"
     assert Path(selected["requestPath"]).is_file()
     assert not (project / ".kungfu" / "runtime").exists()
+
+
+def test_project_work_session_yields_at_deterministic_attention(tmp_path):
+    calls = []
+    statuses = [
+        {
+            "live": True,
+            "lifecycleState": "ready",
+            "interactionState": "ready",
+            "output": {"nextSequence": 10},
+        },
+        {
+            "live": True,
+            "lifecycleState": "ready",
+            "interactionState": "ready",
+            "output": {"nextSequence": 42},
+            "workAgent": {
+                "attempt": "waiting",
+                "attention": {
+                    "kind": "needs-answer",
+                    "nextActions": ["reply", "review-changes", "end-attempt"],
+                },
+            },
+            "product": {"state": "available"},
+            "controller": {"holderId": "kungfu-project-work"},
+        },
+    ]
+
+    def invoke(request):
+        calls.append(request)
+        operation = request["operation"]
+        if operation == "plan-start":
+            return {"root": "sha256:" + "1" * 64}
+        if operation == "start":
+            return {"status": "started"}
+        if operation == "status":
+            return statuses.pop(0) if len(statuses) > 1 else statuses[0]
+        if operation == "plan-control":
+            return {"root": "sha256:" + "2" * 64}
+        if operation == "instruct":
+            return {"status": "written"}
+        if operation == "snapshot":
+            return {
+                "terminal": {
+                    "vt": {
+                        "lines": [
+                            "MOCK WORKING: inspect project",
+                            "MOCK NEEDS ANSWER: choose alpha or beta.",
+                            "mock› ",
+                        ]
+                    }
+                }
+            }
+        raise AssertionError(operation)
+
+    work = {
+        "schema": "kungfu.work-ref/v1",
+        "workspaceId": "workspace:test",
+        "profileId": "kungfu.work-control",
+        "profileRoot": "sha256:" + "3" * 64,
+        "entityType": "assignment",
+        "entityId": "first",
+        "entityRoot": "sha256:" + "4" * 64,
+        "purpose": "complete-project-assignment",
+        "systemTimeCut": "sha256:" + "5" * 64,
+    }
+    selected = {
+        "id": "kungfu.mock-agent.multi-step",
+        "provider": "synthetic",
+        "launch": {
+            "executable": "/usr/bin/node",
+            "argv": ["/mock-provider.mjs", "--scenario", "multi-step"],
+        },
+    }
+
+    result, session = run_agent.run_session_attempt(
+        invoke=invoke,
+        run_id="agent-test",
+        selected=selected,
+        verification={"version": "1.0.0"},
+        work=work,
+        cwd=str(tmp_path),
+        env={"PATH": "/usr/bin"},
+        prompt="bounded Work",
+        timeout_seconds=1,
+    )
+
+    assert result.exit_code == 0
+    assert "MOCK NEEDS ANSWER" in result.stdout
+    assert session["live"] is True
+    assert session["workAgent"]["attention"]["kind"] == "needs-answer"
+    start_input = next(
+        call["input"] for call in calls if call["operation"] == "plan-start"
+    )
+    assert start_input["binding"] == {"kind": "work", "workRef": work}
+    assert start_input["workConsoleId"] == ("work:kungfu.work-control:assignment:first")
+
+
+def test_mock_profile_probes_the_deterministic_provider_version():
+    profile = run_agent.runtime_profiles.deterministic_mock_profile("approval")
+    verification = run_agent.runtime_profiles.verify_profile(profile)
+
+    assert verification["ok"] is True
+    assert verification["version"] == "1.0.0"
+    assert verification["argv"][-3:] == ["--scenario", "approval", "--version"]
