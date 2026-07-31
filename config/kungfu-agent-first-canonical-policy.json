@@ -238,13 +238,13 @@
       },
       "source": {
         "path": "framework/kfx/kungfu-kfx.contract.json",
-        "sha256": "sha256:d157e2749808ece583f793845ea7a1547eaab720a230cb00a2e7095fa498a3e0",
-        "renderedSha256": "sha256:d157e2749808ece583f793845ea7a1547eaab720a230cb00a2e7095fa498a3e0",
+        "sha256": "sha256:5df5537fa161de8a210b1facac7cec5cf054b3a5eff4096fb27fec4370fd9e6c",
+        "renderedSha256": "sha256:5df5537fa161de8a210b1facac7cec5cf054b3a5eff4096fb27fec4370fd9e6c",
         "byteForByte": true
       },
       "artifact": {
         "path": "config/kungfu-kfx.contract.json",
-        "expectedSha256": "sha256:d157e2749808ece583f793845ea7a1547eaab720a230cb00a2e7095fa498a3e0"
+        "expectedSha256": "sha256:5df5537fa161de8a210b1facac7cec5cf054b3a5eff4096fb27fec4370fd9e6c"
       }
     },
     {
