@@ -10,7 +10,7 @@ sensitivity: public
 evidence_grade: A
 review_state: self-reviewed
 last_reviewed: 2026-07-31
-ai_provenance: GPT-5 via Codex on 2026-07-31; based on checked-in Kungfu, Buildchain, and build-images source plus protected GitHub workflow evidence visible to this task; this update adds the multi-demo capture-selection contract and v2 Passport projection without claiming production deployment or unobserved runtime
+ai_provenance: GPT-5 via Codex on 2026-07-31; based on checked-in Kungfu, Buildchain, and build-images source plus protected GitHub workflow evidence visible to this task; this update adds the unified manual, Alpha, and Release trigger-plan contract without claiming production deployment or unobserved runtime
 ---
 
 # Auditable Demo Artifact Pipeline
@@ -42,10 +42,16 @@ contract. It declares a bounded exact argv, terminal dimensions and timeout,
 completion sentinel, scene, evidence class, publication slug, claims, and
 non-claims for each demo id. The adapter accepts `--demo-id ID`; omitting it
 selects `agent-work-lab`, so the existing workflow and README hero remain
-compatible. A manual Build workflow selects a registered command by setting
-`auditable-demo-id` and enables media with `render-auditable-demo`; the workflow
-passes the selected id as a literal bounded adapter argument and binds the same
-id into the Release Passport.
+compatible. The Build workflow first compiles one retained
+`kungfu.auditable-demo.trigger-plan/v1`, then every entry path consumes only
+that plan. A manual run selects a registered command with `auditable-demo-id`;
+leaving `render-auditable-demo` disabled exercises the required capture and
+Gate without full media, while enabling it runs the same full media path used
+by promotion. Alpha and Release pull requests always compile a required
+full-media refresh plan for the README-featured default demo. Final promotion
+consumes the same `build.yml` candidate evidence instead of implementing a
+second recording path. Event type remains provenance and selection input; it
+cannot change the downstream adapter, Gate, renderer, or Passport logic.
 
 The catalog is not a Release Passport, Work, Warrant, capability grant, or
 runtime authority. Its own authority block declares an empty grant set. The

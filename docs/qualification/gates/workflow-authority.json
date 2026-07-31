@@ -274,14 +274,14 @@
     {
       "path": ".github/workflows/build.yml",
       "authority": "product-publication",
-      "definitionDigest": "sha256:402aca91eeeb6e2059dc9360e5e4ffc3ad72f6d765eb814d390645600fb8ea8a",
+      "definitionDigest": "sha256:57864c1a8616d4e1d923671f28a3a0a0b7a8c4e083e5ad1766f866dd283a7e02",
       "jobs": [
         {
           "id": "auditable-demo",
           "authority": "qualification",
           "publication": "none",
           "receipt": "qualifying",
-          "definitionDigest": "sha256:b8a65e72d4aa794dd8dd4f30983dc187603fbf76e9146672bb82e1168cc8cdf9",
+          "definitionDigest": "sha256:75a1cb234096abe4d29fbd56be3afee6d97e83fe2a06c0109bea3c0250e79452",
           "credentials": {"githubToken":"read","oidc":false,"repositorySecrets":[],"inheritedSecrets":false,"environment":null},
           "externalActions": ["kungfu-systems/buildchain/.github/workflows/.auditable-demo.yml@d43e6574432bc0b1ae9d1d0557f8ccc4785fa2e4"],
           "steps": []
@@ -301,10 +301,20 @@
           "authority": "qualification",
           "publication": "none",
           "receipt": "qualifying",
-          "definitionDigest": "sha256:400c902a71e2c6af782afb7ef4629b51c83f3127b2221a34a0df51d3a4ca136a",
+          "definitionDigest": "sha256:cedbf033e352694a0dcdcbdad66ffc61a0cc513e24efa02c286594439e596a71",
           "credentials": {"githubToken":"read","oidc":false,"repositorySecrets":[],"inheritedSecrets":false,"environment":null},
           "externalActions": ["actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0","actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd","actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a"],
-          "steps": [{"index":1,"label":"name:Check out exact qualified source","definitionDigest":"sha256:29b1db9963a2029aabffae82fe0ec406fa6ec8d3a522d80493e9e84be9967dbe"},{"index":2,"label":"id:artifact-expiry","definitionDigest":"sha256:b63afe1390635ea616d7c2a9ccc69bfb49f5b8d2ee193c8b8df61800eaad0591"},{"index":3,"label":"name:Write exact auditable demo Release Passport","authority":"evidence-publication","definitionDigest":"sha256:7f1735e11f7350745037a40e154b75f86e3c74f3250d333ed7f7e5a2cf725b74"},{"index":4,"label":"name:Upload exact auditable demo Release Passport","authority":"evidence-publication","definitionDigest":"sha256:026dc02ae0372598499bba6aa300fe2c537f6ca694ae3b7d4719a91ca6e4780a"}]
+          "steps": [{"index":1,"label":"name:Check out exact qualified source","definitionDigest":"sha256:29b1db9963a2029aabffae82fe0ec406fa6ec8d3a522d80493e9e84be9967dbe"},{"index":2,"label":"id:artifact-expiry","definitionDigest":"sha256:b63afe1390635ea616d7c2a9ccc69bfb49f5b8d2ee193c8b8df61800eaad0591"},{"index":3,"label":"name:Write exact auditable demo Release Passport","authority":"evidence-publication","definitionDigest":"sha256:c38e5aed66326929f52d4780d7c0e0b25c3410f35d593a0efee0e6a571441a73"},{"index":4,"label":"name:Upload exact auditable demo Release Passport","authority":"evidence-publication","definitionDigest":"sha256:026dc02ae0372598499bba6aa300fe2c537f6ca694ae3b7d4719a91ca6e4780a"}]
+        },
+        {
+          "id": "auditable-demo-plan",
+          "authority": "qualification",
+          "publication": "none",
+          "receipt": "diagnostic",
+          "definitionDigest": "sha256:baf4a3a4f37315e0babbc9477c2a347a0083733862e2b6b2a01e59849bce205a",
+          "credentials": {"githubToken":"read","oidc":false,"repositorySecrets":[],"inheritedSecrets":false,"environment":null},
+          "externalActions": ["actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0","actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e","actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a"],
+          "steps": [{"index":1,"label":"name:Check out exact qualified source","definitionDigest":"sha256:29b1db9963a2029aabffae82fe0ec406fa6ec8d3a522d80493e9e84be9967dbe"},{"index":2,"label":"name:Set up pinned Node.js","definitionDigest":"sha256:93f3675945caff80d4b510964b74f50d37e770eade12d52d8600f9da040518ad"},{"index":3,"label":"id:plan","definitionDigest":"sha256:c623e35ba06beeaf132506f560168256457d84d5f7459f5956c9b23bdec2966a"},{"index":4,"label":"name:Retain exact auditable demo trigger plan","authority":"evidence-publication","definitionDigest":"sha256:08859c3c7f88a0c633d5def10ce51b21e72fa4e4f1c868987eb1d80014b9542a"}]
         },
         {
           "id": "build",

@@ -10,8 +10,15 @@ import { parse } from 'yaml';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const WORKFLOW_PATH = path.join(ROOT, '.github', 'workflows', 'build.yml');
+const RELEASE_WORKFLOW_PATH = path.join(
+  ROOT,
+  '.github',
+  'workflows',
+  'release-new-version.yml',
+);
 const WORKFLOW_TEXT = fs.readFileSync(WORKFLOW_PATH, 'utf8');
 const WORKFLOW = parse(WORKFLOW_TEXT);
+const RELEASE_WORKFLOW = parse(fs.readFileSync(RELEASE_WORKFLOW_PATH, 'utf8'));
 const AsyncFunction = Object.getPrototypeOf(async () => {}).constructor;
 
 test('Alpha and release builds rerun when candidate source is synchronized', () => {
@@ -232,6 +239,7 @@ test('resolver admits a retained producer coordinate from an earlier run attempt
 
 test('Gate runtime and renderer are immutable and Passport uses the same runtime', () => {
   const gate = WORKFLOW.jobs['auditable-demo'];
+  const plan = WORKFLOW.jobs['auditable-demo-plan'];
   const passport = WORKFLOW.jobs['auditable-demo-passport'];
   const runtime = gate.uses.match(
     /^kungfu-systems\/buildchain\/\.github\/workflows\/\.auditable-demo\.yml@([0-9a-f]{40})$/u,
@@ -251,11 +259,20 @@ test('Gate runtime and renderer are immutable and Passport uses the same runtime
   );
   assert.equal(
     gate.with['adapter-arguments-json'],
-    "${{ format('[\"--demo-id\",{0}]', toJSON(inputs.auditable-demo-id || 'agent-work-lab')) }}",
+    '${{ format(\'["--demo-id",{0}]\', toJSON(needs.auditable-demo-plan.outputs.demo-id)) }}',
   );
   assert.equal(
     passportStep.env.AUDITABLE_DEMO_ID,
-    "${{ inputs.auditable-demo-id || 'agent-work-lab' }}",
+    '${{ needs.auditable-demo-plan.outputs.demo-id }}',
+  );
+  assert.deepEqual(gate.needs, [
+    'build',
+    'resolve-auditable-demo-source',
+    'auditable-demo-plan',
+  ]);
+  assert.match(
+    plan.steps.find(({ id }) => id === 'plan').run,
+    /write[\s\S]*verify/u,
   );
   assert.equal(passportStep.env.BUILDCHAIN_SHA, runtime[1]);
   assert.equal(passportStep.env.RENDERER_IMAGE, gate.with['renderer-image']);
@@ -303,13 +320,29 @@ test('Passport binding normalizes upload digests to exact API coordinates', asyn
   );
 });
 
-test('full media is selective while the Gate remains unconditional when applicable', () => {
+test('manual, Alpha, and Release events share one normalized media plan', () => {
   const gate = WORKFLOW.jobs['auditable-demo'];
-  assert.match(gate.with['render-media'], /render-auditable-demo/u);
-  assert.match(
+  const plan = WORKFLOW.jobs['auditable-demo-plan'];
+  const planStep = plan.steps.find(({ id }) => id === 'plan');
+  assert.equal(
     gate.with['render-media'],
-    /startsWith\(github\.base_ref, 'alpha\/'\)/u,
+    "${{ needs.auditable-demo-plan.outputs.render-media == 'true' }}",
   );
+  assert.equal(
+    planStep.env.AUDITABLE_DEMO_RENDER_MEDIA,
+    "${{ github.event_name == 'workflow_dispatch' && inputs.render-auditable-demo && 'true' || 'false' }}",
+  );
+  assert.equal(
+    planStep.env.AUDITABLE_DEMO_ID,
+    "${{ github.event_name == 'workflow_dispatch' && inputs.auditable-demo-id || '' }}",
+    'promotion events must not inherit workflow-dispatch defaults',
+  );
+  assert.equal(
+    RELEASE_WORKFLOW.jobs.promote.with['release-candidate-workflow-file'],
+    'build.yml',
+    'final promotion must consume the same Build workflow media plan',
+  );
+  assert.doesNotMatch(gate.with['render-media'], /github\.event_name|alpha\//u);
   assert.doesNotMatch(gate.if, /render-auditable-demo|alpha\//u);
   assert.match(WORKFLOW_TEXT, /reason: "linux-x64-not-produced"/u);
 });

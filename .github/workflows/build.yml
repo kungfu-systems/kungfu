@@ -49,7 +49,7 @@ on:
         type: boolean
         default: false
       render-auditable-demo:
-        description: "Render full media after the exact Linux artifact passes the required auditable-demo Gate"
+        description: "Run the same full media refresh required by Alpha and Release; false retains Gate-only validation"
         required: false
         type: boolean
         default: false
@@ -443,9 +443,61 @@ jobs:
           compression-level: 0
           overwrite: false
 
+  auditable-demo-plan:
+    name: Resolve unified auditable demo trigger plan
+    needs: build
+    if: ${{ needs.build.result == 'success' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    outputs:
+      demo-id: ${{ steps.plan.outputs.demo-id }}
+      render-media: ${{ steps.plan.outputs.render-media }}
+      refresh-required: ${{ steps.plan.outputs.refresh-required }}
+      trigger-class: ${{ steps.plan.outputs.trigger-class }}
+      plan-root: ${{ steps.plan.outputs.plan-root }}
+    steps:
+      - name: Check out exact qualified source
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          ref: ${{ needs.build.outputs.publish-source-sha }}
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Set up pinned Node.js
+        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
+        with:
+          node-version-file: .node-version
+          check-latest: false
+
+      - name: Normalize manual, Alpha, and Release media intent
+        id: plan
+        env:
+          AUDITABLE_DEMO_BASE_REF: ${{ github.base_ref }}
+          AUDITABLE_DEMO_ID: ${{ github.event_name == 'workflow_dispatch' && inputs.auditable-demo-id || '' }}
+          AUDITABLE_DEMO_RENDER_MEDIA: ${{ github.event_name == 'workflow_dispatch' && inputs.render-auditable-demo && 'true' || 'false' }}
+          AUDITABLE_DEMO_SOURCE_SHA: ${{ needs.build.outputs.publish-source-sha }}
+        run: |
+          set -euo pipefail
+          ./shifu node scripts/auditable-demo-trigger-plan.mjs write \
+            --output auditable-demo-trigger-plan.json
+          ./shifu node scripts/auditable-demo-trigger-plan.mjs verify \
+            --input auditable-demo-trigger-plan.json
+
+      - name: Retain exact auditable demo trigger plan
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: auditable-demo-trigger-plan-${{ needs.build.outputs.publish-source-sha }}-${{ github.run_id }}-${{ github.run_attempt }}
+          path: auditable-demo-trigger-plan.json
+          if-no-files-found: error
+          retention-days: 14
+          compression-level: 0
+          overwrite: false
+
   auditable-demo:
     name: Required auditable demo Gate
-    needs: [build, resolve-auditable-demo-source]
+    needs: [build, resolve-auditable-demo-source, auditable-demo-plan]
     if: ${{ needs.resolve-auditable-demo-source.outputs.applicable == 'true' }}
     permissions:
       actions: read
@@ -456,16 +508,16 @@ jobs:
       source-artifact-name: ${{ needs.resolve-auditable-demo-source.outputs.artifact-name }}
       source-artifact-digest: ${{ needs.resolve-auditable-demo-source.outputs.artifact-digest }}
       adapter-path: scripts/auditable-demo-adapter.py
-      adapter-arguments-json: ${{ format('["--demo-id",{0}]', toJSON(inputs.auditable-demo-id || 'agent-work-lab')) }}
+      adapter-arguments-json: ${{ format('["--demo-id",{0}]', toJSON(needs.auditable-demo-plan.outputs.demo-id)) }}
       renderer-image: ghcr.io/kungfu-systems/build-images/demo-renderer@sha256:06141e3d01a13e6d44766d3acc115ca07c58443f59840f313ecd938b2b0c138c
-      render-media: ${{ (github.event_name == 'workflow_dispatch' && inputs.render-auditable-demo) || (github.event_name == 'pull_request' && startsWith(github.base_ref, 'alpha/')) }}
+      render-media: ${{ needs.auditable-demo-plan.outputs.render-media == 'true' }}
       artifact-retention-days: 14
       require-trusted-event: true
 
   auditable-demo-passport:
     name: Bind auditable demo Release Passport
     needs:
-      [build, resolve-auditable-demo-source, auditable-demo]
+      [build, resolve-auditable-demo-source, auditable-demo-plan, auditable-demo]
     if: ${{ needs.auditable-demo.result == 'success' }}
     runs-on: ubuntu-24.04
     timeout-minutes: 5
@@ -586,7 +638,7 @@ jobs:
           MEDIA_ARTIFACT_URL: ${{ needs.auditable-demo.outputs.media-artifact-url }}
           MEDIA_ARTIFACT_EXPIRES_AT: ${{ steps.artifact-expiry.outputs.media-artifact-expires-at }}
           MEDIA_ROOT: ${{ needs.auditable-demo.outputs.media-root }}
-          AUDITABLE_DEMO_ID: ${{ inputs.auditable-demo-id || 'agent-work-lab' }}
+          AUDITABLE_DEMO_ID: ${{ needs.auditable-demo-plan.outputs.demo-id }}
           BUILDCHAIN_SHA: d43e6574432bc0b1ae9d1d0557f8ccc4785fa2e4
           RENDERER_IMAGE: ghcr.io/kungfu-systems/build-images/demo-renderer@sha256:06141e3d01a13e6d44766d3acc115ca07c58443f59840f313ecd938b2b0c138c
         run: ./shifu node scripts/auditable-demo-passport.mjs write --output auditable-demo-release-passport.json
