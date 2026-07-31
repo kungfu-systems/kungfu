@@ -17,18 +17,9 @@
 #include <system_error>
 #include <utility>
 
+#include "io/durability.h"
 #include <kungfu/yijinjing/storage/content_hash.h>
 #include <kungfu/yijinjing/time.h>
-
-#ifdef _WIN32
-#ifndef NOMINMAX
-#define NOMINMAX
-#endif
-#include <windows.h>
-#else
-#include <fcntl.h>
-#include <unistd.h>
-#endif
 
 namespace kungfu::runtime::durability {
 namespace {
@@ -38,6 +29,7 @@ using yijinjing::ownership::evidence;
 using yijinjing::ownership::lease;
 using yijinjing::ownership::scope;
 using yijinjing::storage::compute_content_hash_value;
+namespace platform_durability = yijinjing::io::durability;
 
 // Classify-and-continue seam (KF-ADR-019f86da-4f90-7749-b14e-9c0626c03f9f tier 2). A durability commit path throws
 // through several helpers; rather than a hand-maintained catch ladder at every
@@ -147,110 +139,6 @@ std::string normalized_root(const std::string &root) {
   return fs::absolute(root).lexically_normal().string();
 }
 
-class native_file {
-public:
-  native_file(const fs::path &path, bool truncate) : path_(path) {
-#ifdef _WIN32
-    handle_ = CreateFileW(path.wstring().c_str(), GENERIC_READ | GENERIC_WRITE, FILE_SHARE_READ, nullptr,
-                          truncate ? CREATE_ALWAYS : OPEN_ALWAYS, FILE_ATTRIBUTE_NORMAL, nullptr);
-    if (handle_ == INVALID_HANDLE_VALUE) {
-      throw std::system_error(static_cast<int>(GetLastError()), std::system_category(), "open durable file");
-    }
-    LARGE_INTEGER target{};
-    if (!truncate && SetFilePointerEx(handle_, target, nullptr, FILE_END) == 0) {
-      throw std::system_error(static_cast<int>(GetLastError()), std::system_category(), "seek durable file");
-    }
-#else
-    fd_ = ::open(path.c_str(), O_CREAT | O_RDWR | (truncate ? O_TRUNC : O_APPEND) | O_CLOEXEC, 0644);
-    if (fd_ < 0) {
-      throw std::system_error(errno, std::generic_category(), "open durable file");
-    }
-#endif
-  }
-
-  ~native_file() {
-#ifdef _WIN32
-    if (handle_ != INVALID_HANDLE_VALUE) {
-      CloseHandle(handle_);
-    }
-#else
-    if (fd_ >= 0) {
-      ::close(fd_);
-    }
-#endif
-  }
-
-  native_file(const native_file &) = delete;
-  native_file &operator=(const native_file &) = delete;
-
-  void write(const std::string &bytes) {
-    size_t offset = 0;
-    while (offset < bytes.size()) {
-#ifdef _WIN32
-      const auto remaining = std::min<size_t>(bytes.size() - offset, std::numeric_limits<DWORD>::max());
-      DWORD written = 0;
-      if (WriteFile(handle_, bytes.data() + offset, static_cast<DWORD>(remaining), &written, nullptr) == 0 ||
-          written == 0) {
-        throw std::system_error(static_cast<int>(GetLastError()), std::system_category(), "write durable file");
-      }
-      offset += written;
-#else
-      const auto written = ::write(fd_, bytes.data() + offset, bytes.size() - offset);
-      if (written <= 0) {
-        throw std::system_error(errno, std::generic_category(), "write durable file");
-      }
-      offset += static_cast<size_t>(written);
-#endif
-    }
-  }
-
-  void sync() {
-#ifdef _WIN32
-    if (FlushFileBuffers(handle_) == 0) {
-      throw std::system_error(static_cast<int>(GetLastError()), std::system_category(), "sync durable file");
-    }
-#else
-    if (::fsync(fd_) != 0) {
-      throw std::system_error(errno, std::generic_category(), "sync durable file");
-    }
-#endif
-  }
-
-private:
-  fs::path path_;
-#ifdef _WIN32
-  HANDLE handle_ = INVALID_HANDLE_VALUE;
-#else
-  int fd_ = -1;
-#endif
-};
-
-void sync_directory(const fs::path &directory) {
-#ifdef _WIN32
-  // Win32 directory handles are valid only for a documented subset of file
-  // APIs; FlushFileBuffers is not one of them.  Checkpoint publication already
-  // uses MoveFileExW(MOVEFILE_WRITE_THROUGH), the Windows metadata barrier.
-  // Keep this boundary fail-closed for a missing/non-directory path without
-  // inventing a POSIX directory-fsync guarantee on Windows.
-  std::error_code error;
-  if (!fs::is_directory(directory, error) || error) {
-    throw std::system_error(error ? error : std::make_error_code(std::errc::not_a_directory),
-                            "validate durable directory");
-  }
-#else
-  const auto fd = ::open(directory.c_str(), O_RDONLY | O_DIRECTORY | O_CLOEXEC);
-  if (fd < 0) {
-    throw std::system_error(errno, std::generic_category(), "open durable directory");
-  }
-  const auto result = ::fsync(fd);
-  const auto error = errno;
-  ::close(fd);
-  if (result != 0) {
-    throw std::system_error(error, std::generic_category(), "sync durable directory");
-  }
-#endif
-}
-
 void create_directory_chain_durably(const fs::path &existing_root, const std::vector<std::string> &components) {
   auto current = existing_root;
   for (const auto &component : components) {
@@ -259,23 +147,10 @@ void create_directory_chain_durably(const fs::path &existing_root, const std::ve
       if (!fs::create_directory(child)) {
         throw std::runtime_error("cannot create durable directory " + child.string());
       }
-      sync_directory(current);
+      (void)platform_durability::sync_directory(current);
     }
     current = child;
   }
-}
-
-void replace_file(const fs::path &temporary, const fs::path &final) {
-#ifdef _WIN32
-  if (MoveFileExW(temporary.wstring().c_str(), final.wstring().c_str(),
-                  MOVEFILE_REPLACE_EXISTING | MOVEFILE_WRITE_THROUGH) == 0) {
-    throw std::system_error(static_cast<int>(GetLastError()), std::system_category(), "publish durable checkpoint");
-  }
-#else
-  if (::rename(temporary.c_str(), final.c_str()) != 0) {
-    throw std::system_error(errno, std::generic_category(), "publish durable checkpoint");
-  }
-#endif
 }
 
 std::string read_file(const fs::path &path) {
@@ -778,10 +653,10 @@ struct durable_ingest_log::impl {
 
   void create_segment(uint64_t segment_id) {
     const auto path = active_segment_path(directory, segment_id);
-    native_file file(path, true);
+    platform_durability::durable_file file(path, true);
     file.write(segment_header(segment_id, options.stream_id, options.container_epoch));
     file.sync();
-    sync_directory(directory);
+    (void)platform_durability::sync_directory(directory);
     current_status.active_segment_id = segment_id;
     active_path = path;
     active_size = SEGMENT_HEADER_SIZE;
@@ -878,8 +753,8 @@ struct durable_ingest_log::impl {
       return;
     }
     const auto sealed = sealed_segment_path(directory, current_status.active_segment_id);
-    replace_file(active_path, sealed);
-    sync_directory(directory);
+    platform_durability::replace_file(active_path, sealed);
+    (void)platform_durability::sync_directory(directory);
     create_segment(current_status.active_segment_id + 1);
   }
 
@@ -925,7 +800,7 @@ struct durable_ingest_log::impl {
       inject(ingest_fault_point::BeforeRecordWrite);
       const auto record = encode_record(position, carrier_type, frame, payload, payload_size,
                                         service_owner.status().generation, writer_generation.generation);
-      native_file file(active_path, false);
+      platform_durability::durable_file file(active_path, false);
       file.write(record);
       inject(ingest_fault_point::AfterRecordWrite);
       active_size += record.size();
@@ -1103,7 +978,7 @@ struct durable_ingest_log::impl {
         return timeout_result(false);
       }
       {
-        native_file file(active_path, false);
+        platform_durability::durable_file file(active_path, false);
         file.sync();
       }
       inject(ingest_fault_point::AfterDataSync);
@@ -1142,7 +1017,7 @@ struct durable_ingest_log::impl {
         return timeout_result(true);
       }
       {
-        native_file file(temporary, true);
+        platform_durability::durable_file file(temporary, true);
         file.write(encode_checkpoint(next));
         file.sync();
       }
@@ -1150,7 +1025,7 @@ struct durable_ingest_log::impl {
       if (deadline_expired()) {
         return timeout_result(true);
       }
-      replace_file(temporary, final_path);
+      platform_durability::replace_file(temporary, final_path);
       inject(ingest_fault_point::AfterCheckpointRename);
       if (deadline_expired()) {
         return timeout_result(true);
@@ -1159,7 +1034,7 @@ struct durable_ingest_log::impl {
       if (deadline_expired()) {
         return timeout_result(true);
       }
-      sync_directory(directory);
+      (void)platform_durability::sync_directory(directory);
       inject(ingest_fault_point::AfterDirectorySync);
 
       durable_checkpoint = next;

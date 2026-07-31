@@ -445,6 +445,12 @@ function testTestManifest() {
     path.join('scripts', 'command-argument-batches.test.mjs'),
     path.join('scripts', 'qualify-embedding-membranes.test.mjs'),
     path.join('scripts', 'durability-powercut-platform.test.mjs'),
+    path.join(
+      'framework',
+      'gui',
+      'scripts',
+      'electron-builder-config.test.mjs',
+    ),
     path.join('framework', 'gui', 'scripts', 'run-electron-builder.test.mjs'),
     path.join('scripts', 'candidate-timeline-events.test.mjs'),
     path.join('scripts', 'qualify-xinfa-context-quality.test.mjs'),
