@@ -1287,7 +1287,17 @@ function WorkDashboardView({
       </section>
     );
   }
-  return <GlobalWorkView shell={shell} projects={caps.projects} />;
+  return <ProjectWorkControlView shell={shell} projects={caps.projects} />;
+}
+
+export function ProjectWorkControlView({
+  projects,
+  shell,
+}: {
+  projects: Projects;
+  shell: Shell;
+}) {
+  return <GlobalWorkView shell={shell} projects={projects} />;
 }
 
 export const View = WorkDashboardView;

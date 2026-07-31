@@ -174,6 +174,7 @@ export function ProjectsPanel({
   onCatalog,
   onOpenProject,
   onOpenExistingProject,
+  onRestoreProject,
   onOpenWork,
 }: {
   projects: Projects;
@@ -181,6 +182,7 @@ export function ProjectsPanel({
   onCatalog: (catalog: ProjectsCatalog) => void;
   onOpenProject: (workspace: WorkspaceSelection) => Promise<unknown>;
   onOpenExistingProject: () => void;
+  onRestoreProject: (projectPath: string, section: 'files' | 'work') => boolean;
   onOpenWork: (project: ProjectSummary, section?: 'files' | 'work') => void;
 }) {
   const [catalog, setCatalog] = React.useState<ProjectsCatalog>();
@@ -230,8 +232,8 @@ export function ProjectsPanel({
       .finally(() => setBusy(''));
   }, [projects]);
   React.useEffect(() => {
-    void refresh();
-  }, [refresh]);
+    if (!focusedPath) void refresh();
+  }, [focusedPath, refresh]);
 
   const open = React.useCallback(
     (project: ProjectSummary) => {
@@ -409,12 +411,13 @@ export function ProjectsPanel({
     : undefined;
   const forwardedProject = React.useRef('');
   React.useEffect(() => {
-    if (!openedProject || forwardedProject.current === openedProject.path) {
+    if (!focusedPath || forwardedProject.current === focusedPath) {
       return;
     }
-    forwardedProject.current = openedProject.path;
-    onOpenWork(openedProject, 'files');
-  }, [onOpenWork, openedProject]);
+    if (onRestoreProject(focusedPath, 'files')) {
+      forwardedProject.current = focusedPath;
+    }
+  }, [focusedPath, onRestoreProject]);
 
   return (
     <section

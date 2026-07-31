@@ -100,6 +100,27 @@ export const PROJECT_WORK_QUICK_COMMANDS: QuickCommand<ProjectWorkQuickAction>[]
     },
   ];
 
+export function projectWorkQuickCommandAvailable(options: {
+  surface: string;
+  hasOpenedProject: boolean;
+  completedWork: boolean;
+}): boolean {
+  return (
+    options.hasOpenedProject &&
+    (options.surface === 'project-work' ||
+      (options.surface === 'project-assignment' && options.completedWork))
+  );
+}
+
+export function selectVisibleProjectWorkRun<Run extends { workspace: string }>(
+  runs: readonly Run[],
+  workspace: string,
+  suppressRetainedRun: boolean,
+): Run | null {
+  if (suppressRetainedRun) return null;
+  return runs.find((candidate) => candidate.workspace === workspace) ?? null;
+}
+
 export type ProjectsActionRequest = {
   id: number;
   action: ProjectsQuickAction;
