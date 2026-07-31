@@ -47,6 +47,10 @@ export function surfaceQualificationTempRoot(
   return platform === 'win32' && hostTemporary ? hostTemporary : fallback;
 }
 
+export function surfaceQualificationTempPrefix(tempRoot) {
+  return path.join(tempRoot, 'kfs-');
+}
+
 function parseArgs(argv) {
   const options = {
     validateOnly: false,
@@ -254,9 +258,7 @@ function directoryBytes(root) {
 async function exactQualification(options, fixture) {
   const tempRoot = surfaceQualificationTempRoot();
   fs.mkdirSync(tempRoot, { recursive: true });
-  const temp = fs.mkdtempSync(
-    path.join(tempRoot, 'kungfu-surface-qualification-'),
-  );
+  const temp = fs.mkdtempSync(surfaceQualificationTempPrefix(tempRoot));
   try {
     if (options.cliArchive.endsWith('.zip'))
       extractZip({ archiveFile: options.cliArchive, targetDir: temp });
@@ -318,7 +320,7 @@ async function exactQualification(options, fixture) {
 
     const desktopInstall = installDesktopArtifact(
       options.desktopInstaller,
-      path.join(temp, 'desktop-installation'),
+      temp,
     );
     const guiExecutable = findGuiExecutable(desktopInstall.installRoot);
     const guiStarted = process.hrtime.bigint();
