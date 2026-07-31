@@ -35,6 +35,32 @@ const SEALED_WORK_SCHEMA =
   'kungfu.assignment-orchestration.sealed-work-coordinate/v1';
 const FEDERATED_SOURCE_ID = 'kungfu.workspace-federation.sealed-work-index';
 const HISTORY_SOURCE_SCHEMA = 'kungfu.work-design.open-card-history-source/v1';
+const POLICY_DISPOSITION_SCHEMA =
+  'kungfu.work-design.open-card-policy-disposition/v1';
+
+const AUTO_ADOPTION_POLICY_PREIMAGE = Object.freeze({
+  schema: 'kungfu.work-design.open-card-auto-adoption-policy/v1',
+  id: 'verified-history-within-authorized-boundary',
+  version: 1,
+  minimumConfidence: 'medium',
+  allowedGapIds: ['global-work-partial'],
+  requiresAdviceStatus: 'ready',
+  requiresHistoryStatus: 'complete',
+  requiresSelectedHistory: true,
+  requiresVerifiedAdvice: true,
+  preservesWorkDefinition: true,
+  escalationOutcome: 'human-decision-required',
+});
+const AUTO_ADOPTION_POLICY = Object.freeze({
+  ...AUTO_ADOPTION_POLICY_PREIMAGE,
+  policyRoot: semanticRoot(AUTO_ADOPTION_POLICY_PREIMAGE),
+});
+const CONFIDENCE_ORDER = new Map([
+  ['unknown', 0],
+  ['low', 1],
+  ['medium', 2],
+  ['high', 3],
+]);
 
 const AUTHORITY = Object.freeze({
   mode: 'capture-preflight-only',
@@ -326,6 +352,89 @@ function fallback(request, reason, diagnostics, partial = {}) {
   return { ...preimage, preflightRoot: semanticRoot(preimage) };
 }
 
+function autoAdoptionEscalations(advice, historyBinding) {
+  const reasons = new Set();
+  if (advice.status !== AUTO_ADOPTION_POLICY.requiresAdviceStatus)
+    reasons.add('advice-not-ready');
+  if (historyBinding.status !== AUTO_ADOPTION_POLICY.requiresHistoryStatus)
+    reasons.add('history-not-complete');
+  if (historyBinding.selectedCount < 1) reasons.add('no-selected-history');
+  if (
+    (CONFIDENCE_ORDER.get(advice.confidence) ?? -1) <
+    CONFIDENCE_ORDER.get(AUTO_ADOPTION_POLICY.minimumConfidence)
+  )
+    reasons.add('confidence-below-policy');
+  for (const gapId of advice.gapIds)
+    if (!AUTO_ADOPTION_POLICY.allowedGapIds.includes(gapId))
+      reasons.add(`unresolved-gap:${gapId}`);
+  return [...reasons].sort();
+}
+
+function buildPolicyDisposition(request, advice, historyBinding) {
+  const evaluation = {
+    eligible: true,
+    historyStatus: historyBinding.status,
+    selectedCount: historyBinding.selectedCount,
+    confidence: advice.confidence,
+    gapIds: advice.gapIds,
+    escalationReasons: [],
+  };
+  const rationaleRoot = semanticRoot({
+    schema: 'kungfu.work-design.open-card-policy-rationale/v1',
+    policyRoot: AUTO_ADOPTION_POLICY.policyRoot,
+    adviceRoot: advice.adviceRoot,
+    intentRoot: request.humanWorkDefinitionRoot,
+    evaluation,
+  });
+  const preimage = {
+    schema: POLICY_DISPOSITION_SCHEMA,
+    adviceRoot: advice.adviceRoot,
+    intentRoot: request.humanWorkDefinitionRoot,
+    action: 'policy-accepted',
+    rationaleRoot,
+    resultingAdviceRoot: advice.adviceRoot,
+    policyRoot: AUTO_ADOPTION_POLICY.policyRoot,
+    evaluation,
+    authority: {
+      mode: 'policy-disposition-record',
+      assignmentAuthority: false,
+      workControlAuthority: false,
+      mutatesOriginalAdvice: false,
+      mutatesUserIntent: false,
+    },
+  };
+  return { ...preimage, dispositionRoot: semanticRoot(preimage) };
+}
+
+function humanDecisionRequired(request, history, advice, reasons) {
+  const preimage = {
+    schema: OPEN_CARD_PREFLIGHT_SCHEMA,
+    ok: true,
+    outcome: 'human-decision-required',
+    humanAuthorization: {
+      authority: 'human',
+      finalWorkDefinitionRoot: request.humanWorkDefinitionRoot,
+      preserved: true,
+    },
+    history,
+    advice,
+    disposition: null,
+    adoption: {
+      adopted: false,
+      adviceRoot: advice.advice.adviceRoot,
+    },
+    escalation: {
+      required: true,
+      policyRoot: AUTO_ADOPTION_POLICY.policyRoot,
+      reasons,
+    },
+    fallback: null,
+    cardState: { ...CARD_STATE },
+    authority: { ...AUTHORITY },
+  };
+  return { ...preimage, preflightRoot: semanticRoot(preimage) };
+}
+
 function validateEnvelope(request) {
   const diagnostics = [];
   if (!isObject(request))
@@ -388,15 +497,17 @@ function validateEnvelope(request) {
         'advice request input must be an object',
       ),
     );
-  if (!isObject(request.disposition))
-    diagnostics.push(
-      diagnostic(
-        'invalid-type',
-        '$.disposition',
-        'human disposition must be an object',
-      ),
-    );
-  else {
+  if (request.disposition !== undefined) {
+    if (!isObject(request.disposition)) {
+      diagnostics.push(
+        diagnostic(
+          'invalid-type',
+          '$.disposition',
+          'explicit human disposition must be an object',
+        ),
+      );
+      return diagnostics;
+    }
     if (!ACTIONS.has(request.disposition.action))
       diagnostics.push(
         diagnostic(
@@ -541,7 +652,7 @@ export function runOpenCardPreflight(request) {
       { history, advice },
     );
   if (
-    ROOT.test(String(request.disposition.expectedAdviceRoot ?? '')) &&
+    ROOT.test(String(request.disposition?.expectedAdviceRoot ?? '')) &&
     request.disposition.expectedAdviceRoot !== advised.advice.adviceRoot
   )
     return fallback(
@@ -557,11 +668,48 @@ export function runOpenCardPreflight(request) {
       { history, advice },
     );
 
-  const expectedAction =
-    advised.advice.status === 'insufficient-history'
-      ? 'insufficient-history'
-      : request.disposition.action;
-  if (expectedAction !== request.disposition.action)
+  if (request.disposition === undefined) {
+    const escalationReasons = autoAdoptionEscalations(
+      advised.advice,
+      historyBinding,
+    );
+    if (escalationReasons.length > 0)
+      return humanDecisionRequired(request, history, advice, escalationReasons);
+    const disposition = buildPolicyDisposition(
+      request,
+      advised.advice,
+      historyBinding,
+    );
+    const preimage = {
+      schema: OPEN_CARD_PREFLIGHT_SCHEMA,
+      ok: true,
+      outcome: 'advisory-auto-adopted',
+      humanAuthorization: {
+        authority: 'human',
+        finalWorkDefinitionRoot: request.humanWorkDefinitionRoot,
+        preserved: true,
+      },
+      history,
+      advice,
+      disposition,
+      adoption: {
+        adopted: true,
+        adviceRoot: advised.advice.adviceRoot,
+        mode: 'policy-auto-adopted',
+        policyRoot: AUTO_ADOPTION_POLICY.policyRoot,
+      },
+      escalation: null,
+      fallback: null,
+      cardState: { ...CARD_STATE },
+      authority: { ...AUTHORITY },
+    };
+    return { ...preimage, preflightRoot: semanticRoot(preimage) };
+  }
+
+  if (
+    advised.advice.status === 'insufficient-history' &&
+    request.disposition.action !== 'insufficient-history'
+  )
     return fallback(
       request,
       'disposition-status-mismatch',
@@ -666,9 +814,53 @@ export function verifyOpenCardPreflight(result) {
       result.advice?.advice?.adviceRoot !== result.adoption.adviceRoot)
   )
     return { ok: false, reason: 'adopted-advice-root-mismatch' };
+  if (
+    result.outcome === 'advisory-auto-adopted' &&
+    result.adoption?.mode !== 'policy-auto-adopted'
+  )
+    return { ok: false, reason: 'auto-adoption-mode-missing' };
+  if (result.adoption?.mode === 'policy-auto-adopted') {
+    const disposition = result.disposition;
+    if (
+      result.outcome !== 'advisory-auto-adopted' ||
+      result.adoption.adopted !== true ||
+      result.adoption.policyRoot !== AUTO_ADOPTION_POLICY.policyRoot ||
+      result.escalation !== null ||
+      result.fallback !== null ||
+      !isObject(disposition) ||
+      disposition.schema !== POLICY_DISPOSITION_SCHEMA ||
+      disposition.action !== 'policy-accepted' ||
+      disposition.policyRoot !== AUTO_ADOPTION_POLICY.policyRoot ||
+      disposition.adviceRoot !== result.adoption.adviceRoot ||
+      disposition.intentRoot !==
+        result.humanAuthorization.finalWorkDefinitionRoot ||
+      disposition.resultingAdviceRoot !== result.adoption.adviceRoot ||
+      disposition.evaluation?.eligible !== true ||
+      disposition.evaluation?.escalationReasons?.length !== 0
+    )
+      return { ok: false, reason: 'policy-disposition-invalid' };
+    const { dispositionRoot, ...dispositionPreimage } = disposition;
+    if (semanticRoot(dispositionPreimage) !== dispositionRoot)
+      return { ok: false, reason: 'policy-disposition-root-mismatch' };
+  }
+  if (
+    result.outcome === 'human-decision-required' &&
+    (result.escalation?.required !== true ||
+      result.escalation?.policyRoot !== AUTO_ADOPTION_POLICY.policyRoot ||
+      !Array.isArray(result.escalation?.reasons) ||
+      result.escalation.reasons.length === 0 ||
+      result.adoption?.adopted !== false ||
+      result.disposition !== null ||
+      result.fallback !== null)
+  )
+    return { ok: false, reason: 'human-escalation-invalid' };
   return { ok: true, reason: null };
 }
 
 export function openCardAuthorityBoundary() {
   return { authority: { ...AUTHORITY }, cardState: { ...CARD_STATE } };
+}
+
+export function openCardAutoAdoptionPolicy() {
+  return structuredClone(AUTO_ADOPTION_POLICY);
 }

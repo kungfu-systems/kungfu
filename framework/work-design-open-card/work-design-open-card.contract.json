@@ -36,7 +36,22 @@
     "claimed": false,
     "dispatched": false
   },
+  "autoAdoption": {
+    "schema": "kungfu.work-design.open-card-auto-adoption-policy/v1",
+    "id": "verified-history-within-authorized-boundary",
+    "version": 1,
+    "minimumConfidence": "medium",
+    "allowedGapIds": ["global-work-partial"],
+    "requiresAdviceStatus": "ready",
+    "requiresHistoryStatus": "complete",
+    "requiresSelectedHistory": true,
+    "requiresVerifiedAdvice": true,
+    "preservesWorkDefinition": true,
+    "escalationOutcome": "human-decision-required",
+    "policyRoot": "sha256:9d64a0b5fef826552678c0451154320733dbe4b76ff21d9167e516750e904f07"
+  },
   "dispositions": [
+    "policy-accepted",
     "accepted",
     "adapted",
     "overridden",
@@ -55,5 +70,5 @@
     "selector-unavailable",
     "stale-manifest"
   ],
-  "contractRoot": "sha256:f2074c617daa84e4b491d84a4f7d69df441574812b25bb9c2388edd248f24d8b"
+  "contractRoot": "sha256:2de4fa3b24d004f50eb6420416e8f5e484306a320c1e68ac6873d6574a6e15bd"
 }

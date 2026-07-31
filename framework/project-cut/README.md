@@ -124,7 +124,13 @@ coordinates enter the candidate set; replicas are deduplicated by immutable
 state root, partial global coverage remains explicit in the advice gaps, and a
 caller-supplied candidate list is never treated as history evidence. The Shifu
 route dispatches through checked-in Node protocol code without package install,
-build output, or checkout-local cache writes:
+build output, or checkout-local cache writes. A rooted native policy
+automatically adopts verified, bounded advice when history selection is
+complete and non-empty, confidence is medium or high, and no gap other than
+disclosed `global-work-partial` remains. Insufficient, low-confidence, or
+otherwise unresolved advice returns `human-decision-required`; explicit human
+dispositions and manual fallback remain exceptional paths rather than a default
+approval gate:
 
 ```sh
 kungfu workspace work --home --scope all --include-settled \
