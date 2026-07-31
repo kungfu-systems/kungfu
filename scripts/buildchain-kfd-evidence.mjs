@@ -28,6 +28,7 @@ import {
   assertKfdEvidenceSourceBinding,
   findGitTreeEquivalentAncestor,
   resolveKfdProductGateCheckedAt,
+  selectKfdEvidenceSourceSha,
 } from './source-acceptance.mjs';
 
 let runtime;
@@ -584,7 +585,12 @@ function resolveKfdEvidenceSourceSha({ write }) {
     ? ''
     : String(readJson(KFD3_PREBUILD_WITNESS_PATH).source?.sourceSha || '');
   return assertKfdEvidenceSourceBinding({
-    sourceSha: configured || (write ? headSha : committed),
+    sourceSha: selectKfdEvidenceSourceSha({
+      write,
+      configured,
+      committed,
+      headSha,
+    }),
     headSha,
     isAncestor: isGitAncestor,
     findTreeEquivalentAncestor: findGitTreeEquivalentAncestor,
