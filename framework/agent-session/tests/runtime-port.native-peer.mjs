@@ -17,12 +17,21 @@ const BINDING_PATH = path.join(
   'kungfu_node.node',
 );
 const require = createRequire(import.meta.url);
+// Core keeps the live-peer registration handshake open for 60 seconds. The
+// fixture must not declare failure earlier than the production contract,
+// especially on a cold Windows runner where coordinator startup follows a full
+// native rebuild.
+const PEER_REGISTRATION_TIMEOUT_MS = 60_000;
 
 function sleep(milliseconds) {
   return new Promise((resolve) => setTimeout(resolve, milliseconds));
 }
 
-async function waitFor(predicate, label, timeout = 15_000) {
+async function waitFor(
+  predicate,
+  label,
+  timeout = PEER_REGISTRATION_TIMEOUT_MS,
+) {
   const deadline = Date.now() + timeout;
   while (Date.now() < deadline) {
     const value = predicate();
