@@ -876,7 +876,7 @@ function assertCoreAssembled() {
 }
 
 // KF-ADR-019f86da-4f90-73ff-9543-f0a4f0beef05 stage 1: kungfu-trunk (the product trunk carrying the kungfu-owned
-// env/package surface) ships next to the frozen binary, together with its
+// env/package surface) ships next to the assembled product, together with its
 // runtime-pins manifest. UV_VERSION in the manifest must equal the repo's
 // .uv-version so the product and the dev launcher pull the same pinned uv.
 function stageTrunk(runtimePinSnapshot) {
