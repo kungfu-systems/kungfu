@@ -162,6 +162,10 @@ test(
         'kungfu.kfx.work-settlement-receipt/v1',
       );
       assert.equal(
+        application.receipt.authorityRoots.receiptDependencyRoot,
+        expected.lifecycleReceiptDependencyRoot,
+      );
+      assert.equal(
         fs.existsSync(path.join(runtimeDir, 'kfx', 'registry-history.jsonl')),
         false,
       );
