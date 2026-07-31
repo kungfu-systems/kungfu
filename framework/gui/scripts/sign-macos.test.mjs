@@ -4,6 +4,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
 import test from 'node:test';
+import { readElectronBuilderProjection } from '../../maintainability/semantic-amplification.mjs';
 
 import {
   isMachOHeader,
@@ -113,9 +114,9 @@ test('both desktop builders resolve the signing hook from the GUI project', () =
     'framework/gui/electron-builder.yml',
     'product/electron-builder.yml',
   ]) {
-    assert.match(
-      fs.readFileSync(path.join(ROOT, config), 'utf8'),
-      /^\s+sign: \.\/scripts\/sign-macos\.mjs$/m,
+    assert.equal(
+      readElectronBuilderProjection(path.join(ROOT, config)).mac.sign,
+      './scripts/sign-macos.mjs',
       config,
     );
   }

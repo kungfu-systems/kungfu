@@ -17,10 +17,10 @@
 #include <utility>
 
 #ifndef _WIN32
-#include <fcntl.h>
 #include <unistd.h>
 #endif
 
+#include "io/durability.h"
 #include <kungfu/yijinjing/io/advisory_file_lock.h>
 
 namespace kungfu::runtime::storage_service_api {
@@ -28,6 +28,7 @@ namespace kungfu::runtime::storage_service_api {
 namespace detail {
 
 namespace fs = std::filesystem;
+namespace platform_durability = kungfu::yijinjing::io::durability;
 namespace yy_storage = kungfu::yijinjing::storage;
 using kungfu::yijinjing::io::advisory_file_lock;
 using kungfu::yijinjing::io::advisory_file_lock_options;
@@ -135,18 +136,6 @@ std::optional<nlohmann::json> load_json(const fs::path &path) {
   return value;
 }
 
-void sync_directory(const fs::path &path) {
-#ifndef _WIN32
-  const int fd = ::open(path.c_str(), O_RDONLY);
-  if (fd >= 0) {
-    (void)::fsync(fd);
-    (void)::close(fd);
-  }
-#else
-  (void)path;
-#endif
-}
-
 void atomic_write_json(const fs::path &path, const nlohmann::json &value) {
   fs::create_directories(path.parent_path());
   const auto temp = path.string() + ".tmp." + std::to_string(now_millis()) + "." + std::to_string(process_id()) + "." +
@@ -160,29 +149,21 @@ void atomic_write_json(const fs::path &path, const nlohmann::json &value) {
     std::fclose(output);
     throw std::runtime_error("backend_authority_write_failed: " + temp);
   }
-#ifdef _WIN32
-  if (_commit(_fileno(output)) != 0) {
-#else
-  if (::fsync(fileno(output)) != 0) {
-#endif
+  try {
+    platform_durability::sync_file(output);
+  } catch (const std::system_error &) {
     std::fclose(output);
     throw std::runtime_error("backend_authority_sync_failed: " + temp);
   }
   if (std::fclose(output) != 0) {
     throw std::runtime_error("backend_authority_close_failed: " + temp);
   }
-  std::error_code ec;
-  fs::rename(temp, path, ec);
-#ifdef _WIN32
-  if (ec && !MoveFileExA(temp.c_str(), path.string().c_str(), MOVEFILE_REPLACE_EXISTING | MOVEFILE_WRITE_THROUGH)) {
+  try {
+    platform_durability::replace_file(temp, path);
+  } catch (const std::system_error &) {
     throw std::runtime_error("backend_authority_publish_failed: " + path.string());
   }
-#else
-  if (ec) {
-    throw std::runtime_error("backend_authority_publish_failed: " + path.string() + ": " + ec.message());
-  }
-#endif
-  sync_directory(path.parent_path());
+  platform_durability::best_effort_sync_directory(path.parent_path());
 }
 
 storage_backend_inventory_view inventory_view(const std::vector<stored_content_object> &objects) {

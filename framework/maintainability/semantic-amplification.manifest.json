@@ -301,41 +301,52 @@
           "configuration",
           "policy"
         ],
-        "authority": {
-          "id": "electron-builder-surface-policy",
-          "kind": "repository-source",
-          "sources": [
-            "framework/gui/electron-builder.yml",
-            "product/electron-builder.yml"
-          ]
-        },
+      "authority": {
+        "id": "electron-builder-surface-policy",
+        "kind": "repository-source",
+        "sources": [
+          "framework/gui/electron-builder.base.json",
+          "product/electron-builder.overlay.json"
+        ]
+      },
         "legalAxes": {
-          "surface": [
-            "framework-gui",
-            "assembled-product"
+        "surface": [
+          "framework-gui",
+          "assembled-product",
+          "projection-generator"
           ]
         },
         "adapters": [
-          {
-            "id": "framework-gui-package",
+        {
+          "id": "framework-gui-package",
             "axes": {
               "surface": "framework-gui"
             },
-            "paths": [
-              "framework/gui/electron-builder.yml"
-            ],
+          "paths": [
+            "framework/gui/electron-builder.base.json"
+          ],
             "authorityBinding": "electron-builder-surface-policy"
           },
-          {
-            "id": "assembled-product-package",
+        {
+          "id": "assembled-product-package",
             "axes": {
               "surface": "assembled-product"
             },
-            "paths": [
-              "product/electron-builder.yml"
-            ],
-            "authorityBinding": "electron-builder-surface-policy"
-          }
+          "paths": [
+            "product/electron-builder.overlay.json"
+          ],
+          "authorityBinding": "electron-builder-surface-policy"
+        },
+        {
+          "id": "electron-builder-projection-generator",
+          "axes": {
+            "surface": "projection-generator"
+          },
+          "paths": [
+            "framework/maintainability/semantic-amplification.mjs"
+          ],
+          "authorityBinding": "electron-builder-surface-policy"
+        }
         ],
         "projections": [
           {
@@ -348,34 +359,32 @@
           }
         ],
         "qualification": [
-          {
-            "path": "product/scripts/dist.test.mjs",
-            "role": "config-contract"
-          }
-        ],
+        {
+          "path": "product/scripts/dist.test.mjs",
+          "role": "config-contract"
+        },
+        {
+          "path": "framework/gui/scripts/electron-builder-config.test.mjs",
+          "role": "base-overlay-projection-drift"
+        }
+      ],
         "detectors": [
           {
             "id": "electron-config-overlap",
             "kind": "normalized-line-overlap",
             "findingClass": "config-duplication",
-            "paths": [
-              "framework/gui/electron-builder.yml",
-              "product/electron-builder.yml"
-            ],
-            "minimumLineLength": 4,
-            "maximumSharedLines": 40,
-            "remediation": "Move shared packaging policy behind one validated base/overlay mechanism when electron-builder qualification can prove identical merged output."
-          }
-        ],
-        "exceptions": [
-          {
-            "id": "electron-yaml-overlay-not-yet-qualified",
-            "expiresAt": "2026-10-31",
-            "rationale": "The two checked-in YAML surfaces remain independently executable; changing inheritance before exact platform packaging would risk installer behavior.",
-            "remediation": "Qualify a merged-config renderer on macOS, Linux, and Windows, then reduce normalized overlap without deleting product-only resources."
-          }
-        ],
-        "recovery": "Treat common keys as debt, preserve product-only resources, and require exact-platform package qualification before consolidation."
+          "paths": [
+            "framework/gui/electron-builder.base.json",
+            "product/electron-builder.overlay.json"
+          ],
+          "minimumLineLength": 4,
+          "maximumSharedLines": 9,
+          "thresholdRationale": "The product overlay must restate nine resource/filter lines because electron-builder replaces extraResources arrays instead of merging their entries; any additional shared policy line is a regression.",
+          "remediation": "Keep shared packaging policy in the canonical base, product-only assembly in the overlay, and both generated projections drift-checked."
+        }
+      ],
+      "exceptions": [],
+      "recovery": "Edit the executable base or product overlay, regenerate both projections, run the drift and product config contracts, then qualify packaging on every claimed platform."
       },
       {
         "id": "core-durability",
@@ -388,13 +397,15 @@
           "policy",
           "evidence"
         ],
-        "authority": {
-          "id": "native-durability-contract-and-storage-authority",
-          "kind": "repository-source",
-          "sources": [
-            "framework/core/src/libkungfu/include/kungfu/runtime/durable_ingest.h",
-            "framework/storage/kungfu-storage.contract.json"
-          ]
+      "authority": {
+        "id": "native-durability-contract-and-storage-authority",
+        "kind": "repository-source",
+        "sources": [
+          "framework/core/src/libkungfu/include/kungfu/runtime/durable_ingest.h",
+          "framework/core/src/libyijinjing/src/io/durability.h",
+          "framework/core/src/libyijinjing/include/kungfu/yijinjing/platform/mmap.h",
+          "framework/storage/kungfu-storage.contract.json"
+        ]
         },
         "legalAxes": {
           "durability-semantics": [
@@ -408,35 +419,19 @@
             "provider"
           ]
         },
-        "adapters": [
-          {
-            "id": "durable-ingest-os-adapter",
-            "axes": {
-              "durability-semantics": "strict-file-and-metadata"
-            },
-            "paths": [
-              "framework/core/src/libkungfu/src/runtime/durable_ingest.cpp"
-            ],
-            "authorityBinding": "native-durability-contract-and-storage-authority"
+      "adapters": [
+        {
+          "id": "native-file-durability-platform-adapter",
+          "axes": {
+            "durability-semantics": "strict-file-and-metadata"
           },
-          {
-            "id": "fact-journal-os-adapter",
-            "axes": {
-              "durability-semantics": "strict-file-and-metadata"
-            },
-            "paths": [
-              "framework/core/src/libkungfu/src/runtime/storage/fact_durable_admission.cpp"
-            ],
-            "authorityBinding": "native-durability-contract-and-storage-authority"
-          },
-          {
-            "id": "backend-switch-os-adapter",
-            "axes": {
-              "durability-semantics": "strict-file-and-metadata"
-            },
-            "paths": [
-              "framework/core/src/libkungfu/src/runtime/storage/backend_switch.cpp"
-            ],
+          "paths": [
+            "framework/core/src/libyijinjing/src/io/durability.h",
+            "framework/core/src/libyijinjing/src/io/durability.cpp",
+            "framework/core/src/libkungfu/src/runtime/durable_ingest.cpp",
+            "framework/core/src/libkungfu/src/runtime/storage/fact_durable_admission.cpp",
+            "framework/core/src/libkungfu/src/runtime/storage/backend_switch.cpp"
+          ],
             "authorityBinding": "native-durability-contract-and-storage-authority"
           },
           {
@@ -461,17 +456,33 @@
             "authorityBinding": "native-durability-contract-and-storage-authority"
           }
         ],
-        "projections": [
-          {
-            "path": "docs/qualification/fact-storage-authority.md",
+      "projections": [
+        {
+          "path": "framework/core/src/libkungfu/src/runtime/durable_ingest.cpp",
+          "role": "strict-durable-ingest-consumer"
+        },
+        {
+          "path": "framework/core/src/libkungfu/src/runtime/storage/fact_durable_admission.cpp",
+          "role": "strict-fact-journal-consumer"
+        },
+        {
+          "path": "framework/core/src/libkungfu/src/runtime/storage/backend_switch.cpp",
+          "role": "strict-backend-authority-consumer"
+        },
+        {
+          "path": "docs/qualification/fact-storage-authority.md",
             "role": "qualification-documentation"
           }
         ],
         "qualification": [
-          {
-            "path": "framework/core/src/libkungfu/tests/durable_ingest_tests.cpp",
-            "role": "native-contract"
-          },
+        {
+          "path": "framework/core/src/libkungfu/tests/durable_ingest_tests.cpp",
+          "role": "native-contract"
+        },
+        {
+          "path": "framework/core/src/libyijinjing/tests/durability_tests.cpp",
+          "role": "cross-platform-primitive-contract"
+        },
           {
             "path": "framework/core/tests/qualification/durability/product_contract.test.mjs",
             "role": "product-contract"
@@ -482,8 +493,9 @@
             "id": "durability-platform-primitive-spread",
             "kind": "token-spread",
             "findingClass": "leaking-platform-branch",
-            "paths": [
-              "framework/core/src/libkungfu/src/runtime/durable_ingest.cpp",
+          "paths": [
+            "framework/core/src/libyijinjing/src/io/durability.cpp",
+            "framework/core/src/libkungfu/src/runtime/durable_ingest.cpp",
               "framework/core/src/libkungfu/src/runtime/storage/fact_durable_admission.cpp",
               "framework/core/src/libkungfu/src/runtime/storage/backend_switch.cpp",
               "framework/core/src/libyijinjing/src/storage/content_store.cpp",
@@ -496,7 +508,7 @@
               "_commit("
             ],
             "maximumPaths": 2,
-            "remediation": "Converge only equivalent strict durability primitives behind a native OS adapter; retain content-store and provider semantics as explicit variants."
+          "remediation": "Keep equivalent strict primitives in the native file durability adapter; retain content-store best effort, mapping policy, and provider-owned WAL as explicit variants."
           }
         ],
         "exceptions": [
@@ -507,7 +519,7 @@
             "remediation": "Keep the weaker capability explicit; consolidate only after its public contract and power-loss evidence are upgraded."
           }
         ],
-        "recovery": "Inspect the declared durability semantics before moving OS code; never turn Windows metadata barriers, POSIX directory fsync, content-store best effort, and provider WAL into one false guarantee."
+      "recovery": "Inspect the declared durability semantics, use the platform adapter for strict file and metadata operations, preserve mapping policy, content-store best effort, and provider WAL as distinct contracts, then run native crash-recovery qualification."
       },
       {
         "id": "integrity-governance",

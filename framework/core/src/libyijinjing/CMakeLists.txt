@@ -55,7 +55,9 @@ set_target_properties(yijinjing PROPERTIES POSITION_INDEPENDENT_CODE ON)
 if(DEFINED KUNGFU_BUILD_DIR)
   set_target_properties(yijinjing PROPERTIES ARCHIVE_OUTPUT_DIRECTORY ${KUNGFU_BUILD_DIR})
 endif()
-target_include_directories(yijinjing PUBLIC ${PROJECT_SOURCE_DIR}/include)
+target_include_directories(yijinjing PUBLIC
+  ${PROJECT_SOURCE_DIR}/include
+  $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/src>)
 
 # boost::hana is header-only; inside the kungfu build and standalone alike,
 # use the vendored copy next to this tree unless the embedder has provided
@@ -99,6 +101,14 @@ if(YIJINJING_BUILD_TESTS)
   endif()
   target_compile_features(yijinjing_advisory_file_lock_tests PRIVATE cxx_std_20)
   add_test(NAME yijinjing_advisory_file_lock_tests COMMAND yijinjing_advisory_file_lock_tests)
+
+  add_executable(yijinjing_durability_tests tests/durability_tests.cpp)
+  target_link_libraries(yijinjing_durability_tests PRIVATE yijinjing)
+  if(TARGET kungfu_compile_contract)
+    target_link_libraries(yijinjing_durability_tests PRIVATE kungfu_compile_contract)
+  endif()
+  target_compile_features(yijinjing_durability_tests PRIVATE cxx_std_20)
+  add_test(NAME yijinjing_durability_tests COMMAND yijinjing_durability_tests)
 
   add_executable(yijinjing_fact_ledger_tests tests/fact_ledger_tests.cpp)
   target_link_libraries(yijinjing_fact_ledger_tests PRIVATE yijinjing)
