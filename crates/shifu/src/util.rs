@@ -74,6 +74,27 @@ pub fn run_agent(arguments: &[String]) -> ! {
     exit(0)
 }
 
+pub fn standard_companion_globs(platform: &str) -> (String, String) {
+    let archive_platform = match platform {
+        "macos" => "darwin",
+        other => other,
+    };
+    let manifest_platform = match platform {
+        "macos" => "darwin",
+        "windows" => "win32",
+        other => other,
+    };
+    let archive = if platform == "windows" {
+        "zip"
+    } else {
+        "tar.gz"
+    };
+    (
+        format!("product/release/cli/*cli-{archive_platform}-*.{archive}"),
+        format!("product/release/cli/*upgrade-*-{manifest_platform}-*.json"),
+    )
+}
+
 pub fn die(msg: &str) -> ! {
     eprintln!("shifu: {msg}");
     std::process::exit(1);
@@ -118,8 +139,35 @@ pub fn exec_or_exit(mut cmd: Command) -> ! {
 
 #[cfg(test)]
 mod tests {
+    use super::standard_companion_globs;
+
     #[test]
     fn agent_registry_covers_every_development_route() {
         assert!(super::agent_verified());
+    }
+
+    #[test]
+    fn standard_companions_preserve_platform_names() {
+        assert_eq!(
+            standard_companion_globs("windows"),
+            (
+                "product/release/cli/*cli-windows-*.zip".to_string(),
+                "product/release/cli/*upgrade-*-win32-*.json".to_string(),
+            )
+        );
+        assert_eq!(
+            standard_companion_globs("macos"),
+            (
+                "product/release/cli/*cli-darwin-*.tar.gz".to_string(),
+                "product/release/cli/*upgrade-*-darwin-*.json".to_string(),
+            )
+        );
+        assert_eq!(
+            standard_companion_globs("linux"),
+            (
+                "product/release/cli/*cli-linux-*.tar.gz".to_string(),
+                "product/release/cli/*upgrade-*-linux-*.json".to_string(),
+            )
+        );
     }
 }
