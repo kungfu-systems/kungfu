@@ -38,11 +38,11 @@ import {
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const SOURCE_SHA = '1'.repeat(40);
-const RUNTIME_SHA = '472bc2efc987dd8baab310f0d510e2e165875b19';
+const RUNTIME_SHA = 'adbcbdef01668890d8de9354bdb6e32a84bb52ad';
 const STABLE_RUNTIME_SHA = '9e904de2c85dbea7c799780ee166510b3336d812';
 const SOURCE_TREE_SHA = 'a'.repeat(40);
 const CONTRACT_DIGEST =
-  '214849268fe8a0c2d13c6bd5754df629a88c473a45acae6185d9acaef96e1ae5';
+  'b6a670d46012d13e559f7739f74091284ef997d8968848dfa9a6eb5ee05e6653';
 const STABLE_CONTRACT_DIGEST =
   '914720131f07664cd187a1033f357c4952ef1008f5553cb6b285a75f786a7fbc';
 const PREDICATE_COMMAND = 'node scripts/kungfu-release-qualification.mjs';

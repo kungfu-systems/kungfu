@@ -464,7 +464,7 @@ test('workflow contract keeps candidates exact-source, independent, and publish-
   );
   assert.match(
     workflow,
-    /uses: kungfu-systems\/buildchain\/\.github\/workflows\/\.build\.yml@472bc2efc987dd8baab310f0d510e2e165875b19/u,
+    /uses: kungfu-systems\/buildchain\/\.github\/workflows\/\.build\.yml@adbcbdef01668890d8de9354bdb6e32a84bb52ad/u,
   );
   assert.match(
     workflow,
