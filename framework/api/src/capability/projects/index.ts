@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
-import { randomUUID } from 'node:crypto';
+import { createHash, randomUUID } from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 
@@ -219,6 +219,7 @@ export type ProjectRemoveReceipt = {
 export type ProjectCommandOptions = {
   bin: string;
   env: Record<string, string | undefined>;
+  catalogConfigHomes?: string[];
   execFile: (
     file: string,
     args: string[],
@@ -249,6 +250,58 @@ export type ProjectCommandOptions = {
     onLine: (line: string) => void,
   ) => Promise<void>;
 };
+
+export function mergeProjectsCatalogs(
+  catalogs: ProjectsCatalog[],
+): ProjectsCatalog {
+  const [primary, ...additional] = catalogs;
+  if (!primary) {
+    throw new Error('at least one Project catalog is required');
+  }
+  if (additional.length === 0) return primary;
+
+  const projects: ProjectSummary[] = [];
+  const seen = new Set<string>();
+  for (const catalog of catalogs) {
+    for (const project of catalog.projects) {
+      const key = path.resolve(project.path);
+      if (seen.has(key)) continue;
+      seen.add(key);
+      projects.push({
+        ...project,
+        selected: project.id === primary.selectedProjectId,
+      });
+    }
+  }
+  const sources: Record<string, number> = {};
+  for (const project of projects) {
+    if (!project.source) continue;
+    sources[project.source] = (sources[project.source] ?? 0) + 1;
+  }
+  const rootInput = {
+    schema: 'kungfu.projects.merged-catalog-root/v1',
+    catalogRoots: catalogs.map((catalog) => catalog.catalogRoot).sort(),
+    projects: projects.map((project) => ({
+      id: project.id,
+      path: project.path,
+      available: project.available,
+      state: project.state,
+    })),
+    selectedProjectId: primary.selectedProjectId,
+  };
+  return {
+    ...primary,
+    projects,
+    sources,
+    hiddenProjectCount: catalogs.reduce(
+      (total, catalog) => total + (catalog.hiddenProjectCount ?? 0),
+      0,
+    ),
+    catalogRoot: `sha256:${createHash('sha256')
+      .update(JSON.stringify(rootInput))
+      .digest('hex')}`,
+  };
+}
 
 export type ProjectWorkRunEvent = {
   schema: 'kungfu.work-start.event/v1';
@@ -511,6 +564,7 @@ export function projectSearchDocuments(
 
 export function openProjects(options: ProjectCommandOptions): Projects {
   let retainedRuns: ProjectWorkRunSnapshot[] = [];
+  const catalogConfigHomeByProjectId = new Map<string, string | undefined>();
   const runListeners = new Set<(runs: ProjectWorkRunSnapshot[]) => void>();
   const publishRuns = () => {
     const snapshot = retainedRuns.map((run) => ({
@@ -528,10 +582,14 @@ export function openProjects(options: ProjectCommandOptions): Projects {
     );
     publishRuns();
   };
-  const invoke = async <T>(args: string[], schema: string): Promise<T> => {
+  const invoke = async <T>(
+    args: string[],
+    schema: string,
+    env = options.env,
+  ): Promise<T> => {
     const raw = await options.execFile(options.bin, args, {
       encoding: 'utf8',
-      env: options.env,
+      env,
       maxBuffer: 4 * 1024 * 1024,
     });
     return parse<T>(raw, schema);
@@ -551,11 +609,31 @@ export function openProjects(options: ProjectCommandOptions): Projects {
     return parse<T>(raw, schema);
   };
   return {
-    list: () =>
-      invoke<ProjectsCatalog>(
-        ['project', 'list'],
-        'kungfu.projects.catalog/v1',
-      ),
+    list: async () => {
+      const configHomes = [undefined, ...(options.catalogConfigHomes ?? [])];
+      const catalogs = await Promise.all([
+        invoke<ProjectsCatalog>(
+          ['project', 'list'],
+          'kungfu.projects.catalog/v1',
+        ),
+        ...(options.catalogConfigHomes ?? []).map((configHome) =>
+          invoke<ProjectsCatalog>(
+            ['project', 'list'],
+            'kungfu.projects.catalog/v1',
+            { ...options.env, KF_CONFIG_HOME: configHome },
+          ),
+        ),
+      ]);
+      catalogConfigHomeByProjectId.clear();
+      for (const [index, catalog] of catalogs.entries()) {
+        for (const project of catalog.projects) {
+          if (!catalogConfigHomeByProjectId.has(project.id)) {
+            catalogConfigHomeByProjectId.set(project.id, configHomes[index]);
+          }
+        }
+      }
+      return mergeProjectsCatalogs(catalogs);
+    },
     files: (projectPath, fileOptions) =>
       readProjectFileTree(projectPath, fileOptions),
     templates: () =>
@@ -612,6 +690,12 @@ export function openProjects(options: ProjectCommandOptions): Projects {
       invoke<ProjectRemovePlan>(
         ['project', 'remove-plan', projectId],
         'kungfu.project.remove-plan/v1',
+        catalogConfigHomeByProjectId.get(projectId)
+          ? {
+              ...options.env,
+              KF_CONFIG_HOME: catalogConfigHomeByProjectId.get(projectId),
+            }
+          : options.env,
       ),
     remove: (projectId, expectedPlanRoot) =>
       invoke<ProjectRemoveReceipt>(
@@ -624,6 +708,12 @@ export function openProjects(options: ProjectCommandOptions): Projects {
           '--execute',
         ],
         'kungfu.project.remove-receipt/v1',
+        catalogConfigHomeByProjectId.get(projectId)
+          ? {
+              ...options.env,
+              KF_CONFIG_HOME: catalogConfigHomeByProjectId.get(projectId),
+            }
+          : options.env,
       ),
     prepareWork: (objective, acceptanceCriterion) =>
       prepareProjectWork(objective, acceptanceCriterion),

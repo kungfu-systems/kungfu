@@ -13,6 +13,24 @@ export type WritableTerminal = {
 
 const CURSOR_HOME = '\u001b[H';
 const ERASE_LINE = '\u001b[2K';
+export const BEGIN_SYNCHRONIZED_UPDATE = '\u001b[?2026h';
+export const END_SYNCHRONIZED_UPDATE = '\u001b[?2026l';
+
+export type IncrementalTerminalOutputOptions = {
+  synchronizedOutput?: boolean;
+};
+
+export function synchronizedTerminalOutputEnabled(
+  env: Record<string, string | undefined>,
+): boolean {
+  const setting = env.KUNGFU_TUI_SYNCHRONIZED_OUTPUT?.trim().toLowerCase();
+  return (
+    env.TERM !== 'dumb' &&
+    setting !== '0' &&
+    setting !== 'false' &&
+    setting !== 'off'
+  );
+}
 
 function isCursorVisibilityOnly(value: string): boolean {
   return (
@@ -39,7 +57,10 @@ export function terminalCanvasRows(rows: number): number {
 export class IncrementalTerminalOutput {
   private previousLines: string[] | undefined;
 
-  constructor(private readonly terminal: WritableTerminal) {}
+  constructor(
+    private readonly terminal: WritableTerminal,
+    private readonly options: IncrementalTerminalOutputOptions = {},
+  ) {}
 
   get isTTY(): boolean | undefined {
     return this.terminal.isTTY;
@@ -62,7 +83,7 @@ export class IncrementalTerminalOutput {
 
     if (this.previousLines === undefined) {
       this.previousLines = nextLines;
-      return this.terminal.write(`${CURSOR_HOME}${frame}`) !== false;
+      return this.writeFrame(`${CURSOR_HOME}${frame}`);
     }
 
     const previousLines = this.previousLines;
@@ -75,7 +96,14 @@ export class IncrementalTerminalOutput {
       patch += `\u001b[${index + 1};1H${ERASE_LINE}${next}`;
     }
     this.previousLines = nextLines;
-    return patch ? this.terminal.write(patch) !== false : true;
+    return patch ? this.writeFrame(patch) : true;
+  }
+
+  private writeFrame(frame: string): boolean {
+    const output = this.options.synchronizedOutput
+      ? `${BEGIN_SYNCHRONIZED_UPDATE}${frame}${END_SYNCHRONIZED_UPDATE}`
+      : frame;
+    return this.terminal.write(output) !== false;
   }
 
   on(event: 'resize', listener: ResizeListener): unknown {

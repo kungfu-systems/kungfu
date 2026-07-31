@@ -15,6 +15,10 @@ import React from 'react';
 
 import { resolveMeasuredListWindow } from '../list-window/index.js';
 import type { TerminalDimensions } from '../profile-shell.js';
+import {
+  KUNGFU_EMPTY_WORK_NEBULA_PATTERN,
+  TerminalAmbientScene,
+} from '../terminal-animation.js';
 import { terminalCanvasRows } from '../terminal-canvas.js';
 
 export type WorkSort = 'updated-desc' | 'project-asc' | 'title-asc';
@@ -290,6 +294,10 @@ export function WorkWindow({
     Math.max(18, Math.floor(dimensions.columns * 0.2)),
   );
   const panelRows = Math.max(3, canvasRows - 6);
+  const workPanelDimensions = {
+    columns: Math.max(12, dimensions.columns - navigationWidth - 6),
+    rows: Math.max(3, panelRows - 2),
+  };
   const viewportRows = Math.max(1, panelRows - 2);
   const window = resolveMeasuredListWindow({
     selected,
@@ -369,7 +377,12 @@ export function WorkWindow({
           paddingX={1}
           overflow="hidden"
         >
-          {visibleItems.length === 0 ? (
+          {model.counts.all === 0 ? (
+            <TerminalAmbientScene
+              dimensions={workPanelDimensions}
+              pattern={KUNGFU_EMPTY_WORK_NEBULA_PATTERN}
+            />
+          ) : visibleItems.length === 0 ? (
             <Text color="yellow" wrap="truncate-end">
               No {FILTER_LABELS[model.filter]} Work.
             </Text>
