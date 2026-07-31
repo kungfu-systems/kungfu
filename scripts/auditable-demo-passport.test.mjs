@@ -15,6 +15,7 @@ import {
 const SOURCE_SHA = 'a'.repeat(40);
 const GATE_ROOT = `sha256:${'b'.repeat(64)}`;
 const MEDIA_ROOT = `sha256:${'c'.repeat(64)}`;
+const MEDIA_QUALIFICATION_ROOT = `sha256:${'f'.repeat(64)}`;
 
 function artifact(
   prefix,
@@ -99,10 +100,14 @@ test('binds a selectively rendered media artifact to its exact root', () => {
       `sha256:${'3'.repeat(64)}`,
     ),
     MEDIA_ROOT,
+    MEDIA_PROFILE: 'responsive-web-delivery-v1',
+    MEDIA_QUALIFICATION_ROOT,
   };
   const passport = buildPassport(env);
   assert.equal(passport.media.status, 'rendered');
   assert.equal(passport.media.root, MEDIA_ROOT);
+  assert.equal(passport.media.profile, 'responsive-web-delivery-v1');
+  assert.equal(passport.media.qualificationRoot, MEDIA_QUALIFICATION_ROOT);
   assert.equal(passport.media.artifact.expiresAt, '2026-08-08T12:00:00.000Z');
 });
 

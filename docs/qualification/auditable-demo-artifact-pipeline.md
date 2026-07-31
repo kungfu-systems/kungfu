@@ -71,9 +71,9 @@ they cannot replace the README managed block.
 
 | Component | Immutable coordinate |
 | --- | --- |
-| Demo renderer | `ghcr.io/kungfu-systems/build-images/demo-renderer@sha256:06141e3d01a13e6d44766d3acc115ca07c58443f59840f313ecd938b2b0c138c` |
-| Renderer release | [`v1.3.0-alpha.19`](https://github.com/kungfu-systems/build-images/releases/tag/v1.3.0-alpha.19), exact source `0dc471bfdec50e06afd12493a279d3c0056dae1f`, containing protected merge `f6bccf6ecb5753386a502a335748c6a0b1ecb7a9` |
-| Buildchain Gate | `d43e6574432bc0b1ae9d1d0557f8ccc4785fa2e4` (Buildchain PR `#2092`, bounded literal multi-demo adapter arguments) |
+| Demo renderer | `ghcr.io/kungfu-systems/build-images/demo-renderer@sha256:b70a2f5631665f685280bc9d7434c5ed5cf48b760b728873734d0c47bff72b25` |
+| Renderer release | `v1.3.0-alpha.20`, exact version-state source `b3cebc2deb5f140af74db24b1b45233ac6733ef1`, containing the renderer merge from Build Images PR `#339` |
+| Buildchain Gate | `0e4ac58013ff3e09abb18da9896fad5f5b823ef7` (Buildchain PR `#2104`, responsive 1080p/720p media qualification) |
 | Consumer adapter | `scripts/auditable-demo-adapter.py` from the exact qualified Kungfu source SHA |
 
 Buildchain's reusable build emits

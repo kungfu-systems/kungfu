@@ -281,9 +281,9 @@
           "authority": "qualification",
           "publication": "none",
           "receipt": "qualifying",
-          "definitionDigest": "sha256:75a1cb234096abe4d29fbd56be3afee6d97e83fe2a06c0109bea3c0250e79452",
+          "definitionDigest": "sha256:97e0f4af7f678d36b5f32f68d64298b5d321385a247c852234dead25e0700019",
           "credentials": {"githubToken":"read","oidc":false,"repositorySecrets":[],"inheritedSecrets":false,"environment":null},
-          "externalActions": ["kungfu-systems/buildchain/.github/workflows/.auditable-demo.yml@d43e6574432bc0b1ae9d1d0557f8ccc4785fa2e4"],
+          "externalActions": ["kungfu-systems/buildchain/.github/workflows/.auditable-demo.yml@0e4ac58013ff3e09abb18da9896fad5f5b823ef7"],
           "steps": []
         },
         {
@@ -301,10 +301,10 @@
           "authority": "qualification",
           "publication": "none",
           "receipt": "qualifying",
-          "definitionDigest": "sha256:cedbf033e352694a0dcdcbdad66ffc61a0cc513e24efa02c286594439e596a71",
+          "definitionDigest": "sha256:9f2c68d593567265cd9a58ef590abf3525d5f1c947579be77a21b3eccc6c9639",
           "credentials": {"githubToken":"read","oidc":false,"repositorySecrets":[],"inheritedSecrets":false,"environment":null},
           "externalActions": ["actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0","actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd","actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a"],
-          "steps": [{"index":1,"label":"name:Check out exact qualified source","definitionDigest":"sha256:29b1db9963a2029aabffae82fe0ec406fa6ec8d3a522d80493e9e84be9967dbe"},{"index":2,"label":"id:artifact-expiry","definitionDigest":"sha256:b63afe1390635ea616d7c2a9ccc69bfb49f5b8d2ee193c8b8df61800eaad0591"},{"index":3,"label":"name:Write exact auditable demo Release Passport","authority":"evidence-publication","definitionDigest":"sha256:c38e5aed66326929f52d4780d7c0e0b25c3410f35d593a0efee0e6a571441a73"},{"index":4,"label":"name:Upload exact auditable demo Release Passport","authority":"evidence-publication","definitionDigest":"sha256:026dc02ae0372598499bba6aa300fe2c537f6ca694ae3b7d4719a91ca6e4780a"}]
+          "steps": [{"index":1,"label":"name:Check out exact qualified source","definitionDigest":"sha256:29b1db9963a2029aabffae82fe0ec406fa6ec8d3a522d80493e9e84be9967dbe"},{"index":2,"label":"id:artifact-expiry","definitionDigest":"sha256:b63afe1390635ea616d7c2a9ccc69bfb49f5b8d2ee193c8b8df61800eaad0591"},{"index":3,"label":"name:Write exact auditable demo Release Passport","authority":"evidence-publication","definitionDigest":"sha256:a02727f54c70e124e17b7bd4400e9963989d8fde0e9dce8c49a4efa5b9175d44"},{"index":4,"label":"name:Upload exact auditable demo Release Passport","authority":"evidence-publication","definitionDigest":"sha256:026dc02ae0372598499bba6aa300fe2c537f6ca694ae3b7d4719a91ca6e4780a"}]
         },
         {
           "id": "auditable-demo-plan",

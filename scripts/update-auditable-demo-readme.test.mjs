@@ -51,6 +51,8 @@ function evidence() {
     media: {
       root: `sha256:${'e'.repeat(64)}`,
       artifact: artifact('102', 'auditable-demo-media', '2'),
+      profile: 'responsive-web-delivery-v1',
+      qualificationRoot: `sha256:${'6'.repeat(64)}`,
     },
     passport: {
       root: `sha256:${'f'.repeat(64)}`,
@@ -220,6 +222,8 @@ test('materializes README evidence only from a verified Passport and exact media
     const members = {
       'complete-transcript.txt': Buffer.from('autoplay completed\n'),
       'demo.gif': Buffer.from('GIF89a qualified fixture'),
+      'demo-720p.mp4': Buffer.from('720p mp4 fixture'),
+      'demo-720p.webm': Buffer.from('720p webm fixture'),
       'demo.mp4': Buffer.from('mp4 fixture'),
       'demo.webm': Buffer.from('webm fixture'),
       'gate-receipt.json': Buffer.from('{}\n'),
@@ -236,20 +240,84 @@ test('materializes README evidence only from a verified Passport and exact media
           inputs: {
             terminalCapture: { root: `sha256:${'9'.repeat(64)}` },
           },
+          derivation: {
+            policy: 'single-frame-set-deterministic-renditions/v1',
+            renditions: {
+              'demo.gif': {
+                width: 1280,
+                height: 720,
+                operation: 'lanczos-downscale-from-source-frames',
+              },
+            },
+          },
         }),
       ),
+      'media-inspection.json': Buffer.from('{"passed":true}\n'),
       'media-probe.json': Buffer.from('{"passed":true}\n'),
       'poster.png': Buffer.from('png fixture'),
       'public-projection.json': Buffer.from('{}\n'),
       'renderer-checksums.sha256': Buffer.from('renderer fixture\n'),
       'scene.json': Buffer.from('{"durationMs":1000}\n'),
     };
+    const renditionSpecs = [
+      ['primary-video', 'demo.mp4', 'video/mp4', 1920, 1080, 'scene-exact'],
+      ['alternate-video', 'demo.webm', 'video/webm', 1920, 1080, 'scene-exact'],
+      [
+        'responsive-primary-video',
+        'demo-720p.mp4',
+        'video/mp4',
+        1280,
+        720,
+        'exact-downscale-same-aspect',
+      ],
+      [
+        'responsive-alternate-video',
+        'demo-720p.webm',
+        'video/webm',
+        1280,
+        720,
+        'exact-downscale-same-aspect',
+      ],
+      [
+        'readme-compatibility',
+        'demo.gif',
+        'image/gif',
+        1280,
+        720,
+        'exact-downscale-same-aspect',
+      ],
+      ['evidence-poster', 'poster.png', 'image/png', 1920, 1080, 'scene-exact'],
+    ];
+    const qualificationBody = {
+      schema: 'buildchain.auditable-demo-media-qualification/v1',
+      profile: { id: 'responsive-web-delivery-v1' },
+      inspectionRoot: `sha256:${'8'.repeat(64)}`,
+      renditions: renditionSpecs.map(
+        ([role, file, mimeType, width, height, dimensionPolicy]) => ({
+          role,
+          path: file,
+          mimeType,
+          width,
+          height,
+          dimensionPolicy,
+          root: sha256(members[file]),
+          bytes: members[file].length,
+        }),
+      ),
+      nonClaims: [],
+    };
+    const qualification = {
+      ...qualificationBody,
+      qualificationRoot: sha256(Buffer.from(stableJson(qualificationBody))),
+    };
     const receipt = {
-      schema: 'buildchain.auditable-demo-media/v1',
+      schema: 'buildchain.auditable-demo-media/v2',
       status: 'passed',
       sourceSha: SHA,
       qualifiedGateRoot: GATE_ROOT,
       rendererImage: RENDERER,
+      qualification,
+      qualificationRoot: qualification.qualificationRoot,
     };
     members['media-receipt.json'] = Buffer.from(stableJson(receipt));
     for (const [name, bytes] of Object.entries(members)) {
@@ -286,6 +354,8 @@ test('materializes README evidence only from a verified Passport and exact media
       MEDIA_ARTIFACT_URL: `${RUN_URL}/artifacts/102`,
       MEDIA_ARTIFACT_EXPIRES_AT: '2026-08-08T12:00:00Z',
       MEDIA_ROOT: mediaRoot,
+      MEDIA_PROFILE: 'responsive-web-delivery-v1',
+      MEDIA_QUALIFICATION_ROOT: qualification.qualificationRoot,
       BUILDCHAIN_SHA: 'b'.repeat(40),
       RENDERER_IMAGE: RENDERER,
     });

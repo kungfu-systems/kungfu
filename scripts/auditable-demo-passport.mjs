@@ -20,6 +20,7 @@ const RENDERER_PATTERN =
   /^[a-z0-9][a-z0-9./_-]*@[sS][hH][aA]256:[0-9a-f]{64}$/u;
 const DEMO_ID_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/u;
 const EVIDENCE_CLASS_PATTERN = /^[a-z0-9][a-z0-9._/-]*\/v[1-9][0-9]*$/u;
+const MEDIA_PROFILE_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*-v[1-9][0-9]*$/u;
 const TRIGGER_PLAN_SCHEMA = 'kungfu.auditable-demo.trigger-plan/v1';
 const DEFAULT_DEMO_ID = 'agent-work-lab';
 const PROMOTION_REF_PATTERN =
@@ -272,6 +273,12 @@ export function buildPassport(
 
   const media = exactArtifact(env, 'MEDIA', repository, runId, false);
   const mediaRoot = exactRoot(env, 'MEDIA_ROOT', false);
+  const mediaProfile = media
+    ? required(env, 'MEDIA_PROFILE', MEDIA_PROFILE_PATTERN, 'media profile')
+    : null;
+  const mediaQualificationRoot = media
+    ? exactRoot(env, 'MEDIA_QUALIFICATION_ROOT')
+    : null;
   if (Boolean(media) !== Boolean(mediaRoot)) {
     fail('media artifact and media root must be present or absent together');
   }
@@ -325,11 +332,15 @@ export function buildPassport(
           status: 'rendered',
           root: mediaRoot,
           artifact: media,
+          profile: mediaProfile,
+          qualificationRoot: mediaQualificationRoot,
         }
       : {
           status: 'not-requested',
           root: null,
           artifact: null,
+          profile: null,
+          qualificationRoot: null,
         },
     workflow: {
       repository,
@@ -393,6 +404,12 @@ export function verifyPassport(passport) {
     typeof passport.demo.publication?.readmeFeatured !== 'boolean' ||
     !DEMO_ID_PATTERN.test(passport.demo.publication?.siteSlug || '') ||
     !EVIDENCE_CLASS_PATTERN.test(passport.authority?.evidenceClass || '') ||
+    (passport.media?.status === 'rendered' &&
+      (!MEDIA_PROFILE_PATTERN.test(passport.media.profile || '') ||
+        !DIGEST_PATTERN.test(passport.media.qualificationRoot || ''))) ||
+    (passport.media?.status === 'not-requested' &&
+      (passport.media.profile !== null ||
+        passport.media.qualificationRoot !== null)) ||
     passport.authority?.publication !== 'github-artifacts-only' ||
     passport.authority?.productionDeployment !== false ||
     passport.authority?.authorization?.status !== 'not-granted-by-demo' ||

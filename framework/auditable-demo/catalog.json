@@ -40,8 +40,8 @@
       },
       "scene": {
         "id": "kungfu-agent-work-lab-autoplay",
-        "width": 1280,
-        "height": 720,
+        "width": 1920,
+        "height": 1080,
         "fps": 15,
         "title": "Kungfu Agent Work Lab — exact installed artifact",
         "background": "#0B1020",

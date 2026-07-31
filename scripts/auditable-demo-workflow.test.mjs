@@ -330,6 +330,11 @@ test('Gate runtime and renderer are immutable and Passport uses the same runtime
     gate.with['renderer-image'],
     /^ghcr\.io\/kungfu-systems\/build-images\/demo-renderer@sha256:[0-9a-f]{64}$/u,
   );
+  assert.equal(
+    gate.with['media-profile'],
+    'responsive-web-delivery-v1',
+    'Gate and render must use the declared responsive qualification profile',
+  );
   const passportStep = passport.steps.find(
     ({ name }) => name === 'Write exact auditable demo Release Passport',
   );
@@ -357,6 +362,14 @@ test('Gate runtime and renderer are immutable and Passport uses the same runtime
   );
   assert.equal(passportStep.env.BUILDCHAIN_SHA, runtime[1]);
   assert.equal(passportStep.env.RENDERER_IMAGE, gate.with['renderer-image']);
+  assert.equal(
+    passportStep.env.MEDIA_PROFILE,
+    '${{ needs.auditable-demo.outputs.media-profile }}',
+  );
+  assert.equal(
+    passportStep.env.MEDIA_QUALIFICATION_ROOT,
+    '${{ needs.auditable-demo.outputs.media-qualification-root }}',
+  );
   assert.equal(passport.permissions.actions, 'read');
   assert.match(
     expiryStep.with.script,

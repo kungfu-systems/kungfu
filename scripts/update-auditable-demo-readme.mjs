@@ -35,11 +35,14 @@ const NON_AUTHORITIES = [
 const MEDIA_MEMBERS = [
   'checksums.sha256',
   'complete-transcript.txt',
+  'demo-720p.mp4',
+  'demo-720p.webm',
   'demo.gif',
   'demo.mp4',
   'demo.webm',
   'gate-receipt.json',
   'manifest.json',
+  'media-inspection.json',
   'media-probe.json',
   'media-receipt.json',
   'poster.png',
@@ -214,6 +217,16 @@ export function validatePublicEvidence(value) {
     'media root',
     DIGEST_PATTERN,
   );
+  const mediaProfile = requiredString(
+    value.media?.profile,
+    'media profile',
+    /^responsive-web-delivery-v1$/u,
+  );
+  const mediaQualificationRoot = requiredString(
+    value.media?.qualificationRoot,
+    'media qualification root',
+    DIGEST_PATTERN,
+  );
   const passportRoot = requiredString(
     value.passport?.root,
     'Passport root',
@@ -294,7 +307,12 @@ export function validatePublicEvidence(value) {
     buildchainSha,
     rendererImage,
     gate: { root: gateRoot, artifact: gateArtifact },
-    media: { root: mediaRoot, artifact: mediaArtifact },
+    media: {
+      root: mediaRoot,
+      artifact: mediaArtifact,
+      profile: mediaProfile,
+      qualificationRoot: mediaQualificationRoot,
+    },
     passport: { root: passportRoot, artifact: passportArtifact },
     demo,
     evidenceClass,
@@ -356,13 +374,58 @@ function verifyMediaBundle(mediaDirectory, passport) {
     ).toString('utf8'),
   );
   if (
-    receipt.schema !== 'buildchain.auditable-demo-media/v1' ||
+    receipt.schema !== 'buildchain.auditable-demo-media/v2' ||
     receipt.status !== 'passed' ||
     receipt.sourceSha !== passport.source.sha ||
     receipt.qualifiedGateRoot !== passport.gate.root ||
-    receipt.rendererImage !== passport.toolchain.rendererImage
+    receipt.rendererImage !== passport.toolchain.rendererImage ||
+    receipt.qualification?.profile?.id !== passport.media.profile ||
+    receipt.qualificationRoot !== passport.media.qualificationRoot ||
+    receipt.qualification?.qualificationRoot !== receipt.qualificationRoot
   ) {
     fail('media receipt does not bind the Passport');
+  }
+  const { qualificationRoot, ...qualificationBody } = receipt.qualification;
+  if (
+    qualificationRoot !== sha256(Buffer.from(stableJson(qualificationBody)))
+  ) {
+    fail('media qualification root does not verify');
+  }
+  const renditions = receipt.qualification.renditions;
+  if (!Array.isArray(renditions)) {
+    fail('media qualification renditions are missing');
+  }
+  const roles = new Map();
+  for (const rendition of renditions) {
+    if (
+      !rendition ||
+      typeof rendition.role !== 'string' ||
+      typeof rendition.path !== 'string' ||
+      !MEDIA_MEMBERS.includes(rendition.path) ||
+      rendition.path === 'checksums.sha256' ||
+      roles.has(rendition.role) ||
+      !DIGEST_PATTERN.test(rendition.root || '')
+    ) {
+      fail('media qualification role mapping is invalid');
+    }
+    const bytes = readRegular(
+      path.join(mediaDirectory, rendition.path),
+      rendition.role,
+    );
+    if (rendition.root !== sha256(bytes) || rendition.bytes !== bytes.length) {
+      fail(`media qualification drifted for role ${rendition.role}`);
+    }
+    roles.set(rendition.role, { ...rendition, bytes });
+  }
+  const readmeRendition = roles.get('readme-compatibility');
+  if (
+    !readmeRendition ||
+    readmeRendition.mimeType !== 'image/gif' ||
+    readmeRendition.width !== 1280 ||
+    readmeRendition.height !== 720 ||
+    readmeRendition.dimensionPolicy !== 'exact-downscale-same-aspect'
+  ) {
+    fail('README compatibility rendition is not qualified at 1280x720');
   }
   const manifest = JSON.parse(
     readRegular(
@@ -376,15 +439,15 @@ function verifyMediaBundle(mediaDirectory, passport) {
     manifest.policy?.evidenceClass !== passport.authority.evidenceClass ||
     manifest.policy?.visualClassification !== 'bounded-pty-replay' ||
     manifest.policy?.runtimeTextAuthority !== 'terminal-capture.json' ||
-    !DIGEST_PATTERN.test(manifest.inputs?.terminalCapture?.root || '')
+    !DIGEST_PATTERN.test(manifest.inputs?.terminalCapture?.root || '') ||
+    manifest.derivation?.policy !==
+      'single-frame-set-deterministic-renditions/v1' ||
+    manifest.derivation?.renditions?.[readmeRendition.path]?.operation !==
+      'lanczos-downscale-from-source-frames'
   ) {
     fail('renderer manifest does not prove the qualified PTY replay');
   }
-  return readRegular(
-    path.join(mediaDirectory, 'demo.gif'),
-    'README GIF',
-    10 * 1024 * 1024,
-  );
+  return readmeRendition.bytes;
 }
 
 export function buildPublicEvidence({
