@@ -31,7 +31,7 @@ or `windows-2022`; the already hosted Linux ARM64 lane is unchanged.
 
 The inventory token is projected only into code checked out from the immutable
 Buildchain workflow-shell authority at
-`adbcbdef01668890d8de9354bdb6e32a84bb52ad`. The routing output contains
+`a03b37b856e969cf091b286d8649cf1ba71f17a0`. The routing output contains
 de-identified counts and decisions, not runner names. A missing token,
 permission failure, or unavailable inventory API cannot claim an outage and
 therefore preserves the original self-hosted matrix. Source identity,
