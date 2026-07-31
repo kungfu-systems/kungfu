@@ -477,6 +477,7 @@ export function ProjectsHost({
               key={project.id}
               color={index === selected ? 'cyan' : undefined}
               bold={index === selected}
+              wrap="truncate-end"
             >
               {index === selected ? '›' : ' '} {project.name}{' '}
               <Text color={project.available ? 'green' : 'red'}>
@@ -558,27 +559,18 @@ export function ProjectsHost({
           </Text>
           <Text bold>[y/Enter] remove · [n/Esc] cancel</Text>
         </Box>
-      ) : openedProject && !busy ? (
-        <Box
-          flexDirection="column"
-          borderStyle="double"
-          borderColor="green"
-          paddingX={1}
-        >
-          <Text bold color="green">
-            PROJECT OPENED
-          </Text>
-          <Text>{openedProject.display_path}</Text>
-          <Text>
-            <Text bold>[Enter]</Text> open this Project · <Text bold>/new</Text>{' '}
-            create another
-          </Text>
-        </Box>
       ) : (
-        <Text color={busy ? 'yellow' : undefined}>
-          {busy ? '◌ ' : '✓ '}
-          {message}
-        </Text>
+        <>
+          <Text color={busy ? 'yellow' : undefined}>
+            {busy ? '◌ ' : '✓ '}
+            {message}
+          </Text>
+          {openedProject && !busy ? (
+            <Text dimColor wrap="truncate-end">
+              Current · {openedProject.display_path}
+            </Text>
+          ) : null}
+        </>
       )}
     </Box>
   );

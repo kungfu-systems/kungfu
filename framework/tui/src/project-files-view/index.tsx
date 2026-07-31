@@ -28,6 +28,242 @@ type DimensionSource = {
   subscribe(listener: (dimensions: TerminalDimensions) => void): () => void;
 };
 
+export function ProjectFileTreeNavigation({
+  root,
+  dimensions,
+  workCount,
+  focused,
+  isInputCaptured,
+  onFocus,
+  onOpenWork,
+  onOpenProjects,
+  onOpenLab,
+  onWorkspacePointer,
+  topOffset = 3,
+}: {
+  root: string;
+  dimensions: DimensionSource;
+  workCount?: number;
+  focused: boolean;
+  isInputCaptured: () => boolean;
+  onFocus: () => void;
+  onOpenWork: () => void;
+  onOpenProjects: () => void;
+  onOpenLab: () => void;
+  onWorkspacePointer: () => void;
+  topOffset?: number;
+}) {
+  const { exit } = useApp();
+  const [size, setSize] = React.useState(dimensions.get());
+  const [selected, setSelected] = React.useState(0);
+  const [expandedPaths, setExpandedPaths] = React.useState<ReadonlySet<string>>(
+    () => new Set(),
+  );
+  const [message, setMessage] = React.useState(
+    'Enter expands a folder or copies a file path.',
+  );
+  const navigationWidth = Math.min(
+    28,
+    Math.max(20, Math.floor(size.columns * 0.22)),
+  );
+  const entries = React.useMemo(
+    () => readProjectFileTree(root, { expandedPaths }),
+    [expandedPaths, root],
+  );
+  const treeRows = Math.max(3, terminalCanvasRows(size.rows) - 13);
+  const treeWindow = resolveListWindow({
+    selected,
+    itemCount: entries.length,
+    viewportRows: treeRows,
+  });
+  const visibleEntries = entries.slice(treeWindow.start, treeWindow.end);
+
+  React.useEffect(() => dimensions.subscribe(setSize), [dimensions]);
+  React.useEffect(() => {
+    setSelected((current) =>
+      Math.min(current, Math.max(0, entries.length - 1)),
+    );
+  }, [entries.length]);
+
+  const activate = React.useCallback(
+    (index: number) => {
+      const entry = entries[index];
+      if (!entry) return;
+      if (entry.kind === 'directory') {
+        if (!entry.expandable) {
+          setMessage(`${entry.name}/ is excluded from recursive preview.`);
+          return;
+        }
+        setExpandedPaths((current) =>
+          toggleProjectFileTreeEntry(current, entry),
+        );
+        setMessage(
+          `${entry.name}/ ${entry.collapsed ? 'expanded' : 'collapsed'}.`,
+        );
+        return;
+      }
+      const absolutePath = path.resolve(root, entry.relativePath);
+      const receipt = copyTextToClipboard(absolutePath, {
+        exec: (file, args, options) =>
+          execFileSync(file, args, {
+            ...options,
+            encoding: 'utf8',
+          }),
+      });
+      setMessage(
+        receipt.ok
+          ? `Copied · ${entry.name}`
+          : `Copy failed · ${receipt.error}`,
+      );
+    },
+    [entries, root],
+  );
+
+  React.useEffect(() => {
+    const onData = (chunk: Buffer | string) => {
+      const input = String(chunk);
+      const mouseEvents = decodeTerminalMouseInput(input);
+      if (mouseEvents.length > 0) {
+        for (const event of mouseEvents) {
+          if (
+            event.column < 1 ||
+            event.column > navigationWidth + 2 ||
+            event.row < topOffset ||
+            event.row > terminalCanvasRows(size.rows)
+          ) {
+            continue;
+          }
+          onWorkspacePointer();
+          onFocus();
+          if (event.kind === 'wheel') {
+            const delta = event.button === 'wheel-up' ? -1 : 1;
+            setSelected((current) =>
+              scrollListSelection({
+                current,
+                delta,
+                itemCount: entries.length,
+              }),
+            );
+            continue;
+          }
+          if (event.kind !== 'press' || event.button !== 'left') continue;
+          if (event.row === topOffset + 2) {
+            onOpenWork();
+            continue;
+          }
+          const offset = event.row - (topOffset + 4);
+          if (offset < 0 || offset >= visibleEntries.length) continue;
+          const index = treeWindow.start + offset;
+          setSelected(index);
+          if (entries[index]?.kind === 'directory') activate(index);
+        }
+        return;
+      }
+      if (!focused || isInputCaptured()) return;
+      if (input === 'q' || input === '\u0003') return exit();
+      if (input === 'w' || input === 't' || input === '\u001b') {
+        return onOpenWork();
+      }
+      if (input === 'p') return onOpenProjects();
+      if (input === 'a') return onOpenLab();
+      if (input === 'j' || input === '\u001b[B') {
+        setSelected((current) => boundedIndex(current, 1, entries.length));
+        return;
+      }
+      if (input === 'k' || input === '\u001b[A') {
+        setSelected((current) => boundedIndex(current, -1, entries.length));
+        return;
+      }
+      const entry = entries[selected];
+      if (input === '\r' || input === '\n') return activate(selected);
+      if (input === 'l' || input === '\u001b[C') {
+        if (entry?.kind === 'directory' && entry.collapsed) {
+          activate(selected);
+        } else if (entry && entries[selected + 1]?.depth === entry.depth + 1) {
+          setSelected(selected + 1);
+        }
+        return;
+      }
+      if (input === 'h' || input === '\u001b[D') {
+        if (entry?.kind === 'directory' && !entry.collapsed) {
+          activate(selected);
+        } else {
+          setSelected(projectFileTreeParentIndex(entries, selected));
+        }
+      }
+    };
+    process.stdin.on('data', onData);
+    return () => {
+      process.stdin.off('data', onData);
+    };
+  }, [
+    activate,
+    entries,
+    exit,
+    focused,
+    isInputCaptured,
+    navigationWidth,
+    onFocus,
+    onOpenLab,
+    onOpenProjects,
+    onOpenWork,
+    onWorkspacePointer,
+    selected,
+    size.rows,
+    topOffset,
+    treeWindow.start,
+    visibleEntries.length,
+  ]);
+
+  return (
+    <Box
+      width={navigationWidth}
+      flexDirection="column"
+      borderStyle="round"
+      borderColor={focused ? 'cyan' : undefined}
+      paddingX={1}
+      flexShrink={0}
+      overflow="hidden"
+    >
+      <Text bold>PROJECT</Text>
+      <Text color={focused ? undefined : 'cyan'} bold={!focused}>
+        {focused ? '  ' : '› '}Work {workCount ?? '…'}
+      </Text>
+      <Text color={focused ? 'cyan' : undefined} bold={focused}>
+        {focused ? '› ' : '  '}Files
+      </Text>
+      {entries.length > visibleEntries.length ? (
+        <Text dimColor>
+          {treeWindow.start + 1}–{treeWindow.end}/{entries.length}
+        </Text>
+      ) : null}
+      <Box flexDirection="column" flexGrow={1} overflow="hidden">
+        {visibleEntries.length > 0 ? (
+          visibleEntries.map((entry, offset) => {
+            const index = treeWindow.start + offset;
+            return (
+              <Text
+                key={entry.relativePath}
+                color={focused && index === selected ? 'cyan' : undefined}
+                bold={focused && index === selected}
+                wrap="truncate-end"
+              >
+                {focused && index === selected ? '›' : ' '}
+                {projectFileTreeLabel(entry)}
+              </Text>
+            );
+          })
+        ) : (
+          <Text dimColor>No visible files</Text>
+        )}
+      </Box>
+      <Text dimColor wrap="truncate-end">
+        {focused ? message : '[t] Files · Enter expand/copy'}
+      </Text>
+    </Box>
+  );
+}
+
 export function ProjectFilesHost({
   root,
   dimensions,
