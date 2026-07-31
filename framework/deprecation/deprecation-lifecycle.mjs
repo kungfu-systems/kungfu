@@ -6,6 +6,7 @@ import crypto from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { isDeepStrictEqual } from 'node:util';
 
 import { evaluateDeprecationEnrollment } from './deprecation-surface-discovery.mjs';
 
@@ -251,12 +252,246 @@ function requireDate(value, findings, label) {
   }
 }
 
+/** @param {unknown} value */
+function isRealDate(value) {
+  return (
+    typeof value === 'string' &&
+    DATE.test(value) &&
+    !Number.isNaN(Date.parse(`${value}T00:00:00Z`))
+  );
+}
+
+/** @param {string} code @param {string} message */
+function codedFinding(code, message) {
+  return { code, message };
+}
+
+/** @param {any} entry */
+function historicalGrandfatherSnapshot(entry) {
+  return {
+    id: entry.id,
+    lifecycle: entry.lifecycle,
+    surfaceClass: entry.surfaceClass,
+    surface: {
+      kind: entry.surface?.kind,
+      path: entry.surface?.path,
+    },
+    deprecatedAt: entry.deprecatedAt,
+    windows: entry.windows,
+    earliestRemovalBoundary: entry.earliestRemovalBoundary,
+    removalEvidence: entry.removalEvidence,
+  };
+}
+
 /**
- * @param {{root?: string, contract: any, registry: any}} options
+ * @param {string} root
+ * @param {any} contract
+ * @param {any} entry
+ * @param {Array<string | {code: string, message: string}>} findings
+ */
+function validateHistoricalGrandfather(root, contract, entry, findings) {
+  const policy = contract.historicalGrandfatherPolicy;
+  const projection = entry.historicalGrandfather;
+  const reservedRecord = policy?.records?.[entry.id];
+  if (!projection && !reservedRecord) return false;
+  if (!projection) {
+    findings.push(
+      codedFinding(
+        'deprecation-historical-grandfather-invalid',
+        'reserved historical exception requires an explicit grandfather projection',
+      ),
+    );
+    return false;
+  }
+  const record = policy?.records?.[projection.recordId];
+  let valid = true;
+  const reject = (message) => {
+    valid = false;
+    findings.push(
+      codedFinding('deprecation-historical-grandfather-invalid', message),
+    );
+  };
+  if (projection.authority !== DEFAULT_CONTRACT) {
+    reject(`historical grandfather authority must be ${DEFAULT_CONTRACT}`);
+  }
+  if (projection.recordId !== entry.id) {
+    reject('historical grandfather recordId must equal the exact entry id');
+  }
+  if (!record) {
+    reject('historical grandfather record is not reserved by the contract');
+    return false;
+  }
+  if (
+    !isDeepStrictEqual(historicalGrandfatherSnapshot(entry), record.exactEntry)
+  ) {
+    reject('historical grandfather exact entry snapshot does not match');
+  }
+  if (
+    !isDeepStrictEqual(
+      strings(projection.evidenceRefs),
+      strings(record.evidenceRefs),
+    )
+  ) {
+    reject('historical grandfather evidenceRefs do not match the exact record');
+  }
+  for (const evidence of strings(projection.evidenceRefs)) {
+    requireFile(root, evidence, findings, 'historical grandfather evidence');
+  }
+  if (strings(projection.evidenceRefs).length === 0) {
+    reject('historical grandfather evidenceRefs must not be empty');
+  }
+  return valid;
+}
+
+/** @param {string} surfacePath @param {any} rule */
+function coreHeaderRuleMatches(surfacePath, rule) {
+  const relative = surfacePath.startsWith('framework/core/')
+    ? surfacePath.slice('framework/core/'.length)
+    : surfacePath;
+  if (strings(rule.exclude_files).includes(relative)) return false;
+  if (strings(rule.include_files).includes(relative)) return true;
+  return strings(rule.include_prefixes).some((prefix) =>
+    relative.startsWith(prefix),
+  );
+}
+
+/**
+ * @param {string} root
+ * @param {any} contract
+ * @param {any} entry
+ * @param {boolean} grandfatherValid
+ * @param {Array<string | {code: string, message: string}>} findings
+ */
+function validateClassification(
+  root,
+  contract,
+  entry,
+  grandfatherValid,
+  findings,
+) {
+  const classification = entry.classification;
+  const policy = contract.classificationPolicy;
+  const reject = (message) =>
+    findings.push(
+      codedFinding('deprecation-classification-integrity', message),
+    );
+  if (!classification || typeof classification !== 'object') {
+    reject('classification provenance is required');
+    return;
+  }
+  let allowedClasses = [];
+  if (classification.authorityType === 'core-public-contract') {
+    const authority = policy?.authorities?.corePublicContract;
+    if (classification.authority !== authority?.path) {
+      reject('core classification authority path is not exact');
+      return;
+    }
+    const authorityPath = path.join(root, String(classification.authority));
+    if (!fs.existsSync(authorityPath)) {
+      reject(
+        `classification authority is missing: ${classification.authority}`,
+      );
+      return;
+    }
+    const architecture = readJson(authorityPath);
+    const rule = objects(architecture.public_contracts?.header_rules).find(
+      (candidate) => candidate.id === classification.ruleId,
+    );
+    if (!rule) {
+      reject(`classification rule is missing: ${classification.ruleId}`);
+      return;
+    }
+    if (!coreHeaderRuleMatches(String(entry.surface?.path || ''), rule)) {
+      reject(
+        `surface path is outside classification rule ${classification.ruleId}`,
+      );
+      return;
+    }
+    allowedClasses = strings(policy?.coreLevelAllowedClasses?.[rule.level]);
+    if (allowedClasses.length === 0) {
+      reject(`unsupported core public-contract level ${rule.level}`);
+      return;
+    }
+  } else if (classification.authorityType === 'cli-surface-registry') {
+    const authority = policy?.authorities?.cliSurfaceRegistry;
+    if (
+      classification.authority !== authority?.path ||
+      classification.ruleId !== authority?.ruleId
+    ) {
+      reject('CLI classification authority or rule is not exact');
+      return;
+    }
+    const authorityPath = path.join(root, String(classification.authority));
+    if (!fs.existsSync(authorityPath)) {
+      reject(
+        `classification authority is missing: ${classification.authority}`,
+      );
+      return;
+    }
+    const cliRegistry = readJson(authorityPath);
+    const maturity = jsonPointer(cliRegistry, String(authority.pointer));
+    allowedClasses = strings(authority.maturityClasses?.[maturity]);
+    if (allowedClasses.length === 0) {
+      reject(`unsupported CLI maturity ${String(maturity)}`);
+      return;
+    }
+  } else if (classification.authorityType === 'kind-policy') {
+    if (
+      classification.authority !== DEFAULT_CONTRACT ||
+      classification.ruleId !== entry.surface?.kind
+    ) {
+      reject('kind-policy classification authority or rule is not exact');
+      return;
+    }
+    allowedClasses = strings(
+      policy?.kindAllowedClasses?.[classification.ruleId],
+    );
+    if (allowedClasses.length === 0) {
+      reject(`unsupported governed surface kind ${classification.ruleId}`);
+      return;
+    }
+  } else {
+    reject(
+      `unsupported classification authority type ${String(classification.authorityType)}`,
+    );
+    return;
+  }
+  if (!allowedClasses.includes(entry.surfaceClass) && !grandfatherValid) {
+    reject(
+      `surface class ${entry.surfaceClass} is weaker or incompatible; authority allows ${allowedClasses.join(', ')}`,
+    );
+  }
+  const markers = objects(entry.surface?.markers);
+  if (
+    !['removed', 'settled'].includes(entry.lifecycle) &&
+    markers.length === 0
+  ) {
+    reject('live entry requires at least one exact marker dialect');
+  }
+  for (const marker of markers) {
+    const dialectClasses = strings(
+      policy?.dialectAllowedClasses?.[marker.dialect],
+    );
+    if (dialectClasses.length === 0) {
+      reject(`unsupported classification marker dialect ${marker.dialect}`);
+    } else if (
+      !dialectClasses.includes(entry.surfaceClass) &&
+      !grandfatherValid
+    ) {
+      reject(
+        `marker dialect ${marker.dialect} is incompatible with ${entry.surfaceClass}; dialect allows ${dialectClasses.join(', ')}`,
+      );
+    }
+  }
+}
+
+/**
+ * @param {{root?: string, contract: any, registry: any, asOfDate?: string}} options
  */
 export function validateDeprecationAuthority(options) {
   const root = path.resolve(options.root || ROOT);
   const { contract, registry } = options;
+  const asOfDate = options.asOfDate || new Date().toISOString().slice(0, 10);
   const findings = [];
   if (contract.schema !== 'kungfu.deprecation-lifecycle.contract/v1') {
     findings.push('unsupported deprecation lifecycle contract schema');
@@ -279,6 +514,9 @@ export function validateDeprecationAuthority(options) {
   if (!parseSemver(String(registry.productVersion || ''))) {
     findings.push('registry productVersion must be semantic version');
   }
+  if (!isRealDate(asOfDate)) {
+    findings.push('authority as-of date must be a real YYYY-MM-DD date');
+  }
   if (!Array.isArray(registry.releaseHistory)) {
     findings.push('releaseHistory must be an explicit array');
   }
@@ -286,7 +524,30 @@ export function validateDeprecationAuthority(options) {
   for (const release of objects(registry.releaseHistory)) {
     if (!parseSemver(String(release.version || '')))
       findings.push('release history contains an invalid semantic version');
+    else if (
+      parseSemver(String(registry.productVersion || '')) &&
+      compareSemver(release.version, registry.productVersion) > 0
+    ) {
+      findings.push(
+        codedFinding(
+          'deprecation-version-after-context',
+          `release history version ${release.version} is after registry productVersion ${registry.productVersion}`,
+        ),
+      );
+    }
     requireDate(String(release.date || ''), findings, 'release history date');
+    if (
+      isRealDate(release.date) &&
+      isRealDate(asOfDate) &&
+      release.date > asOfDate
+    ) {
+      findings.push(
+        codedFinding(
+          'deprecation-date-after-context',
+          `release history date ${release.date} is after authority context ${asOfDate}`,
+        ),
+      );
+    }
     if (!['alpha', 'stable'].includes(release.channel))
       findings.push(`${release.version}: release history channel is invalid`);
     if (typeof release.qualified !== 'boolean')
@@ -331,9 +592,34 @@ export function validateDeprecationAuthority(options) {
       entryFindings,
       'deprecatedAt.date',
     );
+    if (
+      isRealDate(entry.deprecatedAt?.date) &&
+      isRealDate(asOfDate) &&
+      entry.deprecatedAt.date > asOfDate
+    ) {
+      entryFindings.push(
+        codedFinding(
+          'deprecation-date-after-context',
+          `deprecatedAt.date ${entry.deprecatedAt.date} is after authority context ${asOfDate}`,
+        ),
+      );
+    }
     if (!parseSemver(String(entry.deprecatedAt?.productVersion || ''))) {
       entryFindings.push(
         'deprecatedAt.productVersion must be semantic version',
+      );
+    } else if (
+      parseSemver(String(registry.productVersion || '')) &&
+      compareSemver(
+        entry.deprecatedAt.productVersion,
+        registry.productVersion,
+      ) > 0
+    ) {
+      entryFindings.push(
+        codedFinding(
+          'deprecation-version-after-context',
+          `deprecatedAt.productVersion ${entry.deprecatedAt.productVersion} is after registry productVersion ${registry.productVersion}`,
+        ),
       );
     }
     requireFile(
@@ -360,6 +646,19 @@ export function validateDeprecationAuthority(options) {
         `consumer ${consumer.id || '<missing>'} evidence`,
       );
     }
+    const grandfatherValid = validateHistoricalGrandfather(
+      root,
+      contract,
+      entry,
+      entryFindings,
+    );
+    validateClassification(
+      root,
+      contract,
+      entry,
+      grandfatherValid,
+      entryFindings,
+    );
     for (const [field, fallback] of [
       ['minimumCalendarDays', surfacePolicy?.defaultMinimumCalendarDays],
       [
@@ -372,6 +671,18 @@ export function validateDeprecationAuthority(options) {
         entryFindings.push(`windows.${field} must be a non-negative integer`);
       if (fallback === undefined)
         entryFindings.push(`${entry.surfaceClass} lacks a default ${field}`);
+      else if (
+        Number.isInteger(value) &&
+        value < fallback &&
+        !grandfatherValid
+      ) {
+        entryFindings.push(
+          codedFinding(
+            'deprecation-window-below-minimum',
+            `windows.${field} ${value} is below ${entry.surfaceClass} minimum ${fallback}`,
+          ),
+        );
+      }
     }
     if (
       surfacePolicy &&
@@ -393,11 +704,26 @@ export function validateDeprecationAuthority(options) {
 
     if (
       entry.surfaceClass === 'persisted-schema-wire-protocol' &&
-      !entry.supportPolicy?.historicalReaderOrMigrationQualified
+      (!entry.supportPolicy?.historicalReaderOrMigrationQualified ||
+        !entry.supportPolicy?.authority ||
+        strings(entry.supportPolicy?.evidence).length === 0)
     ) {
       entryFindings.push(
-        'persisted schema or protocol needs qualified historical reader, export, or migration evidence',
+        codedFinding(
+          'deprecation-support-evidence-invalid',
+          'persisted schema or protocol needs exact authority and qualified historical reader, export, or migration evidence',
+        ),
       );
+    } else if (entry.surfaceClass === 'persisted-schema-wire-protocol') {
+      requireFile(
+        root,
+        String(entry.supportPolicy.authority),
+        entryFindings,
+        'support policy authority',
+      );
+      for (const evidence of strings(entry.supportPolicy.evidence)) {
+        requireFile(root, evidence, entryFindings, 'support policy evidence');
+      }
     }
 
     if (entry.lifecycle === 'active') {
@@ -499,10 +825,63 @@ export function validateDeprecationAuthority(options) {
           entryFindings,
           'removalEvidence.removedAt.date',
         );
+        if (
+          isRealDate(evidence.removedAt?.date) &&
+          isRealDate(asOfDate) &&
+          evidence.removedAt.date > asOfDate
+        ) {
+          entryFindings.push(
+            codedFinding(
+              'deprecation-date-after-context',
+              `removalEvidence.removedAt.date ${evidence.removedAt.date} is after authority context ${asOfDate}`,
+            ),
+          );
+        }
         if (!parseSemver(String(evidence.removedAt?.productVersion || '')))
           entryFindings.push(
             'removalEvidence.removedAt.productVersion must be semantic version',
           );
+        else if (
+          parseSemver(String(registry.productVersion || '')) &&
+          compareSemver(
+            evidence.removedAt.productVersion,
+            registry.productVersion,
+          ) > 0
+        ) {
+          entryFindings.push(
+            codedFinding(
+              'deprecation-version-after-context',
+              `removalEvidence.removedAt.productVersion ${evidence.removedAt.productVersion} is after registry productVersion ${registry.productVersion}`,
+            ),
+          );
+        }
+        if (
+          isRealDate(evidence.removedAt?.date) &&
+          isRealDate(entry.deprecatedAt?.date) &&
+          evidence.removedAt.date < entry.deprecatedAt.date
+        ) {
+          entryFindings.push(
+            codedFinding(
+              'deprecation-removal-boundary-invalid',
+              'removalEvidence.removedAt.date precedes deprecatedAt.date',
+            ),
+          );
+        }
+        if (
+          parseSemver(String(evidence.removedAt?.productVersion || '')) &&
+          parseSemver(String(entry.deprecatedAt?.productVersion || '')) &&
+          compareSemver(
+            evidence.removedAt.productVersion,
+            entry.deprecatedAt.productVersion,
+          ) < 0
+        ) {
+          entryFindings.push(
+            codedFinding(
+              'deprecation-removal-boundary-invalid',
+              'removalEvidence.removedAt.productVersion precedes deprecatedAt.productVersion',
+            ),
+          );
+        }
         if (!/^[0-9a-f]{40}$/u.test(String(evidence.gitCommit || '')))
           entryFindings.push('removalEvidence.gitCommit must be exact');
         for (const file of strings(evidence.migrationQualification))
@@ -529,10 +908,13 @@ export function validateDeprecationAuthority(options) {
       }
     }
     findings.push(
-      ...entryFindings.map((message) => ({
-        code: 'deprecation-authority',
+      ...entryFindings.map((finding) => ({
+        code:
+          typeof finding === 'string' ? 'deprecation-authority' : finding.code,
         entry: prefix,
-        message: `${prefix}: ${message}`,
+        message: `${prefix}: ${
+          typeof finding === 'string' ? finding : finding.message
+        }`,
       })),
     );
   }
@@ -738,7 +1120,12 @@ export function auditDeprecations(options = {}) {
     options.releaseDate || new Date().toISOString().slice(0, 10),
   );
   const channel = String(options.channel || 'audit');
-  const authority = validateDeprecationAuthority({ root, contract, registry });
+  const authority = validateDeprecationAuthority({
+    root,
+    contract,
+    registry,
+    asOfDate: releaseDate,
+  });
   const findings = [...authority.findings];
   const enrollment = discovery
     ? evaluateDeprecationEnrollment({

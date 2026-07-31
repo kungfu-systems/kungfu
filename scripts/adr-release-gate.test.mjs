@@ -566,11 +566,23 @@ function deprecationEntry(overrides = {}) {
     id: 'fixture.alpha-surface',
     lifecycle: 'deprecated',
     surfaceClass: 'public-alpha-preview',
+    classification: {
+      authority: 'framework/core/architecture/layers.json',
+      authorityType: 'core-public-contract',
+      ruleId: 'fixture-source-api',
+    },
     owner: 'fixture/owner',
     surface: {
       kind: 'source-api',
       path: 'src/surface.txt',
       symbols: ['old_surface'],
+      markers: [
+        {
+          id: 'old-surface',
+          dialect: 'cpp-deprecated-attribute',
+          path: 'src/surface.txt',
+        },
+      ],
     },
     replacement: 'new_surface',
     migrationGuidance: 'docs/migration.md',
@@ -631,12 +643,27 @@ function deprecationFixture(selected, releaseHistory = []) {
     writeDeprecationFixture(root, rel);
   }
   writeDeprecationFixture(root, 'src/surface.txt', 'new_surface\n');
+  writeDeprecationFixture(
+    root,
+    'framework/core/architecture/layers.json',
+    JSON.stringify({
+      public_contracts: {
+        header_rules: [
+          {
+            id: 'fixture-source-api',
+            include_files: ['src/surface.txt'],
+            level: 'experimental',
+          },
+        ],
+      },
+    }),
+  );
   return {
     root,
     registry: {
       schema: 'kungfu.deprecation-registry/v1',
       contract: 'framework/deprecation/deprecation-lifecycle.contract.json',
-      productVersion: '4.0.0-alpha.1',
+      productVersion: '5.0.0',
       releaseHistory,
       entries: [selected],
     },
@@ -703,6 +730,165 @@ test('calendar and release windows jointly select the first eligible prerelease'
   assert.equal(due.entries[0].eligibleRelease.version, '4.0.0-alpha.2');
 });
 
+test('class defaults are executable minima while stricter windows are preserved', () => {
+  const below = auditDeprecationFixture(
+    deprecationEntry({
+      windows: { minimumCalendarDays: 29, minimumQualifiedReleases: 0 },
+    }),
+  );
+  assert.equal(below.ok, false);
+  assert.deepEqual(
+    below.findings
+      .filter((finding) => finding.code === 'deprecation-window-below-minimum')
+      .map((finding) => finding.message),
+    [
+      'fixture.alpha-surface: windows.minimumCalendarDays 29 is below public-alpha-preview minimum 30',
+      'fixture.alpha-surface: windows.minimumQualifiedReleases 0 is below public-alpha-preview minimum 1',
+    ],
+  );
+
+  const stricter = auditDeprecationFixture(
+    deprecationEntry({
+      windows: { minimumCalendarDays: 45, minimumQualifiedReleases: 2 },
+    }),
+  );
+  assert.equal(stricter.ok, true);
+  assert.equal(stricter.entries[0].nextEligibleRelease.notBefore, '2026-08-15');
+  assert.equal(
+    stricter.entries[0].nextEligibleRelease.minimumQualifiedReleases,
+    2,
+  );
+});
+
+test('classification provenance prevents stable and artifact downgrades', () => {
+  const cli = auditDeprecationFixture(
+    deprecationEntry({
+      id: 'fixture.cli-command',
+      surfaceClass: 'public-alpha-preview',
+      surface: {
+        kind: 'cli-command',
+        path: 'src/surface.txt',
+        symbols: ['kungfu fixture'],
+        markers: [
+          {
+            id: 'fixture-cli',
+            dialect: 'cli-structured-compatibility',
+            path: 'src/surface.txt',
+          },
+        ],
+      },
+      classification: {
+        authority: 'framework/deprecation/deprecation-lifecycle.contract.json',
+        authorityType: 'kind-policy',
+        ruleId: 'cli-command',
+      },
+    }),
+  );
+  assert.equal(cli.ok, false);
+  assert.match(
+    cli.findings.find(
+      (finding) => finding.code === 'deprecation-classification-integrity',
+    ).message,
+    /authority allows stable-cli-sdk-public-api/u,
+  );
+
+  const artifact = auditDeprecationFixture(
+    deprecationEntry({
+      id: 'fixture.artifact',
+      surfaceClass: 'document',
+      surface: {
+        kind: 'document',
+        path: 'src/surface.txt',
+        symbols: ['fixture.tar.gz'],
+        markers: [
+          {
+            id: 'fixture-artifact',
+            dialect: 'artifact-structured-compatibility',
+            path: 'src/surface.txt',
+          },
+        ],
+      },
+      classification: {
+        authority: 'framework/deprecation/deprecation-lifecycle.contract.json',
+        authorityType: 'kind-policy',
+        ruleId: 'document',
+      },
+      windows: { minimumCalendarDays: 30, minimumQualifiedReleases: 1 },
+      earliestRemovalBoundary: 'any-qualified-release',
+    }),
+  );
+  assert.equal(artifact.ok, false);
+  assert.match(
+    artifact.findings.find(
+      (finding) => finding.code === 'deprecation-classification-integrity',
+    ).message,
+    /dialect allows artifact/u,
+  );
+});
+
+test('future dates and versions beyond product authority fail closed', () => {
+  const future = auditDeprecationFixture(
+    deprecationEntry({
+      deprecatedAt: {
+        date: '2026-08-01',
+        productVersion: '4.0.0-alpha.1',
+        decision: 'docs/decision.md',
+      },
+    }),
+  );
+  assert.equal(future.ok, false);
+  assert.equal(future.findings[0].code, 'deprecation-date-after-context');
+
+  const laterVersion = auditDeprecationFixture(
+    deprecationEntry({
+      deprecatedAt: {
+        date: '2026-07-01',
+        productVersion: '5.1.0',
+        decision: 'docs/decision.md',
+      },
+    }),
+  );
+  assert.equal(laterVersion.ok, false);
+  assert.ok(
+    laterVersion.findings.some(
+      (finding) => finding.code === 'deprecation-version-after-context',
+    ),
+  );
+});
+
+test('the checked-in zero-window settlement is exact and non-copyable', () => {
+  const registry = JSON.parse(
+    fs.readFileSync(
+      path.join(REPO_ROOT, 'framework/deprecation/deprecation-registry.json'),
+      'utf8',
+    ),
+  );
+  const copied = structuredClone(registry);
+  const settlement = copied.entries.find(
+    (entry) => entry.id === 'cli.prestable-compatibility-aliases',
+  );
+  settlement.id = 'cli.copied-zero-window';
+  copied.entries = [settlement];
+  const report = auditDeprecations({
+    root: REPO_ROOT,
+    contract: DEPRECATION_CONTRACT,
+    registry: copied,
+    releaseDate: '2026-07-29',
+  });
+  assert.equal(report.ok, false);
+  assert.ok(
+    report.findings.some(
+      (finding) =>
+        finding.code === 'deprecation-historical-grandfather-invalid',
+    ),
+  );
+  assert.ok(
+    report.findings.some(
+      (finding) => finding.code === 'deprecation-window-below-minimum',
+    ),
+  );
+});
+
 test('stable API removal remains blocked until a new major', () => {
   const stable = deprecationEntry({
     id: 'fixture.stable-api',
@@ -739,6 +925,23 @@ test('protocol removal fails closed without qualified historical support', () =>
     deprecationEntry({
       id: 'fixture.protocol',
       surfaceClass: 'persisted-schema-wire-protocol',
+      surface: {
+        kind: 'wire-protocol',
+        path: 'src/surface.txt',
+        symbols: ['fixture-wire-v1'],
+        markers: [
+          {
+            id: 'fixture-wire-v1',
+            dialect: 'persisted-schema-protocol',
+            path: 'src/surface.txt',
+          },
+        ],
+      },
+      classification: {
+        authority: 'framework/deprecation/deprecation-lifecycle.contract.json',
+        authorityType: 'kind-policy',
+        ruleId: 'wire-protocol',
+      },
       deprecatedAt: {
         date: '2025-01-01',
         productVersion: '4.0.0',
@@ -757,10 +960,50 @@ test('protocol removal fails closed without qualified historical support', () =>
   assert.equal(report.ok, false);
   assert.equal(report.entries[0].disposition, 'invalid');
   assert.ok(
-    report.findings.some((finding) =>
-      String(finding.message).includes('qualified historical reader'),
+    report.findings.some(
+      (finding) => finding.code === 'deprecation-support-evidence-invalid',
     ),
   );
+});
+
+test('protocol support claims require exact authority and evidence', () => {
+  const report = auditDeprecationFixture(
+    deprecationEntry({
+      id: 'fixture.protocol-supported',
+      surfaceClass: 'persisted-schema-wire-protocol',
+      surface: {
+        kind: 'wire-protocol',
+        path: 'src/surface.txt',
+        symbols: ['fixture-wire-v1'],
+        markers: [
+          {
+            id: 'fixture-wire-v1',
+            dialect: 'persisted-schema-protocol',
+            path: 'src/surface.txt',
+          },
+        ],
+      },
+      classification: {
+        authority: 'framework/deprecation/deprecation-lifecycle.contract.json',
+        authorityType: 'kind-policy',
+        ruleId: 'wire-protocol',
+      },
+      deprecatedAt: {
+        date: '2025-01-01',
+        productVersion: '4.0.0',
+        decision: 'docs/decision.md',
+      },
+      windows: { minimumCalendarDays: 180, minimumQualifiedReleases: 2 },
+      earliestRemovalBoundary: 'next-major-and-support-policy',
+      supportPolicy: {
+        historicalReaderOrMigrationQualified: true,
+        authority: 'docs/decision.md',
+        evidence: ['tests/migration.test.mjs'],
+      },
+    }),
+  );
+  assert.equal(report.ok, true);
+  assert.equal(report.entries[0].disposition, 'not-due');
 });
 
 test('one exact bounded Warrant covers only its declared release and date', () => {
