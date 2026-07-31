@@ -26,6 +26,7 @@ import {
   parseArgs,
   resolveInstanceHome,
   seedInstanceConfig,
+  seedInstanceProjectIndex,
   shouldAutoWorkspaceHome,
   workspaceDataHomeForCwd,
   workspaceEnv,
@@ -277,6 +278,51 @@ test('seeds default config into a fresh instance without overwriting it', () => 
     assert.equal(second.seeded, false);
     assert.equal(second.reason, 'target-exists');
     assert.match(readFileSync(target, 'utf8'), /"scale":2/);
+  } finally {
+    rmSync(parent, { recursive: true, force: true });
+  }
+});
+
+test('seeds the machine Project index into an isolated product instance', () => {
+  const parent = mkdtempSync(
+    path.join(tmpdir(), 'kungfu-product-project-seed-'),
+  );
+  const sourceHome = path.join(parent, 'default-config');
+  const instanceHome = path.join(parent, 'instance');
+  const relativePaths = [
+    path.join('gui', 'workspaces.json'),
+    path.join('projects', 'library.json'),
+    path.join('workspaces', 'catalog.json'),
+  ];
+  try {
+    for (const [index, relativePath] of relativePaths.entries()) {
+      const source = path.join(sourceHome, relativePath);
+      mkdirSync(path.dirname(source), { recursive: true });
+      writeFileSync(source, `{"index":${index}}\n`);
+    }
+    const first = seedInstanceProjectIndex(instanceHome, {
+      sourceConfigHome: sourceHome,
+    });
+    assert.equal(first.length, 3);
+    for (const [index, relativePath] of relativePaths.entries()) {
+      const target = path.join(instanceHome, 'config', relativePath);
+      assert.equal(readFileSync(target, 'utf8'), `{"index":${index}}\n`);
+    }
+
+    writeFileSync(
+      path.join(instanceHome, 'config', relativePaths[1]),
+      '{"retained":true}\n',
+    );
+    assert.equal(
+      seedInstanceProjectIndex(instanceHome, {
+        sourceConfigHome: sourceHome,
+      }).length,
+      0,
+    );
+    assert.match(
+      readFileSync(path.join(instanceHome, 'config', relativePaths[1]), 'utf8'),
+      /retained/,
+    );
   } finally {
     rmSync(parent, { recursive: true, force: true });
   }

@@ -58,7 +58,7 @@ import {
   reduceControlPlaneInput,
   resolveProductStartupSurface,
 } from './profile-shell.js';
-import { ProjectFilesHost } from './project-files-view/index.js';
+import { ProjectFileTreeNavigation } from './project-files-view/index.js';
 import {
   PROJECTS_QUICK_COMMANDS,
   PROJECT_WORK_QUICK_COMMANDS,
@@ -703,9 +703,7 @@ function ProjectWorkHost({
   const [runs, setRuns] = React.useState<ProjectWorkRunSnapshot[]>(() =>
     projects.runs(),
   );
-  const [projectSection, setProjectSection] = React.useState<'work' | 'files'>(
-    'work',
-  );
+  const [fileTreeFocused, setFileTreeFocused] = React.useState(false);
   const [loadingFrame, setLoadingFrame] = React.useState(0);
   React.useEffect(() => dimensions.subscribe(setSize), [dimensions]);
   React.useEffect(() => projects.subscribeRuns(setRuns), [projects]);
@@ -731,10 +729,6 @@ function ProjectWorkHost({
   const retainedAgentFinished =
     visibleRun?.receipt?.status === 'agent-finished';
   const canvasRows = terminalCanvasRows(size.rows);
-  const navigationWidth = Math.min(
-    24,
-    Math.max(18, Math.floor(size.columns * 0.2)),
-  );
   const loadingSpinner = ['◐', '◓', '◑', '◒'][loadingFrame];
   const beginNewWork = React.useCallback(() => {
     if (loadingWork || busy || visibleRun?.running) return;
@@ -845,7 +839,7 @@ function ProjectWorkHost({
   }, [busy, composer, onOpenCapturedWork, project.workspace_root, projects]);
 
   React.useEffect(() => {
-    if (projectSection === 'files') return;
+    if (fileTreeFocused) return;
     const onData = (chunk: Buffer | string) => {
       const value = String(chunk);
       if (isInputCaptured()) return;
@@ -941,7 +935,7 @@ function ProjectWorkHost({
       if (value === 'q' || value === '\u0003') return exit();
       if (value === 'a') return onOpenLab();
       if (value === 't') {
-        setProjectSection('files');
+        setFileTreeFocused(true);
         return;
       }
       if (value === 'p' || value === '\u001b') return onOpenProjects();
@@ -967,25 +961,10 @@ function ProjectWorkHost({
     onOpenProjects,
     plan,
     previewCodex,
-    projectSection,
+    fileTreeFocused,
     projects.prepareWork,
     retainedAgentFinished,
   ]);
-
-  if (projectSection === 'files') {
-    return (
-      <ProjectFilesHost
-        root={project.workspace_root}
-        dimensions={dimensions}
-        workCount={loadingWork ? undefined : 0}
-        isInputCaptured={isInputCaptured}
-        onOpenWork={() => setProjectSection('work')}
-        onOpenProjects={onOpenProjects}
-        onOpenLab={onOpenLab}
-        onWorkspacePointer={onWorkspacePointer}
-      />
-    );
-  }
 
   const eventRows = Math.max(3, canvasRows - 15);
   const visibleEvents = visibleRun?.events.slice(-eventRows) ?? [];
@@ -1009,22 +988,19 @@ function ProjectWorkHost({
         {project.workspace_root}
       </Text>
       <Box flexGrow={1}>
-        <Box
-          width={navigationWidth}
-          flexDirection="column"
-          borderStyle="single"
-          borderColor="cyan"
-          paddingX={1}
-        >
-          <Text bold>PROJECT</Text>
-          <Text>{'  '}Files</Text>
-          <Text bold color="cyan">
-            › Work {loadingWork ? '…' : 0}
-          </Text>
-          <Text> </Text>
-          <Text dimColor>[t] Files</Text>
-          <Text dimColor>[Enter] New Work</Text>
-        </Box>
+        <ProjectFileTreeNavigation
+          root={project.workspace_root}
+          dimensions={dimensions}
+          workCount={loadingWork ? undefined : 0}
+          focused={fileTreeFocused}
+          isInputCaptured={isInputCaptured}
+          onFocus={() => setFileTreeFocused(true)}
+          onOpenWork={() => setFileTreeFocused(false)}
+          onOpenProjects={onOpenProjects}
+          onOpenLab={onOpenLab}
+          onWorkspacePointer={onWorkspacePointer}
+          topOffset={5}
+        />
         <Box flexGrow={1} flexDirection="column" paddingLeft={1}>
           <Text wrap="truncate-end">
             Create Work, choose an Agent, and keep the result in this Project.
@@ -1041,8 +1017,8 @@ function ProjectWorkHost({
                     : 'NEXT: [Enter or /new] create Work'}
           </Text>
           <Text dimColor wrap="truncate-end">
-            [t] Files · [n or /new] New Work · [p/Esc] Projects · [a] Agent Work
-            Lab · [q] quit
+            [t] focus Files · [n or /new] New Work · [p/Esc] Projects · [a]
+            Agent Work Lab · [q] quit
           </Text>
           <Box flexDirection="column" marginTop={1} flexGrow={1}>
             {loadingWork ? (

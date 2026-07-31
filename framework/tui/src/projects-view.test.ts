@@ -20,7 +20,8 @@ test('Projects exposes only New, Open, and safe removal on the first layer', () 
   assert.doesNotMatch(source, /command: '\/import'/);
   assert.doesNotMatch(source, /command: '\/blank'/);
   assert.match(source, /projects\s*\.select\(project\.path\)/);
-  assert.match(source, /PROJECT OPENED/);
+  assert.match(source, /Current · \{openedProject\.display_path\}/);
+  assert.match(source, /wrap="truncate-end"/);
   assert.match(
     source,
     /Project files and\s+retained Kungfu evidence stay untouched/,
@@ -82,12 +83,13 @@ test('opened Project Work offers an exact-plan Codex path and retained session o
   assert.match(projectWork, /\.subscribeRuns\(setRuns\)/);
   assert.match(projectWork, /CODEX SESSION RUNNING/);
   assert.match(projectWork, /receipt\.nextActions/);
-  assert.match(projectWork, /<ProjectFilesHost/);
+  assert.match(projectWork, /<ProjectFileTreeNavigation/);
+  assert.match(projectWork, /focused=\{fileTreeFocused\}/);
   assert.match(projectWork, /value === 't'/);
+  assert.doesNotMatch(projectWork, /projectSection === 'files'/);
   assert.match(projectWork, /LOADING PROJECT WORK/);
   assert.match(projectWork, /empty-Project state will appear only after/);
-  assert.match(projectWork, /\{' {2}'\}Files/);
-  assert.match(projectWork, /› Work \{loadingWork \? '…' : 0\}/);
+  assert.match(projectWork, /workCount=\{loadingWork \? undefined : 0\}/);
   assert.match(
     projectWork,
     /NEXT: \[Enter\] review Project changes with a fresh Agent/,
@@ -106,4 +108,19 @@ test('opened Project Work offers an exact-plan Codex path and retained session o
     /setProjectWorkLoading\(false\)[\s\S]*setProjectResumeSettled\(true\)/,
   );
   assert.match(source, /await lab\.resumeStarterProject\(\)/);
+});
+
+test('retained Project Work keeps the file tree in the left navigation', () => {
+  const source = readFileSync(
+    new URL('./starter-project-view/index.tsx', import.meta.url),
+    'utf8',
+  );
+  const host = source.slice(
+    source.indexOf('export function StarterProjectHost'),
+  );
+
+  assert.match(host, /navigationPanel=\{/);
+  assert.match(host, /<ProjectFileTreeNavigation/);
+  assert.match(host, /focused=\{activeRegion === 0\}/);
+  assert.doesNotMatch(host, /projectSection === 'files'/);
 });
