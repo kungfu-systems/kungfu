@@ -161,7 +161,7 @@ test('native campaign uses a short platform-owned temp root', () => {
   );
 });
 
-test('native campaign failure diagnostics retain only a bounded log tail', () => {
+test('suite failure diagnostics retain only a bounded log tail', () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'peer-log-tail-'));
   const log = path.join(root, 'peer.log');
   try {
