@@ -653,6 +653,14 @@ export function openProjects(options: ProjectCommandOptions): Projects {
     }
     return { workConsoleId, sessionAttemptId };
   };
+  const receiptHasSessionRef = (receipt: ProjectWorkRunReceipt): boolean => {
+    const session = (
+      receipt.agentReport as
+        | { session?: Record<string, unknown> | null }
+        | undefined
+    )?.session;
+    return Boolean(session?.workConsoleId && session?.sessionAttemptId);
+  };
   const projectSessionSnapshot = async (
     ref: ProjectAgentSessionRef,
     knownStatus?: Record<string, unknown>,
@@ -960,7 +968,7 @@ export function openProjects(options: ProjectCommandOptions): Projects {
             lastEventAt: Date.now(),
             receipt,
           }));
-          if (receipt.status === 'agent-waiting' && options.agentSession) {
+          if (options.agentSession && receiptHasSessionRef(receipt)) {
             await refreshRun(runId);
           }
           return receipt;
@@ -1009,7 +1017,7 @@ export function openProjects(options: ProjectCommandOptions): Projects {
           lastEventAt: Date.now(),
           receipt: finalReceipt,
         }));
-        if (finalReceipt.status === 'agent-waiting' && options.agentSession) {
+        if (options.agentSession && receiptHasSessionRef(finalReceipt)) {
           await refreshRun(runId);
         }
         return finalReceipt;

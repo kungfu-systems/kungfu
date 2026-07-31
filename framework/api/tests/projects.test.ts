@@ -316,6 +316,67 @@ test('Project Work run streams only canonical public events and one receipt', as
   unsubscribe();
 });
 
+test('Project Work restores an ended failed Session as a retry boundary', async () => {
+  const ref = {
+    workConsoleId: 'work:qualification:assignment:crash',
+    sessionAttemptId: 'attempt:crash:1',
+  };
+  const projects = openProjects({
+    bin: 'kungfu',
+    env: {},
+    execFile: async () => {
+      throw new Error('streaming path expected');
+    },
+    execFileEvents: async (_file, _args, _options, onLine) => {
+      onLine(
+        JSON.stringify({
+          schema: 'kungfu.work-start.receipt/v1',
+          ok: false,
+          status: 'agent-failed',
+          workPhase: 'executing',
+          work: { assignmentId: 'crash' },
+          agent: { provider: 'synthetic' },
+          agentReport: { runId: ref.sessionAttemptId, session: ref },
+          nextActions: ['inspect-retained-agent-report'],
+          writeOccurred: true,
+          receiptRoot: `sha256:${'4'.repeat(64)}`,
+        }),
+      );
+    },
+    agentSession: {
+      invoke: async (request) => {
+        assert.equal(request.operation, 'status');
+        return {
+          ...ref,
+          live: false,
+          lifecycleState: 'ended',
+          interactionState: 'ended',
+          providerAdapter: { provider: 'synthetic' },
+          workAgent: {
+            attempt: 'ended',
+            attention: {
+              kind: 'blocked',
+              reason: 'agent-exited-with-error',
+              message: 'The Agent process ended with an error.',
+              nextActions: ['retry-or-start-new-attempt'],
+            },
+          },
+        };
+      },
+    },
+  });
+
+  const receipt = await projects.run(
+    'mock',
+    { workspace: '/project', work: 'crash', scenario: 'crash' },
+    () => undefined,
+  );
+
+  assert.equal(receipt.status, 'agent-failed');
+  assert.equal(projects.runs()[0]?.session?.live, false);
+  assert.equal(projects.runs()[0]?.session?.attention?.kind, 'blocked');
+});
+
 test('Project Work is previewed before the exact request is captured by Core', async () => {
   const inputs: Array<{ args: string[]; input: string }> = [];
   const projects = openProjects({
