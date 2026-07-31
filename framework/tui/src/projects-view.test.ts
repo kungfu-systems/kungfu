@@ -63,6 +63,13 @@ test('All Work navigation preserves but does not reuse Project context', () => {
   assert.match(source, /GlobalWorkFilter/);
   assert.match(source, /'active', 'completed', 'all'/);
   assert.match(source, /value === 'f'/);
+  const workHost = source.slice(
+    source.indexOf('function WorkControlHost'),
+    source.indexOf('type ProjectWorkActionRequest'),
+  );
+  assert.match(workHost, /pattern=\{KUNGFU_WORK_DISCOVERY_PATTERN\}/);
+  assert.match(workHost, /emptyState\s*\?\s*EMPTY_GLOBAL_WORK_SNAPSHOT/);
+  assert.match(workHost, /if \(emptyState\) return undefined/);
 });
 
 test('opened Project Work offers an exact-plan Codex path and retained session output', () => {
@@ -88,8 +95,20 @@ test('opened Project Work offers an exact-plan Codex path and retained session o
   assert.match(projectWork, /value === 't'/);
   assert.doesNotMatch(projectWork, /projectSection === 'files'/);
   assert.match(projectWork, /LOADING PROJECT WORK/);
-  assert.match(projectWork, /empty-Project state will appear only after/);
+  assert.match(projectWork, /<ProjectWorkDock/);
+  assert.match(source, /function ProjectWorkDock[\s\S]*?height=\{4\}/);
+  assert.ok(
+    projectWork.indexOf('KUNGFU_PROJECT_DISCOVERY_PATTERN') <
+      projectWork.indexOf('title={`${loadingSpinner} LOADING PROJECT WORK`}'),
+  );
   assert.match(projectWork, /workCount=\{loadingWork \? undefined : 0\}/);
+  assert.match(projectWork, /KUNGFU_EMPTY_WORK_NEBULA_PATTERN/);
+  assert.match(projectWork, /<TerminalAmbientScene/);
+  assert.match(projectWork, /const emptyProjectIdle =/);
+  assert.match(
+    projectWork,
+    /\) : loadingWork \|\| emptyProjectIdle \? null : \(/,
+  );
   assert.match(
     projectWork,
     /NEXT: \[Enter\] review Project changes with a fresh Agent/,
@@ -122,5 +141,6 @@ test('retained Project Work keeps the file tree in the left navigation', () => {
   assert.match(host, /navigationPanel=\{/);
   assert.match(host, /<ProjectFileTreeNavigation/);
   assert.match(host, /focused=\{activeRegion === 0\}/);
+  assert.match(host, /navigationWidth=\{projectNavigationWidth\(size\)\}/);
   assert.doesNotMatch(host, /projectSection === 'files'/);
 });

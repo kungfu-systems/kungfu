@@ -15,6 +15,10 @@ import {
 } from '../list-window/index.js';
 import { boundedIndex } from '../navigation.js';
 import type { QuickCommand, TerminalDimensions } from '../profile-shell.js';
+import {
+  KUNGFU_PROJECT_DISCOVERY_PATTERN,
+  TerminalLoadingScene,
+} from '../terminal-animation.js';
 import { terminalCanvasRows } from '../terminal-canvas.js';
 import { decodeTerminalMouseInput } from '../terminal-lifecycle.js';
 
@@ -438,6 +442,27 @@ export function ProjectsHost({
   });
   const rows =
     catalog?.projects.slice(projectWindow.start, projectWindow.end) ?? [];
+  if (
+    busy &&
+    !catalog &&
+    importPath === undefined &&
+    !importPlan &&
+    !removePlan &&
+    !createPlan
+  ) {
+    return (
+      <TerminalLoadingScene
+        dimensions={{
+          ...size,
+          rows: terminalCanvasRows(size.rows),
+        }}
+        title="PROJECTS"
+        status="Discovering machine-local Projects"
+        detail="Joining the active instance with known Project locators."
+        pattern={KUNGFU_PROJECT_DISCOVERY_PATTERN}
+      />
+    );
+  }
   return (
     <Box
       width={size.columns}

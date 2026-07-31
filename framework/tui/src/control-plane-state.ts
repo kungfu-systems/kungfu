@@ -149,6 +149,23 @@ export function resolveProductStartupSurface({
   return projectResumeSettled ? 'all-work' : null;
 }
 
+export function directWorkspaceNavigationFromInput(
+  current: ControlPlaneState,
+  input: string,
+  surface: string,
+): 'projects' | null {
+  if (
+    current.mode === 'closed' &&
+    current.focus === 'input' &&
+    current.query === '' &&
+    input === 'p' &&
+    (surface === 'project-work' || surface === 'project-assignment')
+  ) {
+    return 'projects';
+  }
+  return null;
+}
+
 export function quickCommandMatches(
   query: string,
   commands: QuickCommand[] = QUICK_COMMANDS,

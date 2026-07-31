@@ -5,10 +5,138 @@ import test from 'node:test';
 import { fileURLToPath } from 'node:url';
 
 import {
+  mergeProjectsCatalogs,
   openProjects,
   prepareProjectWork,
   projectSearchDocuments,
 } from '../src/capability/projects/index.ts';
+
+test('Projects merges machine-local catalogs without changing the active instance', async () => {
+  const calls: Array<{
+    args: string[];
+    configHome: string | undefined;
+  }> = [];
+  const catalog = (
+    projectPath: string,
+    id: string,
+    selected: boolean,
+  ): Record<string, unknown> => ({
+    schema: 'kungfu.projects.catalog/v1',
+    projects: [
+      {
+        schema: 'kungfu.project/v1',
+        id,
+        name: id,
+        path: projectPath,
+        available: true,
+        selected,
+        initialized: true,
+        state: 'live-runtime',
+        source: 'library',
+      },
+    ],
+    selectedProjectId: selected ? id : null,
+    registryPath: '/config/workspaces.json',
+    libraryPath: '/config/projects/library.json',
+    sources: { library: 1 },
+    hiddenProjectCount: 0,
+    writeOccurred: false,
+    catalogRoot: `sha256:${selected ? '1' : '2'}`.padEnd(71, '0'),
+  });
+  const projects = openProjects({
+    bin: 'kungfu',
+    env: { KF_CONFIG_HOME: '/instance/config' },
+    catalogConfigHomes: ['/machine/config'],
+    execFile: async (_file, args, options) => {
+      calls.push({ args, configHome: options.env.KF_CONFIG_HOME });
+      if (args[1] === 'remove-plan') {
+        return JSON.stringify({
+          schema: 'kungfu.project.remove-plan/v1',
+          project: {
+            schema: 'kungfu.project/v1',
+            id: 'machine',
+            name: 'machine',
+            path: '/machine/project',
+            available: true,
+            selected: false,
+            initialized: true,
+            state: 'live-runtime',
+          },
+          effects: ['Forget locator'],
+          skippedEffects: ['Keep project files'],
+          confirmationRequired: true,
+          writeOccurred: false,
+          planRoot: `sha256:${'3'.repeat(64)}`,
+        });
+      }
+      return JSON.stringify(
+        options.env.KF_CONFIG_HOME === '/machine/config'
+          ? catalog('/machine/project', 'machine', true)
+          : catalog('/instance/project', 'instance', true),
+      );
+    },
+  });
+
+  const result = await projects.list();
+  await projects.planRemove('machine');
+
+  assert.deepEqual(
+    result.projects.map((project) => project.path),
+    ['/instance/project', '/machine/project'],
+  );
+  assert.equal(result.selectedProjectId, 'instance');
+  assert.deepEqual(
+    result.projects.map((project) => project.selected),
+    [true, false],
+  );
+  assert.deepEqual(calls, [
+    { args: ['project', 'list'], configHome: '/instance/config' },
+    { args: ['project', 'list'], configHome: '/machine/config' },
+    {
+      args: ['project', 'remove-plan', 'machine'],
+      configHome: '/machine/config',
+    },
+  ]);
+});
+
+test('Projects catalog merge deduplicates matching paths with primary precedence', () => {
+  const primary = {
+    schema: 'kungfu.projects.catalog/v1' as const,
+    projects: [
+      {
+        schema: 'kungfu.project/v1' as const,
+        id: 'primary',
+        name: 'Project',
+        path: '/project',
+        available: true,
+        selected: true,
+        initialized: true,
+        state: 'live-runtime',
+        source: 'recent' as const,
+      },
+    ],
+    selectedProjectId: 'primary',
+    registryPath: '/instance/workspaces.json',
+    libraryPath: '/instance/library.json',
+    sources: { recent: 1 },
+    hiddenProjectCount: 0,
+    writeOccurred: false as const,
+    catalogRoot: `sha256:${'1'.repeat(64)}`,
+  };
+  const merged = mergeProjectsCatalogs([
+    primary,
+    {
+      ...primary,
+      projects: [{ ...primary.projects[0], id: 'machine', selected: false }],
+      selectedProjectId: null,
+      catalogRoot: `sha256:${'2'.repeat(64)}`,
+    },
+  ]);
+
+  assert.equal(merged.projects.length, 1);
+  assert.equal(merged.projects[0]?.id, 'primary');
+  assert.equal(merged.registryPath, '/instance/workspaces.json');
+});
 
 test('Projects delegates to the Core project command', async () => {
   const calls: string[][] = [];

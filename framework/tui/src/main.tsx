@@ -53,12 +53,19 @@ import {
   QUICK_COMMANDS,
   type TerminalDimensions,
   createControlPlaneInputFence,
-  horizontalPointerActionAtPoint,
+  directWorkspaceNavigationFromInput,
   quickCommandMatches,
   reduceControlPlaneInput,
   resolveProductStartupSurface,
+  splitHorizontalPointerActionAtPoint,
 } from './profile-shell.js';
-import { ProjectFileTreeNavigation } from './project-files-view/index.js';
+import {
+  ProjectFileTreeNavigation,
+  type ProjectPathCopyNotice,
+  ProjectPathCopyOverlay,
+  projectNavigationWidth,
+  projectWorkAmbientRows,
+} from './project-files-view/index.js';
 import {
   PROJECTS_QUICK_COMMANDS,
   PROJECT_WORK_QUICK_COMMANDS,
@@ -73,7 +80,17 @@ import {
   StarterProjectHost,
 } from './starter-project-view/index.js';
 import {
+  KUNGFU_EMPTY_WORK_NEBULA_PATTERN,
+  KUNGFU_PROJECT_DISCOVERY_PATTERN,
+  KUNGFU_STARTUP_NEBULA_PATTERN,
+  KUNGFU_WORK_DISCOVERY_PATTERN,
+  TerminalAmbientScene,
+  TerminalLoadingScene,
+  terminalAnimationsEnabled,
+} from './terminal-animation.js';
+import {
   IncrementalTerminalOutput,
+  synchronizedTerminalOutputEnabled,
   terminalCanvasRows,
 } from './terminal-canvas.js';
 import {
@@ -244,9 +261,15 @@ function openTuiAgentWorkLab(): AgentWorkLab {
 function openTuiProjects() {
   const paths = runtimePaths();
   const cli = tuiCliInvocation(paths);
+  const machineConfigHome = process.env.KF_PROJECTS_CONFIG_HOME;
   return openProjects({
     bin: cli.bin,
     env: cli.env,
+    catalogConfigHomes:
+      machineConfigHome &&
+      path.resolve(machineConfigHome) !== path.resolve(paths.configHome)
+        ? [machineConfigHome]
+        : [],
     execFile: (file, values, options) =>
       new Promise<string>((resolve, reject) => {
         execFile(file, cli.args(values), options, (error, stdout, stderr) => {
@@ -412,6 +435,7 @@ class InsetDimensionSource {
 function WorkControlHost({
   projects,
   dimensions,
+  emptyState,
   onOpenLab,
   onSearchDocuments,
   onWorkspacePointer,
@@ -419,6 +443,7 @@ function WorkControlHost({
 }: {
   projects: Projects;
   dimensions: InsetDimensionSource;
+  emptyState: boolean;
   onOpenLab: () => void;
   onSearchDocuments: (documents: ProductSearchDocument[]) => void;
   onWorkspacePointer: () => void;
@@ -433,14 +458,16 @@ function WorkControlHost({
   );
   const initialSnapshot = React.useMemo(
     () =>
-      loadLatestGlobalWorkCache(
-        (candidate) => fs.readFileSync(candidate, 'utf8'),
-        [
-          observerStatePath,
-          path.join(paths.configHome, 'gui', 'global-work-observer.json'),
-        ],
-      ),
-    [observerStatePath, paths.configHome],
+      emptyState
+        ? EMPTY_GLOBAL_WORK_SNAPSHOT
+        : loadLatestGlobalWorkCache(
+            (candidate) => fs.readFileSync(candidate, 'utf8'),
+            [
+              observerStatePath,
+              path.join(paths.configHome, 'gui', 'global-work-observer.json'),
+            ],
+          ),
+    [emptyState, observerStatePath, paths.configHome],
   );
   const [size, setSize] = React.useState(dimensions.get());
   const [snapshot, setSnapshot] = React.useState<GlobalWorkSnapshot | null>(
@@ -478,6 +505,7 @@ function WorkControlHost({
 
   React.useEffect(() => dimensions.subscribe(setSize), [dimensions]);
   React.useEffect(() => {
+    if (emptyState) return undefined;
     let active = true;
     void projects
       .list()
@@ -488,9 +516,10 @@ function WorkControlHost({
     return () => {
       active = false;
     };
-  }, [projects]);
+  }, [emptyState, projects]);
   React.useEffect(() => {
     if (initialSnapshot) applySnapshot(initialSnapshot);
+    if (emptyState) return undefined;
     fs.mkdirSync(path.dirname(observerStatePath), { recursive: true });
     return startGlobalWorkObserver({
       bin: cli.bin,
@@ -504,7 +533,7 @@ function WorkControlHost({
         setBusy(false);
       },
     });
-  }, [applySnapshot, cli, initialSnapshot, observerStatePath]);
+  }, [applySnapshot, cli, emptyState, initialSnapshot, observerStatePath]);
   const model = React.useMemo(
     (): WorkWindowModel =>
       snapshot
@@ -586,6 +615,10 @@ function WorkControlHost({
         return;
       }
       if (key === 'refresh') {
+        if (emptyState) {
+          applySnapshot(EMPTY_GLOBAL_WORK_SNAPSHOT);
+          return;
+        }
         setBusy(true);
         const cached = loadLatestGlobalWorkCache(
           (candidate) => fs.readFileSync(candidate, 'utf8'),
@@ -614,6 +647,7 @@ function WorkControlHost({
     };
   }, [
     applySnapshot,
+    emptyState,
     exit,
     isInputCaptured,
     model,
@@ -638,6 +672,21 @@ function WorkControlHost({
       }
     : model;
 
+  if (!snapshot && busy) {
+    return (
+      <TerminalLoadingScene
+        dimensions={{
+          ...size,
+          rows: terminalCanvasRows(size.rows),
+        }}
+        title="ALL WORK"
+        status="Reading the machine Work graph"
+        detail="Joining retained Work with its local Project coordinates."
+        pattern={KUNGFU_WORK_DISCOVERY_PATTERN}
+      />
+    );
+  }
+
   return (
     <WorkWindow
       model={displayedModel}
@@ -659,6 +708,33 @@ type ProjectWorkComposer = {
   acceptanceCriterion: string;
   plan?: ProjectWorkCapturePlan;
 };
+
+function ProjectWorkDock({
+  title,
+  detail,
+  tone,
+}: {
+  title: string;
+  detail: string;
+  tone: 'cyan' | 'green';
+}) {
+  return (
+    <Box
+      height={4}
+      flexShrink={0}
+      flexDirection="column"
+      borderStyle="double"
+      borderColor={tone}
+      paddingX={1}
+      overflow="hidden"
+    >
+      <Text bold color={tone} wrap="truncate-end">
+        {title}
+      </Text>
+      <Text wrap="truncate-end">{detail}</Text>
+    </Box>
+  );
+}
 
 function ProjectWorkHost({
   projects,
@@ -705,6 +781,7 @@ function ProjectWorkHost({
   );
   const [fileTreeFocused, setFileTreeFocused] = React.useState(false);
   const [loadingFrame, setLoadingFrame] = React.useState(0);
+  const [copyNotice, setCopyNotice] = React.useState<ProjectPathCopyNotice>();
   React.useEffect(() => dimensions.subscribe(setSize), [dimensions]);
   React.useEffect(() => projects.subscribeRuns(setRuns), [projects]);
   React.useEffect(() => {
@@ -715,6 +792,11 @@ function ProjectWorkHost({
     );
     return () => clearInterval(timer);
   }, [loadingWork]);
+  React.useEffect(() => {
+    if (!copyNotice) return;
+    const timeout = setTimeout(() => setCopyNotice(undefined), 3500);
+    return () => clearTimeout(timeout);
+  }, [copyNotice]);
   const composerActive = Boolean(composer);
   React.useEffect(() => {
     onInputModeChange(composerActive);
@@ -729,6 +811,11 @@ function ProjectWorkHost({
   const retainedAgentFinished =
     visibleRun?.receipt?.status === 'agent-finished';
   const canvasRows = terminalCanvasRows(size.rows);
+  const projectWorkAmbientDimensions = {
+    columns: Math.max(12, size.columns - projectNavigationWidth(size) - 8),
+    rows: projectWorkAmbientRows(size),
+  };
+  const emptyProjectIdle = !loadingWork && !visibleRun && !plan && !composer;
   const loadingSpinner = ['◐', '◓', '◑', '◒'][loadingFrame];
   const beginNewWork = React.useCallback(() => {
     if (loadingWork || busy || visibleRun?.running) return;
@@ -999,6 +1086,7 @@ function ProjectWorkHost({
           onOpenProjects={onOpenProjects}
           onOpenLab={onOpenLab}
           onWorkspacePointer={onWorkspacePointer}
+          onCopyNotice={setCopyNotice}
           topOffset={5}
         />
         <Box flexGrow={1} flexDirection="column" paddingLeft={1}>
@@ -1022,24 +1110,19 @@ function ProjectWorkHost({
           </Text>
           <Box flexDirection="column" marginTop={1} flexGrow={1}>
             {loadingWork ? (
-              <Box
-                flexDirection="column"
-                borderStyle="double"
-                borderColor="cyan"
-                paddingX={1}
-              >
-                <Text bold color="cyan">
-                  {loadingSpinner} LOADING PROJECT WORK
-                </Text>
-                <Text>
-                  Kungfu is reading retained Work and evidence for this exact
-                  Project.
-                </Text>
-                <Text dimColor>
-                  The empty-Project state will appear only after this check
-                  finishes with no Work.
-                </Text>
-              </Box>
+              <>
+                <Box flexGrow={1} alignItems="center" justifyContent="center">
+                  <TerminalAmbientScene
+                    dimensions={projectWorkAmbientDimensions}
+                    pattern={KUNGFU_PROJECT_DISCOVERY_PATTERN}
+                  />
+                </Box>
+                <ProjectWorkDock
+                  title={`${loadingSpinner} LOADING PROJECT WORK`}
+                  detail="Reading retained Work and evidence before showing this Project."
+                  tone="cyan"
+                />
+              </>
             ) : visibleRun ? (
               <>
                 <Text bold color={visibleRun.running ? 'yellow' : 'green'}>
@@ -1080,25 +1163,21 @@ function ProjectWorkHost({
                   </>
                 ) : null}
               </>
-            ) : (
-              <Box
-                flexDirection="column"
-                borderStyle="double"
-                borderColor="green"
-                paddingX={1}
-              >
-                <Text bold color="green">
-                  PROJECT OPENED
-                </Text>
-                <Text>
-                  The Project is active. No Agent has been launched yet.
-                </Text>
-                <Text>
-                  Press <Text bold>[Enter]</Text> to describe the first Work.
-                  You will choose an Agent before anything runs.
-                </Text>
-              </Box>
-            )}
+            ) : emptyProjectIdle ? (
+              <>
+                <Box flexGrow={1} alignItems="center" justifyContent="center">
+                  <TerminalAmbientScene
+                    dimensions={projectWorkAmbientDimensions}
+                    pattern={KUNGFU_EMPTY_WORK_NEBULA_PATTERN}
+                  />
+                </Box>
+                <ProjectWorkDock
+                  title="PROJECT OPENED"
+                  detail="No Work yet. Press [Enter] to describe it, then choose an Agent."
+                  tone="green"
+                />
+              </>
+            ) : null}
           </Box>
           {plan ? (
             <Box
@@ -1194,11 +1273,7 @@ function ProjectWorkHost({
                 </>
               ) : null}
             </Box>
-          ) : loadingWork ? (
-            <Text color="cyan">
-              {loadingSpinner} Loading retained Project Work…
-            </Text>
-          ) : (
+          ) : loadingWork || emptyProjectIdle ? null : (
             <Text color={busy ? 'yellow' : undefined}>
               {busy ? '◌ ' : '✓ '}
               {message}
@@ -1206,6 +1281,9 @@ function ProjectWorkHost({
           )}
         </Box>
       </Box>
+      {copyNotice ? (
+        <ProjectPathCopyOverlay notice={copyNotice} dimensions={size} />
+      ) : null}
     </Box>
   );
 }
@@ -1220,6 +1298,26 @@ const PENDING_STARTUP: AgentWorkLabStartupRoute = {
   workGraphPresent: null,
   evidence: [],
   writeOccurred: false,
+};
+
+const EMPTY_GLOBAL_WORK_SNAPSHOT: GlobalWorkSnapshot = {
+  schema: 'kungfu.workspace-federation.query/v1',
+  observed_at: '',
+  aggregate: {
+    state: 'complete',
+    component_count: 0,
+    available_component_count: 0,
+    unknown_component_count: 0,
+    conflict_count: 0,
+  },
+  verification: { ok: true },
+  global_work: {
+    visible_work: [],
+    visible_work_count: 0,
+    canonical_work_count: 0,
+    conflict_count: 0,
+    label_collision_count: 0,
+  },
 };
 
 function StartingHost({
@@ -1247,21 +1345,16 @@ function StartingHost({
     };
   }, [exit, isInputCaptured, onOpenLab]);
   return (
-    <Box
-      width={size.columns}
-      height={terminalCanvasRows(size.rows)}
-      flexDirection="column"
-      paddingX={1}
-    >
-      <Text bold color="cyan">
-        KUNGFU
-      </Text>
-      <Text>Terminal product is open.</Text>
-      <Text dimColor>
-        Reading local Work and exact Profile evidence in the background…
-      </Text>
-      <Text dimColor>[a] Agent Work Lab · q quit</Text>
-    </Box>
+    <TerminalLoadingScene
+      dimensions={{
+        ...size,
+        rows: terminalCanvasRows(size.rows),
+      }}
+      title="KUNGFU"
+      status="Opening your Work control plane"
+      detail="Reading local Projects, Work, and Agent evidence."
+      pattern={KUNGFU_STARTUP_NEBULA_PATTERN}
+    />
   );
 }
 
@@ -1269,18 +1362,23 @@ function ProductHost({
   lab,
   dimensions,
   autoDemo = false,
+  emptyState = false,
   onAutoDemoSettled,
 }: {
   lab: AgentWorkLab;
   dimensions: DimensionStore;
   autoDemo?: boolean;
+  emptyState?: boolean;
   onAutoDemoSettled?: (result: AgentWorkLabAutoplayResult) => void;
 }) {
   const { exit } = useApp();
   const [size, setSize] = React.useState(dimensions.get());
   const startupProjectRoot = React.useMemo(
-    () => existingProjectWorkspaceRoot(process.cwd(), process.env),
-    [],
+    () =>
+      emptyState
+        ? ''
+        : existingProjectWorkspaceRoot(process.cwd(), process.env),
+    [emptyState],
   );
   const [startup, setStartup] = React.useState<
     AgentWorkLabStartupRoute | undefined
@@ -1292,7 +1390,14 @@ function ProductHost({
     | 'projects'
     | 'project-work'
     | 'project-assignment'
-  >(autoDemo ? 'lab' : startupProjectRoot ? 'loading' : 'all-work');
+  >(autoDemo ? 'lab' : emptyState ? 'all-work' : 'loading');
+  const startupAnimationEnabled = React.useMemo(
+    () => terminalAnimationsEnabled(process.env),
+    [],
+  );
+  const [startupIntroSettled, setStartupIntroSettled] = React.useState(
+    autoDemo || emptyState || !startupAnimationEnabled,
+  );
   const surfaceRef = React.useRef(surface);
   React.useEffect(() => {
     surfaceRef.current = surface;
@@ -1334,7 +1439,7 @@ function ProductHost({
   const openProjectRequest = React.useRef(0);
   const [projectWorkLoading, setProjectWorkLoading] = React.useState(false);
   const [projectResumeSettled, setProjectResumeSettled] = React.useState(
-    autoDemo || !startupProjectRoot,
+    autoDemo || emptyState || !startupProjectRoot,
   );
   const [control, setControl] =
     React.useState<ControlPlaneState>(CLOSED_CONTROL_PLANE);
@@ -1370,6 +1475,11 @@ function ProductHost({
     [dimensions],
   );
   React.useEffect(() => dimensions.subscribe(setSize), [dimensions]);
+  React.useEffect(() => {
+    if (autoDemo || emptyState || !startupAnimationEnabled) return undefined;
+    const timer = setTimeout(() => setStartupIntroSettled(true), 540);
+    return () => clearTimeout(timer);
+  }, [autoDemo, emptyState, startupAnimationEnabled]);
   React.useEffect(() => {
     if (autoDemo || control.mode === 'closed' || cliDocuments.length > 0)
       return;
@@ -1433,7 +1543,7 @@ function ProductHost({
     };
   }, [autoDemo, lab, startup, surface]);
   React.useEffect(() => {
-    if (autoDemo || !startupProjectRoot) return;
+    if (autoDemo || emptyState || !startupProjectRoot) return;
     let active = true;
     const request = openProjectRequest.current + 1;
     openProjectRequest.current = request;
@@ -1482,7 +1592,7 @@ function ProductHost({
     return () => {
       active = false;
     };
-  }, [autoDemo, lab, projects, startupProjectRoot]);
+  }, [autoDemo, emptyState, lab, projects, startupProjectRoot]);
   const autoplay = React.useMemo(
     () =>
       autoDemo
@@ -1501,7 +1611,7 @@ function ProductHost({
   const starterOpen =
     surface === 'project-assignment' && Boolean(starterProject);
   React.useEffect(() => {
-    if (autoDemo || surface !== 'loading') return;
+    if (autoDemo || surface !== 'loading' || !startupIntroSettled) return;
     const resolved = resolveProductStartupSurface({
       contextualProject: Boolean(startupProjectRoot),
       openedProject: Boolean(openedProject),
@@ -1513,6 +1623,7 @@ function ProductHost({
     openedProject,
     projectResumeSettled,
     startupProjectRoot,
+    startupIntroSettled,
     surface,
   ]);
   const availableQuickCommands = React.useMemo(
@@ -1887,11 +1998,12 @@ function ProductHost({
       if (mouseEvents.length > 0) {
         for (const event of mouseEvents) {
           if (event.kind !== 'press' || event.button !== 'left') continue;
-          const navigation = horizontalPointerActionAtPoint({
+          const navigation = splitHorizontalPointerActionAtPoint({
             actions: productNavActions,
             column: event.column,
             row: event.row,
             targetRow: 1,
+            width: size.columns,
             startColumn: 2,
             gap: 2,
           });
@@ -1920,6 +2032,17 @@ function ProductHost({
         return;
       }
       const current = controlRef.current;
+      const directNavigation = directWorkspaceNavigationFromInput(
+        current,
+        String(chunk),
+        surfaceRef.current,
+      );
+      if (directNavigation === 'projects') {
+        inputFence.captureCurrentEmission();
+        setControlNow({ ...CLOSED_CONTROL_PLANE, focus: 'workspace' });
+        setSurface('projects');
+        return;
+      }
       const itemCount =
         current.mode === 'commands'
           ? quickCommandsRef.current.length
@@ -2136,6 +2259,7 @@ function ProductHost({
       <WorkControlHost
         projects={projects}
         dimensions={contentDimensions}
+        emptyState={emptyState}
         onOpenLab={() => setSurface('lab')}
         onSearchDocuments={setWorkDocuments}
         onWorkspacePointer={() =>
@@ -2168,35 +2292,41 @@ function ProductHost({
       overflow="hidden"
     >
       {!autoDemo ? (
-        <Box height={1} paddingX={1} gap={2}>
-          <Text
-            color={surface === 'all-work' ? 'cyan' : undefined}
-            bold={surface === 'all-work'}
-          >
-            [1] All Work
-          </Text>
-          <Text
-            color={
-              surface === 'projects' ||
-              surface === 'project-work' ||
-              surface === 'project-assignment'
-                ? 'cyan'
-                : undefined
-            }
-            bold={
-              surface === 'projects' ||
-              surface === 'project-work' ||
-              surface === 'project-assignment'
-            }
-          >
-            [2]{' '}
-            {openedProject
-              ? `Project · ${path.basename(openedProject.workspace_root)}`
-              : 'Projects'}
-          </Text>
-          <Text color={labOpen ? 'cyan' : undefined} bold={labOpen}>
-            [3] Agent Work Lab
-          </Text>
+        <Box height={1} paddingX={1}>
+          <Box flexGrow={1} flexShrink={1} gap={2} overflow="hidden">
+            <Text
+              color={surface === 'all-work' ? 'cyan' : undefined}
+              bold={surface === 'all-work'}
+              wrap="truncate-end"
+            >
+              [1] All Work
+            </Text>
+            <Text
+              color={
+                surface === 'projects' ||
+                surface === 'project-work' ||
+                surface === 'project-assignment'
+                  ? 'cyan'
+                  : undefined
+              }
+              bold={
+                surface === 'projects' ||
+                surface === 'project-work' ||
+                surface === 'project-assignment'
+              }
+              wrap="truncate-end"
+            >
+              [2]{' '}
+              {openedProject
+                ? `Project · ${path.basename(openedProject.workspace_root)}`
+                : 'Projects'}
+            </Text>
+          </Box>
+          <Box flexShrink={0} marginLeft={2}>
+            <Text color={labOpen ? 'cyan' : undefined} bold={labOpen}>
+              [3] Agent Work Lab
+            </Text>
+          </Box>
         </Box>
       ) : null}
       {content}
@@ -2220,19 +2350,6 @@ function ProductHost({
             dimensions={size}
             state={control}
             resultCount={resultCount}
-            surfaceLabel={
-              labOpen
-                ? 'Agent Work Lab'
-                : surface === 'projects'
-                  ? 'Projects'
-                  : starterOpen || surface === 'project-work'
-                    ? openedProject
-                      ? `Project · ${path.basename(openedProject.workspace_root)}`
-                      : 'Project'
-                    : surface === 'all-work'
-                      ? 'All Work'
-                      : 'Starting'
-            }
             controlsLabel={
               labOpen
                 ? 'LAB CONTROLS'
@@ -2290,6 +2407,7 @@ async function main(): Promise<void> {
   }
   const lab = openTuiAgentWorkLab();
   const autoDemo = process.argv.includes('--agent-work-lab-autoplay');
+  const emptyState = process.argv.includes('--empty-state');
   if (process.argv.includes('--agent-work-lab-demo')) {
     const report = await lab.runDemo();
     for (const event of report.events) {
@@ -2315,7 +2433,9 @@ async function main(): Promise<void> {
     process,
   );
   const dimensions = new DimensionStore(lifecycle.dimensions());
-  const terminalOutput = new IncrementalTerminalOutput(process.stdout);
+  const terminalOutput = new IncrementalTerminalOutput(process.stdout, {
+    synchronizedOutput: synchronizedTerminalOutputEnabled(process.env),
+  });
   let instance: ReturnType<typeof render> | undefined;
   let autoDemoResult: AgentWorkLabAutoplayResult | undefined;
   let terminating = false;
@@ -2335,6 +2455,7 @@ async function main(): Promise<void> {
           lab={lab}
           dimensions={dimensions}
           autoDemo={autoDemo}
+          emptyState={emptyState}
           onAutoDemoSettled={(result) => {
             autoDemoResult = result;
           }}
