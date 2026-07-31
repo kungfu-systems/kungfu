@@ -1,0 +1,25 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kungfu.tech/schema/work-design-activation-envelope-v1.schema.json",
+  "title": "Bounded native Work Design activation envelope",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "id", "version", "activePolicyRoot", "allowedParameterPaths", "requiredCohortRoots", "minimumQualifiedSamples", "minimumCanarySamples", "maximumRegressionRateBps", "authority", "envelopeRoot"],
+  "properties": {
+    "schema": { "const": "kungfu.work-design.activation-envelope/v1" },
+    "id": { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._:/-]*$" },
+    "version": { "type": "integer", "minimum": 1 },
+    "activePolicyRoot": { "$ref": "#/$defs/root" },
+    "allowedParameterPaths": { "type": "array", "uniqueItems": true, "items": { "type": "string" } },
+    "requiredCohortRoots": { "type": "array", "minItems": 1, "uniqueItems": true, "items": { "$ref": "#/$defs/root" } },
+    "minimumQualifiedSamples": { "const": 30 },
+    "minimumCanarySamples": { "const": 10 },
+    "maximumRegressionRateBps": { "type": "integer", "minimum": 0, "maximum": 10000 },
+    "authority": { "$ref": "#/$defs/authority" },
+    "envelopeRoot": { "$ref": "#/$defs/root" }
+  },
+  "$defs": {
+    "root": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" },
+    "authority": { "const": { "mode": "native-bounded-policy-envelope", "objectiveAuthority": false, "scopeAuthority": false, "acceptanceAuthority": false, "safetyBoundaryAuthority": false, "workControlAuthority": false, "repositoryAuthority": false } }
+  }
+}
