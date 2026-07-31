@@ -1,22 +1,86 @@
 import { spawn } from 'node:child_process';
 import { createHash, randomUUID } from 'node:crypto';
 import {
+  chmodSync,
+  cpSync,
   existsSync,
   lstatSync,
   mkdirSync,
   readFileSync,
+  realpathSync,
   unlinkSync,
   writeFileSync,
 } from 'node:fs';
+import { createRequire } from 'node:module';
 import os from 'node:os';
 import path from 'node:path';
 import { setTimeout as delay } from 'node:timers/promises';
 import { fileURLToPath } from 'node:url';
 import { invokeAgentSessionSurfaceRpc } from './product-rpc.mjs';
 
+const require = createRequire(import.meta.url);
+
 const CONNECT_TIMEOUT_MS = 5000;
 const RETRY_MS = 50;
 const STARTUP_LOCK_STALE_MS = CONNECT_TIMEOUT_MS * 2;
+
+export function prepareAgentSessionNodePty({ runtimeDir, modulePath } = {}) {
+  if (typeof runtimeDir !== 'string' || runtimeDir.length === 0) {
+    throw new Error('node-pty preparation requires runtimeDir');
+  }
+  const resolvedModule = path.resolve(
+    modulePath ?? require.resolve('node-pty/lib/index.js'),
+  );
+  const packageRoot = realpathSync(path.dirname(path.dirname(resolvedModule)));
+  if (process.platform !== 'darwin') return resolvedModule;
+  const helper = path.join(
+    packageRoot,
+    'prebuilds',
+    `${process.platform}-${process.arch}`,
+    'spawn-helper',
+  );
+  if (existsSync(helper) && (lstatSync(helper).mode & 0o111) !== 0) {
+    return resolvedModule;
+  }
+  const targetRoot = path.join(
+    path.resolve(runtimeDir),
+    'agent-session-support',
+    'node-pty',
+  );
+  if (!existsSync(targetRoot)) {
+    ensurePrivateDirectory(path.dirname(targetRoot));
+    cpSync(packageRoot, targetRoot, { recursive: true });
+  }
+  const targetStat = lstatSync(targetRoot);
+  if (!targetStat.isDirectory() || targetStat.isSymbolicLink()) {
+    throw new Error(
+      `Agent Session node-pty support path '${targetRoot}' must be a real directory`,
+    );
+  }
+  const uid = process.getuid?.();
+  if (uid !== undefined && targetStat.uid !== uid) {
+    throw new Error(
+      `Agent Session node-pty support path '${targetRoot}' is not owned by this user`,
+    );
+  }
+  const targetHelper = path.join(
+    targetRoot,
+    'prebuilds',
+    `${process.platform}-${process.arch}`,
+    'spawn-helper',
+  );
+  if (!existsSync(targetHelper)) {
+    throw new Error(`node-pty spawn-helper is unavailable: ${targetHelper}`);
+  }
+  const helperStat = lstatSync(targetHelper);
+  if (!helperStat.isFile() || helperStat.isSymbolicLink()) {
+    throw new Error(
+      `node-pty spawn-helper '${targetHelper}' must be a real file`,
+    );
+  }
+  chmodSync(targetHelper, 0o700);
+  return path.join(targetRoot, 'lib', 'index.js');
+}
 
 export function detachedAgentSessionPaths(runtimeDir) {
   if (typeof runtimeDir !== 'string' || runtimeDir.length === 0) {

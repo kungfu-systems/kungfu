@@ -17,6 +17,7 @@ import {
   panelStyle,
 } from '@kungfu-tech/kfx';
 import React from 'react';
+import { createAgentSessionProxy } from '../agent-session-proxy';
 import { guiKungfuCliArgs } from '../runtime';
 
 export function openRendererProjects() {
@@ -54,6 +55,11 @@ export function openRendererProjects() {
     execFile: ExecFile;
     spawn: Spawn;
   };
+  const electron = window.require('electron') as {
+    ipcRenderer: {
+      invoke: (channel: string, payload: unknown) => Promise<unknown>;
+    };
+  };
   const env: Record<string, string | undefined> = {
     ...window.process.env,
     KUNGFU_AS_VARIANT: undefined,
@@ -66,6 +72,8 @@ export function openRendererProjects() {
   return capability.openProjects({
     bin,
     env,
+    agentSessionClient: 'gui',
+    agentSession: createAgentSessionProxy(electron.ipcRenderer),
     execFile: (file, values, options) =>
       new Promise<string>((resolve, reject) => {
         childProcess.execFile(
@@ -200,6 +208,7 @@ export function ProjectsPanel({
     provider: string;
     plan: ProjectWorkRunPlan;
   }>();
+  const mockScenario = window.process.env.KUNGFU_MOCK_AGENT_SCENARIO;
   React.useEffect(() => projects.subscribeRuns(setRuns), [projects]);
   const onCatalogRef = React.useRef(onCatalog);
   React.useEffect(() => {
@@ -347,6 +356,7 @@ export function ProjectsPanel({
         .planRun(provider, {
           workspace: project.path,
           work: selectedWork[project.path],
+          scenario: provider === 'mock' ? mockScenario : undefined,
         })
         .then((plan) => setRunPlan({ project, provider, plan }))
         .catch((reason) =>
@@ -354,7 +364,7 @@ export function ProjectsPanel({
         )
         .finally(() => setBusy(''));
     },
-    [projects, selectedWork],
+    [mockScenario, projects, selectedWork],
   );
   const confirmRun = React.useCallback(() => {
     if (!runPlan) return;
@@ -367,6 +377,7 @@ export function ProjectsPanel({
       {
         workspace: project.path,
         work: runPlan.plan.work.assignmentId,
+        scenario: provider === 'mock' ? mockScenario : undefined,
         expectedPlanRoot: runPlan.plan.planRoot,
       },
       () => undefined,
@@ -377,8 +388,22 @@ export function ProjectsPanel({
         setError(reason instanceof Error ? reason.message : String(reason)),
       )
       .finally(() => setBusy(''));
-  }, [projects, runPlan]);
+  }, [mockScenario, projects, runPlan]);
   const visibleRun = runs.find((run) => run.id === visibleRunId) ?? null;
+  React.useEffect(() => {
+    if (!visibleRun?.session?.live) return undefined;
+    let refreshing = false;
+    const refreshSession = () => {
+      if (refreshing) return;
+      refreshing = true;
+      void projects.refreshRun(visibleRun.id).finally(() => {
+        refreshing = false;
+      });
+    };
+    refreshSession();
+    const timer = window.setInterval(refreshSession, 500);
+    return () => window.clearInterval(timer);
+  }, [projects, visibleRun?.id, visibleRun?.session?.live]);
   const openedProject = focusedPath
     ? catalog?.projects.find((project) => project.path === focusedPath)
     : undefined;
@@ -553,6 +578,9 @@ export function ProjectsPanel({
                       ['codex', 'Run Codex'],
                       ['claude', 'Run Claude'],
                       ['opencode', 'Run OpenCode'],
+                      ...(mockScenario
+                        ? ([['mock', `Run Mock · ${mockScenario}`]] as const)
+                        : []),
                     ] as const
                   ).map(([provider, label]) => (
                     <button
@@ -608,6 +636,72 @@ export function ProjectsPanel({
             )?.name
           }
           onClose={() => setVisibleRunId(null)}
+          onReply={(text) => {
+            void projects
+              .replyToRun(visibleRun.id, text)
+              .catch((reason) =>
+                setError(
+                  reason instanceof Error ? reason.message : String(reason),
+                ),
+              );
+          }}
+          onApprove={(approved) => {
+            void projects
+              .approveRun(visibleRun.id, approved)
+              .catch((reason) =>
+                setError(
+                  reason instanceof Error ? reason.message : String(reason),
+                ),
+              );
+          }}
+          onReview={() => {
+            const project = catalog?.projects.find(
+              (candidate) => candidate.path === visibleRun.workspace,
+            );
+            void projects
+              .endRun(visibleRun.id)
+              .then(() => {
+                if (project) onOpenWork(project, 'work');
+              })
+              .catch((reason) =>
+                setError(
+                  reason instanceof Error ? reason.message : String(reason),
+                ),
+              );
+          }}
+          onRetry={() => {
+            const project = catalog?.projects.find(
+              (candidate) => candidate.path === visibleRun.workspace,
+            );
+            if (!project || !visibleRun.work) return;
+            setBusy('Planning a fresh Agent attempt…');
+            void (
+              visibleRun.session?.live
+                ? projects.endRun(visibleRun.id)
+                : Promise.resolve(visibleRun)
+            )
+              .then(() =>
+                projects.planRun(visibleRun.provider, {
+                  workspace: project.path,
+                  work: visibleRun.work,
+                  scenario:
+                    visibleRun.provider === 'mock' ? mockScenario : undefined,
+                }),
+              )
+              .then((plan) =>
+                setRunPlan({
+                  project,
+                  provider: visibleRun.provider,
+                  plan,
+                }),
+              )
+              .catch((reason) =>
+                setError(
+                  reason instanceof Error ? reason.message : String(reason),
+                ),
+              )
+              .finally(() => setBusy(''));
+          }}
         />
       ) : null}
       {runPlan ? (

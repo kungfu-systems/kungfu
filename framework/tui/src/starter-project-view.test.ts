@@ -13,6 +13,7 @@ import type {
 import { renderProfileShellSnapshot } from './profile-shell.js';
 import {
   agentProfileSourceLabel,
+  deterministicMockAgentSelection,
   openedProjectWorkReference,
   openedProjectWorks,
   projectSectionNavigationAtPoint,
@@ -453,6 +454,19 @@ test('Agent selection exposes configured and auto-discovered sources', () => {
     agentProfileSourceLabel('discovered', 'path_cli'),
     'Auto-discovered · path cli',
   );
+  assert.equal(
+    agentProfileSourceLabel('qualification'),
+    'Qualification fixture · deterministic and credential-free',
+  );
+});
+
+test('deterministic Mock Agent selection binds the requested scenario', () => {
+  const profile = deterministicMockAgentSelection('approval');
+
+  assert.equal(profile.id, 'kungfu.mock-agent.approval');
+  assert.equal(profile.label, 'Mock Agent · approval');
+  assert.equal(profile.provider, 'synthetic');
+  assert.equal(profile.source, 'qualification');
 });
 
 test('real Agent activity shows a credential-safe workspace command preview', () => {

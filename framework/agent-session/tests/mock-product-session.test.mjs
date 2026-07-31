@@ -1,36 +1,21 @@
 import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
-import { chmodSync, cpSync, statSync } from 'node:fs';
-import { mkdtemp, rm } from 'node:fs/promises';
-import { createRequire } from 'node:module';
+import { lstatSync } from 'node:fs';
+import { mkdir, mkdtemp, rm, symlink, writeFile } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
 import { setTimeout as delay } from 'node:timers/promises';
 import { fileURLToPath } from 'node:url';
-import { createDetachedAgentSessionHost } from '../src/product-client.mjs';
+import {
+  createDetachedAgentSessionHost,
+  prepareAgentSessionNodePty,
+} from '../src/product-client.mjs';
 
 const MOCK = fileURLToPath(
   new URL('../src/mock-provider.mjs', import.meta.url),
 );
 const PROFILE_ROOT = `sha256:${'7'.repeat(64)}`;
-const require = createRequire(import.meta.url);
-
-function preparedNodePty(root) {
-  const source = path.dirname(require.resolve('node-pty/package.json'));
-  const target = path.join(root, 'node-pty');
-  cpSync(source, target, { recursive: true });
-  if (process.platform === 'darwin') {
-    const helper = path.join(
-      target,
-      'prebuilds',
-      `${process.platform}-${process.arch}`,
-      'spawn-helper',
-    );
-    chmodSync(helper, (statSync(helper).mode & 0o777) | 0o111);
-  }
-  return path.join(target, 'lib', 'index.js');
-}
 
 async function eventually(probe, label) {
   const deadline = Date.now() + 5000;
@@ -60,11 +45,63 @@ async function control(host, session, operation, payload, automatic = true) {
   });
 }
 
+test('macOS node-pty preparation rejects a linked private support target', async (t) => {
+  if (process.platform !== 'darwin') {
+    t.skip('private spawn-helper preparation is macOS-specific');
+    return;
+  }
+  const root = await mkdtemp(
+    path.join(os.tmpdir(), 'kungfu-node-pty-support-'),
+  );
+  t.after(() => rm(root, { recursive: true, force: true }));
+  const runtimeDir = path.join(root, 'runtime');
+  const packageRoot = path.join(root, 'source-node-pty');
+  const linkedTarget = path.join(
+    runtimeDir,
+    'agent-session-support',
+    'node-pty',
+  );
+  await mkdir(path.join(packageRoot, 'lib'), { recursive: true });
+  await mkdir(
+    path.join(packageRoot, 'prebuilds', `${process.platform}-${process.arch}`),
+    { recursive: true },
+  );
+  await writeFile(path.join(packageRoot, 'lib', 'index.js'), 'export {};\n');
+  await writeFile(
+    path.join(
+      packageRoot,
+      'prebuilds',
+      `${process.platform}-${process.arch}`,
+      'spawn-helper',
+    ),
+    'fixture\n',
+    { mode: 0o600 },
+  );
+  await mkdir(path.dirname(linkedTarget), { recursive: true });
+  await symlink(packageRoot, linkedTarget, 'dir');
+
+  assert.throws(
+    () =>
+      prepareAgentSessionNodePty({
+        runtimeDir,
+        modulePath: path.join(packageRoot, 'lib', 'index.js'),
+      }),
+    /must be a real directory/u,
+  );
+});
+
 test('deterministic Mock Agent traverses answer, approval, review, and exit in the detached product runtime', async (t) => {
   const runtimeDir = await mkdtemp(
     path.join(os.tmpdir(), 'kungfu-mock-product-session-'),
   );
-  const ptyModule = preparedNodePty(runtimeDir);
+  const ptyModule = prepareAgentSessionNodePty({ runtimeDir });
+  if (process.platform === 'darwin') {
+    assert.equal(ptyModule.startsWith(runtimeDir), true);
+    assert.equal(
+      lstatSync(path.dirname(path.dirname(ptyModule))).isSymbolicLink(),
+      false,
+    );
+  }
   const workers = [];
   const host = createDetachedAgentSessionHost({
     runtimeDir,
@@ -151,7 +188,7 @@ test('deterministic Mock Agent traverses answer, approval, review, and exit in t
     const status = await host.invoke({ operation: 'status', session });
     return status.interactionState === 'ready' ? status : null;
   }, 'review boundary');
-  assert.equal(review.workAgent.attention.kind, 'needs-answer');
+  assert.equal(review.workAgent.attention.kind, 'ready-for-review');
   const snapshot = await host.invoke({
     operation: 'snapshot',
     session,

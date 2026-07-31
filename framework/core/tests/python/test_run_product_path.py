@@ -56,6 +56,22 @@ def test_next_work_requires_explicit_selection_when_ambiguous(tmp_path):
     )
 
 
+def test_explicit_work_selector_can_start_a_fresh_attempt_while_work_executes(
+    tmp_path, monkeypatch
+):
+    project = tmp_path / "project"
+    project.mkdir()
+    _capture(project, "first")
+    monkeypatch.setattr(run, "_work_phase", lambda *_args: "executing")
+
+    selected = run._choose_work(str(project), work_selector="first")
+
+    assert selected["assignmentId"] == "first"
+    assert selected["phase"] == "executing"
+    with pytest.raises(ValueError, match="no Work can start"):
+        run._choose_work(str(project))
+
+
 def test_task_capture_creates_a_bounded_assignment_not_runtime(tmp_path):
     project = tmp_path / "project"
     project.mkdir()

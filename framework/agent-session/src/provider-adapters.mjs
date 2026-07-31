@@ -349,6 +349,13 @@ export function createProviderAdapter({ provider, version }) {
         });
       }
       const screen = cleanScreen(lines);
+      if (provider === 'synthetic' && /MOCK READY FOR REVIEW:/u.test(screen)) {
+        return interactionResult({
+          state: 'ready',
+          signatureId: 'synthetic.ready.review',
+          compatible: true,
+        });
+      }
       const current = currentScreenState(profile, screen);
       if (current) {
         return interactionResult({
