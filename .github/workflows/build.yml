@@ -175,9 +175,6 @@ jobs:
       github-artifact-attestation-signer-sha: 375b2d4b8a904776453773a33b4c4e4556c8c999
       github-artifact-attestation-platform-id: linux-x64
       artifact-signing-request-upload-no-proxy: ${{ vars.BUILDCHAIN_ARTIFACT_SIGNING_REQUEST_UPLOAD_NO_PROXY }}
-      credential-island-macos-app-path: ${{ (fromJSON(inputs.macos-overflow-request-json || '{}').mode != 'self-hosted' && fromJSON(inputs.macos-overflow-request-json || '{}').mode != 'github-hosted') && 'product/dist/desktop/mac-arm64/Kungfu Episodes.app' || '' }}
-      credential-island-caller-owned: ${{ fromJSON(inputs.macos-overflow-request-json || '{}').mode != 'self-hosted' && fromJSON(inputs.macos-overflow-request-json || '{}').mode != 'github-hosted' }}
-      credential-island-macos-platform-id: macos-arm64
       expected-artifacts-json: >-
         {"minFiles":3,"minTotalBytes":1,"requiredPaths":["product/release/qualification/layer-qualification-summary.json"]}
       # Every lane must retain its source-bound qualification summary. The
@@ -217,9 +214,9 @@ jobs:
       # On Linux it qualifies Episodes before running the ADR
       # release-admissibility gate.
       # shifu-entry-contract: allow cross-platform release qualification dispatch into the canonical shifu shim
-      # Functional native qualification stays credential-free. Buildchain seals
-      # the exact unsigned macOS app after this lifecycle, then a separate
-      # protected GitHub-hosted credential island signs and notarizes it.
+      # Functional native qualification stays credential-free. The declarative
+      # signing inventory lets Buildchain seal the exact unsigned macOS app and
+      # finalize signing and notarization inside its protected authority.
       verify-command: node scripts/run-release-qualification.mjs --execution-profile ${{ startsWith(github.base_ref, 'release/') && 'release-candidate' || 'alpha' }} --native-upgrade-policy skip
       release-candidate: true
       publish-channel: ${{ (fromJSON(inputs.macos-overflow-request-json || '{}').mode == 'self-hosted' || fromJSON(inputs.macos-overflow-request-json || '{}').mode == 'github-hosted') && 'none' || (github.event_name == 'pull_request' && (startsWith(github.base_ref, 'release/') && 'release' || 'alpha') || 'none') }}
@@ -648,84 +645,6 @@ jobs:
           retention-days: 14
           compression-level: 0
           overwrite: false
-
-  credential-island-macos:
-    name: Sign and notarize sealed macOS application
-    needs: build
-    if: ${{ needs.build.result == 'success' && fromJSON(inputs.macos-overflow-request-json || '{}').mode != 'self-hosted' && fromJSON(inputs.macos-overflow-request-json || '{}').mode != 'github-hosted' && (!inputs.platforms-json || contains(inputs.platforms-json, 'macos-arm64')) }}
-    runs-on: macos-15
-    timeout-minutes: 90
-    environment:
-      name: buildchain-artifact-signing
-    permissions:
-      actions: read
-      contents: read
-    outputs:
-      artifact-name: ${{ steps.names.outputs.artifact-name }}
-      manifest-artifact-name: ${{ steps.names.outputs.manifest-artifact-name }}
-      evidence-path: ${{ steps.credential-island.outputs.evidence-path }}
-    steps:
-      - name: Resolve signed artifact names
-        id: names
-        shell: bash
-        env:
-          SOURCE_SHA: ${{ needs.build.outputs.publish-source-sha }}
-        run: |
-          {
-            echo "artifact-name=kungfu-macos-credential-${SOURCE_SHA}"
-            echo "manifest-artifact-name=kungfu-manifest-macos-credential-${SOURCE_SHA}"
-          } >> "${GITHUB_OUTPUT}"
-
-      - name: Download immutable credential-island runtime
-        uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
-        with:
-          name: kungfu-credential-island-runtime-${{ needs.build.outputs.buildchain-runtime-sha }}
-          path: .buildchain/runtime/actions/macos-credential-island
-
-      - name: Download source-bound sealed application input
-        uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
-        with:
-          name: kungfu-credential-island-input-macos-arm64-${{ needs.build.outputs.publish-source-sha }}
-          path: .buildchain/credential-island-input
-
-      - name: Sign, notarize, staple, and verify
-        id: credential-island
-        uses: ./.buildchain/runtime/actions/macos-credential-island
-        with:
-          input-root: .buildchain/credential-island-input
-          output-root: .buildchain/credential-island-output
-          source-repository: ${{ github.repository }}
-          source-sha: ${{ needs.build.outputs.publish-source-sha }}
-          source-tree-sha: ${{ needs.build.outputs.publish-source-tree-sha }}
-          source-ref: ${{ needs.build.outputs.publish-source-ref || github.ref }}
-          buildchain-runtime-sha: ${{ needs.build.outputs.buildchain-runtime-sha }}
-          artifact-name: ${{ steps.names.outputs.artifact-name }}
-          platform-id: macos-arm64-credential
-          artifact-relative-output: product/release
-          expected-team-id: ${{ vars.BUILDCHAIN_MACOS_EXPECTED_TEAM_ID }}
-          certificate-sha1: ${{ vars.BUILDCHAIN_MACOS_CERTIFICATE_SHA1 }}
-          certificate-p12-base64: ${{ secrets.BUILDCHAIN_MACOS_CERTIFICATE_P12_BASE64 }}
-          certificate-password: ${{ secrets.BUILDCHAIN_MACOS_CERTIFICATE_PASSWORD }}
-          notary-api-key-p8-base64: ${{ secrets.BUILDCHAIN_MACOS_NOTARY_API_KEY_P8_BASE64 }}
-          notary-api-key-id: ${{ secrets.BUILDCHAIN_MACOS_NOTARY_API_KEY_ID }}
-          notary-api-issuer: ${{ secrets.BUILDCHAIN_MACOS_NOTARY_API_ISSUER }}
-
-      - name: Upload authoritative signed macOS payload
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
-        with:
-          name: ${{ steps.names.outputs.artifact-name }}
-          path: ${{ steps.credential-island.outputs.artifact-root }}
-          if-no-files-found: error
-          retention-days: 14
-          compression-level: 0
-
-      - name: Upload authoritative signed macOS manifest
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
-        with:
-          name: ${{ steps.names.outputs.manifest-artifact-name }}
-          path: ${{ steps.credential-island.outputs.manifest-path }}
-          if-no-files-found: error
-          retention-days: 14
 
   phase-b-package:
     name: Prepare Kungfu Phase B package

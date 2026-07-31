@@ -475,16 +475,12 @@ test('workflow contract keeps candidates exact-source, independent, and publish-
     workflow,
     /publish-channel: \$\{\{ \(fromJSON\(inputs\.macos-overflow-request-json \|\| '\{\}'\)\.mode == 'self-hosted'/u,
   );
-  assert.match(
-    workflow,
-    /credential-island-macos-app-path: \$\{\{ \(fromJSON\(inputs\.macos-overflow-request-json \|\| '\{\}'\)\.mode != 'self-hosted'/u,
-  );
+  assert.doesNotMatch(workflow, /credential-island-macos-app-path:/u);
+  assert.doesNotMatch(workflow, /credential-island-caller-owned:/u);
+  assert.doesNotMatch(workflow, /credential-island-macos-platform-id:/u);
   assert.match(
     workflow,
     /github\.ref == format\('refs\/heads\/\{0\}', github\.event\.repository\.default_branch\)/u,
   );
-  assert.match(
-    workflow,
-    /credential-island-macos:[\s\S]*if: \$\{\{ needs\.build\.result == 'success' && fromJSON\(inputs\.macos-overflow-request-json \|\| '\{\}'\)\.mode != 'self-hosted' && fromJSON\(inputs\.macos-overflow-request-json \|\| '\{\}'\)\.mode != 'github-hosted'/u,
-  );
+  assert.doesNotMatch(workflow, /^ {2}credential-island-macos:$/mu);
 });

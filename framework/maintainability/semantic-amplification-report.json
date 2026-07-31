@@ -5,7 +5,7 @@
   "manifestPath": "framework/maintainability/semantic-amplification.manifest.json",
   "manifestRoot": "sha256:bb27f12a23178b9775e61fcf6c91804636d687153cdd9199f5fe76bfe9793299",
   "baselineRef": "dbfed9ca1785d147b26f4f06e7e6895ac7368fee",
-  "sourceRoot": "sha256:e60175693acad5c259ff79de659a46507f3b9db613170cf2cce0443238c470fb",
+  "sourceRoot": "sha256:0b320468e20c2bd2393851fb0d46fd001d0cc140081b88fa5bb8ab034af175ad",
   "roles": {
     "authority": "exactly one authority route per family; the route may name multiple co-owned source files",
     "allowedProjectionRoles": [
@@ -1122,9 +1122,9 @@
         },
         {
           "path": "docs/qualification/gates/workflow-bindings.json",
-          "currentLines": 661,
+          "currentLines": 658,
           "baselineLines": 580,
-          "currentRoot": "sha256:d79925ac9b68fefbd15ce566496587f22071a6875cf48a1110bb6de20ad8ca1e",
+          "currentRoot": "sha256:ab4bfa5d79733df7823ec0917f0e1514deed6454ec6765cef693f21fb30c0fad",
           "baselineRoot": "sha256:233cd22ebce4c9930e0e4889808b88661d77c202d5e5f73121823dcdc461576d",
           "changedSinceBaseline": true
         },
@@ -1138,9 +1138,9 @@
         },
         {
           "path": "docs/qualification/gates/release-and-promotion.md",
-          "currentLines": 205,
+          "currentLines": 206,
           "baselineLines": 141,
-          "currentRoot": "sha256:63888378cb673b38b783280d8e8d12cfdc88a272a5f025bcc77caa3064ac8087",
+          "currentRoot": "sha256:54911099d5f644e85319be8de5d1787c334c9062bb4dfa61155ffd5043c4da11",
           "baselineRoot": "sha256:5eb20fe886635e0464313023daa1a2b62529ad1d6977202dce9c91c6b8aacf9e",
           "changedSinceBaseline": true
         },
@@ -1148,7 +1148,7 @@
           "path": "docs/qualification/gates/release-admission.md",
           "currentLines": 75,
           "baselineLines": 75,
-          "currentRoot": "sha256:d1ad047996188a6218cf45e3f28c62d0fb9e3d516c65623164203ef33d6d449f",
+          "currentRoot": "sha256:1c3cbff7c64f9afb758b433162288f1c0327c03ff8eafd128b89755d4980a08b",
           "baselineRoot": "sha256:69f293fefb3c94df44051dc86ba4435416f5ea4348f2ffb245bef19bb494a280",
           "changedSinceBaseline": true
         },

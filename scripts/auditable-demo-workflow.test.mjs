@@ -317,7 +317,7 @@ test('full media is selective while the Gate remains unconditional when applicab
 test('the auditable demo path grants no publication or deployment authority', () => {
   const excerpt = WORKFLOW_TEXT.slice(
     WORKFLOW_TEXT.indexOf('  resolve-auditable-demo-source:'),
-    WORKFLOW_TEXT.indexOf('  credential-island-macos:'),
+    WORKFLOW_TEXT.indexOf('  phase-b-package:'),
   );
   assert.doesNotMatch(excerpt, /\bdeployments:\s*write\b/u);
   assert.doesNotMatch(excerpt, /\bpackages:\s*write\b/u);

@@ -107,18 +107,18 @@ test('automatic hosted preflight does not inherit a private Cargo mirror', () =>
   );
 });
 
-test('custom Linux-only and publish-none overflow builds do not start the macOS credential island', () => {
+test('consumer workflow delegates every declared signing request to Buildchain', () => {
   const workflow = fs.readFileSync(
     path.join(process.cwd(), '.github/workflows/build.yml'),
     'utf8',
   );
-  assert.match(
-    workflow,
-    /credential-island-macos:[\s\S]*if: \$\{\{ needs\.build\.result == 'success' && fromJSON\(inputs\.macos-overflow-request-json \|\| '\{\}'\)\.mode != 'self-hosted' && fromJSON\(inputs\.macos-overflow-request-json \|\| '\{\}'\)\.mode != 'github-hosted' && \(!inputs\.platforms-json \|\| contains\(inputs\.platforms-json, 'macos-arm64'\)\) \}\}/u,
-  );
+  assert.doesNotMatch(workflow, /^ {2}credential-island-macos:$/mu);
+  assert.doesNotMatch(workflow, /credential-island-macos-app-path:/u);
+  assert.doesNotMatch(workflow, /credential-island-caller-owned:/u);
+  assert.doesNotMatch(workflow, /credential-island-macos-platform-id:/u);
 });
 
-test('macOS products use Buildchain signing through the formal environment', () => {
+test('macOS products use Buildchain-native declarative signing', () => {
   const workflow = fs.readFileSync(
     path.join(process.cwd(), '.github/workflows/build.yml'),
     'utf8',
@@ -131,10 +131,9 @@ test('macOS products use Buildchain signing through the formal environment', () 
     workflow,
     /BUILDCHAIN_PROMOTION_TOKEN: \$\{\{ secrets\.KUNGFU_GITHUB_TOKEN \}\}/u,
   );
-  assert.match(
-    workflow,
-    /credential-island-macos:[\s\S]*name: buildchain-artifact-signing/u,
-  );
+  assert.doesNotMatch(workflow, /name: buildchain-artifact-signing/u);
+  assert.doesNotMatch(workflow, /BUILDCHAIN_MACOS_CERTIFICATE_/u);
+  assert.doesNotMatch(workflow, /BUILDCHAIN_MACOS_NOTARY_/u);
   assert.doesNotMatch(
     workflow,
     /BUILDCHAIN_MACOS_EXPECTED_BUNDLE_ID/u,
@@ -144,6 +143,10 @@ test('macOS products use Buildchain signing through the formal environment', () 
   assert.match(
     config,
     /\[\[signing\.artifacts\]\][\s\S]*id = "kungfu-cli-macos-arm64"[\s\S]*kind = "archive"[\s\S]*platforms = \["macos-arm64"\]/u,
+  );
+  assert.match(
+    config,
+    /\[\[signing\.artifacts\]\][\s\S]*id = "kungfu-desktop-macos-arm64"[\s\S]*path = "product\/dist\/desktop\/mac-arm64\/Kungfu Episodes\.app"[\s\S]*kind = "app-bundle"[\s\S]*platforms = \["macos-arm64"\][\s\S]*required = true/u,
   );
 });
 

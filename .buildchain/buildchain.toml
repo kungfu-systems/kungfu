@@ -80,3 +80,11 @@ profile = "auto"
 kind = "archive"
 platforms = ["macos-arm64"]
 required = true
+
+[[signing.artifacts]]
+id = "kungfu-desktop-macos-arm64"
+path = "product/dist/desktop/mac-arm64/Kungfu Episodes.app"
+profile = "auto"
+kind = "app-bundle"
+platforms = ["macos-arm64"]
+required = true
