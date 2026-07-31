@@ -9,6 +9,7 @@ const root = (char: string) => `sha256:${char.repeat(64)}`;
 
 function authorization(
   runtimeTier: ServiceAuthorization['runtimeTier'],
+  grantedCapabilities: string[] = [],
 ): ServiceAuthorization {
   return {
     schema: 'kungfu.kfx.host-authorization/v2',
@@ -21,7 +22,7 @@ function authorization(
     admissionGrade: 'kfd-attested',
     placement: 'service-node',
     requiredCapabilities: [],
-    grantedCapabilities: [],
+    grantedCapabilities,
     reportRoot: root('5'),
     admissionPlanRoot: root('6'),
     corePolicyRoot: root('7'),
@@ -41,9 +42,13 @@ function authorization(
 
 const isolated = resolveServiceLanding(authorization('isolated'));
 const integrated = resolveServiceLanding(authorization('integrated-explicit'));
+const networked = resolveServiceLanding(authorization('isolated', ['network']));
 if (
   isolated.tier !== 'sandbox' ||
   isolated.profile.denyNetwork !== true ||
+  networked.tier !== 'sandbox' ||
+  networked.profile.denyNetwork !== false ||
+  networked.networkConsent !== true ||
   integrated.tier !== 'co-resident'
 ) {
   throw new Error('identity-neutral service authorization harness failed');

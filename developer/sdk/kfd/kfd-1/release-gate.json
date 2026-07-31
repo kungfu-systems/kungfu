@@ -88,13 +88,13 @@
       "standard": "KFD-1",
       "standardKey": "kfd-1",
       "result": "passed",
-      "preBuildWitnessSha256": "ec523e9f81bc2031c873c23c1cd627db19c574d8b80ffe451d317aa262ec7e43",
+      "preBuildWitnessSha256": "27c3276f0f93a7d117732e42f2ae750c1c36f7e43f51319a3a1d98197c0bf77a",
       "sourceHashes": {
-        "sha256": "e8dc34cf0de35e20f4f31d350152ccd4810e97a635be3868ab37409ed3e11848",
+        "sha256": "e73170a614c8d5e5c517fbf7f1043d7e1c6ace2e5387bfadbe2512a5fc8fa66b",
         "surfaceCount": 21
       },
       "artifactHashes": {
-        "sha256": "6546aaccb98243a8e959e25ea9c9f8aaf75c1a1e3fdbd0d964e46c8bfb21559a",
+        "sha256": "d4967120431d7cbdc4fef74fd00deeafcaa6dcaa22ddd4822617851dca53e20d",
         "surfaceCount": 21
       },
       "witness": {
@@ -152,9 +152,9 @@
           {
             "name": "kungfu-kfx",
             "sourcePath": "framework/kfx/kungfu-kfx.contract.json",
-            "sourceSha256": "f9f99ee94a91580f0e5e4592c260e32f2ab3d2c12f1c439db1e31d6ee0cfadff",
+            "sourceSha256": "4467f08a4b6b7c82e1ce02f8c028571f953b86975755d640716ac53008db9f42",
             "artifactPath": "config/kungfu-kfx.contract.json",
-            "expectedSha256": "f9f99ee94a91580f0e5e4592c260e32f2ab3d2c12f1c439db1e31d6ee0cfadff",
+            "expectedSha256": "4467f08a4b6b7c82e1ce02f8c028571f953b86975755d640716ac53008db9f42",
             "byteForByte": true
           },
           {
@@ -397,8 +397,8 @@
           {
             "name": "kungfu-kfx",
             "sourcePath": "framework/kfx/kungfu-kfx.contract.json",
-            "expectedSha256": "f9f99ee94a91580f0e5e4592c260e32f2ab3d2c12f1c439db1e31d6ee0cfadff",
-            "actualSha256": "f9f99ee94a91580f0e5e4592c260e32f2ab3d2c12f1c439db1e31d6ee0cfadff",
+            "expectedSha256": "4467f08a4b6b7c82e1ce02f8c028571f953b86975755d640716ac53008db9f42",
+            "actualSha256": "4467f08a4b6b7c82e1ce02f8c028571f953b86975755d640716ac53008db9f42",
             "status": "passed",
             "reason": ""
           },
@@ -574,10 +574,10 @@
           {
             "name": "kungfu-kfx",
             "sourcePath": "framework/kfx/kungfu-kfx.contract.json",
-            "sourceSha256": "f9f99ee94a91580f0e5e4592c260e32f2ab3d2c12f1c439db1e31d6ee0cfadff",
+            "sourceSha256": "4467f08a4b6b7c82e1ce02f8c028571f953b86975755d640716ac53008db9f42",
             "artifactPath": "config/kungfu-kfx.contract.json",
-            "expectedSha256": "f9f99ee94a91580f0e5e4592c260e32f2ab3d2c12f1c439db1e31d6ee0cfadff",
-            "actualSha256": "f9f99ee94a91580f0e5e4592c260e32f2ab3d2c12f1c439db1e31d6ee0cfadff",
+            "expectedSha256": "4467f08a4b6b7c82e1ce02f8c028571f953b86975755d640716ac53008db9f42",
+            "actualSha256": "4467f08a4b6b7c82e1ce02f8c028571f953b86975755d640716ac53008db9f42",
             "byteForByte": true,
             "status": "passed",
             "reason": ""
