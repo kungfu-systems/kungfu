@@ -370,6 +370,14 @@ test('desktop local tree bytes are part of the exact Release Cut', () => {
     });
     assert.equal(first.localArtifact.format, 'directory');
     assert.notEqual(first.localArtifact.digest, second.localArtifact.digest);
+    assert.equal(
+      first.manifestIdentityRoot,
+      bundledManifest.manifestIdentityRoot,
+    );
+    assert.equal(
+      second.manifestIdentityRoot,
+      bundledManifest.manifestIdentityRoot,
+    );
     assert.notEqual(first.releaseCutRoot, second.releaseCutRoot);
   } finally {
     fs.rmSync(f.root, { recursive: true, force: true });
@@ -405,6 +413,7 @@ test('CLI finalization adds an exact archive without losing desktop evidence', (
     const output = path.join(f.root, 'release', 'manifest.json');
     const release = finalizeCliUpgradeManifest({
       bundledManifest: desktopManifest,
+      embeddedManifest: bundledManifest,
       cliArtifact: archive,
       artifactUrl: 'https://example.invalid/kungfu-cli.tar.gz',
       output,

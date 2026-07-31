@@ -34,6 +34,7 @@ const CUT_BINDING_FIELDS = new Set([
 const MANIFEST_IDENTITY_EXCLUDED_FIELDS = new Set([
   ...CUT_BINDING_FIELDS,
   'artifacts',
+  'localArtifact',
   'qualificationEvidenceRef',
 ]);
 
