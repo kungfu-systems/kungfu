@@ -7,7 +7,7 @@ export type ServiceAuthorization = KfxHostContribution['authorization'];
 
 export type ServiceLanding =
   | { tier: 'co-resident' }
-  | { tier: 'sandbox'; profile: SandboxProfile; networkConsent: false };
+  | { tier: 'sandbox'; profile: SandboxProfile; networkConsent: boolean };
 
 function rooted(value: string | null): value is string {
   return value?.startsWith('sha256:') === true;
@@ -49,9 +49,9 @@ export function resolveServiceLanding(
     tier: 'sandbox',
     profile: {
       base: 'restrictive',
-      denyNetwork: true,
+      denyNetwork: !authorization.grantedCapabilities.includes('network'),
       denyWrite: !authorization.grantedCapabilities.includes('storage'),
     },
-    networkConsent: false,
+    networkConsent: authorization.grantedCapabilities.includes('network'),
   };
 }

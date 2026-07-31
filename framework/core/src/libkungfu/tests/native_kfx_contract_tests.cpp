@@ -100,7 +100,7 @@ void test_contract_is_versioned_and_core_owned() {
   require(first.at("contractVersion") == 3, "native contract version drifted");
   require(first.at("versionNegotiation").at("supported") == nlohmann::json::array({3}),
           "native contract retained pre-cutover authority documents");
-  require(first.at("sourceContractVersion") == 12, "native contract did not expose its source compatibility version");
+  require(first.at("sourceContractVersion") == 13, "native contract did not expose its source compatibility version");
   require(first.at("runtimeTiers") == nlohmann::json::array({"isolated", "integrated-explicit", "metadata-only"}),
           "native contract exposed an origin-derived runtime tier");
   require(first.at("admissionGrades") == nlohmann::json::array({"unverified", "identity-verified", "kfd-attested"}),
