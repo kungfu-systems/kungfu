@@ -124,6 +124,7 @@
     "check:work-design-open-card": "node scripts/require-shifu.mjs check:work-design-open-card && node framework/work-design-open-card/tooling/check-work-design-open-card.mjs",
     "test:work-design-open-card": "node scripts/require-shifu.mjs test:work-design-open-card && node --test scripts/check-work-design-open-card.test.mjs",
     "work-design:open-card-preflight": "node scripts/require-shifu.mjs work-design:open-card-preflight && node framework/work-design-open-card/tooling/open-card-preflight.mjs",
+    "work-design:feedback": "node scripts/require-shifu.mjs work-design:feedback && node framework/work-design-policy-replay/tooling/check-work-design-policy-replay.mjs feedback",
     "check:project-cut-composition": "node scripts/require-shifu.mjs check:project-cut-composition && node scripts/check-project-cut-composition.mjs",
     "test:project-cut-composition": "node scripts/require-shifu.mjs test:project-cut-composition && node --test scripts/check-project-cut-composition.test.mjs",
     "check:project-cut-publication": "node scripts/require-shifu.mjs check:project-cut-publication && node framework/project-cut/bin/project-cut.mjs publication-contract-check --json",

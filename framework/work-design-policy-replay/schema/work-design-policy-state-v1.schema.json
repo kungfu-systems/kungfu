@@ -1,0 +1,23 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kungfu.tech/schema/work-design-policy-state-v1.schema.json",
+  "title": "Append-only reducible Work Design active policy state",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "version", "activePolicyRoot", "previousPolicyRoot", "candidatePolicyRoot", "phase", "activationRoot", "rollbackRoot", "stateRoot"],
+  "properties": {
+    "schema": { "const": "kungfu.work-design.policy-state/v1" },
+    "version": { "type": "integer", "minimum": 1 },
+    "activePolicyRoot": { "$ref": "#/$defs/root" },
+    "previousPolicyRoot": { "$ref": "#/$defs/nullableRoot" },
+    "candidatePolicyRoot": { "$ref": "#/$defs/nullableRoot" },
+    "phase": { "enum": ["stable", "canary", "promoted", "rolled-back"] },
+    "activationRoot": { "$ref": "#/$defs/nullableRoot" },
+    "rollbackRoot": { "$ref": "#/$defs/nullableRoot" },
+    "stateRoot": { "$ref": "#/$defs/root" }
+  },
+  "$defs": {
+    "root": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" },
+    "nullableRoot": { "anyOf": [{ "$ref": "#/$defs/root" }, { "type": "null" }] }
+  }
+}

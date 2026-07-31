@@ -303,6 +303,27 @@ test('open-card Work Design preflight is build-free on both shims', () => {
   );
 });
 
+test('Work Design outcome feedback and status are build-free on both shims', () => {
+  const posix = fs.readFileSync(path.join(ROOT, 'shifu'), 'utf8');
+  const windows = fs.readFileSync(path.join(ROOT, 'shifu.cmd'), 'utf8');
+  const readonly = fs.readFileSync(
+    path.join(ROOT, 'scripts/shifu-readonly-entry.mjs'),
+    'utf8',
+  );
+  for (const entrypoint of [posix, windows]) {
+    assert.match(entrypoint, /work-design:feedback/u);
+    assert.match(entrypoint, /shifu-readonly-entry\.mjs/u);
+  }
+  assert.match(
+    readonly,
+    /framework[\\/]work-design-policy-replay[\\/]tooling[\\/]check-work-design-policy-replay\.mjs/u,
+  );
+  assert.doesNotMatch(
+    readonly,
+    /fnm install|pnpm|\.buildchain[\\/]diagnostics/u,
+  );
+});
+
 test('Xinfa product tasks bypass unrelated Kungfu dependency caches', () => {
   const posix = fs.readFileSync(path.join(ROOT, 'shifu'), 'utf8');
   const windows = fs.readFileSync(path.join(ROOT, 'shifu.cmd'), 'utf8');
