@@ -518,6 +518,10 @@ test('portable-off qualification profiles cover every native Build lane', () => 
   assert.equal(buildWorkflow.split(`sha256:${sccacheDigest}`).length - 1, 1);
   assert.match(
     buildWorkflow,
+    /windows-compiler-cache-mode:[\s\S]*?options:\s*\n\s+- sccache\s*\n\s+- ["']off["']/u,
+  );
+  assert.match(
+    buildWorkflow,
     /compiler-cache-provider: \$\{\{ github\.event_name == 'workflow_dispatch' && inputs\.windows-compiler-cache-mode == 'off' && 'none' \|\| 'sccache' \}\}/u,
   );
   assert.match(

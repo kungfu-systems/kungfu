@@ -27,7 +27,7 @@ on:
         type: choice
         options:
           - sccache
-          - off
+          - "off"
         default: sccache
       run-kungfu-phase-b:
         description: "Qualify the Linux CLI package with the reviewed build-images Phase B consumer"
