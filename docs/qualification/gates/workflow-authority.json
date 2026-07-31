@@ -39,10 +39,10 @@
           "authority": "qualification",
           "publication": "none",
           "receipt": "diagnostic",
-          "definitionDigest": "sha256:6636bc04709fa719edf1b960b4a15a9f45e554cd2c0abf5bcf91520d6de1cc4c",
+          "definitionDigest": "sha256:1c6d78b6c0d40f2b7b7a860cbb5011b174fbe532d904688685a19644f2ba5a79",
           "credentials": {"githubToken":"read","oidc":false,"repositorySecrets":[],"inheritedSecrets":false,"environment":null},
           "externalActions": ["actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0","actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e","actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093"],
-          "steps": [{"index":1,"label":"name:Check out exact protected source","definitionDigest":"sha256:b44fd5f1596425c7504ed181b5cad26f973ef05e941802de191f7d0468e3a036"},{"index":2,"label":"uses:actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e","definitionDigest":"sha256:a869cc671103a9106dc90b4275a4148de9a5d18cd3578a2642d8ae8076d8dbf0"},{"index":3,"label":"name:Download exact promoted Windows transport","authority":"evidence-publication","definitionDigest":"sha256:a9b5d54e077b0ba7f5f8a3dfaf8bf4b87ad0b65e5e33ed8ec719969edce3529b"},{"index":4,"label":"name:Provision the repository-pinned Shifu toolchain","definitionDigest":"sha256:181996b872b998bd59d606e157c97bdfbbb9e3546f4550529c1d3498da99d35d"},{"index":5,"label":"name:Qualify remote and local-CAS consumer paths","definitionDigest":"sha256:733067b5d71b7f301ae242d1924ce2f6f4c27d9cfe9aaf945fe11f895ab45aa7"}]
+          "steps": [{"index":1,"label":"name:Check out exact protected source","definitionDigest":"sha256:b44fd5f1596425c7504ed181b5cad26f973ef05e941802de191f7d0468e3a036"},{"index":2,"label":"uses:actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e","definitionDigest":"sha256:a869cc671103a9106dc90b4275a4148de9a5d18cd3578a2642d8ae8076d8dbf0"},{"index":3,"label":"name:Download exact promoted Windows transport","authority":"evidence-publication","definitionDigest":"sha256:a9b5d54e077b0ba7f5f8a3dfaf8bf4b87ad0b65e5e33ed8ec719969edce3529b"},{"index":4,"label":"name:Provision the repository-pinned Shifu toolchain","definitionDigest":"sha256:181996b872b998bd59d606e157c97bdfbbb9e3546f4550529c1d3498da99d35d"},{"index":5,"label":"name:Qualify remote and local-CAS consumer paths","definitionDigest":"sha256:6df6bfa35b470701da8fc08721a833b12ca7c1c8ca3ccc2b58d51ede3b05691f"}]
         }
       ]
     },

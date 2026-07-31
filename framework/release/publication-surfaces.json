@@ -69,7 +69,7 @@
             "product-stable",
             "product-binaries"
           ],
-          "sourceRoot": "sha256:b99fbeb61e0d99e8116c48078e099867cbb80794331e387f16ace2fd02cf7ff6"
+          "sourceRoot": "sha256:2785e62e8d3fde69af50afb3f162b195cc335682dfdf0a39c6bfd5afa95bf7d8"
         },
         {
           "path": ".github/workflows/affected-native-pr.yml",

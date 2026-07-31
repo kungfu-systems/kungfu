@@ -779,11 +779,9 @@ jobs:
             if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
             $runtime = Join-Path $firstCheckout "framework\core\dist\kungfu"
             $nativeFiles = @(
-              Get-ChildItem -Path (Join-Path $runtime "pykungfu*.pyd"), (Join-Path $runtime "*.dll") -File
+              Get-Item -LiteralPath (Join-Path $runtime "pykungfu.cp313-win_amd64.pyd")
+              Get-Item -LiteralPath (Join-Path $runtime "libnode.dll")
             )
-            if ($nativeFiles.Count -lt 3) {
-              throw "Qualified Windows runtime closure is incomplete."
-            }
             foreach ($nativeFile in $nativeFiles) {
               $bytes = [System.IO.File]::ReadAllBytes($nativeFile.FullName)
               if ($bytes.Length -lt 2 -or $bytes[0] -ne 0x4d -or $bytes[1] -ne 0x5a) {

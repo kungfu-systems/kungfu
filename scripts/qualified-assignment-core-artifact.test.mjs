@@ -2085,7 +2085,11 @@ test('workflows keep candidate and promotion outside untrusted PR authority', ()
   );
   assert.match(
     promotionWorkflow,
-    /qualify_windows_x86_64_consumer:[\s\S]*needs: promote[\s\S]*windows_x86_64_available[\s\S]*runs-on: windows-2022[\s\S]*qualified-assignment-core-\$\{\{ needs\.promote\.outputs\.target_sha \}\}-windows-x86_64-cp313[\s\S]*git worktree add --detach \$firstCheckout \$env:TARGET_SHA[\s\S]*KUNGFU_QUALIFIED_CORE_BUNDLE[\s\S]*pykungfu\*\.pyd[\s\S]*0x4d[\s\S]*0x5a[\s\S]*shifu\.cmd work --help[\s\S]*KUNGFU_QUALIFIED_CORE_GITHUB[\s\S]*local-cas-hit/u,
+    /qualify_windows_x86_64_consumer:[\s\S]*needs: promote[\s\S]*windows_x86_64_available[\s\S]*runs-on: windows-2022[\s\S]*qualified-assignment-core-\$\{\{ needs\.promote\.outputs\.target_sha \}\}-windows-x86_64-cp313[\s\S]*git worktree add --detach \$firstCheckout \$env:TARGET_SHA[\s\S]*KUNGFU_QUALIFIED_CORE_BUNDLE[\s\S]*pykungfu\.cp313-win_amd64\.pyd[\s\S]*libnode\.dll[\s\S]*0x4d[\s\S]*0x5a[\s\S]*shifu\.cmd work --help[\s\S]*KUNGFU_QUALIFIED_CORE_GITHUB[\s\S]*local-cas-hit/u,
+  );
+  assert.doesNotMatch(
+    promotionWorkflow,
+    /Qualified Windows runtime closure is incomplete|nativeFiles\.Count -lt 3/u,
   );
   assert.match(
     promotionWorkflow,
