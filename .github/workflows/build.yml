@@ -53,6 +53,10 @@ on:
         required: false
         type: boolean
         default: false
+      auditable-demo-id:
+        description: "Exact checked-in auditable demo catalog id; defaults to the README-featured Agent Work Lab"
+        required: false
+        default: "agent-work-lab"
       macos-overflow-request-json:
         description: "Exact-source queue policy envelope; omitted for normal Build runs"
         required: false
@@ -449,12 +453,13 @@ jobs:
     permissions:
       actions: read
       contents: read
-    uses: kungfu-systems/buildchain/.github/workflows/.auditable-demo.yml@3272608ba28ef714fe710dd8da99d00fdeb4c619 # issue #2057 canonical qualified sentinel
+    uses: kungfu-systems/buildchain/.github/workflows/.auditable-demo.yml@d43e6574432bc0b1ae9d1d0557f8ccc4785fa2e4 # PR #2092 bounded multi-demo adapter argv
     with:
       source-ref: ${{ needs.build.outputs.publish-source-sha }}
       source-artifact-name: ${{ needs.resolve-auditable-demo-source.outputs.artifact-name }}
       source-artifact-digest: ${{ needs.resolve-auditable-demo-source.outputs.artifact-digest }}
       adapter-path: scripts/auditable-demo-adapter.py
+      adapter-arguments-json: ${{ format('["--demo-id",{0}]', toJSON(inputs.auditable-demo-id || 'agent-work-lab')) }}
       renderer-image: ghcr.io/kungfu-systems/build-images/demo-renderer@sha256:06141e3d01a13e6d44766d3acc115ca07c58443f59840f313ecd938b2b0c138c
       render-media: ${{ (github.event_name == 'workflow_dispatch' && inputs.render-auditable-demo) || (github.event_name == 'pull_request' && startsWith(github.base_ref, 'alpha/')) }}
       artifact-retention-days: 14
@@ -584,7 +589,8 @@ jobs:
           MEDIA_ARTIFACT_URL: ${{ needs.auditable-demo.outputs.media-artifact-url }}
           MEDIA_ARTIFACT_EXPIRES_AT: ${{ steps.artifact-expiry.outputs.media-artifact-expires-at }}
           MEDIA_ROOT: ${{ needs.auditable-demo.outputs.media-root }}
-          BUILDCHAIN_SHA: 3272608ba28ef714fe710dd8da99d00fdeb4c619
+          AUDITABLE_DEMO_ID: ${{ inputs.auditable-demo-id || 'agent-work-lab' }}
+          BUILDCHAIN_SHA: d43e6574432bc0b1ae9d1d0557f8ccc4785fa2e4
           RENDERER_IMAGE: ghcr.io/kungfu-systems/build-images/demo-renderer@sha256:06141e3d01a13e6d44766d3acc115ca07c58443f59840f313ecd938b2b0c138c
         run: ./shifu node scripts/auditable-demo-passport.mjs write --output auditable-demo-release-passport.json
 

@@ -274,16 +274,16 @@
     {
       "path": ".github/workflows/build.yml",
       "authority": "product-publication",
-      "definitionDigest": "sha256:5b86c66ec0daf93dfc247010ca7aad8b458413a5d04a4dc429a0dfe6f78c108b",
+      "definitionDigest": "sha256:402aca91eeeb6e2059dc9360e5e4ffc3ad72f6d765eb814d390645600fb8ea8a",
       "jobs": [
         {
           "id": "auditable-demo",
           "authority": "qualification",
           "publication": "none",
           "receipt": "qualifying",
-          "definitionDigest": "sha256:d2837a97186272d1e630e8e60ef3677d9c2c86d57c82f2a027a69af427a17764",
+          "definitionDigest": "sha256:b8a65e72d4aa794dd8dd4f30983dc187603fbf76e9146672bb82e1168cc8cdf9",
           "credentials": {"githubToken":"read","oidc":false,"repositorySecrets":[],"inheritedSecrets":false,"environment":null},
-          "externalActions": ["kungfu-systems/buildchain/.github/workflows/.auditable-demo.yml@3272608ba28ef714fe710dd8da99d00fdeb4c619"],
+          "externalActions": ["kungfu-systems/buildchain/.github/workflows/.auditable-demo.yml@d43e6574432bc0b1ae9d1d0557f8ccc4785fa2e4"],
           "steps": []
         },
         {
@@ -301,10 +301,10 @@
           "authority": "qualification",
           "publication": "none",
           "receipt": "qualifying",
-          "definitionDigest": "sha256:0c6dcd35823b210212cecb4101d266ec544d610b27038c271c20edd207bb37d6",
+          "definitionDigest": "sha256:400c902a71e2c6af782afb7ef4629b51c83f3127b2221a34a0df51d3a4ca136a",
           "credentials": {"githubToken":"read","oidc":false,"repositorySecrets":[],"inheritedSecrets":false,"environment":null},
           "externalActions": ["actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0","actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd","actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a"],
-          "steps": [{"index":1,"label":"name:Check out exact qualified source","definitionDigest":"sha256:29b1db9963a2029aabffae82fe0ec406fa6ec8d3a522d80493e9e84be9967dbe"},{"index":2,"label":"id:artifact-expiry","definitionDigest":"sha256:b63afe1390635ea616d7c2a9ccc69bfb49f5b8d2ee193c8b8df61800eaad0591"},{"index":3,"label":"name:Write exact auditable demo Release Passport","authority":"evidence-publication","definitionDigest":"sha256:a47c75038305c63d534dcea5c9957d3dc3ba971a3aa3e900be7a094955baca45"},{"index":4,"label":"name:Upload exact auditable demo Release Passport","authority":"evidence-publication","definitionDigest":"sha256:026dc02ae0372598499bba6aa300fe2c537f6ca694ae3b7d4719a91ca6e4780a"}]
+          "steps": [{"index":1,"label":"name:Check out exact qualified source","definitionDigest":"sha256:29b1db9963a2029aabffae82fe0ec406fa6ec8d3a522d80493e9e84be9967dbe"},{"index":2,"label":"id:artifact-expiry","definitionDigest":"sha256:b63afe1390635ea616d7c2a9ccc69bfb49f5b8d2ee193c8b8df61800eaad0591"},{"index":3,"label":"name:Write exact auditable demo Release Passport","authority":"evidence-publication","definitionDigest":"sha256:7f1735e11f7350745037a40e154b75f86e3c74f3250d333ed7f7e5a2cf725b74"},{"index":4,"label":"name:Upload exact auditable demo Release Passport","authority":"evidence-publication","definitionDigest":"sha256:026dc02ae0372598499bba6aa300fe2c537f6ca694ae3b7d4719a91ca6e4780a"}]
         },
         {
           "id": "build",

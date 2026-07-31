@@ -37,14 +37,14 @@ MAX_EXTRACTED_BYTES = 4 * 1024 * 1024 * 1024
 MAX_MEMBERS = 100_000
 EPISODE_RELEASE_EVIDENCE = "qualification/episode-release-evidence.json"
 PULL_MERGE_REF = re.compile(r"^refs/pull/[1-9][0-9]*/merge$")
-COMPLETION_SENTINEL = re.compile(r"KUNGFU_TUI_DEMO_COMPLETE ([^\r\n]+)")
-TERMINAL_COLUMNS = 150
-TERMINAL_ROWS = 36
-TERMINAL_TIMEOUT_SECONDS = 60
 TERMINAL_EVENT_QUANTUM_MS = 20
 MAX_TERMINAL_BYTES = 4 * 1024 * 1024
 MAX_TERMINAL_EVENTS = 10_000
 MAX_FAILURE_EXCERPT_CHARS = 4_096
+CATALOG_MODULE = (
+    Path(__file__).parent.parent / "framework" / "auditable-demo" / "catalog.mjs"
+)
+DEFAULT_CATALOG = CATALOG_MODULE.with_suffix(".json")
 ANSI_OSC = re.compile(r"\x1b\].*?(?:\x07|\x1b\\)", re.DOTALL)
 ANSI_CSI = re.compile(r"\x1b\[[0-?]*[ -/]*[@-~]")
 ANSI_ESCAPE = re.compile(r"\x1b[@-_]")
@@ -576,6 +576,56 @@ def isolated_environment(home: Path) -> dict[str, str]:
     }
 
 
+def resolve_demo_selection(catalog: Path, demo_id: str | None) -> dict[str, Any]:
+    command = [
+        "node",
+        str(CATALOG_MODULE),
+        "resolve",
+        "--catalog",
+        str(catalog),
+    ]
+    if demo_id:
+        command.extend(["--demo-id", demo_id])
+    result = subprocess.run(
+        command,
+        check=False,
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        timeout=10,
+    )
+    if result.returncode != 0:
+        detail = result.stderr.strip() or f"exit status {result.returncode}"
+        fail(f"demo catalog resolution failed: {detail}")
+    try:
+        selection = json.loads(result.stdout)
+    except json.JSONDecodeError as error:
+        fail(f"demo catalog resolver returned invalid JSON: {error}")
+    if not isinstance(selection, dict):
+        fail("demo catalog resolver returned a non-object selection")
+    exact_keys(
+        selection,
+        {
+            "schema",
+            "catalogPath",
+            "catalogRoot",
+            "descriptorRoot",
+            "defaultDemoId",
+            "demo",
+        },
+        set(),
+        "demo selection",
+    )
+    if (
+        selection["schema"] != "kungfu.auditable-demo.selection/v1"
+        or not SHA256.fullmatch(str(selection["catalogRoot"]))
+        or not SHA256.fullmatch(str(selection["descriptorRoot"]))
+        or not isinstance(selection["demo"], dict)
+    ):
+        fail("demo catalog resolver returned an invalid selection")
+    return selection
+
+
 def terminate_process_group(process: subprocess.Popen[bytes]) -> None:
     if process.poll() is not None:
         return
@@ -588,35 +638,39 @@ def terminate_process_group(process: subprocess.Popen[bytes]) -> None:
             process.wait(timeout=2)
 
 
-def validate_completion(decoded: str) -> dict[str, Any]:
-    matches = COMPLETION_SENTINEL.findall(decoded)
+def validate_completion(decoded: str, demo: dict[str, Any]) -> dict[str, Any]:
+    completion_contract = demo["completion"]
+    sentinel = re.compile(re.escape(completion_contract["sentinel"]) + r"([^\r\n]+)")
+    matches = sentinel.findall(decoded)
     if len(matches) != 1:
         fail(
-            "installed kungfu autoplay must emit exactly one "
-            "KUNGFU_TUI_DEMO_COMPLETE sentinel"
+            "installed kungfu demo must emit exactly one declared "
+            f"{completion_contract['sentinel'].strip()} sentinel"
         )
     try:
         completion = json.loads(matches[0])
     except json.JSONDecodeError as error:
-        fail(f"installed kungfu autoplay completion sentinel is invalid JSON: {error}")
+        fail(f"installed kungfu demo completion sentinel is invalid JSON: {error}")
     if not isinstance(completion, dict):
-        fail("installed kungfu autoplay completion sentinel must be an object")
+        fail("installed kungfu demo completion sentinel must be an object")
+    digest_field = completion_contract["digestField"]
+    count_field = completion_contract["countField"]
     exact_keys(
         completion,
-        {"schema", "status", "reportRoot", "eventCount"},
+        {"schema", "status", digest_field, count_field},
         set(),
         "completion sentinel",
     )
     if (
-        completion["schema"] != "kungfu.agent-work-lab.tui-autoplay/v1"
-        or completion["status"] != "qualified"
-        or not SHA256.fullmatch(str(completion["reportRoot"]))
-        or not isinstance(completion["eventCount"], int)
-        or isinstance(completion["eventCount"], bool)
-        or completion["eventCount"] < 1
-        or completion["eventCount"] > 100_000
+        completion["schema"] != completion_contract["schema"]
+        or completion["status"] != completion_contract["status"]
+        or not SHA256.fullmatch(str(completion[digest_field]))
+        or not isinstance(completion[count_field], int)
+        or isinstance(completion[count_field], bool)
+        or completion[count_field] < 1
+        or completion[count_field] > 100_000
     ):
-        fail("installed kungfu autoplay completion sentinel did not pass")
+        fail("installed kungfu demo completion sentinel did not pass")
     return completion
 
 
@@ -642,13 +696,19 @@ def read_pty_chunk(
         raise
 
 
-def run_autoplay(launcher: Path, home: Path) -> tuple[dict[str, Any], bytes, int]:
+def run_demo(
+    launcher: Path, home: Path, demo: dict[str, Any]
+) -> tuple[dict[str, Any], bytes, int]:
     environment = isolated_environment(home)
+    terminal = demo["terminal"]
+    terminal_columns = terminal["columns"]
+    terminal_rows = terminal["rows"]
+    terminal_timeout_seconds = terminal["timeoutSeconds"]
     master_fd, slave_fd = pty.openpty()
     fcntl.ioctl(
         slave_fd,
         termios.TIOCSWINSZ,
-        struct.pack("HHHH", TERMINAL_ROWS, TERMINAL_COLUMNS, 0, 0),
+        struct.pack("HHHH", terminal_rows, terminal_columns, 0, 0),
     )
     process: subprocess.Popen[bytes] | None = None
     raw = bytearray()
@@ -658,7 +718,7 @@ def run_autoplay(launcher: Path, home: Path) -> tuple[dict[str, Any], bytes, int
     timed_out = False
     try:
         process = subprocess.Popen(
-            [str(launcher), "agent-work-lab", "autoplay"],
+            [str(launcher), *demo["argv"]],
             cwd=home,
             env=environment,
             stdin=slave_fd,
@@ -671,7 +731,7 @@ def run_autoplay(launcher: Path, home: Path) -> tuple[dict[str, Any], bytes, int
         slave_fd = -1
         while True:
             now = time.monotonic()
-            if now - started_at > TERMINAL_TIMEOUT_SECONDS:
+            if now - started_at > terminal_timeout_seconds:
                 timed_out = True
                 terminate_process_group(process)
                 break
@@ -685,7 +745,7 @@ def run_autoplay(launcher: Path, home: Path) -> tuple[dict[str, Any], bytes, int
                 raw.extend(chunk)
                 if len(raw) > MAX_TERMINAL_BYTES:
                     terminate_process_group(process)
-                    fail("installed kungfu autoplay exceeded the 4 MiB capture bound")
+                    fail("installed kungfu demo exceeded the 4 MiB capture bound")
                 observed_ms = max(
                     0,
                     int((time.monotonic() - first_output_at) * 1000),
@@ -703,16 +763,11 @@ def run_autoplay(launcher: Path, home: Path) -> tuple[dict[str, Any], bytes, int
                     events.append({"atMs": at_ms, "data": encoded})
                 if len(events) > MAX_TERMINAL_EVENTS:
                     terminate_process_group(process)
-                    fail(
-                        "installed kungfu autoplay exceeded the 10000-event "
-                        "capture bound"
-                    )
+                    fail("installed kungfu demo exceeded the 10000-event capture bound")
             if process.poll() is not None and not readable:
                 break
         if timed_out:
-            fail(
-                f"installed kungfu autoplay exceeded {TERMINAL_TIMEOUT_SECONDS} seconds"
-            )
+            fail(f"installed kungfu demo exceeded {terminal_timeout_seconds} seconds")
         exit_code = process.wait(timeout=2)
     finally:
         if process is not None:
@@ -721,10 +776,10 @@ def run_autoplay(launcher: Path, home: Path) -> tuple[dict[str, Any], bytes, int
             os.close(slave_fd)
         os.close(master_fd)
     if not events:
-        fail("installed kungfu autoplay produced no PTY output")
+        fail("installed kungfu demo produced no PTY output")
     decoded = safe_terminal_output(bytes(raw))
     try:
-        completion = validate_completion(decoded)
+        completion = validate_completion(decoded, demo)
     except AdapterError as error:
         excerpt = terminal_failure_excerpt(decoded)
         fail(
@@ -732,20 +787,20 @@ def run_autoplay(launcher: Path, home: Path) -> tuple[dict[str, Any], bytes, int
             f"sanitized PTY tail={json.dumps(excerpt, ensure_ascii=True)}"
         )
     if exit_code != 0:
-        fail(f"installed kungfu autoplay failed with exit status {exit_code}")
+        fail(f"installed kungfu demo failed with exit status {exit_code}")
     last_event_ms = events[-1]["atMs"]
-    if last_event_ms >= TERMINAL_TIMEOUT_SECONDS * 1000:
-        fail("installed kungfu autoplay capture reached the terminal time bound")
+    if last_event_ms >= terminal_timeout_seconds * 1000:
+        fail("installed kungfu demo capture reached the terminal time bound")
     duration_ms = min(
-        60_000,
+        terminal_timeout_seconds * 1000,
         max(500, ((last_event_ms + 500 + 999) // 1000) * 1000),
     )
     capture = {
         "schema": "kungfu.terminal-capture/v1",
-        "command": "kungfu agent-work-lab autoplay",
+        "command": demo["commandLabel"],
         "dimensions": {
-            "columns": TERMINAL_COLUMNS,
-            "rows": TERMINAL_ROWS,
+            "columns": terminal_columns,
+            "rows": terminal_rows,
         },
         "durationMs": duration_ms,
         "encoding": "base64",
@@ -779,6 +834,7 @@ def transcript_lines(
     terminal_output: str,
     capture: dict[str, Any],
     exit_code: int,
+    demo: dict[str, Any],
 ) -> list[str]:
     visible = ANSI_OSC.sub("", terminal_output)
     visible = ANSI_CSI.sub("", visible)
@@ -790,7 +846,7 @@ def transcript_lines(
         if character in "\n\t" or ord(character) >= 0x20
     )
     lines = [
-        "$ kungfu agent-work-lab autoplay",
+        f"$ {demo['commandLabel']}",
         f"artifact.repository={coordinate['repository']}",
         f"artifact.run_id={coordinate['runId']}",
         f"artifact.name={coordinate['name']}",
@@ -805,7 +861,10 @@ def transcript_lines(
         f"pty.rows={capture['dimensions']['rows']}",
         f"pty.event_count={len(capture['events'])}",
         f"pty.duration_ms={capture['durationMs']}",
-        f"autoplay.report_root={capture['completion']['reportRoot']}",
+        (
+            "completion.digest="
+            f"{capture['completion'][demo['completion']['digestField']]}"
+        ),
         "authority.classification=volatile-terminal-observation",
         "authority.grants=none",
         "--- PTY stream (complete UTF-8; terminal controls removed) ---",
@@ -816,10 +875,13 @@ def transcript_lines(
 
 
 def build_projection(
-    lines: list[str], capture: dict[str, Any], exit_code: int
+    lines: list[str],
+    capture: dict[str, Any],
+    exit_code: int,
+    demo: dict[str, Any],
 ) -> dict[str, Any]:
     if exit_code != 0:
-        fail(f"installed kungfu autoplay failed with exit status {exit_code}")
+        fail(f"installed kungfu demo failed with exit status {exit_code}")
     identity_end = 18
     output_start = 20
     exit_line = len(lines)
@@ -835,15 +897,8 @@ def build_projection(
     second_boundary = max(first_boundary + 1, (duration_ms * 2) // 3)
     return {
         "schema": "build-images.demo-projection/v1",
-        "evidenceClass": "exact-installed-artifact-agent-work-lab-autoplay/v1",
-        "claimBoundary": (
-            "This proves one exact retained Linux x64 artifact completed the "
-            "bundled offline Agent Work Lab autoplay inside a bounded, "
-            "credential-free PTY. Terminal bytes are observation only and "
-            "grant no authority. It does not prove hosted provider behavior, "
-            "general production continuity, signed macOS behavior, "
-            "performance, FO10, or production deployment."
-        ),
+        "evidenceClass": demo["evidenceClass"],
+        "claimBoundary": demo["claimBoundary"],
         "cues": [
             {
                 "startMs": 0,
@@ -878,6 +933,7 @@ def write_outputs(
     lines: list[str],
     projection: dict[str, Any],
     capture: dict[str, Any],
+    demo: dict[str, Any],
 ) -> None:
     if output.exists() and (not output.is_dir() or any(output.iterdir())):
         fail("adapter output must be an empty directory")
@@ -893,20 +949,28 @@ def write_outputs(
     )
     scene = {
         "schema": "build-images.demo-scene/v1",
-        "id": "kungfu-agent-work-lab-autoplay",
-        "width": 1280,
-        "height": 720,
-        "fps": 15,
+        "id": demo["scene"]["id"],
+        "width": demo["scene"]["width"],
+        "height": demo["scene"]["height"],
+        "fps": demo["scene"]["fps"],
         "durationMs": capture["durationMs"],
-        "title": "Kungfu Agent Work Lab — exact installed artifact",
-        "commandLabel": "kungfu agent-work-lab autoplay",
-        "background": "#0B1020",
-        "accent": "#67E8A5",
+        "title": demo["scene"]["title"],
+        "commandLabel": demo["commandLabel"],
+        "background": demo["scene"]["background"],
+        "accent": demo["scene"]["accent"],
     }
     (output / "scene.json").write_text(stable_json(scene), encoding="utf-8")
 
 
-def adapt(artifact_root: Path, output: Path, source_coordinate: Path) -> None:
+def adapt(
+    artifact_root: Path,
+    output: Path,
+    source_coordinate: Path,
+    catalog: Path = DEFAULT_CATALOG,
+    demo_id: str | None = None,
+) -> None:
+    selection = resolve_demo_selection(catalog, demo_id)
+    demo = selection["demo"]
     coordinate = validate_coordinate(source_coordinate)
     release_root = find_release_root(artifact_root)
     qualified_source = qualified_source_revision(release_root, coordinate["sourceSha"])
@@ -927,8 +991,8 @@ def adapt(artifact_root: Path, output: Path, source_coordinate: Path) -> None:
             installed, archive, qualified_source
         )
         executable_digest = sha256_file(launcher)
-        capture, raw_terminal_output, exit_code = run_autoplay(
-            launcher, temporary_root / "home"
+        capture, raw_terminal_output, exit_code = run_demo(
+            launcher, temporary_root / "home", demo
         )
         terminal_output = safe_terminal_output(raw_terminal_output)
         lines = transcript_lines(
@@ -939,12 +1003,14 @@ def adapt(artifact_root: Path, output: Path, source_coordinate: Path) -> None:
             terminal_output=terminal_output,
             capture=capture,
             exit_code=exit_code,
+            demo=demo,
         )
         write_outputs(
             output,
             lines,
-            build_projection(lines, capture, exit_code),
+            build_projection(lines, capture, exit_code, demo),
             capture,
+            demo,
         )
 
 
@@ -953,6 +1019,8 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--artifact-root", type=Path, required=True)
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--source-coordinate", type=Path, required=True)
+    parser.add_argument("--demo-catalog", type=Path, default=DEFAULT_CATALOG)
+    parser.add_argument("--demo-id")
     return parser.parse_args()
 
 
@@ -963,6 +1031,8 @@ def main() -> None:
             args.artifact_root.resolve(),
             args.output.resolve(),
             args.source_coordinate.resolve(),
+            args.demo_catalog.resolve(),
+            args.demo_id,
         )
     except (AdapterError, OSError, subprocess.SubprocessError) as error:
         raise SystemExit(f"auditable demo adapter: {error}") from error

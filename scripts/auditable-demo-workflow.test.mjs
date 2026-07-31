@@ -245,6 +245,18 @@ test('Gate runtime and renderer are immutable and Passport uses the same runtime
     ({ name }) => name === 'Write exact auditable demo Release Passport',
   );
   const expiryStep = passport.steps.find(({ id }) => id === 'artifact-expiry');
+  assert.equal(
+    WORKFLOW.on.workflow_dispatch.inputs['auditable-demo-id'].default,
+    'agent-work-lab',
+  );
+  assert.equal(
+    gate.with['adapter-arguments-json'],
+    "${{ format('[\"--demo-id\",{0}]', toJSON(inputs.auditable-demo-id || 'agent-work-lab')) }}",
+  );
+  assert.equal(
+    passportStep.env.AUDITABLE_DEMO_ID,
+    "${{ inputs.auditable-demo-id || 'agent-work-lab' }}",
+  );
   assert.equal(passportStep.env.BUILDCHAIN_SHA, runtime[1]);
   assert.equal(passportStep.env.RENDERER_IMAGE, gate.with['renderer-image']);
   assert.equal(passport.permissions.actions, 'read');

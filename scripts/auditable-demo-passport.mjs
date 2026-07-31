@@ -6,6 +6,11 @@ import path from 'node:path';
 import process from 'node:process';
 import { pathToFileURL } from 'node:url';
 
+import {
+  DEFAULT_CATALOG_PATH,
+  loadAuditableDemo,
+} from '../framework/auditable-demo/catalog.mjs';
+
 const SHA_PATTERN = /^[0-9a-f]{40}$/u;
 const DIGEST_PATTERN = /^sha256:[0-9a-f]{64}$/u;
 const ID_PATTERN = /^[1-9][0-9]*$/u;
@@ -13,7 +18,8 @@ const ARTIFACT_NAME_PATTERN = /^[A-Za-z0-9][A-Za-z0-9._-]{0,255}$/u;
 const REPOSITORY_PATTERN = /^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/u;
 const RENDERER_PATTERN =
   /^[a-z0-9][a-z0-9./_-]*@[sS][hH][aA]256:[0-9a-f]{64}$/u;
-const EVIDENCE_CLASS = 'exact-installed-artifact-agent-work-lab-autoplay/v1';
+const DEMO_ID_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/u;
+const EVIDENCE_CLASS_PATTERN = /^[a-z0-9][a-z0-9._/-]*\/v[1-9][0-9]*$/u;
 const REQUIRED_AUTHORIZATION_SOURCES = [
   'exact-release-passport',
   'core-policy',
@@ -127,7 +133,15 @@ function exactRoot(env, name, requiredRoot = true) {
   return value;
 }
 
-export function buildPassport(env = process.env) {
+export function buildPassport(
+  env = process.env,
+  {
+    catalogPath = DEFAULT_CATALOG_PATH,
+    demoId = env.AUDITABLE_DEMO_ID || '',
+  } = {},
+) {
+  const selection = loadAuditableDemo({ catalogPath, demoId });
+  const demo = selection.demo;
   const repository = required(
     env,
     'GITHUB_REPOSITORY',
@@ -187,8 +201,17 @@ export function buildPassport(env = process.env) {
   const workflowUrl = `https://github.com/${repository}/actions/runs/${runId}`;
 
   const payload = {
-    schema: 'kungfu.auditable-demo.release-passport/v1',
+    schema: 'kungfu.auditable-demo.release-passport/v2',
     status: 'qualified',
+    demo: {
+      id: demo.id,
+      catalogRoot: selection.catalogRoot,
+      descriptorRoot: selection.descriptorRoot,
+      commandLabel: demo.commandLabel,
+      evidenceClass: demo.evidenceClass,
+      sceneId: demo.scene.id,
+      publication: demo.publication,
+    },
     source: {
       repository,
       sha: sourceSha,
@@ -221,7 +244,7 @@ export function buildPassport(env = process.env) {
       rendererImage,
     },
     authority: {
-      evidenceClass: EVIDENCE_CLASS,
+      evidenceClass: demo.evidenceClass,
       publication: 'github-artifacts-only',
       productionDeployment: false,
       authorization: {
@@ -229,22 +252,8 @@ export function buildPassport(env = process.env) {
         requiredSources: REQUIRED_AUTHORIZATION_SOURCES,
         nonAuthorities: NON_AUTHORITIES,
       },
-      claims: [
-        'The exact retained Linux artifact executed its installed kungfu agent-work-lab autoplay command in a bounded PTY.',
-        'The autoplay completion sentinel passed with exit status zero.',
-        'The exact terminal capture, transcript, public projection, and scene passed the Buildchain Gate and bound the rendered media.',
-      ],
-      nonClaims: [
-        'cross-run continuity',
-        'provider migration',
-        'macOS execution',
-        'durability',
-        'performance',
-        'FO10',
-        'authorization from first-party or System identity',
-        'authorization from KFD compliance or Product System metadata',
-        'authorization from local bundle presence, package metadata, registry history, scan output, or standalone generation',
-      ],
+      claims: demo.claims,
+      nonClaims: demo.nonClaims,
     },
   };
   const payloadText = stableJson(payload);
@@ -261,7 +270,7 @@ export function buildPassport(env = process.env) {
 export function verifyPassport(passport) {
   if (
     !passport ||
-    passport.schema !== 'kungfu.auditable-demo.release-passport/v1' ||
+    passport.schema !== 'kungfu.auditable-demo.release-passport/v2' ||
     passport.status !== 'qualified' ||
     !passport.root ||
     passport.root.algorithm !== 'sha256' ||
@@ -275,7 +284,17 @@ export function verifyPassport(passport) {
     fail('document root does not match the canonical payload');
   }
   if (
-    passport.authority?.evidenceClass !== EVIDENCE_CLASS ||
+    !passport.demo ||
+    !DEMO_ID_PATTERN.test(passport.demo.id || '') ||
+    !DIGEST_PATTERN.test(passport.demo.catalogRoot || '') ||
+    !DIGEST_PATTERN.test(passport.demo.descriptorRoot || '') ||
+    typeof passport.demo.commandLabel !== 'string' ||
+    !passport.demo.commandLabel.startsWith('kungfu ') ||
+    passport.demo.evidenceClass !== passport.authority?.evidenceClass ||
+    !DEMO_ID_PATTERN.test(passport.demo.sceneId || '') ||
+    typeof passport.demo.publication?.readmeFeatured !== 'boolean' ||
+    !DEMO_ID_PATTERN.test(passport.demo.publication?.siteSlug || '') ||
+    !EVIDENCE_CLASS_PATTERN.test(passport.authority?.evidenceClass || '') ||
     passport.authority?.publication !== 'github-artifacts-only' ||
     passport.authority?.productionDeployment !== false ||
     passport.authority?.authorization?.status !== 'not-granted-by-demo' ||
