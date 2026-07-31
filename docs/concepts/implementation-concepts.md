@@ -75,7 +75,7 @@ These appear in the control-axis ADRs (0003–0005) and in the code.
 | **reactor** | The reactive **engine core** (`runtime::live::reactor`): a participant on the journal bus that drives a single-threaded event loop and exposes journal events as an RxCpp observable stream. It is the base of the live runtime layer. |
 | **peer** | A `reactor` specialized as a **client/peer** (`peer : public reactor`): the typical participant that attaches to the bus to consume and produce events. |
 | **watcher** | The **Node (N-API) binding** (`Watcher : public peer`): it consumes the journal/state and exposes it to JavaScript for the reference UIs. |
-| **event loop** | The **Python event-loop integration** (`LiveEventLoop`): fuses the engine loop with Python `asyncio` on a single thread — see [KF-ADR-019f86da-4f90-7a30-8697-5c648120053d](../adr/KF-ADR-019f86da-4f90-7a30-8697-5c648120053d.md). |
+| **asyncio bridge** | `JournalAsyncioBridge` coordinates reactor steps with a standard CPython asyncio loop through public APIs while keeping journal/replay time distinct from asyncio monotonic time. Process-isolated Python KFX services use the standard loop directly — see [KF-ADR-019fb64f-ba63-7620-a384-063adec7af2f](../adr/KF-ADR-019fb64f-ba63-7620-a384-063adec7af2f.md). |
 
 ## Layers (in brief)
 
