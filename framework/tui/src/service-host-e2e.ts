@@ -11,6 +11,7 @@ const root = (value: string) => `sha256:${value.padEnd(64, value[0] ?? '0')}`;
 
 function authorization(
   runtimeTier: ServiceAuthorization['runtimeTier'],
+  grantedCapabilities: string[] = ['ledger'],
 ): ServiceAuthorization {
   return {
     schema: 'kungfu.kfx.host-authorization/v2',
@@ -23,7 +24,7 @@ function authorization(
     admissionGrade: 'kfd-attested',
     placement: runtimeTier === 'isolated' ? 'service-node' : 'gui',
     requiredCapabilities: ['ledger'],
-    grantedCapabilities: ['ledger'],
+    grantedCapabilities,
     reportRoot: root('5'),
     admissionPlanRoot: root('6'),
     corePolicyRoot: root('7'),
@@ -48,6 +49,17 @@ if (
   isolated.profile.denyNetwork !== true
 ) {
   throw new Error('identity-neutral isolated placement did not fail closed');
+}
+
+const networked = resolveServiceLanding(
+  authorization('isolated', ['ledger', 'network']),
+);
+if (
+  networked.tier !== 'sandbox' ||
+  networked.profile.denyNetwork !== false ||
+  networked.networkConsent !== true
+) {
+  throw new Error('exact network grant did not open the isolated profile');
 }
 
 const integrated = resolveServiceLanding(authorization('integrated-explicit'));

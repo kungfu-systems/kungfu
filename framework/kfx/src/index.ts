@@ -140,6 +140,11 @@ export type KfxCapabilities = {
 };
 
 export type KfxCapabilityKey = keyof KfxCapabilities;
+export type KfxServiceCapabilityKey =
+  | KfxCapabilityKey
+  | 'journal.read.batch'
+  | 'network'
+  | 'process';
 
 // ── manifest data (`kungfu.kfx.json`) ─────────────────────────────────────
 
@@ -264,7 +269,7 @@ export type KfxServiceDecl = {
   entry: { python?: string; node?: string; cpp?: KfxServiceCppEntry };
   // kungfu relay capabilities the service needs; undeclared stay absent — the
   // same permission seam a view's `capabilities` is
-  capabilities: KfxCapabilityKey[];
+  capabilities: KfxServiceCapabilityKey[];
 };
 
 // `kungfuConfig.suite` — a suite groups related kfx for distribution and
@@ -427,7 +432,7 @@ export type KfxPlanEntry = {
 export type KfxServicePlanEntry = {
   id: string;
   facet: 'service';
-  capabilities: KfxCapabilityKey[];
+  capabilities: KfxServiceCapabilityKey[];
   product: KfxProductDecl;
   executionAllowed: boolean;
   authorizationRoot: string | null;
@@ -1165,7 +1170,7 @@ export function planKfx(
                   node?: string;
                   cpp?: KfxServiceCppEntry;
                 };
-                capabilities?: KfxCapabilityKey[];
+                capabilities?: KfxServiceCapabilityKey[];
               };
             };
           };
