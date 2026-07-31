@@ -252,6 +252,9 @@ Napi::Value Watcher::RequestReadFromPublic(const Napi::CallbackInfo &info) {
   if (not is_live()) {
     return Napi::Boolean::New(info.Env(), false);
   }
+  if (not has_writer(get_coordinator_command_uid())) {
+    return Napi::Boolean::New(info.Env(), false);
+  }
   auto source_location = IODevice::ExtractLocation(info, 0, get_locator());
   auto from_time = GetBigInt(info, 1);
   request_read_from_public(now(), source_location->uid, from_time);
