@@ -108,6 +108,7 @@ function validateDemo(value, index) {
       'terminal',
       'completion',
       'scene',
+      'renditions',
       'publication',
       'claimBoundary',
       'claims',
@@ -217,6 +218,123 @@ function validateDemo(value, index) {
       7,
     ),
   };
+  if (!Array.isArray(value.renditions) || value.renditions.length !== 2) {
+    fail(
+      `${label}.renditions must declare exactly primary and responsive captures`,
+    );
+  }
+  const renditions = value.renditions.map((rendition, renditionIndex) => {
+    const renditionLabel = `${label}.renditions[${renditionIndex}]`;
+    exactKeys(
+      rendition,
+      ['id', 'role', 'terminal', 'scene'],
+      [],
+      renditionLabel,
+    );
+    const renditionId = string(
+      rendition.id,
+      ID_PATTERN,
+      `${renditionLabel}.id`,
+      32,
+    );
+    if (!['primary', 'responsive'].includes(rendition.role)) {
+      fail(`${renditionLabel}.role is unsupported`);
+    }
+    exactKeys(
+      rendition.terminal,
+      ['columns', 'rows', 'timeoutSeconds'],
+      [],
+      `${renditionLabel}.terminal`,
+    );
+    const renditionTerminal = {
+      columns: integer(
+        rendition.terminal.columns,
+        40,
+        240,
+        `${renditionLabel}.terminal.columns`,
+      ),
+      rows: integer(
+        rendition.terminal.rows,
+        12,
+        80,
+        `${renditionLabel}.terminal.rows`,
+      ),
+      timeoutSeconds: integer(
+        rendition.terminal.timeoutSeconds,
+        1,
+        60,
+        `${renditionLabel}.terminal.timeoutSeconds`,
+      ),
+    };
+    exactKeys(
+      rendition.scene,
+      ['id', 'width', 'height', 'fps', 'title', 'background', 'accent'],
+      [],
+      `${renditionLabel}.scene`,
+    );
+    const renditionScene = {
+      id: string(
+        rendition.scene.id,
+        ID_PATTERN,
+        `${renditionLabel}.scene.id`,
+        128,
+      ),
+      width: integer(
+        rendition.scene.width,
+        320,
+        3840,
+        `${renditionLabel}.scene.width`,
+      ),
+      height: integer(
+        rendition.scene.height,
+        240,
+        2160,
+        `${renditionLabel}.scene.height`,
+      ),
+      fps: integer(rendition.scene.fps, 1, 60, `${renditionLabel}.scene.fps`),
+      title: string(
+        rendition.scene.title,
+        null,
+        `${renditionLabel}.scene.title`,
+        256,
+      ),
+      background: string(
+        rendition.scene.background,
+        /^#[0-9A-Fa-f]{6}$/u,
+        `${renditionLabel}.scene.background`,
+        7,
+      ),
+      accent: string(
+        rendition.scene.accent,
+        /^#[0-9A-Fa-f]{6}$/u,
+        `${renditionLabel}.scene.accent`,
+        7,
+      ),
+    };
+    return {
+      id: renditionId,
+      role: rendition.role,
+      terminal: renditionTerminal,
+      scene: renditionScene,
+    };
+  });
+  if (
+    JSON.stringify(renditions.map(({ id, role }) => ({ id, role }))) !==
+      JSON.stringify([
+        { id: '1080p', role: 'primary' },
+        { id: '720p', role: 'responsive' },
+      ]) ||
+    JSON.stringify(renditions[0].terminal) !== JSON.stringify(terminal) ||
+    JSON.stringify(renditions[0].scene) !== JSON.stringify(scene) ||
+    renditions[0].scene.width !== 1920 ||
+    renditions[0].scene.height !== 1080 ||
+    renditions[1].scene.width !== 1280 ||
+    renditions[1].scene.height !== 720 ||
+    JSON.stringify(renditions[0].terminal) ===
+      JSON.stringify(renditions[1].terminal)
+  ) {
+    fail(`${label}.renditions must be distinct native 1080p and 720p captures`);
+  }
   exactKeys(
     value.publication,
     ['readmeFeatured', 'siteSlug'],
@@ -253,6 +371,7 @@ function validateDemo(value, index) {
     terminal,
     completion,
     scene,
+    renditions,
     publication,
     claimBoundary: string(
       value.claimBoundary,

@@ -164,6 +164,7 @@ function fixture(
         ]
       : [
           'printf "\\033[2J\\033[H\\033[1;36mKungfu Agent Work Lab fixture\\033[0m\\r\\n"',
+          'printf "terminal-size="; stty size',
           'printf "\\033[38;2;103;232;165mFresh process continues from governed Work.\\033[0m\\r\\n"',
         ];
   const sentinel = omitSentinel
@@ -334,6 +335,14 @@ test('adapter selects a second catalog demo without changing the capture engine'
         siteSlug: 'agent-work-lab-secondary',
       },
     });
+    catalog.demos[1].renditions[0].scene = structuredClone(
+      catalog.demos[1].scene,
+    );
+    catalog.demos[1].renditions[1].scene = {
+      ...catalog.demos[1].renditions[1].scene,
+      id: 'kungfu-agent-work-lab-secondary-autoplay-720p',
+      title: 'Kungfu Agent Work Lab — secondary capture simulation',
+    };
     const demoCatalog = path.join(root, 'catalog.json');
     json(demoCatalog, catalog);
     const { result, output } = run(root, {
@@ -405,9 +414,14 @@ test('adapter executes only the exact installed archive in a PTY and emits the d
     const { result, output } = run(root);
     assert.equal(result.status, 0, result.stderr);
     assert.deepEqual(fs.readdirSync(output).sort(), [
+      'complete-transcript-720p.txt',
       'complete-transcript.txt',
+      'public-projection-720p.json',
       'public-projection.json',
+      'rendition-set.json',
+      'scene-720p.json',
       'scene.json',
+      'terminal-capture-720p.json',
       'terminal-capture.json',
     ]);
     const transcript = fs.readFileSync(
@@ -456,6 +470,33 @@ test('adapter executes only the exact installed archive in a PTY and emits the d
     ).toString('utf8');
     assert.ok(terminalBytes.includes('\u001b[1;36m'));
     assert.ok(terminalBytes.includes('\u001b[38;2;103;232;165m'));
+    assert.match(terminalBytes, /terminal-size=36 150/u);
+    const responsiveCapture = JSON.parse(
+      fs.readFileSync(path.join(output, 'terminal-capture-720p.json'), 'utf8'),
+    );
+    assert.deepEqual(responsiveCapture.dimensions, { columns: 100, rows: 28 });
+    const responsiveBytes = Buffer.concat(
+      responsiveCapture.events.map((event) =>
+        Buffer.from(event.data, 'base64'),
+      ),
+    ).toString('utf8');
+    assert.match(responsiveBytes, /terminal-size=28 100/u);
+    assert.notEqual(terminalBytes, responsiveBytes);
+    const renditionSet = JSON.parse(
+      fs.readFileSync(path.join(output, 'rendition-set.json'), 'utf8'),
+    );
+    assert.equal(renditionSet.schema, 'kungfu.auditable-demo.rendition-set/v1');
+    assert.deepEqual(
+      renditionSet.renditions.map(({ id, role }) => ({ id, role })),
+      [
+        { id: '1080p', role: 'primary' },
+        { id: '720p', role: 'responsive' },
+      ],
+    );
+    assert.notEqual(
+      renditionSet.renditions[0].captureRoot,
+      renditionSet.renditions[1].captureRoot,
+    );
   } finally {
     fs.rmSync(root, { recursive: true, force: true });
   }

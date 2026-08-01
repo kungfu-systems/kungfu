@@ -697,10 +697,12 @@ def read_pty_chunk(
 
 
 def run_demo(
-    launcher: Path, home: Path, demo: dict[str, Any]
+    launcher: Path,
+    home: Path,
+    demo: dict[str, Any],
+    terminal: dict[str, Any],
 ) -> tuple[dict[str, Any], bytes, int]:
     environment = isolated_environment(home)
-    terminal = demo["terminal"]
     terminal_columns = terminal["columns"]
     terminal_rows = terminal["rows"]
     terminal_timeout_seconds = terminal["timeoutSeconds"]
@@ -928,38 +930,88 @@ def build_projection(
     }
 
 
+def rendition_paths(rendition_id: str) -> dict[str, str]:
+    suffix = "" if rendition_id == "1080p" else "-720p"
+    return {
+        "transcript": f"complete-transcript{suffix}.txt",
+        "projection": f"public-projection{suffix}.json",
+        "scene": f"scene{suffix}.json",
+        "terminalCapture": f"terminal-capture{suffix}.json",
+    }
+
+
 def write_outputs(
     output: Path,
-    lines: list[str],
-    projection: dict[str, Any],
-    capture: dict[str, Any],
+    captures: list[dict[str, Any]],
     demo: dict[str, Any],
 ) -> None:
     if output.exists() and (not output.is_dir() or any(output.iterdir())):
         fail("adapter output must be an empty directory")
     output.mkdir(parents=True, exist_ok=True)
-    (output / "complete-transcript.txt").write_text(
-        "\n".join(lines) + "\n", encoding="utf-8"
-    )
-    (output / "public-projection.json").write_text(
-        stable_json(projection), encoding="utf-8"
-    )
-    (output / "terminal-capture.json").write_text(
-        stable_json(capture), encoding="utf-8"
-    )
-    scene = {
-        "schema": "build-images.demo-scene/v1",
-        "id": demo["scene"]["id"],
-        "width": demo["scene"]["width"],
-        "height": demo["scene"]["height"],
-        "fps": demo["scene"]["fps"],
-        "durationMs": capture["durationMs"],
-        "title": demo["scene"]["title"],
-        "commandLabel": demo["commandLabel"],
-        "background": demo["scene"]["background"],
-        "accent": demo["scene"]["accent"],
+    manifest_renditions = []
+    capture_roots = []
+    for item in captures:
+        rendition = item["rendition"]
+        paths = rendition_paths(rendition["id"])
+        scene_input = rendition["scene"]
+        scene = {
+            "schema": "build-images.demo-scene/v1",
+            "id": scene_input["id"],
+            "width": scene_input["width"],
+            "height": scene_input["height"],
+            "fps": scene_input["fps"],
+            "durationMs": item["capture"]["durationMs"],
+            "title": scene_input["title"],
+            "commandLabel": demo["commandLabel"],
+            "background": scene_input["background"],
+            "accent": scene_input["accent"],
+        }
+        transcript_bytes = ("\n".join(item["lines"]) + "\n").encode("utf-8")
+        capture_bytes = stable_json(item["capture"]).encode("utf-8")
+        (output / paths["transcript"]).write_bytes(transcript_bytes)
+        (output / paths["projection"]).write_text(
+            stable_json(item["projection"]), encoding="utf-8"
+        )
+        (output / paths["terminalCapture"]).write_bytes(capture_bytes)
+        (output / paths["scene"]).write_text(stable_json(scene), encoding="utf-8")
+        capture_root = f"sha256:{hashlib.sha256(capture_bytes).hexdigest()}"
+        capture_roots.append(capture_root)
+        manifest_renditions.append(
+            {
+                "id": rendition["id"],
+                "role": rendition["role"],
+                "transcript": paths["transcript"],
+                "projection": paths["projection"],
+                "scene": paths["scene"],
+                "terminalCapture": paths["terminalCapture"],
+                "captureRoot": capture_root,
+            }
+        )
+    if len(set(capture_roots)) != len(capture_roots):
+        fail("native rendition terminal captures must have distinct roots")
+    rendition_set = {
+        "schema": "kungfu.auditable-demo.rendition-set/v1",
+        "renditions": manifest_renditions,
+        "authority": {
+            "classification": "capture-routing-metadata",
+            "grants": [],
+            "nonAuthorities": [
+                "publication-authority",
+                "runtime-authority",
+                "first-party-identity",
+                "system-identity",
+                "kfd-compliance",
+                "product-system-metadata",
+                "package-metadata",
+                "registry-history",
+                "scan-output",
+                "standalone-generation",
+            ],
+        },
     }
-    (output / "scene.json").write_text(stable_json(scene), encoding="utf-8")
+    (output / "rendition-set.json").write_text(
+        stable_json(rendition_set), encoding="utf-8"
+    )
 
 
 def adapt(
@@ -991,27 +1043,48 @@ def adapt(
             installed, archive, qualified_source
         )
         executable_digest = sha256_file(launcher)
-        capture, raw_terminal_output, exit_code = run_demo(
-            launcher, temporary_root / "home", demo
-        )
-        terminal_output = safe_terminal_output(raw_terminal_output)
-        lines = transcript_lines(
-            coordinate=coordinate,
-            archive_digest=archive_digest,
-            executable_digest=executable_digest,
-            product_version=product_version,
-            terminal_output=terminal_output,
-            capture=capture,
-            exit_code=exit_code,
-            demo=demo,
-        )
-        write_outputs(
-            output,
-            lines,
-            build_projection(lines, capture, exit_code, demo),
-            capture,
-            demo,
-        )
+        raw_captures = []
+        for rendition in demo["renditions"]:
+            capture, raw_terminal_output, exit_code = run_demo(
+                launcher,
+                temporary_root / f"home-{rendition['id']}",
+                demo,
+                rendition["terminal"],
+            )
+            raw_captures.append(
+                {
+                    "rendition": rendition,
+                    "capture": capture,
+                    "raw": raw_terminal_output,
+                    "exitCode": exit_code,
+                }
+            )
+        common_duration_ms = max(item["capture"]["durationMs"] for item in raw_captures)
+        captures = []
+        for item in raw_captures:
+            capture = item["capture"]
+            capture["durationMs"] = common_duration_ms
+            exit_code = item["exitCode"]
+            terminal_output = safe_terminal_output(item["raw"])
+            lines = transcript_lines(
+                coordinate=coordinate,
+                archive_digest=archive_digest,
+                executable_digest=executable_digest,
+                product_version=product_version,
+                terminal_output=terminal_output,
+                capture=capture,
+                exit_code=exit_code,
+                demo=demo,
+            )
+            captures.append(
+                {
+                    "rendition": item["rendition"],
+                    "capture": capture,
+                    "lines": lines,
+                    "projection": build_projection(lines, capture, exit_code, demo),
+                }
+            )
+        write_outputs(output, captures, demo)
 
 
 def parse_args() -> argparse.Namespace:

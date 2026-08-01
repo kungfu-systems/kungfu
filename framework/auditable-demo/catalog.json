@@ -47,6 +47,44 @@
         "background": "#0B1020",
         "accent": "#67E8A5"
       },
+      "renditions": [
+        {
+          "id": "1080p",
+          "role": "primary",
+          "terminal": {
+            "columns": 150,
+            "rows": 36,
+            "timeoutSeconds": 60
+          },
+          "scene": {
+            "id": "kungfu-agent-work-lab-autoplay",
+            "width": 1920,
+            "height": 1080,
+            "fps": 15,
+            "title": "Kungfu Agent Work Lab — exact installed artifact",
+            "background": "#0B1020",
+            "accent": "#67E8A5"
+          }
+        },
+        {
+          "id": "720p",
+          "role": "responsive",
+          "terminal": {
+            "columns": 100,
+            "rows": 28,
+            "timeoutSeconds": 60
+          },
+          "scene": {
+            "id": "kungfu-agent-work-lab-autoplay-720p",
+            "width": 1280,
+            "height": 720,
+            "fps": 15,
+            "title": "Kungfu Agent Work Lab — exact installed artifact",
+            "background": "#0B1020",
+            "accent": "#67E8A5"
+          }
+        }
+      ],
       "publication": {
         "readmeFeatured": true,
         "siteSlug": "agent-work-lab"
