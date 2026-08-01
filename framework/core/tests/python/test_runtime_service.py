@@ -77,6 +77,29 @@ LEASE_FIXTURES = json.loads(
 )
 
 
+def test_windows_json_write_retries_transient_replace_lock(tmp_path, monkeypatch):
+    target = tmp_path / "runtime" / "state.json"
+    original_replace = runtime_service.os.replace
+    attempts = []
+    sleeps = []
+
+    def replace_after_transient_lock(source, destination):
+        attempts.append((source, destination))
+        if len(attempts) == 1:
+            raise PermissionError(5, "Access is denied", str(destination))
+        original_replace(source, destination)
+
+    monkeypatch.setattr(runtime_service.platform, "system", lambda: "Windows")
+    monkeypatch.setattr(runtime_service.os, "replace", replace_after_transient_lock)
+    monkeypatch.setattr(runtime_service.time, "sleep", sleeps.append)
+
+    runtime_service._json_write(target, {"status": "running"})
+
+    assert runtime_service._json_read(target) == {"status": "running"}
+    assert len(attempts) == 2
+    assert sleeps == [0.05]
+
+
 def test_adopted_coordinator_kill_uses_portable_hard_signal(monkeypatch):
     delivered = []
     monkeypatch.setattr(
