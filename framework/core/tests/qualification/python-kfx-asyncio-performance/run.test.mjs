@@ -14,6 +14,7 @@ import {
   commandInvocation,
   deriveStatistics,
   evaluateReport,
+  executeRetained,
   loadProfile,
   parseObservationStream,
   qualificationPlan,
@@ -122,6 +123,26 @@ test('Windows invokes Shifu through ComSpec without weakening argument boundarie
   assert.equal(invocation.command, 'C:\\Windows\\System32\\cmd.exe');
   assert.deepEqual(invocation.args.slice(0, 3), ['/d', '/s', '/c']);
   assert.match(invocation.args[3], /"argument with spaces"/u);
+});
+
+test('execution streams both output channels into retained storage', (t) => {
+  const outputDir = fs.mkdtempSync(
+    path.join(process.env.RUNNER_TEMP || os.tmpdir(), 'python-kfx-execute-'),
+  );
+  t.after(() => fs.rmSync(outputDir, { recursive: true, force: true }));
+  const logPath = path.join(outputDir, 'command.log');
+  const execution = executeRetained(
+    [
+      process.execPath,
+      '-e',
+      "process.stdout.write('retained-out\\n'); process.stderr.write('retained-err\\n');",
+    ],
+    logPath,
+  );
+  assert.equal(execution.status, 0, execution.error?.message);
+  assert.equal(execution.output, fs.readFileSync(logPath, 'utf8'));
+  assert.match(execution.output, /retained-out/u);
+  assert.match(execution.output, /retained-err/u);
 });
 
 test('manual Gate Measurement retains exact-source evidence on all three supported lanes', () => {
@@ -395,6 +416,8 @@ test('independent verification rejects tampered retained suite logs', (t) => {
   const observations = completeObservations(loaded.profile);
   const raw = observations.map((item) => `${JSON.stringify(item)}\n`).join('');
   fs.writeFileSync(path.join(outputDir, 'raw-observations.jsonl'), raw);
+  const toolchain = 'toolchain facts\n';
+  fs.writeFileSync(path.join(outputDir, 'toolchain.log'), toolchain);
   const exactSource = source();
   const runId = `${exactSource.revision.slice(0, 12)}-${process.platform}-${process.arch}`;
   const report = evaluateReport({
@@ -404,7 +427,7 @@ test('independent verification rejects tampered retained suite logs', (t) => {
     loaded,
     setup,
     correctness,
-    toolchainRoot: `sha256:${'c'.repeat(64)}`,
+    toolchainRoot: `sha256:${sha256(toolchain)}`,
     observations,
     rawPath: 'raw-observations.jsonl',
     rawSha256: sha256(raw),

@@ -122,20 +122,29 @@ export function qualificationPlan(loaded, { quick = false } = {}) {
   };
 }
 
-function execute(command, env = process.env) {
+export function executeRetained(command, logPath, env = process.env) {
   const invocation = commandInvocation(command);
   const started = Date.now();
-  const result = spawnSync(invocation.command, invocation.args, {
-    cwd: ROOT,
-    env,
-    encoding: 'utf8',
-    maxBuffer: 128 * 1024 * 1024,
-  });
+  const log = fs.openSync(logPath, 'wx');
+  let result;
+  try {
+    // Send both streams straight to retained storage. Besides removing the
+    // fixed in-memory buffer, this avoids waiting for EOF on a captured pipe
+    // after a Windows descendant inherited its handle. The direct child exit
+    // remains authoritative, while a cancelled run still leaves a partial log
+    // for diagnosis and artifact retention.
+    result = spawnSync(invocation.command, invocation.args, {
+      cwd: ROOT,
+      env,
+      stdio: ['ignore', log, log],
+    });
+  } finally {
+    fs.closeSync(log);
+  }
+  const output = fs.readFileSync(logPath, 'utf8');
   return {
     status: result.status,
-    stdout: result.stdout || '',
-    stderr: result.stderr || '',
-    output: `${result.stdout || ''}${result.stderr || ''}`,
+    output,
     durationMs: Date.now() - started,
     error: result.error,
   };
@@ -154,17 +163,17 @@ function plannedSuite(command) {
 
 function retainSuite(outputDir, id, command, executed) {
   const filename = `${id}.log`;
-  fs.writeFileSync(path.join(outputDir, filename), executed.output, {
-    encoding: 'utf8',
-    flag: 'wx',
-  });
+  const pathname = path.join(outputDir, filename);
+  if (!fs.existsSync(pathname)) {
+    throw new Error(`${id} retained log is missing`);
+  }
   return {
     command,
     status: executed.status === 0 && !executed.error ? 'passed' : 'failed',
     exit_code: executed.status ?? 1,
     duration_ms: executed.durationMs,
     raw_log: filename,
-    raw_sha256: sha256(executed.output),
+    raw_sha256: sha256(fs.readFileSync(pathname)),
   };
 }
 
@@ -524,6 +533,17 @@ export function verifyEvidence(
   if (!report.roots.toolchain) {
     throw new Error('qualified evidence is missing its toolchain root');
   }
+  const toolchainPath = retainedFile(
+    evidenceDir,
+    'toolchain.log',
+    'toolchain log',
+  );
+  if (
+    `sha256:${sha256(fs.readFileSync(toolchainPath))}` !==
+    report.roots.toolchain
+  ) {
+    throw new Error('toolchain log digest does not match the report');
+  }
   const platformEntry = loaded.profile.platforms.find(
     (entry) =>
       entry.os === report.environment.os &&
@@ -685,13 +705,14 @@ async function main() {
   fs.mkdirSync(path.dirname(outputDir), { recursive: true });
   fs.mkdirSync(outputDir, { recursive: false });
 
-  const setupExecution = execute(plan.setup);
+  const setupExecution = executeRetained(
+    plan.setup,
+    path.join(outputDir, 'setup.log'),
+  );
   const setup = retainSuite(outputDir, 'setup', plan.setup, setupExecution);
   let correctness = plannedSuite(plan.correctness);
   let workloadExecution = {
     status: 1,
-    stdout: '',
-    stderr: '',
     output: '',
     durationMs: 0,
   };
@@ -702,9 +723,15 @@ async function main() {
   let toolchainRoot = null;
   let evidenceSource = source;
   if (setup.status === 'passed') {
-    const doctor = execute([LAUNCHER, 'doctor', '--json']);
+    const doctor = executeRetained(
+      [LAUNCHER, 'doctor', '--json'],
+      path.join(outputDir, 'toolchain.log'),
+    );
     if (doctor.status === 0) toolchainRoot = `sha256:${sha256(doctor.output)}`;
-    const correctnessExecution = execute(plan.correctness);
+    const correctnessExecution = executeRetained(
+      plan.correctness,
+      path.join(outputDir, 'correctness.log'),
+    );
     correctness = retainSuite(
       outputDir,
       'correctness',
@@ -718,26 +745,29 @@ async function main() {
         evidenceSource.revision === source.revision &&
         evidenceSource.tree === source.tree
       ) {
-        workloadExecution = execute(plan.workload, {
-          ...process.env,
-          KUNGFU_ALLOW_FOREIGN_RUNTIME: '1',
-        });
+        workloadExecution = executeRetained(
+          plan.workload,
+          path.join(outputDir, 'workload.log'),
+          {
+            ...process.env,
+            KUNGFU_ALLOW_FOREIGN_RUNTIME: '1',
+          },
+        );
       } else {
         workloadExecution.output =
           'source drifted during setup or correctness; measurement skipped\n';
-        workloadExecution.stderr = workloadExecution.output;
+        fs.writeFileSync(
+          path.join(outputDir, 'workload.log'),
+          workloadExecution.output,
+          {
+            encoding: 'utf8',
+            flag: 'wx',
+          },
+        );
       }
-      fs.writeFileSync(
-        path.join(outputDir, 'workload.log'),
-        workloadExecution.output,
-        {
-          encoding: 'utf8',
-          flag: 'wx',
-        },
-      );
       if (workloadExecution.status === 0) {
         try {
-          const parsed = parseObservationStream(workloadExecution.stdout);
+          const parsed = parseObservationStream(workloadExecution.output);
           validateCoverage(parsed.observations, loaded.profile, {
             quick: options.quick,
           });

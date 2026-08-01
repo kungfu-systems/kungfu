@@ -9,8 +9,8 @@ confidence: high
 sensitivity: public
 evidence_grade: A
 review_state: self-reviewed
-last_reviewed: 2026-08-01
-ai_provenance: GPT-5 via Codex on 2026-08-01; derived from the frozen profile, public runtime APIs, exact-revision runner, and retained observations; no unretained platform result is claimed
+last_reviewed: 2026-08-02
+ai_provenance: GPT-5 via Codex on 2026-08-02; derived from the frozen profile, public runtime APIs, exact-revision runner, and retained observations; no unretained platform result is claimed
 ---
 
 # Python KFX asyncio Performance Qualification
@@ -46,7 +46,10 @@ Every scored repetition is retained in `raw-observations.jsonl` in emission
 order. The runner never removes outliers. `report.json` and `summary.md` are
 derived from the complete raw set and bind the source commit/tree, CPython and
 host facts, toolchain, profile, runner, and workload roots. Output paths are
-create-only.
+create-only. Setup, correctness, toolchain, and workload output streams directly
+to retained files from process start, so Windows descendant handle inheritance
+cannot strand an in-memory capture pipe and a cancelled run keeps its partial
+diagnostic evidence.
 
 Before measurements, the runner builds the exact checkout and requires
 `test:native-kfx-admission` to pass. A dirty tree, unsupported CPython/platform,
