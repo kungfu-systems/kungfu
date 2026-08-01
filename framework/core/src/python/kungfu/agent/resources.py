@@ -45,6 +45,10 @@ def commands():
     return _read_json("commands.json")
 
 
+def intent_map():
+    return _read_json("intent-map.json")
+
+
 def cli_surface_catalog():
     return _read_json("cli_surface.catalog.json")
 

@@ -11,8 +11,8 @@ import gzip
 import hashlib
 import json
 import os
+import subprocess
 from pathlib import Path, PurePosixPath
-
 
 _COMPATIBILITY = Path("compatibility/context-pack-v1")
 
@@ -243,4 +243,125 @@ def projection(audience, root=None):
         "roots": {key: result[key] for key in ("atlasRoot", "packRoot", "cutRoot")},
         "audience": audience,
         "projection": value,
+    }
+
+
+def _xinfa(arguments):
+    # Keep offline Atlas verification stdlib-only.  The CLI stack (and click)
+    # is needed only when a caller asks the linked Xinfa runtime to project or
+    # expand task context.
+    from kungfu.cli.commands.env import _resolve_trunk
+
+    trunk = _resolve_trunk()
+    if not trunk:
+        raise FileNotFoundError(
+            "linked Xinfa product was not found; set KUNGFU_TRUNK_BIN for source qualification"
+        )
+    result = subprocess.run(
+        [trunk, "xinfa", *arguments],
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+    if result.returncode != 0:
+        detail = result.stderr.strip() or result.stdout.strip() or "no diagnostic"
+        raise ValueError(f"Xinfa context operation failed: {detail}")
+    try:
+        return json.loads(result.stdout)
+    except json.JSONDecodeError as error:
+        raise ValueError("Xinfa returned invalid JSON") from error
+
+
+def task_context(task, role, budget, route, root=None):
+    root, _, verification = _verified_pack(root)
+    payload = _xinfa(
+        [
+            "context",
+            "--atlas",
+            str(root),
+            "--route",
+            route,
+            "--task",
+            task,
+            "--role",
+            role,
+            "--budget",
+            str(budget),
+            "--json",
+        ]
+    )
+    projection_value = payload.get("projection", payload)
+    omissions = projection_value.get("omissions", [])
+    required_omissions = [row for row in omissions if row.get("required") is True]
+    status = projection_value.get("status", payload.get("status"))
+    roots = projection_value.get("roots", payload.get("roots", {}))
+    atlas_root = (
+        roots.get("atlas")
+        or roots.get("atlasRoot")
+        or projection_value.get("atlas_root")
+        or projection_value.get("atlasRoot")
+    )
+    if atlas_root and atlas_root != verification["atlasRoot"]:
+        raise ValueError("Xinfa context Atlas root does not match the installed pack")
+    if status not in {None, "complete", "pass"} or required_omissions:
+        raise ValueError(
+            "Xinfa context is incomplete: "
+            + json.dumps(
+                {"status": status, "requiredOmissions": required_omissions},
+                sort_keys=True,
+            )
+        )
+    return {
+        "schema": "kungfu.agent-task-context/v1",
+        "route": route,
+        "task": task,
+        "role": role,
+        "budget": budget,
+        "roots": {
+            key: verification[key]
+            for key in (
+                "atlasRoot",
+                "packRoot",
+                "cutRoot",
+                "manifestRoot",
+                "receiptRoot",
+            )
+        },
+        "context": projection_value,
+        "omissions": omissions,
+        "expansionHandles": projection_value.get(
+            "expansion_handles", projection_value.get("expansionHandles", [])
+        ),
+        "internalPathsExposed": False,
+    }
+
+
+def expand(view, handle, budget, root=None):
+    root, _, verification = _verified_pack(root)
+    if view not in {"agent", "human"}:
+        raise ValueError("view must be agent or human")
+    payload = _xinfa(
+        [
+            "expand",
+            "--atlas",
+            str(root),
+            "--view",
+            str(root / "views" / f"{view}.json"),
+            "--handle",
+            handle,
+            "--budget",
+            str(budget),
+            "--json",
+        ]
+    )
+    return {
+        "schema": "kungfu.agent-context-expansion/v1",
+        "view": view,
+        "handle": handle,
+        "budget": budget,
+        "roots": {
+            key: verification[key] for key in ("atlasRoot", "packRoot", "cutRoot")
+        },
+        "expansion": payload,
+        "internalPathsExposed": False,
     }

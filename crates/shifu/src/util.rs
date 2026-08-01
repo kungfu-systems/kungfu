@@ -6,9 +6,73 @@
 // for the call sites' convenience.
 
 use std::path::Path;
-use std::process::{Command, Stdio};
+use std::process::{exit, Command, Stdio};
 
 pub use shifu_core::host::{find_on_path, kungfu_cache_dir, unique_temp_dir, xdg_dir};
+
+const AGENT_BRIEF: &str = include_str!("../agent/brief.md");
+const AGENT_MAP: &str = include_str!("../agent/intent-map.json");
+const AGENT_CAPABILITIES: &str = include_str!("../agent/capabilities.json");
+const AGENT_SCHEMA: &str = include_str!("../agent/kfd3_api.schema.json");
+const AGENT_REGISTRY: &str = include_str!("../agent/kfd3_api.registry.json");
+
+fn print_json_surface(value: &str) {
+    print!("{}", value);
+    if !value.ends_with('\n') {
+        println!();
+    }
+}
+
+fn agent_verified() -> bool {
+    [
+        "shifu.agent.brief",
+        "shifu.agent.map",
+        "shifu.agent.capabilities",
+        "shifu.agent.schema",
+        "shifu.agent.verify",
+    ]
+    .iter()
+    .all(|id| AGENT_REGISTRY.contains(id))
+        && [
+            "acquire",
+            "doctor-bootstrap",
+            "toolchain",
+            "dependencies",
+            "build",
+            "check",
+            "verify",
+            "artifacts",
+            "promotion",
+            "recovery",
+        ]
+        .iter()
+        .all(|route| AGENT_MAP.contains(route) && AGENT_CAPABILITIES.contains(route))
+}
+
+pub fn run_agent(arguments: &[String]) -> ! {
+    match arguments
+        .iter()
+        .map(String::as_str)
+        .collect::<Vec<_>>()
+        .as_slice()
+    {
+        ["brief"] => print!("{AGENT_BRIEF}"),
+        ["map", "--json"] => print_json_surface(AGENT_MAP),
+        ["capabilities", "--json"] => print_json_surface(AGENT_CAPABILITIES),
+        ["schema", "--json"] => print_json_surface(AGENT_SCHEMA),
+        ["registry", "--json"] => print_json_surface(AGENT_REGISTRY),
+        ["verify", "--json"] => {
+            let ok = agent_verified();
+            println!("{{\"schema\":\"shifu.agent-verification/v1\",\"ok\":{ok},\"registryId\":\"shifu-agent-interface\",\"authority\":\"shifu\"}}");
+            exit(if ok { 0 } else { 1 });
+        }
+        _ => {
+            eprintln!("usage: shifu agent brief|map --json|capabilities --json|schema --json|registry --json|verify --json");
+            exit(2);
+        }
+    }
+    exit(0)
+}
 
 pub fn die(msg: &str) -> ! {
     eprintln!("shifu: {msg}");
@@ -49,5 +113,13 @@ pub fn exec_or_exit(mut cmd: Command) -> ! {
             Ok(status) => std::process::exit(status.code().unwrap_or(1)),
             Err(err) => die(&format!("failed to run {:?}: {err}", cmd.get_program())),
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    #[test]
+    fn agent_registry_covers_every_development_route() {
+        assert!(super::agent_verified());
     }
 }

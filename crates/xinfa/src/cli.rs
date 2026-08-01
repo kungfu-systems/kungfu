@@ -120,6 +120,15 @@ fn repository_root(project: &str, explicit: Option<&String>) -> Result<PathBuf, 
 
 pub fn run(arguments: &[String]) -> Result<ExitCode, String> {
     match command::parse(arguments) {
+        Command::Agent(rest) => {
+            let (output, ok) = crate::agent::response(rest)?;
+            print!("{output}");
+            Ok(if ok {
+                ExitCode::SUCCESS
+            } else {
+                ExitCode::from(1)
+            })
+        }
         Command::Version => {
             println!("xinfa {VERSION}");
             Ok(ExitCode::SUCCESS)

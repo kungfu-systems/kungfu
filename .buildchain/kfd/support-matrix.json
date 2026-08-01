@@ -24,7 +24,7 @@
   },
   "kfd3Enforcement": {
     "schema": "kungfu-kfd-3-release-gate-enforcement/v1",
-    "declaredSurfaceCount": 162,
+    "declaredSurfaceCount": 176,
     "enforcedSurfaceCount": 0,
     "gateBindings": [],
     "claimBoundary": "Declared means discoverable; enforced requires a retained passed hard release Gate. Merely detected or declared surfaces are not enforced."
@@ -55,7 +55,7 @@
           },
           {
             "path": "framework/contract/kungfu-contracts.registry.json",
-            "sha256": "sha256:1b51661a257538c04d4097132a2352b90e05645423ffb4f761deacd5a19016e5"
+        "sha256": "sha256:1b51661a257538c04d4097132a2352b90e05645423ffb4f761deacd5a19016e5"
           }
         ]
       },
@@ -102,7 +102,7 @@
         "evidenceRoots": [
           {
             "path": ".buildchain/kfd/kfd-2/release-claims.json",
-            "sha256": "sha256:42052e16b263a0f9058362678825ea69ae9b4b6aef69c21f28ce6c0f3abaca7d"
+        "sha256": "sha256:3098a39ac94989577ba55109ebd2a730ea0f7cf645a0575884e4a0707dfaddd9"
           },
           {
             "path": "docs/qualification/kfd2-trust-assessment.md",
@@ -152,11 +152,11 @@
         "evidenceRoots": [
           {
             "path": ".buildchain/kfd/kfd-3/surfaces.json",
-            "sha256": "sha256:4dc7406cd7a1c49b9f2cf1db7d5b168d242ce403eb8bee34afdae8a87f629f42"
+            "sha256": "sha256:953f00ae3cb60b445aa6836e7c9abb592c116357fc63cbfadaf3e50cdb03b40b"
           },
           {
             "path": ".buildchain/kfd/kfd-3/capability-query.json",
-            "sha256": "sha256:d3cf0f558d97cc3fd82e96f76581116a6e08d6fb756dccbfadff64d9a8ef9324"
+            "sha256": "sha256:9127bacb5ec86c2f2bc0373fa3aacc68265c6f17df82ba82b50c4556816f4f75"
           }
         ]
       },
@@ -176,7 +176,7 @@
       },
       "claimClass": "release-qualified-support",
       "knownLimitations": [
-        "Support covers the 161 product-declared surfaces accepted by the exact Buildchain registry audit."
+        "Support covers the 176 product-declared surfaces accepted by the exact Buildchain registry audit."
       ],
       "owner": "buildchain",
       "nextGate": "Publish the exact product-declared registry audit and artifact closure in the Alpha release passport."

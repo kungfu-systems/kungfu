@@ -189,6 +189,10 @@ fn dispatch(
     host: &Value,
 ) -> Result<(u8, String, Vec<Value>), String> {
     match command::parse(arguments) {
+        Command::Agent(rest) => {
+            let (output, ok) = crate::agent::response(rest)?;
+            Ok((if ok { 0 } else { 1 }, output, vec![]))
+        }
         Command::Version => Ok((0, format!("xinfa {}\n", env!("CARGO_PKG_VERSION")), vec![])),
         Command::Help => Ok((0, format!("{}\n", crate::CLI_USAGE), vec![])),
         Command::Contract => Ok((0, command::PRODUCT_CONTRACT.to_owned(), vec![])),

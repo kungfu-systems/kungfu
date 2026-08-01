@@ -242,11 +242,60 @@ def _install_skill_file(target, out_dir, force):
     return str(src), dest
 
 
+def _skill_dir(target, scope):
+    root = Path.cwd() if scope == "project" else Path.home()
+    provider_root = ".agents" if target == "codex" else ".claude"
+    return root / provider_root / "skills" / "kungfu-agent-onboarding"
+
+
+def _skill_state(target, destination):
+    source = agent_pack.skill_path(target).read_bytes()
+    destination = Path(destination) / "SKILL.md"
+    if not destination.is_file():
+        return "absent"
+    try:
+        installed = destination.read_bytes()
+        text = installed.decode("utf-8")
+    except (OSError, UnicodeError):
+        return "incompatible"
+    if (
+        not text.startswith("---\n")
+        or "\nname:" not in text
+        or "\ndescription:" not in text
+    ):
+        return "incompatible"
+    return "current" if installed == source else "stale"
+
+
 @agent.command(help=api_help("kungfu.agent.brief"))
 @kfd3_api("kungfu.agent.brief")
 @agent_command_context
 def brief(ctx):
-    click.echo(agent_pack.document_text("brief.md"), nl=False)
+    text = agent_pack.document_text("brief.md")
+    if len(text.encode("utf-8")) > 8192 or len(text.splitlines()) > 120:
+        raise click.ClickException(
+            "installed Agent brief exceeds its 8192-byte/120-line budget"
+        )
+    click.echo(text, nl=False)
+
+
+@agent.command(name="map", help="Print the stable first-entry intent map.")
+@click.option("--json", "as_json", is_flag=True, help="machine-readable output")
+@kfd3_api("kungfu.agent.map")
+@agent_command_context
+def intent_map(ctx, as_json):
+    payload = agent_pack.intent_map()
+    required = payload.get("requiredIntentIds", [])
+    actual = [row.get("id") for row in payload.get("intents", [])]
+    if len(actual) != len(set(actual)) or set(required) != set(actual):
+        raise click.ClickException(
+            "installed Agent intent map has invalid required coverage"
+        )
+    if as_json:
+        _json(payload)
+        return
+    for row in payload["intents"]:
+        click.echo(f"{row['id']} [{row['maturity']}]: {row['summary']}")
 
 
 @agent.command(help=api_help("kungfu.agent.docs"))
@@ -1204,17 +1253,28 @@ def choose_mode(
     default=None,
     help="destination directory; required with --execute",
 )
+@click.option(
+    "--scope",
+    type=click.Choice(["project", "user"]),
+    default=None,
+    help="provider-supported destination scope; mutually exclusive with --out",
+)
 @click.option("--execute", is_flag=True, help="copy the file after preview")
 @click.option("--force", is_flag=True, help="replace an existing SKILL.md")
 @click.option("--json", "as_json", is_flag=True, help="machine-readable output")
 @kfd3_api("kungfu.agent.install-skill")
 @agent_command_context
-def install_skill(ctx, target, out_dir, execute, force, as_json):
+def install_skill(ctx, target, out_dir, scope, execute, force, as_json):
+    if out_dir and scope:
+        raise click.UsageError("choose --scope or --out, not both")
+    if not out_dir and scope:
+        out_dir = str(_skill_dir(target, scope))
     src = agent_pack.skill_path(target)
     dest = os.path.join(out_dir, "SKILL.md") if out_dir else None
     payload = {
         "schema": "kungfu.agent-skill-install/v1",
         "target": target,
+        "scope": scope,
         "source": str(src),
         "destination": dest,
         "execute": execute,
@@ -1245,18 +1305,29 @@ def install_skill(ctx, target, out_dir, execute, force, as_json):
     type=click.Choice(["codex", "claude"]),
     help="provider skill target",
 )
+@click.option(
+    "--scope",
+    type=click.Choice(["project", "user"]),
+    default="project",
+    show_default=True,
+    help="provider Skill discovery scope",
+)
 @click.option("--json", "as_json", is_flag=True, help="machine-readable output")
 @kfd3_api("kungfu.agent.status")
 @agent_command_context
-def status(ctx, target, as_json):
+def status(ctx, target, scope, as_json):
     policy = _read_policy(ctx, target)
+    skill_dir = _skill_dir(target, scope)
     payload = {
         "schema": "kungfu.agent-status/v1",
         "target": target,
+        "scope": scope,
         "configured": policy is not None,
         "policyPath": _policy_path(ctx, target),
         "policy": policy,
         "skillSource": str(agent_pack.skill_path(target)),
+        "skillDestination": str(skill_dir / "SKILL.md"),
+        "skillState": _skill_state(target, skill_dir),
         "commands": {
             "bootstrap": f"kungfu agent bootstrap --target {target} --mode report",
             "mode": f"kungfu agent mode set --target {target} --mode managed-run",
@@ -1272,6 +1343,7 @@ def status(ctx, target, as_json):
     else:
         gate = "on" if policy.get("reportCloseoutGate") else "off"
         click.echo(f"[agent] {target}: {policy.get('mode')} (report gate: {gate})")
+    click.echo(f"[agent] skill {scope}: {payload['skillState']}")
 
 
 @agent.command(help=api_help("kungfu.agent.bootstrap"))
@@ -1463,11 +1535,26 @@ def uninstall(ctx, target, execute, as_json):
 
 @agent.command(help=api_help("kungfu.agent.context"))
 @click.option("--json", "as_json", is_flag=True, help="machine-readable output")
+@click.option("--task", help="exact task for verified Xinfa context")
+@click.option("--role", help="task role; required with --task")
+@click.option("--budget", type=click.IntRange(min=1), help="context token budget")
+@click.option("--route", help="exact route id; required with --task")
 @kfd3_api("kungfu.agent.context")
 @agent_command_context
-def context(ctx, as_json):
+def context(ctx, as_json, task, role, budget, route):
     try:
-        data = _context(ctx)
+        task_mode = any(value is not None for value in (task, role, budget, route))
+        if task_mode and not all(
+            value is not None for value in (task, role, budget, route)
+        ):
+            raise ValueError(
+                "--task, --role, --budget, and --route are required together"
+            )
+        data = (
+            documentation_pack.task_context(task, role, budget, route)
+            if task_mode
+            else _context(ctx)
+        )
     except (OSError, ValueError, json.JSONDecodeError) as e:
         click.echo(f"[agent] failed to load context: {e}", err=True)
         sys.exit(1)
@@ -1475,6 +1562,24 @@ def context(ctx, as_json):
         _json(data)
         return
     click.echo(json.dumps(data, indent=2, sort_keys=True))
+
+
+@agent.command(name="expand", help="Expand one verified Xinfa context handle.")
+@click.option("--view", type=click.Choice(["agent", "human"]), default="agent")
+@click.option("--handle", required=True)
+@click.option("--budget", required=True, type=click.IntRange(min=1))
+@click.option("--json", "as_json", is_flag=True, help="machine-readable output")
+@kfd3_api("kungfu.agent.expand")
+@agent_command_context
+def expand(ctx, view, handle, budget, as_json):
+    try:
+        payload = documentation_pack.expand(view, handle, budget)
+    except (FileNotFoundError, OSError, ValueError, json.JSONDecodeError) as error:
+        raise click.ClickException(str(error)) from error
+    if as_json:
+        _json(payload)
+    else:
+        click.echo(json.dumps(payload, indent=2, sort_keys=True))
 
 
 @agent.command(help=api_help("kungfu.agent.verify"))

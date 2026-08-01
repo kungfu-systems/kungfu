@@ -115,6 +115,16 @@
       ]
     },
     {
+      "id": "kungfu.agent.map",
+      "surface": "cli",
+      "name": "kungfu agent map --json",
+      "purpose": "Print and validate the complete stable first-entry intent route map.",
+      "maturity": "stable",
+      "visibility": "public-agent",
+      "anchor": {"kind": "runtime-click", "symbol": "intent_map"},
+      "projections": ["commands.json", "agent-pack-doc", "provider-skill"]
+    },
+    {
       "id": "kungfu.agent.capabilities",
       "surface": "cli",
       "name": "kungfu agent capabilities --json",
@@ -710,6 +720,16 @@
         "commands.json",
         "capabilities-json"
       ]
+    },
+    {
+      "id": "kungfu.agent.expand",
+      "surface": "cli",
+      "name": "kungfu agent expand --view agent --handle <id> --budget <tokens> --json",
+      "purpose": "Expand one verified packaged Xinfa context handle without exposing internal pack paths.",
+      "maturity": "stable",
+      "visibility": "public-agent",
+      "anchor": {"kind": "runtime-click", "symbol": "expand"},
+      "projections": ["commands.json", "agent-pack-doc", "provider-skill"]
     },
     {
       "id": "kungfu.run",
