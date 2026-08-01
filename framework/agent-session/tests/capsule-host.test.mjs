@@ -38,7 +38,7 @@ class FakePtyProcess extends EventEmitter {
   }
 }
 
-function fixture(maxOutputBytes = 64) {
+function fixture(maxOutputBytes = 64, platform = process.platform) {
   const child = new FakePtyProcess();
   let now = 1000;
   const host = new AgentSessionCapsuleHost({
@@ -47,6 +47,7 @@ function fixture(maxOutputBytes = 64) {
     runtimeIdentity: 'runtime-test-1',
     maxOutputBytes,
     now: () => now++,
+    platform,
   });
   const status = host.start({
     workConsoleId: 'console-1',
@@ -185,6 +186,24 @@ test('resize and signal target only the current process identity', () => {
         signal: 'SIGKILL',
       }),
     /not allowed/u,
+  );
+});
+
+test('Windows termination uses the node-pty kill contract without claiming unsupported signals', () => {
+  const { child, current, host } = fixture(64, 'win32');
+  assert.equal(
+    host.signal({ ...current, actionId: 'end-1', signal: 'SIGTERM' }).status,
+    'applied',
+  );
+  assert.deepEqual(child.signals, [undefined]);
+  assert.throws(
+    () =>
+      host.signal({
+        ...current,
+        actionId: 'interrupt-1',
+        signal: 'SIGINT',
+      }),
+    /signal 'SIGINT' is not supported on Windows/u,
   );
 });
 
