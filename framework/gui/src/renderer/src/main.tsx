@@ -71,12 +71,6 @@ import {
 import { publishRefresh } from '../../sandbox/refresh';
 import { createKfxSharedModules } from '../shared-modules';
 import {
-  RetainedCoreSurfaceStack,
-  kfxNativePlanArgs,
-  resolveKfxHostDescriptor,
-  useRetainedCoreSurfaces,
-} from './agent-work-lab';
-import {
   loadKungfuConfig,
   normalizedUiConfig,
   resolvedMonoFontFamily,
@@ -88,9 +82,13 @@ import { type KfxLoadResult, loadKfx } from './kfx-loader';
 import {
   KfxErrorBoundary,
   ProjectsPanel,
+  RetainedCoreSurfaceStack,
   RuntimeFailurePanel,
   WorkspacePanel,
+  kfxNativePlanArgs,
   openRendererProjects,
+  resolveKfxHostDescriptor,
+  useRetainedCoreSurfaces,
   workspaceIpc,
 } from './projects-panel';
 import {
