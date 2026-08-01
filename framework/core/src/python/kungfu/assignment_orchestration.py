@@ -1904,11 +1904,24 @@ def list_sealed_assignment_states(
                     }
                 )
                 continue
+            event_counts = dict(snapshot.get("counts") or {})
+            assignment_state = {
+                "schema": "kungfu.assignment-orchestration.retained-assignment-state/v1",
+                "workspace": dict(snapshot.get("workspace") or {}),
+                "initiative_subject": snapshot.get("initiative_subject"),
+                "assignment_subject": subject,
+                "assignment": assignment,
+                "phase": snapshot.get("phase"),
+                "active_lease": snapshot.get("active_lease"),
+                "event_counts": event_counts,
+            }
             states.append(
                 {
                     "schema": "kungfu.assignment-orchestration.sealed-work-coordinate/v1",
                     "assignment_subject": subject,
                     "workspace_identity_root": owning_root,
+                    "assignment_state_root": semantic_root(assignment_state),
+                    "event_counts": event_counts,
                     "state_root": verification["state_root"],
                     "query_proof_root": query_root,
                     "phase": snapshot.get("phase"),
