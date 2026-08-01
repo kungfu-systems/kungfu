@@ -3,7 +3,6 @@
 use serde_json::{json, Map, Value};
 use sha2::{Digest, Sha256};
 use std::collections::{BTreeMap, BTreeSet};
-
 mod agent;
 mod atlas;
 #[cfg(not(target_arch = "wasm32"))]
@@ -19,7 +18,6 @@ mod project_validation;
 mod projection;
 mod resolver;
 mod semantic_project;
-
 pub use atlas::{
     compile_repository_atlas_from_source, diff_atlas_values, impact_from_atlas_values,
     import_context_pack_artifacts, inspect_atlas_value, verify_atlas_artifacts, verify_atlas_bytes,
