@@ -5,7 +5,7 @@
   "manifestPath": "framework/maintainability/semantic-amplification.manifest.json",
   "manifestRoot": "sha256:a4a33a8743dd4c2d30b88f19834fda45c9dda0ac972239cfdb9aa6b4ffba2b18",
   "baselineRef": "dbfed9ca1785d147b26f4f06e7e6895ac7368fee",
-  "sourceRoot": "sha256:1b9effc4949233c496e42b60afce079d1c8f1bb279224625d4d6ef234966ce5a",
+  "sourceRoot": "sha256:ed973e83e1a0b0e5febf977727712e1ad357cf311c74e502ba60da0fef0034ec",
   "roles": {
     "authority": "exactly one authority route per family; the route may name multiple co-owned source files",
     "allowedProjectionRoles": [
@@ -1150,17 +1150,17 @@
         },
         {
           "path": "docs/qualification/gates/workflow-bindings.json",
-          "currentLines": 660,
+          "currentLines": 659,
           "baselineLines": 580,
-          "currentRoot": "sha256:dd422137c3a0f97d9cc8da42833ecd02fa78f9c7bd17f6336eea853407cc1836",
+          "currentRoot": "sha256:859b41a709e170abc4f75e5a90475a2ca5e4cdcec9eaa2ea1faa7079d90f92f2",
           "baselineRoot": "sha256:233cd22ebce4c9930e0e4889808b88661d77c202d5e5f73121823dcdc461576d",
           "changedSinceBaseline": true
         },
         {
           "path": ".github/workflows/release-new-version.yml",
-          "currentLines": 388,
+          "currentLines": 386,
           "baselineLines": 362,
-          "currentRoot": "sha256:7d0bcb4cfccd6c622b01dd54c207d7dd7fc1221312577e540cc0f902f6a390c1",
+          "currentRoot": "sha256:2652f6cc8779a2beae2fdadb09d49cbf2ef4649b64d15950ba31ec3a3ce0e38e",
           "baselineRoot": "sha256:3bdd847c80a05030de1d826282cef2e76a85e31dc0904df02c7f0cdda7a5eb74",
           "changedSinceBaseline": true
         },
