@@ -15,6 +15,13 @@ export function shouldRestoreRetainedProjectRun(
   return Boolean(work.phase) || row.canonical_root !== work.requestRoot;
 }
 
+export const RESTORING_RETAINED_AGENT_RESULT =
+  'Restoring retained Agent result…';
+
+export function settleRetainedProjectRunBusy(current: string): string {
+  return current === RESTORING_RETAINED_AGENT_RESULT ? '' : current;
+}
+
 export function resolveWorkProject<
   T extends { id: string; path: string },
   O extends { workspace_id?: string },

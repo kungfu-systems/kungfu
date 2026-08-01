@@ -38,8 +38,10 @@ import {
   subscribeGlobalWorkObserver,
 } from './global-work-observer';
 import {
+  RESTORING_RETAINED_AGENT_RESULT,
   assignmentSelector,
   resolveWorkProject,
+  settleRetainedProjectRunBusy,
   shouldRestoreRetainedProjectRun,
 } from './project-work-run';
 import { openWorkControlProfile } from './work-control-profile';
@@ -1323,7 +1325,7 @@ function GlobalWorkView({
     if (restoredWorkKeys.current.has(key)) return;
     restoredWorkKeys.current.add(key);
     let active = true;
-    setRunBusy('Restoring retained Agent result…');
+    setRunBusy(RESTORING_RETAINED_AGENT_RESULT);
     setRunError('');
     void projects
       .resumeRun(currentProject.path, currentInventoryWork)
@@ -1339,7 +1341,7 @@ function GlobalWorkView({
         }
       })
       .finally(() => {
-        if (active) setRunBusy('');
+        setRunBusy(settleRetainedProjectRunBusy);
       });
     return () => {
       active = false;

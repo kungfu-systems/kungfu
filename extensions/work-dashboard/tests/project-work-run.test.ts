@@ -2,8 +2,10 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 
 import {
+  RESTORING_RETAINED_AGENT_RESULT,
   assignmentSelector,
   resolveWorkProject,
+  settleRetainedProjectRunBusy,
   shouldRestoreRetainedProjectRun,
 } from '../src/view/project-work-run.ts';
 
@@ -48,5 +50,16 @@ test('Project Work restores a retained run from inventory or global authority', 
       canonical_root: captured.requestRoot,
     }),
     false,
+  );
+});
+
+test('retained run restoration releases only its own busy state', () => {
+  assert.equal(
+    settleRetainedProjectRunBusy(RESTORING_RETAINED_AGENT_RESULT),
+    '',
+  );
+  assert.equal(
+    settleRetainedProjectRunBusy('Preparing a fresh independent review…'),
+    'Preparing a fresh independent review…',
   );
 });
