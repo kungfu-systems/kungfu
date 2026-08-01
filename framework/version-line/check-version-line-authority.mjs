@@ -154,6 +154,9 @@ function requireContains(text, fragment, label) {
 
 function validateWorkflowProjections(root, projection) {
   const native = JSON.stringify(projection.runnerRouting.matrices.native);
+  const line = projection.lines.find(({ id }) => id === projection.activeLine);
+  if (!line) throw new Error('active line projection is missing');
+  const nativePreset = `kungfu-v${line.major}-native`;
   const selfHosted = JSON.stringify(
     projection.runnerRouting.matrices.selfHosted,
   );
@@ -175,8 +178,11 @@ function validateWorkflowProjections(root, projection) {
     'build matrix',
   );
   requireContains(build, 'runner-preset: custom', 'build runner preset');
-  requireContains(release, native, 'release matrix');
-  requireContains(release, 'runner-preset: custom', 'release runner preset');
+  requireContains(
+    release,
+    `runner-preset: ${nativePreset}`,
+    'release runner preset',
+  );
   requireContains(patrol, selfHosted, 'dev patrol matrix');
   requireContains(patrol, 'runner-preset: custom', 'dev patrol runner preset');
   const stable = fs.readFileSync(
@@ -287,6 +293,7 @@ export function checkVersionLineAuthority(root = ROOT) {
     narrowMatches(
       JSON.stringify({
         lines: projection.lines,
+        runnerPresets: [`kungfu-v${line.major}-native`],
         runnerCompatibilityAliases:
           authority.runnerRouting.compatibilityAliases,
       }),
