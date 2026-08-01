@@ -359,7 +359,7 @@ function materializePythonEntrypoint(packageRoot) {
  */
 function linuxReleaseStripCandidates(files) {
   return files.filter((file) =>
-    /^dist\/kungfu\/(?:[^/]+\.(?:node|so)|libwasm\/[^/]+\.so|kungfu-(?:kfd-agent-runtime|wasm-host))$/u.test(
+    /^dist\/kungfu\/(?:[^/]+\.(?:node|so)|libwasm\/[^/]+\.so|kungfu-(?:kfd-agent-runtime|trunk|wasm-host))$/u.test(
       file,
     ),
   );

@@ -63,6 +63,7 @@ kungfu agent status --target codex --scope project --json
 kungfu agent install-skill --target codex --scope project --json
 kungfu shifu agent capabilities --json
 kungfu xinfa agent capabilities --json
+kungfu xinfa compile --workspace <repo> --output <atlas-dir> --json
 kungfu agent docs --projection agent --json
 ```
 

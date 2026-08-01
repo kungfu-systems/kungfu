@@ -45,6 +45,7 @@ def test_brief_and_intent_map_enforce_complete_bounded_first_entry():
 
     assert len(brief.encode("utf-8")) <= 8192
     assert len(brief.splitlines()) <= 120
+    assert "kungfu xinfa compile" in brief
     assert set(intent_map["requiredIntentIds"]) == {
         row["id"] for row in intent_map["intents"]
     }
