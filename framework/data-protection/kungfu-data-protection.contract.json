@@ -4,7 +4,8 @@
   "version": 1,
   "status": {
     "specification": "accepted",
-    "domainAdapters": "work-agent-project-cut-dogfood-source-qualified",
+    "domainAdapters": "work-agent-project-cut-dogfood-product-release-exit-source-qualified",
+    "sourceQualification": "accepted",
     "installedQualification": "not-qualified",
     "releaseQualification": "not-qualified"
   },
@@ -433,6 +434,7 @@
     "gate": "./shifu check:data-protection-contract",
     "test": "scripts/check-data-protection-contract.test.mjs",
     "fixtures": "tests/fixtures/data-protection-contract/cases.json",
+    "aggregate": "framework/data-protection/durable-history-qualification.contract.json",
     "requiredAdversarialCases": [
       "duplicate-domain-member-authority",
       "activity-is-not-protected-history",

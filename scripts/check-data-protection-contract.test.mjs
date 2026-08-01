@@ -220,8 +220,9 @@ test('freezes one versioned composition policy without taking domain authority',
   assert.equal(contract.status.specification, 'accepted');
   assert.equal(
     contract.status.domainAdapters,
-    'work-agent-project-cut-dogfood-source-qualified',
+    'work-agent-project-cut-dogfood-product-release-exit-source-qualified',
   );
+  assert.equal(contract.status.sourceQualification, 'accepted');
   assert.equal(contract.status.releaseQualification, 'not-qualified');
   assert.equal(contract.authority.kind, 'composition-policy');
   assert.match(contract.authority.receiptRule, /does not replace/u);
@@ -358,4 +359,5 @@ test('human contract states the same authority and non-claim boundaries', () => 
   assert.match(guide, /Garbage collection is plan-only by default/u);
   assert.match(guide, /does not claim protection against physical media loss/u);
   assert.match(guide, /.\/shifu check:data-protection-contract/u);
+  assert.match(guide, /.\/shifu check:durable-history-qualification/u);
 });

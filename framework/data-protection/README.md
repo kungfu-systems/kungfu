@@ -84,8 +84,16 @@ Cut portability, specified by
 its Exit member carries verified installed-image bytes and receipt roots without
 channel or download caches, then creates a separate copy-forward activation
 receipt whose paths belong to the destination. Public and `shifu-local` trust
-domains are retained rather than collapsed. User-facing Exit surfaces and
-cross-release qualification remain staged separately. The contract does not
+domains are retained rather than collapsed. User-facing Exit surfaces share
+the same Core authority seam. The aggregate
+[`durable-history-qualification.contract.json`](durable-history-qualification.contract.json)
+is now source-qualified: its disposable campaign covers all declared
+entrypoints, clean full and explicitly lossy thin import, predecessor reading,
+interruption, cache/worktree loss, rollback, unknown members, and GC, and emits
+an exact source/artifact/campaign/review-bound receipt. That source result does
+not qualify the installed product, stable release, off-host backup, physical
+media, or an unexecuted platform; soak, off-host restore, and platform
+expansion remain explicit deferred work. The contract does not
 inspect or mutate a real `.kungfu` home. It does not claim protection against physical media loss.
 
 Verify the contract and its adversarial corpus with:
@@ -95,4 +103,6 @@ Verify the contract and its adversarial corpus with:
 ./shifu check:work-agent-history-continuity
 ./shifu check:project-cut-dogfood-history
 ./shifu check:product-release-cut-portability
+./shifu check:exit-history-surfaces
+./shifu check:durable-history-qualification
 ```
