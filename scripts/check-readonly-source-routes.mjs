@@ -18,6 +18,14 @@ const REQUIRED_AGENT_DISCOVERY = [
   'kungfu agent status --target <agent> --json',
   'kungfu agent work inspect --ref <ref> --json',
 ];
+const REQUIRED_SOURCE_ACCEPTANCE_DENIALS = [
+  '_tmp_*',
+  '.buildchain/diagnostics/*.tmp-*',
+  '.pnpm-store/**',
+  'generated-fixtures/**',
+  'nested-task-output/**',
+];
+const SOURCE_ACCEPTANCE_WRITER_OWNER = 'source-acceptance-runtime';
 
 function sourceCommand(command) {
   const normalized = command
@@ -69,6 +77,31 @@ export function validateReadonlyRouteInventory(
     }
     if (!route.implementation || !exists(path.join(ROOT, route.implementation)))
       diagnostics.push({ code: 'route-implementation', id: route.id || '' });
+    if (route.id === 'source-acceptance') {
+      if (
+        !route.runtimeImplementation ||
+        !exists(path.join(ROOT, route.runtimeImplementation))
+      )
+        diagnostics.push({
+          code: 'source-runtime-implementation',
+          id: route.id,
+        });
+      if (route.writerOwner !== SOURCE_ACCEPTANCE_WRITER_OWNER)
+        diagnostics.push({ code: 'source-writer-owner', id: route.id });
+      if (!String(route.recovery || '').includes('OS runtime root'))
+        diagnostics.push({ code: 'source-writer-recovery', id: route.id });
+      const denied = new Set(route.deniedCheckoutWriters || []);
+      for (const writer of REQUIRED_SOURCE_ACCEPTANCE_DENIALS) {
+        if (!denied.has(writer))
+          diagnostics.push({
+            code: 'source-writer-denial',
+            id: route.id,
+            writer,
+            owner: SOURCE_ACCEPTANCE_WRITER_OWNER,
+            recovery: route.recovery || '',
+          });
+      }
+    }
   }
   const declaredSource = new Set(
     routes
