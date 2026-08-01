@@ -303,6 +303,33 @@ jobs:
             (Join-Path $env:LOCALAPPDATA "Microsoft\WinGet\Links")
           ) | Out-File -FilePath $env:GITHUB_PATH -Append -Encoding utf8
 
+      - name: Setup Rust toolchain for qualification on Windows
+        if: ${{ matrix.platform == 'windows' }}
+        shell: cmd
+        env:
+          RUSTUP_DIST_SERVER: https://rsproxy.cn
+          RUSTUP_UPDATE_ROOT: https://rsproxy.cn/rustup
+        run: |
+          @echo off
+          set "CARGO_HOME=%RUNNER_TOOL_CACHE%\kungfu-gate-cargo-v1"
+          set "RUSTUP_HOME=%RUNNER_TOOL_CACHE%\kungfu-gate-rustup-1.96.0"
+          set "RUSTUP_INIT_ROOT=%RUNNER_TOOL_CACHE%\kungfu-gate-rustup-init-v1"
+          set "RUSTUP_INIT=%RUSTUP_INIT_ROOT%\rustup-init.exe"
+          if not exist "%RUSTUP_INIT_ROOT%" mkdir "%RUSTUP_INIT_ROOT%"
+          if errorlevel 1 exit /b %errorlevel%
+          if not exist "%RUSTUP_INIT%" curl.exe --proto "=https" --tlsv1.2 --retry 10 --retry-connrefused --fail --silent --show-error --location "https://win.rustup.rs/x86_64" --output "%RUSTUP_INIT%"
+          if not exist "%CARGO_HOME%\bin\rustup.exe" "%RUSTUP_INIT%" --default-toolchain "1.96.0" --profile minimal --component rustfmt --component clippy -y --no-modify-path
+          if not exist "%CARGO_HOME%\bin\rustup.exe" exit /b 1
+          "%CARGO_HOME%\bin\rustup.exe" run "1.96.0" rustc --version >nul 2>nul
+          if errorlevel 1 "%CARGO_HOME%\bin\rustup.exe" toolchain install "1.96.0" --profile minimal --component rustfmt --component clippy
+          if errorlevel 1 exit /b %errorlevel%
+          "%CARGO_HOME%\bin\rustup.exe" run "1.96.0" rustc --version
+          "%CARGO_HOME%\bin\rustup.exe" target add "wasm32-unknown-unknown" --toolchain "1.96.0"
+          if errorlevel 1 exit /b %errorlevel%
+          echo %CARGO_HOME%\bin>>"%GITHUB_PATH%"
+          echo CARGO_HOME=%CARGO_HOME%>>"%GITHUB_ENV%"
+          echo RUSTUP_HOME=%RUSTUP_HOME%>>"%GITHUB_ENV%"
+
       - name: Run exact-revision qualification on Unix
         if: ${{ matrix.platform != 'windows' }}
         shell: bash
