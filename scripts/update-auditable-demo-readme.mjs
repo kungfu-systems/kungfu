@@ -122,6 +122,36 @@ function exactArtifact(value, label) {
   };
 }
 
+function optionalRenditionAuthority(value) {
+  if (value === undefined) return null;
+  const frameSets = value?.frameSets;
+  if (
+    value?.policy !== 'independent-native-frame-sets/v1' ||
+    !Array.isArray(frameSets) ||
+    frameSets.length !== 2 ||
+    frameSets[0]?.role !== 'primary' ||
+    frameSets[0]?.width !== 1920 ||
+    frameSets[0]?.height !== 1080 ||
+    !DIGEST_PATTERN.test(frameSets[0]?.captureRoot || '') ||
+    frameSets[1]?.role !== 'responsive' ||
+    frameSets[1]?.width !== 1280 ||
+    frameSets[1]?.height !== 720 ||
+    !DIGEST_PATTERN.test(frameSets[1]?.captureRoot || '') ||
+    frameSets[0].captureRoot === frameSets[1].captureRoot
+  ) {
+    fail('native rendition authority is invalid');
+  }
+  return {
+    policy: value.policy,
+    frameSets: frameSets.map(({ role, width, height, captureRoot }) => ({
+      role,
+      width,
+      height,
+      captureRoot,
+    })),
+  };
+}
+
 export function validatePublicEvidence(value) {
   const version =
     value?.schema === 'kungfu.auditable-demo.public-evidence/v2' ? 2 : 1;
@@ -273,6 +303,9 @@ export function validatePublicEvidence(value) {
       'authorization non-authorities',
     ),
   };
+  const renditionAuthority = optionalRenditionAuthority(
+    value.renditionAuthority,
+  );
   const readmeMedia = {
     path: requiredString(
       value.readmeMedia?.path,
@@ -319,11 +352,12 @@ export function validatePublicEvidence(value) {
     claims: value.claims,
     nonClaims: value.nonClaims,
     authorization,
+    renditionAuthority,
     readmeMedia,
   };
 }
 
-function verifyMediaBundle(mediaDirectory, passport) {
+export function verifyMediaBundle(mediaDirectory, passport) {
   const members = fs
     .readdirSync(mediaDirectory, { withFileTypes: true })
     .map((entry) => {
@@ -433,21 +467,74 @@ function verifyMediaBundle(mediaDirectory, passport) {
       'renderer manifest',
     ).toString('utf8'),
   );
+  const nativeInputs = manifest.inputs?.renditions;
+  const nativeFrameSets = manifest.derivation?.sourceFrameSets;
   if (
     manifest.schema !== 'build-images.auditable-demo-render/v1' ||
     manifest.renderer?.image !== passport.toolchain.rendererImage ||
     manifest.policy?.evidenceClass !== passport.authority.evidenceClass ||
     manifest.policy?.visualClassification !== 'bounded-pty-replay' ||
-    manifest.policy?.runtimeTextAuthority !== 'terminal-capture.json' ||
-    !DIGEST_PATTERN.test(manifest.inputs?.terminalCapture?.root || '') ||
-    manifest.derivation?.policy !==
-      'single-frame-set-deterministic-renditions/v1' ||
-    manifest.derivation?.renditions?.[readmeRendition.path]?.operation !==
-      'lanczos-downscale-from-source-frames'
+    manifest.policy?.runtimeTextAuthority !== 'rendition-set.json' ||
+    manifest.inputs?.renditionSet?.schema !==
+      'kungfu.auditable-demo.rendition-set/v1' ||
+    !DIGEST_PATTERN.test(manifest.inputs?.renditionSet?.root || '') ||
+    manifest.derivation?.authority !== 'rendition-set.json' ||
+    manifest.derivation?.policy !== 'independent-native-frame-sets/v1'
   ) {
-    fail('renderer manifest does not prove the qualified PTY replay');
+    fail('renderer manifest does not prove the qualified native PTY replay');
   }
-  return readmeRendition.bytes;
+  if (
+    !Array.isArray(nativeInputs) ||
+    nativeInputs.length !== 2 ||
+    nativeInputs[0]?.role !== 'primary' ||
+    nativeInputs[0]?.terminalCapture?.dimensions?.columns !== 150 ||
+    nativeInputs[0]?.terminalCapture?.dimensions?.rows !== 36 ||
+    !DIGEST_PATTERN.test(nativeInputs[0]?.terminalCapture?.root || '') ||
+    nativeInputs[1]?.role !== 'responsive' ||
+    nativeInputs[1]?.terminalCapture?.dimensions?.columns !== 100 ||
+    nativeInputs[1]?.terminalCapture?.dimensions?.rows !== 28 ||
+    !DIGEST_PATTERN.test(nativeInputs[1]?.terminalCapture?.root || '') ||
+    nativeInputs[0].terminalCapture.root ===
+      nativeInputs[1].terminalCapture.root
+  ) {
+    fail('renderer inputs do not bind two distinct native terminal captures');
+  }
+  if (
+    !Array.isArray(nativeFrameSets) ||
+    nativeFrameSets.length !== 2 ||
+    nativeFrameSets[0]?.role !== 'primary' ||
+    nativeFrameSets[0]?.width !== 1920 ||
+    nativeFrameSets[0]?.height !== 1080 ||
+    nativeFrameSets[0]?.captureRoot !== nativeInputs[0].terminalCapture.root ||
+    nativeFrameSets[1]?.role !== 'responsive' ||
+    nativeFrameSets[1]?.width !== 1280 ||
+    nativeFrameSets[1]?.height !== 720 ||
+    nativeFrameSets[1]?.captureRoot !== nativeInputs[1].terminalCapture.root
+  ) {
+    fail('renderer derivation does not bind the required native frame sets');
+  }
+  for (const rendition of roles.values()) {
+    const derivation = manifest.derivation?.renditions?.[rendition.path];
+    if (
+      !derivation ||
+      derivation.width !== rendition.width ||
+      derivation.height !== rendition.height ||
+      derivation.operation !== 'native-frame-set-encode'
+    ) {
+      fail(`renderer derivation is invalid for role ${rendition.role}`);
+    }
+  }
+  return {
+    gif: readmeRendition.bytes,
+    nativeFrameSets: nativeFrameSets.map(
+      ({ role, width, height, captureRoot }) => ({
+        role,
+        width,
+        height,
+        captureRoot,
+      }),
+    ),
+  };
 }
 
 export function buildPublicEvidence({
@@ -474,7 +561,7 @@ export function buildPublicEvidence({
   ) {
     fail('Passport artifact is not bound to the exact workflow run');
   }
-  const gif = verifyMediaBundle(mediaDirectory, passport);
+  const { gif, nativeFrameSets } = verifyMediaBundle(mediaDirectory, passport);
   const rootName = passport.root.value.slice(7);
   const mediaPrefix =
     passport.demo.id === 'agent-work-lab' &&
@@ -492,6 +579,10 @@ export function buildPublicEvidence({
       rendererImage: passport.toolchain.rendererImage,
       gate: passport.gate,
       media: passport.media,
+      renditionAuthority: {
+        policy: 'independent-native-frame-sets/v1',
+        frameSets: nativeFrameSets,
+      },
       passport: {
         root: passport.root.value,
         artifact: exactPassportArtifact,
@@ -585,6 +676,10 @@ export function renderAuditableDemoBlock(value) {
     fail('only the catalog-selected README demo can update the managed block');
   }
   const shortSource = evidence.sourceSha.slice(0, 12);
+  const nativeRenditionLine =
+    evidence.renditionAuthority?.policy === 'independent-native-frame-sets/v1'
+      ? 'The 1080p and 720p renditions come from independent native PTY captures, not scaling.'
+      : '';
   return [
     START,
     '## See a fresh Agent continue the same Work',
@@ -603,6 +698,7 @@ export function renderAuditableDemoBlock(value) {
     `The installed \`${evidence.demo.commandLabel}\` command ran in a bounded PTY, the`,
     'required Buildchain Gate qualified its exact capture, and full media rendered only',
     'from that passing Gate.',
+    ...(nativeRenditionLine ? [nativeRenditionLine] : []),
     '',
     `[Method and evidence](docs/qualification/auditable-demo-artifact-pipeline.md) · [source \`${shortSource}\`](https://github.com/kungfu-systems/kungfu/commit/${evidence.sourceSha}) · [workflow run](${evidence.workflowUrl})`,
     '',
