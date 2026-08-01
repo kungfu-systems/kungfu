@@ -29,3 +29,27 @@ test('unclassified, writing, or missing routes fail closed', () => {
   assert.ok(codes.includes('read-route-side-effect'));
   assert.ok(codes.includes('route-implementation'));
 });
+
+test('source acceptance requires exact writer ownership, recovery, and checkout denials', () => {
+  const broken = structuredClone(inventory);
+  const source = broken.routes.find(
+    (route) => route.id === 'source-acceptance',
+  );
+  source.writerOwner = 'nested-task';
+  source.recovery = '';
+  source.deniedCheckoutWriters = [];
+  const diagnostics = validateReadonlyRouteInventory(broken);
+  const codes = diagnostics.map((item) => item.code);
+  assert.ok(codes.includes('source-writer-owner'));
+  assert.ok(codes.includes('source-writer-recovery'));
+  assert.equal(
+    diagnostics.filter((item) => item.code === 'source-writer-denial').length,
+    5,
+  );
+  for (const item of diagnostics.filter(
+    (diagnostic) => diagnostic.code === 'source-writer-denial',
+  )) {
+    assert.equal(item.owner, 'source-acceptance-runtime');
+    assert.equal(item.recovery, '');
+  }
+});
