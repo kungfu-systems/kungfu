@@ -110,6 +110,7 @@ import {
   resolveTuiCliRuntime,
   resolveTuiProductPaths,
   resolveTuiRuntimeDir,
+  tuiChildCliEnvironment,
 } from './terminal-lifecycle.js';
 import {
   globalWorkContribution,
@@ -210,14 +211,7 @@ async function invokeTuiAgentSession(
 }
 
 function cliEnvironment(): NodeJS.ProcessEnv {
-  const env = { ...process.env };
-  // This process is running inside embedded libnode. Child `kungfu` calls must
-  // re-enter the ordinary CLI instead of recursively selecting the Node host.
-  env.KUNGFU_AS_VARIANT = undefined;
-  env.KUNGFU_DIR = undefined;
-  env.KUNGFU_KFX_CONTRACT = undefined;
-  env.KF_BUNDLED_EXTENSION_ROOT = undefined;
-  return env;
+  return tuiChildCliEnvironment(process.env);
 }
 
 function runtimePaths() {

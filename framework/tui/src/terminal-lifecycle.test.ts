@@ -22,7 +22,25 @@ import {
   existingProjectWorkspaceRoot,
   resolveTuiCoreDir,
   resolveTuiProductPaths,
+  tuiChildCliEnvironment,
 } from './terminal-lifecycle.js';
+
+test('child CLI retains the packaged KFX root without recursive libnode selection', () => {
+  const parent = {
+    KUNGFU_AS_VARIANT: 'node',
+    KUNGFU_DIR: '/product/runtime',
+    KUNGFU_KFX_CONTRACT: '/product/runtime/config/kungfu-kfx.contract.json',
+    KF_BUNDLED_EXTENSION_ROOT: '/product/extensions',
+  };
+
+  const child = tuiChildCliEnvironment(parent);
+
+  assert.equal(child.KUNGFU_AS_VARIANT, undefined);
+  assert.equal(child.KUNGFU_DIR, undefined);
+  assert.equal(child.KUNGFU_KFX_CONTRACT, undefined);
+  assert.equal(child.KF_BUNDLED_EXTENSION_ROOT, '/product/extensions');
+  assert.equal(parent.KUNGFU_AS_VARIANT, 'node');
+});
 
 class FakeOutput extends EventEmitter implements TerminalOutput {
   isTTY = true;

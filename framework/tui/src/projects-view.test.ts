@@ -230,7 +230,5 @@ test('Project Session discovery follows the current runtime host after Project r
     openProjects,
     /ensureTuiAgentSession\(paths\.runtimeDir\)/,
   );
-  assert.match(source, /env\.KUNGFU_DIR = undefined/);
-  assert.match(source, /env\.KUNGFU_KFX_CONTRACT = undefined/);
-  assert.match(source, /env\.KF_BUNDLED_EXTENSION_ROOT = undefined/);
+  assert.match(source, /return tuiChildCliEnvironment\(process\.env\)/);
 });
