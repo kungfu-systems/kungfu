@@ -88,13 +88,13 @@
       "standard": "KFD-1",
       "standardKey": "kfd-1",
       "result": "passed",
-      "preBuildWitnessSha256": "874c3a77afec4d83fe5feb546fefd576c934b44148431fda8c11f6ea7d74ce2f",
+      "preBuildWitnessSha256": "7916690a91b2616b9356edae50d84e306d4ef739d82a1510a9730926c5bdaebc",
       "sourceHashes": {
-        "sha256": "be04f28d450dca59536800904259ab5676836c03e3f3d47bd25a71b079f5e60b",
+        "sha256": "ca29c0b21ca7321bbd6d416c4e2eff22c3eeb201c5bb70cfdf948c1ffdd1e877",
         "surfaceCount": 21
       },
       "artifactHashes": {
-        "sha256": "7f456267ecb101e0c3cd54bb10307749caffeeffe840f0baf565d10caa1f9f3e",
+        "sha256": "dfd75daa4948727fafe915adf5ef36ecd3395d2dfe3ca816a8181529f21c74ee",
         "surfaceCount": 21
       },
       "witness": {
@@ -134,7 +134,7 @@
         "sourceVerificationRequired": true,
         "canonicalPolicy": {
           "path": "framework/contract/kungfu-agent-first-canonical-policy.json",
-          "sha256": "cc42aa6432a09432bb31bb8ca69d7134b3413e36e39d5e77cef296472e2d0f38"
+          "sha256": "80986c426d1d3daf1c98a7e56c8a999a7a738e3769ca7fef930cd5c2bf7dbc98"
         },
         "registry": {
           "path": "framework/contract/kungfu-contracts.registry.json",
@@ -200,9 +200,9 @@
           {
             "name": "kungfu-agent-session",
             "sourcePath": "framework/agent-session/kungfu-agent-session.contract.json",
-            "sourceSha256": "86e291a9852dc8f26c2f1fe40f39e1e20f0ecb30e21800966acd977f9b9a21a8",
+            "sourceSha256": "e3ad3b19b8410213e58fedf4297b06830850e3451d3d8206bb35d2a405642d78",
             "artifactPath": "config/kungfu-agent-session.contract.json",
-            "expectedSha256": "86e291a9852dc8f26c2f1fe40f39e1e20f0ecb30e21800966acd977f9b9a21a8",
+            "expectedSha256": "e3ad3b19b8410213e58fedf4297b06830850e3451d3d8206bb35d2a405642d78",
             "byteForByte": true
           },
           {
@@ -445,8 +445,8 @@
           {
             "name": "kungfu-agent-session",
             "sourcePath": "framework/agent-session/kungfu-agent-session.contract.json",
-            "expectedSha256": "86e291a9852dc8f26c2f1fe40f39e1e20f0ecb30e21800966acd977f9b9a21a8",
-            "actualSha256": "86e291a9852dc8f26c2f1fe40f39e1e20f0ecb30e21800966acd977f9b9a21a8",
+            "expectedSha256": "e3ad3b19b8410213e58fedf4297b06830850e3451d3d8206bb35d2a405642d78",
+            "actualSha256": "e3ad3b19b8410213e58fedf4297b06830850e3451d3d8206bb35d2a405642d78",
             "status": "passed",
             "reason": ""
           },
@@ -640,10 +640,10 @@
           {
             "name": "kungfu-agent-session",
             "sourcePath": "framework/agent-session/kungfu-agent-session.contract.json",
-            "sourceSha256": "86e291a9852dc8f26c2f1fe40f39e1e20f0ecb30e21800966acd977f9b9a21a8",
+            "sourceSha256": "e3ad3b19b8410213e58fedf4297b06830850e3451d3d8206bb35d2a405642d78",
             "artifactPath": "config/kungfu-agent-session.contract.json",
-            "expectedSha256": "86e291a9852dc8f26c2f1fe40f39e1e20f0ecb30e21800966acd977f9b9a21a8",
-            "actualSha256": "86e291a9852dc8f26c2f1fe40f39e1e20f0ecb30e21800966acd977f9b9a21a8",
+            "expectedSha256": "e3ad3b19b8410213e58fedf4297b06830850e3451d3d8206bb35d2a405642d78",
+            "actualSha256": "e3ad3b19b8410213e58fedf4297b06830850e3451d3d8206bb35d2a405642d78",
             "byteForByte": true,
             "status": "passed",
             "reason": ""

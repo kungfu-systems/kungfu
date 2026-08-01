@@ -38,6 +38,7 @@ from kungfu.rewind.fb.RunStatus import RunStatus
 
 REPORT_SCHEMA = "kungfu.agent-run-report/v1"
 CONTINUATION_SCHEMA = "kungfu.agent-continuation-envelope/v1"
+HISTORY_PROJECTION_SCHEMA = "kungfu.work-agent-history.projection/v1"
 _ROOT = re.compile(r"sha256:[0-9a-f]{64}\Z")
 _ANSI_ESCAPE = re.compile(r"\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])")
 _SENSITIVE_COMMAND_NAME = (
@@ -98,6 +99,31 @@ def canonical_root(value: Any) -> str:
         value, ensure_ascii=False, sort_keys=True, separators=(",", ":")
     ).encode("utf-8")
     return f"sha256:{hashlib.sha256(encoded).hexdigest()}"
+
+
+def agent_activity_history_projection(
+    work_ref: Mapping[str, Any] | None,
+    *,
+    entrypoint: str = "managed-run",
+) -> dict[str, Any]:
+    """Describe an Agent attempt without upgrading activity into Work history."""
+
+    work = validate_work_ref(work_ref)
+    return {
+        "schema": HISTORY_PROJECTION_SCHEMA,
+        "state": "session-activity-only",
+        "entrypoint": entrypoint,
+        "workRefRoot": canonical_root(work) if work is not None else None,
+        "semanticAdmissionReceiptRoot": None,
+        "processExitSettlesWork": False,
+        "selfReportSettlesWork": False,
+        "nextAction": "independent-assessment-required",
+        "authority": {
+            "contract": ("framework/data-protection/work-agent-history.contract.json"),
+            "semanticOwner": "profile-kfd-action-episode",
+            "observer": "agent-session",
+        },
+    }
 
 
 def _read_json_object(
@@ -998,6 +1024,7 @@ def execute(
                 "settlementStatus": "unsettled",
                 "nextAction": "independent-assessment-required",
             },
+            "historyProtection": agent_activity_history_projection(work),
             "privacy": {
                 "priorTranscriptBytesGivenToAgent": 0,
                 "privateProviderSessionStoreRead": False,

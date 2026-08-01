@@ -807,7 +807,7 @@ export function ProjectWorkHost({
       .then((receipt) =>
         setMessage(
           receipt.ok
-            ? 'Agent Work is retained. Follow the receipt next action below.'
+            ? 'Agent session activity is retained. Protected Work history still requires an accepted domain receipt.'
             : `Agent Work ended with status ${receipt.status}.`,
         ),
       )

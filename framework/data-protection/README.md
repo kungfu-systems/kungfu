@@ -55,15 +55,31 @@ after either an equivalent successor is admitted or an export/import recovery
 path passes postflight equivalence. Observer projections and caches may be
 rebuilt, but they cannot be the only recovery source.
 
+## Work and Agent entrypoints
+
+[`work-agent-history.contract.json`](work-agent-history.contract.json) applies
+the boundary to GUI, TUI, CLI, native Agent UI, managed runs, Skill Envelopes,
+KFD, and external Agent UIs. Every surface routes semantic actions to the same
+Work/Profile, Fact, and Episode authority. A provider exit, self-report,
+WorkConsole row, or retained SessionAttempt is shown as session activity only;
+it has no semantic admission receipt and cannot complete Work.
+
+WorkConsole remains an observer projection. Losing its registry can remove a
+reattach convenience, but cannot erase or reinterpret accepted Work history.
+Compatible history is read under its exact roots or copy-forward migrated with
+a mapping receipt in a disposable qualification home. Tests never migrate the
+real user home.
+
 ## Current boundary
 
-This slice freezes and tests the contract. Domain adapters, installed-product
-migration, user-facing history surfaces, and cross-release qualification are
-staged separately. The contract does not inspect or mutate a real `.kungfu`
-home, and it does not claim protection against physical media loss.
+The base contract and Work/Agent adapter are source-qualified. Project Cut,
+Dogfood, installed-product migration, Exit surfaces, and cross-release
+qualification remain staged separately. The contract does not inspect or
+mutate a real `.kungfu` home, and it does not claim protection against physical media loss.
 
 Verify the contract and its adversarial corpus with:
 
 ```sh
 ./shifu check:data-protection-contract
+./shifu check:work-agent-history-continuity
 ```

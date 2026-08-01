@@ -264,6 +264,17 @@
     ],
     "negotiation": "major-schema-exact-minor-capability-subset"
   },
+  "historyProtection": {
+    "contract": "framework/data-protection/work-agent-history.contract.json",
+    "sessionAttemptState": "session-activity-only",
+    "semanticAdmissionReceipt": null,
+    "processExitSettlesWork": false,
+    "selfReportSettlesWork": false,
+    "workConsoleAuthority": "observer-only",
+    "ownerHistoryAuthority": "profile-kfd-action-episode",
+    "registryLossRule": "Session convenience may be lost or rebuilt without changing owner-domain Work history.",
+    "privacyRule": "Do not retain credentials, hidden reasoning, raw private prompts, full transcripts, or provider-private stores for history protection."
+  },
   "compatibility": {
     "stability": "pre-release",
     "additiveChanges": "New optional capabilities, operations, states, and error codes may be added within v1.",
@@ -293,6 +304,7 @@
       "recovery",
       "productProjection",
       "capabilityDiscovery",
+      "historyProtection",
       "compatibility",
       "valueSchemaBundle"
     ],
@@ -339,6 +351,9 @@
         "type": "object"
       },
       "capabilityDiscovery": {
+        "type": "object"
+      },
+      "historyProtection": {
         "type": "object"
       },
       "compatibility": {

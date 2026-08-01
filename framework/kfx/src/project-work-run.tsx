@@ -103,6 +103,10 @@ export function ProjectWorkRunConfirmation({
           Completion, review, Git commit, push, and publication are not
           included. The exact plan is {plan.planRoot.slice(0, 24)}…
         </p>
+        <p style={{ ...mono, color: '#b8c2cc' }}>
+          Agent session activity is not protected Work history until an owning
+          domain accepts it with a verifiable receipt.
+        </p>
         {!plan.executable ? (
           <p style={{ ...mono, color: '#f48771' }}>
             {plan.blockedReason ??
@@ -289,8 +293,9 @@ export function ProjectWorkRunSession({
               marginTop: 8,
             }}
           >
-            Agent run retained · Work is {run.receipt.workPhase}.{' '}
-            {run.receipt.nextActions[0] || 'Inspect the retained evidence.'}
+            Agent session activity retained · Work is {run.receipt.workPhase}.{' '}
+            {run.receipt.nextActions[0] || 'Inspect the retained evidence.'}{' '}
+            Protected Work history still requires an accepted domain receipt.
           </div>
         ) : null}
         {run.error ? (

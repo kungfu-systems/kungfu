@@ -111,7 +111,8 @@
         "status",
         "startedAt",
         "plans",
-        "receipts"
+        "receipts",
+        "historyProtection"
       ],
       "properties": {
         "sessionAttemptId": { "type": "string", "minLength": 1 },
@@ -137,6 +138,26 @@
         "receipts": {
           "type": "array",
           "items": { "$ref": "#/$defs/receipt" }
+        },
+        "historyProtection": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "schema",
+            "state",
+            "semanticAdmissionReceiptRoot",
+            "processExitSettlesWork",
+            "selfReportSettlesWork",
+            "authority"
+          ],
+          "properties": {
+            "schema": { "const": "kungfu.work-console-history-boundary/v1" },
+            "state": { "const": "session-activity-only" },
+            "semanticAdmissionReceiptRoot": { "type": "null" },
+            "processExitSettlesWork": { "const": false },
+            "selfReportSettlesWork": { "const": false },
+            "authority": { "const": "observer-only" }
+          }
         }
       }
     },

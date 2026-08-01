@@ -43,6 +43,15 @@
     ],
     "rule": "Internal authority nouns may appear in evidence, diagnostics, APIs, and explain views, but not as first-layer navigation, calls to action, or prerequisites."
   },
+  "historyProtection": {
+    "contract": "framework/data-protection/work-agent-history.contract.json",
+    "userRule": "Agent session activity is not protected Work history until an owning domain accepts it with a verifiable receipt.",
+    "activityState": "session-activity-only",
+    "protectedState": "protected-history-admitted",
+    "processExitSettlesWork": false,
+    "workConsoleAuthority": "observer-only",
+    "recoveryWithoutOriginalAgentUi": true
+  },
   "surfaces": {
     "tui": {
       "entrypoint": "kungfu",
