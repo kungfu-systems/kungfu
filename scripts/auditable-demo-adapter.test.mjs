@@ -335,11 +335,11 @@ test('adapter selects a second catalog demo without changing the capture engine'
         siteSlug: 'agent-work-lab-secondary',
       },
     });
-    catalog.demos[1].renditions[0].scene = structuredClone(
-      catalog.demos[1].scene,
+    catalog.demos.at(-1).renditions[0].scene = structuredClone(
+      catalog.demos.at(-1).scene,
     );
-    catalog.demos[1].renditions[1].scene = {
-      ...catalog.demos[1].renditions[1].scene,
+    catalog.demos.at(-1).renditions[1].scene = {
+      ...catalog.demos.at(-1).renditions[1].scene,
       id: 'kungfu-agent-work-lab-secondary-autoplay-720p',
       title: 'Kungfu Agent Work Lab — secondary capture simulation',
     };

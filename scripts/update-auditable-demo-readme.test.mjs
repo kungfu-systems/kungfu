@@ -14,6 +14,7 @@ import {
   renderAuditableDemoBlock,
   updateReadme,
   validatePublicEvidence,
+  verifyMediaBundle,
   verifyReadmeMediaFile,
 } from './update-auditable-demo-readme.mjs';
 
@@ -235,18 +236,77 @@ test('materializes README evidence only from a verified Passport and exact media
             evidenceClass:
               'exact-installed-artifact-agent-work-lab-autoplay/v1',
             visualClassification: 'bounded-pty-replay',
-            runtimeTextAuthority: 'terminal-capture.json',
+            runtimeTextAuthority: 'rendition-set.json',
           },
           inputs: {
-            terminalCapture: { root: `sha256:${'9'.repeat(64)}` },
+            renditionSet: {
+              schema: 'kungfu.auditable-demo.rendition-set/v1',
+              root: `sha256:${'7'.repeat(64)}`,
+            },
+            renditions: [
+              {
+                role: 'primary',
+                terminalCapture: {
+                  root: `sha256:${'9'.repeat(64)}`,
+                  dimensions: { columns: 150, rows: 36 },
+                },
+              },
+              {
+                role: 'responsive',
+                terminalCapture: {
+                  root: `sha256:${'6'.repeat(64)}`,
+                  dimensions: { columns: 100, rows: 28 },
+                },
+              },
+            ],
           },
           derivation: {
-            policy: 'single-frame-set-deterministic-renditions/v1',
+            authority: 'rendition-set.json',
+            policy: 'independent-native-frame-sets/v1',
+            sourceFrameSets: [
+              {
+                role: 'primary',
+                width: 1920,
+                height: 1080,
+                captureRoot: `sha256:${'9'.repeat(64)}`,
+              },
+              {
+                role: 'responsive',
+                width: 1280,
+                height: 720,
+                captureRoot: `sha256:${'6'.repeat(64)}`,
+              },
+            ],
             renditions: {
+              'demo.mp4': {
+                width: 1920,
+                height: 1080,
+                operation: 'native-frame-set-encode',
+              },
+              'demo.webm': {
+                width: 1920,
+                height: 1080,
+                operation: 'native-frame-set-encode',
+              },
+              'demo-720p.mp4': {
+                width: 1280,
+                height: 720,
+                operation: 'native-frame-set-encode',
+              },
+              'demo-720p.webm': {
+                width: 1280,
+                height: 720,
+                operation: 'native-frame-set-encode',
+              },
               'demo.gif': {
                 width: 1280,
                 height: 720,
-                operation: 'lanczos-downscale-from-source-frames',
+                operation: 'native-frame-set-encode',
+              },
+              'poster.png': {
+                width: 1920,
+                height: 1080,
+                operation: 'native-frame-set-encode',
               },
             },
           },
@@ -377,6 +437,15 @@ test('materializes README evidence only from a verified Passport and exact media
       projection.evidence.authorization,
       passport.authority.authorization,
     );
+    assert.deepEqual(
+      projection.evidence.renditionAuthority.frameSets.map(
+        ({ role, width, height }) => [role, width, height],
+      ),
+      [
+        ['primary', 1920, 1080],
+        ['responsive', 1280, 720],
+      ],
+    );
 
     const passportPath = path.join(repoRoot, 'passport.json');
     const passportArtifactPath = path.join(repoRoot, 'passport-artifact.json');
@@ -407,7 +476,39 @@ test('materializes README evidence only from a verified Passport and exact media
         }),
       /media checksum mismatch/u,
     );
+    fs.writeFileSync(
+      path.join(mediaDirectory, 'demo.gif'),
+      members['demo.gif'],
+    );
+
+    const manifestPath = path.join(mediaDirectory, 'manifest.json');
+    const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
+    manifest.derivation.renditions['demo.gif'].operation =
+      'lanczos-downscale-from-source-frames';
+    fs.writeFileSync(manifestPath, stableJson(manifest));
+    const reboundChecksums = `${mediaMembersForTest(mediaDirectory)
+      .map(
+        (name) =>
+          `${sha256(fs.readFileSync(path.join(mediaDirectory, name))).slice(7)}  ${name}`,
+      )
+      .join('\n')}\n`;
+    fs.writeFileSync(
+      path.join(mediaDirectory, 'checksums.sha256'),
+      reboundChecksums,
+    );
+    passport.media.root = sha256(Buffer.from(reboundChecksums));
+    assert.throws(
+      () => verifyMediaBundle(mediaDirectory, passport),
+      /renderer derivation is invalid for role readme-compatibility/u,
+    );
   } finally {
     fs.rmSync(repoRoot, { recursive: true, force: true });
   }
 });
+
+function mediaMembersForTest(mediaDirectory) {
+  return fs
+    .readdirSync(mediaDirectory)
+    .filter((name) => name !== 'checksums.sha256')
+    .sort();
+}
