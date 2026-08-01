@@ -2277,14 +2277,6 @@ def _read_cli_selection(
         raise DistributionUpdateError(
             "cli-selection-invalid", "CLI selection schema is invalid"
         )
-    frontend_build_id = _path_safe_id(
-        str(selection.get("frontendBuildId") or ""), "frontend-build-id"
-    )
-    root = _cli_image_root(config_home, frontend_build_id)
-    if Path(str(selection.get("productRoot") or "")).resolve() != root:
-        raise DistributionUpdateError(
-            "cli-selection-invalid", "CLI selection escaped the product inventory"
-        )
     generation = selection.get("generation")
     if generation is not None and (
         isinstance(generation, bool)
@@ -2294,20 +2286,8 @@ def _read_cli_selection(
         raise DistributionUpdateError(
             "cli-selection-invalid", "CLI selection generation is invalid"
         )
-    image = _read_object(root / "image.json")
-    if (
-        image.get("schema") != CLI_IMAGE_SCHEMA
-        or image.get("frontendBuildId") != frontend_build_id
-        or image.get("artifactDigest") != selection.get("artifactDigest")
-        or image.get("runtimeBuildId") != selection.get("runtimeBuildId")
-        or image.get("releaseCutRoot") != selection.get("releaseCutRoot")
-        or image.get("platformSliceRoot") != selection.get("platformSliceRoot")
-        or Path(str(image.get("productRoot") or "")).resolve() != root
-    ):
-        raise DistributionUpdateError(
-            "cli-selection-invalid", "CLI selection and image evidence disagree"
-        )
     transition = selection.get("cutTransition")
+    verified_transition = None
     if transition is not None:
         try:
             verified_transition = release_cut.validate_cut_transition(transition)
@@ -2323,6 +2303,40 @@ def _read_cli_selection(
                 "cli-selection-invalid",
                 "CLI selection Cut Transition root disagrees with retained evidence",
             )
+    if selection.get("selectionMode") == "legacy-bootstrap":
+        if (
+            verified_transition is None
+            or verified_transition["toReleaseCutRoot"]
+            != selection.get("releaseCutRoot")
+            or verified_transition["toProductVersion"]
+            != selection.get("productVersion")
+        ):
+            raise DistributionUpdateError(
+                "cli-selection-invalid",
+                "legacy bootstrap selection is not bound to exact recovery evidence",
+            )
+        return selection, {}
+    frontend_build_id = _path_safe_id(
+        str(selection.get("frontendBuildId") or ""), "frontend-build-id"
+    )
+    root = _cli_image_root(config_home, frontend_build_id)
+    if Path(str(selection.get("productRoot") or "")).resolve() != root:
+        raise DistributionUpdateError(
+            "cli-selection-invalid", "CLI selection escaped the product inventory"
+        )
+    image = _read_object(root / "image.json")
+    if (
+        image.get("schema") != CLI_IMAGE_SCHEMA
+        or image.get("frontendBuildId") != frontend_build_id
+        or image.get("artifactDigest") != selection.get("artifactDigest")
+        or image.get("runtimeBuildId") != selection.get("runtimeBuildId")
+        or image.get("releaseCutRoot") != selection.get("releaseCutRoot")
+        or image.get("platformSliceRoot") != selection.get("platformSliceRoot")
+        or Path(str(image.get("productRoot") or "")).resolve() != root
+    ):
+        raise DistributionUpdateError(
+            "cli-selection-invalid", "CLI selection and image evidence disagree"
+        )
     return selection, image
 
 
@@ -2332,6 +2346,7 @@ def _select_cli_image(
     config_home: str | Path,
     cut_decision: Mapping[str, Any] | None = None,
     cut_transition: Mapping[str, Any] | None = None,
+    bootstrap_rollback: Mapping[str, Any] | None = None,
     receipt_factory: Callable[[dict[str, Any]], dict[str, Any]],
 ) -> tuple[dict[str, Any], dict[str, Any] | None]:
     lock_root = _cli_inventory_root(config_home) / "locks"
@@ -2359,7 +2374,7 @@ def _select_cli_image(
             current = _read_cli_selection(config_home)
             if current is not None:
                 current_selection, current_image = current
-                current_cut = current_image.get("releaseCutRoot")
+                current_cut = current_selection.get("releaseCutRoot")
                 target_cut = image.get("releaseCutRoot")
                 cut_movement_authorized = False
                 if current_cut is not None or target_cut is not None:
@@ -2392,7 +2407,11 @@ def _select_cli_image(
                         return current_selection, None
                 if not cut_movement_authorized:
                     version_order = compare_product_versions(
-                        str(current_image["productVersion"]),
+                        str(
+                            current_image.get("productVersion")
+                            or current_selection.get("productVersion")
+                            or ""
+                        ),
                         str(image["productVersion"]),
                     )
                     if version_order > 0:
@@ -2429,7 +2448,20 @@ def _select_cli_image(
                     ),
                 }
                 if previous is not None
-                else None
+                and previous.get("selectionMode") != "legacy-bootstrap"
+                else (
+                    {
+                        "kind": "legacy-bootstrap",
+                        "releaseCutRoot": previous["releaseCutRoot"],
+                        "productVersion": previous["productVersion"],
+                    }
+                    if previous is not None
+                    else (
+                        copy.deepcopy(dict(bootstrap_rollback))
+                        if bootstrap_rollback is not None
+                        else None
+                    )
+                )
             )
             selection = {
                 "schema": CLI_SELECTION_SCHEMA,
@@ -2651,6 +2683,8 @@ def selected_cli_command(
     if selected is None:
         return None
     selection, image = selected
+    if selection.get("selectionMode") == "legacy-bootstrap":
+        return None
     frontend_build_id = str(selection["frontendBuildId"])
     root = _cli_image_root(config_home, frontend_build_id)
     executable = (root / str(image.get("executable") or "")).resolve()
@@ -2720,8 +2754,10 @@ def apply_archive(
             installed_cut = bootstrap_release_cut_root
             installed_version = bootstrap_version
         else:
-            installed_cut = selected[1].get("releaseCutRoot")
-            installed_version = selected[1].get("productVersion")
+            installed_cut = selected[0].get("releaseCutRoot")
+            installed_version = selected[1].get("productVersion") or selected[0].get(
+                "productVersion"
+            )
         if not installed_cut or not installed_version:
             raise DistributionUpdateError(
                 "current-release-cut-unknown",
@@ -2930,6 +2966,15 @@ def apply_archive(
         cut_decision=verified_cut_decision or cut_decision,
         cut_transition=cut_transition,
         receipt_factory=receipt_for_selection,
+        bootstrap_rollback=(
+            {
+                "kind": "legacy-bootstrap",
+                "releaseCutRoot": bootstrap_release_cut_root,
+                "productVersion": bootstrap_version,
+            }
+            if bootstrap_release_cut_root and bootstrap_version
+            else None
+        ),
     )
     return receipt if receipt is not None else receipt_for_selection(selection)
 
@@ -2958,7 +3003,10 @@ def apply_shifu_local_archive(
             "Shifu local installation requires a publication-ineligible local Cut",
         )
     selected = _read_cli_selection(config_home)
-    if selected is None:
+    legacy_selection = (
+        selected is not None and selected[0].get("selectionMode") == "legacy-bootstrap"
+    )
+    if selected is None or legacy_selection:
         if not bootstrap_release_cut_root or not bootstrap_version:
             raise DistributionUpdateError(
                 "local-bootstrap-coordinate-required",
@@ -2966,6 +3014,14 @@ def apply_shifu_local_archive(
             )
         current_release_cut_root = bootstrap_release_cut_root
         current_version = bootstrap_version
+        if legacy_selection and (
+            selected[0].get("releaseCutRoot") != bootstrap_release_cut_root
+            or selected[0].get("productVersion") != bootstrap_version
+        ):
+            raise DistributionUpdateError(
+                "stale-bootstrap-coordinate",
+                "legacy bootstrap selection differs from the installed Product receipt",
+            )
         current_manifest = None
         authorization_kind = "shifu-local-bootstrap"
     else:
@@ -3000,9 +3056,11 @@ def apply_shifu_local_archive(
         cut_transition=cut_transition,
         allow_shifu_local=True,
         bootstrap_release_cut_root=(
-            current_release_cut_root if selected is None else None
+            current_release_cut_root if selected is None or legacy_selection else None
         ),
-        bootstrap_version=current_version if selected is None else None,
+        bootstrap_version=(
+            current_version if selected is None or legacy_selection else None
+        ),
     )
 
 
@@ -3038,32 +3096,87 @@ def rollback_shifu_local_cli(
             "stale-rollback-coordinate",
             "retained rollback image no longer matches the expected Release Cut",
         )
-    target_root = _cli_image_root(
-        config_home, str(rollback.get("frontendBuildId") or "")
+    target_is_legacy = rollback.get("kind") == "legacy-bootstrap"
+    if target_is_legacy:
+        target_image: dict[str, Any] = {}
+        target_version = str(rollback.get("productVersion") or "")
+        if not target_version:
+            raise DistributionUpdateError(
+                "rollback-coordinate-invalid",
+                "legacy bootstrap rollback has no exact Product version",
+            )
+    else:
+        target_root = _cli_image_root(
+            config_home, str(rollback.get("frontendBuildId") or "")
+        )
+        target_image = _read_object(target_root / "image.json")
+        if (
+            target_image.get("schema") != CLI_IMAGE_SCHEMA
+            or target_image.get("releaseCutRoot") != expected_rollback_release_cut_root
+            or target_image.get("artifactDigest") != rollback.get("artifactDigest")
+            or Path(str(target_image.get("productRoot") or "")).resolve() != target_root
+        ):
+            raise DistributionUpdateError(
+                "rollback-image-invalid",
+                "retained rollback image does not match the native inventory coordinate",
+            )
+        target_version = str(target_image["productVersion"])
+    current_is_legacy = selection.get("selectionMode") == "legacy-bootstrap"
+    current_version = str(
+        selection.get("productVersion")
+        if current_is_legacy
+        else current_image["productVersion"]
     )
-    target_image = _read_object(target_root / "image.json")
-    if (
-        target_image.get("schema") != CLI_IMAGE_SCHEMA
-        or target_image.get("releaseCutRoot") != expected_rollback_release_cut_root
-        or target_image.get("artifactDigest") != rollback.get("artifactDigest")
-        or Path(str(target_image.get("productRoot") or "")).resolve() != target_root
-    ):
-        raise DistributionUpdateError(
-            "rollback-image-invalid",
-            "retained rollback image does not match the native inventory coordinate",
-        )
-    current_manifest = _installed_cli_manifest(current_image)
-    target_manifest = _installed_cli_manifest(target_image)
+    current_manifest = (
+        None if current_is_legacy else _installed_cli_manifest(current_image)
+    )
     try:
-        transition = _shifu_local_transition(
-            current_release_cut_root=expected_current_release_cut_root,
-            current_version=str(current_image["productVersion"]),
-            current_manifest=current_manifest,
-            target_manifest=target_manifest,
-            authorization_kind="shifu-local-recovery",
-            evidence_roots=evidence_roots,
-            relation="recovery",
-        )
+        if target_is_legacy:
+            compatibility = selection.get("cutTransition", {}).get("compatibility")
+            transition = release_cut.finish_cut_transition(
+                {
+                    "schema": release_cut.CUT_TRANSITION_SCHEMA,
+                    "fromReleaseCutRoot": expected_current_release_cut_root,
+                    "toReleaseCutRoot": expected_rollback_release_cut_root,
+                    "fromProductVersion": current_version,
+                    "toProductVersion": target_version,
+                    "relation": "recovery",
+                    "authorization": {
+                        "trustDomain": "shifu-local",
+                        "kind": "shifu-local-recovery",
+                        "publicationEligible": False,
+                        "evidenceRoots": sorted(set(evidence_roots)),
+                    },
+                    "compatibility": copy.deepcopy(dict(compatibility or {})),
+                    "migrationPlanRoot": release_cut.content_root(
+                        {
+                            "migrationClass": "none",
+                            "targetReleaseCutRoot": expected_rollback_release_cut_root,
+                        }
+                    ),
+                    "rollbackPlanRoot": release_cut.content_root(
+                        {
+                            "rollbackClass": "automatic",
+                            "currentReleaseCutRoot": expected_current_release_cut_root,
+                            "targetReleaseCutRoot": expected_rollback_release_cut_root,
+                        }
+                    ),
+                    "activeWorkPolicy": "keep-pinned",
+                    "evidenceRoots": sorted(set(evidence_roots)),
+                    "diagnostics": [],
+                }
+            )
+        else:
+            target_manifest = _installed_cli_manifest(target_image)
+            transition = _shifu_local_transition(
+                current_release_cut_root=expected_current_release_cut_root,
+                current_version=current_version,
+                current_manifest=current_manifest,
+                target_manifest=target_manifest,
+                authorization_kind="shifu-local-recovery",
+                evidence_roots=evidence_roots,
+                relation="recovery",
+            )
     except release_cut.ReleaseCutError as error:
         raise DistributionUpdateError(error.code, str(error)) from error
     plan = {
@@ -3074,8 +3187,8 @@ def rollback_shifu_local_cli(
         "targetReleaseCutRoot": expected_rollback_release_cut_root,
         "cutTransitionRoot": transition["cutTransitionRoot"],
         "cutTransition": transition,
-        "currentFrontendBuildId": current_image["frontendBuildId"],
-        "targetFrontendBuildId": target_image["frontendBuildId"],
+        "currentFrontendBuildId": current_image.get("frontendBuildId"),
+        "targetFrontendBuildId": target_image.get("frontendBuildId"),
         "activeWorkPolicy": "keep-pinned",
         "sourceCacheRequired": False,
     }
@@ -3103,28 +3216,50 @@ def rollback_shifu_local_cli(
             generation = _next_cli_generation(
                 config_home, int(selection.get("generation") or 0)
             )
-            next_selection = {
-                "schema": CLI_SELECTION_SCHEMA,
-                "generation": generation,
-                "frontendBuildId": target_image["frontendBuildId"],
-                "runtimeBuildId": target_image["runtimeBuildId"],
-                "artifactDigest": target_image["artifactDigest"],
-                "productRoot": target_image["productRoot"],
-                "manifestIdentityRoot": target_image["manifestIdentityRoot"],
-                "releaseCutRoot": target_image["releaseCutRoot"],
-                "platformSliceRoot": target_image["platformSliceRoot"],
-                "cutTransitionRoot": transition["cutTransitionRoot"],
-                "cutTransition": transition,
-                "previousFrontendBuildId": current_image["frontendBuildId"],
-                "rollback": {
+            reverse_rollback = (
+                {
+                    "kind": "legacy-bootstrap",
+                    "releaseCutRoot": selection["releaseCutRoot"],
+                    "productVersion": selection["productVersion"],
+                }
+                if current_is_legacy
+                else {
                     "frontendBuildId": current_image["frontendBuildId"],
                     "runtimeBuildId": current_image["runtimeBuildId"],
                     "artifactDigest": current_image["artifactDigest"],
                     "productRoot": current_image["productRoot"],
                     "releaseCutRoot": current_image["releaseCutRoot"],
                     "platformSliceRoot": current_image["platformSliceRoot"],
-                },
-            }
+                }
+            )
+            if target_is_legacy:
+                next_selection = {
+                    "schema": CLI_SELECTION_SCHEMA,
+                    "selectionMode": "legacy-bootstrap",
+                    "generation": generation,
+                    "releaseCutRoot": expected_rollback_release_cut_root,
+                    "productVersion": target_version,
+                    "cutTransitionRoot": transition["cutTransitionRoot"],
+                    "cutTransition": transition,
+                    "previousFrontendBuildId": current_image.get("frontendBuildId"),
+                    "rollback": reverse_rollback,
+                }
+            else:
+                next_selection = {
+                    "schema": CLI_SELECTION_SCHEMA,
+                    "generation": generation,
+                    "frontendBuildId": target_image["frontendBuildId"],
+                    "runtimeBuildId": target_image["runtimeBuildId"],
+                    "artifactDigest": target_image["artifactDigest"],
+                    "productRoot": target_image["productRoot"],
+                    "manifestIdentityRoot": target_image["manifestIdentityRoot"],
+                    "releaseCutRoot": target_image["releaseCutRoot"],
+                    "platformSliceRoot": target_image["platformSliceRoot"],
+                    "cutTransitionRoot": transition["cutTransitionRoot"],
+                    "cutTransition": transition,
+                    "previousFrontendBuildId": current_image.get("frontendBuildId"),
+                    "rollback": reverse_rollback,
+                }
             receipt = {
                 **plan,
                 "state": "complete",

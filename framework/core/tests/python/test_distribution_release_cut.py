@@ -375,6 +375,64 @@ def test_shifu_local_same_semver_successor_installs_side_by_side_and_rolls_back(
     assert inventory["selectedReceiptRoot"] == rolled_back["receiptRoot"]
 
 
+def test_shifu_local_first_selection_rolls_back_to_bootstrap_without_source_cache(
+    tmp_path: Path,
+) -> None:
+    config_home = tmp_path / "config"
+    archive, manifest = _local_cut_archive(
+        tmp_path / "first",
+        build_id="first",
+    )
+    bootstrap_root = f"sha256:{'0' * 64}"
+    applied = distribution_update.apply_shifu_local_archive(
+        manifest,
+        archive,
+        config_home=config_home,
+        expected_digest=manifest["artifacts"][1]["digest"],
+        evidence_roots=[manifest["artifacts"][1]["digest"]],
+        bootstrap_release_cut_root=bootstrap_root,
+        bootstrap_version=manifest["productVersion"],
+        execute=True,
+    )
+    archive.unlink()
+
+    recovered = distribution_update.rollback_shifu_local_cli(
+        config_home=config_home,
+        expected_current_release_cut_root=manifest["releaseCutRoot"],
+        expected_rollback_release_cut_root=bootstrap_root,
+        evidence_roots=[applied["cutTransitionRoot"]],
+        execute=True,
+    )
+    assert recovered["sourceCacheRequired"] is False
+    assert recovered["frontendSelection"]["selectionMode"] == "legacy-bootstrap"
+    assert recovered["frontendSelection"]["releaseCutRoot"] == bootstrap_root
+    assert (
+        distribution_update.selected_cli_command(
+            {
+                "KUNGFU_INSTALL_SOURCE": "archive",
+                "KF_CONFIG_HOME": str(config_home),
+            }
+        )
+        is None
+    )
+    inventory = distribution_update.cli_inventory_fsck(config_home)
+    assert inventory["ok"] is True
+    assert inventory["selectedReceiptRoot"] == recovered["receiptRoot"]
+
+    restored = distribution_update.rollback_shifu_local_cli(
+        config_home=config_home,
+        expected_current_release_cut_root=bootstrap_root,
+        expected_rollback_release_cut_root=manifest["releaseCutRoot"],
+        evidence_roots=[recovered["cutTransitionRoot"]],
+        execute=True,
+    )
+    assert restored["sourceCacheRequired"] is False
+    assert (
+        restored["frontendSelection"]["frontendBuildId"] == manifest["frontendBuildId"]
+    )
+    assert distribution_update.cli_inventory_fsck(config_home)["ok"] is True
+
+
 def test_shifu_local_rollback_advances_past_an_unpublished_successor_receipt(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:

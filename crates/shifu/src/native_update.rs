@@ -15,7 +15,7 @@ use shifu_core::{bootstrap, host, json};
 
 use crate::envfile;
 
-const LEGACY_BOOTSTRAP_ROOT: &str =
+pub(crate) const LEGACY_BOOTSTRAP_ROOT: &str =
     "sha256:ec51232534d89e75615d44f41ed6af0b2e9978e7bf6655bf231e7f35cefd13fc";
 
 pub struct ApplyTarget<'a> {
@@ -85,7 +85,7 @@ fn apply_args(
         target.manifest_digest.into(),
         "--json".into(),
     ];
-    if current_cut.is_empty() {
+    if current_cut.is_empty() || current_cut == LEGACY_BOOTSTRAP_ROOT {
         args.extend([
             "--bootstrap-release-cut-root".into(),
             LEGACY_BOOTSTRAP_ROOT.into(),
@@ -444,6 +444,9 @@ mod tests {
         let successor = apply_args(&target, "sha256:current", "4.0.0-alpha.0", true);
         assert!(!successor.contains(&OsString::from("--bootstrap-release-cut-root")));
         assert!(successor.contains(&OsString::from("--yes")));
+        let recovered_bootstrap =
+            apply_args(&target, LEGACY_BOOTSTRAP_ROOT, "4.0.0-alpha.0", false);
+        assert!(recovered_bootstrap.contains(&OsString::from("--bootstrap-release-cut-root")));
         let _ = std::fs::remove_dir_all(root);
     }
 

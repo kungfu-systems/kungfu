@@ -598,7 +598,10 @@ pub fn run_promote(args: &[String]) -> ! {
     }
     let installed = installed_sha();
     let previous_build_id = installed_value("KUNGFU_INSTALLED_BUILD_ID");
-    let previous_release_cut_root = installed_value("KUNGFU_INSTALLED_RELEASE_CUT_ROOT");
+    let mut previous_release_cut_root = installed_value("KUNGFU_INSTALLED_RELEASE_CUT_ROOT");
+    if previous_release_cut_root.is_empty() {
+        previous_release_cut_root = native_update::LEGACY_BOOTSTRAP_ROOT.to_string();
+    }
     let entry = if preview {
         if !rollback_entry_valid(&registry_dir(), &previous_build_id, &installed) {
             util::die(

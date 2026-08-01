@@ -409,7 +409,13 @@ pub(super) fn retain_previous_installed_receipt(
 ) -> Result<(), String> {
     let current = fs::read_to_string(installed_receipt_path())
         .map_err(|error| format!("cannot retain previous installed Product receipt: {error}"))?;
-    let current_cut = receipt_value(&current, "KUNGFU_INSTALLED_RELEASE_CUT_ROOT");
+    let recorded_current_cut = receipt_value(&current, "KUNGFU_INSTALLED_RELEASE_CUT_ROOT");
+    let legacy_bootstrap = recorded_current_cut.is_empty();
+    let current_cut = if legacy_bootstrap {
+        native_update::LEGACY_BOOTSTRAP_ROOT.to_string()
+    } else {
+        recorded_current_cut
+    };
     if current_cut == pending.target_release_cut_root {
         return Ok(());
     }
@@ -421,14 +427,18 @@ pub(super) fn retain_previous_installed_receipt(
         kind = "app".to_string();
     }
     let (updater_path, updater_digest) = if kind == "app" {
-        let backup_updater =
-            PathBuf::from(&pending.desktop_backup_path).join("Contents/Resources/kungfu/kungfu");
         let installed_updater =
             PathBuf::from(&pending.installed_path).join("Contents/Resources/kungfu/kungfu");
-        if !backup_updater.is_file() {
-            return Err("retained desktop has no native updater".to_string());
+        if legacy_bootstrap {
+            retain_external_updater(&installed_updater, &pending.target_release_cut_root)?
+        } else {
+            let backup_updater = PathBuf::from(&pending.desktop_backup_path)
+                .join("Contents/Resources/kungfu/kungfu");
+            if !backup_updater.is_file() {
+                return Err("retained desktop has no native updater".to_string());
+            }
+            (installed_updater, artifact_sha256(&backup_updater)?)
         }
-        (installed_updater, artifact_sha256(&backup_updater)?)
     } else {
         let source = PathBuf::from(receipt_value(&current, "KUNGFU_INSTALLED_NATIVE_UPDATER"));
         retain_external_updater(&source, &current_cut)?
@@ -437,7 +447,7 @@ pub(super) fn retain_previous_installed_receipt(
     let enriched = set_receipt_value(
         &set_receipt_value(
             &set_receipt_value(
-                &current,
+                &set_receipt_value(&current, "KUNGFU_INSTALLED_RELEASE_CUT_ROOT", &current_cut),
                 "KUNGFU_INSTALLED_NATIVE_UPDATER",
                 &updater_path.display().to_string(),
             ),
