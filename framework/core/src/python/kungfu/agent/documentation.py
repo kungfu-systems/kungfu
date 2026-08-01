@@ -14,9 +14,6 @@ import os
 import subprocess
 from pathlib import Path, PurePosixPath
 
-from kungfu.cli.commands.env import _resolve_trunk
-
-
 _COMPATIBILITY = Path("compatibility/context-pack-v1")
 
 
@@ -250,6 +247,11 @@ def projection(audience, root=None):
 
 
 def _xinfa(arguments):
+    # Keep offline Atlas verification stdlib-only.  The CLI stack (and click)
+    # is needed only when a caller asks the linked Xinfa runtime to project or
+    # expand task context.
+    from kungfu.cli.commands.env import _resolve_trunk
+
     trunk = _resolve_trunk()
     if not trunk:
         raise FileNotFoundError(
