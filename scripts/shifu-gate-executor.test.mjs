@@ -549,6 +549,7 @@ test('task actions re-enter an existing lightweight Shifu task beside an active 
       SHIFU_CACHE_PROFILE_REF: profilePath,
       SHIFU_CACHE_PROFILE_DIGEST: sha256(profileBytes),
       SHIFU_CACHE_SCOPE: 'self-hosted-runner',
+      SHIFU_CACHE_RECEIPT: path.join(directory, 'shifu-cache-resolution.json'),
       RUNNER_NAME: runnerName,
       SHIFU_CACHE_ACTIVE: undefined,
       SHIFU_CACHE_BYPASS: undefined,

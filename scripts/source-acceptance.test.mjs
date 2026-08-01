@@ -9,6 +9,11 @@ import { fileURLToPath } from 'node:url';
 
 import { scanTree } from './no-bash-guard.mjs';
 import {
+  SOURCE_ACCEPTANCE_RUNTIME_OWNER,
+  assertExternalSourceAcceptanceTarget,
+  prepareSourceAcceptanceRuntime,
+} from './readonly-source-toolchain.mjs';
+import {
   assertKfdEvidenceSourceBinding,
   findGitTreeEquivalentAncestor,
   isLocalQualificationRuntime,
@@ -21,6 +26,79 @@ import {
 } from './source-acceptance.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+
+test('source acceptance owns one external runtime for every writable tool surface', (t) => {
+  const runtime = prepareSourceAcceptanceRuntime(ROOT);
+  t.after(runtime.cleanup);
+  assert.equal(runtime.owner, SOURCE_ACCEPTANCE_RUNTIME_OWNER);
+  if (process.platform !== 'win32') {
+    assert.equal(
+      runtime.runtimeRoot.startsWith('/private/tmp/kf-sa-') ||
+        runtime.runtimeRoot.startsWith('/tmp/kf-sa-'),
+      true,
+    );
+    assert.equal(runtime.env.TMPDIR.length < 80, true);
+  }
+  for (const key of [
+    'TMPDIR',
+    'XDG_CACHE_HOME',
+    'XDG_STATE_HOME',
+    'COREPACK_HOME',
+    'PNPM_HOME',
+    'npm_config_cache',
+    'SHIFU_CACHE_RECEIPT',
+  ]) {
+    assert.doesNotThrow(() =>
+      assertExternalSourceAcceptanceTarget(ROOT, runtime.env[key], key),
+    );
+  }
+});
+
+test('repo-local temporary, cache, fixture, and nested task writers fail before mutation', (t) => {
+  const temporary = fs.mkdtempSync(
+    path.join(os.tmpdir(), 'kungfu-source-writer-denial-'),
+  );
+  t.after(() => fs.rmSync(temporary, { recursive: true, force: true }));
+  const checkout = path.join(temporary, 'checkout');
+  fs.mkdirSync(checkout);
+  const sentinel = path.join(checkout, 'sentinel');
+  fs.writeFileSync(sentinel, 'unchanged\n');
+  for (const relative of [
+    '_tmp_guard',
+    '.buildchain/diagnostics/shifu-cache-resolution.json.tmp-1',
+    '.pnpm-store/state.json',
+    'generated-fixtures/result.json',
+    'nested-task-output/receipt.json',
+  ]) {
+    assert.throws(
+      () =>
+        assertExternalSourceAcceptanceTarget(
+          checkout,
+          path.join(checkout, relative),
+          relative,
+        ),
+      /owner=source-acceptance-runtime; recovery=/u,
+    );
+    assert.equal(fs.existsSync(path.join(checkout, relative)), false);
+  }
+  const checkoutAlias = path.join(temporary, 'checkout-alias');
+  fs.symlinkSync(
+    checkout,
+    checkoutAlias,
+    process.platform === 'win32' ? 'junction' : 'dir',
+  );
+  assert.throws(
+    () =>
+      assertExternalSourceAcceptanceTarget(
+        checkout,
+        path.join(checkoutAlias, 'aliased-output'),
+        'aliased-output',
+      ),
+    /owner=source-acceptance-runtime; recovery=/u,
+  );
+  assert.equal(fs.existsSync(path.join(checkout, 'aliased-output')), false);
+  assert.equal(fs.readFileSync(sentinel, 'utf8'), 'unchanged\n');
+});
 
 test('no-bash guard ignores local Kungfu qualification runtimes', (t) => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'kungfu-no-bash-'));
