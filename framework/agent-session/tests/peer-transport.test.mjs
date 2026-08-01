@@ -46,7 +46,11 @@ class FakePtyProcess extends EventEmitter {
   }
 }
 
-function fixture({ maxFrames = 256, maxOutputBytes = 1024 } = {}) {
+function fixture({
+  maxFrames = 256,
+  maxOutputBytes = 1024,
+  platform = 'linux',
+} = {}) {
   let clock = 1000;
   const child = new FakePtyProcess();
   const host = new AgentSessionCapsuleHost({
@@ -55,6 +59,7 @@ function fixture({ maxFrames = 256, maxOutputBytes = 1024 } = {}) {
     runtimeIdentity: 'workspace-runtime-1',
     maxOutputBytes,
     now: () => clock,
+    platform,
   });
   const started = host.start({
     workConsoleId: 'console-1',
@@ -217,6 +222,35 @@ test('interrupt signal is idempotent and uses the same controller and foreground
         expectedForeground: { ...foreground, processStartIdentity: 'stale' },
       }),
     (error) => error.code === 'foreground_mismatch',
+  );
+});
+
+test('Windows transport rejects an unsupported interrupt without recording fake delivery', () => {
+  const { current, foreground, port, transport } = fixture({
+    platform: 'win32',
+  });
+  transport.acquireControl({
+    leaseId: 'lease-gui',
+    holderId: 'gui',
+    planRoot: 'plan-gui',
+  });
+  assert.throws(
+    () =>
+      transport.submitSignal({
+        ...current,
+        actionId: 'interrupt-1',
+        inputId: 'interrupt-input-1',
+        signal: 'SIGINT',
+        leaseId: 'lease-gui',
+        holderId: 'gui',
+        coordinatorEpoch: '3',
+        expectedForeground: foreground,
+      }),
+    /signal 'SIGINT' is not supported on Windows/u,
+  );
+  assert.equal(
+    port.frames.some((frame) => frame.kind === 'interrupt-delivered'),
+    false,
   );
 });
 
