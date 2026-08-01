@@ -400,6 +400,179 @@ test('Project Work run streams only canonical public events and one receipt', as
   unsubscribe();
 });
 
+test('Project Work launches one fresh read-only independent review from the retained run', async () => {
+  const calls: string[][] = [];
+  const reportPath =
+    '/project/.kungfu/runtime/agent-runs/run-1/bundle/report.json';
+  const projects = openProjects({
+    bin: 'kungfu',
+    env: {},
+    execFile: async (_file, args) => {
+      calls.push(args);
+      assert.deepEqual(args, [
+        'work',
+        'review-agent-plan',
+        reportPath,
+        '--workspace',
+        '/project',
+        '--initiative-id',
+        'initiative-1',
+        '--assignment-id',
+        'assignment-1',
+        '--reviewer',
+        'codex.profile.1',
+      ]);
+      return JSON.stringify({
+        schema: 'kungfu.work-review.plan/v1',
+        planRoot: `sha256:${'3'.repeat(64)}`,
+        executable: true,
+        confirmationRequired: true,
+        workspace: { id: 'project:1', root: '/project', identityRoot: 'root' },
+        work: {
+          initiativeId: 'initiative-1',
+          assignmentId: 'assignment-1',
+          phase: 'executing',
+          queryProofRoot: 'query',
+          assignmentRoot: 'assignment',
+          workDefinitionRoot: 'definition',
+          acceptanceChecks: ['evidence exists'],
+        },
+        deliverable: {
+          path: '/project/result.md',
+          root: 'result',
+          content: '',
+        },
+        inputs: [],
+        evidenceMode: 'project-files',
+        execution: {
+          reportPath,
+          reportRoot: 'report',
+          runId: 'run-1',
+          episodeId: 'episode-1',
+          agent: {},
+        },
+        reviewer: {
+          id: 'codex.profile.1',
+          label: 'Codex',
+          provider: 'codex',
+          profileRoot: 'profile',
+          selection: 'explicit',
+          verification: {
+            ok: true,
+            available: true,
+            version: '1.0.0',
+            error: null,
+          },
+          permissionMode: 'read-only',
+          freshProcess: true,
+          priorTranscriptBytes: 0,
+        },
+        reviewExecution: {
+          mode: 'fresh-process',
+          reportPath: null,
+          reportRoot: null,
+          runId: null,
+          episodeId: null,
+          reviewCut: null,
+          assessmentRoot: null,
+        },
+        admissionBinding: { ok: true, state: 'current-checkout' },
+        effects: [{ stage: 'run', label: 'Launch fresh reviewer' }],
+        skippedEffects: ['git-push'],
+        writeOccurred: false,
+      });
+    },
+    execFileEvents: async (_file, args, _options, onLine) => {
+      if (args[0] === 'run') {
+        onLine(
+          JSON.stringify({
+            schema: 'kungfu.work-start.receipt/v1',
+            ok: true,
+            status: 'agent-finished',
+            workPhase: 'executing',
+            workspace: { workspace_root: '/project' },
+            work: {
+              initiativeId: 'initiative-1',
+              assignmentId: 'assignment-1',
+            },
+            agent: {
+              id: 'codex.profile.1',
+              provider: 'codex',
+              label: 'Codex',
+            },
+            agentReport: { episode: { reportPath } },
+            nextActions: ['run-independent-assessment'],
+            writeOccurred: true,
+            receiptRoot: `sha256:${'2'.repeat(64)}`,
+          }),
+        );
+        return;
+      }
+      assert.deepEqual(args, [
+        'work',
+        'review-agent-run',
+        reportPath,
+        '--workspace',
+        '/project',
+        '--initiative-id',
+        'initiative-1',
+        '--assignment-id',
+        'assignment-1',
+        '--reviewer',
+        'codex.profile.1',
+        '--expected-plan-root',
+        `sha256:${'3'.repeat(64)}`,
+        '--execute',
+        '--events-json',
+      ]);
+      onLine(
+        JSON.stringify({
+          schema: 'kungfu.work-review.event/v1',
+          index: 1,
+          stage: 'run',
+          status: 'started',
+          text: 'Fresh reviewer started',
+          root: null,
+        }),
+      );
+      onLine(
+        JSON.stringify({
+          schema: 'kungfu.work-review.receipt/v1',
+          ok: true,
+          status: 'review-passed',
+          planRoot: `sha256:${'3'.repeat(64)}`,
+          receiptRoot: `sha256:${'4'.repeat(64)}`,
+          workPhase: 'independently-reviewed',
+          nextActions: ['decide-continuation-and-close'],
+          writeOccurred: true,
+        }),
+      );
+    },
+  });
+
+  await projects.run(
+    'codex',
+    { workspace: '/project', work: 'assignment-1' },
+    () => undefined,
+  );
+  const sourceRun = projects.runs()[0];
+  assert.ok(sourceRun);
+  const plan = await projects.planReview(sourceRun.id);
+  const events: string[] = [];
+  const receipt = await projects.review(sourceRun.id, plan, (event) =>
+    events.push(event.text),
+  );
+
+  assert.equal(calls.length, 1);
+  assert.deepEqual(events, ['Fresh reviewer started']);
+  assert.equal(receipt.status, 'review-passed');
+  assert.equal(projects.runs()[0]?.kind, 'review');
+  assert.equal(
+    projects.runs()[0]?.reviewReceipt?.workPhase,
+    'independently-reviewed',
+  );
+});
+
 test('Project Work restores an ended failed Session as a retry boundary', async () => {
   const ref = {
     workConsoleId: 'work:qualification:assignment:crash',

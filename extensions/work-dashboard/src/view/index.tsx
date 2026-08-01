@@ -13,6 +13,7 @@ import type {
   ProjectWorkRunSnapshot,
   Projects,
   ProjectsCatalog,
+  WorkReviewPlan,
 } from '@kungfu-tech/api/capability';
 import {
   filterGlobalWork,
@@ -22,6 +23,7 @@ import {
 } from '@kungfu-tech/api/capability';
 import type { KfxCapabilities, Shell } from '@kungfu-tech/kfx';
 import {
+  ProjectWorkReviewConfirmation,
   ProjectWorkRunConfirmation,
   ProjectWorkRunSession,
   headingStyle,
@@ -98,7 +100,30 @@ type NodeHost = {
 type ProjectViewMemory = {
   section: 'files' | 'work';
   selectedFile?: ProjectFileTreeEntry;
+  agentProvider?: AgentProvider;
 };
+
+type AgentProvider = 'codex' | 'claude' | 'opencode';
+
+const AGENT_PROVIDERS: AgentProvider[] = ['codex', 'claude', 'opencode'];
+const LAST_AGENT_PROVIDER_KEY = 'kungfu.project-work.last-agent-provider';
+
+function retainedAgentProvider(): AgentProvider {
+  try {
+    const value = window.localStorage.getItem(LAST_AGENT_PROVIDER_KEY);
+    return AGENT_PROVIDERS.includes(value as AgentProvider)
+      ? (value as AgentProvider)
+      : 'codex';
+  } catch {
+    return 'codex';
+  }
+}
+
+function agentProviderLabel(provider: AgentProvider): string {
+  return provider === 'opencode'
+    ? 'OpenCode'
+    : provider[0].toUpperCase() + provider.slice(1);
+}
 
 const projectViewMemory = new Map<string, ProjectViewMemory>();
 
@@ -860,6 +885,10 @@ function GlobalWorkView({
   const [projectAdminBusy, setProjectAdminBusy] = React.useState('');
   const [projectAdminError, setProjectAdminError] = React.useState('');
   const [newWorkOpen, setNewWorkOpen] = React.useState(false);
+  const [agentProvider, setAgentProvider] = React.useState<AgentProvider>(
+    () => initialProjectMemory?.agentProvider ?? retainedAgentProvider(),
+  );
+  const [agentMenuOpen, setAgentMenuOpen] = React.useState(false);
   const [status, setStatus] = React.useState('Connecting All Work…');
   const [error, setError] = React.useState('');
   const [projectsCatalog, setProjectsCatalog] =
@@ -879,6 +908,10 @@ function GlobalWorkView({
     workspace: string;
     work: string;
     plan: ProjectWorkRunPlan;
+  }>();
+  const [reviewPlan, setReviewPlan] = React.useState<{
+    runId: string;
+    plan: WorkReviewPlan;
   }>();
   const [runBusy, setRunBusy] = React.useState('');
   const [runError, setRunError] = React.useState('');
@@ -913,7 +946,9 @@ function GlobalWorkView({
         (shell.params.projectSection === 'work' ? 'work' : 'files'),
     );
     setSelectedProjectFile(remembered?.selectedFile);
+    setAgentProvider(remembered?.agentProvider ?? retainedAgentProvider());
     setLoadedProjectMemoryKey(projectMemoryKey);
+    setAgentMenuOpen(false);
     setProjectMenuOpen(false);
     setRemovePlan(undefined);
     setProjectAdminError('');
@@ -929,13 +964,22 @@ function GlobalWorkView({
     projectViewMemory.set(projectMemoryKey, {
       section: projectSection,
       selectedFile: selectedProjectFile,
+      agentProvider,
     });
   }, [
     loadedProjectMemoryKey,
     projectMemoryKey,
     projectSection,
     selectedProjectFile,
+    agentProvider,
   ]);
+  React.useEffect(() => {
+    try {
+      window.localStorage.setItem(LAST_AGENT_PROVIDER_KEY, agentProvider);
+    } catch {
+      // The in-memory Project view still retains the selection for this process.
+    }
+  }, [agentProvider]);
 
   React.useEffect(() => {
     if (
@@ -1230,6 +1274,17 @@ function GlobalWorkView({
       )
       .finally(() => setRunBusy(''));
   };
+  const prepareReview = (run: ProjectWorkRunSnapshot) => {
+    setRunBusy('Preparing a fresh independent review…');
+    setRunError('');
+    void projects
+      .planReview(run.id)
+      .then((plan) => setReviewPlan({ runId: run.id, plan }))
+      .catch((reason) =>
+        setRunError(reason instanceof Error ? reason.message : String(reason)),
+      )
+      .finally(() => setRunBusy(''));
+  };
   const confirmRun = () => {
     if (!runPlan) return;
     const pending = projects.run(
@@ -1250,6 +1305,29 @@ function GlobalWorkView({
       )
       .finally(() => setRunBusy(''));
   };
+  const confirmReview = () => {
+    if (!reviewPlan) return;
+    const pending = projects.review(
+      reviewPlan.runId,
+      reviewPlan.plan,
+      () => undefined,
+    );
+    setReviewPlan(undefined);
+    setVisibleRunId(projects.runs()[0]?.id ?? null);
+    setRunBusy('Starting independent review…');
+    void pending
+      .then(() => {
+        void refreshProjectInventory();
+      })
+      .catch((reason) =>
+        setRunError(reason instanceof Error ? reason.message : String(reason)),
+      )
+      .finally(() => setRunBusy(''));
+  };
+  const orderedProviders = [
+    agentProvider,
+    ...AGENT_PROVIDERS.filter((provider) => provider !== agentProvider),
+  ];
 
   const workLoading = requestedProject
     ? !projectInventory || !projectsCatalogReady
@@ -1365,27 +1443,100 @@ function GlobalWorkView({
                   before the Agent starts.
                 </div>
                 <div style={{ display: 'flex', gap: 7, flexWrap: 'wrap' }}>
-                  {(['codex', 'claude', 'opencode'] as const).map(
-                    (provider) => (
-                      <button
-                        key={provider}
-                        type="button"
-                        disabled={Boolean(runBusy)}
-                        onClick={() => prepareRun(provider)}
+                  <div
+                    style={{
+                      display: 'inline-flex',
+                      position: 'relative',
+                      alignItems: 'stretch',
+                    }}
+                  >
+                    <button
+                      type="button"
+                      disabled={Boolean(runBusy)}
+                      onClick={() => prepareRun(agentProvider)}
+                      style={{
+                        ...mono,
+                        padding: '6px 10px',
+                        border: '1px solid #4fc1ff',
+                        borderRight: 'none',
+                        borderRadius: '5px 0 0 5px',
+                        background: '#0e639c',
+                        color: '#f1f1f1',
+                        cursor: runBusy ? 'wait' : 'pointer',
+                        fontWeight: 700,
+                      }}
+                    >
+                      Run Agent · {agentProviderLabel(agentProvider)}
+                    </button>
+                    <button
+                      type="button"
+                      aria-label="Choose Agent"
+                      aria-expanded={agentMenuOpen}
+                      disabled={Boolean(runBusy)}
+                      onClick={() => setAgentMenuOpen((open) => !open)}
+                      style={{
+                        ...mono,
+                        width: 32,
+                        border: '1px solid #4fc1ff',
+                        borderRadius: '0 5px 5px 0',
+                        background: '#0b5686',
+                        color: '#f1f1f1',
+                        cursor: runBusy ? 'wait' : 'pointer',
+                      }}
+                    >
+                      ▾
+                    </button>
+                    {agentMenuOpen ? (
+                      <div
+                        role="menu"
+                        aria-label="Agent choices"
                         style={{
-                          ...mono,
-                          padding: '6px 9px',
+                          position: 'absolute',
+                          zIndex: 80,
+                          top: 'calc(100% + 4px)',
+                          left: 0,
+                          minWidth: '100%',
+                          padding: 4,
                           border: '1px solid #4b4b4b',
-                          borderRadius: 5,
-                          background: '#2d2d30',
-                          color: '#f1f1f1',
-                          cursor: 'pointer',
+                          borderRadius: 6,
+                          background: '#252526',
+                          boxShadow: '0 12px 28px rgba(0,0,0,.45)',
                         }}
                       >
-                        Run {provider === 'opencode' ? 'OpenCode' : provider}
-                      </button>
-                    ),
-                  )}
+                        {orderedProviders.map((provider) => (
+                          <button
+                            key={provider}
+                            type="button"
+                            role="menuitemradio"
+                            aria-checked={provider === agentProvider}
+                            onClick={() => {
+                              setAgentProvider(provider);
+                              setAgentMenuOpen(false);
+                            }}
+                            style={{
+                              ...mono,
+                              display: 'block',
+                              width: '100%',
+                              padding: '7px 9px',
+                              border: 'none',
+                              borderRadius: 4,
+                              background:
+                                provider === agentProvider
+                                  ? '#04395e'
+                                  : 'transparent',
+                              color: '#f1f1f1',
+                              textAlign: 'left',
+                              cursor: 'pointer',
+                              whiteSpace: 'nowrap',
+                            }}
+                          >
+                            {provider === agentProvider ? '✓ ' : ''}
+                            {agentProviderLabel(provider)}
+                          </button>
+                        ))}
+                      </div>
+                    ) : null}
+                  </div>
                   {runs.some(
                     (run) =>
                       run.workspace === currentProject.path &&
@@ -1466,6 +1617,11 @@ function GlobalWorkView({
             ?.display.title
         }
         onClose={() => setVisibleRunId(null)}
+        onReview={
+          visibleRun.receipt?.status === 'agent-finished'
+            ? () => prepareReview(visibleRun)
+            : undefined
+        }
       />
     </div>
   ) : null;
@@ -1477,6 +1633,14 @@ function GlobalWorkView({
           busy={Boolean(runBusy)}
           onCancel={() => setRunPlan(undefined)}
           onConfirm={confirmRun}
+        />
+      ) : null}
+      {reviewPlan ? (
+        <ProjectWorkReviewConfirmation
+          plan={reviewPlan.plan}
+          busy={Boolean(runBusy)}
+          onCancel={() => setReviewPlan(undefined)}
+          onConfirm={confirmReview}
         />
       ) : null}
       {newWorkOpen && requestedProject ? (

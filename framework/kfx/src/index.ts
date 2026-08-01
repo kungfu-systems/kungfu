@@ -116,6 +116,7 @@ export {
   queryRows,
 } from '@kungfu-tech/api/query';
 export {
+  ProjectWorkReviewConfirmation,
   ProjectWorkRunConfirmation,
   ProjectWorkRunSession,
 } from './project-work-run.js';

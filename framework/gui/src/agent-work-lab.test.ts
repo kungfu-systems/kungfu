@@ -385,9 +385,21 @@ test('Projects and Work use the shared exact-plan Agent session surface', () => 
   );
 
   assert.match(work, /ProjectWorkRunConfirmation/);
+  assert.match(work, /ProjectWorkReviewConfirmation/);
   assert.match(work, /ProjectWorkRunSession/);
   assert.match(work, /expectedPlanRoot/);
+  assert.match(work, /Run Agent · \{agentProviderLabel\(agentProvider\)\}/);
+  assert.match(work, /aria-label="Choose Agent"/);
+  assert.match(work, /orderedProviders/);
+  assert.match(work, /kungfu\.project-work\.last-agent-provider/);
+  assert.match(work, /window\.localStorage\.setItem/);
+  assert.doesNotMatch(work, /Run \{provider === 'opencode'/);
+  assert.match(work, /projects\s*\.planReview\(run\.id\)/);
+  assert.match(work, /projects\s*\.review\(/);
   assert.match(runSurface, /plan\.blockedReason/);
+  assert.match(runSurface, /Confirm independent review/);
+  assert.match(runSurface, /fresh read-only process/);
+  assert.match(runSurface, /Review changes/);
   assert.match(runSurface, /aria-label="Resize Agent session"/);
   assert.match(runSurface, /Fullscreen session view/);
   assert.match(runSurface, /setPointerCapture/);
