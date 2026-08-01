@@ -1092,6 +1092,9 @@ function App() {
   const [configError, setConfigError] = React.useState('');
   const [runtimeStatus, setRuntimeStatus] =
     React.useState<RuntimeStatusResult | null>(null);
+  const [historyStatus, setHistoryStatus] = React.useState<ExitHistoryStatus>(
+    EXIT_HISTORY_STATUS_FALLBACK,
+  );
   const [statusBarItems, setStatusBarItems] = React.useState<
     Record<string, StatusBarItem>
   >({});
@@ -1178,6 +1181,60 @@ function App() {
       active = false;
     };
   }, []);
+
+  React.useEffect(() => {
+    if (!runtime.ok) {
+      setHistoryStatus(EXIT_HISTORY_STATUS_FALLBACK);
+      return undefined;
+    }
+    type ExecFile = (
+      file: string,
+      args: string[],
+      options: {
+        encoding: 'utf8';
+        env: Record<string, string | undefined>;
+        maxBuffer: number;
+      },
+      callback: (error: Error | null, stdout: string) => void,
+    ) => void;
+    const { execFile } = window.require('node:child_process') as {
+      execFile: ExecFile;
+    };
+    const env: Record<string, string | undefined> = {
+      ...window.process.env,
+      KUNGFU_AS_VARIANT: undefined,
+    };
+    const bin =
+      env.KUNGFU_CLI_BIN ||
+      env.KUNGFU_BIN ||
+      (window.process.platform === 'win32' ? 'kungfu.exe' : 'kungfu');
+    let active = true;
+    execFile(
+      bin,
+      guiKungfuCliArgs(env, ['exit', 'history', 'status', '--json']),
+      { encoding: 'utf8', env, maxBuffer: 2 * 1024 * 1024 },
+      (error, stdout) => {
+        if (!active) return;
+        if (error) {
+          setHistoryStatus(EXIT_HISTORY_STATUS_FALLBACK);
+          return;
+        }
+        try {
+          const value = JSON.parse(stdout) as ExitHistoryStatus;
+          setHistoryStatus(
+            value.ok && value.nextActions?.length
+              ? value
+              : EXIT_HISTORY_STATUS_FALLBACK,
+          );
+        } catch {
+          setHistoryStatus(EXIT_HISTORY_STATUS_FALLBACK);
+        }
+      },
+    );
+    return () => {
+      active = false;
+    };
+  }, [runtime.ok]);
 
   React.useEffect(() => {
     if (
@@ -1864,6 +1921,16 @@ function App() {
       side: 'left',
       priority: -85,
       tooltip: trustTooltip(runtimeStatus),
+      command: statusCommand,
+    },
+    {
+      id: 'system.history-protection',
+      text: `history: ${historyStatus.state}`,
+      icon: historyStatus.ok ? '◇' : '!',
+      severity: historyStatus.ok ? 'ok' : 'warning',
+      side: 'left',
+      priority: -80,
+      tooltip: `Coverage: ${historyStatus.coverage}. Last verified export: ${historyStatus.lastVerifiedExport?.bundleId ?? 'none'}. Next: ${historyStatus.nextActions[0]}`,
       command: statusCommand,
     },
     {

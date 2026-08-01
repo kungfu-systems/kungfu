@@ -212,3 +212,179 @@ def import_cmd(ctx, file_path, input_base64, execute, authorized_by, as_json):
         )
     if result.get("ok") is not True:
         ctx.exit(2)
+
+
+@exit_group.group(
+    name="history",
+    cls=PrioritizedCommandGroup,
+    help="inspect, export, verify, import, and rebuild protected history",
+)
+@click.help_option("-h", "--help")
+@kfc.pass_context()
+def history_group(ctx):
+    pass
+
+
+@history_group.command(
+    name="status",
+    help="show the protection contract or verify one selected scope inventory",
+)
+@click.option("--file", "file_path", help="optional Exit request JSON path or -")
+@click.option("--input-base64", help="optional base64-encoded Exit request JSON")
+@click.option("--json", "as_json", is_flag=True, help="machine-readable output")
+@exit_command_context
+def history_status_cmd(ctx, file_path, input_base64, as_json):
+    request = _input(file_path, input_base64) if file_path or input_base64 else None
+    result = _run(
+        lambda: exit_bundle.history_status(
+            ctx.runtime_dir,
+            request,
+            config_home=ctx.config_home,
+        )
+    )
+    if as_json:
+        _json(result)
+        return
+    click.echo(
+        f"[history] {result['state']}: coverage={result['coverage']} "
+        f"members={len(result['eligibleMembers'])}"
+    )
+    click.echo(f"[history] next: {result['nextActions'][0]}")
+
+
+@history_group.command(
+    name="export",
+    help="write one full or explicitly lossy thin Exit package",
+)
+@click.option("--file", "file_path", help="request JSON path or -")
+@click.option("--input-base64", help="base64-encoded request JSON")
+@click.option("--out", required=True, type=click.Path(dir_okay=False, path_type=Path))
+@click.option("--json", "as_json", is_flag=True, help="machine-readable receipt")
+@exit_command_context
+def history_export_cmd(ctx, file_path, input_base64, out, as_json):
+    package = _run(
+        lambda: exit_bundle.build(
+            ctx.runtime_dir,
+            _input(file_path, input_base64),
+            config_home=ctx.config_home,
+        )
+    )
+    _run(lambda: exit_bundle.write(out, package))
+    observer = _run(
+        lambda: exit_bundle.record_verified_history_export(ctx.runtime_dir, package)
+    )
+    result = {
+        "schema": "kungfu.exit-history.export-receipt/v1",
+        "ok": True,
+        "bundleId": package["manifest"]["bundleId"],
+        "mode": package["manifest"]["mode"],
+        "bundleRoot": package["manifest"]["bundleRoot"],
+        "packageRoot": package["packageRoot"],
+        "memberCount": len(package["manifest"]["members"]),
+        "loss": package["manifest"]["loss"],
+        "observerRoot": observer["observerRoot"],
+        "written": True,
+    }
+    if as_json:
+        _json(result)
+        return
+    click.echo(
+        f"[history] exported {result['mode']} {result['bundleId']}: "
+        f"{result['packageRoot']}"
+    )
+
+
+@history_group.command(
+    name="verify",
+    help="verify package roots without initializing or mutating a runtime",
+)
+@click.option("--file", "file_path", help="package JSON path or -")
+@click.option("--input-base64", help="base64-encoded package JSON")
+@click.option("--json", "as_json", is_flag=True, help="machine-readable output")
+@exit_command_context
+def history_verify_cmd(ctx, file_path, input_base64, as_json):
+    if file_path and file_path != "-":
+        result = exit_verifier.verify_file(file_path)
+    else:
+        result = exit_verifier.verify_bytes(
+            _verification_bytes(file_path, input_base64)
+        )
+    if as_json:
+        _json(result)
+    else:
+        click.echo(
+            f"[history] {result.get('bundleId') or '<unknown>'} "
+            f"{result['verdict']}: {result['reportRoot']}"
+        )
+    if result.get("verdict") == "degraded":
+        ctx.exit(3)
+    if result.get("verdict") == "rejected":
+        ctx.exit(4)
+
+
+@history_group.command(
+    name="import",
+    help="validate by default or explicitly import into the selected runtime",
+)
+@click.option("--file", "file_path", help="package JSON path or -")
+@click.option("--input-base64", help="base64-encoded package JSON")
+@click.option("--execute", is_flag=True, help="materialize after isolated preflight")
+@click.option("--authorized-by", help="actor approving this exact execute")
+@click.option("--json", "as_json", is_flag=True, help="machine-readable output")
+@exit_command_context
+def history_import_cmd(ctx, file_path, input_base64, execute, authorized_by, as_json):
+    result = _run(
+        lambda: exit_bundle.import_package(
+            ctx.runtime_dir,
+            _input(file_path, input_base64),
+            config_home=ctx.config_home,
+            execute=execute,
+            authorized_by=authorized_by or "",
+        )
+    )
+    if as_json:
+        _json(result)
+    else:
+        click.echo(
+            f"[history] import {result['status']}: "
+            f"written={len(result['writtenMembers'])} "
+            f"remaining={len(result['remainingMembers'])}"
+        )
+    if result.get("ok") is not True:
+        ctx.exit(2)
+
+
+@history_group.command(
+    name="rebuild",
+    help="plan or rebuild declared projections from local semantic authorities",
+)
+@click.option(
+    "--projection",
+    "projections",
+    multiple=True,
+    type=click.Choice(["episode", "fact-kernel"]),
+)
+@click.option("--execute", is_flag=True, help="execute the bounded rebuild plan")
+@click.option("--authorized-by", help="actor approving this exact execute")
+@click.option("--json", "as_json", is_flag=True, help="machine-readable output")
+@exit_command_context
+def history_rebuild_cmd(ctx, projections, execute, authorized_by, as_json):
+    result = _run(
+        lambda: exit_bundle.rebuild_history_projections(
+            ctx.runtime_dir,
+            projections=projections,
+            execute=execute,
+            authorized_by=authorized_by or "",
+        )
+    )
+    if as_json:
+        _json(result)
+    else:
+        click.echo(
+            f"[history] projections {result['status']}: "
+            f"{len(result['operations'])} operation(s)"
+        )
+        if result["nextActions"]:
+            click.echo(f"[history] next: {result['nextActions'][0]}")
+    if result.get("ok") is not True:
+        ctx.exit(2)
