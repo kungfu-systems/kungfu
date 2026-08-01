@@ -2236,9 +2236,24 @@ def _resume_starter_close(
             if str(row.get("review_id") or "") not in decided_review_ids
             and row.get("verdict") == "fit"
         ]
-        if len(pending) != 1:
+        if not pending:
             raise ValueError("retained review state is missing one exact fit review")
-        review = pending[0]
+        exact_fit_roots = {
+            (
+                str(row.get("claim_id") or ""),
+                str(row.get("claim_payload_hash") or ""),
+                str(row.get("continuation_plan_root") or ""),
+            )
+            for row in pending
+        }
+        if len(exact_fit_roots) != 1:
+            raise ValueError("retained review state has conflicting fit reviews")
+        # Repeated product requests can retain more than one independent
+        # review event for the same exact completion claim and continuation
+        # plan. They are equivalent restoration evidence, not an ambiguous
+        # human decision. Prefer the latest retained event while preserving
+        # fail-closed behavior when the exact claim or plan differs.
+        review = pending[-1]
         review_receipt = _work_start_receipt(
             {
                 "schema": "kungfu.work-review.receipt/v1",

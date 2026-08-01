@@ -552,6 +552,63 @@ test('renderer Projects sends the exact Work capture request through stdin', asy
   }
 });
 
+test('renderer Projects preserves structured CLI stdout on failure', async () => {
+  const previousWindow = Object.getOwnPropertyDescriptor(globalThis, 'window');
+  const diagnosis = JSON.stringify({
+    schema: 'kungfu.assignment-orchestration.diagnosis/v1',
+    ok: false,
+    code: 'assignment-operation-failed',
+    message: 'retained review state has conflicting fit reviews',
+  });
+  Object.defineProperty(globalThis, 'window', {
+    configurable: true,
+    value: {
+      process: { env: {}, platform: 'darwin' },
+      require: (specifier: string) => {
+        if (specifier === 'node:child_process') {
+          return {
+            execFile: (
+              _file: string,
+              _args: string[],
+              _options: unknown,
+              callback: (
+                error: Error | null,
+                stdout: string,
+                stderr: string,
+              ) => void,
+            ) => {
+              queueMicrotask(() =>
+                callback(new Error('Command failed'), diagnosis, ''),
+              );
+            },
+            spawn: () => {
+              throw new Error('spawn is not expected');
+            },
+          };
+        }
+        if (specifier === 'electron') {
+          return { ipcRenderer: { invoke: async () => undefined } };
+        }
+        throw new Error(`Unexpected renderer require: ${specifier}`);
+      },
+    },
+  });
+
+  try {
+    const projects = openRendererProjects();
+    await assert.rejects(
+      projects.works('/project'),
+      /retained review state has conflicting fit reviews/,
+    );
+  } finally {
+    if (previousWindow) {
+      Object.defineProperty(globalThis, 'window', previousWindow);
+    } else {
+      Reflect.deleteProperty(globalThis, 'window');
+    }
+  }
+});
+
 test('Project Work inventory keeps captured Work visible before admission', () => {
   const rows = projectInventoryWorkRows(
     {

@@ -87,8 +87,11 @@ export function openRendererProjects() {
           args(values),
           options,
           (error, stdout, stderr) => {
-            if (error) reject(new Error(stderr.trim() || error.message));
-            else resolve(stdout);
+            if (error) {
+              reject(
+                new Error(stderr.trim() || stdout.trim() || error.message),
+              );
+            } else resolve(stdout);
           },
         );
       }),
