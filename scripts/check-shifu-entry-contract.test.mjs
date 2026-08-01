@@ -611,14 +611,27 @@ test('runtime guard rejects a direct task and accepts Shifu provenance', () => {
   assert.equal(accepted.status, 0);
 });
 
-test('package manager cannot run a guarded root task without a canonical Shifu correction', () => {
-  const corepack = process.platform === 'win32' ? 'corepack.cmd' : 'corepack';
-  const direct = spawnSync(corepack, ['pnpm', 'run', 'check:entry-contract'], {
-    cwd: ROOT,
-    encoding: 'utf8',
-    env: { ...process.env, SHIFU_ENTRYPOINT: '' },
-    shell: process.platform === 'win32',
-  });
+test('package task guard rejects direct package-manager provenance without repository writes', (t) => {
+  const runtimeRoot =
+    process.env.KUNGFU_SOURCE_ACCEPTANCE_RUNTIME_ROOT || os.tmpdir();
+  const fixture = fs.mkdtempSync(
+    path.join(runtimeRoot, 'kungfu-package-manager-guard-'),
+  );
+  t.after(() => fs.rmSync(fixture, { recursive: true, force: true }));
+  const direct = spawnSync(
+    process.execPath,
+    [path.join(ROOT, 'scripts', 'require-shifu.mjs'), 'check:entry-contract'],
+    {
+      cwd: fixture,
+      encoding: 'utf8',
+      env: {
+        ...process.env,
+        SHIFU_ENTRYPOINT: '',
+        npm_command: 'run-script',
+        npm_lifecycle_event: 'check:entry-contract',
+      },
+    },
+  );
   const output = `${direct.stdout}\n${direct.stderr}`;
   assert.equal(direct.status, 1);
   assert.match(output, /Direct package-manager invocation is unsupported/);
@@ -627,4 +640,5 @@ test('package manager cannot run a guarded root task without a canonical Shifu c
     /\[shifu-entry\] Run: \.\/shifu (?:install|check:entry-contract)(?:\r?\n|$)/,
   );
   assert.doesNotMatch(output, /\[shifu-entry\] Run: (?:corepack|node|pnpm)\b/);
+  assert.deepEqual(fs.readdirSync(fixture), []);
 });
