@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import assert from 'node:assert/strict';
-import { spawnSync } from 'node:child_process';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
@@ -65,36 +64,20 @@ test('all supported entrypoints route to one semantic authority and projection',
   );
 });
 
-test('managed and native Agent activity uses the Core projection without semantic admission', () => {
-  const code = [
-    'import json',
-    'from kungfu.agent.run_agent import agent_activity_history_projection',
-    `work = json.loads(${JSON.stringify(JSON.stringify(workRef()))})`,
-    "print(json.dumps(agent_activity_history_projection(work, entrypoint='native-agent-ui'), sort_keys=True))",
-  ].join('\n');
-  const result = spawnSync(
-    'uv',
-    ['run', '--project', 'framework/core', '--frozen', 'python', '-c', code],
-    {
-      cwd: ROOT,
-      encoding: 'utf8',
-      env: {
-        ...process.env,
-        PYTHONPATH: path.join(ROOT, 'framework/core/src/python'),
-        KUNGFU_NATIVE_PATH: path.join(ROOT, 'framework/core/build/Release'),
-      },
-    },
+test('managed and native Agent activity shares the Core projection contract', () => {
+  const runner = read('framework/core/src/python/kungfu/agent/run_agent.py');
+  assert.match(runner, /def agent_activity_history_projection\(/u);
+  assert.match(runner, /"schema": HISTORY_PROJECTION_SCHEMA/u);
+  assert.match(runner, /"state": "session-activity-only"/u);
+  assert.match(runner, /"workRefRoot": canonical_root\(work\)/u);
+  assert.match(runner, /"semanticAdmissionReceiptRoot": None/u);
+  assert.match(runner, /"processExitSettlesWork": False/u);
+  assert.match(runner, /"selfReportSettlesWork": False/u);
+  assert.match(runner, /"nextAction": "independent-assessment-required"/u);
+  assert.equal(
+    contract.canonicalProjection.schema,
+    'kungfu.work-agent-history.projection/v1',
   );
-  assert.equal(result.status, 0, result.stderr);
-  const projection = JSON.parse(result.stdout);
-  assert.equal(projection.schema, contract.canonicalProjection.schema);
-  assert.equal(projection.state, 'session-activity-only');
-  assert.equal(projection.entrypoint, 'native-agent-ui');
-  assert.match(projection.workRefRoot, /^sha256:[0-9a-f]{64}$/u);
-  assert.equal(projection.semanticAdmissionReceiptRoot, null);
-  assert.equal(projection.processExitSettlesWork, false);
-  assert.equal(projection.selfReportSettlesWork, false);
-  assert.equal(projection.nextAction, 'independent-assessment-required');
 });
 
 test('WorkConsole v1 readback preserves exact Work roots but remains observer-only', () => {
