@@ -37,7 +37,11 @@ import {
   type GlobalWorkObserverIpc,
   subscribeGlobalWorkObserver,
 } from './global-work-observer';
-import { assignmentSelector, resolveWorkProject } from './project-work-run';
+import {
+  assignmentSelector,
+  resolveWorkProject,
+  shouldRestoreRetainedProjectRun,
+} from './project-work-run';
 import { openWorkControlProfile } from './work-control-profile';
 
 // Preserve the qualified Profile application service without restoring its
@@ -1303,7 +1307,7 @@ function GlobalWorkView({
     if (
       projectSection !== 'work' ||
       !currentProject?.path ||
-      !currentInventoryWork?.phase
+      !shouldRestoreRetainedProjectRun(currentInventoryWork, current)
     ) {
       return;
     }
@@ -1341,6 +1345,7 @@ function GlobalWorkView({
       active = false;
     };
   }, [
+    current,
     currentInventoryWork,
     currentProject?.path,
     currentRetainedRun,

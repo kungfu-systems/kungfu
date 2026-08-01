@@ -4,6 +4,7 @@ import test from 'node:test';
 import {
   assignmentSelector,
   resolveWorkProject,
+  shouldRestoreRetainedProjectRun,
 } from '../src/view/project-work-run.ts';
 
 test('a Work card binds its exact Assignment and owning Project', () => {
@@ -23,5 +24,29 @@ test('a Work card binds its exact Assignment and owning Project', () => {
   assert.deepEqual(
     resolveWorkProject([{ workspace_id: '/projects/a' }], projects),
     projects[0],
+  );
+});
+
+test('Project Work restores a retained run from inventory or global authority', () => {
+  const captured = {
+    requestRoot: `sha256:${'1'.repeat(64)}`,
+  };
+  const retainedState = {
+    canonical_root: `sha256:${'2'.repeat(64)}`,
+  };
+
+  assert.equal(
+    shouldRestoreRetainedProjectRun(
+      { ...captured, phase: 'executing' },
+      { canonical_root: captured.requestRoot },
+    ),
+    true,
+  );
+  assert.equal(shouldRestoreRetainedProjectRun(captured, retainedState), true);
+  assert.equal(
+    shouldRestoreRetainedProjectRun(captured, {
+      canonical_root: captured.requestRoot,
+    }),
+    false,
   );
 });
