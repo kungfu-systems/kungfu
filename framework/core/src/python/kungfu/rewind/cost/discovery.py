@@ -108,9 +108,21 @@ def _opencode_candidates(
     return hits
 
 
+def _amp_candidates(
+    which: Callable[[str], Optional[str]], platform: str
+) -> list[tuple[str, str]]:
+    del platform
+    hits: list[tuple[str, str]] = []
+    on_path = which("amp")
+    if on_path:
+        hits.append((on_path, PATH_CLASS_PATH))
+    return hits
+
+
 _PROVIDER_CANDIDATES = {
     "codex": _codex_candidates,
     "claude": _claude_candidates,
+    "amp": _amp_candidates,
     "opencode": _opencode_candidates,
 }
 
@@ -206,11 +218,11 @@ def discover_providers(
 ) -> dict[str, ProviderDiscovery]:
     """Discover several providers at once; returns {provider: ProviderDiscovery}.
 
-    Defaults to the built-in provider set (codex, claude, opencode). All keyword args pass
+    Defaults to the built-in provider set (codex, claude, amp, opencode). All keyword args pass
     through to `discover_provider` (which/version_probe/platform/exists).
     """
     if providers is None:
-        providers = ["codex", "claude", "opencode"]
+        providers = ["codex", "claude", "amp", "opencode"]
     return {p: discover_provider(p, **kwargs) for p in providers}
 
 
@@ -221,5 +233,5 @@ def discover_all_provider_candidates(
     """Discover every safe executable candidate for each requested provider."""
 
     if providers is None:
-        providers = ["codex", "claude", "opencode"]
+        providers = ["codex", "claude", "amp", "opencode"]
     return {p: discover_provider_candidates(p, **kwargs) for p in providers}

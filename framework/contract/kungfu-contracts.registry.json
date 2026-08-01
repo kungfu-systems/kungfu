@@ -361,7 +361,7 @@
       "surface": "exit-bundle",
       "id": "kungfu-exit-bundle",
       "schema": "kungfu.exit-bundle.contract/v1",
-      "contractSchemaRoot": "sha256:9b5b525d081a0c05df32369c4dc42d3cffb31945591009d4b6cfbb669a08c6cc",
+      "contractSchemaRoot": "sha256:c8d86adb58d83d95434b107c2420d54b6973219583662a64ce1fe8372dffff8d",
       "weldedSurface": "exit-bundle-contract",
       "env": "KUNGFU_EXIT_BUNDLE_CONTRACT",
       "file": "kungfu-exit-bundle.contract.json",

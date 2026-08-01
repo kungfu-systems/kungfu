@@ -67,6 +67,85 @@ function sessionKey(workConsoleId, sessionAttemptId) {
   return `${workConsoleId}\u0000${sessionAttemptId}`;
 }
 
+function nativeWorkObservation(value) {
+  if (value == null) return null;
+  const requiredFields = [
+    'assignmentId',
+    'continuation',
+    'evidenceEpisodeRoots',
+    'initiativeId',
+    'nextAction',
+    'nextActions',
+    'phase',
+    'queryProofRoot',
+    'remainingObligation',
+    'schema',
+    'state',
+  ];
+  const optionalFields = ['acceptanceChecks', 'objective', 'title'];
+  const fields = Object.keys(value);
+  if (
+    typeof value !== 'object' ||
+    !requiredFields.every((field) => fields.includes(field)) ||
+    fields.some(
+      (field) =>
+        !requiredFields.includes(field) && !optionalFields.includes(field),
+    ) ||
+    value.schema !== 'kungfu.native-work-observation/v1' ||
+    !['none', 'ambiguous', 'available', 'degraded', 'unknown'].includes(
+      value.state,
+    ) ||
+    typeof value.initiativeId !== 'string' ||
+    typeof value.assignmentId !== 'string' ||
+    ![value.phase, value.remainingObligation, value.nextAction].every(
+      (candidate) => candidate === null || typeof candidate === 'string',
+    ) ||
+    !Array.isArray(value.nextActions) ||
+    !value.nextActions.every((candidate) => typeof candidate === 'string') ||
+    ![value.title, value.objective].every(
+      (candidate) => candidate === undefined || typeof candidate === 'string',
+    ) ||
+    (value.acceptanceChecks !== undefined &&
+      (!Array.isArray(value.acceptanceChecks) ||
+        !value.acceptanceChecks.every(
+          (candidate) => typeof candidate === 'string',
+        ))) ||
+    !Array.isArray(value.evidenceEpisodeRoots) ||
+    !value.evidenceEpisodeRoots.every((root) =>
+      /^sha256:[a-f0-9]{64}$/u.test(root),
+    ) ||
+    (value.queryProofRoot !== null &&
+      !/^sha256:[a-f0-9]{64}$/u.test(value.queryProofRoot))
+  ) {
+    throw new AgentSessionSurfaceError(
+      'invalid_argument',
+      'native Work observation must use the exact public Core projection',
+    );
+  }
+  const continuation = value.continuation;
+  const continuationFields = [
+    'completionClaimCount',
+    'continuationDecisionCount',
+    'independentReviewCount',
+  ];
+  if (
+    !continuation ||
+    typeof continuation !== 'object' ||
+    Object.keys(continuation).sort().join('\u0000') !==
+      continuationFields.sort().join('\u0000') ||
+    !continuationFields.every(
+      (field) =>
+        Number.isInteger(continuation[field]) && continuation[field] >= 0,
+    )
+  ) {
+    throw new AgentSessionSurfaceError(
+      'invalid_argument',
+      'native Work continuation counts must be non-negative integers',
+    );
+  }
+  return structuredClone(value);
+}
+
 export function agentSessionProductState({
   live = false,
   lifecycleState = '',
@@ -131,6 +210,8 @@ function publicStatus(session) {
   const statusProjection = {
     schema: 'kungfu.agent-session.surface-status/v1',
     live: true,
+    terminalObservable: true,
+    controllable: true,
     workConsoleId: status.workConsoleId,
     sessionAttemptId: status.sessionAttemptId,
     capsuleId: status.capsuleId,
@@ -162,6 +243,7 @@ function publicStatus(session) {
       : null,
     workOutcome: null,
     proof: null,
+    receiptRoots: [],
     product: agentSessionProductState({
       live: true,
       lifecycleState: status.lifecycleState,
@@ -179,6 +261,111 @@ function publicStatus(session) {
   return {
     ...statusProjection,
     workAgent: projectWorkAgentState(statusProjection),
+  };
+}
+
+function nativeAttemptStatus(projection, now) {
+  const { console, attempt } = projection;
+  const observer = attempt.observer ?? {
+    state: 'unknown',
+    observedAt: 0,
+    staleAfterMs: 2000,
+    processIdentityRoot: '',
+    work: null,
+    diagnostic: 'native-observer-metadata-unavailable',
+  };
+  const ageMs = Math.max(0, now - observer.observedAt);
+  const ended = attempt.status === 'exited';
+  const observerState = ended
+    ? 'disconnected'
+    : ageMs > Math.max(observer.staleAfterMs, 5000)
+      ? 'stale'
+      : observer.state;
+  const processObserved =
+    !ended && !['stale', 'disconnected'].includes(observerState);
+  const attention = ended
+    ? {
+        kind: 'ready-for-review',
+        reason: 'native-agent-attempt-ended',
+        message:
+          'The native Agent process ended. Review Core Work evidence before completion.',
+        nextActions: ['inspect-work-status', 'review-project-changes'],
+      }
+    : observerState === 'fresh'
+      ? null
+      : {
+          kind: 'blocked',
+          reason: `native-observer-${observerState}`,
+          message:
+            observerState === 'stale'
+              ? 'The native Agent heartbeat is stale. Its process and Work state are not inferred as current.'
+              : 'The native Agent remains outside TUI input control, and its Core observer needs attention.',
+          nextActions: ['continue-in-native-ui', 'inspect-work-status'],
+        };
+  return {
+    schema: 'kungfu.agent-session.surface-status/v1',
+    live: processObserved,
+    workspaceId: console.workspaceId,
+    backend: 'native-interactive',
+    terminalObservable: false,
+    controllable: false,
+    workConsoleId: console.consoleId,
+    sessionAttemptId: attempt.sessionAttemptId,
+    lifecycleState: ended ? 'ended' : processObserved ? 'running' : 'unknown',
+    interactionState: 'external-native-ui',
+    inputAdmission: 'closed',
+    foreground: null,
+    output: null,
+    exit: attempt.exit ?? null,
+    providerAdapter: {
+      provider: attempt.provider,
+      providerVersion: attempt.providerVersion,
+      compatible: true,
+      reason: 'native-ui-owned-by-provider-terminal',
+    },
+    queuedInstructions: [],
+    binding: attempt.workBinding ?? console.binding,
+    attachments: [],
+    controller: null,
+    workOutcome: null,
+    proof: null,
+    receiptRoots: attempt.receipts
+      .map((receiptValue) => receiptValue.receiptRoot)
+      .filter(Boolean),
+    product: {
+      schema: 'kungfu.agent-session.product-state/v1',
+      state: ended
+        ? 'ended'
+        : observerState === 'fresh'
+          ? 'working'
+          : 'action-required',
+      reason: ended
+        ? 'attempt-ended'
+        : observerState === 'fresh'
+          ? 'native-provider-working'
+          : `native-observer-${observerState}`,
+      recommendedAction: ended
+        ? 'review-work-evidence'
+        : observerState === 'fresh'
+          ? null
+          : 'continue-in-native-ui-or-inspect-work-status',
+    },
+    workAgent: {
+      schema: 'kungfu.project-work-agent-state/v1',
+      attempt: ended
+        ? 'ended'
+        : observerState === 'fresh'
+          ? 'working'
+          : 'waiting',
+      attention,
+    },
+    nativeObserver: {
+      ...observer,
+      state: observerState,
+      ageMs,
+    },
+    console,
+    attempt,
   };
 }
 
@@ -246,6 +433,12 @@ export class AgentSessionProductSurface {
         'show',
         'plan-start',
         'start',
+        'plan-native-start',
+        'start-native',
+        'plan-native-bind-work',
+        'bind-native-work',
+        'heartbeat-native',
+        'end-native',
         'attach',
         'detach',
         'status',
@@ -267,6 +460,12 @@ export class AgentSessionProductSurface {
         'presentation',
       ],
       authority: 'agent-session-capsule-interaction-port',
+      terminalAuthorities: {
+        capsule: 'agent-session-capsule',
+        structured: 'provider-structured-transport',
+        nativeInteractive: 'provider-native-terminal',
+      },
+      nativeObserverAuthority: 'core-work-status-plus-exact-launcher-heartbeat',
       registryAuthority: WORK_CONSOLE_REGISTRY_SCHEMA,
       workMutationAuthority: 'profile-kfd3-actions-only',
       rawHumanFallback: 'current-controller-only',
@@ -281,6 +480,7 @@ export class AgentSessionProductSurface {
         'unknown-or-approval-state-never-auto-delivers',
         'capsule-worker-loss-ends-the-old-attempt-and-cannot-fake-continuity',
         'machine-reboot-requires-a-new-attempt-or-provider-resume',
+        'native-interactive-attempts-expose-no-terminal-bytes-or-tui-input-control',
       ],
       ...(productRoutes ? { providerRoutes: productRoutes } : {}),
     };
@@ -302,25 +502,46 @@ export class AgentSessionProductSurface {
         const live = liveByAttempt.get(
           sessionKey(console.consoleId, attempt.sessionAttemptId),
         );
+        const nativeStatus =
+          attempt.backend === 'native-interactive'
+            ? nativeAttemptStatus({ console, attempt }, this.now())
+            : null;
         return {
           schema: 'kungfu.agent-session.attempt-presentation/v1',
           workConsoleId: console.consoleId,
           sessionAttemptId: attempt.sessionAttemptId,
           provider: attempt.provider,
-          live: Boolean(live),
-          lifecycleState: live?.lifecycleState ?? attempt.status,
-          interactionState: live?.interactionState ?? 'unavailable',
-          inputAdmission: live?.inputAdmission ?? 'closed',
+          workspaceId: console.workspaceId,
+          binding: nativeStatus?.binding ?? console.binding,
+          backend: attempt.backend,
+          live: nativeStatus?.live ?? Boolean(live),
+          terminalObservable: nativeStatus?.terminalObservable ?? Boolean(live),
+          controllable: nativeStatus?.controllable ?? Boolean(live),
+          lifecycleState:
+            nativeStatus?.lifecycleState ??
+            live?.lifecycleState ??
+            attempt.status,
+          interactionState:
+            nativeStatus?.interactionState ??
+            live?.interactionState ??
+            'unavailable',
+          inputAdmission:
+            nativeStatus?.inputAdmission ?? live?.inputAdmission ?? 'closed',
           queuedInstructions: live?.queuedInstructions ?? 0,
-          providerAdapter: live?.providerAdapter ?? {
-            provider: attempt.provider,
-            providerVersion: attempt.providerVersion,
-            compatible: false,
-            reason: 'attempt-not-live',
-          },
+          providerAdapter: nativeStatus?.providerAdapter ??
+            live?.providerAdapter ?? {
+              provider: attempt.provider,
+              providerVersion: attempt.providerVersion,
+              compatible: false,
+              reason: 'attempt-not-live',
+            },
           product:
+            nativeStatus?.product ??
             live?.product ??
             agentSessionProductState({ attemptStatus: attempt.status }),
+          workAgent: nativeStatus?.workAgent ?? live?.workAgent ?? null,
+          nativeObserver: nativeStatus?.nativeObserver ?? null,
+          receiptRoots: nativeStatus?.receiptRoots ?? [],
         };
       }),
     );
@@ -344,11 +565,16 @@ export class AgentSessionProductSurface {
           `session '${normalized.sessionAttemptId}' is unavailable`,
         );
       }
+      if (projection.attempt.backend === 'native-interactive') {
+        return nativeAttemptStatus(projection, this.now());
+      }
       return {
         schema: 'kungfu.agent-session.surface-status/v1',
         workConsoleId: normalized.workConsoleId,
         sessionAttemptId: normalized.sessionAttemptId,
         live: false,
+        terminalObservable: false,
+        controllable: false,
         lifecycleState: projection.attempt.status,
         interactionState: 'unavailable',
         inputAdmission: 'closed',
@@ -385,6 +611,259 @@ export class AgentSessionProductSurface {
 
   resolveConsole(input) {
     return this.registry.resolve(input);
+  }
+
+  planNativeStart(input) {
+    const binding = input.binding ?? {
+      kind: 'workspace-assistant',
+      workRef: null,
+    };
+    const resolution = this.registry.resolve({
+      workspaceId: input.workspaceId,
+      workConsoleId: input.workConsoleId,
+      binding,
+    });
+    const registered = this.registry.console(resolution.workConsoleId);
+    const workConflict = this.registry.activeWorkConflict(resolution.binding, {
+      workConsoleId: resolution.workConsoleId,
+      sessionAttemptId: input.sessionAttemptId,
+    });
+    const active =
+      workConflict?.attempt ??
+      registered?.attempts.find((attempt) =>
+        ['planned', 'running', 'detached'].includes(attempt.status),
+      );
+    if (active && active.sessionAttemptId !== input.sessionAttemptId) {
+      const activeProvider = active.provider ?? 'unknown provider';
+      const requestedProvider = input.provider ?? 'requested provider';
+      throw new AgentSessionSurfaceError(
+        'native_attempt_already_active',
+        [
+          'Another Agent is already active for this Work.',
+          `WorkConsole: ${resolution.workConsoleId}`,
+          `Active Agent: ${activeProvider} (attempt ${active.sessionAttemptId}, status ${active.status})`,
+          `Requested Agent: ${requestedProvider}`,
+          '',
+          'Kungfu permits one active Agent per WorkConsole to protect single-writer continuity. This is expected behavior, not a system failure.',
+          `Next: exit the active Agent normally, then retry \`kungfu run ${requestedProvider}\`.`,
+          'For parallel Agents, use separate Work items so they resolve to separate WorkConsoles.',
+        ].join('\n'),
+      );
+    }
+    const body = {
+      schema: 'kungfu.agent-session.native-start-plan/v1',
+      operation: 'native-start',
+      workspaceId: resolution.workspaceId,
+      workConsoleId: resolution.workConsoleId,
+      sessionAttemptId: required(input.sessionAttemptId, 'sessionAttemptId'),
+      provider: required(input.provider, 'provider'),
+      providerVersion: required(input.providerVersion, 'providerVersion'),
+      profileRoot: required(input.profileRoot, 'profileRoot'),
+      runtimeProfileId:
+        input.runtimeProfileId ?? registered?.runtimeProfileId ?? 'unknown',
+      backend: 'native-interactive',
+      binding: resolution.binding,
+      effects: [
+        'register-native-provider-attempt',
+        'observe-metadata-without-terminal-capture',
+      ],
+      workEffects: [],
+      rollback: 'end-native-attempt-record-only',
+    };
+    const plan = { ...body, root: agentSessionSurfaceRoot(body) };
+    this.registry.recordPlan(plan);
+    return plan;
+  }
+
+  planNativeBindWork({ session: ref, workRef }) {
+    const normalized = sessionRef(ref);
+    const projection = this.registry.projection(normalized);
+    if (!projection || projection.attempt.backend !== 'native-interactive') {
+      throw new AgentSessionSurfaceError(
+        'session_not_found',
+        'native SessionAttempt is unavailable',
+      );
+    }
+    const binding = { kind: 'work', workRef };
+    const conflict = this.registry.activeWorkConflict(binding, normalized);
+    if (conflict) this.#throwNativeWorkConflict(conflict, workRef);
+    const body = {
+      schema: 'kungfu.agent-session.native-bind-work-plan/v1',
+      operation: 'native-bind-work',
+      workConsoleId: normalized.workConsoleId,
+      sessionAttemptId: normalized.sessionAttemptId,
+      workRef: structuredClone(workRef),
+      effects: ['bind-active-native-attempt-to-work'],
+      workEffects: [],
+      rollback: 'end-native-attempt-or-bind-after-active-attempt-ends',
+    };
+    return { ...body, root: agentSessionSurfaceRoot(body) };
+  }
+
+  bindNativeWork({ actorId, plan, expectedPlanRoot }) {
+    required(actorId, 'actorId');
+    this.#verifyPlan(plan, expectedPlanRoot, 'native-bind-work');
+    if (plan.operation !== 'native-bind-work') {
+      throw new AgentSessionSurfaceError(
+        'invalid_plan',
+        'native Work binding requires a native-bind-work plan',
+      );
+    }
+    const conflict = this.registry.activeWorkConflict(
+      { kind: 'work', workRef: plan.workRef },
+      plan,
+    );
+    if (conflict) this.#throwNativeWorkConflict(conflict, plan.workRef);
+    const result = receipt(
+      'bind-native-work',
+      actorId,
+      {
+        status: 'bound',
+        workConsoleId: plan.workConsoleId,
+        sessionAttemptId: plan.sessionAttemptId,
+        workRef: structuredClone(plan.workRef),
+      },
+      this.now,
+    );
+    try {
+      this.registry.bindNativeWork(plan, plan.workRef, result);
+    } catch (error) {
+      if (error?.code === 'native_work_already_active') {
+        this.#throwNativeWorkConflict(error.conflict, plan.workRef);
+      }
+      throw error;
+    }
+    return result;
+  }
+
+  startNative({ actorId, client, plan, expectedPlanRoot, processIdentity }) {
+    required(actorId, 'actorId');
+    required(client, 'client');
+    this.#verifyPlan(plan, expectedPlanRoot, 'native-start');
+    if (plan.operation !== 'native-start') {
+      throw new AgentSessionSurfaceError(
+        'invalid_plan',
+        'native start requires a native-start plan',
+      );
+    }
+    if (!processIdentity || typeof processIdentity !== 'object') {
+      throw new AgentSessionSurfaceError(
+        'invalid_argument',
+        'native start requires exact launcher process identity',
+      );
+    }
+    const recordedAt = this.now();
+    const result = receipt(
+      'start-native',
+      actorId,
+      {
+        status: 'started',
+        planRoot: plan.root,
+        workConsoleId: plan.workConsoleId,
+        sessionAttemptId: plan.sessionAttemptId,
+        terminalOwnership: 'provider-native-ui',
+        inputControl: 'external-to-kungfu-tui',
+      },
+      () => recordedAt,
+    );
+    this.registry.recordNativeStarted(plan, result, {
+      state: 'unknown',
+      observedAt: recordedAt,
+      staleAfterMs: 2000,
+      processIdentityRoot: agentSessionSurfaceRoot(processIdentity),
+      work: null,
+      diagnostic: 'awaiting-first-native-heartbeat',
+    });
+    return result;
+  }
+
+  heartbeatNative({ session: ref, processIdentity, observation = {} }) {
+    const projection = this.registry.projection(sessionRef(ref));
+    if (!projection || projection.attempt.backend !== 'native-interactive') {
+      throw new AgentSessionSurfaceError(
+        'session_not_found',
+        'native SessionAttempt is unavailable',
+      );
+    }
+    const processIdentityRoot = agentSessionSurfaceRoot(
+      processIdentity ?? null,
+    );
+    if (
+      projection.attempt.observer?.processIdentityRoot !== processIdentityRoot
+    ) {
+      throw new AgentSessionSurfaceError(
+        'stale_native_process',
+        'native heartbeat process identity does not match the registered attempt',
+      );
+    }
+    const state = ['fresh', 'degraded', 'unknown'].includes(observation.state)
+      ? observation.state
+      : 'unknown';
+    const staleAfterMs = Math.min(
+      10000,
+      Math.max(500, Number(observation.staleAfterMs ?? 2000)),
+    );
+    const observedAt = this.now();
+    this.registry.recordNativeHeartbeat(ref, {
+      state,
+      observedAt,
+      staleAfterMs,
+      processIdentityRoot,
+      work: nativeWorkObservation(observation.work),
+      diagnostic:
+        typeof observation.diagnostic === 'string'
+          ? observation.diagnostic
+          : null,
+    });
+    return receipt(
+      'heartbeat-native',
+      'native-launcher',
+      {
+        status: state,
+        workConsoleId: projection.console.consoleId,
+        sessionAttemptId: projection.attempt.sessionAttemptId,
+        observerState: state,
+      },
+      () => observedAt,
+    );
+  }
+
+  endNative({ actorId, session: ref, processIdentity, exit = {} }) {
+    required(actorId, 'actorId');
+    const projection = this.registry.projection(sessionRef(ref));
+    if (!projection || projection.attempt.backend !== 'native-interactive') {
+      throw new AgentSessionSurfaceError(
+        'session_not_found',
+        'native SessionAttempt is unavailable',
+      );
+    }
+    if (
+      projection.attempt.observer?.processIdentityRoot !==
+      agentSessionSurfaceRoot(processIdentity ?? null)
+    ) {
+      throw new AgentSessionSurfaceError(
+        'stale_native_process',
+        'native end process identity does not match the registered attempt',
+      );
+    }
+    const exitProjection = {
+      exitCode: typeof exit.exitCode === 'number' ? exit.exitCode : null,
+      signal: typeof exit.signal === 'string' ? exit.signal : null,
+    };
+    const result = receipt(
+      'end-native',
+      actorId,
+      {
+        status: 'ended',
+        workConsoleId: projection.console.consoleId,
+        sessionAttemptId: projection.attempt.sessionAttemptId,
+        exit: exitProjection,
+        completionClaimed: false,
+      },
+      this.now,
+    );
+    this.registry.recordNativeEnded(ref, result, exitProjection);
+    return result;
   }
 
   planStart(input) {
@@ -803,7 +1282,15 @@ export class AgentSessionProductSurface {
       });
     }
     if (operation === 'plan-start') return this.planStart(request.input ?? {});
+    if (operation === 'plan-native-start')
+      return this.planNativeStart(request.input ?? {});
+    if (operation === 'plan-native-bind-work')
+      return this.planNativeBindWork(request.input ?? request);
     if (operation === 'start') return this.start(request);
+    if (operation === 'start-native') return this.startNative(request);
+    if (operation === 'bind-native-work') return this.bindNativeWork(request);
+    if (operation === 'heartbeat-native') return this.heartbeatNative(request);
+    if (operation === 'end-native') return this.endNative(request);
     if (operation === 'attach') return this.attach(request);
     if (operation === 'detach') return this.detach(request);
     if (operation === 'plan-control') {
@@ -816,6 +1303,24 @@ export class AgentSessionProductSurface {
     throw new AgentSessionSurfaceError(
       'unknown_operation',
       `unknown Agent Session operation '${operation}'`,
+    );
+  }
+
+  #throwNativeWorkConflict(conflict, workRef) {
+    const active = conflict.attempt;
+    const console = conflict.console;
+    const assignment = workRef?.entityId ?? 'requested Work';
+    throw new AgentSessionSurfaceError(
+      'native_work_already_active',
+      [
+        `Work '${assignment}' already has an active Agent.`,
+        `Active Agent: ${active.provider ?? 'unknown provider'} (attempt ${active.sessionAttemptId}, status ${active.status})`,
+        `Active Console: ${console.consoleId}`,
+        '',
+        'Kungfu stopped this session before it could become a second writer. This is expected Work protection, not a system failure.',
+        'Next: return to the terminal running the active Agent; or exit that Agent normally and retry this Work; or choose a different Work in this terminal.',
+        'Inspect all sessions with `kungfu agent session list --json`.',
+      ].join('\n'),
     );
   }
 
@@ -937,6 +1442,15 @@ export function createAgentSessionSurfaceClient({ invoke, client, actorId }) {
     show: (session) => invoke({ operation: 'show', client, actorId, session }),
     planStart: (input) =>
       invoke({ operation: 'plan-start', client, actorId, input }),
+    planNativeStart: (input) =>
+      invoke({ operation: 'plan-native-start', client, actorId, input }),
+    planNativeBindWork: (session, workRef) =>
+      invoke({
+        operation: 'plan-native-bind-work',
+        client,
+        actorId,
+        input: { session, workRef },
+      }),
     start: (plan, attachment, execution) =>
       invoke({
         operation: 'start',
@@ -946,6 +1460,41 @@ export function createAgentSessionSurfaceClient({ invoke, client, actorId }) {
         expectedPlanRoot: plan.root,
         attachment,
         execution,
+      }),
+    startNative: (plan, processIdentity) =>
+      invoke({
+        operation: 'start-native',
+        client,
+        actorId,
+        plan,
+        expectedPlanRoot: plan.root,
+        processIdentity,
+      }),
+    bindNativeWork: (plan) =>
+      invoke({
+        operation: 'bind-native-work',
+        client,
+        actorId,
+        plan,
+        expectedPlanRoot: plan.root,
+      }),
+    heartbeatNative: (session, processIdentity, observation) =>
+      invoke({
+        operation: 'heartbeat-native',
+        client,
+        actorId,
+        session,
+        processIdentity,
+        observation,
+      }),
+    endNative: (session, processIdentity, exit) =>
+      invoke({
+        operation: 'end-native',
+        client,
+        actorId,
+        session,
+        processIdentity,
+        exit,
       }),
     attach: (session, attachment, acquireControl = false) =>
       invoke({

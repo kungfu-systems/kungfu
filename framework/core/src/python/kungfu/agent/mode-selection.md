@@ -2,6 +2,14 @@
 
 Choose the smallest mode that preserves evidence.
 
+Native interaction is an orthogonal launch surface, not another evidence mode.
+Bare `kungfu run codex|claude|amp|opencode` or bare `kungfu run agent` keeps the
+provider UI, starts a fresh content-bound SessionAttempt, and lets the Kungfu
+TUI observe the same Core Work state without owning provider input or transcript
+bytes. A registered third-party PTY provider uses
+`kungfu run agent --agent <profile-id>` through the same path. Adding a task or
+managed-run control selects the managed path instead.
+
 | Mode | Use when | First command | Maturity |
 |---|---|---|---|
 | brief | You need local facts before acting. | `kungfu agent brief` | stable |

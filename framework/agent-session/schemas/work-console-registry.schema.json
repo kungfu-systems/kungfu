@@ -108,6 +108,7 @@
         "runId",
         "provider",
         "providerVersion",
+        "backend",
         "status",
         "startedAt",
         "plans",
@@ -119,6 +120,9 @@
         "runId": { "type": "string", "minLength": 1 },
         "provider": { "type": "string", "minLength": 1 },
         "providerVersion": { "type": "string", "minLength": 1 },
+        "backend": {
+          "enum": ["capsule", "structured", "tmux", "direct", "native-interactive"]
+        },
         "status": {
           "enum": [
             "planned",
@@ -131,6 +135,59 @@
         },
         "startedAt": { "type": "number" },
         "endedAt": { "type": "number" },
+        "observer": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "state",
+            "observedAt",
+            "staleAfterMs",
+            "processIdentityRoot",
+            "work",
+            "diagnostic"
+          ],
+          "properties": {
+            "state": {
+              "enum": ["fresh", "stale", "disconnected", "degraded", "unknown"]
+            },
+            "observedAt": { "type": "number" },
+            "staleAfterMs": { "type": "number", "exclusiveMinimum": 0 },
+            "processIdentityRoot": { "type": "string" },
+            "work": {
+              "anyOf": [
+                { "$ref": "#/$defs/nativeWorkObservation" },
+                { "type": "null" }
+              ]
+            },
+            "diagnostic": {
+              "anyOf": [{ "type": "string" }, { "type": "null" }]
+            }
+          }
+        },
+        "exit": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["exitCode", "signal"],
+          "properties": {
+            "exitCode": {
+              "anyOf": [{ "type": "number" }, { "type": "null" }]
+            },
+            "signal": {
+              "anyOf": [{ "type": "string" }, { "type": "null" }]
+            }
+          }
+        },
+        "workBinding": {
+          "allOf": [
+            { "$ref": "#/$defs/binding" },
+            {
+              "type": "object",
+              "properties": {
+                "kind": { "const": "work" }
+              }
+            }
+          ]
+        },
         "plans": {
           "type": "array",
           "items": { "$ref": "#/$defs/plan" }
@@ -179,13 +236,76 @@
         "workspaceId": { "type": "string", "minLength": 1 },
         "binding": { "$ref": "#/$defs/binding" },
         "runtimeProfileId": { "type": "string", "minLength": 1 },
-        "backend": { "enum": ["capsule", "structured", "tmux", "direct"] },
+        "backend": {
+          "enum": ["capsule", "structured", "tmux", "direct", "native-interactive"]
+        },
         "attempts": {
           "type": "array",
           "items": { "$ref": "#/$defs/sessionAttempt" }
         },
         "createdAt": { "type": "number" },
         "updatedAt": { "type": "number" }
+      }
+    },
+    "nativeWorkObservation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema",
+        "state",
+        "initiativeId",
+        "assignmentId",
+        "phase",
+        "queryProofRoot",
+        "nextActions",
+        "evidenceEpisodeRoots",
+        "continuation",
+        "remainingObligation",
+        "nextAction"
+      ],
+      "properties": {
+        "schema": { "const": "kungfu.native-work-observation/v1" },
+        "state": { "enum": ["none", "ambiguous", "available", "degraded", "unknown"] },
+        "initiativeId": { "type": "string" },
+        "assignmentId": { "type": "string" },
+        "title": { "type": "string" },
+        "objective": { "type": "string" },
+        "acceptanceChecks": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "phase": { "anyOf": [{ "type": "string" }, { "type": "null" }] },
+        "queryProofRoot": {
+          "anyOf": [
+            { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" },
+            { "type": "null" }
+          ]
+        },
+        "nextActions": { "type": "array", "items": { "type": "string" } },
+        "evidenceEpisodeRoots": {
+          "type": "array",
+          "items": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" }
+        },
+        "continuation": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "completionClaimCount",
+            "independentReviewCount",
+            "continuationDecisionCount"
+          ],
+          "properties": {
+            "completionClaimCount": { "type": "integer", "minimum": 0 },
+            "independentReviewCount": { "type": "integer", "minimum": 0 },
+            "continuationDecisionCount": { "type": "integer", "minimum": 0 }
+          }
+        },
+        "remainingObligation": {
+          "anyOf": [{ "type": "string" }, { "type": "null" }]
+        },
+        "nextAction": {
+          "anyOf": [{ "type": "string" }, { "type": "null" }]
+        }
       }
     }
   }

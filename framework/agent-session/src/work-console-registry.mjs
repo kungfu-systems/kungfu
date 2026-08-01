@@ -20,6 +20,20 @@ const ATTEMPT_STATES = new Set([
   'orphaned',
   'unrecoverable',
 ]);
+const ATTEMPT_BACKENDS = new Set([
+  'capsule',
+  'structured',
+  'tmux',
+  'direct',
+  'native-interactive',
+]);
+const OBSERVER_STATES = new Set([
+  'fresh',
+  'stale',
+  'disconnected',
+  'degraded',
+  'unknown',
+]);
 
 function required(value, label) {
   if (typeof value !== 'string' || value.length === 0) {
@@ -81,8 +95,16 @@ function canonical(value) {
     .join(',')}}`;
 }
 
-function bindingKey(binding) {
-  return canonical(binding);
+function bindingIdentityKey(bindingValue) {
+  const binding = normalizeBinding(bindingValue);
+  if (binding.kind !== 'work') return binding.kind;
+  const { workspaceId, profileId, entityType, entityId } = binding.workRef;
+  return canonical({ workspaceId, profileId, entityType, entityId });
+}
+
+function attemptWorkBinding(value) {
+  if (value == null) return null;
+  return normalizeBinding({ kind: 'work', workRef: value.workRef ?? value });
 }
 
 export function primaryWorkConsoleId({ workspaceId, binding }) {
@@ -113,6 +135,7 @@ function normalizeAttempt(value) {
       typeof value.providerVersion === 'string'
         ? value.providerVersion
         : 'unknown',
+    backend: ATTEMPT_BACKENDS.has(value.backend) ? value.backend : 'capsule',
     status: ATTEMPT_STATES.has(value.status) ? value.status : 'orphaned',
     startedAt: typeof value.startedAt === 'number' ? value.startedAt : 0,
     ...(typeof value.endedAt === 'number' ? { endedAt: value.endedAt } : {}),
@@ -124,6 +147,51 @@ function normalizeAttempt(value) {
     plans: Array.isArray(value.plans)
       ? value.plans.filter((plan) => plan && typeof plan === 'object')
       : [],
+    ...(value.observer && typeof value.observer === 'object'
+      ? {
+          observer: {
+            state: OBSERVER_STATES.has(value.observer.state)
+              ? value.observer.state
+              : 'unknown',
+            observedAt:
+              typeof value.observer.observedAt === 'number'
+                ? value.observer.observedAt
+                : 0,
+            staleAfterMs:
+              typeof value.observer.staleAfterMs === 'number' &&
+              value.observer.staleAfterMs > 0
+                ? value.observer.staleAfterMs
+                : 2000,
+            processIdentityRoot:
+              typeof value.observer.processIdentityRoot === 'string'
+                ? value.observer.processIdentityRoot
+                : '',
+            work:
+              value.observer.work && typeof value.observer.work === 'object'
+                ? clone(value.observer.work)
+                : null,
+            diagnostic:
+              typeof value.observer.diagnostic === 'string'
+                ? value.observer.diagnostic
+                : null,
+          },
+        }
+      : {}),
+    ...(value.exit && typeof value.exit === 'object'
+      ? {
+          exit: {
+            exitCode:
+              typeof value.exit.exitCode === 'number'
+                ? value.exit.exitCode
+                : null,
+            signal:
+              typeof value.exit.signal === 'string' ? value.exit.signal : null,
+          },
+        }
+      : {}),
+    ...(value.workBinding
+      ? { workBinding: attemptWorkBinding(value.workBinding) }
+      : {}),
     historyProtection: historyBoundary(),
   };
 }
@@ -154,7 +222,12 @@ function normalizeConsole(value, fallbackWorkspaceId = 'home') {
       ? value.backend
       : 'capsule',
     attempts: (Array.isArray(value.attempts) ? value.attempts : [])
-      .map(normalizeAttempt)
+      .map((attempt) =>
+        normalizeAttempt({
+          ...attempt,
+          backend: attempt?.backend ?? value.backend,
+        }),
+      )
       .filter(Boolean),
     createdAt: typeof value.createdAt === 'number' ? value.createdAt : 0,
     updatedAt: typeof value.updatedAt === 'number' ? value.updatedAt : 0,
@@ -233,7 +306,10 @@ export class WorkConsoleRegistry {
     const existing = this.value.consoles.find(
       (entry) => entry.consoleId === workConsoleId,
     );
-    if (existing && bindingKey(existing.binding) !== bindingKey(binding)) {
+    if (
+      existing &&
+      bindingIdentityKey(existing.binding) !== bindingIdentityKey(binding)
+    ) {
       throw Object.assign(
         new Error(
           `WorkConsole '${workConsoleId}' is already bound to another work identity`,
@@ -244,12 +320,16 @@ export class WorkConsoleRegistry {
     const primary = this.value.consoles.find(
       (entry) =>
         entry.workspaceId === workspaceId &&
-        bindingKey(entry.binding) === bindingKey(binding),
+        bindingIdentityKey(entry.binding) === bindingIdentityKey(binding),
     );
     return {
       schema: 'kungfu.work-console-resolution/v1',
       workspaceId,
-      workConsoleId: primary?.consoleId ?? workConsoleId,
+      workConsoleId:
+        existing?.consoleId ??
+        (input.workConsoleId
+          ? workConsoleId
+          : (primary?.consoleId ?? workConsoleId)),
       canonicalWorkConsoleId: canonicalId,
       existing: Boolean(primary ?? existing),
       binding,
@@ -288,6 +368,7 @@ export class WorkConsoleRegistry {
         runId: plan.sessionAttemptId,
         provider: plan.provider,
         providerVersion: plan.providerVersion,
+        backend: plan.backend ?? 'capsule',
         status: 'planned',
         startedAt: now,
         receipts: [],
@@ -295,6 +376,8 @@ export class WorkConsoleRegistry {
         historyProtection: historyBoundary(),
       };
       console.attempts.push(attempt);
+    } else {
+      attempt.backend = plan.backend ?? attempt.backend;
     }
     if (!attempt.plans.some((candidate) => candidate.planRoot === plan.root)) {
       attempt.plans.push({
@@ -308,6 +391,7 @@ export class WorkConsoleRegistry {
     }
     console.runtimeProfileId =
       plan.runtimeProfileId ?? console.runtimeProfileId;
+    console.backend = plan.backend ?? console.backend;
     console.updatedAt = now;
     this.#save();
     return clone({ console, attempt });
@@ -328,6 +412,137 @@ export class WorkConsoleRegistry {
     if (!found) return;
     this.#appendReceipt(found.attempt, receipt);
     found.console.updatedAt = receipt.recordedAt;
+    this.#save();
+  }
+
+  recordNativeStarted(plan, receipt, observer) {
+    this.recordStarted(plan, receipt);
+    const { console, attempt } = this.#find(plan);
+    attempt.backend = 'native-interactive';
+    attempt.observer = clone(observer);
+    console.backend = 'native-interactive';
+    console.updatedAt = receipt.recordedAt;
+    this.#save();
+  }
+
+  recordNativeHeartbeat(ref, observer) {
+    const { console, attempt } = this.#find(ref);
+    if (attempt.backend !== 'native-interactive') {
+      throw Object.assign(
+        new Error('native heartbeat requires a native-interactive attempt'),
+        { code: 'attempt_backend_mismatch' },
+      );
+    }
+    attempt.status = 'running';
+    attempt.endedAt = undefined;
+    attempt.observer = clone(observer);
+    console.updatedAt = observer.observedAt;
+    // Heartbeat recency is live observer state, not durable Work evidence.  A
+    // worker restart invalidates it and recovery records the attempt as
+    // disconnected, so persisting every pulse only churns the Project runtime
+    // while a provider-native UI owns the terminal.  Later durable operations
+    // (bind/end) naturally include the latest in-memory observer projection.
+  }
+
+  bindNativeWork(ref, workRef, receipt = null) {
+    const { console, attempt } = this.#find(ref);
+    if (attempt.backend !== 'native-interactive') {
+      throw Object.assign(
+        new Error('native Work binding requires a native-interactive attempt'),
+        { code: 'attempt_backend_mismatch' },
+      );
+    }
+    if (!['planned', 'running', 'detached'].includes(attempt.status)) {
+      throw Object.assign(
+        new Error('native Work binding requires an active SessionAttempt'),
+        { code: 'attempt_not_active' },
+      );
+    }
+    const binding = attemptWorkBinding(workRef);
+    if (binding.workRef.workspaceId !== console.workspaceId) {
+      throw Object.assign(
+        new Error('WorkRef workspace differs from the Agent Console workspace'),
+        { code: 'work_workspace_mismatch' },
+      );
+    }
+    if (
+      attempt.workBinding &&
+      bindingIdentityKey(attempt.workBinding) !== bindingIdentityKey(binding)
+    ) {
+      throw Object.assign(
+        new Error('SessionAttempt is already bound to another Work'),
+        { code: 'attempt_work_binding_mismatch' },
+      );
+    }
+    const conflict = this.activeWorkConflict(binding, ref);
+    if (conflict) {
+      throw Object.assign(new Error('Work already has an active Agent'), {
+        code: 'native_work_already_active',
+        conflict,
+      });
+    }
+    attempt.workBinding = binding;
+    if (receipt) this.#appendReceipt(attempt, receipt);
+    console.updatedAt = this.now();
+    this.#save();
+    return clone({ console, attempt });
+  }
+
+  activeWorkConflict(bindingValue, excludeRef = null) {
+    const binding = normalizeBinding(bindingValue);
+    if (binding.kind !== 'work') return null;
+    for (const console of this.value.consoles) {
+      for (const attempt of console.attempts) {
+        const mayStillOwnNativeWork =
+          attempt.status === 'orphaned' &&
+          attempt.backend === 'native-interactive';
+        if (
+          !mayStillOwnNativeWork &&
+          !['planned', 'running', 'detached'].includes(attempt.status)
+        )
+          continue;
+        if (
+          excludeRef &&
+          console.consoleId ===
+            (excludeRef.workConsoleId ?? excludeRef.consoleId) &&
+          attempt.sessionAttemptId ===
+            (excludeRef.sessionAttemptId ?? excludeRef.attemptId)
+        ) {
+          continue;
+        }
+        const activeBinding = attempt.workBinding ?? console.binding;
+        if (
+          activeBinding.kind === 'work' &&
+          bindingIdentityKey(activeBinding) === bindingIdentityKey(binding)
+        ) {
+          return clone({ console, attempt });
+        }
+      }
+    }
+    return null;
+  }
+
+  recordNativeEnded(ref, receipt, exit) {
+    const { console, attempt } = this.#find(ref);
+    if (attempt.backend !== 'native-interactive') {
+      throw Object.assign(
+        new Error('native end requires a native-interactive attempt'),
+        { code: 'attempt_backend_mismatch' },
+      );
+    }
+    attempt.status = 'exited';
+    attempt.endedAt = receipt.recordedAt;
+    attempt.exit = clone(exit);
+    if (attempt.observer) {
+      attempt.observer = {
+        ...attempt.observer,
+        state: 'disconnected',
+        observedAt: receipt.recordedAt,
+        diagnostic: 'provider-process-ended',
+      };
+    }
+    this.#appendReceipt(attempt, receipt);
+    console.updatedAt = receipt.recordedAt;
     this.#save();
   }
 
@@ -406,11 +621,18 @@ export class WorkConsoleRegistry {
       for (const attempt of console.attempts) {
         if (!['planned', 'running', 'detached'].includes(attempt.status))
           continue;
-        attempt.status = ['direct', 'capsule', 'structured'].includes(
-          console.backend,
-        )
+        const backend = attempt.backend ?? console.backend;
+        attempt.status = ['direct', 'capsule', 'structured'].includes(backend)
           ? 'unrecoverable'
           : 'orphaned';
+        if (backend === 'native-interactive' && attempt.observer) {
+          attempt.observer = {
+            ...attempt.observer,
+            state: 'disconnected',
+            observedAt: now,
+            diagnostic: 'agent-session-worker-restarted',
+          };
+        }
         attempt.endedAt = now;
         attempt.receipts.push({
           operation: 'recover',

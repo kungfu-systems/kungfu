@@ -219,6 +219,300 @@ def _capture_task(workspace_root, task):
     }
 
 
+def _native_work_binding(workspace_root, workspace_id, runtime_dir):
+    """Describe current Work without creating, choosing, or advancing it."""
+
+    rows = [
+        {**row, "phase": _work_phase(workspace_root, row)}
+        for row in _captured_work(workspace_root)
+    ]
+    active_phases = {*orchestration.PHASES, "captured", "ready", "planned"}
+    active = [row for row in rows if row["phase"] in active_phases]
+    continuation_decided = [
+        row for row in active if row["phase"] == "continuation-decided"
+    ]
+    settled_subjects = set()
+    if continuation_decided:
+        try:
+            sealed = orchestration.list_sealed_assignment_states(workspace_root)
+        except (OSError, ValueError, json.JSONDecodeError) as error:
+            return None, {
+                "schema": "kungfu.native-work-selection/v1",
+                "workspaceId": workspace_id,
+                "state": "degraded",
+                "candidateAssignmentIds": sorted(row["assignmentId"] for row in active),
+                "selectionAuthority": "kungfu-work-cli",
+                "entrypoint": "kungfu work status",
+                "diagnostic": f"sealed Work index is unavailable: {error}",
+            }
+        undecidable_subjects = {
+            str(row.get("assignment_subject") or "")
+            for row in sealed.get("unqualified_states") or []
+        }
+        if sealed.get("issues") or any(
+            f"kungfu:{row['assignmentId']}" in undecidable_subjects
+            for row in continuation_decided
+        ):
+            return None, {
+                "schema": "kungfu.native-work-selection/v1",
+                "workspaceId": workspace_id,
+                "state": "degraded",
+                "candidateAssignmentIds": sorted(row["assignmentId"] for row in active),
+                "selectionAuthority": "kungfu-work-cli",
+                "entrypoint": "kungfu work status",
+                "diagnostic": "sealed Work index cannot prove the current continuation boundary",
+            }
+        settled_subjects = {
+            str(row.get("assignment_subject") or "")
+            for row in sealed.get("states") or []
+            if row.get("settled") is True
+        }
+    eligible = sorted(
+        (
+            row
+            for row in active
+            if f"kungfu:{row['assignmentId']}" not in settled_subjects
+        ),
+        key=lambda row: row["assignmentId"],
+    )
+    selection = {
+        "schema": "kungfu.native-work-selection/v1",
+        "workspaceId": workspace_id,
+        "state": "none"
+        if not eligible
+        else "ambiguous"
+        if len(eligible) > 1
+        else "single",
+        "candidateAssignmentIds": [row["assignmentId"] for row in eligible],
+        "settledAssignmentIds": sorted(
+            row["assignmentId"]
+            for row in active
+            if f"kungfu:{row['assignmentId']}" in settled_subjects
+        ),
+        "selectionAuthority": "kungfu-work-cli",
+        "entrypoint": "kungfu work status",
+    }
+    if len(eligible) == 1:
+        row = eligible[0]
+        selection.update(
+            {
+                "state": "single",
+                "initiativeId": row["initiativeId"],
+                "assignmentId": row["assignmentId"],
+                "phase": row["phase"],
+            }
+        )
+    return None, selection
+
+
+def _native_work_observer(runtime_dir, work_selection, bound_work_ref=None):
+    """Build a fresh, read-only Core Work projection for a native attempt."""
+
+    selection = dict(work_selection)
+    if bound_work_ref is not None:
+        selection.update(
+            {
+                "state": "bound",
+                "initiativeId": str(bound_work_ref.get("initiativeId") or ""),
+                "assignmentId": str(bound_work_ref.get("entityId") or ""),
+            }
+        )
+    selection_state = str(selection.get("state") or "unknown")
+    initiative_id = str(selection.get("initiativeId") or "")
+    assignment_id = str(selection.get("assignmentId") or "")
+
+    def empty_observation(state):
+        return {
+            "schema": "kungfu.native-work-observation/v1",
+            "state": state,
+            "initiativeId": initiative_id,
+            "assignmentId": assignment_id,
+            "title": "",
+            "objective": "",
+            "acceptanceChecks": [],
+            "phase": selection.get("phase"),
+            "queryProofRoot": None,
+            "nextActions": [],
+            "evidenceEpisodeRoots": [],
+            "continuation": {
+                "completionClaimCount": 0,
+                "independentReviewCount": 0,
+                "continuationDecisionCount": 0,
+            },
+            "remainingObligation": None,
+            "nextAction": None,
+        }
+
+    if selection_state == "none":
+        return {"state": "fresh", "work": empty_observation("none")}
+    if selection_state == "ambiguous":
+        return {"state": "fresh", "work": empty_observation("ambiguous")}
+    if selection_state == "single":
+        return {"state": "fresh", "work": empty_observation("available")}
+    if selection_state != "bound":
+        observation = empty_observation("degraded")
+        return {
+            "state": "degraded",
+            "work": observation,
+            "diagnostic": str(
+                selection.get("diagnostic") or "exact Work binding is unavailable"
+            ),
+        }
+    # Import the Work authority only when this attempt owns an exact WorkRef.
+    # Unbound provider-native UIs heartbeat from a background observer thread;
+    # loading the complete Work CLI/storage graph there is unnecessary and can
+    # interfere with a provider TUI that is still establishing its terminal.
+    from kungfu.cli.commands import assignment as work_commands
+
+    try:
+        status = work_commands._status(str(runtime_dir), initiative_id, assignment_id)
+    except (OSError, RuntimeError, ValueError, json.JSONDecodeError) as error:
+        observation = empty_observation("degraded")
+        return {
+            "state": "degraded",
+            "work": observation,
+            "diagnostic": str(error),
+        }
+    assignment = dict(status.get("assignment") or {})
+    work_definition = dict(assignment.get("work_definition") or {})
+    acceptance_checks = [
+        str(value).strip()
+        for value in list(work_definition.get("acceptance_criteria") or [])
+        if str(value).strip()
+    ]
+    next_action_rows = list(status.get("next_actions") or [])
+    next_actions = []
+    for row in next_action_rows:
+        if isinstance(row, dict):
+            action = str(row.get("action") or "").strip()
+            description = str(row.get("description") or "").strip()
+            next_actions.append(
+                ": ".join(value for value in (action, description) if value)
+            )
+        elif str(row).strip():
+            next_actions.append(str(row).strip())
+    evidence_roots = assignment.get("evidenceEpisodeRoots")
+    if evidence_roots is None:
+        evidence_roots = assignment.get("evidence_episode_roots")
+    evidence_roots = [
+        str(root)
+        for root in list(evidence_roots or [])
+        if re.fullmatch(r"sha256:[a-f0-9]{64}", str(root))
+    ]
+    work = {
+        "schema": "kungfu.native-work-observation/v1",
+        "state": "available",
+        "initiativeId": initiative_id,
+        "assignmentId": assignment_id,
+        "title": str(
+            work_definition.get("title") or assignment.get("title") or ""
+        ).strip(),
+        "objective": str(
+            work_definition.get("objective") or assignment.get("objective") or ""
+        ).strip(),
+        "acceptanceChecks": acceptance_checks,
+        "phase": str(status.get("phase") or selection.get("phase") or "") or None,
+        "queryProofRoot": status.get("query_proof_root"),
+        "nextActions": next_actions,
+        "evidenceEpisodeRoots": evidence_roots,
+        "continuation": {
+            "completionClaimCount": int(status.get("completion_claim_count") or 0),
+            "independentReviewCount": int(status.get("independent_review_count") or 0),
+            "continuationDecisionCount": int(
+                status.get("continuation_decision_count") or 0
+            ),
+        },
+        "remainingObligation": (
+            status.get("remainingObligation")
+            or status.get("remaining_obligation")
+            or (assignment.get("work_definition") or {}).get("remaining_obligation")
+            or None
+        ),
+        "nextAction": next_actions[0] if next_actions else None,
+    }
+    return {"state": "fresh", "work": work}
+
+
+def _run_native_provider(ctx, *, provider=None, profile_id=None, workspace_root=None):
+    target = resolve_workspace_target(
+        "read-only", workspace_root or None, cwd=os.getcwd()
+    )
+    if (
+        target.identity.workspace_kind != "project"
+        or not target.identity.workspace_root
+    ):
+        raise click.ClickException(
+            "kungfu run requires a project; cd into one or pass --workspace"
+        )
+    try:
+        if profile_id is not None:
+            profile, _selection = run_agent.select_profile(
+                profile_id,
+                config_home=ctx.config_home,
+                runtime_home=ctx.home,
+            )
+        elif provider is not None:
+            profile = _provider_profile(
+                provider,
+                config_home=ctx.config_home,
+                runtime_home=ctx.home,
+            )
+        else:
+            profile, _selection = run_agent.select_interactive_profile(
+                config_home=ctx.config_home,
+                runtime_home=ctx.home,
+            )
+        work_ref, work_selection = _native_work_binding(
+            target.identity.workspace_root,
+            target.identity.workspace_id,
+            target.runtime_dir,
+        )
+        session_endpoint = run_agent.session_surface.ensure(str(target.runtime_dir))
+
+        def invoke_native_session(request):
+            nonlocal session_endpoint
+            try:
+                return run_agent.session_surface.invoke(
+                    request, endpoint=session_endpoint
+                )
+            except (OSError, ValueError):
+                session_endpoint = run_agent.session_surface.ensure(
+                    str(target.runtime_dir)
+                )
+                return run_agent.session_surface.invoke(
+                    request, endpoint=session_endpoint
+                )
+
+        exit_code = run_agent.run_native_interactive(
+            profile,
+            runtime_dir=str(target.runtime_dir),
+            config_home=ctx.config_home,
+            runtime_home=ctx.home,
+            workspace_root=target.identity.workspace_root,
+            work_ref=work_ref,
+            work_selection=work_selection,
+            session_endpoint=session_endpoint,
+            session_invoker=invoke_native_session,
+            work_observer=lambda bound_work_ref: _native_work_observer(
+                target.runtime_dir, work_selection, bound_work_ref
+            ),
+        )
+    except (OSError, ValueError) as error:
+        raise click.ClickException(str(error)) from error
+    if exit_code != 0:
+        provider_name = str(profile.get("provider") or "agent")
+        click.echo(
+            "Error: provider-native UI "
+            f"'{provider_name}' exited with status {exit_code}. "
+            "Kungfu ended this SessionAttempt but did not change Work completion. "
+            "Run `kungfu agent session list --json` to inspect the attempt; "
+            "then retry `kungfu run "
+            f"{provider_name}` in the same terminal.",
+            err=True,
+        )
+    ctx.exit(exit_code)
+
+
 def _run_provider(
     ctx,
     provider,
@@ -336,6 +630,29 @@ def _run_provider(
     return result
 
 
+def _native_provider_request(
+    *,
+    task,
+    work_selector,
+    workspace_root,
+    plan_only,
+    as_json,
+    events_json,
+    expected_plan_root,
+    allow_foreign_binding,
+):
+    return (
+        task is None
+        and work_selector is None
+        and workspace_root is None
+        and not plan_only
+        and not as_json
+        and not events_json
+        and expected_plan_root is None
+        and not allow_foreign_binding
+    )
+
+
 def _provider_command(provider):
     @run.command(
         name=provider,
@@ -370,6 +687,17 @@ def _provider_command(provider):
         expected_plan_root,
         allow_foreign_binding,
     ):
+        if _native_provider_request(
+            task=task,
+            work_selector=work_selector,
+            workspace_root=workspace_root,
+            plan_only=plan_only,
+            as_json=as_json,
+            events_json=events_json,
+            expected_plan_root=expected_plan_root,
+            allow_foreign_binding=allow_foreign_binding,
+        ):
+            return _run_native_provider(ctx, provider=provider)
         return _run_provider(
             ctx,
             provider,
@@ -386,7 +714,7 @@ def _provider_command(provider):
     return command
 
 
-for _provider in ("codex", "claude", "opencode"):
+for _provider in ("codex", "claude", "amp", "opencode"):
     _provider_command(_provider)
 
 
@@ -439,7 +767,7 @@ def mock(
 
 
 @run.command(name="agent", help=api_help("kungfu.run.agent"))
-@click.option("--prompt", required=True, help="bounded task for the fresh Agent")
+@click.option("--prompt", required=False, help="bounded task for the fresh Agent")
 @click.option(
     "--agent",
     "profile_id",
@@ -485,6 +813,23 @@ def agent(
     timeout_seconds,
     as_json,
 ):
+    if prompt is None:
+        timeout_is_explicit = (
+            ctx.get_parameter_source("timeout_seconds")
+            == click.core.ParameterSource.COMMANDLINE
+        )
+        if (
+            work_ref is not None
+            or continuation is not None
+            or as_json
+            or timeout_is_explicit
+        ):
+            raise click.UsageError(
+                "--work-ref, --continuation, --timeout, and --json require --prompt"
+            )
+        return _run_native_provider(
+            ctx, profile_id=profile_id, workspace_root=workspace_root
+        )
     try:
         payload = run_agent.execute(
             prompt=prompt,

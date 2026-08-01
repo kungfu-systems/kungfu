@@ -72,8 +72,13 @@ real user home.
 
 ## Current boundary
 
-The base contract and Work/Agent adapter are source-qualified. Project Cut,
-Dogfood, installed-product migration, Exit surfaces, and cross-release
+The base contract, Work/Agent adapter, and
+[`project-cut-dogfood-history.contract.json`](project-cut-dogfood-history.contract.json)
+are source-qualified. Project Cut full members preserve all four owner roots,
+verified predecessors/successors, explicit loss, and protected publication
+manifests; Native Assignment and Dogfood reuse the existing Fact, Episode,
+Profile, and Work authority members rather than creating another store.
+Installed-product migration, user-facing Exit surfaces, and cross-release
 qualification remain staged separately. The contract does not inspect or
 mutate a real `.kungfu` home, and it does not claim protection against physical media loss.
 
@@ -82,4 +87,5 @@ Verify the contract and its adversarial corpus with:
 ```sh
 ./shifu check:data-protection-contract
 ./shifu check:work-agent-history-continuity
+./shifu check:project-cut-dogfood-history
 ```

@@ -9,7 +9,7 @@
     "node": "22.22.3",
     "productVersion": "4.0.0-alpha.1"
   },
-  "briefBudget": {"maxBytes": 8192, "maxLines": 120, "actualBytes": 4150, "actualLines": 82, "passed": true},
+  "briefBudget": {"maxBytes": 8192, "maxLines": 120, "actualBytes": 4476, "actualLines": 87, "passed": true},
   "intentCoverage": {"required": 12, "observed": 12, "passed": true},
   "checks": [
     {"id": "agent-pack", "command": "node scripts/verify-agent-pack.mjs", "status": "passed"},

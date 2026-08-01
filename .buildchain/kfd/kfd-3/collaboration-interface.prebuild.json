@@ -6,15 +6,15 @@
   "supportLevel": "release",
   "source": {
     "cwd": ".",
-    "sourceSha": "e5b495a9239ae2df9fbe4a0b896e92e8e6a0d77d",
+    "sourceSha": "8536c026fdad4c011e60b54c39af6fcfda30cd29",
     "registryPath": ".buildchain/kfd/kfd-3/surfaces.json",
-    "registryDigest": "sha256:633ad8c3b17dcb9339cfd9317ccfbad5086391c996cc75c67d3f44d4cf38b541"
+    "registryDigest": "sha256:25613e11edd21b978db0c6a44f1761c2321ad822ceb4e00dfa457002c43ef988"
   },
   "sourceRegistry": {
     "id": "kungfu",
     "path": ".buildchain/kfd/kfd-3/surfaces.json",
-    "sha256": "8db710eb9ca5ec86e20bda52ef4b9c561953f50a24170fd6ad3f51eed40bfdf8",
-    "digest": "sha256:633ad8c3b17dcb9339cfd9317ccfbad5086391c996cc75c67d3f44d4cf38b541"
+    "sha256": "444c729021b359515007d4f31d45594f4acfd3930a8f7ef955ceff226a47420f",
+    "digest": "sha256:25613e11edd21b978db0c6a44f1761c2321ad822ceb4e00dfa457002c43ef988"
   },
   "upstreamKfd": {
     "aggregatePath": "developer/sdk/kfd/upstream-aggregate.json",
@@ -29,12 +29,12 @@
       "libnode": "22.22.3-kf.5-alpha.3",
       "buildchain": "3.0.0"
     },
-    "digest": "sha256:e5c38eaca5a17d76beff878f2851e0fd5c92d30b028bfc7c6b990c42cf6d71a3"
+    "digest": "sha256:dd091e6b95b59f4c38ad06d8da248c3dd7cce56e965d19bbbb25df00597948e0"
   },
   "expectedArtifactVerification": {
     "command": "node scripts/buildchain-kfd-evidence.mjs --artifact-witness --json"
   },
-  "collaborationInterfaceDigest": "sha256:6428987508e018e3983aed534112279443e54c6631e75dcf3f0fd8e85aeda793",
+  "collaborationInterfaceDigest": "sha256:d6a3ddd439a593479a688356336276c09ff7b0cddc80fe4f2c164575524e4a2e",
   "collaborationInterface": {
     "schemaVersion": 1,
     "contract": "kungfu-buildchain-kfd-3-surface-registry",
@@ -57,7 +57,7 @@
         "libnode": "22.22.3-kf.5-alpha.3",
         "buildchain": "3.0.0"
       },
-      "digest": "sha256:e5c38eaca5a17d76beff878f2851e0fd5c92d30b028bfc7c6b990c42cf6d71a3"
+      "digest": "sha256:dd091e6b95b59f4c38ad06d8da248c3dd7cce56e965d19bbbb25df00597948e0"
     },
     "surfaces": [
       {
@@ -403,6 +403,26 @@
       {
         "id": "kungfu.agent.console",
         "name": "kungfu agent console",
+        "kind": "cli-api-gui",
+        "participantProfile": "agent-or-developer",
+        "state": "declared",
+        "availability": "shipped",
+        "visibility": "public",
+        "participantFacing": true,
+        "public": true,
+        "sourcePath": "framework/core/src/python/kungfu/agent/kfd3_api.registry.json",
+        "evidencePath": "framework/core/src/python/kungfu/agent/commands.json",
+        "artifactPath": "framework/core/src/python/kungfu/agent/commands.json",
+        "maturity": "experimental",
+        "declaration": {
+          "owner": "kungfu",
+          "source": "scripts/buildchain-kfd-evidence.mjs",
+          "sourcePath": "framework/core/src/python/kungfu/agent/kfd3_api.registry.json"
+        }
+      },
+      {
+        "id": "kungfu.agent.console.bind-work",
+        "name": "kungfu agent console bind-work --initiative-id <id> --assignment-id <id> --json",
         "kind": "cli-api-gui",
         "participantProfile": "agent-or-developer",
         "state": "declared",
@@ -2467,7 +2487,7 @@
       },
       {
         "id": "kungfu.run.agent",
-        "name": "kungfu run agent --prompt <task> [--agent <profile-id>]",
+        "name": "kungfu run agent [--agent <profile-id>] [--prompt <task>]",
         "kind": "cli",
         "participantProfile": "agent-or-developer",
         "state": "declared",
@@ -3588,8 +3608,8 @@
     ],
     "audit": {
       "status": "passed",
-      "declared": 175,
-      "artifactPublic": 175,
+      "declared": 176,
+      "artifactPublic": 176,
       "policy": {
         "sourceOfTruth": ".buildchain/kfd/kfd-3/surfaces.json",
         "detectedButUnregistered": "product-specific-audit",
@@ -3944,6 +3964,26 @@
     {
       "id": "kungfu.agent.console",
       "name": "kungfu agent console",
+      "kind": "cli-api-gui",
+      "participantProfile": "agent-or-developer",
+      "state": "declared",
+      "availability": "shipped",
+      "visibility": "public",
+      "participantFacing": true,
+      "public": true,
+      "sourcePath": "framework/core/src/python/kungfu/agent/kfd3_api.registry.json",
+      "evidencePath": "framework/core/src/python/kungfu/agent/commands.json",
+      "artifactPath": "framework/core/src/python/kungfu/agent/commands.json",
+      "maturity": "experimental",
+      "declaration": {
+        "owner": "kungfu",
+        "source": "scripts/buildchain-kfd-evidence.mjs",
+        "sourcePath": "framework/core/src/python/kungfu/agent/kfd3_api.registry.json"
+      }
+    },
+    {
+      "id": "kungfu.agent.console.bind-work",
+      "name": "kungfu agent console bind-work --initiative-id <id> --assignment-id <id> --json",
       "kind": "cli-api-gui",
       "participantProfile": "agent-or-developer",
       "state": "declared",
@@ -6008,7 +6048,7 @@
     },
     {
       "id": "kungfu.run.agent",
-      "name": "kungfu run agent --prompt <task> [--agent <profile-id>]",
+      "name": "kungfu run agent [--agent <profile-id>] [--prompt <task>]",
       "kind": "cli",
       "participantProfile": "agent-or-developer",
       "state": "declared",

@@ -839,13 +839,11 @@ test('clicking a visible Lab action executes the same bounded action as its key'
       () => output.chunks.join('').includes('Ready · choose a test case'),
       'the clickable Lab action bar to become ready',
     );
-    await new Promise<void>((resolve) => setTimeout(resolve, 30));
-    process.stdin.emit('data', Buffer.from('\u001b[<0;5;4M'));
-    await waitUntil(
-      () => calls.includes('demo'),
-      'the clicked Demo action',
-      10_000,
-    );
+    const clickDemo = Buffer.from('\u001b[<0;5;4M');
+    await waitUntil(() => {
+      if (!calls.includes('demo')) process.stdin.emit('data', clickDemo);
+      return calls.includes('demo');
+    }, 'the clicked Demo action');
   } finally {
     instance.unmount();
     instance.cleanup();

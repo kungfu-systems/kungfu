@@ -2569,6 +2569,7 @@ def claim(
     def operation():
         _, runtime_dir, _ = _runtime(workspace_root, home)
         _ensure_profile(runtime_dir, authorized_by)
+        run_agent.bind_current_native_work(runtime_dir, initiative_id, assignment_id)
         receipt = _profile_action(
             runtime_dir,
             "claim-assignment",
@@ -2597,6 +2598,8 @@ def _advance(
 ):
     identity, runtime_dir, _ = _runtime(workspace_root, home)
     _ensure_profile(runtime_dir, actor)
+    if to_phase == "executing":
+        run_agent.bind_current_native_work(runtime_dir, initiative_id, assignment_id)
     current = _status(runtime_dir, initiative_id, assignment_id)
     dogfood_receipt = None
     if to_phase == "executing":

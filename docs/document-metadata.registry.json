@@ -977,6 +977,28 @@
         "invisible_context_boundary": "language SDK successor migration, external adoption, and battle-tested maturity are not claimed"
       }
     },
+    "docs/guides/native-agent-adapters.md": {
+      "metadata_schema": "kungfu.document-metadata/v1",
+      "document_status": "draft",
+      "doc_type": "developer-guide",
+      "review_state": "self-reviewed",
+      "sensitivity": "public",
+      "sources": [
+        "local-files",
+        "user-consensus"
+      ],
+      "period": "2026-08-01",
+      "theme": "kungfu-native-agent-adapters",
+      "confidence": "high",
+      "evidence_grade": "A",
+      "last_reviewed": "2026-08-01",
+      "ai_provenance": {
+        "model_family": "OpenAI GPT-5",
+        "product": "Codex",
+        "generated_at": "2026-08-01",
+        "invisible_context_boundary": "No hidden provider state, credentials, or unobserved platform behavior is claimed"
+      }
+    },
     "docs/guides/python-environments.md": {
       "metadata_schema": "kungfu.document-metadata/v1",
       "document_status": "active",

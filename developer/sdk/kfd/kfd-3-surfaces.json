@@ -73,7 +73,7 @@
       "libnode": "22.22.3-kf.5-alpha.3",
       "buildchain": "3.0.0"
     },
-    "digest": "sha256:e5c38eaca5a17d76beff878f2851e0fd5c92d30b028bfc7c6b990c42cf6d71a3"
+    "digest": "sha256:dd091e6b95b59f4c38ad06d8da248c3dd7cce56e965d19bbbb25df00597948e0"
   },
   "surfaces": [
     {
@@ -419,6 +419,26 @@
     {
       "id": "kungfu.agent.console",
       "name": "kungfu agent console",
+      "kind": "cli-api-gui",
+      "participantProfile": "agent-or-developer",
+      "state": "declared",
+      "availability": "shipped",
+      "visibility": "public",
+      "participantFacing": true,
+      "public": true,
+      "sourcePath": "framework/core/src/python/kungfu/agent/kfd3_api.registry.json",
+      "evidencePath": "framework/core/src/python/kungfu/agent/commands.json",
+      "artifactPath": "framework/core/src/python/kungfu/agent/commands.json",
+      "maturity": "experimental",
+      "declaration": {
+        "owner": "kungfu",
+        "source": "scripts/buildchain-kfd-evidence.mjs",
+        "sourcePath": "framework/core/src/python/kungfu/agent/kfd3_api.registry.json"
+      }
+    },
+    {
+      "id": "kungfu.agent.console.bind-work",
+      "name": "kungfu agent console bind-work --initiative-id <id> --assignment-id <id> --json",
       "kind": "cli-api-gui",
       "participantProfile": "agent-or-developer",
       "state": "declared",
@@ -2483,7 +2503,7 @@
     },
     {
       "id": "kungfu.run.agent",
-      "name": "kungfu run agent --prompt <task> [--agent <profile-id>]",
+      "name": "kungfu run agent [--agent <profile-id>] [--prompt <task>]",
       "kind": "cli",
       "participantProfile": "agent-or-developer",
       "state": "declared",

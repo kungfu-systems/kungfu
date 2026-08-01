@@ -137,7 +137,7 @@
   "catalogProjection": {
     "artifact": "kungfu.agent/cli_surface.catalog.json",
     "authority": "runtime-fold",
-    "expectedSurfaceRoot": "sha256:def0db29294574f8717f6d208c96db7a077df736e9e75c6092bd9a9b54445aff",
+    "expectedSurfaceRoot": "sha256:56d7c9d5ddc7c009fe7c4cb73514dc3b631b94bcaa108834cf1d3e4e6b2e4a9a",
     "consumers": {
       "agentCapabilities": "embed-complete",
       "agentCommands": "strict-link",

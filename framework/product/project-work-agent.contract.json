@@ -27,6 +27,8 @@
       "attentionStates": ["needs-answer", "needs-approval", "blocked", "ready-for-review"],
       "completionRule": "Agent output, readiness, or exit never completes Work; human review and native Work evidence remain required",
       "recoveryRule": "A lost process creates an unrecoverable attempt and an explicit new-attempt action without creating a second Work item",
+      "nativeInteractiveRule": "A bare kungfu run <agent> preserves the provider-native terminal while registering an observer-only SessionAttempt in the same primary WorkConsole",
+      "nativeObserverRule": "TUI shows explicit fresh, stale, disconnected, degraded, or unknown Core Work observation and never reads terminal bytes or controls provider input",
       "deterministicQualificationProvider": "synthetic"
     }
   },
@@ -61,6 +63,9 @@
           "[2] Projects",
           "New Work",
           "Project, Work, and Agent state"
+        ],
+        "framework/tui/src/work-window/index.tsx": [
+          "NATIVE UI · OBSERVE ONLY"
         ],
       "framework/tui/src/projects-view/index.tsx": [
           "New Project",
@@ -121,6 +126,7 @@
         "kungfu project select"
       ],
       "requiredRunCommands": [
+        "kungfu run amp",
         "kungfu run claude",
         "kungfu run codex",
         "kungfu run opencode"

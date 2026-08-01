@@ -95,6 +95,18 @@ export function resolveTuiCliRuntime({
   };
 }
 
+export function tuiChildCliEnvironment(
+  env: NodeJS.ProcessEnv,
+): NodeJS.ProcessEnv {
+  const child = { ...env };
+  // Re-enter the ordinary CLI instead of recursively selecting embedded
+  // libnode, while retaining the installed KFX authority root.
+  child.KUNGFU_AS_VARIANT = undefined;
+  child.KUNGFU_DIR = undefined;
+  child.KUNGFU_KFX_CONTRACT = undefined;
+  return child;
+}
+
 export function resolveTuiProductPaths({
   env,
   resolveCorePackageJson,

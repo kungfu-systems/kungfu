@@ -4,7 +4,7 @@
   "version": 1,
   "status": {
     "specification": "accepted",
-    "domainAdapters": "work-agent-source-qualified",
+    "domainAdapters": "work-agent-project-cut-dogfood-source-qualified",
     "installedQualification": "not-qualified",
     "releaseQualification": "not-qualified"
   },

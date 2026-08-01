@@ -5,6 +5,14 @@ description: Use when a user asks to understand, start, inspect, extend, or safe
 
 # Kungfu Agent Onboarding
 
+When `KUNGFU_AGENT_ENVIRONMENT=native-interactive`, treat the injected
+Console/Skill/WorkRef envelopes as discovery pointers, never as prior chat or
+completion proof. Confirm them with `"$KUNGFU_CLI_BIN" agent console current
+--json` and `"$KUNGFU_CLI_BIN" skill catalog --json`. Before the first Work
+mutation, bind the chosen Assignment with `"$KUNGFU_CLI_BIN" agent console
+bind-work --initiative-id <id> --assignment-id <id> --json`; stop unless the
+result is `status: bound`, including when another native writer is active.
+
 Run `kungfu agent brief`, then `kungfu agent docs --verify --json` and
 `kungfu agent map --json`. Select only the route relevant to the user's task.
 

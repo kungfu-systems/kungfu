@@ -39,6 +39,10 @@ replacement for live product state.
   Work authority.
 - **managed-run** is optional stronger supervision and evidence capture; native
   provider onboarding and public Work management do not depend on it.
+- **native-interactive** keeps the provider's familiar UI through bare `kungfu
+  run <provider>`. It injects content-bound Project/Console/Skill envelopes but
+  captures no transcript and grants no Work authority. Bind an accepted Work
+  before mutation; the TUI remains an observer, not an input controller.
 - **Shifu** is the one-stop development/recovery launcher. Use `kungfu shifu
   agent brief`; Shifu owns clone, pinned uv/fnm/pnpm bootstrap, dependencies,
   build, checks, artifacts, promotion, doctor, and recovery guidance.
@@ -54,6 +58,7 @@ non-claims, discovery commands, and expansion handles. Common starts:
 kungfu project open-plan --path <directory> --json
 kungfu project list --json
 kungfu work status --workspace <path> --initiative-id <id> --assignment-id <id>
+kungfu run codex
 kungfu agent status --target codex --scope project --json
 kungfu agent install-skill --target codex --scope project --json
 kungfu shifu agent capabilities --json

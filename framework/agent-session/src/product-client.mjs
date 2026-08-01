@@ -82,11 +82,23 @@ export function prepareAgentSessionNodePty({ runtimeDir, modulePath } = {}) {
   return path.join(targetRoot, 'lib', 'index.js');
 }
 
+function canonicalRuntimeDir(runtimeDir) {
+  let existing = path.resolve(runtimeDir);
+  const suffix = [];
+  while (!existsSync(existing)) {
+    const parent = path.dirname(existing);
+    if (parent === existing) break;
+    suffix.unshift(path.basename(existing));
+    existing = parent;
+  }
+  return path.join(realpathSync(existing), ...suffix);
+}
+
 export function detachedAgentSessionPaths(runtimeDir) {
   if (typeof runtimeDir !== 'string' || runtimeDir.length === 0) {
     throw new Error('detached Agent Session host requires runtimeDir');
   }
-  const directory = path.join(path.resolve(runtimeDir), 'agent-session');
+  const directory = path.join(canonicalRuntimeDir(runtimeDir), 'agent-session');
   const scope = createHash('sha256')
     .update(directory)
     .digest('hex')
@@ -243,6 +255,7 @@ export function createDetachedAgentSessionHost({
             env: {
               ...env,
               ELECTRON_RUN_AS_NODE: '1',
+              KUNGFU_AS_VARIANT: 'node',
               KUNGFU_AGENT_SESSION_ENDPOINT: paths.endpoint,
               KUNGFU_AGENT_SESSION_METADATA: paths.metadata,
               KUNGFU_AGENT_SESSION_REGISTRY: paths.registry,
