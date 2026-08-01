@@ -598,6 +598,7 @@ async function main() {
 
   if (source.dirty) throw new Error('execute requires a clean source tree');
   const outputDir = path.resolve(options.output || defaultOutput(runId));
+  fs.mkdirSync(path.dirname(outputDir), { recursive: true });
   fs.mkdirSync(outputDir, { recursive: false });
 
   const setupExecution = execute(plan.setup);
