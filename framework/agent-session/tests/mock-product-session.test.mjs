@@ -47,6 +47,27 @@ async function control(host, session, operation, payload, automatic = true) {
   });
 }
 
+function mockProviderEnvironment() {
+  const environment = { PATH: process.env.PATH ?? '' };
+  if (process.platform !== 'win32') return environment;
+  for (const requested of [
+    'systemroot',
+    'windir',
+    'comspec',
+    'pathext',
+    'temp',
+    'tmp',
+  ]) {
+    const actual = Object.keys(process.env).find(
+      (name) => name.toLowerCase() === requested,
+    );
+    if (actual && typeof process.env[actual] === 'string') {
+      environment[actual] = process.env[actual];
+    }
+  }
+  return environment;
+}
+
 test('macOS node-pty preparation rejects a linked private support target', async (t) => {
   if (process.platform !== 'darwin') {
     t.skip('private spawn-helper preparation is macOS-specific');
@@ -141,7 +162,7 @@ test('deterministic Mock Agent traverses answer, approval, review, and exit in t
     executable: process.execPath,
     argv: [MOCK, '--scenario', 'multi-step'],
     cwd: runtimeDir,
-    env: { PATH: process.env.PATH ?? '' },
+    env: mockProviderEnvironment(),
     runtimeProfileId: 'kungfu.mock-agent.multi-step',
     binding: {
       kind: 'work',
