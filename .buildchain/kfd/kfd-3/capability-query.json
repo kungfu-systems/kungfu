@@ -9,8 +9,8 @@
   "status": "passed",
   "verificationMode": "product-declared-registry",
   "summary": {
-    "detected": 161,
-    "declared": 161,
+    "detected": 162,
+    "declared": 162,
     "enforced": 0,
     "detectedButUnregistered": 0,
     "declaredButMissing": 0
@@ -422,6 +422,29 @@
         "sourcePath": "framework/core/src/python/kungfu/agent/kfd3_api.registry.json",
         "artifactPath": "framework/core/src/python/kungfu/agent/commands.json",
         "digest": "sha256:0f29129cffce5d9943c601e5c20702e4ba61c5302e81ced6226d340411d653f8"
+      },
+      "kfd2Trust": {
+        "status": "unknown",
+        "trustImpact": "passport-claim-not-found",
+        "residualRisk": []
+      },
+      "residualRisk": []
+    },
+    {
+      "id": "kungfu.agent.console.bind-work",
+      "kind": "cli-api-gui",
+      "name": "kungfu agent console bind-work --initiative-id <id> --assignment-id <id> --json",
+      "state": "declared",
+      "detected": true,
+      "enforced": false,
+      "sourcePath": "framework/core/src/python/kungfu/agent/kfd3_api.registry.json",
+      "artifactPath": "framework/core/src/python/kungfu/agent/commands.json",
+      "evidencePath": "framework/core/src/python/kungfu/agent/commands.json",
+      "kfd1Basis": {
+        "registryPath": ".buildchain/kfd/kfd-3/surfaces.json",
+        "sourcePath": "framework/core/src/python/kungfu/agent/kfd3_api.registry.json",
+        "artifactPath": "framework/core/src/python/kungfu/agent/commands.json",
+        "digest": "sha256:9add2c2b2e913242ddb0297e929f71d27cb375f88c0cd9b4bf298a9d4e8ad7e9"
       },
       "kfd2Trust": {
         "status": "unknown",
@@ -2710,7 +2733,7 @@
     {
       "id": "kungfu.run.agent",
       "kind": "cli",
-      "name": "kungfu run agent --prompt <task> [--agent <profile-id>]",
+      "name": "kungfu run agent [--agent <profile-id>] [--prompt <task>]",
       "state": "declared",
       "detected": true,
       "enforced": false,
@@ -2721,7 +2744,7 @@
         "registryPath": ".buildchain/kfd/kfd-3/surfaces.json",
         "sourcePath": "framework/core/src/python/kungfu/agent/kfd3_api.registry.json",
         "artifactPath": "framework/core/src/python/kungfu/agent/commands.json",
-        "digest": "sha256:beb5b40046280483b04aac839213b67e996608ccad1d582d7205b435ce70ca0e"
+        "digest": "sha256:c9b9d79be920d756ab51712d7b8ac8285ddea3de8241efbb2d935cce31639af3"
       },
       "kfd2Trust": {
         "status": "unknown",

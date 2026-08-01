@@ -7,7 +7,7 @@
       "role": "claim-source",
       "kind": "file",
       "path": "framework/core/src/python/kungfu/agent/index.json",
-      "sha256": "4f4ce9cd335ce2e1729dd1b810224a57eb149fb03f334e3cd22414d06b374cd7"
+      "sha256": "4cc335b9d5c4817a570fa4fa4dbbe034de6c524a07e0ed164212c3a3b3d13a6b"
     }
   ],
   "machineEvidence": [
@@ -16,7 +16,7 @@
       "pointer": {
         "kind": "file",
         "path": "framework/core/src/python/kungfu/agent/commands.json",
-        "sha256": "8cf537f1870804178200e9faed3213c70d3f78aa4b911c24eba6498d18436a02"
+        "sha256": "f94d59c84a87877a46866678eddc2038210db8e6813cfd4367441863373687b6"
       },
       "description": "Machine-readable command catalog and mode maturity metadata."
     },
@@ -25,7 +25,7 @@
       "pointer": {
         "kind": "file",
         "path": "framework/core/src/python/kungfu/agent/cli_surface.catalog.json",
-        "sha256": "f41068fd89c2c06e98fee0ce9d4054f7398ddc945de5a60b2500485b9c1dfa72"
+        "sha256": "b5e336bd839c390e1e1122aec3f411bb2ceb3c12635241c2e73f284d7c53b2db"
       },
       "description": "Complete deterministic CLI surface graph shared by offline Agent capabilities and catalog parity checks."
     },
@@ -34,7 +34,7 @@
       "pointer": {
         "kind": "file",
         "path": "framework/core/src/python/kungfu/agent/mode-selection.md",
-        "sha256": "0e1ef27e4c6158f5a5a8ad922ddb9b1c11df12cad934e278a23720c79b95b065"
+        "sha256": "e25fdbe6971bd7aa256e3b817fffa68f7a7010c6581acb69849a5993c26199b3"
       },
       "description": "Human and agent-readable mode selection rules."
     },
@@ -52,7 +52,7 @@
       "pointer": {
         "kind": "file",
         "path": "scripts/verify-agent-pack.mjs",
-        "sha256": "3d5cf84d6cc561c681c68b51c92fa211f7993e1ca1a8da5d8bb9700b57a53bd2"
+        "sha256": "aa0d046ccc24be157dd0d7be703a1f833559c97b2a4131e94808b6c5327d3784"
       },
       "description": "Read-only verifier for installed agent pack completeness and command/doc consistency."
     },
@@ -61,26 +61,26 @@
       "pointer": {
         "kind": "file",
         "path": "scripts/check-cli-catalog-parity.mjs",
-        "sha256": "a8e4c919d73120dd45c4a8f8c8f7187caa62ec819e74a83a9b2d3fdcbcc13c3e"
+        "sha256": "5f827a4aecb90e240c3ec7e829547c99ac4f33d8a24bf5e1432a3a5eac97159e"
       },
       "description": "Build-free source-acceptance verifier for surface roots and Human, Agent, KFD-3, docs, skills, GUI, and package consumers."
     }
   ],
   "hashes": {
     "registrySha256": "3ad1f496db4e1906d300e439542d3b1d6a69148519d2a5faa9635f6240d7ee56",
-    "sourceSha256": "4f4ce9cd335ce2e1729dd1b810224a57eb149fb03f334e3cd22414d06b374cd7",
+    "sourceSha256": "4cc335b9d5c4817a570fa4fa4dbbe034de6c524a07e0ed164212c3a3b3d13a6b",
     "evidenceSha256": [
       {
         "path": "framework/core/src/python/kungfu/agent/commands.json",
-        "sha256": "8cf537f1870804178200e9faed3213c70d3f78aa4b911c24eba6498d18436a02"
+        "sha256": "f94d59c84a87877a46866678eddc2038210db8e6813cfd4367441863373687b6"
       },
       {
         "path": "framework/core/src/python/kungfu/agent/cli_surface.catalog.json",
-        "sha256": "f41068fd89c2c06e98fee0ce9d4054f7398ddc945de5a60b2500485b9c1dfa72"
+        "sha256": "b5e336bd839c390e1e1122aec3f411bb2ceb3c12635241c2e73f284d7c53b2db"
       },
       {
         "path": "framework/core/src/python/kungfu/agent/mode-selection.md",
-        "sha256": "0e1ef27e4c6158f5a5a8ad922ddb9b1c11df12cad934e278a23720c79b95b065"
+        "sha256": "e25fdbe6971bd7aa256e3b817fffa68f7a7010c6581acb69849a5993c26199b3"
       },
       {
         "path": "framework/core/src/python/kungfu/agent/safety.md",
@@ -88,25 +88,25 @@
       },
       {
         "path": "scripts/verify-agent-pack.mjs",
-        "sha256": "3d5cf84d6cc561c681c68b51c92fa211f7993e1ca1a8da5d8bb9700b57a53bd2"
+        "sha256": "aa0d046ccc24be157dd0d7be703a1f833559c97b2a4131e94808b6c5327d3784"
       },
       {
         "path": "scripts/check-cli-catalog-parity.mjs",
-        "sha256": "a8e4c919d73120dd45c4a8f8c8f7187caa62ec819e74a83a9b2d3fdcbcc13c3e"
+        "sha256": "5f827a4aecb90e240c3ec7e829547c99ac4f33d8a24bf5e1432a3a5eac97159e"
       }
     ],
     "artifactSha256": [
       {
         "path": "framework/core/src/python/kungfu/agent/index.json",
-        "sha256": "4f4ce9cd335ce2e1729dd1b810224a57eb149fb03f334e3cd22414d06b374cd7"
+        "sha256": "4cc335b9d5c4817a570fa4fa4dbbe034de6c524a07e0ed164212c3a3b3d13a6b"
       },
       {
         "path": "framework/core/src/python/kungfu/agent/commands.json",
-        "sha256": "8cf537f1870804178200e9faed3213c70d3f78aa4b911c24eba6498d18436a02"
+        "sha256": "f94d59c84a87877a46866678eddc2038210db8e6813cfd4367441863373687b6"
       },
       {
         "path": "framework/core/src/python/kungfu/agent/cli_surface.catalog.json",
-        "sha256": "f41068fd89c2c06e98fee0ce9d4054f7398ddc945de5a60b2500485b9c1dfa72"
+        "sha256": "b5e336bd839c390e1e1122aec3f411bb2ceb3c12635241c2e73f284d7c53b2db"
       }
     ]
   },
@@ -114,19 +114,19 @@
     {
       "name": "agent-pack-index",
       "path": "framework/core/src/python/kungfu/agent/index.json",
-      "sha256": "4f4ce9cd335ce2e1729dd1b810224a57eb149fb03f334e3cd22414d06b374cd7",
+      "sha256": "4cc335b9d5c4817a570fa4fa4dbbe034de6c524a07e0ed164212c3a3b3d13a6b",
       "expectedPackagePath": "kungfu/agent/index.json"
     },
     {
       "name": "agent-command-catalog",
       "path": "framework/core/src/python/kungfu/agent/commands.json",
-      "sha256": "8cf537f1870804178200e9faed3213c70d3f78aa4b911c24eba6498d18436a02",
+      "sha256": "f94d59c84a87877a46866678eddc2038210db8e6813cfd4367441863373687b6",
       "expectedPackagePath": "kungfu/agent/commands.json"
     },
     {
       "name": "cli-surface-catalog",
       "path": "framework/core/src/python/kungfu/agent/cli_surface.catalog.json",
-      "sha256": "f41068fd89c2c06e98fee0ce9d4054f7398ddc945de5a60b2500485b9c1dfa72",
+      "sha256": "b5e336bd839c390e1e1122aec3f411bb2ceb3c12635241c2e73f284d7c53b2db",
       "expectedPackagePath": "kungfu/agent/cli_surface.catalog.json"
     }
   ],

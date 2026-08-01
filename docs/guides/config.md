@@ -111,6 +111,8 @@ validated as a complete config against the same contract schema.
 Durability is the first policy with a complete native execution chain. Its
 requested policy, admission result, effects, costs, receipts, timeout handling,
 and rollback are documented in [Configure durability](durability-configuration.md).
+Third-party PTY Agent declarations and their bounded Skill injection contract
+are documented in [Native Agent adapters](native-agent-adapters.md).
 
 ## First default surface
 

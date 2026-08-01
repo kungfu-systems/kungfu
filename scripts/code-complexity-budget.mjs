@@ -98,6 +98,11 @@ function language(pathname) {
 }
 
 function isEligible(pathname, policy) {
+  if (
+    pathname === '.kungfu/qualification' ||
+    pathname.startsWith('.kungfu/qualification/')
+  )
+    return false;
   const metadataPaths = [policy.baselinePath];
   const metadataPrefixes = [
     policy.waiverDirectory,
@@ -992,6 +997,7 @@ export {
   checkCurrent,
   classify,
   hasGeneratedProvenance,
+  isEligible,
   language,
   ownerFor,
   percentile,

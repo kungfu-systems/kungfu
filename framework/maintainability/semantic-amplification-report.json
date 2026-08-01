@@ -3,9 +3,9 @@
   "verdict": "pass",
   "authoritySemantics": "navigation-only-projection-over-existing-authorities",
   "manifestPath": "framework/maintainability/semantic-amplification.manifest.json",
-  "manifestRoot": "sha256:c6861ec9dc5215720094b0f317fcc0d909d2ae4a138a23f1690316408acde161",
+  "manifestRoot": "sha256:0d9fe260e4e2586f3d4f7b640d145e38445e158afff01c176ed8ce51c3b3937b",
   "baselineRef": "dbfed9ca1785d147b26f4f06e7e6895ac7368fee",
-  "sourceRoot": "sha256:8677c90c896462a1b0fb11f622c3a697a109ef5a70983b2162c9e07bf7a00185",
+  "sourceRoot": "sha256:161381cf3b5433aad88436093e8e0084155ade44c1b07c03ae2740007976e167",
   "roles": {
     "authority": "exactly one authority route per family; the route may name multiple co-owned source files",
     "allowedProjectionRoles": [
@@ -24,8 +24,8 @@
   "summary": {
     "families": 6,
     "authorities": 6,
-    "mappedSurfaces": 78,
-    "changedMappedSurfaces": 50,
+    "mappedSurfaces": 79,
+    "changedMappedSurfaces": 52,
     "blockingIssues": 0
   },
   "families": [
@@ -44,15 +44,15 @@
         "authority": 2,
         "generated-projection": 3,
         "thin-binding": 1,
-        "conformance-oracle": 2,
+        "conformance-oracle": 3,
         "test": 2,
         "package-release": 1,
         "documentation": 1
       },
       "amplification": {
-        "mappedSurfaces": 12,
-        "nonAuthoritySurfaces": 10,
-        "changedSurfaces": 11,
+        "mappedSurfaces": 13,
+        "nonAuthoritySurfaces": 11,
+        "changedSurfaces": 13,
         "changedPaths": [
           "framework/core/src/python/kungfu/cli/surface_contract.registry.json",
           "framework/core/src/python/kungfu/cli/commands/__registry__.py",
@@ -60,6 +60,8 @@
           "framework/core/src/python/kungfu/agent/cli_surface.catalog.json",
           "framework/core/src/python/kungfu/agent/commands.json",
           "framework/core/src/python/kungfu/cli/help_projection.py",
+          "scripts/check-cli-catalog-parity.mjs",
+          "scripts/verify-agent-pack.mjs",
           "framework/core/tests/python/test_cli_surface_contract.py",
           "product/scripts/cli-surface-qualification.mjs",
           "product/scripts/verify-cli-surface-qualification.mjs",
@@ -91,6 +93,10 @@
           "role": "conformance-oracle"
         },
         {
+          "path": "scripts/verify-agent-pack.mjs",
+          "role": "conformance-oracle"
+        },
+        {
           "path": "framework/core/tests/python/test_cli_surface_contract.py",
           "role": "test"
         },
@@ -116,7 +122,7 @@
           "path": "framework/core/src/python/kungfu/cli/surface_contract.registry.json",
           "currentLines": 157,
           "baselineLines": 155,
-          "currentRoot": "sha256:db2d19c31548fd127880903f6b166a1b510f8387fcbfc000a27cfc3832eb5d4d",
+          "currentRoot": "sha256:7bfed15e1926af994d0f95879906ac8953154656326e44c995cf3c40323a2533",
           "baselineRoot": "sha256:7af1893015500d9d54e2783e44af30cd4af8753787d9d9b70c77356b0e788c17",
           "changedSinceBaseline": true
         },
@@ -138,17 +144,17 @@
         },
         {
           "path": "framework/core/src/python/kungfu/agent/cli_surface.catalog.json",
-          "currentLines": 982,
+          "currentLines": 986,
           "baselineLines": 33927,
-          "currentRoot": "sha256:f41068fd89c2c06e98fee0ce9d4054f7398ddc945de5a60b2500485b9c1dfa72",
+          "currentRoot": "sha256:b5e336bd839c390e1e1122aec3f411bb2ceb3c12635241c2e73f284d7c53b2db",
           "baselineRoot": "sha256:9f2f17fca5aa4e4daa28a276c1e3a153fa263e791b497f7ea83a93796f7aeb1f",
           "changedSinceBaseline": true
         },
         {
           "path": "framework/core/src/python/kungfu/agent/commands.json",
-          "currentLines": 1063,
+          "currentLines": 1069,
           "baselineLines": 1117,
-          "currentRoot": "sha256:8cf537f1870804178200e9faed3213c70d3f78aa4b911c24eba6498d18436a02",
+          "currentRoot": "sha256:f94d59c84a87877a46866678eddc2038210db8e6813cfd4367441863373687b6",
           "baselineRoot": "sha256:969ac3d851c14196b7244ac1afaecfc237c82d45527fbe06a33d3fc064ea7fc4",
           "changedSinceBaseline": true
         },
@@ -162,11 +168,19 @@
         },
         {
           "path": "scripts/check-cli-catalog-parity.mjs",
-          "currentLines": 346,
+          "currentLines": 348,
           "baselineLines": 346,
-          "currentRoot": "sha256:a8e4c919d73120dd45c4a8f8c8f7187caa62ec819e74a83a9b2d3fdcbcc13c3e",
+          "currentRoot": "sha256:5f827a4aecb90e240c3ec7e829547c99ac4f33d8a24bf5e1432a3a5eac97159e",
           "baselineRoot": "sha256:a8e4c919d73120dd45c4a8f8c8f7187caa62ec819e74a83a9b2d3fdcbcc13c3e",
-          "changedSinceBaseline": false
+          "changedSinceBaseline": true
+        },
+        {
+          "path": "scripts/verify-agent-pack.mjs",
+          "currentLines": 398,
+          "baselineLines": 396,
+          "currentRoot": "sha256:aa0d046ccc24be157dd0d7be703a1f833559c97b2a4131e94808b6c5327d3784",
+          "baselineRoot": "sha256:3d5cf84d6cc561c681c68b51c92fa211f7993e1ca1a8da5d8bb9700b57a53bd2",
+          "changedSinceBaseline": true
         },
         {
           "path": "framework/core/tests/python/test_cli_surface_contract.py",

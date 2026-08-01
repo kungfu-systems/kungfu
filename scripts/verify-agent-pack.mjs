@@ -35,6 +35,8 @@ const REQUIRED = [
   'examples/remote-sync.md',
   'skills/codex/SKILL.md',
   'skills/claude/SKILL.md',
+  'skills/amp/SKILL.md',
+  'skills/opencode/SKILL.md',
 ];
 
 /** @type {string[]} */

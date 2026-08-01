@@ -520,11 +520,8 @@
           "minLength": 1
         },
         "provider": {
-          "enum": [
-            "codex",
-            "claude",
-            "opencode"
-          ]
+          "type": "string",
+          "pattern": "^[a-z0-9][a-z0-9._-]{0,63}$"
         },
         "activeProfiles": {
           "type": "array",
@@ -579,6 +576,12 @@
               }
             },
             "profiles": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "bindWork": {
               "type": "array",
               "items": {
                 "type": "string"
@@ -663,6 +666,7 @@
         "required": [
           "entrypoint",
           "skillInstallRoots",
+          "nativeProviderAdapters",
           "runtimeProfiles",
           "defaultRuntimeProfile",
           "backendDefault",
@@ -686,6 +690,12 @@
               "claude": {
                 "type": "string"
               }
+            }
+          },
+          "nativeProviderAdapters": {
+            "type": "array",
+            "items": {
+              "$ref": "#/$defs/nativeProviderAdapter"
             }
           },
           "runtimeProfiles": {
@@ -977,11 +987,8 @@
             "minLength": 1
           },
           "provider": {
-            "enum": [
-              "codex",
-              "claude",
-              "opencode"
-            ]
+            "type": "string",
+            "pattern": "^[a-z0-9][a-z0-9._-]{0,63}$"
           },
           "launch": {
             "type": "object",
@@ -998,6 +1005,19 @@
               },
               "argv": {
                 "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "interactiveArgv": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "versionArgv": {
+                "type": "array",
+                "minItems": 1,
                 "items": {
                   "type": "string"
                 }
@@ -1029,11 +1049,8 @@
             ],
             "properties": {
               "adapter": {
-                "enum": [
-                  "codex",
-                  "claude",
-                  "opencode"
-                ]
+                "type": "string",
+                "pattern": "^[a-z0-9][a-z0-9._-]{0,63}$"
               },
               "envelope": {
                 "enum": [
@@ -1058,6 +1075,137 @@
                 "type": "null"
               }
             ]
+          }
+        }
+      },
+      "nativeProviderAdapter": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "schema",
+          "id",
+          "label",
+          "discovery",
+          "credentialEnvironment",
+          "skill",
+          "knownLimits"
+        ],
+        "properties": {
+          "schema": {
+            "const": "kungfu.native-provider-adapter/v1"
+          },
+          "id": {
+            "type": "string",
+            "pattern": "^[a-z0-9][a-z0-9._-]{0,63}$"
+          },
+          "label": {
+            "type": "string",
+            "minLength": 1
+          },
+          "discovery": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "executableNames",
+              "knownPaths",
+              "versionArgv"
+            ],
+            "properties": {
+              "executableNames": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "pattern": "^[A-Za-z0-9][A-Za-z0-9._+-]*$"
+                },
+                "uniqueItems": true
+              },
+              "knownPaths": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "uniqueItems": true
+              },
+              "versionArgv": {
+                "type": "array",
+                "minItems": 1,
+                "items": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "credentialEnvironment": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "pattern": "^[A-Z_][A-Z0-9_]*$"
+            },
+            "uniqueItems": true
+          },
+          "skill": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "source",
+              "argv",
+              "environment",
+              "environmentJson",
+              "files"
+            ],
+            "properties": {
+              "source": {
+                "type": "string",
+                "minLength": 1
+              },
+              "argv": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "environment": {
+                "type": "object",
+                "propertyNames": {
+                  "pattern": "^[A-Z_][A-Z0-9_]*$"
+                },
+                "additionalProperties": {
+                  "type": "string"
+                }
+              },
+              "environmentJson": {
+                "type": "object",
+                "propertyNames": {
+                  "pattern": "^[A-Z_][A-Z0-9_]*$"
+                }
+              },
+              "files": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "path",
+                    "content"
+                  ],
+                  "properties": {
+                    "path": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "content": {}
+                  }
+                }
+              }
+            }
+          },
+          "knownLimits": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            }
           }
         }
       }
@@ -1085,6 +1233,7 @@
         "codex": "~/.codex/skills",
         "claude": "~/.claude/skills"
       },
+      "nativeProviderAdapters": [],
       "runtimeProfiles": [],
       "defaultRuntimeProfile": null,
       "backendDefault": "tmux",

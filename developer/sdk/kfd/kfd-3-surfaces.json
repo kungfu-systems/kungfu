@@ -429,6 +429,26 @@
       }
     },
     {
+      "id": "kungfu.agent.console.bind-work",
+      "name": "kungfu agent console bind-work --initiative-id <id> --assignment-id <id> --json",
+      "kind": "cli-api-gui",
+      "participantProfile": "agent-or-developer",
+      "state": "declared",
+      "availability": "shipped",
+      "visibility": "public",
+      "participantFacing": true,
+      "public": true,
+      "sourcePath": "framework/core/src/python/kungfu/agent/kfd3_api.registry.json",
+      "evidencePath": "framework/core/src/python/kungfu/agent/commands.json",
+      "artifactPath": "framework/core/src/python/kungfu/agent/commands.json",
+      "maturity": "experimental",
+      "declaration": {
+        "owner": "kungfu",
+        "source": "scripts/buildchain-kfd-evidence.mjs",
+        "sourcePath": "framework/core/src/python/kungfu/agent/kfd3_api.registry.json"
+      }
+    },
+    {
       "id": "kungfu.agent.console.current",
       "name": "kungfu agent console current --json",
       "kind": "cli-api-gui",
@@ -2435,7 +2455,7 @@
     },
     {
       "id": "kungfu.run.agent",
-      "name": "kungfu run agent --prompt <task> [--agent <profile-id>]",
+      "name": "kungfu run agent [--agent <profile-id>] [--prompt <task>]",
       "kind": "cli",
       "participantProfile": "agent-or-developer",
       "state": "declared",

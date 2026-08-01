@@ -268,6 +268,8 @@ function auditPublicReferences(byPath) {
     'examples/remote-sync.md',
     'skills/codex/SKILL.md',
     'skills/claude/SKILL.md',
+    'skills/amp/SKILL.md',
+    'skills/opencode/SKILL.md',
   ];
   for (const rel of docs) {
     const text = fs.readFileSync(path.join(PACK, rel), 'utf8');
