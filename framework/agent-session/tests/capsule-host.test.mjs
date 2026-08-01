@@ -38,7 +38,7 @@ class FakePtyProcess extends EventEmitter {
   }
 }
 
-function fixture(maxOutputBytes = 64, platform = process.platform) {
+function fixture(maxOutputBytes = 64, platform = 'linux') {
   const child = new FakePtyProcess();
   let now = 1000;
   const host = new AgentSessionCapsuleHost({

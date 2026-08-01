@@ -156,6 +156,83 @@ test('partial Core assembly cannot masquerade as Work readiness', (t) => {
   );
 });
 
+test('source Kungfu route projects its built TUI and Product extensions', (t) => {
+  if (process.platform === 'win32') {
+    t.skip('POSIX launcher contract');
+    return;
+  }
+  const temp = fs.mkdtempSync(path.join(os.tmpdir(), 'kungfu-shifu-tui-'));
+  t.after(() => fs.rmSync(temp, { recursive: true, force: true }));
+  const launcher = path.join(temp, 'shifu');
+  const executable = path.join(
+    temp,
+    'framework',
+    'core',
+    'dist',
+    'kungfu',
+    'kungfu',
+  );
+  const tuiEntry = path.join(temp, 'framework', 'tui', 'dist', 'tui.mjs');
+  const extensionRoot = path.join(temp, 'product', 'extensions');
+  const template = path.join(
+    extensionRoot,
+    'agent-work-lab',
+    'experience',
+    'starter-project.json',
+  );
+  fs.mkdirSync(path.dirname(executable), { recursive: true });
+  fs.mkdirSync(path.dirname(tuiEntry), { recursive: true });
+  fs.mkdirSync(path.dirname(template), { recursive: true });
+  fs.copyFileSync(path.join(ROOT, 'shifu'), launcher);
+  fs.writeFileSync(tuiEntry, '');
+  fs.writeFileSync(template, '{}\n');
+  fs.writeFileSync(
+    executable,
+    [
+      '#!/bin/sh',
+      'printf "%s\\n" "$KUNGFU_TUI_ENTRY"',
+      'printf "%s\\n" "$KF_BUNDLED_EXTENSION_ROOT"',
+      'printf "%s\\n" "$*"',
+      '',
+    ].join('\n'),
+  );
+  fs.chmodSync(launcher, 0o755);
+  fs.chmodSync(executable, 0o755);
+
+  const result = spawnSync(
+    launcher,
+    ['kungfu', 'agent-work-lab', 'project-tour'],
+    {
+      encoding: 'utf8',
+      env: {
+        ...process.env,
+        HOME: temp,
+        KUNGFU_TUI_ENTRY: '',
+        KF_BUNDLED_EXTENSION_ROOT: '',
+        XDG_CONFIG_HOME: path.join(temp, 'config'),
+      },
+    },
+  );
+  assert.equal(result.status, 0, result.stderr);
+  assert.deepEqual(result.stdout.trim().split('\n'), [
+    tuiEntry,
+    extensionRoot,
+    'agent-work-lab project-tour',
+  ]);
+});
+
+test('Windows source Kungfu route projects built TUI Product paths', () => {
+  const windows = fs.readFileSync(path.join(ROOT, 'shifu.cmd'), 'utf8');
+  assert.match(
+    windows,
+    /if not defined KUNGFU_TUI_ENTRY if exist .*framework\\tui\\dist\\tui\.mjs/u,
+  );
+  assert.match(
+    windows,
+    /if not defined KF_BUNDLED_EXTENSION_ROOT if exist .*agent-work-lab\\experience\\starter-project\.json/u,
+  );
+});
+
 test('cached pinned uv activates Work after Qualified Core materialization', (t) => {
   if (process.platform === 'win32') {
     t.skip('POSIX launcher contract');

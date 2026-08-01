@@ -793,6 +793,10 @@
           "role": "thin-binding"
         },
         {
+          "path": "framework/core/src/python/kungfu/agent/intent-map.json",
+          "role": "thin-binding"
+        },
+        {
           "path": "scripts/run-native-kfx-admission-tests.mjs",
           "role": "conformance-oracle"
         },

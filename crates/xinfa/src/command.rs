@@ -40,6 +40,7 @@ pub(crate) enum Command<'a> {
     Contract,
     Schema(&'a str),
     Diagnose,
+    Agent(&'a [String]),
     Invoke(Operation, &'a [String]),
     Unknown,
 }
@@ -51,6 +52,7 @@ pub(crate) fn parse(arguments: &[String]) -> Command<'_> {
         [command, format] if command == "contract" && format == "--json" => Command::Contract,
         [command, name] if command == "schema" => Command::Schema(name),
         [command, format] if command == "diagnose" && format == "--json" => Command::Diagnose,
+        [command, rest @ ..] if command == "agent" => Command::Agent(rest),
         [namespace, operation, rest @ ..]
             if namespace == "project" && operation == "materialize" =>
         {

@@ -31,7 +31,6 @@
 use std::env;
 use std::path::{Path, PathBuf};
 use std::process::exit;
-
 mod artifact_catalog;
 mod dispatch;
 mod doctor;
@@ -45,17 +44,14 @@ mod registrar;
 mod self_update;
 mod tools;
 mod util;
-
 pub use invocation::{InvocationContext, InvocationMode};
 use shifu_core::style;
-
 /// Rich subcommands handled by the L2 node implementation (shifu.mjs),
 /// mirroring the sh / cmd entrypoints. Everything else goes to corepack pnpm.
 const L2_SUBCOMMANDS: &[&str] = &[
     "build", "rebuild", "cache", "docs", "gate", "proxy", "config",
 ];
 const SOURCE_ACCEPTANCE_CACHE_BYPASS: &str = "source-acceptance";
-
 #[cfg(any(windows, test))]
 fn command_requires_msvc(command: Option<&str>) -> bool {
     !matches!(
@@ -169,6 +165,7 @@ fn print_usage() {
     println!("  shifu promote --rollback   restore the exact retained prior Product");
     println!("  shifu builds               list provenance and Git relation for dev builds");
     println!("  shifu artifacts <verb>     print the local artifact contract or schema");
+    println!("  shifu agent ...             KFD-3 Agent brief, map, capabilities, and verify");
     println!("  shifu help                 pnpm's own help (tasks are pnpm scripts)");
     println!();
     println!(
@@ -198,7 +195,10 @@ pub fn main_and_exit(args: &[String], invocation: InvocationContext) -> ! {
         print_usage();
         exit(if args.is_empty() { 2 } else { 0 });
     }
-
+    // Product-owned Agent discovery is static, rootless, and read-only.
+    if first == Some("agent") {
+        util::run_agent(&args[1..]);
+    }
     // Repo acquisition — the one verb that must work outside a checkout.
     if first == Some("clone") {
         clone_repo(&args[1..]);

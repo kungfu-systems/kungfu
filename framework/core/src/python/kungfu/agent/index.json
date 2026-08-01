@@ -19,6 +19,7 @@
   "documents": [
     { "path": "index.json", "purpose": "pack manifest", "maturity": "stable" },
     { "path": "brief.md", "purpose": "first-read overview", "maturity": "stable" },
+    { "path": "intent-map.json", "purpose": "stable complete first-entry intent routing map", "maturity": "stable" },
     { "path": "xinfa-context.md", "purpose": "verified-context discovery, help, and automation boundary", "maturity": "stable" },
     { "path": "primitive-management.md", "purpose": "Primitive authoring context binding and installed read-only discovery", "maturity": "experimental" },
     { "path": "mode-selection.md", "purpose": "choose the right operating mode", "maturity": "stable" },
@@ -52,6 +53,8 @@
   "entrypoints": {
     "human": "kungfu agent brief",
     "machine": "kungfu agent capabilities --json",
+    "map": "kungfu agent map --json",
+    "context": "kungfu agent context --task <task> --role <role> --budget <tokens> --route <route-id> --json",
     "workModel": "kungfu agent work-model --json",
     "modeChoice": "kungfu agent choose-mode --json",
     "verify": "kungfu agent verify --json"

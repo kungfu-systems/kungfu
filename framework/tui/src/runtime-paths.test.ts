@@ -7,10 +7,111 @@ import path from 'node:path';
 import test from 'node:test';
 
 import {
+  resolveTuiAgentSessionPaths,
   resolveTuiCliRuntime,
   resolveTuiProductPaths,
   resolveTuiRuntimeDir,
 } from './terminal-lifecycle.js';
+
+test('embedded TUI resolves bundled Agent Session files from its admitted entry', () => {
+  const entry = path.resolve('/checkout/framework/tui/dist/tui.mjs');
+  const bundleDir = path.dirname(entry);
+  const paths = resolveTuiAgentSessionPaths({
+    env: { KUNGFU_TUI_ENTRY: entry },
+    modulePath: '/native/runtime/tui.mjs',
+    exists: (candidate) =>
+      candidate === entry ||
+      candidate === path.join(bundleDir, 'agent-session-worker.mjs') ||
+      candidate === path.join(bundleDir, 'mock-agent.mjs'),
+  });
+
+  assert.deepEqual(paths, {
+    packageRoot: path.resolve('/checkout/framework/agent-session'),
+    workerPath: path.join(bundleDir, 'agent-session-worker.mjs'),
+    mockPath: path.join(bundleDir, 'mock-agent.mjs'),
+  });
+});
+
+test('TUI retains source Agent Session fallbacks without an admitted entry', () => {
+  assert.deepEqual(
+    resolveTuiAgentSessionPaths({
+      env: {},
+      modulePath: '/checkout/framework/tui/src/main.tsx',
+      exists: () => false,
+    }),
+    {
+      packageRoot: path.resolve('/checkout/framework/agent-session'),
+      workerPath: path.resolve(
+        '/checkout/framework/agent-session/src/product-worker.mjs',
+      ),
+      mockPath: path.resolve(
+        '/checkout/framework/agent-session/src/mock-provider.mjs',
+      ),
+    },
+  );
+});
+
+test('embedded libnode uses its admitted argv entry when env is not projected', () => {
+  const entry = path.resolve('/checkout/framework/tui/dist/tui.mjs');
+  const bundleDir = path.dirname(entry);
+  assert.deepEqual(
+    resolveTuiAgentSessionPaths({
+      env: {},
+      argvEntry: entry,
+      modulePath: '/native/runtime/tui.mjs',
+      exists: (candidate) =>
+        candidate === entry ||
+        candidate === path.join(bundleDir, 'agent-session-worker.mjs') ||
+        candidate === path.join(bundleDir, 'mock-agent.mjs'),
+    }),
+    {
+      packageRoot: path.resolve('/checkout/framework/agent-session'),
+      workerPath: path.join(bundleDir, 'agent-session-worker.mjs'),
+      mockPath: path.join(bundleDir, 'mock-agent.mjs'),
+    },
+  );
+});
+
+test('embedded libnode derives its source bundle from Product extensions', () => {
+  const entry = path.resolve('/checkout/framework/tui/dist/tui.mjs');
+  const bundleDir = path.dirname(entry);
+  assert.deepEqual(
+    resolveTuiAgentSessionPaths({
+      env: { KF_BUNDLED_EXTENSION_ROOT: '/checkout/product/extensions' },
+      argvEntry: '/native/runtime/tui.mjs',
+      modulePath: '/native/runtime/tui.mjs',
+      exists: (candidate) =>
+        candidate === entry ||
+        candidate === path.join(bundleDir, 'agent-session-worker.mjs') ||
+        candidate === path.join(bundleDir, 'mock-agent.mjs'),
+    }),
+    {
+      packageRoot: path.resolve('/checkout/framework/agent-session'),
+      workerPath: path.join(bundleDir, 'agent-session-worker.mjs'),
+      mockPath: path.join(bundleDir, 'mock-agent.mjs'),
+    },
+  );
+});
+
+test('embedded libnode derives its packaged bundle from Product extensions', () => {
+  const entry = path.resolve('/product/Resources/tui/tui.mjs');
+  const bundleDir = path.dirname(entry);
+  assert.deepEqual(
+    resolveTuiAgentSessionPaths({
+      env: { KF_BUNDLED_EXTENSION_ROOT: '/product/Resources/extensions' },
+      modulePath: '/product/Resources/kungfu/tui.mjs',
+      exists: (candidate) =>
+        candidate === entry ||
+        candidate === path.join(bundleDir, 'agent-session-worker.mjs') ||
+        candidate === path.join(bundleDir, 'mock-agent.mjs'),
+    }),
+    {
+      packageRoot: path.resolve('/product/agent-session'),
+      workerPath: path.join(bundleDir, 'agent-session-worker.mjs'),
+      mockPath: path.join(bundleDir, 'mock-agent.mjs'),
+    },
+  );
+});
 
 test('packaged TUI resolves from KUNGFU_DIR without npm package discovery', () => {
   let packageResolutionAttempted = false;

@@ -1,15 +1,20 @@
 import type {
   GlobalWorkFilter,
+  GlobalWorkRow,
   GlobalWorkSnapshot,
   Profile,
   ProjectFileTreeEntry,
   ProjectRemovePlan,
   ProjectSummary,
   ProjectWorkCapturePlan,
+  ProjectWorkCaptureReceipt,
+  ProjectWorkInventory,
   ProjectWorkRunPlan,
   ProjectWorkRunSnapshot,
   Projects,
   ProjectsCatalog,
+  WorkClosePlan,
+  WorkReviewPlan,
 } from '@kungfu-tech/api/capability';
 import {
   filterGlobalWork,
@@ -19,8 +24,13 @@ import {
 } from '@kungfu-tech/api/capability';
 import type { KfxCapabilities, Shell } from '@kungfu-tech/kfx';
 import {
+  ProjectWorkCloseConfirmation,
+  ProjectWorkReviewConfirmation,
   ProjectWorkRunConfirmation,
   ProjectWorkRunSession,
+  controlButtonStyle,
+  controlMenuItemStyle,
+  controlMenuStyle,
   headingStyle,
   mono,
   panelStyle,
@@ -32,7 +42,21 @@ import {
   type GlobalWorkObserverIpc,
   subscribeGlobalWorkObserver,
 } from './global-work-observer';
-import { assignmentSelector, resolveWorkProject } from './project-work-run';
+import {
+  ProjectWorkList,
+  resolveSelectedProjectWorkRow,
+} from './project-work-list';
+export { resolveSelectedProjectWorkRow } from './project-work-list';
+import {
+  RESTORING_RETAINED_AGENT_RESULT,
+  assignmentSelector,
+  isProjectWorkReviewable,
+  isProjectWorkSettled,
+  preferredProjectReviewRun,
+  resolveWorkProject,
+  settleRetainedProjectRunBusy,
+  shouldRestoreRetainedProjectRun,
+} from './project-work-run';
 import { openWorkControlProfile } from './work-control-profile';
 
 // Preserve the qualified Profile application service without restoring its
@@ -95,9 +119,76 @@ type NodeHost = {
 type ProjectViewMemory = {
   section: 'files' | 'work';
   selectedFile?: ProjectFileTreeEntry;
+  agentProvider?: AgentProvider;
 };
 
+type AgentProvider = 'codex' | 'claude' | 'opencode';
+
+const AGENT_PROVIDERS: AgentProvider[] = ['codex', 'claude', 'opencode'];
+const LAST_AGENT_PROVIDER_KEY = 'kungfu.project-work.last-agent-provider';
+
+function retainedAgentProvider(): AgentProvider {
+  try {
+    const value = window.localStorage.getItem(LAST_AGENT_PROVIDER_KEY);
+    return AGENT_PROVIDERS.includes(value as AgentProvider)
+      ? (value as AgentProvider)
+      : 'codex';
+  } catch {
+    return 'codex';
+  }
+}
+
+function agentProviderLabel(provider: AgentProvider): string {
+  return provider === 'opencode'
+    ? 'OpenCode'
+    : provider[0].toUpperCase() + provider.slice(1);
+}
+
 const projectViewMemory = new Map<string, ProjectViewMemory>();
+
+export function projectInventoryWorkRows(
+  inventory: ProjectWorkInventory | undefined,
+  project: ProjectSummary | undefined,
+): GlobalWorkRow[] {
+  if (!inventory || !project) return [];
+  return inventory.works.map((work) => ({
+    canonical_root: work.stateRoot || work.requestRoot,
+    object_kind: 'assignment',
+    subject: `kungfu:${work.assignmentId}`,
+    display: {
+      title: work.title,
+      status: work.settled
+        ? work.phase || 'completed'
+        : work.phase || 'captured',
+      next_actions: work.settled
+        ? []
+        : work.phase
+          ? []
+          : ['Choose an Agent to admit and run this Work'],
+    },
+    observations: [
+      {
+        workspace_id: project.id,
+        availability: 'available',
+      },
+    ],
+  }));
+}
+
+function mergeProjectWorkRows(
+  globalRows: GlobalWorkRow[],
+  inventoryRows: GlobalWorkRow[],
+): GlobalWorkRow[] {
+  const authoritativeAssignments = new Set(
+    globalRows.map((row) => assignmentSelector(row.subject)).filter(Boolean),
+  );
+  return [
+    ...globalRows,
+    ...inventoryRows.filter(
+      (row) => !authoritativeAssignments.has(assignmentSelector(row.subject)),
+    ),
+  ];
+}
 
 function TextInput({
   value,
@@ -131,9 +222,9 @@ const projectNavButtonStyle = (selected: boolean): React.CSSProperties => ({
   justifyContent: 'space-between',
   gap: 12,
   padding: '9px 10px',
-  border: `1px solid ${selected ? '#4fc1ff' : 'transparent'}`,
+  border: `1px solid ${selected ? '#4fc1ff' : '#3c3c3c'}`,
   borderRadius: 6,
-  background: selected ? '#04395e' : 'transparent',
+  background: selected ? '#04395e' : '#252526',
   color: selected ? '#f1f1f1' : '#cccccc',
   cursor: 'pointer',
   textAlign: 'left',
@@ -154,19 +245,33 @@ function ProjectNavigation({
   projects,
   section,
   selectedFile,
+  works,
+  selectedWorkRoot,
+  workFilter,
+  workSearch,
   workCount,
   workLoading,
   onSection,
   onSelectFile,
+  onSelectWork,
+  onWorkFilter,
+  onWorkSearch,
 }: {
   project: ProjectSummary | undefined;
   projects: Projects;
   section: 'files' | 'work';
   selectedFile: ProjectFileTreeEntry | undefined;
+  works: GlobalWorkRow[];
+  selectedWorkRoot?: string;
+  workFilter: GlobalWorkFilter;
+  workSearch: string;
   workCount: number;
   workLoading: boolean;
   onSection: (section: 'files' | 'work') => void;
   onSelectFile: (entry: ProjectFileTreeEntry) => void;
+  onSelectWork: (row: GlobalWorkRow) => void;
+  onWorkFilter: (filter: GlobalWorkFilter) => void;
+  onWorkSearch: (value: string) => void;
 }) {
   const [expandedPaths, setExpandedPaths] = React.useState<ReadonlySet<string>>(
     () => new Set(),
@@ -242,7 +347,88 @@ function ProjectNavigation({
       <div style={{ height: 1, background: '#3c3c3c', margin: '3px 0' }} />
       <button
         type="button"
+        aria-current={section === 'work' ? 'page' : undefined}
+        aria-expanded={section === 'work'}
+        onClick={() => onSection('work')}
+        style={{
+          ...projectNavButtonStyle(section === 'work'),
+          padding: '11px 10px',
+        }}
+      >
+        <span>
+          <strong style={{ display: 'block' }}>Work</strong>
+          <span style={{ color: '#9aa7b2', fontSize: 10 }}>
+            Create, run, review
+          </span>
+        </span>
+        <span
+          title={workLoading ? 'Retained Work is still loading' : undefined}
+          style={{ color: workLoading ? '#dcdcaa' : '#9cdcfe' }}
+        >
+          {workLoading ? (
+            <span className="kf-project-nav-spinner">↻</span>
+          ) : (
+            workCount
+          )}
+        </span>
+      </button>
+      {section === 'work' ? (
+        <div
+          style={{
+            flex: 1,
+            minHeight: 100,
+            display: 'flex',
+            flexDirection: 'column',
+            gap: 6,
+            overflow: 'hidden',
+          }}
+        >
+          <TextInput value={workSearch} onChange={onWorkSearch} />
+          <fieldset
+            aria-label="Filter Project Work"
+            style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(3, 1fr)',
+              minInlineSize: 0,
+              margin: 0,
+              padding: 0,
+              border: 0,
+            }}
+          >
+            {(['active', 'completed', 'all'] as const).map((value) => (
+              <button
+                key={value}
+                type="button"
+                onClick={() => onWorkFilter(value)}
+                style={{
+                  ...mono,
+                  minWidth: 0,
+                  padding: '4px 3px',
+                  border: `1px solid ${
+                    workFilter === value ? '#4fc1ff' : '#3c3c3c'
+                  }`,
+                  background: workFilter === value ? '#04395e' : '#252526',
+                  color: workFilter === value ? '#f1f1f1' : '#cccccc',
+                  cursor: 'pointer',
+                  textTransform: 'capitalize',
+                }}
+              >
+                {value}
+              </button>
+            ))}
+          </fieldset>
+          <ProjectWorkList
+            compact
+            rows={works}
+            currentRoot={selectedWorkRoot}
+            onSelect={onSelectWork}
+          />
+        </div>
+      ) : null}
+      <button
+        type="button"
         aria-current={section === 'files' ? 'page' : undefined}
+        aria-expanded={section === 'files'}
         onClick={() => onSection('files')}
         style={projectNavButtonStyle(section === 'files')}
       >
@@ -308,24 +494,6 @@ function ProjectNavigation({
           ) : null}
         </div>
       ) : null}
-      <button
-        type="button"
-        aria-current={section === 'work' ? 'page' : undefined}
-        onClick={() => onSection('work')}
-        style={projectNavButtonStyle(section === 'work')}
-      >
-        <span>Work</span>
-        <span
-          title={workLoading ? 'Retained Work is still loading' : undefined}
-          style={{ color: workLoading ? '#dcdcaa' : '#9cdcfe' }}
-        >
-          {workLoading ? (
-            <span className="kf-project-nav-spinner">↻</span>
-          ) : (
-            workCount
-          )}
-        </span>
-      </button>
       <div style={{ ...mono, color: '#858585' }}>
         Files are read-only. Work remains governed by Kungfu.
       </div>
@@ -581,7 +749,10 @@ function NewProjectWorkDialog({
   project: ProjectSummary;
   projects: Projects;
   onClose: () => void;
-  onCreated: () => void;
+  onCreated: (
+    plan: ProjectWorkCapturePlan,
+    receipt: ProjectWorkCaptureReceipt,
+  ) => void;
 }) {
   const [objective, setObjective] = React.useState('');
   const [acceptance, setAcceptance] = React.useState('');
@@ -606,7 +777,7 @@ function NewProjectWorkDialog({
     setError('');
     void projects
       .captureWork(project.path, plan)
-      .then(onCreated)
+      .then((receipt) => onCreated(plan, receipt))
       .catch((reason) =>
         setError(reason instanceof Error ? reason.message : String(reason)),
       )
@@ -620,11 +791,24 @@ function NewProjectWorkDialog({
     <dialog
       open
       aria-modal="true"
+      aria-label={`Create Work in ${project.name}`}
       style={{
-        position: 'absolute',
+        position: 'fixed',
         inset: 0,
         zIndex: 50,
-        background: 'rgba(0,0,0,0.84)',
+        boxSizing: 'border-box',
+        width: 'auto',
+        maxWidth: 'none',
+        height: 'auto',
+        maxHeight: 'none',
+        margin: 0,
+        border: 'none',
+        background: 'rgba(8, 12, 18, 0.62)',
+        backdropFilter: 'blur(1px)',
+        color: '#e6edf3',
+        colorScheme: 'dark',
+        fontSize: 15,
+        lineHeight: 1.5,
         display: 'grid',
         placeItems: 'center',
         padding: 24,
@@ -633,16 +817,21 @@ function NewProjectWorkDialog({
       <div
         style={{
           width: 'min(680px, 90vw)',
-          background: '#252526',
-          border: '2px solid #4fc1ff',
+          background: '#20262e',
+          color: '#e6edf3',
+          border: '1px solid #52606d',
           borderRadius: 10,
-          padding: 18,
+          padding: 22,
           boxShadow: '0 18px 48px rgba(0,0,0,.55)',
         }}
       >
-        <h3 style={{ marginTop: 0 }}>New Work · {project.name}</h3>
+        <h3 style={{ marginTop: 0, color: '#f4f7fa', fontSize: 20 }}>
+          New Work · {project.name}
+        </h3>
         <label style={{ display: 'grid', gap: 6, marginBottom: 12 }}>
-          <span style={mono}>What should the Agent do?</span>
+          <span style={{ ...mono, color: '#d7dde5', fontSize: 14 }}>
+            What should the Agent do?
+          </span>
           <textarea
             ref={objectiveRef}
             value={objective}
@@ -654,16 +843,20 @@ function NewProjectWorkDialog({
             style={{
               ...mono,
               resize: 'vertical',
-              padding: 9,
-              border: '1px solid #4b4b4b',
+              padding: 10,
+              border: '1px solid #52606d',
               borderRadius: 6,
-              background: '#1e1e1e',
-              color: '#f1f1f1',
+              background: '#111820',
+              color: '#f4f7fa',
+              fontSize: 15,
+              lineHeight: 1.5,
             }}
           />
         </label>
         <label style={{ display: 'grid', gap: 6 }}>
-          <span style={mono}>How will you know the Work is correct?</span>
+          <span style={{ ...mono, color: '#d7dde5', fontSize: 14 }}>
+            How will you know the Work is correct?
+          </span>
           <textarea
             value={acceptance}
             onChange={(event) => {
@@ -674,11 +867,13 @@ function NewProjectWorkDialog({
             style={{
               ...mono,
               resize: 'vertical',
-              padding: 9,
-              border: '1px solid #4b4b4b',
+              padding: 10,
+              border: '1px solid #52606d',
               borderRadius: 6,
-              background: '#1e1e1e',
-              color: '#f1f1f1',
+              background: '#111820',
+              color: '#f4f7fa',
+              fontSize: 15,
+              lineHeight: 1.5,
             }}
           />
         </label>
@@ -714,12 +909,16 @@ function NewProjectWorkDialog({
             marginTop: 14,
           }}
         >
-          <button type="button" style={projectActionStyle} onClick={onClose}>
+          <button
+            type="button"
+            style={{ ...projectActionStyle, fontSize: 13 }}
+            onClick={onClose}
+          >
             Cancel
           </button>
           <button
             type="button"
-            style={projectActionStyle}
+            style={{ ...projectActionStyle, fontSize: 13 }}
             disabled={Boolean(busy) || !objective.trim() || !acceptance.trim()}
             onClick={prepare}
           >
@@ -732,6 +931,7 @@ function NewProjectWorkDialog({
                 ...projectActionStyle,
                 borderColor: '#89d185',
                 background: '#1f4d2e',
+                fontSize: 13,
               }}
               disabled={Boolean(busy)}
               onClick={create}
@@ -764,6 +964,9 @@ function GlobalWorkView({
   const [selected, setSelected] = React.useState<string | null>(
     () => shell.params.workId?.trim() || null,
   );
+  const [selectedAssignmentId, setSelectedAssignmentId] = React.useState<
+    string | null
+  >(null);
   const [search, setSearch] = React.useState('');
   const [filter, setFilter] = React.useState<GlobalWorkFilter>('active');
   const [projectSection, setProjectSection] = React.useState<'files' | 'work'>(
@@ -781,11 +984,18 @@ function GlobalWorkView({
   const [projectAdminBusy, setProjectAdminBusy] = React.useState('');
   const [projectAdminError, setProjectAdminError] = React.useState('');
   const [newWorkOpen, setNewWorkOpen] = React.useState(false);
+  const [agentProvider, setAgentProvider] = React.useState<AgentProvider>(
+    () => initialProjectMemory?.agentProvider ?? retainedAgentProvider(),
+  );
+  const [agentMenuOpen, setAgentMenuOpen] = React.useState(false);
   const [status, setStatus] = React.useState('Connecting All Work…');
   const [error, setError] = React.useState('');
   const [projectsCatalog, setProjectsCatalog] =
     React.useState<ProjectsCatalog>();
   const [projectsCatalogReady, setProjectsCatalogReady] = React.useState(false);
+  const [projectInventory, setProjectInventory] =
+    React.useState<ProjectWorkInventory>();
+  const [projectInventoryError, setProjectInventoryError] = React.useState('');
   const [runs, setRuns] = React.useState<ProjectWorkRunSnapshot[]>(() =>
     projects.runs(),
   );
@@ -798,9 +1008,22 @@ function GlobalWorkView({
     work: string;
     plan: ProjectWorkRunPlan;
   }>();
+  const [reviewPlan, setReviewPlan] = React.useState<{
+    runId: string;
+    plan: WorkReviewPlan;
+  }>();
+  const [closePlan, setClosePlan] = React.useState<{
+    plan: WorkClosePlan;
+    continueAfter: boolean;
+  }>();
   const [runBusy, setRunBusy] = React.useState('');
   const [runError, setRunError] = React.useState('');
+  const [retainedRestoreState, setRetainedRestoreState] = React.useState<{
+    key: string;
+    status: 'loading' | 'settled' | 'failed';
+  }>();
   const lastNotification = React.useRef({ key: '', at: 0 });
+  const sessionPanelRef = React.useRef<HTMLDivElement>(null);
   const shellRef = React.useRef(shell);
   shellRef.current = shell;
   const ipc = React.useMemo(
@@ -817,6 +1040,7 @@ function GlobalWorkView({
     const requestedWorkId = shell.params.workId?.trim();
     if (!requestedWorkId) return;
     setSelected(requestedWorkId);
+    setSelectedAssignmentId(null);
     setSearch('');
   }, [shell.params.workId]);
   React.useEffect(() => {
@@ -831,7 +1055,9 @@ function GlobalWorkView({
         (shell.params.projectSection === 'work' ? 'work' : 'files'),
     );
     setSelectedProjectFile(remembered?.selectedFile);
+    setAgentProvider(remembered?.agentProvider ?? retainedAgentProvider());
     setLoadedProjectMemoryKey(projectMemoryKey);
+    setAgentMenuOpen(false);
     setProjectMenuOpen(false);
     setRemovePlan(undefined);
     setProjectAdminError('');
@@ -847,20 +1073,29 @@ function GlobalWorkView({
     projectViewMemory.set(projectMemoryKey, {
       section: projectSection,
       selectedFile: selectedProjectFile,
+      agentProvider,
     });
   }, [
     loadedProjectMemoryKey,
     projectMemoryKey,
     projectSection,
     selectedProjectFile,
+    agentProvider,
   ]);
+  React.useEffect(() => {
+    try {
+      window.localStorage.setItem(LAST_AGENT_PROVIDER_KEY, agentProvider);
+    } catch {
+      // The in-memory Project view still retains the selection for this process.
+    }
+  }, [agentProvider]);
 
   React.useEffect(() => {
     if (
       projectSection === 'files' &&
       (shell.params.projectId?.trim() || shell.params.projectPath?.trim())
     ) {
-      setStatus('Files ready · retained Work loads when selected');
+      setStatus('Files ready · retained Work restores in the background');
       return undefined;
     }
     let dispose: (() => Promise<void>) | undefined;
@@ -992,6 +1227,50 @@ function GlobalWorkView({
           state: 'focused',
         }
       : undefined);
+  const projectInventoryRequest = React.useRef<{
+    path: string;
+    promise: Promise<ProjectWorkInventory | undefined>;
+  }>();
+  const refreshProjectInventory = React.useCallback(() => {
+    if (!requestedProject?.path) return Promise.resolve(undefined);
+    if (projectInventoryRequest.current?.path === requestedProject.path) {
+      return projectInventoryRequest.current.promise;
+    }
+    const request = projects
+      .works(requestedProject.path)
+      .then((inventory) => {
+        setProjectInventory(inventory);
+        setProjectInventoryError('');
+        return inventory;
+      })
+      .catch((reason) => {
+        setProjectInventoryError(
+          reason instanceof Error ? reason.message : String(reason),
+        );
+        return undefined;
+      });
+    projectInventoryRequest.current = {
+      path: requestedProject.path,
+      promise: request,
+    };
+    void request.then(() => {
+      if (projectInventoryRequest.current?.promise === request) {
+        projectInventoryRequest.current = undefined;
+      }
+    });
+    return request;
+  }, [projects, requestedProject?.path]);
+  React.useEffect(() => {
+    if (!requestedProject?.path) return undefined;
+    if (projectSection === 'work') {
+      void refreshProjectInventory();
+      return undefined;
+    }
+    const timer = window.setTimeout(() => {
+      void refreshProjectInventory();
+    }, 250);
+    return () => window.clearTimeout(timer);
+  }, [projectSection, refreshProjectInventory, requestedProject?.path]);
   const planProjectRemoval = () => {
     if (!requestedProject) return;
     setProjectMenuOpen(false);
@@ -1046,18 +1325,44 @@ function GlobalWorkView({
         (row) => row.object_kind === 'assignment',
       )
     : [];
+  const inventoryRows = projectInventoryWorkRows(
+    projectInventory?.projectPath === requestedProject?.path
+      ? projectInventory
+      : undefined,
+    requestedProject,
+  );
   const projectRows = requestedProject
-    ? allAssignmentRows.filter(
-        (row) =>
-          resolveWorkProject(row.observations, projectsCatalog?.projects ?? [])
-            ?.id === requestedProject.id,
+    ? mergeProjectWorkRows(
+        allAssignmentRows.filter(
+          (row) =>
+            resolveWorkProject(
+              row.observations,
+              projectsCatalog?.projects ?? [],
+            )?.id === requestedProject.id,
+        ),
+        inventoryRows,
       )
     : [];
+  const visibleInventoryRows = inventoryRows.filter((row) => {
+    const completed = Boolean(
+      projectInventory?.works.find(
+        (work) => work.assignmentId === assignmentSelector(row.subject),
+      )?.settled,
+    );
+    return (
+      filter === 'all' || (filter === 'completed' ? completed : !completed)
+    );
+  });
   const rows = requestedProject
-    ? filteredAssignmentRows.filter(
-        (row) =>
-          resolveWorkProject(row.observations, projectsCatalog?.projects ?? [])
-            ?.id === requestedProject.id,
+    ? mergeProjectWorkRows(
+        filteredAssignmentRows.filter(
+          (row) =>
+            resolveWorkProject(
+              row.observations,
+              projectsCatalog?.projects ?? [],
+            )?.id === requestedProject.id,
+        ),
+        visibleInventoryRows,
       )
     : filteredAssignmentRows;
   const needle = search.trim().toLowerCase();
@@ -1070,8 +1375,12 @@ function GlobalWorkView({
         (item.workspace_id ?? '').toLowerCase().includes(needle),
       ),
   );
-  const current =
-    rows.find((row) => row.canonical_root === selected) ?? visible[0] ?? null;
+  const current = resolveSelectedProjectWorkRow(
+    rows,
+    visible,
+    selected,
+    selectedAssignmentId,
+  );
   const currentProject = current
     ? resolveWorkProject(current.observations, projectsCatalog?.projects ?? [])
     : undefined;
@@ -1079,7 +1388,67 @@ function GlobalWorkView({
     current?.object_kind === 'assignment'
       ? assignmentSelector(current.subject)
       : undefined;
+  const currentInventoryWork = projectInventory?.works.find(
+    (work) => work.assignmentId === workSelector,
+  );
+  const currentRetainedRun = runs.find(
+    (run) =>
+      run.workspace === currentProject?.path &&
+      run.work === workSelector &&
+      Boolean(run.receipt),
+  );
+  const currentReviewRun = preferredProjectReviewRun(
+    runs,
+    currentRetainedRun?.id,
+  );
+  const currentReviewRunning = Boolean(currentReviewRun?.running);
+  const currentReviewPassed =
+    currentReviewRun?.reviewReceipt?.status === 'review-passed';
+  const currentWorkSettled = isProjectWorkSettled(currentInventoryWork);
+  const currentReviewableRun =
+    currentRetainedRun?.receipt?.status === 'agent-finished' &&
+    isProjectWorkReviewable(currentInventoryWork)
+      ? currentRetainedRun
+      : undefined;
+  const retainedRestoreKey =
+    currentProject?.path &&
+    currentInventoryWork &&
+    shouldRestoreRetainedProjectRun(currentInventoryWork, current)
+      ? [
+          currentProject.path,
+          currentInventoryWork.initiativeId,
+          currentInventoryWork.assignmentId,
+        ].join('|')
+      : undefined;
+  const retainedRestoreStatus =
+    retainedRestoreKey && retainedRestoreState?.key === retainedRestoreKey
+      ? retainedRestoreState.status
+      : 'loading';
+  const retainedRunRestorePending = Boolean(
+    retainedRestoreKey &&
+      !currentRetainedRun &&
+      retainedRestoreStatus === 'loading',
+  );
+  const retainedRunRestoreFailed = Boolean(
+    retainedRestoreKey &&
+      !currentRetainedRun &&
+      retainedRestoreStatus === 'failed',
+  );
+  const retainedRunId = currentRetainedRun?.id;
+  const retainedProjectPath = currentProject?.path;
+  const retainedInitiativeId = currentInventoryWork?.initiativeId;
+  const retainedAssignmentId = currentInventoryWork?.assignmentId;
   const visibleRun = runs.find((run) => run.id === visibleRunId) ?? null;
+  const openVisibleRun = (runId: string) => {
+    setVisibleRunId(runId);
+    window.requestAnimationFrame(() => {
+      sessionPanelRef.current?.scrollIntoView({
+        behavior: 'smooth',
+        block: 'nearest',
+      });
+      sessionPanelRef.current?.focus({ preventScroll: true });
+    });
+  };
   const prepareRun = (provider: string) => {
     if (!currentProject || !workSelector) return;
     setRunBusy(`Checking ${provider} and the selected Work…`);
@@ -1102,6 +1471,98 @@ function GlobalWorkView({
       )
       .finally(() => setRunBusy(''));
   };
+  const prepareReview = (run: ProjectWorkRunSnapshot) => {
+    setRunBusy('Preparing a fresh independent review…');
+    setRunError('');
+    void refreshProjectInventory()
+      .then((inventory) => {
+        const work = inventory?.works.find(
+          (candidate) => candidate.assignmentId === run.work,
+        );
+        if (isProjectWorkSettled(work)) {
+          setStatus('Work is complete · retained evidence is available');
+          return undefined;
+        }
+        if (!isProjectWorkReviewable(work)) {
+          throw new Error(
+            work?.phase
+              ? `Review changes is not available while Work is ${work.phase}`
+              : 'Review changes is waiting for the current native Work phase',
+          );
+        }
+        return projects.planReview(run.id);
+      })
+      .then((plan) => {
+        if (plan) setReviewPlan({ runId: run.id, plan });
+      })
+      .catch((reason) =>
+        setRunError(reason instanceof Error ? reason.message : String(reason)),
+      )
+      .finally(() => setRunBusy(''));
+  };
+  const prepareClose = (continueAfter: boolean) => {
+    if (!currentProject || !currentInventoryWork) return;
+    setRunBusy('Preparing exact Work settlement…');
+    setRunError('');
+    void projects
+      .planClose(currentProject.path, currentInventoryWork)
+      .then((plan) => setClosePlan({ plan, continueAfter }))
+      .catch((reason) =>
+        setRunError(reason instanceof Error ? reason.message : String(reason)),
+      )
+      .finally(() => setRunBusy(''));
+  };
+  const restoredWorkKeys = React.useRef(new Set<string>());
+  React.useEffect(() => {
+    if (
+      !retainedRestoreKey ||
+      !retainedProjectPath ||
+      !retainedInitiativeId ||
+      !retainedAssignmentId
+    )
+      return;
+    if (retainedRunId) {
+      return;
+    }
+    const key = retainedRestoreKey;
+    if (restoredWorkKeys.current.has(key)) return;
+    restoredWorkKeys.current.add(key);
+    let active = true;
+    setRetainedRestoreState({ key, status: 'loading' });
+    setRunBusy(RESTORING_RETAINED_AGENT_RESULT);
+    setRunError('');
+    void projects
+      .resumeRun(retainedProjectPath, {
+        initiativeId: retainedInitiativeId,
+        assignmentId: retainedAssignmentId,
+      })
+      .then(() => {
+        if (!active) return;
+        setRetainedRestoreState({ key, status: 'settled' });
+      })
+      .catch((reason) => {
+        if (active) {
+          restoredWorkKeys.current.delete(key);
+          setRetainedRestoreState({ key, status: 'failed' });
+          setRunError(
+            reason instanceof Error ? reason.message : String(reason),
+          );
+        }
+      })
+      .finally(() => {
+        setRunBusy(settleRetainedProjectRunBusy);
+      });
+    return () => {
+      active = false;
+    };
+  }, [
+    projects,
+    retainedAssignmentId,
+    retainedInitiativeId,
+    retainedProjectPath,
+    retainedRestoreKey,
+    retainedRunId,
+  ]);
   const confirmRun = () => {
     if (!runPlan) return;
     const pending = projects.run(
@@ -1122,8 +1583,60 @@ function GlobalWorkView({
       )
       .finally(() => setRunBusy(''));
   };
+  const confirmReview = () => {
+    if (!reviewPlan) return;
+    const pending = projects.review(
+      reviewPlan.runId,
+      reviewPlan.plan,
+      () => undefined,
+    );
+    setReviewPlan(undefined);
+    setVisibleRunId(
+      preferredProjectReviewRun(projects.runs(), reviewPlan.runId)?.id ??
+        reviewPlan.runId,
+    );
+    setRunBusy('Starting independent review…');
+    void pending
+      .then(() => {
+        void refreshProjectInventory();
+      })
+      .catch((reason) =>
+        setRunError(reason instanceof Error ? reason.message : String(reason)),
+      )
+      .finally(() => setRunBusy(''));
+  };
+  const confirmClose = () => {
+    if (!closePlan) return;
+    const requestedContinuation = closePlan.continueAfter;
+    const pending = projects.close(closePlan.plan);
+    setClosePlan(undefined);
+    setRunBusy('Settling Work and retaining portable evidence…');
+    setRunError('');
+    void pending
+      .then((receipt) => {
+        if (!receipt.ok || receipt.status !== 'completed') {
+          throw new Error(
+            receipt.message || `Work settlement ended as ${receipt.status}`,
+          );
+        }
+        setVisibleRunId(null);
+        return refreshProjectInventory().then(() => {
+          if (requestedContinuation) setNewWorkOpen(true);
+        });
+      })
+      .catch((reason) =>
+        setRunError(reason instanceof Error ? reason.message : String(reason)),
+      )
+      .finally(() => setRunBusy(''));
+  };
+  const orderedProviders = [
+    agentProvider,
+    ...AGENT_PROVIDERS.filter((provider) => provider !== agentProvider),
+  ];
 
-  const workLoading = !snapshot || !projectsCatalogReady;
+  const workLoading = requestedProject
+    ? !projectInventory || !projectsCatalogReady
+    : !snapshot || !projectsCatalogReady;
   const projectNameFallback =
     requestedProjectPath?.split(/[\\/]/u).filter(Boolean).at(-1) ??
     requestedProjectId ??
@@ -1152,6 +1665,343 @@ function GlobalWorkView({
       ))}
     </div>
   );
+  const selectWork = (row: GlobalWorkRow) => {
+    setSelected(row.canonical_root);
+    setSelectedAssignmentId(assignmentSelector(row.subject));
+    if (requestedProject?.path) void refreshProjectInventory();
+  };
+  const workDetail = (
+    <section style={{ ...panelStyle, flex: 1, minHeight: 0, overflow: 'auto' }}>
+      {current ? (
+        <>
+          <h2 style={headingStyle}>
+            {current.display.title || current.subject}
+          </h2>
+          <div style={{ ...mono, color: '#9cdcfe' }}>
+            Work · {current.subject}
+          </div>
+          <div style={{ ...mono, color: '#cccccc', marginTop: 8 }}>
+            status:{' '}
+            {current.display.status ||
+              current.display.portfolio_state ||
+              'open'}
+          </div>
+          {(current.display.next_actions ?? []).map((action) => (
+            <div key={action} style={{ ...mono, color: '#dcdcaa' }}>
+              next: {action}
+            </div>
+          ))}
+          {current.object_kind === 'assignment' && currentProject ? (
+            <>
+              <h2 style={{ ...headingStyle, marginTop: 14 }}>
+                {currentWorkSettled
+                  ? 'Work completed'
+                  : currentReviewRunning
+                    ? 'Independent review running'
+                    : currentReviewPassed
+                      ? 'Independent review passed'
+                      : retainedRunRestorePending
+                        ? 'Restoring Agent result'
+                        : currentReviewableRun
+                          ? 'Review Agent result'
+                          : 'Run with an Agent'}
+              </h2>
+              <div style={{ ...mono, color: '#858585', marginBottom: 8 }}>
+                {currentWorkSettled
+                  ? `Project · ${currentProject.name}. The approved result and portable Work evidence are retained.`
+                  : currentReviewRunning
+                    ? `Project · ${currentProject.name}. A fresh read-only reviewer is checking the retained Agent result.`
+                    : currentReviewPassed
+                      ? `Project · ${currentProject.name}. The retained Agent result passed independent review.`
+                      : retainedRunRestorePending
+                        ? `Project · ${currentProject.name}. Recovering the retained Agent result and its next action.`
+                        : currentReviewableRun
+                          ? `Project · ${currentProject.name}. The retained Agent result requires an independent review.`
+                          : `Project · ${currentProject.name}. Preview the exact effects before the Agent starts.`}
+              </div>
+              <div style={{ display: 'flex', gap: 7, flexWrap: 'wrap' }}>
+                {currentWorkSettled ? (
+                  <>
+                    <span
+                      style={{
+                        ...mono,
+                        padding: '6px 10px',
+                        border: '1px solid #4ec9b0',
+                        borderRadius: 5,
+                        background: '#184b32',
+                        color: '#d8f3dc',
+                        fontWeight: 700,
+                      }}
+                    >
+                      COMPLETED · EVIDENCE RETAINED
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setNewWorkOpen(true)}
+                      style={{
+                        ...mono,
+                        padding: '6px 10px',
+                        border: '1px solid #4fc1ff',
+                        borderRadius: 5,
+                        background: '#0e639c',
+                        color: '#f1f1f1',
+                        cursor: 'pointer',
+                        fontWeight: 700,
+                      }}
+                    >
+                      Create next Work
+                    </button>
+                  </>
+                ) : retainedRunRestorePending || retainedRunRestoreFailed ? (
+                  <button
+                    type="button"
+                    disabled
+                    style={{
+                      ...mono,
+                      padding: '6px 10px',
+                      border: '1px solid #5a5a5a',
+                      borderRadius: 5,
+                      background: '#3a3a3a',
+                      color: '#c8c8c8',
+                    }}
+                  >
+                    {retainedRunRestorePending
+                      ? 'Restoring Agent result…'
+                      : 'Agent result unavailable'}
+                  </button>
+                ) : currentReviewRunning || currentReviewPassed ? (
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (currentReviewRun)
+                          openVisibleRun(currentReviewRun.id);
+                      }}
+                      style={{
+                        ...mono,
+                        padding: '6px 10px',
+                        border: '1px solid #4fc1ff',
+                        borderRadius: 5,
+                        background: '#0e639c',
+                        color: '#f1f1f1',
+                        cursor: 'pointer',
+                        fontWeight: 700,
+                      }}
+                    >
+                      Open Review
+                    </button>
+                    {currentReviewPassed ? (
+                      <>
+                        <button
+                          type="button"
+                          disabled={Boolean(runBusy || closePlan)}
+                          onClick={() => prepareClose(false)}
+                          style={{
+                            ...mono,
+                            padding: '6px 10px',
+                            border: '1px solid #4ec9b0',
+                            borderRadius: 5,
+                            background: '#184b32',
+                            color: '#f1f1f1',
+                            cursor: runBusy || closePlan ? 'wait' : 'pointer',
+                            fontWeight: 700,
+                          }}
+                        >
+                          Settle Work…
+                        </button>
+                        <button
+                          type="button"
+                          disabled={Boolean(runBusy || closePlan)}
+                          onClick={() => prepareClose(true)}
+                          style={{
+                            ...mono,
+                            padding: '6px 10px',
+                            border: '1px solid #d7ba7d',
+                            borderRadius: 5,
+                            background: '#3b321f',
+                            color: '#f1f1f1',
+                            cursor: runBusy || closePlan ? 'wait' : 'pointer',
+                          }}
+                        >
+                          Continue with new Work…
+                        </button>
+                      </>
+                    ) : null}
+                  </>
+                ) : currentReviewableRun ? (
+                  <button
+                    type="button"
+                    disabled={Boolean(runBusy || reviewPlan)}
+                    onClick={() => prepareReview(currentReviewableRun)}
+                    style={{
+                      ...mono,
+                      padding: '6px 10px',
+                      border: '1px solid #4fc1ff',
+                      borderRadius: 5,
+                      background: '#0e639c',
+                      color: '#f1f1f1',
+                      cursor: runBusy || reviewPlan ? 'wait' : 'pointer',
+                      fontWeight: 700,
+                    }}
+                  >
+                    Review changes
+                  </button>
+                ) : (
+                  <div
+                    style={{
+                      display: 'inline-flex',
+                      position: 'relative',
+                      alignItems: 'stretch',
+                    }}
+                  >
+                    <button
+                      type="button"
+                      disabled={Boolean(runBusy)}
+                      onClick={() => prepareRun(agentProvider)}
+                      style={{
+                        ...controlButtonStyle({
+                          tone: 'primary',
+                          disabled: Boolean(runBusy),
+                        }),
+                        borderRight: 'none',
+                        borderRadius: '5px 0 0 5px',
+                        cursor: runBusy ? 'wait' : 'pointer',
+                      }}
+                    >
+                      Run Agent · {agentProviderLabel(agentProvider)}
+                    </button>
+                    <button
+                      type="button"
+                      aria-label="Choose Agent"
+                      aria-expanded={agentMenuOpen}
+                      disabled={Boolean(runBusy)}
+                      onClick={() => setAgentMenuOpen((open) => !open)}
+                      style={{
+                        ...controlButtonStyle({
+                          tone: 'primary',
+                          disabled: Boolean(runBusy),
+                        }),
+                        width: 32,
+                        padding: 0,
+                        borderRadius: '0 5px 5px 0',
+                        background: '#0b5686',
+                        cursor: runBusy ? 'wait' : 'pointer',
+                      }}
+                    >
+                      ▾
+                    </button>
+                    {agentMenuOpen ? (
+                      <div
+                        role="menu"
+                        aria-label="Agent choices"
+                        style={{
+                          ...controlMenuStyle,
+                          top: 'calc(100% + 4px)',
+                          left: 0,
+                          minWidth: '100%',
+                        }}
+                      >
+                        {orderedProviders.map((provider) => (
+                          <button
+                            key={provider}
+                            type="button"
+                            role="menuitemradio"
+                            aria-checked={provider === agentProvider}
+                            onClick={() => {
+                              setAgentProvider(provider);
+                              setAgentMenuOpen(false);
+                            }}
+                            style={{
+                              ...controlMenuItemStyle(
+                                provider === agentProvider,
+                              ),
+                            }}
+                          >
+                            {provider === agentProvider ? '✓ ' : ''}
+                            {agentProviderLabel(provider)}
+                          </button>
+                        ))}
+                      </div>
+                    ) : null}
+                  </div>
+                )}
+                {currentReviewRun &&
+                !currentReviewRunning &&
+                !currentReviewPassed ? (
+                  <button
+                    type="button"
+                    onClick={() => openVisibleRun(currentReviewRun.id)}
+                    style={{
+                      ...mono,
+                      padding: '6px 9px',
+                      border: '1px solid #4fc1ff',
+                      borderRadius: 5,
+                      background: '#102c3c',
+                      color: '#f1f1f1',
+                      cursor: 'pointer',
+                    }}
+                  >
+                    Open Review
+                  </button>
+                ) : null}
+                {currentRetainedRun ? (
+                  <button
+                    type="button"
+                    onClick={() => openVisibleRun(currentRetainedRun.id)}
+                    style={{
+                      ...mono,
+                      padding: '6px 9px',
+                      border: '1px solid #4fc1ff',
+                      borderRadius: 5,
+                      background: '#102c3c',
+                      color: '#f1f1f1',
+                      cursor: 'pointer',
+                    }}
+                  >
+                    Open Session
+                  </button>
+                ) : null}
+              </div>
+              {runBusy ? (
+                <div style={{ ...mono, color: '#dcdcaa', marginTop: 8 }}>
+                  ◌ {runBusy}
+                </div>
+              ) : null}
+              {runError ? (
+                <div style={{ ...mono, color: '#f48771', marginTop: 8 }}>
+                  {runError}
+                </div>
+              ) : null}
+            </>
+          ) : null}
+          <h2 style={{ ...headingStyle, marginTop: 14 }}>Project evidence</h2>
+          {current.observations.map((observation, index) => (
+            <div
+              key={`${observation.workspace_id ?? 'workspace'}:${index}`}
+              style={{ ...mono, color: '#858585' }}
+            >
+              {observation.workspace_id ?? 'unknown workspace'} ·{' '}
+              {observation.availability ?? 'unknown'}
+            </div>
+          ))}
+          <div
+            style={{
+              ...mono,
+              color: '#6a6a6a',
+              overflowWrap: 'anywhere',
+              marginTop: 14,
+            }}
+          >
+            root: {current.canonical_root}
+          </div>
+        </>
+      ) : (
+        <div style={{ ...mono, color: '#6a6a6a' }}>
+          Select Work to inspect its status, next action, and Agent controls.
+        </div>
+      )}
+    </section>
+  );
   const workColumns = (
     <div
       style={{
@@ -1162,173 +2012,16 @@ function GlobalWorkView({
         marginTop: 8,
       }}
     >
-      <section
-        style={{ ...panelStyle, width: 460, overflow: 'auto', flexShrink: 0 }}
-      >
-        {visible.map((row) => (
-          <button
-            type="button"
-            key={row.canonical_root}
-            onClick={() => setSelected(row.canonical_root)}
-            style={{
-              ...mono,
-              display: 'block',
-              width: '100%',
-              textAlign: 'left',
-              padding: 8,
-              marginBottom: 3,
-              border: 'none',
-              borderRadius: 4,
-              cursor: 'pointer',
-              background:
-                current?.canonical_root === row.canonical_root
-                  ? '#04395e'
-                  : 'transparent',
-              color: '#cccccc',
-            }}
-          >
-            <span style={{ color: row.conflict ? '#f48771' : '#4ec9b0' }}>
-              [{row.display.status || row.display.portfolio_state || 'open'}]
-            </span>{' '}
-            {row.display.title || row.subject}
-            <div style={{ color: '#858585', fontSize: 11 }}>
-              {row.observations
-                .map((item) => item.workspace_id)
-                .filter(Boolean)
-                .join(' · ')}
-            </div>
-          </button>
-        ))}
-        {visible.length === 0 ? (
-          <div style={{ ...mono, color: '#6a6a6a', padding: 8 }}>
-            No Work matches this view.
-          </div>
-        ) : null}
-      </section>
-      <section style={{ ...panelStyle, flex: 1, overflow: 'auto' }}>
-        {current ? (
-          <>
-            <h2 style={headingStyle}>
-              {current.display.title || current.subject}
-            </h2>
-            <div style={{ ...mono, color: '#9cdcfe' }}>
-              Work · {current.subject}
-            </div>
-            <div style={{ ...mono, color: '#cccccc', marginTop: 8 }}>
-              status:{' '}
-              {current.display.status ||
-                current.display.portfolio_state ||
-                'open'}
-            </div>
-            {(current.display.next_actions ?? []).map((action) => (
-              <div key={action} style={{ ...mono, color: '#dcdcaa' }}>
-                next: {action}
-              </div>
-            ))}
-            {current.object_kind === 'assignment' && currentProject ? (
-              <>
-                <h2 style={{ ...headingStyle, marginTop: 14 }}>
-                  Run with an Agent
-                </h2>
-                <div style={{ ...mono, color: '#858585', marginBottom: 8 }}>
-                  Project · {currentProject.name}. Preview the exact effects
-                  before the Agent starts.
-                </div>
-                <div style={{ display: 'flex', gap: 7, flexWrap: 'wrap' }}>
-                  {(['codex', 'claude', 'opencode'] as const).map(
-                    (provider) => (
-                      <button
-                        key={provider}
-                        type="button"
-                        disabled={Boolean(runBusy)}
-                        onClick={() => prepareRun(provider)}
-                        style={{
-                          ...mono,
-                          padding: '6px 9px',
-                          border: '1px solid #4b4b4b',
-                          borderRadius: 5,
-                          background: '#2d2d30',
-                          color: '#f1f1f1',
-                          cursor: 'pointer',
-                        }}
-                      >
-                        Run {provider === 'opencode' ? 'OpenCode' : provider}
-                      </button>
-                    ),
-                  )}
-                  {runs.some(
-                    (run) =>
-                      run.workspace === currentProject.path &&
-                      run.work === workSelector,
-                  ) ? (
-                    <button
-                      type="button"
-                      onClick={() =>
-                        setVisibleRunId(
-                          runs.find(
-                            (run) =>
-                              run.workspace === currentProject.path &&
-                              run.work === workSelector,
-                          )?.id ?? null,
-                        )
-                      }
-                      style={{
-                        ...mono,
-                        padding: '6px 9px',
-                        border: '1px solid #4fc1ff',
-                        borderRadius: 5,
-                        background: '#102c3c',
-                        color: '#f1f1f1',
-                        cursor: 'pointer',
-                      }}
-                    >
-                      Open Session
-                    </button>
-                  ) : null}
-                </div>
-                {runBusy ? (
-                  <div style={{ ...mono, color: '#dcdcaa', marginTop: 8 }}>
-                    ◌ {runBusy}
-                  </div>
-                ) : null}
-                {runError ? (
-                  <div style={{ ...mono, color: '#f48771', marginTop: 8 }}>
-                    {runError}
-                  </div>
-                ) : null}
-              </>
-            ) : null}
-            <h2 style={{ ...headingStyle, marginTop: 14 }}>Project evidence</h2>
-            {current.observations.map((observation, index) => (
-              <div
-                key={`${observation.workspace_id ?? 'workspace'}:${index}`}
-                style={{ ...mono, color: '#858585' }}
-              >
-                {observation.workspace_id ?? 'unknown workspace'} ·{' '}
-                {observation.availability ?? 'unknown'}
-              </div>
-            ))}
-            <div
-              style={{
-                ...mono,
-                color: '#6a6a6a',
-                overflowWrap: 'anywhere',
-                marginTop: 14,
-              }}
-            >
-              root: {current.canonical_root}
-            </div>
-          </>
-        ) : (
-          <div style={{ ...mono, color: '#6a6a6a' }}>
-            Select Work to inspect its status, next action, and Agent controls.
-          </div>
-        )}
-      </section>
+      <ProjectWorkList
+        rows={visible}
+        currentRoot={current?.canonical_root}
+        onSelect={selectWork}
+      />
+      {workDetail}
     </div>
   );
   const sessionPanel = visibleRun ? (
-    <div style={{ marginTop: 8 }}>
+    <div ref={sessionPanelRef} tabIndex={-1} style={{ marginTop: 8 }}>
       <ProjectWorkRunSession
         run={visibleRun}
         title={
@@ -1336,6 +2029,16 @@ function GlobalWorkView({
             ?.display.title
         }
         onClose={() => setVisibleRunId(null)}
+        onReview={
+          visibleRun.receipt?.status === 'agent-finished' &&
+          isProjectWorkReviewable(
+            projectInventory?.works.find(
+              (work) => work.assignmentId === visibleRun.work,
+            ),
+          )
+            ? () => prepareReview(visibleRun)
+            : undefined
+        }
       />
     </div>
   ) : null;
@@ -1349,14 +2052,35 @@ function GlobalWorkView({
           onConfirm={confirmRun}
         />
       ) : null}
+      {reviewPlan ? (
+        <ProjectWorkReviewConfirmation
+          plan={reviewPlan.plan}
+          busy={Boolean(runBusy)}
+          onCancel={() => setReviewPlan(undefined)}
+          onConfirm={confirmReview}
+        />
+      ) : null}
+      {closePlan ? (
+        <ProjectWorkCloseConfirmation
+          plan={closePlan.plan}
+          continueAfter={closePlan.continueAfter}
+          busy={Boolean(runBusy)}
+          onCancel={() => setClosePlan(undefined)}
+          onConfirm={confirmClose}
+        />
+      ) : null}
       {newWorkOpen && requestedProject ? (
         <NewProjectWorkDialog
           project={requestedProject}
           projects={projects}
           onClose={() => setNewWorkOpen(false)}
-          onCreated={() => {
+          onCreated={(plan, receipt) => {
             setNewWorkOpen(false);
             setProjectSection('work');
+            void refreshProjectInventory().then(() => {
+              setSelected(receipt.requestRoot);
+              setSelectedAssignmentId(plan.assignmentId);
+            });
           }}
         />
       ) : null}
@@ -1451,10 +2175,17 @@ function GlobalWorkView({
           projects={projects}
           section={projectSection}
           selectedFile={selectedProjectFile}
+          works={visible}
+          selectedWorkRoot={current?.canonical_root}
+          workFilter={filter}
+          workSearch={search}
           workCount={projectRows.length}
           workLoading={workLoading}
           onSection={setProjectSection}
           onSelectFile={setSelectedProjectFile}
+          onSelectWork={selectWork}
+          onWorkFilter={setFilter}
+          onWorkSearch={setSearch}
         />
         <main
           style={{
@@ -1604,8 +2335,13 @@ function GlobalWorkView({
             </section>
           ) : (
             <>
-              {workControls}
-              {workColumns}
+              {projectInventoryError ? (
+                <div style={{ ...mono, color: '#dcdcaa', marginTop: 6 }}>
+                  Retained Project Work could not refresh:{' '}
+                  {projectInventoryError}
+                </div>
+              ) : null}
+              {workDetail}
             </>
           )}
           {sessionPanel}

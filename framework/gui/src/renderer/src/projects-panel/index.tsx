@@ -20,6 +20,7 @@ import {
   WORKSPACE_START_CONTINUATION_CHANNEL,
 } from '../../../sandbox/channels';
 import { createAgentSessionProxy } from '../agent-session-proxy';
+import { AgentWorkLabPanel } from '../agent-work-lab';
 import { guiKungfuCliArgs } from '../runtime';
 
 export function openRendererProjects() {
@@ -38,9 +39,13 @@ export function openRendererProjects() {
     args: string[],
     options: {
       env: Record<string, string | undefined>;
-      stdio: ['ignore', 'pipe', 'pipe'];
+      stdio: ['ignore' | 'pipe', 'pipe', 'pipe'];
     },
   ) => {
+    stdin: {
+      end: (input: string) => void;
+      once: (event: 'error', listener: (reason: Error) => void) => void;
+    };
     stdout: {
       on: (event: 'data', listener: (chunk: unknown) => void) => void;
     };
@@ -83,10 +88,59 @@ export function openRendererProjects() {
           args(values),
           options,
           (error, stdout, stderr) => {
-            if (error) reject(new Error(stderr.trim() || error.message));
-            else resolve(stdout);
+            if (error) {
+              reject(
+                new Error(stderr.trim() || stdout.trim() || error.message),
+              );
+            } else resolve(stdout);
           },
         );
+      }),
+    execFileInput: (file, values, input, options) =>
+      new Promise<string>((resolve, reject) => {
+        const child = childProcess.spawn(file, args(values), {
+          env: options.env,
+          stdio: ['pipe', 'pipe', 'pipe'],
+        });
+        let stdout = '';
+        let stderr = '';
+        let size = 0;
+        let settled = false;
+        const fail = (reason: Error) => {
+          if (settled) return;
+          settled = true;
+          child.kill();
+          reject(reason);
+        };
+        const append = (current: string, chunk: unknown) => {
+          const text = String(chunk);
+          size += text.length;
+          if (size > options.maxBuffer) {
+            fail(new Error('Project Work capture output exceeded maxBuffer'));
+            return current;
+          }
+          return current + text;
+        };
+        child.stdout.on('data', (chunk) => {
+          stdout = append(stdout, chunk);
+        });
+        child.stderr.on('data', (chunk) => {
+          stderr = append(stderr, chunk);
+        });
+        child.stdin.once('error', fail);
+        child.once('error', (reason) =>
+          fail(reason instanceof Error ? reason : new Error(String(reason))),
+        );
+        child.once('close', (code) => {
+          if (settled) return;
+          if (code !== 0) {
+            fail(new Error(stderr.trim() || `kungfu capture exited ${code}`));
+            return;
+          }
+          settled = true;
+          resolve(stdout);
+        });
+        child.stdin.end(input);
       }),
     execFileEvents: (file, values, options, onLine) =>
       new Promise<void>((resolve, reject) => {
@@ -871,4 +925,122 @@ export class KfxErrorBoundary extends React.Component<
     }
     return this.props.children;
   }
+}
+
+export type CoreSurfaceId = 'projects' | 'agent-work-lab' | 'core-work';
+
+export function useRetainedCoreSurfaces({
+  projectsOpen,
+  labOpen,
+  coreWorkOpen,
+}: {
+  projectsOpen: boolean;
+  labOpen: boolean;
+  coreWorkOpen: boolean;
+}): ReadonlySet<CoreSurfaceId> {
+  const [retained, setRetained] = React.useState<ReadonlySet<CoreSurfaceId>>(
+    () =>
+      new Set([
+        ...(projectsOpen ? (['projects'] as const) : []),
+        ...(labOpen ? (['agent-work-lab'] as const) : []),
+        ...(coreWorkOpen ? (['core-work'] as const) : []),
+      ]),
+  );
+  React.useEffect(() => {
+    const visible = projectsOpen
+      ? 'projects'
+      : labOpen
+        ? 'agent-work-lab'
+        : coreWorkOpen
+          ? 'core-work'
+          : undefined;
+    if (!visible) return;
+    setRetained((current) =>
+      current.has(visible) ? current : new Set([...current, visible]),
+    );
+  }, [coreWorkOpen, labOpen, projectsOpen]);
+  return retained;
+}
+
+type ProjectsPanelProps = React.ComponentProps<typeof ProjectsPanel>;
+type LabPanelProps = React.ComponentProps<typeof AgentWorkLabPanel>;
+
+export function RetainedCoreSurfaceStack({
+  visible,
+  retained,
+  projects,
+  focusedPath,
+  onCatalog,
+  onOpenProject,
+  onOpenExistingProject,
+  onRestoreProject,
+  lab,
+  startup,
+  onOpenWork,
+  onOpenLabExistingProject,
+  onOpenStarterProject,
+  work,
+}: {
+  visible?: CoreSurfaceId;
+  retained: ReadonlySet<CoreSurfaceId>;
+  projects: ProjectsPanelProps['projects'];
+  focusedPath: ProjectsPanelProps['focusedPath'];
+  onCatalog: ProjectsPanelProps['onCatalog'];
+  onOpenProject: ProjectsPanelProps['onOpenProject'];
+  onOpenExistingProject: ProjectsPanelProps['onOpenExistingProject'];
+  onRestoreProject: ProjectsPanelProps['onRestoreProject'];
+  lab: LabPanelProps['lab'];
+  startup: LabPanelProps['startup'];
+  onOpenWork: LabPanelProps['onOpenWork'];
+  onOpenLabExistingProject: LabPanelProps['onOpenExistingProject'];
+  onOpenStarterProject: LabPanelProps['onOpenStarterProject'];
+  work: React.ReactNode;
+}) {
+  return (
+    <>
+      {visible === 'projects' || retained.has('projects') ? (
+        <div
+          style={{
+            display: visible === 'projects' ? 'block' : 'none',
+            height: '100%',
+          }}
+        >
+          <ProjectsPanel
+            projects={projects}
+            focusedPath={focusedPath}
+            onCatalog={onCatalog}
+            onOpenProject={onOpenProject}
+            onOpenExistingProject={onOpenExistingProject}
+            onRestoreProject={onRestoreProject}
+          />
+        </div>
+      ) : null}
+      {visible === 'agent-work-lab' || retained.has('agent-work-lab') ? (
+        <div
+          style={{
+            display: visible === 'agent-work-lab' ? 'block' : 'none',
+            height: '100%',
+          }}
+        >
+          <AgentWorkLabPanel
+            lab={lab}
+            startup={startup}
+            onOpenWork={onOpenWork}
+            onOpenExistingProject={onOpenLabExistingProject}
+            onOpenStarterProject={onOpenStarterProject}
+          />
+        </div>
+      ) : null}
+      {visible === 'core-work' || retained.has('core-work') ? (
+        <div
+          style={{
+            display: visible === 'core-work' ? 'block' : 'none',
+            height: '100%',
+          }}
+        >
+          {work}
+        </div>
+      ) : null}
+    </>
+  );
 }

@@ -12,11 +12,14 @@ from __future__ import annotations
 import argparse
 import base64
 import binascii
+import copy
 import hashlib
 import json
+import os
 import sys
+import time
 from pathlib import Path
-from typing import Any, Mapping
+from typing import Any, Mapping, Sequence
 
 
 CONTRACT_FILE = "exit_verifier.contract.json"
@@ -27,6 +30,10 @@ INFO_SCHEMA = "kungfu.exit-verifier-info/v1"
 VERIFIER_ID = "kungfu-exit-verifier"
 VERIFIER_VERSION = 1
 _ROOT_PREFIX = b"kungfu.exit-verifier.root/v1\0"
+STATUS_SCHEMA = "kungfu.exit-history.status/v1"
+EXPORT_OBSERVER_SCHEMA = "kungfu.exit-history.export-observer/v1"
+REBUILD_SCHEMA = "kungfu.exit-history.projection-rebuild/v1"
+_THIN_CAPABILITIES = ["inspect", "verify-inventory"]
 
 
 def _canonical(value: Any) -> bytes:
@@ -432,6 +439,267 @@ def verify_file(path: str | Path) -> dict[str, Any]:
         return verify_bytes(candidate.read_bytes())
     except OSError as error:
         return _rejected("package-read-failed", str(error))
+
+
+def _export_observer_path(runtime_dir: str | Path) -> Path:
+    return Path(runtime_dir).expanduser() / "exit" / "history-export-observer.json"
+
+
+def record_verified_export(
+    runtime_dir: str | Path, package: Mapping[str, Any]
+) -> dict[str, Any]:
+    """Record a disposable observer projection after full package verification."""
+
+    from kungfu import exit_bundle
+
+    inspection = exit_bundle.inspect(package)
+    manifest = package["manifest"]
+    body = {
+        "schema": EXPORT_OBSERVER_SCHEMA,
+        "bundleId": manifest["bundleId"],
+        "mode": manifest["mode"],
+        "bundleRoot": manifest["bundleRoot"],
+        "packageRoot": package["packageRoot"],
+        "memberCount": len(manifest["members"]),
+        "verifiedMembers": list(inspection["verifiedMembers"]),
+        "loss": list(manifest["loss"]),
+        "authority": "disposable-observer-projection",
+    }
+    body["observerRoot"] = exit_bundle._root("history-export-observer", body)
+    path = _export_observer_path(runtime_dir)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    temporary = path.with_name(f".{path.name}.{os.getpid()}.{time.time_ns()}.tmp")
+    try:
+        with temporary.open("x", encoding="utf-8") as stream:
+            json.dump(body, stream, indent=2, sort_keys=True)
+            stream.write("\n")
+            stream.flush()
+            os.fsync(stream.fileno())
+        os.replace(temporary, path)
+    finally:
+        temporary.unlink(missing_ok=True)
+    return body
+
+
+def _read_verified_export(runtime_dir: str | Path) -> dict[str, Any] | None:
+    from kungfu import exit_bundle
+
+    path = _export_observer_path(runtime_dir)
+    if not path.is_file():
+        return None
+    try:
+        body = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as error:
+        raise exit_bundle.ExitBundleError(
+            "history-export-observer-invalid",
+            "history export observer projection is unreadable",
+        ) from error
+    if not isinstance(body, dict) or body.get("schema") != EXPORT_OBSERVER_SCHEMA:
+        raise exit_bundle.ExitBundleError(
+            "history-export-observer-invalid",
+            "history export observer projection schema is invalid",
+        )
+    expected = exit_bundle._root(
+        "history-export-observer",
+        {key: value for key, value in body.items() if key != "observerRoot"},
+    )
+    if body.get("observerRoot") != expected:
+        raise exit_bundle.ExitBundleError(
+            "history-export-observer-root-mismatch",
+            "history export observer projection root does not match",
+        )
+    return body
+
+
+def status(
+    runtime_dir: str | Path,
+    request: Mapping[str, Any] | None = None,
+    *,
+    config_home: str | Path | None = None,
+) -> dict[str, Any]:
+    """Project the governed history contract without becoming data authority."""
+
+    from kungfu import exit_bundle
+
+    contract = exit_bundle._contract()
+    inventory: list[dict[str, Any]] = [
+        {
+            "kind": str(row["id"]),
+            "authority": str(row["owner"]),
+            "protocol": str(row["protocol"]),
+            "modes": list(row["modes"]),
+        }
+        for row in contract.get("memberInventory") or []
+        if row.get("eligibleMember") is True
+    ]
+    inventory.sort(key=lambda row: row["kind"])
+    last_export = _read_verified_export(runtime_dir)
+    body: dict[str, Any] = {
+        "schema": STATUS_SCHEMA,
+        "ok": True,
+        "state": "contract-ready",
+        "coverage": "not-evaluated",
+        "authority": {
+            "composition": "kungfu.exit-bundle",
+            "memberDomainsRemainAuthoritative": True,
+            "observerMutation": False,
+        },
+        "contractRoot": exit_bundle._schema_root(contract),
+        "runtimeInitialized": Path(runtime_dir).expanduser().exists(),
+        "eligibleMembers": inventory,
+        "selectedScope": None,
+        "lastVerifiedExport": last_export,
+        "nextActions": [
+            "kungfu exit history status --file <request.json> --json",
+            "kungfu exit history export --file <request.json> --out <exit.json> --json",
+        ],
+        "nonClaims": [
+            "contract-ready-does-not-prove-selected-scope-coverage",
+            "software-portability-does-not-prove-off-host-backup",
+            "observer-state-does-not-settle-or-mutate-member-work",
+        ],
+    }
+    if last_export is not None:
+        body.update(
+            {
+                "state": "degraded" if last_export["loss"] else "verified",
+                "coverage": (
+                    "last-export-explicit-loss"
+                    if last_export["loss"]
+                    else "last-export-content-verified"
+                ),
+                "nextActions": [
+                    "kungfu exit history export --file <request.json> --out <exit.json> --json",
+                    "kungfu exit history verify --file <exit.json> --json",
+                ],
+            }
+        )
+    if request is not None:
+        thin_request = copy.deepcopy(dict(request))
+        thin_request["mode"] = "thin"
+        thin_request["requiredCapabilities"] = list(_THIN_CAPABILITIES)
+        thin_request["equivalenceLevels"] = ["exact-record-roots"]
+        package = exit_bundle.build(runtime_dir, thin_request, config_home=config_home)
+        inspection = exit_bundle.inspect(package)
+        manifest = package["manifest"]
+        body.update(
+            {
+                "state": "inventory-verified",
+                "coverage": "selected-scope-inventory",
+                "selectedScope": {
+                    "id": manifest["scope"]["id"],
+                    "root": manifest["scope"]["root"],
+                    "bundleId": manifest["bundleId"],
+                    "bundleRoot": manifest["bundleRoot"],
+                    "inventoryMembers": [
+                        {
+                            "memberId": row["memberId"],
+                            "identityRoot": row["identityRoot"],
+                            "contentRoot": row["contentRoot"],
+                        }
+                        for row in manifest["members"]
+                    ],
+                    "contentVerifiedMembers": list(inspection["verifiedMembers"]),
+                    "intentionalThinLoss": list(manifest["loss"]),
+                },
+                "nextActions": [
+                    "kungfu exit history export --file <request.json> --out <exit.json> --json",
+                    "kungfu exit history verify --file <exit.json> --json",
+                ],
+            }
+        )
+    body["statusRoot"] = exit_bundle._root("history-status", body)
+    return body
+
+
+def rebuild_projections(
+    runtime_dir: str | Path,
+    *,
+    projections: Sequence[str] | None = None,
+    execute: bool = False,
+    authorized_by: str = "",
+) -> dict[str, Any]:
+    """Rebuild declared projections from local authorities, never from UI state."""
+
+    from kungfu import exit_bundle
+
+    selected = sorted(set(projections or ("episode", "fact-kernel")))
+    unknown = sorted(set(selected) - {"episode", "fact-kernel"})
+    if unknown:
+        raise exit_bundle.ExitBundleError(
+            "history-projection-unsupported",
+            "unsupported history projection selection",
+            projections=unknown,
+        )
+    operations = [
+        {
+            "projection": projection,
+            "authority": (
+                "yijinjing-journal" if projection == "episode" else "native-fact-kernel"
+            ),
+            "mutation": "rebuildable-projection-only",
+        }
+        for projection in selected
+    ]
+    body: dict[str, Any] = {
+        "schema": REBUILD_SCHEMA,
+        "ok": True,
+        "status": "planned" if not execute else "rebuilt",
+        "execute": execute,
+        "operations": operations,
+        "receipts": [],
+        "authorityMutation": False,
+        "nextActions": (
+            ["kungfu exit history rebuild --execute --authorized-by <actor> --json"]
+            if not execute
+            else []
+        ),
+    }
+    if not execute:
+        body["receiptRoot"] = exit_bundle._root("history-projection-rebuild", body)
+        return body
+    actor = authorized_by.strip()
+    if not actor:
+        raise exit_bundle.ExitBundleError(
+            "authorization-actor-required",
+            "projection rebuild requires authorized_by",
+        )
+
+    from kungfu.storage import service as storage_service
+
+    receipts = []
+    for projection in selected:
+        if projection == "episode":
+            result = storage_service.episode_projection_rebuild(runtime_dir)
+            receipt = {
+                "projection": projection,
+                "schema": result.get("schema"),
+                "ok": result.get("ok") is True,
+                "authority": result.get("authority"),
+                "queryRecords": int(result.get("query_records") or 0),
+                "journalRecords": sum(
+                    int(row.get("count") or 0)
+                    for row in result.get("journal_records") or []
+                ),
+            }
+        else:
+            result = storage_service.fact_kernel_rebuild_projections(runtime_dir)
+            receipt = {
+                "projection": projection,
+                "schema": result.get("schema"),
+                "ok": result.get("ok") is True,
+                "beforeRoot": result.get("before_root"),
+                "afterRoot": result.get("after_root"),
+                "projectionCount": int(result.get("projection_count") or 0),
+                "writeOccurred": result.get("write_occurred") is True,
+            }
+        receipts.append(receipt)
+    body["receipts"] = receipts
+    body["ok"] = all(row["ok"] is True for row in receipts)
+    body["status"] = "rebuilt" if body["ok"] else "rejected"
+    body["authorizedBy"] = actor
+    body["receiptRoot"] = exit_bundle._root("history-projection-rebuild", body)
+    return body
 
 
 def _cli_parser() -> argparse.ArgumentParser:

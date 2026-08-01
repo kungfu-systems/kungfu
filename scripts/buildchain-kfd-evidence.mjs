@@ -1,7 +1,6 @@
 #!/usr/bin/env node
 // SPDX-License-Identifier: Apache-2.0
 // @ts-check
-
 import { execFileSync, spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import fs from 'node:fs';
@@ -23,6 +22,7 @@ import {
   KFD3_DEFAULT_REGISTRY_PATH,
   checkColdBuildchainKfd,
   loadBuildchainKfdRuntime,
+  renderKfdJson,
 } from '../framework/release/buildchain-kfd-runtime.mjs';
 import { prepareGateMeasurementHistory } from './prepare-gate-measurement-history.mjs';
 import {
@@ -34,7 +34,6 @@ import {
 let runtime;
 const KFD3_SURFACE_REGISTRY_CONTRACT =
   'kungfu-buildchain-kfd-3-surface-registry';
-
 const __filename = fileURLToPath(import.meta.url);
 const ROOT = path.resolve(path.dirname(__filename), '..');
 const BUILDCHAIN_DIR = path.join(ROOT, '.buildchain');
@@ -136,6 +135,14 @@ const AGENT_COMMANDS_PATH = path.join(
   'agent',
   'commands.json',
 );
+const SHIFU_AGENT_REGISTRY_PATH = path.join(
+  ROOT,
+  'crates/shifu/agent/kfd3_api.registry.json',
+);
+const XINFA_AGENT_REGISTRY_PATH = path.join(
+  ROOT,
+  'crates/xinfa/agent/kfd3_api.registry.json',
+);
 const SDK_CLI_PATH = path.join(ROOT, 'developer', 'sdk', 'src', 'sdk.js');
 const PRODUCT_PACKAGE_PATH = path.join(ROOT, 'product', 'package.json');
 const RUNTIME_CLI_PATH = path.join(
@@ -236,12 +243,10 @@ function parseArgs(argv) {
 function readJson(filePath) {
   return JSON.parse(fs.readFileSync(filePath, 'utf8'));
 }
-
 function productDisplayName() {
   const pkg = readJson(PRODUCT_PACKAGE_PATH);
   return String(pkg.kungfuProduct?.displayName || 'Kungfu');
 }
-
 function productIdentity() {
   return {
     id: 'kungfu',
@@ -249,16 +254,13 @@ function productIdentity() {
     repository: 'kungfu-systems/kungfu',
   };
 }
-
 function renderJson(value) {
-  return `${JSON.stringify(value, null, 2)}\n`;
+  return renderKfdJson(value);
 }
-
 function writeJson(filePath, value) {
   fs.mkdirSync(path.dirname(filePath), { recursive: true });
   fs.writeFileSync(filePath, renderJson(value));
 }
-
 function rel(filePath) {
   const resolved = path.resolve(filePath);
   if (!resolved.startsWith(`${ROOT}${path.sep}`) && resolved !== ROOT) {
@@ -266,27 +268,21 @@ function rel(filePath) {
   }
   return path.relative(ROOT, resolved).split(path.sep).join('/');
 }
-
 function sha256Text(value) {
   return createHash('sha256').update(String(value)).digest('hex');
 }
-
 function sha256Json(value) {
   return sha256Text(JSON.stringify(value));
 }
-
 function sha256File(filePath) {
   return createHash('sha256').update(fs.readFileSync(filePath)).digest('hex');
 }
-
 function sha256RenderedJson(value) {
   return sha256Text(renderJson(value));
 }
-
 function packageResolver(baseFile) {
   return createRequire(baseFile);
 }
-
 function packageJson(packageName, baseFile) {
   const req = packageResolver(baseFile);
   const packageJsonPath = req.resolve(`${packageName}/package.json`);
@@ -296,7 +292,6 @@ function packageJson(packageName, baseFile) {
     value: readJson(packageJsonPath),
   };
 }
-
 function packageAsset(packageName, assetPath, baseFile) {
   const metadata = packageJson(packageName, baseFile);
   const req = packageResolver(baseFile);
@@ -323,7 +318,6 @@ function packageAsset(packageName, assetPath, baseFile) {
     parsed,
   };
 }
-
 function requireAsset(packageName, assetPath, baseFile) {
   const asset = packageAsset(packageName, assetPath, baseFile);
   if (!asset) {
@@ -331,7 +325,6 @@ function requireAsset(packageName, assetPath, baseFile) {
   }
   return asset;
 }
-
 function assetSummary(asset) {
   return {
     path: asset.path,
@@ -339,12 +332,10 @@ function assetSummary(asset) {
     contract: asset.contract || undefined,
   };
 }
-
 function readOptionalJson(filePath) {
   if (!fs.existsSync(filePath)) return null;
   return readJson(filePath);
 }
-
 function buildOwnKfdFacts() {
   const contractRegistry = readOptionalJson(CONTRACT_REGISTRY_PATH);
   const kfd2Registry = readOptionalJson(KFD2_REGISTRY_PATH);
@@ -411,7 +402,6 @@ function buildOwnKfdFacts() {
     },
   };
 }
-
 function buildUpstreamKfdAggregate() {
   const kfdPackage = packageJson('@kungfu-tech/kfd', SDK_CLI_PATH);
   const libnodePackage = packageJson('@kungfu-tech/libnode', CORE_PACKAGE_PATH);
@@ -614,6 +604,7 @@ function fileSurface({
   evidencePath,
   maturity,
   distribution,
+  owner = 'kungfu',
 }) {
   return {
     id,
@@ -630,29 +621,34 @@ function fileSurface({
     artifactPath: evidencePath || sourcePath,
     maturity: maturity || 'stable',
     declaration: {
-      owner: 'kungfu',
+      owner,
       source: 'scripts/buildchain-kfd-evidence.mjs',
       sourcePath,
     },
     ...(distribution ? { distribution } : {}),
   };
 }
-
 function agentApiSurfaces() {
-  const registry = readJson(AGENT_REGISTRY_PATH);
-  const apis = Array.isArray(registry.apis) ? registry.apis : [];
-  return apis.map((api) =>
-    fileSurface({
-      id: String(api.id),
-      name: String(api.name || api.id),
-      kind: String(api.surface || 'cli'),
-      sourcePath: rel(AGENT_REGISTRY_PATH),
-      evidencePath: rel(AGENT_COMMANDS_PATH),
-      maturity: String(api.maturity || 'stable'),
-    }),
-  );
+  return [
+    [AGENT_REGISTRY_PATH, AGENT_COMMANDS_PATH, 'kungfu'],
+    [SHIFU_AGENT_REGISTRY_PATH, SHIFU_AGENT_REGISTRY_PATH, 'shifu'],
+    [XINFA_AGENT_REGISTRY_PATH, XINFA_AGENT_REGISTRY_PATH, 'xinfa'],
+  ].flatMap(([registryPath, evidencePath, owner]) => {
+    const registry = readJson(registryPath);
+    const apis = Array.isArray(registry.apis) ? registry.apis : [];
+    return apis.map((api) =>
+      fileSurface({
+        id: String(api.id),
+        name: String(api.name || api.command || api.id),
+        kind: String(api.surface || 'cli'),
+        sourcePath: rel(registryPath),
+        evidencePath: rel(evidencePath),
+        maturity: String(api.maturity || 'stable'),
+        owner,
+      }),
+    );
+  });
 }
-
 function sdkAndProductSurfaces() {
   return [
     fileSurface({
@@ -796,7 +792,6 @@ function sdkAndProductSurfaces() {
     }),
   ];
 }
-
 function uniqueById(surfaces) {
   const byId = new Map();
   for (const surface of surfaces) {
@@ -805,7 +800,6 @@ function uniqueById(surfaces) {
   }
   return [...byId.values()].sort((a, b) => a.id.localeCompare(b.id));
 }
-
 function buildKfd3Registry(upstreamAggregate = buildUpstreamKfdAggregate()) {
   const surfaces = uniqueById([
     ...agentApiSurfaces(),
@@ -828,6 +822,14 @@ function buildKfd3Registry(upstreamAggregate = buildUpstreamKfdAggregate()) {
           {
             path: rel(AGENT_REGISTRY_PATH),
             role: 'kungfu-agent-first-subregistry',
+          },
+          {
+            path: rel(SHIFU_AGENT_REGISTRY_PATH),
+            role: 'shifu-agent-subregistry',
+          },
+          {
+            path: rel(XINFA_AGENT_REGISTRY_PATH),
+            role: 'xinfa-agent-subregistry',
           },
           {
             path: rel(AGENT_COMMANDS_PATH),
@@ -881,7 +883,6 @@ function buildKfd3Registry(upstreamAggregate = buildUpstreamKfdAggregate()) {
     },
   };
 }
-
 function registryDescriptor(registry) {
   return {
     id: registry.product.id,
@@ -890,7 +891,6 @@ function registryDescriptor(registry) {
     digest: `sha256:${sha256Json(registry)}`,
   };
 }
-
 function missingSurfaceFields(surface) {
   return [
     'id',

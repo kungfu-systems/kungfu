@@ -97,6 +97,32 @@ def parse_reviewer_result(report, acceptance_checks):
     }
 
 
+def exact_pending_fit_review(current, *, missing_message, conflicting_message):
+    reviews = list(current.get("independent_reviews") or [])
+    decisions = list(current.get("continuation_decisions") or [])
+    decided_review_ids = {str(row.get("review_id") or "") for row in decisions}
+    pending = [
+        row
+        for row in reviews
+        if str(row.get("review_id") or "") not in decided_review_ids
+        and row.get("verdict") == "fit"
+    ]
+    if not pending:
+        raise ValueError(missing_message)
+    exact_fit_roots = {
+        (
+            str(row.get("claim_id") or ""),
+            str(row.get("claim_payload_hash") or ""),
+            str(row.get("continuation_plan_root") or ""),
+        )
+        for row in pending
+    }
+    if len(exact_fit_roots) != 1:
+        raise ValueError(conflicting_message)
+    # Repeated requests may retain equivalent reviews for one exact claim.
+    return pending[-1]
+
+
 def build_plan(
     *,
     ctx,

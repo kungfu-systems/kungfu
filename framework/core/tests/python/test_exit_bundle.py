@@ -9,7 +9,7 @@ from click.testing import CliRunner
 import pytest
 
 from kungfu import dogfood as dogfood_api
-from kungfu import exit_bundle, profile_composition, profile_sdk
+from kungfu import exit_bundle, exit_verifier, profile_composition, profile_sdk
 from kungfu.agent import work_profile
 from kungfu.atlas import mission_control
 from kungfu.cli.commands import __registry__  # noqa: F401
@@ -396,6 +396,117 @@ def test_exit_cli_uses_the_same_service_receipt(tmp_path):
 
     assert preview.exit_code == 0, preview.output
     assert __import__("json").loads(preview.output)["status"] == "validated"
+
+
+def test_exit_history_status_is_honest_and_scope_bound(tmp_path):
+    source = tmp_path / "source" / "runtime"
+    _sealed_episode(source, 708)
+
+    general = exit_verifier.status(source)
+    selected = exit_verifier.status(source, _request(708))
+
+    assert general["state"] == "contract-ready"
+    assert general["coverage"] == "not-evaluated"
+    assert general["selectedScope"] is None
+    assert general["lastVerifiedExport"] is None
+    assert len(general["eligibleMembers"]) == 9
+    assert selected["state"] == "inventory-verified"
+    assert selected["coverage"] == "selected-scope-inventory"
+    assert [
+        row["memberId"] for row in selected["selectedScope"]["inventoryMembers"]
+    ] == ["episode-708"]
+    assert selected["selectedScope"]["contentVerifiedMembers"] == []
+    assert selected["selectedScope"]["intentionalThinLoss"]
+    assert str(tmp_path) not in json.dumps(selected)
+
+    thin = exit_bundle.build(source, _request(708, mode="thin"))
+    exit_verifier.record_verified_export(source, thin)
+    degraded = exit_verifier.status(source)
+    assert degraded["state"] == "degraded"
+    assert degraded["coverage"] == "last-export-explicit-loss"
+    assert degraded["lastVerifiedExport"]["loss"]
+
+
+def test_exit_history_cli_exports_and_verifies_through_shared_core(tmp_path):
+    source = tmp_path / "source" / "runtime"
+    request_path = tmp_path / "request.json"
+    package_path = tmp_path / "history.json"
+    _sealed_episode(source, 709)
+    request_path.write_text(json.dumps(_request(709)), encoding="utf-8")
+    runner = CliRunner()
+
+    status = runner.invoke(
+        kfc,
+        ["exit", "history", "status", "--file", str(request_path), "--json"],
+        env={"KF_RUNTIME_DIR": str(source)},
+    )
+    exported = runner.invoke(
+        kfc,
+        [
+            "exit",
+            "history",
+            "export",
+            "--file",
+            str(request_path),
+            "--out",
+            str(package_path),
+            "--json",
+        ],
+        env={"KF_RUNTIME_DIR": str(source)},
+    )
+    verified = runner.invoke(
+        kfc,
+        ["exit", "history", "verify", "--file", str(package_path), "--json"],
+        env={"KF_RUNTIME_DIR": str(source)},
+    )
+
+    assert status.exit_code == 0, status.output
+    assert json.loads(status.output)["state"] == "inventory-verified"
+    assert exported.exit_code == 0, exported.output
+    export_receipt = json.loads(exported.output)
+    assert export_receipt["schema"] == "kungfu.exit-history.export-receipt/v1"
+    assert export_receipt["written"] is True
+    observed = exit_verifier.status(source)["lastVerifiedExport"]
+    projected = exit_verifier.status(source)
+    assert projected["state"] == "verified"
+    assert projected["coverage"] == "last-export-content-verified"
+    assert observed["packageRoot"] == export_receipt["packageRoot"]
+    assert observed["observerRoot"] == export_receipt["observerRoot"]
+    assert observed["authority"] == "disposable-observer-projection"
+    assert str(tmp_path) not in json.dumps(observed)
+    assert package_path.is_file()
+    assert verified.exit_code == 0, verified.output
+    assert json.loads(verified.output)["verdict"] == "verified"
+
+
+def test_exit_history_projection_rebuild_is_bounded_and_authorized(tmp_path):
+    runtime = tmp_path / "runtime"
+    _sealed_episode(runtime, 710)
+
+    plan = exit_verifier.rebuild_projections(runtime, projections=["episode"])
+    rebuilt = exit_verifier.rebuild_projections(
+        runtime,
+        projections=["episode", "fact-kernel"],
+        execute=True,
+        authorized_by="test-owner",
+    )
+
+    assert plan["status"] == "planned"
+    assert plan["authorityMutation"] is False
+    assert plan["nextActions"] == [
+        "kungfu exit history rebuild --execute --authorized-by <actor> --json"
+    ]
+    assert rebuilt["ok"] is True
+    assert rebuilt["status"] == "rebuilt"
+    assert rebuilt["authorityMutation"] is False
+    assert {row["projection"] for row in rebuilt["receipts"]} == {
+        "episode",
+        "fact-kernel",
+    }
+    assert str(tmp_path) not in json.dumps(rebuilt)
+    with pytest.raises(exit_bundle.ExitBundleError) as error:
+        exit_verifier.rebuild_projections(runtime, execute=True)
+    assert error.value.code == "authorization-actor-required"
 
 
 def test_profile_and_mission_exit_package_replays_into_clean_runtime(tmp_path):

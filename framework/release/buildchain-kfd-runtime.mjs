@@ -4,6 +4,37 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
+const COMPACT_SURFACE_IDS = ['kungfu.agent.', 'shifu.agent.', 'xinfa.agent.'];
+
+function isCompactSurface(value) {
+  return (
+    value &&
+    typeof value === 'object' &&
+    typeof value.id === 'string' &&
+    (COMPACT_SURFACE_IDS.some((prefix) => value.id.startsWith(prefix)) ||
+      ['xinfa.context', 'xinfa.expand'].includes(value.id))
+  );
+}
+
+export function renderKfdJson(value) {
+  const compact = [];
+  const rendered = JSON.stringify(
+    value,
+    (_key, item) => {
+      if (!isCompactSurface(item)) return item;
+      const token = `__KUNGFU_COMPACT_SURFACE_${compact.length}__`;
+      compact.push(JSON.stringify(item));
+      return token;
+    },
+    2,
+  );
+  return `${compact.reduce(
+    (text, item, index) =>
+      text.replace(`"__KUNGFU_COMPACT_SURFACE_${index}__"`, item),
+    rendered,
+  )}\n`;
+}
+
 export const BUILDCHAIN_KFD1_CONTRACT_WORLD_WITNESS_PATH =
   '.buildchain/kfd/kfd-1/contract-world.witness.json';
 export const BUILDCHAIN_KFD1_RELEASE_GATE_PATH =
@@ -42,14 +73,18 @@ function relative(root, file) {
   return path.relative(root, file).split(path.sep).join('/');
 }
 
-function assertPair(root, source, projection) {
+function assertPair(root, source, projection, canonicalProjection = false) {
   const sourceFile = path.join(root, source);
   const projectionFile = path.join(root, projection);
   if (!fs.existsSync(sourceFile) || !fs.existsSync(projectionFile))
     throw new Error(
       `cold KFD projection is missing: ${source} -> ${projection}`,
     );
-  if (!fs.readFileSync(sourceFile).equals(fs.readFileSync(projectionFile)))
+  const sourceBytes = fs.readFileSync(sourceFile);
+  const expected = canonicalProjection
+    ? Buffer.from(`${JSON.stringify(JSON.parse(sourceBytes), null, 2)}\n`)
+    : sourceBytes;
+  if (!expected.equals(fs.readFileSync(projectionFile)))
     throw new Error(`cold KFD projection differs: ${source} -> ${projection}`);
 }
 
@@ -75,6 +110,7 @@ export function checkColdBuildchainKfd(root) {
     [
       '.buildchain/kfd/support-matrix.json',
       'developer/sdk/kfd/support-matrix.json',
+      true,
     ],
   ];
   const claimsDir = path.join(root, BUILDCHAIN_KFD2_DIR, 'claims');

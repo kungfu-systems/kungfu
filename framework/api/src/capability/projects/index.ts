@@ -4,8 +4,18 @@ import { createHash, randomUUID } from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 
+import type { AgentRuntimeCatalog } from '../agent-runtime.js';
 import type { AgentSession } from '../agent-session.js';
-import type { ProjectWork, WorkStartReceipt } from '../agent-work-lab.js';
+import type {
+  ProjectWork,
+  ProjectWorkResume,
+  WorkClosePlan,
+  WorkCloseReceipt,
+  WorkReviewEvent,
+  WorkReviewPlan,
+  WorkReviewReceipt,
+  WorkStartReceipt,
+} from '../agent-work-lab.js';
 import type { ProductSearchDocument } from '../product-search.js';
 
 export type ProjectFileTreeEntry = {
@@ -528,6 +538,8 @@ export type ProjectWorkRunPlan = {
 
 export type ProjectWorkRunSnapshot = {
   id: string;
+  kind?: 'run' | 'review';
+  sourceRunId?: string;
   provider: string;
   workspace: string;
   work?: string;
@@ -535,8 +547,9 @@ export type ProjectWorkRunSnapshot = {
   startedAt: number;
   lastEventAt: number;
   running: boolean;
-  events: ProjectWorkRunEvent[];
+  events: Array<ProjectWorkRunEvent | WorkReviewEvent>;
   receipt?: ProjectWorkRunReceipt;
+  reviewReceipt?: WorkReviewReceipt;
   session?: ProjectAgentSessionSnapshot;
   error?: string;
 };
@@ -659,6 +672,24 @@ export type Projects = {
     },
     onEvent?: (event: ProjectWorkRunEvent) => void,
   ) => Promise<ProjectWorkRunReceipt>;
+  resumeRun: (
+    workspace: string,
+    work: Pick<ProjectWork, 'initiativeId' | 'assignmentId'>,
+  ) => Promise<ProjectWorkRunSnapshot | null>;
+  planClose: (
+    workspace: string,
+    work: Pick<ProjectWork, 'initiativeId' | 'assignmentId'>,
+  ) => Promise<WorkClosePlan>;
+  close: (plan: WorkClosePlan) => Promise<WorkCloseReceipt>;
+  planReview: (
+    runId: string,
+    reviewerProfileId?: string,
+  ) => Promise<WorkReviewPlan>;
+  review: (
+    runId: string,
+    plan: WorkReviewPlan,
+    onEvent?: (event: WorkReviewEvent) => void,
+  ) => Promise<WorkReviewReceipt>;
   runs: () => ProjectWorkRunSnapshot[];
   subscribeRuns: (
     listener: (runs: ProjectWorkRunSnapshot[]) => void,
@@ -1056,6 +1087,134 @@ export function openProjects(options: ProjectCommandOptions): Projects {
     });
     return parse<T>(raw, schema);
   };
+  const executionReceipt = (runId: string): ProjectWorkRunReceipt => {
+    const run = retainedRuns.find((candidate) => candidate.id === runId);
+    if (!run?.receipt) {
+      throw new Error('Independent review requires one retained Agent run');
+    }
+    return run.receipt;
+  };
+  const restoreRun = async (
+    receipt: ProjectWorkRunReceipt,
+    workspace: string,
+  ): Promise<ProjectWorkRunSnapshot> => {
+    const report = receipt.agentReport as
+      | { runId?: string; session?: Record<string, unknown> | null }
+      | undefined;
+    const retained = report?.session;
+    const attemptId = String(
+      retained?.sessionAttemptId ?? report?.runId ?? receipt.receiptRoot,
+    );
+    const runId = `retained:${attemptId}`;
+    const existing = retainedRuns.find(
+      (run) =>
+        run.id === runId ||
+        (run.receipt?.receiptRoot &&
+          run.receipt.receiptRoot === receipt.receiptRoot),
+    );
+    if (!existing) {
+      const now = Date.now();
+      const provider = String(receipt.agent?.provider ?? 'agent');
+      retainedRuns = [
+        {
+          id: runId,
+          provider: provider === 'synthetic' ? 'mock' : provider,
+          workspace,
+          work: String(receipt.work?.assignmentId ?? ''),
+          startedAt: now,
+          lastEventAt: now,
+          running: false,
+          events: [],
+          receipt,
+        },
+        ...retainedRuns,
+      ].slice(0, 8);
+      publishRuns();
+    }
+    const current =
+      retainedRuns.find(
+        (run) =>
+          run.id === runId || run.receipt?.receiptRoot === receipt.receiptRoot,
+      ) ?? null;
+    if (!current) throw new Error('Retained Agent run could not be restored');
+    if (retained?.workConsoleId && options.agentSession) {
+      return (await refreshRun(current.id)) ?? current;
+    }
+    return current;
+  };
+  const restoreReviewRun = (
+    receipt: WorkReviewReceipt,
+    sourceRun: ProjectWorkRunSnapshot,
+  ): ProjectWorkRunSnapshot => {
+    const reviewId = `retained-review:${receipt.receiptRoot}`;
+    const existing = retainedRuns.find(
+      (run) =>
+        run.id === reviewId ||
+        run.reviewReceipt?.receiptRoot === receipt.receiptRoot,
+    );
+    if (existing) return existing;
+    const now = Date.now();
+    const restored: ProjectWorkRunSnapshot = {
+      id: reviewId,
+      kind: 'review',
+      sourceRunId: sourceRun.id,
+      provider: sourceRun.provider,
+      workspace: sourceRun.workspace,
+      work: sourceRun.work,
+      startedAt: now,
+      lastEventAt: now,
+      running: false,
+      events: [],
+      reviewReceipt: receipt,
+    };
+    retainedRuns = [restored, ...retainedRuns].slice(0, 8);
+    publishRuns();
+    return restored;
+  };
+  const reportPath = (receipt: ProjectWorkRunReceipt): string => {
+    const report = receipt.agentReport as
+      | { episode?: { reportPath?: unknown } }
+      | undefined;
+    const value = report?.episode?.reportPath;
+    if (typeof value !== 'string' || !value) {
+      throw new Error('The retained Agent run has no reviewable report path');
+    }
+    return value;
+  };
+  const preferredReviewerProfile = async (
+    receipt: ProjectWorkRunReceipt,
+  ): Promise<{ id: string }> => {
+    const executed = receipt.agent as
+      | { id?: unknown; provider?: unknown; label?: unknown }
+      | undefined;
+    if (
+      executed?.provider === 'codex' &&
+      typeof executed.id === 'string' &&
+      executed.id
+    ) {
+      return { id: executed.id };
+    }
+    const catalog = await invoke<AgentRuntimeCatalog>(
+      ['agent', 'runtime', 'discover', '--json'],
+      'kungfu.agent-runtime-catalog/v1',
+    );
+    const candidates = [
+      ...catalog.configured,
+      ...catalog.discovered.map((row) => row.profile),
+    ].filter((profile) => profile.provider === 'codex');
+    const preferredIds = new Set(
+      [catalog.defaultProfileId, catalog.recommendedProfileId].filter(Boolean),
+    );
+    const selected =
+      candidates.find((profile) => preferredIds.has(profile.id)) ??
+      candidates[0];
+    if (!selected) {
+      throw new Error(
+        'Independent review requires one verified Codex runtime profile',
+      );
+    }
+    return selected;
+  };
   const invalidateCatalog = () => {
     cachedCatalog = undefined;
     catalogRequest = undefined;
@@ -1366,6 +1525,291 @@ export function openProjects(options: ProjectCommandOptions): Projects {
         throw reason;
       }
     },
+    resumeRun: async (workspace, work) => {
+      await invoke<{
+        schema: 'kungfu.work.resume-prepare/v1';
+        status: 'ready' | 'reconciled';
+        writeOccurred: boolean;
+      }>(
+        [
+          'work',
+          'resume-prepare',
+          '--workspace',
+          workspace,
+          '--actor',
+          'kungfu-product-project-resume',
+          '--execute',
+        ],
+        'kungfu.work.resume-prepare/v1',
+      );
+      const resumed = await invoke<{
+        schema: 'kungfu.work-start.resume/v1';
+        status: 'retained-agent-run' | 'no-retained-agent-run';
+        workReceipt: ProjectWorkResume['workReceipt'] | null;
+        writeOccurred: false;
+      }>(
+        [
+          'work',
+          'start-resume',
+          '--workspace',
+          workspace,
+          '--initiative-id',
+          work.initiativeId,
+          '--assignment-id',
+          work.assignmentId,
+        ],
+        'kungfu.work-start.resume/v1',
+      );
+      const closeState = await invoke<{
+        schema: 'kungfu.work-close.resume/v1';
+        status: 'completed' | 'close-pending' | 'review-passed' | 'not-ready';
+        reviewReceipt: WorkReviewReceipt | null;
+        writeOccurred: false;
+      }>(
+        [
+          'work',
+          'close-resume',
+          '--workspace',
+          workspace,
+          '--initiative-id',
+          work.initiativeId,
+          '--assignment-id',
+          work.assignmentId,
+        ],
+        'kungfu.work-close.resume/v1',
+      );
+      if (!resumed.workReceipt) return null;
+      const sourceRun = await restoreRun(resumed.workReceipt, workspace);
+      return closeState.reviewReceipt
+        ? restoreReviewRun(closeState.reviewReceipt, sourceRun)
+        : sourceRun;
+    },
+    planClose: async (workspace, work) => {
+      await invoke<{
+        schema: 'kungfu.work.resume-prepare/v1';
+        status: 'ready' | 'reconciled';
+        writeOccurred: boolean;
+      }>(
+        [
+          'work',
+          'resume-prepare',
+          '--workspace',
+          workspace,
+          '--actor',
+          'kungfu-product-project-close',
+          '--execute',
+        ],
+        'kungfu.work.resume-prepare/v1',
+      );
+      return invoke<WorkClosePlan>(
+        [
+          'work',
+          'close-plan',
+          '--workspace',
+          workspace,
+          '--initiative-id',
+          work.initiativeId,
+          '--assignment-id',
+          work.assignmentId,
+        ],
+        'kungfu.work-close.plan/v1',
+      );
+    },
+    close: (plan) =>
+      invoke<WorkCloseReceipt>(
+        [
+          'work',
+          'close',
+          '--workspace',
+          plan.workspace.root,
+          '--initiative-id',
+          plan.work.initiativeId,
+          '--assignment-id',
+          plan.work.assignmentId,
+          '--actor',
+          'local-user',
+          '--expected-plan-root',
+          plan.planRoot,
+          '--execute',
+        ],
+        'kungfu.work-close.receipt/v1',
+      ),
+    planReview: async (runId, reviewerProfileId) => {
+      const receipt = executionReceipt(runId);
+      const workspaceRoot = receipt.workspace?.workspace_root;
+      const work = receipt.work;
+      if (!workspaceRoot || !work?.initiativeId || !work.assignmentId) {
+        throw new Error(
+          'The retained Agent run has no exact Project Work coordinates',
+        );
+      }
+      await invoke<{
+        schema: 'kungfu.work.resume-prepare/v1';
+        status: 'ready' | 'reconciled';
+        writeOccurred: boolean;
+      }>(
+        [
+          'work',
+          'resume-prepare',
+          '--workspace',
+          workspaceRoot,
+          '--actor',
+          'kungfu-product-project-review',
+          '--execute',
+        ],
+        'kungfu.work.resume-prepare/v1',
+      );
+      const reviewer = reviewerProfileId
+        ? { id: reviewerProfileId }
+        : await preferredReviewerProfile(receipt);
+      return invoke<WorkReviewPlan>(
+        [
+          'work',
+          'review-agent-plan',
+          reportPath(receipt),
+          '--workspace',
+          workspaceRoot,
+          '--initiative-id',
+          work.initiativeId,
+          '--assignment-id',
+          work.assignmentId,
+          '--reviewer',
+          reviewer.id,
+        ],
+        'kungfu.work-review.plan/v1',
+      );
+    },
+    review: async (runId, plan, onEvent) => {
+      const priorReviews = retainedRuns.filter(
+        (run) => run.kind === 'review' && run.sourceRunId === runId,
+      );
+      if (priorReviews.some((run) => run.running)) {
+        throw new Error('Independent review is already running');
+      }
+      const passedReview = priorReviews.find(
+        (run) => run.reviewReceipt?.status === 'review-passed',
+      );
+      if (passedReview?.reviewReceipt) return passedReview.reviewReceipt;
+      const receipt = executionReceipt(runId);
+      const startedAt = Date.now();
+      const reviewId = [
+        'review',
+        plan.reviewer.provider,
+        plan.work.assignmentId,
+        String(startedAt),
+      ].join(':');
+      const reviewRun: ProjectWorkRunSnapshot = {
+        id: reviewId,
+        kind: 'review',
+        sourceRunId: runId,
+        provider: plan.reviewer.provider,
+        workspace: plan.workspace.root,
+        work: plan.work.assignmentId,
+        startedAt,
+        lastEventAt: startedAt,
+        running: true,
+        events: [],
+      };
+      retainedRuns = [reviewRun, ...retainedRuns].slice(0, 8);
+      publishRuns();
+      const args = [
+        'work',
+        'review-agent-run',
+        reportPath(receipt),
+        '--workspace',
+        plan.workspace.root,
+        '--initiative-id',
+        plan.work.initiativeId,
+        '--assignment-id',
+        plan.work.assignmentId,
+        '--reviewer',
+        plan.reviewer.id,
+        '--expected-plan-root',
+        plan.planRoot,
+        '--execute',
+      ];
+      if (!onEvent || !options.execFileEvents) {
+        try {
+          const reviewReceipt = await invoke<WorkReviewReceipt>(
+            [...args, '--json'],
+            'kungfu.work-review.receipt/v1',
+          );
+          updateRun(reviewId, (run) => ({
+            ...run,
+            running: false,
+            lastEventAt: Date.now(),
+            reviewReceipt,
+          }));
+          return reviewReceipt;
+        } catch (reason) {
+          updateRun(reviewId, (run) => ({
+            ...run,
+            running: false,
+            lastEventAt: Date.now(),
+            error: reason instanceof Error ? reason.message : String(reason),
+          }));
+          throw reason;
+        }
+      }
+      let reviewReceipt: WorkReviewReceipt | null = null;
+      try {
+        await options.execFileEvents(
+          options.bin,
+          [...args, '--events-json'],
+          {
+            encoding: 'utf8',
+            env: options.env,
+            maxBuffer: 64 * 1024 * 1024,
+          },
+          (line) => {
+            const payload = JSON.parse(line) as
+              | WorkReviewEvent
+              | WorkReviewReceipt;
+            if (payload.schema === 'kungfu.work-review.event/v1') {
+              updateRun(reviewId, (run) => ({
+                ...run,
+                lastEventAt: Date.now(),
+                events: [...run.events, payload].slice(-100),
+              }));
+              onEvent(payload);
+            } else if (payload.schema === 'kungfu.work-review.receipt/v1') {
+              reviewReceipt = payload;
+            }
+          },
+        );
+        if (!reviewReceipt) {
+          throw new Error(
+            'Independent review stream ended without a canonical receipt',
+          );
+        }
+        const finalReceipt = reviewReceipt as WorkReviewReceipt;
+        updateRun(reviewId, (run) => ({
+          ...run,
+          running: false,
+          lastEventAt: Date.now(),
+          reviewReceipt: finalReceipt,
+        }));
+        return finalReceipt;
+      } catch (reason) {
+        const retained = reviewReceipt as WorkReviewReceipt | null;
+        if (retained) {
+          updateRun(reviewId, (run) => ({
+            ...run,
+            running: false,
+            lastEventAt: Date.now(),
+            reviewReceipt: retained,
+          }));
+          return retained;
+        }
+        updateRun(reviewId, (run) => ({
+          ...run,
+          running: false,
+          lastEventAt: Date.now(),
+          error: reason instanceof Error ? reason.message : String(reason),
+        }));
+        throw reason;
+      }
+    },
     runs: () =>
       retainedRuns.map((run) => ({ ...run, events: [...run.events] })),
     subscribeRuns: (listener) => {
@@ -1453,52 +1897,7 @@ export function openProjects(options: ProjectCommandOptions): Projects {
       publishRuns();
       return retainedRuns.map((run) => ({ ...run, events: [...run.events] }));
     },
-    restoreRun: async (receipt, workspace) => {
-      const report = receipt.agentReport as
-        | { runId?: string; session?: Record<string, unknown> | null }
-        | undefined;
-      const retained = report?.session;
-      const attemptId = String(
-        retained?.sessionAttemptId ?? report?.runId ?? receipt.receiptRoot,
-      );
-      const runId = `retained:${attemptId}`;
-      const existing = retainedRuns.find(
-        (run) =>
-          run.id === runId ||
-          (run.receipt?.receiptRoot &&
-            run.receipt.receiptRoot === receipt.receiptRoot),
-      );
-      if (!existing) {
-        const now = Date.now();
-        const provider = String(receipt.agent?.provider ?? 'agent');
-        retainedRuns = [
-          {
-            id: runId,
-            provider: provider === 'synthetic' ? 'mock' : provider,
-            workspace,
-            work: String(receipt.work?.assignmentId ?? ''),
-            startedAt: now,
-            lastEventAt: now,
-            running: false,
-            events: [],
-            receipt,
-          },
-          ...retainedRuns,
-        ].slice(0, 8);
-        publishRuns();
-      }
-      const current =
-        retainedRuns.find(
-          (run) =>
-            run.id === runId ||
-            run.receipt?.receiptRoot === receipt.receiptRoot,
-        ) ?? null;
-      if (!current) throw new Error('Retained Agent run could not be restored');
-      if (retained?.workConsoleId && options.agentSession) {
-        return (await refreshRun(current.id)) ?? current;
-      }
-      return current;
-    },
+    restoreRun,
     refreshRun,
     replyToRun: (runId, text) => controlRun(runId, 'instruct', { text }, false),
     approveRun: async (runId, approved) => {

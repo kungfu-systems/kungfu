@@ -21,6 +21,7 @@ const PACK = path.join(
 const REQUIRED = [
   'index.json',
   'brief.md',
+  'intent-map.json',
   'xinfa-context.md',
   'primitive-management.md',
   'mode-selection.md',
@@ -67,6 +68,7 @@ let commands = null;
 let cliSurface = null;
 let apiRegistry = null;
 let apiSchema = null;
+let intentMap = null;
 try {
   index = readJson('index.json');
 } catch (e) {
@@ -96,6 +98,13 @@ try {
 } catch (e) {
   fail(
     `kfd3_api.schema.json is invalid JSON: ${e instanceof Error ? e.message : e}`,
+  );
+}
+try {
+  intentMap = readJson('intent-map.json');
+} catch (e) {
+  fail(
+    `intent-map.json is invalid JSON: ${e instanceof Error ? e.message : e}`,
   );
 }
 
@@ -141,6 +150,37 @@ const xinfaContext = exists('xinfa-context.md') ? read('xinfa-context.md') : '';
 const primitiveManagement = exists('primitive-management.md')
   ? read('primitive-management.md')
   : '';
+if (Buffer.byteLength(brief, 'utf8') > 8192)
+  fail('brief.md exceeds the 8192-byte first-entry budget');
+if (brief.split(/\r?\n/).length > 120)
+  fail('brief.md exceeds the 120-line first-entry budget');
+if (intentMap) {
+  const required = intentMap.requiredIntentIds || [];
+  const actual = (intentMap.intents || []).map((row) => row.id);
+  if (new Set(actual).size !== actual.length)
+    fail('intent-map.json contains duplicate intent ids');
+  if (
+    required.length !== actual.length ||
+    required.some((id) => !actual.includes(id))
+  )
+    fail('intent-map.json required intent coverage is incomplete or unknown');
+  for (const row of intentMap.intents || []) {
+    for (const field of [
+      'id',
+      'summary',
+      'audience',
+      'maturity',
+      'authorityRoots',
+      'access',
+      'authorization',
+      'nonClaims',
+      'discoveryCommands',
+      'expansionHandles',
+    ])
+      if (!(field in row))
+        fail(`intent-map.json intent ${row.id} missing ${field}`);
+  }
+}
 for (const [rel, text] of [
   ['brief.md', brief],
   ['xinfa-context.md', xinfaContext],

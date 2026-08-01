@@ -2108,20 +2108,16 @@ def _work_close_plan(
     current = _status(runtime_dir, initiative_id, assignment_id)
     reviews = list(current.get("independent_reviews") or [])
     decisions = list(current.get("continuation_decisions") or [])
-    decided_review_ids = {str(row.get("review_id") or "") for row in decisions}
-    pending_reviews = [
-        row
-        for row in reviews
-        if str(row.get("review_id") or "") not in decided_review_ids
-    ]
     decision_mode = "required"
     decision = None
     if current["phase"] == "independently-reviewed":
-        if len(pending_reviews) != 1:
-            raise ValueError(
-                "Work close requires one exact undecided independent review"
-            )
-        review = pending_reviews[0]
+        review = assignment_review.exact_pending_fit_review(
+            current,
+            missing_message=(
+                "Work close requires one exact undecided fit independent review"
+            ),
+            conflicting_message="Work close found conflicting fit reviews",
+        )
     elif current["phase"] == "continuation-decided":
         close_decisions = [row for row in decisions if row.get("action") == "close"]
         if not close_decisions:
@@ -2227,18 +2223,11 @@ def _resume_starter_close(
     review_receipt = None
     close_receipt = None
     if current["phase"] == "independently-reviewed":
-        reviews = list(current.get("independent_reviews") or [])
-        decisions = list(current.get("continuation_decisions") or [])
-        decided_review_ids = {str(row.get("review_id") or "") for row in decisions}
-        pending = [
-            row
-            for row in reviews
-            if str(row.get("review_id") or "") not in decided_review_ids
-            and row.get("verdict") == "fit"
-        ]
-        if len(pending) != 1:
-            raise ValueError("retained review state is missing one exact fit review")
-        review = pending[0]
+        review = assignment_review.exact_pending_fit_review(
+            current,
+            missing_message="retained review state is missing one exact fit review",
+            conflicting_message="retained review state has conflicting fit reviews",
+        )
         review_receipt = _work_start_receipt(
             {
                 "schema": "kungfu.work-review.receipt/v1",
