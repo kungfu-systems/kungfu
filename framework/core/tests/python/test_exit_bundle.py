@@ -1,10 +1,14 @@
 # SPDX-License-Identifier: Apache-2.0
 
 import copy
+import json
 from pathlib import Path
+import shutil
 
 from click.testing import CliRunner
+import pytest
 
+from kungfu import dogfood as dogfood_api
 from kungfu import exit_bundle, profile_composition, profile_sdk
 from kungfu.agent import work_profile
 from kungfu.atlas import mission_control
@@ -16,6 +20,16 @@ from kungfu.storage import service as storage_service
 
 MISSION_PROFILE_SOURCE = (
     Path(__file__).resolve().parents[4] / "extensions" / "mission-control"
+)
+DOGFOOD_PROFILE_SOURCE = Path(__file__).resolve().parents[4] / "extensions" / "dogfood"
+REPOSITORY_ROOT = Path(__file__).resolve().parents[4]
+PROJECT_CUT_ROOT = "b3f93706640ab2d63e7eadb5bed0b473c79a8f04a07e501ec4d34db4fd262e6b"
+PROJECT_CUT_SUCCESSOR_ROOT = (
+    "4e36c3ba7813ca8d69572c19faf174b9ae3b5188afd1792e9ea5c02acc5adf1e"
+)
+PROJECT_CUT_PUBLICATION_ROOTS = (
+    "f466df51e1259a944a0cd4e94a27b091ea4137d6c3b170dcfb5621ba9c48c9e9",
+    "2073a8094acb224e4abe38cc53b3ffc27c6a5de5ea4bda799c35339ac8d11503",
 )
 
 
@@ -153,6 +167,54 @@ def _single_member_request(member_id, kind, options):
             {
                 "memberId": member_id,
                 "kind": kind,
+                "requiredForScope": True,
+                "options": options,
+            }
+        ],
+    }
+
+
+def _copy_project_cut_history(target):
+    paths = []
+    for digest in (PROJECT_CUT_ROOT, PROJECT_CUT_SUCCESSOR_ROOT):
+        relative = Path("project-cuts") / "sha256" / digest[:2] / digest
+        source = REPOSITORY_ROOT / ".kungfu" / relative
+        destination = target / relative
+        destination.mkdir(parents=True)
+        for name in ("manifest.json", "receipt.json"):
+            shutil.copy2(source / name, destination / name)
+        paths.append(destination / "manifest.json")
+    publications = []
+    for digest in PROJECT_CUT_PUBLICATION_ROOTS:
+        relative = Path("ledger-publications") / "sha256" / digest[:2] / digest
+        source = REPOSITORY_ROOT / ".kungfu" / relative / "manifest.json"
+        destination = target / relative / "manifest.json"
+        destination.parent.mkdir(parents=True)
+        shutil.copy2(source, destination)
+        publications.append(destination)
+    return {
+        "manifestPath": str(paths[0]),
+        "successorManifestPaths": [str(paths[1])],
+        "publicationManifestPaths": [str(path) for path in publications],
+    }
+
+
+def _project_cut_request(options, mode="full"):
+    return {
+        "schema": "kungfu.exit-bundle-request/v1",
+        "bundleId": f"exit:project-cut-history-{mode}",
+        "mode": mode,
+        "scope": {
+            "id": "project-cut/history-fixture",
+            "authority": "Project Cut protocol",
+            "schema": "project.cut/v1",
+            "protocol": "project-cut-history-portability/v1",
+            "cutRoot": f"sha256:{PROJECT_CUT_ROOT}",
+        },
+        "members": [
+            {
+                "memberId": "project-cut-history",
+                "kind": "project-cut-v1",
                 "requiredForScope": True,
                 "options": options,
             }
@@ -531,3 +593,221 @@ def test_all_remaining_member_adapters_roundtrip_idempotently(tmp_path):
         assert imported["status"] == "imported", (member_id, imported)
         assert repeated["ok"] is True, (member_id, repeated)
         assert repeated["status"] == "already_present", (member_id, repeated)
+
+
+def test_project_cut_history_member_survives_source_removal(tmp_path):
+    source_home = tmp_path / "disposable-source"
+    options = _copy_project_cut_history(source_home)
+    package = exit_bundle.build(source_home / "runtime", _project_cut_request(options))
+    expected = {
+        Path(path).relative_to(source_home): Path(path).read_bytes()
+        for path in [
+            options["manifestPath"],
+            str(Path(options["manifestPath"]).with_name("receipt.json")),
+            options["successorManifestPaths"][0],
+            str(Path(options["successorManifestPaths"][0]).with_name("receipt.json")),
+            *options["publicationManifestPaths"],
+        ]
+    }
+
+    assert exit_bundle.inspect(package)["status"] == "verified"
+    material = package["materials"]["project-cut-history"]
+    assert material["primaryCutRoot"] == f"sha256:{PROJECT_CUT_ROOT}"
+    assert material["successorCutRoots"] == [f"sha256:{PROJECT_CUT_SUCCESSOR_ROOT}"]
+    assert material["settlement"]["state"] == "published"
+
+    shutil.rmtree(source_home)
+    destination_runtime = tmp_path / "clean-destination" / "runtime"
+    imported = exit_bundle.import_package(
+        destination_runtime,
+        package,
+        execute=True,
+        authorized_by="test-owner",
+    )
+    repeated = exit_bundle.import_package(
+        destination_runtime,
+        package,
+        execute=True,
+        authorized_by="test-owner",
+    )
+
+    assert imported["ok"] is True, imported
+    assert imported["status"] == "imported"
+    assert imported["writtenMembers"] == ["project-cut-history"]
+    assert repeated["ok"] is True, repeated
+    assert repeated["status"] == "already_present"
+    for relative, payload in expected.items():
+        assert (destination_runtime.parent / relative).read_bytes() == payload
+    assert not source_home.exists()
+
+
+def test_project_cut_history_member_rejects_thin_and_diverged_destinations(
+    tmp_path,
+):
+    source_home = tmp_path / "source"
+    options = _copy_project_cut_history(source_home)
+    source_runtime = source_home / "runtime"
+    thin = exit_bundle.build(source_runtime, _project_cut_request(options, mode="thin"))
+    thin_destination = tmp_path / "thin-destination" / "runtime"
+
+    assert exit_bundle.inspect(thin)["status"] == "degraded"
+    rejected_thin = exit_bundle.import_package(
+        thin_destination,
+        thin,
+        execute=True,
+        authorized_by="test-owner",
+    )
+    assert rejected_thin["status"] == "rejected"
+    assert rejected_thin["failure"]["code"] == "thin-materialization-forbidden"
+    assert not thin_destination.parent.exists()
+
+    full = exit_bundle.build(source_runtime, _project_cut_request(options))
+    diverged_home = tmp_path / "diverged-destination"
+    diverged_receipt = (
+        diverged_home
+        / "project-cuts"
+        / "sha256"
+        / PROJECT_CUT_ROOT[:2]
+        / PROJECT_CUT_ROOT
+        / "receipt.json"
+    )
+    diverged_receipt.parent.mkdir(parents=True)
+    diverged_receipt.write_bytes(b'{"diverged":true}\n')
+    rejected = exit_bundle.import_package(
+        diverged_home / "runtime",
+        full,
+        execute=True,
+        authorized_by="test-owner",
+    )
+    assert rejected["status"] == "rejected"
+    assert rejected["failure"]["code"] == "member-import-failed"
+    assert "destination contains different bytes" in rejected["failure"]["message"]
+    assert not diverged_receipt.with_name("manifest.json").exists()
+    assert diverged_receipt.read_bytes() == b'{"diverged":true}\n'
+
+    relation_tamper = copy.deepcopy(full)
+    relation_tamper["materials"]["project-cut-history"]["cuts"][1][
+        "parentCutRoots"
+    ] = []
+    relation_material = relation_tamper["materials"]["project-cut-history"]
+    relation_descriptor = relation_tamper["manifest"]["members"][0]["material"]
+    relation_descriptor["byteLength"] = len(
+        exit_bundle.canonical_json_bytes(relation_material)
+    )
+    relation_descriptor["sha256"] = exit_bundle._material_root(relation_material)
+    relation_tamper["manifest"]["bundleRoot"] = exit_bundle._manifest_root(
+        relation_tamper["manifest"]
+    )
+    relation_tamper["packageRoot"] = exit_bundle._package_root(relation_tamper)
+    with pytest.raises(exit_bundle.ProjectCutExitError) as relation_error:
+        exit_bundle.inspect(relation_tamper)
+    assert relation_error.value.code == "project-cut-relation-mismatch"
+
+    publication_tamper = copy.deepcopy(full)
+    publication_tamper["materials"]["project-cut-history"]["publications"][0][
+        "batchRoot"
+    ] = f"sha256:{'c' * 64}"
+    publication_material = publication_tamper["materials"]["project-cut-history"]
+    publication_descriptor = publication_tamper["manifest"]["members"][0]["material"]
+    publication_descriptor["byteLength"] = len(
+        exit_bundle.canonical_json_bytes(publication_material)
+    )
+    publication_descriptor["sha256"] = exit_bundle._material_root(publication_material)
+    publication_tamper["manifest"]["bundleRoot"] = exit_bundle._manifest_root(
+        publication_tamper["manifest"]
+    )
+    publication_tamper["packageRoot"] = exit_bundle._package_root(publication_tamper)
+    with pytest.raises(exit_bundle.ProjectCutExitError) as publication_error:
+        exit_bundle.inspect(publication_tamper)
+    assert publication_error.value.code == "project-cut-publication-root-mismatch"
+
+    private_manifest = tmp_path / "private-path" / "manifest.json"
+    private_manifest.parent.mkdir()
+    value = json.loads(Path(options["manifestPath"]).read_text(encoding="utf-8"))
+    value["privateSource"] = "/Users/example/private/worktree"
+    private_manifest.write_text(json.dumps(value) + "\n", encoding="utf-8")
+    shutil.copy2(
+        Path(options["manifestPath"]).with_name("receipt.json"),
+        private_manifest.with_name("receipt.json"),
+    )
+    with pytest.raises(exit_bundle.ProjectCutExitError) as error:
+        exit_bundle._project_cut_build_bundle(
+            {"manifestPath": str(private_manifest)}, mode="full"
+        )
+    assert error.value.code == "project-cut-private-path-leakage"
+
+
+def test_dogfood_profile_facts_roundtrip_through_native_exit_members(tmp_path):
+    source = tmp_path / "dogfood-source" / "runtime"
+    destination = tmp_path / "dogfood-destination" / "runtime"
+    dogfood_api.ensure_profile(str(source), "test-owner")
+    finding = dogfood_api.action(
+        str(source),
+        "capture-finding",
+        {
+            "findingId": "exit-history-finding",
+            "title": "Exit history finding",
+            "summary": "A qualified Dogfood fact survives its original runtime.",
+            "episodeRoot": f"sha256:{'a' * 64}",
+            "evidenceRoots": [f"sha256:{'b' * 64}"],
+            "dimensions": {
+                "repository": ["kungfu"],
+                "component": ["exit"],
+                "capability": ["history"],
+                "error": ["portability"],
+                "platform": ["source"],
+            },
+            "privacy": "internal",
+            "actor": "test-agent",
+            "observedAt": "2026-08-01T00:00:00Z",
+            "impact": "normal",
+        },
+        "test-owner",
+    )["finding"]
+    request = {
+        "schema": "kungfu.exit-bundle-request/v1",
+        "bundleId": "exit:dogfood-native-history",
+        "mode": "full",
+        "scope": {
+            "id": "dogfood/history-fixture",
+            "authority": "kungfu.dogfood.feedback Profile",
+            "schema": "kungfu.dogfood-feedback.finding/v1",
+            "protocol": "declared-facts-v1",
+        },
+        "members": [
+            {
+                "memberId": "dogfood-profile",
+                "kind": "profile-source-v1",
+                "requiredForScope": True,
+                "options": {
+                    "source": str(DOGFOOD_PROFILE_SOURCE),
+                    "grantedPermissions": ["storage"],
+                },
+            },
+            {
+                "memberId": "dogfood-facts",
+                "kind": "fact-library-v1",
+                "requiredForScope": True,
+                "options": {},
+            },
+        ],
+    }
+    package = exit_bundle.build(source, request)
+    shutil.rmtree(source.parent)
+
+    imported = exit_bundle.import_package(
+        destination, package, execute=True, authorized_by="test-owner"
+    )
+    repeated = exit_bundle.import_package(
+        destination, package, execute=True, authorized_by="test-owner"
+    )
+    assert imported["failure"] is None, json.dumps(imported, indent=2)
+    assert imported["ok"] is True, imported
+    assert imported["writtenMembers"] == ["dogfood-profile", "dogfood-facts"]
+    assert repeated["status"] == "already_present", repeated
+    lookup = dogfood_api.read(
+        str(destination), "lookup", {"identity": finding["finding_root"]}
+    )
+
+    assert lookup["match_count"] == 1
+    assert lookup["matches"][0]["record"]["finding_root"] == finding["finding_root"]

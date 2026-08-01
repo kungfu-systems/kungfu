@@ -5,6 +5,7 @@
     "kungfu.storage.episode-bundle/v1",
     "kungfu.fact-authority-bundle/v2",
     "kungfu.fact-kernel.portable-bundle/v1",
+    "kungfu.project-cut.history-bundle/v1",
     "kungfu.facts.library-bundle/v1",
     "kungfu.mission-control.bundle/v2",
     "kungfu.profile-source-bundle/v1"
@@ -14,6 +15,7 @@
     "episode-sealed-content-root/v1",
     "kungfu.fact-root.canonical/v2",
     "fact-kernel.integrity-root/v1",
+    "project-cut-history-portability/v1",
     "declared-facts-v1",
     "mission-control-portability/v2",
     "profile-source-closure/v1"
