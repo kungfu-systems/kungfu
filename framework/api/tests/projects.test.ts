@@ -489,6 +489,13 @@ test('Project Work launches one fresh read-only independent review from the reta
     env: {},
     execFile: async (_file, args) => {
       calls.push(args);
+      if (args[1] === 'resume-prepare') {
+        return JSON.stringify({
+          schema: 'kungfu.work.resume-prepare/v1',
+          status: 'reconciled',
+          writeOccurred: true,
+        });
+      }
       assert.deepEqual(args, [
         'work',
         'review-agent-plan',
@@ -643,7 +650,16 @@ test('Project Work launches one fresh read-only independent review from the reta
     events.push(event.text),
   );
 
-  assert.equal(calls.length, 1);
+  assert.deepEqual(calls[0], [
+    'work',
+    'resume-prepare',
+    '--workspace',
+    '/project',
+    '--actor',
+    'kungfu-product-project-review',
+    '--execute',
+  ]);
+  assert.equal(calls.length, 2);
   assert.deepEqual(events, ['Fresh reviewer started']);
   assert.equal(receipt.status, 'review-passed');
   assert.equal(projects.runs()[0]?.kind, 'review');

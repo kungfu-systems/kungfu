@@ -1537,6 +1537,22 @@ export function openProjects(options: ProjectCommandOptions): Projects {
           'The retained Agent run has no exact Project Work coordinates',
         );
       }
+      await invoke<{
+        schema: 'kungfu.work.resume-prepare/v1';
+        status: 'ready' | 'reconciled';
+        writeOccurred: boolean;
+      }>(
+        [
+          'work',
+          'resume-prepare',
+          '--workspace',
+          workspaceRoot,
+          '--actor',
+          'kungfu-product-project-review',
+          '--execute',
+        ],
+        'kungfu.work.resume-prepare/v1',
+      );
       const reviewer = reviewerProfileId
         ? { id: reviewerProfileId }
         : await preferredReviewerProfile(receipt);
