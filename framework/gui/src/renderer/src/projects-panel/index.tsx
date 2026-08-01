@@ -9,7 +9,6 @@ import type {
 import * as capability from '@kungfu-tech/api/capability';
 import { mono, panelStyle } from '@kungfu-tech/kfx';
 import React from 'react';
-import { ProjectWorkControlView } from '../../../../../../extensions/work-dashboard/src/view/index';
 import { isResettableRuntimeFailure } from '../../../runtime-recovery-contract';
 import {
   RUNTIME_BACKUP_RESET_CHANNEL,
@@ -965,7 +964,6 @@ export function useRetainedCoreSurfaces({
 
 type ProjectsPanelProps = React.ComponentProps<typeof ProjectsPanel>;
 type LabPanelProps = React.ComponentProps<typeof AgentWorkLabPanel>;
-type WorkPanelProps = React.ComponentProps<typeof ProjectWorkControlView>;
 
 export function RetainedCoreSurfaceStack({
   visible,
@@ -981,11 +979,11 @@ export function RetainedCoreSurfaceStack({
   onOpenWork,
   onOpenLabExistingProject,
   onOpenStarterProject,
-  shell,
+  work,
 }: {
   visible?: CoreSurfaceId;
   retained: ReadonlySet<CoreSurfaceId>;
-  projects: ProjectsPanelProps['projects'] & WorkPanelProps['projects'];
+  projects: ProjectsPanelProps['projects'];
   focusedPath: ProjectsPanelProps['focusedPath'];
   onCatalog: ProjectsPanelProps['onCatalog'];
   onOpenProject: ProjectsPanelProps['onOpenProject'];
@@ -996,7 +994,7 @@ export function RetainedCoreSurfaceStack({
   onOpenWork: LabPanelProps['onOpenWork'];
   onOpenLabExistingProject: LabPanelProps['onOpenExistingProject'];
   onOpenStarterProject: LabPanelProps['onOpenStarterProject'];
-  shell: WorkPanelProps['shell'];
+  work: React.ReactNode;
 }) {
   return (
     <>
@@ -1040,7 +1038,7 @@ export function RetainedCoreSurfaceStack({
             height: '100%',
           }}
         >
-          <ProjectWorkControlView projects={projects} shell={shell} />
+          {work}
         </div>
       ) : null}
     </>

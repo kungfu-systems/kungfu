@@ -35,6 +35,7 @@ import React from 'react';
 import * as ReactDOM from 'react-dom';
 import { createRoot } from 'react-dom/client';
 import * as jsxRuntime from 'react/jsx-runtime';
+import { ProjectWorkControlView } from '../../../../../extensions/work-dashboard/src/view/index';
 import {
   actionableKfxFailures,
   shouldOpenAgentWorkLab,
@@ -2344,7 +2345,9 @@ function App() {
                 setProjectsOpen(true);
               }}
               onOpenStarterProject={(root) => void workspaceBridge.path(root)}
-              shell={shell}
+              work={
+                <ProjectWorkControlView projects={projects} shell={shell} />
+              }
             />
             {!projectsOpen && !labOpen && !coreWorkOpen ? (
               runtime.ok ? (
