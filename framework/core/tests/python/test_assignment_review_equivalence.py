@@ -5,6 +5,8 @@ from types import SimpleNamespace
 
 import pytest
 
+from kungfu import assignment_close
+
 
 ASSIGNMENT_CLI = importlib.import_module("kungfu.cli.commands.assignment")
 
@@ -34,6 +36,16 @@ def _equivalent_reviews(*, include_plan=False):
     return plan_root, reviews
 
 
+def _services():
+    return assignment_close.CloseServices(
+        runtime=lambda *args: ASSIGNMENT_CLI._assignment_runtime(*args),
+        status=lambda *args: ASSIGNMENT_CLI._status(*args),
+        receipt=lambda value: ASSIGNMENT_CLI._work_start_receipt(value),
+        ensure_profile=lambda *args: ASSIGNMENT_CLI._ensure_profile(*args),
+        profile_action=lambda *args: ASSIGNMENT_CLI._profile_action(*args),
+    )
+
+
 def test_work_close_resume_deduplicates_equivalent_fit_reviews(tmp_path, monkeypatch):
     plan_root, reviews = _equivalent_reviews()
     monkeypatch.setattr(
@@ -51,11 +63,12 @@ def test_work_close_resume_deduplicates_equivalent_fit_reviews(tmp_path, monkeyp
         },
     )
 
-    resumed = ASSIGNMENT_CLI._resume_starter_close(
+    resumed = assignment_close.resume(
         workspace_root=tmp_path,
         home=None,
         initiative_id="initiative-a",
         assignment_id="assignment-a",
+        services=_services(),
     )
 
     assert resumed["status"] == "review-passed"
@@ -90,11 +103,12 @@ def test_work_close_plan_deduplicates_equivalent_fit_reviews(tmp_path, monkeypat
         },
     )
 
-    plan = ASSIGNMENT_CLI._work_close_plan(
+    plan = assignment_close.build_plan(
         workspace_root=tmp_path,
         home=None,
         initiative_id="initiative-a",
         assignment_id="assignment-a",
+        services=_services(),
     )
 
     assert plan["review"]["id"] == "review-2"
@@ -134,9 +148,10 @@ def test_work_close_resume_rejects_conflicting_fit_reviews(tmp_path, monkeypatch
     )
 
     with pytest.raises(ValueError, match="conflicting fit reviews"):
-        ASSIGNMENT_CLI._resume_starter_close(
+        assignment_close.resume(
             workspace_root=tmp_path,
             home=None,
             initiative_id="initiative-a",
             assignment_id="assignment-a",
+            services=_services(),
         )

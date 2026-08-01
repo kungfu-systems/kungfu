@@ -1,0 +1,125 @@
+{
+  "schema": "kungfu.python-structure-governance-manifest/v1",
+  "baselinePath": "framework/maintainability/abstraction-integrity.baseline.json",
+  "reportPath": "framework/maintainability/abstraction-integrity-report.json",
+  "sourceRoots": {
+    "production": [
+      "framework/core/src/python"
+    ],
+    "test": [
+      "framework/core/tests/python"
+    ]
+  },
+  "limits": {
+    "newProductionModulePhysicalLines": 1000,
+    "oversizedPhysicalLines": 1000,
+    "giantPhysicalLines": 2000,
+    "aggregateHeadroomPercent": 5,
+    "minimumOwnedDefinitions": 2,
+    "minimumSubstantiveModulePhysicalLines": 120
+  },
+  "aggregates": [
+    {
+      "id": "kungfu-flat-root",
+      "prefix": "framework/core/src/python/kungfu/",
+      "recursive": false
+    },
+    {
+      "id": "kungfu-cli",
+      "prefix": "framework/core/src/python/kungfu/cli/",
+      "recursive": true
+    },
+    {
+      "id": "kungfu-runtime-family",
+      "prefix": "framework/core/src/python/kungfu/runtime_",
+      "recursive": true
+    }
+  ],
+  "forbiddenStronglyConnectedComponents": [
+    [
+      "kungfu.runtime_broker",
+      "kungfu.runtime_service"
+    ]
+  ],
+  "publicImports": [
+    "kungfu.exit_bundle.ProductReleaseHistoryError",
+    "kungfu.runtime_broker.RuntimeLeaseManager",
+    "kungfu.runtime_broker.RuntimeLifecycleError",
+    "kungfu.runtime_broker.NativeReadinessAuthority",
+    "kungfu.runtime_service.ProcessRuntimeHost"
+  ],
+  "typedSeams": [
+    "kungfu.product_release_history.ProductReleaseHistoryPort",
+    "kungfu.assignment_lifecycle.ports.AssignmentEventSink",
+    "kungfu.assignment_lifecycle.ports.AssignmentRuntime",
+    "kungfu.assignment_lifecycle.ports.AssignmentRuntimePort",
+    "kungfu.assignment_lifecycle.ports.AssignmentAdvancePort",
+    "kungfu.assignment_start.StartPlanPort",
+    "kungfu.assignment_start.AssignmentAdmissionPort",
+    "kungfu.assignment_start.StartRequest",
+    "kungfu.assignment_start.StartServices",
+    "kungfu.assignment_review_lifecycle.ReviewRequest",
+    "kungfu.assignment_review_lifecycle.ReviewPlanPort",
+    "kungfu.assignment_review_lifecycle.ReviewServices",
+    "kungfu.assignment_close.CloseRequest",
+    "kungfu.assignment_close.CloseServices",
+    "kungfu.assignment_evidence.EvidenceServices",
+    "kungfu.runtime_ports.RuntimeProcessHost",
+    "kungfu.runtime_ports.RuntimeDrainHost",
+    "kungfu.runtime_ports.RuntimeReadinessAuthority",
+    "kungfu.runtime_ports.RuntimeLeaseClock"
+  ],
+  "ownership": [
+    {
+      "owner": "core/python-assignment-start-review",
+      "paths": [
+        "framework/core/src/python/kungfu/assignment_lifecycle/ports.py",
+        "framework/core/src/python/kungfu/assignment_start.py",
+        "framework/core/src/python/kungfu/assignment_review_lifecycle.py"
+      ]
+    },
+    {
+      "owner": "core/python-assignment-close-evidence",
+      "paths": [
+        "framework/core/src/python/kungfu/assignment_close.py",
+        "framework/core/src/python/kungfu/assignment_evidence.py"
+      ]
+    },
+    {
+      "owner": "core/python-release-history",
+      "paths": [
+        "framework/core/src/python/kungfu/product_release_history.py"
+      ]
+    },
+    {
+      "owner": "core/python-runtime-contracts",
+      "paths": [
+        "framework/core/src/python/kungfu/runtime_contract.py",
+        "framework/core/src/python/kungfu/runtime_paths.py",
+        "framework/core/src/python/kungfu/runtime_ports.py"
+      ]
+    },
+    {
+      "owner": "core/python-runtime-lifecycle",
+      "paths": [
+        "framework/core/src/python/kungfu/runtime_leases.py",
+        "framework/core/src/python/kungfu/runtime_state.py"
+      ]
+    },
+    {
+      "owner": "shifu/python-structure-entry",
+      "paths": [
+        "scripts/check-code-complexity.mjs",
+        "scripts/check-code-complexity.test.mjs"
+      ]
+    },
+    {
+      "owner": "shifu/python-structure-oracle",
+      "paths": [
+        "scripts/check-python-structure.py",
+        "scripts/check-python-structure.test.py"
+      ]
+    }
+  ],
+  "exceptions": []
+}

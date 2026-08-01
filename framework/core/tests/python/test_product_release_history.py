@@ -9,7 +9,7 @@ from pathlib import Path
 import pytest
 import pykungfu  # noqa: F401
 
-from kungfu import distribution_update, exit_bundle
+from kungfu import distribution_update, exit_bundle, product_release_history
 
 from test_distribution_release_cut import _local_cut_archive
 
@@ -128,7 +128,7 @@ def test_exit_product_release_history_survives_cache_deletion_and_rolls_back(
     assert selected["selected"]["releaseCutRoot"] == second["targetReleaseCutRoot"]
     assert selected["selected"]["productRoot"].startswith(str(destination.resolve()))
 
-    reexported = exit_bundle._product_history_build(destination)
+    reexported = product_release_history.build(destination)
     assert set(reexported["inventory"]["selectionReceiptRoots"]) >= set(
         member["inventory"]["selectionReceiptRoots"]
     )
@@ -154,18 +154,18 @@ def test_product_release_history_rejects_unknown_features_and_thin_import(
     tmp_path: Path,
 ) -> None:
     source, _first, _second, _manifest = _installed_history(tmp_path)
-    full = exit_bundle._product_history_build(source)
+    full = product_release_history.build(source)
     unknown = copy.deepcopy(full)
     unknown["requiredFeatures"].append("future-required-history-v9")
 
     with pytest.raises(exit_bundle.ProductReleaseHistoryError) as error:
-        exit_bundle._product_history_verify(unknown)
+        product_release_history.verify(unknown)
     assert error.value.code == "history-required-feature-unsupported"
 
-    thin = exit_bundle._product_history_build(source, mode="thin")
-    assert exit_bundle._product_history_verify(thin)["mode"] == "thin"
+    thin = product_release_history.build(source, mode="thin")
+    assert product_release_history.verify(thin)["mode"] == "thin"
     with pytest.raises(exit_bundle.ProductReleaseHistoryError) as error:
-        exit_bundle._product_history_import(
+        product_release_history.import_history(
             tmp_path / "thin-destination", thin, execute=True
         )
     assert error.value.code == "history-thin-materialization-forbidden"
@@ -175,11 +175,11 @@ def test_product_release_history_recovers_receipt_before_current_interruption(
     tmp_path: Path,
 ) -> None:
     source, _first, _second, _manifest = _installed_history(tmp_path)
-    bundle = exit_bundle._product_history_build(source)
+    bundle = product_release_history.build(source)
     destination = tmp_path / "interrupted-destination"
 
     with pytest.raises(exit_bundle.ProductReleaseHistoryError) as error:
-        exit_bundle._product_history_import(
+        product_release_history.import_history(
             destination, bundle, execute=True, _fault_before_current=True
         )
     assert error.value.code == "qualification-fault-before-current"
@@ -187,7 +187,9 @@ def test_product_release_history_recovers_receipt_before_current_interruption(
     assert pending["ok"] is False
     assert pending["issues"][0]["code"] == "cli-selection-publication-pending"
 
-    recovered = exit_bundle._product_history_import(destination, bundle, execute=True)
+    recovered = product_release_history.import_history(
+        destination, bundle, execute=True
+    )
     assert recovered["status"] == "recovered"
     assert recovered["sourceCacheRequired"] is False
     assert distribution_update.cli_inventory_fsck(destination)["ok"] is True
@@ -197,18 +199,18 @@ def test_product_release_history_refuses_recovery_after_receipt_bound_image_loss
     tmp_path: Path,
 ) -> None:
     source, _first, _second, _manifest = _installed_history(tmp_path)
-    bundle = exit_bundle._product_history_build(source)
+    bundle = product_release_history.build(source)
     destination = tmp_path / "lost-recovery-image"
 
     with pytest.raises(exit_bundle.ProductReleaseHistoryError):
-        exit_bundle._product_history_import(
+        product_release_history.import_history(
             destination, bundle, execute=True, _fault_before_current=True
         )
     selected_id = str(bundle["material"]["selected"]["frontendBuildId"])
     shutil.rmtree(distribution_update._cli_image_root(destination, selected_id))
 
     with pytest.raises(exit_bundle.ProductReleaseHistoryError) as error:
-        exit_bundle._product_history_import(destination, bundle, execute=True)
+        product_release_history.import_history(destination, bundle, execute=True)
     assert error.value.code == "history-recovery-image-missing"
     assert not distribution_update._cli_selection_path(destination).exists()
 
@@ -217,7 +219,7 @@ def test_product_release_history_rejects_diverged_destination_before_selection(
     tmp_path: Path,
 ) -> None:
     source, _first, _second, _manifest = _installed_history(tmp_path)
-    bundle = exit_bundle._product_history_build(source)
+    bundle = product_release_history.build(source)
     destination = tmp_path / "diverged-destination"
     distribution_update._write_object(
         distribution_update._cli_selection_path(destination),
@@ -225,5 +227,5 @@ def test_product_release_history_rejects_diverged_destination_before_selection(
     )
 
     with pytest.raises(exit_bundle.ProductReleaseHistoryError) as error:
-        exit_bundle._product_history_import(destination, bundle, execute=True)
+        product_release_history.import_history(destination, bundle, execute=True)
     assert error.value.code == "history-destination-not-clean"
