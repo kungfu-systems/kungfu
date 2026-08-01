@@ -23,7 +23,9 @@ use std::fs;
 use std::fs::OpenOptions;
 use std::io::Write;
 use std::path::{Path, PathBuf};
-use std::process::{Command, Stdio};
+use std::process::Command;
+#[cfg(not(windows))]
+use std::process::Stdio;
 
 use shifu_core::{bootstrap, host, json, style};
 
