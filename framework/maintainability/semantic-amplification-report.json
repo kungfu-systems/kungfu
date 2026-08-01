@@ -5,7 +5,7 @@
   "manifestPath": "framework/maintainability/semantic-amplification.manifest.json",
   "manifestRoot": "sha256:0d9fe260e4e2586f3d4f7b640d145e38445e158afff01c176ed8ce51c3b3937b",
   "baselineRef": "dbfed9ca1785d147b26f4f06e7e6895ac7368fee",
-  "sourceRoot": "sha256:161381cf3b5433aad88436093e8e0084155ade44c1b07c03ae2740007976e167",
+  "sourceRoot": "sha256:44e95ac8833fb8d89866a6b514c991ce8f810cc66defad0812f1e8241814f9c1",
   "roles": {
     "authority": "exactly one authority route per family; the route may name multiple co-owned source files",
     "allowedProjectionRoles": [
@@ -556,9 +556,9 @@
         },
         {
           "path": "framework/kfx/src/index.ts",
-          "currentLines": 1541,
+          "currentLines": 1642,
           "baselineLines": 1622,
-          "currentRoot": "sha256:9ad09822a03a893f20defd3167247e63d053582652d2c5bcefe1ccff54d5b65f",
+          "currentRoot": "sha256:17cace844696bc3d74f8a09db910e0ddcd9d91a2440c1b8c9396cd6a589d4bfe",
           "baselineRoot": "sha256:c27078f816d82f9d6aceb9d681f387ab1ee5ccdb806f0570e1b8959f8f2fadf8",
           "changedSinceBaseline": true
         },
@@ -604,9 +604,9 @@
         },
         {
           "path": "scripts/run-kfx-profile-suite-tests.mjs",
-          "currentLines": 221,
+          "currentLines": 225,
           "baselineLines": 89,
-          "currentRoot": "sha256:b79625b4df7c42b1dad2c1a89d8be35f661ac2839f603b83a3091fd9397d63ec",
+          "currentRoot": "sha256:a5cebb1709920bf60842d8055272ff0578973ce18198478641157006f7b710e7",
           "baselineRoot": "sha256:d7d0cd90cf794bd7f9240f0f9a2a8ed1757eb42e20179396f6268bee7c1bc035",
           "changedSinceBaseline": true
         },
