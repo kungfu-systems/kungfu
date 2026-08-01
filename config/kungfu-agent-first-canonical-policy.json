@@ -523,13 +523,13 @@
       },
       "source": {
         "path": "framework/primitive/kungfu-primitive-catalog.contract.json",
-        "sha256": "sha256:145106b2a6d9d51a0a83adde697308b44a7dec073c2bda2a5237ac4532ccb32c",
-        "renderedSha256": "sha256:145106b2a6d9d51a0a83adde697308b44a7dec073c2bda2a5237ac4532ccb32c",
+        "sha256": "sha256:e1f847ecbc8c5980d6b14a59b9077e865ccc8e53046239243f387c1d7302a73b",
+        "renderedSha256": "sha256:e1f847ecbc8c5980d6b14a59b9077e865ccc8e53046239243f387c1d7302a73b",
         "byteForByte": true
       },
       "artifact": {
         "path": "config/primitive/kungfu-primitive-catalog.contract.json",
-        "expectedSha256": "sha256:145106b2a6d9d51a0a83adde697308b44a7dec073c2bda2a5237ac4532ccb32c"
+        "expectedSha256": "sha256:e1f847ecbc8c5980d6b14a59b9077e865ccc8e53046239243f387c1d7302a73b"
       }
     }
   ]
