@@ -95,6 +95,13 @@ pub fn standard_companion_globs(platform: &str) -> (String, String) {
     )
 }
 
+pub fn registration_policy_is_coherent(trust_domain: &str, publication_eligible: bool) -> bool {
+    matches!(
+        (trust_domain, publication_eligible),
+        ("shifu-local", false) | ("public", true)
+    )
+}
+
 pub fn die(msg: &str) -> ! {
     eprintln!("shifu: {msg}");
     std::process::exit(1);
@@ -139,7 +146,7 @@ pub fn exec_or_exit(mut cmd: Command) -> ! {
 
 #[cfg(test)]
 mod tests {
-    use super::standard_companion_globs;
+    use super::{registration_policy_is_coherent, standard_companion_globs};
 
     #[test]
     fn agent_registry_covers_every_development_route() {
@@ -169,5 +176,14 @@ mod tests {
                 "product/release/cli/*upgrade-*-linux-*.json".to_string(),
             )
         );
+    }
+
+    #[test]
+    fn registration_policy_requires_a_coherent_trust_domain() {
+        assert!(registration_policy_is_coherent("shifu-local", false));
+        assert!(registration_policy_is_coherent("public", true));
+        assert!(!registration_policy_is_coherent("public", false));
+        assert!(!registration_policy_is_coherent("shifu-local", true));
+        assert!(!registration_policy_is_coherent("unknown", false));
     }
 }
