@@ -478,7 +478,11 @@ export function sourceAcceptancePlan(files, evidenceBaseCommit = '') {
       '--test',
       'scripts/kfd4-perspective-qualification.test.mjs',
     ],
-    ['Shifu version sync', 'scripts/sync-shifu-version.mjs', '--check'],
+    [
+      'Native component version sync',
+      'scripts/sync-shifu-version.mjs',
+      '--check',
+    ],
     ['layered SDK projections', 'scripts/generate-layered-sdk.mjs', '--check'],
     [
       'Work lifecycle matrix materialization',

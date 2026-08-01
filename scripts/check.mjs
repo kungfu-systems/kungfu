@@ -323,8 +323,8 @@ function checkPlatformMacros() {
   log('[check] Windows platform macros use _WIN32');
 }
 
-function checkShifuVersionSync() {
-  run('shifu version sync gate', 'node', [
+function checkNativeComponentVersionSync() {
+  run('native component version sync gate', 'node', [
     path.join('scripts', 'sync-shifu-version.mjs'),
     '--check',
   ]);
@@ -787,7 +787,7 @@ function checkStaged() {
   checkNoBashStaged();
   checkTestManifest();
   checkPlatformMacros();
-  checkShifuVersionSync();
+  checkNativeComponentVersionSync();
   checkShifuEntryContract();
   checkShifuCacheContract();
   checkShifuDocumentationContract();
@@ -898,7 +898,7 @@ function checkShared() {
 function checkChanged() {
   checkNoBashTree();
   checkPlatformMacros();
-  checkShifuVersionSync();
+  checkNativeComponentVersionSync();
   checkShifuEntryContract();
   checkXinfaBoundary();
   checkCarrierActionEnvelope();
@@ -923,7 +923,7 @@ function checkChanged() {
 function checkAll() {
   checkNoBashTree();
   checkPlatformMacros();
-  checkShifuVersionSync();
+  checkNativeComponentVersionSync();
   checkShifuEntryContract();
   checkXinfaBoundary();
   checkCarrierActionEnvelope(['--all']);
