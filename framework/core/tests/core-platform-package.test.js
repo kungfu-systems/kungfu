@@ -6,6 +6,7 @@ const path = require('node:path');
 
 const contract = require('../core-platform-package.contract.json');
 const sourcePackage = require('../package.json');
+const stdlibPrune = require('../../../product/stdlib-prune.json');
 const {
   platformPackages,
   resolveExecutable,
@@ -75,6 +76,12 @@ test('platform package budget preserves its bounded bands', () => {
       contract.sizePolicy.compressedHardCeilingBytes,
   );
   assert.equal(contract.sizePolicy.hardCeilingExceptionRequiresReview, true);
+});
+
+test('Linux package prunes the unused dbm accelerator before size enforcement', () => {
+  const dbmAccelerator = 'lib/python3.13/lib-dynload/_dbm*';
+  assert.ok(stdlibPrune.prune.linux.includes(dbmAccelerator));
+  assert.equal(stdlibPrune.prune.darwin.includes(dbmAccelerator), false);
 });
 
 test('Linux Release stripping is explicit and excludes runtimes owned upstream', () => {

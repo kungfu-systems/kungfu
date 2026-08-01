@@ -36,6 +36,7 @@
       "lib/python3.13/site-packages/pip",
       "lib/python3.13/site-packages/pip-*.dist-info",
       "lib/python3.13/lib-dynload/_tkinter*",
+      "lib/python3.13/lib-dynload/_dbm*",
       "bin/idle3*",
       "bin/pip*",
       "bin/pydoc3*",
