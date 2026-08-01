@@ -2079,6 +2079,10 @@ test('workflows keep candidate and promotion outside untrusted PR authority', ()
   );
   assert.match(
     promotionWorkflow,
+    /sed -n -e 's\/\^manifest-root=\/manifest:\/p' -e 's\/\^qualification-receipt-root=\/qualification:\/p' -e 's\/\^promotion-authority-root=\/promotion:\/p'/u,
+  );
+  assert.match(
+    promotionWorkflow,
     /Qualify Linux x86_64 consumer remote and local-CAS paths[\s\S]*linux_x86_64_cp313_available[\s\S]*git worktree add --detach "\$first_checkout" "\$TARGET_SHA"[\s\S]*KUNGFU_QUALIFIED_CORE_BUNDLE="\$bundle"[\s\S]*pykungfu\.cpython-313-x86_64-linux-gnu\.so[\s\S]*ELF 64-bit[\s\S]*\.\/shifu work --help[\s\S]*KUNGFU_QUALIFIED_CORE_GITHUB=0[\s\S]*local-cas-hit/u,
   );
   assert.match(

@@ -593,7 +593,7 @@ jobs:
                   --github-output "$reusable_output"; then
                   continue
                 fi
-                authority_identity="$(sed -n -e 's/^manifest-root=manifest:/p' -e 's/^qualification-receipt-root=qualification:/p' -e 's/^promotion-authority-root=promotion:/p' "$reusable_output" | paste -sd '|' -)"
+                authority_identity="$(sed -n -e 's/^manifest-root=/manifest:/p' -e 's/^qualification-receipt-root=/qualification:/p' -e 's/^promotion-authority-root=/promotion:/p' "$reusable_output" | paste -sd '|' -)"
                 if [ -n "$matched_authority" ] && [ "$authority_identity" != "$matched_authority" ]; then
                   echo "Multiple distinct compatible Qualified Core authorities are active for ${row}." >&2
                   exit 1
