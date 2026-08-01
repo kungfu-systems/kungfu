@@ -44,7 +44,10 @@ test('provider-first source bundle resolves node-pty through the Agent Session p
       bundleRequire,
     );
     assert.equal(existsSync(modulePath), true);
-    assert.match(modulePath, /node-pty\/lib\/index\.js$/u);
+    assert.equal(
+      modulePath.endsWith(path.join('node-pty', 'lib', 'index.js')),
+      true,
+    );
   } finally {
     if (previous === undefined) {
       Reflect.deleteProperty(
