@@ -55,7 +55,7 @@
           },
           {
             "path": "framework/contract/kungfu-contracts.registry.json",
-          "sha256": "sha256:86079535834c818ba06972f3a1ff1bf8188c876746fd54d29ee04947f6de867b"
+            "sha256": "sha256:86079535834c818ba06972f3a1ff1bf8188c876746fd54d29ee04947f6de867b"
           }
         ]
       },
@@ -102,7 +102,7 @@
         "evidenceRoots": [
           {
             "path": ".buildchain/kfd/kfd-2/release-claims.json",
-          "sha256": "sha256:7c9e95cd988a99c8f1d1e3e85da358a62d9577865496e37c7662d62248db286a"
+            "sha256": "sha256:7c9e95cd988a99c8f1d1e3e85da358a62d9577865496e37c7662d62248db286a"
           },
           {
             "path": "docs/qualification/kfd2-trust-assessment.md",
@@ -152,7 +152,7 @@
         "evidenceRoots": [
           {
             "path": ".buildchain/kfd/kfd-3/surfaces.json",
-          "sha256": "sha256:a6a163aa010db2ab3aceb093fccc0962891aaaa2e8ea31a2280b79c611a796d3"
+            "sha256": "sha256:a6a163aa010db2ab3aceb093fccc0962891aaaa2e8ea31a2280b79c611a796d3"
           },
           {
             "path": ".buildchain/kfd/kfd-3/capability-query.json",
