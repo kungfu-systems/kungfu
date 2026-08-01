@@ -585,7 +585,7 @@
         "evidenceRoots": [
           {
             "path": "framework/core/src/python/kungfu/assignment_orchestration.py",
-            "sha256": "sha256:0543901da508a83d0181a0e016976765c5311dc514bb4be2b419f904ca88e6ac"
+            "sha256": "sha256:148e0e298fbaea96d4ff1de5df2f74923c8c7b54f23d00573ca44bb1c97a3bfa"
           }
         ]
       },
