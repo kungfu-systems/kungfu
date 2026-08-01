@@ -37,6 +37,31 @@ async function eventually(
   );
 }
 
+function mockProviderEnvironment({
+  platform = process.platform,
+  source = process.env,
+} = {}) {
+  if (platform !== 'win32') return { PATH: source.PATH ?? '' };
+  const environment = {};
+  for (const requested of [
+    'path',
+    'systemroot',
+    'windir',
+    'comspec',
+    'pathext',
+    'temp',
+    'tmp',
+  ]) {
+    const actual = Object.keys(source).find(
+      (name) => name.toLowerCase() === requested,
+    );
+    if (actual && typeof source[actual] === 'string') {
+      environment[actual] = source[actual];
+    }
+  }
+  return environment;
+}
+
 async function control(host, session, operation, payload, automatic = true) {
   const plan = await host.invoke({
     operation: 'plan-control',
@@ -65,6 +90,28 @@ test('convergence timeout includes its last observed diagnostic', async () => {
     ),
     /fixture state did not converge within 1ms; last lifecycle=ready, interaction=busy/u,
   );
+});
+
+test('Windows Mock Agent environment preserves required names and their casing', () => {
+  const source = {
+    Path: 'C:\\tools',
+    SYSTEMROOT: 'C:\\Windows',
+    windir: 'C:\\Windows',
+    ComSpec: 'C:\\Windows\\System32\\cmd.exe',
+    PATHEXT: '.COM;.EXE',
+    TEMP: 'C:\\Temp',
+    Tmp: 'C:\\Temp',
+    KUNGFU_UNREVIEWED_SECRET: 'omit',
+  };
+  assert.deepEqual(mockProviderEnvironment({ platform: 'win32', source }), {
+    Path: source.Path,
+    SYSTEMROOT: source.SYSTEMROOT,
+    windir: source.windir,
+    ComSpec: source.ComSpec,
+    PATHEXT: source.PATHEXT,
+    TEMP: source.TEMP,
+    Tmp: source.Tmp,
+  });
 });
 
 test('macOS node-pty preparation rejects a linked private support target', async (t) => {
@@ -152,6 +199,7 @@ test('deterministic Mock Agent traverses answer, approval, review, and exit in t
     workConsoleId: 'work:kungfu.work-control:assignment:mock-flow',
     sessionAttemptId: 'attempt:mock-flow:1',
   };
+  const providerEnvironment = mockProviderEnvironment();
   const input = {
     ...session,
     workspaceId: 'workspace:mock-flow',
@@ -161,7 +209,7 @@ test('deterministic Mock Agent traverses answer, approval, review, and exit in t
     executable: process.execPath,
     argv: [MOCK, '--scenario', 'multi-step'],
     cwd: runtimeDir,
-    env: { PATH: process.env.PATH ?? '' },
+    env: providerEnvironment,
     runtimeProfileId: 'kungfu.mock-agent.multi-step',
     binding: {
       kind: 'work',
