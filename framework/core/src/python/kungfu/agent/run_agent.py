@@ -24,6 +24,7 @@ import uuid
 
 import kungfu
 from kungfu.agent import runtime_profiles
+from kungfu.agent import session_surface
 from kungfu.content_hash import compute_content_hash_value
 from kungfu.rewind import (
     ACTION_RUN_BEGIN,
@@ -65,6 +66,7 @@ _PROVIDER_ENV_ALLOWLIST = {
     "codex": ("OPENAI_API_KEY", "CODEX_HOME"),
     "claude": ("ANTHROPIC_API_KEY", "CLAUDE_CONFIG_DIR"),
     "opencode": (),
+    "synthetic": (),
 }
 _DEFAULT_ARGV = {
     "codex": [
@@ -77,6 +79,7 @@ _DEFAULT_ARGV = {
     ],
     "claude": ["--print", "--output-format", "json"],
     "opencode": ["run", "--pure", "--format", "json"],
+    "synthetic": [],
 }
 _BOOTSTRAP = (
     "You are a fresh Agent process launched by Kungfu. "
@@ -172,6 +175,9 @@ def select_profile(
     config_home: str | None = None,
     runtime_home: str | None = None,
 ) -> tuple[dict[str, Any], str]:
+    if profile_id and profile_id.startswith("kungfu.mock-agent."):
+        scenario = profile_id.removeprefix("kungfu.mock-agent.")
+        return runtime_profiles.deterministic_mock_profile(scenario), "qualification"
     resolved = runtime_profiles.kungfu_config.resolve_config(
         config_home=config_home, runtime_home=runtime_home
     )
@@ -268,6 +274,8 @@ def _environment(
                 "XDG_CACHE_HOME": str(isolated / "cache"),
             }
         )
+    if provider == "synthetic":
+        env["KUNGFU_AS_VARIANT"] = "node"
     env.update(
         {
             "KUNGFU_AGENT_ATTEMPT_ID": run_id,
@@ -313,6 +321,204 @@ class ProcessResult:
     stderr: str
     interrupted: bool
     timed_out: bool
+
+
+def _session_ref(work: Mapping[str, Any], run_id: str) -> dict[str, str]:
+    return {
+        "workConsoleId": (
+            f"work:{work['profileId']}:{work['entityType']}:{work['entityId']}"
+        ),
+        "sessionAttemptId": run_id,
+    }
+
+
+def _invoke_session_control(
+    invoke: Callable[[Mapping[str, Any]], Mapping[str, Any]],
+    ref: Mapping[str, str],
+    operation: str,
+    payload: Mapping[str, Any],
+    *,
+    automatic: bool = True,
+) -> Mapping[str, Any]:
+    plan = invoke(
+        {
+            "operation": "plan-control",
+            "controlOperation": operation,
+            "session": dict(ref),
+            "payload": dict(payload),
+        }
+    )
+    return invoke(
+        {
+            "operation": operation,
+            "actorId": "kungfu-project-work",
+            "client": "cli",
+            "plan": plan,
+            "expectedPlanRoot": plan["root"],
+            "payload": dict(payload),
+            "automatic": automatic,
+        }
+    )
+
+
+def _wait_for_session(
+    invoke: Callable[[Mapping[str, Any]], Mapping[str, Any]],
+    ref: Mapping[str, str],
+    predicate: Callable[[Mapping[str, Any]], bool],
+    *,
+    timeout_seconds: float,
+) -> Mapping[str, Any]:
+    deadline = time.monotonic() + timeout_seconds
+    latest: Mapping[str, Any] | None = None
+    while time.monotonic() < deadline:
+        latest = invoke({"operation": "status", "session": dict(ref)})
+        if predicate(latest):
+            return latest
+        time.sleep(0.05)
+    state = (latest or {}).get("interactionState") or "unavailable"
+    raise ValueError(f"Agent Session did not reach a safe boundary: {state}")
+
+
+def run_session_attempt(
+    *,
+    invoke: Callable[[Mapping[str, Any]], Mapping[str, Any]],
+    run_id: str,
+    selected: Mapping[str, Any],
+    verification: Mapping[str, Any],
+    work: Mapping[str, Any],
+    cwd: str,
+    env: Mapping[str, str],
+    prompt: str,
+    timeout_seconds: float,
+    event_sink: Callable[[Mapping[str, Any]], None] | None = None,
+) -> tuple[ProcessResult, dict[str, Any]]:
+    """Start one Work-bound Session, deliver the first turn, and yield at attention."""
+
+    provider = str(selected["provider"])
+    ref = _session_ref(work, run_id)
+    launch = dict(selected.get("launch") or {})
+    argv = (
+        [str(value) for value in launch.get("argv") or []]
+        if provider == "synthetic"
+        else []
+    )
+    start_input = {
+        **ref,
+        "workspaceId": str(work["workspaceId"]),
+        "provider": provider,
+        "providerVersion": str(verification["version"]),
+        "profileRoot": canonical_root(selected),
+        "executable": str(launch["executable"]),
+        "argv": argv,
+        "cwd": cwd,
+        "env": dict(env),
+        "runtimeProfileId": str(selected["id"]),
+        "binding": {"kind": "work", "workRef": dict(work)},
+    }
+    plan = invoke({"operation": "plan-start", "input": start_input})
+    started = invoke(
+        {
+            "operation": "start",
+            "actorId": "kungfu-project-work",
+            "client": "cli",
+            "plan": plan,
+            "expectedPlanRoot": plan["root"],
+            "attachment": {
+                "attachmentId": f"project-work:{run_id}",
+                "presentation": "project-work",
+            },
+            "execution": {"env": dict(env), "cols": 120, "rows": 36},
+        }
+    )
+    actual_console = started.get("workConsoleId")
+    actual_attempt = started.get("sessionAttemptId")
+    if isinstance(actual_console, str) and isinstance(actual_attempt, str):
+        ref = {
+            "workConsoleId": actual_console,
+            "sessionAttemptId": actual_attempt,
+        }
+    ready = _wait_for_session(
+        invoke,
+        ref,
+        lambda status: (
+            status.get("interactionState")
+            in {"ready", "approval-needed", "unknown", "ended"}
+        ),
+        timeout_seconds=min(timeout_seconds, 30.0),
+    )
+    if ready.get("interactionState") != "ready":
+        raise ValueError(
+            "Agent Session requires attention before the initial Work instruction"
+        )
+    before_sequence = int((ready.get("output") or {}).get("nextSequence") or 0)
+    delivered = _invoke_session_control(invoke, ref, "instruct", {"text": prompt})
+    if delivered.get("status") not in {"written", "duplicate"}:
+        raise ValueError(
+            f"Agent Session rejected the Work instruction: {delivered.get('reason')}"
+        )
+    if event_sink is not None:
+        event_sink(
+            {
+                "schema": "kungfu.agent-run.activity/v1",
+                "kind": "agent",
+                "phase": "started",
+                "text": "Agent Session accepted the Work instruction.",
+                "rawToolArgumentsExposed": False,
+            }
+        )
+    boundary = _wait_for_session(
+        invoke,
+        ref,
+        lambda status: (
+            status.get("interactionState") in {"approval-needed", "unknown", "ended"}
+            or (
+                status.get("interactionState") == "ready"
+                and int((status.get("output") or {}).get("nextSequence") or 0)
+                > before_sequence
+            )
+        ),
+        timeout_seconds=timeout_seconds,
+    )
+    snapshot = invoke(
+        {"operation": "snapshot", "session": dict(ref), "requestedSequence": 0}
+    )
+    lines = list(((snapshot.get("terminal") or {}).get("vt") or {}).get("lines") or [])
+    visible = "\n".join(str(line).rstrip() for line in lines).strip()
+    if event_sink is not None:
+        for line in visible.splitlines()[-12:]:
+            if line.strip():
+                event_sink(
+                    {
+                        "schema": "kungfu.agent-run.activity/v1",
+                        "kind": "agent",
+                        "phase": "waiting",
+                        "text": line.strip()[:1000],
+                        "rawToolArgumentsExposed": False,
+                    }
+                )
+    exit_value = boundary.get("exit") or {}
+    exit_code = int(exit_value.get("exitCode") or exit_value.get("code") or 0)
+    session_value = {
+        "schema": "kungfu.agent-run-session/v1",
+        **ref,
+        "live": boundary.get("live") is True,
+        "lifecycleState": boundary.get("lifecycleState"),
+        "interactionState": boundary.get("interactionState"),
+        "workAgent": boundary.get("workAgent"),
+        "product": boundary.get("product"),
+        "controller": boundary.get("controller"),
+        "output": boundary.get("output"),
+    }
+    return (
+        ProcessResult(
+            exit_code=exit_code,
+            stdout=visible,
+            stderr="",
+            interrupted=False,
+            timed_out=False,
+        ),
+        session_value,
+    )
 
 
 def run_process(
@@ -562,6 +768,10 @@ def parse_provider_output(provider: str, stdout: str) -> dict[str, Any]:
                 usage = dict(payload["usage"])
             if isinstance(payload.get("total_cost_usd"), (int, float)):
                 cost = payload["total_cost_usd"]
+    elif provider == "synthetic":
+        visible = _ANSI_ESCAPE.sub("", stdout).strip()
+        if visible:
+            text_parts.append(visible[:128_000])
     return {
         "providerSessionIds": sorted(session_ids),
         "text": "\n".join(text_parts) if text_parts else None,
@@ -584,6 +794,8 @@ def execute(
     timeout_seconds: float = 900,
     process_runner: Callable[..., ProcessResult] = run_process,
     event_sink: Callable[[Mapping[str, Any]], None] | None = None,
+    session_invoker: Callable[[Mapping[str, Any]], Mapping[str, Any]] | None = None,
+    use_session: bool | None = None,
 ) -> dict[str, Any]:
     from kungfu.storage.episode_lifecycle import RuntimeEpisodeLifecycle
 
@@ -637,6 +849,7 @@ def execute(
     )
     started = time.monotonic_ns()
     streamed_agent_text = False
+    session_value: dict[str, Any] | None = None
 
     def project_output(stream_name: str, line: str) -> None:
         nonlocal streamed_agent_text
@@ -658,7 +871,35 @@ def execute(
             ),
             run_id=run_id,
         )
-        if process_runner is run_process:
+        session_requested = (
+            use_session
+            if use_session is not None
+            else bool(os.environ.get("KUNGFU_PROJECT_WORK_AGENT_SESSION"))
+        )
+        session_invoke = session_invoker
+        if session_requested and session_invoke is None:
+            session_invoke = session_surface.invoke
+        if (
+            session_requested
+            and session_invoke is not None
+            and provider in {"codex", "claude", "synthetic"}
+            and permission_mode == "workspace-write"
+            and work is not None
+            and cwd is not None
+        ):
+            result, session_value = run_session_attempt(
+                invoke=session_invoke,
+                run_id=run_id,
+                selected=selected,
+                verification=verification,
+                work=work,
+                cwd=cwd,
+                env=env,
+                prompt=argv[-1],
+                timeout_seconds=timeout_seconds,
+                event_sink=event_sink,
+            )
+        elif process_runner is run_process:
             result = process_runner(
                 argv,
                 cwd=cwd,
@@ -702,6 +943,7 @@ def execute(
             "stdout": result.stdout,
             "stderr": result.stderr,
             "parsed": parsed,
+            "session": session_value,
         }
         response_path = bundle_dir / "response.json"
         response_path.write_text(
@@ -725,7 +967,9 @@ def execute(
                 "verified": True,
             },
             "launch": {
+                "mode": "agent-session" if session_value is not None else "process",
                 "cwd": cwd,
+                "permissionMode": permission_mode,
                 "argvWithoutPrompt": argv[:-1],
                 "environmentKeys": env_keys,
                 "promptRoot": canonical_root(prompt),
@@ -745,6 +989,7 @@ def execute(
                 "wallTimeNs": max(0, time.monotonic_ns() - started),
             },
             "providerObservation": parsed,
+            "session": session_value,
             "work": {
                 "workRef": work,
                 "continuation": continuation_value,

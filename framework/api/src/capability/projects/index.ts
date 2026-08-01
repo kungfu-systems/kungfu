@@ -1,10 +1,11 @@
 // SPDX-License-Identifier: Apache-2.0
 
-import { randomUUID } from 'node:crypto';
+import { createHash, randomUUID } from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 
-import type { WorkStartReceipt } from '../agent-work-lab.js';
+import type { AgentSession } from '../agent-session.js';
+import type { ProjectWork, WorkStartReceipt } from '../agent-work-lab.js';
 import type { ProductSearchDocument } from '../product-search.js';
 
 export type ProjectFileTreeEntry = {
@@ -22,6 +23,119 @@ export type ProjectFileTreeOptions = {
   maxDepth?: number;
   maxEntries?: number;
 };
+
+export type ProjectFilePreview = {
+  schema: 'kungfu.project-file.preview/v1';
+  projectPath: string;
+  relativePath: string;
+  absolutePath: string;
+  name: string;
+  mediaType: 'text/markdown' | 'text/plain' | 'application/json';
+  language: string;
+  content: string;
+  size: number;
+  readOnly: true;
+  writeOccurred: false;
+};
+
+const PROJECT_FILE_PREVIEW_LIMIT = 512 * 1024;
+const PROJECT_FILE_PREVIEW_TYPES = new Map<string, [string, string]>([
+  ['.md', ['text/markdown', 'markdown']],
+  ['.markdown', ['text/markdown', 'markdown']],
+  ['.txt', ['text/plain', 'text']],
+  ['.json', ['application/json', 'json']],
+  ['.yaml', ['text/plain', 'yaml']],
+  ['.yml', ['text/plain', 'yaml']],
+  ['.toml', ['text/plain', 'toml']],
+  ['.csv', ['text/plain', 'csv']],
+  ['.tsv', ['text/plain', 'tsv']],
+  ['.js', ['text/plain', 'javascript']],
+  ['.jsx', ['text/plain', 'javascript']],
+  ['.mjs', ['text/plain', 'javascript']],
+  ['.cjs', ['text/plain', 'javascript']],
+  ['.ts', ['text/plain', 'typescript']],
+  ['.tsx', ['text/plain', 'typescript']],
+  ['.py', ['text/plain', 'python']],
+  ['.rs', ['text/plain', 'rust']],
+  ['.go', ['text/plain', 'go']],
+  ['.c', ['text/plain', 'c']],
+  ['.cc', ['text/plain', 'cpp']],
+  ['.cpp', ['text/plain', 'cpp']],
+  ['.h', ['text/plain', 'c']],
+  ['.hpp', ['text/plain', 'cpp']],
+  ['.sh', ['text/plain', 'shell']],
+  ['.bash', ['text/plain', 'shell']],
+  ['.zsh', ['text/plain', 'shell']],
+  ['.css', ['text/plain', 'css']],
+  ['.html', ['text/plain', 'html']],
+  ['.xml', ['text/plain', 'xml']],
+  ['.sql', ['text/plain', 'sql']],
+  ['.ini', ['text/plain', 'ini']],
+  ['.conf', ['text/plain', 'text']],
+]);
+
+function isWithinProject(root: string, candidate: string): boolean {
+  const relative = path.relative(root, candidate);
+  return (
+    relative.length > 0 &&
+    !relative.startsWith(`..${path.sep}`) &&
+    relative !== '..' &&
+    !path.isAbsolute(relative)
+  );
+}
+
+export function readProjectFilePreview(
+  projectPath: string,
+  relativePath: string,
+): ProjectFilePreview {
+  const root = fs.realpathSync(projectPath);
+  const requested = path.resolve(root, relativePath);
+  if (!isWithinProject(root, requested)) {
+    throw new Error('Project file preview path must stay inside the Project');
+  }
+  const requestedStat = fs.lstatSync(requested);
+  if (requestedStat.isSymbolicLink()) {
+    throw new Error('Symbolic links cannot be previewed');
+  }
+  const absolutePath = fs.realpathSync(requested);
+  if (!isWithinProject(root, absolutePath)) {
+    throw new Error('Project file preview path resolves outside the Project');
+  }
+  const stat = fs.statSync(absolutePath);
+  if (!stat.isFile())
+    throw new Error('Only regular Project files can be previewed');
+  if (stat.size > PROJECT_FILE_PREVIEW_LIMIT) {
+    throw new Error('Project file is larger than the 512 KiB preview limit');
+  }
+  const extension = path.extname(absolutePath).toLowerCase();
+  const previewType = PROJECT_FILE_PREVIEW_TYPES.get(extension);
+  if (!previewType) {
+    throw new Error('This Project file type is not available for preview');
+  }
+  const bytes = fs.readFileSync(absolutePath);
+  if (bytes.includes(0))
+    throw new Error('Binary Project files cannot be previewed');
+  let content: string;
+  try {
+    content = new TextDecoder('utf-8', { fatal: true }).decode(bytes);
+  } catch {
+    throw new Error('Project file is not valid UTF-8 text');
+  }
+  const [mediaType, language] = previewType;
+  return {
+    schema: 'kungfu.project-file.preview/v1',
+    projectPath: root,
+    relativePath: path.relative(root, absolutePath),
+    absolutePath,
+    name: path.basename(absolutePath),
+    mediaType: mediaType as ProjectFilePreview['mediaType'],
+    language,
+    content,
+    size: stat.size,
+    readOnly: true,
+    writeOccurred: false,
+  };
+}
 
 const COLLAPSED_PROJECT_DIRECTORIES = new Set([
   '.git',
@@ -149,6 +263,8 @@ export type ProjectSummary = {
   selected: boolean;
   initialized: boolean;
   state: string;
+  workCount?: number;
+  updatedAt?: string;
   identityRoot?: string;
   source?: 'library' | 'recent' | 'workspace-catalog';
 };
@@ -181,6 +297,15 @@ export type ProjectsTemplates = {
   templates: ProjectTemplateSummary[];
   writeOccurred: false;
   catalogRoot: string;
+};
+
+export type ProjectWorkInventory = {
+  schema: 'kungfu.project-work.inventory/v1';
+  projectPath: string;
+  works: ProjectWork[];
+  activeWork: ProjectWork | null;
+  writeOccurred: false;
+  inventoryRoot: string;
 };
 
 export type ProjectImportPlan = {
@@ -219,6 +344,7 @@ export type ProjectRemoveReceipt = {
 export type ProjectCommandOptions = {
   bin: string;
   env: Record<string, string | undefined>;
+  catalogConfigHomes?: string[];
   execFile: (
     file: string,
     args: string[],
@@ -248,7 +374,61 @@ export type ProjectCommandOptions = {
     },
     onLine: (line: string) => void,
   ) => Promise<void>;
+  agentSession?: AgentSession | null;
+  agentSessionClient?: 'gui' | 'cli';
 };
+
+export function mergeProjectsCatalogs(
+  catalogs: ProjectsCatalog[],
+): ProjectsCatalog {
+  const [primary, ...additional] = catalogs;
+  if (!primary) {
+    throw new Error('at least one Project catalog is required');
+  }
+  if (additional.length === 0) return primary;
+
+  const projects: ProjectSummary[] = [];
+  const seen = new Set<string>();
+  for (const catalog of catalogs) {
+    for (const project of catalog.projects) {
+      const key = path.resolve(project.path);
+      if (seen.has(key)) continue;
+      seen.add(key);
+      projects.push({
+        ...project,
+        selected: project.id === primary.selectedProjectId,
+      });
+    }
+  }
+  const sources: Record<string, number> = {};
+  for (const project of projects) {
+    if (!project.source) continue;
+    sources[project.source] = (sources[project.source] ?? 0) + 1;
+  }
+  const rootInput = {
+    schema: 'kungfu.projects.merged-catalog-root/v1',
+    catalogRoots: catalogs.map((catalog) => catalog.catalogRoot).sort(),
+    projects: projects.map((project) => ({
+      id: project.id,
+      path: project.path,
+      available: project.available,
+      state: project.state,
+    })),
+    selectedProjectId: primary.selectedProjectId,
+  };
+  return {
+    ...primary,
+    projects,
+    sources,
+    hiddenProjectCount: catalogs.reduce(
+      (total, catalog) => total + (catalog.hiddenProjectCount ?? 0),
+      0,
+    ),
+    catalogRoot: `sha256:${createHash('sha256')
+      .update(JSON.stringify(rootInput))
+      .digest('hex')}`,
+  };
+}
 
 export type ProjectWorkRunEvent = {
   schema: 'kungfu.work-start.event/v1';
@@ -318,6 +498,7 @@ export type ProjectWorkRunPlan = {
   schema: 'kungfu.work-start.plan/v1';
   planRoot: string;
   executable: boolean;
+  blockedReason: string | null;
   confirmationRequired: true;
   workspace: { id: string; root: string };
   work: {
@@ -325,6 +506,7 @@ export type ProjectWorkRunPlan = {
     title: string;
     objective: string;
     acceptanceChecks: string[];
+    phase: string;
   };
   agent: {
     id: string;
@@ -355,16 +537,47 @@ export type ProjectWorkRunSnapshot = {
   running: boolean;
   events: ProjectWorkRunEvent[];
   receipt?: ProjectWorkRunReceipt;
+  session?: ProjectAgentSessionSnapshot;
   error?: string;
 };
 
+export type ProjectAgentSessionRef = {
+  workConsoleId: string;
+  sessionAttemptId: string;
+};
+
+export type ProjectAgentAttention = {
+  kind: 'needs-answer' | 'needs-approval' | 'blocked' | 'ready-for-review';
+  reason: string;
+  message: string;
+  nextActions: string[];
+};
+
+export type ProjectAgentSessionSnapshot = ProjectAgentSessionRef & {
+  provider: string;
+  live: boolean;
+  lifecycleState: string;
+  interactionState: string;
+  attempt: string;
+  attention: ProjectAgentAttention | null;
+  pendingControl: { requestId: string | number } | null;
+  terminalLines: string[];
+  updatedAt: number;
+};
+
 export type Projects = {
-  list: () => Promise<ProjectsCatalog>;
+  list: (options?: { refresh?: boolean }) => Promise<ProjectsCatalog>;
+  cachedCatalog: () => ProjectsCatalog | undefined;
   files: (
     projectPath: string,
     options?: ProjectFileTreeOptions,
   ) => ProjectFileTreeEntry[];
+  previewFile: (
+    projectPath: string,
+    relativePath: string,
+  ) => ProjectFilePreview;
   templates: () => Promise<ProjectsTemplates>;
+  works: (projectPath: string) => Promise<ProjectWorkInventory>;
   planCreate: (
     destination?: string,
     templateId?: string,
@@ -399,6 +612,7 @@ export type Projects = {
       workspace?: string;
       work?: string;
       task?: string;
+      scenario?: string;
       expectedPlanRoot?: string;
     },
   ) => Promise<ProjectWorkRunPlan>;
@@ -408,6 +622,7 @@ export type Projects = {
       workspace?: string;
       work?: string;
       task?: string;
+      scenario?: string;
       expectedPlanRoot?: string;
     },
     onEvent?: (event: ProjectWorkRunEvent) => void,
@@ -416,6 +631,22 @@ export type Projects = {
   subscribeRuns: (
     listener: (runs: ProjectWorkRunSnapshot[]) => void,
   ) => () => void;
+  syncSessions: (options?: {
+    workspace?: string;
+    workspaceId?: string;
+    work?: string;
+  }) => Promise<ProjectWorkRunSnapshot[]>;
+  restoreRun: (
+    receipt: ProjectWorkRunReceipt,
+    workspace: string,
+  ) => Promise<ProjectWorkRunSnapshot>;
+  refreshRun: (runId: string) => Promise<ProjectWorkRunSnapshot | null>;
+  replyToRun: (runId: string, text: string) => Promise<ProjectWorkRunSnapshot>;
+  approveRun: (
+    runId: string,
+    approved: boolean,
+  ) => Promise<ProjectWorkRunSnapshot>;
+  endRun: (runId: string) => Promise<ProjectWorkRunSnapshot>;
 };
 
 function parse<T>(raw: string, schema: string): T {
@@ -511,6 +742,9 @@ export function projectSearchDocuments(
 
 export function openProjects(options: ProjectCommandOptions): Projects {
   let retainedRuns: ProjectWorkRunSnapshot[] = [];
+  let cachedCatalog: ProjectsCatalog | undefined;
+  let catalogRequest: Promise<ProjectsCatalog> | undefined;
+  const catalogConfigHomeByProjectId = new Map<string, string | undefined>();
   const runListeners = new Set<(runs: ProjectWorkRunSnapshot[]) => void>();
   const publishRuns = () => {
     const snapshot = retainedRuns.map((run) => ({
@@ -528,10 +762,135 @@ export function openProjects(options: ProjectCommandOptions): Projects {
     );
     publishRuns();
   };
-  const invoke = async <T>(args: string[], schema: string): Promise<T> => {
+  const sessionInvoke = async (
+    request: Record<string, unknown> & { operation: string },
+  ): Promise<Record<string, unknown>> => {
+    if (!options.agentSession) {
+      throw new Error('Agent Session control is unavailable on this surface');
+    }
+    return options.agentSession.invoke(request);
+  };
+  const sessionRef = (run: ProjectWorkRunSnapshot): ProjectAgentSessionRef => {
+    const retained = run.session;
+    const reportSession = (
+      run.receipt?.agentReport as
+        | { session?: Record<string, unknown> | null }
+        | undefined
+    )?.session;
+    const workConsoleId =
+      retained?.workConsoleId ?? String(reportSession?.workConsoleId ?? '');
+    const sessionAttemptId =
+      retained?.sessionAttemptId ??
+      String(reportSession?.sessionAttemptId ?? '');
+    if (!workConsoleId || !sessionAttemptId) {
+      throw new Error('The retained Agent run has no Session reference');
+    }
+    return { workConsoleId, sessionAttemptId };
+  };
+  const receiptHasSessionRef = (receipt: ProjectWorkRunReceipt): boolean => {
+    const session = (
+      receipt.agentReport as
+        | { session?: Record<string, unknown> | null }
+        | undefined
+    )?.session;
+    return Boolean(session?.workConsoleId && session?.sessionAttemptId);
+  };
+  const projectSessionSnapshot = async (
+    ref: ProjectAgentSessionRef,
+    knownStatus?: Record<string, unknown>,
+  ): Promise<ProjectAgentSessionSnapshot> => {
+    const status =
+      knownStatus ??
+      (await sessionInvoke({ operation: 'status', session: { ...ref } }));
+    let terminalLines: string[] = [];
+    if (status.live === true) {
+      const snapshot = await sessionInvoke({
+        operation: 'snapshot',
+        session: { ...ref },
+        requestedSequence: 0,
+      });
+      const terminal = snapshot.terminal as
+        | { vt?: { lines?: unknown[] } }
+        | undefined;
+      terminalLines = (terminal?.vt?.lines ?? []).map((line) => String(line));
+    }
+    const agent = status.workAgent as
+      | {
+          attempt?: string;
+          attention?: ProjectAgentAttention | null;
+        }
+      | undefined;
+    const adapter = status.providerAdapter as { provider?: string } | undefined;
+    const structured = status.structuredControl as
+      | { pending?: Array<{ requestId?: string | number }> }
+      | undefined;
+    const pending = structured?.pending?.[0];
+    return {
+      ...ref,
+      provider: adapter?.provider ?? 'agent',
+      live: status.live === true,
+      lifecycleState: String(status.lifecycleState ?? 'unavailable'),
+      interactionState: String(status.interactionState ?? 'unavailable'),
+      attempt: String(agent?.attempt ?? 'working'),
+      attention: agent?.attention ?? null,
+      pendingControl:
+        pending?.requestId === undefined
+          ? null
+          : { requestId: pending.requestId },
+      terminalLines,
+      updatedAt: Date.now(),
+    };
+  };
+  const refreshRun = async (
+    runId: string,
+  ): Promise<ProjectWorkRunSnapshot | null> => {
+    const run = retainedRuns.find((candidate) => candidate.id === runId);
+    if (!run) return null;
+    const session = await projectSessionSnapshot(sessionRef(run));
+    updateRun(runId, (current) => ({
+      ...current,
+      lastEventAt: session.updatedAt,
+      session,
+    }));
+    return retainedRuns.find((candidate) => candidate.id === runId) ?? null;
+  };
+  const controlRun = async (
+    runId: string,
+    operation: 'instruct' | 'send-key' | 'respond-control' | 'end',
+    payload: Record<string, unknown>,
+    automatic = true,
+  ): Promise<ProjectWorkRunSnapshot> => {
+    const run = retainedRuns.find((candidate) => candidate.id === runId);
+    if (!run) throw new Error(`Agent run '${runId}' is unavailable`);
+    const ref = sessionRef(run);
+    const plan = await sessionInvoke({
+      operation: 'plan-control',
+      controlOperation: operation,
+      session: { ...ref },
+      payload,
+    });
+    await sessionInvoke({
+      operation,
+      actorId: 'kungfu-project-work',
+      client: options.agentSessionClient ?? 'gui',
+      plan,
+      expectedPlanRoot: plan.root,
+      payload,
+      automatic,
+    });
+    const refreshed = await refreshRun(runId);
+    if (!refreshed)
+      throw new Error(`Agent run '${runId}' disappeared after control`);
+    return refreshed;
+  };
+  const invoke = async <T>(
+    args: string[],
+    schema: string,
+    env = options.env,
+  ): Promise<T> => {
     const raw = await options.execFile(options.bin, args, {
       encoding: 'utf8',
-      env: options.env,
+      env,
       maxBuffer: 4 * 1024 * 1024,
     });
     return parse<T>(raw, schema);
@@ -550,18 +909,61 @@ export function openProjects(options: ProjectCommandOptions): Projects {
     });
     return parse<T>(raw, schema);
   };
-  return {
-    list: () =>
+  const invalidateCatalog = () => {
+    cachedCatalog = undefined;
+    catalogRequest = undefined;
+  };
+  const loadCatalog = (refresh = false): Promise<ProjectsCatalog> => {
+    if (refresh) invalidateCatalog();
+    if (cachedCatalog) return Promise.resolve(cachedCatalog);
+    if (catalogRequest) return catalogRequest;
+    const configHomes = [undefined, ...(options.catalogConfigHomes ?? [])];
+    catalogRequest = Promise.all([
       invoke<ProjectsCatalog>(
         ['project', 'list'],
         'kungfu.projects.catalog/v1',
       ),
+      ...(options.catalogConfigHomes ?? []).map((configHome) =>
+        invoke<ProjectsCatalog>(
+          ['project', 'list'],
+          'kungfu.projects.catalog/v1',
+          { ...options.env, KF_CONFIG_HOME: configHome },
+        ),
+      ),
+    ])
+      .then((catalogs) => {
+        catalogConfigHomeByProjectId.clear();
+        for (const [index, catalog] of catalogs.entries()) {
+          for (const project of catalog.projects) {
+            if (!catalogConfigHomeByProjectId.has(project.id)) {
+              catalogConfigHomeByProjectId.set(project.id, configHomes[index]);
+            }
+          }
+        }
+        cachedCatalog = mergeProjectsCatalogs(catalogs);
+        return cachedCatalog;
+      })
+      .finally(() => {
+        catalogRequest = undefined;
+      });
+    return catalogRequest;
+  };
+  return {
+    list: ({ refresh = false } = {}) => loadCatalog(refresh),
+    cachedCatalog: () => cachedCatalog,
     files: (projectPath, fileOptions) =>
       readProjectFileTree(projectPath, fileOptions),
+    previewFile: (projectPath, relativePath) =>
+      readProjectFilePreview(projectPath, relativePath),
     templates: () =>
       invoke<ProjectsTemplates>(
         ['project', 'templates'],
         'kungfu.projects.templates/v1',
+      ),
+    works: (projectPath) =>
+      invoke<ProjectWorkInventory>(
+        ['project', 'works', projectPath],
+        'kungfu.project-work.inventory/v1',
       ),
     planCreate: (destination, templateId) =>
       invoke(
@@ -573,8 +975,8 @@ export function openProjects(options: ProjectCommandOptions): Projects {
         ],
         'kungfu.project-template.plan/v1',
       ),
-    create: (destination, expectedPlanRoot, templateId) =>
-      invoke(
+    create: async (destination, expectedPlanRoot, templateId) => {
+      const receipt = await invoke<Record<string, unknown>>(
         [
           'project',
           'create',
@@ -585,14 +987,17 @@ export function openProjects(options: ProjectCommandOptions): Projects {
           '--execute',
         ],
         'kungfu.project-template.creation-receipt/v1',
-      ),
+      );
+      invalidateCatalog();
+      return receipt;
+    },
     planImport: (path) =>
       invoke<ProjectImportPlan>(
         ['project', 'open-plan', path],
         'kungfu.project.import-plan/v1',
       ),
-    importProject: (path, expectedPlanRoot) =>
-      invoke(
+    importProject: async (path, expectedPlanRoot) => {
+      const receipt = await invoke<Record<string, unknown>>(
         [
           'project',
           'open',
@@ -602,19 +1007,31 @@ export function openProjects(options: ProjectCommandOptions): Projects {
           '--execute',
         ],
         'kungfu.project.import-receipt/v1',
-      ),
-    select: (path) =>
-      invoke(
+      );
+      invalidateCatalog();
+      return receipt;
+    },
+    select: async (path) => {
+      const receipt = await invoke<Record<string, unknown>>(
         ['project', 'select', path],
         'kungfu.project.selection-receipt/v1',
-      ),
+      );
+      invalidateCatalog();
+      return receipt;
+    },
     planRemove: (projectId) =>
       invoke<ProjectRemovePlan>(
         ['project', 'remove-plan', projectId],
         'kungfu.project.remove-plan/v1',
+        catalogConfigHomeByProjectId.get(projectId)
+          ? {
+              ...options.env,
+              KF_CONFIG_HOME: catalogConfigHomeByProjectId.get(projectId),
+            }
+          : options.env,
       ),
-    remove: (projectId, expectedPlanRoot) =>
-      invoke<ProjectRemoveReceipt>(
+    remove: async (projectId, expectedPlanRoot) => {
+      const receipt = await invoke<ProjectRemoveReceipt>(
         [
           'project',
           'remove',
@@ -624,7 +1041,16 @@ export function openProjects(options: ProjectCommandOptions): Projects {
           '--execute',
         ],
         'kungfu.project.remove-receipt/v1',
-      ),
+        catalogConfigHomeByProjectId.get(projectId)
+          ? {
+              ...options.env,
+              KF_CONFIG_HOME: catalogConfigHomeByProjectId.get(projectId),
+            }
+          : options.env,
+      );
+      invalidateCatalog();
+      return receipt;
+    },
     prepareWork: (objective, acceptanceCriterion) =>
       prepareProjectWork(objective, acceptanceCriterion),
     captureWork: (workspace, plan) =>
@@ -651,6 +1077,9 @@ export function openProjects(options: ProjectCommandOptions): Projects {
             ? ['--workspace', commandOptions.workspace]
             : []),
           ...(commandOptions.work ? ['--work', commandOptions.work] : []),
+          ...(commandOptions.scenario
+            ? ['--scenario', commandOptions.scenario]
+            : []),
           ...(commandOptions.expectedPlanRoot
             ? ['--expected-plan-root', commandOptions.expectedPlanRoot]
             : []),
@@ -689,6 +1118,9 @@ export function openProjects(options: ProjectCommandOptions): Projects {
           ? ['--workspace', commandOptions.workspace]
           : []),
         ...(commandOptions.work ? ['--work', commandOptions.work] : []),
+        ...(commandOptions.scenario
+          ? ['--scenario', commandOptions.scenario]
+          : []),
         ...(commandOptions.expectedPlanRoot
           ? ['--expected-plan-root', commandOptions.expectedPlanRoot]
           : []),
@@ -705,6 +1137,9 @@ export function openProjects(options: ProjectCommandOptions): Projects {
             lastEventAt: Date.now(),
             receipt,
           }));
+          if (options.agentSession && receiptHasSessionRef(receipt)) {
+            await refreshRun(runId);
+          }
           return receipt;
         } catch (reason) {
           updateRun(runId, (run) => ({
@@ -744,14 +1179,37 @@ export function openProjects(options: ProjectCommandOptions): Projects {
         );
         if (!receipt)
           throw new Error('Work run stream ended without a canonical receipt');
+        const finalReceipt = receipt as ProjectWorkRunReceipt;
         updateRun(runId, (run) => ({
           ...run,
           running: false,
           lastEventAt: Date.now(),
-          receipt: receipt ?? undefined,
+          receipt: finalReceipt,
         }));
-        return receipt;
+        if (options.agentSession && receiptHasSessionRef(finalReceipt)) {
+          await refreshRun(runId);
+        }
+        return finalReceipt;
       } catch (reason) {
+        const retainedFailure = receipt as ProjectWorkRunReceipt | null;
+        if (retainedFailure?.status === 'agent-failed') {
+          const failedReceipt = retainedFailure;
+          updateRun(runId, (run) => ({
+            ...run,
+            running: false,
+            lastEventAt: Date.now(),
+            receipt: failedReceipt,
+          }));
+          if (options.agentSession && receiptHasSessionRef(failedReceipt)) {
+            await refreshRun(runId);
+          }
+          return failedReceipt;
+        }
+        if (retainedFailure) {
+          throw new Error(
+            `${retainedFailure.status}${retainedFailure.failedAt ? ` at ${retainedFailure.failedAt}` : ''}: ${retainedFailure.message ?? 'Work start failed'}`,
+          );
+        }
         updateRun(runId, (run) => ({
           ...run,
           running: false,
@@ -770,5 +1228,123 @@ export function openProjects(options: ProjectCommandOptions): Projects {
       );
       return () => runListeners.delete(listener);
     },
+    syncSessions: async (syncOptions = {}) => {
+      if (!options.agentSession) return retainedRuns;
+      const listed = await sessionInvoke({ operation: 'list' });
+      const sessions = Array.isArray(listed.sessions)
+        ? (listed.sessions as Record<string, unknown>[])
+        : [];
+      for (const status of sessions) {
+        const binding = status.binding as
+          | { kind?: string; workRef?: Record<string, unknown> }
+          | undefined;
+        const workRef = binding?.workRef;
+        if (binding?.kind !== 'work' || !workRef) continue;
+        if (
+          syncOptions.workspaceId &&
+          workRef.workspaceId !== syncOptions.workspaceId
+        )
+          continue;
+        if (syncOptions.work && workRef.entityId !== syncOptions.work) continue;
+        const ref = {
+          workConsoleId: String(status.workConsoleId ?? ''),
+          sessionAttemptId: String(status.sessionAttemptId ?? ''),
+        };
+        if (!ref.workConsoleId || !ref.sessionAttemptId) continue;
+        const existing = retainedRuns.find(
+          (run) =>
+            run.session?.workConsoleId === ref.workConsoleId &&
+            run.session.sessionAttemptId === ref.sessionAttemptId,
+        );
+        const session = await projectSessionSnapshot(ref, status);
+        if (existing) {
+          updateRun(existing.id, (run) => ({ ...run, session }));
+          continue;
+        }
+        const now = Date.now();
+        retainedRuns = [
+          {
+            id: `session:${ref.sessionAttemptId}`,
+            provider: session.provider,
+            workspace: syncOptions.workspace ?? '',
+            work: String(workRef.entityId ?? ''),
+            startedAt: now,
+            lastEventAt: now,
+            running: false,
+            events: [],
+            session,
+          },
+          ...retainedRuns,
+        ].slice(0, 8);
+        publishRuns();
+      }
+      return retainedRuns.map((run) => ({ ...run, events: [...run.events] }));
+    },
+    restoreRun: async (receipt, workspace) => {
+      const report = receipt.agentReport as
+        | { runId?: string; session?: Record<string, unknown> | null }
+        | undefined;
+      const retained = report?.session;
+      const attemptId = String(
+        retained?.sessionAttemptId ?? report?.runId ?? receipt.receiptRoot,
+      );
+      const runId = `retained:${attemptId}`;
+      const existing = retainedRuns.find(
+        (run) =>
+          run.id === runId ||
+          (run.receipt?.receiptRoot &&
+            run.receipt.receiptRoot === receipt.receiptRoot),
+      );
+      if (!existing) {
+        const now = Date.now();
+        const provider = String(receipt.agent?.provider ?? 'agent');
+        retainedRuns = [
+          {
+            id: runId,
+            provider: provider === 'synthetic' ? 'mock' : provider,
+            workspace,
+            work: String(receipt.work?.assignmentId ?? ''),
+            startedAt: now,
+            lastEventAt: now,
+            running: false,
+            events: [],
+            receipt,
+          },
+          ...retainedRuns,
+        ].slice(0, 8);
+        publishRuns();
+      }
+      const current =
+        retainedRuns.find(
+          (run) =>
+            run.id === runId ||
+            run.receipt?.receiptRoot === receipt.receiptRoot,
+        ) ?? null;
+      if (!current) throw new Error('Retained Agent run could not be restored');
+      if (retained?.workConsoleId && options.agentSession) {
+        return (await refreshRun(current.id)) ?? current;
+      }
+      return current;
+    },
+    refreshRun,
+    replyToRun: (runId, text) => controlRun(runId, 'instruct', { text }, false),
+    approveRun: async (runId, approved) => {
+      const run = retainedRuns.find((candidate) => candidate.id === runId);
+      const pending = run?.session?.pendingControl;
+      if (pending) {
+        return controlRun(
+          runId,
+          'respond-control',
+          {
+            requestId: pending.requestId,
+            decision: approved ? 'allow' : 'deny',
+          },
+          false,
+        );
+      }
+      await controlRun(runId, 'send-key', { key: approved ? 'y' : 'n' }, false);
+      return controlRun(runId, 'send-key', { key: 'Enter' }, false);
+    },
+    endRun: (runId) => controlRun(runId, 'end', {}, false),
   };
 }

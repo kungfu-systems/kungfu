@@ -60,6 +60,7 @@ export type ProductQuickCommandAction =
   | 'help'
   | 'search'
   | 'health'
+  | 'new-work'
   | 'work'
   | 'projects'
   | 'lab'
@@ -89,6 +90,14 @@ export const QUICK_COMMANDS: QuickCommand<ProductQuickCommandAction>[] = [
     summary:
       'Describe the read-only runtime, Peer, storage, and Episode health command.',
     action: 'health',
+  },
+  {
+    id: 'new-work',
+    command: '/new',
+    title: 'Create Work',
+    summary:
+      'Create Work in the current Project, or choose a Project when none is open.',
+    action: 'new-work',
   },
   {
     id: 'work',
@@ -147,6 +156,23 @@ export function resolveProductStartupSurface({
   if (!contextualProject) return 'all-work';
   if (openedProject) return 'project-work';
   return projectResumeSettled ? 'all-work' : null;
+}
+
+export function directWorkspaceNavigationFromInput(
+  current: ControlPlaneState,
+  input: string,
+  surface: string,
+): 'projects' | null {
+  if (
+    current.mode === 'closed' &&
+    current.focus === 'input' &&
+    current.query === '' &&
+    input === 'p' &&
+    (surface === 'project-work' || surface === 'project-assignment')
+  ) {
+    return 'projects';
+  }
+  return null;
 }
 
 export function quickCommandMatches(

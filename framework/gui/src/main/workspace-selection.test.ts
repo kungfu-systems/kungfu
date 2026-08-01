@@ -16,8 +16,8 @@ import {
   applyDesktopWorkspaceEnvironment,
   clearDesktopWorkspaceEnvForRelaunch,
   defaultHomeDesktopWorkspace,
-  desktopWorkspaceTransitionMode,
   listRecentDesktopWorkspaces,
+  prepareDesktopWorkspaceEnvironmentForRelaunch,
   resolveLastDesktopWorkspace,
   workspaceRegistryPath,
 } from './workspace-selection.ts';
@@ -97,31 +97,39 @@ test('desktop project selection preserves a Projects navigation intent across re
   assert.deepEqual(env, {});
 });
 
-test('development workspace selection reloads the current renderer instead of relaunching Electron', () => {
-  assert.equal(
-    desktopWorkspaceTransitionMode({
-      isPackaged: false,
-      rendererUrl: 'http://localhost:5173',
-      shellWindowAvailable: true,
-    }),
-    'renderer-reload',
-  );
-  assert.equal(
-    desktopWorkspaceTransitionMode({
-      isPackaged: true,
-      rendererUrl: '',
-      shellWindowAvailable: true,
-    }),
-    'application-relaunch',
-  );
-  assert.equal(
-    desktopWorkspaceTransitionMode({
-      isPackaged: false,
-      rendererUrl: '',
-      shellWindowAvailable: true,
-    }),
-    'application-relaunch',
-  );
+test('workspace selection preserves a process boundary for registry and explicit development roots', () => {
+  const selected = {
+    workspaceId: 'project:selected',
+    workspaceKind: 'project' as const,
+    workspaceRoot: '/tmp/selected',
+    displayPath: '/tmp/selected',
+    dataHome: '/tmp/selected/.kungfu',
+    runtimeDir: '/tmp/selected/.kungfu/runtime',
+    state: 'live-runtime' as const,
+    evidenceLevel: 'live-local' as const,
+    settledEpisodeCount: 1,
+    projectCutCount: 1,
+    resolutionReason: 'last-workspace-registry' as const,
+  };
+  const registryEnv: Record<string, string | undefined> = {
+    KF_CONFIG_HOME: '/tmp/config',
+    KF_HOME: '/tmp/old',
+    KF_RUNTIME_DIR: '/tmp/old/runtime',
+  };
+  prepareDesktopWorkspaceEnvironmentForRelaunch(registryEnv, selected, true);
+  assert.deepEqual(registryEnv, { KF_CONFIG_HOME: '/tmp/config' });
+
+  const explicitEnv: Record<string, string | undefined> = {
+    KF_INSTANCE_HOME: '/tmp/instance',
+    KF_CONFIG_HOME: '/tmp/instance/config',
+    KF_HOME: '/tmp/instance/home',
+    KF_RUNTIME_DIR: '/tmp/instance/home/runtime',
+  };
+  prepareDesktopWorkspaceEnvironmentForRelaunch(explicitEnv, selected, false);
+  assert.equal(explicitEnv.KF_INSTANCE_HOME, undefined);
+  assert.equal(explicitEnv.KF_HOME, '/tmp/selected/.kungfu');
+  assert.equal(explicitEnv.KF_RUNTIME_DIR, '/tmp/selected/.kungfu/runtime');
+  assert.equal(explicitEnv.KF_WORKSPACE_ROOT, '/tmp/selected');
 });
 
 function fixture(name: string): string {

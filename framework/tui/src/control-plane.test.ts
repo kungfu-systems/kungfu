@@ -16,6 +16,7 @@ import {
   type ControlPlaneState,
   QUICK_COMMANDS,
   createControlPlaneInputFence,
+  directWorkspaceNavigationFromInput,
   quickCommandMatches,
   reduceControlPlaneInput,
   resolveProductStartupSurface,
@@ -23,6 +24,8 @@ import {
 import {
   PROJECTS_QUICK_COMMANDS,
   PROJECT_WORK_QUICK_COMMANDS,
+  projectWorkQuickCommandAvailable,
+  selectVisibleProjectWorkRun,
 } from './projects-view/index.js';
 import {
   globalWorkContribution,
@@ -30,6 +33,41 @@ import {
   loadLatestGlobalWorkCache,
   parseGlobalWorkObserverLine,
 } from './work-control-contribution.js';
+
+test('p opens Projects directly from an empty Project input prompt', () => {
+  assert.equal(
+    directWorkspaceNavigationFromInput(
+      CLOSED_CONTROL_PLANE,
+      'p',
+      'project-work',
+    ),
+    'projects',
+  );
+  assert.equal(
+    directWorkspaceNavigationFromInput(
+      CLOSED_CONTROL_PLANE,
+      'p',
+      'project-assignment',
+    ),
+    'projects',
+  );
+  assert.equal(
+    directWorkspaceNavigationFromInput(
+      { ...CLOSED_CONTROL_PLANE, query: 'hel' },
+      'p',
+      'project-work',
+    ),
+    null,
+  );
+  assert.equal(
+    directWorkspaceNavigationFromInput(
+      { ...CLOSED_CONTROL_PLANE, focus: 'workspace' },
+      'p',
+      'project-work',
+    ),
+    null,
+  );
+});
 
 const globalWorkSnapshot = {
   schema: 'kungfu.workspace-federation.query/v1' as const,
@@ -227,8 +265,19 @@ test('keeps a closing key captured for the rest of its synchronous input emissio
 test('keeps quick commands bounded to declared product actions', () => {
   assert.deepEqual(
     QUICK_COMMANDS.map((row) => row.action),
-    ['help', 'search', 'health', 'work', 'projects', 'lab', 'home', 'quit'],
+    [
+      'help',
+      'search',
+      'health',
+      'new-work',
+      'work',
+      'projects',
+      'lab',
+      'home',
+      'quit',
+    ],
   );
+  assert.equal(quickCommandMatches('/new')[0]?.action, 'new-work');
   assert.equal(quickCommandMatches('/rm -rf').length, 0);
 });
 
@@ -359,6 +408,45 @@ test('gives /new a Work meaning inside an opened Project', () => {
   assert.match(projectWorkCommands[0]?.summary ?? '', /acceptance criterion/);
 });
 
+test('keeps /new available after completed Project Work but not during active review', () => {
+  assert.equal(
+    projectWorkQuickCommandAvailable({
+      surface: 'project-assignment',
+      hasOpenedProject: true,
+      completedWork: true,
+    }),
+    true,
+  );
+  assert.equal(
+    projectWorkQuickCommandAvailable({
+      surface: 'project-assignment',
+      hasOpenedProject: true,
+      completedWork: false,
+    }),
+    false,
+  );
+  assert.equal(
+    projectWorkQuickCommandAvailable({
+      surface: 'project-work',
+      hasOpenedProject: true,
+      completedWork: false,
+    }),
+    true,
+  );
+});
+
+test('completed Project Work does not retain the previous Agent run as a new-Work blocker', () => {
+  const retained = [{ id: 'old-run', workspace: '/tmp/project' }];
+  assert.equal(
+    selectVisibleProjectWorkRun(retained, '/tmp/project', false)?.id,
+    'old-run',
+  );
+  assert.equal(
+    selectVisibleProjectWorkRun(retained, '/tmp/project', true),
+    null,
+  );
+});
+
 test('startup opens only the current .kungfu Project and otherwise shows All Work', () => {
   assert.equal(
     resolveProductStartupSurface({
@@ -428,7 +516,8 @@ test('the real Ink control plane covers the product canvas and keeps a fixed inp
   instance.cleanup();
   assert.match(frame, /KUNGFU · HELP/);
   assert.match(frame, /focused input accepts text/);
-  assert.match(frame, /Help is open/);
+  assert.match(frame, /Help open/);
+  assert.match(frame, /HELP.*Esc Back/s);
   assert.match(frame, /╭/);
   assert.match(frame, /╰/);
   assert.doesNotMatch(frame, /UNDERLYING PRODUCT CONTENT/);
@@ -463,8 +552,9 @@ test('the idle input is a focused full panel and renders typed text', async () =
   instance.unmount();
   instance.cleanup();
   assert.match(frame, /continue work/);
-  assert.match(frame, /INPUT · Kungfu/);
-  assert.match(frame, /Text entry is active · Esc Controls/);
+  assert.match(frame, /VIEW CONTROLS/);
+  assert.match(frame, /Esc Controls · \? Help/);
+  assert.doesNotMatch(frame, /Kungfu/);
   assert.match(frame, /╭/);
   assert.match(frame, /╰/);
 });
@@ -479,7 +569,6 @@ test('the idle bar makes Lab controls visually explicit', async () => {
         dimensions: { columns: 80, rows: 24 },
         state: { ...CLOSED_CONTROL_PLANE, focus: 'workspace' },
         resultCount: 0,
-        surfaceLabel: 'Agent Work Lab',
         controlsLabel: 'LAB CONTROLS',
         controlsHint: 'd Demo · x Same · m Handoff · Tab Focus',
       }),
@@ -496,9 +585,10 @@ test('the idle bar makes Lab controls visually explicit', async () => {
   instance.unmount();
   instance.cleanup();
 
-  assert.match(frame, /LAB CONTROLS · Agent Work Lab/);
+  assert.match(frame, /LAB CONTROLS/);
   assert.match(frame, /d Demo · x Same · m Handoff · Tab Focus/);
   assert.match(frame, /i Input/);
+  assert.match(frame, /◇ Press i to type/);
 });
 
 test('search keeps the selected result visible beyond the first viewport', async () => {

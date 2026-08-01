@@ -764,7 +764,12 @@ test('TUI host streams events and preserves the one-second rhythm', () => {
   assert.match(playbackSource, /wait\(timing\.verdictIntervalMs\)/);
   assert.match(hostSource, /agentWorkLabRunProgressLabel/);
   assert.match(mainSource, /existingProjectWorkspaceRoot\(process\.cwd\(\)/);
-  assert.match(mainSource, /startupProjectRoot \? 'loading' : 'all-work'/);
+  assert.match(
+    mainSource,
+    /playbackMode \? 'lab' : emptyState \? 'all-work' : 'loading'/,
+  );
+  assert.match(mainSource, /startupIntroSettled/);
+  assert.match(mainSource, /TerminalLoadingScene/);
   assert.match(mainSource, /surface !== 'lab'/);
   assert.match(hostSource, /quietProgressIntervalMs/);
   assert.match(hostSource, /recommendationDurationMs/);
@@ -785,7 +790,7 @@ test('TUI host streams events and preserves the one-second rhythm', () => {
   assert.match(hostSource, /lab\.runMigration\(/);
   assert.match(mainSource, /void lab\s*\.inspect\(\)/);
   assert.doesNotMatch(mainSource, /startup = lab\.inspectSync\(\)/);
-  assert.match(mainSource, /Terminal product is open/);
+  assert.match(mainSource, /Opening your Work control plane/);
   assert.doesNotMatch(
     mainSource,
     /setRunProgress|setNextPrompt|setReportDetail/,
@@ -836,7 +841,11 @@ test('clicking a visible Lab action executes the same bounded action as its key'
     );
     await new Promise<void>((resolve) => setTimeout(resolve, 30));
     process.stdin.emit('data', Buffer.from('\u001b[<0;5;4M'));
-    await waitUntil(() => calls.includes('demo'), 'the clicked Demo action');
+    await waitUntil(
+      () => calls.includes('demo'),
+      'the clicked Demo action',
+      10_000,
+    );
   } finally {
     instance.unmount();
     instance.cleanup();

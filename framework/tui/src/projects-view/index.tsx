@@ -15,6 +15,10 @@ import {
 } from '../list-window/index.js';
 import { boundedIndex } from '../navigation.js';
 import type { QuickCommand, TerminalDimensions } from '../profile-shell.js';
+import {
+  KUNGFU_PROJECT_DISCOVERY_PATTERN,
+  TerminalLoadingScene,
+} from '../profile-shell.js';
 import { terminalCanvasRows } from '../terminal-canvas.js';
 import { decodeTerminalMouseInput } from '../terminal-lifecycle.js';
 
@@ -95,6 +99,27 @@ export const PROJECT_WORK_QUICK_COMMANDS: QuickCommand<ProjectWorkQuickAction>[]
       action: 'project-work-new',
     },
   ];
+
+export function projectWorkQuickCommandAvailable(options: {
+  surface: string;
+  hasOpenedProject: boolean;
+  completedWork: boolean;
+}): boolean {
+  return (
+    options.hasOpenedProject &&
+    (options.surface === 'project-work' ||
+      (options.surface === 'project-assignment' && options.completedWork))
+  );
+}
+
+export function selectVisibleProjectWorkRun<Run extends { workspace: string }>(
+  runs: readonly Run[],
+  workspace: string,
+  suppressRetainedRun: boolean,
+): Run | null {
+  if (suppressRetainedRun) return null;
+  return runs.find((candidate) => candidate.workspace === workspace) ?? null;
+}
 
 export type ProjectsActionRequest = {
   id: number;
@@ -438,6 +463,27 @@ export function ProjectsHost({
   });
   const rows =
     catalog?.projects.slice(projectWindow.start, projectWindow.end) ?? [];
+  if (
+    busy &&
+    !catalog &&
+    importPath === undefined &&
+    !importPlan &&
+    !removePlan &&
+    !createPlan
+  ) {
+    return (
+      <TerminalLoadingScene
+        dimensions={{
+          ...size,
+          rows: terminalCanvasRows(size.rows),
+        }}
+        title="PROJECTS"
+        status="Discovering machine-local Projects"
+        detail="Joining the active instance with known Project locators."
+        pattern={KUNGFU_PROJECT_DISCOVERY_PATTERN}
+      />
+    );
+  }
   return (
     <Box
       width={size.columns}
@@ -477,6 +523,7 @@ export function ProjectsHost({
               key={project.id}
               color={index === selected ? 'cyan' : undefined}
               bold={index === selected}
+              wrap="truncate-end"
             >
               {index === selected ? '›' : ' '} {project.name}{' '}
               <Text color={project.available ? 'green' : 'red'}>
@@ -558,27 +605,18 @@ export function ProjectsHost({
           </Text>
           <Text bold>[y/Enter] remove · [n/Esc] cancel</Text>
         </Box>
-      ) : openedProject && !busy ? (
-        <Box
-          flexDirection="column"
-          borderStyle="double"
-          borderColor="green"
-          paddingX={1}
-        >
-          <Text bold color="green">
-            PROJECT OPENED
-          </Text>
-          <Text>{openedProject.display_path}</Text>
-          <Text>
-            <Text bold>[Enter]</Text> open this Project · <Text bold>/new</Text>{' '}
-            create another
-          </Text>
-        </Box>
       ) : (
-        <Text color={busy ? 'yellow' : undefined}>
-          {busy ? '◌ ' : '✓ '}
-          {message}
-        </Text>
+        <>
+          <Text color={busy ? 'yellow' : undefined}>
+            {busy ? '◌ ' : '✓ '}
+            {message}
+          </Text>
+          {openedProject && !busy ? (
+            <Text dimColor wrap="truncate-end">
+              Current · {openedProject.display_path}
+            </Text>
+          ) : null}
+        </>
       )}
     </Box>
   );

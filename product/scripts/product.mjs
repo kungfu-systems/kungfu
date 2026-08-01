@@ -4,7 +4,7 @@
 // product-level assembly so `./shifu product gui build` does not silently
 // regress to a GUI-only build.
 
-import { spawnSync } from 'node:child_process';
+import { spawn, spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import {
   copyFileSync,
@@ -35,12 +35,122 @@ const KFD_UPSTREAM_AGGREGATE = path.join(
 );
 const SDK_ENTRY = path.join(ROOT, 'developer', 'sdk', 'src', 'sdk.js');
 const EXTENSIONS_ROOT = path.join(ROOT, 'extensions');
+const GUI_ROOT = path.join(ROOT, 'framework', 'gui');
+
+export const DEVELOPMENT_RESTART_EXIT_CODE = 75;
+
+const WORKSPACE_ENV_KEYS = [
+  'KF_HOME',
+  'KF_RUNTIME_DIR',
+  'KF_WORKSPACE_ID',
+  'KF_WORKSPACE_KIND',
+  'KF_WORKSPACE_ROOT',
+  'KF_WORKSPACE_DISPLAY_PATH',
+  'KF_WORKSPACE_RESOLUTION_REASON',
+  'KF_WORKSPACE_STATE',
+  'KF_WORKSPACE_DIAGNOSIS',
+];
+
+function supervisedEnvironment(baseEnv) {
+  return {
+    ...baseEnv,
+    KUNGFU_GUI_DEV_SUPERVISOR: '1',
+    KUNGFU_GUI_DEV_RESTART_EXIT_CODE: String(DEVELOPMENT_RESTART_EXIT_CODE),
+  };
+}
+
+function selectedRegistryWorkspace(env) {
+  const configHome = path.resolve(
+    expandHomePath(
+      env.KF_CONFIG_HOME || path.join(os.homedir(), '.kungfu-config'),
+    ),
+  );
+  const registryPath = path.join(configHome, 'gui', 'workspaces.json');
+  if (!existsSync(registryPath)) return null;
+  try {
+    const registry = JSON.parse(readFileSync(registryPath, 'utf8'));
+    return (
+      registry.recent?.find(
+        (candidate) => candidate.workspace_id === registry.last_workspace_id,
+      ) ?? null
+    );
+  } catch {
+    return null;
+  }
+}
+
+export function nextDevelopmentEnvironment(baseEnv) {
+  const env = supervisedEnvironment(baseEnv);
+  for (const key of [
+    'KF_INSTANCE_HOME',
+    ...WORKSPACE_ENV_KEYS,
+    'KFE_INITIAL_SURFACE',
+    'KFE_FOCUSED_PROJECT_PATH',
+  ]) {
+    Reflect.deleteProperty(env, key);
+  }
+  const selected = selectedRegistryWorkspace(env);
+  if (
+    selected?.workspace_kind === 'project' &&
+    typeof selected.workspace_root === 'string' &&
+    selected.workspace_root.length > 0
+  ) {
+    env.KFE_INITIAL_SURFACE = 'projects';
+    env.KFE_FOCUSED_PROJECT_PATH = selected.workspace_root;
+  }
+  return env;
+}
+
+function runElectronVite(root, env) {
+  const executable = path.join(
+    root,
+    'node_modules',
+    '.bin',
+    process.platform === 'win32' ? 'electron-vite.cmd' : 'electron-vite',
+  );
+  return new Promise((resolve, reject) => {
+    const child = spawn(executable, ['dev'], {
+      cwd: root,
+      env,
+      stdio: 'inherit',
+      shell: process.platform === 'win32',
+    });
+    child.once('error', reject);
+    child.once('close', (code, signal) => resolve({ code: code ?? 1, signal }));
+  });
+}
+
+export async function superviseDevelopment(options) {
+  let env = supervisedEnvironment({
+    ...options.baseEnv,
+    KUNGFU_GUI_DEV_USER_DATA:
+      options.baseEnv.KUNGFU_GUI_DEV_USER_DATA ||
+      path.join(options.root, 'out', 'dev-user-data'),
+  });
+  for (;;) {
+    const result = await (options.run ?? runElectronVite)(options.root, env);
+    if (result.code !== DEVELOPMENT_RESTART_EXIT_CODE) return result.code;
+    options.onRestart?.();
+    env = nextDevelopmentEnvironment(env);
+  }
+}
+
+export function guiDevelopmentMain(baseEnv = process.env) {
+  return superviseDevelopment({
+    root: GUI_ROOT,
+    baseEnv,
+    onRestart: () =>
+      process.stdout.write(
+        '\n[kungfu-gui] Project changed; restarting the development renderer and native process.\n\n',
+      ),
+  });
+}
 
 function usage(code) {
   process.stdout.write(
     [
       'usage: ./shifu product gui dev|build|pack|dist [--dry-run] [--instance-home <path>] [--no-instance-home]',
-      '       ./shifu product tui dev|demo|build|bundle|dist [--dry-run] [--instance-home <path>] [--no-instance-home]',
+      '       ./shifu product tui dev|demo|build|bundle|dist [--empty-state] [--dry-run] [--instance-home <path>] [--no-instance-home]',
       '       ./shifu product cli dist [--dry-run] [--instance-home <path>] [--no-instance-home]',
       '',
       'gui build/pack  -> desktop product unpacked app under product/dist/desktop',
@@ -54,6 +164,9 @@ function usage(code) {
       '  dev commands auto-pick a workspace data home at <workspace>/.kungfu',
       '  KF_DEV_HOME=<path> pins the dev workspace data home for local dev runs',
       '  (dev only; explicit flags and KF_INSTANCE_HOME/KF_HOME take precedence)',
+      '',
+      '--empty-state',
+      '  open `product tui dev` against a deterministic no-Work snapshot',
       '',
     ].join('\n'),
   );
@@ -126,6 +239,26 @@ function seedInstanceConfig(instanceHome, options = {}) {
   mkdirSync(path.dirname(target), { recursive: true });
   copyFileSync(source, target);
   return { seeded: true, source, target };
+}
+
+function seedInstanceProjectIndex(instanceHome, options = {}) {
+  const sourceConfigHome = options.sourceConfigHome || defaultConfigHome();
+  const targetConfigHome = path.join(instanceHome, 'config');
+  const relativePaths = [
+    path.join('gui', 'workspaces.json'),
+    path.join('projects', 'library.json'),
+    path.join('workspaces', 'catalog.json'),
+  ];
+  const seeded = [];
+  for (const relativePath of relativePaths) {
+    const source = path.join(sourceConfigHome, relativePath);
+    const target = path.join(targetConfigHome, relativePath);
+    if (!existsSync(source) || existsSync(target)) continue;
+    mkdirSync(path.dirname(target), { recursive: true });
+    copyFileSync(source, target);
+    seeded.push({ source, target });
+  }
+  return seeded;
 }
 
 function nearestExistingWorkspaceHome(cwd) {
@@ -226,11 +359,16 @@ function devWorkspaceHomeOverride(parsed, surface, verb, env = process.env) {
 function instanceEnv(instanceHome, baseEnv = process.env) {
   if (!instanceHome) return { ...baseEnv };
   const runtimeHome = path.join(instanceHome, 'home');
+  const projectsConfigHome =
+    baseEnv.KF_PROJECTS_CONFIG_HOME ||
+    baseEnv.KF_CONFIG_HOME ||
+    defaultConfigHome();
   return {
     ...baseEnv,
     KF_INSTANCE_HOME: instanceHome,
     KF_HOME: runtimeHome,
     KF_CONFIG_HOME: path.join(instanceHome, 'config'),
+    KF_PROJECTS_CONFIG_HOME: projectsConfigHome,
     KF_RUNTIME_DIR: path.join(runtimeHome, 'runtime'),
   };
 }
@@ -359,6 +497,7 @@ function prepareDevViewExtensions(options = {}) {
 function parseArgs(argv) {
   const parsed = {
     dryRun: false,
+    emptyState: false,
     instanceHome: '',
     noInstanceHome: false,
     positional: [],
@@ -367,6 +506,8 @@ function parseArgs(argv) {
     const arg = argv[i];
     if (arg === '--dry-run') {
       parsed.dryRun = true;
+    } else if (arg === '--empty-state') {
+      parsed.emptyState = true;
     } else if (arg === '--no-instance-home') {
       parsed.noInstanceHome = true;
     } else if (arg === '--instance-home' || arg === '--home' || arg === '-H') {
@@ -393,6 +534,7 @@ function envDiff(env) {
     ['KF_INSTANCE_HOME', env.KF_INSTANCE_HOME],
     ['KF_HOME', env.KF_HOME],
     ['KF_CONFIG_HOME', env.KF_CONFIG_HOME],
+    ['KF_PROJECTS_CONFIG_HOME', env.KF_PROJECTS_CONFIG_HOME],
     ['KF_RUNTIME_DIR', env.KF_RUNTIME_DIR],
     ['KUNGFU_SDK_ENTRY', env.KUNGFU_SDK_ENTRY],
     ['KUNGFU_KFD3_REGISTRY', env.KUNGFU_KFD3_REGISTRY],
@@ -434,6 +576,11 @@ function run(label, cmd, args, options = {}) {
         `[instance-home] seeded config: ${seed.source} -> ${seed.target}\n`,
       );
     }
+    for (const projectSeed of seedInstanceProjectIndex(options.instanceHome)) {
+      process.stdout.write(
+        `[instance-home] seeded Project index: ${projectSeed.source} -> ${projectSeed.target}\n`,
+      );
+    }
   }
   // Selecting a workspace is read-only. Desktop owns the write-intent-bound
   // ensure gate; the launcher must not initialize <workspace>/.kungfu merely
@@ -456,6 +603,9 @@ function main(argv = process.argv.slice(2)) {
   const parsed = parseArgs(argv);
   const { dryRun, positional } = parsed;
   const [surface, verb] = positional;
+  if (parsed.emptyState && !(surface === 'tui' && verb === 'dev')) {
+    fail('--empty-state is supported only by `product tui dev`');
+  }
   const autoInstanceHome = '';
   const autoWorkspaceHome =
     devWorkspaceHomeOverride(parsed, surface, verb) ||
@@ -479,6 +629,10 @@ function main(argv = process.argv.slice(2)) {
   if (!surface || !verb) usage(1);
 
   if (surface === 'gui') {
+    if (verb === 'supervise-dev') {
+      if (dryRun) fail('internal gui supervisor does not support --dry-run');
+      return guiDevelopmentMain(env);
+    }
     if (verb === 'dev') {
       prepareDevViewExtensions({ dryRun, env });
       pnpm('gui dev', ['--filter', '@kungfu-tech/gui', 'run', 'dev'], {
@@ -522,7 +676,9 @@ function main(argv = process.argv.slice(2)) {
     }
   } else if (surface === 'tui') {
     if (verb === 'dev') {
-      pnpm('tui dev', ['--filter', '@kungfu-tech/tui', 'run', 'dev'], {
+      const tuiArgs = ['--filter', '@kungfu-tech/tui', 'run', 'dev'];
+      if (parsed.emptyState) tuiArgs.push('--', '--empty-state');
+      pnpm('tui dev', tuiArgs, {
         dryRun,
         env,
         instanceHome,
@@ -595,7 +751,8 @@ function main(argv = process.argv.slice(2)) {
 }
 
 if (process.argv[1] && path.resolve(process.argv[1]) === __filename) {
-  main();
+  const result = main();
+  if (result instanceof Promise) process.exitCode = await result;
 }
 
 export {
@@ -611,6 +768,7 @@ export {
   prepareDevViewExtensions,
   resolveInstanceHome,
   seedInstanceConfig,
+  seedInstanceProjectIndex,
   shouldAutoInstanceHome,
   shouldAutoWorkspaceHome,
   workspaceDataHomeForCwd,

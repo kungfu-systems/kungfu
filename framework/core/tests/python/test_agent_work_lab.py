@@ -2,12 +2,17 @@
 
 import json
 import os
+from pathlib import Path
 
 from click.testing import CliRunner
 
 from kungfu import agent_work_lab
 from kungfu.cli.commands import kfc
 from kungfu.cli.commands import agent_work_lab as agent_work_lab_commands  # noqa: F401
+from kungfu.cli.commands.assignment import (
+    _project_review_evidence,
+    _reviewer_read_only_safe,
+)
 
 
 def _verified_query(canonical_work_count=0):
@@ -28,6 +33,72 @@ def _verified_query(canonical_work_count=0):
         "proof": {"proof_root": proof_root},
         "writes": [],
     }
+
+
+def test_generic_project_review_selects_bounded_project_evidence(tmp_path):
+    project = tmp_path / "project"
+    (project / "deliverables").mkdir(parents=True)
+    (project / "inputs").mkdir()
+    (project / ".kungfu" / "runtime").mkdir(parents=True)
+    (project / "README.md").write_text("# Project\n", encoding="utf-8")
+    (project / "inputs" / "incident.md").write_text(
+        "connection dropped\n", encoding="utf-8"
+    )
+    deliverable = project / "deliverables" / "recovery.md"
+    deliverable.write_text(
+        "# Recovery\nRestart from retained Work.\n", encoding="utf-8"
+    )
+    report = project / ".kungfu" / "runtime" / "report.json"
+    report.write_text("{}\n", encoding="utf-8")
+
+    evidence = _project_review_evidence(project, report, {})
+
+    assert evidence["mode"] == "project-files"
+    assert evidence["primary"]["path"] == "deliverables/recovery.md"
+    assert {row["path"] for row in evidence["supporting"]} == {
+        "README.md",
+        "inputs/incident.md",
+    }
+    assert evidence["primary"]["root"].startswith("sha256:")
+    assert Path(project / evidence["primary"]["path"]).is_file()
+
+
+def test_generic_project_review_falls_back_to_retained_agent_report(tmp_path):
+    project = tmp_path / "project"
+    report = project / ".kungfu" / "runtime" / "report.json"
+    report.parent.mkdir(parents=True)
+    report.write_text('{"status":"agent-finished"}\n', encoding="utf-8")
+
+    evidence = _project_review_evidence(project, report, {})
+
+    assert evidence["mode"] == "execution-report"
+    assert evidence["primary"]["path"] == ".kungfu/runtime/report.json"
+    assert evidence["supporting"] == []
+
+
+def test_only_exact_qualification_mock_profile_is_safe_for_read_only_review():
+    assert _reviewer_read_only_safe({"provider": "codex"})
+    assert _reviewer_read_only_safe(
+        {
+            "provider": "synthetic",
+            "id": "kungfu.mock-agent.review-fit",
+            "source": "qualification",
+        }
+    )
+    assert not _reviewer_read_only_safe(
+        {
+            "provider": "synthetic",
+            "id": "kungfu.mock-agent.complete",
+            "source": "qualification",
+        }
+    )
+    assert not _reviewer_read_only_safe(
+        {
+            "provider": "synthetic",
+            "id": "kungfu.mock-agent.review-fit",
+            "source": "user",
+        }
+    )
 
 
 def test_absent_runtime_is_verified_empty_without_materializing_it(
@@ -85,6 +156,28 @@ def test_autoplay_cli_launches_the_shipped_tui(monkeypatch):
 
     assert result.exit_code == 0, result.output
     assert launches == [("--agent-work-lab-autoplay",)]
+
+
+def test_project_tour_cli_launches_a_disposable_project_in_the_shipped_tui(
+    monkeypatch,
+):
+    from kungfu.cli import tui_runtime
+
+    launches = []
+    monkeypatch.setattr(
+        tui_runtime,
+        "run_tui",
+        lambda _ctx, commands=(): launches.append(tuple(commands)),
+    )
+
+    result = CliRunner().invoke(kfc, ["agent-work-lab", "project-tour"])
+
+    assert result.exit_code == 0, result.output
+    assert len(launches) == 1
+    assert launches[0][0] == "--project-work-tour-root"
+    destination = Path(launches[0][1])
+    assert destination.name == "my-first-kungfu-project"
+    assert not destination.exists()
 
 
 def test_existing_global_work_routes_to_work_graph(tmp_path, monkeypatch):

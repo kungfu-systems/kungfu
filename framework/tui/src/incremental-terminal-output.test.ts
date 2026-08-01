@@ -5,8 +5,11 @@ import { EventEmitter } from 'node:events';
 import test from 'node:test';
 
 import {
+  BEGIN_SYNCHRONIZED_UPDATE,
+  END_SYNCHRONIZED_UPDATE,
   IncrementalTerminalOutput,
   type WritableTerminal,
+  synchronizedTerminalOutputEnabled,
 } from './terminal-canvas.js';
 
 class FakeTerminal extends EventEmitter implements WritableTerminal {
@@ -28,6 +31,36 @@ test('writes the first complete frame once from terminal home', () => {
   output.write('alpha\nbeta\ngamma');
 
   assert.deepEqual(terminal.writes, ['\u001b[Halpha\nbeta\ngamma']);
+});
+
+test('wraps a complete frame patch in one synchronized terminal update', () => {
+  const terminal = new FakeTerminal();
+  const output = new IncrementalTerminalOutput(terminal, {
+    synchronizedOutput: true,
+  });
+
+  output.write('alpha\nbeta');
+  output.write('alpha\ngamma');
+
+  assert.deepEqual(terminal.writes, [
+    `${BEGIN_SYNCHRONIZED_UPDATE}\u001b[Halpha\nbeta${END_SYNCHRONIZED_UPDATE}`,
+    `${BEGIN_SYNCHRONIZED_UPDATE}\u001b[2;1H\u001b[2Kgamma${END_SYNCHRONIZED_UPDATE}`,
+  ]);
+});
+
+test('synchronized output degrades for dumb and explicitly disabled terminals', () => {
+  assert.equal(
+    synchronizedTerminalOutputEnabled({ TERM: 'xterm-256color' }),
+    true,
+  );
+  assert.equal(synchronizedTerminalOutputEnabled({ TERM: 'dumb' }), false);
+  assert.equal(
+    synchronizedTerminalOutputEnabled({
+      TERM: 'xterm-256color',
+      KUNGFU_TUI_SYNCHRONIZED_OUTPUT: '0',
+    }),
+    false,
+  );
 });
 
 test('updates only changed physical lines in one terminal write', () => {

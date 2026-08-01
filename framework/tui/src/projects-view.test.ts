@@ -20,7 +20,8 @@ test('Projects exposes only New, Open, and safe removal on the first layer', () 
   assert.doesNotMatch(source, /command: '\/import'/);
   assert.doesNotMatch(source, /command: '\/blank'/);
   assert.match(source, /projects\s*\.select\(project\.path\)/);
-  assert.match(source, /PROJECT OPENED/);
+  assert.match(source, /Current · \{openedProject\.display_path\}/);
+  assert.match(source, /wrap="truncate-end"/);
   assert.match(
     source,
     /Project files and\s+retained Kungfu evidence stay untouched/,
@@ -62,13 +63,23 @@ test('All Work navigation preserves but does not reuse Project context', () => {
   assert.match(source, /GlobalWorkFilter/);
   assert.match(source, /'active', 'completed', 'all'/);
   assert.match(source, /value === 'f'/);
+  const workHost = source.slice(
+    source.indexOf('function WorkControlHost'),
+    source.indexOf('const PENDING_STARTUP'),
+  );
+  assert.match(workHost, /pattern=\{KUNGFU_WORK_DISCOVERY_PATTERN\}/);
+  assert.match(workHost, /emptyState\s*\?\s*EMPTY_GLOBAL_WORK_SNAPSHOT/);
+  assert.match(workHost, /if \(emptyState\) return undefined/);
 });
 
-test('opened Project Work offers an exact-plan Codex path and retained session output', () => {
+test('opened Project Work offers an exact-plan Agent path and recoverable session controls', () => {
   const source = readFileSync(new URL('./main.tsx', import.meta.url), 'utf8');
-  const projectWork = source.slice(
-    source.indexOf('function ProjectWorkHost'),
-    source.indexOf('const PENDING_STARTUP'),
+  const projectWorkSource = readFileSync(
+    new URL('./work-window/index.tsx', import.meta.url),
+    'utf8',
+  );
+  const projectWork = projectWorkSource.slice(
+    projectWorkSource.indexOf('export function ProjectWorkHost'),
   );
 
   assert.match(projectWork, /NEXT: \[Enter or \/new\] create Work/);
@@ -77,17 +88,39 @@ test('opened Project Work offers an exact-plan Codex path and retained session o
   assert.match(projectWork, /\.captureWork\(/);
   assert.match(projectWork, /CONFIRM WORK CAPTURE/);
   assert.match(projectWork, /No Work is admitted and no\s*Agent\s+runs yet/);
-  assert.match(projectWork, /\.planRun\('codex'/);
+  assert.match(projectWork, /\.planRun\(selectedProvider/);
+  assert.match(projectWork, /KUNGFU_MOCK_AGENT_SCENARIO/);
   assert.match(projectWork, /expectedPlanRoot: acceptedPlan\.planRoot/);
   assert.match(projectWork, /\.subscribeRuns\(setRuns\)/);
-  assert.match(projectWork, /CODEX SESSION RUNNING/);
+  assert.match(projectWork, /\.syncSessions\(/);
+  assert.match(projectWork, /\.restoreRun\(/);
+  assert.match(projectWork, /\.replyToRun\(/);
+  assert.match(projectWork, /\.approveRun\(/);
+  assert.match(projectWork, /\.endRun\(/);
+  assert.match(projectWork, /SESSION RUNNING/);
   assert.match(projectWork, /receipt\.nextActions/);
-  assert.match(projectWork, /<ProjectFilesHost/);
+  assert.match(projectWork, /<ProjectFileTreeNavigation/);
+  assert.match(projectWork, /focused=\{fileTreeFocused\}/);
   assert.match(projectWork, /value === 't'/);
+  assert.doesNotMatch(projectWork, /projectSection === 'files'/);
   assert.match(projectWork, /LOADING PROJECT WORK/);
-  assert.match(projectWork, /empty-Project state will appear only after/);
-  assert.match(projectWork, /\{' {2}'\}Files/);
-  assert.match(projectWork, /› Work \{loadingWork \? '…' : 0\}/);
+  assert.match(projectWork, /<ProjectWorkDock/);
+  assert.match(
+    projectWorkSource,
+    /function ProjectWorkDock[\s\S]*?height=\{4\}/,
+  );
+  assert.ok(
+    projectWork.indexOf('KUNGFU_PROJECT_DISCOVERY_PATTERN') <
+      projectWork.indexOf('title={`${loadingSpinner} LOADING PROJECT WORK`}'),
+  );
+  assert.match(projectWork, /workCount=\{loadingWork \? undefined : 0\}/);
+  assert.match(projectWork, /KUNGFU_EMPTY_WORK_NEBULA_PATTERN/);
+  assert.match(projectWork, /<TerminalAmbientScene/);
+  assert.match(projectWork, /const emptyProjectIdle =/);
+  assert.match(
+    projectWork,
+    /\) : loadingWork \|\| emptyProjectIdle \? null : \(/,
+  );
   assert.match(
     projectWork,
     /NEXT: \[Enter\] review Project changes with a fresh Agent/,
@@ -105,5 +138,23 @@ test('opened Project Work offers an exact-plan Codex path and retained session o
     source,
     /setProjectWorkLoading\(false\)[\s\S]*setProjectResumeSettled\(true\)/,
   );
-  assert.match(source, /await lab\.resumeStarterProject\(\)/);
+  assert.match(source, /await projects\.works\(/);
+  assert.match(source, /await lab\.resumeProjectWork\(/);
+  assert.doesNotMatch(source, /await lab\.resumeStarterProject\(\)/);
+});
+
+test('retained Project Work keeps the file tree in the left navigation', () => {
+  const source = readFileSync(
+    new URL('./starter-project-view/index.tsx', import.meta.url),
+    'utf8',
+  );
+  const host = source.slice(
+    source.indexOf('export function StarterProjectHost'),
+  );
+
+  assert.match(host, /navigationPanel=\{/);
+  assert.match(host, /<ProjectFileTreeNavigation/);
+  assert.match(host, /focused=\{activeRegion === 0\}/);
+  assert.match(host, /navigationWidth=\{projectNavigationWidth\(size\)\}/);
+  assert.doesNotMatch(host, /projectSection === 'files'/);
 });

@@ -259,25 +259,22 @@ test('only admitted provider output is identified as actual agent output', () =>
   );
 });
 
-test('the shell keeps navigation outside the Lab content branch', () => {
+test('the shell moves product navigation into the title-bar menu', () => {
   const source = readFileSync(
     new URL('./renderer/src/main.tsx', import.meta.url),
-    'utf8',
-  );
-  const navigation = readFileSync(
-    new URL('./renderer/src/product-navigation/index.tsx', import.meta.url),
     'utf8',
   );
   const body = source.slice(
     source.indexOf('<div style={chromeBodyStyle}>'),
     source.indexOf('{notificationToasts}'),
   );
-  const labBranch = body.indexOf('labOpen ? (');
 
-  assert.ok(navigation.indexOf('<nav') >= 0);
-  assert.ok(body.indexOf('<ProductNavigation') >= 0);
-  assert.ok(labBranch >= 0);
-  assert.ok(body.indexOf('<ProductNavigation') < labBranch);
+  assert.match(source, /aria-label="Open product menu"/);
+  assert.match(source, /aria-label="Kungfu product menu"/);
+  assert.match(source, /title: 'All Work'/);
+  assert.match(source, /title: 'Projects'/);
+  assert.match(source, /title: 'Agent Work Lab'/);
+  assert.doesNotMatch(body, /<ProductNavigation/);
 });
 
 test('the visual contract keeps a fixed frame with independently scrolling sessions', () => {
@@ -330,6 +327,10 @@ test('the GUI shell uses the shared startup surface policy', () => {
     new URL('./renderer/src/main.tsx', import.meta.url),
     'utf8',
   );
+  const projectsSource = readFileSync(
+    new URL('./renderer/src/projects-panel/index.tsx', import.meta.url),
+    'utf8',
+  );
   const mainSource = readFileSync(
     new URL('./main/index.ts', import.meta.url),
     'utf8',
@@ -339,13 +340,27 @@ test('the GUI shell uses the shared startup surface policy', () => {
   assert.match(source, /startupSurface === 'work-graph'/);
   assert.match(
     source,
+    /initialProjectsOpen[\s\S]*discoveredKfxCount: 0[\s\S]*: loadKfx\(/,
+  );
+  assert.match(source, /initialProjectsOpen && !initialFocusedProjectPath/);
+  assert.match(source, /projectPath: initialFocusedProjectPath/);
+  assert.match(
+    source,
+    /initialProjectsOpen &&[\s\S]*params\.projectPath\?\.trim\(\)/,
+  );
+  assert.match(
+    source,
     /shouldOpenAgentWorkLab\(startupSurface, loaded\.entries\.length\)/,
   );
-  assert.match(source, /WORKSPACE_SELECT_PATH_CHANNEL/);
+  assert.match(projectsSource, /WORKSPACE_SELECT_PATH_CHANNEL/);
   assert.match(source, /onOpenStarterProject/);
   assert.match(mainSource, /ipcMain\.handle\(WORKSPACE_SELECT_PATH_CHANNEL/);
-  assert.match(mainSource, /transition: 'renderer-reload'/);
-  assert.match(mainSource, /shellWindow\.webContents\.reload\(\)/);
+  assert.match(mainSource, /transition: 'development-supervisor-restart'/);
+  assert.match(mainSource, /transition: 'application-relaunch'/);
+  assert.match(mainSource, /prepareDesktopWorkspaceEnvironmentForRelaunch/);
+  assert.match(mainSource, /KUNGFU_GUI_DEV_USER_DATA/);
+  assert.match(mainSource, /app\.setPath\('userData', developmentUserData\)/);
+  assert.doesNotMatch(mainSource, /shellWindow\.webContents\.reload\(\)/);
   assert.match(mainSource, /realpathSync\(requestedPath\)/);
   assert.match(mainSource, /statSync\(workspaceRoot\)\.isDirectory\(\)/);
 });
@@ -362,25 +377,50 @@ test('Projects and Work use the shared exact-plan Agent session surface', () => 
     ),
     'utf8',
   );
+  const runSurface = readFileSync(
+    new URL('../../kfx/src/project-work-run.tsx', import.meta.url),
+    'utf8',
+  );
 
-  for (const source of [projects, work]) {
-    assert.match(source, /ProjectWorkRunConfirmation/);
-    assert.match(source, /ProjectWorkRunSession/);
-    assert.match(source, /expectedPlanRoot/);
-  }
+  assert.match(work, /ProjectWorkRunConfirmation/);
+  assert.match(work, /ProjectWorkRunSession/);
+  assert.match(work, /expectedPlanRoot/);
+  assert.match(runSurface, /plan\.blockedReason/);
+  assert.match(runSurface, /aria-label="Resize Agent session"/);
+  assert.match(runSurface, /Fullscreen session view/);
+  assert.match(runSurface, /setPointerCapture/);
+  assert.match(runSurface, /background: '#20262e'/);
+  assert.match(runSurface, /color: '#e6edf3'/);
   assert.match(projects, /Opening Project/);
-  assert.match(projects, /onOpenWork\(openedProject, 'files'\)/);
+  assert.match(projects, /onRestoreProject\(focusedPath, 'files'\)/);
+  assert.match(projects, /forwardedProject\.current = focusedPath/);
   assert.match(projects, /Open Project…/);
   assert.match(projects, /New Project/);
-  assert.match(projects, /New Work/);
-  assert.match(projects, /What should the Agent do\?/);
+  assert.match(projects, /Open Project/);
+  assert.match(projects, /project\.workCount/);
+  assert.match(projects, /project\.updatedAt/);
+  assert.match(projects, /projects\.cachedCatalog/);
+  assert.doesNotMatch(projects, /Run Codex|Open Session|New Work/);
+  assert.doesNotMatch(projects, /Remove from Kungfu|Remove from Projects/);
   assert.doesNotMatch(projects, /PROJECT OPENED/);
   assert.doesNotMatch(projects, /Import Existing|New Starter|Assignment/);
   assert.match(work, /All Work/);
   assert.match(work, /ProjectNavigation/);
   assert.match(work, /ProjectFilesView/);
+  assert.match(
+    work,
+    /projects\.previewFile\(project\.path, selected\.relativePath\)/,
+  );
+  assert.match(work, /aria-label=\{`\$\{preview\.value\.name\} contents`\}/);
+  assert.match(
+    work,
+    /Symbolic links cannot be previewed|supported UTF-8 text file/,
+  );
   assert.match(work, /Loading retained Project Work/);
   assert.match(work, /Copy absolute path/);
+  assert.match(work, /aria-label="Project menu"/);
+  assert.match(work, /Remove from Projects…/);
+  assert.match(work, /Confirm once more/);
   assert.match(work, /projectSection/);
   assert.doesNotMatch(work, /Portfolio ·|connecting live Portfolio/);
 });

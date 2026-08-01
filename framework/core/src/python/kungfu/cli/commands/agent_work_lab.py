@@ -1,6 +1,7 @@
 # SPDX-License-Identifier: Apache-2.0
 
 import json
+import tempfile
 from pathlib import Path
 
 import click
@@ -129,6 +130,20 @@ def autoplay(ctx):
     from kungfu.cli.tui_runtime import run_tui
 
     return run_tui(ctx, ("--agent-work-lab-autoplay",))
+
+
+@agent_work_lab.command(
+    name="project-tour",
+    help="animate a disposable Project Work failure-and-recovery story",
+)
+@kfd3_api("kungfu.agent-work-lab")
+@kfc.pass_context()
+def project_tour(ctx):
+    from kungfu.cli.tui_runtime import run_tui
+
+    with tempfile.TemporaryDirectory(prefix="kungfu-project-tour-") as temporary:
+        destination = Path(temporary) / "my-first-kungfu-project"
+        return run_tui(ctx, ("--project-work-tour-root", str(destination)))
 
 
 @agent_work_lab.command(

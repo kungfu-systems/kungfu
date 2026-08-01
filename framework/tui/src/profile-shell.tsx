@@ -14,13 +14,24 @@ import {
 } from './control-plane-state.js';
 import { resolveListWindow } from './list-window/index.js';
 import { boundedIndex } from './navigation.js';
-import { terminalCanvasRows } from './terminal-canvas.js';
+import {
+  KUNGFU_CIRCULAR_STARTUP_PATTERN,
+  KUNGFU_EMPTY_WORK_NEBULA_PATTERN,
+  type TerminalAnimationPattern,
+  type TerminalDimensions,
+  terminalAnimationPatternSize,
+  terminalAnimationsEnabled,
+  terminalCanvasRows,
+  useTerminalAnimationFrame,
+} from './terminal-canvas.js';
+export * from './terminal-canvas.js';
 import type { WorkLoopShellModel } from './work-loop-contribution.js';
 
 export {
   CLOSED_CONTROL_PLANE,
   QUICK_COMMANDS,
   createControlPlaneInputFence,
+  directWorkspaceNavigationFromInput,
   quickCommandMatches,
   reduceControlPlaneInput,
   resolveProductStartupSurface,
@@ -33,8 +44,6 @@ export type {
   ProductQuickCommandAction,
   QuickCommand,
 } from './control-plane-state.js';
-
-export type TerminalDimensions = { columns: number; rows: number };
 
 export type ProfileShellCard = {
   id: string;
@@ -90,10 +99,14 @@ export function compactProfileNavigationWidth(
   return Math.min(20, Math.max(16, Math.floor(dimensions.columns * 0.24)));
 }
 
-function profileShellNavigationWidth(
+export function resolveProfileShellNavigationWidth(
   model: ProfileShellModel,
   dimensions: TerminalDimensions,
+  override?: number,
 ): number {
+  if (override !== undefined) {
+    return Math.max(0, Math.min(dimensions.columns - 1, override));
+  }
   const layout = resolveProfileShellLayout(dimensions);
   if (layout.navigationWidth > 0) return layout.navigationWidth;
   return model.retainNavigationInCompact
@@ -168,12 +181,14 @@ function CardPanel({
   active,
   maxRows,
   height,
+  width,
 }: {
   model: ProfileShellModel;
   selectedCard: number;
   active: boolean;
   maxRows: number;
   height: number;
+  width: number;
 }) {
   const cardRows = model.cards.some((card) => card.summary.trim()) ? 2 : 1;
   const visibleCount = Math.max(1, Math.floor((maxRows - 8) / cardRows));
@@ -191,6 +206,7 @@ function CardPanel({
       borderColor={active ? 'cyan' : undefined}
       paddingX={1}
       height={height}
+      width={width}
       flexShrink={0}
       overflow="hidden"
     >
@@ -215,13 +231,15 @@ function CardPanel({
             flexDirection="column"
             marginTop={offset === 0 ? 1 : 0}
           >
-            <Box>
-              <Text color={index === selectedCard ? 'cyan' : undefined} bold>
-                {index === selectedCard ? '› ' : '  '}
-                {index + 1}. {card.title}
-              </Text>
+            <Text
+              color={index === selectedCard ? 'cyan' : undefined}
+              bold
+              wrap="truncate-end"
+            >
+              {index === selectedCard ? '› ' : '  '}
+              {index + 1}. {card.title}
               <Text color={cardStatusColor(card.status)}> [{card.status}]</Text>
-            </Box>
+            </Text>
             {card.summary.trim() ? (
               <Text wrap="truncate-end"> {card.summary}</Text>
             ) : null}
@@ -236,7 +254,13 @@ function EvidencePanel({
   model,
   active,
   height,
-}: { model: ProfileShellModel; active: boolean; height: number }) {
+  width,
+}: {
+  model: ProfileShellModel;
+  active: boolean;
+  height: number;
+  width: number;
+}) {
   const qualificationLabel = model.profile.qualificationLabel ?? 'KFD-3';
   return (
     <Box
@@ -245,6 +269,7 @@ function EvidencePanel({
       borderColor={active ? 'cyan' : undefined}
       paddingX={1}
       height={height}
+      width={width}
       flexShrink={0}
       overflow="hidden"
     >
@@ -345,14 +370,21 @@ export function profileShellCardPanelContainsPoint({
   column,
   row,
   topOffset = 0,
+  navigationWidth,
 }: {
   model: ProfileShellModel;
   dimensions: TerminalDimensions;
   column: number;
   row: number;
   topOffset?: number;
+  navigationWidth?: number;
 }): boolean {
   const layout = resolveProfileShellLayout(dimensions);
+  const resolvedNavigationWidth = resolveProfileShellNavigationWidth(
+    model,
+    dimensions,
+    navigationWidth,
+  );
   const metrics = profileShellBodyMetrics(model, dimensions);
   const localRow = row - topOffset;
   const bodyStart = 2 + metrics.workLoopRows;
@@ -366,11 +398,10 @@ export function profileShellCardPanelContainsPoint({
     return false;
   }
   if (layout.mode === 'one-column') {
-    const navigationWidth = profileShellNavigationWidth(model, dimensions);
-    if (navigationWidth > 0) return column > navigationWidth;
+    if (resolvedNavigationWidth > 0) return column > resolvedNavigationWidth;
     return localRow >= bodyStart + 2;
   }
-  if (column <= layout.navigationWidth) return false;
+  if (column <= resolvedNavigationWidth) return false;
   if (layout.mode === 'three-column') {
     return column <= dimensions.columns - layout.evidenceWidth;
   }
@@ -383,18 +414,32 @@ export function ProfileShell({
   selectedCard = 0,
   activeRegion = 1,
   busy = false,
+  navigationPanel,
+  navigationWidth: navigationWidthOverride,
 }: {
   model: ProfileShellModel;
   dimensions: TerminalDimensions;
   selectedCard?: number;
   activeRegion?: number;
   busy?: boolean;
+  navigationPanel?: React.ReactNode;
+  navigationWidth?: number;
 }) {
   const layout = resolveProfileShellLayout(dimensions);
-  const navigationWidth = profileShellNavigationWidth(model, dimensions);
+  const navigationWidth = resolveProfileShellNavigationWidth(
+    model,
+    dimensions,
+    navigationWidthOverride,
+  );
   const { bodyHeight, twoColumnEvidenceHeight, twoColumnCardHeight } =
     profileShellBodyMetrics(model, dimensions);
-  const navigation = (
+  const evidenceWidth =
+    layout.mode === 'three-column' ? layout.evidenceWidth : 0;
+  const cardPanelWidth = Math.max(
+    1,
+    dimensions.columns - navigationWidth - evidenceWidth,
+  );
+  const navigation = navigationPanel ?? (
     <NavigationPanel model={model} active={activeRegion === 0} />
   );
 
@@ -403,6 +448,7 @@ export function ProfileShell({
       width={dimensions.columns}
       height={terminalCanvasRows(dimensions.rows)}
       flexDirection="column"
+      overflow="hidden"
     >
       <Box justifyContent="space-between" paddingX={1}>
         <Text bold>{model.profile.title}</Text>
@@ -417,40 +463,53 @@ export function ProfileShell({
       ) : null}
       {layout.mode === 'three-column' ? (
         <Box height={bodyHeight}>
-          <Box width={layout.navigationWidth}>{navigation}</Box>
-          <Box flexGrow={1}>
+          <Box width={navigationWidth} flexShrink={0} overflow="hidden">
+            {navigation}
+          </Box>
+          <Box width={cardPanelWidth} flexShrink={0} overflow="hidden">
             <CardPanel
               model={model}
               selectedCard={selectedCard}
               active={activeRegion === 1}
               maxRows={bodyHeight}
               height={bodyHeight}
+              width={cardPanelWidth}
             />
           </Box>
-          <Box width={layout.evidenceWidth}>
+          <Box width={evidenceWidth} flexShrink={0} overflow="hidden">
             <EvidencePanel
               model={model}
               active={activeRegion === 2}
               height={bodyHeight}
+              width={evidenceWidth}
             />
           </Box>
         </Box>
       ) : null}
       {layout.mode === 'two-column' ? (
         <Box height={bodyHeight}>
-          <Box width={layout.navigationWidth}>{navigation}</Box>
-          <Box flexDirection="column" flexGrow={1}>
+          <Box width={navigationWidth} flexShrink={0} overflow="hidden">
+            {navigation}
+          </Box>
+          <Box
+            width={cardPanelWidth}
+            flexDirection="column"
+            flexShrink={0}
+            overflow="hidden"
+          >
             <CardPanel
               model={model}
               selectedCard={selectedCard}
               active={activeRegion === 1}
               maxRows={twoColumnCardHeight}
               height={twoColumnCardHeight}
+              width={cardPanelWidth}
             />
             <EvidencePanel
               model={model}
               active={activeRegion === 2}
               height={twoColumnEvidenceHeight}
+              width={cardPanelWidth}
             />
           </Box>
         </Box>
@@ -464,19 +523,23 @@ export function ProfileShell({
             active={activeRegion === 1}
             maxRows={bodyHeight - 2}
             height={bodyHeight - 2}
+            width={dimensions.columns}
           />
         </Box>
       ) : null}
       {layout.mode === 'one-column' && navigationWidth > 0 ? (
         <Box height={bodyHeight}>
-          <Box width={navigationWidth}>{navigation}</Box>
-          <Box flexGrow={1}>
+          <Box width={navigationWidth} flexShrink={0} overflow="hidden">
+            {navigation}
+          </Box>
+          <Box width={cardPanelWidth} flexShrink={0} overflow="hidden">
             <CardPanel
               model={model}
               selectedCard={selectedCard}
               active={activeRegion === 1}
               maxRows={bodyHeight}
               height={bodyHeight}
+              width={cardPanelWidth}
             />
           </Box>
         </Box>
@@ -1671,50 +1734,44 @@ export function ControlPlaneBar({
   dimensions,
   state,
   resultCount,
-  surfaceLabel = 'Kungfu',
   controlsLabel = 'VIEW CONTROLS',
   controlsHint = 'Workspace shortcuts active',
 }: {
   dimensions: TerminalDimensions;
   state: ControlPlaneState;
   resultCount: number;
-  surfaceLabel?: string;
   controlsLabel?: string;
   controlsHint?: string;
 }) {
   const modalOpen = state.mode !== 'closed';
   const inputFocused = modalOpen || state.focus === 'input';
+  const acceptsText =
+    state.mode === 'closed' ||
+    state.mode === 'commands' ||
+    state.mode === 'search';
   const value =
     state.mode === 'commands' || state.mode === 'search' || !modalOpen
       ? state.query
       : '';
   const prompt =
     state.mode === 'help'
-      ? 'Help is open'
+      ? 'Help open'
       : state.mode === 'detail'
-        ? 'Result details are open'
+        ? 'Details open'
         : value ||
-          (!modalOpen
-            ? inputFocused
-              ? 'Type a message…'
-              : 'Keyboard shortcuts are active'
-            : '');
-  const modeLabel = modalOpen
-    ? 'KUNGFU'
-    : inputFocused
-      ? 'INPUT'
-      : controlsLabel;
+          (!modalOpen ? (inputFocused ? 'Type…' : 'Press i to type') : '');
+  const modeLabel = modalOpen ? state.mode.toUpperCase() : controlsLabel;
   const hint =
     state.notice ??
     (state.mode === 'commands'
-      ? `${resultCount} bounded action${resultCount === 1 ? '' : 's'} · Enter run · Esc cancel`
+      ? `${resultCount} action${resultCount === 1 ? '' : 's'} · Enter Run · Esc Close`
       : state.mode === 'search'
-        ? `${resultCount} result${resultCount === 1 ? '' : 's'} · Enter open · Esc cancel`
+        ? `${resultCount} result${resultCount === 1 ? '' : 's'} · Enter Open · Esc Close`
         : state.mode === 'help' || state.mode === 'detail'
-          ? 'Esc returns to the input'
+          ? 'Esc Back'
           : state.focus === 'workspace'
-            ? `${controlsHint} · i Input · ? Help · / Actions · Ctrl+K Search`
-            : 'Text entry is active · Esc Controls · Tab next focus · ? Help · / Actions · Ctrl+K Search');
+            ? `${controlsHint} · i Input`
+            : 'Esc Controls · ? Help · / Actions · Ctrl+K Search');
   const tone = inputFocused ? 'cyan' : 'gray';
   return (
     <Box
@@ -1728,24 +1785,24 @@ export function ControlPlaneBar({
       paddingX={1}
       overflow="hidden"
     >
-      <Text color={tone} wrap="truncate-end">
+      <Text
+        color={state.notice ? 'yellow' : inputFocused ? 'white' : 'gray'}
+        dimColor={!state.notice}
+        wrap="truncate-end"
+      >
         <Text
           bold
           color={inputFocused ? 'black' : 'white'}
           backgroundColor={inputFocused ? 'cyan' : 'gray'}
         >
           {' '}
-          {modeLabel} · {surfaceLabel}{' '}
+          {modeLabel}{' '}
         </Text>{' '}
-        <Text bold>{modalOpen ? '›' : inputFocused ? '›' : '◆'}</Text> {prompt}
-        {!modalOpen ? inputCursor(inputFocused) : null}
-      </Text>
-      <Text
-        color={state.notice ? 'yellow' : inputFocused ? 'white' : 'gray'}
-        dimColor={!state.notice}
-        wrap="truncate-end"
-      >
         {hint}
+      </Text>
+      <Text color={tone} wrap="truncate-end">
+        <Text bold>{inputFocused ? '›' : '◇'}</Text> {prompt}
+        {acceptsText ? inputCursor(inputFocused) : null}
       </Text>
     </Box>
   );
@@ -1784,6 +1841,121 @@ export function PlaybackBar({
       <Text color="white" dimColor wrap="truncate-end">
         {hint}
       </Text>
+    </Box>
+  );
+}
+
+export function TerminalAnimation({
+  pattern,
+  dimensions,
+  active = true,
+  animate = terminalAnimationsEnabled(process.env),
+}: {
+  pattern: TerminalAnimationPattern;
+  dimensions: TerminalDimensions;
+  active?: boolean;
+  animate?: boolean;
+}) {
+  const frame = useTerminalAnimationFrame({
+    active,
+    enabled: animate,
+    pattern,
+  });
+  const patternSize = terminalAnimationPatternSize(dimensions, pattern);
+  const cells = pattern.render(frame, patternSize);
+  return (
+    <Box flexDirection="column" width={patternSize.width}>
+      {cells.map((line, row) => (
+        <Text key={`${pattern.id}-${row}`}>
+          {line.map((cell, column) => (
+            <Text key={`${pattern.id}-${row}-${column}`} color={cell.color}>
+              {cell.glyph}
+            </Text>
+          ))}
+        </Text>
+      ))}
+    </Box>
+  );
+}
+
+export function TerminalAmbientScene({
+  dimensions,
+  pattern = KUNGFU_EMPTY_WORK_NEBULA_PATTERN,
+  animate,
+}: {
+  dimensions: TerminalDimensions;
+  pattern?: TerminalAnimationPattern;
+  animate?: boolean;
+}) {
+  return (
+    <Box
+      width={dimensions.columns}
+      height={dimensions.rows}
+      alignItems="center"
+      justifyContent="center"
+      overflow="hidden"
+    >
+      <TerminalAnimation
+        pattern={pattern}
+        dimensions={dimensions}
+        animate={animate}
+      />
+    </Box>
+  );
+}
+
+export function TerminalLoadingScene({
+  dimensions,
+  title,
+  status,
+  detail,
+  pattern = KUNGFU_CIRCULAR_STARTUP_PATTERN,
+  animate,
+}: {
+  dimensions: TerminalDimensions;
+  title: string;
+  status: string;
+  detail?: string;
+  pattern?: TerminalAnimationPattern;
+  animate?: boolean;
+}) {
+  const compact = dimensions.columns < 58 || dimensions.rows < 15;
+  const animationEnabled = animate ?? terminalAnimationsEnabled(process.env);
+  const patternSize = terminalAnimationPatternSize(dimensions, pattern);
+  return (
+    <Box
+      width={dimensions.columns}
+      height={dimensions.rows}
+      alignItems="center"
+      justifyContent="center"
+      overflow="hidden"
+    >
+      <Box flexDirection="row" alignItems="center" gap={compact ? 1 : 3}>
+        <TerminalAnimation
+          pattern={pattern}
+          dimensions={dimensions}
+          animate={animationEnabled}
+        />
+        <Box
+          flexDirection="column"
+          width={Math.max(
+            8,
+            Math.min(
+              44,
+              dimensions.columns - patternSize.width - (compact ? 1 : 3),
+            ),
+          )}
+        >
+          <Text bold color="cyan">
+            {title}
+          </Text>
+          <Text>{status}</Text>
+          {!compact && detail ? <Text dimColor>{detail}</Text> : null}
+          <Text dimColor>
+            {animationEnabled ? 'Loading · live' : 'Loading'}
+          </Text>
+        </Box>
+      </Box>
     </Box>
   );
 }

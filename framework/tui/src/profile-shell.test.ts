@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
 import { Writable } from 'node:stream';
 import test from 'node:test';
-import { Box, render } from 'ink';
+import { Box, Text, render } from 'ink';
 import React from 'react';
 
 import {
@@ -14,7 +14,34 @@ import {
   profileShellCardPanelContainsPoint,
   renderProfileShellSnapshot,
   resolveProfileShellLayout,
+  resolveProfileShellNavigationWidth,
+  splitHorizontalPointerActionAtPoint,
 } from './profile-shell.js';
+
+test('split navigation keeps the trailing action reachable at narrow widths', () => {
+  const actions = [
+    { action: 'work', label: '[1] All Work' },
+    { action: 'projects', label: '[2] Project · a-very-long-project-name' },
+    { action: 'lab', label: '[3] Agent Work Lab' },
+  ] as const;
+  const base = {
+    actions,
+    row: 1,
+    targetRow: 1,
+    width: 80,
+    startColumn: 2,
+    endPadding: 1,
+    gap: 2,
+  };
+  assert.equal(
+    splitHorizontalPointerActionAtPoint({ ...base, column: 79 }),
+    'lab',
+  );
+  assert.equal(
+    splitHorizontalPointerActionAtPoint({ ...base, column: 58 }),
+    undefined,
+  );
+});
 
 class CaptureOutput extends Writable {
   readonly isTTY = false;
@@ -99,6 +126,107 @@ const WORK_CONTROL_FIXTURE: ProfileShellModel = {
   ],
   notice: 'read-only',
 };
+
+test('custom navigation keeps one stable width across ProfileShell breakpoints', () => {
+  const dimensions = { columns: 160, rows: 48 };
+  assert.equal(
+    resolveProfileShellNavigationWidth(WORK_CONTROL_FIXTURE, dimensions),
+    24,
+  );
+  assert.equal(
+    resolveProfileShellNavigationWidth(WORK_CONTROL_FIXTURE, dimensions, 28),
+    28,
+  );
+  assert.equal(
+    profileShellCardPanelContainsPoint({
+      model: WORK_CONTROL_FIXTURE,
+      dimensions,
+      column: 26,
+      row: 10,
+    }),
+    true,
+  );
+  assert.equal(
+    profileShellCardPanelContainsPoint({
+      model: WORK_CONTROL_FIXTURE,
+      dimensions,
+      navigationWidth: 28,
+      column: 26,
+      row: 10,
+    }),
+    false,
+  );
+});
+
+test('three-column Project Work keeps exact column boundaries with long card content', async () => {
+  const dimensions = { columns: 140, rows: 42 };
+  const navigationWidth = 28;
+  const evidenceWidth = resolveProfileShellLayout(dimensions).evidenceWidth;
+  const cardWidth = dimensions.columns - navigationWidth - evidenceWidth;
+  const output = new CaptureOutput(dimensions.columns, dimensions.rows);
+  const model: ProfileShellModel = {
+    ...WORK_CONTROL_FIXTURE,
+    profile: {
+      ...WORK_CONTROL_FIXTURE.profile,
+      title: 'Project',
+      version: 'agent-work-starter-4',
+    },
+    subject: {
+      id: 'work',
+      title: 'Work · 3',
+      subtitle: '/Users/dkr/Documents/Kungfu/agent-work-starter-4',
+    },
+    cards: [
+      {
+        id: 'create-launch-brief',
+        title: 'Create an evidence-backed launch brief',
+        status: 'completed · evidence retained',
+        summary:
+          'Work is complete. Open it to inspect the retained review and completion evidence.',
+      },
+    ],
+  };
+  const navigationPanel = React.createElement(
+    Box,
+    {
+      width: navigationWidth,
+      flexDirection: 'column',
+      borderStyle: 'round',
+      paddingX: 1,
+    },
+    React.createElement(Text, null, 'Files       Work 3'),
+  );
+  const instance = render(
+    React.createElement(ProfileShell, {
+      model,
+      dimensions,
+      navigationWidth,
+      navigationPanel,
+    }),
+    {
+      stdout: output as unknown as NodeJS.WriteStream,
+      exitOnCtrlC: false,
+      patchConsole: false,
+      debug: true,
+    },
+  );
+  await new Promise<void>((resolve) => setImmediate(resolve));
+  instance.unmount();
+  instance.cleanup();
+
+  const border = output.chunks
+    .join('')
+    .split('\n')
+    .find((line) => line.startsWith('╭'));
+  assert.ok(border);
+  assert.equal(border.length, dimensions.columns);
+  assert.equal(border[0], '╭');
+  assert.equal(border[navigationWidth - 1], '╮');
+  assert.equal(border[navigationWidth], '╭');
+  assert.equal(border[navigationWidth + cardWidth - 1], '╮');
+  assert.equal(border[navigationWidth + cardWidth], '╭');
+  assert.equal(border[dimensions.columns - 1], '╮');
+});
 
 for (const qualification of [
   {

@@ -23,6 +23,8 @@ function run(command, args, options = {}) {
 run(process.execPath, [
   '--test',
   'scripts/check-workspace-continuation.test.mjs',
+  'framework/gui/scripts/dev.test.mjs',
+  'framework/gui/src/kfx-host-descriptor.test.ts',
   'framework/gui/src/main/workspace-selection.test.ts',
 ]);
 

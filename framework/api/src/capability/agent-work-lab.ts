@@ -341,7 +341,7 @@ export type WorkStartEvent = {
   activity?: {
     schema: 'kungfu.agent-run.activity/v1';
     kind: 'agent' | 'tool';
-    phase: 'started' | 'progress' | 'completed' | 'failed';
+    phase: 'started' | 'progress' | 'waiting' | 'completed' | 'failed';
     text: string;
     commandPreview?: string;
     rawToolArgumentsExposed: false;
@@ -353,6 +353,7 @@ export type WorkStartReceipt = {
   ok: boolean;
   status:
     | 'agent-finished'
+    | 'agent-waiting'
     | 'agent-failed'
     | 'failed'
     | 'plan-drift'
@@ -417,6 +418,7 @@ export type WorkReviewPlan = {
   };
   deliverable: { path: string; root: string; content: string };
   inputs: Array<{ path: string; root: string }>;
+  evidenceMode: 'project-files' | 'execution-report';
   execution: {
     reportPath: string;
     reportRoot: string;

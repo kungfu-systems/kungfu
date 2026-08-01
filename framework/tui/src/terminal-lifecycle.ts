@@ -107,9 +107,12 @@ export function resolveTuiProductPaths({
   packagedBin: string;
 } {
   const configuredKungfuDir = env.KUNGFU_DIR;
-  const coreDir = configuredKungfuDir
-    ? path.dirname(path.resolve(configuredKungfuDir))
-    : path.dirname(resolveCorePackageJson());
+  const configuredSourceCoreDir = env.KUNGFU_TUI_SOURCE_CORE_DIR;
+  const coreDir = configuredSourceCoreDir
+    ? path.resolve(configuredSourceCoreDir)
+    : configuredKungfuDir
+      ? path.dirname(path.resolve(configuredKungfuDir))
+      : path.dirname(resolveCorePackageJson());
   const kungfuDir = configuredKungfuDir
     ? path.resolve(configuredKungfuDir)
     : path.join(coreDir, 'dist', 'kungfu');

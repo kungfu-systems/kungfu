@@ -6,6 +6,7 @@ const PROVIDER_PROFILES = {
     supportedVersion: /^0\.144\.[0-9]+$/u,
     testedVersions: ['0.144.3'],
     signatures: {
+      blocked: [],
       approval: [
         [
           'codex.approval.run-command',
@@ -22,6 +23,7 @@ const PROVIDER_PROFILES = {
     supportedVersion: /^2\.1\.[0-9]+$/u,
     testedVersions: ['2.1.209'],
     signatures: {
+      blocked: [],
       approval: [
         ['claude.approval.needs-permission', /claude needs your permission/iu],
         [
@@ -52,6 +54,18 @@ const PROVIDER_PROFILES = {
           /(?=[\s\S]*\bTry\b)(?=[\s\S]*\bmanual\b)(?=[\s\S]*\bmode\b)/iu,
         ],
       ],
+    },
+  },
+  synthetic: {
+    adapterVersion: 'kungfu-mock-agent/v1',
+    supportedVersion: /^1\.0\.0$/u,
+    testedVersions: ['1.0.0'],
+    latestStateWins: true,
+    signatures: {
+      blocked: [['synthetic.blocked', /MOCK BLOCKED:/u]],
+      approval: [['synthetic.approval', /MOCK NEEDS APPROVAL:/u]],
+      busy: [['synthetic.busy', /MOCK WORKING:/u]],
+      ready: [['synthetic.ready.prompt', /^\s*mock›(?:\s|$)/mu]],
     },
   },
 };
@@ -127,6 +141,12 @@ function latestVolatileState(profile, volatileTail) {
     latestReset >= 0 ? volatileTail.slice(latestReset) : volatileTail;
   const text = currentTail.replace(VOLATILE_ESCAPE, ' ');
   const candidates = [
+    ...profile.signatures.blocked.map(([signatureId, pattern]) => ({
+      state: 'unknown',
+      reason: 'provider-reported-blocked',
+      signatureId,
+      index: lastMatch(pattern, text),
+    })),
     ...profile.signatures.approval.map(([signatureId, pattern]) => ({
       state: 'approval-needed',
       signatureId,
@@ -153,6 +173,52 @@ function latestVolatileState(profile, volatileTail) {
 }
 
 function currentScreenState(profile, screen) {
+  if (profile.latestStateWins) {
+    const candidates = [
+      ...profile.signatures.blocked.map(([signatureId, pattern]) => ({
+        state: 'unknown',
+        reason: 'provider-reported-blocked',
+        signatureId,
+        index: lastMatch(pattern, screen),
+      })),
+      ...profile.signatures.approval.map(([signatureId, pattern]) => ({
+        state: 'approval-needed',
+        reason: null,
+        signatureId,
+        index: lastMatch(pattern, screen),
+      })),
+      ...profile.signatures.busy.map(([signatureId, pattern]) => ({
+        state: 'busy',
+        reason: null,
+        signatureId,
+        index: lastMatch(pattern, screen),
+      })),
+      ...profile.signatures.ready.map(([signatureId, pattern]) => ({
+        state: 'ready',
+        reason: null,
+        signatureId,
+        index: lastMatch(pattern, screen),
+      })),
+    ]
+      .filter((candidate) => candidate.index >= 0)
+      .sort((left, right) => right.index - left.index);
+    if (candidates[0]) {
+      const latest = candidates[0];
+      return {
+        state: latest.state,
+        reason: latest.reason,
+        signatureId: latest.signatureId,
+      };
+    }
+  }
+  const blocked = matches(profile.signatures.blocked, screen);
+  if (blocked) {
+    return {
+      state: 'unknown',
+      reason: 'provider-reported-blocked',
+      signatureId: blocked,
+    };
+  }
   const approval = matches(profile.signatures.approval, screen);
   if (approval) {
     return { state: 'approval-needed', signatureId: approval };
@@ -283,13 +349,21 @@ export function createProviderAdapter({ provider, version }) {
         });
       }
       const screen = cleanScreen(lines);
+      if (provider === 'synthetic' && /MOCK READY FOR REVIEW:/u.test(screen)) {
+        return interactionResult({
+          state: 'ready',
+          signatureId: 'synthetic.ready.review',
+          compatible: true,
+        });
+      }
       const current = currentScreenState(profile, screen);
       if (current) {
         return interactionResult({
           state: current.state,
           signatureId: current.signatureId,
           reason:
-            current.state === 'unknown' ? 'unrecognized-modal-state' : null,
+            current.reason ??
+            (current.state === 'unknown' ? 'unrecognized-modal-state' : null),
           compatible: true,
         });
       }
@@ -299,7 +373,8 @@ export function createProviderAdapter({ provider, version }) {
           state: latest.state,
           signatureId: latest.signatureId,
           reason:
-            latest.state === 'unknown' ? 'unrecognized-modal-state' : null,
+            latest.reason ??
+            (latest.state === 'unknown' ? 'unrecognized-modal-state' : null),
           compatible: true,
         });
       }

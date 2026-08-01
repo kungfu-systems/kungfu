@@ -20,7 +20,15 @@
       "Create or select Work",
       "Run Agent",
       "Review and complete Work"
-    ]
+    ],
+    "agentExecution": {
+      "workOwns": "one durable WorkConsole with one or more SessionAttempt records",
+      "attemptStates": ["starting", "working", "waiting", "ended", "unrecoverable"],
+      "attentionStates": ["needs-answer", "needs-approval", "blocked", "ready-for-review"],
+      "completionRule": "Agent output, readiness, or exit never completes Work; human review and native Work evidence remain required",
+      "recoveryRule": "A lost process creates an unrecoverable attempt and an explicit new-attempt action without creating a second Work item",
+      "deterministicQualificationProvider": "synthetic"
+    }
   },
   "progressiveDisclosure": {
     "firstLayerAllowedObjects": ["Project", "Work", "Agent"],
@@ -48,7 +56,7 @@
       "framework/tui/src/projects-view/index.tsx": [
           "New Project",
           "Open Project",
-          "PROJECT OPENED"
+          "Current ·"
         ],
       "framework/tui/src/starter-project-view/index.tsx": [
           "Available Agents with their exact source",
@@ -62,13 +70,13 @@
         "framework/gui/src/renderer/src/main.tsx": [
           "All Work",
           "Projects",
-          "Open Projects"
+          "Agent Work Lab"
         ],
-      "framework/gui/src/renderer/src/projects-panel/index.tsx": [
+        "framework/gui/src/renderer/src/projects-panel/index.tsx": [
           "New Project",
           "Open Project",
-          "New Work",
-          "Run Codex"
+          "Works",
+          "Last activity"
         ],
         "extensions/work-dashboard/src/view/index.tsx": [
           "All Work",
@@ -126,6 +134,8 @@
       "crates/trunk/src/help.rs",
       "framework/tui/src/projects-view.test.ts",
       "framework/tui/src/starter-project-view.test.ts",
+      "framework/agent-session/tests/mock-provider.test.mjs",
+      "framework/agent-session/tests/work-attention.test.mjs",
       "framework/gui/src/agent-work-lab.test.ts",
       "extensions/work-dashboard/tests/work-control-profile.test.ts"
     ]

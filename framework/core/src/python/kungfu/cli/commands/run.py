@@ -108,6 +108,11 @@ def _choose_work(workspace_root, work_selector=None):
         if len(selected) != 1:
             raise ValueError(f"Work selector is ambiguous: {work_selector}")
         row = selected[0]
+        # An explicit selection is allowed to reach the native start plan even
+        # when it is settled. The plan remains non-executable and explains the
+        # authoritative phase in GUI/CLI confirmation; execution rechecks the
+        # same exact plan and fails closed before any write.
+        return row
     else:
         actionable = [
             row for row in rows if row["phase"] in {"captured", "ready", "planned"}
@@ -125,7 +130,7 @@ def _choose_work(workspace_root, work_selector=None):
                 f"multiple Work items can start ({choices}); pass --work <work>"
             )
         row = actionable[0]
-    if row["phase"] not in {"captured", "ready", "planned"}:
+    if row["phase"] not in {"captured", "ready", "planned", "executing"}:
         next_step = (
             "review and close it"
             if row["phase"] in {"executing", "stage-ready", "completion-claimed"}
@@ -137,7 +142,11 @@ def _choose_work(workspace_root, work_selector=None):
     return row
 
 
-def _provider_profile(provider, *, config_home, runtime_home):
+def _provider_profile(provider, *, config_home, runtime_home, mock_scenario=None):
+    if provider == "synthetic":
+        return run_agent.runtime_profiles.deterministic_mock_profile(
+            mock_scenario or "multi-step"
+        )
     catalog = run_agent.runtime_profiles.discover_catalog(
         resolved_config=run_agent.runtime_profiles.kungfu_config.resolve_config(
             config_home=config_home,
@@ -221,6 +230,7 @@ def _run_provider(
     events_json,
     expected_plan_root,
     allow_foreign_binding,
+    mock_scenario=None,
 ):
     from kungfu.cli.commands import assignment as work_commands
 
@@ -242,7 +252,10 @@ def _run_provider(
             else _choose_work(root, work_selector=work_selector)
         )
         profile = _provider_profile(
-            provider, config_home=ctx.config_home, runtime_home=ctx.home
+            provider,
+            config_home=ctx.config_home,
+            runtime_home=ctx.home,
+            mock_scenario=mock_scenario,
         )
         plan = work_commands._work_start_plan(
             ctx=ctx,
@@ -375,6 +388,54 @@ def _provider_command(provider):
 
 for _provider in ("codex", "claude", "opencode"):
     _provider_command(_provider)
+
+
+@run.command(name="mock", help="run deterministic Project Work scenarios", hidden=True)
+@click.argument("task", required=False)
+@click.option("--work", "work_selector", default=None)
+@click.option(
+    "--workspace",
+    "workspace_root",
+    type=click.Path(exists=True, file_okay=False, resolve_path=True),
+    default=None,
+)
+@click.option(
+    "--scenario",
+    type=click.Choice(run_agent.runtime_profiles.MOCK_SCENARIOS),
+    default="multi-step",
+    show_default=True,
+)
+@click.option("--plan", "plan_only", is_flag=True)
+@click.option("--json", "as_json", is_flag=True)
+@click.option("--events-json", is_flag=True)
+@click.option("--expected-plan-root", default=None)
+@click.option("--allow-foreign-binding", is_flag=True, hidden=True)
+@run_command_context
+def mock(
+    ctx,
+    task,
+    work_selector,
+    workspace_root,
+    scenario,
+    plan_only,
+    as_json,
+    events_json,
+    expected_plan_root,
+    allow_foreign_binding,
+):
+    return _run_provider(
+        ctx,
+        "synthetic",
+        task,
+        work_selector,
+        workspace_root,
+        plan_only,
+        as_json,
+        events_json,
+        expected_plan_root,
+        allow_foreign_binding,
+        mock_scenario=scenario,
+    )
 
 
 @run.command(name="agent", help=api_help("kungfu.run.agent"))

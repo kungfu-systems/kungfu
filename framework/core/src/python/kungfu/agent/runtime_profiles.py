@@ -15,6 +15,7 @@ import re
 import shutil
 import subprocess
 from datetime import UTC, datetime
+from pathlib import Path
 from typing import Any, Mapping
 
 from kungfu import config as kungfu_config
@@ -25,6 +26,18 @@ PROFILE_SCHEMA = "kungfu.agent-runtime-profile/v1"
 CATALOG_SCHEMA = "kungfu.agent-runtime-catalog/v1"
 VERIFY_SCHEMA = "kungfu.agent-runtime-verification/v1"
 PROVIDERS = ("codex", "claude", "opencode")
+MOCK_SCENARIOS = (
+    "complete",
+    "deliverable",
+    "question",
+    "approval",
+    "blocked",
+    "crash",
+    "disconnect",
+    "multi-step",
+    "recovery-story",
+    "review-fit",
+)
 BACKENDS = ("tmux", "direct")
 CWD_POLICIES = ("workspace-root", "home", "inherit")
 _VERSION_TIMEOUT_SECONDS = 5.0
@@ -84,6 +97,48 @@ def _profile(
         "source": source,
         "lastVerified": last_verified,
     }
+
+
+def deterministic_mock_profile(
+    scenario: str = "multi-step",
+    *,
+    executable: str | None = None,
+    script: str | None = None,
+) -> dict[str, Any]:
+    """Return the explicit credential-free Mock Agent profile used by qualification."""
+
+    if scenario not in MOCK_SCENARIOS:
+        raise ValueError(
+            f"unknown Mock Agent scenario: {scenario}; expected {', '.join(MOCK_SCENARIOS)}"
+        )
+    source_root = Path(__file__).resolve().parents[6]
+    script_value = (
+        script
+        or os.environ.get("KUNGFU_MOCK_AGENT_SCRIPT")
+        or str(
+            source_root / "framework" / "agent-session" / "src" / "mock-provider.mjs"
+        )
+    )
+    executable_value = (
+        executable
+        or os.environ.get("KUNGFU_MOCK_AGENT_EXECUTABLE")
+        or shutil.which("node")
+        or ""
+    )
+    if not executable_value:
+        raise ValueError("Mock Agent requires the bundled Node runtime")
+    if not Path(script_value).is_file():
+        raise ValueError(f"Mock Agent script is unavailable: {script_value}")
+    return _profile(
+        profile_id=f"kungfu.mock-agent.{scenario}",
+        label=f"Mock Agent · {scenario}",
+        provider="synthetic",
+        executable=os.path.abspath(executable_value),
+        argv=[os.path.abspath(script_value), "--scenario", scenario],
+        cwd_policy="workspace-root",
+        backend="direct",
+        source="qualification",
+    )
 
 
 def _validate_profile(profile: Mapping[str, Any], contract: dict[str, Any]) -> None:
@@ -343,6 +398,13 @@ def set_default(
 
 def verify_profile(profile: Mapping[str, Any]) -> dict[str, Any]:
     executable = str((profile.get("launch") or {}).get("executable") or "")
+    provider = str(profile.get("provider") or "")
+    launch_argv = [
+        str(value) for value in (profile.get("launch") or {}).get("argv") or []
+    ]
+    probe_argv = (
+        [*launch_argv, "--version"] if provider == "synthetic" else ["--version"]
+    )
     available = bool(
         executable and os.path.isfile(executable) and os.access(executable, os.X_OK)
     )
@@ -351,11 +413,16 @@ def verify_profile(profile: Mapping[str, Any]) -> dict[str, Any]:
     if available:
         try:
             result = subprocess.run(
-                [executable, "--version"],
+                [executable, *probe_argv],
                 capture_output=True,
                 text=True,
                 timeout=_VERSION_TIMEOUT_SECONDS,
                 check=False,
+                env=(
+                    {**os.environ, "KUNGFU_AS_VARIANT": "node"}
+                    if provider == "synthetic"
+                    else None
+                ),
             )
             text = (result.stdout or result.stderr or "").strip()
             if result.returncode != 0:
@@ -373,9 +440,9 @@ def verify_profile(profile: Mapping[str, Any]) -> dict[str, Any]:
     return {
         "schema": VERIFY_SCHEMA,
         "profileId": profile.get("id"),
-        "provider": profile.get("provider"),
+        "provider": provider,
         "executable": executable,
-        "argv": ["--version"],
+        "argv": probe_argv,
         "available": available,
         "version": version,
         "ok": available and error is None,

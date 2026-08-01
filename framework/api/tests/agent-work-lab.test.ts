@@ -413,6 +413,7 @@ test('Starter Review streams one fresh read-only review through public Work auth
     inputs: [
       { path: 'inputs/product-notes.md', root: `sha256:${'5'.repeat(64)}` },
     ],
+    evidenceMode: 'project-files' as const,
     execution: {
       reportPath: '/projects/agent-work-starter/.kungfu/report.json',
       reportRoot: `sha256:${'6'.repeat(64)}`,
