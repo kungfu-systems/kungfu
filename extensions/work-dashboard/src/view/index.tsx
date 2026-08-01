@@ -1,11 +1,14 @@
 import type {
   GlobalWorkFilter,
+  GlobalWorkRow,
   GlobalWorkSnapshot,
   Profile,
   ProjectFileTreeEntry,
   ProjectRemovePlan,
   ProjectSummary,
   ProjectWorkCapturePlan,
+  ProjectWorkCaptureReceipt,
+  ProjectWorkInventory,
   ProjectWorkRunPlan,
   ProjectWorkRunSnapshot,
   Projects,
@@ -98,6 +101,50 @@ type ProjectViewMemory = {
 };
 
 const projectViewMemory = new Map<string, ProjectViewMemory>();
+
+export function projectInventoryWorkRows(
+  inventory: ProjectWorkInventory | undefined,
+  project: ProjectSummary | undefined,
+): GlobalWorkRow[] {
+  if (!inventory || !project) return [];
+  return inventory.works.map((work) => ({
+    canonical_root: work.stateRoot || work.requestRoot,
+    object_kind: 'assignment',
+    subject: `kungfu:${work.assignmentId}`,
+    display: {
+      title: work.title,
+      status: work.settled
+        ? work.phase || 'completed'
+        : work.phase || 'captured',
+      next_actions: work.settled
+        ? []
+        : work.phase
+          ? []
+          : ['Choose an Agent to admit and run this Work'],
+    },
+    observations: [
+      {
+        workspace_id: project.id,
+        availability: 'available',
+      },
+    ],
+  }));
+}
+
+function mergeProjectWorkRows(
+  globalRows: GlobalWorkRow[],
+  inventoryRows: GlobalWorkRow[],
+): GlobalWorkRow[] {
+  const authoritativeAssignments = new Set(
+    globalRows.map((row) => assignmentSelector(row.subject)).filter(Boolean),
+  );
+  return [
+    ...globalRows,
+    ...inventoryRows.filter(
+      (row) => !authoritativeAssignments.has(assignmentSelector(row.subject)),
+    ),
+  ];
+}
 
 function TextInput({
   value,
@@ -581,7 +628,10 @@ function NewProjectWorkDialog({
   project: ProjectSummary;
   projects: Projects;
   onClose: () => void;
-  onCreated: () => void;
+  onCreated: (
+    plan: ProjectWorkCapturePlan,
+    receipt: ProjectWorkCaptureReceipt,
+  ) => void;
 }) {
   const [objective, setObjective] = React.useState('');
   const [acceptance, setAcceptance] = React.useState('');
@@ -606,7 +656,7 @@ function NewProjectWorkDialog({
     setError('');
     void projects
       .captureWork(project.path, plan)
-      .then(onCreated)
+      .then((receipt) => onCreated(plan, receipt))
       .catch((reason) =>
         setError(reason instanceof Error ? reason.message : String(reason)),
       )
@@ -620,11 +670,24 @@ function NewProjectWorkDialog({
     <dialog
       open
       aria-modal="true"
+      aria-label={`Create Work in ${project.name}`}
       style={{
-        position: 'absolute',
+        position: 'fixed',
         inset: 0,
         zIndex: 50,
-        background: 'rgba(0,0,0,0.84)',
+        boxSizing: 'border-box',
+        width: 'auto',
+        maxWidth: 'none',
+        height: 'auto',
+        maxHeight: 'none',
+        margin: 0,
+        border: 'none',
+        background: 'rgba(8, 12, 18, 0.62)',
+        backdropFilter: 'blur(1px)',
+        color: '#e6edf3',
+        colorScheme: 'dark',
+        fontSize: 15,
+        lineHeight: 1.5,
         display: 'grid',
         placeItems: 'center',
         padding: 24,
@@ -633,16 +696,21 @@ function NewProjectWorkDialog({
       <div
         style={{
           width: 'min(680px, 90vw)',
-          background: '#252526',
-          border: '2px solid #4fc1ff',
+          background: '#20262e',
+          color: '#e6edf3',
+          border: '1px solid #52606d',
           borderRadius: 10,
-          padding: 18,
+          padding: 22,
           boxShadow: '0 18px 48px rgba(0,0,0,.55)',
         }}
       >
-        <h3 style={{ marginTop: 0 }}>New Work · {project.name}</h3>
+        <h3 style={{ marginTop: 0, color: '#f4f7fa', fontSize: 20 }}>
+          New Work · {project.name}
+        </h3>
         <label style={{ display: 'grid', gap: 6, marginBottom: 12 }}>
-          <span style={mono}>What should the Agent do?</span>
+          <span style={{ ...mono, color: '#d7dde5', fontSize: 14 }}>
+            What should the Agent do?
+          </span>
           <textarea
             ref={objectiveRef}
             value={objective}
@@ -654,16 +722,20 @@ function NewProjectWorkDialog({
             style={{
               ...mono,
               resize: 'vertical',
-              padding: 9,
-              border: '1px solid #4b4b4b',
+              padding: 10,
+              border: '1px solid #52606d',
               borderRadius: 6,
-              background: '#1e1e1e',
-              color: '#f1f1f1',
+              background: '#111820',
+              color: '#f4f7fa',
+              fontSize: 15,
+              lineHeight: 1.5,
             }}
           />
         </label>
         <label style={{ display: 'grid', gap: 6 }}>
-          <span style={mono}>How will you know the Work is correct?</span>
+          <span style={{ ...mono, color: '#d7dde5', fontSize: 14 }}>
+            How will you know the Work is correct?
+          </span>
           <textarea
             value={acceptance}
             onChange={(event) => {
@@ -674,11 +746,13 @@ function NewProjectWorkDialog({
             style={{
               ...mono,
               resize: 'vertical',
-              padding: 9,
-              border: '1px solid #4b4b4b',
+              padding: 10,
+              border: '1px solid #52606d',
               borderRadius: 6,
-              background: '#1e1e1e',
-              color: '#f1f1f1',
+              background: '#111820',
+              color: '#f4f7fa',
+              fontSize: 15,
+              lineHeight: 1.5,
             }}
           />
         </label>
@@ -714,12 +788,16 @@ function NewProjectWorkDialog({
             marginTop: 14,
           }}
         >
-          <button type="button" style={projectActionStyle} onClick={onClose}>
+          <button
+            type="button"
+            style={{ ...projectActionStyle, fontSize: 13 }}
+            onClick={onClose}
+          >
             Cancel
           </button>
           <button
             type="button"
-            style={projectActionStyle}
+            style={{ ...projectActionStyle, fontSize: 13 }}
             disabled={Boolean(busy) || !objective.trim() || !acceptance.trim()}
             onClick={prepare}
           >
@@ -732,6 +810,7 @@ function NewProjectWorkDialog({
                 ...projectActionStyle,
                 borderColor: '#89d185',
                 background: '#1f4d2e',
+                fontSize: 13,
               }}
               disabled={Boolean(busy)}
               onClick={create}
@@ -786,6 +865,9 @@ function GlobalWorkView({
   const [projectsCatalog, setProjectsCatalog] =
     React.useState<ProjectsCatalog>();
   const [projectsCatalogReady, setProjectsCatalogReady] = React.useState(false);
+  const [projectInventory, setProjectInventory] =
+    React.useState<ProjectWorkInventory>();
+  const [projectInventoryError, setProjectInventoryError] = React.useState('');
   const [runs, setRuns] = React.useState<ProjectWorkRunSnapshot[]>(() =>
     projects.runs(),
   );
@@ -992,6 +1074,26 @@ function GlobalWorkView({
           state: 'focused',
         }
       : undefined);
+  const refreshProjectInventory = React.useCallback(() => {
+    if (!requestedProject?.path) return Promise.resolve(undefined);
+    return projects
+      .works(requestedProject.path)
+      .then((inventory) => {
+        setProjectInventory(inventory);
+        setProjectInventoryError('');
+        return inventory;
+      })
+      .catch((reason) => {
+        setProjectInventoryError(
+          reason instanceof Error ? reason.message : String(reason),
+        );
+        return undefined;
+      });
+  }, [projects, requestedProject?.path]);
+  React.useEffect(() => {
+    if (projectSection !== 'work' || !requestedProject?.path) return;
+    void refreshProjectInventory();
+  }, [projectSection, refreshProjectInventory, requestedProject?.path]);
   const planProjectRemoval = () => {
     if (!requestedProject) return;
     setProjectMenuOpen(false);
@@ -1046,18 +1148,44 @@ function GlobalWorkView({
         (row) => row.object_kind === 'assignment',
       )
     : [];
+  const inventoryRows = projectInventoryWorkRows(
+    projectInventory?.projectPath === requestedProject?.path
+      ? projectInventory
+      : undefined,
+    requestedProject,
+  );
   const projectRows = requestedProject
-    ? allAssignmentRows.filter(
-        (row) =>
-          resolveWorkProject(row.observations, projectsCatalog?.projects ?? [])
-            ?.id === requestedProject.id,
+    ? mergeProjectWorkRows(
+        allAssignmentRows.filter(
+          (row) =>
+            resolveWorkProject(
+              row.observations,
+              projectsCatalog?.projects ?? [],
+            )?.id === requestedProject.id,
+        ),
+        inventoryRows,
       )
     : [];
+  const visibleInventoryRows = inventoryRows.filter((row) => {
+    const completed = Boolean(
+      projectInventory?.works.find(
+        (work) => work.assignmentId === assignmentSelector(row.subject),
+      )?.settled,
+    );
+    return (
+      filter === 'all' || (filter === 'completed' ? completed : !completed)
+    );
+  });
   const rows = requestedProject
-    ? filteredAssignmentRows.filter(
-        (row) =>
-          resolveWorkProject(row.observations, projectsCatalog?.projects ?? [])
-            ?.id === requestedProject.id,
+    ? mergeProjectWorkRows(
+        filteredAssignmentRows.filter(
+          (row) =>
+            resolveWorkProject(
+              row.observations,
+              projectsCatalog?.projects ?? [],
+            )?.id === requestedProject.id,
+        ),
+        visibleInventoryRows,
       )
     : filteredAssignmentRows;
   const needle = search.trim().toLowerCase();
@@ -1123,7 +1251,9 @@ function GlobalWorkView({
       .finally(() => setRunBusy(''));
   };
 
-  const workLoading = !snapshot || !projectsCatalogReady;
+  const workLoading = requestedProject
+    ? !projectInventory || !projectsCatalogReady
+    : !snapshot || !projectsCatalogReady;
   const projectNameFallback =
     requestedProjectPath?.split(/[\\/]/u).filter(Boolean).at(-1) ??
     requestedProjectId ??
@@ -1354,9 +1484,12 @@ function GlobalWorkView({
           project={requestedProject}
           projects={projects}
           onClose={() => setNewWorkOpen(false)}
-          onCreated={() => {
+          onCreated={(_plan, receipt) => {
             setNewWorkOpen(false);
             setProjectSection('work');
+            void refreshProjectInventory().then(() => {
+              setSelected(receipt.requestRoot);
+            });
           }}
         />
       ) : null}
@@ -1605,6 +1738,12 @@ function GlobalWorkView({
           ) : (
             <>
               {workControls}
+              {projectInventoryError ? (
+                <div style={{ ...mono, color: '#dcdcaa', marginTop: 6 }}>
+                  Retained Project Work could not refresh:{' '}
+                  {projectInventoryError}
+                </div>
+              ) : null}
               {workColumns}
             </>
           )}

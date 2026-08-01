@@ -38,9 +38,13 @@ export function openRendererProjects() {
     args: string[],
     options: {
       env: Record<string, string | undefined>;
-      stdio: ['ignore', 'pipe', 'pipe'];
+      stdio: ['ignore' | 'pipe', 'pipe', 'pipe'];
     },
   ) => {
+    stdin: {
+      end: (input: string) => void;
+      once: (event: 'error', listener: (reason: Error) => void) => void;
+    };
     stdout: {
       on: (event: 'data', listener: (chunk: unknown) => void) => void;
     };
@@ -87,6 +91,52 @@ export function openRendererProjects() {
             else resolve(stdout);
           },
         );
+      }),
+    execFileInput: (file, values, input, options) =>
+      new Promise<string>((resolve, reject) => {
+        const child = childProcess.spawn(file, args(values), {
+          env: options.env,
+          stdio: ['pipe', 'pipe', 'pipe'],
+        });
+        let stdout = '';
+        let stderr = '';
+        let size = 0;
+        let settled = false;
+        const fail = (reason: Error) => {
+          if (settled) return;
+          settled = true;
+          child.kill();
+          reject(reason);
+        };
+        const append = (current: string, chunk: unknown) => {
+          const text = String(chunk);
+          size += text.length;
+          if (size > options.maxBuffer) {
+            fail(new Error('Project Work capture output exceeded maxBuffer'));
+            return current;
+          }
+          return current + text;
+        };
+        child.stdout.on('data', (chunk) => {
+          stdout = append(stdout, chunk);
+        });
+        child.stderr.on('data', (chunk) => {
+          stderr = append(stderr, chunk);
+        });
+        child.stdin.once('error', fail);
+        child.once('error', (reason) =>
+          fail(reason instanceof Error ? reason : new Error(String(reason))),
+        );
+        child.once('close', (code) => {
+          if (settled) return;
+          if (code !== 0) {
+            fail(new Error(stderr.trim() || `kungfu capture exited ${code}`));
+            return;
+          }
+          settled = true;
+          resolve(stdout);
+        });
+        child.stdin.end(input);
       }),
     execFileEvents: (file, values, options, onLine) =>
       new Promise<void>((resolve, reject) => {

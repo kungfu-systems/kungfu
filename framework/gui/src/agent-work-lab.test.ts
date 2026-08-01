@@ -11,6 +11,7 @@ import {
   AGENT_WORK_LAB_SUITE,
   agentWorkLabRecommendation,
 } from '../../../extensions/agent-work-lab/experience/src/index.js';
+import { projectInventoryWorkRows } from '../../../extensions/work-dashboard/src/view/index';
 import {
   actionableKfxFailures,
   shouldOpenAgentWorkLab,
@@ -24,6 +25,7 @@ import {
   agentWorkLabPlaybackLines,
   agentWorkLabSessionStories,
 } from './renderer/src/agent-work-lab';
+import { openRendererProjects } from './renderer/src/projects-panel/index';
 
 const qualifiedReport = {
   status: 'qualified',
@@ -400,6 +402,9 @@ test('Projects and Work use the shared exact-plan Agent session surface', () => 
   assert.match(projects, /project\.workCount/);
   assert.match(projects, /project\.updatedAt/);
   assert.match(projects, /projects\.cachedCatalog/);
+  assert.match(projects, /execFileInput:/);
+  assert.match(projects, /stdio: \['pipe', 'pipe', 'pipe'\]/);
+  assert.match(projects, /child\.stdin\.end\(input\)/);
   assert.doesNotMatch(projects, /Run Codex|Open Session|New Work/);
   assert.doesNotMatch(projects, /Remove from Kungfu|Remove from Projects/);
   assert.doesNotMatch(projects, /PROJECT OPENED/);
@@ -417,10 +422,159 @@ test('Projects and Work use the shared exact-plan Agent session surface', () => 
     /Symbolic links cannot be previewed|supported UTF-8 text file/,
   );
   assert.match(work, /Loading retained Project Work/);
+  assert.match(
+    work,
+    /requestedProject[\s\S]*\? !projectInventory \|\| !projectsCatalogReady[\s\S]*: !snapshot \|\| !projectsCatalogReady/,
+  );
   assert.match(work, /Copy absolute path/);
   assert.match(work, /aria-label="Project menu"/);
   assert.match(work, /Remove from Projects…/);
   assert.match(work, /Confirm once more/);
+  assert.match(work, /aria-label=\{`Create Work in \$\{project\.name\}`\}/);
+  assert.match(work, /position: 'fixed'/);
+  assert.match(work, /maxWidth: 'none'/);
+  assert.match(work, /border: 'none'/);
+  assert.match(work, /color: '#e6edf3'/);
+  assert.match(work, /fontSize: 15/);
   assert.match(work, /projectSection/);
   assert.doesNotMatch(work, /Portfolio ·|connecting live Portfolio/);
+});
+
+test('renderer Projects sends the exact Work capture request through stdin', async () => {
+  const previousWindow = Object.getOwnPropertyDescriptor(globalThis, 'window');
+  let capturedInput = '';
+  let capturedArgs: string[] = [];
+  let stdoutListener: ((chunk: unknown) => void) | undefined;
+  let closeListener: ((code: number | null) => void) | undefined;
+  const captureResponse = {
+    schema: 'kungfu.assignment-capture.response/v1',
+    status: 'captured',
+    requestRoot: `sha256:${'1'.repeat(64)}`,
+    receiptRoot: `sha256:${'2'.repeat(64)}`,
+    requestPath: '/project/.kungfu/inbox/request.json',
+    receiptPath: '/project/.kungfu/inbox/receipt.json',
+    target: {
+      workspaceId: 'project:example',
+      workspaceRoot: '/project',
+      dataHome: '/project/.kungfu',
+      runtimeInitialized: false,
+    },
+    authority: 'capture-material-only',
+    admitted: false,
+    claimed: false,
+  };
+  const child = {
+    stdin: {
+      once: () => undefined,
+      end: (input: string) => {
+        capturedInput = input;
+        queueMicrotask(() => {
+          stdoutListener?.(JSON.stringify(captureResponse));
+          closeListener?.(0);
+        });
+      },
+    },
+    stdout: {
+      on: (_event: string, listener: (chunk: unknown) => void) => {
+        stdoutListener = listener;
+      },
+    },
+    stderr: { on: () => undefined },
+    once: (event: string, listener: (value: Error | number | null) => void) => {
+      if (event === 'close') {
+        closeListener = listener as (code: number | null) => void;
+      }
+    },
+    kill: () => undefined,
+  };
+  Object.defineProperty(globalThis, 'window', {
+    configurable: true,
+    value: {
+      process: { env: {}, platform: 'darwin' },
+      require: (specifier: string) => {
+        if (specifier === 'node:child_process') {
+          return {
+            execFile: () => undefined,
+            spawn: (_file: string, args: string[]) => {
+              capturedArgs = args;
+              return child;
+            },
+          };
+        }
+        if (specifier === 'electron') {
+          return { ipcRenderer: { invoke: async () => undefined } };
+        }
+        throw new Error(`Unexpected renderer require: ${specifier}`);
+      },
+    },
+  });
+
+  try {
+    const projects = openRendererProjects();
+    const plan = projects.prepareWork(
+      'Create a launch checklist',
+      'The checklist has five verified steps',
+    );
+    const receipt = await projects.captureWork('/project', plan);
+
+    assert.equal(receipt.status, 'captured');
+    assert.deepEqual(capturedArgs, [
+      'work',
+      'capture',
+      '--request',
+      '-',
+      '--workspace',
+      '/project',
+      '--json',
+    ]);
+    assert.deepEqual(JSON.parse(capturedInput), plan.request);
+  } finally {
+    if (previousWindow) {
+      Object.defineProperty(globalThis, 'window', previousWindow);
+    } else {
+      Reflect.deleteProperty(globalThis, 'window');
+    }
+  }
+});
+
+test('Project Work inventory keeps captured Work visible before admission', () => {
+  const rows = projectInventoryWorkRows(
+    {
+      schema: 'kungfu.project-work.inventory/v1',
+      projectPath: '/project',
+      works: [
+        {
+          state: 'captured-pending-admission',
+          initiativeId: 'initiative-example',
+          assignmentId: 'assignment-example',
+          title: 'Find two new commercial goals',
+          objective: 'Find two new commercial goals',
+          acceptanceChecks: ['Two goals are supported by evidence'],
+          requestRoot: `sha256:${'1'.repeat(64)}`,
+          receiptRoot: `sha256:${'2'.repeat(64)}`,
+          requestPath: '/project/.kungfu/inbox/request.json',
+        },
+      ],
+      activeWork: null,
+      writeOccurred: false,
+      inventoryRoot: `sha256:${'3'.repeat(64)}`,
+    },
+    {
+      schema: 'kungfu.project/v1',
+      id: 'project:example',
+      name: 'project',
+      path: '/project',
+      available: true,
+      selected: true,
+      initialized: true,
+      state: 'focused',
+    },
+  );
+
+  assert.equal(rows[0]?.subject, 'kungfu:assignment-example');
+  assert.equal(rows[0]?.display.status, 'captured');
+  assert.deepEqual(rows[0]?.display.next_actions, [
+    'Choose an Agent to admit and run this Work',
+  ]);
+  assert.equal(rows[0]?.observations[0]?.workspace_id, 'project:example');
 });
