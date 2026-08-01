@@ -218,7 +218,7 @@ test('freezes one versioned composition policy without taking domain authority',
   assert.equal(contract.schema, 'kungfu.data-protection.contract/v1');
   assert.equal(contract.version, 1);
   assert.equal(contract.status.specification, 'accepted');
-  assert.equal(contract.status.domainAdapters, 'staged');
+  assert.equal(contract.status.domainAdapters, 'work-agent-source-qualified');
   assert.equal(contract.status.releaseQualification, 'not-qualified');
   assert.equal(contract.authority.kind, 'composition-policy');
   assert.match(contract.authority.receiptRule, /does not replace/u);

@@ -9,6 +9,8 @@ import {
 import path from 'node:path';
 
 export const WORK_CONSOLE_REGISTRY_SCHEMA = 'kungfu.work-console-registry/v2';
+export const WORK_CONSOLE_HISTORY_BOUNDARY_SCHEMA =
+  'kungfu.work-console-history-boundary/v1';
 
 const ATTEMPT_STATES = new Set([
   'planned',
@@ -30,6 +32,17 @@ function required(value, label) {
 
 function clone(value) {
   return structuredClone(value);
+}
+
+function historyBoundary() {
+  return {
+    schema: WORK_CONSOLE_HISTORY_BOUNDARY_SCHEMA,
+    state: 'session-activity-only',
+    semanticAdmissionReceiptRoot: null,
+    processExitSettlesWork: false,
+    selfReportSettlesWork: false,
+    authority: 'observer-only',
+  };
 }
 
 function normalizeBinding(value) {
@@ -111,6 +124,7 @@ function normalizeAttempt(value) {
     plans: Array.isArray(value.plans)
       ? value.plans.filter((plan) => plan && typeof plan === 'object')
       : [],
+    historyProtection: historyBoundary(),
   };
 }
 
@@ -278,6 +292,7 @@ export class WorkConsoleRegistry {
         startedAt: now,
         receipts: [],
         plans: [],
+        historyProtection: historyBoundary(),
       };
       console.attempts.push(attempt);
     }
