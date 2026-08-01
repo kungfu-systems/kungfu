@@ -2058,42 +2058,6 @@ _CUT_IDENTITY_FIELDS = (
 )
 
 
-def _manifest_compatibility(
-    current: Mapping[str, Any] | None,
-    target: Mapping[str, Any],
-) -> dict[str, Any]:
-    def ranges_overlap(left: Mapping[str, Any], right: Mapping[str, Any]) -> bool:
-        return max(int(left["min"]), int(right["min"])) <= min(
-            int(left["max"]), int(right["max"])
-        )
-
-    if current is None:
-        control_protocol = True
-        peer_wire_protocol = True
-        journal_readable = True
-    else:
-        control_protocol = ranges_overlap(
-            current["controlProtocolRange"], target["controlProtocolRange"]
-        )
-        peer_wire_protocol = ranges_overlap(
-            current["peerWireProtocolRange"], target["peerWireProtocolRange"]
-        )
-        journal_write = int(current["journalSchemaWriteVersion"])
-        journal_readable = (
-            int(target["journalSchemaReadRange"]["min"])
-            <= journal_write
-            <= int(target["journalSchemaReadRange"]["max"])
-        )
-    return {
-        "controlProtocol": control_protocol,
-        "peerWireProtocol": peer_wire_protocol,
-        "journalReadable": journal_readable,
-        "migrationClass": target["migrationClass"],
-        "rollbackClass": target["rollbackClass"],
-        "providerResumeRequired": target["migrationClass"] != "none",
-    }
-
-
 def _installed_cli_manifest(
     image: Mapping[str, Any],
 ) -> dict[str, Any]:
@@ -2105,49 +2069,6 @@ def _installed_cli_manifest(
             "installed CLI image has no safe upgrade manifest",
         )
     return runtime_upgrade.validate_manifest(_read_object(manifest))
-
-
-def _shifu_local_transition(
-    *,
-    current_release_cut_root: str,
-    current_version: str,
-    current_manifest: Mapping[str, Any] | None,
-    target_manifest: Mapping[str, Any],
-    authorization_kind: str,
-    evidence_roots: list[str],
-    relation: str = "verified-successor",
-) -> dict[str, Any]:
-    target_cut = target_manifest["releaseCut"]
-    compatibility = _manifest_compatibility(current_manifest, target_manifest)
-    return release_cut.build_shifu_local_transition(
-        current_release_cut_root=current_release_cut_root,
-        current_version=current_version,
-        target_cut=target_cut,
-        relation=relation,
-        authorization_kind=authorization_kind,
-        compatibility=compatibility,
-        migration_plan_root=release_cut.content_root(
-            {
-                "migrationClass": target_manifest["migrationClass"],
-                "runtimeBuildId": target_manifest["runtimeBuildId"],
-                "targetReleaseCutRoot": target_cut["releaseCutRoot"],
-            }
-        ),
-        rollback_plan_root=release_cut.content_root(
-            {
-                "rollbackClass": target_manifest["rollbackClass"],
-                "currentReleaseCutRoot": current_release_cut_root,
-                "targetReleaseCutRoot": target_cut["releaseCutRoot"],
-            }
-        ),
-        active_work_policy=(
-            "provider-resume"
-            if compatibility["providerResumeRequired"]
-            else "keep-pinned"
-        ),
-        evidence_roots=evidence_roots,
-        diagnostics=[],
-    )
 
 
 def _install_cli_image(
@@ -2303,14 +2224,8 @@ def _read_cli_selection(
                 "cli-selection-invalid",
                 "CLI selection Cut Transition root disagrees with retained evidence",
             )
-    if selection.get("selectionMode") == "legacy-bootstrap":
-        if (
-            verified_transition is None
-            or verified_transition["toReleaseCutRoot"]
-            != selection.get("releaseCutRoot")
-            or verified_transition["toProductVersion"]
-            != selection.get("productVersion")
-        ):
+    if release_cut.is_legacy_bootstrap(selection):
+        if not release_cut.legacy_selection_is_bound(selection, verified_transition):
             raise DistributionUpdateError(
                 "cli-selection-invalid",
                 "legacy bootstrap selection is not bound to exact recovery evidence",
@@ -2432,68 +2347,29 @@ def _select_cli_image(
             generation = _next_cli_generation(
                 config_home, int((previous or {}).get("generation") or 0)
             )
-            rollback = (
-                {
-                    "frontendBuildId": previous["frontendBuildId"],
-                    "runtimeBuildId": previous["runtimeBuildId"],
-                    "artifactDigest": previous["artifactDigest"],
-                    "productRoot": previous["productRoot"],
-                    **(
-                        {
-                            "releaseCutRoot": previous["releaseCutRoot"],
-                            "platformSliceRoot": previous["platformSliceRoot"],
-                        }
-                        if previous.get("releaseCutRoot")
-                        else {}
-                    ),
-                }
-                if previous is not None
-                and previous.get("selectionMode") != "legacy-bootstrap"
-                else (
-                    {
-                        "kind": "legacy-bootstrap",
-                        "releaseCutRoot": previous["releaseCutRoot"],
-                        "productVersion": previous["productVersion"],
-                    }
-                    if previous is not None
-                    else (
-                        copy.deepcopy(dict(bootstrap_rollback))
-                        if bootstrap_rollback is not None
-                        else None
-                    )
+            if previous is None:
+                rollback = bootstrap_rollback
+            elif release_cut.is_legacy_bootstrap(previous):
+                rollback = release_cut.legacy_coordinate(
+                    previous["releaseCutRoot"], previous["productVersion"]
                 )
+            else:
+                rollback = release_cut.image_coordinate(previous)
+            selection = release_cut.image_selection(
+                image,
+                schema=CLI_SELECTION_SCHEMA,
+                generation=generation,
+                transition_root=(
+                    cut_decision.get("cutTransitionRoot")
+                    if isinstance(cut_decision, Mapping)
+                    else None
+                ),
+                transition=cut_transition,
+                previous_frontend_build_id=(
+                    previous.get("frontendBuildId") if previous is not None else None
+                ),
+                rollback=rollback,
             )
-            selection = {
-                "schema": CLI_SELECTION_SCHEMA,
-                "generation": generation,
-                "frontendBuildId": image["frontendBuildId"],
-                "runtimeBuildId": image["runtimeBuildId"],
-                "artifactDigest": image["artifactDigest"],
-                "productRoot": image["productRoot"],
-                **(
-                    {
-                        "manifestIdentityRoot": image["manifestIdentityRoot"],
-                        "releaseCutRoot": image["releaseCutRoot"],
-                        "platformSliceRoot": image["platformSliceRoot"],
-                        "cutTransitionRoot": (
-                            cut_decision.get("cutTransitionRoot")
-                            if isinstance(cut_decision, Mapping)
-                            else None
-                        ),
-                        "cutTransition": (
-                            copy.deepcopy(dict(cut_transition))
-                            if cut_transition is not None
-                            else None
-                        ),
-                    }
-                    if image.get("releaseCutRoot")
-                    else {}
-                ),
-                "previousFrontendBuildId": (
-                    previous["frontendBuildId"] if previous is not None else None
-                ),
-                "rollback": rollback,
-            }
             return finish_selection(selection)
 
 
@@ -2683,7 +2559,7 @@ def selected_cli_command(
     if selected is None:
         return None
     selection, image = selected
-    if selection.get("selectionMode") == "legacy-bootstrap":
+    if release_cut.is_legacy_bootstrap(selection):
         return None
     frontend_build_id = str(selection["frontendBuildId"])
     root = _cli_image_root(config_home, frontend_build_id)
@@ -2967,11 +2843,7 @@ def apply_archive(
         cut_transition=cut_transition,
         receipt_factory=receipt_for_selection,
         bootstrap_rollback=(
-            {
-                "kind": "legacy-bootstrap",
-                "releaseCutRoot": bootstrap_release_cut_root,
-                "productVersion": bootstrap_version,
-            }
+            release_cut.legacy_coordinate(bootstrap_release_cut_root, bootstrap_version)
             if bootstrap_release_cut_root and bootstrap_version
             else None
         ),
@@ -3003,8 +2875,8 @@ def apply_shifu_local_archive(
             "Shifu local installation requires a publication-ineligible local Cut",
         )
     selected = _read_cli_selection(config_home)
-    legacy_selection = (
-        selected is not None and selected[0].get("selectionMode") == "legacy-bootstrap"
+    legacy_selection = selected is not None and release_cut.is_legacy_bootstrap(
+        selected[0]
     )
     if selected is None or legacy_selection:
         if not bootstrap_release_cut_root or not bootstrap_version:
@@ -3014,9 +2886,13 @@ def apply_shifu_local_archive(
             )
         current_release_cut_root = bootstrap_release_cut_root
         current_version = bootstrap_version
-        if legacy_selection and (
-            selected[0].get("releaseCutRoot") != bootstrap_release_cut_root
-            or selected[0].get("productVersion") != bootstrap_version
+        if (
+            selected is not None
+            and legacy_selection
+            and (
+                selected[0].get("releaseCutRoot") != bootstrap_release_cut_root
+                or selected[0].get("productVersion") != bootstrap_version
+            )
         ):
             raise DistributionUpdateError(
                 "stale-bootstrap-coordinate",
@@ -3036,7 +2912,7 @@ def apply_shifu_local_archive(
         current_manifest = _installed_cli_manifest(image)
         authorization_kind = "shifu-local-successor"
     try:
-        cut_transition = _shifu_local_transition(
+        cut_transition = release_cut.shifu_local_transition(
             current_release_cut_root=current_release_cut_root,
             current_version=current_version,
             current_manifest=current_manifest,
@@ -3096,7 +2972,7 @@ def rollback_shifu_local_cli(
             "stale-rollback-coordinate",
             "retained rollback image no longer matches the expected Release Cut",
         )
-    target_is_legacy = rollback.get("kind") == "legacy-bootstrap"
+    target_is_legacy = rollback.get("kind") == release_cut.LEGACY_BOOTSTRAP_MODE
     if target_is_legacy:
         target_image: dict[str, Any] = {}
         target_version = str(rollback.get("productVersion") or "")
@@ -3121,7 +2997,7 @@ def rollback_shifu_local_cli(
                 "retained rollback image does not match the native inventory coordinate",
             )
         target_version = str(target_image["productVersion"])
-    current_is_legacy = selection.get("selectionMode") == "legacy-bootstrap"
+    current_is_legacy = release_cut.is_legacy_bootstrap(selection)
     current_version = str(
         selection.get("productVersion")
         if current_is_legacy
@@ -3133,42 +3009,17 @@ def rollback_shifu_local_cli(
     try:
         if target_is_legacy:
             compatibility = selection.get("cutTransition", {}).get("compatibility")
-            transition = release_cut.finish_cut_transition(
-                {
-                    "schema": release_cut.CUT_TRANSITION_SCHEMA,
-                    "fromReleaseCutRoot": expected_current_release_cut_root,
-                    "toReleaseCutRoot": expected_rollback_release_cut_root,
-                    "fromProductVersion": current_version,
-                    "toProductVersion": target_version,
-                    "relation": "recovery",
-                    "authorization": {
-                        "trustDomain": "shifu-local",
-                        "kind": "shifu-local-recovery",
-                        "publicationEligible": False,
-                        "evidenceRoots": sorted(set(evidence_roots)),
-                    },
-                    "compatibility": copy.deepcopy(dict(compatibility or {})),
-                    "migrationPlanRoot": release_cut.content_root(
-                        {
-                            "migrationClass": "none",
-                            "targetReleaseCutRoot": expected_rollback_release_cut_root,
-                        }
-                    ),
-                    "rollbackPlanRoot": release_cut.content_root(
-                        {
-                            "rollbackClass": "automatic",
-                            "currentReleaseCutRoot": expected_current_release_cut_root,
-                            "targetReleaseCutRoot": expected_rollback_release_cut_root,
-                        }
-                    ),
-                    "activeWorkPolicy": "keep-pinned",
-                    "evidenceRoots": sorted(set(evidence_roots)),
-                    "diagnostics": [],
-                }
+            transition = release_cut.legacy_recovery_transition(
+                current_release_cut_root=expected_current_release_cut_root,
+                current_version=current_version,
+                target_release_cut_root=expected_rollback_release_cut_root,
+                target_version=target_version,
+                compatibility=compatibility or {},
+                evidence_roots=evidence_roots,
             )
         else:
             target_manifest = _installed_cli_manifest(target_image)
-            transition = _shifu_local_transition(
+            transition = release_cut.shifu_local_transition(
                 current_release_cut_root=expected_current_release_cut_root,
                 current_version=current_version,
                 current_manifest=current_manifest,
@@ -3217,49 +3068,32 @@ def rollback_shifu_local_cli(
                 config_home, int(selection.get("generation") or 0)
             )
             reverse_rollback = (
-                {
-                    "kind": "legacy-bootstrap",
-                    "releaseCutRoot": selection["releaseCutRoot"],
-                    "productVersion": selection["productVersion"],
-                }
+                release_cut.legacy_coordinate(
+                    selection["releaseCutRoot"], selection["productVersion"]
+                )
                 if current_is_legacy
-                else {
-                    "frontendBuildId": current_image["frontendBuildId"],
-                    "runtimeBuildId": current_image["runtimeBuildId"],
-                    "artifactDigest": current_image["artifactDigest"],
-                    "productRoot": current_image["productRoot"],
-                    "releaseCutRoot": current_image["releaseCutRoot"],
-                    "platformSliceRoot": current_image["platformSliceRoot"],
-                }
+                else release_cut.image_coordinate(current_image)
             )
             if target_is_legacy:
-                next_selection = {
-                    "schema": CLI_SELECTION_SCHEMA,
-                    "selectionMode": "legacy-bootstrap",
-                    "generation": generation,
-                    "releaseCutRoot": expected_rollback_release_cut_root,
-                    "productVersion": target_version,
-                    "cutTransitionRoot": transition["cutTransitionRoot"],
-                    "cutTransition": transition,
-                    "previousFrontendBuildId": current_image.get("frontendBuildId"),
-                    "rollback": reverse_rollback,
-                }
+                next_selection = release_cut.legacy_selection(
+                    schema=CLI_SELECTION_SCHEMA,
+                    generation=generation,
+                    release_cut_root=expected_rollback_release_cut_root,
+                    product_version=target_version,
+                    transition=transition,
+                    previous_frontend_build_id=current_image.get("frontendBuildId"),
+                    rollback=reverse_rollback,
+                )
             else:
-                next_selection = {
-                    "schema": CLI_SELECTION_SCHEMA,
-                    "generation": generation,
-                    "frontendBuildId": target_image["frontendBuildId"],
-                    "runtimeBuildId": target_image["runtimeBuildId"],
-                    "artifactDigest": target_image["artifactDigest"],
-                    "productRoot": target_image["productRoot"],
-                    "manifestIdentityRoot": target_image["manifestIdentityRoot"],
-                    "releaseCutRoot": target_image["releaseCutRoot"],
-                    "platformSliceRoot": target_image["platformSliceRoot"],
-                    "cutTransitionRoot": transition["cutTransitionRoot"],
-                    "cutTransition": transition,
-                    "previousFrontendBuildId": current_image.get("frontendBuildId"),
-                    "rollback": reverse_rollback,
-                }
+                next_selection = release_cut.image_selection(
+                    target_image,
+                    schema=CLI_SELECTION_SCHEMA,
+                    generation=generation,
+                    transition_root=transition["cutTransitionRoot"],
+                    transition=transition,
+                    previous_frontend_build_id=current_image.get("frontendBuildId"),
+                    rollback=reverse_rollback,
+                )
             receipt = {
                 **plan,
                 "state": "complete",

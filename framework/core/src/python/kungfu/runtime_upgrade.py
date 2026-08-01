@@ -23,6 +23,7 @@ PLAN_SCHEMA = "kungfu.runtime-upgrade-plan/v1"
 RECEIPT_SCHEMA = "kungfu.runtime-upgrade-receipt/v1"
 GC_PLAN_SCHEMA = "kungfu.runtime-image-gc-plan/v1"
 MESSAGE_SCHEMA = "kungfu.product-upgrade-message/v1"
+LEGACY_BOOTSTRAP_MODE = "legacy-bootstrap"
 
 
 class UpgradeError(ValueError):
@@ -1583,6 +1584,229 @@ def build_shifu_local_transition(
         "diagnostics": list(diagnostics or []),
     }
     return finish_cut_transition(transition)
+
+
+def is_legacy_bootstrap(selection: Mapping[str, Any]) -> bool:
+    return selection.get("selectionMode") == LEGACY_BOOTSTRAP_MODE
+
+
+def legacy_coordinate(
+    release_cut_root: Any,
+    product_version: Any,
+) -> dict[str, Any]:
+    return {
+        "kind": LEGACY_BOOTSTRAP_MODE,
+        "releaseCutRoot": release_cut_root,
+        "productVersion": product_version,
+    }
+
+
+def image_coordinate(image: Mapping[str, Any]) -> dict[str, Any]:
+    return {
+        "frontendBuildId": image["frontendBuildId"],
+        "runtimeBuildId": image["runtimeBuildId"],
+        "artifactDigest": image["artifactDigest"],
+        "productRoot": image["productRoot"],
+        **(
+            {
+                "releaseCutRoot": image["releaseCutRoot"],
+                "platformSliceRoot": image["platformSliceRoot"],
+            }
+            if image.get("releaseCutRoot")
+            else {}
+        ),
+    }
+
+
+def legacy_selection_is_bound(
+    selection: Mapping[str, Any],
+    transition: Mapping[str, Any] | None,
+) -> bool:
+    return bool(
+        transition is not None
+        and transition.get("toReleaseCutRoot") == selection.get("releaseCutRoot")
+        and transition.get("toProductVersion") == selection.get("productVersion")
+    )
+
+
+def manifest_compatibility(
+    current: Mapping[str, Any] | None,
+    target: Mapping[str, Any],
+) -> dict[str, Any]:
+    def ranges_overlap(left: Mapping[str, Any], right: Mapping[str, Any]) -> bool:
+        return max(int(left["min"]), int(right["min"])) <= min(
+            int(left["max"]), int(right["max"])
+        )
+
+    if current is None:
+        control_protocol = peer_wire_protocol = journal_readable = True
+    else:
+        control_protocol = ranges_overlap(
+            current["controlProtocolRange"], target["controlProtocolRange"]
+        )
+        peer_wire_protocol = ranges_overlap(
+            current["peerWireProtocolRange"], target["peerWireProtocolRange"]
+        )
+        journal_write = int(current["journalSchemaWriteVersion"])
+        journal_readable = (
+            int(target["journalSchemaReadRange"]["min"])
+            <= journal_write
+            <= int(target["journalSchemaReadRange"]["max"])
+        )
+    return {
+        "controlProtocol": control_protocol,
+        "peerWireProtocol": peer_wire_protocol,
+        "journalReadable": journal_readable,
+        "migrationClass": target["migrationClass"],
+        "rollbackClass": target["rollbackClass"],
+        "providerResumeRequired": target["migrationClass"] != "none",
+    }
+
+
+def shifu_local_transition(
+    *,
+    current_release_cut_root: str,
+    current_version: str,
+    current_manifest: Mapping[str, Any] | None,
+    target_manifest: Mapping[str, Any],
+    authorization_kind: str,
+    evidence_roots: list[str],
+    relation: str = "verified-successor",
+) -> dict[str, Any]:
+    target_cut = target_manifest["releaseCut"]
+    compatibility = manifest_compatibility(current_manifest, target_manifest)
+    return build_shifu_local_transition(
+        current_release_cut_root=current_release_cut_root,
+        current_version=current_version,
+        target_cut=target_cut,
+        relation=relation,
+        authorization_kind=authorization_kind,
+        compatibility=compatibility,
+        migration_plan_root=content_root(
+            {
+                "migrationClass": target_manifest["migrationClass"],
+                "runtimeBuildId": target_manifest["runtimeBuildId"],
+                "targetReleaseCutRoot": target_cut["releaseCutRoot"],
+            }
+        ),
+        rollback_plan_root=content_root(
+            {
+                "rollbackClass": target_manifest["rollbackClass"],
+                "currentReleaseCutRoot": current_release_cut_root,
+                "targetReleaseCutRoot": target_cut["releaseCutRoot"],
+            }
+        ),
+        active_work_policy=(
+            "provider-resume"
+            if compatibility["providerResumeRequired"]
+            else "keep-pinned"
+        ),
+        evidence_roots=evidence_roots,
+        diagnostics=[],
+    )
+
+
+def image_selection(
+    image: Mapping[str, Any],
+    *,
+    schema: str,
+    generation: int,
+    transition_root: Any,
+    transition: Mapping[str, Any] | None,
+    previous_frontend_build_id: Any,
+    rollback: Mapping[str, Any] | None,
+) -> dict[str, Any]:
+    return {
+        "schema": schema,
+        "generation": generation,
+        "frontendBuildId": image["frontendBuildId"],
+        "runtimeBuildId": image["runtimeBuildId"],
+        "artifactDigest": image["artifactDigest"],
+        "productRoot": image["productRoot"],
+        **(
+            {
+                "manifestIdentityRoot": image["manifestIdentityRoot"],
+                "releaseCutRoot": image["releaseCutRoot"],
+                "platformSliceRoot": image["platformSliceRoot"],
+                "cutTransitionRoot": transition_root,
+                "cutTransition": (
+                    copy.deepcopy(dict(transition)) if transition is not None else None
+                ),
+            }
+            if image.get("releaseCutRoot")
+            else {}
+        ),
+        "previousFrontendBuildId": previous_frontend_build_id,
+        "rollback": copy.deepcopy(dict(rollback)) if rollback is not None else None,
+    }
+
+
+def legacy_selection(
+    *,
+    schema: str,
+    generation: int,
+    release_cut_root: str,
+    product_version: str,
+    transition: Mapping[str, Any],
+    previous_frontend_build_id: Any,
+    rollback: Mapping[str, Any],
+) -> dict[str, Any]:
+    return {
+        "schema": schema,
+        "selectionMode": LEGACY_BOOTSTRAP_MODE,
+        "generation": generation,
+        "releaseCutRoot": release_cut_root,
+        "productVersion": product_version,
+        "cutTransitionRoot": transition["cutTransitionRoot"],
+        "cutTransition": copy.deepcopy(dict(transition)),
+        "previousFrontendBuildId": previous_frontend_build_id,
+        "rollback": copy.deepcopy(dict(rollback)),
+    }
+
+
+def legacy_recovery_transition(
+    *,
+    current_release_cut_root: str,
+    current_version: str,
+    target_release_cut_root: str,
+    target_version: str,
+    compatibility: Mapping[str, Any],
+    evidence_roots: list[str],
+) -> dict[str, Any]:
+    evidence = sorted(set(evidence_roots))
+    return finish_cut_transition(
+        {
+            "schema": CUT_TRANSITION_SCHEMA,
+            "fromReleaseCutRoot": current_release_cut_root,
+            "toReleaseCutRoot": target_release_cut_root,
+            "fromProductVersion": current_version,
+            "toProductVersion": target_version,
+            "relation": "recovery",
+            "authorization": {
+                "trustDomain": "shifu-local",
+                "kind": "shifu-local-recovery",
+                "publicationEligible": False,
+                "evidenceRoots": evidence,
+            },
+            "compatibility": copy.deepcopy(dict(compatibility)),
+            "migrationPlanRoot": content_root(
+                {
+                    "migrationClass": "none",
+                    "targetReleaseCutRoot": target_release_cut_root,
+                }
+            ),
+            "rollbackPlanRoot": content_root(
+                {
+                    "rollbackClass": "automatic",
+                    "currentReleaseCutRoot": current_release_cut_root,
+                    "targetReleaseCutRoot": target_release_cut_root,
+                }
+            ),
+            "activeWorkPolicy": "keep-pinned",
+            "evidenceRoots": evidence,
+            "diagnostics": [],
+        }
+    )
 
 
 def decide_cut_transition(
