@@ -1055,6 +1055,7 @@ _MANIFEST_CUT_FIELDS = {
     "platformSliceRoot",
     "cutTransition",
     "artifacts",
+    "localArtifact",
     "qualificationEvidenceRef",
 }
 

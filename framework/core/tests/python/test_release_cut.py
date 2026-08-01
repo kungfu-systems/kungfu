@@ -361,6 +361,13 @@ def test_manifest_identity_root_excludes_only_cut_projection_fields() -> None:
         "releaseCutRoot": _root("1"),
         "platformSliceRoot": _root("2"),
         "cutTransition": {"cutTransitionRoot": _root("3")},
+        "artifacts": [{"kind": "desktop", "digest": _root("4")}],
+        "localArtifact": {
+            "kind": "desktop-local",
+            "format": "directory",
+            "digest": _root("5"),
+        },
+        "qualificationEvidenceRef": _root("6"),
     }
     expected = release_cut.content_root(
         {
