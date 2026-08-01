@@ -39,6 +39,7 @@
     "policyStateSchema": "kungfu.work-design.policy-state/v1",
     "policyDecisionSchema": "kungfu.work-design.policy-decision/v1",
     "policyMonitoringSchema": "kungfu.work-design.policy-monitoring/v1",
+    "prospectiveOutcomeBindingSchema": "kungfu.work-design.prospective-outcome-binding/v1",
     "metrics": {
       "timeout": "planned-budget-versus-attributable-active-time-excluding-declared-waits",
       "rework": "acceptance-reopen-or-corrective-successor-only",
@@ -57,7 +58,22 @@
     "outOfEnvelope": "human-decision-required",
     "concurrency": "expected-state-root-fenced",
     "rollback": "automatic-exact-previous-policy-root",
-    "status": "build-free-read-only-machine-projection"
+    "status": "build-free-read-only-machine-projection",
+    "prospectiveAccounting": {
+      "activeEngineeringClasses": [
+        "implementation-debug",
+        "local-validation"
+      ],
+      "excludedWaitClasses": [
+        "ci-queue",
+        "external-review",
+        "human-decision",
+        "platform-approval"
+      ],
+      "activeSecondsConservedExactly": true,
+      "openingEstimateRootRequired": true,
+      "authority": "observation-and-advice-only"
+    }
   },
   "failurePolicy": {
     "asOfLeakage": "reject-without-report",
@@ -86,5 +102,5 @@
     ],
     "schemaRoot": "sha256:60214373b6ec4ddcb689010b73ccb51d8668ab439c20a41d2b8ec53c67779c7a"
   },
-  "contractRoot": "sha256:0a65c510267f4a39e963342f4cac2557010425ed1afaa9bf1dd50e407c972b93"
+  "contractRoot": "sha256:f26817f158853fd1b34881e0a565cfdbcce50c2a801a7fe8014fc3e074e33d46"
 }

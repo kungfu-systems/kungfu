@@ -83,7 +83,10 @@ export function checkWorkDesignPolicyReplayContract(root = DEFAULT_ROOT) {
     feedback?.rollback !== 'automatic-exact-previous-policy-root' ||
     feedback?.unknownEvidence !== 'remain-unknown-and-block-affected-cohort' ||
     feedback?.privacyBoundary !==
-      'roots-enums-timestamps-and-sanitized-identifiers-only'
+      'roots-enums-timestamps-and-sanitized-identifiers-only' ||
+    feedback?.prospectiveAccounting?.activeSecondsConservedExactly !== true ||
+    feedback?.prospectiveAccounting?.openingEstimateRootRequired !== true ||
+    feedback?.prospectiveAccounting?.authority !== 'observation-and-advice-only'
   )
     throw new Error(
       'outcome feedback thresholds or activation boundary drifted',

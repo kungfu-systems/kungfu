@@ -3,8 +3,11 @@
 
 import { semanticRoot } from '../../project-cut/src/project-cut.mjs';
 import {
+  WORK_DESIGN_OUTCOME_HISTORY_RECORD_SCHEMA,
+  buildOutcomeInformedEstimate,
   buildWorkDesignAdvice,
   buildWorkDesignDisposition,
+  verifyOutcomeInformedEstimate,
   verifyWorkDesignAdvice,
   verifyWorkDesignDisposition,
 } from '../../work-design-advisor/src/work-design-advisor.mjs';
@@ -35,6 +38,11 @@ const SEALED_WORK_SCHEMA =
   'kungfu.assignment-orchestration.sealed-work-coordinate/v1';
 const FEDERATED_SOURCE_ID = 'kungfu.workspace-federation.sealed-work-index';
 const HISTORY_SOURCE_SCHEMA = 'kungfu.work-design.open-card-history-source/v1';
+const OUTCOME_HISTORY_SCHEMA =
+  'kungfu.work-design.open-card-outcome-history/v1';
+const OUTCOME_BINDING_SCHEMA =
+  'kungfu.assignment-orchestration.work-design-outcome-binding/v1';
+const OUTCOME_SCHEMA = 'kungfu.work-design.outcome/v1';
 const POLICY_DISPOSITION_SCHEMA =
   'kungfu.work-design.open-card-policy-disposition/v1';
 
@@ -112,6 +120,182 @@ function sortedRoots(values) {
   );
 }
 
+function rooted(value, rootKey) {
+  if (!isObject(value) || !ROOT.test(String(value[rootKey] ?? '')))
+    return false;
+  const { [rootKey]: _root, ...preimage } = value;
+  return semanticRoot(preimage) === value[rootKey];
+}
+
+function outcomeRecord(binding, asOf) {
+  if (
+    !isObject(binding) ||
+    binding.schema !== OUTCOME_BINDING_SCHEMA ||
+    !rooted(binding, 'binding_root')
+  )
+    throw new Error('outcome binding root mismatch');
+  const outcome = binding.outcome;
+  if (
+    !isObject(outcome) ||
+    outcome.schema !== OUTCOME_SCHEMA ||
+    !rooted(outcome, 'outcomeRoot') ||
+    !rooted(outcome.cohort, 'cohortRoot') ||
+    !rooted(outcome.coverage, 'coverageRoot')
+  )
+    throw new Error('nested outcome root mismatch');
+  for (const root of [
+    binding.workspace_identity_root,
+    binding.settled_state_root,
+    binding.state_query_proof_root,
+    outcome.evidence?.settledStateRoot,
+    outcome.evidence?.queryProofRoot,
+  ])
+    requireRoot(root, 'outcome binding root');
+  if (
+    binding.settled_state_root !== outcome.evidence.settledStateRoot ||
+    binding.state_query_proof_root !== outcome.evidence.queryProofRoot ||
+    binding.assignment_subject !== `kungfu:${outcome.assignmentId}`
+  )
+    throw new Error('outcome binding does not match settled Work evidence');
+  const outcomeAsOf = canonicalTimestamp(outcome.asOf, 'outcome.asOf');
+  if (Date.parse(outcomeAsOf) > Date.parse(asOf))
+    throw new Error(
+      'outcome is from the future relative to the declared as-of',
+    );
+  const waits = outcome.window?.excludedWaitSeconds;
+  const waitNames = [
+    'ci-queue',
+    'external-review',
+    'human-decision',
+    'platform-approval',
+  ];
+  if (
+    !isObject(waits) ||
+    waitNames.some(
+      (name) => !Number.isSafeInteger(waits[name]) || waits[name] < 0,
+    )
+  )
+    throw new Error('outcome excluded waits are invalid');
+  if (
+    !Number.isSafeInteger(outcome.window?.attributableActiveSeconds) ||
+    outcome.window.attributableActiveSeconds < 0
+  )
+    throw new Error('outcome attributable active time is invalid');
+  const rework = outcome.metrics?.rework;
+  if (
+    !isObject(rework) ||
+    !['qualified', 'unknown'].includes(rework.status) ||
+    (rework.count !== null &&
+      (!Number.isSafeInteger(rework.count) || rework.count < 0))
+  )
+    throw new Error('outcome rework signal is invalid');
+  const preimage = {
+    schema: WORK_DESIGN_OUTCOME_HISTORY_RECORD_SCHEMA,
+    assignmentSubject: binding.assignment_subject,
+    workspaceIdentityRoot: binding.workspace_identity_root,
+    settledStateRoot: binding.settled_state_root,
+    bindingRoot: binding.binding_root,
+    outcomeRoot: outcome.outcomeRoot,
+    coverageRoot: outcome.coverage.coverageRoot,
+    cohortRoot: outcome.cohort.cohortRoot,
+    outcomeAsOf,
+    coverageComplete: outcome.coverage.complete === true,
+    attributableActiveSeconds: outcome.window.attributableActiveSeconds,
+    excludedWaitSeconds: Object.fromEntries(
+      waitNames.map((name) => [name, waits[name]]),
+    ),
+    rework: {
+      status: rework.status,
+      count: rework.status === 'qualified' ? rework.count : null,
+    },
+    sourceEvidenceRoots: sortedRoots(
+      outcome.evidence.sourceEvidenceRoots ?? [],
+    ),
+  };
+  return { ...preimage, recordRoot: semanticRoot(preimage) };
+}
+
+export function buildOpenCardOutcomeHistory({ query, asOf, targetCohortRoot }) {
+  if (!isObject(query) || query.schema !== FEDERATED_QUERY_SCHEMA)
+    throw new Error(`history query must use ${FEDERATED_QUERY_SCHEMA}`);
+  if (query.verification?.ok !== true || query.aggregate?.proof_ok !== true)
+    throw new Error('history query proof did not verify');
+  const source = query.global_work?.outcome_history;
+  if (
+    !isObject(source) ||
+    source.schema !==
+      'kungfu.workspace-federation.work-design-outcome-history/v1' ||
+    !rooted(source, 'history_root')
+  )
+    throw new Error('global Work outcome history root mismatch');
+  const canonicalAsOf = canonicalTimestamp(asOf, 'asOf');
+  requireRoot(targetCohortRoot, 'targetCohortRoot');
+  const recordsByState = new Map();
+  const conflictedStateRoots = new Set();
+  const issues = [...(source.issues ?? [])];
+  for (const binding of source.bindings ?? []) {
+    try {
+      const record = outcomeRecord(binding, canonicalAsOf);
+      if (conflictedStateRoots.has(record.settledStateRoot)) continue;
+      const existing = recordsByState.get(record.settledStateRoot);
+      if (existing && existing.recordRoot !== record.recordRoot) {
+        recordsByState.delete(record.settledStateRoot);
+        conflictedStateRoots.add(record.settledStateRoot);
+        issues.push({
+          code: 'conflicting-outcome-records',
+          settledStateRoot: record.settledStateRoot,
+          recordRoots: sortedRoots([existing.recordRoot, record.recordRoot]),
+        });
+      } else if (!existing) recordsByState.set(record.settledStateRoot, record);
+    } catch (error) {
+      issues.push({
+        code: 'outcome-record-unqualified',
+        bindingRoot: binding?.binding_root ?? null,
+        message: error instanceof Error ? error.message : String(error),
+      });
+    }
+  }
+  const coverage = source.coverage ?? {};
+  const normalizedCoverage = {
+    uniqueSettledStateCount: Number(coverage.unique_settled_state_count ?? 0),
+    uniqueAssignmentCount: Number(coverage.unique_assignment_count ?? 0),
+    complete: Number(coverage.complete ?? 0),
+    partial: Number(coverage.partial ?? 0),
+    sealedOnlyUnknown: Number(coverage.sealed_only_unknown ?? 0),
+    unqualifiedStateCount: Number(coverage.unqualified_state_count ?? 0),
+  };
+  if (
+    Object.values(normalizedCoverage).some(
+      (value) => !Number.isSafeInteger(value) || value < 0,
+    )
+  )
+    throw new Error('global Work outcome coverage is invalid');
+  const preimage = {
+    schema: OUTCOME_HISTORY_SCHEMA,
+    asOf: canonicalAsOf,
+    queryProofRoot: requireRoot(query.proof?.proof_root, 'query proof root'),
+    globalWorkProjectionRoot: requireRoot(
+      query.proof?.global_work_projection_root,
+      'global Work projection root',
+    ),
+    targetCohortRoot,
+    records: [...recordsByState.values()].sort((left, right) =>
+      Buffer.compare(
+        Buffer.from(left.settledStateRoot, 'utf8'),
+        Buffer.from(right.settledStateRoot, 'utf8'),
+      ),
+    ),
+    issues: issues.sort((left, right) =>
+      Buffer.compare(
+        Buffer.from(semanticRoot(left), 'utf8'),
+        Buffer.from(semanticRoot(right), 'utf8'),
+      ),
+    ),
+    coverage: normalizedCoverage,
+  };
+  return { ...preimage, sourceRoot: semanticRoot(preimage) };
+}
+
 /**
  * Compile Selector input only from a verified installed global Work query.
  * The compiler never reads Assignment payload bodies and never infers success
@@ -122,8 +306,9 @@ export function buildOpenCardHistorySelectionRequest({
   objectiveRoot,
   xinfaRoot,
   asOf,
-  maxSelected = 8,
+  maxSelected = null,
   maximumIndexAgeSeconds = 300,
+  outcomeHistory = null,
 }) {
   if (!isObject(query) || query.schema !== FEDERATED_QUERY_SCHEMA)
     throw new Error(`history query must use ${FEDERATED_QUERY_SCHEMA}`);
@@ -154,6 +339,15 @@ export function buildOpenCardHistorySelectionRequest({
   const canonicalAsOf = canonicalTimestamp(asOf, 'asOf');
   if (!Array.isArray(query.components))
     throw new Error('history query components must be an array');
+
+  if (outcomeHistory !== null && !rooted(outcomeHistory, 'sourceRoot'))
+    throw new Error('open-card outcome history root mismatch');
+  const outcomeByState = new Map(
+    (outcomeHistory?.records ?? []).map((record) => [
+      record.settledStateRoot,
+      record,
+    ]),
+  );
 
   const candidatesByStateRoot = new Map();
   const authorityRoots = new Set();
@@ -200,6 +394,11 @@ export function buildOpenCardHistorySelectionRequest({
         `${at}.query_proof_root`,
       );
       authorityRoots.add(authorityRoot);
+      const outcome = outcomeByState.get(stateRoot);
+      const comparable =
+        outcome !== undefined &&
+        outcome.coverageComplete === true &&
+        outcome.cohortRoot === outcomeHistory?.targetCohortRoot;
       const candidate = buildWorkHistoryCandidate({
         recordSchema: SEALED_WORK_SCHEMA,
         authority: { root: authorityRoot, status: 'current' },
@@ -218,14 +417,29 @@ export function buildOpenCardHistorySelectionRequest({
         },
         supersession: { status: 'active', at: null, replacementRoot: null },
         invalidation: { status: 'valid', at: null, evidenceRoot: null },
-        applicability: 'precedent',
+        applicability: comparable ? 'comparable' : 'precedent',
         evidenceRoots: sortedRoots([
           componentCutRoot,
           componentProofRoot,
           stateProofRoot,
           stateRoot,
+          ...(outcome
+            ? [
+                outcome.bindingRoot,
+                outcome.outcomeRoot,
+                outcome.coverageRoot,
+                outcome.cohortRoot,
+                ...outcome.sourceEvidenceRoots,
+              ]
+            : []),
         ]),
-        ranking: { score: 1 },
+        ranking: {
+          score: comparable
+            ? 100 + Math.min(99, outcome.sourceEvidenceRoots.length)
+            : outcome
+              ? 10
+              : 1,
+        },
       });
       const existing = candidatesByStateRoot.get(stateRoot);
       if (
@@ -251,7 +465,9 @@ export function buildOpenCardHistorySelectionRequest({
   const policy = buildWorkHistorySelectionPolicy({
     id: 'open-card-native-sealed-work-v1',
     version: 1,
-    maxSelected,
+    maxSelected:
+      maxSelected ??
+      (ROOT.test(String(outcomeHistory?.targetCohortRoot ?? '')) ? 64 : 8),
     recentWindowSeconds: 60 * 60 * 24 * 365,
     maximumIndexAgeSeconds,
     allowedAuthorityRoots: sortedRoots([...authorityRoots]),
@@ -555,6 +771,19 @@ function validateEnvelope(request) {
         ),
       );
   }
+  if (
+    request.outcomeHistory !== undefined &&
+    (!isObject(request.outcomeHistory) ||
+      request.outcomeHistory.schema !== OUTCOME_HISTORY_SCHEMA ||
+      !rooted(request.outcomeHistory, 'sourceRoot'))
+  )
+    diagnostics.push(
+      diagnostic(
+        'outcome-history-invalid',
+        '$.outcomeHistory',
+        'outcome history must be an exact rooted global Work projection',
+      ),
+    );
   const availability = request.availability ?? {};
   for (const name of ['selector', 'advisor']) {
     if (!AVAILABILITY.has(availability[name] ?? 'available'))
@@ -589,6 +818,7 @@ export function runOpenCardPreflight(request) {
     verification: selectionVerification,
     verificationRoot: semanticRoot(selectionVerification),
     source: request.historySource ?? null,
+    outcomeHistory: request.outcomeHistory ?? null,
   };
   if (!selectionVerification.ok)
     return fallback(
@@ -602,6 +832,8 @@ export function runOpenCardPreflight(request) {
     selected.manifest.coverage.gaps.includes('stale-index-snapshot')
   )
     return fallback(request, 'stale-manifest', [], { history });
+  if ((request.outcomeHistory?.issues ?? []).length > 0)
+    return fallback(request, 'outcome-history-unqualified', [], { history });
 
   const advisorAvailability = request.availability?.advisor ?? 'available';
   if (advisorAvailability !== 'available')
@@ -640,9 +872,43 @@ export function runOpenCardPreflight(request) {
     advised.advice,
     expectedInput,
   );
+  const estimated = request.outcomeHistory
+    ? buildOutcomeInformedEstimate({
+        asOf: request.outcomeHistory.asOf,
+        sourceRoot: request.outcomeHistory.sourceRoot,
+        queryProofRoot: request.outcomeHistory.queryProofRoot,
+        globalWorkProjectionRoot:
+          request.outcomeHistory.globalWorkProjectionRoot,
+        targetCohortRoot: request.outcomeHistory.targetCohortRoot,
+        selectedStateRoots: sortedRoots(
+          selected.manifest.included.map(
+            (entry) => entry.sourceReference.sourceRoot,
+          ),
+        ),
+        records: request.outcomeHistory.records,
+        coverage: request.outcomeHistory.coverage,
+      })
+    : { ok: true, estimate: null, diagnostics: [] };
+  if (!estimated.ok)
+    return fallback(request, 'advisor-failed', estimated.diagnostics, {
+      history,
+    });
+  const estimateVerification = estimated.estimate
+    ? verifyOutcomeInformedEstimate(estimated.estimate)
+    : null;
+  if (estimateVerification?.ok === false)
+    return fallback(
+      request,
+      'advice-root-mismatch',
+      estimateVerification.diagnostics,
+      { history },
+    );
   const advice = {
     advice: advised.advice,
     verification: adviceVerification,
+    estimation: estimated.estimate
+      ? { estimate: estimated.estimate, verification: estimateVerification }
+      : null,
   };
   if (!adviceVerification.ok)
     return fallback(
@@ -814,6 +1080,14 @@ export function verifyOpenCardPreflight(result) {
       result.advice?.advice?.adviceRoot !== result.adoption.adviceRoot)
   )
     return { ok: false, reason: 'adopted-advice-root-mismatch' };
+  if (
+    result.advice?.estimation !== null &&
+    result.advice?.estimation !== undefined &&
+    (verifyOutcomeInformedEstimate(result.advice.estimation.estimate).ok !==
+      true ||
+      result.advice.estimation.verification?.ok !== true)
+  )
+    return { ok: false, reason: 'outcome-estimate-root-mismatch' };
   if (
     result.outcome === 'advisory-auto-adopted' &&
     result.adoption?.mode !== 'policy-auto-adopted'

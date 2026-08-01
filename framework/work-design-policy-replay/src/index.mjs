@@ -23,6 +23,8 @@ export const WORK_DESIGN_MONITORING_SCHEMA =
   'kungfu.work-design.policy-monitoring/v1';
 export const WORK_DESIGN_FEEDBACK_INSPECTION_SCHEMA =
   'kungfu.work-design.feedback-inspection/v1';
+export const WORK_DESIGN_PROSPECTIVE_OUTCOME_BINDING_SCHEMA =
+  'kungfu.work-design.prospective-outcome-binding/v1';
 
 export const MINIMUM_SHADOW_SAMPLES = 10;
 export const MINIMUM_DEFAULT_PROMOTION_SAMPLES = 30;
@@ -634,6 +636,127 @@ export function verifyWorkDesignOutcome(outcome) {
     );
   rooted(outcome, 'outcomeRoot', '$', diagnostics);
   return { ok: diagnostics.length === 0, diagnostics };
+}
+
+export function compileProspectiveOutcomeBinding(input) {
+  const outcomeVerification = verifyWorkDesignOutcome(input.outcome);
+  if (!outcomeVerification.ok)
+    return {
+      ok: false,
+      binding: null,
+      diagnostics: outcomeVerification.diagnostics,
+    };
+  const diagnostics = [];
+  const opening = input.openingEstimate;
+  if (
+    !opening ||
+    opening.schema !== 'kungfu.work-design.opening-estimate-binding/v1' ||
+    !ROOT.test(String(opening.openingEstimateRoot ?? ''))
+  )
+    diagnostics.push(
+      diagnostic(
+        'opening-estimate-invalid',
+        '$.openingEstimate',
+        'a rooted opening estimate binding is required',
+      ),
+    );
+  else {
+    const { openingEstimateRoot, ...preimage } = opening;
+    if (semanticRoot(preimage) !== openingEstimateRoot)
+      diagnostics.push(
+        diagnostic(
+          'root-mismatch',
+          '$.openingEstimate.openingEstimateRoot',
+          'opening estimate root differs from its canonical preimage',
+        ),
+      );
+    if (opening.assignmentId !== input.outcome.assignmentId)
+      diagnostics.push(
+        diagnostic(
+          'assignment-mismatch',
+          '$.openingEstimate.assignmentId',
+          'opening estimate and outcome must name the same Assignment',
+        ),
+      );
+    if (opening.adviceRoot !== input.outcome.bindings.adviceRoot)
+      diagnostics.push(
+        diagnostic(
+          'advice-root-mismatch',
+          '$.openingEstimate.adviceRoot',
+          'opening estimate and outcome must bind the same advice root',
+        ),
+      );
+  }
+  if (!Array.isArray(input.activeSegments))
+    diagnostics.push(
+      diagnostic('invalid-type', '$.activeSegments', 'expected array'),
+    );
+  const classes = new Set(['implementation-debug', 'local-validation']);
+  const activity = { 'implementation-debug': 0, 'local-validation': 0 };
+  const evidenceRoots = [];
+  for (const [index, segment] of (input.activeSegments ?? []).entries()) {
+    if (!classes.has(segment.class))
+      diagnostics.push(
+        diagnostic(
+          'invalid-value',
+          `$.activeSegments[${index}].class`,
+          'unsupported active engineering class',
+        ),
+      );
+    if (!Number.isSafeInteger(segment.seconds) || segment.seconds < 0)
+      diagnostics.push(
+        diagnostic(
+          'invalid-value',
+          `$.activeSegments[${index}].seconds`,
+          'active seconds must be a non-negative safe integer',
+        ),
+      );
+    requireRoot(
+      segment.evidenceRoot,
+      `$.activeSegments[${index}].evidenceRoot`,
+      diagnostics,
+    );
+    if (classes.has(segment.class) && Number.isSafeInteger(segment.seconds))
+      activity[segment.class] += segment.seconds;
+    if (ROOT.test(String(segment.evidenceRoot ?? '')))
+      evidenceRoots.push(segment.evidenceRoot);
+  }
+  if (
+    activity['implementation-debug'] + activity['local-validation'] !==
+    input.outcome.window.attributableActiveSeconds
+  )
+    diagnostics.push(
+      diagnostic(
+        'active-attribution-mismatch',
+        '$.activeSegments',
+        'prospective active classes must exactly conserve attributable active time',
+      ),
+    );
+  if (diagnostics.length > 0) return { ok: false, binding: null, diagnostics };
+  const preimage = {
+    schema: WORK_DESIGN_PROSPECTIVE_OUTCOME_BINDING_SCHEMA,
+    assignmentId: input.outcome.assignmentId,
+    openingEstimateRoot: opening.openingEstimateRoot,
+    outcomeRoot: input.outcome.outcomeRoot,
+    settledStateRoot: input.outcome.evidence.settledStateRoot,
+    activeEngineeringSeconds: activity,
+    excludedWaitSeconds: structuredClone(
+      input.outcome.window.excludedWaitSeconds,
+    ),
+    evidenceRoots: [...new Set(evidenceRoots)].sort(compareUtf8),
+    authority: {
+      mode: 'prospective-outcome-observation',
+      assignmentAuthority: false,
+      workControlAuthority: false,
+      policyAuthority: false,
+      mayMutate: false,
+    },
+  };
+  return {
+    ok: true,
+    binding: { ...preimage, prospectiveBindingRoot: semanticRoot(preimage) },
+    diagnostics: [],
+  };
 }
 
 export function compileOutcomeReplaySample(input) {

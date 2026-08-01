@@ -15,6 +15,7 @@ import {
 import {
   OPEN_CARD_PREFLIGHT_SCHEMA,
   buildOpenCardHistorySelectionRequest,
+  buildOpenCardOutcomeHistory,
   runOpenCardPreflight,
   verifyOpenCardPreflight,
 } from '../framework/work-design-open-card/src/work-design-open-card.mjs';
@@ -212,10 +213,142 @@ function assertCaptureBoundary(result) {
   assert.equal(result.humanAuthorization.preserved, true);
 }
 
-function globalWorkQuery() {
+function globalOutcomeBinding(state, index) {
+  const cohortBody = {
+    deliveryClass: 'native-proof-required',
+    workClass: 'control-plane',
+    repositoryClass: 'kungfu',
+  };
+  const coverageBody = {
+    qualifiedMetrics: [
+      'acceptanceFailure',
+      'dependencyCorrection',
+      'rework',
+      'timeout',
+    ],
+    unknownMetrics: [],
+    complete: true,
+  };
+  const outcomeBody = {
+    schema: 'kungfu.work-design.outcome/v1',
+    assignmentId: state.assignment_subject.replace(/^kungfu:/u, ''),
+    asOf: '2026-07-30T07:30:00Z',
+    bindings: {
+      workDefinitionRoot: semanticRoot({ workDefinition: index }),
+      adviceRoot: semanticRoot({ advice: index }),
+      policyRoot: semanticRoot({ policy: index }),
+    },
+    cohort: { ...cohortBody, cohortRoot: semanticRoot(cohortBody) },
+    window: {
+      admittedAt: '2026-07-30T05:00:00Z',
+      settledAt: '2026-07-30T07:00:00Z',
+      attributableActiveSeconds: index * 100,
+      excludedWaitSeconds: {
+        'ci-queue': 10,
+        'external-review': 20,
+        'human-decision': 30,
+        'platform-approval': 40,
+      },
+    },
+    metrics: {
+      acceptanceFailure: { status: 'qualified', count: 0 },
+      dependencyCorrection: { status: 'qualified', count: 0 },
+      rework: { status: 'qualified', count: index % 2 },
+      timeout: { status: 'qualified', exceeded: false },
+    },
+    coverage: {
+      ...coverageBody,
+      coverageRoot: semanticRoot(coverageBody),
+    },
+    evidence: {
+      settledStateRoot: state.state_root,
+      queryProofRoot: state.query_proof_root,
+      sourceEvidenceRoots: [semanticRoot({ outcomeEvidence: index })],
+    },
+    authority: {
+      mode: 'settled-work-observation',
+      factAuthority: false,
+      episodeAuthority: false,
+      assignmentAuthority: false,
+      workControlAuthority: false,
+      policyAuthority: false,
+      mayMutate: false,
+    },
+  };
+  const outcome = { ...outcomeBody, outcomeRoot: semanticRoot(outcomeBody) };
+  const bindingBody = {
+    schema: 'kungfu.assignment-orchestration.work-design-outcome-binding/v1',
+    assignment_subject: state.assignment_subject,
+    workspace_identity_root: state.workspace_identity_root,
+    settled_state_root: state.state_root,
+    state_query_proof_root: state.query_proof_root,
+    opening_estimate_root: null,
+    published_at: '2026-07-30T07:40:00Z',
+    outcome,
+  };
+  return { ...bindingBody, binding_root: semanticRoot(bindingBody) };
+}
+
+function globalWorkQuery({ outcomeCount = 0, partialCount = 0 } = {}) {
   const componentCutRoot = semanticRoot({ cut: 'component-work' });
   const componentProofRoot = semanticRoot({ proof: 'component-work' });
-  const stateRoot = semanticRoot({ state: 'settled-work' });
+  const stateCount = Math.max(1, outcomeCount + partialCount);
+  const states = Array.from({ length: stateCount }, (_, index) => ({
+    schema: 'kungfu.assignment-orchestration.sealed-work-coordinate/v1',
+    assignment_subject: `kungfu:settled-precedent-${index + 1}`,
+    workspace_identity_root: AUTHORITY_ROOT,
+    state_root: semanticRoot({ state: `settled-work-${index + 1}` }),
+    query_proof_root: componentProofRoot,
+    phase: 'continuation-decided',
+    settled: true,
+    storage_kind: 'git-common-dir',
+  }));
+  const bindings = states
+    .slice(0, outcomeCount + partialCount)
+    .map((state, index) => {
+      const binding = globalOutcomeBinding(state, index + 1);
+      if (index < outcomeCount) return binding;
+      const outcome = structuredClone(binding.outcome);
+      const coverageBody = {
+        qualifiedMetrics: ['rework'],
+        unknownMetrics: [
+          'acceptanceFailure',
+          'dependencyCorrection',
+          'timeout',
+        ],
+        complete: false,
+      };
+      outcome.coverage = {
+        ...coverageBody,
+        coverageRoot: semanticRoot(coverageBody),
+      };
+      const { outcomeRoot: _outcomeRoot, ...outcomePreimage } = outcome;
+      outcome.outcomeRoot = semanticRoot(outcomePreimage);
+      const { binding_root: _bindingRoot, ...bindingPreimage } = binding;
+      bindingPreimage.outcome = outcome;
+      return {
+        ...bindingPreimage,
+        binding_root: semanticRoot(bindingPreimage),
+      };
+    });
+  const outcomeHistoryBody = {
+    schema: 'kungfu.workspace-federation.work-design-outcome-history/v1',
+    bindings,
+    issues: [],
+    coverage: {
+      unique_settled_state_count: states.length,
+      unique_assignment_count: states.length,
+      complete: outcomeCount,
+      partial: partialCount,
+      sealed_only_unknown: states.length - bindings.length,
+      unqualified_state_count: 0,
+    },
+    writes: 0,
+  };
+  const outcomeHistory = {
+    ...outcomeHistoryBody,
+    history_root: semanticRoot(outcomeHistoryBody),
+  };
   return {
     schema: 'kungfu.workspace-federation.query/v1',
     scope: 'all',
@@ -237,20 +370,10 @@ function globalWorkQuery() {
         observed_at: '2026-07-30T07:59:30Z',
         cut_root: componentCutRoot,
         query_proof_root: componentProofRoot,
-        retained_assignment_states: [
-          {
-            schema: 'kungfu.assignment-orchestration.sealed-work-coordinate/v1',
-            assignment_subject: 'kungfu:settled-precedent',
-            workspace_identity_root: AUTHORITY_ROOT,
-            state_root: stateRoot,
-            query_proof_root: componentProofRoot,
-            phase: 'continuation-decided',
-            settled: true,
-            storage_kind: 'git-common-dir',
-          },
-        ],
+        retained_assignment_states: states,
       },
     ],
+    global_work: { outcome_history: outcomeHistory },
     proof: {
       schema: 'kungfu.workspace-federation.query-proof/v1',
       proof_root: semanticRoot({ proof: 'global-work' }),
@@ -259,6 +382,27 @@ function globalWorkQuery() {
     verification: { ok: true },
     writes: [],
   };
+}
+
+function outcomeInformedRequest({ outcomeCount, partialCount = 0 }) {
+  const query = globalWorkQuery({ outcomeCount, partialCount });
+  const targetCohortRoot =
+    query.global_work.outcome_history.bindings[0].outcome.cohort.cohortRoot;
+  const outcomeHistory = buildOpenCardOutcomeHistory({
+    query,
+    asOf: AS_OF,
+    targetCohortRoot,
+  });
+  const input = request();
+  input.outcomeHistory = outcomeHistory;
+  input.selectionRequest = buildOpenCardHistorySelectionRequest({
+    query,
+    objectiveRoot: input.humanWorkDefinitionRoot,
+    xinfaRoot: XINFA_ROOT,
+    asOf: AS_OF,
+    outcomeHistory,
+  });
+  return { input, query, outcomeHistory };
 }
 
 test('native global Work query compiles settled sealed coordinates into selector input', () => {
@@ -300,6 +444,115 @@ test('history compilation deduplicates replica observations by sealed state root
     selectionRequest.candidates[0].temporal.indexedAt,
     '2026-07-30T07:59:40.000Z',
   );
+});
+
+test('open-card invokes rooted outcome estimation before preserving human authority', () => {
+  const { input, outcomeHistory } = outcomeInformedRequest({
+    outcomeCount: 10,
+    partialCount: 1,
+  });
+  const result = runOpenCardPreflight(input);
+  assertCaptureBoundary(result);
+  assert.equal(result.outcome, 'advisory-auto-adopted');
+  assert.equal(
+    result.history.outcomeHistory.sourceRoot,
+    outcomeHistory.sourceRoot,
+  );
+  const estimate = result.advice.estimation.estimate;
+  assert.equal(estimate.comparability.qualifiedSampleCount, 10);
+  assert.deepEqual(estimate.attributableActiveSeconds, {
+    p50: 500,
+    p80: 800,
+    minimum: 100,
+    maximum: 1000,
+  });
+  assert.deepEqual(estimate.excludedWaitTotals, {
+    'ci-queue': 100,
+    'external-review': 200,
+    'human-decision': 300,
+    'platform-approval': 400,
+  });
+  assert.equal(estimate.guidance.phase, 'tentative-trend');
+  assert.equal(estimate.guidance.recommendedBudgetSeconds, 800);
+  assert.equal(estimate.guidance.defaultPolicyInfluence, false);
+  assert.equal(
+    result.humanAuthorization.finalWorkDefinitionRoot,
+    input.humanWorkDefinitionRoot,
+  );
+});
+
+for (const [count, phase, budget] of [
+  [9, 'observation-only', null],
+  [10, 'tentative-trend', 800],
+  [29, 'tentative-trend', 2400],
+  [30, 'replay-gated', 2400],
+]) {
+  test(`${count} rooted outcomes retain the exact advisory promotion boundary`, () => {
+    const { input } = outcomeInformedRequest({ outcomeCount: count });
+    const result = runOpenCardPreflight(input);
+    assertCaptureBoundary(result);
+    const estimate = result.advice.estimation.estimate;
+    assert.equal(estimate.comparability.qualifiedSampleCount, count);
+    assert.equal(estimate.guidance.phase, phase);
+    assert.equal(estimate.guidance.recommendedBudgetSeconds, budget);
+    assert.equal(estimate.guidance.defaultPolicyInfluence, false);
+    assert.equal(estimate.guidance.requiresExistingReplayGates, count >= 30);
+  });
+}
+
+test('partial and legacy sealed outcomes remain explicit coverage unknowns', () => {
+  const { outcomeHistory } = outcomeInformedRequest({
+    outcomeCount: 1,
+    partialCount: 1,
+  });
+  assert.deepEqual(outcomeHistory.coverage, {
+    uniqueSettledStateCount: 2,
+    uniqueAssignmentCount: 2,
+    complete: 1,
+    partial: 1,
+    sealedOnlyUnknown: 0,
+    unqualifiedStateCount: 0,
+  });
+  assert.equal(outcomeHistory.records.length, 2);
+  assert.equal(
+    outcomeHistory.records.filter((record) => record.coverageComplete).length,
+    1,
+  );
+});
+
+test('outcome root mismatch explicitly falls back to manual capture', () => {
+  const query = globalWorkQuery({ outcomeCount: 1 });
+  query.global_work.outcome_history.bindings[0].outcome.outcomeRoot =
+    semanticRoot({ mismatched: true });
+  const { history_root: _historyRoot, ...historyPreimage } =
+    query.global_work.outcome_history;
+  query.global_work.outcome_history.history_root =
+    semanticRoot(historyPreimage);
+  const targetCohortRoot =
+    query.global_work.outcome_history.bindings[0].outcome.cohort.cohortRoot;
+  const outcomeHistory = buildOpenCardOutcomeHistory({
+    query,
+    asOf: AS_OF,
+    targetCohortRoot,
+  });
+  assert.equal(outcomeHistory.records.length, 0);
+  assert.equal(outcomeHistory.issues[0].code, 'outcome-record-unqualified');
+  const input = request('accepted');
+  input.outcomeHistory = outcomeHistory;
+  input.selectionRequest = buildOpenCardHistorySelectionRequest({
+    query,
+    objectiveRoot: input.humanWorkDefinitionRoot,
+    xinfaRoot: XINFA_ROOT,
+    asOf: AS_OF,
+    outcomeHistory,
+  });
+  const result = runOpenCardPreflight(input);
+  assertCaptureBoundary(result);
+  assert.equal(result.outcome, 'manual-capture');
+  assert.equal(result.fallback.reason, 'outcome-history-unqualified');
+  assert.equal(result.advice, null);
+  assert.equal(result.adoption.adopted, false);
+  assert.equal(result.fallback.silentAdoption, false);
 });
 
 test('history compilation fails closed when the installed Work proof is invalid', () => {

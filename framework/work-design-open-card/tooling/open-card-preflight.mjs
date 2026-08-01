@@ -6,6 +6,7 @@ import fs from 'node:fs';
 import {
   buildOpenCardHistorySelectionRequest,
   buildOpenCardHistorySource,
+  buildOpenCardOutcomeHistory,
   runOpenCardPreflight,
   verifyOpenCardPreflight,
 } from '../src/work-design-open-card.mjs';
@@ -29,11 +30,20 @@ try {
   const historyPath = optionalPath(process.argv, '--history-query');
   if (historyPath !== null) {
     const query = JSON.parse(fs.readFileSync(historyPath, 'utf8'));
+    const targetCohortRoot = request.adviceRequest?.targetCohortRoot;
+    if (targetCohortRoot) {
+      request.outcomeHistory = buildOpenCardOutcomeHistory({
+        query,
+        asOf: request.adviceRequest?.asOf,
+        targetCohortRoot,
+      });
+    }
     request.selectionRequest = buildOpenCardHistorySelectionRequest({
       query,
       objectiveRoot: request.humanWorkDefinitionRoot,
       xinfaRoot: request.adviceRequest?.xinfaRoot,
       asOf: request.adviceRequest?.asOf,
+      outcomeHistory: request.outcomeHistory ?? null,
     });
     request.historySource = buildOpenCardHistorySource(query);
   }

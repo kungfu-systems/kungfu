@@ -67,6 +67,18 @@ export function checkWorkDesignAdvisorContract(root = DEFAULT_ROOT) {
     throw new Error(
       'work-design advisory authority or sample boundary drifted',
     );
+  const estimation = roots.contract.outcomeEstimation;
+  if (
+    estimation?.thresholds?.observationOnlyMaximum !== 9 ||
+    estimation?.thresholds?.tentativeTrendMinimum !== 10 ||
+    estimation?.thresholds?.tentativeTrendMaximum !== 29 ||
+    estimation?.thresholds?.existingReplayGatesRequiredMinimum !== 30 ||
+    estimation?.defaultPolicyInfluence !== false ||
+    estimation?.finalWorkDefinitionAuthority !== 'human'
+  )
+    throw new Error(
+      'outcome-informed estimate thresholds or authority drifted',
+    );
   const requiredDispositions = [
     'accepted',
     'adapted',

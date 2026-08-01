@@ -43,4 +43,13 @@ if (
   JSON.stringify(contract.autoAdoption)
 )
   throw new Error('open-card auto-adoption policy drifted');
+if (
+  contract.outcomeEstimate?.runsAfterSelector !== true ||
+  contract.outcomeEstimate?.runsBeforeCapture !== true ||
+  contract.outcomeEstimate?.preservesHumanWorkDefinition !== true ||
+  contract.outcomeEstimate?.failure !==
+    'explicit-manual-capture-without-silent-adoption' ||
+  !contract.fallbackReasons.includes('outcome-history-unqualified')
+)
+  throw new Error('open-card outcome estimate boundary drifted');
 console.log(`[work-design-open-card] contract=${actualRoot}`);

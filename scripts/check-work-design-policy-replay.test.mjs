@@ -19,6 +19,7 @@ import {
   buildWorkDesignReplayPolicy,
   buildWorkDesignReplaySample,
   compileOutcomeReplaySample,
+  compileProspectiveOutcomeBinding,
   compileWorkDesignOutcome,
   decideWorkDesignActivation,
   decideWorkDesignCanary,
@@ -481,6 +482,72 @@ test('outcomes compile directly into the existing rooted replay sample path', ()
     outcome.coverage.coverageRoot,
   );
   assert.match(result.sample.sampleRoot, /^sha256:[0-9a-f]{64}$/u);
+});
+
+test('prospective binding conserves active classes and keeps waits excluded', () => {
+  const outcome = compiledOutcome('prospective-outcome');
+  const openingPreimage = {
+    schema: 'kungfu.work-design.opening-estimate-binding/v1',
+    assignmentId: outcome.assignmentId,
+    asOf: '2026-07-31T09:00:00Z',
+    workDefinitionRoot: outcome.bindings.workDefinitionRoot,
+    adviceRoot: outcome.bindings.adviceRoot,
+    estimateRoot: semanticRoot({ estimate: 'prospective' }),
+    targetCohortRoot: outcome.cohort.cohortRoot,
+    guidance: {
+      phase: 'observation-only',
+      defaultPolicyInfluence: false,
+    },
+    authority: {
+      mode: 'opening-observation-only',
+      assignmentAuthority: false,
+      finalWorkDefinitionAuthority: false,
+      mayMutate: false,
+    },
+  };
+  const openingEstimate = {
+    ...openingPreimage,
+    openingEstimateRoot: semanticRoot(openingPreimage),
+  };
+  const activeSegments = [
+    {
+      class: 'implementation-debug',
+      seconds: 6000,
+      evidenceRoot: semanticRoot({ activity: 'implementation' }),
+    },
+    {
+      class: 'local-validation',
+      seconds: 1200,
+      evidenceRoot: semanticRoot({ activity: 'validation' }),
+    },
+  ];
+  const result = compileProspectiveOutcomeBinding({
+    openingEstimate,
+    outcome,
+    activeSegments,
+  });
+  assert.equal(result.ok, true, JSON.stringify(result.diagnostics));
+  assert.deepEqual(result.binding.activeEngineeringSeconds, {
+    'implementation-debug': 6000,
+    'local-validation': 1200,
+  });
+  assert.equal(result.binding.excludedWaitSeconds['external-review'], 3600);
+  assert.equal(result.binding.authority.assignmentAuthority, false);
+
+  const mismatch = compileProspectiveOutcomeBinding({
+    openingEstimate,
+    outcome,
+    activeSegments: [
+      { ...activeSegments[0], seconds: 5999 },
+      activeSegments[1],
+    ],
+  });
+  assert.equal(mismatch.ok, false);
+  assert.ok(
+    mismatch.diagnostics.some(
+      ({ code }) => code === 'active-attribution-mismatch',
+    ),
+  );
 });
 
 test('shadow thresholds are exact at 9, 10, 29, and 30 per comparable cohort', () => {

@@ -10,6 +10,17 @@
     "querySchema": "kungfu.workspace-federation.query/v1",
     "recordSchema": "kungfu.assignment-orchestration.sealed-work-coordinate/v1",
     "sourceId": "kungfu.workspace-federation.sealed-work-index",
+    "outcomeHistorySchema": "kungfu.work-design.open-card-outcome-history/v1",
+    "outcomeBindingSchema": "kungfu.assignment-orchestration.work-design-outcome-binding/v1",
+    "outcomeJoin": "exact-settled-state-root",
+    "outcomeAdmission": [
+      "verified-as-of",
+      "exact-outcome-root",
+      "exact-coverage-root",
+      "exact-cohort-root",
+      "exact-query-proof-root",
+      "rooted-source-evidence"
+    ],
     "portableSettledOnly": true,
     "replicaDeduplicationKey": "state_root",
     "callerSuppliedCandidates": false,
@@ -68,7 +79,15 @@
     "selector-failed",
     "selector-timeout",
     "selector-unavailable",
-    "stale-manifest"
+    "stale-manifest",
+    "outcome-history-unqualified"
   ],
-  "contractRoot": "sha256:2de4fa3b24d004f50eb6420416e8f5e484306a320c1e68ac6873d6574a6e15bd"
+  "outcomeEstimate": {
+    "runsAfterSelector": true,
+    "runsBeforeCapture": true,
+    "rooted": true,
+    "preservesHumanWorkDefinition": true,
+    "failure": "explicit-manual-capture-without-silent-adoption"
+  },
+  "contractRoot": "sha256:a655d99c14815182a7f9dc53e0d0deaaf0021e49d71edd8c01a1ee264b01dfa2"
 }
