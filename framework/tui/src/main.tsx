@@ -107,6 +107,7 @@ import {
   decodeTerminalMouseInput,
   describeCliFailure,
   existingProjectWorkspaceRoot,
+  resolveTuiAgentSessionPaths,
   resolveTuiCliRuntime,
   resolveTuiProductPaths,
   resolveTuiRuntimeDir,
@@ -138,21 +139,11 @@ function ensureTuiAgentSession(runtimeDir: string): Promise<string> {
   const resolvedRuntimeDir = path.resolve(runtimeDir);
   if (tuiAgentSessionReady && tuiAgentSessionRuntimeDir === resolvedRuntimeDir)
     return tuiAgentSessionReady;
-  const packagedWorker = fileURLToPath(
-    new URL('./agent-session-worker.mjs', import.meta.url),
-  );
-  const packagedMock = fileURLToPath(
-    new URL('./mock-agent.mjs', import.meta.url),
-  );
-  const packageRoot = fileURLToPath(
-    new URL('../../agent-session/', import.meta.url),
-  );
-  const workerPath = fs.existsSync(packagedWorker)
-    ? packagedWorker
-    : path.join(packageRoot, 'src', 'product-worker.mjs');
-  const mockPath = fs.existsSync(packagedMock)
-    ? packagedMock
-    : path.join(packageRoot, 'src', 'mock-provider.mjs');
+  const { packageRoot, workerPath, mockPath } = resolveTuiAgentSessionPaths({
+    env: process.env,
+    argvEntry: process.argv[1],
+    modulePath: fileURLToPath(import.meta.url),
+  });
   const packagedPty = path.join(
     path.dirname(workerPath),
     'node_modules',
@@ -223,6 +214,7 @@ function runtimePaths() {
   const cli = resolveTuiCliRuntime({ env: process.env, packagedBin });
   return {
     coreDir,
+    packagedBin,
     runtimeDir: resolveTuiRuntimeDir({
       env: process.env,
       cwd: process.cwd(),
@@ -261,14 +253,24 @@ function tuiCliInvocation(paths: ReturnType<typeof runtimePaths>) {
   };
 }
 
-function openTuiAgentWorkLab(): AgentWorkLab {
+function openTuiAgentWorkLab(projectTour = false): AgentWorkLab {
   const paths = runtimePaths();
   const cli = tuiCliInvocation(paths);
+  if (projectTour) {
+    const { mockPath } = resolveTuiAgentSessionPaths({
+      env: process.env,
+      argvEntry: process.argv[1],
+      modulePath: fileURLToPath(import.meta.url),
+    });
+    cli.env.KUNGFU_MOCK_AGENT_EXECUTABLE ||= paths.packagedBin;
+    cli.env.KUNGFU_MOCK_AGENT_SCRIPT ||= mockPath;
+    cli.env.KUNGFU_ASSIGNMENT_ADMIT_ALLOW_FOREIGN_BINDING = '1';
+  }
   return openAgentWorkLab({
     runtimeDir: paths.runtimeDir,
     bin: cli.bin,
     env: cli.env,
-    allowForeignBinding: paths.sourceCliFallback,
+    allowForeignBinding: paths.sourceCliFallback || projectTour,
     execFileSync: (file, values, options) =>
       execFileSync(file, cli.args(values), options),
     execFile: (file, values, options) =>
@@ -346,12 +348,22 @@ function openTuiAgentWorkLab(): AgentWorkLab {
   });
 }
 
-function openTuiProjects(useAgentSession = true) {
+function openTuiProjects(useAgentSession = true, allowForeignBinding = false) {
   const paths = runtimePaths();
   const cli = tuiCliInvocation(paths);
   if (!useAgentSession) {
     cli.env.KUNGFU_PROJECT_WORK_AGENT_SESSION = undefined;
     cli.env.KUNGFU_AGENT_SESSION_ENDPOINT = undefined;
+    const { mockPath } = resolveTuiAgentSessionPaths({
+      env: process.env,
+      argvEntry: process.argv[1],
+      modulePath: fileURLToPath(import.meta.url),
+    });
+    cli.env.KUNGFU_MOCK_AGENT_EXECUTABLE ||= paths.packagedBin;
+    cli.env.KUNGFU_MOCK_AGENT_SCRIPT ||= mockPath;
+  }
+  if (allowForeignBinding) {
+    cli.env.KUNGFU_ASSIGNMENT_ADMIT_ALLOW_FOREIGN_BINDING = '1';
   }
   const machineConfigHome = process.env.KF_PROJECTS_CONFIG_HOME;
   return openProjects({
@@ -937,7 +949,7 @@ function ProductHost({
     surfaceRef.current = surface;
   }, [surface]);
   const projects = React.useMemo(
-    () => openTuiProjects(!projectTourRoot),
+    () => openTuiProjects(!projectTourRoot, Boolean(projectTourRoot)),
     [projectTourRoot],
   );
   const [starterProject, setStarterProject] =
@@ -1680,6 +1692,7 @@ function ProductHost({
         projects={projects}
         destination={projectTourRoot}
         columns={size.columns}
+        rows={size.rows}
         onSettled={projectTourSettled}
       />
     );
@@ -2028,7 +2041,6 @@ async function main(): Promise<void> {
     );
     return;
   }
-  const lab = openTuiAgentWorkLab();
   const autoDemo = process.argv.includes('--agent-work-lab-autoplay');
   const projectTourIndex = process.argv.indexOf('--project-work-tour-root');
   const projectTourRoot =
@@ -2036,6 +2048,7 @@ async function main(): Promise<void> {
   if (projectTourIndex >= 0 && !projectTourRoot) {
     throw new Error('--project-work-tour-root requires a destination');
   }
+  const lab = openTuiAgentWorkLab(Boolean(projectTourRoot));
   const playbackMode = autoDemo || Boolean(projectTourRoot);
   const emptyState = process.argv.includes('--empty-state');
   if (process.argv.includes('--agent-work-lab-demo')) {

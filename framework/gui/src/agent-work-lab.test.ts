@@ -11,7 +11,10 @@ import {
   AGENT_WORK_LAB_SUITE,
   agentWorkLabRecommendation,
 } from '../../../extensions/agent-work-lab/experience/src/index.js';
-import { projectInventoryWorkRows } from '../../../extensions/work-dashboard/src/view/index';
+import {
+  projectInventoryWorkRows,
+  resolveSelectedProjectWorkRow,
+} from '../../../extensions/work-dashboard/src/view/index';
 import {
   actionableKfxFailures,
   shouldOpenAgentWorkLab,
@@ -274,7 +277,9 @@ test('the shell moves product navigation into the title-bar menu', () => {
   assert.match(source, /aria-label="Open product menu"/);
   assert.match(source, /aria-label="Kungfu product menu"/);
   assert.match(source, /title: 'All Work'/);
-  assert.match(source, /title: 'Projects'/);
+  assert.match(source, /id: 'current-project'/);
+  assert.match(source, /title: currentProjectTitle/);
+  assert.match(source, /title: 'All Projects'/);
   assert.match(source, /title: 'Agent Work Lab'/);
   assert.doesNotMatch(body, /<ProductNavigation/);
 });
@@ -435,6 +440,27 @@ test('Projects and Work use the shared exact-plan Agent session surface', () => 
   assert.doesNotMatch(projects, /Import Existing|New Starter|Assignment/);
   assert.match(work, /All Work/);
   assert.match(work, /ProjectNavigation/);
+  assert.match(work, /aria-expanded=\{section === 'work'\}/);
+  assert.match(work, /aria-expanded=\{section === 'files'\}/);
+  assert.match(work, /isProjectWorkSettled\(currentInventoryWork\)/);
+  assert.match(
+    work,
+    /currentRetainedRun\?\.receipt\?\.status === 'agent-finished' &&[\s\S]*isProjectWorkReviewable\(currentInventoryWork\)/,
+  );
+  assert.match(
+    work,
+    /refreshProjectInventory\(\)[\s\S]*isProjectWorkSettled\(work\)[\s\S]*isProjectWorkReviewable\(work\)[\s\S]*projects\.planReview\(run\.id\)/,
+  );
+  assert.match(
+    work,
+    /section === 'work'[\s\S]*aria-label="Filter Project Work"[\s\S]*<WorkList[\s\S]*section === 'files'/,
+  );
+  assert.match(work, /background: selected \? '#04395e' : '#252526'/);
+  assert.match(
+    work,
+    /<ProjectNavigation[\s\S]*works=\{visible\}[\s\S]*onSelectWork=\{selectWork\}/,
+  );
+  assert.match(work, /\{workDetail\}/);
   assert.match(work, /ProjectFilesView/);
   assert.match(
     work,
@@ -658,4 +684,55 @@ test('Project Work inventory keeps captured Work visible before admission', () =
     'Choose an Agent to admit and run this Work',
   ]);
   assert.equal(rows[0]?.observations[0]?.workspace_id, 'project:example');
+});
+
+test('Project Work selection follows the Assignment when admission changes its canonical root', () => {
+  const captured = projectInventoryWorkRows(
+    {
+      schema: 'kungfu.project-work.inventory/v1',
+      projectPath: '/project',
+      works: [
+        {
+          state: 'captured-pending-admission',
+          initiativeId: 'initiative-example',
+          assignmentId: 'assignment-example',
+          title: 'Find four new commercial goals',
+          objective: 'Find four new commercial goals',
+          acceptanceChecks: ['Four goals are supported by evidence'],
+          requestRoot: `sha256:${'1'.repeat(64)}`,
+          receiptRoot: `sha256:${'2'.repeat(64)}`,
+          requestPath: '/project/.kungfu/inbox/request.json',
+        },
+      ],
+      activeWork: null,
+      writeOccurred: false,
+      inventoryRoot: `sha256:${'3'.repeat(64)}`,
+    },
+    {
+      schema: 'kungfu.project/v1',
+      id: 'project:example',
+      name: 'project',
+      path: '/project',
+      available: true,
+      selected: true,
+      initialized: true,
+      state: 'focused',
+    },
+  )[0];
+  assert.ok(captured);
+  const admitted = {
+    ...captured,
+    canonical_root: `sha256:${'4'.repeat(64)}`,
+    display: { ...captured.display, status: 'executing' },
+  };
+
+  assert.equal(
+    resolveSelectedProjectWorkRow(
+      [admitted],
+      [admitted],
+      captured.canonical_root,
+      'assignment-example',
+    ),
+    admitted,
+  );
 });

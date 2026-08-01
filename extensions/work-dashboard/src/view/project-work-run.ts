@@ -22,6 +22,21 @@ export function settleRetainedProjectRunBusy(current: string): string {
   return current === RESTORING_RETAINED_AGENT_RESULT ? '' : current;
 }
 
+export function isProjectWorkSettled(
+  work: { phase?: string; settled?: boolean } | undefined,
+): boolean {
+  return Boolean(work?.settled || work?.phase === 'continuation-decided');
+}
+
+export function isProjectWorkReviewable(
+  work: { phase?: string; settled?: boolean } | undefined,
+): boolean {
+  if (!work || isProjectWorkSettled(work)) return false;
+  return ['executing', 'stage-ready', 'completion-claimed'].includes(
+    work.phase ?? '',
+  );
+}
+
 export function preferredProjectReviewRun<
   T extends {
     kind?: string;

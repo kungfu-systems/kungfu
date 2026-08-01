@@ -7,6 +7,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+const tuiRoot = path.join(root, 'framework', 'tui');
 const isWin = process.platform === 'win32';
 const agentWorkLabOnly = process.argv.includes('--agent-work-lab');
 const logPrefix = agentWorkLabOnly ? '[agent-work-lab]' : '[kfx-profile-suite]';
@@ -97,13 +98,16 @@ if (agentWorkLabOnly) {
     ],
     ['KFX Manifest discovery', 'framework/kfx/src/profile-suite.test.ts'],
   ]) {
+    const testPath = path.join(root, file);
     run(label, 'pnpm', [
       '--filter',
       '@kungfu-tech/tui',
       'exec',
       'tsx',
       '--test',
-      path.join(root, file),
+      testPath.startsWith(`${tuiRoot}${path.sep}`)
+        ? path.relative(tuiRoot, testPath)
+        : testPath,
     ]);
   }
 

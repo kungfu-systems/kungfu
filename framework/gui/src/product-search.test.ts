@@ -75,7 +75,7 @@ test('Core Work remains a first-class shell surface without an admitted Work KFX
   assert.match(source, /onOpenAllWork=\{\(\) => openWorkSurface\(\)\}/);
   assert.match(
     source,
-    /coreWorkOpen \? \([\s\S]*<ProjectWorkControlView projects=\{projects\} shell=\{shell\} \/>/,
+    /coreWorkOpen \|\| retainedCoreSurfaces\.has\('core-work'\)[\s\S]*<ProjectWorkControlView projects=\{projects\} shell=\{shell\} \/>/,
   );
   assert.match(
     source,
@@ -83,11 +83,44 @@ test('Core Work remains a first-class shell surface without an admitted Work KFX
   );
 });
 
-test('Projects, Lab, and workspace transitions close Core Work explicitly', () => {
+test('visited core product surfaces stay mounted while hidden', () => {
+  assert.match(source, /const \[retainedCoreSurfaces,/);
   assert.match(
     source,
-    /onOpenProjects=\{\(\) => \{[\s\S]*setCoreWorkOpen\(false\)[\s\S]*setProjectsOpen\(true\)/,
+    /projectsOpen \|\| retainedCoreSurfaces\.has\('projects'\)/,
   );
+  assert.match(
+    source,
+    /labOpen \|\| retainedCoreSurfaces\.has\('agent-work-lab'\)/,
+  );
+  assert.match(
+    source,
+    /coreWorkOpen \|\| retainedCoreSurfaces\.has\('core-work'\)/,
+  );
+  assert.match(source, /display: projectsOpen \? 'block' : 'none'/);
+  assert.match(source, /display: labOpen \? 'block' : 'none'/);
+  assert.match(source, /display: coreWorkOpen \? 'block' : 'none'/);
+});
+
+test('Project navigation preserves the current Project while the catalog is explicit', () => {
+  assert.match(source, /const lastProjectParamsRef = React\.useRef/);
+  assert.match(
+    source,
+    /lastProjectParamsRef\.current = restoredParams[\s\S]*setFocusedProjectPath\(projectPath\)/,
+  );
+  assert.match(
+    source,
+    /onOpenCurrentProject=\{[\s\S]*openWorkSurface\(lastProjectParamsRef\.current \?\? undefined\)/,
+  );
+  assert.match(source, /title: 'All Projects'/);
+  assert.match(source, /title: 'All Projects'[\s\S]*id: 'current-project'/);
+  assert.match(
+    source,
+    /onOpenProjects=\{\(\) => \{[\s\S]*setFocusedProjectPath\(''\)[\s\S]*setProjectsOpen\(true\)/,
+  );
+});
+
+test('Lab and workspace transitions close Core Work explicitly', () => {
   assert.match(
     source,
     /onOpenLab=\{\(\) => \{[\s\S]*setCoreWorkOpen\(false\)[\s\S]*setLabOpen\(true\)/,

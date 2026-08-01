@@ -1541,3 +1541,102 @@ export const inputStyle: React.CSSProperties = {
   borderRadius: 4,
   color: '#cccccc',
 };
+
+export type ControlTone =
+  | 'default'
+  | 'primary'
+  | 'success'
+  | 'warning'
+  | 'danger';
+
+const CONTROL_TONES: Record<
+  ControlTone,
+  { border: string; background: string; color: string }
+> = {
+  default: {
+    border: '#4b4b4b',
+    background: '#2d2d30',
+    color: '#f1f1f1',
+  },
+  primary: {
+    border: '#4fc1ff',
+    background: '#0e639c',
+    color: '#f1f1f1',
+  },
+  success: {
+    border: '#4ec9b0',
+    background: '#184b32',
+    color: '#f1f1f1',
+  },
+  warning: {
+    border: '#d7ba7d',
+    background: '#3b321f',
+    color: '#f1f1f1',
+  },
+  danger: {
+    border: '#f48771',
+    background: '#5a1d1d',
+    color: '#f1f1f1',
+  },
+};
+
+export function controlButtonStyle({
+  tone = 'default',
+  disabled = false,
+}: {
+  tone?: ControlTone;
+  disabled?: boolean;
+} = {}): React.CSSProperties {
+  const colors = CONTROL_TONES[tone];
+  return {
+    ...mono,
+    minHeight: 34,
+    padding: '6px 10px',
+    border: `1px solid ${colors.border}`,
+    borderRadius: 5,
+    background: colors.background,
+    color: colors.color,
+    cursor: disabled ? 'default' : 'pointer',
+    fontWeight: tone === 'primary' || tone === 'success' ? 700 : 500,
+    opacity: disabled ? 0.62 : 1,
+  };
+}
+
+export const controlSelectStyle: React.CSSProperties = {
+  ...mono,
+  minHeight: 34,
+  padding: '6px 30px 6px 9px',
+  border: '1px solid #4b4b4b',
+  borderRadius: 5,
+  background: '#2d2d30',
+  color: '#f1f1f1',
+  colorScheme: 'dark',
+  cursor: 'pointer',
+};
+
+export const controlMenuStyle: React.CSSProperties = {
+  position: 'absolute',
+  zIndex: 80,
+  padding: 4,
+  border: '1px solid #4b4b4b',
+  borderRadius: 6,
+  background: '#252526',
+  boxShadow: '0 12px 28px rgba(0,0,0,.45)',
+};
+
+export function controlMenuItemStyle(selected = false): React.CSSProperties {
+  return {
+    ...mono,
+    display: 'block',
+    width: '100%',
+    minHeight: 32,
+    padding: '7px 9px',
+    border: 'none',
+    borderRadius: 4,
+    background: selected ? '#04395e' : 'transparent',
+    color: '#f1f1f1',
+    textAlign: 'left',
+    cursor: 'pointer',
+    whiteSpace: 'nowrap',
+  };
+}

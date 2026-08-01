@@ -4,6 +4,8 @@ import test from 'node:test';
 import {
   RESTORING_RETAINED_AGENT_RESULT,
   assignmentSelector,
+  isProjectWorkReviewable,
+  isProjectWorkSettled,
   preferredProjectReviewRun,
   resolveWorkProject,
   settleRetainedProjectRunBusy,
@@ -63,6 +65,25 @@ test('retained run restoration releases only its own busy state', () => {
     settleRetainedProjectRunBusy('Preparing a fresh independent review…'),
     'Preparing a fresh independent review…',
   );
+});
+
+test('Project Work review follows the native phase and never reopens settled Work', () => {
+  for (const phase of ['executing', 'stage-ready', 'completion-claimed']) {
+    assert.equal(isProjectWorkReviewable({ phase }), true);
+    assert.equal(isProjectWorkSettled({ phase }), false);
+  }
+
+  assert.equal(
+    isProjectWorkReviewable({ phase: 'continuation-decided' }),
+    false,
+  );
+  assert.equal(isProjectWorkSettled({ phase: 'continuation-decided' }), true);
+  assert.equal(
+    isProjectWorkReviewable({ phase: 'executing', settled: true }),
+    false,
+  );
+  assert.equal(isProjectWorkSettled({ settled: true }), true);
+  assert.equal(isProjectWorkReviewable(undefined), false);
 });
 
 test('Project Work keeps the active or passed independent review visible', () => {

@@ -10,6 +10,7 @@ import type {
   ProjectTemplateWorkspaceSelection,
   ProjectWork,
   ProjectWorkReference,
+  ProjectWorkRunEvent,
   Projects,
   WorkClosePlan,
   WorkCloseReceipt,
@@ -1675,6 +1676,81 @@ export const PROJECT_TOUR_STORY_STEPS = [
   'Capture another Work and show the complete Project Work inventory',
 ] as const;
 
+export const PROJECT_TOUR_GUIDE_SCENES = [
+  {
+    id: 'starter-project',
+    kicker: 'NEW USER · STARTER PROJECT',
+    title: '先从一个真实、可丢弃的 Project 开始',
+    detail:
+      '文件树、Work 和后续证据都写入这个隔离 Project；演示不会触碰你的真实项目。',
+  },
+  {
+    id: 'connection-loss',
+    kicker: 'COMMON FAILURE · CONNECTION LOST',
+    title: '第一次执行模拟连接中断（exit 75）',
+    detail:
+      '下面播放 Mock Agent 返回的真实公开事件；连接断开不会让 Work 消失或被误判为完成。',
+  },
+  {
+    id: 'connection-retained',
+    kicker: 'KUNGFU RETAINS THE ATTEMPT',
+    title: '失败的 Attempt 已保留，Work 仍然存在',
+    detail:
+      '你可以离开终端后再回来；Kungfu 保留同一个 Work 身份、失败证据和下一步。',
+  },
+  {
+    id: 'agent-crash',
+    kicker: 'COMMON FAILURE · PROCESS CRASH',
+    title: '第二次执行模拟 Agent 进程崩溃（exit 23）',
+    detail:
+      '这是新的 Attempt，不是新的 Work。下面仍然只显示 Mock Agent 与 Kungfu 的真实事件。',
+  },
+  {
+    id: 'same-work',
+    kicker: 'ONE WORK · MULTIPLE ATTEMPTS',
+    title: '两次故障都归属于同一个 Work',
+    detail:
+      '重试不会丢失目标、验收条件或既有 Attempt；右侧可以看到完整的保留链。',
+  },
+  {
+    id: 'recovery',
+    kicker: 'RECOVERY ATTEMPT',
+    title: '第三次启动一个全新的 Mock Agent 进程',
+    detail:
+      '它读取 Project 文件并写出确定性的恢复报告，过程事件将在下方逐条播放。',
+  },
+  {
+    id: 'agent-exit',
+    kicker: 'AGENT EXIT IS NOT COMPLETION',
+    title: 'Agent 成功退出，只代表产生了候选证据',
+    detail:
+      'Kungfu 不接受 Agent 自我认证；Work 必须继续经过独立审查和原生结算。',
+  },
+  {
+    id: 'independent-review',
+    kicker: 'INDEPENDENT REVIEW',
+    title: '启动一个全新的只读 Mock Reviewer',
+    detail:
+      'Reviewer 不继承执行 Agent 的 transcript，并逐项核对验收条件；真实 review 事件显示在下方。',
+  },
+  {
+    id: 'native-settlement',
+    kicker: 'NATIVE SETTLEMENT',
+    title: '审查通过后，仍由原生 Work authority 结算',
+    detail:
+      'Review 不是完成按钮；只有 proof-bound receipt 可以把 Work 变成 settled。',
+  },
+  {
+    id: 'next-work',
+    kicker: 'KEEP THE WORK WHEN THE CHAT ENDS',
+    title: '旧 Work 已完成，下一项 Work 已被捕获',
+    detail:
+      'Project 同时保留完成历史和新的待办；这就是可以跨中断恢复的日常工作循环。',
+  },
+] as const;
+
+export type ProjectTourGuideScene = (typeof PROJECT_TOUR_GUIDE_SCENES)[number];
+
 export type ProjectTourResult =
   | {
       state: 'completed';
@@ -1694,6 +1770,110 @@ type TourEvent = {
   detail: string;
   tone: 'good' | 'bad' | 'info';
 };
+
+export type ProjectTourStreamLine = {
+  id: number;
+  section: string;
+  sectionTag: string;
+  index: number | null;
+  source: 'agent' | 'tool' | 'kungfu' | 'receipt';
+  status: string;
+  text: string;
+};
+
+export function projectTourProtocolLine(
+  event: ProjectWorkRunEvent | WorkReviewEvent,
+  section: string,
+  sectionTag: string,
+  id: number,
+): ProjectTourStreamLine {
+  return {
+    id,
+    section,
+    sectionTag,
+    index: event.index,
+    source: event.activity?.kind ?? 'kungfu',
+    status: event.status,
+    text: event.activity?.text || event.text,
+  };
+}
+
+export function projectTourLayout(rows: number): {
+  canvasRows: number;
+  summaryRows: number;
+  streamRows: number;
+  visibleStreamRows: number;
+} {
+  const canvasRows = Math.max(12, terminalCanvasRows(rows) - 3);
+  const availableRows = Math.max(9, canvasRows - 3);
+  const summaryRows = Math.max(
+    5,
+    Math.min(12, Math.floor(availableRows * 0.44)),
+  );
+  const streamRows = Math.max(4, availableRows - summaryRows);
+  return {
+    canvasRows,
+    summaryRows,
+    streamRows,
+    visibleStreamRows: Math.max(2, streamRows - 3),
+  };
+}
+
+function terminalCharacterWidth(character: string): number {
+  const code = character.codePointAt(0) ?? 0;
+  if (code === 0 || code < 32 || (code >= 0x7f && code < 0xa0)) return 0;
+  if (
+    code >= 0x1100 &&
+    (code <= 0x115f ||
+      code === 0x2329 ||
+      code === 0x232a ||
+      (code >= 0x2e80 && code <= 0xa4cf && code !== 0x303f) ||
+      (code >= 0xac00 && code <= 0xd7a3) ||
+      (code >= 0xf900 && code <= 0xfaff) ||
+      (code >= 0xfe10 && code <= 0xfe19) ||
+      (code >= 0xfe30 && code <= 0xfe6f) ||
+      (code >= 0xff00 && code <= 0xff60) ||
+      (code >= 0xffe0 && code <= 0xffe6) ||
+      (code >= 0x1f300 && code <= 0x1faff) ||
+      (code >= 0x20000 && code <= 0x3fffd))
+  )
+    return 2;
+  return 1;
+}
+
+function projectTourWrapLine(value: string, width: number): string[] {
+  const lines: string[] = [];
+  let line = '';
+  let cells = 0;
+  for (const character of value) {
+    const characterWidth = terminalCharacterWidth(character);
+    if (cells + characterWidth > width && line) {
+      lines.push(line.padEnd(line.length + width - cells));
+      line = '';
+      cells = 0;
+    }
+    line += character;
+    cells += characterWidth;
+  }
+  lines.push(line.padEnd(line.length + width - cells));
+  return lines;
+}
+
+export function projectTourGuidePanelLines(
+  scene: ProjectTourGuideScene,
+  width: number,
+): string[] {
+  const fit = (value: string) => projectTourWrapLine(value, width)[0];
+  const detail = projectTourWrapLine(scene.detail, width).slice(0, 2);
+  return [
+    fit(`TOUR GUIDE · ${scene.kicker}`),
+    fit(scene.title),
+    detail[0] ?? ' '.repeat(width),
+    detail[1] ?? ' '.repeat(width),
+    ' '.repeat(width),
+    fit('真实事件流已暂停 · 导览将自动继续'),
+  ];
+}
 
 const wait = (milliseconds: number) =>
   new Promise<void>((resolve) => setTimeout(resolve, milliseconds));
@@ -1719,21 +1899,27 @@ export function ProjectTourView({
   projects,
   destination,
   columns,
+  rows,
   onSettled,
 }: {
   lab: AgentWorkLab;
   projects: Projects;
   destination: string;
   columns: number;
+  rows: number;
   onSettled: (result: ProjectTourResult) => void;
 }) {
   const [step, setStep] = React.useState(0);
-  const [status, setStatus] = React.useState(
-    'Preparing an isolated Starter Project…',
-  );
   const [events, setEvents] = React.useState<TourEvent[]>([]);
   const [files, setFiles] = React.useState<ProjectFileTreeEntry[]>([]);
   const [works, setWorks] = React.useState<ProjectWork[]>([]);
+  const [guide, setGuide] = React.useState<ProjectTourGuideScene | null>(null);
+  const [streamHeading, setStreamHeading] = React.useState(
+    'WAITING FOR MOCK AGENT',
+  );
+  const [streamLines, setStreamLines] = React.useState<ProjectTourStreamLine[]>(
+    [],
+  );
   const started = React.useRef(false);
 
   React.useEffect(() => {
@@ -1743,7 +1929,6 @@ export function ProjectTourView({
     const record = (event: TourEvent) => {
       if (!active) return;
       setEvents((current) => [...current, event].slice(-8));
-      setStatus(event.detail);
     };
     const refreshFiles = () => {
       if (!active) return;
@@ -1760,9 +1945,60 @@ export function ProjectTourView({
       if (active) setWorks(inventory.works);
       return inventory;
     };
+    let streamSequence = 0;
+    const showGuide = async (scene: ProjectTourGuideScene) => {
+      if (!active) return;
+      setGuide(scene);
+      await wait(1650);
+      if (active) setGuide(null);
+      await wait(140);
+    };
+    const replayEvents = async (
+      section: string,
+      sectionTag: string,
+      captured: Array<ProjectWorkRunEvent | WorkReviewEvent>,
+    ) => {
+      if (!active) return;
+      setStreamHeading(section);
+      for (const event of captured) {
+        if (!active) return;
+        streamSequence += 1;
+        const line = projectTourProtocolLine(
+          event,
+          section,
+          sectionTag,
+          streamSequence,
+        );
+        setStreamLines((current) => [...current, line].slice(-120));
+        await wait(event.activity ? 260 : 150);
+      }
+    };
+    const recordReceipt = (
+      section: string,
+      sectionTag: string,
+      receipt: WorkCloseReceipt,
+    ) => {
+      if (!active) return;
+      streamSequence += 1;
+      setStreamHeading(section);
+      setStreamLines((current) => [
+        ...current,
+        {
+          id: streamSequence,
+          section,
+          sectionTag,
+          index: null,
+          source: 'receipt',
+          status: receipt.status,
+          text: `${receipt.status} · Work ${receipt.workPhase} · ${receipt.receiptRoot}`,
+        },
+      ]);
+    };
     const runAttempt = async (
       assignmentId: string,
       expectedStatus: 'agent-failed' | 'agent-finished',
+      section: string,
+      sectionTag: string,
     ): Promise<WorkStartReceipt> => {
       const plan = await projects.planRun('mock', {
         workspace: destination,
@@ -1774,6 +2010,8 @@ export function ProjectTourView({
           `Mock recovery Work plan is blocked: binding=${plan.admissionBinding.state}; agent=${plan.agent.verification.error ?? (plan.agent.verification.ok ? 'verified' : 'unavailable')}`,
         );
       }
+      const captured: ProjectWorkRunEvent[] = [];
+      setStreamHeading(`${section} · RUNNING`);
       const receipt = await projects.run(
         'mock',
         {
@@ -1782,8 +2020,9 @@ export function ProjectTourView({
           scenario: 'recovery-story',
           expectedPlanRoot: plan.planRoot,
         },
-        () => undefined,
+        (event) => captured.push(event),
       );
+      await replayEvents(section, sectionTag, captured);
       if (receipt.status !== expectedStatus) {
         throw new Error(
           `Mock recovery attempt returned ${receipt.status}; expected ${expectedStatus}`,
@@ -1802,6 +2041,7 @@ export function ProjectTourView({
         const initial = await refreshWorks();
         const work = initial.activeWork ?? initial.works[0];
         if (!work) throw new Error('Starter Project has no captured Work');
+        await showGuide(PROJECT_TOUR_GUIDE_SCENES[0]);
         record({
           title: 'Starter Project created',
           detail:
@@ -1811,9 +2051,12 @@ export function ProjectTourView({
         await wait(650);
 
         setStep(2);
+        await showGuide(PROJECT_TOUR_GUIDE_SCENES[1]);
         const disconnected = await runAttempt(
           work.assignmentId,
           'agent-failed',
+          'MOCK AGENT · ATTEMPT 1',
+          'A1',
         );
         record({
           title: 'Connection lost · exit 75',
@@ -1822,10 +2065,17 @@ export function ProjectTourView({
           tone: 'bad',
         });
         await refreshWorks();
+        await showGuide(PROJECT_TOUR_GUIDE_SCENES[2]);
         await wait(700);
 
         setStep(3);
-        const crashed = await runAttempt(work.assignmentId, 'agent-failed');
+        await showGuide(PROJECT_TOUR_GUIDE_SCENES[3]);
+        const crashed = await runAttempt(
+          work.assignmentId,
+          'agent-failed',
+          'MOCK AGENT · ATTEMPT 2',
+          'A2',
+        );
         record({
           title: 'Agent process crashed · exit 23',
           detail:
@@ -1833,10 +2083,17 @@ export function ProjectTourView({
           tone: 'bad',
         });
         await refreshWorks();
+        await showGuide(PROJECT_TOUR_GUIDE_SCENES[4]);
         await wait(700);
 
         setStep(4);
-        const completed = await runAttempt(work.assignmentId, 'agent-finished');
+        await showGuide(PROJECT_TOUR_GUIDE_SCENES[5]);
+        const completed = await runAttempt(
+          work.assignmentId,
+          'agent-finished',
+          'MOCK AGENT · RECOVERY ATTEMPT',
+          'REC',
+        );
         refreshFiles();
         record({
           title: 'Fresh attempt produced evidence',
@@ -1844,16 +2101,23 @@ export function ProjectTourView({
             'Mock Agent wrote deliverables/mock-agent-recovery-report.md; process exit still did not settle Work.',
           tone: 'good',
         });
+        await showGuide(PROJECT_TOUR_GUIDE_SCENES[6]);
         await wait(700);
 
         setStep(5);
+        await showGuide(PROJECT_TOUR_GUIDE_SCENES[7]);
         const reviewPlan = await lab.planStarterReview(
           completed,
           'kungfu.mock-agent.review-fit',
         );
         if (!reviewPlan.executable)
           throw new Error('Mock review plan is blocked');
-        const review = await lab.runStarterReview(reviewPlan);
+        const reviewEvents: WorkReviewEvent[] = [];
+        setStreamHeading('INDEPENDENT REVIEW · RUNNING');
+        const review = await lab.runStarterReview(reviewPlan, (event) =>
+          reviewEvents.push(event),
+        );
+        await replayEvents('INDEPENDENT REVIEW', 'REV', reviewEvents);
         if (review.status !== 'review-passed') {
           throw new Error(
             `Mock review returned ${review.status}: ${review.message ?? 'no settlement detail'}`,
@@ -1871,6 +2135,8 @@ export function ProjectTourView({
         if (closed.status !== 'completed') {
           throw new Error(`Native Work close returned ${closed.status}`);
         }
+        await showGuide(PROJECT_TOUR_GUIDE_SCENES[8]);
+        recordReceipt('NATIVE SETTLEMENT', 'SET', closed);
         record({
           title: 'Independent review and native settlement',
           detail:
@@ -1892,6 +2158,7 @@ export function ProjectTourView({
           detail: `${finalInventory.works.length} Works are visible: completed history plus the next captured outcome.`,
           tone: 'info',
         });
+        await showGuide(PROJECT_TOUR_GUIDE_SCENES[9]);
         await wait(1100);
 
         const evidence = {
@@ -1927,20 +2194,27 @@ export function ProjectTourView({
     };
   }, [destination, lab, onSettled, projects]);
 
+  const layout = projectTourLayout(rows);
   const fileWidth = Math.min(38, Math.max(24, Math.floor(columns * 0.26)));
   const workWidth = Math.min(48, Math.max(32, Math.floor(columns * 0.3)));
+  const visibleStreamLines = streamLines.slice(-layout.visibleStreamRows);
+  const guidePanelLines = guide
+    ? projectTourGuidePanelLines(guide, Math.max(1, columns - 4))
+    : [];
   return (
-    <Box flexDirection="column" width={columns}>
-      <Box borderStyle="round" borderColor="cyan" paddingX={1}>
-        <Text bold color="cyan">
-          Kungfu Project → Work → Agent · recovery tour
-        </Text>
-        <Text dimColor>
-          {' '}
-          STEP {Math.min(step + 1, 7)}/7 · {path.basename(destination)}
+    <Box
+      flexDirection="column"
+      width={columns}
+      height={layout.canvasRows}
+      overflow="hidden"
+    >
+      <Box height={3} borderStyle="round" borderColor="cyan" paddingX={1}>
+        <Text bold color="cyan" wrap="truncate-end">
+          Kungfu Project → Work → Agent · STEP {Math.min(step + 1, 7)}/7 ·{' '}
+          {path.basename(destination)}
         </Text>
       </Box>
-      <Box flexDirection="row" flexGrow={1}>
+      <Box flexDirection="row" height={layout.summaryRows} overflow="hidden">
         <Box
           width={fileWidth}
           flexDirection="column"
@@ -1952,7 +2226,7 @@ export function ProjectTourView({
           {files.length === 0 ? (
             <Text dimColor>Creating Starter files…</Text>
           ) : (
-            files.slice(0, 15).map((entry) => (
+            files.slice(0, Math.max(2, layout.summaryRows - 3)).map((entry) => (
               <Text
                 key={entry.relativePath}
                 color={
@@ -1977,29 +2251,31 @@ export function ProjectTourView({
           {works.length === 0 ? (
             <Text dimColor>Loading captured Work…</Text>
           ) : (
-            works.map((work, index) => (
-              <Box
-                key={`${work.initiativeId}:${work.assignmentId}`}
-                flexDirection="column"
-                marginTop={index ? 1 : 0}
-              >
-                <Text
-                  color={
-                    work.settled
-                      ? 'green'
-                      : work.phase === 'executing'
-                        ? 'yellow'
-                        : 'cyan'
-                  }
+            works
+              .slice(0, Math.max(1, layout.summaryRows - 3))
+              .map((work, index) => (
+                <Box
+                  key={`${work.initiativeId}:${work.assignmentId}`}
+                  flexDirection="column"
+                  marginTop={index ? 1 : 0}
                 >
-                  {work.settled ? '✓' : '●'} {work.title}
-                </Text>
-                <Text dimColor>
-                  {' '}
-                  {shortWorkState(work)} · {work.assignmentId}
-                </Text>
-              </Box>
-            ))
+                  <Text
+                    color={
+                      work.settled
+                        ? 'green'
+                        : work.phase === 'executing'
+                          ? 'yellow'
+                          : 'cyan'
+                    }
+                  >
+                    {work.settled ? '✓' : '●'} {work.title}
+                  </Text>
+                  <Text dimColor>
+                    {' '}
+                    {shortWorkState(work)} · {work.assignmentId}
+                  </Text>
+                </Box>
+              ))
           )}
         </Box>
         <Box
@@ -2010,34 +2286,84 @@ export function ProjectTourView({
           paddingX={1}
         >
           <Text bold>RETAINED ATTEMPTS + SETTLEMENT</Text>
-          {events.map((event, index) => (
-            <Box
-              key={`${event.title}:${index}`}
-              flexDirection="column"
-              marginTop={index ? 1 : 0}
-            >
-              <Text
-                color={
-                  event.tone === 'good'
-                    ? 'green'
-                    : event.tone === 'bad'
-                      ? 'red'
-                      : 'cyan'
-                }
+          {events
+            .slice(-Math.max(1, Math.floor((layout.summaryRows - 3) / 2)))
+            .map((event, index) => (
+              <Box
+                key={`${event.title}:${index}`}
+                flexDirection="column"
+                marginTop={index ? 1 : 0}
               >
-                {event.tone === 'bad' ? '!' : '✓'} {event.title}
-              </Text>
-              <Text dimColor>{event.detail}</Text>
-            </Box>
-          ))}
+                <Text
+                  color={
+                    event.tone === 'good'
+                      ? 'green'
+                      : event.tone === 'bad'
+                        ? 'red'
+                        : 'cyan'
+                  }
+                >
+                  {event.tone === 'bad' ? '!' : '✓'} {event.title}
+                </Text>
+                <Text dimColor>{event.detail}</Text>
+              </Box>
+            ))}
         </Box>
       </Box>
-      <Box borderStyle="round" borderColor="cyan" paddingX={1}>
-        <Text color="cyan">{status}</Text>
-        <Text dimColor>
-          {' '}
-          Mock Agent is explicit; exit never grants completion authority.
-        </Text>
+      <Box
+        height={layout.streamRows}
+        flexDirection="column"
+        borderStyle={guide ? 'double' : 'round'}
+        borderColor={guide ? 'magenta' : 'cyan'}
+        paddingX={1}
+        overflow="hidden"
+      >
+        {guide ? (
+          guidePanelLines.map((line, index) => (
+            <Text
+              key={`${guide.id}:${index}`}
+              bold={index < 2}
+              color={index === 0 ? 'magenta' : index === 5 ? 'gray' : 'white'}
+              backgroundColor="blue"
+            >
+              {line}
+            </Text>
+          ))
+        ) : (
+          <>
+            <Text bold color="cyan" wrap="truncate-end">
+              AGENT EVENT STREAM · {streamHeading}
+            </Text>
+            {visibleStreamLines.length === 0 ? (
+              <Text dimColor>
+                Waiting for the first admitted Mock Agent event…
+              </Text>
+            ) : null}
+            {visibleStreamLines.map((line) => (
+              <Text
+                key={line.id}
+                wrap="truncate-end"
+                color={
+                  line.status === 'failed'
+                    ? 'red'
+                    : line.status === 'completed' || line.source === 'receipt'
+                      ? 'green'
+                      : line.source === 'agent'
+                        ? 'cyan'
+                        : line.source === 'tool'
+                          ? 'yellow'
+                          : undefined
+                }
+              >
+                {line.sectionTag.padEnd(3)}{' '}
+                {line.index === null
+                  ? '--'
+                  : String(line.index).padStart(2, '0')}{' '}
+                {line.source.padEnd(7)} {line.text}
+              </Text>
+            ))}
+          </>
+        )}
       </Box>
     </Box>
   );

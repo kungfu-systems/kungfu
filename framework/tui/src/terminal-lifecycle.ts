@@ -107,6 +107,57 @@ export function tuiChildCliEnvironment(
   return child;
 }
 
+export function resolveTuiAgentSessionPaths({
+  env,
+  argvEntry,
+  modulePath,
+  exists = fs.existsSync,
+}: {
+  env: NodeJS.ProcessEnv;
+  argvEntry?: string;
+  modulePath: string;
+  exists?: (candidate: string) => boolean;
+}): {
+  packageRoot: string;
+  workerPath: string;
+  mockPath: string;
+} {
+  const configuredEntry = env.KUNGFU_TUI_ENTRY;
+  const extensionRoot = env.KF_BUNDLED_EXTENSION_ROOT;
+  const extensionDerivedEntries = extensionRoot
+    ? [
+        path.resolve(extensionRoot, '..', 'tui', 'tui.mjs'),
+        path.resolve(
+          extensionRoot,
+          '..',
+          '..',
+          'framework',
+          'tui',
+          'dist',
+          'tui.mjs',
+        ),
+      ]
+    : [];
+  const activeEntry = [configuredEntry, argvEntry, ...extensionDerivedEntries]
+    .filter((candidate): candidate is string => Boolean(candidate))
+    .find(exists);
+  const resolvedEntry = path.resolve(activeEntry || modulePath);
+  const bundleDir = path.dirname(resolvedEntry);
+  const packagedWorker = path.join(bundleDir, 'agent-session-worker.mjs');
+  const packagedMock = path.join(bundleDir, 'mock-agent.mjs');
+  const packageRoot = path.resolve(bundleDir, '..', '..', 'agent-session');
+
+  return {
+    packageRoot,
+    workerPath: exists(packagedWorker)
+      ? packagedWorker
+      : path.join(packageRoot, 'src', 'product-worker.mjs'),
+    mockPath: exists(packagedMock)
+      ? packagedMock
+      : path.join(packageRoot, 'src', 'mock-provider.mjs'),
+  };
+}
+
 export function resolveTuiProductPaths({
   env,
   resolveCorePackageJson,

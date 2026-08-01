@@ -210,6 +210,8 @@ exit /b !errorlevel!
 :kungfucli
 shift
 if exist "%~dp0framework\core\dist\kungfu\kungfu.exe" (
+  if not defined KUNGFU_TUI_ENTRY if exist "%~dp0framework\tui\dist\tui.mjs" set "KUNGFU_TUI_ENTRY=%~dp0framework\tui\dist\tui.mjs"
+  if not defined KF_BUNDLED_EXTENSION_ROOT if exist "%~dp0product\extensions\agent-work-lab\experience\starter-project.json" set "KF_BUNDLED_EXTENSION_ROOT=%~dp0product\extensions"
   "%~dp0framework\core\dist\kungfu\kungfu.exe" %*
   exit /b !errorlevel!
 )
