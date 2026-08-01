@@ -6,10 +6,18 @@ import type { DomainState } from '@kungfu-tech/api/capability';
 import type {
   ShellNotification,
   ShellState,
+  StatusBarItem,
   StatusBarSeverity,
 } from '@kungfu-tech/kfx';
+import React from 'react';
 
-import type { RuntimeStatusResult } from '../../runtime-status';
+import {
+  EXIT_HISTORY_STATUS_FALLBACK,
+  type ExitHistoryStatus,
+  type RuntimeStatusResult,
+  observeExitHistoryStatus,
+} from '../../runtime-status';
+import { guiKungfuCliArgs } from './runtime';
 
 export const SHELL_STATE_LOCATION = {
   role: 'system',
@@ -110,6 +118,38 @@ export function trustTooltip(status: RuntimeStatusResult | null): string {
       }`;
     })
     .join('\n\n');
+}
+
+export function useExitHistoryStatus(runtimeOk: boolean): ExitHistoryStatus {
+  const [status, setStatus] = React.useState<ExitHistoryStatus>(
+    EXIT_HISTORY_STATUS_FALLBACK,
+  );
+
+  React.useEffect(() => {
+    if (!runtimeOk) {
+      setStatus(EXIT_HISTORY_STATUS_FALLBACK);
+      return undefined;
+    }
+    return observeExitHistoryStatus(window, guiKungfuCliArgs, setStatus);
+  }, [runtimeOk]);
+
+  return status;
+}
+
+export function exitHistoryStatusItem(
+  status: ExitHistoryStatus,
+  command: StatusBarItem['command'],
+): StatusBarItem {
+  return {
+    id: 'system.history-protection',
+    text: `history: ${status.state}`,
+    icon: status.ok ? '◇' : '!',
+    severity: status.ok ? 'ok' : 'warning',
+    side: 'left',
+    priority: -80,
+    tooltip: `Coverage: ${status.coverage}. Last verified export: ${status.lastVerifiedExport?.bundleId ?? 'none'}. Next: ${status.nextActions[0]}`,
+    command,
+  };
 }
 
 export function notificationColor(level: ShellNotification['level']): string {

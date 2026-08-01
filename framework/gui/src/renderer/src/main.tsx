@@ -51,11 +51,8 @@ import {
   profileHomeId,
 } from '../../navigation';
 import {
-  EXIT_HISTORY_STATUS_FALLBACK,
-  type ExitHistoryStatus,
   type RuntimeStatusResult,
   deriveWorkspaceRuntimePresentation,
-  observeExitHistoryStatus,
 } from '../../runtime-status';
 import {
   GLOBAL_WORK_OBSERVER_EVENT_CHANNEL,
@@ -105,6 +102,7 @@ import {
 import { sandboxClient } from './sandbox-client';
 import {
   DEFAULT_STATE,
+  exitHistoryStatusItem,
   loadShellState,
   notificationColor,
   notificationId,
@@ -112,6 +110,7 @@ import {
   statusColor,
   trustStatusText,
   trustTooltip,
+  useExitHistoryStatus,
 } from './shell-state';
 
 // Modules injected into every kfx bundle (the externals contract of
@@ -1095,9 +1094,7 @@ function App() {
   const [configError, setConfigError] = React.useState('');
   const [runtimeStatus, setRuntimeStatus] =
     React.useState<RuntimeStatusResult | null>(null);
-  const [historyStatus, setHistoryStatus] = React.useState<ExitHistoryStatus>(
-    EXIT_HISTORY_STATUS_FALLBACK,
-  );
+  const historyStatus = useExitHistoryStatus(runtime.ok);
   const [statusBarItems, setStatusBarItems] = React.useState<
     Record<string, StatusBarItem>
   >({});
@@ -1106,14 +1103,6 @@ function App() {
   );
   const notificationTimers = React.useRef(new Map<string, number>());
   const startupViewApplied = React.useRef(false);
-
-  React.useEffect(() => {
-    if (!runtime.ok) {
-      setHistoryStatus(EXIT_HISTORY_STATUS_FALLBACK);
-      return undefined;
-    }
-    return observeExitHistoryStatus(window, guiKungfuCliArgs, setHistoryStatus);
-  }, [runtime.ok]);
 
   React.useEffect(() => {
     if (startupViewApplied.current || !config) return;
@@ -1880,16 +1869,7 @@ function App() {
       tooltip: trustTooltip(runtimeStatus),
       command: statusCommand,
     },
-    {
-      id: 'system.history-protection',
-      text: `history: ${historyStatus.state}`,
-      icon: historyStatus.ok ? '◇' : '!',
-      severity: historyStatus.ok ? 'ok' : 'warning',
-      side: 'left',
-      priority: -80,
-      tooltip: `Coverage: ${historyStatus.coverage}. Last verified export: ${historyStatus.lastVerifiedExport?.bundleId ?? 'none'}. Next: ${historyStatus.nextActions[0]}`,
-      command: statusCommand,
-    },
+    exitHistoryStatusItem(historyStatus, statusCommand),
     {
       id: 'system.profile',
       text: `profile: ${profile.id}`,

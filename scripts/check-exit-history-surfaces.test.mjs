@@ -23,6 +23,7 @@ const history = read('framework/core/src/python/kungfu/exit_verifier.py');
 const tui = read('framework/tui/src/main.tsx');
 const gui = read('framework/gui/src/renderer/src/main.tsx');
 const guiObserver = read('framework/gui/src/runtime-status.ts');
+const guiHistory = read('framework/gui/src/renderer/src/shell-state.ts');
 
 const expected = new Map([
   ['kungfu exit history status', ['read', 'kungfu.exit.bundle']],
@@ -73,13 +74,14 @@ test('GUI and TUI observe the same status and exact next action', () => {
   assert.match(guiObserver, /\['exit', 'history', 'status', '--json'\]/u);
   assert.match(guiObserver, /EXIT_HISTORY_STATUS_FALLBACK/u);
   assert.match(guiObserver, /kungfu exit history status --json/u);
-  assert.match(gui, /historyStatus\.nextActions\[0\]/u);
+  assert.match(guiHistory, /status\.nextActions\[0\]/u);
   assert.match(tui, /\['exit', 'history', 'status', '--json'\]/u);
   assert.match(tui, /historyStatus\.nextActions\[0\]/u);
   assert.match(tui, /EXIT_HISTORY_STATUS_FALLBACK/u);
   assert.match(tui, /kungfu exit history status --json/u);
   assert.match(tui, /History \{historyStatus\.state\}/u);
-  assert.match(gui, /system\.history-protection/u);
+  assert.match(guiHistory, /system\.history-protection/u);
+  assert.match(gui, /exitHistoryStatusItem\(historyStatus, statusCommand\)/u);
 });
 
 test('contract keeps honest status, loss, and rebuild semantics', () => {
