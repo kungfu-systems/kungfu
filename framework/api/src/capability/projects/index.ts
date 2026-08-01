@@ -8,6 +8,7 @@ import type { AgentRuntimeCatalog } from '../agent-runtime.js';
 import type { AgentSession } from '../agent-session.js';
 import type {
   ProjectWork,
+  ProjectWorkResume,
   WorkReviewEvent,
   WorkReviewPlan,
   WorkReviewReceipt,
@@ -669,6 +670,10 @@ export type Projects = {
     },
     onEvent?: (event: ProjectWorkRunEvent) => void,
   ) => Promise<ProjectWorkRunReceipt>;
+  resumeRun: (
+    workspace: string,
+    work: Pick<ProjectWork, 'initiativeId' | 'assignmentId'>,
+  ) => Promise<ProjectWorkRunSnapshot | null>;
   planReview: (
     runId: string,
     reviewerProfileId?: string,
@@ -1082,6 +1087,54 @@ export function openProjects(options: ProjectCommandOptions): Projects {
     }
     return run.receipt;
   };
+  const restoreRun = async (
+    receipt: ProjectWorkRunReceipt,
+    workspace: string,
+  ): Promise<ProjectWorkRunSnapshot> => {
+    const report = receipt.agentReport as
+      | { runId?: string; session?: Record<string, unknown> | null }
+      | undefined;
+    const retained = report?.session;
+    const attemptId = String(
+      retained?.sessionAttemptId ?? report?.runId ?? receipt.receiptRoot,
+    );
+    const runId = `retained:${attemptId}`;
+    const existing = retainedRuns.find(
+      (run) =>
+        run.id === runId ||
+        (run.receipt?.receiptRoot &&
+          run.receipt.receiptRoot === receipt.receiptRoot),
+    );
+    if (!existing) {
+      const now = Date.now();
+      const provider = String(receipt.agent?.provider ?? 'agent');
+      retainedRuns = [
+        {
+          id: runId,
+          provider: provider === 'synthetic' ? 'mock' : provider,
+          workspace,
+          work: String(receipt.work?.assignmentId ?? ''),
+          startedAt: now,
+          lastEventAt: now,
+          running: false,
+          events: [],
+          receipt,
+        },
+        ...retainedRuns,
+      ].slice(0, 8);
+      publishRuns();
+    }
+    const current =
+      retainedRuns.find(
+        (run) =>
+          run.id === runId || run.receipt?.receiptRoot === receipt.receiptRoot,
+      ) ?? null;
+    if (!current) throw new Error('Retained Agent run could not be restored');
+    if (retained?.workConsoleId && options.agentSession) {
+      return (await refreshRun(current.id)) ?? current;
+    }
+    return current;
+  };
   const reportPath = (receipt: ProjectWorkRunReceipt): string => {
     const report = receipt.agentReport as
       | { episode?: { reportPath?: unknown } }
@@ -1436,6 +1489,45 @@ export function openProjects(options: ProjectCommandOptions): Projects {
         throw reason;
       }
     },
+    resumeRun: async (workspace, work) => {
+      await invoke<{
+        schema: 'kungfu.work.resume-prepare/v1';
+        status: 'ready' | 'reconciled';
+        writeOccurred: boolean;
+      }>(
+        [
+          'work',
+          'resume-prepare',
+          '--workspace',
+          workspace,
+          '--actor',
+          'kungfu-product-project-resume',
+          '--execute',
+        ],
+        'kungfu.work.resume-prepare/v1',
+      );
+      const resumed = await invoke<{
+        schema: 'kungfu.work-start.resume/v1';
+        status: 'retained-agent-run' | 'no-retained-agent-run';
+        workReceipt: ProjectWorkResume['workReceipt'] | null;
+        writeOccurred: false;
+      }>(
+        [
+          'work',
+          'start-resume',
+          '--workspace',
+          workspace,
+          '--initiative-id',
+          work.initiativeId,
+          '--assignment-id',
+          work.assignmentId,
+        ],
+        'kungfu.work-start.resume/v1',
+      );
+      return resumed.workReceipt
+        ? restoreRun(resumed.workReceipt, workspace)
+        : null;
+    },
     planReview: async (runId, reviewerProfileId) => {
       const receipt = executionReceipt(runId);
       const workspaceRoot = receipt.workspace?.workspace_root;
@@ -1673,52 +1765,7 @@ export function openProjects(options: ProjectCommandOptions): Projects {
       publishRuns();
       return retainedRuns.map((run) => ({ ...run, events: [...run.events] }));
     },
-    restoreRun: async (receipt, workspace) => {
-      const report = receipt.agentReport as
-        | { runId?: string; session?: Record<string, unknown> | null }
-        | undefined;
-      const retained = report?.session;
-      const attemptId = String(
-        retained?.sessionAttemptId ?? report?.runId ?? receipt.receiptRoot,
-      );
-      const runId = `retained:${attemptId}`;
-      const existing = retainedRuns.find(
-        (run) =>
-          run.id === runId ||
-          (run.receipt?.receiptRoot &&
-            run.receipt.receiptRoot === receipt.receiptRoot),
-      );
-      if (!existing) {
-        const now = Date.now();
-        const provider = String(receipt.agent?.provider ?? 'agent');
-        retainedRuns = [
-          {
-            id: runId,
-            provider: provider === 'synthetic' ? 'mock' : provider,
-            workspace,
-            work: String(receipt.work?.assignmentId ?? ''),
-            startedAt: now,
-            lastEventAt: now,
-            running: false,
-            events: [],
-            receipt,
-          },
-          ...retainedRuns,
-        ].slice(0, 8);
-        publishRuns();
-      }
-      const current =
-        retainedRuns.find(
-          (run) =>
-            run.id === runId ||
-            run.receipt?.receiptRoot === receipt.receiptRoot,
-        ) ?? null;
-      if (!current) throw new Error('Retained Agent run could not be restored');
-      if (retained?.workConsoleId && options.agentSession) {
-        return (await refreshRun(current.id)) ?? current;
-      }
-      return current;
-    },
+    restoreRun,
     refreshRun,
     replyToRun: (runId, text) => controlRun(runId, 'instruct', { text }, false),
     approveRun: async (runId, approved) => {

@@ -1251,6 +1251,19 @@ function GlobalWorkView({
     current?.object_kind === 'assignment'
       ? assignmentSelector(current.subject)
       : undefined;
+  const currentInventoryWork = projectInventory?.works.find(
+    (work) => work.assignmentId === workSelector,
+  );
+  const currentRetainedRun = runs.find(
+    (run) =>
+      run.workspace === currentProject?.path &&
+      run.work === workSelector &&
+      Boolean(run.receipt),
+  );
+  const currentReviewableRun =
+    currentRetainedRun?.receipt?.status === 'agent-finished'
+      ? currentRetainedRun
+      : undefined;
   const visibleRun = runs.find((run) => run.id === visibleRunId) ?? null;
   const prepareRun = (provider: string) => {
     if (!currentProject || !workSelector) return;
@@ -1285,6 +1298,55 @@ function GlobalWorkView({
       )
       .finally(() => setRunBusy(''));
   };
+  const restoredWorkKeys = React.useRef(new Set<string>());
+  React.useEffect(() => {
+    if (
+      projectSection !== 'work' ||
+      !currentProject?.path ||
+      !currentInventoryWork?.phase
+    ) {
+      return;
+    }
+    if (currentRetainedRun) {
+      setVisibleRunId(currentRetainedRun.id);
+      return;
+    }
+    const key = [
+      currentProject.path,
+      currentInventoryWork.initiativeId,
+      currentInventoryWork.assignmentId,
+    ].join('|');
+    if (restoredWorkKeys.current.has(key)) return;
+    restoredWorkKeys.current.add(key);
+    let active = true;
+    setRunBusy('Restoring retained Agent result…');
+    setRunError('');
+    void projects
+      .resumeRun(currentProject.path, currentInventoryWork)
+      .then((run) => {
+        if (active && run) setVisibleRunId(run.id);
+      })
+      .catch((reason) => {
+        if (active) {
+          restoredWorkKeys.current.delete(key);
+          setRunError(
+            reason instanceof Error ? reason.message : String(reason),
+          );
+        }
+      })
+      .finally(() => {
+        if (active) setRunBusy('');
+      });
+    return () => {
+      active = false;
+    };
+  }, [
+    currentInventoryWork,
+    currentProject?.path,
+    currentRetainedRun,
+    projectSection,
+    projects,
+  ]);
   const confirmRun = () => {
     if (!runPlan) return;
     const pending = projects.run(
@@ -1436,123 +1498,134 @@ function GlobalWorkView({
             {current.object_kind === 'assignment' && currentProject ? (
               <>
                 <h2 style={{ ...headingStyle, marginTop: 14 }}>
-                  Run with an Agent
+                  {currentReviewableRun
+                    ? 'Review Agent result'
+                    : 'Run with an Agent'}
                 </h2>
                 <div style={{ ...mono, color: '#858585', marginBottom: 8 }}>
-                  Project · {currentProject.name}. Preview the exact effects
-                  before the Agent starts.
+                  {currentReviewableRun
+                    ? `Project · ${currentProject.name}. The retained Agent result requires an independent review.`
+                    : `Project · ${currentProject.name}. Preview the exact effects before the Agent starts.`}
                 </div>
                 <div style={{ display: 'flex', gap: 7, flexWrap: 'wrap' }}>
-                  <div
-                    style={{
-                      display: 'inline-flex',
-                      position: 'relative',
-                      alignItems: 'stretch',
-                    }}
-                  >
+                  {currentReviewableRun ? (
                     <button
                       type="button"
                       disabled={Boolean(runBusy)}
-                      onClick={() => prepareRun(agentProvider)}
+                      onClick={() => prepareReview(currentReviewableRun)}
                       style={{
                         ...mono,
                         padding: '6px 10px',
                         border: '1px solid #4fc1ff',
-                        borderRight: 'none',
-                        borderRadius: '5px 0 0 5px',
+                        borderRadius: 5,
                         background: '#0e639c',
                         color: '#f1f1f1',
                         cursor: runBusy ? 'wait' : 'pointer',
                         fontWeight: 700,
                       }}
                     >
-                      Run Agent · {agentProviderLabel(agentProvider)}
+                      Review changes
                     </button>
-                    <button
-                      type="button"
-                      aria-label="Choose Agent"
-                      aria-expanded={agentMenuOpen}
-                      disabled={Boolean(runBusy)}
-                      onClick={() => setAgentMenuOpen((open) => !open)}
+                  ) : (
+                    <div
                       style={{
-                        ...mono,
-                        width: 32,
-                        border: '1px solid #4fc1ff',
-                        borderRadius: '0 5px 5px 0',
-                        background: '#0b5686',
-                        color: '#f1f1f1',
-                        cursor: runBusy ? 'wait' : 'pointer',
+                        display: 'inline-flex',
+                        position: 'relative',
+                        alignItems: 'stretch',
                       }}
                     >
-                      ▾
-                    </button>
-                    {agentMenuOpen ? (
-                      <div
-                        role="menu"
-                        aria-label="Agent choices"
+                      <button
+                        type="button"
+                        disabled={Boolean(runBusy)}
+                        onClick={() => prepareRun(agentProvider)}
                         style={{
-                          position: 'absolute',
-                          zIndex: 80,
-                          top: 'calc(100% + 4px)',
-                          left: 0,
-                          minWidth: '100%',
-                          padding: 4,
-                          border: '1px solid #4b4b4b',
-                          borderRadius: 6,
-                          background: '#252526',
-                          boxShadow: '0 12px 28px rgba(0,0,0,.45)',
+                          ...mono,
+                          padding: '6px 10px',
+                          border: '1px solid #4fc1ff',
+                          borderRight: 'none',
+                          borderRadius: '5px 0 0 5px',
+                          background: '#0e639c',
+                          color: '#f1f1f1',
+                          cursor: runBusy ? 'wait' : 'pointer',
+                          fontWeight: 700,
                         }}
                       >
-                        {orderedProviders.map((provider) => (
-                          <button
-                            key={provider}
-                            type="button"
-                            role="menuitemradio"
-                            aria-checked={provider === agentProvider}
-                            onClick={() => {
-                              setAgentProvider(provider);
-                              setAgentMenuOpen(false);
-                            }}
-                            style={{
-                              ...mono,
-                              display: 'block',
-                              width: '100%',
-                              padding: '7px 9px',
-                              border: 'none',
-                              borderRadius: 4,
-                              background:
-                                provider === agentProvider
-                                  ? '#04395e'
-                                  : 'transparent',
-                              color: '#f1f1f1',
-                              textAlign: 'left',
-                              cursor: 'pointer',
-                              whiteSpace: 'nowrap',
-                            }}
-                          >
-                            {provider === agentProvider ? '✓ ' : ''}
-                            {agentProviderLabel(provider)}
-                          </button>
-                        ))}
-                      </div>
-                    ) : null}
-                  </div>
-                  {runs.some(
-                    (run) =>
-                      run.workspace === currentProject.path &&
-                      run.work === workSelector,
-                  ) ? (
+                        Run Agent · {agentProviderLabel(agentProvider)}
+                      </button>
+                      <button
+                        type="button"
+                        aria-label="Choose Agent"
+                        aria-expanded={agentMenuOpen}
+                        disabled={Boolean(runBusy)}
+                        onClick={() => setAgentMenuOpen((open) => !open)}
+                        style={{
+                          ...mono,
+                          width: 32,
+                          border: '1px solid #4fc1ff',
+                          borderRadius: '0 5px 5px 0',
+                          background: '#0b5686',
+                          color: '#f1f1f1',
+                          cursor: runBusy ? 'wait' : 'pointer',
+                        }}
+                      >
+                        ▾
+                      </button>
+                      {agentMenuOpen ? (
+                        <div
+                          role="menu"
+                          aria-label="Agent choices"
+                          style={{
+                            position: 'absolute',
+                            zIndex: 80,
+                            top: 'calc(100% + 4px)',
+                            left: 0,
+                            minWidth: '100%',
+                            padding: 4,
+                            border: '1px solid #4b4b4b',
+                            borderRadius: 6,
+                            background: '#252526',
+                            boxShadow: '0 12px 28px rgba(0,0,0,.45)',
+                          }}
+                        >
+                          {orderedProviders.map((provider) => (
+                            <button
+                              key={provider}
+                              type="button"
+                              role="menuitemradio"
+                              aria-checked={provider === agentProvider}
+                              onClick={() => {
+                                setAgentProvider(provider);
+                                setAgentMenuOpen(false);
+                              }}
+                              style={{
+                                ...mono,
+                                display: 'block',
+                                width: '100%',
+                                padding: '7px 9px',
+                                border: 'none',
+                                borderRadius: 4,
+                                background:
+                                  provider === agentProvider
+                                    ? '#04395e'
+                                    : 'transparent',
+                                color: '#f1f1f1',
+                                textAlign: 'left',
+                                cursor: 'pointer',
+                                whiteSpace: 'nowrap',
+                              }}
+                            >
+                              {provider === agentProvider ? '✓ ' : ''}
+                              {agentProviderLabel(provider)}
+                            </button>
+                          ))}
+                        </div>
+                      ) : null}
+                    </div>
+                  )}
+                  {currentRetainedRun ? (
                     <button
                       type="button"
-                      onClick={() =>
-                        setVisibleRunId(
-                          runs.find(
-                            (run) =>
-                              run.workspace === currentProject.path &&
-                              run.work === workSelector,
-                          )?.id ?? null,
-                        )
-                      }
+                      onClick={() => setVisibleRunId(currentRetainedRun.id)}
                       style={{
                         ...mono,
                         padding: '6px 9px',

@@ -87,6 +87,86 @@ test('Projects reads retained Work inventory through the public Project command'
   assert.deepEqual(calls, [['project', 'works', '/projects/example']]);
 });
 
+test('Projects restores the retained Agent receipt for a selected native Work', async () => {
+  const calls: string[][] = [];
+  const receipt = {
+    schema: 'kungfu.work-start.receipt/v1' as const,
+    ok: true,
+    status: 'agent-finished' as const,
+    workPhase: 'executing',
+    workspace: { workspace_root: '/project' },
+    work: {
+      initiativeId: 'initiative-1',
+      assignmentId: 'assignment-1',
+      title: 'Retained Work',
+      objective: 'Keep the Agent result',
+      acceptanceChecks: ['result is reviewable'],
+    },
+    agent: {
+      id: 'codex.profile.1',
+      provider: 'codex',
+      label: 'Codex',
+    },
+    agentReport: {
+      runId: 'agent-retained-1',
+      episode: { reportPath: '/project/.kungfu/report.json' },
+    },
+    nextActions: ['run-independent-assessment'],
+    writeOccurred: true,
+    receiptRoot: `sha256:${'2'.repeat(64)}`,
+  };
+  const projects = openProjects({
+    bin: 'kungfu',
+    env: {},
+    execFile: async (_file, args) => {
+      calls.push(args);
+      if (args[1] === 'resume-prepare') {
+        return JSON.stringify({
+          schema: 'kungfu.work.resume-prepare/v1',
+          status: 'ready',
+          writeOccurred: false,
+        });
+      }
+      assert.equal(args[1], 'start-resume');
+      return JSON.stringify({
+        schema: 'kungfu.work-start.resume/v1',
+        status: 'retained-agent-run',
+        workReceipt: receipt,
+        writeOccurred: false,
+      });
+    },
+  });
+
+  const restored = await projects.resumeRun('/project', {
+    initiativeId: 'initiative-1',
+    assignmentId: 'assignment-1',
+  });
+
+  assert.equal(restored?.receipt?.status, 'agent-finished');
+  assert.equal(restored?.work, 'assignment-1');
+  assert.deepEqual(calls, [
+    [
+      'work',
+      'resume-prepare',
+      '--workspace',
+      '/project',
+      '--actor',
+      'kungfu-product-project-resume',
+      '--execute',
+    ],
+    [
+      'work',
+      'start-resume',
+      '--workspace',
+      '/project',
+      '--initiative-id',
+      'initiative-1',
+      '--assignment-id',
+      'assignment-1',
+    ],
+  ]);
+});
+
 test('Projects merges machine-local catalogs without changing the active instance', async () => {
   const calls: Array<{
     args: string[];

@@ -396,6 +396,9 @@ test('Projects and Work use the shared exact-plan Agent session surface', () => 
   assert.doesNotMatch(work, /Run \{provider === 'opencode'/);
   assert.match(work, /projects\s*\.planReview\(run\.id\)/);
   assert.match(work, /projects\s*\.review\(/);
+  assert.match(work, /projects\s*\.resumeRun\(/);
+  assert.match(work, /currentReviewableRun/);
+  assert.match(work, /Review Agent result/);
   assert.match(runSurface, /plan\.blockedReason/);
   assert.match(runSurface, /Confirm independent review/);
   assert.match(runSurface, /fresh read-only process/);
