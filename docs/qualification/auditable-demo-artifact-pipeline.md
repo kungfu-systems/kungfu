@@ -9,8 +9,8 @@ confidence: high
 sensitivity: public
 evidence_grade: A
 review_state: self-reviewed
-last_reviewed: 2026-07-31
-ai_provenance: GPT-5 via Codex on 2026-07-31; based on checked-in Kungfu, Buildchain, and build-images source plus protected GitHub workflow evidence visible to this task; this update adds the unified manual, Alpha, and Release trigger-plan contract without claiming production deployment or unobserved runtime
+last_reviewed: 2026-08-01
+ai_provenance: GPT-5 via Codex on 2026-08-01; based on checked-in Kungfu, Buildchain, and build-images source plus protected GitHub workflow evidence visible to this task; this update binds independently captured native 1080p and 720p renditions without claiming production deployment or unobserved runtime
 ---
 
 # Auditable Demo Artifact Pipeline
@@ -24,8 +24,8 @@ The required path is:
 ```text
 Buildchain producer-owned artifact coordinate
 -> checked-in Kungfu exact-output adapter
--> exact installed `kungfu agent-work-lab autoplay` execution in a bounded PTY
--> bounded terminal capture + complete transcript + public projection + scene
+-> two exact installed `kungfu agent-work-lab autoplay` executions in distinct bounded PTYs
+-> independent native 1080p and 720p capture, transcript, projection, and scene sets
 -> Buildchain Gate and immutable terminal-replay renderer smoke
 -> content-addressed qualified Gate bundle
 -> exact Release Passport
@@ -71,9 +71,9 @@ they cannot replace the README managed block.
 
 | Component | Immutable coordinate |
 | --- | --- |
-| Demo renderer | `ghcr.io/kungfu-systems/build-images/demo-renderer@sha256:b70a2f5631665f685280bc9d7434c5ed5cf48b760b728873734d0c47bff72b25` |
-| Renderer release | `v1.3.0-alpha.20`, exact version-state source `b3cebc2deb5f140af74db24b1b45233ac6733ef1`, containing the renderer merge from Build Images PR `#339` |
-| Buildchain Gate | `0e4ac58013ff3e09abb18da9896fad5f5b823ef7` (Buildchain PR `#2104`, responsive 1080p/720p media qualification) |
+| Demo renderer | `ghcr.io/kungfu-systems/build-images/demo-renderer@sha256:e5ae5002dc0fc267e265dba1068d7476e541dddc9035ccd72cee94dfad872591` |
+| Renderer release | `v1.3.0-alpha.25`, exact version-state source `f327dd2c2879b5fe26982f3d60ddb00b55a64a25`, built from source `8f5581cdffcfbb695c6738de1a8935e3ee8774f2` containing Build Images PR `#350` |
+| Buildchain Gate | `afd75d295fcd2d55cfebf621f5ca6d05a9904830` (Buildchain PR `#2126`, independent native rendition qualification) |
 | Consumer adapter | `scripts/auditable-demo-adapter.py` from the exact qualified Kungfu source SHA |
 
 Buildchain's reusable build emits
@@ -87,15 +87,17 @@ coordinate.
 
 The adapter opens exactly one release qualification root, rejects unsafe or
 unbounded archive members, validates the retained layer, live-Peer, runtime
-activation, zero-burden, and invariant reports, resolves one catalog demo, and
-executes the installed archive's declared launcher with the selected exact argv
-in a disposable home directory and a real catalog-bounded PTY. The default
-selection remains `kungfu agent-work-lab autoplay` at `150x36`. The isolated process removes
-`NO_COLOR`, sets `FORCE_COLOR=3`, and declares `TERM=xterm-256color` plus
-`COLORTERM=truecolor` so the capture retains the installed TUI's ANSI styling.
-The capture is limited to 60 seconds, 4 MiB, and 10,000 quantized events. A
-successful result requires one valid `KUNGFU_TUI_DEMO_COMPLETE` payload and
-exit status zero.
+activation, zero-burden, and invariant reports, and resolves one catalog demo.
+It then executes the installed archive's declared launcher twice with the same
+selected exact argv: once in an isolated `150x36` PTY for the native 1920x1080
+scene and once in a separate isolated `100x28` PTY for the native 1280x720
+scene. Each execution receives its own disposable home, so responsive content
+is reflowed by the actual TUI rather than scaled from the 1080p output. Both
+isolated processes remove `NO_COLOR`, set `FORCE_COLOR=3`, and declare
+`TERM=xterm-256color` plus `COLORTERM=truecolor` so the captures retain the
+installed TUI's ANSI styling. Each capture is limited to 60 seconds, 4 MiB,
+and 10,000 quantized events. A successful result requires a valid
+`KUNGFU_TUI_DEMO_COMPLETE` payload and exit status zero from both executions.
 
 Its public evidence class is
 `exact-installed-artifact-agent-work-lab-autoplay/v1`. It claims only that the
@@ -118,6 +120,14 @@ Core policy, Work or Warrant, an explicit capability grant, and runtime
 isolation.
 
 ## Retained evidence
+
+The Gate rejects equal capture roots, incorrect PTY dimensions, missing native
+inputs, or a renderer manifest that does not declare
+`independent-native-frame-sets/v1`. The renderer creates separate Chromium
+frame directories for the two capture sets; the native path contains no scale
+filter. It records every output operation as `native-frame-set-encode`, and its
+qualification compares the 720p first frame with a scaled 1080p first frame to
+prove that the content is not the same image at a smaller resolution.
 
 The Gate and optional media are ordinary GitHub Artifacts with explicit ids,
 names, archive digests, URLs, roots, and expiries. A separate

@@ -26,6 +26,10 @@ const WORKFLOW = parse(WORKFLOW_TEXT);
 const RELEASE_WORKFLOW = parse(fs.readFileSync(RELEASE_WORKFLOW_PATH, 'utf8'));
 const AsyncFunction = Object.getPrototypeOf(async () => {}).constructor;
 const SOURCE_SHA = '1'.repeat(40);
+const NATIVE_RENDITION_BUILDCHAIN_SHA =
+  'afd75d295fcd2d55cfebf621f5ca6d05a9904830';
+const NATIVE_RENDITION_RENDERER_IMAGE =
+  'ghcr.io/kungfu-systems/build-images/demo-renderer@sha256:e5ae5002dc0fc267e265dba1068d7476e541dddc9035ccd72cee94dfad872591';
 
 function triggerPlan(overrides = {}) {
   return buildAuditableDemoTriggerPlan({
@@ -326,10 +330,12 @@ test('Gate runtime and renderer are immutable and Passport uses the same runtime
     /^kungfu-systems\/buildchain\/\.github\/workflows\/\.auditable-demo\.yml@([0-9a-f]{40})$/u,
   );
   assert.ok(runtime, 'Gate must use one exact Buildchain commit');
+  assert.equal(runtime[1], NATIVE_RENDITION_BUILDCHAIN_SHA);
   assert.match(
     gate.with['renderer-image'],
     /^ghcr\.io\/kungfu-systems\/build-images\/demo-renderer@sha256:[0-9a-f]{64}$/u,
   );
+  assert.equal(gate.with['renderer-image'], NATIVE_RENDITION_RENDERER_IMAGE);
   assert.equal(
     gate.with['media-profile'],
     'responsive-web-delivery-v1',

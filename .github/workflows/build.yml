@@ -502,14 +502,14 @@ jobs:
     permissions:
       actions: read
       contents: read
-    uses: kungfu-systems/buildchain/.github/workflows/.auditable-demo.yml@0e4ac58013ff3e09abb18da9896fad5f5b823ef7 # PR #2104 responsive media qualification
+    uses: kungfu-systems/buildchain/.github/workflows/.auditable-demo.yml@afd75d295fcd2d55cfebf621f5ca6d05a9904830 # PR #2126 native rendition qualification
     with:
       source-ref: ${{ needs.build.outputs.publish-source-sha }}
       source-artifact-name: ${{ needs.resolve-auditable-demo-source.outputs.artifact-name }}
       source-artifact-digest: ${{ needs.resolve-auditable-demo-source.outputs.artifact-digest }}
       adapter-path: scripts/auditable-demo-adapter.py
       adapter-arguments-json: ${{ format('["--demo-id",{0}]', toJSON(needs.auditable-demo-plan.outputs.demo-id)) }}
-      renderer-image: ghcr.io/kungfu-systems/build-images/demo-renderer@sha256:b70a2f5631665f685280bc9d7434c5ed5cf48b760b728873734d0c47bff72b25
+      renderer-image: ghcr.io/kungfu-systems/build-images/demo-renderer@sha256:e5ae5002dc0fc267e265dba1068d7476e541dddc9035ccd72cee94dfad872591
       render-media: ${{ needs.auditable-demo-plan.outputs.render-media == 'true' }}
       media-profile: responsive-web-delivery-v1
       artifact-retention-days: 14
@@ -642,8 +642,8 @@ jobs:
           MEDIA_PROFILE: ${{ needs.auditable-demo.outputs.media-profile }}
           MEDIA_QUALIFICATION_ROOT: ${{ needs.auditable-demo.outputs.media-qualification-root }}
           AUDITABLE_DEMO_ID: ${{ needs.auditable-demo-plan.outputs.demo-id }}
-          BUILDCHAIN_SHA: 0e4ac58013ff3e09abb18da9896fad5f5b823ef7
-          RENDERER_IMAGE: ghcr.io/kungfu-systems/build-images/demo-renderer@sha256:b70a2f5631665f685280bc9d7434c5ed5cf48b760b728873734d0c47bff72b25
+          BUILDCHAIN_SHA: afd75d295fcd2d55cfebf621f5ca6d05a9904830
+          RENDERER_IMAGE: ghcr.io/kungfu-systems/build-images/demo-renderer@sha256:e5ae5002dc0fc267e265dba1068d7476e541dddc9035ccd72cee94dfad872591
         run: ./shifu node scripts/auditable-demo-passport.mjs write --output auditable-demo-release-passport.json
 
       - name: Upload exact auditable demo Release Passport
