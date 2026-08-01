@@ -1048,9 +1048,13 @@
       "name": "kungfu exit build --file <request.json> --json",
       "aliases": [
         "kungfu exit inspect --file <package.json> --json",
-        "kungfu exit import --file <package.json> [--execute --authorized-by <actor>] --json"
+        "kungfu exit import --file <package.json> [--execute --authorized-by <actor>] --json",
+        "kungfu exit history status [--file <request.json>] --json",
+        "kungfu exit history export --file <request.json> --out <exit.json> --json",
+        "kungfu exit history import --file <exit.json> [--execute --authorized-by <actor>] --json",
+        "kungfu exit history rebuild [--projection <episode|fact-kernel>] [--execute --authorized-by <actor>] --json"
       ],
-      "purpose": "Compose, inspect, validate, or explicitly import one scope-bound Exit package through the shared Core receipt path.",
+      "purpose": "Inspect protection status, compose or export one scope-bound package, validate or explicitly import it, and rebuild declared projections through the shared Core receipt path.",
       "maturity": "experimental",
       "visibility": "adjacent-agent",
       "anchor": {
@@ -1067,7 +1071,8 @@
       "name": "kungfu-exit-verify --file <package.json> --json",
       "aliases": [
         "python -m kungfu.exit_verifier --file <package.json> --json",
-        "kungfu exit verify --file <package.json> --json"
+        "kungfu exit verify --file <package.json> --json",
+        "kungfu exit history verify --file <exit.json> --json"
       ],
       "purpose": "Run the bounded read-only installed Exit verifier without initializing a runtime; report safe capabilities, omissions, loss, failure codes, and residual risk.",
       "maturity": "experimental",

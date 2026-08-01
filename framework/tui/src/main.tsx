@@ -253,6 +253,22 @@ function tuiCliInvocation(paths: ReturnType<typeof runtimePaths>) {
   };
 }
 
+type ExitHistoryStatus = {
+  ok: boolean;
+  state: string;
+  coverage: string;
+  lastVerifiedExport: { bundleId: string; packageRoot: string } | null;
+  nextActions: string[];
+};
+
+const EXIT_HISTORY_STATUS_FALLBACK: ExitHistoryStatus = {
+  ok: false,
+  state: 'unavailable',
+  coverage: 'not-evaluated',
+  lastVerifiedExport: null,
+  nextActions: ['kungfu exit history status --json'],
+};
+
 function openTuiAgentWorkLab(projectTour = false): AgentWorkLab {
   const paths = runtimePaths();
   const cli = tuiCliInvocation(paths);
@@ -1019,11 +1035,49 @@ function ProductHost({
       ? 'Offline demo automation owns this run'
       : 'Loading governed command catalog',
   );
+  const [historyStatus, setHistoryStatus] = React.useState<ExitHistoryStatus>(
+    EXIT_HISTORY_STATUS_FALLBACK,
+  );
   const contentDimensions = React.useMemo(
-    () => new InsetDimensionSource(dimensions, 5),
+    () => new InsetDimensionSource(dimensions, 6),
     [dimensions],
   );
   React.useEffect(() => dimensions.subscribe(setSize), [dimensions]);
+  React.useEffect(() => {
+    if (playbackMode) return undefined;
+    const paths = runtimePaths();
+    const invocation = tuiCliInvocation(paths);
+    let active = true;
+    execFile(
+      paths.bin,
+      invocation.args(['exit', 'history', 'status', '--json']),
+      {
+        encoding: 'utf8',
+        env: invocation.env,
+        maxBuffer: 2 * 1024 * 1024,
+      },
+      (error, stdout) => {
+        if (!active) return;
+        if (error) {
+          setHistoryStatus(EXIT_HISTORY_STATUS_FALLBACK);
+          return;
+        }
+        try {
+          const value = JSON.parse(stdout) as ExitHistoryStatus;
+          setHistoryStatus(
+            value.ok && value.nextActions?.length
+              ? value
+              : EXIT_HISTORY_STATUS_FALLBACK,
+          );
+        } catch {
+          setHistoryStatus(EXIT_HISTORY_STATUS_FALLBACK);
+        }
+      },
+    );
+    return () => {
+      active = false;
+    };
+  }, [playbackMode]);
   React.useEffect(() => {
     if (playbackMode || emptyState || !startupAnimationEnabled)
       return undefined;
@@ -1959,6 +2013,18 @@ function ProductHost({
               [3] Agent Work Lab
             </Text>
           </Box>
+        </Box>
+      ) : null}
+      {!playbackMode ? (
+        <Box height={1} paddingX={1} overflow="hidden">
+          <Text
+            color={historyStatus.ok ? 'green' : 'yellow'}
+            wrap="truncate-end"
+          >
+            History {historyStatus.state} · coverage {historyStatus.coverage} ·
+            last export {historyStatus.lastVerifiedExport?.bundleId ?? 'none'} ·
+            Next: {historyStatus.nextActions[0]}
+          </Text>
         </Box>
       ) : null}
       {content}

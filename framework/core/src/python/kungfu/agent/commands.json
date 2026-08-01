@@ -380,6 +380,30 @@
       "purpose": "Validate by default or explicitly import after isolated full replay, returning landed, remaining, loss, and recovery evidence."
     },
     {
+      "apiId": "kungfu.exit.bundle",
+      "name": "kungfu exit history status [--file <request.json>] --json",
+      "maturity": "experimental",
+      "purpose": "Observe the installed history-protection contract or verify one selected scope inventory without mutating member authority."
+    },
+    {
+      "apiId": "kungfu.exit.bundle",
+      "name": "kungfu exit history export --file <request.json> --out <exit.json> --json",
+      "maturity": "experimental",
+      "purpose": "Write one full or explicitly lossy thin package and retain a disposable verified-export observer receipt."
+    },
+    {
+      "apiId": "kungfu.exit.bundle",
+      "name": "kungfu exit history import --file <exit.json> [--execute --authorized-by <actor>] --json",
+      "maturity": "experimental",
+      "purpose": "Validate by default or explicitly import one verified history package through the shared Exit receipt path."
+    },
+    {
+      "apiId": "kungfu.exit.bundle",
+      "name": "kungfu exit history rebuild [--projection <episode|fact-kernel>] [--execute --authorized-by <actor>] --json",
+      "maturity": "experimental",
+      "purpose": "Plan or explicitly rebuild only declared Episode and Fact projections from their unchanged local authorities."
+    },
+    {
       "apiId": "kungfu.exit.verify",
       "name": "kungfu-exit-verify --file <package.json> --json",
       "maturity": "experimental",
@@ -396,6 +420,12 @@
       "name": "kungfu exit verify --file <package.json> --json",
       "maturity": "experimental",
       "purpose": "Invoke the packaged verifier through the integrated Kungfu CLI when a configured runtime is already available."
+    },
+    {
+      "apiId": "kungfu.exit.verify",
+      "name": "kungfu exit history verify --file <exit.json> --json",
+      "maturity": "experimental",
+      "purpose": "Run the same bounded read-only verifier over one history package without initializing or mutating a runtime."
     },
     {
       "apiId": "kungfu.cut.inspect",
