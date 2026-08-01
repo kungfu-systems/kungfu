@@ -319,7 +319,7 @@
       "targetKind": "probe",
       "targetPath": "scripts/buildchain-kfd-evidence.mjs",
       "relation": "explains",
-      "expectedRevision": "sha256:349d67465541c6637913cf066c0efb45d216abe9f6b82febc7cfb9f5b8a04048"
+      "expectedRevision": "sha256:251d41ce613d80d67471a3c1565c403ecfe5ab6c4783d7fadb95ec951444a680"
     }
   ],
   "routes": [
