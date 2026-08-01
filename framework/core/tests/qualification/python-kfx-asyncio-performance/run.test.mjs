@@ -166,6 +166,10 @@ test('native correctness gate preserves ctest regex argv on Windows', () => {
   assert.match(admissionRunner, /shell: false/u);
   assert.match(admissionRunner, /platformCommand\(command\)/u);
   assert.match(admissionRunner, /platformCommandOptions\(command\)/u);
+  assert.match(
+    admissionRunner,
+    /KUNGFU_DIR: path\.join\(root, 'framework\/core\/dist\/kungfu'\)/u,
+  );
   assert.doesNotMatch(admissionRunner, /shell: isWin/u);
 });
 

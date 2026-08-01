@@ -357,7 +357,7 @@ run(
   ],
   {
     ...process.env,
-    KUNGFU_DIR: path.join(root, 'framework/core/build/Release'),
+    KUNGFU_DIR: path.join(root, 'framework/core/dist/kungfu'),
     KUNGFU_REQUIRE_NATIVE: '1',
   },
 );
