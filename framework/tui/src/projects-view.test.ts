@@ -65,7 +65,7 @@ test('All Work navigation preserves but does not reuse Project context', () => {
   assert.match(source, /value === 'f'/);
   const workHost = source.slice(
     source.indexOf('function WorkControlHost'),
-    source.indexOf('type ProjectWorkActionRequest'),
+    source.indexOf('const PENDING_STARTUP'),
   );
   assert.match(workHost, /pattern=\{KUNGFU_WORK_DISCOVERY_PATTERN\}/);
   assert.match(workHost, /emptyState\s*\?\s*EMPTY_GLOBAL_WORK_SNAPSHOT/);
@@ -74,9 +74,12 @@ test('All Work navigation preserves but does not reuse Project context', () => {
 
 test('opened Project Work offers an exact-plan Agent path and recoverable session controls', () => {
   const source = readFileSync(new URL('./main.tsx', import.meta.url), 'utf8');
-  const projectWork = source.slice(
-    source.indexOf('function ProjectWorkHost'),
-    source.indexOf('const PENDING_STARTUP'),
+  const projectWorkSource = readFileSync(
+    new URL('./work-window/index.tsx', import.meta.url),
+    'utf8',
+  );
+  const projectWork = projectWorkSource.slice(
+    projectWorkSource.indexOf('export function ProjectWorkHost'),
   );
 
   assert.match(projectWork, /NEXT: \[Enter or \/new\] create Work/);
@@ -102,7 +105,10 @@ test('opened Project Work offers an exact-plan Agent path and recoverable sessio
   assert.doesNotMatch(projectWork, /projectSection === 'files'/);
   assert.match(projectWork, /LOADING PROJECT WORK/);
   assert.match(projectWork, /<ProjectWorkDock/);
-  assert.match(source, /function ProjectWorkDock[\s\S]*?height=\{4\}/);
+  assert.match(
+    projectWorkSource,
+    /function ProjectWorkDock[\s\S]*?height=\{4\}/,
+  );
   assert.ok(
     projectWork.indexOf('KUNGFU_PROJECT_DISCOVERY_PATTERN') <
       projectWork.indexOf('title={`${loadingSpinner} LOADING PROJECT WORK`}'),

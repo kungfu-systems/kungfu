@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import type {
+  KfxExperienceFlowDescriptor,
   ProjectSummary,
   Projects,
   ProjectsCatalog,
@@ -8,6 +9,16 @@ import type {
 import * as capability from '@kungfu-tech/api/capability';
 import { mono, panelStyle } from '@kungfu-tech/kfx';
 import React from 'react';
+import { isResettableRuntimeFailure } from '../../../runtime-recovery-contract';
+import {
+  RUNTIME_BACKUP_RESET_CHANNEL,
+  WORKSPACE_GET_CHANNEL,
+  WORKSPACE_OPEN_CHANNEL,
+  WORKSPACE_SELECT_HOME_CHANNEL,
+  WORKSPACE_SELECT_PATH_CHANNEL,
+  WORKSPACE_SELECT_RECENT_CHANNEL,
+  WORKSPACE_START_CONTINUATION_CHANNEL,
+} from '../../../sandbox/channels';
 import { createAgentSessionProxy } from '../agent-session-proxy';
 import { guiKungfuCliArgs } from '../runtime';
 
@@ -517,4 +528,347 @@ export function ProjectsPanel({
       ) : null}
     </section>
   );
+}
+
+type KfxPlan = {
+  hostContract?: KfxExperienceFlowDescriptor | null;
+};
+
+function hostContract(value: unknown): KfxExperienceFlowDescriptor | null {
+  if (!value || typeof value !== 'object') return null;
+  const candidate = (value as KfxPlan).hostContract;
+  return candidate &&
+    typeof candidate === 'object' &&
+    candidate.admission?.state === 'admitted'
+    ? candidate
+    : null;
+}
+
+export function resolveKfxHostDescriptor(options: {
+  nativePlan: () => unknown;
+  cliPlan: () => unknown;
+}): KfxExperienceFlowDescriptor | null {
+  try {
+    const descriptor = hostContract(options.nativePlan());
+    if (descriptor) return descriptor;
+  } catch {
+    // A retained Project can be inspected without a live native master. In
+    // that state the Core CLI remains the exact read-only KFX authority.
+  }
+  try {
+    return hostContract(options.cliPlan());
+  } catch {
+    return null;
+  }
+}
+
+export function kfxNativePlanArgs(
+  env: Record<string, string | undefined>,
+  path: Pick<typeof import('node:path'), 'delimiter' | 'dirname' | 'resolve'>,
+  exists: (value: string) => boolean = () => true,
+): string[] {
+  const roots: Array<{ kind: 'product' | 'user'; path: string }> = [];
+  const seen = new Set<string>();
+  const add = (kind: 'product' | 'user', value: string | undefined) => {
+    if (!value) return;
+    const resolved = path.resolve(value);
+    if (seen.has(resolved) || !exists(resolved)) return;
+    seen.add(resolved);
+    roots.push({ kind, path: resolved });
+  };
+  const productRoot = env.KF_BUNDLED_EXTENSION_ROOT;
+  add('product', productRoot);
+  for (const entry of (env.KF_EXTENSION_PATH ?? '').split(path.delimiter)) {
+    if (!entry) continue;
+    const resolved = path.resolve(entry);
+    add(
+      productRoot && resolved === path.resolve(productRoot)
+        ? 'product'
+        : 'user',
+      resolved,
+    );
+  }
+  if (env.KF_RUNTIME_DIR) {
+    add('user', path.resolve(path.dirname(env.KF_RUNTIME_DIR), 'extensions'));
+  }
+  return [
+    'kfx',
+    'native',
+    'plan',
+    ...roots.flatMap((root) => ['--root', `${root.kind}=${root.path}`]),
+  ];
+}
+
+type WorkspaceSnapshot = {
+  current: {
+    workspaceId: string;
+    workspaceKind: 'home' | 'project';
+    workspaceRoot: string | null;
+    displayPath: string;
+    dataHome: string;
+    state:
+      | 'uninitialized'
+      | 'shadow-only'
+      | 'live-runtime'
+      | 'evidence-degraded'
+      | 'unavailable';
+    diagnosis: string;
+    evidenceLevel: 'none' | 'settled-review' | 'live-local' | 'degraded';
+    settledEpisodeCount: number;
+    projectCutCount: number;
+  };
+  recent: Array<{
+    workspace_id?: string;
+    workspace_kind?: 'home' | 'project';
+    workspace_root?: string | null;
+    display_path?: string;
+    data_home?: string;
+  }>;
+};
+
+export function workspaceIpc() {
+  const ipcRenderer = (
+    window.require('electron') as {
+      ipcRenderer: {
+        invoke: (channel: string, payload?: unknown) => Promise<unknown>;
+      };
+    }
+  ).ipcRenderer;
+  return {
+    get: () =>
+      ipcRenderer.invoke(WORKSPACE_GET_CHANNEL) as Promise<WorkspaceSnapshot>,
+    open: () => ipcRenderer.invoke(WORKSPACE_OPEN_CHANNEL),
+    home: () => ipcRenderer.invoke(WORKSPACE_SELECT_HOME_CHANNEL),
+    path: (workspaceRoot: string) =>
+      ipcRenderer.invoke(WORKSPACE_SELECT_PATH_CHANNEL, { workspaceRoot }),
+    startContinuation: () =>
+      ipcRenderer.invoke(WORKSPACE_START_CONTINUATION_CHANNEL),
+    recent: (workspaceId: string) =>
+      ipcRenderer.invoke(WORKSPACE_SELECT_RECENT_CHANNEL, { workspaceId }),
+  };
+}
+
+export function WorkspacePanel() {
+  const bridge = React.useMemo(workspaceIpc, []);
+  const [snapshot, setSnapshot] = React.useState<WorkspaceSnapshot | null>(
+    null,
+  );
+  const [error, setError] = React.useState<string | null>(null);
+  React.useEffect(() => {
+    void bridge
+      .get()
+      .then(setSnapshot)
+      .catch((e) => setError((e as Error).message));
+  }, [bridge]);
+  const run = (action: () => Promise<unknown>) => {
+    setError(null);
+    void action().catch((e) => setError((e as Error).message));
+  };
+  return (
+    <section style={{ ...panelStyle, width: 'min(680px, 100%)' }}>
+      <h2 style={{ margin: '0 0 8px', fontSize: 15 }}>Project details</h2>
+      {snapshot && (
+        <div style={{ ...mono, color: '#9cdcfe', marginBottom: 10 }}>
+          {snapshot.current.displayPath} · {snapshot.current.state}
+          {snapshot.current.diagnosis ? ` · ${snapshot.current.diagnosis}` : ''}
+        </div>
+      )}
+      <div style={{ display: 'flex', gap: 6, marginBottom: 12 }}>
+        <button
+          type="button"
+          onClick={() => run(bridge.open)}
+          style={{ ...mono, padding: '6px 10px' }}
+        >
+          Open Project…
+        </button>
+        <button
+          type="button"
+          onClick={() => run(bridge.home)}
+          style={{ ...mono, padding: '6px 10px' }}
+        >
+          Use Personal Project
+        </button>
+      </div>
+      <div style={{ ...mono, color: '#858585', marginBottom: 6 }}>
+        Opening or selecting is read-only. The first fact-bearing action creates
+        the selected `.kungfu` data home.
+      </div>
+      {snapshot?.current.state === 'shadow-only' && (
+        <div
+          style={{
+            display: 'grid',
+            gap: 5,
+            padding: 8,
+            marginBottom: 10,
+            border: '1px solid #3c3c3c',
+            borderRadius: 5,
+          }}
+        >
+          <div style={{ ...mono, color: '#9cdcfe' }}>
+            Settled history is available without a local runtime.
+          </div>
+          <div style={{ ...mono, color: '#858585' }}>
+            {snapshot.current.settledEpisodeCount} Episode shadow(s) ·{' '}
+            {snapshot.current.projectCutCount} Project Cut(s) · evidence{' '}
+            {snapshot.current.evidenceLevel}. Git shadows are not Episode
+            authority; raw replay and requalification require full evidence.
+          </div>
+          <button
+            type="button"
+            onClick={() => run(bridge.startContinuation)}
+            style={{ ...mono, padding: '6px 10px', width: 'fit-content' }}
+          >
+            Start local continuation
+          </button>
+        </div>
+      )}
+      {snapshot?.current.state === 'evidence-degraded' && (
+        <div style={{ ...mono, color: '#f48771', marginBottom: 10 }}>
+          Settled evidence is degraded. Continuation is disabled until the
+          reported shadow mismatch is repaired or full evidence is imported.
+        </div>
+      )}
+      {snapshot?.current.state === 'uninitialized' && (
+        <div
+          style={{
+            display: 'grid',
+            gap: 5,
+            padding: 8,
+            marginBottom: 10,
+            border: '1px solid #3c3c3c',
+            borderRadius: 5,
+          }}
+        >
+          <div style={{ ...mono, color: '#9cdcfe' }}>
+            This Project has not been initialized yet.
+          </div>
+          <div style={{ ...mono, color: '#858585' }}>
+            Open the focused Profile and run its first fact-bearing action when
+            you are ready.
+          </div>
+        </div>
+      )}
+      {snapshot?.recent.map((recent) => (
+        <button
+          key={recent.workspace_id}
+          type="button"
+          disabled={
+            recent.workspace_kind === 'project' && !recent.workspace_root
+          }
+          onClick={() =>
+            recent.workspace_id &&
+            run(() => bridge.recent(recent.workspace_id as string))
+          }
+          style={{
+            ...mono,
+            display: 'block',
+            width: '100%',
+            padding: '5px 7px',
+            border: 'none',
+            background: 'transparent',
+            color: '#cccccc',
+            textAlign: 'left',
+            cursor: 'pointer',
+          }}
+        >
+          {recent.display_path || recent.workspace_root || 'Personal Project'}
+        </button>
+      ))}
+      {error && <div style={{ ...mono, color: '#f48771' }}>{error}</div>}
+    </section>
+  );
+}
+
+export function RuntimeFailurePanel({ message }: { message: string }) {
+  const [busy, setBusy] = React.useState(false);
+  const [error, setError] = React.useState('');
+  const resettable = isResettableRuntimeFailure(message);
+  const backupAndReset = () => {
+    setBusy(true);
+    setError('');
+    const ipcRenderer = (
+      window.require('electron') as {
+        ipcRenderer: {
+          invoke: (
+            channel: string,
+            payload: unknown,
+          ) => Promise<{ ok?: boolean; canceled?: boolean; error?: string }>;
+        };
+      }
+    ).ipcRenderer;
+    void ipcRenderer
+      .invoke(RUNTIME_BACKUP_RESET_CHANNEL, { message })
+      .then((result) => {
+        if (!result.ok && !result.canceled) {
+          setError(result.error || 'runtime recovery failed');
+        }
+      })
+      .catch((reason) => setError((reason as Error).message))
+      .finally(() => setBusy(false));
+  };
+  return (
+    <section style={{ ...panelStyle, width: 'min(680px, 100%)' }}>
+      <h2 style={{ margin: '0 0 8px', fontSize: 15 }}>
+        Project runtime unavailable
+      </h2>
+      <pre
+        style={{
+          ...mono,
+          color: '#f48771',
+          whiteSpace: 'pre-wrap',
+          overflowWrap: 'anywhere',
+        }}
+      >
+        {message || 'Unknown runtime startup failure'}
+      </pre>
+      {resettable && (
+        <>
+          <button
+            type="button"
+            disabled={busy}
+            onClick={backupAndReset}
+            style={{ ...mono, padding: '6px 10px' }}
+          >
+            {busy ? 'Preparing recovery…' : 'Back up and reset runtime'}
+          </button>
+          <div style={{ ...mono, color: '#858585', marginTop: 8 }}>
+            The current runtime is preserved under
+            .kungfu/backups/runtime-recovery before Kungfu creates a fresh one.
+          </div>
+        </>
+      )}
+      {error && <div style={{ ...mono, color: '#f48771' }}>{error}</div>}
+    </section>
+  );
+}
+
+// One failing kfx renders its error panel; it never takes the shell down.
+export class KfxErrorBoundary extends React.Component<
+  { kfxId: string; children: React.ReactNode },
+  { error: Error | null }
+> {
+  state = { error: null as Error | null };
+  static getDerivedStateFromError(error: Error) {
+    return { error };
+  }
+  componentDidUpdate(prev: { kfxId: string }) {
+    if (prev.kfxId !== this.props.kfxId && this.state.error) {
+      this.setState({ error: null });
+    }
+  }
+  render() {
+    if (this.state.error) {
+      return (
+        <section style={panelStyle}>
+          <div style={{ ...mono, color: '#f48771' }}>
+            kfx `{this.props.kfxId}` failed: {this.state.error.message}
+          </div>
+          <div style={{ ...mono, color: '#6a6a6a', marginTop: 4 }}>
+            the shell and other kfx keep running — see the console for the stack
+          </div>
+        </section>
+      );
+    }
+    return this.props.children;
+  }
 }

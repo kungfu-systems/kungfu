@@ -1929,3 +1929,8 @@ export function AgentWorkLabPanel({
     </section>
   );
 }
+
+export {
+  kfxNativePlanArgs,
+  resolveKfxHostDescriptor,
+} from './projects-panel/index.js';

@@ -17,17 +17,17 @@ import {
 import { boundedIndex } from '../navigation.js';
 import type { TerminalDimensions } from '../profile-shell.js';
 import {
+  KUNGFU_EMPTY_WORK_NAV_NEBULA_PATTERN,
+  KUNGFU_PROJECT_DISCOVERY_PATTERN,
+  TerminalAmbientScene,
+} from '../profile-shell.js';
+import {
   projectFileTreeIndexAtPoint,
   projectFileTreeLabel,
   projectFileTreeParentIndex,
   readProjectFileTree,
   toggleProjectFileTreeEntry,
 } from '../project-file-tree/index.js';
-import {
-  KUNGFU_EMPTY_WORK_NAV_NEBULA_PATTERN,
-  KUNGFU_PROJECT_DISCOVERY_PATTERN,
-  TerminalAmbientScene,
-} from '../terminal-animation.js';
 import { terminalCanvasRows } from '../terminal-canvas.js';
 import { decodeTerminalMouseInput } from '../terminal-lifecycle.js';
 

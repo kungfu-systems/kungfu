@@ -2,7 +2,7 @@
 
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { PROJECT_TOUR_STORY_STEPS } from './project-tour-view.js';
+import { PROJECT_TOUR_STORY_STEPS } from './starter-project-view/index.js';
 
 test('Project recovery tour tells the complete user lifecycle without granting mock authority', () => {
   assert.equal(PROJECT_TOUR_STORY_STEPS.length, 7);

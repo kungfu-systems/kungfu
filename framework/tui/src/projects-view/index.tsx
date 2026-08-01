@@ -18,7 +18,7 @@ import type { QuickCommand, TerminalDimensions } from '../profile-shell.js';
 import {
   KUNGFU_PROJECT_DISCOVERY_PATTERN,
   TerminalLoadingScene,
-} from '../terminal-animation.js';
+} from '../profile-shell.js';
 import { terminalCanvasRows } from '../terminal-canvas.js';
 import { decodeTerminalMouseInput } from '../terminal-lifecycle.js';
 

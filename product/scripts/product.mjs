@@ -4,7 +4,7 @@
 // product-level assembly so `./shifu product gui build` does not silently
 // regress to a GUI-only build.
 
-import { spawnSync } from 'node:child_process';
+import { spawn, spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import {
   copyFileSync,
@@ -35,6 +35,116 @@ const KFD_UPSTREAM_AGGREGATE = path.join(
 );
 const SDK_ENTRY = path.join(ROOT, 'developer', 'sdk', 'src', 'sdk.js');
 const EXTENSIONS_ROOT = path.join(ROOT, 'extensions');
+const GUI_ROOT = path.join(ROOT, 'framework', 'gui');
+
+export const DEVELOPMENT_RESTART_EXIT_CODE = 75;
+
+const WORKSPACE_ENV_KEYS = [
+  'KF_HOME',
+  'KF_RUNTIME_DIR',
+  'KF_WORKSPACE_ID',
+  'KF_WORKSPACE_KIND',
+  'KF_WORKSPACE_ROOT',
+  'KF_WORKSPACE_DISPLAY_PATH',
+  'KF_WORKSPACE_RESOLUTION_REASON',
+  'KF_WORKSPACE_STATE',
+  'KF_WORKSPACE_DIAGNOSIS',
+];
+
+function supervisedEnvironment(baseEnv) {
+  return {
+    ...baseEnv,
+    KUNGFU_GUI_DEV_SUPERVISOR: '1',
+    KUNGFU_GUI_DEV_RESTART_EXIT_CODE: String(DEVELOPMENT_RESTART_EXIT_CODE),
+  };
+}
+
+function selectedRegistryWorkspace(env) {
+  const configHome = path.resolve(
+    expandHomePath(
+      env.KF_CONFIG_HOME || path.join(os.homedir(), '.kungfu-config'),
+    ),
+  );
+  const registryPath = path.join(configHome, 'gui', 'workspaces.json');
+  if (!existsSync(registryPath)) return null;
+  try {
+    const registry = JSON.parse(readFileSync(registryPath, 'utf8'));
+    return (
+      registry.recent?.find(
+        (candidate) => candidate.workspace_id === registry.last_workspace_id,
+      ) ?? null
+    );
+  } catch {
+    return null;
+  }
+}
+
+export function nextDevelopmentEnvironment(baseEnv) {
+  const env = supervisedEnvironment(baseEnv);
+  for (const key of [
+    'KF_INSTANCE_HOME',
+    ...WORKSPACE_ENV_KEYS,
+    'KFE_INITIAL_SURFACE',
+    'KFE_FOCUSED_PROJECT_PATH',
+  ]) {
+    Reflect.deleteProperty(env, key);
+  }
+  const selected = selectedRegistryWorkspace(env);
+  if (
+    selected?.workspace_kind === 'project' &&
+    typeof selected.workspace_root === 'string' &&
+    selected.workspace_root.length > 0
+  ) {
+    env.KFE_INITIAL_SURFACE = 'projects';
+    env.KFE_FOCUSED_PROJECT_PATH = selected.workspace_root;
+  }
+  return env;
+}
+
+function runElectronVite(root, env) {
+  const executable = path.join(
+    root,
+    'node_modules',
+    '.bin',
+    process.platform === 'win32' ? 'electron-vite.cmd' : 'electron-vite',
+  );
+  return new Promise((resolve, reject) => {
+    const child = spawn(executable, ['dev'], {
+      cwd: root,
+      env,
+      stdio: 'inherit',
+      shell: process.platform === 'win32',
+    });
+    child.once('error', reject);
+    child.once('close', (code, signal) => resolve({ code: code ?? 1, signal }));
+  });
+}
+
+export async function superviseDevelopment(options) {
+  let env = supervisedEnvironment({
+    ...options.baseEnv,
+    KUNGFU_GUI_DEV_USER_DATA:
+      options.baseEnv.KUNGFU_GUI_DEV_USER_DATA ||
+      path.join(options.root, 'out', 'dev-user-data'),
+  });
+  for (;;) {
+    const result = await (options.run ?? runElectronVite)(options.root, env);
+    if (result.code !== DEVELOPMENT_RESTART_EXIT_CODE) return result.code;
+    options.onRestart?.();
+    env = nextDevelopmentEnvironment(env);
+  }
+}
+
+export function guiDevelopmentMain(baseEnv = process.env) {
+  return superviseDevelopment({
+    root: GUI_ROOT,
+    baseEnv,
+    onRestart: () =>
+      process.stdout.write(
+        '\n[kungfu-gui] Project changed; restarting the development renderer and native process.\n\n',
+      ),
+  });
+}
 
 function usage(code) {
   process.stdout.write(
@@ -519,6 +629,10 @@ function main(argv = process.argv.slice(2)) {
   if (!surface || !verb) usage(1);
 
   if (surface === 'gui') {
+    if (verb === 'supervise-dev') {
+      if (dryRun) fail('internal gui supervisor does not support --dry-run');
+      return guiDevelopmentMain(env);
+    }
     if (verb === 'dev') {
       prepareDevViewExtensions({ dryRun, env });
       pnpm('gui dev', ['--filter', '@kungfu-tech/gui', 'run', 'dev'], {
@@ -637,7 +751,8 @@ function main(argv = process.argv.slice(2)) {
 }
 
 if (process.argv[1] && path.resolve(process.argv[1]) === __filename) {
-  main();
+  const result = main();
+  if (result instanceof Promise) process.exitCode = await result;
 }
 
 export {
