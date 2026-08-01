@@ -431,6 +431,12 @@
         "scripts/check-python-structure.py",
         "scripts/check-python-structure.test.py"
       ]
+    },
+    {
+      "owner": "framework/data-protection-qualification",
+      "paths": [
+        "scripts/durable-history-qualification.mjs"
+      ]
     }
   ],
   "publicImports": [
@@ -440,7 +446,7 @@
     "kungfu.runtime_broker.NativeReadinessAuthority",
     "kungfu.runtime_service.ProcessRuntimeHost"
   ],
-  "reportRoot": "sha256:0d930b9773c228536c540980864d56efcc753b2b9e1bc72f3f133f00ed250110",
+  "reportRoot": "sha256:265024db2617fa11ceb64c6f7debd690bf06558638243e471b1823f081b36041",
   "schema": "kungfu.abstraction-integrity-report/v1",
   "sourceRoot": "sha256:eb71b4c9180e30518c0ed147fe16deef62241591eecaa035a33a7f6f827c4031",
   "summary": {

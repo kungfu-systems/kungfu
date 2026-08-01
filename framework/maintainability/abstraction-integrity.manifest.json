@@ -119,6 +119,12 @@
         "scripts/check-python-structure.py",
         "scripts/check-python-structure.test.py"
       ]
+    },
+    {
+      "owner": "framework/data-protection-qualification",
+      "paths": [
+        "scripts/durable-history-qualification.mjs"
+      ]
     }
   ],
   "exceptions": []
