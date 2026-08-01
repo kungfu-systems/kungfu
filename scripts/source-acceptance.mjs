@@ -464,6 +464,11 @@ export function sourceAcceptancePlan(files, evidenceBaseCommit = '') {
     ],
     ['KFD support matrix', 'scripts/kfd-support-matrix.mjs', '--check'],
     [
+      'Darwin x64 retirement policy',
+      'scripts/platform-command.mjs',
+      '--check-darwin-x64-retirement',
+    ],
+    [
       'KFD support matrix negative fixtures',
       '--test',
       'scripts/kfd-support-matrix.test.mjs',
@@ -516,6 +521,8 @@ export function sourceAcceptancePlan(files, evidenceBaseCommit = '') {
         'scripts/run-shifu-lifecycle.test.mjs',
         'scripts/check-typescript-files.test.mjs',
         'scripts/source-acceptance.test.mjs',
+        'scripts/platform-command.test.mjs',
+        'product/scripts/dist.test.mjs',
         'scripts/opencode-local-model-canary-workflow.test.mjs',
         'scripts/kungfu-workflow-authority.test.mjs',
         'scripts/code-complexity-budget.test.mjs',

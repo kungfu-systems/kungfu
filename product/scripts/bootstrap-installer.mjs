@@ -7,6 +7,10 @@ import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 
 import { canonicalBytes, contentRoot } from './release-channel-index.mjs';
+import {
+  INTEL_MACOS_DIAGNOSTIC,
+  assertSupportedProductTarget,
+} from './runtime-pin-snapshot.mjs';
 
 export const BOOTSTRAP_PUBLICATION_SCHEMA =
   'kungfu.bootstrap-installer-publication/v1';
@@ -111,12 +115,7 @@ function publicationEntries(index, channel) {
     )
     .map((entry) => {
       const identity = `${entry.platform}/${entry.architecture}`;
-      if (
-        !['darwin', 'linux', 'win32'].includes(entry.platform) ||
-        !['arm64', 'x64'].includes(entry.architecture)
-      ) {
-        throw new Error(`unsupported bootstrap target: ${identity}`);
-      }
+      assertSupportedProductTarget(entry.platform, entry.architecture);
       if (identities.has(identity)) {
         throw new Error(`ambiguous bootstrap target: ${identity}`);
       }
@@ -255,6 +254,7 @@ os=$(uname -s 2>/dev/null || true)
 case "$os" in Darwin) platform=darwin ;; Linux) platform=linux ;; *) fail unsupported-platform "supported systems are macOS and Linux" ;; esac
 machine=$(uname -m 2>/dev/null || true)
 case "$machine" in arm64|aarch64) architecture=arm64 ;; x86_64|amd64) architecture=x64 ;; *) fail unsupported-architecture "unsupported architecture: $machine" ;; esac
+[ "$platform/$architecture" != darwin/x64 ] || fail unsupported-host ${shellLiteral(INTEL_MACOS_DIAGNOSTIC)}
 if [ "$platform" = linux ]; then
   libc=$(getconf GNU_LIBC_VERSION 2>/dev/null || ldd --version 2>&1 | head -1 || true)
   case "$libc" in *glibc*|*"GNU libc"*|*GLIBC*) ;; *) fail unsupported-libc "the advertised Linux archive requires glibc" ;; esac

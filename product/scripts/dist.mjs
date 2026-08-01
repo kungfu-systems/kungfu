@@ -36,6 +36,7 @@ import {
 import { normalizeCopiedSymlinks } from './portable-symlinks.mjs';
 import { productReleaseChannelConfig } from './release-channel-trust.mjs';
 import {
+  assertSupportedProductHost,
   readTrunkRuntimePinSnapshot,
   runProductAssembly,
 } from './runtime-pin-snapshot.mjs';
@@ -213,7 +214,6 @@ function rollupPlatformPackageName() {
   const libc = linuxLibc();
   const packages = {
     'darwin-arm64': '@rollup/rollup-darwin-arm64',
-    'darwin-x64': '@rollup/rollup-darwin-x64',
     [`linux-arm64-${libc}`]: `@rollup/rollup-linux-arm64-${libc}`,
     [`linux-x64-${libc}`]: `@rollup/rollup-linux-x64-${libc}`,
     'win32-arm64': '@rollup/rollup-win32-arm64-msvc',
@@ -2290,6 +2290,7 @@ function buildCliProduct(esbuildRuntime) {
 }
 
 function main() {
+  assertSupportedProductHost();
   runProductAssembly({
     productTarget,
     builderArgs,

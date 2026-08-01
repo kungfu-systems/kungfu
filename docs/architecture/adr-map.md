@@ -13,20 +13,20 @@ domain, then open a decision or its bounded neighborhood.
 Use browser find to search titles, themes, statuses, or compact keys. The
 full IDs stay behind links so filenames do not dominate the page.
 
-Coverage: **166 ADRs** across **8 domains**; **2 authoritative edges**.
+Coverage: **167 ADRs** across **8 domains**; **2 authoritative edges**.
 
 ## Domain overview
 
 ```mermaid
 flowchart LR
-  root["ADR corpus · 166"]
+  root["ADR corpus · 167"]
   root --> d0["Facts, storage, and replay · 42"]
   root --> d1["Agent and work control · 22"]
   root --> d2["Xinfa and documentation · 15"]
   root --> d3["Extensions, SDKs, and language boundaries · 16"]
   root --> d4["Runtime, live services, and lifecycle · 21"]
   root --> d5["Build, distribution, and release · 7"]
-  root --> d6["Product and user surfaces · 7"]
+  root --> d6["Product and user surfaces · 8"]
   root --> d7["Architecture and governance · 36"]
 ```
 
@@ -220,17 +220,18 @@ review`; evidence is the number of declared qualification references.
 </details>
 
 <details id="product-ui">
-<summary><strong>Product and user surfaces</strong> · 7</summary>
+<summary><strong>Product and user surfaces</strong> · 8</summary>
 
 | Key | Decision | Theme | Status | Evidence | Nearby (navigation only) |
 |---|---|---|---|---:|---|
 | KF · 8c3a | [KFX contributes semantics once; GUI, TUI, CLI, and agents project them](../adr/KF-ADR-019f86da-4f90-72df-add3-948f3ae38c3a.md) | surface-neutral-kfx-contributions-thin-bindings | accepted / implemented / self-reviewed | 5 | [KF · e62e](../adr/KF-ADR-019f86da-4f90-7ef4-b28b-ee1fbaf9e62e.md) (shared terms: agents, cli, gui, kfx)<br>[KF · 341a](../adr/KF-ADR-019f86da-4f90-76ce-8957-f95affe9341a.md) (shared terms: surface, tui)<br>[KF · 8dff](../adr/KF-ADR-019f86da-4f90-7c91-9cc2-6dbd18d68dff.md) (shared terms: neutral) |
 | KF · 24e1 | [Per-user supervisor manages per-data-root masters](../adr/KF-ADR-019f86da-4f90-730a-a068-06e8758324e1.md) | — | superseded / not-applicable / legacy-unreviewed | 0 | [KF · 5d36](../adr/KF-ADR-019f86da-4f90-7d61-8afa-33d66ca05d36.md) (shared terms: data) |
-| KF · 341a | [v4 TUI = the platform's second reference surface (shell-native, zero-copy, React/Ink)](../adr/KF-ADR-019f86da-4f90-76ce-8957-f95affe9341a.md) | — | accepted / staged / self-reviewed | 3 | [KF · 8c3a](../adr/KF-ADR-019f86da-4f90-72df-add3-948f3ae38c3a.md) (shared terms: surface, tui)<br>[KF · e62e](../adr/KF-ADR-019f86da-4f90-7ef4-b28b-ee1fbaf9e62e.md) (shared terms: native, tui) |
-| KF · 8dff | [every product layer is independently complete and the core remains domain-neutral](../adr/KF-ADR-019f86da-4f90-7c91-9cc2-6dbd18d68dff.md) | — | accepted / implemented / legacy-unreviewed | 26 | [KF · 5d36](../adr/KF-ADR-019f86da-4f90-7d61-8afa-33d66ca05d36.md) (shared terms: product)<br>[KF · 1042](../adr/KF-ADR-019f9388-a139-7355-b9f2-f6dd9aa91042.md) (shared terms: product)<br>[KF · 8c3a](../adr/KF-ADR-019f86da-4f90-72df-add3-948f3ae38c3a.md) (shared terms: neutral)<br>[KF · e62e](../adr/KF-ADR-019f86da-4f90-7ef4-b28b-ee1fbaf9e62e.md) (shared terms: core) |
-| KF · 5d36 | [Desktop selects one explicit workspace and initializes its data home lazily](../adr/KF-ADR-019f86da-4f90-7d61-8afa-33d66ca05d36.md) | kungfu-workspace-product | proposed / not-started / unreviewed | 0 | [KF · 1042](../adr/KF-ADR-019f9388-a139-7355-b9f2-f6dd9aa91042.md) (shared terms: product)<br>[KF · 8dff](../adr/KF-ADR-019f86da-4f90-7c91-9cc2-6dbd18d68dff.md) (shared terms: product)<br>[KF · e62e](../adr/KF-ADR-019f86da-4f90-7ef4-b28b-ee1fbaf9e62e.md) (shared terms: one)<br>[KF · 24e1](../adr/KF-ADR-019f86da-4f90-730a-a068-06e8758324e1.md) (shared terms: data) |
+| KF · 341a | [v4 TUI = the platform's second reference surface (shell-native, zero-copy, React/Ink)](../adr/KF-ADR-019f86da-4f90-76ce-8957-f95affe9341a.md) | — | accepted / staged / self-reviewed | 3 | [KF · 8c3a](../adr/KF-ADR-019f86da-4f90-72df-add3-948f3ae38c3a.md) (shared terms: surface, tui)<br>[KF · e62e](../adr/KF-ADR-019f86da-4f90-7ef4-b28b-ee1fbaf9e62e.md) (shared terms: native, tui)<br>[KF · 0ff7](../adr/KF-ADR-019fbbe4-40c5-7c67-9ed2-910a65430ff7.md) (shared terms: platform) |
+| KF · 8dff | [every product layer is independently complete and the core remains domain-neutral](../adr/KF-ADR-019f86da-4f90-7c91-9cc2-6dbd18d68dff.md) | — | accepted / implemented / legacy-unreviewed | 26 | [KF · 5d36](../adr/KF-ADR-019f86da-4f90-7d61-8afa-33d66ca05d36.md) (shared terms: product)<br>[KF · 1042](../adr/KF-ADR-019f9388-a139-7355-b9f2-f6dd9aa91042.md) (shared terms: product)<br>[KF · 0ff7](../adr/KF-ADR-019fbbe4-40c5-7c67-9ed2-910a65430ff7.md) (shared terms: product)<br>[KF · 8c3a](../adr/KF-ADR-019f86da-4f90-72df-add3-948f3ae38c3a.md) (shared terms: neutral) |
+| KF · 5d36 | [Desktop selects one explicit workspace and initializes its data home lazily](../adr/KF-ADR-019f86da-4f90-7d61-8afa-33d66ca05d36.md) | kungfu-workspace-product | proposed / not-started / unreviewed | 0 | [KF · 0ff7](../adr/KF-ADR-019fbbe4-40c5-7c67-9ed2-910a65430ff7.md) (shared terms: kungfu, product)<br>[KF · 1042](../adr/KF-ADR-019f9388-a139-7355-b9f2-f6dd9aa91042.md) (shared terms: product)<br>[KF · 8dff](../adr/KF-ADR-019f86da-4f90-7c91-9cc2-6dbd18d68dff.md) (shared terms: product)<br>[KF · e62e](../adr/KF-ADR-019f86da-4f90-7ef4-b28b-ee1fbaf9e62e.md) (shared terms: one) |
 | KF · e62e | [one Core-native KFX runtime serves GUI, TUI, CLI, and agents](../adr/KF-ADR-019f86da-4f90-7ef4-b28b-ee1fbaf9e62e.md) | core-native-multisurface-kfx-runtime | accepted / implemented / self-reviewed | 3 | [KF · 8c3a](../adr/KF-ADR-019f86da-4f90-72df-add3-948f3ae38c3a.md) (shared terms: agents, cli, gui, kfx)<br>[KF · 341a](../adr/KF-ADR-019f86da-4f90-76ce-8957-f95affe9341a.md) (shared terms: native, tui)<br>[KF · 5d36](../adr/KF-ADR-019f86da-4f90-7d61-8afa-33d66ca05d36.md) (shared terms: one)<br>[KF · 8dff](../adr/KF-ADR-019f86da-4f90-7c91-9cc2-6dbd18d68dff.md) (shared terms: core) |
-| KF · 1042 | [Docker-first Hub Starter is a product contract before it is an image](../adr/KF-ADR-019f9388-a139-7355-b9f2-f6dd9aa91042.md) | hub-starter-docker | accepted / staged / self-reviewed | 15 | [KF · 5d36](../adr/KF-ADR-019f86da-4f90-7d61-8afa-33d66ca05d36.md) (shared terms: product)<br>[KF · 8dff](../adr/KF-ADR-019f86da-4f90-7c91-9cc2-6dbd18d68dff.md) (shared terms: product) |
+| KF · 1042 | [Docker-first Hub Starter is a product contract before it is an image](../adr/KF-ADR-019f9388-a139-7355-b9f2-f6dd9aa91042.md) | hub-starter-docker | accepted / staged / self-reviewed | 15 | [KF · 5d36](../adr/KF-ADR-019f86da-4f90-7d61-8afa-33d66ca05d36.md) (shared terms: product)<br>[KF · 8dff](../adr/KF-ADR-019f86da-4f90-7c91-9cc2-6dbd18d68dff.md) (shared terms: product)<br>[KF · 0ff7](../adr/KF-ADR-019fbbe4-40c5-7c67-9ed2-910a65430ff7.md) (shared terms: product) |
+| KF · 0ff7 | [Intel macOS is unsupported across the Kungfu product](../adr/KF-ADR-019fbbe4-40c5-7c67-9ed2-910a65430ff7.md) | product-platform-support | accepted / not-started / self-reviewed | 0 | [KF · 5d36](../adr/KF-ADR-019f86da-4f90-7d61-8afa-33d66ca05d36.md) (shared terms: kungfu, product)<br>[KF · 1042](../adr/KF-ADR-019f9388-a139-7355-b9f2-f6dd9aa91042.md) (shared terms: product)<br>[KF · 8dff](../adr/KF-ADR-019f86da-4f90-7c91-9cc2-6dbd18d68dff.md) (shared terms: product)<br>[KF · 341a](../adr/KF-ADR-019f86da-4f90-76ce-8957-f95affe9341a.md) (shared terms: platform) |
 
 </details>
 

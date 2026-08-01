@@ -15,9 +15,16 @@ import {
   buildBootstrapInstallerPublication,
 } from './bootstrap-installer.mjs';
 import { buildChannelIndex } from './release-channel-index.mjs';
+import { INTEL_MACOS_DIAGNOSTIC } from './runtime-pin-snapshot.mjs';
 import { bindProductReleaseCut } from './upgrade-manifest.mjs';
 
-function fixture() {
+function fixture(
+  targets = [
+    ['darwin', 'arm64', 'tar.gz'],
+    ['linux', 'x64', 'tar.gz'],
+    ['win32', 'x64', 'zip'],
+  ],
+) {
   const root = fs.mkdtempSync(
     path.join(os.tmpdir(), 'kungfu-bootstrap-installer-'),
   );
@@ -28,11 +35,7 @@ function fixture() {
     .subarray(-32)
     .toString('base64');
   const sourceCommit = 'a'.repeat(40);
-  const entries = [
-    ['darwin', 'arm64', 'tar.gz'],
-    ['linux', 'x64', 'tar.gz'],
-    ['win32', 'x64', 'zip'],
-  ].map(([platform, architecture, extension]) => {
+  const entries = targets.map(([platform, architecture, extension]) => {
     const manifestPath = path.join(root, `${platform}-${architecture}.json`);
     const manifest = bindProductReleaseCut({
       schema: 'kungfu.product-upgrade.manifest/v1',
@@ -102,6 +105,27 @@ function fixture() {
     trustedKeys: { [keyId]: rawPublicKey },
   };
 }
+
+test('bootstrap publication rejects Intel macOS before emitting installers', () => {
+  const value = fixture([['darwin', 'x64', 'tar.gz']]);
+  try {
+    assert.throws(
+      () =>
+        buildBootstrapInstallerPublication({
+          channelIndex: value.index,
+          trustedKeys: value.trustedKeys,
+          channel: 'alpha',
+          channelUrl: 'https://kungfu.tech/.well-known/kungfu/alpha.json',
+        }),
+      (error) => {
+        assert.equal(error.message, INTEL_MACOS_DIAGNOSTIC);
+        return true;
+      },
+    );
+  } finally {
+    fs.rmSync(value.root, { recursive: true, force: true });
+  }
+});
 
 test('bootstrap publication is deterministic and pins signed release identity', () => {
   const value = fixture();
@@ -177,6 +201,7 @@ test('bootstrap publication is deterministic and pins signed release identity', 
     assert.match(shell.bytes.toString(), /--dry-run/);
     assert.match(shell.bytes.toString(), /sha256sum/);
     assert.match(shell.bytes.toString(), /archive-unsafe/);
+    assert.equal(shell.bytes.toString().includes(INTEL_MACOS_DIAGNOSTIC), true);
     const shellPath = path.join(value.root, 'install.sh');
     fs.writeFileSync(shellPath, shell.bytes);
     const syntax = spawnSync('/bin/sh', ['-n', shellPath], {

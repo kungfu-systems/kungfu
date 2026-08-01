@@ -86,6 +86,50 @@ test('cold source Work failure remains machine-actionable', (t) => {
   });
 });
 
+test('Intel macOS fails before launcher acquisition or task dispatch', (t) => {
+  if (process.platform === 'win32') {
+    t.skip('POSIX launcher contract');
+    return;
+  }
+  const temp = fs.mkdtempSync(
+    path.join(os.tmpdir(), 'kungfu-shifu-intel-mac-'),
+  );
+  t.after(() => fs.rmSync(temp, { recursive: true, force: true }));
+  const launcher = path.join(temp, 'shifu');
+  const bin = path.join(temp, 'bin');
+  const networkMarker = path.join(temp, 'network-attempted');
+  fs.mkdirSync(bin);
+  fs.copyFileSync(path.join(ROOT, 'shifu'), launcher);
+  fs.chmodSync(launcher, 0o755);
+  fs.writeFileSync(
+    path.join(bin, 'uname'),
+    '#!/bin/sh\ncase "$1" in -s) echo Darwin ;; -m) echo x86_64 ;; esac\n',
+  );
+  fs.writeFileSync(
+    path.join(bin, 'curl'),
+    `#!/bin/sh\ntouch ${JSON.stringify(networkMarker)}\nexit 99\n`,
+  );
+  fs.chmodSync(path.join(bin, 'uname'), 0o755);
+  fs.chmodSync(path.join(bin, 'curl'), 0o755);
+
+  const result = spawnSync(launcher, ['build'], {
+    encoding: 'utf8',
+    env: {
+      ...process.env,
+      HOME: temp,
+      PATH: `${bin}:/usr/bin:/bin`,
+      XDG_CONFIG_HOME: path.join(temp, 'config'),
+    },
+  });
+  assert.equal(result.status, 64);
+  assert.equal(result.stdout, '');
+  assert.equal(
+    result.stderr,
+    'shifu: unsupported-host: Intel macOS (Darwin x86_64) is not supported by Kungfu\n',
+  );
+  assert.equal(fs.existsSync(networkMarker), false);
+});
+
 test('partial Core assembly cannot masquerade as Work readiness', (t) => {
   if (process.platform === 'win32') {
     t.skip('POSIX launcher contract');
@@ -119,7 +163,6 @@ test('cached pinned uv activates Work after Qualified Core materialization', (t)
   }
   const cacheTargets = {
     'darwin-arm64': 'macos-aarch64',
-    'darwin-x64': 'macos-x86_64',
     'linux-arm64': 'linux-aarch64',
     'linux-x64': 'linux-x86_64',
   };

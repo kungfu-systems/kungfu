@@ -227,7 +227,6 @@ fn release_asset() -> String {
     let (os, arch) = (env::consts::OS, env::consts::ARCH);
     match (os, arch) {
         ("macos", "aarch64") => "shifu-macos-arm64".to_string(),
-        ("macos", "x86_64") => "shifu-macos-x64".to_string(),
         ("linux", "x86_64") => "shifu-linux-x64".to_string(),
         ("linux", "aarch64") => "shifu-linux-arm64".to_string(),
         ("windows", "x86_64") => "shifu-windows-x64.exe".to_string(),
