@@ -193,6 +193,47 @@ test('bundled manifest binds exact runtime bytes and source product identity', (
   }
 });
 
+test('Buildchain source-build evidence remains publication-ineligible', () => {
+  const f = fixture();
+  try {
+    const evidence =
+      'buildchain-retained:product/release/qualification/kungfu-upgrade-qualification-evidence.json';
+    const options = {
+      ...f,
+      platform: 'win32',
+      architecture: 'x64',
+      revision: '1'.repeat(40),
+      runtimeSignature: `${evidence}#runtime`,
+      qualificationEvidenceRef: evidence,
+    };
+    const sourceBuild = buildBundledUpgradeManifest({
+      ...options,
+      sourceBuild: true,
+    });
+    assert.deepEqual(sourceBuild.releaseCut.publicationPolicy, {
+      trustDomain: 'shifu-local',
+      publicationEligible: false,
+      immutable: true,
+      eligibleChannels: [],
+    });
+
+    const publicBuild = buildBundledUpgradeManifest({
+      ...options,
+      sourceBuild: false,
+    });
+    assert.equal(
+      publicBuild.releaseCut.publicationPolicy.trustDomain,
+      'public',
+    );
+    assert.equal(
+      publicBuild.releaseCut.publicationPolicy.publicationEligible,
+      true,
+    );
+  } finally {
+    fs.rmSync(f.root, { recursive: true, force: true });
+  }
+});
+
 test('combined release rejects a CLI and desktop identity split', () => {
   const root = `sha256:${'1'.repeat(64)}`;
   assert.doesNotThrow(() =>

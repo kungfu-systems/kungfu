@@ -20,6 +20,7 @@ import {
 import { contentRoot } from './release-channel-index.mjs';
 
 export const UNQUALIFIED_RELEASE_EVIDENCE = 'unqualified-local-build';
+const BUILDCHAIN_RETAINED_EVIDENCE = 'buildchain-retained:';
 const DOCUMENTATION_URL = 'https://www.kungfu.tech/docs/guides/upgrading';
 const RELEASE_SCHEMA = 'kungfu.product-upgrade.manifest/v1';
 const RELEASE_CUT_SCHEMA = 'kungfu.product-release-cut/v1';
@@ -196,18 +197,20 @@ export function bindProductReleaseCut(
       .map((value) => value.trim())
       .filter(Boolean),
     sourceSettlementRoot = process.env.KF_SOURCE_SETTLEMENT_ROOT,
+    sourceBuild = process.env.KUNGFU_BUILDCHAIN_SOURCE_BUILD === '1',
   } = {},
 ) {
   const base = cutFreeManifest(manifest);
   const manifestIdentityRoot = contentRoot(manifestIdentity(base));
+  const localOnlyEvidence = (value) =>
+    String(value || '').startsWith(UNQUALIFIED_RELEASE_EVIDENCE) ||
+    (sourceBuild &&
+      String(value || '').startsWith(BUILDCHAIN_RETAINED_EVIDENCE));
   const localEvidence =
-    String(base.qualificationEvidenceRef || '').startsWith(
-      UNQUALIFIED_RELEASE_EVIDENCE,
-    ) ||
+    localOnlyEvidence(base.qualificationEvidenceRef) ||
     (base.artifacts || []).some(
       (artifact) =>
-        !artifact.signature ||
-        artifact.signature === UNQUALIFIED_RELEASE_EVIDENCE,
+        !artifact.signature || localOnlyEvidence(artifact.signature),
     );
   const trustDomain = localEvidence ? 'shifu-local' : 'public';
   const qualificationEvidenceRoots = sortedRoots([
@@ -315,6 +318,7 @@ export function buildBundledUpgradeManifest({
     UNQUALIFIED_RELEASE_EVIDENCE,
   qualificationEvidenceRef = process.env.KF_UPGRADE_QUALIFICATION_REF ||
     `${UNQUALIFIED_RELEASE_EVIDENCE}:${revision}`,
+  sourceBuild = process.env.KUNGFU_BUILDCHAIN_SOURCE_BUILD === '1',
 }) {
   assertPlatform(platform, architecture);
   if (!fs.statSync(runtimeRoot).isDirectory()) {
@@ -326,37 +330,40 @@ export function buildBundledUpgradeManifest({
   });
   const runtimeBuildId = `runtime-${version}-${runtimeDigest.slice(0, 16)}`;
   const frontendBuildId = `product-${version}-${revision.slice(0, 12)}-${runtimeDigest.slice(0, 16)}`;
-  return bindProductReleaseCut({
-    schema: RELEASE_SCHEMA,
-    productVersion: version,
-    releaseChannel,
-    sourceCommit: revision,
-    runtimeBuildId,
-    runtimeArtifactDigest: `sha256:${runtimeDigest}`,
-    runtimeEntrypoint: runtimeEntrypoint(platform),
-    frontendBuildId,
-    controlProtocolRange: { min: 1, max: 1 },
-    peerWireProtocolRange: { min: 1, max: 1 },
-    journalSchemaReadRange: { min: 1, max: 1 },
-    journalSchemaWriteVersion: 1,
-    migrationClass: 'none',
-    rollbackClass: 'automatic',
-    minimumSupportedFrontend: version,
-    minimumSupportedRuntime: version,
-    platform,
-    architecture,
-    artifacts: [
-      {
-        kind: 'runtime',
-        url: 'app-resource://kungfu',
-        size: treeSize(runtimeRoot, { filter: releaseRuntimePath }),
-        digest: `sha256:${runtimeDigest}`,
-        signature: runtimeSignature,
-      },
-    ],
-    qualificationEvidenceRef,
-    documentationUrl: DOCUMENTATION_URL,
-  });
+  return bindProductReleaseCut(
+    {
+      schema: RELEASE_SCHEMA,
+      productVersion: version,
+      releaseChannel,
+      sourceCommit: revision,
+      runtimeBuildId,
+      runtimeArtifactDigest: `sha256:${runtimeDigest}`,
+      runtimeEntrypoint: runtimeEntrypoint(platform),
+      frontendBuildId,
+      controlProtocolRange: { min: 1, max: 1 },
+      peerWireProtocolRange: { min: 1, max: 1 },
+      journalSchemaReadRange: { min: 1, max: 1 },
+      journalSchemaWriteVersion: 1,
+      migrationClass: 'none',
+      rollbackClass: 'automatic',
+      minimumSupportedFrontend: version,
+      minimumSupportedRuntime: version,
+      platform,
+      architecture,
+      artifacts: [
+        {
+          kind: 'runtime',
+          url: 'app-resource://kungfu',
+          size: treeSize(runtimeRoot, { filter: releaseRuntimePath }),
+          digest: `sha256:${runtimeDigest}`,
+          signature: runtimeSignature,
+        },
+      ],
+      qualificationEvidenceRef,
+      documentationUrl: DOCUMENTATION_URL,
+    },
+    { sourceBuild },
+  );
 }
 
 export function buildCliUpgradeManifest({
