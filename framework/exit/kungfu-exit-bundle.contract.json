@@ -92,7 +92,7 @@
       },
       "memberInventory": {
         "type": "array",
-        "minItems": 8
+        "minItems": 9
       },
       "guarantees": {
         "type": "array",
@@ -677,6 +677,7 @@
                 "fact-cut-portable-v1",
                 "storage-source-export-v1",
                 "episode-v1",
+                "project-cut-v1",
                 "fact-library-v1",
                 "mission-control-v2"
               ]
@@ -1237,6 +1238,34 @@
       },
       "eligibleMember": true,
       "gap": "Scoped Cut portability is Python-orchestrated and must not be confused with the native whole-authority bundle."
+    },
+    {
+      "id": "project-cut-v1",
+      "schemas": [
+        "kungfu.project-cut.history-bundle/v1"
+      ],
+      "owner": "Project Cut protocol reader and exact tracked-artifact importer",
+      "source": "framework/core/src/python/kungfu/exit_bundle.py",
+      "identityRoot": "primaryCutRoot with four-root Project Cut receipt identity",
+      "protocol": "project-cut-history-portability/v1",
+      "modes": [
+        "full",
+        "thin"
+      ],
+      "material": [
+        "exact Project Cut manifest and receipt bytes",
+        "verified successor Cut manifest and receipt bytes",
+        "protected settlement publication manifests",
+        "predecessor, successor, settlement, omission, conflict, and unknown state"
+      ],
+      "import": {
+        "validateDefault": true,
+        "executeExplicit": true,
+        "idempotent": true,
+        "destinationPreflight": "all-artifact-byte-and-root-preflight-before-project-layout-write"
+      },
+      "eligibleMember": true,
+      "gap": "The member preserves Project Cut and protected publication evidence; native Work and Dogfood facts remain separate Fact, Episode, Profile, and Work authority members."
     },
     {
       "id": "fact-library-v1",
