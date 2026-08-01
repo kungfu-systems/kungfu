@@ -31,6 +31,26 @@ def _spec(*, process_exit="restart", durable_state="declared", max_restarts=3):
     }
 
 
+def test_json_write_is_atomic_across_interleaved_writers(tmp_path, monkeypatch):
+    target = tmp_path / "runtime" / "state.json"
+    original_replace = peer_lifecycle.os.replace
+    interleaved = False
+
+    def replace_with_interleaved_writer(source, destination):
+        nonlocal interleaved
+        if not interleaved:
+            interleaved = True
+            peer_lifecycle._write_json(target, {"writer": "nested"})
+        original_replace(source, destination)
+
+    monkeypatch.setattr(peer_lifecycle.os, "replace", replace_with_interleaved_writer)
+
+    peer_lifecycle._write_json(target, {"writer": "outer"})
+
+    assert peer_lifecycle._read_json(target) == {"writer": "outer"}
+    assert list(target.parent.glob(f".{target.name}.*.tmp")) == []
+
+
 def test_plan_is_stable_and_never_uses_a_shell(tmp_path):
     first = peer_lifecycle.plan(_spec(), tmp_path)
     second = peer_lifecycle.plan(_spec(), tmp_path)
@@ -161,6 +181,45 @@ def test_ensure_fails_closed_on_pid_reuse(tmp_path, monkeypatch):
         peer_lifecycle.ensure(_spec(), runtime_dir, wait_seconds=0)
 
     assert failure.value.code == "ownership-unknown"
+
+
+def test_ensure_stops_waiting_when_a_new_host_exits(tmp_path, monkeypatch):
+    stopped = {
+        "healthy": False,
+        "lifecycleState": "starting",
+    }
+
+    class ExitedHost:
+        def poll(self):
+            return 2
+
+    monkeypatch.setattr(peer_lifecycle, "status", lambda *_args: stopped)
+
+    result = peer_lifecycle._wait_for_ensure_status(
+        str(tmp_path), "test.probe", 30, host_process=ExitedHost()
+    )
+
+    assert result is stopped
+
+
+def test_ensure_wait_returns_the_observed_ready_snapshot(tmp_path, monkeypatch):
+    ready = {"healthy": True, "lifecycleState": "ready"}
+    transient_empty_read = {"healthy": False, "lifecycleState": "stopped"}
+    statuses = [ready, transient_empty_read]
+    calls = 0
+
+    def next_status(_runtime_dir, _peer_id):
+        nonlocal calls
+        current = statuses[min(calls, len(statuses) - 1)]
+        calls += 1
+        return current
+
+    monkeypatch.setattr(peer_lifecycle, "status", next_status)
+
+    result = peer_lifecycle._wait_for_ensure_status(str(tmp_path), "test.probe", 30)
+
+    assert result is ready
+    assert calls == 1
 
 
 def test_stale_host_generation_cannot_stop_new_owner(tmp_path, monkeypatch):

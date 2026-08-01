@@ -19,6 +19,7 @@ import re
 import signal
 import subprocess
 import sys
+import tempfile
 import time
 from pathlib import Path
 from typing import Any, Mapping
@@ -63,9 +64,26 @@ def _read_json(path: Path) -> dict[str, Any]:
 
 def _write_json(path: Path, value: Mapping[str, Any]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
-    temporary = path.with_suffix(path.suffix + ".tmp")
-    temporary.write_text(json.dumps(value, indent=2, sort_keys=True) + "\n", "utf-8")
-    os.replace(temporary, path)
+    temporary: Path | None = None
+    try:
+        with tempfile.NamedTemporaryFile(
+            mode="w",
+            encoding="utf-8",
+            newline="\n",
+            dir=path.parent,
+            prefix=f".{path.name}.",
+            suffix=".tmp",
+            delete=False,
+        ) as output:
+            temporary = Path(output.name)
+            output.write(json.dumps(value, indent=2, sort_keys=True) + "\n")
+        os.replace(temporary, path)
+    finally:
+        if temporary is not None:
+            try:
+                temporary.unlink()
+            except FileNotFoundError:
+                pass
 
 
 def _canonical_digest(value: Mapping[str, Any]) -> str:
@@ -462,6 +480,32 @@ def _product_entry_command() -> list[str]:
     ]
 
 
+def _wait_for_ensure_status(
+    runtime: str,
+    peer_id: str,
+    timeout: float,
+    *,
+    host_process: subprocess.Popen[Any] | None = None,
+) -> dict[str, Any]:
+    """Wait for a live host to finish its asynchronous readiness transition."""
+
+    deadline = time.monotonic() + timeout
+    while True:
+        current = status(runtime, peer_id)
+        if current["healthy"] or current["lifecycleState"] in {
+            "crash-loop",
+            "ended",
+            "lost-control",
+            "ownership-unknown",
+        }:
+            return current
+        if host_process is not None and host_process.poll() is not None:
+            return current
+        if time.monotonic() >= deadline:
+            return current
+        time.sleep(0.1)
+
+
 def ensure(
     spec: Mapping[str, Any],
     runtime_dir: str | os.PathLike[str],
@@ -559,18 +603,8 @@ def ensure(
                 "process-identity-unavailable",
                 "Peer host process start identity was unavailable",
             )
-    deadline = time.monotonic() + readiness_wait
-    while time.monotonic() < deadline:
-        current_status = status(runtime, peer_id)
-        if current_status["healthy"] or current_status["lifecycleState"] in {
-            "crash-loop",
-            "lost-control",
-            "ownership-unknown",
-        }:
-            break
-        time.sleep(0.1)
     return {
-        **status(runtime, peer_id),
+        **_wait_for_ensure_status(runtime, peer_id, readiness_wait, host_process=child),
         "changed": True,
         "adopted": False,
         "command": command,
