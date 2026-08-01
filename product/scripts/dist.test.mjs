@@ -206,7 +206,10 @@ test('CLI product archive name uses the Kungfu Episodes product prefix', () => {
     cliArchiveBase('linux-arm64'),
     'kungfu-episodes-cli-linux-arm64',
   );
-  assert.equal(cliArchiveBase('win32-x64'), 'kungfu-episodes-cli-win32-x64');
+  assert.equal(
+    cliArchiveBase('windows-x64'),
+    'kungfu-episodes-cli-windows-x64',
+  );
 });
 
 test('CLI product manifest channel config contains only runtime trust fields', () => {

@@ -282,6 +282,7 @@ struct LocalReleaseEvidence {
     release_cut_root: String,
     platform_slice_root: String,
 }
+
 /// Read the repo's KFD-3 registry and return the registration plan for
 /// `task`, if any surface declares one for the host platform. A repo without
 /// a registry, or without a matching declaration, simply has no plan — that
@@ -393,10 +394,10 @@ fn plan_at(root: &Path, path: &Path, task: &str) -> Option<DistributionPlan> {
             .filter(|a| !a.kind.is_empty() && !a.path_glob.is_empty())
             .collect();
         if dist.str_of("releaseCompanions") == "standard" {
-            let runtime = match env::consts::OS {
-                "macos" => "darwin",
-                "windows" => "win32",
-                other => other,
+            let (runtime, upgrade_runtime) = match env::consts::OS {
+                "macos" => ("darwin", "darwin"),
+                "windows" => ("windows", "win32"),
+                other => (other, other),
             };
             let archive = if env::consts::OS == "windows" {
                 "zip"
@@ -411,7 +412,7 @@ fn plan_at(root: &Path, path: &Path, task: &str) -> Option<DistributionPlan> {
                 },
                 DeclaredArtifact {
                     kind: "upgrade-manifest".to_string(),
-                    path_glob: format!("product/release/cli/*upgrade-*-{runtime}-*.json"),
+                    path_glob: format!("product/release/cli/*upgrade-*-{upgrade_runtime}-*.json"),
                     sha256: String::new(),
                 },
             ]);
