@@ -400,6 +400,7 @@ MOCK_SCENARIOS = (
 BACKENDS = ("tmux", "direct")
 CWD_POLICIES = ("workspace-root", "home", "inherit")
 _VERSION_TIMEOUT_SECONDS = 5.0
+_PROVIDER_VERSION_TIMEOUT_SECONDS = {"amp": 15.0}
 _SEMANTIC_VERSION = re.compile(
     r"(?<![0-9])([0-9]+\.[0-9]+\.[0-9]+(?:[-+][0-9A-Za-z.-]+)?)(?![0-9])"
 )
@@ -408,6 +409,10 @@ _SEMANTIC_VERSION = re.compile(
 def _parse_semantic_version(output: str) -> str | None:
     match = _SEMANTIC_VERSION.search(output)
     return match.group(1) if match else None
+
+
+def _version_timeout_seconds(provider: str) -> float:
+    return _PROVIDER_VERSION_TIMEOUT_SECONDS.get(provider, _VERSION_TIMEOUT_SECONDS)
 
 
 def _profile_id(provider: str, path_class: str, path: str) -> str:
@@ -649,14 +654,19 @@ def _discover_configured_adapter(
         if path in seen or not exists(path):
             continue
         seen.add(path)
+        provider = str(adapter["id"])
         version = (
             version_probe(path)
             if version_probe is not None
-            else _probe_version(path, discovery["versionArgv"])
+            else _probe_version(
+                path,
+                discovery["versionArgv"],
+                timeout_seconds=_version_timeout_seconds(provider),
+            )
         )
         results.append(
             ProviderDiscovery(
-                provider=str(adapter["id"]),
+                provider=provider,
                 found=True,
                 path=path,
                 path_class=path_class,
@@ -667,13 +677,18 @@ def _discover_configured_adapter(
     return results
 
 
-def _probe_version(executable: str, version_argv: list[str]) -> str | None:
+def _probe_version(
+    executable: str,
+    version_argv: list[str],
+    *,
+    timeout_seconds: float = _VERSION_TIMEOUT_SECONDS,
+) -> str | None:
     try:
         result = subprocess.run(
             [executable, *(str(value) for value in version_argv)],
             capture_output=True,
             text=True,
-            timeout=_VERSION_TIMEOUT_SECONDS,
+            timeout=timeout_seconds,
             check=False,
         )
     except (OSError, subprocess.SubprocessError):
@@ -877,7 +892,7 @@ def verify_profile(profile: Mapping[str, Any]) -> dict[str, Any]:
                 [executable, *probe_argv],
                 capture_output=True,
                 text=True,
-                timeout=_VERSION_TIMEOUT_SECONDS,
+                timeout=_version_timeout_seconds(provider),
                 check=False,
                 env=(
                     {**os.environ, "KUNGFU_AS_VARIANT": "node"}

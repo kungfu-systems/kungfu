@@ -435,6 +435,29 @@ def test_runtime_profile_verification_returns_a_semantic_provider_version(
     assert result["version"] == expected
 
 
+def test_amp_runtime_profile_verification_allows_a_bounded_cold_start(
+    monkeypatch,
+):
+    observed = {}
+
+    def probe(*args, **kwargs):
+        observed["timeout"] = kwargs["timeout"]
+        return SimpleNamespace(returncode=0, stdout="0.0.1785586633\n", stderr="")
+
+    monkeypatch.setattr(runtime_profiles.subprocess, "run", probe)
+
+    result = runtime_profiles.verify_profile(
+        {
+            "id": "amp.path.test",
+            "provider": "amp",
+            "launch": {"executable": sys.executable},
+        }
+    )
+
+    assert result["ok"] is True
+    assert observed["timeout"] == 15.0
+
+
 def test_third_party_runtime_verification_accepts_bounded_opaque_version(
     monkeypatch,
 ):
@@ -1392,7 +1415,7 @@ def test_bare_native_launches_get_unique_workspace_consoles(monkeypatch, tmp_pat
     )
 
 
-def test_unbound_native_attempt_polls_binding_without_work_heartbeat(
+def test_unbound_native_attempt_heartbeats_session_without_work_observation(
     monkeypatch, tmp_path
 ):
     requests = []
@@ -1459,7 +1482,20 @@ def test_unbound_native_attempt_polls_binding_without_work_heartbeat(
 
     operations = [request["operation"] for request in requests]
     assert operations.count("show") >= 2
-    assert "heartbeat-native" not in operations
+    heartbeats = [
+        request for request in requests if request["operation"] == "heartbeat-native"
+    ]
+    assert len(heartbeats) >= 2
+    assert all(
+        heartbeat["observation"]
+        == {
+            "state": "fresh",
+            "staleAfterMs": 5000,
+            "work": None,
+            "diagnostic": None,
+        }
+        for heartbeat in heartbeats
+    )
     assert operations.count("end-native") == 1
 
 

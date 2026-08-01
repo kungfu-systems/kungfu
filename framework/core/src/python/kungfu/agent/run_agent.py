@@ -802,16 +802,21 @@ def run_native_interactive(
                     {"operation": "show", "session": dict(session_ref)}
                 )
                 binding = current.get("binding") or {}
-                if binding.get("kind") != "work" or not binding.get("workRef"):
-                    # A workspace assistant has no Work state to heartbeat yet.
-                    # Keep polling the read-only Session projection until the
-                    # provider binds from inside its fully established UI; this
-                    # avoids pushing Work observations through the provider's
-                    # trust/startup boundary.
-                    stop_heartbeat.wait(heartbeat_seconds)
-                    continue
-                active_work_ref = binding["workRef"]
-                observed = dict(work_observer(active_work_ref) if work_observer else {})
+                if binding.get("kind") == "work" and binding.get("workRef"):
+                    active_work_ref = binding["workRef"]
+                    observed = dict(
+                        work_observer(active_work_ref) if work_observer else {}
+                    )
+                else:
+                    # Session liveness and Work observation are independent.
+                    # A workspace assistant has no Work projection yet, but the
+                    # launcher can still prove that its provider process is
+                    # alive while it waits for an in-UI bind.
+                    observed = {
+                        "state": "fresh",
+                        "work": None,
+                        "diagnostic": None,
+                    }
                 session_invoker(
                     {
                         "operation": "heartbeat-native",

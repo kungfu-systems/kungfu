@@ -40,7 +40,21 @@ export function resolveNativeInteractiveNodePty(
     'lib',
     'index.js',
   );
-  const candidates = [requested ? path.resolve(requested) : null, bundled];
+  const sourcePackage = path.resolve(
+    path.dirname(fileURLToPath(import.meta.url)),
+    '..',
+    '..',
+    'agent-session',
+    'node_modules',
+    'node-pty',
+    'lib',
+    'index.js',
+  );
+  const candidates = [
+    requested ? path.resolve(requested) : null,
+    bundled,
+    sourcePackage,
+  ];
   try {
     const productClient = moduleRequire.resolve(
       '@kungfu-tech/agent-session/product-client',
