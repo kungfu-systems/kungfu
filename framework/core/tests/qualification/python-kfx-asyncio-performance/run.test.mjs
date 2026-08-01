@@ -131,6 +131,10 @@ test('manual Gate Measurement retains exact-source evidence on all three support
   }
   assert.match(workflow, /python-kfx-asyncio:qualify -- --execute --output/u);
   assert.match(workflow, /raw observations and derived report/u);
+  assert.match(
+    workflow,
+    /inputs\.focused-gates == '' && !inputs\.python-kfx-asyncio-performance/u,
+  );
   assert.doesNotMatch(workflow.split('jobs:')[0], /pull_request:/u);
 });
 
