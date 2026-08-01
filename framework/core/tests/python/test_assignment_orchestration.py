@@ -1800,6 +1800,19 @@ def test_sealed_state_index_retains_exact_work_coordinate(tmp_path):
             "schema": "kungfu.assignment-orchestration.sealed-work-coordinate/v1",
             "assignment_subject": "kungfu:assignment-a",
             "workspace_identity_root": owning_root,
+            "assignment_state_root": assignment_orchestration.semantic_root(
+                {
+                    "schema": "kungfu.assignment-orchestration.retained-assignment-state/v1",
+                    "workspace": {},
+                    "initiative_subject": status["initiative_subject"],
+                    "assignment_subject": status["assignment_subject"],
+                    "assignment": status["assignment"],
+                    "phase": status["phase"],
+                    "active_lease": status["active_lease"],
+                    "event_counts": plan["snapshot"]["counts"],
+                }
+            ),
+            "event_counts": plan["snapshot"]["counts"],
             "state_root": plan["state_root"],
             "query_proof_root": status["query_proof_root"],
             "phase": "continuation-decided",
