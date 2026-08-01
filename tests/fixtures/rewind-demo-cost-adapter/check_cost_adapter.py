@@ -2,8 +2,8 @@
 #
 # Parse-layer assertions for the cost adapters. Proves three things without a
 # journal or the native binding:
-#   1. provider discovery locates Codex (PATH + macOS app bundle), Claude, and
-#      OpenCode and records misses diagnosably, touching no credential;
+#   1. provider discovery locates Codex (PATH + macOS app bundle), Claude, Amp,
+#      and OpenCode and records misses diagnosably, touching no credential;
 #   2. the Codex `exec --json` adapter accumulates turn.completed usage into an
 #      EXACT_RUN snapshot with no fabricated dollar cost;
 #   3. the Claude `--print --output-format json` adapter carries the real
@@ -142,6 +142,7 @@ res = discover_providers(
         {
             "codex": "/c/codex",
             "claude": "/c/claude",
+            "amp": "/c/amp",
             "opencode": "/c/opencode",
         }
     ),
@@ -150,7 +151,7 @@ res = discover_providers(
 )
 check(
     "discover_providers returns all defaults",
-    set(res) == {"codex", "claude", "opencode"}
+    set(res) == {"codex", "claude", "amp", "opencode"}
     and all(isinstance(v, ProviderDiscovery) for v in res.values()),
 )
 check("all defaults found with injected PATH", all(v.found for v in res.values()))
