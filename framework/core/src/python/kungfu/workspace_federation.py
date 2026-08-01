@@ -725,6 +725,29 @@ def query_federation(
     return result
 
 
+def _retained_state_dominates(
+    candidate: Mapping[str, Any], predecessor: Mapping[str, Any]
+) -> bool:
+    candidate_counts = candidate.get("event_counts")
+    predecessor_counts = predecessor.get("event_counts")
+    if not isinstance(candidate_counts, Mapping) or not isinstance(
+        predecessor_counts, Mapping
+    ):
+        return False
+    if not candidate_counts or set(candidate_counts) != set(predecessor_counts):
+        return False
+    try:
+        pairs = [
+            (int(candidate_counts[key]), int(predecessor_counts[key]))
+            for key in candidate_counts
+        ]
+    except (TypeError, ValueError):
+        return False
+    return all(current >= previous for current, previous in pairs) and any(
+        current > previous for current, previous in pairs
+    )
+
+
 def _compose_global_work(
     components: Iterable[Mapping[str, Any]],
     *,
@@ -911,11 +934,25 @@ def _compose_global_work(
     }
     outcome_history = _compose_outcome_history(component_rows, retained_states)
     retained_subjects: dict[str, list[dict[str, Any]]] = {}
+    retained_nodes: dict[str, dict[str, Any]] = {}
     for state in retained_states.values():
         if state.get("settled") is True:
             retained_subjects.setdefault(
                 str(state.get("assignment_subject") or ""), []
             ).append(state)
+            try:
+                reference = WorkRef(
+                    workspace_identity_root=str(
+                        state.get("workspace_identity_root") or ""
+                    ),
+                    object_kind="assignment",
+                    subject=str(state.get("assignment_subject") or ""),
+                    version_root=str(state.get("state_root") or ""),
+                    cut_root=str(state.get("query_proof_root") or ""),
+                )
+            except (TypeError, ValueError):
+                continue
+            retained_nodes[reference.node_key] = state
     for rows in retained_subjects.values():
         rows.sort(key=lambda row: str(row.get("state_root") or ""))
 
@@ -930,6 +967,7 @@ def _compose_global_work(
         for side in ("source", "target"):
             reference = parse_work_ref((relation or {}).get(side) or {})
             target_root = node_to_canonical.get(reference.node_key)
+            retained_target = retained_nodes.get(reference.node_key)
             if target_root:
                 resolved.append(
                     {
@@ -938,6 +976,20 @@ def _compose_global_work(
                         "side": side,
                         "work_ref": reference.as_dict(),
                         "canonical_root": target_root,
+                    }
+                )
+            elif retained_target:
+                resolved.append(
+                    {
+                        "kind": "typed-relation-endpoint",
+                        "relation_root": relation.get("relation_root"),
+                        "side": side,
+                        "work_ref": reference.as_dict(),
+                        "resolution": "retained-sealed-assignment-state",
+                        "sealed_state_root": retained_target["state_root"],
+                        "assignment_state_root": retained_target.get(
+                            "assignment_state_root", ""
+                        ),
                     }
                 )
             else:
@@ -967,6 +1019,30 @@ def _compose_global_work(
                 subject_to_canonical.get(("assignment", dependency_subject), set())
             )
             retained_candidates = retained_subjects.get(dependency_subject, [])
+            retained_candidate_groups: dict[str, list[dict[str, Any]]] = {}
+            for retained in retained_candidates:
+                assignment_state_root = str(retained.get("assignment_state_root") or "")
+                group_key = (
+                    assignment_state_root
+                    if _ROOT.fullmatch(assignment_state_root)
+                    else f"legacy:{retained['state_root']}"
+                )
+                retained_candidate_groups.setdefault(group_key, []).append(retained)
+            selected_retained_group_root = ""
+            if len(retained_candidate_groups) == 1:
+                selected_retained_group_root = next(iter(retained_candidate_groups))
+            elif len(retained_candidate_groups) > 1:
+                dominant_roots = [
+                    group_root
+                    for group_root, group_rows in retained_candidate_groups.items()
+                    if all(
+                        other_root == group_root
+                        or _retained_state_dominates(group_rows[0], other_rows[0])
+                        for other_root, other_rows in retained_candidate_groups.items()
+                    )
+                ]
+                if len(dominant_roots) == 1:
+                    selected_retained_group_root = dominant_roots[0]
             unqualified_candidates = [
                 row
                 for row in unqualified_retained_states.values()
@@ -984,13 +1060,28 @@ def _compose_global_work(
                 and not canonical_by_root[candidates[0]]["conflict"]
             ):
                 resolved.append({**base, "canonical_root": candidates[0]})
-            elif not candidates and len(retained_candidates) == 1:
-                retained = retained_candidates[0]
+            elif not candidates and selected_retained_group_root:
+                retained_group = retained_candidate_groups[selected_retained_group_root]
+                retained_group.sort(key=lambda row: str(row["state_root"]))
+                retained = retained_group[0]
+                superseded_state_roots = sorted(
+                    row["state_root"]
+                    for group_root, rows in retained_candidate_groups.items()
+                    if group_root != selected_retained_group_root
+                    for row in rows
+                )
                 resolved.append(
                     {
                         **base,
                         "resolution": "retained-sealed-assignment-state",
                         "sealed_state_root": retained["state_root"],
+                        "equivalent_sealed_state_roots": [
+                            row["state_root"] for row in retained_group
+                        ],
+                        "superseded_sealed_state_roots": superseded_state_roots,
+                        "assignment_state_root": retained.get(
+                            "assignment_state_root", ""
+                        ),
                         "work_ref": {
                             "schema": WORK_REF_SCHEMA,
                             "workspace_identity_root": retained[
@@ -1029,6 +1120,19 @@ def _compose_global_work(
                         "candidate_sealed_state_roots": [
                             row["state_root"] for row in retained_candidates
                         ],
+                        **(
+                            {
+                                "candidate_assignment_state_roots": sorted(
+                                    {
+                                        str(row.get("assignment_state_root") or "")
+                                        for row in retained_candidates
+                                        if row.get("assignment_state_root")
+                                    }
+                                )
+                            }
+                            if retained_candidates
+                            else {}
+                        ),
                         "candidate_unqualified_state_roots": [
                             row["state_root"] for row in unqualified_candidates
                         ],
