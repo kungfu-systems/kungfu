@@ -989,11 +989,10 @@ function App() {
               },
             ) => string;
           };
-          const path = window.require('node:path') as {
-            delimiter: string;
-            dirname: (value: string) => string;
-            resolve: (...values: string[]) => string;
-          };
+          const path = window.require('node:path') as Pick<
+            typeof import('node:path'),
+            'delimiter' | 'dirname' | 'resolve'
+          >;
           const fs = window.require('node:fs') as {
             existsSync: (value: string) => boolean;
           };
@@ -1077,13 +1076,14 @@ function App() {
     () =>
       window.process.env.KFE_INITIAL_VIEW || profileHomeId(profile, enabled),
   );
-  const [params, setParams] = React.useState<Record<string, string>>(() =>
-    initialFocusedProjectPath
-      ? {
-          projectPath: initialFocusedProjectPath,
-          projectSection: 'files',
-        }
-      : {},
+  const [params, setParams] = React.useState<Record<string, string>>(
+    (): Record<string, string> =>
+      initialFocusedProjectPath
+        ? {
+            projectPath: initialFocusedProjectPath,
+            projectSection: 'files',
+          }
+        : {},
   );
   const lastWorkParamsRef = React.useRef<Record<string, string>>(
     initialFocusedProjectPath
