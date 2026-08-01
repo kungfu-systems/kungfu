@@ -349,6 +349,33 @@ GUI/TUI parity, cross-machine migration, physical-media durability, and the
 stable cross-minor support window remain unqualified or undecided. See
 [Exit, Migration, and Version Compatibility](../guides/exit-and-version-compatibility.md).
 
+## Durable history protection starts at the owner receipt
+
+**Guarantee.** The
+[`kungfu-data-protection.contract.json`](../../framework/data-protection/kungfu-data-protection.contract.json)
+registers one protection boundary, retention taxonomy, authority map, and
+entrypoint matrix without taking authority from Work Control, Fact/Episode,
+Project Cut, Product Release Cut, receipt issuers, schema/interpreter owners, or
+Exit Bundle composition. UI, process, provider, transcript, and cache activity
+is not protected semantic history until an owner-domain success receipt and
+exact identity/root verify.
+
+**Verify.** Run:
+
+```sh
+./shifu check:data-protection-contract
+```
+
+The gate binds every domain descriptor to its current owner source and exercises
+positive copy-forward/export recovery plus adversarial authority duplication,
+hidden loss, in-place reinterpretation, unknown required members, unsupported
+downgrade, cache-dependent recovery, and unsafe GC.
+
+**Maturity.** The composition contract and source gate are accepted. Domain
+adapters, installed-product migration, user-surface parity, cross-release
+qualification, and any physical-media durability claim remain staged or out of
+scope.
+
 ## KFD-2 release claims use the Buildchain product registry contract
 
 **Guarantee.** Public KFD-2 release trust claims are declared in one tracked
