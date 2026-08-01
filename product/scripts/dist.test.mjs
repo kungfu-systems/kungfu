@@ -15,12 +15,10 @@ import {
   cliArchiveLayout,
   copyTree,
   desktopUpdaterArtifact,
-  esbuildPlatformBinaryPath,
   installArgs,
   installedKungfuInvocation,
   isShippedKfdSupport,
   kfxBundleExternalModules,
-  requiresManagedEsbuildPlatform,
   runInstalledKungfuAgentHubSmoke,
   runInstalledKungfuAssignmentAdmissionSmoke,
   runInstalledKungfuCommand,
@@ -32,6 +30,12 @@ import {
   productReleaseChannelConfig,
   releaseChannelKeyId,
 } from './release-channel-trust.mjs';
+import {
+  PLATFORM_DEPENDENCY_RUNTIME_OWNER,
+  esbuildPlatformBinaryPath,
+  platformDependencyPackageName,
+  requiresManagedEsbuildPlatform,
+} from './runtime-pin-snapshot.mjs';
 import {
   INTEL_MACOS_DIAGNOSTIC,
   PRODUCT_ASSEMBLY_STAGE_IDS,
@@ -860,10 +864,17 @@ test('CLI staging carries the Xinfa contract and verification engine', () => {
 
 test('installed SDK keeps esbuild external and carries its native runtime', () => {
   const dist = fs.readFileSync(new URL('./dist.mjs', import.meta.url), 'utf8');
+  const runtime = fs.readFileSync(
+    new URL('./runtime-pin-snapshot.mjs', import.meta.url),
+    'utf8',
+  );
   assert.match(dist, /external: \['esbuild'\]/);
   assert.match(dist, /'esbuild',\s+esbuildRuntime\.resolvePaths/);
-  assert.match(dist, /function esbuildPlatformPackageName\(\)/);
-  assert.match(dist, /function ensureEsbuildRuntime\(\{ slot, paths \}\)/);
+  assert.match(runtime, /esbuild: \{/);
+  assert.match(
+    runtime,
+    /const ensureEsbuildRuntime = \(\{ slot, paths \}\) =>/,
+  );
   assert.match(
     dist,
     /process\.env\.ESBUILD_BINARY_PATH = esbuildRuntime\.binaryPath/,
@@ -884,12 +895,12 @@ test('Buildchain stages exact esbuild binaries per product surface', () => {
     assert.match(dist, new RegExp(`slot: '${slot}'`));
   }
   assert.match(dist, /esbuild-platform',\s+slot/);
-  assert.match(dist, /installedVersion !== version/);
+  assert.match(dist, /installed !== version/);
   assert.match(dist, /requiresManagedEsbuildPlatform/);
   assert.match(dist, /resolvePaths\.unshift\(path\.dirname\(nodePath\)\)/);
   assert.match(
     dist,
-    /esbuild host \$\{esbuildVersion\} does not match \$\{packageName\} \$\{platformVersion\}/,
+    /esbuild host \$\{version\} does not match \$\{packageName\} \$\{platformVersion\}/,
   );
   assert.match(dist, /buildKfx\(kfxPackages, sdkBuildEnv\)/);
   assert.match(dist, /'bundle tui',[\s\S]+?env: tuiBuildEnv/);
@@ -920,9 +931,37 @@ test('product assembly stages have one ordered lifecycle owner', () => {
 });
 
 test('platform package installs revalidate registry metadata', () => {
+  const runtime = fs.readFileSync(
+    new URL('./runtime-pin-snapshot.mjs', import.meta.url),
+    'utf8',
+  );
+  assert.match(runtime, /'--prefer-online'/);
+  assert.doesNotMatch(runtime, /'--prefer-offline'/);
+});
+
+test('platform dependency lifecycle has one named owner and restores dist headroom', () => {
   const dist = fs.readFileSync(new URL('./dist.mjs', import.meta.url), 'utf8');
-  assert.match(dist, /'--prefer-online'/);
-  assert.doesNotMatch(dist, /'--prefer-offline'/);
+  assert.equal(
+    PLATFORM_DEPENDENCY_RUNTIME_OWNER,
+    'product/release-assembly-runtime',
+  );
+  assert.ok(dist.split(/\r?\n/u).length <= 2200);
+  assert.match(dist, /createPlatformDependencyRuntime\(\{/u);
+  assert.doesNotMatch(dist, /function ensureNoOptionalPlatformPackage/u);
+});
+
+test('platform dependency owner preserves macOS, Linux, and Windows package identities', () => {
+  const fixtures = [
+    ['libnode', 'darwin', 'arm64', '', '@kungfu-tech/libnode-darwin-arm64'],
+    ['rollup', 'linux', 'x64', 'gnu', '@rollup/rollup-linux-x64-gnu'],
+    ['esbuild', 'win32', 'x64', '', '@esbuild/win32-x64'],
+  ];
+  for (const [kind, platform, architecture, libc, expected] of fixtures) {
+    assert.equal(
+      platformDependencyPackageName(kind, { platform, architecture, libc }),
+      expected,
+    );
+  }
 });
 
 test('esbuild platform binary follows the native package layout', () => {
