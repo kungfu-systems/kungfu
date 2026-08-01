@@ -14,7 +14,7 @@ import {
   createNebulaPattern,
   terminalAnimationPatternSize,
   terminalAnimationsEnabled,
-} from './terminal-animation.js';
+} from './profile-shell.js';
 
 test('circular animation patterns render bounded deterministic terminal frames', () => {
   const first = KUNGFU_CIRCULAR_STARTUP_PATTERN.render(0, {

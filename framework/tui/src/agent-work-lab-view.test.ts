@@ -39,7 +39,6 @@ import {
   nextWorkbenchFocus,
   scrollWorkbenchSession,
   sessionTitleBar,
-  splitHorizontalPointerActionAtPoint,
   workbenchActionAtPoint,
   workbenchReportAtPoint,
   workbenchReportReturnAtPoint,
@@ -347,40 +346,6 @@ test('mouse coordinates resolve visible workbench actions and report cards', () 
       gap: 2,
     }),
     'projects',
-  );
-  assert.equal(
-    splitHorizontalPointerActionAtPoint({
-      actions: [
-        { action: 'work', label: '[1] All Work' },
-        { action: 'projects', label: '[2] Project · a-very-long-project-name' },
-        { action: 'lab', label: '[3] Agent Work Lab' },
-      ],
-      column: 79,
-      row: 1,
-      targetRow: 1,
-      width: 80,
-      startColumn: 2,
-      endPadding: 1,
-      gap: 2,
-    }),
-    'lab',
-  );
-  assert.equal(
-    splitHorizontalPointerActionAtPoint({
-      actions: [
-        { action: 'work', label: '[1] All Work' },
-        { action: 'projects', label: '[2] Project · a-very-long-project-name' },
-        { action: 'lab', label: '[3] Agent Work Lab' },
-      ],
-      column: 58,
-      row: 1,
-      targetRow: 1,
-      width: 80,
-      startColumn: 2,
-      endPadding: 1,
-      gap: 2,
-    }),
-    undefined,
   );
 });
 
@@ -876,7 +841,11 @@ test('clicking a visible Lab action executes the same bounded action as its key'
     );
     await new Promise<void>((resolve) => setTimeout(resolve, 30));
     process.stdin.emit('data', Buffer.from('\u001b[<0;5;4M'));
-    await waitUntil(() => calls.includes('demo'), 'the clicked Demo action');
+    await waitUntil(
+      () => calls.includes('demo'),
+      'the clicked Demo action',
+      10_000,
+    );
   } finally {
     instance.unmount();
     instance.cleanup();

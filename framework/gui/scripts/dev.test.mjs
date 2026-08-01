@@ -10,7 +10,7 @@ import {
   DEVELOPMENT_RESTART_EXIT_CODE,
   nextDevelopmentEnvironment,
   superviseDevelopment,
-} from './dev.mjs';
+} from '../../../product/scripts/product.mjs';
 
 test('development restart resolves the selected Project without retaining the old native root', () => {
   const root = path.join(tmpdir(), `kungfu-gui-dev-${process.pid}`);

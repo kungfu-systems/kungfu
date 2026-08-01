@@ -976,7 +976,7 @@ export function openProjects(options: ProjectCommandOptions): Projects {
         'kungfu.project-template.plan/v1',
       ),
     create: async (destination, expectedPlanRoot, templateId) => {
-      const receipt = await invoke(
+      const receipt = await invoke<Record<string, unknown>>(
         [
           'project',
           'create',
@@ -997,7 +997,7 @@ export function openProjects(options: ProjectCommandOptions): Projects {
         'kungfu.project.import-plan/v1',
       ),
     importProject: async (path, expectedPlanRoot) => {
-      const receipt = await invoke(
+      const receipt = await invoke<Record<string, unknown>>(
         [
           'project',
           'open',
@@ -1012,7 +1012,7 @@ export function openProjects(options: ProjectCommandOptions): Projects {
       return receipt;
     },
     select: async (path) => {
-      const receipt = await invoke(
+      const receipt = await invoke<Record<string, unknown>>(
         ['project', 'select', path],
         'kungfu.project.selection-receipt/v1',
       );

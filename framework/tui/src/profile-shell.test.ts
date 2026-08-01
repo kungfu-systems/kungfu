@@ -15,7 +15,33 @@ import {
   renderProfileShellSnapshot,
   resolveProfileShellLayout,
   resolveProfileShellNavigationWidth,
+  splitHorizontalPointerActionAtPoint,
 } from './profile-shell.js';
+
+test('split navigation keeps the trailing action reachable at narrow widths', () => {
+  const actions = [
+    { action: 'work', label: '[1] All Work' },
+    { action: 'projects', label: '[2] Project · a-very-long-project-name' },
+    { action: 'lab', label: '[3] Agent Work Lab' },
+  ] as const;
+  const base = {
+    actions,
+    row: 1,
+    targetRow: 1,
+    width: 80,
+    startColumn: 2,
+    endPadding: 1,
+    gap: 2,
+  };
+  assert.equal(
+    splitHorizontalPointerActionAtPoint({ ...base, column: 79 }),
+    'lab',
+  );
+  assert.equal(
+    splitHorizontalPointerActionAtPoint({ ...base, column: 58 }),
+    undefined,
+  );
+});
 
 class CaptureOutput extends Writable {
   readonly isTTY = false;
