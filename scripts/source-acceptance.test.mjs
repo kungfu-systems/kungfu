@@ -455,6 +455,11 @@ test('source plan covers representative source-only checks', () => {
   );
   assert.ok(
     contractTests.args.includes(
+      'scripts/check-durable-history-qualification.test.mjs',
+    ),
+  );
+  assert.ok(
+    contractTests.args.includes(
       'scripts/check-work-agent-history-continuity.test.mjs',
     ),
   );
