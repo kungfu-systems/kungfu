@@ -75,6 +75,16 @@ function executableOnPath(name) {
   throw new Error(`${name} is not available on PATH`);
 }
 
+function declaredExecutable(name, candidate) {
+  if (!candidate) return null;
+  try {
+    fs.accessSync(candidate, fs.constants.X_OK);
+    return candidate;
+  } catch {
+    throw new Error(`${name} is not executable: ${candidate}`);
+  }
+}
+
 function snapshotSource(root) {
   const rows = [];
   const visit = (directory) => {
@@ -189,9 +199,11 @@ test('declared discovery routes are zero-write in a cold read-only fixture', (t)
   assert.equal(cloned.status, 0, cloned.stderr);
   const base = sourceMergeBase();
   const corePytest = path.join(ROOT, 'framework/core/.venv/bin/pytest');
-  const pytest = fs.existsSync(corePytest)
-    ? corePytest
-    : executableOnPath('pytest');
+  const pytest =
+    declaredExecutable(
+      'KUNGFU_READONLY_PYTEST',
+      process.env.KUNGFU_READONLY_PYTEST,
+    ) || (fs.existsSync(corePytest) ? corePytest : executableOnPath('pytest'));
   const fixedBase = spawnSync(
     git,
     ['update-ref', 'refs/heads/dev/v4/v4.0', base.sha],
