@@ -78,9 +78,15 @@ are source-qualified. Project Cut full members preserve all four owner roots,
 verified predecessors/successors, explicit loss, and protected publication
 manifests; Native Assignment and Dogfood reuse the existing Fact, Episode,
 Profile, and Work authority members rather than creating another store.
-Installed-product migration, user-facing Exit surfaces, and cross-release
-qualification remain staged separately. The contract does not inspect or
-mutate a real `.kungfu` home, and it does not claim protection against physical media loss.
+The base and owner-specific source-release adapters now include Product Release
+Cut portability, specified by
+[`product-release-cut-portability.contract.json`](product-release-cut-portability.contract.json):
+its Exit member carries verified installed-image bytes and receipt roots without
+channel or download caches, then creates a separate copy-forward activation
+receipt whose paths belong to the destination. Public and `shifu-local` trust
+domains are retained rather than collapsed. User-facing Exit surfaces and
+cross-release qualification remain staged separately. The contract does not
+inspect or mutate a real `.kungfu` home. It does not claim protection against physical media loss.
 
 Verify the contract and its adversarial corpus with:
 
@@ -88,4 +94,5 @@ Verify the contract and its adversarial corpus with:
 ./shifu check:data-protection-contract
 ./shifu check:work-agent-history-continuity
 ./shifu check:project-cut-dogfood-history
+./shifu check:product-release-cut-portability
 ```

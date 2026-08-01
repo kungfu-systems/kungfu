@@ -101,7 +101,11 @@ def exit_group(ctx):
 @exit_command_context
 def build_cmd(ctx, file_path, input_base64, out, as_json):
     package = _run(
-        lambda: exit_bundle.build(ctx.runtime_dir, _input(file_path, input_base64))
+        lambda: exit_bundle.build(
+            ctx.runtime_dir,
+            _input(file_path, input_base64),
+            config_home=ctx.config_home,
+        )
     )
     if out is not None:
         _run(lambda: exit_bundle.write(out, package))
@@ -193,6 +197,7 @@ def import_cmd(ctx, file_path, input_base64, execute, authorized_by, as_json):
         lambda: exit_bundle.import_package(
             ctx.runtime_dir,
             _input(file_path, input_base64),
+            config_home=ctx.config_home,
             execute=execute,
             authorized_by=authorized_by or "",
         )
