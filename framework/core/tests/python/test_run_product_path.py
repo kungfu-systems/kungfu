@@ -31,6 +31,33 @@ def _capture(project: Path, assignment_id: str):
     return orchestration.capture_assignment_request(request, target)
 
 
+def test_agent_activity_history_projection_keeps_process_success_outside_work():
+    work = {
+        "schema": "kungfu.work-ref/v1",
+        "workspaceId": "project:history-fixture",
+        "profileId": "work-control",
+        "profileRoot": "sha256:" + "a" * 64,
+        "entityType": "assignment",
+        "entityId": "history-fixture",
+        "entityRoot": "sha256:" + "b" * 64,
+        "purpose": "qualify exact history continuity",
+        "systemTimeCut": "2026-08-01T00:00:00Z",
+    }
+
+    projection = run_agent.agent_activity_history_projection(
+        work, entrypoint="native-agent-ui"
+    )
+
+    assert projection["schema"] == "kungfu.work-agent-history.projection/v1"
+    assert projection["state"] == "session-activity-only"
+    assert projection["entrypoint"] == "native-agent-ui"
+    assert projection["workRefRoot"] == run_agent.canonical_root(work)
+    assert projection["semanticAdmissionReceiptRoot"] is None
+    assert projection["processExitSettlesWork"] is False
+    assert projection["selfReportSettlesWork"] is False
+    assert projection["nextAction"] == "independent-assessment-required"
+
+
 def test_next_work_selects_the_only_captured_assignment(tmp_path):
     project = tmp_path / "project"
     project.mkdir()
