@@ -88,6 +88,11 @@ class _Channel:
                     self._accept_event(msg)
                 elif kind == "control" and msg.get("action") == "shutdown":
                     self._request_shutdown()
+        except (OSError, ValueError):
+            # A transport owner may close or shut down the stream to terminate
+            # the relay. Treat that race exactly like EOF instead of leaking an
+            # unhandled exception from the background reader.
+            pass
         finally:
             self._mark_closed()
 

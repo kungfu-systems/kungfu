@@ -368,10 +368,14 @@ async def relay_repetition(
     started = time.perf_counter_ns()
     await asyncio.gather(*(invoke() for _ in range(operations)))
     elapsed = time.perf_counter_ns() - started
+    try:
+        guest_socket.shutdown(socket.SHUT_RDWR)
+    except OSError:
+        pass
+    thread.join(timeout=5)
     guest_write.close()
     guest_read.close()
     guest_socket.close()
-    thread.join(timeout=5)
     if thread.is_alive() or failures:
         raise AssertionError(f"capability relay host failed: {failures}")
     return latencies, elapsed, time.process_time() - cpu_started, peak

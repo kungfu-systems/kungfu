@@ -6,6 +6,13 @@ import asyncio
 import importlib.util
 from pathlib import Path
 
+import pytest
+
+
+pytestmark = pytest.mark.filterwarnings(
+    "error::pytest.PytestUnhandledThreadExceptionWarning"
+)
+
 
 MODULE_PATH = Path(__file__).with_name("workload.py")
 SPEC = importlib.util.spec_from_file_location(
