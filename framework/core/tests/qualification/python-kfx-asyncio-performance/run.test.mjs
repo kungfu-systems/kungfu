@@ -164,6 +164,8 @@ test('native correctness gate preserves ctest regex argv on Windows', () => {
     'utf8',
   );
   assert.match(admissionRunner, /shell: false/u);
+  assert.match(admissionRunner, /platformCommand\(command\)/u);
+  assert.match(admissionRunner, /platformCommandOptions\(command\)/u);
   assert.doesNotMatch(admissionRunner, /shell: isWin/u);
 });
 
