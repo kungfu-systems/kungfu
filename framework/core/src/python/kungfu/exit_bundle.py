@@ -2172,7 +2172,7 @@ def _product_history_image_entries(
                         "history-symlink-unsafe",
                         "installed image symlink escapes its image root",
                     )
-                description = {
+                description: dict[str, Any] = {
                     "path": relative,
                     "kind": "symlink",
                     "target": target,
