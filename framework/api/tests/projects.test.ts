@@ -671,6 +671,137 @@ test('Project Work restores and controls one retained Agent Session through the 
   );
 });
 
+test('Project Work rediscovers native UI attempts as observer-only without terminal access', async () => {
+  const operations: string[] = [];
+  const ref = {
+    workConsoleId: 'work:kungfu.work-control:assignment:alpha',
+    sessionAttemptId: 'native:alpha:1',
+  };
+  const status = {
+    ...ref,
+    workspaceId: 'workspace:test',
+    backend: 'native-interactive',
+    live: true,
+    terminalObservable: false,
+    controllable: false,
+    lifecycleState: 'running',
+    interactionState: 'external-native-ui',
+    providerAdapter: { provider: 'amp' },
+    binding: {
+      kind: 'work',
+      workRef: {
+        workspaceId: 'workspace:test',
+        entityId: 'alpha',
+      },
+    },
+    workAgent: { attempt: 'working', attention: null },
+    nativeObserver: {
+      state: 'fresh',
+      ageMs: 40,
+      staleAfterMs: 2000,
+      diagnostic: null,
+      work: {
+        state: 'available',
+        initiativeId: 'initiative:alpha',
+        assignmentId: 'alpha',
+        phase: 'executing',
+        queryProofRoot: `sha256:${'1'.repeat(64)}`,
+        nextActions: ['stage: Record the stage-ready boundary'],
+        evidenceEpisodeRoots: [],
+        continuation: {
+          completionClaimCount: 0,
+          independentReviewCount: 0,
+          continuationDecisionCount: 0,
+        },
+        remainingObligation: null,
+        nextAction: 'stage: Record the stage-ready boundary',
+      },
+    },
+  };
+  const agentSession = {
+    invoke: async (request: Record<string, unknown>) => {
+      operations.push(String(request.operation));
+      if (request.operation === 'list') {
+        return {
+          sessions: [],
+          attempts: [
+            {
+              ...status,
+              sessionAttemptId: 'native:alpha:0',
+              live: false,
+              lifecycleState: 'ended',
+            },
+            status,
+          ],
+        };
+      }
+      if (request.operation === 'status') return status;
+      throw new Error(
+        `unexpected native observer operation ${request.operation}`,
+      );
+    },
+  };
+  const options = {
+    bin: 'kungfu',
+    env: {},
+    execFile: async (_bin: string, args: string[]) => {
+      assert.deepEqual(args.slice(0, 2), ['work', 'status']);
+      return JSON.stringify({
+        schema: 'kungfu.assignment-orchestration.status/v1',
+        assignment: {
+          title: 'Native continuity',
+          objective: 'Keep Work visible across native UIs',
+          work_definition: {
+            title: 'Native continuity',
+            objective: 'Keep Work visible across native UIs',
+            acceptance_criteria: ['Rediscover the same Work'],
+          },
+        },
+      });
+    },
+    agentSession,
+  };
+
+  const projects = openProjects(options);
+  const publications: number[] = [];
+  projects.subscribeRuns((runs) => publications.push(runs.length));
+  const [observed] = await projects.syncSessions({
+    workspace: '/project',
+    workspaceId: 'workspace:test',
+  });
+  assert.equal(observed?.provider, 'amp');
+  assert.equal(observed?.session?.backend, 'native-interactive');
+  assert.equal(observed?.session?.controllable, false);
+  assert.equal(observed?.session?.terminalObservable, false);
+  assert.deepEqual(observed?.session?.terminalLines, []);
+  assert.equal(observed?.session?.nativeObserver?.work?.phase, 'executing');
+  assert.equal(
+    observed?.session?.nativeObserver?.work?.objective,
+    'Keep Work visible across native UIs',
+  );
+  assert.deepEqual(publications, [0, 2]);
+  assert.deepEqual(observed?.session?.receiptRoots, []);
+  await assert.rejects(
+    projects.replyToRun(String(observed?.id), 'do not deliver'),
+    /observer-only/u,
+  );
+
+  const restarted = openProjects(options);
+  const [rediscovered] = await restarted.syncSessions({
+    workspace: '/project',
+    workspaceId: 'workspace:test',
+  });
+  assert.deepEqual(
+    {
+      workConsoleId: rediscovered?.session?.workConsoleId,
+      sessionAttemptId: rediscovered?.session?.sessionAttemptId,
+    },
+    ref,
+  );
+  assert.equal(operations.includes('snapshot'), false);
+  assert.equal(operations.includes('plan-control'), false);
+});
+
 test('Project Work keeps Initiative and Assignment identities distinct for non-Latin objectives', () => {
   const plan = prepareProjectWork(
     '分析更好的商业目标',

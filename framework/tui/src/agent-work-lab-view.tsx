@@ -953,7 +953,7 @@ export function AgentWorkLabHost({
             topOffset,
           });
           if (action) {
-            performSuiteAction(action);
+            performSuiteActionRef.current(action);
             continue;
           }
           const result = workbenchReportAtPoint({

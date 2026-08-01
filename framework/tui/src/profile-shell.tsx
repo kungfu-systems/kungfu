@@ -19,6 +19,7 @@ import {
   KUNGFU_EMPTY_WORK_NEBULA_PATTERN,
   type TerminalAnimationPattern,
   type TerminalDimensions,
+  splitHorizontalPointerActionAtPoint,
   terminalAnimationPatternSize,
   terminalAnimationsEnabled,
   terminalCanvasRows,

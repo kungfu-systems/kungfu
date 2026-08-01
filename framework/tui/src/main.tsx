@@ -89,7 +89,6 @@ import {
   ProjectsHost,
   type ProjectsQuickAction,
   projectWorkQuickCommandAvailable,
-  selectVisibleProjectWorkRun,
 } from './projects-view/index.js';
 import {
   type OpenedStarterProject,
@@ -132,9 +131,12 @@ const nodeRequire = createRequire(import.meta.url);
 let tuiAgentSessionEndpoint = '';
 let tuiAgentSessionReady: Promise<string> | undefined;
 let tuiAgentSessionHost: ReturnType<typeof createDetachedAgentSessionHost>;
+let tuiAgentSessionRuntimeDir = '';
 
 function ensureTuiAgentSession(runtimeDir: string): Promise<string> {
-  if (tuiAgentSessionReady) return tuiAgentSessionReady;
+  const resolvedRuntimeDir = path.resolve(runtimeDir);
+  if (tuiAgentSessionReady && tuiAgentSessionRuntimeDir === resolvedRuntimeDir)
+    return tuiAgentSessionReady;
   const packagedWorker = fileURLToPath(
     new URL('./agent-session-worker.mjs', import.meta.url),
   );
@@ -166,21 +168,22 @@ function ensureTuiAgentSession(runtimeDir: string): Promise<string> {
   );
   process.env.KUNGFU_AGENT_SESSION_NODE_PTY_MODULE = prepareAgentSessionNodePty(
     {
-      runtimeDir,
+      runtimeDir: resolvedRuntimeDir,
       modulePath: fs.existsSync(packagedPty) ? packagedPty : sourcePty,
     },
   );
   process.env.KUNGFU_AGENT_SESSION_WORKER = workerPath;
-  process.env.KUNGFU_MOCK_AGENT_EXECUTABLE ||= process.execPath;
-  process.env.KUNGFU_MOCK_AGENT_SCRIPT ||= mockPath;
+  process.env.KUNGFU_MOCK_AGENT_EXECUTABLE = process.execPath;
+  process.env.KUNGFU_MOCK_AGENT_SCRIPT = mockPath;
   process.env.KUNGFU_PROJECT_WORK_AGENT_SESSION = '1';
   const host = createDetachedAgentSessionHost({
-    runtimeDir,
+    runtimeDir: resolvedRuntimeDir,
     executable: process.env.KUNGFU_AGENT_SESSION_EXECUTABLE || process.execPath,
     workerPath,
     env: process.env,
   });
   tuiAgentSessionHost = host;
+  tuiAgentSessionRuntimeDir = resolvedRuntimeDir;
   tuiAgentSessionEndpoint = host.endpoint;
   process.env.KUNGFU_AGENT_SESSION_ENDPOINT = host.endpoint;
   tuiAgentSessionReady = Promise.resolve(
@@ -189,11 +192,31 @@ function ensureTuiAgentSession(runtimeDir: string): Promise<string> {
   return tuiAgentSessionReady;
 }
 
+async function invokeTuiAgentSession(
+  request: Record<string, unknown> & { operation: string },
+) {
+  while (true) {
+    const ready = tuiAgentSessionReady;
+    const host = tuiAgentSessionHost;
+    if (!ready || !host) {
+      throw new Error('Agent Session control is unavailable on this surface');
+    }
+    await ready;
+    if (ready !== tuiAgentSessionReady || host !== tuiAgentSessionHost) {
+      continue;
+    }
+    return host.invoke(request);
+  }
+}
+
 function cliEnvironment(): NodeJS.ProcessEnv {
   const env = { ...process.env };
   // This process is running inside embedded libnode. Child `kungfu` calls must
   // re-enter the ordinary CLI instead of recursively selecting the Node host.
   env.KUNGFU_AS_VARIANT = undefined;
+  env.KUNGFU_DIR = undefined;
+  env.KUNGFU_KFX_CONTRACT = undefined;
+  env.KF_BUNDLED_EXTENSION_ROOT = undefined;
   return env;
 }
 
@@ -331,9 +354,6 @@ function openTuiAgentWorkLab(): AgentWorkLab {
 
 function openTuiProjects(useAgentSession = true) {
   const paths = runtimePaths();
-  const agentSessionReady = useAgentSession
-    ? ensureTuiAgentSession(paths.runtimeDir)
-    : undefined;
   const cli = tuiCliInvocation(paths);
   if (!useAgentSession) {
     cli.env.KUNGFU_PROJECT_WORK_AGENT_SESSION = undefined;
@@ -346,10 +366,7 @@ function openTuiProjects(useAgentSession = true) {
     agentSessionClient: 'cli',
     agentSession: useAgentSession
       ? {
-          invoke: async (request) => {
-            await agentSessionReady;
-            return tuiAgentSessionHost.invoke(request);
-          },
+          invoke: invokeTuiAgentSession,
         }
       : undefined,
     catalogConfigHomes:
@@ -359,16 +376,32 @@ function openTuiProjects(useAgentSession = true) {
         : [],
     execFile: (file, values, options) =>
       new Promise<string>((resolve, reject) => {
-        execFile(file, cli.args(values), options, (error, stdout, stderr) => {
-          if (error)
-            reject(new Error(describeCliFailure(error, stdout, stderr)));
-          else resolve(stdout);
-        });
+        execFile(
+          file,
+          cli.args(values),
+          {
+            ...options,
+            env: {
+              ...options.env,
+              KF_RUNTIME_DIR: tuiAgentSessionRuntimeDir,
+              KUNGFU_AGENT_SESSION_ENDPOINT: tuiAgentSessionEndpoint,
+            },
+          },
+          (error, stdout, stderr) => {
+            if (error)
+              reject(new Error(describeCliFailure(error, stdout, stderr)));
+            else resolve(stdout);
+          },
+        );
       }),
     execFileInput: (file, values, input, options) =>
       new Promise<string>((resolve, reject) => {
         const child = spawn(file, cli.args(values), {
-          env: options.env,
+          env: {
+            ...options.env,
+            KF_RUNTIME_DIR: tuiAgentSessionRuntimeDir,
+            KUNGFU_AGENT_SESSION_ENDPOINT: tuiAgentSessionEndpoint,
+          },
           stdio: ['pipe', 'pipe', 'pipe'],
         });
         let stdout = '';
@@ -414,10 +447,14 @@ function openTuiProjects(useAgentSession = true) {
         child.stdin.end(input);
       }),
     execFileEvents: async (file, values, options, onLine) => {
-      await agentSessionReady;
+      if (tuiAgentSessionReady) await tuiAgentSessionReady;
       return new Promise<void>((resolve, reject) => {
         const child = spawn(file, cli.args(values), {
-          env: options.env,
+          env: {
+            ...options.env,
+            KF_RUNTIME_DIR: tuiAgentSessionRuntimeDir,
+            KUNGFU_AGENT_SESSION_ENDPOINT: tuiAgentSessionEndpoint,
+          },
           stdio: ['ignore', 'pipe', 'pipe'],
         });
         let stdoutBuffer = '';
@@ -1748,6 +1785,7 @@ function ProductHost({
         projects={projects}
         project={openedProject}
         dimensions={contentDimensions}
+        ensureAgentSession={ensureTuiAgentSession}
         onContinueRetainedWork={async (receipt) => {
           const inventory = await projects.works(openedProject.workspace_root);
           const work = inventory.works.find(

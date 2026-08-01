@@ -413,6 +413,23 @@
       ]
     },
     {
+      "id": "kungfu.agent.console.bind-work",
+      "surface": "cli-api-gui",
+      "name": "kungfu agent console bind-work --initiative-id <id> --assignment-id <id> --json",
+      "purpose": "Atomically bind the current native SessionAttempt to one exact Assignment and reject a second active writer with actionable recovery guidance.",
+      "maturity": "experimental",
+      "visibility": "public-agent",
+      "anchor": {
+        "kind": "runtime-click",
+        "symbol": "console_bind_work"
+      },
+      "projections": [
+        "commands.json",
+        "capabilities-json",
+        "provider-skill"
+      ]
+    },
+    {
       "id": "kungfu.agent.session",
       "surface": "cli-api-gui",
       "name": "kungfu agent session <operation> --input - --json",
@@ -433,7 +450,7 @@
       "id": "kungfu.agent.runtime",
       "surface": "cli",
       "name": "kungfu agent runtime",
-      "purpose": "Discover and configure machine-local Codex and Claude launch profiles without reading provider credentials.",
+      "purpose": "Discover and configure machine-local built-in or registered native Agent launch profiles without reading provider credentials.",
       "maturity": "experimental",
       "visibility": "public-agent",
       "anchor": {
@@ -448,7 +465,7 @@
       "id": "kungfu.agent.runtime.discover",
       "surface": "cli",
       "name": "kungfu agent runtime discover --json",
-      "purpose": "List every safe executable Codex and Claude candidate from PATH and explicit known locations.",
+      "purpose": "List every safe executable candidate declared by built-in or registered native Provider adapters.",
       "maturity": "experimental",
       "visibility": "public-agent",
       "anchor": {
@@ -482,7 +499,7 @@
       "id": "kungfu.agent.runtime.upsert",
       "surface": "cli",
       "name": "kungfu agent runtime upsert --id <id> --provider <provider> --executable <path> --json",
-      "purpose": "Preview or explicitly add or edit one executable-plus-argv Agent Runtime Profile.",
+      "purpose": "Preview or explicitly add or edit one executable-plus-argv Agent Runtime Profile for a built-in or registered Provider adapter.",
       "maturity": "experimental",
       "visibility": "public-agent",
       "anchor": {
@@ -711,8 +728,8 @@
     {
       "id": "kungfu.run.agent",
       "surface": "cli",
-      "name": "kungfu run agent --prompt <task> [--agent <profile-id>]",
-      "purpose": "Launch one fresh Agent process through a verified Runtime Profile, retain an Episode and transcript-free continuation evidence, and leave Work settlement to independent assessment.",
+      "name": "kungfu run agent [--agent <profile-id>] [--prompt <task>]",
+      "purpose": "Open the verified provider's native interactive UI when no prompt is given; with --prompt, launch one governed fresh process and retain transcript-free continuation evidence without settling Work.",
       "maturity": "experimental",
       "visibility": "public-agent",
       "anchor": {

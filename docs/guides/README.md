@@ -15,6 +15,7 @@ review the plan from `kungfu recover`.
 - [Recover a Kungfu Workspace](recovery.md)
 - [Rewind an Episode](rewind.md)
 - [Configuration](config.md)
+- [Native Agent adapters](native-agent-adapters.md)
 - [Durability Configuration](durability-configuration.md)
 - [Install the standalone Kungfu CLI](installing-cli.md)
 - [Upgrade Kungfu](upgrading.md)

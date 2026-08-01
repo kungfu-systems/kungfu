@@ -641,6 +641,10 @@
           "role": "conformance-oracle"
         },
         {
+          "path": "scripts/verify-agent-pack.mjs",
+          "role": "conformance-oracle"
+        },
+        {
           "path": "framework/core/tests/python/test_cli_surface_contract.py",
           "role": "test"
         },

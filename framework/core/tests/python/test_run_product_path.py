@@ -4,10 +4,11 @@ from pathlib import Path
 from types import SimpleNamespace
 
 import pytest
+from click.testing import CliRunner
 
 from kungfu import assignment_orchestration as orchestration
 from kungfu.agent import run_agent
-from kungfu.cli.commands import assignment, run
+from kungfu.cli.commands import assignment, kfc, run
 from kungfu.workspace import resolve_workspace_target
 
 
@@ -258,6 +259,514 @@ def test_task_capture_creates_a_bounded_assignment_not_runtime(tmp_path):
     assert selected["initiativeId"] == "project-work"
     assert Path(selected["requestPath"]).is_file()
     assert not (project / ".kungfu" / "runtime").exists()
+
+
+def test_only_bare_provider_invocation_selects_native_interactive_mode():
+    defaults = {
+        "task": None,
+        "work_selector": None,
+        "workspace_root": None,
+        "plan_only": False,
+        "as_json": False,
+        "events_json": False,
+        "expected_plan_root": None,
+        "allow_foreign_binding": False,
+    }
+    assert run._native_provider_request(**defaults) is True
+    for field, value in (
+        ("task", "bounded task"),
+        ("work_selector", "work-1"),
+        ("workspace_root", "/project"),
+        ("plan_only", True),
+        ("as_json", True),
+        ("events_json", True),
+        ("expected_plan_root", "sha256:" + "a" * 64),
+        ("allow_foreign_binding", True),
+    ):
+        request = {**defaults, field: value}
+        assert run._native_provider_request(**request) is False, field
+
+
+@pytest.mark.parametrize("provider", ["codex", "claude", "amp", "opencode"])
+def test_bare_provider_cli_dispatches_native_without_managed_work(
+    tmp_path, monkeypatch, provider
+):
+    calls = []
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setattr(
+        run,
+        "_run_native_provider",
+        lambda ctx, **kwargs: calls.append((ctx, kwargs)),
+    )
+    monkeypatch.setattr(
+        run,
+        "_run_provider",
+        lambda *_args, **_kwargs: pytest.fail("managed Work path was selected"),
+    )
+
+    result = CliRunner().invoke(
+        kfc, ["--home", str(tmp_path / "home"), "run", provider]
+    )
+
+    assert result.exit_code == 0, result.output
+    assert calls[0][1] == {"provider": provider}
+
+
+def test_native_provider_failure_leaves_actionable_terminal_error(
+    tmp_path, monkeypatch
+):
+    project = tmp_path / "project"
+    project.mkdir()
+    monkeypatch.chdir(project)
+    target = SimpleNamespace(
+        identity=SimpleNamespace(
+            workspace_kind="project",
+            workspace_root=str(project),
+            workspace_id="workspace:test",
+        ),
+        runtime_dir=project / ".kungfu" / "runtime",
+    )
+    monkeypatch.setattr(
+        run, "resolve_workspace_target", lambda *_args, **_kwargs: target
+    )
+    monkeypatch.setattr(
+        run,
+        "_provider_profile",
+        lambda *_args, **_kwargs: {"provider": "codex"},
+    )
+    monkeypatch.setattr(
+        run,
+        "_native_work_binding",
+        lambda *_args, **_kwargs: (
+            None,
+            {
+                "schema": "kungfu.native-work-selection/v1",
+                "workspaceId": "workspace:test",
+                "state": "none",
+            },
+        ),
+    )
+    monkeypatch.setattr(run.run_agent.session_surface, "ensure", lambda *_args: "sock")
+    monkeypatch.setattr(
+        run.run_agent,
+        "run_native_interactive",
+        lambda *_args, **_kwargs: 7,
+    )
+
+    result = CliRunner().invoke(kfc, ["--home", str(tmp_path / "home"), "run", "codex"])
+
+    assert result.exit_code == 7
+    assert "Error: provider-native UI 'codex' exited with status 7." in result.output
+    assert "did not change Work completion" in result.output
+    assert "kungfu agent session list --json" in result.output
+
+
+@pytest.mark.parametrize("provider", ["codex", "claude", "amp", "opencode"])
+def test_parameterized_provider_cli_preserves_managed_path(
+    tmp_path, monkeypatch, provider
+):
+    calls = []
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setattr(
+        run,
+        "_run_native_provider",
+        lambda *_args, **_kwargs: pytest.fail("native UI path was selected"),
+    )
+    monkeypatch.setattr(
+        run,
+        "_run_provider",
+        lambda *args, **kwargs: calls.append((args, kwargs)),
+    )
+
+    result = CliRunner().invoke(
+        kfc,
+        ["--home", str(tmp_path / "home"), "run", provider, "bounded task"],
+    )
+
+    assert result.exit_code == 0, result.output
+    assert calls[0][0][1:3] == (provider, "bounded task")
+
+
+@pytest.mark.parametrize(
+    ("option", "value"),
+    [
+        ("--work", "assignment:alpha"),
+        ("--workspace", "{project}"),
+        ("--plan", None),
+        ("--json", None),
+        ("--events-json", None),
+        ("--expected-plan-root", "sha256:" + "1" * 64),
+    ],
+)
+def test_every_provider_control_option_preserves_managed_dispatch(
+    tmp_path, monkeypatch, option, value
+):
+    project = tmp_path / "project"
+    project.mkdir()
+    calls = []
+    monkeypatch.chdir(project)
+    monkeypatch.setattr(
+        run,
+        "_run_native_provider",
+        lambda *_args, **_kwargs: pytest.fail("native UI path was selected"),
+    )
+    monkeypatch.setattr(
+        run,
+        "_run_provider",
+        lambda *args, **kwargs: calls.append((args, kwargs)),
+    )
+    argument = str(project) if value == "{project}" else value
+    argv = ["--home", str(tmp_path / "home"), "run", "codex", option]
+    if argument is not None:
+        argv.append(argument)
+
+    result = CliRunner().invoke(kfc, argv)
+
+    assert result.exit_code == 0, result.output
+    assert len(calls) == 1
+
+
+def test_bare_run_agent_dispatches_native_default(tmp_path, monkeypatch):
+    calls = []
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setattr(
+        run,
+        "_run_native_provider",
+        lambda ctx, **kwargs: calls.append((ctx, kwargs)),
+    )
+
+    result = CliRunner().invoke(kfc, ["--home", str(tmp_path / "home"), "run", "agent"])
+
+    assert result.exit_code == 0, result.output
+    assert calls[0][1] == {"profile_id": None, "workspace_root": None}
+
+
+def test_bare_run_agent_dispatches_registered_third_party_profile(
+    tmp_path, monkeypatch
+):
+    calls = []
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setattr(
+        run,
+        "_run_native_provider",
+        lambda ctx, **kwargs: calls.append((ctx, kwargs)),
+    )
+
+    result = CliRunner().invoke(
+        kfc,
+        [
+            "--home",
+            str(tmp_path / "home"),
+            "run",
+            "agent",
+            "--agent",
+            "termagent.path.local",
+        ],
+    )
+
+    assert result.exit_code == 0, result.output
+    assert calls[0][1] == {
+        "profile_id": "termagent.path.local",
+        "workspace_root": None,
+    }
+
+
+def test_run_agent_managed_controls_still_require_prompt(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+
+    result = CliRunner().invoke(
+        kfc,
+        ["--home", str(tmp_path / "home"), "run", "agent", "--json"],
+    )
+
+    assert result.exit_code == 2
+    assert "--work-ref, --continuation, --timeout, and --json require --prompt" in (
+        result.output
+    )
+
+
+def test_run_agent_prompt_and_explicit_profile_preserve_managed_execution(
+    tmp_path, monkeypatch
+):
+    project = tmp_path / "project"
+    project.mkdir()
+    calls = []
+    monkeypatch.chdir(project)
+
+    def execute(**kwargs):
+        calls.append(kwargs)
+        return {
+            "runId": "run:test",
+            "runtimeProfile": {"provider": "codex"},
+            "launch": {"exitCode": 0},
+            "episode": {"manifestPath": str(tmp_path / "episode.json")},
+        }
+
+    monkeypatch.setattr(run.run_agent, "execute", execute)
+    result = CliRunner().invoke(
+        kfc,
+        [
+            "--home",
+            str(tmp_path / "home"),
+            "run",
+            "agent",
+            "--prompt",
+            "bounded task",
+            "--agent",
+            "codex-explicit",
+            "--workspace",
+            str(project),
+        ],
+    )
+
+    assert result.exit_code == 0, result.output
+    assert len(calls) == 1
+    assert calls[0]["prompt"] == "bounded task"
+    assert calls[0]["profile_id"] == "codex-explicit"
+    assert calls[0]["workspace_root"] == str(project)
+    assert calls[0]["work_ref"] is None
+    assert calls[0]["continuation"] is None
+    assert calls[0]["timeout_seconds"] == 900.0
+
+
+def test_native_work_binding_never_guesses_between_assignments(tmp_path, monkeypatch):
+    project = tmp_path / "project"
+    project.mkdir()
+    _capture(project, "first")
+    _capture(project, "second")
+    monkeypatch.setattr(run, "_work_phase", lambda *_args: "executing")
+
+    work_ref, selection = run._native_work_binding(
+        str(project), "workspace:test", project / ".kungfu" / "runtime"
+    )
+
+    assert work_ref is None
+    assert selection["state"] == "ambiguous"
+    assert selection["candidateAssignmentIds"] == ["first", "second"]
+
+
+def test_native_work_binding_with_no_work_is_read_only(tmp_path):
+    project = tmp_path / "project"
+    project.mkdir()
+
+    work_ref, selection = run._native_work_binding(
+        str(project), "workspace:test", project / ".kungfu" / "runtime"
+    )
+
+    assert work_ref is None
+    assert selection["state"] == "none"
+    assert not (project / ".kungfu").exists()
+
+
+@pytest.mark.parametrize("phase", [*orchestration.PHASES, "ready", "planned"])
+def test_native_work_binding_discovers_but_does_not_claim_the_only_current_work(
+    tmp_path, monkeypatch, phase
+):
+    project = tmp_path / "project"
+    project.mkdir()
+    _capture(project, "first")
+    monkeypatch.setattr(run, "_work_phase", lambda *_args: phase)
+    monkeypatch.setattr(
+        orchestration,
+        "list_sealed_assignment_states",
+        lambda *_args: {
+            "states": [],
+            "unqualified_states": [],
+            "issues": [],
+        },
+    )
+    monkeypatch.setattr(
+        "kungfu.cli.commands.assignment._status",
+        lambda *_args: {
+            "assignment": {"assignment_id": "first", "phase": phase},
+            "query_proof_root": "sha256:" + "1" * 64,
+        },
+    )
+    work_ref, selection = run._native_work_binding(
+        str(project), "workspace:test", project / ".kungfu" / "runtime"
+    )
+
+    assert selection["state"] == "single"
+    assert work_ref is None
+    assert selection["assignmentId"] == "first"
+    assert selection["phase"] == phase
+
+
+def test_native_work_binding_reports_one_captured_request_without_admitting(
+    tmp_path,
+):
+    project = tmp_path / "project"
+    project.mkdir()
+    _capture(project, "first")
+
+    work_ref, selection = run._native_work_binding(
+        str(project), "workspace:test", project / ".kungfu" / "runtime"
+    )
+
+    assert work_ref is None
+    assert selection["state"] == "single"
+    assert selection["candidateAssignmentIds"] == ["first"]
+    assert selection["assignmentId"] == "first"
+    assert selection["phase"] == "captured"
+    assert not (project / ".kungfu" / "runtime").exists()
+
+
+def test_native_work_binding_excludes_portably_settled_work(tmp_path, monkeypatch):
+    project = tmp_path / "project"
+    project.mkdir()
+    _capture(project, "first")
+    monkeypatch.setattr(run, "_work_phase", lambda *_args: "continuation-decided")
+    monkeypatch.setattr(
+        orchestration,
+        "list_sealed_assignment_states",
+        lambda *_args: {
+            "states": [
+                {
+                    "assignment_subject": "kungfu:first",
+                    "settled": True,
+                }
+            ],
+            "unqualified_states": [],
+            "issues": [],
+        },
+    )
+
+    work_ref, selection = run._native_work_binding(
+        str(project), "workspace:test", project / ".kungfu" / "runtime"
+    )
+
+    assert work_ref is None
+    assert selection["state"] == "none"
+    assert selection["candidateAssignmentIds"] == []
+    assert selection["settledAssignmentIds"] == ["first"]
+
+
+def test_native_work_binding_degrades_when_settlement_is_ambiguous(
+    tmp_path, monkeypatch
+):
+    project = tmp_path / "project"
+    project.mkdir()
+    _capture(project, "first")
+    monkeypatch.setattr(run, "_work_phase", lambda *_args: "continuation-decided")
+    monkeypatch.setattr(
+        orchestration,
+        "list_sealed_assignment_states",
+        lambda *_args: {
+            "states": [],
+            "unqualified_states": [],
+            "issues": [{"code": "sealed-assignment-state-invalid"}],
+        },
+    )
+
+    work_ref, selection = run._native_work_binding(
+        str(project), "workspace:test", project / ".kungfu" / "runtime"
+    )
+
+    assert work_ref is None
+    assert selection["state"] == "degraded"
+    assert selection["candidateAssignmentIds"] == ["first"]
+    assert "cannot prove" in selection["diagnostic"]
+
+
+def test_native_work_observer_reads_fresh_core_state_without_mutation(
+    tmp_path, monkeypatch
+):
+    root = "sha256:" + "1" * 64
+    monkeypatch.setattr(
+        "kungfu.cli.commands.assignment._status",
+        lambda *_args: {
+            "assignment": {
+                "title": "Native continuity",
+                "objective": "Keep Work visible across native UIs",
+                "work_definition": {
+                    "acceptance_criteria": ["Rediscover the same Work"]
+                },
+                "evidenceEpisodeRoots": [root],
+            },
+            "phase": "executing",
+            "query_proof_root": root,
+            "next_actions": [
+                {
+                    "action": "stage",
+                    "description": "Record the stage-ready boundary",
+                }
+            ],
+        },
+    )
+
+    observed = run._native_work_observer(
+        tmp_path,
+        {
+            "state": "bound",
+            "initiativeId": "initiative:alpha",
+            "assignmentId": "assignment:alpha",
+            "phase": "executing",
+        },
+    )
+
+    assert observed["state"] == "fresh"
+    assert observed["work"] == {
+        "schema": "kungfu.native-work-observation/v1",
+        "state": "available",
+        "initiativeId": "initiative:alpha",
+        "assignmentId": "assignment:alpha",
+        "title": "Native continuity",
+        "objective": "Keep Work visible across native UIs",
+        "acceptanceChecks": ["Rediscover the same Work"],
+        "phase": "executing",
+        "queryProofRoot": root,
+        "nextActions": ["stage: Record the stage-ready boundary"],
+        "evidenceEpisodeRoots": [root],
+        "continuation": {
+            "completionClaimCount": 0,
+            "independentReviewCount": 0,
+            "continuationDecisionCount": 0,
+        },
+        "remainingObligation": None,
+        "nextAction": "stage: Record the stage-ready boundary",
+    }
+
+
+def test_native_work_observer_exposes_none_ambiguous_and_degraded(tmp_path):
+    none = run._native_work_observer(tmp_path, {"state": "none"})
+    ambiguous = run._native_work_observer(tmp_path, {"state": "ambiguous"})
+    degraded = run._native_work_observer(
+        tmp_path,
+        {"state": "single-unbound", "diagnostic": "proof unavailable"},
+    )
+
+    assert none["work"]["state"] == "none"
+    assert ambiguous["work"]["state"] == "ambiguous"
+    assert degraded["state"] == "degraded"
+    assert degraded["work"]["state"] == "degraded"
+    assert degraded["diagnostic"] == "proof unavailable"
+
+
+def test_unbound_native_work_observer_does_not_load_work_authority(
+    monkeypatch, tmp_path
+):
+    import builtins
+
+    original_import = builtins.__import__
+
+    def guarded_import(name, globals=None, locals=None, fromlist=(), level=0):
+        if name == "kungfu.cli.commands" and "assignment" in fromlist:
+            raise AssertionError("unbound observer loaded Work authority")
+        return original_import(name, globals, locals, fromlist, level)
+
+    monkeypatch.setattr(builtins, "__import__", guarded_import)
+
+    for state in ("none", "ambiguous", "single", "single-unbound"):
+        observed = run._native_work_observer(
+            tmp_path,
+            {"state": state, "diagnostic": "proof unavailable"},
+        )
+        assert observed["work"]["state"] in {
+            "none",
+            "ambiguous",
+            "available",
+            "degraded",
+        }
 
 
 def test_project_work_session_yields_at_deterministic_attention(tmp_path):

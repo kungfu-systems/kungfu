@@ -19,6 +19,7 @@ import {
   composeRenameEvidence,
   dispositionSoftWarnings,
   hasGeneratedProvenance,
+  isEligible,
   ownerFor,
   percentile,
   protectedBaselineCandidates,
@@ -75,6 +76,21 @@ test('classification order covers every declared source class', () => {
     classify('scripts/tool.mjs', bytes('const value = 1;')),
     'first-party-handwritten-implementation',
   );
+});
+
+test('local qualification runtimes stay outside source complexity budgets', () => {
+  const policy = {
+    baselinePath: 'baseline.json',
+    waiverDirectory: 'waivers',
+    baselineGovernance: {},
+    specialEligibleNames: [],
+    eligibleExtensions: ['.cc', '.json'],
+  };
+  assert.equal(
+    isEligible('.kungfu/qualification/runtime/vendor.cc', policy),
+    false,
+  );
+  assert.equal(isEligible('.kungfu/episodes/a.json', policy), true);
 });
 
 test('generated projection requires a file-header provenance marker', () => {

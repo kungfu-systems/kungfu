@@ -199,6 +199,16 @@ Profile roots, then query its context/capability/Profile entrypoints. The
 Console is execution placement, not silent authority over an external source;
 its transcript is not completion proof.
 
+Bare `kungfu run codex|claude|amp|opencode` and bare `kungfu run agent` open the
+provider's native interactive UI. Kungfu injects only a session-scoped provider
+Skill plus content-bound Console, Skill, and optional WorkRef envelopes. It does
+not capture provider terminal bytes, copy a transcript, write the Project's
+provider configuration, or let the Kungfu TUI control provider input. Add a
+task or managed-run option to use the separate managed execution path. A
+declarative `kungfu.native-provider-adapter/v1` plus an Agent Runtime Profile
+extends this native path to another PTY Agent without changing Kungfu core;
+launch it with `kungfu run agent --agent <profile-id>`.
+
 Agent Console presentation and KFD-3 use one Agent Session action surface.
 Discover it with `kungfu agent session capabilities --json`, then use
 `plan-start`/`start` or `plan-control`/the matching action against the returned
@@ -220,6 +230,10 @@ Use the modes this way:
   `kungfu atlas import` when the user asks to sync, inspect, or visualize
   missions, goals, and worktree markers in Kungfu.
 - **trace**: capture an existing command with `kungfu trace -- <command>`.
+- **native-interactive launch**: use bare `kungfu run <provider>` (or bare
+  `kungfu run agent`) to keep the provider's familiar UI while Kungfu records a
+  fresh SessionAttempt and the TUI observes the same Core Work state. This is a
+  launch surface, not a second Work authority or transcript store.
 - **managed-run**: let Kungfu launch a provider CLI with skill context and run
   evidence; this surface is experimental. Keep the report closeout gate as a
   fallback when switching between managed-run and report mode.
@@ -233,6 +247,8 @@ Episode imports may use Home automatically when no project is discovered:
 
 ```sh
 kungfu workspace inspect --home --json
+kungfu run codex
+kungfu run agent
 kungfu managed-run --provider <provider> --prompt <task>
 kungfu storage import --from <episode-bundle.json> --execute --json
 ```

@@ -3,7 +3,7 @@
   "id": "kungfu-agent-session",
   "version": 1,
   "weldedSurface": "agent-session-control-plane-contract",
-  "description": "Provider-neutral identity, authority, interaction, receipt, and recovery semantics for one fenced PTY-owning AgentSessionCapsule per live SessionAttempt.",
+  "description": "Provider-neutral identity, authority, interaction, receipt, and recovery semantics for Capsule-owned terminals and observer-only provider-native terminals under the same WorkConsole registry.",
   "dependencies": {
     "runtime": {
       "surface": "runtime",
@@ -34,10 +34,16 @@
   },
   "authorities": {
     "ptyOwner": {
-      "owner": "agent-session-capsule",
-      "cardinality": "one-authoritative-capsule-per-live-attempt",
+      "owner": "backend-specific-single-owner",
+      "cardinality": "one-authoritative-terminal-owner-per-live-attempt",
+      "backendRules": {
+        "capsule": "agent-session-capsule owns the PTY",
+        "structured": "structured provider transport owns direct stdio",
+        "native-interactive": "provider-native UI owns inherited terminal descriptors; Kungfu TUI is observer-only"
+      },
       "writers": [
-        "agent-session-capsule"
+        "agent-session-capsule",
+        "provider-native-process"
       ],
       "readers": [
         "attached-presentation",
@@ -57,8 +63,10 @@
         "generic-workref-binding",
         "workconsole-identity",
         "sessionattempt-lifecycle",
+        "sessionattempt-exclusive-work-binding",
         "reviewed-plan-roots",
-        "metadata-only-receipts"
+        "metadata-only-receipts",
+        "native-observer-freshness-and-core-work-projection"
       ],
       "forbids": [
         "tabs",
@@ -161,10 +169,16 @@
     "writePath": "journal-input-frame-plus-notice",
     "publicOperations": [
       "plan-start",
+      "plan-native-start",
+      "plan-native-bind-work",
       "resolve-console",
       "list",
       "show",
       "start",
+      "start-native",
+      "bind-native-work",
+      "heartbeat-native",
+      "end-native",
       "attach",
       "detach",
       "end",
@@ -196,6 +210,14 @@
   "providerProcess": {
     "spawn": "validated-executable-plus-argv",
     "persistentInteractiveShell": false,
+    "nativeInteractive": {
+      "stdio": "inherit-provider-native-terminal",
+      "terminalCapture": false,
+      "tuiInputControl": false,
+      "continuity": "metadata-heartbeat-plus-core-work-observation",
+      "launchConcurrency": "each bare launch receives an automatically unique workspace Console",
+      "workConcurrency": "binding an active attempt to one WorkRef is atomic and rejects every second live writer"
+    },
     "foregroundIdentity": [
       "provider",
       "profileRoot",
@@ -222,6 +244,8 @@
     "supervisorRestart": "adopt-only-with-proven-runtime-identity-generation-and-pid-start-identity",
     "capsuleCrash": "end-old-attempt-as-lost-control-and-use-provider-supported-resume-in-new-attempt",
     "machineReboot": "persist-registry-and-mark-old-capsule-attempt-unrecoverable-before-new-attempt-or-provider-supported-resume",
+    "nativeTuiRestart": "rediscover-the-same-attempt-from-the-detached-registry-without-touching-provider-stdio",
+    "nativeWorkerRestart": "mark-observer-disconnected-until-the-exact-launcher-identity-heartbeats-again",
     "fakePtyRecovery": false
   },
   "productProjection": {
@@ -425,12 +449,8 @@
         ],
         "properties": {
           "provider": {
-            "enum": [
-              "codex",
-              "claude",
-              "synthetic",
-              "custom"
-            ]
+            "type": "string",
+            "pattern": "^[a-z0-9][a-z0-9._-]{0,63}$"
           },
           "profileRoot": {
             "$ref": "#/$defs/sha256"

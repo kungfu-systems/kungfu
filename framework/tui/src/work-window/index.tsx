@@ -34,10 +34,9 @@ import {
   projectNavigationWidth,
   projectWorkAmbientRows,
 } from '../project-files-view/index.js';
-import {
-  type ProjectWorkQuickAction,
-  type ProjectWorkspaceSelection,
-  selectVisibleProjectWorkRun,
+import type {
+  ProjectWorkQuickAction,
+  ProjectWorkspaceSelection,
 } from '../projects-view/index.js';
 import { terminalCanvasRows } from '../terminal-canvas.js';
 
@@ -506,6 +505,7 @@ export function ProjectWorkHost({
   projects,
   project,
   dimensions,
+  ensureAgentSession,
   onContinueRetainedWork,
   onOpenProjects,
   onOpenLab,
@@ -522,6 +522,7 @@ export function ProjectWorkHost({
   projects: Projects;
   project: ProjectWorkspaceSelection;
   dimensions: ProjectWorkDimensionSource;
+  ensureAgentSession: (runtimeDir: string) => Promise<unknown>;
   onContinueRetainedWork: (receipt: WorkStartReceipt) => Promise<void>;
   onOpenProjects: () => void;
   onOpenLab: () => void;
@@ -549,41 +550,55 @@ export function ProjectWorkHost({
   const [runs, setRuns] = React.useState<ProjectWorkRunSnapshot[]>(() =>
     projects.runs(),
   );
+  const [restoringRuns, setRestoringRuns] = React.useState(true);
   const [fileTreeFocused, setFileTreeFocused] = React.useState(false);
   const [loadingFrame, setLoadingFrame] = React.useState(0);
   const [copyNotice, setCopyNotice] = React.useState<ProjectPathCopyNotice>();
   const [agentReply, setAgentReply] = React.useState<string>();
+  const workDiscoveryLoading = loadingWork || restoringRuns;
   React.useEffect(() => dimensions.subscribe(setSize), [dimensions]);
   React.useEffect(() => projects.subscribeRuns(setRuns), [projects]);
   React.useEffect(() => {
     let active = true;
-    const restore = initialWorkReceipt
-      ? projects.restoreRun(initialWorkReceipt, project.workspace_root)
-      : projects.syncSessions({
+    setRestoringRuns(true);
+    const restore = async () => {
+      await ensureAgentSession(project.runtime_dir);
+      if (initialWorkReceipt) {
+        await projects.restoreRun(initialWorkReceipt, project.workspace_root);
+      } else {
+        await projects.syncSessions({
           workspace: project.workspace_root,
           workspaceId: project.workspace_id,
         });
-    void restore.catch((error) => {
-      if (active)
-        setMessage(error instanceof Error ? error.message : String(error));
-    });
+      }
+    };
+    void restore()
+      .catch((error) => {
+        if (active)
+          setMessage(error instanceof Error ? error.message : String(error));
+      })
+      .finally(() => {
+        if (active) setRestoringRuns(false);
+      });
     return () => {
       active = false;
     };
   }, [
+    ensureAgentSession,
     initialWorkReceipt,
     project.workspace_id,
     project.workspace_root,
+    project.runtime_dir,
     projects,
   ]);
   React.useEffect(() => {
-    if (!loadingWork) return;
+    if (!workDiscoveryLoading) return;
     const timer = setInterval(
       () => setLoadingFrame((current) => (current + 1) % 4),
       180,
     );
     return () => clearInterval(timer);
-  }, [loadingWork]);
+  }, [workDiscoveryLoading]);
   React.useEffect(() => {
     if (!copyNotice) return;
     const timeout = setTimeout(() => setCopyNotice(undefined), 3500);
@@ -597,15 +612,75 @@ export function ProjectWorkHost({
     };
   }, [composerActive, onInputModeChange]);
 
-  const visibleRun = selectVisibleProjectWorkRun(
-    runs,
-    project.workspace_root,
-    allowNewWorkOverRetainedRun,
+  const projectRuns = runs.filter(
+    (candidate) => candidate.workspace === project.workspace_root,
   );
+  const runPriority = (candidate: ProjectWorkRunSnapshot) => {
+    if (candidate.session?.live) return 3;
+    if (
+      candidate.running ||
+      (candidate.session?.backend === 'native-interactive' &&
+        candidate.session.lifecycleState !== 'ended')
+    )
+      return 2;
+    return 1;
+  };
+  const visibleRun = allowNewWorkOverRetainedRun
+    ? null
+    : ([...projectRuns].sort(
+        (left, right) =>
+          runPriority(right) - runPriority(left) ||
+          right.lastEventAt - left.lastEventAt,
+      )[0] ?? null);
   const session = visibleRun?.session;
-  const attention = session?.attention;
+  const sessionAttention = session?.attention;
+  const transientNativeObserverAttention = Boolean(
+    session?.backend === 'native-interactive' &&
+      sessionAttention?.kind === 'blocked' &&
+      sessionAttention.reason.startsWith('native-observer-') &&
+      session.nativeObserver?.state !== 'degraded' &&
+      (session.nativeObserver?.ageMs ?? 0) < 5000,
+  );
+  const attention = transientNativeObserverAttention ? null : sessionAttention;
+  const nativeObserverDisplayState = transientNativeObserverAttention
+    ? 'refreshing'
+    : session?.nativeObserver?.state;
+  const providerSessionActive = Boolean(
+    visibleRun?.running ||
+      session?.live ||
+      (session?.backend === 'native-interactive' &&
+        session.lifecycleState !== 'ended'),
+  );
+  const visibleWorkId =
+    visibleRun?.work ?? session?.nativeObserver?.work?.assignmentId;
+  const projectWorkCount = new Set(
+    projectRuns
+      .map(
+        (candidate) =>
+          candidate.work ??
+          candidate.session?.nativeObserver?.work?.assignmentId,
+      )
+      .filter((work): work is string => Boolean(work)),
+  ).size;
+  const visibleRunProvider = visibleRun?.provider;
   React.useEffect(() => {
-    if (!visibleRun?.id || !session?.live) return;
+    if (!visibleRunProvider) return;
+    setMessage(
+      visibleWorkId
+        ? `Observing Work · ${visibleWorkId}`
+        : `Observing ${visibleRunProvider} workspace session`,
+    );
+  }, [visibleRunProvider, visibleWorkId]);
+  React.useEffect(() => {
+    if (
+      !visibleRun?.id ||
+      (!session?.live &&
+        !(
+          session?.backend === 'native-interactive' &&
+          session.lifecycleState !== 'ended'
+        ))
+    )
+      return;
     let refreshing = false;
     const refresh = () => {
       if (refreshing) return;
@@ -622,7 +697,13 @@ export function ProjectWorkHost({
     refresh();
     const timer = setInterval(refresh, 500);
     return () => clearInterval(timer);
-  }, [projects, session?.live, visibleRun?.id]);
+  }, [
+    projects,
+    session?.backend,
+    session?.lifecycleState,
+    session?.live,
+    visibleRun?.id,
+  ]);
   const retainedAgentFinished =
     visibleRun?.receipt?.status === 'agent-finished';
   const retainedAgentReviewable = Boolean(
@@ -636,15 +717,19 @@ export function ProjectWorkHost({
   const selectedAgentLabel = mockScenario
     ? `Mock Agent · ${mockScenario}`
     : 'Codex';
+  const visibleAgentLabel = visibleRun?.provider
+    ? visibleRun.provider
+    : selectedAgentLabel;
   const canvasRows = terminalCanvasRows(size.rows);
   const projectWorkAmbientDimensions = {
     columns: Math.max(12, size.columns - projectNavigationWidth(size) - 8),
     rows: projectWorkAmbientRows(size),
   };
-  const emptyProjectIdle = !loadingWork && !visibleRun && !plan && !composer;
+  const emptyProjectIdle =
+    !workDiscoveryLoading && !visibleRun && !plan && !composer;
   const loadingSpinner = ['◐', '◓', '◑', '◒'][loadingFrame];
   const beginNewWork = React.useCallback(() => {
-    if (loadingWork || busy || visibleRun?.running) return;
+    if (workDiscoveryLoading || busy || visibleRun?.running) return;
     if (visibleRun?.receipt) {
       setMessage(
         'Review and complete the retained Work before creating another Work.',
@@ -658,7 +743,7 @@ export function ProjectWorkHost({
       acceptanceCriterion: '',
     });
     setMessage('Describe one outcome for this Project.');
-  }, [busy, loadingWork, visibleRun?.receipt, visibleRun?.running]);
+  }, [busy, visibleRun?.receipt, visibleRun?.running, workDiscoveryLoading]);
   React.useEffect(() => {
     if (!actionRequest) return;
     beginNewWork();
@@ -702,9 +787,10 @@ export function ProjectWorkHost({
     if (busy || !retainedAgentReviewable || !receipt) return;
     setBusy(true);
     setMessage('Ending this Agent attempt and opening independent review…');
-    const end = session?.live
-      ? projects.endRun(visibleRun.id)
-      : Promise.resolve(visibleRun);
+    const end =
+      session?.live && session.controllable !== false
+        ? projects.endRun(visibleRun.id)
+        : Promise.resolve(visibleRun);
     void end
       .then(() => onContinueRetainedWork(receipt))
       .catch((error) =>
@@ -716,6 +802,7 @@ export function ProjectWorkHost({
     onContinueRetainedWork,
     projects,
     retainedAgentReviewable,
+    session?.controllable,
     session?.live,
     visibleRun,
     visibleRun?.receipt,
@@ -757,9 +844,10 @@ export function ProjectWorkHost({
     setMessage(
       'Ending the blocked attempt and planning one fresh Agent attempt…',
     );
-    const end = session?.live
-      ? projects.endRun(visibleRun.id)
-      : Promise.resolve(visibleRun);
+    const end =
+      session?.live && session.controllable !== false
+        ? projects.endRun(visibleRun.id)
+        : Promise.resolve(visibleRun);
     void end
       .then(() =>
         projects.planRun(selectedProvider, {
@@ -782,6 +870,7 @@ export function ProjectWorkHost({
     project.workspace_root,
     projects,
     selectedProvider,
+    session?.controllable,
     session?.live,
     visibleRun,
   ]);
@@ -807,7 +896,7 @@ export function ProjectWorkHost({
       .then((receipt) =>
         setMessage(
           receipt.ok
-            ? 'Agent session activity is retained. Protected Work history still requires an accepted domain receipt.'
+            ? 'Agent Work is retained. Follow the receipt next action below.'
             : `Agent Work ended with status ${receipt.status}.`,
         ),
       )
@@ -957,6 +1046,7 @@ export function ProjectWorkHost({
         return;
       }
       if (value === 'p' || value === '\u001b') return onOpenProjects();
+      if (session?.controllable === false) return;
       if (value === 'n') return beginNewWork();
       if (attention?.kind === 'needs-approval' && value === 'y')
         return decideAgentApproval(true);
@@ -998,6 +1088,7 @@ export function ProjectWorkHost({
     projects.prepareWork,
     retainedAgentReviewable,
     retryAgentAttempt,
+    session?.controllable,
     submitAgentReply,
   ]);
 
@@ -1029,7 +1120,7 @@ export function ProjectWorkHost({
         <ProjectFileTreeNavigation
           root={project.workspace_root}
           dimensions={dimensions}
-          workCount={loadingWork ? undefined : 0}
+          workCount={workDiscoveryLoading ? undefined : projectWorkCount}
           focused={fileTreeFocused}
           isInputCaptured={isInputCaptured}
           onFocus={() => setFileTreeFocused(true)}
@@ -1045,9 +1136,9 @@ export function ProjectWorkHost({
             Create Work, choose an Agent, and keep the result in this Project.
           </Text>
           <Text bold color="yellow" wrap="truncate-end">
-            {loadingWork
+            {workDiscoveryLoading
               ? `${loadingSpinner} LOADING: discovering retained Work in this Project`
-              : visibleRun?.running || session?.attempt === 'working'
+              : providerSessionActive || session?.attempt === 'working'
                 ? 'RUNNING: the Agent is working in this Project'
                 : attention
                   ? `ATTENTION: ${attention.message}`
@@ -1062,7 +1153,7 @@ export function ProjectWorkHost({
             Agent Work Lab · [q] quit
           </Text>
           <Box flexDirection="column" marginTop={1} flexGrow={1}>
-            {loadingWork ? (
+            {workDiscoveryLoading ? (
               <>
                 <Box flexGrow={1} alignItems="center" justifyContent="center">
                   <TerminalAmbientScene
@@ -1078,16 +1169,110 @@ export function ProjectWorkHost({
               </>
             ) : visibleRun ? (
               <>
-                <Text
-                  bold
-                  color={
-                    visibleRun.running || session?.live ? 'yellow' : 'green'
-                  }
-                >
-                  {visibleRun.running || session?.live
-                    ? `◌ ${selectedAgentLabel.toUpperCase()} SESSION RUNNING`
-                    : `✓ ${selectedAgentLabel.toUpperCase()} SESSION`}
+                <Text bold color={providerSessionActive ? 'yellow' : 'green'}>
+                  {providerSessionActive
+                    ? `◌ ${visibleAgentLabel.toUpperCase()} SESSION RUNNING`
+                    : `✓ ${visibleAgentLabel.toUpperCase()} SESSION`}
                 </Text>
+                {session?.nativeObserver ? (
+                  <Box flexDirection="column">
+                    <Text
+                      bold
+                      color={
+                        nativeObserverDisplayState === 'fresh'
+                          ? 'green'
+                          : nativeObserverDisplayState === 'refreshing'
+                            ? 'cyan'
+                            : nativeObserverDisplayState === 'stale'
+                              ? 'yellow'
+                              : 'red'
+                      }
+                    >
+                      NATIVE UI · OBSERVE ONLY ·{' '}
+                      {nativeObserverDisplayState?.toUpperCase()} ·{' '}
+                      {session.nativeObserver.ageMs}ms old
+                    </Text>
+                    <Text dimColor>
+                      Provider owns terminal input; continue in its native UI.
+                    </Text>
+                    <Text dimColor>
+                      Agent session activity is retained; protected Work history
+                      begins only with an accepted domain receipt.
+                    </Text>
+                    {session.nativeObserver.work ? (
+                      <>
+                        <Text bold color="cyan">
+                          Work ·{' '}
+                          {session.nativeObserver.work.title ||
+                            session.nativeObserver.work.assignmentId ||
+                            session.nativeObserver.work.state}
+                        </Text>
+                        <Text dimColor>
+                          ID · {session.nativeObserver.work.assignmentId}
+                          {session.nativeObserver.work.phase
+                            ? ` · Phase ${session.nativeObserver.work.phase}`
+                            : ''}
+                        </Text>
+                        {session.nativeObserver.work.objective ? (
+                          <Text>
+                            Objective · {session.nativeObserver.work.objective}
+                          </Text>
+                        ) : null}
+                        {session.nativeObserver.work.remainingObligation ? (
+                          <Text color="yellow">
+                            Remaining ·{' '}
+                            {session.nativeObserver.work.remainingObligation}
+                          </Text>
+                        ) : null}
+                        {session.nativeObserver.work.acceptanceChecks.map(
+                          (check, index) => (
+                            <Text key={`${index}:${check}`}>
+                              Acceptance {index + 1} · {check}
+                            </Text>
+                          ),
+                        )}
+                        {session.nativeObserver.work.nextAction ? (
+                          <Text color="cyan">
+                            Next · {session.nativeObserver.work.nextAction}
+                          </Text>
+                        ) : null}
+                        <Text dimColor>
+                          Continuity · claims{' '}
+                          {
+                            session.nativeObserver.work.continuation
+                              .completionClaimCount
+                          }{' '}
+                          · reviews{' '}
+                          {
+                            session.nativeObserver.work.continuation
+                              .independentReviewCount
+                          }{' '}
+                          · decisions{' '}
+                          {
+                            session.nativeObserver.work.continuation
+                              .continuationDecisionCount
+                          }{' '}
+                          · evidence{' '}
+                          {
+                            session.nativeObserver.work.evidenceEpisodeRoots
+                              .length
+                          }{' '}
+                          · session receipts {session.receiptRoots.length}
+                        </Text>
+                      </>
+                    ) : null}
+                    {session.nativeObserver.diagnostic ? (
+                      <Text color="red">
+                        Observer · {session.nativeObserver.diagnostic}
+                      </Text>
+                    ) : null}
+                    {session.nativeObserver.detailDiagnostic ? (
+                      <Text color="yellow">
+                        Work details · {session.nativeObserver.detailDiagnostic}
+                      </Text>
+                    ) : null}
+                  </Box>
+                ) : null}
                 {visibleTerminalLines && visibleTerminalLines.length > 0 ? (
                   visibleTerminalLines.map((line, index) => (
                     <Text key={`${index}:${line}`} wrap="truncate-end">
@@ -1103,10 +1288,10 @@ export function ProjectWorkHost({
                       {event.activity?.text || event.text}
                     </Text>
                   ))
-                ) : (
+                ) : session?.nativeObserver ? null : (
                   <Text color="yellow">
                     {visibleRun.running
-                      ? 'Codex is working; waiting for the next retained event…'
+                      ? `${visibleAgentLabel} is working; waiting for the next retained event…`
                       : 'No streamed events were retained for this run.'}
                   </Text>
                 )}
@@ -1143,13 +1328,15 @@ export function ProjectWorkHost({
                     </Text>
                     <Text>{attention.message}</Text>
                     <Text bold>
-                      {attention.kind === 'needs-approval'
-                        ? '[y] approve · [n] deny'
-                        : attention.kind === 'needs-answer'
-                          ? '[i] answer · [v/Enter] review changes'
-                          : attention.kind === 'ready-for-review'
-                            ? '[v/Enter] review changes'
-                            : '[r] end this attempt and plan a fresh attempt'}
+                      {session?.controllable === false
+                        ? 'Continue in the provider-native terminal; TUI is observer only'
+                        : attention.kind === 'needs-approval'
+                          ? '[y] approve · [n] deny'
+                          : attention.kind === 'needs-answer'
+                            ? '[i] answer · [v/Enter] review changes'
+                            : attention.kind === 'ready-for-review'
+                              ? '[v/Enter] review changes'
+                              : '[r] end this attempt and plan a fresh attempt'}
                     </Text>
                   </Box>
                 ) : null}
@@ -1277,7 +1464,7 @@ export function ProjectWorkHost({
                 </>
               ) : null}
             </Box>
-          ) : loadingWork || emptyProjectIdle ? null : (
+          ) : workDiscoveryLoading || emptyProjectIdle ? null : (
             <Text color={busy ? 'yellow' : undefined}>
               {busy ? '◌ ' : '✓ '}
               {message}

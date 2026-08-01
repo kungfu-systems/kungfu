@@ -16,6 +16,7 @@ from kungfu import durability as durability_contract
 from kungfu.agent import agent_hub
 from kungfu.agent import agent_hub_qualification
 from kungfu.agent import runtime_profiles
+from kungfu.agent import run_agent
 from kungfu.agent import session_surface
 from kungfu.agent import work_profile
 from kungfu.agent import documentation as documentation_pack
@@ -44,6 +45,27 @@ def agent(ctx):
 
 
 def _context(ctx):
+    native_raw = os.environ.get("KUNGFU_AGENT_CONTEXT", "").strip()
+    if native_raw:
+        native = json.loads(native_raw)
+        if (
+            not isinstance(native, dict)
+            or native.get("schema") != "kungfu.native-agent-context/v1"
+            or native.get("environment") != "native-interactive"
+        ):
+            raise ValueError("invalid native Agent context envelope")
+        console_raw = os.environ.get("KUNGFU_AGENT_CONSOLE_ENVELOPE", "").strip()
+        if console_raw:
+            envelope = json.loads(console_raw)
+            kungfu_config.validate_value("agentConsoleEnvelope", envelope)
+            work_binding = dict(native.get("workBinding") or {})
+            effective_work_ref = _effective_console_work_ref(envelope)
+            work_binding["launchState"] = (
+                "bound" if effective_work_ref is not None else "unbound"
+            )
+            work_binding["workRef"] = effective_work_ref
+            native["workBinding"] = work_binding
+        return native
     config = resolve_config(runtime_home=ctx.home)
     index = agent_pack.index()
     return {
@@ -69,6 +91,26 @@ def _context(ctx):
             "collaborationInterface": registry_summary(),
         },
     }
+
+
+def _effective_console_work_ref(envelope):
+    effective_work_ref = envelope.get("workRef")
+    try:
+        status = session_surface.invoke(
+            {
+                "operation": "show",
+                "session": {
+                    "workConsoleId": envelope["consoleId"],
+                    "sessionAttemptId": envelope["attemptId"],
+                },
+            }
+        )
+        binding = status.get("binding") or {}
+        if binding.get("kind") == "work":
+            effective_work_ref = binding.get("workRef")
+    except (OSError, ValueError):
+        pass
+    return effective_work_ref
 
 
 def _docs_context():
@@ -777,10 +819,18 @@ def runtime_list(ctx, as_json):
 @click.option("--id", "profile_id", required=True, help="stable profile id")
 @click.option("--label", required=True, help="user-visible profile label")
 @click.option(
-    "--provider", required=True, type=click.Choice(runtime_profiles.PROVIDERS)
+    "--provider",
+    required=True,
+    help="built-in or registered native Provider adapter id",
 )
 @click.option("--executable", required=True, help="executable path or PATH name")
 @click.option("--arg", "argv", multiple=True, help="repeat for each launch argv")
+@click.option(
+    "--interactive-arg",
+    "interactive_argv",
+    multiple=True,
+    help="repeat for each provider-native interactive argv",
+)
 @click.option("--shell-mode", is_flag=True, help="explicitly allow shell semantics")
 @click.option(
     "--cwd-policy",
@@ -811,6 +861,7 @@ def runtime_upsert(
     provider,
     executable,
     argv,
+    interactive_argv,
     shell_mode,
     cwd_policy,
     backend,
@@ -826,6 +877,7 @@ def runtime_upsert(
             provider=provider,
             executable=executable,
             argv=list(argv),
+            interactive_argv=list(interactive_argv),
             shell_mode=shell_mode,
             cwd_policy=cwd_policy,
             backend=backend,
@@ -951,11 +1003,13 @@ def console_current(ctx, as_json):
             raise click.ClickException(
                 f"invalid Agent Console envelope: {exc}"
             ) from exc
+        effective_work_ref = _effective_console_work_ref(envelope)
         payload = {
             "schema": "kungfu.agent-console-current/v1",
             "available": True,
             "envelope": envelope,
-            "workBound": envelope.get("workRef") is not None,
+            "workBound": effective_work_ref is not None,
+            "workRef": effective_work_ref,
             "knownLimits": envelope.get("knownLimits", []),
         }
     if as_json:
@@ -971,6 +1025,46 @@ def console_current(ctx, as_json):
     )
 
 
+@console.command(
+    name="bind-work",
+    help="atomically bind this native Agent attempt to one Assignment",
+)
+@click.option("--initiative-id", required=True)
+@click.option("--assignment-id", required=True)
+@click.option("--json", "as_json", is_flag=True, help="machine-readable output")
+@kfd3_api("kungfu.agent.console.bind-work")
+@agent_command_context
+def console_bind_work(ctx, initiative_id, assignment_id, as_json):
+    raw = os.environ.get("KUNGFU_AGENT_CONSOLE_ENVELOPE", "").strip()
+    if not raw:
+        raise click.ClickException(
+            "bind-work must run inside a native Kungfu Agent Console"
+        )
+    try:
+        envelope = json.loads(raw)
+        kungfu_config.validate_value("agentConsoleEnvelope", envelope)
+        binding = run_agent.bind_current_native_work(
+            str(ctx.runtime_dir), initiative_id, assignment_id
+        )
+        if binding is None:
+            raise ValueError("native Agent Console binding is unavailable")
+    except (OSError, RuntimeError, ValueError, json.JSONDecodeError) as exc:
+        raise click.ClickException(str(exc)) from exc
+    payload = {
+        "schema": "kungfu.agent-console.work-binding/v1",
+        "status": "bound",
+        **binding,
+        "next": "continue-this-Assignment-in-this-terminal",
+    }
+    if as_json:
+        _json(payload)
+        return
+    click.echo(
+        f"bound {assignment_id} to {envelope['consoleId']} "
+        f"attempt {envelope['attemptId']}"
+    )
+
+
 @agent.command(name="session", help=api_help("kungfu.agent.session"))
 @click.argument(
     "operation",
@@ -983,6 +1077,12 @@ def console_current(ctx, as_json):
             "snapshot",
             "plan-start",
             "start",
+            "plan-native-start",
+            "start-native",
+            "plan-native-bind-work",
+            "bind-native-work",
+            "heartbeat-native",
+            "end-native",
             "attach",
             "detach",
             "plan-control",
@@ -1094,7 +1194,7 @@ def choose_mode(
 @click.option(
     "--target",
     required=True,
-    type=click.Choice(["codex", "claude"]),
+    type=click.Choice(["codex", "claude", "amp", "opencode"]),
     help="which provider skill to install",
 )
 @click.option(

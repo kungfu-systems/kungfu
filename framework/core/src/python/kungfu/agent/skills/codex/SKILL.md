@@ -1,7 +1,8 @@
 ---
+name: kungfu-agent-onboarding
 key: kungfu-agent-onboarding
 title: Kungfu Agent Onboarding
-description: Use the installed Kungfu agent pack and discover verified Xinfa context before choosing report, atlas-projection, trace, managed-run, or remote-sync mode.
+description: Discover the exact Kungfu Project, WorkConsole, WorkRef, Skill catalog, and Core Work state admitted to this Codex process before choosing a work mode.
 triggers:
   - kungfu
   - atlas projection
@@ -30,6 +31,38 @@ capabilities:
 ---
 
 # Kungfu Agent Onboarding
+
+When `KUNGFU_AGENT_ENVIRONMENT=native-interactive`, begin from the injected
+Kungfu envelopes rather than provider chat history:
+
+- `KUNGFU_AGENT_CONSOLE_ENVELOPE` identifies the exact Project, WorkConsole,
+  SessionAttempt, runtime Profile, and optional WorkRef.
+- `KUNGFU_SKILL_CONTEXT` advertises the compact Skill catalog. Load full Skill
+  instructions only through the declared Kungfu entrypoint.
+- `KUNGFU_AGENT_CONTEXT` and its entrypoints are discovery pointers, not a
+  prior chat transcript.
+- `KUNGFU_PRIOR_TRANSCRIPT_BYTES=0` means continuity comes from Core evidence.
+
+Confirm current facts with `"$KUNGFU_CLI_BIN" agent console current --json`,
+`"$KUNGFU_CLI_BIN" skill catalog --json`, and the exact
+`"$KUNGFU_CLI_BIN" work status` query. Never
+infer Work completion from terminal output or process exit. The Kungfu TUI is
+an observer and never owns Codex input or transcript bytes.
+
+A bare `kungfu run codex` launch is intentionally Work-unbound so many terminal
+windows can start in the same Project. As soon as you choose or accept one
+Assignment, and before editing files or invoking a Work mutation, run:
+
+```sh
+"$KUNGFU_CLI_BIN" agent console bind-work --initiative-id <id> --assignment-id <id> --json
+```
+
+Do not continue unless it returns `status: bound`. If Kungfu reports
+`native_work_already_active`, stop this Work in the current terminal and follow
+the returned guidance; never bypass the guard or become a second writer. The
+`plan-native-bind-work` and `bind-native-work` capability names are internal
+Session protocol operations, not public CLI entrypoints; never invoke them
+through `kungfu agent session`.
 
 Before acting in a Kungfu runtime, read local facts from the installed pack:
 

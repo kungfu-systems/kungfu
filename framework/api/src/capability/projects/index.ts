@@ -553,15 +553,47 @@ export type ProjectAgentAttention = {
   nextActions: string[];
 };
 
+export type ProjectNativeWorkSnapshot = {
+  state: string;
+  initiativeId: string;
+  assignmentId: string;
+  title: string;
+  objective: string;
+  acceptanceChecks: string[];
+  phase: string | null;
+  queryProofRoot: string | null;
+  nextActions: string[];
+  evidenceEpisodeRoots: string[];
+  continuation: {
+    completionClaimCount: number;
+    independentReviewCount: number;
+    continuationDecisionCount: number;
+  };
+  remainingObligation: string | null;
+  nextAction: string | null;
+};
+
 export type ProjectAgentSessionSnapshot = ProjectAgentSessionRef & {
   provider: string;
+  backend: string;
   live: boolean;
+  terminalObservable: boolean;
+  controllable: boolean;
   lifecycleState: string;
   interactionState: string;
   attempt: string;
   attention: ProjectAgentAttention | null;
   pendingControl: { requestId: string | number } | null;
   terminalLines: string[];
+  nativeObserver: {
+    state: string;
+    ageMs: number;
+    staleAfterMs: number;
+    diagnostic: string | null;
+    detailDiagnostic: string | null;
+    work: ProjectNativeWorkSnapshot | null;
+  } | null;
+  receiptRoots: string[];
   updatedAt: number;
 };
 
@@ -798,12 +830,14 @@ export function openProjects(options: ProjectCommandOptions): Projects {
   const projectSessionSnapshot = async (
     ref: ProjectAgentSessionRef,
     knownStatus?: Record<string, unknown>,
+    workspace = '',
+    knownWork?: ProjectNativeWorkSnapshot | null,
   ): Promise<ProjectAgentSessionSnapshot> => {
     const status =
       knownStatus ??
       (await sessionInvoke({ operation: 'status', session: { ...ref } }));
     let terminalLines: string[] = [];
-    if (status.live === true) {
+    if (status.live === true && status.terminalObservable !== false) {
       const snapshot = await sessionInvoke({
         operation: 'snapshot',
         session: { ...ref },
@@ -825,10 +859,102 @@ export function openProjects(options: ProjectCommandOptions): Projects {
       | { pending?: Array<{ requestId?: string | number }> }
       | undefined;
     const pending = structured?.pending?.[0];
+    const receiptRoots = Array.isArray(status.receiptRoots)
+      ? status.receiptRoots.map((root) => String(root))
+      : [];
+    const nativeObserver = status.nativeObserver as
+      | {
+          state?: string;
+          ageMs?: number;
+          staleAfterMs?: number;
+          diagnostic?: string | null;
+          work?: NonNullable<
+            ProjectAgentSessionSnapshot['nativeObserver']
+          >['work'];
+        }
+      | undefined;
+    const rawNativeWork = nativeObserver?.work;
+    let nativeWork = rawNativeWork
+      ? {
+          ...rawNativeWork,
+          title: String(rawNativeWork.title ?? knownWork?.title ?? ''),
+          objective: String(
+            rawNativeWork.objective ?? knownWork?.objective ?? '',
+          ),
+          acceptanceChecks: Array.isArray(rawNativeWork.acceptanceChecks)
+            ? rawNativeWork.acceptanceChecks.map((value) => String(value))
+            : [...(knownWork?.acceptanceChecks ?? [])],
+        }
+      : null;
+    let detailDiagnostic: string | null = null;
+    if (
+      nativeWork &&
+      !nativeWork.title &&
+      !nativeWork.objective &&
+      workspace &&
+      nativeWork.initiativeId &&
+      nativeWork.assignmentId
+    ) {
+      try {
+        const rawStatus = await options.execFile(
+          options.bin,
+          [
+            'work',
+            'status',
+            '--workspace',
+            workspace,
+            '--initiative-id',
+            nativeWork.initiativeId,
+            '--assignment-id',
+            nativeWork.assignmentId,
+          ],
+          {
+            encoding: 'utf8',
+            env: options.env,
+            maxBuffer: 4 * 1024 * 1024,
+          },
+        );
+        const workStatus = parse<{
+          assignment?: {
+            title?: string;
+            objective?: string;
+            work_definition?: {
+              title?: string;
+              objective?: string;
+              acceptance_criteria?: unknown[];
+              remaining_obligation?: string;
+            };
+          };
+        }>(rawStatus, 'kungfu.assignment-orchestration.status/v1');
+        const assignment = workStatus.assignment ?? {};
+        const definition = assignment.work_definition ?? {};
+        nativeWork = {
+          ...nativeWork,
+          title: String(definition.title ?? assignment.title ?? '').trim(),
+          objective: String(
+            definition.objective ?? assignment.objective ?? '',
+          ).trim(),
+          acceptanceChecks: (definition.acceptance_criteria ?? [])
+            .map((value) => String(value).trim())
+            .filter(Boolean),
+          remainingObligation:
+            nativeWork.remainingObligation ??
+            (String(definition.remaining_obligation ?? '').trim() || null),
+        };
+      } catch (error) {
+        detailDiagnostic =
+          error instanceof Error ? error.message : String(error);
+      }
+    }
     return {
       ...ref,
       provider: adapter?.provider ?? 'agent',
+      backend: String(
+        status.backend ?? (nativeObserver ? 'native-interactive' : 'capsule'),
+      ),
       live: status.live === true,
+      terminalObservable: status.terminalObservable !== false,
+      controllable: status.controllable !== false,
       lifecycleState: String(status.lifecycleState ?? 'unavailable'),
       interactionState: String(status.interactionState ?? 'unavailable'),
       attempt: String(agent?.attempt ?? 'working'),
@@ -838,6 +964,17 @@ export function openProjects(options: ProjectCommandOptions): Projects {
           ? null
           : { requestId: pending.requestId },
       terminalLines,
+      nativeObserver: nativeObserver
+        ? {
+            state: String(nativeObserver.state ?? 'unknown'),
+            ageMs: Number(nativeObserver.ageMs ?? 0),
+            staleAfterMs: Number(nativeObserver.staleAfterMs ?? 0),
+            diagnostic: nativeObserver.diagnostic ?? null,
+            detailDiagnostic,
+            work: nativeWork,
+          }
+        : null,
+      receiptRoots,
       updatedAt: Date.now(),
     };
   };
@@ -846,7 +983,12 @@ export function openProjects(options: ProjectCommandOptions): Projects {
   ): Promise<ProjectWorkRunSnapshot | null> => {
     const run = retainedRuns.find((candidate) => candidate.id === runId);
     if (!run) return null;
-    const session = await projectSessionSnapshot(sessionRef(run));
+    const session = await projectSessionSnapshot(
+      sessionRef(run),
+      undefined,
+      run.workspace,
+      run.session?.nativeObserver?.work,
+    );
     updateRun(runId, (current) => ({
       ...current,
       lastEventAt: session.updatedAt,
@@ -862,6 +1004,11 @@ export function openProjects(options: ProjectCommandOptions): Projects {
   ): Promise<ProjectWorkRunSnapshot> => {
     const run = retainedRuns.find((candidate) => candidate.id === runId);
     if (!run) throw new Error(`Agent run '${runId}' is unavailable`);
+    if (run.session?.controllable === false) {
+      throw new Error(
+        'This native Agent Session is observer-only; continue in the provider terminal',
+      );
+    }
     const ref = sessionRef(run);
     const plan = await sessionInvoke({
       operation: 'plan-control',
@@ -1234,18 +1381,37 @@ export function openProjects(options: ProjectCommandOptions): Projects {
       const sessions = Array.isArray(listed.sessions)
         ? (listed.sessions as Record<string, unknown>[])
         : [];
-      for (const status of sessions) {
+      const attempts = Array.isArray(listed.attempts)
+        ? (listed.attempts as Record<string, unknown>[])
+        : [];
+      const candidates = new Map<string, Record<string, unknown>>();
+      for (const status of [...attempts, ...sessions]) {
+        const key = `${String(status.workConsoleId ?? '')}\u0000${String(status.sessionAttemptId ?? '')}`;
+        if (key !== '\u0000') candidates.set(key, status);
+      }
+      for (const status of candidates.values()) {
         const binding = status.binding as
           | { kind?: string; workRef?: Record<string, unknown> }
           | undefined;
         const workRef = binding?.workRef;
-        if (binding?.kind !== 'work' || !workRef) continue;
-        if (
-          syncOptions.workspaceId &&
-          workRef.workspaceId !== syncOptions.workspaceId
-        )
+        if (binding?.kind === 'work' && workRef) {
+          if (
+            syncOptions.workspaceId &&
+            workRef.workspaceId !== syncOptions.workspaceId
+          )
+            continue;
+          if (syncOptions.work && workRef.entityId !== syncOptions.work)
+            continue;
+        } else if (binding?.kind === 'workspace-assistant') {
+          if (
+            syncOptions.workspaceId &&
+            status.workspaceId !== syncOptions.workspaceId
+          )
+            continue;
+          if (syncOptions.work) continue;
+        } else {
           continue;
-        if (syncOptions.work && workRef.entityId !== syncOptions.work) continue;
+        }
         const ref = {
           workConsoleId: String(status.workConsoleId ?? ''),
           sessionAttemptId: String(status.sessionAttemptId ?? ''),
@@ -1256,9 +1422,16 @@ export function openProjects(options: ProjectCommandOptions): Projects {
             run.session?.workConsoleId === ref.workConsoleId &&
             run.session.sessionAttemptId === ref.sessionAttemptId,
         );
-        const session = await projectSessionSnapshot(ref, status);
+        const session = await projectSessionSnapshot(
+          ref,
+          status,
+          status.lifecycleState === 'ended' ? '' : syncOptions.workspace,
+          existing?.session?.nativeObserver?.work,
+        );
         if (existing) {
-          updateRun(existing.id, (run) => ({ ...run, session }));
+          retainedRuns = retainedRuns.map((run) =>
+            run.id === existing.id ? { ...run, session } : run,
+          );
           continue;
         }
         const now = Date.now();
@@ -1267,7 +1440,7 @@ export function openProjects(options: ProjectCommandOptions): Projects {
             id: `session:${ref.sessionAttemptId}`,
             provider: session.provider,
             workspace: syncOptions.workspace ?? '',
-            work: String(workRef.entityId ?? ''),
+            ...(workRef ? { work: String(workRef.entityId ?? '') } : {}),
             startedAt: now,
             lastEventAt: now,
             running: false,
@@ -1276,8 +1449,8 @@ export function openProjects(options: ProjectCommandOptions): Projects {
           },
           ...retainedRuns,
         ].slice(0, 8);
-        publishRuns();
       }
+      publishRuns();
       return retainedRuns.map((run) => ({ ...run, events: [...run.events] }));
     },
     restoreRun: async (receipt, workspace) => {

@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
 import { createHash } from 'node:crypto';
-import { mkdtemp, rm } from 'node:fs/promises';
+import { mkdir, mkdtemp, rm, symlink } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
@@ -20,7 +20,7 @@ test('detached endpoint is stable per runtime root and derived only from it', ()
   const second = detachedAgentSessionPaths('/tmp/kungfu-runtime-a');
   const other = detachedAgentSessionPaths('/tmp/kungfu-runtime-b');
   const expectedScope = createHash('sha256')
-    .update(path.resolve('/tmp/kungfu-runtime-a', 'agent-session'))
+    .update(first.directory)
     .digest('hex')
     .slice(0, 16);
   assert.deepEqual(first, second);
@@ -33,10 +33,28 @@ test('detached endpoint is stable per runtime root and derived only from it', ()
   );
 });
 
+test('filesystem aliases resolve to one detached endpoint', async () => {
+  const parent = await mkdtemp(path.join(os.tmpdir(), 'kungfu-session-alias-'));
+  const runtime = path.join(parent, 'runtime');
+  const alias = path.join(parent, 'runtime-alias');
+  try {
+    await mkdir(runtime);
+    await symlink(runtime, alias, 'dir');
+    assert.deepEqual(
+      detachedAgentSessionPaths(alias),
+      detachedAgentSessionPaths(runtime),
+    );
+  } finally {
+    await rm(parent, { recursive: true, force: true });
+  }
+});
+
 test('a new main client reconnects to one worker and worker loss never fakes continuity', async () => {
   const root = await mkdtemp(path.join(os.tmpdir(), 'kungfu-session-worker-'));
   const children = [];
+  const spawnedEnvironments = [];
   const spawnProcess = (command, args, options) => {
+    spawnedEnvironments.push(options.env);
     const child = spawn(command, args, { ...options, detached: false });
     children.push(child);
     return child;
@@ -59,6 +77,7 @@ test('a new main client reconnects to one worker and worker loss never fakes con
       sessions: ['attempt:retained-across-main-restart'],
     });
     assert.equal(children.length, 1);
+    assert.equal(spawnedEnvironments[0].KUNGFU_AS_VARIANT, 'node');
 
     children[0].kill('SIGTERM');
     await new Promise((resolve) => children[0].once('exit', resolve));
