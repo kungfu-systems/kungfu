@@ -619,9 +619,9 @@
         },
         {
           "path": "scripts/run-native-kfx-admission-tests.mjs",
-          "currentLines": 408,
+          "currentLines": 409,
           "baselineLines": 99,
-          "currentRoot": "sha256:4f8ed2f419f4247092e28c356a3d6aa4d8b9167d243476837bd090d659eeb1e3",
+          "currentRoot": "sha256:da96f4c05d93ade603150e31344c282e95521a7872e3c9bb14d931b70d87533c",
           "baselineRoot": "sha256:32bb3806ac0541fd4230c78febce26efcfb85b56ef8ce19b4a374d0a07f1c4a4",
           "changedSinceBaseline": true
         },

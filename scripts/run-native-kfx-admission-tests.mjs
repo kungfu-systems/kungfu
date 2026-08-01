@@ -8,7 +8,6 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const isWin = process.platform === 'win32';
 
 function run(label, command, args, env = process.env) {
   process.stdout.write(`[native-admission] ${label}\n`);
@@ -16,7 +15,9 @@ function run(label, command, args, env = process.env) {
     cwd: root,
     env,
     stdio: 'inherit',
-    shell: isWin,
+    // Preserve argv on Windows: cmd.exe treats the ctest regex parentheses as
+    // shell syntax instead of passing them to ctest.exe.
+    shell: false,
   });
   if (result.error) throw result.error;
   if (result.status !== 0) process.exit(result.status ?? 1);

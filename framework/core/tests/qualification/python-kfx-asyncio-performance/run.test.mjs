@@ -158,6 +158,15 @@ test('manual Gate Measurement retains exact-source evidence on all three support
   assert.doesNotMatch(workflow.split('jobs:')[0], /pull_request:/u);
 });
 
+test('native correctness gate preserves ctest regex argv on Windows', () => {
+  const admissionRunner = fs.readFileSync(
+    path.join(ROOT, 'scripts', 'run-native-kfx-admission-tests.mjs'),
+    'utf8',
+  );
+  assert.match(admissionRunner, /shell: false/u);
+  assert.doesNotMatch(admissionRunner, /shell: isWin/u);
+});
+
 test('raw parser keeps every observation and rejects failure records', () => {
   const manifest = {
     schema: 'kungfu.python-kfx-asyncio.performance-manifest/v1',
