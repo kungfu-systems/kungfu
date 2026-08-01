@@ -54,6 +54,7 @@
 set -eu
 cd "$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)"
 
+if [ "$(uname -s 2>/dev/null || true)/$(uname -m 2>/dev/null || true)" = "Darwin/x86_64" ]; then echo "shifu: unsupported-host: Intel macOS (Darwin x86_64) is not supported by Kungfu" >&2; exit 64; fi
 # Load local cache proxy config: user-global first, then layer the optional in-repo override (both exported → passed to subprocesses).
 kungfu_load_proxy() {
   _f="${XDG_CONFIG_HOME:-$HOME/.config}/kungfu/build-local.env"
@@ -75,7 +76,6 @@ kungfu_native_platform() {
   # Git Bash (shell = "bash"), where uname reports MINGW*/MSYS*/CYGWIN*.
   case "$(uname -s)/$(uname -m)" in
     Darwin/arm64) echo "macos-arm64" ;;
-    Darwin/x86_64) echo "macos-x64" ;;
     Linux/x86_64) echo "linux-x64" ;;
     Linux/aarch64 | Linux/arm64) echo "linux-arm64" ;;
     MINGW*/x86_64 | MSYS*/x86_64 | CYGWIN*/x86_64) echo "windows-x64" ;;

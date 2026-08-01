@@ -4,6 +4,37 @@ import fs from 'node:fs';
 import path from 'node:path';
 import process from 'node:process';
 
+export const INTEL_MACOS_DIAGNOSTIC =
+  'unsupported-host: Intel macOS (Darwin x86_64) is not supported by Kungfu';
+
+const SUPPORTED_PRODUCT_TARGETS = new Set([
+  'darwin/arm64',
+  'linux/arm64',
+  'linux/x64',
+  'win32/x64',
+]);
+
+export function assertSupportedProductHost({
+  platform = process.platform,
+  architecture = process.arch,
+} = {}) {
+  if (platform === 'darwin' && ['x64', 'x86_64'].includes(architecture)) {
+    throw new Error(INTEL_MACOS_DIAGNOSTIC);
+  }
+}
+
+export function assertSupportedProductTarget(platform, architecture) {
+  assertSupportedProductHost({ platform, architecture });
+  const identity = `${platform}/${architecture}`;
+  if (!SUPPORTED_PRODUCT_TARGETS.has(identity)) {
+    throw new Error(`unsupported product target: ${identity}`);
+  }
+}
+
+export function supportedProductTargets() {
+  return [...SUPPORTED_PRODUCT_TARGETS].sort();
+}
+
 export function readTrunkRuntimePinSnapshot({ runtimePinsPath, repoPinPath }) {
   const runtimePins = fs.readFileSync(runtimePinsPath, 'utf8');
   const uvPin = (runtimePins.match(/^UV_VERSION=(.+)$/m) || [])[1]?.trim();

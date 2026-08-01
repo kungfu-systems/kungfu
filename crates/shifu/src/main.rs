@@ -11,9 +11,8 @@
 //   shifu --version | -v | -V     launcher version + build identity
 //   shifu self-version            this binary's crate version (machine readable)
 //   shifu / -h / --help           launcher usage (pnpm's own help: `shifu help`)
-// plus the capability the scripts could only ask the user for: when fnm / uv
-// are missing it bootstraps them from prebuilt release binaries into a
-// user-global cache (no compiler, no package manager, no admin required).
+// plus bootstrap of missing fnm / uv from prebuilt release binaries into a
+// user-global cache (no compiler, package manager, or admin required).
 //
 // Installed-binary delegation: a shifu installed outside the repo (e.g.
 // ~/.local/bin) never runs its own logic against a checkout — inside a repo it
@@ -183,6 +182,7 @@ fn print_usage() {
 }
 
 pub fn main_and_exit(args: &[String], invocation: InvocationContext) -> ! {
+    shifu_core::host::validate_current_host().unwrap_or_else(|e| util::die_code(e, 64));
     let first = args.first().map(String::as_str);
 
     // Answers for this binary itself — never delegated (the shim reads it to

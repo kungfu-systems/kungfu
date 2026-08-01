@@ -32,8 +32,12 @@ import {
   releaseChannelKeyId,
 } from './release-channel-trust.mjs';
 import {
+  INTEL_MACOS_DIAGNOSTIC,
   PRODUCT_ASSEMBLY_STAGE_IDS,
+  assertSupportedProductHost,
+  assertSupportedProductTarget,
   readTrunkRuntimePinSnapshot,
+  supportedProductTargets,
 } from './runtime-pin-snapshot.mjs';
 import { buildCliUpgradeManifest } from './upgrade-manifest.mjs';
 
@@ -45,6 +49,35 @@ const {
   esmEntrypointArgs,
   toEsmEntrypointSpecifier,
 } = require('../../framework/gui/scripts/before-pack.cjs');
+
+test('Intel macOS is rejected by the product-wide host policy', () => {
+  for (const architecture of ['x64', 'x86_64']) {
+    for (const operation of [
+      () => assertSupportedProductHost({ platform: 'darwin', architecture }),
+      () => assertSupportedProductTarget('darwin', architecture),
+    ]) {
+      assert.throws(operation, (error) => {
+        assert.equal(error.message, INTEL_MACOS_DIAGNOSTIC);
+        return true;
+      });
+    }
+  }
+});
+
+test('the supported product matrix is exact', () => {
+  assert.deepEqual(supportedProductTargets(), [
+    'darwin/arm64',
+    'linux/arm64',
+    'linux/x64',
+    'win32/x64',
+  ]);
+  for (const target of supportedProductTargets()) {
+    const [platform, architecture] = target.split('/');
+    assert.doesNotThrow(() =>
+      assertSupportedProductTarget(platform, architecture),
+    );
+  }
+});
 
 test('installed TUI binds child CLI calls to the manifest runtime entry', () => {
   const installRoot = path.resolve('installed-product');

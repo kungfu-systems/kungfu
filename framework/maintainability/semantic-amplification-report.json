@@ -5,7 +5,7 @@
   "manifestPath": "framework/maintainability/semantic-amplification.manifest.json",
   "manifestRoot": "sha256:c6861ec9dc5215720094b0f317fcc0d909d2ae4a138a23f1690316408acde161",
   "baselineRef": "dbfed9ca1785d147b26f4f06e7e6895ac7368fee",
-  "sourceRoot": "sha256:186c2e5f709bf6c24c878c3f63441935f7b63910ba51c8e4b45a762e0ce02849",
+  "sourceRoot": "sha256:af262def15aa177e690f5cebc7e06b68845f32f020b69e48d66ef81e9a3b9229",
   "roles": {
     "authority": "exactly one authority route per family; the route may name multiple co-owned source files",
     "allowedProjectionRoles": [
@@ -614,17 +614,17 @@
         },
         {
           "path": "product/scripts/dist.mjs",
-          "currentLines": 2401,
+          "currentLines": 2402,
           "baselineLines": 2514,
-          "currentRoot": "sha256:d665eedcfd3fd6d9e7160d45bb0358eeea29023863fc3b586392c81997162f6d",
+          "currentRoot": "sha256:740d0cc44be5f04d05eed0e20c73fccaba6370dd54f98d90d66f259e386ccde6",
           "baselineRoot": "sha256:6cfd6c55e296163ab863fb1d79a4a51198ad12943274fc0858338bb651a108da",
           "changedSinceBaseline": true
         },
         {
           "path": "product/scripts/runtime-pin-snapshot.mjs",
-          "currentLines": 211,
+          "currentLines": 242,
           "baselineLines": null,
-          "currentRoot": "sha256:e4f903e70040428542d944456c1170245e13f96ce9fccf7a66a4656173b4de44",
+          "currentRoot": "sha256:cdfd975c2ede6cf3654d1b55df37e0578ef03a061a8dd59f99170937b8dd3a00",
           "baselineRoot": null,
           "changedSinceBaseline": true
         }
@@ -1910,7 +1910,7 @@
         "topology": "product-assembly",
         "kind": "line-count",
         "status": "remediated",
-        "metric": 2401,
+        "metric": 2402,
         "threshold": 2450,
         "finding": null
       },
