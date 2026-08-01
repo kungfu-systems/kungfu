@@ -88,6 +88,115 @@ test('Projects reads retained Work inventory through the public Project command'
   assert.deepEqual(calls, [['project', 'works', '/projects/example']]);
 });
 
+test('Projects previews and executes the exact native Work settlement plan', async () => {
+  const calls: string[][] = [];
+  const plan = {
+    schema: 'kungfu.work-close.plan/v1' as const,
+    workspace: {
+      id: 'project-1',
+      root: '/project',
+      identityRoot: `sha256:${'1'.repeat(64)}`,
+    },
+    work: {
+      initiativeId: 'initiative-1',
+      assignmentId: 'assignment-1',
+      phase: 'independently-reviewed',
+      queryProofRoot: `sha256:${'2'.repeat(64)}`,
+      assignmentRoot: `sha256:${'3'.repeat(64)}`,
+    },
+    review: {
+      id: 'review-1',
+      root: `sha256:${'4'.repeat(64)}`,
+      verdict: 'fit',
+      continuationPlanRoot: `sha256:${'5'.repeat(64)}`,
+      allowedActions: ['approve', 'close'],
+    },
+    decision: {
+      mode: 'required' as const,
+      action: 'close' as const,
+      root: null,
+    },
+    effects: [{ stage: 'decide' as const, label: 'Record close decision' }],
+    skippedEffects: ['git-push'],
+    confirmationRequired: true as const,
+    executable: true,
+    writeOccurred: false as const,
+    planRoot: `sha256:${'6'.repeat(64)}`,
+  };
+  const projects = openProjects({
+    bin: 'kungfu',
+    env: {},
+    execFile: async (_file, args) => {
+      calls.push(args);
+      if (args[1] === 'resume-prepare') {
+        return JSON.stringify({
+          schema: 'kungfu.work.resume-prepare/v1',
+          status: 'ready',
+          writeOccurred: false,
+        });
+      }
+      if (args[1] === 'close-plan') return JSON.stringify(plan);
+      assert.equal(args[1], 'close');
+      return JSON.stringify({
+        schema: 'kungfu.work-close.receipt/v1',
+        ok: true,
+        status: 'completed',
+        planRoot: plan.planRoot,
+        receiptRoot: `sha256:${'7'.repeat(64)}`,
+        workPhase: 'continuation-decided',
+        decisionAction: 'close',
+        nextActions: [],
+        writeOccurred: true,
+      });
+    },
+  });
+
+  const prepared = await projects.planClose('/project', {
+    initiativeId: 'initiative-1',
+    assignmentId: 'assignment-1',
+  });
+  const receipt = await projects.close(prepared);
+
+  assert.equal(prepared.planRoot, plan.planRoot);
+  assert.equal(receipt.status, 'completed');
+  assert.deepEqual(calls, [
+    [
+      'work',
+      'resume-prepare',
+      '--workspace',
+      '/project',
+      '--actor',
+      'kungfu-product-project-close',
+      '--execute',
+    ],
+    [
+      'work',
+      'close-plan',
+      '--workspace',
+      '/project',
+      '--initiative-id',
+      'initiative-1',
+      '--assignment-id',
+      'assignment-1',
+    ],
+    [
+      'work',
+      'close',
+      '--workspace',
+      '/project',
+      '--initiative-id',
+      'initiative-1',
+      '--assignment-id',
+      'assignment-1',
+      '--actor',
+      'local-user',
+      '--expected-plan-root',
+      plan.planRoot,
+      '--execute',
+    ],
+  ]);
+});
+
 test('Projects restores the retained Agent receipt for a selected native Work', async () => {
   const calls: string[][] = [];
   const receipt = {

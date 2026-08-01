@@ -116,6 +116,7 @@ export {
   queryRows,
 } from '@kungfu-tech/api/query';
 export {
+  ProjectWorkCloseConfirmation,
   ProjectWorkReviewConfirmation,
   ProjectWorkRunConfirmation,
   ProjectWorkRunSession,

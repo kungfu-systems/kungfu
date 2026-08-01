@@ -1650,6 +1650,57 @@ def test_work_close_resume_deduplicates_equivalent_fit_reviews(tmp_path, monkeyp
     assert resumed["writeOccurred"] is False
 
 
+def test_work_close_plan_deduplicates_equivalent_fit_reviews(tmp_path, monkeypatch):
+    plan_root = _sha256("8")
+    claim_hash = _sha256("9")
+    reviews = [
+        {
+            "review_id": f"review-{index}",
+            "claim_id": "completion-a",
+            "claim_payload_hash": claim_hash,
+            "continuation_plan_root": plan_root,
+            "continuation_plan": {"allowed_actions": ["approve", "close"]},
+            "verdict": "fit",
+        }
+        for index in range(3)
+    ]
+    monkeypatch.setattr(
+        ASSIGNMENT_CLI,
+        "_runtime",
+        lambda *_args: (
+            SimpleNamespace(
+                workspace_id="project-a",
+                workspace_root=str(tmp_path),
+                identity_root=_sha256("1"),
+            ),
+            tmp_path / "runtime",
+            None,
+        ),
+    )
+    monkeypatch.setattr(
+        ASSIGNMENT_CLI,
+        "_status",
+        lambda *_args: {
+            "phase": "independently-reviewed",
+            "query_proof_root": _sha256("2"),
+            "assignment": {"assignment_id": "assignment-a"},
+            "independent_reviews": reviews,
+            "continuation_decisions": [],
+        },
+    )
+
+    plan = ASSIGNMENT_CLI._work_close_plan(
+        workspace_root=tmp_path,
+        home=None,
+        initiative_id="initiative-a",
+        assignment_id="assignment-a",
+    )
+
+    assert plan["review"]["id"] == "review-2"
+    assert plan["executable"] is True
+    assert plan["writeOccurred"] is False
+
+
 def test_work_close_resume_rejects_conflicting_fit_reviews(tmp_path, monkeypatch):
     monkeypatch.setattr(
         ASSIGNMENT_CLI,

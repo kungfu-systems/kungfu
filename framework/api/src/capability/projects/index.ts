@@ -9,6 +9,8 @@ import type { AgentSession } from '../agent-session.js';
 import type {
   ProjectWork,
   ProjectWorkResume,
+  WorkClosePlan,
+  WorkCloseReceipt,
   WorkReviewEvent,
   WorkReviewPlan,
   WorkReviewReceipt,
@@ -674,6 +676,11 @@ export type Projects = {
     workspace: string,
     work: Pick<ProjectWork, 'initiativeId' | 'assignmentId'>,
   ) => Promise<ProjectWorkRunSnapshot | null>;
+  planClose: (
+    workspace: string,
+    work: Pick<ProjectWork, 'initiativeId' | 'assignmentId'>,
+  ) => Promise<WorkClosePlan>;
+  close: (plan: WorkClosePlan) => Promise<WorkCloseReceipt>;
   planReview: (
     runId: string,
     reviewerProfileId?: string,
@@ -1577,6 +1584,56 @@ export function openProjects(options: ProjectCommandOptions): Projects {
         ? restoreReviewRun(closeState.reviewReceipt, sourceRun)
         : sourceRun;
     },
+    planClose: async (workspace, work) => {
+      await invoke<{
+        schema: 'kungfu.work.resume-prepare/v1';
+        status: 'ready' | 'reconciled';
+        writeOccurred: boolean;
+      }>(
+        [
+          'work',
+          'resume-prepare',
+          '--workspace',
+          workspace,
+          '--actor',
+          'kungfu-product-project-close',
+          '--execute',
+        ],
+        'kungfu.work.resume-prepare/v1',
+      );
+      return invoke<WorkClosePlan>(
+        [
+          'work',
+          'close-plan',
+          '--workspace',
+          workspace,
+          '--initiative-id',
+          work.initiativeId,
+          '--assignment-id',
+          work.assignmentId,
+        ],
+        'kungfu.work-close.plan/v1',
+      );
+    },
+    close: (plan) =>
+      invoke<WorkCloseReceipt>(
+        [
+          'work',
+          'close',
+          '--workspace',
+          plan.workspace.root,
+          '--initiative-id',
+          plan.work.initiativeId,
+          '--assignment-id',
+          plan.work.assignmentId,
+          '--actor',
+          'local-user',
+          '--expected-plan-root',
+          plan.planRoot,
+          '--execute',
+        ],
+        'kungfu.work-close.receipt/v1',
+      ),
     planReview: async (runId, reviewerProfileId) => {
       const receipt = executionReceipt(runId);
       const workspaceRoot = receipt.workspace?.workspace_root;

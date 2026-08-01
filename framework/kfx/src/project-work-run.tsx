@@ -3,6 +3,7 @@
 import type {
   ProjectWorkRunPlan,
   ProjectWorkRunSnapshot,
+  WorkClosePlan,
   WorkReviewPlan,
 } from '@kungfu-tech/api/capability';
 import React from 'react';
@@ -249,6 +250,118 @@ export function ProjectWorkReviewConfirmation({
             onClick={onConfirm}
           >
             {busy ? 'Starting…' : 'Start review'}
+          </button>
+        </div>
+      </div>
+    </dialog>
+  );
+}
+
+export function ProjectWorkCloseConfirmation({
+  plan,
+  continueAfter = false,
+  busy = false,
+  onConfirm,
+  onCancel,
+}: {
+  plan: WorkClosePlan;
+  continueAfter?: boolean;
+  busy?: boolean;
+  onConfirm: () => void;
+  onCancel: () => void;
+}) {
+  return (
+    <dialog
+      open
+      aria-modal="true"
+      aria-label="Confirm Work settlement"
+      style={{
+        position: 'fixed',
+        inset: 0,
+        zIndex: 1200,
+        border: 'none',
+        margin: 0,
+        width: 'auto',
+        height: 'auto',
+        boxSizing: 'border-box',
+        background: 'rgba(8, 12, 18, 0.68)',
+        color: '#e6edf3',
+        fontSize: 14,
+        lineHeight: 1.55,
+        display: 'grid',
+        placeItems: 'center',
+        padding: 24,
+      }}
+    >
+      <div
+        style={{
+          width: 'min(760px, 92vw)',
+          maxHeight: '88vh',
+          overflow: 'auto',
+          boxSizing: 'border-box',
+          background: '#20262e',
+          color: '#e6edf3',
+          border: '1px solid #566575',
+          borderRadius: 12,
+          padding: 22,
+          boxShadow: '0 24px 72px rgba(0, 0, 0, 0.5)',
+        }}
+      >
+        <h3 style={{ margin: 0, color: '#ffffff', fontSize: 18 }}>
+          {continueAfter ? 'Settle and create next Work' : 'Settle Work'}
+        </h3>
+        <div style={{ ...mono, color: '#9cdcfe', marginTop: 10 }}>
+          {plan.work.assignmentId}
+        </div>
+        <p style={{ color: '#e6edf3', marginBottom: 6 }}>
+          Kungfu will retain the approved result and perform these exact
+          effects:
+        </p>
+        <ol style={{ marginTop: 0, paddingLeft: 24, color: '#e6edf3' }}>
+          {plan.effects.map((effect) => (
+            <li key={`${effect.stage}:${effect.label}`}>{effect.label}</li>
+          ))}
+        </ol>
+        {continueAfter ? (
+          <p style={{ color: '#d7ba7d' }}>
+            After settlement, a fresh Work form will open. The next Work is a
+            separate governed assignment; no Agent starts automatically.
+          </p>
+        ) : null}
+        <p style={{ ...mono, color: '#b8c2cc' }}>
+          Skipped: {plan.skippedEffects.join(', ')}. The exact plan is{' '}
+          {plan.planRoot.slice(0, 24)}…
+        </p>
+        {!plan.executable ? (
+          <p style={{ ...mono, color: '#f48771' }}>
+            Native Work authority did not admit this settlement plan.
+          </p>
+        ) : null}
+        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
+          <button
+            type="button"
+            style={actionStyle}
+            disabled={busy}
+            onClick={onCancel}
+          >
+            Back
+          </button>
+          <button
+            type="button"
+            style={{
+              ...actionStyle,
+              borderColor: '#4ec9b0',
+              opacity: busy || !plan.executable ? 0.55 : 1,
+              cursor: busy || !plan.executable ? 'not-allowed' : 'pointer',
+            }}
+            disabled={busy || !plan.executable}
+            onClick={onConfirm}
+          >
+            {busy
+              ? 'Settling…'
+              : continueAfter
+                ? 'Settle and create next Work'
+                : 'Settle Work'}
           </button>
         </div>
       </div>

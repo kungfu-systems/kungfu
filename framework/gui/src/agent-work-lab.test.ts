@@ -385,6 +385,7 @@ test('Projects and Work use the shared exact-plan Agent session surface', () => 
   );
 
   assert.match(work, /ProjectWorkRunConfirmation/);
+  assert.match(work, /ProjectWorkCloseConfirmation/);
   assert.match(work, /ProjectWorkReviewConfirmation/);
   assert.match(work, /ProjectWorkRunSession/);
   assert.match(work, /expectedPlanRoot/);
@@ -397,6 +398,14 @@ test('Projects and Work use the shared exact-plan Agent session surface', () => 
   assert.match(work, /projects\s*\.planReview\(run\.id\)/);
   assert.match(work, /projects\s*\.review\(/);
   assert.match(work, /projects\s*\.resumeRun\(/);
+  assert.match(work, /projects\s*\.planClose\(/);
+  assert.match(work, /projects\s*\.close\(/);
+  assert.match(work, /Settle Work…/);
+  assert.match(work, /Continue with new Work…/);
+  assert.match(work, /COMPLETED · EVIDENCE RETAINED/);
+  assert.match(work, /sessionPanelRef/);
+  assert.match(work, /scrollIntoView/);
+  assert.match(work, /openVisibleRun/);
   assert.match(work, /currentReviewableRun/);
   assert.match(work, /Review Agent result/);
   assert.match(runSurface, /plan\.blockedReason/);

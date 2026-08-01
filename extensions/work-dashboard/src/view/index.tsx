@@ -13,6 +13,7 @@ import type {
   ProjectWorkRunSnapshot,
   Projects,
   ProjectsCatalog,
+  WorkClosePlan,
   WorkReviewPlan,
 } from '@kungfu-tech/api/capability';
 import {
@@ -23,6 +24,7 @@ import {
 } from '@kungfu-tech/api/capability';
 import type { KfxCapabilities, Shell } from '@kungfu-tech/kfx';
 import {
+  ProjectWorkCloseConfirmation,
   ProjectWorkReviewConfirmation,
   ProjectWorkRunConfirmation,
   ProjectWorkRunSession,
@@ -920,6 +922,10 @@ function GlobalWorkView({
     runId: string;
     plan: WorkReviewPlan;
   }>();
+  const [closePlan, setClosePlan] = React.useState<{
+    plan: WorkClosePlan;
+    continueAfter: boolean;
+  }>();
   const [runBusy, setRunBusy] = React.useState('');
   const [runError, setRunError] = React.useState('');
   const [retainedRestoreState, setRetainedRestoreState] = React.useState<{
@@ -927,6 +933,7 @@ function GlobalWorkView({
     status: 'loading' | 'settled' | 'failed';
   }>();
   const lastNotification = React.useRef({ key: '', at: 0 });
+  const sessionPanelRef = React.useRef<HTMLDivElement>(null);
   const shellRef = React.useRef(shell);
   shellRef.current = shell;
   const ipc = React.useMemo(
@@ -1278,6 +1285,7 @@ function GlobalWorkView({
   const currentReviewRunning = Boolean(currentReviewRun?.running);
   const currentReviewPassed =
     currentReviewRun?.reviewReceipt?.status === 'review-passed';
+  const currentWorkSettled = Boolean(currentInventoryWork?.settled);
   const currentReviewableRun =
     currentRetainedRun?.receipt?.status === 'agent-finished'
       ? currentRetainedRun
@@ -1308,11 +1316,20 @@ function GlobalWorkView({
       retainedRestoreStatus === 'failed',
   );
   const retainedRunId = currentRetainedRun?.id;
-  const preferredReviewRunId = currentReviewRun?.id;
   const retainedProjectPath = currentProject?.path;
   const retainedInitiativeId = currentInventoryWork?.initiativeId;
   const retainedAssignmentId = currentInventoryWork?.assignmentId;
   const visibleRun = runs.find((run) => run.id === visibleRunId) ?? null;
+  const openVisibleRun = (runId: string) => {
+    setVisibleRunId(runId);
+    window.requestAnimationFrame(() => {
+      sessionPanelRef.current?.scrollIntoView({
+        behavior: 'smooth',
+        block: 'nearest',
+      });
+      sessionPanelRef.current?.focus({ preventScroll: true });
+    });
+  };
   const prepareRun = (provider: string) => {
     if (!currentProject || !workSelector) return;
     setRunBusy(`Checking ${provider} and the selected Work…`);
@@ -1346,6 +1363,18 @@ function GlobalWorkView({
       )
       .finally(() => setRunBusy(''));
   };
+  const prepareClose = (continueAfter: boolean) => {
+    if (!currentProject || !currentInventoryWork) return;
+    setRunBusy('Preparing exact Work settlement…');
+    setRunError('');
+    void projects
+      .planClose(currentProject.path, currentInventoryWork)
+      .then((plan) => setClosePlan({ plan, continueAfter }))
+      .catch((reason) =>
+        setRunError(reason instanceof Error ? reason.message : String(reason)),
+      )
+      .finally(() => setRunBusy(''));
+  };
   const restoredWorkKeys = React.useRef(new Set<string>());
   React.useEffect(() => {
     if (
@@ -1356,7 +1385,6 @@ function GlobalWorkView({
     )
       return;
     if (retainedRunId) {
-      setVisibleRunId(preferredReviewRunId ?? retainedRunId);
       return;
     }
     const key = retainedRestoreKey;
@@ -1371,9 +1399,8 @@ function GlobalWorkView({
         initiativeId: retainedInitiativeId,
         assignmentId: retainedAssignmentId,
       })
-      .then((run) => {
+      .then(() => {
         if (!active) return;
-        if (run) setVisibleRunId(run.id);
         setRetainedRestoreState({ key, status: 'settled' });
       })
       .catch((reason) => {
@@ -1392,7 +1419,6 @@ function GlobalWorkView({
       active = false;
     };
   }, [
-    preferredReviewRunId,
     projects,
     retainedAssignmentId,
     retainedInitiativeId,
@@ -1436,6 +1462,30 @@ function GlobalWorkView({
     void pending
       .then(() => {
         void refreshProjectInventory();
+      })
+      .catch((reason) =>
+        setRunError(reason instanceof Error ? reason.message : String(reason)),
+      )
+      .finally(() => setRunBusy(''));
+  };
+  const confirmClose = () => {
+    if (!closePlan) return;
+    const requestedContinuation = closePlan.continueAfter;
+    const pending = projects.close(closePlan.plan);
+    setClosePlan(undefined);
+    setRunBusy('Settling Work and retaining portable evidence…');
+    setRunError('');
+    void pending
+      .then((receipt) => {
+        if (!receipt.ok || receipt.status !== 'completed') {
+          throw new Error(
+            receipt.message || `Work settlement ended as ${receipt.status}`,
+          );
+        }
+        setVisibleRunId(null);
+        return refreshProjectInventory().then(() => {
+          if (requestedContinuation) setNewWorkOpen(true);
+        });
       })
       .catch((reason) =>
         setRunError(reason instanceof Error ? reason.message : String(reason)),
@@ -1554,29 +1604,65 @@ function GlobalWorkView({
             {current.object_kind === 'assignment' && currentProject ? (
               <>
                 <h2 style={{ ...headingStyle, marginTop: 14 }}>
-                  {currentReviewRunning
-                    ? 'Independent review running'
-                    : currentReviewPassed
-                      ? 'Independent review passed'
-                      : retainedRunRestorePending
-                        ? 'Restoring Agent result'
-                        : currentReviewableRun
-                          ? 'Review Agent result'
-                          : 'Run with an Agent'}
+                  {currentWorkSettled
+                    ? 'Work completed'
+                    : currentReviewRunning
+                      ? 'Independent review running'
+                      : currentReviewPassed
+                        ? 'Independent review passed'
+                        : retainedRunRestorePending
+                          ? 'Restoring Agent result'
+                          : currentReviewableRun
+                            ? 'Review Agent result'
+                            : 'Run with an Agent'}
                 </h2>
                 <div style={{ ...mono, color: '#858585', marginBottom: 8 }}>
-                  {currentReviewRunning
-                    ? `Project · ${currentProject.name}. A fresh read-only reviewer is checking the retained Agent result.`
-                    : currentReviewPassed
-                      ? `Project · ${currentProject.name}. The retained Agent result passed independent review.`
-                      : retainedRunRestorePending
-                        ? `Project · ${currentProject.name}. Recovering the retained Agent result and its next action.`
-                        : currentReviewableRun
-                          ? `Project · ${currentProject.name}. The retained Agent result requires an independent review.`
-                          : `Project · ${currentProject.name}. Preview the exact effects before the Agent starts.`}
+                  {currentWorkSettled
+                    ? `Project · ${currentProject.name}. The approved result and portable Work evidence are retained.`
+                    : currentReviewRunning
+                      ? `Project · ${currentProject.name}. A fresh read-only reviewer is checking the retained Agent result.`
+                      : currentReviewPassed
+                        ? `Project · ${currentProject.name}. The retained Agent result passed independent review.`
+                        : retainedRunRestorePending
+                          ? `Project · ${currentProject.name}. Recovering the retained Agent result and its next action.`
+                          : currentReviewableRun
+                            ? `Project · ${currentProject.name}. The retained Agent result requires an independent review.`
+                            : `Project · ${currentProject.name}. Preview the exact effects before the Agent starts.`}
                 </div>
                 <div style={{ display: 'flex', gap: 7, flexWrap: 'wrap' }}>
-                  {retainedRunRestorePending || retainedRunRestoreFailed ? (
+                  {currentWorkSettled ? (
+                    <>
+                      <span
+                        style={{
+                          ...mono,
+                          padding: '6px 10px',
+                          border: '1px solid #4ec9b0',
+                          borderRadius: 5,
+                          background: '#184b32',
+                          color: '#d8f3dc',
+                          fontWeight: 700,
+                        }}
+                      >
+                        COMPLETED · EVIDENCE RETAINED
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => setNewWorkOpen(true)}
+                        style={{
+                          ...mono,
+                          padding: '6px 10px',
+                          border: '1px solid #4fc1ff',
+                          borderRadius: 5,
+                          background: '#0e639c',
+                          color: '#f1f1f1',
+                          cursor: 'pointer',
+                          fontWeight: 700,
+                        }}
+                      >
+                        Create next Work
+                      </button>
+                    </>
+                  ) : retainedRunRestorePending || retainedRunRestoreFailed ? (
                     <button
                       type="button"
                       disabled
@@ -1594,24 +1680,64 @@ function GlobalWorkView({
                         : 'Agent result unavailable'}
                     </button>
                   ) : currentReviewRunning || currentReviewPassed ? (
-                    <button
-                      type="button"
-                      onClick={() =>
-                        setVisibleRunId(currentReviewRun?.id ?? null)
-                      }
-                      style={{
-                        ...mono,
-                        padding: '6px 10px',
-                        border: '1px solid #4fc1ff',
-                        borderRadius: 5,
-                        background: '#0e639c',
-                        color: '#f1f1f1',
-                        cursor: 'pointer',
-                        fontWeight: 700,
-                      }}
-                    >
-                      Open Review
-                    </button>
+                    <>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (currentReviewRun)
+                            openVisibleRun(currentReviewRun.id);
+                        }}
+                        style={{
+                          ...mono,
+                          padding: '6px 10px',
+                          border: '1px solid #4fc1ff',
+                          borderRadius: 5,
+                          background: '#0e639c',
+                          color: '#f1f1f1',
+                          cursor: 'pointer',
+                          fontWeight: 700,
+                        }}
+                      >
+                        Open Review
+                      </button>
+                      {currentReviewPassed ? (
+                        <>
+                          <button
+                            type="button"
+                            disabled={Boolean(runBusy || closePlan)}
+                            onClick={() => prepareClose(false)}
+                            style={{
+                              ...mono,
+                              padding: '6px 10px',
+                              border: '1px solid #4ec9b0',
+                              borderRadius: 5,
+                              background: '#184b32',
+                              color: '#f1f1f1',
+                              cursor: runBusy || closePlan ? 'wait' : 'pointer',
+                              fontWeight: 700,
+                            }}
+                          >
+                            Settle Work…
+                          </button>
+                          <button
+                            type="button"
+                            disabled={Boolean(runBusy || closePlan)}
+                            onClick={() => prepareClose(true)}
+                            style={{
+                              ...mono,
+                              padding: '6px 10px',
+                              border: '1px solid #d7ba7d',
+                              borderRadius: 5,
+                              background: '#3b321f',
+                              color: '#f1f1f1',
+                              cursor: runBusy || closePlan ? 'wait' : 'pointer',
+                            }}
+                          >
+                            Continue with new Work…
+                          </button>
+                        </>
+                      ) : null}
+                    </>
                   ) : currentReviewableRun ? (
                     <button
                       type="button"
@@ -1731,7 +1857,7 @@ function GlobalWorkView({
                   !currentReviewPassed ? (
                     <button
                       type="button"
-                      onClick={() => setVisibleRunId(currentReviewRun.id)}
+                      onClick={() => openVisibleRun(currentReviewRun.id)}
                       style={{
                         ...mono,
                         padding: '6px 9px',
@@ -1748,7 +1874,7 @@ function GlobalWorkView({
                   {currentRetainedRun ? (
                     <button
                       type="button"
-                      onClick={() => setVisibleRunId(currentRetainedRun.id)}
+                      onClick={() => openVisibleRun(currentRetainedRun.id)}
                       style={{
                         ...mono,
                         padding: '6px 9px',
@@ -1805,7 +1931,7 @@ function GlobalWorkView({
     </div>
   );
   const sessionPanel = visibleRun ? (
-    <div style={{ marginTop: 8 }}>
+    <div ref={sessionPanelRef} tabIndex={-1} style={{ marginTop: 8 }}>
       <ProjectWorkRunSession
         run={visibleRun}
         title={
@@ -1837,6 +1963,15 @@ function GlobalWorkView({
           busy={Boolean(runBusy)}
           onCancel={() => setReviewPlan(undefined)}
           onConfirm={confirmReview}
+        />
+      ) : null}
+      {closePlan ? (
+        <ProjectWorkCloseConfirmation
+          plan={closePlan.plan}
+          continueAfter={closePlan.continueAfter}
+          busy={Boolean(runBusy)}
+          onCancel={() => setClosePlan(undefined)}
+          onConfirm={confirmClose}
         />
       ) : null}
       {newWorkOpen && requestedProject ? (

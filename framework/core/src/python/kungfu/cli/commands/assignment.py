@@ -2097,6 +2097,39 @@ def _identity_options(function):
     return function
 
 
+def _exact_pending_fit_review(
+    current,
+    *,
+    missing_message,
+    conflicting_message,
+):
+    reviews = list(current.get("independent_reviews") or [])
+    decisions = list(current.get("continuation_decisions") or [])
+    decided_review_ids = {str(row.get("review_id") or "") for row in decisions}
+    pending = [
+        row
+        for row in reviews
+        if str(row.get("review_id") or "") not in decided_review_ids
+        and row.get("verdict") == "fit"
+    ]
+    if not pending:
+        raise ValueError(missing_message)
+    exact_fit_roots = {
+        (
+            str(row.get("claim_id") or ""),
+            str(row.get("claim_payload_hash") or ""),
+            str(row.get("continuation_plan_root") or ""),
+        )
+        for row in pending
+    }
+    if len(exact_fit_roots) != 1:
+        raise ValueError(conflicting_message)
+    # Repeated product requests can retain more than one independent review
+    # event for the same exact completion claim and continuation plan. They
+    # are equivalent evidence, not an ambiguous human decision.
+    return pending[-1]
+
+
 def _work_close_plan(
     *,
     workspace_root,
@@ -2108,20 +2141,16 @@ def _work_close_plan(
     current = _status(runtime_dir, initiative_id, assignment_id)
     reviews = list(current.get("independent_reviews") or [])
     decisions = list(current.get("continuation_decisions") or [])
-    decided_review_ids = {str(row.get("review_id") or "") for row in decisions}
-    pending_reviews = [
-        row
-        for row in reviews
-        if str(row.get("review_id") or "") not in decided_review_ids
-    ]
     decision_mode = "required"
     decision = None
     if current["phase"] == "independently-reviewed":
-        if len(pending_reviews) != 1:
-            raise ValueError(
-                "Work close requires one exact undecided independent review"
-            )
-        review = pending_reviews[0]
+        review = _exact_pending_fit_review(
+            current,
+            missing_message=(
+                "Work close requires one exact undecided fit independent review"
+            ),
+            conflicting_message="Work close found conflicting fit reviews",
+        )
     elif current["phase"] == "continuation-decided":
         close_decisions = [row for row in decisions if row.get("action") == "close"]
         if not close_decisions:
@@ -2227,33 +2256,11 @@ def _resume_starter_close(
     review_receipt = None
     close_receipt = None
     if current["phase"] == "independently-reviewed":
-        reviews = list(current.get("independent_reviews") or [])
-        decisions = list(current.get("continuation_decisions") or [])
-        decided_review_ids = {str(row.get("review_id") or "") for row in decisions}
-        pending = [
-            row
-            for row in reviews
-            if str(row.get("review_id") or "") not in decided_review_ids
-            and row.get("verdict") == "fit"
-        ]
-        if not pending:
-            raise ValueError("retained review state is missing one exact fit review")
-        exact_fit_roots = {
-            (
-                str(row.get("claim_id") or ""),
-                str(row.get("claim_payload_hash") or ""),
-                str(row.get("continuation_plan_root") or ""),
-            )
-            for row in pending
-        }
-        if len(exact_fit_roots) != 1:
-            raise ValueError("retained review state has conflicting fit reviews")
-        # Repeated product requests can retain more than one independent
-        # review event for the same exact completion claim and continuation
-        # plan. They are equivalent restoration evidence, not an ambiguous
-        # human decision. Prefer the latest retained event while preserving
-        # fail-closed behavior when the exact claim or plan differs.
-        review = pending[-1]
+        review = _exact_pending_fit_review(
+            current,
+            missing_message="retained review state is missing one exact fit review",
+            conflicting_message="retained review state has conflicting fit reviews",
+        )
         review_receipt = _work_start_receipt(
             {
                 "schema": "kungfu.work-review.receipt/v1",
