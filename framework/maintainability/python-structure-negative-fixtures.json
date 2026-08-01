@@ -1,0 +1,71 @@
+{
+  "schema": "kungfu.python-structure-negative-fixtures/v2",
+  "cases": [
+    {
+      "id": "wrapper-split",
+      "contents": {
+        "framework/core/src/python/kungfu/new_wrapper.py": "from kungfu import owner\n\ndef first(value):\n    return owner.first(value)\n\ndef second(value):\n    return owner.second(value)\n"
+      },
+      "expected": "wrapper-only-split"
+    },
+    {
+      "id": "generated-hiding",
+      "productionRoots": ["framework/core/src/python/kungfu"],
+      "contents": {
+        "framework/core/src/python/generated/hidden_owner.py": "def hidden_owner():\n    return 1\n"
+      },
+      "expected": "production-source-hidden"
+    },
+    {
+      "id": "import-only-reexport",
+      "contents": {
+        "framework/core/src/python/kungfu/reexport_only.py": "from kungfu.owner import first, second\n\n__all__ = [\"first\", \"second\"]\n"
+      },
+      "expected": "wrapper-only-split"
+    },
+    {
+      "id": "minification",
+      "baselineFile": {
+        "path": "framework/core/src/python/kungfu/giant.py",
+        "physicalLines": 1200,
+        "contentRoot": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "responsibilities": 12
+      },
+      "currentFile": {
+        "path": "framework/core/src/python/kungfu/giant.py",
+        "module": "kungfu.giant",
+        "kind": "production",
+        "physicalLines": 900,
+        "contentRoot": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        "ownedDefinitions": 12,
+        "responsibilities": 12,
+        "imports": [],
+        "symbols": [],
+        "wrapperOnly": false
+      },
+      "expected": "oversized-responsibility-not-reduced"
+    },
+    {
+      "id": "duplicate-owner",
+      "ownership": [
+        {"owner": "owner-a", "paths": ["framework/core/src/python/kungfu/a.py"]},
+        {"owner": "owner-b", "paths": ["framework/core/src/python/kungfu/a.py"]}
+      ],
+      "expected": "duplicated-responsibility"
+    },
+    {
+      "id": "exception-laundering",
+      "exceptions": [
+        {
+          "id": "expired-self-approved",
+          "owner": "owner-a",
+          "scope": "all Python sources",
+          "expires": "2000-01-01",
+          "authorizedBy": "owner-a",
+          "retirement": "never"
+        }
+      ],
+      "expected": "invalid-structure-exception"
+    }
+  ]
+}

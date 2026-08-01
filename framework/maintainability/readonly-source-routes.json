@@ -98,6 +98,15 @@
       "dependencyInstallation": false
     },
     {
+      "id": "python-structure-query",
+      "command": "./shifu maintainability:python-structure",
+      "classification": "read-only-source",
+      "implementation": "scripts/check-code-complexity.mjs",
+      "transitiveWriters": [],
+      "network": false,
+      "dependencyInstallation": false
+    },
+    {
       "id": "amplification-query",
       "command": "./shifu maintainability:amplification",
       "classification": "read-only-source",

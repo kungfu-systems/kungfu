@@ -85,13 +85,19 @@ test('copy-forward ordering is cache-independent and interruption-safe', () => {
 
 test('implementation delegates to the existing owner services', () => {
   const composer = read('framework/core/src/python/kungfu/exit_bundle.py');
+  const history = read(
+    'framework/core/src/python/kungfu/product_release_history.py',
+  );
   const cli = read('framework/core/src/python/kungfu/cli/commands/exit.py');
-  assert.match(composer, /runtime_upgrade\.validate_release_cut/u);
-  assert.match(composer, /runtime_upgrade\.validate_cut_transition/u);
-  assert.match(composer, /distribution_update\.cli_inventory_fsck/u);
-  assert.match(composer, /_persist_cli_selection_receipt/u);
-  assert.match(composer, /"current-selection"/u);
+  assert.match(history, /class ProductReleaseHistoryPort\(Protocol\)/u);
+  assert.match(history, /runtime_upgrade\.validate_release_cut/u);
+  assert.match(history, /runtime_upgrade\.validate_cut_transition/u);
+  assert.match(history, /distribution_update\.cli_inventory_fsck/u);
+  assert.match(history, /_persist_cli_selection_receipt/u);
+  assert.match(history, /"current-selection"/u);
   assert.match(composer, /"product-release-cut-v1": \{/u);
-  assert.match(composer, /_product_history_import/u);
+  assert.match(composer, /product_release_history\.build/u);
+  assert.match(composer, /product_release_history\.verify/u);
+  assert.match(composer, /product_release_history\.import_history/u);
   assert.match(cli, /config_home=ctx\.config_home/u);
 });

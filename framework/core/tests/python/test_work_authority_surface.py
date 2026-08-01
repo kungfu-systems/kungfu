@@ -4,7 +4,9 @@ from datetime import UTC, datetime
 import importlib
 import json
 
+from kungfu import assignment_close, assignment_evidence
 from kungfu.cli.commands import __registry__  # noqa: F401
+from kungfu.cli.commands import assignment_review
 from kungfu.cli.commands import kfc
 from kungfu.agent import run_agent
 
@@ -75,7 +77,6 @@ def test_work_family_contains_only_profile_backed_orchestration_commands():
 
 
 def test_start_resume_accepts_the_generic_project_work_purpose(tmp_path, monkeypatch):
-    command = importlib.import_module("kungfu.cli.commands.assignment")
     report_path = tmp_path / "agent-runs" / "run-1" / "bundle" / "report.json"
     report_path.parent.mkdir(parents=True)
     report_path.write_text("{}", encoding="utf-8")
@@ -89,13 +90,13 @@ def test_start_resume_accepts_the_generic_project_work_purpose(tmp_path, monkeyp
         }
     }
     monkeypatch.setattr(
-        command,
-        "_load_execution_agent_report",
+        assignment_evidence,
+        "load_execution_agent_report",
         lambda *_args, **_kwargs: (report_path, report),
     )
 
     assert (
-        command._latest_starter_agent_report(
+        assignment_evidence.latest_starter_agent_report(
             tmp_path,
             "agent-work-starter",
             "create-launch-brief",
@@ -118,7 +119,6 @@ def test_atlas_bridge_has_no_work_mutation_aliases():
 
 
 def test_reviewer_result_requires_exact_criterion_coverage():
-    command = importlib.import_module("kungfu.cli.commands.assignment")
     checks = ["Names the product", "Uses retained evidence"]
     report = {
         "providerObservation": {
@@ -135,7 +135,7 @@ def test_reviewer_result_requires_exact_criterion_coverage():
             )
         }
     }
-    result = command._parse_reviewer_result(report, checks)
+    result = assignment_review.parse_reviewer_result(report, checks)
     assert result["verdict"] == "fit"
     assert all(row["passed"] for row in result["criteria"])
 
@@ -202,7 +202,9 @@ def test_exact_retained_passing_reviewer_evidence_is_reusable(tmp_path):
         "launch": {
             "cwd": str(workspace),
             "argvWithoutPrompt": ["codex", "exec", "--sandbox", "read-only"],
-            "promptRoot": run_agent.canonical_root(command._review_agent_prompt(plan)),
+            "promptRoot": run_agent.canonical_root(
+                assignment_review.review_agent_prompt(plan)
+            ),
             "exitCode": 0,
         },
         "providerObservation": {
@@ -384,11 +386,12 @@ def test_starter_close_plan_binds_one_fit_review_and_hides_technical_seal(
         },
     )
 
-    plan = command._work_close_plan(
+    plan = assignment_close.build_plan(
         workspace_root="/project",
         home=False,
         initiative_id="starter",
         assignment_id="write-brief",
+        services=command._close_services(),
     )
 
     assert plan["writeOccurred"] is False

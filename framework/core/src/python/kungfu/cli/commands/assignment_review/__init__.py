@@ -125,7 +125,8 @@ def exact_pending_fit_review(current, *, missing_message, conflicting_message):
 
 def build_plan(
     *,
-    ctx,
+    config_home,
+    runtime_home,
     request_file,
     workspace_root,
     home,
@@ -151,8 +152,8 @@ def build_plan(
     )
     selected, selection = run_agent.select_profile(
         profile_id,
-        config_home=ctx.config_home,
-        runtime_home=ctx.home,
+        config_home=config_home,
+        runtime_home=runtime_home,
     )
     verification = run_agent.runtime_profiles.verify_profile(selected)
     binding = orchestration.binding_provenance(allow_foreign=allow_foreign_binding)

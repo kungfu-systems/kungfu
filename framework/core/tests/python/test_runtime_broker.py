@@ -7,7 +7,7 @@ from pathlib import Path
 
 import pytest
 
-from kungfu import runtime_broker
+from kungfu import runtime_broker, runtime_state
 
 
 ROOT = Path(__file__).parents[4]
@@ -588,7 +588,7 @@ def test_reconciled_native_evidence_projects_exact_durable_and_projection_cuts(
         request_source="python",
         minimum_cut=_cut(),
     )["requirement"]
-    authority = runtime_broker._ReconciledReadinessProjection(
+    authority = runtime_state._ReconciledReadinessProjection(
         _reconciliation(),
         _projection_status(),
     )
@@ -609,7 +609,7 @@ def test_reconciled_native_evidence_projects_exact_durable_and_projection_cuts(
 
 
 def test_reconciled_readiness_rejects_non_authoritative_durability_evidence():
-    authority = runtime_broker._ReconciledReadinessProjection(
+    authority = runtime_state._ReconciledReadinessProjection(
         {**_reconciliation(), "recovered": False}
     )
     requirement = runtime_broker.plan_operation(
@@ -631,7 +631,7 @@ def test_retained_readiness_fixture_binds_native_evidence_above_the_minimum_cut(
         request_source="python",
         minimum_cut=fixture["minimumCut"],
     )["requirement"]
-    readiness = runtime_broker._ReconciledReadinessProjection(
+    readiness = runtime_state._ReconciledReadinessProjection(
         fixture["durabilityReconciliation"],
         fixture["projectionStatus"],
     ).establish(requirement, "1", {})
@@ -686,14 +686,14 @@ def test_product_publishes_native_coordinates_only_after_exact_authority(
             or _projection_status(evidence["minimumCut"])
         ),
     )
-    original_replace = runtime_broker.os.replace
+    original_replace = runtime_state.os.replace
 
     def replace_after_authority(source, destination):
         assert [kind for kind, _ in calls] == ["durability", "projection"]
         assert not Path(destination).exists()
         original_replace(source, destination)
 
-    monkeypatch.setattr(runtime_broker.os, "replace", replace_after_authority)
+    monkeypatch.setattr(runtime_state.os, "replace", replace_after_authority)
 
     published = runtime_broker.publish_native_readiness_evidence(
         runtime_dir,

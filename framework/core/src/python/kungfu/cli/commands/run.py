@@ -552,7 +552,8 @@ def _run_provider(
             mock_scenario=mock_scenario,
         )
         plan = work_commands._work_start_plan(
-            ctx=ctx,
+            config_home=ctx.config_home,
+            runtime_home=ctx.home,
             request_file=Path(work["requestPath"]),
             workspace_root=root,
             home=False,

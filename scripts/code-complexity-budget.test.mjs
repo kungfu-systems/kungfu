@@ -131,6 +131,28 @@ test('calibration percentile and owner routes are deterministic', () => {
     ownerFor('.kungfu/project-cuts/sha256/x/manifest.json', { components: [] }),
     'kungfu/retained-native-evidence',
   );
+  assert.equal(
+    ownerFor('framework/core/src/python/kungfu/domain.py', { components: [] }, [
+      {
+        owner: 'core/python-domain',
+        paths: ['framework/core/src/python/kungfu/domain.py'],
+      },
+    ]),
+    'core/python-domain',
+  );
+  assert.equal(
+    ownerFor('framework/core/src/python/kungfu/domain.py', { components: [] }, [
+      {
+        owner: 'core/python-domain-a',
+        paths: ['framework/core/src/python/kungfu/domain.py'],
+      },
+      {
+        owner: 'core/python-domain-b',
+        paths: ['framework/core/src/python/kungfu/domain.py'],
+      },
+    ]),
+    '',
+  );
 });
 
 test('protected baseline follows admitted dev authority without origin HEAD', () => {

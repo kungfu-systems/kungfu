@@ -21,6 +21,7 @@ from xml.sax.saxutils import escape as xml_escape
 import kungfu
 import psutil
 from kungfu import host
+from kungfu import runtime_leases, runtime_paths, runtime_state
 from kungfu.action_envelope import CARRIER_ACTION_ENVELOPE
 from kungfu.coordination import locks as coordination_locks
 from kungfu.coordination.arbiter import (
@@ -286,22 +287,10 @@ def _systemd_env_line(key: str, value: str) -> str:
     return f'Environment="{key}={escaped}"'
 
 
-def _canonical_path(value: str) -> str:
-    return str(Path(value).expanduser().resolve())
-
-
-def resolve_config_home(config_home: str | None = None) -> str:
-    return _canonical_path(
-        config_home or os.environ.get("KF_CONFIG_HOME") or "~/.kungfu-config"
-    )
-
-
-def resolve_runtime_home(home: str) -> str:
-    return _canonical_path(home)
-
-
-def resolve_runtime_dir(home: str, runtime_dir: str | None = None) -> str:
-    return _canonical_path(runtime_dir or str(Path(home).expanduser() / "runtime"))
+_canonical_path = runtime_paths.canonical_path
+resolve_config_home = runtime_paths.resolve_config_home
+resolve_runtime_home = runtime_paths.resolve_runtime_home
+resolve_runtime_dir = runtime_paths.resolve_runtime_dir
 
 
 def route_id(home: str, runtime_dir: str) -> str:
@@ -778,16 +767,14 @@ def _runtime_demand_status(
     grace_ns: int,
     clock: Any = None,
 ) -> dict[str, Any] | None:
-    from kungfu import runtime_broker
-
-    manager = runtime_broker.RuntimeLeaseManager(
+    manager = runtime_leases.RuntimeLeaseManager(
         config_home,
-        runtime_broker.workspace_id(runtime_dir),
+        runtime_state.workspace_id(runtime_dir),
         clock=clock,
     )
     try:
         return manager.begin_idle_drain(grace_ns)
-    except runtime_broker.RuntimeLifecycleError:
+    except runtime_leases.RuntimeLifecycleError:
         return None
 
 
@@ -798,15 +785,13 @@ def _complete_runtime_drain(
     *,
     stopped: bool,
 ) -> bool:
-    from kungfu import runtime_broker
-
-    manager = runtime_broker.RuntimeLeaseManager(
+    manager = runtime_leases.RuntimeLeaseManager(
         config_home,
-        runtime_broker.workspace_id(runtime_dir),
+        runtime_state.workspace_id(runtime_dir),
     )
     try:
         manager.complete_drain(generation, stopped=stopped)
-    except runtime_broker.RuntimeLifecycleError:
+    except runtime_leases.RuntimeLifecycleError:
         return False
     return True
 
@@ -816,15 +801,13 @@ def _fence_runtime_restart(
     runtime_dir: str,
     coordinator_pid: int,
 ) -> bool:
-    from kungfu import runtime_broker
-
-    manager = runtime_broker.RuntimeLeaseManager(
+    manager = runtime_leases.RuntimeLeaseManager(
         config_home,
-        runtime_broker.workspace_id(runtime_dir),
+        runtime_state.workspace_id(runtime_dir),
     )
     try:
         manager.begin_restart(coordinator_pid)
-    except runtime_broker.RuntimeLifecycleError:
+    except runtime_leases.RuntimeLifecycleError:
         return False
     return True
 
@@ -878,9 +861,7 @@ def _fenced_adopted_coordinator(
     start_identity = state.get("coordinatorStartIdentity")
     if state.get("coordinatorPid") != pid or not _process_matches(pid, start_identity):
         return None
-    from kungfu import runtime_broker
-
-    generation = runtime_broker.fenced_coordinator_generation(
+    generation = runtime_state.fenced_coordinator_generation(
         config_home,
         runtime_dir,
         pid,
@@ -1696,8 +1677,6 @@ def route_status(
     runtime_dir: str,
     config_home: str | None = None,
 ) -> dict[str, Any]:
-    from kungfu import runtime_broker
-
     config_home = resolve_config_home(config_home)
     home = resolve_runtime_home(home)
     runtime_dir = resolve_runtime_dir(home, runtime_dir)
@@ -1787,7 +1766,7 @@ def route_status(
         },
         "lastSupervisorState": supervisor_state,
         "lastState": state,
-        "product": runtime_broker.product_status(config_home, runtime_dir),
+        "product": runtime_state.product_status(config_home, runtime_dir),
     }
 
 

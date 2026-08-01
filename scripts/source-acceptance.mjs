@@ -327,6 +327,14 @@ export function sourceAcceptancePlan(files, evidenceBaseCommit = '') {
       '--self-test',
     ],
     ['code complexity budget ratchet', 'scripts/code-complexity-budget.mjs'],
+    ...(coldReadOnlySourceAcceptance
+      ? []
+      : [
+          [
+            'Python structure boundary ratchet',
+            'scripts/check-code-complexity.mjs',
+          ],
+        ]),
     [
       'semantic amplification and task graph',
       'framework/maintainability/semantic-amplification.mjs',
@@ -542,6 +550,7 @@ export function sourceAcceptancePlan(files, evidenceBaseCommit = '') {
         'scripts/opencode-local-model-canary-workflow.test.mjs',
         'scripts/kungfu-workflow-authority.test.mjs',
         'scripts/code-complexity-budget.test.mjs',
+        'scripts/check-code-complexity.test.mjs',
         'framework/maintainability/semantic-amplification.test.mjs',
         'framework/maintainability/terminal-evidence-matrix.test.mjs',
         ...(coldReadOnlySourceAcceptance

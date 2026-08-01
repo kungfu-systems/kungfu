@@ -808,6 +808,23 @@
       ]
     },
     {
+      "path": ".github/workflows/python-structure.yml",
+      "authority": "qualification",
+      "definitionDigest": "sha256:42c98469a3389dd87e1a7bb44095d09c50bd737eb9c1ddab9c35891568348064",
+      "jobs": [
+        {
+          "id": "exact-root-ratchet",
+          "authority": "qualification",
+          "publication": "none",
+          "receipt": "diagnostic",
+          "definitionDigest": "sha256:af3f4cd14481b675c4258874d9b5e8f2fc5e7368fa0843b13a76f50a15206516",
+          "credentials": {"githubToken":"read","oidc":false,"repositorySecrets":[],"inheritedSecrets":false,"environment":null},
+          "externalActions": ["actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0","actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020","actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065"],
+          "steps": [{"index":1,"label":"name:Check out exact candidate with baseline history","definitionDigest":"sha256:e38d12f09414ee9c90ba4454a09be29c5ed92a67b0f06c7ef874f49aaf864dbe"},{"index":2,"label":"uses:actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020","definitionDigest":"sha256:7fdc9534c6944d6b8202093e9c1397532d2ff6c40e0d385c0e6952caaf7ff614"},{"index":3,"label":"uses:actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065","definitionDigest":"sha256:d79ce1de2c982d133b2a2cb6bff714a8e572c2ce2acac7bc4984fb0576cb31ea"},{"index":4,"label":"name:Verify Python structure gate (POSIX)","definitionDigest":"sha256:bbe6fbb9c00a42bf8421604066d6ee601ee68095309bc7fb222172d699b828ef"},{"index":5,"label":"name:Verify Python structure gate (Windows)","definitionDigest":"sha256:dadb6dbe868e3f205eaaa39daccf9c4e7ae1d2122acddca22ddef18fed14c39c"}]
+        }
+      ]
+    },
+    {
       "path": ".github/workflows/queue-admission-lease.yml",
       "authority": "qualification",
       "definitionDigest": "sha256:835423db04199ffe10917fb66c23a60de9b5c0472d06f9c230667f166d313392",
