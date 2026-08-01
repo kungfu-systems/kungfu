@@ -244,6 +244,13 @@ jobs:
   python-kfx-asyncio-performance:
     if: ${{ inputs.python-kfx-asyncio-performance }}
     timeout-minutes: 1200
+    env:
+      # actions/checkout inherits Git's config-count environment. Keep the
+      # exact-source fetch off the flaky HTTP/2 proxy path used by the trusted
+      # self-hosted runners while retaining checkout's bounded retries.
+      GIT_CONFIG_COUNT: "1"
+      GIT_CONFIG_KEY_0: http.version
+      GIT_CONFIG_VALUE_0: HTTP/1.1
     strategy:
       fail-fast: false
       matrix:

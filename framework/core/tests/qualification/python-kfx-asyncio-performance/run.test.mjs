@@ -164,8 +164,10 @@ test('manual Gate Measurement retains exact-source evidence on all three support
   assert.match(workflow, /matrix\.platform != 'windows'/u);
   assert.match(workflow, /matrix\.platform == 'windows'/u);
   const qualificationJob = workflow.split(
-    '  python-kfx-asyncio-performance:',
+    '\n  python-kfx-asyncio-performance:',
   )[1];
+  assert.match(qualificationJob, /GIT_CONFIG_KEY_0: http\.version/u);
+  assert.match(qualificationJob, /GIT_CONFIG_VALUE_0: HTTP\/1\.1/u);
   assert.match(qualificationJob, /RUNNER_TOOL_CACHE%\\kungfu-gate-cargo-v1/u);
   assert.match(
     qualificationJob,
