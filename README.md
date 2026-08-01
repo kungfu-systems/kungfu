@@ -29,7 +29,14 @@ Projects can start blank, use the guided Agent Work Starter template, or safely
 remember an existing folder without changing its files.
 
 Use `kungfu run claude` or `kungfu run opencode` for another discovered
-provider. Pass a task to capture and start new Work
+provider. You can open several terminal windows in the same Project and run
+the same bare command in each one; Kungfu gives every launch its own Console,
+without asking you to invent a name. The Agent binds that Console to an exact
+Assignment before it starts changing the Project. If another live Agent already
+owns that Assignment, Kungfu stops the second writer and tells it to return to
+the existing terminal, wait for that Agent to exit, or choose different Work.
+
+Pass a task to capture and start new Work
 (`kungfu run codex "Prepare the release notes"`), or use `--work` when more
 than one captured Assignment is eligible. A successful provider process is
 retained for independent review; it does not complete Work by itself.
@@ -89,8 +96,11 @@ multi-day durability or retention result, or FO10 qualification.
 `kungfu run <agent>` is the scriptable golden path, not a required replacement
 for Codex, Claude Code, VS Code, terminals, or other agent surfaces. The
 provider-neutral low-level launcher remains available as the advanced
-`kungfu run agent` command. The same local contracts and Work state remain
-available through the Kungfu TUI, GUI, CLI, and APIs.
+`kungfu run agent` command. Registered third-party PTY Agents use
+`kungfu run agent --agent <profile-id>` and the bounded
+[native adapter contract](docs/guides/native-agent-adapters.md). The same local
+contracts and Work state remain available through the Kungfu TUI, GUI, CLI,
+and APIs.
 
 ## Build from source
 

@@ -35,7 +35,9 @@
   ],
   "skills": [
     { "target": "codex", "path": "skills/codex/SKILL.md", "maturity": "stable" },
-    { "target": "claude", "path": "skills/claude/SKILL.md", "maturity": "stable" }
+    { "target": "claude", "path": "skills/claude/SKILL.md", "maturity": "stable" },
+    { "target": "amp", "path": "skills/amp/SKILL.md", "maturity": "experimental" },
+    { "target": "opencode", "path": "skills/opencode/SKILL.md", "maturity": "experimental" }
   ],
   "installChannels": [
     { "channel": "electron", "includes": "bundled @kungfu-tech/core runtime and CLI", "maturity": "stable" },

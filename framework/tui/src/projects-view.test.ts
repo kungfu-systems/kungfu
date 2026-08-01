@@ -90,11 +90,46 @@ test('opened Project Work offers an exact-plan Agent path and recoverable sessio
   assert.match(projectWork, /expectedPlanRoot: acceptedPlan\.planRoot/);
   assert.match(projectWork, /\.subscribeRuns\(setRuns\)/);
   assert.match(projectWork, /\.syncSessions\(/);
+  assert.match(projectWork, /const \[restoringRuns, setRestoringRuns\]/);
+  assert.match(projectWork, /setRestoringRuns\(true\)/);
+  assert.match(projectWork, /if \(active\) setRestoringRuns\(false\)/);
+  assert.match(
+    projectWork,
+    /const workDiscoveryLoading = loadingWork \|\| restoringRuns/,
+  );
+  assert.match(projectWork, /ensureTuiAgentSession\(project\.runtime_dir\)/);
   assert.match(projectWork, /\.restoreRun\(/);
   assert.match(projectWork, /\.replyToRun\(/);
   assert.match(projectWork, /\.approveRun\(/);
   assert.match(projectWork, /\.endRun\(/);
   assert.match(projectWork, /SESSION RUNNING/);
+  assert.match(projectWork, /NATIVE UI · OBSERVE ONLY/);
+  assert.match(projectWork, /Provider owns terminal input/);
+  assert.match(projectWork, /Objective ·/);
+  assert.match(projectWork, /Remaining ·/);
+  assert.match(projectWork, /Acceptance \{index \+ 1\} ·/);
+  assert.match(
+    projectWork,
+    /Next · \{session\.nativeObserver\.work\.nextAction\}/,
+  );
+  assert.match(projectWork, /Work details ·/);
+  assert.match(projectWork, /session\?\.nativeObserver \? null/);
+  assert.match(projectWork, /const transientNativeObserverAttention = Boolean/);
+  assert.match(
+    projectWork,
+    /sessionAttention\.reason\.startsWith\('native-observer-'\)/,
+  );
+  assert.match(projectWork, /session\.nativeObserver\?\.state !== 'degraded'/);
+  assert.match(projectWork, /session\.nativeObserver\?\.ageMs \?\? 0\) < 5000/);
+  assert.match(projectWork, /const nativeObserverDisplayState =/);
+  assert.match(projectWork, /\? 'refreshing'/);
+  assert.match(projectWork, /const providerSessionActive = Boolean/);
+  assert.match(projectWork, /session\.lifecycleState !== 'ended'/);
+  assert.match(projectWork, /session\?\.controllable === false/);
+  assert.match(
+    projectWork,
+    /Continue in the provider-native terminal; TUI is observer only/,
+  );
   assert.match(projectWork, /receipt\.nextActions/);
   assert.match(projectWork, /<ProjectFileTreeNavigation/);
   assert.match(projectWork, /focused=\{fileTreeFocused\}/);
@@ -107,13 +142,23 @@ test('opened Project Work offers an exact-plan Agent path and recoverable sessio
     projectWork.indexOf('KUNGFU_PROJECT_DISCOVERY_PATTERN') <
       projectWork.indexOf('title={`${loadingSpinner} LOADING PROJECT WORK`}'),
   );
-  assert.match(projectWork, /workCount=\{loadingWork \? undefined : 0\}/);
+  assert.match(
+    projectWork,
+    /workCount=\{workDiscoveryLoading \? undefined : projectWorkCount\}/,
+  );
+  assert.match(projectWork, /const projectWorkCount = new Set\(/);
+  assert.match(projectWork, /if \(candidate\.session\?\.live\) return 3/);
+  assert.match(
+    projectWork,
+    /candidate\.session\?\.backend === 'native-interactive'/,
+  );
+  assert.match(projectWork, /Observing Work · \$\{visibleWorkId\}/);
   assert.match(projectWork, /KUNGFU_EMPTY_WORK_NEBULA_PATTERN/);
   assert.match(projectWork, /<TerminalAmbientScene/);
   assert.match(projectWork, /const emptyProjectIdle =/);
   assert.match(
     projectWork,
-    /\) : loadingWork \|\| emptyProjectIdle \? null : \(/,
+    /\) : workDiscoveryLoading \|\| emptyProjectIdle \? null : \(/,
   );
   assert.match(
     projectWork,
@@ -133,6 +178,37 @@ test('opened Project Work offers an exact-plan Agent path and recoverable sessio
     /setProjectWorkLoading\(false\)[\s\S]*setProjectResumeSettled\(true\)/,
   );
   assert.match(source, /await lab\.resumeStarterProject\(\)/);
+});
+
+test('Project Session discovery follows the current runtime host after Project restore', () => {
+  const source = readFileSync(new URL('./main.tsx', import.meta.url), 'utf8');
+  const invokeCurrent = source.slice(
+    source.indexOf('async function invokeTuiAgentSession'),
+    source.indexOf('function cliEnvironment'),
+  );
+  const openProjects = source.slice(
+    source.indexOf('function openTuiProjects'),
+    source.indexOf('function ProjectFileTreeNavigation'),
+  );
+
+  assert.match(invokeCurrent, /const ready = tuiAgentSessionReady/);
+  assert.match(invokeCurrent, /const host = tuiAgentSessionHost/);
+  assert.match(
+    invokeCurrent,
+    /ready !== tuiAgentSessionReady \|\| host !== tuiAgentSessionHost/,
+  );
+  assert.match(
+    openProjects,
+    /agentSession:\s*\{\s*invoke: invokeTuiAgentSession/,
+  );
+  assert.doesNotMatch(openProjects, /const agentSessionReady =/);
+  assert.doesNotMatch(
+    openProjects,
+    /ensureTuiAgentSession\(paths\.runtimeDir\)/,
+  );
+  assert.match(source, /delete env\.KUNGFU_DIR/);
+  assert.match(source, /delete env\.KUNGFU_KFX_CONTRACT/);
+  assert.match(source, /delete env\.KF_BUNDLED_EXTENSION_ROOT/);
 });
 
 test('retained Project Work keeps the file tree in the left navigation', () => {

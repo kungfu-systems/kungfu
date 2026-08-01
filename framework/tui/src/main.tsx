@@ -126,9 +126,12 @@ const nodeRequire = createRequire(import.meta.url);
 let tuiAgentSessionEndpoint = '';
 let tuiAgentSessionReady: Promise<string> | undefined;
 let tuiAgentSessionHost: ReturnType<typeof createDetachedAgentSessionHost>;
+let tuiAgentSessionRuntimeDir = '';
 
 function ensureTuiAgentSession(runtimeDir: string): Promise<string> {
-  if (tuiAgentSessionReady) return tuiAgentSessionReady;
+  const resolvedRuntimeDir = path.resolve(runtimeDir);
+  if (tuiAgentSessionReady && tuiAgentSessionRuntimeDir === resolvedRuntimeDir)
+    return tuiAgentSessionReady;
   const packagedWorker = fileURLToPath(
     new URL('./agent-session-worker.mjs', import.meta.url),
   );
@@ -162,7 +165,7 @@ function ensureTuiAgentSession(runtimeDir: string): Promise<string> {
   );
   process.env.KUNGFU_AGENT_SESSION_NODE_PTY_MODULE = prepareAgentSessionNodePty(
     {
-      runtimeDir,
+      runtimeDir: resolvedRuntimeDir,
       modulePath: fs.existsSync(packagedPty) ? packagedPty : sourcePty,
     },
   );
@@ -171,11 +174,12 @@ function ensureTuiAgentSession(runtimeDir: string): Promise<string> {
   process.env.KUNGFU_MOCK_AGENT_SCRIPT = mockPath;
   process.env.KUNGFU_PROJECT_WORK_AGENT_SESSION = '1';
   const host = createDetachedAgentSessionHost({
-    runtimeDir,
+    runtimeDir: resolvedRuntimeDir,
     workerPath,
     env: process.env,
   });
   tuiAgentSessionHost = host;
+  tuiAgentSessionRuntimeDir = resolvedRuntimeDir;
   tuiAgentSessionEndpoint = host.endpoint;
   process.env.KUNGFU_AGENT_SESSION_ENDPOINT = host.endpoint;
   tuiAgentSessionReady = Promise.resolve(
@@ -184,11 +188,31 @@ function ensureTuiAgentSession(runtimeDir: string): Promise<string> {
   return tuiAgentSessionReady;
 }
 
+async function invokeTuiAgentSession(
+  request: Record<string, unknown> & { operation: string },
+) {
+  while (true) {
+    const ready = tuiAgentSessionReady;
+    const host = tuiAgentSessionHost;
+    if (!ready || !host) {
+      throw new Error('Agent Session control is unavailable on this surface');
+    }
+    await ready;
+    if (ready !== tuiAgentSessionReady || host !== tuiAgentSessionHost) {
+      continue;
+    }
+    return host.invoke(request);
+  }
+}
+
 function cliEnvironment(): NodeJS.ProcessEnv {
   const env = { ...process.env };
   // This process is running inside embedded libnode. Child `kungfu` calls must
   // re-enter the ordinary CLI instead of recursively selecting the Node host.
   env.KUNGFU_AS_VARIANT = undefined;
+  env.KUNGFU_DIR = undefined;
+  env.KUNGFU_KFX_CONTRACT = undefined;
+  env.KF_BUNDLED_EXTENSION_ROOT = undefined;
   return env;
 }
 
@@ -326,7 +350,6 @@ function openTuiAgentWorkLab(): AgentWorkLab {
 
 function openTuiProjects() {
   const paths = runtimePaths();
-  const agentSessionReady = ensureTuiAgentSession(paths.runtimeDir);
   const cli = tuiCliInvocation(paths);
   const machineConfigHome = process.env.KF_PROJECTS_CONFIG_HOME;
   return openProjects({
@@ -334,10 +357,7 @@ function openTuiProjects() {
     env: cli.env,
     agentSessionClient: 'cli',
     agentSession: {
-      invoke: async (request) => {
-        await agentSessionReady;
-        return tuiAgentSessionHost.invoke(request);
-      },
+      invoke: invokeTuiAgentSession,
     },
     catalogConfigHomes:
       machineConfigHome &&
@@ -346,16 +366,32 @@ function openTuiProjects() {
         : [],
     execFile: (file, values, options) =>
       new Promise<string>((resolve, reject) => {
-        execFile(file, cli.args(values), options, (error, stdout, stderr) => {
-          if (error)
-            reject(new Error(describeCliFailure(error, stdout, stderr)));
-          else resolve(stdout);
-        });
+        execFile(
+          file,
+          cli.args(values),
+          {
+            ...options,
+            env: {
+              ...options.env,
+              KF_RUNTIME_DIR: tuiAgentSessionRuntimeDir,
+              KUNGFU_AGENT_SESSION_ENDPOINT: tuiAgentSessionEndpoint,
+            },
+          },
+          (error, stdout, stderr) => {
+            if (error)
+              reject(new Error(describeCliFailure(error, stdout, stderr)));
+            else resolve(stdout);
+          },
+        );
       }),
     execFileInput: (file, values, input, options) =>
       new Promise<string>((resolve, reject) => {
         const child = spawn(file, cli.args(values), {
-          env: options.env,
+          env: {
+            ...options.env,
+            KF_RUNTIME_DIR: tuiAgentSessionRuntimeDir,
+            KUNGFU_AGENT_SESSION_ENDPOINT: tuiAgentSessionEndpoint,
+          },
           stdio: ['pipe', 'pipe', 'pipe'],
         });
         let stdout = '';
@@ -401,10 +437,14 @@ function openTuiProjects() {
         child.stdin.end(input);
       }),
     execFileEvents: async (file, values, options, onLine) => {
-      await agentSessionReady;
+      if (tuiAgentSessionReady) await tuiAgentSessionReady;
       return new Promise<void>((resolve, reject) => {
         const child = spawn(file, cli.args(values), {
-          env: options.env,
+          env: {
+            ...options.env,
+            KF_RUNTIME_DIR: tuiAgentSessionRuntimeDir,
+            KUNGFU_AGENT_SESSION_ENDPOINT: tuiAgentSessionEndpoint,
+          },
           stdio: ['ignore', 'pipe', 'pipe'],
         });
         let stdoutBuffer = '';
@@ -857,24 +897,36 @@ function ProjectWorkHost({
   const [runs, setRuns] = React.useState<ProjectWorkRunSnapshot[]>(() =>
     projects.runs(),
   );
+  const [restoringRuns, setRestoringRuns] = React.useState(true);
   const [fileTreeFocused, setFileTreeFocused] = React.useState(false);
   const [loadingFrame, setLoadingFrame] = React.useState(0);
   const [copyNotice, setCopyNotice] = React.useState<ProjectPathCopyNotice>();
   const [agentReply, setAgentReply] = React.useState<string>();
+  const workDiscoveryLoading = loadingWork || restoringRuns;
   React.useEffect(() => dimensions.subscribe(setSize), [dimensions]);
   React.useEffect(() => projects.subscribeRuns(setRuns), [projects]);
   React.useEffect(() => {
     let active = true;
-    const restore = initialWorkReceipt
-      ? projects.restoreRun(initialWorkReceipt, project.workspace_root)
-      : projects.syncSessions({
+    setRestoringRuns(true);
+    const restore = async () => {
+      await ensureTuiAgentSession(project.runtime_dir);
+      if (initialWorkReceipt) {
+        await projects.restoreRun(initialWorkReceipt, project.workspace_root);
+      } else {
+        await projects.syncSessions({
           workspace: project.workspace_root,
           workspaceId: project.workspace_id,
         });
-    void restore.catch((error) => {
-      if (active)
-        setMessage(error instanceof Error ? error.message : String(error));
-    });
+      }
+    };
+    void restore()
+      .catch((error) => {
+        if (active)
+          setMessage(error instanceof Error ? error.message : String(error));
+      })
+      .finally(() => {
+        if (active) setRestoringRuns(false);
+      });
     return () => {
       active = false;
     };
@@ -882,16 +934,17 @@ function ProjectWorkHost({
     initialWorkReceipt,
     project.workspace_id,
     project.workspace_root,
+    project.runtime_dir,
     projects,
   ]);
   React.useEffect(() => {
-    if (!loadingWork) return;
+    if (!workDiscoveryLoading) return;
     const timer = setInterval(
       () => setLoadingFrame((current) => (current + 1) % 4),
       180,
     );
     return () => clearInterval(timer);
-  }, [loadingWork]);
+  }, [workDiscoveryLoading]);
   React.useEffect(() => {
     if (!copyNotice) return;
     const timeout = setTimeout(() => setCopyNotice(undefined), 3500);
@@ -905,13 +958,74 @@ function ProjectWorkHost({
     };
   }, [composerActive, onInputModeChange]);
 
+  const projectRuns = runs.filter(
+    (candidate) => candidate.workspace === project.workspace_root,
+  );
+  const runPriority = (candidate: ProjectWorkRunSnapshot) => {
+    if (candidate.session?.live) return 3;
+    if (
+      candidate.running ||
+      (candidate.session?.backend === 'native-interactive' &&
+        candidate.session.lifecycleState !== 'ended')
+    )
+      return 2;
+    return 1;
+  };
   const visibleRun =
-    runs.find((candidate) => candidate.workspace === project.workspace_root) ??
-    null;
+    [...projectRuns].sort(
+      (left, right) =>
+        runPriority(right) - runPriority(left) ||
+        right.lastEventAt - left.lastEventAt,
+    )[0] ?? null;
   const session = visibleRun?.session;
-  const attention = session?.attention;
+  const sessionAttention = session?.attention;
+  const transientNativeObserverAttention = Boolean(
+    session?.backend === 'native-interactive' &&
+      sessionAttention?.kind === 'blocked' &&
+      sessionAttention.reason.startsWith('native-observer-') &&
+      session.nativeObserver?.state !== 'degraded' &&
+      (session.nativeObserver?.ageMs ?? 0) < 5000,
+  );
+  const attention = transientNativeObserverAttention ? null : sessionAttention;
+  const nativeObserverDisplayState = transientNativeObserverAttention
+    ? 'refreshing'
+    : session?.nativeObserver?.state;
+  const providerSessionActive = Boolean(
+    visibleRun?.running ||
+      session?.live ||
+      (session?.backend === 'native-interactive' &&
+        session.lifecycleState !== 'ended'),
+  );
+  const visibleWorkId =
+    visibleRun?.work ?? session?.nativeObserver?.work?.assignmentId;
+  const projectWorkCount = new Set(
+    projectRuns
+      .map(
+        (candidate) =>
+          candidate.work ??
+          candidate.session?.nativeObserver?.work?.assignmentId,
+      )
+      .filter((work): work is string => Boolean(work)),
+  ).size;
+  const visibleRunProvider = visibleRun?.provider;
   React.useEffect(() => {
-    if (!visibleRun?.id || !session?.live) return;
+    if (!visibleRunProvider) return;
+    setMessage(
+      visibleWorkId
+        ? `Observing Work · ${visibleWorkId}`
+        : `Observing ${visibleRunProvider} workspace session`,
+    );
+  }, [visibleRunProvider, visibleWorkId]);
+  React.useEffect(() => {
+    if (
+      !visibleRun?.id ||
+      (!session?.live &&
+        !(
+          session?.backend === 'native-interactive' &&
+          session.lifecycleState !== 'ended'
+        ))
+    )
+      return;
     let refreshing = false;
     const refresh = () => {
       if (refreshing) return;
@@ -928,7 +1042,13 @@ function ProjectWorkHost({
     refresh();
     const timer = setInterval(refresh, 500);
     return () => clearInterval(timer);
-  }, [projects, session?.live, visibleRun?.id]);
+  }, [
+    projects,
+    session?.backend,
+    session?.lifecycleState,
+    session?.live,
+    visibleRun?.id,
+  ]);
   const retainedAgentFinished =
     visibleRun?.receipt?.status === 'agent-finished';
   const retainedAgentReviewable = Boolean(
@@ -942,15 +1062,19 @@ function ProjectWorkHost({
   const selectedAgentLabel = mockScenario
     ? `Mock Agent · ${mockScenario}`
     : 'Codex';
+  const visibleAgentLabel = visibleRun?.provider
+    ? visibleRun.provider
+    : selectedAgentLabel;
   const canvasRows = terminalCanvasRows(size.rows);
   const projectWorkAmbientDimensions = {
     columns: Math.max(12, size.columns - projectNavigationWidth(size) - 8),
     rows: projectWorkAmbientRows(size),
   };
-  const emptyProjectIdle = !loadingWork && !visibleRun && !plan && !composer;
+  const emptyProjectIdle =
+    !workDiscoveryLoading && !visibleRun && !plan && !composer;
   const loadingSpinner = ['◐', '◓', '◑', '◒'][loadingFrame];
   const beginNewWork = React.useCallback(() => {
-    if (loadingWork || busy || visibleRun?.running) return;
+    if (workDiscoveryLoading || busy || visibleRun?.running) return;
     if (visibleRun?.receipt) {
       setMessage(
         'Review and complete the retained Work before creating another Work.',
@@ -964,7 +1088,7 @@ function ProjectWorkHost({
       acceptanceCriterion: '',
     });
     setMessage('Describe one outcome for this Project.');
-  }, [busy, loadingWork, visibleRun?.receipt, visibleRun?.running]);
+  }, [busy, visibleRun?.receipt, visibleRun?.running, workDiscoveryLoading]);
   React.useEffect(() => {
     if (!actionRequest) return;
     beginNewWork();
@@ -1008,9 +1132,10 @@ function ProjectWorkHost({
     if (busy || !retainedAgentReviewable || !receipt) return;
     setBusy(true);
     setMessage('Ending this Agent attempt and opening independent review…');
-    const end = session?.live
-      ? projects.endRun(visibleRun.id)
-      : Promise.resolve(visibleRun);
+    const end =
+      session?.live && session.controllable !== false
+        ? projects.endRun(visibleRun.id)
+        : Promise.resolve(visibleRun);
     void end
       .then(() => onContinueRetainedWork(receipt))
       .catch((error) =>
@@ -1022,6 +1147,7 @@ function ProjectWorkHost({
     onContinueRetainedWork,
     projects,
     retainedAgentReviewable,
+    session?.controllable,
     session?.live,
     visibleRun,
     visibleRun?.receipt,
@@ -1063,9 +1189,10 @@ function ProjectWorkHost({
     setMessage(
       'Ending the blocked attempt and planning one fresh Agent attempt…',
     );
-    const end = session?.live
-      ? projects.endRun(visibleRun.id)
-      : Promise.resolve(visibleRun);
+    const end =
+      session?.live && session.controllable !== false
+        ? projects.endRun(visibleRun.id)
+        : Promise.resolve(visibleRun);
     void end
       .then(() =>
         projects.planRun(selectedProvider, {
@@ -1088,6 +1215,7 @@ function ProjectWorkHost({
     project.workspace_root,
     projects,
     selectedProvider,
+    session?.controllable,
     session?.live,
     visibleRun,
   ]);
@@ -1263,6 +1391,7 @@ function ProjectWorkHost({
         return;
       }
       if (value === 'p' || value === '\u001b') return onOpenProjects();
+      if (session?.controllable === false) return;
       if (value === 'n') return beginNewWork();
       if (attention?.kind === 'needs-approval' && value === 'y')
         return decideAgentApproval(true);
@@ -1304,6 +1433,7 @@ function ProjectWorkHost({
     projects.prepareWork,
     retainedAgentReviewable,
     retryAgentAttempt,
+    session?.controllable,
     submitAgentReply,
   ]);
 
@@ -1335,7 +1465,7 @@ function ProjectWorkHost({
         <ProjectFileTreeNavigation
           root={project.workspace_root}
           dimensions={dimensions}
-          workCount={loadingWork ? undefined : 0}
+          workCount={workDiscoveryLoading ? undefined : projectWorkCount}
           focused={fileTreeFocused}
           isInputCaptured={isInputCaptured}
           onFocus={() => setFileTreeFocused(true)}
@@ -1351,9 +1481,9 @@ function ProjectWorkHost({
             Create Work, choose an Agent, and keep the result in this Project.
           </Text>
           <Text bold color="yellow" wrap="truncate-end">
-            {loadingWork
+            {workDiscoveryLoading
               ? `${loadingSpinner} LOADING: discovering retained Work in this Project`
-              : visibleRun?.running || session?.attempt === 'working'
+              : providerSessionActive || session?.attempt === 'working'
                 ? 'RUNNING: the Agent is working in this Project'
                 : attention
                   ? `ATTENTION: ${attention.message}`
@@ -1368,7 +1498,7 @@ function ProjectWorkHost({
             Agent Work Lab · [q] quit
           </Text>
           <Box flexDirection="column" marginTop={1} flexGrow={1}>
-            {loadingWork ? (
+            {workDiscoveryLoading ? (
               <>
                 <Box flexGrow={1} alignItems="center" justifyContent="center">
                   <TerminalAmbientScene
@@ -1384,16 +1514,106 @@ function ProjectWorkHost({
               </>
             ) : visibleRun ? (
               <>
-                <Text
-                  bold
-                  color={
-                    visibleRun.running || session?.live ? 'yellow' : 'green'
-                  }
-                >
-                  {visibleRun.running || session?.live
-                    ? `◌ ${selectedAgentLabel.toUpperCase()} SESSION RUNNING`
-                    : `✓ ${selectedAgentLabel.toUpperCase()} SESSION`}
+                <Text bold color={providerSessionActive ? 'yellow' : 'green'}>
+                  {providerSessionActive
+                    ? `◌ ${visibleAgentLabel.toUpperCase()} SESSION RUNNING`
+                    : `✓ ${visibleAgentLabel.toUpperCase()} SESSION`}
                 </Text>
+                {session?.nativeObserver ? (
+                  <Box flexDirection="column">
+                    <Text
+                      bold
+                      color={
+                        nativeObserverDisplayState === 'fresh'
+                          ? 'green'
+                          : nativeObserverDisplayState === 'refreshing'
+                            ? 'cyan'
+                            : nativeObserverDisplayState === 'stale'
+                              ? 'yellow'
+                              : 'red'
+                      }
+                    >
+                      NATIVE UI · OBSERVE ONLY ·{' '}
+                      {nativeObserverDisplayState?.toUpperCase()} ·{' '}
+                      {session.nativeObserver.ageMs}ms old
+                    </Text>
+                    <Text dimColor>
+                      Provider owns terminal input; continue in its native UI.
+                    </Text>
+                    {session.nativeObserver.work ? (
+                      <>
+                        <Text bold color="cyan">
+                          Work ·{' '}
+                          {session.nativeObserver.work.title ||
+                            session.nativeObserver.work.assignmentId ||
+                            session.nativeObserver.work.state}
+                        </Text>
+                        <Text dimColor>
+                          ID · {session.nativeObserver.work.assignmentId}
+                          {session.nativeObserver.work.phase
+                            ? ` · Phase ${session.nativeObserver.work.phase}`
+                            : ''}
+                        </Text>
+                        {session.nativeObserver.work.objective ? (
+                          <Text>
+                            Objective · {session.nativeObserver.work.objective}
+                          </Text>
+                        ) : null}
+                        {session.nativeObserver.work.remainingObligation ? (
+                          <Text color="yellow">
+                            Remaining ·{' '}
+                            {session.nativeObserver.work.remainingObligation}
+                          </Text>
+                        ) : null}
+                        {session.nativeObserver.work.acceptanceChecks.map(
+                          (check, index) => (
+                            <Text key={`${index}:${check}`}>
+                              Acceptance {index + 1} · {check}
+                            </Text>
+                          ),
+                        )}
+                        {session.nativeObserver.work.nextAction ? (
+                          <Text color="cyan">
+                            Next · {session.nativeObserver.work.nextAction}
+                          </Text>
+                        ) : null}
+                        <Text dimColor>
+                          Continuity · claims{' '}
+                          {
+                            session.nativeObserver.work.continuation
+                              .completionClaimCount
+                          }{' '}
+                          · reviews{' '}
+                          {
+                            session.nativeObserver.work.continuation
+                              .independentReviewCount
+                          }{' '}
+                          · decisions{' '}
+                          {
+                            session.nativeObserver.work.continuation
+                              .continuationDecisionCount
+                          }{' '}
+                          · evidence{' '}
+                          {
+                            session.nativeObserver.work.evidenceEpisodeRoots
+                              .length
+                          }{' '}
+                          · session receipts {session.receiptRoots.length}
+                        </Text>
+                      </>
+                    ) : null}
+                    {session.nativeObserver.diagnostic ? (
+                      <Text color="red">
+                        Observer · {session.nativeObserver.diagnostic}
+                      </Text>
+                    ) : null}
+                    {session.nativeObserver.detailDiagnostic ? (
+                      <Text color="yellow">
+                        Work details · {session.nativeObserver.detailDiagnostic}
+                      </Text>
+                    ) : null}
+                  </Box>
+                ) : null}
                 {visibleTerminalLines && visibleTerminalLines.length > 0 ? (
                   visibleTerminalLines.map((line, index) => (
                     <Text key={`${index}:${line}`} wrap="truncate-end">
@@ -1409,10 +1629,10 @@ function ProjectWorkHost({
                       {event.activity?.text || event.text}
                     </Text>
                   ))
-                ) : (
+                ) : session?.nativeObserver ? null : (
                   <Text color="yellow">
                     {visibleRun.running
-                      ? 'Codex is working; waiting for the next retained event…'
+                      ? `${visibleAgentLabel} is working; waiting for the next retained event…`
                       : 'No streamed events were retained for this run.'}
                   </Text>
                 )}
@@ -1449,13 +1669,15 @@ function ProjectWorkHost({
                     </Text>
                     <Text>{attention.message}</Text>
                     <Text bold>
-                      {attention.kind === 'needs-approval'
-                        ? '[y] approve · [n] deny'
-                        : attention.kind === 'needs-answer'
-                          ? '[i] answer · [v/Enter] review changes'
-                          : attention.kind === 'ready-for-review'
-                            ? '[v/Enter] review changes'
-                            : '[r] end this attempt and plan a fresh attempt'}
+                      {session?.controllable === false
+                        ? 'Continue in the provider-native terminal; TUI is observer only'
+                        : attention.kind === 'needs-approval'
+                          ? '[y] approve · [n] deny'
+                          : attention.kind === 'needs-answer'
+                            ? '[i] answer · [v/Enter] review changes'
+                            : attention.kind === 'ready-for-review'
+                              ? '[v/Enter] review changes'
+                              : '[r] end this attempt and plan a fresh attempt'}
                     </Text>
                   </Box>
                 ) : null}
@@ -1583,7 +1805,7 @@ function ProjectWorkHost({
                 </>
               ) : null}
             </Box>
-          ) : loadingWork || emptyProjectIdle ? null : (
+          ) : workDiscoveryLoading || emptyProjectIdle ? null : (
             <Text color={busy ? 'yellow' : undefined}>
               {busy ? '◌ ' : '✓ '}
               {message}

@@ -2,10 +2,12 @@
 
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
+import os from 'node:os';
 import path from 'node:path';
 import { test } from 'node:test';
 import { fileURLToPath } from 'node:url';
 
+import { scanTree } from './no-bash-guard.mjs';
 import {
   sourceAcceptancePlan,
   sourceClangFormatCommand,
@@ -14,6 +16,21 @@ import {
 } from './source-acceptance.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+
+test('no-bash guard ignores local Kungfu qualification runtimes', (t) => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'kungfu-no-bash-'));
+  t.after(() => fs.rmSync(root, { recursive: true, force: true }));
+  fs.mkdirSync(path.join(root, '.kungfu/qualification/runtime'), {
+    recursive: true,
+  });
+  fs.writeFileSync(
+    path.join(root, '.kungfu/qualification/runtime/vendor.sh'),
+    '#!/bin/sh\n',
+  );
+  fs.writeFileSync(path.join(root, 'tracked.sh'), '#!/bin/sh\n');
+
+  assert.deepEqual(scanTree(root), ['tracked.sh']);
+});
 
 test('type baseline covers every Python surface declared by [tool.mypy]', () => {
   // The three siblings of the core package are small but load-bearing

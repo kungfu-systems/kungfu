@@ -99,6 +99,7 @@
     ]
   },
   "overrides": {
+    "kungfu agent console bind-work": {"mutation_class": "write"},
     "kungfu.cli.commands.dev.mission.control": {"owner": "profile-kfx"},
     "kungfu.cli.commands.atlas.authority.status.cmd": {"owner": "profile-kfx"},
     "kungfu.cli.commands.atlas.authority.cutover.cmd": {"owner": "profile-kfx"},
@@ -137,7 +138,7 @@
   "catalogProjection": {
     "artifact": "kungfu.agent/cli_surface.catalog.json",
     "authority": "runtime-fold",
-    "expectedSurfaceRoot": "sha256:828865fa50235c04f5867a9abcc5cd6f3049014d49ab87d41cd9148dad2f4f31",
+    "expectedSurfaceRoot": "sha256:db6bca7063a61e1632d65e8ab7f1c28ab5efce217906f987688d03c983ee91a1",
     "consumers": {
       "agentCapabilities": "embed-complete",
       "agentCommands": "strict-link",
