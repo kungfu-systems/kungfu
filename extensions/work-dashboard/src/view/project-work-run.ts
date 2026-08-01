@@ -22,6 +22,25 @@ export function settleRetainedProjectRunBusy(current: string): string {
   return current === RESTORING_RETAINED_AGENT_RESULT ? '' : current;
 }
 
+export function preferredProjectReviewRun<
+  T extends {
+    kind?: string;
+    sourceRunId?: string;
+    running: boolean;
+    reviewReceipt?: { status?: string };
+  },
+>(runs: T[], sourceRunId: string | undefined): T | undefined {
+  if (!sourceRunId) return undefined;
+  const reviews = runs.filter(
+    (run) => run.kind === 'review' && run.sourceRunId === sourceRunId,
+  );
+  return (
+    reviews.find((run) => run.running) ??
+    reviews.find((run) => run.reviewReceipt?.status === 'review-passed') ??
+    reviews[0]
+  );
+}
+
 export function resolveWorkProject<
   T extends { id: string; path: string },
   O extends { workspace_id?: string },

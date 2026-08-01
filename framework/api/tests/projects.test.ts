@@ -15,6 +15,7 @@ import { fileURLToPath } from 'node:url';
 
 import {
   type ProjectWorkRunReceipt,
+  type WorkReviewPlan,
   mergeProjectsCatalogs,
   openProjects,
   prepareProjectWork,
@@ -127,6 +128,15 @@ test('Projects restores the retained Agent receipt for a selected native Work', 
           writeOccurred: false,
         });
       }
+      if (args[1] === 'close-resume') {
+        return JSON.stringify({
+          schema: 'kungfu.work-close.resume/v1',
+          status: 'not-ready',
+          reviewReceipt: null,
+          closeReceipt: null,
+          writeOccurred: false,
+        });
+      }
       assert.equal(args[1], 'start-resume');
       return JSON.stringify({
         schema: 'kungfu.work-start.resume/v1',
@@ -164,7 +174,97 @@ test('Projects restores the retained Agent receipt for a selected native Work', 
       '--assignment-id',
       'assignment-1',
     ],
+    [
+      'work',
+      'close-resume',
+      '--workspace',
+      '/project',
+      '--initiative-id',
+      'initiative-1',
+      '--assignment-id',
+      'assignment-1',
+    ],
   ]);
+});
+
+test('Projects restores a passed independent review from native Work authority', async () => {
+  const receipt = {
+    schema: 'kungfu.work-start.receipt/v1' as const,
+    ok: true,
+    status: 'agent-finished' as const,
+    workPhase: 'independently-reviewed',
+    workspace: { workspace_root: '/project' },
+    work: {
+      initiativeId: 'initiative-1',
+      assignmentId: 'assignment-1',
+      title: 'Retained Work',
+      objective: 'Keep the Agent result',
+      acceptanceChecks: ['result is reviewable'],
+    },
+    agent: {
+      id: 'codex.profile.1',
+      provider: 'codex',
+      label: 'Codex',
+    },
+    agentReport: {
+      runId: 'agent-retained-1',
+      episode: { reportPath: '/project/.kungfu/report.json' },
+    },
+    nextActions: ['run-independent-review'],
+    writeOccurred: true,
+    receiptRoot: `sha256:${'2'.repeat(64)}`,
+  };
+  const reviewReceipt = {
+    schema: 'kungfu.work-review.receipt/v1' as const,
+    ok: true,
+    status: 'review-passed' as const,
+    planRoot: `sha256:${'3'.repeat(64)}`,
+    receiptRoot: `sha256:${'4'.repeat(64)}`,
+    workPhase: 'independently-reviewed',
+    nativeVerdict: 'fit',
+    nextActions: ['decide-close-or-continue'],
+    writeOccurred: true,
+  };
+  const projects = openProjects({
+    bin: 'kungfu',
+    env: {},
+    execFile: async (_file, args) => {
+      if (args[1] === 'resume-prepare') {
+        return JSON.stringify({
+          schema: 'kungfu.work.resume-prepare/v1',
+          status: 'ready',
+          writeOccurred: false,
+        });
+      }
+      if (args[1] === 'start-resume') {
+        return JSON.stringify({
+          schema: 'kungfu.work-start.resume/v1',
+          status: 'retained-agent-run',
+          workReceipt: receipt,
+          writeOccurred: false,
+        });
+      }
+      assert.equal(args[1], 'close-resume');
+      return JSON.stringify({
+        schema: 'kungfu.work-close.resume/v1',
+        status: 'review-passed',
+        reviewReceipt,
+        closeReceipt: null,
+        writeOccurred: false,
+      });
+    },
+  });
+
+  const restored = await projects.resumeRun('/project', {
+    initiativeId: 'initiative-1',
+    assignmentId: 'assignment-1',
+  });
+
+  assert.equal(restored?.kind, 'review');
+  assert.equal(restored?.reviewReceipt?.status, 'review-passed');
+  assert.ok(
+    projects.runs().some((run) => run.receipt?.status === 'agent-finished'),
+  );
 });
 
 test('Projects merges machine-local catalogs without changing the active instance', async () => {
@@ -667,6 +767,95 @@ test('Project Work launches one fresh read-only independent review from the reta
     projects.runs()[0]?.reviewReceipt?.workPhase,
     'independently-reviewed',
   );
+  const reviewCount = projects
+    .runs()
+    .filter((run) => run.kind === 'review').length;
+  const repeated = await projects.review(sourceRun.id, plan);
+  assert.equal(repeated.receiptRoot, receipt.receiptRoot);
+  assert.equal(
+    projects.runs().filter((run) => run.kind === 'review').length,
+    reviewCount,
+  );
+});
+
+test('Project Work rejects a concurrent independent review for the same Agent result', async () => {
+  const sourceReceipt: ProjectWorkRunReceipt = {
+    schema: 'kungfu.work-start.receipt/v1',
+    ok: true,
+    status: 'agent-finished',
+    workPhase: 'executing',
+    workspace: { workspace_root: '/project' },
+    work: {
+      initiativeId: 'initiative-1',
+      assignmentId: 'assignment-1',
+      title: 'Retained Work',
+      objective: 'Keep the Agent result',
+      acceptanceChecks: ['result is reviewable'],
+    },
+    agent: {
+      id: 'codex.profile.1',
+      provider: 'codex',
+      label: 'Codex',
+    },
+    agentReport: {
+      runId: 'run-1',
+      episode: {
+        reportPath:
+          '/project/.kungfu/runtime/agent-runs/run-1/bundle/report.json',
+      },
+    },
+    nextActions: ['run-independent-assessment'],
+    writeOccurred: true,
+    receiptRoot: `sha256:${'2'.repeat(64)}`,
+  };
+  const plan = {
+    workspace: { root: '/project' },
+    work: {
+      initiativeId: 'initiative-1',
+      assignmentId: 'assignment-1',
+    },
+    reviewer: { id: 'codex.profile.1', provider: 'codex' },
+    planRoot: `sha256:${'3'.repeat(64)}`,
+  } as WorkReviewPlan;
+  let releaseReview = () => undefined;
+  const reviewGate = new Promise<void>((resolve) => {
+    releaseReview = resolve;
+  });
+  let launches = 0;
+  const projects = openProjects({
+    bin: 'kungfu',
+    env: {},
+    execFile: async () => {
+      throw new Error('streaming path expected');
+    },
+    execFileEvents: async (_file, _args, _options, onLine) => {
+      launches += 1;
+      await reviewGate;
+      onLine(
+        JSON.stringify({
+          schema: 'kungfu.work-review.receipt/v1',
+          ok: true,
+          status: 'review-passed',
+          planRoot: plan.planRoot,
+          receiptRoot: `sha256:${'4'.repeat(64)}`,
+          workPhase: 'independently-reviewed',
+          nextActions: ['decide-continuation-and-close'],
+          writeOccurred: true,
+        }),
+      );
+    },
+  });
+  const sourceRun = await projects.restoreRun(sourceReceipt, '/project');
+
+  const firstReview = projects.review(sourceRun.id, plan, () => undefined);
+  assert.equal(projects.runs()[0]?.running, true);
+  await assert.rejects(
+    projects.review(sourceRun.id, plan, () => undefined),
+    /Independent review is already running/,
+  );
+  assert.equal(launches, 1);
+  releaseReview();
+  assert.equal((await firstReview).status, 'review-passed');
 });
 
 test('Project Work restores an ended failed Session as a retry boundary', async () => {

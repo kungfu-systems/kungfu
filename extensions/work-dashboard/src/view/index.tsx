@@ -40,6 +40,7 @@ import {
 import {
   RESTORING_RETAINED_AGENT_RESULT,
   assignmentSelector,
+  preferredProjectReviewRun,
   resolveWorkProject,
   settleRetainedProjectRunBusy,
   shouldRestoreRetainedProjectRun,
@@ -921,6 +922,10 @@ function GlobalWorkView({
   }>();
   const [runBusy, setRunBusy] = React.useState('');
   const [runError, setRunError] = React.useState('');
+  const [retainedRestoreState, setRetainedRestoreState] = React.useState<{
+    key: string;
+    status: 'loading' | 'settled' | 'failed';
+  }>();
   const lastNotification = React.useRef({ key: '', at: 0 });
   const shellRef = React.useRef(shell);
   shellRef.current = shell;
@@ -1266,10 +1271,47 @@ function GlobalWorkView({
       run.work === workSelector &&
       Boolean(run.receipt),
   );
+  const currentReviewRun = preferredProjectReviewRun(
+    runs,
+    currentRetainedRun?.id,
+  );
+  const currentReviewRunning = Boolean(currentReviewRun?.running);
+  const currentReviewPassed =
+    currentReviewRun?.reviewReceipt?.status === 'review-passed';
   const currentReviewableRun =
     currentRetainedRun?.receipt?.status === 'agent-finished'
       ? currentRetainedRun
       : undefined;
+  const retainedRestoreKey =
+    projectSection === 'work' &&
+    currentProject?.path &&
+    currentInventoryWork &&
+    shouldRestoreRetainedProjectRun(currentInventoryWork, current)
+      ? [
+          currentProject.path,
+          currentInventoryWork.initiativeId,
+          currentInventoryWork.assignmentId,
+        ].join('|')
+      : undefined;
+  const retainedRestoreStatus =
+    retainedRestoreKey && retainedRestoreState?.key === retainedRestoreKey
+      ? retainedRestoreState.status
+      : 'loading';
+  const retainedRunRestorePending = Boolean(
+    retainedRestoreKey &&
+      !currentRetainedRun &&
+      retainedRestoreStatus === 'loading',
+  );
+  const retainedRunRestoreFailed = Boolean(
+    retainedRestoreKey &&
+      !currentRetainedRun &&
+      retainedRestoreStatus === 'failed',
+  );
+  const retainedRunId = currentRetainedRun?.id;
+  const preferredReviewRunId = currentReviewRun?.id;
+  const retainedProjectPath = currentProject?.path;
+  const retainedInitiativeId = currentInventoryWork?.initiativeId;
+  const retainedAssignmentId = currentInventoryWork?.assignmentId;
   const visibleRun = runs.find((run) => run.id === visibleRunId) ?? null;
   const prepareRun = (provider: string) => {
     if (!currentProject || !workSelector) return;
@@ -1307,34 +1349,37 @@ function GlobalWorkView({
   const restoredWorkKeys = React.useRef(new Set<string>());
   React.useEffect(() => {
     if (
-      projectSection !== 'work' ||
-      !currentProject?.path ||
-      !shouldRestoreRetainedProjectRun(currentInventoryWork, current)
-    ) {
+      !retainedRestoreKey ||
+      !retainedProjectPath ||
+      !retainedInitiativeId ||
+      !retainedAssignmentId
+    )
+      return;
+    if (retainedRunId) {
+      setVisibleRunId(preferredReviewRunId ?? retainedRunId);
       return;
     }
-    if (currentRetainedRun) {
-      setVisibleRunId(currentRetainedRun.id);
-      return;
-    }
-    const key = [
-      currentProject.path,
-      currentInventoryWork.initiativeId,
-      currentInventoryWork.assignmentId,
-    ].join('|');
+    const key = retainedRestoreKey;
     if (restoredWorkKeys.current.has(key)) return;
     restoredWorkKeys.current.add(key);
     let active = true;
+    setRetainedRestoreState({ key, status: 'loading' });
     setRunBusy(RESTORING_RETAINED_AGENT_RESULT);
     setRunError('');
     void projects
-      .resumeRun(currentProject.path, currentInventoryWork)
+      .resumeRun(retainedProjectPath, {
+        initiativeId: retainedInitiativeId,
+        assignmentId: retainedAssignmentId,
+      })
       .then((run) => {
-        if (active && run) setVisibleRunId(run.id);
+        if (!active) return;
+        if (run) setVisibleRunId(run.id);
+        setRetainedRestoreState({ key, status: 'settled' });
       })
       .catch((reason) => {
         if (active) {
           restoredWorkKeys.current.delete(key);
+          setRetainedRestoreState({ key, status: 'failed' });
           setRunError(
             reason instanceof Error ? reason.message : String(reason),
           );
@@ -1347,12 +1392,13 @@ function GlobalWorkView({
       active = false;
     };
   }, [
-    current,
-    currentInventoryWork,
-    currentProject?.path,
-    currentRetainedRun,
-    projectSection,
+    preferredReviewRunId,
     projects,
+    retainedAssignmentId,
+    retainedInitiativeId,
+    retainedProjectPath,
+    retainedRestoreKey,
+    retainedRunId,
   ]);
   const confirmRun = () => {
     if (!runPlan) return;
@@ -1382,7 +1428,10 @@ function GlobalWorkView({
       () => undefined,
     );
     setReviewPlan(undefined);
-    setVisibleRunId(projects.runs()[0]?.id ?? null);
+    setVisibleRunId(
+      preferredProjectReviewRun(projects.runs(), reviewPlan.runId)?.id ??
+        reviewPlan.runId,
+    );
     setRunBusy('Starting independent review…');
     void pending
       .then(() => {
@@ -1505,20 +1554,68 @@ function GlobalWorkView({
             {current.object_kind === 'assignment' && currentProject ? (
               <>
                 <h2 style={{ ...headingStyle, marginTop: 14 }}>
-                  {currentReviewableRun
-                    ? 'Review Agent result'
-                    : 'Run with an Agent'}
+                  {currentReviewRunning
+                    ? 'Independent review running'
+                    : currentReviewPassed
+                      ? 'Independent review passed'
+                      : retainedRunRestorePending
+                        ? 'Restoring Agent result'
+                        : currentReviewableRun
+                          ? 'Review Agent result'
+                          : 'Run with an Agent'}
                 </h2>
                 <div style={{ ...mono, color: '#858585', marginBottom: 8 }}>
-                  {currentReviewableRun
-                    ? `Project · ${currentProject.name}. The retained Agent result requires an independent review.`
-                    : `Project · ${currentProject.name}. Preview the exact effects before the Agent starts.`}
+                  {currentReviewRunning
+                    ? `Project · ${currentProject.name}. A fresh read-only reviewer is checking the retained Agent result.`
+                    : currentReviewPassed
+                      ? `Project · ${currentProject.name}. The retained Agent result passed independent review.`
+                      : retainedRunRestorePending
+                        ? `Project · ${currentProject.name}. Recovering the retained Agent result and its next action.`
+                        : currentReviewableRun
+                          ? `Project · ${currentProject.name}. The retained Agent result requires an independent review.`
+                          : `Project · ${currentProject.name}. Preview the exact effects before the Agent starts.`}
                 </div>
                 <div style={{ display: 'flex', gap: 7, flexWrap: 'wrap' }}>
-                  {currentReviewableRun ? (
+                  {retainedRunRestorePending || retainedRunRestoreFailed ? (
                     <button
                       type="button"
-                      disabled={Boolean(runBusy)}
+                      disabled
+                      style={{
+                        ...mono,
+                        padding: '6px 10px',
+                        border: '1px solid #5a5a5a',
+                        borderRadius: 5,
+                        background: '#3a3a3a',
+                        color: '#c8c8c8',
+                      }}
+                    >
+                      {retainedRunRestorePending
+                        ? 'Restoring Agent result…'
+                        : 'Agent result unavailable'}
+                    </button>
+                  ) : currentReviewRunning || currentReviewPassed ? (
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setVisibleRunId(currentReviewRun?.id ?? null)
+                      }
+                      style={{
+                        ...mono,
+                        padding: '6px 10px',
+                        border: '1px solid #4fc1ff',
+                        borderRadius: 5,
+                        background: '#0e639c',
+                        color: '#f1f1f1',
+                        cursor: 'pointer',
+                        fontWeight: 700,
+                      }}
+                    >
+                      Open Review
+                    </button>
+                  ) : currentReviewableRun ? (
+                    <button
+                      type="button"
+                      disabled={Boolean(runBusy || reviewPlan)}
                       onClick={() => prepareReview(currentReviewableRun)}
                       style={{
                         ...mono,
@@ -1527,7 +1624,7 @@ function GlobalWorkView({
                         borderRadius: 5,
                         background: '#0e639c',
                         color: '#f1f1f1',
-                        cursor: runBusy ? 'wait' : 'pointer',
+                        cursor: runBusy || reviewPlan ? 'wait' : 'pointer',
                         fontWeight: 700,
                       }}
                     >
@@ -1629,6 +1726,25 @@ function GlobalWorkView({
                       ) : null}
                     </div>
                   )}
+                  {currentReviewRun &&
+                  !currentReviewRunning &&
+                  !currentReviewPassed ? (
+                    <button
+                      type="button"
+                      onClick={() => setVisibleRunId(currentReviewRun.id)}
+                      style={{
+                        ...mono,
+                        padding: '6px 9px',
+                        border: '1px solid #4fc1ff',
+                        borderRadius: 5,
+                        background: '#102c3c',
+                        color: '#f1f1f1',
+                        cursor: 'pointer',
+                      }}
+                    >
+                      Open Review
+                    </button>
+                  ) : null}
                   {currentRetainedRun ? (
                     <button
                       type="button"

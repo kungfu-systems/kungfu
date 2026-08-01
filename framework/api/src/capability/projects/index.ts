@@ -1135,6 +1135,35 @@ export function openProjects(options: ProjectCommandOptions): Projects {
     }
     return current;
   };
+  const restoreReviewRun = (
+    receipt: WorkReviewReceipt,
+    sourceRun: ProjectWorkRunSnapshot,
+  ): ProjectWorkRunSnapshot => {
+    const reviewId = `retained-review:${receipt.receiptRoot}`;
+    const existing = retainedRuns.find(
+      (run) =>
+        run.id === reviewId ||
+        run.reviewReceipt?.receiptRoot === receipt.receiptRoot,
+    );
+    if (existing) return existing;
+    const now = Date.now();
+    const restored: ProjectWorkRunSnapshot = {
+      id: reviewId,
+      kind: 'review',
+      sourceRunId: sourceRun.id,
+      provider: sourceRun.provider,
+      workspace: sourceRun.workspace,
+      work: sourceRun.work,
+      startedAt: now,
+      lastEventAt: now,
+      running: false,
+      events: [],
+      reviewReceipt: receipt,
+    };
+    retainedRuns = [restored, ...retainedRuns].slice(0, 8);
+    publishRuns();
+    return restored;
+  };
   const reportPath = (receipt: ProjectWorkRunReceipt): string => {
     const report = receipt.agentReport as
       | { episode?: { reportPath?: unknown } }
@@ -1524,9 +1553,29 @@ export function openProjects(options: ProjectCommandOptions): Projects {
         ],
         'kungfu.work-start.resume/v1',
       );
-      return resumed.workReceipt
-        ? restoreRun(resumed.workReceipt, workspace)
-        : null;
+      const closeState = await invoke<{
+        schema: 'kungfu.work-close.resume/v1';
+        status: 'completed' | 'close-pending' | 'review-passed' | 'not-ready';
+        reviewReceipt: WorkReviewReceipt | null;
+        writeOccurred: false;
+      }>(
+        [
+          'work',
+          'close-resume',
+          '--workspace',
+          workspace,
+          '--initiative-id',
+          work.initiativeId,
+          '--assignment-id',
+          work.assignmentId,
+        ],
+        'kungfu.work-close.resume/v1',
+      );
+      if (!resumed.workReceipt) return null;
+      const sourceRun = await restoreRun(resumed.workReceipt, workspace);
+      return closeState.reviewReceipt
+        ? restoreReviewRun(closeState.reviewReceipt, sourceRun)
+        : sourceRun;
     },
     planReview: async (runId, reviewerProfileId) => {
       const receipt = executionReceipt(runId);
@@ -1574,6 +1623,16 @@ export function openProjects(options: ProjectCommandOptions): Projects {
       );
     },
     review: async (runId, plan, onEvent) => {
+      const priorReviews = retainedRuns.filter(
+        (run) => run.kind === 'review' && run.sourceRunId === runId,
+      );
+      if (priorReviews.some((run) => run.running)) {
+        throw new Error('Independent review is already running');
+      }
+      const passedReview = priorReviews.find(
+        (run) => run.reviewReceipt?.status === 'review-passed',
+      );
+      if (passedReview?.reviewReceipt) return passedReview.reviewReceipt;
       const receipt = executionReceipt(runId);
       const startedAt = Date.now();
       const reviewId = [

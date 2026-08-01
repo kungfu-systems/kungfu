@@ -4,6 +4,7 @@ import test from 'node:test';
 import {
   RESTORING_RETAINED_AGENT_RESULT,
   assignmentSelector,
+  preferredProjectReviewRun,
   resolveWorkProject,
   settleRetainedProjectRunBusy,
   shouldRestoreRetainedProjectRun,
@@ -61,5 +62,44 @@ test('retained run restoration releases only its own busy state', () => {
   assert.equal(
     settleRetainedProjectRunBusy('Preparing a fresh independent review…'),
     'Preparing a fresh independent review…',
+  );
+});
+
+test('Project Work keeps the active or passed independent review visible', () => {
+  const passed = {
+    id: 'review-passed',
+    kind: 'review',
+    sourceRunId: 'source-1',
+    running: false,
+    reviewReceipt: { status: 'review-passed' },
+  };
+  const failed = {
+    id: 'review-failed',
+    kind: 'review',
+    sourceRunId: 'source-1',
+    running: false,
+    reviewReceipt: { status: 'settlement-interrupted' },
+  };
+  const running = {
+    id: 'review-running',
+    kind: 'review',
+    sourceRunId: 'source-1',
+    running: true,
+  };
+
+  assert.equal(
+    preferredProjectReviewRun([failed, passed], 'source-1')?.id,
+    'review-passed',
+  );
+  assert.equal(
+    preferredProjectReviewRun([passed, running], 'source-1')?.id,
+    'review-running',
+  );
+  assert.equal(
+    preferredProjectReviewRun(
+      [{ ...running, sourceRunId: 'source-2' }],
+      'source-1',
+    ),
+    undefined,
   );
 });
