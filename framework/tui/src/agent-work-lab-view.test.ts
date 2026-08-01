@@ -39,7 +39,6 @@ import {
   nextWorkbenchFocus,
   scrollWorkbenchSession,
   sessionTitleBar,
-  splitHorizontalPointerActionAtPoint,
   workbenchActionAtPoint,
   workbenchReportAtPoint,
   workbenchReportReturnAtPoint,
@@ -347,40 +346,6 @@ test('mouse coordinates resolve visible workbench actions and report cards', () 
       gap: 2,
     }),
     'projects',
-  );
-  assert.equal(
-    splitHorizontalPointerActionAtPoint({
-      actions: [
-        { action: 'work', label: '[1] All Work' },
-        { action: 'projects', label: '[2] Project · a-very-long-project-name' },
-        { action: 'lab', label: '[3] Agent Work Lab' },
-      ],
-      column: 79,
-      row: 1,
-      targetRow: 1,
-      width: 80,
-      startColumn: 2,
-      endPadding: 1,
-      gap: 2,
-    }),
-    'lab',
-  );
-  assert.equal(
-    splitHorizontalPointerActionAtPoint({
-      actions: [
-        { action: 'work', label: '[1] All Work' },
-        { action: 'projects', label: '[2] Project · a-very-long-project-name' },
-        { action: 'lab', label: '[3] Agent Work Lab' },
-      ],
-      column: 58,
-      row: 1,
-      targetRow: 1,
-      width: 80,
-      startColumn: 2,
-      endPadding: 1,
-      gap: 2,
-    }),
-    undefined,
   );
 });
 

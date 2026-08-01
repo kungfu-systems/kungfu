@@ -8,10 +8,6 @@ import { homedir } from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
-  createDetachedAgentSessionHost,
-  prepareAgentSessionNodePty,
-} from '@kungfu-tech/agent-session/product-client';
-import {
   type AgentWorkLab,
   type AgentWorkLabStartupRoute,
   type GlobalWorkFilter,
@@ -38,6 +34,10 @@ import {
 } from '@kungfu-tech/api/capability';
 import { Box, Text, render, useApp } from 'ink';
 import React from 'react';
+import {
+  createDetachedAgentSessionHost,
+  prepareAgentSessionNodePty,
+} from '../../agent-session/src/product-client.mjs';
 
 import {
   AGENT_WORK_LAB_QUICK_COMMANDS,
@@ -143,10 +143,8 @@ function ensureTuiAgentSession(runtimeDir: string): Promise<string> {
   const packagedMock = fileURLToPath(
     new URL('./mock-agent.mjs', import.meta.url),
   );
-  const packageRoot = path.dirname(
-    path.dirname(
-      nodeRequire.resolve('@kungfu-tech/agent-session/product-client'),
-    ),
+  const packageRoot = fileURLToPath(
+    new URL('../../agent-session/', import.meta.url),
   );
   const workerPath = fs.existsSync(packagedWorker)
     ? packagedWorker

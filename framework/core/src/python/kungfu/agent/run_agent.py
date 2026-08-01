@@ -25,7 +25,6 @@ from typing import Any, Callable, Mapping, Sequence
 import uuid
 
 import kungfu
-from kungfu.agent import native_provider_adapters
 from kungfu.agent import runtime_profiles
 from kungfu.agent import session_surface
 from kungfu.content_hash import compute_content_hash_value
@@ -458,7 +457,7 @@ def native_provider_adapter(
 ) -> dict[str, Any]:
     """Materialize one session-only Skill adapter for a provider-native UI."""
 
-    return native_provider_adapters.materialize_adapter(
+    return runtime_profiles.materialize_adapter(
         provider,
         runtime_dir=runtime_dir,
         session_id=session_id,

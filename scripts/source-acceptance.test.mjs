@@ -11,6 +11,7 @@ import { scanTree } from './no-bash-guard.mjs';
 import {
   assertKfdEvidenceSourceBinding,
   findGitTreeEquivalentAncestor,
+  isLocalQualificationRuntime,
   resolveKfdProductGateCheckedAt,
   selectKfdEvidenceSourceSha,
   sourceAcceptancePlan,
@@ -34,6 +35,16 @@ test('no-bash guard ignores local Kungfu qualification runtimes', (t) => {
   fs.writeFileSync(path.join(root, 'tracked.sh'), '#!/bin/sh\n');
 
   assert.deepEqual(scanTree(root), ['tracked.sh']);
+});
+
+test('source acceptance excludes only the local qualification runtime tree', () => {
+  assert.equal(isLocalQualificationRuntime('.kungfu/qualification'), true);
+  assert.equal(
+    isLocalQualificationRuntime('.kungfu/qualification/runtime/vendor.cc'),
+    true,
+  );
+  assert.equal(isLocalQualificationRuntime('.kungfu/episodes/a.json'), false);
+  assert.equal(isLocalQualificationRuntime('docs/qualification/a.md'), false);
 });
 
 test('KFD evidence rejects a source SHA whose ancestry was removed by rebase', () => {

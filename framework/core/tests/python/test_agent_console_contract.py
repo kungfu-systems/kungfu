@@ -16,7 +16,6 @@ from click.testing import CliRunner
 import pytest
 
 from kungfu import config
-from kungfu.agent import native_provider_adapters
 from kungfu.agent import run_agent
 from kungfu.agent import runtime_profiles
 from kungfu.agent.kfd3 import verify_agent_interface
@@ -929,7 +928,7 @@ def test_registered_third_party_adapter_materializes_only_bounded_runtime_state(
     ]
     runtime_dir = tmp_path / "runtime"
 
-    adapter = native_provider_adapters.materialize_adapter(
+    adapter = runtime_profiles.materialize_adapter(
         "termagent",
         runtime_dir=str(runtime_dir),
         resolved_config=resolved,
@@ -1175,19 +1174,19 @@ def test_third_party_adapter_rejects_builtin_replacement_and_unsafe_templates(
     replacement = _third_party_adapter(source, provider="codex")
     defaults["agent"]["nativeProviderAdapters"] = [replacement]
     with pytest.raises(ValueError, match="cannot replace built-in"):
-        native_provider_adapters.adapter_catalog(resolved_config={"config": defaults})
+        runtime_profiles.adapter_catalog(resolved_config={"config": defaults})
 
     unsafe = _third_party_adapter(source)
     unsafe["skill"]["argv"] = ["--instructions", "{provider_home}"]
     defaults["agent"]["nativeProviderAdapters"] = [unsafe]
     with pytest.raises(ValueError, match="invalid template"):
-        native_provider_adapters.adapter_catalog(resolved_config={"config": defaults})
+        runtime_profiles.adapter_catalog(resolved_config={"config": defaults})
 
     unsafe = _third_party_adapter(source)
     unsafe["skill"]["files"] = [{"path": "../settings.json", "content": {}}]
     defaults["agent"]["nativeProviderAdapters"] = [unsafe]
     with pytest.raises(ValueError, match="unsafe runtime file path"):
-        native_provider_adapters.adapter_catalog(resolved_config={"config": defaults})
+        runtime_profiles.adapter_catalog(resolved_config={"config": defaults})
 
 
 def test_native_interactive_runner_inherits_terminal_descriptors(monkeypatch, tmp_path):

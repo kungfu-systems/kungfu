@@ -150,13 +150,25 @@ export function sourceChangedFiles() {
   ]) {
     for (const file of git(args).split('\n')) {
       const rel = file.trim();
-      if (rel && fs.existsSync(path.join(ROOT, rel))) files.add(rel);
+      if (
+        rel &&
+        !isLocalQualificationRuntime(rel) &&
+        fs.existsSync(path.join(ROOT, rel))
+      )
+        files.add(rel);
     }
   }
   console.log(
     `[source-acceptance] revision=${git(['rev-parse', 'HEAD'])} base=${base.ref}@${base.sha}`,
   );
   return [...files];
+}
+
+export function isLocalQualificationRuntime(relativePath) {
+  return (
+    relativePath === '.kungfu/qualification' ||
+    relativePath.startsWith('.kungfu/qualification/')
+  );
 }
 
 const KFD_REBASE_EQUIVALENCE_ANCESTOR_LIMIT = 4096;

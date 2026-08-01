@@ -19,6 +19,7 @@ import {
   KUNGFU_EMPTY_WORK_NEBULA_PATTERN,
   type TerminalAnimationPattern,
   type TerminalDimensions,
+  splitHorizontalPointerActionAtPoint,
   terminalAnimationPatternSize,
   terminalAnimationsEnabled,
   terminalCanvasRows,
@@ -829,57 +830,6 @@ export function horizontalPointerActionAtPoint<Action extends string>({
     const end = start + action.label.length - 1;
     if (column >= start && column <= end) return action.action;
     start = end + 1 + gap;
-  }
-  return undefined;
-}
-
-export function splitHorizontalPointerActionAtPoint<Action extends string>({
-  actions,
-  column,
-  row,
-  targetRow,
-  width,
-  startColumn = 1,
-  endPadding = 1,
-  gap = 1,
-}: {
-  actions: readonly WorkbenchActionButton<Action>[];
-  column: number;
-  row: number;
-  targetRow: number;
-  width: number;
-  startColumn?: number;
-  endPadding?: number;
-  gap?: number;
-}): Action | undefined {
-  if (
-    row !== targetRow ||
-    actions.length === 0 ||
-    column < startColumn ||
-    column > width
-  ) {
-    return undefined;
-  }
-  const trailing = actions.at(-1);
-  if (!trailing) return undefined;
-  const trailingEnd = Math.max(startColumn, width - endPadding);
-  const trailingStart = Math.max(
-    startColumn,
-    trailingEnd - trailing.label.length + 1,
-  );
-  if (column >= trailingStart && column <= trailingEnd) {
-    return trailing.action;
-  }
-
-  const leadingEnd = trailingStart - gap - 1;
-  let start = startColumn;
-  for (const action of actions.slice(0, -1)) {
-    const end = Math.min(start + action.label.length - 1, leadingEnd);
-    if (end >= start && column >= start && column <= end) {
-      return action.action;
-    }
-    start += action.label.length + gap;
-    if (start > leadingEnd) break;
   }
   return undefined;
 }
