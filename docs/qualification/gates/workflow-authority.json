@@ -611,7 +611,7 @@
     {
       "path": ".github/workflows/gate-measurement.yml",
       "authority": "qualification",
-      "definitionDigest": "sha256:425a3daeeb6b055a73c5827d9af1b509e05b69dd2c3f282bac298b78b3f673b7",
+      "definitionDigest": "sha256:ffaf6a6c20090c16ca55fa8bd4af08b3475a076480cc980c50f3584f43e62b53",
       "jobs": [
         {
           "id": "focused",
@@ -632,6 +632,16 @@
           "credentials": {"githubToken":"read","oidc":false,"repositorySecrets":[],"inheritedSecrets":false,"environment":null},
           "externalActions": ["kungfu-systems/buildchain/.github/workflows/.gate-profile.yml@9e904de2c85dbea7c799780ee166510b3336d812"],
           "steps": []
+        },
+        {
+          "id": "python-kfx-asyncio-performance",
+          "authority": "qualification",
+          "publication": "none",
+          "receipt": "diagnostic",
+          "definitionDigest": "sha256:66e3c9a0c688c9d1aaeef0ad3ee39f98176beb909d5b27aabef64df00cc8c36f",
+          "credentials": {"githubToken":"read","oidc":false,"repositorySecrets":[],"inheritedSecrets":false,"environment":null},
+          "externalActions": ["actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0","actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a"],
+          "steps": [{"index":1,"label":"name:Check out exact qualification source","definitionDigest":"sha256:28d3c9c0cfe3aef0882a953155f870ed684566c91e7fec5d59cf4f324dcdb868"},{"index":2,"label":"name:Run exact-revision qualification","definitionDigest":"sha256:d33892fa3cb074ef8e147b3de70de203bb18e59a7cae4c6ed4ce1912195907f4"},{"index":3,"label":"name:Retain raw observations and derived report","authority":"evidence-publication","definitionDigest":"sha256:23342e59d6051c04b0f7b0b60357edf856fc105ae26c3f9332e1330bac28bdc6"}]
         }
       ]
     },

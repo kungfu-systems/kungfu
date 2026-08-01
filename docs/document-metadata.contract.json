@@ -129,6 +129,7 @@
         "docs/research/rust-host-spike.md",
         "docs/qualification/layer-gate-timing-baseline.md",
         "docs/qualification/node-watcher-runtime-boundary.md",
+        "docs/qualification/python-kfx-asyncio-performance.md",
         "docs/qualification/single-host-performance-qualification.md",
       "docs/qualification/runtime-activation-and-product-delivery.md",
       "docs/qualification/auditable-demo-artifact-pipeline.md",

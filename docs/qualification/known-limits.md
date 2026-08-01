@@ -40,6 +40,13 @@ Its exact boundary is machine-readable in the
 Journal/replay ordering remains Core-owned; live service scheduling uses
 CPython's standard asyncio loop.
 
+The performance harness now qualifies a retained, exact-revision CPython 3.13
+service-plane envelope on macOS ARM64, Linux x64, and Windows x64. Its metrics
+remain advisory and platform-specific: it does not qualify journal or
+data-plane hot paths, set a universal latency/throughput SLO, or make a claim
+for a platform whose exact-revision artifact is missing. See
+[Python KFX asyncio Performance Qualification](python-kfx-asyncio-performance.md).
+
 One recorded limit remains: the Node watcher snapshot model makes a whole-state
 copy under lock. That becomes relevant at large state sizes, not at current
 scale
