@@ -32,6 +32,7 @@
       "equivalenceSemantics",
       "compatibilitySemantics",
       "supportPolicy",
+      "historySurface",
       "memberInventory",
       "guarantees",
       "falsifiers",
@@ -88,6 +89,9 @@
         "type": "object"
       },
       "supportPolicy": {
+        "type": "object"
+      },
+      "historySurface": {
         "type": "object"
       },
       "memberInventory": {
@@ -1128,6 +1132,27 @@
         "a released stable v4 artifact"
       ]
     }
+  },
+  "historySurface": {
+    "schema": "kungfu.exit-history.surface/v1",
+    "authority": "Exit Bundle composition over unchanged member-domain authorities",
+    "statusSemantics": {
+      "contract-ready": "The installed contract and eligible adapter inventory are available; selected data coverage has not been evaluated.",
+      "inventory-verified": "A thin package verified the selected scope, member identities, content roots, and explicit loss without claiming content availability.",
+      "verified": "The independent bounded verifier accepted a full package and every delegated member root.",
+      "degraded": "The package is intentionally thin or has explicit omission, loss, or capability contraction.",
+      "rejected": "A required schema, protocol, root, authorization, or destination invariant failed closed."
+    },
+    "commands": {
+      "status": "kungfu exit history status [--file <request.json>] --json",
+      "export": "kungfu exit history export --file <request.json> --out <exit.json> --json",
+      "verify": "kungfu exit history verify --file <exit.json> --json",
+      "import": "kungfu exit history import --file <exit.json> [--execute --authorized-by <actor>] --json",
+      "rebuild": "kungfu exit history rebuild [--projection <episode|fact-kernel>] [--execute --authorized-by <actor>] --json"
+    },
+    "observerRule": "GUI and TUI invoke the same Core status projection, show its exact next action, and never settle Work or mutate member authority.",
+    "rebuildRule": "Projection rebuild replays local Episode and Fact authorities; it never copies GUI, TUI, SQLite, provider, or cache state as semantic truth.",
+    "stdoutRule": "Machine mode emits one schema-bound JSON document and no package bytes unless an explicit output file is requested."
   },
   "memberInventory": [
     {
