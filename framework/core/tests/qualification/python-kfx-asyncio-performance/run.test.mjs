@@ -1,8 +1,10 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import assert from 'node:assert/strict';
+import { spawnSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
+import process from 'node:process';
 import { test } from 'node:test';
 import { fileURLToPath } from 'node:url';
 
@@ -84,6 +86,23 @@ test('plan builds and proves correctness before invoking the scored workload', (
   assert.deepEqual(plan.correctness.slice(1), ['test:native-kfx-admission']);
   assert.ok(plan.workload.some((item) => item.endsWith('workload.py')));
   assert.equal(plan.workload.includes('--quick'), false);
+});
+
+test('Shifu argument separator reaches a dry-run runner without becoming an option', () => {
+  const result = spawnSync(
+    process.execPath,
+    [
+      path.join(
+        ROOT,
+        'framework/core/tests/qualification/python-kfx-asyncio-performance/run.mjs',
+      ),
+      '--',
+      '--dry-run',
+    ],
+    { cwd: ROOT, encoding: 'utf8' },
+  );
+  assert.equal(result.status, 0, result.stderr);
+  assert.equal(JSON.parse(result.stdout).verdict, 'planned');
 });
 
 test('Windows invokes Shifu through ComSpec without weakening argument boundaries', () => {

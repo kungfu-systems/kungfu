@@ -546,6 +546,7 @@ function parseArgs(argv) {
   };
   for (let index = 0; index < argv.length; index += 1) {
     const arg = argv[index];
+    if (arg === '--') continue;
     if (arg === '--execute') options.mode = 'execute';
     else if (arg === '--dry-run') options.mode = 'dry-run';
     else if (arg === '--quick') options.quick = true;
