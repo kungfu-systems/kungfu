@@ -1195,6 +1195,10 @@ export function ProjectWorkHost({
                     <Text dimColor>
                       Provider owns terminal input; continue in its native UI.
                     </Text>
+                    <Text dimColor>
+                      Agent session activity is retained; protected Work history
+                      begins only with an accepted domain receipt.
+                    </Text>
                     {session.nativeObserver.work ? (
                       <>
                         <Text bold color="cyan">
