@@ -7,8 +7,7 @@
 #
 # Workspace-internal building block on purpose: never published, never tagged,
 # no shim, and its version is NOT lerna-synced — scripts/sync-shifu-version.mjs
-# pins crates/shifu alone, so the release pin surface stays exactly one crate
-# wide.
+# pins only the user-visible Shifu and Xinfa components.
 
 [package]
 name = "shifu-core"

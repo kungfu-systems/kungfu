@@ -597,7 +597,11 @@ async function main() {
         PATH: `${nodeCommandDirectory}${path.delimiter}${systemCommandDirectory}`,
       },
     });
-    assert.equal(shifu.stdout, 'xinfa 0.1.0\n');
+    const packageVersion = fs
+      .readFileSync(path.join(ROOT, 'Cargo.toml'), 'utf8')
+      .match(/^version = "([^"]+)"$/mu)?.[1];
+    assert.ok(packageVersion, 'Xinfa Cargo.toml must declare a version');
+    assert.equal(shifu.stdout, `xinfa ${packageVersion}\n`);
     assert.equal(shifu.stderr, '');
   } finally {
     fs.rmSync(temporary, { recursive: true, force: true });

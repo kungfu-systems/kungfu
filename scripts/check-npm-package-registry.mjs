@@ -216,6 +216,7 @@ export function validateComponentDistribution(inputs) {
   const components = new Map(
     (contract.components || []).map((component) => [component.id, component]),
   );
+  const productVersion = inputs.corePackage.version;
   for (const [id, cargo] of [
     ['shifu', inputs.shifuCargo],
     ['xinfa', inputs.xinfaCargo],
@@ -225,8 +226,16 @@ export function validateComponentDistribution(inputs) {
       issues.push(`missing ${id} component contract`);
       continue;
     }
-    if (!cargoVersion(cargo) || component.releaseTag !== `${id}-v{version}`)
+    const componentVersion = cargoVersion(cargo);
+    if (!componentVersion || component.releaseTag !== `${id}-v{version}`)
       issues.push(`${id} version or release-tag authority drifted`);
+    if (
+      component.versionPolicy !== 'lockstep-with-kungfu' ||
+      componentVersion !== productVersion
+    )
+      issues.push(
+        `${id} user-visible version must match Kungfu ${productVersion}`,
+      );
     for (const asset of component.assets || [])
       if (!inputs.workflow.includes(`asset: ${asset}`))
         issues.push(`${id} release workflow lacks ${asset}`);

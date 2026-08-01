@@ -84,6 +84,28 @@ test('component distribution rejects a second Core npm executable', () => {
   );
 });
 
+test('component distribution rejects native component version drift', () => {
+  const inputs = structuredClone(loadComponentDistributionInputs());
+  inputs.xinfaCargo = inputs.xinfaCargo.replace(
+    /^version = "[^"]+"$/mu,
+    'version = "0.1.0"',
+  );
+  assert.match(
+    validateComponentDistribution(inputs).join('\n'),
+    /xinfa user-visible version must match Kungfu/u,
+  );
+});
+
+test('component distribution rejects version-policy drift', () => {
+  const inputs = structuredClone(loadComponentDistributionInputs());
+  inputs.contract.components.find(({ id }) => id === 'xinfa').versionPolicy =
+    'independent';
+  assert.match(
+    validateComponentDistribution(inputs).join('\n'),
+    /xinfa user-visible version must match Kungfu/u,
+  );
+});
+
 test('component distribution rejects unsigned release workflow drift', () => {
   const inputs = structuredClone(loadComponentDistributionInputs());
   inputs.workflow = inputs.workflow.replace(

@@ -22,7 +22,9 @@ next action; it is never silently replaced by the first route.
 
 Xinfa is an independent semantic authority incubated in this repository. Its
 source location is not an ownership boundary: it retains its own `xinfa.*`
-protocol namespace, version, state, cache, license, and extraction manifest.
+protocol namespace and schema versions, state, cache, license, and extraction
+manifest. Its user-visible executable version follows the shared Kungfu/Shifu
+product train while Xinfa is incubated and embedded here.
 The Rust library has no Kungfu or Shifu dependency; its closed public-registry
 dependency allowlist rejects path, git, private, and monorepo-relative
 dependencies. `kungfu-trunk` links that library in one direction and exposes it
@@ -65,7 +67,7 @@ Episode alone does not execute Xinfa.
 | Project | source documents, domain semantics, provider instances, route intent | Context IR or compiler receipts |
 | Shifu | project submission protocol, conformance diagnostics, Gate execution, thin invocation adapters | a second Context IR, graph, selector, pack, or capsule compiler |
 | Xinfa | Atlas identity, Context IR, graph and impact semantics, selection, pack/capsule formats, compiler provenance | project truth, runtime facts, or release attestation |
-| Kungfu | the single npm/Core executable, thin in-process product adapters, and consumption of public Xinfa artifacts | Xinfa schemas, state, version, standalone release, or compiler internals |
+| Kungfu | the single npm/Core executable, thin in-process product adapters, consumption of public Xinfa artifacts, and the shared user-visible release number | Xinfa schemas or protocol versions, state, standalone release identity, or compiler internals |
 | Buildchain | exact artifact and release attestation | authoring or compiler semantics |
 
 The dependency direction is Project sources → public submission contracts →

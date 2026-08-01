@@ -100,8 +100,8 @@ the component's case for existing.
 The paved road for mode 1, as implemented for the launcher:
 
 - **Version pin** — the component's `Cargo.toml` `version` is what the shims
-  and the release workflow bind to. For the launcher it is kept in lockstep
-  with the monorepo version (`lerna.json`) by
+  and the release workflow bind to. Shifu and Xinfa are kept in lockstep with
+  the monorepo version (`lerna.json`) by
   `scripts/sync-shifu-version.mjs`: the root `version` lifecycle rewrites it
   during `lerna version`, and `./shifu check` gates against drift. No separate
   VERSION files.
@@ -143,9 +143,10 @@ The paved road for mode 1, as implemented for the launcher:
   source if cargo is present, then fall back to the legacy in-script path, so
   no machine class is stranded.
 
-Xinfa uses this pipeline with its own version and tag prefix. Kungfu links both
-libraries in-process while `@kungfu-tech/core` continues to ship only the
-`kungfu` executable and no standalone component payload.
+Xinfa uses this pipeline with the shared product version and its own tag prefix.
+Its `xinfa.*` protocol/schema versions remain independently governed. Kungfu
+links both libraries in-process while `@kungfu-tech/core` continues to ship
+only the `kungfu` executable and no standalone component payload.
 
 ## Selective exercise discipline
 
