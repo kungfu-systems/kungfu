@@ -43,6 +43,8 @@
   ],
   "publicImports": [
     "kungfu.exit_bundle.ProductReleaseHistoryError",
+    "kungfu.exit_bundle.ProjectCutExitError",
+    "kungfu.project_cut_exit.ProjectCutExitError",
     "kungfu.runtime_broker.RuntimeLeaseManager",
     "kungfu.runtime_broker.RuntimeLifecycleError",
     "kungfu.runtime_broker.NativeReadinessAuthority",
@@ -50,6 +52,7 @@
   ],
   "typedSeams": [
     "kungfu.product_release_history.ProductReleaseHistoryPort",
+    "kungfu.project_cut_exit.ProjectCutExitPort",
     "kungfu.assignment_lifecycle.ports.AssignmentEventSink",
     "kungfu.assignment_lifecycle.ports.AssignmentRuntime",
     "kungfu.assignment_lifecycle.ports.AssignmentRuntimePort",
@@ -89,6 +92,12 @@
       "owner": "core/python-release-history",
       "paths": [
         "framework/core/src/python/kungfu/product_release_history.py"
+      ]
+    },
+    {
+      "owner": "core/python-project-cut-exit",
+      "paths": [
+        "framework/core/src/python/kungfu/project_cut_exit.py"
       ]
     },
     {
