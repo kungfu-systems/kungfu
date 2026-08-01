@@ -108,6 +108,11 @@ def _choose_work(workspace_root, work_selector=None):
         if len(selected) != 1:
             raise ValueError(f"Work selector is ambiguous: {work_selector}")
         row = selected[0]
+        # An explicit selection is allowed to reach the native start plan even
+        # when it is settled. The plan remains non-executable and explains the
+        # authoritative phase in GUI/CLI confirmation; execution rechecks the
+        # same exact plan and fails closed before any write.
+        return row
     else:
         actionable = [
             row for row in rows if row["phase"] in {"captured", "ready", "planned"}
@@ -578,8 +583,8 @@ def _run_provider(
         for index, effect in enumerate(plan["effects"], start=1):
             click.echo(f"{index}. {effect['label']}")
         click.echo(
-            "Kungfu will retain the Agent run for independent review; "
-            "process exit does not complete Work."
+            "Kungfu will retain Agent session activity for independent review; "
+            "protected Work history begins only with an accepted domain receipt."
         )
     # Call the same implementation behind `kungfu work start`, with the exact
     # content-bound plan just shown. The wrapped callback returns its receipt.
@@ -613,7 +618,7 @@ def _run_provider(
         raise click.exceptions.Exit(1)
     if not as_json and not events_json:
         report = result.get("agentReport") or {}
-        click.echo("Agent run retained · independent review required")
+        click.echo("Agent session activity retained · independent review required")
         click.echo(f"Project: {root}")
         click.echo(
             f"Work: {work['assignmentId']} · {result.get('workPhase', 'executing')}"
@@ -847,5 +852,6 @@ def agent(
             f"exit={payload['launch']['exitCode']}"
         )
         click.echo(f"proof: {payload['episode']['manifestPath']}")
+        click.echo("History: session activity only; no semantic admission receipt")
         click.echo("Work settlement: independent assessment required")
     sys.exit(int(payload["launch"]["exitCode"]))

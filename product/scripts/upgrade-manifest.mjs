@@ -12,11 +12,32 @@ import {
   loadUpgradeQualificationContract,
   verifyUpgradeQualificationEvidence,
 } from '../../scripts/upgrade-qualification.mjs';
-import { internalSymlinkTarget, sha256Tree } from './compatibility.mjs';
+import {
+  internalSymlinkTarget,
+  isPythonBytecodePath,
+  sha256Tree,
+} from './compatibility.mjs';
+import { contentRoot } from './release-channel-index.mjs';
 
 export const UNQUALIFIED_RELEASE_EVIDENCE = 'unqualified-local-build';
+const BUILDCHAIN_RETAINED_EVIDENCE = 'buildchain-retained:';
 const DOCUMENTATION_URL = 'https://www.kungfu.tech/docs/guides/upgrading';
 const RELEASE_SCHEMA = 'kungfu.product-upgrade.manifest/v1';
+const RELEASE_CUT_SCHEMA = 'kungfu.product-release-cut/v1';
+const PLATFORM_SLICE_SCHEMA = 'kungfu.product-release-platform-slice/v1';
+const CUT_BINDING_FIELDS = new Set([
+  'manifestIdentityRoot',
+  'releaseCut',
+  'releaseCutRoot',
+  'platformSliceRoot',
+  'cutTransition',
+]);
+const MANIFEST_IDENTITY_EXCLUDED_FIELDS = new Set([
+  ...CUT_BINDING_FIELDS,
+  'artifacts',
+  'localArtifact',
+  'qualificationEvidenceRef',
+]);
 
 function readJson(file) {
   return JSON.parse(fs.readFileSync(file, 'utf8'));
@@ -31,11 +52,14 @@ function sourceCommit(root) {
   return result.stdout.trim();
 }
 
-function treeSize(root) {
+const releaseRuntimePath = (file) => !isPythonBytecodePath(file);
+
+function treeSize(root, { filter = () => true } = {}) {
   let size = 0;
   const visit = (dir) => {
     for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
       const full = path.join(dir, entry.name);
+      if (!filter(full, entry)) continue;
       if (entry.isDirectory()) visit(full);
       else if (entry.isFile()) size += fs.statSync(full).size;
       else if (entry.isSymbolicLink()) {
@@ -51,6 +75,71 @@ function sha256File(file) {
   return createHash('sha256').update(fs.readFileSync(file)).digest('hex');
 }
 
+function localArtifactIdentity(artifact) {
+  const stat = fs.statSync(artifact);
+  if (!stat.isFile() && !stat.isDirectory()) {
+    throw new Error(
+      `local desktop artifact is not a file or directory: ${artifact}`,
+    );
+  }
+  return {
+    kind: 'desktop-local',
+    format: stat.isDirectory() ? 'directory' : 'file',
+    size: stat.isDirectory() ? treeSize(artifact) : stat.size,
+    digest: `sha256:${
+      stat.isDirectory() ? sha256Tree(artifact) : sha256File(artifact)
+    }`,
+  };
+}
+
+export function resolveDesktopLocalArtifact(
+  desktopDistDir,
+  updaterName,
+  platform = process.platform,
+) {
+  if (platform !== 'darwin') return path.join(desktopDistDir, updaterName);
+  const apps = fs
+    .readdirSync(desktopDistDir, { withFileTypes: true })
+    .filter((entry) => entry.isDirectory() && entry.name.startsWith('mac'))
+    .flatMap((entry) =>
+      fs
+        .readdirSync(path.join(desktopDistDir, entry.name), {
+          withFileTypes: true,
+        })
+        .filter(
+          (candidate) =>
+            candidate.isDirectory() && candidate.name.endsWith('.app'),
+        )
+        .map((candidate) =>
+          path.join(desktopDistDir, entry.name, candidate.name),
+        ),
+    );
+  if (apps.length !== 1) {
+    throw new Error(
+      `expected one local macOS app artifact, found: ${apps.join(', ') || 'none'}`,
+    );
+  }
+  return apps[0];
+}
+
+export function desktopUpdaterArtifact(files, platform = process.platform) {
+  const suffix = {
+    darwin: '.zip',
+    win32: '.exe',
+    linux: '.AppImage',
+  }[platform];
+  if (!suffix) throw new Error(`unsupported desktop platform: ${platform}`);
+  const matches = files
+    .filter((file) => file.endsWith(suffix))
+    .sort((left, right) => left.localeCompare(right));
+  if (matches.length !== 1) {
+    throw new Error(
+      `expected one ${platform} desktop updater artifact, found: ${matches.join(', ') || 'none'}`,
+    );
+  }
+  return matches[0];
+}
+
 function assertPlatform(platform, architecture) {
   if (!['darwin', 'linux', 'win32'].includes(platform)) {
     throw new Error(`unsupported release platform: ${platform}`);
@@ -64,8 +153,158 @@ function runtimeEntrypoint(platform) {
   return platform === 'win32' ? 'kungfu.exe' : 'kungfu';
 }
 
+function exactRootOrContent(value) {
+  return /^sha256:[a-f0-9]{64}$/.test(value || '') ? value : contentRoot(value);
+}
+
+function sortedRoots(values) {
+  return [...new Set(values.filter(Boolean).map(exactRootOrContent))].sort();
+}
+
+function cutFreeManifest(manifest) {
+  return Object.fromEntries(
+    Object.entries(manifest).filter(([key]) => !CUT_BINDING_FIELDS.has(key)),
+  );
+}
+
+function manifestIdentity(manifest) {
+  return Object.fromEntries(
+    Object.entries(manifest).filter(
+      ([key]) => !MANIFEST_IDENTITY_EXCLUDED_FIELDS.has(key),
+    ),
+  );
+}
+
+function artifactIdentity(artifact) {
+  return {
+    kind: artifact.kind,
+    url: artifact.url,
+    size: artifact.size,
+    digest: artifact.digest,
+    signature: artifact.signature,
+  };
+}
+
+export function bindProductReleaseCut(
+  manifest,
+  {
+    parentReleaseCutRoots = String(
+      process.env.KF_PARENT_RELEASE_CUT_ROOTS ||
+        process.env.KUNGFU_SELECTED_RELEASE_CUT_ROOT ||
+        '',
+    )
+      .split(',')
+      .map((value) => value.trim())
+      .filter(Boolean),
+    sourceSettlementRoot = process.env.KF_SOURCE_SETTLEMENT_ROOT,
+    sourceBuild = process.env.KUNGFU_BUILDCHAIN_SOURCE_BUILD === '1',
+  } = {},
+) {
+  const base = cutFreeManifest(manifest);
+  const manifestIdentityRoot = contentRoot(manifestIdentity(base));
+  const localOnlyEvidence = (value) =>
+    String(value || '').startsWith(UNQUALIFIED_RELEASE_EVIDENCE) ||
+    (sourceBuild &&
+      String(value || '').startsWith(BUILDCHAIN_RETAINED_EVIDENCE));
+  const localEvidence =
+    localOnlyEvidence(base.qualificationEvidenceRef) ||
+    (base.artifacts || []).some(
+      (artifact) =>
+        !artifact.signature || localOnlyEvidence(artifact.signature),
+    );
+  const trustDomain = localEvidence ? 'shifu-local' : 'public';
+  const qualificationEvidenceRoots = sortedRoots([
+    base.qualificationEvidenceRef,
+  ]);
+  const signingEvidenceRoots =
+    trustDomain === 'public'
+      ? sortedRoots(
+          (base.artifacts || []).map((artifact) => artifact.signature),
+        )
+      : [];
+  const platformSlice = {
+    schema: PLATFORM_SLICE_SCHEMA,
+    platform: base.platform,
+    architecture: base.architecture,
+    manifestIdentityRoot,
+    artifactRoot: contentRoot({
+      releaseArtifacts: (base.artifacts || []).map(artifactIdentity),
+      localArtifact: base.localArtifact || null,
+    }),
+    qualificationEvidenceRoots,
+    signingEvidenceRoots,
+  };
+  platformSlice.platformSliceRoot = contentRoot(platformSlice);
+  const compatibility = {
+    controlProtocolRange: base.controlProtocolRange,
+    peerWireProtocolRange: base.peerWireProtocolRange,
+    journalSchemaReadRange: base.journalSchemaReadRange,
+    journalSchemaWriteVersion: base.journalSchemaWriteVersion,
+    minimumSupportedFrontend: base.minimumSupportedFrontend,
+    minimumSupportedRuntime: base.minimumSupportedRuntime,
+  };
+  const migration = {
+    migrationClass: base.migrationClass,
+    rollbackClass: base.rollbackClass,
+  };
+  const releaseCut = {
+    schema: RELEASE_CUT_SCHEMA,
+    productVersion: base.productVersion,
+    parentReleaseCutRoots: sortedRoots(parentReleaseCutRoots),
+    sourceSettlementRoot: exactRootOrContent(
+      sourceSettlementRoot || {
+        sourceCommit: base.sourceCommit,
+      },
+    ),
+    semanticIdentityRoot: contentRoot({
+      productVersion: base.productVersion,
+      releaseChannel: base.releaseChannel,
+      runtimeBuildId: base.runtimeBuildId,
+      frontendBuildId: base.frontendBuildId,
+    }),
+    productAssemblyRoot: contentRoot({
+      runtimeArtifactDigest: base.runtimeArtifactDigest,
+      artifacts: (base.artifacts || []).map(artifactIdentity),
+      localArtifact: base.localArtifact || null,
+    }),
+    compatibilityContractRoot: contentRoot(compatibility),
+    migrationContractRoot: contentRoot(migration),
+    platformSlices: [platformSlice],
+    qualificationEvidenceRoots,
+    signingEvidenceRoots,
+    publicationPolicy: {
+      trustDomain,
+      publicationEligible: trustDomain === 'public',
+      immutable: true,
+      eligibleChannels:
+        trustDomain === 'public' ? [base.releaseChannel].sort() : [],
+    },
+    omissionRoots: [],
+    waiverRoots: [],
+  };
+  releaseCut.releaseCutRoot = contentRoot(releaseCut);
+  return {
+    ...base,
+    manifestIdentityRoot,
+    releaseCut,
+    releaseCutRoot: releaseCut.releaseCutRoot,
+    platformSliceRoot: platformSlice.platformSliceRoot,
+  };
+}
+
 export function platformUpgradeManifestName(version, platform, architecture) {
   return `kungfu-upgrade-${version}-${platform}-${architecture}.json`;
+}
+
+export function assertUpgradeIdentityConverged(bundled, releaseBase) {
+  if (
+    !bundled?.manifestIdentityRoot ||
+    bundled.manifestIdentityRoot !== releaseBase?.manifestIdentityRoot
+  ) {
+    throw new Error(
+      'CLI archive and desktop release base have divergent upgrade identities',
+    );
+  }
 }
 
 export function buildBundledUpgradeManifest({
@@ -79,46 +318,63 @@ export function buildBundledUpgradeManifest({
     UNQUALIFIED_RELEASE_EVIDENCE,
   qualificationEvidenceRef = process.env.KF_UPGRADE_QUALIFICATION_REF ||
     `${UNQUALIFIED_RELEASE_EVIDENCE}:${revision}`,
+  sourceBuild = process.env.KUNGFU_BUILDCHAIN_SOURCE_BUILD === '1',
 }) {
   assertPlatform(platform, architecture);
   if (!fs.statSync(runtimeRoot).isDirectory()) {
     throw new Error(`runtime root is not a directory: ${runtimeRoot}`);
   }
   const version = readJson(path.join(root, 'product', 'package.json')).version;
-  const runtimeDigest = sha256Tree(runtimeRoot);
+  const runtimeDigest = sha256Tree(runtimeRoot, {
+    filter: releaseRuntimePath,
+  });
   const runtimeBuildId = `runtime-${version}-${runtimeDigest.slice(0, 16)}`;
-  const frontendBuildId = `product-${version}-${revision.slice(0, 16)}`;
-  return {
-    schema: RELEASE_SCHEMA,
-    productVersion: version,
-    releaseChannel,
-    sourceCommit: revision,
-    runtimeBuildId,
-    runtimeArtifactDigest: `sha256:${runtimeDigest}`,
-    runtimeEntrypoint: runtimeEntrypoint(platform),
-    frontendBuildId,
-    controlProtocolRange: { min: 1, max: 1 },
-    peerWireProtocolRange: { min: 1, max: 1 },
-    journalSchemaReadRange: { min: 1, max: 1 },
-    journalSchemaWriteVersion: 1,
-    migrationClass: 'none',
-    rollbackClass: 'automatic',
-    minimumSupportedFrontend: version,
-    minimumSupportedRuntime: version,
-    platform,
-    architecture,
-    artifacts: [
-      {
-        kind: 'runtime',
-        url: 'app-resource://kungfu',
-        size: treeSize(runtimeRoot),
-        digest: `sha256:${runtimeDigest}`,
-        signature: runtimeSignature,
-      },
-    ],
-    qualificationEvidenceRef,
-    documentationUrl: DOCUMENTATION_URL,
-  };
+  const frontendBuildId = `product-${version}-${revision.slice(0, 12)}-${runtimeDigest.slice(0, 16)}`;
+  return bindProductReleaseCut(
+    {
+      schema: RELEASE_SCHEMA,
+      productVersion: version,
+      releaseChannel,
+      sourceCommit: revision,
+      runtimeBuildId,
+      runtimeArtifactDigest: `sha256:${runtimeDigest}`,
+      runtimeEntrypoint: runtimeEntrypoint(platform),
+      frontendBuildId,
+      controlProtocolRange: { min: 1, max: 1 },
+      peerWireProtocolRange: { min: 1, max: 1 },
+      journalSchemaReadRange: { min: 1, max: 1 },
+      journalSchemaWriteVersion: 1,
+      migrationClass: 'none',
+      rollbackClass: 'automatic',
+      minimumSupportedFrontend: version,
+      minimumSupportedRuntime: version,
+      platform,
+      architecture,
+      artifacts: [
+        {
+          kind: 'runtime',
+          url: 'app-resource://kungfu',
+          size: treeSize(runtimeRoot, { filter: releaseRuntimePath }),
+          digest: `sha256:${runtimeDigest}`,
+          signature: runtimeSignature,
+        },
+      ],
+      qualificationEvidenceRef,
+      documentationUrl: DOCUMENTATION_URL,
+    },
+    { sourceBuild },
+  );
+}
+
+export function buildCliUpgradeManifest({
+  stageRoot,
+  layout,
+  root = path.resolve(import.meta.dirname, '..', '..'),
+}) {
+  return buildBundledUpgradeManifest({
+    root,
+    runtimeRoot: path.join(stageRoot, layout.runtimeDirectory),
+  });
 }
 
 export function writeBundledUpgradeManifest(options) {
@@ -135,6 +391,7 @@ export function writeBundledUpgradeManifest(options) {
 export function finalizeDesktopUpgradeManifest({
   bundledManifest,
   desktopArtifact,
+  localArtifact = desktopArtifact,
   artifactUrl,
   artifactSignature = process.env.KF_DESKTOP_ARTIFACT_SIGNATURE ||
     UNQUALIFIED_RELEASE_EVIDENCE,
@@ -145,8 +402,9 @@ export function finalizeDesktopUpgradeManifest({
   if (!fs.statSync(desktopArtifact).isFile()) {
     throw new Error(`desktop artifact is not a file: ${desktopArtifact}`);
   }
-  const manifest = {
+  const manifest = bindProductReleaseCut({
     ...bundledManifest,
+    localArtifact: localArtifactIdentity(localArtifact),
     artifacts: [
       ...bundledManifest.artifacts.filter((item) => item.kind !== 'desktop'),
       {
@@ -158,7 +416,7 @@ export function finalizeDesktopUpgradeManifest({
       },
     ],
     qualificationEvidenceRef,
-  };
+  });
   fs.mkdirSync(path.dirname(output), { recursive: true });
   fs.writeFileSync(output, `${JSON.stringify(manifest, null, 2)}\n`, 'utf8');
   return manifest;
@@ -166,6 +424,7 @@ export function finalizeDesktopUpgradeManifest({
 
 export function finalizeCliUpgradeManifest({
   bundledManifest,
+  embeddedManifest = bundledManifest,
   cliArtifact,
   artifactUrl,
   artifactSignature = process.env.KF_CLI_ARTIFACT_SIGNATURE ||
@@ -174,10 +433,11 @@ export function finalizeCliUpgradeManifest({
     bundledManifest.qualificationEvidenceRef,
   output,
 }) {
+  assertUpgradeIdentityConverged(embeddedManifest, bundledManifest);
   if (!fs.statSync(cliArtifact).isFile()) {
     throw new Error(`CLI artifact is not a file: ${cliArtifact}`);
   }
-  const manifest = {
+  const manifest = bindProductReleaseCut({
     ...bundledManifest,
     artifacts: [
       ...bundledManifest.artifacts.filter((item) => item.kind !== 'cli'),
@@ -190,7 +450,7 @@ export function finalizeCliUpgradeManifest({
       },
     ],
     qualificationEvidenceRef,
-  };
+  });
   fs.mkdirSync(path.dirname(output), { recursive: true });
   fs.writeFileSync(output, `${JSON.stringify(manifest, null, 2)}\n`, 'utf8');
   return manifest;

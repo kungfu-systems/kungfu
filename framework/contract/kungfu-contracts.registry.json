@@ -183,6 +183,13 @@
       "file": "kungfu-upgrade.contract.json",
       "source": "framework/upgrade/kungfu-upgrade.contract.json",
       "artifact": "config/kungfu-upgrade.contract.json",
+      "extraArtifacts": [
+        {
+          "label": "product Release Cut profile",
+          "source": "framework/upgrade/kungfu-product-release-cut.contract.json",
+          "artifact": "config/kungfu-product-release-cut.contract.json"
+        }
+      ],
       "cli": {
         "contract": [
           "contract",

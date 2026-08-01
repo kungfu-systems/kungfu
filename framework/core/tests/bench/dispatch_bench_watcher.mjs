@@ -9,7 +9,7 @@
 // node — run under ./shifu or fnm so process.execPath (used to spawn the
 // watcher) matches the ABI of the built kungfu_node.node binding.
 //
-// Usage: node tests/bench/dispatch_bench_watcher.mjs [event-count]
+// Usage: node tests/bench/dispatch_bench_watcher.mjs [event-count] [carrier-type]
 
 import { spawn } from 'node:child_process';
 import fs from 'node:fs';
@@ -33,6 +33,7 @@ const coreDir = path.resolve(benchDir, '..', '..'); // framework/core
 const repoDir = path.resolve(coreDir, '..', '..'); // repo root
 
 const count = Number.parseInt(process.argv[2] || '200000', 10);
+const carrierType = process.argv[3] || '601';
 
 const home = benchHome();
 console.log(`bench home: ${home}`);
@@ -69,10 +70,26 @@ if (!alive(watcher)) {
   process.exit(1);
 }
 
-runLoad(benchDir, home, count, 'quote', env);
+const load = runLoad(benchDir, home, count, carrierType, env);
+if (load.error || load.status !== 0) {
+  console.error(
+    `dispatch load failed${load.error ? `: ${load.error.message}` : ` with status ${load.status}`}`,
+  );
+  process.exit(1);
+}
 
 // the watcher self-exits after its 40s window (+ unwind); wait it out
 await waitExit(watcher, 90000);
+if (alive(watcher)) {
+  watcher.kill();
+  coordinator.kill();
+  await Promise.all([waitExit(watcher, 5000), waitExit(coordinator, 5000)]);
+  console.error('watcher did not exit within 90 seconds');
+  process.exit(1);
+}
+
+coordinator.kill();
+await waitExit(coordinator, 5000);
 
 console.log('--- dispatch probe reports (watcher) ---');
 const reports = collectProbeReports([
@@ -86,4 +103,24 @@ if (reports.length === 0) {
   process.exit(1);
 }
 for (const line of reports) console.log(line);
+
+const carrierHex = Number.parseInt(carrierType, 10)
+  .toString(16)
+  .padStart(8, '0');
+const carrierReports = reports.filter((line) =>
+  line.includes(`carrier_type=0x${carrierHex}`),
+);
+const observed = carrierReports.reduce((maximum, line) => {
+  const match = line.match(/\bn=(\d+)\b/);
+  return match ? Math.max(maximum, Number.parseInt(match[1], 10)) : maximum;
+}, 0);
+if (observed < count) {
+  console.error(
+    `watcher observed ${observed}/${count} requested carrier ${carrierType} frames`,
+  );
+  process.exit(1);
+}
+console.log(
+  `watcher observed ${observed} requested carrier ${carrierType} frames`,
+);
 console.log(`bench home kept for inspection: ${home}`);

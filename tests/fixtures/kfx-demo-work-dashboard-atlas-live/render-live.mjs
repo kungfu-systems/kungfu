@@ -76,6 +76,11 @@ const fakeCaps = {
   storage: {
     savedQueries: () => ({ entries: [] }),
   },
+  projects: {
+    list: async () => ({ schema: 'kungfu.projects.catalog/v1', projects: [] }),
+    runs: () => [],
+    subscribeRuns: () => () => undefined,
+  },
 };
 const fakeShell = {
   params: {},
@@ -137,12 +142,13 @@ const html = ReactDomServer.renderToStaticMarkup(
 );
 
 for (const needle of [
-  'Portfolio · Live federated view',
-  'connecting live Portfolio…',
+  'All Work',
+  'Connecting All Work…',
   'active local project workspace',
-  'no current work across active local workspaces',
+  'Loading retained Project Work…',
+  'All Work remains open while Kungfu restores its Work graph.',
 ]) {
-  if (!html.includes(needle)) fail(`live Portfolio view missing ${needle}`);
+  if (!html.includes(needle)) fail(`live All Work view missing ${needle}`);
 }
 
-console.log('[kfx-demo-work-dashboard-atlas-live] profile + Portfolio render ok');
+console.log('[kfx-demo-work-dashboard-atlas-live] profile + All Work render ok');

@@ -36,8 +36,8 @@ The two runs bracket the rx layer's share: the rx-isolated run is chain scan
 + `instanceof` (one `dynamic_cast` per frame, coordinator only) + feed guards;
 the storage-on delta is cached/sqlite work that no rx change can recover.
 
-Load shape: `dispatch_load.py` registers a real peer and writes typed
-schema `Quote`-style frames. Typed frames are the right load because **both**
+Load shape: `dispatch_load.py` registers a real peer and writes closed-schema
+`SyntheticData` frames (`carrier_type=601`). Closed frames are the right load because **both**
 runtime forms already pre-filter open-layer events before rx: coordinator's
 `is_reactable` is `not is_custom_event` and the watcher's rejects custom
 events too. Open-layer traffic therefore never touches the filter chains —

@@ -3,6 +3,7 @@ import type {
   GlobalWorkSnapshot,
   Profile,
   ProjectFileTreeEntry,
+  ProjectRemovePlan,
   ProjectSummary,
   ProjectWorkCapturePlan,
   ProjectWorkRunPlan,
@@ -91,6 +92,13 @@ type NodeHost = {
   process: NodeJS.Process;
 };
 
+type ProjectViewMemory = {
+  section: 'files' | 'work';
+  selectedFile?: ProjectFileTreeEntry;
+};
+
+const projectViewMemory = new Map<string, ProjectViewMemory>();
+
 function TextInput({
   value,
   onChange,
@@ -143,23 +151,54 @@ const projectActionStyle: React.CSSProperties = {
 
 function ProjectNavigation({
   project,
+  projects,
   section,
+  selectedFile,
   workCount,
   workLoading,
   onSection,
+  onSelectFile,
 }: {
   project: ProjectSummary | undefined;
+  projects: Projects;
   section: 'files' | 'work';
+  selectedFile: ProjectFileTreeEntry | undefined;
   workCount: number;
   workLoading: boolean;
   onSection: (section: 'files' | 'work') => void;
+  onSelectFile: (entry: ProjectFileTreeEntry) => void;
 }) {
+  const [expandedPaths, setExpandedPaths] = React.useState<ReadonlySet<string>>(
+    () => new Set(),
+  );
+  const tree = React.useMemo(() => {
+    if (!project) return { entries: [] as ProjectFileTreeEntry[], error: '' };
+    try {
+      return {
+        entries: projects.files(project.path, { expandedPaths }),
+        error: '',
+      };
+    } catch (reason) {
+      return {
+        entries: [] as ProjectFileTreeEntry[],
+        error: reason instanceof Error ? reason.message : String(reason),
+      };
+    }
+  }, [expandedPaths, project, projects]);
+  const activate = (entry: ProjectFileTreeEntry) => {
+    onSection('files');
+    if (entry.kind === 'directory') {
+      setExpandedPaths((current) => toggleProjectFileTreeEntry(current, entry));
+    } else {
+      onSelectFile(entry);
+    }
+  };
   return (
     <aside
       aria-label="Project sections"
       style={{
         ...panelStyle,
-        width: 210,
+        width: 280,
         flexShrink: 0,
         display: 'flex',
         flexDirection: 'column',
@@ -209,9 +248,66 @@ function ProjectNavigation({
       >
         <span>Files</span>
         <span aria-hidden="true" style={{ color: '#858585' }}>
-          tree
+          {tree.entries.length}
         </span>
       </button>
+      {section === 'files' ? (
+        <div
+          role="tree"
+          aria-label={`${project?.name ?? 'Project'} files`}
+          style={{
+            flex: 1,
+            minHeight: 100,
+            overflow: 'auto',
+            border: '1px solid #3c3c3c',
+            borderRadius: 6,
+            padding: 4,
+            background: '#1e1e1e',
+          }}
+        >
+          {tree.entries.map((entry) => (
+            <button
+              type="button"
+              aria-expanded={
+                entry.kind === 'directory' ? !entry.collapsed : undefined
+              }
+              key={entry.relativePath}
+              title={entry.absolutePath}
+              onClick={() => activate(entry)}
+              style={{
+                ...mono,
+                display: 'block',
+                width: '100%',
+                border: 'none',
+                borderRadius: 4,
+                padding: '5px 6px',
+                background:
+                  selectedFile?.relativePath === entry.relativePath
+                    ? '#04395e'
+                    : 'transparent',
+                color: entry.kind === 'directory' ? '#9cdcfe' : '#cccccc',
+                cursor: 'pointer',
+                textAlign: 'left',
+                whiteSpace: 'pre',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+              }}
+            >
+              {projectFileTreeLabel(entry)}
+            </button>
+          ))}
+          {tree.error ? (
+            <div style={{ ...mono, color: '#f48771', padding: 6 }}>
+              {tree.error}
+            </div>
+          ) : null}
+          {!tree.error && tree.entries.length === 0 ? (
+            <div style={{ ...mono, color: '#858585', padding: 6 }}>
+              This Project folder is empty.
+            </div>
+          ) : null}
+        </div>
+      ) : null}
       <button
         type="button"
         aria-current={section === 'work' ? 'page' : undefined}
@@ -230,7 +326,7 @@ function ProjectNavigation({
           )}
         </span>
       </button>
-      <div style={{ ...mono, color: '#858585', marginTop: 'auto' }}>
+      <div style={{ ...mono, color: '#858585' }}>
         Files are read-only. Work remains governed by Kungfu.
       </div>
     </aside>
@@ -240,28 +336,29 @@ function ProjectNavigation({
 function ProjectFilesView({
   project,
   projects,
+  selected,
 }: {
   project: ProjectSummary;
   projects: Projects;
+  selected: ProjectFileTreeEntry | undefined;
 }) {
-  const [expandedPaths, setExpandedPaths] = React.useState<ReadonlySet<string>>(
-    () => new Set(),
-  );
-  const [selected, setSelected] = React.useState<ProjectFileTreeEntry>();
   const [notice, setNotice] = React.useState('');
-  const tree = React.useMemo(() => {
+  const preview = React.useMemo(() => {
+    if (!selected || selected.kind === 'directory') {
+      return { value: undefined, error: '' };
+    }
     try {
       return {
-        entries: projects.files(project.path, { expandedPaths }),
+        value: projects.previewFile(project.path, selected.relativePath),
         error: '',
       };
     } catch (reason) {
       return {
-        entries: [] as ProjectFileTreeEntry[],
+        value: undefined,
         error: reason instanceof Error ? reason.message : String(reason),
       };
     }
-  }, [expandedPaths, project.path, projects]);
+  }, [project.path, projects, selected]);
 
   React.useEffect(() => {
     if (!notice) return;
@@ -269,12 +366,6 @@ function ProjectFilesView({
     return () => window.clearTimeout(timer);
   }, [notice]);
 
-  const activate = (entry: ProjectFileTreeEntry) => {
-    setSelected(entry);
-    if (entry.kind === 'directory') {
-      setExpandedPaths((current) => toggleProjectFileTreeEntry(current, entry));
-    }
-  };
   const copyPath = async (entry: ProjectFileTreeEntry) => {
     try {
       if (navigator.clipboard) {
@@ -319,13 +410,12 @@ function ProjectFilesView({
         <div>
           <h2 style={headingStyle}>Files</h2>
           <div style={{ ...mono, color: '#858585' }}>
-            One level is shown by default. Expand folders without opening file
-            contents.
+            Select a supported UTF-8 text file in the Project navigation.
           </div>
         </div>
         <button
           type="button"
-          disabled={!selected || selected.kind === 'directory'}
+          disabled={!preview.value}
           onClick={() => selected && void copyPath(selected)}
           style={{
             ...mono,
@@ -334,10 +424,7 @@ function ProjectFilesView({
             background: '#2d2d30',
             color: '#f1f1f1',
             padding: '6px 9px',
-            cursor:
-              !selected || selected.kind === 'directory'
-                ? 'default'
-                : 'pointer',
+            cursor: preview.value ? 'pointer' : 'default',
           }}
         >
           Copy absolute path
@@ -356,61 +443,80 @@ function ProjectFilesView({
       >
         {project.path}
       </div>
-      {tree.error ? (
-        <div style={{ ...mono, color: '#f48771' }}>{tree.error}</div>
-      ) : (
+      {preview.error ? (
         <div
-          role="tree"
-          aria-label={`${project.name} files`}
+          style={{
+            ...mono,
+            color: '#dcdcaa',
+            border: '1px solid #6b5b2a',
+            borderRadius: 6,
+            padding: 12,
+          }}
+        >
+          {preview.error}
+        </div>
+      ) : preview.value ? (
+        <div
           style={{
             flex: 1,
             minHeight: 0,
-            overflow: 'auto',
+            display: 'flex',
+            flexDirection: 'column',
             border: '1px solid #3c3c3c',
             borderRadius: 6,
-            padding: 6,
             background: '#1e1e1e',
+            overflow: 'hidden',
           }}
         >
-          {tree.entries.map((entry) => (
-            <button
-              type="button"
-              aria-expanded={
-                entry.kind === 'directory' ? !entry.collapsed : undefined
-              }
-              key={entry.relativePath}
-              title={entry.absolutePath}
-              onClick={() => activate(entry)}
-              onDoubleClick={() => {
-                if (entry.kind !== 'directory') void copyPath(entry);
-              }}
-              style={{
-                ...mono,
-                display: 'block',
-                width: '100%',
-                border: 'none',
-                borderRadius: 4,
-                padding: '6px 8px',
-                background:
-                  selected?.relativePath === entry.relativePath
-                    ? '#04395e'
-                    : 'transparent',
-                color: entry.kind === 'directory' ? '#9cdcfe' : '#cccccc',
-                cursor: 'pointer',
-                textAlign: 'left',
-                whiteSpace: 'pre',
-                overflow: 'hidden',
-                textOverflow: 'ellipsis',
-              }}
-            >
-              {projectFileTreeLabel(entry)}
-            </button>
-          ))}
-          {tree.entries.length === 0 ? (
-            <div style={{ ...mono, color: '#858585', padding: 8 }}>
-              This Project folder is empty.
-            </div>
-          ) : null}
+          <div
+            style={{
+              ...mono,
+              display: 'flex',
+              justifyContent: 'space-between',
+              gap: 12,
+              padding: '8px 10px',
+              borderBottom: '1px solid #3c3c3c',
+              color: '#9cdcfe',
+            }}
+          >
+            <span>{preview.value.relativePath}</span>
+            <span style={{ color: '#858585', flexShrink: 0 }}>
+              {preview.value.language} · {preview.value.size} bytes · read-only
+            </span>
+          </div>
+          <pre
+            aria-label={`${preview.value.name} contents`}
+            style={{
+              ...mono,
+              flex: 1,
+              minHeight: 0,
+              margin: 0,
+              padding: 14,
+              overflow: 'auto',
+              whiteSpace: 'pre-wrap',
+              overflowWrap: 'anywhere',
+              color: '#d4d4d4',
+              lineHeight: 1.55,
+            }}
+          >
+            {preview.value.content}
+          </pre>
+        </div>
+      ) : (
+        <div
+          style={{
+            flex: 1,
+            border: '1px solid #3c3c3c',
+            borderRadius: 6,
+            display: 'grid',
+            placeItems: 'center',
+            padding: 20,
+            background: '#1e1e1e',
+            color: '#858585',
+          }}
+        >
+          Choose AGENTS.md, README.md, WORK.md, or another supported text file
+          from the navigation tree to inspect it here.
         </div>
       )}
       {notice ? (
@@ -647,6 +753,11 @@ function GlobalWorkView({
   projects: Projects;
 }) {
   const host = window as unknown as NodeHost;
+  const projectMemoryKey =
+    shell.params.projectPath?.trim() || shell.params.projectId?.trim() || '';
+  const initialProjectMemory = projectMemoryKey
+    ? projectViewMemory.get(projectMemoryKey)
+    : undefined;
   const [snapshot, setSnapshot] = React.useState<GlobalWorkSnapshot | null>(
     null,
   );
@@ -656,8 +767,19 @@ function GlobalWorkView({
   const [search, setSearch] = React.useState('');
   const [filter, setFilter] = React.useState<GlobalWorkFilter>('active');
   const [projectSection, setProjectSection] = React.useState<'files' | 'work'>(
-    () => (shell.params.projectSection === 'work' ? 'work' : 'files'),
+    () =>
+      initialProjectMemory?.section ??
+      (shell.params.projectSection === 'work' ? 'work' : 'files'),
   );
+  const [selectedProjectFile, setSelectedProjectFile] = React.useState<
+    ProjectFileTreeEntry | undefined
+  >(initialProjectMemory?.selectedFile);
+  const [loadedProjectMemoryKey, setLoadedProjectMemoryKey] =
+    React.useState(projectMemoryKey);
+  const [projectMenuOpen, setProjectMenuOpen] = React.useState(false);
+  const [removePlan, setRemovePlan] = React.useState<ProjectRemovePlan>();
+  const [projectAdminBusy, setProjectAdminBusy] = React.useState('');
+  const [projectAdminError, setProjectAdminError] = React.useState('');
   const [newWorkOpen, setNewWorkOpen] = React.useState(false);
   const [status, setStatus] = React.useState('Connecting All Work…');
   const [error, setError] = React.useState('');
@@ -701,16 +823,46 @@ function GlobalWorkView({
     if (!shell.params.projectId?.trim() && !shell.params.projectPath?.trim()) {
       return;
     }
+    const remembered = projectMemoryKey
+      ? projectViewMemory.get(projectMemoryKey)
+      : undefined;
     setProjectSection(
-      shell.params.projectSection === 'work' ? 'work' : 'files',
+      remembered?.section ??
+        (shell.params.projectSection === 'work' ? 'work' : 'files'),
     );
+    setSelectedProjectFile(remembered?.selectedFile);
+    setLoadedProjectMemoryKey(projectMemoryKey);
+    setProjectMenuOpen(false);
+    setRemovePlan(undefined);
+    setProjectAdminError('');
   }, [
+    projectMemoryKey,
     shell.params.projectId,
     shell.params.projectPath,
     shell.params.projectSection,
   ]);
+  React.useEffect(() => {
+    if (!projectMemoryKey || loadedProjectMemoryKey !== projectMemoryKey)
+      return;
+    projectViewMemory.set(projectMemoryKey, {
+      section: projectSection,
+      selectedFile: selectedProjectFile,
+    });
+  }, [
+    loadedProjectMemoryKey,
+    projectMemoryKey,
+    projectSection,
+    selectedProjectFile,
+  ]);
 
   React.useEffect(() => {
+    if (
+      projectSection === 'files' &&
+      (shell.params.projectId?.trim() || shell.params.projectPath?.trim())
+    ) {
+      setStatus('Files ready · retained Work loads when selected');
+      return undefined;
+    }
     let dispose: (() => Promise<void>) | undefined;
     let stopped = false;
     const receive = (event: GlobalWorkObserverEvent) => {
@@ -768,8 +920,31 @@ function GlobalWorkView({
       stopped = true;
       if (dispose) void dispose();
     };
-  }, [ipc]);
+  }, [ipc, projectSection, shell.params.projectId, shell.params.projectPath]);
   React.useEffect(() => {
+    if (projectSection === 'files' && shell.params.projectPath?.trim()) {
+      setProjectsCatalogReady(false);
+      let active = true;
+      const timer = window.setTimeout(() => {
+        void projects
+          .list()
+          .then((catalog) => {
+            if (active) setProjectsCatalog(catalog);
+          })
+          .catch(() => {
+            // Files remain usable; catalog errors surface only when Work needs it.
+          })
+          .finally(() => {
+            if (active) setProjectsCatalogReady(true);
+          });
+      }, 250);
+      const unsubscribe = projects.subscribeRuns(setRuns);
+      return () => {
+        active = false;
+        window.clearTimeout(timer);
+        unsubscribe();
+      };
+    }
     let active = true;
     void projects
       .list()
@@ -790,17 +965,76 @@ function GlobalWorkView({
       active = false;
       unsubscribe();
     };
-  }, [projects]);
+  }, [projectSection, projects, shell.params.projectPath]);
 
   const requestedProjectId = shell.params.projectId?.trim();
   const requestedProjectPath = shell.params.projectPath?.trim();
-  const requestedProject =
+  const catalogProject =
     projectsCatalog?.projects.find(
       (project) => project.id === requestedProjectId,
     ) ??
     projectsCatalog?.projects.find(
       (project) => project.path === requestedProjectPath,
     );
+  const requestedProject =
+    catalogProject ??
+    (requestedProjectPath
+      ? {
+          schema: 'kungfu.project/v1' as const,
+          id: `project-path:${requestedProjectPath}`,
+          name:
+            requestedProjectPath.split(/[\\/]/u).filter(Boolean).at(-1) ??
+            'Project',
+          path: requestedProjectPath,
+          available: true,
+          selected: true,
+          initialized: true,
+          state: 'focused',
+        }
+      : undefined);
+  const planProjectRemoval = () => {
+    if (!requestedProject) return;
+    setProjectMenuOpen(false);
+    setProjectAdminBusy('Preparing safe removal…');
+    setProjectAdminError('');
+    void projects
+      .list()
+      .then((catalog) => {
+        const project = catalog.projects.find(
+          (candidate) => candidate.path === requestedProject.path,
+        );
+        if (!project) {
+          throw new Error(
+            'This Project is not present in the Projects catalog',
+          );
+        }
+        return projects.planRemove(project.id);
+      })
+      .then(setRemovePlan)
+      .catch((reason) =>
+        setProjectAdminError(
+          reason instanceof Error ? reason.message : String(reason),
+        ),
+      )
+      .finally(() => setProjectAdminBusy(''));
+  };
+  const confirmProjectRemoval = () => {
+    if (!removePlan) return;
+    setProjectAdminBusy(`Removing ${removePlan.project.name} from Projects…`);
+    setProjectAdminError('');
+    void projects
+      .remove(removePlan.project.id, removePlan.planRoot)
+      .then(() => {
+        setRemovePlan(undefined);
+        setStatus('Removed from Projects · Project files and Work were kept');
+      })
+      .catch((reason) =>
+        setProjectAdminError(
+          reason instanceof Error ? reason.message : String(reason),
+        ),
+      )
+      .finally(() => setProjectAdminBusy(''));
+  };
   const requestedProjectKey = requestedProjectId || requestedProjectPath;
   const allAssignmentRows = snapshot
     ? filterGlobalWork(snapshot, 'all').filter(
@@ -1126,6 +1360,78 @@ function GlobalWorkView({
           }}
         />
       ) : null}
+      {removePlan ? (
+        <dialog
+          open
+          aria-modal="true"
+          aria-label="Confirm Project removal"
+          style={{
+            position: 'absolute',
+            inset: 0,
+            zIndex: 60,
+            background: 'rgba(0,0,0,0.82)',
+            display: 'grid',
+            placeItems: 'center',
+            padding: 24,
+          }}
+        >
+          <div
+            style={{
+              width: 'min(620px, 90vw)',
+              background: '#252526',
+              border: '2px solid #f48771',
+              borderRadius: 10,
+              padding: 18,
+              boxShadow: '0 18px 48px rgba(0,0,0,.55)',
+            }}
+          >
+            <h3 style={{ marginTop: 0 }}>
+              Remove {removePlan.project.name} from Projects?
+            </h3>
+            <div style={{ ...mono, color: '#9cdcfe' }}>
+              {removePlan.project.path}
+            </div>
+            <p>
+              This only removes the machine-local Project locator. Project
+              files, retained Work, and Kungfu evidence will not be deleted.
+            </p>
+            <p style={{ ...mono, color: '#dcdcaa' }}>
+              Confirm once more to remove it from the Projects catalog.
+            </p>
+            {projectAdminError ? (
+              <div style={{ ...mono, color: '#f48771', marginBottom: 10 }}>
+                {projectAdminError}
+              </div>
+            ) : null}
+            <div
+              style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}
+            >
+              <button
+                type="button"
+                disabled={Boolean(projectAdminBusy)}
+                onClick={() => setRemovePlan(undefined)}
+                style={{ ...mono, padding: '7px 11px' }}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={Boolean(projectAdminBusy)}
+                onClick={confirmProjectRemoval}
+                style={{
+                  ...mono,
+                  padding: '7px 11px',
+                  border: '1px solid #f48771',
+                  background: '#5a1d1d',
+                  color: '#f1f1f1',
+                }}
+              >
+                {projectAdminBusy || 'Remove from Projects'}
+              </button>
+            </div>
+          </div>
+        </dialog>
+      ) : null}
     </>
   );
 
@@ -1142,10 +1448,13 @@ function GlobalWorkView({
       >
         <ProjectNavigation
           project={requestedProject}
+          projects={projects}
           section={projectSection}
+          selectedFile={selectedProjectFile}
           workCount={projectRows.length}
           workLoading={workLoading}
           onSection={setProjectSection}
+          onSelectFile={setSelectedProjectFile}
         />
         <main
           style={{
@@ -1184,36 +1493,105 @@ function GlobalWorkView({
               <div style={{ ...mono, color: '#4ec9b0', marginTop: 4 }}>
                 {status}
               </div>
-              {error || runError ? (
+              {error || runError || projectAdminError ? (
                 <div style={{ ...mono, color: '#dcdcaa', marginTop: 4 }}>
-                  {error || runError}
+                  {error || runError || projectAdminError}
+                </div>
+              ) : null}
+              {projectAdminBusy && !removePlan ? (
+                <div style={{ ...mono, color: '#dcdcaa', marginTop: 4 }}>
+                  ◌ {projectAdminBusy}
                 </div>
               ) : null}
             </div>
-            <button
-              type="button"
-              disabled={!requestedProject}
-              onClick={() => setNewWorkOpen(true)}
+            <div
               style={{
-                ...mono,
                 alignSelf: 'center',
-                border: '1px solid #4fc1ff',
-                borderRadius: 6,
-                background: '#0e639c',
-                color: '#f1f1f1',
-                padding: '7px 11px',
-                cursor: requestedProject ? 'pointer' : 'default',
-                fontWeight: 700,
+                display: 'flex',
+                gap: 7,
+                position: 'relative',
               }}
             >
-              + New Work
-            </button>
+              <button
+                type="button"
+                disabled={!requestedProject}
+                onClick={() => setNewWorkOpen(true)}
+                style={{
+                  ...mono,
+                  border: '1px solid #4fc1ff',
+                  borderRadius: 6,
+                  background: '#0e639c',
+                  color: '#f1f1f1',
+                  padding: '7px 11px',
+                  cursor: requestedProject ? 'pointer' : 'default',
+                  fontWeight: 700,
+                }}
+              >
+                + New Work
+              </button>
+              <button
+                type="button"
+                aria-label="Project menu"
+                aria-expanded={projectMenuOpen}
+                disabled={!requestedProject || Boolean(projectAdminBusy)}
+                onClick={() => setProjectMenuOpen((open) => !open)}
+                style={{
+                  ...mono,
+                  border: '1px solid #4b4b4b',
+                  borderRadius: 6,
+                  background: '#2d2d30',
+                  color: '#f1f1f1',
+                  padding: '7px 10px',
+                  cursor: requestedProject ? 'pointer' : 'default',
+                }}
+              >
+                ⋯
+              </button>
+              {projectMenuOpen ? (
+                <div
+                  role="menu"
+                  aria-label="Project actions"
+                  style={{
+                    position: 'absolute',
+                    right: 0,
+                    top: 'calc(100% + 6px)',
+                    zIndex: 20,
+                    width: 250,
+                    padding: 5,
+                    border: '1px solid #4b4b4b',
+                    borderRadius: 7,
+                    background: '#252526',
+                    boxShadow: '0 10px 30px rgba(0,0,0,.45)',
+                  }}
+                >
+                  <button
+                    type="button"
+                    role="menuitem"
+                    onClick={planProjectRemoval}
+                    style={{
+                      ...mono,
+                      width: '100%',
+                      padding: '8px 9px',
+                      border: 'none',
+                      borderRadius: 4,
+                      background: 'transparent',
+                      color: '#f0b7ad',
+                      textAlign: 'left',
+                      cursor: 'pointer',
+                    }}
+                  >
+                    Remove from Projects…
+                  </button>
+                </div>
+              ) : null}
+            </div>
           </section>
           {projectSection === 'files' ? (
             requestedProject ? (
               <ProjectFilesView
                 project={requestedProject}
                 projects={projects}
+                selected={selectedProjectFile}
               />
             ) : (
               <ProjectWorkLoading projectName={projectNameFallback} />
@@ -1287,7 +1665,17 @@ function WorkDashboardView({
       </section>
     );
   }
-  return <GlobalWorkView shell={shell} projects={caps.projects} />;
+  return <ProjectWorkControlView shell={shell} projects={caps.projects} />;
+}
+
+export function ProjectWorkControlView({
+  projects,
+  shell,
+}: {
+  projects: Projects;
+  shell: Shell;
+}) {
+  return <GlobalWorkView shell={shell} projects={projects} />;
 }
 
 export const View = WorkDashboardView;

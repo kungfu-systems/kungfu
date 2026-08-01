@@ -45,6 +45,15 @@
     ],
     "rule": "Internal authority nouns may appear in evidence, diagnostics, APIs, and explain views, but not as first-layer navigation, calls to action, or prerequisites."
   },
+  "historyProtection": {
+    "contract": "framework/data-protection/work-agent-history.contract.json",
+    "userRule": "Agent session activity is not protected Work history until an owning domain accepts it with a verifiable receipt.",
+    "activityState": "session-activity-only",
+    "protectedState": "protected-history-admitted",
+    "processExitSettlesWork": false,
+    "workConsoleAuthority": "observer-only",
+    "recoveryWithoutOriginalAgentUi": true
+  },
   "surfaces": {
     "tui": {
       "entrypoint": "kungfu",
@@ -53,7 +62,9 @@
           "[1] All Work",
           "[2] Projects",
           "New Work",
-          "Project, Work, and Agent state",
+          "Project, Work, and Agent state"
+        ],
+        "framework/tui/src/work-window/index.tsx": [
           "NATIVE UI · OBSERVE ONLY"
         ],
       "framework/tui/src/projects-view/index.tsx": [
@@ -73,13 +84,13 @@
         "framework/gui/src/renderer/src/main.tsx": [
           "All Work",
           "Projects",
-          "Open Projects"
+          "Agent Work Lab"
         ],
-      "framework/gui/src/renderer/src/projects-panel/index.tsx": [
+        "framework/gui/src/renderer/src/projects-panel/index.tsx": [
           "New Project",
           "Open Project",
-          "New Work",
-          "Run Codex"
+          "Works",
+          "Last activity"
         ],
         "extensions/work-dashboard/src/view/index.tsx": [
           "All Work",

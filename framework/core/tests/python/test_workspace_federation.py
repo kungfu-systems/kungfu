@@ -7,6 +7,7 @@ from pathlib import Path
 
 import pytest
 
+from kungfu import workspace_federation as federation
 from kungfu.workspace import (
     ensure_workspace_data_home,
     inspect_workspace,
@@ -1334,3 +1335,119 @@ def test_global_completion_requires_project_cut_root_and_settlement_receipt():
     assert settled["portfolio_state"] == "completed"
     assert settled["project_cut_settlement"] == "satisfied"
     assert settled["globally_completed"] is True
+
+
+def _retained_state(marker, assignment="kungfu:assignment-a"):
+    return {
+        "schema": "kungfu.assignment-orchestration.sealed-work-coordinate/v1",
+        "assignment_subject": assignment,
+        "workspace_identity_root": ROOT_A,
+        "state_root": "sha256:" + marker * 64,
+        "query_proof_root": ROOT_B,
+        "phase": "continuation-decided",
+        "settled": True,
+        "storage_kind": "git-common-dir",
+    }
+
+
+def _outcome_binding(state, marker, complete):
+    return {
+        "schema": "kungfu.assignment-orchestration.work-design-outcome-binding/v1",
+        "assignment_subject": state["assignment_subject"],
+        "workspace_identity_root": state["workspace_identity_root"],
+        "settled_state_root": state["state_root"],
+        "state_query_proof_root": state["query_proof_root"],
+        "opening_estimate_root": None,
+        "published_at": "2026-08-01T01:00:00Z",
+        "outcome": {
+            "outcomeRoot": "sha256:" + marker * 64,
+            "coverage": {
+                "complete": complete,
+                "coverageRoot": ROOT_C,
+            },
+            "cohort": {"cohortRoot": ROOT_D},
+            "evidence": {"settledStateRoot": state["state_root"]},
+        },
+        "binding_root": "sha256:" + marker * 64,
+    }
+
+
+def test_global_outcome_history_deduplicates_replicas_and_keeps_unknown_explicit():
+    complete_state = _retained_state("1", "kungfu:assignment-complete")
+    partial_state = _retained_state("2", "kungfu:assignment-partial")
+    unknown_state = _retained_state("3", "kungfu:assignment-legacy")
+    complete = _outcome_binding(complete_state, "4", True)
+    partial = _outcome_binding(partial_state, "5", False)
+    components = [
+        {
+            "workspace": {"identity_root": ROOT_A},
+            "retained_assignment_states": [
+                complete_state,
+                partial_state,
+                unknown_state,
+            ],
+            "unqualified_retained_assignment_states": [{"state_root": ROOT_D}],
+            "retained_outcome_bindings": [complete, partial],
+        },
+        {
+            "workspace": {"identity_root": ROOT_A},
+            "retained_assignment_states": [complete_state],
+            "retained_outcome_bindings": [complete],
+        },
+    ]
+
+    projection = federation._compose_global_work(components, include_settled=True)
+    history = projection["outcome_history"]
+
+    assert len(history["bindings"]) == 2
+    assert history["coverage"] == {
+        "unique_settled_state_count": 3,
+        "unique_assignment_count": 3,
+        "complete": 1,
+        "partial": 1,
+        "sealed_only_unknown": 1,
+        "unqualified_state_count": 1,
+    }
+    assert history["writes"] == 0
+    assert projection["complete_outcome_count"] == 1
+
+
+def test_global_outcome_history_reports_zero_coverage_without_guessing_legacy_time():
+    state = _retained_state("6", "kungfu:assignment-sealed-only")
+    projection = federation._compose_global_work(
+        [{"retained_assignment_states": [state]}], include_settled=True
+    )
+
+    assert projection["outcome_history"]["bindings"] == []
+    assert projection["outcome_history"]["coverage"] == {
+        "unique_settled_state_count": 1,
+        "unique_assignment_count": 1,
+        "complete": 0,
+        "partial": 0,
+        "sealed_only_unknown": 1,
+        "unqualified_state_count": 0,
+    }
+
+
+def test_global_outcome_history_rejects_distinct_binding_roots_for_one_state():
+    state = _retained_state("7", "kungfu:assignment-conflict")
+    first = _outcome_binding(state, "8", True)
+    second = {**first, "binding_root": "sha256:" + "9" * 64}
+    projection = federation._compose_global_work(
+        [
+            {
+                "retained_assignment_states": [state],
+                "retained_outcome_bindings": [first],
+            },
+            {
+                "retained_assignment_states": [state],
+                "retained_outcome_bindings": [second],
+            },
+        ],
+        include_settled=True,
+    )
+
+    history = projection["outcome_history"]
+    assert history["bindings"] == []
+    assert history["coverage"]["sealed_only_unknown"] == 1
+    assert history["issues"][0]["code"] == "conflicting-replica-outcome-bindings"

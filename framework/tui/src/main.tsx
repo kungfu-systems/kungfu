@@ -65,6 +65,15 @@ import {
   splitHorizontalPointerActionAtPoint,
 } from './profile-shell.js';
 import {
+  KUNGFU_EMPTY_WORK_NEBULA_PATTERN,
+  KUNGFU_PROJECT_DISCOVERY_PATTERN,
+  KUNGFU_STARTUP_NEBULA_PATTERN,
+  KUNGFU_WORK_DISCOVERY_PATTERN,
+  TerminalAmbientScene,
+  TerminalLoadingScene,
+  terminalAnimationsEnabled,
+} from './profile-shell.js';
+import {
   ProjectFileTreeNavigation,
   type ProjectPathCopyNotice,
   ProjectPathCopyOverlay,
@@ -79,21 +88,15 @@ import {
   type ProjectsActionRequest,
   ProjectsHost,
   type ProjectsQuickAction,
+  projectWorkQuickCommandAvailable,
 } from './projects-view/index.js';
 import {
   type OpenedStarterProject,
+  type ProjectTourResult,
+  ProjectTourView,
   StarterProjectHost,
   workReceiptHasRetainedSession,
 } from './starter-project-view/index.js';
-import {
-  KUNGFU_EMPTY_WORK_NEBULA_PATTERN,
-  KUNGFU_PROJECT_DISCOVERY_PATTERN,
-  KUNGFU_STARTUP_NEBULA_PATTERN,
-  KUNGFU_WORK_DISCOVERY_PATTERN,
-  TerminalAmbientScene,
-  TerminalLoadingScene,
-  terminalAnimationsEnabled,
-} from './terminal-animation.js';
 import {
   IncrementalTerminalOutput,
   synchronizedTerminalOutputEnabled,
@@ -114,6 +117,8 @@ import {
   startGlobalWorkObserver,
 } from './work-control-contribution.js';
 import {
+  type ProjectWorkActionRequest,
+  ProjectWorkHost,
   type WorkSort,
   WorkWindow,
   type WorkWindowModel,
@@ -175,6 +180,7 @@ function ensureTuiAgentSession(runtimeDir: string): Promise<string> {
   process.env.KUNGFU_PROJECT_WORK_AGENT_SESSION = '1';
   const host = createDetachedAgentSessionHost({
     runtimeDir: resolvedRuntimeDir,
+    executable: process.env.KUNGFU_AGENT_SESSION_EXECUTABLE || process.execPath,
     workerPath,
     env: process.env,
   });
@@ -348,17 +354,23 @@ function openTuiAgentWorkLab(): AgentWorkLab {
   });
 }
 
-function openTuiProjects() {
+function openTuiProjects(useAgentSession = true) {
   const paths = runtimePaths();
   const cli = tuiCliInvocation(paths);
+  if (!useAgentSession) {
+    cli.env.KUNGFU_PROJECT_WORK_AGENT_SESSION = undefined;
+    cli.env.KUNGFU_AGENT_SESSION_ENDPOINT = undefined;
+  }
   const machineConfigHome = process.env.KF_PROJECTS_CONFIG_HOME;
   return openProjects({
     bin: cli.bin,
     env: cli.env,
     agentSessionClient: 'cli',
-    agentSession: {
-      invoke: invokeTuiAgentSession,
-    },
+    agentSession: useAgentSession
+      ? {
+          invoke: invokeTuiAgentSession,
+        }
+      : undefined,
     catalogConfigHomes:
       machineConfigHome &&
       path.resolve(machineConfigHome) !== path.resolve(paths.configHome)
@@ -813,1013 +825,6 @@ function WorkControlHost({
   );
 }
 
-type ProjectWorkActionRequest = {
-  id: number;
-  action: ProjectWorkQuickAction;
-};
-
-type ProjectWorkComposer = {
-  step: 'objective' | 'acceptance' | 'preview' | 'capturing';
-  objective: string;
-  acceptanceCriterion: string;
-  plan?: ProjectWorkCapturePlan;
-};
-
-function ProjectWorkDock({
-  title,
-  detail,
-  tone,
-}: {
-  title: string;
-  detail: string;
-  tone: 'cyan' | 'green';
-}) {
-  return (
-    <Box
-      height={4}
-      flexShrink={0}
-      flexDirection="column"
-      borderStyle="double"
-      borderColor={tone}
-      paddingX={1}
-      overflow="hidden"
-    >
-      <Text bold color={tone} wrap="truncate-end">
-        {title}
-      </Text>
-      <Text wrap="truncate-end">{detail}</Text>
-    </Box>
-  );
-}
-
-function ProjectWorkHost({
-  projects,
-  project,
-  dimensions,
-  onContinueRetainedWork,
-  onOpenProjects,
-  onOpenLab,
-  onOpenCapturedWork,
-  onInputModeChange,
-  onWorkspacePointer,
-  loadingWork,
-  actionRequest,
-  onActionHandled,
-  isInputCaptured,
-  initialWorkReceipt,
-}: {
-  projects: Projects;
-  project: ProjectWorkspaceSelection;
-  dimensions: InsetDimensionSource;
-  onContinueRetainedWork: (receipt: WorkStartReceipt) => Promise<void>;
-  onOpenProjects: () => void;
-  onOpenLab: () => void;
-  onOpenCapturedWork: (
-    plan: ProjectWorkCapturePlan,
-    receipt: ProjectWorkCaptureReceipt,
-  ) => void;
-  onInputModeChange: (active: boolean) => void;
-  onWorkspacePointer: () => void;
-  loadingWork: boolean;
-  actionRequest?: ProjectWorkActionRequest;
-  onActionHandled?: (id: number) => void;
-  isInputCaptured: () => boolean;
-  initialWorkReceipt?: WorkStartReceipt;
-}) {
-  const { exit } = useApp();
-  const [size, setSize] = React.useState(dimensions.get());
-  const [plan, setPlan] = React.useState<ProjectWorkRunPlan>();
-  const [composer, setComposer] = React.useState<ProjectWorkComposer>();
-  const [busy, setBusy] = React.useState(false);
-  const [message, setMessage] = React.useState(
-    'Press Enter to create the first Work in this Project.',
-  );
-  const [runs, setRuns] = React.useState<ProjectWorkRunSnapshot[]>(() =>
-    projects.runs(),
-  );
-  const [restoringRuns, setRestoringRuns] = React.useState(true);
-  const [fileTreeFocused, setFileTreeFocused] = React.useState(false);
-  const [loadingFrame, setLoadingFrame] = React.useState(0);
-  const [copyNotice, setCopyNotice] = React.useState<ProjectPathCopyNotice>();
-  const [agentReply, setAgentReply] = React.useState<string>();
-  const workDiscoveryLoading = loadingWork || restoringRuns;
-  React.useEffect(() => dimensions.subscribe(setSize), [dimensions]);
-  React.useEffect(() => projects.subscribeRuns(setRuns), [projects]);
-  React.useEffect(() => {
-    let active = true;
-    setRestoringRuns(true);
-    const restore = async () => {
-      await ensureTuiAgentSession(project.runtime_dir);
-      if (initialWorkReceipt) {
-        await projects.restoreRun(initialWorkReceipt, project.workspace_root);
-      } else {
-        await projects.syncSessions({
-          workspace: project.workspace_root,
-          workspaceId: project.workspace_id,
-        });
-      }
-    };
-    void restore()
-      .catch((error) => {
-        if (active)
-          setMessage(error instanceof Error ? error.message : String(error));
-      })
-      .finally(() => {
-        if (active) setRestoringRuns(false);
-      });
-    return () => {
-      active = false;
-    };
-  }, [
-    initialWorkReceipt,
-    project.workspace_id,
-    project.workspace_root,
-    project.runtime_dir,
-    projects,
-  ]);
-  React.useEffect(() => {
-    if (!workDiscoveryLoading) return;
-    const timer = setInterval(
-      () => setLoadingFrame((current) => (current + 1) % 4),
-      180,
-    );
-    return () => clearInterval(timer);
-  }, [workDiscoveryLoading]);
-  React.useEffect(() => {
-    if (!copyNotice) return;
-    const timeout = setTimeout(() => setCopyNotice(undefined), 3500);
-    return () => clearTimeout(timeout);
-  }, [copyNotice]);
-  const composerActive = Boolean(composer);
-  React.useEffect(() => {
-    onInputModeChange(composerActive);
-    return () => {
-      if (composerActive) onInputModeChange(false);
-    };
-  }, [composerActive, onInputModeChange]);
-
-  const projectRuns = runs.filter(
-    (candidate) => candidate.workspace === project.workspace_root,
-  );
-  const runPriority = (candidate: ProjectWorkRunSnapshot) => {
-    if (candidate.session?.live) return 3;
-    if (
-      candidate.running ||
-      (candidate.session?.backend === 'native-interactive' &&
-        candidate.session.lifecycleState !== 'ended')
-    )
-      return 2;
-    return 1;
-  };
-  const visibleRun =
-    [...projectRuns].sort(
-      (left, right) =>
-        runPriority(right) - runPriority(left) ||
-        right.lastEventAt - left.lastEventAt,
-    )[0] ?? null;
-  const session = visibleRun?.session;
-  const sessionAttention = session?.attention;
-  const transientNativeObserverAttention = Boolean(
-    session?.backend === 'native-interactive' &&
-      sessionAttention?.kind === 'blocked' &&
-      sessionAttention.reason.startsWith('native-observer-') &&
-      session.nativeObserver?.state !== 'degraded' &&
-      (session.nativeObserver?.ageMs ?? 0) < 5000,
-  );
-  const attention = transientNativeObserverAttention ? null : sessionAttention;
-  const nativeObserverDisplayState = transientNativeObserverAttention
-    ? 'refreshing'
-    : session?.nativeObserver?.state;
-  const providerSessionActive = Boolean(
-    visibleRun?.running ||
-      session?.live ||
-      (session?.backend === 'native-interactive' &&
-        session.lifecycleState !== 'ended'),
-  );
-  const visibleWorkId =
-    visibleRun?.work ?? session?.nativeObserver?.work?.assignmentId;
-  const projectWorkCount = new Set(
-    projectRuns
-      .map(
-        (candidate) =>
-          candidate.work ??
-          candidate.session?.nativeObserver?.work?.assignmentId,
-      )
-      .filter((work): work is string => Boolean(work)),
-  ).size;
-  const visibleRunProvider = visibleRun?.provider;
-  React.useEffect(() => {
-    if (!visibleRunProvider) return;
-    setMessage(
-      visibleWorkId
-        ? `Observing Work · ${visibleWorkId}`
-        : `Observing ${visibleRunProvider} workspace session`,
-    );
-  }, [visibleRunProvider, visibleWorkId]);
-  React.useEffect(() => {
-    if (
-      !visibleRun?.id ||
-      (!session?.live &&
-        !(
-          session?.backend === 'native-interactive' &&
-          session.lifecycleState !== 'ended'
-        ))
-    )
-      return;
-    let refreshing = false;
-    const refresh = () => {
-      if (refreshing) return;
-      refreshing = true;
-      void projects
-        .refreshRun(visibleRun.id)
-        .catch((error) =>
-          setMessage(error instanceof Error ? error.message : String(error)),
-        )
-        .finally(() => {
-          refreshing = false;
-        });
-    };
-    refresh();
-    const timer = setInterval(refresh, 500);
-    return () => clearInterval(timer);
-  }, [
-    projects,
-    session?.backend,
-    session?.lifecycleState,
-    session?.live,
-    visibleRun?.id,
-  ]);
-  const retainedAgentFinished =
-    visibleRun?.receipt?.status === 'agent-finished';
-  const retainedAgentReviewable = Boolean(
-    visibleRun?.receipt &&
-      (retainedAgentFinished ||
-        attention?.kind === 'ready-for-review' ||
-        attention?.kind === 'needs-answer'),
-  );
-  const mockScenario = process.env.KUNGFU_MOCK_AGENT_SCENARIO;
-  const selectedProvider = mockScenario ? 'mock' : 'codex';
-  const selectedAgentLabel = mockScenario
-    ? `Mock Agent · ${mockScenario}`
-    : 'Codex';
-  const visibleAgentLabel = visibleRun?.provider
-    ? visibleRun.provider
-    : selectedAgentLabel;
-  const canvasRows = terminalCanvasRows(size.rows);
-  const projectWorkAmbientDimensions = {
-    columns: Math.max(12, size.columns - projectNavigationWidth(size) - 8),
-    rows: projectWorkAmbientRows(size),
-  };
-  const emptyProjectIdle =
-    !workDiscoveryLoading && !visibleRun && !plan && !composer;
-  const loadingSpinner = ['◐', '◓', '◑', '◒'][loadingFrame];
-  const beginNewWork = React.useCallback(() => {
-    if (workDiscoveryLoading || busy || visibleRun?.running) return;
-    if (visibleRun?.receipt) {
-      setMessage(
-        'Review and complete the retained Work before creating another Work.',
-      );
-      return;
-    }
-    setPlan(undefined);
-    setComposer({
-      step: 'objective',
-      objective: '',
-      acceptanceCriterion: '',
-    });
-    setMessage('Describe one outcome for this Project.');
-  }, [busy, visibleRun?.receipt, visibleRun?.running, workDiscoveryLoading]);
-  React.useEffect(() => {
-    if (!actionRequest) return;
-    beginNewWork();
-    onActionHandled?.(actionRequest.id);
-  }, [actionRequest, beginNewWork, onActionHandled]);
-  const previewCodex = React.useCallback(() => {
-    if (busy || visibleRun?.running || visibleRun?.receipt) return;
-    setBusy(true);
-    setMessage(
-      `Verifying ${selectedAgentLabel}, native binding, and the selected Work…`,
-    );
-    void projects
-      .planRun(selectedProvider, {
-        workspace: project.workspace_root,
-        scenario: mockScenario,
-      })
-      .then((nextPlan) => {
-        setPlan(nextPlan);
-        setMessage(
-          nextPlan.executable
-            ? 'Exact Work plan is ready for confirmation.'
-            : 'The Work plan is blocked; inspect the verification evidence below.',
-        );
-      })
-      .catch((error) =>
-        setMessage(error instanceof Error ? error.message : String(error)),
-      )
-      .finally(() => setBusy(false));
-  }, [
-    busy,
-    project.workspace_root,
-    projects,
-    mockScenario,
-    selectedAgentLabel,
-    selectedProvider,
-    visibleRun?.receipt,
-    visibleRun?.running,
-  ]);
-  const continueRetainedWork = React.useCallback(() => {
-    const receipt = visibleRun?.receipt;
-    if (busy || !retainedAgentReviewable || !receipt) return;
-    setBusy(true);
-    setMessage('Ending this Agent attempt and opening independent review…');
-    const end =
-      session?.live && session.controllable !== false
-        ? projects.endRun(visibleRun.id)
-        : Promise.resolve(visibleRun);
-    void end
-      .then(() => onContinueRetainedWork(receipt))
-      .catch((error) =>
-        setMessage(error instanceof Error ? error.message : String(error)),
-      )
-      .finally(() => setBusy(false));
-  }, [
-    busy,
-    onContinueRetainedWork,
-    projects,
-    retainedAgentReviewable,
-    session?.controllable,
-    session?.live,
-    visibleRun,
-    visibleRun?.receipt,
-  ]);
-  const submitAgentReply = React.useCallback(() => {
-    if (!visibleRun || agentReply === undefined || !agentReply.trim() || busy)
-      return;
-    setBusy(true);
-    setMessage('Delivering your answer to the same Agent Session…');
-    void projects
-      .replyToRun(visibleRun.id, agentReply.trim())
-      .then(() => setAgentReply(undefined))
-      .catch((error) =>
-        setMessage(error instanceof Error ? error.message : String(error)),
-      )
-      .finally(() => setBusy(false));
-  }, [agentReply, busy, projects, visibleRun]);
-  const decideAgentApproval = React.useCallback(
-    (approved: boolean) => {
-      if (!visibleRun || busy) return;
-      setBusy(true);
-      setMessage(
-        approved
-          ? 'Approving the bounded Agent request…'
-          : 'Denying the Agent request; Work remains open.',
-      );
-      void projects
-        .approveRun(visibleRun.id, approved)
-        .catch((error) =>
-          setMessage(error instanceof Error ? error.message : String(error)),
-        )
-        .finally(() => setBusy(false));
-    },
-    [busy, projects, visibleRun],
-  );
-  const retryAgentAttempt = React.useCallback(() => {
-    if (!visibleRun?.work || busy) return;
-    setBusy(true);
-    setMessage(
-      'Ending the blocked attempt and planning one fresh Agent attempt…',
-    );
-    const end =
-      session?.live && session.controllable !== false
-        ? projects.endRun(visibleRun.id)
-        : Promise.resolve(visibleRun);
-    void end
-      .then(() =>
-        projects.planRun(selectedProvider, {
-          workspace: project.workspace_root,
-          work: visibleRun.work,
-          scenario: mockScenario,
-        }),
-      )
-      .then((nextPlan) => {
-        setPlan(nextPlan);
-        setMessage('Fresh Agent attempt is ready for confirmation.');
-      })
-      .catch((error) =>
-        setMessage(error instanceof Error ? error.message : String(error)),
-      )
-      .finally(() => setBusy(false));
-  }, [
-    busy,
-    mockScenario,
-    project.workspace_root,
-    projects,
-    selectedProvider,
-    session?.controllable,
-    session?.live,
-    visibleRun,
-  ]);
-  const confirmRun = React.useCallback(() => {
-    if (!plan?.executable || busy) return;
-    const acceptedPlan = plan;
-    setPlan(undefined);
-    setBusy(true);
-    setMessage(
-      `Launching ${acceptedPlan.agent.label} for ${acceptedPlan.work.title}…`,
-    );
-    void projects
-      .run(
-        selectedProvider,
-        {
-          workspace: project.workspace_root,
-          work: acceptedPlan.work.assignmentId,
-          scenario: mockScenario,
-          expectedPlanRoot: acceptedPlan.planRoot,
-        },
-        () => undefined,
-      )
-      .then((receipt) =>
-        setMessage(
-          receipt.ok
-            ? 'Agent Work is retained. Follow the receipt next action below.'
-            : `Agent Work ended with status ${receipt.status}.`,
-        ),
-      )
-      .catch((error) =>
-        setMessage(error instanceof Error ? error.message : String(error)),
-      )
-      .finally(() => setBusy(false));
-  }, [
-    busy,
-    mockScenario,
-    plan,
-    project.workspace_root,
-    projects,
-    selectedProvider,
-  ]);
-  const captureComposedWork = React.useCallback(() => {
-    if (!composer?.plan || busy) return;
-    const capturePlan = composer.plan;
-    setComposer({ ...composer, step: 'capturing' });
-    setBusy(true);
-    setMessage('Capturing the exact request without admitting or running it…');
-    void projects
-      .captureWork(project.workspace_root, capturePlan)
-      .then((receipt) => onOpenCapturedWork(capturePlan, receipt))
-      .catch((error) => {
-        setComposer({ ...composer, step: 'preview' });
-        setMessage(error instanceof Error ? error.message : String(error));
-      })
-      .finally(() => setBusy(false));
-  }, [busy, composer, onOpenCapturedWork, project.workspace_root, projects]);
-
-  React.useEffect(() => {
-    if (fileTreeFocused) return;
-    const onData = (chunk: Buffer | string) => {
-      const value = String(chunk);
-      if (isInputCaptured()) return;
-      if (agentReply !== undefined) {
-        if (value === '\u001b') {
-          setAgentReply(undefined);
-        } else if (value === '\u007f' || value === '\b') {
-          setAgentReply((current) => current?.slice(0, -1) ?? '');
-        } else if (value === '\r' || value === '\n') {
-          submitAgentReply();
-        } else if (
-          [...value].every((character) => {
-            const codePoint = character.codePointAt(0) ?? 0;
-            return codePoint >= 0x20 && codePoint !== 0x7f;
-          })
-        ) {
-          setAgentReply((current) => `${current ?? ''}${value}`.slice(0, 1000));
-        }
-        return;
-      }
-      if (composer) {
-        if (composer.step === 'capturing') return;
-        if (composer.step === 'preview') {
-          if (value === '\u001b' || value === 'b') {
-            setComposer({ ...composer, step: 'acceptance', plan: undefined });
-          } else if (value === '\r' || value === '\n') {
-            captureComposedWork();
-          }
-          return;
-        }
-        if (value === '\u001b') {
-          setComposer(undefined);
-          setMessage('New Work cancelled; nothing was captured.');
-          return;
-        }
-        if (value === '\u007f' || value === '\b') {
-          setComposer((current) =>
-            current?.step === 'objective'
-              ? { ...current, objective: current.objective.slice(0, -1) }
-              : current
-                ? {
-                    ...current,
-                    acceptanceCriterion: current.acceptanceCriterion.slice(
-                      0,
-                      -1,
-                    ),
-                  }
-                : current,
-          );
-          return;
-        }
-        if (value === '\r' || value === '\n') {
-          if (composer.step === 'objective') {
-            if (!composer.objective.trim()) return;
-            setComposer({ ...composer, step: 'acceptance' });
-            setMessage(
-              'Define the result that independent review should check.',
-            );
-          } else {
-            if (!composer.acceptanceCriterion.trim()) return;
-            try {
-              setComposer({
-                ...composer,
-                step: 'preview',
-                plan: projects.prepareWork(
-                  composer.objective,
-                  composer.acceptanceCriterion,
-                ),
-              });
-              setMessage('Review this Work before capturing it.');
-            } catch (error) {
-              setMessage(
-                error instanceof Error ? error.message : String(error),
-              );
-            }
-          }
-          return;
-        }
-        const printable = [...value].every((character) => {
-          const codePoint = character.codePointAt(0) ?? 0;
-          return codePoint >= 0x20 && codePoint !== 0x7f;
-        });
-        if (printable) {
-          setComposer((current) =>
-            current?.step === 'objective'
-              ? {
-                  ...current,
-                  objective: `${current.objective}${value}`.slice(0, 320),
-                }
-              : current
-                ? {
-                    ...current,
-                    acceptanceCriterion:
-                      `${current.acceptanceCriterion}${value}`.slice(0, 320),
-                  }
-                : current,
-          );
-        }
-        return;
-      }
-      if (plan) {
-        if (value === '\u001b' || value === 'b' || value === 'n') {
-          setPlan(undefined);
-          setMessage('Work start cancelled; no effects were performed.');
-        } else if (value === '\r' || value === 'y') {
-          confirmRun();
-        }
-        return;
-      }
-      if (value === 'q' || value === '\u0003') return exit();
-      if (value === 'a') return onOpenLab();
-      if (value === 't') {
-        setFileTreeFocused(true);
-        return;
-      }
-      if (value === 'p' || value === '\u001b') return onOpenProjects();
-      if (session?.controllable === false) return;
-      if (value === 'n') return beginNewWork();
-      if (attention?.kind === 'needs-approval' && value === 'y')
-        return decideAgentApproval(true);
-      if (attention?.kind === 'needs-approval' && value === 'n')
-        return decideAgentApproval(false);
-      if (attention?.kind === 'needs-answer' && value === 'i') {
-        setAgentReply('');
-        return;
-      }
-      if (attention?.kind === 'blocked' && value === 'r')
-        return retryAgentAttempt();
-      if (value === 'v' && retainedAgentReviewable)
-        return continueRetainedWork();
-      if (value === '\r' && retainedAgentReviewable)
-        return continueRetainedWork();
-      if (value === '\r') return beginNewWork();
-      if (value === 'r') previewCodex();
-    };
-    process.stdin.on('data', onData);
-    return () => {
-      process.stdin.off('data', onData);
-    };
-  }, [
-    beginNewWork,
-    agentReply,
-    attention?.kind,
-    captureComposedWork,
-    composer,
-    confirmRun,
-    continueRetainedWork,
-    decideAgentApproval,
-    exit,
-    isInputCaptured,
-    onOpenLab,
-    onOpenProjects,
-    plan,
-    previewCodex,
-    fileTreeFocused,
-    projects.prepareWork,
-    retainedAgentReviewable,
-    retryAgentAttempt,
-    session?.controllable,
-    submitAgentReply,
-  ]);
-
-  const eventRows = Math.max(3, canvasRows - 15);
-  const visibleEvents = visibleRun?.events.slice(-eventRows) ?? [];
-  const visibleTerminalLines = session?.terminalLines
-    .filter((line) => line.trim())
-    .slice(-eventRows);
-  const projectName =
-    path.basename(project.workspace_root) || project.display_path;
-  return (
-    <Box
-      width={size.columns}
-      height={canvasRows}
-      flexDirection="column"
-      borderStyle="round"
-      borderColor="cyan"
-      paddingX={1}
-      position="relative"
-      overflow="hidden"
-    >
-      <Text bold color="cyan" wrap="truncate-end">
-        PROJECT · {projectName}
-      </Text>
-      <Text dimColor wrap="truncate-end">
-        {project.workspace_root}
-      </Text>
-      <Box flexGrow={1}>
-        <ProjectFileTreeNavigation
-          root={project.workspace_root}
-          dimensions={dimensions}
-          workCount={workDiscoveryLoading ? undefined : projectWorkCount}
-          focused={fileTreeFocused}
-          isInputCaptured={isInputCaptured}
-          onFocus={() => setFileTreeFocused(true)}
-          onOpenWork={() => setFileTreeFocused(false)}
-          onOpenProjects={onOpenProjects}
-          onOpenLab={onOpenLab}
-          onWorkspacePointer={onWorkspacePointer}
-          onCopyNotice={setCopyNotice}
-          topOffset={5}
-        />
-        <Box flexGrow={1} flexDirection="column" paddingLeft={1}>
-          <Text wrap="truncate-end">
-            Create Work, choose an Agent, and keep the result in this Project.
-          </Text>
-          <Text bold color="yellow" wrap="truncate-end">
-            {workDiscoveryLoading
-              ? `${loadingSpinner} LOADING: discovering retained Work in this Project`
-              : providerSessionActive || session?.attempt === 'working'
-                ? 'RUNNING: the Agent is working in this Project'
-                : attention
-                  ? `ATTENTION: ${attention.message}`
-                  : retainedAgentFinished
-                    ? 'NEXT: [Enter] review Project changes with a fresh Agent'
-                    : visibleRun?.receipt
-                      ? 'NEXT: inspect the retained failure before retrying'
-                      : 'NEXT: [Enter or /new] create Work'}
-          </Text>
-          <Text dimColor wrap="truncate-end">
-            [t] focus Files · [n or /new] New Work · [p/Esc] Projects · [a]
-            Agent Work Lab · [q] quit
-          </Text>
-          <Box flexDirection="column" marginTop={1} flexGrow={1}>
-            {workDiscoveryLoading ? (
-              <>
-                <Box flexGrow={1} alignItems="center" justifyContent="center">
-                  <TerminalAmbientScene
-                    dimensions={projectWorkAmbientDimensions}
-                    pattern={KUNGFU_PROJECT_DISCOVERY_PATTERN}
-                  />
-                </Box>
-                <ProjectWorkDock
-                  title={`${loadingSpinner} LOADING PROJECT WORK`}
-                  detail="Reading retained Work and evidence before showing this Project."
-                  tone="cyan"
-                />
-              </>
-            ) : visibleRun ? (
-              <>
-                <Text bold color={providerSessionActive ? 'yellow' : 'green'}>
-                  {providerSessionActive
-                    ? `◌ ${visibleAgentLabel.toUpperCase()} SESSION RUNNING`
-                    : `✓ ${visibleAgentLabel.toUpperCase()} SESSION`}
-                </Text>
-                {session?.nativeObserver ? (
-                  <Box flexDirection="column">
-                    <Text
-                      bold
-                      color={
-                        nativeObserverDisplayState === 'fresh'
-                          ? 'green'
-                          : nativeObserverDisplayState === 'refreshing'
-                            ? 'cyan'
-                            : nativeObserverDisplayState === 'stale'
-                              ? 'yellow'
-                              : 'red'
-                      }
-                    >
-                      NATIVE UI · OBSERVE ONLY ·{' '}
-                      {nativeObserverDisplayState?.toUpperCase()} ·{' '}
-                      {session.nativeObserver.ageMs}ms old
-                    </Text>
-                    <Text dimColor>
-                      Provider owns terminal input; continue in its native UI.
-                    </Text>
-                    {session.nativeObserver.work ? (
-                      <>
-                        <Text bold color="cyan">
-                          Work ·{' '}
-                          {session.nativeObserver.work.title ||
-                            session.nativeObserver.work.assignmentId ||
-                            session.nativeObserver.work.state}
-                        </Text>
-                        <Text dimColor>
-                          ID · {session.nativeObserver.work.assignmentId}
-                          {session.nativeObserver.work.phase
-                            ? ` · Phase ${session.nativeObserver.work.phase}`
-                            : ''}
-                        </Text>
-                        {session.nativeObserver.work.objective ? (
-                          <Text>
-                            Objective · {session.nativeObserver.work.objective}
-                          </Text>
-                        ) : null}
-                        {session.nativeObserver.work.remainingObligation ? (
-                          <Text color="yellow">
-                            Remaining ·{' '}
-                            {session.nativeObserver.work.remainingObligation}
-                          </Text>
-                        ) : null}
-                        {session.nativeObserver.work.acceptanceChecks.map(
-                          (check, index) => (
-                            <Text key={`${index}:${check}`}>
-                              Acceptance {index + 1} · {check}
-                            </Text>
-                          ),
-                        )}
-                        {session.nativeObserver.work.nextAction ? (
-                          <Text color="cyan">
-                            Next · {session.nativeObserver.work.nextAction}
-                          </Text>
-                        ) : null}
-                        <Text dimColor>
-                          Continuity · claims{' '}
-                          {
-                            session.nativeObserver.work.continuation
-                              .completionClaimCount
-                          }{' '}
-                          · reviews{' '}
-                          {
-                            session.nativeObserver.work.continuation
-                              .independentReviewCount
-                          }{' '}
-                          · decisions{' '}
-                          {
-                            session.nativeObserver.work.continuation
-                              .continuationDecisionCount
-                          }{' '}
-                          · evidence{' '}
-                          {
-                            session.nativeObserver.work.evidenceEpisodeRoots
-                              .length
-                          }{' '}
-                          · session receipts {session.receiptRoots.length}
-                        </Text>
-                      </>
-                    ) : null}
-                    {session.nativeObserver.diagnostic ? (
-                      <Text color="red">
-                        Observer · {session.nativeObserver.diagnostic}
-                      </Text>
-                    ) : null}
-                    {session.nativeObserver.detailDiagnostic ? (
-                      <Text color="yellow">
-                        Work details · {session.nativeObserver.detailDiagnostic}
-                      </Text>
-                    ) : null}
-                  </Box>
-                ) : null}
-                {visibleTerminalLines && visibleTerminalLines.length > 0 ? (
-                  visibleTerminalLines.map((line, index) => (
-                    <Text key={`${index}:${line}`} wrap="truncate-end">
-                      {line}
-                    </Text>
-                  ))
-                ) : visibleEvents.length > 0 ? (
-                  visibleEvents.map((event) => (
-                    <Text key={`${event.index}:${event.root ?? event.text}`}>
-                      <Text color={event.status === 'failed' ? 'red' : 'cyan'}>
-                        {String(event.index).padStart(2, '0')} {event.stage}
-                      </Text>{' '}
-                      {event.activity?.text || event.text}
-                    </Text>
-                  ))
-                ) : session?.nativeObserver ? null : (
-                  <Text color="yellow">
-                    {visibleRun.running
-                      ? `${visibleAgentLabel} is working; waiting for the next retained event…`
-                      : 'No streamed events were retained for this run.'}
-                  </Text>
-                )}
-                {visibleRun.error ? (
-                  <Text color="red">{visibleRun.error}</Text>
-                ) : null}
-                {visibleRun.receipt ? (
-                  <>
-                    <Text bold color={visibleRun.receipt.ok ? 'green' : 'red'}>
-                      {visibleRun.receipt.status} ·{' '}
-                      {visibleRun.receipt.workPhase}
-                    </Text>
-                    {visibleRun.receipt.nextActions
-                      .slice(0, 2)
-                      .map((action) => (
-                        <Text key={action}>Next · {action}</Text>
-                      ))}
-                  </>
-                ) : null}
-                {attention ? (
-                  <Box
-                    flexDirection="column"
-                    borderStyle="double"
-                    borderColor={
-                      attention.kind === 'blocked' ? 'red' : 'yellow'
-                    }
-                    paddingX={1}
-                  >
-                    <Text
-                      bold
-                      color={attention.kind === 'blocked' ? 'red' : 'yellow'}
-                    >
-                      {attention.kind.replaceAll('-', ' ').toUpperCase()}
-                    </Text>
-                    <Text>{attention.message}</Text>
-                    <Text bold>
-                      {session?.controllable === false
-                        ? 'Continue in the provider-native terminal; TUI is observer only'
-                        : attention.kind === 'needs-approval'
-                          ? '[y] approve · [n] deny'
-                          : attention.kind === 'needs-answer'
-                            ? '[i] answer · [v/Enter] review changes'
-                            : attention.kind === 'ready-for-review'
-                              ? '[v/Enter] review changes'
-                              : '[r] end this attempt and plan a fresh attempt'}
-                    </Text>
-                  </Box>
-                ) : null}
-              </>
-            ) : emptyProjectIdle ? (
-              <>
-                <Box flexGrow={1} alignItems="center" justifyContent="center">
-                  <TerminalAmbientScene
-                    dimensions={projectWorkAmbientDimensions}
-                    pattern={KUNGFU_EMPTY_WORK_NEBULA_PATTERN}
-                  />
-                </Box>
-                <ProjectWorkDock
-                  title="PROJECT OPENED"
-                  detail="No Work yet. Press [Enter] to describe it, then choose an Agent."
-                  tone="green"
-                />
-              </>
-            ) : null}
-          </Box>
-          {agentReply !== undefined ? (
-            <Box
-              flexDirection="column"
-              borderStyle="double"
-              borderColor="cyan"
-              paddingX={1}
-            >
-              <Text bold color="cyan">
-                ANSWER AGENT
-              </Text>
-              <Text inverse>{agentReply || ' '}</Text>
-              <Text bold>[Enter] send · [Esc] cancel</Text>
-            </Box>
-          ) : plan ? (
-            <Box
-              flexDirection="column"
-              borderStyle="double"
-              borderColor={plan.executable ? 'yellow' : 'red'}
-              paddingX={1}
-            >
-              <Text bold color={plan.executable ? 'yellow' : 'red'}>
-                CONFIRM WORK START
-              </Text>
-              <Text>
-                {plan.work.title} · {plan.agent.label}
-              </Text>
-              <Text color={plan.agent.verification.ok ? 'green' : 'red'}>
-                Agent{' '}
-                {plan.agent.verification.ok
-                  ? `verified · ${plan.agent.verification.version || 'available'}`
-                  : `failed · ${plan.agent.verification.error || 'unavailable'}`}
-              </Text>
-              <Text color={plan.admissionBinding.ok ? 'green' : 'red'}>
-                Native binding · {plan.admissionBinding.state}
-              </Text>
-              {plan.effects.slice(0, 4).map((effect, index) => (
-                <Text key={`${effect.stage}:${effect.label}`}>
-                  {index + 1}. {effect.label}
-                </Text>
-              ))}
-              <Text bold>
-                {plan.executable
-                  ? '[y/Enter] Start Work · [b/Esc] back'
-                  : '[b/Esc] back · repair verification before retrying'}
-              </Text>
-            </Box>
-          ) : composer ? (
-            <Box
-              flexDirection="column"
-              borderStyle="double"
-              borderColor={composer.step === 'preview' ? 'yellow' : 'cyan'}
-              paddingX={1}
-            >
-              <Text
-                bold
-                color={composer.step === 'preview' ? 'yellow' : 'cyan'}
-              >
-                {composer.step === 'objective'
-                  ? 'NEW WORK · OBJECTIVE'
-                  : composer.step === 'acceptance'
-                    ? 'NEW WORK · ACCEPTANCE'
-                    : composer.step === 'capturing'
-                      ? 'CAPTURING WORK'
-                      : 'CONFIRM WORK CAPTURE'}
-              </Text>
-              {composer.step === 'objective' ? (
-                <>
-                  <Text>What should the Agent accomplish in this Project?</Text>
-                  <Text>
-                    Objective: <Text inverse>{composer.objective || ' '}</Text>
-                  </Text>
-                  <Text bold>[Enter] continue · [Esc] cancel</Text>
-                </>
-              ) : composer.step === 'acceptance' ? (
-                <>
-                  <Text>How will independent review know it is done?</Text>
-                  <Text>
-                    Check:{' '}
-                    <Text inverse>{composer.acceptanceCriterion || ' '}</Text>
-                  </Text>
-                  <Text bold>[Enter] preview · [Esc] cancel</Text>
-                </>
-              ) : composer.plan ? (
-                <>
-                  <Text>
-                    Work ID ·{' '}
-                    <Text color="cyan">{composer.plan.assignmentId}</Text>
-                  </Text>
-                  <Text>Objective · {composer.plan.objective}</Text>
-                  <Text bold>Acceptance criteria</Text>
-                  {composer.plan.acceptanceChecks.map((check, index) => (
-                    <Text key={check}>
-                      {index + 1}. {check}
-                    </Text>
-                  ))}
-                  <Text color="yellow">
-                    This only captures the request. No Work is admitted and no
-                    Agent runs yet.
-                  </Text>
-                  <Text bold>
-                    {composer.step === 'capturing'
-                      ? '◌ Waiting for the canonical capture receipt…'
-                      : '[Enter] capture Work · [b/Esc] edit acceptance'}
-                  </Text>
-                </>
-              ) : null}
-            </Box>
-          ) : workDiscoveryLoading || emptyProjectIdle ? null : (
-            <Text color={busy ? 'yellow' : undefined}>
-              {busy ? '◌ ' : '✓ '}
-              {message}
-            </Text>
-          )}
-        </Box>
-      </Box>
-      {copyNotice ? (
-        <ProjectPathCopyOverlay notice={copyNotice} dimensions={size} />
-      ) : null}
-    </Box>
-  );
-}
-
 const PENDING_STARTUP: AgentWorkLabStartupRoute = {
   schema: 'kungfu.agent-work-lab.startup-route/v1',
   state: 'verified-empty',
@@ -1894,16 +899,21 @@ function ProductHost({
   lab,
   dimensions,
   autoDemo = false,
+  projectTourRoot,
   emptyState = false,
   onAutoDemoSettled,
+  onProjectTourSettled,
 }: {
   lab: AgentWorkLab;
   dimensions: DimensionStore;
   autoDemo?: boolean;
+  projectTourRoot?: string;
   emptyState?: boolean;
   onAutoDemoSettled?: (result: AgentWorkLabAutoplayResult) => void;
+  onProjectTourSettled?: (result: ProjectTourResult) => void;
 }) {
   const { exit } = useApp();
+  const playbackMode = autoDemo || Boolean(projectTourRoot);
   const [size, setSize] = React.useState(dimensions.get());
   const startupProjectRoot = React.useMemo(
     () =>
@@ -1914,7 +924,7 @@ function ProductHost({
   );
   const [startup, setStartup] = React.useState<
     AgentWorkLabStartupRoute | undefined
-  >(autoDemo ? PENDING_STARTUP : undefined);
+  >(playbackMode ? PENDING_STARTUP : undefined);
   const [surface, setSurface] = React.useState<
     | 'loading'
     | 'lab'
@@ -1922,19 +932,22 @@ function ProductHost({
     | 'projects'
     | 'project-work'
     | 'project-assignment'
-  >(autoDemo ? 'lab' : emptyState ? 'all-work' : 'loading');
+  >(playbackMode ? 'lab' : emptyState ? 'all-work' : 'loading');
   const startupAnimationEnabled = React.useMemo(
     () => terminalAnimationsEnabled(process.env),
     [],
   );
   const [startupIntroSettled, setStartupIntroSettled] = React.useState(
-    autoDemo || emptyState || !startupAnimationEnabled,
+    playbackMode || emptyState || !startupAnimationEnabled,
   );
   const surfaceRef = React.useRef(surface);
   React.useEffect(() => {
     surfaceRef.current = surface;
   }, [surface]);
-  const projects = React.useMemo(openTuiProjects, []);
+  const projects = React.useMemo(
+    () => openTuiProjects(!projectTourRoot),
+    [projectTourRoot],
+  );
   const [starterProject, setStarterProject] =
     React.useState<OpenedStarterProject>();
   const [starterWorkReceipt, setStarterWorkReceipt] =
@@ -1971,7 +984,7 @@ function ProductHost({
   const openProjectRequest = React.useRef(0);
   const [projectWorkLoading, setProjectWorkLoading] = React.useState(false);
   const [projectResumeSettled, setProjectResumeSettled] = React.useState(
-    autoDemo || emptyState || !startupProjectRoot,
+    playbackMode || emptyState || !startupProjectRoot,
   );
   const [control, setControl] =
     React.useState<ControlPlaneState>(CLOSED_CONTROL_PLANE);
@@ -1998,7 +1011,7 @@ function ProductHost({
     ProductSearchDocument[]
   >([]);
   const [catalogStatus, setCatalogStatus] = React.useState(
-    autoDemo
+    playbackMode
       ? 'Offline demo automation owns this run'
       : 'Loading governed command catalog',
   );
@@ -2008,12 +1021,13 @@ function ProductHost({
   );
   React.useEffect(() => dimensions.subscribe(setSize), [dimensions]);
   React.useEffect(() => {
-    if (autoDemo || emptyState || !startupAnimationEnabled) return undefined;
+    if (playbackMode || emptyState || !startupAnimationEnabled)
+      return undefined;
     const timer = setTimeout(() => setStartupIntroSettled(true), 540);
     return () => clearTimeout(timer);
-  }, [autoDemo, emptyState, startupAnimationEnabled]);
+  }, [emptyState, playbackMode, startupAnimationEnabled]);
   React.useEffect(() => {
-    if (autoDemo || control.mode === 'closed' || cliDocuments.length > 0)
+    if (playbackMode || control.mode === 'closed' || cliDocuments.length > 0)
       return;
     let active = true;
     const paths = runtimePaths();
@@ -2047,9 +1061,9 @@ function ProductHost({
     return () => {
       active = false;
     };
-  }, [autoDemo, cliDocuments.length, control.mode]);
+  }, [cliDocuments.length, control.mode, playbackMode]);
   React.useEffect(() => {
-    if (autoDemo || surface !== 'lab' || startup) return;
+    if (playbackMode || surface !== 'lab' || startup) return;
     let active = true;
     void lab
       .inspect()
@@ -2073,9 +1087,9 @@ function ProductHost({
     return () => {
       active = false;
     };
-  }, [autoDemo, lab, startup, surface]);
+  }, [lab, playbackMode, startup, surface]);
   React.useEffect(() => {
-    if (autoDemo || emptyState || !startupProjectRoot) return;
+    if (playbackMode || emptyState || !startupProjectRoot) return;
     let active = true;
     const request = openProjectRequest.current + 1;
     openProjectRequest.current = request;
@@ -2098,17 +1112,28 @@ function ProductHost({
         } as unknown as ProjectTemplateWorkspaceSelection);
         surfaceRef.current = 'project-work';
         setSurface('project-work');
-        const resumed = await lab.resumeStarterProject();
-        if (
-          !active ||
-          request !== openProjectRequest.current ||
-          !resumed ||
-          resumed.project.workspace.selected.workspace_root !==
-            selected.workspace.workspace_root
-        ) {
-          return;
-        }
-        setStarterProject(resumed.project);
+        const inventory = await projects.works(
+          selected.workspace.workspace_root,
+        );
+        const work = inventory.activeWork;
+        if (!active || request !== openProjectRequest.current || !work) return;
+        const workspace = {
+          schema: 'kungfu.workspace.registry/v1',
+          last_workspace_id: selected.workspace.workspace_id,
+          recent: [selected.workspace],
+          updated_at: '',
+          registry_path: '',
+          selected: selected.workspace,
+        } as unknown as ProjectTemplateWorkspaceSelection;
+        const resumed = await lab.resumeProjectWork({
+          destination: selected.workspace.workspace_root,
+          initialWork: {
+            initiativeId: work.initiativeId,
+            assignmentId: work.assignmentId,
+            requestPath: work.requestPath,
+          },
+        });
+        setStarterProject({ workspace, work, works: inventory.works });
         setStarterWorkReceipt(resumed.workReceipt);
         setStarterReviewReceipt(resumed.reviewReceipt);
         setStarterCloseReceipt(resumed.closeReceipt);
@@ -2128,7 +1153,7 @@ function ProductHost({
     return () => {
       active = false;
     };
-  }, [autoDemo, emptyState, lab, projects, startupProjectRoot]);
+  }, [emptyState, lab, playbackMode, projects, startupProjectRoot]);
   const autoplay = React.useMemo(
     () =>
       autoDemo
@@ -2141,13 +1166,20 @@ function ProductHost({
         : undefined,
     [autoDemo, exit, onAutoDemoSettled],
   );
+  const projectTourSettled = React.useCallback(
+    (result: ProjectTourResult) => {
+      onProjectTourSettled?.(result);
+      exit();
+    },
+    [exit, onProjectTourSettled],
+  );
 
   const resolvedStartup = startup ?? PENDING_STARTUP;
   const labOpen = surface === 'lab';
   const starterOpen =
     surface === 'project-assignment' && Boolean(starterProject);
   React.useEffect(() => {
-    if (autoDemo || surface !== 'loading' || !startupIntroSettled) return;
+    if (playbackMode || surface !== 'loading' || !startupIntroSettled) return;
     const resolved = resolveProductStartupSurface({
       contextualProject: Boolean(startupProjectRoot),
       openedProject: Boolean(openedProject),
@@ -2155,7 +1187,7 @@ function ProductHost({
     });
     if (resolved) setSurface(resolved);
   }, [
-    autoDemo,
+    playbackMode,
     openedProject,
     projectResumeSettled,
     startupProjectRoot,
@@ -2168,10 +1200,14 @@ function ProductHost({
         ? [...AGENT_WORK_LAB_QUICK_COMMANDS, ...QUICK_COMMANDS]
         : surface === 'projects'
           ? [...PROJECTS_QUICK_COMMANDS, ...QUICK_COMMANDS]
-          : surface === 'project-work' && openedProject
+          : projectWorkQuickCommandAvailable({
+                surface,
+                hasOpenedProject: Boolean(openedProject),
+                completedWork: starterCloseReceipt?.status === 'completed',
+              })
             ? [...PROJECT_WORK_QUICK_COMMANDS, ...QUICK_COMMANDS]
             : QUICK_COMMANDS,
-    [labOpen, openedProject, surface],
+    [labOpen, openedProject, starterCloseReceipt?.status, surface],
   );
   const viewDocuments = React.useMemo<ProductSearchDocument[]>(
     () => [
@@ -2423,6 +1459,19 @@ function ProductHost({
           selected: 0,
           detail: health,
         });
+      } else if (command.action === 'new-work') {
+        if (openedProject) {
+          setSurface('project-work');
+          dispatchProjectWorkAction('project-work-new');
+          setControlNow({ ...CLOSED_CONTROL_PLANE, focus: 'workspace' });
+        } else {
+          setSurface('projects');
+          setControlNow({
+            ...CLOSED_CONTROL_PLANE,
+            focus: 'workspace',
+            notice: 'Choose a Project before creating Work.',
+          });
+        }
       } else if (command.action === 'work') {
         openGlobalWork();
         closeControl('workspace');
@@ -2517,17 +1566,18 @@ function ProductHost({
     openGlobalWork,
     openHome,
     openProject,
+    openedProject,
     projects,
     setControlNow,
   ]);
   const activateControlRef = React.useRef(activateControl);
   activateControlRef.current = activateControl;
   const isInputCaptured = React.useCallback(
-    () => autoDemo || inputFence.isCaptured(),
-    [autoDemo, inputFence],
+    () => playbackMode || inputFence.isCaptured(),
+    [inputFence, playbackMode],
   );
   React.useEffect(() => {
-    if (autoDemo) return;
+    if (playbackMode) return;
     const onData = (chunk: Buffer | string) => {
       if (workspaceInputActiveRef.current) return;
       const mouseEvents = decodeTerminalMouseInput(chunk);
@@ -2600,7 +1650,7 @@ function ProductHost({
       process.stdin.off('data', onData);
     };
   }, [
-    autoDemo,
+    playbackMode,
     dispatchLabAction,
     exit,
     inputFence,
@@ -2614,7 +1664,7 @@ function ProductHost({
   ]);
 
   React.useEffect(() => {
-    if (autoDemo) return;
+    if (playbackMode) return;
     const onData = (chunk: Buffer | string) => {
       if (workspaceInputActiveRef.current || isInputCaptured()) return;
       const value = String(chunk);
@@ -2628,10 +1678,20 @@ function ProductHost({
     return () => {
       process.stdin.off('data', onData);
     };
-  }, [autoDemo, isInputCaptured, openGlobalWork, openHome, openedProject]);
+  }, [isInputCaptured, openGlobalWork, openHome, openedProject, playbackMode]);
 
   let content: React.ReactNode;
-  if (starterOpen && starterProject) {
+  if (projectTourRoot) {
+    content = (
+      <ProjectTourView
+        lab={lab}
+        projects={projects}
+        destination={projectTourRoot}
+        columns={size.columns}
+        onSettled={projectTourSettled}
+      />
+    );
+  } else if (starterOpen && starterProject) {
     content = (
       <StarterProjectHost
         project={starterProject}
@@ -2727,18 +1787,36 @@ function ProductHost({
         projects={projects}
         project={openedProject}
         dimensions={contentDimensions}
+        ensureAgentSession={ensureTuiAgentSession}
         onContinueRetainedWork={async (receipt) => {
-          const resumed = await lab.resumeStarterProject();
-          if (
-            !resumed ||
-            resumed.project.workspace.selected.workspace_root !==
-              openedProject.workspace_root
-          ) {
+          const inventory = await projects.works(openedProject.workspace_root);
+          const work = inventory.works.find(
+            (candidate) =>
+              candidate.initiativeId === receipt.work?.initiativeId &&
+              candidate.assignmentId === receipt.work?.assignmentId,
+          );
+          if (!work) {
             throw new Error(
               'Kungfu could not bind this retained run to its Project review flow.',
             );
           }
-          setStarterProject(resumed.project);
+          const workspace = {
+            schema: 'kungfu.workspace.registry/v1',
+            last_workspace_id: openedProject.workspace_id,
+            recent: [openedProject],
+            updated_at: '',
+            registry_path: '',
+            selected: openedProject,
+          } as unknown as ProjectTemplateWorkspaceSelection;
+          const resumed = await lab.resumeProjectWork({
+            destination: openedProject.workspace_root,
+            initialWork: {
+              initiativeId: work.initiativeId,
+              assignmentId: work.assignmentId,
+              requestPath: work.requestPath,
+            },
+          });
+          setStarterProject({ workspace, work, works: inventory.works });
           setStarterWorkReceipt(receipt);
           setStarterReviewReceipt(resumed.reviewReceipt);
           setStarterCloseReceipt(resumed.closeReceipt);
@@ -2795,6 +1873,9 @@ function ProductHost({
         }
         loadingWork={projectWorkLoading}
         initialWorkReceipt={starterWorkReceipt}
+        allowNewWorkOverRetainedRun={
+          starterCloseReceipt?.status === 'completed'
+        }
         actionRequest={projectWorkActionRequest}
         onActionHandled={acknowledgeProjectWorkAction}
         isInputCaptured={isInputCaptured}
@@ -2837,7 +1918,7 @@ function ProductHost({
       flexDirection="column"
       overflow="hidden"
     >
-      {!autoDemo ? (
+      {!playbackMode ? (
         <Box height={1} paddingX={1}>
           <Box flexGrow={1} flexShrink={1} gap={2} overflow="hidden">
             <Text
@@ -2876,11 +1957,15 @@ function ProductHost({
         </Box>
       ) : null}
       {content}
-      {autoDemo ? (
+      {playbackMode ? (
         <PlaybackBar
           dimensions={size}
           label="DEMO PLAYBACK"
-          status="Agent Work Lab · Offline continuity"
+          status={
+            projectTourRoot
+              ? 'Project Work · failure recovery and settlement'
+              : 'Agent Work Lab · Offline continuity'
+          }
           hint="Automatic · No input required · exits after the final result"
         />
       ) : (
@@ -2922,7 +2007,7 @@ function ProductHost({
                         : 't Files · Enter Run · /new New Work · p Projects'
                       : `f Active/Completed/All · s Sort · j/k Work · [2] ${
                           openedProject ? 'Project' : 'Projects'
-                        }`
+                        } · /new Work`
             }
           />
         </>
@@ -2947,12 +2032,19 @@ function printNonInteractiveDiagnostic(): void {
 async function main(): Promise<void> {
   if (process.argv.includes('--help')) {
     process.stdout.write(
-      'Kungfu Work Control TUI\n\nRun in an interactive terminal.\nOffline animation demo: `kungfu agent-work-lab autoplay`.\nAgent brief: `kungfu agent brief`.\n',
+      'Kungfu Work Control TUI\n\nRun in an interactive terminal.\nOffline animation demo: `kungfu agent-work-lab autoplay`.\nProject recovery tour: `kungfu agent-work-lab project-tour`.\nAgent brief: `kungfu agent brief`.\n',
     );
     return;
   }
   const lab = openTuiAgentWorkLab();
   const autoDemo = process.argv.includes('--agent-work-lab-autoplay');
+  const projectTourIndex = process.argv.indexOf('--project-work-tour-root');
+  const projectTourRoot =
+    projectTourIndex >= 0 ? process.argv[projectTourIndex + 1] : undefined;
+  if (projectTourIndex >= 0 && !projectTourRoot) {
+    throw new Error('--project-work-tour-root requires a destination');
+  }
+  const playbackMode = autoDemo || Boolean(projectTourRoot);
   const emptyState = process.argv.includes('--empty-state');
   if (process.argv.includes('--agent-work-lab-demo')) {
     const report = await lab.runDemo();
@@ -2969,7 +2061,7 @@ async function main(): Promise<void> {
     process.stdout.isTTY !== true
   ) {
     printNonInteractiveDiagnostic();
-    if (autoDemo) process.exitCode = 2;
+    if (playbackMode) process.exitCode = 2;
     return;
   }
 
@@ -2984,6 +2076,7 @@ async function main(): Promise<void> {
   });
   let instance: ReturnType<typeof render> | undefined;
   let autoDemoResult: AgentWorkLabAutoplayResult | undefined;
+  let projectTourResult: ProjectTourResult | undefined;
   let terminating = false;
   await lifecycle.run(
     {
@@ -3001,9 +2094,13 @@ async function main(): Promise<void> {
           lab={lab}
           dimensions={dimensions}
           autoDemo={autoDemo}
+          projectTourRoot={projectTourRoot}
           emptyState={emptyState}
           onAutoDemoSettled={(result) => {
             autoDemoResult = result;
+          }}
+          onProjectTourSettled={(result) => {
+            projectTourResult = result;
           }}
         />,
         {
@@ -3044,6 +2141,23 @@ async function main(): Promise<void> {
     ) {
       process.exitCode = 1;
     }
+  }
+  if (projectTourRoot) {
+    if (!projectTourResult) {
+      throw new Error('Project Work tour exited without a result');
+    }
+    const completion =
+      projectTourResult.state === 'completed'
+        ? projectTourResult.report
+        : {
+            schema: 'kungfu.project-work.tui-tour/v1',
+            status: 'failed',
+            message: projectTourResult.message,
+          };
+    process.stdout.write(
+      `KUNGFU_PROJECT_TOUR_COMPLETE ${JSON.stringify(completion)}\n`,
+    );
+    if (projectTourResult.state === 'failed') process.exitCode = 1;
   }
 }
 

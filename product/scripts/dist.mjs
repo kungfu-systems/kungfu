@@ -18,7 +18,10 @@ import {
 import { extractTarGz, extractZip, writeTarGz, writeZip } from './archive.mjs';
 import { cliLauncherContent } from './cli-launcher.mjs';
 import { qualifyCliSurface } from './cli-surface-qualification.mjs';
-import { writeCompatibilityManifest } from './compatibility.mjs';
+import {
+  isPythonBytecodePath,
+  writeCompatibilityManifest,
+} from './compatibility.mjs';
 import {
   installedKungfuInvocation,
   runInstalledKungfuCommand,
@@ -33,15 +36,19 @@ import {
 import { normalizeCopiedSymlinks } from './portable-symlinks.mjs';
 import { productReleaseChannelConfig } from './release-channel-trust.mjs';
 import {
+  assertSupportedProductHost,
   readTrunkRuntimePinSnapshot,
   runProductAssembly,
 } from './runtime-pin-snapshot.mjs';
 import {
-  buildBundledUpgradeManifest,
+  buildCliUpgradeManifest,
+  desktopUpdaterArtifact,
   finalizeCliUpgradeManifest,
   finalizeDesktopUpgradeManifest,
   platformUpgradeManifestName,
+  resolveDesktopLocalArtifact,
 } from './upgrade-manifest.mjs';
+export { desktopUpdaterArtifact };
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -207,7 +214,6 @@ function rollupPlatformPackageName() {
   const libc = linuxLibc();
   const packages = {
     'darwin-arm64': '@rollup/rollup-darwin-arm64',
-    'darwin-x64': '@rollup/rollup-darwin-x64',
     [`linux-arm64-${libc}`]: `@rollup/rollup-linux-arm64-${libc}`,
     [`linux-x64-${libc}`]: `@rollup/rollup-linux-x64-${libc}`,
     'win32-arm64': '@rollup/rollup-win32-arm64-msvc',
@@ -621,9 +627,6 @@ function assertSafeGeneratedDir(dir) {
   }
 }
 
-export const isPythonBytecodePath = (value) =>
-  /(^|\/)__pycache__(\/|$)|\.pyc$/i.test(value.replaceAll('\\', '/'));
-
 function copyPackageDir(source, target) {
   fs.mkdirSync(path.dirname(target), { recursive: true });
   fs.cpSync(source, target, {
@@ -788,24 +791,6 @@ function stageDesktopRelease() {
   });
 }
 
-export function desktopUpdaterArtifact(files, platform = process.platform) {
-  const suffix = {
-    darwin: '.zip',
-    win32: '.exe',
-    linux: '.AppImage',
-  }[platform];
-  if (!suffix) throw new Error(`unsupported desktop platform: ${platform}`);
-  const matches = files
-    .filter((file) => file.endsWith(suffix))
-    .sort((left, right) => left.localeCompare(right));
-  if (matches.length !== 1) {
-    throw new Error(
-      `expected one ${platform} desktop updater artifact, found: ${matches.join(', ') || 'none'}`,
-    );
-  }
-  return matches[0];
-}
-
 function finalizeDesktopReleaseManifest() {
   if (builderArgs.includes('--dir')) {
     console.log(
@@ -815,6 +800,10 @@ function finalizeDesktopReleaseManifest() {
   }
   const files = fs.readdirSync(DESKTOP_DIST_DIR);
   const artifactName = desktopUpdaterArtifact(files);
+  const localArtifact = resolveDesktopLocalArtifact(
+    DESKTOP_DIST_DIR,
+    artifactName,
+  );
   const metadata = files.filter(
     (file) => file.endsWith('.yml') || file.endsWith('.yaml'),
   );
@@ -834,6 +823,7 @@ function finalizeDesktopReleaseManifest() {
   const manifest = finalizeDesktopUpgradeManifest({
     bundledManifest,
     desktopArtifact: path.join(DESKTOP_DIST_DIR, artifactName),
+    localArtifact,
     artifactUrl,
     output: path.join(DESKTOP_DIST_DIR, outputName),
   });
@@ -1917,6 +1907,11 @@ export function smokeCliProductArchive({ archivePath, archiveBase }) {
         }
 
         const kungfuBin = entryPath(installRoot, manifest.entries, 'kungfu');
+        const runtimeEntry = entryPath(
+          installRoot,
+          manifest.entries,
+          'runtime',
+        );
         const compatibility = entryPath(
           installRoot,
           manifest.entries,
@@ -2022,6 +2017,7 @@ export function smokeCliProductArchive({ archivePath, archiveBase }) {
           'upgradeManifest',
         );
         assertFile(kungfuBin, 'installed kungfu runtime');
+        assertFile(runtimeEntry, 'installed assembled runtime entry');
         assertFile(upgradeManifest, 'installed product upgrade manifest');
         const upgradeIdentity = readJson(upgradeManifest);
         if (upgradeIdentity.schema !== 'kungfu.product-upgrade.manifest/v1') {
@@ -2142,6 +2138,7 @@ export function smokeCliProductArchive({ archivePath, archiveBase }) {
         runInstalledTuiBootstrapSmoke({
           installRoot,
           kungfuBin,
+          runtimeEntry,
           tuiEntry,
           env: smokeEnv,
         });
@@ -2227,9 +2224,9 @@ function buildCliProduct(esbuildRuntime) {
         );
       }
       bundleSdkForCli(stageRoot, esbuildRuntime);
-      const bundledUpgradeManifest = buildBundledUpgradeManifest({
-        root: ROOT,
-        runtimeRoot: CORE_DIST,
+      const bundledUpgradeManifest = buildCliUpgradeManifest({
+        stageRoot,
+        layout,
       });
       const bundledUpgradePath = path.join(
         stageRoot,
@@ -2275,6 +2272,7 @@ function buildCliProduct(esbuildRuntime) {
       const combinedManifestPath = path.join(CLI_RELEASE_DIR, outputName);
       finalizeCliUpgradeManifest({
         bundledManifest: releaseBase,
+        embeddedManifest: bundledUpgradeManifest,
         cliArtifact: archivePath,
         artifactUrl,
         output: combinedManifestPath,
@@ -2292,6 +2290,7 @@ function buildCliProduct(esbuildRuntime) {
 }
 
 function main() {
+  assertSupportedProductHost();
   runProductAssembly({
     productTarget,
     builderArgs,

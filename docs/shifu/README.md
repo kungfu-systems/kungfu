@@ -172,14 +172,15 @@ versions and roots. Roots use UTF-8 JSON with recursively sorted object keys,
 preserved array order, `JSON.stringify` scalar encoding, and no insignificant
 whitespace.
 
-The initial production matrix contains four isolated CPython 3.13 rows:
-macOS ARM64, macOS x86_64, Linux x86_64, and Windows x86_64. Candidate and
+The production matrix contains exactly three isolated CPython 3.13 rows:
+macOS ARM64, Linux x86_64, and Windows x86_64. Candidate and
 promoted transport names bind both the exact source commit and row identity.
 Each row has its own runner, build identity, payload closure, and single active
 promotion authority. An absent row is reported as `unqualified`; another
-platform's bytes can never substitute for it. The current automatic checkout
-consumer remains intentionally limited to macOS ARM64 until the dedicated
-platform consumer Assignments qualify the other three rows.
+platform's bytes can never substitute for it. Intel macOS (`darwin-x64`) is
+explicitly unsupported and cannot select transport or source-build fallback.
+The automatic checkout consumer admits all three declared rows and rejects
+every other host as `unsupported-host`.
 
 The consumer verifies every declared byte, mode, bounded POSIX path and safe
 relative symlink while staging outside the target. It then verifies all current

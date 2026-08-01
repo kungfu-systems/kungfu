@@ -6,15 +6,15 @@
   "supportLevel": "release",
   "source": {
     "cwd": ".",
-    "sourceSha": "4c8bac06666ccfa7ddc5fdd5a7927a817beac42a",
+    "sourceSha": "89b8ff1df255efab51fb2c121fb9eba5bb7581ae",
     "registryPath": ".buildchain/kfd/kfd-3/surfaces.json",
-    "registryDigest": "sha256:e8f315c350890dfcc9eac07e24fcd1930d69bdf5c49ca8fd1fe9c5b5f14d9e9e"
+    "registryDigest": "sha256:2e3350fd21f0189efb83f33427021a7989c48b1ffbcbc17464febeab9c5e5b8a"
   },
   "sourceRegistry": {
     "id": "kungfu",
     "path": ".buildchain/kfd/kfd-3/surfaces.json",
-    "sha256": "5a3d42974a577ee7fc17ad316de8bd70135cb0e15c232dbc6dd97ee889278a08",
-    "digest": "sha256:e8f315c350890dfcc9eac07e24fcd1930d69bdf5c49ca8fd1fe9c5b5f14d9e9e"
+    "sha256": "55ddb0f2cd6b66c2d087dfd8115eaeb0ef6c9ec2e1c5e25254bfafe863e0bf86",
+    "digest": "sha256:2e3350fd21f0189efb83f33427021a7989c48b1ffbcbc17464febeab9c5e5b8a"
   },
   "upstreamKfd": {
     "aggregatePath": "developer/sdk/kfd/upstream-aggregate.json",
@@ -29,12 +29,12 @@
       "libnode": "22.22.3-kf.5-alpha.3",
       "buildchain": "3.0.0"
     },
-    "digest": "sha256:53de9af73a4f324b11f022eb745238c35daa56df3de03319f04ee76b99bd782d"
+    "digest": "sha256:e5c38eaca5a17d76beff878f2851e0fd5c92d30b028bfc7c6b990c42cf6d71a3"
   },
   "expectedArtifactVerification": {
     "command": "node scripts/buildchain-kfd-evidence.mjs --artifact-witness --json"
   },
-  "collaborationInterfaceDigest": "sha256:0d952fe34a7e9705147f4af578a7061b7491334b7ec8bc5f09d17dfa0efb0434",
+  "collaborationInterfaceDigest": "sha256:9947a46ce12d892f29ad77de501513a611161962010d1ac4c136f142bf1a9bc9",
   "collaborationInterface": {
     "schemaVersion": 1,
     "contract": "kungfu-buildchain-kfd-3-surface-registry",
@@ -57,7 +57,7 @@
         "libnode": "22.22.3-kf.5-alpha.3",
         "buildchain": "3.0.0"
       },
-      "digest": "sha256:53de9af73a4f324b11f022eb745238c35daa56df3de03319f04ee76b99bd782d"
+      "digest": "sha256:e5c38eaca5a17d76beff878f2851e0fd5c92d30b028bfc7c6b990c42cf6d71a3"
     },
     "surfaces": [
       {
@@ -1802,10 +1802,10 @@
         "distribution": {
           "registrar": "shifu",
           "tasks": [
-            "dist",
-            "dist:dir",
+            "dist*",
             "package"
           ],
+          "releaseCompanions": "standard",
           "artifacts": [
             {
               "kind": "app",
@@ -5083,10 +5083,10 @@
       "distribution": {
         "registrar": "shifu",
         "tasks": [
-          "dist",
-          "dist:dir",
+          "dist*",
           "package"
         ],
+        "releaseCompanions": "standard",
         "artifacts": [
           {
             "kind": "app",

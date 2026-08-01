@@ -18,7 +18,7 @@ import type { QuickCommand, TerminalDimensions } from '../profile-shell.js';
 import {
   KUNGFU_PROJECT_DISCOVERY_PATTERN,
   TerminalLoadingScene,
-} from '../terminal-animation.js';
+} from '../profile-shell.js';
 import { terminalCanvasRows } from '../terminal-canvas.js';
 import { decodeTerminalMouseInput } from '../terminal-lifecycle.js';
 
@@ -99,6 +99,27 @@ export const PROJECT_WORK_QUICK_COMMANDS: QuickCommand<ProjectWorkQuickAction>[]
       action: 'project-work-new',
     },
   ];
+
+export function projectWorkQuickCommandAvailable(options: {
+  surface: string;
+  hasOpenedProject: boolean;
+  completedWork: boolean;
+}): boolean {
+  return (
+    options.hasOpenedProject &&
+    (options.surface === 'project-work' ||
+      (options.surface === 'project-assignment' && options.completedWork))
+  );
+}
+
+export function selectVisibleProjectWorkRun<Run extends { workspace: string }>(
+  runs: readonly Run[],
+  workspace: string,
+  suppressRetainedRun: boolean,
+): Run | null {
+  if (suppressRetainedRun) return null;
+  return runs.find((candidate) => candidate.workspace === workspace) ?? null;
+}
 
 export type ProjectsActionRequest = {
   id: number;

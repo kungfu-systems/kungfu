@@ -9,6 +9,7 @@ import path from 'node:path';
 import { test } from 'node:test';
 import { readElectronBuilderProjection } from '../../framework/maintainability/semantic-amplification.mjs';
 import { cliLauncherContent } from './cli-launcher.mjs';
+import { isPythonBytecodePath, sha256Tree } from './compatibility.mjs';
 import {
   cliArchiveBase,
   cliArchiveLayout,
@@ -16,13 +17,13 @@ import {
   desktopUpdaterArtifact,
   esbuildPlatformBinaryPath,
   installedKungfuInvocation,
-  isPythonBytecodePath,
   isShippedKfdSupport,
   kfxBundleExternalModules,
   requiresManagedEsbuildPlatform,
   runInstalledKungfuAgentHubSmoke,
   runInstalledKungfuAssignmentAdmissionSmoke,
   runInstalledKungfuCommand,
+  runInstalledTuiBootstrapSmoke,
   stageXinfaContract,
   verifyProductObservabilityEvents,
 } from './dist.mjs';
@@ -31,9 +32,14 @@ import {
   releaseChannelKeyId,
 } from './release-channel-trust.mjs';
 import {
+  INTEL_MACOS_DIAGNOSTIC,
   PRODUCT_ASSEMBLY_STAGE_IDS,
+  assertSupportedProductHost,
+  assertSupportedProductTarget,
   readTrunkRuntimePinSnapshot,
+  supportedProductTargets,
 } from './runtime-pin-snapshot.mjs';
+import { buildCliUpgradeManifest } from './upgrade-manifest.mjs';
 
 const require = createRequire(import.meta.url);
 const workDashboardPackage = require('../../extensions/work-dashboard/kungfu.kfx.json');
@@ -43,6 +49,69 @@ const {
   esmEntrypointArgs,
   toEsmEntrypointSpecifier,
 } = require('../../framework/gui/scripts/before-pack.cjs');
+
+test('Intel macOS is rejected by the product-wide host policy', () => {
+  for (const architecture of ['x64', 'x86_64']) {
+    for (const operation of [
+      () => assertSupportedProductHost({ platform: 'darwin', architecture }),
+      () => assertSupportedProductTarget('darwin', architecture),
+    ]) {
+      assert.throws(operation, (error) => {
+        assert.equal(error.message, INTEL_MACOS_DIAGNOSTIC);
+        return true;
+      });
+    }
+  }
+});
+
+test('the supported product matrix is exact', () => {
+  assert.deepEqual(supportedProductTargets(), [
+    'darwin/arm64',
+    'linux/arm64',
+    'linux/x64',
+    'win32/x64',
+  ]);
+  for (const target of supportedProductTargets()) {
+    const [platform, architecture] = target.split('/');
+    assert.doesNotThrow(() =>
+      assertSupportedProductTarget(platform, architecture),
+    );
+  }
+});
+
+test('installed TUI binds child CLI calls to the manifest runtime entry', () => {
+  const installRoot = path.resolve('installed-product');
+  const kungfuBin = path.join(installRoot, 'kungfu.cmd');
+  const runtimeEntry = path.join(installRoot, 'runtime', 'kungfu.exe');
+  const tuiEntry = path.join(installRoot, 'tui', 'tui.mjs');
+  let invocation;
+
+  runInstalledTuiBootstrapSmoke(
+    {
+      installRoot,
+      kungfuBin,
+      runtimeEntry,
+      tuiEntry,
+      env: {},
+    },
+    {
+      spawn(command, args, options) {
+        invocation = { command, args, options };
+        return {
+          status: 0,
+          signal: null,
+          stdout: '{"schema":"kungfu.agent-work-lab.report/v1"}\n',
+          stderr: '',
+        };
+      },
+    },
+  );
+
+  assert.equal(invocation.command, kungfuBin);
+  assert.deepEqual(invocation.args, [tuiEntry, '--agent-work-lab-demo']);
+  assert.equal(invocation.options.env.KUNGFU_DIR, path.dirname(runtimeEntry));
+  assert.notEqual(invocation.options.env.KUNGFU_DIR, path.dirname(kungfuBin));
+});
 
 test('trunk staging retains one source-authoritative runtime pin snapshot', () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'kungfu-pin-test-'));
@@ -170,7 +239,10 @@ test('CLI product archive name uses the Kungfu Episodes product prefix', () => {
     cliArchiveBase('linux-arm64'),
     'kungfu-episodes-cli-linux-arm64',
   );
-  assert.equal(cliArchiveBase('win32-x64'), 'kungfu-episodes-cli-win32-x64');
+  assert.equal(
+    cliArchiveBase('windows-x64'),
+    'kungfu-episodes-cli-windows-x64',
+  );
 });
 
 test('CLI product manifest channel config contains only runtime trust fields', () => {
@@ -248,6 +320,43 @@ test('product staging rejects an absolute symlink outside its source tree', (t) 
     fs.writeFileSync(outside, 'outside');
     fs.symlinkSync(outside, path.join(source, 'bin', 'python'));
     assert.throws(() => copyTree(source, target), /escaping symlink/);
+  } finally {
+    fs.rmSync(parent, { recursive: true, force: true });
+  }
+});
+
+test('CLI upgrade identity binds the filtered staged runtime', (t) => {
+  if (process.platform === 'win32') {
+    t.skip('POSIX symlink contract');
+    return;
+  }
+  const parent = fs.mkdtempSync(path.join(os.tmpdir(), 'kungfu-dist-test-'));
+  try {
+    const source = path.join(parent, 'source');
+    const stageRoot = path.join(parent, 'stage');
+    const runtime = path.join(stageRoot, 'runtime');
+    fs.mkdirSync(path.join(source, 'bin'), { recursive: true });
+    fs.writeFileSync(path.join(source, 'kungfu'), 'runtime');
+    fs.writeFileSync(path.join(source, 'bin', 'python3'), 'interpreter');
+    fs.writeFileSync(path.join(source, 'bin', 'ignored.pyc'), 'bytecode');
+    fs.symlinkSync('python3', path.join(source, 'bin', 'python'));
+    copyTree(source, runtime);
+
+    const manifest = buildCliUpgradeManifest({
+      stageRoot,
+      layout: cliArchiveLayout(),
+    });
+
+    assert.equal(
+      manifest.runtimeArtifactDigest,
+      `sha256:${sha256Tree(runtime)}`,
+    );
+    assert.equal(
+      manifest.runtimeArtifactDigest,
+      `sha256:${sha256Tree(source, {
+        filter: (file) => !isPythonBytecodePath(file),
+      })}`,
+    );
   } finally {
     fs.rmSync(parent, { recursive: true, force: true });
   }

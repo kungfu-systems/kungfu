@@ -3,13 +3,13 @@
   "generatedFrom": {
     "authority": "append-only canonical Era and Stage records plus non-authoritative Era Candidate revisions under docs/evolution",
     "semanticGraphAuthority": "Xinfa Atlas; this projection never creates current runtime authority",
-    "sourceRoot": "sha256:daf3722ae8d5153c5b2048405e4343f081165e9a076acb8f85427b0b3817556a"
+    "sourceRoot": "sha256:434f095b86cc321d4a2116463d9a4cf7c63ba511aed73953edc179975af80d80"
   },
   "summary": {
     "eras": 5,
-    "stages": 9,
-    "evidence": 33,
-    "authoritySubjects": 7,
+    "stages": 10,
+    "evidence": 36,
+    "authoritySubjects": 10,
     "eraCandidates": 0,
     "unresolvedEraCandidates": 0
   },
@@ -826,6 +826,105 @@
       ],
       "supersedes": [],
       "file": "docs/evolution/stages/09-work-control-canonical-name.md"
+    },
+    {
+      "schema": "kungfu.evolution-stage/v1",
+      "id": "product-release-cut-updater-convergence",
+      "era": "work-control-dogfood",
+      "sequence": 10,
+      "title": "Product Release Cut and updater convergence",
+      "status": "open",
+      "evolutionImpact": "opens",
+      "period": {
+        "start": "2026-07-29",
+        "end": "ongoing"
+      },
+      "buildsOn": [
+        "work-control-canonical-name"
+      ],
+      "pressure": "Release channels, immutable images, KFD-3 local artifacts, and Shifu promotion existed, but SemVer and per-artifact roots did not identify one exact product world or authorize movement between same-label builds.",
+      "priorLimitation": "Shifu could select local desktop builds while native archive installation and rollback used separate coordinates; same-SemVer descendants and public supersession had no shared exact identity.",
+      "localCapability": "Product Release Cut and Cut Transition bind exact public and local release worlds, KFD-3 registers desktop plus CLI plus final manifest in one slot, and Shifu delegates installation and rollback to the native updater.",
+      "compression": "Version label, artifact provenance, compatibility, publication trust, local selection, native installation, and rollback converge on one Cut identity and one explicit transition.",
+      "authorityTransitions": [
+        {
+          "subject": "product-release-identity",
+          "before": "SemVer plus per-artifact manifest roots",
+          "after": "one immutable Product Release Cut with exact platform slices",
+          "authorityRefs": [
+            "framework/upgrade/kungfu-product-release-cut.contract.json",
+            "docs/adr/KF-ADR-019fabb5-62a0-7b8d-8f8d-6505efdbc239.md"
+          ]
+        },
+        {
+          "subject": "product-update-movement",
+          "before": "version precedence and adapter-local selection rules",
+          "after": "explicit Cut Transition with lineage, compatibility, migration, rollback, trust, and evidence",
+          "authorityRefs": [
+            "framework/upgrade/kungfu-product-release-cut.contract.json",
+            "framework/upgrade/kungfu-upgrade.contract.json"
+          ]
+        },
+        {
+          "subject": "local-product-installation",
+          "before": "Shifu desktop selection and native CLI archive installation with separate provenance",
+          "after": "Shifu selects one same-slot KFD-3 product bundle and native Core owns CLI install, selection, and rollback",
+          "authorityRefs": [
+            "docs/guides/upgrading.md",
+            "docs/shifu/schema/local-artifact-catalog-v1.schema.json"
+          ]
+        }
+      ],
+      "retiredSurfaces": [
+        "SemVer as exact product identity",
+        "Shifu as a second CLI installer",
+        "source cache as rollback authority",
+        "implicit same-version replacement"
+      ],
+      "unlockedCapabilities": [
+        "same-SemVer successor qualification",
+        "public signed supersession",
+        "publication-ineligible local dogfood Cuts",
+        "cache-independent native rollback",
+        "cross-platform Cut-bound release evidence"
+      ],
+      "downstreamConsumers": [
+        "signed release channels",
+        "bootstrap installers",
+        "KFD-3 product registration",
+        "Shifu promotion",
+        "native updater",
+        "Buildchain release qualification"
+      ],
+      "evidence": [
+        {
+          "kind": "adr",
+          "ref": "docs/adr/KF-ADR-019fabb5-62a0-7b8d-8f8d-6505efdbc239.md",
+          "label": "Product Release Cut identity decision"
+        },
+        {
+          "kind": "document",
+          "ref": "framework/upgrade/kungfu-product-release-cut.contract.json",
+          "label": "Executable Cut and transition contract"
+        },
+        {
+          "kind": "document",
+          "ref": "docs/guides/upgrading.md",
+          "label": "Updater and Shifu ownership guide"
+        }
+      ],
+      "readerRoute": {
+        "intent": "Understand exact product identity and how local or public updates move between releases",
+        "start": "docs/guides/upgrading.md",
+        "deepen": [
+          "framework/upgrade/kungfu-product-release-cut.contract.json",
+          "docs/adr/KF-ADR-019fabb5-62a0-7b8d-8f8d-6505efdbc239.md",
+          "docs/development/versioning.md"
+        ]
+      },
+      "amends": [],
+      "supersedes": [],
+      "file": "docs/evolution/stages/10-product-release-cut-updater.md"
     }
   ],
   "eraCandidates": [],
@@ -876,12 +975,39 @@
       ]
     },
     {
+      "subject": "local-product-installation",
+      "authority": "Shifu selects one same-slot KFD-3 product bundle and native Core owns CLI install, selection, and rollback",
+      "sinceStage": "product-release-cut-updater-convergence",
+      "authorityRefs": [
+        "docs/guides/upgrading.md",
+        "docs/shifu/schema/local-artifact-catalog-v1.schema.json"
+      ]
+    },
+    {
       "subject": "primitive-lifecycle",
       "authority": "derived Primitive management plane with intake closure",
       "sinceStage": "native-work-control-recursive-dogfood",
       "authorityRefs": [
         "docs/architecture/primitive-management-plane.md",
         "docs/architecture/incubation-passport-governance.md"
+      ]
+    },
+    {
+      "subject": "product-release-identity",
+      "authority": "one immutable Product Release Cut with exact platform slices",
+      "sinceStage": "product-release-cut-updater-convergence",
+      "authorityRefs": [
+        "framework/upgrade/kungfu-product-release-cut.contract.json",
+        "docs/adr/KF-ADR-019fabb5-62a0-7b8d-8f8d-6505efdbc239.md"
+      ]
+    },
+    {
+      "subject": "product-update-movement",
+      "authority": "explicit Cut Transition with lineage, compatibility, migration, rollback, trust, and evidence",
+      "sinceStage": "product-release-cut-updater-convergence",
+      "authorityRefs": [
+        "framework/upgrade/kungfu-product-release-cut.contract.json",
+        "framework/upgrade/kungfu-upgrade.contract.json"
       ]
     },
     {

@@ -9,6 +9,10 @@ import { fileURLToPath } from 'node:url';
 
 import { scanTree } from './no-bash-guard.mjs';
 import {
+  assertKfdEvidenceSourceBinding,
+  findGitTreeEquivalentAncestor,
+  resolveKfdProductGateCheckedAt,
+  selectKfdEvidenceSourceSha,
   sourceAcceptancePlan,
   sourceClangFormatCommand,
   sourceMypyCommand,
@@ -30,6 +34,127 @@ test('no-bash guard ignores local Kungfu qualification runtimes', (t) => {
   fs.writeFileSync(path.join(root, 'tracked.sh'), '#!/bin/sh\n');
 
   assert.deepEqual(scanTree(root), ['tracked.sh']);
+});
+
+test('KFD evidence rejects a source SHA whose ancestry was removed by rebase', () => {
+  assert.throws(
+    () =>
+      assertKfdEvidenceSourceBinding({
+        sourceSha: 'a'.repeat(40),
+        headSha: 'b'.repeat(40),
+        isAncestor: () => false,
+      }),
+    /not an ancestor of checked head.*regenerate the evidence after rebasing/u,
+  );
+});
+
+test('KFD evidence accepts an exact tree-equivalent ancestor after queue rebase', () => {
+  const sourceSha = 'a'.repeat(40);
+  const headSha = 'b'.repeat(40);
+  const replayedSha = 'c'.repeat(40);
+  assert.equal(
+    assertKfdEvidenceSourceBinding({
+      sourceSha,
+      headSha,
+      isAncestor: () => false,
+      findTreeEquivalentAncestor: (source, head) => {
+        assert.equal(source, sourceSha);
+        assert.equal(head, headSha);
+        return replayedSha;
+      },
+    }),
+    sourceSha,
+  );
+});
+
+test('KFD evidence checks the committed witness binding under an exact CI source', () => {
+  const committed = 'a'.repeat(40);
+  const configured = 'b'.repeat(40);
+  assert.equal(
+    selectKfdEvidenceSourceSha({
+      write: false,
+      configured,
+      committed,
+      headSha: configured,
+    }),
+    committed,
+  );
+  assert.equal(
+    selectKfdEvidenceSourceSha({
+      write: true,
+      configured,
+      committed,
+      headSha: 'c'.repeat(40),
+    }),
+    configured,
+  );
+});
+
+test('KFD tree-equivalence lookup stays first-parent and bounded', () => {
+  const sourceSha = 'a'.repeat(40);
+  const headSha = 'b'.repeat(40);
+  const replayedSha = 'c'.repeat(40);
+  const treeSha = 'd'.repeat(40);
+  const calls = [];
+  assert.equal(
+    findGitTreeEquivalentAncestor(sourceSha, headSha, (args) => {
+      calls.push(args);
+      if (args[0] === 'cat-file') return 'commit';
+      if (args[0] === 'rev-parse') return treeSha;
+      return `${headSha} ${'e'.repeat(40)}\n${replayedSha} ${treeSha}`;
+    }),
+    replayedSha,
+  );
+  assert.deepEqual(calls, [
+    ['cat-file', '-t', sourceSha],
+    ['rev-parse', `${sourceSha}^{tree}`],
+    ['log', '--first-parent', '--max-count=4096', '--format=%H %T', headSha],
+  ]);
+});
+
+test('KFD tree-equivalence rejects non-commit Git objects', () => {
+  const sourceSha = 'a'.repeat(40);
+  const calls = [];
+  assert.equal(
+    findGitTreeEquivalentAncestor(sourceSha, 'b'.repeat(40), (args) => {
+      calls.push(args);
+      return 'tree';
+    }),
+    '',
+  );
+  assert.deepEqual(calls, [['cat-file', '-t', sourceSha]]);
+});
+
+test('KFD product gates remain checkable without ignored runtime outputs', () => {
+  const sourceSha = 'a'.repeat(40);
+  const commitCheckedAt = '2026-07-31T02:20:37+00:00';
+  assert.equal(
+    resolveKfdProductGateCheckedAt({
+      write: false,
+      now: () => {
+        throw new Error('check mode must not use the wall clock');
+      },
+      retainedGateResults: [null, null, null],
+      sourceSha,
+      commitTimestamp: (commit) => {
+        assert.equal(commit, sourceSha);
+        return commitCheckedAt;
+      },
+    }),
+    commitCheckedAt,
+  );
+  assert.equal(
+    resolveKfdProductGateCheckedAt({
+      write: false,
+      now: () => '',
+      retainedGateResults: [null, { checkedAt: '2026-07-30T00:00:00Z' }],
+      sourceSha,
+      commitTimestamp: () => {
+        throw new Error('retained evidence must preserve its timestamp');
+      },
+    }),
+    '2026-07-30T00:00:00Z',
+  );
 });
 
 test('type baseline covers every Python surface declared by [tool.mypy]', () => {
@@ -210,12 +335,33 @@ test('source plan covers representative source-only checks', () => {
   assert.ok(labels.includes('Project Cut scoped composition admission'));
   assert.ok(labels.includes('durability production-candidate admission'));
   assert.ok(labels.includes('Buildchain KFD release evidence'));
+  assert.ok(labels.includes('agent-first canonical policy'));
+  assert.ok(labels.includes('agent-first contract audit'));
   const kfdEvidence = plan.find(
     (step) => step.label === 'Buildchain KFD release evidence',
   );
   assert.deepEqual(kfdEvidence.args, [
     'scripts/buildchain-kfd-evidence.mjs',
     '--check',
+  ]);
+  const canonicalPolicy = plan.find(
+    (step) => step.label === 'agent-first canonical policy',
+  );
+  assert.deepEqual(canonicalPolicy.args, [
+    'developer/sdk/src/sdk.js',
+    'contract',
+    'policy',
+    '--check',
+    '--json',
+  ]);
+  const contractAudit = plan.find(
+    (step) => step.label === 'agent-first contract audit',
+  );
+  assert.deepEqual(contractAudit.args, [
+    'developer/sdk/src/sdk.js',
+    'contract',
+    'audit',
+    '--json',
   ]);
   const typeBaseline = plan.find(
     (step) => step.label === 'Python type baseline',
@@ -290,6 +436,16 @@ test('source plan covers representative source-only checks', () => {
   );
   assert.ok(
     contractTests.args.includes('scripts/check-exit-bundle-contract.test.mjs'),
+  );
+  assert.ok(
+    contractTests.args.includes(
+      'scripts/check-data-protection-contract.test.mjs',
+    ),
+  );
+  assert.ok(
+    contractTests.args.includes(
+      'scripts/check-work-agent-history-continuity.test.mjs',
+    ),
   );
   assert.ok(
     contractTests.args.includes('scripts/check-git-episode-provider.test.mjs'),
@@ -477,7 +633,7 @@ test('changed GUI TypeScript receives a file-scoped semantic check', () => {
   ]);
 });
 
-test('cold read-only source acceptance skips dependency-backed GUI TypeScript', () => {
+test('cold read-only source acceptance skips dependency-backed checks', () => {
   const previous = process.env.KUNGFU_READONLY_NESTED_SOURCE_ACCEPTANCE;
   process.env.KUNGFU_READONLY_NESTED_SOURCE_ACCEPTANCE = '1';
   try {
@@ -486,6 +642,14 @@ test('cold read-only source acceptance skips dependency-backed GUI TypeScript', 
     ]);
     assert.equal(
       plan.some((step) => step.label === 'changed GUI TypeScript check'),
+      false,
+    );
+    assert.equal(
+      plan.some((step) => step.label === 'agent-first canonical policy'),
+      false,
+    );
+    assert.equal(
+      plan.some((step) => step.label === 'agent-first contract audit'),
       false,
     );
   } finally {

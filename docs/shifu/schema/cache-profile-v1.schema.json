@@ -182,7 +182,6 @@
           "items": {
             "enum": [
               "darwin-arm64",
-              "darwin-x64",
               "linux-arm64",
               "linux-x64",
               "windows-arm64",

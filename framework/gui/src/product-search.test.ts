@@ -54,9 +54,64 @@ test('Cmd or Ctrl K focuses the same search plane without executing CLI results'
 
 test('Work activation reaches the declared Work view and selects the exact result', () => {
   assert.match(source, /productRoleEntry\(enabled, 'profile-view'\)/);
-  assert.match(source, /openKfx\(workView\.id, \{ workId:/);
+  assert.match(
+    source,
+    /openWorkSurface\(\{ workId: result\.action\.workId \}\)/,
+  );
+  assert.match(
+    source,
+    /workEntry[\s\S]*openKfx\(workEntry\.id, restoredParams\)/,
+  );
+  assert.match(source, /openCoreWork\(restoredParams\)/);
   assert.match(workViewSource, /shell\.params\.workId\?\.trim\(\)/);
   assert.match(workViewSource, /\[shell\.params\.workId\]/);
+});
+
+test('Core Work remains a first-class shell surface without an admitted Work KFX', () => {
+  assert.match(
+    source,
+    /coreWorkOpen \|\| activeKfx\?\.id === workEntry\?\.id[\s\S]*\? 'core-work'/,
+  );
+  assert.match(source, /onOpenAllWork=\{\(\) => openWorkSurface\(\)\}/);
+  assert.match(
+    source,
+    /coreWorkOpen \? \([\s\S]*<ProjectWorkControlView projects=\{projects\} shell=\{shell\} \/>/,
+  );
+  assert.match(
+    source,
+    /coreWorkOpen[\s\S]*currentProjectName[\s\S]*'All Work'/,
+  );
+});
+
+test('Projects, Lab, and workspace transitions close Core Work explicitly', () => {
+  assert.match(
+    source,
+    /onOpenProjects=\{\(\) => \{[\s\S]*setCoreWorkOpen\(false\)[\s\S]*setProjectsOpen\(true\)/,
+  );
+  assert.match(
+    source,
+    /onOpenLab=\{\(\) => \{[\s\S]*setCoreWorkOpen\(false\)[\s\S]*setLabOpen\(true\)/,
+  );
+  assert.match(source, /onOpenWork=\{\(\) => openWorkSurface\(\)\}/);
+});
+
+test('All Work restores the last Project and section after other navigation', () => {
+  assert.match(source, /const lastWorkParamsRef = React\.useRef/);
+  assert.match(
+    source,
+    /const restoredParams = nextParams \?\? lastWorkParamsRef\.current/,
+  );
+  assert.match(source, /lastWorkParamsRef\.current = nextParams/);
+  assert.match(
+    source,
+    /openWorkSurface\(\{ projectPath, projectSection: section \}\)/,
+  );
+  assert.match(workViewSource, /const projectViewMemory = new Map/);
+  assert.match(workViewSource, /initialProjectMemory\?\.selectedFile/);
+  assert.match(
+    workViewSource,
+    /projectViewMemory\.set\(projectMemoryKey, \{[\s\S]*section: projectSection,[\s\S]*selectedFile: selectedProjectFile/,
+  );
 });
 
 test('Profile lifecycle refresh preserves the last visible projection', () => {

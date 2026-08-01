@@ -17,7 +17,7 @@
   "main": "out/main/index.js",
   "scripts": {
     "ensure-electron": "node scripts/ensure-electron.mjs",
-    "dev": "pnpm run ensure-electron && electron-vite dev",
+    "dev": "pnpm run ensure-electron && node ../../product/scripts/product.mjs gui supervise-dev",
     "build": "electron-vite build",
     "audit:bundle": "node scripts/bundle-core-audit.cjs",
     "start": "pnpm run ensure-electron && electron-vite preview",

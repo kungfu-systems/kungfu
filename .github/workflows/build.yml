@@ -146,7 +146,7 @@ jobs:
   build:
     needs: [preflight, windows-fast-sentinel, auditable-demo-fast-sentinel]
     if: ${{ needs.preflight.result == 'success' && needs.windows-fast-sentinel.result == 'success' && needs.auditable-demo-fast-sentinel.result == 'success' && !inputs.fast-sentinels-only && fromJSON(inputs.macos-overflow-request-json || '{}').mode != 'control' }}
-    uses: kungfu-systems/buildchain/.github/workflows/.build.yml@adbcbdef01668890d8de9354bdb6e32a84bb52ad # protected artifact-signing authority
+    uses: kungfu-systems/buildchain/.github/workflows/.build.yml@252900728d55b63f36b5304261dd9c49d738a07a # bounded final signing metadata
     secrets:
       BUILDCHAIN_PROMOTION_TOKEN: ${{ secrets.KUNGFU_GITHUB_TOKEN }}
       BUILDCHAIN_ARTIFACT_RELAY_S3_ROLE_ARN: ${{ secrets.BUILDCHAIN_ARTIFACT_RELAY_S3_ROLE_ARN }}
@@ -502,15 +502,16 @@ jobs:
     permissions:
       actions: read
       contents: read
-    uses: kungfu-systems/buildchain/.github/workflows/.auditable-demo.yml@d43e6574432bc0b1ae9d1d0557f8ccc4785fa2e4 # PR #2092 bounded multi-demo adapter argv
+    uses: kungfu-systems/buildchain/.github/workflows/.auditable-demo.yml@afd75d295fcd2d55cfebf621f5ca6d05a9904830 # PR #2126 native rendition qualification
     with:
       source-ref: ${{ needs.build.outputs.publish-source-sha }}
       source-artifact-name: ${{ needs.resolve-auditable-demo-source.outputs.artifact-name }}
       source-artifact-digest: ${{ needs.resolve-auditable-demo-source.outputs.artifact-digest }}
       adapter-path: scripts/auditable-demo-adapter.py
       adapter-arguments-json: ${{ format('["--demo-id",{0}]', toJSON(needs.auditable-demo-plan.outputs.demo-id)) }}
-      renderer-image: ghcr.io/kungfu-systems/build-images/demo-renderer@sha256:06141e3d01a13e6d44766d3acc115ca07c58443f59840f313ecd938b2b0c138c
+      renderer-image: ghcr.io/kungfu-systems/build-images/demo-renderer@sha256:e5ae5002dc0fc267e265dba1068d7476e541dddc9035ccd72cee94dfad872591
       render-media: ${{ needs.auditable-demo-plan.outputs.render-media == 'true' }}
+      media-profile: responsive-web-delivery-v1
       artifact-retention-days: 14
       require-trusted-event: true
 
@@ -638,9 +639,11 @@ jobs:
           MEDIA_ARTIFACT_URL: ${{ needs.auditable-demo.outputs.media-artifact-url }}
           MEDIA_ARTIFACT_EXPIRES_AT: ${{ steps.artifact-expiry.outputs.media-artifact-expires-at }}
           MEDIA_ROOT: ${{ needs.auditable-demo.outputs.media-root }}
+          MEDIA_PROFILE: ${{ needs.auditable-demo.outputs.media-profile }}
+          MEDIA_QUALIFICATION_ROOT: ${{ needs.auditable-demo.outputs.media-qualification-root }}
           AUDITABLE_DEMO_ID: ${{ needs.auditable-demo-plan.outputs.demo-id }}
-          BUILDCHAIN_SHA: d43e6574432bc0b1ae9d1d0557f8ccc4785fa2e4
-          RENDERER_IMAGE: ghcr.io/kungfu-systems/build-images/demo-renderer@sha256:06141e3d01a13e6d44766d3acc115ca07c58443f59840f313ecd938b2b0c138c
+          BUILDCHAIN_SHA: afd75d295fcd2d55cfebf621f5ca6d05a9904830
+          RENDERER_IMAGE: ghcr.io/kungfu-systems/build-images/demo-renderer@sha256:e5ae5002dc0fc267e265dba1068d7476e541dddc9035ccd72cee94dfad872591
         run: ./shifu node scripts/auditable-demo-passport.mjs write --output auditable-demo-release-passport.json
 
       - name: Upload exact auditable demo Release Passport

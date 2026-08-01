@@ -14,7 +14,17 @@ import {
 } from './control-plane-state.js';
 import { resolveListWindow } from './list-window/index.js';
 import { boundedIndex } from './navigation.js';
-import { terminalCanvasRows } from './terminal-canvas.js';
+import {
+  KUNGFU_CIRCULAR_STARTUP_PATTERN,
+  KUNGFU_EMPTY_WORK_NEBULA_PATTERN,
+  type TerminalAnimationPattern,
+  type TerminalDimensions,
+  terminalAnimationPatternSize,
+  terminalAnimationsEnabled,
+  terminalCanvasRows,
+  useTerminalAnimationFrame,
+} from './terminal-canvas.js';
+export * from './terminal-canvas.js';
 import type { WorkLoopShellModel } from './work-loop-contribution.js';
 
 export {
@@ -34,8 +44,6 @@ export type {
   ProductQuickCommandAction,
   QuickCommand,
 } from './control-plane-state.js';
-
-export type TerminalDimensions = { columns: number; rows: number };
 
 export type ProfileShellCard = {
   id: string;
@@ -1884,6 +1892,121 @@ export function PlaybackBar({
       <Text color="white" dimColor wrap="truncate-end">
         {hint}
       </Text>
+    </Box>
+  );
+}
+
+export function TerminalAnimation({
+  pattern,
+  dimensions,
+  active = true,
+  animate = terminalAnimationsEnabled(process.env),
+}: {
+  pattern: TerminalAnimationPattern;
+  dimensions: TerminalDimensions;
+  active?: boolean;
+  animate?: boolean;
+}) {
+  const frame = useTerminalAnimationFrame({
+    active,
+    enabled: animate,
+    pattern,
+  });
+  const patternSize = terminalAnimationPatternSize(dimensions, pattern);
+  const cells = pattern.render(frame, patternSize);
+  return (
+    <Box flexDirection="column" width={patternSize.width}>
+      {cells.map((line, row) => (
+        <Text key={`${pattern.id}-${row}`}>
+          {line.map((cell, column) => (
+            <Text key={`${pattern.id}-${row}-${column}`} color={cell.color}>
+              {cell.glyph}
+            </Text>
+          ))}
+        </Text>
+      ))}
+    </Box>
+  );
+}
+
+export function TerminalAmbientScene({
+  dimensions,
+  pattern = KUNGFU_EMPTY_WORK_NEBULA_PATTERN,
+  animate,
+}: {
+  dimensions: TerminalDimensions;
+  pattern?: TerminalAnimationPattern;
+  animate?: boolean;
+}) {
+  return (
+    <Box
+      width={dimensions.columns}
+      height={dimensions.rows}
+      alignItems="center"
+      justifyContent="center"
+      overflow="hidden"
+    >
+      <TerminalAnimation
+        pattern={pattern}
+        dimensions={dimensions}
+        animate={animate}
+      />
+    </Box>
+  );
+}
+
+export function TerminalLoadingScene({
+  dimensions,
+  title,
+  status,
+  detail,
+  pattern = KUNGFU_CIRCULAR_STARTUP_PATTERN,
+  animate,
+}: {
+  dimensions: TerminalDimensions;
+  title: string;
+  status: string;
+  detail?: string;
+  pattern?: TerminalAnimationPattern;
+  animate?: boolean;
+}) {
+  const compact = dimensions.columns < 58 || dimensions.rows < 15;
+  const animationEnabled = animate ?? terminalAnimationsEnabled(process.env);
+  const patternSize = terminalAnimationPatternSize(dimensions, pattern);
+  return (
+    <Box
+      width={dimensions.columns}
+      height={dimensions.rows}
+      alignItems="center"
+      justifyContent="center"
+      overflow="hidden"
+    >
+      <Box flexDirection="row" alignItems="center" gap={compact ? 1 : 3}>
+        <TerminalAnimation
+          pattern={pattern}
+          dimensions={dimensions}
+          animate={animationEnabled}
+        />
+        <Box
+          flexDirection="column"
+          width={Math.max(
+            8,
+            Math.min(
+              44,
+              dimensions.columns - patternSize.width - (compact ? 1 : 3),
+            ),
+          )}
+        >
+          <Text bold color="cyan">
+            {title}
+          </Text>
+          <Text>{status}</Text>
+          {!compact && detail ? <Text dimColor>{detail}</Text> : null}
+          <Text dimColor>
+            {animationEnabled ? 'Loading · live' : 'Loading'}
+          </Text>
+        </Box>
+      </Box>
     </Box>
   );
 }

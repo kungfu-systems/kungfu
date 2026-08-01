@@ -8,7 +8,7 @@ import React from 'react';
 
 const mono: React.CSSProperties = {
   fontFamily: 'var(--kf-mono-font-family, monospace)',
-  fontSize: 'var(--kf-font-size, 12px)',
+  fontSize: 'max(var(--kf-font-size, 12px), 13px)',
 };
 
 const actionStyle: React.CSSProperties = {
@@ -44,11 +44,18 @@ export function ProjectWorkRunConfirmation({
       aria-modal="true"
       aria-label="Confirm Work start"
       style={{
-        position: 'absolute',
+        position: 'fixed',
         inset: 0,
-        zIndex: 80,
+        zIndex: 1200,
         border: 'none',
-        background: 'rgba(0,0,0,0.82)',
+        margin: 0,
+        width: 'auto',
+        height: 'auto',
+        boxSizing: 'border-box',
+        background: 'rgba(8, 12, 18, 0.68)',
+        color: '#e6edf3',
+        fontSize: 14,
+        lineHeight: 1.55,
         display: 'grid',
         placeItems: 'center',
         padding: 24,
@@ -59,39 +66,51 @@ export function ProjectWorkRunConfirmation({
           width: 'min(760px, 92vw)',
           maxHeight: '88vh',
           overflow: 'auto',
-          background: '#252526',
-          border: '2px solid #d7ba7d',
-          borderRadius: 10,
-          padding: 18,
-          boxShadow: '0 18px 48px rgba(0,0,0,.65)',
+          boxSizing: 'border-box',
+          background: '#20262e',
+          color: '#e6edf3',
+          border: '1px solid #566575',
+          borderRadius: 12,
+          padding: 22,
+          boxShadow: '0 24px 72px rgba(0, 0, 0, 0.5)',
         }}
       >
-        <h3 style={{ margin: 0, color: '#f1f1f1' }}>Confirm Work start</h3>
-        <div style={{ ...mono, color: '#9cdcfe', marginTop: 8 }}>
+        <h3 style={{ margin: 0, color: '#ffffff', fontSize: 18 }}>
+          Confirm Work start
+        </h3>
+        <div style={{ ...mono, color: '#9cdcfe', marginTop: 10, fontSize: 14 }}>
           {plan.work.title}
         </div>
-        <div style={{ ...mono, color: '#cccccc', marginTop: 3 }}>
+        <div style={{ ...mono, color: '#d7dde5', marginTop: 4 }}>
           {plan.agent.label} · {plan.agent.verification.version || 'verified'}
         </div>
-        <div style={{ ...mono, color: '#858585', marginTop: 3 }}>
+        <div style={{ ...mono, color: '#aeb8c4', marginTop: 4 }}>
           {plan.workspace.root}
         </div>
-        <p style={{ marginBottom: 6 }}>
-          Kungfu will perform these effects once:
-        </p>
-        <ol style={{ marginTop: 0 }}>
-          {plan.effects.map((effect) => (
-            <li key={`${effect.stage}:${effect.label}`}>{effect.label}</li>
-          ))}
-        </ol>
-        <p style={{ ...mono, color: '#a8a8a8' }}>
+        {plan.executable ? (
+          <>
+            <p style={{ marginBottom: 6 }}>
+              Kungfu will perform these effects once:
+            </p>
+            <ol style={{ marginTop: 0, paddingLeft: 24, color: '#e6edf3' }}>
+              {plan.effects.map((effect) => (
+                <li key={`${effect.stage}:${effect.label}`}>{effect.label}</li>
+              ))}
+            </ol>
+          </>
+        ) : null}
+        <p style={{ ...mono, color: '#b8c2cc' }}>
           Completion, review, Git commit, push, and publication are not
           included. The exact plan is {plan.planRoot.slice(0, 24)}…
         </p>
+        <p style={{ ...mono, color: '#b8c2cc' }}>
+          Agent session activity is not protected Work history until an owning
+          domain accepts it with a verifiable receipt.
+        </p>
         {!plan.executable ? (
           <p style={{ ...mono, color: '#f48771' }}>
-            This plan is not executable: verify the Agent and native source
-            binding first.
+            {plan.blockedReason ??
+              'This plan is not executable. Verify the Agent and native source binding first.'}
           </p>
         ) : null}
         <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
@@ -105,7 +124,12 @@ export function ProjectWorkRunConfirmation({
           </button>
           <button
             type="button"
-            style={{ ...actionStyle, borderColor: '#d7ba7d' }}
+            style={{
+              ...actionStyle,
+              borderColor: '#d7ba7d',
+              opacity: busy || !plan.executable ? 0.55 : 1,
+              cursor: busy || !plan.executable ? 'not-allowed' : 'pointer',
+            }}
             disabled={busy || !plan.executable}
             onClick={onConfirm}
           >
@@ -136,6 +160,9 @@ export function ProjectWorkRunSession({
 }) {
   const [now, setNow] = React.useState(() => Date.now());
   const [reply, setReply] = React.useState('');
+  const [panelHeight, setPanelHeight] = React.useState(320);
+  const [fullscreen, setFullscreen] = React.useState(false);
+  const resizeStart = React.useRef<{ y: number; height: number } | null>(null);
   const live = run.session?.live ?? run.running;
   React.useEffect(() => {
     if (!live) return undefined;
@@ -156,14 +183,20 @@ export function ProjectWorkRunSession({
     <aside
       aria-label="Agent Work session"
       style={{
+        position: fullscreen ? 'fixed' : 'relative',
+        inset: fullscreen ? 12 : undefined,
+        zIndex: fullscreen ? 1200 : undefined,
         border: '1px solid #4fc1ff',
         borderRadius: 8,
         background: '#0d1117',
-        minHeight: 160,
-        maxHeight: 280,
+        color: '#e6edf3',
+        height: fullscreen ? 'auto' : panelHeight,
+        minHeight: fullscreen ? 0 : 220,
+        maxHeight: fullscreen ? 'none' : 'calc(100vh - 120px)',
         display: 'flex',
         flexDirection: 'column',
         overflow: 'hidden',
+        boxShadow: fullscreen ? '0 24px 80px rgba(0, 0, 0, 0.72)' : undefined,
       }}
     >
       <header
@@ -177,11 +210,34 @@ export function ProjectWorkRunSession({
           gap: 12,
         }}
       >
-        <span>
+        <span
+          style={{ minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis' }}
+        >
           {title || run.work || run.task || 'Agent Work'} · {run.provider}
         </span>
-        <span>
-          {status}
+        <span style={{ display: 'flex', alignItems: 'center', flexShrink: 0 }}>
+          <span>{status}</span>
+          <button
+            type="button"
+            aria-label={
+              fullscreen ? 'Restore session view' : 'Fullscreen session view'
+            }
+            title={fullscreen ? 'Restore session panel' : 'Fill the window'}
+            onClick={() => setFullscreen((value) => !value)}
+            style={{
+              ...mono,
+              width: 28,
+              height: 24,
+              border: 'none',
+              background: 'transparent',
+              color: '#f1f1f1',
+              cursor: 'pointer',
+              marginLeft: 8,
+              fontSize: 16,
+            }}
+          >
+            {fullscreen ? '❐' : '⛶'}
+          </button>
           {onClose ? (
             <button
               type="button"
@@ -194,7 +250,10 @@ export function ProjectWorkRunSession({
                 background: 'transparent',
                 color: '#f1f1f1',
                 cursor: 'pointer',
-                marginLeft: 10,
+                width: 28,
+                height: 24,
+                marginLeft: 2,
+                fontSize: 16,
               }}
             >
               ×
@@ -234,8 +293,9 @@ export function ProjectWorkRunSession({
               marginTop: 8,
             }}
           >
-            Agent run retained · Work is {run.receipt.workPhase}.{' '}
-            {run.receipt.nextActions[0] || 'Inspect the retained evidence.'}
+            Agent session activity retained · Work is {run.receipt.workPhase}.{' '}
+            {run.receipt.nextActions[0] || 'Inspect the retained evidence.'}{' '}
+            Protected Work history still requires an accepted domain receipt.
           </div>
         ) : null}
         {run.error ? (
@@ -328,6 +388,58 @@ export function ProjectWorkRunSession({
             </button>
           ) : null}
         </footer>
+      ) : null}
+      {!fullscreen ? (
+        <div
+          role="separator"
+          tabIndex={0}
+          aria-orientation="horizontal"
+          aria-label="Resize Agent session"
+          title="Drag to resize the Agent session"
+          onKeyDown={(event) => {
+            if (event.key !== 'ArrowUp' && event.key !== 'ArrowDown') return;
+            event.preventDefault();
+            const delta = event.key === 'ArrowUp' ? -24 : 24;
+            const available = Math.max(320, window.innerHeight - 120);
+            setPanelHeight((height) =>
+              Math.min(available, Math.max(220, height + delta)),
+            );
+          }}
+          onPointerDown={(event) => {
+            resizeStart.current = { y: event.clientY, height: panelHeight };
+            event.currentTarget.setPointerCapture(event.pointerId);
+          }}
+          onPointerMove={(event) => {
+            if (!resizeStart.current) return;
+            const available = Math.max(320, window.innerHeight - 120);
+            setPanelHeight(
+              Math.min(
+                available,
+                Math.max(
+                  220,
+                  resizeStart.current.height +
+                    event.clientY -
+                    resizeStart.current.y,
+                ),
+              ),
+            );
+          }}
+          onPointerUp={(event) => {
+            resizeStart.current = null;
+            event.currentTarget.releasePointerCapture(event.pointerId);
+          }}
+          onPointerCancel={() => {
+            resizeStart.current = null;
+          }}
+          style={{
+            height: 10,
+            flexShrink: 0,
+            cursor: 'ns-resize',
+            borderTop: '1px solid #263b4d',
+            background:
+              'linear-gradient(transparent 3px, #6b7d8f 3px, #6b7d8f 5px, transparent 5px)',
+          }}
+        />
       ) : null}
     </aside>
   );

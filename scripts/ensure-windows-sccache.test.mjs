@@ -66,13 +66,28 @@ test('Windows sccache installer verifies pinned bytes and exports auditable bind
     assert.equal(receipt.reused, false);
     assert.equal(receipt.bindings.sourceCommit, 'a'.repeat(40));
     assert.equal(receipt.bindings.cacheDirectory, WINDOWS_SCCACHE_DIR);
+    assert.equal(
+      receipt.bindings.cacheDirectoryResolution,
+      'repository-workspace',
+    );
     assert.match(receipt.root, /^sha256:[0-9a-f]{64}$/u);
     assert.match(receipt.toolRoot, /^sha256:[0-9a-f]{64}$/u);
     const exported = fs.readFileSync(githubEnv, 'utf8');
-    assert.match(
-      exported,
-      new RegExp(`SCCACHE_DIR=${WINDOWS_SCCACHE_DIR}`, 'u'),
+    const exportedEnvironment = Object.fromEntries(
+      exported
+        .trim()
+        .split('\n')
+        .map((line) => {
+          const separator = line.indexOf('=');
+          return [line.slice(0, separator), line.slice(separator + 1)];
+        }),
     );
+    const resolvedCacheDirectory = path.resolve(root, WINDOWS_SCCACHE_DIR);
+    assert.equal(
+      exportedEnvironment.KUNGFU_WINDOWS_ALPHA_SCCACHE_DIR,
+      resolvedCacheDirectory,
+    );
+    assert.equal(exportedEnvironment.SCCACHE_DIR, resolvedCacheDirectory);
     assert.match(
       exported,
       new RegExp(`BUILDCHAIN_COMPILER_CACHE_TOOL_ROOT=${receipt.root}`, 'u'),

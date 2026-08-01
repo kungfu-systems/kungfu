@@ -23,6 +23,7 @@ import {
   summarizeQualifiedCoreUsage,
 } from './qualified-assignment-core-observability.mjs';
 import {
+  REQUIRED_ROWS,
   qualifiedCoreArtifactName,
   qualifiedCorePlatformRowForHost,
   qualifiedCorePlatformRowForIdentity,
@@ -37,14 +38,9 @@ const GITHUB_DOWNLOAD_ATTEMPTS = 3;
 const HTTP_DOWNLOAD_ATTEMPTS = 3;
 const SHA = /^[0-9a-f]{40}$/u;
 const ROOT_HASH = /^sha256:[0-9a-f]{64}$/u;
-const ACTIVE_CONSUMER_ROWS = new Set([
-  'darwin-arm64-cp313',
-  'linux-x86_64-cp313',
-  'windows-x86_64-cp313',
-]);
+const ACTIVE_CONSUMER_ROWS = new Set(REQUIRED_ROWS);
 const TOOL_CACHE_TARGETS = {
   'darwin-arm64': 'macos-aarch64',
-  'darwin-x64': 'macos-x86_64',
   'linux-arm64': 'linux-aarch64',
   'linux-x64': 'linux-x86_64',
   'win32-x64': 'windows-x86_64',

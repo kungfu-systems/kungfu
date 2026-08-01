@@ -983,7 +983,11 @@ function main() {
         else
           fail(
             `fixture ${name}`,
-            `${runner.label} exit ${exitLabel(r.status, r.signal)}; tail: ${tail3(r)}`,
+            `${runner.label} exit ${exitLabel(r.status, r.signal)}; tail: ${outputTail(
+              r.stdout,
+              r.stderr,
+              24,
+            ).slice(0, 2400)}`,
           );
       }
     }

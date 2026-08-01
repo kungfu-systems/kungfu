@@ -37,6 +37,33 @@ function git(args) {
   return result.stdout.trim();
 }
 
+function qualifiedPython() {
+  const result = spawnSync(
+    'uv',
+    [
+      'run',
+      '--project',
+      path.join(root, 'framework/core'),
+      '--frozen',
+      'python',
+      '-c',
+      'import sys; print(sys.executable)',
+    ],
+    {
+      cwd: root,
+      encoding: 'utf8',
+      stdio: ['ignore', 'pipe', 'pipe'],
+    },
+  );
+  if (result.error) throw result.error;
+  if (result.status !== 0) {
+    throw new Error(
+      result.stderr.trim() || 'could not resolve the qualified CPython runtime',
+    );
+  }
+  return result.stdout.trim();
+}
+
 function checkIdentityNeutralAuthority() {
   const read = (relative) => fs.readFileSync(path.join(root, relative), 'utf8');
   const json = (relative) => JSON.parse(read(relative));
@@ -55,6 +82,28 @@ function checkIdentityNeutralAuthority() {
   assert.equal(native.coreCapabilityPolicy.originAuthority, false);
   assert.equal(native.coreCapabilityPolicy.productAssemblyAuthority, false);
   assert.equal(native.coreCapabilityPolicy.kfdAuthority, 'eligibility-only');
+  const coreCapabilityCeiling = new Set(
+    native.coreCapabilityPolicy.allowedCapabilities,
+  );
+  for (const manifestPath of git(['ls-files', 'extensions/**/kungfu.kfx.json'])
+    .split('\n')
+    .filter(Boolean)) {
+    const manifest = json(manifestPath);
+    const config = manifest.kungfuConfig?.config ?? {};
+    for (const facet of ['view', 'adapter', 'service']) {
+      for (const capability of config[facet]?.capabilities ?? []) {
+        assert.equal(
+          coreCapabilityCeiling.has(capability),
+          true,
+          `${manifestPath} ${facet} capability is outside the embedded Core policy ceiling: ${capability}`,
+        );
+      }
+    }
+  }
+  assert.ok(
+    sourceContract.knownCapabilities.includes('projects'),
+    'KFX capability catalog omitted the Projects application service',
+  );
   assert.deepEqual(native.runtimeTiers, [
     'isolated',
     'integrated-explicit',
@@ -265,6 +314,12 @@ run(
     'pytest',
     path.join(root, 'framework/core/tests/python/test_native_kfx_contract.py'),
     path.join(root, 'framework/core/tests/python/test_action_envelope.py'),
+    path.join(
+      root,
+      'framework/core/tests/python/test_event_loop_concurrency.py',
+    ),
+    path.join(root, 'framework/core/tests/python/test_kfx_async_capability.py'),
+    path.join(root, 'framework/core/tests/python/test_kfx_python_service.py'),
   ],
   {
     ...process.env,
@@ -313,6 +368,23 @@ run('KFX type contract', 'pnpm', [
   'run',
   'build',
 ]);
+
+run(
+  'Python KFX standard asyncio service host',
+  'pnpm',
+  [
+    '--filter',
+    '@kungfu-tech/tui',
+    'exec',
+    'tsx',
+    '--test',
+    path.join(root, 'framework/tui/src/service-host-python.test.ts'),
+  ],
+  {
+    ...process.env,
+    KUNGFU_PYTHON_BIN: qualifiedPython(),
+  },
+);
 
 run('schema authority gate', 'node', [
   path.join(root, 'scripts/check-schema-authority.mjs'),

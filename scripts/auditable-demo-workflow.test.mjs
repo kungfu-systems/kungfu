@@ -26,6 +26,10 @@ const WORKFLOW = parse(WORKFLOW_TEXT);
 const RELEASE_WORKFLOW = parse(fs.readFileSync(RELEASE_WORKFLOW_PATH, 'utf8'));
 const AsyncFunction = Object.getPrototypeOf(async () => {}).constructor;
 const SOURCE_SHA = '1'.repeat(40);
+const NATIVE_RENDITION_BUILDCHAIN_SHA =
+  'afd75d295fcd2d55cfebf621f5ca6d05a9904830';
+const NATIVE_RENDITION_RENDERER_IMAGE =
+  'ghcr.io/kungfu-systems/build-images/demo-renderer@sha256:e5ae5002dc0fc267e265dba1068d7476e541dddc9035ccd72cee94dfad872591';
 
 function triggerPlan(overrides = {}) {
   return buildAuditableDemoTriggerPlan({
@@ -260,7 +264,7 @@ test('every produced Linux artifact enters the required exact-output Gate', () =
   );
   assert.equal(
     build.uses,
-    'kungfu-systems/buildchain/.github/workflows/.build.yml@adbcbdef01668890d8de9354bdb6e32a84bb52ad',
+    'kungfu-systems/buildchain/.github/workflows/.build.yml@252900728d55b63f36b5304261dd9c49d738a07a',
     'the build runtime must be the protected Buildchain authority with hosted signing finalization',
   );
   assert.equal(
@@ -326,9 +330,16 @@ test('Gate runtime and renderer are immutable and Passport uses the same runtime
     /^kungfu-systems\/buildchain\/\.github\/workflows\/\.auditable-demo\.yml@([0-9a-f]{40})$/u,
   );
   assert.ok(runtime, 'Gate must use one exact Buildchain commit');
+  assert.equal(runtime[1], NATIVE_RENDITION_BUILDCHAIN_SHA);
   assert.match(
     gate.with['renderer-image'],
     /^ghcr\.io\/kungfu-systems\/build-images\/demo-renderer@sha256:[0-9a-f]{64}$/u,
+  );
+  assert.equal(gate.with['renderer-image'], NATIVE_RENDITION_RENDERER_IMAGE);
+  assert.equal(
+    gate.with['media-profile'],
+    'responsive-web-delivery-v1',
+    'Gate and render must use the declared responsive qualification profile',
   );
   const passportStep = passport.steps.find(
     ({ name }) => name === 'Write exact auditable demo Release Passport',
@@ -357,6 +368,14 @@ test('Gate runtime and renderer are immutable and Passport uses the same runtime
   );
   assert.equal(passportStep.env.BUILDCHAIN_SHA, runtime[1]);
   assert.equal(passportStep.env.RENDERER_IMAGE, gate.with['renderer-image']);
+  assert.equal(
+    passportStep.env.MEDIA_PROFILE,
+    '${{ needs.auditable-demo.outputs.media-profile }}',
+  );
+  assert.equal(
+    passportStep.env.MEDIA_QUALIFICATION_ROOT,
+    '${{ needs.auditable-demo.outputs.media-qualification-root }}',
+  );
   assert.equal(passport.permissions.actions, 'read');
   assert.match(
     expiryStep.with.script,

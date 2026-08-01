@@ -37,6 +37,7 @@ QUERY_SCHEMA = "kungfu.workspace-federation.query/v1"
 QUERY_PROOF_SCHEMA = "kungfu.workspace-federation.query-proof/v1"
 QUERY_VERIFICATION_SCHEMA = "kungfu.workspace-federation.query-verification/v1"
 GLOBAL_WORK_PROJECTION_SCHEMA = "kungfu.workspace-federation.global-work/v1"
+OUTCOME_HISTORY_SCHEMA = "kungfu.workspace-federation.work-design-outcome-history/v1"
 CANONICAL_WORK_SCHEMA = "kungfu.workspace-federation.canonical-work/v1"
 INITIATIVE_GROUP_SCHEMA = "kungfu.workspace-federation.initiative-group/v1"
 CANONICAL_WORK_IDENTITY_SCHEMA = (
@@ -698,6 +699,8 @@ def query_federation(
         "unqualified_retained_assignment_state_count": projection[
             "unqualified_retained_assignment_state_count"
         ],
+        "outcome_history_root": projection["outcome_history"]["history_root"],
+        "outcome_coverage": dict(projection["outcome_history"]["coverage"]),
         "available_component_count": available,
         "degraded_component_count": degraded,
         "unavailable_component_count": unavailable,
@@ -906,6 +909,7 @@ def _compose_global_work(
         for state in component.get("unqualified_retained_assignment_states") or []
         if state.get("state_root")
     }
+    outcome_history = _compose_outcome_history(component_rows, retained_states)
     retained_subjects: dict[str, list[dict[str, Any]]] = {}
     for state in retained_states.values():
         if state.get("settled") is True:
@@ -1161,6 +1165,7 @@ def _compose_global_work(
             unqualified_retained_states[root]
             for root in sorted(unqualified_retained_states)
         ],
+        "outcome_history": outcome_history,
         "visible_work": visible_work,
         "filter": {
             "include_settled": include_settled,
@@ -1185,9 +1190,114 @@ def _compose_global_work(
         "label_collision_count": len(label_collisions),
         "retained_assignment_state_count": len(retained_states),
         "unqualified_retained_assignment_state_count": len(unqualified_retained_states),
+        "complete_outcome_count": outcome_history["coverage"]["complete"],
+        "partial_outcome_count": outcome_history["coverage"]["partial"],
+        "sealed_only_unknown_outcome_count": outcome_history["coverage"][
+            "sealed_only_unknown"
+        ],
         "writes": 0,
     }
     return {**body, "projection_root": semantic_root(body)}
+
+
+def _compose_outcome_history(
+    components: Iterable[Mapping[str, Any]],
+    retained_states: Mapping[str, Mapping[str, Any]],
+) -> dict[str, Any]:
+    """Join only verified component bindings to exact retained state roots."""
+
+    grouped: dict[str, dict[str, dict[str, Any]]] = {}
+    issues: list[dict[str, Any]] = []
+    for component in components:
+        workspace_root = str(
+            (component.get("workspace") or {}).get("identity_root") or ""
+        )
+        for binding in component.get("retained_outcome_bindings") or []:
+            state_root = str(binding.get("settled_state_root") or "")
+            binding_root = str(binding.get("binding_root") or "")
+            if state_root not in retained_states:
+                issues.append(
+                    {
+                        "code": "outcome-binding-state-unavailable",
+                        "workspace_identity_root": workspace_root,
+                        "settled_state_root": state_root,
+                        "binding_root": binding_root,
+                    }
+                )
+                continue
+            state = retained_states[state_root]
+            outcome = binding.get("outcome") or {}
+            if (
+                binding.get("workspace_identity_root")
+                != state.get("workspace_identity_root")
+                or binding.get("state_query_proof_root")
+                != state.get("query_proof_root")
+                or binding.get("assignment_subject") != state.get("assignment_subject")
+                or outcome.get("evidence", {}).get("settledStateRoot") != state_root
+            ):
+                issues.append(
+                    {
+                        "code": "outcome-binding-state-mismatch",
+                        "workspace_identity_root": workspace_root,
+                        "settled_state_root": state_root,
+                        "binding_root": binding_root,
+                    }
+                )
+                continue
+            grouped.setdefault(state_root, {})[binding_root] = dict(binding)
+
+    bindings: list[dict[str, Any]] = []
+    for state_root, candidates in sorted(grouped.items()):
+        outcome_roots = {
+            str((candidate.get("outcome") or {}).get("outcomeRoot") or "")
+            for candidate in candidates.values()
+        }
+        if len(candidates) != 1:
+            issues.append(
+                {
+                    "code": "conflicting-replica-outcome-bindings",
+                    "settled_state_root": state_root,
+                    "binding_roots": sorted(candidates),
+                    "outcome_roots": sorted(outcome_roots),
+                }
+            )
+            continue
+        bindings.append(candidates[sorted(candidates)[0]])
+
+    bound_states = {str(row["settled_state_root"]) for row in bindings}
+    complete = sum(bool(row["outcome"]["coverage"]["complete"]) for row in bindings)
+    partial = len(bindings) - complete
+    settled = {
+        root for root, state in retained_states.items() if state.get("settled") is True
+    }
+    coverage = {
+        "unique_settled_state_count": len(settled),
+        "unique_assignment_count": len(
+            {
+                str(retained_states[root].get("assignment_subject") or "")
+                for root in settled
+            }
+        ),
+        "complete": complete,
+        "partial": partial,
+        "sealed_only_unknown": len(settled - bound_states),
+        "unqualified_state_count": len(
+            {
+                str(state.get("state_root") or semantic_root(state))
+                for component in components
+                for state in component.get("unqualified_retained_assignment_states")
+                or []
+            }
+        ),
+    }
+    body = {
+        "schema": OUTCOME_HISTORY_SCHEMA,
+        "bindings": sorted(bindings, key=lambda row: str(row["settled_state_root"])),
+        "issues": sorted(issues, key=semantic_root),
+        "coverage": coverage,
+        "writes": 0,
+    }
+    return {**body, "history_root": semantic_root(body)}
 
 
 def verify_federation_query(value: Mapping[str, Any]) -> dict[str, Any]:
@@ -1616,6 +1726,27 @@ def _load_component(
         }
     )
     sealed_states = cast(list[dict[str, Any]], sealed_index["states"])
+    outcome_index = (
+        assignment_orchestration.list_outcome_bindings(identity.workspace_root)
+        if identity.workspace_root
+        else {
+            "schema": assignment_orchestration.OUTCOME_INDEX_SCHEMA,
+            "bindings": [],
+            "issues": [],
+            "storage_kind": "none",
+            "writes": [],
+            "index_root": semantic_root(
+                {
+                    "schema": assignment_orchestration.OUTCOME_INDEX_SCHEMA,
+                    "bindings": [],
+                    "issues": [],
+                    "storage_kind": "none",
+                    "writes": [],
+                }
+            ),
+        }
+    )
+    outcome_bindings = cast(list[dict[str, Any]], outcome_index["bindings"])
     runtime_dir = os.path.join(identity.data_home, "runtime")
     if not os.path.isdir(runtime_dir):
         body = {
@@ -1636,12 +1767,14 @@ def _load_component(
             "initiatives": [],
             "assignments": [],
             "relations": [],
-            "problems": list(sealed_index["issues"]),
+            "problems": [*sealed_index["issues"], *outcome_index["issues"]],
             "retained_assignment_states": sealed_states,
             "unqualified_retained_assignment_states": sealed_index[
                 "unqualified_states"
             ],
             "retained_state_index_root": _retained_state_projection_root(sealed_states),
+            "retained_outcome_bindings": outcome_bindings,
+            "outcome_binding_index_root": outcome_index["index_root"],
             "reader_runtime": _reader_runtime_identity(),
             "workspace_runtime": _workspace_runtime_identity(identity),
             "profile_binding": _empty_profile_binding(),
@@ -1769,10 +1902,12 @@ def _load_component(
         "initiatives": projected_initiatives,
         "assignments": projected_assignments,
         "relations": [relations[root] for root in sorted(relations)],
-        "problems": [*problems, *sealed_index["issues"]],
+        "problems": [*problems, *sealed_index["issues"], *outcome_index["issues"]],
         "retained_assignment_states": sealed_states,
         "unqualified_retained_assignment_states": sealed_index["unqualified_states"],
         "retained_state_index_root": _retained_state_projection_root(sealed_states),
+        "retained_outcome_bindings": outcome_bindings,
+        "outcome_binding_index_root": outcome_index["index_root"],
         "reader_runtime": _reader_runtime_identity(),
         "workspace_runtime": _workspace_runtime_identity(identity),
         "profile_binding": profile_binding,
@@ -1935,6 +2070,10 @@ def _bind_component_envelope(component: dict[str, Any]) -> dict[str, Any]:
             component.get("unqualified_retained_assignment_states") or []
         ),
         "retained_state_index_root": component.get("retained_state_index_root") or "",
+        "retained_outcome_binding_count": len(
+            component.get("retained_outcome_bindings") or []
+        ),
+        "outcome_binding_index_root": component.get("outcome_binding_index_root") or "",
         "relation_roots": sorted(
             str(row.get("relation_root") or "")
             for row in component.get("relations") or []
@@ -1964,6 +2103,10 @@ def _component_result_material(component: Mapping[str, Any]) -> dict[str, Any]:
             component.get("unqualified_retained_assignment_states") or []
         ),
         "retained_state_index_root": component.get("retained_state_index_root") or "",
+        "retained_outcome_bindings": list(
+            component.get("retained_outcome_bindings") or []
+        ),
+        "outcome_binding_index_root": component.get("outcome_binding_index_root") or "",
     }
 
 

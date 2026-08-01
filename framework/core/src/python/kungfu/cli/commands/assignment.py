@@ -485,243 +485,28 @@ def _work_start_plan(
     actor,
     allow_foreign_binding,
 ):
-    captured = orchestration.load_captured_request(request_file)
-    projected = orchestration.atlas_assignment_projection(
-        captured,
+    return assignment_review.build_plan(
+        ctx=ctx,
+        request_file=request_file,
+        workspace_root=workspace_root,
+        home=home,
         initiative_id=initiative_id,
         assignment_id=assignment_id,
-    )
-    target = resolve_workspace_target(
-        "capture-only",
-        workspace_root or None,
-        home=home,
-        cwd=os.getcwd(),
-    )
-    selected, selection = run_agent.select_profile(
-        profile_id,
-        config_home=ctx.config_home,
-        runtime_home=ctx.home,
-    )
-    verification = run_agent.runtime_profiles.verify_profile(selected)
-    binding = orchestration.binding_provenance(allow_foreign=allow_foreign_binding)
-    work_control = profile_sdk.validate_source(
-        _profile_source(), str(target.runtime_dir)
-    )["inspection"]
-    current_phase = "captured"
-    if Path(target.runtime_dir).is_dir():
-        try:
-            current_phase = _status(
-                str(target.runtime_dir),
-                projected["initiative_id"],
-                projected["assignment_id"],
-            )["phase"]
-        except (OSError, RuntimeError, ValueError, json.JSONDecodeError):
-            current_phase = "captured"
-    continuing = current_phase == "executing"
-    stable_verification = {
-        "ok": verification["ok"],
-        "available": verification["available"],
-        "version": verification["version"],
-        "error": verification["error"],
-    }
-    effects = (
-        [
-            {
-                "stage": "admit",
-                "label": "Admit the captured Initiative and Assignment into Work Control",
-            },
-            {
-                "stage": "claim",
-                "label": "Mint a two-hour execution lease for the selected Agent",
-            },
-            {
-                "stage": "kickoff",
-                "label": "Enter the executing phase under that exact lease",
-            },
-            {
-                "stage": "run",
-                "label": "Launch one fresh Agent process in this project workspace",
-            },
-            {
-                "stage": "retain",
-                "label": "Retain the Agent Episode and report without claiming completion",
-            },
-        ]
-        if not continuing
-        else [
-            {
-                "stage": "run",
-                "label": "Launch one fresh Agent attempt under the active Work lease",
-            },
-            {
-                "stage": "retain",
-                "label": "Retain the new Agent Episode without repeating admission",
-            },
-        ]
-    )
-    body = {
-        "schema": "kungfu.work-start.plan/v1",
-        "workspace": {
-            "id": target.identity.workspace_id,
-            "root": target.identity.workspace_root,
-            "identityRoot": target.identity.identity_root,
-            "initialized": target.identity.initialized,
-        },
-        "work": {
-            "requestPath": str(Path(request_file).expanduser().resolve()),
-            "requestRoot": projected["request_root"],
-            "initiativeId": projected["initiative_id"],
-            "assignmentId": projected["assignment_id"],
-            "title": projected["title"],
-            "objective": projected["objective"],
-            "acceptanceChecks": list(
-                projected["work_definition"].get("acceptance_criteria") or []
-            ),
-            "phase": current_phase,
-        },
-        "agent": {
-            "id": selected["id"],
-            "label": selected["label"],
-            "provider": selected["provider"],
-            "profileRoot": run_agent.canonical_root(selected),
-            "selection": selection,
-            "verification": stable_verification,
-        },
-        "workControl": {
-            "profileId": work_control["profile"]["id"],
-            "profileRoot": work_control["profile_suite_root"],
-        },
-        "admissionBinding": {
-            "ok": binding["ok"],
-            "state": binding["state"],
-            "override": binding["override"],
-            "provenanceRoot": binding["provenance_root"],
-            "sourceRevision": binding["source_revision"],
-        },
-        "actor": actor,
-        "continuationMode": (
-            "existing-executing-work" if continuing else "first-attempt"
-        ),
-        "effects": effects,
-        "skippedEffects": [
-            "completion-claim",
-            "independent-review",
-            "continuation-decision",
-            "git-init",
-            "git-commit",
-            "git-push",
-            "publish",
-        ],
-        "confirmationRequired": True,
-        "executable": bool(binding["ok"] and stable_verification["ok"]),
-        "writeOccurred": False,
-    }
-    return {**body, "planRoot": orchestration.semantic_root(body)}
-
-
-def _project_work_prompt(plan):
-    work = plan["work"]
-    checks = "\n".join(f"- {value}" for value in work["acceptanceChecks"])
-    return (
-        "Work on the admitted Kungfu Assignment in this project.\n\n"
-        "Kungfu checked native authority immediately before this process launch. "
-        "The admitted WorkRef in your context envelope is the exact executing "
-        "status cut for this run; use it to satisfy the Work-state check and do "
-        "not locate or invoke another Kungfu executable.\n\n"
-        "Read AGENTS.md when present, then inspect the project files relevant to "
-        "the objective before editing. Follow project-local instructions and use "
-        "only supported facts. Do not edit .kungfu, initialize Git, commit, push, "
-        "publish, or claim that Work is complete.\n\n"
-        f"Objective:\n{work['objective']}\n\n"
-        f"Acceptance checks:\n{checks}\n\n"
-        "When the file is ready, report what changed, the source file behind each "
-        "claim, every acceptance check you verified, and any unresolved question. "
-        "Kungfu will retain this run as evidence; independent assessment remains "
-        "required."
+        profile_id=profile_id,
+        actor=actor,
+        allow_foreign_binding=allow_foreign_binding,
+        profile_source=_profile_source,
+        status_reader=_status,
     )
 
 
-def _work_start_receipt(body):
-    return {**body, "receiptRoot": orchestration.semantic_root(body)}
-
-
-def _native_write_receipt_root(payload):
-    receipt = payload.get("receipt") if isinstance(payload, dict) else None
-    if not isinstance(receipt, dict):
-        return None
-    value = receipt.get("payload_hash")
-    return value if isinstance(value, str) and value else None
-
-
-def _admission_summary(admission, status):
-    initiative = admission.get("initiative_receipt") or {}
-    assignment = admission.get("assignment_receipt") or {}
-    workspace = admission["workspace"]
-    return {
-        "schema": "kungfu.work-start.authority-effect/v1",
-        "stage": "admit",
-        "phase": admission["phase"],
-        "requestRoot": admission["request_root"],
-        "initiativeReceiptRoot": _native_write_receipt_root(initiative),
-        "assignmentReceiptRoot": _native_write_receipt_root(assignment),
-        "queryProofRoot": status["query_proof_root"],
-        "workspaceId": workspace["workspace_id"],
-        "workspaceIdentityRoot": workspace["identity_root"],
-        "binding": {
-            "state": admission["binding"]["state"],
-            "provenanceRoot": admission["binding"]["provenance_root"],
-            "override": admission["binding"]["override"],
-        },
-    }
-
-
-def _claim_summary(claim_receipt, status):
-    claim = claim_receipt["claim"]
-    return {
-        "schema": "kungfu.work-start.authority-effect/v1",
-        "stage": "claim",
-        "claimId": claim["claim_id"],
-        "leaseId": claim["lease_id"],
-        "leaseExpiresAt": claim["lease_expires_at"],
-        "agent": claim["agent"],
-        "receiptRoot": _native_write_receipt_root(claim_receipt),
-        "queryProofRoot": status["query_proof_root"],
-    }
-
-
-def _kickoff_summary(kickoff_receipt):
-    transition = kickoff_receipt["transition"]
-    status = kickoff_receipt["status"]
-    return {
-        "schema": "kungfu.work-start.authority-effect/v1",
-        "stage": "kickoff",
-        "transitionId": transition["claim_id"],
-        "leaseId": transition["lease_id"],
-        "fromPhase": transition["from_phase"],
-        "toPhase": transition["to_phase"],
-        "receiptRoot": _native_write_receipt_root(kickoff_receipt),
-        "queryProofRoot": status["query_proof_root"],
-    }
-
-
-def _agent_report_summary(agent_report):
-    observation = agent_report.get("providerObservation") or {}
-    return {
-        "schema": "kungfu.work-start.agent-report-ref/v1",
-        "runId": agent_report["runId"],
-        "reportRoot": agent_report["reportRoot"],
-        "runtimeProfile": agent_report["runtimeProfile"],
-        "launch": {
-            "exitCode": agent_report["launch"]["exitCode"],
-            "interrupted": agent_report["launch"]["interrupted"],
-            "timedOut": agent_report["launch"]["timedOut"],
-            "wallTimeNs": agent_report["launch"]["wallTimeNs"],
-        },
-        "providerSessionIds": list(observation.get("providerSessionIds") or []),
-        "work": agent_report["work"],
-        "episode": agent_report["episode"],
-        "session": agent_report.get("session"),
-    }
+_work_start_phase_plan = assignment_review.phase_plan
+_project_work_prompt = assignment_review.project_prompt
+_work_start_receipt = assignment_review.receipt
+_admission_summary = assignment_review.admission_summary
+_claim_summary = assignment_review.claim_summary
+_kickoff_summary = assignment_review.kickoff_summary
+_agent_report_summary = assignment_review.agent_report_summary
 
 
 @assignment.command(
@@ -880,10 +665,11 @@ def start_work(
                     "status": "not-executable",
                     "planRoot": plan["planRoot"],
                     "failedAt": stage,
-                    "message": "Agent or native admission binding did not verify",
-                    "workPhase": "captured",
+                    "message": plan["blockedReason"]
+                    or "Agent or native admission binding did not verify",
+                    "workPhase": plan["work"]["phase"],
                     "nextActions": [
-                        "repair-agent-runtime-or-build-binding",
+                        "inspect-current-work-status",
                         "preview-work-start-again",
                     ],
                     "writeOccurred": False,
@@ -897,7 +683,8 @@ def start_work(
                 "Exact Work start plan verified.",
                 plan["planRoot"],
             )
-            if plan["continuationMode"] == "existing-executing-work":
+            continuation_mode = plan["continuationMode"]
+            if continuation_mode != "first-attempt":
                 stage = "resume"
                 target = resolve_workspace_target(
                     "read-only",
@@ -921,7 +708,7 @@ def start_work(
                 event(
                     stage,
                     "completed",
-                    "Reusing the admitted Work and its active execution lease.",
+                    f"Resuming Work from its {last_status['phase']} phase.",
                     last_status["query_proof_root"],
                 )
             else:
@@ -957,6 +744,10 @@ def start_work(
                     last_status["query_proof_root"],
                 )
 
+            if continuation_mode in {
+                "first-attempt",
+                "existing-admitted-work",
+            }:
                 stage = "claim"
                 event(stage, "started", "Minting a bounded Agent execution lease.")
                 lease_id = f"work-start-{uuid.uuid4().hex}"
@@ -983,6 +774,7 @@ def start_work(
                     },
                     actor,
                 )
+                write_occurred = True
                 last_status = _status(
                     runtime_dir,
                     plan["work"]["initiativeId"],
@@ -996,6 +788,11 @@ def start_work(
                     last_status["query_proof_root"],
                 )
 
+            if continuation_mode in {
+                "first-attempt",
+                "existing-admitted-work",
+                "existing-claimed-work",
+            }:
                 stage = "kickoff"
                 event(stage, "started", "Entering the executing phase.")
                 kickoff_receipt = _advance(
@@ -1007,6 +804,7 @@ def start_work(
                     actor,
                     "Start the user-selected verified Agent for this Assignment",
                 )
+                write_occurred = True
                 last_status = kickoff_receipt["status"]
                 receipts["kickoff"] = _kickoff_summary(kickoff_receipt)
             run_gate = orchestration.gate(last_status, "run")
@@ -1165,6 +963,121 @@ def start_work(
 
 def _content_root(path):
     return f"sha256:{hashlib.sha256(path.read_bytes()).hexdigest()}"
+
+
+_REVIEW_EVIDENCE_SUFFIXES = {
+    ".csv",
+    ".json",
+    ".md",
+    ".rst",
+    ".toml",
+    ".txt",
+    ".yaml",
+    ".yml",
+}
+_REVIEW_EVIDENCE_EXCLUDED_DIRECTORIES = {
+    ".git",
+    ".kungfu",
+    ".venv",
+    "build",
+    "dist",
+    "node_modules",
+    "target",
+}
+_REVIEW_EVIDENCE_FILE_LIMIT = 24
+_REVIEW_EVIDENCE_BYTES_LIMIT = 1024 * 1024
+
+
+def _project_review_evidence(workspace, report_path, work_definition):
+    workspace = Path(workspace).resolve()
+    explicit = work_definition.get("evidence_paths") or []
+    if not isinstance(explicit, list) or any(
+        not isinstance(value, str) or not value.strip() for value in explicit
+    ):
+        raise ValueError("Assignment evidence_paths must be an array of paths")
+    candidates = []
+    if explicit:
+        for value in explicit:
+            candidate = (workspace / value).resolve()
+            if workspace not in candidate.parents or not candidate.is_file():
+                raise ValueError(f"Assignment evidence path is unavailable: {value}")
+            candidates.append(candidate)
+    else:
+        for root, directories, filenames in os.walk(workspace):
+            directories[:] = sorted(
+                directory
+                for directory in directories
+                if directory not in _REVIEW_EVIDENCE_EXCLUDED_DIRECTORIES
+                and not directory.startswith(".")
+            )
+            for filename in sorted(filenames):
+                candidate = Path(root) / filename
+                if candidate.suffix.lower() not in _REVIEW_EVIDENCE_SUFFIXES:
+                    continue
+                try:
+                    size = candidate.stat().st_size
+                except OSError:
+                    continue
+                if size <= _REVIEW_EVIDENCE_BYTES_LIMIT:
+                    candidates.append(candidate.resolve())
+
+    def priority(candidate):
+        relative = candidate.relative_to(workspace)
+        parts = relative.parts
+        return (
+            0
+            if parts and parts[0] == "deliverables"
+            else 1
+            if relative.as_posix() == "WORK.md"
+            else 2
+            if relative.as_posix() == "README.md"
+            else 3
+            if parts and parts[0] == "inputs"
+            else 4,
+            relative.as_posix(),
+        )
+
+    selected: list[Path] = []
+    total_bytes = 0
+    for candidate in sorted(set(candidates), key=priority):
+        size = candidate.stat().st_size
+        if len(selected) >= _REVIEW_EVIDENCE_FILE_LIMIT:
+            break
+        if total_bytes + size > _REVIEW_EVIDENCE_BYTES_LIMIT:
+            continue
+        selected.append(candidate)
+        total_bytes += size
+    if selected:
+        primary, *supporting = selected
+        return {
+            "mode": "project-files",
+            "primary": {
+                "path": primary.relative_to(workspace).as_posix(),
+                "root": _content_root(primary),
+                "content": primary.read_text(encoding="utf-8"),
+            },
+            "supporting": [
+                {
+                    "path": candidate.relative_to(workspace).as_posix(),
+                    "root": _content_root(candidate),
+                }
+                for candidate in supporting
+            ],
+        }
+    report_path = Path(report_path).resolve()
+    try:
+        display_path = report_path.relative_to(workspace).as_posix()
+    except ValueError:
+        display_path = str(report_path)
+    return {
+        "mode": "execution-report",
+        "primary": {
+            "path": display_path,
+            "root": _content_root(report_path),
+            "content": report_path.read_text(encoding="utf-8"),
+        },
+        "supporting": [],
+    }
 
 
 def _load_execution_agent_report(
@@ -1382,6 +1295,14 @@ def start_resume(
     )
 
 
+def _reviewer_read_only_safe(reviewer):
+    return reviewer.get("provider") == "codex" or (
+        reviewer.get("provider") == "synthetic"
+        and reviewer.get("id") == "kungfu.mock-agent.review-fit"
+        and reviewer.get("source") == "qualification"
+    )
+
+
 def _work_review_plan(
     *,
     ctx,
@@ -1418,23 +1339,13 @@ def _work_review_plan(
     verification = run_agent.runtime_profiles.verify_profile(reviewer)
     binding = orchestration.binding_provenance(allow_foreign=allow_foreign_binding)
     workspace = Path(identity.workspace_root or "").resolve()
-    deliverable = workspace / "deliverables" / "launch-brief.md"
-    if not deliverable.is_file():
-        raise ValueError("Starter deliverable is missing: deliverables/launch-brief.md")
-    inputs_root = workspace / "inputs"
-    inputs = [
-        {
-            "path": str(path.relative_to(workspace)),
-            "root": _content_root(path),
-        }
-        for path in sorted(inputs_root.glob("*.md"))
-        if path.is_file()
-    ]
-    if not inputs:
-        raise ValueError("Starter review requires the retained input files")
-    acceptance_checks = list(
-        status_value["assignment"]["work_definition"].get("acceptance_criteria") or []
+    work_definition = status_value["assignment"]["work_definition"]
+    evidence = _project_review_evidence(
+        workspace,
+        report_path,
+        work_definition,
     )
+    acceptance_checks = list(work_definition.get("acceptance_criteria") or [])
     if not acceptance_checks:
         raise ValueError("Assignment has no acceptance criteria to review")
     stable_verification = {
@@ -1443,7 +1354,7 @@ def _work_review_plan(
         "version": verification["version"],
         "error": verification["error"],
     }
-    reviewer_safe = reviewer.get("provider") == "codex"
+    reviewer_safe = _reviewer_read_only_safe(reviewer)
     body = {
         "schema": "kungfu.work-review.plan/v1",
         "workspace": {
@@ -1460,12 +1371,9 @@ def _work_review_plan(
             "workDefinitionRoot": status_value["assignment"]["work_definition_root"],
             "acceptanceChecks": acceptance_checks,
         },
-        "deliverable": {
-            "path": "deliverables/launch-brief.md",
-            "root": _content_root(deliverable),
-            "content": deliverable.read_text(encoding="utf-8"),
-        },
-        "inputs": inputs,
+        "deliverable": evidence["primary"],
+        "inputs": evidence["supporting"],
+        "evidenceMode": evidence["mode"],
         "execution": {
             "reportPath": str(report_path),
             "reportRoot": execution_report["reportRoot"],
@@ -1599,6 +1507,9 @@ def _find_retained_reviewer_evidence(runtime_dir, plan):
             launch = report["launch"]
             privacy = report["privacy"]
             argv = list(launch.get("argvWithoutPrompt") or [])
+            read_only_launch = launch.get("permissionMode") == "read-only" or (
+                "--sandbox" in argv and "read-only" in argv
+            )
             if (
                 work_ref.get("workspaceId") != plan["workspace"]["id"]
                 or work_ref.get("profileId") != "kungfu.work-control"
@@ -1610,8 +1521,7 @@ def _find_retained_reviewer_evidence(runtime_dir, plan):
                 or runtime_profile.get("root") != plan["reviewer"]["profileRoot"]
                 or launch.get("cwd") != plan["workspace"]["root"]
                 or launch.get("promptRoot") != expected_prompt_root
-                or "--sandbox" not in argv
-                or "read-only" not in argv
+                or not read_only_launch
                 or privacy.get("priorTranscriptBytesGivenToAgent") != 0
                 or privacy.get("privateProviderSessionStoreRead") is not False
             ):

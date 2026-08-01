@@ -279,6 +279,7 @@ qualified. `docs.contract.json` owns the directory taxonomy, stable entry
 files, publication topology, and executable examples;
 [`document-metadata.contract.json`](document-metadata.contract.json) owns
 metadata routing and ADR projections;
+the registry set rooted at
 [`document-metadata.registry.json`](document-metadata.registry.json) keeps
 public entry and guide metadata out of rendered pages, while
 [`vocabulary.registry.json`](vocabulary.registry.json) owns executable language

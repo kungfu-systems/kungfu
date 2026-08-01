@@ -101,16 +101,13 @@ import {
 } from './terminal-host';
 import { executeWorkLoopCli } from './work-loop-cli';
 import {
-  DESKTOP_PRESENTATION_ENV_KEYS,
-  DESKTOP_WORKSPACE_ENV_KEYS,
   applyDesktopProjectPresentationIntent,
   applyDesktopWorkspaceEnvironment,
   clearDesktopWorkspaceEnvForRelaunch,
   defaultHomeDesktopWorkspace,
-  desktopWorkspaceEnvironment,
-  desktopWorkspaceTransitionMode,
   inspectDesktopContinuation,
   listRecentDesktopWorkspaces,
+  prepareDesktopWorkspaceEnvironmentForRelaunch,
   resolveLastDesktopWorkspace,
 } from './workspace-selection';
 
@@ -149,6 +146,14 @@ function defaultConfigHome(): string {
     process.env.KF_CONFIG_HOME ||
       path.join(app.getPath('home'), '.kungfu-config'),
   );
+}
+
+if (!app.isPackaged && process.env.KUNGFU_GUI_DEV_USER_DATA) {
+  const developmentUserData = resolveHomePath(
+    process.env.KUNGFU_GUI_DEV_USER_DATA,
+  );
+  mkdirSync(developmentUserData, { recursive: true });
+  app.setPath('userData', developmentUserData);
 }
 
 const desktopWorkspaceIsRegistryManaged =
@@ -303,6 +308,7 @@ process.env.KUNGFU_KFX_CONTRACT =
 const bundledExtensionRoot = app.isPackaged
   ? path.join(process.resourcesPath, 'extensions')
   : bundledExtensionSourceRoot;
+process.env.KF_BUNDLED_EXTENSION_ROOT = bundledExtensionRoot;
 process.env.KF_EXTENSION_PATH =
   app.isPackaged && process.env.KF_EXTENSION_PATH
     ? [bundledExtensionRoot, process.env.KF_EXTENSION_PATH].join(path.delimiter)
@@ -878,7 +884,7 @@ function workspaceSnapshot() {
   };
 }
 
-async function relaunchWithWorkspaceSelection(
+function relaunchWithWorkspaceSelection(
   args: string[],
   projectPresentationPath: string | null = null,
 ) {
@@ -888,39 +894,34 @@ async function relaunchWithWorkspaceSelection(
   });
   const selected = JSON.parse(out.toString());
   applyDesktopProjectPresentationIntent(process.env, projectPresentationPath);
-  const transition = desktopWorkspaceTransitionMode({
-    isPackaged: app.isPackaged,
-    rendererUrl: process.env.ELECTRON_RENDERER_URL || '',
-    shellWindowAvailable: Boolean(shellWindow && !shellWindow.isDestroyed()),
-  });
-  if (transition === 'renderer-reload' && shellWindow) {
-    const workspace = resolveLastDesktopWorkspace(defaultConfigHome());
-    if (!workspace) {
-      throw new Error('selected project workspace could not be resolved');
-    }
-    applyDesktopWorkspaceEnvironment(process.env, workspace);
-    const rendererEnv = {
-      ...desktopWorkspaceEnvironment(workspace),
-      ...Object.fromEntries(
-        DESKTOP_PRESENTATION_ENV_KEYS.flatMap((key) =>
-          process.env[key] === undefined ? [] : [[key, process.env[key]]],
-        ),
-      ),
+  const workspace = resolveLastDesktopWorkspace(defaultConfigHome());
+  if (!workspace) {
+    throw new Error('selected project workspace could not be resolved');
+  }
+  const developmentRestartExitCode = Number.parseInt(
+    process.env.KUNGFU_GUI_DEV_RESTART_EXIT_CODE || '',
+    10,
+  );
+  if (
+    !app.isPackaged &&
+    process.env.KUNGFU_GUI_DEV_SUPERVISOR === '1' &&
+    Number.isInteger(developmentRestartExitCode)
+  ) {
+    setImmediate(() => {
+      appQuitting = true;
+      app.exit(developmentRestartExitCode);
+    });
+    return {
+      ok: true,
+      selected,
+      transition: 'development-supervisor-restart',
     };
-    const script = [
-      `for (const key of ${JSON.stringify([
-        ...DESKTOP_WORKSPACE_ENV_KEYS,
-        ...DESKTOP_PRESENTATION_ENV_KEYS,
-      ])}) delete window.process.env[key];`,
-      `Object.assign(window.process.env, ${JSON.stringify(rendererEnv)});`,
-    ].join('\n');
-    await shellWindow.webContents.executeJavaScript(script);
-    shellWindow.webContents.reload();
-    return { ok: true, selected, transition: 'renderer-reload' };
   }
-  if (desktopWorkspaceIsRegistryManaged) {
-    clearDesktopWorkspaceEnvForRelaunch(process.env);
-  }
+  prepareDesktopWorkspaceEnvironmentForRelaunch(
+    process.env,
+    workspace,
+    desktopWorkspaceIsRegistryManaged,
+  );
   setImmediate(() => {
     app.relaunch();
     // This app normally hides its only window instead of closing it. Mark the
@@ -928,7 +929,7 @@ async function relaunchWithWorkspaceSelection(
     // windowless tray process and prevent the replacement window from opening.
     quitGui();
   });
-  return { ok: true, selected };
+  return { ok: true, selected, transition: 'application-relaunch' };
 }
 
 ipcMain.handle(WORKSPACE_GET_CHANNEL, () => workspaceSnapshot());
@@ -1197,6 +1198,29 @@ function createWindow() {
     },
   });
   shellWindow = win;
+
+  if (!app.isPackaged) {
+    win.webContents.on('console-message', (details) =>
+      console.log(
+        `KF_GUI_RENDERER_CONSOLE level=${details.level} source=${details.sourceId}:${details.lineNumber} ${details.message}`,
+      ),
+    );
+    win.webContents.on(
+      'did-fail-load',
+      (_event, code, description, url, isMainFrame) => {
+        if (isMainFrame) {
+          console.error(
+            `KF_GUI_RENDERER_LOAD_FAIL code=${code} url=${url} ${description}`,
+          );
+        }
+      },
+    );
+    win.webContents.on('render-process-gone', (_event, details) => {
+      console.error(
+        `KF_GUI_RENDERER_GONE reason=${details.reason} exitCode=${details.exitCode}`,
+      );
+    });
+  }
 
   win.on('maximize', () => publishWindowChromeState(win));
   win.on('unmaximize', () => publishWindowChromeState(win));

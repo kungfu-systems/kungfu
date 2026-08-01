@@ -59,6 +59,71 @@ export function nsisUninstallArgs() {
   return ['/S'];
 }
 
+export function windowsProcessesUnderRoot(target) {
+  const script = [
+    '$root = [IO.Path]::GetFullPath($env:KF_QUALIFICATION_INSTALL_ROOT)',
+    '$matches = @(Get-CimInstance -ClassName Win32_Process | Where-Object {',
+    '  $_.ExecutablePath -and $_.ExecutablePath.StartsWith($root, [StringComparison]::OrdinalIgnoreCase)',
+    '} | Select-Object ProcessId, Name, ExecutablePath)',
+    '$matches | ConvertTo-Json -Compress',
+  ].join('\n');
+  const result = spawnSync(
+    'powershell.exe',
+    ['-NoProfile', '-NonInteractive', '-Command', script],
+    {
+      encoding: 'utf8',
+      windowsHide: true,
+      env: { ...process.env, KF_QUALIFICATION_INSTALL_ROOT: target },
+    },
+  );
+  if (result.status !== 0)
+    return [
+      {
+        diagnostic_error: (
+          result.stderr ||
+          result.error?.message ||
+          'PowerShell failed'
+        ).trim(),
+      },
+    ];
+  try {
+    const parsed = JSON.parse(result.stdout || '[]');
+    return Array.isArray(parsed) ? parsed : parsed ? [parsed] : [];
+  } catch (error) {
+    return [
+      {
+        diagnostic_error: `invalid PowerShell JSON: ${
+          error instanceof Error ? error.message : String(error)
+        }`,
+      },
+    ];
+  }
+}
+
+export async function waitForWindowsProcessesUnderRootExit(
+  target,
+  {
+    platform = process.platform,
+    timeoutMs = 60_000,
+    pollIntervalMs = 100,
+    processesUnderRoot = windowsProcessesUnderRoot,
+  } = {},
+) {
+  if (platform !== 'win32') return;
+  const deadline = Date.now() + timeoutMs;
+  while (true) {
+    const processes = processesUnderRoot(target);
+    if (processes.length === 0) return;
+    if (Date.now() >= deadline)
+      fail(
+        `timed out waiting for installed Windows processes to exit under ${target}; processes=${JSON.stringify(
+          processes,
+        )}`,
+      );
+    await new Promise((resolve) => setTimeout(resolve, pollIntervalMs));
+  }
+}
+
 export function pathRemovalDiagnostics(
   target,
   { platform = process.platform } = {},
@@ -90,51 +155,7 @@ export function pathRemovalDiagnostics(
     ];
   }
   if (platform !== 'win32') return diagnostics;
-
-  const script = [
-    '$root = [IO.Path]::GetFullPath($env:KF_QUALIFICATION_INSTALL_ROOT)',
-    '$matches = @(Get-CimInstance -ClassName Win32_Process | Where-Object {',
-    '  $_.ExecutablePath -and $_.ExecutablePath.StartsWith($root, [StringComparison]::OrdinalIgnoreCase)',
-    '} | Select-Object ProcessId, Name, ExecutablePath)',
-    '$matches | ConvertTo-Json -Compress',
-  ].join('\n');
-  const result = spawnSync(
-    'powershell.exe',
-    ['-NoProfile', '-NonInteractive', '-Command', script],
-    {
-      encoding: 'utf8',
-      windowsHide: true,
-      env: { ...process.env, KF_QUALIFICATION_INSTALL_ROOT: target },
-    },
-  );
-  if (result.status !== 0) {
-    diagnostics.processes_under_root = [
-      {
-        diagnostic_error: (
-          result.stderr ||
-          result.error?.message ||
-          'PowerShell failed'
-        ).trim(),
-      },
-    ];
-    return diagnostics;
-  }
-  try {
-    const parsed = JSON.parse(result.stdout || '[]');
-    diagnostics.processes_under_root = Array.isArray(parsed)
-      ? parsed
-      : parsed
-        ? [parsed]
-        : [];
-  } catch (error) {
-    diagnostics.processes_under_root = [
-      {
-        diagnostic_error: `invalid PowerShell JSON: ${
-          error instanceof Error ? error.message : String(error)
-        }`,
-      },
-    ];
-  }
+  diagnostics.processes_under_root = windowsProcessesUnderRoot(target);
   return diagnostics;
 }
 
@@ -236,6 +257,11 @@ export function installDesktopArtifact(installer, tempRoot) {
             entry.isFile() && /uninstall.*\.exe$/i.test(path.basename(target)),
           'NSIS uninstaller',
         );
+        // A bounded GUI startup can leave a short-lived packaged runtime child
+        // after Electron's main process exits. Starting NSIS before that child
+        // releases its DLLs makes the one-shot uninstaller skip those files
+        // permanently, even though no process remains by the final timeout.
+        await waitForWindowsProcessesUnderRootExit(installRoot);
         run(uninstaller, nsisUninstallArgs());
         await waitForPathRemoval(installRoot);
         return;

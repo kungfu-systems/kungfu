@@ -8,7 +8,7 @@ from click.testing import CliRunner
 
 from kungfu import assignment_orchestration as orchestration
 from kungfu.agent import run_agent
-from kungfu.cli.commands import kfc, run
+from kungfu.cli.commands import assignment, kfc, run
 from kungfu.workspace import resolve_workspace_target
 
 
@@ -30,6 +30,33 @@ def _capture(project: Path, assignment_id: str):
         },
     }
     return orchestration.capture_assignment_request(request, target)
+
+
+def test_agent_activity_history_projection_keeps_process_success_outside_work():
+    work = {
+        "schema": "kungfu.work-ref/v1",
+        "workspaceId": "project:history-fixture",
+        "profileId": "work-control",
+        "profileRoot": "sha256:" + "a" * 64,
+        "entityType": "assignment",
+        "entityId": "history-fixture",
+        "entityRoot": "sha256:" + "b" * 64,
+        "purpose": "qualify exact history continuity",
+        "systemTimeCut": "2026-08-01T00:00:00Z",
+    }
+
+    projection = run_agent.agent_activity_history_projection(
+        work, entrypoint="native-agent-ui"
+    )
+
+    assert projection["schema"] == "kungfu.work-agent-history.projection/v1"
+    assert projection["state"] == "session-activity-only"
+    assert projection["entrypoint"] == "native-agent-ui"
+    assert projection["workRefRoot"] == run_agent.canonical_root(work)
+    assert projection["semanticAdmissionReceiptRoot"] is None
+    assert projection["processExitSettlesWork"] is False
+    assert projection["selfReportSettlesWork"] is False
+    assert projection["nextAction"] == "independent-assessment-required"
 
 
 def test_next_work_selects_the_only_captured_assignment(tmp_path):
@@ -72,6 +99,154 @@ def test_explicit_work_selector_can_start_a_fresh_attempt_while_work_executes(
     assert selected["phase"] == "executing"
     with pytest.raises(ValueError, match="no Work can start"):
         run._choose_work(str(project))
+
+
+def test_explicit_settled_work_reaches_the_fail_closed_start_plan(
+    tmp_path, monkeypatch
+):
+    project = tmp_path / "project"
+    project.mkdir()
+    _capture(project, "first")
+    monkeypatch.setattr(run, "_work_phase", lambda *_args: "continuation-decided")
+
+    selected = run._choose_work(str(project), work_selector="first")
+
+    assert selected["assignmentId"] == "first"
+    assert selected["phase"] == "continuation-decided"
+    with pytest.raises(ValueError, match="no Work can start"):
+        run._choose_work(str(project))
+
+
+@pytest.mark.parametrize(
+    ("phase", "mode", "stages"),
+    [
+        ("captured", "first-attempt", ["admit", "claim", "kickoff", "run", "retain"]),
+        ("admitted", "existing-admitted-work", ["claim", "kickoff", "run", "retain"]),
+        ("claimed", "existing-claimed-work", ["kickoff", "run", "retain"]),
+        ("executing", "existing-executing-work", ["run", "retain"]),
+    ],
+)
+def test_work_start_phase_plan_only_uses_legal_forward_transitions(phase, mode, stages):
+    actual_mode, effects, blocked_reason = assignment._work_start_phase_plan(phase)
+
+    assert actual_mode == mode
+    assert [effect["stage"] for effect in effects] == stages
+    assert blocked_reason is None
+
+
+@pytest.mark.parametrize(
+    "phase",
+    [
+        "stage-ready",
+        "completion-claimed",
+        "independently-reviewed",
+        "continuation-decided",
+    ],
+)
+def test_work_start_phase_plan_rejects_settled_or_review_work(phase):
+    mode, effects, blocked_reason = assignment._work_start_phase_plan(phase)
+
+    assert mode is None
+    assert effects == []
+    assert phase in blocked_reason
+
+
+def test_resumed_authority_writes_remain_visible_when_run_gate_fails(
+    tmp_path, monkeypatch
+):
+    request = tmp_path / "request.json"
+    request.write_text("{}\n", encoding="utf-8")
+    plan = {
+        "planRoot": "sha256:" + "1" * 64,
+        "executable": True,
+        "blockedReason": None,
+        "continuationMode": "existing-admitted-work",
+        "workspace": {"id": "workspace:test", "root": str(tmp_path)},
+        "work": {
+            "initiativeId": "project-work",
+            "assignmentId": "first",
+            "phase": "admitted",
+        },
+        "agent": {
+            "id": "kungfu.mock-agent",
+            "label": "Mock Agent",
+            "provider": "synthetic",
+        },
+        "workControl": {
+            "profileId": "kungfu.work-control",
+            "profileRoot": "sha256:" + "2" * 64,
+        },
+    }
+    statuses = iter(
+        [
+            {"phase": "admitted", "query_proof_root": "sha256:" + "3" * 64},
+            {"phase": "claimed", "query_proof_root": "sha256:" + "4" * 64},
+        ]
+    )
+    monkeypatch.setattr(assignment, "_work_start_plan", lambda **_kwargs: plan)
+    monkeypatch.setattr(
+        assignment,
+        "resolve_workspace_target",
+        lambda *_args, **_kwargs: SimpleNamespace(runtime_dir=tmp_path / "runtime"),
+    )
+    monkeypatch.setattr(assignment, "_status", lambda *_args: next(statuses))
+    monkeypatch.setattr(
+        assignment,
+        "_profile_action",
+        lambda *_args: {
+            "claim": {
+                "claim_id": "claim-1",
+                "lease_id": "lease-1",
+                "lease_expires_at": "2026-08-01T02:00:00Z",
+                "agent": "kungfu.mock-agent",
+            },
+            "receipt": {"payload_hash": "sha256:" + "5" * 64},
+        },
+    )
+    monkeypatch.setattr(
+        assignment,
+        "_advance",
+        lambda *_args: {
+            "transition": {
+                "claim_id": "transition-1",
+                "lease_id": "lease-1",
+                "from_phase": "claimed",
+                "to_phase": "executing",
+            },
+            "status": {
+                "phase": "executing",
+                "query_proof_root": "sha256:" + "6" * 64,
+            },
+            "receipt": {"payload_hash": "sha256:" + "7" * 64},
+        },
+    )
+    monkeypatch.setattr(
+        assignment.orchestration,
+        "gate",
+        lambda *_args: {"ok": False, "reason": "test run gate failure"},
+    )
+
+    result = assignment.start_work.callback.__wrapped__(
+        SimpleNamespace(config_home=str(tmp_path), home=str(tmp_path)),
+        request,
+        str(tmp_path),
+        False,
+        "project-work",
+        "first",
+        "kungfu.mock-agent",
+        "local-user",
+        plan["planRoot"],
+        True,
+        False,
+        False,
+        False,
+    )
+
+    assert result["ok"] is False
+    assert result["failedAt"] == "kickoff"
+    assert result["workPhase"] == "executing"
+    assert result["writeOccurred"] is True
+    assert set(result["authorityReceipts"]) == {"claim", "kickoff"}
 
 
 def test_task_capture_creates_a_bounded_assignment_not_runtime(tmp_path):
@@ -695,5 +870,15 @@ def test_mock_profile_probes_the_deterministic_provider_version():
     verification = run_agent.runtime_profiles.verify_profile(profile)
 
     assert verification["ok"] is True
-    assert verification["version"] == "1.0.0"
+    assert verification["version"] == "1.1.0"
     assert verification["argv"][-3:] == ["--scenario", "approval", "--version"]
+
+
+def test_synthetic_provider_retains_its_explicit_qualification_result():
+    output = (
+        'MOCK WORKING: read retained evidence\nKUNGFU_REVIEW_RESULT {"verdict":"fit"}\n'
+    )
+
+    parsed = run_agent.parse_provider_output("synthetic", output)
+
+    assert parsed["text"] == output.strip()

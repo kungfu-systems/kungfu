@@ -69,7 +69,7 @@
             "product-stable",
             "product-binaries"
           ],
-          "sourceRoot": "sha256:b99fbeb61e0d99e8116c48078e099867cbb80794331e387f16ace2fd02cf7ff6"
+          "sourceRoot": "sha256:5fb26894efc3f581fbae8b7d7bc9518ea1b414529044b01ee7316be47708d194"
         },
         {
           "path": ".github/workflows/affected-native-pr.yml",
@@ -80,7 +80,7 @@
             "product-stable",
             "product-binaries"
           ],
-          "sourceRoot": "sha256:ca478b9378664bd3cffc4be3b6939421227d52616c0c690a0f84e63d26ba1617"
+          "sourceRoot": "sha256:c069f9e6cb4db21eaaff5ebe144ff720df5546962ef565062e1e1392c4e5565c"
         },
         {
           "path": ".github/workflows/alpha-promotion-preflight.yml",
@@ -122,7 +122,7 @@
             "product-stable",
             "product-binaries"
           ],
-          "sourceRoot": "sha256:389bc7dae812b63af4a7a2cd7452491f814df2fc0565b823dec78a1a28f38110"
+          "sourceRoot": "sha256:852a7bfa1f74b3d9bc0eef28d7f6009415e51a6eac9efe0690b6ca58dbf418fe"
         },
         {
           "path": ".github/workflows/buildchain-validate.yml",
@@ -227,7 +227,7 @@
             "product-alpha",
             "product-stable"
           ],
-          "sourceRoot": "sha256:d855b0bed551c031f314b8223d45729d2a4609737bacf573ac1683188227b1fe"
+          "sourceRoot": "sha256:f5f95d955cf38bee6b92c81cb2e9a3c012e0a96243d1c0e579378c27c8d1e756"
         },
         {
           "path": ".github/workflows/kfd-verifier-drift.yml",
@@ -291,7 +291,7 @@
             "product-stable",
             "product-binaries"
           ],
-          "sourceRoot": "sha256:c919eeba095a47b342a91623abace7f28ddedd618146eff818745609d995ade2"
+          "sourceRoot": "sha256:7d0bcb4cfccd6c622b01dd54c207d7dd7fc1221312577e540cc0f902f6a390c1"
         },
         {
           "path": ".github/workflows/release-shifu.yml",
@@ -326,7 +326,7 @@
     "buildchain": {
       "repository": "kungfu-systems/buildchain",
       "owner": "kungfu-systems/buildchain",
-      "sourceRevision": "adbcbdef01668890d8de9354bdb6e32a84bb52ad",
+      "sourceRevision": "252900728d55b63f36b5304261dd9c49d738a07a",
       "version": "3.0.2-alpha.2",
       "compatibilityMode": "stable-v3-contract-plus-exact-additive-runtime",
       "stableContractLock": ".buildchain/contract-lock.json",
@@ -821,5 +821,5 @@
       }
     }
   ],
-  "registryRoot": "sha256:9f1654ebd942d8372c4da19115a32fa0ec27ed1713d5ddf086facd13936eeb49"
+  "registryRoot": "sha256:87909b76c438c4476524c64d87b3142367edd0ec5c43c0c121ffd5dd88523708"
 }

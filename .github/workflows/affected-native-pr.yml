@@ -1089,12 +1089,6 @@ jobs:
             runner_arch: ARM64
             node_platform: darwin
             node_arch: arm64
-          - row: darwin-x86_64-cp313
-            runner: macos-15-intel
-            runner_os: macOS
-            runner_arch: X64
-            node_platform: darwin
-            node_arch: x64
           - row: linux-x86_64-cp313
             runner: ubuntu-24.04
             runner_os: Linux

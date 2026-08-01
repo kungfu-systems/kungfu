@@ -118,6 +118,27 @@ Git, or repository state.
 ./shifu test:work-history-selector
 ```
 
+The open-card preflight can compile Selector input directly from the installed
+controller's verified global Work query. Only settled portable sealed-work
+coordinates enter the candidate set; replicas are deduplicated by immutable
+state root, partial global coverage remains explicit in the advice gaps, and a
+caller-supplied candidate list is never treated as history evidence. The Shifu
+route dispatches through checked-in Node protocol code without package install,
+build output, or checkout-local cache writes. A rooted native policy
+automatically adopts verified, bounded advice when history selection is
+complete and non-empty, confidence is medium or high, and no gap other than
+disclosed `global-work-partial` remains. Insufficient, low-confidence, or
+otherwise unresolved advice returns `human-decision-required`; explicit human
+dispositions and manual fallback remain exceptional paths rather than a default
+approval gate:
+
+```sh
+kungfu workspace work --home --scope all --include-settled \
+  --details components --json > global-work.json
+./shifu work-design:open-card-preflight --input request.json \
+  --history-query global-work.json
+```
+
 Work Design policy replay is a fourth, non-authoritative offline projection
 over a caller-supplied exact qualified cohort. It compares immutable baseline
 and candidate policy versions across selection, advice, disposition, outcome,
@@ -132,9 +153,30 @@ Assignment, Work Control, repository, protected-branch, or active-default
 authority. Even an eligible artifact records `activated: false`; activation
 requires a separately authorized native decision outside this contract.
 
+Settled portable Work can feed that replay path through a rooted outcome
+compiler. The compiler attributes timeout only to active time outside declared
+waits, counts rework only from acceptance reopen or corrective successor facts,
+counts dependency correction only from post-admission graph-root changes, and
+counts acceptance failure only from independent `unfit` assessments. Missing
+legacy evidence remains `unknown`; it is never inferred from Git or elapsed wall
+time. Shadow evaluation is exact per comparable cohort: fewer than 10 qualified
+samples are observation-only, 10–29 are tentative, and 30 or more may satisfy
+the default promotion floor.
+
+Activation is a separate native, versioned state transition constrained by an
+exact parameter envelope and expected-state root. An eligible candidate enters
+canary automatically only inside that envelope; semantic expansion returns
+`human-decision-required`. Canary and promoted-policy monitoring can restore the
+exact previous policy root automatically when the declared regression threshold
+is crossed. The build-free status operation is a read-only projection and owns
+no Work Control, repository, objective, scope, acceptance, or safety authority.
+
 ```sh
 ./shifu check:work-design-policy-replay
 ./shifu test:work-design-policy-replay
+./shifu work-design:feedback compile --input outcome-request.json
+./shifu work-design:feedback shadow --input shadow-request.json
+./shifu work-design:feedback status --input status-request.json
 ```
 
 Merge-safe composition is a third, separate rooted layer described by

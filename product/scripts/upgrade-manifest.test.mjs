@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import assert from 'node:assert/strict';
+import { spawnSync } from 'node:child_process';
 import { generateKeyPairSync, sign } from 'node:crypto';
 import fs from 'node:fs';
 import os from 'node:os';
@@ -16,6 +17,7 @@ import {
 } from '../../scripts/upgrade-qualification.mjs';
 import {
   UNQUALIFIED_RELEASE_EVIDENCE,
+  assertUpgradeIdentityConverged,
   assertUpgradePublicationEligible,
   buildBundledUpgradeManifest,
   finalizeCliUpgradeManifest,
@@ -164,6 +166,19 @@ test('bundled manifest binds exact runtime bytes and source product identity', (
     assert.match(manifest.frontendBuildId, /^product-4\.0\.0-alpha\.1-/);
     assert.equal(manifest.runtimeEntrypoint, 'kungfu');
     assert.equal(manifest.artifacts[0].signature, UNQUALIFIED_RELEASE_EVIDENCE);
+    fs.mkdirSync(path.join(f.runtimeRoot, '__pycache__'));
+    fs.writeFileSync(
+      path.join(f.runtimeRoot, '__pycache__', 'runtime.pyc'),
+      'bytecode',
+    );
+    const bytecodeChanged = buildBundledUpgradeManifest({
+      ...f,
+      platform: 'darwin',
+      architecture: 'arm64',
+      revision: '1'.repeat(40),
+    });
+    assert.equal(bytecodeChanged.runtimeBuildId, manifest.runtimeBuildId);
+    assert.equal(bytecodeChanged.frontendBuildId, manifest.frontendBuildId);
     fs.writeFileSync(path.join(f.runtimeRoot, 'kungfu'), 'changed');
     const changed = buildBundledUpgradeManifest({
       ...f,
@@ -172,6 +187,109 @@ test('bundled manifest binds exact runtime bytes and source product identity', (
       revision: '1'.repeat(40),
     });
     assert.notEqual(changed.runtimeBuildId, manifest.runtimeBuildId);
+    assert.notEqual(changed.frontendBuildId, manifest.frontendBuildId);
+  } finally {
+    fs.rmSync(f.root, { recursive: true, force: true });
+  }
+});
+
+test('Buildchain source-build evidence remains publication-ineligible', () => {
+  const f = fixture();
+  try {
+    const evidence =
+      'buildchain-retained:product/release/qualification/kungfu-upgrade-qualification-evidence.json';
+    const options = {
+      ...f,
+      platform: 'win32',
+      architecture: 'x64',
+      revision: '1'.repeat(40),
+      runtimeSignature: `${evidence}#runtime`,
+      qualificationEvidenceRef: evidence,
+    };
+    const sourceBuild = buildBundledUpgradeManifest({
+      ...options,
+      sourceBuild: true,
+    });
+    assert.deepEqual(sourceBuild.releaseCut.publicationPolicy, {
+      trustDomain: 'shifu-local',
+      publicationEligible: false,
+      immutable: true,
+      eligibleChannels: [],
+    });
+
+    const publicBuild = buildBundledUpgradeManifest({
+      ...options,
+      sourceBuild: false,
+    });
+    assert.equal(
+      publicBuild.releaseCut.publicationPolicy.trustDomain,
+      'public',
+    );
+    assert.equal(
+      publicBuild.releaseCut.publicationPolicy.publicationEligible,
+      true,
+    );
+  } finally {
+    fs.rmSync(f.root, { recursive: true, force: true });
+  }
+});
+
+test('combined release rejects a CLI and desktop identity split', () => {
+  const root = `sha256:${'1'.repeat(64)}`;
+  assert.doesNotThrow(() =>
+    assertUpgradeIdentityConverged(
+      { manifestIdentityRoot: root },
+      { manifestIdentityRoot: root },
+    ),
+  );
+  assert.throws(
+    () =>
+      assertUpgradeIdentityConverged(
+        { manifestIdentityRoot: root },
+        { manifestIdentityRoot: `sha256:${'2'.repeat(64)}` },
+      ),
+    /divergent upgrade identities/u,
+  );
+});
+
+test('Product Release Cut roots verify identically in Node and Python', () => {
+  const f = fixture();
+  try {
+    const manifest = buildBundledUpgradeManifest({
+      ...f,
+      platform: 'linux',
+      architecture: 'x64',
+      revision: '1'.repeat(40),
+    });
+    const modulePath = path.join(repoRoot, 'framework/core/src/python');
+    const script = `
+import json, sys
+sys.path.insert(0, sys.argv[1])
+from kungfu import runtime_upgrade as module
+manifest = json.load(sys.stdin)
+cut = module.validate_release_cut(manifest["releaseCut"])
+print(json.dumps({
+  "manifestIdentityRoot": module.manifest_identity_root(manifest),
+  "releaseCutRoot": cut["releaseCutRoot"],
+  "platformSliceRoot": cut["platformSlices"][0]["platformSliceRoot"],
+}, sort_keys=True))
+`;
+    const python = spawnSync(
+      process.env.PYTHON ||
+        (process.platform === 'win32' ? 'python' : 'python3'),
+      ['-c', script, modulePath],
+      {
+        cwd: repoRoot,
+        input: JSON.stringify(manifest),
+        encoding: 'utf8',
+      },
+    );
+    assert.equal(python.status, 0, python.stderr);
+    assert.deepEqual(JSON.parse(python.stdout), {
+      manifestIdentityRoot: manifest.manifestIdentityRoot,
+      platformSliceRoot: manifest.platformSliceRoot,
+      releaseCutRoot: manifest.releaseCutRoot,
+    });
   } finally {
     fs.rmSync(f.root, { recursive: true, force: true });
   }
@@ -230,6 +348,12 @@ test('desktop finalization binds installer bytes and stays fail-closed locally',
     });
     assert.equal(release.artifacts.at(-1).size, 9);
     assert.match(release.artifacts.at(-1).digest, /^sha256:[a-f0-9]{64}$/);
+    assert.deepEqual(release.localArtifact, {
+      kind: 'desktop-local',
+      format: 'file',
+      size: 9,
+      digest: release.artifacts.at(-1).digest,
+    });
     assert.throws(
       () => assertUpgradePublicationEligible(release),
       /qualification evidence/,
@@ -251,6 +375,51 @@ test('desktop finalization binds installer bytes and stays fail-closed locally',
       ),
       eligible,
     );
+  } finally {
+    fs.rmSync(f.root, { recursive: true, force: true });
+  }
+});
+
+test('desktop local tree bytes are part of the exact Release Cut', () => {
+  const f = fixture();
+  try {
+    const bundledManifest = buildBundledUpgradeManifest({
+      ...f,
+      platform: 'darwin',
+      architecture: 'arm64',
+      revision: '4'.repeat(40),
+    });
+    const updater = path.join(f.root, 'Kungfu Episodes.zip');
+    const app = path.join(f.root, 'Kungfu Episodes.app');
+    fs.writeFileSync(updater, 'desktop-updater');
+    fs.mkdirSync(path.join(app, 'Contents'), { recursive: true });
+    fs.writeFileSync(path.join(app, 'Contents', 'product.bin'), 'first');
+    const first = finalizeDesktopUpgradeManifest({
+      bundledManifest,
+      desktopArtifact: updater,
+      localArtifact: app,
+      artifactUrl: 'https://example.invalid/Kungfu-Episodes.zip',
+      output: path.join(f.root, 'first.json'),
+    });
+    fs.writeFileSync(path.join(app, 'Contents', 'product.bin'), 'second');
+    const second = finalizeDesktopUpgradeManifest({
+      bundledManifest,
+      desktopArtifact: updater,
+      localArtifact: app,
+      artifactUrl: 'https://example.invalid/Kungfu-Episodes.zip',
+      output: path.join(f.root, 'second.json'),
+    });
+    assert.equal(first.localArtifact.format, 'directory');
+    assert.notEqual(first.localArtifact.digest, second.localArtifact.digest);
+    assert.equal(
+      first.manifestIdentityRoot,
+      bundledManifest.manifestIdentityRoot,
+    );
+    assert.equal(
+      second.manifestIdentityRoot,
+      bundledManifest.manifestIdentityRoot,
+    );
+    assert.notEqual(first.releaseCutRoot, second.releaseCutRoot);
   } finally {
     fs.rmSync(f.root, { recursive: true, force: true });
   }
@@ -285,6 +454,7 @@ test('CLI finalization adds an exact archive without losing desktop evidence', (
     const output = path.join(f.root, 'release', 'manifest.json');
     const release = finalizeCliUpgradeManifest({
       bundledManifest: desktopManifest,
+      embeddedManifest: bundledManifest,
       cliArtifact: archive,
       artifactUrl: 'https://example.invalid/kungfu-cli.tar.gz',
       output,

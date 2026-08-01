@@ -53,6 +53,8 @@ runs:
         fi
         ./shifu install --frozen-lockfile
         ./shifu rebuild:core
+        ./shifu test:node-watcher-runtime-boundary
+        ./shifu test:agent-session-peer-transport:native
         node framework/release/qualified-assignment-core-artifact.mjs seal \
           --repository-root . \
           --payload-root framework/core/dist/kungfu \
@@ -82,6 +84,10 @@ runs:
         .\shifu.cmd install --frozen-lockfile
         if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
         .\shifu.cmd rebuild:core
+        if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+        .\shifu.cmd test:node-watcher-runtime-boundary
+        if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+        .\shifu.cmd test:agent-session-peer-transport:native
         if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
         node framework/release/qualified-assignment-core-artifact.mjs seal `
           --repository-root . `

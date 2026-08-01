@@ -49,7 +49,7 @@ retained for independent review; it does not complete Work by itself.
 Session 1 stops with a partial result. Session 2 starts without the previous
 conversation, recovers what was done and what remains, then finishes the same Work.
 
-[![Kungfu Agent Work Lab showing a fresh Agent continuing the same Work without copied chat](docs/qualification/evidence/auditable-demo/bca0cebcabb4c93e5f0a726052ae0259707ef660b3fe0524c5953e5219bf88b8/demo.gif)](docs/qualification/auditable-demo-artifact-pipeline.md)
+[![Kungfu Agent Work Lab showing a fresh Agent continuing the same Work without copied chat](docs/qualification/evidence/auditable-demo/835bde89ae8cee57661dfc2f4ba96bbf6d2be1546d89f42fd0c18a331a7308da/demo.gif)](docs/qualification/auditable-demo-artifact-pipeline.md)
 
 <details>
 <summary>How this exact installed-artifact demo was verified</summary>
@@ -59,9 +59,9 @@ The installed `kungfu agent-work-lab autoplay` command ran in a bounded PTY, the
 required Buildchain Gate qualified its exact capture, and full media rendered only
 from that passing Gate.
 
-[Method and evidence](docs/qualification/auditable-demo-artifact-pipeline.md) · [source `127a4bc1f061`](https://github.com/kungfu-systems/kungfu/commit/127a4bc1f0618173dd80ce0cfd7f43a1de179ef8) · [workflow run](https://github.com/kungfu-systems/kungfu/actions/runs/30583219789)
+[Method and evidence](docs/qualification/auditable-demo-artifact-pipeline.md) · [source `7777de45e3fa`](https://github.com/kungfu-systems/kungfu/commit/7777de45e3fa53c6654d39990314efc2bc9ae99a) · [workflow run](https://github.com/kungfu-systems/kungfu/actions/runs/30646944258)
 
-[Gate bundle](https://github.com/kungfu-systems/kungfu/actions/runs/30583219789/artifacts/8777601414) `sha256:56b1bb0af140e19704be0fe2a0440fd75655790226c6f63acc01eb700d2b8ce1` · [media bundle](https://github.com/kungfu-systems/kungfu/actions/runs/30583219789/artifacts/8777636996) `sha256:7f80810216c570f7a58265c7d345c0206c28a0ffeef85ae2b53a4faa4756a601` · [Release Passport](https://github.com/kungfu-systems/kungfu/actions/runs/30583219789/artifacts/8777653079) `sha256:bca0cebcabb4c93e5f0a726052ae0259707ef660b3fe0524c5953e5219bf88b8`
+[Gate bundle](https://github.com/kungfu-systems/kungfu/actions/runs/30646944258/artifacts/8802347879) `sha256:9e73aac549a32458ad132ad8166836aa7ab03885210117a15a5d382ef2687c33` · [media bundle](https://github.com/kungfu-systems/kungfu/actions/runs/30646944258/artifacts/8802406105) `sha256:8353070c7b204bccb9e51e124cd07de215ef64db742a70333614c4fe065c59aa` · [Release Passport](https://github.com/kungfu-systems/kungfu/actions/runs/30646944258/artifacts/8802427227) `sha256:835bde89ae8cee57661dfc2f4ba96bbf6d2be1546d89f42fd0c18a331a7308da`
 
 Evidence class: `exact-installed-artifact-agent-work-lab-autoplay/v1`. This proves only the exact
 installed-artifact autoplay and named Gate/render path. The demo grants no

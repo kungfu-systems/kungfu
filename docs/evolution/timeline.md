@@ -4,7 +4,7 @@ This page is generated from the append-only Era and Stage corpus. It is a
 longitudinal learning path, not a replacement for current architecture, runtime,
 or qualification authority.
 
-Coverage: **5 eras**, **9 stages**, and **33 evidence references**.
+Coverage: **5 eras**, **10 stages**, and **36 evidence references**.
 
 ## Era 1: Journal substrate
 
@@ -125,6 +125,16 @@ Initiative, Assignment, Work Control, Primitive governance, and native KFX manag
 **Compression:** One canonical name now carries the current Profile, package, CLI, GUI, TUI, Agent, documentation, build, and publication surfaces while exact historical evidence remains readable without becoming writable.
 
 [Open the immutable Stage record](stages/09-work-control-canonical-name.md) for the full capability, authority transition, downstream consumers, and evidence.
+
+### 10. Product Release Cut and updater convergence
+
+**Period:** 2026-07-29 to ongoing · **Recorded status:** open
+
+**Pressure:** Release channels, immutable images, KFD-3 local artifacts, and Shifu promotion existed, but SemVer and per-artifact roots did not identify one exact product world or authorize movement between same-label builds.
+
+**Compression:** Version label, artifact provenance, compatibility, publication trust, local selection, native installation, and rollback converge on one Cut identity and one explicit transition.
+
+[Open the immutable Stage record](stages/10-product-release-cut-updater.md) for the full capability, authority transition, downstream consumers, and evidence.
 
 ## Maintenance
 

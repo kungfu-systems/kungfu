@@ -178,6 +178,7 @@ export function prepareAlphaPublication({
   privateKeyPem,
   trustDocument,
   outputDir,
+  previousChannelIndex = null,
   now = new Date(),
 }) {
   const trust = releaseChannelTrust(trustDocument, 'alpha');
@@ -214,6 +215,7 @@ export function prepareAlphaPublication({
     keyId: identity.keyId,
     generatedAt,
     expiresAt,
+    previousChannelIndex,
   });
   if (spec.sourceCommit !== sourceSha) {
     throw new Error(
@@ -506,6 +508,7 @@ async function main() {
     ...environment,
     candidatePassportPath,
     trustDocument,
+    previousChannelIndex: previous?.index || null,
     outputDir: path.join(temporaryRoot, 'prepared'),
     now: publicationTimestamp(
       readJson(environment.releasePassportPath, 'final release passport'),

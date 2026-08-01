@@ -159,6 +159,83 @@ export function sourceChangedFiles() {
   return [...files];
 }
 
+const KFD_REBASE_EQUIVALENCE_ANCESTOR_LIMIT = 4096;
+
+export function findGitTreeEquivalentAncestor(
+  sourceSha,
+  headSha,
+  gitRead = gitMaybe,
+) {
+  if (gitRead(['cat-file', '-t', sourceSha]) !== 'commit') return '';
+  const sourceTree = gitRead(['rev-parse', `${sourceSha}^{tree}`]);
+  if (!/^[0-9a-f]{40}$/u.test(sourceTree)) return '';
+  for (const line of gitRead([
+    'log',
+    '--first-parent',
+    `--max-count=${KFD_REBASE_EQUIVALENCE_ANCESTOR_LIMIT}`,
+    '--format=%H %T',
+    headSha,
+  ]).split('\n')) {
+    const [commitSha, treeSha] = line.trim().split(/\s+/u);
+    if (treeSha === sourceTree) return commitSha;
+  }
+  return '';
+}
+
+export function assertKfdEvidenceSourceBinding({
+  sourceSha,
+  headSha,
+  isAncestor,
+  findTreeEquivalentAncestor = () => '',
+}) {
+  const gitSha = /^[0-9a-f]{40}$/u;
+  if (!gitSha.test(sourceSha) || !gitSha.test(headSha)) {
+    throw new Error(
+      `KFD evidence requires exact 40-hex Git coordinates, got source=${sourceSha || '<empty>'} head=${headSha || '<empty>'}`,
+    );
+  }
+  if (
+    !isAncestor(sourceSha, headSha) &&
+    !gitSha.test(findTreeEquivalentAncestor(sourceSha, headSha))
+  ) {
+    throw new Error(
+      `KFD evidence source ${sourceSha} is not an ancestor of checked head ${headSha} and has no tree-equivalent ancestor; regenerate the evidence after rebasing`,
+    );
+  }
+  return sourceSha;
+}
+
+export function selectKfdEvidenceSourceSha({
+  write,
+  configured,
+  committed,
+  headSha,
+}) {
+  if (write) return configured || headSha;
+  return committed || configured;
+}
+
+export function resolveKfdProductGateCheckedAt({
+  write,
+  now,
+  retainedGateResults,
+  sourceSha,
+  commitTimestamp,
+}) {
+  if (write) return now();
+  for (const gate of retainedGateResults) {
+    const checkedAt = String(gate?.checkedAt || '');
+    if (checkedAt) return checkedAt;
+  }
+  const checkedAt = commitTimestamp(sourceSha);
+  if (!checkedAt || Number.isNaN(Date.parse(checkedAt))) {
+    throw new Error(
+      `KFD product-gate evidence cannot resolve a checkedAt timestamp for ${sourceSha}`,
+    );
+  }
+  return checkedAt;
+}
+
 /**
  * @param {string[]} files
  * @param {string} [evidenceBaseCommit]
@@ -167,6 +244,8 @@ export function sourceAcceptancePlan(files, evidenceBaseCommit = '') {
   const settlementPublicationPresent = fs.existsSync(
     path.join(ROOT, 'framework/project-cut/publication.contract.json'),
   );
+  const coldReadOnlySourceAcceptance =
+    process.env.KUNGFU_READONLY_NESTED_SOURCE_ACCEPTANCE === '1';
   const nodeChecks = [
     ['no Bash scripts', 'scripts/no-bash-guard.mjs'],
     ['Shifu entry contract', 'scripts/check-shifu-entry-contract.mjs'],
@@ -351,6 +430,25 @@ export function sourceAcceptancePlan(files, evidenceBaseCommit = '') {
       'scripts/buildchain-kfd-evidence.mjs',
       '--check',
     ],
+    ...(coldReadOnlySourceAcceptance
+      ? []
+      : [
+          [
+            'agent-first canonical policy',
+            'developer/sdk/src/sdk.js',
+            'contract',
+            'policy',
+            '--check',
+            '--json',
+          ],
+          [
+            'agent-first contract audit',
+            'developer/sdk/src/sdk.js',
+            'contract',
+            'audit',
+            '--json',
+          ],
+        ]),
     [
       'KFD-4 perspective qualification',
       'framework/core/tests/qualification/kfd4-perspective.mjs',
@@ -365,6 +463,11 @@ export function sourceAcceptancePlan(files, evidenceBaseCommit = '') {
       'framework/version-line/check-version-line-authority.mjs',
     ],
     ['KFD support matrix', 'scripts/kfd-support-matrix.mjs', '--check'],
+    [
+      'Darwin x64 retirement policy',
+      'scripts/platform-command.mjs',
+      '--check-darwin-x64-retirement',
+    ],
     [
       'KFD support matrix negative fixtures',
       '--test',
@@ -418,12 +521,14 @@ export function sourceAcceptancePlan(files, evidenceBaseCommit = '') {
         'scripts/run-shifu-lifecycle.test.mjs',
         'scripts/check-typescript-files.test.mjs',
         'scripts/source-acceptance.test.mjs',
+        'scripts/platform-command.test.mjs',
+        'product/scripts/dist.test.mjs',
         'scripts/opencode-local-model-canary-workflow.test.mjs',
         'scripts/kungfu-workflow-authority.test.mjs',
         'scripts/code-complexity-budget.test.mjs',
         'framework/maintainability/semantic-amplification.test.mjs',
         'framework/maintainability/terminal-evidence-matrix.test.mjs',
-        ...(process.env.KUNGFU_READONLY_NESTED_SOURCE_ACCEPTANCE === '1'
+        ...(coldReadOnlySourceAcceptance
           ? []
           : ['scripts/readonly-agent-bootstrap.test.mjs']),
         'scripts/check-readonly-source-routes.test.mjs',
@@ -466,6 +571,8 @@ export function sourceAcceptancePlan(files, evidenceBaseCommit = '') {
         'scripts/check-cli-catalog-parity.test.mjs',
         'framework/deprecation/deprecation-surface-discovery.test.mjs',
         'scripts/check-fact-cut-kernel-contract.test.mjs',
+        'scripts/check-data-protection-contract.test.mjs',
+        'scripts/check-work-agent-history-continuity.test.mjs',
         'scripts/check-exit-bundle-contract.test.mjs',
         'scripts/check-fact-root-canonical.test.mjs',
         'scripts/kungfu-invariant.test.mjs',
@@ -555,7 +662,7 @@ export function sourceAcceptancePlan(files, evidenceBaseCommit = '') {
       command: process.execPath,
       args: ['scripts/run-desktop-update-tests.mjs'],
     },
-    ...(process.env.KUNGFU_READONLY_NESTED_SOURCE_ACCEPTANCE === '1'
+    ...(coldReadOnlySourceAcceptance
       ? []
       : [
           {
@@ -592,10 +699,7 @@ export function sourceAcceptancePlan(files, evidenceBaseCommit = '') {
   const guiTypeScript = files.filter(
     (file) => file.startsWith('framework/gui/src/') && /\.tsx?$/.test(file),
   );
-  if (
-    guiTypeScript.length &&
-    process.env.KUNGFU_READONLY_NESTED_SOURCE_ACCEPTANCE !== '1'
-  ) {
+  if (guiTypeScript.length && !coldReadOnlySourceAcceptance) {
     plan.push({
       label: 'changed GUI TypeScript check',
       command: process.execPath,

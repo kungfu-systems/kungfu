@@ -1,3 +1,6 @@
+import fs from 'node:fs';
+import path from 'node:path';
+
 import { PeerTransportError } from './peer-transport.mjs';
 
 export const ACTION_ENVELOPE_CARRIER_TYPE = 1000;
@@ -29,6 +32,19 @@ function positiveSafeInteger(value, label) {
   return value;
 }
 
+function canonicalRuntimeDir(runtimeDir) {
+  const absolute = path.resolve(runtimeDir);
+  let existing = absolute;
+  const missing = [];
+  while (!fs.existsSync(existing)) {
+    const parent = path.dirname(existing);
+    if (parent === existing) break;
+    missing.unshift(path.basename(existing));
+    existing = parent;
+  }
+  return path.join(fs.realpathSync.native(existing), ...missing);
+}
+
 /**
  * KF-ADR-019f86da-4f90-7332-a4cd-c9c9b549a5fb production adapter for AgentSession transport frames.
  *
@@ -55,8 +71,9 @@ export class NativeKungfuJournalNoticePort {
       throw new PeerTransportError('invalid_argument', 'peerName is required');
     }
     this.maxFrames = positiveSafeInteger(maxFrames, 'maxFrames');
+    const canonicalDataRoot = canonicalRuntimeDir(runtimeDir);
     this.peer = new this.binding.Watcher(
-      runtimeDir,
+      canonicalDataRoot,
       peerName,
       true,
       millisecondsSleepAfterStep,

@@ -65,7 +65,7 @@ test('All Work navigation preserves but does not reuse Project context', () => {
   assert.match(source, /value === 'f'/);
   const workHost = source.slice(
     source.indexOf('function WorkControlHost'),
-    source.indexOf('type ProjectWorkActionRequest'),
+    source.indexOf('const PENDING_STARTUP'),
   );
   assert.match(workHost, /pattern=\{KUNGFU_WORK_DISCOVERY_PATTERN\}/);
   assert.match(workHost, /emptyState\s*\?\s*EMPTY_GLOBAL_WORK_SNAPSHOT/);
@@ -74,9 +74,12 @@ test('All Work navigation preserves but does not reuse Project context', () => {
 
 test('opened Project Work offers an exact-plan Agent path and recoverable session controls', () => {
   const source = readFileSync(new URL('./main.tsx', import.meta.url), 'utf8');
-  const projectWork = source.slice(
-    source.indexOf('function ProjectWorkHost'),
-    source.indexOf('const PENDING_STARTUP'),
+  const projectWorkSource = readFileSync(
+    new URL('./work-window/index.tsx', import.meta.url),
+    'utf8',
+  );
+  const projectWork = projectWorkSource.slice(
+    projectWorkSource.indexOf('export function ProjectWorkHost'),
   );
 
   assert.match(projectWork, /NEXT: \[Enter or \/new\] create Work/);
@@ -97,7 +100,7 @@ test('opened Project Work offers an exact-plan Agent path and recoverable sessio
     projectWork,
     /const workDiscoveryLoading = loadingWork \|\| restoringRuns/,
   );
-  assert.match(projectWork, /ensureTuiAgentSession\(project\.runtime_dir\)/);
+  assert.match(projectWork, /ensureAgentSession\(project\.runtime_dir\)/);
   assert.match(projectWork, /\.restoreRun\(/);
   assert.match(projectWork, /\.replyToRun\(/);
   assert.match(projectWork, /\.approveRun\(/);
@@ -137,7 +140,10 @@ test('opened Project Work offers an exact-plan Agent path and recoverable sessio
   assert.doesNotMatch(projectWork, /projectSection === 'files'/);
   assert.match(projectWork, /LOADING PROJECT WORK/);
   assert.match(projectWork, /<ProjectWorkDock/);
-  assert.match(source, /function ProjectWorkDock[\s\S]*?height=\{4\}/);
+  assert.match(
+    projectWorkSource,
+    /function ProjectWorkDock[\s\S]*?height=\{4\}/,
+  );
   assert.ok(
     projectWork.indexOf('KUNGFU_PROJECT_DISCOVERY_PATTERN') <
       projectWork.indexOf('title={`${loadingSpinner} LOADING PROJECT WORK`}'),
@@ -177,7 +183,25 @@ test('opened Project Work offers an exact-plan Agent path and recoverable sessio
     source,
     /setProjectWorkLoading\(false\)[\s\S]*setProjectResumeSettled\(true\)/,
   );
-  assert.match(source, /await lab\.resumeStarterProject\(\)/);
+  assert.match(source, /await projects\.works\(/);
+  assert.match(source, /await lab\.resumeProjectWork\(/);
+  assert.doesNotMatch(source, /await lab\.resumeStarterProject\(\)/);
+});
+
+test('retained Project Work keeps the file tree in the left navigation', () => {
+  const source = readFileSync(
+    new URL('./starter-project-view/index.tsx', import.meta.url),
+    'utf8',
+  );
+  const host = source.slice(
+    source.indexOf('export function StarterProjectHost'),
+  );
+
+  assert.match(host, /navigationPanel=\{/);
+  assert.match(host, /<ProjectFileTreeNavigation/);
+  assert.match(host, /focused=\{activeRegion === 0\}/);
+  assert.match(host, /navigationWidth=\{projectNavigationWidth\(size\)\}/);
+  assert.doesNotMatch(host, /projectSection === 'files'/);
 });
 
 test('Project Session discovery follows the current runtime host after Project restore', () => {
@@ -199,30 +223,14 @@ test('Project Session discovery follows the current runtime host after Project r
   );
   assert.match(
     openProjects,
-    /agentSession:\s*\{\s*invoke: invokeTuiAgentSession/,
+    /agentSession:\s*useAgentSession[\s\S]*?invoke: invokeTuiAgentSession/,
   );
   assert.doesNotMatch(openProjects, /const agentSessionReady =/);
   assert.doesNotMatch(
     openProjects,
     /ensureTuiAgentSession\(paths\.runtimeDir\)/,
   );
-  assert.match(source, /delete env\.KUNGFU_DIR/);
-  assert.match(source, /delete env\.KUNGFU_KFX_CONTRACT/);
-  assert.match(source, /delete env\.KF_BUNDLED_EXTENSION_ROOT/);
-});
-
-test('retained Project Work keeps the file tree in the left navigation', () => {
-  const source = readFileSync(
-    new URL('./starter-project-view/index.tsx', import.meta.url),
-    'utf8',
-  );
-  const host = source.slice(
-    source.indexOf('export function StarterProjectHost'),
-  );
-
-  assert.match(host, /navigationPanel=\{/);
-  assert.match(host, /<ProjectFileTreeNavigation/);
-  assert.match(host, /focused=\{activeRegion === 0\}/);
-  assert.match(host, /navigationWidth=\{projectNavigationWidth\(size\)\}/);
-  assert.doesNotMatch(host, /projectSection === 'files'/);
+  assert.match(source, /env\.KUNGFU_DIR = undefined/);
+  assert.match(source, /env\.KUNGFU_KFX_CONTRACT = undefined/);
+  assert.match(source, /env\.KF_BUNDLED_EXTENSION_ROOT = undefined/);
 });

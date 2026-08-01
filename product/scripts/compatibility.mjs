@@ -28,13 +28,17 @@ export function internalSymlinkTarget(root, file) {
   return target;
 }
 
-export function sha256Tree(root) {
+export const isPythonBytecodePath = (value) =>
+  /(^|\/)__pycache__(\/|$)|\.pyc$/i.test(value.replaceAll('\\', '/'));
+
+export function sha256Tree(root, { filter = () => true } = {}) {
   const rows = [];
   const visit = (dir) => {
     for (const entry of fs
       .readdirSync(dir, { withFileTypes: true })
       .sort((left, right) => left.name.localeCompare(right.name))) {
       const full = path.join(dir, entry.name);
+      if (!filter(full, entry)) continue;
       if (entry.isDirectory()) visit(full);
       else if (entry.isFile()) {
         rows.push(
@@ -49,6 +53,9 @@ export function sha256Tree(root) {
     }
   };
   visit(root);
+  rows.sort((left, right) =>
+    Buffer.compare(Buffer.from(left, 'utf8'), Buffer.from(right, 'utf8')),
+  );
   return sha256Buffer(`${rows.join('\n')}\n`);
 }
 

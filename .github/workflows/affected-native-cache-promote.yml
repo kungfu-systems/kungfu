@@ -497,7 +497,6 @@ jobs:
           mkdir -p "$promoted_root" "$status_root"
           rows=(
             darwin-arm64-cp313
-            darwin-x86_64-cp313
             linux-x86_64-cp313
             windows-x86_64-cp313
           )
@@ -594,7 +593,7 @@ jobs:
                   --github-output "$reusable_output"; then
                   continue
                 fi
-                authority_identity="$(sed -n -e 's/^manifest-root=manifest:/p' -e 's/^qualification-receipt-root=qualification:/p' -e 's/^promotion-authority-root=promotion:/p' "$reusable_output" | paste -sd '|' -)"
+                authority_identity="$(sed -n -e 's/^manifest-root=/manifest:/p' -e 's/^qualification-receipt-root=/qualification:/p' -e 's/^promotion-authority-root=/promotion:/p' "$reusable_output" | paste -sd '|' -)"
                 if [ -n "$matched_authority" ] && [ "$authority_identity" != "$matched_authority" ]; then
                   echo "Multiple distinct compatible Qualified Core authorities are active for ${row}." >&2
                   exit 1
@@ -707,7 +706,6 @@ jobs:
         with:
           target-sha: ${{ steps.target.outputs.sha }}
           darwin-arm64-available: ${{ steps.qualified_core_promotion.outputs.darwin_arm64_cp313_available }}
-          darwin-x86-64-available: ${{ steps.qualified_core_promotion.outputs.darwin_x86_64_cp313_available }}
           linux-x86-64-available: ${{ steps.qualified_core_promotion.outputs.linux_x86_64_cp313_available }}
           windows-x86-64-available: ${{ steps.qualified_core_promotion.outputs.windows_x86_64_cp313_available }}
       - name: Summarize Qualified Core promotion
@@ -779,11 +777,9 @@ jobs:
             if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
             $runtime = Join-Path $firstCheckout "framework\core\dist\kungfu"
             $nativeFiles = @(
-              Get-ChildItem -Path (Join-Path $runtime "pykungfu*.pyd"), (Join-Path $runtime "*.dll") -File
+              Get-Item -LiteralPath (Join-Path $runtime "pykungfu.cp313-win_amd64.pyd")
+              Get-Item -LiteralPath (Join-Path $runtime "libnode.dll")
             )
-            if ($nativeFiles.Count -lt 3) {
-              throw "Qualified Windows runtime closure is incomplete."
-            }
             foreach ($nativeFile in $nativeFiles) {
               $bytes = [System.IO.File]::ReadAllBytes($nativeFile.FullName)
               if ($bytes.Length -lt 2 -or $bytes[0] -ne 0x4d -or $bytes[1] -ne 0x5a) {
