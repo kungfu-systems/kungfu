@@ -29,7 +29,6 @@ import type {
   ShellNotificationInput,
   ShellState,
   StatusBarItem,
-  StatusBarSeverity,
 } from '@kungfu-tech/kfx';
 import { mono, panelStyle } from '@kungfu-tech/kfx';
 import React from 'react';
@@ -52,8 +51,12 @@ import {
   profileHomeId,
 } from '../../navigation';
 import {
+  EXIT_HISTORY_STATUS_FALLBACK,
+  type ExitHistoryStatus,
   type RuntimeStatusResult,
   deriveWorkspaceRuntimePresentation,
+  observeExitHistoryStatus,
+  statusColor,
 } from '../../runtime-status';
 import {
   GLOBAL_WORK_OBSERVER_EVENT_CHANNEL,
@@ -231,29 +234,6 @@ function SandboxSlot({
   }, [entry.id, entry.bundlePath]);
   return <div ref={ref} style={{ width: '100%', height: '100%' }} />;
 }
-
-function statusColor(severity: StatusBarSeverity | undefined): string {
-  if (severity === 'ok') return '#4ec9b0';
-  if (severity === 'warning') return '#dcdcaa';
-  if (severity === 'error') return '#f48771';
-  return '#cccccc';
-}
-
-type ExitHistoryStatus = {
-  ok: boolean;
-  state: string;
-  coverage: string;
-  lastVerifiedExport: { bundleId: string; packageRoot: string } | null;
-  nextActions: string[];
-};
-
-const EXIT_HISTORY_STATUS_FALLBACK: ExitHistoryStatus = {
-  ok: false,
-  state: 'unavailable',
-  coverage: 'not-evaluated',
-  lastVerifiedExport: null,
-  nextActions: ['kungfu exit history status --json'],
-};
 
 function trustStatusText(status: RuntimeStatusResult | null): string {
   const assessments = status?.payload?.assessments;
@@ -1141,6 +1121,14 @@ function App() {
   const startupViewApplied = React.useRef(false);
 
   React.useEffect(() => {
+    if (!runtime.ok) {
+      setHistoryStatus(EXIT_HISTORY_STATUS_FALLBACK);
+      return undefined;
+    }
+    return observeExitHistoryStatus(window, guiKungfuCliArgs, setHistoryStatus);
+  }, [runtime.ok]);
+
+  React.useEffect(() => {
     if (startupViewApplied.current || !config) return;
     startupViewApplied.current = true;
     const agent = config.config.agent as
@@ -1217,60 +1205,6 @@ function App() {
       active = false;
     };
   }, []);
-
-  React.useEffect(() => {
-    if (!runtime.ok) {
-      setHistoryStatus(EXIT_HISTORY_STATUS_FALLBACK);
-      return undefined;
-    }
-    type ExecFile = (
-      file: string,
-      args: string[],
-      options: {
-        encoding: 'utf8';
-        env: Record<string, string | undefined>;
-        maxBuffer: number;
-      },
-      callback: (error: Error | null, stdout: string) => void,
-    ) => void;
-    const { execFile } = window.require('node:child_process') as {
-      execFile: ExecFile;
-    };
-    const env: Record<string, string | undefined> = {
-      ...window.process.env,
-      KUNGFU_AS_VARIANT: undefined,
-    };
-    const bin =
-      env.KUNGFU_CLI_BIN ||
-      env.KUNGFU_BIN ||
-      (window.process.platform === 'win32' ? 'kungfu.exe' : 'kungfu');
-    let active = true;
-    execFile(
-      bin,
-      guiKungfuCliArgs(env, ['exit', 'history', 'status', '--json']),
-      { encoding: 'utf8', env, maxBuffer: 2 * 1024 * 1024 },
-      (error, stdout) => {
-        if (!active) return;
-        if (error) {
-          setHistoryStatus(EXIT_HISTORY_STATUS_FALLBACK);
-          return;
-        }
-        try {
-          const value = JSON.parse(stdout) as ExitHistoryStatus;
-          setHistoryStatus(
-            value.ok && value.nextActions?.length
-              ? value
-              : EXIT_HISTORY_STATUS_FALLBACK,
-          );
-        } catch {
-          setHistoryStatus(EXIT_HISTORY_STATUS_FALLBACK);
-        }
-      },
-    );
-    return () => {
-      active = false;
-    };
-  }, [runtime.ok]);
 
   React.useEffect(() => {
     if (
