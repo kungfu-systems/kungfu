@@ -165,7 +165,7 @@ test('provider exit closes input before any later write can reach a shell', () =
 });
 
 test('resize and signal target only the current process identity', () => {
-  const { child, current, host } = fixture();
+  const { child, current, host } = fixture(64, 'linux');
   assert.equal(
     host.resize({ ...current, actionId: 'resize-1', cols: 120, rows: 40 })
       .status,

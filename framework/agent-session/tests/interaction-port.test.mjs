@@ -43,6 +43,7 @@ function fixture({
   version = '0.144.3',
   queueLimit = 4,
   pause,
+  platform = process.platform,
 } = {}) {
   const child = new FakePtyProcess();
   const host = new AgentSessionCapsuleHost({
@@ -51,6 +52,7 @@ function fixture({
     runtimeIdentity: 'runtime-interaction-1',
     maxOutputBytes: 4096,
     now: () => 1000,
+    platform,
   });
   const started = host.start({
     workConsoleId: 'console-1',
@@ -201,7 +203,7 @@ test('approval and unknown modal states never auto-deliver or auto-queue', () =>
 });
 
 test('interrupt mode sends one fenced signal then waits for ready before text', () => {
-  const { authority, child, port, screen } = fixture();
+  const { authority, child, port, screen } = fixture({ platform: 'linux' });
   screen('Working (3s • esc to interrupt)');
   const held = port.instruct(
     instruction(authority, 'interrupt', { mode: 'interrupt' }),
