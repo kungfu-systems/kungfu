@@ -5,7 +5,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 import type { AgentSession } from '../agent-session.js';
-import type { WorkStartReceipt } from '../agent-work-lab.js';
+import type { ProjectWork, WorkStartReceipt } from '../agent-work-lab.js';
 import type { ProductSearchDocument } from '../product-search.js';
 
 export type ProjectFileTreeEntry = {
@@ -23,6 +23,119 @@ export type ProjectFileTreeOptions = {
   maxDepth?: number;
   maxEntries?: number;
 };
+
+export type ProjectFilePreview = {
+  schema: 'kungfu.project-file.preview/v1';
+  projectPath: string;
+  relativePath: string;
+  absolutePath: string;
+  name: string;
+  mediaType: 'text/markdown' | 'text/plain' | 'application/json';
+  language: string;
+  content: string;
+  size: number;
+  readOnly: true;
+  writeOccurred: false;
+};
+
+const PROJECT_FILE_PREVIEW_LIMIT = 512 * 1024;
+const PROJECT_FILE_PREVIEW_TYPES = new Map<string, [string, string]>([
+  ['.md', ['text/markdown', 'markdown']],
+  ['.markdown', ['text/markdown', 'markdown']],
+  ['.txt', ['text/plain', 'text']],
+  ['.json', ['application/json', 'json']],
+  ['.yaml', ['text/plain', 'yaml']],
+  ['.yml', ['text/plain', 'yaml']],
+  ['.toml', ['text/plain', 'toml']],
+  ['.csv', ['text/plain', 'csv']],
+  ['.tsv', ['text/plain', 'tsv']],
+  ['.js', ['text/plain', 'javascript']],
+  ['.jsx', ['text/plain', 'javascript']],
+  ['.mjs', ['text/plain', 'javascript']],
+  ['.cjs', ['text/plain', 'javascript']],
+  ['.ts', ['text/plain', 'typescript']],
+  ['.tsx', ['text/plain', 'typescript']],
+  ['.py', ['text/plain', 'python']],
+  ['.rs', ['text/plain', 'rust']],
+  ['.go', ['text/plain', 'go']],
+  ['.c', ['text/plain', 'c']],
+  ['.cc', ['text/plain', 'cpp']],
+  ['.cpp', ['text/plain', 'cpp']],
+  ['.h', ['text/plain', 'c']],
+  ['.hpp', ['text/plain', 'cpp']],
+  ['.sh', ['text/plain', 'shell']],
+  ['.bash', ['text/plain', 'shell']],
+  ['.zsh', ['text/plain', 'shell']],
+  ['.css', ['text/plain', 'css']],
+  ['.html', ['text/plain', 'html']],
+  ['.xml', ['text/plain', 'xml']],
+  ['.sql', ['text/plain', 'sql']],
+  ['.ini', ['text/plain', 'ini']],
+  ['.conf', ['text/plain', 'text']],
+]);
+
+function isWithinProject(root: string, candidate: string): boolean {
+  const relative = path.relative(root, candidate);
+  return (
+    relative.length > 0 &&
+    !relative.startsWith(`..${path.sep}`) &&
+    relative !== '..' &&
+    !path.isAbsolute(relative)
+  );
+}
+
+export function readProjectFilePreview(
+  projectPath: string,
+  relativePath: string,
+): ProjectFilePreview {
+  const root = fs.realpathSync(projectPath);
+  const requested = path.resolve(root, relativePath);
+  if (!isWithinProject(root, requested)) {
+    throw new Error('Project file preview path must stay inside the Project');
+  }
+  const requestedStat = fs.lstatSync(requested);
+  if (requestedStat.isSymbolicLink()) {
+    throw new Error('Symbolic links cannot be previewed');
+  }
+  const absolutePath = fs.realpathSync(requested);
+  if (!isWithinProject(root, absolutePath)) {
+    throw new Error('Project file preview path resolves outside the Project');
+  }
+  const stat = fs.statSync(absolutePath);
+  if (!stat.isFile())
+    throw new Error('Only regular Project files can be previewed');
+  if (stat.size > PROJECT_FILE_PREVIEW_LIMIT) {
+    throw new Error('Project file is larger than the 512 KiB preview limit');
+  }
+  const extension = path.extname(absolutePath).toLowerCase();
+  const previewType = PROJECT_FILE_PREVIEW_TYPES.get(extension);
+  if (!previewType) {
+    throw new Error('This Project file type is not available for preview');
+  }
+  const bytes = fs.readFileSync(absolutePath);
+  if (bytes.includes(0))
+    throw new Error('Binary Project files cannot be previewed');
+  let content: string;
+  try {
+    content = new TextDecoder('utf-8', { fatal: true }).decode(bytes);
+  } catch {
+    throw new Error('Project file is not valid UTF-8 text');
+  }
+  const [mediaType, language] = previewType;
+  return {
+    schema: 'kungfu.project-file.preview/v1',
+    projectPath: root,
+    relativePath: path.relative(root, absolutePath),
+    absolutePath,
+    name: path.basename(absolutePath),
+    mediaType: mediaType as ProjectFilePreview['mediaType'],
+    language,
+    content,
+    size: stat.size,
+    readOnly: true,
+    writeOccurred: false,
+  };
+}
 
 const COLLAPSED_PROJECT_DIRECTORIES = new Set([
   '.git',
@@ -150,6 +263,8 @@ export type ProjectSummary = {
   selected: boolean;
   initialized: boolean;
   state: string;
+  workCount?: number;
+  updatedAt?: string;
   identityRoot?: string;
   source?: 'library' | 'recent' | 'workspace-catalog';
 };
@@ -182,6 +297,15 @@ export type ProjectsTemplates = {
   templates: ProjectTemplateSummary[];
   writeOccurred: false;
   catalogRoot: string;
+};
+
+export type ProjectWorkInventory = {
+  schema: 'kungfu.project-work.inventory/v1';
+  projectPath: string;
+  works: ProjectWork[];
+  activeWork: ProjectWork | null;
+  writeOccurred: false;
+  inventoryRoot: string;
 };
 
 export type ProjectImportPlan = {
@@ -374,6 +498,7 @@ export type ProjectWorkRunPlan = {
   schema: 'kungfu.work-start.plan/v1';
   planRoot: string;
   executable: boolean;
+  blockedReason: string | null;
   confirmationRequired: true;
   workspace: { id: string; root: string };
   work: {
@@ -381,6 +506,7 @@ export type ProjectWorkRunPlan = {
     title: string;
     objective: string;
     acceptanceChecks: string[];
+    phase: string;
   };
   agent: {
     id: string;
@@ -440,12 +566,18 @@ export type ProjectAgentSessionSnapshot = ProjectAgentSessionRef & {
 };
 
 export type Projects = {
-  list: () => Promise<ProjectsCatalog>;
+  list: (options?: { refresh?: boolean }) => Promise<ProjectsCatalog>;
+  cachedCatalog: () => ProjectsCatalog | undefined;
   files: (
     projectPath: string,
     options?: ProjectFileTreeOptions,
   ) => ProjectFileTreeEntry[];
+  previewFile: (
+    projectPath: string,
+    relativePath: string,
+  ) => ProjectFilePreview;
   templates: () => Promise<ProjectsTemplates>;
+  works: (projectPath: string) => Promise<ProjectWorkInventory>;
   planCreate: (
     destination?: string,
     templateId?: string,
@@ -610,6 +742,8 @@ export function projectSearchDocuments(
 
 export function openProjects(options: ProjectCommandOptions): Projects {
   let retainedRuns: ProjectWorkRunSnapshot[] = [];
+  let cachedCatalog: ProjectsCatalog | undefined;
+  let catalogRequest: Promise<ProjectsCatalog> | undefined;
   const catalogConfigHomeByProjectId = new Map<string, string | undefined>();
   const runListeners = new Set<(runs: ProjectWorkRunSnapshot[]) => void>();
   const publishRuns = () => {
@@ -775,38 +909,61 @@ export function openProjects(options: ProjectCommandOptions): Projects {
     });
     return parse<T>(raw, schema);
   };
-  return {
-    list: async () => {
-      const configHomes = [undefined, ...(options.catalogConfigHomes ?? [])];
-      const catalogs = await Promise.all([
+  const invalidateCatalog = () => {
+    cachedCatalog = undefined;
+    catalogRequest = undefined;
+  };
+  const loadCatalog = (refresh = false): Promise<ProjectsCatalog> => {
+    if (refresh) invalidateCatalog();
+    if (cachedCatalog) return Promise.resolve(cachedCatalog);
+    if (catalogRequest) return catalogRequest;
+    const configHomes = [undefined, ...(options.catalogConfigHomes ?? [])];
+    catalogRequest = Promise.all([
+      invoke<ProjectsCatalog>(
+        ['project', 'list'],
+        'kungfu.projects.catalog/v1',
+      ),
+      ...(options.catalogConfigHomes ?? []).map((configHome) =>
         invoke<ProjectsCatalog>(
           ['project', 'list'],
           'kungfu.projects.catalog/v1',
+          { ...options.env, KF_CONFIG_HOME: configHome },
         ),
-        ...(options.catalogConfigHomes ?? []).map((configHome) =>
-          invoke<ProjectsCatalog>(
-            ['project', 'list'],
-            'kungfu.projects.catalog/v1',
-            { ...options.env, KF_CONFIG_HOME: configHome },
-          ),
-        ),
-      ]);
-      catalogConfigHomeByProjectId.clear();
-      for (const [index, catalog] of catalogs.entries()) {
-        for (const project of catalog.projects) {
-          if (!catalogConfigHomeByProjectId.has(project.id)) {
-            catalogConfigHomeByProjectId.set(project.id, configHomes[index]);
+      ),
+    ])
+      .then((catalogs) => {
+        catalogConfigHomeByProjectId.clear();
+        for (const [index, catalog] of catalogs.entries()) {
+          for (const project of catalog.projects) {
+            if (!catalogConfigHomeByProjectId.has(project.id)) {
+              catalogConfigHomeByProjectId.set(project.id, configHomes[index]);
+            }
           }
         }
-      }
-      return mergeProjectsCatalogs(catalogs);
-    },
+        cachedCatalog = mergeProjectsCatalogs(catalogs);
+        return cachedCatalog;
+      })
+      .finally(() => {
+        catalogRequest = undefined;
+      });
+    return catalogRequest;
+  };
+  return {
+    list: ({ refresh = false } = {}) => loadCatalog(refresh),
+    cachedCatalog: () => cachedCatalog,
     files: (projectPath, fileOptions) =>
       readProjectFileTree(projectPath, fileOptions),
+    previewFile: (projectPath, relativePath) =>
+      readProjectFilePreview(projectPath, relativePath),
     templates: () =>
       invoke<ProjectsTemplates>(
         ['project', 'templates'],
         'kungfu.projects.templates/v1',
+      ),
+    works: (projectPath) =>
+      invoke<ProjectWorkInventory>(
+        ['project', 'works', projectPath],
+        'kungfu.project-work.inventory/v1',
       ),
     planCreate: (destination, templateId) =>
       invoke(
@@ -818,8 +975,8 @@ export function openProjects(options: ProjectCommandOptions): Projects {
         ],
         'kungfu.project-template.plan/v1',
       ),
-    create: (destination, expectedPlanRoot, templateId) =>
-      invoke(
+    create: async (destination, expectedPlanRoot, templateId) => {
+      const receipt = await invoke(
         [
           'project',
           'create',
@@ -830,14 +987,17 @@ export function openProjects(options: ProjectCommandOptions): Projects {
           '--execute',
         ],
         'kungfu.project-template.creation-receipt/v1',
-      ),
+      );
+      invalidateCatalog();
+      return receipt;
+    },
     planImport: (path) =>
       invoke<ProjectImportPlan>(
         ['project', 'open-plan', path],
         'kungfu.project.import-plan/v1',
       ),
-    importProject: (path, expectedPlanRoot) =>
-      invoke(
+    importProject: async (path, expectedPlanRoot) => {
+      const receipt = await invoke(
         [
           'project',
           'open',
@@ -847,12 +1007,18 @@ export function openProjects(options: ProjectCommandOptions): Projects {
           '--execute',
         ],
         'kungfu.project.import-receipt/v1',
-      ),
-    select: (path) =>
-      invoke(
+      );
+      invalidateCatalog();
+      return receipt;
+    },
+    select: async (path) => {
+      const receipt = await invoke(
         ['project', 'select', path],
         'kungfu.project.selection-receipt/v1',
-      ),
+      );
+      invalidateCatalog();
+      return receipt;
+    },
     planRemove: (projectId) =>
       invoke<ProjectRemovePlan>(
         ['project', 'remove-plan', projectId],
@@ -864,8 +1030,8 @@ export function openProjects(options: ProjectCommandOptions): Projects {
             }
           : options.env,
       ),
-    remove: (projectId, expectedPlanRoot) =>
-      invoke<ProjectRemoveReceipt>(
+    remove: async (projectId, expectedPlanRoot) => {
+      const receipt = await invoke<ProjectRemoveReceipt>(
         [
           'project',
           'remove',
@@ -881,7 +1047,10 @@ export function openProjects(options: ProjectCommandOptions): Projects {
               KF_CONFIG_HOME: catalogConfigHomeByProjectId.get(projectId),
             }
           : options.env,
-      ),
+      );
+      invalidateCatalog();
+      return receipt;
+    },
     prepareWork: (objective, acceptanceCriterion) =>
       prepareProjectWork(objective, acceptanceCriterion),
     captureWork: (workspace, plan) =>
@@ -1022,6 +1191,25 @@ export function openProjects(options: ProjectCommandOptions): Projects {
         }
         return finalReceipt;
       } catch (reason) {
+        const retainedFailure = receipt as ProjectWorkRunReceipt | null;
+        if (retainedFailure?.status === 'agent-failed') {
+          const failedReceipt = retainedFailure;
+          updateRun(runId, (run) => ({
+            ...run,
+            running: false,
+            lastEventAt: Date.now(),
+            receipt: failedReceipt,
+          }));
+          if (options.agentSession && receiptHasSessionRef(failedReceipt)) {
+            await refreshRun(runId);
+          }
+          return failedReceipt;
+        }
+        if (retainedFailure) {
+          throw new Error(
+            `${retainedFailure.status}${retainedFailure.failedAt ? ` at ${retainedFailure.failedAt}` : ''}: ${retainedFailure.message ?? 'Work start failed'}`,
+          );
+        }
         updateRun(runId, (run) => ({
           ...run,
           running: false,

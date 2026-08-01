@@ -46,6 +46,12 @@ def templates():
     _emit(_run(projects.templates))
 
 
+@project.command(name="works", help="list retained Work captured in one Project")
+@click.argument("path", type=click.Path(exists=True, file_okay=False))
+def works(path):
+    _emit(_run(lambda: projects.work_inventory(path)))
+
+
 @project.command(name="create-plan", help="preview creating one Project")
 @click.option("--destination", type=click.Path(file_okay=False), default=None)
 @click.option("--parent", type=click.Path(file_okay=False), default=None)

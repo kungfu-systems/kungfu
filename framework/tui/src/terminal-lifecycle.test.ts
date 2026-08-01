@@ -21,6 +21,7 @@ import {
   decodeTerminalMouseInput,
   existingProjectWorkspaceRoot,
   resolveTuiCoreDir,
+  resolveTuiProductPaths,
 } from './terminal-lifecycle.js';
 
 class FakeOutput extends EventEmitter implements TerminalOutput {
@@ -78,6 +79,20 @@ test('source runtime resolution keeps the workspace package fallback', () => {
     }),
     '/workspace/framework/core',
   );
+});
+
+test('source TUI can name the exact Core project independently of the loaded binding', () => {
+  const resolved = resolveTuiProductPaths({
+    env: {
+      KUNGFU_DIR: '/build/Release',
+      KUNGFU_TUI_SOURCE_CORE_DIR: '/repo/framework/core',
+    },
+    resolveCorePackageJson: () => '/unused/package.json',
+  });
+
+  assert.equal(resolved.coreDir, '/repo/framework/core');
+  assert.equal(resolved.kungfuDir, '/build/Release');
+  assert.equal(resolved.packagedBin, '/build/Release/kungfu');
 });
 
 test('owns alternate screen, raw mode, resize, and idempotent restoration', () => {

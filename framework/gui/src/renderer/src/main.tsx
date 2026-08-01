@@ -94,7 +94,6 @@ import {
   resolveKfxHostDescriptor,
 } from './kfx-host-descriptor';
 import { type KfxLoadResult, loadKfx } from './kfx-loader';
-import { ProductNavigation } from './product-navigation';
 import { ProjectsPanel, openRendererProjects } from './projects-panel';
 import {
   type Runtime,
@@ -421,11 +420,16 @@ function ShellTitleBar({
   searchResults,
   searchStatus,
   settingsOpen,
-  workspaceLabel,
+  activeViewId,
+  advancedItems,
+  failures,
   onSearchChange,
   onSearchActivate,
   onOpenSettings,
-  onOpenWorkspace,
+  onOpenAllWork,
+  onOpenProjects,
+  onOpenLab,
+  onOpenView,
   onWindowControl,
 }: {
   chrome: WindowChromeConfig;
@@ -434,16 +438,23 @@ function ShellTitleBar({
   searchResults: ProductSearchResult[];
   searchStatus: string;
   settingsOpen: boolean;
-  workspaceLabel: string;
+  activeViewId?: string;
+  advancedItems: ReturnType<typeof primaryNavigation>;
+  failures: Array<{ dir: string; error: string }>;
   onSearchChange: (value: string) => void;
   onSearchActivate: (result: ProductSearchResult) => void;
   onOpenSettings: () => void;
-  onOpenWorkspace: () => void;
+  onOpenAllWork: () => void;
+  onOpenProjects: () => void;
+  onOpenLab: () => void;
+  onOpenView: (id: string) => void;
   onWindowControl: (control: WindowChromeControl) => void;
 }) {
   const searchRoot = React.useRef<HTMLFormElement>(null);
+  const menuRoot = React.useRef<HTMLDivElement>(null);
   const searchInput = React.useRef<HTMLInputElement>(null);
   const [searchOpen, setSearchOpen] = React.useState(false);
+  const [menuOpen, setMenuOpen] = React.useState(false);
   const [selectedSearchResult, setSelectedSearchResult] = React.useState(0);
   React.useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
@@ -452,6 +463,9 @@ function ShellTitleBar({
         setSearchOpen(true);
         searchInput.current?.focus();
         searchInput.current?.select();
+      } else if (event.key === 'Escape') {
+        setSearchOpen(false);
+        setMenuOpen(false);
       }
     };
     const onPointerDown = (event: MouseEvent) => {
@@ -462,6 +476,13 @@ function ShellTitleBar({
         !searchRoot.current.contains(target)
       ) {
         setSearchOpen(false);
+      }
+      if (
+        target instanceof Node &&
+        menuRoot.current &&
+        !menuRoot.current.contains(target)
+      ) {
+        setMenuOpen(false);
       }
     };
     window.addEventListener('keydown', onKeyDown);
@@ -476,6 +497,10 @@ function ShellTitleBar({
     if (!result) return;
     onSearchActivate(result);
     setSearchOpen(false);
+  };
+  const activateMenu = (action: () => void) => {
+    setMenuOpen(false);
+    action();
   };
   const dragRegion: ElectronChromeStyle = {
     WebkitAppRegion: chrome.draggable ? 'drag' : undefined,
@@ -730,29 +755,164 @@ function ShellTitleBar({
           paddingRight: 8,
         }}
       >
-        <button
-          type="button"
-          aria-label="Open Projects"
-          title={workspaceLabel}
-          onClick={onOpenWorkspace}
-          style={{
-            ...interactiveRegion,
-            ...mono,
-            maxWidth: 180,
-            height: 28,
-            overflow: 'hidden',
-            textOverflow: 'ellipsis',
-            whiteSpace: 'nowrap',
-            border: '1px solid #3c3c3c',
-            borderRadius: 6,
-            cursor: 'pointer',
-            background: '#252526',
-            color: '#9cdcfe',
-            padding: '0 8px',
-          }}
+        <div
+          ref={menuRoot}
+          style={{ ...interactiveRegion, position: 'relative' }}
         >
-          {workspaceLabel}
-        </button>
+          <button
+            type="button"
+            aria-label="Open product menu"
+            aria-expanded={menuOpen}
+            title="Navigate Kungfu"
+            onClick={() => setMenuOpen((open) => !open)}
+            style={{
+              ...mono,
+              maxWidth: 210,
+              height: 28,
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              whiteSpace: 'nowrap',
+              border: '1px solid #3c3c3c',
+              borderRadius: 6,
+              cursor: 'pointer',
+              background: menuOpen ? '#04395e' : '#252526',
+              color: '#9cdcfe',
+              padding: '0 9px',
+            }}
+          >
+            ☰ {activeTitle}
+          </button>
+          {menuOpen ? (
+            <nav
+              aria-label="Kungfu product menu"
+              style={{
+                position: 'absolute',
+                top: 32,
+                right: 0,
+                width: 250,
+                maxHeight: 'min(520px, calc(100vh - 64px))',
+                overflow: 'auto',
+                padding: 6,
+                boxSizing: 'border-box',
+                border: '1px solid #454545',
+                borderRadius: 8,
+                background: '#202124',
+                boxShadow: '0 16px 42px rgba(0, 0, 0, 0.58)',
+              }}
+            >
+              {[
+                {
+                  id: 'all-work',
+                  title: 'All Work',
+                  icon: '◎',
+                  active: activeViewId === 'core-work',
+                  action: onOpenAllWork,
+                },
+                {
+                  id: 'projects',
+                  title: 'Projects',
+                  icon: '◫',
+                  active: activeViewId === 'projects',
+                  action: onOpenProjects,
+                },
+                {
+                  id: 'agent-work-lab',
+                  title: 'Agent Work Lab',
+                  icon: '🧪',
+                  active: activeViewId === 'agent-work-lab',
+                  action: onOpenLab,
+                },
+              ].map((item) => (
+                <button
+                  key={item.id}
+                  type="button"
+                  aria-current={item.active ? 'page' : undefined}
+                  onClick={() => activateMenu(item.action)}
+                  style={{
+                    ...mono,
+                    width: '100%',
+                    minHeight: 34,
+                    display: 'grid',
+                    gridTemplateColumns: '22px minmax(0, 1fr)',
+                    alignItems: 'center',
+                    gap: 8,
+                    padding: '7px 10px',
+                    border: 'none',
+                    borderRadius: 5,
+                    cursor: 'pointer',
+                    textAlign: 'left',
+                    background: item.active ? '#04395e' : 'transparent',
+                    color: item.active ? '#9cdcfe' : '#e6edf3',
+                  }}
+                >
+                  <span aria-hidden="true">{item.icon}</span>
+                  <span>{item.title}</span>
+                </button>
+              ))}
+              {advancedItems.length > 0 ? (
+                <>
+                  <div
+                    style={{
+                      ...mono,
+                      margin: '6px 8px 3px',
+                      paddingTop: 7,
+                      borderTop: '1px solid #3c3c3c',
+                      color: '#9aa0a6',
+                      fontSize: 11,
+                    }}
+                  >
+                    More
+                  </div>
+                  {advancedItems.map((item) => (
+                    <button
+                      key={item.id}
+                      type="button"
+                      aria-current={
+                        activeViewId === item.id ? 'page' : undefined
+                      }
+                      onClick={() => activateMenu(() => onOpenView(item.id))}
+                      style={{
+                        ...mono,
+                        width: '100%',
+                        minHeight: 32,
+                        display: 'grid',
+                        gridTemplateColumns: '22px minmax(0, 1fr)',
+                        alignItems: 'center',
+                        gap: 8,
+                        padding: '6px 10px',
+                        border: 'none',
+                        borderRadius: 5,
+                        cursor: 'pointer',
+                        textAlign: 'left',
+                        background:
+                          activeViewId === item.id ? '#04395e' : 'transparent',
+                        color: activeViewId === item.id ? '#9cdcfe' : '#d7dde5',
+                      }}
+                    >
+                      <span aria-hidden="true">{item.icon}</span>
+                      <span>{item.title}</span>
+                    </button>
+                  ))}
+                </>
+              ) : null}
+              {failures.length > 0 ? (
+                <div
+                  title={failures
+                    .map((failure) => `${failure.dir}: ${failure.error}`)
+                    .join('\n')}
+                  style={{
+                    ...mono,
+                    margin: '8px 8px 4px',
+                    color: '#f48771',
+                    fontSize: 11,
+                  }}
+                >
+                  {failures.length} kfx failed to load
+                </div>
+              ) : null}
+            </nav>
+          ) : null}
+        </div>
         <button
           type="button"
           aria-label="Open settings"
@@ -1044,6 +1204,8 @@ function App() {
   const workspaceBridge = React.useMemo(workspaceIpc, []);
   const initialProjectsOpen =
     window.process.env.KFE_INITIAL_SURFACE === 'projects';
+  const initialFocusedProjectPath =
+    window.process.env.KFE_FOCUSED_PROJECT_PATH || '';
   const [startup] = React.useState<AgentWorkLabStartupRoute>(() => {
     if (initialProjectsOpen) {
       return {
@@ -1123,7 +1285,15 @@ function App() {
     },
   );
   const [loaded] = React.useState<KfxLoadResult>(() =>
-    loadKfx(window.process.env, SHARED_MODULES, kfxDescriptor),
+    initialProjectsOpen
+      ? {
+          discoveredKfxCount: 0,
+          entries: [],
+          suites: {},
+          profiles: [],
+          failures: [],
+        }
+      : loadKfx(window.process.env, SHARED_MODULES, kfxDescriptor),
   );
   React.useEffect(() => {
     if (
@@ -1149,10 +1319,14 @@ function App() {
       ? false
       : shouldOpenAgentWorkLab(startupSurface, loaded.entries.length),
   );
-  const [projectsOpen, setProjectsOpen] = React.useState(initialProjectsOpen);
-  const [coreWorkOpen, setCoreWorkOpen] = React.useState(false);
+  const [projectsOpen, setProjectsOpen] = React.useState(
+    initialProjectsOpen && !initialFocusedProjectPath,
+  );
+  const [coreWorkOpen, setCoreWorkOpen] = React.useState(
+    initialProjectsOpen && Boolean(initialFocusedProjectPath),
+  );
   const [focusedProjectPath, setFocusedProjectPath] = React.useState(
-    window.process.env.KFE_FOCUSED_PROJECT_PATH || '',
+    initialFocusedProjectPath,
   );
   const [projectSearchDocuments, setProjectSearchDocuments] = React.useState<
     ProductSearchDocument[]
@@ -1178,7 +1352,22 @@ function App() {
     () =>
       window.process.env.KFE_INITIAL_VIEW || profileHomeId(profile, enabled),
   );
-  const [params, setParams] = React.useState<Record<string, string>>({});
+  const [params, setParams] = React.useState<Record<string, string>>(() =>
+    initialFocusedProjectPath
+      ? {
+          projectPath: initialFocusedProjectPath,
+          projectSection: 'files',
+        }
+      : {},
+  );
+  const lastWorkParamsRef = React.useRef<Record<string, string>>(
+    initialFocusedProjectPath
+      ? {
+          projectPath: initialFocusedProjectPath,
+          projectSection: 'files',
+        }
+      : {},
+  );
   const [settingsOpen, setSettingsOpen] = React.useState(false);
   const [workspaceOpen, setWorkspaceOpen] = React.useState(false);
   const [searchText, setSearchText] = React.useState('');
@@ -1286,6 +1475,12 @@ function App() {
   }, []);
 
   React.useEffect(() => {
+    if (
+      initialProjectsOpen &&
+      (params.projectId?.trim() || params.projectPath?.trim())
+    ) {
+      return;
+    }
     type GlobalWorkObserverEvent =
       | {
           schema: 'kungfu.gui.global-work-observer-event/v1';
@@ -1339,7 +1534,7 @@ function App() {
       ipc?.removeListener(GLOBAL_WORK_OBSERVER_EVENT_CHANNEL, receive);
       void ipc?.invoke(GLOBAL_WORK_OBSERVER_UNSUBSCRIBE_CHANNEL);
     };
-  }, []);
+  }, [initialProjectsOpen, params.projectId, params.projectPath]);
 
   // shared refresh bus: one shell-owned timer, kfx subscribe
   const subscribers = React.useRef(new Set<() => void>());
@@ -1486,9 +1681,13 @@ function App() {
 
   React.useEffect(() => {
     if (state.profileId !== profile.id) {
-      updateState({ profileId: profile.id });
+      setState((current) => {
+        const next = { ...current, profileId: profile.id };
+        if (runtime.domain) saveShellState(runtime.domain, next);
+        return next;
+      });
     }
-  }, [profile.id, state.profileId, updateState]);
+  }, [profile.id, runtime.domain, state.profileId]);
 
   React.useEffect(() => {
     type NavigationIpc = {
@@ -1785,13 +1984,12 @@ function App() {
     ...sessionWindowShell,
   };
 
-  const sidebarCollapsed = state.sidebarCollapsed;
   const primaryNav = primaryNavigation(profile, enabled);
   const workEntry =
     productRoleEntry(enabled, 'profile-view') ??
     enabled.find((entry) => entry.id === profileHomeId(profile, enabled));
   const openCoreWork = React.useCallback(
-    (nextParams: Record<string, string> = {}) => {
+    (nextParams: Record<string, string>) => {
       setLabOpen(false);
       setProjectsOpen(false);
       setParams(nextParams);
@@ -1799,26 +1997,28 @@ function App() {
     },
     [],
   );
-  const restoreProjectWork = React.useCallback(
-    (projectPath: string, section: 'files' | 'work'): boolean => {
-      if (workEntry) {
-        openKfx(workEntry.id, { projectPath, projectSection: section });
-      } else {
-        openCoreWork({ projectPath, projectSection: section });
+  const openWorkSurface = React.useCallback(
+    (nextParams?: Record<string, string>) => {
+      const restoredParams = nextParams ?? lastWorkParamsRef.current;
+      if (nextParams && Object.keys(nextParams).length > 0) {
+        lastWorkParamsRef.current = nextParams;
       }
-      return true;
+      if (workEntry) {
+        openKfx(workEntry.id, restoredParams);
+      } else {
+        openCoreWork(restoredParams);
+      }
     },
     [openCoreWork, openKfx, workEntry],
   );
-  const publicNav = workEntry
-    ? [{ id: workEntry.id, title: 'All Work', icon: '◎' }]
-    : [{ id: 'core-work', title: 'All Work', icon: '◎' }];
-  const advancedNav = primaryNav.filter(
-    (item) => !publicNav.some((publicItem) => publicItem.id === item.id),
+  const restoreProjectWork = React.useCallback(
+    (projectPath: string, section: 'files' | 'work'): boolean => {
+      openWorkSurface({ projectPath, projectSection: section });
+      return true;
+    },
+    [openWorkSurface],
   );
-  const toggleSidebar = React.useCallback(() => {
-    updateState({ sidebarCollapsed: !sidebarCollapsed });
-  }, [sidebarCollapsed, updateState]);
+  const advancedNav = primaryNav.filter((item) => item.id !== workEntry?.id);
 
   const caps = activeKfx ? subsetCaps(runtime, activeKfx) : null;
   const settingsKfx =
@@ -1882,20 +2082,11 @@ function App() {
       if (result.action.kind === 'open-view') {
         openKfx(result.action.viewId);
       } else if (result.action.kind === 'open-work') {
-        const workView = productRoleEntry(enabled, 'profile-view');
-        if (workView) {
-          openKfx(workView.id, { workId: result.action.workId });
-        } else {
-          showNotification({
-            level: 'warning',
-            title: 'Work view unavailable',
-            message:
-              'The Work result remains read-only, but no Work view can open its details.',
-          });
-        }
+        openWorkSurface({ workId: result.action.workId });
       } else if (result.action.kind === 'open-project') {
         setFocusedProjectPath(result.action.projectPath);
         setLabOpen(false);
+        setCoreWorkOpen(false);
         setProjectsOpen(true);
       } else {
         showNotification({
@@ -1906,7 +2097,7 @@ function App() {
       }
       setSearchText('');
     },
-    [enabled, openKfx, showNotification],
+    [openKfx, openWorkSurface, showNotification],
   );
 
   const workspaceRuntime = deriveWorkspaceRuntimePresentation(runtimeStatus);
@@ -2345,24 +2536,44 @@ function App() {
           labOpen
             ? 'Agent Work Lab'
             : projectsOpen
-              ? currentProjectName
-                ? `Project · ${currentProjectName}`
-                : 'Projects'
-              : (activeKfx?.title ?? 'Kungfu Episodes')
+              ? 'Projects'
+              : coreWorkOpen
+                ? currentProjectName
+                  ? `Project · ${currentProjectName}`
+                  : 'All Work'
+                : (activeKfx?.title ?? 'Kungfu Episodes')
         }
         searchText={searchText}
         searchResults={searchResults}
         searchStatus={searchCatalogStatus}
         settingsOpen={settingsOpen}
-        workspaceLabel={currentProjectName || 'Projects'}
+        activeViewId={
+          labOpen
+            ? 'agent-work-lab'
+            : projectsOpen
+              ? 'projects'
+              : coreWorkOpen || activeKfx?.id === workEntry?.id
+                ? 'core-work'
+                : activeKfx?.id
+        }
+        advancedItems={advancedNav}
+        failures={visibleKfxFailures}
         onSearchChange={setSearchText}
         onSearchActivate={activateSearchResult}
         onOpenSettings={() => setSettingsOpen(true)}
-        onOpenWorkspace={() => {
+        onOpenAllWork={() => openWorkSurface()}
+        onOpenProjects={() => {
           setLabOpen(false);
+          setCoreWorkOpen(false);
           setFocusedProjectPath('');
           setProjectsOpen(true);
         }}
+        onOpenLab={() => {
+          setProjectsOpen(false);
+          setCoreWorkOpen(false);
+          setLabOpen(true);
+        }}
+        onOpenView={(id) => shell.open(id)}
         onWindowControl={controlWindow}
       />
       <div style={chromeBodyStyle}>
@@ -2375,26 +2586,6 @@ function App() {
             overflow: 'hidden',
           }}
         >
-          <ProductNavigation
-            collapsed={sidebarCollapsed}
-            activeViewId={activeKfx?.id}
-            labOpen={labOpen}
-            projectsOpen={projectsOpen}
-            publicItems={publicNav}
-            advancedItems={advancedNav}
-            failures={visibleKfxFailures}
-            onToggle={toggleSidebar}
-            onOpenView={(id) => shell.open(id)}
-            onOpenProjects={() => {
-              setLabOpen(false);
-              setFocusedProjectPath('');
-              setProjectsOpen(true);
-            }}
-            onOpenLab={() => {
-              setProjectsOpen(false);
-              setLabOpen(true);
-            }}
-          />
           <div style={{ flex: 1, minHeight: 0, overflow: 'hidden' }}>
             {projectsOpen ? (
               <ProjectsPanel
@@ -2404,29 +2595,23 @@ function App() {
                 onOpenProject={handleOpenProject}
                 onOpenExistingProject={() => void workspaceBridge.open()}
                 onRestoreProject={restoreProjectWork}
-                onOpenWork={(project, section = 'work') => {
-                  if (workEntry) {
-                    openKfx(workEntry.id, {
-                      projectId: project.id,
-                      projectPath: project.path,
-                      projectSection: section,
-                    });
-                  }
-                }}
               />
             ) : labOpen ? (
               <AgentWorkLabPanel
                 lab={agentWorkLab}
                 startup={startup}
-                onOpenWork={() => setLabOpen(false)}
+                onOpenWork={() => openWorkSurface()}
                 onOpenExistingProject={() => {
                   setLabOpen(false);
+                  setCoreWorkOpen(false);
                   setProjectsOpen(true);
                 }}
                 onOpenStarterProject={(workspaceRoot) =>
                   void workspaceBridge.path(workspaceRoot)
                 }
               />
+            ) : coreWorkOpen ? (
+              <ProjectWorkControlView projects={projects} shell={shell} />
             ) : runtime.ok ? (
               activeKfx && activeKfx.tier === 'sandboxed-ipc' ? (
                 // isolated third-party view: embedded, not mounted here

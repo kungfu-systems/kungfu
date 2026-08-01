@@ -132,7 +132,9 @@ test('opened Project Work offers an exact-plan Agent path and recoverable sessio
     source,
     /setProjectWorkLoading\(false\)[\s\S]*setProjectResumeSettled\(true\)/,
   );
-  assert.match(source, /await lab\.resumeStarterProject\(\)/);
+  assert.match(source, /await projects\.works\(/);
+  assert.match(source, /await lab\.resumeProjectWork\(/);
+  assert.doesNotMatch(source, /await lab\.resumeStarterProject\(\)/);
 });
 
 test('retained Project Work keeps the file tree in the left navigation', () => {

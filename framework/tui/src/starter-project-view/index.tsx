@@ -1169,7 +1169,7 @@ export function StarterProjectHost({
           <Text>
             {successful
               ? project.receipt
-                ? 'Review deliverables/launch-brief.md and the retained evidence before accepting completion.'
+                ? 'Review the retained Project evidence before accepting completion.'
                 : 'Review the project changes and retained evidence before accepting completion.'
               : (workReceipt?.message ?? error)}
           </Text>
@@ -1286,7 +1286,7 @@ export function StarterProjectHost({
             </Text>
           ) : null}
           <Text>
-            Deliverable · {reviewPlan.deliverable.path} ·{' '}
+            Primary evidence · {reviewPlan.deliverable.path} ·{' '}
             {reviewPlan.deliverable.root.slice(0, 18)}…
           </Text>
         </Box>

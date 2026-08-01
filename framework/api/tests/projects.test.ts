@@ -1,6 +1,15 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import assert from 'node:assert/strict';
+import {
+  mkdirSync,
+  mkdtempSync,
+  rmSync,
+  symlinkSync,
+  writeFileSync,
+} from 'node:fs';
+import { tmpdir } from 'node:os';
+import path from 'node:path';
 import test from 'node:test';
 import { fileURLToPath } from 'node:url';
 
@@ -10,7 +19,73 @@ import {
   openProjects,
   prepareProjectWork,
   projectSearchDocuments,
+  readProjectFilePreview,
 } from '../src/capability/projects/index.ts';
+
+test('Project file previews stay read-only, bounded, textual, and inside the Project', (t) => {
+  const project = mkdtempSync(path.join(tmpdir(), 'kungfu-project-preview-'));
+  t.after(() => rmSync(project, { recursive: true, force: true }));
+  writeFileSync(
+    path.join(project, 'AGENTS.md'),
+    '# Project rules\n\nKeep Work.\n',
+  );
+  writeFileSync(path.join(project, 'binary.md'), Buffer.from([0, 1, 2]));
+  writeFileSync(path.join(project, 'image.png'), 'not an admitted text type');
+  mkdirSync(path.join(project, 'nested'));
+  symlinkSync(
+    path.join(project, 'AGENTS.md'),
+    path.join(project, 'nested', 'rules.md'),
+  );
+
+  const preview = readProjectFilePreview(project, 'AGENTS.md');
+
+  assert.equal(preview.schema, 'kungfu.project-file.preview/v1');
+  assert.equal(preview.mediaType, 'text/markdown');
+  assert.equal(preview.language, 'markdown');
+  assert.equal(preview.content, '# Project rules\n\nKeep Work.\n');
+  assert.equal(preview.readOnly, true);
+  assert.equal(preview.writeOccurred, false);
+  assert.throws(
+    () => readProjectFilePreview(project, '../outside.md'),
+    /must stay inside the Project/,
+  );
+  assert.throws(
+    () => readProjectFilePreview(project, 'nested/rules.md'),
+    /Symbolic links cannot be previewed/,
+  );
+  assert.throws(
+    () => readProjectFilePreview(project, 'binary.md'),
+    /Binary Project files cannot be previewed/,
+  );
+  assert.throws(
+    () => readProjectFilePreview(project, 'image.png'),
+    /file type is not available for preview/,
+  );
+});
+
+test('Projects reads retained Work inventory through the public Project command', async () => {
+  const calls: string[][] = [];
+  const projects = openProjects({
+    bin: 'kungfu',
+    env: {},
+    execFile: async (_file, args) => {
+      calls.push(args);
+      return JSON.stringify({
+        schema: 'kungfu.project-work.inventory/v1',
+        projectPath: '/projects/example',
+        works: [],
+        activeWork: null,
+        writeOccurred: false,
+        inventoryRoot: `sha256:${'1'.repeat(64)}`,
+      });
+    },
+  });
+
+  const inventory = await projects.works('/projects/example');
+
+  assert.equal(inventory.writeOccurred, false);
+  assert.deepEqual(calls, [['project', 'works', '/projects/example']]);
+});
 
 test('Projects merges machine-local catalogs without changing the active instance', async () => {
   const calls: Array<{
@@ -157,10 +232,19 @@ test('Projects delegates to the Core project command', async () => {
     },
   });
 
+  assert.equal(projects.cachedCatalog(), undefined);
   const result = await projects.list();
+  const restored = await projects.list();
 
   assert.equal(result.schema, 'kungfu.projects.catalog/v1');
+  assert.equal(restored, result);
+  assert.equal(projects.cachedCatalog(), result);
   assert.deepEqual(calls, [['project', 'list']]);
+  await projects.list({ refresh: true });
+  assert.deepEqual(calls, [
+    ['project', 'list'],
+    ['project', 'list'],
+  ]);
   assert.ok(
     projects
       .files(fileURLToPath(new URL('.', import.meta.url)))
@@ -375,6 +459,40 @@ test('Project Work restores an ended failed Session as a retry boundary', async 
   assert.equal(receipt.status, 'agent-failed');
   assert.equal(projects.runs()[0]?.session?.live, false);
   assert.equal(projects.runs()[0]?.session?.attention?.kind, 'blocked');
+});
+
+test('Project Work retains a canonical failed receipt when the CLI exits nonzero', async () => {
+  const projects = openProjects({
+    bin: 'kungfu',
+    env: {},
+    execFile: async () => {
+      throw new Error('streaming path expected');
+    },
+    execFileEvents: async (_file, _args, _options, onLine) => {
+      onLine(
+        JSON.stringify({
+          schema: 'kungfu.work-start.receipt/v1',
+          ok: false,
+          status: 'agent-failed',
+          workPhase: 'executing',
+          nextActions: ['inspect-retained-agent-report'],
+          writeOccurred: true,
+          receiptRoot: `sha256:${'5'.repeat(64)}`,
+        }),
+      );
+      throw new Error('kungfu exited 1 after retaining the failure receipt');
+    },
+  });
+
+  const receipt = await projects.run(
+    'mock',
+    { workspace: '/project', scenario: 'disconnect' },
+    () => undefined,
+  );
+
+  assert.equal(receipt.status, 'agent-failed');
+  assert.equal(projects.runs()[0]?.receipt?.receiptRoot, receipt.receiptRoot);
+  assert.equal(projects.runs()[0]?.error, undefined);
 });
 
 test('Project Work is previewed before the exact request is captured by Core', async () => {

@@ -40,6 +40,7 @@ IMPORT_RECEIPT_SCHEMA = "kungfu.project.import-receipt/v1"
 SELECTION_RECEIPT_SCHEMA = "kungfu.project.selection-receipt/v1"
 REMOVE_PLAN_SCHEMA = "kungfu.project.remove-plan/v1"
 REMOVE_RECEIPT_SCHEMA = "kungfu.project.remove-receipt/v1"
+WORK_INVENTORY_SCHEMA = "kungfu.project-work.inventory/v1"
 
 
 def _root(value: Any) -> str:
@@ -181,10 +182,59 @@ def _project_row(value: dict[str, Any], selected_id: str | None) -> dict[str, An
     }
 
 
+def _project_summary(path: Path, known_activity: list[str]) -> dict[str, Any]:
+    activity = [value for value in known_activity if value]
+    try:
+        activity.append(
+            datetime.fromtimestamp(path.stat().st_mtime, timezone.utc)
+            .isoformat()
+            .replace("+00:00", "Z")
+        )
+    except OSError:
+        pass
+    work_count = 0
+    for candidate in (path / ".kungfu" / "inbox" / "assignment-requests").glob(
+        "sha256/*/*/request.json"
+    ):
+        if _captured_work(candidate) is None:
+            continue
+        work_count += 1
+        try:
+            activity.append(
+                datetime.fromtimestamp(candidate.stat().st_mtime, timezone.utc)
+                .isoformat()
+                .replace("+00:00", "Z")
+            )
+        except OSError:
+            pass
+    return {
+        "workCount": work_count,
+        "updatedAt": max(activity) if activity else None,
+    }
+
+
 def catalog(*, config_home: str | None = None) -> dict[str, Any]:
     registry = load_workspace_registry(config_home)
     library = _load_library(config_home)
     locator_catalog = load_workspace_catalog(config_home)
+    activity_by_path: dict[str, list[str]] = {}
+
+    def remember_activity(path_value: Any, updated_at: Any) -> None:
+        if not path_value or not isinstance(updated_at, str) or not updated_at:
+            return
+        activity_by_path.setdefault(_canonical_project_path(path_value), []).append(
+            updated_at
+        )
+
+    for library_row in library["projects"]:
+        remember_activity(library_row.get("path"), library_row.get("rememberedAt"))
+    for recent_row in registry["recent"]:
+        remember_activity(
+            recent_row.get("workspace_root") or recent_row.get("display_path"),
+            recent_row.get("selected_at"),
+        )
+    for locator_row in locator_catalog["entries"]:
+        remember_activity(locator_row.get("locator"), locator_row.get("updated_at"))
     hidden = {
         _canonical_project_path(row.get("path"))
         for row in library["hidden"]
@@ -252,6 +302,10 @@ def catalog(*, config_home: str | None = None) -> dict[str, Any]:
         if selected_path == path:
             row["selected"] = True
         row["source"] = source
+        if row["available"]:
+            row.update(_project_summary(Path(path), activity_by_path.get(path, [])))
+        else:
+            row.update(workCount=0, updatedAt=None)
         projects.append(row)
         sources[source] = sources.get(source, 0) + 1
     body = {
@@ -289,6 +343,84 @@ def templates() -> dict[str, Any]:
         "writeOccurred": False,
     }
     return {**body, "catalogRoot": _root(body)}
+
+
+def _captured_work(candidate: Path) -> dict[str, Any] | None:
+    try:
+        captured = orchestration.load_captured_request(candidate)
+    except (OSError, ValueError, json.JSONDecodeError):
+        return None
+    request = captured["request"]
+    work = request.get("workDefinition") or {}
+    initiative_id = str(work.get("mission_id") or "").strip()
+    assignment_id = str(work.get("goal_id") or "").strip()
+    title = str(work.get("title") or "").strip()
+    objective = str(work.get("objective") or "").strip()
+    acceptance_checks = work.get("acceptance_criteria")
+    if (
+        not initiative_id
+        or not assignment_id
+        or not title
+        or not objective
+        or not isinstance(acceptance_checks, list)
+        or not acceptance_checks
+        or any(not isinstance(row, str) or not row.strip() for row in acceptance_checks)
+    ):
+        return None
+    return {
+        "state": "captured-pending-admission",
+        "initiativeId": initiative_id,
+        "assignmentId": assignment_id,
+        "title": title,
+        "objective": objective,
+        "acceptanceChecks": [row.strip() for row in acceptance_checks],
+        "requestRoot": captured["request_root"],
+        "receiptRoot": captured["capture_receipt_roots"][-1],
+        "requestPath": captured["request_path"],
+        "capturedAt": candidate.stat().st_mtime_ns,
+    }
+
+
+def work_inventory(path: str | Path) -> dict[str, Any]:
+    target = Path(path).expanduser().resolve()
+    if not target.is_dir():
+        raise ValueError(f"project directory is unavailable: {target}")
+    candidates = sorted(
+        (target / ".kungfu" / "inbox" / "assignment-requests").glob(
+            "sha256/*/*/request.json"
+        ),
+        key=lambda candidate: (candidate.stat().st_mtime_ns, str(candidate)),
+    )
+    works = [work for candidate in candidates if (work := _captured_work(candidate))]
+    sealed = orchestration.list_sealed_assignment_states(target)
+    by_subject: dict[str, list[dict[str, Any]]] = {}
+    for state in sealed["states"]:
+        by_subject.setdefault(str(state["assignment_subject"]), []).append(state)
+    projected = []
+    for work in works:
+        states = by_subject.get(f"kungfu:{work['assignmentId']}", [])
+        settled = [state for state in states if state["settled"]]
+        retained = settled or states
+        next_work = {key: value for key, value in work.items() if key != "capturedAt"}
+        if retained:
+            selected = sorted(
+                retained,
+                key=lambda state: (str(state["phase"]), str(state["state_root"])),
+            )[-1]
+            next_work.update(
+                phase=selected["phase"],
+                settled=bool(settled),
+                stateRoot=selected["state_root"],
+            )
+        projected.append(next_work)
+    body = {
+        "schema": WORK_INVENTORY_SCHEMA,
+        "projectPath": str(target),
+        "works": projected,
+        "activeWork": projected[-1] if projected else None,
+        "writeOccurred": False,
+    }
+    return {**body, "inventoryRoot": _root(body)}
 
 
 def plan_import(path: str | Path) -> dict[str, Any]:

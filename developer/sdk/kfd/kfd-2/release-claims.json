@@ -38,7 +38,7 @@
           "pointer": {
             "kind": "file",
             "path": "framework/core/src/python/kungfu/agent/cli_surface.catalog.json",
-            "sha256": "ba30bda255d88eeb30ec1a76dd3e16053dd38faf05e1e178e579a406e0841947"
+            "sha256": "6dc4950eb1c021d7722a8239dfad12388c1be14119228c1088c0b98a1b30be48"
           },
           "description": "Complete deterministic CLI surface graph shared by offline Agent capabilities and catalog parity checks."
         },
