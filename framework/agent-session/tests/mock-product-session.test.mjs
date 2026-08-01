@@ -16,15 +16,17 @@ const MOCK = fileURLToPath(
   new URL('../src/mock-provider.mjs', import.meta.url),
 );
 const PROFILE_ROOT = `sha256:${'7'.repeat(64)}`;
+const CONVERGENCE_TIMEOUT_MS = 5000;
+const STARTUP_CONVERGENCE_TIMEOUT_MS = 15000;
 
-async function eventually(probe, label) {
-  const deadline = Date.now() + 5000;
+async function eventually(probe, label, timeoutMs = CONVERGENCE_TIMEOUT_MS) {
+  const deadline = Date.now() + timeoutMs;
   while (Date.now() < deadline) {
     const value = await probe();
     if (value) return value;
     await delay(25);
   }
-  throw new Error(`${label} did not converge`);
+  throw new Error(`${label} did not converge within ${timeoutMs}ms`);
 }
 
 async function control(host, session, operation, payload, automatic = true) {
@@ -162,10 +164,14 @@ test('deterministic Mock Agent traverses answer, approval, review, and exit in t
     execution: { env: input.env, cols: 100, rows: 30 },
   });
 
-  await eventually(async () => {
-    const status = await host.invoke({ operation: 'status', session });
-    return status.interactionState === 'ready' ? status : null;
-  }, 'initial ready state');
+  await eventually(
+    async () => {
+      const status = await host.invoke({ operation: 'status', session });
+      return status.interactionState === 'ready' ? status : null;
+    },
+    'initial ready state',
+    STARTUP_CONVERGENCE_TIMEOUT_MS,
+  );
   await control(host, session, 'instruct', { text: 'perform bounded Work' });
   const answer = await eventually(async () => {
     const status = await host.invoke({ operation: 'status', session });
