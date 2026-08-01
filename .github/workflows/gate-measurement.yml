@@ -250,12 +250,15 @@ jobs:
         include:
           - id: linux-x64
             name: Linux x64
+            platform: linux
             runner: '["self-hosted","Linux","X64","kungfu-build-v4-linux-x64"]'
           - id: macos-arm64
             name: macOS ARM64
+            platform: macos
             runner: '["self-hosted","macOS","ARM64","kungfu-build-v4-macos-arm64"]'
           - id: windows-x64
             name: Windows x64
+            platform: windows
             runner: '["self-hosted","Windows","X64","kungfu-build-v4-windows-x64"]'
     name: Python KFX asyncio performance / ${{ matrix.name }}
     runs-on: ${{ fromJSON(matrix.runner) }}
@@ -267,7 +270,41 @@ jobs:
           fetch-depth: 1
           persist-credentials: false
 
-      - name: Run exact-revision qualification
+      - name: Prepare runner toolchain paths on Unix
+        if: ${{ matrix.platform != 'windows' }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          runner_root="$(cd "$RUNNER_TEMP/../.." && pwd)"
+          node_bin="$runner_root/externals/node24/bin"
+          test -x "$node_bin/node"
+          {
+            printf '%s\n' "$node_bin"
+            printf '%s\n' "$HOME/.cargo/bin"
+            printf '%s\n' "$HOME/.local/bin"
+            printf '%s\n' "$HOME/.local/share/fnm"
+          } >>"$GITHUB_PATH"
+
+      - name: Prepare runner toolchain paths on Windows
+        if: ${{ matrix.platform == 'windows' }}
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          $runnerRoot = Split-Path (Split-Path $env:RUNNER_TEMP -Parent) -Parent
+          $nodeBin = Join-Path $runnerRoot "externals\node24\bin"
+          if (-not (Test-Path (Join-Path $nodeBin "node.exe"))) {
+            throw "runner Node 24 is unavailable"
+          }
+          @(
+            $nodeBin,
+            (Join-Path $env:USERPROFILE ".cargo\bin"),
+            (Join-Path $env:USERPROFILE ".local\bin"),
+            (Join-Path $env:USERPROFILE ".fnm"),
+            (Join-Path $env:LOCALAPPDATA "Microsoft\WinGet\Links")
+          ) | Out-File -FilePath $env:GITHUB_PATH -Append -Encoding utf8
+
+      - name: Run exact-revision qualification on Unix
+        if: ${{ matrix.platform != 'windows' }}
         shell: bash
         env:
           KUNGFU_BUILDCHAIN_SOURCE_BUILD: "1"
@@ -276,6 +313,18 @@ jobs:
           set -euo pipefail
           output_dir="$RUNNER_TEMP/python-kfx-asyncio-performance-${{ matrix.id }}"
           ./shifu python-kfx-asyncio:qualify -- --execute --output "$output_dir"
+
+      - name: Run exact-revision qualification on Windows
+        if: ${{ matrix.platform == 'windows' }}
+        shell: cmd
+        env:
+          KUNGFU_BUILDCHAIN_SOURCE_BUILD: "1"
+          SHIFU_NATIVE: "1"
+        run: |
+          @echo off
+          set "output_dir=%RUNNER_TEMP%\python-kfx-asyncio-performance-${{ matrix.id }}"
+          call shifu.cmd python-kfx-asyncio:qualify -- --execute --output "%output_dir%"
+          if errorlevel 1 exit /b %errorlevel%
 
       - name: Retain raw observations and derived report
         if: ${{ always() }}

@@ -130,6 +130,10 @@ test('manual Gate Measurement retains exact-source evidence on all three support
     assert.match(workflow, new RegExp(label, 'u'));
   }
   assert.match(workflow, /python-kfx-asyncio:qualify -- --execute --output/u);
+  assert.match(workflow, /externals\/node24\/bin/u);
+  assert.match(workflow, /shifu\.cmd python-kfx-asyncio:qualify/u);
+  assert.match(workflow, /matrix\.platform != 'windows'/u);
+  assert.match(workflow, /matrix\.platform == 'windows'/u);
   assert.match(workflow, /raw observations and derived report/u);
   assert.match(
     workflow,
