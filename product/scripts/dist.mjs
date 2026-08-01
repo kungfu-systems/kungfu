@@ -37,7 +37,10 @@ import { normalizeCopiedSymlinks } from './portable-symlinks.mjs';
 import { productReleaseChannelConfig } from './release-channel-trust.mjs';
 import {
   assertSupportedProductHost,
+  createPlatformDependencyRuntime,
+  esbuildPlatformBinaryPath,
   readTrunkRuntimePinSnapshot,
+  requiresManagedEsbuildPlatform,
   runProductAssembly,
 } from './runtime-pin-snapshot.mjs';
 import {
@@ -49,6 +52,7 @@ import {
   resolveDesktopLocalArtifact,
 } from './upgrade-manifest.mjs';
 export { desktopUpdaterArtifact };
+export { esbuildPlatformBinaryPath, requiresManagedEsbuildPlatform };
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -200,49 +204,6 @@ function labelSlug(label) {
     .replace(/^\.+|\.+$/g, '');
 }
 
-function libnodePlatformPackageName() {
-  const packages = {
-    'darwin-arm64': '@kungfu-tech/libnode-darwin-arm64',
-    'linux-x64': '@kungfu-tech/libnode-linux-x64',
-    'linux-arm64': '@kungfu-tech/libnode-linux-arm64',
-    'win32-x64': '@kungfu-tech/libnode-win32-x64',
-  };
-  return packages[`${process.platform}-${process.arch}`];
-}
-
-function rollupPlatformPackageName() {
-  const libc = linuxLibc();
-  const packages = {
-    'darwin-arm64': '@rollup/rollup-darwin-arm64',
-    [`linux-arm64-${libc}`]: `@rollup/rollup-linux-arm64-${libc}`,
-    [`linux-x64-${libc}`]: `@rollup/rollup-linux-x64-${libc}`,
-    'win32-arm64': '@rollup/rollup-win32-arm64-msvc',
-    'win32-ia32': '@rollup/rollup-win32-ia32-msvc',
-    'win32-x64': '@rollup/rollup-win32-x64-msvc',
-  };
-  return packages[
-    `${process.platform}-${process.arch}${libc ? `-${libc}` : ''}`
-  ];
-}
-
-function esbuildPlatformPackageName() {
-  const packages = {
-    'darwin-arm64': '@esbuild/darwin-arm64',
-    'linux-x64': '@esbuild/linux-x64',
-    'linux-arm64': '@esbuild/linux-arm64',
-    'win32-x64': '@esbuild/win32-x64',
-  };
-  return packages[`${process.platform}-${process.arch}`];
-}
-
-function linuxLibc() {
-  if (process.platform !== 'linux') {
-    return '';
-  }
-  const report = process.report?.getReport?.();
-  return report?.header?.glibcVersionRuntime ? 'gnu' : 'musl';
-}
-
 function installArgs() {
   const args = ['install', '--frozen-lockfile'];
   if (process.env.KUNGFU_BUILDCHAIN_NO_OPTIONAL === '1') {
@@ -251,289 +212,19 @@ function installArgs() {
   return args;
 }
 
-function canResolve(packageName) {
-  try {
-    require.resolve(`${packageName}/package.json`);
-    return true;
-  } catch {
-    return false;
-  }
-}
-
-function canResolveFrom(packageName, paths) {
-  try {
-    require.resolve(`${packageName}/package.json`, { paths });
-    return true;
-  } catch {
-    return false;
-  }
-}
-
-function packageVersionFrom(packageName, paths) {
-  return readJson(require.resolve(`${packageName}/package.json`, { paths }))
-    .version;
-}
-
-function rollupPackagePathsFromGui() {
-  const vitePackageJson = require.resolve('vite/package.json', {
-    paths: [GUI_DIR],
-  });
-  const viteDir = path.dirname(vitePackageJson);
-  const rollupPackageJson = require.resolve('rollup/package.json', {
-    paths: [viteDir],
-  });
-  return [path.dirname(rollupPackageJson), viteDir];
-}
-
-function rollupVersionFromGui() {
-  return packageVersionFrom('rollup', rollupPackagePathsFromGui());
-}
-
-function packageJsonPath(nodePath, packageName) {
-  return path.join(nodePath, ...packageName.split('/'), 'package.json');
-}
-
-function appendNodePath(env, nodePaths) {
-  const nextNodePath = [...nodePaths, env.NODE_PATH || '']
-    .filter(Boolean)
-    .join(path.delimiter);
-  return nextNodePath ? { ...env, NODE_PATH: nextNodePath } : env;
-}
-
-function ensureNoOptionalPlatformPackage({
-  kind,
-  packageName,
-  version,
-  installRoot,
-}) {
-  const nodePath = path.join(installRoot, 'node_modules');
-  const installedPackageJson = packageJsonPath(nodePath, packageName);
-  const installedVersion = fs.existsSync(installedPackageJson)
-    ? readJson(installedPackageJson).version
-    : undefined;
-  if (installedVersion !== version) {
-    fs.rmSync(installRoot, { recursive: true, force: true });
-    fs.mkdirSync(installRoot, { recursive: true });
-    run(
-      `install ${kind} platform package`,
-      'npm',
-      [
-        'install',
-        '--no-save',
-        '--package-lock=false',
-        '--ignore-scripts',
-        // Platform packages can be published after a runner cached an older
-        // packument. Revalidate metadata through the configured registry so a
-        // warm cache cannot turn a real version into a false ETARGET.
-        '--prefer-online',
-        '--prefix',
-        installRoot,
-        `${packageName}@${version}`,
-      ],
-      {
-        phase: 'dependencies',
-        event: `product.${kind}.platform.install`,
-        attributes: {
-          packageName,
-          version,
-        },
-      },
-    );
-  } else {
-    buildchainLogger.mark(`product.${kind}.platform.cached`, {
-      phase: 'dependencies',
-      attributes: {
-        packageName,
-        version,
-      },
-    });
-  }
-
-  buildchainLogger.mark(`product.${kind}.platform.ready`, {
-    phase: 'dependencies',
-    attributes: {
-      packageName,
-      version,
-    },
-  });
-  return nodePath;
-}
-
-export function esbuildPlatformBinaryPath(packageRoot, platform) {
-  return path.join(
-    packageRoot,
-    platform === 'win32' ? 'esbuild.exe' : path.join('bin', 'esbuild'),
-  );
-}
-
-export function requiresManagedEsbuildPlatform({
-  noOptional,
-  hostVersion,
-  platformVersion,
-}) {
-  return noOptional && platformVersion !== hostVersion;
-}
-
-function ensureEsbuildRuntime({ slot, paths }) {
-  const packageJson = require.resolve('esbuild/package.json', { paths });
-  const esbuildVersion = readJson(packageJson).version;
-  const resolvePaths = [path.dirname(packageJson)];
-  const packageName = esbuildPlatformPackageName();
-  if (!packageName) {
-    throw new Error(
-      `unsupported esbuild platform: ${process.platform}-${process.arch}`,
-    );
-  }
-  let platformPackageJson;
-  try {
-    platformPackageJson = require.resolve(`${packageName}/package.json`, {
-      paths: resolvePaths,
-    });
-  } catch {
-    platformPackageJson = undefined;
-  }
-  const resolvedPlatformVersion = platformPackageJson
-    ? readJson(platformPackageJson).version
-    : undefined;
-  if (
-    requiresManagedEsbuildPlatform({
-      noOptional: process.env.KUNGFU_BUILDCHAIN_NO_OPTIONAL === '1',
-      hostVersion: esbuildVersion,
-      platformVersion: resolvedPlatformVersion,
-    })
-  ) {
-    const nodePath = ensureNoOptionalPlatformPackage({
-      kind: `esbuild.${slot}`,
-      packageName,
-      version: esbuildVersion,
-      installRoot: path.join(
-        ROOT,
-        '.buildchain',
-        'esbuild-platform',
-        slot,
-        `${process.platform}-${process.arch}`,
-      ),
-    });
-    platformPackageJson = packageJsonPath(nodePath, packageName);
-    resolvePaths.unshift(path.dirname(nodePath));
-  }
-  if (!platformPackageJson) {
-    throw new Error(`missing ${packageName} for esbuild ${esbuildVersion}`);
-  }
-  const platformVersion = readJson(platformPackageJson).version;
-  if (platformVersion !== esbuildVersion) {
-    throw new Error(
-      `esbuild host ${esbuildVersion} does not match ${packageName} ${platformVersion}`,
-    );
-  }
-  const binaryPath = esbuildPlatformBinaryPath(
-    path.dirname(platformPackageJson),
-    process.platform,
-  );
-  if (!fs.existsSync(binaryPath)) {
-    throw new Error(`missing ${packageName} binary: ${binaryPath}`);
-  }
-  return {
-    packageJson,
-    packageName,
-    resolvePaths,
-    binaryPath,
-  };
-}
-
-function guiEsbuildPackagePaths() {
-  const electronVitePackageJson = require.resolve(
-    'electron-vite/package.json',
-    { paths: [GUI_DIR] },
-  );
-  return [path.dirname(electronVitePackageJson)];
-}
-
-function buildchainSourceBuildEnv() {
-  if (process.env.KUNGFU_BUILDCHAIN_NO_OPTIONAL !== '1') {
-    buildchainLogger.mark('product.libnode.platform.optional', {
-      phase: 'dependencies',
-      attributes: {
-        noOptional: false,
-      },
-    });
-    return process.env;
-  }
-
-  const packageName = libnodePlatformPackageName();
-  if (!packageName) {
-    throw new Error(
-      `unsupported libnode platform: ${process.platform}-${process.arch}`,
-    );
-  }
-  const nodePaths = [];
-  if (canResolve(packageName)) {
-    buildchainLogger.mark('product.libnode.platform.resolved', {
-      phase: 'dependencies',
-      attributes: {
-        packageName,
-        source: 'workspace-node-path',
-      },
-    });
-  }
-
-  const corePackage = readJson(
-    path.join(ROOT, 'framework', 'core', 'package.json'),
-  );
-  const libnodeVersion = corePackage.devDependencies?.['@kungfu-tech/libnode'];
-  if (!libnodeVersion) {
-    throw new Error('framework/core must declare @kungfu-tech/libnode');
-  }
-
-  const installRoot = path.join(
-    ROOT,
-    '.buildchain',
-    'libnode-platform',
-    `${process.platform}-${process.arch}`,
-  );
-  if (!canResolve(packageName)) {
-    nodePaths.push(
-      ensureNoOptionalPlatformPackage({
-        kind: 'libnode',
-        packageName,
-        version: libnodeVersion,
-        installRoot,
-      }),
-    );
-  }
-
-  const rollupPackageName = rollupPlatformPackageName();
-  if (!rollupPackageName) {
-    throw new Error(
-      `unsupported rollup platform: ${process.platform}-${process.arch}`,
-    );
-  }
-  if (canResolveFrom(rollupPackageName, rollupPackagePathsFromGui())) {
-    buildchainLogger.mark('product.rollup.platform.resolved', {
-      phase: 'dependencies',
-      attributes: {
-        packageName: rollupPackageName,
-        source: 'workspace-node-path',
-      },
-    });
-  } else {
-    nodePaths.push(
-      ensureNoOptionalPlatformPackage({
-        kind: 'rollup',
-        packageName: rollupPackageName,
-        version: rollupVersionFromGui(),
-        installRoot: path.join(
-          ROOT,
-          '.buildchain',
-          'rollup-platform',
-          `${process.platform}-${process.arch}`,
-        ),
-      }),
-    );
-  }
-
-  return appendNodePath(process.env, nodePaths);
-}
+const platformDependencyRuntime = createPlatformDependencyRuntime({
+  root: ROOT,
+  guiDir: GUI_DIR,
+  readJson,
+  run,
+  logger: buildchainLogger,
+  requireFn: require,
+});
+const {
+  buildchainSourceBuildEnv,
+  ensureEsbuildRuntime,
+  guiEsbuildPackagePaths,
+} = platformDependencyRuntime;
 
 function readJson(file) {
   return JSON.parse(fs.readFileSync(file, 'utf8'));
