@@ -73,14 +73,18 @@ function relative(root, file) {
   return path.relative(root, file).split(path.sep).join('/');
 }
 
-function assertPair(root, source, projection) {
+function assertPair(root, source, projection, canonicalProjection = false) {
   const sourceFile = path.join(root, source);
   const projectionFile = path.join(root, projection);
   if (!fs.existsSync(sourceFile) || !fs.existsSync(projectionFile))
     throw new Error(
       `cold KFD projection is missing: ${source} -> ${projection}`,
     );
-  if (!fs.readFileSync(sourceFile).equals(fs.readFileSync(projectionFile)))
+  const sourceBytes = fs.readFileSync(sourceFile);
+  const expected = canonicalProjection
+    ? Buffer.from(`${JSON.stringify(JSON.parse(sourceBytes), null, 2)}\n`)
+    : sourceBytes;
+  if (!expected.equals(fs.readFileSync(projectionFile)))
     throw new Error(`cold KFD projection differs: ${source} -> ${projection}`);
 }
 
@@ -106,6 +110,7 @@ export function checkColdBuildchainKfd(root) {
     [
       '.buildchain/kfd/support-matrix.json',
       'developer/sdk/kfd/support-matrix.json',
+      true,
     ],
   ];
   const claimsDir = path.join(root, BUILDCHAIN_KFD2_DIR, 'claims');
