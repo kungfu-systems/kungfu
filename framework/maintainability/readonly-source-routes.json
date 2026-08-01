@@ -12,7 +12,19 @@
       "command": "./shifu check:source",
       "classification": "read-only-source",
       "implementation": "scripts/source-acceptance.mjs",
-      "transitiveWriters": [],
+      "runtimeImplementation": "scripts/readonly-source-toolchain.mjs",
+      "writerOwner": "source-acceptance-runtime",
+      "transitiveWriters": [
+        "disposable OS test directories only"
+      ],
+      "deniedCheckoutWriters": [
+        "_tmp_*",
+        ".buildchain/diagnostics/*.tmp-*",
+        ".pnpm-store/**",
+        "generated-fixtures/**",
+        "nested-task-output/**"
+      ],
+      "recovery": "move disposable writes to the declared OS runtime root; run legitimate materialization in an isolated worktree and exclude it from ./shifu check:source",
       "network": false,
       "dependencyInstallation": false
     },

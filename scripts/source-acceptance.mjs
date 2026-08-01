@@ -11,6 +11,11 @@ import {
   checkDevChannelAuthority,
   devMergeBaseCandidates,
 } from './candidate-timeline-events.cjs';
+import {
+  assertSourceCheckoutUnchanged,
+  prepareSourceAcceptanceRuntime,
+  sourceCheckoutSnapshot,
+} from './readonly-source-toolchain.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const CPP = /\.(?:c|cc|cpp|cxx|h|hh|hpp|hxx)$/;
@@ -805,12 +810,12 @@ export function sourceAcceptancePlan(files, evidenceBaseCommit = '') {
 }
 
 /** @param {Command} step */
-function run(step) {
+function run(step, sourceEnv = process.env) {
   console.log(`\n[source-acceptance] ${step.label}`);
   console.log(`[source-acceptance] $ ${step.command} ${step.args.join(' ')}`);
   const result = spawnSync(step.command, step.args, {
     cwd: step.cwd || ROOT,
-    env: step.env || process.env,
+    env: { ...sourceEnv, ...(step.env || {}) },
     stdio: 'inherit',
   });
   if (result.error || result.status !== 0) {
@@ -829,21 +834,42 @@ function run(step) {
 }
 
 function main() {
-  const files = sourceChangedFiles();
-  console.log(`[source-acceptance] changed files: ${files.length}`);
-  const devChannels = checkDevChannelAuthority();
+  const before = sourceCheckoutSnapshot(ROOT);
+  const runtime = prepareSourceAcceptanceRuntime(ROOT);
   console.log(
-    `\n[source-acceptance] dev channel authority\n${JSON.stringify(devChannels, null, 2)}`,
+    `[source-acceptance] trackedTreeRoot=${before.trackedTreeRoot} untrackedInventoryRoot=${before.untrackedInventoryRoot}`,
   );
-  if (devChannels.verdict !== 'pass')
-    throw new Error('dev channel authority failed');
-  if (process.env.KUNGFU_READONLY_NESTED_SOURCE_ACCEPTANCE === '1') {
-    console.warn(
-      '[source-acceptance] cold read-only lane: the installed TypeScript dependency graph is absent; normal source acceptance and CI enforce tooling type checks.',
+  let failure;
+  try {
+    const files = sourceChangedFiles();
+    console.log(`[source-acceptance] changed files: ${files.length}`);
+    const devChannels = checkDevChannelAuthority();
+    console.log(
+      `\n[source-acceptance] dev channel authority\n${JSON.stringify(devChannels, null, 2)}`,
     );
+    if (devChannels.verdict !== 'pass')
+      throw new Error('dev channel authority failed');
+    if (process.env.KUNGFU_READONLY_NESTED_SOURCE_ACCEPTANCE === '1') {
+      console.warn(
+        '[source-acceptance] cold read-only lane: the installed TypeScript dependency graph is absent; normal source acceptance and CI enforce tooling type checks.',
+      );
+    }
+    for (const step of sourceAcceptancePlan(files, sourceMergeBase().sha))
+      run(step, runtime.env);
+  } catch (error) {
+    failure = error;
+  } finally {
+    try {
+      const after = sourceCheckoutSnapshot(ROOT);
+      assertSourceCheckoutUnchanged(before, after);
+      console.log(
+        `[source-acceptance] zero-write trackedTreeRoot=${after.trackedTreeRoot} untrackedInventoryRoot=${after.untrackedInventoryRoot}`,
+      );
+    } finally {
+      runtime.cleanup();
+    }
   }
-  for (const step of sourceAcceptancePlan(files, sourceMergeBase().sha))
-    run(step);
+  if (failure) throw failure;
   console.log('\n[source-acceptance] build-free source gate passed');
 }
 
