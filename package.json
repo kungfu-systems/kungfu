@@ -173,6 +173,7 @@
     "render:domain-profile-authoring": "node scripts/require-shifu.mjs render:domain-profile-authoring && node scripts/domain-profile-authoring.mjs --write && node developer/sdk/src/sdk.js contract render domain-profile-authoring --write --json && node developer/sdk/src/sdk.js contract policy --write --json",
     "check:fact-durable-admission": "node scripts/require-shifu.mjs check:fact-durable-admission && node --test scripts/check-fact-durable-admission.test.mjs",
     "fact-durable-admission:qualify": "node scripts/require-shifu.mjs fact-durable-admission:qualify && node scripts/run-fact-durable-admission-qualification.mjs",
+    "check:data-protection-contract": "node scripts/require-shifu.mjs check:data-protection-contract && node --test scripts/check-data-protection-contract.test.mjs",
     "check:exit-bundle-contract": "node scripts/require-shifu.mjs check:exit-bundle-contract && node --test scripts/check-exit-bundle-contract.test.mjs",
     "check:exit-verifier-package": "node scripts/require-shifu.mjs check:exit-verifier-package && PYTHONPATH=framework/core/src/python:${KUNGFU_NATIVE_PATH:-framework/core/build/Release} uv run --project framework/core --frozen python scripts/check-exit-verifier-package.py --json",
     "check:exit-clean-runtime": "node scripts/require-shifu.mjs check:exit-clean-runtime && python3 scripts/check-exit-clean-runtime.py --json",
