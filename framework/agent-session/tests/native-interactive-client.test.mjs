@@ -28,9 +28,15 @@ test('provider-first source bundle resolves node-pty through the Agent Session p
       () => bundleRequire.resolve('node-pty/lib/index.js'),
       /Cannot find module/u,
     );
-    assert.match(
+    assert.equal(
       bundleRequire.resolve('@kungfu-tech/agent-session/product-client'),
-      /framework\/agent-session\/src\/product-client\.mjs$/u,
+      path.join(
+        ROOT,
+        'framework',
+        'agent-session',
+        'src',
+        'product-client.mjs',
+      ),
     );
     const modulePath = resolveNativeInteractiveNodePty(
       path.join(TUI_DIST, 'agent-session-worker.mjs'),
