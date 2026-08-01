@@ -9,7 +9,7 @@ from click.testing import CliRunner
 import pytest
 
 from kungfu import dogfood as dogfood_api
-from kungfu import exit_bundle, profile_composition, profile_sdk
+from kungfu import exit_bundle, exit_verifier, profile_composition, profile_sdk
 from kungfu.agent import work_profile
 from kungfu.atlas import mission_control
 from kungfu.cli.commands import __registry__  # noqa: F401
@@ -402,8 +402,8 @@ def test_exit_history_status_is_honest_and_scope_bound(tmp_path):
     source = tmp_path / "source" / "runtime"
     _sealed_episode(source, 708)
 
-    general = exit_bundle.history_status(source)
-    selected = exit_bundle.history_status(source, _request(708))
+    general = exit_verifier.status(source)
+    selected = exit_verifier.status(source, _request(708))
 
     assert general["state"] == "contract-ready"
     assert general["coverage"] == "not-evaluated"
@@ -420,8 +420,8 @@ def test_exit_history_status_is_honest_and_scope_bound(tmp_path):
     assert str(tmp_path) not in json.dumps(selected)
 
     thin = exit_bundle.build(source, _request(708, mode="thin"))
-    exit_bundle.record_verified_history_export(source, thin)
-    degraded = exit_bundle.history_status(source)
+    exit_verifier.record_verified_export(source, thin)
+    degraded = exit_verifier.status(source)
     assert degraded["state"] == "degraded"
     assert degraded["coverage"] == "last-export-explicit-loss"
     assert degraded["lastVerifiedExport"]["loss"]
@@ -466,8 +466,8 @@ def test_exit_history_cli_exports_and_verifies_through_shared_core(tmp_path):
     export_receipt = json.loads(exported.output)
     assert export_receipt["schema"] == "kungfu.exit-history.export-receipt/v1"
     assert export_receipt["written"] is True
-    observed = exit_bundle.history_status(source)["lastVerifiedExport"]
-    projected = exit_bundle.history_status(source)
+    observed = exit_verifier.status(source)["lastVerifiedExport"]
+    projected = exit_verifier.status(source)
     assert projected["state"] == "verified"
     assert projected["coverage"] == "last-export-content-verified"
     assert observed["packageRoot"] == export_receipt["packageRoot"]
@@ -483,8 +483,8 @@ def test_exit_history_projection_rebuild_is_bounded_and_authorized(tmp_path):
     runtime = tmp_path / "runtime"
     _sealed_episode(runtime, 710)
 
-    plan = exit_bundle.rebuild_history_projections(runtime, projections=["episode"])
-    rebuilt = exit_bundle.rebuild_history_projections(
+    plan = exit_verifier.rebuild_projections(runtime, projections=["episode"])
+    rebuilt = exit_verifier.rebuild_projections(
         runtime,
         projections=["episode", "fact-kernel"],
         execute=True,
@@ -505,7 +505,7 @@ def test_exit_history_projection_rebuild_is_bounded_and_authorized(tmp_path):
     }
     assert str(tmp_path) not in json.dumps(rebuilt)
     with pytest.raises(exit_bundle.ExitBundleError) as error:
-        exit_bundle.rebuild_history_projections(runtime, execute=True)
+        exit_verifier.rebuild_projections(runtime, execute=True)
     assert error.value.code == "authorization-actor-required"
 
 

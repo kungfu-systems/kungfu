@@ -236,7 +236,7 @@ def history_group(ctx):
 def history_status_cmd(ctx, file_path, input_base64, as_json):
     request = _input(file_path, input_base64) if file_path or input_base64 else None
     result = _run(
-        lambda: exit_bundle.history_status(
+        lambda: exit_verifier.status(
             ctx.runtime_dir,
             request,
             config_home=ctx.config_home,
@@ -271,7 +271,7 @@ def history_export_cmd(ctx, file_path, input_base64, out, as_json):
     )
     _run(lambda: exit_bundle.write(out, package))
     observer = _run(
-        lambda: exit_bundle.record_verified_history_export(ctx.runtime_dir, package)
+        lambda: exit_verifier.record_verified_export(ctx.runtime_dir, package)
     )
     result = {
         "schema": "kungfu.exit-history.export-receipt/v1",
@@ -370,7 +370,7 @@ def history_import_cmd(ctx, file_path, input_base64, execute, authorized_by, as_
 @exit_command_context
 def history_rebuild_cmd(ctx, projections, execute, authorized_by, as_json):
     result = _run(
-        lambda: exit_bundle.rebuild_history_projections(
+        lambda: exit_verifier.rebuild_projections(
             ctx.runtime_dir,
             projections=projections,
             execute=execute,

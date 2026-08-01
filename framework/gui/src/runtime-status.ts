@@ -70,6 +70,80 @@ export type RuntimeStatusResult = {
   updatedAt: number;
 };
 
+export type ExitHistoryStatus = {
+  ok: boolean;
+  state: string;
+  coverage: string;
+  lastVerifiedExport: { bundleId: string; packageRoot: string } | null;
+  nextActions: string[];
+};
+
+export const EXIT_HISTORY_STATUS_FALLBACK: ExitHistoryStatus = {
+  ok: false,
+  state: 'unavailable',
+  coverage: 'not-evaluated',
+  lastVerifiedExport: null,
+  nextActions: ['kungfu exit history status --json'],
+};
+
+type ExitHistoryExecFile = (
+  file: string,
+  args: string[],
+  options: {
+    encoding: 'utf8';
+    env: Record<string, string | undefined>;
+    maxBuffer: number;
+  },
+  callback: (error: Error | null, stdout: string) => void,
+) => void;
+
+export function observeExitHistoryStatus(
+  win: Window,
+  cliArgs: (
+    env: Record<string, string | undefined>,
+    args: string[],
+  ) => string[],
+  onStatus: (status: ExitHistoryStatus) => void,
+): () => void {
+  const { execFile } = win.require('node:child_process') as {
+    execFile: ExitHistoryExecFile;
+  };
+  const env: Record<string, string | undefined> = {
+    ...win.process.env,
+    KUNGFU_AS_VARIANT: undefined,
+  };
+  const bin =
+    env.KUNGFU_CLI_BIN ||
+    env.KUNGFU_BIN ||
+    (win.process.platform === 'win32' ? 'kungfu.exe' : 'kungfu');
+  let active = true;
+  execFile(
+    bin,
+    cliArgs(env, ['exit', 'history', 'status', '--json']),
+    { encoding: 'utf8', env, maxBuffer: 2 * 1024 * 1024 },
+    (error, stdout) => {
+      if (!active) return;
+      if (error) {
+        onStatus(EXIT_HISTORY_STATUS_FALLBACK);
+        return;
+      }
+      try {
+        const value = JSON.parse(stdout) as ExitHistoryStatus;
+        onStatus(
+          value.ok && value.nextActions?.length
+            ? value
+            : EXIT_HISTORY_STATUS_FALLBACK,
+        );
+      } catch {
+        onStatus(EXIT_HISTORY_STATUS_FALLBACK);
+      }
+    },
+  );
+  return () => {
+    active = false;
+  };
+}
+
 export type WorkspaceRuntimePresentation = {
   state: WorkspaceRuntimeState;
   label: string;
@@ -119,7 +193,7 @@ export function deriveWorkspaceRuntimePresentation(
   const payload = result.payload;
   const product = payload.product;
   if (product) {
-    if (product.error || product.liveState === 'failed') {
+    if (product.error) {
       return presentation(
         'needs-attention',
         'Live capabilities need attention',
