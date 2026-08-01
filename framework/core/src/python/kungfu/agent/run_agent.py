@@ -768,6 +768,10 @@ def parse_provider_output(provider: str, stdout: str) -> dict[str, Any]:
                 usage = dict(payload["usage"])
             if isinstance(payload.get("total_cost_usd"), (int, float)):
                 cost = payload["total_cost_usd"]
+    elif provider == "synthetic":
+        visible = _ANSI_ESCAPE.sub("", stdout).strip()
+        if visible:
+            text_parts.append(visible[:128_000])
     return {
         "providerSessionIds": sorted(session_ids),
         "text": "\n".join(text_parts) if text_parts else None,
@@ -965,6 +969,7 @@ def execute(
             "launch": {
                 "mode": "agent-session" if session_value is not None else "process",
                 "cwd": cwd,
+                "permissionMode": permission_mode,
                 "argvWithoutPrompt": argv[:-1],
                 "environmentKeys": env_keys,
                 "promptRoot": canonical_root(prompt),

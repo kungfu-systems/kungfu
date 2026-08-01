@@ -28,11 +28,15 @@ VERIFY_SCHEMA = "kungfu.agent-runtime-verification/v1"
 PROVIDERS = ("codex", "claude", "opencode")
 MOCK_SCENARIOS = (
     "complete",
+    "deliverable",
     "question",
     "approval",
     "blocked",
     "crash",
+    "disconnect",
     "multi-step",
+    "recovery-story",
+    "review-fit",
 )
 BACKENDS = ("tmux", "direct")
 CWD_POLICIES = ("workspace-root", "home", "inherit")

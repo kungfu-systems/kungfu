@@ -1,21 +1,12 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import type {
-  ProjectRemovePlan,
   ProjectSummary,
-  ProjectWorkCapturePlan,
-  ProjectWorkRunPlan,
-  ProjectWorkRunSnapshot,
   Projects,
   ProjectsCatalog,
 } from '@kungfu-tech/api/capability';
 import * as capability from '@kungfu-tech/api/capability';
-import {
-  ProjectWorkRunConfirmation,
-  ProjectWorkRunSession,
-  mono,
-  panelStyle,
-} from '@kungfu-tech/kfx';
+import { mono, panelStyle } from '@kungfu-tech/kfx';
 import React from 'react';
 import { createAgentSessionProxy } from '../agent-session-proxy';
 import { guiKungfuCliArgs } from '../runtime';
@@ -175,7 +166,6 @@ export function ProjectsPanel({
   onOpenProject,
   onOpenExistingProject,
   onRestoreProject,
-  onOpenWork,
 }: {
   projects: Projects;
   focusedPath?: string;
@@ -183,57 +173,38 @@ export function ProjectsPanel({
   onOpenProject: (workspace: WorkspaceSelection) => Promise<unknown>;
   onOpenExistingProject: () => void;
   onRestoreProject: (projectPath: string, section: 'files' | 'work') => boolean;
-  onOpenWork: (project: ProjectSummary, section?: 'files' | 'work') => void;
 }) {
-  const [catalog, setCatalog] = React.useState<ProjectsCatalog>();
+  const [catalog, setCatalog] = React.useState<ProjectsCatalog | undefined>(
+    projects.cachedCatalog,
+  );
   const [busy, setBusy] = React.useState('');
   const [error, setError] = React.useState('');
   const [createPlan, setCreatePlan] = React.useState<CreatePlan>();
-  const [workComposer, setWorkComposer] = React.useState<{
-    project: ProjectSummary;
-    plan?: ProjectWorkCapturePlan;
-  }>();
-  const [workObjective, setWorkObjective] = React.useState('');
-  const [workAcceptance, setWorkAcceptance] = React.useState('');
-  const [selectedWork, setSelectedWork] = React.useState<
-    Record<string, string>
-  >({});
-  const [removePlan, setRemovePlan] = React.useState<ProjectRemovePlan>();
-  const [runs, setRuns] = React.useState<ProjectWorkRunSnapshot[]>(() =>
-    projects.runs(),
-  );
-  const [visibleRunId, setVisibleRunId] = React.useState<string | null>(
-    () => projects.runs()[0]?.id ?? null,
-  );
-  const [runPlan, setRunPlan] = React.useState<{
-    project: ProjectSummary;
-    provider: string;
-    plan: ProjectWorkRunPlan;
-  }>();
-  const mockScenario = window.process.env.KUNGFU_MOCK_AGENT_SCENARIO;
-  React.useEffect(() => projects.subscribeRuns(setRuns), [projects]);
   const onCatalogRef = React.useRef(onCatalog);
   React.useEffect(() => {
     onCatalogRef.current = onCatalog;
   }, [onCatalog]);
 
-  const refresh = React.useCallback(() => {
-    setBusy('Loading Projects…');
-    setError('');
-    return projects
-      .list()
-      .then((value) => {
-        setCatalog(value);
-        onCatalogRef.current(value);
-      })
-      .catch((reason) =>
-        setError(reason instanceof Error ? reason.message : String(reason)),
-      )
-      .finally(() => setBusy(''));
-  }, [projects]);
+  const refresh = React.useCallback(
+    (force = true) => {
+      setBusy('Loading Projects…');
+      setError('');
+      return projects
+        .list({ refresh: force })
+        .then((value) => {
+          setCatalog(value);
+          onCatalogRef.current(value);
+        })
+        .catch((reason) =>
+          setError(reason instanceof Error ? reason.message : String(reason)),
+        )
+        .finally(() => setBusy(''));
+    },
+    [projects],
+  );
   React.useEffect(() => {
-    if (!focusedPath) void refresh();
-  }, [focusedPath, refresh]);
+    if (!focusedPath && !catalog) void refresh(false);
+  }, [catalog, focusedPath, refresh]);
 
   const open = React.useCallback(
     (project: ProjectSummary) => {
@@ -286,126 +257,6 @@ export function ProjectsPanel({
       .finally(() => setBusy(''));
   }, [createPlan, onOpenProject, projects]);
 
-  const prepareWork = React.useCallback(
-    (project: ProjectSummary) => {
-      try {
-        const plan = projects.prepareWork(workObjective, workAcceptance);
-        setWorkComposer({ project, plan });
-        setError('');
-      } catch (reason) {
-        setError(reason instanceof Error ? reason.message : String(reason));
-      }
-    },
-    [projects, workAcceptance, workObjective],
-  );
-  const captureWork = React.useCallback(() => {
-    if (!workComposer?.plan) return;
-    const { project, plan } = workComposer;
-    setBusy(`Creating Work in ${project.name}…`);
-    setError('');
-    void projects
-      .captureWork(project.path, plan)
-      .then(() => {
-        setSelectedWork((current) => ({
-          ...current,
-          [project.path]: plan.assignmentId,
-        }));
-        setWorkComposer(undefined);
-        setWorkObjective('');
-        setWorkAcceptance('');
-      })
-      .catch((reason) =>
-        setError(reason instanceof Error ? reason.message : String(reason)),
-      )
-      .finally(() => setBusy(''));
-  }, [projects, workComposer]);
-
-  const planRemove = React.useCallback(
-    (project: ProjectSummary) => {
-      setBusy(`Planning removal of ${project.name} from Kungfu…`);
-      setError('');
-      void projects
-        .planRemove(project.id)
-        .then(setRemovePlan)
-        .catch((reason) =>
-          setError(reason instanceof Error ? reason.message : String(reason)),
-        )
-        .finally(() => setBusy(''));
-    },
-    [projects],
-  );
-  const confirmRemove = React.useCallback(() => {
-    if (!removePlan) return;
-    setBusy(`Removing ${removePlan.project.name} from Kungfu Projects…`);
-    setError('');
-    void projects
-      .remove(removePlan.project.id, removePlan.planRoot)
-      .then(() => {
-        setRemovePlan(undefined);
-        return refresh();
-      })
-      .catch((reason) =>
-        setError(reason instanceof Error ? reason.message : String(reason)),
-      )
-      .finally(() => setBusy(''));
-  }, [projects, refresh, removePlan]);
-
-  const planRun = React.useCallback(
-    (project: ProjectSummary, provider: string) => {
-      setBusy(`Checking ${provider} and the next Work…`);
-      setError('');
-      void projects
-        .planRun(provider, {
-          workspace: project.path,
-          work: selectedWork[project.path],
-          scenario: provider === 'mock' ? mockScenario : undefined,
-        })
-        .then((plan) => setRunPlan({ project, provider, plan }))
-        .catch((reason) =>
-          setError(reason instanceof Error ? reason.message : String(reason)),
-        )
-        .finally(() => setBusy(''));
-    },
-    [mockScenario, projects, selectedWork],
-  );
-  const confirmRun = React.useCallback(() => {
-    if (!runPlan) return;
-    const { project, provider } = runPlan;
-    setBusy(`Starting ${provider} for ${project.name}…`);
-    setError('');
-    setRunPlan(undefined);
-    const pending = projects.run(
-      provider,
-      {
-        workspace: project.path,
-        work: runPlan.plan.work.assignmentId,
-        scenario: provider === 'mock' ? mockScenario : undefined,
-        expectedPlanRoot: runPlan.plan.planRoot,
-      },
-      () => undefined,
-    );
-    setVisibleRunId(projects.runs()[0]?.id);
-    void pending
-      .catch((reason) =>
-        setError(reason instanceof Error ? reason.message : String(reason)),
-      )
-      .finally(() => setBusy(''));
-  }, [mockScenario, projects, runPlan]);
-  const visibleRun = runs.find((run) => run.id === visibleRunId) ?? null;
-  React.useEffect(() => {
-    if (!visibleRun?.session?.live) return undefined;
-    let refreshing = false;
-    const refreshSession = () => {
-      if (refreshing) return;
-      refreshing = true;
-      void projects.refreshRun(visibleRun.id).finally(() => {
-        refreshing = false;
-      });
-    };
-    refreshSession();
-    const timer = window.setInterval(refreshSession, 500);
-    return () => window.clearInterval(timer);
-  }, [projects, visibleRun?.id, visibleRun?.session?.live]);
   const openedProject = focusedPath
     ? catalog?.projects.find((project) => project.path === focusedPath)
     : undefined;
@@ -442,8 +293,8 @@ export function ProjectsPanel({
         <div>
           <h2 style={{ margin: 0, color: '#f1f1f1' }}>Projects</h2>
           <p style={{ ...mono, color: '#a8a8a8', margin: '6px 0 0' }}>
-            Open a Project, create Work, then choose an Agent. Kungfu remembers
-            the Project while its files stay ordinary.
+            Open a Project to inspect Files and manage Work, Agents, and deeper
+            Project actions. Kungfu remembers it while its files stay ordinary.
           </p>
         </div>
         <div style={{ display: 'flex', gap: 8 }}>
@@ -457,7 +308,11 @@ export function ProjectsPanel({
           <button type="button" style={buttonStyle} onClick={planProject}>
             New Project
           </button>
-          <button type="button" style={buttonStyle} onClick={refresh}>
+          <button
+            type="button"
+            style={buttonStyle}
+            onClick={() => void refresh()}
+          >
             Refresh
           </button>
         </div>
@@ -499,7 +354,7 @@ export function ProjectsPanel({
           <div
             style={{
               display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(380px, 1fr))',
               gap: 10,
               overflow: 'auto',
               minHeight: 0,
@@ -522,13 +377,18 @@ export function ProjectsPanel({
                 }}
               >
                 <div
-                  style={{ display: 'flex', justifyContent: 'space-between' }}
+                  style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    gap: 10,
+                  }}
                 >
                   <strong>{project.name}</strong>
                   <span
                     style={{
                       ...mono,
                       color: project.available ? '#89d185' : '#f48771',
+                      flexShrink: 0,
                     }}
                   >
                     {project.available ? project.state : 'unavailable'}
@@ -547,77 +407,44 @@ export function ProjectsPanel({
                 >
                   {project.path}
                 </div>
-                <div style={{ display: 'flex', gap: 7, flexWrap: 'wrap' }}>
+                <div
+                  style={{
+                    ...mono,
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    flexWrap: 'wrap',
+                    gap: 10,
+                    color: '#a8a8a8',
+                    marginBottom: 12,
+                  }}
+                >
+                  <span>
+                    {project.workCount ?? 0}{' '}
+                    {(project.workCount ?? 0) === 1 ? 'Work' : 'Works'}
+                  </span>
+                  <span>
+                    Last activity ·{' '}
+                    {project.updatedAt
+                      ? new Intl.DateTimeFormat(undefined, {
+                          dateStyle: 'medium',
+                          timeStyle: 'short',
+                        }).format(new Date(project.updatedAt))
+                      : 'unknown'}
+                  </span>
+                </div>
+                <div style={{ display: 'flex' }}>
                   <button
                     type="button"
-                    style={buttonStyle}
+                    style={{
+                      ...buttonStyle,
+                      width: '100%',
+                      borderColor: '#4fc1ff',
+                      background: '#0e639c',
+                    }}
                     disabled={!project.available || Boolean(busy)}
                     onClick={() => open(project)}
                   >
-                    Open
-                  </button>
-                  <button
-                    type="button"
-                    style={buttonStyle}
-                    disabled={!project.available || Boolean(busy)}
-                    onClick={() => onOpenWork(project, 'work')}
-                  >
-                    Work
-                  </button>
-                  <button
-                    type="button"
-                    style={buttonStyle}
-                    disabled={!project.available || Boolean(busy)}
-                    onClick={() => {
-                      setWorkObjective('');
-                      setWorkAcceptance('');
-                      setWorkComposer({ project });
-                    }}
-                  >
-                    New Work
-                  </button>
-                  {(
-                    [
-                      ['codex', 'Run Codex'],
-                      ['claude', 'Run Claude'],
-                      ['opencode', 'Run OpenCode'],
-                      ...(mockScenario
-                        ? ([['mock', `Run Mock · ${mockScenario}`]] as const)
-                        : []),
-                    ] as const
-                  ).map(([provider, label]) => (
-                    <button
-                      key={provider}
-                      type="button"
-                      style={buttonStyle}
-                      disabled={!project.available || Boolean(busy)}
-                      onClick={() => planRun(project, provider)}
-                    >
-                      {label}
-                    </button>
-                  ))}
-                  {runs.some((run) => run.workspace === project.path) ? (
-                    <button
-                      type="button"
-                      style={buttonStyle}
-                      onClick={() =>
-                        setVisibleRunId(
-                          runs.find((run) => run.workspace === project.path)
-                            ?.id ?? null,
-                        )
-                      }
-                    >
-                      Open Session
-                    </button>
-                  ) : null}
-                  <button
-                    type="button"
-                    title="Remove from Kungfu Projects; keep every project file"
-                    style={{ ...buttonStyle, color: '#f0b7ad' }}
-                    disabled={Boolean(busy)}
-                    onClick={() => planRemove(project)}
-                  >
-                    Remove
+                    Open Project
                   </button>
                 </div>
               </article>
@@ -630,91 +457,6 @@ export function ProjectsPanel({
           </div>
         </>
       )}
-      {visibleRun ? (
-        <ProjectWorkRunSession
-          run={visibleRun}
-          title={
-            catalog?.projects.find(
-              (project) => project.path === visibleRun.workspace,
-            )?.name
-          }
-          onClose={() => setVisibleRunId(null)}
-          onReply={(text) => {
-            void projects
-              .replyToRun(visibleRun.id, text)
-              .catch((reason) =>
-                setError(
-                  reason instanceof Error ? reason.message : String(reason),
-                ),
-              );
-          }}
-          onApprove={(approved) => {
-            void projects
-              .approveRun(visibleRun.id, approved)
-              .catch((reason) =>
-                setError(
-                  reason instanceof Error ? reason.message : String(reason),
-                ),
-              );
-          }}
-          onReview={() => {
-            const project = catalog?.projects.find(
-              (candidate) => candidate.path === visibleRun.workspace,
-            );
-            void projects
-              .endRun(visibleRun.id)
-              .then(() => {
-                if (project) onOpenWork(project, 'work');
-              })
-              .catch((reason) =>
-                setError(
-                  reason instanceof Error ? reason.message : String(reason),
-                ),
-              );
-          }}
-          onRetry={() => {
-            const project = catalog?.projects.find(
-              (candidate) => candidate.path === visibleRun.workspace,
-            );
-            if (!project || !visibleRun.work) return;
-            setBusy('Planning a fresh Agent attempt…');
-            void (
-              visibleRun.session?.live
-                ? projects.endRun(visibleRun.id)
-                : Promise.resolve(visibleRun)
-            )
-              .then(() =>
-                projects.planRun(visibleRun.provider, {
-                  workspace: project.path,
-                  work: visibleRun.work,
-                  scenario:
-                    visibleRun.provider === 'mock' ? mockScenario : undefined,
-                }),
-              )
-              .then((plan) =>
-                setRunPlan({
-                  project,
-                  provider: visibleRun.provider,
-                  plan,
-                }),
-              )
-              .catch((reason) =>
-                setError(
-                  reason instanceof Error ? reason.message : String(reason),
-                ),
-              )
-              .finally(() => setBusy(''));
-          }}
-        />
-      ) : null}
-      {runPlan ? (
-        <ProjectWorkRunConfirmation
-          plan={runPlan.plan}
-          busy={Boolean(busy)}
-          onCancel={() => setRunPlan(undefined)}
-          onConfirm={confirmRun}
-        />
-      ) : null}
       {createPlan ? (
         <dialog
           open
@@ -768,164 +510,6 @@ export function ProjectsPanel({
                 onClick={createProject}
               >
                 Create Project
-              </button>
-            </div>
-          </div>
-        </dialog>
-      ) : null}
-      {workComposer ? (
-        <dialog
-          open
-          aria-modal="true"
-          style={{
-            position: 'absolute',
-            inset: 0,
-            zIndex: 50,
-            background: 'rgba(0,0,0,0.82)',
-            display: 'grid',
-            placeItems: 'center',
-            padding: 24,
-          }}
-        >
-          <div
-            style={{
-              width: 'min(680px, 90vw)',
-              background: '#252526',
-              border: '2px solid #4fc1ff',
-              borderRadius: 10,
-              padding: 18,
-              boxShadow: '0 18px 48px rgba(0,0,0,.55)',
-            }}
-          >
-            <h3 style={{ marginTop: 0 }}>
-              New Work · {workComposer.project.name}
-            </h3>
-            <label style={{ display: 'grid', gap: 6, marginBottom: 12 }}>
-              <span style={mono}>What should the Agent do?</span>
-              <textarea
-                value={workObjective}
-                onChange={(event) => setWorkObjective(event.target.value)}
-                rows={4}
-                style={{
-                  ...mono,
-                  resize: 'vertical',
-                  padding: 9,
-                  border: '1px solid #4b4b4b',
-                  borderRadius: 6,
-                  background: '#1e1e1e',
-                  color: '#f1f1f1',
-                }}
-              />
-            </label>
-            <label style={{ display: 'grid', gap: 6 }}>
-              <span style={mono}>How will you know the Work is correct?</span>
-              <textarea
-                value={workAcceptance}
-                onChange={(event) => setWorkAcceptance(event.target.value)}
-                rows={3}
-                style={{
-                  ...mono,
-                  resize: 'vertical',
-                  padding: 9,
-                  border: '1px solid #4b4b4b',
-                  borderRadius: 6,
-                  background: '#1e1e1e',
-                  color: '#f1f1f1',
-                }}
-              />
-            </label>
-            <p style={{ ...mono, color: '#a8a8a8' }}>
-              Kungfu creates one Work item in this Project. Choose an Agent
-              after the Work is created.
-            </p>
-            <div
-              style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}
-            >
-              <button
-                type="button"
-                style={buttonStyle}
-                onClick={() => setWorkComposer(undefined)}
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                style={{ ...buttonStyle, borderColor: '#4fc1ff' }}
-                disabled={!workObjective.trim() || !workAcceptance.trim()}
-                onClick={() => prepareWork(workComposer.project)}
-              >
-                Review Work
-              </button>
-              {workComposer.plan?.objective === workObjective.trim() &&
-              workComposer.plan.acceptanceChecks[0] ===
-                workAcceptance.trim() ? (
-                <button
-                  type="button"
-                  style={{
-                    ...buttonStyle,
-                    borderColor: '#89d185',
-                    background: '#1f4d2e',
-                  }}
-                  onClick={captureWork}
-                >
-                  Create Work
-                </button>
-              ) : null}
-            </div>
-          </div>
-        </dialog>
-      ) : null}
-      {removePlan ? (
-        <dialog
-          open
-          aria-modal="true"
-          style={{
-            position: 'absolute',
-            inset: 0,
-            zIndex: 50,
-            background: 'rgba(0,0,0,0.82)',
-            display: 'grid',
-            placeItems: 'center',
-            padding: 24,
-          }}
-        >
-          <div
-            style={{
-              width: 'min(620px, 90vw)',
-              background: '#252526',
-              border: '2px solid #f48771',
-              borderRadius: 10,
-              padding: 18,
-              boxShadow: '0 18px 48px rgba(0,0,0,.55)',
-            }}
-          >
-            <h3 style={{ marginTop: 0 }}>
-              Remove {removePlan.project.name} from Kungfu?
-            </h3>
-            <div style={{ ...mono, color: '#9cdcfe' }}>
-              {removePlan.project.path}
-            </div>
-            <p>
-              This removes only the machine-local Projects locator. The project
-              directory, its files, and retained Kungfu evidence will not be
-              deleted.
-            </p>
-            <div
-              style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}
-            >
-              <button
-                type="button"
-                style={buttonStyle}
-                onClick={() => setRemovePlan(undefined)}
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                style={{ ...buttonStyle, borderColor: '#f48771' }}
-                onClick={confirmRemove}
-              >
-                Remove from Kungfu
               </button>
             </div>
           </div>

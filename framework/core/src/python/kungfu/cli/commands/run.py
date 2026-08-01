@@ -108,6 +108,11 @@ def _choose_work(workspace_root, work_selector=None):
         if len(selected) != 1:
             raise ValueError(f"Work selector is ambiguous: {work_selector}")
         row = selected[0]
+        # An explicit selection is allowed to reach the native start plan even
+        # when it is settled. The plan remains non-executable and explains the
+        # authoritative phase in GUI/CLI confirmation; execution rechecks the
+        # same exact plan and fails closed before any write.
+        return row
     else:
         actionable = [
             row for row in rows if row["phase"] in {"captured", "ready", "planned"}

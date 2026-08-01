@@ -72,6 +72,10 @@ import {
   projectWorkAmbientRows,
 } from './project-files-view/index.js';
 import {
+  type ProjectTourResult,
+  ProjectTourView,
+} from './project-tour-view.js';
+import {
   PROJECTS_QUICK_COMMANDS,
   PROJECT_WORK_QUICK_COMMANDS,
   type ProjectWorkQuickAction,
@@ -169,11 +173,12 @@ function ensureTuiAgentSession(runtimeDir: string): Promise<string> {
     },
   );
   process.env.KUNGFU_AGENT_SESSION_WORKER = workerPath;
-  process.env.KUNGFU_MOCK_AGENT_EXECUTABLE = process.execPath;
-  process.env.KUNGFU_MOCK_AGENT_SCRIPT = mockPath;
+  process.env.KUNGFU_MOCK_AGENT_EXECUTABLE ||= process.execPath;
+  process.env.KUNGFU_MOCK_AGENT_SCRIPT ||= mockPath;
   process.env.KUNGFU_PROJECT_WORK_AGENT_SESSION = '1';
   const host = createDetachedAgentSessionHost({
     runtimeDir,
+    executable: process.env.KUNGFU_AGENT_SESSION_EXECUTABLE || process.execPath,
     workerPath,
     env: process.env,
   });
@@ -326,21 +331,29 @@ function openTuiAgentWorkLab(): AgentWorkLab {
   });
 }
 
-function openTuiProjects() {
+function openTuiProjects(useAgentSession = true) {
   const paths = runtimePaths();
-  const agentSessionReady = ensureTuiAgentSession(paths.runtimeDir);
+  const agentSessionReady = useAgentSession
+    ? ensureTuiAgentSession(paths.runtimeDir)
+    : undefined;
   const cli = tuiCliInvocation(paths);
+  if (!useAgentSession) {
+    cli.env.KUNGFU_PROJECT_WORK_AGENT_SESSION = undefined;
+    cli.env.KUNGFU_AGENT_SESSION_ENDPOINT = undefined;
+  }
   const machineConfigHome = process.env.KF_PROJECTS_CONFIG_HOME;
   return openProjects({
     bin: cli.bin,
     env: cli.env,
     agentSessionClient: 'cli',
-    agentSession: {
-      invoke: async (request) => {
-        await agentSessionReady;
-        return tuiAgentSessionHost.invoke(request);
-      },
-    },
+    agentSession: useAgentSession
+      ? {
+          invoke: async (request) => {
+            await agentSessionReady;
+            return tuiAgentSessionHost.invoke(request);
+          },
+        }
+      : undefined,
     catalogConfigHomes:
       machineConfigHome &&
       path.resolve(machineConfigHome) !== path.resolve(paths.configHome)
@@ -1678,16 +1691,21 @@ function ProductHost({
   lab,
   dimensions,
   autoDemo = false,
+  projectTourRoot,
   emptyState = false,
   onAutoDemoSettled,
+  onProjectTourSettled,
 }: {
   lab: AgentWorkLab;
   dimensions: DimensionStore;
   autoDemo?: boolean;
+  projectTourRoot?: string;
   emptyState?: boolean;
   onAutoDemoSettled?: (result: AgentWorkLabAutoplayResult) => void;
+  onProjectTourSettled?: (result: ProjectTourResult) => void;
 }) {
   const { exit } = useApp();
+  const playbackMode = autoDemo || Boolean(projectTourRoot);
   const [size, setSize] = React.useState(dimensions.get());
   const startupProjectRoot = React.useMemo(
     () =>
@@ -1698,7 +1716,7 @@ function ProductHost({
   );
   const [startup, setStartup] = React.useState<
     AgentWorkLabStartupRoute | undefined
-  >(autoDemo ? PENDING_STARTUP : undefined);
+  >(playbackMode ? PENDING_STARTUP : undefined);
   const [surface, setSurface] = React.useState<
     | 'loading'
     | 'lab'
@@ -1706,19 +1724,22 @@ function ProductHost({
     | 'projects'
     | 'project-work'
     | 'project-assignment'
-  >(autoDemo ? 'lab' : emptyState ? 'all-work' : 'loading');
+  >(playbackMode ? 'lab' : emptyState ? 'all-work' : 'loading');
   const startupAnimationEnabled = React.useMemo(
     () => terminalAnimationsEnabled(process.env),
     [],
   );
   const [startupIntroSettled, setStartupIntroSettled] = React.useState(
-    autoDemo || emptyState || !startupAnimationEnabled,
+    playbackMode || emptyState || !startupAnimationEnabled,
   );
   const surfaceRef = React.useRef(surface);
   React.useEffect(() => {
     surfaceRef.current = surface;
   }, [surface]);
-  const projects = React.useMemo(openTuiProjects, []);
+  const projects = React.useMemo(
+    () => openTuiProjects(!projectTourRoot),
+    [projectTourRoot],
+  );
   const [starterProject, setStarterProject] =
     React.useState<OpenedStarterProject>();
   const [starterWorkReceipt, setStarterWorkReceipt] =
@@ -1755,7 +1776,7 @@ function ProductHost({
   const openProjectRequest = React.useRef(0);
   const [projectWorkLoading, setProjectWorkLoading] = React.useState(false);
   const [projectResumeSettled, setProjectResumeSettled] = React.useState(
-    autoDemo || emptyState || !startupProjectRoot,
+    playbackMode || emptyState || !startupProjectRoot,
   );
   const [control, setControl] =
     React.useState<ControlPlaneState>(CLOSED_CONTROL_PLANE);
@@ -1782,7 +1803,7 @@ function ProductHost({
     ProductSearchDocument[]
   >([]);
   const [catalogStatus, setCatalogStatus] = React.useState(
-    autoDemo
+    playbackMode
       ? 'Offline demo automation owns this run'
       : 'Loading governed command catalog',
   );
@@ -1792,12 +1813,13 @@ function ProductHost({
   );
   React.useEffect(() => dimensions.subscribe(setSize), [dimensions]);
   React.useEffect(() => {
-    if (autoDemo || emptyState || !startupAnimationEnabled) return undefined;
+    if (playbackMode || emptyState || !startupAnimationEnabled)
+      return undefined;
     const timer = setTimeout(() => setStartupIntroSettled(true), 540);
     return () => clearTimeout(timer);
-  }, [autoDemo, emptyState, startupAnimationEnabled]);
+  }, [emptyState, playbackMode, startupAnimationEnabled]);
   React.useEffect(() => {
-    if (autoDemo || control.mode === 'closed' || cliDocuments.length > 0)
+    if (playbackMode || control.mode === 'closed' || cliDocuments.length > 0)
       return;
     let active = true;
     const paths = runtimePaths();
@@ -1831,9 +1853,9 @@ function ProductHost({
     return () => {
       active = false;
     };
-  }, [autoDemo, cliDocuments.length, control.mode]);
+  }, [cliDocuments.length, control.mode, playbackMode]);
   React.useEffect(() => {
-    if (autoDemo || surface !== 'lab' || startup) return;
+    if (playbackMode || surface !== 'lab' || startup) return;
     let active = true;
     void lab
       .inspect()
@@ -1857,9 +1879,9 @@ function ProductHost({
     return () => {
       active = false;
     };
-  }, [autoDemo, lab, startup, surface]);
+  }, [lab, playbackMode, startup, surface]);
   React.useEffect(() => {
-    if (autoDemo || emptyState || !startupProjectRoot) return;
+    if (playbackMode || emptyState || !startupProjectRoot) return;
     let active = true;
     const request = openProjectRequest.current + 1;
     openProjectRequest.current = request;
@@ -1882,17 +1904,28 @@ function ProductHost({
         } as unknown as ProjectTemplateWorkspaceSelection);
         surfaceRef.current = 'project-work';
         setSurface('project-work');
-        const resumed = await lab.resumeStarterProject();
-        if (
-          !active ||
-          request !== openProjectRequest.current ||
-          !resumed ||
-          resumed.project.workspace.selected.workspace_root !==
-            selected.workspace.workspace_root
-        ) {
-          return;
-        }
-        setStarterProject(resumed.project);
+        const inventory = await projects.works(
+          selected.workspace.workspace_root,
+        );
+        const work = inventory.activeWork;
+        if (!active || request !== openProjectRequest.current || !work) return;
+        const workspace = {
+          schema: 'kungfu.workspace.registry/v1',
+          last_workspace_id: selected.workspace.workspace_id,
+          recent: [selected.workspace],
+          updated_at: '',
+          registry_path: '',
+          selected: selected.workspace,
+        } as unknown as ProjectTemplateWorkspaceSelection;
+        const resumed = await lab.resumeProjectWork({
+          destination: selected.workspace.workspace_root,
+          initialWork: {
+            initiativeId: work.initiativeId,
+            assignmentId: work.assignmentId,
+            requestPath: work.requestPath,
+          },
+        });
+        setStarterProject({ workspace, work, works: inventory.works });
         setStarterWorkReceipt(resumed.workReceipt);
         setStarterReviewReceipt(resumed.reviewReceipt);
         setStarterCloseReceipt(resumed.closeReceipt);
@@ -1912,7 +1945,7 @@ function ProductHost({
     return () => {
       active = false;
     };
-  }, [autoDemo, emptyState, lab, projects, startupProjectRoot]);
+  }, [emptyState, lab, playbackMode, projects, startupProjectRoot]);
   const autoplay = React.useMemo(
     () =>
       autoDemo
@@ -1925,13 +1958,20 @@ function ProductHost({
         : undefined,
     [autoDemo, exit, onAutoDemoSettled],
   );
+  const projectTourSettled = React.useCallback(
+    (result: ProjectTourResult) => {
+      onProjectTourSettled?.(result);
+      exit();
+    },
+    [exit, onProjectTourSettled],
+  );
 
   const resolvedStartup = startup ?? PENDING_STARTUP;
   const labOpen = surface === 'lab';
   const starterOpen =
     surface === 'project-assignment' && Boolean(starterProject);
   React.useEffect(() => {
-    if (autoDemo || surface !== 'loading' || !startupIntroSettled) return;
+    if (playbackMode || surface !== 'loading' || !startupIntroSettled) return;
     const resolved = resolveProductStartupSurface({
       contextualProject: Boolean(startupProjectRoot),
       openedProject: Boolean(openedProject),
@@ -1939,7 +1979,7 @@ function ProductHost({
     });
     if (resolved) setSurface(resolved);
   }, [
-    autoDemo,
+    playbackMode,
     openedProject,
     projectResumeSettled,
     startupProjectRoot,
@@ -2325,11 +2365,11 @@ function ProductHost({
   const activateControlRef = React.useRef(activateControl);
   activateControlRef.current = activateControl;
   const isInputCaptured = React.useCallback(
-    () => autoDemo || inputFence.isCaptured(),
-    [autoDemo, inputFence],
+    () => playbackMode || inputFence.isCaptured(),
+    [inputFence, playbackMode],
   );
   React.useEffect(() => {
-    if (autoDemo) return;
+    if (playbackMode) return;
     const onData = (chunk: Buffer | string) => {
       if (workspaceInputActiveRef.current) return;
       const mouseEvents = decodeTerminalMouseInput(chunk);
@@ -2402,7 +2442,7 @@ function ProductHost({
       process.stdin.off('data', onData);
     };
   }, [
-    autoDemo,
+    playbackMode,
     dispatchLabAction,
     exit,
     inputFence,
@@ -2416,7 +2456,7 @@ function ProductHost({
   ]);
 
   React.useEffect(() => {
-    if (autoDemo) return;
+    if (playbackMode) return;
     const onData = (chunk: Buffer | string) => {
       if (workspaceInputActiveRef.current || isInputCaptured()) return;
       const value = String(chunk);
@@ -2430,10 +2470,20 @@ function ProductHost({
     return () => {
       process.stdin.off('data', onData);
     };
-  }, [autoDemo, isInputCaptured, openGlobalWork, openHome, openedProject]);
+  }, [isInputCaptured, openGlobalWork, openHome, openedProject, playbackMode]);
 
   let content: React.ReactNode;
-  if (starterOpen && starterProject) {
+  if (projectTourRoot) {
+    content = (
+      <ProjectTourView
+        lab={lab}
+        projects={projects}
+        destination={projectTourRoot}
+        columns={size.columns}
+        onSettled={projectTourSettled}
+      />
+    );
+  } else if (starterOpen && starterProject) {
     content = (
       <StarterProjectHost
         project={starterProject}
@@ -2530,17 +2580,34 @@ function ProductHost({
         project={openedProject}
         dimensions={contentDimensions}
         onContinueRetainedWork={async (receipt) => {
-          const resumed = await lab.resumeStarterProject();
-          if (
-            !resumed ||
-            resumed.project.workspace.selected.workspace_root !==
-              openedProject.workspace_root
-          ) {
+          const inventory = await projects.works(openedProject.workspace_root);
+          const work = inventory.works.find(
+            (candidate) =>
+              candidate.initiativeId === receipt.work?.initiativeId &&
+              candidate.assignmentId === receipt.work?.assignmentId,
+          );
+          if (!work) {
             throw new Error(
               'Kungfu could not bind this retained run to its Project review flow.',
             );
           }
-          setStarterProject(resumed.project);
+          const workspace = {
+            schema: 'kungfu.workspace.registry/v1',
+            last_workspace_id: openedProject.workspace_id,
+            recent: [openedProject],
+            updated_at: '',
+            registry_path: '',
+            selected: openedProject,
+          } as unknown as ProjectTemplateWorkspaceSelection;
+          const resumed = await lab.resumeProjectWork({
+            destination: openedProject.workspace_root,
+            initialWork: {
+              initiativeId: work.initiativeId,
+              assignmentId: work.assignmentId,
+              requestPath: work.requestPath,
+            },
+          });
+          setStarterProject({ workspace, work, works: inventory.works });
           setStarterWorkReceipt(receipt);
           setStarterReviewReceipt(resumed.reviewReceipt);
           setStarterCloseReceipt(resumed.closeReceipt);
@@ -2642,7 +2709,7 @@ function ProductHost({
       flexDirection="column"
       overflow="hidden"
     >
-      {!autoDemo ? (
+      {!playbackMode ? (
         <Box height={1} paddingX={1}>
           <Box flexGrow={1} flexShrink={1} gap={2} overflow="hidden">
             <Text
@@ -2681,11 +2748,15 @@ function ProductHost({
         </Box>
       ) : null}
       {content}
-      {autoDemo ? (
+      {playbackMode ? (
         <PlaybackBar
           dimensions={size}
           label="DEMO PLAYBACK"
-          status="Agent Work Lab · Offline continuity"
+          status={
+            projectTourRoot
+              ? 'Project Work · failure recovery and settlement'
+              : 'Agent Work Lab · Offline continuity'
+          }
           hint="Automatic · No input required · exits after the final result"
         />
       ) : (
@@ -2752,12 +2823,19 @@ function printNonInteractiveDiagnostic(): void {
 async function main(): Promise<void> {
   if (process.argv.includes('--help')) {
     process.stdout.write(
-      'Kungfu Work Control TUI\n\nRun in an interactive terminal.\nOffline animation demo: `kungfu agent-work-lab autoplay`.\nAgent brief: `kungfu agent brief`.\n',
+      'Kungfu Work Control TUI\n\nRun in an interactive terminal.\nOffline animation demo: `kungfu agent-work-lab autoplay`.\nProject recovery tour: `kungfu agent-work-lab project-tour`.\nAgent brief: `kungfu agent brief`.\n',
     );
     return;
   }
   const lab = openTuiAgentWorkLab();
   const autoDemo = process.argv.includes('--agent-work-lab-autoplay');
+  const projectTourIndex = process.argv.indexOf('--project-work-tour-root');
+  const projectTourRoot =
+    projectTourIndex >= 0 ? process.argv[projectTourIndex + 1] : undefined;
+  if (projectTourIndex >= 0 && !projectTourRoot) {
+    throw new Error('--project-work-tour-root requires a destination');
+  }
+  const playbackMode = autoDemo || Boolean(projectTourRoot);
   const emptyState = process.argv.includes('--empty-state');
   if (process.argv.includes('--agent-work-lab-demo')) {
     const report = await lab.runDemo();
@@ -2774,7 +2852,7 @@ async function main(): Promise<void> {
     process.stdout.isTTY !== true
   ) {
     printNonInteractiveDiagnostic();
-    if (autoDemo) process.exitCode = 2;
+    if (playbackMode) process.exitCode = 2;
     return;
   }
 
@@ -2789,6 +2867,7 @@ async function main(): Promise<void> {
   });
   let instance: ReturnType<typeof render> | undefined;
   let autoDemoResult: AgentWorkLabAutoplayResult | undefined;
+  let projectTourResult: ProjectTourResult | undefined;
   let terminating = false;
   await lifecycle.run(
     {
@@ -2806,9 +2885,13 @@ async function main(): Promise<void> {
           lab={lab}
           dimensions={dimensions}
           autoDemo={autoDemo}
+          projectTourRoot={projectTourRoot}
           emptyState={emptyState}
           onAutoDemoSettled={(result) => {
             autoDemoResult = result;
+          }}
+          onProjectTourSettled={(result) => {
+            projectTourResult = result;
           }}
         />,
         {
@@ -2849,6 +2932,23 @@ async function main(): Promise<void> {
     ) {
       process.exitCode = 1;
     }
+  }
+  if (projectTourRoot) {
+    if (!projectTourResult) {
+      throw new Error('Project Work tour exited without a result');
+    }
+    const completion =
+      projectTourResult.state === 'completed'
+        ? projectTourResult.report
+        : {
+            schema: 'kungfu.project-work.tui-tour/v1',
+            status: 'failed',
+            message: projectTourResult.message,
+          };
+    process.stdout.write(
+      `KUNGFU_PROJECT_TOUR_COMPLETE ${JSON.stringify(completion)}\n`,
+    );
+    if (projectTourResult.state === 'failed') process.exitCode = 1;
   }
 }
 

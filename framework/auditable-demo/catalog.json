@@ -106,6 +106,58 @@
         "authorization from KFD compliance or Product System metadata",
         "authorization from local bundle presence, package metadata, registry history, scan output, or standalone generation"
       ]
+    },
+    {
+      "id": "project-work-recovery",
+      "argv": [
+        "agent-work-lab",
+        "project-tour"
+      ],
+      "commandLabel": "kungfu agent-work-lab project-tour",
+      "evidenceClass": "exact-installed-artifact-project-work-recovery/v1",
+      "terminal": {
+        "columns": 150,
+        "rows": 36,
+        "timeoutSeconds": 60
+      },
+      "completion": {
+        "sentinel": "KUNGFU_PROJECT_TOUR_COMPLETE ",
+        "schema": "kungfu.project-work.tui-tour/v1",
+        "status": "qualified",
+        "digestField": "reportRoot",
+        "countField": "eventCount"
+      },
+      "scene": {
+        "id": "kungfu-project-work-recovery",
+        "width": 1280,
+        "height": 720,
+        "fps": 15,
+        "title": "Kungfu Project Work — retained failures and native settlement",
+        "background": "#0B1020",
+        "accent": "#67E8A5"
+      },
+      "publication": {
+        "readmeFeatured": false,
+        "siteSlug": "project-work-recovery"
+      },
+      "claimBoundary": "This proves one exact retained artifact created a disposable Starter Project, displayed its file tree and Work inventory, retained deterministic Mock Agent disconnect and crash attempts, produced a deliverable, and closed one Work through the bundled qualification reviewer plus native settlement receipts. Mock output and terminal bytes grant no authority. It does not prove hosted provider behavior, production KFX admission, durability across machines, signed macOS behavior, performance, FO10, or production deployment.",
+      "claims": [
+        "The exact retained artifact executed its installed kungfu agent-work-lab project-tour command in a bounded PTY.",
+        "The disposable Project retained two failed Mock Agent attempts before a successful evidence-producing attempt.",
+        "The tour completed read-only qualification review, native Work settlement, and a two-Work Project inventory with exit status zero."
+      ],
+      "nonClaims": [
+        "hosted provider behavior",
+        "production KFX admission",
+        "cross-machine durability",
+        "macOS execution",
+        "performance",
+        "FO10",
+        "authorization from Mock Agent output or terminal observation",
+        "authorization from first-party or System identity",
+        "authorization from KFD compliance or Product System metadata",
+        "authorization from local bundle presence, package metadata, registry history, scan output, or standalone generation"
+      ]
     }
   ]
 }

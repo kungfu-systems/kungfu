@@ -11,14 +11,14 @@ def review_agent_prompt(plan):
     criteria = "\n".join(f"- {value}" for value in plan["work"]["acceptanceChecks"])
     inputs = "\n".join(f"- {row['path']} ({row['root']})" for row in plan["inputs"])
     return (
-        "Independently review the completed Starter Project deliverable. "
+        "Independently review the retained Project Work evidence. "
         "This is a fresh review process with no prior transcript. Stay read-only: "
         "do not edit, create, delete, rename, or format any project file.\n\n"
-        f"Deliverable: {plan['deliverable']['path']} "
+        f"Primary evidence: {plan['deliverable']['path']} "
         f"({plan['deliverable']['root']})\n"
-        f"Retained inputs:\n{inputs}\n\n"
+        f"Supporting evidence:\n{inputs or '- none'}\n\n"
         f"Acceptance criteria:\n{criteria}\n\n"
-        "Read the deliverable and retained input files. Check every criterion "
+        "Read the primary and supporting evidence. Check every criterion "
         "against exact source evidence. Your final line must be exactly one line "
         "beginning with KUNGFU_REVIEW_RESULT followed by a JSON object with keys: "
         'verdict ("fit" or "revision-required"), summary (string), criteria '

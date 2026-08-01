@@ -418,6 +418,7 @@ export type WorkReviewPlan = {
   };
   deliverable: { path: string; root: string; content: string };
   inputs: Array<{ path: string; root: string }>;
+  evidenceMode: 'project-files' | 'execution-report';
   execution: {
     reportPath: string;
     reportRoot: string;

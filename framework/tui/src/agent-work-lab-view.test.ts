@@ -801,7 +801,7 @@ test('TUI host streams events and preserves the one-second rhythm', () => {
   assert.match(mainSource, /existingProjectWorkspaceRoot\(process\.cwd\(\)/);
   assert.match(
     mainSource,
-    /autoDemo \? 'lab' : emptyState \? 'all-work' : 'loading'/,
+    /playbackMode \? 'lab' : emptyState \? 'all-work' : 'loading'/,
   );
   assert.match(mainSource, /startupIntroSettled/);
   assert.match(mainSource, /TerminalLoadingScene/);

@@ -4,13 +4,18 @@ from pathlib import Path
 
 import pytest
 
+from kungfu import assignment_orchestration as orchestration
 from kungfu import profile_composition, profile_sdk, projects
 from kungfu.atlas import mission_control
 from kungfu.cli.commands import project as project_commands
 from kungfu.project_template import BLANK_TEMPLATE_ID
 from kungfu.rewind import reporting as rewind_reporting
 from kungfu.storage import service as storage_service
-from kungfu.workspace import ensure_workspace_data_home, inspect_workspace
+from kungfu.workspace import (
+    ensure_workspace_data_home,
+    inspect_workspace,
+    resolve_workspace_target,
+)
 
 SOURCE = Path(__file__).resolve().parents[4] / "extensions" / "work-control"
 
@@ -188,6 +193,8 @@ def test_catalog_lists_only_project_workspaces(tmp_path):
     assert [(row["name"], row["selected"]) for row in result["projects"]] == [
         ("ordinary-project", True)
     ]
+    assert result["projects"][0]["workCount"] == 0
+    assert result["projects"][0]["updatedAt"].endswith("Z")
     assert result["writeOccurred"] is False
     assert Path(result["libraryPath"]).is_file()
 
@@ -359,3 +366,54 @@ def test_template_catalog_contains_starter_and_blank_project():
         "kungfu.blank-project",
     ]
     assert result["templates"][1]["initialWorkTitle"] is None
+
+
+def test_project_work_inventory_lists_multiple_captured_work_without_writing(tmp_path):
+    project = tmp_path / "ordinary-project"
+    project.mkdir()
+    config_home = tmp_path / "config"
+    plan = projects.plan_import(project)
+    projects.import_project(
+        project,
+        expected_plan_root=plan["planRoot"],
+        config_home=str(config_home),
+    )
+    target = resolve_workspace_target(
+        "capture-only",
+        str(project),
+        cwd=str(project),
+    )
+    for index in range(2):
+        request = {
+            "schema": "kungfu.assignment-request/v1",
+            "source": {
+                "kind": "kungfu-product",
+                "surface": "project-work-composer",
+            },
+            "retention": {
+                "policy": "explicit-expiry-retain-bytes-v1",
+                "expiresAt": None,
+            },
+            "workDefinition": {
+                "goal_id": f"assignment-example-{index}",
+                "mission_id": "project-work-example",
+                "title": f"Example Work {index}",
+                "objective": f"Produce result {index}",
+                "acceptance_criteria": [f"Result {index} is reviewable"],
+            },
+        }
+        orchestration.capture_assignment_request(request, target)
+
+    inventory = projects.work_inventory(project)
+
+    assert inventory["schema"] == "kungfu.project-work.inventory/v1"
+    assert [work["assignmentId"] for work in inventory["works"]] == [
+        "assignment-example-0",
+        "assignment-example-1",
+    ]
+    assert inventory["activeWork"]["assignmentId"] == "assignment-example-1"
+    assert inventory["writeOccurred"] is False
+    assert inventory["inventoryRoot"].startswith("sha256:")
+    summary = projects.catalog(config_home=str(config_home))["projects"][0]
+    assert summary["workCount"] == 2
+    assert summary["updatedAt"].endswith("Z")

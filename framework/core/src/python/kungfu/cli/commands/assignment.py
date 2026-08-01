@@ -517,48 +517,20 @@ def _work_start_plan(
             )["phase"]
         except (OSError, RuntimeError, ValueError, json.JSONDecodeError):
             current_phase = "captured"
-    continuing = current_phase == "executing"
+    continuation_mode, effects, phase_blocked_reason = _work_start_phase_plan(
+        current_phase
+    )
     stable_verification = {
         "ok": verification["ok"],
         "available": verification["available"],
         "version": verification["version"],
         "error": verification["error"],
     }
-    effects = (
-        [
-            {
-                "stage": "admit",
-                "label": "Admit the captured Initiative and Assignment into Work Control",
-            },
-            {
-                "stage": "claim",
-                "label": "Mint a two-hour execution lease for the selected Agent",
-            },
-            {
-                "stage": "kickoff",
-                "label": "Enter the executing phase under that exact lease",
-            },
-            {
-                "stage": "run",
-                "label": "Launch one fresh Agent process in this project workspace",
-            },
-            {
-                "stage": "retain",
-                "label": "Retain the Agent Episode and report without claiming completion",
-            },
-        ]
-        if not continuing
-        else [
-            {
-                "stage": "run",
-                "label": "Launch one fresh Agent attempt under the active Work lease",
-            },
-            {
-                "stage": "retain",
-                "label": "Retain the new Agent Episode without repeating admission",
-            },
-        ]
-    )
+    blocked_reason = phase_blocked_reason
+    if blocked_reason is None and not binding["ok"]:
+        blocked_reason = "Native Work admission binding did not verify."
+    if blocked_reason is None and not stable_verification["ok"]:
+        blocked_reason = "The selected Agent runtime did not verify."
     body = {
         "schema": "kungfu.work-start.plan/v1",
         "workspace": {
@@ -599,9 +571,7 @@ def _work_start_plan(
             "sourceRevision": binding["source_revision"],
         },
         "actor": actor,
-        "continuationMode": (
-            "existing-executing-work" if continuing else "first-attempt"
-        ),
+        "continuationMode": continuation_mode,
         "effects": effects,
         "skippedEffects": [
             "completion-claim",
@@ -613,10 +583,120 @@ def _work_start_plan(
             "publish",
         ],
         "confirmationRequired": True,
-        "executable": bool(binding["ok"] and stable_verification["ok"]),
+        "blockedReason": blocked_reason,
+        "executable": bool(
+            continuation_mode is not None
+            and binding["ok"]
+            and stable_verification["ok"]
+        ),
         "writeOccurred": False,
     }
     return {**body, "planRoot": orchestration.semantic_root(body)}
+
+
+def _work_start_phase_plan(phase):
+    retain = {
+        "stage": "retain",
+        "label": "Retain the Agent Episode and report without claiming completion",
+    }
+    if phase == "captured":
+        return (
+            "first-attempt",
+            [
+                {
+                    "stage": "admit",
+                    "label": "Admit the captured Initiative and Assignment into Work Control",
+                },
+                {
+                    "stage": "claim",
+                    "label": "Mint a two-hour execution lease for the selected Agent",
+                },
+                {
+                    "stage": "kickoff",
+                    "label": "Enter the executing phase under that exact lease",
+                },
+                {
+                    "stage": "run",
+                    "label": "Launch one fresh Agent process in this project workspace",
+                },
+                retain,
+            ],
+            None,
+        )
+    if phase == "admitted":
+        return (
+            "existing-admitted-work",
+            [
+                {
+                    "stage": "claim",
+                    "label": "Mint a two-hour execution lease for the admitted Work",
+                },
+                {
+                    "stage": "kickoff",
+                    "label": "Enter the executing phase under that exact lease",
+                },
+                {
+                    "stage": "run",
+                    "label": "Launch one fresh Agent process in this project workspace",
+                },
+                retain,
+            ],
+            None,
+        )
+    if phase == "claimed":
+        return (
+            "existing-claimed-work",
+            [
+                {
+                    "stage": "kickoff",
+                    "label": "Enter the executing phase under the active Work lease",
+                },
+                {
+                    "stage": "run",
+                    "label": "Launch one fresh Agent process in this project workspace",
+                },
+                retain,
+            ],
+            None,
+        )
+    if phase == "executing":
+        return (
+            "existing-executing-work",
+            [
+                {
+                    "stage": "run",
+                    "label": "Launch one fresh Agent attempt under the active Work lease",
+                },
+                {
+                    **retain,
+                    "label": "Retain the new Agent Episode without repeating admission",
+                },
+            ],
+            None,
+        )
+    if phase == "stage-ready":
+        reason = (
+            "This Work is stage-ready. Review or settle it before creating "
+            "follow-up Work."
+        )
+    elif phase == "completion-claimed":
+        reason = (
+            "This Work is completion-claimed and awaiting independent review; "
+            "another execution attempt is not allowed."
+        )
+    elif phase == "independently-reviewed":
+        reason = (
+            "This Work is independently-reviewed. Decide continuation before "
+            "creating follow-up Work."
+        )
+    elif phase == "continuation-decided":
+        reason = (
+            "This Work is settled (continuation-decided). Create follow-up Work "
+            "to run another Agent."
+        )
+    else:
+        reason = f"Work phase {phase!r} cannot start an Agent attempt."
+    return None, [], reason
 
 
 def _project_work_prompt(plan):
@@ -880,10 +960,11 @@ def start_work(
                     "status": "not-executable",
                     "planRoot": plan["planRoot"],
                     "failedAt": stage,
-                    "message": "Agent or native admission binding did not verify",
-                    "workPhase": "captured",
+                    "message": plan["blockedReason"]
+                    or "Agent or native admission binding did not verify",
+                    "workPhase": plan["work"]["phase"],
                     "nextActions": [
-                        "repair-agent-runtime-or-build-binding",
+                        "inspect-current-work-status",
                         "preview-work-start-again",
                     ],
                     "writeOccurred": False,
@@ -897,7 +978,8 @@ def start_work(
                 "Exact Work start plan verified.",
                 plan["planRoot"],
             )
-            if plan["continuationMode"] == "existing-executing-work":
+            continuation_mode = plan["continuationMode"]
+            if continuation_mode != "first-attempt":
                 stage = "resume"
                 target = resolve_workspace_target(
                     "read-only",
@@ -921,7 +1003,7 @@ def start_work(
                 event(
                     stage,
                     "completed",
-                    "Reusing the admitted Work and its active execution lease.",
+                    f"Resuming Work from its {last_status['phase']} phase.",
                     last_status["query_proof_root"],
                 )
             else:
@@ -957,6 +1039,10 @@ def start_work(
                     last_status["query_proof_root"],
                 )
 
+            if continuation_mode in {
+                "first-attempt",
+                "existing-admitted-work",
+            }:
                 stage = "claim"
                 event(stage, "started", "Minting a bounded Agent execution lease.")
                 lease_id = f"work-start-{uuid.uuid4().hex}"
@@ -983,6 +1069,7 @@ def start_work(
                     },
                     actor,
                 )
+                write_occurred = True
                 last_status = _status(
                     runtime_dir,
                     plan["work"]["initiativeId"],
@@ -996,6 +1083,11 @@ def start_work(
                     last_status["query_proof_root"],
                 )
 
+            if continuation_mode in {
+                "first-attempt",
+                "existing-admitted-work",
+                "existing-claimed-work",
+            }:
                 stage = "kickoff"
                 event(stage, "started", "Entering the executing phase.")
                 kickoff_receipt = _advance(
@@ -1007,6 +1099,7 @@ def start_work(
                     actor,
                     "Start the user-selected verified Agent for this Assignment",
                 )
+                write_occurred = True
                 last_status = kickoff_receipt["status"]
                 receipts["kickoff"] = _kickoff_summary(kickoff_receipt)
             run_gate = orchestration.gate(last_status, "run")
@@ -1165,6 +1258,121 @@ def start_work(
 
 def _content_root(path):
     return f"sha256:{hashlib.sha256(path.read_bytes()).hexdigest()}"
+
+
+_REVIEW_EVIDENCE_SUFFIXES = {
+    ".csv",
+    ".json",
+    ".md",
+    ".rst",
+    ".toml",
+    ".txt",
+    ".yaml",
+    ".yml",
+}
+_REVIEW_EVIDENCE_EXCLUDED_DIRECTORIES = {
+    ".git",
+    ".kungfu",
+    ".venv",
+    "build",
+    "dist",
+    "node_modules",
+    "target",
+}
+_REVIEW_EVIDENCE_FILE_LIMIT = 24
+_REVIEW_EVIDENCE_BYTES_LIMIT = 1024 * 1024
+
+
+def _project_review_evidence(workspace, report_path, work_definition):
+    workspace = Path(workspace).resolve()
+    explicit = work_definition.get("evidence_paths") or []
+    if not isinstance(explicit, list) or any(
+        not isinstance(value, str) or not value.strip() for value in explicit
+    ):
+        raise ValueError("Assignment evidence_paths must be an array of paths")
+    candidates = []
+    if explicit:
+        for value in explicit:
+            candidate = (workspace / value).resolve()
+            if workspace not in candidate.parents or not candidate.is_file():
+                raise ValueError(f"Assignment evidence path is unavailable: {value}")
+            candidates.append(candidate)
+    else:
+        for root, directories, filenames in os.walk(workspace):
+            directories[:] = sorted(
+                directory
+                for directory in directories
+                if directory not in _REVIEW_EVIDENCE_EXCLUDED_DIRECTORIES
+                and not directory.startswith(".")
+            )
+            for filename in sorted(filenames):
+                candidate = Path(root) / filename
+                if candidate.suffix.lower() not in _REVIEW_EVIDENCE_SUFFIXES:
+                    continue
+                try:
+                    size = candidate.stat().st_size
+                except OSError:
+                    continue
+                if size <= _REVIEW_EVIDENCE_BYTES_LIMIT:
+                    candidates.append(candidate.resolve())
+
+    def priority(candidate):
+        relative = candidate.relative_to(workspace)
+        parts = relative.parts
+        return (
+            0
+            if parts and parts[0] == "deliverables"
+            else 1
+            if relative.as_posix() == "WORK.md"
+            else 2
+            if relative.as_posix() == "README.md"
+            else 3
+            if parts and parts[0] == "inputs"
+            else 4,
+            relative.as_posix(),
+        )
+
+    selected = []
+    total_bytes = 0
+    for candidate in sorted(set(candidates), key=priority):
+        size = candidate.stat().st_size
+        if len(selected) >= _REVIEW_EVIDENCE_FILE_LIMIT:
+            break
+        if total_bytes + size > _REVIEW_EVIDENCE_BYTES_LIMIT:
+            continue
+        selected.append(candidate)
+        total_bytes += size
+    if selected:
+        primary, *supporting = selected
+        return {
+            "mode": "project-files",
+            "primary": {
+                "path": primary.relative_to(workspace).as_posix(),
+                "root": _content_root(primary),
+                "content": primary.read_text(encoding="utf-8"),
+            },
+            "supporting": [
+                {
+                    "path": candidate.relative_to(workspace).as_posix(),
+                    "root": _content_root(candidate),
+                }
+                for candidate in supporting
+            ],
+        }
+    report_path = Path(report_path).resolve()
+    try:
+        display_path = report_path.relative_to(workspace).as_posix()
+    except ValueError:
+        display_path = str(report_path)
+    return {
+        "mode": "execution-report",
+        "primary": {
+            "path": display_path,
+            "root": _content_root(report_path),
+            "content": report_path.read_text(encoding="utf-8"),
+        },
+        "supporting": [],
+    }
 
 
 def _load_execution_agent_report(
@@ -1382,6 +1590,14 @@ def start_resume(
     )
 
 
+def _reviewer_read_only_safe(reviewer):
+    return reviewer.get("provider") == "codex" or (
+        reviewer.get("provider") == "synthetic"
+        and reviewer.get("id") == "kungfu.mock-agent.review-fit"
+        and reviewer.get("source") == "qualification"
+    )
+
+
 def _work_review_plan(
     *,
     ctx,
@@ -1418,23 +1634,13 @@ def _work_review_plan(
     verification = run_agent.runtime_profiles.verify_profile(reviewer)
     binding = orchestration.binding_provenance(allow_foreign=allow_foreign_binding)
     workspace = Path(identity.workspace_root or "").resolve()
-    deliverable = workspace / "deliverables" / "launch-brief.md"
-    if not deliverable.is_file():
-        raise ValueError("Starter deliverable is missing: deliverables/launch-brief.md")
-    inputs_root = workspace / "inputs"
-    inputs = [
-        {
-            "path": str(path.relative_to(workspace)),
-            "root": _content_root(path),
-        }
-        for path in sorted(inputs_root.glob("*.md"))
-        if path.is_file()
-    ]
-    if not inputs:
-        raise ValueError("Starter review requires the retained input files")
-    acceptance_checks = list(
-        status_value["assignment"]["work_definition"].get("acceptance_criteria") or []
+    work_definition = status_value["assignment"]["work_definition"]
+    evidence = _project_review_evidence(
+        workspace,
+        report_path,
+        work_definition,
     )
+    acceptance_checks = list(work_definition.get("acceptance_criteria") or [])
     if not acceptance_checks:
         raise ValueError("Assignment has no acceptance criteria to review")
     stable_verification = {
@@ -1443,7 +1649,7 @@ def _work_review_plan(
         "version": verification["version"],
         "error": verification["error"],
     }
-    reviewer_safe = reviewer.get("provider") == "codex"
+    reviewer_safe = _reviewer_read_only_safe(reviewer)
     body = {
         "schema": "kungfu.work-review.plan/v1",
         "workspace": {
@@ -1460,12 +1666,9 @@ def _work_review_plan(
             "workDefinitionRoot": status_value["assignment"]["work_definition_root"],
             "acceptanceChecks": acceptance_checks,
         },
-        "deliverable": {
-            "path": "deliverables/launch-brief.md",
-            "root": _content_root(deliverable),
-            "content": deliverable.read_text(encoding="utf-8"),
-        },
-        "inputs": inputs,
+        "deliverable": evidence["primary"],
+        "inputs": evidence["supporting"],
+        "evidenceMode": evidence["mode"],
         "execution": {
             "reportPath": str(report_path),
             "reportRoot": execution_report["reportRoot"],
@@ -1599,6 +1802,9 @@ def _find_retained_reviewer_evidence(runtime_dir, plan):
             launch = report["launch"]
             privacy = report["privacy"]
             argv = list(launch.get("argvWithoutPrompt") or [])
+            read_only_launch = launch.get("permissionMode") == "read-only" or (
+                "--sandbox" in argv and "read-only" in argv
+            )
             if (
                 work_ref.get("workspaceId") != plan["workspace"]["id"]
                 or work_ref.get("profileId") != "kungfu.work-control"
@@ -1610,8 +1816,7 @@ def _find_retained_reviewer_evidence(runtime_dir, plan):
                 or runtime_profile.get("root") != plan["reviewer"]["profileRoot"]
                 or launch.get("cwd") != plan["workspace"]["root"]
                 or launch.get("promptRoot") != expected_prompt_root
-                or "--sandbox" not in argv
-                or "read-only" not in argv
+                or not read_only_launch
                 or privacy.get("priorTranscriptBytesGivenToAgent") != 0
                 or privacy.get("privateProviderSessionStoreRead") is not False
             ):
