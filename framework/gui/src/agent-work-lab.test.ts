@@ -453,7 +453,7 @@ test('Projects and Work use the shared exact-plan Agent session surface', () => 
   );
   assert.match(
     work,
-    /section === 'work'[\s\S]*aria-label="Filter Project Work"[\s\S]*<WorkList[\s\S]*section === 'files'/,
+    /section === 'work'[\s\S]*aria-label="Filter Project Work"[\s\S]*<ProjectWorkList[\s\S]*section === 'files'/,
   );
   assert.match(work, /background: selected \? '#04395e' : '#252526'/);
   assert.match(

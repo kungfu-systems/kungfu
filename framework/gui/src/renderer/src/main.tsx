@@ -29,14 +29,12 @@ import type {
   ShellNotificationInput,
   ShellState,
   StatusBarItem,
-  StatusBarSeverity,
 } from '@kungfu-tech/kfx';
 import { mono, panelStyle } from '@kungfu-tech/kfx';
 import React from 'react';
 import * as ReactDOM from 'react-dom';
 import { createRoot } from 'react-dom/client';
 import * as jsxRuntime from 'react/jsx-runtime';
-import { ProjectWorkControlView } from '../../../../../extensions/work-dashboard/src/view/index';
 import {
   actionableKfxFailures,
   shouldOpenAgentWorkLab,
@@ -73,9 +71,10 @@ import {
 import { publishRefresh } from '../../sandbox/refresh';
 import { createKfxSharedModules } from '../shared-modules';
 import {
-  AgentWorkLabPanel,
+  RetainedCoreSurfaceStack,
   kfxNativePlanArgs,
   resolveKfxHostDescriptor,
+  useRetainedCoreSurfaces,
 } from './agent-work-lab';
 import {
   loadKungfuConfig,
@@ -102,7 +101,16 @@ import {
   openRendererAgentWorkLab,
 } from './runtime';
 import { sandboxClient } from './sandbox-client';
-import { DEFAULT_STATE, loadShellState, saveShellState } from './shell-state';
+import {
+  DEFAULT_STATE,
+  loadShellState,
+  notificationColor,
+  notificationId,
+  saveShellState,
+  statusColor,
+  trustStatusText,
+  trustTooltip,
+} from './shell-state';
 
 // Modules injected into every kfx bundle (the externals contract of
 // `kungfu sdk kfx build`): one React instance and the public API surfaces.
@@ -230,61 +238,6 @@ function SandboxSlot({
     // stable for a given runtime
   }, [entry.id, entry.bundlePath]);
   return <div ref={ref} style={{ width: '100%', height: '100%' }} />;
-}
-
-function statusColor(severity: StatusBarSeverity | undefined): string {
-  if (severity === 'ok') return '#4ec9b0';
-  if (severity === 'warning') return '#dcdcaa';
-  if (severity === 'error') return '#f48771';
-  return '#cccccc';
-}
-
-function trustStatusText(status: RuntimeStatusResult | null): string {
-  const assessments = status?.payload?.assessments;
-  if (!assessments) return 'trust unavailable';
-  const counts = assessments.counts ?? {};
-  const blocked =
-    (counts.stale ?? 0) +
-    (counts['insufficient-evidence'] ?? 0) +
-    (counts.conflicted ?? 0) +
-    (counts.unverifiable ?? 0) +
-    (counts['failed-retryable'] ?? 0);
-  if (blocked > 0) return `trust blocked ${String(blocked)}`;
-  if ((counts.pending ?? 0) + (counts.running ?? 0) > 0)
-    return `trust pending ${String((counts.pending ?? 0) + (counts.running ?? 0))}`;
-  return `trust fresh ${String(counts.fresh ?? 0)}`;
-}
-
-function trustTooltip(status: RuntimeStatusResult | null): string {
-  const assessments = status?.payload?.assessments?.assessments;
-  if (!assessments) return 'Assessment subscription is unavailable';
-  if (assessments.length === 0) return 'No load-bearing claims assessed';
-  return assessments
-    .map((assessment) => {
-      const request = assessment.request ?? {};
-      const risks = assessment.report?.residual_risks?.join('; ') || '-';
-      return `${assessment.state || '-'}: ${request.claim_id || '-'} for ${
-        request.purpose || '-'
-      }\nresidual risk: ${risks}\nproof: ${
-        assessment.report?.query_proof_root || '-'
-      }`;
-    })
-    .join('\n\n');
-}
-
-function notificationColor(level: ShellNotification['level']): string {
-  if (level === 'success') return '#4ec9b0';
-  if (level === 'warning') return '#dcdcaa';
-  if (level === 'error') return '#f48771';
-  return '#9cdcfe';
-}
-
-let notificationSeq = 0;
-function notificationId(): string {
-  notificationSeq += 1;
-  return (
-    globalThis.crypto?.randomUUID?.() ?? `n-${Date.now()}-${notificationSeq}`
-  );
 }
 
 type WindowChromeControl = 'minimize' | 'toggle-maximize' | 'close';
@@ -1064,30 +1017,11 @@ function App() {
   const [coreWorkOpen, setCoreWorkOpen] = React.useState(
     initialProjectsOpen && Boolean(initialFocusedProjectPath),
   );
-  const [retainedCoreSurfaces, setRetainedCoreSurfaces] = React.useState<
-    ReadonlySet<'projects' | 'agent-work-lab' | 'core-work'>
-  >(
-    () =>
-      new Set([
-        ...(projectsOpen ? (['projects'] as const) : []),
-        ...(labOpen ? (['agent-work-lab'] as const) : []),
-        ...(coreWorkOpen ? (['core-work'] as const) : []),
-      ]),
-  );
-  React.useEffect(() => {
-    const visibleSurface = projectsOpen
-      ? 'projects'
-      : labOpen
-        ? 'agent-work-lab'
-        : coreWorkOpen
-          ? 'core-work'
-          : undefined;
-    if (!visibleSurface) return;
-    setRetainedCoreSurfaces((current) => {
-      if (current.has(visibleSurface)) return current;
-      return new Set([...current, visibleSurface]);
-    });
-  }, [coreWorkOpen, labOpen, projectsOpen]);
+  const retainedCoreSurfaces = useRetainedCoreSurfaces({
+    projectsOpen,
+    labOpen,
+    coreWorkOpen,
+  });
   const [focusedProjectPath, setFocusedProjectPath] = React.useState(
     initialFocusedProjectPath,
   );
@@ -2386,52 +2320,34 @@ function App() {
           }}
         >
           <div style={{ flex: 1, minHeight: 0, overflow: 'hidden' }}>
-            {projectsOpen || retainedCoreSurfaces.has('projects') ? (
-              <div
-                style={{
-                  display: projectsOpen ? 'block' : 'none',
-                  height: '100%',
-                }}
-              >
-                <ProjectsPanel
-                  projects={projects}
-                  focusedPath={focusedProjectPath}
-                  onCatalog={handleProjectsCatalog}
-                  onOpenProject={handleOpenProject}
-                  onOpenExistingProject={() => void workspaceBridge.open()}
-                  onRestoreProject={restoreProjectWork}
-                />
-              </div>
-            ) : null}
-            {labOpen || retainedCoreSurfaces.has('agent-work-lab') ? (
-              <div
-                style={{ display: labOpen ? 'block' : 'none', height: '100%' }}
-              >
-                <AgentWorkLabPanel
-                  lab={agentWorkLab}
-                  startup={startup}
-                  onOpenWork={() => openWorkSurface()}
-                  onOpenExistingProject={() => {
-                    setLabOpen(false);
-                    setCoreWorkOpen(false);
-                    setProjectsOpen(true);
-                  }}
-                  onOpenStarterProject={(workspaceRoot) =>
-                    void workspaceBridge.path(workspaceRoot)
-                  }
-                />
-              </div>
-            ) : null}
-            {coreWorkOpen || retainedCoreSurfaces.has('core-work') ? (
-              <div
-                style={{
-                  display: coreWorkOpen ? 'block' : 'none',
-                  height: '100%',
-                }}
-              >
-                <ProjectWorkControlView projects={projects} shell={shell} />
-              </div>
-            ) : null}
+            <RetainedCoreSurfaceStack
+              visible={
+                projectsOpen
+                  ? 'projects'
+                  : labOpen
+                    ? 'agent-work-lab'
+                    : coreWorkOpen
+                      ? 'core-work'
+                      : undefined
+              }
+              retained={retainedCoreSurfaces}
+              projects={projects}
+              focusedPath={focusedProjectPath}
+              onCatalog={handleProjectsCatalog}
+              onOpenProject={handleOpenProject}
+              onOpenExistingProject={() => void workspaceBridge.open()}
+              onRestoreProject={restoreProjectWork}
+              lab={agentWorkLab}
+              startup={startup}
+              onOpenWork={() => openWorkSurface()}
+              onOpenLabExistingProject={() => {
+                setLabOpen(false);
+                setCoreWorkOpen(false);
+                setProjectsOpen(true);
+              }}
+              onOpenStarterProject={(root) => void workspaceBridge.path(root)}
+              shell={shell}
+            />
             {!projectsOpen && !labOpen && !coreWorkOpen ? (
               runtime.ok ? (
                 activeKfx && activeKfx.tier === 'sandboxed-ipc' ? (

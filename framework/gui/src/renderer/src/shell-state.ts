@@ -3,7 +3,13 @@
 // agent APIs read and write the same configuration the GUI shows; the GUI
 // holds no private settings file.
 import type { DomainState } from '@kungfu-tech/api/capability';
-import type { ShellState } from '@kungfu-tech/kfx';
+import type {
+  ShellNotification,
+  ShellState,
+  StatusBarSeverity,
+} from '@kungfu-tech/kfx';
+
+import type { RuntimeStatusResult } from '../../runtime-status';
 
 export const SHELL_STATE_LOCATION = {
   role: 'system',
@@ -64,4 +70,59 @@ export function loadShellState(domain: DomainState): ShellState {
 
 export function saveShellState(domain: DomainState, state: ShellState): void {
   domain.setConfig(SHELL_STATE_LOCATION, JSON.stringify(state));
+}
+
+export function statusColor(severity: StatusBarSeverity | undefined): string {
+  if (severity === 'ok') return '#4ec9b0';
+  if (severity === 'warning') return '#dcdcaa';
+  if (severity === 'error') return '#f48771';
+  return '#cccccc';
+}
+
+export function trustStatusText(status: RuntimeStatusResult | null): string {
+  const assessments = status?.payload?.assessments;
+  if (!assessments) return 'trust unavailable';
+  const counts = assessments.counts ?? {};
+  const blocked =
+    (counts.stale ?? 0) +
+    (counts['insufficient-evidence'] ?? 0) +
+    (counts.conflicted ?? 0) +
+    (counts.unverifiable ?? 0) +
+    (counts['failed-retryable'] ?? 0);
+  if (blocked > 0) return `trust blocked ${String(blocked)}`;
+  if ((counts.pending ?? 0) + (counts.running ?? 0) > 0)
+    return `trust pending ${String((counts.pending ?? 0) + (counts.running ?? 0))}`;
+  return `trust fresh ${String(counts.fresh ?? 0)}`;
+}
+
+export function trustTooltip(status: RuntimeStatusResult | null): string {
+  const assessments = status?.payload?.assessments?.assessments;
+  if (!assessments) return 'Assessment subscription is unavailable';
+  if (assessments.length === 0) return 'No load-bearing claims assessed';
+  return assessments
+    .map((assessment) => {
+      const request = assessment.request ?? {};
+      const risks = assessment.report?.residual_risks?.join('; ') || '-';
+      return `${assessment.state || '-'}: ${request.claim_id || '-'} for ${
+        request.purpose || '-'
+      }\nresidual risk: ${risks}\nproof: ${
+        assessment.report?.query_proof_root || '-'
+      }`;
+    })
+    .join('\n\n');
+}
+
+export function notificationColor(level: ShellNotification['level']): string {
+  if (level === 'success') return '#4ec9b0';
+  if (level === 'warning') return '#dcdcaa';
+  if (level === 'error') return '#f48771';
+  return '#9cdcfe';
+}
+
+let notificationSeq = 0;
+export function notificationId(): string {
+  notificationSeq += 1;
+  return (
+    globalThis.crypto?.randomUUID?.() ?? `n-${Date.now()}-${notificationSeq}`
+  );
 }
