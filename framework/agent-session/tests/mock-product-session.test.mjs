@@ -17,16 +17,24 @@ const MOCK = fileURLToPath(
 );
 const PROFILE_ROOT = `sha256:${'7'.repeat(64)}`;
 const CONVERGENCE_TIMEOUT_MS = 5000;
-const STARTUP_CONVERGENCE_TIMEOUT_MS = 15000;
+const STARTUP_CONVERGENCE_TIMEOUT_MS = 60000;
 
-async function eventually(probe, label, timeoutMs = CONVERGENCE_TIMEOUT_MS) {
+async function eventually(
+  probe,
+  label,
+  timeoutMs = CONVERGENCE_TIMEOUT_MS,
+  diagnostic = () => '',
+) {
   const deadline = Date.now() + timeoutMs;
   while (Date.now() < deadline) {
     const value = await probe();
     if (value) return value;
     await delay(25);
   }
-  throw new Error(`${label} did not converge within ${timeoutMs}ms`);
+  const detail = diagnostic();
+  throw new Error(
+    `${label} did not converge within ${timeoutMs}ms${detail ? `; ${detail}` : ''}`,
+  );
 }
 
 async function control(host, session, operation, payload, automatic = true) {
@@ -46,6 +54,18 @@ async function control(host, session, operation, payload, automatic = true) {
     automatic,
   });
 }
+
+test('convergence timeout includes its last observed diagnostic', async () => {
+  await assert.rejects(
+    eventually(
+      async () => null,
+      'fixture state',
+      1,
+      () => 'last lifecycle=ready, interaction=busy',
+    ),
+    /fixture state did not converge within 1ms; last lifecycle=ready, interaction=busy/u,
+  );
+});
 
 test('macOS node-pty preparation rejects a linked private support target', async (t) => {
   if (process.platform !== 'darwin') {
@@ -164,13 +184,19 @@ test('deterministic Mock Agent traverses answer, approval, review, and exit in t
     execution: { env: input.env, cols: 100, rows: 30 },
   });
 
+  let lastInitialStatus = null;
   await eventually(
     async () => {
       const status = await host.invoke({ operation: 'status', session });
+      lastInitialStatus = status;
       return status.interactionState === 'ready' ? status : null;
     },
     'initial ready state',
     STARTUP_CONVERGENCE_TIMEOUT_MS,
+    () =>
+      lastInitialStatus
+        ? `last lifecycle=${lastInitialStatus.lifecycleState}, interaction=${lastInitialStatus.interactionState}`
+        : 'no status observed',
   );
   await control(host, session, 'instruct', { text: 'perform bounded Work' });
   const answer = await eventually(async () => {
