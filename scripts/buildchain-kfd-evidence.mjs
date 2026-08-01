@@ -136,6 +136,20 @@ const AGENT_COMMANDS_PATH = path.join(
   'agent',
   'commands.json',
 );
+const SHIFU_AGENT_REGISTRY_PATH = path.join(
+  ROOT,
+  'crates',
+  'shifu',
+  'agent',
+  'kfd3_api.registry.json',
+);
+const XINFA_AGENT_REGISTRY_PATH = path.join(
+  ROOT,
+  'crates',
+  'xinfa',
+  'agent',
+  'kfd3_api.registry.json',
+);
 const SDK_CLI_PATH = path.join(ROOT, 'developer', 'sdk', 'src', 'sdk.js');
 const PRODUCT_PACKAGE_PATH = path.join(ROOT, 'product', 'package.json');
 const RUNTIME_CLI_PATH = path.join(
@@ -614,6 +628,7 @@ function fileSurface({
   evidencePath,
   maturity,
   distribution,
+  owner = 'kungfu',
 }) {
   return {
     id,
@@ -630,7 +645,7 @@ function fileSurface({
     artifactPath: evidencePath || sourcePath,
     maturity: maturity || 'stable',
     declaration: {
-      owner: 'kungfu',
+      owner,
       source: 'scripts/buildchain-kfd-evidence.mjs',
       sourcePath,
     },
@@ -639,18 +654,25 @@ function fileSurface({
 }
 
 function agentApiSurfaces() {
-  const registry = readJson(AGENT_REGISTRY_PATH);
-  const apis = Array.isArray(registry.apis) ? registry.apis : [];
-  return apis.map((api) =>
-    fileSurface({
-      id: String(api.id),
-      name: String(api.name || api.id),
-      kind: String(api.surface || 'cli'),
-      sourcePath: rel(AGENT_REGISTRY_PATH),
-      evidencePath: rel(AGENT_COMMANDS_PATH),
-      maturity: String(api.maturity || 'stable'),
-    }),
-  );
+  return [
+    [AGENT_REGISTRY_PATH, AGENT_COMMANDS_PATH, 'kungfu'],
+    [SHIFU_AGENT_REGISTRY_PATH, SHIFU_AGENT_REGISTRY_PATH, 'shifu'],
+    [XINFA_AGENT_REGISTRY_PATH, XINFA_AGENT_REGISTRY_PATH, 'xinfa'],
+  ].flatMap(([registryPath, evidencePath, owner]) => {
+    const registry = readJson(registryPath);
+    const apis = Array.isArray(registry.apis) ? registry.apis : [];
+    return apis.map((api) =>
+      fileSurface({
+        id: String(api.id),
+        name: String(api.name || api.command || api.id),
+        kind: String(api.surface || 'cli'),
+        sourcePath: rel(registryPath),
+        evidencePath: rel(evidencePath),
+        maturity: String(api.maturity || 'stable'),
+        owner,
+      }),
+    );
+  });
 }
 
 function sdkAndProductSurfaces() {
@@ -828,6 +850,14 @@ function buildKfd3Registry(upstreamAggregate = buildUpstreamKfdAggregate()) {
           {
             path: rel(AGENT_REGISTRY_PATH),
             role: 'kungfu-agent-first-subregistry',
+          },
+          {
+            path: rel(SHIFU_AGENT_REGISTRY_PATH),
+            role: 'shifu-agent-subregistry',
+          },
+          {
+            path: rel(XINFA_AGENT_REGISTRY_PATH),
+            role: 'xinfa-agent-subregistry',
           },
           {
             path: rel(AGENT_COMMANDS_PATH),

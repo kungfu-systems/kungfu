@@ -4,6 +4,7 @@ use serde_json::{json, Map, Value};
 use sha2::{Digest, Sha256};
 use std::collections::{BTreeMap, BTreeSet};
 
+mod agent;
 mod atlas;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod cli;
@@ -99,6 +100,7 @@ pub(crate) const CLI_USAGE: &str = concat!(
     "  xinfa context --atlas DIR --route ID --task TEXT --role ROLE --budget TOKENS --json\n",
     "  xinfa expand --atlas DIR --view FILE --handle ID --budget TOKENS --json\n",
     "  xinfa diagnose --json",
+    "\n  xinfa agent brief|map --json|capabilities --json|schema --json|registry --json|verify --json",
 );
 
 const TOP_KEYS: &[&str] = &[

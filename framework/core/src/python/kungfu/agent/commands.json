@@ -38,6 +38,18 @@
       "purpose": "List installed Agent documents and expose the Xinfa context-discovery boundary."
     },
     {
+      "apiId": "kungfu.agent.map",
+      "name": "kungfu agent map --json",
+      "maturity": "stable",
+      "purpose": "Print and validate the complete stable first-entry intent route map."
+    },
+    {
+      "apiId": "kungfu.agent.expand",
+      "name": "kungfu agent expand --view agent --handle <id> --budget <tokens> --json",
+      "maturity": "stable",
+      "purpose": "Expand one verified packaged Xinfa context handle without exposing internal pack paths."
+    },
+    {
       "apiId": "kungfu.agent.capabilities",
       "name": "kungfu agent capabilities --json",
       "maturity": "stable",

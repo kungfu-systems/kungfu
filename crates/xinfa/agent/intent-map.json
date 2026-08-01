@@ -1,0 +1,7 @@
+{"schema":"xinfa.agent-intent-map/v1","product":"xinfa","intents":[
+{"id":"route-resolution","command":"xinfa route resolve --atlas <dir> --task <file> --json","access":"read-only","authorization":"none","maturity":"stable"},
+{"id":"verified-context","command":"xinfa context --atlas <dir> --route <id> --task <text> --role <role> --budget <tokens> --json","access":"read-only","authorization":"none","maturity":"stable"},
+{"id":"budget-control","command":"xinfa chart create --atlas <dir> --route <id> --task <text> --role <role> --budget <tokens> --json","access":"read-only","authorization":"none","maturity":"stable"},
+{"id":"expansion","command":"xinfa expand --atlas <dir> --view <file> --handle <id> --budget <tokens> --json","access":"read-only","authorization":"none","maturity":"stable"},
+{"id":"diagnosis","command":"xinfa diagnose --json","access":"read-only","authorization":"none","maturity":"stable"},
+{"id":"schema-discovery","command":"xinfa agent schema --json","access":"read-only","authorization":"none","maturity":"stable"}]}
