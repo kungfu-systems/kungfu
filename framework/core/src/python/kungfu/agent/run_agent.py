@@ -21,7 +21,7 @@ import subprocess
 import sys
 import threading
 import time
-from typing import Any, Callable, Mapping, Sequence
+from typing import Any, Callable, Mapping, Protocol, Sequence
 import uuid
 
 import kungfu
@@ -48,6 +48,10 @@ _SENSITIVE_COMMAND_NAME = (
     r"(?:api[-_]?key|access[-_]?key|token|secret|password|passwd|"
     r"authorization|cookie|credential|signature)"
 )
+
+
+class _ReturnCodeResult(Protocol):
+    returncode: int
 
 
 def bind_current_native_work(
@@ -531,6 +535,17 @@ def native_environment(
         env["KUNGFU_CLI_BIN"] = cli_bin
     else:
         cli_bin = "kungfu"
+    bind_work_entrypoint = [
+        cli_bin,
+        "agent",
+        "console",
+        "bind-work",
+        "--initiative-id",
+        "<id>",
+        "--assignment-id",
+        "<id>",
+        "--json",
+    ]
     context = {
         "schema": "kungfu.native-agent-context/v1",
         "environment": "native-interactive",
@@ -538,17 +553,7 @@ def native_environment(
             "context": [cli_bin, "agent", "context", "--json"],
             "skills": [cli_bin, "skill", "catalog", "--json"],
             "work": [cli_bin, "work", "status"],
-            "bindWork": [
-                cli_bin,
-                "agent",
-                "console",
-                "bind-work",
-                "--initiative-id",
-                "<id>",
-                "--assignment-id",
-                "<id>",
-                "--json",
-            ],
+            "bindWork": bind_work_entrypoint,
         },
         "workBinding": {
             "launchState": "bound" if work_ref is not None else "unbound",
@@ -631,7 +636,7 @@ def native_environment(
                 "context": [cli_bin, "agent", "context", "--json"],
                 "capabilities": [cli_bin, "agent", "capabilities", "--json"],
                 "profiles": [cli_bin, "profile", "manager", "--json"],
-                "bindWork": context["entrypoints"]["bindWork"],
+                "bindWork": bind_work_entrypoint,
             },
             "knownLimits": [
                 "native provider terminal bytes are not captured by Kungfu",
@@ -687,7 +692,7 @@ def run_native_interactive(
     workspace_root: str,
     work_ref: Mapping[str, Any] | None,
     work_selection: Mapping[str, Any],
-    process_runner: Callable[..., Any] | None = None,
+    process_runner: Callable[..., _ReturnCodeResult] | None = None,
     session_invoker: Callable[[Mapping[str, Any]], Mapping[str, Any]] | None = None,
     session_endpoint: str | None = None,
     work_observer: Callable[[Mapping[str, Any] | None], Mapping[str, Any]]
@@ -789,6 +794,8 @@ def run_native_interactive(
     heartbeat_errors: list[Exception] = []
 
     def heartbeat() -> None:
+        if session_invoker is None:
+            return
         while not stop_heartbeat.is_set():
             try:
                 current = session_invoker(
@@ -839,7 +846,7 @@ def run_native_interactive(
         heartbeat_thread.start()
 
     argv = [*interactive_launch_argv(profile), *adapter["argv"]]
-    completed = None
+    completed: _ReturnCodeResult | None = None
     try:
         if process_runner is None:
             # Spawn the terminal owner before starting any Python observer
@@ -857,7 +864,7 @@ def run_native_interactive(
         stop_heartbeat.set()
         if heartbeat_thread is not None:
             heartbeat_thread.join(timeout=max(1.0, heartbeat_seconds * 2))
-        if registered:
+        if registered and session_invoker is not None:
             session_invoker(
                 {
                     "operation": "end-native",
