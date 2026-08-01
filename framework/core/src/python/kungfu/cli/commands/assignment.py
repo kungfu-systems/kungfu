@@ -1037,7 +1037,7 @@ def _project_review_evidence(workspace, report_path, work_definition):
             relative.as_posix(),
         )
 
-    selected = []
+    selected: list[Path] = []
     total_bytes = 0
     for candidate in sorted(set(candidates), key=priority):
         size = candidate.stat().st_size
