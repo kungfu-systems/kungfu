@@ -2,7 +2,9 @@
 
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
+import crypto from 'node:crypto';
 import fs from 'node:fs';
+import os from 'node:os';
 import path from 'node:path';
 import process from 'node:process';
 import { test } from 'node:test';
@@ -15,8 +17,10 @@ import {
   loadProfile,
   parseObservationStream,
   qualificationPlan,
+  renderSummary,
   validateCoverage,
   validateReport,
+  verifyEvidence,
 } from './run.mjs';
 
 const ROOT = path.resolve(
@@ -27,6 +31,10 @@ const ROOT = path.resolve(
   '..',
   '..',
 );
+
+function sha256(value) {
+  return crypto.createHash('sha256').update(value).digest('hex');
+}
 
 function source(dirty = false) {
   return { revision: '1'.repeat(40), tree: '2'.repeat(40), dirty };
@@ -273,4 +281,128 @@ test('dirty and quick evidence fail closed while dry-run makes no claim', () => 
   validateReport(planned);
   assert.equal(planned.verdict, 'planned');
   assert.equal(planned.claims.service_plane_envelope_qualified, false);
+});
+
+function completeObservations(profile) {
+  const observations = [];
+  for (const concurrency of profile.matrix.concurrency) {
+    for (const caseName of [
+      'one-yield',
+      'future-handoff',
+      'cancel-timeout-error',
+    ]) {
+      for (
+        let repetition = 0;
+        repetition < profile.sampling.scored_repetitions;
+        repetition += 1
+      ) {
+        observations.push(record({ case: caseName, concurrency, repetition }));
+      }
+    }
+    for (const payload of profile.matrix.payload_bytes) {
+      for (
+        let repetition = 0;
+        repetition < profile.sampling.scored_repetitions;
+        repetition += 1
+      ) {
+        observations.push(
+          record({
+            workload: 'async-capability-relay',
+            case: 'round-trip',
+            concurrency,
+            payload_bytes: payload,
+            repetition,
+          }),
+        );
+      }
+    }
+  }
+  for (
+    let repetition = 0;
+    repetition < profile.sampling.scored_repetitions;
+    repetition += 1
+  ) {
+    observations.push(
+      record({
+        workload: 'journal-asyncio-bridge',
+        case: 'journal-callback-and-empty-pump',
+        repetition,
+      }),
+      record({
+        workload: 'python-service-process-lifecycle',
+        case: 'cold-launch-relay-and-graceful-shutdown',
+        repetition,
+      }),
+    );
+  }
+  observations.push(
+    record({
+      workload: 'bounded-relay-soak',
+      case: 'relay-1024b-concurrency-8',
+      concurrency: 8,
+      payload_bytes: 1024,
+    }),
+  );
+  return observations;
+}
+
+test('independent verification rejects tampered retained suite logs', (t) => {
+  const loaded = loadProfile();
+  const outputDir = fs.mkdtempSync(
+    path.join(process.env.RUNNER_TEMP || os.tmpdir(), 'python-kfx-verify-'),
+  );
+  t.after(() => fs.rmSync(outputDir, { recursive: true, force: true }));
+  const retained = {
+    setup: 'setup passed\n',
+    correctness: 'correctness passed\n',
+  };
+  const retainedSuite = (name) => {
+    fs.writeFileSync(path.join(outputDir, `${name}.log`), retained[name]);
+    return {
+      command: ['./shifu', name],
+      status: 'passed',
+      exit_code: 0,
+      duration_ms: 1,
+      raw_log: `${name}.log`,
+      raw_sha256: sha256(retained[name]),
+    };
+  };
+  const setup = retainedSuite('setup');
+  const correctness = retainedSuite('correctness');
+  const observations = completeObservations(loaded.profile);
+  const raw = observations.map((item) => `${JSON.stringify(item)}\n`).join('');
+  fs.writeFileSync(path.join(outputDir, 'raw-observations.jsonl'), raw);
+  const exactSource = source();
+  const runId = `${exactSource.revision.slice(0, 12)}-${process.platform}-${process.arch}`;
+  const report = evaluateReport({
+    mode: 'execute',
+    runId,
+    source: exactSource,
+    loaded,
+    setup,
+    correctness,
+    toolchainRoot: `sha256:${'c'.repeat(64)}`,
+    observations,
+    rawPath: 'raw-observations.jsonl',
+    rawSha256: sha256(raw),
+    manifest: { python: '3.13.7', implementation: 'CPython' },
+  });
+  fs.writeFileSync(
+    path.join(outputDir, 'report.json'),
+    `${JSON.stringify(report, null, 2)}\n`,
+  );
+  fs.writeFileSync(
+    path.join(outputDir, 'summary.md'),
+    renderSummary(report, loaded),
+  );
+
+  assert.equal(
+    verifyEvidence(outputDir, loaded, exactSource).verdict,
+    'qualified',
+  );
+  fs.writeFileSync(path.join(outputDir, 'correctness.log'), 'tampered\n');
+  assert.throws(
+    () => verifyEvidence(outputDir, loaded, exactSource),
+    /correctness log digest does not match/u,
+  );
 });

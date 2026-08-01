@@ -455,6 +455,30 @@ export function validateReport(report) {
   }
 }
 
+function retainedFile(evidenceDir, relativePath, label) {
+  if (typeof relativePath !== 'string' || relativePath.length === 0) {
+    throw new Error(`${label} path is missing`);
+  }
+  const root = path.resolve(evidenceDir);
+  const pathname = path.resolve(root, relativePath);
+  const relative = path.relative(root, pathname);
+  if (relative.startsWith('..') || path.isAbsolute(relative)) {
+    throw new Error(`${label} path escapes the evidence directory`);
+  }
+  return pathname;
+}
+
+function verifyRetainedSuite(evidenceDir, name, suite) {
+  if (suite.status !== 'passed' || suite.exit_code !== 0) {
+    throw new Error(`${name} suite is not passing`);
+  }
+  const pathname = retainedFile(evidenceDir, suite.raw_log, `${name} log`);
+  const raw = fs.readFileSync(pathname);
+  if (sha256(raw) !== suite.raw_sha256) {
+    throw new Error(`${name} log digest does not match the report`);
+  }
+}
+
 export function verifyEvidence(
   evidenceDir,
   loaded = loadProfile(),
@@ -465,6 +489,20 @@ export function verifyEvidence(
   validateReport(report);
   if (report.verdict !== 'qualified') {
     throw new Error(`evidence verdict is ${report.verdict}, not qualified`);
+  }
+  if (report.source.dirty) throw new Error('evidence source is dirty');
+  if (report.profile !== loaded.profile.name) {
+    throw new Error('evidence profile does not match the verification profile');
+  }
+  if (report.invalidations.length !== 0) {
+    throw new Error('qualified evidence retains invalidations');
+  }
+  if (
+    report.claims.service_plane_envelope_qualified !== true ||
+    report.claims.journal_hot_path_qualified !== false ||
+    report.claims.universal_performance_promise !== false
+  ) {
+    throw new Error('evidence claim boundary is inconsistent');
   }
   if (exactSource.dirty) throw new Error('verification checkout is dirty');
   if (
@@ -483,7 +521,37 @@ export function verifyEvidence(
       throw new Error(`${name} root does not match the verification checkout`);
     }
   }
-  const rawPath = path.join(evidenceDir, report.observations.raw_path || '');
+  if (!report.roots.toolchain) {
+    throw new Error('qualified evidence is missing its toolchain root');
+  }
+  const platformEntry = loaded.profile.platforms.find(
+    (entry) =>
+      entry.os === report.environment.os &&
+      entry.arch === report.environment.arch,
+  );
+  if (
+    !platformEntry ||
+    report.environment.platform_claim !== platformEntry.claim
+  ) {
+    throw new Error('evidence platform does not match the qualified profile');
+  }
+  if (
+    report.environment.python_implementation !== 'CPython' ||
+    !/^3\.13\./u.test(report.environment.python || '')
+  ) {
+    throw new Error('evidence does not use the qualified CPython 3.13 line');
+  }
+  const expectedRunId = `${report.source.revision.slice(0, 12)}-${report.environment.os}-${report.environment.arch}`;
+  if (report.run_id !== expectedRunId) {
+    throw new Error('evidence run id does not match its source and platform');
+  }
+  verifyRetainedSuite(evidenceDir, 'setup', report.setup);
+  verifyRetainedSuite(evidenceDir, 'correctness', report.correctness);
+  const rawPath = retainedFile(
+    evidenceDir,
+    report.observations.raw_path,
+    'raw observations',
+  );
   const raw = fs.readFileSync(rawPath, 'utf8');
   if (sha256(raw) !== report.observations.raw_sha256) {
     throw new Error('raw observation digest does not match the report');
@@ -492,6 +560,18 @@ export function verifyEvidence(
     .split(/\r?\n/u)
     .filter(Boolean)
     .map((line) => JSON.parse(line));
+  if (
+    observations.some(
+      (record) =>
+        record.schema !==
+          'kungfu.python-kfx-asyncio.performance-observation/v1' ||
+        record.status !== 'passed',
+    )
+  ) {
+    throw new Error(
+      'raw observations contain an invalid or non-passing record',
+    );
+  }
   if (observations.length !== report.observations.count) {
     throw new Error('raw observation count does not match the report');
   }
@@ -501,6 +581,10 @@ export function verifyEvidence(
     report.statistics,
     'derived statistics do not match the complete raw observations',
   );
+  const summaryPath = retainedFile(evidenceDir, 'summary.md', 'summary');
+  if (fs.readFileSync(summaryPath, 'utf8') !== renderSummary(report, loaded)) {
+    throw new Error('human-readable summary does not match the report');
+  }
   return report;
 }
 
