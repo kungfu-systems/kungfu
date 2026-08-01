@@ -43,6 +43,7 @@ function fixture({
   version = '0.144.3',
   queueLimit = 4,
   pause,
+  platform = 'linux',
 } = {}) {
   const child = new FakePtyProcess();
   const host = new AgentSessionCapsuleHost({
@@ -51,6 +52,7 @@ function fixture({
     runtimeIdentity: 'runtime-interaction-1',
     maxOutputBytes: 4096,
     now: () => 1000,
+    platform,
   });
   const started = host.start({
     workConsoleId: 'console-1',
