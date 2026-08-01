@@ -47,6 +47,7 @@ use crate::artifact_catalog::product_mainline_ref;
 use crate::native_update::{
     artifact_sha256, installed_release_cut_root, local_artifact_identity_valid, valid_sha256_root,
 };
+use crate::util;
 
 /// The buildchain self-describe contract shifu asks for the repo's KFD-3
 /// registry location. shifu holds no copy of that layout path: the layout is
@@ -281,6 +282,7 @@ struct LocalReleaseEvidence {
     product_version: String,
     release_cut_root: String,
     platform_slice_root: String,
+    release_trust_domain: String,
 }
 
 /// Read the repo's KFD-3 registry and return the registration plan for
@@ -394,25 +396,16 @@ fn plan_at(root: &Path, path: &Path, task: &str) -> Option<DistributionPlan> {
             .filter(|a| !a.kind.is_empty() && !a.path_glob.is_empty())
             .collect();
         if dist.str_of("releaseCompanions") == "standard" {
-            let (runtime, upgrade_runtime) = match env::consts::OS {
-                "macos" => ("darwin", "darwin"),
-                "windows" => ("windows", "win32"),
-                other => (other, other),
-            };
-            let archive = if env::consts::OS == "windows" {
-                "zip"
-            } else {
-                "tar.gz"
-            };
+            let (archive_glob, manifest_glob) = util::standard_companion_globs(env::consts::OS);
             artifacts.extend([
                 DeclaredArtifact {
                     kind: "cli-archive".to_string(),
-                    path_glob: format!("product/release/cli/*cli-{runtime}-*.{archive}"),
+                    path_glob: archive_glob,
                     sha256: String::new(),
                 },
                 DeclaredArtifact {
                     kind: "upgrade-manifest".to_string(),
-                    path_glob: format!("product/release/cli/*upgrade-*-{upgrade_runtime}-*.json"),
+                    path_glob: manifest_glob,
                     sha256: String::new(),
                 },
             ]);
@@ -595,7 +588,10 @@ pub fn register(root: &Path, plan: &DistributionPlan) {
                 "KUNGFU_BUILD_PLATFORM_SLICE_ROOT={}",
                 quote(&release.platform_slice_root)
             ),
-            "KUNGFU_BUILD_RELEASE_TRUST_DOMAIN='shifu-local'".to_string(),
+            format!(
+                "KUNGFU_BUILD_RELEASE_TRUST_DOMAIN={}",
+                quote(&release.release_trust_domain)
+            ),
         ]);
     }
     meta.push(String::new());
@@ -663,10 +659,12 @@ fn local_release_evidence(
     let policy = release_cut
         .get("publicationPolicy")
         .ok_or_else(|| "Product Release Cut has no publication policy".to_string())?;
-    if policy.str_of("trustDomain") != "shifu-local"
-        || policy.get("publicationEligible") != Some(&json::Json::Bool(false))
-    {
-        return Err("registered dev build is not publication-ineligible".to_string());
+    let trust_domain = policy.str_of("trustDomain");
+    let Some(json::Json::Bool(publication_eligible)) = policy.get("publicationEligible") else {
+        return Err("registered build has no publication eligibility".to_string());
+    };
+    if !util::registration_policy_is_coherent(trust_domain, *publication_eligible) {
+        return Err("registered build has an incoherent publication policy".to_string());
     }
     let (local_path, local_declaration, local_sha) = local_artifact
         .ok_or_else(|| "registered dev build has no local desktop artifact".to_string())?;
@@ -708,6 +706,7 @@ fn local_release_evidence(
         product_version: document.str_of("productVersion").to_string(),
         release_cut_root: release_cut_root.to_string(),
         platform_slice_root: platform_slice_root.to_string(),
+        release_trust_domain: trust_domain.to_string(),
     }))
 }
 
@@ -976,8 +975,8 @@ mod tests {
                   "releaseCut": {{
                     "releaseCutRoot": "sha256:{cut}",
                     "publicationPolicy": {{
-                      "trustDomain": "shifu-local",
-                      "publicationEligible": false
+                      "trustDomain": "public",
+                      "publicationEligible": true
                     }}
                   }},
                   "localArtifact": {{
@@ -1035,7 +1034,7 @@ mod tests {
             "KUNGFU_BUILD_PLATFORM_SLICE_ROOT='sha256:{}'",
             "d".repeat(64)
         )));
-        assert!(meta.contains("KUNGFU_BUILD_RELEASE_TRUST_DOMAIN='shifu-local'"));
+        assert!(meta.contains("KUNGFU_BUILD_RELEASE_TRUST_DOMAIN='public'"));
         // Content hash of b"artifact-bytes", recorded for provenance.
         assert!(meta.contains(
             "KUNGFU_BUILD_SHA256='6521df166eb07efaf36eba5b6bedefd9d6a252e9c80bab1c99653700ec71473c'"
