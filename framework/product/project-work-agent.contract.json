@@ -70,13 +70,13 @@
         "framework/gui/src/renderer/src/main.tsx": [
           "All Work",
           "Projects",
-          "Open Projects"
+          "Agent Work Lab"
         ],
-      "framework/gui/src/renderer/src/projects-panel/index.tsx": [
+        "framework/gui/src/renderer/src/projects-panel/index.tsx": [
           "New Project",
           "Open Project",
-          "New Work",
-          "Run Codex"
+          "Works",
+          "Last activity"
         ],
         "extensions/work-dashboard/src/view/index.tsx": [
           "All Work",
