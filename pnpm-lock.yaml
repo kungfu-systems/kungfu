@@ -488,6 +488,9 @@ importers:
 
   framework/gui:
     dependencies:
+      '@kungfu-tech/agent-session':
+        specifier: workspace:*
+        version: link:../agent-session
       '@kungfu-tech/api':
         specifier: workspace:*
         version: link:../api
@@ -604,9 +607,6 @@ importers:
 
   framework/tui:
     dependencies:
-      '@kungfu-tech/agent-session':
-        specifier: workspace:*
-        version: link:../agent-session
       '@kungfu-tech/api':
         specifier: workspace:*
         version: link:../api
