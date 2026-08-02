@@ -6,14 +6,14 @@
   "measurement": {
     "aggregates": {
       "kungfu-cli": 20273,
-      "kungfu-flat-root": 36604,
-      "kungfu-runtime-family": 6152
+      "kungfu-flat-root": 36612,
+      "kungfu-runtime-family": 6160
     },
     "counts": {
       "productionFiles": 230,
-      "productionPhysicalLines": 83301,
+      "productionPhysicalLines": 83309,
       "testFiles": 96,
-      "testPhysicalLines": 45491
+      "testPhysicalLines": 45514
     },
     "hiddenProductionFiles": [],
     "modulesOver1000": [
@@ -87,7 +87,7 @@
       },
       {
         "path": "framework/core/src/python/kungfu/runtime_service.py",
-        "physicalLines": 2295
+        "physicalLines": 2303
       },
       {
         "path": "framework/core/src/python/kungfu/runtime_upgrade.py",
@@ -121,7 +121,7 @@
       },
       {
         "path": "framework/core/src/python/kungfu/runtime_service.py",
-        "physicalLines": 2295
+        "physicalLines": 2303
       },
       {
         "path": "framework/core/src/python/kungfu/workspace_federation.py",
@@ -232,9 +232,9 @@
         "responsibilities": 114
       },
       {
-        "contentRoot": "sha256:1a6e5e9d98e334120be3130e6e886d53e917208250c2e81f17ce4ecb8a18851c",
+        "contentRoot": "sha256:596b1331379e6c071e84faee38371a4d0135154dcdf7358bea977cfac918aed5",
         "path": "framework/core/src/python/kungfu/runtime_service.py",
-        "physicalLines": 2295,
+        "physicalLines": 2303,
         "responsibilities": 104
       },
       {
@@ -345,17 +345,17 @@
         "test": "platform.system() != 'Windows'"
       },
       {
-        "line": 1515,
+        "line": 1523,
         "path": "framework/core/src/python/kungfu/runtime_service.py",
         "test": "platform.system() == 'Windows'"
       },
       {
-        "line": 1535,
+        "line": 1543,
         "path": "framework/core/src/python/kungfu/runtime_service.py",
         "test": "platform.system() != 'Windows' or getattr(error, 'winerror', None) != 5"
       },
       {
-        "line": 1623,
+        "line": 1631,
         "path": "framework/core/src/python/kungfu/runtime_service.py",
         "test": "platform.system() != 'Windows'"
       },
@@ -366,7 +366,7 @@
       }
     ],
     "schema": "kungfu.python-structure-measurement/v1",
-    "sourceRoot": "sha256:ef42aa08c66783883d4162248bcd008bae593bd91942c6826bb1b8b45aef49f0",
+    "sourceRoot": "sha256:4e165d1514c182d1cd4083037b093a9535d17eaee1e3b3ca436c07d6a863d76c",
     "sourceRoots": {
       "production": [
         "framework/core/src/python"
@@ -450,9 +450,9 @@
     "kungfu.runtime_broker.NativeReadinessAuthority",
     "kungfu.runtime_service.ProcessRuntimeHost"
   ],
-  "reportRoot": "sha256:9431c6baf3f5e74dec60092a520efff7354b70c1bc33bbbdcfaa23dee16238ef",
+  "reportRoot": "sha256:00162ce674ec82744cfb92949ec6b03c0b499002446727303d914374aa33e94d",
   "schema": "kungfu.abstraction-integrity-report/v1",
-  "sourceRoot": "sha256:ef42aa08c66783883d4162248bcd008bae593bd91942c6826bb1b8b45aef49f0",
+  "sourceRoot": "sha256:4e165d1514c182d1cd4083037b093a9535d17eaee1e3b3ca436c07d6a863d76c",
   "summary": {
     "blockingIssues": 0
   },

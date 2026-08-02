@@ -167,7 +167,15 @@ def _json_write(path: Path, payload: dict[str, Any]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     tmp = path.with_suffix(path.suffix + ".tmp")
     tmp.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", "utf-8")
-    os.replace(tmp, path)
+    replace_attempts = 20 if platform.system() == "Windows" else 1
+    for attempt in range(replace_attempts):
+        try:
+            os.replace(tmp, path)
+            return
+        except PermissionError:
+            if attempt == replace_attempts - 1:
+                raise
+            time.sleep(0.05)
 
 
 def _json_read(path: Path) -> dict[str, Any]:
