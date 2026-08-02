@@ -547,9 +547,9 @@
           "authority": "qualification",
           "publication": "none",
           "receipt": "diagnostic",
-          "definitionDigest": "sha256:eab2b72943fbc3851d1d8b1af2816c7406ddf30305c8829c0e696d2a19f909dc",
+          "definitionDigest": "sha256:57a029cf8190b4df23acdab9ba2607199f768e86544ea020c57a29dd22ca41be",
           "credentials": {"githubToken":"write","oidc":false,"repositorySecrets":["KUNGFU_GITHUB_TOKEN"],"inheritedSecrets":false,"environment":null},
-          "externalActions": ["kungfu-systems/buildchain/.github/workflows/dev-qualification-patrol.yml@0be49aac9cd9974f74b5b73944a58ba0125f1c90"],
+          "externalActions": ["kungfu-systems/buildchain/.github/workflows/dev-qualification-patrol.yml@49da2cd118b04d502fd90deaa57acaf83b0eaed7"],
           "steps": []
         }
       ]
