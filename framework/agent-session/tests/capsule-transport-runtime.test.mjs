@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { mkdtemp, rm } from 'node:fs/promises';
+import { mkdtemp, rm, stat } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
@@ -44,10 +44,22 @@ test('Capsule node-pty resolution is lazy and reports an optional capability', (
 test('the detached control core starts without node-pty for native sessions', async () => {
   const root = await mkdtemp(path.join(os.tmpdir(), 'kungfu-native-core-'));
   const paths = detachedAgentSessionPaths(root);
+  const socketRoot =
+    process.platform === 'win32'
+      ? null
+      : await mkdtemp(
+          path.join(
+            process.platform === 'darwin' ? '/tmp' : os.tmpdir(),
+            'kungfu-native-core-socket-',
+          ),
+        );
+  if (socketRoot) await rm(socketRoot, { recursive: true, force: true });
   let worker;
   try {
     worker = await runAgentSessionProductWorker({
-      endpoint: paths.endpoint,
+      endpoint: socketRoot
+        ? path.join(socketRoot, 'core.sock')
+        : paths.endpoint,
       metadata: paths.metadata,
       registryPath: paths.registry,
       ptyModule: '/definitely/missing/node-pty.js',
@@ -57,9 +69,13 @@ test('the detached control core starts without node-pty for native sessions', as
       worker.surface.capabilities().registryAuthority.includes('v3'),
       true,
     );
+    if (socketRoot) {
+      assert.equal((await stat(socketRoot)).mode & 0o777, 0o700);
+    }
     assert.deepEqual(worker.runtime.list(), []);
   } finally {
     await worker?.close();
     await rm(root, { recursive: true, force: true });
+    if (socketRoot) await rm(socketRoot, { recursive: true, force: true });
   }
 });
