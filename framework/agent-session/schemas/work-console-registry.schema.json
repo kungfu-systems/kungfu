@@ -1,11 +1,15 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "kungfu.work-console-registry/v2",
+  "$id": "kungfu.work-console-registry/v3",
   "type": "object",
   "additionalProperties": false,
-  "required": ["schema", "consoles"],
+  "required": ["schema", "activeWorkLeases", "consoles"],
   "properties": {
-    "schema": { "const": "kungfu.work-console-registry/v2" },
+    "schema": { "const": "kungfu.work-console-registry/v3" },
+    "activeWorkLeases": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/activeWorkLease" }
+    },
     "consoles": {
       "type": "array",
       "items": { "$ref": "#/$defs/workConsole" }
@@ -14,18 +18,63 @@
   "$defs": {
     "workRef": {
       "type": "object",
+      "additionalProperties": false,
       "required": [
+        "schema",
         "workspaceId",
         "profileId",
+        "profileRoot",
         "entityType",
-        "entityId"
+        "entityId",
+        "entityRoot",
+        "purpose",
+        "systemTimeCut",
+        "initiativeId"
       ],
       "properties": {
+        "schema": { "const": "kungfu.work-ref/v1" },
         "workspaceId": { "type": "string", "minLength": 1 },
         "profileId": { "type": "string", "minLength": 1 },
+        "profileRoot": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" },
         "entityType": { "type": "string", "minLength": 1 },
-        "entityId": { "type": "string", "minLength": 1 }
+        "entityId": { "type": "string", "minLength": 1 },
+        "entityRoot": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" },
+        "purpose": { "type": "string", "minLength": 1 },
+        "systemTimeCut": { "type": "string", "minLength": 1 },
+        "initiativeId": { "type": "string", "minLength": 1 }
       }
+    },
+    "legacyWorkRefV1": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema",
+        "workspaceId",
+        "profileId",
+        "profileRoot",
+        "entityType",
+        "entityId",
+        "entityRoot",
+        "purpose",
+        "systemTimeCut"
+      ],
+      "properties": {
+        "schema": { "const": "kungfu.work-ref/v1" },
+        "workspaceId": { "type": "string", "minLength": 1 },
+        "profileId": { "type": "string", "minLength": 1 },
+        "profileRoot": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" },
+        "entityType": { "type": "string", "minLength": 1 },
+        "entityId": { "type": "string", "minLength": 1 },
+        "entityRoot": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" },
+        "purpose": { "type": "string", "minLength": 1 },
+        "systemTimeCut": { "type": "string", "minLength": 1 }
+      }
+    },
+    "readableWorkRef": {
+      "oneOf": [
+        { "$ref": "#/$defs/workRef" },
+        { "$ref": "#/$defs/legacyWorkRefV1" }
+      ]
     },
     "binding": {
       "oneOf": [
@@ -35,7 +84,7 @@
           "required": ["kind", "workRef"],
           "properties": {
             "kind": { "const": "work" },
-            "workRef": { "$ref": "#/$defs/workRef" }
+            "workRef": { "$ref": "#/$defs/readableWorkRef" }
           }
         },
         {
@@ -108,6 +157,7 @@
         "runId",
         "provider",
         "providerVersion",
+        "runtimeProfileId",
         "backend",
         "status",
         "startedAt",
@@ -120,6 +170,7 @@
         "runId": { "type": "string", "minLength": 1 },
         "provider": { "type": "string", "minLength": 1 },
         "providerVersion": { "type": "string", "minLength": 1 },
+        "runtimeProfileId": { "type": "string", "minLength": 1 },
         "backend": {
           "enum": ["capsule", "structured", "tmux", "direct", "native-interactive"]
         },
@@ -139,23 +190,25 @@
           "type": "object",
           "additionalProperties": false,
           "required": [
+            "schema",
             "state",
             "observedAt",
             "staleAfterMs",
             "processIdentityRoot",
-            "work",
+            "workRefRoot",
             "diagnostic"
           ],
           "properties": {
+            "schema": { "const": "kungfu.attempt-heartbeat/v1" },
             "state": {
               "enum": ["fresh", "stale", "disconnected", "degraded", "unknown"]
             },
             "observedAt": { "type": "number" },
             "staleAfterMs": { "type": "number", "exclusiveMinimum": 0 },
             "processIdentityRoot": { "type": "string" },
-            "work": {
+            "workRefRoot": {
               "anyOf": [
-                { "$ref": "#/$defs/nativeWorkObservation" },
+                { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" },
                 { "type": "null" }
               ]
             },
@@ -164,6 +217,7 @@
             }
           }
         },
+        "workProjection": { "$ref": "#/$defs/nativeWorkProjection" },
         "exit": {
           "type": "object",
           "additionalProperties": false,
@@ -247,6 +301,35 @@
         "updatedAt": { "type": "number" }
       }
     },
+    "activeWorkLease": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema",
+        "leaseId",
+        "workKey",
+        "workRef",
+        "workConsoleId",
+        "sessionAttemptId",
+        "provider",
+        "runtimeProfileId",
+        "acquiredAt",
+        "state"
+      ],
+      "properties": {
+        "schema": { "const": "kungfu.active-work-lease/v1" },
+        "leaseId": { "type": "string", "minLength": 1 },
+        "workKey": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" },
+        "workRef": { "$ref": "#/$defs/readableWorkRef" },
+        "workConsoleId": { "type": "string", "minLength": 1 },
+        "sessionAttemptId": { "type": "string", "minLength": 1 },
+        "provider": { "type": "string", "minLength": 1 },
+        "runtimeProfileId": { "type": "string", "minLength": 1 },
+        "acquiredAt": { "type": "number" },
+        "state": { "enum": ["active", "recovery-pending"] },
+        "recoveryDeadlineAt": { "type": "number" }
+      }
+    },
     "nativeWorkObservation": {
       "type": "object",
       "additionalProperties": false,
@@ -304,6 +387,44 @@
           "anyOf": [{ "type": "string" }, { "type": "null" }]
         },
         "nextAction": {
+          "anyOf": [{ "type": "string" }, { "type": "null" }]
+        }
+      }
+    },
+    "nativeWorkProjection": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema",
+        "workRefRoot",
+        "state",
+        "observedAt",
+        "source",
+        "queryCount",
+        "queryProofRoot",
+        "work",
+        "diagnostic"
+      ],
+      "properties": {
+        "schema": { "const": "kungfu.native-work-projection/v1" },
+        "workRefRoot": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" },
+        "state": { "enum": ["fresh", "stale", "degraded", "unknown"] },
+        "observedAt": { "type": "number" },
+        "source": { "enum": ["initial", "invalidation", "bounded-fallback"] },
+        "queryCount": { "type": "integer", "minimum": 1 },
+        "queryProofRoot": {
+          "anyOf": [
+            { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" },
+            { "type": "null" }
+          ]
+        },
+        "work": {
+          "anyOf": [
+            { "$ref": "#/$defs/nativeWorkObservation" },
+            { "type": "null" }
+          ]
+        },
+        "diagnostic": {
           "anyOf": [{ "type": "string" }, { "type": "null" }]
         }
       }

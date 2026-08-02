@@ -38,7 +38,7 @@ test('installed Codex regenerates the exact credential-free stable schema bundle
   }
   assert.equal(version.status, 0, version.stderr);
   const cliVersion = version.stdout.match(/([0-9]+\.[0-9]+\.[0-9]+)/u)?.[1];
-  assert.equal(cliVersion, '0.144.3');
+  assert.equal(cliVersion, '0.146.0');
 
   const generated = spawnSync(
     executable,

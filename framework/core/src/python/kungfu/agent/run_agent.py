@@ -10,7 +10,6 @@ successful process exit or provider self-report never settles Work.
 from __future__ import annotations
 
 from dataclasses import dataclass
-import hashlib
 import json
 import os
 from pathlib import Path
@@ -26,7 +25,15 @@ import uuid
 
 import kungfu
 from kungfu.agent import runtime_profiles
+from kungfu.agent import session_contract
 from kungfu.agent import session_surface
+from kungfu.agent.native_launch import NativeLaunchCoordinator
+from kungfu.agent.managed_run import ManagedRunCoordinator
+from kungfu.agent.provider_output import (
+    parse_provider_output,
+    public_activities_from_provider_line,
+    public_command_preview as public_command_preview,
+)
 from kungfu.content_hash import compute_content_hash_value
 from kungfu.skill import build_skill_context
 from kungfu.rewind import (
@@ -44,10 +51,6 @@ CONTINUATION_SCHEMA = "kungfu.agent-continuation-envelope/v1"
 HISTORY_PROJECTION_SCHEMA = "kungfu.work-agent-history.projection/v1"
 _ROOT = re.compile(r"sha256:[0-9a-f]{64}\Z")
 _ANSI_ESCAPE = re.compile(r"\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])")
-_SENSITIVE_COMMAND_NAME = (
-    r"(?:api[-_]?key|access[-_]?key|token|secret|password|passwd|"
-    r"authorization|cookie|credential|signature)"
-)
 
 
 def bind_current_native_work(
@@ -110,6 +113,7 @@ def bind_current_native_work(
         "systemTimeCut": status["query_proof_root"],
         "initiativeId": initiative_id,
     }
+    session_contract.validate_work_ref(work_ref)
     session = {
         "workConsoleId": str(envelope["consoleId"]),
         "sessionAttemptId": str(envelope["attemptId"]),
@@ -203,10 +207,9 @@ _BOOTSTRAP = (
 
 
 def canonical_root(value: Any) -> str:
-    encoded = json.dumps(
-        value, ensure_ascii=False, sort_keys=True, separators=(",", ":")
-    ).encode("utf-8")
-    return f"sha256:{hashlib.sha256(encoded).hexdigest()}"
+    """Compatibility facade for the canonical Agent Session semantic root."""
+
+    return session_contract.semantic_root(value)
 
 
 def agent_activity_history_projection(
@@ -246,29 +249,13 @@ def _read_json_object(
 
 
 def validate_work_ref(value: Mapping[str, Any] | None) -> dict[str, Any] | None:
-    result = _read_json_object(value, "WorkRef")
-    if result is None:
-        return None
-    required = {
-        "schema",
-        "workspaceId",
-        "profileId",
-        "profileRoot",
-        "entityType",
-        "entityId",
-        "entityRoot",
-        "purpose",
-        "systemTimeCut",
-    }
-    if set(result) != required or result.get("schema") != "kungfu.work-ref/v1":
-        raise ValueError("WorkRef must use the exact kungfu.work-ref/v1 shape")
-    for field in required - {"schema"}:
-        if not isinstance(result.get(field), str) or not str(result[field]).strip():
-            raise ValueError(f"WorkRef.{field} must be non-empty text")
-    for field in ("profileRoot", "entityRoot"):
-        if _ROOT.fullmatch(str(result[field])) is None:
-            raise ValueError(f"WorkRef.{field} must be a sha256 root")
-    return result
+    """Read current or retained legacy v1 WorkRef data.
+
+    New Assignment writers use ``session_contract.validate_work_ref`` directly
+    and therefore require the unambiguous Initiative locator.
+    """
+
+    return session_contract.validate_work_ref(value, compatibility=True)
 
 
 def validate_continuation(
@@ -645,6 +632,7 @@ def native_environment(
             **console_envelope_body,
             "envelopeRoot": canonical_root(console_envelope_body),
         }
+        session_contract.validate_agent_console_envelope(console_envelope)
         env.update(
             {
                 "KUNGFU_AGENT_ATTEMPT_ID": str(session_ref["sessionAttemptId"]),
@@ -694,183 +682,34 @@ def run_native_interactive(
     work_observer: Callable[[Mapping[str, Any] | None], Mapping[str, Any]]
     | None = None,
     heartbeat_seconds: float = 0.5,
+    work_projection_seconds: float = 2.0,
 ) -> int:
     """Run a verified provider UI with inherited terminal file descriptors."""
-
-    verification = runtime_profiles.verify_profile(profile)
-    if verification.get("ok") is not True:
-        raise ValueError(
-            "Agent Runtime Profile verification failed: "
-            f"{verification.get('error') or 'unknown error'}"
-        )
-    cwd = _cwd(profile, workspace_root=workspace_root, home=runtime_home)
-    provider = str(profile["provider"])
-    adapter_id = str((profile.get("bootstrap") or {}).get("adapter") or provider)
-    if adapter_id != provider:
-        raise ValueError("Agent Runtime Profile bootstrap adapter must match provider")
-    attempt_id = f"native:{uuid.uuid4()}"
-    adapter = native_provider_adapter(
-        adapter_id,
-        runtime_dir=runtime_dir,
-        session_id=attempt_id,
-        config_home=config_home,
-        runtime_home=runtime_home,
+    coordinator = NativeLaunchCoordinator(
+        verify_profile=runtime_profiles.verify_profile,
+        resolve_cwd=_cwd,
+        build_adapter=native_provider_adapter,
+        build_environment=native_environment,
+        session_ref=_session_ref,
+        interactive_argv=interactive_launch_argv,
+        semantic_root=canonical_root,
+        heartbeat_observation=session_surface.native_heartbeat_observation,
     )
-    workspace_id = str(
-        work_ref.get("workspaceId")
-        if work_ref is not None
-        else work_selection.get("workspaceId") or workspace_root
-    )
-    session_ref = {
-        "workConsoleId": (
-            _session_ref(work_ref, attempt_id)["workConsoleId"]
-            if work_ref is not None
-            else f"assistant:{workspace_id}:{attempt_id}"
-        ),
-        "sessionAttemptId": attempt_id,
-    }
-    process_identity = {
-        "launcherPid": os.getpid(),
-        "attemptId": attempt_id,
-        "launchedAt": time.time_ns(),
-    }
-    env = native_environment(
-        provider,
+    return coordinator.run(
+        profile,
         runtime_dir=runtime_dir,
         config_home=config_home,
         runtime_home=runtime_home,
         workspace_root=workspace_root,
         work_ref=work_ref,
         work_selection=work_selection,
-        profile=profile,
-        session_ref=session_ref if session_invoker is not None else None,
+        process_runner=process_runner,
+        session_invoker=session_invoker,
         session_endpoint=session_endpoint,
-        provider_version=str(verification.get("version") or "unknown"),
-        adapter=adapter,
+        work_observer=work_observer,
+        heartbeat_seconds=heartbeat_seconds,
+        work_projection_seconds=work_projection_seconds,
     )
-    actor_id = f"native:{provider}:{attempt_id}"
-    registered = False
-    if session_invoker is not None:
-        binding = (
-            {"kind": "work", "workRef": dict(work_ref)}
-            if work_ref is not None
-            else {"kind": "workspace-assistant", "workRef": None}
-        )
-        plan = session_invoker(
-            {
-                "operation": "plan-native-start",
-                "client": "cli",
-                "actorId": actor_id,
-                "input": {
-                    **session_ref,
-                    "workspaceId": workspace_id,
-                    "provider": provider,
-                    "providerVersion": str(verification.get("version") or "unknown"),
-                    "profileRoot": canonical_root(profile),
-                    "runtimeProfileId": str(
-                        profile.get("id") or f"kungfu.agent-runtime.{provider}"
-                    ),
-                    "binding": binding,
-                },
-            }
-        )
-        session_invoker(
-            {
-                "operation": "start-native",
-                "actorId": actor_id,
-                "client": "cli",
-                "plan": dict(plan),
-                "expectedPlanRoot": plan["root"],
-                "processIdentity": process_identity,
-            }
-        )
-        registered = True
-
-    stop_heartbeat = threading.Event()
-    heartbeat_errors: list[Exception] = []
-
-    def heartbeat() -> None:
-        if session_invoker is None:
-            return
-        while not stop_heartbeat.is_set():
-            try:
-                current = session_invoker(
-                    {"operation": "show", "session": dict(session_ref)}
-                )
-                binding = current.get("binding") or {}
-                observed = session_surface.native_heartbeat_observation(
-                    binding, work_observer
-                )
-                session_invoker(
-                    {
-                        "operation": "heartbeat-native",
-                        "client": "cli",
-                        "actorId": actor_id,
-                        "session": dict(session_ref),
-                        "processIdentity": process_identity,
-                        "observation": {
-                            "state": str(observed.get("state") or "unknown"),
-                            "staleAfterMs": max(5000, int(heartbeat_seconds * 10000)),
-                            "work": observed.get("work"),
-                            "diagnostic": observed.get("diagnostic"),
-                        },
-                    }
-                )
-            except Exception as error:  # pragma: no cover - surfaced after join
-                heartbeat_errors.append(error)
-                return
-            stop_heartbeat.wait(heartbeat_seconds)
-
-    heartbeat_thread = None
-
-    def start_heartbeat() -> None:
-        nonlocal heartbeat_thread
-        if not registered:
-            return
-        heartbeat_thread = threading.Thread(
-            target=heartbeat,
-            name=f"kungfu-native-observer-{attempt_id}",
-            daemon=True,
-        )
-        heartbeat_thread.start()
-
-    argv = [*interactive_launch_argv(profile), *adapter["argv"]]
-    completed: session_surface.ReturnCodeResult | None = None
-    try:
-        if process_runner is None:
-            # Spawn the terminal owner before starting any Python observer
-            # thread.  A cwd-bearing subprocess launch can require fork/exec on
-            # macOS; forking after the heartbeat thread starts can leave a
-            # provider-native TUI with an unsafe inherited process state.
-            provider_process = subprocess.Popen(argv, cwd=cwd, env=env)
-            start_heartbeat()
-            completed = subprocess.CompletedProcess(argv, provider_process.wait())
-        else:
-            start_heartbeat()
-            completed = process_runner(argv, cwd=cwd, env=env, check=False)
-        return int(completed.returncode)
-    finally:
-        stop_heartbeat.set()
-        if heartbeat_thread is not None:
-            heartbeat_thread.join(timeout=max(1.0, heartbeat_seconds * 2))
-        if registered and session_invoker is not None:
-            session_invoker(
-                {
-                    "operation": "end-native",
-                    "actorId": actor_id,
-                    "client": "cli",
-                    "session": dict(session_ref),
-                    "processIdentity": process_identity,
-                    "exit": {
-                        "exitCode": (
-                            int(completed.returncode) if completed is not None else None
-                        ),
-                        "signal": None,
-                    },
-                }
-            )
-        if heartbeat_errors and completed is not None:
-            raise ValueError(f"native Agent observer failed: {heartbeat_errors[0]}")
 
 
 def _environment(
@@ -945,9 +784,15 @@ class ProcessResult:
 
 
 def _session_ref(work: Mapping[str, Any], run_id: str) -> dict[str, str]:
+    initiative = (
+        f":{work['initiativeId']}"
+        if work.get("entityType") == "assignment" and work.get("initiativeId")
+        else ""
+    )
     return {
         "workConsoleId": (
-            f"work:{work['profileId']}:{work['entityType']}:{work['entityId']}"
+            f"work:{work['profileId']}:{work['entityType']}"
+            f"{initiative}:{work['entityId']}"
         ),
         "sessionAttemptId": run_id,
     }
@@ -1014,131 +859,24 @@ def run_session_attempt(
     event_sink: Callable[[Mapping[str, Any]], None] | None = None,
 ) -> tuple[ProcessResult, dict[str, Any]]:
     """Start one Work-bound Session, deliver the first turn, and yield at attention."""
-
-    provider = str(selected["provider"])
-    ref = _session_ref(work, run_id)
-    launch = dict(selected.get("launch") or {})
-    argv = (
-        [str(value) for value in launch.get("argv") or []]
-        if provider == "synthetic"
-        else []
+    coordinator = ManagedRunCoordinator(
+        session_ref=_session_ref,
+        semantic_root=canonical_root,
+        wait_for_session=_wait_for_session,
+        invoke_control=_invoke_session_control,
+        result_factory=ProcessResult,
     )
-    start_input = {
-        **ref,
-        "workspaceId": str(work["workspaceId"]),
-        "provider": provider,
-        "providerVersion": str(verification["version"]),
-        "profileRoot": canonical_root(selected),
-        "executable": str(launch["executable"]),
-        "argv": argv,
-        "cwd": cwd,
-        "env": dict(env),
-        "runtimeProfileId": str(selected["id"]),
-        "binding": {"kind": "work", "workRef": dict(work)},
-    }
-    plan = invoke({"operation": "plan-start", "input": start_input})
-    started = invoke(
-        {
-            "operation": "start",
-            "actorId": "kungfu-project-work",
-            "client": "cli",
-            "plan": plan,
-            "expectedPlanRoot": plan["root"],
-            "attachment": {
-                "attachmentId": f"project-work:{run_id}",
-                "presentation": "project-work",
-            },
-            "execution": {"env": dict(env), "cols": 120, "rows": 36},
-        }
-    )
-    actual_console = started.get("workConsoleId")
-    actual_attempt = started.get("sessionAttemptId")
-    if isinstance(actual_console, str) and isinstance(actual_attempt, str):
-        ref = {
-            "workConsoleId": actual_console,
-            "sessionAttemptId": actual_attempt,
-        }
-    ready = _wait_for_session(
-        invoke,
-        ref,
-        lambda status: (
-            status.get("interactionState")
-            in {"ready", "approval-needed", "unknown", "ended"}
-        ),
-        timeout_seconds=min(timeout_seconds, 30.0),
-    )
-    if ready.get("interactionState") != "ready":
-        raise ValueError(
-            "Agent Session requires attention before the initial Work instruction"
-        )
-    before_sequence = int((ready.get("output") or {}).get("nextSequence") or 0)
-    delivered = _invoke_session_control(invoke, ref, "instruct", {"text": prompt})
-    if delivered.get("status") not in {"written", "duplicate"}:
-        raise ValueError(
-            f"Agent Session rejected the Work instruction: {delivered.get('reason')}"
-        )
-    if event_sink is not None:
-        event_sink(
-            {
-                "schema": "kungfu.agent-run.activity/v1",
-                "kind": "agent",
-                "phase": "started",
-                "text": "Agent Session accepted the Work instruction.",
-                "rawToolArgumentsExposed": False,
-            }
-        )
-    boundary = _wait_for_session(
-        invoke,
-        ref,
-        lambda status: (
-            status.get("interactionState") in {"approval-needed", "unknown", "ended"}
-            or (
-                status.get("interactionState") == "ready"
-                and int((status.get("output") or {}).get("nextSequence") or 0)
-                > before_sequence
-            )
-        ),
+    return coordinator.run(
+        invoke=invoke,
+        run_id=run_id,
+        selected=selected,
+        verification=verification,
+        work=work,
+        cwd=cwd,
+        env=env,
+        prompt=prompt,
         timeout_seconds=timeout_seconds,
-    )
-    snapshot = invoke(
-        {"operation": "snapshot", "session": dict(ref), "requestedSequence": 0}
-    )
-    lines = list(((snapshot.get("terminal") or {}).get("vt") or {}).get("lines") or [])
-    visible = "\n".join(str(line).rstrip() for line in lines).strip()
-    if event_sink is not None:
-        for line in visible.splitlines()[-12:]:
-            if line.strip():
-                event_sink(
-                    {
-                        "schema": "kungfu.agent-run.activity/v1",
-                        "kind": "agent",
-                        "phase": "waiting",
-                        "text": line.strip()[:1000],
-                        "rawToolArgumentsExposed": False,
-                    }
-                )
-    exit_value = boundary.get("exit") or {}
-    exit_code = int(exit_value.get("exitCode") or exit_value.get("code") or 0)
-    session_value = {
-        "schema": "kungfu.agent-run-session/v1",
-        **ref,
-        "live": boundary.get("live") is True,
-        "lifecycleState": boundary.get("lifecycleState"),
-        "interactionState": boundary.get("interactionState"),
-        "workAgent": boundary.get("workAgent"),
-        "product": boundary.get("product"),
-        "controller": boundary.get("controller"),
-        "output": boundary.get("output"),
-    }
-    return (
-        ProcessResult(
-            exit_code=exit_code,
-            stdout=visible,
-            stderr="",
-            interrupted=False,
-            timed_out=False,
-        ),
-        session_value,
+        event_sink=event_sink,
     )
 
 
@@ -1218,189 +956,6 @@ def run_process(
         interrupted,
         timed_out,
     )
-
-
-def public_activities_from_provider_line(
-    provider: str, line: str
-) -> list[dict[str, Any]]:
-    """Project bounded Agent/tool activity with a credential-safe command preview."""
-
-    normalized = _ANSI_ESCAPE.sub("", line).strip()
-    if not normalized or provider not in {"codex", "opencode"}:
-        return []
-    try:
-        payload = json.loads(normalized)
-    except json.JSONDecodeError:
-        return []
-    if not isinstance(payload, dict):
-        return []
-    if provider == "codex":
-        event_type = payload.get("type")
-        item = payload.get("item")
-        if event_type not in {"item.started", "item.completed"} or not isinstance(
-            item, dict
-        ):
-            return []
-        item_type = str(item.get("type") or "")
-        if item_type == "agent_message" and event_type == "item.completed":
-            text = item.get("text")
-            if not isinstance(text, str):
-                return []
-            return [
-                {
-                    "schema": "kungfu.agent-run.activity/v1",
-                    "kind": "agent",
-                    "phase": "progress",
-                    "text": value[:1000],
-                    "rawToolArgumentsExposed": False,
-                }
-                for raw in text.splitlines()
-                if (value := _ANSI_ESCAPE.sub("", raw).strip())
-            ]
-        if item_type not in {
-            "command_execution",
-            "file_change",
-            "mcp_tool_call",
-            "web_search",
-        }:
-            return []
-        phase = "started" if event_type == "item.started" else "completed"
-        label = {
-            "command_execution": "Workspace command",
-            "file_change": "Project file change",
-            "mcp_tool_call": "Connected tool",
-            "web_search": "Web search",
-        }[item_type]
-        command_preview = (
-            public_command_preview(item.get("command"))
-            if item_type == "command_execution"
-            else ""
-        )
-        text = f"{label} {phase}."
-        if command_preview:
-            text = f"{text} {command_preview}"
-        return [
-            {
-                "schema": "kungfu.agent-run.activity/v1",
-                "kind": "tool",
-                "phase": phase,
-                "text": text,
-                **({"commandPreview": command_preview} if command_preview else {}),
-                "rawToolArgumentsExposed": False,
-            }
-        ]
-    part = payload.get("part")
-    part = part if isinstance(part, dict) else {}
-    text = part.get("text")
-    if payload.get("type") == "text" and isinstance(text, str):
-        return [
-            {
-                "schema": "kungfu.agent-run.activity/v1",
-                "kind": "agent",
-                "phase": "progress",
-                "text": value[:1000],
-                "rawToolArgumentsExposed": False,
-            }
-            for raw in text.splitlines()
-            if (value := _ANSI_ESCAPE.sub("", raw).strip())
-        ]
-    return []
-
-
-def public_command_preview(command: Any) -> str:
-    """Return the actual workspace command with common credential values redacted."""
-
-    if not isinstance(command, str):
-        return ""
-    value = " ".join(_ANSI_ESCAPE.sub("", command).split())
-    if not value:
-        return ""
-    value = re.sub(
-        rf"(?i)\b([A-Z0-9_]*{_SENSITIVE_COMMAND_NAME}[A-Z0-9_]*)="
-        r"(?:\"[^\"]*\"|'[^']*'|[^\s]+)",
-        r"\1=<redacted>",
-        value,
-    )
-    value = re.sub(
-        rf"(?i)(--?{_SENSITIVE_COMMAND_NAME}(?:=|\s+))"
-        r"(?:\"[^\"]*\"|'[^']*'|[^\s]+)",
-        r"\1<redacted>",
-        value,
-    )
-    value = re.sub(
-        rf"(?i)([?&][^=\s&]*{_SENSITIVE_COMMAND_NAME}[^=\s&]*=)[^&\s]+",
-        r"\1<redacted>",
-        value,
-    )
-    value = re.sub(
-        r"(?i)(authorization\s*:\s*)(?:bearer\s+|basic\s+)?[^'\"\s]+",
-        r"\1<redacted>",
-        value,
-    )
-    return value[:1000]
-
-
-def parse_provider_output(provider: str, stdout: str) -> dict[str, Any]:
-    session_ids: set[str] = set()
-    text_parts: list[str] = []
-    usage: dict[str, Any] | None = None
-    cost: int | float | None = None
-    if provider in {"opencode", "codex"}:
-        for line in stdout.splitlines():
-            try:
-                event = json.loads(line)
-            except json.JSONDecodeError:
-                continue
-            if not isinstance(event, dict):
-                continue
-            session_id = event.get("sessionID") or event.get("thread_id")
-            if isinstance(session_id, str) and session_id:
-                session_ids.add(session_id)
-            part_value = event.get("part")
-            part: dict[str, Any] = part_value if isinstance(part_value, dict) else {}
-            text = part.get("text")
-            if not isinstance(text, str):
-                item_value = event.get("item")
-                item: dict[str, Any] = (
-                    item_value if isinstance(item_value, dict) else {}
-                )
-                text = item.get("text")
-            if isinstance(text, str) and text:
-                text_parts.append(text)
-            tokens = part.get("tokens")
-            if isinstance(tokens, dict):
-                usage = dict(tokens)
-            part_cost = part.get("cost")
-            if isinstance(part_cost, (int, float)):
-                cost = part_cost
-    elif provider == "claude":
-        try:
-            payload = json.loads(stdout)
-        except json.JSONDecodeError:
-            payload = {}
-        if isinstance(payload, dict):
-            session_id = payload.get("session_id")
-            if isinstance(session_id, str) and session_id:
-                session_ids.add(session_id)
-            text = payload.get("result")
-            if isinstance(text, str) and text:
-                text_parts.append(text)
-            if isinstance(payload.get("usage"), dict):
-                usage = dict(payload["usage"])
-            if isinstance(payload.get("total_cost_usd"), (int, float)):
-                cost = payload["total_cost_usd"]
-    elif provider == "amp" and stdout.strip():
-        text_parts.append(stdout.strip())
-    elif provider == "synthetic":
-        visible = _ANSI_ESCAPE.sub("", stdout).strip()
-        if visible:
-            text_parts.append(visible[:128_000])
-    return {
-        "providerSessionIds": sorted(session_ids),
-        "text": "\n".join(text_parts) if text_parts else None,
-        "usage": usage,
-        "cost": cost,
-    }
 
 
 def execute(

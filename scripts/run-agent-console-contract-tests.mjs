@@ -8,6 +8,8 @@ import process from 'node:process';
 const root = process.cwd();
 const pythonPath = [
   path.join(root, 'framework', 'core', 'src', 'python'),
+  process.env.KUNGFU_NATIVE_PATH ??
+    path.join(root, 'framework', 'core', 'build', 'Release'),
   process.env.PYTHONPATH,
 ]
   .filter(Boolean)
@@ -36,6 +38,22 @@ const result = spawnSync(
       'tests',
       'python',
       'test_rewind_progress.py',
+    ),
+    path.join(
+      root,
+      'framework',
+      'core',
+      'tests',
+      'python',
+      'test_work_projection.py',
+    ),
+    path.join(
+      root,
+      'framework',
+      'core',
+      'tests',
+      'python',
+      'test_agent_session_module_boundaries.py',
     ),
     '-q',
   ],

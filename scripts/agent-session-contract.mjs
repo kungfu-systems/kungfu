@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // @ts-check
 
+import { createHash } from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -18,11 +19,39 @@ const FIXTURE_ROOT = path.join(
   'fixtures',
   'agent-session-capsule-contract',
 );
+const CORE_SCHEMA_PATH = path.join(
+  ROOT,
+  'framework',
+  'agent-session',
+  'schemas',
+  'agent-session-core.schema.json',
+);
+const CORE_FIXTURE_PATH = path.join(
+  ROOT,
+  'framework',
+  'agent-session',
+  'tests',
+  'fixtures',
+  'agent-session-core-golden.json',
+);
 
 const readJson = (file) => JSON.parse(fs.readFileSync(file, 'utf8'));
 const list = (value) => (Array.isArray(value) ? value : []);
 const object = (value) =>
   value && typeof value === 'object' && !Array.isArray(value) ? value : {};
+
+function canonical(value) {
+  if (value === null || typeof value !== 'object') return JSON.stringify(value);
+  if (Array.isArray(value)) return `[${value.map(canonical).join(',')}]`;
+  return `{${Object.entries(value)
+    .sort(([left], [right]) => left.localeCompare(right))
+    .map(([key, child]) => `${JSON.stringify(key)}:${canonical(child)}`)
+    .join(',')}}`;
+}
+
+function semanticRoot(value) {
+  return `sha256:${createHash('sha256').update(canonical(value)).digest('hex')}`;
+}
 
 function issue(code, pathValue, message) {
   return { code, path: pathValue, message };
@@ -326,6 +355,11 @@ export async function checkAgentSessionContract(root = ROOT) {
     throw new Error('agent-session provider cannot use a persistent shell');
   if (contract.recovery?.fakePtyRecovery !== false)
     throw new Error('agent-session cannot claim fake PTY recovery');
+  if (
+    contract.coreValues?.schemaSource !==
+    'framework/agent-session/schemas/agent-session-core.schema.json'
+  )
+    throw new Error('agent-session core value schema source mismatch');
   const frameIds = list(contract.frameClasses).map((frame) => frame.id);
   for (const required of [
     'volatile-terminal-transport',
@@ -353,6 +387,38 @@ export async function checkAgentSessionContract(root = ROOT) {
         `agent-session contract metadata failed schema validation: ${JSON.stringify(contractIssues)}`,
       );
     ajv.addSchema(contract.valueSchemaBundle);
+    const coreSchema = readJson(
+      path.join(root, path.relative(ROOT, CORE_SCHEMA_PATH)),
+    );
+    const coreFixture = readJson(
+      path.join(root, path.relative(ROOT, CORE_FIXTURE_PATH)),
+    );
+    ajv.addSchema(coreSchema);
+    for (const [definition, value] of [
+      ['workRef', coreFixture.workRef],
+      [
+        'agentConsoleEnvelope',
+        {
+          ...coreFixture.envelopeBody,
+          envelopeRoot: coreFixture.envelopeRoot,
+        },
+      ],
+      ...coreFixture.runtimeProfiles.map((profile) => [
+        'runtimeProfile',
+        profile,
+      ]),
+    ]) {
+      const validate = ajv.getSchema(`${coreSchema.$id}#/$defs/${definition}`);
+      if (!validate || !validate(value))
+        throw new Error(
+          `agent-session core ${definition} fixture failed schema validation: ${JSON.stringify(validate?.errors ?? [])}`,
+        );
+    }
+    if (
+      semanticRoot(coreFixture.workRef) !== coreFixture.workRefRoot ||
+      semanticRoot(coreFixture.envelopeBody) !== coreFixture.envelopeRoot
+    )
+      throw new Error('agent-session core semantic-root golden mismatch');
     for (const target of [
       'sessionPlan',
       'sessionAction',

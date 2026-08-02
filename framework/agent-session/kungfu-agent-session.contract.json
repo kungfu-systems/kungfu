@@ -57,13 +57,14 @@
     },
     "workConsoleRegistry": {
       "owner": "agent-session-product-worker",
-      "schema": "kungfu.work-console-registry/v2",
+      "schema": "kungfu.work-console-registry/v3",
       "schemaSource": "framework/agent-session/schemas/work-console-registry.schema.json",
       "contains": [
         "generic-workref-binding",
         "workconsole-identity",
         "sessionattempt-lifecycle",
         "sessionattempt-exclusive-work-binding",
+        "first-class-active-work-lease",
         "reviewed-plan-roots",
         "metadata-only-receipts",
         "native-observer-freshness-and-core-work-projection"
@@ -299,6 +300,20 @@
     "registryLossRule": "Session convenience may be lost or rebuilt without changing owner-domain Work history.",
     "privacyRule": "Do not retain credentials, hidden reasoning, raw private prompts, full transcripts, or provider-private stores for history protection."
   },
+  "coreValues": {
+    "schemaSource": "framework/agent-session/schemas/agent-session-core.schema.json",
+    "definitions": [
+      "workRef",
+      "agentConsoleEnvelope",
+      "runtimeProfile",
+      "sessionAttempt"
+    ],
+    "canonicalization": "utf8-json-sorted-object-keys-no-whitespace-v1",
+    "semanticRoot": "sha256-canonical-json-bytes",
+    "writerPolicy": "strict-canonical-definition",
+    "compatibilityRead": "legacyWorkRefV1 is accepted only while loading retained v1 registry data; it is never emitted by a new Assignment binding",
+    "providerPolicy": "provider and bootstrap adapter identifiers are open strings backed by the runtime adapter catalog, not a language-local closed union"
+  },
   "compatibility": {
     "stability": "pre-release",
     "additiveChanges": "New optional capabilities, operations, states, and error codes may be added within v1.",
@@ -329,6 +344,7 @@
       "productProjection",
       "capabilityDiscovery",
       "historyProtection",
+      "coreValues",
       "compatibility",
       "valueSchemaBundle"
     ],
@@ -378,6 +394,9 @@
         "type": "object"
       },
       "historyProtection": {
+        "type": "object"
+      },
+      "coreValues": {
         "type": "object"
       },
       "compatibility": {

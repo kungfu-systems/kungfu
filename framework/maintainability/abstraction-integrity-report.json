@@ -5,15 +5,15 @@
   "manifestPath": "framework/maintainability/abstraction-integrity.manifest.json",
   "measurement": {
     "aggregates": {
-      "kungfu-cli": 20264,
-      "kungfu-flat-root": 36053,
+      "kungfu-cli": 20268,
+      "kungfu-flat-root": 36070,
       "kungfu-runtime-family": 6242
     },
     "counts": {
-      "productionFiles": 242,
-      "productionPhysicalLines": 84370,
-      "testFiles": 100,
-      "testPhysicalLines": 46021
+      "productionFiles": 252,
+      "productionPhysicalLines": 85255,
+      "testFiles": 102,
+      "testPhysicalLines": 46304
     },
     "hiddenProductionFiles": [],
     "modulesOver1000": [
@@ -23,7 +23,7 @@
       },
       {
         "path": "framework/core/src/python/kungfu/agent/run_agent.py",
-        "physicalLines": 1682
+        "physicalLines": 1237
       },
       {
         "path": "framework/core/src/python/kungfu/agent/work_profile.py",
@@ -115,9 +115,9 @@
         "responsibilities": 31
       },
       {
-        "contentRoot": "sha256:7a3c6444a3ae6bad4b1002cb230ea01372955b3900e666eb990eedf8e596d03d",
+        "contentRoot": "sha256:2742dfee8f21883fa25b12d2e8c293588480b921b6191aa78880d002200cc35b",
         "path": "framework/core/src/python/kungfu/agent/run_agent.py",
-        "physicalLines": 1682,
+        "physicalLines": 1237,
         "responsibilities": 36
       },
       {
@@ -244,7 +244,7 @@
     "parseErrors": [],
     "platformBranches": [
       {
-        "line": 54,
+        "line": 59,
         "path": "framework/core/src/python/kungfu/agent/session_surface.py",
         "test": "sys.platform == 'win32'"
       },
@@ -345,7 +345,7 @@
       }
     ],
     "schema": "kungfu.python-structure-measurement/v1",
-    "sourceRoot": "sha256:676e3c09fef4dbff6ea4e95d83a21bcf0f57734df09483b07ce66cd12dbae045",
+    "sourceRoot": "sha256:ec035832589a3cf72db3adb04fce84730fe237091b4c8b273e970df2509708d6",
     "sourceRoots": {
       "production": [
         "framework/core/src/python"
@@ -426,6 +426,67 @@
       ]
     },
     {
+      "owner": "agent-session/contract-console-lifecycle",
+      "paths": [
+        "framework/agent-session/src/session-contract.mjs",
+        "framework/agent-session/src/session-lifecycle-service.mjs",
+        "framework/agent-session/src/work-console-model.mjs"
+      ]
+    },
+    {
+      "owner": "agent-session/native-transport",
+      "paths": [
+        "framework/agent-session/src/capsule-transport-runtime.mjs",
+        "framework/agent-session/src/mock-provider.mjs",
+        "framework/agent-session/src/native-interactive-client.mjs"
+      ]
+    },
+    {
+      "owner": "agent-session/work-lease-projection",
+      "paths": [
+        "framework/agent-session/src/active-work-lease.mjs",
+        "framework/agent-session/src/work-attention.mjs",
+        "framework/agent-session/src/work-projection-service.mjs"
+      ]
+    },
+    {
+      "owner": "core/python-agent-session-native-execution",
+      "paths": [
+        "framework/core/src/python/kungfu/agent/managed_run.py",
+        "framework/core/src/python/kungfu/agent/native_launch.py",
+        "framework/core/src/python/kungfu/agent/provider_bootstrap.py"
+      ]
+    },
+    {
+      "owner": "core/python-agent-session-run-interface",
+      "paths": [
+        "framework/core/src/python/kungfu/agent/provider_output.py",
+        "framework/core/src/python/kungfu/agent/run_intent.py",
+        "framework/core/src/python/kungfu/agent/work_projection.py"
+      ]
+    },
+    {
+      "owner": "core/python-agent-session-runtime-profile",
+      "paths": [
+        "framework/core/src/python/kungfu/agent/runtime_profile_catalog.py",
+        "framework/core/src/python/kungfu/agent/runtime_profile_store.py",
+        "framework/core/src/python/kungfu/agent/verification_probe.py"
+      ]
+    },
+    {
+      "owner": "core/python-agent-session-contract",
+      "paths": [
+        "framework/core/src/python/kungfu/agent/session_contract.py"
+      ]
+    },
+    {
+      "owner": "tui/native-project-work-session",
+      "paths": [
+        "framework/tui/src/work-window/project-work-session-state.ts",
+        "framework/tui/src/work-window/project-work-session-view.tsx"
+      ]
+    },
+    {
       "owner": "core/python-workspace-federation-read-model",
       "paths": [
         "framework/core/src/python/kungfu/assignment_graph.py",
@@ -477,9 +538,9 @@
     "kungfu.runtime_broker.NativeReadinessAuthority",
     "kungfu.runtime_service.ProcessRuntimeHost"
   ],
-  "reportRoot": "sha256:cf01855ffb54873348de79e6e4e5a1e4c120aaa7b62c3edd10cd9bac1ded368a",
+  "reportRoot": "sha256:ef0a1753193ed2a81bd0771054f30173903a4d2d7ae20ddda139f835dcd0ddc5",
   "schema": "kungfu.abstraction-integrity-report/v1",
-  "sourceRoot": "sha256:676e3c09fef4dbff6ea4e95d83a21bcf0f57734df09483b07ce66cd12dbae045",
+  "sourceRoot": "sha256:ec035832589a3cf72db3adb04fce84730fe237091b4c8b273e970df2509708d6",
   "summary": {
     "blockingIssues": 0
   },

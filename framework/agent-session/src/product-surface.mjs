@@ -146,6 +146,49 @@ function nativeWorkObservation(value) {
   return structuredClone(value);
 }
 
+function nativeWorkProjection(value) {
+  if (!value || typeof value !== 'object') {
+    throw new AgentSessionSurfaceError(
+      'invalid_argument',
+      'native Work projection is required',
+    );
+  }
+  const requiredFields = [
+    'schema',
+    'workRefRoot',
+    'state',
+    'observedAt',
+    'source',
+    'queryCount',
+    'queryProofRoot',
+    'work',
+    'diagnostic',
+  ];
+  if (
+    Object.keys(value).sort().join('\u0000') !==
+      requiredFields.sort().join('\u0000') ||
+    value.schema !== 'kungfu.native-work-projection/v1' ||
+    !/^sha256:[a-f0-9]{64}$/u.test(value.workRefRoot) ||
+    !['fresh', 'stale', 'degraded', 'unknown'].includes(value.state) ||
+    typeof value.observedAt !== 'number' ||
+    !['initial', 'invalidation', 'bounded-fallback'].includes(value.source) ||
+    !Number.isInteger(value.queryCount) ||
+    value.queryCount < 1 ||
+    (value.queryProofRoot !== null &&
+      !/^sha256:[a-f0-9]{64}$/u.test(value.queryProofRoot)) ||
+    (value.diagnostic !== null && typeof value.diagnostic !== 'string')
+  ) {
+    throw new AgentSessionSurfaceError(
+      'invalid_argument',
+      'native Work projection must use the exact bounded projection contract',
+    );
+  }
+  return {
+    ...structuredClone(value),
+    work: nativeWorkObservation(value.work),
+  };
+}
+
 export function agentSessionProductState({
   live = false,
   lifecycleState = '',
@@ -265,7 +308,7 @@ function publicStatus(session) {
 }
 
 function nativeAttemptStatus(projection, now) {
-  const { console, attempt } = projection;
+  const { console, attempt, activeWorkLease = null } = projection;
   const observer = attempt.observer ?? {
     state: 'unknown',
     observedAt: 0,
@@ -283,6 +326,8 @@ function nativeAttemptStatus(projection, now) {
       : observer.state;
   const processObserved =
     !ended && !['stale', 'disconnected'].includes(observerState);
+  const coherentWork = attempt.workProjection?.work ?? null;
+  const workBlocked = coherentWork?.phase === 'blocked';
   const attention = ended
     ? {
         kind: 'ready-for-review',
@@ -291,17 +336,15 @@ function nativeAttemptStatus(projection, now) {
           'The native Agent process ended. Review Core Work evidence before completion.',
         nextActions: ['inspect-work-status', 'review-project-changes'],
       }
-    : observerState === 'fresh'
-      ? null
-      : {
+    : workBlocked
+      ? {
           kind: 'blocked',
-          reason: `native-observer-${observerState}`,
+          reason: 'work-control-reports-blocked',
           message:
-            observerState === 'stale'
-              ? 'The native Agent heartbeat is stale. Its process and Work state are not inferred as current.'
-              : 'The native Agent remains outside TUI input control, and its Core observer needs attention.',
-          nextActions: ['continue-in-native-ui', 'inspect-work-status'],
-        };
+            'Work Control reports that this Work is blocked. Inspect its current obligation and next action.',
+          nextActions: ['inspect-work-status', 'resolve-work-blocker'],
+        }
+      : null;
   return {
     schema: 'kungfu.agent-session.surface-status/v1',
     live: processObserved,
@@ -363,7 +406,10 @@ function nativeAttemptStatus(projection, now) {
       ...observer,
       state: observerState,
       ageMs,
+      work: coherentWork,
+      workProjection: attempt.workProjection ?? null,
     },
+    activeWorkLease,
     console,
     attempt,
   };
@@ -438,6 +484,7 @@ export class AgentSessionProductSurface {
         'plan-native-bind-work',
         'bind-native-work',
         'heartbeat-native',
+        'project-native-work',
         'end-native',
         'attach',
         'detach',
@@ -490,7 +537,8 @@ export class AgentSessionProductSurface {
     const runtimeSessions = this.runtime.list();
     this.registry.observe(runtimeSessions);
     const sessions = runtimeSessions.map((session) => publicStatus(session));
-    const consoles = this.registry.snapshot().consoles;
+    const registry = this.registry.snapshot();
+    const consoles = registry.consoles;
     const liveByAttempt = new Map(
       sessions.map((session) => [
         sessionKey(session.workConsoleId, session.sessionAttemptId),
@@ -511,6 +559,7 @@ export class AgentSessionProductSurface {
           workConsoleId: console.consoleId,
           sessionAttemptId: attempt.sessionAttemptId,
           provider: attempt.provider,
+          runtimeProfileId: attempt.runtimeProfileId,
           workspaceId: console.workspaceId,
           binding: nativeStatus?.binding ?? console.binding,
           backend: attempt.backend,
@@ -549,8 +598,14 @@ export class AgentSessionProductSurface {
       schema: 'kungfu.agent-session.surface-list/v1',
       sessions,
       consoles,
+      activeWorkLeases: registry.activeWorkLeases,
       attempts,
-      listRoot: agentSessionSurfaceRoot({ sessions, consoles, attempts }),
+      listRoot: agentSessionSurfaceRoot({
+        sessions,
+        consoles,
+        activeWorkLeases: registry.activeWorkLeases,
+        attempts,
+      }),
     };
   }
 
@@ -767,11 +822,15 @@ export class AgentSessionProductSurface {
       () => recordedAt,
     );
     this.registry.recordNativeStarted(plan, result, {
+      schema: 'kungfu.attempt-heartbeat/v1',
       state: 'unknown',
       observedAt: recordedAt,
       staleAfterMs: 2000,
       processIdentityRoot: agentSessionSurfaceRoot(processIdentity),
-      work: null,
+      workRefRoot:
+        plan.binding?.kind === 'work'
+          ? agentSessionSurfaceRoot(plan.binding.workRef)
+          : null,
       diagnostic: 'awaiting-first-native-heartbeat',
     });
     return result;
@@ -804,12 +863,38 @@ export class AgentSessionProductSurface {
       Math.max(500, Number(observation.staleAfterMs ?? 2000)),
     );
     const observedAt = this.now();
+    if (
+      observation.schema !== 'kungfu.attempt-heartbeat/v1' ||
+      (observation.workRefRoot !== null &&
+        !/^sha256:[a-f0-9]{64}$/u.test(observation.workRefRoot)) ||
+      Object.hasOwn(observation, 'work')
+    ) {
+      throw new AgentSessionSurfaceError(
+        'invalid_argument',
+        'AttemptHeartbeat may contain liveness coordinates only',
+      );
+    }
+    const activeWorkRef =
+      projection.attempt.workBinding?.workRef ??
+      (projection.console.binding.kind === 'work'
+        ? projection.console.binding.workRef
+        : null);
+    const expectedWorkRefRoot = activeWorkRef
+      ? agentSessionSurfaceRoot(activeWorkRef)
+      : null;
+    if ((observation.workRefRoot ?? null) !== expectedWorkRefRoot) {
+      throw new AgentSessionSurfaceError(
+        'attempt_heartbeat_binding_mismatch',
+        'AttemptHeartbeat Work coordinate does not match the active binding',
+      );
+    }
     this.registry.recordNativeHeartbeat(ref, {
+      schema: 'kungfu.attempt-heartbeat/v1',
       state,
       observedAt,
       staleAfterMs,
       processIdentityRoot,
-      work: nativeWorkObservation(observation.work),
+      workRefRoot: observation.workRefRoot ?? null,
       diagnostic:
         typeof observation.diagnostic === 'string'
           ? observation.diagnostic
@@ -826,6 +911,75 @@ export class AgentSessionProductSurface {
       },
       () => observedAt,
     );
+  }
+
+  projectNativeWork({ session: ref, processIdentity, projection }) {
+    const normalized = sessionRef(ref);
+    const current = this.registry.projection(normalized);
+    if (!current || current.attempt.backend !== 'native-interactive') {
+      throw new AgentSessionSurfaceError(
+        'session_not_found',
+        'native SessionAttempt is unavailable',
+      );
+    }
+    if (
+      current.attempt.observer?.processIdentityRoot !==
+      agentSessionSurfaceRoot(processIdentity ?? null)
+    ) {
+      throw new AgentSessionSurfaceError(
+        'stale_native_process',
+        'native Work projection process identity does not match the registered attempt',
+      );
+    }
+    const value = nativeWorkProjection(projection);
+    if (
+      current.attempt.workBinding &&
+      value.workRefRoot !==
+        agentSessionSurfaceRoot(current.attempt.workBinding.workRef)
+    ) {
+      throw new AgentSessionSurfaceError(
+        'work_projection_binding_mismatch',
+        'native Work projection does not match the active Work binding',
+      );
+    }
+    const boundWorkRef = current.attempt.workBinding?.workRef;
+    if (
+      boundWorkRef &&
+      value.work &&
+      (value.work.initiativeId !== (boundWorkRef.initiativeId ?? '') ||
+        value.work.assignmentId !== boundWorkRef.entityId)
+    ) {
+      throw new AgentSessionSurfaceError(
+        'work_projection_identity_mismatch',
+        'native Work projection identity does not match the active Work binding',
+      );
+    }
+    if (value.work && value.queryProofRoot !== value.work.queryProofRoot) {
+      throw new AgentSessionSurfaceError(
+        'work_projection_proof_mismatch',
+        'native Work projection proof does not match its coherent Work snapshot',
+      );
+    }
+    const prior = current.attempt.workProjection;
+    if (
+      prior &&
+      (value.observedAt < prior.observedAt ||
+        value.queryCount <= prior.queryCount)
+    ) {
+      throw new AgentSessionSurfaceError(
+        'stale_work_projection',
+        'native Work projection must advance observation time and query count',
+      );
+    }
+    this.registry.recordNativeWorkProjection(normalized, value);
+    return {
+      schema: 'kungfu.native-work-projection-receipt/v1',
+      status: 'projected',
+      workConsoleId: normalized.workConsoleId,
+      sessionAttemptId: normalized.sessionAttemptId,
+      queryProofRoot: value.queryProofRoot,
+      observedAt: value.observedAt,
+    };
   }
 
   endNative({ actorId, session: ref, processIdentity, exit = {} }) {
@@ -867,6 +1021,7 @@ export class AgentSessionProductSurface {
   }
 
   planStart(input) {
+    this.registry.observe(this.runtime.list());
     const binding = input.binding ?? {
       kind: 'workspace-assistant',
       workRef: null,
@@ -1290,6 +1445,8 @@ export class AgentSessionProductSurface {
     if (operation === 'start-native') return this.startNative(request);
     if (operation === 'bind-native-work') return this.bindNativeWork(request);
     if (operation === 'heartbeat-native') return this.heartbeatNative(request);
+    if (operation === 'project-native-work')
+      return this.projectNativeWork(request);
     if (operation === 'end-native') return this.endNative(request);
     if (operation === 'attach') return this.attach(request);
     if (operation === 'detach') return this.detach(request);
@@ -1486,6 +1643,15 @@ export function createAgentSessionSurfaceClient({ invoke, client, actorId }) {
         session,
         processIdentity,
         observation,
+      }),
+    projectNativeWork: (session, processIdentity, projection) =>
+      invoke({
+        operation: 'project-native-work',
+        actorId,
+        client,
+        session,
+        processIdentity,
+        projection,
       }),
     endNative: (session, processIdentity, exit) =>
       invoke({

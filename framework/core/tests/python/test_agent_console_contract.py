@@ -14,10 +14,12 @@ import tomllib
 import click
 from click.testing import CliRunner
 import pytest
+from jsonschema import Draft202012Validator
 
 from kungfu import config
 from kungfu.agent import run_agent
 from kungfu.agent import runtime_profiles
+from kungfu.agent import session_contract
 from kungfu.agent.kfd3 import verify_agent_interface
 from kungfu.cli.commands import agent as agent_commands, kfc
 from kungfu.rewind.cost.discovery import discover_provider_candidates
@@ -63,7 +65,75 @@ def _work_ref():
         "entityRoot": ROOT_HASH,
         "purpose": "delegated-work",
         "systemTimeCut": "2026-07-13T00:00:00Z",
+        "initiativeId": "initiative:test",
     }
+
+
+def test_agent_session_core_contract_matches_cross_language_golden():
+    schema = json.loads(
+        (
+            ROOT
+            / "framework"
+            / "agent-session"
+            / "schemas"
+            / "agent-session-core.schema.json"
+        ).read_text(encoding="utf-8")
+    )
+    fixture = json.loads(
+        (
+            ROOT
+            / "framework"
+            / "agent-session"
+            / "tests"
+            / "fixtures"
+            / "agent-session-core-golden.json"
+        ).read_text(encoding="utf-8")
+    )
+    envelope = {**fixture["envelopeBody"], "envelopeRoot": fixture["envelopeRoot"]}
+    definitions = schema["$defs"]
+
+    Draft202012Validator(
+        {**schema, "$ref": "#/$defs/workRef", "$defs": definitions}
+    ).validate(fixture["workRef"])
+    Draft202012Validator(
+        {**schema, "$ref": "#/$defs/agentConsoleEnvelope", "$defs": definitions}
+    ).validate(envelope)
+    for profile in fixture["runtimeProfiles"]:
+        Draft202012Validator(
+            {**schema, "$ref": "#/$defs/runtimeProfile", "$defs": definitions}
+        ).validate(profile)
+
+    assert session_contract.semantic_root(fixture["workRef"]) == fixture["workRefRoot"]
+    assert (
+        session_contract.semantic_root(fixture["envelopeBody"])
+        == fixture["envelopeRoot"]
+    )
+    assert session_contract.validate_work_ref(fixture["workRef"]) == fixture["workRef"]
+    assert session_contract.validate_agent_console_envelope(envelope) == envelope
+
+
+def test_agent_session_core_contract_legacy_read_is_explicit():
+    legacy = dict(_work_ref())
+    legacy.pop("initiativeId")
+    assert session_contract.validate_work_ref(legacy, compatibility=True) == legacy
+    with pytest.raises(ValueError, match="initiativeId"):
+        session_contract.validate_work_ref(legacy)
+    with pytest.raises(ValueError, match="unknown runtimeRouting"):
+        envelope = {
+            **json.loads(
+                (
+                    ROOT
+                    / "framework"
+                    / "agent-session"
+                    / "tests"
+                    / "fixtures"
+                    / "agent-session-core-golden.json"
+                ).read_text(encoding="utf-8")
+            )["envelopeBody"],
+            "runtimeRouting": {},
+            "envelopeRoot": ROOT_HASH,
+        }
+        session_contract.validate_agent_console_envelope(envelope)
 
 
 def _third_party_adapter(skill_source, *, provider="termagent"):
@@ -219,6 +289,7 @@ def test_registered_third_party_provider_is_a_config_contract_member(tmp_path):
             "context": ["kungfu", "agent", "context", "--json"],
             "capabilities": ["kungfu", "agent", "capabilities", "--json"],
             "profiles": ["kungfu", "profile", "manager", "--json"],
+            "bindWork": ["kungfu", "agent", "console", "bind-work"],
         },
         "knownLimits": [],
         "envelopeRoot": ROOT_HASH,
@@ -295,6 +366,7 @@ def test_agent_console_envelope_binds_work_and_discovery_entrypoints():
             "context": ["kungfu", "agent", "context", "--json"],
             "capabilities": ["kungfu", "agent", "capabilities", "--json"],
             "profiles": ["kungfu", "profile", "manager", "--json"],
+            "bindWork": ["kungfu", "agent", "console", "bind-work"],
         },
         "knownLimits": ["terminal transcript is not proof"],
         "envelopeRoot": ROOT_HASH,
@@ -319,6 +391,7 @@ def test_agent_console_envelope_accepts_opencode_provider():
             "context": ["kungfu", "agent", "context", "--json"],
             "capabilities": ["kungfu", "agent", "capabilities", "--json"],
             "profiles": ["kungfu", "profile", "manager", "--json"],
+            "bindWork": ["kungfu", "agent", "console", "bind-work"],
         },
         "knownLimits": ["terminal transcript is not proof"],
         "envelopeRoot": ROOT_HASH,
@@ -1489,9 +1562,10 @@ def test_unbound_native_attempt_heartbeats_session_without_work_observation(
     assert all(
         heartbeat["observation"]
         == {
+            "schema": "kungfu.attempt-heartbeat/v1",
             "state": "fresh",
             "staleAfterMs": 5000,
-            "work": None,
+            "workRefRoot": None,
             "diagnostic": None,
         }
         for heartbeat in heartbeats
@@ -1824,10 +1898,13 @@ def test_native_interactive_runner_reuses_work_console_with_fresh_attempts(
     assert len(plans) == 2
     assert plans[0]["workConsoleId"] == plans[1]["workConsoleId"]
     assert plans[0]["workConsoleId"] == (
-        "work:kungfu.work-control:assignment:assignment:continuity"
+        "work:kungfu.work-control:assignment:initiative:test:assignment:continuity"
     )
     assert plans[0]["sessionAttemptId"] != plans[1]["sessionAttemptId"]
     assert [request["operation"] for request in requests].count("heartbeat-native") >= 2
+    assert [request["operation"] for request in requests].count(
+        "project-native-work"
+    ) == 2
     assert [request["operation"] for request in requests].count("end-native") == 2
     for _argv, kwargs in launches:
         envelope = json.loads(kwargs["env"]["KUNGFU_AGENT_CONSOLE_ENVELOPE"])

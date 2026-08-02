@@ -7,249 +7,26 @@ import {
   writeFileSync,
 } from 'node:fs';
 import path from 'node:path';
+import { ActiveWorkLeaseService } from './active-work-lease.mjs';
+import { SessionLifecycleService } from './session-lifecycle-service.mjs';
+import {
+  attemptWorkBinding,
+  bindingIdentityKey,
+  clone,
+  historyBoundary,
+  normalizeBinding,
+  normalizeWorkConsoleRegistry,
+  primaryWorkConsoleId,
+  required,
+} from './work-console-model.mjs';
+import { WorkProjectionService } from './work-projection-service.mjs';
 
-export const WORK_CONSOLE_REGISTRY_SCHEMA = 'kungfu.work-console-registry/v2';
-export const WORK_CONSOLE_HISTORY_BOUNDARY_SCHEMA =
-  'kungfu.work-console-history-boundary/v1';
-
-const ATTEMPT_STATES = new Set([
-  'planned',
-  'running',
-  'detached',
-  'exited',
-  'orphaned',
-  'unrecoverable',
-]);
-const ATTEMPT_BACKENDS = new Set([
-  'capsule',
-  'structured',
-  'tmux',
-  'direct',
-  'native-interactive',
-]);
-const OBSERVER_STATES = new Set([
-  'fresh',
-  'stale',
-  'disconnected',
-  'degraded',
-  'unknown',
-]);
-
-function required(value, label) {
-  if (typeof value !== 'string' || value.length === 0) {
-    throw Object.assign(new Error(`${label} is required`), {
-      code: 'invalid_argument',
-    });
-  }
-  return value;
-}
-
-function clone(value) {
-  return structuredClone(value);
-}
-
-function historyBoundary() {
-  return {
-    schema: WORK_CONSOLE_HISTORY_BOUNDARY_SCHEMA,
-    state: 'session-activity-only',
-    semanticAdmissionReceiptRoot: null,
-    processExitSettlesWork: false,
-    selfReportSettlesWork: false,
-    authority: 'observer-only',
-  };
-}
-
-function normalizeBinding(value) {
-  const binding = value ?? { kind: 'workspace-assistant', workRef: null };
-  if (!['work', 'workspace-assistant'].includes(binding.kind)) {
-    throw Object.assign(
-      new Error(`unsupported binding kind '${String(binding.kind)}'`),
-      { code: 'invalid_argument' },
-    );
-  }
-  if (binding.kind === 'work') {
-    if (!binding.workRef || typeof binding.workRef !== 'object') {
-      throw Object.assign(new Error('work binding requires a WorkRef'), {
-        code: 'invalid_argument',
-      });
-    }
-    for (const field of [
-      'workspaceId',
-      'profileId',
-      'entityType',
-      'entityId',
-    ]) {
-      required(binding.workRef[field], `workRef.${field}`);
-    }
-    return { kind: 'work', workRef: clone(binding.workRef) };
-  }
-  return { kind: 'workspace-assistant', workRef: null };
-}
-
-function canonical(value) {
-  if (value === null || typeof value !== 'object') return JSON.stringify(value);
-  if (Array.isArray(value)) return `[${value.map(canonical).join(',')}]`;
-  return `{${Object.entries(value)
-    .sort(([left], [right]) => left.localeCompare(right))
-    .map(([key, child]) => `${JSON.stringify(key)}:${canonical(child)}`)
-    .join(',')}}`;
-}
-
-function bindingIdentityKey(bindingValue) {
-  const binding = normalizeBinding(bindingValue);
-  if (binding.kind !== 'work') return binding.kind;
-  const { workspaceId, profileId, entityType, entityId } = binding.workRef;
-  return canonical({ workspaceId, profileId, entityType, entityId });
-}
-
-function attemptWorkBinding(value) {
-  if (value == null) return null;
-  return normalizeBinding({ kind: 'work', workRef: value.workRef ?? value });
-}
-
-export function primaryWorkConsoleId({ workspaceId, binding }) {
-  const normalized = normalizeBinding(binding);
-  if (normalized.kind === 'work') {
-    const { profileId, entityType, entityId } = normalized.workRef;
-    return `work:${profileId}:${entityType}:${entityId}`;
-  }
-  return `assistant:${required(workspaceId, 'workspaceId')}`;
-}
-
-function normalizeAttempt(value) {
-  if (!value || typeof value !== 'object') return null;
-  const sessionAttemptId =
-    typeof value.sessionAttemptId === 'string'
-      ? value.sessionAttemptId
-      : value.attemptId;
-  if (typeof sessionAttemptId !== 'string' || sessionAttemptId.length === 0)
-    return null;
-  return {
-    sessionAttemptId,
-    runId:
-      typeof value.runId === 'string' && value.runId.length > 0
-        ? value.runId
-        : sessionAttemptId,
-    provider: typeof value.provider === 'string' ? value.provider : 'unknown',
-    providerVersion:
-      typeof value.providerVersion === 'string'
-        ? value.providerVersion
-        : 'unknown',
-    backend: ATTEMPT_BACKENDS.has(value.backend) ? value.backend : 'capsule',
-    status: ATTEMPT_STATES.has(value.status) ? value.status : 'orphaned',
-    startedAt: typeof value.startedAt === 'number' ? value.startedAt : 0,
-    ...(typeof value.endedAt === 'number' ? { endedAt: value.endedAt } : {}),
-    receipts: Array.isArray(value.receipts)
-      ? value.receipts.filter(
-          (receipt) => receipt && typeof receipt === 'object',
-        )
-      : [],
-    plans: Array.isArray(value.plans)
-      ? value.plans.filter((plan) => plan && typeof plan === 'object')
-      : [],
-    ...(value.observer && typeof value.observer === 'object'
-      ? {
-          observer: {
-            state: OBSERVER_STATES.has(value.observer.state)
-              ? value.observer.state
-              : 'unknown',
-            observedAt:
-              typeof value.observer.observedAt === 'number'
-                ? value.observer.observedAt
-                : 0,
-            staleAfterMs:
-              typeof value.observer.staleAfterMs === 'number' &&
-              value.observer.staleAfterMs > 0
-                ? value.observer.staleAfterMs
-                : 2000,
-            processIdentityRoot:
-              typeof value.observer.processIdentityRoot === 'string'
-                ? value.observer.processIdentityRoot
-                : '',
-            work:
-              value.observer.work && typeof value.observer.work === 'object'
-                ? clone(value.observer.work)
-                : null,
-            diagnostic:
-              typeof value.observer.diagnostic === 'string'
-                ? value.observer.diagnostic
-                : null,
-          },
-        }
-      : {}),
-    ...(value.exit && typeof value.exit === 'object'
-      ? {
-          exit: {
-            exitCode:
-              typeof value.exit.exitCode === 'number'
-                ? value.exit.exitCode
-                : null,
-            signal:
-              typeof value.exit.signal === 'string' ? value.exit.signal : null,
-          },
-        }
-      : {}),
-    ...(value.workBinding
-      ? { workBinding: attemptWorkBinding(value.workBinding) }
-      : {}),
-    historyProtection: historyBoundary(),
-  };
-}
-
-function normalizeConsole(value, fallbackWorkspaceId = 'home') {
-  if (!value || typeof value !== 'object') return null;
-  if (typeof value.consoleId !== 'string' || value.consoleId.length === 0)
-    return null;
-  const binding = normalizeBinding(
-    value.binding ?? {
-      kind: value.bindingKind === 'work' ? 'work' : 'workspace-assistant',
-      workRef: value.workRef ?? null,
-    },
-  );
-  const workspaceId =
-    typeof value.workspaceId === 'string'
-      ? value.workspaceId
-      : (binding.workRef?.workspaceId ?? fallbackWorkspaceId);
-  return {
-    consoleId: value.consoleId,
-    workspaceId,
-    binding,
-    runtimeProfileId:
-      typeof value.runtimeProfileId === 'string'
-        ? value.runtimeProfileId
-        : 'unknown',
-    backend: ['capsule', 'structured', 'tmux', 'direct'].includes(value.backend)
-      ? value.backend
-      : 'capsule',
-    attempts: (Array.isArray(value.attempts) ? value.attempts : [])
-      .map((attempt) =>
-        normalizeAttempt({
-          ...attempt,
-          backend: attempt?.backend ?? value.backend,
-        }),
-      )
-      .filter(Boolean),
-    createdAt: typeof value.createdAt === 'number' ? value.createdAt : 0,
-    updatedAt: typeof value.updatedAt === 'number' ? value.updatedAt : 0,
-  };
-}
-
-export function normalizeWorkConsoleRegistry(value) {
-  const fallbackWorkspaceId =
-    value && typeof value.workspaceId === 'string' ? value.workspaceId : 'home';
-  return {
-    schema: WORK_CONSOLE_REGISTRY_SCHEMA,
-    consoles: (Array.isArray(value?.consoles) ? value.consoles : [])
-      .map((entry) => {
-        try {
-          return normalizeConsole(entry, fallbackWorkspaceId);
-        } catch {
-          return null;
-        }
-      })
-      .filter(Boolean),
-  };
-}
+export {
+  WORK_CONSOLE_HISTORY_BOUNDARY_SCHEMA,
+  WORK_CONSOLE_REGISTRY_SCHEMA,
+  normalizeWorkConsoleRegistry,
+  primaryWorkConsoleId,
+} from './work-console-model.mjs';
 
 export class JsonFileWorkConsoleRegistryStore {
   constructor(filePath) {
@@ -282,6 +59,21 @@ export class WorkConsoleRegistry {
     this.store = store;
     this.now = now;
     this.value = normalizeWorkConsoleRegistry(snapshot ?? store?.load());
+    this.workLeases = new ActiveWorkLeaseService({
+      state: this.value,
+      now: this.now,
+    });
+    this.lifecycle = new SessionLifecycleService({
+      find: (ref, requiredEntry = true) => this.#find(ref, requiredEntry),
+      appendReceipt: (attempt, receipt) =>
+        this.#appendReceipt(attempt, receipt),
+      workLeases: this.workLeases,
+      now: this.now,
+    });
+    this.workProjection = new WorkProjectionService({
+      find: (ref, requiredEntry = true) => this.#find(ref, requiredEntry),
+    });
+    this.#migrateActiveWorkLeases();
     this.#recoverInterruptedAttempts();
   }
 
@@ -368,6 +160,7 @@ export class WorkConsoleRegistry {
         runId: plan.sessionAttemptId,
         provider: plan.provider,
         providerVersion: plan.providerVersion,
+        runtimeProfileId: plan.runtimeProfileId ?? 'unknown',
         backend: plan.backend ?? 'capsule',
         status: 'planned',
         startedAt: now,
@@ -378,6 +171,8 @@ export class WorkConsoleRegistry {
       console.attempts.push(attempt);
     } else {
       attempt.backend = plan.backend ?? attempt.backend;
+      attempt.runtimeProfileId =
+        plan.runtimeProfileId ?? attempt.runtimeProfileId;
     }
     if (!attempt.plans.some((candidate) => candidate.planRoot === plan.root)) {
       attempt.plans.push({
@@ -392,18 +187,21 @@ export class WorkConsoleRegistry {
     console.runtimeProfileId =
       plan.runtimeProfileId ?? console.runtimeProfileId;
     console.backend = plan.backend ?? console.backend;
+    if (resolved.binding.kind === 'work') {
+      this.#reapExpiredWorkLeases();
+      this.workLeases.acquire({
+        workRef: resolved.binding.workRef,
+        console,
+        attempt,
+      });
+    }
     console.updatedAt = now;
     this.#save();
     return clone({ console, attempt });
   }
 
   recordStarted(plan, receipt) {
-    const { console, attempt } = this.#find(plan);
-    attempt.status = 'running';
-    attempt.startedAt = receipt.recordedAt;
-    attempt.endedAt = undefined;
-    this.#appendReceipt(attempt, receipt);
-    console.updatedAt = receipt.recordedAt;
+    this.lifecycle.recordStarted(plan, receipt);
     this.#save();
   }
 
@@ -416,32 +214,22 @@ export class WorkConsoleRegistry {
   }
 
   recordNativeStarted(plan, receipt, observer) {
-    this.recordStarted(plan, receipt);
-    const { console, attempt } = this.#find(plan);
-    attempt.backend = 'native-interactive';
-    attempt.observer = clone(observer);
-    console.backend = 'native-interactive';
-    console.updatedAt = receipt.recordedAt;
+    this.lifecycle.recordNativeStarted(plan, receipt, observer);
     this.#save();
   }
 
   recordNativeHeartbeat(ref, observer) {
-    const { console, attempt } = this.#find(ref);
-    if (attempt.backend !== 'native-interactive') {
-      throw Object.assign(
-        new Error('native heartbeat requires a native-interactive attempt'),
-        { code: 'attempt_backend_mismatch' },
-      );
-    }
-    attempt.status = 'running';
-    attempt.endedAt = undefined;
-    attempt.observer = clone(observer);
-    console.updatedAt = observer.observedAt;
+    this.lifecycle.recordNativeHeartbeat(ref, observer);
     // Heartbeat recency is live observer state, not durable Work evidence.  A
     // worker restart invalidates it and recovery records the attempt as
     // disconnected, so persisting every pulse only churns the Project runtime
     // while a provider-native UI owns the terminal.  Later durable operations
     // (bind/end) naturally include the latest in-memory observer projection.
+  }
+
+  recordNativeWorkProjection(ref, projection) {
+    this.workProjection.recordNative(ref, projection);
+    this.#save();
   }
 
   bindNativeWork(ref, workRef, receipt = null) {
@@ -474,11 +262,14 @@ export class WorkConsoleRegistry {
         { code: 'attempt_work_binding_mismatch' },
       );
     }
-    const conflict = this.activeWorkConflict(binding, ref);
-    if (conflict) {
+    this.#reapExpiredWorkLeases();
+    try {
+      this.workLeases.acquire({ workRef: binding.workRef, console, attempt });
+    } catch (error) {
+      if (error?.code !== 'native_work_already_active') throw error;
       throw Object.assign(new Error('Work already has an active Agent'), {
         code: 'native_work_already_active',
-        conflict,
+        conflict: this.#leaseConflictProjection(error.lease),
       });
     }
     attempt.workBinding = binding;
@@ -491,81 +282,30 @@ export class WorkConsoleRegistry {
   activeWorkConflict(bindingValue, excludeRef = null) {
     const binding = normalizeBinding(bindingValue);
     if (binding.kind !== 'work') return null;
-    for (const console of this.value.consoles) {
-      for (const attempt of console.attempts) {
-        const mayStillOwnNativeWork =
-          attempt.status === 'orphaned' &&
-          attempt.backend === 'native-interactive';
-        if (
-          !mayStillOwnNativeWork &&
-          !['planned', 'running', 'detached'].includes(attempt.status)
-        )
-          continue;
-        if (
-          excludeRef &&
-          console.consoleId ===
-            (excludeRef.workConsoleId ?? excludeRef.consoleId) &&
-          attempt.sessionAttemptId ===
-            (excludeRef.sessionAttemptId ?? excludeRef.attemptId)
-        ) {
-          continue;
-        }
-        const activeBinding = attempt.workBinding ?? console.binding;
-        if (
-          activeBinding.kind === 'work' &&
-          bindingIdentityKey(activeBinding) === bindingIdentityKey(binding)
-        ) {
-          return clone({ console, attempt });
-        }
-      }
-    }
-    return null;
+    this.#reapExpiredWorkLeases();
+    const lease = this.workLeases.conflict(binding.workRef, excludeRef);
+    return lease ? this.#leaseConflictProjection(lease) : null;
   }
 
   recordNativeEnded(ref, receipt, exit) {
-    const { console, attempt } = this.#find(ref);
-    if (attempt.backend !== 'native-interactive') {
-      throw Object.assign(
-        new Error('native end requires a native-interactive attempt'),
-        { code: 'attempt_backend_mismatch' },
-      );
-    }
-    attempt.status = 'exited';
-    attempt.endedAt = receipt.recordedAt;
-    attempt.exit = clone(exit);
-    if (attempt.observer) {
-      attempt.observer = {
-        ...attempt.observer,
-        state: 'disconnected',
-        observedAt: receipt.recordedAt,
-        diagnostic: 'provider-process-ended',
-      };
-    }
-    this.#appendReceipt(attempt, receipt);
-    console.updatedAt = receipt.recordedAt;
+    this.lifecycle.recordNativeEnded(ref, receipt, exit);
     this.#save();
   }
 
   observe(sessions) {
-    let changed = false;
-    for (const session of sessions) {
-      const status = session.port.status();
-      const found = this.#find(status, false);
-      if (!found) continue;
-      const next = status.lifecycleState === 'ended' ? 'exited' : 'running';
-      if (found.attempt.status !== next) {
-        found.attempt.status = next;
-        if (next === 'exited') found.attempt.endedAt = this.now();
-        found.console.updatedAt = this.now();
-        changed = true;
-      }
-    }
+    const changed = this.lifecycle.observe(sessions);
     if (changed) this.#save();
   }
 
   projection(ref) {
     const found = this.#find(ref, false);
-    return found ? clone(found) : null;
+    if (!found) return null;
+    const activeWorkLease = this.value.activeWorkLeases.find(
+      (lease) =>
+        lease.workConsoleId === found.console.consoleId &&
+        lease.sessionAttemptId === found.attempt.sessionAttemptId,
+    );
+    return clone({ ...found, activeWorkLease: activeWorkLease ?? null });
   }
 
   console(workConsoleId) {
@@ -626,12 +366,27 @@ export class WorkConsoleRegistry {
           ? 'unrecoverable'
           : 'orphaned';
         if (backend === 'native-interactive' && attempt.observer) {
+          const recoveryDeadlineAt =
+            attempt.observer.observedAt + attempt.observer.staleAfterMs;
+          this.workLeases.markRecoveryPending(
+            {
+              workConsoleId: console.consoleId,
+              sessionAttemptId: attempt.sessionAttemptId,
+            },
+            recoveryDeadlineAt,
+          );
           attempt.observer = {
             ...attempt.observer,
             state: 'disconnected',
             observedAt: now,
             diagnostic: 'agent-session-worker-restarted',
           };
+        }
+        if (backend !== 'native-interactive') {
+          this.workLeases.release({
+            workConsoleId: console.consoleId,
+            sessionAttemptId: attempt.sessionAttemptId,
+          });
         }
         attempt.endedAt = now;
         attempt.receipts.push({
@@ -649,6 +404,73 @@ export class WorkConsoleRegistry {
       }
     }
     if (changed) this.#save();
+  }
+
+  #migrateActiveWorkLeases() {
+    if (this.value.activeWorkLeases.length > 0) return;
+    let changed = false;
+    for (const console of this.value.consoles) {
+      for (const attempt of console.attempts) {
+        if (!['planned', 'running', 'detached'].includes(attempt.status))
+          continue;
+        const binding = attempt.workBinding ?? console.binding;
+        if (binding.kind !== 'work') continue;
+        try {
+          this.workLeases.acquire({
+            workRef: binding.workRef,
+            console,
+            attempt,
+          });
+          changed = true;
+        } catch (error) {
+          if (error?.code !== 'native_work_already_active') throw error;
+          attempt.status = 'orphaned';
+          attempt.endedAt = this.now();
+          changed = true;
+        }
+      }
+    }
+    if (changed) this.#save();
+  }
+
+  #reapExpiredWorkLeases() {
+    const expired = this.workLeases.reapExpiredRecovery();
+    for (const lease of expired) {
+      const found = this.#find(lease, false);
+      if (!found) continue;
+      found.attempt.receipts.push({
+        operation: 'release-work-lease',
+        status: 'expired',
+        reason: 'exact-native-process-evidence-expired-after-worker-restart',
+        recordedAt: this.now(),
+        receiptRoot: null,
+        semanticOutcome: null,
+        workState: null,
+        proof: null,
+      });
+      found.console.updatedAt = this.now();
+    }
+    if (expired.length > 0) this.#save();
+  }
+
+  #leaseConflictProjection(lease) {
+    const found = this.#find(lease, false);
+    if (!found) {
+      return {
+        lease: clone(lease),
+        console: {
+          consoleId: lease.workConsoleId,
+          workspaceId: lease.workRef.workspaceId,
+        },
+        attempt: {
+          sessionAttemptId: lease.sessionAttemptId,
+          provider: lease.provider,
+          runtimeProfileId: lease.runtimeProfileId,
+          status: lease.state,
+        },
+      };
+    }
+    return clone({ ...found, lease });
   }
 
   #save() {

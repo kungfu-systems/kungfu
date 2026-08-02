@@ -1,7 +1,7 @@
 import { mkdirSync, renameSync, unlinkSync, writeFileSync } from 'node:fs';
-import { createRequire } from 'node:module';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
+import { createCapsuleNodePtyLoader } from './capsule-transport-runtime.mjs';
 import {
   CodexAppServerProductRuntime,
   codexAppServerProductEnabled,
@@ -13,8 +13,6 @@ import {
   JsonFileWorkConsoleRegistryStore,
   WorkConsoleRegistry,
 } from './work-console-registry.mjs';
-
-const require = createRequire(import.meta.url);
 
 export async function runAgentSessionProductWorker({
   endpoint = process.env.KUNGFU_AGENT_SESSION_ENDPOINT,
@@ -30,10 +28,12 @@ export async function runAgentSessionProductWorker({
     );
   }
   mkdirSync(path.dirname(metadata), { recursive: true, mode: 0o700 });
-  const loadedPty =
-    pty ?? require(ptyModule ? path.resolve(ptyModule) : 'node-pty');
   const runtime = new InProcessAgentSessionProductRuntime({
-    pty: loadedPty,
+    pty,
+    loadPty: createCapsuleNodePtyLoader({
+      modulePath: ptyModule,
+      registryPath,
+    }),
     baseEnv,
     structuredRuntime: codexAppServerProductEnabled(baseEnv)
       ? new CodexAppServerProductRuntime({ baseEnv })

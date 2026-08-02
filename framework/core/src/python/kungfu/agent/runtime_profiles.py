@@ -10,18 +10,22 @@ from __future__ import annotations
 
 import copy
 import hashlib
-import json
 import os
-import re
 import shutil
 import subprocess
-from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any, Mapping
-import uuid
 
 from kungfu import config as kungfu_config
 from kungfu.agent import resources as agent_resources
+from kungfu.agent.provider_bootstrap import (
+    ProviderBootstrapAdapter,
+    validate_file_paths as _validate_file_paths,
+    validate_templates as _validate_templates,
+)
+from kungfu.agent.verification_probe import VerificationProbe
+from kungfu.agent.runtime_profile_catalog import RuntimeProfileCatalog
+from kungfu.agent.runtime_profile_store import RuntimeProfileStore
 from kungfu.rewind.cost.discovery import (
     ProviderDiscovery,
     discover_all_provider_candidates,
@@ -30,10 +34,6 @@ from kungfu.rewind.cost.discovery import (
 
 ADAPTER_SCHEMA = "kungfu.native-provider-adapter/v1"
 BUILTIN_PROVIDERS = ("codex", "claude", "amp", "opencode")
-_TEMPLATE = re.compile(
-    r"\{(skill_file|skill_dir|skills_root|adapter_root|provider_log_dir)(:json)?\}"
-)
-_UNRESOLVED_TEMPLATE = re.compile(r"\{[a-z_]+(?::json)?\}")
 
 
 def policy_payload(runtime_dir, target, mode, enabled=True):
@@ -228,90 +228,6 @@ def resolve_adapter(
     return copy.deepcopy(catalog[adapter_id])
 
 
-def _validate_file_paths(adapter_id: str, adapter: Mapping[str, Any]) -> None:
-    seen: set[str] = set()
-    for row in dict(adapter.get("skill") or {}).get("files") or []:
-        relative = Path(str(row.get("path") or ""))
-        if relative.is_absolute() or ".." in relative.parts or not relative.parts:
-            raise ValueError(
-                f"native Provider adapter {adapter_id} has unsafe runtime file path: "
-                f"{relative}"
-            )
-        normalized = relative.as_posix()
-        if normalized in seen:
-            raise ValueError(
-                f"native Provider adapter {adapter_id} repeats runtime file path: "
-                f"{normalized}"
-            )
-        seen.add(normalized)
-
-
-def _validate_templates(adapter_id: str, adapter: Mapping[str, Any]) -> None:
-    paths = {
-        "adapter_root": "/kungfu/runtime/adapter",
-        "skills_root": "/kungfu/runtime/adapter/skills",
-        "skill_dir": "/kungfu/runtime/adapter/skills/kungfu-agent-onboarding",
-        "skill_file": "/kungfu/runtime/adapter/skills/kungfu-agent-onboarding/SKILL.md",
-        "provider_log_dir": "/kungfu/runtime/native-attempt/provider-logs/agent",
-    }
-    skill = dict(adapter.get("skill") or {})
-    duplicate_environment = set(skill.get("environment") or {}).intersection(
-        skill.get("environmentJson") or {}
-    )
-    if duplicate_environment:
-        names = ", ".join(sorted(str(value) for value in duplicate_environment))
-        raise ValueError(
-            f"native Provider adapter {adapter_id} repeats environment keys: {names}"
-        )
-    try:
-        _render(skill.get("argv") or [], paths)
-        _render(skill.get("environment") or {}, paths)
-        _render(skill.get("environmentJson") or {}, paths)
-        _render([row.get("content") for row in skill.get("files") or []], paths)
-    except ValueError as error:
-        raise ValueError(
-            f"native Provider adapter {adapter_id} has an invalid template: {error}"
-        ) from error
-
-
-def _render_text(value: str, paths: Mapping[str, str]) -> str:
-    def replace(match: re.Match[str]) -> str:
-        rendered = paths[match.group(1)]
-        return json.dumps(rendered, ensure_ascii=False) if match.group(2) else rendered
-
-    rendered = _TEMPLATE.sub(replace, value)
-    unresolved = _UNRESOLVED_TEMPLATE.search(rendered)
-    if unresolved:
-        raise ValueError(
-            f"unsupported native Provider adapter template: {unresolved.group(0)}"
-        )
-    return rendered
-
-
-def _render(value: Any, paths: Mapping[str, str]) -> Any:
-    if isinstance(value, str):
-        return _render_text(value, paths)
-    if isinstance(value, list):
-        return [_render(item, paths) for item in value]
-    if isinstance(value, dict):
-        return {str(key): _render(item, paths) for key, item in value.items()}
-    return copy.deepcopy(value)
-
-
-def _write_runtime_file(path: Path, content: str) -> None:
-    path.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
-    if path.is_file() and path.read_text(encoding="utf-8") == content:
-        return
-    temporary = path.with_name(f".{path.name}.{uuid.uuid4().hex}.tmp")
-    try:
-        temporary.write_text(content, encoding="utf-8")
-        temporary.chmod(0o600)
-        temporary.replace(path)
-    finally:
-        if temporary.exists():
-            temporary.unlink()
-
-
 def materialize_adapter(
     adapter_id: str,
     *,
@@ -322,81 +238,17 @@ def materialize_adapter(
     runtime_home: str | None = None,
 ) -> dict[str, Any]:
     """Materialize one adapter under Kungfu runtime state only."""
-
-    definition = resolve_adapter(
+    return ProviderBootstrapAdapter(
+        resolve=resolve_adapter,
+        schema=ADAPTER_SCHEMA,
+    ).materialize(
         adapter_id,
+        runtime_dir=runtime_dir,
+        session_id=session_id,
         resolved_config=resolved_config,
         config_home=config_home,
         runtime_home=runtime_home,
     )
-    adapter_root = (
-        Path(runtime_dir) / "agent-sessions" / "native-provider-adapters" / adapter_id
-    )
-    if session_id is None:
-        session_root = adapter_root
-    else:
-        session_token = str(session_id).removeprefix("native:")
-        try:
-            session_token = str(uuid.UUID(session_token))
-        except ValueError as error:
-            raise ValueError(
-                "native Provider adapter session id must be a UUID"
-            ) from error
-        session_root = (
-            Path(runtime_dir) / "agent-sessions" / "native-attempts" / session_token
-        )
-    provider_log_dir = session_root / "provider-logs" / adapter_id
-    provider_log_dir.mkdir(mode=0o700, parents=True, exist_ok=True)
-    skills_root = adapter_root / "skills"
-    skill_dir = skills_root / "kungfu-agent-onboarding"
-    skill_file = skill_dir / "SKILL.md"
-    source = Path(
-        os.path.abspath(os.path.expanduser(str(definition["skill"]["source"])))
-    )
-    if not source.is_file():
-        raise ValueError(
-            f"native Agent Skill is unavailable for {adapter_id}: {source}"
-        )
-    _write_runtime_file(skill_file, source.read_text(encoding="utf-8"))
-    paths = {
-        "adapter_root": str(adapter_root),
-        "skills_root": str(skills_root),
-        "skill_dir": str(skill_dir),
-        "skill_file": str(skill_file),
-        "provider_log_dir": str(provider_log_dir),
-    }
-    skill = dict(definition["skill"])
-    for row in skill.get("files") or []:
-        relative = Path(str(row["path"]))
-        target = adapter_root.joinpath(relative)
-        content = json.dumps(
-            _render(row["content"], paths),
-            ensure_ascii=False,
-            sort_keys=True,
-            separators=(",", ":"),
-        )
-        _write_runtime_file(target, content + "\n")
-    environment = {
-        str(key): _render_text(str(value), paths)
-        for key, value in dict(skill.get("environment") or {}).items()
-    }
-    for key, value in dict(skill.get("environmentJson") or {}).items():
-        environment[str(key)] = json.dumps(
-            _render(value, paths),
-            ensure_ascii=False,
-            sort_keys=True,
-            separators=(",", ":"),
-        )
-    return {
-        "schema": ADAPTER_SCHEMA,
-        "provider": adapter_id,
-        "skillFile": str(skill_file),
-        "providerLogDir": str(provider_log_dir),
-        "argv": [_render_text(str(value), paths) for value in skill.get("argv") or []],
-        "environment": environment,
-        "credentialEnvironment": list(definition.get("credentialEnvironment") or []),
-        "knownLimits": list(definition.get("knownLimits") or []),
-    }
 
 
 PROFILE_SCHEMA = "kungfu.agent-runtime-profile/v1"
@@ -419,14 +271,6 @@ BACKENDS = ("tmux", "direct")
 CWD_POLICIES = ("workspace-root", "home", "inherit")
 _VERSION_TIMEOUT_SECONDS = 5.0
 _PROVIDER_VERSION_TIMEOUT_SECONDS = {"amp": 15.0}
-_SEMANTIC_VERSION = re.compile(
-    r"(?<![0-9])([0-9]+\.[0-9]+\.[0-9]+(?:[-+][0-9A-Za-z.-]+)?)(?![0-9])"
-)
-
-
-def _parse_semantic_version(output: str) -> str | None:
-    match = _SEMANTIC_VERSION.search(output)
-    return match.group(1) if match else None
 
 
 def _version_timeout_seconds(provider: str) -> float:
@@ -572,79 +416,20 @@ def discover_catalog(
     resolved_config: Mapping[str, Any] | None = None,
     discovery_kwargs: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
-    resolved = dict(resolved_config or kungfu_config.resolve_config())
-    agent_config = dict((resolved.get("config") or {}).get("agent") or {})
-    backend = str(agent_config.get("backendDefault") or "tmux")
-    kwargs = dict(discovery_kwargs or {})
-    discovered = discover_all_provider_candidates(**kwargs)
-    adapters = adapter_catalog(resolved_config=resolved)
-    for provider, adapter in adapters.items():
-        if provider in PROVIDERS:
-            continue
-        discovered[provider] = _discover_configured_adapter(adapter, **kwargs)
-    candidates: list[dict[str, Any]] = []
-    diagnostics: list[dict[str, Any]] = []
-    for provider, adapter in adapters.items():
-        rows = discovered.get(provider, [])
-        if not rows:
-            diagnostics.append(
-                {
-                    "provider": provider,
-                    "available": False,
-                    "message": "no executable found on PATH or a known location",
-                }
-            )
-        for row in rows:
-            if not row.path or not row.path_class:
-                continue
-            profile = _profile(
-                profile_id=_profile_id(provider, row.path_class, row.path),
-                label=_label(provider, row.path_class),
-                provider=provider,
-                executable=row.path,
-                version_argv=list(adapter["discovery"]["versionArgv"]),
-                backend=backend,
-                source="discovered",
-            )
-            profile["label"] = _label(
-                provider,
-                row.path_class,
-                provider_label=str(adapter.get("label") or provider),
-            )
-            candidates.append(
-                {
-                    "profile": profile,
-                    "pathClass": row.path_class,
-                    "version": row.version,
-                    "available": True,
-                    "candidatesChecked": row.candidates_checked,
-                }
-            )
-    configured = copy.deepcopy(agent_config.get("runtimeProfiles") or [])
-    configured_ids = {row.get("id") for row in configured}
-    explicit_default = agent_config.get("defaultRuntimeProfile")
-    available_ids = [row["profile"]["id"] for row in candidates]
-    recommended = (
-        explicit_default
-        if explicit_default in configured_ids or explicit_default in available_ids
-        else (available_ids[0] if available_ids else None)
+    return RuntimeProfileCatalog(
+        schema=CATALOG_SCHEMA,
+        providers=PROVIDERS,
+        resolve_config=kungfu_config.resolve_config,
+        adapters=adapter_catalog,
+        discover_all=discover_all_provider_candidates,
+        discover_custom=_discover_configured_adapter,
+        build_profile=_profile,
+        profile_id=_profile_id,
+        profile_label=_label,
+    ).discover(
+        resolved_config=resolved_config,
+        discovery_kwargs=discovery_kwargs,
     )
-    return {
-        "schema": CATALOG_SCHEMA,
-        "configPath": resolved.get("configPath"),
-        "configured": configured,
-        "discovered": candidates,
-        "defaultProfileId": explicit_default,
-        "recommendedProfileId": recommended,
-        "backendDefault": backend,
-        "startupView": agent_config.get("startupView") or "profile-home",
-        "diagnostics": diagnostics,
-        "privacyBoundary": [
-            "PATH and known executable locations only",
-            "bounded --version probe only",
-            "no provider auth, keychain, session, billing, or private log reads",
-        ],
-    }
 
 
 def _discover_configured_adapter(
@@ -701,27 +486,26 @@ def _probe_version(
     *,
     timeout_seconds: float = _VERSION_TIMEOUT_SECONDS,
 ) -> str | None:
-    try:
-        result = subprocess.run(
-            [executable, *(str(value) for value in version_argv)],
-            capture_output=True,
-            text=True,
-            timeout=timeout_seconds,
-            check=False,
-        )
-    except (OSError, subprocess.SubprocessError):
-        return None
-    output = (result.stdout or result.stderr or "").strip()
-    return output.splitlines()[0].strip() if output else None
+    return VerificationProbe(
+        schema=VERIFY_SCHEMA,
+        default_timeout_seconds=_VERSION_TIMEOUT_SECONDS,
+        provider_timeouts=_PROVIDER_VERSION_TIMEOUT_SECONDS,
+        run=subprocess.run,
+    ).raw_version(
+        executable,
+        version_argv,
+        timeout_seconds=timeout_seconds,
+    )
 
 
 def configured_profiles(
     *, config_home: str | None = None, runtime_home: str | None = None
 ) -> list[dict[str, Any]]:
-    resolved = kungfu_config.resolve_config(
-        config_home=config_home, runtime_home=runtime_home
-    )
-    return copy.deepcopy(resolved["config"]["agent"]["runtimeProfiles"])
+    return RuntimeProfileStore(
+        resolve_config=kungfu_config.resolve_config,
+        set_config_value=kungfu_config.set_user_config_value,
+        discover_catalog=discover_catalog,
+    ).configured(config_home=config_home, runtime_home=runtime_home)
 
 
 def plan_upsert(
@@ -780,21 +564,11 @@ def apply_upsert(
     config_home: str | None = None,
     runtime_home: str | None = None,
 ) -> dict[str, Any]:
-    if plan.get("schema") != "kungfu.agent-runtime-profile-plan/v1":
-        raise ValueError("Agent Runtime Profile apply requires an exact plan")
-    resolved = kungfu_config.set_user_config_value(
-        "agent.runtimeProfiles",
-        copy.deepcopy(plan["runtimeProfiles"]),
-        config_home=config_home,
-        runtime_home=runtime_home,
-    )
-    return {
-        "schema": "kungfu.agent-runtime-profile-receipt/v1",
-        "action": plan["action"],
-        "profileId": plan["profile"]["id"],
-        "configPath": resolved["configPath"],
-        "changed": True,
-    }
+    return RuntimeProfileStore(
+        resolve_config=kungfu_config.resolve_config,
+        set_config_value=kungfu_config.set_user_config_value,
+        discover_catalog=discover_catalog,
+    ).apply_upsert(plan, config_home=config_home, runtime_home=runtime_home)
 
 
 def plan_remove(
@@ -820,27 +594,11 @@ def apply_remove(
     config_home: str | None = None,
     runtime_home: str | None = None,
 ) -> dict[str, Any]:
-    if plan.get("schema") != "kungfu.agent-runtime-profile-remove-plan/v1":
-        raise ValueError("Agent Runtime Profile removal requires an exact plan")
-    resolved = kungfu_config.set_user_config_value(
-        "agent.runtimeProfiles",
-        copy.deepcopy(plan["runtimeProfiles"]),
-        config_home=config_home,
-        runtime_home=runtime_home,
-    )
-    if resolved["config"]["agent"].get("defaultRuntimeProfile") == plan["profileId"]:
-        resolved = kungfu_config.set_user_config_value(
-            "agent.defaultRuntimeProfile",
-            None,
-            config_home=config_home,
-            runtime_home=runtime_home,
-        )
-    return {
-        "schema": "kungfu.agent-runtime-profile-remove-receipt/v1",
-        "profileId": plan["profileId"],
-        "configPath": resolved["configPath"],
-        "changed": True,
-    }
+    return RuntimeProfileStore(
+        resolve_config=kungfu_config.resolve_config,
+        set_config_value=kungfu_config.set_user_config_value,
+        discover_catalog=discover_catalog,
+    ).apply_remove(plan, config_home=config_home, runtime_home=runtime_home)
 
 
 def set_default(
@@ -850,99 +608,25 @@ def set_default(
     config_home: str | None = None,
     runtime_home: str | None = None,
 ) -> dict[str, Any]:
-    resolved = kungfu_config.resolve_config(
-        config_home=config_home, runtime_home=runtime_home
+    return RuntimeProfileStore(
+        resolve_config=kungfu_config.resolve_config,
+        set_config_value=kungfu_config.set_user_config_value,
+        discover_catalog=discover_catalog,
+    ).set_default(
+        profile_id,
+        execute=execute,
+        config_home=config_home,
+        runtime_home=runtime_home,
     )
-    configured = resolved["config"]["agent"]["runtimeProfiles"]
-    known = {row.get("id") for row in configured}
-    if profile_id not in known:
-        catalog = discover_catalog(resolved_config=resolved)
-        known.update(row["profile"]["id"] for row in catalog["discovered"])
-    if profile_id not in known:
-        raise ValueError(
-            f"Agent Runtime Profile is not configured or discovered: {profile_id}"
-        )
-    receipt = {
-        "schema": "kungfu.agent-runtime-default-plan/v1",
-        "profileId": profile_id,
-        "previous": resolved["config"]["agent"].get("defaultRuntimeProfile"),
-        "execute": execute,
-        "changed": False,
-    }
-    if execute:
-        updated = kungfu_config.set_user_config_value(
-            "agent.defaultRuntimeProfile",
-            profile_id,
-            config_home=config_home,
-            runtime_home=runtime_home,
-        )
-        receipt.update(
-            {
-                "schema": "kungfu.agent-runtime-default-receipt/v1",
-                "configPath": updated["configPath"],
-                "changed": True,
-            }
-        )
-    return receipt
 
 
 def verify_profile(profile: Mapping[str, Any]) -> dict[str, Any]:
-    executable = str((profile.get("launch") or {}).get("executable") or "")
-    provider = str(profile.get("provider") or "")
-    launch_argv = [
-        str(value) for value in (profile.get("launch") or {}).get("argv") or []
-    ]
-    probe_argv = [
-        str(value) for value in (profile.get("launch") or {}).get("versionArgv") or []
-    ]
-    if not probe_argv:
-        probe_argv = (
-            [*launch_argv, "--version"] if provider == "synthetic" else ["--version"]
-        )
-    available = bool(
-        executable and os.path.isfile(executable) and os.access(executable, os.X_OK)
-    )
-    version = None
-    error = None
-    if available:
-        try:
-            result = subprocess.run(
-                [executable, *probe_argv],
-                capture_output=True,
-                text=True,
-                timeout=_version_timeout_seconds(provider),
-                check=False,
-                env=(
-                    {**os.environ, "KUNGFU_AS_VARIANT": "node"}
-                    if provider == "synthetic"
-                    else None
-                ),
-            )
-            text = (result.stdout or result.stderr or "").strip()
-            if result.returncode != 0:
-                error = f"version probe exited {result.returncode}"
-            elif text:
-                first_line = text.splitlines()[0].strip()[:256]
-                version = _parse_semantic_version(first_line) or first_line
-            else:
-                error = "version probe returned no output"
-        except (OSError, subprocess.SubprocessError) as exc:
-            error = str(exc)
-    else:
-        error = "executable is missing or not executable"
-    return {
-        "schema": VERIFY_SCHEMA,
-        "profileId": profile.get("id"),
-        "provider": provider,
-        "executable": executable,
-        "argv": probe_argv,
-        "available": available,
-        "version": version,
-        "ok": available and error is None,
-        "error": error,
-        "observedAt": datetime.now(UTC).isoformat(),
-        "privacyBoundary": "bounded declared executable version probe only",
-    }
+    return VerificationProbe(
+        schema=VERIFY_SCHEMA,
+        default_timeout_seconds=_VERSION_TIMEOUT_SECONDS,
+        provider_timeouts=_PROVIDER_VERSION_TIMEOUT_SECONDS,
+        run=subprocess.run,
+    ).verify(profile)
 
 
 def find_profile(

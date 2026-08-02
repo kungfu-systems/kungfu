@@ -1,0 +1,270 @@
+# SPDX-License-Identifier: Apache-2.0
+
+"""Provider-native launch lifecycle, independent from CLI parsing."""
+
+from __future__ import annotations
+
+import os
+import subprocess
+import threading
+import time
+from typing import Any, Callable, Mapping
+import uuid
+
+from kungfu.agent.work_projection import WorkProjectionPort
+
+
+class NativeLaunchCoordinator:
+    """Own one provider-native process and its Core observer lifecycle."""
+
+    def __init__(
+        self,
+        *,
+        verify_profile: Callable[[Mapping[str, Any]], Mapping[str, Any]],
+        resolve_cwd: Callable[..., str | None],
+        build_adapter: Callable[..., Mapping[str, Any]],
+        build_environment: Callable[..., dict[str, str]],
+        session_ref: Callable[[Mapping[str, Any], str], Mapping[str, str]],
+        interactive_argv: Callable[[Mapping[str, Any]], list[str]],
+        semantic_root: Callable[[Any], str],
+        heartbeat_observation: Callable[[Mapping[str, Any]], Mapping[str, Any]],
+    ) -> None:
+        self.verify_profile = verify_profile
+        self.resolve_cwd = resolve_cwd
+        self.build_adapter = build_adapter
+        self.build_environment = build_environment
+        self.session_ref = session_ref
+        self.interactive_argv = interactive_argv
+        self.semantic_root = semantic_root
+        self.heartbeat_observation = heartbeat_observation
+
+    def run(
+        self,
+        profile: Mapping[str, Any],
+        *,
+        runtime_dir: str,
+        config_home: str,
+        runtime_home: str,
+        workspace_root: str,
+        work_ref: Mapping[str, Any] | None,
+        work_selection: Mapping[str, Any],
+        process_runner: Callable[..., Any] | None = None,
+        session_invoker: Callable[[Mapping[str, Any]], Mapping[str, Any]] | None = None,
+        session_endpoint: str | None = None,
+        work_observer: Callable[[Mapping[str, Any] | None], Mapping[str, Any]]
+        | None = None,
+        heartbeat_seconds: float = 0.5,
+        work_projection_seconds: float = 2.0,
+    ) -> int:
+        verification = self.verify_profile(profile)
+        if verification.get("ok") is not True:
+            raise ValueError(
+                "Agent Runtime Profile verification failed: "
+                f"{verification.get('error') or 'unknown error'}"
+            )
+        cwd = self.resolve_cwd(
+            profile, workspace_root=workspace_root, home=runtime_home
+        )
+        provider = str(profile["provider"])
+        adapter_id = str((profile.get("bootstrap") or {}).get("adapter") or provider)
+        if adapter_id != provider:
+            raise ValueError(
+                "Agent Runtime Profile bootstrap adapter must match provider"
+            )
+        attempt_id = f"native:{uuid.uuid4()}"
+        adapter = self.build_adapter(
+            adapter_id,
+            runtime_dir=runtime_dir,
+            session_id=attempt_id,
+            config_home=config_home,
+            runtime_home=runtime_home,
+        )
+        workspace_id = str(
+            work_ref.get("workspaceId")
+            if work_ref is not None
+            else work_selection.get("workspaceId") or workspace_root
+        )
+        session_ref = {
+            "workConsoleId": (
+                self.session_ref(work_ref, attempt_id)["workConsoleId"]
+                if work_ref is not None
+                else f"assistant:{workspace_id}:{attempt_id}"
+            ),
+            "sessionAttemptId": attempt_id,
+        }
+        process_identity = {
+            "launcherPid": os.getpid(),
+            "attemptId": attempt_id,
+            "launchedAt": time.time_ns(),
+        }
+        env = self.build_environment(
+            provider,
+            runtime_dir=runtime_dir,
+            config_home=config_home,
+            runtime_home=runtime_home,
+            workspace_root=workspace_root,
+            work_ref=work_ref,
+            work_selection=work_selection,
+            profile=profile,
+            session_ref=session_ref if session_invoker is not None else None,
+            session_endpoint=session_endpoint,
+            provider_version=str(verification.get("version") or "unknown"),
+            adapter=adapter,
+        )
+        actor_id = f"native:{provider}:{attempt_id}"
+        registered = False
+        if session_invoker is not None:
+            binding = (
+                {"kind": "work", "workRef": dict(work_ref)}
+                if work_ref is not None
+                else {"kind": "workspace-assistant", "workRef": None}
+            )
+            plan = session_invoker(
+                {
+                    "operation": "plan-native-start",
+                    "client": "cli",
+                    "actorId": actor_id,
+                    "input": {
+                        **session_ref,
+                        "workspaceId": workspace_id,
+                        "provider": provider,
+                        "providerVersion": str(
+                            verification.get("version") or "unknown"
+                        ),
+                        "profileRoot": self.semantic_root(profile),
+                        "runtimeProfileId": str(
+                            profile.get("id") or f"kungfu.agent-runtime.{provider}"
+                        ),
+                        "binding": binding,
+                    },
+                }
+            )
+            session_invoker(
+                {
+                    "operation": "start-native",
+                    "actorId": actor_id,
+                    "client": "cli",
+                    "plan": dict(plan),
+                    "expectedPlanRoot": plan["root"],
+                    "processIdentity": process_identity,
+                }
+            )
+            registered = True
+
+        stop_heartbeat = threading.Event()
+        heartbeat_errors: list[Exception] = []
+        projection_port = (
+            WorkProjectionPort(
+                work_observer,
+                fallback_seconds=work_projection_seconds,
+            )
+            if work_observer is not None
+            else None
+        )
+        projected_binding_root: str | None = None
+
+        def heartbeat() -> None:
+            nonlocal projected_binding_root
+            if session_invoker is None:
+                return
+            while not stop_heartbeat.is_set():
+                try:
+                    current = session_invoker(
+                        {"operation": "show", "session": dict(session_ref)}
+                    )
+                    binding = current.get("binding") or {}
+                    observed = self.heartbeat_observation(binding)
+                    session_invoker(
+                        {
+                            "operation": "heartbeat-native",
+                            "client": "cli",
+                            "actorId": actor_id,
+                            "session": dict(session_ref),
+                            "processIdentity": process_identity,
+                            "observation": {
+                                "schema": str(observed["schema"]),
+                                "state": str(observed.get("state") or "unknown"),
+                                "staleAfterMs": max(
+                                    5000, int(heartbeat_seconds * 10000)
+                                ),
+                                "workRefRoot": observed.get("workRefRoot"),
+                                "diagnostic": observed.get("diagnostic"),
+                            },
+                        }
+                    )
+                    bound_ref = (
+                        binding.get("workRef")
+                        if binding.get("kind") == "work"
+                        else None
+                    )
+                    if projection_port is not None and bound_ref:
+                        binding_root = self.semantic_root(bound_ref)
+                        projection = projection_port.refresh(
+                            bound_ref,
+                            force=binding_root != projected_binding_root,
+                        )
+                        projected_binding_root = binding_root
+                        if projection is not None:
+                            session_invoker(
+                                {
+                                    "operation": "project-native-work",
+                                    "client": "cli",
+                                    "actorId": actor_id,
+                                    "session": dict(session_ref),
+                                    "processIdentity": process_identity,
+                                    "projection": projection,
+                                }
+                            )
+                except Exception as error:  # pragma: no cover
+                    heartbeat_errors.append(error)
+                    return
+                stop_heartbeat.wait(heartbeat_seconds)
+
+        heartbeat_thread: threading.Thread | None = None
+
+        def start_heartbeat() -> None:
+            nonlocal heartbeat_thread
+            if not registered:
+                return
+            heartbeat_thread = threading.Thread(
+                target=heartbeat,
+                name=f"kungfu-native-observer-{attempt_id}",
+                daemon=True,
+            )
+            heartbeat_thread.start()
+
+        argv = [*self.interactive_argv(profile), *adapter["argv"]]
+        completed: Any | None = None
+        try:
+            if process_runner is None:
+                provider_process = subprocess.Popen(argv, cwd=cwd, env=env)
+                start_heartbeat()
+                completed = subprocess.CompletedProcess(argv, provider_process.wait())
+            else:
+                start_heartbeat()
+                completed = process_runner(argv, cwd=cwd, env=env, check=False)
+            return int(completed.returncode)
+        finally:
+            stop_heartbeat.set()
+            if heartbeat_thread is not None:
+                heartbeat_thread.join(timeout=max(1.0, heartbeat_seconds * 2))
+            if registered and session_invoker is not None:
+                session_invoker(
+                    {
+                        "operation": "end-native",
+                        "actorId": actor_id,
+                        "client": "cli",
+                        "session": dict(session_ref),
+                        "processIdentity": process_identity,
+                        "exit": {
+                            "exitCode": (
+                                int(completed.returncode)
+                                if completed is not None
+                                else None
+                            ),
+                            "signal": None,
+                        },
+                    }
+                )
+            if heartbeat_errors and completed is not None:
+                raise ValueError(f"native Agent observer failed: {heartbeat_errors[0]}")

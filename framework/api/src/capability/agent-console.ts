@@ -10,6 +10,7 @@ export type WorkRef = {
   entityRoot: string;
   purpose: string;
   systemTimeCut: string;
+  initiativeId?: string;
 };
 
 export type AgentConsoleEnvelope = {
@@ -18,18 +19,14 @@ export type AgentConsoleEnvelope = {
   consoleId: string;
   attemptId: string;
   runtimeProfileId: string;
-  provider: 'codex' | 'claude' | 'opencode';
+  provider: string;
   activeProfiles: Array<{ id: string; root: string }>;
   workRef: WorkRef | null;
-  runtimeRouting: {
-    controlRuntimeDir: string;
-    workRuntimeDir: null;
-    workRuntimeResolution: 'agent-project-cut';
-  };
   entrypoints: {
     context: string[];
     capabilities: string[];
     profiles: string[];
+    bindWork: string[];
   };
   knownLimits: string[];
   envelopeRoot: string;
@@ -43,17 +40,24 @@ export type AgentConsoleLaunch = {
   backend: AgentBackend;
 };
 
-function canonical(value: unknown): string {
+export function canonicalAgentSessionJson(value: unknown): string {
   if (value === null || typeof value !== 'object') return JSON.stringify(value);
-  if (Array.isArray(value)) return `[${value.map(canonical).join(',')}]`;
+  if (Array.isArray(value)) {
+    return `[${value.map(canonicalAgentSessionJson).join(',')}]`;
+  }
   return `{${Object.entries(value as Record<string, unknown>)
     .sort(([left], [right]) => left.localeCompare(right))
-    .map(([key, child]) => `${JSON.stringify(key)}:${canonical(child)}`)
+    .map(
+      ([key, child]) =>
+        `${JSON.stringify(key)}:${canonicalAgentSessionJson(child)}`,
+    )
     .join(',')}}`;
 }
 
-async function sha256(value: unknown): Promise<string> {
-  const bytes = new TextEncoder().encode(canonical(value));
+export async function agentSessionSemanticRoot(
+  value: unknown,
+): Promise<string> {
+  const bytes = new TextEncoder().encode(canonicalAgentSessionJson(value));
   const digest = await globalThis.crypto.subtle.digest('SHA-256', bytes);
   return `sha256:${Array.from(new Uint8Array(digest))
     .map((byte) => byte.toString(16).padStart(2, '0'))
@@ -69,7 +73,14 @@ export async function buildWorkRef(input: {
   entity: unknown;
   purpose: string;
   systemTimeCut: string;
+  initiativeId?: string;
 }): Promise<WorkRef> {
+  if (input.entityType === 'assignment' && !input.initiativeId) {
+    throw new Error('Assignment WorkRef requires initiativeId');
+  }
+  if (input.entityType !== 'assignment' && input.initiativeId) {
+    throw new Error('WorkRef initiativeId is only valid for assignments');
+  }
   return {
     schema: 'kungfu.work-ref/v1',
     workspaceId: input.workspaceId,
@@ -77,9 +88,10 @@ export async function buildWorkRef(input: {
     profileRoot: input.profileRoot,
     entityType: input.entityType,
     entityId: input.entityId,
-    entityRoot: await sha256(input.entity),
+    entityRoot: await agentSessionSemanticRoot(input.entity),
     purpose: input.purpose,
     systemTimeCut: input.systemTimeCut,
+    ...(input.initiativeId ? { initiativeId: input.initiativeId } : {}),
   };
 }
 
@@ -90,7 +102,6 @@ export async function buildAgentConsoleEnvelope(input: {
   runtimeProfile: AgentRuntimeProfile;
   workRef?: WorkRef | null;
   activeProfiles?: Array<{ id: string; root: string }>;
-  controlRuntimeDir?: string;
 }): Promise<AgentConsoleEnvelope> {
   const body = {
     schema: 'kungfu.agent-console-envelope/v1' as const,
@@ -101,19 +112,21 @@ export async function buildAgentConsoleEnvelope(input: {
     provider: input.runtimeProfile.provider,
     activeProfiles: input.activeProfiles ?? [],
     workRef: input.workRef ?? null,
-    runtimeRouting: {
-      controlRuntimeDir: input.controlRuntimeDir ?? '',
-      workRuntimeDir: null,
-      workRuntimeResolution: 'agent-project-cut' as const,
-    },
     entrypoints: {
-      context: ['kungfu agent context --json'],
-      capabilities: [
-        'kungfu agent capabilities --json',
-        'kungfu agent runtime list --json',
-        'kungfu agent session capabilities --json',
+      context: ['kungfu', 'agent', 'context', '--json'],
+      capabilities: ['kungfu', 'agent', 'capabilities', '--json'],
+      profiles: ['kungfu', 'profile', 'manager', '--json'],
+      bindWork: [
+        'kungfu',
+        'agent',
+        'console',
+        'bind-work',
+        '--initiative-id',
+        '<id>',
+        '--assignment-id',
+        '<id>',
+        '--json',
       ],
-      profiles: ['kungfu profile manager --json'],
     },
     knownLimits: [
       'The Console does not acquire authority over an external work source.',
@@ -121,7 +134,7 @@ export async function buildAgentConsoleEnvelope(input: {
       'Use public Profile plans, authorizations, actions, and receipts for mutations.',
     ],
   };
-  return { ...body, envelopeRoot: await sha256(body) };
+  return { ...body, envelopeRoot: await agentSessionSemanticRoot(body) };
 }
 
 const bootstrapPrompt = [
@@ -142,6 +155,7 @@ export function prepareAgentConsoleLaunch(input: {
   envelope: AgentConsoleEnvelope;
   workspaceRoot?: string;
   home?: string;
+  controlRuntimeDir?: string;
 }): AgentConsoleLaunch {
   const profile = input.profile;
   const launchArgs = [...profile.launch.argv, bootstrapPrompt];
@@ -171,10 +185,9 @@ export function prepareAgentConsoleLaunch(input: {
       KUNGFU_AGENT_CONSOLE_ENVELOPE: JSON.stringify(input.envelope),
       KUNGFU_AGENT_CONSOLE_ID: input.envelope.consoleId,
       KUNGFU_AGENT_ATTEMPT_ID: input.envelope.attemptId,
-      ...(input.envelope.runtimeRouting.controlRuntimeDir
+      ...(input.controlRuntimeDir
         ? {
-            KUNGFU_CONTROL_RUNTIME_DIR:
-              input.envelope.runtimeRouting.controlRuntimeDir,
+            KUNGFU_CONTROL_RUNTIME_DIR: input.controlRuntimeDir,
           }
         : {}),
       ...(input.workspaceRoot

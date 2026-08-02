@@ -354,7 +354,7 @@ try {
     input: {
       ...ref,
       provider,
-      providerVersion: provider === 'codex' ? '0.144.3' : '2.1.209',
+      providerVersion: provider === 'codex' ? '0.146.0' : '2.1.220',
       profileRoot: PROFILE_ROOT,
       executable: providerExecutable,
       argv: providerArguments(provider, { claudeModel, claudeEffort }),
@@ -445,7 +445,7 @@ try {
     input: {
       ...approvalRef,
       provider,
-      providerVersion: provider === 'codex' ? '0.144.3' : '2.1.209',
+      providerVersion: provider === 'codex' ? '0.146.0' : '2.1.220',
       profileRoot: PROFILE_ROOT,
       executable: providerExecutable,
       argv: providerArguments(provider, { claudeModel, claudeEffort }),
@@ -608,7 +608,7 @@ try {
     input: {
       ...interruptRef,
       provider,
-      providerVersion: provider === 'codex' ? '0.144.3' : '2.1.209',
+      providerVersion: provider === 'codex' ? '0.146.0' : '2.1.220',
       profileRoot: PROFILE_ROOT,
       executable: providerExecutable,
       argv: providerArguments(provider, { claudeModel, claudeEffort }),

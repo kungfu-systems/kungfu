@@ -79,9 +79,9 @@
           "New Work",
           "Project, Work, and Agent state"
         ],
-        "framework/tui/src/work-window/index.tsx": [
-          "NATIVE UI · OBSERVE ONLY"
-        ],
+    "framework/tui/src/work-window/project-work-session-view.tsx": [
+      "NATIVE UI · OBSERVE ONLY"
+    ],
       "framework/tui/src/projects-view/index.tsx": [
           "New Project",
           "Open Project",
