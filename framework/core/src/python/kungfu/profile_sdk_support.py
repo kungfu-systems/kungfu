@@ -10,7 +10,7 @@ import hashlib
 import json
 import re
 from pathlib import Path
-from typing import Any, Mapping
+from typing import Any, Mapping, NoReturn
 
 from kungfu import agent as agent_pack
 from kungfu import contract as contract_runtime
@@ -296,7 +296,7 @@ _OPERATIONS = (
 )
 
 
-def _fail(message: str, **details: Any) -> None:
+def _fail(message: str, **details: Any) -> NoReturn:
     raise ProfileSdkError("lifecycle-command-contract-invalid", message, **details)
 
 
