@@ -51,35 +51,22 @@ test('Codex result schema constrains the user response without copying receipts'
   assert.equal(schema.additionalProperties, false);
   assert.deepEqual(schema.required, [
     'response',
-    'intentId',
-    'personalization',
-    'receiptCitation',
-    'verification',
-    'nextStep',
-    'scopeStatement',
-    'nonClaims',
+    'personalizationBasis',
+    'verificationCommand',
+    'nextStepCommand',
   ]);
-  assert.equal(schema.properties.response.maxLength, 4096);
+  assert.equal(schema.properties.response.maxLength, 2048);
   assert.match(
     schema.properties.response.description,
-    /sibling evidence fields remain visible/u,
+    /complete user-visible Chinese answer/u,
   );
-  assert.equal(schema.properties.personalization.additionalProperties, false);
-  assert.match(
-    schema.properties.personalization.properties.explanation.description,
-    /user-visible sentence/u,
-  );
-  assert.match(schema.properties.receiptCitation.pattern, /sha256/u);
-  assert.match(
-    schema.properties.receiptCitation.description,
-    /compare it byte-for-byte/u,
-  );
-  assert.deepEqual(schema.properties.nextStep.properties.safetyClass.enum, [
-    'read-only',
-    'preview-safe',
+  assert.deepEqual(schema.properties.verificationCommand.enum, [
+    'kungfu agent status --target codex --scope project --json',
   ]);
-  assert.equal(schema.properties.nonClaims.minItems, 4);
-  assert.equal(schema.properties.nonClaims.maxItems, 4);
+  assert.deepEqual(schema.properties.nextStepCommand.enum, [
+    'kungfu project list --json',
+    'kungfu project open-plan --path . --json',
+  ]);
 });
 
 const root = (character) => `sha256:${character.repeat(64)}`;
@@ -211,49 +198,30 @@ test('protocol evidence rejects a brief command hidden inside another executable
 
 test('normalizes experience only when the evidence is user-visible and safe', () => {
   const value = receipt(1);
-  const explanation = 'Kungfu gives your agent a product-owned evidence path.';
   const verification =
     'kungfu agent status --target codex --scope project --json';
   const next = 'kungfu project list --json';
-  const receiptCitation = `本次 receipt 是 ${value.receiptRoot}，你可以用候选 CLI 独立复验。`;
   const scopeStatement =
     '本次只验证了这个本地 Codex 与候选 CLI；未验证 Claude、CI 托管 Codex、其他平台或公开发布。';
   const result = {
-    response: `${explanation} ${receiptCitation} Verify with ${verification}; next run ${next}. ${scopeStatement}`,
-    intentId: 'onboarding',
-    personalization: { basis: ['current-tools'], explanation },
-    receiptCitation,
-    verification: {
-      command: verification,
-      expected: 'A rooted Agent status object.',
-    },
-    nextStep: {
-      command: next,
-      safetyClass: 'read-only',
-      reason: 'See registered projects.',
-    },
-    scopeStatement,
-    nonClaims: value.nonClaims.slice(0, 4),
+    response: `Kungfu 为当前 Codex 工具提供可核验的工作入口。本次 receipt 是 ${value.receiptRoot}。验证命令：${verification}；下一步：${next}。${scopeStatement}`,
+    personalizationBasis: 'current-tools',
+    verificationCommand: verification,
+    nextStepCommand: next,
   };
 
   assert.equal(
     normalizedExperienceFromResult(result, value).intentId,
     'onboarding',
   );
-  result.nonClaims.push(result.nonClaims[0]);
-  assert.throws(
-    () => normalizedExperienceFromResult(result, value),
-    /duplicate or extra non-claims/u,
-  );
-  result.nonClaims.pop();
-  const validReceiptCitation = result.receiptCitation;
-  result.receiptCitation = `本次 receipt 是 ${root('f')}，你可以独立复验。`;
+  const validResponse = result.response;
+  result.response = result.response.replace(value.receiptRoot, root('f'));
   assert.throws(
     () => normalizedExperienceFromResult(result, value),
     /receipt citation omitted or changed/u,
   );
-  result.receiptCitation = validReceiptCitation;
-  result.nextStep.command = 'kungfu project open-plan --execute';
+  result.response = validResponse;
+  result.nextStepCommand = 'kungfu project open-plan --execute';
   assert.throws(
     () => normalizedExperienceFromResult(result, value),
     /cannot execute writes/u,

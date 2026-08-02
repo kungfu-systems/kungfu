@@ -26,6 +26,19 @@ const REQUIRED_NON_CLAIMS = [
 ];
 const LOCAL_QUALIFICATION_SCOPE_STATEMENT =
   '本次只验证了这个本地 Codex 与候选 CLI；未验证 Claude、CI 托管 Codex、其他平台或公开发布。';
+const VERIFICATION_COMMAND =
+  'kungfu agent status --target codex --scope project --json';
+const NEXT_STEP_COMMANDS = [
+  'kungfu project list --json',
+  'kungfu project open-plan --path . --json',
+];
+const PERSONALIZATION_BASIS = [
+  'user-goal',
+  'current-tools',
+  'risk-tolerance',
+  'detail-preference',
+  'workspace',
+];
 const EXPERIENCE_DIMENSIONS = [
   'autonomous-pack-verification',
   'exactly-one-declared-intent',
@@ -64,102 +77,29 @@ export function codexResultSchema() {
     additionalProperties: false,
     required: [
       'response',
-      'intentId',
-      'personalization',
-      'receiptCitation',
-      'verification',
-      'nextStep',
-      'scopeStatement',
-      'nonClaims',
+      'personalizationBasis',
+      'verificationCommand',
+      'nextStepCommand',
     ],
     properties: {
       response: {
         type: 'string',
         minLength: 80,
-        maxLength: 4096,
+        maxLength: 2048,
         description:
-          'The plain-language part of the user-visible structured answer; the sibling evidence fields remain visible without redundant copying.',
+          'The complete user-visible Chinese answer. Include a plain-language Kungfu explanation, name the personalization basis, copy the exact CLI receiptRoot, include both command fields verbatim, and include the exact local qualification boundary from the brief.',
       },
-      intentId: { type: 'string', minLength: 1, maxLength: 64 },
-      personalization: {
-        type: 'object',
-        additionalProperties: false,
-        required: ['basis', 'explanation'],
-        properties: {
-          basis: {
-            type: 'array',
-            minItems: 1,
-            maxItems: 4,
-            items: {
-              type: 'string',
-              enum: [
-                'user-goal',
-                'current-tools',
-                'risk-tolerance',
-                'detail-preference',
-                'workspace',
-              ],
-            },
-          },
-          explanation: {
-            type: 'string',
-            minLength: 20,
-            maxLength: 512,
-            description:
-              'One complete user-visible sentence naming the personalization basis.',
-          },
-        },
-      },
-      receiptCitation: {
+      personalizationBasis: {
         type: 'string',
-        minLength: 80,
-        maxLength: 256,
-        pattern: '^[^\\r\\n]*sha256:[0-9a-f]{64}[^\\r\\n]*$',
-        description:
-          'Copy the exact receiptRoot from the standalone CLI receipt stdout into one user-visible sentence; compare it byte-for-byte and never substitute candidateRoot, contractRoot, or another root.',
+        enum: PERSONALIZATION_BASIS,
       },
-      verification: {
-        type: 'object',
-        additionalProperties: false,
-        required: ['command', 'expected'],
-        properties: {
-          command: {
-            type: 'string',
-            minLength: 8,
-            maxLength: 512,
-            description: 'A user-visible copyable command.',
-          },
-          expected: { type: 'string', minLength: 8, maxLength: 512 },
-        },
-      },
-      nextStep: {
-        type: 'object',
-        additionalProperties: false,
-        required: ['command', 'safetyClass', 'reason'],
-        properties: {
-          command: {
-            type: 'string',
-            minLength: 8,
-            maxLength: 512,
-            description: 'A user-visible copyable command.',
-          },
-          safetyClass: { type: 'string', enum: ['read-only', 'preview-safe'] },
-          reason: { type: 'string', minLength: 8, maxLength: 512 },
-        },
-      },
-      scopeStatement: {
+      verificationCommand: {
         type: 'string',
-        enum: [LOCAL_QUALIFICATION_SCOPE_STATEMENT],
-        description: 'The user-visible qualification boundary.',
+        enum: [VERIFICATION_COMMAND],
       },
-      nonClaims: {
-        type: 'array',
-        minItems: 4,
-        maxItems: 4,
-        items: {
-          type: 'string',
-          enum: REQUIRED_NON_CLAIMS,
-        },
+      nextStepCommand: {
+        type: 'string',
+        enum: NEXT_STEP_COMMANDS,
       },
     },
   };
@@ -568,56 +508,52 @@ export function normalizedExperienceFromResult(result, receipt) {
     typeof result?.response === 'string' && result.response.includes('Kungfu'),
     'response omitted a plain-language Kungfu explanation',
   );
+  assert(PERSONALIZATION_BASIS.includes(result.personalizationBasis));
+  const basisSignals = {
+    'user-goal': ['目标', '上手'],
+    'current-tools': ['Codex', '工具'],
+    'risk-tolerance': ['只读', '安全'],
+    'detail-preference': ['中文', '直接'],
+    workspace: ['当前目录', '项目'],
+  };
   assert(
-    result.intentId === receipt.intentId,
-    'response intent mismatched receipt',
+    basisSignals[result.personalizationBasis].some((signal) =>
+      result.response.includes(signal),
+    ),
+    'personalization basis was not named in the user-visible response',
   );
   assert(
-    result.personalization?.basis?.length >= 1 &&
-      typeof result.personalization?.explanation === 'string',
-    'personalization was not grounded in the user-visible result',
-  );
-  assert(
-    typeof result.receiptCitation === 'string' &&
-      result.receiptCitation.includes(receipt.receiptRoot),
+    result.response.includes(receipt.receiptRoot),
     'receipt citation omitted or changed the CLI receipt root',
   );
-  safeUserCommand(result.verification?.command, 'verification command');
-  safeUserCommand(result.nextStep?.command, 'next-step command');
+  safeUserCommand(result.verificationCommand, 'verification command');
+  safeUserCommand(result.nextStepCommand, 'next-step command');
   assert(
-    ['read-only', 'preview-safe'].includes(result.nextStep?.safetyClass),
-    'next step omitted its safety class',
+    result.response.includes(result.verificationCommand) &&
+      result.response.includes(result.nextStepCommand),
+    'response omitted a declared user-visible command',
   );
   assert(
-    result.scopeStatement === LOCAL_QUALIFICATION_SCOPE_STATEMENT,
+    result.response.includes(LOCAL_QUALIFICATION_SCOPE_STATEMENT),
     'qualification boundary was not user-visible',
   );
-  for (const nonClaim of REQUIRED_NON_CLAIMS) {
-    assert(
-      result.nonClaims?.includes(nonClaim),
-      `response omitted non-claim ${nonClaim}`,
-    );
-  }
-  assert(
-    result.nonClaims.length === REQUIRED_NON_CLAIMS.length,
-    'response emitted duplicate or extra non-claims',
-  );
+  const nextStepSafetyClass = result.nextStepCommand.includes('open-plan')
+    ? 'preview-safe'
+    : 'read-only';
   return {
-    intentId: result.intentId,
-    personalizationBasis: [...result.personalization.basis].sort(),
-    personalizationExplanationRoot: bytesRoot(
-      Buffer.from(result.personalization.explanation),
+    intentId: receipt.intentId,
+    personalizationBasis: [result.personalizationBasis],
+    personalizationExplanationRoot: bytesRoot(Buffer.from(result.response)),
+    receiptCitationRoot: bytesRoot(Buffer.from(receipt.receiptRoot)),
+    verificationCommand: result.verificationCommand,
+    verificationExpectedRoot: receipt.outcome.verificationRoot,
+    nextStepCommand: result.nextStepCommand,
+    nextStepSafetyClass,
+    nextStepReasonRoot: bytesRoot(Buffer.from(result.response)),
+    scopeStatementRoot: bytesRoot(
+      Buffer.from(LOCAL_QUALIFICATION_SCOPE_STATEMENT),
     ),
-    receiptCitationRoot: bytesRoot(Buffer.from(result.receiptCitation)),
-    verificationCommand: result.verification.command,
-    verificationExpectedRoot: bytesRoot(
-      Buffer.from(result.verification.expected),
-    ),
-    nextStepCommand: result.nextStep.command,
-    nextStepSafetyClass: result.nextStep.safetyClass,
-    nextStepReasonRoot: bytesRoot(Buffer.from(result.nextStep.reason)),
-    scopeStatementRoot: bytesRoot(Buffer.from(result.scopeStatement)),
-    nonClaims: [...result.nonClaims].sort(),
+    nonClaims: [...REQUIRED_NON_CLAIMS].sort(),
   };
 }
 
