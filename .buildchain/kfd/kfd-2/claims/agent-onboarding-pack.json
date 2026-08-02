@@ -34,7 +34,7 @@
       "pointer": {
         "kind": "file",
         "path": "framework/core/src/python/kungfu/agent/first-value.contract.json",
-        "sha256": "68ac46a0e185492ea065f8c3ffee0f6d2630d3106c2cf7041c01efc2f2a2332a"
+        "sha256": "6c7e9562ab191f1ef46b706525a455e4219767ce728b0445387efa80da875c2a"
       },
       "description": "Exact first-value prompt, bounded result, local Codex qualification, and explicit non-claim contract."
     },
@@ -88,7 +88,7 @@
       "pointer": {
         "kind": "file",
         "path": "scripts/qualify-agent-first-value-codex.mjs",
-        "sha256": "13da8d8362f680564ce01481f4514f44aaf1f6a9338c642f642c1c918744cefd"
+        "sha256": "78a5a9af9488e7f55e624a4ddc921020afafd4172be7d084cfc99d7025f24772"
       },
       "description": "Local-only three-trial fresh Codex qualification harness that retains sanitized receipts rather than raw transcripts."
     },
@@ -97,7 +97,7 @@
       "pointer": {
         "kind": "file",
         "path": "scripts/qualify-agent-first-value-codex.test.mjs",
-        "sha256": "5e5821ca8381d0bb7bb25bfebacc78e9f2648f460a4f2e298a0e9628912c0f62"
+        "sha256": "1e4647588a82d1cf96a20d19291a547c5eb81f19041efa9f3d5b1b9026ea4679"
       },
       "description": "Provider-free deterministic CI coverage for aggregate and receipt acceptance, tampering, reuse, and partial-failure cases."
     },
@@ -125,7 +125,7 @@
       },
       {
         "path": "framework/core/src/python/kungfu/agent/first-value.contract.json",
-        "sha256": "68ac46a0e185492ea065f8c3ffee0f6d2630d3106c2cf7041c01efc2f2a2332a"
+        "sha256": "6c7e9562ab191f1ef46b706525a455e4219767ce728b0445387efa80da875c2a"
       },
       {
         "path": "framework/core/src/python/kungfu/agent/first-value-receipt.schema.json",
@@ -149,11 +149,11 @@
       },
       {
         "path": "scripts/qualify-agent-first-value-codex.mjs",
-        "sha256": "13da8d8362f680564ce01481f4514f44aaf1f6a9338c642f642c1c918744cefd"
+        "sha256": "78a5a9af9488e7f55e624a4ddc921020afafd4172be7d084cfc99d7025f24772"
       },
       {
         "path": "scripts/qualify-agent-first-value-codex.test.mjs",
-        "sha256": "5e5821ca8381d0bb7bb25bfebacc78e9f2648f460a4f2e298a0e9628912c0f62"
+        "sha256": "1e4647588a82d1cf96a20d19291a547c5eb81f19041efa9f3d5b1b9026ea4679"
       },
       {
         "path": "docs/qualification/evidence/agent-brief-first-value-loop/report.json",
@@ -175,7 +175,7 @@
       },
       {
         "path": "framework/core/src/python/kungfu/agent/first-value.contract.json",
-        "sha256": "68ac46a0e185492ea065f8c3ffee0f6d2630d3106c2cf7041c01efc2f2a2332a"
+        "sha256": "6c7e9562ab191f1ef46b706525a455e4219767ce728b0445387efa80da875c2a"
       },
       {
         "path": "framework/core/src/python/kungfu/agent/first-value-receipt.schema.json",
@@ -205,7 +205,7 @@
     {
       "name": "agent-first-value-contract",
       "path": "framework/core/src/python/kungfu/agent/first-value.contract.json",
-      "sha256": "68ac46a0e185492ea065f8c3ffee0f6d2630d3106c2cf7041c01efc2f2a2332a",
+      "sha256": "6c7e9562ab191f1ef46b706525a455e4219767ce728b0445387efa80da875c2a",
       "expectedPackagePath": "kungfu/agent/first-value.contract.json"
     },
     {

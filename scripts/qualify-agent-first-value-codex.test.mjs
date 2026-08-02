@@ -255,6 +255,7 @@ function qualification() {
       surface: 'codex-cli',
       version: 'codex-cli fixture',
       executionMode: 'codex-exec-ephemeral',
+      model: 'gpt-5.6-terra',
       reasoningEffort: 'low',
     },
     platform: { system: 'darwin', arch: 'arm64' },
@@ -342,6 +343,19 @@ test('deterministic CI verifier rejects an unbounded Codex reasoning profile', (
   assert.throws(
     () => verifyAgentFirstValueQualification(report),
     /reasoning effort mismatch/u,
+  );
+});
+
+test('deterministic CI verifier rejects an unpinned Codex model', () => {
+  const report = qualification();
+  report.provider.model = 'default';
+  report.qualificationRoot = semanticRoot({
+    ...report,
+    qualificationRoot: undefined,
+  });
+  assert.throws(
+    () => verifyAgentFirstValueQualification(report),
+    /model mismatch/u,
   );
 });
 

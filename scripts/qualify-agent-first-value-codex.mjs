@@ -15,6 +15,7 @@ const QUALIFICATION_SCHEMA =
   'kungfu.agent-first-value-local-codex-qualification/v2';
 const REQUIRED_TRIALS = 10;
 const MINIMUM_CANONICAL_TRIALS = 5;
+const QUALIFICATION_MODEL = 'gpt-5.6-terra';
 const QUALIFICATION_REASONING_EFFORT = 'low';
 const REQUIRED_NON_CLAIMS = [
   'claude-qualified',
@@ -663,6 +664,10 @@ export function verifyAgentFirstValueQualification(report) {
     'Codex was not ephemeral',
   );
   assert(
+    report.provider?.model === QUALIFICATION_MODEL,
+    'Codex qualification model mismatch',
+  );
+  assert(
     report.provider?.reasoningEffort === QUALIFICATION_REASONING_EFFORT,
     'Codex qualification reasoning effort mismatch',
   );
@@ -898,6 +903,8 @@ function run(argv) {
     assert(
       contract.contract?.qualification?.localCodexProfile?.reasoningEffort ===
         QUALIFICATION_REASONING_EFFORT &&
+        contract.contract?.qualification?.localCodexProfile?.model ===
+          QUALIFICATION_MODEL &&
         contract.contract?.qualification?.localCodexProfile?.executionMode ===
           'codex-exec-ephemeral' &&
         contract.contract?.qualification?.localCodexProfile?.userConfig ===
@@ -959,6 +966,8 @@ function run(argv) {
               'exec',
               '--ephemeral',
               '--ignore-user-config',
+              '--model',
+              QUALIFICATION_MODEL,
               '--config',
               `model_reasoning_effort="${QUALIFICATION_REASONING_EFFORT}"`,
               '--sandbox',
@@ -1064,6 +1073,7 @@ function run(argv) {
         surface: 'codex-cli',
         version: codexVersion,
         executionMode: 'codex-exec-ephemeral',
+        model: QUALIFICATION_MODEL,
         reasoningEffort: QUALIFICATION_REASONING_EFFORT,
       },
       platform: { system: process.platform, arch: process.arch },

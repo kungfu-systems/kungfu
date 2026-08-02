@@ -223,6 +223,7 @@ def test_first_value_contract_binds_exact_prompt_and_packaged_roots():
     )
     assert view["contract"]["qualification"]["localCodexProfile"] == {
         "executionMode": "codex-exec-ephemeral",
+        "model": "gpt-5.6-terra",
         "reasoningEffort": "low",
         "userConfig": "ignored",
     }
