@@ -5,7 +5,7 @@
   "manifestPath": "framework/maintainability/semantic-amplification.manifest.json",
   "manifestRoot": "sha256:a4a33a8743dd4c2d30b88f19834fda45c9dda0ac972239cfdb9aa6b4ffba2b18",
   "baselineRef": "dbfed9ca1785d147b26f4f06e7e6895ac7368fee",
-  "sourceRoot": "sha256:9d8cf6520af773444262a7f29c41d878a4c6dc2c166c8df528d4a3230cb128af",
+  "sourceRoot": "sha256:5b611b97ae6cb456ff1258e3351ece9321ad52bcf720b9838763392e89d7cd2d",
   "roles": {
     "authority": "exactly one authority route per family; the route may name multiple co-owned source files",
     "allowedProjectionRoles": [
@@ -122,7 +122,7 @@
           "path": "framework/core/src/python/kungfu/cli/surface_contract.registry.json",
           "currentLines": 157,
           "baselineLines": 155,
-          "currentRoot": "sha256:ba8f1d0a67ef9c7f1d1cb7fa5361b43fafd6dbb8396aab72cb4e01bedcc0f25e",
+          "currentRoot": "sha256:179b8402dd5f8f06e9f8411f2f875b323a019282694d4dbdccad34f8d6dbc604",
           "baselineRoot": "sha256:7af1893015500d9d54e2783e44af30cd4af8753787d9d9b70c77356b0e788c17",
           "changedSinceBaseline": true
         },
@@ -146,7 +146,7 @@
           "path": "framework/core/src/python/kungfu/agent/cli_surface.catalog.json",
           "currentLines": 1010,
           "baselineLines": 33927,
-          "currentRoot": "sha256:42ec9e630794b1cb3470a9c99c1972291b9be4ef05520c6a5223c0407965808b",
+          "currentRoot": "sha256:6d10f27ad7b608086b18c80c95006ff22f77e554934e5d895ff22d387c1efc1f",
           "baselineRoot": "sha256:9f2f17fca5aa4e4daa28a276c1e3a153fa263e791b497f7ea83a93796f7aeb1f",
           "changedSinceBaseline": true
         },
@@ -176,9 +176,9 @@
         },
         {
           "path": "scripts/verify-agent-pack.mjs",
-          "currentLines": 525,
+          "currentLines": 537,
           "baselineLines": 396,
-          "currentRoot": "sha256:c67c1b163837167787016767df080ae26781ff1b0b24f5a37de45a90d7a5f020",
+          "currentRoot": "sha256:041a052fd0a6d7c442cd6ff1c36afaeff8fa4fc5d3e2bfcf421300c8960b7aa4",
           "baselineRoot": "sha256:3d5cf84d6cc561c681c68b51c92fa211f7993e1ca1a8da5d8bb9700b57a53bd2",
           "changedSinceBaseline": true
         },
