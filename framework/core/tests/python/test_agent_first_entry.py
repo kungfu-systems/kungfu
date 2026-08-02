@@ -46,6 +46,7 @@ def test_brief_and_intent_map_enforce_complete_bounded_first_entry():
     assert len(brief.encode("utf-8")) <= 8192
     assert len(brief.splitlines()) <= 120
     assert "kungfu xinfa compile" in brief
+    assert "merely printing or reading it is not\ncompletion" in brief
     assert "run exactly one\n   `kungfu agent first-value receipt`" in brief
     assert "Cite the CLI-returned `receiptRoot`" in brief
     assert "never reconstruct or recompute" in brief
@@ -151,8 +152,8 @@ def test_first_value_contract_binds_exact_prompt_and_packaged_roots():
     view = first_value.contract_view()
 
     assert view["contract"]["prompt"] == {
-        "text": "请运行 kungfu agent brief，结合你对我的了解，用最适合我的方式解释并带我上手 Kungfu。",
-        "root": "sha256:423f13042ff32413653c8589a4fa768579ed6fbf90253e33952e60e86fa9338c",
+        "text": "请运行 kungfu agent brief 并完整执行其中的 First response protocol，结合你对我的了解，用最适合我的方式解释 Kungfu，完成一次安全发现后给我一个可验证的上手结果。",
+        "root": "sha256:c1b723639346e9c02a5e4a3f4cd426234a8f7b6360b33483c780f23c20538e39",
         "encoding": "utf-8",
     }
     assert view["contract"]["result"]["maximumQuestionCount"] == 1
