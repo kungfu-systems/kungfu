@@ -16,6 +16,7 @@ import {
   copyTree,
   desktopUpdaterArtifact,
   esbuildPlatformBinaryPath,
+  installArgs,
   installedKungfuInvocation,
   isShippedKfdSupport,
   kfxBundleExternalModules,
@@ -964,4 +965,14 @@ test('no-optional builds isolate a mismatched esbuild platform binary', () => {
     }),
     false,
   );
+});
+
+test('no-optional installs authorize deterministic non-interactive purges', () => {
+  assert.deepEqual(installArgs(false), ['install', '--frozen-lockfile']);
+  assert.deepEqual(installArgs(true), [
+    'install',
+    '--frozen-lockfile',
+    '--no-optional',
+    '--config.confirmModulesPurge=false',
+  ]);
 });

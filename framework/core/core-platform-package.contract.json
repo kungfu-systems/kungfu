@@ -81,6 +81,13 @@
     "compressedHardCeilingBytes": 104857600,
     "compressedNormalCeilingBytes": 89128960,
     "compressedOptimizationTargetBytes": 73400320,
+    "preflightMeasurementErrorBoundBytes": 65536,
+    "lastQualifiedAlpha": {
+      "sourceSha": "e18bea415fe1f94261e58e18292899d1e38004d8",
+      "workflowRunId": 30429156996,
+      "artifactSha256": "c8e9cca3e391db4b8e3ebeb3f0ed8bee00c48d3ddc62748e63869c9328e5d4b5",
+      "compressedBytes": 103890355
+    },
     "hardCeilingExceptionRequiresReview": true
   },
   "publication": {

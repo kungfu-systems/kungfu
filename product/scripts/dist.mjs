@@ -243,10 +243,12 @@ function linuxLibc() {
   return report?.header?.glibcVersionRuntime ? 'gnu' : 'musl';
 }
 
-function installArgs() {
+export function installArgs(
+  noOptional = process.env.KUNGFU_BUILDCHAIN_NO_OPTIONAL === '1',
+) {
   const args = ['install', '--frozen-lockfile'];
-  if (process.env.KUNGFU_BUILDCHAIN_NO_OPTIONAL === '1') {
-    args.push('--no-optional');
+  if (noOptional) {
+    args.push('--no-optional', '--config.confirmModulesPurge=false');
   }
   return args;
 }
