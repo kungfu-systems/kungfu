@@ -7,9 +7,10 @@ import pytest
 from click.testing import CliRunner
 
 from kungfu import agent as agent_pack
-from kungfu import profile_lifecycle_commands, profile_sdk
+from kungfu import profile_sdk
 from kungfu.cli.commands import __registry__  # noqa: F401
 from kungfu.cli.commands import kfc
+from kungfu import profile_sdk_support as profile_lifecycle_commands
 from kungfu.profile_sdk_support import _root
 
 
