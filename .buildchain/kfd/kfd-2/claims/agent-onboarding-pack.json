@@ -43,7 +43,7 @@
       "pointer": {
         "kind": "file",
         "path": "framework/core/src/python/kungfu/agent/first-value-receipt.schema.json",
-        "sha256": "f4bf6589e724c11f41546bf56fd64c4bc55dfc5f939f1715e7f156381fb854b5"
+        "sha256": "23b3b66eff164631e24c5fd2bf81bcf8f51942de114c5c4a0585035e917a3aac"
       },
       "description": "Machine-verifiable receipt schema for the selected intent, safe discovery, minimal outcome, and candidate identity."
     },
@@ -88,7 +88,7 @@
       "pointer": {
         "kind": "file",
         "path": "scripts/qualify-agent-first-value-codex.mjs",
-        "sha256": "5a7c9d9a8ce21076029fdbde5747a8e40d0b8eaa963711e2bafeb51a9ed69713"
+        "sha256": "43fd32103764662ea3bf3322b8bfafa2057282f92ab956f74c7b82a2f3c32099"
       },
       "description": "Local-only three-trial fresh Codex qualification harness that retains sanitized receipts rather than raw transcripts."
     },
@@ -120,7 +120,7 @@
       },
       {
         "path": "framework/core/src/python/kungfu/agent/first-value-receipt.schema.json",
-        "sha256": "f4bf6589e724c11f41546bf56fd64c4bc55dfc5f939f1715e7f156381fb854b5"
+        "sha256": "23b3b66eff164631e24c5fd2bf81bcf8f51942de114c5c4a0585035e917a3aac"
       },
       {
         "path": "framework/core/src/python/kungfu/agent/mode-selection.md",
@@ -140,7 +140,7 @@
       },
       {
         "path": "scripts/qualify-agent-first-value-codex.mjs",
-        "sha256": "5a7c9d9a8ce21076029fdbde5747a8e40d0b8eaa963711e2bafeb51a9ed69713"
+        "sha256": "43fd32103764662ea3bf3322b8bfafa2057282f92ab956f74c7b82a2f3c32099"
       },
       {
         "path": "scripts/qualify-agent-first-value-codex.test.mjs",
@@ -166,7 +166,7 @@
       },
       {
         "path": "framework/core/src/python/kungfu/agent/first-value-receipt.schema.json",
-        "sha256": "f4bf6589e724c11f41546bf56fd64c4bc55dfc5f939f1715e7f156381fb854b5"
+        "sha256": "23b3b66eff164631e24c5fd2bf81bcf8f51942de114c5c4a0585035e917a3aac"
       }
     ]
   },
@@ -198,7 +198,7 @@
     {
       "name": "agent-first-value-receipt-schema",
       "path": "framework/core/src/python/kungfu/agent/first-value-receipt.schema.json",
-      "sha256": "f4bf6589e724c11f41546bf56fd64c4bc55dfc5f939f1715e7f156381fb854b5",
+      "sha256": "23b3b66eff164631e24c5fd2bf81bcf8f51942de114c5c4a0585035e917a3aac",
       "expectedPackagePath": "kungfu/agent/first-value-receipt.schema.json"
     }
   ],

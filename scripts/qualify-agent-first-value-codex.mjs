@@ -55,8 +55,28 @@ function successful(result, label) {
     const evidenceRoot = bytesRoot(
       Buffer.from(`${result.stdout || ''}\n${result.stderr || ''}`),
     );
+    const diagnostics = [];
+    for (const line of String(result.stdout || '').split(/\r?\n/u)) {
+      if (!line.trim()) continue;
+      try {
+        const event = JSON.parse(line);
+        const message =
+          event?.type === 'error'
+            ? event.message
+            : event?.type === 'turn.failed'
+              ? event.error?.message
+              : null;
+        if (typeof message === 'string' && message.trim())
+          diagnostics.push(message.trim().slice(0, 512));
+      } catch {
+        // Raw provider output is intentionally not retained or echoed.
+      }
+    }
+    const diagnostic = diagnostics.length
+      ? `; provider diagnostic: ${diagnostics.join(' | ')}`
+      : '';
     throw new Error(
-      `${label} failed with exit ${result.status ?? 'signal'}; output root ${evidenceRoot}`,
+      `${label} failed with exit ${result.status ?? 'signal'}; output root ${evidenceRoot}${diagnostic}`,
     );
   }
   return result;

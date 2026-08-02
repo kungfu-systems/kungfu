@@ -111,6 +111,9 @@
     },
     "diagnostics": {
       "type": "array",
+      "items": {
+        "type": "string"
+      },
       "maxItems": 0
     },
     "observedAt": {"type": "string", "format": "date-time"},
