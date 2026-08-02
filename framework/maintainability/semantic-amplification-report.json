@@ -5,7 +5,7 @@
   "manifestPath": "framework/maintainability/semantic-amplification.manifest.json",
   "manifestRoot": "sha256:a4a33a8743dd4c2d30b88f19834fda45c9dda0ac972239cfdb9aa6b4ffba2b18",
   "baselineRef": "dbfed9ca1785d147b26f4f06e7e6895ac7368fee",
-  "sourceRoot": "sha256:9f2cbde6e305c479ff87157e3aff5bad8c233f6d2b7d0cec0d393f185d2e0eb0",
+  "sourceRoot": "sha256:e972f4da4da50a652df5eb037f20cc52efa4a26bb35933e1138b01d0bb18940d",
   "roles": {
     "authority": "exactly one authority route per family; the route may name multiple co-owned source files",
     "allowedProjectionRoles": [
@@ -390,9 +390,9 @@
         },
         {
           "path": "framework/core/src/python/kungfu/assignment_orchestration.py",
-          "currentLines": 2631,
+          "currentLines": 1588,
           "baselineLines": 1014,
-          "currentRoot": "sha256:8144cbd026aed03b8c1fec9988659f4f114f3baa0240d032d266c00ca154df67",
+          "currentRoot": "sha256:5c49399a62d43e478fe6d538c0ccb945296ebfc3dbbf9a9a914c85cd094ad412",
           "baselineRoot": "sha256:68b2491178449fab6abb8d96fb69819a8807751dd145ddd7a553393f57b73890",
           "changedSinceBaseline": true
         },
