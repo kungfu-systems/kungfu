@@ -34,7 +34,7 @@ kungfu run codex "Prepare the release notes"
 A successful agent process is retained for independent review; it does not
 complete Work by itself.
 
-<!-- kungfu:auditable-demo:start -->
+<!-- kungfu:auditable-demo:agent-work-lab-autoplay:start -->
 ## See a fresh Agent continue the same Work
 
 **One Work. Two fresh Agent processes. No copied chat.**
@@ -63,7 +63,10 @@ metadata, local bundle presence, package metadata, registry history, scan output
 or standalone generation, and makes no production-deployment claim.
 
 </details>
-<!-- kungfu:auditable-demo:end -->
+<!-- kungfu:auditable-demo:agent-work-lab-autoplay:end -->
+
+<!-- kungfu:auditable-demo:project-tour-08x:start -->
+<!-- kungfu:auditable-demo:project-tour-08x:end -->
 
 Want to explore without leaving Kungfu first? Run the terminal product:
 

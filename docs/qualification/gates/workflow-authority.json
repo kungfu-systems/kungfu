@@ -274,16 +274,16 @@
     {
       "path": ".github/workflows/build.yml",
       "authority": "product-publication",
-      "definitionDigest": "sha256:fb83542d4d1bff81fa60cb33f1d513143c08730944d7437820566b4fdef56f9e",
+      "definitionDigest": "sha256:f133f20915e4774eb7de12e2417410b23c2596eb4223a19db97452332fecfe40",
       "jobs": [
         {
           "id": "auditable-demo",
           "authority": "qualification",
           "publication": "none",
           "receipt": "qualifying",
-          "definitionDigest": "sha256:d114f857e5697f5e51512d96a9591e7bda74bf519cca7d3c0cfc5ecee7ee083c",
-          "credentials": {"githubToken":"read","oidc":false,"repositorySecrets":[],"inheritedSecrets":false,"environment":null},
-          "externalActions": ["kungfu-systems/buildchain/.github/workflows/.auditable-demo.yml@31483f9652651d5b7b324fae6864bc4e7ff16fb6"],
+          "definitionDigest": "sha256:87f987854a7653316c1b455146b3502827bb64363ee3af5faad730133f6ff5a3",
+          "credentials": {"githubToken":"write","oidc":false,"repositorySecrets":["KUNGFU_GITHUB_TOKEN"],"inheritedSecrets":false,"environment":null},
+          "externalActions": ["kungfu-systems/buildchain/.github/workflows/.declarative-auditable-demo.yml@4501f4832da19614a24cf81fc71483aadaaac0b7"],
           "steps": []
         },
         {
@@ -297,31 +297,11 @@
           "steps": [{"index":1,"label":"name:Check out exact candidate source","definitionDigest":"sha256:90b7875c1b8263fc6ee031b6f446decfc1fe5eb289f08dbc3d506c4bce43f113"},{"index":2,"label":"name:Reject known-invalid auditable demo contracts","definitionDigest":"sha256:6680331f1967c56036aac5897f6b2275dfe45149d40cfcea537e8d16a13d94fc"}]
         },
         {
-          "id": "auditable-demo-passport",
-          "authority": "qualification",
-          "publication": "none",
-          "receipt": "qualifying",
-          "definitionDigest": "sha256:fa14afc75cf3058df521c109a012e0f3c754cbef0f63d21d7c8b97ceea7812c3",
-          "credentials": {"githubToken":"read","oidc":false,"repositorySecrets":[],"inheritedSecrets":false,"environment":null},
-          "externalActions": ["actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0","actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd","actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a"],
-          "steps": [{"index":1,"label":"name:Check out exact qualified source","definitionDigest":"sha256:29b1db9963a2029aabffae82fe0ec406fa6ec8d3a522d80493e9e84be9967dbe"},{"index":2,"label":"id:artifact-expiry","definitionDigest":"sha256:b63afe1390635ea616d7c2a9ccc69bfb49f5b8d2ee193c8b8df61800eaad0591"},{"index":3,"label":"name:Write exact auditable demo Release Passport","authority":"evidence-publication","definitionDigest":"sha256:c85e62a2b4adc479152f019e81e53a90717e3ccf6163873252c6d3ff48adfc56"},{"index":4,"label":"name:Upload exact auditable demo Release Passport","authority":"evidence-publication","definitionDigest":"sha256:026dc02ae0372598499bba6aa300fe2c537f6ca694ae3b7d4719a91ca6e4780a"}]
-        },
-        {
-          "id": "auditable-demo-plan",
-          "authority": "qualification",
-          "publication": "none",
-          "receipt": "diagnostic",
-          "definitionDigest": "sha256:db3fb0cb7b21676fd352e5dca68c014d3fe6cba6f47f115c669db56adcb694c1",
-          "credentials": {"githubToken":"read","oidc":false,"repositorySecrets":[],"inheritedSecrets":false,"environment":null},
-          "externalActions": ["actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0","actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e","actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a"],
-          "steps": [{"index":1,"label":"name:Check out exact qualified source","definitionDigest":"sha256:29b1db9963a2029aabffae82fe0ec406fa6ec8d3a522d80493e9e84be9967dbe"},{"index":2,"label":"name:Set up pinned Node.js","definitionDigest":"sha256:93f3675945caff80d4b510964b74f50d37e770eade12d52d8600f9da040518ad"},{"index":3,"label":"id:plan","definitionDigest":"sha256:544ea5818581dbbb37898a6cdc1217f302075ab6178f34c2d87ffcfd05dc29f5"},{"index":4,"label":"name:Retain exact auditable demo trigger plan","authority":"evidence-publication","definitionDigest":"sha256:08859c3c7f88a0c633d5def10ce51b21e72fa4e4f1c868987eb1d80014b9542a"}]
-        },
-        {
           "id": "build",
           "authority": "qualification",
           "publication": "none",
           "receipt": "qualifying",
-          "definitionDigest": "sha256:21574dcc9159778cf61f22b16af8f46c12bba73018478788790bdd7e7868c491",
+          "definitionDigest": "sha256:b6a06dcd26b06ef41a488cd779d2bd7557125d9e51425be84fa89ffc5b9eebe1",
           "credentials": {"githubToken":"write","oidc":true,"repositorySecrets":["BUILDCHAIN_ARTIFACT_RELAY_S3_DOWNLOAD_ROLE_ARN","BUILDCHAIN_ARTIFACT_RELAY_S3_ROLE_ARN","BUILDCHAIN_ARTIFACT_RELAY_S3_UPLOAD_ROLE_ARN","KUNGFU_GITHUB_TOKEN"],"inheritedSecrets":false,"environment":null},
           "externalActions": ["kungfu-systems/buildchain/.github/workflows/.build.yml@a5d2e312d083bc1b382c36e2ecb9179c7cd90dbe"],
           "steps": []

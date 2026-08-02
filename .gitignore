@@ -48,6 +48,7 @@ cmake-build-debug/
 dist/
 .buildchain/*
 !.buildchain/buildchain.toml
+!.buildchain/auditable-demo.json
 !.buildchain/alpha-contract-lock.json
 !.buildchain/contract-lock.json
 product/.buildchain/
