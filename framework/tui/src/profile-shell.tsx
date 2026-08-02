@@ -32,11 +32,13 @@ import type { WorkLoopShellModel } from './work-loop-contribution.js';
 export {
   CLOSED_CONTROL_PLANE,
   QUICK_COMMANDS,
+  contextualProjectRestoreCanCommit,
   createControlPlaneInputFence,
   directWorkspaceNavigationFromInput,
   quickCommandMatches,
   reduceControlPlaneInput,
   resolveProductStartupSurface,
+  shouldStartContextualProjectRestore,
 } from './control-plane-state.js';
 export type {
   ControlPlaneInputFence,

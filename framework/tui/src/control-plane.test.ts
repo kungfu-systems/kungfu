@@ -16,11 +16,13 @@ import {
   ControlPlaneOverlay,
   type ControlPlaneState,
   QUICK_COMMANDS,
+  contextualProjectRestoreCanCommit,
   createControlPlaneInputFence,
   directWorkspaceNavigationFromInput,
   quickCommandMatches,
   reduceControlPlaneInput,
   resolveProductStartupSurface,
+  shouldStartContextualProjectRestore,
 } from './profile-shell.js';
 import {
   PROJECTS_QUICK_COMMANDS,
@@ -481,6 +483,30 @@ test('startup opens only the current .kungfu Project and otherwise shows All Wor
     }),
     'all-work',
   );
+});
+
+test('explicit product navigation cancels contextual Project restoration', () => {
+  const startup = {
+    playbackMode: false,
+    emptyState: false,
+    startupProjectRoot: '/tmp/project',
+  };
+  assert.equal(
+    shouldStartContextualProjectRestore({ ...startup, surface: 'loading' }),
+    true,
+  );
+  for (const surface of ['lab', 'projects', 'all-work', 'onboarding']) {
+    assert.equal(
+      shouldStartContextualProjectRestore({ ...startup, surface }),
+      false,
+      `${surface} must not be replaced by a late Project restore`,
+    );
+    assert.equal(
+      contextualProjectRestoreCanCommit(surface),
+      false,
+      `${surface} must revoke a pending restore before React rerenders`,
+    );
+  }
 });
 
 test('the real Ink control plane covers the product canvas and keeps a fixed input bar', async () => {
