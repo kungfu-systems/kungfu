@@ -1,7 +1,32 @@
 import assert from 'node:assert/strict';
 import path from 'node:path';
 import test from 'node:test';
+import { fileURLToPath } from 'node:url';
 import { ensureNativeInteractiveSessionSurface } from '../src/native-interactive-client.mjs';
+
+test('provider-native bootstrap resolves the default source worker', async () => {
+  const calls = [];
+  const endpoint = await ensureNativeInteractiveSessionSurface({
+    runtimeDir: '/tmp/kungfu-native-default-worker',
+    env: {},
+    createHost(options) {
+      calls.push(options);
+      return {
+        endpoint: '/tmp/native-agent-session.sock',
+        async invoke(request) {
+          assert.deepEqual(request, { operation: 'capabilities' });
+          return { schema: 'kungfu.agent-session.capabilities/v1' };
+        },
+      };
+    },
+  });
+  assert.equal(endpoint, '/tmp/native-agent-session.sock');
+  assert.equal(calls.length, 1);
+  assert.equal(
+    calls[0].workerPath,
+    fileURLToPath(new URL('../src/product-worker.mjs', import.meta.url)),
+  );
+});
 
 test('provider-native bootstrap does not resolve or forward node-pty', async () => {
   const calls = [];
