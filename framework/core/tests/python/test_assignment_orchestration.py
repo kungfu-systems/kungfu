@@ -12,7 +12,14 @@ import kungfu
 import pytest
 from click.testing import CliRunner
 
-from kungfu import assignment_orchestration, profile_composition, profile_sdk
+from kungfu import (
+    assignment_orchestration,
+    initiative_family,
+    profile_composition,
+    profile_sdk,
+)
+from kungfu.initiative_family import canonical as assignment_canonical
+from kungfu.initiative_family import typed_v2 as initiative_family_v2
 from kungfu.atlas import mission_control
 from kungfu.cli.commands import kfc
 from kungfu.workspace import (
@@ -409,6 +416,27 @@ def _family_binding_manifest(state, publication_state="published"):
         "children": children,
     }
     return _seal_binding_manifest(manifest)
+
+
+def test_initiative_family_compatibility_imports_preserve_owner_identity():
+    assert (
+        assignment_orchestration.canonical_json is assignment_canonical.canonical_json
+    )
+    assert assignment_orchestration.semantic_root is assignment_canonical.semantic_root
+    assert assignment_orchestration._root is assignment_canonical._root
+    assert assignment_orchestration.family_contract is initiative_family.family_contract
+    assert (
+        assignment_orchestration.validate_family_state
+        is initiative_family.validate_family_state
+    )
+    assert (
+        assignment_orchestration.transition_family_state_v2
+        is initiative_family_v2.transition_family_state_v2
+    )
+    assert (
+        assignment_orchestration.InitiativeFamilyV1Port
+        is initiative_family_v2.InitiativeFamilyV1Port
+    )
 
 
 def test_initiative_family_state_is_rooted_bounded_and_parent_inert():
