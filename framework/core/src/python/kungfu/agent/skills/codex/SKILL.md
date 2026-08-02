@@ -29,8 +29,10 @@ local evidence requires another route.
 Then run `kungfu agent first-value receipt --intent <id> --discovery '<command>'
 --question-count <0-or-1> --outcome '<bounded-summary>' --json`. Cite its
 `receiptRoot`; run the receipt as one standalone command whose JSON prints
-directly, without capture, redirection, a pipe, or a reprint. Do not retain a
-raw transcript or treat model prose as proof.
+directly, without capture, redirection, a pipe, or a reprint. Copy that exact
+root into the receipt citation, compare it byte-for-byte before answering, and
+do not substitute a candidate, contract, or other root. Do not retain a raw
+transcript or treat model prose as proof.
 Name one user-supplied or workspace-visible personalization basis, then include
 one copyable read-only verification command, one concrete safe next step, and
 the candidate/provider/platform/public-release non-claims.

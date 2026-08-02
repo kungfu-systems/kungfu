@@ -111,8 +111,9 @@ export function codexResultSchema() {
         type: 'string',
         minLength: 80,
         maxLength: 256,
+        pattern: '^[^\\r\\n]*sha256:[0-9a-f]{64}[^\\r\\n]*$',
         description:
-          'One complete user-visible sentence containing the exact receiptRoot returned by the CLI.',
+          'Copy the exact receiptRoot from the standalone CLI receipt stdout into one user-visible sentence; compare it byte-for-byte and never substitute candidateRoot, contractRoot, or another root.',
       },
       verification: {
         type: 'object',

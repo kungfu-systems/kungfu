@@ -45,6 +45,11 @@ test('Codex result schema constrains the user response without copying receipts'
     schema.properties.personalization.properties.explanation.description,
     /user-visible sentence/u,
   );
+  assert.match(schema.properties.receiptCitation.pattern, /sha256/u);
+  assert.match(
+    schema.properties.receiptCitation.description,
+    /compare it byte-for-byte/u,
+  );
   assert.deepEqual(schema.properties.nextStep.properties.safetyClass.enum, [
     'read-only',
     'preview-safe',

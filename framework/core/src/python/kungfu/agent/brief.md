@@ -34,8 +34,10 @@ directly with the bounded protocol below before your final response.
    `kungfu agent first-value receipt --intent <id> --discovery '<command>'
    --question-count <0-or-1> --outcome '<bounded-summary>' --json` before the final
    response, using the selected intent and actual question count. Let its JSON print directly;
-   do not capture, redirect, pipe, or reprint it. Cite the CLI-returned `receiptRoot`;
-   never reconstruct or recompute receipt fields in model prose.
+   do not capture, redirect, pipe, or reprint it. Copy the CLI JSON's exact
+   `receiptRoot` into your receipt citation and compare it byte-for-byte before
+   answering; do not substitute a candidate, contract, or other root, and never
+   reconstruct or recompute receipt fields in model prose.
    Give the user one copyable read-only
    verification command and one concrete safe next step. State that the result
    is local to this candidate and does not qualify Claude, hosted Codex, another

@@ -101,7 +101,7 @@
           "pointer": {
             "kind": "file",
             "path": "scripts/qualify-agent-first-value-codex.mjs",
-            "sha256": "b6a7a954bfd96fcac2cde8978c6bf1313a78236349c1f135b2a87826882616d3"
+            "sha256": "da82198ab75b052fe9dbebbe258aaf495a19a0ec9ca452d99cbaae12d3512d89"
           },
           "description": "Local-only three-trial fresh Codex qualification harness that retains sanitized receipts rather than raw transcripts."
         },
@@ -110,7 +110,7 @@
           "pointer": {
             "kind": "file",
             "path": "scripts/qualify-agent-first-value-codex.test.mjs",
-            "sha256": "4a77a3c5cfa31d1c21e86976cb44d95f95d6ff3b00ef5a3b38a55b07a7c2c4d2"
+            "sha256": "a6f6817426bfb7f86ab9259daa937ecaf5940c8abc50d2cd2f0ba0438e902b4d"
           },
           "description": "Provider-free deterministic CI coverage for aggregate and receipt acceptance, tampering, reuse, and partial-failure cases."
         },
@@ -198,7 +198,7 @@
           "pointer": {
             "kind": "file",
             "path": "framework/core/src/python/kungfu/agent/skills/codex/SKILL.md",
-            "sha256": "2017c8c3a8a70cdeb7e3f576d8ae4b8028151fdf353bbfdc14dd66466410615b"
+            "sha256": "19d6c43fc504ac764e8d02b89a380cabf7634c40b4a4412373028995dbd7a169"
           },
           "description": "Codex-side report closeout gate instructions shipped in the agent pack."
         }
