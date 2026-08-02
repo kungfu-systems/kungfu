@@ -64,10 +64,16 @@ async def run(caps):
         async with asyncio.timeout(15):
             child = await asyncio.create_subprocess_exec(
                 sys.executable,
+                "-I",
+                "-S",
                 "-c",
                 "raise SystemExit(0)",
+                stdin=asyncio.subprocess.PIPE,
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE,
             )
-            return_code = await child.wait()
+            await child.communicate()
+            return_code = child.returncode
     finally:
         if child is not None and child.returncode is None:
             child.kill()
