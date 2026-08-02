@@ -13,6 +13,10 @@ from jsonschema import Draft202012Validator
 
 from kungfu import contract, peer_lifecycle
 
+from windows_continuity_sentinel import (
+    run_scenario as run_windows_continuity_scenario,
+)
+
 
 def _spec(*, process_exit="restart", durable_state="declared", max_restarts=3):
     return {
@@ -494,51 +498,28 @@ def _assert_healthy(started):
 
 
 def test_real_host_crash_adoption_and_peer_restart_are_fenced(tmp_path):
-    runtime_dir = str(tmp_path / "runtime")
     probe = Path(__file__).parents[1] / "fixtures" / "peer_lifecycle_probe.py"
-    spec = _spec()
-    spec["command"] = {"argv": [sys.executable, str(probe)]}
-    started = peer_lifecycle.ensure(spec, runtime_dir, wait_seconds=10)
-    _assert_healthy(started)
-    first_host_generation = started["host"]["generation"]
-    first_peer_generation = started["peer"]["generation"]
-    first_peer_pid = started["peer"]["pid"]
-    try:
-        host_process = psutil.Process(started["host"]["pid"])
-        host_process.kill()
-        host_process.wait(timeout=5)
-        orphan = _wait_status(runtime_dir, lambda value: value["orphaned"])
-        assert orphan["adoptable"]
-        assert orphan["peer"]["pid"] == first_peer_pid
+    report = run_windows_continuity_scenario(
+        tmp_path / "runtime", probe=probe, phase_timeout_seconds=10
+    )
 
-        adopted = peer_lifecycle.ensure(spec, runtime_dir, wait_seconds=10)
-        assert adopted["healthy"]
-        assert adopted["host"]["generation"] == first_host_generation + 1
-        assert adopted["peer"]["pid"] == first_peer_pid
-
-        with pytest.raises(peer_lifecycle.PeerLifecycleError) as stale:
-            peer_lifecycle.stop(
-                runtime_dir,
-                "test.probe",
-                expected_host_generation=first_host_generation,
-                timeout=0,
-            )
-        assert stale.value.code == "stale-host-generation"
-
-        peer_process = psutil.Process(first_peer_pid)
-        peer_process.kill()
-        restarted = _wait_status(
-            runtime_dir,
-            lambda value: (
-                value["healthy"]
-                and value["peer"]["generation"] == first_peer_generation + 1
-            ),
-        )
-        assert restarted["healthy"]
-        assert restarted["peer"]["pid"] != first_peer_pid
-        assert restarted["restartAttempts"] == 1
-    finally:
-        peer_lifecycle.stop(runtime_dir, "test.probe")
+    assert report["status"] == "passed"
+    assert report["coverage"] == {
+        "realHostCrash": True,
+        "peerAdoption": True,
+        "peerRestart": True,
+        "restartedHealthy": True,
+        "staleOwnerFenced": True,
+        "cleanupComplete": True,
+    }
+    assert set(report["phaseTimings"]) == {
+        "initialReadiness",
+        "hostCrashAdoption",
+        "peerAdoption",
+        "staleOwnerFencing",
+        "peerRestartHealth",
+        "cleanup",
+    }
 
 
 @pytest.mark.parametrize(

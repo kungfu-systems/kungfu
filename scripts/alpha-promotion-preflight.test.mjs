@@ -10,10 +10,12 @@ import { test } from 'node:test';
 import {
   aggregatePlatformReceipts,
   buildPlatformReceipt,
+  buildWindowsContinuityFastReceipt,
   inspectAuditableDemoFastSentinel,
   inspectWindowsFastSentinel,
   runAlphaFastSentinel,
   verifyAggregateReceipt,
+  verifyWindowsContinuityFastReceipt,
 } from './alpha-promotion-preflight.mjs';
 
 const ROOT_FILES = [
@@ -43,6 +45,12 @@ const ROOT_FILES = [
   'scripts/alpha-release-history.mjs',
   'scripts/alpha-ruleset.mjs',
   'scripts/probe-release-platform.mjs',
+  'framework/core/src/python/kungfu/peer_lifecycle.py',
+  'framework/core/tests/python/test_peer_lifecycle.py',
+  'framework/core/tests/python/windows_continuity_sentinel.py',
+  'framework/core/tests/fixtures/peer_lifecycle_probe.py',
+  'scripts/run-shifu-lifecycle.mjs',
+  'shifu.cmd',
   'shifu.gates.json',
 ];
 const PLATFORMS = ['linux-x64', 'linux-arm64', 'macos-arm64', 'windows-x64'];
@@ -61,12 +69,64 @@ function fixture(t) {
     fs.mkdirSync(path.dirname(target), { recursive: true });
     fs.writeFileSync(target, `${file}\n`);
   }
+  fs.writeFileSync(
+    path.join(root, 'shifu.cmd'),
+    'if /i not "%~1"=="check:source" goto native\nsource-acceptance.mjs\n',
+  );
+  fs.writeFileSync(
+    path.join(root, 'scripts/run-shifu-lifecycle.mjs'),
+    [
+      'export function windowsCmdArgs() {}',
+      'windowsVerbatimArguments: true',
+      "['/d', '/s', '/c']",
+    ].join('\n'),
+  );
   git(root, 'init', '-q');
   git(root, 'config', 'user.name', 'Preflight Test');
   git(root, 'config', 'user.email', 'preflight@example.invalid');
   git(root, 'add', '.');
   git(root, '-c', 'core.hooksPath=/dev/null', 'commit', '-q', '-m', 'fixture');
   return root;
+}
+
+function continuityScenario() {
+  const phaseTimings = Object.fromEntries(
+    [
+      'initialReadiness',
+      'hostCrashAdoption',
+      'peerAdoption',
+      'staleOwnerFencing',
+      'peerRestartHealth',
+      'cleanup',
+    ].map((phase) => [phase, { durationMs: 25, deadlineMs: 10_000 }]),
+  );
+  const sample = (number) => ({
+    sample: number,
+    schema: 'kungfu.windows-continuity-fast-sentinel/v1',
+    status: 'passed',
+    phaseTimings,
+    coverage: {
+      realHostCrash: true,
+      peerAdoption: true,
+      peerRestart: true,
+      restartedHealthy: true,
+      staleOwnerFenced: true,
+      cleanupComplete: true,
+    },
+  });
+  return {
+    schema: 'kungfu.windows-continuity-fast-sentinel/v1',
+    status: 'passed',
+    platform: {
+      system: 'win32',
+      machine: 'AMD64',
+      python: '3.13.14',
+      psutil: '6.1.1',
+    },
+    sampleCount: 2,
+    samples: [sample(1), sample(2)],
+    retryPolicy: 'none; repeated samples are independent qualifications',
+  };
 }
 
 function aggregate(root, generatedAt = '2026-07-23T00:00:00.000Z') {
@@ -264,6 +324,84 @@ test('current exact source passes both bounded pre-build sentinels', () => {
   assert.deepEqual(runAlphaFastSentinel('auditable-demo'), []);
 });
 
+test('Windows continuity receipt binds the exact scenario and rejects drift', (t) => {
+  const root = fixture(t);
+  const sourceSha = git(root, 'rev-parse', 'HEAD');
+  const receipt = buildWindowsContinuityFastReceipt({
+    root,
+    sourceSha,
+    platform: 'win32',
+    architecture: 'x64',
+    nativeReport: continuityScenario(),
+    nativeExitCode: 0,
+    durationMs: 250,
+  });
+
+  assert.equal(receipt.status, 'passed');
+  assert.equal(
+    verifyWindowsContinuityFastReceipt({
+      root,
+      receipt,
+      expectedSourceCommit: sourceSha,
+      expectedPlatform: 'win32',
+      expectedArchitecture: 'x64',
+    }),
+    receipt,
+  );
+  fs.appendFileSync(
+    path.join(
+      root,
+      'framework/core/tests/python/windows_continuity_sentinel.py',
+    ),
+    'drift\n',
+  );
+  assert.throws(
+    () =>
+      verifyWindowsContinuityFastReceipt({
+        root,
+        receipt,
+        expectedSourceCommit: sourceSha,
+        expectedPlatform: 'win32',
+      }),
+    /Root mismatch/u,
+  );
+});
+
+test('Windows continuity receipt fails closed for stale, partial, and non-Windows evidence', (t) => {
+  const root = fixture(t);
+  const sourceSha = git(root, 'rev-parse', 'HEAD');
+  const partial = continuityScenario();
+  partial.samples[0].coverage.restartedHealthy = false;
+  for (const [platform, claimedSha, report] of [
+    [
+      'linux',
+      sourceSha,
+      { ...continuityScenario(), platform: { system: 'linux' } },
+    ],
+    ['win32', 'f'.repeat(40), continuityScenario()],
+    ['win32', sourceSha, partial],
+  ]) {
+    const receipt = buildWindowsContinuityFastReceipt({
+      root,
+      sourceSha: claimedSha,
+      platform,
+      architecture: 'x64',
+      nativeReport: report,
+      nativeExitCode: 0,
+    });
+    assert.equal(receipt.status, 'failed');
+    assert.throws(
+      () =>
+        verifyWindowsContinuityFastReceipt({
+          root,
+          receipt,
+          expectedSourceCommit: sourceSha,
+        }),
+      /not qualifying/u,
+    );
+  }
+});
+
 test('fast sentinels fail the representative recent invalid fixtures', () => {
   const windowsIssues = inspectWindowsFastSentinel({
     shifuCmd: '@echo off\nif /i not "%~1"=="build" goto native\n',
@@ -325,6 +463,14 @@ test('patrol, normal Alpha builds and sentinels keep one controller authority', 
   assert.match(build, /windows-fast-sentinel:[\s\S]*runs-on: windows-2025/u);
   assert.match(
     build,
+    /windows-fast-sentinel:[\s\S]*outputs:[\s\S]*receipt-root:[\s\S]*continuity-input-root:/u,
+  );
+  assert.match(
+    build,
+    /Run real Windows crash and restart continuity sentinel[\s\S]*verify-fast-sentinel/u,
+  );
+  assert.match(
+    build,
     /auditable-demo-fast-sentinel:[\s\S]*runs-on: ubuntu-24\.04/u,
   );
   assert.match(
@@ -333,7 +479,7 @@ test('patrol, normal Alpha builds and sentinels keep one controller authority', 
   );
   assert.match(
     build,
-    /fast-sentinels-only:[\s\S]*Run only the source-bound Windows and auditable-demo fast sentinels/u,
+    /fast-sentinels-only:[\s\S]*Run only the exact-source Windows continuity and auditable-demo fast sentinels/u,
   );
   assert.match(
     build,
