@@ -247,7 +247,10 @@
         "status": "implemented-candidate-profile",
         "surfaces": [
           "framework/core/src/python/kungfu/assignment_orchestration.py",
-          "docs/qualification/evidence/assignment-organization-rollout/7aae2c562a/report.json"
+          "docs/qualification/evidence/assignment-organization-rollout/7aae2c562a/report.json",
+          "docs/architecture/primitive-management-plane.md",
+          "framework/incubation/incubation-passport.registry.json",
+          "framework/primitive/kungfu-primitive-catalog.contract.json"
         ]
       },
       "verification": {
@@ -260,6 +263,18 @@
           {
             "path": "framework/core/tests/python/test_assignment_orchestration.py",
             "sha256": "sha256:362a6b85e1162bb04566e778c03eb511c65ac57035ad794bb893802aa4e6d28c"
+          },
+          {
+            "path": "docs/architecture/primitive-management-plane.md",
+            "sha256": "sha256:487177ad3247adbfed6fd1ccdecf7c31a7a6c93387bfba98af41cf1256426bcb"
+          },
+          {
+            "path": "framework/incubation/incubation-passport.registry.json",
+            "sha256": "sha256:8cab184f9c708c5fd00324cb420f22972047875b0238b8bf2d10c95e36012dad"
+          },
+          {
+            "path": "framework/primitive/kungfu-primitive-catalog.contract.json",
+            "sha256": "sha256:e2eac134b5ad294a82710318c9c09096d76420d4f3e741e6b547e8b96d2cbc52"
           }
         ]
       },
@@ -279,11 +294,12 @@
       },
       "claimClass": "adoption-candidate",
       "knownLimitations": [
-        "The evidence is bounded to Kungfu's first-party Assignment profile; it does not prove universal primitive need or independent adoption.",
+        "The evidence is bounded to Kungfu's first-party Assignment profile and Primitive Management Plane; it does not prove universal primitive need or independent adoption.",
+        "Incubation passports are the sole intake and the nine-entry catalog is a derived projection; its experimental and candidate admission states are not shipment or KFD-5 promotion.",
         "A passed Buildchain gate does not self-qualify, activate, or ship KFD-5 support."
       ],
       "owner": "kungfu-primitive",
-      "nextGate": "Retain the exact-source gate and release passport, then obtain independent adopter evidence and an explicit release decision before changing shipped support."
+      "nextGate": "Retain the Primitive Management evidence roots and exact-source gate, then obtain independent adopter evidence and an explicit release decision before changing shipped support."
     },
     {
       "id": "KFD-6",
@@ -303,6 +319,36 @@
         "status": "none",
         "evidenceRoots": []
       },
+      "precursorEvidence": {
+        "status": "non-conforming-evidence",
+        "surfaces": [
+          "framework/work-design-advisor/work-design-advisor.contract.json",
+          "framework/work-design-policy-replay/work-design-policy-replay.contract.json",
+          "framework/project-cut/README.md"
+        ],
+        "evidenceRoots": [
+          {
+            "path": "framework/work-design-advisor/work-design-advisor.contract.json",
+            "sha256": "sha256:bbfd014adb84bfce90e20f39978a3cd6129d9c57a56f4564783273db69eb1614"
+          },
+          {
+            "path": "framework/work-design-policy-replay/work-design-policy-replay.contract.json",
+            "sha256": "sha256:caa4f7d38d7efeef985453267d355c2a4dda3737eb83a4bfd5f6cdfbc6f4bc4e"
+          },
+          {
+            "path": "framework/project-cut/README.md",
+            "sha256": "sha256:0d7b91a5d3c04e47175e286763542a7da9e84d4d01b012451d4895b3191dc062"
+          }
+        ],
+        "missingGates": [
+          "plural genesis methods and declared budgets",
+          "fixed-ontology and no-new-primitive baselines",
+          "systematic false-candidate rejection",
+          "held-out promotion separation",
+          "cross-domain transfer"
+        ],
+        "claimBoundary": "Work Design history selection, outcome estimation, and offline policy replay are bounded advisory precursors only. They do not implement, verify, activate, or ship KFD-6 autonomous discovery."
+      },
       "buildchain": {
         "gateStatus": "not-applicable",
         "protocol": "none"
@@ -319,10 +365,11 @@
       },
       "claimClass": "explicit-non-adoption",
       "knownLimitations": [
-        "Kungfu has no bounded KFD-6 causal-experience discovery implementation or evidence."
+        "Kungfu has no conforming KFD-6 causal-experience discovery implementation or verification.",
+        "The retained Work Design precursors do not compare plural genesis methods, run fixed-ontology or no-new-primitive baselines, reject false candidates systematically, separate held-out promotion, or demonstrate transfer."
       ],
       "owner": "unassigned",
-      "nextGate": "Keep unsupported unless a separately admitted causal-experience discovery initiative is approved."
+      "nextGate": "Keep unsupported; admit a separate causal-experience discovery initiative only after the listed missing gates have executable contracts and evidence."
     },
     {
       "id": "KFD-7",
