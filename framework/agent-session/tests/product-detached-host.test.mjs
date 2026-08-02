@@ -39,7 +39,11 @@ test('filesystem aliases resolve to one detached endpoint', async () => {
   const alias = path.join(parent, 'runtime-alias');
   try {
     await mkdir(runtime);
-    await symlink(runtime, alias, 'dir');
+    await symlink(
+      runtime,
+      alias,
+      process.platform === 'win32' ? 'junction' : 'dir',
+    );
     assert.deepEqual(
       detachedAgentSessionPaths(alias),
       detachedAgentSessionPaths(runtime),
