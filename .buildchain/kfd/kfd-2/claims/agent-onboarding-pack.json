@@ -43,7 +43,7 @@
       "pointer": {
         "kind": "file",
         "path": "framework/core/src/python/kungfu/agent/first-value-receipt.schema.json",
-        "sha256": "23b3b66eff164631e24c5fd2bf81bcf8f51942de114c5c4a0585035e917a3aac"
+        "sha256": "89b076e6f4e1eba2c4a28d159c285c32227b8554f17c779e75369410a39ad839"
       },
       "description": "Machine-verifiable receipt schema for the selected intent, safe discovery, minimal outcome, and candidate identity."
     },
@@ -120,7 +120,7 @@
       },
       {
         "path": "framework/core/src/python/kungfu/agent/first-value-receipt.schema.json",
-        "sha256": "23b3b66eff164631e24c5fd2bf81bcf8f51942de114c5c4a0585035e917a3aac"
+        "sha256": "89b076e6f4e1eba2c4a28d159c285c32227b8554f17c779e75369410a39ad839"
       },
       {
         "path": "framework/core/src/python/kungfu/agent/mode-selection.md",
@@ -166,7 +166,7 @@
       },
       {
         "path": "framework/core/src/python/kungfu/agent/first-value-receipt.schema.json",
-        "sha256": "23b3b66eff164631e24c5fd2bf81bcf8f51942de114c5c4a0585035e917a3aac"
+        "sha256": "89b076e6f4e1eba2c4a28d159c285c32227b8554f17c779e75369410a39ad839"
       }
     ]
   },
@@ -198,7 +198,7 @@
     {
       "name": "agent-first-value-receipt-schema",
       "path": "framework/core/src/python/kungfu/agent/first-value-receipt.schema.json",
-      "sha256": "23b3b66eff164631e24c5fd2bf81bcf8f51942de114c5c4a0585035e917a3aac",
+      "sha256": "89b076e6f4e1eba2c4a28d159c285c32227b8554f17c779e75369410a39ad839",
       "expectedPackagePath": "kungfu/agent/first-value-receipt.schema.json"
     }
   ],

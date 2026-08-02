@@ -161,7 +161,28 @@ def test_first_value_contract_binds_exact_prompt_and_packaged_roots():
     }
     assert view["contract"]["qualification"]["requiredLocalCodexTrials"] == 3
     assert view["productIdentity"]["candidateRoot"].startswith("sha256:")
-    assert view["receiptSchema"]["properties"]["verdict"] == {"const": "verified"}
+    assert view["receiptSchema"]["properties"]["verdict"] == {
+        "type": "string",
+        "const": "verified",
+    }
+
+
+def test_first_value_receipt_schema_is_structured_output_compatible():
+    schema = first_value.contract_view()["receiptSchema"]
+
+    def assert_compatible(node):
+        if isinstance(node, dict):
+            if "const" in node or "enum" in node:
+                assert "type" in node
+            if node.get("type") == "array":
+                assert "items" in node
+            for value in node.values():
+                assert_compatible(value)
+        elif isinstance(node, list):
+            for value in node:
+                assert_compatible(value)
+
+    assert_compatible(schema)
 
 
 def test_first_value_source_revision_prefers_intrinsic_build_info(monkeypatch):
