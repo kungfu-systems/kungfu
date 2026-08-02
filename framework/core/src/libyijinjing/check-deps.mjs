@@ -31,6 +31,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
+const coreRoot = path.resolve(here, '..', '..');
 
 const forbiddenIncludes =
   /^\s*#\s*include\s*[<"](nng\/|rxcpp\/|sqlite|rocksdb\/|leveldb\/|lmdb|duckdb|kungfu\/runtime\/|kungfu\/longfist\/|kungfu\/yijinjing\/schema\/registry\.h|kungfu\/yijinjing\/live\/|kungfu\/yijinjing\/cache\/|kungfu\/yijinjing\/index\/|kungfu\/yijinjing\/nanomsg\/|kungfu\/yijinjing\/socket\/|kungfu\/yijinjing\/io\.h|kungfu\/yijinjing\/rx\.h|kungfu\/yijinjing\/util\/|kungfu\/wingchun\/)/;
@@ -47,6 +48,73 @@ const forbiddenEngineSymbols =
 // Engine names on a live CMake line (comments stripped) mean a link/dependency
 // declaration; the kernel must not carry one.
 const forbiddenLinkTokens = /rocksdb|sqlite|leveldb|lmdb|duckdb/i;
+
+const writerSafetyFiles = [
+  'src/libyijinjing/include/kungfu/yijinjing/journal/frame.h',
+  'src/libyijinjing/include/kungfu/yijinjing/journal/journal.h',
+  'src/libyijinjing/src/journal/writer.cpp',
+  'src/libkungfu/src/runtime/action_recorder.cpp',
+  'src/libkungfu/src/runtime/journal/replay_writer.cpp',
+];
+const writerSafetyFragments = new Map([
+  [
+    'src/libyijinjing/include/kungfu/yijinjing/journal/journal.h',
+    [
+      'void copy_bytes(const void *source, size_t length)',
+      'std::span<const std::byte>',
+      'validate_frame_commit',
+    ],
+  ],
+  [
+    'src/libyijinjing/src/journal/writer.cpp',
+    [
+      'checked_cpu_word_length',
+      'require_capacity(data_length)',
+      'length != data.size()',
+      'std::as_bytes(std::span{data})',
+    ],
+  ],
+  [
+    'src/bindings/python/binding/py-runtime.cpp',
+    [
+      'contiguous one-dimensional bytes-like buffer',
+      'std::span<const std::byte>',
+      'py::overload_cast<int64_t, int32_t, const std::vector<uint8_t> &, uint32_t>',
+    ],
+  ],
+]);
+
+function scanWriterSafety(root) {
+  const hits = [];
+  for (const relative of writerSafetyFiles) {
+    const lines = fs
+      .readFileSync(path.join(root, relative), 'utf8')
+      .split('\n');
+    lines.forEach((line, index) => {
+      if (/\bassert\s*\(/.test(line) && !/\bstatic_assert\s*\(/.test(line))
+        hits.push(
+          `${relative}:${index + 1}: runtime assert is not a memory-safety contract`,
+        );
+      if (
+        /\b(?:std::)?memcpy\s*\(/.test(line) &&
+        !lines
+          .slice(Math.max(0, index - 3), index + 1)
+          .join('\n')
+          .includes('KUNGFU_WRITER_RAW_COPY_EXCEPTION:')
+      )
+        hits.push(
+          `${relative}:${index + 1}: raw copy lacks an adjacent reviewed exception marker`,
+        );
+    });
+  }
+  for (const [relative, fragments] of writerSafetyFragments) {
+    const source = fs.readFileSync(path.join(root, relative), 'utf8');
+    for (const fragment of fragments)
+      if (!source.includes(fragment))
+        hits.push(`${relative}: missing checked-path fragment: ${fragment}`);
+  }
+  return hits;
+}
 
 function* walk(dir) {
   if (!fs.existsSync(dir)) return;
@@ -190,6 +258,32 @@ function selfTest() {
     );
     expect('seeded trading symbol is caught', seeded.symbolHits.length > 0);
     expect('seeded engine link is caught', seeded.linkHits.length > 0);
+
+    for (const relative of writerSafetyFiles)
+      write(`core/${relative}`, 'int clean;\n');
+    for (const [relative, fragments] of writerSafetyFragments)
+      write(`core/${relative}`, `${fragments.join('\n')}\n`);
+    write(
+      'core/src/libyijinjing/include/kungfu/yijinjing/journal/frame.h',
+      '// KUNGFU_WRITER_RAW_COPY_EXCEPTION: checked fixture\nmemcpy(dst, src, length);\n',
+    );
+    expect(
+      'checked writer fixture passes',
+      scanWriterSafety(path.join(tmp, 'core')).length === 0,
+    );
+    write(
+      'core/src/libyijinjing/src/journal/writer.cpp',
+      `${writerSafetyFragments.get('src/libyijinjing/src/journal/writer.cpp').join('\n')}\nassert(length <= capacity);\nmemcpy(dst, src, length);\n`,
+    );
+    const writerSeeded = scanWriterSafety(path.join(tmp, 'core'));
+    expect(
+      'seeded assert-only writer bound is caught',
+      writerSeeded.some((hit) => hit.includes('runtime assert')),
+    );
+    expect(
+      'seeded unchecked writer copy is caught',
+      writerSeeded.some((hit) => hit.includes('raw copy lacks')),
+    );
   } finally {
     fs.rmSync(tmp, { recursive: true, force: true });
   }
@@ -207,8 +301,14 @@ if (process.argv.includes('--self-test')) {
   selfTest();
 } else {
   console.log(`yijinjing core dependency guard: ${here}`);
-  if (report(runChecks(here))) process.exit(1);
+  const dependencyFailed = report(runChecks(here));
+  const writerSafetyHits = scanWriterSafety(coreRoot);
+  if (writerSafetyHits.length) {
+    console.error(writerSafetyHits.join('\n'));
+    console.error('FAIL: yijinjing writer memory-safety source guard');
+  }
+  if (dependencyFailed || writerSafetyHits.length) process.exit(1);
   console.log(
-    'OK: core includes only the schema leaf, storage contracts, hash, mmap and base utilities.',
+    'OK: core dependency boundary and checked writer memory-safety paths hold.',
   );
 }

@@ -1143,7 +1143,7 @@ class CoordinatorEngine(NativeCoordinator):
             return
         payload = grant_payload(name, holder)
         carrier, data = wrap_event(ACTION_GRANT, payload)
-        self.get_writer(holder).write_bytes(self.now(), carrier, list(data), len(data))
+        self.get_writer(holder).write_bytes(self.now(), carrier, data)
 
     def _reap_dead_lock_holders(self) -> None:
         # Reclaim locks whose holder is gone. The holder's liveness comes from
