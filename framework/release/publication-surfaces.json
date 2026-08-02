@@ -194,7 +194,7 @@
             "product-alpha",
             "product-stable"
           ],
-          "sourceRoot": "sha256:319b251e6b63912cc299161e68d9d817601478a932b31f131c188732f87e13d2"
+          "sourceRoot": "sha256:a94f7b5c47883a70231ab1ca9b202cf0e7c15089d163410e0888b937c57d2c1f"
         },
         {
           "path": ".github/workflows/stable-candidate-patrol.yml",
@@ -845,5 +845,5 @@
       }
     }
   ],
-  "registryRoot": "sha256:f453246f13c4060d607e20efcd40be7461c90afd3c9288ee53d255422ef5faf1"
+  "registryRoot": "sha256:4c9a6fd13f74f9455d2aaf4d63f1cb43afb697ca5130fbe32dcbf9751b3e26c0"
 }
