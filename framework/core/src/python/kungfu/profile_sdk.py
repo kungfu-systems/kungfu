@@ -21,6 +21,7 @@ from typing import Any, Mapping
 from kungfu import agent as agent_pack
 from kungfu import runtime_broker
 from kungfu import kfx_contract
+from kungfu import profile_lifecycle_commands
 from kungfu.storage import service as storage_service
 from kungfu.profile_sdk_support import (
     ACTION_PLAN_SCHEMA as ACTION_PLAN_SCHEMA,
@@ -86,16 +87,23 @@ def capabilities() -> dict[str, Any]:
     contract_bytes = agent_pack.document_text("profile-sdk.contract.json").encode(
         "utf-8"
     )
+    lifecycle_authority = storage_service.profile_lifecycle("", "contract")
+    sdk_authority = {
+        "schema": sdk_contract["schema"],
+        "id": sdk_contract["id"],
+        "version": sdk_contract["version"],
+        "root": "sha256:" + _sha256(contract_bytes),
+    }
+    lifecycle_command_contract = profile_lifecycle_commands.command_contract(
+        lifecycle_authority,
+        sdk_authority,
+        agent_pack.cli_surface_catalog(),
+    )
     return {
         "schema": SDK_SCHEMA,
         "contract": kfx_contract.contract_metadata(),
         "profileSchema": kfx_contract.profile_suite_schema(),
-        "sdkContract": {
-            "schema": sdk_contract["schema"],
-            "id": sdk_contract["id"],
-            "version": sdk_contract["version"],
-            "root": "sha256:" + _sha256(contract_bytes),
-        },
+        "sdkContract": sdk_authority,
         "schemas": {
             "brief": sdk_contract["briefSchema"],
             "decisionCard": sdk_contract["decisionCardSchema"],
@@ -113,7 +121,8 @@ def capabilities() -> dict[str, Any]:
         },
         "sourcePlanSchema": SOURCE_PLAN_SCHEMA,
         "actionRegistrySchema": ACTION_REGISTRY_SCHEMA,
-        "lifecycleAuthority": storage_service.profile_lifecycle("", "contract"),
+        "lifecycleAuthority": lifecycle_authority,
+        "lifecycleCommandContract": lifecycle_command_contract,
         "operations": [
             "capabilities",
             "examples",
@@ -156,6 +165,7 @@ def capabilities() -> dict[str, Any]:
             "assessment-authorize",
             "manager",
             "authorize-lifecycle",
+            "lifecycle-command-contract",
             "export",
             "import",
         ],
@@ -171,6 +181,12 @@ def capabilities() -> dict[str, Any]:
             "selfCertification": False,
         },
     }
+
+
+def lifecycle_command_contract() -> dict[str, Any]:
+    """Return the same installed command contract projected by capabilities."""
+
+    return capabilities()["lifecycleCommandContract"]
 
 
 def examples() -> dict[str, Any]:

@@ -316,6 +316,8 @@
     "test:native-kfx-admission": "node scripts/require-shifu.mjs test:native-kfx-admission && node scripts/run-native-kfx-admission-tests.mjs",
     "check:kfx-identity-neutral-authority": "node scripts/require-shifu.mjs check:kfx-identity-neutral-authority && node scripts/run-native-kfx-admission-tests.mjs --identity-neutral-only",
     "test:profile-lifecycle": "node scripts/require-shifu.mjs test:profile-lifecycle && node scripts/run-profile-lifecycle-tests.mjs",
+    "fix:profile-lifecycle-command-contract": "node scripts/require-shifu.mjs fix:profile-lifecycle-command-contract && uv run --project framework/core --frozen ruff format framework/core/src/python/kungfu/profile_lifecycle_commands.py framework/core/src/python/kungfu/profile_sdk.py framework/core/src/python/kungfu/profile_composition.py framework/core/tests/python/test_profile_lifecycle_command_contract.py && biome check --write scripts/run-profile-lifecycle-tests.mjs scripts/qualify-profile-lifecycle-command-contract.mjs",
+    "qualify:profile-lifecycle-command-contract": "node scripts/require-shifu.mjs qualify:profile-lifecycle-command-contract && node scripts/qualify-profile-lifecycle-command-contract.mjs",
     "test:agent-profile-sdk": "node scripts/require-shifu.mjs test:agent-profile-sdk && node scripts/run-agent-profile-sdk-tests.mjs",
     "test:agent-console-contract": "node scripts/require-shifu.mjs test:agent-console-contract && node scripts/run-agent-console-contract-tests.mjs",
     "test:runtime-upgrade": "node scripts/require-shifu.mjs test:runtime-upgrade && node scripts/run-runtime-upgrade-tests.mjs",
