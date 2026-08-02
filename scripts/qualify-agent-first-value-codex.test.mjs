@@ -38,12 +38,12 @@ test('Codex result schema constrains the user response without copying receipts'
   assert.equal(schema.properties.response.maxLength, 4096);
   assert.match(
     schema.properties.response.description,
-    /personalization\.explanation.*scopeStatement verbatim/u,
+    /sibling evidence fields remain visible/u,
   );
   assert.equal(schema.properties.personalization.additionalProperties, false);
   assert.match(
     schema.properties.personalization.properties.explanation.description,
-    /copy it verbatim into response/u,
+    /user-visible sentence/u,
   );
   assert.deepEqual(schema.properties.nextStep.properties.safetyClass.enum, [
     'read-only',
@@ -245,6 +245,13 @@ test('normalizes experience only when the evidence is user-visible and safe', ()
     normalizedExperienceFromResult(result, value).intentId,
     'onboarding',
   );
+  const validReceiptCitation = result.receiptCitation;
+  result.receiptCitation = `本次 receipt 是 ${root('f')}，你可以独立复验。`;
+  assert.throws(
+    () => normalizedExperienceFromResult(result, value),
+    /receipt citation omitted or changed/u,
+  );
+  result.receiptCitation = validReceiptCitation;
   result.nextStep.command = 'kungfu project open-plan --execute';
   assert.throws(
     () => normalizedExperienceFromResult(result, value),

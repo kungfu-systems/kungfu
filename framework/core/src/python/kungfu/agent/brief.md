@@ -33,8 +33,10 @@ directly with the bounded protocol below before your final response.
 7. Whenever step 3 loads the first-value contract, run exactly one
    `kungfu agent first-value receipt` with the selected intent, actual question count,
    declared discovery command, and a bounded outcome summary before the final
-   response. Cite the CLI-returned `receiptRoot`; never reconstruct or recompute
-   receipt fields in model prose. Give the user one copyable read-only
+   response. Run it as one standalone command and let its JSON print directly;
+   do not capture, redirect, pipe, or reprint it. Cite the CLI-returned `receiptRoot`;
+   never reconstruct or recompute receipt fields in model prose.
+   Give the user one copyable read-only
    verification command and one concrete safe next step. State that the result
    is local to this candidate and does not qualify Claude, hosted Codex, another
    platform, or a public release. The product reruns the discovery without a

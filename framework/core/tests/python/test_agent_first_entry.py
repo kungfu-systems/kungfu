@@ -49,6 +49,7 @@ def test_brief_and_intent_map_enforce_complete_bounded_first_entry():
     assert "merely printing or reading it is not\ncompletion" in brief
     assert "do not run `kungfu agent brief` again" in brief
     assert "run exactly one\n   `kungfu agent first-value receipt`" in brief
+    assert "do not capture, redirect, pipe, or reprint it" in brief
     assert "Cite the CLI-returned `receiptRoot`" in brief
     assert "never reconstruct or recompute" in brief
     assert "the user does not need to name any protocol step" in brief

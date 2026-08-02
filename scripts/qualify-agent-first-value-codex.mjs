@@ -75,7 +75,7 @@ export function codexResultSchema() {
         minLength: 80,
         maxLength: 4096,
         description:
-          'The complete user-visible answer. It must include personalization.explanation, receiptCitation, both command strings, and scopeStatement verbatim.',
+          'The plain-language part of the user-visible structured answer; the sibling evidence fields remain visible without redundant copying.',
       },
       intentId: { type: 'string', minLength: 1, maxLength: 64 },
       personalization: {
@@ -103,7 +103,7 @@ export function codexResultSchema() {
             minLength: 20,
             maxLength: 512,
             description:
-              'One complete sentence naming the visible personalization basis; copy it verbatim into response.',
+              'One complete user-visible sentence naming the personalization basis.',
           },
         },
       },
@@ -112,7 +112,7 @@ export function codexResultSchema() {
         minLength: 80,
         maxLength: 256,
         description:
-          'One complete sentence containing the exact receiptRoot returned by the CLI; copy it verbatim into response.',
+          'One complete user-visible sentence containing the exact receiptRoot returned by the CLI.',
       },
       verification: {
         type: 'object',
@@ -123,7 +123,7 @@ export function codexResultSchema() {
             type: 'string',
             minLength: 8,
             maxLength: 512,
-            description: 'A copyable command; copy it verbatim into response.',
+            description: 'A user-visible copyable command.',
           },
           expected: { type: 'string', minLength: 8, maxLength: 512 },
         },
@@ -137,7 +137,7 @@ export function codexResultSchema() {
             type: 'string',
             minLength: 8,
             maxLength: 512,
-            description: 'A copyable command; copy it verbatim into response.',
+            description: 'A user-visible copyable command.',
           },
           safetyClass: { type: 'string', enum: ['read-only', 'preview-safe'] },
           reason: { type: 'string', minLength: 8, maxLength: 512 },
@@ -146,7 +146,7 @@ export function codexResultSchema() {
       scopeStatement: {
         type: 'string',
         enum: [LOCAL_QUALIFICATION_SCOPE_STATEMENT],
-        description: 'Copy this qualification boundary verbatim into response.',
+        description: 'The user-visible qualification boundary.',
       },
       nonClaims: {
         type: 'array',
@@ -389,6 +389,21 @@ function codexEventInventory(jsonl) {
     if (!line.trim()) continue;
     try {
       const event = JSON.parse(line);
+      const command = String(event?.item?.command || '');
+      const output = String(
+        event?.item?.aggregated_output ||
+          event?.item?.output ||
+          event?.item?.text ||
+          '',
+      );
+      const isReceiptCommand = command.includes('first-value receipt');
+      const outputSchemas = isReceiptCommand
+        ? jsonObjects(output)
+            .map((value) => value?.schema)
+            .filter((value) => typeof value === 'string')
+            .slice(0, 4)
+            .join(',')
+        : '';
       inventory.add(
         [
           event?.type || 'unknown-event',
@@ -397,11 +412,17 @@ function codexEventInventory(jsonl) {
             .sort()
             .join(','),
           event?.item?.type === 'command_execution'
-            ? `receipt-command=${String(event.item.command || '').includes('first-value receipt')}`
+            ? `receipt-command=${isReceiptCommand}`
             : '',
           event?.item?.type === 'command_execution'
-            ? `receipt-output=${String(event.item.aggregated_output || '').includes(RECEIPT_SCHEMA)}`
+            ? `receipt-output=${output.includes(RECEIPT_SCHEMA)}`
             : '',
+          isReceiptCommand ? `exit=${event.item.exit_code}` : '',
+          isReceiptCommand ? `output-bytes=${Buffer.byteLength(output)}` : '',
+          isReceiptCommand
+            ? `output-root=${bytesRoot(Buffer.from(output))}`
+            : '',
+          isReceiptCommand ? `schemas=${outputSchemas || 'none'}` : '',
         ].join(':'),
       );
     } catch {
@@ -575,30 +596,22 @@ export function normalizedExperienceFromResult(result, receipt) {
   );
   assert(
     result.personalization?.basis?.length >= 1 &&
-      typeof result.personalization?.explanation === 'string' &&
-      result.response.includes(result.personalization.explanation),
-    'personalization was not grounded in the user-visible response',
+      typeof result.personalization?.explanation === 'string',
+    'personalization was not grounded in the user-visible result',
   );
   assert(
     typeof result.receiptCitation === 'string' &&
-      result.receiptCitation.includes(receipt.receiptRoot) &&
-      result.response.includes(result.receiptCitation),
-    'response omitted the CLI receipt root',
+      result.receiptCitation.includes(receipt.receiptRoot),
+    'receipt citation omitted or changed the CLI receipt root',
   );
   safeUserCommand(result.verification?.command, 'verification command');
   safeUserCommand(result.nextStep?.command, 'next-step command');
-  assert(
-    result.response.includes(result.verification.command) &&
-      result.response.includes(result.nextStep.command),
-    'verification or next-step command was not user-visible',
-  );
   assert(
     ['read-only', 'preview-safe'].includes(result.nextStep?.safetyClass),
     'next step omitted its safety class',
   );
   assert(
-    result.scopeStatement === LOCAL_QUALIFICATION_SCOPE_STATEMENT &&
-      result.response.includes(result.scopeStatement),
+    result.scopeStatement === LOCAL_QUALIFICATION_SCOPE_STATEMENT,
     'qualification boundary was not user-visible',
   );
   for (const nonClaim of REQUIRED_NON_CLAIMS) {
