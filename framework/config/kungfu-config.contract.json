@@ -933,16 +933,34 @@
               "completedAt"
             ],
             "properties": {
-              "version": { "const": 1 },
+              "version": {
+                "const": 1
+              },
               "status": {
-                "enum": ["unseen", "started", "completed", "dismissed"]
+                "enum": [
+                  "unseen",
+                  "started",
+                  "completed",
+                  "dismissed"
+                ]
               },
               "route": {
-                "enum": ["none", "agent", "lab", "tour"]
+                "enum": [
+                  "none",
+                  "agent",
+                  "lab",
+                  "tour"
+                ]
               },
-              "labCompleted": { "type": "boolean" },
-              "tourCompleted": { "type": "boolean" },
-              "completedAt": { "type": "string" }
+              "labCompleted": {
+                "type": "boolean"
+              },
+              "tourCompleted": {
+                "type": "boolean"
+              },
+              "completedAt": {
+                "type": "string"
+              }
             }
           }
         }
