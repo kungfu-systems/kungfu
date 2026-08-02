@@ -95,6 +95,8 @@ function wrapOnboardingText(value: string, width: number): string[] {
   return lines;
 }
 
+const AGENT_SHELL_ENTRY = 'kungfu run codex|claude|opencode|amp';
+
 export type TuiOnboardingAction =
   | 'copy'
   | 'lab'
@@ -199,10 +201,11 @@ export function AgentFirstOnboardingView({
       <Text color="green" bold>
         KUNGFU · AGENT-FIRST ENTRY
       </Text>
-      <Text bold>Start in either place. Use one path, or both.</Text>
+      <Text bold>Keep your agent. Give it durable Work.</Text>
       <Text wrap="wrap">
-        Copy Kungfu into the Agent you already use, continue directly into the
-        Kungfu UI, or explore first. Copying is helpful, never required.
+        Start in either place. Copy Kungfu into the Agent you already use,
+        continue directly into the Kungfu UI, or explore first. Copying is
+        helpful, never required.
       </Text>
       <TitledBorderWindow
         columns={Math.max(20, dimensions.columns - 2)}
@@ -220,7 +223,7 @@ export function AgentFirstOnboardingView({
           )),
           <Text key="prompt-command-gap"> </Text>,
           ...wrapOnboardingText(
-            `The copied prompt includes this exact local command: ${command}`,
+            `Exact local command: ${command}`,
             Math.max(16, dimensions.columns - 8),
           ).map((row) => (
             <Text key={`command:${row}`} dimColor>
@@ -241,6 +244,9 @@ export function AgentFirstOnboardingView({
         rows={[
           <Text key="continue-copy">
             Open the local Work control plane. No copy or paste is required.
+          </Text>,
+          <Text key="shell-entry" dimColor>
+            Keep your normal Agent workflow: {AGENT_SHELL_ENTRY}
           </Text>,
           <OnboardingShortcutLine
             key="continue-shortcut"
