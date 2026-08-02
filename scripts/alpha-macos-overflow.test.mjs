@@ -464,8 +464,9 @@ test('workflow contract keeps candidates exact-source, independent, and publish-
   );
   assert.match(
     workflow,
-    /uses: kungfu-systems\/buildchain\/\.github\/workflows\/\.build\.yml@252900728d55b63f36b5304261dd9c49d738a07a/u,
+    /uses: kungfu-systems\/buildchain\/\.github\/workflows\/\.build\.yml@a5d2e312d083bc1b382c36e2ecb9179c7cd90dbe/u,
   );
+  assert.match(workflow, /checkout-history-mode: full/u);
   assert.match(
     workflow,
     /self-hosted-offline-fallback: \$\{\{ fromJSON\(inputs\.macos-overflow-request-json \|\| '\{\}'\)\.mode != 'self-hosted' && fromJSON\(inputs\.macos-overflow-request-json \|\| '\{\}'\)\.mode != 'github-hosted' \}\}/u,
