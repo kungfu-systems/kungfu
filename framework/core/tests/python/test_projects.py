@@ -1,5 +1,6 @@
 # SPDX-License-Identifier: Apache-2.0
 
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 import pytest
@@ -417,3 +418,74 @@ def test_project_work_inventory_lists_multiple_captured_work_without_writing(tmp
     summary = projects.catalog(config_home=str(config_home))["projects"][0]
     assert summary["workCount"] == 2
     assert summary["updatedAt"].endswith("Z")
+
+
+def test_project_work_inventory_projects_live_executing_phase(tmp_path):
+    project = tmp_path / "ordinary-project"
+    project.mkdir()
+    target = resolve_workspace_target(
+        "capture-only",
+        str(project),
+        cwd=str(project),
+    )
+    request = {
+        "schema": "kungfu.assignment-request/v1",
+        "source": {
+            "kind": "kungfu-product",
+            "surface": "project-work-composer",
+        },
+        "retention": {
+            "policy": "explicit-expiry-retain-bytes-v1",
+            "expiresAt": None,
+        },
+        "workDefinition": {
+            "goal_id": "assignment-example",
+            "mission_id": "project-work-example",
+            "title": "Example Work",
+            "objective": "Produce a reviewable result",
+            "acceptance_criteria": ["The result is reviewable"],
+        },
+    }
+    orchestration.capture_assignment_request(request, target)
+    runtime = project / ".kungfu" / "runtime"
+    _activate_work_control(runtime)
+    mission_control.create_initiative(
+        str(runtime),
+        initiative_id="project-work-example",
+        title="Project Work Example",
+        intent="Retain live Work state in the Project view",
+        actor="local-user",
+    )
+    mission_control.create_assignment(
+        str(runtime),
+        initiative_id="project-work-example",
+        assignment_id="assignment-example",
+        title="Example Work",
+        objective="Produce a reviewable result",
+        actor="local-user",
+    )
+    mission_control.claim_assignment_execution(
+        str(runtime),
+        initiative_id="project-work-example",
+        assignment_id="assignment-example",
+        owner="local-user",
+        agent="native-agent",
+        slot="interactive",
+        lease_id="lease-example",
+        lease_expires_at=(datetime.now(timezone.utc) + timedelta(hours=1)).isoformat(),
+        authorized_by="local-user",
+    )
+    mission_control.advance_assignment_phase(
+        str(runtime),
+        initiative_id="project-work-example",
+        assignment_id="assignment-example",
+        to_phase="executing",
+        actor="native-agent",
+        reason="begin retained Project Work",
+    )
+
+    inventory = projects.work_inventory(project)
+
+    assert inventory["activeWork"]["phase"] == "executing"
+    assert inventory["activeWork"]["settled"] is False
+    assert inventory["writeOccurred"] is False
