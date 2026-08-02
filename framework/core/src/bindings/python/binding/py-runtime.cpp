@@ -1423,7 +1423,30 @@ void bind(pybind11::module &&m) {
       .def("copy_frame", &writer::copy_frame)
       .def("mark", &writer::mark)
       .def("mark_at", &writer::mark_at)
-      .def("write_bytes", &writer::write_bytes);
+      .def(
+          "write_bytes",
+          [](writer &target, int64_t trigger_time, int32_t carrier_type, py::buffer payload) {
+            const auto view = payload.request();
+            if (view.ndim != 1 || view.itemsize <= 0 || view.size < 0 ||
+                (view.size > 1 && (view.strides.empty() || view.strides[0] != view.itemsize))) {
+              throw std::invalid_argument("writer payload must be a contiguous one-dimensional bytes-like buffer");
+            }
+            const auto item_size = static_cast<size_t>(view.itemsize);
+            const auto item_count = static_cast<size_t>(view.size);
+            if (item_count > std::numeric_limits<size_t>::max() / item_size) {
+              throw std::invalid_argument("writer payload byte length overflows size_t");
+            }
+            const auto byte_length = item_count * item_size;
+            if (view.ptr == nullptr && byte_length != 0) {
+              throw std::invalid_argument("writer payload has a null address");
+            }
+            target.write_bytes(trigger_time, carrier_type,
+                               std::span<const std::byte>(static_cast<const std::byte *>(view.ptr), byte_length));
+          },
+          py::arg("trigger_time"), py::arg("carrier_type"), py::arg("payload"))
+      .def("write_bytes",
+           py::overload_cast<int64_t, int32_t, const std::vector<uint8_t> &, uint32_t>(&writer::write_bytes),
+           py::arg("trigger_time"), py::arg("carrier_type"), py::arg("payload"), py::arg("length"));
 
   py::class_<sink, PySink, sink_ptr>(m, "sink")
       .def(py::init())
