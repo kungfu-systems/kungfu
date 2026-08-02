@@ -32,16 +32,16 @@ permissions:
 
 jobs:
   patrol:
-    uses: kungfu-systems/buildchain/.github/workflows/dev-qualification-patrol.yml@0be49aac9cd9974f74b5b73944a58ba0125f1c90
+    uses: kungfu-systems/buildchain/.github/workflows/dev-qualification-patrol.yml@49da2cd118b04d502fd90deaa57acaf83b0eaed7
     with:
-      buildchain-ref: ${{ inputs.buildchain-ref || '0be49aac9cd9974f74b5b73944a58ba0125f1c90' }}
+      buildchain-ref: ${{ inputs.buildchain-ref || '49da2cd118b04d502fd90deaa57acaf83b0eaed7' }}
       source-branch: ${{ github.event.repository.default_branch }}
       dev-workflow-path: .github/workflows/dev-verify-patrol.yml
       preflight-workflow-path: .github/workflows/alpha-promotion-preflight.yml
       priority-workflows-json: >-
         [".github/workflows/build.yml",".github/workflows/release-new-version.yml",".github/workflows/release-shifu.yml"]
       dispatch-inputs-json: >-
-        {"buildchain-ref":"${{ inputs.buildchain-ref || '0be49aac9cd9974f74b5b73944a58ba0125f1c90' }}"}
+        {"buildchain-ref":"${{ inputs.buildchain-ref || '49da2cd118b04d502fd90deaa57acaf83b0eaed7' }}"}
       max-attempts: 2
       mutation-authorized: ${{ github.event_name != 'workflow_dispatch' }}
       dry-run: ${{ github.event_name == 'workflow_dispatch' && inputs.dry-run || false }}
