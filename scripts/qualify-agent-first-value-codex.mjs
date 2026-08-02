@@ -17,6 +17,7 @@ const REQUIRED_TRIALS = 10;
 const MINIMUM_CANONICAL_TRIALS = 5;
 const QUALIFICATION_MODEL = 'gpt-5.6-terra';
 const QUALIFICATION_REASONING_EFFORT = 'low';
+const QUALIFICATION_CONTEXT_ISOLATION = 'ephemeral-auth-link';
 const REQUIRED_NON_CLAIMS = [
   'claude-qualified',
   'ci-hosted-codex-qualified',
@@ -175,6 +176,13 @@ export function candidateShellRouter() {
 
 function installCandidateShellRouter(home) {
   fs.writeFileSync(path.join(home, '.zshenv'), candidateShellRouter(), 'utf8');
+}
+
+export function installIsolatedCodexHome(sourceCodexHome, destination) {
+  const sourceAuth = fs.realpathSync(path.join(sourceCodexHome, 'auth.json'));
+  fs.mkdirSync(destination, { recursive: true });
+  fs.symlinkSync(sourceAuth, path.join(destination, 'auth.json'));
+  return destination;
 }
 
 function jsonObjects(value) {
@@ -668,6 +676,10 @@ export function verifyAgentFirstValueQualification(report) {
     'Codex qualification model mismatch',
   );
   assert(
+    report.provider?.contextIsolation === QUALIFICATION_CONTEXT_ISOLATION,
+    'Codex qualification context isolation mismatch',
+  );
+  assert(
     report.provider?.reasoningEffort === QUALIFICATION_REASONING_EFFORT,
     'Codex qualification reasoning effort mismatch',
   );
@@ -859,10 +871,15 @@ function run(argv) {
     path.join(os.tmpdir(), 'kungfu-first-value-probe-'),
   );
   const probeHome = path.join(probeRoot, 'home');
+  const isolatedCodexHome = installIsolatedCodexHome(
+    process.env.CODEX_HOME,
+    path.join(probeRoot, 'codex-home'),
+  );
   fs.mkdirSync(probeHome, { recursive: true });
   installCandidateShellRouter(probeHome);
   const baseEnv = {
     ...process.env,
+    CODEX_HOME: isolatedCodexHome,
     HOME: probeHome,
     XDG_CONFIG_HOME: path.join(probeHome, '.config'),
     KF_CONFIG_HOME: path.join(probeHome, '.config', 'kungfu'),
@@ -905,6 +922,8 @@ function run(argv) {
         QUALIFICATION_REASONING_EFFORT &&
         contract.contract?.qualification?.localCodexProfile?.model ===
           QUALIFICATION_MODEL &&
+        contract.contract?.qualification?.localCodexProfile
+          ?.contextIsolation === QUALIFICATION_CONTEXT_ISOLATION &&
         contract.contract?.qualification?.localCodexProfile?.executionMode ===
           'codex-exec-ephemeral' &&
         contract.contract?.qualification?.localCodexProfile?.userConfig ===
@@ -1073,6 +1092,7 @@ function run(argv) {
         surface: 'codex-cli',
         version: codexVersion,
         executionMode: 'codex-exec-ephemeral',
+        contextIsolation: QUALIFICATION_CONTEXT_ISOLATION,
         model: QUALIFICATION_MODEL,
         reasoningEffort: QUALIFICATION_REASONING_EFFORT,
       },

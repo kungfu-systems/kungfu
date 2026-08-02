@@ -82,6 +82,7 @@
     "ci": "deterministic-contract-and-receipt-only",
     "local": "provider-and-candidate-specific",
     "localCodexProfile": {
+      "contextIsolation": "ephemeral-auth-link",
       "executionMode": "codex-exec-ephemeral",
       "model": "gpt-5.6-terra",
       "reasoningEffort": "low",

@@ -1,11 +1,15 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
 import test from 'node:test';
 
 import {
   candidateShellRouter,
   codexResultSchema,
+  installIsolatedCodexHome,
   normalizedExperienceFromResult,
   protocolEvidenceFromCodexEventStream,
   receiptsFromCodexEventStream,
@@ -13,6 +17,26 @@ import {
   verifyAgentFirstValueQualification,
   verifyFirstValueReceipt,
 } from './qualify-agent-first-value-codex.mjs';
+
+test('isolated Codex home projects authentication without copying it', () => {
+  const rootDir = fs.mkdtempSync(path.join(os.tmpdir(), 'kungfu-codex-home-'));
+  const source = path.join(rootDir, 'source');
+  const destination = path.join(rootDir, 'isolated');
+  fs.mkdirSync(source);
+  fs.writeFileSync(path.join(source, 'auth.json'), '{"fixture":true}\n');
+  try {
+    installIsolatedCodexHome(source, destination);
+    const projected = path.join(destination, 'auth.json');
+    assert.equal(fs.lstatSync(projected).isSymbolicLink(), true);
+    assert.equal(
+      fs.realpathSync(projected),
+      fs.realpathSync(path.join(source, 'auth.json')),
+    );
+    assert.deepEqual(fs.readdirSync(destination), ['auth.json']);
+  } finally {
+    fs.rmSync(rootDir, { recursive: true, force: true });
+  }
+});
 
 test('candidate shell router pins every plain kungfu command to the candidate', () => {
   const router = candidateShellRouter();
@@ -255,6 +279,7 @@ function qualification() {
       surface: 'codex-cli',
       version: 'codex-cli fixture',
       executionMode: 'codex-exec-ephemeral',
+      contextIsolation: 'ephemeral-auth-link',
       model: 'gpt-5.6-terra',
       reasoningEffort: 'low',
     },
@@ -356,6 +381,19 @@ test('deterministic CI verifier rejects an unpinned Codex model', () => {
   assert.throws(
     () => verifyAgentFirstValueQualification(report),
     /model mismatch/u,
+  );
+});
+
+test('deterministic CI verifier rejects inherited Codex context', () => {
+  const report = qualification();
+  report.provider.contextIsolation = 'inherited';
+  report.qualificationRoot = semanticRoot({
+    ...report,
+    qualificationRoot: undefined,
+  });
+  assert.throws(
+    () => verifyAgentFirstValueQualification(report),
+    /context isolation mismatch/u,
   );
 });
 
