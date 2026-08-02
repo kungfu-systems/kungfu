@@ -7,9 +7,23 @@ from pathlib import Path
 import shutil
 import socket
 import sys
+from typing import Protocol
 
 
 MAX_RESPONSE_BYTES = 1024 * 1024
+
+
+class ReturnCodeResult(Protocol):
+    returncode: int
+
+
+def native_heartbeat_observation(binding, work_observer=None):
+    """Separate provider liveness from an optional bound Work projection."""
+
+    work_ref = binding.get("workRef") if binding.get("kind") == "work" else None
+    if work_ref:
+        return dict(work_observer(work_ref) if work_observer else {})
+    return {"state": "fresh", "work": None, "diagnostic": None}
 
 
 def endpoint_for_runtime(runtime_dir):

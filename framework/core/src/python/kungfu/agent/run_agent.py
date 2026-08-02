@@ -21,7 +21,7 @@ import subprocess
 import sys
 import threading
 import time
-from typing import Any, Callable, Mapping, Protocol, Sequence
+from typing import Any, Callable, Mapping, Sequence
 import uuid
 
 import kungfu
@@ -48,10 +48,6 @@ _SENSITIVE_COMMAND_NAME = (
     r"(?:api[-_]?key|access[-_]?key|token|secret|password|passwd|"
     r"authorization|cookie|credential|signature)"
 )
-
-
-class _ReturnCodeResult(Protocol):
-    returncode: int
 
 
 def bind_current_native_work(
@@ -692,7 +688,7 @@ def run_native_interactive(
     workspace_root: str,
     work_ref: Mapping[str, Any] | None,
     work_selection: Mapping[str, Any],
-    process_runner: Callable[..., _ReturnCodeResult] | None = None,
+    process_runner: Callable[..., session_surface.ReturnCodeResult] | None = None,
     session_invoker: Callable[[Mapping[str, Any]], Mapping[str, Any]] | None = None,
     session_endpoint: str | None = None,
     work_observer: Callable[[Mapping[str, Any] | None], Mapping[str, Any]]
@@ -802,21 +798,9 @@ def run_native_interactive(
                     {"operation": "show", "session": dict(session_ref)}
                 )
                 binding = current.get("binding") or {}
-                if binding.get("kind") == "work" and binding.get("workRef"):
-                    active_work_ref = binding["workRef"]
-                    observed = dict(
-                        work_observer(active_work_ref) if work_observer else {}
-                    )
-                else:
-                    # Session liveness and Work observation are independent.
-                    # A workspace assistant has no Work projection yet, but the
-                    # launcher can still prove that its provider process is
-                    # alive while it waits for an in-UI bind.
-                    observed = {
-                        "state": "fresh",
-                        "work": None,
-                        "diagnostic": None,
-                    }
+                observed = session_surface.native_heartbeat_observation(
+                    binding, work_observer
+                )
                 session_invoker(
                     {
                         "operation": "heartbeat-native",
@@ -851,7 +835,7 @@ def run_native_interactive(
         heartbeat_thread.start()
 
     argv = [*interactive_launch_argv(profile), *adapter["argv"]]
-    completed: _ReturnCodeResult | None = None
+    completed: session_surface.ReturnCodeResult | None = None
     try:
         if process_runner is None:
             # Spawn the terminal owner before starting any Python observer
