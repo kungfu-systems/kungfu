@@ -263,7 +263,6 @@ function ShellTitleBar({
   onSearchChange,
   onSearchActivate,
   onOpenSettings,
-  onOpenOnboarding,
   onOpenAllWork,
   currentProjectTitle,
   onOpenCurrentProject,
@@ -284,7 +283,6 @@ function ShellTitleBar({
   onSearchChange: (value: string) => void;
   onSearchActivate: (result: ProductSearchResult) => void;
   onOpenSettings: () => void;
-  onOpenOnboarding: () => void;
   onOpenAllWork: () => void;
   currentProjectTitle: string;
   onOpenCurrentProject?: () => void;
@@ -644,13 +642,6 @@ function ShellTitleBar({
               }}
             >
               {[
-                {
-                  id: 'onboarding',
-                  title: 'Getting Started',
-                  icon: '→',
-                  active: activeViewId === 'onboarding',
-                  action: onOpenOnboarding,
-                },
                 {
                   id: 'all-work',
                   title: 'All Work',
@@ -2225,12 +2216,6 @@ function App() {
         onSearchChange={setSearchText}
         onSearchActivate={activateSearchResult}
         onOpenSettings={() => setSettingsOpen(true)}
-        onOpenOnboarding={() => {
-          setLabOpen(false);
-          setProjectsOpen(false);
-          setCoreWorkOpen(false);
-          setOnboardingOpen(true);
-        }}
         onOpenAllWork={() => openWorkSurface()}
         currentProjectTitle={
           currentProjectDisplayName
