@@ -186,6 +186,8 @@ test('Getting Started copies the one-line Agent prompt with one key and confirms
   }
 
   const frame = output.chunks.join('');
+  assert.match(frame, /Keep your agent\. Give it durable Work\./u);
+  assert.match(frame, /kungfu run\s+codex\|claude\|opencode\|amp/u);
   assert.match(frame, /\[C\/c\] Copy this one-line Agent prompt/u);
   assert.match(frame, /\[Enter\] Continue to Kungfu/u);
   assert.match(frame, /\[L\/l\] Agent Work Lab/u);
