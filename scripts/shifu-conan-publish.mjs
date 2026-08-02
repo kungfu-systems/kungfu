@@ -12,7 +12,13 @@ const repoRoot = path.dirname(here);
 export const MATRIX = Object.freeze({
   'macos-arm64': {
     nodePlatform: 'darwin',
-    settings: { os: 'Macos', arch: 'armv8', compiler: 'apple-clang' },
+    settings: {
+      os: 'Macos',
+      arch: 'armv8',
+      compiler: 'apple-clang',
+      'compiler.version': '21',
+      'compiler.cppstd': '23',
+    },
   },
   'linux-gcc14-x64': {
     nodePlatform: 'linux',
@@ -21,15 +27,22 @@ export const MATRIX = Object.freeze({
       arch: 'x86_64',
       compiler: 'gcc',
       'compiler.version': '14',
+      'compiler.cppstd': '23',
     },
   },
   'windows-msvc-x64': {
     nodePlatform: 'win32',
-    settings: { os: 'Windows', arch: 'x86_64', compiler: 'msvc' },
+    settings: {
+      os: 'Windows',
+      arch: 'x86_64',
+      compiler: 'msvc',
+      'compiler.cppstd': '23',
+    },
   },
 });
 
-const ROCKSDB_PACKAGE_PATTERN = 'rocksdb/6.29.5#*:*#*';
+const CORE_RECIPE = path.join(repoRoot, 'framework', 'core');
+const PROFILE_ARGS = ['-pr', 'default', '-s:a', 'compiler.cppstd=23'];
 
 function fail(message) {
   throw new Error(message);
@@ -97,7 +110,27 @@ export function packageRevisionRefs(payload) {
   return refs.sort();
 }
 
-function conanCommand(args, { capture = false } = {}) {
+export function graphPackageRevisionRefs(payload) {
+  const refs = [];
+  for (const node of Object.values(payload?.graph?.nodes || {})) {
+    if (node?.recipe === 'Consumer') continue;
+    if (!node?.package_id) continue;
+    const rawReference = String(node.ref || '');
+    const [reference, embeddedRrev = ''] = rawReference.split('#', 2);
+    if (!reference.includes('/')) continue;
+    const rrev = String(node.rrev || embeddedRrev || '');
+    const packageId = String(node.package_id || '');
+    const prev = String(node.prev || '');
+    if (!rrev || !packageId || !prev)
+      fail(
+        `graph dependency lacks exact RREV/package_id/PREV identity: ${reference}`,
+      );
+    refs.push(`${reference}#${rrev}:${packageId}#${prev}`);
+  }
+  return [...new Set(refs)].sort();
+}
+
+export function conanCommand(args, { capture = false } = {}) {
   const executable = process.env.SHIFU_CONAN_BIN || 'conan';
   const result = spawnSync(executable, args, {
     cwd: repoRoot,
@@ -112,7 +145,7 @@ function conanCommand(args, { capture = false } = {}) {
   return result.stdout || '';
 }
 
-function detectProfile() {
+export function detectProfile() {
   const probe = spawnSync(
     process.env.SHIFU_CONAN_BIN || 'conan',
     ['profile', 'path', 'default'],
@@ -128,7 +161,7 @@ function detectProfile() {
   );
   if (probe.status !== 0) conanCommand(['profile', 'detect', '--force']);
   return JSON.parse(
-    conanCommand(['profile', 'show', '-pr', 'default', '--format=json'], {
+    conanCommand(['profile', 'show', ...PROFILE_ARGS, '--format=json'], {
       capture: true,
     }),
   );
@@ -139,28 +172,40 @@ export function plan(matrixEntry, remote = 'workhub-conan') {
     schema: 'shifu.conan-binary-publish-plan/v1',
     mode: 'dry-run',
     matrixEntry,
-    recipe: 'rocksdb/6.29.5',
+    recipe: 'framework/core dependency closure',
     remote,
     execution: 'inside-shifu-cache-apply',
     profile: 'ephemeral-auto-detected-and-validated',
-    storage: 'persistent-host-local-profile-partition',
+    settings: MATRIX[matrixEntry].settings,
+    storage: {
+      mutable: 'persistent-host-local-profile-partition',
+      immutableBinaryAuthority: 'hosted-remote-rrev-package-id-prev',
+      immutableSourceTransport: 'shared-content-addressed-download-cache',
+    },
     authentication: 'conan-remote-env-only',
+    publication: 'additive-only-no-force',
     commands: [
       'conan profile detect --force (only when default is absent)',
-      'conan create <rocksdb-recipe> --version 6.29.5 --build=missing',
-      `conan list ${ROCKSDB_PACKAGE_PATTERN} --filter-profile default`,
+      'assert clean exact Git checkout',
+      'conan install framework/core --build=missing -s:a compiler.cppstd=23 --format=json',
+      'derive every dependency RREV/package_id/PREV from the resolved graph',
+      'conan list <each-exact-package-revision> --remote <remote>',
       `conan remote auth ${remote} --force --strict`,
-      `conan upload --list <exact-package-list> --remote ${remote} --check --confirm`,
-      `conan list <each-exact-package-revision> --remote ${remote} and assert read-back`,
+      `conan upload <each-missing-exact-package-revision> --remote ${remote} --check --confirm`,
+      `conan list <each-exact-package-revision> --remote ${remote} and assert exact read-back`,
     ],
     buildchainInputs: ['SHIFU_CACHE_PROFILE_REF', 'SHIFU_CACHE_PROFILE_DIGEST'],
     publisherSecretInBuildchain: false,
   };
 }
 
-function assertExecutionEnvironment(remote) {
+export function assertManagedConanEnvironment() {
   if (process.env.SHIFU_CACHE_MANAGED_CONAN !== '1' || !process.env.CONAN_HOME)
-    fail('publisher must run inside shifu cache apply');
+    fail('Conan operation must run inside shifu cache apply');
+}
+
+export function assertExecutionEnvironment(remote) {
+  assertManagedConanEnvironment();
   const suffix = remote.toUpperCase().replaceAll('-', '_');
   const username = `CONAN_LOGIN_USERNAME_${suffix}`;
   const password = `CONAN_PASSWORD_${suffix}`;
@@ -168,59 +213,97 @@ function assertExecutionEnvironment(remote) {
     fail(`publisher requires ${username} and ${password}`);
 }
 
+export function gitRevision() {
+  const status = spawnSync('git', ['status', '--porcelain'], {
+    cwd: repoRoot,
+    encoding: 'utf8',
+    stdio: ['ignore', 'pipe', 'inherit'],
+  });
+  if (status.status !== 0) fail('cannot verify publisher Git checkout');
+  if (String(status.stdout || '').trim())
+    fail('publisher requires a clean exact Git checkout');
+  const revision = spawnSync('git', ['rev-parse', 'HEAD'], {
+    cwd: repoRoot,
+    encoding: 'utf8',
+    stdio: ['ignore', 'pipe', 'inherit'],
+  });
+  if (revision.status !== 0) fail('cannot resolve publisher Git revision');
+  return String(revision.stdout || '').trim();
+}
+
+function remoteHasExactReference(reference, remote) {
+  const payload = JSON.parse(
+    conanCommand(['list', reference, '--remote', remote, '--format=json'], {
+      capture: true,
+    }),
+  );
+  return packageRevisionRefs(payload).includes(reference);
+}
+
 export function execute({ matrixEntry, remote }) {
   assertExecutionEnvironment(remote);
+  const sourceRevision = gitRevision();
   const detected = detectProfile();
   validateDetectedProfile(matrixEntry, detected);
   const scratch = fs.mkdtempSync(
     path.join(os.tmpdir(), 'shifu-conan-publish-'),
   );
-  const packageList = path.join(scratch, 'rocksdb-package-list.json');
   try {
-    conanCommand([
-      'create',
-      path.join(repoRoot, 'framework', 'core', '.conan', 'recipes', 'rocksdb'),
-      '--version',
-      '6.29.5',
-      '--build=missing',
-    ]);
-    conanCommand([
-      'list',
-      ROCKSDB_PACKAGE_PATTERN,
-      '--filter-profile',
-      'default',
-      '--format=json',
-      '--out-file',
-      packageList,
-    ]);
-    const expectedRefs = packageRevisionRefs(
-      JSON.parse(fs.readFileSync(packageList, 'utf8')),
+    const graph = JSON.parse(
+      conanCommand(
+        [
+          'install',
+          CORE_RECIPE,
+          '--output-folder',
+          path.join(scratch, 'generators'),
+          '--lockfile=',
+          '--build=missing',
+          ...PROFILE_ARGS,
+          '--format=json',
+        ],
+        { capture: true },
+      ),
     );
+    const expectedRefs = graphPackageRevisionRefs(graph);
     if (expectedRefs.length === 0)
-      fail('local package list contains no exact RocksDB package revision');
-    conanCommand(['remote', 'auth', remote, '--force', '--strict']);
-    conanCommand([
-      'upload',
-      '--list',
-      packageList,
-      '--remote',
-      remote,
-      '--check',
-      '--confirm',
-    ]);
-    const missing = expectedRefs.filter((reference) => {
-      const remoteRefs = packageRevisionRefs(
-        JSON.parse(
-          conanCommand(
-            ['list', reference, '--remote', remote, '--format=json'],
-            { capture: true },
-          ),
-        ),
+      fail(
+        'resolved Core graph contains no exact dependency package revisions',
       );
-      return !remoteRefs.includes(reference);
+    const alreadyPresent = expectedRefs.filter((reference) =>
+      remoteHasExactReference(reference, remote),
+    );
+    const missingBefore = expectedRefs.filter(
+      (reference) => !alreadyPresent.includes(reference),
+    );
+    conanCommand(['remote', 'auth', remote, '--force', '--strict']);
+    for (const reference of missingBefore)
+      conanCommand([
+        'upload',
+        reference,
+        '--remote',
+        remote,
+        '--check',
+        '--confirm',
+      ]);
+    const missing = expectedRefs.filter((reference) => {
+      return !remoteHasExactReference(reference, remote);
     });
     if (missing.length > 0)
       fail(`remote read-back missing package revisions: ${missing.join(', ')}`);
+    return {
+      schema: 'shifu.conan-binary-publish-receipt/v1',
+      sourceRevision,
+      matrixEntry,
+      settings: MATRIX[matrixEntry].settings,
+      remote,
+      identity: 'rrev-package-id-prev',
+      exactReferences: expectedRefs,
+      alreadyPresent,
+      published: missingBefore,
+      readBack: expectedRefs,
+      overwrite: false,
+      outcome: 'published-and-read-back',
+    };
   } finally {
     fs.rmSync(scratch, { recursive: true, force: true });
   }
@@ -236,10 +319,8 @@ if (
     if (!options.execute) {
       process.stdout.write(`${JSON.stringify(output, null, 2)}\n`);
     } else {
-      execute(options);
-      process.stdout.write(
-        `${JSON.stringify({ ...output, mode: 'execute', outcome: 'published-and-read-back' }, null, 2)}\n`,
-      );
+      const receipt = execute(options);
+      process.stdout.write(`${JSON.stringify(receipt, null, 2)}\n`);
     }
   } catch (error) {
     process.stderr.write(`shifu conan publish: ${error.message}\n`);
