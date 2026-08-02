@@ -7,7 +7,7 @@
       "role": "claim-source",
       "kind": "file",
       "path": "framework/core/src/python/kungfu/agent/index.json",
-      "sha256": "73d3a88e880a58c842fcd530de6202df5d7eff1f3dcbb36d82c0da9860be18db"
+      "sha256": "c1101dea12f478b95a3ff588143fedef59cab20b1d961d298f62a2a4dd61df68"
     }
   ],
   "machineEvidence": [
@@ -16,7 +16,7 @@
       "pointer": {
         "kind": "file",
         "path": "framework/core/src/python/kungfu/agent/commands.json",
-        "sha256": "8c9ada7ac25558b76a3a1346b38350fac932522ff1714bb7b5ba581da4e251cb"
+        "sha256": "a2c04235939688a128132d1949f4d80571326d676ffe9231952ea20accc9102d"
       },
       "description": "Machine-readable command catalog and mode maturity metadata."
     },
@@ -25,7 +25,7 @@
       "pointer": {
         "kind": "file",
         "path": "framework/core/src/python/kungfu/agent/cli_surface.catalog.json",
-        "sha256": "a12ee23e387a33a51e636e26bdf65bf8ae0ed9127800b69c570ea5aa3aee1327"
+        "sha256": "03e2c7d85c0a19263dd56785cb11afa2399f50c1da2d63bd68fc8e8fa22aab56"
       },
       "description": "Complete deterministic CLI surface graph shared by offline Agent capabilities and catalog parity checks."
     },
@@ -34,7 +34,7 @@
       "pointer": {
         "kind": "file",
         "path": "framework/core/src/python/kungfu/agent/first-value.contract.json",
-        "sha256": "7242d507c17447c0d14cfdbd653c7c0c18c3eb106f3ab0f9b943cd12c78d87e6"
+        "sha256": "422a43e3f6c22e89e754c73f2ec6570ab0185ff23bc74e91ba6ed34a629f7f04"
       },
       "description": "Exact first-value prompt, bounded result, local Codex qualification, and explicit non-claim contract."
     },
@@ -43,7 +43,7 @@
       "pointer": {
         "kind": "file",
         "path": "framework/core/src/python/kungfu/agent/first-value-receipt.schema.json",
-        "sha256": "89b076e6f4e1eba2c4a28d159c285c32227b8554f17c779e75369410a39ad839"
+        "sha256": "278b99602570036b8631f58b34abff77c84e84e60f2d4ec4527af2ffe22821b7"
       },
       "description": "Machine-verifiable receipt schema for the selected intent, safe discovery, minimal outcome, and candidate identity."
     },
@@ -70,7 +70,7 @@
       "pointer": {
         "kind": "file",
         "path": "scripts/verify-agent-pack.mjs",
-        "sha256": "041a052fd0a6d7c442cd6ff1c36afaeff8fa4fc5d3e2bfcf421300c8960b7aa4"
+        "sha256": "c137b536cfc06c6501d12209cbe1df22e7769d398f090a2c36d4745ef7718f7c"
       },
       "description": "Read-only verifier for installed agent pack completeness and command/doc consistency."
     },
@@ -88,7 +88,7 @@
       "pointer": {
         "kind": "file",
         "path": "scripts/qualify-agent-first-value-codex.mjs",
-        "sha256": "e0bd2814a73855f80661f9100d88b57fb72b0665b690a8add7f3913198e77ae9"
+        "sha256": "23fb915a99a53bf7977623d9ba70bfe4325cd5890f7b6928fbb0831c35ea2965"
       },
       "description": "Local-only three-trial fresh Codex qualification harness that retains sanitized receipts rather than raw transcripts."
     },
@@ -97,7 +97,7 @@
       "pointer": {
         "kind": "file",
         "path": "scripts/qualify-agent-first-value-codex.test.mjs",
-        "sha256": "4fbef47e7fbdf2745f072d0313fcd602fc9cdb072997ef87d929da99ecec30a1"
+        "sha256": "16a7082bb293a1a2c08dd3f8a7ad3a4652d12e5b92801b2412df541ee819e35a"
       },
       "description": "Provider-free deterministic CI coverage for aggregate and receipt acceptance, tampering, reuse, and partial-failure cases."
     },
@@ -106,30 +106,30 @@
       "pointer": {
         "kind": "file",
         "path": "docs/qualification/evidence/agent-brief-first-value-loop/report.json",
-        "sha256": "ced28dbc3859b6f0ae905cb0b09bfa40688d7bff97a98320c44cf87bafe8532e"
+        "sha256": "956452d6d9d5782ec2199dbc41a5d5a994d1add9aad1958511d235e680119b85"
       },
       "description": "Sanitized three-trial local Codex qualification whose receipts and aggregate root are reverified in provider-free CI."
     }
   ],
   "hashes": {
     "registrySha256": "1365d3a445e1587000175cdbc7f50ed83dfe6ebf4190c73f5d18f0bb41c35e15",
-    "sourceSha256": "73d3a88e880a58c842fcd530de6202df5d7eff1f3dcbb36d82c0da9860be18db",
+    "sourceSha256": "c1101dea12f478b95a3ff588143fedef59cab20b1d961d298f62a2a4dd61df68",
     "evidenceSha256": [
       {
         "path": "framework/core/src/python/kungfu/agent/commands.json",
-        "sha256": "8c9ada7ac25558b76a3a1346b38350fac932522ff1714bb7b5ba581da4e251cb"
+        "sha256": "a2c04235939688a128132d1949f4d80571326d676ffe9231952ea20accc9102d"
       },
       {
         "path": "framework/core/src/python/kungfu/agent/cli_surface.catalog.json",
-        "sha256": "a12ee23e387a33a51e636e26bdf65bf8ae0ed9127800b69c570ea5aa3aee1327"
+        "sha256": "03e2c7d85c0a19263dd56785cb11afa2399f50c1da2d63bd68fc8e8fa22aab56"
       },
       {
         "path": "framework/core/src/python/kungfu/agent/first-value.contract.json",
-        "sha256": "7242d507c17447c0d14cfdbd653c7c0c18c3eb106f3ab0f9b943cd12c78d87e6"
+        "sha256": "422a43e3f6c22e89e754c73f2ec6570ab0185ff23bc74e91ba6ed34a629f7f04"
       },
       {
         "path": "framework/core/src/python/kungfu/agent/first-value-receipt.schema.json",
-        "sha256": "89b076e6f4e1eba2c4a28d159c285c32227b8554f17c779e75369410a39ad839"
+        "sha256": "278b99602570036b8631f58b34abff77c84e84e60f2d4ec4527af2ffe22821b7"
       },
       {
         "path": "framework/core/src/python/kungfu/agent/mode-selection.md",
@@ -141,7 +141,7 @@
       },
       {
         "path": "scripts/verify-agent-pack.mjs",
-        "sha256": "041a052fd0a6d7c442cd6ff1c36afaeff8fa4fc5d3e2bfcf421300c8960b7aa4"
+        "sha256": "c137b536cfc06c6501d12209cbe1df22e7769d398f090a2c36d4745ef7718f7c"
       },
       {
         "path": "scripts/check-cli-catalog-parity.mjs",
@@ -149,37 +149,37 @@
       },
       {
         "path": "scripts/qualify-agent-first-value-codex.mjs",
-        "sha256": "e0bd2814a73855f80661f9100d88b57fb72b0665b690a8add7f3913198e77ae9"
+        "sha256": "23fb915a99a53bf7977623d9ba70bfe4325cd5890f7b6928fbb0831c35ea2965"
       },
       {
         "path": "scripts/qualify-agent-first-value-codex.test.mjs",
-        "sha256": "4fbef47e7fbdf2745f072d0313fcd602fc9cdb072997ef87d929da99ecec30a1"
+        "sha256": "16a7082bb293a1a2c08dd3f8a7ad3a4652d12e5b92801b2412df541ee819e35a"
       },
       {
         "path": "docs/qualification/evidence/agent-brief-first-value-loop/report.json",
-        "sha256": "ced28dbc3859b6f0ae905cb0b09bfa40688d7bff97a98320c44cf87bafe8532e"
+        "sha256": "956452d6d9d5782ec2199dbc41a5d5a994d1add9aad1958511d235e680119b85"
       }
     ],
     "artifactSha256": [
       {
         "path": "framework/core/src/python/kungfu/agent/index.json",
-        "sha256": "73d3a88e880a58c842fcd530de6202df5d7eff1f3dcbb36d82c0da9860be18db"
+        "sha256": "c1101dea12f478b95a3ff588143fedef59cab20b1d961d298f62a2a4dd61df68"
       },
       {
         "path": "framework/core/src/python/kungfu/agent/commands.json",
-        "sha256": "8c9ada7ac25558b76a3a1346b38350fac932522ff1714bb7b5ba581da4e251cb"
+        "sha256": "a2c04235939688a128132d1949f4d80571326d676ffe9231952ea20accc9102d"
       },
       {
         "path": "framework/core/src/python/kungfu/agent/cli_surface.catalog.json",
-        "sha256": "a12ee23e387a33a51e636e26bdf65bf8ae0ed9127800b69c570ea5aa3aee1327"
+        "sha256": "03e2c7d85c0a19263dd56785cb11afa2399f50c1da2d63bd68fc8e8fa22aab56"
       },
       {
         "path": "framework/core/src/python/kungfu/agent/first-value.contract.json",
-        "sha256": "7242d507c17447c0d14cfdbd653c7c0c18c3eb106f3ab0f9b943cd12c78d87e6"
+        "sha256": "422a43e3f6c22e89e754c73f2ec6570ab0185ff23bc74e91ba6ed34a629f7f04"
       },
       {
         "path": "framework/core/src/python/kungfu/agent/first-value-receipt.schema.json",
-        "sha256": "89b076e6f4e1eba2c4a28d159c285c32227b8554f17c779e75369410a39ad839"
+        "sha256": "278b99602570036b8631f58b34abff77c84e84e60f2d4ec4527af2ffe22821b7"
       }
     ]
   },
@@ -187,31 +187,31 @@
     {
       "name": "agent-pack-index",
       "path": "framework/core/src/python/kungfu/agent/index.json",
-      "sha256": "73d3a88e880a58c842fcd530de6202df5d7eff1f3dcbb36d82c0da9860be18db",
+      "sha256": "c1101dea12f478b95a3ff588143fedef59cab20b1d961d298f62a2a4dd61df68",
       "expectedPackagePath": "kungfu/agent/index.json"
     },
     {
       "name": "agent-command-catalog",
       "path": "framework/core/src/python/kungfu/agent/commands.json",
-      "sha256": "8c9ada7ac25558b76a3a1346b38350fac932522ff1714bb7b5ba581da4e251cb",
+      "sha256": "a2c04235939688a128132d1949f4d80571326d676ffe9231952ea20accc9102d",
       "expectedPackagePath": "kungfu/agent/commands.json"
     },
     {
       "name": "cli-surface-catalog",
       "path": "framework/core/src/python/kungfu/agent/cli_surface.catalog.json",
-      "sha256": "a12ee23e387a33a51e636e26bdf65bf8ae0ed9127800b69c570ea5aa3aee1327",
+      "sha256": "03e2c7d85c0a19263dd56785cb11afa2399f50c1da2d63bd68fc8e8fa22aab56",
       "expectedPackagePath": "kungfu/agent/cli_surface.catalog.json"
     },
     {
       "name": "agent-first-value-contract",
       "path": "framework/core/src/python/kungfu/agent/first-value.contract.json",
-      "sha256": "7242d507c17447c0d14cfdbd653c7c0c18c3eb106f3ab0f9b943cd12c78d87e6",
+      "sha256": "422a43e3f6c22e89e754c73f2ec6570ab0185ff23bc74e91ba6ed34a629f7f04",
       "expectedPackagePath": "kungfu/agent/first-value.contract.json"
     },
     {
       "name": "agent-first-value-receipt-schema",
       "path": "framework/core/src/python/kungfu/agent/first-value-receipt.schema.json",
-      "sha256": "89b076e6f4e1eba2c4a28d159c285c32227b8554f17c779e75369410a39ad839",
+      "sha256": "278b99602570036b8631f58b34abff77c84e84e60f2d4ec4527af2ffe22821b7",
       "expectedPackagePath": "kungfu/agent/first-value-receipt.schema.json"
     }
   ],
