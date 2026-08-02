@@ -42,14 +42,24 @@ from kungfu.cli.commands import agent as agent_command  # noqa: E402
 def test_brief_and_intent_map_enforce_complete_bounded_first_entry():
     brief = resources.document_text("brief.md")
     intent_map = agent_pack.intent_map()
+    normalized_brief = " ".join(brief.split())
 
     assert len(brief.encode("utf-8")) <= 8192
     assert len(brief.splitlines()) <= 120
     assert "kungfu xinfa compile" in brief
-    assert "merely printing or reading it is not\ncompletion" in brief
-    assert "run exactly one\n   `kungfu agent first-value receipt`" in brief
-    assert "Cite the CLI-returned `receiptRoot`" in brief
-    assert "never reconstruct or recompute" in brief
+    assert "merely printing or reading it is not completion" in normalized_brief
+    assert "do not run `kungfu agent brief` again" in normalized_brief
+    assert "first-value start --json" in normalized_brief
+    assert "Do not separately run the docs verifier" in normalized_brief
+    assert (
+        "run exactly one standalone `kungfu agent first-value start" in normalized_brief
+    )
+    assert "do not capture, redirect, pipe, or reprint it" in normalized_brief
+    assert "compare it byte-for-byte before answering" in normalized_brief
+    assert "do not substitute a candidate, contract, or other root" in normalized_brief
+    assert "never reconstruct or recompute" in normalized_brief
+    assert "the user does not need to name any protocol step" in normalized_brief
+    assert "one copyable read-only verification command" in normalized_brief
     assert set(intent_map["requiredIntentIds"]) == {
         row["id"] for row in intent_map["intents"]
     }
@@ -60,6 +70,39 @@ def test_brief_and_intent_map_enforce_complete_bounded_first_entry():
         assert row["nonClaims"]
         assert row["discoveryCommands"]
         assert row["expansionHandles"]
+
+
+def test_first_value_receipt_accepts_the_explicit_discovery_alias():
+    discovery = next(
+        parameter
+        for parameter in agent_command.first_value_receipt.params
+        if parameter.name == "discovery"
+    )
+
+    assert discovery.opts == ["--discovery", "--discovery-command"]
+
+
+def test_first_value_start_fails_closed_then_uses_the_exact_default():
+    with pytest.raises(ValueError, match="valid Documentation Atlas"):
+        first_value.create_start_receipt({"valid": False})
+
+    seen = {}
+
+    def runner(argv, timeout, maximum):
+        seen.update(argv=argv, timeout=timeout, maximum=maximum)
+        return 0, b'{"schema":"kungfu.agent-status/v1"}\n', b""
+
+    receipt = first_value.create_start_receipt(
+        {"valid": True},
+        runner=runner,
+        observed_at="2026-08-02T00:00:00Z",
+        attempt_id="automatic-start",
+    )
+    default = first_value.contract()["result"]["exactPromptDefault"]
+    assert " ".join(seen["argv"]) == default["discoveryCommand"]
+    assert receipt["intentId"] == default["intentId"] == "onboarding"
+    assert receipt["questionCount"] == default["questionCount"] == 0
+    assert first_value.verify_receipt(receipt)["verified"] is True
 
 
 @pytest.mark.parametrize(
@@ -152,10 +195,22 @@ def test_first_value_contract_binds_exact_prompt_and_packaged_roots():
     view = first_value.contract_view()
 
     assert view["contract"]["prompt"] == {
-        "text": "请运行 kungfu agent brief，不要在打印 brief 后停止，请继续按 First response protocol 依次验证文档、读取 intent map 与 first-value contract、执行一次安全发现并调用 first-value receipt 固化结果，最后结合你对我的了解，用最适合我的方式解释 Kungfu 并给我一个可验证的上手结果。",
-        "root": "sha256:c5e6c02d553e1addd4db51a573c54af86346b7ca55ee0b4778b80582cb56fee2",
+        "text": "我没用过 Kungfu，希望过程安全、直接并能自己验证；请运行 kungfu agent brief，严格按它带我完成第一次上手。",
+        "root": "sha256:97314a340dd8b7350d2e1a4610ab8dc4c65636ab93d5e01836fc9cebde599ac5",
         "encoding": "utf-8",
+        "personalizationBasis": "user-goal",
+        "personalizationLabel": "个性化依据：用户目标",
     }
+    family = view["contract"]["promptFamily"]
+    assert family["canonicalRoot"] == view["contract"]["prompt"]["root"]
+    assert len(family["variants"]) == 5
+    for prompt in [view["contract"]["prompt"], *family["variants"]]:
+        assert "kungfu agent brief" in prompt["text"]
+        assert prompt["personalizationLabel"].startswith("个性化依据：")
+        assert all(
+            hint not in prompt["text"]
+            for hint in family["naturalLanguagePolicy"]["forbiddenProtocolHints"]
+        )
     assert view["contract"]["result"]["maximumQuestionCount"] == 1
     assert view["contract"]["result"]["exactPromptDefault"] == {
         "intentId": "onboarding",
@@ -163,12 +218,42 @@ def test_first_value_contract_binds_exact_prompt_and_packaged_roots():
         "discoveryCommand": "kungfu agent status --target codex --scope project --json",
         "outcomeKind": "verified-discovery",
     }
-    assert view["contract"]["qualification"]["requiredLocalCodexTrials"] == 3
+    assert view["contract"]["qualification"]["requiredLocalCodexTrials"] == 10
+    assert view["contract"]["qualification"]["minimumCanonicalPromptTrials"] == 5
+    assert (
+        view["contract"]["result"]["deterministicEntryCommand"]
+        == "kungfu agent first-value start --json"
+    )
+    assert view["contract"]["qualification"]["localCodexProfile"] == {
+        "contextIsolation": "ephemeral-auth-link-candidate-project-skill",
+        "executionMode": "codex-exec-ephemeral",
+        "model": "gpt-5.6-sol",
+        "providerSkillScope": "candidate-project",
+        "reasoningEffort": "medium",
+        "userConfig": "ignored",
+    }
+    assert len(view["contract"]["qualification"]["experienceDimensions"]) == 9
+    assert view["contract"]["result"]["responseGuide"]["nextStepCommand"] == (
+        "kungfu project list"
+    )
     assert view["productIdentity"]["candidateRoot"].startswith("sha256:")
     assert view["receiptSchema"]["properties"]["verdict"] == {
         "type": "string",
         "const": "verified",
     }
+
+
+def test_compact_first_value_contract_retains_only_bounded_entry_facts():
+    view = first_value.compact_contract_view()
+    encoded = json.dumps(view, ensure_ascii=False).encode("utf-8")
+
+    assert view["schema"] == "kungfu.agent-first-value-contract-compact-view/v1"
+    assert len(encoded) <= 4096
+    assert "text" not in view["contract"]["prompt"]
+    assert view["contract"]["promptFamily"]["currentRoot"].startswith("sha256:")
+    assert view["contract"]["result"]["exactPromptDefault"]["intentId"] == "onboarding"
+    assert view["receiptSchema"]["schema"] == first_value.RECEIPT_SCHEMA
+    assert view["receiptSchema"]["root"].startswith("sha256:")
 
 
 def test_first_value_receipt_schema_is_structured_output_compatible():
@@ -238,6 +323,35 @@ def test_first_value_receipt_reruns_declared_discovery_and_verifies():
     assert receipt["intentId"] == "onboarding"
     assert receipt["discovery"]["safetyClass"] == "read-only"
     assert receipt["discovery"]["outputBytes"] > 0
+    assert receipt["agentResponseGuide"]["protocolComplete"] is True
+    assert receipt["agentResponseGuide"]["mustNotRunMoreCommands"] is True
+    assert receipt["agentResponseGuide"]["instruction"].startswith("协议已完成")
+    assert "Kungfu" in receipt["agentResponseGuide"]["explanationSeed"]
+    assert receipt["agentResponseGuide"]["answerTemplate"].count("{receiptRoot}") == 1
+    assert receipt["agentResponseGuide"]["personalizationBasis"] == "user-goal"
+    assert receipt["agentResponseGuide"]["personalizationLabel"] == (
+        "个性化依据：用户目标"
+    )
+    assert receipt["agentResponseGuide"]["verificationCommand"] == (
+        "kungfu agent capabilities --json"
+    )
+    assert receipt["agentResponseGuide"]["nextStepCommand"] == "kungfu project list"
+    assert first_value.verify_receipt(receipt)["verified"] is True
+
+
+def test_first_value_receipt_binds_a_declared_natural_variant(monkeypatch):
+    variant = first_value.contract()["promptFamily"]["variants"][0]
+    monkeypatch.setenv("KUNGFU_FIRST_VALUE_PROMPT_ROOT", variant["root"])
+
+    receipt = first_value.create_receipt(
+        intent_id="onboarding",
+        discovery_command="kungfu agent capabilities --json",
+        question_count=0,
+        outcome_summary="Verified the candidate Agent capability envelope.",
+        runner=lambda argv, timeout, maximum: (0, b"ok\n", b""),
+    )
+
+    assert receipt["promptRoot"] == variant["root"]
     assert first_value.verify_receipt(receipt)["verified"] is True
 
 

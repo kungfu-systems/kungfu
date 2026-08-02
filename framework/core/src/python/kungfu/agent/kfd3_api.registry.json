@@ -183,6 +183,16 @@
       "projections": ["commands.json", "capabilities-json", "agent-pack-doc", "provider-skill"]
     },
     {
+      "id": "kungfu.agent.first-value.start",
+      "surface": "cli",
+      "name": "kungfu agent first-value start --json",
+      "purpose": "Verify the installed pack, run the declared read-only onboarding discovery, and emit one rooted receipt.",
+      "maturity": "stable",
+      "visibility": "public-agent",
+      "anchor": {"kind": "runtime-click", "symbol": "first_value_start"},
+      "projections": ["commands.json", "capabilities-json", "agent-pack-doc", "provider-skill"]
+    },
+    {
       "id": "kungfu.agent.first-value.receipt",
       "surface": "cli",
       "name": "kungfu agent first-value receipt --intent <id> --discovery <command> --question-count <0-or-1> --outcome <summary> --json",
