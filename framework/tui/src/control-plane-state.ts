@@ -158,6 +158,29 @@ export function resolveProductStartupSurface({
   return projectResumeSettled ? 'all-work' : null;
 }
 
+export function shouldStartContextualProjectRestore({
+  playbackMode,
+  surface,
+  emptyState,
+  startupProjectRoot,
+}: {
+  playbackMode: boolean;
+  surface: string;
+  emptyState: boolean;
+  startupProjectRoot?: string;
+}): boolean {
+  return (
+    !playbackMode &&
+    contextualProjectRestoreCanCommit(surface) &&
+    !emptyState &&
+    Boolean(startupProjectRoot)
+  );
+}
+
+export function contextualProjectRestoreCanCommit(surface: string): boolean {
+  return surface === 'loading';
+}
+
 export function directWorkspaceNavigationFromInput(
   current: ControlPlaneState,
   input: string,

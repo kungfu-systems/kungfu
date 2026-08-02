@@ -67,11 +67,13 @@ import {
   PlaybackBar,
   QUICK_COMMANDS,
   type TerminalDimensions,
+  contextualProjectRestoreCanCommit,
   createControlPlaneInputFence,
   directWorkspaceNavigationFromInput,
   quickCommandMatches,
   reduceControlPlaneInput,
   resolveProductStartupSurface,
+  shouldStartContextualProjectRestore,
   splitHorizontalPointerActionAtPoint,
 } from './profile-shell.js';
 import {
@@ -928,6 +930,15 @@ function StartingHost({
   );
 }
 
+type ProductSurface =
+  | 'loading'
+  | 'onboarding'
+  | 'lab'
+  | 'all-work'
+  | 'projects'
+  | 'project-work'
+  | 'project-assignment';
+
 function ProductHost({
   lab,
   dimensions,
@@ -970,15 +981,7 @@ function ProductHost({
   const [startup, setStartup] = React.useState<
     AgentWorkLabStartupRoute | undefined
   >(playbackMode ? PENDING_STARTUP : undefined);
-  const [surface, setSurface] = React.useState<
-    | 'loading'
-    | 'onboarding'
-    | 'lab'
-    | 'all-work'
-    | 'projects'
-    | 'project-work'
-    | 'project-assignment'
-  >(
+  const [surface, setSurfaceState] = React.useState<ProductSurface>(
     playbackMode
       ? 'lab'
       : firstLaunch
@@ -995,9 +998,10 @@ function ProductHost({
     playbackMode || firstLaunch || emptyState || !startupAnimationEnabled,
   );
   const surfaceRef = React.useRef(surface);
-  React.useEffect(() => {
-    surfaceRef.current = surface;
-  }, [surface]);
+  const setSurface = React.useCallback((next: ProductSurface) => {
+    surfaceRef.current = next;
+    setSurfaceState(next);
+  }, []);
   const projects = React.useMemo(
     () => openTuiProjects(!projectTourRoot, Boolean(projectTourRoot)),
     [projectTourRoot],
@@ -1182,12 +1186,16 @@ function ProductHost({
   }, [lab, playbackMode, startup, surface]);
   React.useEffect(() => {
     if (
-      playbackMode ||
-      surface === 'onboarding' ||
-      emptyState ||
-      !startupProjectRoot
-    )
+      !shouldStartContextualProjectRestore({
+        playbackMode,
+        surface,
+        emptyState,
+        startupProjectRoot,
+      })
+    ) {
       return;
+    }
+    if (!startupProjectRoot) return;
     let active = true;
     const request = openProjectRequest.current + 1;
     openProjectRequest.current = request;
@@ -1195,7 +1203,9 @@ function ProductHost({
     void projects
       .select(startupProjectRoot)
       .then(async (receipt) => {
-        if (!active) return;
+        if (!active || !contextualProjectRestoreCanCommit(surfaceRef.current)) {
+          return;
+        }
         const selected = receipt as {
           workspace: ProjectWorkspaceSelection;
         };
@@ -1208,13 +1218,19 @@ function ProductHost({
           registry_path: '',
           selected: selected.workspace,
         } as unknown as ProjectTemplateWorkspaceSelection);
-        surfaceRef.current = 'project-work';
         setSurface('project-work');
         const inventory = await projects.works(
           selected.workspace.workspace_root,
         );
         const work = inventory.activeWork;
-        if (!active || request !== openProjectRequest.current || !work) return;
+        if (
+          !active ||
+          request !== openProjectRequest.current ||
+          surfaceRef.current !== 'project-work' ||
+          !work
+        ) {
+          return;
+        }
         const workspace = {
           schema: 'kungfu.workspace.registry/v1',
           last_workspace_id: selected.workspace.workspace_id,
@@ -1231,6 +1247,13 @@ function ProductHost({
             requestPath: work.requestPath,
           },
         });
+        if (
+          !active ||
+          request !== openProjectRequest.current ||
+          surfaceRef.current !== 'project-work'
+        ) {
+          return;
+        }
         setStarterProject({ workspace, work, works: inventory.works });
         setStarterWorkReceipt(resumed.workReceipt);
         setStarterReviewReceipt(resumed.reviewReceipt);
@@ -1251,7 +1274,15 @@ function ProductHost({
     return () => {
       active = false;
     };
-  }, [emptyState, lab, playbackMode, projects, startupProjectRoot, surface]);
+  }, [
+    emptyState,
+    lab,
+    playbackMode,
+    projects,
+    setSurface,
+    startupProjectRoot,
+    surface,
+  ]);
   const autoplay = React.useMemo(
     () =>
       autoDemo
@@ -1288,6 +1319,7 @@ function ProductHost({
     playbackMode,
     openedProject,
     projectResumeSettled,
+    setSurface,
     startupProjectRoot,
     startupIntroSettled,
     surface,
@@ -1484,7 +1516,7 @@ function ProductHost({
         );
       }
     },
-    [dispatchLabAction, onboardingState, persistOnboarding],
+    [dispatchLabAction, onboardingState, persistOnboarding, setSurface],
   );
   const acknowledgeLabAction = React.useCallback((id: number) => {
     setLabActionRequest((current) =>
@@ -1572,18 +1604,18 @@ function ProductHost({
           }
         });
     },
-    [lab, setControlNow],
+    [lab, setControlNow, setSurface],
   );
   const openGlobalWork = React.useCallback(() => {
     setControlNow({ ...CLOSED_CONTROL_PLANE, focus: 'workspace' });
     setSurface('all-work');
-  }, [setControlNow]);
+  }, [setControlNow, setSurface]);
   const openHome = React.useCallback(() => {
     setControlNow({ ...CLOSED_CONTROL_PLANE, focus: 'workspace' });
     if (starterProject) setSurface('project-assignment');
     else if (openedProject) setSurface('project-work');
     else setSurface('all-work');
-  }, [openedProject, setControlNow, starterProject]);
+  }, [openedProject, setControlNow, setSurface, starterProject]);
   const activateControl = React.useCallback(() => {
     const current = controlRef.current;
     if (current.mode === 'commands') {
@@ -1744,6 +1776,7 @@ function ProductHost({
     openedProject,
     projects,
     setControlNow,
+    setSurface,
   ]);
   const activateControlRef = React.useRef(activateControl);
   activateControlRef.current = activateControl;
@@ -1848,6 +1881,7 @@ function ProductHost({
     openedProject,
     productNavActions,
     setControlNow,
+    setSurface,
     size,
   ]);
 
@@ -1873,6 +1907,7 @@ function ProductHost({
     openHome,
     openedProject,
     playbackMode,
+    setSurface,
     surface,
   ]);
 
