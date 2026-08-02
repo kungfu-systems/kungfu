@@ -17,7 +17,9 @@ const REQUIRED_TRIALS = 10;
 const MINIMUM_CANONICAL_TRIALS = 5;
 const QUALIFICATION_MODEL = 'gpt-5.6-sol';
 const QUALIFICATION_REASONING_EFFORT = 'medium';
-const QUALIFICATION_CONTEXT_ISOLATION = 'ephemeral-auth-link';
+const QUALIFICATION_CONTEXT_ISOLATION =
+  'ephemeral-auth-link-candidate-project-skill';
+const PROVIDER_SKILL_SCOPE = 'candidate-project';
 const REQUIRED_NON_CLAIMS = [
   'claude-qualified',
   'ci-hosted-codex-qualified',
@@ -87,6 +89,59 @@ export function candidateShellRouter() {
 
 function installCandidateShellRouter(home) {
   fs.writeFileSync(path.join(home, '.zshenv'), candidateShellRouter(), 'utf8');
+}
+
+function installCandidateCodexSkill(kungfu, workspace, env) {
+  const destination = path.join(
+    workspace,
+    '.agents',
+    'skills',
+    'kungfu-agent-onboarding',
+    'SKILL.md',
+  );
+  const payload = parseJson(
+    successful(
+      spawnSync(
+        kungfu,
+        [
+          'agent',
+          'install-skill',
+          '--target',
+          'codex',
+          '--scope',
+          'project',
+          '--execute',
+          '--json',
+        ],
+        { cwd: workspace, encoding: 'utf8', env },
+      ),
+      'candidate Codex Skill installation',
+    ).stdout,
+    'candidate Codex Skill installation',
+  );
+  assert(
+    payload.schema === 'kungfu.agent-skill-install/v1' &&
+      payload.target === 'codex' &&
+      payload.scope === 'project' &&
+      payload.execute === true &&
+      payload.changed === true,
+    'candidate Codex Skill installation receipt drifted',
+  );
+  assert(
+    path.resolve(payload.destination || '') === destination,
+    'candidate Codex Skill installed outside the isolated workspace',
+  );
+  const bytes = fs.readFileSync(destination);
+  assert(
+    bytes.includes(Buffer.from('name: kungfu-agent-onboarding')) &&
+      bytes.includes(Buffer.from('agentResponseGuide.answerTemplate')),
+    'candidate Codex Skill omitted the bounded first-value protocol',
+  );
+  return {
+    target: 'codex',
+    scope: 'project',
+    root: bytesRoot(bytes),
+  };
 }
 
 export function installIsolatedCodexHome(sourceCodexHome, destination) {
@@ -693,6 +748,10 @@ export function verifyAgentFirstValueQualification(report) {
     ROOT_PATTERN.test(report.candidate?.executableRoot || ''),
     'candidate executable root is invalid',
   );
+  assert(
+    ROOT_PATTERN.test(report.candidate?.providerSkillRoot || ''),
+    'candidate provider Skill root is invalid',
+  );
   const ids = new Set();
   const workspaces = new Set();
   const promptCounts = new Map();
@@ -723,6 +782,12 @@ export function verifyAgentFirstValueQualification(report) {
     assert(
       ROOT_PATTERN.test(trial.responseRoot || ''),
       'trial omitted response root',
+    );
+    assert(
+      trial.providerSkill?.target === 'codex' &&
+        trial.providerSkill?.scope === 'project' &&
+        trial.providerSkill?.root === report.candidate.providerSkillRoot,
+      'trial was not bound to the candidate Codex Skill',
     );
     assert(
       Object.keys(trial.protocolEvidence || {})
@@ -898,6 +963,8 @@ function run(argv) {
           ?.contextIsolation === QUALIFICATION_CONTEXT_ISOLATION &&
         contract.contract?.qualification?.localCodexProfile?.executionMode ===
           'codex-exec-ephemeral' &&
+        contract.contract?.qualification?.localCodexProfile
+          ?.providerSkillScope === PROVIDER_SKILL_SCOPE &&
         contract.contract?.qualification?.localCodexProfile?.userConfig ===
           'ignored',
       'candidate local Codex profile drifted',
@@ -943,6 +1010,7 @@ function run(argv) {
         KUNGFU_FIRST_VALUE_ATTEMPT_ID: attemptId,
         KUNGFU_FIRST_VALUE_PROMPT_ROOT: promptEntry.root,
       };
+      const providerSkill = installCandidateCodexSkill(kungfu, workspace, env);
       process.stderr.write(
         `[agent-first-value] Codex trial ${number}/${REQUIRED_TRIALS} (${promptEntry.id})\n`,
       );
@@ -1033,6 +1101,7 @@ function run(argv) {
           eventStreamRoot: bytesRoot(Buffer.from(execution.stdout)),
           responseRoot: bytesRoot(Buffer.from(result.response)),
           questionMarkCount,
+          providerSkill,
           protocolEvidence,
           receipt,
           verificationRoot: semanticRoot(verification),
@@ -1065,6 +1134,7 @@ function run(argv) {
         executableRoot: bytesRoot(fs.readFileSync(kungfu)),
         sourceRevision: options['source-revision'],
         productCandidateRoot: contract.productIdentity.candidateRoot,
+        providerSkillRoot: trials[0].providerSkill.root,
       },
       promptRoot,
       promptCoverage: promptEntries.map((entry, index) => ({

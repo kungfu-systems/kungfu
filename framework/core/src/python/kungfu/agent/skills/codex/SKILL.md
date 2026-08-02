@@ -23,15 +23,19 @@ contract, discovery, or receipt commands on this bounded path. The user does
 not need to spell out the protocol. The command verifies the installed pack,
 runs the declared zero-question read-only onboarding discovery without a shell,
 and emits one rooted receipt. Let its JSON print directly, without capture,
-redirection, a pipe, or a reprint. Copy its exact `receiptRoot` into the receipt
-citation, compare it byte-for-byte before answering, and do not substitute a
-candidate, contract, or other root. Do not retain a raw transcript or treat
-model prose as proof.
+redirection, a pipe, or a reprint. When that receipt says
+`agentResponseGuide.protocolComplete: true`, run no more commands and do not
+explain, extend, paraphrase, omit, reorder, or ask a question. Render only its
+`agentResponseGuide.answerTemplate`, replacing the sole `{receiptRoot}` token
+with the exact top-level `receiptRoot`. Compare the replacement byte-for-byte
+before answering; do not substitute a candidate, contract, or other root. Do
+not retain a raw transcript or treat model prose as proof.
 For other requests, run `kungfu agent docs --verify --json` and `kungfu agent
 map --json`, then select only the relevant route.
-Name one user-supplied or workspace-visible personalization basis, then include
-one copyable read-only verification command, one concrete safe next step, and
-the candidate/provider/platform/public-release non-claims.
+Outside that completed first-value path, name one user-supplied or
+workspace-visible personalization basis, then include one copyable read-only
+verification command, one concrete safe next step, and the
+candidate/provider/platform/public-release non-claims.
 
 Use `kungfu agent context --task "<task>" --role <role> --budget <tokens>
 --route <route-id> --json` when detail is needed. Stop on invalid roots,

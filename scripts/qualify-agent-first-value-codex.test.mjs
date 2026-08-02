@@ -329,7 +329,7 @@ function qualification() {
       surface: 'codex-cli',
       version: 'codex-cli fixture',
       executionMode: 'codex-exec-ephemeral',
-      contextIsolation: 'ephemeral-auth-link',
+      contextIsolation: 'ephemeral-auth-link-candidate-project-skill',
       model: 'gpt-5.6-sol',
       reasoningEffort: 'medium',
     },
@@ -338,6 +338,7 @@ function qualification() {
       executableRoot: root('9'),
       sourceRevision: 'a'.repeat(40),
       productCandidateRoot: root('2'),
+      providerSkillRoot: root('f'),
     },
     promptRoot: root('1'),
     promptCoverage: [
@@ -371,6 +372,11 @@ function qualification() {
       eventStreamRoot: semanticRoot({ events: index }),
       responseRoot: semanticRoot({ response: index }),
       questionMarkCount: 0,
+      providerSkill: {
+        target: 'codex',
+        scope: 'project',
+        root: root('f'),
+      },
       protocolEvidence: protocolEvidence(),
       receipt: value,
       verificationRoot: root('8'),

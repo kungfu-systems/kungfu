@@ -195,8 +195,8 @@ def test_first_value_contract_binds_exact_prompt_and_packaged_roots():
     view = first_value.contract_view()
 
     assert view["contract"]["prompt"] == {
-        "text": "请运行 kungfu agent brief，结合你对我的了解，用最适合我的方式解释并带我上手 Kungfu。",
-        "root": "sha256:423f13042ff32413653c8589a4fa768579ed6fbf90253e33952e60e86fa9338c",
+        "text": "我没用过 Kungfu，希望过程安全、直接并能自己验证；请运行 kungfu agent brief，严格按它带我完成第一次上手。",
+        "root": "sha256:97314a340dd8b7350d2e1a4610ab8dc4c65636ab93d5e01836fc9cebde599ac5",
         "encoding": "utf-8",
         "personalizationBasis": "user-goal",
         "personalizationLabel": "个性化依据：用户目标",
@@ -225,9 +225,10 @@ def test_first_value_contract_binds_exact_prompt_and_packaged_roots():
         == "kungfu agent first-value start --json"
     )
     assert view["contract"]["qualification"]["localCodexProfile"] == {
-        "contextIsolation": "ephemeral-auth-link",
+        "contextIsolation": "ephemeral-auth-link-candidate-project-skill",
         "executionMode": "codex-exec-ephemeral",
         "model": "gpt-5.6-sol",
+        "providerSkillScope": "candidate-project",
         "reasoningEffort": "medium",
         "userConfig": "ignored",
     }
