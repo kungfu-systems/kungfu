@@ -16,13 +16,14 @@
 name: Dev Verify Patrol
 
 on:
-  schedule:
-    # Daily at 20:00 UTC, which is 04:00 Asia/Shanghai on the following day.
-    - cron: "0 20 * * *"
   workflow_dispatch:
     inputs:
       buildchain-ref:
         description: "Temporary Buildchain train or exact SHA for trusted manual validation"
+        required: false
+        default: ""
+      source-sha:
+        description: "Controller-observed Dev SHA; must equal the dispatch event SHA"
         required: false
         default: ""
 
@@ -30,7 +31,30 @@ permissions:
   contents: read
 
 jobs:
+  bind-source:
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+    outputs:
+      source-sha: ${{ steps.source.outputs.source-sha }}
+    steps:
+      - name: Bind workflow event to requested Dev source
+        id: source
+        shell: bash
+        env:
+          EVENT_SHA: ${{ github.sha }}
+          REQUESTED_SHA: ${{ inputs.source-sha }}
+        run: |
+          set -euo pipefail
+          [[ "$EVENT_SHA" =~ ^[0-9a-f]{40}$ ]]
+          if [ -n "$REQUESTED_SHA" ]; then
+            [[ "$REQUESTED_SHA" =~ ^[0-9a-f]{40}$ ]]
+            test "$REQUESTED_SHA" = "$EVENT_SHA"
+          fi
+          echo "source-sha=$EVENT_SHA" >> "$GITHUB_OUTPUT"
+
   verify:
+    needs: bind-source
     permissions:
       contents: read
       id-token: write
@@ -42,6 +66,7 @@ jobs:
       # cache hits are optional: every source/runtime checkout verifies the
       # locked SHA and falls back to GitHub when a retained bundle is stale.
       buildchain-ref: ${{ github.event_name == 'workflow_dispatch' && inputs.buildchain-ref || '' }}
+      source-ref: ${{ needs.bind-source.outputs.source-sha }}
       checkout-cache-mode: auto
       checkout-cache-fallback: github
       rust-toolchain: "1.96.0"
@@ -70,7 +95,8 @@ jobs:
   report:
     needs: verify
     # Always run so the tracking issue is closed on green and opened/refreshed
-    # on red. This workflow only triggers on schedule / workflow_dispatch.
+    # on red. This workflow is dispatched only through the qualification
+    # controller or a trusted manual diagnostic.
     if: always()
     runs-on: ubuntu-latest
     permissions:
@@ -79,7 +105,7 @@ jobs:
     env:
       GH_TOKEN: ${{ github.token }}
       RESULT: ${{ needs.verify.result }}
-      HEAD_SHA: ${{ github.sha }}
+      HEAD_SHA: ${{ needs.verify.outputs.source-sha }}
       DEV_BRANCH: ${{ github.event.repository.default_branch }}
       RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
       AUTOMATION_LABELS: "kind/internal,area/buildchain,source/automation,state/blocked"
@@ -119,7 +145,7 @@ jobs:
           body="$(cat <<EOF
           <!-- kungfu-attention-source: automation -->
 
-          The daily dev verify patrol found \`${DEV_BRANCH}\` failing.
+          The Dev qualification patrol found \`${DEV_BRANCH}\` failing.
 
           - Commit: \`${short_sha}\`
           - Run: ${RUN_URL}
