@@ -9,6 +9,48 @@ import path from 'node:path';
 import process from 'node:process';
 
 const buildDir = path.join(process.cwd(), 'framework', 'core', 'build');
+const coreDir = path.join(process.cwd(), 'framework', 'core');
+const pythonEnvironment =
+  process.env.UV_PROJECT_ENVIRONMENT || path.join(coreDir, '.venv');
+const python =
+  process.platform === 'win32'
+    ? path.join(pythonEnvironment, 'Scripts', 'python.exe')
+    : path.join(pythonEnvironment, 'bin', 'python');
+const ninjaName = process.platform === 'win32' ? 'ninja.exe' : 'ninja';
+const managedNinja = process.env.UV_PROJECT_ENVIRONMENT
+  ? path.join(
+      process.env.UV_PROJECT_ENVIRONMENT,
+      process.platform === 'win32' ? 'Scripts' : 'bin',
+      ninjaName,
+    )
+  : path.join(
+      coreDir,
+      '.venv',
+      process.platform === 'win32' ? 'Scripts' : 'bin',
+      ninjaName,
+    );
+const configure = spawnSync(
+  'cmake',
+  [
+    '-S',
+    coreDir,
+    '-B',
+    buildDir,
+    `-DCMAKE_MAKE_PROGRAM=${managedNinja}`,
+    `-DPYTHON_EXECUTABLE=${python}`,
+  ],
+  { cwd: process.cwd(), stdio: 'inherit' },
+);
+if (configure.error || configure.status !== 0) {
+  if (configure.error)
+    console.error(
+      `[profile-lifecycle-test] configure: ${configure.error.message}`,
+    );
+  console.error(
+    '[profile-lifecycle-test] failed to rebind the configured tree to the current Shifu toolchain',
+  );
+  process.exit(configure.status ?? 2);
+}
 // shifu-entry-contract: this task builds the exact native target before use.
 const build = spawnSync(
   'cmake',
@@ -73,13 +115,6 @@ if (result.error || result.status !== 0) {
   process.exit(result.status ?? 1);
 }
 
-const pythonEnvironment =
-  process.env.UV_PROJECT_ENVIRONMENT ||
-  path.join(process.cwd(), 'framework', 'core', '.venv');
-const python =
-  process.platform === 'win32'
-    ? path.join(pythonEnvironment, 'Scripts', 'python.exe')
-    : path.join(pythonEnvironment, 'bin', 'python');
 const pythonPath = [
   path.join(process.cwd(), 'framework', 'core', 'build', 'Release'),
   path.join(process.cwd(), 'framework', 'core', 'src', 'python'),
@@ -102,6 +137,14 @@ const pythonResult = spawnSync(
       'tests',
       'python',
       'test_profile_lifecycle_cli.py',
+    ),
+    path.join(
+      process.cwd(),
+      'framework',
+      'core',
+      'tests',
+      'python',
+      'test_profile_lifecycle_command_contract.py',
     ),
     '-q',
   ],
