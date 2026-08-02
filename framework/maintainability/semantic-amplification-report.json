@@ -1310,7 +1310,7 @@
   ],
   "terminalEvidenceProjection": {
     "matrixPath": "framework/maintainability/terminal-evidence-matrix.json",
-    "matrixSchema": "kungfu.maintainability-terminal-evidence-matrix/v2",
+    "matrixSchema": "kungfu.maintainability-terminal-evidence-matrix/v3",
     "predecessorAssignmentId": "2026-07-27-kungfu-maintainability-terminal-closure",
     "predecessorSealedStateRoot": "sha256:41449544ae9f64f6a6e6e7ae69f24c0fd9049e38beef4bba2bbed3e3e730e98c"
   },

@@ -2,7 +2,6 @@
 // SPDX-License-Identifier: Apache-2.0
 // @ts-check
 
-import { spawnSync } from 'node:child_process';
 import crypto from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -10,6 +9,17 @@ import process from 'node:process';
 import { fileURLToPath } from 'node:url';
 
 import { semanticRoot } from '../project-cut/src/project-cut.mjs';
+import { collectTerminalLiveObservations } from '../terminal-evidence/live-observations.mjs';
+import {
+  verifyLiveAssignment,
+  verifyLiveRuns,
+} from '../terminal-evidence/live-verification.mjs';
+import {
+  exact,
+  issue,
+  requiredRoot,
+  uniqueBy,
+} from '../terminal-evidence/verification-primitives.mjs';
 
 const ROOT = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
@@ -17,78 +27,9 @@ const ROOT = path.resolve(
 );
 const MATRIX_PATH = 'framework/maintainability/terminal-evidence-matrix.json';
 const SHA = /^[0-9a-f]{40}$/u;
-const ROOT_PATTERN = /^sha256:[0-9a-f]{64}$/u;
 
 function digestBytes(bytes) {
   return `sha256:${crypto.createHash('sha256').update(bytes).digest('hex')}`;
-}
-
-function issue(code, target, message) {
-  return { code, target, message };
-}
-
-function git(args) {
-  const result = spawnSync('git', args, {
-    cwd: ROOT,
-    encoding: 'utf8',
-    shell: false,
-  });
-  if (result.status !== 0) {
-    throw new Error(
-      `git ${args.join(' ')} failed: ${(result.stderr || '').trim()}`,
-    );
-  }
-  return result.stdout.trim();
-}
-
-function requiredRoot(references, value, target, kind, issues) {
-  if (!ROOT_PATTERN.test(value || '')) {
-    issues.push(
-      issue('invalid-root', target, `${target} must be a sha256 root`),
-    );
-    return;
-  }
-  const prior = references.get(value);
-  if (prior && prior.kind !== kind) {
-    issues.push(
-      issue(
-        'retained-role-conflict',
-        target,
-        `${value} cannot represent both ${prior.kind} and ${kind}`,
-      ),
-    );
-    return;
-  }
-  references.set(value, { kind, target });
-}
-
-function exact(value, expected, code, target, issues) {
-  if (value !== expected) {
-    issues.push(
-      issue(
-        code,
-        target,
-        `${target} is ${String(value)}, expected ${expected}`,
-      ),
-    );
-  }
-}
-
-function uniqueBy(values, key, code, issues) {
-  const seen = new Set();
-  for (const value of values || []) {
-    const identity = value?.[key];
-    if (!identity || seen.has(identity)) {
-      issues.push(
-        issue(
-          code,
-          identity || key,
-          `${key} values must be present and unique`,
-        ),
-      );
-    }
-    seen.add(identity);
-  }
 }
 
 function retainedRoot(bytes, object) {
@@ -138,19 +79,85 @@ function verifyRetainedBinding(
         );
       }
       break;
-    case 'review-snapshot':
+    case 'github-review-snapshot':
       mismatch(
         'retained-review-schema',
         'review.schema',
         document?.schema,
-        'kungfu.terminal-review-snapshot/v1',
+        'kungfu.terminal-github-review-snapshot/v1',
       );
-      for (const field of ['reviewer', 'decision', 'commit', 'freshContext']) {
+      for (const field of ['reviewId', 'reviewer', 'decision', 'commit']) {
         mismatch(
           `retained-review-${field}`,
           `review.${field}`,
           document?.[field],
+          evidence.delivery?.approval?.[field],
+        );
+      }
+      break;
+    case 'terminal-review-report':
+      mismatch(
+        'retained-terminal-review-schema',
+        'terminalReview.schema',
+        document?.schema,
+        'kungfu.terminal-review-report/v1',
+      );
+      for (const field of [
+        'reviewer',
+        'verdict',
+        'commit',
+        'tree',
+        'freshContext',
+        'maximumOpenSeverity',
+      ]) {
+        mismatch(
+          `retained-terminal-review-${field}`,
+          `terminalReview.${field}`,
+          document?.[field],
           evidence.review?.[field],
+        );
+      }
+      if ((document?.findings || []).length !== 0) {
+        issues.push(
+          issue(
+            'terminal-review-open-findings',
+            'terminalReview.findings',
+            'terminal review retains open findings',
+          ),
+        );
+      }
+      break;
+    case 'terminal-review-attestation-snapshot':
+      mismatch(
+        'retained-terminal-attestation-schema',
+        'terminalReviewAttestation.schema',
+        document?.schema,
+        'kungfu.terminal-review-attestation-snapshot/v1',
+      );
+      for (const field of ['commentId', 'author', 'createdAt', 'updatedAt']) {
+        mismatch(
+          `retained-terminal-attestation-${field}`,
+          `terminalReviewAttestation.${field}`,
+          document?.[field],
+          live.terminalReview?.[field],
+        );
+      }
+      for (const field of [
+        'schema',
+        'goalId',
+        'commit',
+        'tree',
+        'reviewer',
+        'verdict',
+        'freshContext',
+        'maximumOpenSeverity',
+        'reportRoot',
+      ]) {
+        mismatch(
+          `retained-terminal-attestation-document-${field}`,
+          `terminalReviewAttestation.attestation.${field}`,
+          document?.attestation?.[field],
+          live.terminalReview?.[field],
         );
       }
       break;
@@ -199,7 +206,7 @@ function verifyRetainedBinding(
         'retained-claim-head',
         'assignment.claim.git_commit',
         document?.git_commit,
-        live.head,
+        live.source?.head,
       );
       if (
         !Array.isArray(document?.go_set) ||
@@ -234,13 +241,19 @@ function verifyRetainedBinding(
         'retained-native-reviewer',
         'assignment.review.reviewer',
         document?.reviewer,
-        matrix.terminalEvidence.reviewRule.reviewer,
+        matrix.terminalEvidence.terminalReviewRule.reviewer,
       );
       mismatch(
         'retained-native-review-verdict',
         'assignment.review.verdict',
         document?.verdict,
-        'fit',
+        matrix.terminalEvidence.terminalReviewRule.verdict,
+      );
+      mismatch(
+        'retained-native-review-source',
+        'assignment.review.reviewer_source',
+        document?.reviewer_source,
+        evidence.review?.root,
       );
       break;
     case 'assignment-decision':
@@ -298,29 +311,37 @@ function verifyRetainedBinding(
       }
       break;
     }
-    case 'platform-run': {
-      const platform = (evidence.platforms || []).find(
+    case 'run-snapshot': {
+      const run = (evidence.runs || []).find(
         ({ evidenceRoot }) => evidenceRoot === object.root,
       );
       mismatch(
-        'retained-platform-schema',
-        'platform.schema',
+        'retained-run-schema',
+        'run.schema',
         document?.schema,
-        'kungfu.terminal-platform-run-snapshot/v1',
+        'kungfu.terminal-run-snapshot/v1',
       );
-      for (const field of ['platform', 'commit', 'runId', 'conclusion']) {
+      for (const field of [
+        'role',
+        'workflowPath',
+        'runId',
+        'runAttempt',
+        'event',
+        'commit',
+        'conclusion',
+      ]) {
         mismatch(
-          `retained-platform-${field}`,
-          `platform.${field}`,
+          `retained-run-${field}`,
+          `run.${field}`,
           document?.[field],
-          platform?.[field],
+          run?.[field],
         );
       }
       mismatch(
-        'retained-platform-live-head',
-        'platform.commit',
+        'retained-run-live-head',
+        'run.commit',
         document?.commit,
-        live.head,
+        live.source?.head,
       );
       break;
     }
@@ -362,7 +383,7 @@ export function verifyTerminalEvidence(
   const references = new Map();
   exact(
     matrix.schema,
-    'kungfu.maintainability-terminal-evidence-matrix/v2',
+    'kungfu.maintainability-terminal-evidence-matrix/v3',
     'matrix-schema',
     'matrix.schema',
     issues,
@@ -381,24 +402,53 @@ export function verifyTerminalEvidence(
     'goalId',
     issues,
   );
-
-  if (!SHA.test(live.head || '')) {
+  if ((matrix.exceptions || []).length !== 0) {
     issues.push(
-      issue('invalid-live-head', 'live.head', 'live HEAD is not exact'),
+      issue(
+        'terminal-exception-present',
+        'matrix.exceptions',
+        'terminal closure does not admit exceptions',
+      ),
+    );
+  }
+  exact(
+    live.schema,
+    'kungfu.terminal-live-observations/v1',
+    'live-schema',
+    'live.schema',
+    issues,
+  );
+  if (!SHA.test(live.source?.head || '')) {
+    issues.push(
+      issue('invalid-live-head', 'live.source.head', 'live HEAD is not exact'),
     );
   }
   exact(
     evidence.source?.commit,
-    live.head,
+    live.source?.head,
     'source-head-mismatch',
     'source.commit',
     issues,
   );
   exact(
     evidence.source?.commit,
-    live.protectedCommit,
+    live.source?.protectedCommit,
     'protected-head-mismatch',
     'source.commit',
+    issues,
+  );
+  exact(
+    evidence.source?.tree,
+    live.source?.headTree,
+    'source-tree-mismatch',
+    'source.tree',
+    issues,
+  );
+  exact(
+    live.source?.headTree,
+    live.source?.protectedTree,
+    'protected-tree-mismatch',
+    'live.source.protectedTree',
     issues,
   );
   exact(
@@ -432,7 +482,7 @@ export function verifyTerminalEvidence(
   );
   exact(
     evidence.delivery?.mergeCommit,
-    live.head,
+    live.source?.head,
     'delivery-not-live-head',
     'delivery.mergeCommit',
     issues,
@@ -458,34 +508,185 @@ export function verifyTerminalEvidence(
     'delivery-snapshot',
     issues,
   );
+  exact(
+    live.delivery?.baseRef,
+    matrix.sourceBinding.protectedBranch,
+    'delivery-base-mismatch',
+    'live.delivery.baseRef',
+    issues,
+  );
+  exact(
+    live.delivery?.pullRequestTree,
+    live.source?.headTree,
+    'delivery-tested-tree-mismatch',
+    'live.delivery.pullRequestTree',
+    issues,
+  );
+  exact(
+    live.delivery?.mergeTree,
+    live.source?.headTree,
+    'delivery-merge-tree-mismatch',
+    'live.delivery.mergeTree',
+    issues,
+  );
+  const pullReviewRule = matrix.terminalEvidence.pullRequestReviewRule;
+  for (const field of ['reviewId', 'reviewer', 'decision', 'commit']) {
+    exact(
+      evidence.delivery?.approval?.[field],
+      live.delivery?.approval?.[field],
+      `pull-review-${field}-mismatch`,
+      `delivery.approval.${field}`,
+      issues,
+    );
+  }
+  exact(
+    evidence.delivery?.approval?.reviewer,
+    pullReviewRule.reviewer,
+    'pull-reviewer-mismatch',
+    'delivery.approval.reviewer',
+    issues,
+  );
+  exact(
+    evidence.delivery?.approval?.decision,
+    pullReviewRule.decision,
+    'pull-review-decision-mismatch',
+    'delivery.approval.decision',
+    issues,
+  );
+  exact(
+    live.delivery?.approval?.tree,
+    live.source?.headTree,
+    'pull-review-tree-mismatch',
+    'live.delivery.approval.tree',
+    issues,
+  );
+  requiredRoot(
+    references,
+    evidence.delivery?.approval?.root,
+    'delivery.approval.root',
+    'github-review-snapshot',
+    issues,
+  );
 
+  const terminalReviewRule = matrix.terminalEvidence.terminalReviewRule;
+  exact(
+    live.terminalReview?.schema,
+    terminalReviewRule.attestationSchema,
+    'review-attestation-schema-mismatch',
+    'live.terminalReview.schema',
+    issues,
+  );
+  exact(
+    live.terminalReview?.goalId,
+    matrix.goalId,
+    'review-attestation-goal-mismatch',
+    'live.terminalReview.goalId',
+    issues,
+  );
+  exact(
+    live.terminalReview?.commit,
+    live.source?.head,
+    'review-attestation-head-mismatch',
+    'live.terminalReview.commit',
+    issues,
+  );
+  exact(
+    live.terminalReview?.tree,
+    live.source?.headTree,
+    'review-attestation-tree-mismatch',
+    'live.terminalReview.tree',
+    issues,
+  );
+  exact(
+    live.terminalReview?.author,
+    terminalReviewRule.reviewer,
+    'review-attestation-author-mismatch',
+    'live.terminalReview.author',
+    issues,
+  );
+  exact(
+    live.terminalReview?.reviewer,
+    terminalReviewRule.reviewer,
+    'review-attestation-reviewer-mismatch',
+    'live.terminalReview.reviewer',
+    issues,
+  );
+  exact(
+    live.terminalReview?.verdict,
+    terminalReviewRule.verdict,
+    'review-attestation-verdict-mismatch',
+    'live.terminalReview.verdict',
+    issues,
+  );
+  exact(
+    live.terminalReview?.freshContext,
+    terminalReviewRule.freshContext,
+    'review-attestation-fresh-context-mismatch',
+    'live.terminalReview.freshContext',
+    issues,
+  );
+  exact(
+    live.terminalReview?.maximumOpenSeverity,
+    terminalReviewRule.maximumOpenSeverity,
+    'review-attestation-severity-mismatch',
+    'live.terminalReview.maximumOpenSeverity',
+    issues,
+  );
+  exact(
+    evidence.review?.root,
+    live.terminalReview?.reportRoot,
+    'review-attestation-root-mismatch',
+    'review.root',
+    issues,
+  );
   exact(
     evidence.review?.reviewer,
-    matrix.terminalEvidence.reviewRule.reviewer,
+    terminalReviewRule.reviewer,
     'reviewer-mismatch',
     'review.reviewer',
     issues,
   );
   exact(
-    evidence.review?.decision,
-    matrix.terminalEvidence.reviewRule.decision,
-    'review-decision-mismatch',
-    'review.decision',
+    evidence.review?.verdict,
+    terminalReviewRule.verdict,
+    'review-verdict-mismatch',
+    'review.verdict',
     issues,
   );
   exact(
     evidence.review?.commit,
-    live.head,
+    live.source?.head,
     'review-head-mismatch',
     'review.commit',
     issues,
   );
-  if (evidence.review?.freshContext !== true) {
+  exact(
+    evidence.review?.tree,
+    live.source?.headTree,
+    'review-tree-mismatch',
+    'review.tree',
+    issues,
+  );
+  exact(
+    evidence.review?.freshContext,
+    terminalReviewRule.freshContext,
+    'review-not-fresh',
+    'review.freshContext',
+    issues,
+  );
+  exact(
+    evidence.review?.maximumOpenSeverity,
+    terminalReviewRule.maximumOpenSeverity,
+    'review-open-severity',
+    'review.maximumOpenSeverity',
+    issues,
+  );
+  if (!Number.isInteger(live.terminalReview?.commentId)) {
     issues.push(
       issue(
-        'review-not-fresh',
-        'review.freshContext',
-        'terminal review must be fresh-context',
+        'review-attestation-comment-missing',
+        'live.terminalReview.commentId',
+        'terminal review attestation has no live GitHub comment identity',
       ),
     );
   }
@@ -493,40 +694,18 @@ export function verifyTerminalEvidence(
     references,
     evidence.review?.root,
     'review.root',
-    'review-snapshot',
+    'terminal-review-report',
+    issues,
+  );
+  requiredRoot(
+    references,
+    evidence.review?.attestationRoot,
+    'review.attestationRoot',
+    'terminal-review-attestation-snapshot',
     issues,
   );
 
-  exact(
-    evidence.assignment?.assignmentId,
-    matrix.goalId,
-    'assignment-identity-mismatch',
-    'assignment.assignmentId',
-    issues,
-  );
-  exact(
-    evidence.assignment?.gitCommit,
-    live.head,
-    'assignment-head-mismatch',
-    'assignment.gitCommit',
-    issues,
-  );
-  for (const [field, kind] of [
-    ['requestRoot', 'assignment-request'],
-    ['captureReceiptRoot', 'assignment-capture'],
-    ['completionClaimRoot', 'assignment-claim'],
-    ['independentReviewRoot', 'assignment-review'],
-    ['completionDecisionRoot', 'assignment-decision'],
-    ['sealedStateRoot', 'assignment-seal'],
-  ]) {
-    requiredRoot(
-      references,
-      evidence.assignment?.[field],
-      `assignment.${field}`,
-      kind,
-      issues,
-    );
-  }
+  verifyLiveAssignment(matrix, evidence, live, references, issues);
   exact(
     evidence.predecessor?.assignmentId,
     matrix.predecessor.assignmentId,
@@ -549,61 +728,7 @@ export function verifyTerminalEvidence(
     issues,
   );
 
-  uniqueBy(evidence.platforms, 'platform', 'duplicate-platform', issues);
-  const platforms = new Map(
-    (evidence.platforms || []).map((entry) => [entry.platform, entry]),
-  );
-  for (const required of matrix.terminalEvidence.requiredProductPlatforms) {
-    const platform = platforms.get(required);
-    if (!platform) {
-      issues.push(
-        issue('missing-platform', required, `missing platform ${required}`),
-      );
-      continue;
-    }
-    exact(
-      platform.commit,
-      live.head,
-      'platform-head-mismatch',
-      `${required}.commit`,
-      issues,
-    );
-    if (!Number.isInteger(platform.runId) || platform.runId < 1) {
-      issues.push(
-        issue(
-          'invalid-platform-run',
-          `${required}.runId`,
-          'platform run id must be positive',
-        ),
-      );
-    }
-    if (platform.conclusion !== 'success') {
-      issues.push(
-        issue(
-          'platform-not-successful',
-          required,
-          `platform conclusion is ${platform.conclusion}`,
-        ),
-      );
-    }
-    requiredRoot(
-      references,
-      platform.evidenceRoot,
-      `${required}.evidenceRoot`,
-      'platform-run',
-      issues,
-    );
-    uniqueBy(platform.artifacts, 'name', 'duplicate-artifact', issues);
-    for (const artifact of platform.artifacts || []) {
-      requiredRoot(
-        references,
-        artifact.root,
-        `${required}.artifacts.${artifact.name}`,
-        'artifact-bytes',
-        issues,
-      );
-    }
-  }
+  verifyLiveRuns(matrix, evidence, live, references, issues);
 
   uniqueBy(evidence.retainedObjects, 'root', 'duplicate-retained-root', issues);
   const retained = new Map(
@@ -662,7 +787,8 @@ export function verifyTerminalEvidence(
   return {
     schema: 'kungfu.terminal-evidence-verification/v1',
     verdict: issues.length ? 'fail' : 'pass',
-    sourceCommit: live.head,
+    sourceCommit: live.source?.head,
+    liveObservationRoot: semanticRoot(live),
     verifiedRoots: references.size,
     issues,
   };
@@ -694,21 +820,16 @@ function main() {
   const delivery = JSON.parse(
     fs.readFileSync(path.resolve(options.delivery), 'utf8'),
   );
-  const protectedRef =
-    options.protectedRef ||
-    `refs/remotes/origin/${matrix.sourceBinding.protectedBranch}`;
-  const report = verifyTerminalEvidence(
-    matrix,
-    evidence,
-    {
-      head: git(['rev-parse', 'HEAD']),
-      protectedCommit: git(['rev-parse', protectedRef]),
-      delivery,
-    },
-    (relative) =>
-      fs.readFileSync(
-        path.resolve(path.dirname(evidencePath), String(relative)),
-      ),
+  if (semanticRoot(delivery) !== evidence.delivery?.evidenceRoot) {
+    throw new Error('delivery input does not match the retained delivery root');
+  }
+  const expectedProtectedRef = `refs/remotes/origin/${matrix.sourceBinding.protectedBranch}`;
+  if (options.protectedRef && options.protectedRef !== expectedProtectedRef) {
+    throw new Error(`protected ref must be ${expectedProtectedRef}`);
+  }
+  const live = collectTerminalLiveObservations(matrix, evidence);
+  const report = verifyTerminalEvidence(matrix, evidence, live, (relative) =>
+    fs.readFileSync(path.resolve(path.dirname(evidencePath), String(relative))),
   );
   process.stdout.write(`${JSON.stringify(report, null, 2)}\n`);
   if (report.issues.length) process.exitCode = 1;
