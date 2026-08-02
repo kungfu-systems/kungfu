@@ -168,6 +168,7 @@ def manager(runtime_dir: str | Path) -> dict[str, Any]:
         profiles.append(projected)
     return {
         "schema": MANAGER_SCHEMA,
+        "lifecycleCommandContract": profile_sdk.lifecycle_command_contract(),
         "runtimeDir": lifecycle.get("runtime_dir", str(runtime_dir)),
         "cutSystemTime": lifecycle.get("cut_system_time", 0),
         "profiles": profiles,
