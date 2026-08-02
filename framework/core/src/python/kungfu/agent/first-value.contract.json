@@ -83,7 +83,7 @@
     "local": "provider-and-candidate-specific",
     "localCodexProfile": {
       "executionMode": "codex-exec-ephemeral",
-      "reasoningEffort": "medium",
+      "reasoningEffort": "low",
       "userConfig": "ignored"
     },
     "requiredLocalCodexTrials": 10,

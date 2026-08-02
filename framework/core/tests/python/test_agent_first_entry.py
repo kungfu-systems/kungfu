@@ -223,7 +223,7 @@ def test_first_value_contract_binds_exact_prompt_and_packaged_roots():
     )
     assert view["contract"]["qualification"]["localCodexProfile"] == {
         "executionMode": "codex-exec-ephemeral",
-        "reasoningEffort": "medium",
+        "reasoningEffort": "low",
         "userConfig": "ignored",
     }
     assert len(view["contract"]["qualification"]["experienceDimensions"]) == 9

@@ -247,7 +247,7 @@ function qualification() {
       surface: 'codex-cli',
       version: 'codex-cli fixture',
       executionMode: 'codex-exec-ephemeral',
-      reasoningEffort: 'medium',
+      reasoningEffort: 'low',
     },
     platform: { system: 'darwin', arch: 'arm64' },
     candidate: {

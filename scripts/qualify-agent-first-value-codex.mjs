@@ -15,7 +15,7 @@ const QUALIFICATION_SCHEMA =
   'kungfu.agent-first-value-local-codex-qualification/v2';
 const REQUIRED_TRIALS = 10;
 const MINIMUM_CANONICAL_TRIALS = 5;
-const QUALIFICATION_REASONING_EFFORT = 'medium';
+const QUALIFICATION_REASONING_EFFORT = 'low';
 const REQUIRED_NON_CLAIMS = [
   'claude-qualified',
   'ci-hosted-codex-qualified',
