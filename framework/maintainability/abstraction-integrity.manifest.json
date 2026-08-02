@@ -157,6 +157,14 @@
       ]
     },
     {
+      "owner": "core/python-profile-sdk",
+      "paths": [
+        "framework/core/src/python/kungfu/profile_sdk_kfd3.py",
+        "framework/core/src/python/kungfu/profile_sdk_source.py",
+        "framework/core/src/python/kungfu/profile_sdk_support.py"
+      ]
+    },
+    {
       "owner": "shifu/python-structure-entry",
       "paths": [
         "scripts/check-code-complexity.mjs",
