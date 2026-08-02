@@ -22,7 +22,6 @@ import {
   type ProjectWorkRunSnapshot,
   type Projects,
   type ProjectsCatalog,
-  SYSTEM_HELP_DOCUMENTS,
   type WorkCloseReceipt,
   type WorkReviewReceipt,
   type WorkStartReceipt,
@@ -54,9 +53,9 @@ import {
   AgentWorkLabHost,
   type AgentWorkLabSuiteAction,
   type TuiOnboardingAction,
-  type TuiOnboardingNotice,
   agentWorkLabActionReturnsToControls,
   readTuiOnboardingState,
+  useTransientOnboardingNotice,
 } from './agent-work-lab-view.js';
 import { copyTextToClipboard } from './clipboard/index.js';
 import { scrollListSelection } from './list-window/index.js';
@@ -67,11 +66,14 @@ import {
   ControlPlaneOverlay,
   type ControlPlaneState,
   PlaybackBar,
+  type ProductSurface,
   QUICK_COMMANDS,
   type TerminalDimensions,
+  buildTuiProductSearchDocuments,
   contextualProjectRestoreCanCommit,
   createControlPlaneInputFence,
   directWorkspaceNavigationFromInput,
+  initialProductSurface,
   quickCommandMatches,
   reduceControlPlaneInput,
   resolveProductStartupSurface,
@@ -932,15 +934,6 @@ function StartingHost({
   );
 }
 
-type ProductSurface =
-  | 'loading'
-  | 'onboarding'
-  | 'lab'
-  | 'all-work'
-  | 'projects'
-  | 'project-work'
-  | 'project-assignment';
-
 function ProductHost({
   lab,
   dimensions,
@@ -971,12 +964,7 @@ function ProductHost({
       return readTuiOnboardingState(paths.configHome);
     });
   const [onboardingNotice, setOnboardingNotice] =
-    React.useState<TuiOnboardingNotice>();
-  React.useEffect(() => {
-    if (!onboardingNotice) return undefined;
-    const timer = setTimeout(() => setOnboardingNotice(undefined), 4_000);
-    return () => clearTimeout(timer);
-  }, [onboardingNotice]);
+    useTransientOnboardingNotice();
   const firstLaunch =
     !playbackMode && !emptyState && shouldShowKungfuOnboarding(onboardingState);
   const startupProjectRoot = React.useMemo(
@@ -990,13 +978,7 @@ function ProductHost({
     AgentWorkLabStartupRoute | undefined
   >(playbackMode ? PENDING_STARTUP : undefined);
   const [surface, setSurfaceState] = React.useState<ProductSurface>(
-    playbackMode
-      ? 'lab'
-      : firstLaunch
-        ? 'onboarding'
-        : emptyState
-          ? 'all-work'
-          : 'loading',
+    initialProductSurface({ playbackMode, firstLaunch, emptyState }),
   );
   const startupAnimationEnabled = React.useMemo(
     () => terminalAnimationsEnabled(process.env),
@@ -1347,76 +1329,15 @@ function ProductHost({
             : QUICK_COMMANDS,
     [labOpen, openedProject, starterCloseReceipt?.status, surface],
   );
-  const viewDocuments = React.useMemo<ProductSearchDocument[]>(
-    () => [
-      {
-        id: 'view.work-control',
-        kind: 'view',
-        title: 'All Work',
-        summary: 'Open the cross-Project read-only Work overview.',
-        keywords: ['all', 'work', 'active', 'completed'],
-        action: { kind: 'open-view', viewId: 'work' },
-      },
-      {
-        id: 'view.projects',
-        kind: 'view',
-        title: 'Projects',
-        summary: 'Create a Project or open an existing directory.',
-        keywords: ['project', 'new', 'open', 'directory'],
-        action: { kind: 'open-view', viewId: 'projects' },
-      },
-      {
-        id: 'view.agent-work-lab',
-        kind: 'view',
-        title: 'Agent Work Lab',
-        summary: 'Compare bounded Agent Work behavior across two Sessions.',
-        keywords: ['qualification', 'handoff', 'session'],
-        action: { kind: 'open-view', viewId: 'lab' },
-      },
-      {
-        id: 'view.onboarding',
-        kind: 'view',
-        title: 'Getting Started',
-        summary: 'Reopen the Agent-first onboarding guide at any time.',
-        keywords: ['onboarding', 'agent', 'guide', 'first'],
-        action: { kind: 'open-view', viewId: 'onboarding' },
-      },
-    ],
-    [],
-  );
-  const quickSearchDocuments = React.useMemo<ProductSearchDocument[]>(
-    () =>
-      availableQuickCommands.map((command, index) => ({
-        id: `command.quick.${command.id}`,
-        kind: 'command',
-        title: command.command,
-        summary: command.summary,
-        section: 'Quick actions',
-        keywords: [command.title],
-        priority: index,
-        action: {
-          kind: 'describe-command',
-          command: command.command,
-        },
-      })),
-    [availableQuickCommands],
-  );
   const documents = React.useMemo(
-    () => [
-      ...SYSTEM_HELP_DOCUMENTS,
-      ...quickSearchDocuments,
-      ...cliDocuments,
-      ...workDocuments,
-      ...projectDocuments,
-      ...viewDocuments,
-    ],
-    [
-      cliDocuments,
-      projectDocuments,
-      quickSearchDocuments,
-      viewDocuments,
-      workDocuments,
-    ],
+    () =>
+      buildTuiProductSearchDocuments({
+        quickCommands: availableQuickCommands,
+        cliDocuments,
+        workDocuments,
+        projectDocuments,
+      }),
+    [availableQuickCommands, cliDocuments, projectDocuments, workDocuments],
   );
   const searchResults = React.useMemo(
     () => searchProductDocuments(documents, control.query),
@@ -1486,7 +1407,7 @@ function ProductHost({
         },
       );
     },
-    [setControlNow],
+    [setControlNow, setOnboardingNotice],
   );
   const setWorkspaceInputActive = React.useCallback(
     (active: boolean) => {
@@ -1555,6 +1476,7 @@ function ProductHost({
       dispatchLabAction,
       onboardingState,
       persistOnboarding,
+      setOnboardingNotice,
       setSurface,
     ],
   );

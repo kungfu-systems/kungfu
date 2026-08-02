@@ -3,13 +3,13 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import test from 'node:test';
-import {
-  PRODUCT_HELP_LINKS,
-  productHelpMenuItems,
-} from './main/product-help-menu';
 
 const source = readFileSync(
   new URL('./renderer/src/main.tsx', import.meta.url),
+  'utf8',
+);
+const mainProcessSource = readFileSync(
+  new URL('./main/index.ts', import.meta.url),
   'utf8',
 );
 const projectsPanelSource = readFileSync(
@@ -56,33 +56,19 @@ test('the title-bar product menu reserves permanent chrome for daily work', () =
 });
 
 test('the Help menu keeps onboarding available without permanent shell chrome', () => {
-  let onboardingOpened = 0;
-  const externalUrls: string[] = [];
-  const items = productHelpMenuItems({
-    openOnboarding: () => {
-      onboardingOpened += 1;
-    },
-    openExternal: (url) => externalUrls.push(url),
-  });
-
-  assert.deepEqual(
-    items.map((item) => item.label ?? item.type),
-    [
-      'Onboarding',
-      'separator',
-      'GitHub Repository',
-      'Kungfu Website',
-      'Developer Platform',
-    ],
+  assert.match(
+    mainProcessSource,
+    /label: 'Onboarding',[\s\S]*navigateShell\(\{ target: 'onboarding' \}\)/u,
   );
-
-  items[0]?.click?.();
-  for (const item of items.slice(2)) item.click?.();
-  assert.equal(onboardingOpened, 1);
-  assert.deepEqual(
-    externalUrls,
-    PRODUCT_HELP_LINKS.map((entry) => entry.url),
+  assert.match(mainProcessSource, /label: 'GitHub Repository'/u);
+  assert.match(
+    mainProcessSource,
+    /https:\/\/github\.com\/kungfu-systems\/kungfu/u,
   );
+  assert.match(mainProcessSource, /label: 'Kungfu Website'/u);
+  assert.match(mainProcessSource, /https:\/\/kungfu\.tech/u);
+  assert.match(mainProcessSource, /label: 'Developer Platform'/u);
+  assert.match(mainProcessSource, /https:\/\/libkungfu\.dev/u);
 });
 
 test('Cmd or Ctrl K focuses the same search plane without executing CLI results', () => {

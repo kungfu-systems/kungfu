@@ -87,7 +87,6 @@ import {
   isKungfuCliInstalled,
   uninstallKungfuCliFromPath,
 } from './installCli';
-import { productHelpMenuItems } from './product-help-menu';
 import {
   PRODUCT_NAME,
   productAboutPanelOptions,
@@ -1153,10 +1152,26 @@ function buildMenu() {
       },
     },
   ];
-  const helpSubmenu = productHelpMenuItems({
-    openOnboarding: () => navigateShell({ target: 'onboarding' }),
-    openExternal: (url) => void shell.openExternal(url),
-  });
+  const helpSubmenu: Electron.MenuItemConstructorOptions[] = [
+    {
+      label: 'Onboarding',
+      click: () => navigateShell({ target: 'onboarding' }),
+    },
+    { type: 'separator' },
+    {
+      label: 'GitHub Repository',
+      click: () =>
+        void shell.openExternal('https://github.com/kungfu-systems/kungfu'),
+    },
+    {
+      label: 'Kungfu Website',
+      click: () => void shell.openExternal('https://kungfu.tech'),
+    },
+    {
+      label: 'Developer Platform',
+      click: () => void shell.openExternal('https://libkungfu.dev'),
+    },
+  ];
   const planDeps: KfxPlanDeps = {
     fs: {
       existsSync,

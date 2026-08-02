@@ -111,6 +111,19 @@ export type TuiOnboardingNotice = {
   next: string;
 };
 
+export function useTransientOnboardingNotice(): [
+  TuiOnboardingNotice | undefined,
+  React.Dispatch<React.SetStateAction<TuiOnboardingNotice | undefined>>,
+] {
+  const [notice, setNotice] = React.useState<TuiOnboardingNotice>();
+  React.useEffect(() => {
+    if (!notice) return undefined;
+    const timer = setTimeout(() => setNotice(undefined), 4_000);
+    return () => clearTimeout(timer);
+  }, [notice]);
+  return [notice, setNotice];
+}
+
 export function tuiOnboardingActionFromInput(
   value: string,
 ): TuiOnboardingAction | 'quit' | null {
