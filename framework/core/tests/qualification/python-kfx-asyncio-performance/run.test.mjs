@@ -145,6 +145,30 @@ test('execution streams both output channels into retained storage', (t) => {
   assert.match(execution.output, /retained-err/u);
 });
 
+test('workload execution can retain stderr without contaminating JSONL stdout', (t) => {
+  const outputDir = fs.mkdtempSync(
+    path.join(process.env.RUNNER_TEMP || os.tmpdir(), 'python-kfx-streams-'),
+  );
+  t.after(() => fs.rmSync(outputDir, { recursive: true, force: true }));
+  const stdoutPath = path.join(outputDir, 'workload.log');
+  const stderrPath = path.join(outputDir, 'workload.stderr.log');
+  const execution = executeRetained(
+    [
+      process.execPath,
+      '-e',
+      'process.stdout.write(\'{"schema":"fixture"}\\n\'); process.stderr.write(\'retained-warning\\n\');',
+    ],
+    stdoutPath,
+    process.env,
+    stderrPath,
+  );
+  assert.equal(execution.status, 0, execution.error?.message);
+  assert.equal(execution.output, '{"schema":"fixture"}\n');
+  assert.equal(execution.stderrOutput, 'retained-warning\n');
+  assert.equal(fs.readFileSync(stdoutPath, 'utf8'), execution.output);
+  assert.equal(fs.readFileSync(stderrPath, 'utf8'), execution.stderrOutput);
+});
+
 test('manual Gate Measurement retains exact-source evidence on all three supported lanes', () => {
   const workflow = fs.readFileSync(
     path.join(ROOT, '.github', 'workflows', 'gate-measurement.yml'),

@@ -122,10 +122,17 @@ export function qualificationPlan(loaded, { quick = false } = {}) {
   };
 }
 
-export function executeRetained(command, logPath, env = process.env) {
+export function executeRetained(
+  command,
+  logPath,
+  env = process.env,
+  stderrLogPath = logPath,
+) {
   const invocation = commandInvocation(command);
   const started = Date.now();
   const log = fs.openSync(logPath, 'wx');
+  const splitStderr = stderrLogPath !== logPath;
+  const stderrLog = splitStderr ? fs.openSync(stderrLogPath, 'wx') : log;
   let result;
   try {
     // Send both streams straight to retained storage. Besides removing the
@@ -136,15 +143,17 @@ export function executeRetained(command, logPath, env = process.env) {
     result = spawnSync(invocation.command, invocation.args, {
       cwd: ROOT,
       env,
-      stdio: ['ignore', log, log],
+      stdio: ['ignore', log, stderrLog],
     });
   } finally {
+    if (splitStderr) fs.closeSync(stderrLog);
     fs.closeSync(log);
   }
   const output = fs.readFileSync(logPath, 'utf8');
   return {
     status: result.status,
     output,
+    stderrOutput: splitStderr ? fs.readFileSync(stderrLogPath, 'utf8') : output,
     durationMs: Date.now() - started,
     error: result.error,
   };
@@ -752,6 +761,7 @@ async function main() {
             ...process.env,
             KUNGFU_ALLOW_FOREIGN_RUNTIME: '1',
           },
+          path.join(outputDir, 'workload.stderr.log'),
         );
       } else {
         workloadExecution.output =
