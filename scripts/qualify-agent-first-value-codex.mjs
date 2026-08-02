@@ -292,8 +292,16 @@ function commandInvokesKungfu(command, expectedArgs) {
 export function protocolEvidenceFromCodexEventStream(
   jsonl,
   expectedPromptRoot,
+  expectedProviderSkillRoot,
 ) {
   const requirements = [
+    {
+      id: 'provider-skill',
+      command: (value) =>
+        value.includes('.agents/skills/kungfu-agent-onboarding/SKILL.md'),
+      output: (value) =>
+        bytesRoot(Buffer.from(value)) === expectedProviderSkillRoot,
+    },
     {
       id: 'brief',
       command: (value) => commandInvokesKungfu(value, ['agent', 'brief']),
@@ -313,8 +321,8 @@ export function protocolEvidenceFromCodexEventStream(
   ];
   const executions = commandExecutions(jsonl);
   assert(
-    executions.length === 2,
-    `protocol expected exactly two command executions, got ${executions.length}`,
+    executions.length === 3,
+    `protocol expected exactly three command executions, got ${executions.length}`,
   );
   const evidence = {};
   for (const requirement of requirements) {
@@ -796,7 +804,7 @@ export function verifyAgentFirstValueQualification(report) {
     assert(
       Object.keys(trial.protocolEvidence || {})
         .sort()
-        .join(',') === 'brief,first-value-start',
+        .join(',') === 'brief,first-value-start,provider-skill',
       'trial omitted autonomous protocol evidence',
     );
     for (const evidence of Object.values(trial.protocolEvidence)) {
@@ -1077,6 +1085,7 @@ function run(argv) {
         const protocolEvidence = protocolEvidenceFromCodexEventStream(
           execution.stdout,
           promptEntry.root,
+          providerSkill.root,
         );
         const experience = normalizedExperienceFromResult(result, receipt);
         const receiptPath = path.join(trialRoot, 'receipt.json');

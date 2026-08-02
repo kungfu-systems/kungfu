@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import assert from 'node:assert/strict';
+import crypto from 'node:crypto';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
@@ -110,6 +111,8 @@ test('natural Codex response yields one bounded experience record', () => {
 });
 
 const root = (character) => `sha256:${character.repeat(64)}`;
+const bytesRoot = (value) =>
+  `sha256:${crypto.createHash('sha256').update(value).digest('hex')}`;
 
 function receipt(number, promptRoot = root('1')) {
   const value = {
@@ -186,6 +189,7 @@ function receipt(number, promptRoot = root('1')) {
 const protocolEvidence = () => ({
   brief: { commandRoot: root('a'), outputRoot: root('b') },
   'first-value-start': { commandRoot: root('a'), outputRoot: root('b') },
+  'provider-skill': { commandRoot: root('a'), outputRoot: root('b') },
 });
 
 test('extracts only CLI receipts from Codex command execution events', () => {
@@ -235,18 +239,38 @@ test('binds autonomous protocol completion to command execution outputs', () => 
       },
     });
   const stream = [
+    command(
+      "sed -n '1,240p' .agents/skills/kungfu-agent-onboarding/SKILL.md",
+      'candidate provider skill',
+    ),
     command("/bin/zsh -lc 'kungfu agent brief'", '# Kungfu Agent Brief'),
     command('kungfu agent first-value start --json', JSON.stringify(value)),
   ].join('\n');
 
   assert.deepEqual(
-    Object.keys(protocolEvidenceFromCodexEventStream(stream, root('1'))).sort(),
-    ['brief', 'first-value-start'],
+    Object.keys(
+      protocolEvidenceFromCodexEventStream(
+        stream,
+        root('1'),
+        bytesRoot('candidate provider skill'),
+      ),
+    ).sort(),
+    ['brief', 'first-value-start', 'provider-skill'],
   );
 });
 
 test('protocol evidence rejects a brief command hidden inside another executable name', () => {
+  const skill = 'candidate provider skill';
   const stream = [
+    JSON.stringify({
+      type: 'item.completed',
+      item: {
+        type: 'command_execution',
+        command:
+          "sed -n '1,240p' .agents/skills/kungfu-agent-onboarding/SKILL.md",
+        aggregated_output: skill,
+      },
+    }),
     JSON.stringify({
       type: 'item.completed',
       item: {
@@ -265,13 +289,15 @@ test('protocol evidence rejects a brief command hidden inside another executable
     }),
   ].join('\n');
   assert.throws(
-    () => protocolEvidenceFromCodexEventStream(stream, root('1')),
+    () =>
+      protocolEvidenceFromCodexEventStream(stream, root('1'), bytesRoot(skill)),
     /protocol evidence brief expected one verified command, got 0/u,
   );
 });
 
-test('protocol evidence rejects any command beyond brief and first-value start', () => {
+test('protocol evidence rejects any command beyond Skill load, brief, and first-value start', () => {
   const value = receipt(1);
+  const skill = 'candidate provider skill';
   const command = (text, output) =>
     JSON.stringify({
       type: 'item.completed',
@@ -282,13 +308,18 @@ test('protocol evidence rejects any command beyond brief and first-value start',
       },
     });
   const stream = [
+    command(
+      "sed -n '1,240p' .agents/skills/kungfu-agent-onboarding/SKILL.md",
+      skill,
+    ),
     command('kungfu agent brief', '# Kungfu Agent Brief'),
     command('kungfu agent first-value start --json', JSON.stringify(value)),
     command('kungfu project list', '{}'),
   ].join('\n');
   assert.throws(
-    () => protocolEvidenceFromCodexEventStream(stream, root('1')),
-    /exactly two command executions, got 3/u,
+    () =>
+      protocolEvidenceFromCodexEventStream(stream, root('1'), bytesRoot(skill)),
+    /exactly three command executions, got 4/u,
   );
 });
 
