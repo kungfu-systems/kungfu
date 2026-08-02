@@ -1306,7 +1306,7 @@ export function AgentWorkLabHost({
                   title: starterReceipt.destination,
                   lines: [
                     `${starterReceipt.files.length} reference files written and verified.`,
-                    'Initial Work request captured with canonical Assignment authority.',
+                    'Initial Work request captured with canonical Work authority.',
                     'Its state is pending admission: no Agent run or completion is claimed.',
                     busy
                       ? 'Selecting this folder as the active Kungfu project…'

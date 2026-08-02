@@ -96,7 +96,7 @@
     "gui": {
       "entrypoint": "Kungfu Episodes.app",
       "requiredCopy": {
-        "framework/gui/src/renderer/src/onboarding-panel.tsx": [
+        "framework/gui/src/renderer/src/product-navigation/index.tsx": [
           "Keep your agent. Give it durable Work.",
           "Copy prompt for my Agent",
           "Install kungfu in PATH",
