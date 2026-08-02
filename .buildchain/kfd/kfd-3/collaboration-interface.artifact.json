@@ -10,8 +10,8 @@
   "sourceRegistry": {
     "id": "kungfu",
     "path": ".buildchain/kfd/kfd-3/surfaces.json",
-    "sha256": "0f70e4c6a6ce6f3d15855a204adf6dd99f508a7083b5a53ba57d70dcccdda350",
-    "digest": "sha256:c5765550c2c6b69b6d30d8461febe6c62679321eb776a29f4ad2ab199c90ebaa"
+    "sha256": "fad7b6f6f79af3a3508988a6741770e3a02f022be2c3c3946268416c916942b1",
+    "digest": "sha256:a7489f665b391207851189e6da19cd1625d194ec257c72b701229e407cfc454c"
   },
   "upstreamKfd": {
     "aggregatePath": "developer/sdk/kfd/upstream-aggregate.json",
@@ -28,7 +28,7 @@
     },
     "digest": "sha256:4b6a6b2f5519c7cc8379bbac57bcf3bf65297e44b5b70c17afdeb9d769244277"
   },
-  "collaborationInterfaceDigest": "sha256:f5d7dcd0eecb95c435472ad1ce7c0c6e0dc195026e4414e6724bfd69b9e3485c",
+  "collaborationInterfaceDigest": "sha256:118db141121e56ff93b67772e2042edc702cd5936e4d89b7a52af010a3c65039",
   "exposedSurfaces": [
     {
       "id": "kungfu.agent",
@@ -304,6 +304,7 @@
     {"id":"kungfu.agent.first-value","name":"kungfu agent first-value","kind":"cli","participantProfile":"agent-or-developer","state":"declared","availability":"shipped","visibility":"public","participantFacing":true,"public":true,"sourcePath":"framework/core/src/python/kungfu/agent/kfd3_api.registry.json","evidencePath":"framework/core/src/python/kungfu/agent/commands.json","artifactPath":"framework/core/src/python/kungfu/agent/commands.json","maturity":"stable","declaration":{"owner":"kungfu","source":"scripts/buildchain-kfd-evidence.mjs","sourcePath":"framework/core/src/python/kungfu/agent/kfd3_api.registry.json"}},
     {"id":"kungfu.agent.first-value.contract","name":"kungfu agent first-value contract --json","kind":"cli","participantProfile":"agent-or-developer","state":"declared","availability":"shipped","visibility":"public","participantFacing":true,"public":true,"sourcePath":"framework/core/src/python/kungfu/agent/kfd3_api.registry.json","evidencePath":"framework/core/src/python/kungfu/agent/commands.json","artifactPath":"framework/core/src/python/kungfu/agent/commands.json","maturity":"stable","declaration":{"owner":"kungfu","source":"scripts/buildchain-kfd-evidence.mjs","sourcePath":"framework/core/src/python/kungfu/agent/kfd3_api.registry.json"}},
     {"id":"kungfu.agent.first-value.receipt","name":"kungfu agent first-value receipt --intent <id> --discovery <command> --question-count <0-or-1> --outcome <summary> --json","kind":"cli","participantProfile":"agent-or-developer","state":"declared","availability":"shipped","visibility":"public","participantFacing":true,"public":true,"sourcePath":"framework/core/src/python/kungfu/agent/kfd3_api.registry.json","evidencePath":"framework/core/src/python/kungfu/agent/commands.json","artifactPath":"framework/core/src/python/kungfu/agent/commands.json","maturity":"stable","declaration":{"owner":"kungfu","source":"scripts/buildchain-kfd-evidence.mjs","sourcePath":"framework/core/src/python/kungfu/agent/kfd3_api.registry.json"}},
+    {"id":"kungfu.agent.first-value.start","name":"kungfu agent first-value start --json","kind":"cli","participantProfile":"agent-or-developer","state":"declared","availability":"shipped","visibility":"public","participantFacing":true,"public":true,"sourcePath":"framework/core/src/python/kungfu/agent/kfd3_api.registry.json","evidencePath":"framework/core/src/python/kungfu/agent/commands.json","artifactPath":"framework/core/src/python/kungfu/agent/commands.json","maturity":"stable","declaration":{"owner":"kungfu","source":"scripts/buildchain-kfd-evidence.mjs","sourcePath":"framework/core/src/python/kungfu/agent/kfd3_api.registry.json"}},
     {"id":"kungfu.agent.first-value.verify","name":"kungfu agent first-value verify <receipt-file> --json","kind":"cli","participantProfile":"agent-or-developer","state":"declared","availability":"shipped","visibility":"public","participantFacing":true,"public":true,"sourcePath":"framework/core/src/python/kungfu/agent/kfd3_api.registry.json","evidencePath":"framework/core/src/python/kungfu/agent/commands.json","artifactPath":"framework/core/src/python/kungfu/agent/commands.json","maturity":"stable","declaration":{"owner":"kungfu","source":"scripts/buildchain-kfd-evidence.mjs","sourcePath":"framework/core/src/python/kungfu/agent/kfd3_api.registry.json"}},
     {"id":"kungfu.agent.hub","name":"kungfu agent hub","kind":"cli","participantProfile":"agent-or-developer","state":"declared","availability":"shipped","visibility":"public","participantFacing":true,"public":true,"sourcePath":"framework/core/src/python/kungfu/agent/kfd3_api.registry.json","evidencePath":"framework/core/src/python/kungfu/agent/commands.json","artifactPath":"framework/core/src/python/kungfu/agent/commands.json","maturity":"experimental","declaration":{"owner":"kungfu","source":"scripts/buildchain-kfd-evidence.mjs","sourcePath":"framework/core/src/python/kungfu/agent/kfd3_api.registry.json"}},
     {"id":"kungfu.agent.hub.adapter","name":"kungfu agent hub adapter --qualification-root <path>","kind":"cli","participantProfile":"agent-or-developer","state":"declared","availability":"shipped","visibility":"public","participantFacing":true,"public":true,"sourcePath":"framework/core/src/python/kungfu/agent/kfd3_api.registry.json","evidencePath":"framework/core/src/python/kungfu/agent/commands.json","artifactPath":"framework/core/src/python/kungfu/agent/commands.json","maturity":"experimental","declaration":{"owner":"kungfu","source":"scripts/buildchain-kfd-evidence.mjs","sourcePath":"framework/core/src/python/kungfu/agent/kfd3_api.registry.json"}},
