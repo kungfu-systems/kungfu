@@ -444,17 +444,25 @@ export function verifyFirstValueReceipt(receipt, expected = {}) {
     'receipt omitted a minimal verified outcome',
   );
   assert(
-    receipt.responseGuide?.protocolComplete === true &&
-      receipt.responseGuide?.mustNotRunMoreCommands === true &&
+    receipt.agentResponseGuide?.protocolComplete === true &&
+      receipt.agentResponseGuide?.mustNotRunMoreCommands === true &&
+      typeof receipt.agentResponseGuide?.instruction === 'string' &&
+      receipt.agentResponseGuide.instruction.length > 0 &&
+      typeof receipt.agentResponseGuide?.explanationSeed === 'string' &&
+      receipt.agentResponseGuide.explanationSeed.includes('Kungfu') &&
       PERSONALIZATION_BASIS.includes(
-        receipt.responseGuide?.personalizationBasis,
+        receipt.agentResponseGuide?.personalizationBasis,
       ) &&
-      receipt.responseGuide?.personalizationLabel ===
-        PERSONALIZATION_LABELS[receipt.responseGuide?.personalizationBasis] &&
-      receipt.responseGuide?.verificationCommand ===
+      receipt.agentResponseGuide?.personalizationLabel ===
+        PERSONALIZATION_LABELS[
+          receipt.agentResponseGuide?.personalizationBasis
+        ] &&
+      receipt.agentResponseGuide?.verificationCommand ===
         receipt.discovery?.command &&
-      NEXT_STEP_COMMANDS.includes(receipt.responseGuide?.nextStepCommand) &&
-      receipt.responseGuide?.scopeStatement ===
+      NEXT_STEP_COMMANDS.includes(
+        receipt.agentResponseGuide?.nextStepCommand,
+      ) &&
+      receipt.agentResponseGuide?.scopeStatement ===
         LOCAL_QUALIFICATION_SCOPE_STATEMENT,
     'receipt response guide is invalid',
   );
@@ -546,7 +554,7 @@ export function experienceResultFromResponse(response, receipt) {
     'Codex final response was not a substantive user-visible answer',
   );
   assert(
-    response.includes(receipt.responseGuide.personalizationLabel),
+    response.includes(receipt.agentResponseGuide.personalizationLabel),
     'Codex response omitted the receipt-selected personalization label',
   );
   assert(
@@ -562,7 +570,7 @@ export function experienceResultFromResponse(response, receipt) {
   );
   return {
     response,
-    personalizationBasis: receipt.responseGuide.personalizationBasis,
+    personalizationBasis: receipt.agentResponseGuide.personalizationBasis,
     verificationCommand: VERIFICATION_COMMAND,
     nextStepCommand: nextStepMatches[0],
   };

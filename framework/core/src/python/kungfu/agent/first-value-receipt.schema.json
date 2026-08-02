@@ -16,7 +16,7 @@
     "intentId",
     "discovery",
     "outcome",
-    "responseGuide",
+    "agentResponseGuide",
     "nonClaims",
     "diagnostics",
     "observedAt",
@@ -111,13 +111,15 @@
         "verificationRoot": {"$ref": "#/$defs/root"}
       }
     },
-    "responseGuide": {
+    "agentResponseGuide": {
       "type": "object",
       "additionalProperties": false,
       "required": [
         "language",
         "protocolComplete",
         "mustNotRunMoreCommands",
+        "instruction",
+        "explanationSeed",
         "personalizationBasis",
         "personalizationLabel",
         "verificationCommand",
@@ -128,6 +130,14 @@
         "language": {"type": "string", "const": "zh-CN"},
         "protocolComplete": {"type": "boolean", "const": true},
         "mustNotRunMoreCommands": {"type": "boolean", "const": true},
+        "instruction": {
+          "type": "string",
+          "const": "协议已完成。现在停止执行命令，只依据本对象和 receiptRoot 用中文回答用户。"
+        },
+        "explanationSeed": {
+          "type": "string",
+          "const": "Kungfu 是为 Agent 工作提供本地项目边界、权限路径和可核验证据的协作层；这次第一步已完成只读环境发现。"
+        },
         "personalizationBasis": {
           "type": "string",
           "enum": [

@@ -367,10 +367,12 @@ def create_receipt(
                 }
             ),
         },
-        "responseGuide": {
+        "agentResponseGuide": {
             "language": guide["language"],
             "protocolComplete": guide["protocolComplete"],
             "mustNotRunMoreCommands": guide["mustNotRunMoreCommands"],
+            "instruction": guide["instruction"],
+            "explanationSeed": guide["explanationSeed"],
             "personalizationBasis": current_prompt["personalizationBasis"],
             "personalizationLabel": current_prompt["personalizationLabel"],
             "verificationCommand": discovery_command,
@@ -457,13 +459,15 @@ def verify_receipt(
         "language": guide["language"],
         "protocolComplete": guide["protocolComplete"],
         "mustNotRunMoreCommands": guide["mustNotRunMoreCommands"],
+        "instruction": guide["instruction"],
+        "explanationSeed": guide["explanationSeed"],
         "personalizationBasis": receipt_prompt["personalizationBasis"],
         "personalizationLabel": receipt_prompt["personalizationLabel"],
         "verificationCommand": receipt["discovery"]["command"],
         "nextStepCommand": guide["nextStepCommand"],
         "scopeStatement": guide["scopeStatement"],
     }
-    if receipt["responseGuide"] != expected_guide:
+    if receipt["agentResponseGuide"] != expected_guide:
         raise ValueError("first-value receipt response guide mismatch")
     if require_current_product:
         expected = _product_identity(_pack_roots())

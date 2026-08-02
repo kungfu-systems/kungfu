@@ -40,10 +40,11 @@ directly with the bounded protocol below before your final response.
    answering; do not substitute a candidate, contract, or other root, and never
    reconstruct or recompute receipt fields in model prose.
    Give the user the receipt's exact discovery command as one copyable read-only
-   verification command. The receipt's `responseGuide` is the final-response
+   verification command. Its first field, `agentResponseGuide`, is the final
    contract: when `protocolComplete` and `mustNotRunMoreCommands` are true, run
-   no more commands before answering. Copy its one `nextStepCommand`, exact
-   personalization label, receipt root, and `scopeStatement` into the answer.
+   no more commands before answering. Use its `explanationSeed`, then copy its
+   one `nextStepCommand`, exact `personalizationLabel`, receipt root, and
+   `scopeStatement` into the answer.
    The product reruns discovery without a shell and returns bounded facts.
 8. Expand detail only when requested. Use `kungfu agent context --task "..."
    --role <role> --budget <tokens> --route <route-id> --json`, then follow its
@@ -51,7 +52,6 @@ directly with the bounded protocol below before your final response.
    ambiguous route, stale root, or required omission.
 
 ## Mental model
-
 - **Project** binds a directory to local `.kungfu` state. A normal directory does
   not need Git. In an existing Git repository, `.kungfu` sits beside `.git` and
   runtime/history data is not silently staged or committed.

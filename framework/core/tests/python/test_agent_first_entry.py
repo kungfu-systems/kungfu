@@ -322,14 +322,18 @@ def test_first_value_receipt_reruns_declared_discovery_and_verifies():
     assert receipt["intentId"] == "onboarding"
     assert receipt["discovery"]["safetyClass"] == "read-only"
     assert receipt["discovery"]["outputBytes"] > 0
-    assert receipt["responseGuide"]["protocolComplete"] is True
-    assert receipt["responseGuide"]["mustNotRunMoreCommands"] is True
-    assert receipt["responseGuide"]["personalizationBasis"] == "user-goal"
-    assert receipt["responseGuide"]["personalizationLabel"] == ("个性化依据：用户目标")
-    assert receipt["responseGuide"]["verificationCommand"] == (
+    assert receipt["agentResponseGuide"]["protocolComplete"] is True
+    assert receipt["agentResponseGuide"]["mustNotRunMoreCommands"] is True
+    assert receipt["agentResponseGuide"]["instruction"].startswith("协议已完成")
+    assert "Kungfu" in receipt["agentResponseGuide"]["explanationSeed"]
+    assert receipt["agentResponseGuide"]["personalizationBasis"] == "user-goal"
+    assert receipt["agentResponseGuide"]["personalizationLabel"] == (
+        "个性化依据：用户目标"
+    )
+    assert receipt["agentResponseGuide"]["verificationCommand"] == (
         "kungfu agent capabilities --json"
     )
-    assert receipt["responseGuide"]["nextStepCommand"] == "kungfu project list"
+    assert receipt["agentResponseGuide"]["nextStepCommand"] == "kungfu project list"
     assert first_value.verify_receipt(receipt)["verified"] is True
 
 
