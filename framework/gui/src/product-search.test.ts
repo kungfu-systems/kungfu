@@ -8,6 +8,10 @@ const source = readFileSync(
   new URL('./renderer/src/main.tsx', import.meta.url),
   'utf8',
 );
+const mainProcessSource = readFileSync(
+  new URL('./main/index.ts', import.meta.url),
+  'utf8',
+);
 const projectsPanelSource = readFileSync(
   new URL('./renderer/src/projects-panel/index.tsx', import.meta.url),
   'utf8',
@@ -38,6 +42,33 @@ test('the title-bar search shares Help, Command, Work, and view sources', () => 
   assert.match(source, /Search Help, Commands, Work/);
   assert.doesNotMatch(source, /Search views/);
   assert.doesNotMatch(source, /<datalist/);
+});
+
+test('the title-bar product menu reserves permanent chrome for daily work', () => {
+  assert.doesNotMatch(
+    source,
+    /id: 'onboarding',[\s\S]*title: 'Getting Started'/,
+  );
+  assert.doesNotMatch(source, /onOpenOnboarding/);
+  assert.match(source, /id: 'all-work'/);
+  assert.match(source, /id: 'projects'/);
+  assert.match(source, /id: 'agent-work-lab'/);
+});
+
+test('the Help menu keeps onboarding available without permanent shell chrome', () => {
+  assert.match(
+    mainProcessSource,
+    /label: 'Onboarding',[\s\S]*navigateShell\(\{ target: 'onboarding' \}\)/u,
+  );
+  assert.match(mainProcessSource, /label: 'GitHub Repository'/u);
+  assert.match(
+    mainProcessSource,
+    /https:\/\/github\.com\/kungfu-systems\/kungfu/u,
+  );
+  assert.match(mainProcessSource, /label: 'Kungfu Website'/u);
+  assert.match(mainProcessSource, /https:\/\/kungfu\.tech/u);
+  assert.match(mainProcessSource, /label: 'Developer Platform'/u);
+  assert.match(mainProcessSource, /https:\/\/libkungfu\.dev/u);
 });
 
 test('Cmd or Ctrl K focuses the same search plane without executing CLI results', () => {

@@ -7,6 +7,7 @@ import pytest
 from click.testing import CliRunner
 
 from kungfu import assignment_orchestration as orchestration
+from kungfu.agent import first_value as onboarding
 from kungfu.agent import run_agent
 from kungfu.cli.commands import assignment, kfc, run
 from kungfu.workspace import resolve_workspace_target
@@ -261,6 +262,133 @@ def test_task_capture_creates_a_bounded_assignment_not_runtime(tmp_path):
     assert not (project / ".kungfu" / "runtime").exists()
 
 
+def test_agent_route_completion_persists_shared_onboarding_state(tmp_path):
+    config_home = tmp_path / "config"
+    runtime_home = tmp_path / "runtime"
+    onboarding.kungfu_config.set_user_config_value(
+        "ui.onboarding",
+        {
+            "version": 1,
+            "status": "started",
+            "route": "tour",
+            "labCompleted": True,
+            "tourCompleted": False,
+            "completedAt": "",
+        },
+        config_home=str(config_home),
+        runtime_home=str(runtime_home),
+    )
+
+    receipt = onboarding.complete_agent_route(
+        config_home=str(config_home), runtime_home=str(runtime_home)
+    )
+
+    assert receipt["state"]["status"] == "completed"
+    assert receipt["state"]["route"] == "agent"
+    assert receipt["state"]["labCompleted"] is True
+    assert receipt["state"]["tourCompleted"] is False
+    assert receipt["state"]["completedAt"].endswith("Z")
+    saved = onboarding.kungfu_config.resolve_config(
+        config_home=str(config_home), runtime_home=str(runtime_home)
+    )["config"]["ui"]["onboarding"]
+    assert saved == receipt["state"]
+
+
+def test_run_from_a_fresh_directory_converges_on_agent_first_onboarding(
+    tmp_path, monkeypatch
+):
+    monkeypatch.chdir(tmp_path)
+
+    result = CliRunner().invoke(kfc, ["--home", str(tmp_path / "home"), "run", "codex"])
+
+    assert result.exit_code == 1
+    assert "needs a Project before it can start durable Work" in result.output
+    assert "kungfu agent brief" in result.output
+    assert "bare `kungfu`" in result.output
+    assert "kungfu run codex" in result.output
+
+
+def test_successful_managed_work_start_completes_agent_onboarding(
+    tmp_path, monkeypatch
+):
+    project = tmp_path / "project"
+    project.mkdir()
+    request = project / "request.json"
+    request.write_text("{}\n", encoding="utf-8")
+    target = SimpleNamespace(
+        identity=SimpleNamespace(
+            workspace_kind="project",
+            workspace_root=str(project),
+        )
+    )
+    monkeypatch.setattr(
+        run, "resolve_workspace_target", lambda *_args, **_kwargs: target
+    )
+    monkeypatch.setattr(
+        run,
+        "_capture_task",
+        lambda *_args: {
+            "requestPath": str(request),
+            "initiativeId": "project-work",
+            "assignmentId": "first",
+            "title": "First Work",
+        },
+    )
+    monkeypatch.setattr(
+        run,
+        "_provider_profile",
+        lambda *_args, **_kwargs: {"id": "kungfu.mock", "provider": "synthetic"},
+    )
+    monkeypatch.setattr(
+        assignment,
+        "_work_start_plan",
+        lambda **_kwargs: {
+            "planRoot": "sha256:" + "1" * 64,
+            "workspace": {"root": str(project)},
+            "work": {"assignmentId": "first", "title": "First Work"},
+            "agent": {
+                "label": "Mock Agent",
+                "verification": {"version": "1.0.0"},
+            },
+            "effects": [],
+        },
+    )
+    monkeypatch.setattr(
+        assignment.start_work.callback,
+        "__wrapped__",
+        lambda *_args, **_kwargs: {"ok": True, "workPhase": "executing"},
+    )
+    completed = []
+    monkeypatch.setattr(
+        onboarding,
+        "complete_agent_route",
+        lambda **kwargs: completed.append(kwargs) or {"state": {"status": "completed"}},
+    )
+
+    result = run._run_provider(
+        SimpleNamespace(
+            config_home=str(tmp_path / "config"), home=str(tmp_path / "home")
+        ),
+        "synthetic",
+        "First Work",
+        None,
+        str(project),
+        False,
+        True,
+        False,
+        None,
+        False,
+    )
+
+    assert result["ok"] is True
+    assert completed == [
+        {
+            "config_home": str(tmp_path / "config"),
+            "runtime_home": str(tmp_path / "home"),
+        }
+    ]
+
+
 def test_only_bare_provider_invocation_selects_native_interactive_mode():
     defaults = {
         "task": None,
@@ -347,10 +475,31 @@ def test_native_provider_failure_leaves_actionable_terminal_error(
         ),
     )
     monkeypatch.setattr(run.run_agent.session_surface, "ensure", lambda *_args: "sock")
+    completed = []
+    monkeypatch.setattr(
+        onboarding,
+        "complete_agent_route",
+        lambda **kwargs: completed.append(kwargs) or {"state": {"status": "completed"}},
+    )
+    monkeypatch.setattr(
+        run,
+        "_native_work_observer",
+        lambda *_args: {"state": "active"},
+    )
+
+    def fail_after_binding(*_args, **kwargs):
+        bound_work_ref = {
+            "initiativeId": "project-work",
+            "entityId": "assignment:first",
+        }
+        kwargs["work_observer"](bound_work_ref)
+        kwargs["work_observer"](bound_work_ref)
+        return 7
+
     monkeypatch.setattr(
         run.run_agent,
         "run_native_interactive",
-        lambda *_args, **_kwargs: 7,
+        fail_after_binding,
     )
 
     result = CliRunner().invoke(kfc, ["--home", str(tmp_path / "home"), "run", "codex"])
@@ -359,6 +508,8 @@ def test_native_provider_failure_leaves_actionable_terminal_error(
     assert "Error: provider-native UI 'codex' exited with status 7." in result.output
     assert "did not change Work completion" in result.output
     assert "kungfu agent session list --json" in result.output
+    assert len(completed) == 1
+    assert completed[0]["runtime_home"] == str(tmp_path / "home")
 
 
 @pytest.mark.parametrize("provider", ["codex", "claude", "amp", "opencode"])

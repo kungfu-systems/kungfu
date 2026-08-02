@@ -12,17 +12,17 @@
     "textInference": false
   },
   "surfacePin": {
-    "cliVersion": "0.144.3",
+    "cliVersion": "0.146.0",
     "deployment": "local-runtime",
     "platform": "macos-arm64",
     "transport": "stdio-jsonl",
     "listen": "stdio://",
     "websocketAuthority": false,
     "experimentalApi": false,
-    "schemaManifest": "schemas/codex-app-server/codex-v0.144.3-stable-schema-manifest.json",
+    "schemaManifest": "schemas/codex-app-server/codex-v0.146.0-stable-schema-manifest.json",
     "schemaBundleAlgorithm": "sha256-path-nul-canonical-json-size-nul-canonical-json-sha256-lf/v1",
-    "schemaBundleFileCount": 267,
-    "schemaBundleSha256": "db6486174d318cc61d0ea100b5cfc9f6c3441d3a7c402382f971477802d11af7",
+    "schemaBundleFileCount": 275,
+    "schemaBundleSha256": "c1ab53bbe1955ea63bc4fbb976f01a1fb4dc5af8e2f3067fb9d228c035692538",
     "maturity": "development-surface-with-stable-schema-subset",
     "authClass": "official-ambient-codex-cli-auth",
     "credentialPolicy": "adapter-spawns-codex-and-never-reads-auth-storage"
@@ -62,7 +62,7 @@
     "replayContinuity": false
   },
   "mappingPolicy": {
-    "source": "codex-0.144.3-generated-stable-json-schema",
+    "source": "codex-0.146.0-generated-stable-json-schema",
     "officialSource": "https://developers.openai.com/codex/app-server",
     "admission": "exact-allowlist",
     "unknownMethod": "fail-closed-requalification-required",

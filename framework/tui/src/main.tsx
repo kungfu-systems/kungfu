@@ -22,7 +22,6 @@ import {
   type ProjectWorkRunSnapshot,
   type Projects,
   type ProjectsCatalog,
-  SYSTEM_HELP_DOCUMENTS,
   type WorkCloseReceipt,
   type WorkReviewReceipt,
   type WorkStartReceipt,
@@ -56,7 +55,9 @@ import {
   type TuiOnboardingAction,
   agentWorkLabActionReturnsToControls,
   readTuiOnboardingState,
+  useTransientOnboardingNotice,
 } from './agent-work-lab-view.js';
+import { copyTextToClipboard } from './clipboard/index.js';
 import { scrollListSelection } from './list-window/index.js';
 import { boundedIndex, decodeShellKey } from './navigation.js';
 import {
@@ -65,13 +66,18 @@ import {
   ControlPlaneOverlay,
   type ControlPlaneState,
   PlaybackBar,
+  type ProductSurface,
   QUICK_COMMANDS,
   type TerminalDimensions,
+  buildTuiProductSearchDocuments,
+  contextualProjectRestoreCanCommit,
   createControlPlaneInputFence,
   directWorkspaceNavigationFromInput,
+  initialProductSurface,
   quickCommandMatches,
   reduceControlPlaneInput,
   resolveProductStartupSurface,
+  shouldStartContextualProjectRestore,
   splitHorizontalPointerActionAtPoint,
 } from './profile-shell.js';
 import {
@@ -957,7 +963,8 @@ function ProductHost({
       const paths = runtimePaths();
       return readTuiOnboardingState(paths.configHome);
     });
-  const [onboardingNotice, setOnboardingNotice] = React.useState('');
+  const [onboardingNotice, setOnboardingNotice] =
+    useTransientOnboardingNotice();
   const firstLaunch =
     !playbackMode && !emptyState && shouldShowKungfuOnboarding(onboardingState);
   const startupProjectRoot = React.useMemo(
@@ -970,22 +977,8 @@ function ProductHost({
   const [startup, setStartup] = React.useState<
     AgentWorkLabStartupRoute | undefined
   >(playbackMode ? PENDING_STARTUP : undefined);
-  const [surface, setSurface] = React.useState<
-    | 'loading'
-    | 'onboarding'
-    | 'lab'
-    | 'all-work'
-    | 'projects'
-    | 'project-work'
-    | 'project-assignment'
-  >(
-    playbackMode
-      ? 'lab'
-      : firstLaunch
-        ? 'onboarding'
-        : emptyState
-          ? 'all-work'
-          : 'loading',
+  const [surface, setSurfaceState] = React.useState<ProductSurface>(
+    initialProductSurface({ playbackMode, firstLaunch, emptyState }),
   );
   const startupAnimationEnabled = React.useMemo(
     () => terminalAnimationsEnabled(process.env),
@@ -995,9 +988,10 @@ function ProductHost({
     playbackMode || firstLaunch || emptyState || !startupAnimationEnabled,
   );
   const surfaceRef = React.useRef(surface);
-  React.useEffect(() => {
-    surfaceRef.current = surface;
-  }, [surface]);
+  const setSurface = React.useCallback((next: ProductSurface) => {
+    surfaceRef.current = next;
+    setSurfaceState(next);
+  }, []);
   const projects = React.useMemo(
     () => openTuiProjects(!projectTourRoot, Boolean(projectTourRoot)),
     [projectTourRoot],
@@ -1182,12 +1176,16 @@ function ProductHost({
   }, [lab, playbackMode, startup, surface]);
   React.useEffect(() => {
     if (
-      playbackMode ||
-      surface === 'onboarding' ||
-      emptyState ||
-      !startupProjectRoot
-    )
+      !shouldStartContextualProjectRestore({
+        playbackMode,
+        surface,
+        emptyState,
+        startupProjectRoot,
+      })
+    ) {
       return;
+    }
+    if (!startupProjectRoot) return;
     let active = true;
     const request = openProjectRequest.current + 1;
     openProjectRequest.current = request;
@@ -1195,7 +1193,9 @@ function ProductHost({
     void projects
       .select(startupProjectRoot)
       .then(async (receipt) => {
-        if (!active) return;
+        if (!active || !contextualProjectRestoreCanCommit(surfaceRef.current)) {
+          return;
+        }
         const selected = receipt as {
           workspace: ProjectWorkspaceSelection;
         };
@@ -1208,13 +1208,19 @@ function ProductHost({
           registry_path: '',
           selected: selected.workspace,
         } as unknown as ProjectTemplateWorkspaceSelection);
-        surfaceRef.current = 'project-work';
         setSurface('project-work');
         const inventory = await projects.works(
           selected.workspace.workspace_root,
         );
         const work = inventory.activeWork;
-        if (!active || request !== openProjectRequest.current || !work) return;
+        if (
+          !active ||
+          request !== openProjectRequest.current ||
+          surfaceRef.current !== 'project-work' ||
+          !work
+        ) {
+          return;
+        }
         const workspace = {
           schema: 'kungfu.workspace.registry/v1',
           last_workspace_id: selected.workspace.workspace_id,
@@ -1231,6 +1237,13 @@ function ProductHost({
             requestPath: work.requestPath,
           },
         });
+        if (
+          !active ||
+          request !== openProjectRequest.current ||
+          surfaceRef.current !== 'project-work'
+        ) {
+          return;
+        }
         setStarterProject({ workspace, work, works: inventory.works });
         setStarterWorkReceipt(resumed.workReceipt);
         setStarterReviewReceipt(resumed.reviewReceipt);
@@ -1251,7 +1264,15 @@ function ProductHost({
     return () => {
       active = false;
     };
-  }, [emptyState, lab, playbackMode, projects, startupProjectRoot, surface]);
+  }, [
+    emptyState,
+    lab,
+    playbackMode,
+    projects,
+    setSurface,
+    startupProjectRoot,
+    surface,
+  ]);
   const autoplay = React.useMemo(
     () =>
       autoDemo
@@ -1288,6 +1309,7 @@ function ProductHost({
     playbackMode,
     openedProject,
     projectResumeSettled,
+    setSurface,
     startupProjectRoot,
     startupIntroSettled,
     surface,
@@ -1307,68 +1329,15 @@ function ProductHost({
             : QUICK_COMMANDS,
     [labOpen, openedProject, starterCloseReceipt?.status, surface],
   );
-  const viewDocuments = React.useMemo<ProductSearchDocument[]>(
-    () => [
-      {
-        id: 'view.work-control',
-        kind: 'view',
-        title: 'All Work',
-        summary: 'Open the cross-Project read-only Work overview.',
-        keywords: ['all', 'work', 'active', 'completed'],
-        action: { kind: 'open-view', viewId: 'work' },
-      },
-      {
-        id: 'view.projects',
-        kind: 'view',
-        title: 'Projects',
-        summary: 'Create a Project or open an existing directory.',
-        keywords: ['project', 'new', 'open', 'directory'],
-        action: { kind: 'open-view', viewId: 'projects' },
-      },
-      {
-        id: 'view.agent-work-lab',
-        kind: 'view',
-        title: 'Agent Work Lab',
-        summary: 'Compare bounded Agent Work behavior across two Sessions.',
-        keywords: ['qualification', 'handoff', 'session'],
-        action: { kind: 'open-view', viewId: 'lab' },
-      },
-    ],
-    [],
-  );
-  const quickSearchDocuments = React.useMemo<ProductSearchDocument[]>(
-    () =>
-      availableQuickCommands.map((command, index) => ({
-        id: `command.quick.${command.id}`,
-        kind: 'command',
-        title: command.command,
-        summary: command.summary,
-        section: 'Quick actions',
-        keywords: [command.title],
-        priority: index,
-        action: {
-          kind: 'describe-command',
-          command: command.command,
-        },
-      })),
-    [availableQuickCommands],
-  );
   const documents = React.useMemo(
-    () => [
-      ...SYSTEM_HELP_DOCUMENTS,
-      ...quickSearchDocuments,
-      ...cliDocuments,
-      ...workDocuments,
-      ...projectDocuments,
-      ...viewDocuments,
-    ],
-    [
-      cliDocuments,
-      projectDocuments,
-      quickSearchDocuments,
-      viewDocuments,
-      workDocuments,
-    ],
+    () =>
+      buildTuiProductSearchDocuments({
+        quickCommands: availableQuickCommands,
+        cliDocuments,
+        workDocuments,
+        projectDocuments,
+      }),
+    [availableQuickCommands, cliDocuments, projectDocuments, workDocuments],
   );
   const searchResults = React.useMemo(
     () => searchProductDocuments(documents, control.query),
@@ -1419,9 +1388,12 @@ function ProductHost({
         { env: invocation.env, maxBuffer: 2 * 1024 * 1024 },
         (error) => {
           if (error) {
-            setOnboardingNotice(
-              `Could not save Getting Started state: ${error.message}`,
-            );
+            setOnboardingNotice({
+              ok: false,
+              title: 'GETTING STARTED STATE NOT SAVED',
+              detail: error.message,
+              next: 'Press Enter to continue without saving this state.',
+            });
             setControlNow({
               ...CLOSED_CONTROL_PLANE,
               focus: 'workspace',
@@ -1429,13 +1401,13 @@ function ProductHost({
             });
             return;
           }
-          setOnboardingNotice('');
+          setOnboardingNotice(undefined);
           setOnboardingState(next);
           onSaved?.();
         },
       );
     },
-    [setControlNow],
+    [setControlNow, setOnboardingNotice],
   );
   const setWorkspaceInputActive = React.useCallback(
     (active: boolean) => {
@@ -1456,10 +1428,25 @@ function ProductHost({
   );
   const handleOnboardingAction = React.useCallback(
     (action: TuiOnboardingAction) => {
-      if (action === 'agent') {
-        persistOnboarding(
-          finishKungfuOnboarding(onboardingState, { route: 'agent' }),
-          () => setSurface('all-work'),
+      if (action === 'copy') {
+        const receipt = copyTextToClipboard(agentFirstEntry.prompt, {
+          exec: (file, args, options) =>
+            execFileSync(file, args, { ...options, encoding: 'utf8' }),
+        });
+        setOnboardingNotice(
+          receipt.ok
+            ? {
+                ok: true,
+                title: 'ONE-LINE AGENT PROMPT COPIED',
+                detail: 'Paste it into your Agent in another window.',
+                next: 'Optional: [Enter] start · [L/l] Lab · [T/t] Tour.',
+              }
+            : {
+                ok: false,
+                title: 'COPY PROMPT FAILED',
+                detail: receipt.error,
+                next: 'Optional: [Enter] start · [L/l] Lab · [T/t] Tour.',
+              },
         );
       } else if (action === 'lab') {
         persistOnboarding(
@@ -1484,7 +1471,14 @@ function ProductHost({
         );
       }
     },
-    [dispatchLabAction, onboardingState, persistOnboarding],
+    [
+      agentFirstEntry.prompt,
+      dispatchLabAction,
+      onboardingState,
+      persistOnboarding,
+      setOnboardingNotice,
+      setSurface,
+    ],
   );
   const acknowledgeLabAction = React.useCallback((id: number) => {
     setLabActionRequest((current) =>
@@ -1572,18 +1566,18 @@ function ProductHost({
           }
         });
     },
-    [lab, setControlNow],
+    [lab, setControlNow, setSurface],
   );
   const openGlobalWork = React.useCallback(() => {
     setControlNow({ ...CLOSED_CONTROL_PLANE, focus: 'workspace' });
     setSurface('all-work');
-  }, [setControlNow]);
+  }, [setControlNow, setSurface]);
   const openHome = React.useCallback(() => {
     setControlNow({ ...CLOSED_CONTROL_PLANE, focus: 'workspace' });
     if (starterProject) setSurface('project-assignment');
     else if (openedProject) setSurface('project-work');
     else setSurface('all-work');
-  }, [openedProject, setControlNow, starterProject]);
+  }, [openedProject, setControlNow, setSurface, starterProject]);
   const activateControl = React.useCallback(() => {
     const current = controlRef.current;
     if (current.mode === 'commands') {
@@ -1656,6 +1650,9 @@ function ProductHost({
       } else if (command.action === 'lab') {
         setSurface('lab');
         closeControl('workspace');
+      } else if (command.action === 'onboarding') {
+        setSurface('onboarding');
+        closeControl('workspace');
       } else if (command.action === 'home') {
         openHome();
         closeControl('workspace');
@@ -1717,6 +1714,8 @@ function ProductHost({
     } else if (result.action.kind === 'open-view') {
       if (result.action.viewId === 'work') {
         openGlobalWork();
+      } else if (result.action.viewId === 'onboarding') {
+        setSurface('onboarding');
       } else {
         setSurface(result.action.viewId === 'lab' ? 'lab' : 'projects');
       }
@@ -1744,6 +1743,7 @@ function ProductHost({
     openedProject,
     projects,
     setControlNow,
+    setSurface,
   ]);
   const activateControlRef = React.useRef(activateControl);
   activateControlRef.current = activateControl;
@@ -1848,6 +1848,7 @@ function ProductHost({
     openedProject,
     productNavActions,
     setControlNow,
+    setSurface,
     size,
   ]);
 
@@ -1861,7 +1862,6 @@ function ProductHost({
         if (openedProject) openHome();
         else setSurface('projects');
       } else if (value === '3') setSurface('lab');
-      else if (value === '4') setSurface('onboarding');
     };
     process.stdin.on('data', onData);
     return () => {
@@ -1873,6 +1873,7 @@ function ProductHost({
     openHome,
     openedProject,
     playbackMode,
+    setSurface,
     surface,
   ]);
 
@@ -2177,7 +2178,6 @@ function ProductHost({
             <Text color={labOpen ? 'cyan' : undefined} bold={labOpen}>
               [3] Agent Work Lab
             </Text>
-            <Text>[4] Getting Started</Text>
           </Box>
         </Box>
       ) : null}

@@ -1,13 +1,6 @@
-import { existsSync } from 'node:fs';
-import { createRequire } from 'node:module';
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
-import {
-  createDetachedAgentSessionHost,
-  prepareAgentSessionNodePty,
-} from './product-client.mjs';
-
-const require = createRequire(import.meta.url);
+import { createDetachedAgentSessionHost } from './product-client.mjs';
 
 function required(value, label) {
   if (typeof value !== 'string' || value.length === 0) {
@@ -16,9 +9,9 @@ function required(value, label) {
   return value;
 }
 
-function resolveWorker() {
-  if (process.env.KUNGFU_AGENT_SESSION_WORKER) {
-    return path.resolve(process.env.KUNGFU_AGENT_SESSION_WORKER);
+function resolveWorker(env) {
+  if (env.KUNGFU_AGENT_SESSION_WORKER) {
+    return path.resolve(env.KUNGFU_AGENT_SESSION_WORKER);
   }
   const bundled = fileURLToPath(
     new URL('./agent-session-worker.mjs', import.meta.url),
@@ -27,74 +20,23 @@ function resolveWorker() {
   return fileURLToPath(new URL('./product-worker.mjs', import.meta.url));
 }
 
-export function resolveNativeInteractiveNodePty(
-  workerPath,
-  runtimeDir,
-  moduleRequire = require,
-) {
-  const requested = process.env.KUNGFU_AGENT_SESSION_NODE_PTY_MODULE;
-  const bundled = path.join(
-    path.dirname(workerPath),
-    'node_modules',
-    'node-pty',
-    'lib',
-    'index.js',
-  );
-  const sourcePackage = path.resolve(
-    path.dirname(fileURLToPath(import.meta.url)),
-    '..',
-    '..',
-    'agent-session',
-    'node_modules',
-    'node-pty',
-    'lib',
-    'index.js',
-  );
-  const candidates = [
-    requested ? path.resolve(requested) : null,
-    bundled,
-    sourcePackage,
-  ];
-  try {
-    const productClient = moduleRequire.resolve(
-      '@kungfu-tech/agent-session/product-client',
-    );
-    candidates.push(
-      path.join(
-        path.dirname(path.dirname(productClient)),
-        'node_modules',
-        'node-pty',
-        'lib',
-        'index.js',
-      ),
-    );
-  } catch {}
-  try {
-    candidates.push(moduleRequire.resolve('node-pty/lib/index.js'));
-  } catch {}
-  const modulePath = candidates.find(
-    (candidate) => candidate && existsSync(candidate),
-  );
-  if (!modulePath) {
-    throw new Error(
-      'native Agent Session bootstrap cannot locate its packaged node-pty runtime',
-    );
-  }
-  return prepareAgentSessionNodePty({ runtimeDir, modulePath });
-}
-
 export async function ensureNativeInteractiveSessionSurface({
   runtimeDir = process.env.KF_RUNTIME_DIR,
+  env = process.env,
+  createHost = createDetachedAgentSessionHost,
 } = {}) {
   const resolvedRuntime = path.resolve(required(runtimeDir, 'KF_RUNTIME_DIR'));
-  const workerPath = resolveWorker();
-  process.env.KUNGFU_AGENT_SESSION_NODE_PTY_MODULE =
-    resolveNativeInteractiveNodePty(workerPath, resolvedRuntime);
-  const host = createDetachedAgentSessionHost({
+  const workerPath = resolveWorker(env);
+  const nativeEnv = Object.fromEntries(
+    Object.entries(env).filter(
+      ([name]) => name !== 'KUNGFU_AGENT_SESSION_NODE_PTY_MODULE',
+    ),
+  );
+  const host = createHost({
     runtimeDir: resolvedRuntime,
-    executable: process.env.KUNGFU_AGENT_SESSION_EXECUTABLE || process.execPath,
+    executable: env.KUNGFU_AGENT_SESSION_EXECUTABLE || process.execPath,
     workerPath,
-    env: process.env,
+    env: nativeEnv,
   });
   await host.invoke({ operation: 'capabilities' });
   return host.endpoint;

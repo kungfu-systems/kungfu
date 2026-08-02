@@ -75,11 +75,11 @@ int main(int argc, char **argv) {
   auto append = [&](int32_t carrier_type, FrameDataType data_type, const void *bytes, std::size_t len) {
     bus->set_trigger_frame_uid(prev_uid);
     const int64_t gen_time = time::now_in_nano();
-    auto frame = writer->open_frame(prev_gen_time, carrier_type, len, STREAM_ID);
-    frame->set_data_type(data_type);
-    std::memcpy(const_cast<void *>(frame->data_address()), bytes, len);
+    auto tx = writer->reserve_frame(prev_gen_time, carrier_type, len, STREAM_ID);
+    tx.frame()->set_data_type(data_type);
+    tx.copy_bytes(bytes, len);
     prev_uid = writer->current_frame_uid();
-    writer->close_frame(len, gen_time);
+    tx.commit(len, gen_time);
     prev_gen_time = gen_time;
   };
 

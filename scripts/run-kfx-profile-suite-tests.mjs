@@ -88,6 +88,10 @@ if (agentWorkLabOnly) {
   assertNoLegacyProductIdentity();
   for (const [label, file] of [
     ['API capability adapter', 'framework/api/tests/agent-work-lab.test.ts'],
+    [
+      'TUI Getting Started',
+      'framework/tui/src/agent-first-onboarding-view.test.ts',
+    ],
     ['TUI experience', 'framework/tui/src/agent-work-lab-view.test.ts'],
     ['TUI workbench framework', 'framework/tui/src/profile-shell.test.ts'],
     ['Product TUI demo entry', 'product/scripts/product.test.mjs'],

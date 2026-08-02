@@ -274,16 +274,16 @@
     {
       "path": ".github/workflows/build.yml",
       "authority": "product-publication",
-      "definitionDigest": "sha256:57864c1a8616d4e1d923671f28a3a0a0b7a8c4e083e5ad1766f866dd283a7e02",
+      "definitionDigest": "sha256:f133f20915e4774eb7de12e2417410b23c2596eb4223a19db97452332fecfe40",
       "jobs": [
         {
           "id": "auditable-demo",
           "authority": "qualification",
           "publication": "none",
           "receipt": "qualifying",
-          "definitionDigest": "sha256:5d96929ec45001d15f36a59c3cbd97342c3ed64e68a048b0c8afbb0f12db8aa7",
-          "credentials": {"githubToken":"read","oidc":false,"repositorySecrets":[],"inheritedSecrets":false,"environment":null},
-          "externalActions": ["kungfu-systems/buildchain/.github/workflows/.auditable-demo.yml@afd75d295fcd2d55cfebf621f5ca6d05a9904830"],
+          "definitionDigest": "sha256:87f987854a7653316c1b455146b3502827bb64363ee3af5faad730133f6ff5a3",
+          "credentials": {"githubToken":"write","oidc":false,"repositorySecrets":["KUNGFU_GITHUB_TOKEN"],"inheritedSecrets":false,"environment":null},
+          "externalActions": ["kungfu-systems/buildchain/.github/workflows/.declarative-auditable-demo.yml@4501f4832da19614a24cf81fc71483aadaaac0b7"],
           "steps": []
         },
         {
@@ -297,31 +297,11 @@
           "steps": [{"index":1,"label":"name:Check out exact candidate source","definitionDigest":"sha256:90b7875c1b8263fc6ee031b6f446decfc1fe5eb289f08dbc3d506c4bce43f113"},{"index":2,"label":"name:Reject known-invalid auditable demo contracts","definitionDigest":"sha256:6680331f1967c56036aac5897f6b2275dfe45149d40cfcea537e8d16a13d94fc"}]
         },
         {
-          "id": "auditable-demo-passport",
-          "authority": "qualification",
-          "publication": "none",
-          "receipt": "qualifying",
-          "definitionDigest": "sha256:c7218a748e04f4445bcf7daac7cde19288e7fc3c280b55df7e2d3d5224ac1709",
-          "credentials": {"githubToken":"read","oidc":false,"repositorySecrets":[],"inheritedSecrets":false,"environment":null},
-          "externalActions": ["actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0","actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd","actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a"],
-          "steps": [{"index":1,"label":"name:Check out exact qualified source","definitionDigest":"sha256:29b1db9963a2029aabffae82fe0ec406fa6ec8d3a522d80493e9e84be9967dbe"},{"index":2,"label":"id:artifact-expiry","definitionDigest":"sha256:b63afe1390635ea616d7c2a9ccc69bfb49f5b8d2ee193c8b8df61800eaad0591"},{"index":3,"label":"name:Write exact auditable demo Release Passport","authority":"evidence-publication","definitionDigest":"sha256:49d631c2178af0fff7a27292912e64fef6d234578c1b7639882bbec0e6fce371"},{"index":4,"label":"name:Upload exact auditable demo Release Passport","authority":"evidence-publication","definitionDigest":"sha256:026dc02ae0372598499bba6aa300fe2c537f6ca694ae3b7d4719a91ca6e4780a"}]
-        },
-        {
-          "id": "auditable-demo-plan",
-          "authority": "qualification",
-          "publication": "none",
-          "receipt": "diagnostic",
-          "definitionDigest": "sha256:db3fb0cb7b21676fd352e5dca68c014d3fe6cba6f47f115c669db56adcb694c1",
-          "credentials": {"githubToken":"read","oidc":false,"repositorySecrets":[],"inheritedSecrets":false,"environment":null},
-          "externalActions": ["actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0","actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e","actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a"],
-          "steps": [{"index":1,"label":"name:Check out exact qualified source","definitionDigest":"sha256:29b1db9963a2029aabffae82fe0ec406fa6ec8d3a522d80493e9e84be9967dbe"},{"index":2,"label":"name:Set up pinned Node.js","definitionDigest":"sha256:93f3675945caff80d4b510964b74f50d37e770eade12d52d8600f9da040518ad"},{"index":3,"label":"id:plan","definitionDigest":"sha256:544ea5818581dbbb37898a6cdc1217f302075ab6178f34c2d87ffcfd05dc29f5"},{"index":4,"label":"name:Retain exact auditable demo trigger plan","authority":"evidence-publication","definitionDigest":"sha256:08859c3c7f88a0c633d5def10ce51b21e72fa4e4f1c868987eb1d80014b9542a"}]
-        },
-        {
           "id": "build",
           "authority": "qualification",
           "publication": "none",
           "receipt": "qualifying",
-          "definitionDigest": "sha256:21574dcc9159778cf61f22b16af8f46c12bba73018478788790bdd7e7868c491",
+          "definitionDigest": "sha256:b6a06dcd26b06ef41a488cd779d2bd7557125d9e51425be84fa89ffc5b9eebe1",
           "credentials": {"githubToken":"write","oidc":true,"repositorySecrets":["BUILDCHAIN_ARTIFACT_RELAY_S3_DOWNLOAD_ROLE_ARN","BUILDCHAIN_ARTIFACT_RELAY_S3_ROLE_ARN","BUILDCHAIN_ARTIFACT_RELAY_S3_UPLOAD_ROLE_ARN","KUNGFU_GITHUB_TOKEN"],"inheritedSecrets":false,"environment":null},
           "externalActions": ["kungfu-systems/buildchain/.github/workflows/.build.yml@a5d2e312d083bc1b382c36e2ecb9179c7cd90dbe"],
           "steps": []
@@ -381,10 +361,10 @@
           "authority": "qualification",
           "publication": "none",
           "receipt": "diagnostic",
-          "definitionDigest": "sha256:bce62fa5a7da528dc1ff453cb140e5b8de976daca0ddc1019f0232bdbfd5b5b4",
+          "definitionDigest": "sha256:f7dc63acebe5c10defce5fac27e65ce16aa95d6c554102da98d441333c100199",
           "credentials": {"githubToken":"read","oidc":false,"repositorySecrets":[],"inheritedSecrets":false,"environment":null},
           "externalActions": ["actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0"],
-          "steps": [{"index":1,"label":"name:Check out exact candidate source","definitionDigest":"sha256:90b7875c1b8263fc6ee031b6f446decfc1fe5eb289f08dbc3d506c4bce43f113"},{"index":2,"label":"name:Reject known-invalid Windows entry contracts","definitionDigest":"sha256:ebf365cac4ac6f116e8c4befa7efbdbb54d86a142e6576ab47a868d57914047f"}]
+          "steps": [{"index":1,"label":"name:Check out exact candidate source","definitionDigest":"sha256:90b7875c1b8263fc6ee031b6f446decfc1fe5eb289f08dbc3d506c4bce43f113"},{"index":2,"label":"id:continuity","definitionDigest":"sha256:aae979c9b8b143b19076785a8b475412dfaf38549d5e0a6764fb006a52c72a5d"},{"index":3,"label":"name:Independently verify the exact Windows continuity receipt","definitionDigest":"sha256:02b95433a8c2b062797026a17d1f6579c78ebc31c89a569daf2ec9a93cb4455e"}]
         }
       ]
     },

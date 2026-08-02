@@ -2,7 +2,9 @@
 // config validation and mutation; this adapter gives GUI and KFX the same JSON
 // plans/receipts without creating a renderer-private configuration path.
 
-export type AgentProvider = 'codex' | 'claude' | 'opencode';
+// Provider identifiers are open by contract. Built-ins are catalog entries,
+// not a closed union that prevents a declared third-party PTY adapter.
+export type AgentProvider = string;
 export type AgentBackend = 'tmux' | 'direct';
 
 export type AgentRuntimeProfile = {
@@ -10,7 +12,13 @@ export type AgentRuntimeProfile = {
   id: string;
   label: string;
   provider: AgentProvider;
-  launch: { executable: string; argv: string[]; shellMode: boolean };
+  launch: {
+    executable: string;
+    argv: string[];
+    interactiveArgv: string[];
+    versionArgv: string[];
+    shellMode: boolean;
+  };
   cwdPolicy: 'workspace-root' | 'home' | 'inherit';
   backendDefault: AgentBackend;
   bootstrap: {
@@ -18,7 +26,7 @@ export type AgentRuntimeProfile = {
     envelope: 'required' | 'disabled';
   };
   source: 'discovered' | 'user';
-  lastVerified?: string | null;
+  lastVerified: string | null;
 };
 
 export type AgentRuntimeCatalog = {

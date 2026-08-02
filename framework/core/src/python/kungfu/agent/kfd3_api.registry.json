@@ -115,6 +115,26 @@
       ]
     },
     {
+      "id": "kungfu.agent.bootstrap-status",
+      "surface": "cli-api-gui",
+      "name": "kungfu agent bootstrap-status --json",
+      "purpose": "Expose pending, verified, degraded, or unavailable Agent Brief bootstrap state for the current native attempt without claiming model comprehension.",
+      "maturity": "experimental",
+      "visibility": "public-agent",
+      "anchor": {"kind": "runtime-click", "symbol": "bootstrap_status"},
+      "projections": ["commands.json", "capabilities-json", "provider-skill"]
+    },
+    {
+      "id": "kungfu.agent.work-advisory",
+      "surface": "cli",
+      "name": "kungfu agent work-advisory --signals <signals.json> --json",
+      "purpose": "Return authority-free deterministic advice, a minimal Work preview, one-confirmation requirement, and the existing create-bind action path from bounded structured signals.",
+      "maturity": "preview",
+      "visibility": "public-agent",
+      "anchor": {"kind": "runtime-click", "symbol": "work_advisory_command"},
+      "projections": ["commands.json", "provider-skill"]
+    },
+    {
       "id": "kungfu.agent.map",
       "surface": "cli",
       "name": "kungfu agent map --json",

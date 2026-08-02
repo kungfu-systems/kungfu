@@ -17,6 +17,7 @@ import { InProcessAgentSessionProductRuntime } from '../src/product-runtime.mjs'
 import {
   AgentSessionProductSurface,
   agentSessionProductState,
+  agentSessionSurfaceRoot,
   createAgentSessionSurfaceClient,
 } from '../src/product-surface.mjs';
 import { createProviderAdapter } from '../src/provider-adapters.mjs';
@@ -165,8 +166,15 @@ function fixture({ registry = null } = {}) {
     workConsoleId: 'work:kungfu.work-control:assignment:assignment-42',
     sessionAttemptId: 'attempt:assignment-42:1',
     provider: 'codex',
-    providerVersion: '0.144.3',
+    providerVersion: '0.146.0',
     profileRoot: PROFILE_ROOT,
+    bootstrap: {
+      schema: 'kungfu.agent-bootstrap-receipt/v1',
+      state: 'verified',
+      attemptId: 'attempt:assignment-42:1',
+      receiptRoot: `sha256:${'f'.repeat(64)}`,
+      mutationsAllowed: true,
+    },
     executable: '/usr/local/bin/codex',
     argv: ['--no-alt-screen'],
     cwd: '/workspace',
@@ -183,10 +191,37 @@ function fixture({ registry = null } = {}) {
         entityRoot: `sha256:${'e'.repeat(64)}`,
         purpose: 'delegated-work',
         systemTimeCut: '2026-07-14T09:00:00Z',
+        initiativeId: 'initiative-42',
       },
     },
   };
   return { clients, input, runtime, surface };
+}
+
+function nativeProjection(work, overrides = {}) {
+  return {
+    schema: 'kungfu.native-work-projection/v1',
+    workRefRoot: agentSessionSurfaceRoot({
+      schema: 'kungfu.work-ref/v1',
+      workspaceId: 'workspace-1',
+      profileId: 'kungfu.work-control',
+      profileRoot: PROFILE_ROOT,
+      entityType: 'assignment',
+      entityId: 'assignment-42',
+      entityRoot: `sha256:${'e'.repeat(64)}`,
+      purpose: 'delegated-work',
+      systemTimeCut: '2026-07-14T09:00:00Z',
+      initiativeId: 'initiative-42',
+    }),
+    state: 'fresh',
+    observedAt: 4000,
+    source: 'initial',
+    queryCount: 1,
+    queryProofRoot: work?.queryProofRoot ?? null,
+    work,
+    diagnostic: null,
+    ...overrides,
+  };
 }
 
 test('product state hides process topology and reserves action-required for unsafe recovery', () => {
@@ -236,7 +271,7 @@ test('Core resolves one primary WorkConsole for a generic WorkRef', () => {
   assert.deepEqual(first, second);
   assert.equal(
     first.workConsoleId,
-    'work:kungfu.work-control:assignment:assignment-42',
+    'work:kungfu.work-control:assignment:initiative-42:assignment-42',
   );
   assert.equal(first.binding.workRef.entityType, 'assignment');
 });
@@ -259,11 +294,13 @@ test('native provider UI registers one observer-only attempt in the primary Work
     sessionAttemptId: plan.sessionAttemptId,
   });
   assert.equal(awaiting.nativeObserver.state, 'unknown');
+  assert.equal(awaiting.bootstrap.state, 'verified');
+  assert.equal(awaiting.bootstrap.mutationsAllowed, true);
   assert.equal(awaiting.product.state, 'action-required');
   const work = {
     schema: 'kungfu.native-work-observation/v1',
     state: 'available',
-    initiativeId: 'initiative-1',
+    initiativeId: 'initiative-42',
     assignmentId: 'assignment-42',
     title: 'Native continuity',
     objective: 'Keep Work visible across native UIs',
@@ -286,7 +323,20 @@ test('native provider UI registers one observer-only attempt in the primary Work
       sessionAttemptId: plan.sessionAttemptId,
     },
     processIdentity,
-    { state: 'fresh', staleAfterMs: 500, work },
+    {
+      schema: 'kungfu.attempt-heartbeat/v1',
+      state: 'fresh',
+      staleAfterMs: 500,
+      workRefRoot: agentSessionSurfaceRoot(input.binding.workRef),
+    },
+  );
+  clients.cli.projectNativeWork(
+    {
+      workConsoleId: plan.workConsoleId,
+      sessionAttemptId: plan.sessionAttemptId,
+    },
+    processIdentity,
+    nativeProjection(work),
   );
   const observed = clients.gui.show({
     workConsoleId: plan.workConsoleId,
@@ -304,25 +354,26 @@ test('native provider UI registers one observer-only attempt in the primary Work
   assert.equal(observed.workOutcome, null);
   assert.equal(observed.proof, null);
 
-  clients.cli.heartbeatNative(
+  clients.cli.projectNativeWork(
     {
       workConsoleId: plan.workConsoleId,
       sessionAttemptId: plan.sessionAttemptId,
     },
     processIdentity,
-    {
+    nativeProjection(work, {
       state: 'degraded',
-      staleAfterMs: 500,
+      observedAt: 4001,
+      source: 'bounded-fallback',
+      queryCount: 2,
       diagnostic: 'Core Work read unavailable',
-      work: { ...work, state: 'degraded', queryProofRoot: null },
-    },
+    }),
   );
   const degraded = clients.gui.show({
     workConsoleId: plan.workConsoleId,
     sessionAttemptId: plan.sessionAttemptId,
   });
-  assert.equal(degraded.nativeObserver.state, 'degraded');
-  assert.equal(degraded.product.state, 'action-required');
+  assert.equal(degraded.nativeObserver.state, 'fresh');
+  assert.equal(degraded.nativeObserver.workProjection.state, 'degraded');
 
   clients.cli.heartbeatNative(
     {
@@ -330,7 +381,12 @@ test('native provider UI registers one observer-only attempt in the primary Work
       sessionAttemptId: plan.sessionAttemptId,
     },
     processIdentity,
-    { state: 'fresh', staleAfterMs: 500, work },
+    {
+      schema: 'kungfu.attempt-heartbeat/v1',
+      state: 'fresh',
+      staleAfterMs: 500,
+      workRefRoot: agentSessionSurfaceRoot(input.binding.workRef),
+    },
   );
 
   surface.now = () => 10001;
@@ -341,7 +397,8 @@ test('native provider UI registers one observer-only attempt in the primary Work
   assert.equal(stale.live, false);
   assert.equal(stale.nativeObserver.state, 'stale');
   assert.equal(stale.product.state, 'action-required');
-  assert.equal(stale.workAgent.attention.kind, 'blocked');
+  assert.equal(stale.workAgent.attention, null);
+  assert.equal(stale.nativeObserver.work.queryProofRoot, work.queryProofRoot);
 
   assert.throws(
     () =>
@@ -351,10 +408,52 @@ test('native provider UI registers one observer-only attempt in the primary Work
           sessionAttemptId: plan.sessionAttemptId,
         },
         processIdentity,
-        { state: 'fresh', work: { ...work, transcript: 'forbidden' } },
+        {
+          schema: 'kungfu.attempt-heartbeat/v1',
+          state: 'fresh',
+          workRefRoot: agentSessionSurfaceRoot(input.binding.workRef),
+          work: { ...work, transcript: 'forbidden' },
+        },
       ),
-    /exact public Core projection/u,
+    /liveness coordinates only/u,
   );
+});
+
+test('native bootstrap state is observable and blocks Work binding until verified', () => {
+  const pending = fixture();
+  const pendingInput = { ...pending.input, bootstrap: undefined };
+  const pendingPlan = pending.clients.cli.planNativeStart(pendingInput);
+  assert.equal(pendingPlan.bootstrap.state, 'pending');
+  assert.equal(
+    pending.clients.gui.show({
+      workConsoleId: pendingPlan.workConsoleId,
+      sessionAttemptId: pendingPlan.sessionAttemptId,
+    }).bootstrap.state,
+    'pending',
+  );
+  assert.throws(
+    () =>
+      pending.clients.cli.planNativeBindWork(
+        {
+          workConsoleId: pendingPlan.workConsoleId,
+          sessionAttemptId: pendingPlan.sessionAttemptId,
+        },
+        pending.input.binding.workRef,
+      ),
+    (error) => error?.code === 'native_bootstrap_not_verified',
+  );
+
+  const degraded = fixture();
+  const degradedPlan = degraded.clients.cli.planNativeStart({
+    ...degraded.input,
+    bootstrap: {
+      ...degraded.input.bootstrap,
+      state: 'degraded',
+      mutationsAllowed: false,
+    },
+  });
+  assert.equal(degradedPlan.bootstrap.state, 'degraded');
+  assert.equal(degradedPlan.bootstrap.mutationsAllowed, false);
 });
 
 test('native heartbeat updates live projection without durable registry churn', () => {
@@ -381,28 +480,10 @@ test('native heartbeat updates live projection without durable registry churn', 
     },
     processIdentity,
     {
+      schema: 'kungfu.attempt-heartbeat/v1',
       state: 'fresh',
       staleAfterMs: 500,
-      work: {
-        schema: 'kungfu.native-work-observation/v1',
-        state: 'available',
-        initiativeId: 'initiative-1',
-        assignmentId: 'assignment-42',
-        title: 'Native continuity',
-        objective: 'Keep Work visible across native UIs',
-        acceptanceChecks: ['Rediscover the same Work'],
-        phase: 'executing',
-        queryProofRoot: `sha256:${'a'.repeat(64)}`,
-        nextActions: [],
-        evidenceEpisodeRoots: [],
-        continuation: {
-          completionClaimCount: 0,
-          independentReviewCount: 0,
-          continuationDecisionCount: 0,
-        },
-        remainingObligation: null,
-        nextAction: null,
-      },
+      workRefRoot: agentSessionSurfaceRoot(input.binding.workRef),
     },
   );
 
@@ -529,6 +610,10 @@ test('native Work binding atomically blocks a second writer and releases on exit
     sessionAttemptId: 'attempt:assignment-42:second',
     provider: 'opencode',
     providerVersion: '1.18.3',
+    bootstrap: {
+      ...input.bootstrap,
+      attemptId: 'attempt:assignment-42:second',
+    },
     binding,
   });
   clients.cli.startNative(second, { launcherPid: 43, launchedAt: 5000 });
@@ -595,7 +680,7 @@ test('worker restart keeps an orphaned native Work binding fail-closed', () => {
               sessionAttemptId: 'native:orphaned',
               runId: 'native:orphaned',
               provider: 'codex',
-              providerVersion: '0.144.3',
+              providerVersion: '0.146.0',
               backend: 'native-interactive',
               status: 'running',
               startedAt: 4000,
@@ -847,8 +932,8 @@ test('Terminal WorkRef launch remains Profile-neutral and rejects partial identi
   assert.match(source, /profileId: params\.workProfileId/u);
 });
 
-test('the published v2 schema admits the Core registry and excludes presentation', async () => {
-  const { clients, input } = fixture();
+test('the published v3 schema admits the Core registry and excludes presentation', async () => {
+  const { clients, input, surface } = fixture();
   clients.gui.start(clients.gui.planStart(input), {
     attachmentId: 'view:schema',
     presentation: 'headless',
@@ -860,10 +945,8 @@ test('the published v2 schema admits the Core registry and excludes presentation
     ),
   );
   const validate = new Ajv2020({ strict: true }).compile(schema);
-  const registry = {
-    schema: WORK_CONSOLE_REGISTRY_SCHEMA,
-    consoles: clients.cli.list().consoles,
-  };
+  clients.cli.list();
+  const registry = surface.registry.snapshot();
   assert.equal(validate(registry), true, JSON.stringify(validate.errors));
   assert.equal('presentation' in schema.properties, false);
 });
@@ -1025,7 +1108,7 @@ test('the product runtime executes a reviewed plan through the real Capsule host
     workConsoleId: 'assistant:workspace-runtime',
     sessionAttemptId: 'attempt:runtime:1',
     provider: 'codex',
-    providerVersion: '0.144.3',
+    providerVersion: '0.146.0',
     profileRoot: PROFILE_ROOT,
     executable: '/usr/local/bin/codex',
     argv: ['--no-alt-screen'],

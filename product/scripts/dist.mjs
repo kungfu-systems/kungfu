@@ -243,10 +243,12 @@ function linuxLibc() {
   return report?.header?.glibcVersionRuntime ? 'gnu' : 'musl';
 }
 
-function installArgs() {
+export function installArgs(
+  noOptional = process.env.KUNGFU_BUILDCHAIN_NO_OPTIONAL === '1',
+) {
   const args = ['install', '--frozen-lockfile'];
-  if (process.env.KUNGFU_BUILDCHAIN_NO_OPTIONAL === '1') {
-    args.push('--no-optional');
+  if (noOptional) {
+    args.push('--no-optional', '--config.confirmModulesPurge=false');
   }
   return args;
 }
@@ -1110,6 +1112,25 @@ function writeCliLauncher(stageRoot, layout) {
   fs.writeFileSync(output, cliLauncherContent(), 'utf8');
   if (!isWin) fs.chmodSync(output, 0o755);
   return layout.launcherName;
+}
+
+export function writeAuditableDemoBinaryMetadata(
+  stageRoot,
+  layout,
+  platform = platformId(),
+) {
+  const binary = path.join(stageRoot, layout.launcherName);
+  const metadata = {
+    contract: 'kungfu.declarative-demo-binary/v1',
+    platformId: platform,
+    sha256: sha256File(binary),
+    runtimeDependencies: [],
+  };
+  fs.writeFileSync(
+    path.join(stageRoot, 'auditable-demo-binary.json'),
+    `${JSON.stringify(metadata, null, 2)}\n`,
+  );
+  return metadata;
 }
 
 function writeCliManifest(stageRoot, archiveName, layout) {
@@ -2255,6 +2276,7 @@ function buildCliProduct(esbuildRuntime) {
         'utf8',
       );
       writeCliLauncher(stageRoot, layout);
+      writeAuditableDemoBinaryMetadata(stageRoot, layout);
       writeCliManifest(stageRoot, archiveName, layout);
 
       if (isWin) {

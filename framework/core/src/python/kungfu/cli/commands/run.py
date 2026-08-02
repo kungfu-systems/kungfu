@@ -10,12 +10,15 @@ import click
 
 from kungfu import assignment_orchestration as orchestration
 from kungfu.agent import run_agent
+from kungfu.agent import first_value as onboarding
+from kungfu.agent.run_intent import RunIntentDispatcher
 from kungfu.cli.commands import PrioritizedCommandGroup, kfc
 from kungfu.agent.kfd3 import api_help, kfd3_api
-from kungfu.workspace import resolve_workspace_target
+from kungfu.workspace import WorkspaceTargetRequired, resolve_workspace_target
 
 
 run_command_context = kfc.pass_context()
+_RUN_INTENTS = RunIntentDispatcher()
 
 
 def _json_file(handle, label):
@@ -122,7 +125,9 @@ def _choose_work(workspace_root, work_selector=None):
             detail = "; ".join(blocked) or "no captured Work"
             raise ValueError(
                 "no Work can start in this project; "
-                f"{detail}. Review or close active Work before running another Agent."
+                f'{detail}. Pass a task to `kungfu run <agent> "<task>"`, or run '
+                "`kungfu agent brief` for the guided first entry. Review or close "
+                "active Work before running another Agent."
             )
         if len(actionable) != 1:
             choices = ", ".join(row["assignmentId"] for row in actionable)
@@ -434,16 +439,23 @@ def _native_work_observer(runtime_dir, work_selection, bound_work_ref=None):
 
 
 def _run_native_provider(ctx, *, provider=None, profile_id=None, workspace_root=None):
-    target = resolve_workspace_target(
-        "read-only", workspace_root or None, cwd=os.getcwd()
+    command = f"kungfu run {provider or 'agent'}" + (
+        f" --agent {profile_id}" if profile_id else ""
     )
+    try:
+        target = resolve_workspace_target(
+            "read-only", workspace_root or None, cwd=os.getcwd()
+        )
+    except WorkspaceTargetRequired as error:
+        raise click.ClickException(
+            onboarding.project_required_message(command)
+        ) from error
     if (
         target.identity.workspace_kind != "project"
         or not target.identity.workspace_root
     ):
-        raise click.ClickException(
-            "kungfu run requires a project; cd into one or pass --workspace"
-        )
+        raise click.ClickException(onboarding.project_required_message(command))
+
     try:
         if profile_id is not None:
             profile, _selection = run_agent.select_profile(
@@ -483,6 +495,14 @@ def _run_native_provider(ctx, *, provider=None, profile_id=None, workspace_root=
                     request, endpoint=session_endpoint
                 )
 
+        onboarding_observer = onboarding.AgentRouteCompletionObserver(
+            lambda bound_work_ref: _native_work_observer(
+                target.runtime_dir, work_selection, bound_work_ref
+            ),
+            config_home=ctx.config_home,
+            runtime_home=ctx.home,
+        )
+
         exit_code = run_agent.run_native_interactive(
             profile,
             runtime_dir=str(target.runtime_dir),
@@ -493,12 +513,16 @@ def _run_native_provider(ctx, *, provider=None, profile_id=None, workspace_root=
             work_selection=work_selection,
             session_endpoint=session_endpoint,
             session_invoker=invoke_native_session,
-            work_observer=lambda bound_work_ref: _native_work_observer(
-                target.runtime_dir, work_selection, bound_work_ref
-            ),
+            work_observer=onboarding_observer,
         )
     except (OSError, ValueError) as error:
         raise click.ClickException(str(error)) from error
+    if onboarding_observer.error is not None:
+        click.echo(
+            "Warning: Work was bound, but Getting Started state was not saved: "
+            f"{onboarding_observer.error}",
+            err=True,
+        )
     if exit_code != 0:
         provider_name = str(profile.get("provider") or "agent")
         click.echo(
@@ -528,15 +552,20 @@ def _run_provider(
 ):
     from kungfu.cli.commands import assignment as work_commands
 
-    target = resolve_workspace_target(
-        "read-only", workspace_root or None, cwd=os.getcwd()
-    )
+    try:
+        target = resolve_workspace_target(
+            "read-only", workspace_root or None, cwd=os.getcwd()
+        )
+    except WorkspaceTargetRequired as error:
+        raise click.ClickException(
+            onboarding.project_required_message(f"kungfu run {provider}")
+        ) from error
     if (
         target.identity.workspace_kind != "project"
         or not target.identity.workspace_root
     ):
         raise click.ClickException(
-            "kungfu run requires a project; cd into one or pass --workspace"
+            onboarding.project_required_message(f"kungfu run {provider}")
         )
     root = target.identity.workspace_root
     try:
@@ -617,6 +646,16 @@ def _run_provider(
                 err=True,
             )
         raise click.exceptions.Exit(1)
+    try:
+        onboarding.complete_agent_route(
+            config_home=ctx.config_home, runtime_home=ctx.home
+        )
+    except (OSError, RuntimeError, ValueError, json.JSONDecodeError) as error:
+        if not as_json and not events_json:
+            click.echo(
+                f"Warning: Work started, but Getting Started state was not saved: {error}",
+                err=True,
+            )
     if not as_json and not events_json:
         report = result.get("agentReport") or {}
         click.echo("Agent session activity retained · independent review required")
@@ -642,16 +681,7 @@ def _native_provider_request(
     expected_plan_root,
     allow_foreign_binding,
 ):
-    return (
-        task is None
-        and work_selector is None
-        and workspace_root is None
-        and not plan_only
-        and not as_json
-        and not events_json
-        and expected_plan_root is None
-        and not allow_foreign_binding
-    )
+    return _RUN_INTENTS.provider_mode(locals()) == "native"
 
 
 def _provider_command(provider):
@@ -688,28 +718,31 @@ def _provider_command(provider):
         expected_plan_root,
         allow_foreign_binding,
     ):
-        if _native_provider_request(
-            task=task,
-            work_selector=work_selector,
-            workspace_root=workspace_root,
-            plan_only=plan_only,
-            as_json=as_json,
-            events_json=events_json,
-            expected_plan_root=expected_plan_root,
-            allow_foreign_binding=allow_foreign_binding,
-        ):
-            return _run_native_provider(ctx, provider=provider)
-        return _run_provider(
-            ctx,
-            provider,
-            task,
-            work_selector,
-            workspace_root,
-            plan_only,
-            as_json,
-            events_json,
-            expected_plan_root,
-            allow_foreign_binding,
+        request = {
+            "task": task,
+            "work_selector": work_selector,
+            "workspace_root": workspace_root,
+            "plan_only": plan_only,
+            "as_json": as_json,
+            "events_json": events_json,
+            "expected_plan_root": expected_plan_root,
+            "allow_foreign_binding": allow_foreign_binding,
+        }
+        return _RUN_INTENTS.dispatch_provider(
+            request=request,
+            native=lambda: _run_native_provider(ctx, provider=provider),
+            managed=lambda: _run_provider(
+                ctx,
+                provider,
+                task,
+                work_selector,
+                workspace_root,
+                plan_only,
+                as_json,
+                events_json,
+                expected_plan_root,
+                allow_foreign_binding,
+            ),
         )
 
     return command
@@ -814,37 +847,45 @@ def agent(
     timeout_seconds,
     as_json,
 ):
-    if prompt is None:
-        timeout_is_explicit = (
-            ctx.get_parameter_source("timeout_seconds")
-            == click.core.ParameterSource.COMMANDLINE
-        )
-        if (
-            work_ref is not None
-            or continuation is not None
-            or as_json
-            or timeout_is_explicit
-        ):
-            raise click.UsageError(
-                "--work-ref, --continuation, --timeout, and --json require --prompt"
+    timeout_is_explicit = (
+        ctx.get_parameter_source("timeout_seconds")
+        == click.core.ParameterSource.COMMANDLINE
+    )
+
+    def managed():
+        try:
+            return run_agent.execute(
+                prompt=prompt,
+                runtime_dir=ctx.runtime_dir,
+                config_home=ctx.config_home,
+                profile_id=profile_id,
+                workspace_root=workspace_root,
+                home=ctx.home,
+                work_ref=_json_file(work_ref, "WorkRef"),
+                continuation=_json_file(continuation, "continuation envelope"),
+                timeout_seconds=timeout_seconds,
             )
-        return _run_native_provider(
-            ctx, profile_id=profile_id, workspace_root=workspace_root
-        )
+        except (OSError, ValueError) as error:
+            raise click.ClickException(str(error)) from error
+
     try:
-        payload = run_agent.execute(
+        payload = _RUN_INTENTS.dispatch_agent(
             prompt=prompt,
-            runtime_dir=ctx.runtime_dir,
-            config_home=ctx.config_home,
-            profile_id=profile_id,
-            workspace_root=workspace_root,
-            home=ctx.home,
-            work_ref=_json_file(work_ref, "WorkRef"),
-            continuation=_json_file(continuation, "continuation envelope"),
-            timeout_seconds=timeout_seconds,
+            has_managed_options=(
+                work_ref is not None
+                or continuation is not None
+                or as_json
+                or timeout_is_explicit
+            ),
+            native=lambda: _run_native_provider(
+                ctx, profile_id=profile_id, workspace_root=workspace_root
+            ),
+            managed=managed,
         )
-    except (OSError, ValueError) as error:
-        raise click.ClickException(str(error)) from error
+    except ValueError as error:
+        raise click.UsageError(str(error)) from error
+    if prompt is None:
+        return payload
     if as_json:
         click.echo(json.dumps(payload, ensure_ascii=False, indent=2))
     else:

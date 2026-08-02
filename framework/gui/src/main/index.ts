@@ -1151,9 +1151,25 @@ function buildMenu() {
         });
       },
     },
+  ];
+  const helpSubmenu: Electron.MenuItemConstructorOptions[] = [
     {
-      label: 'Getting Started with Your Agent',
+      label: 'Onboarding',
       click: () => navigateShell({ target: 'onboarding' }),
+    },
+    { type: 'separator' },
+    {
+      label: 'GitHub Repository',
+      click: () =>
+        void shell.openExternal('https://github.com/kungfu-systems/kungfu'),
+    },
+    {
+      label: 'Kungfu Website',
+      click: () => void shell.openExternal('https://kungfu.tech'),
+    },
+    {
+      label: 'Developer Platform',
+      click: () => void shell.openExternal('https://libkungfu.dev'),
     },
   ];
   const planDeps: KfxPlanDeps = {
@@ -1223,6 +1239,7 @@ function buildMenu() {
       ],
     },
     { role: 'windowMenu' },
+    { role: 'help', submenu: helpSubmenu },
   ];
 
   Menu.setApplicationMenu(Menu.buildFromTemplate(template));

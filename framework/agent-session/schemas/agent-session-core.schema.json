@@ -1,0 +1,277 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kungfu.dev/schemas/agent-session-core/v1",
+  "title": "Kungfu Agent Session core values",
+  "description": "Canonical cross-language value contract for Agent Session identity and bootstrap metadata. Writers use the strict definitions; compatibility readers may use legacyWorkRefV1 only while migrating retained v1 registry data.",
+  "$defs": {
+    "sha256": {
+      "type": "string",
+      "pattern": "^sha256:[a-f0-9]{64}$"
+    },
+    "identifier": {
+      "type": "string",
+      "pattern": "^[a-z0-9][a-z0-9._-]{0,127}$"
+    },
+    "legacyWorkRefV1": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema",
+        "workspaceId",
+        "profileId",
+        "profileRoot",
+        "entityType",
+        "entityId",
+        "entityRoot",
+        "purpose",
+        "systemTimeCut"
+      ],
+      "properties": {
+        "schema": { "const": "kungfu.work-ref/v1" },
+        "workspaceId": { "type": "string", "minLength": 1 },
+        "profileId": { "type": "string", "minLength": 1 },
+        "profileRoot": { "$ref": "#/$defs/sha256" },
+        "entityType": { "type": "string", "minLength": 1 },
+        "entityId": { "type": "string", "minLength": 1 },
+        "entityRoot": { "$ref": "#/$defs/sha256" },
+        "purpose": { "type": "string", "minLength": 1 },
+        "systemTimeCut": { "type": "string", "minLength": 1 }
+      }
+    },
+    "workRef": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema",
+        "workspaceId",
+        "profileId",
+        "profileRoot",
+        "entityType",
+        "entityId",
+        "entityRoot",
+        "purpose",
+        "systemTimeCut"
+      ],
+      "properties": {
+        "schema": { "const": "kungfu.work-ref/v1" },
+        "workspaceId": { "type": "string", "minLength": 1 },
+        "profileId": { "type": "string", "minLength": 1 },
+        "profileRoot": { "$ref": "#/$defs/sha256" },
+        "entityType": { "type": "string", "minLength": 1 },
+        "entityId": { "type": "string", "minLength": 1 },
+        "entityRoot": { "$ref": "#/$defs/sha256" },
+        "purpose": { "type": "string", "minLength": 1 },
+        "systemTimeCut": { "type": "string", "minLength": 1 },
+        "initiativeId": { "type": "string", "minLength": 1 }
+      },
+      "allOf": [
+        {
+          "if": {
+            "required": ["entityType"],
+            "properties": { "entityType": { "const": "assignment" } }
+          },
+          "then": { "required": ["initiativeId"] }
+        }
+      ]
+    },
+    "agentConsoleEnvelope": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema",
+        "workspaceId",
+        "consoleId",
+        "attemptId",
+        "runtimeProfileId",
+        "provider",
+        "activeProfiles",
+        "workRef",
+        "entrypoints",
+        "knownLimits",
+        "envelopeRoot"
+      ],
+      "properties": {
+        "schema": { "const": "kungfu.agent-console-envelope/v1" },
+        "workspaceId": { "type": "string", "minLength": 1 },
+        "consoleId": { "type": "string", "minLength": 1 },
+        "attemptId": { "type": "string", "minLength": 1 },
+        "runtimeProfileId": { "type": "string", "minLength": 1 },
+        "provider": { "$ref": "#/$defs/identifier" },
+        "activeProfiles": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["id", "root"],
+            "properties": {
+              "id": { "type": "string", "minLength": 1 },
+              "root": { "$ref": "#/$defs/sha256" }
+            }
+          }
+        },
+        "workRef": {
+          "anyOf": [
+            { "$ref": "#/$defs/workRef" },
+            { "type": "null" }
+          ]
+        },
+        "entrypoints": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["context", "capabilities", "profiles", "bindWork"],
+          "properties": {
+            "context": { "$ref": "#/$defs/argv" },
+            "capabilities": { "$ref": "#/$defs/argv" },
+            "profiles": { "$ref": "#/$defs/argv" },
+            "bindWork": { "$ref": "#/$defs/argv" }
+          }
+        },
+        "knownLimits": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "bootstrap": { "$ref": "#/$defs/bootstrapProjection" },
+        "envelopeRoot": { "$ref": "#/$defs/sha256" }
+      }
+    },
+    "bootstrapProjection": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schema", "state", "attemptId", "receiptRoot", "mutationsAllowed"],
+      "properties": {
+        "schema": { "const": "kungfu.agent-bootstrap-receipt/v1" },
+        "state": { "enum": ["pending", "verified", "degraded"] },
+        "attemptId": { "type": "string", "minLength": 1 },
+        "receiptRoot": { "$ref": "#/$defs/sha256" },
+        "mutationsAllowed": { "type": "boolean" }
+      }
+    },
+    "argv": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "type": "string" }
+    },
+    "runtimeProfile": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema",
+        "id",
+        "label",
+        "provider",
+        "launch",
+        "cwdPolicy",
+        "backendDefault",
+        "bootstrap",
+        "source",
+        "lastVerified"
+      ],
+      "properties": {
+        "schema": { "const": "kungfu.agent-runtime-profile/v1" },
+        "id": { "$ref": "#/$defs/identifier" },
+        "label": { "type": "string", "minLength": 1 },
+        "provider": { "$ref": "#/$defs/identifier" },
+        "launch": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["executable", "argv", "interactiveArgv", "versionArgv", "shellMode"],
+          "properties": {
+            "executable": { "type": "string", "minLength": 1 },
+            "argv": { "type": "array", "items": { "type": "string" } },
+            "interactiveArgv": { "type": "array", "items": { "type": "string" } },
+            "versionArgv": { "$ref": "#/$defs/argv" },
+            "shellMode": { "type": "boolean" }
+          }
+        },
+        "cwdPolicy": { "enum": ["workspace-root", "home", "inherit"] },
+        "backendDefault": { "enum": ["tmux", "direct"] },
+        "bootstrap": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["adapter", "envelope"],
+          "properties": {
+            "adapter": { "$ref": "#/$defs/identifier" },
+            "envelope": { "enum": ["required", "disabled"] }
+          }
+        },
+        "source": { "enum": ["discovered", "user", "qualification"] },
+        "lastVerified": {
+          "anyOf": [{ "type": "string" }, { "type": "null" }]
+        }
+      }
+    },
+    "sessionAttempt": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "sessionAttemptId",
+        "runId",
+        "provider",
+        "providerVersion",
+        "runtimeProfileId",
+        "backend",
+        "status",
+        "startedAt",
+        "plans",
+        "receipts",
+        "historyProtection"
+      ],
+      "properties": {
+        "sessionAttemptId": { "type": "string", "minLength": 1 },
+        "runId": { "type": "string", "minLength": 1 },
+        "provider": { "$ref": "#/$defs/identifier" },
+        "providerVersion": { "type": "string", "minLength": 1 },
+        "runtimeProfileId": { "type": "string", "minLength": 1 },
+        "backend": { "enum": ["capsule", "structured", "tmux", "direct", "native-interactive"] },
+        "status": { "enum": ["planned", "running", "detached", "exited", "orphaned", "unrecoverable"] },
+        "startedAt": { "type": "number" },
+        "endedAt": { "type": "number" },
+        "workBinding": { "$ref": "#/$defs/workBinding" },
+        "bootstrap": { "$ref": "#/$defs/bootstrapProjection" },
+        "observer": { "type": "object" },
+        "exit": { "type": "object" },
+        "plans": { "type": "array", "items": { "type": "object" } },
+        "receipts": { "type": "array", "items": { "type": "object" } },
+        "historyProtection": { "type": "object" }
+      }
+    },
+    "workBinding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "workRef"],
+      "properties": {
+        "kind": { "const": "work" },
+        "workRef": { "$ref": "#/$defs/workRef" }
+      }
+    },
+    "activeWorkLease": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema",
+        "leaseId",
+        "workKey",
+        "workRef",
+        "workConsoleId",
+        "sessionAttemptId",
+        "provider",
+        "runtimeProfileId",
+        "acquiredAt",
+        "state"
+      ],
+      "properties": {
+        "schema": { "const": "kungfu.active-work-lease/v1" },
+        "leaseId": { "type": "string", "minLength": 1 },
+        "workKey": { "$ref": "#/$defs/sha256" },
+        "workRef": { "$ref": "#/$defs/workRef" },
+        "workConsoleId": { "type": "string", "minLength": 1 },
+        "sessionAttemptId": { "type": "string", "minLength": 1 },
+        "provider": { "$ref": "#/$defs/identifier" },
+        "runtimeProfileId": { "type": "string", "minLength": 1 },
+        "acquiredAt": { "type": "number" },
+        "state": { "enum": ["active", "recovery-pending"] },
+        "recoveryDeadlineAt": { "type": "number" }
+      }
+    }
+  }
+}

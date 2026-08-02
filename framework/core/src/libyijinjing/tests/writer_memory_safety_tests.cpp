@@ -138,7 +138,7 @@ void test_reservation_rejects_max_plus_one_and_size_max_without_mutation() {
   require(publisher->notifications == 2, "writer did not recover after boundary rejection");
 }
 
-void test_payload_and_binding_lengths_reject_before_publication() {
+void test_payload_extents_reject_before_publication() {
   temp_tree tree;
   auto publisher = std::make_shared<counting_publisher>();
   writer target(make_location(tree.root(), "payload"), location::PUBLIC, publisher, false, make_bus(),
@@ -164,15 +164,12 @@ void test_payload_and_binding_lengths_reject_before_publication() {
         tx.copy_bytes(nullptr, 1);
       },
       "non-empty null transaction copy was accepted");
-  require_throws([&] { target.write_raw(5, 3004, 0, 1); }, "non-empty null raw write was accepted");
-  require_throws([&] { target.write_bytes(6, 3005, bytes, 4); }, "short legacy byte length was accepted");
-  require_throws([&] { target.write_bytes(7, 3006, bytes, 9); }, "long legacy byte length was accepted");
   require(target.get_journal()->current_frame()->address() == cursor, "rejected payload operation advanced the cursor");
   require(publisher->notifications == 0, "rejected payload operation notified readers");
 
-  target.write_raw(8, 3007, 0, 0);
-  require(publisher->notifications == 1, "valid empty raw payload was not published");
-  target.write_bytes(9, 3008, bytes, static_cast<uint32_t>(bytes.size()));
+  target.write_bytes(8, 3007, std::span<const std::byte>{});
+  require(publisher->notifications == 1, "valid empty byte payload was not published");
+  target.write_bytes(9, 3008, std::as_bytes(std::span{bytes}));
   require(publisher->notifications == 2, "writer did not recover after payload rejection");
 }
 
@@ -215,7 +212,7 @@ int main() {
   const std::vector<std::pair<std::string, std::function<void()>>> tests = {
       {"reservation bounds reject without mutation",
        test_reservation_rejects_max_plus_one_and_size_max_without_mutation},
-      {"payload bounds reject before publication", test_payload_and_binding_lengths_reject_before_publication},
+      {"payload bounds reject before publication", test_payload_extents_reject_before_publication},
       {"frame copy rejects inconsistent sources", test_copy_frame_rejects_inconsistent_sources_without_mutation},
   };
 

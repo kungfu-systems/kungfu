@@ -241,7 +241,9 @@ Napi::Value Watcher::IssueRawPublic(const Napi::CallbackInfo &info) {
   if (payload.Length() > MAX_CUSTOM_FRAME_BYTES) {
     throw Napi::Error::New(info.Env(), "custom frame exceeds the 1 MiB peer limit");
   }
-  writer->write_raw(now(), carrier_type, reinterpret_cast<uintptr_t>(payload.Data()), payload.Length());
+  auto tx = writer->reserve_frame(now(), carrier_type, payload.Length());
+  tx.copy_bytes(payload.Data(), payload.Length());
+  tx.commit(payload.Length());
   return Napi::Boolean::New(info.Env(), true);
 }
 

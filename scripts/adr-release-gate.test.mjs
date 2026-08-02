@@ -693,10 +693,10 @@ test('checked-in deprecation authority distinguishes live debt from settled hist
   });
   assert.equal(report.ok, true);
   assert.equal(report.readOnly, true);
-  assert.equal(report.summary.entries, 5);
-  assert.equal(report.summary.dispositions['not-due'], 4);
+  assert.equal(report.summary.entries, 4);
+  assert.equal(report.summary.dispositions['not-due'], 3);
   assert.equal(report.summary.dispositions.removed, 1);
-  assert.equal(report.inventory.live.length, 11);
+  assert.equal(report.inventory.live.length, 9);
   assert.equal(report.inventory.settled.length, 1);
   assert.equal(report.inventory.classifications.historicalEvidence.length, 1);
 });

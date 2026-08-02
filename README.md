@@ -1,48 +1,44 @@
 # Kungfu
 
-**Your agent shouldn't start over when the chat ends.**
+**Your agents don't hand off the work. You do.**
 
-Kungfu helps a fresh agent continue the same work without asking you to explain
-it all again. It does this from declared project sources, makes missing or
-conflicting context visible, and preserves enough structure to continue without
-reconstructing everything from conversation history.
+Every switch means copying context, re-explaining decisions, chasing updates,
+and checking what got lost. Kungfu keeps the same work moving, no matter which
+agent takes over.
+
+Use the best Agent when it matters. Use a cheaper one when it does not. Keep the
+same Work across Codex, Claude, OpenCode, Amp, or your own execution surface.
 
 > **Kungfu UNGFU™** · Never Guess. Facts Unfold. [Why this signature
 > exists](docs/concepts/why-kungfu.md).
 
-Open the terminal product with no arguments:
+Before asking an agent to use Kungfu, make sure the `kungfu` command is on its
+`PATH`. [Set up the Kungfu command](docs/guides/installing-cli.md#make-kungfu-available-in-path),
+then paste this one sentence into the agent you already use:
 
-```sh
-kungfu
+```text
+Run `kungfu agent brief`, then guide me through my first Project and Work. Keep me in my current agent, and use Kungfu as the durable Work layer.
 ```
 
-Start in Agent Work Lab on a fresh installation, create or import a Project,
-then run its next Assignment with an agent you already use. The scriptable path
-is:
+Keep working in that agent when you are ready:
 
 ```sh
 cd your-project
 kungfu run codex
 ```
 
-Projects can start blank, use the guided Agent Work Starter template, or safely
-remember an existing folder without changing its files.
+Use `claude`, `opencode`, or `amp` instead of `codex` when that is the agent you
+already use. Pass a task to create the first Work directly:
 
-Use `kungfu run claude` or `kungfu run opencode` for another discovered
-provider. You can open several terminal windows in the same Project and run
-the same bare command in each one; Kungfu gives every launch its own Console,
-without asking you to invent a name. The Agent binds that Console to an exact
-Assignment before it starts changing the Project. If another live Agent already
-owns that Assignment, Kungfu stops the second writer and tells it to return to
-the existing terminal, wait for that Agent to exit, or choose different Work.
+```sh
+kungfu run codex "Prepare the release notes"
+```
 
-Pass a task to capture and start new Work
-(`kungfu run codex "Prepare the release notes"`), or use `--work` when more
-than one captured Assignment is eligible. A successful provider process is
-retained for independent review; it does not complete Work by itself.
+A successful agent process is retained for independent review; it does not
+complete Work by itself.
 
-<!-- kungfu:auditable-demo:start -->
-## See a fresh Agent continue the same Work
+<!-- kungfu:auditable-demo:agent-work-lab-autoplay:start -->
+## See the Work survive an Agent change
 
 **One Work. Two fresh Agent processes. No copied chat.**
 
@@ -70,12 +66,25 @@ metadata, local bundle presence, package metadata, registry history, scan output
 or standalone generation, and makes no production-deployment claim.
 
 </details>
-<!-- kungfu:auditable-demo:end -->
+<!-- kungfu:auditable-demo:agent-work-lab-autoplay:end -->
+
+<!-- kungfu:auditable-demo:project-tour-08x:start -->
+<!-- kungfu:auditable-demo:project-tour-08x:end -->
+
+Want to explore without leaving Kungfu first? Run the terminal product:
+
+```sh
+kungfu
+```
+
+Getting Started leads to the same Agent-first prompt. Agent Work Lab is the
+lowest-friction optional demonstration, and Guided Project Tour leaves a
+Project you can keep using. After onboarding, bare `kungfu` opens Work directly.
 
 ## What Kungfu preserves
 
-- **Work continuity.** A fresh Agent can recover what was done, what remains,
-  and which Work it is continuing.
+- **Work continuity.** Change the Agent without losing what was done, what
+  remains, or which Work is continuing.
 - **Verified project understanding.** Declared sources, important omissions,
   conflicts, decisions, and uncertainty remain visible instead of being guessed.
 - **Inspectable history.** People and Agents can see what happened, what the
@@ -91,16 +100,24 @@ See the [continuity handoff](https://kungfu.tech/#continuity-demo) and
 The current result is preparatory fixture evidence—not a provider comparison,
 multi-day durability or retention result, or FO10 qualification.
 
-## Keep using the agents you already have
+## Change the Agent, not the Work
 
-`kungfu run <agent>` is the scriptable golden path, not a required replacement
-for Codex, Claude Code, VS Code, terminals, or other agent surfaces. The
-provider-neutral low-level launcher remains available as the advanced
-`kungfu run agent` command. Registered third-party PTY Agents use
-`kungfu run agent --agent <profile-id>` and the bounded
+`kungfu run <agent>` is the scriptable golden path across Codex, Claude Code,
+OpenCode, Amp, and other Agent surfaces. Kungfu does not replace those surfaces;
+it keeps the Work behind them. The provider-neutral low-level launcher remains
+available as the advanced `kungfu run agent` command. Registered third-party
+PTY Agents use `kungfu run agent --agent <profile-id>` and the bounded
 [native adapter contract](docs/guides/native-agent-adapters.md). The same local
 contracts and Work state remain available through the Kungfu TUI, GUI, CLI,
 and APIs.
+
+Projects can start blank, use the guided Agent Work Starter template, or safely
+remember an existing folder without changing its files. You can open several
+terminals in the same Project and run the same bare command in each one; Kungfu
+gives every launch its own Console. The Agent binds that Console to exact Work
+before it changes the Project. If another live Agent already owns that Work,
+Kungfu stops the second writer and points back to the existing attempt. Use
+`--work` when more than one captured Work item is eligible.
 
 ## Build from source
 
@@ -240,7 +257,17 @@ and prepared package-manager adapters are not public release artifacts.
 
 ### Kungfu in the Agent Supply Chain
 
-Kungfu is also the founding runtime proof for an open Agent Supply Chain:
+Kungfu lights the first loop by keeping Work alive across the Agents a person
+already uses. The Agent experiences explicit capabilities, inspectable evidence,
+and durable Work—then can recognize and ask for those qualities elsewhere.
+
+That creates a possible market loop: Agents recommend within human or Hub
+authority, builders receive a demand signal, and more Agent-native products can
+ship the same qualities. Those products can restart the loop without Kungfu.
+This is an adoption thesis, not a claim of broad external demand or a multi-Hub
+market. [See the Agent Supply Chain loop](https://kungfu.tech/agent-supply-chain/).
+
+The technical chain is:
 
 ```text
 KFD-3 discovery -> Buildchain artifact evidence -> KFD-2 assessment

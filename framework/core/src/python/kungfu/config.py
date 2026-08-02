@@ -108,7 +108,7 @@ def value_schema(
     # Schemas such as WorkConsole and the Agent Console envelope embed WorkRef
     # by local reference. Inject the canonical sibling schema at validation
     # time so the contract keeps one WorkRef definition.
-    schema.setdefault("$defs", {})["workRef"] = copy.deepcopy(schemas["workRef"])
+    schema.setdefault("$defs", {})["workRef"] = _embedded_work_ref_schema(schemas, name)
     return schema
 
 
@@ -123,8 +123,25 @@ def validate_value(
     if not isinstance(schemas, dict) or name not in schemas:
         raise ValueError(f"Unknown Kungfu config value schema: {name}")
     schema = copy.deepcopy(schemas[name])
-    schema.setdefault("$defs", {})["workRef"] = copy.deepcopy(schemas["workRef"])
+    schema.setdefault("$defs", {})["workRef"] = _embedded_work_ref_schema(schemas, name)
     contract_runtime.validate_json_schema(value, schema, name)
+
+
+def _embedded_work_ref_schema(
+    schemas: Mapping[str, Any], value_schema_name: str
+) -> dict[str, Any]:
+    canonical = copy.deepcopy(schemas["workRef"])
+    if value_schema_name != "workConsoleRegistry":
+        return canonical
+    legacy = copy.deepcopy(canonical)
+    legacy["properties"].pop("initiativeId", None)
+    legacy.pop("allOf", None)
+    return {
+        "oneOf": [canonical, legacy],
+        "x-kungfu-compatibility": (
+            "legacy WorkRef v1 remains readable only in retained registry data"
+        ),
+    }
 
 
 def raw_default_config(

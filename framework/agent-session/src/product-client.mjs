@@ -5,7 +5,6 @@ import {
   cpSync,
   existsSync,
   lstatSync,
-  mkdirSync,
   readFileSync,
   realpathSync,
   unlinkSync,
@@ -16,6 +15,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { setTimeout as delay } from 'node:timers/promises';
 import { fileURLToPath } from 'node:url';
+import { ensurePrivateRuntimeDirectory } from './private-runtime-directory.mjs';
 import { invokeAgentSessionSurfaceRpc } from './product-rpc.mjs';
 
 const require = createRequire(import.meta.url);
@@ -48,7 +48,7 @@ export function prepareAgentSessionNodePty({ runtimeDir, modulePath } = {}) {
     'node-pty',
   );
   if (!existsSync(targetRoot)) {
-    ensurePrivateDirectory(path.dirname(targetRoot));
+    ensurePrivateRuntimeDirectory(path.dirname(targetRoot));
     cpSync(packageRoot, targetRoot, { recursive: true });
   }
   const targetStat = lstatSync(targetRoot);
@@ -121,27 +121,6 @@ export function detachedAgentSessionPaths(runtimeDir) {
     registry: path.join(directory, 'work-console-registry.json'),
     startupLock: path.join(directory, 'worker-start.lock'),
   };
-}
-
-function ensurePrivateDirectory(directory) {
-  mkdirSync(directory, { recursive: true, mode: 0o700 });
-  const stat = lstatSync(directory);
-  if (!stat.isDirectory() || stat.isSymbolicLink()) {
-    throw new Error(
-      `Agent Session runtime path '${directory}' is not a real directory`,
-    );
-  }
-  const uid = process.getuid?.();
-  if (uid !== undefined && stat.uid !== uid) {
-    throw new Error(
-      `Agent Session runtime path '${directory}' is not owned by this user`,
-    );
-  }
-  if (process.platform !== 'win32' && (stat.mode & 0o077) !== 0) {
-    throw new Error(
-      `Agent Session runtime path '${directory}' must not be group/world accessible`,
-    );
-  }
 }
 
 function transientConnection(error) {
@@ -220,8 +199,10 @@ export function createDetachedAgentSessionHost({
   async function ensureWorker() {
     if (starting) return starting;
     starting = (async () => {
-      ensurePrivateDirectory(paths.directory);
-      if (paths.socketDirectory) ensurePrivateDirectory(paths.socketDirectory);
+      ensurePrivateRuntimeDirectory(paths.directory);
+      if (paths.socketDirectory) {
+        ensurePrivateRuntimeDirectory(paths.socketDirectory);
+      }
       const deadline = now() + STARTUP_LOCK_STALE_MS + CONNECT_TIMEOUT_MS;
       let lastError = null;
       while (now() < deadline) {

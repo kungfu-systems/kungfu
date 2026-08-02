@@ -1154,12 +1154,14 @@ export function AgentWorkLabPanel({
   onOpenWork,
   onOpenExistingProject,
   onOpenStarterProject,
+  onComplete,
 }: {
   lab: AgentWorkLab;
   startup: AgentWorkLabStartupRoute;
   onOpenWork?: () => void;
   onOpenExistingProject?: () => void;
   onOpenStarterProject?: (destination: string) => void;
+  onComplete?: () => void;
 }) {
   const [mode, setMode] = React.useState<AgentWorkLabMode>('offline-demo');
   const [agents, setAgents] = React.useState<AgentRuntimeCatalog | null>(null);
@@ -1379,6 +1381,7 @@ export function AgentWorkLabPanel({
       setActiveFindingIndex(-1);
       setShowNextRecommendation(true);
       setError('');
+      if (nextReport.status !== 'failed') onComplete?.();
     } catch (reason) {
       if (playbackRunRef.current === runId) {
         setError((reason as Error).message);

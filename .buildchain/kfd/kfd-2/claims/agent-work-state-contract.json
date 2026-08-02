@@ -16,7 +16,7 @@
       "pointer": {
         "kind": "file",
         "path": "docs/adr/KF-ADR-019f86da-4f90-786d-aa24-a97705e13917.md",
-        "sha256": "f2c7ec8409bf35f8788b2991e67285179ebd441f7eeeb1f879856f390b006a04"
+        "sha256": "1538e1e9654f626872ff4c2a0e09271881912ab281768e01911207a2d5795954"
       },
       "description": "Accepted role-separation decision and bounded P17 qualification boundary."
     },
@@ -43,7 +43,7 @@
       "pointer": {
         "kind": "file",
         "path": "framework/core/tests/python/test_agent_work_state_contract.py",
-        "sha256": "0bb709db90739eeecaf23d528c7b7fb52d60e51c625193f6a402321979cb8d2e"
+        "sha256": "243df94d5ce449aa3031f84981ebd79d867de39f3b11c84f31caa4490a3b4c5e"
       },
       "description": "Runtime CLI parity and fail-closed contract-schema checks."
     },
@@ -52,7 +52,7 @@
       "pointer": {
         "kind": "file",
         "path": "framework/core/src/python/kungfu/agent/kfd3_api.registry.json",
-        "sha256": "83bd291df0047719de49b47370f18812e878ce14c7a69263762f518e88c322bb"
+        "sha256": "ec86da8274437dcb3cdc73d702bad6ab29097e606c618fe703c82d3622904055"
       },
       "description": "Agent collaboration-interface registration for the work-model query."
     }
@@ -63,7 +63,7 @@
     "evidenceSha256": [
       {
         "path": "docs/adr/KF-ADR-019f86da-4f90-786d-aa24-a97705e13917.md",
-        "sha256": "f2c7ec8409bf35f8788b2991e67285179ebd441f7eeeb1f879856f390b006a04"
+        "sha256": "1538e1e9654f626872ff4c2a0e09271881912ab281768e01911207a2d5795954"
       },
       {
         "path": "scripts/check-agent-work-state-contract.test.mjs",
@@ -75,11 +75,11 @@
       },
       {
         "path": "framework/core/tests/python/test_agent_work_state_contract.py",
-        "sha256": "0bb709db90739eeecaf23d528c7b7fb52d60e51c625193f6a402321979cb8d2e"
+        "sha256": "243df94d5ce449aa3031f84981ebd79d867de39f3b11c84f31caa4490a3b4c5e"
       },
       {
         "path": "framework/core/src/python/kungfu/agent/kfd3_api.registry.json",
-        "sha256": "83bd291df0047719de49b47370f18812e878ce14c7a69263762f518e88c322bb"
+        "sha256": "ec86da8274437dcb3cdc73d702bad6ab29097e606c618fe703c82d3622904055"
       }
     ],
     "artifactSha256": [

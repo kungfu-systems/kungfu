@@ -146,7 +146,7 @@ export class CodexAppServerProductRuntime {
       routes: [
         {
           ...routeStatus(this.appServerArgv),
-          providerVersion: '0.144.3',
+          providerVersion: '0.146.0',
           capabilities: [
             'structured-provider-events',
             'exact-provider-controls',
@@ -159,9 +159,9 @@ export class CodexAppServerProductRuntime {
 
   planRoute(input) {
     if (input.provider !== 'codex' || input.fallbackFrom) return null;
-    if (input.providerVersion !== '0.144.3') {
+    if (input.providerVersion !== '0.146.0') {
       throw Object.assign(
-        new Error('structured Codex route requires provider version 0.144.3'),
+        new Error('structured Codex route requires provider version 0.146.0'),
         { code: 'provider_version_drift' },
       );
     }
@@ -376,7 +376,7 @@ export class CodexAppServerProductRuntime {
           providerVersion: plan.providerVersion,
           adapterVersion: 'codex-app-server-structured/v1',
           compatible: true,
-          tested: plan.providerVersion === '0.144.3',
+          tested: plan.providerVersion === '0.146.0',
           failureCode:
             state.eventFailure?.code ?? current.failure?.code ?? null,
           failureDetail:

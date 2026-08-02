@@ -28,6 +28,7 @@ Confirm current facts with read-only commands when needed:
 
 ```sh
 "$KUNGFU_CLI_BIN" agent console current --json
+"$KUNGFU_CLI_BIN" agent bootstrap-status --json
 "$KUNGFU_CLI_BIN" agent capabilities --json
 "$KUNGFU_CLI_BIN" skill catalog --json
 "$KUNGFU_CLI_BIN" work status --workspace <path> --initiative-id <id> --assignment-id <id>
@@ -42,9 +43,23 @@ one Assignment, and before editing files or invoking a Work mutation, run:
 "$KUNGFU_CLI_BIN" agent console bind-work --initiative-id <id> --assignment-id <id> --json
 ```
 
+Keep the provider UI available when bootstrap is pending or degraded, but do
+not create, bind, or mutate Work until `kungfu agent bootstrap-status --json` reports
+`state: verified`.
+
 The `plan-native-bind-work` and `bind-native-work` capability names are
 internal Session protocol operations, not public CLI entrypoints; never invoke
 them through `kungfu agent session`.
+
+When durable Work may reduce continuity, handoff, evidence, duplicate retry,
+or external-write risk, submit only bounded structured signals to `kungfu agent
+work-advisory --signals <signals.json> --json`. Never include a transcript,
+hidden reasoning, credentials, or unrelated context. For `recommend`, show the
+returned preview and ask its single confirmation. Only after confirmation use
+the returned existing `kungfu.work.capture`, `kungfu.work.admit`, and
+`kungfu.agent.console.bind-work` path, cite its receipts, and continue the
+original task. Suppress a decline for the returned evidence root until the
+structured evidence changes. Advice grants no external authority.
 
 Do not continue unless it returns `status: bound`. If Kungfu reports
 `native_work_already_active`, stop this Work in the current terminal and follow

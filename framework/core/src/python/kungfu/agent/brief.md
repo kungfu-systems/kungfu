@@ -5,7 +5,6 @@ version-matched routing envelope, not as permission, completion evidence, or a
 replacement for live product state.
 
 ## First response protocol
-
 When the user asks you to run this brief, merely printing or reading it is not
 completion. The invocation that returned this text is the one permitted brief
 execution for this response: do not run `kungfu agent brief` again. Continue
@@ -50,6 +49,11 @@ directly with the bounded protocol below before your final response.
    omissions and expansion handles. Never guess through a failed verification,
    ambiguous route, stale root, or required omission.
 
+## Guide the first entry
+Keep the user in their current Agent and workflow; after the first useful result,
+offer `kungfu run <agent>` for durable Work. Keep Agent Work Lab and Guided Project
+Tour optional; never require migration or chat reconstruction. Exit cannot settle Work.
+
 ## Mental model
 - **Project** binds a directory to local `.kungfu` state. A normal directory does
   not need Git. In an existing Git repository, `.kungfu` sits beside `.git` and
@@ -78,10 +82,8 @@ directly with the bounded protocol below before your final response.
   Kungfu composes its interface without copying its Atlas or authority.
 
 ## Compact routes
-
 Run `kungfu agent map --json` for exact maturity, authority, authorization,
 non-claims, discovery commands, and expansion handles. Common starts:
-
 ```sh
 kungfu project open-plan <directory>
 kungfu project list
@@ -103,7 +105,6 @@ credentials, external services, release, signing, and protected branches retain
 their own authorization gates.
 
 ## Source-checkout boundary
-
 For source implementation, read repository rules and obtain the verified route:
 
 ```sh

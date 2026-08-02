@@ -45,7 +45,7 @@ function input(overrides = {}) {
     workConsoleId: 'console-product',
     sessionAttemptId: 'attempt-structured',
     provider: 'codex',
-    providerVersion: '0.144.3',
+    providerVersion: '0.146.0',
     profileRoot: PROFILE_ROOT,
     executable: process.execPath,
     argv: [provider, 'product-route'],
@@ -357,7 +357,7 @@ test('GUI CLI and Agent share one frozen structured route and exact controls', a
     'attach-presentation',
   ]);
   assert.equal(fallback.provider, 'codex');
-  assert.equal(fallback.providerVersion, '0.144.3');
+  assert.equal(fallback.providerVersion, '0.146.0');
   assert.equal(fallback.profileRoot, PROFILE_ROOT);
   const fallbackReceipt = await product.invoke({
     operation: 'start',

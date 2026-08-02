@@ -70,8 +70,9 @@ const writerSafetyFragments = new Map([
     [
       'checked_cpu_word_length',
       'require_capacity(data_length)',
-      'length != data.size()',
-      'std::as_bytes(std::span{data})',
+      'auto tx = reserve_frame(trigger_time, carrier_type, data.size());',
+      'tx.copy_bytes(data.data(), data.size());',
+      'tx.commit(data.size());',
     ],
   ],
   [
@@ -79,7 +80,9 @@ const writerSafetyFragments = new Map([
     [
       'contiguous one-dimensional bytes-like buffer',
       'std::span<const std::byte>',
-      'py::overload_cast<int64_t, int32_t, const std::vector<uint8_t> &, uint32_t>',
+      'const auto byte_length = item_count * item_size;',
+      'if (view.ptr == nullptr && byte_length != 0)',
+      'target.write_bytes(trigger_time, carrier_type,',
     ],
   ],
 ]);

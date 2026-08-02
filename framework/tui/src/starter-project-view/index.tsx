@@ -385,6 +385,8 @@ export function deterministicMockAgentSelection(
     launch: {
       executable: process.env.KUNGFU_MOCK_AGENT_EXECUTABLE ?? process.execPath,
       argv: [],
+      interactiveArgv: [],
+      versionArgv: ['--version'],
       shellMode: false,
     },
     cwdPolicy: 'workspace-root',

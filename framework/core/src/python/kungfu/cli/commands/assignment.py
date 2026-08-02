@@ -20,6 +20,7 @@ from kungfu import assignment_start
 from kungfu import dogfood as dogfood_api
 from kungfu import profile_composition, profile_sdk
 from kungfu.agent import run_agent
+from kungfu.agent import resources as agent_resources
 from kungfu.cli.commands import PrioritizedCommandGroup, kfc
 from kungfu.cli.commands import assignment_review
 from kungfu.cli.surface_contract import surface
@@ -82,6 +83,8 @@ def _run(operation):
 
 
 def _runtime(workspace_root="", home=False, operation_class="semantic-write"):
+    if operation_class != "read-only":
+        agent_resources.require_current_native_bootstrap_for_mutation()
     target = resolve_workspace_target(
         operation_class,
         workspace_root or None,

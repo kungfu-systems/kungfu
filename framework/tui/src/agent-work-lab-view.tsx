@@ -95,39 +95,107 @@ function wrapOnboardingText(value: string, width: number): string[] {
   return lines;
 }
 
+const AGENT_SHELL_ENTRY = 'kungfu run codex|claude|opencode|amp';
+
 export type TuiOnboardingAction =
-  | 'agent'
+  | 'copy'
   | 'lab'
   | 'tour'
   | 'continue'
   | 'dismiss';
+
+export type TuiOnboardingNotice = {
+  ok: boolean;
+  title: string;
+  detail: string;
+  next: string;
+};
+
+export function useTransientOnboardingNotice(): [
+  TuiOnboardingNotice | undefined,
+  React.Dispatch<React.SetStateAction<TuiOnboardingNotice | undefined>>,
+] {
+  const [notice, setNotice] = React.useState<TuiOnboardingNotice>();
+  React.useEffect(() => {
+    if (!notice) return undefined;
+    const timer = setTimeout(() => setNotice(undefined), 4_000);
+    return () => clearTimeout(timer);
+  }, [notice]);
+  return [notice, setNotice];
+}
+
+export function tuiOnboardingActionFromInput(
+  value: string,
+): TuiOnboardingAction | 'quit' | null {
+  if (value === 'q' || value === 'Q' || value === '\u0003') return 'quit';
+  if (value === 'c' || value === 'C') return 'copy';
+  if (value === '\r' || value === '\n') return 'continue';
+  if (value === 'l' || value === 'L') return 'lab';
+  if (value === 't' || value === 'T') return 'tour';
+  if (value === 's' || value === 'S') return 'dismiss';
+  return null;
+}
+
+function OnboardingShortcutLine({
+  value,
+  opaqueWidth,
+}: {
+  value: string;
+  opaqueWidth?: number;
+}) {
+  const content =
+    opaqueWidth === undefined
+      ? value
+      : ` ${value}`.slice(0, opaqueWidth).padEnd(opaqueWidth);
+  return (
+    <Text
+      color={opaqueWidth === undefined ? undefined : 'white'}
+      backgroundColor={opaqueWidth === undefined ? undefined : 'blue'}
+      wrap="truncate-end"
+    >
+      {content.split(/(\[[^\]]+\])/u).map((part, index) =>
+        /^\[[^\]]+\]$/u.test(part) ? (
+          <Text
+            key={`${index}:${part}`}
+            bold
+            color="black"
+            backgroundColor="yellow"
+          >
+            {part}
+          </Text>
+        ) : (
+          part
+        ),
+      )}
+    </Text>
+  );
+}
 
 export function AgentFirstOnboardingView({
   dimensions,
   state,
   command,
   prompt,
-  notice = '',
+  notice,
   onAction,
 }: {
   dimensions: TerminalDimensions;
   state: KungfuOnboardingState;
   command: string;
   prompt: string;
-  notice?: string;
+  notice?: TuiOnboardingNotice;
   onAction: (action: TuiOnboardingAction) => void;
 }) {
   const { exit } = useApp();
+  const noticePanelWidth = Math.max(24, Math.min(72, dimensions.columns - 4));
+  const noticeColumns = Math.max(1, noticePanelWidth - 2);
+  const noticeLine = (value: string) =>
+    ` ${value}`.slice(0, noticeColumns).padEnd(noticeColumns);
   React.useEffect(() => {
     const onData = (chunk: Buffer | string) => {
-      const value = String(chunk);
-      if (value === 'q' || value === 'Q' || value === '\u0003') exit();
-      else if (value === '1' || value === '\r' || value === '\n')
-        onAction('agent');
-      else if (value === '2') onAction('lab');
-      else if (value === '3') onAction('tour');
-      else if (value === 'w') onAction('continue');
-      else if (value === 's') onAction('dismiss');
+      const action = tuiOnboardingActionFromInput(String(chunk));
+      if (action === 'quit') exit();
+      else if (action) onAction(action);
     };
     process.stdin.on('data', onData);
     return () => {
@@ -148,34 +216,95 @@ export function AgentFirstOnboardingView({
       </Text>
       <Text bold>Keep your agent. Give it durable Work.</Text>
       <Text wrap="wrap">
-        Kungfu does not require a new chat or daily workspace. Start by teaching
-        the agent you already use how to preserve Projects, Work, attempts,
-        review, and settlement across sessions.
+        Start in either place. Copy Kungfu into the Agent you already use,
+        continue directly into the Kungfu UI, or explore first. Copying is
+        helpful, never required.
       </Text>
       <TitledBorderWindow
         columns={Math.max(20, dimensions.columns - 2)}
-        title="1 · COPY THIS TO YOUR EXISTING AGENT"
+        title="OPTION A · BRING KUNGFU TO YOUR AGENT"
         borderColor="green"
         paddingX={1}
         rows={[
-          ...wrapOnboardingText(prompt, Math.max(16, dimensions.columns - 8)),
-          '',
+          ...wrapOnboardingText(
+            prompt,
+            Math.max(16, dimensions.columns - 8),
+          ).map((row) => (
+            <Text key={`prompt:${row}`} color="cyan" bold>
+              {row}
+            </Text>
+          )),
+          <Text key="prompt-command-gap"> </Text>,
           ...wrapOnboardingText(
             `Exact local command: ${command}`,
             Math.max(16, dimensions.columns - 8),
-          ),
-          '[1/Enter] I’ll use my Agent',
+          ).map((row) => (
+            <Text key={`command:${row}`} dimColor>
+              {row}
+            </Text>
+          )),
+          <OnboardingShortcutLine
+            key="copy-shortcut"
+            value="[C/c] Copy this one-line Agent prompt"
+          />,
         ]}
       />
-      <Text>
-        Optional: [2] Agent Work Lab · [3] Guided Project Tour · [w] Work now ·
-        [s] Don’t show again
-      </Text>
-      <Text dimColor>
-        Keep using kungfu run codex|claude|opencode|amp. GUI/TUI are optional
-        control surfaces. Current route: {state.route}.
-      </Text>
-      {notice ? <Text color="yellow">{notice}</Text> : null}
+      <TitledBorderWindow
+        columns={Math.max(20, dimensions.columns - 2)}
+        title="OPTION B · START IN KUNGFU"
+        borderColor="cyan"
+        paddingX={1}
+        rows={[
+          <Text key="continue-copy">
+            Open the local Work control plane. No copy or paste is required.
+          </Text>,
+          <Text key="shell-entry" dimColor>
+            Keep your normal Agent workflow: {AGENT_SHELL_ENTRY}
+          </Text>,
+          <OnboardingShortcutLine
+            key="continue-shortcut"
+            value="[Enter] Continue to Kungfu"
+          />,
+        ]}
+      />
+      <OnboardingShortcutLine value="Explore first: [L/l] Agent Work Lab · [T/t] Guided Project Tour" />
+      <OnboardingShortcutLine
+        value={`Return any time with /onboarding · [S/s] Don’t show again · Current route: ${state.route}`}
+      />
+      {notice ? (
+        <Box
+          position="absolute"
+          width={noticePanelWidth}
+          height={6}
+          marginTop={Math.max(2, Math.floor((dimensions.rows - 6) / 2))}
+          marginLeft={Math.max(
+            2,
+            Math.floor((dimensions.columns - noticePanelWidth) / 2),
+          )}
+          borderStyle="double"
+          borderColor={notice.ok ? 'green' : 'red'}
+          flexDirection="column"
+          overflow="hidden"
+        >
+          <Text
+            bold
+            color={notice.ok ? 'black' : 'white'}
+            backgroundColor={notice.ok ? 'green' : 'red'}
+          >
+            {noticeLine(notice.title)}
+          </Text>
+          <Text color="white" backgroundColor="blue">
+            {noticeLine(notice.detail)}
+          </Text>
+          <OnboardingShortcutLine
+            value={notice.next}
+            opaqueWidth={noticeColumns}
+          />
+          <Text color="white" backgroundColor="blue" dimColor>
+            {noticeLine('Closes automatically in 4 seconds.')}
+          </Text>
+        </Box>
+      ) : null}
     </Box>
   );
 }
