@@ -463,6 +463,17 @@ test('patrol, normal Alpha builds and sentinels keep one controller authority', 
   );
   assert.match(
     build,
+    /KUNGFU_EXACT_SOURCE_SHA:[\s\S]*fast-sentinel --kind windows --source-commit \$env:KUNGFU_EXACT_SOURCE_SHA[\s\S]*verify-fast-sentinel[\s\S]*--source-commit \$env:KUNGFU_EXACT_SOURCE_SHA/u,
+  );
+  assert.doesNotMatch(
+    build.slice(
+      build.indexOf('  windows-fast-sentinel:'),
+      build.indexOf('  auditable-demo-fast-sentinel:'),
+    ),
+    /^\s*GITHUB_SHA:/mu,
+  );
+  assert.match(
+    build,
     /auditable-demo-fast-sentinel:[\s\S]*runs-on: ubuntu-24\.04/u,
   );
   assert.match(

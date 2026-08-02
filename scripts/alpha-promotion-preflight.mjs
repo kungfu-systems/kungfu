@@ -774,9 +774,11 @@ function main(argv = process.argv.slice(2)) {
     const output = path.resolve(options.out);
     let result;
     if (options.kind === 'windows') {
+      if (!options['source-commit'])
+        throw new Error('Windows fast-sentinel requires --source-commit');
       const native = executeWindowsContinuityScenario(output);
       result = buildWindowsContinuityFastReceipt({
-        sourceSha: process.env.GITHUB_SHA || '',
+        sourceSha: options['source-commit'],
         nativeReport: native.report,
         nativeExitCode: native.exitCode,
         durationMs: Date.now() - startedAt,

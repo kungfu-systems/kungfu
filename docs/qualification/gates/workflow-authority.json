@@ -361,10 +361,10 @@
           "authority": "qualification",
           "publication": "none",
           "receipt": "diagnostic",
-          "definitionDigest": "sha256:e7e22cc96a21a57c700c66bc85266051c7b859bd9892ef633d5c3df3b70dcace",
+          "definitionDigest": "sha256:f7dc63acebe5c10defce5fac27e65ce16aa95d6c554102da98d441333c100199",
           "credentials": {"githubToken":"read","oidc":false,"repositorySecrets":[],"inheritedSecrets":false,"environment":null},
           "externalActions": ["actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0"],
-          "steps": [{"index":1,"label":"name:Check out exact candidate source","definitionDigest":"sha256:90b7875c1b8263fc6ee031b6f446decfc1fe5eb289f08dbc3d506c4bce43f113"},{"index":2,"label":"id:continuity","definitionDigest":"sha256:7b385ea24cf93a1681e845b0b831870419b399aea945e6c093560b4b55ea72ab"},{"index":3,"label":"name:Independently verify the exact Windows continuity receipt","definitionDigest":"sha256:08e15551c227c68b9b0941b5a2af65e795f9ddd6efe1f42a0fc54ce4bfe720b9"}]
+          "steps": [{"index":1,"label":"name:Check out exact candidate source","definitionDigest":"sha256:90b7875c1b8263fc6ee031b6f446decfc1fe5eb289f08dbc3d506c4bce43f113"},{"index":2,"label":"id:continuity","definitionDigest":"sha256:aae979c9b8b143b19076785a8b475412dfaf38549d5e0a6764fb006a52c72a5d"},{"index":3,"label":"name:Independently verify the exact Windows continuity receipt","definitionDigest":"sha256:02b95433a8c2b062797026a17d1f6579c78ebc31c89a569daf2ec9a93cb4455e"}]
         }
       ]
     },

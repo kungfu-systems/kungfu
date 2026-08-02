@@ -120,9 +120,9 @@ jobs:
         id: continuity
         shell: pwsh
         env:
-          GITHUB_SHA: ${{ fromJSON(inputs.macos-overflow-request-json || '{}').sourceSha || github.event.pull_request.head.sha || github.sha }}
+          KUNGFU_EXACT_SOURCE_SHA: ${{ fromJSON(inputs.macos-overflow-request-json || '{}').sourceSha || github.event.pull_request.head.sha || github.sha }}
         run: |
-          .\shifu.cmd node scripts/alpha-promotion-preflight.mjs fast-sentinel --kind windows --out .buildchain/fast-sentinel/windows.json
+          .\shifu.cmd node scripts/alpha-promotion-preflight.mjs fast-sentinel --kind windows --source-commit $env:KUNGFU_EXACT_SOURCE_SHA --out .buildchain/fast-sentinel/windows.json
           $receipt = Get-Content .buildchain/fast-sentinel/windows.json -Raw | ConvertFrom-Json
           "receipt-root=$($receipt.receiptRoot)" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
           "source-sha=$($receipt.sourceSha)" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
@@ -131,8 +131,8 @@ jobs:
       - name: Independently verify the exact Windows continuity receipt
         shell: pwsh
         env:
-          GITHUB_SHA: ${{ fromJSON(inputs.macos-overflow-request-json || '{}').sourceSha || github.event.pull_request.head.sha || github.sha }}
-        run: .\shifu.cmd node scripts/alpha-promotion-preflight.mjs verify-fast-sentinel --receipt .buildchain/fast-sentinel/windows.json --source-commit $env:GITHUB_SHA --platform win32 --architecture x64
+          KUNGFU_EXACT_SOURCE_SHA: ${{ fromJSON(inputs.macos-overflow-request-json || '{}').sourceSha || github.event.pull_request.head.sha || github.sha }}
+        run: .\shifu.cmd node scripts/alpha-promotion-preflight.mjs verify-fast-sentinel --receipt .buildchain/fast-sentinel/windows.json --source-commit $env:KUNGFU_EXACT_SOURCE_SHA --platform win32 --architecture x64
 
   auditable-demo-fast-sentinel:
     name: Auditable demo exact-source fast sentinel
