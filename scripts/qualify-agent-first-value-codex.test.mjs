@@ -8,7 +8,7 @@ import test from 'node:test';
 
 import {
   candidateShellRouter,
-  codexResultSchema,
+  experienceResultFromResponse,
   installIsolatedCodexHome,
   normalizedExperienceFromResult,
   protocolEvidenceFromCodexEventStream,
@@ -46,31 +46,31 @@ test('candidate shell router pins every plain kungfu command to the candidate', 
   assert.doesNotMatch(router, /usr\/local/u);
 });
 
-test('Codex result schema constrains the user response without copying receipts', () => {
-  const schema = codexResultSchema();
-  assert.equal(schema.additionalProperties, false);
-  assert.deepEqual(schema.required, [
-    'response',
-    'personalizationBasis',
-    'verificationCommand',
-    'nextStepCommand',
-  ]);
-  assert.equal(schema.properties.response.maxLength, 2048);
-  assert.match(
-    schema.properties.response.description,
-    /complete user-visible Chinese answer/u,
-  );
-  assert.match(
-    schema.properties.response.description,
-    /本次只验证了这个本地 Codex 与候选 CLI；未验证 Claude、CI 托管 Codex、其他平台或公开发布。/u,
-  );
-  assert.deepEqual(schema.properties.verificationCommand.enum, [
+test('natural Codex response yields one bounded experience record', () => {
+  const response = [
+    'Kungfu 给 Agent 一个可核验的工作入口。',
+    '个性化依据：当前工具。',
     'kungfu agent status --target codex --scope project --json',
-  ]);
-  assert.deepEqual(schema.properties.nextStepCommand.enum, [
     'kungfu project list --json',
-    'kungfu project open-plan --path . --json',
-  ]);
+  ].join('\n');
+  assert.deepEqual(experienceResultFromResponse(response), {
+    response,
+    personalizationBasis: 'current-tools',
+    verificationCommand:
+      'kungfu agent status --target codex --scope project --json',
+    nextStepCommand: 'kungfu project list --json',
+  });
+  assert.throws(
+    () => experienceResultFromResponse(`${response}\n个性化依据：用户目标`),
+    /named 2 personalization bases/u,
+  );
+  assert.throws(
+    () =>
+      experienceResultFromResponse(
+        response.replace('kungfu project list --json', '稍后再说'),
+      ),
+    /named 0 safe next steps/u,
+  );
 });
 
 const root = (character) => `sha256:${character.repeat(64)}`;
@@ -208,7 +208,7 @@ test('normalizes experience only when the evidence is user-visible and safe', ()
   const scopeStatement =
     '本次只验证了这个本地 Codex 与候选 CLI；未验证 Claude、CI 托管 Codex、其他平台或公开发布。';
   const result = {
-    response: `Kungfu 为当前 Codex 工具提供可核验的工作入口。本次 receipt 是 ${value.receiptRoot}。验证命令：${verification}；下一步：${next}。${scopeStatement}`,
+    response: `Kungfu 为当前 Codex 工具提供可核验的工作入口。个性化依据：当前工具。本次 receipt 是 ${value.receiptRoot}。验证命令：${verification}；下一步：${next}。${scopeStatement}`,
     personalizationBasis: 'current-tools',
     verificationCommand: verification,
     nextStepCommand: next,

@@ -101,7 +101,7 @@
           "pointer": {
             "kind": "file",
             "path": "scripts/qualify-agent-first-value-codex.mjs",
-            "sha256": "68f520224ba0fb6181f6f67cb772d1f1e0911fa5d936ce4ba0b247f99de4025b"
+            "sha256": "1c0ed503b88202e9831a42aba135d2f95266f299c89d5f276aac5fcd321073d6"
           },
           "description": "Local-only three-trial fresh Codex qualification harness that retains sanitized receipts rather than raw transcripts."
         },
@@ -110,7 +110,7 @@
           "pointer": {
             "kind": "file",
             "path": "scripts/qualify-agent-first-value-codex.test.mjs",
-            "sha256": "ea78a9eeabd4943e21d98bd42c1b23b77134dfbb4d1549d54f1184799895aec9"
+            "sha256": "f0d863dcb97e349223f8c3c99a62d01cd85f56a416e3c64b32716502462d5a2f"
           },
           "description": "Provider-free deterministic CI coverage for aggregate and receipt acceptance, tampering, reuse, and partial-failure cases."
         },

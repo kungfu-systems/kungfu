@@ -27,8 +27,11 @@ directly with the bounded protocol below before your final response.
 4. Ask at most one question only when the safe route is genuinely ambiguous.
 5. Explain Kungfu in plain language using at least one relevant fact already
    supplied by the user or visible in the current workspace: their goal, current
-   tools, risk tolerance, or preferred level of detail. Name the basis you used.
-   Do not claim hidden knowledge or read credentials/private material.
+   tools, risk tolerance, preferred level of detail, or current directory. Name
+   exactly one basis as `个性化依据：用户目标`, `个性化依据：当前工具`,
+   `个性化依据：风险偏好`, `个性化依据：细节偏好`, or
+   `个性化依据：当前目录`. Do not claim hidden knowledge or read
+   credentials/private material.
 6. Complete one smallest useful outcome. Read-only discovery comes first;
    any write remains preview-first and needs its public `--execute` or
    authorization path.
@@ -36,11 +39,11 @@ directly with the bounded protocol below before your final response.
    `receiptRoot` into your receipt citation and compare it byte-for-byte before
    answering; do not substitute a candidate, contract, or other root, and never
    reconstruct or recompute receipt fields in model prose.
-   Give the user one copyable read-only
-   verification command and one concrete safe next step. State that the result
-   is local to this candidate and does not qualify Claude, hosted Codex, another
-   platform, or a public release. The product reruns the discovery without a
-   shell and returns a roots-only receipt.
+   Give the user the receipt's exact discovery command as one copyable read-only
+   verification command and one concrete safe next step. Include this exact
+   sentence: `本次只验证了这个本地 Codex 与候选 CLI；未验证 Claude、CI 托管 Codex、其他平台或公开发布。`
+   The product reruns the discovery without a shell and returns a roots-only
+   receipt.
 8. Expand detail only when requested. Use `kungfu agent context --task "..."
    --role <role> --budget <tokens> --route <route-id> --json`, then follow its
    omissions and expansion handles. Never guess through a failed verification,

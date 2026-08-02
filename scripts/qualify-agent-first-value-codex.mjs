@@ -39,6 +39,13 @@ const PERSONALIZATION_BASIS = [
   'detail-preference',
   'workspace',
 ];
+const PERSONALIZATION_LABELS = {
+  'user-goal': '个性化依据：用户目标',
+  'current-tools': '个性化依据：当前工具',
+  'risk-tolerance': '个性化依据：风险偏好',
+  'detail-preference': '个性化依据：细节偏好',
+  workspace: '个性化依据：当前目录',
+};
 const EXPERIENCE_DIMENSIONS = [
   'autonomous-pack-verification',
   'exactly-one-declared-intent',
@@ -68,40 +75,6 @@ export function semanticRoot(value) {
     .createHash('sha256')
     .update(JSON.stringify(stable(value)))
     .digest('hex')}`;
-}
-
-export function codexResultSchema() {
-  return {
-    $schema: 'https://json-schema.org/draft/2020-12/schema',
-    type: 'object',
-    additionalProperties: false,
-    required: [
-      'response',
-      'personalizationBasis',
-      'verificationCommand',
-      'nextStepCommand',
-    ],
-    properties: {
-      response: {
-        type: 'string',
-        minLength: 80,
-        maxLength: 2048,
-        description: `The complete user-visible Chinese answer. Include a plain-language Kungfu explanation, name the personalization basis, copy the exact CLI receiptRoot, include both command fields verbatim, and include this exact local qualification boundary: ${LOCAL_QUALIFICATION_SCOPE_STATEMENT}`,
-      },
-      personalizationBasis: {
-        type: 'string',
-        enum: PERSONALIZATION_BASIS,
-      },
-      verificationCommand: {
-        type: 'string',
-        enum: [VERIFICATION_COMMAND],
-      },
-      nextStepCommand: {
-        type: 'string',
-        enum: NEXT_STEP_COMMANDS,
-      },
-    },
-  };
 }
 
 export function candidateShellRouter() {
@@ -508,16 +481,9 @@ export function normalizedExperienceFromResult(result, receipt) {
     'response omitted a plain-language Kungfu explanation',
   );
   assert(PERSONALIZATION_BASIS.includes(result.personalizationBasis));
-  const basisSignals = {
-    'user-goal': ['目标', '上手'],
-    'current-tools': ['Codex', '工具'],
-    'risk-tolerance': ['只读', '安全'],
-    'detail-preference': ['中文', '直接'],
-    workspace: ['当前目录', '项目'],
-  };
   assert(
-    basisSignals[result.personalizationBasis].some((signal) =>
-      result.response.includes(signal),
+    result.response.includes(
+      PERSONALIZATION_LABELS[result.personalizationBasis],
     ),
     'personalization basis was not named in the user-visible response',
   );
@@ -553,6 +519,37 @@ export function normalizedExperienceFromResult(result, receipt) {
       Buffer.from(LOCAL_QUALIFICATION_SCOPE_STATEMENT),
     ),
     nonClaims: [...REQUIRED_NON_CLAIMS].sort(),
+  };
+}
+
+export function experienceResultFromResponse(response) {
+  assert(
+    typeof response === 'string' && response.length >= 80,
+    'Codex final response was not a substantive user-visible answer',
+  );
+  const personalizationMatches = PERSONALIZATION_BASIS.filter((basis) =>
+    response.includes(PERSONALIZATION_LABELS[basis]),
+  );
+  assert(
+    personalizationMatches.length === 1,
+    `Codex response named ${personalizationMatches.length} personalization bases instead of exactly one`,
+  );
+  assert(
+    response.includes(VERIFICATION_COMMAND),
+    'Codex response omitted the exact verification command',
+  );
+  const nextStepMatches = NEXT_STEP_COMMANDS.filter((command) =>
+    response.includes(command),
+  );
+  assert(
+    nextStepMatches.length === 1,
+    `Codex response named ${nextStepMatches.length} safe next steps instead of exactly one`,
+  );
+  return {
+    response,
+    personalizationBasis: personalizationMatches[0],
+    verificationCommand: VERIFICATION_COMMAND,
+    nextStepCommand: nextStepMatches[0],
   };
 }
 
@@ -873,7 +870,6 @@ function run(argv) {
       ROOT_PATTERN.test(contract.productIdentity?.candidateRoot || ''),
       'candidate contract omitted candidate identity',
     );
-    const resultSchema = codexResultSchema();
     const promptEntries = validatePromptFamily(contract.contract);
     const canonical = promptEntries[0];
     const variants = promptEntries.slice(1);
@@ -895,11 +891,9 @@ function run(argv) {
       );
       const trialHome = path.join(trialRoot, 'home');
       const workspace = path.join(trialRoot, 'workspace');
-      const schemaPath = path.join(trialRoot, 'result.schema.json');
       fs.mkdirSync(trialHome, { recursive: true });
       fs.mkdirSync(workspace, { recursive: true });
       installCandidateShellRouter(trialHome);
-      fs.writeFileSync(schemaPath, `${JSON.stringify(resultSchema)}\n`);
       const env = {
         ...baseEnv,
         HOME: trialHome,
@@ -930,8 +924,6 @@ function run(argv) {
               '--color',
               'never',
               '--json',
-              '--output-schema',
-              schemaPath,
               '--cd',
               workspace,
               promptEntry.text,
@@ -946,10 +938,7 @@ function run(argv) {
           `Codex trial ${number}`,
         );
         const finalText = finalAgentMessage(execution.stdout);
-        const result = parseJson(
-          finalText,
-          `Codex trial ${number} final response`,
-        );
+        const result = experienceResultFromResponse(finalText);
         const questionMarkCount = [...result.response].filter(
           (character) => character === '?' || character === '？',
         ).length;
