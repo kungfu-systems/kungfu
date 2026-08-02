@@ -22,8 +22,8 @@
       },
       {
         "id": "work-style-first-step",
-        "text": "请先看看 kungfu agent brief，再结合我的工作方式告诉我 Kungfu 是什么，并带我迈出第一步。",
-        "root": "sha256:a95197caee64529d8c0f82e76f79d7fc48b7226119d17a520b5f3f1d094bec56",
+        "text": "请运行 kungfu agent brief，按我偏好直接动手验证的工作方式告诉我 Kungfu 是什么，并带我迈出第一步。",
+        "root": "sha256:ff3fe12029ff0e12c5df109957769842d81a6c6ac12a191dde7913dbd1dc1be2",
         "personalizationBasis": "work-style",
         "personalizationLabel": "个性化依据：工作方式"
       },
@@ -36,8 +36,8 @@
       },
       {
         "id": "safe-practical-experience",
-        "text": "请用 kungfu agent brief 带我认识 Kungfu，并根据你对我的了解安排一个安全、实际的第一次体验。",
-        "root": "sha256:b4bd0cf731990832b04c5dec214ee0df42edfa715809df59c7e5f8e4f9362541",
+        "text": "请运行 kungfu agent brief；我重视安全和实用，请据此安排第一次 Kungfu 体验。",
+        "root": "sha256:36ac5e4e64c757c7a78443b59bc25a0207d67ce0af5d01d176c6c379b6c84f74",
         "personalizationBasis": "risk-tolerance",
         "personalizationLabel": "个性化依据：风险偏好"
       },
