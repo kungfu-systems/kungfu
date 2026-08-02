@@ -73,18 +73,18 @@ def test_provider_skill_state_is_separate_and_exact(
     assert (
         destination == tmp_path / provider_root / "skills" / "kungfu-agent-onboarding"
     )
-    assert agent_command._skill_state(target, destination) == "absent"
+    assert agent_pack.skill_state(target, destination) == "absent"
 
     destination.mkdir(parents=True)
     source = resources.skill_path(target).read_bytes()
     (destination / "SKILL.md").write_bytes(source)
-    assert agent_command._skill_state(target, destination) == "current"
+    assert agent_pack.skill_state(target, destination) == "current"
 
     (destination / "SKILL.md").write_bytes(source + b"\n# local note\n")
-    assert agent_command._skill_state(target, destination) == "stale"
+    assert agent_pack.skill_state(target, destination) == "stale"
 
     (destination / "SKILL.md").write_text("no frontmatter\n", encoding="utf-8")
-    assert agent_command._skill_state(target, destination) == "incompatible"
+    assert agent_pack.skill_state(target, destination) == "incompatible"
 
 
 def _verification():

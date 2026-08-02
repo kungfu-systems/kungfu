@@ -3,7 +3,6 @@
 import base64
 import json
 import os
-import subprocess
 import sys
 from pathlib import Path
 from typing import Any
@@ -61,7 +60,7 @@ def _context(ctx):
             envelope = json.loads(console_raw)
             kungfu_config.validate_value("agentConsoleEnvelope", envelope)
             work_binding = dict(native.get("workBinding") or {})
-            effective_work_ref = _effective_console_work_ref(envelope)
+            effective_work_ref = session_surface.effective_work_ref(envelope)
             work_binding["launchState"] = (
                 "bound" if effective_work_ref is not None else "unbound"
             )
@@ -84,7 +83,7 @@ def _context(ctx):
             "skillCatalog": "kungfu skill catalog --json",
             "kfx": "kungfu kfx list --json",
         },
-        "docs": _docs_context(),
+        "docs": documentation_pack.discovery_context(_find_repo_root()),
         "agentPack": {
             "packRoot": str(agent_pack.pack_root()),
             "documents": index["documents"],
@@ -92,57 +91,6 @@ def _context(ctx):
             "commands": agent_pack.commands(),
             "collaborationInterface": registry_summary(),
         },
-    }
-
-
-def _effective_console_work_ref(envelope):
-    effective_work_ref = envelope.get("workRef")
-    try:
-        status = session_surface.invoke(
-            {
-                "operation": "show",
-                "session": {
-                    "workConsoleId": envelope["consoleId"],
-                    "sessionAttemptId": envelope["attemptId"],
-                },
-            }
-        )
-        binding = status.get("binding") or {}
-        if binding.get("kind") == "work":
-            effective_work_ref = binding.get("workRef")
-    except (OSError, ValueError):
-        pass
-    return effective_work_ref
-
-
-def _docs_context():
-    repo_root = _find_repo_root()
-    local_docs = []
-    if repo_root is not None:
-        local_docs.append(
-            {
-                "name": "documentation map",
-                "path": str(repo_root / "docs" / "MAP.md"),
-            }
-        )
-        local_docs.append(
-            {
-                "name": "agent-first global config",
-                "path": str(repo_root / "docs" / "config.md"),
-            }
-        )
-    return {
-        "local": local_docs,
-        "public": [
-            {
-                "name": "documentation map",
-                "url": "https://github.com/kungfu-tech/kungfu/blob/dev/v3/docs/MAP.md",
-            },
-            {
-                "name": "agent-first global config",
-                "url": "https://github.com/kungfu-tech/kungfu/blob/dev/v3/docs/guides/config.md",
-            },
-        ],
     }
 
 
@@ -192,46 +140,6 @@ def _write_policy(ctx, target, policy):
     return path
 
 
-def _policy_payload(ctx, target, mode, enabled=True):
-    closeout_gate = enabled and mode in {"report", "managed-run"}
-    return {
-        "schema": "kungfu.agent-policy/v1",
-        "target": target,
-        "mode": mode,
-        "enabled": enabled,
-        "reportCloseoutGate": closeout_gate,
-        "reportAdapter": "kungfu work claim-completion"
-        if target == "codex"
-        else "kungfu report run begin",
-        "receiptVerifier": "kungfu work status"
-        if target == "codex"
-        else "kungfu report run end",
-        "runtimeDir": ctx.runtime_dir,
-    }
-
-
-def _work_authority_capabilities():
-    return {
-        "schema": "kungfu.work.authority-capabilities/v1",
-        "commandFamily": "kungfu work",
-        "mutationAuthority": "work-control-profile-actions",
-        "durableEvidence": ["episode", "fact", "action-receipt"],
-        "commands": [
-            "capture",
-            "admit",
-            "claim",
-            "kickoff",
-            "stage",
-            "claim-completion",
-            "review",
-            "decide",
-            "seal",
-        ],
-        "readCommands": ["status", "gate", "verify-binding", "verify-seal"],
-        "legacyStore": False,
-    }
-
-
 def _install_skill_file(target, out_dir, force):
     src = agent_pack.skill_path(target)
     dest = os.path.join(out_dir, "SKILL.md")
@@ -250,35 +158,17 @@ def _skill_dir(target, scope):
     return root / provider_root / "skills" / "kungfu-agent-onboarding"
 
 
-def _skill_state(target, destination):
-    source = agent_pack.skill_path(target).read_bytes()
-    destination = Path(destination) / "SKILL.md"
-    if not destination.is_file():
-        return "absent"
-    try:
-        installed = destination.read_bytes()
-        text = installed.decode("utf-8")
-    except (OSError, UnicodeError):
-        return "incompatible"
-    if (
-        not text.startswith("---\n")
-        or "\nname:" not in text
-        or "\ndescription:" not in text
-    ):
-        return "incompatible"
-    return "current" if installed == source else "stale"
-
-
 @agent.command(help=api_help("kungfu.agent.brief"))
 @kfd3_api("kungfu.agent.brief")
 @agent_command_context
 def brief(ctx):
-    text = agent_pack.document_text("brief.md")
-    if len(text.encode("utf-8")) > 8192 or len(text.splitlines()) > 120:
-        raise click.ClickException(
-            "installed Agent brief exceeds its 8192-byte/120-line budget"
+    try:
+        click.echo(
+            first_value_protocol.validate_brief(agent_pack.document_text("brief.md")),
+            nl=False,
         )
-    click.echo(text, nl=False)
+    except ValueError as error:
+        raise click.ClickException(str(error)) from error
 
 
 @agent.command(name="map", help="Print the stable first-entry intent map.")
@@ -286,13 +176,10 @@ def brief(ctx):
 @kfd3_api("kungfu.agent.map")
 @agent_command_context
 def intent_map(ctx, as_json):
-    payload = agent_pack.intent_map()
-    required = payload.get("requiredIntentIds", [])
-    actual = [row.get("id") for row in payload.get("intents", [])]
-    if len(actual) != len(set(actual)) or set(required) != set(actual):
-        raise click.ClickException(
-            "installed Agent intent map has invalid required coverage"
-        )
+    try:
+        payload = first_value_protocol.intent_map_view()
+    except ValueError as error:
+        raise click.ClickException(str(error)) from error
     if as_json:
         _json(payload)
         return
@@ -344,7 +231,7 @@ def first_value_receipt(ctx, intent_id, discovery, question_count, outcome, as_j
             question_count=question_count,
             outcome_summary=outcome,
         )
-    except (OSError, ValueError, subprocess.SubprocessError) as error:
+    except (OSError, ValueError, first_value_protocol.SubprocessError) as error:
         raise click.ClickException(str(error)) from error
     if as_json:
         _json(payload)
@@ -470,7 +357,7 @@ def capabilities(ctx, as_json):
         },
         "actionGeometry": action_geometry,
         "workDomainProfile": work_domain_profile,
-        "workLoop": _work_authority_capabilities(),
+        "workLoop": first_value_protocol.work_authority_capabilities(),
     }
     if as_json:
         _json(payload)
@@ -1126,7 +1013,7 @@ def console_current(ctx, as_json):
             raise click.ClickException(
                 f"invalid Agent Console envelope: {exc}"
             ) from exc
-        effective_work_ref = _effective_console_work_ref(envelope)
+        effective_work_ref = session_surface.effective_work_ref(envelope)
         payload = {
             "schema": "kungfu.agent-console-current/v1",
             "available": True,
@@ -1401,7 +1288,7 @@ def status(ctx, target, scope, as_json):
         "policy": policy,
         "skillSource": str(agent_pack.skill_path(target)),
         "skillDestination": str(skill_dir / "SKILL.md"),
-        "skillState": _skill_state(target, skill_dir),
+        "skillState": agent_pack.skill_state(target, skill_dir),
         "commands": {
             "bootstrap": f"kungfu agent bootstrap --target {target} --mode report",
             "mode": f"kungfu agent mode set --target {target} --mode managed-run",
@@ -1447,7 +1334,9 @@ def status(ctx, target, scope, as_json):
 @kfd3_api("kungfu.agent.bootstrap")
 @agent_command_context
 def bootstrap(ctx, target, mode, skill_dir, execute, force, as_json):
-    policy = _policy_payload(ctx, target, mode, enabled=True)
+    policy = runtime_profiles.policy_payload(
+        ctx.runtime_dir, target, mode, enabled=True
+    )
     skill_destination = os.path.join(skill_dir, "SKILL.md") if skill_dir else None
     payload = {
         "schema": "kungfu.agent-bootstrap/v1",
@@ -1506,8 +1395,17 @@ def mode(ctx):
 @agent_command_context
 def set_mode(ctx, target, mode_name, execute, as_json):
     previous = _read_policy(ctx, target)
-    policy = dict(previous or _policy_payload(ctx, target, mode_name, enabled=True))
-    policy.update(_policy_payload(ctx, target, mode_name, enabled=True))
+    policy = dict(
+        previous
+        or runtime_profiles.policy_payload(
+            ctx.runtime_dir, target, mode_name, enabled=True
+        )
+    )
+    policy.update(
+        runtime_profiles.policy_payload(
+            ctx.runtime_dir, target, mode_name, enabled=True
+        )
+    )
     payload = {
         "schema": "kungfu.agent-mode-set/v1",
         "target": target,
@@ -1543,7 +1441,9 @@ def set_mode(ctx, target, mode_name, execute, as_json):
 @agent_command_context
 def unbootstrap(ctx, target, execute, as_json):
     previous = _read_policy(ctx, target)
-    disabled = _policy_payload(ctx, target, "brief", enabled=False)
+    disabled = runtime_profiles.policy_payload(
+        ctx.runtime_dir, target, "brief", enabled=False
+    )
     payload = {
         "schema": "kungfu.agent-unbootstrap/v1",
         "target": target,
@@ -1580,7 +1480,9 @@ def unbootstrap(ctx, target, execute, as_json):
 @agent_command_context
 def uninstall(ctx, target, execute, as_json):
     previous = _read_policy(ctx, target)
-    disabled = _policy_payload(ctx, target, "brief", enabled=False)
+    disabled = runtime_profiles.policy_payload(
+        ctx.runtime_dir, target, "brief", enabled=False
+    )
     payload = {
         "schema": "kungfu.agent-uninstall/v1",
         "target": target,

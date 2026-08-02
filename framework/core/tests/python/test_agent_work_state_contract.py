@@ -41,12 +41,11 @@ import kungfu  # noqa: E402
 kungfu._build_info = {"version": "test"}
 
 from kungfu import contract, durability  # noqa: E402
-from kungfu.agent import action_geometry, domain_profile, work_profile  # noqa: E402
+from kungfu.agent import action_geometry, domain_profile, first_value, work_profile  # noqa: E402
 from kungfu.agent.native_authority import (  # noqa: E402
     ConformanceOracleDisabled,
     NativeActionRuntimeUnavailable,
 )
-from kungfu.cli.commands import agent as agent_command  # noqa: E402
 from kungfu.cli.commands import __registry__  # noqa: E402, F401
 from kungfu.cli.commands import kfc  # noqa: E402
 
@@ -189,7 +188,7 @@ def test_agent_capabilities_discovers_the_same_work_model(tmp_path, monkeypatch)
     assert payload["workDomainProfile"] == contract.contract_metadata(
         "agent-work-domain-profile"
     )
-    assert payload["workLoop"] == agent_command._work_authority_capabilities()
+    assert payload["workLoop"] == first_value.work_authority_capabilities()
     assert any(
         row["apiId"] == "kungfu.agent.work-model"
         and row["name"] == "kungfu agent work-model --json"

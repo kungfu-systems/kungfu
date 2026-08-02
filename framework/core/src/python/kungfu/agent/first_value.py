@@ -24,6 +24,29 @@ from kungfu.agent import resources
 RECEIPT_SCHEMA = "kungfu.agent-first-value-receipt/v1"
 REVISION = re.compile(r"^[0-9a-f]{40,64}$")
 Runner = Callable[[list[str], int, int], tuple[int, bytes, bytes]]
+SubprocessError = subprocess.SubprocessError
+
+
+def work_authority_capabilities():
+    return {
+        "schema": "kungfu.work.authority-capabilities/v1",
+        "commandFamily": "kungfu work",
+        "mutationAuthority": "work-control-profile-actions",
+        "durableEvidence": ["episode", "fact", "action-receipt"],
+        "commands": [
+            "capture",
+            "admit",
+            "claim",
+            "kickoff",
+            "stage",
+            "claim-completion",
+            "review",
+            "decide",
+            "seal",
+        ],
+        "readCommands": ["status", "gate", "verify-binding", "verify-seal"],
+        "legacyStore": False,
+    }
 
 
 def _root_bytes(value: bytes) -> str:
@@ -61,6 +84,21 @@ def contract_view() -> dict[str, Any]:
         "productIdentity": _product_identity(roots),
         "receiptSchema": resources.first_value_receipt_schema(),
     }
+
+
+def validate_brief(text: str) -> str:
+    if len(text.encode("utf-8")) > 8192 or len(text.splitlines()) > 120:
+        raise ValueError("installed Agent brief exceeds its 8192-byte/120-line budget")
+    return text
+
+
+def intent_map_view() -> dict[str, Any]:
+    payload = resources.intent_map()
+    required = payload.get("requiredIntentIds", [])
+    actual = [row.get("id") for row in payload.get("intents", [])]
+    if len(actual) != len(set(actual)) or set(required) != set(actual):
+        raise ValueError("installed Agent intent map has invalid required coverage")
+    return payload
 
 
 def _pack_roots() -> dict[str, str]:

@@ -267,7 +267,7 @@
           "pointer": {
             "kind": "file",
             "path": "framework/core/src/python/kungfu/cli/commands/agent.py",
-            "sha256": "93eb040bb0481ad1dbce041a14ecc9e5ccc4fd2feaaa017e990ba4b4c91e0e65"
+            "sha256": "163e434f02c7de2c04739e3f852f174e90c239ad806c2160a4aedad8e5b9ee3b"
           },
           "description": "Agent command surface including mode selection and bootstrap status."
         }
@@ -338,7 +338,7 @@
           "pointer": {
             "kind": "file",
             "path": "framework/core/tests/python/test_agent_work_state_contract.py",
-            "sha256": "46e41022ba5379028596f50a29078c016a06c0dea6a41ed09692317a4448d570"
+            "sha256": "0bb709db90739eeecaf23d528c7b7fb52d60e51c625193f6a402321979cb8d2e"
           },
           "description": "Runtime CLI parity and fail-closed contract-schema checks."
         },
