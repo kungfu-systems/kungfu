@@ -446,12 +446,12 @@ void peer::reader_join(uint32_t source_id, uint32_t dest_id, int64_t from_time, 
   }
 
   auto writer = get_writer(get_coordinator_command_uid());
-  auto &request = writer->open_data<RequestReadFromOthers>(now());
+  RequestReadFromOthers request{};
   request.source_id = source_id;
   request.dest_id = dest_id;
   request.from_time = from_time;
   request.page_size = page_size;
-  writer->close_data();
+  writer->write(now(), request);
 }
 
 bool peer::checkin() {
@@ -521,12 +521,12 @@ yijinjing::journal::writer_ptr &peer::get_thread_writer(uint64_t page_size) {
       SPDLOG_ERROR("has no writer for coordinator_cmd: {:8x}:{}", get_coordinator_command_uid(),
                    get_location_uname(get_coordinator_command_uid()));
     }
-    RequestReadFromOthers &request = coordinator_cmd_writer_for_thread_->open_data<RequestReadFromOthers>();
+    RequestReadFromOthers request{};
     request.source_id = get_live_home_uid();
     request.dest_id = dest_id;
     request.from_time = now();
     SPDLOG_TRACE("RequestReadFromOthers: {}", request.to_string());
-    coordinator_cmd_writer_for_thread_->close_data();
+    coordinator_cmd_writer_for_thread_->write(0, request);
   }
   return thread_writer_;
 }

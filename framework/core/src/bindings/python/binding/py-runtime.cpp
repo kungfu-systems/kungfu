@@ -1443,10 +1443,7 @@ void bind(pybind11::module &&m) {
             target.write_bytes(trigger_time, carrier_type,
                                std::span<const std::byte>(static_cast<const std::byte *>(view.ptr), byte_length));
           },
-          py::arg("trigger_time"), py::arg("carrier_type"), py::arg("payload"))
-      .def("write_bytes",
-           py::overload_cast<int64_t, int32_t, const std::vector<uint8_t> &, uint32_t>(&writer::write_bytes),
-           py::arg("trigger_time"), py::arg("carrier_type"), py::arg("payload"), py::arg("length"));
+          py::arg("trigger_time"), py::arg("carrier_type"), py::arg("payload"));
 
   py::class_<sink, PySink, sink_ptr>(m, "sink")
       .def(py::init())

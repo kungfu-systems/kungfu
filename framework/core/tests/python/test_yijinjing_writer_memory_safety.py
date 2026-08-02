@@ -37,19 +37,13 @@ def test_writer_derives_length_from_contiguous_bytes_like_payload(tmp_path):
     assert bytes(second[0][1]).startswith(b"def")
 
 
-def test_writer_legacy_length_mismatch_is_stable_and_recoverable(tmp_path):
+def test_writer_rejects_removed_overload_and_unsupported_values(tmp_path):
     runtime, location, target = _writer(tmp_path)
 
-    with pytest.raises(
-        RuntimeError,
-        match=r"Writer byte length 1 does not match the 2 byte container",
-    ):
+    with pytest.raises(TypeError):
         target.write_bytes(1, 2101, [1, 2], 1)
-    with pytest.raises(
-        RuntimeError,
-        match=r"Writer byte length 3 does not match the 2 byte container",
-    ):
-        target.write_bytes(2, 2102, [1, 2], 3)
+    with pytest.raises(TypeError):
+        target.write_bytes(2, 2102, [1, 2])
 
     target.write_bytes(3, 2103, b"ok")
     recovered = list(runtime.assemble(location, 0).read_bytes(2103))

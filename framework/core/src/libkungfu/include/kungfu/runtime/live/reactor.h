@@ -378,11 +378,11 @@ protected:
                                                     uint32_t dest_id, uint32_t source_id, int64_t from_time,
                                                     uint64_t page_size = 0) {
     if (check_location_exists(source_id, dest_id)) {
-      T &msg = writer->template open_data<T>(trigger_time);
+      T msg{};
       msg.source_id = source_id;
       msg.from_time = from_time;
       msg.page_size = page_size;
-      writer->close_data();
+      writer->write(trigger_time, msg);
     }
   }
 

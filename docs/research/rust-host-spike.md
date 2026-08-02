@@ -108,10 +108,8 @@ Notable friction found while wiring the probe, all resolved in-probe:
 - pykungfu resolves libnode/libkungfu via `@loader_path` rpath, so `import`
   works from any host as long as the natives stay colocated — the dist layout
   already guarantees that.
-- `writer.write_bytes` takes an explicit length argument; the probe's Python
-  snippet had to pass it correctly (a silent 1-byte write otherwise) — a
-  reminder that the binding surface has sharp edges an embedding host will
-  lean on.
+- `writer.write_bytes` derives the payload extent from one contiguous
+  bytes-like object; embedding hosts cannot supply a conflicting length.
 
 ## Part 3 — Risk register (the five known unknowns)
 
