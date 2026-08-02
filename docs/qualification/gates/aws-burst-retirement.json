@@ -4,7 +4,7 @@
   "owner": "kungfu-ci",
   "retiredAt": "2026-07-30",
   "reactivatedAt": "2026-07-30",
-  "reason": "The v2 callers were retired until the bounded Linux, Windows, and macOS providers landed in reviewed Buildchain v3 authority. Each active caller fixes both the reusable workflow shell and buildchain-ref to its immutable reviewed provider commit; the Windows caller additionally requires the persistent one-shot campaign ledger and exact campaign/source binding.",
+  "reason": "The v2 callers were retired until the bounded Linux, Windows, and macOS providers landed in reviewed Buildchain v3 authority. Each active caller fixes both the reusable workflow shell and buildchain-ref to its immutable reviewed provider commit; the Windows caller additionally requires the persistent one-shot campaign ledger, exact campaign/source binding, and the USD 80 phase cap with a frozen spend baseline.",
   "runtimeSafety": {
     "workflowShellReferencesV2": false,
     "buildchainRefInputsV2": false,
@@ -21,6 +21,8 @@
     "windowsCampaignLedgerMergeCommit": "ab147fa02d4e17937818c89c1269483fa450d986",
     "windowsCampaignSourceBindingPullRequest": 2212,
     "windowsCampaignSourceBindingMergeCommit": "447936a3aa36415a39c75e92fc9b26b0774aeb75",
+    "windowsUsd80PhaseCapPullRequest": 2229,
+    "windowsUsd80PhaseCapMergeCommit": "ae9bd5385cfb8060fb2574521121f1a798e83c6f",
     "v3RequiredInputs": [
       "aws-codebuild-project",
       "aws-ec2-windows-runner-label",
