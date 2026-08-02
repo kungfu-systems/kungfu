@@ -475,10 +475,31 @@ def test_native_provider_failure_leaves_actionable_terminal_error(
         ),
     )
     monkeypatch.setattr(run.run_agent.session_surface, "ensure", lambda *_args: "sock")
+    completed = []
+    monkeypatch.setattr(
+        onboarding,
+        "complete_agent_route",
+        lambda **kwargs: completed.append(kwargs) or {"state": {"status": "completed"}},
+    )
+    monkeypatch.setattr(
+        run,
+        "_native_work_observer",
+        lambda *_args: {"state": "active"},
+    )
+
+    def fail_after_binding(*_args, **kwargs):
+        bound_work_ref = {
+            "initiativeId": "project-work",
+            "entityId": "assignment:first",
+        }
+        kwargs["work_observer"](bound_work_ref)
+        kwargs["work_observer"](bound_work_ref)
+        return 7
+
     monkeypatch.setattr(
         run.run_agent,
         "run_native_interactive",
-        lambda *_args, **_kwargs: 7,
+        fail_after_binding,
     )
 
     result = CliRunner().invoke(kfc, ["--home", str(tmp_path / "home"), "run", "codex"])
@@ -487,6 +508,8 @@ def test_native_provider_failure_leaves_actionable_terminal_error(
     assert "Error: provider-native UI 'codex' exited with status 7." in result.output
     assert "did not change Work completion" in result.output
     assert "kungfu agent session list --json" in result.output
+    assert len(completed) == 1
+    assert completed[0]["runtime_home"] == str(tmp_path / "home")
 
 
 @pytest.mark.parametrize("provider", ["codex", "claude", "amp", "opencode"])

@@ -1868,7 +1868,6 @@ def test_native_interactive_runner_reuses_work_console_with_fresh_attempts(
         time.sleep(0.03)
         return SimpleNamespace(returncode=0)
 
-    bound_work = []
     for _index in range(2):
         assert (
             run_agent.run_native_interactive(
@@ -1886,7 +1885,6 @@ def test_native_interactive_runner_reuses_work_console_with_fresh_attempts(
                     "state": "fresh",
                     "work": work_observation,
                 },
-                on_work_bound=bound_work.append,
                 heartbeat_seconds=0.01,
             )
             == 0
@@ -1907,7 +1905,6 @@ def test_native_interactive_runner_reuses_work_console_with_fresh_attempts(
     assert [request["operation"] for request in requests].count(
         "project-native-work"
     ) == 2
-    assert bound_work == [work_ref, work_ref]
     assert [request["operation"] for request in requests].count("end-native") == 2
     for _argv, kwargs in launches:
         envelope = json.loads(kwargs["env"]["KUNGFU_AGENT_CONSOLE_ENVELOPE"])

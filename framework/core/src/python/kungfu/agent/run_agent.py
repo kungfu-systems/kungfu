@@ -681,7 +681,6 @@ def run_native_interactive(
     session_endpoint: str | None = None,
     work_observer: Callable[[Mapping[str, Any] | None], Mapping[str, Any]]
     | None = None,
-    on_work_bound: Callable[[Mapping[str, Any]], None] | None = None,
     heartbeat_seconds: float = 0.5,
     work_projection_seconds: float = 2.0,
 ) -> int:
@@ -708,7 +707,6 @@ def run_native_interactive(
         session_invoker=session_invoker,
         session_endpoint=session_endpoint,
         work_observer=work_observer,
-        on_work_bound=on_work_bound,
         heartbeat_seconds=heartbeat_seconds,
         work_projection_seconds=work_projection_seconds,
     )

@@ -53,7 +53,6 @@ class NativeLaunchCoordinator:
         session_endpoint: str | None = None,
         work_observer: Callable[[Mapping[str, Any] | None], Mapping[str, Any]]
         | None = None,
-        on_work_bound: Callable[[Mapping[str, Any]], None] | None = None,
         heartbeat_seconds: float = 0.5,
         work_projection_seconds: float = 2.0,
     ) -> int:
@@ -163,10 +162,9 @@ class NativeLaunchCoordinator:
             else None
         )
         projected_binding_root: str | None = None
-        bound_work_reported = False
 
         def heartbeat() -> None:
-            nonlocal bound_work_reported, projected_binding_root
+            nonlocal projected_binding_root
             if session_invoker is None:
                 return
             while not stop_heartbeat.is_set():
@@ -199,10 +197,6 @@ class NativeLaunchCoordinator:
                         if binding.get("kind") == "work"
                         else None
                     )
-                    if not bound_work_reported and isinstance(bound_ref, Mapping):
-                        if on_work_bound is not None:
-                            on_work_bound(bound_ref)
-                        bound_work_reported = True
                     if projection_port is not None and bound_ref:
                         binding_root = self.semantic_root(bound_ref)
                         projection = projection_port.refresh(

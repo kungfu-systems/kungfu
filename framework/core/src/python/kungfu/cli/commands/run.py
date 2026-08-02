@@ -516,6 +516,17 @@ def _run_native_provider(ctx, *, provider=None, profile_id=None, workspace_root=
                     request, endpoint=session_endpoint
                 )
 
+        onboarding_work_bound = False
+
+        def observe_bound_work(bound_work_ref):
+            nonlocal onboarding_work_bound
+            if not onboarding_work_bound:
+                complete_onboarding(bound_work_ref)
+                onboarding_work_bound = True
+            return _native_work_observer(
+                target.runtime_dir, work_selection, bound_work_ref
+            )
+
         exit_code = run_agent.run_native_interactive(
             profile,
             runtime_dir=str(target.runtime_dir),
@@ -526,10 +537,7 @@ def _run_native_provider(ctx, *, provider=None, profile_id=None, workspace_root=
             work_selection=work_selection,
             session_endpoint=session_endpoint,
             session_invoker=invoke_native_session,
-            work_observer=lambda bound_work_ref: _native_work_observer(
-                target.runtime_dir, work_selection, bound_work_ref
-            ),
-            on_work_bound=complete_onboarding,
+            work_observer=observe_bound_work,
         )
     except (OSError, ValueError) as error:
         raise click.ClickException(str(error)) from error
