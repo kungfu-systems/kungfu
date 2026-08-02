@@ -263,6 +263,11 @@ Napi::Value Watcher::RequestReadFromPublic(const Napi::CallbackInfo &info) {
   return Napi::Boolean::New(info.Env(), true);
 }
 
+Napi::Value Watcher::CanRequestReadFromPublic(const Napi::CallbackInfo &info) {
+  std::lock_guard<std::mutex> lock(writers_mtx_);
+  return Napi::Boolean::New(info.Env(), is_live() and writers_.find(get_coordinator_command_uid()) != writers_.end());
+}
+
 Napi::Value Watcher::DrainCustomData(const Napi::CallbackInfo &info) {
   std::deque<custom_frame_record> drained;
   uint64_t dropped = 0;
@@ -371,6 +376,8 @@ void Watcher::Init(Napi::Env env, Napi::Object exports) {
                                         InstanceMethod("issueCustomData", &Watcher::IssueCustomData),             //
                                         InstanceMethod("issueRawPublic", &Watcher::IssueRawPublic),               //
                                         InstanceMethod("requestReadFromPublic", &Watcher::RequestReadFromPublic), //
+                                        InstanceMethod("canRequestReadFromPublic",                                //
+                                                       &Watcher::CanRequestReadFromPublic),                       //
                                         InstanceMethod("drainCustomData", &Watcher::DrainCustomData),             //
                                         InstanceMethod("runtimeStats", &Watcher::GetRuntimeStats),                //
                                         InstanceMethod("issueMark", &Watcher::IssueMark),                         //

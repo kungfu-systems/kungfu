@@ -14,6 +14,7 @@ class FakeWatcher {
     this.runtimeDir = runtimeDir;
     this.started = false;
     this.live = true;
+    this.readRequestReady = true;
     this.usable = true;
     this.issued = [];
     this.incoming = [];
@@ -42,7 +43,11 @@ class FakeWatcher {
 
   requestReadFromPublic(location, fromTime) {
     this.followed = { location, fromTime };
-    return this.live;
+    return this.live && this.readRequestReady;
+  }
+
+  canRequestReadFromPublic() {
+    return this.live && this.readRequestReady;
   }
 
   drainCustomData() {
@@ -160,6 +165,28 @@ test('reader follows a Peer public journal and reconstructs cursor frames', () =
   assert.equal(recovered.frames[0].kind, 'controller-granted');
   assert.equal(recovered.frames[0].payload.leaseId, 'lease-1');
   assert.equal(reader.peer.followed.fromTime, 0n);
+});
+
+test('reader exposes coordinator command readiness separately from liveness', () => {
+  const reader = new NativeKungfuJournalNoticePort({
+    binding,
+    runtimeDir: '/tmp/runtime',
+    peerName: 'capsule-reader-readiness',
+  });
+  reader.peer.readRequestReady = false;
+  assert.equal(reader.health().live, true);
+  assert.equal(reader.canFollow(), false);
+  assert.throws(
+    () =>
+      reader.follow({
+        role: 'system',
+        namespace: 'node',
+        name: 'capsule-writer',
+      }),
+    (error) => error.code === 'peer_not_ready',
+  );
+  reader.peer.readRequestReady = true;
+  assert.equal(reader.canFollow(), true);
 });
 
 test('native queue overflow becomes an explicit gap', () => {

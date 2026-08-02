@@ -159,6 +159,10 @@ export class NativeKungfuJournalNoticePort {
     }
   }
 
+  canFollow() {
+    return this.peer.canRequestReadFromPublic();
+  }
+
   drain() {
     const result = this.peer.drainCustomData();
     this.nativeDropped += result.dropped;
