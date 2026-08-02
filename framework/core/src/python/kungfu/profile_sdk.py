@@ -21,7 +21,6 @@ from typing import Any, Mapping
 from kungfu import agent as agent_pack
 from kungfu import runtime_broker
 from kungfu import kfx_contract
-from kungfu import profile_lifecycle_commands
 from kungfu.storage import service as storage_service
 from kungfu.profile_sdk_support import (
     ACTION_PLAN_SCHEMA as ACTION_PLAN_SCHEMA,
@@ -46,6 +45,7 @@ from kungfu.profile_sdk_support import (
     _TOKEN as _TOKEN,
     _canonical as _canonical,
     _changes as _changes,
+    command_contract as _command_contract,
     _confined as _confined,
     _portable_source_paths as _portable_source_paths,
     _pretty as _pretty,
@@ -94,7 +94,7 @@ def capabilities() -> dict[str, Any]:
         "version": sdk_contract["version"],
         "root": "sha256:" + _sha256(contract_bytes),
     }
-    lifecycle_command_contract = profile_lifecycle_commands.command_contract(
+    lifecycle_command_contract = _command_contract(
         lifecycle_authority,
         sdk_authority,
         agent_pack.cli_surface_catalog(),
