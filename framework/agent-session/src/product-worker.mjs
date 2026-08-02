@@ -6,6 +6,7 @@ import {
   CodexAppServerProductRuntime,
   codexAppServerProductEnabled,
 } from './codex-app-server-product.mjs';
+import { ensurePrivateRuntimeDirectory } from './private-runtime-directory.mjs';
 import { bindAgentSessionSurfaceRpc } from './product-rpc.mjs';
 import { InProcessAgentSessionProductRuntime } from './product-runtime.mjs';
 import { AgentSessionProductSurface } from './product-surface.mjs';
@@ -28,6 +29,9 @@ export async function runAgentSessionProductWorker({
     );
   }
   mkdirSync(path.dirname(metadata), { recursive: true, mode: 0o700 });
+  if (process.platform !== 'win32') {
+    ensurePrivateRuntimeDirectory(path.dirname(endpoint));
+  }
   const runtime = new InProcessAgentSessionProductRuntime({
     pty,
     loadPty: createCapsuleNodePtyLoader({
