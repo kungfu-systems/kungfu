@@ -29,7 +29,7 @@ const SOURCE_SHA = '1'.repeat(40);
 const NATIVE_RENDITION_BUILDCHAIN_SHA =
   'afd75d295fcd2d55cfebf621f5ca6d05a9904830';
 const NATIVE_RENDITION_RENDERER_IMAGE =
-  'ghcr.io/kungfu-systems/build-images/demo-renderer@sha256:e5ae5002dc0fc267e265dba1068d7476e541dddc9035ccd72cee94dfad872591';
+  'ghcr.io/kungfu-systems/build-images/demo-renderer@sha256:32f5079f14ec0380c27f0df39448cb931e87fe744cc867fbd3d61cfd8a5e18de';
 
 function triggerPlan(overrides = {}) {
   return buildAuditableDemoTriggerPlan({
