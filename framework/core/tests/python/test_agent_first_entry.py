@@ -198,12 +198,15 @@ def test_first_value_contract_binds_exact_prompt_and_packaged_roots():
         "text": "请运行 kungfu agent brief，结合你对我的了解，用最适合我的方式解释并带我上手 Kungfu。",
         "root": "sha256:423f13042ff32413653c8589a4fa768579ed6fbf90253e33952e60e86fa9338c",
         "encoding": "utf-8",
+        "personalizationBasis": "user-goal",
+        "personalizationLabel": "个性化依据：用户目标",
     }
     family = view["contract"]["promptFamily"]
     assert family["canonicalRoot"] == view["contract"]["prompt"]["root"]
     assert len(family["variants"]) == 5
     for prompt in [view["contract"]["prompt"], *family["variants"]]:
         assert "kungfu agent brief" in prompt["text"]
+        assert prompt["personalizationLabel"].startswith("个性化依据：")
         assert all(
             hint not in prompt["text"]
             for hint in family["naturalLanguagePolicy"]["forbiddenProtocolHints"]
@@ -321,6 +324,8 @@ def test_first_value_receipt_reruns_declared_discovery_and_verifies():
     assert receipt["discovery"]["outputBytes"] > 0
     assert receipt["responseGuide"]["protocolComplete"] is True
     assert receipt["responseGuide"]["mustNotRunMoreCommands"] is True
+    assert receipt["responseGuide"]["personalizationBasis"] == "user-goal"
+    assert receipt["responseGuide"]["personalizationLabel"] == ("个性化依据：用户目标")
     assert receipt["responseGuide"]["verificationCommand"] == (
         "kungfu agent capabilities --json"
     )

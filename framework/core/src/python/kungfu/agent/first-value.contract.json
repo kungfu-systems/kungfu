@@ -6,7 +6,9 @@
   "prompt": {
     "text": "请运行 kungfu agent brief，结合你对我的了解，用最适合我的方式解释并带我上手 Kungfu。",
     "root": "sha256:423f13042ff32413653c8589a4fa768579ed6fbf90253e33952e60e86fa9338c",
-    "encoding": "utf-8"
+    "encoding": "utf-8",
+    "personalizationBasis": "user-goal",
+    "personalizationLabel": "个性化依据：用户目标"
   },
   "promptFamily": {
     "canonicalRoot": "sha256:423f13042ff32413653c8589a4fa768579ed6fbf90253e33952e60e86fa9338c",
@@ -14,27 +16,37 @@
       {
         "id": "new-user-first-result",
         "text": "请运行 kungfu agent brief，然后用你认为最适合新手的方式带我完成第一次 Kungfu 上手。",
-        "root": "sha256:a1e49d7eb9e0d5418715947698db18da6140ae3adb8676226c2f7b1abef4a6c3"
+        "root": "sha256:a1e49d7eb9e0d5418715947698db18da6140ae3adb8676226c2f7b1abef4a6c3",
+        "personalizationBasis": "user-goal",
+        "personalizationLabel": "个性化依据：用户目标"
       },
       {
         "id": "work-style-first-step",
         "text": "请先看看 kungfu agent brief，再结合我的工作方式告诉我 Kungfu 是什么，并带我迈出第一步。",
-        "root": "sha256:a95197caee64529d8c0f82e76f79d7fc48b7226119d17a520b5f3f1d094bec56"
+        "root": "sha256:a95197caee64529d8c0f82e76f79d7fc48b7226119d17a520b5f3f1d094bec56",
+        "personalizationBasis": "work-style",
+        "personalizationLabel": "个性化依据：工作方式"
       },
       {
         "id": "complete-beginner-verifiable",
         "text": "运行 kungfu agent brief，假设我完全没用过 Kungfu，请边解释边让我得到一个能验证的入门结果。",
-        "root": "sha256:f93d6fcab1ad3d0198579d0094a886cca2f6d24e0e48b7121c69765c500be451"
+        "root": "sha256:f93d6fcab1ad3d0198579d0094a886cca2f6d24e0e48b7121c69765c500be451",
+        "personalizationBasis": "user-goal",
+        "personalizationLabel": "个性化依据：用户目标"
       },
       {
         "id": "safe-practical-experience",
         "text": "请用 kungfu agent brief 带我认识 Kungfu，并根据你对我的了解安排一个安全、实际的第一次体验。",
-        "root": "sha256:b4bd0cf731990832b04c5dec214ee0df42edfa715809df59c7e5f8e4f9362541"
+        "root": "sha256:b4bd0cf731990832b04c5dec214ee0df42edfa715809df59c7e5f8e4f9362541",
+        "personalizationBasis": "risk-tolerance",
+        "personalizationLabel": "个性化依据：风险偏好"
       },
       {
         "id": "low-question-direct-start",
         "text": "我想开始用 Kungfu：请运行 kungfu agent brief，少问问题，直接带我完成一个合适的入门结果。",
-        "root": "sha256:19895b56b44b18caf9b2bd2b64acc372617f2386c3c66fa32e56430cedd0d281"
+        "root": "sha256:19895b56b44b18caf9b2bd2b64acc372617f2386c3c66fa32e56430cedd0d281",
+        "personalizationBasis": "detail-preference",
+        "personalizationLabel": "个性化依据：细节偏好"
       }
     ],
     "naturalLanguagePolicy": {
@@ -66,13 +78,6 @@
       "language": "zh-CN",
       "protocolComplete": true,
       "mustNotRunMoreCommands": true,
-      "personalizationLabels": [
-        "个性化依据：用户目标",
-        "个性化依据：当前工具",
-        "个性化依据：风险偏好",
-        "个性化依据：细节偏好",
-        "个性化依据：当前目录"
-      ],
       "nextStepCommand": "kungfu project list",
       "scopeStatement": "本次只验证了这个本地 Codex 与候选 CLI；未验证 Claude、CI 托管 Codex、其他平台或公开发布。"
     },

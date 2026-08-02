@@ -118,7 +118,8 @@
         "language",
         "protocolComplete",
         "mustNotRunMoreCommands",
-        "personalizationLabels",
+        "personalizationBasis",
+        "personalizationLabel",
         "verificationCommand",
         "nextStepCommand",
         "scopeStatement"
@@ -127,13 +128,18 @@
         "language": {"type": "string", "const": "zh-CN"},
         "protocolComplete": {"type": "boolean", "const": true},
         "mustNotRunMoreCommands": {"type": "boolean", "const": true},
-        "personalizationLabels": {
-          "type": "array",
-          "minItems": 5,
-          "maxItems": 5,
-          "uniqueItems": true,
-          "items": {"type": "string", "minLength": 1}
+        "personalizationBasis": {
+          "type": "string",
+          "enum": [
+            "user-goal",
+            "current-tools",
+            "risk-tolerance",
+            "detail-preference",
+            "workspace",
+            "work-style"
+          ]
         },
+        "personalizationLabel": {"type": "string", "minLength": 1},
         "verificationCommand": {"type": "string", "minLength": 1},
         "nextStepCommand": {"type": "string", "const": "kungfu project list"},
         "scopeStatement": {"type": "string", "minLength": 1}

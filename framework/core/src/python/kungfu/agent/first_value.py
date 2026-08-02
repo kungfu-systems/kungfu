@@ -185,6 +185,22 @@ def _current_prompt_root(first_value_contract: dict[str, Any]) -> str:
     return requested
 
 
+def _prompt_for_root(
+    first_value_contract: dict[str, Any], prompt_root: str
+) -> dict[str, Any]:
+    prompts = [
+        first_value_contract["prompt"],
+        *((first_value_contract.get("promptFamily") or {}).get("variants") or []),
+    ]
+    return next(prompt for prompt in prompts if prompt["root"] == prompt_root)
+
+
+def _current_prompt(first_value_contract: dict[str, Any]) -> dict[str, Any]:
+    return _prompt_for_root(
+        first_value_contract, _current_prompt_root(first_value_contract)
+    )
+
+
 def _source_revision() -> str | None:
     build_info = kungfu.__build_info__
     intrinsic = str((build_info.get("git") or {}).get("revision") or "").strip()
@@ -314,6 +330,7 @@ def create_receipt(
     roots = _pack_roots()
     output_root = _root_bytes(stdout)
     guide = first_value_contract["result"]["responseGuide"]
+    current_prompt = _current_prompt(first_value_contract)
     receipt = {
         "schema": RECEIPT_SCHEMA,
         "verdict": "verified",
@@ -354,7 +371,8 @@ def create_receipt(
             "language": guide["language"],
             "protocolComplete": guide["protocolComplete"],
             "mustNotRunMoreCommands": guide["mustNotRunMoreCommands"],
-            "personalizationLabels": list(guide["personalizationLabels"]),
+            "personalizationBasis": current_prompt["personalizationBasis"],
+            "personalizationLabel": current_prompt["personalizationLabel"],
             "verificationCommand": discovery_command,
             "nextStepCommand": guide["nextStepCommand"],
             "scopeStatement": guide["scopeStatement"],
@@ -434,11 +452,13 @@ def verify_receipt(
     if set(receipt["nonClaims"]) != required_non_claims:
         raise ValueError("first-value receipt non-claims mismatch")
     guide = first_value_contract["result"]["responseGuide"]
+    receipt_prompt = _prompt_for_root(first_value_contract, receipt["promptRoot"])
     expected_guide = {
         "language": guide["language"],
         "protocolComplete": guide["protocolComplete"],
         "mustNotRunMoreCommands": guide["mustNotRunMoreCommands"],
-        "personalizationLabels": list(guide["personalizationLabels"]),
+        "personalizationBasis": receipt_prompt["personalizationBasis"],
+        "personalizationLabel": receipt_prompt["personalizationLabel"],
         "verificationCommand": receipt["discovery"]["command"],
         "nextStepCommand": guide["nextStepCommand"],
         "scopeStatement": guide["scopeStatement"],

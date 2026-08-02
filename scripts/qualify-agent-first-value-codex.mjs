@@ -35,6 +35,7 @@ const PERSONALIZATION_BASIS = [
   'risk-tolerance',
   'detail-preference',
   'workspace',
+  'work-style',
 ];
 const PERSONALIZATION_LABELS = {
   'user-goal': '个性化依据：用户目标',
@@ -42,6 +43,7 @@ const PERSONALIZATION_LABELS = {
   'risk-tolerance': '个性化依据：风险偏好',
   'detail-preference': '个性化依据：细节偏好',
   workspace: '个性化依据：当前目录',
+  'work-style': '个性化依据：工作方式',
 };
 const EXPERIENCE_DIMENSIONS = [
   'autonomous-pack-verification',
@@ -444,6 +446,11 @@ export function verifyFirstValueReceipt(receipt, expected = {}) {
   assert(
     receipt.responseGuide?.protocolComplete === true &&
       receipt.responseGuide?.mustNotRunMoreCommands === true &&
+      PERSONALIZATION_BASIS.includes(
+        receipt.responseGuide?.personalizationBasis,
+      ) &&
+      receipt.responseGuide?.personalizationLabel ===
+        PERSONALIZATION_LABELS[receipt.responseGuide?.personalizationBasis] &&
       receipt.responseGuide?.verificationCommand ===
         receipt.discovery?.command &&
       NEXT_STEP_COMMANDS.includes(receipt.responseGuide?.nextStepCommand) &&
@@ -533,17 +540,14 @@ export function normalizedExperienceFromResult(result, receipt) {
   };
 }
 
-export function experienceResultFromResponse(response) {
+export function experienceResultFromResponse(response, receipt) {
   assert(
     typeof response === 'string' && response.length >= 80,
     'Codex final response was not a substantive user-visible answer',
   );
-  const personalizationMatches = PERSONALIZATION_BASIS.filter((basis) =>
-    response.includes(PERSONALIZATION_LABELS[basis]),
-  );
   assert(
-    personalizationMatches.length === 1,
-    `Codex response named ${personalizationMatches.length} personalization bases instead of exactly one`,
+    response.includes(receipt.responseGuide.personalizationLabel),
+    'Codex response omitted the receipt-selected personalization label',
   );
   assert(
     response.includes(VERIFICATION_COMMAND),
@@ -558,7 +562,7 @@ export function experienceResultFromResponse(response) {
   );
   return {
     response,
-    personalizationBasis: personalizationMatches[0],
+    personalizationBasis: receipt.responseGuide.personalizationBasis,
     verificationCommand: VERIFICATION_COMMAND,
     nextStepCommand: nextStepMatches[0],
   };
@@ -949,14 +953,6 @@ function run(argv) {
           `Codex trial ${number}`,
         );
         const finalText = finalAgentMessage(execution.stdout);
-        const result = experienceResultFromResponse(finalText);
-        const questionMarkCount = [...result.response].filter(
-          (character) => character === '?' || character === '？',
-        ).length;
-        assert(
-          questionMarkCount <= 1,
-          `Codex trial ${number} asked more than one question`,
-        );
         const receipts = receiptsFromCodexEventStream(execution.stdout);
         assert(
           receipts.length === 1,
@@ -969,6 +965,14 @@ function run(argv) {
           candidateRoot: contract.productIdentity.candidateRoot,
           sourceRevision: options['source-revision'],
         });
+        const result = experienceResultFromResponse(finalText, receipt);
+        const questionMarkCount = [...result.response].filter(
+          (character) => character === '?' || character === '？',
+        ).length;
+        assert(
+          questionMarkCount <= 1,
+          `Codex trial ${number} asked more than one question`,
+        );
         assert(
           questionMarkCount === receipt.questionCount,
           `Codex trial ${number} declared a different question count`,

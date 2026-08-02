@@ -53,7 +53,13 @@ test('natural Codex response yields one bounded experience record', () => {
     'kungfu agent status --target codex --scope project --json',
     'kungfu project list',
   ].join('\n');
-  assert.deepEqual(experienceResultFromResponse(response), {
+  const selected = {
+    responseGuide: {
+      personalizationBasis: 'current-tools',
+      personalizationLabel: '个性化依据：当前工具',
+    },
+  };
+  assert.deepEqual(experienceResultFromResponse(response, selected), {
     response,
     personalizationBasis: 'current-tools',
     verificationCommand:
@@ -61,13 +67,18 @@ test('natural Codex response yields one bounded experience record', () => {
     nextStepCommand: 'kungfu project list',
   });
   assert.throws(
-    () => experienceResultFromResponse(`${response}\n个性化依据：用户目标`),
-    /named 2 personalization bases/u,
+    () =>
+      experienceResultFromResponse(
+        response.replace('个性化依据：当前工具', '个性化依据：用户目标'),
+        selected,
+      ),
+    /omitted the receipt-selected personalization label/u,
   );
   assert.throws(
     () =>
       experienceResultFromResponse(
         response.replace('kungfu project list', '稍后再说'),
+        selected,
       ),
     /named 0 safe next steps/u,
   );
@@ -112,13 +123,8 @@ function receipt(number, promptRoot = root('1')) {
       language: 'zh-CN',
       protocolComplete: true,
       mustNotRunMoreCommands: true,
-      personalizationLabels: [
-        '个性化依据：用户目标',
-        '个性化依据：当前工具',
-        '个性化依据：风险偏好',
-        '个性化依据：细节偏好',
-        '个性化依据：当前目录',
-      ],
+      personalizationBasis: 'user-goal',
+      personalizationLabel: '个性化依据：用户目标',
       verificationCommand:
         'kungfu agent status --target codex --scope project --json',
       nextStepCommand: 'kungfu project list',
