@@ -59,15 +59,26 @@ async def run(caps):
     print("[python-asyncio-fixture] network-done", file=sys.stderr, flush=True)
 
     print("[python-asyncio-fixture] process-start", file=sys.stderr, flush=True)
-    async with asyncio.timeout(5):
-        child = await asyncio.create_subprocess_exec(
-            sys.executable,
-            "-c",
-            "print('subprocess-ok')",
-            stdout=asyncio.subprocess.PIPE,
-        )
-        stdout, _stderr = await child.communicate()
-    process_result = stdout.decode().strip()
+    child = None
+    try:
+        async with asyncio.timeout(15):
+            child = await asyncio.create_subprocess_exec(
+                sys.executable,
+                "-c",
+                "raise SystemExit(0)",
+            )
+            return_code = await child.wait()
+    finally:
+        if child is not None and child.returncode is None:
+            child.kill()
+            try:
+                async with asyncio.timeout(2):
+                    await child.wait()
+            except (TimeoutError, ProcessLookupError):
+                pass
+    if return_code != 0:
+        raise RuntimeError(f"subprocess probe exited with {return_code}")
+    process_result = "subprocess-ok"
     print("[python-asyncio-fixture] process-done", file=sys.stderr, flush=True)
 
     records_a, records_b = await asyncio.gather(
