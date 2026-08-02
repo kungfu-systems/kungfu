@@ -330,25 +330,15 @@ export function protocolEvidenceFromCodexEventStream(
         ),
     },
     {
-      id: 'intent-map',
-      command: (value) => value.includes('agent map --json'),
-      output: (value) =>
-        outputHasJson(
-          value,
-          (row) =>
-            typeof row?.schema === 'string' &&
-            row.schema.includes('agent-intent-map') &&
-            Array.isArray(row.intents),
-        ),
-    },
-    {
       id: 'first-value-contract',
-      command: (value) => value.includes('agent first-value contract --json'),
+      command: (value) =>
+        value.includes('agent first-value contract --compact --json'),
       output: (value) =>
         outputHasJson(
           value,
           (row) =>
-            row?.schema === 'kungfu.agent-first-value-contract-view/v1' &&
+            row?.schema ===
+              'kungfu.agent-first-value-contract-compact-view/v1' &&
             row.contract?.promptFamily &&
             [
               row.contract?.prompt?.root,
@@ -763,7 +753,7 @@ export function verifyAgentFirstValueQualification(report) {
       Object.keys(trial.protocolEvidence || {})
         .sort()
         .join(',') ===
-        'brief,docs-verify,first-value-contract,first-value-receipt,intent-map',
+        'brief,docs-verify,first-value-contract,first-value-receipt',
       'trial omitted autonomous protocol evidence',
     );
     for (const evidence of Object.values(trial.protocolEvidence)) {

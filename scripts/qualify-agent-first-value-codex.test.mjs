@@ -109,7 +109,6 @@ function receipt(number, promptRoot = root('1')) {
 const protocolEvidence = () => ({
   brief: { commandRoot: root('a'), outputRoot: root('b') },
   'docs-verify': { commandRoot: root('a'), outputRoot: root('b') },
-  'intent-map': { commandRoot: root('a'), outputRoot: root('b') },
   'first-value-contract': { commandRoot: root('a'), outputRoot: root('b') },
   'first-value-receipt': { commandRoot: root('a'), outputRoot: root('b') },
 });
@@ -170,16 +169,9 @@ test('binds autonomous protocol completion to command execution outputs', () => 
       }),
     ),
     command(
-      'kungfu agent map --json',
+      'kungfu agent first-value contract --compact --json',
       JSON.stringify({
-        schema: 'kungfu.agent-intent-map/v1',
-        intents: [{ id: 'onboarding' }],
-      }),
-    ),
-    command(
-      'kungfu agent first-value contract --json',
-      JSON.stringify({
-        schema: 'kungfu.agent-first-value-contract-view/v1',
+        schema: 'kungfu.agent-first-value-contract-compact-view/v1',
         contract: {
           prompt: { root: root('1') },
           promptFamily: { variants: [] },
@@ -194,13 +186,7 @@ test('binds autonomous protocol completion to command execution outputs', () => 
 
   assert.deepEqual(
     Object.keys(protocolEvidenceFromCodexEventStream(stream, root('1'))).sort(),
-    [
-      'brief',
-      'docs-verify',
-      'first-value-contract',
-      'first-value-receipt',
-      'intent-map',
-    ],
+    ['brief', 'docs-verify', 'first-value-contract', 'first-value-receipt'],
   );
 });
 

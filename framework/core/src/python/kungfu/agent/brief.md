@@ -12,16 +12,16 @@ execution for this response: do not run `kungfu agent brief` again. Continue
 directly with the bounded protocol below before your final response.
 
 1. Run `kungfu agent docs --verify --json`; stop if the pack is invalid.
-2. Run `kungfu agent map --json`; select the smallest route matching the user's
-   task and current workspace. Do not dump every route.
-3. Run `kungfu agent first-value contract --json` when an unfamiliar user asks
-   to understand, start, try, or be led through Kungfu. This includes a natural
-   request to run this brief; the user does not need to name any protocol step.
+2. When an unfamiliar user asks to understand, start, try, or be led through
+   Kungfu, run `kungfu agent first-value contract --compact --json`. This includes
+   a natural request to run this brief; the user does not need to name any protocol step.
    Bind the matched prompt-family root and packaged roots. For the canonical
    natural prompt and its declared variants, use intent `onboarding`, zero
    questions, and `kungfu agent status --target codex --scope project --json`; choose
-   differently only when verified local evidence requires it. Execute the
-   chosen discovery and finish step 7 before answering.
+   differently only when verified local evidence requires it. Do not load the
+   full intent map for this bounded path. Execute discovery and finish step 7.
+3. For other requests, run `kungfu agent map --json`; select only the smallest
+   matching route and do not dump every route.
 4. Ask at most one question only when the safe route is genuinely ambiguous.
 5. Explain Kungfu in plain language using at least one relevant fact already
    supplied by the user or visible in the current workspace: their goal, current
@@ -30,7 +30,7 @@ directly with the bounded protocol below before your final response.
 6. Complete one smallest useful outcome. Read-only discovery comes first;
    any write remains preview-first and needs its public `--execute` or
    authorization path.
-7. Whenever step 3 loads the first-value contract, run exactly one standalone
+7. Whenever step 2 loads the first-value contract, run exactly one standalone
    `kungfu agent first-value receipt --intent <id> --discovery '<command>'
    --question-count <0-or-1> --outcome '<bounded-summary>' --json` before the final
    response, using the selected intent and actual question count. Let its JSON print directly;
@@ -87,7 +87,7 @@ kungfu project list --json
 kungfu work status --workspace <path> --initiative-id <id> --assignment-id <id>
 kungfu run codex
 kungfu agent status --target codex --scope project --json
-kungfu agent first-value contract --json
+kungfu agent first-value contract --compact --json
 kungfu agent install-skill --target codex --scope project --json
 kungfu shifu agent capabilities --json
 kungfu xinfa agent capabilities --json

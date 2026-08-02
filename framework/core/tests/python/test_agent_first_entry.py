@@ -48,6 +48,8 @@ def test_brief_and_intent_map_enforce_complete_bounded_first_entry():
     assert "kungfu xinfa compile" in brief
     assert "merely printing or reading it is not\ncompletion" in brief
     assert "do not run `kungfu agent brief` again" in brief
+    assert "first-value contract --compact --json" in brief
+    assert "Do not load the\n   full intent map for this bounded path" in brief
     assert "run exactly one standalone\n   `kungfu agent first-value receipt" in brief
     assert "--discovery '<command>'" in brief
     assert "do not capture, redirect, pipe, or reprint it" in brief
@@ -196,6 +198,19 @@ def test_first_value_contract_binds_exact_prompt_and_packaged_roots():
         "type": "string",
         "const": "verified",
     }
+
+
+def test_compact_first_value_contract_retains_only_bounded_entry_facts():
+    view = first_value.compact_contract_view()
+    encoded = json.dumps(view, ensure_ascii=False).encode("utf-8")
+
+    assert view["schema"] == "kungfu.agent-first-value-contract-compact-view/v1"
+    assert len(encoded) <= 4096
+    assert "text" not in view["contract"]["prompt"]
+    assert view["contract"]["promptFamily"]["currentRoot"].startswith("sha256:")
+    assert view["contract"]["result"]["exactPromptDefault"]["intentId"] == "onboarding"
+    assert view["receiptSchema"]["schema"] == first_value.RECEIPT_SCHEMA
+    assert view["receiptSchema"]["root"].startswith("sha256:")
 
 
 def test_first_value_receipt_schema_is_structured_output_compatible():

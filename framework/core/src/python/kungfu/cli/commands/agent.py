@@ -201,15 +201,24 @@ def first_value(ctx):
     name="contract", help=api_help("kungfu.agent.first-value.contract")
 )
 @click.option("--json", "as_json", is_flag=True, help="machine-readable output")
+@click.option("--compact", is_flag=True, help="bounded first-entry projection")
 @kfd3_api("kungfu.agent.first-value.contract")
 @agent_command_context
-def first_value_contract(ctx, as_json):
+def first_value_contract(ctx, as_json, compact):
     try:
-        payload = first_value_protocol.contract_view()
+        payload = (
+            first_value_protocol.compact_contract_view()
+            if compact
+            else first_value_protocol.contract_view()
+        )
     except (OSError, ValueError) as error:
         raise click.ClickException(str(error)) from error
     if as_json:
         _json(payload)
+        return
+    if compact:
+        click.echo(payload["contract"]["promptFamily"]["currentRoot"])
+        click.echo(f"contract: {payload['productIdentity']['contractRoot']}")
         return
     click.echo(payload["contract"]["prompt"]["text"])
     click.echo(f"contract: {payload['productIdentity']['contractRoot']}")

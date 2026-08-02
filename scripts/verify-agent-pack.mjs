@@ -308,7 +308,7 @@ for (const [rel, text] of [
   ['skills/codex/SKILL.md', codexSkill],
 ]) {
   for (const phrase of [
-    'kungfu agent first-value contract --json',
+    'kungfu agent first-value contract --compact --json',
     'kungfu agent first-value receipt',
   ]) {
     if (!text.includes(phrase))

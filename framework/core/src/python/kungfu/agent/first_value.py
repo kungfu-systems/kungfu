@@ -108,6 +108,45 @@ def contract_view() -> dict[str, Any]:
     }
 
 
+def compact_contract_view() -> dict[str, Any]:
+    payload = contract()
+    roots = _pack_roots()
+    family = payload["promptFamily"]
+    return {
+        "schema": "kungfu.agent-first-value-contract-compact-view/v1",
+        "contract": {
+            "id": payload["id"],
+            "maturity": payload["maturity"],
+            "prompt": {"root": payload["prompt"]["root"]},
+            "promptFamily": {
+                "canonicalRoot": family["canonicalRoot"],
+                "currentRoot": _current_prompt_root(payload),
+                "variants": [
+                    {"id": row["id"], "root": row["root"]} for row in family["variants"]
+                ],
+            },
+            "result": {
+                "exactPromptDefault": payload["result"]["exactPromptDefault"],
+                "maximumQuestionCount": payload["result"]["maximumQuestionCount"],
+                "discoveryPolicy": {
+                    "execution": payload["result"]["discoveryPolicy"]["execution"],
+                    "forbiddenArguments": payload["result"]["discoveryPolicy"][
+                        "forbiddenArguments"
+                    ],
+                },
+            },
+            "qualification": {
+                "nonClaims": payload["qualification"]["nonClaims"],
+            },
+        },
+        "productIdentity": _product_identity(roots),
+        "receiptSchema": {
+            "schema": RECEIPT_SCHEMA,
+            "root": _root_bytes(_resource_bytes("first-value-receipt.schema.json")),
+        },
+    }
+
+
 def validate_brief(text: str) -> str:
     if len(text.encode("utf-8")) > 8192 or len(text.splitlines()) > 120:
         raise ValueError("installed Agent brief exceeds its 8192-byte/120-line budget")
