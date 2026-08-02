@@ -143,6 +143,13 @@
       ]
     },
     {
+      "owner": "core/python-workspace-federation-read-model",
+      "paths": [
+        "framework/core/src/python/kungfu/assignment_graph.py",
+        "framework/core/src/python/kungfu/workspace_federation_projection.py"
+      ]
+    },
+    {
       "owner": "shifu/python-structure-entry",
       "paths": [
         "scripts/check-code-complexity.mjs",
