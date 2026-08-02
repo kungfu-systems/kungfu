@@ -11,6 +11,7 @@ from .resources import (
     profile_sdk_contract,
     registry,
     registry_schema,
+    skill_state,
     skill_path,
 )
 from . import documentation
@@ -26,6 +27,7 @@ __all__ = [
     "profile_sdk_contract",
     "registry",
     "registry_schema",
+    "skill_state",
     "skill_path",
     "documentation",
 ]

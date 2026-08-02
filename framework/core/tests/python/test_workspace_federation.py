@@ -7,7 +7,9 @@ from pathlib import Path
 
 import pytest
 
+from kungfu import assignment_graph
 from kungfu import workspace_federation as federation
+from kungfu import workspace_federation_projection as federation_projection
 from kungfu.workspace import (
     ensure_workspace_data_home,
     inspect_workspace,
@@ -47,6 +49,24 @@ CONTRACT = (
     / "workspace-federation"
     / "workspace-federation.contract.json"
 )
+
+
+def test_workspace_federation_preserves_extracted_read_model_exports():
+    assert federation.WorkRef is assignment_graph.WorkRef
+    assert federation.build_work_ref is assignment_graph.build_work_ref
+    assert federation.build_relation is assignment_graph.build_relation
+    assert (
+        federation.qualify_assignment_graph is assignment_graph.qualify_assignment_graph
+    )
+    assert (
+        federation.traverse_assignment_graph
+        is assignment_graph.traverse_assignment_graph
+    )
+    assert (
+        federation._retained_state_dominates
+        is federation_projection._retained_state_dominates
+    )
+    assert federation._compose_global_work is federation_projection._compose_global_work
 
 
 def _qualified_project(tmp_path, name):

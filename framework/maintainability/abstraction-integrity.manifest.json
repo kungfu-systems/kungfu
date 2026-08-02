@@ -43,6 +43,8 @@
   ],
   "publicImports": [
     "kungfu.exit_bundle.ProductReleaseHistoryError",
+    "kungfu.exit_bundle.ProjectCutExitError",
+    "kungfu.project_cut_exit.ProjectCutExitError",
     "kungfu.runtime_broker.RuntimeLeaseManager",
     "kungfu.runtime_broker.RuntimeLifecycleError",
     "kungfu.runtime_broker.NativeReadinessAuthority",
@@ -50,6 +52,8 @@
   ],
   "typedSeams": [
     "kungfu.product_release_history.ProductReleaseHistoryPort",
+    "kungfu.project_cut_exit.ProjectCutExitPort",
+    "kungfu.initiative_family.typed_v2.InitiativeFamilyV1Port",
     "kungfu.assignment_lifecycle.ports.AssignmentEventSink",
     "kungfu.assignment_lifecycle.ports.AssignmentRuntime",
     "kungfu.assignment_lifecycle.ports.AssignmentRuntimePort",
@@ -92,6 +96,20 @@
       ]
     },
     {
+      "owner": "core/python-project-cut-exit",
+      "paths": [
+        "framework/core/src/python/kungfu/project_cut_exit.py"
+      ]
+    },
+    {
+      "owner": "core/python-initiative-family",
+      "paths": [
+        "framework/core/src/python/kungfu/initiative_family/__init__.py",
+        "framework/core/src/python/kungfu/initiative_family/canonical.py",
+        "framework/core/src/python/kungfu/initiative_family/typed_v2.py"
+      ]
+    },
+    {
       "owner": "core/python-runtime-contracts",
       "paths": [
         "framework/core/src/python/kungfu/runtime_contract.py",
@@ -104,6 +122,31 @@
       "paths": [
         "framework/core/src/python/kungfu/runtime_leases.py",
         "framework/core/src/python/kungfu/runtime_state.py"
+      ]
+    },
+    {
+      "owner": "core/python-agent-first-value",
+      "paths": [
+        "framework/core/src/python/kungfu/agent/first_value.py"
+      ]
+    },
+    {
+      "owner": "product/agent-first-value-qualification",
+      "paths": [
+        "scripts/qualify-agent-first-value-codex.mjs"
+      ]
+    },
+    {
+      "owner": "core/python-runtime-service-config",
+      "paths": [
+        "framework/core/src/python/kungfu/runtime_service_config.py"
+      ]
+    },
+    {
+      "owner": "core/python-workspace-federation-read-model",
+      "paths": [
+        "framework/core/src/python/kungfu/assignment_graph.py",
+        "framework/core/src/python/kungfu/workspace_federation_projection.py"
       ]
     },
     {

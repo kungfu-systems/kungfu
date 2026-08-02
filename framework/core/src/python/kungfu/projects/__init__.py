@@ -381,6 +381,24 @@ def _captured_work(candidate: Path) -> dict[str, Any] | None:
     }
 
 
+def _live_work_phase(target: Path, work: dict[str, Any]) -> str | None:
+    runtime_dir = target / ".kungfu" / "runtime"
+    if not runtime_dir.is_dir():
+        return None
+    try:
+        from kungfu.cli.commands import assignment as assignment_commands
+
+        status = assignment_commands._status(
+            str(runtime_dir),
+            work["initiativeId"],
+            work["assignmentId"],
+        )
+    except (OSError, RuntimeError, ValueError, json.JSONDecodeError):
+        return None
+    phase = str(status.get("phase") or "").strip()
+    return phase if phase in orchestration.PHASES else None
+
+
 def work_inventory(path: str | Path) -> dict[str, Any]:
     target = Path(path).expanduser().resolve()
     if not target.is_dir():
@@ -412,6 +430,8 @@ def work_inventory(path: str | Path) -> dict[str, Any]:
                 settled=bool(settled),
                 stateRoot=selected["state_root"],
             )
+        elif phase := _live_work_phase(target, work):
+            next_work.update(phase=phase, settled=False)
         projected.append(next_work)
     body = {
         "schema": WORK_INVENTORY_SCHEMA,

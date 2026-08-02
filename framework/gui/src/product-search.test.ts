@@ -8,6 +8,10 @@ const source = readFileSync(
   new URL('./renderer/src/main.tsx', import.meta.url),
   'utf8',
 );
+const projectsPanelSource = readFileSync(
+  new URL('./renderer/src/projects-panel/index.tsx', import.meta.url),
+  'utf8',
+);
 const workViewSource = readFileSync(
   new URL(
     '../../../extensions/work-dashboard/src/view/index.tsx',
@@ -75,7 +79,11 @@ test('Core Work remains a first-class shell surface without an admitted Work KFX
   assert.match(source, /onOpenAllWork=\{\(\) => openWorkSurface\(\)\}/);
   assert.match(
     source,
-    /coreWorkOpen \|\| retainedCoreSurfaces\.has\('core-work'\)[\s\S]*<ProjectWorkControlView projects=\{projects\} shell=\{shell\} \/>/,
+    /<RetainedCoreSurfaceStack[\s\S]*work=\{[\s\S]*<ProjectWorkControlView projects=\{projects\} shell=\{shell\} \/>/,
+  );
+  assert.match(
+    projectsPanelSource,
+    /visible === 'core-work' \|\| retained\.has\('core-work'\)/,
   );
   assert.match(
     source,
@@ -84,22 +92,31 @@ test('Core Work remains a first-class shell surface without an admitted Work KFX
 });
 
 test('visited core product surfaces stay mounted while hidden', () => {
-  assert.match(source, /const \[retainedCoreSurfaces,/);
+  assert.match(source, /useRetainedCoreSurfaces\(\{/);
   assert.match(
-    source,
-    /projectsOpen \|\| retainedCoreSurfaces\.has\('projects'\)/,
+    projectsPanelSource,
+    /visible === 'projects' \|\| retained\.has\('projects'\)/,
   );
   assert.match(
-    source,
-    /labOpen \|\| retainedCoreSurfaces\.has\('agent-work-lab'\)/,
+    projectsPanelSource,
+    /visible === 'agent-work-lab' \|\| retained\.has\('agent-work-lab'\)/,
   );
   assert.match(
-    source,
-    /coreWorkOpen \|\| retainedCoreSurfaces\.has\('core-work'\)/,
+    projectsPanelSource,
+    /visible === 'core-work' \|\| retained\.has\('core-work'\)/,
   );
-  assert.match(source, /display: projectsOpen \? 'block' : 'none'/);
-  assert.match(source, /display: labOpen \? 'block' : 'none'/);
-  assert.match(source, /display: coreWorkOpen \? 'block' : 'none'/);
+  assert.match(
+    projectsPanelSource,
+    /display: visible === 'projects' \? 'block' : 'none'/,
+  );
+  assert.match(
+    projectsPanelSource,
+    /display: visible === 'agent-work-lab' \? 'block' : 'none'/,
+  );
+  assert.match(
+    projectsPanelSource,
+    /display: visible === 'core-work' \? 'block' : 'none'/,
+  );
 });
 
 test('Project navigation preserves the current Project while the catalog is explicit', () => {

@@ -4,7 +4,7 @@
   "owner": "kungfu-ci",
   "retiredAt": "2026-07-30",
   "reactivatedAt": "2026-07-30",
-  "reason": "The v2 callers were retired until the bounded Linux, Windows, and macOS providers landed in reviewed Buildchain v3 authority. Reactivation now fixes both the reusable workflow shell and buildchain-ref to that one immutable reviewed commit.",
+  "reason": "The v2 callers were retired until the bounded Linux, Windows, and macOS providers landed in reviewed Buildchain v3 authority. Each active caller fixes both the reusable workflow shell and buildchain-ref to its immutable reviewed provider commit; the Windows caller additionally requires the persistent one-shot campaign ledger and exact campaign/source binding.",
   "runtimeSafety": {
     "workflowShellReferencesV2": false,
     "buildchainRefInputsV2": false,
@@ -17,6 +17,10 @@
     "reviewedBuildchainV3Source": "376fb92fa014102366111b9aaef4856486c1e499",
     "windowsJitRepairPullRequest": 2083,
     "windowsJitRepairMergeCommit": "376fb92fa014102366111b9aaef4856486c1e499",
+    "windowsCampaignLedgerPullRequest": 2210,
+    "windowsCampaignLedgerMergeCommit": "ab147fa02d4e17937818c89c1269483fa450d986",
+    "windowsCampaignSourceBindingPullRequest": 2212,
+    "windowsCampaignSourceBindingMergeCommit": "447936a3aa36415a39c75e92fc9b26b0774aeb75",
     "v3RequiredInputs": [
       "aws-codebuild-project",
       "aws-ec2-windows-runner-label",
@@ -62,7 +66,9 @@
     "requirementsSatisfied": [
       "Protected Assignment remains owned by kungfu-ci and Buildchain maintainers.",
       "Required runner presets and controller inputs landed in reviewed Buildchain v3.",
-      "Reusable workflow shell and buildchain-ref are pinned to the same immutable reviewed v3 commit.",
+      "Each reusable workflow shell and buildchain-ref pair is pinned to the same immutable reviewed v3 commit.",
+      "Windows admission is one-shot, source-bound, permanently killable, and atomically capped before launch.",
+      "Windows run title and runner label both bind campaign and qualification identity before launch.",
       "Bounded trust, label, non-publication, timeout, cancellation, and cleanup assertions are restored with targeted tests.",
       "Provider policy changes remain outside the caller reactivation."
     ]

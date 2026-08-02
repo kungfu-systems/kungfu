@@ -1,0 +1,53 @@
+{
+  "schema": "kungfu.agent-first-value-contract/v1",
+  "id": "kungfu.agent.first-value",
+  "version": 1,
+  "maturity": "stable",
+  "prompt": {
+    "text": "请运行 kungfu agent brief，不要在打印 brief 后停止，请继续按 First response protocol 依次验证文档、读取 intent map 与 first-value contract、执行一次安全发现并调用 first-value receipt 固化结果，最后结合你对我的了解，用最适合我的方式解释 Kungfu 并给我一个可验证的上手结果。",
+    "root": "sha256:c5e6c02d553e1addd4db51a573c54af86346b7ca55ee0b4778b80582cb56fee2",
+    "encoding": "utf-8"
+  },
+  "result": {
+    "maximumQuestionCount": 1,
+    "requiredIntentCount": 1,
+    "minimumSafeDiscoveryCount": 1,
+    "requiredOutcomeCount": 1,
+    "intentAuthority": "intent-map.json",
+    "exactPromptDefault": {
+      "intentId": "onboarding",
+      "questionCount": 0,
+      "discoveryCommand": "kungfu agent status --target codex --scope project --json",
+      "outcomeKind": "verified-discovery"
+    },
+    "discoveryPolicy": {
+      "allowDeclaredIntentCommandsOnly": true,
+      "allowTemplateSubstitution": true,
+      "forbiddenArguments": ["--execute"],
+      "execution": "direct-argv-no-shell",
+      "maximumOutputBytes": 4194304,
+      "timeoutSeconds": 30
+    }
+  },
+  "evidence": {
+    "receiptSchema": "first-value-receipt.schema.json",
+    "rootAlgorithm": "sha256-sorted-json-v1",
+    "retainedContent": "roots-and-bounded-facts-only",
+    "rawTranscriptRetention": false,
+    "independentVerification": "the product reruns the declared safe discovery without a shell"
+  },
+  "qualification": {
+    "ci": "deterministic-contract-and-receipt-only",
+    "local": "provider-and-candidate-specific",
+    "requiredLocalCodexTrials": 3,
+    "aggregatePolicy": "all-trials-must-pass",
+    "nonClaims": [
+      "claude-qualified",
+      "ci-hosted-codex-qualified",
+      "other-platforms-qualified",
+      "public-release-qualified",
+      "model-output-alone-is-proof",
+      "brief-or-skill-grants-write-authority"
+    ]
+  }
+}

@@ -14,7 +14,7 @@ const ROOT = path.resolve(
 );
 const TUI_DIST = path.join(ROOT, 'framework', 'tui', 'dist');
 
-test('provider-first source bundle resolves node-pty through the Agent Session package', async () => {
+test('provider-first source bundle resolves node-pty from the sibling Agent Session package', async () => {
   const runtimeDir = await mkdtemp(
     path.join(os.tmpdir(), 'kungfu-native-provider-first-'),
   );
@@ -38,10 +38,15 @@ test('provider-first source bundle resolves node-pty through the Agent Session p
         'product-client.mjs',
       ),
     );
+    const unavailableRequire = {
+      resolve() {
+        throw new Error('package lookup unavailable');
+      },
+    };
     const modulePath = resolveNativeInteractiveNodePty(
       path.join(TUI_DIST, 'agent-session-worker.mjs'),
       runtimeDir,
-      bundleRequire,
+      unavailableRequire,
     );
     assert.equal(existsSync(modulePath), true);
     assert.equal(

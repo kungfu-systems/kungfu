@@ -68,13 +68,28 @@ def _install_fake_pykungfu():
 
 _install_fake_pykungfu()
 
-from kungfu import runtime_broker, runtime_service  # noqa: E402
+from kungfu import runtime_broker, runtime_service, runtime_service_config  # noqa: E402
 
 
 ROOT = Path(__file__).parents[4]
 LEASE_FIXTURES = json.loads(
     (ROOT / "tests/fixtures/runtime-lease-recovery/cases.json").read_text()
 )
+
+
+def test_runtime_service_config_preserves_compatibility_exports():
+    for name in (
+        "ServicePlan",
+        "entry_command",
+        "command_env",
+        "coordinator_run_command",
+        "assessment_worker_command",
+        "run_assessment_worker",
+        "supervisor_command",
+        "supervisor_state_dir",
+        "supervisor_log_path",
+    ):
+        assert getattr(runtime_service, name) is getattr(runtime_service_config, name)
 
 
 def test_windows_json_write_retries_transient_replace_lock(tmp_path, monkeypatch):

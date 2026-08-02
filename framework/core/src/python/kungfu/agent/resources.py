@@ -49,6 +49,33 @@ def intent_map():
     return _read_json("intent-map.json")
 
 
+def first_value_contract():
+    return _read_json("first-value.contract.json")
+
+
+def first_value_receipt_schema():
+    return _read_json("first-value-receipt.schema.json")
+
+
+def skill_state(target, destination):
+    source = skill_path(target).read_bytes()
+    destination = Path(destination) / "SKILL.md"
+    if not destination.is_file():
+        return "absent"
+    try:
+        installed = destination.read_bytes()
+        text = installed.decode("utf-8")
+    except (OSError, UnicodeError):
+        return "incompatible"
+    if (
+        not text.startswith("---\n")
+        or "\nname:" not in text
+        or "\ndescription:" not in text
+    ):
+        return "incompatible"
+    return "current" if installed == source else "stale"
+
+
 def cli_surface_catalog():
     return _read_json("cli_surface.catalog.json")
 
