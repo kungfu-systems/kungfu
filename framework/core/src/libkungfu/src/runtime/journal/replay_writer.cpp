@@ -32,7 +32,18 @@ frame_ptr replay_writer::open_frame(int64_t trigger_time, int32_t carrier_type, 
     throw replay_exhausted(carrier_type, trigger_time, get_location()->uname, get_dest());
   }
 
-  cloned_frame_->copy(*reader_for_write_->current_frame());
+  const auto source = reader_for_write_->current_frame();
+  const auto source_frame_length = source->frame_length();
+  const auto source_header_length = source->header_length();
+  if (source_header_length != sizeof(yijinjing::types::frame_header) || source_frame_length < source_header_length) {
+    throw journal_error("Can not replay a frame with an invalid source length");
+  }
+  const auto source_data_length = source_frame_length - source_header_length;
+  if (length > source_data_length) {
+    throw journal_error(fmt::format("Replay payload of {} bytes exceeds the recorded {} byte frame capacity", length,
+                                    source_data_length));
+  }
+  cloned_frame_->copy(*source);
   return cloned_frame_;
 }
 
@@ -62,8 +73,10 @@ writer::frame_transaction replay_writer::reserve_frame(int64_t trigger_time, int
   }
   try {
     auto frame = open_frame(trigger_time, carrier_type, length, stream_id);
+    size_to_write_ = length;
     return frame_transaction(*this, frame.get(), true);
   } catch (...) {
+    size_to_write_ = 0;
     writer_mtx_.unlock();
     throw;
   }
