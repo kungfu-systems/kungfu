@@ -97,6 +97,7 @@ test('migration plan is additive, exact, dry-run, and approval-bound', (t) => {
   assert.equal(plan.overwrite, false);
   assert.equal(plan.localArtifactMutation, false);
   assert.equal(plan.temporaryPartitionLock, true);
+  assert.equal(plan.impact.totalSizeBytes > 0, true);
   assert.deepEqual(plan.exactReferences, [
     {
       partition: 'development-333333333333',
