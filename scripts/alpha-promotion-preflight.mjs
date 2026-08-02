@@ -140,56 +140,61 @@ export function inspectWindowsFastSentinel({ shifuCmd, lifecycle }) {
 }
 
 export function inspectAuditableDemoFastSentinel({
-  adapter,
   workflow,
-  catalog,
+  scenario,
+  product,
 }) {
   const issues = [];
-  let catalogValue;
+  let scenarioValue;
   try {
-    catalogValue = typeof catalog === 'string' ? JSON.parse(catalog) : catalog;
+    scenarioValue =
+      typeof scenario === 'string' ? JSON.parse(scenario) : scenario;
   } catch {
-    issues.push('auditable-demo catalog is not valid JSON');
+    issues.push('auditable-demo scenario is not valid JSON');
   }
-  const defaultDemo = catalogValue?.demos?.find(
-    (demo) => demo?.id === catalogValue?.defaultDemoId,
-  );
+  const demos = scenarioValue?.demos || [];
+  const autoplay = demos.find((demo) => demo?.id === 'agent-work-lab-autoplay');
+  const projectTour = demos.find((demo) => demo?.id === 'project-tour-08x');
   if (
-    catalogValue?.schema !== 'kungfu.auditable-demo.catalog/v1' ||
-    !defaultDemo ||
-    defaultDemo.completion?.status !== 'qualified' ||
-    typeof defaultDemo.completion?.sentinel !== 'string' ||
-    defaultDemo.completion.sentinel.length === 0
+    scenarioValue?.schema !== 'buildchain.declarative-binary-demo/v1' ||
+    scenarioValue?.execution?.durationClass !== 'long-form' ||
+    scenarioValue?.execution?.totalTimeoutSeconds !== 180 ||
+    scenarioValue?.authority?.grants?.length !== 0 ||
+    demos.length !== 2 ||
+    JSON.stringify(autoplay?.steps?.[0]?.argv) !==
+      JSON.stringify(['agent-work-lab', 'autoplay']) ||
+    JSON.stringify(projectTour?.steps?.[0]?.argv) !==
+      JSON.stringify(['agent-work-lab', 'project-tour', '--speed', '0.8'])
   ) {
     issues.push(
-      'auditable-demo catalog no longer declares one qualified default completion sentinel',
+      'auditable-demo scenario no longer declares the exact bounded two-demo cut',
     );
   }
   requirePattern(
     issues,
-    adapter,
-    /completion_contract\s*=\s*demo\["completion"\][\s\S]*re\.compile\(re\.escape\(completion_contract\["sentinel"\]\)/iu,
-    'auditable-demo adapter no longer compiles the catalog completion sentinel',
+    product,
+    /writeAuditableDemoBinaryMetadata\(stageRoot, layout\)/u,
+    'Kungfu product no longer emits exact declarative demo binary metadata',
   );
   requirePattern(
     issues,
-    adapter,
-    /completion\["status"\]\s*!=\s*completion_contract\["status"\]/iu,
-    'auditable-demo adapter no longer enforces the catalog completion verdict',
+    workflow,
+    /artifact-paths:[\s\S]*product\/dist\/cli\/kungfu-episodes-cli-linux-x64/u,
+    'build artifact no longer retains the exact standalone demo distribution',
   );
   const runtime = workflow.match(
-    /uses:\s*kungfu-systems\/buildchain\/\.github\/workflows\/\.auditable-demo\.yml@([0-9a-f]{40})/u,
+    /uses:\s*kungfu-systems\/buildchain\/\.github\/workflows\/\.declarative-auditable-demo\.yml@([0-9a-f]{40})/u,
   );
   if (!runtime || !EXACT_BUILDCHAIN_SHA.test(runtime[1])) {
     issues.push(
-      'auditable-demo Gate is not pinned to one exact Buildchain SHA',
+      'declarative auditable-demo workflow is not pinned to one exact Buildchain SHA',
     );
   }
   requirePattern(
     issues,
     workflow,
-    /adapter-path:\s*scripts\/auditable-demo-adapter\.py[\s\S]*adapter-arguments-json:\s*\$\{\{\s*format\('\["--demo-id",\{0\}\]'/iu,
-    'auditable-demo Gate no longer passes one bounded catalog demo id',
+    /media-profile:\s*responsive-long-form-web-delivery-v1[\s\S]*materialize:\s*\$\{\{ github\.event_name != 'workflow_dispatch' \|\| inputs\.render-auditable-demo \}\}/u,
+    'declarative auditable-demo no longer shares one manual and promotion materialization path',
   );
   return issues;
 }
@@ -206,16 +211,16 @@ export function runAlphaFastSentinel(kind, root = ROOT) {
   }
   if (kind === 'auditable-demo') {
     return inspectAuditableDemoFastSentinel({
-      adapter: fs.readFileSync(
-        path.join(root, 'scripts', 'auditable-demo-adapter.py'),
-        'utf8',
-      ),
       workflow: fs.readFileSync(
         path.join(root, '.github', 'workflows', 'build.yml'),
         'utf8',
       ),
-      catalog: fs.readFileSync(
-        path.join(root, 'framework', 'auditable-demo', 'catalog.json'),
+      scenario: fs.readFileSync(
+        path.join(root, '.buildchain', 'auditable-demo.json'),
+        'utf8',
+      ),
+      product: fs.readFileSync(
+        path.join(root, 'product', 'scripts', 'dist.mjs'),
         'utf8',
       ),
     });

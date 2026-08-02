@@ -32,7 +32,7 @@ test('candidate patrol is a thin Buildchain caller with exact channel and eviden
     /uses: kungfu-systems\/buildchain\/.github\/workflows\/dev-alpha-candidate-patrol\.yml@([0-9a-f]{40})/u,
   )?.[1];
   assert.match(reusableRef || '', /^[0-9a-f]{40}$/u);
-  assert.equal(reusableRef, '009c00d7c0145b5991f56aa97a98d5d1bbcc350f');
+  assert.equal(reusableRef, 'f6b0cddea283495414ac3481364c1c27ae5c6485');
   assert.match(
     source,
     new RegExp(

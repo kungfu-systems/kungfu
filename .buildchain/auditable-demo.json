@@ -1,0 +1,77 @@
+{
+  "schema": "buildchain.declarative-binary-demo/v1",
+  "product": {
+    "id": "kungfu",
+    "displayName": "Kungfu",
+    "binaryName": "kungfu"
+  },
+  "artifact": {
+    "platformId": "linux-x64",
+    "binaryPath": "product/dist/cli/kungfu-episodes-cli-linux-x64/kungfu",
+    "metadataPath": "product/dist/cli/kungfu-episodes-cli-linux-x64/auditable-demo-binary.json",
+    "metadataContract": "kungfu.declarative-demo-binary/v1",
+    "runtimeDependencies": []
+  },
+  "execution": {
+    "deterministic": true,
+    "network": "none",
+    "secrets": "none",
+    "durationClass": "long-form",
+    "totalTimeoutSeconds": 180,
+    "environment": {}
+  },
+  "renditions": [
+    {"id": "1080p", "role": "primary", "columns": 150, "rows": 36, "width": 1920, "height": 1080},
+    {"id": "720p", "role": "responsive", "columns": 100, "rows": 28, "width": 1280, "height": 720}
+  ],
+  "demos": [
+    {
+      "id": "agent-work-lab-autoplay",
+      "title": "Kungfu Agent Work Lab autoplay",
+      "claimBoundary": "This exact standalone Kungfu artifact proves only the bounded offline Agent Work Lab autoplay observed in two independently captured native PTYs; it grants no Work, release, capability, or production authority.",
+      "steps": [
+        {
+          "id": "autoplay",
+          "argv": ["agent-work-lab", "autoplay"],
+          "timeoutSeconds": 90,
+          "expectedExitCodes": [0],
+          "stdoutIncludes": ["KUNGFU_TUI_DEMO_COMPLETE"],
+          "fileAssertions": []
+        }
+      ]
+    },
+    {
+      "id": "project-tour-08x",
+      "title": "Kungfu Project Tour at 0.8x",
+      "claimBoundary": "This exact standalone Kungfu artifact proves only the bounded disposable Project Tour observed at 0.8x in two independently captured native PTYs; Mock Agent output and terminal observations grant no Work, release, capability, or production authority.",
+      "steps": [
+        {
+          "id": "project-tour",
+          "argv": ["agent-work-lab", "project-tour", "--speed", "0.8"],
+          "timeoutSeconds": 180,
+          "expectedExitCodes": [0],
+          "stdoutIncludes": ["KUNGFU_PROJECT_TOUR_COMPLETE"],
+          "fileAssertions": []
+        }
+      ]
+    }
+  ],
+  "publication": {
+    "evidencePath": "docs/qualification/evidence/auditable-demo",
+    "readmePath": "README.md",
+    "marker": "kungfu:auditable-demo"
+  },
+  "authority": {
+    "grants": [],
+    "nonAuthorities": [
+      "first-party-identity",
+      "system-identity",
+      "kfd-compliance",
+      "product-system-metadata",
+      "package-metadata",
+      "registry-history",
+      "scan-output",
+      "standalone-generation"
+    ]
+  }
+}

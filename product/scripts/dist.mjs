@@ -1114,6 +1114,25 @@ function writeCliLauncher(stageRoot, layout) {
   return layout.launcherName;
 }
 
+export function writeAuditableDemoBinaryMetadata(
+  stageRoot,
+  layout,
+  platform = platformId(),
+) {
+  const binary = path.join(stageRoot, layout.launcherName);
+  const metadata = {
+    contract: 'kungfu.declarative-demo-binary/v1',
+    platformId: platform,
+    sha256: sha256File(binary),
+    runtimeDependencies: [],
+  };
+  fs.writeFileSync(
+    path.join(stageRoot, 'auditable-demo-binary.json'),
+    `${JSON.stringify(metadata, null, 2)}\n`,
+  );
+  return metadata;
+}
+
 function writeCliManifest(stageRoot, archiveName, layout) {
   const surfaceCatalog = readJson(CLI_SURFACE_CATALOG);
   const update = fs.existsSync(RELEASE_CHANNEL_TRUST)
@@ -2257,6 +2276,7 @@ function buildCliProduct(esbuildRuntime) {
         'utf8',
       );
       writeCliLauncher(stageRoot, layout);
+      writeAuditableDemoBinaryMetadata(stageRoot, layout);
       writeCliManifest(stageRoot, archiveName, layout);
 
       if (isWin) {

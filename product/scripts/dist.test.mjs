@@ -27,6 +27,7 @@ import {
   runInstalledTuiBootstrapSmoke,
   stageXinfaContract,
   verifyProductObservabilityEvents,
+  writeAuditableDemoBinaryMetadata,
 } from './dist.mjs';
 import {
   productReleaseChannelConfig,
@@ -243,6 +244,26 @@ test('CLI product archive name uses the Kungfu Episodes product prefix', () => {
   assert.equal(
     cliArchiveBase('windows-x64'),
     'kungfu-episodes-cli-windows-x64',
+  );
+});
+
+test('CLI product emits exact standalone demo metadata beside the launcher', (t) => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'kungfu-demo-binary-'));
+  t.after(() => fs.rmSync(root, { recursive: true, force: true }));
+  const layout = cliArchiveLayout('linux');
+  fs.writeFileSync(path.join(root, layout.launcherName), '#!/bin/sh\nexit 0\n');
+  const metadata = writeAuditableDemoBinaryMetadata(root, layout, 'linux-x64');
+  assert.deepEqual(metadata, {
+    contract: 'kungfu.declarative-demo-binary/v1',
+    platformId: 'linux-x64',
+    sha256: `sha256:${crypto.createHash('sha256').update('#!/bin/sh\nexit 0\n').digest('hex')}`,
+    runtimeDependencies: [],
+  });
+  assert.deepEqual(
+    JSON.parse(
+      fs.readFileSync(path.join(root, 'auditable-demo-binary.json'), 'utf8'),
+    ),
+    metadata,
   );
 });
 

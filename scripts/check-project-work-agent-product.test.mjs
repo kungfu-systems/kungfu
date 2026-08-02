@@ -112,8 +112,18 @@ test('README first-use paths converge on Agent-first onboarding', () => {
   );
   const agentBrief = readme.indexOf('Run `kungfu agent brief`');
   const runAgent = readme.indexOf('kungfu run codex');
-  const demoStart = readme.indexOf('<!-- kungfu:auditable-demo:start -->');
-  const demoEnd = readme.indexOf('<!-- kungfu:auditable-demo:end -->');
+  const demoStart = readme.indexOf(
+    '<!-- kungfu:auditable-demo:agent-work-lab-autoplay:start -->',
+  );
+  const autoplayEnd = readme.indexOf(
+    '<!-- kungfu:auditable-demo:agent-work-lab-autoplay:end -->',
+  );
+  const tourStart = readme.indexOf(
+    '<!-- kungfu:auditable-demo:project-tour-08x:start -->',
+  );
+  const demoEnd = readme.indexOf(
+    '<!-- kungfu:auditable-demo:project-tour-08x:end -->',
+  );
   const tuiEntry = readme.indexOf('\nkungfu\n', demoEnd);
   const firstUseEnd = readme.indexOf('\n## What Kungfu preserves', demoEnd);
 
@@ -130,7 +140,9 @@ test('README first-use paths converge on Agent-first onboarding', () => {
     demoStart > runAgent,
     'Agent Work Lab demo must follow run <agent>',
   );
-  assert.ok(demoEnd > demoStart, 'managed Agent Work Lab block is incomplete');
+  assert.ok(autoplayEnd > demoStart, 'managed autoplay block is incomplete');
+  assert.ok(tourStart > autoplayEnd, 'managed Project Tour block is missing');
+  assert.ok(demoEnd > tourStart, 'managed Project Tour block is incomplete');
   assert.ok(tuiEntry > demoEnd, 'bare TUI entry must follow the Lab demo');
   assert.match(
     readme.slice(demoEnd, firstUseEnd),
