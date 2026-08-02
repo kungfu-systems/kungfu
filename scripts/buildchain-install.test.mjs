@@ -41,9 +41,14 @@ test('source install provisions only build-free tools from wheels', () => {
   assert.match(text, /psutil==6\.1\.1/);
   assert.match(text, /tabulate==0\.9\.0/);
   assert.doesNotMatch(text, /cargo|cmake|conan|ninja|dist|verify|build\b/i);
+  const sourceToolsBin = path.join(
+    '/tmp',
+    'kungfu-source-acceptance-tools',
+    'bin',
+  );
   assert.deepEqual(sourceToolBindings(plan), {
-    pathEntry: '/tmp/kungfu-source-acceptance-tools/bin',
-    pytest: '/tmp/kungfu-source-acceptance-tools/bin/pytest',
+    pathEntry: sourceToolsBin,
+    pytest: path.join(sourceToolsBin, 'pytest'),
   });
 });
 
