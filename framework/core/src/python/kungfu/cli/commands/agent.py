@@ -224,23 +224,58 @@ def first_value(ctx):
     name="contract", help=api_help("kungfu.agent.first-value.contract")
 )
 @click.option("--json", "as_json", is_flag=True, help="machine-readable output")
+@click.option("--compact", is_flag=True, help="bounded first-entry projection")
 @kfd3_api("kungfu.agent.first-value.contract")
 @agent_command_context
-def first_value_contract(ctx, as_json):
+def first_value_contract(ctx, as_json, compact):
     try:
-        payload = first_value_protocol.contract_view()
+        payload = (
+            first_value_protocol.compact_contract_view()
+            if compact
+            else first_value_protocol.contract_view()
+        )
     except (OSError, ValueError) as error:
         raise click.ClickException(str(error)) from error
     if as_json:
         _json(payload)
         return
+    if compact:
+        click.echo(payload["contract"]["promptFamily"]["currentRoot"])
+        click.echo(f"contract: {payload['productIdentity']['contractRoot']}")
+        return
     click.echo(payload["contract"]["prompt"]["text"])
     click.echo(f"contract: {payload['productIdentity']['contractRoot']}")
 
 
+@first_value.command(name="start", help=api_help("kungfu.agent.first-value.start"))
+@click.option("--json", "as_json", is_flag=True, help="machine-readable output")
+@kfd3_api("kungfu.agent.first-value.start")
+@agent_command_context
+def first_value_start(ctx, as_json):
+    try:
+        payload = first_value_protocol.create_start_receipt(documentation_pack.verify())
+    except (
+        FileNotFoundError,
+        OSError,
+        ValueError,
+        first_value_protocol.SubprocessError,
+    ) as error:
+        raise click.ClickException(str(error)) from error
+    if as_json:
+        _json(payload)
+        return
+    click.echo(f"verified first value: {payload['receiptRoot']}")
+
+
 @first_value.command(name="receipt", help=api_help("kungfu.agent.first-value.receipt"))
 @click.option("--intent", "intent_id", required=True, help="one declared intent id")
-@click.option("--discovery", required=True, help="one declared safe discovery command")
+@click.option(
+    "--discovery",
+    "--discovery-command",
+    "discovery",
+    required=True,
+    help="one declared safe discovery command",
+)
 @click.option("--question-count", required=True, type=click.IntRange(0, 1))
 @click.option("--outcome", required=True, help="bounded human outcome summary")
 @click.option("--json", "as_json", is_flag=True, help="machine-readable output")
