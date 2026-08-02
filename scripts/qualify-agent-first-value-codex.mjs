@@ -153,6 +153,7 @@ export function codexResultSchema() {
       nonClaims: {
         type: 'array',
         minItems: 4,
+        maxItems: 4,
         items: {
           type: 'string',
           enum: REQUIRED_NON_CLAIMS,
@@ -588,6 +589,10 @@ export function normalizedExperienceFromResult(result, receipt) {
       `response omitted non-claim ${nonClaim}`,
     );
   }
+  assert(
+    result.nonClaims.length === REQUIRED_NON_CLAIMS.length,
+    'response emitted duplicate or extra non-claims',
+  );
   return {
     intentId: result.intentId,
     personalizationBasis: [...result.personalization.basis].sort(),

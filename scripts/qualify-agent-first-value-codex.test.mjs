@@ -54,6 +54,8 @@ test('Codex result schema constrains the user response without copying receipts'
     'read-only',
     'preview-safe',
   ]);
+  assert.equal(schema.properties.nonClaims.minItems, 4);
+  assert.equal(schema.properties.nonClaims.maxItems, 4);
 });
 
 const root = (character) => `sha256:${character.repeat(64)}`;
@@ -214,6 +216,12 @@ test('normalizes experience only when the evidence is user-visible and safe', ()
     normalizedExperienceFromResult(result, value).intentId,
     'onboarding',
   );
+  result.nonClaims.push(result.nonClaims[0]);
+  assert.throws(
+    () => normalizedExperienceFromResult(result, value),
+    /duplicate or extra non-claims/u,
+  );
+  result.nonClaims.pop();
   const validReceiptCitation = result.receiptCitation;
   result.receiptCitation = `本次 receipt 是 ${root('f')}，你可以独立复验。`;
   assert.throws(
