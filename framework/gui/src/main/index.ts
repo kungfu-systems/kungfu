@@ -443,6 +443,8 @@ function readDesktopOnboardingState(): KungfuOnboardingState {
   }
 }
 
+const DESKTOP_AGENT_BRIEF_ARGS = ['agent', 'brief'] as const;
+
 function desktopAgentFirstEntry() {
   const command = kungfuAgentBriefCommand(
     kungfuCliInvocation.bin,
@@ -451,6 +453,7 @@ function desktopAgentFirstEntry() {
   return {
     state: readDesktopOnboardingState(),
     command,
+    commandArgs: DESKTOP_AGENT_BRIEF_ARGS,
     prompt: kungfuAgentFirstPrompt(command),
     cliInstalled: isKungfuCliInstalled(),
     cliPath: path.isAbsolute(kungfuCliInvocation.bin)
