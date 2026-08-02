@@ -76,7 +76,7 @@ class AgentRouteCompletionObserver:
 
     def __init__(
         self,
-        observer: Callable[[Mapping[str, Any]], Mapping[str, Any]],
+        observer: Callable[[Mapping[str, Any] | None], Mapping[str, Any]],
         *,
         config_home: str | None = None,
         runtime_home: str | None = None,
@@ -87,8 +87,8 @@ class AgentRouteCompletionObserver:
         self._attempted = False
         self.error: Exception | None = None
 
-    def __call__(self, work_ref: Mapping[str, Any]) -> Mapping[str, Any]:
-        if not self._attempted:
+    def __call__(self, work_ref: Mapping[str, Any] | None) -> Mapping[str, Any]:
+        if isinstance(work_ref, Mapping) and not self._attempted:
             self._attempted = True
             try:
                 complete_agent_route(
