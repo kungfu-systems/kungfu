@@ -15,6 +15,7 @@ const QUALIFICATION_SCHEMA =
   'kungfu.agent-first-value-local-codex-qualification/v2';
 const REQUIRED_TRIALS = 10;
 const MINIMUM_CANONICAL_TRIALS = 5;
+const QUALIFICATION_REASONING_EFFORT = 'medium';
 const REQUIRED_NON_CLAIMS = [
   'claude-qualified',
   'ci-hosted-codex-qualified',
@@ -681,6 +682,10 @@ export function verifyAgentFirstValueQualification(report) {
     'Codex was not ephemeral',
   );
   assert(
+    report.provider?.reasoningEffort === QUALIFICATION_REASONING_EFFORT,
+    'Codex qualification reasoning effort mismatch',
+  );
+  assert(
     report.platform?.system === 'darwin',
     'qualification is not macOS-local',
   );
@@ -911,6 +916,15 @@ function run(argv) {
       'candidate canonical prompt threshold drifted',
     );
     assert(
+      contract.contract?.qualification?.localCodexProfile?.reasoningEffort ===
+        QUALIFICATION_REASONING_EFFORT &&
+        contract.contract?.qualification?.localCodexProfile?.executionMode ===
+          'codex-exec-ephemeral' &&
+        contract.contract?.qualification?.localCodexProfile?.userConfig ===
+          'ignored',
+      'candidate local Codex profile drifted',
+    );
+    assert(
       contract.productIdentity?.sourceRevision === options['source-revision'],
       'candidate intrinsic source revision does not match --source-revision',
     );
@@ -965,6 +979,8 @@ function run(argv) {
               'exec',
               '--ephemeral',
               '--ignore-user-config',
+              '--config',
+              `model_reasoning_effort="${QUALIFICATION_REASONING_EFFORT}"`,
               '--sandbox',
               'read-only',
               '--skip-git-repo-check',
@@ -1068,6 +1084,7 @@ function run(argv) {
         surface: 'codex-cli',
         version: codexVersion,
         executionMode: 'codex-exec-ephemeral',
+        reasoningEffort: QUALIFICATION_REASONING_EFFORT,
       },
       platform: { system: process.platform, arch: process.arch },
       candidate: {

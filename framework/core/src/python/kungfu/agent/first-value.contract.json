@@ -80,6 +80,11 @@
   "qualification": {
     "ci": "deterministic-contract-and-receipt-only",
     "local": "provider-and-candidate-specific",
+    "localCodexProfile": {
+      "executionMode": "codex-exec-ephemeral",
+      "reasoningEffort": "medium",
+      "userConfig": "ignored"
+    },
     "requiredLocalCodexTrials": 10,
     "minimumCanonicalPromptTrials": 5,
     "requiredVariantCoverage": "all-declared-variants",

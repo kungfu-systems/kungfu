@@ -269,6 +269,7 @@ function qualification() {
       surface: 'codex-cli',
       version: 'codex-cli fixture',
       executionMode: 'codex-exec-ephemeral',
+      reasoningEffort: 'medium',
     },
     platform: { system: 'darwin', arch: 'arm64' },
     candidate: {
@@ -343,6 +344,19 @@ test('deterministic CI verifier accepts ten independent rooted experiences', () 
     'verified',
   );
   assert.equal(verifyAgentFirstValueQualification(report).verified, true);
+});
+
+test('deterministic CI verifier rejects an unbounded Codex reasoning profile', () => {
+  const report = qualification();
+  report.provider.reasoningEffort = 'high';
+  report.qualificationRoot = semanticRoot({
+    ...report,
+    qualificationRoot: undefined,
+  });
+  assert.throws(
+    () => verifyAgentFirstValueQualification(report),
+    /reasoning effort mismatch/u,
+  );
 });
 
 test('deterministic CI verifier rejects one failed or reused trial', () => {
