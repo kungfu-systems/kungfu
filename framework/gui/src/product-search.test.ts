@@ -3,6 +3,10 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import test from 'node:test';
+import {
+  PRODUCT_HELP_LINKS,
+  productHelpMenuItems,
+} from './main/product-help-menu';
 
 const source = readFileSync(
   new URL('./renderer/src/main.tsx', import.meta.url),
@@ -38,6 +42,47 @@ test('the title-bar search shares Help, Command, Work, and view sources', () => 
   assert.match(source, /Search Help, Commands, Work/);
   assert.doesNotMatch(source, /Search views/);
   assert.doesNotMatch(source, /<datalist/);
+});
+
+test('the title-bar product menu reserves permanent chrome for daily work', () => {
+  assert.doesNotMatch(
+    source,
+    /id: 'onboarding',[\s\S]*title: 'Getting Started'/,
+  );
+  assert.doesNotMatch(source, /onOpenOnboarding/);
+  assert.match(source, /id: 'all-work'/);
+  assert.match(source, /id: 'projects'/);
+  assert.match(source, /id: 'agent-work-lab'/);
+});
+
+test('the Help menu keeps onboarding available without permanent shell chrome', () => {
+  let onboardingOpened = 0;
+  const externalUrls: string[] = [];
+  const items = productHelpMenuItems({
+    openOnboarding: () => {
+      onboardingOpened += 1;
+    },
+    openExternal: (url) => externalUrls.push(url),
+  });
+
+  assert.deepEqual(
+    items.map((item) => item.label ?? item.type),
+    [
+      'Onboarding',
+      'separator',
+      'GitHub Repository',
+      'Kungfu Website',
+      'Developer Platform',
+    ],
+  );
+
+  items[0]?.click?.();
+  for (const item of items.slice(2)) item.click?.();
+  assert.equal(onboardingOpened, 1);
+  assert.deepEqual(
+    externalUrls,
+    PRODUCT_HELP_LINKS.map((entry) => entry.url),
+  );
 });
 
 test('Cmd or Ctrl K focuses the same search plane without executing CLI results', () => {

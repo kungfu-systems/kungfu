@@ -87,6 +87,7 @@ import {
   isKungfuCliInstalled,
   uninstallKungfuCliFromPath,
 } from './installCli';
+import { productHelpMenuItems } from './product-help-menu';
 import {
   PRODUCT_NAME,
   productAboutPanelOptions,
@@ -1151,11 +1152,11 @@ function buildMenu() {
         });
       },
     },
-    {
-      label: 'Getting Started with Your Agent',
-      click: () => navigateShell({ target: 'onboarding' }),
-    },
   ];
+  const helpSubmenu = productHelpMenuItems({
+    openOnboarding: () => navigateShell({ target: 'onboarding' }),
+    openExternal: (url) => void shell.openExternal(url),
+  });
   const planDeps: KfxPlanDeps = {
     fs: {
       existsSync,
@@ -1223,6 +1224,7 @@ function buildMenu() {
       ],
     },
     { role: 'windowMenu' },
+    { role: 'help', submenu: helpSubmenu },
   ];
 
   Menu.setApplicationMenu(Menu.buildFromTemplate(template));
