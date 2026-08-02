@@ -49,6 +49,14 @@ def intent_map():
     return _read_json("intent-map.json")
 
 
+def first_value_contract():
+    return _read_json("first-value.contract.json")
+
+
+def first_value_receipt_schema():
+    return _read_json("first-value-receipt.schema.json")
+
+
 def cli_surface_catalog():
     return _read_json("cli_surface.catalog.json")
 

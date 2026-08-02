@@ -1,0 +1,53 @@
+{
+  "schema": "kungfu.agent-first-value-contract/v1",
+  "id": "kungfu.agent.first-value",
+  "version": 1,
+  "maturity": "stable",
+  "prompt": {
+    "text": "请运行 kungfu agent brief，结合你对我的了解，用最适合我的方式解释并带我上手 Kungfu。",
+    "root": "sha256:423f13042ff32413653c8589a4fa768579ed6fbf90253e33952e60e86fa9338c",
+    "encoding": "utf-8"
+  },
+  "result": {
+    "maximumQuestionCount": 1,
+    "requiredIntentCount": 1,
+    "minimumSafeDiscoveryCount": 1,
+    "requiredOutcomeCount": 1,
+    "intentAuthority": "intent-map.json",
+    "exactPromptDefault": {
+      "intentId": "onboarding",
+      "questionCount": 0,
+      "discoveryCommand": "kungfu agent status --target codex --scope project --json",
+      "outcomeKind": "verified-discovery"
+    },
+    "discoveryPolicy": {
+      "allowDeclaredIntentCommandsOnly": true,
+      "allowTemplateSubstitution": true,
+      "forbiddenArguments": ["--execute"],
+      "execution": "direct-argv-no-shell",
+      "maximumOutputBytes": 4194304,
+      "timeoutSeconds": 30
+    }
+  },
+  "evidence": {
+    "receiptSchema": "first-value-receipt.schema.json",
+    "rootAlgorithm": "sha256-sorted-json-v1",
+    "retainedContent": "roots-and-bounded-facts-only",
+    "rawTranscriptRetention": false,
+    "independentVerification": "the product reruns the declared safe discovery without a shell"
+  },
+  "qualification": {
+    "ci": "deterministic-contract-and-receipt-only",
+    "local": "provider-and-candidate-specific",
+    "requiredLocalCodexTrials": 3,
+    "aggregatePolicy": "all-trials-must-pass",
+    "nonClaims": [
+      "claude-qualified",
+      "ci-hosted-codex-qualified",
+      "other-platforms-qualified",
+      "public-release-qualified",
+      "model-output-alone-is-proof",
+      "brief-or-skill-grants-write-authority"
+    ]
+  }
+}

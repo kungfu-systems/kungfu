@@ -35,7 +35,7 @@ import kungfu  # noqa: E402
 kungfu._build_info = {"version": "test"}
 
 from kungfu import agent as agent_pack  # noqa: E402
-from kungfu.agent import documentation, resources  # noqa: E402
+from kungfu.agent import documentation, first_value, resources  # noqa: E402
 from kungfu.cli.commands import agent as agent_command  # noqa: E402
 
 
@@ -142,3 +142,113 @@ def test_task_context_fails_closed_on_required_omission(tmp_path, monkeypatch):
 
     with pytest.raises(ValueError, match="incomplete"):
         documentation.task_context("task", "guide", 64, "route", tmp_path)
+
+
+def test_first_value_contract_binds_exact_prompt_and_packaged_roots():
+    view = first_value.contract_view()
+
+    assert view["contract"]["prompt"] == {
+        "text": "请运行 kungfu agent brief，结合你对我的了解，用最适合我的方式解释并带我上手 Kungfu。",
+        "root": "sha256:423f13042ff32413653c8589a4fa768579ed6fbf90253e33952e60e86fa9338c",
+        "encoding": "utf-8",
+    }
+    assert view["contract"]["result"]["maximumQuestionCount"] == 1
+    assert view["contract"]["result"]["exactPromptDefault"] == {
+        "intentId": "onboarding",
+        "questionCount": 0,
+        "discoveryCommand": "kungfu agent status --target codex --scope project --json",
+        "outcomeKind": "verified-discovery",
+    }
+    assert view["contract"]["qualification"]["requiredLocalCodexTrials"] == 3
+    assert view["productIdentity"]["candidateRoot"].startswith("sha256:")
+    assert view["receiptSchema"]["properties"]["verdict"] == {"const": "verified"}
+
+
+def test_first_value_source_revision_prefers_intrinsic_build_info(monkeypatch):
+    revision = "a" * 40
+    monkeypatch.setattr(
+        kungfu, "_build_info", {"version": "test", "git": {"revision": revision}}
+    )
+    monkeypatch.delenv("KUNGFU_FIRST_VALUE_SOURCE_REVISION", raising=False)
+
+    assert first_value.contract_view()["productIdentity"]["sourceRevision"] == revision
+
+
+def test_first_value_source_revision_rejects_external_mismatch(monkeypatch):
+    monkeypatch.setattr(
+        kungfu, "_build_info", {"version": "test", "git": {"revision": "a" * 40}}
+    )
+    monkeypatch.setenv("KUNGFU_FIRST_VALUE_SOURCE_REVISION", "b" * 40)
+
+    with pytest.raises(ValueError, match="does not match kungfu build-info"):
+        first_value.contract_view()
+
+
+def test_first_value_receipt_reruns_declared_discovery_and_verifies():
+    calls = []
+
+    def runner(argv, timeout, maximum):
+        calls.append((argv, timeout, maximum))
+        return 0, b'{"schema":"kungfu.agent-capabilities/v1"}\n', b""
+
+    receipt = first_value.create_receipt(
+        intent_id="onboarding",
+        discovery_command="kungfu agent capabilities --json",
+        question_count=0,
+        outcome_summary="Verified the installed Agent capability envelope.",
+        runner=runner,
+        observed_at="2026-08-02T00:00:00Z",
+        attempt_id="fixture-codex-1",
+    )
+
+    assert calls == [
+        (
+            ["kungfu", "agent", "capabilities", "--json"],
+            30,
+            4194304,
+        )
+    ]
+    assert receipt["verdict"] == "verified"
+    assert receipt["questionCount"] == 0
+    assert receipt["intentId"] == "onboarding"
+    assert receipt["discovery"]["safetyClass"] == "read-only"
+    assert receipt["discovery"]["outputBytes"] > 0
+    assert first_value.verify_receipt(receipt)["verified"] is True
+
+
+@pytest.mark.parametrize(
+    "intent_id,command,question_count,error",
+    [
+        ("missing", "kungfu agent capabilities --json", 0, "not uniquely declared"),
+        ("onboarding", "kungfu agent capabilities --execute", 0, "--execute"),
+        ("onboarding", "sh -c whoami", 0, "current kungfu CLI"),
+        ("onboarding", "kungfu agent capabilities --json", 2, "must be 0..1"),
+    ],
+)
+def test_first_value_receipt_rejects_unsafe_or_unbounded_results(
+    intent_id, command, question_count, error
+):
+    with pytest.raises(ValueError, match=error):
+        first_value.create_receipt(
+            intent_id=intent_id,
+            discovery_command=command,
+            question_count=question_count,
+            outcome_summary="bounded",
+            runner=lambda argv, timeout, maximum: (0, b"ok\n", b""),
+        )
+
+
+def test_first_value_receipt_fails_closed_on_tampering():
+    receipt = first_value.create_receipt(
+        intent_id="onboarding",
+        discovery_command="kungfu agent capabilities --json",
+        question_count=1,
+        outcome_summary="Verified the installed Agent capability envelope.",
+        runner=lambda argv, timeout, maximum: (0, b"ok\n", b""),
+        observed_at="2026-08-02T00:00:00Z",
+        attempt_id="fixture-codex-2",
+    )
+    receipt["questionCount"] = 0
+
+    with pytest.raises(ValueError, match="receipt root mismatch"):
+        first_value.verify_receipt(receipt)

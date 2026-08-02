@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // @ts-check
 
+import crypto from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -22,6 +23,8 @@ const REQUIRED = [
   'index.json',
   'brief.md',
   'intent-map.json',
+  'first-value.contract.json',
+  'first-value-receipt.schema.json',
   'xinfa-context.md',
   'primitive-management.md',
   'mode-selection.md',
@@ -69,6 +72,8 @@ let cliSurface = null;
 let apiRegistry = null;
 let apiSchema = null;
 let intentMap = null;
+let firstValueContract = null;
+let firstValueReceiptSchema = null;
 try {
   index = readJson('index.json');
 } catch (e) {
@@ -105,6 +110,20 @@ try {
 } catch (e) {
   fail(
     `intent-map.json is invalid JSON: ${e instanceof Error ? e.message : e}`,
+  );
+}
+try {
+  firstValueContract = readJson('first-value.contract.json');
+} catch (e) {
+  fail(
+    `first-value.contract.json is invalid JSON: ${e instanceof Error ? e.message : e}`,
+  );
+}
+try {
+  firstValueReceiptSchema = readJson('first-value-receipt.schema.json');
+} catch (e) {
+  fail(
+    `first-value-receipt.schema.json is invalid JSON: ${e instanceof Error ? e.message : e}`,
   );
 }
 
@@ -146,6 +165,9 @@ if (index) {
 }
 
 const brief = exists('brief.md') ? read('brief.md') : '';
+const codexSkill = exists('skills/codex/SKILL.md')
+  ? read('skills/codex/SKILL.md')
+  : '';
 const xinfaContext = exists('xinfa-context.md') ? read('xinfa-context.md') : '';
 const primitiveManagement = exists('primitive-management.md')
   ? read('primitive-management.md')
@@ -181,6 +203,59 @@ if (intentMap) {
         fail(`intent-map.json intent ${row.id} missing ${field}`);
   }
 }
+if (firstValueContract) {
+  const prompt = firstValueContract.prompt || {};
+  const promptRoot = `sha256:${crypto
+    .createHash('sha256')
+    .update(String(prompt.text || ''), 'utf8')
+    .digest('hex')}`;
+  if (firstValueContract.schema !== 'kungfu.agent-first-value-contract/v1')
+    fail('first-value contract has an unknown schema');
+  if (prompt.root !== promptRoot)
+    fail('first-value contract prompt root does not bind the exact UTF-8 text');
+  if (firstValueContract.result?.maximumQuestionCount !== 1)
+    fail('first-value contract does not enforce at most one question');
+  if (firstValueContract.result?.requiredIntentCount !== 1)
+    fail('first-value contract does not enforce exactly one intent');
+  if (firstValueContract.result?.minimumSafeDiscoveryCount !== 1)
+    fail('first-value contract does not require one safe discovery');
+  if (firstValueContract.result?.requiredOutcomeCount !== 1)
+    fail('first-value contract does not require one minimal outcome');
+  const exactDefault = firstValueContract.result?.exactPromptDefault || {};
+  if (
+    exactDefault.intentId !== 'onboarding' ||
+    exactDefault.questionCount !== 0 ||
+    exactDefault.discoveryCommand !==
+      'kungfu agent status --target codex --scope project --json'
+  )
+    fail('first-value contract exact-prompt default is not deterministic');
+  if (firstValueContract.qualification?.requiredLocalCodexTrials !== 3)
+    fail('first-value contract does not require three local Codex trials');
+  if (
+    firstValueContract.qualification?.ci !==
+    'deterministic-contract-and-receipt-only'
+  )
+    fail('first-value contract incorrectly requires a provider in CI');
+  for (const nonClaim of [
+    'claude-qualified',
+    'ci-hosted-codex-qualified',
+    'public-release-qualified',
+    'model-output-alone-is-proof',
+  ])
+    if (!(firstValueContract.qualification?.nonClaims || []).includes(nonClaim))
+      fail(`first-value contract omitted non-claim ${nonClaim}`);
+}
+if (firstValueReceiptSchema) {
+  if (
+    firstValueReceiptSchema.properties?.schema?.const !==
+    'kungfu.agent-first-value-receipt/v1'
+  )
+    fail('first-value receipt schema has an unknown receipt identity');
+  if (firstValueReceiptSchema.properties?.questionCount?.maximum !== 1)
+    fail('first-value receipt schema permits more than one question');
+  if (firstValueReceiptSchema.properties?.diagnostics?.maxItems !== 0)
+    fail('a verified first-value receipt can retain diagnostics');
+}
 for (const [rel, text] of [
   ['brief.md', brief],
   ['xinfa-context.md', xinfaContext],
@@ -192,6 +267,18 @@ for (const [rel, text] of [
   ]) {
     if (!text.includes(phrase))
       fail(`${rel} missing Xinfa discovery phrase: ${phrase}`);
+  }
+}
+for (const [rel, text] of [
+  ['brief.md', brief],
+  ['skills/codex/SKILL.md', codexSkill],
+]) {
+  for (const phrase of [
+    'kungfu agent first-value contract --json',
+    'kungfu agent first-value receipt',
+  ]) {
+    if (!text.includes(phrase))
+      fail(`${rel} missing deterministic first-value phrase: ${phrase}`);
   }
 }
 for (const phrase of [

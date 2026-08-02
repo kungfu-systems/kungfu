@@ -3,6 +3,7 @@
 import base64
 import json
 import os
+import subprocess
 import sys
 from pathlib import Path
 from typing import Any
@@ -15,6 +16,7 @@ from kungfu import contract as contract_runtime
 from kungfu import durability as durability_contract
 from kungfu.agent import agent_hub
 from kungfu.agent import agent_hub_qualification
+from kungfu.agent import first_value as first_value_protocol
 from kungfu.agent import runtime_profiles
 from kungfu.agent import run_agent
 from kungfu.agent import session_surface
@@ -296,6 +298,78 @@ def intent_map(ctx, as_json):
         return
     for row in payload["intents"]:
         click.echo(f"{row['id']} [{row['maturity']}]: {row['summary']}")
+
+
+@agent.group(
+    name="first-value",
+    help=api_help("kungfu.agent.first-value"),
+)
+@kfd3_api("kungfu.agent.first-value")
+@agent_command_context
+def first_value(ctx):
+    pass
+
+
+@first_value.command(
+    name="contract", help=api_help("kungfu.agent.first-value.contract")
+)
+@click.option("--json", "as_json", is_flag=True, help="machine-readable output")
+@kfd3_api("kungfu.agent.first-value.contract")
+@agent_command_context
+def first_value_contract(ctx, as_json):
+    try:
+        payload = first_value_protocol.contract_view()
+    except (OSError, ValueError) as error:
+        raise click.ClickException(str(error)) from error
+    if as_json:
+        _json(payload)
+        return
+    click.echo(payload["contract"]["prompt"]["text"])
+    click.echo(f"contract: {payload['productIdentity']['contractRoot']}")
+
+
+@first_value.command(name="receipt", help=api_help("kungfu.agent.first-value.receipt"))
+@click.option("--intent", "intent_id", required=True, help="one declared intent id")
+@click.option("--discovery", required=True, help="one declared safe discovery command")
+@click.option("--question-count", required=True, type=click.IntRange(0, 1))
+@click.option("--outcome", required=True, help="bounded human outcome summary")
+@click.option("--json", "as_json", is_flag=True, help="machine-readable output")
+@kfd3_api("kungfu.agent.first-value.receipt")
+@agent_command_context
+def first_value_receipt(ctx, intent_id, discovery, question_count, outcome, as_json):
+    try:
+        payload = first_value_protocol.create_receipt(
+            intent_id=intent_id,
+            discovery_command=discovery,
+            question_count=question_count,
+            outcome_summary=outcome,
+        )
+    except (OSError, ValueError, subprocess.SubprocessError) as error:
+        raise click.ClickException(str(error)) from error
+    if as_json:
+        _json(payload)
+        return
+    click.echo(f"verified first value: {payload['receiptRoot']}")
+
+
+@first_value.command(name="verify", help=api_help("kungfu.agent.first-value.verify"))
+@click.argument(
+    "receipt_file", type=click.Path(exists=True, dir_okay=False, path_type=Path)
+)
+@click.option("--json", "as_json", is_flag=True, help="machine-readable output")
+@kfd3_api("kungfu.agent.first-value.verify")
+@agent_command_context
+def first_value_verify(ctx, receipt_file, as_json):
+    try:
+        payload = first_value_protocol.verify_receipt(
+            first_value_protocol.read_receipt(receipt_file)
+        )
+    except (OSError, ValueError, json.JSONDecodeError) as error:
+        raise click.ClickException(str(error)) from error
+    if as_json:
+        _json(payload)
+        return
+    click.echo(f"verified first-value receipt: {payload['receiptRoot']}")
 
 
 @agent.command(help=api_help("kungfu.agent.docs"))
