@@ -150,6 +150,13 @@
       ]
     },
     {
+      "owner": "core/python-distribution-update-policy",
+      "paths": [
+        "framework/core/src/python/kungfu/distribution_update_planning.py",
+        "framework/core/src/python/kungfu/distribution_update_policy.py"
+      ]
+    },
+    {
       "owner": "shifu/python-structure-entry",
       "paths": [
         "scripts/check-code-complexity.mjs",

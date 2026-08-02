@@ -6,14 +6,14 @@
   "measurement": {
     "aggregates": {
       "kungfu-cli": 20249,
-      "kungfu-flat-root": 35711,
+      "kungfu-flat-root": 35831,
       "kungfu-runtime-family": 6242
     },
     "counts": {
-      "productionFiles": 237,
-      "productionPhysicalLines": 84013,
-      "testFiles": 98,
-      "testPhysicalLines": 45887
+      "productionFiles": 239,
+      "productionPhysicalLines": 84133,
+      "testFiles": 99,
+      "testPhysicalLines": 45932
     },
     "hiddenProductionFiles": [],
     "modulesOver1000": [
@@ -63,7 +63,7 @@
       },
       {
         "path": "framework/core/src/python/kungfu/distribution_update.py",
-        "physicalLines": 3107
+        "physicalLines": 1889
       },
       {
         "path": "framework/core/src/python/kungfu/exit_bundle.py",
@@ -107,10 +107,6 @@
       }
     ],
     "modulesOver2000": [
-      {
-        "path": "framework/core/src/python/kungfu/distribution_update.py",
-        "physicalLines": 3107
-      },
       {
         "path": "framework/core/src/python/kungfu/profile_sdk.py",
         "physicalLines": 3135
@@ -184,10 +180,10 @@
         "responsibilities": 46
       },
       {
-        "contentRoot": "sha256:4028ee3685cf29c89b1864c8d4ee9f7f44daa898eadfe5d9357396a5c0c0a563",
+        "contentRoot": "sha256:f63e9b74d1f71546923d976aa235c2c7b2500c54f73b6e57d79e38802d795a36",
         "path": "framework/core/src/python/kungfu/distribution_update.py",
-        "physicalLines": 3107,
-        "responsibilities": 72
+        "physicalLines": 1889,
+        "responsibilities": 36
       },
       {
         "contentRoot": "sha256:5ed800177af8ff6a7b00434b3ba1f6330baf66c27901e91578d2442df9a9ee71",
@@ -354,7 +350,7 @@
       }
     ],
     "schema": "kungfu.python-structure-measurement/v1",
-    "sourceRoot": "sha256:dbc82d9e0bdbb06c685a7eb69f9ce76e9773cf646ebff76a6debe849bdda9377",
+    "sourceRoot": "sha256:6619ce2e0f0b22703af1e807832ac82029c7bf789c1b31daee02e1ca9b99e2d4",
     "sourceRoots": {
       "production": [
         "framework/core/src/python"
@@ -442,6 +438,13 @@
       ]
     },
     {
+      "owner": "core/python-distribution-update-policy",
+      "paths": [
+        "framework/core/src/python/kungfu/distribution_update_planning.py",
+        "framework/core/src/python/kungfu/distribution_update_policy.py"
+      ]
+    },
+    {
       "owner": "shifu/python-structure-entry",
       "paths": [
         "scripts/check-code-complexity.mjs",
@@ -471,9 +474,9 @@
     "kungfu.runtime_broker.NativeReadinessAuthority",
     "kungfu.runtime_service.ProcessRuntimeHost"
   ],
-  "reportRoot": "sha256:b1f388e4aefc731f781f4d06e5ba1c078354012fee0dfdc1a8f9c7f3dcb06bc9",
+  "reportRoot": "sha256:65b6a369094fa0f3efeb8c23ff1a17563553d5927ea153660050f1f9389784ec",
   "schema": "kungfu.abstraction-integrity-report/v1",
-  "sourceRoot": "sha256:dbc82d9e0bdbb06c685a7eb69f9ce76e9773cf646ebff76a6debe849bdda9377",
+  "sourceRoot": "sha256:6619ce2e0f0b22703af1e807832ac82029c7bf789c1b31daee02e1ca9b99e2d4",
   "summary": {
     "blockingIssues": 0
   },
