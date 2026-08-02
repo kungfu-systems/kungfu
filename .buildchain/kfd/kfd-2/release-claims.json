@@ -47,7 +47,7 @@
           "pointer": {
             "kind": "file",
             "path": "framework/core/src/python/kungfu/agent/first-value.contract.json",
-            "sha256": "73056d6ca4fd647deafbb5761b0fdd4e7223a169bc1df96eff3f5447a859a444"
+            "sha256": "ecf4fd6886e5e31bd1c52c430d7fb3fb3670f425ff7fb5dec44a7a8de5fa5269"
           },
           "description": "Exact first-value prompt, bounded result, local Codex qualification, and explicit non-claim contract."
         },
