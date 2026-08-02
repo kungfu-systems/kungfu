@@ -1,6 +1,5 @@
 import * as capability from '@kungfu-tech/api/capability';
 import type {
-  AgentWorkLabStartupRoute,
   KfxExperienceFlowDescriptor,
   ProductSearchDocument,
   ProductSearchResult,
@@ -77,6 +76,10 @@ import {
   unsetKungfuConfigValue,
 } from './gui-config';
 import { type KfxLoadResult, loadKfx } from './kfx-loader';
+import {
+  createLabOnboardingRoutes,
+  deferredAgentWorkStartup,
+} from './onboarding-routes';
 import {
   AgentFirstOnboardingPanel,
   type WindowChromeConfig,
@@ -829,44 +832,22 @@ function App() {
     window.process.env.KFE_INITIAL_SURFACE === 'projects';
   const initialFocusedProjectPath =
     window.process.env.KFE_FOCUSED_PROJECT_PATH || '';
-  const [startup] = React.useState<AgentWorkLabStartupRoute>(() => {
-    if (initialProjectsOpen || initialOnboardingOpen) {
-      return {
-        schema: 'kungfu.agent-work-lab.startup-route/v1',
-        state: 'diagnostic',
-        route: 'diagnostic',
-        reasonCode: initialOnboardingOpen
-          ? 'agent-first-onboarding'
-          : 'project-control-requested',
-        message: initialOnboardingOpen
-          ? 'Agent-first onboarding starts without runtime inspection.'
-          : 'Project control starts without Agent Work Lab inspection.',
-        runtimeDir: window.process.env.KF_RUNTIME_DIR || '',
-        workGraphPresent: null,
-        evidence: [],
-        writeOccurred: false,
-      };
-    }
-    try {
-      return agentWorkLab.inspectSync();
-    } catch (error) {
-      return {
-        schema: 'kungfu.agent-work-lab.startup-route/v1',
-        state: 'diagnostic',
-        route: 'diagnostic',
-        reasonCode: 'startup-inspection-failed',
-        message: error instanceof Error ? error.message : String(error),
-        runtimeDir: window.process.env.KF_RUNTIME_DIR || '',
-        workGraphPresent: null,
-        evidence: [],
-        writeOccurred: false,
-      };
-    }
-  });
+  const initialCoreWorkOpen = !initialProjectsOpen && !initialOnboardingOpen;
+  const [startup] = React.useState(() =>
+    deferredAgentWorkStartup(
+      initialOnboardingOpen
+        ? 'onboarding'
+        : initialProjectsOpen
+          ? 'projects'
+          : 'work',
+      window.process.env.KF_RUNTIME_DIR || '',
+    ),
+  );
   const startupSurface = capability.agentWorkLabStartupSurface(startup);
   const [runtime] = React.useState(() =>
     !initialProjectsOpen &&
     !initialOnboardingOpen &&
+    !initialCoreWorkOpen &&
     startupSurface === 'work-graph'
       ? bootRuntime()
       : deferredRuntime(
@@ -877,7 +858,8 @@ function App() {
   runtime.projects = projects;
   const [kfxDescriptor] = React.useState<KfxExperienceFlowDescriptor | null>(
     () => {
-      if (initialProjectsOpen || initialOnboardingOpen) return null;
+      if (initialProjectsOpen || initialOnboardingOpen || initialCoreWorkOpen)
+        return null;
       const env = window.process.env as Record<string, string | undefined>;
       return resolveKfxHostDescriptor({
         nativePlan: () => runtime.storage?.kfxRegistry('plan', {}),
@@ -913,7 +895,7 @@ function App() {
     },
   );
   const [loaded] = React.useState<KfxLoadResult>(() =>
-    initialProjectsOpen || initialOnboardingOpen
+    initialProjectsOpen || initialOnboardingOpen || initialCoreWorkOpen
       ? {
           discoveredKfxCount: 0,
           entries: [],
@@ -943,7 +925,7 @@ function App() {
     [kfxDescriptor, loaded.failures],
   );
   const [labOpen, setLabOpen] = React.useState(() =>
-    initialProjectsOpen || initialOnboardingOpen
+    initialProjectsOpen || initialOnboardingOpen || initialCoreWorkOpen
       ? false
       : shouldOpenAgentWorkLab(startupSurface, loaded.entries.length),
   );
@@ -954,9 +936,10 @@ function App() {
     !initialOnboardingOpen && initialProjectsOpen && !initialFocusedProjectPath,
   );
   const [coreWorkOpen, setCoreWorkOpen] = React.useState(
-    !initialOnboardingOpen &&
-      initialProjectsOpen &&
-      Boolean(initialFocusedProjectPath),
+    initialCoreWorkOpen ||
+      (!initialOnboardingOpen &&
+        initialProjectsOpen &&
+        Boolean(initialFocusedProjectPath)),
   );
   const retainedCoreSurfaces = useRetainedCoreSurfaces({
     projectsOpen,
@@ -1485,6 +1468,12 @@ function App() {
     },
     [dismissNotification],
   );
+  const labOnboarding = createLabOnboardingRoutes({
+    state: agentFirstEntry.state,
+    persist: persistOnboarding,
+    notify: showNotification,
+    openPath: workspaceBridge.path,
+  });
 
   const uiConfig = normalizedUiConfig(config);
 
@@ -2340,9 +2329,8 @@ function App() {
                     setCoreWorkOpen(false);
                     setProjectsOpen(true);
                   }}
-                  onOpenStarterProject={(root) =>
-                    void workspaceBridge.path(root)
-                  }
+                  onLabComplete={labOnboarding.completeLab}
+                  onOpenStarterProject={labOnboarding.openStarterProject}
                   work={
                     <ProjectWorkControlView projects={projects} shell={shell} />
                   }

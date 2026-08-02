@@ -105,6 +105,39 @@ test('Project, Work, and Agent are the complete first-layer object model', () =>
   assertRequiredCopy(contract.surfaces.gui.requiredCopy);
 });
 
+test('README first-use paths converge on Agent-first onboarding', () => {
+  const readme = fs.readFileSync(path.join(ROOT, 'README.md'), 'utf8');
+  const pathGuide = readme.indexOf(
+    'docs/guides/installing-cli.md#make-kungfu-available-in-path',
+  );
+  const agentBrief = readme.indexOf('Run `kungfu agent brief`');
+  const runAgent = readme.indexOf('kungfu run codex');
+  const demoStart = readme.indexOf('<!-- kungfu:auditable-demo:start -->');
+  const demoEnd = readme.indexOf('<!-- kungfu:auditable-demo:end -->');
+  const tuiEntry = readme.indexOf('\nkungfu\n', demoEnd);
+  const firstUseEnd = readme.indexOf('\n## What Kungfu preserves', demoEnd);
+
+  assert.ok(
+    pathGuide > 0,
+    'README must protect app-only users with PATH setup',
+  );
+  assert.ok(agentBrief > pathGuide, 'Agent brief must follow PATH setup');
+  assert.ok(
+    runAgent > agentBrief,
+    'run <agent> must follow the one-line brief',
+  );
+  assert.ok(
+    demoStart > runAgent,
+    'Agent Work Lab demo must follow run <agent>',
+  );
+  assert.ok(demoEnd > demoStart, 'managed Agent Work Lab block is incomplete');
+  assert.ok(tuiEntry > demoEnd, 'bare TUI entry must follow the Lab demo');
+  assert.match(
+    readme.slice(demoEnd, firstUseEnd),
+    /Getting Started leads to the same Agent-first prompt/u,
+  );
+});
+
 test('CLI exposes Project creation and Agent execution without legacy entrypoints', () => {
   const contract = readJson(CONTRACT_PATH);
   const catalog = readJson(CATALOG_PATH);

@@ -10,36 +10,29 @@ reconstructing everything from conversation history.
 > **Kungfu UNGFU™** · Never Guess. Facts Unfold. [Why this signature
 > exists](docs/concepts/why-kungfu.md).
 
-Open the terminal product with no arguments:
+Before asking an agent to use Kungfu, make sure the `kungfu` command is on its
+`PATH`. [Set up the Kungfu command](docs/guides/installing-cli.md#make-kungfu-available-in-path),
+then paste this one sentence into the agent you already use:
 
-```sh
-kungfu
-```
+> Run `kungfu agent brief`, then guide me through my first Project and Work.
+> Keep me in my current agent, and use Kungfu as the durable Work layer.
 
-Start in Agent Work Lab on a fresh installation, create or import a Project,
-then run its next Assignment with an agent you already use. The scriptable path
-is:
+Keep working in that agent when you are ready:
 
 ```sh
 cd your-project
 kungfu run codex
 ```
 
-Projects can start blank, use the guided Agent Work Starter template, or safely
-remember an existing folder without changing its files.
+Use `claude`, `opencode`, or `amp` instead of `codex` when that is the agent you
+already use. Pass a task to create the first Work directly:
 
-Use `kungfu run claude` or `kungfu run opencode` for another discovered
-provider. You can open several terminal windows in the same Project and run
-the same bare command in each one; Kungfu gives every launch its own Console,
-without asking you to invent a name. The Agent binds that Console to an exact
-Assignment before it starts changing the Project. If another live Agent already
-owns that Assignment, Kungfu stops the second writer and tells it to return to
-the existing terminal, wait for that Agent to exit, or choose different Work.
+```sh
+kungfu run codex "Prepare the release notes"
+```
 
-Pass a task to capture and start new Work
-(`kungfu run codex "Prepare the release notes"`), or use `--work` when more
-than one captured Assignment is eligible. A successful provider process is
-retained for independent review; it does not complete Work by itself.
+A successful agent process is retained for independent review; it does not
+complete Work by itself.
 
 <!-- kungfu:auditable-demo:start -->
 ## See a fresh Agent continue the same Work
@@ -72,6 +65,16 @@ or standalone generation, and makes no production-deployment claim.
 </details>
 <!-- kungfu:auditable-demo:end -->
 
+Want to explore without leaving Kungfu first? Run the terminal product:
+
+```sh
+kungfu
+```
+
+Getting Started leads to the same Agent-first prompt. Agent Work Lab is the
+lowest-friction optional demonstration, and Guided Project Tour leaves a
+Project you can keep using. After onboarding, bare `kungfu` opens Work directly.
+
 ## What Kungfu preserves
 
 - **Work continuity.** A fresh Agent can recover what was done, what remains,
@@ -101,6 +104,14 @@ provider-neutral low-level launcher remains available as the advanced
 [native adapter contract](docs/guides/native-agent-adapters.md). The same local
 contracts and Work state remain available through the Kungfu TUI, GUI, CLI,
 and APIs.
+
+Projects can start blank, use the guided Agent Work Starter template, or safely
+remember an existing folder without changing its files. You can open several
+terminals in the same Project and run the same bare command in each one; Kungfu
+gives every launch its own Console. The Agent binds that Console to exact Work
+before it changes the Project. If another live Agent already owns that Work,
+Kungfu stops the second writer and points back to the existing attempt. Use
+`--work` when more than one captured Work item is eligible.
 
 ## Build from source
 

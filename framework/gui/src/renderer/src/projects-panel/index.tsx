@@ -979,6 +979,7 @@ export function RetainedCoreSurfaceStack({
   onOpenWork,
   onOpenLabExistingProject,
   onOpenStarterProject,
+  onLabComplete,
   work,
 }: {
   visible?: CoreSurfaceId;
@@ -994,6 +995,7 @@ export function RetainedCoreSurfaceStack({
   onOpenWork: LabPanelProps['onOpenWork'];
   onOpenLabExistingProject: LabPanelProps['onOpenExistingProject'];
   onOpenStarterProject: LabPanelProps['onOpenStarterProject'];
+  onLabComplete: LabPanelProps['onComplete'];
   work: React.ReactNode;
 }) {
   return (
@@ -1028,6 +1030,7 @@ export function RetainedCoreSurfaceStack({
             onOpenWork={onOpenWork}
             onOpenExistingProject={onOpenLabExistingProject}
             onOpenStarterProject={onOpenStarterProject}
+            onComplete={onLabComplete}
           />
         </div>
       ) : null}
