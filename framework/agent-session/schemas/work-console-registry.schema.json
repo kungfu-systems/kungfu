@@ -161,6 +161,7 @@
         "backend",
         "status",
         "startedAt",
+        "bootstrap",
         "plans",
         "receipts",
         "historyProtection"
@@ -186,6 +187,29 @@
         },
         "startedAt": { "type": "number" },
         "endedAt": { "type": "number" },
+        "bootstrap": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "schema",
+            "state",
+            "attemptId",
+            "receiptRoot",
+            "mutationsAllowed"
+          ],
+          "properties": {
+            "schema": { "const": "kungfu.agent-bootstrap-receipt/v1" },
+            "state": { "enum": ["pending", "verified", "degraded"] },
+            "attemptId": { "type": "string", "minLength": 1 },
+            "receiptRoot": {
+              "anyOf": [
+                { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" },
+                { "type": "null" }
+              ]
+            },
+            "mutationsAllowed": { "type": "boolean" }
+          }
+        },
         "observer": {
           "type": "object",
           "additionalProperties": false,

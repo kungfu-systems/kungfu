@@ -215,6 +215,17 @@
       "stdio": "inherit-provider-native-terminal",
       "terminalCapture": false,
       "tuiInputControl": false,
+      "bootstrapProjection": {
+        "schema": "kungfu.agent-bootstrap-receipt/v1",
+        "states": [
+          "pending",
+          "verified",
+          "degraded"
+        ],
+        "attemptBound": true,
+        "workBindingRequiresVerified": true,
+        "semanticComprehensionClaimed": false
+      },
       "continuity": "metadata-heartbeat-plus-core-work-observation",
       "launchConcurrency": "each bare launch receives an automatically unique workspace Console",
       "workConcurrency": "binding an active attempt to one WorkRef is atomic and rejects every second live writer"

@@ -6,10 +6,12 @@ import path from 'node:path';
 import process from 'node:process';
 
 const root = process.cwd();
+const nativePath =
+  process.env.KUNGFU_NATIVE_PATH ??
+  path.join(root, 'framework', 'core', 'build', 'Release');
 const pythonPath = [
   path.join(root, 'framework', 'core', 'src', 'python'),
-  process.env.KUNGFU_NATIVE_PATH ??
-    path.join(root, 'framework', 'core', 'build', 'Release'),
+  nativePath,
   process.env.PYTHONPATH,
 ]
   .filter(Boolean)
@@ -30,6 +32,14 @@ const result = spawnSync(
       'tests',
       'python',
       'test_agent_console_contract.py',
+    ),
+    path.join(
+      root,
+      'framework',
+      'core',
+      'tests',
+      'python',
+      'test_agent_work_advisory.py',
     ),
     path.join(
       root,
@@ -61,6 +71,7 @@ const result = spawnSync(
     cwd: root,
     env: {
       ...process.env,
+      KUNGFU_NATIVE_PATH: nativePath,
       PYTHONPATH: pythonPath,
     },
     stdio: 'inherit',

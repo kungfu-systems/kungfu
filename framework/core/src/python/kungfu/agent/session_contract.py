@@ -45,8 +45,10 @@ _ENVELOPE_FIELDS = {
     "workRef",
     "entrypoints",
     "knownLimits",
+    "bootstrap",
     "envelopeRoot",
 }
+_ENVELOPE_REQUIRED_FIELDS = _ENVELOPE_FIELDS - {"bootstrap"}
 
 
 def canonical_json(value: Any) -> str:
@@ -152,7 +154,7 @@ def validate_agent_console_envelope(
     _exact_fields(
         result,
         allowed=_ENVELOPE_FIELDS,
-        required=_ENVELOPE_FIELDS,
+        required=_ENVELOPE_REQUIRED_FIELDS,
         label="AgentConsoleEnvelope",
     )
     if result.get("schema") != AGENT_CONSOLE_ENVELOPE_SCHEMA:
@@ -199,6 +201,42 @@ def validate_agent_console_envelope(
         isinstance(item, str) for item in limits
     ):
         raise ValueError("AgentConsoleEnvelope.knownLimits must be a text array")
+    if "bootstrap" in result:
+        bootstrap = _object(result.get("bootstrap"), "AgentConsoleEnvelope.bootstrap")
+        bootstrap_fields = {
+            "schema",
+            "state",
+            "attemptId",
+            "receiptRoot",
+            "mutationsAllowed",
+        }
+        _exact_fields(
+            bootstrap,
+            allowed=bootstrap_fields,
+            required=bootstrap_fields,
+            label="AgentConsoleEnvelope.bootstrap",
+        )
+        if bootstrap.get("schema") != "kungfu.agent-bootstrap-receipt/v1":
+            raise ValueError("AgentConsoleEnvelope.bootstrap.schema is unsupported")
+        if bootstrap.get("state") not in {"pending", "verified", "degraded"}:
+            raise ValueError("AgentConsoleEnvelope.bootstrap.state is unsupported")
+        if bootstrap.get("attemptId") != result["attemptId"]:
+            raise ValueError(
+                "AgentConsoleEnvelope.bootstrap.attemptId must match attemptId"
+            )
+        if _ROOT.fullmatch(str(bootstrap.get("receiptRoot") or "")) is None:
+            raise ValueError(
+                "AgentConsoleEnvelope.bootstrap.receiptRoot must be a sha256 root"
+            )
+        mutations_allowed = bootstrap.get("mutationsAllowed")
+        if not isinstance(mutations_allowed, bool):
+            raise ValueError(
+                "AgentConsoleEnvelope.bootstrap.mutationsAllowed must be boolean"
+            )
+        if mutations_allowed is not (bootstrap["state"] == "verified"):
+            raise ValueError(
+                "AgentConsoleEnvelope.bootstrap mutation state is inconsistent"
+            )
     envelope_root = result.pop("envelopeRoot")
     expected_root = semantic_root(result)
     result["envelopeRoot"] = envelope_root

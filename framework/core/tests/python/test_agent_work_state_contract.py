@@ -41,7 +41,12 @@ import kungfu  # noqa: E402
 kungfu._build_info = {"version": "test"}
 
 from kungfu import contract, durability  # noqa: E402
-from kungfu.agent import action_geometry, domain_profile, first_value, work_profile  # noqa: E402
+from kungfu.agent import (  # noqa: E402
+    action_geometry,
+    domain_profile,
+    first_value,
+    work_profile,
+)
 from kungfu.agent.native_authority import (  # noqa: E402
     ConformanceOracleDisabled,
     NativeActionRuntimeUnavailable,

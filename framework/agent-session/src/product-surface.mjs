@@ -3,6 +3,7 @@ import { projectWorkAgentState } from './work-attention.mjs';
 import {
   WORK_CONSOLE_REGISTRY_SCHEMA,
   WorkConsoleRegistry,
+  normalizeNativeBootstrap,
 } from './work-console-registry.mjs';
 
 const CONTROL_OPERATIONS = new Set([
@@ -409,6 +410,7 @@ function nativeAttemptStatus(projection, now) {
       work: coherentWork,
       workProjection: attempt.workProjection ?? null,
     },
+    bootstrap: attempt.bootstrap,
     activeWorkLease,
     console,
     attempt,
@@ -590,6 +592,7 @@ export class AgentSessionProductSurface {
             agentSessionProductState({ attemptStatus: attempt.status }),
           workAgent: nativeStatus?.workAgent ?? live?.workAgent ?? null,
           nativeObserver: nativeStatus?.nativeObserver ?? null,
+          bootstrap: nativeStatus?.bootstrap ?? attempt.bootstrap,
           receiptRoots: nativeStatus?.receiptRoots ?? [],
         };
       }),
@@ -705,18 +708,23 @@ export class AgentSessionProductSurface {
         ].join('\n'),
       );
     }
+    const sessionAttemptId = required(
+      input.sessionAttemptId,
+      'sessionAttemptId',
+    );
     const body = {
       schema: 'kungfu.agent-session.native-start-plan/v1',
       operation: 'native-start',
       workspaceId: resolution.workspaceId,
       workConsoleId: resolution.workConsoleId,
-      sessionAttemptId: required(input.sessionAttemptId, 'sessionAttemptId'),
+      sessionAttemptId,
       provider: required(input.provider, 'provider'),
       providerVersion: required(input.providerVersion, 'providerVersion'),
       profileRoot: required(input.profileRoot, 'profileRoot'),
       runtimeProfileId:
         input.runtimeProfileId ?? registered?.runtimeProfileId ?? 'unknown',
       backend: 'native-interactive',
+      bootstrap: normalizeNativeBootstrap(input.bootstrap, sessionAttemptId),
       binding: resolution.binding,
       effects: [
         'register-native-provider-attempt',
@@ -737,6 +745,15 @@ export class AgentSessionProductSurface {
       throw new AgentSessionSurfaceError(
         'session_not_found',
         'native SessionAttempt is unavailable',
+      );
+    }
+    if (
+      projection.attempt.bootstrap?.state !== 'verified' ||
+      projection.attempt.bootstrap?.mutationsAllowed !== true
+    ) {
+      throw new AgentSessionSurfaceError(
+        'native_bootstrap_not_verified',
+        'native Agent bootstrap is not verified; Work binding is disabled',
       );
     }
     const binding = { kind: 'work', workRef };

@@ -614,7 +614,8 @@
         "id": "live-click-tree-and-cli-surface-registry",
         "sources": [
           "framework/core/src/python/kungfu/cli/surface_contract.registry.json",
-          "framework/core/src/python/kungfu/cli/commands/__registry__.py"
+          "framework/core/src/python/kungfu/cli/commands/__registry__.py",
+          "framework/core/src/python/kungfu/agent/kfd3_api.registry.json"
         ]
       },
       "surfaces": [

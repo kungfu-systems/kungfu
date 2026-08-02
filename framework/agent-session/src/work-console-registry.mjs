@@ -15,6 +15,7 @@ import {
   clone,
   historyBoundary,
   normalizeBinding,
+  normalizeNativeBootstrap,
   normalizeWorkConsoleRegistry,
   primaryWorkConsoleId,
   required,
@@ -24,6 +25,7 @@ import { WorkProjectionService } from './work-projection-service.mjs';
 export {
   WORK_CONSOLE_HISTORY_BOUNDARY_SCHEMA,
   WORK_CONSOLE_REGISTRY_SCHEMA,
+  normalizeNativeBootstrap,
   normalizeWorkConsoleRegistry,
   primaryWorkConsoleId,
 } from './work-console-model.mjs';
@@ -164,6 +166,10 @@ export class WorkConsoleRegistry {
         backend: plan.backend ?? 'capsule',
         status: 'planned',
         startedAt: now,
+        bootstrap: normalizeNativeBootstrap(
+          plan.bootstrap,
+          plan.sessionAttemptId,
+        ),
         receipts: [],
         plans: [],
         historyProtection: historyBoundary(),

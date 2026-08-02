@@ -168,6 +168,13 @@ function fixture({ registry = null } = {}) {
     provider: 'codex',
     providerVersion: '0.146.0',
     profileRoot: PROFILE_ROOT,
+    bootstrap: {
+      schema: 'kungfu.agent-bootstrap-receipt/v1',
+      state: 'verified',
+      attemptId: 'attempt:assignment-42:1',
+      receiptRoot: `sha256:${'f'.repeat(64)}`,
+      mutationsAllowed: true,
+    },
     executable: '/usr/local/bin/codex',
     argv: ['--no-alt-screen'],
     cwd: '/workspace',
@@ -287,6 +294,8 @@ test('native provider UI registers one observer-only attempt in the primary Work
     sessionAttemptId: plan.sessionAttemptId,
   });
   assert.equal(awaiting.nativeObserver.state, 'unknown');
+  assert.equal(awaiting.bootstrap.state, 'verified');
+  assert.equal(awaiting.bootstrap.mutationsAllowed, true);
   assert.equal(awaiting.product.state, 'action-required');
   const work = {
     schema: 'kungfu.native-work-observation/v1',
@@ -408,6 +417,43 @@ test('native provider UI registers one observer-only attempt in the primary Work
       ),
     /liveness coordinates only/u,
   );
+});
+
+test('native bootstrap state is observable and blocks Work binding until verified', () => {
+  const pending = fixture();
+  const pendingInput = { ...pending.input, bootstrap: undefined };
+  const pendingPlan = pending.clients.cli.planNativeStart(pendingInput);
+  assert.equal(pendingPlan.bootstrap.state, 'pending');
+  assert.equal(
+    pending.clients.gui.show({
+      workConsoleId: pendingPlan.workConsoleId,
+      sessionAttemptId: pendingPlan.sessionAttemptId,
+    }).bootstrap.state,
+    'pending',
+  );
+  assert.throws(
+    () =>
+      pending.clients.cli.planNativeBindWork(
+        {
+          workConsoleId: pendingPlan.workConsoleId,
+          sessionAttemptId: pendingPlan.sessionAttemptId,
+        },
+        pending.input.binding.workRef,
+      ),
+    (error) => error?.code === 'native_bootstrap_not_verified',
+  );
+
+  const degraded = fixture();
+  const degradedPlan = degraded.clients.cli.planNativeStart({
+    ...degraded.input,
+    bootstrap: {
+      ...degraded.input.bootstrap,
+      state: 'degraded',
+      mutationsAllowed: false,
+    },
+  });
+  assert.equal(degradedPlan.bootstrap.state, 'degraded');
+  assert.equal(degradedPlan.bootstrap.mutationsAllowed, false);
 });
 
 test('native heartbeat updates live projection without durable registry churn', () => {
@@ -564,6 +610,10 @@ test('native Work binding atomically blocks a second writer and releases on exit
     sessionAttemptId: 'attempt:assignment-42:second',
     provider: 'opencode',
     providerVersion: '1.18.3',
+    bootstrap: {
+      ...input.bootstrap,
+      attemptId: 'attempt:assignment-42:second',
+    },
     binding,
   });
   clients.cli.startNative(second, { launcherPid: 43, launchedAt: 5000 });

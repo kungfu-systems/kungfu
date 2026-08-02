@@ -619,6 +619,54 @@
             "type": "string"
           }
         },
+        "bootstrap": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "schema",
+            "state",
+            "attemptId",
+            "receiptRoot",
+            "mutationsAllowed"
+          ],
+          "properties": {
+            "schema": {
+              "const": "kungfu.agent-bootstrap-receipt/v1"
+            },
+            "state": {
+              "enum": [
+                "verified",
+                "degraded",
+                "not-issued"
+              ]
+            },
+            "attemptId": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "minLength": 1
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "receiptRoot": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "pattern": "^sha256:[a-f0-9]{64}$"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "mutationsAllowed": {
+              "type": "boolean"
+            }
+          }
+        },
         "envelopeRoot": {
           "type": "string",
           "pattern": "^sha256:[a-f0-9]{64}$"

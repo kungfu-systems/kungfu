@@ -130,7 +130,20 @@
           "type": "array",
           "items": { "type": "string" }
         },
+        "bootstrap": { "$ref": "#/$defs/bootstrapProjection" },
         "envelopeRoot": { "$ref": "#/$defs/sha256" }
+      }
+    },
+    "bootstrapProjection": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schema", "state", "attemptId", "receiptRoot", "mutationsAllowed"],
+      "properties": {
+        "schema": { "const": "kungfu.agent-bootstrap-receipt/v1" },
+        "state": { "enum": ["pending", "verified", "degraded"] },
+        "attemptId": { "type": "string", "minLength": 1 },
+        "receiptRoot": { "$ref": "#/$defs/sha256" },
+        "mutationsAllowed": { "type": "boolean" }
       }
     },
     "argv": {
@@ -214,6 +227,7 @@
         "startedAt": { "type": "number" },
         "endedAt": { "type": "number" },
         "workBinding": { "$ref": "#/$defs/workBinding" },
+        "bootstrap": { "$ref": "#/$defs/bootstrapProjection" },
         "observer": { "type": "object" },
         "exit": { "type": "object" },
         "plans": { "type": "array", "items": { "type": "object" } },

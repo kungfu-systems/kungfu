@@ -4,6 +4,7 @@
 
 from __future__ import annotations
 
+import json
 import os
 import subprocess
 import threading
@@ -135,6 +136,9 @@ class NativeLaunchCoordinator:
                         "runtimeProfileId": str(
                             profile.get("id") or f"kungfu.agent-runtime.{provider}"
                         ),
+                        "bootstrap": json.loads(env["KUNGFU_AGENT_CONTEXT"])[
+                            "bootstrap"
+                        ],
                         "binding": binding,
                     },
                 }

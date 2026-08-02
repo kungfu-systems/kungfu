@@ -67,14 +67,19 @@ test('all supported entrypoints route to one semantic authority and projection',
 
 test('managed and native Agent activity shares the Core projection contract', () => {
   const runner = read('framework/core/src/python/kungfu/agent/run_agent.py');
+  const resources = read('framework/core/src/python/kungfu/agent/resources.py');
   assert.match(runner, /def agent_activity_history_projection\(/u);
-  assert.match(runner, /"schema": HISTORY_PROJECTION_SCHEMA/u);
-  assert.match(runner, /"state": "session-activity-only"/u);
-  assert.match(runner, /"workRefRoot": canonical_root\(work\)/u);
-  assert.match(runner, /"semanticAdmissionReceiptRoot": None/u);
-  assert.match(runner, /"processExitSettlesWork": False/u);
-  assert.match(runner, /"selfReportSettlesWork": False/u);
-  assert.match(runner, /"nextAction": "independent-assessment-required"/u);
+  assert.match(runner, /agent_resources\.agent_activity_history_projection\(/u);
+  assert.match(
+    resources,
+    /"schema": "kungfu\.work-agent-history\.projection\/v1"/u,
+  );
+  assert.match(resources, /"state": "session-activity-only"/u);
+  assert.match(resources, /"workRefRoot": canonical_root\(work_ref\)/u);
+  assert.match(resources, /"semanticAdmissionReceiptRoot": None/u);
+  assert.match(resources, /"processExitSettlesWork": False/u);
+  assert.match(resources, /"selfReportSettlesWork": False/u);
+  assert.match(resources, /"nextAction": "independent-assessment-required"/u);
   assert.equal(
     contract.canonicalProjection.schema,
     'kungfu.work-agent-history.projection/v1',

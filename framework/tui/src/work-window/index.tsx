@@ -5,6 +5,7 @@ import type {
   GlobalWorkFilter,
   GlobalWorkRow,
   GlobalWorkSnapshot,
+  ProjectAgentSessionSnapshot,
   ProjectWorkCapturePlan,
   ProjectWorkCaptureReceipt,
   ProjectWorkRunPlan,
@@ -43,6 +44,13 @@ import { projectWorkSessionState } from './project-work-session-state.js';
 import { NativeWorkProjectionView } from './project-work-session-view.js';
 
 export type WorkSort = 'updated-desc' | 'project-asc' | 'title-asc';
+
+export function agentBootstrapLine(
+  bootstrap: ProjectAgentSessionSnapshot['bootstrap'],
+): string {
+  if (!bootstrap) return 'Bootstrap · unavailable';
+  return `Bootstrap · ${bootstrap.state} · Work mutations ${bootstrap.mutationsAllowed ? 'enabled' : 'blocked'}`;
+}
 
 type ProjectWorkDimensionSource = {
   get(): TerminalDimensions;
@@ -1132,6 +1140,17 @@ export function ProjectWorkHost({
                     ? `◌ ${visibleAgentLabel.toUpperCase()} SESSION RUNNING`
                     : `✓ ${visibleAgentLabel.toUpperCase()} SESSION`}
                 </Text>
+                {session?.bootstrap ? (
+                  <Text
+                    color={
+                      session.bootstrap.state === 'verified'
+                        ? 'green'
+                        : 'yellow'
+                    }
+                  >
+                    {agentBootstrapLine(session.bootstrap)}
+                  </Text>
+                ) : null}
                 {session?.nativeObserver ? (
                   <NativeWorkProjectionView session={session} />
                 ) : null}

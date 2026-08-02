@@ -27,6 +27,7 @@ from kungfu.agent.kfd3 import (
     registry_summary,
     verify_agent_interface,
 )
+from kungfu.cli.commands import agent_work_lab as agent_work_lab_commands
 from kungfu.cli.commands import kfc, PrioritizedCommandGroup
 from kungfu.config import resolve_config
 
@@ -83,7 +84,9 @@ def _context(ctx):
             "skillCatalog": "kungfu skill catalog --json",
             "kfx": "kungfu kfx list --json",
         },
-        "docs": documentation_pack.discovery_context(_find_repo_root()),
+        "docs": documentation_pack.discovery_context(
+            agent_work_lab_commands.find_repo_root()
+        ),
         "agentPack": {
             "packRoot": str(agent_pack.pack_root()),
             "documents": index["documents"],
@@ -94,19 +97,7 @@ def _context(ctx):
     }
 
 
-def _find_repo_root():
-    candidates = [Path.cwd(), Path(__file__).resolve()]
-    for candidate in candidates:
-        for directory in [candidate, *candidate.parents]:
-            if (directory / "docs" / "MAP.md").is_file() and (
-                directory / "framework"
-            ).is_dir():
-                return directory
-    return None
-
-
-def _json(payload):
-    click.echo(json.dumps(payload, indent=2, sort_keys=True))
+_json = agent_work_lab_commands.agent_json_output
 
 
 def _policy_dir(ctx):
@@ -171,6 +162,19 @@ def brief(ctx):
         raise click.ClickException(str(error)) from error
 
 
+@agent.command(
+    name="bootstrap-status",
+    help="Inspect this native attempt's Agent Brief bootstrap.",
+)
+@click.option("--json", "as_json", is_flag=True, help="machine-readable output")
+@kfd3_api("kungfu.agent.bootstrap-status")
+@agent_work_lab_commands.surface(mutation_class="read")
+@agent_command_context
+def bootstrap_status(ctx, as_json):
+    del ctx
+    agent_work_lab_commands.emit_agent_bootstrap_status(as_json)
+
+
 @agent.command(name="map", help="Print the stable first-entry intent map.")
 @click.option("--json", "as_json", is_flag=True, help="machine-readable output")
 @kfd3_api("kungfu.agent.map")
@@ -185,6 +189,25 @@ def intent_map(ctx, as_json):
         return
     for row in payload["intents"]:
         click.echo(f"{row['id']} [{row['maturity']}]: {row['summary']}")
+
+
+@agent.command(
+    name="work-advisory",
+    help="assess bounded structured signals before proposing durable Work",
+)
+@click.option(
+    "--signals",
+    "signals_file",
+    type=click.File("r", encoding="utf-8"),
+    required=True,
+    help="structured JSON signals; transcripts and hidden reasoning are rejected",
+)
+@click.option("--json", "as_json", is_flag=True, help="machine-readable output")
+@kfd3_api("kungfu.agent.work-advisory")
+@agent_command_context
+def work_advisory_command(ctx, signals_file, as_json):
+    del ctx
+    agent_work_lab_commands.emit_agent_work_advisory(signals_file, as_json)
 
 
 @agent.group(
@@ -1018,6 +1041,7 @@ def console_current(ctx, as_json):
             "schema": "kungfu.agent-console-current/v1",
             "available": True,
             "envelope": envelope,
+            "bootstrap": agent_pack.bootstrap_status(),
             "workBound": effective_work_ref is not None,
             "workRef": effective_work_ref,
             "knownLimits": envelope.get("knownLimits", []),

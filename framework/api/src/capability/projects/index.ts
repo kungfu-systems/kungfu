@@ -598,6 +598,12 @@ export type ProjectAgentSessionSnapshot = ProjectAgentSessionRef & {
   attention: ProjectAgentAttention | null;
   pendingControl: { requestId: string | number } | null;
   terminalLines: string[];
+  bootstrap: {
+    state: 'pending' | 'verified' | 'degraded';
+    attemptId: string;
+    receiptRoot: string | null;
+    mutationsAllowed: boolean;
+  } | null;
   nativeObserver: {
     state: string;
     ageMs: number;
@@ -920,6 +926,14 @@ export function openProjects(options: ProjectCommandOptions): Projects {
           >['work'];
         }
       | undefined;
+    const bootstrap = status.bootstrap as
+      | {
+          state?: 'pending' | 'verified' | 'degraded';
+          attemptId?: string;
+          receiptRoot?: string | null;
+          mutationsAllowed?: boolean;
+        }
+      | undefined;
     const rawNativeWork = nativeObserver?.work;
     const nativeWork = rawNativeWork
       ? {
@@ -953,6 +967,14 @@ export function openProjects(options: ProjectCommandOptions): Projects {
           ? null
           : { requestId: pending.requestId },
       terminalLines,
+      bootstrap: bootstrap?.state
+        ? {
+            state: bootstrap.state,
+            attemptId: String(bootstrap.attemptId ?? ref.sessionAttemptId),
+            receiptRoot: bootstrap.receiptRoot ?? null,
+            mutationsAllowed: bootstrap.mutationsAllowed === true,
+          }
+        : null,
       nativeObserver: nativeObserver
         ? {
             state: String(nativeObserver.state ?? 'unknown'),

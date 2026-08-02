@@ -24,6 +24,7 @@ from typing import Any, Callable, Mapping, Sequence
 import uuid
 
 import kungfu
+from kungfu.agent import resources as agent_resources
 from kungfu.agent import runtime_profiles
 from kungfu.agent import session_contract
 from kungfu.agent import session_surface
@@ -48,7 +49,6 @@ from kungfu.rewind.fb.RunStatus import RunStatus
 
 REPORT_SCHEMA = "kungfu.agent-run-report/v1"
 CONTINUATION_SCHEMA = "kungfu.agent-continuation-envelope/v1"
-HISTORY_PROJECTION_SCHEMA = "kungfu.work-agent-history.projection/v1"
 _ROOT = re.compile(r"sha256:[0-9a-f]{64}\Z")
 _ANSI_ESCAPE = re.compile(r"\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])")
 
@@ -90,6 +90,7 @@ def bind_current_native_work(
         raise ValueError(
             "native Agent Console runtime does not match its Kungfu Project"
         )
+    agent_resources.validated_current_bootstrap_receipt(envelope)
 
     # ``runtime_dir`` belongs to the CLI invocation context.  A packaged CLI may
     # deliberately use ``--home`` while the native attempt is attached to a
@@ -217,24 +218,9 @@ def agent_activity_history_projection(
     *,
     entrypoint: str = "managed-run",
 ) -> dict[str, Any]:
-    """Describe an Agent attempt without upgrading activity into Work history."""
-
-    work = validate_work_ref(work_ref)
-    return {
-        "schema": HISTORY_PROJECTION_SCHEMA,
-        "state": "session-activity-only",
-        "entrypoint": entrypoint,
-        "workRefRoot": canonical_root(work) if work is not None else None,
-        "semanticAdmissionReceiptRoot": None,
-        "processExitSettlesWork": False,
-        "selfReportSettlesWork": False,
-        "nextAction": "independent-assessment-required",
-        "authority": {
-            "contract": ("framework/data-protection/work-agent-history.contract.json"),
-            "semanticOwner": "profile-kfd-action-episode",
-            "observer": "agent-session",
-        },
-    }
+    return agent_resources.agent_activity_history_projection(
+        validate_work_ref(work_ref), entrypoint=entrypoint
+    )
 
 
 def _read_json_object(
@@ -529,6 +515,19 @@ def native_environment(
         "<id>",
         "--json",
     ]
+    selected = dict(profile or {})
+    profile_id = str(selected.get("id") or f"kungfu.agent-runtime.{provider}")
+    bootstrap_receipt = (
+        agent_resources.native_bootstrap_receipt(
+            provider,
+            profile=selected,
+            adapter=selected_adapter,
+            session_ref=session_ref,
+        )
+        if session_ref is not None
+        else None
+    )
+    bootstrap_context = agent_resources.bootstrap_context(bootstrap_receipt)
     context = {
         "schema": "kungfu.native-agent-context/v1",
         "environment": "native-interactive",
@@ -541,6 +540,8 @@ def native_environment(
         "workBinding": {
             "launchState": "bound" if work_ref is not None else "unbound",
             "requiredBeforeProjectWrite": True,
+            "bootstrapRequiredBeforeProjectWrite": True,
+            "mutationsAllowed": bootstrap_context["mutationsAllowed"],
             "conflictCode": "native_work_already_active",
             "canonicalEntrypoint": "bindWork",
             "internalSessionOperations": [
@@ -549,6 +550,7 @@ def native_environment(
             ],
             "internalSessionOperationsAreCliEntrypoints": False,
         },
+        "bootstrap": bootstrap_context,
         "workSelection": dict(work_selection),
         "terminal": {
             "stdioAttached": terminal_attached,
@@ -559,8 +561,6 @@ def native_environment(
             "recovered": terminal_recovery,
         },
     }
-    selected = dict(profile or {})
-    profile_id = str(selected.get("id") or f"kungfu.agent-runtime.{provider}")
     env.update(
         {
             "KF_CONFIG_HOME": config_home,
@@ -627,6 +627,7 @@ def native_environment(
                 "provider exit does not claim Work completion",
                 *(str(value) for value in selected_adapter.get("knownLimits") or []),
             ],
+            "bootstrap": bootstrap_context,
         }
         console_envelope = {
             **console_envelope_body,
@@ -639,6 +640,12 @@ def native_environment(
                 "KUNGFU_AGENT_CONSOLE_ID": str(session_ref["workConsoleId"]),
                 "KUNGFU_AGENT_CONSOLE_ENVELOPE": json.dumps(
                     console_envelope,
+                    ensure_ascii=False,
+                    sort_keys=True,
+                    separators=(",", ":"),
+                ),
+                "KUNGFU_AGENT_BOOTSTRAP_RECEIPT": json.dumps(
+                    bootstrap_receipt,
                     ensure_ascii=False,
                     sort_keys=True,
                     separators=(",", ":"),
@@ -784,18 +791,7 @@ class ProcessResult:
 
 
 def _session_ref(work: Mapping[str, Any], run_id: str) -> dict[str, str]:
-    initiative = (
-        f":{work['initiativeId']}"
-        if work.get("entityType") == "assignment" and work.get("initiativeId")
-        else ""
-    )
-    return {
-        "workConsoleId": (
-            f"work:{work['profileId']}:{work['entityType']}"
-            f"{initiative}:{work['entityId']}"
-        ),
-        "sessionAttemptId": run_id,
-    }
+    return agent_resources.session_ref(work, run_id)
 
 
 def _invoke_session_control(

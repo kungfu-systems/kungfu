@@ -14,10 +14,36 @@ import React from 'react';
 
 import {
   WorkWindow,
+  agentBootstrapLine,
   buildWorkWindowModel,
   cycleWorkSort,
   formatWorkUpdatedAt,
 } from './work-window/index.js';
+
+test('Agent bootstrap projection names pending, verified, and degraded states', () => {
+  const base = {
+    attemptId: 'native:one',
+    receiptRoot: null,
+    mutationsAllowed: false,
+  };
+  assert.equal(
+    agentBootstrapLine({ ...base, state: 'pending' }),
+    'Bootstrap · pending · Work mutations blocked',
+  );
+  assert.equal(
+    agentBootstrapLine({
+      ...base,
+      state: 'verified',
+      receiptRoot: `sha256:${'a'.repeat(64)}`,
+      mutationsAllowed: true,
+    }),
+    'Bootstrap · verified · Work mutations enabled',
+  );
+  assert.equal(
+    agentBootstrapLine({ ...base, state: 'degraded' }),
+    'Bootstrap · degraded · Work mutations blocked',
+  );
+});
 
 class CaptureOutput extends Writable {
   readonly isTTY = false;

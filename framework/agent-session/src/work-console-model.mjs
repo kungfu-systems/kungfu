@@ -27,6 +27,8 @@ const OBSERVER_STATES = new Set([
   'degraded',
   'unknown',
 ]);
+const BOOTSTRAP_STATES = new Set(['pending', 'verified', 'degraded']);
+const ROOT_PATTERN = /^sha256:[a-f0-9]{64}$/u;
 
 export function required(value, label) {
   if (typeof value !== 'string' || value.length === 0) {
@@ -103,6 +105,29 @@ export function attemptWorkBinding(value, { compatibility = false } = {}) {
     { kind: 'work', workRef: value.workRef ?? value },
     { compatibility },
   );
+}
+
+export function normalizeNativeBootstrap(value, sessionAttemptId) {
+  const requestedState = BOOTSTRAP_STATES.has(value?.state)
+    ? value.state
+    : 'pending';
+  const receiptRoot = ROOT_PATTERN.test(value?.receiptRoot)
+    ? value.receiptRoot
+    : null;
+  const exactAttempt = value?.attemptId === sessionAttemptId;
+  const verified =
+    requestedState === 'verified' &&
+    exactAttempt &&
+    receiptRoot !== null &&
+    value?.mutationsAllowed === true;
+  return {
+    schema: 'kungfu.agent-bootstrap-receipt/v1',
+    state:
+      requestedState === 'verified' && !verified ? 'degraded' : requestedState,
+    attemptId: sessionAttemptId,
+    receiptRoot,
+    mutationsAllowed: verified,
+  };
 }
 
 export function primaryWorkConsoleId({ workspaceId, binding }) {
@@ -233,6 +258,7 @@ function normalizeAttempt(value, { compatibility = false } = {}) {
         }
       : {}),
     ...(workBinding ? { workBinding } : {}),
+    bootstrap: normalizeNativeBootstrap(value.bootstrap, sessionAttemptId),
     historyProtection: historyBoundary(),
   };
 }

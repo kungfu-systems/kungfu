@@ -24,6 +24,7 @@ from kungfu.agent.kfd3 import verify_agent_interface
 from kungfu.cli.commands import agent as agent_commands, kfc
 from kungfu.rewind.cost.discovery import discover_provider_candidates
 from kungfu.workspace import resolve_workspace_target
+from agent_bootstrap_fixtures import verified_bootstrap_receipt
 
 
 ROOT = Path(__file__).resolve().parents[4]
@@ -1486,6 +1487,15 @@ def test_bare_native_launches_get_unique_workspace_consoles(monkeypatch, tmp_pat
         plan["binding"] == {"kind": "workspace-assistant", "workRef": None}
         for plan in plans
     )
+    assert all(plan["bootstrap"]["state"] in {"verified", "degraded"} for plan in plans)
+    assert all(
+        plan["bootstrap"]["attemptId"] == plan["sessionAttemptId"] for plan in plans
+    )
+    assert all(
+        plan["bootstrap"]["mutationsAllowed"]
+        is (plan["bootstrap"]["state"] == "verified")
+        for plan in plans
+    )
 
 
 def test_unbound_native_attempt_heartbeats_session_without_work_observation(
@@ -1622,6 +1632,11 @@ def test_current_native_console_uses_project_runtime_when_cli_context_is_home(
         "attemptId": "native:one",
     }
     monkeypatch.setenv("KUNGFU_AGENT_CONSOLE_ENVELOPE", json.dumps(envelope))
+    monkeypatch.setenv(
+        "KUNGFU_AGENT_BOOTSTRAP_RECEIPT",
+        json.dumps(verified_bootstrap_receipt()),
+    )
+    monkeypatch.setenv("KUNGFU_AGENT_ATTEMPT_ID", "native:one")
     monkeypatch.setenv("KUNGFU_AGENT_SESSION_ACTOR", "native:codex:native:one")
     monkeypatch.setenv("KUNGFU_WORKSPACE_ROOT", str(project))
     monkeypatch.setenv("KUNGFU_AGENT_RUNTIME_DIR", str(project_runtime))
@@ -1707,6 +1722,11 @@ def test_public_bind_work_cli_preserves_stable_project_runtime_under_home(
     }
     envelope = {**body, "envelopeRoot": run_agent.canonical_root(body)}
     monkeypatch.setenv("KUNGFU_AGENT_CONSOLE_ENVELOPE", json.dumps(envelope))
+    monkeypatch.setenv(
+        "KUNGFU_AGENT_BOOTSTRAP_RECEIPT",
+        json.dumps(verified_bootstrap_receipt()),
+    )
+    monkeypatch.setenv("KUNGFU_AGENT_ATTEMPT_ID", "native:one")
     monkeypatch.setenv("KUNGFU_WORKSPACE_ROOT", str(project))
     monkeypatch.setenv("KUNGFU_AGENT_RUNTIME_DIR", str(project_runtime))
     monkeypatch.setattr(

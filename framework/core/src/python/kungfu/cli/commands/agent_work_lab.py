@@ -1,16 +1,20 @@
 # SPDX-License-Identifier: Apache-2.0
 
 import json
+import os
 import tempfile
 from pathlib import Path
 
 import click
 
+from kungfu import agent as agent_pack
 from kungfu import agent_work_lab as lab
+from kungfu import config as kungfu_config
 from kungfu import project_template
 from kungfu.agent.kfd3 import kfd3_api
 from kungfu.agent import runtime_profiles
 from kungfu.cli.commands import PrioritizedCommandGroup, kfc
+from kungfu.cli.surface_contract import surface as surface
 from kungfu.config import resolve_config
 
 
@@ -21,6 +25,58 @@ def _json(value):
 def _event_json(value):
     click.echo(json.dumps(value, sort_keys=True))
     click.get_text_stream("stdout").flush()
+
+
+def find_repo_root():
+    candidates = [Path.cwd(), Path(__file__).resolve()]
+    for candidate in candidates:
+        for directory in [candidate, *candidate.parents]:
+            if (directory / "docs" / "MAP.md").is_file() and (
+                directory / "framework"
+            ).is_dir():
+                return directory
+    return None
+
+
+def agent_json_output(payload):
+    _json(payload)
+
+
+def agent_bootstrap_status_payload():
+    envelope_raw = os.environ.get("KUNGFU_AGENT_CONSOLE_ENVELOPE", "").strip()
+    if envelope_raw:
+        kungfu_config.validate_value("agentConsoleEnvelope", json.loads(envelope_raw))
+    return agent_pack.bootstrap_status()
+
+
+def emit_agent_bootstrap_status(as_json):
+    try:
+        payload = agent_bootstrap_status_payload()
+    except (ValueError, json.JSONDecodeError) as exc:
+        raise click.ClickException(f"invalid Agent bootstrap state: {exc}") from exc
+    if as_json:
+        agent_json_output(payload)
+        return
+    click.echo(
+        f"bootstrap {payload['state']}"
+        + (f" for attempt {payload['attemptId']}" if payload.get("attemptId") else "")
+    )
+
+
+def emit_agent_work_advisory(signals_file, as_json):
+    try:
+        payload = agent_pack.assess_work_advisory(json.load(signals_file))
+    except (TypeError, ValueError, json.JSONDecodeError) as exc:
+        raise click.ClickException(str(exc)) from exc
+    if as_json:
+        agent_json_output(payload)
+        return
+    click.echo(f"{payload['decision']} · {', '.join(payload['reasonCodes'])}")
+    if payload["preview"] is not None:
+        click.echo(f"Work: {payload['preview']['title']}")
+    if payload["confirmation"]["required"]:
+        click.echo(payload["confirmation"]["prompt"])
+    click.echo(f"Decision: {payload['decisionRoot']}")
 
 
 @kfc.group(

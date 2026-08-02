@@ -32,10 +32,22 @@
       "purpose": "Print the local onboarding brief."
     },
     {
+      "apiId": "kungfu.agent.bootstrap-status",
+      "name": "kungfu agent bootstrap-status --json",
+      "maturity": "experimental",
+      "purpose": "Expose pending, verified, degraded, or unavailable Agent Brief bootstrap state for the current native attempt without claiming model comprehension."
+    },
+    {
       "apiId": "kungfu.agent.docs",
       "name": "kungfu agent docs",
       "maturity": "stable",
       "purpose": "List installed Agent documents and expose the Xinfa context-discovery boundary."
+    },
+    {
+      "apiId": "kungfu.agent.work-advisory",
+      "name": "kungfu agent work-advisory --signals <signals.json> --json",
+      "maturity": "preview",
+      "purpose": "Return authority-free deterministic advice, a minimal Work preview, one-confirmation requirement, and the existing create-bind action path from bounded structured signals."
     },
     {
       "apiId": "kungfu.agent.map",
