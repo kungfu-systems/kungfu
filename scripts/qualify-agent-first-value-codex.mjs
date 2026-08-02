@@ -15,8 +15,8 @@ const QUALIFICATION_SCHEMA =
   'kungfu.agent-first-value-local-codex-qualification/v2';
 const REQUIRED_TRIALS = 10;
 const MINIMUM_CANONICAL_TRIALS = 5;
-const QUALIFICATION_MODEL = 'gpt-5.6-terra';
-const QUALIFICATION_REASONING_EFFORT = 'low';
+const QUALIFICATION_MODEL = 'gpt-5.6-sol';
+const QUALIFICATION_REASONING_EFFORT = 'medium';
 const QUALIFICATION_CONTEXT_ISOLATION = 'ephemeral-auth-link';
 const REQUIRED_NON_CLAIMS = [
   'claude-qualified',

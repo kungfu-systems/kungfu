@@ -40,10 +40,11 @@ directly with the bounded protocol below before your final response.
    answering; do not substitute a candidate, contract, or other root, and never
    reconstruct or recompute receipt fields in model prose.
    Give the user the receipt's exact discovery command as one copyable read-only
-   verification command and one concrete safe next step. Include this exact
-   sentence: `本次只验证了这个本地 Codex 与候选 CLI；未验证 Claude、CI 托管 Codex、其他平台或公开发布。`
-   The product reruns the discovery without a shell and returns a roots-only
-   receipt.
+   verification command. Give exactly one safe next step, copied verbatim from
+   `kungfu project list --json` or
+   `kungfu project open-plan --path . --json`; do not expand `.` to an absolute
+   path. Include this exact sentence: `本次只验证了这个本地 Codex 与候选 CLI；未验证 Claude、CI 托管 Codex、其他平台或公开发布。`
+   The product reruns the discovery without a shell and returns a roots-only receipt.
 8. Expand detail only when requested. Use `kungfu agent context --task "..."
    --role <role> --budget <tokens> --route <route-id> --json`, then follow its
    omissions and expansion handles. Never guess through a failed verification,

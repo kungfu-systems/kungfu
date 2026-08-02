@@ -252,8 +252,8 @@ function qualification() {
       version: 'codex-cli fixture',
       executionMode: 'codex-exec-ephemeral',
       contextIsolation: 'ephemeral-auth-link',
-      model: 'gpt-5.6-terra',
-      reasoningEffort: 'low',
+      model: 'gpt-5.6-sol',
+      reasoningEffort: 'medium',
     },
     platform: { system: 'darwin', arch: 'arm64' },
     candidate: {
