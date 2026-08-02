@@ -18,6 +18,7 @@ const REQUIRED_AGENT_DISCOVERY = [
   'kungfu agent status --target <agent> --json',
   'kungfu agent work inspect --ref <ref> --json',
 ];
+const REQUIRED_EXPLICIT_SOURCE_ROUTES = ['./shifu docs:check:readonly'];
 const REQUIRED_SOURCE_ACCEPTANCE_DENIALS = [
   '_tmp_*',
   '.buildchain/diagnostics/*.tmp-*',
@@ -114,6 +115,9 @@ export function validateReadonlyRouteInventory(
   for (const command of REQUIRED_AGENT_DISCOVERY)
     if (!commands.has(command))
       diagnostics.push({ code: 'agent-route-unclassified', command });
+  for (const command of REQUIRED_EXPLICIT_SOURCE_ROUTES)
+    if (!commands.has(command))
+      diagnostics.push({ code: 'explicit-source-route-unclassified', command });
   return diagnostics;
 }
 

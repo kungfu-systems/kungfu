@@ -12,6 +12,8 @@ import {
   devMergeBaseCandidates,
 } from './candidate-timeline-events.cjs';
 import {
+  SOURCE_ACCEPTANCE_RECOVERY,
+  SOURCE_ACCEPTANCE_RUNTIME_OWNER,
   assertSourceCheckoutUnchanged,
   prepareSourceAcceptanceRuntime,
   sourceCheckoutSnapshot,
@@ -618,7 +620,6 @@ export function sourceAcceptancePlan(files, evidenceBaseCommit = '') {
       env:
         label === 'documentation contracts' && evidenceBaseCommit
           ? {
-              ...process.env,
               KUNGFU_ADR_EVIDENCE_BASE_SHA: evidenceBaseCommit,
             }
           : undefined,
@@ -828,13 +829,6 @@ export function sourceAcceptancePlan(files, evidenceBaseCommit = '') {
 
   const python = files.filter((file) => file.endsWith('.py'));
   if (python.length) {
-    const ruffEnv = {
-      ...process.env,
-      RUFF_CACHE_DIR: path.join(
-        process.env.XDG_CACHE_HOME || process.env.RUNNER_TEMP || '/tmp',
-        'kungfu-source-ruff',
-      ),
-    };
     const format = sourcePythonCommand([
       'format',
       '--no-cache',
@@ -856,12 +850,10 @@ export function sourceAcceptancePlan(files, evidenceBaseCommit = '') {
       {
         label: 'changed Python format',
         ...format,
-        env: ruffEnv,
       },
       {
         label: 'changed Python lint',
         ...lint,
-        env: ruffEnv,
       },
     );
   }
@@ -875,13 +867,6 @@ export function sourceAcceptancePlan(files, evidenceBaseCommit = '') {
       label: 'Python type baseline',
       ...mypy,
       cwd: path.join(ROOT, 'framework/core'),
-      env: {
-        ...process.env,
-        MYPY_CACHE_DIR: path.join(
-          process.env.RUNNER_TEMP || '/tmp',
-          'kungfu-source-mypy',
-        ),
-      },
     });
   }
 
@@ -901,18 +886,52 @@ export function sourceAcceptancePlan(files, evidenceBaseCommit = '') {
   return plan;
 }
 
-/** @param {Command} step */
-function run(step, sourceEnv = process.env) {
+const SOURCE_ACCEPTANCE_RUNTIME_ENV = [
+  'TMPDIR',
+  'TMP',
+  'TEMP',
+  'XDG_CACHE_HOME',
+  'XDG_STATE_HOME',
+  'COREPACK_HOME',
+  'COREPACK_ENABLE_DOWNLOAD_PROMPT',
+  'PNPM_HOME',
+  'npm_config_cache',
+  'NPM_CONFIG_CACHE',
+  'UV_CACHE_DIR',
+  'RUFF_CACHE_DIR',
+  'MYPY_CACHE_DIR',
+  'SHIFU_CACHE_RECEIPT',
+  'KUNGFU_SOURCE_ACCEPTANCE_RUNTIME_ROOT',
+];
+
+export function sourceAcceptanceChildEnv(sourceEnv, stepEnv = {}) {
+  const childEnv = { ...sourceEnv, ...stepEnv };
+  for (const key of SOURCE_ACCEPTANCE_RUNTIME_ENV) {
+    if (sourceEnv[key] !== undefined) childEnv[key] = sourceEnv[key];
+  }
+  return childEnv;
+}
+
+/**
+ * @param {Command} step
+ * @param {NodeJS.ProcessEnv} sourceEnv
+ * @param {typeof spawnSync} spawn
+ */
+export function runSourceAcceptanceStep(
+  step,
+  sourceEnv = process.env,
+  spawn = spawnSync,
+) {
   console.log(`\n[source-acceptance] ${step.label}`);
   console.log(`[source-acceptance] $ ${step.command} ${step.args.join(' ')}`);
-  const result = spawnSync(step.command, step.args, {
+  const result = spawn(step.command, step.args, {
     cwd: step.cwd || ROOT,
-    env: { ...sourceEnv, ...(step.env || {}) },
+    env: sourceAcceptanceChildEnv(sourceEnv, step.env),
     stdio: 'inherit',
   });
   if (result.error || result.status !== 0) {
     throw new Error(
-      `${step.label} failed: ${result.error?.message || result.status}`,
+      `${step.label} failed: ${result.error?.message || result.status}; owner=${SOURCE_ACCEPTANCE_RUNTIME_OWNER}; recovery=${SOURCE_ACCEPTANCE_RECOVERY}`,
     );
   }
   if (process.env.KUNGFU_READONLY_NESTED_SOURCE_ACCEPTANCE === '1') {
@@ -951,7 +970,7 @@ function main() {
       );
     }
     for (const step of sourceAcceptancePlan(files, sourceMergeBase().sha))
-      run(step, runtime.env);
+      runSourceAcceptanceStep(step, runtime.env);
   } catch (error) {
     failure = error;
   } finally {
