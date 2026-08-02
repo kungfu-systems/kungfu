@@ -465,7 +465,7 @@ jobs:
       actions: read
       contents: write
       pull-requests: write
-    uses: kungfu-systems/buildchain/.github/workflows/.declarative-auditable-demo.yml@4501f4832da19614a24cf81fc71483aadaaac0b7
+    uses: kungfu-systems/buildchain/.github/workflows/.declarative-auditable-demo.yml@ae9f4b91ee1027d0e18f416c8f18bc4645c8e3f9
     secrets:
       DEMO_UPDATE_TOKEN: ${{ secrets.KUNGFU_GITHUB_TOKEN }}
     with:

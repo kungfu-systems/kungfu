@@ -252,11 +252,31 @@ test('CLI product emits exact standalone demo metadata beside the launcher', (t)
   t.after(() => fs.rmSync(root, { recursive: true, force: true }));
   const layout = cliArchiveLayout('linux');
   fs.writeFileSync(path.join(root, layout.launcherName), '#!/bin/sh\nexit 0\n');
-  const metadata = writeAuditableDemoBinaryMetadata(root, layout, 'linux-x64');
+  fs.mkdirSync(path.join(root, layout.runtimeDirectory));
+  fs.writeFileSync(path.join(root, layout.runtimeEntrypoint), 'runtime\n');
+  const metadata = writeAuditableDemoBinaryMetadata(
+    root,
+    layout,
+    'linux-x64',
+    root,
+  );
   assert.deepEqual(metadata, {
     contract: 'kungfu.declarative-demo-binary/v1',
     platformId: 'linux-x64',
     sha256: `sha256:${crypto.createHash('sha256').update('#!/bin/sh\nexit 0\n').digest('hex')}`,
+    executableFiles: [
+      {
+        path: 'kungfu',
+        sha256: crypto
+          .createHash('sha256')
+          .update('#!/bin/sh\nexit 0\n')
+          .digest('hex'),
+      },
+      {
+        path: 'runtime/kungfu',
+        sha256: crypto.createHash('sha256').update('runtime\n').digest('hex'),
+      },
+    ],
     runtimeDependencies: [],
   });
   assert.deepEqual(

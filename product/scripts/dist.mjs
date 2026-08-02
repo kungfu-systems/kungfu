@@ -1118,12 +1118,18 @@ export function writeAuditableDemoBinaryMetadata(
   stageRoot,
   layout,
   platform = platformId(),
+  artifactRoot = ROOT,
 ) {
   const binary = path.join(stageRoot, layout.launcherName);
+  const runtime = path.join(stageRoot, layout.runtimeEntrypoint);
   const metadata = {
     contract: 'kungfu.declarative-demo-binary/v1',
     platformId: platform,
     sha256: sha256File(binary),
+    executableFiles: [binary, runtime].map((file) => ({
+      path: path.relative(artifactRoot, file).split(path.sep).join('/'),
+      sha256: sha256File(file).slice('sha256:'.length),
+    })),
     runtimeDependencies: [],
   };
   fs.writeFileSync(
