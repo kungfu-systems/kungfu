@@ -62,6 +62,44 @@ def complete_agent_route(
     return {"state": state, "configPath": updated["configPath"]}
 
 
+def project_required_message(command: str) -> str:
+    return (
+        "Kungfu needs a Project before it can start durable Work. Run "
+        "`kungfu agent brief` in the agent you already use, or run bare `kungfu` "
+        "for Getting Started; then open a Project and retry "
+        f"`{command}`."
+    )
+
+
+class AgentRouteCompletionObserver:
+    """Complete shared onboarding once, then project the bound Work."""
+
+    def __init__(
+        self,
+        observer: Callable[[Mapping[str, Any]], Mapping[str, Any]],
+        *,
+        config_home: str | None = None,
+        runtime_home: str | None = None,
+    ) -> None:
+        self._observer = observer
+        self._config_home = config_home
+        self._runtime_home = runtime_home
+        self._attempted = False
+        self.error: Exception | None = None
+
+    def __call__(self, work_ref: Mapping[str, Any]) -> Mapping[str, Any]:
+        if not self._attempted:
+            self._attempted = True
+            try:
+                complete_agent_route(
+                    config_home=self._config_home,
+                    runtime_home=self._runtime_home,
+                )
+            except (OSError, RuntimeError, ValueError, json.JSONDecodeError) as error:
+                self.error = error
+        return self._observer(work_ref)
+
+
 def work_authority_capabilities():
     return {
         "schema": "kungfu.work.authority-capabilities/v1",

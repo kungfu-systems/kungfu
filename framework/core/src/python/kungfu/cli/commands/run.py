@@ -21,15 +21,6 @@ run_command_context = kfc.pass_context()
 _RUN_INTENTS = RunIntentDispatcher()
 
 
-def _project_required_message(command: str) -> str:
-    return (
-        "Kungfu needs a Project before it can start durable Work. Run "
-        "`kungfu agent brief` in the agent you already use, or run bare `kungfu` "
-        "for Getting Started; then open a Project and retry "
-        f"`{command}`."
-    )
-
-
 def _json_file(handle, label):
     if handle is None:
         return None
@@ -456,26 +447,14 @@ def _run_native_provider(ctx, *, provider=None, profile_id=None, workspace_root=
             "read-only", workspace_root or None, cwd=os.getcwd()
         )
     except WorkspaceTargetRequired as error:
-        raise click.ClickException(_project_required_message(command)) from error
+        raise click.ClickException(
+            onboarding.project_required_message(command)
+        ) from error
     if (
         target.identity.workspace_kind != "project"
         or not target.identity.workspace_root
     ):
-        raise click.ClickException(_project_required_message(command))
-    onboarding_updated = False
-    onboarding_error = None
-
-    def complete_onboarding(_work_ref):
-        nonlocal onboarding_error, onboarding_updated
-        if onboarding_updated:
-            return
-        try:
-            onboarding.complete_agent_route(
-                config_home=ctx.config_home, runtime_home=ctx.home
-            )
-            onboarding_updated = True
-        except (OSError, RuntimeError, ValueError, json.JSONDecodeError) as error:
-            onboarding_error = error
+        raise click.ClickException(onboarding.project_required_message(command))
 
     try:
         if profile_id is not None:
@@ -516,16 +495,13 @@ def _run_native_provider(ctx, *, provider=None, profile_id=None, workspace_root=
                     request, endpoint=session_endpoint
                 )
 
-        onboarding_work_bound = False
-
-        def observe_bound_work(bound_work_ref):
-            nonlocal onboarding_work_bound
-            if not onboarding_work_bound:
-                complete_onboarding(bound_work_ref)
-                onboarding_work_bound = True
-            return _native_work_observer(
+        onboarding_observer = onboarding.AgentRouteCompletionObserver(
+            lambda bound_work_ref: _native_work_observer(
                 target.runtime_dir, work_selection, bound_work_ref
-            )
+            ),
+            config_home=ctx.config_home,
+            runtime_home=ctx.home,
+        )
 
         exit_code = run_agent.run_native_interactive(
             profile,
@@ -537,14 +513,14 @@ def _run_native_provider(ctx, *, provider=None, profile_id=None, workspace_root=
             work_selection=work_selection,
             session_endpoint=session_endpoint,
             session_invoker=invoke_native_session,
-            work_observer=observe_bound_work,
+            work_observer=onboarding_observer,
         )
     except (OSError, ValueError) as error:
         raise click.ClickException(str(error)) from error
-    if onboarding_error is not None:
+    if onboarding_observer.error is not None:
         click.echo(
             "Warning: Work was bound, but Getting Started state was not saved: "
-            f"{onboarding_error}",
+            f"{onboarding_observer.error}",
             err=True,
         )
     if exit_code != 0:
@@ -582,13 +558,15 @@ def _run_provider(
         )
     except WorkspaceTargetRequired as error:
         raise click.ClickException(
-            _project_required_message(f"kungfu run {provider}")
+            onboarding.project_required_message(f"kungfu run {provider}")
         ) from error
     if (
         target.identity.workspace_kind != "project"
         or not target.identity.workspace_root
     ):
-        raise click.ClickException(_project_required_message(f"kungfu run {provider}"))
+        raise click.ClickException(
+            onboarding.project_required_message(f"kungfu run {provider}")
+        )
     root = target.identity.workspace_root
     try:
         work = (
