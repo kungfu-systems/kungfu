@@ -274,7 +274,7 @@
     {
       "path": ".github/workflows/build.yml",
       "authority": "product-publication",
-      "definitionDigest": "sha256:57864c1a8616d4e1d923671f28a3a0a0b7a8c4e083e5ad1766f866dd283a7e02",
+      "definitionDigest": "sha256:fb83542d4d1bff81fa60cb33f1d513143c08730944d7437820566b4fdef56f9e",
       "jobs": [
         {
           "id": "auditable-demo",
@@ -381,10 +381,10 @@
           "authority": "qualification",
           "publication": "none",
           "receipt": "diagnostic",
-          "definitionDigest": "sha256:bce62fa5a7da528dc1ff453cb140e5b8de976daca0ddc1019f0232bdbfd5b5b4",
+          "definitionDigest": "sha256:e7e22cc96a21a57c700c66bc85266051c7b859bd9892ef633d5c3df3b70dcace",
           "credentials": {"githubToken":"read","oidc":false,"repositorySecrets":[],"inheritedSecrets":false,"environment":null},
           "externalActions": ["actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0"],
-          "steps": [{"index":1,"label":"name:Check out exact candidate source","definitionDigest":"sha256:90b7875c1b8263fc6ee031b6f446decfc1fe5eb289f08dbc3d506c4bce43f113"},{"index":2,"label":"name:Reject known-invalid Windows entry contracts","definitionDigest":"sha256:ebf365cac4ac6f116e8c4befa7efbdbb54d86a142e6576ab47a868d57914047f"}]
+          "steps": [{"index":1,"label":"name:Check out exact candidate source","definitionDigest":"sha256:90b7875c1b8263fc6ee031b6f446decfc1fe5eb289f08dbc3d506c4bce43f113"},{"index":2,"label":"id:continuity","definitionDigest":"sha256:7b385ea24cf93a1681e845b0b831870419b399aea945e6c093560b4b55ea72ab"},{"index":3,"label":"name:Independently verify the exact Windows continuity receipt","definitionDigest":"sha256:08e15551c227c68b9b0941b5a2af65e795f9ddd6efe1f42a0fc54ce4bfe720b9"}]
         }
       ]
     },
