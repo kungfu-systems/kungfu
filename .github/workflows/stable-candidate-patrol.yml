@@ -44,14 +44,15 @@ jobs:
     needs: resolve-version-line
     # The reusable workflow and runtime are pinned to the same reviewed,
     # immutable Buildchain source.
-    uses: kungfu-systems/buildchain/.github/workflows/stable-candidate-patrol.yml@7629c4b499cd2d4eebf4c020fbc81637ae1dcb39
+    uses: kungfu-systems/buildchain/.github/workflows/stable-candidate-patrol.yml@978520e86134683f66b607bc70c2d18f623e2410
     with:
-      buildchain-ref: 7629c4b499cd2d4eebf4c020fbc81637ae1dcb39
+      buildchain-ref: 978520e86134683f66b607bc70c2d18f623e2410
       target-branch: ${{ needs.resolve-version-line.outputs.stable-branch }}
       ledger-ref: ${{ needs.resolve-version-line.outputs.candidate-ledger }}
       release-now: ${{ inputs.release-now }}
       auto-approve: false
-      auto-merge: false
+      auto-merge: true
+      merge-method: rebase
       # Scheduled patrols may create the protected source-lock PR. Manual
       # dispatch remains evidence-only unless the operator explicitly enables
       # PR creation; neither path publishes before that PR is reviewed/merged.

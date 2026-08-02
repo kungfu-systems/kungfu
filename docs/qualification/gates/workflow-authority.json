@@ -466,9 +466,9 @@
           "authority": "qualification",
           "publication": "none",
           "receipt": "diagnostic",
-          "definitionDigest": "sha256:c50e857eb62f1c7e323d8e462261829889e50a683c70e4bcadf40e875b811096",
+          "definitionDigest": "sha256:c429cbf8300dc962fdc7f975241e9454b55f3a36caeb65239fdade78673bb85d",
           "credentials": {"githubToken":"write","oidc":false,"repositorySecrets":["KUNGFU_GITHUB_TOKEN"],"inheritedSecrets":false,"environment":null},
-          "externalActions": ["kungfu-systems/buildchain/.github/workflows/dev-alpha-candidate-patrol.yml@f6b0cddea283495414ac3481364c1c27ae5c6485"],
+          "externalActions": ["kungfu-systems/buildchain/.github/workflows/dev-alpha-candidate-patrol.yml@978520e86134683f66b607bc70c2d18f623e2410"],
           "steps": []
         },
         {
@@ -507,6 +507,33 @@
           "credentials": {"githubToken":"read","oidc":false,"repositorySecrets":[],"inheritedSecrets":false,"environment":null},
           "externalActions": ["actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0","actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02"],
           "steps": [{"index":1,"label":"name:Check out exact protected source","authority":"diagnostic-write","definitionDigest":"sha256:f59a8bf2f2ec268be4a505dfc794e8872e7f5173cd61e8c1f5b5a0cfcd84cabe"},{"index":2,"label":"name:Select every protected admitted dev branch","authority":"diagnostic-write","definitionDigest":"sha256:94f241c2b7f49156db6c4ce05a5b5fe5a6de9944bdda41c701e326c4ba0b691e"},{"index":3,"label":"id:collect","authority":"diagnostic-write","definitionDigest":"sha256:8b5df204c5bcac9cf660208059e2428202ed210c08e498c63e030ccfa6971005"},{"index":4,"label":"name:Classify bounded latency evidence","authority":"diagnostic-write","definitionDigest":"sha256:c171910a2aa1485960a93481656b7bb7ea2180640cf0ec4e37f9fc3d47ff4bcf"},{"index":5,"label":"name:Summarize bounded rolling windows","authority":"diagnostic-write","definitionDigest":"sha256:7625acf81c710d3b168b3c22000b6334518ed6fc2cf991a54ac2e72f2827d11d"},{"index":6,"label":"name:Upload bounded diagnostic evidence","authority":"diagnostic-write","definitionDigest":"sha256:078816be3d4140ac96a171b67542e6bf3c238a56899fb75237d1eabca4b43f61"}]
+        }
+      ]
+    },
+    {
+      "path": ".github/workflows/dev-pr-auto-merge.yml",
+      "authority": "qualification",
+      "definitionDigest": "sha256:74edf240b06e26db64041f8b289b97b5e90733a3cacbbb20f1c03e4fcb2191dd",
+      "jobs": [
+        {
+          "id": "admission",
+          "authority": "qualification",
+          "publication": "none",
+          "receipt": "diagnostic",
+          "definitionDigest": "sha256:5ba5b438e1f3b443dd8e824c55267a6a921472a3fdb65ebbf3c5f1f63c8adf00",
+          "credentials": {"githubToken":"write","oidc":false,"repositorySecrets":["KUNGFU_GITHUB_TOKEN"],"inheritedSecrets":false,"environment":null},
+          "externalActions": ["kungfu-systems/buildchain/.github/workflows/dev-pr-auto-merge.yml@978520e86134683f66b607bc70c2d18f623e2410"],
+          "steps": []
+        },
+        {
+          "id": "resolve-target",
+          "authority": "qualification",
+          "publication": "none",
+          "receipt": "diagnostic",
+          "definitionDigest": "sha256:7fb51914ba319dc98492fd4e94194a9a0bf4e5dfa6e094fd9658c60f105394ea",
+          "credentials": {"githubToken":"none","oidc":false,"repositorySecrets":[],"inheritedSecrets":false,"environment":null},
+          "externalActions": [],
+          "steps": [{"index":1,"label":"id:target","definitionDigest":"sha256:e28c3cc873e5e58537f7a17c05bc3b09a6492fe19efcc760a345e2c52bef4559"}]
         }
       ]
     },
@@ -949,9 +976,9 @@
           "authority": "qualification",
           "publication": "none",
           "receipt": "diagnostic",
-          "definitionDigest": "sha256:d0becb5f9e12f3de6737e184b0d53857e93352077fcc24e1c28046d60407fc5b",
+          "definitionDigest": "sha256:3685dd2a6b5ff15009eda840c9c73ae2014d869454b67672b7354b227b9d28c0",
           "credentials": {"githubToken":"write","oidc":false,"repositorySecrets":["KUNGFU_GITHUB_TOKEN"],"inheritedSecrets":false,"environment":null},
-          "externalActions": ["kungfu-systems/buildchain/.github/workflows/stable-candidate-patrol.yml@7629c4b499cd2d4eebf4c020fbc81637ae1dcb39"],
+          "externalActions": ["kungfu-systems/buildchain/.github/workflows/stable-candidate-patrol.yml@978520e86134683f66b607bc70c2d18f623e2410"],
           "steps": []
         }
       ]
