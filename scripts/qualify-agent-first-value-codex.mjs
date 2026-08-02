@@ -86,8 +86,7 @@ export function codexResultSchema() {
         type: 'string',
         minLength: 80,
         maxLength: 2048,
-        description:
-          'The complete user-visible Chinese answer. Include a plain-language Kungfu explanation, name the personalization basis, copy the exact CLI receiptRoot, include both command fields verbatim, and include the exact local qualification boundary from the brief.',
+        description: `The complete user-visible Chinese answer. Include a plain-language Kungfu explanation, name the personalization basis, copy the exact CLI receiptRoot, include both command fields verbatim, and include this exact local qualification boundary: ${LOCAL_QUALIFICATION_SCOPE_STATEMENT}`,
       },
       personalizationBasis: {
         type: 'string',

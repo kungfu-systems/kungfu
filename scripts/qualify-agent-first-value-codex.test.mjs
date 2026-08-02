@@ -60,6 +60,10 @@ test('Codex result schema constrains the user response without copying receipts'
     schema.properties.response.description,
     /complete user-visible Chinese answer/u,
   );
+  assert.match(
+    schema.properties.response.description,
+    /本次只验证了这个本地 Codex 与候选 CLI；未验证 Claude、CI 托管 Codex、其他平台或公开发布。/u,
+  );
   assert.deepEqual(schema.properties.verificationCommand.enum, [
     'kungfu agent status --target codex --scope project --json',
   ]);
