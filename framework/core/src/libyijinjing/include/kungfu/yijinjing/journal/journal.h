@@ -4,6 +4,7 @@
 #define YIJINJING_JOURNAL_H
 
 #include <chrono>
+#include <cstddef>
 #include <expected>
 #include <kungfu/common.h>
 #include <kungfu/yijinjing/journal/bus.h>
@@ -15,6 +16,7 @@
 #include <kungfu/yijinjing/time.h>
 #include <mutex>
 #include <queue>
+#include <span>
 #include <thread>
 
 namespace kungfu::yijinjing::journal {
@@ -372,9 +374,8 @@ public:
     void commit(size_t data_length, int64_t gen_time = time::now_in_nano());
 
     // Capacity-checked payload write. The reservation made by reserve_frame() is
-    // the only bound on the underlying memcpy, so it is enforced here, before the
-    // copy and in release builds too: close_frame()'s assert only fires after the
-    // bytes have already landed, and evaporates entirely under NDEBUG.
+    // the only bound on the underlying memcpy, so it is enforced here before the
+    // copy and independently of debug-only assertions.
     template <typename T> size_t copy_data(const T &data) {
       require_capacity(sizeof(T));
       return frame_->copy_data(data);
@@ -382,8 +383,14 @@ public:
 
     // Same bound for the untyped payload path.
     void copy_bytes(const void *source, size_t length) {
+      if (source == nullptr && length != 0) {
+        throw journal_error("Can not copy a non-empty frame payload from a null address");
+      }
       require_capacity(length);
-      memcpy(data(), source, length);
+      if (length != 0) {
+        // KUNGFU_WRITER_RAW_COPY_EXCEPTION: the transaction validates both source and reserved capacity above.
+        memcpy(data(), source, length);
+      }
     }
 
   private:
@@ -451,6 +458,11 @@ public:
 
   virtual void write_raw(int64_t trigger_time, int32_t carrier_type, uintptr_t data, uint32_t length);
 
+  // Canonical extent-carrying byte entrypoint. It is deliberately non-virtual:
+  // the established vector-plus-length virtual remains ABI-compatible while
+  // delegating to this single checked copy path.
+  void write_bytes(int64_t trigger_time, int32_t carrier_type, std::span<const std::byte> data);
+
   virtual void write_bytes(int64_t trigger_time, int32_t carrier_type, const std::vector<uint8_t> &data,
                            uint32_t length);
 
@@ -505,7 +517,7 @@ public:
     auto s = data.to_string();
     auto size = s.length();
     auto tx = reserve_frame(trigger_time, carrier_type, size);
-    memcpy(tx.data(), s.c_str(), size);
+    tx.copy_bytes(s.data(), size);
     tx.commit(size);
   }
 
@@ -524,7 +536,7 @@ public:
     auto s = data.to_string();
     auto size = s.length();
     auto tx = reserve_frame(trigger_time, T::tag, size);
-    memcpy(tx.data(), s.c_str(), size);
+    tx.copy_bytes(s.data(), size);
     tx.frame()->set_source(source);
     tx.frame()->set_dest(dest);
     tx.commit(size);
@@ -542,7 +554,7 @@ public:
     auto s = data.to_string();
     auto size = s.length();
     auto tx = reserve_frame(trigger_time, T::tag, size);
-    memcpy(tx.data(), s.c_str(), size);
+    tx.copy_bytes(s.data(), size);
     tx.commit(size, gen_time);
   }
 
@@ -558,7 +570,10 @@ protected:
   virtual void on_frame_closing(int64_t gen_time, ::kungfu::yijinjing::journal::frame *frame);
   ::kungfu::yijinjing::journal::frame *open_frame_unserialized(int64_t trigger_time, int32_t carrier_type,
                                                                size_t length, uint64_t stream_id);
-  void close_frame_unserialized(size_t data_length, int64_t gen_time);
+  [[nodiscard]] size_t validate_payload_length(size_t length) const;
+  [[nodiscard]] size_t validate_frame_commit(size_t data_length) const;
+  [[nodiscard]] bool current_frame_has_capacity(size_t aligned_payload_length, uintptr_t page_border) const;
+  void close_frame_unserialized(size_t aligned_data_length, int64_t gen_time);
   void abort_frame_unserialized() noexcept;
   void close_page(int64_t trigger_time);
 };
