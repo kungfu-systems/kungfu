@@ -342,10 +342,6 @@ test('the GUI shell uses the shared startup surface policy', () => {
     new URL('./renderer/src/product-navigation/index.tsx', import.meta.url),
     'utf8',
   );
-  const onboardingRoutesSource = readFileSync(
-    new URL('./renderer/src/onboarding-routes.ts', import.meta.url),
-    'utf8',
-  );
   const mainSource = readFileSync(
     new URL('./main/index.ts', import.meta.url),
     'utf8',
@@ -379,8 +375,8 @@ test('the GUI shell uses the shared startup surface policy', () => {
   assert.match(projectsSource, /WORKSPACE_SELECT_PATH_CHANNEL/);
   assert.match(source, /onOpenStarterProject/);
   assert.match(source, /onLabComplete/);
-  assert.match(onboardingRoutesSource, /finishKungfuOnboarding\(state/);
-  assert.match(onboardingRoutesSource, /\.then\(\(\) => openPath\(root\)\)/);
+  assert.match(navigationSource, /finishKungfuOnboarding\(state/);
+  assert.match(navigationSource, /\.then\(\(\) => openPath\(root\)\)/);
   assert.match(mainSource, /ipcMain\.handle\(WORKSPACE_SELECT_PATH_CHANNEL/);
   assert.match(mainSource, /transition: 'development-supervisor-restart'/);
   assert.match(mainSource, /transition: 'application-relaunch'/);

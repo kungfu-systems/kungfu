@@ -13,11 +13,12 @@ import sys
 import uuid
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Callable
+from typing import Any, Callable, Mapping
 
 from jsonschema import Draft202012Validator
 
 import kungfu
+from kungfu import config as kungfu_config
 from kungfu.agent import resources
 
 
@@ -25,6 +26,40 @@ RECEIPT_SCHEMA = "kungfu.agent-first-value-receipt/v1"
 REVISION = re.compile(r"^[0-9a-f]{40,64}$")
 Runner = Callable[[list[str], int, int], tuple[int, bytes, bytes]]
 SubprocessError = subprocess.SubprocessError
+ONBOARDING_VERSION = 1
+
+
+def completed_agent_state(current: Mapping[str, Any] | None = None) -> dict[str, Any]:
+    """Project a successful Agent-first Work start into the shared UI state."""
+
+    value = dict(current or {})
+    return {
+        "version": ONBOARDING_VERSION,
+        "status": "completed",
+        "route": "agent",
+        "labCompleted": value.get("labCompleted") is True,
+        "tourCompleted": value.get("tourCompleted") is True,
+        "completedAt": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
+    }
+
+
+def complete_agent_route(
+    *, config_home: str | None = None, runtime_home: str | None = None
+) -> dict[str, Any]:
+    """Persist completion only after an exact durable Work start or binding."""
+
+    resolved = kungfu_config.resolve_config(
+        config_home=config_home, runtime_home=runtime_home
+    )
+    current = (resolved.get("config") or {}).get("ui", {}).get("onboarding", {})
+    state = completed_agent_state(current)
+    updated = kungfu_config.set_user_config_value(
+        "ui.onboarding",
+        state,
+        config_home=config_home,
+        runtime_home=runtime_home,
+    )
+    return {"state": state, "configPath": updated["configPath"]}
 
 
 def work_authority_capabilities():

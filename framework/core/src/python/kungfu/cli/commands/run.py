@@ -9,8 +9,8 @@ from pathlib import Path
 import click
 
 from kungfu import assignment_orchestration as orchestration
-from kungfu import onboarding
 from kungfu.agent import run_agent
+from kungfu.agent import first_value as onboarding
 from kungfu.agent.run_intent import RunIntentDispatcher
 from kungfu.cli.commands import PrioritizedCommandGroup, kfc
 from kungfu.agent.kfd3 import api_help, kfd3_api

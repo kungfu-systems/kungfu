@@ -77,13 +77,11 @@ import {
 } from './gui-config';
 import { type KfxLoadResult, loadKfx } from './kfx-loader';
 import {
-  createLabOnboardingRoutes,
-  deferredAgentWorkStartup,
-} from './onboarding-routes';
-import {
   AgentFirstOnboardingPanel,
   type WindowChromeConfig,
   type WindowChromeControl,
+  createLabOnboardingRoutes,
+  deferredAgentWorkStartup,
   useAgentFirstEntry,
   useWindowChrome,
 } from './product-navigation';

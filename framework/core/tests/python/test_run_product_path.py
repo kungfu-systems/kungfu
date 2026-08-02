@@ -7,7 +7,7 @@ import pytest
 from click.testing import CliRunner
 
 from kungfu import assignment_orchestration as orchestration
-from kungfu import onboarding
+from kungfu.agent import first_value as onboarding
 from kungfu.agent import run_agent
 from kungfu.cli.commands import assignment, kfc, run
 from kungfu.workspace import resolve_workspace_target
