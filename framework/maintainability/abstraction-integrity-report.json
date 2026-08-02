@@ -6,12 +6,12 @@
   "measurement": {
     "aggregates": {
       "kungfu-cli": 20273,
-      "kungfu-flat-root": 35568,
+      "kungfu-flat-root": 35569,
       "kungfu-runtime-family": 6160
     },
     "counts": {
       "productionFiles": 233,
-      "productionPhysicalLines": 83457,
+      "productionPhysicalLines": 83458,
       "testFiles": 96,
       "testPhysicalLines": 45650
     },
@@ -35,7 +35,7 @@
       },
       {
         "path": "framework/core/src/python/kungfu/assignment_orchestration.py",
-        "physicalLines": 1587
+        "physicalLines": 1588
       },
       {
         "path": "framework/core/src/python/kungfu/atlas/payloads.py",
@@ -150,9 +150,9 @@
         "responsibilities": 47
       },
       {
-        "contentRoot": "sha256:5aa430caad9ac9cde63dc092a1a103d9d1e4dcd0268bd23ee374ca2e73381210",
+        "contentRoot": "sha256:5c49399a62d43e478fe6d538c0ccb945296ebfc3dbbf9a9a914c85cd094ad412",
         "path": "framework/core/src/python/kungfu/assignment_orchestration.py",
-        "physicalLines": 1587,
+        "physicalLines": 1588,
         "responsibilities": 34
       },
       {
@@ -362,7 +362,7 @@
       }
     ],
     "schema": "kungfu.python-structure-measurement/v1",
-    "sourceRoot": "sha256:f1d674ce17394a6b173b9c6e249cda2e8cf06ecd3cefd8f0a68c951fd9064bf9",
+    "sourceRoot": "sha256:783044e1d91142a836f078d3dc60aacb89cd6cf2d5c9af82607a97f13163d842",
     "sourceRoots": {
       "production": [
         "framework/core/src/python"
@@ -454,9 +454,9 @@
     "kungfu.runtime_broker.NativeReadinessAuthority",
     "kungfu.runtime_service.ProcessRuntimeHost"
   ],
-  "reportRoot": "sha256:32c36da0c69056c16e8e0f9ca883b428a0ed6a8692d2e0379d4bf43ee1050ad5",
+  "reportRoot": "sha256:311b4921a9d9551dbb17c5c38cb7926ec7fd973027ecb94ea173009844f1c326",
   "schema": "kungfu.abstraction-integrity-report/v1",
-  "sourceRoot": "sha256:f1d674ce17394a6b173b9c6e249cda2e8cf06ecd3cefd8f0a68c951fd9064bf9",
+  "sourceRoot": "sha256:783044e1d91142a836f078d3dc60aacb89cd6cf2d5c9af82607a97f13163d842",
   "summary": {
     "blockingIssues": 0
   },
