@@ -27,6 +27,7 @@ from kungfu.agent.kfd3 import (
     registry_summary,
     verify_agent_interface,
 )
+from kungfu.cli.commands import agent_first_value_entry
 from kungfu.cli.commands import agent_work_lab as agent_work_lab_commands
 from kungfu.cli.commands import kfc, PrioritizedCommandGroup
 from kungfu.config import resolve_config
@@ -220,51 +221,7 @@ def first_value(ctx):
     pass
 
 
-@first_value.command(
-    name="contract", help=api_help("kungfu.agent.first-value.contract")
-)
-@click.option("--json", "as_json", is_flag=True, help="machine-readable output")
-@click.option("--compact", is_flag=True, help="bounded first-entry projection")
-@kfd3_api("kungfu.agent.first-value.contract")
-@agent_command_context
-def first_value_contract(ctx, as_json, compact):
-    try:
-        payload = (
-            first_value_protocol.compact_contract_view()
-            if compact
-            else first_value_protocol.contract_view()
-        )
-    except (OSError, ValueError) as error:
-        raise click.ClickException(str(error)) from error
-    if as_json:
-        _json(payload)
-        return
-    if compact:
-        click.echo(payload["contract"]["promptFamily"]["currentRoot"])
-        click.echo(f"contract: {payload['productIdentity']['contractRoot']}")
-        return
-    click.echo(payload["contract"]["prompt"]["text"])
-    click.echo(f"contract: {payload['productIdentity']['contractRoot']}")
-
-
-@first_value.command(name="start", help=api_help("kungfu.agent.first-value.start"))
-@click.option("--json", "as_json", is_flag=True, help="machine-readable output")
-@kfd3_api("kungfu.agent.first-value.start")
-@agent_command_context
-def first_value_start(ctx, as_json):
-    try:
-        payload = first_value_protocol.create_start_receipt(documentation_pack.verify())
-    except (
-        FileNotFoundError,
-        OSError,
-        ValueError,
-        first_value_protocol.SubprocessError,
-    ) as error:
-        raise click.ClickException(str(error)) from error
-    if as_json:
-        _json(payload)
-        return
-    click.echo(f"verified first value: {payload['receiptRoot']}")
+agent_first_value_entry.register(first_value, agent_command_context)
 
 
 @first_value.command(name="receipt", help=api_help("kungfu.agent.first-value.receipt"))

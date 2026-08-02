@@ -127,7 +127,8 @@
     {
       "owner": "core/python-agent-first-value",
       "paths": [
-        "framework/core/src/python/kungfu/agent/first_value.py"
+        "framework/core/src/python/kungfu/agent/first_value.py",
+        "framework/core/src/python/kungfu/cli/commands/agent_first_value_entry.py"
       ]
     },
     {
