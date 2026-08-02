@@ -18,7 +18,9 @@ import {
   findGitTreeEquivalentAncestor,
   isLocalQualificationRuntime,
   resolveKfdProductGateCheckedAt,
+  runSourceAcceptanceStep,
   selectKfdEvidenceSourceSha,
+  sourceAcceptanceChildEnv,
   sourceAcceptancePlan,
   sourceClangFormatCommand,
   sourceMypyCommand,
@@ -46,12 +48,72 @@ test('source acceptance owns one external runtime for every writable tool surfac
     'COREPACK_HOME',
     'PNPM_HOME',
     'npm_config_cache',
+    'UV_CACHE_DIR',
+    'RUFF_CACHE_DIR',
+    'MYPY_CACHE_DIR',
     'SHIFU_CACHE_RECEIPT',
   ]) {
     assert.doesNotThrow(() =>
       assertExternalSourceAcceptanceTarget(ROOT, runtime.env[key], key),
     );
   }
+});
+
+test('step overrides cannot escape the source-acceptance runtime', (t) => {
+  const runtime = prepareSourceAcceptanceRuntime(ROOT);
+  t.after(runtime.cleanup);
+  const checkoutCache = path.join(ROOT, '_tmp_hostile_child_cache');
+  const child = sourceAcceptanceChildEnv(runtime.env, {
+    ...process.env,
+    TMPDIR: checkoutCache,
+    XDG_CACHE_HOME: checkoutCache,
+    UV_CACHE_DIR: checkoutCache,
+    RUFF_CACHE_DIR: checkoutCache,
+    MYPY_CACHE_DIR: checkoutCache,
+    SHIFU_CACHE_RECEIPT: path.join(checkoutCache, 'receipt.json'),
+    KUNGFU_ADR_EVIDENCE_BASE_SHA: 'a'.repeat(40),
+  });
+  for (const key of [
+    'TMPDIR',
+    'XDG_CACHE_HOME',
+    'UV_CACHE_DIR',
+    'RUFF_CACHE_DIR',
+    'MYPY_CACHE_DIR',
+    'SHIFU_CACHE_RECEIPT',
+  ]) {
+    assert.equal(child[key].startsWith(runtime.runtimeRoot), true, key);
+  }
+  assert.equal(child.KUNGFU_ADR_EVIDENCE_BASE_SHA, 'a'.repeat(40));
+  assert.equal(fs.existsSync(checkoutCache), false);
+});
+
+test('the executed child receives the protected runtime plus narrow overrides', (t) => {
+  const runtime = prepareSourceAcceptanceRuntime(ROOT);
+  t.after(runtime.cleanup);
+  let captured;
+  runSourceAcceptanceStep(
+    {
+      label: 'hostile child env fixture',
+      command: 'fixture',
+      args: [],
+      env: {
+        ...process.env,
+        TMPDIR: path.join(ROOT, '_tmp_hostile_spawn'),
+        UV_CACHE_DIR: path.join(ROOT, '.uv-cache'),
+        KUNGFU_ADR_EVIDENCE_BASE_SHA: 'b'.repeat(40),
+      },
+    },
+    runtime.env,
+    (_command, _args, options) => {
+      captured = options.env;
+      return { status: 0 };
+    },
+  );
+  assert.equal(captured.TMPDIR, runtime.env.TMPDIR);
+  assert.equal(captured.UV_CACHE_DIR, runtime.env.UV_CACHE_DIR);
+  assert.equal(captured.KUNGFU_ADR_EVIDENCE_BASE_SHA, 'b'.repeat(40));
+  assert.equal(fs.existsSync(path.join(ROOT, '_tmp_hostile_spawn')), false);
+  assert.equal(fs.existsSync(path.join(ROOT, '.uv-cache')), false);
 });
 
 test('repo-local temporary, cache, fixture, and nested task writers fail before mutation', (t) => {
