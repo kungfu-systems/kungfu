@@ -6,14 +6,14 @@
   "measurement": {
     "aggregates": {
       "kungfu-cli": 20273,
-      "kungfu-flat-root": 36578,
+      "kungfu-flat-root": 36612,
       "kungfu-runtime-family": 6160
     },
     "counts": {
-      "productionFiles": 229,
-      "productionPhysicalLines": 83313,
+      "productionFiles": 230,
+      "productionPhysicalLines": 83347,
       "testFiles": 96,
-      "testPhysicalLines": 45614
+      "testPhysicalLines": 45622
     },
     "hiddenProductionFiles": [],
     "modulesOver1000": [
@@ -67,7 +67,7 @@
       },
       {
         "path": "framework/core/src/python/kungfu/exit_bundle.py",
-        "physicalLines": 2030
+        "physicalLines": 1457
       },
       {
         "path": "framework/core/src/python/kungfu/peer_lifecycle.py",
@@ -114,10 +114,6 @@
       {
         "path": "framework/core/src/python/kungfu/distribution_update.py",
         "physicalLines": 3107
-      },
-      {
-        "path": "framework/core/src/python/kungfu/exit_bundle.py",
-        "physicalLines": 2030
       },
       {
         "path": "framework/core/src/python/kungfu/profile_sdk.py",
@@ -206,10 +202,10 @@
         "responsibilities": 72
       },
       {
-        "contentRoot": "sha256:05a562b0c9508820fa8fc1328a409bc300388b7e7bb975bcc5555d779332a000",
+        "contentRoot": "sha256:5ed800177af8ff6a7b00434b3ba1f6330baf66c27901e91578d2442df9a9ee71",
         "path": "framework/core/src/python/kungfu/exit_bundle.py",
-        "physicalLines": 2030,
-        "responsibilities": 54
+        "physicalLines": 1457,
+        "responsibilities": 36
       },
       {
         "contentRoot": "sha256:216529e0c2108a9ebd74c620a7008c5905e619c9c3aca8ed5677408b5f72cbea",
@@ -370,7 +366,7 @@
       }
     ],
     "schema": "kungfu.python-structure-measurement/v1",
-    "sourceRoot": "sha256:5447ade66cf54d5b7f17813c0677bc38f7dea7e6ecde3374945fd18223df899f",
+    "sourceRoot": "sha256:a88315761a99d4e106fa076b34a9a629a5e2209a4b7898f9f574d3a80db01195",
     "sourceRoots": {
       "production": [
         "framework/core/src/python"
@@ -401,6 +397,12 @@
       "owner": "core/python-release-history",
       "paths": [
         "framework/core/src/python/kungfu/product_release_history.py"
+      ]
+    },
+    {
+      "owner": "core/python-project-cut-exit",
+      "paths": [
+        "framework/core/src/python/kungfu/project_cut_exit.py"
       ]
     },
     {
@@ -441,19 +443,22 @@
   ],
   "publicImports": [
     "kungfu.exit_bundle.ProductReleaseHistoryError",
+    "kungfu.exit_bundle.ProjectCutExitError",
+    "kungfu.project_cut_exit.ProjectCutExitError",
     "kungfu.runtime_broker.RuntimeLeaseManager",
     "kungfu.runtime_broker.RuntimeLifecycleError",
     "kungfu.runtime_broker.NativeReadinessAuthority",
     "kungfu.runtime_service.ProcessRuntimeHost"
   ],
-  "reportRoot": "sha256:fd6b8aa5df24b0b9028104449838e98860f7364f5528e4ceb41dd667bb605d96",
+  "reportRoot": "sha256:0421e3d79b3d2e8ee7dcd89fa54859918209e3bbc46e4ef6518f6afe3dc924fa",
   "schema": "kungfu.abstraction-integrity-report/v1",
-  "sourceRoot": "sha256:5447ade66cf54d5b7f17813c0677bc38f7dea7e6ecde3374945fd18223df899f",
+  "sourceRoot": "sha256:a88315761a99d4e106fa076b34a9a629a5e2209a4b7898f9f574d3a80db01195",
   "summary": {
     "blockingIssues": 0
   },
   "typedSeams": [
     "kungfu.product_release_history.ProductReleaseHistoryPort",
+    "kungfu.project_cut_exit.ProjectCutExitPort",
     "kungfu.assignment_lifecycle.ports.AssignmentEventSink",
     "kungfu.assignment_lifecycle.ports.AssignmentRuntime",
     "kungfu.assignment_lifecycle.ports.AssignmentRuntimePort",
