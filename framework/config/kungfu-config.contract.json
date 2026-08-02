@@ -296,12 +296,20 @@
       "allOf": [
         {
           "if": {
-            "required": ["entityType"],
+            "required": [
+              "entityType"
+            ],
             "properties": {
-              "entityType": { "const": "assignment" }
+              "entityType": {
+                "const": "assignment"
+              }
             }
           },
-          "then": { "required": ["initiativeId"] }
+          "then": {
+            "required": [
+              "initiativeId"
+            ]
+          }
         }
       ]
     },

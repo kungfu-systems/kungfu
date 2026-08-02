@@ -12,7 +12,7 @@ from __future__ import annotations
 import hashlib
 import json
 import re
-from typing import Any, Mapping
+from typing import Any, Mapping, overload
 
 
 WORK_REF_SCHEMA = "kungfu.work-ref/v1"
@@ -86,6 +86,22 @@ def _text(value: Any, label: str) -> str:
     if not isinstance(value, str) or not value:
         raise ValueError(f"{label} must be non-empty text")
     return value
+
+
+@overload
+def validate_work_ref(
+    value: None,
+    *,
+    compatibility: bool = False,
+) -> None: ...
+
+
+@overload
+def validate_work_ref(
+    value: Mapping[str, Any],
+    *,
+    compatibility: bool = False,
+) -> dict[str, Any]: ...
 
 
 def validate_work_ref(
