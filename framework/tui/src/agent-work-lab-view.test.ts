@@ -17,6 +17,7 @@ import React from 'react';
 import {
   AGENT_WORK_LAB_POINTER_ACTIONS,
   AGENT_WORK_LAB_QUICK_COMMANDS,
+  AgentFirstOnboardingView,
   AgentWorkLabHost,
   AgentWorkLabView,
   agentWorkLabActionReturnsToControls,
@@ -30,6 +31,7 @@ import {
   agentWorkLabStarterReceiptInput,
   isAgentWorkLabReportReturnInput,
   nextAgentWorkLabFocus,
+  tuiOnboardingActionFromInput,
 } from './agent-work-lab-view.js';
 import {
   appendWorkbenchSessionLines,
@@ -117,6 +119,120 @@ class CaptureOutput extends EventEmitter {
     return true;
   };
 }
+
+test('Getting Started copies the one-line Agent prompt with one key and confirms it', async () => {
+  const output = new CaptureOutput();
+  const actions: string[] = [];
+  const props = {
+    dimensions: { columns: 80, rows: 24 },
+    state: {
+      version: 1,
+      status: 'completed' as const,
+      route: 'agent' as const,
+      labCompleted: false,
+      tourCompleted: false,
+      completedAt: '2026-08-02T00:00:00.000Z',
+    },
+    command:
+      '/Applications/Kungfu.app/Contents/Resources/bin/kungfu agent brief',
+    prompt: 'Run the local brief, then guide me through my first Work.',
+    onAction: (action: string) => actions.push(action),
+  };
+  const instance = render(
+    React.createElement(AgentFirstOnboardingView, props),
+    {
+      stdout: output as unknown as NodeJS.WriteStream,
+      exitOnCtrlC: false,
+      patchConsole: false,
+      debug: true,
+    },
+  );
+
+  try {
+    await waitUntil(
+      () =>
+        output.chunks
+          .join('')
+          .includes('[C/c] Copy this one-line Agent prompt'),
+      'the copy action label',
+    );
+    await new Promise<void>((resolve) => setTimeout(resolve, 80));
+    process.stdin.emit('data', Buffer.from('1'));
+    await new Promise<void>((resolve) => setTimeout(resolve, 30));
+    assert.equal(actions.length, 0);
+    process.stdin.emit('data', Buffer.from('C'));
+    await waitUntil(() => actions.includes('copy'), 'the copy action');
+    instance.rerender(
+      React.createElement(AgentFirstOnboardingView, {
+        ...props,
+        notice: {
+          ok: true,
+          title: 'ONE-LINE AGENT PROMPT COPIED',
+          detail: 'Paste it into your Agent in another window.',
+          next: 'Optional: [Enter] start · [L/l] Lab · [T/t] Tour.',
+        },
+      }),
+    );
+    await waitUntil(
+      () => output.chunks.join('').includes('ONE-LINE AGENT PROMPT COPIED'),
+      'the copy confirmation',
+    );
+    process.stdin.emit('data', Buffer.from('\r'));
+    await waitUntil(() => actions.includes('continue'), 'the continue action');
+  } finally {
+    instance.unmount();
+    instance.cleanup();
+    process.stdin.pause();
+  }
+
+  const frame = output.chunks.join('');
+  assert.match(frame, /\[C\/c\] Copy this one-line Agent prompt/u);
+  assert.match(frame, /\[Enter\] Continue to Kungfu/u);
+  assert.match(frame, /\[L\/l\] Agent Work Lab/u);
+  assert.match(frame, /\[T\/t\] Guided Project Tour/u);
+  assert.match(frame, /Paste it into your Agent in another window\./u);
+  assert.match(frame, /Optional: \[Enter\] start/u);
+  assert.deepEqual(actions, ['copy', 'continue']);
+});
+
+test('Getting Started uses case-insensitive mnemonic keys instead of step numbers', () => {
+  assert.deepEqual(
+    ['c', 'C', '\r', 'l', 'L', 't', 'T', 's', 'S'].map(
+      tuiOnboardingActionFromInput,
+    ),
+    [
+      'copy',
+      'copy',
+      'continue',
+      'lab',
+      'lab',
+      'tour',
+      'tour',
+      'dismiss',
+      'dismiss',
+    ],
+  );
+  for (const retiredKey of ['1', '2', '3', 'w', 'W']) {
+    assert.equal(tuiOnboardingActionFromInput(retiredKey), null);
+  }
+});
+
+test('Getting Started visually distinguishes its prompt and actionable keys', () => {
+  const source = readFileSync(
+    new URL('./agent-work-lab-view.tsx', import.meta.url),
+    'utf8',
+  );
+  const onboarding = source.slice(
+    source.indexOf('function OnboardingShortcutLine'),
+    source.indexOf('export type TuiAgentWorkLabMode'),
+  );
+  assert.match(onboarding, /backgroundColor="yellow"/u);
+  assert.equal(
+    onboarding.includes('key={`prompt:${row}`} color="cyan" bold'),
+    true,
+  );
+  assert.match(onboarding, /opaqueWidth=\{noticeColumns\}/u);
+});
 
 async function waitUntil(
   condition: () => boolean,
