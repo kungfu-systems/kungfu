@@ -5,15 +5,15 @@
   "manifestPath": "framework/maintainability/abstraction-integrity.manifest.json",
   "measurement": {
     "aggregates": {
-      "kungfu-cli": 20249,
+      "kungfu-cli": 20264,
       "kungfu-flat-root": 35831,
       "kungfu-runtime-family": 6242
     },
     "counts": {
       "productionFiles": 239,
-      "productionPhysicalLines": 84133,
+      "productionPhysicalLines": 84148,
       "testFiles": 99,
-      "testPhysicalLines": 45932
+      "testPhysicalLines": 45957
     },
     "hiddenProductionFiles": [],
     "modulesOver1000": [
@@ -350,7 +350,7 @@
       }
     ],
     "schema": "kungfu.python-structure-measurement/v1",
-    "sourceRoot": "sha256:6619ce2e0f0b22703af1e807832ac82029c7bf789c1b31daee02e1ca9b99e2d4",
+    "sourceRoot": "sha256:d1e35cd82b085dba2aabc9d345d2b93d3374e56065229bbc2f07175863f13727",
     "sourceRoots": {
       "production": [
         "framework/core/src/python"
@@ -474,9 +474,9 @@
     "kungfu.runtime_broker.NativeReadinessAuthority",
     "kungfu.runtime_service.ProcessRuntimeHost"
   ],
-  "reportRoot": "sha256:65b6a369094fa0f3efeb8c23ff1a17563553d5927ea153660050f1f9389784ec",
+  "reportRoot": "sha256:87dd0e6237d88ca3fd808d8fdb130bacffc8950500f40c81a648df0391590553",
   "schema": "kungfu.abstraction-integrity-report/v1",
-  "sourceRoot": "sha256:6619ce2e0f0b22703af1e807832ac82029c7bf789c1b31daee02e1ca9b99e2d4",
+  "sourceRoot": "sha256:d1e35cd82b085dba2aabc9d345d2b93d3374e56065229bbc2f07175863f13727",
   "summary": {
     "blockingIssues": 0
   },
