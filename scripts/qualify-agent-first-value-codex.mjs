@@ -91,9 +91,13 @@ function installCandidateShellRouter(home) {
   fs.writeFileSync(path.join(home, '.zshenv'), candidateShellRouter(), 'utf8');
 }
 
+export function sameCanonicalPath(left, right) {
+  return fs.realpathSync(left) === fs.realpathSync(right);
+}
+
 function installCandidateCodexSkill(kungfu, workspace, env) {
   const destination = path.join(
-    workspace,
+    fs.realpathSync(workspace),
     '.agents',
     'skills',
     'kungfu-agent-onboarding',
@@ -128,7 +132,7 @@ function installCandidateCodexSkill(kungfu, workspace, env) {
     'candidate Codex Skill installation receipt drifted',
   );
   assert(
-    path.resolve(payload.destination || '') === destination,
+    sameCanonicalPath(payload.destination || '', destination),
     'candidate Codex Skill installed outside the isolated workspace',
   );
   const bytes = fs.readFileSync(destination);

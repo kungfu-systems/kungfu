@@ -13,6 +13,7 @@ import {
   normalizedExperienceFromResult,
   protocolEvidenceFromCodexEventStream,
   receiptsFromCodexEventStream,
+  sameCanonicalPath,
   semanticRoot,
   verifyAgentFirstValueQualification,
   verifyFirstValueReceipt,
@@ -44,6 +45,19 @@ test('candidate shell router pins every plain kungfu command to the candidate', 
   assert.match(router, /KUNGFU_CLI_BIN/u);
   assert.match(router, /"\$@"/u);
   assert.doesNotMatch(router, /usr\/local/u);
+});
+
+test('candidate Skill destination accepts canonical and symlinked workspace paths', () => {
+  const rootDir = fs.mkdtempSync(path.join(os.tmpdir(), 'kungfu-skill-path-'));
+  const physical = path.join(rootDir, 'physical');
+  const alias = path.join(rootDir, 'alias');
+  fs.mkdirSync(physical);
+  fs.symlinkSync(physical, alias, 'dir');
+  try {
+    assert.equal(sameCanonicalPath(physical, alias), true);
+  } finally {
+    fs.rmSync(rootDir, { recursive: true, force: true });
+  }
 });
 
 test('natural Codex response yields one bounded experience record', () => {
