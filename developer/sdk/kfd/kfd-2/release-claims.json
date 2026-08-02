@@ -47,7 +47,7 @@
           "pointer": {
             "kind": "file",
             "path": "framework/core/src/python/kungfu/agent/first-value.contract.json",
-            "sha256": "ead555467bc7c826a62e479271a204a7aabb644ad69e32dc51ac3c91d0880127"
+            "sha256": "0f9fe61a6e8fad0d9df4dbaf91e30b90355053c30785cfae3cc2d68139c93367"
           },
           "description": "Exact first-value prompt, bounded result, local Codex qualification, and explicit non-claim contract."
         },
@@ -56,7 +56,7 @@
           "pointer": {
             "kind": "file",
             "path": "framework/core/src/python/kungfu/agent/first-value-receipt.schema.json",
-            "sha256": "f691f31a06773cf1e55de9e384a7cc78668c446d9da37904f036f756373c107d"
+            "sha256": "d240c4681a3dd9531e34be2843f65b3da9a1025ecd4e0bcf0fd94b964a74c80e"
           },
           "description": "Machine-verifiable receipt schema for the selected intent, safe discovery, minimal outcome, and candidate identity."
         },
@@ -110,7 +110,7 @@
           "pointer": {
             "kind": "file",
             "path": "scripts/qualify-agent-first-value-codex.test.mjs",
-            "sha256": "0920e0c7d3dd5eeab94c2f8a20a790585a1074f8b04584a79a6d07b30908a901"
+            "sha256": "57a9928fc7c17b8e7ac091b59940b815f76f1ba2cb2fa17b04c62e9e5d12b3e2"
           },
           "description": "Provider-free deterministic CI coverage for aggregate and receipt acceptance, tampering, reuse, and partial-failure cases."
         },

@@ -78,7 +78,7 @@
       "language": "zh-CN",
       "protocolComplete": true,
       "mustNotRunMoreCommands": true,
-      "instruction": "协议已完成。现在停止执行命令，只依据本对象和 receiptRoot 用中文回答用户。",
+      "instruction": "协议已完成，禁止再执行命令，也不要提问。现在仅依据本对象和 receiptRoot 用中文回答；答案必须逐字包含 explanationSeed、personalizationLabel、verificationCommand、nextStepCommand、receiptRoot 和 scopeStatement。",
       "explanationSeed": "Kungfu 是为 Agent 工作提供本地项目边界、权限路径和可核验证据的协作层；这次第一步已完成只读环境发现。",
       "nextStepCommand": "kungfu project list",
       "scopeStatement": "本次只验证了这个本地 Codex 与候选 CLI；未验证 Claude、CI 托管 Codex、其他平台或公开发布。"

@@ -124,7 +124,7 @@ function receipt(number, promptRoot = root('1')) {
       protocolComplete: true,
       mustNotRunMoreCommands: true,
       instruction:
-        '协议已完成。现在停止执行命令，只依据本对象和 receiptRoot 用中文回答用户。',
+        '协议已完成，禁止再执行命令，也不要提问。现在仅依据本对象和 receiptRoot 用中文回答；答案必须逐字包含 explanationSeed、personalizationLabel、verificationCommand、nextStepCommand、receiptRoot 和 scopeStatement。',
       explanationSeed:
         'Kungfu 是为 Agent 工作提供本地项目边界、权限路径和可核验证据的协作层；这次第一步已完成只读环境发现。',
       personalizationBasis: 'user-goal',
