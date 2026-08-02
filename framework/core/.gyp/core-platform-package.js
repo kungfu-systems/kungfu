@@ -82,8 +82,19 @@ const packageContract = fs.readJsonSync(
  *   size: number,
  *   unpackedSize: number,
  *   entryCount: number,
- *   files: Array<{path: string}>
+ *   files: Array<{path: string, size?: number}>
  * }} NpmPackEntry
+ * @typedef {{
+ *   sourceSha: string,
+ *   workflowRunId: number,
+ *   artifactSha256: string,
+ *   compressedBytes: number
+ * }} QualifiedAlphaBaseline
+ * @typedef {{
+ *   compressedHardCeilingBytes: number,
+ *   preflightMeasurementErrorBoundBytes: number,
+ *   lastQualifiedAlpha: QualifiedAlphaBaseline
+ * }} PlatformSizePolicy
  */
 
 /** Release by default; developers/CI select Debug via build_type. */
@@ -461,18 +472,119 @@ function preparePlatformPackage(descriptor) {
   return packageRoot;
 }
 
+/** @param {string} file @returns {string} */
+function packageBudgetComponent(file) {
+  if (file.startsWith('dist/kungfu/python/')) return 'python-runtime';
+  if (/^dist\/kungfu\/(?:lib)?node(?:\.|$)/u.test(file)) return 'libnode';
+  if (
+    file.startsWith('dist/kungfu/libwasm/') ||
+    /(?:^|\/)kungfu-wasm-host(?:\.exe)?$/u.test(file)
+  )
+    return 'wasm-runtime';
+  if (
+    /^dist\/kungfu\/(?:kungfu(?:-trunk|-kfd-agent-runtime)?(?:\.exe)?|.*\.(?:node|dylib|so|dll))$/u.test(
+      file,
+    )
+  )
+    return 'kungfu-native';
+  return 'package-metadata';
+}
+
+/**
+ * @param {Array<{path: string, size?: number}>} files
+ * @returns {Array<{component: string, fileCount: number, unpackedBytes: number}>}
+ */
+function summarizePackageBudgetComponents(files) {
+  /** @type {Map<string, {component: string, fileCount: number, unpackedBytes: number}>} */
+  const components = new Map();
+  for (const file of files) {
+    const component = packageBudgetComponent(file.path);
+    const row = components.get(component) || {
+      component,
+      fileCount: 0,
+      unpackedBytes: 0,
+    };
+    row.fileCount += 1;
+    row.unpackedBytes += Number(file.size || 0);
+    components.set(component, row);
+  }
+  return [...components.values()].sort((left, right) =>
+    left.component.localeCompare(right.component),
+  );
+}
+
+/**
+ * @param {{
+ *   packageName: string,
+ *   projectedCompressedBytes: number,
+ *   files?: Array<{path: string, size?: number}>,
+ *   policy: PlatformSizePolicy
+ * }} input
+ */
+function evaluateLinuxPackageBudget(input) {
+  const hardCeilingBytes = input.policy.compressedHardCeilingBytes;
+  const errorBoundBytes = input.policy.preflightMeasurementErrorBoundBytes;
+  const projectedCompressedBytes = input.projectedCompressedBytes;
+  const guardedCompressedBytes = projectedCompressedBytes + errorBoundBytes;
+  const headroomBytes = hardCeilingBytes - projectedCompressedBytes;
+  const guardedHeadroomBytes = hardCeilingBytes - guardedCompressedBytes;
+  const baseline = input.policy.lastQualifiedAlpha;
+  const status =
+    guardedCompressedBytes <= hardCeilingBytes ? 'passing' : 'failing';
+  return {
+    schema: 'kungfu.core-platform-package-budget/v1',
+    status,
+    platform: 'linux-x64',
+    package: input.packageName,
+    policy: {
+      hardCeilingBytes,
+      measurementErrorBoundBytes: errorBoundBytes,
+    },
+    projection: {
+      compressedBytes: projectedCompressedBytes,
+      guardedCompressedBytes,
+      headroomBytes,
+      guardedHeadroomBytes,
+      overageBytes: Math.max(0, -guardedHeadroomBytes),
+      deltaFromLastQualifiedAlphaBytes:
+        projectedCompressedBytes - baseline.compressedBytes,
+    },
+    lastQualifiedAlpha: { ...baseline },
+    components: summarizePackageBudgetComponents(input.files || []),
+  };
+}
+
+/**
+ * @param {{compressedBytes: number, guardedCompressedBytes: number}} projection
+ * @param {number} finalCompressedBytes
+ * @param {PlatformSizePolicy} policy
+ */
+function verifyFinalLinuxPackageBudget(
+  projection,
+  finalCompressedBytes,
+  policy,
+) {
+  if (finalCompressedBytes > policy.compressedHardCeilingBytes) {
+    throw new Error(
+      `final compressed size ${finalCompressedBytes} exceeds hard ceiling ${policy.compressedHardCeilingBytes}`,
+    );
+  }
+  if (finalCompressedBytes > projection.guardedCompressedBytes) {
+    throw new Error(
+      `final compressed size ${finalCompressedBytes} exceeds guarded preflight projection ${projection.guardedCompressedBytes}`,
+    );
+  }
+}
+
 /**
  * @param {string} packageRoot
- * @returns {unknown}
+ * @param {boolean} dryRun
+ * @returns {NpmPackEntry}
  */
-function npmPack(packageRoot) {
-  fs.ensureDirSync(stageDir);
-  const { command, args } = npmCommand(
-    'pack',
-    '--json',
-    '--pack-destination',
-    stageDir,
-  );
+function runNpmPack(packageRoot, dryRun) {
+  const commandArgs = ['pack', '--json', '--pack-destination', stageDir];
+  if (dryRun) commandArgs.push('--dry-run');
+  const { command, args } = npmCommand(...commandArgs);
   const result = childProcess.spawnSync(command, args, {
     cwd: packageRoot,
     env: process.env,
@@ -484,7 +596,9 @@ function npmPack(packageRoot) {
 
   if (result.status !== 0) {
     const error = result.error ? `: ${result.error.message}` : '';
-    throw new Error(`npm pack failed for ${packageRoot}${error}`);
+    throw new Error(
+      `npm pack${dryRun ? ' --dry-run' : ''} failed for ${packageRoot}${error}`,
+    );
   }
   /** @type {NpmPackEntry[]} */
   let entries;
@@ -498,7 +612,47 @@ function npmPack(packageRoot) {
       `npm pack returned ${entries?.length || 0} entries for ${packageRoot}`,
     );
   }
-  const packed = entries[0];
+  return entries[0];
+}
+
+/**
+ * @param {string} packageRoot
+ * @returns {unknown}
+ */
+function npmPack(packageRoot) {
+  fs.ensureDirSync(stageDir);
+  /** @type {ReturnType<typeof evaluateLinuxPackageBudget> | undefined} */
+  let budget;
+  if (
+    process.platform === 'linux' &&
+    process.arch === 'x64' &&
+    packageRoot !== path.join(packageBuildDir, 'core')
+  ) {
+    const projected = runNpmPack(packageRoot, true);
+    budget = evaluateLinuxPackageBudget({
+      packageName: projected.name,
+      projectedCompressedBytes: projected.size,
+      files: projected.files,
+      policy: packageContract.sizePolicy,
+    });
+    const budgetPath = path.join(stageDir, `${projected.filename}.budget.json`);
+    writeJson(budgetPath, budget);
+    console.log(
+      `budget ${projected.name}: projected=${budget.projection.compressedBytes}, guarded=${budget.projection.guardedCompressedBytes}, hard=${budget.policy.hardCeilingBytes}, delta=${budget.projection.deltaFromLastQualifiedAlphaBytes}, status=${budget.status}`,
+    );
+    for (const component of budget.components) {
+      console.log(
+        `budget component ${component.component}: ${component.unpackedBytes} bytes, ${component.fileCount} files`,
+      );
+    }
+    if (budget.status !== 'passing') {
+      throw new Error(
+        `${projected.name} guarded compressed projection ${budget.projection.guardedCompressedBytes} exceeds hard ceiling ${budget.policy.hardCeilingBytes} by ${budget.projection.overageBytes} bytes`,
+      );
+    }
+  }
+
+  const packed = runNpmPack(packageRoot, false);
   const archive = path.join(stageDir, packed.filename);
   if (!fs.existsSync(archive)) {
     throw new Error(`npm pack did not produce ${archive}`);
@@ -510,6 +664,13 @@ function npmPack(packageRoot) {
   if (packed.size > hardCeiling) {
     throw new Error(
       `${packed.name} compressed size ${packed.size} exceeds hard ceiling ${hardCeiling}`,
+    );
+  }
+  if (budget) {
+    verifyFinalLinuxPackageBudget(
+      budget.projection,
+      packed.size,
+      packageContract.sizePolicy,
     );
   }
   const files = (packed.files || []).map((entry) => entry.path).sort();
@@ -592,6 +753,17 @@ function npmPack(packageRoot) {
                 ? 'normal'
                 : 'review-required',
         },
+    preflightBudget: budget
+      ? {
+          status: budget.status,
+          projectedCompressedBytes: budget.projection.compressedBytes,
+          guardedCompressedBytes: budget.projection.guardedCompressedBytes,
+          measurementErrorBoundBytes: budget.policy.measurementErrorBoundBytes,
+          deltaFromLastQualifiedAlphaBytes:
+            budget.projection.deltaFromLastQualifiedAlphaBytes,
+          lastQualifiedAlpha: budget.lastQualifiedAlpha,
+        }
+      : undefined,
   };
   const receiptPath = path.join(stageDir, `${packed.filename}.receipt.json`);
   writeJson(receiptPath, receipt);
@@ -748,6 +920,10 @@ if (require.main === module)
   });
 
 module.exports = {
+  evaluateLinuxPackageBudget,
   linuxReleaseStripCandidates,
+  packageBudgetComponent,
   resolvePackageStageDir,
+  summarizePackageBudgetComponents,
+  verifyFinalLinuxPackageBudget,
 };

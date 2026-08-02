@@ -97,6 +97,18 @@ publication workflows consume the rehydrated exact artifacts. Missing relay
 roles or a failed upload/download is therefore a failed build, never permission
 to fall back to an unrecorded direct transfer path.
 
+### Linux x64 Core package budget preflight
+
+Before writing the Linux x64 Core npm tarball, the packer performs a dry-run
+projection with the same npm pack implementation and compressed-byte units as
+the final 100 MiB hard ceiling. The projection retains a 64 KiB measurement
+error bound, component-level unpacked-byte attribution, headroom, and the delta
+from the last qualified Alpha artifact. A guarded projection over the ceiling
+stops the product build before downstream UI and qualification work. The real
+tarball is still created and checked afterward; the preflight cannot replace
+the final compressed-size authority, and a final value outside either the hard
+ceiling or the guarded projection fails closed.
+
 ## Maturity
 
 The local build path (`./shifu sync && ./shifu build`) is real and is
