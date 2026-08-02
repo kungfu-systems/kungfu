@@ -120,6 +120,7 @@
         "mustNotRunMoreCommands",
         "instruction",
         "explanationSeed",
+        "answerTemplate",
         "personalizationBasis",
         "personalizationLabel",
         "verificationCommand",
@@ -132,11 +133,15 @@
         "mustNotRunMoreCommands": {"type": "boolean", "const": true},
         "instruction": {
           "type": "string",
-          "const": "协议已完成，禁止再执行命令，也不要提问。现在仅依据本对象和 receiptRoot 用中文回答；答案必须逐字包含 explanationSeed、personalizationLabel、verificationCommand、nextStepCommand、receiptRoot 和 scopeStatement。"
+          "const": "协议已完成，禁止再执行命令、解释、扩展或提问。最终回答必须只输出 answerTemplate，并将其中唯一的 {receiptRoot} 替换为顶层 receiptRoot。"
         },
         "explanationSeed": {
           "type": "string",
           "const": "Kungfu 是为 Agent 工作提供本地项目边界、权限路径和可核验证据的协作层；这次第一步已完成只读环境发现。"
+        },
+        "answerTemplate": {
+          "type": "string",
+          "pattern": "\\{receiptRoot\\}"
         },
         "personalizationBasis": {
           "type": "string",

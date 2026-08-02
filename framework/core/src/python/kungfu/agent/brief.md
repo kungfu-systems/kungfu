@@ -42,9 +42,8 @@ directly with the bounded protocol below before your final response.
    Give the user the receipt's exact discovery command as one copyable read-only
    verification command. Its first field, `agentResponseGuide`, is the final
    contract: when `protocolComplete` and `mustNotRunMoreCommands` are true, run
-   no more commands before answering. Use its `explanationSeed`, then copy its
-   one `nextStepCommand`, exact `personalizationLabel`, receipt root, and
-   `scopeStatement` into the answer.
+   no more commands before answering. Output only its `answerTemplate`, replacing
+   the sole `{receiptRoot}` placeholder with the top-level exact receipt root.
    The product reruns discovery without a shell and returns bounded facts.
 8. Expand detail only when requested. Use `kungfu agent context --task "..."
    --role <role> --budget <tokens> --route <route-id> --json`, then follow its

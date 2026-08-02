@@ -331,6 +331,21 @@ def create_receipt(
     output_root = _root_bytes(stdout)
     guide = first_value_contract["result"]["responseGuide"]
     current_prompt = _current_prompt(first_value_contract)
+    response_guide = {
+        "language": guide["language"],
+        "protocolComplete": guide["protocolComplete"],
+        "mustNotRunMoreCommands": guide["mustNotRunMoreCommands"],
+        "instruction": guide["instruction"],
+        "explanationSeed": guide["explanationSeed"],
+        "personalizationBasis": current_prompt["personalizationBasis"],
+        "personalizationLabel": current_prompt["personalizationLabel"],
+        "verificationCommand": discovery_command,
+        "nextStepCommand": guide["nextStepCommand"],
+        "scopeStatement": guide["scopeStatement"],
+    }
+    response_guide["answerTemplate"] = guide["answerTemplateFormat"].format(
+        **response_guide
+    )
     receipt = {
         "schema": RECEIPT_SCHEMA,
         "verdict": "verified",
@@ -367,18 +382,7 @@ def create_receipt(
                 }
             ),
         },
-        "agentResponseGuide": {
-            "language": guide["language"],
-            "protocolComplete": guide["protocolComplete"],
-            "mustNotRunMoreCommands": guide["mustNotRunMoreCommands"],
-            "instruction": guide["instruction"],
-            "explanationSeed": guide["explanationSeed"],
-            "personalizationBasis": current_prompt["personalizationBasis"],
-            "personalizationLabel": current_prompt["personalizationLabel"],
-            "verificationCommand": discovery_command,
-            "nextStepCommand": guide["nextStepCommand"],
-            "scopeStatement": guide["scopeStatement"],
-        },
+        "agentResponseGuide": response_guide,
         "nonClaims": list(first_value_contract["qualification"]["nonClaims"]),
         "diagnostics": [],
         "observedAt": observed_at
@@ -467,6 +471,9 @@ def verify_receipt(
         "nextStepCommand": guide["nextStepCommand"],
         "scopeStatement": guide["scopeStatement"],
     }
+    expected_guide["answerTemplate"] = guide["answerTemplateFormat"].format(
+        **expected_guide
+    )
     if receipt["agentResponseGuide"] != expected_guide:
         raise ValueError("first-value receipt response guide mismatch")
     if require_current_product:

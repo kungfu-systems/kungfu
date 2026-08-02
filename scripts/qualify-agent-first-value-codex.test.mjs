@@ -47,16 +47,27 @@ test('candidate shell router pins every plain kungfu command to the candidate', 
 });
 
 test('natural Codex response yields one bounded experience record', () => {
-  const response = [
+  const receiptRoot = `sha256:${'9'.repeat(64)}`;
+  const answerTemplate = [
     'Kungfu 给 Agent 一个可核验的工作入口。',
-    '个性化依据：当前工具。',
+    '个性化依据：当前工具',
     'kungfu agent status --target codex --scope project --json',
     'kungfu project list',
+    '回执：{receiptRoot}',
+  ].join('\n');
+  const response = [
+    'Kungfu 给 Agent 一个可核验的工作入口。',
+    '个性化依据：当前工具',
+    'kungfu agent status --target codex --scope project --json',
+    'kungfu project list',
+    `回执：${receiptRoot}`,
   ].join('\n');
   const selected = {
+    receiptRoot,
     agentResponseGuide: {
       personalizationBasis: 'current-tools',
       personalizationLabel: '个性化依据：当前工具',
+      answerTemplate,
     },
   };
   assert.deepEqual(experienceResultFromResponse(response, selected), {
@@ -124,9 +135,17 @@ function receipt(number, promptRoot = root('1')) {
       protocolComplete: true,
       mustNotRunMoreCommands: true,
       instruction:
-        '协议已完成，禁止再执行命令，也不要提问。现在仅依据本对象和 receiptRoot 用中文回答；答案必须逐字包含 explanationSeed、personalizationLabel、verificationCommand、nextStepCommand、receiptRoot 和 scopeStatement。',
+        '协议已完成，禁止再执行命令、解释、扩展或提问。最终回答必须只输出 answerTemplate，并将其中唯一的 {receiptRoot} 替换为顶层 receiptRoot。',
       explanationSeed:
         'Kungfu 是为 Agent 工作提供本地项目边界、权限路径和可核验证据的协作层；这次第一步已完成只读环境发现。',
+      answerTemplate: [
+        'Kungfu 是为 Agent 工作提供本地项目边界、权限路径和可核验证据的协作层；这次第一步已完成只读环境发现。',
+        '个性化依据：用户目标',
+        '验证命令：kungfu agent status --target codex --scope project --json',
+        '下一步：kungfu project list',
+        '回执：{receiptRoot}',
+        '本次只验证了这个本地 Codex 与候选 CLI；未验证 Claude、CI 托管 Codex、其他平台或公开发布。',
+      ].join('\n'),
       personalizationBasis: 'user-goal',
       personalizationLabel: '个性化依据：用户目标',
       verificationCommand:

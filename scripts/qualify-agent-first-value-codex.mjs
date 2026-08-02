@@ -450,6 +450,15 @@ export function verifyFirstValueReceipt(receipt, expected = {}) {
       receipt.agentResponseGuide.instruction.length > 0 &&
       typeof receipt.agentResponseGuide?.explanationSeed === 'string' &&
       receipt.agentResponseGuide.explanationSeed.includes('Kungfu') &&
+      receipt.agentResponseGuide?.answerTemplate ===
+        [
+          receipt.agentResponseGuide.explanationSeed,
+          receipt.agentResponseGuide.personalizationLabel,
+          `验证命令：${receipt.agentResponseGuide.verificationCommand}`,
+          `下一步：${receipt.agentResponseGuide.nextStepCommand}`,
+          '回执：{receiptRoot}',
+          receipt.agentResponseGuide.scopeStatement,
+        ].join('\n') &&
       PERSONALIZATION_BASIS.includes(
         receipt.agentResponseGuide?.personalizationBasis,
       ) &&
@@ -567,6 +576,14 @@ export function experienceResultFromResponse(response, receipt) {
   assert(
     nextStepMatches.length === 1,
     `Codex response named ${nextStepMatches.length} safe next steps instead of exactly one`,
+  );
+  const expectedResponse = receipt.agentResponseGuide.answerTemplate.replace(
+    '{receiptRoot}',
+    receipt.receiptRoot,
+  );
+  assert(
+    response.trim() === expectedResponse,
+    'Codex final response did not exactly render the product answer template',
   );
   return {
     response,

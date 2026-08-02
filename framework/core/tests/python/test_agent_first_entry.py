@@ -326,6 +326,7 @@ def test_first_value_receipt_reruns_declared_discovery_and_verifies():
     assert receipt["agentResponseGuide"]["mustNotRunMoreCommands"] is True
     assert receipt["agentResponseGuide"]["instruction"].startswith("协议已完成")
     assert "Kungfu" in receipt["agentResponseGuide"]["explanationSeed"]
+    assert receipt["agentResponseGuide"]["answerTemplate"].count("{receiptRoot}") == 1
     assert receipt["agentResponseGuide"]["personalizationBasis"] == "user-goal"
     assert receipt["agentResponseGuide"]["personalizationLabel"] == (
         "个性化依据：用户目标"
