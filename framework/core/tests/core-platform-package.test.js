@@ -13,8 +13,12 @@ const {
   resolveRuntimeDir,
 } = require('../lib/platform-packages');
 const {
+  evaluateLinuxPackageBudget,
   linuxReleaseStripCandidates,
+  packageBudgetComponent,
   resolvePackageStageDir,
+  summarizePackageBudgetComponents,
+  verifyFinalLinuxPackageBudget,
 } = require('../.gyp/core-platform-package');
 
 test('explicit package stage paths resolve from the repository root', () => {
@@ -76,6 +80,89 @@ test('platform package budget preserves its bounded bands', () => {
       contract.sizePolicy.compressedHardCeilingBytes,
   );
   assert.equal(contract.sizePolicy.hardCeilingExceptionRequiresReview, true);
+  assert.equal(
+    contract.sizePolicy.preflightMeasurementErrorBoundBytes,
+    64 * 1024,
+  );
+  assert.equal(
+    contract.sizePolicy.lastQualifiedAlpha.compressedBytes,
+    103890355,
+  );
+});
+
+test('Linux package budget rejects the retained Alpha overage before final packing', () => {
+  const budget = evaluateLinuxPackageBudget({
+    packageName: '@kungfu-tech/core-linux-x64',
+    projectedCompressedBytes: 105263377,
+    policy: contract.sizePolicy,
+  });
+
+  assert.equal(budget.status, 'failing');
+  assert.equal(budget.projection.headroomBytes, -405777);
+  assert.equal(budget.projection.overageBytes, 471313);
+  assert.equal(budget.projection.deltaFromLastQualifiedAlphaBytes, 1373022);
+});
+
+test('Linux package budget boundary is deterministic and guarded', () => {
+  const boundary =
+    contract.sizePolicy.compressedHardCeilingBytes -
+    contract.sizePolicy.preflightMeasurementErrorBoundBytes;
+  const evaluate = (compressedBytes) =>
+    evaluateLinuxPackageBudget({
+      packageName: '@kungfu-tech/core-linux-x64',
+      projectedCompressedBytes: compressedBytes,
+      policy: contract.sizePolicy,
+    });
+
+  assert.equal(evaluate(boundary - 1).status, 'passing');
+  assert.equal(evaluate(boundary).status, 'passing');
+  assert.equal(evaluate(boundary + 1).status, 'failing');
+});
+
+test('final Linux package verification catches a deliberately low preflight estimate', () => {
+  const budget = evaluateLinuxPackageBudget({
+    packageName: '@kungfu-tech/core-linux-x64',
+    projectedCompressedBytes: 100 * 1024 * 1024 - 1024 * 1024,
+    policy: contract.sizePolicy,
+  });
+  assert.equal(budget.status, 'passing');
+
+  assert.throws(
+    () =>
+      verifyFinalLinuxPackageBudget(
+        budget.projection,
+        105263377,
+        contract.sizePolicy,
+      ),
+    /final compressed size 105263377 exceeds hard ceiling 104857600/u,
+  );
+});
+
+test('Linux package budget reports portable component attribution only', () => {
+  assert.equal(
+    packageBudgetComponent('dist/kungfu/python/lib/python3.13/os.py'),
+    'python-runtime',
+  );
+  assert.equal(packageBudgetComponent('dist/kungfu/libnode.so.127'), 'libnode');
+  assert.equal(
+    packageBudgetComponent('dist/kungfu/libwasm/contract.json'),
+    'wasm-runtime',
+  );
+  assert.equal(
+    packageBudgetComponent('dist/kungfu/kungfu_node.node'),
+    'kungfu-native',
+  );
+  assert.deepEqual(
+    summarizePackageBudgetComponents([
+      { path: 'dist/kungfu/python/lib/python3.13/os.py', size: 100 },
+      { path: 'dist/kungfu/python/lib/python3.13/site.py', size: 200 },
+      { path: 'dist/kungfu/libnode.so.127', size: 300 },
+    ]),
+    [
+      { component: 'libnode', fileCount: 1, unpackedBytes: 300 },
+      { component: 'python-runtime', fileCount: 2, unpackedBytes: 300 },
+    ],
+  );
 });
 
 test('Linux package prunes the unused dbm accelerator before size enforcement', () => {
