@@ -21,6 +21,8 @@ const REQUIRED_NON_CLAIMS = [
   'other-platforms-qualified',
   'public-release-qualified',
 ];
+const LOCAL_QUALIFICATION_SCOPE_STATEMENT =
+  '本次只验证了这个本地 Codex 与候选 CLI；未验证 Claude、CI 托管 Codex、其他平台或公开发布。';
 const EXPERIENCE_DIMENSIONS = [
   'autonomous-pack-verification',
   'exactly-one-declared-intent',
@@ -61,12 +63,20 @@ export function codexResultSchema() {
       'response',
       'intentId',
       'personalization',
+      'receiptCitation',
       'verification',
       'nextStep',
+      'scopeStatement',
       'nonClaims',
     ],
     properties: {
-      response: { type: 'string', minLength: 80, maxLength: 4096 },
+      response: {
+        type: 'string',
+        minLength: 80,
+        maxLength: 4096,
+        description:
+          'The complete user-visible answer. It must include personalization.explanation, receiptCitation, both command strings, and scopeStatement verbatim.',
+      },
       intentId: { type: 'string', minLength: 1, maxLength: 64 },
       personalization: {
         type: 'object',
@@ -77,7 +87,6 @@ export function codexResultSchema() {
             type: 'array',
             minItems: 1,
             maxItems: 4,
-            uniqueItems: true,
             items: {
               type: 'string',
               enum: [
@@ -89,15 +98,33 @@ export function codexResultSchema() {
               ],
             },
           },
-          explanation: { type: 'string', minLength: 20, maxLength: 512 },
+          explanation: {
+            type: 'string',
+            minLength: 20,
+            maxLength: 512,
+            description:
+              'One complete sentence naming the visible personalization basis; copy it verbatim into response.',
+          },
         },
+      },
+      receiptCitation: {
+        type: 'string',
+        minLength: 80,
+        maxLength: 256,
+        description:
+          'One complete sentence containing the exact receiptRoot returned by the CLI; copy it verbatim into response.',
       },
       verification: {
         type: 'object',
         additionalProperties: false,
         required: ['command', 'expected'],
         properties: {
-          command: { type: 'string', minLength: 8, maxLength: 512 },
+          command: {
+            type: 'string',
+            minLength: 8,
+            maxLength: 512,
+            description: 'A copyable command; copy it verbatim into response.',
+          },
           expected: { type: 'string', minLength: 8, maxLength: 512 },
         },
       },
@@ -106,15 +133,24 @@ export function codexResultSchema() {
         additionalProperties: false,
         required: ['command', 'safetyClass', 'reason'],
         properties: {
-          command: { type: 'string', minLength: 8, maxLength: 512 },
+          command: {
+            type: 'string',
+            minLength: 8,
+            maxLength: 512,
+            description: 'A copyable command; copy it verbatim into response.',
+          },
           safetyClass: { type: 'string', enum: ['read-only', 'preview-safe'] },
           reason: { type: 'string', minLength: 8, maxLength: 512 },
         },
       },
+      scopeStatement: {
+        type: 'string',
+        enum: [LOCAL_QUALIFICATION_SCOPE_STATEMENT],
+        description: 'Copy this qualification boundary verbatim into response.',
+      },
       nonClaims: {
         type: 'array',
         minItems: 4,
-        uniqueItems: true,
         items: {
           type: 'string',
           enum: REQUIRED_NON_CLAIMS,
@@ -122,6 +158,19 @@ export function codexResultSchema() {
       },
     },
   };
+}
+
+export function candidateShellRouter() {
+  return [
+    'kungfu() {',
+    '  "${KUNGFU_CLI_BIN:?KUNGFU_CLI_BIN is required}" "$@"',
+    '}',
+    '',
+  ].join('\n');
+}
+
+function installCandidateShellRouter(home) {
+  fs.writeFileSync(path.join(home, '.zshenv'), candidateShellRouter(), 'utf8');
 }
 
 function jsonObjects(value) {
@@ -238,6 +287,26 @@ function outputHasJson(output, predicate) {
   });
 }
 
+function commandInvokesKungfu(command, expectedArgs) {
+  const words = String(command)
+    .replace(/["'`]/gu, ' ')
+    .split(/\s+/u)
+    .map((word) => word.replace(/^[;&|()]+|[;&|()]+$/gu, ''))
+    .filter(Boolean);
+  return words.some((word, index) => {
+    const executable = path.basename(word);
+    if (
+      executable !== 'kungfu' &&
+      word !== '$KUNGFU_CLI_BIN' &&
+      word !== '${KUNGFU_CLI_BIN}'
+    )
+      return false;
+    return expectedArgs.every(
+      (expected, offset) => words[index + offset + 1] === expected,
+    );
+  });
+}
+
 export function protocolEvidenceFromCodexEventStream(
   jsonl,
   expectedPromptRoot,
@@ -245,7 +314,7 @@ export function protocolEvidenceFromCodexEventStream(
   const requirements = [
     {
       id: 'brief',
-      command: (value) => /(?:^|\s)kungfu agent brief(?:\s|$)/u.test(value),
+      command: (value) => commandInvokesKungfu(value, ['agent', 'brief']),
       output: (value) => value.includes('# Kungfu Agent Brief'),
     },
     {
@@ -511,7 +580,9 @@ export function normalizedExperienceFromResult(result, receipt) {
     'personalization was not grounded in the user-visible response',
   );
   assert(
-    result.response.includes(receipt.receiptRoot),
+    typeof result.receiptCitation === 'string' &&
+      result.receiptCitation.includes(receipt.receiptRoot) &&
+      result.response.includes(result.receiptCitation),
     'response omitted the CLI receipt root',
   );
   safeUserCommand(result.verification?.command, 'verification command');
@@ -525,6 +596,11 @@ export function normalizedExperienceFromResult(result, receipt) {
     ['read-only', 'preview-safe'].includes(result.nextStep?.safetyClass),
     'next step omitted its safety class',
   );
+  assert(
+    result.scopeStatement === LOCAL_QUALIFICATION_SCOPE_STATEMENT &&
+      result.response.includes(result.scopeStatement),
+    'qualification boundary was not user-visible',
+  );
   for (const nonClaim of REQUIRED_NON_CLAIMS) {
     assert(
       result.nonClaims?.includes(nonClaim),
@@ -537,6 +613,7 @@ export function normalizedExperienceFromResult(result, receipt) {
     personalizationExplanationRoot: bytesRoot(
       Buffer.from(result.personalization.explanation),
     ),
+    receiptCitationRoot: bytesRoot(Buffer.from(result.receiptCitation)),
     verificationCommand: result.verification.command,
     verificationExpectedRoot: bytesRoot(
       Buffer.from(result.verification.expected),
@@ -544,6 +621,7 @@ export function normalizedExperienceFromResult(result, receipt) {
     nextStepCommand: result.nextStep.command,
     nextStepSafetyClass: result.nextStep.safetyClass,
     nextStepReasonRoot: bytesRoot(Buffer.from(result.nextStep.reason)),
+    scopeStatementRoot: bytesRoot(Buffer.from(result.scopeStatement)),
     nonClaims: [...result.nonClaims].sort(),
   };
 }
@@ -683,7 +761,9 @@ export function verifyAgentFirstValueQualification(report) {
     }
     assert(
       trial.experience?.intentId === trial.receipt.intentId &&
-        trial.experience?.personalizationBasis?.length >= 1,
+        trial.experience?.personalizationBasis?.length >= 1 &&
+        ROOT_PATTERN.test(trial.experience?.receiptCitationRoot || '') &&
+        ROOT_PATTERN.test(trial.experience?.scopeStatementRoot || ''),
       'trial omitted normalized personalized experience facts',
     );
     safeUserCommand(
@@ -786,6 +866,7 @@ function run(argv) {
   );
   const probeHome = path.join(probeRoot, 'home');
   fs.mkdirSync(probeHome, { recursive: true });
+  installCandidateShellRouter(probeHome);
   const baseEnv = {
     ...process.env,
     HOME: probeHome,
@@ -794,6 +875,7 @@ function run(argv) {
     KUNGFU_CLI_BIN: kungfu,
     KUNGFU_FIRST_VALUE_SOURCE_REVISION: options['source-revision'],
     PATH: `${path.dirname(kungfu)}:${process.env.PATH || '/usr/bin:/bin'}`,
+    ZDOTDIR: probeHome,
     NO_COLOR: '1',
   };
 
@@ -857,12 +939,14 @@ function run(argv) {
       const schemaPath = path.join(trialRoot, 'result.schema.json');
       fs.mkdirSync(trialHome, { recursive: true });
       fs.mkdirSync(workspace, { recursive: true });
+      installCandidateShellRouter(trialHome);
       fs.writeFileSync(schemaPath, `${JSON.stringify(resultSchema)}\n`);
       const env = {
         ...baseEnv,
         HOME: trialHome,
         XDG_CONFIG_HOME: path.join(trialHome, '.config'),
         KF_CONFIG_HOME: path.join(trialHome, '.config', 'kungfu'),
+        ZDOTDIR: trialHome,
         KUNGFU_FIRST_VALUE_ATTEMPT_ID: attemptId,
         KUNGFU_FIRST_VALUE_PROMPT_ROOT: promptEntry.root,
       };

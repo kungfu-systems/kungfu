@@ -14,7 +14,9 @@ bind-work --initiative-id <id> --assignment-id <id> --json`; stop unless the
 result is `status: bound`, including when another native writer is active.
 
 Run `kungfu agent brief`, then `kungfu agent docs --verify --json` and
-`kungfu agent map --json`. Select only the route relevant to the user's task.
+`kungfu agent map --json`. Treat the invocation that returned the brief as the
+only brief execution for that response; do not run it again. Select only the
+route relevant to the user's task.
 
 When an unfamiliar user naturally asks to understand, start, try, or be led
 through Kungfu, also run `kungfu agent first-value contract --json`. The user

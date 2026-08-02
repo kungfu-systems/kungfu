@@ -7,7 +7,9 @@ replacement for live product state.
 ## First response protocol
 
 When the user asks you to run this brief, merely printing or reading it is not
-completion. Execute the bounded protocol below before your final response.
+completion. The invocation that returned this text is the one permitted brief
+execution for this response: do not run `kungfu agent brief` again. Continue
+directly with the bounded protocol below before your final response.
 
 1. Run `kungfu agent docs --verify --json`; stop if the pack is invalid.
 2. Run `kungfu agent map --json`; select the smallest route matching the user's

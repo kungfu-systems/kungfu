@@ -88,7 +88,7 @@
       "pointer": {
         "kind": "file",
         "path": "scripts/qualify-agent-first-value-codex.mjs",
-        "sha256": "cb832f5a215c7aebbb2068c646178a09e5445912bda22ac35c0b1479fcf9f385"
+        "sha256": "b7248f34ea90c416381d963dccc0b0501362a3187c047e4b16bc12917a1ebddd"
       },
       "description": "Local-only three-trial fresh Codex qualification harness that retains sanitized receipts rather than raw transcripts."
     },
@@ -97,7 +97,7 @@
       "pointer": {
         "kind": "file",
         "path": "scripts/qualify-agent-first-value-codex.test.mjs",
-        "sha256": "bc1392cde6195c09bcc027f48cf83e8d13ebb3cae97fc65bdd130b078b135c84"
+        "sha256": "76c4ed010c755f649bdb87cefbf2a1aa2bc2889f28ef3a7f8ca167d17ee4e559"
       },
       "description": "Provider-free deterministic CI coverage for aggregate and receipt acceptance, tampering, reuse, and partial-failure cases."
     },
@@ -149,11 +149,11 @@
       },
       {
         "path": "scripts/qualify-agent-first-value-codex.mjs",
-        "sha256": "cb832f5a215c7aebbb2068c646178a09e5445912bda22ac35c0b1479fcf9f385"
+        "sha256": "b7248f34ea90c416381d963dccc0b0501362a3187c047e4b16bc12917a1ebddd"
       },
       {
         "path": "scripts/qualify-agent-first-value-codex.test.mjs",
-        "sha256": "bc1392cde6195c09bcc027f48cf83e8d13ebb3cae97fc65bdd130b078b135c84"
+        "sha256": "76c4ed010c755f649bdb87cefbf2a1aa2bc2889f28ef3a7f8ca167d17ee4e559"
       },
       {
         "path": "docs/qualification/evidence/agent-brief-first-value-loop/report.json",

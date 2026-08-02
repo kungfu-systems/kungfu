@@ -4,6 +4,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 
 import {
+  candidateShellRouter,
   codexResultSchema,
   normalizedExperienceFromResult,
   protocolEvidenceFromCodexEventStream,
@@ -13,6 +14,14 @@ import {
   verifyFirstValueReceipt,
 } from './qualify-agent-first-value-codex.mjs';
 
+test('candidate shell router pins every plain kungfu command to the candidate', () => {
+  const router = candidateShellRouter();
+  assert.match(router, /^kungfu\(\) \{/u);
+  assert.match(router, /KUNGFU_CLI_BIN/u);
+  assert.match(router, /"\$@"/u);
+  assert.doesNotMatch(router, /usr\/local/u);
+});
+
 test('Codex result schema constrains the user response without copying receipts', () => {
   const schema = codexResultSchema();
   assert.equal(schema.additionalProperties, false);
@@ -20,12 +29,22 @@ test('Codex result schema constrains the user response without copying receipts'
     'response',
     'intentId',
     'personalization',
+    'receiptCitation',
     'verification',
     'nextStep',
+    'scopeStatement',
     'nonClaims',
   ]);
   assert.equal(schema.properties.response.maxLength, 4096);
+  assert.match(
+    schema.properties.response.description,
+    /personalization\.explanation.*scopeStatement verbatim/u,
+  );
   assert.equal(schema.properties.personalization.additionalProperties, false);
+  assert.match(
+    schema.properties.personalization.properties.explanation.description,
+    /copy it verbatim into response/u,
+  );
   assert.deepEqual(schema.properties.nextStep.properties.safetyClass.enum, [
     'read-only',
     'preview-safe',
@@ -137,7 +156,7 @@ test('binds autonomous protocol completion to command execution outputs', () => 
       },
     });
   const stream = [
-    command('kungfu agent brief', '# Kungfu Agent Brief'),
+    command("/bin/zsh -lc 'kungfu agent brief'", '# Kungfu Agent Brief'),
     command(
       'kungfu agent docs --verify --json',
       JSON.stringify({
@@ -180,16 +199,35 @@ test('binds autonomous protocol completion to command execution outputs', () => 
   );
 });
 
+test('protocol evidence rejects a brief command hidden inside another executable name', () => {
+  const stream = JSON.stringify({
+    type: 'item.completed',
+    item: {
+      type: 'command_execution',
+      command: 'notkungfu agent brief',
+      aggregated_output: '# Kungfu Agent Brief',
+    },
+  });
+  assert.throws(
+    () => protocolEvidenceFromCodexEventStream(stream, root('1')),
+    /protocol evidence brief expected one verified command, got 0/u,
+  );
+});
+
 test('normalizes experience only when the evidence is user-visible and safe', () => {
   const value = receipt(1);
   const explanation = 'Kungfu gives your agent a product-owned evidence path.';
   const verification =
     'kungfu agent status --target codex --scope project --json';
   const next = 'kungfu project list --json';
+  const receiptCitation = `本次 receipt 是 ${value.receiptRoot}，你可以用候选 CLI 独立复验。`;
+  const scopeStatement =
+    '本次只验证了这个本地 Codex 与候选 CLI；未验证 Claude、CI 托管 Codex、其他平台或公开发布。';
   const result = {
-    response: `${explanation} Verify with ${verification}; next run ${next}. ${value.receiptRoot}`,
+    response: `${explanation} ${receiptCitation} Verify with ${verification}; next run ${next}. ${scopeStatement}`,
     intentId: 'onboarding',
     personalization: { basis: ['current-tools'], explanation },
+    receiptCitation,
     verification: {
       command: verification,
       expected: 'A rooted Agent status object.',
@@ -199,6 +237,7 @@ test('normalizes experience only when the evidence is user-visible and safe', ()
       safetyClass: 'read-only',
       reason: 'See registered projects.',
     },
+    scopeStatement,
     nonClaims: value.nonClaims.slice(0, 4),
   };
 
@@ -278,12 +317,14 @@ function qualification() {
         intentId: 'onboarding',
         personalizationBasis: ['current-tools'],
         personalizationExplanationRoot: root('9'),
+        receiptCitationRoot: root('d'),
         verificationCommand:
           'kungfu agent status --target codex --scope project --json',
         verificationExpectedRoot: root('a'),
         nextStepCommand: 'kungfu project list --json',
         nextStepSafetyClass: 'read-only',
         nextStepReasonRoot: root('b'),
+        scopeStatementRoot: root('e'),
         nonClaims: value.nonClaims.slice(0, 4).sort(),
         independentVerificationRoot: root('c'),
       },
