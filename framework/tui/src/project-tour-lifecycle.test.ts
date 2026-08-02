@@ -7,7 +7,7 @@ import {
   cleanupProjectTourTemporaryProject,
   playbackQuitRequested,
   projectTourTemporaryContainer,
-} from './project-tour-lifecycle.js';
+} from './starter-project-view/index.js';
 
 test('playback accepts q as a global exit key without matching other input', () => {
   assert.equal(playbackQuitRequested('q'), true);

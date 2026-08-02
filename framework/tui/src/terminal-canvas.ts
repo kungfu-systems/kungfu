@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
-import { type Box, Text } from 'ink';
+import { Box, Text } from 'ink';
 import React from 'react';
 
 type ResizeListener = (...args: unknown[]) => void;
@@ -50,6 +50,142 @@ function isCursorVisibilityOnly(value: string): boolean {
  */
 export function terminalCanvasRows(rows: number): number {
   return Math.max(1, rows - 1);
+}
+
+type InkColor = React.ComponentProps<typeof Text>['color'];
+
+function clippedBorderText(value: string, width: number): string {
+  if (width <= 0) return '';
+  if (value.length <= width) return value.padEnd(width);
+  if (width === 1) return '…';
+  return `${value.slice(0, width - 1)}…`;
+}
+
+export function titledBorderWindowLines({
+  columns,
+  title,
+  content,
+  paddingX = 1,
+}: {
+  columns: number;
+  title: string;
+  content: readonly string[];
+  paddingX?: number;
+}): string[] {
+  const width = Math.max(4, Math.floor(columns));
+  const innerWidth = width - 2;
+  const horizontalPadding = Math.max(
+    0,
+    Math.min(Math.floor(paddingX), Math.floor(innerWidth / 2)),
+  );
+  const contentWidth = Math.max(0, innerWidth - horizontalPadding * 2);
+  const titleText = `─ ${title} `;
+  const top =
+    titleText.length <= innerWidth
+      ? `${titleText}${'─'.repeat(innerWidth - titleText.length)}`
+      : clippedBorderText(titleText, innerWidth);
+  const pad = ' '.repeat(horizontalPadding);
+  return [
+    `╭${top}╮`,
+    ...content.map(
+      (row) => `│${pad}${clippedBorderText(row, contentWidth)}${pad}│`,
+    ),
+    `╰${'─'.repeat(innerWidth)}╯`,
+  ];
+}
+
+function titledBorderRowKey(row: React.ReactNode, index: number): string {
+  const identity =
+    React.isValidElement(row) && row.key !== null
+      ? String(row.key)
+      : typeof row === 'string' || typeof row === 'number'
+        ? String(row)
+        : 'titled-border-row';
+  return `${index}:${identity}`;
+}
+
+export function TitledBorderWindow({
+  columns,
+  title,
+  rows,
+  borderColor = 'cyan',
+  titleColor = borderColor,
+  paddingX = 1,
+}: {
+  columns: number;
+  title: string;
+  rows: readonly React.ReactNode[];
+  borderColor?: InkColor;
+  titleColor?: InkColor;
+  paddingX?: number;
+}): React.ReactElement {
+  const width = Math.max(4, Math.floor(columns));
+  const innerWidth = width - 2;
+  const horizontalPadding = Math.max(
+    0,
+    Math.min(Math.floor(paddingX), Math.floor(innerWidth / 2)),
+  );
+  const contentWidth = Math.max(0, innerWidth - horizontalPadding * 2);
+  const [top, bottom] = titledBorderWindowLines({
+    columns: width,
+    title,
+    content: [],
+    paddingX: horizontalPadding,
+  });
+  const pad = ' '.repeat(horizontalPadding);
+  return React.createElement(
+    Box,
+    { width, flexDirection: 'column', overflow: 'hidden' },
+    React.createElement(
+      Text,
+      { key: 'top', bold: true, color: titleColor, wrap: 'truncate-end' },
+      top,
+    ),
+    ...rows.map((row, index) =>
+      React.createElement(
+        Box,
+        {
+          key: titledBorderRowKey(row, index),
+          width,
+          height: 1,
+          flexDirection: 'row',
+          overflow: 'hidden',
+        },
+        React.createElement(Text, { color: borderColor }, `│${pad}`),
+        React.createElement(
+          Box,
+          { width: contentWidth, height: 1, overflow: 'hidden' },
+          typeof row === 'string' || typeof row === 'number'
+            ? React.createElement(Text, null, row)
+            : row,
+        ),
+        React.createElement(Text, { color: borderColor }, `${pad}│`),
+      ),
+    ),
+    React.createElement(
+      Text,
+      { key: 'bottom', color: borderColor, wrap: 'truncate-end' },
+      bottom,
+    ),
+  );
+}
+
+export function playbackBorderLines({
+  columns,
+  label,
+  status,
+  hint,
+}: {
+  columns: number;
+  label: string;
+  status: string;
+  hint: string;
+}): [string, string, string] {
+  return titledBorderWindowLines({
+    columns,
+    title: `${label}  ▶ ${status}`,
+    content: [hint],
+  }) as [string, string, string];
 }
 
 export function splitHorizontalPointerActionAtPoint<Action extends string>({

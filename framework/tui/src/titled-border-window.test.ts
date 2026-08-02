@@ -9,7 +9,7 @@ import React from 'react';
 import {
   TitledBorderWindow,
   titledBorderWindowLines,
-} from './titled-border-window.js';
+} from './terminal-canvas.js';
 
 class CaptureOutput extends Writable {
   readonly isTTY = false;

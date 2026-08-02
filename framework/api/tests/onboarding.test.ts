@@ -11,7 +11,7 @@ import {
   kungfuAgentFirstPrompt,
   parseKungfuOnboardingState,
   shouldShowKungfuOnboarding,
-} from '../src/capability/onboarding.ts';
+} from '../src/capability/agent-work-lab.ts';
 
 test('onboarding is versioned, resumable, and hidden only after an explicit outcome', () => {
   const unseen = parseKungfuOnboardingState(undefined);

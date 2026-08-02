@@ -517,7 +517,7 @@ const tui = fs.readFileSync(
   'utf8',
 );
 const tuiOnboarding = fs.readFileSync(
-  path.join(ROOT, 'framework', 'tui', 'src', 'onboarding-view.tsx'),
+  path.join(ROOT, 'framework', 'tui', 'src', 'agent-work-lab-view.tsx'),
   'utf8',
 );
 if (

@@ -2,7 +2,6 @@ import * as capability from '@kungfu-tech/api/capability';
 import type {
   AgentWorkLabStartupRoute,
   KfxExperienceFlowDescriptor,
-  KungfuOnboardingState,
   ProductSearchDocument,
   ProductSearchResult,
   ProjectsCatalog,
@@ -59,8 +58,6 @@ import {
   GLOBAL_WORK_OBSERVER_EVENT_CHANNEL,
   GLOBAL_WORK_OBSERVER_SUBSCRIBE_CHANNEL,
   GLOBAL_WORK_OBSERVER_UNSUBSCRIBE_CHANNEL,
-  ONBOARDING_INSTALL_CLI_CHANNEL,
-  ONBOARDING_SET_CHANNEL,
   RUNTIME_STATUS_GET_CHANNEL,
   SESSION_WINDOW_OPEN_CHANNEL,
   SESSION_WINDOW_RESTORE_CHANNEL,
@@ -68,9 +65,6 @@ import {
   SHELL_NAVIGATE_CHANNEL,
   SHELL_REFRESH_CHANNEL,
   type ShellNavigateRequest,
-  WINDOW_CHROME_CONTROL_CHANNEL,
-  WINDOW_CHROME_GET_CHANNEL,
-  WINDOW_CHROME_STATE_CHANNEL,
 } from '../../sandbox/channels';
 import { publishRefresh } from '../../sandbox/refresh';
 import { createKfxSharedModules } from '../shared-modules';
@@ -84,9 +78,12 @@ import {
 } from './gui-config';
 import { type KfxLoadResult, loadKfx } from './kfx-loader';
 import {
-  type AgentFirstEntry,
   AgentFirstOnboardingPanel,
-} from './onboarding-panel';
+  type WindowChromeConfig,
+  type WindowChromeControl,
+  useAgentFirstEntry,
+  useWindowChrome,
+} from './product-navigation';
 import {
   KfxErrorBoundary,
   ProjectsPanel,
@@ -248,99 +245,9 @@ function SandboxSlot({
   return <div ref={ref} style={{ width: '100%', height: '100%' }} />;
 }
 
-type WindowChromeControl = 'minimize' | 'toggle-maximize' | 'close';
-type WindowChromeConfig = {
-  platform: 'darwin' | 'win32' | 'linux' | 'other';
-  mode: 'native' | 'integrated' | 'custom';
-  customControls: boolean;
-  draggable: boolean;
-  trafficLightInset: number;
-  controlInset: number;
-  maximized: boolean;
-  fullscreen: boolean;
-};
 type ElectronChromeStyle = React.CSSProperties & {
   WebkitAppRegion?: 'drag' | 'no-drag';
 };
-
-const defaultWindowChrome: WindowChromeConfig = {
-  platform: 'other',
-  mode: 'native',
-  customControls: false,
-  draggable: false,
-  trafficLightInset: 0,
-  controlInset: 0,
-  maximized: false,
-  fullscreen: false,
-};
-
-function readWindowChromeEnv(): WindowChromeConfig {
-  try {
-    const raw = window.process?.env?.KF_WINDOW_CHROME;
-    if (!raw) return defaultWindowChrome;
-    return { ...defaultWindowChrome, ...JSON.parse(raw) };
-  } catch {
-    return defaultWindowChrome;
-  }
-}
-
-function useWindowChrome(): [
-  WindowChromeConfig,
-  (control: WindowChromeControl) => void,
-] {
-  const [chrome, setChrome] =
-    React.useState<WindowChromeConfig>(readWindowChromeEnv);
-  React.useEffect(() => {
-    type ChromeIpc = {
-      invoke: (channel: string, payload?: unknown) => Promise<unknown>;
-      on: (
-        channel: string,
-        listener: (event: unknown, payload: unknown) => void,
-      ) => void;
-      removeListener: (
-        channel: string,
-        listener: (event: unknown, payload: unknown) => void,
-      ) => void;
-    };
-    let ipc: ChromeIpc | null = null;
-    try {
-      ipc = (window.require('electron') as { ipcRenderer: ChromeIpc })
-        .ipcRenderer;
-    } catch {
-      ipc = null;
-    }
-    if (!ipc) return;
-    void ipc.invoke(WINDOW_CHROME_GET_CHANNEL).then((next) => {
-      setChrome((current) => ({ ...current, ...(next as object) }));
-    });
-    const handler = (_event: unknown, payload: unknown) => {
-      setChrome((current) => ({ ...current, ...(payload as object) }));
-    };
-    ipc.on(WINDOW_CHROME_STATE_CHANNEL, handler);
-    return () => ipc?.removeListener(WINDOW_CHROME_STATE_CHANNEL, handler);
-  }, []);
-
-  const control = React.useCallback((next: WindowChromeControl) => {
-    try {
-      const ipc = (
-        window.require('electron') as {
-          ipcRenderer: {
-            invoke: (channel: string, payload: unknown) => Promise<unknown>;
-          };
-        }
-      ).ipcRenderer;
-      void ipc
-        .invoke(WINDOW_CHROME_CONTROL_CHANNEL, { control: next })
-        .then((state) =>
-          setChrome((current) => ({ ...current, ...(state as object) })),
-        );
-    } catch {
-      // Browser previews have no Electron window to control.
-    }
-  }, []);
-
-  return [chrome, control];
-}
 
 function ShellTitleBar({
   chrome,
@@ -912,32 +819,12 @@ function App() {
   const [agentWorkLab] = React.useState(openRendererAgentWorkLab);
   const [projects] = React.useState(openRendererProjects);
   const workspaceBridge = React.useMemo(workspaceIpc, []);
-  const [agentFirstEntry, setAgentFirstEntry] = React.useState<AgentFirstEntry>(
-    () => {
-      try {
-        return JSON.parse(
-          window.process.env.KFE_ONBOARDING || '',
-        ) as AgentFirstEntry;
-      } catch {
-        const command = capability.kungfuAgentBriefCommand(
-          window.process.env.KUNGFU_CLI_BIN || 'kungfu',
-          JSON.parse(
-            window.process.env.KUNGFU_CLI_ARGS_PREFIX || '[]',
-          ) as string[],
-        );
-        return {
-          state: { ...capability.DEFAULT_KUNGFU_ONBOARDING_STATE },
-          command,
-          prompt: capability.kungfuAgentFirstPrompt(command),
-          cliPath: '',
-          cliInstalled: false,
-        };
-      }
-    },
-  );
-  const initialOnboardingOpen = capability.shouldShowKungfuOnboarding(
-    agentFirstEntry.state,
-  );
+  const {
+    entry: agentFirstEntry,
+    initialOpen: initialOnboardingOpen,
+    persist: persistOnboarding,
+    installCli: installOnboardingCli,
+  } = useAgentFirstEntry();
   const initialProjectsOpen =
     window.process.env.KFE_INITIAL_SURFACE === 'projects';
   const initialFocusedProjectPath =
@@ -1083,38 +970,6 @@ function App() {
     ProductSearchDocument[]
   >([]);
   const [currentProjectName, setCurrentProjectName] = React.useState('');
-  const persistOnboarding = React.useCallback(
-    async (state: KungfuOnboardingState) => {
-      const ipc = (
-        window.require('electron') as {
-          ipcRenderer: {
-            invoke: (channel: string, payload?: unknown) => Promise<unknown>;
-          };
-        }
-      ).ipcRenderer;
-      const next = (await ipc.invoke(ONBOARDING_SET_CHANNEL, {
-        state,
-      })) as AgentFirstEntry;
-      setAgentFirstEntry(next);
-    },
-    [],
-  );
-  const installOnboardingCli = React.useCallback(async () => {
-    const ipc = (
-      window.require('electron') as {
-        ipcRenderer: {
-          invoke: (channel: string) => Promise<unknown>;
-        };
-      }
-    ).ipcRenderer;
-    const result = (await ipc.invoke(ONBOARDING_INSTALL_CLI_CHANNEL)) as {
-      ok: boolean;
-      message: string;
-      entry: AgentFirstEntry;
-    };
-    setAgentFirstEntry(result.entry);
-    if (!result.ok) throw new Error(result.message);
-  }, []);
   const [state, setState] = React.useState<ShellState>(() =>
     runtime.domain ? loadShellState(runtime.domain) : DEFAULT_STATE,
   );

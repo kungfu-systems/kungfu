@@ -19,6 +19,7 @@ import {
   KUNGFU_EMPTY_WORK_NEBULA_PATTERN,
   type TerminalAnimationPattern,
   type TerminalDimensions,
+  TitledBorderWindow,
   splitHorizontalPointerActionAtPoint,
   terminalAnimationPatternSize,
   terminalAnimationsEnabled,
@@ -26,14 +27,6 @@ import {
   useTerminalAnimationFrame,
 } from './terminal-canvas.js';
 export * from './terminal-canvas.js';
-import {
-  TitledBorderWindow,
-  titledBorderWindowLines,
-} from './titled-border-window.js';
-export {
-  TitledBorderWindow,
-  titledBorderWindowLines,
-} from './titled-border-window.js';
 import type { WorkLoopShellModel } from './work-loop-contribution.js';
 
 export {
@@ -1861,24 +1854,6 @@ export function PlaybackBar({
       />
     </Box>
   );
-}
-
-export function playbackBorderLines({
-  columns,
-  label,
-  status,
-  hint,
-}: {
-  columns: number;
-  label: string;
-  status: string;
-  hint: string;
-}): [string, string, string] {
-  return titledBorderWindowLines({
-    columns,
-    title: `${label}  ▶ ${status}`,
-    content: [hint],
-  }) as [string, string, string];
 }
 
 export function TerminalAnimation({

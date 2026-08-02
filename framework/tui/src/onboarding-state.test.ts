@@ -3,7 +3,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
-import { readTuiOnboardingState } from './onboarding-state.js';
+import { readTuiOnboardingState } from './agent-work-lab-view.js';
 
 test('TUI reads the shared user-level onboarding state without Project state', () => {
   const state = readTuiOnboardingState('/config', (file) => {

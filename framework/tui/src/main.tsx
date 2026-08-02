@@ -48,19 +48,17 @@ import {
 
 import {
   AGENT_WORK_LAB_QUICK_COMMANDS,
+  AgentFirstOnboardingView,
   type AgentWorkLabActionRequest,
   type AgentWorkLabAutoplayResult,
   AgentWorkLabHost,
   type AgentWorkLabSuiteAction,
+  type TuiOnboardingAction,
   agentWorkLabActionReturnsToControls,
+  readTuiOnboardingState,
 } from './agent-work-lab-view.js';
 import { scrollListSelection } from './list-window/index.js';
 import { boundedIndex, decodeShellKey } from './navigation.js';
-import { readTuiOnboardingState } from './onboarding-state.js';
-import {
-  AgentFirstOnboardingView,
-  type TuiOnboardingAction,
-} from './onboarding-view.js';
 import {
   CLOSED_CONTROL_PLANE,
   ControlPlaneBar,
@@ -93,10 +91,6 @@ import {
   projectWorkAmbientRows,
 } from './project-files-view/index.js';
 import {
-  cleanupProjectTourTemporaryProject,
-  playbackQuitRequested,
-} from './project-tour-lifecycle.js';
-import {
   PROJECTS_QUICK_COMMANDS,
   PROJECT_WORK_QUICK_COMMANDS,
   type ProjectWorkQuickAction,
@@ -111,7 +105,9 @@ import {
   type ProjectTourResult,
   ProjectTourView,
   StarterProjectHost,
+  cleanupProjectTourTemporaryProject,
   parseProjectTourSpeed,
+  playbackQuitRequested,
   workReceiptHasRetainedSession,
 } from './starter-project-view/index.js';
 import {

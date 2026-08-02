@@ -68,7 +68,7 @@
     "tui": {
       "entrypoint": "kungfu",
       "requiredCopy": {
-        "framework/tui/src/onboarding-view.tsx": [
+        "framework/tui/src/agent-work-lab-view.tsx": [
           "Keep your agent. Give it durable Work.",
           "Exact local command:",
           "kungfu run codex|claude|opencode|amp"

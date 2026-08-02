@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import { createHash } from 'node:crypto';
-import { readFileSync } from 'node:fs';
+import { readFileSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
 import path from 'node:path';
 import type {
   AgentRuntimeProfile,
@@ -42,12 +43,12 @@ import {
 import {
   KUNGFU_WORK_DISCOVERY_PATTERN,
   type TerminalAnimationCell,
+  TitledBorderWindow,
   terminalAnimationsEnabled,
   terminalCanvasRows,
   useTerminalAnimationFrame,
 } from '../terminal-canvas.js';
 import { decodeTerminalMouseInput } from '../terminal-lifecycle.js';
-import { TitledBorderWindow } from '../titled-border-window.js';
 
 type DimensionSource = {
   get(): TerminalDimensions;
@@ -1792,6 +1793,48 @@ export function parseProjectTourSpeed(value?: string): number {
     );
   }
   return speed;
+}
+
+export function playbackQuitRequested(chunk: Buffer | string): boolean {
+  return /^[qQ]$/u.test(String(chunk));
+}
+
+export function projectTourTemporaryContainer(
+  destination: string,
+  systemTemporaryRoot = tmpdir(),
+): string | null {
+  const temporaryRoot = path.resolve(systemTemporaryRoot);
+  const projectRoot = path.resolve(destination);
+  const container = path.dirname(projectRoot);
+  if (temporaryRoot === path.parse(temporaryRoot).root) return null;
+  if (path.basename(projectRoot) !== 'my-first-kungfu-project') return null;
+  if (!/^kungfu-project-tour-[a-z0-9_-]+$/iu.test(path.basename(container)))
+    return null;
+  if (path.dirname(container) !== temporaryRoot) return null;
+  return container;
+}
+
+export function cleanupProjectTourTemporaryProject(
+  destination: string,
+  options: {
+    systemTemporaryRoot?: string;
+    remove?: (container: string) => void;
+  } = {},
+): string {
+  const container = projectTourTemporaryContainer(
+    destination,
+    options.systemTemporaryRoot,
+  );
+  if (!container) {
+    throw new Error(
+      `refusing to remove unrecognized Project tour path: ${destination}`,
+    );
+  }
+  const remove =
+    options.remove ??
+    ((target: string) => rmSync(target, { recursive: true, force: true }));
+  remove(container);
+  return container;
 }
 
 export function projectTourPacingForSpeed(speed: number) {

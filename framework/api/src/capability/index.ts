@@ -23,7 +23,6 @@ export * from './agent-session.js';
 export * from './agent-work-lab.js';
 export * from './product-search.js';
 export * from './global-work.js';
-export * from './onboarding.js';
 export * from './projects/index.js';
 export * from './runtime.js';
 
