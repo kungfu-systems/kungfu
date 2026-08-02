@@ -1,7 +1,109 @@
 // SPDX-License-Identifier: Apache-2.0
 
-import type { ProductSearchDocument } from '@kungfu-tech/api/capability';
+import {
+  type ProductSearchDocument,
+  SYSTEM_HELP_DOCUMENTS,
+} from '@kungfu-tech/api/capability';
 import { boundedIndex } from './navigation.js';
+
+export type ProductSurface =
+  | 'loading'
+  | 'onboarding'
+  | 'lab'
+  | 'all-work'
+  | 'projects'
+  | 'project-work'
+  | 'project-assignment';
+
+export function initialProductSurface({
+  playbackMode,
+  firstLaunch,
+  emptyState,
+}: {
+  playbackMode: boolean;
+  firstLaunch: boolean;
+  emptyState: boolean;
+}): ProductSurface {
+  if (playbackMode) return 'lab';
+  if (firstLaunch) return 'onboarding';
+  return emptyState ? 'all-work' : 'loading';
+}
+
+type SearchableQuickCommand = {
+  id: string;
+  command: string;
+  summary: string;
+  title: string;
+};
+
+const TUI_PRODUCT_VIEW_DOCUMENTS: ProductSearchDocument[] = [
+  {
+    id: 'view.work-control',
+    kind: 'view',
+    title: 'All Work',
+    summary: 'Open the cross-Project read-only Work overview.',
+    keywords: ['all', 'work', 'active', 'completed'],
+    action: { kind: 'open-view', viewId: 'work' },
+  },
+  {
+    id: 'view.projects',
+    kind: 'view',
+    title: 'Projects',
+    summary: 'Create a Project or open an existing directory.',
+    keywords: ['project', 'new', 'open', 'directory'],
+    action: { kind: 'open-view', viewId: 'projects' },
+  },
+  {
+    id: 'view.agent-work-lab',
+    kind: 'view',
+    title: 'Agent Work Lab',
+    summary: 'Compare bounded Agent Work behavior across two Sessions.',
+    keywords: ['qualification', 'handoff', 'session'],
+    action: { kind: 'open-view', viewId: 'lab' },
+  },
+  {
+    id: 'view.onboarding',
+    kind: 'view',
+    title: 'Getting Started',
+    summary: 'Reopen the Agent-first onboarding guide at any time.',
+    keywords: ['onboarding', 'agent', 'guide', 'first'],
+    action: { kind: 'open-view', viewId: 'onboarding' },
+  },
+];
+
+export function buildTuiProductSearchDocuments({
+  quickCommands,
+  cliDocuments,
+  workDocuments,
+  projectDocuments,
+}: {
+  quickCommands: readonly SearchableQuickCommand[];
+  cliDocuments: readonly ProductSearchDocument[];
+  workDocuments: readonly ProductSearchDocument[];
+  projectDocuments: readonly ProductSearchDocument[];
+}): ProductSearchDocument[] {
+  const quickSearchDocuments = quickCommands.map((command, index) => ({
+    id: `command.quick.${command.id}`,
+    kind: 'command' as const,
+    title: command.command,
+    summary: command.summary,
+    section: 'Quick actions',
+    keywords: [command.title],
+    priority: index,
+    action: {
+      kind: 'describe-command' as const,
+      command: command.command,
+    },
+  }));
+  return [
+    ...SYSTEM_HELP_DOCUMENTS,
+    ...quickSearchDocuments,
+    ...cliDocuments,
+    ...workDocuments,
+    ...projectDocuments,
+    ...TUI_PRODUCT_VIEW_DOCUMENTS,
+  ];
+}
 
 export type ControlPlaneMode =
   | 'closed'

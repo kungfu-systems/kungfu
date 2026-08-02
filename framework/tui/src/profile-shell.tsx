@@ -35,6 +35,8 @@ export {
   contextualProjectRestoreCanCommit,
   createControlPlaneInputFence,
   directWorkspaceNavigationFromInput,
+  buildTuiProductSearchDocuments,
+  initialProductSurface,
   quickCommandMatches,
   reduceControlPlaneInput,
   resolveProductStartupSurface,
@@ -46,6 +48,7 @@ export type {
   ControlPlaneState,
   ControlPlaneUpdate,
   ProductQuickCommandAction,
+  ProductSurface,
   QuickCommand,
 } from './control-plane-state.js';
 
@@ -564,7 +567,6 @@ function clipped(value: string, width: number): string {
   return `${normalized.slice(0, Math.max(0, width - 1))}…`;
 }
 
-/** A stable, ANSI-free renderer used for terminal-size qualification. */
 export function renderProfileShellSnapshot(
   model: ProfileShellModel,
   dimensions: TerminalDimensions,
@@ -634,8 +636,6 @@ export function renderProfileShellSnapshot(
   return lines.slice(0, dimensions.rows).join('\n');
 }
 
-// Generic two-session workbench. Product adapters supply all domain copy,
-// event interpretation, verdict meaning, and next-step policy.
 export type PlaybackTiming = {
   eventIntervalMs: number;
   verdictIntervalMs: number;
