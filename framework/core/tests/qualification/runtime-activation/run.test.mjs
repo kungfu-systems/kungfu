@@ -148,6 +148,17 @@ test('product verification checks the distribution outputs without rebuilding th
   assert.equal(verification.command.includes('--full'), false);
 });
 
+test('source qualification uv runs preserve the exact tracked lockfile', () => {
+  const uvSuites = qualificationPlan({
+    mode: 'execute',
+    withProduct: true,
+  }).filter((suite) => suite.command.includes('uv'));
+  assert.ok(uvSuites.length > 0);
+  for (const suite of uvSuites) {
+    assert.ok(suite.command.includes('--frozen'), suite.id);
+  }
+});
+
 test('only source-tree Python suites allow the hosted qualification interpreter', () => {
   const baseEnv = { Path: 'C:\\Windows\\System32', CUSTOM_MARKER: 'preserved' };
   for (const id of ['activation-core', 'activation-performance']) {
