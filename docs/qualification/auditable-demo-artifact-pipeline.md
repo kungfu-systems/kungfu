@@ -73,7 +73,7 @@ they cannot replace the README managed block.
 | --- | --- |
 | Demo renderer | `ghcr.io/kungfu-systems/build-images/demo-renderer@sha256:e5ae5002dc0fc267e265dba1068d7476e541dddc9035ccd72cee94dfad872591` |
 | Renderer release | `v1.3.0-alpha.25`, exact version-state source `f327dd2c2879b5fe26982f3d60ddb00b55a64a25`, built from source `8f5581cdffcfbb695c6738de1a8935e3ee8774f2` containing Build Images PR `#350` |
-| Buildchain Gate | `afd75d295fcd2d55cfebf621f5ca6d05a9904830` (Buildchain PR `#2126`, independent native rendition qualification) |
+| Buildchain Gate | `31483f9652651d5b7b324fae6864bc4e7ff16fb6` (Buildchain PR `#2217`, independent native rendition path remediation) |
 | Consumer adapter | `scripts/auditable-demo-adapter.py` from the exact qualified Kungfu source SHA |
 
 Buildchain's reusable build emits

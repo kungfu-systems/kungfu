@@ -503,7 +503,7 @@ jobs:
     permissions:
       actions: read
       contents: read
-    uses: kungfu-systems/buildchain/.github/workflows/.auditable-demo.yml@afd75d295fcd2d55cfebf621f5ca6d05a9904830 # PR #2126 native rendition qualification
+    uses: kungfu-systems/buildchain/.github/workflows/.auditable-demo.yml@31483f9652651d5b7b324fae6864bc4e7ff16fb6 # PR #2217 native rendition path remediation
     with:
       source-ref: ${{ needs.build.outputs.publish-source-sha }}
       source-artifact-name: ${{ needs.resolve-auditable-demo-source.outputs.artifact-name }}
@@ -643,7 +643,7 @@ jobs:
           MEDIA_PROFILE: ${{ needs.auditable-demo.outputs.media-profile }}
           MEDIA_QUALIFICATION_ROOT: ${{ needs.auditable-demo.outputs.media-qualification-root }}
           AUDITABLE_DEMO_ID: ${{ needs.auditable-demo-plan.outputs.demo-id }}
-          BUILDCHAIN_SHA: afd75d295fcd2d55cfebf621f5ca6d05a9904830
+          BUILDCHAIN_SHA: 31483f9652651d5b7b324fae6864bc4e7ff16fb6
           RENDERER_IMAGE: ghcr.io/kungfu-systems/build-images/demo-renderer@sha256:32f5079f14ec0380c27f0df39448cb931e87fe744cc867fbd3d61cfd8a5e18de
         run: ./shifu node scripts/auditable-demo-passport.mjs write --output auditable-demo-release-passport.json
 

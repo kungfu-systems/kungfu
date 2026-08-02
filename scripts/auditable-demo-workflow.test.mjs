@@ -27,7 +27,7 @@ const RELEASE_WORKFLOW = parse(fs.readFileSync(RELEASE_WORKFLOW_PATH, 'utf8'));
 const AsyncFunction = Object.getPrototypeOf(async () => {}).constructor;
 const SOURCE_SHA = '1'.repeat(40);
 const NATIVE_RENDITION_BUILDCHAIN_SHA =
-  'afd75d295fcd2d55cfebf621f5ca6d05a9904830';
+  '31483f9652651d5b7b324fae6864bc4e7ff16fb6';
 const NATIVE_RENDITION_RENDERER_IMAGE =
   'ghcr.io/kungfu-systems/build-images/demo-renderer@sha256:32f5079f14ec0380c27f0df39448cb931e87fe744cc867fbd3d61cfd8a5e18de';
 
