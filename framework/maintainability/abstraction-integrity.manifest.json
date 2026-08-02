@@ -125,6 +125,12 @@
       ]
     },
     {
+      "owner": "core/python-runtime-service-config",
+      "paths": [
+        "framework/core/src/python/kungfu/runtime_service_config.py"
+      ]
+    },
+    {
       "owner": "shifu/python-structure-entry",
       "paths": [
         "scripts/check-code-complexity.mjs",
