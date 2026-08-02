@@ -1422,6 +1422,21 @@ export function runInstalledCliSemanticSmoke({
     env,
   });
   if (!brief.trim()) throw new Error('installed CLI agent brief was empty');
+  const firstValue = parseJsonOutput(
+    runInstalledKungfu({
+      kungfuBin,
+      installRoot,
+      home,
+      args: ['agent', 'first-value', 'contract', '--json'],
+      env,
+    }),
+    'agent first-value contract',
+  );
+  if (
+    firstValue.schema !== 'kungfu.agent-first-value-contract-view/v1' ||
+    firstValue.contract?.result?.maximumQuestionCount !== 1
+  )
+    throw new Error('installed CLI agent first-value contract was incomplete');
   const mode = parseJsonOutput(
     runInstalledKungfu({
       kungfuBin,

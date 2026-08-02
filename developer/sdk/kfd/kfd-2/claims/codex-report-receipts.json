@@ -52,13 +52,13 @@
       "pointer": {
         "kind": "file",
         "path": "framework/core/src/python/kungfu/agent/skills/codex/SKILL.md",
-        "sha256": "b50ff77f4659257b48b4ee7fbfe217828ec0335d4b277cdfef8d528922a7a35e"
+        "sha256": "374b115a76e08e92886578f1da09c7823c31770b023cdeb1bec0f5a116b6010f"
       },
       "description": "Codex-side report closeout gate instructions shipped in the agent pack."
     }
   ],
   "hashes": {
-    "registrySha256": "3ad1f496db4e1906d300e439542d3b1d6a69148519d2a5faa9635f6240d7ee56",
+    "registrySha256": "1365d3a445e1587000175cdbc7f50ed83dfe6ebf4190c73f5d18f0bb41c35e15",
     "sourceSha256": "50efcd1f66507e05c06db4a4b78e43b0fce404ba6745d8eecd66108d147e4816",
     "evidenceSha256": [
       {
@@ -79,7 +79,7 @@
       },
       {
         "path": "framework/core/src/python/kungfu/agent/skills/codex/SKILL.md",
-        "sha256": "b50ff77f4659257b48b4ee7fbfe217828ec0335d4b277cdfef8d528922a7a35e"
+        "sha256": "374b115a76e08e92886578f1da09c7823c31770b023cdeb1bec0f5a116b6010f"
       }
     ],
     "artifactSha256": [
@@ -89,7 +89,7 @@
       },
       {
         "path": "framework/core/src/python/kungfu/agent/skills/codex/SKILL.md",
-        "sha256": "b50ff77f4659257b48b4ee7fbfe217828ec0335d4b277cdfef8d528922a7a35e"
+        "sha256": "374b115a76e08e92886578f1da09c7823c31770b023cdeb1bec0f5a116b6010f"
       }
     ]
   },
@@ -103,7 +103,7 @@
     {
       "name": "codex-agent-skill",
       "path": "framework/core/src/python/kungfu/agent/skills/codex/SKILL.md",
-      "sha256": "b50ff77f4659257b48b4ee7fbfe217828ec0335d4b277cdfef8d528922a7a35e",
+      "sha256": "374b115a76e08e92886578f1da09c7823c31770b023cdeb1bec0f5a116b6010f",
       "expectedPackagePath": "kungfu/agent/skills/codex/SKILL.md"
     }
   ],

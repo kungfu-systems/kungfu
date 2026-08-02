@@ -143,6 +143,46 @@
       ]
     },
     {
+      "id": "kungfu.agent.first-value",
+      "surface": "cli",
+      "name": "kungfu agent first-value",
+      "purpose": "Discover and verify the deterministic Agent first-value result contract.",
+      "maturity": "stable",
+      "visibility": "public-agent",
+      "anchor": {"kind": "runtime-click", "symbol": "first_value"},
+      "projections": ["capabilities-json", "agent-pack-doc", "provider-skill"]
+    },
+    {
+      "id": "kungfu.agent.first-value.contract",
+      "surface": "cli",
+      "name": "kungfu agent first-value contract --json",
+      "purpose": "Print the exact prompt, packaged roots, result constraints, receipt schema, and qualification non-claims.",
+      "maturity": "stable",
+      "visibility": "public-agent",
+      "anchor": {"kind": "runtime-click", "symbol": "first_value_contract"},
+      "projections": ["commands.json", "capabilities-json", "agent-pack-doc", "provider-skill"]
+    },
+    {
+      "id": "kungfu.agent.first-value.receipt",
+      "surface": "cli",
+      "name": "kungfu agent first-value receipt --intent <id> --discovery <command> --question-count <0-or-1> --outcome <summary> --json",
+      "purpose": "Rerun one declared safe discovery without a shell and emit a sanitized rooted first-value receipt.",
+      "maturity": "stable",
+      "visibility": "public-agent",
+      "anchor": {"kind": "runtime-click", "symbol": "first_value_receipt"},
+      "projections": ["commands.json", "capabilities-json", "agent-pack-doc", "provider-skill"]
+    },
+    {
+      "id": "kungfu.agent.first-value.verify",
+      "surface": "cli",
+      "name": "kungfu agent first-value verify <receipt-file> --json",
+      "purpose": "Fail closed while validating one retained first-value receipt against the current installed candidate.",
+      "maturity": "stable",
+      "visibility": "public-agent",
+      "anchor": {"kind": "runtime-click", "symbol": "first_value_verify"},
+      "projections": ["commands.json", "capabilities-json", "agent-pack-doc", "provider-skill"]
+    },
+    {
       "id": "kungfu.agent.work-model",
       "surface": "cli",
       "name": "kungfu agent work-model --json",

@@ -5,7 +5,7 @@
   "manifestPath": "framework/maintainability/semantic-amplification.manifest.json",
   "manifestRoot": "sha256:a4a33a8743dd4c2d30b88f19834fda45c9dda0ac972239cfdb9aa6b4ffba2b18",
   "baselineRef": "dbfed9ca1785d147b26f4f06e7e6895ac7368fee",
-  "sourceRoot": "sha256:6c5ec1784023e91550abe0416582d466b01e7a3bc9f809757ec99928d4fe39c1",
+  "sourceRoot": "sha256:9d8cf6520af773444262a7f29c41d878a4c6dc2c166c8df528d4a3230cb128af",
   "roles": {
     "authority": "exactly one authority route per family; the route may name multiple co-owned source files",
     "allowedProjectionRoles": [
@@ -122,7 +122,7 @@
           "path": "framework/core/src/python/kungfu/cli/surface_contract.registry.json",
           "currentLines": 157,
           "baselineLines": 155,
-          "currentRoot": "sha256:421d6f13852846ce01e6abad97116bf822687201ed928ed40a9e6ffe7de3ee34",
+          "currentRoot": "sha256:ba8f1d0a67ef9c7f1d1cb7fa5361b43fafd6dbb8396aab72cb4e01bedcc0f25e",
           "baselineRoot": "sha256:7af1893015500d9d54e2783e44af30cd4af8753787d9d9b70c77356b0e788c17",
           "changedSinceBaseline": true
         },
@@ -144,17 +144,17 @@
         },
         {
           "path": "framework/core/src/python/kungfu/agent/cli_surface.catalog.json",
-          "currentLines": 1002,
+          "currentLines": 1010,
           "baselineLines": 33927,
-          "currentRoot": "sha256:8c3a60fb2cd620e8c42c5e402c629625a50b4390fc5209424ffd85c62a871dc5",
+          "currentRoot": "sha256:42ec9e630794b1cb3470a9c99c1972291b9be4ef05520c6a5223c0407965808b",
           "baselineRoot": "sha256:9f2f17fca5aa4e4daa28a276c1e3a153fa263e791b497f7ea83a93796f7aeb1f",
           "changedSinceBaseline": true
         },
         {
           "path": "framework/core/src/python/kungfu/agent/commands.json",
-          "currentLines": 1111,
+          "currentLines": 1129,
           "baselineLines": 1117,
-          "currentRoot": "sha256:23b35b31bf415317ac0419dc8fa29fab9e3c594d41188925e8d46084b5050544",
+          "currentRoot": "sha256:35cea28ef6c43ee7aee80380bb20159ffdc28a5c6113878f501756e254d7908a",
           "baselineRoot": "sha256:969ac3d851c14196b7244ac1afaecfc237c82d45527fbe06a33d3fc064ea7fc4",
           "changedSinceBaseline": true
         },
@@ -176,9 +176,9 @@
         },
         {
           "path": "scripts/verify-agent-pack.mjs",
-          "currentLines": 438,
+          "currentLines": 525,
           "baselineLines": 396,
-          "currentRoot": "sha256:cffae17bcd46c735f8b6ef46ef82eca230511655427b9ecc4b210c80dbb11cbe",
+          "currentRoot": "sha256:c67c1b163837167787016767df080ae26781ff1b0b24f5a37de45a90d7a5f020",
           "baselineRoot": "sha256:3d5cf84d6cc561c681c68b51c92fa211f7993e1ca1a8da5d8bb9700b57a53bd2",
           "changedSinceBaseline": true
         },
@@ -192,9 +192,9 @@
         },
         {
           "path": "product/scripts/cli-surface-qualification.mjs",
-          "currentLines": 529,
+          "currentLines": 543,
           "baselineLines": 498,
-          "currentRoot": "sha256:fb64c213a11667fba0b0807aa71c7e7f13505ea244457e8e76a8e60c3337e486",
+          "currentRoot": "sha256:c9547bfbe969e060fa574096b8bce5d3890dd3ea5f08b97784aaff0e7ce9ad3c",
           "baselineRoot": "sha256:7533c7b772a961fd8e1ae97acc474b7c9f0fbe6626322f1e98f0e30ee163f551",
           "changedSinceBaseline": true
         },
@@ -208,9 +208,9 @@
         },
         {
           "path": "product/scripts/cli-surface-qualification.test.mjs",
-          "currentLines": 277,
+          "currentLines": 286,
           "baselineLines": 206,
-          "currentRoot": "sha256:fcd41349998b8ff7e74f5770eacc5b94339434b41e0f855521cc069a1f76287f",
+          "currentRoot": "sha256:2df833cf4ec6b15f0a2c5e279c73f493b3752cdd62185d74583e0f20a111ee68",
           "baselineRoot": "sha256:8d4eea48d9b1af101eebb1e45349f22f7604067be87a3db5d4a0586d0b88f934",
           "changedSinceBaseline": true
         },
@@ -603,7 +603,7 @@
           "path": "framework/core/src/python/kungfu/agent/intent-map.json",
           "currentLines": 24,
           "baselineLines": null,
-          "currentRoot": "sha256:d8cee1c88fb3203e6b620bafb9a8a53d107586265607bdd3c0b16a38d8384a52",
+          "currentRoot": "sha256:d483703e85a9db94b462bc4d7d09eed89af7333ad3723800f3a0496386a80531",
           "baselineRoot": null,
           "changedSinceBaseline": true
         },
@@ -641,9 +641,9 @@
         },
         {
           "path": "product/scripts/dist.mjs",
-          "currentLines": 2402,
+          "currentLines": 2417,
           "baselineLines": 2514,
-          "currentRoot": "sha256:740d0cc44be5f04d05eed0e20c73fccaba6370dd54f98d90d66f259e386ccde6",
+          "currentRoot": "sha256:85e43d40391b66218ec7bd7e58ca7be1915e886614aeebb1aad39aeeeed9859d",
           "baselineRoot": "sha256:6cfd6c55e296163ab863fb1d79a4a51198ad12943274fc0858338bb651a108da",
           "changedSinceBaseline": true
         },
@@ -1937,7 +1937,7 @@
         "topology": "product-assembly",
         "kind": "line-count",
         "status": "remediated",
-        "metric": 2402,
+        "metric": 2417,
         "threshold": 2450,
         "finding": null
       },

@@ -333,6 +333,20 @@ export function qualifyCliSurface({
       brief.includes('kungfu xinfa compile'),
       'offline Agent brief omitted the single-entry topology',
     );
+    const firstValue = parseJson(
+      run(
+        ['agent', 'first-value', 'contract', '--json'],
+        'kungfu agent first-value contract',
+      ).stdout,
+      'kungfu agent first-value contract',
+    );
+    assert(
+      firstValue.schema === 'kungfu.agent-first-value-contract-view/v1' &&
+        firstValue.contract?.result?.maximumQuestionCount === 1 &&
+        firstValue.contract?.qualification?.ci ===
+          'deterministic-contract-and-receipt-only',
+      'installed CLI first-value contract is incomplete',
+    );
 
     const briefPath = path.join(tempRoot, 'profile-brief.json');
     const profileSource = path.join(tempRoot, 'profile-source');

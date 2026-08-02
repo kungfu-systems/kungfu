@@ -129,6 +129,15 @@ function runner(observed = catalog()) {
       return json({ schema: 'kungfu.profile-sdk-capabilities/v1' });
     }
     if (joined.includes('kfx list --json')) return json([]);
+    if (joined.includes('agent first-value contract --json')) {
+      return json({
+        schema: 'kungfu.agent-first-value-contract-view/v1',
+        contract: {
+          result: { maximumQuestionCount: 1 },
+          qualification: { ci: 'deterministic-contract-and-receipt-only' },
+        },
+      });
+    }
     if (joined.includes('agent brief')) {
       return { status: 0, stdout: 'Use kungfu xinfa compile\n', stderr: '' };
     }
