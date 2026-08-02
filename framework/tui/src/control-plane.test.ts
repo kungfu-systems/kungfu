@@ -276,11 +276,13 @@ test('keeps quick commands bounded to declared product actions', () => {
       'work',
       'projects',
       'lab',
+      'onboarding',
       'home',
       'quit',
     ],
   );
   assert.equal(quickCommandMatches('/new')[0]?.action, 'new-work');
+  assert.equal(quickCommandMatches('/onboarding')[0]?.action, 'onboarding');
   assert.equal(quickCommandMatches('/rm -rf').length, 0);
 });
 
@@ -543,6 +545,7 @@ test('the real Ink control plane covers the product canvas and keeps a fixed inp
   instance.cleanup();
   assert.match(frame, /KUNGFU · HELP/);
   assert.match(frame, /focused input accepts text/);
+  assert.match(frame, /Getting Started: \/onboarding/);
   assert.match(frame, /Help open/);
   assert.match(frame, /HELP.*Esc Back/s);
   assert.match(frame, /╭/);

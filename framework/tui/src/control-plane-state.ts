@@ -64,6 +64,7 @@ export type ProductQuickCommandAction =
   | 'work'
   | 'projects'
   | 'lab'
+  | 'onboarding'
   | 'home'
   | 'quit';
 
@@ -119,6 +120,13 @@ export const QUICK_COMMANDS: QuickCommand<ProductQuickCommandAction>[] = [
     title: 'Open Lab',
     summary: 'Open the installed identity-neutral work experiment suite.',
     action: 'lab',
+  },
+  {
+    id: 'onboarding',
+    command: '/onboarding',
+    title: 'Open Getting Started',
+    summary: 'Reopen the Agent-first onboarding guide at any time.',
+    action: 'onboarding',
   },
   {
     id: 'home',

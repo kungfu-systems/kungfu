@@ -1670,12 +1670,15 @@ export function ControlPlaneOverlay({
               Mouse requires terminal click reporting. In iTerm2, allow mouse
               clicks and drags for the active Profile.
             </Text>
+            <Text color="yellow">Getting Started: /onboarding</Text>
             <Box marginTop={1} flexDirection="column">
-              {quickCommands.slice(0, Math.max(1, rowBudget)).map((command) => (
-                <Text key={command.id} color="yellow" wrap="truncate-end">
-                  {command.command.padEnd(10)} {command.title}
-                </Text>
-              ))}
+              {quickCommands
+                .slice(0, Math.max(1, rowBudget - 1))
+                .map((command) => (
+                  <Text key={command.id} color="yellow" wrap="truncate-end">
+                    {command.command.padEnd(10)} {command.title}
+                  </Text>
+                ))}
             </Box>
           </>
         ) : null}

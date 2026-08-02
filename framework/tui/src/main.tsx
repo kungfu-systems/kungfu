@@ -54,9 +54,11 @@ import {
   AgentWorkLabHost,
   type AgentWorkLabSuiteAction,
   type TuiOnboardingAction,
+  type TuiOnboardingNotice,
   agentWorkLabActionReturnsToControls,
   readTuiOnboardingState,
 } from './agent-work-lab-view.js';
+import { copyTextToClipboard } from './clipboard/index.js';
 import { scrollListSelection } from './list-window/index.js';
 import { boundedIndex, decodeShellKey } from './navigation.js';
 import {
@@ -968,7 +970,13 @@ function ProductHost({
       const paths = runtimePaths();
       return readTuiOnboardingState(paths.configHome);
     });
-  const [onboardingNotice, setOnboardingNotice] = React.useState('');
+  const [onboardingNotice, setOnboardingNotice] =
+    React.useState<TuiOnboardingNotice>();
+  React.useEffect(() => {
+    if (!onboardingNotice) return undefined;
+    const timer = setTimeout(() => setOnboardingNotice(undefined), 4_000);
+    return () => clearTimeout(timer);
+  }, [onboardingNotice]);
   const firstLaunch =
     !playbackMode && !emptyState && shouldShowKungfuOnboarding(onboardingState);
   const startupProjectRoot = React.useMemo(
@@ -1365,6 +1373,14 @@ function ProductHost({
         keywords: ['qualification', 'handoff', 'session'],
         action: { kind: 'open-view', viewId: 'lab' },
       },
+      {
+        id: 'view.onboarding',
+        kind: 'view',
+        title: 'Getting Started',
+        summary: 'Reopen the Agent-first onboarding guide at any time.',
+        keywords: ['onboarding', 'agent', 'guide', 'first'],
+        action: { kind: 'open-view', viewId: 'onboarding' },
+      },
     ],
     [],
   );
@@ -1451,9 +1467,12 @@ function ProductHost({
         { env: invocation.env, maxBuffer: 2 * 1024 * 1024 },
         (error) => {
           if (error) {
-            setOnboardingNotice(
-              `Could not save Getting Started state: ${error.message}`,
-            );
+            setOnboardingNotice({
+              ok: false,
+              title: 'GETTING STARTED STATE NOT SAVED',
+              detail: error.message,
+              next: 'Press Enter to continue without saving this state.',
+            });
             setControlNow({
               ...CLOSED_CONTROL_PLANE,
               focus: 'workspace',
@@ -1461,7 +1480,7 @@ function ProductHost({
             });
             return;
           }
-          setOnboardingNotice('');
+          setOnboardingNotice(undefined);
           setOnboardingState(next);
           onSaved?.();
         },
@@ -1488,10 +1507,25 @@ function ProductHost({
   );
   const handleOnboardingAction = React.useCallback(
     (action: TuiOnboardingAction) => {
-      if (action === 'agent') {
-        persistOnboarding(
-          finishKungfuOnboarding(onboardingState, { route: 'agent' }),
-          () => setSurface('all-work'),
+      if (action === 'copy') {
+        const receipt = copyTextToClipboard(agentFirstEntry.prompt, {
+          exec: (file, args, options) =>
+            execFileSync(file, args, { ...options, encoding: 'utf8' }),
+        });
+        setOnboardingNotice(
+          receipt.ok
+            ? {
+                ok: true,
+                title: 'ONE-LINE AGENT PROMPT COPIED',
+                detail: 'Paste it into your Agent in another window.',
+                next: 'Optional: [Enter] start · [L/l] Lab · [T/t] Tour.',
+              }
+            : {
+                ok: false,
+                title: 'COPY PROMPT FAILED',
+                detail: receipt.error,
+                next: 'Optional: [Enter] start · [L/l] Lab · [T/t] Tour.',
+              },
         );
       } else if (action === 'lab') {
         persistOnboarding(
@@ -1516,7 +1550,13 @@ function ProductHost({
         );
       }
     },
-    [dispatchLabAction, onboardingState, persistOnboarding, setSurface],
+    [
+      agentFirstEntry.prompt,
+      dispatchLabAction,
+      onboardingState,
+      persistOnboarding,
+      setSurface,
+    ],
   );
   const acknowledgeLabAction = React.useCallback((id: number) => {
     setLabActionRequest((current) =>
@@ -1688,6 +1728,9 @@ function ProductHost({
       } else if (command.action === 'lab') {
         setSurface('lab');
         closeControl('workspace');
+      } else if (command.action === 'onboarding') {
+        setSurface('onboarding');
+        closeControl('workspace');
       } else if (command.action === 'home') {
         openHome();
         closeControl('workspace');
@@ -1749,6 +1792,8 @@ function ProductHost({
     } else if (result.action.kind === 'open-view') {
       if (result.action.viewId === 'work') {
         openGlobalWork();
+      } else if (result.action.viewId === 'onboarding') {
+        setSurface('onboarding');
       } else {
         setSurface(result.action.viewId === 'lab' ? 'lab' : 'projects');
       }
@@ -1895,7 +1940,6 @@ function ProductHost({
         if (openedProject) openHome();
         else setSurface('projects');
       } else if (value === '3') setSurface('lab');
-      else if (value === '4') setSurface('onboarding');
     };
     process.stdin.on('data', onData);
     return () => {
@@ -2212,7 +2256,6 @@ function ProductHost({
             <Text color={labOpen ? 'cyan' : undefined} bold={labOpen}>
               [3] Agent Work Lab
             </Text>
-            <Text>[4] Getting Started</Text>
           </Box>
         </Box>
       ) : null}
