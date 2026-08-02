@@ -57,7 +57,7 @@
     "human": "kungfu agent brief",
     "machine": "kungfu agent capabilities --json",
     "map": "kungfu agent map --json",
-    "firstValue": "kungfu agent first-value contract --json",
+    "firstValue": "kungfu agent first-value start --json",
     "context": "kungfu agent context --task <task> --role <role> --budget <tokens> --route <route-id> --json",
     "workModel": "kungfu agent work-model --json",
     "modeChoice": "kungfu agent choose-mode --json",

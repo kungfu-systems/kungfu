@@ -27,6 +27,7 @@ from kungfu.agent.kfd3 import (
     registry_summary,
     verify_agent_interface,
 )
+from kungfu.cli.commands import agent_first_value_entry
 from kungfu.cli.commands import agent_work_lab as agent_work_lab_commands
 from kungfu.cli.commands import kfc, PrioritizedCommandGroup
 from kungfu.config import resolve_config
@@ -220,27 +221,18 @@ def first_value(ctx):
     pass
 
 
-@first_value.command(
-    name="contract", help=api_help("kungfu.agent.first-value.contract")
-)
-@click.option("--json", "as_json", is_flag=True, help="machine-readable output")
-@kfd3_api("kungfu.agent.first-value.contract")
-@agent_command_context
-def first_value_contract(ctx, as_json):
-    try:
-        payload = first_value_protocol.contract_view()
-    except (OSError, ValueError) as error:
-        raise click.ClickException(str(error)) from error
-    if as_json:
-        _json(payload)
-        return
-    click.echo(payload["contract"]["prompt"]["text"])
-    click.echo(f"contract: {payload['productIdentity']['contractRoot']}")
+agent_first_value_entry.register(first_value, agent_command_context)
 
 
 @first_value.command(name="receipt", help=api_help("kungfu.agent.first-value.receipt"))
 @click.option("--intent", "intent_id", required=True, help="one declared intent id")
-@click.option("--discovery", required=True, help="one declared safe discovery command")
+@click.option(
+    "--discovery",
+    "--discovery-command",
+    "discovery",
+    required=True,
+    help="one declared safe discovery command",
+)
 @click.option("--question-count", required=True, type=click.IntRange(0, 1))
 @click.option("--outcome", required=True, help="bounded human outcome summary")
 @click.option("--json", "as_json", is_flag=True, help="machine-readable output")
