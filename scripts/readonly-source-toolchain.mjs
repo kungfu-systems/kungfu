@@ -437,6 +437,9 @@ export function prepareSourceAcceptanceRuntime(
       'corepack',
       'pnpm-home',
       'npm-cache',
+      'uv-cache',
+      'ruff-cache',
+      'mypy-cache',
       'diagnostics',
     ].map((name) => [name, path.join(runtimeRoot, name)]),
   );
@@ -458,6 +461,9 @@ export function prepareSourceAcceptanceRuntime(
       PNPM_HOME: directories['pnpm-home'],
       npm_config_cache: directories['npm-cache'],
       NPM_CONFIG_CACHE: directories['npm-cache'],
+      UV_CACHE_DIR: directories['uv-cache'],
+      RUFF_CACHE_DIR: directories['ruff-cache'],
+      MYPY_CACHE_DIR: directories['mypy-cache'],
       SHIFU_CACHE_RECEIPT: path.join(
         directories.diagnostics,
         'shifu-cache-resolution.json',
