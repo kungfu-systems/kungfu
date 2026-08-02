@@ -313,6 +313,7 @@ def create_receipt(
 
     roots = _pack_roots()
     output_root = _root_bytes(stdout)
+    guide = first_value_contract["result"]["responseGuide"]
     receipt = {
         "schema": RECEIPT_SCHEMA,
         "verdict": "verified",
@@ -348,6 +349,15 @@ def create_receipt(
                     "outputRoot": output_root,
                 }
             ),
+        },
+        "responseGuide": {
+            "language": guide["language"],
+            "protocolComplete": guide["protocolComplete"],
+            "mustNotRunMoreCommands": guide["mustNotRunMoreCommands"],
+            "personalizationLabels": list(guide["personalizationLabels"]),
+            "verificationCommand": discovery_command,
+            "nextStepCommand": guide["nextStepCommand"],
+            "scopeStatement": guide["scopeStatement"],
         },
         "nonClaims": list(first_value_contract["qualification"]["nonClaims"]),
         "diagnostics": [],
@@ -423,6 +433,18 @@ def verify_receipt(
     required_non_claims = set(first_value_contract["qualification"]["nonClaims"])
     if set(receipt["nonClaims"]) != required_non_claims:
         raise ValueError("first-value receipt non-claims mismatch")
+    guide = first_value_contract["result"]["responseGuide"]
+    expected_guide = {
+        "language": guide["language"],
+        "protocolComplete": guide["protocolComplete"],
+        "mustNotRunMoreCommands": guide["mustNotRunMoreCommands"],
+        "personalizationLabels": list(guide["personalizationLabels"]),
+        "verificationCommand": receipt["discovery"]["command"],
+        "nextStepCommand": guide["nextStepCommand"],
+        "scopeStatement": guide["scopeStatement"],
+    }
+    if receipt["responseGuide"] != expected_guide:
+        raise ValueError("first-value receipt response guide mismatch")
     if require_current_product:
         expected = _product_identity(_pack_roots())
         if receipt["productIdentity"] != expected:

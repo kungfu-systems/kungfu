@@ -47,7 +47,7 @@
           "pointer": {
             "kind": "file",
             "path": "framework/core/src/python/kungfu/agent/first-value.contract.json",
-            "sha256": "4379bdeb7e88f3e2cfb419e9cd2e766bf954e099f5db5a8b9a58038d7bcdee73"
+            "sha256": "9e7c00fde3e9898e090595f4c51fe79c40d20b5ccf2e12bbc2c5a38f798aa8ec"
           },
           "description": "Exact first-value prompt, bounded result, local Codex qualification, and explicit non-claim contract."
         },
@@ -56,7 +56,7 @@
           "pointer": {
             "kind": "file",
             "path": "framework/core/src/python/kungfu/agent/first-value-receipt.schema.json",
-            "sha256": "89b076e6f4e1eba2c4a28d159c285c32227b8554f17c779e75369410a39ad839"
+            "sha256": "3d89967e3b6bf2acc1fbd30a42868aca40c67b6b2569882a2f9d13a77be9b35c"
           },
           "description": "Machine-verifiable receipt schema for the selected intent, safe discovery, minimal outcome, and candidate identity."
         },
@@ -101,7 +101,7 @@
           "pointer": {
             "kind": "file",
             "path": "scripts/qualify-agent-first-value-codex.mjs",
-            "sha256": "e3ed05f3920be91c36a6613d273a291b463745697f3e4fa5637eb0dd56a8b6ed"
+            "sha256": "dc0b14c105d1c5c16140a16109961af6e5e500a563ebec644b5e380f03cc4d30"
           },
           "description": "Local-only three-trial fresh Codex qualification harness that retains sanitized receipts rather than raw transcripts."
         },
@@ -110,7 +110,7 @@
           "pointer": {
             "kind": "file",
             "path": "scripts/qualify-agent-first-value-codex.test.mjs",
-            "sha256": "6f5b15af5a54fc0c3cbd626f6e85aada56b75c90cfb1493ab96f3b522d59cce2"
+            "sha256": "14e99a6c06e8bb933ff99ca8fe2bfbd5c94fe0bad892d59df37e813ede38b177"
           },
           "description": "Provider-free deterministic CI coverage for aggregate and receipt acceptance, tampering, reuse, and partial-failure cases."
         },

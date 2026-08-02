@@ -51,14 +51,14 @@ test('natural Codex response yields one bounded experience record', () => {
     'Kungfu 给 Agent 一个可核验的工作入口。',
     '个性化依据：当前工具。',
     'kungfu agent status --target codex --scope project --json',
-    'kungfu project list --json',
+    'kungfu project list',
   ].join('\n');
   assert.deepEqual(experienceResultFromResponse(response), {
     response,
     personalizationBasis: 'current-tools',
     verificationCommand:
       'kungfu agent status --target codex --scope project --json',
-    nextStepCommand: 'kungfu project list --json',
+    nextStepCommand: 'kungfu project list',
   });
   assert.throws(
     () => experienceResultFromResponse(`${response}\n个性化依据：用户目标`),
@@ -67,7 +67,7 @@ test('natural Codex response yields one bounded experience record', () => {
   assert.throws(
     () =>
       experienceResultFromResponse(
-        response.replace('kungfu project list --json', '稍后再说'),
+        response.replace('kungfu project list', '稍后再说'),
       ),
     /named 0 safe next steps/u,
   );
@@ -107,6 +107,23 @@ function receipt(number, promptRoot = root('1')) {
       kind: 'verified-discovery',
       summaryRoot: root('7'),
       verificationRoot: root('8'),
+    },
+    responseGuide: {
+      language: 'zh-CN',
+      protocolComplete: true,
+      mustNotRunMoreCommands: true,
+      personalizationLabels: [
+        '个性化依据：用户目标',
+        '个性化依据：当前工具',
+        '个性化依据：风险偏好',
+        '个性化依据：细节偏好',
+        '个性化依据：当前目录',
+      ],
+      verificationCommand:
+        'kungfu agent status --target codex --scope project --json',
+      nextStepCommand: 'kungfu project list',
+      scopeStatement:
+        '本次只验证了这个本地 Codex 与候选 CLI；未验证 Claude、CI 托管 Codex、其他平台或公开发布。',
     },
     nonClaims: [
       'claude-qualified',
@@ -186,17 +203,49 @@ test('binds autonomous protocol completion to command execution outputs', () => 
 });
 
 test('protocol evidence rejects a brief command hidden inside another executable name', () => {
-  const stream = JSON.stringify({
-    type: 'item.completed',
-    item: {
-      type: 'command_execution',
-      command: 'notkungfu agent brief',
-      aggregated_output: '# Kungfu Agent Brief',
-    },
-  });
+  const stream = [
+    JSON.stringify({
+      type: 'item.completed',
+      item: {
+        type: 'command_execution',
+        command: 'notkungfu agent brief',
+        aggregated_output: '# Kungfu Agent Brief',
+      },
+    }),
+    JSON.stringify({
+      type: 'item.completed',
+      item: {
+        type: 'command_execution',
+        command: 'kungfu agent first-value start --json',
+        aggregated_output: JSON.stringify(receipt(1)),
+      },
+    }),
+  ].join('\n');
   assert.throws(
     () => protocolEvidenceFromCodexEventStream(stream, root('1')),
     /protocol evidence brief expected one verified command, got 0/u,
+  );
+});
+
+test('protocol evidence rejects any command beyond brief and first-value start', () => {
+  const value = receipt(1);
+  const command = (text, output) =>
+    JSON.stringify({
+      type: 'item.completed',
+      item: {
+        type: 'command_execution',
+        command: text,
+        aggregated_output: output,
+      },
+    });
+  const stream = [
+    command('kungfu agent brief', '# Kungfu Agent Brief'),
+    command('kungfu agent first-value start --json', JSON.stringify(value)),
+    command('kungfu project list', '{}'),
+  ].join('\n');
+  assert.throws(
+    () => protocolEvidenceFromCodexEventStream(stream, root('1')),
+    /exactly two command executions, got 3/u,
   );
 });
 
@@ -204,7 +253,7 @@ test('normalizes experience only when the evidence is user-visible and safe', ()
   const value = receipt(1);
   const verification =
     'kungfu agent status --target codex --scope project --json';
-  const next = 'kungfu project list --json';
+  const next = 'kungfu project list';
   const scopeStatement =
     '本次只验证了这个本地 Codex 与候选 CLI；未验证 Claude、CI 托管 Codex、其他平台或公开发布。';
   const result = {
@@ -304,7 +353,7 @@ function qualification() {
         verificationCommand:
           'kungfu agent status --target codex --scope project --json',
         verificationExpectedRoot: root('a'),
-        nextStepCommand: 'kungfu project list --json',
+        nextStepCommand: 'kungfu project list',
         nextStepSafetyClass: 'read-only',
         nextStepReasonRoot: root('b'),
         scopeStatementRoot: root('e'),

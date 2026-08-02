@@ -28,10 +28,7 @@ const LOCAL_QUALIFICATION_SCOPE_STATEMENT =
   '本次只验证了这个本地 Codex 与候选 CLI；未验证 Claude、CI 托管 Codex、其他平台或公开发布。';
 const VERIFICATION_COMMAND =
   'kungfu agent status --target codex --scope project --json';
-const NEXT_STEP_COMMANDS = [
-  'kungfu project list --json',
-  'kungfu project open-plan --path . --json',
-];
+const NEXT_STEP_COMMANDS = ['kungfu project list'];
 const PERSONALIZATION_BASIS = [
   'user-goal',
   'current-tools',
@@ -254,6 +251,10 @@ export function protocolEvidenceFromCodexEventStream(
     },
   ];
   const executions = commandExecutions(jsonl);
+  assert(
+    executions.length === 2,
+    `protocol expected exactly two command executions, got ${executions.length}`,
+  );
   const evidence = {};
   for (const requirement of requirements) {
     const matches = executions.filter(
@@ -439,6 +440,16 @@ export function verifyFirstValueReceipt(receipt, expected = {}) {
       ROOT_PATTERN.test(receipt.outcome?.summaryRoot || '') &&
       ROOT_PATTERN.test(receipt.outcome?.verificationRoot || ''),
     'receipt omitted a minimal verified outcome',
+  );
+  assert(
+    receipt.responseGuide?.protocolComplete === true &&
+      receipt.responseGuide?.mustNotRunMoreCommands === true &&
+      receipt.responseGuide?.verificationCommand ===
+        receipt.discovery?.command &&
+      NEXT_STEP_COMMANDS.includes(receipt.responseGuide?.nextStepCommand) &&
+      receipt.responseGuide?.scopeStatement ===
+        LOCAL_QUALIFICATION_SCOPE_STATEMENT,
+    'receipt response guide is invalid',
   );
   assert(
     expected.promptRoot === undefined ||

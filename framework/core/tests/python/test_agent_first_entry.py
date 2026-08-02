@@ -229,6 +229,9 @@ def test_first_value_contract_binds_exact_prompt_and_packaged_roots():
         "userConfig": "ignored",
     }
     assert len(view["contract"]["qualification"]["experienceDimensions"]) == 9
+    assert view["contract"]["result"]["responseGuide"]["nextStepCommand"] == (
+        "kungfu project list"
+    )
     assert view["productIdentity"]["candidateRoot"].startswith("sha256:")
     assert view["receiptSchema"]["properties"]["verdict"] == {
         "type": "string",
@@ -316,6 +319,12 @@ def test_first_value_receipt_reruns_declared_discovery_and_verifies():
     assert receipt["intentId"] == "onboarding"
     assert receipt["discovery"]["safetyClass"] == "read-only"
     assert receipt["discovery"]["outputBytes"] > 0
+    assert receipt["responseGuide"]["protocolComplete"] is True
+    assert receipt["responseGuide"]["mustNotRunMoreCommands"] is True
+    assert receipt["responseGuide"]["verificationCommand"] == (
+        "kungfu agent capabilities --json"
+    )
+    assert receipt["responseGuide"]["nextStepCommand"] == "kungfu project list"
     assert first_value.verify_receipt(receipt)["verified"] is True
 
 

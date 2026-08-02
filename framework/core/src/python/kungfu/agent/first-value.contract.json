@@ -62,6 +62,20 @@
       "discoveryCommand": "kungfu agent status --target codex --scope project --json",
       "outcomeKind": "verified-discovery"
     },
+    "responseGuide": {
+      "language": "zh-CN",
+      "protocolComplete": true,
+      "mustNotRunMoreCommands": true,
+      "personalizationLabels": [
+        "个性化依据：用户目标",
+        "个性化依据：当前工具",
+        "个性化依据：风险偏好",
+        "个性化依据：细节偏好",
+        "个性化依据：当前目录"
+      ],
+      "nextStepCommand": "kungfu project list",
+      "scopeStatement": "本次只验证了这个本地 Codex 与候选 CLI；未验证 Claude、CI 托管 Codex、其他平台或公开发布。"
+    },
     "discoveryPolicy": {
       "allowDeclaredIntentCommandsOnly": true,
       "allowTemplateSubstitution": true,

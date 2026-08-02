@@ -16,6 +16,7 @@
     "intentId",
     "discovery",
     "outcome",
+    "responseGuide",
     "nonClaims",
     "diagnostics",
     "observedAt",
@@ -108,6 +109,34 @@
         "kind": {"type": "string", "const": "verified-discovery"},
         "summaryRoot": {"$ref": "#/$defs/root"},
         "verificationRoot": {"$ref": "#/$defs/root"}
+      }
+    },
+    "responseGuide": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "language",
+        "protocolComplete",
+        "mustNotRunMoreCommands",
+        "personalizationLabels",
+        "verificationCommand",
+        "nextStepCommand",
+        "scopeStatement"
+      ],
+      "properties": {
+        "language": {"type": "string", "const": "zh-CN"},
+        "protocolComplete": {"type": "boolean", "const": true},
+        "mustNotRunMoreCommands": {"type": "boolean", "const": true},
+        "personalizationLabels": {
+          "type": "array",
+          "minItems": 5,
+          "maxItems": 5,
+          "uniqueItems": true,
+          "items": {"type": "string", "minLength": 1}
+        },
+        "verificationCommand": {"type": "string", "minLength": 1},
+        "nextStepCommand": {"type": "string", "const": "kungfu project list"},
+        "scopeStatement": {"type": "string", "minLength": 1}
       }
     },
     "nonClaims": {
