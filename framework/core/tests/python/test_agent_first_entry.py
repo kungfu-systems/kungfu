@@ -42,22 +42,24 @@ from kungfu.cli.commands import agent as agent_command  # noqa: E402
 def test_brief_and_intent_map_enforce_complete_bounded_first_entry():
     brief = resources.document_text("brief.md")
     intent_map = agent_pack.intent_map()
+    normalized_brief = " ".join(brief.split())
 
     assert len(brief.encode("utf-8")) <= 8192
     assert len(brief.splitlines()) <= 120
     assert "kungfu xinfa compile" in brief
-    assert "merely printing or reading it is not\ncompletion" in brief
-    assert "do not run `kungfu agent brief` again" in brief
-    assert "first-value contract --compact --json" in brief
-    assert "Do not load the\n   full intent map for this bounded path" in brief
-    assert "run exactly one standalone\n   `kungfu agent first-value receipt" in brief
-    assert "--discovery '<command>'" in brief
-    assert "do not capture, redirect, pipe, or reprint it" in brief
-    assert "compare it byte-for-byte before\n   answering" in brief
-    assert "do not substitute a candidate, contract, or other root" in brief
-    assert "never\n   reconstruct or recompute" in brief
-    assert "the user does not need to name any protocol step" in brief
-    assert "one copyable read-only\n   verification command" in brief
+    assert "merely printing or reading it is not completion" in normalized_brief
+    assert "do not run `kungfu agent brief` again" in normalized_brief
+    assert "first-value start --json" in normalized_brief
+    assert "Do not separately run the docs verifier" in normalized_brief
+    assert (
+        "run exactly one standalone `kungfu agent first-value start" in normalized_brief
+    )
+    assert "do not capture, redirect, pipe, or reprint it" in normalized_brief
+    assert "compare it byte-for-byte before answering" in normalized_brief
+    assert "do not substitute a candidate, contract, or other root" in normalized_brief
+    assert "never reconstruct or recompute" in normalized_brief
+    assert "the user does not need to name any protocol step" in normalized_brief
+    assert "one copyable read-only verification command" in normalized_brief
     assert set(intent_map["requiredIntentIds"]) == {
         row["id"] for row in intent_map["intents"]
     }
@@ -78,6 +80,29 @@ def test_first_value_receipt_accepts_the_explicit_discovery_alias():
     )
 
     assert discovery.opts == ["--discovery", "--discovery-command"]
+
+
+def test_first_value_start_fails_closed_then_uses_the_exact_default():
+    with pytest.raises(ValueError, match="valid Documentation Atlas"):
+        first_value.create_start_receipt({"valid": False})
+
+    seen = {}
+
+    def runner(argv, timeout, maximum):
+        seen.update(argv=argv, timeout=timeout, maximum=maximum)
+        return 0, b'{"schema":"kungfu.agent-status/v1"}\n', b""
+
+    receipt = first_value.create_start_receipt(
+        {"valid": True},
+        runner=runner,
+        observed_at="2026-08-02T00:00:00Z",
+        attempt_id="automatic-start",
+    )
+    default = first_value.contract()["result"]["exactPromptDefault"]
+    assert " ".join(seen["argv"]) == default["discoveryCommand"]
+    assert receipt["intentId"] == default["intentId"] == "onboarding"
+    assert receipt["questionCount"] == default["questionCount"] == 0
+    assert first_value.verify_receipt(receipt)["verified"] is True
 
 
 @pytest.mark.parametrize(
@@ -192,6 +217,10 @@ def test_first_value_contract_binds_exact_prompt_and_packaged_roots():
     }
     assert view["contract"]["qualification"]["requiredLocalCodexTrials"] == 10
     assert view["contract"]["qualification"]["minimumCanonicalPromptTrials"] == 5
+    assert (
+        view["contract"]["result"]["deterministicEntryCommand"]
+        == "kungfu agent first-value start --json"
+    )
     assert view["contract"]["qualification"]["localCodexProfile"] == {
         "executionMode": "codex-exec-ephemeral",
         "reasoningEffort": "medium",

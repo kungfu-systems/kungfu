@@ -224,6 +224,26 @@ def first_value_contract(ctx, as_json, compact):
     click.echo(f"contract: {payload['productIdentity']['contractRoot']}")
 
 
+@first_value.command(name="start", help=api_help("kungfu.agent.first-value.start"))
+@click.option("--json", "as_json", is_flag=True, help="machine-readable output")
+@kfd3_api("kungfu.agent.first-value.start")
+@agent_command_context
+def first_value_start(ctx, as_json):
+    try:
+        payload = first_value_protocol.create_start_receipt(documentation_pack.verify())
+    except (
+        FileNotFoundError,
+        OSError,
+        ValueError,
+        first_value_protocol.SubprocessError,
+    ) as error:
+        raise click.ClickException(str(error)) from error
+    if as_json:
+        _json(payload)
+        return
+    click.echo(f"verified first value: {payload['receiptRoot']}")
+
+
 @first_value.command(name="receipt", help=api_help("kungfu.agent.first-value.receipt"))
 @click.option("--intent", "intent_id", required=True, help="one declared intent id")
 @click.option(

@@ -24,7 +24,7 @@
   },
   "kfd3Enforcement": {
     "schema": "kungfu-kfd-3-release-gate-enforcement/v1",
-    "declaredSurfaceCount": 180,
+    "declaredSurfaceCount": 181,
     "enforcedSurfaceCount": 0,
     "gateBindings": [],
     "claimBoundary": "Declared means discoverable; enforced requires a retained passed hard release Gate. Merely detected or declared surfaces are not enforced."
@@ -102,7 +102,7 @@
         "evidenceRoots": [
           {
             "path": ".buildchain/kfd/kfd-2/release-claims.json",
-            "sha256": "sha256:aec778c9e73cf56be3045bdb2f75151c81f853d850ab0fc2ef2b3c63b1e50cf6"
+            "sha256": "sha256:49f2f6f3b80da445868df25923574675638a21505da45899a75626da0b2169f2"
           },
           {
             "path": "docs/qualification/kfd2-trust-assessment.md",
@@ -152,11 +152,11 @@
         "evidenceRoots": [
           {
             "path": ".buildchain/kfd/kfd-3/surfaces.json",
-            "sha256": "sha256:2b519e8def7abf0103a785b409baf41f1b3acb1a81d3162ab1570d3e406a7669"
+            "sha256": "sha256:a841ffcbe921b45854db93fcfc3e25fe56f8bea657d57c90019d11f07ca180f8"
           },
           {
             "path": ".buildchain/kfd/kfd-3/capability-query.json",
-          "sha256": "sha256:4178efd1ba58c753f2f976d3f0f973a301c4ae8c2aa433d1b1e1d55cf2b8c87e"
+          "sha256": "sha256:da1ce4676bf58819c1cbf325d43da4f0a9561bfc44cc1a28fd5cec0a95a8a41b"
           }
         ]
       },
@@ -176,7 +176,7 @@
       },
       "claimClass": "release-qualified-support",
       "knownLimitations": [
-        "Support covers the 180 product-declared surfaces accepted by the exact Buildchain registry audit."
+        "Support covers the 181 product-declared surfaces accepted by the exact Buildchain registry audit."
       ],
       "owner": "buildchain",
       "nextGate": "Publish the exact product-declared registry audit and artifact closure in the Alpha release passport."

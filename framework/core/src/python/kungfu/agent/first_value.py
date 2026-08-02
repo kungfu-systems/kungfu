@@ -359,6 +359,27 @@ def create_receipt(
     return receipt
 
 
+def create_start_receipt(
+    documentation_verification: dict[str, Any],
+    *,
+    runner: Runner | None = None,
+    observed_at: str | None = None,
+    attempt_id: str | None = None,
+) -> dict[str, Any]:
+    if documentation_verification.get("valid") is not True:
+        raise ValueError("first-value start requires a valid Documentation Atlas")
+    default = contract()["result"]["exactPromptDefault"]
+    return create_receipt(
+        intent_id=default["intentId"],
+        discovery_command=default["discoveryCommand"],
+        question_count=default["questionCount"],
+        outcome_summary="Verified the installed Kungfu Agent status without changing state.",
+        runner=runner,
+        observed_at=observed_at,
+        attempt_id=attempt_id,
+    )
+
+
 def verify_receipt(
     receipt: dict[str, Any], *, require_current_product: bool = True
 ) -> dict[str, Any]:

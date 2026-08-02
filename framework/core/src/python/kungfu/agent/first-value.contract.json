@@ -50,6 +50,7 @@
     }
   },
   "result": {
+    "deterministicEntryCommand": "kungfu agent first-value start --json",
     "maximumQuestionCount": 1,
     "requiredIntentCount": 1,
     "minimumSafeDiscoveryCount": 1,

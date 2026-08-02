@@ -320,39 +320,15 @@ export function protocolEvidenceFromCodexEventStream(
       output: (value) => value.includes('# Kungfu Agent Brief'),
     },
     {
-      id: 'docs-verify',
-      command: (value) => value.includes('agent docs --verify --json'),
+      id: 'first-value-start',
+      command: (value) => value.includes('agent first-value start --json'),
       output: (value) =>
         outputHasJson(
           value,
           (row) =>
-            row?.schema === 'kungfu.documentation-pack-verification/v1' &&
-            row.valid === true,
+            row?.schema === RECEIPT_SCHEMA &&
+            row.promptRoot === expectedPromptRoot,
         ),
-    },
-    {
-      id: 'first-value-contract',
-      command: (value) =>
-        value.includes('agent first-value contract --compact --json'),
-      output: (value) =>
-        outputHasJson(
-          value,
-          (row) =>
-            row?.schema ===
-              'kungfu.agent-first-value-contract-compact-view/v1' &&
-            row.contract?.promptFamily &&
-            [
-              row.contract?.prompt?.root,
-              ...(row.contract?.promptFamily?.variants || []).map(
-                (variant) => variant.root,
-              ),
-            ].includes(expectedPromptRoot),
-        ),
-    },
-    {
-      id: 'first-value-receipt',
-      command: (value) => value.includes('agent first-value receipt'),
-      output: (value) => value.includes(RECEIPT_SCHEMA),
     },
   ];
   const executions = commandExecutions(jsonl);
@@ -757,8 +733,7 @@ export function verifyAgentFirstValueQualification(report) {
     assert(
       Object.keys(trial.protocolEvidence || {})
         .sort()
-        .join(',') ===
-        'brief,docs-verify,first-value-contract,first-value-receipt',
+        .join(',') === 'brief,first-value-start',
       'trial omitted autonomous protocol evidence',
     );
     for (const evidence of Object.values(trial.protocolEvidence)) {

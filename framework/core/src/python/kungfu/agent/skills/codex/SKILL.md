@@ -13,28 +13,22 @@ mutation, bind the chosen Assignment with `"$KUNGFU_CLI_BIN" agent console
 bind-work --initiative-id <id> --assignment-id <id> --json`; stop unless the
 result is `status: bound`, including when another native writer is active.
 
-Run `kungfu agent brief`, then `kungfu agent docs --verify --json`. Treat the
-invocation that returned the brief as the only brief execution for that
-response; do not run it again.
+Run `kungfu agent brief`. Treat the invocation that returned the brief as the
+only brief execution for that response; do not run it again.
 
 When an unfamiliar user naturally asks to understand, start, try, or be led
-through Kungfu, run `kungfu agent first-value contract --compact --json`; do not
-load the full intent map for this bounded path. The user does not need to spell
-out the protocol. Ask at most one necessary question,
-complete one declared read-only or preview-safe discovery, and give one minimal
-outcome. For the contract's canonical prompt and declared natural variants, use
-its zero-question `onboarding` default and
-`kungfu agent status --target codex --scope project --json` unless verified
-local evidence requires another route.
-For other requests, run `kungfu agent map --json` and select only the relevant
-route.
-Then run `kungfu agent first-value receipt --intent <id> --discovery '<command>'
---question-count <0-or-1> --outcome '<bounded-summary>' --json`. Cite its
-`receiptRoot`; run the receipt as one standalone command whose JSON prints
-directly, without capture, redirection, a pipe, or a reprint. Copy that exact
-root into the receipt citation, compare it byte-for-byte before answering, and
-do not substitute a candidate, contract, or other root. Do not retain a raw
-transcript or treat model prose as proof.
+through Kungfu, run exactly one standalone `kungfu agent first-value start
+--json`; do not load the full intent map or separately run the docs verifier,
+contract, discovery, or receipt commands on this bounded path. The user does
+not need to spell out the protocol. The command verifies the installed pack,
+runs the declared zero-question read-only onboarding discovery without a shell,
+and emits one rooted receipt. Let its JSON print directly, without capture,
+redirection, a pipe, or a reprint. Copy its exact `receiptRoot` into the receipt
+citation, compare it byte-for-byte before answering, and do not substitute a
+candidate, contract, or other root. Do not retain a raw transcript or treat
+model prose as proof.
+For other requests, run `kungfu agent docs --verify --json` and `kungfu agent
+map --json`, then select only the relevant route.
 Name one user-supplied or workspace-visible personalization basis, then include
 one copyable read-only verification command, one concrete safe next step, and
 the candidate/provider/platform/public-release non-claims.

@@ -246,6 +246,8 @@ if (firstValueContract) {
     fail('first-value contract does not require one minimal outcome');
   const exactDefault = firstValueContract.result?.exactPromptDefault || {};
   if (
+    firstValueContract.result?.deterministicEntryCommand !==
+      'kungfu agent first-value start --json' ||
     exactDefault.intentId !== 'onboarding' ||
     exactDefault.questionCount !== 0 ||
     exactDefault.discoveryCommand !==
@@ -307,10 +309,7 @@ for (const [rel, text] of [
   ['brief.md', brief],
   ['skills/codex/SKILL.md', codexSkill],
 ]) {
-  for (const phrase of [
-    'kungfu agent first-value contract --compact --json',
-    'kungfu agent first-value receipt',
-  ]) {
+  for (const phrase of ['kungfu agent first-value start', 'receiptRoot']) {
     if (!text.includes(phrase))
       fail(`${rel} missing deterministic first-value phrase: ${phrase}`);
   }

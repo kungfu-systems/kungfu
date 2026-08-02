@@ -108,9 +108,7 @@ function receipt(number, promptRoot = root('1')) {
 
 const protocolEvidence = () => ({
   brief: { commandRoot: root('a'), outputRoot: root('b') },
-  'docs-verify': { commandRoot: root('a'), outputRoot: root('b') },
-  'first-value-contract': { commandRoot: root('a'), outputRoot: root('b') },
-  'first-value-receipt': { commandRoot: root('a'), outputRoot: root('b') },
+  'first-value-start': { commandRoot: root('a'), outputRoot: root('b') },
 });
 
 test('extracts only CLI receipts from Codex command execution events', () => {
@@ -161,32 +159,12 @@ test('binds autonomous protocol completion to command execution outputs', () => 
     });
   const stream = [
     command("/bin/zsh -lc 'kungfu agent brief'", '# Kungfu Agent Brief'),
-    command(
-      'kungfu agent docs --verify --json',
-      JSON.stringify({
-        schema: 'kungfu.documentation-pack-verification/v1',
-        valid: true,
-      }),
-    ),
-    command(
-      'kungfu agent first-value contract --compact --json',
-      JSON.stringify({
-        schema: 'kungfu.agent-first-value-contract-compact-view/v1',
-        contract: {
-          prompt: { root: root('1') },
-          promptFamily: { variants: [] },
-        },
-      }),
-    ),
-    command(
-      'kungfu agent first-value receipt --intent onboarding',
-      JSON.stringify(value),
-    ),
+    command('kungfu agent first-value start --json', JSON.stringify(value)),
   ].join('\n');
 
   assert.deepEqual(
     Object.keys(protocolEvidenceFromCodexEventStream(stream, root('1'))).sort(),
-    ['brief', 'docs-verify', 'first-value-contract', 'first-value-receipt'],
+    ['brief', 'first-value-start'],
   );
 });
 

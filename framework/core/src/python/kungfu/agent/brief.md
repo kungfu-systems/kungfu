@@ -11,16 +11,18 @@ completion. The invocation that returned this text is the one permitted brief
 execution for this response: do not run `kungfu agent brief` again. Continue
 directly with the bounded protocol below before your final response.
 
-1. Run `kungfu agent docs --verify --json`; stop if the pack is invalid.
-2. When an unfamiliar user asks to understand, start, try, or be led through
-   Kungfu, run `kungfu agent first-value contract --compact --json`. This includes
-   a natural request to run this brief; the user does not need to name any protocol step.
-   Bind the matched prompt-family root and packaged roots. For the canonical
-   natural prompt and its declared variants, use intent `onboarding`, zero
-   questions, and `kungfu agent status --target codex --scope project --json`; choose
-   differently only when verified local evidence requires it. Do not load the
-   full intent map for this bounded path. Execute discovery and finish step 7.
-3. For other requests, run `kungfu agent map --json`; select only the smallest
+1. When an unfamiliar user asks to understand, start, try, or be led through
+   Kungfu, run exactly one standalone `kungfu agent first-value start --json`.
+   This includes a natural request to run this brief; the user does not need to
+   name any protocol step. Let its JSON print directly; do not capture,
+   redirect, pipe, or reprint it. Do not separately run the docs verifier,
+   contract, discovery, or receipt commands on this bounded path.
+2. The start command verifies the installed documentation pack, binds the
+   matched prompt-family and product roots, selects the zero-question
+   `onboarding` default, reruns the declared read-only Codex status discovery
+   without a shell, and emits one rooted receipt. Stop if any part fails.
+3. For other requests, first run `kungfu agent docs --verify --json`, then
+   `kungfu agent map --json`; select only the smallest
    matching route and do not dump every route.
 4. Ask at most one question only when the safe route is genuinely ambiguous.
 5. Explain Kungfu in plain language using at least one relevant fact already
@@ -30,11 +32,7 @@ directly with the bounded protocol below before your final response.
 6. Complete one smallest useful outcome. Read-only discovery comes first;
    any write remains preview-first and needs its public `--execute` or
    authorization path.
-7. Whenever step 2 loads the first-value contract, run exactly one standalone
-   `kungfu agent first-value receipt --intent <id> --discovery '<command>'
-   --question-count <0-or-1> --outcome '<bounded-summary>' --json` before the final
-   response, using the selected intent and actual question count. Let its JSON print directly;
-   do not capture, redirect, pipe, or reprint it. Copy the CLI JSON's exact
+7. After step 1, copy the CLI JSON's exact
    `receiptRoot` into your receipt citation and compare it byte-for-byte before
    answering; do not substitute a candidate, contract, or other root, and never
    reconstruct or recompute receipt fields in model prose.
@@ -87,6 +85,7 @@ kungfu project list --json
 kungfu work status --workspace <path> --initiative-id <id> --assignment-id <id>
 kungfu run codex
 kungfu agent status --target codex --scope project --json
+kungfu agent first-value start --json
 kungfu agent first-value contract --compact --json
 kungfu agent install-skill --target codex --scope project --json
 kungfu shifu agent capabilities --json
