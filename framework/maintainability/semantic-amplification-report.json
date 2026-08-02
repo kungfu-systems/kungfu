@@ -5,7 +5,7 @@
   "manifestPath": "framework/maintainability/semantic-amplification.manifest.json",
   "manifestRoot": "sha256:b64ab1daecaec8560dd649af61b7e175adaf562df3aa8b94e3733ef499a308aa",
   "baselineRef": "dbfed9ca1785d147b26f4f06e7e6895ac7368fee",
-  "sourceRoot": "sha256:e70615340fddfd5e1d6b2dd5dfc85dc82ee90508ab80c4786a2bafd43e645efc",
+  "sourceRoot": "sha256:d32ae747281f695c1025cc240eb24be86233cd76110c7982692d82041edd2061",
   "roles": {
     "authority": "exactly one authority route per family; the route may name multiple co-owned source files",
     "allowedProjectionRoles": [
@@ -180,7 +180,7 @@
           "path": "scripts/check-cli-catalog-parity.mjs",
           "currentLines": 348,
           "baselineLines": 346,
-          "currentRoot": "sha256:5f827a4aecb90e240c3ec7e829547c99ac4f33d8a24bf5e1432a3a5eac97159e",
+          "currentRoot": "sha256:5278a6073ac9c013d1d9496800878d6c4d1bad91971b79ffa5e0c450ef987b09",
           "baselineRoot": "sha256:a8e4c919d73120dd45c4a8f8c8f7187caa62ec819e74a83a9b2d3fdcbcc13c3e",
           "changedSinceBaseline": true
         },
@@ -637,7 +637,7 @@
           "path": "docs/qualification/kfd-native-sdk-release-gates.md",
           "currentLines": 506,
           "baselineLines": 495,
-          "currentRoot": "sha256:194b495014fc88e24868c61e84b6fcc99c5154eff3eebd363d9f8cb2823020eb",
+          "currentRoot": "sha256:d7064e1b9befdde83bf1f8dff15fa583969c1c5912df8911e674ab69d0ee7a70",
           "baselineRoot": "sha256:98328a6c59d603f82b03aee017e6bc490ee43decffa7dde63ddcaa644daf9462",
           "changedSinceBaseline": true
         },
@@ -653,7 +653,7 @@
           "path": "product/scripts/dist.mjs",
           "currentLines": 2445,
           "baselineLines": 2514,
-          "currentRoot": "sha256:f57c1e87afebe2cafedb10920b6347a06f57fc8f01577d0f1ad8b0acda9f89d2",
+          "currentRoot": "sha256:414bb9474fe3e1df6a5e554d47f80c2d885e0f8a5ad27f2d2cccbafe9a8e91c4",
           "baselineRoot": "sha256:6cfd6c55e296163ab863fb1d79a4a51198ad12943274fc0858338bb651a108da",
           "changedSinceBaseline": true
         },
@@ -661,7 +661,7 @@
           "path": "product/scripts/runtime-pin-snapshot.mjs",
           "currentLines": 242,
           "baselineLines": null,
-          "currentRoot": "sha256:cdfd975c2ede6cf3654d1b55df37e0578ef03a061a8dd59f99170937b8dd3a00",
+          "currentRoot": "sha256:897d95575dc0b7052bf84d1058e1a4b902c5d9caf7d33e0d9e87bb7499b1c920",
           "baselineRoot": null,
           "changedSinceBaseline": true
         }
