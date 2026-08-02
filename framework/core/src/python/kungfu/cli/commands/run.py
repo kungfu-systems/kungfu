@@ -10,10 +10,11 @@ import click
 
 from kungfu import assignment_orchestration as orchestration
 from kungfu.agent import run_agent
+from kungfu.agent import first_value as onboarding
 from kungfu.agent.run_intent import RunIntentDispatcher
 from kungfu.cli.commands import PrioritizedCommandGroup, kfc
 from kungfu.agent.kfd3 import api_help, kfd3_api
-from kungfu.workspace import resolve_workspace_target
+from kungfu.workspace import WorkspaceTargetRequired, resolve_workspace_target
 
 
 run_command_context = kfc.pass_context()
@@ -124,7 +125,9 @@ def _choose_work(workspace_root, work_selector=None):
             detail = "; ".join(blocked) or "no captured Work"
             raise ValueError(
                 "no Work can start in this project; "
-                f"{detail}. Review or close active Work before running another Agent."
+                f'{detail}. Pass a task to `kungfu run <agent> "<task>"`, or run '
+                "`kungfu agent brief` for the guided first entry. Review or close "
+                "active Work before running another Agent."
             )
         if len(actionable) != 1:
             choices = ", ".join(row["assignmentId"] for row in actionable)
@@ -436,16 +439,23 @@ def _native_work_observer(runtime_dir, work_selection, bound_work_ref=None):
 
 
 def _run_native_provider(ctx, *, provider=None, profile_id=None, workspace_root=None):
-    target = resolve_workspace_target(
-        "read-only", workspace_root or None, cwd=os.getcwd()
+    command = f"kungfu run {provider or 'agent'}" + (
+        f" --agent {profile_id}" if profile_id else ""
     )
+    try:
+        target = resolve_workspace_target(
+            "read-only", workspace_root or None, cwd=os.getcwd()
+        )
+    except WorkspaceTargetRequired as error:
+        raise click.ClickException(
+            onboarding.project_required_message(command)
+        ) from error
     if (
         target.identity.workspace_kind != "project"
         or not target.identity.workspace_root
     ):
-        raise click.ClickException(
-            "kungfu run requires a project; cd into one or pass --workspace"
-        )
+        raise click.ClickException(onboarding.project_required_message(command))
+
     try:
         if profile_id is not None:
             profile, _selection = run_agent.select_profile(
@@ -485,6 +495,14 @@ def _run_native_provider(ctx, *, provider=None, profile_id=None, workspace_root=
                     request, endpoint=session_endpoint
                 )
 
+        onboarding_observer = onboarding.AgentRouteCompletionObserver(
+            lambda bound_work_ref: _native_work_observer(
+                target.runtime_dir, work_selection, bound_work_ref
+            ),
+            config_home=ctx.config_home,
+            runtime_home=ctx.home,
+        )
+
         exit_code = run_agent.run_native_interactive(
             profile,
             runtime_dir=str(target.runtime_dir),
@@ -495,12 +513,16 @@ def _run_native_provider(ctx, *, provider=None, profile_id=None, workspace_root=
             work_selection=work_selection,
             session_endpoint=session_endpoint,
             session_invoker=invoke_native_session,
-            work_observer=lambda bound_work_ref: _native_work_observer(
-                target.runtime_dir, work_selection, bound_work_ref
-            ),
+            work_observer=onboarding_observer,
         )
     except (OSError, ValueError) as error:
         raise click.ClickException(str(error)) from error
+    if onboarding_observer.error is not None:
+        click.echo(
+            "Warning: Work was bound, but Getting Started state was not saved: "
+            f"{onboarding_observer.error}",
+            err=True,
+        )
     if exit_code != 0:
         provider_name = str(profile.get("provider") or "agent")
         click.echo(
@@ -530,15 +552,20 @@ def _run_provider(
 ):
     from kungfu.cli.commands import assignment as work_commands
 
-    target = resolve_workspace_target(
-        "read-only", workspace_root or None, cwd=os.getcwd()
-    )
+    try:
+        target = resolve_workspace_target(
+            "read-only", workspace_root or None, cwd=os.getcwd()
+        )
+    except WorkspaceTargetRequired as error:
+        raise click.ClickException(
+            onboarding.project_required_message(f"kungfu run {provider}")
+        ) from error
     if (
         target.identity.workspace_kind != "project"
         or not target.identity.workspace_root
     ):
         raise click.ClickException(
-            "kungfu run requires a project; cd into one or pass --workspace"
+            onboarding.project_required_message(f"kungfu run {provider}")
         )
     root = target.identity.workspace_root
     try:
@@ -619,6 +646,16 @@ def _run_provider(
                 err=True,
             )
         raise click.exceptions.Exit(1)
+    try:
+        onboarding.complete_agent_route(
+            config_home=ctx.config_home, runtime_home=ctx.home
+        )
+    except (OSError, RuntimeError, ValueError, json.JSONDecodeError) as error:
+        if not as_json and not events_json:
+            click.echo(
+                f"Warning: Work started, but Getting Started state was not saved: {error}",
+                err=True,
+            )
     if not as_json and not events_json:
         report = result.get("agentReport") or {}
         click.echo("Agent session activity retained · independent review required")

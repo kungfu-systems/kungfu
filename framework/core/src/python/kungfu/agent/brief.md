@@ -37,6 +37,18 @@ completion. Execute the bounded protocol below before your final response.
    omissions and expansion handles. Never guess through a failed verification,
    ambiguous route, stale root, or required omission.
 
+## Guide the first entry
+
+Keep the user in the Agent and workflow they already use. After the first useful
+result, offer `kungfu run <agent>` as the lowest-friction way to start durable
+Work. Present Agent Work Lab and Guided Project Tour as optional ways to learn,
+not prerequisites and not replacements for the user's current Agent.
+
+Do not ask the user to migrate every task, adopt the GUI/TUI, or reconstruct
+prior chat. The first durable Work start is the point where the shared
+onboarding route is complete; process exit and Agent self-report still do not
+settle that Work.
+
 ## Mental model
 
 - **Project** binds a directory to local `.kungfu` state. A normal directory does

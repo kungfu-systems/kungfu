@@ -13,11 +13,12 @@ import sys
 import uuid
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Callable
+from typing import Any, Callable, Mapping
 
 from jsonschema import Draft202012Validator
 
 import kungfu
+from kungfu import config as kungfu_config
 from kungfu.agent import resources
 
 
@@ -25,6 +26,78 @@ RECEIPT_SCHEMA = "kungfu.agent-first-value-receipt/v1"
 REVISION = re.compile(r"^[0-9a-f]{40,64}$")
 Runner = Callable[[list[str], int, int], tuple[int, bytes, bytes]]
 SubprocessError = subprocess.SubprocessError
+ONBOARDING_VERSION = 1
+
+
+def completed_agent_state(current: Mapping[str, Any] | None = None) -> dict[str, Any]:
+    """Project a successful Agent-first Work start into the shared UI state."""
+
+    value = dict(current or {})
+    return {
+        "version": ONBOARDING_VERSION,
+        "status": "completed",
+        "route": "agent",
+        "labCompleted": value.get("labCompleted") is True,
+        "tourCompleted": value.get("tourCompleted") is True,
+        "completedAt": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
+    }
+
+
+def complete_agent_route(
+    *, config_home: str | None = None, runtime_home: str | None = None
+) -> dict[str, Any]:
+    """Persist completion only after an exact durable Work start or binding."""
+
+    resolved = kungfu_config.resolve_config(
+        config_home=config_home, runtime_home=runtime_home
+    )
+    current = (resolved.get("config") or {}).get("ui", {}).get("onboarding", {})
+    state = completed_agent_state(current)
+    updated = kungfu_config.set_user_config_value(
+        "ui.onboarding",
+        state,
+        config_home=config_home,
+        runtime_home=runtime_home,
+    )
+    return {"state": state, "configPath": updated["configPath"]}
+
+
+def project_required_message(command: str) -> str:
+    return (
+        "Kungfu needs a Project before it can start durable Work. Run "
+        "`kungfu agent brief` in the agent you already use, or run bare `kungfu` "
+        "for Getting Started; then open a Project and retry "
+        f"`{command}`."
+    )
+
+
+class AgentRouteCompletionObserver:
+    """Complete shared onboarding once, then project the bound Work."""
+
+    def __init__(
+        self,
+        observer: Callable[[Mapping[str, Any] | None], Mapping[str, Any]],
+        *,
+        config_home: str | None = None,
+        runtime_home: str | None = None,
+    ) -> None:
+        self._observer = observer
+        self._config_home = config_home
+        self._runtime_home = runtime_home
+        self._attempted = False
+        self.error: Exception | None = None
+
+    def __call__(self, work_ref: Mapping[str, Any] | None) -> Mapping[str, Any]:
+        if isinstance(work_ref, Mapping) and not self._attempted:
+            self._attempted = True
+            try:
+                complete_agent_route(
+                    config_home=self._config_home,
+                    runtime_home=self._runtime_home,
+                )
+            except (OSError, RuntimeError, ValueError, json.JSONDecodeError) as error:
+                self.error = error
+        return self._observer(work_ref)
 
 
 def work_authority_capabilities():
