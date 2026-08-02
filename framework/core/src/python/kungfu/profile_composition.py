@@ -25,6 +25,7 @@ RESOLVED_QUERY_PLAN_SCHEMA = "kungfu.profile-resolved-query-plan/v1"
 ASSESSMENT_PLAN_SCHEMA = "kungfu.profile-assessment-plan/v1"
 CONTRACT_PLAN_SCHEMA = "kungfu.profile-contract-plan/v1"
 MANAGER_SCHEMA = "kungfu.profile-manager/v1"
+_root = profile_sdk._root
 _GENERIC_VIEWS = {"table", "timeline", "diff", "causal-graph", "attention"}
 _PROFILE_VIEW_KEYS = {
     "kind",
@@ -204,7 +205,7 @@ def query_plan(
         "view": view,
         "corePlan": core,
     }
-    return {"schema": QUERY_PLAN_SCHEMA, "planId": _root(identity), **identity}
+    return {"schema": QUERY_PLAN_SCHEMA, "planId": _root(identity)} | identity
 
 
 def resolved_query_plan(
@@ -486,7 +487,7 @@ def assessment_plan(
         "request": request,
         "executorProfile": executor,
     }
-    plan = {"schema": ASSESSMENT_PLAN_SCHEMA, "planId": _root(identity), **identity}
+    plan = {"schema": ASSESSMENT_PLAN_SCHEMA, "planId": _root(identity)} | identity
     plan["decisionCard"] = profile_sdk.decision_card(
         "profile-assessment-authorization",
         f"Authorize assessment of {instance_id} as {claim_id} for {purpose} at the exact query cut.",
@@ -1241,13 +1242,6 @@ def _strings(value: Any, label: str) -> list[str]:
     ):
         _fail("composition-entry-invalid", f"{label} must be a string array")
     return value
-
-
-def _root(value: Any) -> str:
-    data = json.dumps(
-        value, sort_keys=True, separators=(",", ":"), ensure_ascii=False
-    ).encode()
-    return "sha256:" + hashlib.sha256(data).hexdigest()
 
 
 def _fail(code: str, message: str, **details: Any) -> NoReturn:
