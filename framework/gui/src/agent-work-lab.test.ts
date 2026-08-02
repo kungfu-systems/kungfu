@@ -338,6 +338,10 @@ test('the GUI shell uses the shared startup surface policy', () => {
     new URL('./renderer/src/projects-panel/index.tsx', import.meta.url),
     'utf8',
   );
+  const navigationSource = readFileSync(
+    new URL('./renderer/src/product-navigation/index.tsx', import.meta.url),
+    'utf8',
+  );
   const mainSource = readFileSync(
     new URL('./main/index.ts', import.meta.url),
     'utf8',
@@ -347,9 +351,12 @@ test('the GUI shell uses the shared startup surface policy', () => {
   assert.match(source, /startupSurface === 'work-graph'/);
   assert.match(
     source,
-    /initialProjectsOpen[\s\S]*discoveredKfxCount: 0[\s\S]*: loadKfx\(/,
+    /initialProjectsOpen \|\| initialOnboardingOpen[\s\S]*discoveredKfxCount: 0[\s\S]*: loadKfx\(/,
   );
-  assert.match(source, /initialProjectsOpen && !initialFocusedProjectPath/);
+  assert.match(
+    source,
+    /!initialOnboardingOpen && initialProjectsOpen && !initialFocusedProjectPath/,
+  );
   assert.match(source, /projectPath: initialFocusedProjectPath/);
   assert.match(
     source,
@@ -359,6 +366,8 @@ test('the GUI shell uses the shared startup surface policy', () => {
     source,
     /shouldOpenAgentWorkLab\(startupSurface, loaded\.entries\.length\)/,
   );
+  assert.match(navigationSource, /shouldShowKungfuOnboarding/);
+  assert.match(navigationSource, /AgentFirstOnboardingPanel/);
   assert.match(projectsSource, /WORKSPACE_SELECT_PATH_CHANNEL/);
   assert.match(source, /onOpenStarterProject/);
   assert.match(mainSource, /ipcMain\.handle\(WORKSPACE_SELECT_PATH_CHANNEL/);

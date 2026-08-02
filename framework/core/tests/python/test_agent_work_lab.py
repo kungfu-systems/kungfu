@@ -177,7 +177,32 @@ def test_project_tour_cli_launches_a_disposable_project_in_the_shipped_tui(
     assert launches[0][0] == "--project-work-tour-root"
     destination = Path(launches[0][1])
     assert destination.name == "my-first-kungfu-project"
+    assert launches[0][2:] == ("--project-tour-speed", "1")
     assert not destination.exists()
+
+
+def test_project_tour_cli_projects_bounded_playback_speed(monkeypatch):
+    from kungfu.cli import tui_runtime
+
+    launches = []
+    monkeypatch.setattr(
+        tui_runtime,
+        "run_tui",
+        lambda _ctx, commands=(): launches.append(tuple(commands)),
+    )
+
+    for speed in ("0.75", "0.5"):
+        result = CliRunner().invoke(
+            kfc, ["agent-work-lab", "project-tour", "--speed", speed]
+        )
+        assert result.exit_code == 0, result.output
+        assert launches[-1][2:] == ("--project-tour-speed", speed)
+
+    invalid = CliRunner().invoke(
+        kfc, ["agent-work-lab", "project-tour", "--speed", "0.1"]
+    )
+    assert invalid.exit_code != 0
+    assert "0.25<=x<=2.0" in invalid.output
 
 
 def test_existing_global_work_routes_to_work_graph(tmp_path, monkeypatch):

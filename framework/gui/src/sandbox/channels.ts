@@ -72,8 +72,13 @@ export const SHELL_REFRESH_CHANNEL = 'kf-shell:refresh';
 export const SHELL_NAVIGATE_CHANNEL = 'kf-shell:navigate';
 export type ShellNavigateRequest =
   | { target: 'profile-home' }
+  | { target: 'onboarding' }
   | { target: 'settings' }
   | { target: 'view'; kfxId: string };
+
+export const ONBOARDING_GET_CHANNEL = 'kf-onboarding:get';
+export const ONBOARDING_SET_CHANNEL = 'kf-onboarding:set';
+export const ONBOARDING_INSTALL_CLI_CHANNEL = 'kf-onboarding:install-cli';
 
 // renderer <-> main: Desktop Workspace chooser/switcher. Selection is a
 // global-config convenience record; fact-bearing data remains in the selected
