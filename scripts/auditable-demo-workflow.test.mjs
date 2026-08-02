@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import assert from 'node:assert/strict';
+import { spawnSync } from 'node:child_process';
 import fs from 'node:fs';
 import test from 'node:test';
 
@@ -83,4 +84,16 @@ test('legacy product-specific demo authorities are absent', () => {
     /\.auditable-demo\.yml|auditable-demo-adapter|auditable-demo-passport|update-auditable-demo-readme/u,
   );
   assert.deepEqual(scenario.authority.grants, []);
+});
+
+test('legacy product-specific entrypoints are fail-closed tombstones', () => {
+  for (const [runtime, script] of [
+    [process.execPath, 'scripts/auditable-demo-passport.mjs'],
+    [process.execPath, 'scripts/update-auditable-demo-readme.mjs'],
+    ['python3', 'scripts/auditable-demo-adapter.py'],
+  ]) {
+    const result = spawnSync(runtime, [script], { encoding: 'utf8' });
+    assert.equal(result.status, 1, script);
+    assert.match(result.stderr, /retired/u, script);
+  }
 });
