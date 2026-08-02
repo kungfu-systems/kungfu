@@ -191,7 +191,7 @@ test('AWS CodeBuild qualification rejects static and release credentials', () =>
   }
 });
 
-test('reactivated AWS burst workflows pin one reviewed Buildchain v3 source', () => {
+test('reactivated AWS burst workflows pin reviewed immutable Buildchain v3 sources', () => {
   const retirement = JSON.parse(
     fs.readFileSync(
       path.join(
@@ -215,6 +215,21 @@ test('reactivated AWS burst workflows pin one reviewed Buildchain v3 source', ()
     retirement.evidence.windowsJitRepairMergeCommit,
     buildchainSource,
   );
+  const windowsBuildchainSource =
+    retirement.evidence.windowsCampaignSourceBindingMergeCommit;
+  assert.equal(retirement.evidence.windowsCampaignLedgerPullRequest, 2210);
+  assert.equal(
+    retirement.evidence.windowsCampaignLedgerMergeCommit,
+    'ab147fa02d4e17937818c89c1269483fa450d986',
+  );
+  assert.equal(
+    retirement.evidence.windowsCampaignSourceBindingPullRequest,
+    2212,
+  );
+  assert.equal(
+    windowsBuildchainSource,
+    '447936a3aa36415a39c75e92fc9b26b0774aeb75',
+  );
 
   for (const name of [
     'aws-us-linux-burst-qualification.yml',
@@ -225,6 +240,10 @@ test('reactivated AWS burst workflows pin one reviewed Buildchain v3 source', ()
       path.join(repositoryRoot, '.github/workflows', name),
       'utf8',
     );
+    const expectedBuildchainSource =
+      name === 'aws-us-windows-burst-qualification.yml'
+        ? windowsBuildchainSource
+        : buildchainSource;
     assert.match(workflow, /workflow_dispatch:/);
     assert.doesNotMatch(workflow, /\n {2}pull_request:|\n {2}push:/);
     if (name === 'aws-us-windows-burst-qualification.yml') {
@@ -235,13 +254,14 @@ test('reactivated AWS burst workflows pin one reviewed Buildchain v3 source', ()
     const shellPins =
       workflow.match(
         new RegExp(
-          `uses: kungfu-systems/buildchain/\\.github/workflows/\\.build\\.yml@${buildchainSource}`,
+          `uses: kungfu-systems/buildchain/\\.github/workflows/\\.build\\.yml@${expectedBuildchainSource}`,
           'g',
         ),
       ) || [];
     const runtimePins =
-      workflow.match(new RegExp(`buildchain-ref: ${buildchainSource}`, 'g')) ||
-      [];
+      workflow.match(
+        new RegExp(`buildchain-ref: ${expectedBuildchainSource}`, 'g'),
+      ) || [];
     assert.ok(shellPins.length >= 1);
     assert.equal(runtimePins.length, shellPins.length);
     assert.doesNotMatch(workflow, /train\/v2|buildchain-ref:\s*[\r\n]/);
@@ -292,6 +312,15 @@ test('AWS Windows burst workflow preserves bounded full and cleanup exercises', 
     'utf8',
   );
   assert.match(workflow, /name: AWS US Windows Burst Qualification/);
+  assert.match(
+    workflow,
+    /run-name: AWS Windows JIT \$\{\{ inputs\.campaign-id \}\} \$\{\{ inputs\.qualification-id \}\}/,
+  );
+  assert.match(workflow, /campaign-id:\n {8}description:/);
+  assert.match(
+    workflow,
+    /group: aws-us-windows-burst-\$\{\{ inputs\.campaign-id \}\}-\$\{\{ inputs\.qualification-id \}\}/,
+  );
   assert.match(workflow, /permissions:\n {2}contents: read/);
   assert.equal(
     (
@@ -313,6 +342,14 @@ test('AWS Windows burst workflow preserves bounded full and cleanup exercises', 
   assert.match(workflow, /win-full-0\[1-3\]:full/);
   assert.match(workflow, /win-cancel:cancellation/);
   assert.match(workflow, /win-timeout:timeout/);
+  assert.match(
+    workflow,
+    /\[\[ "\$\{CAMPAIGN_ID\}" =~ \^win-\[a-z0-9\]\[a-z0-9-\]\{2,15\}\$ \]\]/,
+  );
+  assert.match(
+    workflow,
+    /aws-us-ec2-windows-jit-\$\{CAMPAIGN_ID\}-\$\{QUALIFICATION_ID\}/,
+  );
   assert.match(workflow, /timeout-minutes:/);
   assert.match(workflow, /\n {2}smoke:\n/);
   assert.match(workflow, /\n {2}full:\n/);
