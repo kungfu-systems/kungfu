@@ -604,6 +604,14 @@ export type ProjectAgentSessionSnapshot = ProjectAgentSessionRef & {
     staleAfterMs: number;
     diagnostic: string | null;
     detailDiagnostic: string | null;
+    workProjection: {
+      state: string;
+      observedAt: number;
+      source: string;
+      queryCount: number;
+      queryProofRoot: string | null;
+      diagnostic: string | null;
+    } | null;
     work: ProjectNativeWorkSnapshot | null;
   } | null;
   receiptRoots: string[];
@@ -861,7 +869,7 @@ export function openProjects(options: ProjectCommandOptions): Projects {
   const projectSessionSnapshot = async (
     ref: ProjectAgentSessionRef,
     knownStatus?: Record<string, unknown>,
-    workspace = '',
+    _workspace = '',
     knownWork?: ProjectNativeWorkSnapshot | null,
   ): Promise<ProjectAgentSessionSnapshot> => {
     const status =
@@ -899,13 +907,21 @@ export function openProjects(options: ProjectCommandOptions): Projects {
           ageMs?: number;
           staleAfterMs?: number;
           diagnostic?: string | null;
+          workProjection?: {
+            state?: string;
+            observedAt?: number;
+            source?: string;
+            queryCount?: number;
+            queryProofRoot?: string | null;
+            diagnostic?: string | null;
+          } | null;
           work?: NonNullable<
             ProjectAgentSessionSnapshot['nativeObserver']
           >['work'];
         }
       | undefined;
     const rawNativeWork = nativeObserver?.work;
-    let nativeWork = rawNativeWork
+    const nativeWork = rawNativeWork
       ? {
           ...rawNativeWork,
           title: String(rawNativeWork.title ?? knownWork?.title ?? ''),
@@ -917,66 +933,8 @@ export function openProjects(options: ProjectCommandOptions): Projects {
             : [...(knownWork?.acceptanceChecks ?? [])],
         }
       : null;
-    let detailDiagnostic: string | null = null;
-    if (
-      nativeWork &&
-      !nativeWork.title &&
-      !nativeWork.objective &&
-      workspace &&
-      nativeWork.initiativeId &&
-      nativeWork.assignmentId
-    ) {
-      try {
-        const rawStatus = await options.execFile(
-          options.bin,
-          [
-            'work',
-            'status',
-            '--workspace',
-            workspace,
-            '--initiative-id',
-            nativeWork.initiativeId,
-            '--assignment-id',
-            nativeWork.assignmentId,
-          ],
-          {
-            encoding: 'utf8',
-            env: options.env,
-            maxBuffer: 4 * 1024 * 1024,
-          },
-        );
-        const workStatus = parse<{
-          assignment?: {
-            title?: string;
-            objective?: string;
-            work_definition?: {
-              title?: string;
-              objective?: string;
-              acceptance_criteria?: unknown[];
-              remaining_obligation?: string;
-            };
-          };
-        }>(rawStatus, 'kungfu.assignment-orchestration.status/v1');
-        const assignment = workStatus.assignment ?? {};
-        const definition = assignment.work_definition ?? {};
-        nativeWork = {
-          ...nativeWork,
-          title: String(definition.title ?? assignment.title ?? '').trim(),
-          objective: String(
-            definition.objective ?? assignment.objective ?? '',
-          ).trim(),
-          acceptanceChecks: (definition.acceptance_criteria ?? [])
-            .map((value) => String(value).trim())
-            .filter(Boolean),
-          remainingObligation:
-            nativeWork.remainingObligation ??
-            (String(definition.remaining_obligation ?? '').trim() || null),
-        };
-      } catch (error) {
-        detailDiagnostic =
-          error instanceof Error ? error.message : String(error);
-      }
-    }
+    const workProjection = nativeObserver?.workProjection ?? null;
+    const detailDiagnostic = workProjection?.diagnostic ?? null;
     return {
       ...ref,
       provider: adapter?.provider ?? 'agent',
@@ -1002,6 +960,16 @@ export function openProjects(options: ProjectCommandOptions): Projects {
             staleAfterMs: Number(nativeObserver.staleAfterMs ?? 0),
             diagnostic: nativeObserver.diagnostic ?? null,
             detailDiagnostic,
+            workProjection: workProjection
+              ? {
+                  state: String(workProjection.state ?? 'unknown'),
+                  observedAt: Number(workProjection.observedAt ?? 0),
+                  source: String(workProjection.source ?? 'bounded-fallback'),
+                  queryCount: Number(workProjection.queryCount ?? 0),
+                  queryProofRoot: workProjection.queryProofRoot ?? null,
+                  diagnostic: workProjection.diagnostic ?? null,
+                }
+              : null,
             work: nativeWork,
           }
         : null,

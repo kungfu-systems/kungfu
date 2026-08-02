@@ -100,7 +100,7 @@ function harness({
     ledger,
     now: () => 1000 + ledger.nextCursor,
   });
-  const gate = createCodexAppServerContractGate({ cliVersion: '0.144.3' });
+  const gate = createCodexAppServerContractGate({ cliVersion: '0.146.0' });
   let sequence = 0;
   return {
     runtime,

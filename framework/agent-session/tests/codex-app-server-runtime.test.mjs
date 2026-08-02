@@ -63,7 +63,7 @@ async function start(mode, overrides = {}) {
     runtimeGeneration: '7',
     executable: process.execPath,
     argv: [provider, mode],
-    cliVersion: '0.144.3',
+    cliVersion: '0.146.0',
     initializeParams: {
       clientInfo: { name: 'kungfu-test', version: '4.0.0-alpha.1' },
     },
@@ -285,7 +285,7 @@ test('slow or failing consumers cannot block stdout draining', async (t) => {
     runtimeGeneration: '7',
     executable: process.execPath,
     argv: [provider, 'multi-identity'],
-    cliVersion: '0.144.3',
+    cliVersion: '0.146.0',
     initializeParams: {
       clientInfo: { name: 'kungfu-test', version: '4.0.0-alpha.1' },
     },

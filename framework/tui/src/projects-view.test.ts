@@ -78,6 +78,14 @@ test('opened Project Work offers an exact-plan Agent path and recoverable sessio
     new URL('./work-window/index.tsx', import.meta.url),
     'utf8',
   );
+  const projectWorkSessionState = readFileSync(
+    new URL('./work-window/project-work-session-state.ts', import.meta.url),
+    'utf8',
+  );
+  const projectWorkSessionView = readFileSync(
+    new URL('./work-window/project-work-session-view.tsx', import.meta.url),
+    'utf8',
+  );
   const projectWork = projectWorkSource.slice(
     projectWorkSource.indexOf('export function ProjectWorkHost'),
   );
@@ -106,28 +114,24 @@ test('opened Project Work offers an exact-plan Agent path and recoverable sessio
   assert.match(projectWork, /\.approveRun\(/);
   assert.match(projectWork, /\.endRun\(/);
   assert.match(projectWork, /SESSION RUNNING/);
-  assert.match(projectWork, /NATIVE UI · OBSERVE ONLY/);
-  assert.match(projectWork, /Provider owns terminal input/);
-  assert.match(projectWork, /Objective ·/);
-  assert.match(projectWork, /Remaining ·/);
-  assert.match(projectWork, /Acceptance \{index \+ 1\} ·/);
-  assert.match(
-    projectWork,
-    /Next · \{session\.nativeObserver\.work\.nextAction\}/,
-  );
-  assert.match(projectWork, /Work details ·/);
+  assert.match(projectWorkSessionView, /NATIVE UI · OBSERVE ONLY/);
+  assert.match(projectWorkSessionView, /Provider owns terminal input/);
+  assert.match(projectWorkSessionView, /Objective ·/);
+  assert.match(projectWorkSessionView, /Remaining ·/);
+  assert.match(projectWorkSessionView, /Acceptance \{index \+ 1\} ·/);
+  assert.match(projectWorkSessionView, /Next · \{observer\.work\.nextAction\}/);
+  assert.match(projectWorkSessionView, /Work details ·/);
+  assert.match(projectWorkSessionView, /WORK SNAPSHOT ·/);
+  assert.match(projectWorkSessionView, /workProjection.queryCount/);
   assert.match(projectWork, /session\?\.nativeObserver \? null/);
-  assert.match(projectWork, /const transientNativeObserverAttention = Boolean/);
+  assert.match(projectWorkSessionState, /nativeObserverDisplayState:/);
+  assert.doesNotMatch(projectWork, /transientNativeObserverAttention/);
+  assert.doesNotMatch(projectWork, /startsWith\('native-observer-'\)/);
   assert.match(
-    projectWork,
-    /sessionAttention\.reason\.startsWith\('native-observer-'\)/,
+    projectWorkSessionState,
+    /const providerSessionActive = Boolean/,
   );
-  assert.match(projectWork, /session\.nativeObserver\?\.state !== 'degraded'/);
-  assert.match(projectWork, /session\.nativeObserver\?\.ageMs \?\? 0\) < 5000/);
-  assert.match(projectWork, /const nativeObserverDisplayState =/);
-  assert.match(projectWork, /\? 'refreshing'/);
-  assert.match(projectWork, /const providerSessionActive = Boolean/);
-  assert.match(projectWork, /session\.lifecycleState !== 'ended'/);
+  assert.match(projectWorkSessionState, /session\.lifecycleState !== 'ended'/);
   assert.match(projectWork, /session\?\.controllable === false/);
   assert.match(
     projectWork,
@@ -152,10 +156,13 @@ test('opened Project Work offers an exact-plan Agent path and recoverable sessio
     projectWork,
     /workCount=\{workDiscoveryLoading \? undefined : projectWorkCount\}/,
   );
-  assert.match(projectWork, /const projectWorkCount = new Set\(/);
-  assert.match(projectWork, /if \(candidate\.session\?\.live\) return 3/);
+  assert.match(projectWorkSessionState, /const projectWorkCount = new Set\(/);
   assert.match(
-    projectWork,
+    projectWorkSessionState,
+    /if \(candidate\.session\?\.live\) return 3/,
+  );
+  assert.match(
+    projectWorkSessionState,
     /candidate\.session\?\.backend === 'native-interactive'/,
   );
   assert.match(projectWork, /Observing Work · \$\{visibleWorkId\}/);

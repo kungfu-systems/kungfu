@@ -29,6 +29,7 @@ function workRef() {
     profileRoot: ROOT_VALUE,
     entityType: 'assignment',
     entityId: 'history-fixture',
+    initiativeId: 'history-initiative',
     entityRoot: `sha256:${'b'.repeat(64)}`,
     purpose: 'qualify exact history continuity',
     systemTimeCut: '2026-08-01T00:00:00Z',
@@ -160,7 +161,7 @@ test('registry deletion loses convenience only and cannot mutate owner history',
 test('surface copy and runtime reports expose the activity versus history boundary', () => {
   const sources = {
     cli: read('framework/core/src/python/kungfu/cli/commands/run.py'),
-    tui: read('framework/tui/src/work-window/index.tsx'),
+    tui: read('framework/tui/src/work-window/project-work-session-view.tsx'),
     gui: read('framework/kfx/src/project-work-run.tsx'),
     guiEntrypoint: read('framework/gui/src/renderer/src/main.tsx'),
     tuiEntrypoint: read('framework/tui/src/main.tsx'),

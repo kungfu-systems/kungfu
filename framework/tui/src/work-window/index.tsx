@@ -39,6 +39,8 @@ import type {
   ProjectWorkspaceSelection,
 } from '../projects-view/index.js';
 import { terminalCanvasRows } from '../terminal-canvas.js';
+import { projectWorkSessionState } from './project-work-session-state.js';
+import { NativeWorkProjectionView } from './project-work-session-view.js';
 
 export type WorkSort = 'updated-desc' | 'project-asc' | 'title-asc';
 
@@ -612,56 +614,20 @@ export function ProjectWorkHost({
     };
   }, [composerActive, onInputModeChange]);
 
-  const projectRuns = runs.filter(
-    (candidate) => candidate.workspace === project.workspace_root,
-  );
-  const runPriority = (candidate: ProjectWorkRunSnapshot) => {
-    if (candidate.session?.live) return 3;
-    if (
-      candidate.running ||
-      (candidate.session?.backend === 'native-interactive' &&
-        candidate.session.lifecycleState !== 'ended')
-    )
-      return 2;
-    return 1;
-  };
-  const visibleRun = allowNewWorkOverRetainedRun
-    ? null
-    : ([...projectRuns].sort(
-        (left, right) =>
-          runPriority(right) - runPriority(left) ||
-          right.lastEventAt - left.lastEventAt,
-      )[0] ?? null);
-  const session = visibleRun?.session;
-  const sessionAttention = session?.attention;
-  const transientNativeObserverAttention = Boolean(
-    session?.backend === 'native-interactive' &&
-      sessionAttention?.kind === 'blocked' &&
-      sessionAttention.reason.startsWith('native-observer-') &&
-      session.nativeObserver?.state !== 'degraded' &&
-      (session.nativeObserver?.ageMs ?? 0) < 5000,
-  );
-  const attention = transientNativeObserverAttention ? null : sessionAttention;
-  const nativeObserverDisplayState = transientNativeObserverAttention
-    ? 'refreshing'
-    : session?.nativeObserver?.state;
-  const providerSessionActive = Boolean(
-    visibleRun?.running ||
-      session?.live ||
-      (session?.backend === 'native-interactive' &&
-        session.lifecycleState !== 'ended'),
-  );
-  const visibleWorkId =
-    visibleRun?.work ?? session?.nativeObserver?.work?.assignmentId;
-  const projectWorkCount = new Set(
-    projectRuns
-      .map(
-        (candidate) =>
-          candidate.work ??
-          candidate.session?.nativeObserver?.work?.assignmentId,
-      )
-      .filter((work): work is string => Boolean(work)),
-  ).size;
+  const {
+    visibleRun,
+    session,
+    attention,
+    providerSessionActive,
+    visibleWorkId,
+    projectWorkCount,
+    retainedAgentFinished,
+    retainedAgentReviewable,
+  } = projectWorkSessionState({
+    runs,
+    workspace: project.workspace_root,
+    allowNewWorkOverRetainedRun,
+  });
   const visibleRunProvider = visibleRun?.provider;
   React.useEffect(() => {
     if (!visibleRunProvider) return;
@@ -704,14 +670,6 @@ export function ProjectWorkHost({
     session?.live,
     visibleRun?.id,
   ]);
-  const retainedAgentFinished =
-    visibleRun?.receipt?.status === 'agent-finished';
-  const retainedAgentReviewable = Boolean(
-    visibleRun?.receipt &&
-      (retainedAgentFinished ||
-        attention?.kind === 'ready-for-review' ||
-        attention?.kind === 'needs-answer'),
-  );
   const mockScenario = process.env.KUNGFU_MOCK_AGENT_SCENARIO;
   const selectedProvider = mockScenario ? 'mock' : 'codex';
   const selectedAgentLabel = mockScenario
@@ -1175,103 +1133,7 @@ export function ProjectWorkHost({
                     : `✓ ${visibleAgentLabel.toUpperCase()} SESSION`}
                 </Text>
                 {session?.nativeObserver ? (
-                  <Box flexDirection="column">
-                    <Text
-                      bold
-                      color={
-                        nativeObserverDisplayState === 'fresh'
-                          ? 'green'
-                          : nativeObserverDisplayState === 'refreshing'
-                            ? 'cyan'
-                            : nativeObserverDisplayState === 'stale'
-                              ? 'yellow'
-                              : 'red'
-                      }
-                    >
-                      NATIVE UI · OBSERVE ONLY ·{' '}
-                      {nativeObserverDisplayState?.toUpperCase()} ·{' '}
-                      {session.nativeObserver.ageMs}ms old
-                    </Text>
-                    <Text dimColor>
-                      Provider owns terminal input; continue in its native UI.
-                    </Text>
-                    <Text dimColor>
-                      Agent session activity is retained; protected Work history
-                      begins only with an accepted domain receipt.
-                    </Text>
-                    {session.nativeObserver.work ? (
-                      <>
-                        <Text bold color="cyan">
-                          Work ·{' '}
-                          {session.nativeObserver.work.title ||
-                            session.nativeObserver.work.assignmentId ||
-                            session.nativeObserver.work.state}
-                        </Text>
-                        <Text dimColor>
-                          ID · {session.nativeObserver.work.assignmentId}
-                          {session.nativeObserver.work.phase
-                            ? ` · Phase ${session.nativeObserver.work.phase}`
-                            : ''}
-                        </Text>
-                        {session.nativeObserver.work.objective ? (
-                          <Text>
-                            Objective · {session.nativeObserver.work.objective}
-                          </Text>
-                        ) : null}
-                        {session.nativeObserver.work.remainingObligation ? (
-                          <Text color="yellow">
-                            Remaining ·{' '}
-                            {session.nativeObserver.work.remainingObligation}
-                          </Text>
-                        ) : null}
-                        {session.nativeObserver.work.acceptanceChecks.map(
-                          (check, index) => (
-                            <Text key={`${index}:${check}`}>
-                              Acceptance {index + 1} · {check}
-                            </Text>
-                          ),
-                        )}
-                        {session.nativeObserver.work.nextAction ? (
-                          <Text color="cyan">
-                            Next · {session.nativeObserver.work.nextAction}
-                          </Text>
-                        ) : null}
-                        <Text dimColor>
-                          Continuity · claims{' '}
-                          {
-                            session.nativeObserver.work.continuation
-                              .completionClaimCount
-                          }{' '}
-                          · reviews{' '}
-                          {
-                            session.nativeObserver.work.continuation
-                              .independentReviewCount
-                          }{' '}
-                          · decisions{' '}
-                          {
-                            session.nativeObserver.work.continuation
-                              .continuationDecisionCount
-                          }{' '}
-                          · evidence{' '}
-                          {
-                            session.nativeObserver.work.evidenceEpisodeRoots
-                              .length
-                          }{' '}
-                          · session receipts {session.receiptRoots.length}
-                        </Text>
-                      </>
-                    ) : null}
-                    {session.nativeObserver.diagnostic ? (
-                      <Text color="red">
-                        Observer · {session.nativeObserver.diagnostic}
-                      </Text>
-                    ) : null}
-                    {session.nativeObserver.detailDiagnostic ? (
-                      <Text color="yellow">
-                        Work details · {session.nativeObserver.detailDiagnostic}
-                      </Text>
-                    ) : null}
-                  </Box>
+                  <NativeWorkProjectionView session={session} />
                 ) : null}
                 {visibleTerminalLines && visibleTerminalLines.length > 0 ? (
                   visibleTerminalLines.map((line, index) => (

@@ -4,12 +4,13 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
 import test from 'node:test';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 import {
   CodexAppServerContractError,
   createCodexAppServerContractGate,
   loadCodexAppServerContract,
   loadCodexAppServerSchemaManifest,
+  resolveCodexAppServerContractRoot,
   verifyCodexAppServerSchemaManifest,
 } from '../src/codex-app-server-contract.mjs';
 
@@ -32,11 +33,29 @@ function expectCode(fn, code) {
   });
 }
 
+test('bundled TUI worker resolves the source Agent Session contract root', () => {
+  const bundledWorker = path.resolve(
+    here,
+    '..',
+    '..',
+    'tui',
+    'dist',
+    'agent-session-worker.mjs',
+  );
+  assert.equal(
+    resolveCodexAppServerContractRoot({
+      moduleUrl: pathToFileURL(bundledWorker).href,
+      env: {},
+    }),
+    path.resolve(here, '..'),
+  );
+});
+
 test('pinned stable schema manifest has a self-recomputing deterministic bundle digest', () => {
   const manifest = loadCodexAppServerSchemaManifest();
   assert.deepEqual(verifyCodexAppServerSchemaManifest(manifest), {
-    fileCount: 267,
-    sha256: 'db6486174d318cc61d0ea100b5cfc9f6c3441d3a7c402382f971477802d11af7',
+    fileCount: 275,
+    sha256: 'c1ab53bbe1955ea63bc4fbb976f01a1fb4dc5af8e2f3067fb9d228c035692538',
   });
   assert.deepEqual(
     Object.fromEntries(
@@ -46,10 +65,10 @@ test('pinned stable schema manifest has a self-recomputing deterministic bundle 
       ]),
     ),
     {
-      clientRequests: 87,
+      clientRequests: 90,
       clientNotifications: 1,
       serverRequests: 10,
-      serverNotifications: 68,
+      serverNotifications: 70,
     },
   );
 
@@ -67,7 +86,7 @@ test('contract gate pins CLI, stable schema and non-experimental capability shap
   const gate = createCodexAppServerContractGate({
     contract,
     manifest,
-    cliVersion: '0.144.3',
+    cliVersion: '0.146.0',
     initializeCapabilities: {},
   });
   assert.equal(gate.provider, 'codex');
@@ -87,7 +106,7 @@ test('contract gate pins CLI, stable schema and non-experimental capability shap
       createCodexAppServerContractGate({
         contract,
         manifest,
-        cliVersion: '0.144.3',
+        cliVersion: '0.146.0',
         initializeCapabilities: { experimentalApi: true },
       }),
     'experimental-api',
@@ -97,7 +116,7 @@ test('contract gate pins CLI, stable schema and non-experimental capability shap
       createCodexAppServerContractGate({
         contract,
         manifest,
-        cliVersion: '0.144.3',
+        cliVersion: '0.146.0',
         initializeCapabilities: {
           optOutNotificationMethods: ['turn/completed'],
         },
@@ -112,14 +131,14 @@ test('contract gate pins CLI, stable schema and non-experimental capability shap
       createCodexAppServerContractGate({
         contract: driftedContract,
         manifest,
-        cliVersion: '0.144.3',
+        cliVersion: '0.146.0',
       }),
     'schema-bundle-drift',
   );
 });
 
 test('positive fixtures map only typed provider events without retaining raw payloads', () => {
-  const gate = createCodexAppServerContractGate({ cliVersion: '0.144.3' });
+  const gate = createCodexAppServerContractGate({ cliVersion: '0.146.0' });
   for (const entry of fixture('positive-cases.json')) {
     const plan = gate.classify(entry);
     assert.equal(plan.normalizedSemantic, entry.expectedSemantic, entry.id);
@@ -131,7 +150,7 @@ test('positive fixtures map only typed provider events without retaining raw pay
 });
 
 test('negative fixtures fail closed on method, direction, envelope and identity drift', () => {
-  const gate = createCodexAppServerContractGate({ cliVersion: '0.144.3' });
+  const gate = createCodexAppServerContractGate({ cliVersion: '0.146.0' });
   for (const entry of fixture('negative-cases.json')) {
     expectCode(() => gate.classify(entry), entry.expectedCode);
   }

@@ -214,10 +214,16 @@ test('deterministic Mock Agent traverses answer, approval, review, and exit in t
     binding: {
       kind: 'work',
       workRef: {
+        schema: 'kungfu.work-ref/v1',
         workspaceId: 'workspace:mock-flow',
         profileId: 'kungfu.work-control',
+        profileRoot: PROFILE_ROOT,
         entityType: 'assignment',
         entityId: 'mock-flow',
+        entityRoot: `sha256:${'e'.repeat(64)}`,
+        purpose: 'qualification',
+        systemTimeCut: '2026-08-02T00:00:00Z',
+        initiativeId: 'mock-flow-initiative',
       },
     },
   };

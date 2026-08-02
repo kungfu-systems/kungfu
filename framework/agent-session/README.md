@@ -84,6 +84,19 @@ the record but marks the old Capsule attempt `unrecoverable`; it never invents
 process continuity. Terminal panes, splits, drawers and windows retain only
 stable identity references and are not part of the portable registry.
 
+## Core value contract
+
+`schemas/agent-session-core.schema.json` is the canonical cross-language value
+contract for `WorkRef`, `AgentConsoleEnvelope`, `AgentRuntimeProfile`, and
+`SessionAttempt`. Canonical object-key ordering and UTF-8 SHA-256 roots are
+qualified against the same golden fixture in Node, Python, and TypeScript.
+Provider identifiers are open catalog keys, so Amp and declared third-party PTY
+adapters do not require a Core enum change. New Assignment WorkRef writes carry
+an explicit `initiativeId`; a retained v1 WorkRef without that locator remains
+readable only through the registry compatibility path and is never emitted as
+a new binding. Unknown fields, including the retired `runtimeRouting` envelope
+projection, fail closed.
+
 Every client receives the same product-state projection for live and retained
 attempts: `available`, `starting`, `working`, `recovering`, `action-required`,
 or `ended`. Worker loss therefore remains visible as one `action-required`
@@ -92,7 +105,7 @@ provider-supported resume; ordinary GUI text does not expose process topology.
 
 The retained Mac source qualification proves main-process reconnect, provider
 exit fencing, worker-loss fail-closed behavior, bounded overflow gaps, receipt
-privacy, and sub-millisecond local RPC p95. Authenticated Codex 0.144.3 passes
+privacy, and sub-millisecond local RPC p95. Authenticated Codex 0.146.0 passes
 start, instruction/output, approval detection plus deny-key delivery,
 interrupt, reconnect, and end. Authenticated Claude Code 2.1.209 passes the
 same cases with an explicit `Bash` ask rule under `sonnet`/`low`; its real tool
@@ -138,10 +151,10 @@ temporary runtime/workspace paths. The command emits metadata-only JSON and
 fails closed on unknown provider screens.
 
 The Codex App Server structured-hybrid contract is a separate provider adapter
-stage under [KF-ADR-019f86da-4f90-7b50-9cb5-715a82f9e7c4](../../docs/adr/KF-ADR-019f86da-4f90-7b50-9cb5-715a82f9e7c4.md). It pins direct stdio, Codex CLI `0.144.3`, the generated
+stage under [KF-ADR-019f86da-4f90-7b50-9cb5-715a82f9e7c4](../../docs/adr/KF-ADR-019f86da-4f90-7b50-9cb5-715a82f9e7c4.md). It pins direct stdio, Codex CLI `0.146.0`, the generated
 non-experimental stable schema bundle, admitted methods, provider identity, raw
 retention, and recovery limits without changing the shared Interaction Port or
-Claude/PTTY authority. Its committed 267-file manifest defines an independently
+Claude/PTTY authority. Its committed 275-file manifest defines an independently
 recomputable bundle digest; unknown versions, capabilities, methods, required
 fields, or schema bytes fail closed.
 
@@ -201,7 +214,7 @@ existing Agent Session journal authority behind this append/read seam. The
 Stage 4 source test uses only a deterministic in-memory journal and synthetic
 runtime; it does not read provider credentials or private session state.
 
-The product adapter routes new Codex `0.144.3` attempts through direct stdio by
+The product adapter routes new Codex `0.146.0` attempts through direct stdio by
 default. Set `KUNGFU_AGENT_SESSION_CODEX_APP_SERVER=0` to route a newly created
 Codex attempt through the retained PTY fallback; the flag never hot-switches an
 existing attempt. Claude retains its PTY plan, authority, and receipt shape.

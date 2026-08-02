@@ -1240,6 +1240,7 @@ test('Project Work restores and controls one retained Agent Session through the 
 
 test('Project Work rediscovers native UI attempts as observer-only without terminal access', async () => {
   const operations: string[] = [];
+  let workStatusQueries = 0;
   const ref = {
     workConsoleId: 'work:kungfu.work-control:assignment:alpha',
     sessionAttemptId: 'native:alpha:1',
@@ -1267,10 +1268,21 @@ test('Project Work rediscovers native UI attempts as observer-only without termi
       ageMs: 40,
       staleAfterMs: 2000,
       diagnostic: null,
+      workProjection: {
+        state: 'fresh',
+        observedAt: 4000,
+        source: 'bounded-fallback',
+        queryCount: 2,
+        queryProofRoot: `sha256:${'1'.repeat(64)}`,
+        diagnostic: null,
+      },
       work: {
         state: 'available',
         initiativeId: 'initiative:alpha',
         assignmentId: 'alpha',
+        title: 'Native continuity',
+        objective: 'Keep Work visible across native UIs',
+        acceptanceChecks: ['Rediscover the same Work'],
         phase: 'executing',
         queryProofRoot: `sha256:${'1'.repeat(64)}`,
         nextActions: ['stage: Record the stage-ready boundary'],
@@ -1312,6 +1324,7 @@ test('Project Work rediscovers native UI attempts as observer-only without termi
     bin: 'kungfu',
     env: {},
     execFile: async (_bin: string, args: string[]) => {
+      workStatusQueries += 1;
       assert.deepEqual(args.slice(0, 2), ['work', 'status']);
       return JSON.stringify({
         schema: 'kungfu.assignment-orchestration.status/v1',
@@ -1346,6 +1359,11 @@ test('Project Work rediscovers native UI attempts as observer-only without termi
     observed?.session?.nativeObserver?.work?.objective,
     'Keep Work visible across native UIs',
   );
+  assert.equal(
+    observed?.session?.nativeObserver?.workProjection?.queryCount,
+    2,
+  );
+  assert.equal(workStatusQueries, 0);
   assert.deepEqual(publications, [0, 2]);
   assert.deepEqual(observed?.session?.receiptRoots, []);
   await assert.rejects(
