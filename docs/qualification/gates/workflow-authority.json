@@ -227,7 +227,7 @@
     {
       "path": ".github/workflows/aws-us-windows-burst-qualification.yml",
       "authority": "qualification",
-      "definitionDigest": "sha256:41b31b1b94638c5dfdc1b0961c5fa7f7a439444f856ecc71ca14c45f30a53172",
+      "definitionDigest": "sha256:981248c822c03424e1b93fa578de67e214445e342b8eacb966b7d49653aa412d",
       "jobs": [
         {
           "id": "cleanup-exercise",
@@ -244,9 +244,9 @@
           "authority": "qualification",
           "publication": "none",
           "receipt": "diagnostic",
-          "definitionDigest": "sha256:7a4a2ebf862dd35dd9e946beffdf03dfe0d0d79f7ec475129fe3f294bee20ef4",
+          "definitionDigest": "sha256:a7228f8a3efa9e6b93ddcb5b1f0b4212fa1842c03c2a3ae8774d1dd28d29ad99",
           "credentials": {"githubToken":"write","oidc":true,"repositorySecrets":[],"inheritedSecrets":false,"environment":null},
-          "externalActions": ["kungfu-systems/buildchain/.github/workflows/.build.yml@376fb92fa014102366111b9aaef4856486c1e499"],
+          "externalActions": ["kungfu-systems/buildchain/.github/workflows/.build.yml@447936a3aa36415a39c75e92fc9b26b0774aeb75"],
           "steps": []
         },
         {
@@ -254,9 +254,9 @@
           "authority": "qualification",
           "publication": "none",
           "receipt": "diagnostic",
-          "definitionDigest": "sha256:143b06d990a1dca7b6215617af24b2a20b64775d8e174438bf42d5895dbdbcf9",
+          "definitionDigest": "sha256:8b187c791b5b6fc8a5a4c874db6315aa7ba62ba6389c74c6b09e348efb1b480d",
           "credentials": {"githubToken":"write","oidc":true,"repositorySecrets":[],"inheritedSecrets":false,"environment":null},
-          "externalActions": ["kungfu-systems/buildchain/.github/workflows/.build.yml@376fb92fa014102366111b9aaef4856486c1e499"],
+          "externalActions": ["kungfu-systems/buildchain/.github/workflows/.build.yml@447936a3aa36415a39c75e92fc9b26b0774aeb75"],
           "steps": []
         },
         {
@@ -264,10 +264,10 @@
           "authority": "qualification",
           "publication": "none",
           "receipt": "diagnostic",
-          "definitionDigest": "sha256:ed8c39bd07f1a530e41ec91142529b5b5c6e0e345a59f8ffaf6077a779518192",
+          "definitionDigest": "sha256:7c89de0c8a4167b3fe88de845455406f90cfe73b7f188c3271d993d53358c767",
           "credentials": {"githubToken":"read","oidc":false,"repositorySecrets":[],"inheritedSecrets":false,"environment":null},
           "externalActions": ["actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd"],
-          "steps": [{"index":1,"label":"name:Require canonical repository, mode, and label","definitionDigest":"sha256:c79ae3993e76974650848389ab59d62f355ae08734717d349c6ea7e144182999"},{"index":2,"label":"name:Require write-capable actor","definitionDigest":"sha256:3430783a3e543bfdbe6f96ad0be249927e372191c7e2cc5d8c540c14be66d68f"}]
+          "steps": [{"index":1,"label":"name:Require canonical repository, mode, and label","definitionDigest":"sha256:bfd821a228fbc60a9e65f9ae5722d70bb4acc0b3356e5cd6fb499347d0e27e3b"},{"index":2,"label":"name:Require write-capable actor","definitionDigest":"sha256:3430783a3e543bfdbe6f96ad0be249927e372191c7e2cc5d8c540c14be66d68f"}]
         }
       ]
     },

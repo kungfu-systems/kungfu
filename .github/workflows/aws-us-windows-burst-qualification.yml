@@ -1,10 +1,14 @@
 # SPDX-License-Identifier: Apache-2.0
 
 name: AWS US Windows Burst Qualification
+run-name: AWS Windows JIT ${{ inputs.campaign-id }} ${{ inputs.qualification-id }}
 
 on:
   workflow_dispatch:
     inputs:
+      campaign-id:
+        description: "One-shot Windows JIT campaign identity"
+        required: true
       qualification-id:
         description: "One bounded Windows JIT qualification slot"
         required: true
@@ -26,14 +30,14 @@ on:
           - cancellation
           - timeout
       runner-label:
-        description: "Exact unique JIT label created for this run"
+        description: "Exact campaign-scoped JIT label created for this run"
         required: true
 
 permissions:
   contents: read
 
 concurrency:
-  group: aws-us-windows-burst-${{ inputs.qualification-id }}
+  group: aws-us-windows-burst-${{ inputs.campaign-id }}-${{ inputs.qualification-id }}
   cancel-in-progress: false
 
 jobs:
@@ -47,6 +51,7 @@ jobs:
         shell: bash
         env:
           EXPECTED_REPOSITORY: kungfu-systems/kungfu
+          CAMPAIGN_ID: ${{ inputs.campaign-id }}
           QUALIFICATION_ID: ${{ inputs.qualification-id }}
           MODE: ${{ inputs.mode }}
           RUNNER_LABEL: ${{ inputs.runner-label }}
@@ -54,11 +59,12 @@ jobs:
           set -euo pipefail
           test "${GITHUB_EVENT_NAME}" = "workflow_dispatch"
           test "${GITHUB_REPOSITORY}" = "${EXPECTED_REPOSITORY}"
+          [[ "${CAMPAIGN_ID}" =~ ^win-[a-z0-9][a-z0-9-]{2,15}$ ]]
           case "${QUALIFICATION_ID}:${MODE}" in
             win-smoke:smoke|win-full-0[1-3]:full|win-cancel:cancellation|win-timeout:timeout) ;;
             *) exit 1 ;;
           esac
-          test "${RUNNER_LABEL}" = "aws-us-ec2-windows-jit-${QUALIFICATION_ID}"
+          test "${RUNNER_LABEL}" = "aws-us-ec2-windows-jit-${CAMPAIGN_ID}-${QUALIFICATION_ID}"
 
       - name: Require write-capable actor
         uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8
@@ -82,14 +88,14 @@ jobs:
       contents: read
       issues: write
       id-token: write
-    uses: kungfu-systems/buildchain/.github/workflows/.build.yml@376fb92fa014102366111b9aaef4856486c1e499
+    uses: kungfu-systems/buildchain/.github/workflows/.build.yml@447936a3aa36415a39c75e92fc9b26b0774aeb75
     with:
-      buildchain-ref: 376fb92fa014102366111b9aaef4856486c1e499
+      buildchain-ref: 447936a3aa36415a39c75e92fc9b26b0774aeb75
       runner-preset: aws-us-ec2-windows-jit
       aws-ec2-windows-runner-label: ${{ inputs.runner-label }}
       setup-rust: true
       rust-toolchain: "1.96.0"
-      artifact-name: kungfu-aws-windows-${{ inputs.qualification-id }}
+      artifact-name: kungfu-aws-windows-${{ inputs.campaign-id }}-${{ inputs.qualification-id }}
       artifact-paths: |
         product/release/qualification/aws-windows-jit-smoke.json
       expected-artifacts-json: >-
@@ -121,14 +127,14 @@ jobs:
       contents: read
       issues: write
       id-token: write
-    uses: kungfu-systems/buildchain/.github/workflows/.build.yml@376fb92fa014102366111b9aaef4856486c1e499
+    uses: kungfu-systems/buildchain/.github/workflows/.build.yml@447936a3aa36415a39c75e92fc9b26b0774aeb75
     with:
-      buildchain-ref: 376fb92fa014102366111b9aaef4856486c1e499
+      buildchain-ref: 447936a3aa36415a39c75e92fc9b26b0774aeb75
       runner-preset: aws-us-ec2-windows-jit
       aws-ec2-windows-runner-label: ${{ inputs.runner-label }}
       setup-rust: true
       rust-toolchain: "1.96.0"
-      artifact-name: kungfu-aws-windows-${{ inputs.qualification-id }}
+      artifact-name: kungfu-aws-windows-${{ inputs.campaign-id }}-${{ inputs.qualification-id }}
       artifact-paths: |
         product/release
       expected-artifacts-json: >-
