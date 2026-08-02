@@ -145,6 +145,28 @@ def contract() -> dict[str, Any]:
     prompt = payload.get("prompt") or {}
     if prompt.get("root") != _root_bytes(str(prompt.get("text", "")).encode("utf-8")):
         raise ValueError("first-value contract prompt root mismatch")
+    family = payload.get("promptFamily") or {}
+    if family.get("canonicalRoot") != prompt.get("root"):
+        raise ValueError("first-value prompt family canonical root mismatch")
+    policy = family.get("naturalLanguagePolicy") or {}
+    required_phrase = str(policy.get("requiredPhrase") or "")
+    forbidden = [str(value) for value in policy.get("forbiddenProtocolHints") or []]
+    prompts = [prompt, *(family.get("variants") or [])]
+    roots: set[str] = set()
+    for candidate in prompts:
+        text = str(candidate.get("text") or "")
+        root = str(candidate.get("root") or "")
+        if not text or root != _root_bytes(text.encode("utf-8")):
+            raise ValueError("first-value prompt family root mismatch")
+        if root in roots:
+            raise ValueError("first-value prompt family roots must be unique")
+        roots.add(root)
+        if required_phrase and required_phrase not in text:
+            raise ValueError(
+                "first-value prompt family omitted the natural entry phrase"
+            )
+        if any(hint in text for hint in forbidden):
+            raise ValueError("first-value prompt family contains a protocol-step hint")
     return payload
 
 
@@ -156,6 +178,45 @@ def contract_view() -> dict[str, Any]:
         "contract": payload,
         "productIdentity": _product_identity(roots),
         "receiptSchema": resources.first_value_receipt_schema(),
+    }
+
+
+def compact_contract_view() -> dict[str, Any]:
+    payload = contract()
+    roots = _pack_roots()
+    family = payload["promptFamily"]
+    return {
+        "schema": "kungfu.agent-first-value-contract-compact-view/v1",
+        "contract": {
+            "id": payload["id"],
+            "maturity": payload["maturity"],
+            "prompt": {"root": payload["prompt"]["root"]},
+            "promptFamily": {
+                "canonicalRoot": family["canonicalRoot"],
+                "currentRoot": _current_prompt_root(payload),
+                "variants": [
+                    {"id": row["id"], "root": row["root"]} for row in family["variants"]
+                ],
+            },
+            "result": {
+                "exactPromptDefault": payload["result"]["exactPromptDefault"],
+                "maximumQuestionCount": payload["result"]["maximumQuestionCount"],
+                "discoveryPolicy": {
+                    "execution": payload["result"]["discoveryPolicy"]["execution"],
+                    "forbiddenArguments": payload["result"]["discoveryPolicy"][
+                        "forbiddenArguments"
+                    ],
+                },
+            },
+            "qualification": {
+                "nonClaims": payload["qualification"]["nonClaims"],
+            },
+        },
+        "productIdentity": _product_identity(roots),
+        "receiptSchema": {
+            "schema": RECEIPT_SCHEMA,
+            "root": _root_bytes(_resource_bytes("first-value-receipt.schema.json")),
+        },
     }
 
 
@@ -180,6 +241,37 @@ def _pack_roots() -> dict[str, str]:
         "briefRoot": _root_bytes(_resource_bytes("brief.md")),
         "intentMapRoot": _root_bytes(_resource_bytes("intent-map.json")),
     }
+
+
+def _prompt_roots(first_value_contract: dict[str, Any]) -> set[str]:
+    prompt = first_value_contract["prompt"]
+    variants = (first_value_contract.get("promptFamily") or {}).get("variants") or []
+    return {prompt["root"], *(row["root"] for row in variants)}
+
+
+def _current_prompt_root(first_value_contract: dict[str, Any]) -> str:
+    requested = os.environ.get("KUNGFU_FIRST_VALUE_PROMPT_ROOT", "").strip()
+    if not requested:
+        return first_value_contract["prompt"]["root"]
+    if requested not in _prompt_roots(first_value_contract):
+        raise ValueError("KUNGFU_FIRST_VALUE_PROMPT_ROOT is not declared")
+    return requested
+
+
+def _prompt_for_root(
+    first_value_contract: dict[str, Any], prompt_root: str
+) -> dict[str, Any]:
+    prompts = [
+        first_value_contract["prompt"],
+        *((first_value_contract.get("promptFamily") or {}).get("variants") or []),
+    ]
+    return next(prompt for prompt in prompts if prompt["root"] == prompt_root)
+
+
+def _current_prompt(first_value_contract: dict[str, Any]) -> dict[str, Any]:
+    return _prompt_for_root(
+        first_value_contract, _current_prompt_root(first_value_contract)
+    )
 
 
 def _source_revision() -> str | None:
@@ -310,6 +402,23 @@ def create_receipt(
 
     roots = _pack_roots()
     output_root = _root_bytes(stdout)
+    guide = first_value_contract["result"]["responseGuide"]
+    current_prompt = _current_prompt(first_value_contract)
+    response_guide = {
+        "language": guide["language"],
+        "protocolComplete": guide["protocolComplete"],
+        "mustNotRunMoreCommands": guide["mustNotRunMoreCommands"],
+        "instruction": guide["instruction"],
+        "explanationSeed": guide["explanationSeed"],
+        "personalizationBasis": current_prompt["personalizationBasis"],
+        "personalizationLabel": current_prompt["personalizationLabel"],
+        "verificationCommand": discovery_command,
+        "nextStepCommand": guide["nextStepCommand"],
+        "scopeStatement": guide["scopeStatement"],
+    }
+    response_guide["answerTemplate"] = guide["answerTemplateFormat"].format(
+        **response_guide
+    )
     receipt = {
         "schema": RECEIPT_SCHEMA,
         "verdict": "verified",
@@ -324,7 +433,7 @@ def create_receipt(
             "system": platform.system().lower(),
             "machine": platform.machine().lower(),
         },
-        "promptRoot": first_value_contract["prompt"]["root"],
+        "promptRoot": _current_prompt_root(first_value_contract),
         "productIdentity": _product_identity(roots),
         "questionCount": question_count,
         "intentId": intent_id,
@@ -346,6 +455,7 @@ def create_receipt(
                 }
             ),
         },
+        "agentResponseGuide": response_guide,
         "nonClaims": list(first_value_contract["qualification"]["nonClaims"]),
         "diagnostics": [],
         "observedAt": observed_at
@@ -354,6 +464,27 @@ def create_receipt(
     receipt["receiptRoot"] = _root(receipt)
     verify_receipt(receipt, require_current_product=True)
     return receipt
+
+
+def create_start_receipt(
+    documentation_verification: dict[str, Any],
+    *,
+    runner: Runner | None = None,
+    observed_at: str | None = None,
+    attempt_id: str | None = None,
+) -> dict[str, Any]:
+    if documentation_verification.get("valid") is not True:
+        raise ValueError("first-value start requires a valid Documentation Atlas")
+    default = contract()["result"]["exactPromptDefault"]
+    return create_receipt(
+        intent_id=default["intentId"],
+        discovery_command=default["discoveryCommand"],
+        question_count=default["questionCount"],
+        outcome_summary="Verified the installed Kungfu Agent status without changing state.",
+        runner=runner,
+        observed_at=observed_at,
+        attempt_id=attempt_id,
+    )
 
 
 def verify_receipt(
@@ -376,8 +507,8 @@ def verify_receipt(
         raise ValueError("first-value receipt root mismatch")
 
     first_value_contract = contract()
-    if receipt["promptRoot"] != first_value_contract["prompt"]["root"]:
-        raise ValueError("first-value receipt prompt root mismatch")
+    if receipt["promptRoot"] not in _prompt_roots(first_value_contract):
+        raise ValueError("first-value receipt prompt root is not declared")
     _, safety_class = validate_discovery(
         receipt["intentId"], receipt["discovery"]["command"]
     )
@@ -399,6 +530,25 @@ def verify_receipt(
     required_non_claims = set(first_value_contract["qualification"]["nonClaims"])
     if set(receipt["nonClaims"]) != required_non_claims:
         raise ValueError("first-value receipt non-claims mismatch")
+    guide = first_value_contract["result"]["responseGuide"]
+    receipt_prompt = _prompt_for_root(first_value_contract, receipt["promptRoot"])
+    expected_guide = {
+        "language": guide["language"],
+        "protocolComplete": guide["protocolComplete"],
+        "mustNotRunMoreCommands": guide["mustNotRunMoreCommands"],
+        "instruction": guide["instruction"],
+        "explanationSeed": guide["explanationSeed"],
+        "personalizationBasis": receipt_prompt["personalizationBasis"],
+        "personalizationLabel": receipt_prompt["personalizationLabel"],
+        "verificationCommand": receipt["discovery"]["command"],
+        "nextStepCommand": guide["nextStepCommand"],
+        "scopeStatement": guide["scopeStatement"],
+    }
+    expected_guide["answerTemplate"] = guide["answerTemplateFormat"].format(
+        **expected_guide
+    )
+    if receipt["agentResponseGuide"] != expected_guide:
+        raise ValueError("first-value receipt response guide mismatch")
     if require_current_product:
         expected = _product_identity(_pack_roots())
         if receipt["productIdentity"] != expected:
