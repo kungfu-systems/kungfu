@@ -30,10 +30,10 @@ directly with the bounded protocol below before your final response.
 6. Complete one smallest useful outcome. Read-only discovery comes first;
    any write remains preview-first and needs its public `--execute` or
    authorization path.
-7. Whenever step 3 loads the first-value contract, run exactly one
-   `kungfu agent first-value receipt` with the selected intent, actual question count,
-   declared discovery command, and a bounded outcome summary before the final
-   response. Run it as one standalone command and let its JSON print directly;
+7. Whenever step 3 loads the first-value contract, run exactly one standalone
+   `kungfu agent first-value receipt --intent <id> --discovery '<command>'
+   --question-count <0-or-1> --outcome '<bounded-summary>' --json` before the final
+   response, using the selected intent and actual question count. Let its JSON print directly;
    do not capture, redirect, pipe, or reprint it. Cite the CLI-returned `receiptRoot`;
    never reconstruct or recompute receipt fields in model prose.
    Give the user one copyable read-only

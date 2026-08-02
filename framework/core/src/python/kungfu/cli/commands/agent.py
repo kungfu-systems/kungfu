@@ -217,7 +217,13 @@ def first_value_contract(ctx, as_json):
 
 @first_value.command(name="receipt", help=api_help("kungfu.agent.first-value.receipt"))
 @click.option("--intent", "intent_id", required=True, help="one declared intent id")
-@click.option("--discovery", required=True, help="one declared safe discovery command")
+@click.option(
+    "--discovery",
+    "--discovery-command",
+    "discovery",
+    required=True,
+    help="one declared safe discovery command",
+)
 @click.option("--question-count", required=True, type=click.IntRange(0, 1))
 @click.option("--outcome", required=True, help="bounded human outcome summary")
 @click.option("--json", "as_json", is_flag=True, help="machine-readable output")
