@@ -15,6 +15,7 @@ import {
   ControlPlaneBar,
   ControlPlaneOverlay,
   type ControlPlaneState,
+  type ProductSurface,
   QUICK_COMMANDS,
   contextualProjectRestoreCanCommit,
   createControlPlaneInputFence,
@@ -23,6 +24,7 @@ import {
   reduceControlPlaneInput,
   resolveProductStartupSurface,
   shouldStartContextualProjectRestore,
+  useStartupProductSurface,
 } from './profile-shell.js';
 import {
   PROJECTS_QUICK_COMMANDS,
@@ -134,6 +136,78 @@ class CaptureOutput extends Writable {
     this.chunks.push(String(chunk));
     callback();
   }
+}
+
+function deferred<T>() {
+  let resolve!: (value: T | PromiseLike<T>) => void;
+  const promise = new Promise<T>((settle) => {
+    resolve = settle;
+  });
+  return { promise, resolve };
+}
+
+function ContextualProjectRestoreHarness({
+  selected,
+  inventory,
+  navigation,
+}: {
+  selected: Promise<void>;
+  inventory: Promise<void>;
+  navigation?: Promise<ProductSurface>;
+}) {
+  const [surface, setSurfaceState] = React.useState<ProductSurface>('loading');
+  const startupSurface = useStartupProductSurface(surface);
+  const surfaceRef = React.useRef(surface);
+  const [loading, setLoading] = React.useState(false);
+  const [restored, setRestored] = React.useState(false);
+  const setSurface = React.useCallback((next: ProductSurface) => {
+    surfaceRef.current = next;
+    setSurfaceState(next);
+  }, []);
+
+  React.useEffect(() => {
+    if (!navigation) return;
+    void navigation.then(setSurface);
+  }, [navigation, setSurface]);
+
+  React.useEffect(() => {
+    if (
+      !shouldStartContextualProjectRestore({
+        playbackMode: false,
+        surface: startupSurface,
+        emptyState: false,
+        startupProjectRoot: '/tmp/project',
+      })
+    ) {
+      return;
+    }
+    let active = true;
+    setLoading(true);
+    void selected
+      .then(async () => {
+        if (!active || !contextualProjectRestoreCanCommit(surfaceRef.current)) {
+          return;
+        }
+        setSurface('project-work');
+        await inventory;
+        if (!active || surfaceRef.current !== 'project-work') return;
+        setRestored(true);
+      })
+      .finally(() => {
+        if (active) setLoading(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, [inventory, selected, setSurface, startupSurface]);
+
+  return React.createElement(
+    Text,
+    null,
+    `${surface}:${loading ? 'loading' : 'settled'}:${
+      restored ? 'restored' : 'pending'
+    }`,
+  );
 }
 
 test('opens Help, slash commands, and product search from the focused input', () => {
@@ -509,6 +583,71 @@ test('explicit product navigation cancels contextual Project restoration', () =>
       `${surface} must revoke a pending restore before React rerenders`,
     );
   }
+});
+
+test('contextual Project restore survives its owned async surface transition', async () => {
+  const output = new CaptureOutput();
+  const selected = deferred<void>();
+  const inventory = deferred<void>();
+  const instance = render(
+    React.createElement(ContextualProjectRestoreHarness, {
+      selected: selected.promise,
+      inventory: inventory.promise,
+    }),
+    {
+      stdout: output as unknown as NodeJS.WriteStream,
+      exitOnCtrlC: false,
+      patchConsole: false,
+      debug: true,
+    },
+  );
+
+  await new Promise<void>((resolve) => setImmediate(resolve));
+  selected.resolve();
+  await new Promise<void>((resolve) => setImmediate(resolve));
+  assert.match(output.chunks.join(''), /project-work:loading:pending/);
+
+  inventory.resolve();
+  await new Promise<void>((resolve) => setImmediate(resolve));
+  const frame = output.chunks.join('');
+  instance.unmount();
+  instance.cleanup();
+
+  assert.match(frame, /project-work:settled:restored/);
+});
+
+test('explicit navigation cancels async Project restore and settles loading', async () => {
+  const output = new CaptureOutput();
+  const selected = deferred<void>();
+  const inventory = deferred<void>();
+  const navigation = deferred<ProductSurface>();
+  const instance = render(
+    React.createElement(ContextualProjectRestoreHarness, {
+      selected: selected.promise,
+      inventory: inventory.promise,
+      navigation: navigation.promise,
+    }),
+    {
+      stdout: output as unknown as NodeJS.WriteStream,
+      exitOnCtrlC: false,
+      patchConsole: false,
+      debug: true,
+    },
+  );
+
+  await new Promise<void>((resolve) => setImmediate(resolve));
+  navigation.resolve('projects');
+  await new Promise<void>((resolve) => setImmediate(resolve));
+  assert.match(output.chunks.join(''), /projects:loading:pending/);
+
+  selected.resolve();
+  await new Promise<void>((resolve) => setImmediate(resolve));
+  const frame = output.chunks.join('');
+  instance.unmount();
+  instance.cleanup();
+
+  assert.match(frame, /projects:settled:pending/);
+  assert.doesNotMatch(frame, /project-work/);
 });
 
 test('the real Ink control plane covers the product canvas and keeps a fixed input bar', async () => {

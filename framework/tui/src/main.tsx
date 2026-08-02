@@ -79,6 +79,7 @@ import {
   resolveProductStartupSurface,
   shouldStartContextualProjectRestore,
   splitHorizontalPointerActionAtPoint,
+  useStartupProductSurface,
 } from './profile-shell.js';
 import {
   KUNGFU_EMPTY_WORK_NEBULA_PATTERN,
@@ -980,6 +981,7 @@ function ProductHost({
   const [surface, setSurfaceState] = React.useState<ProductSurface>(
     initialProductSurface({ playbackMode, firstLaunch, emptyState }),
   );
+  const startupSurface = useStartupProductSurface(surface);
   const startupAnimationEnabled = React.useMemo(
     () => terminalAnimationsEnabled(process.env),
     [],
@@ -1178,7 +1180,7 @@ function ProductHost({
     if (
       !shouldStartContextualProjectRestore({
         playbackMode,
-        surface,
+        surface: startupSurface,
         emptyState,
         startupProjectRoot,
       })
@@ -1271,7 +1273,7 @@ function ProductHost({
     projects,
     setSurface,
     startupProjectRoot,
-    surface,
+    startupSurface,
   ]);
   const autoplay = React.useMemo(
     () =>
