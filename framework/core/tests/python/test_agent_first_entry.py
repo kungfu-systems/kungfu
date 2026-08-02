@@ -46,6 +46,9 @@ def test_brief_and_intent_map_enforce_complete_bounded_first_entry():
     assert len(brief.encode("utf-8")) <= 8192
     assert len(brief.splitlines()) <= 120
     assert "kungfu xinfa compile" in brief
+    assert "run exactly one\n   `kungfu agent first-value receipt`" in brief
+    assert "Cite the CLI-returned `receiptRoot`" in brief
+    assert "never reconstruct or recompute" in brief
     assert set(intent_map["requiredIntentIds"]) == {
         row["id"] for row in intent_map["intents"]
     }

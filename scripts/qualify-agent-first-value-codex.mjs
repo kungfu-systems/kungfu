@@ -33,6 +33,116 @@ export function semanticRoot(value) {
     .digest('hex')}`;
 }
 
+export function codexResultSchema() {
+  return {
+    $schema: 'https://json-schema.org/draft/2020-12/schema',
+    type: 'object',
+    additionalProperties: false,
+    required: ['response'],
+    properties: {
+      response: { type: 'string', minLength: 40 },
+    },
+  };
+}
+
+function jsonObjects(value) {
+  const objects = [];
+  let start = -1;
+  let depth = 0;
+  let quoted = false;
+  let escaped = false;
+  for (let index = 0; index < value.length; index += 1) {
+    const character = value[index];
+    if (quoted) {
+      if (escaped) escaped = false;
+      else if (character === '\\') escaped = true;
+      else if (character === '"') quoted = false;
+      continue;
+    }
+    if (character === '"') quoted = true;
+    else if (character === '{') {
+      if (depth === 0) start = index;
+      depth += 1;
+    } else if (character === '}' && depth > 0) {
+      depth -= 1;
+      if (depth === 0 && start >= 0) {
+        try {
+          objects.push(JSON.parse(value.slice(start, index + 1)));
+        } catch {
+          // Command wrappers may contain non-JSON braces; keep scanning.
+        }
+        start = -1;
+      }
+    }
+  }
+  return objects;
+}
+
+export function receiptsFromCodexEventStream(jsonl) {
+  const receipts = [];
+  const collect = (value, depth = 0) => {
+    if (depth > 8) return;
+    if (Array.isArray(value)) {
+      for (const child of value) collect(child, depth + 1);
+      return;
+    }
+    if (value && typeof value === 'object') {
+      if (value.schema === RECEIPT_SCHEMA) receipts.push(value);
+      else for (const child of Object.values(value)) collect(child, depth + 1);
+      return;
+    }
+    if (typeof value !== 'string' || !value.includes(RECEIPT_SCHEMA)) return;
+    for (const child of jsonObjects(value)) collect(child, depth + 1);
+  };
+  for (const line of String(jsonl).split(/\r?\n/u)) {
+    if (!line.trim()) continue;
+    let event;
+    try {
+      event = JSON.parse(line);
+    } catch {
+      continue;
+    }
+    if (
+      event?.type !== 'item.completed' ||
+      event.item?.type !== 'command_execution'
+    )
+      continue;
+    for (const field of ['aggregated_output', 'output', 'text']) {
+      if (typeof event.item[field] !== 'string') continue;
+      collect(event.item[field]);
+    }
+  }
+  return receipts;
+}
+
+function codexEventInventory(jsonl) {
+  const inventory = new Set();
+  for (const line of String(jsonl).split(/\r?\n/u)) {
+    if (!line.trim()) continue;
+    try {
+      const event = JSON.parse(line);
+      inventory.add(
+        [
+          event?.type || 'unknown-event',
+          event?.item?.type || 'no-item',
+          Object.keys(event?.item || {})
+            .sort()
+            .join(','),
+          event?.item?.type === 'command_execution'
+            ? `receipt-command=${String(event.item.command || '').includes('first-value receipt')}`
+            : '',
+          event?.item?.type === 'command_execution'
+            ? `receipt-output=${String(event.item.aggregated_output || '').includes(RECEIPT_SCHEMA)}`
+            : '',
+        ].join(':'),
+      );
+    } catch {
+      inventory.add('non-json-event');
+    }
+  }
+  return [...inventory].sort().join(' | ').slice(0, 2048);
+}
+
 function bytesRoot(value) {
   return `sha256:${crypto.createHash('sha256').update(value).digest('hex')}`;
 }
@@ -356,16 +466,7 @@ function run(argv) {
       ROOT_PATTERN.test(contract.productIdentity?.candidateRoot || ''),
       'candidate contract omitted candidate identity',
     );
-    const resultSchema = {
-      $schema: 'https://json-schema.org/draft/2020-12/schema',
-      type: 'object',
-      additionalProperties: false,
-      required: ['response', 'receipt'],
-      properties: {
-        response: { type: 'string', minLength: 40 },
-        receipt: contract.receiptSchema,
-      },
-    };
+    const resultSchema = codexResultSchema();
 
     const trials = [];
     for (let number = 1; number <= 3; number += 1) {
@@ -432,18 +533,28 @@ function run(argv) {
           questionMarkCount <= 1,
           `Codex trial ${number} asked more than one question`,
         );
-        verifyFirstValueReceipt(result.receipt, {
+        const receipts = receiptsFromCodexEventStream(execution.stdout);
+        assert(
+          receipts.length === 1,
+          `Codex trial ${number} emitted ${receipts.length} CLI receipts instead of exactly one; event inventory: ${codexEventInventory(execution.stdout)}`,
+        );
+        const [receipt] = receipts;
+        verifyFirstValueReceipt(receipt, {
           promptRoot,
           attemptId,
           candidateRoot: contract.productIdentity.candidateRoot,
           sourceRevision: options['source-revision'],
         });
         assert(
-          questionMarkCount === result.receipt.questionCount,
+          result.response.includes(receipt.receiptRoot),
+          `Codex trial ${number} response omitted the CLI receipt root`,
+        );
+        assert(
+          questionMarkCount === receipt.questionCount,
           `Codex trial ${number} declared a different question count`,
         );
         const receiptPath = path.join(trialRoot, 'receipt.json');
-        fs.writeFileSync(receiptPath, `${JSON.stringify(result.receipt)}\n`);
+        fs.writeFileSync(receiptPath, `${JSON.stringify(receipt)}\n`);
         const verification = parseJson(
           successful(
             spawnSync(
@@ -466,7 +577,7 @@ function run(argv) {
           eventStreamRoot: bytesRoot(Buffer.from(execution.stdout)),
           responseRoot: bytesRoot(Buffer.from(result.response)),
           questionMarkCount,
-          receipt: result.receipt,
+          receipt,
           verificationRoot: semanticRoot(verification),
         });
         process.stderr.write(

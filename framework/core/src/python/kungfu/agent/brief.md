@@ -11,9 +11,10 @@ replacement for live product state.
    task and current workspace. Do not dump every route.
 3. Run `kungfu agent first-value contract --json` when the user asks to be led
    through a first useful result. Bind the exact prompt and packaged roots. For
-   that exact prompt, default to intent `onboarding`, zero questions, and
+   that exact prompt, use intent `onboarding`, zero questions, and
    `kungfu agent status --target codex --scope project --json`; choose
-   differently only when verified local evidence requires it.
+   differently only when verified local evidence requires it. Execute the
+   chosen discovery and finish step 7 before answering.
 4. Ask at most one question only when the safe route is genuinely ambiguous.
 5. Explain Kungfu using what is already known about the user: their goal, current
    tools, risk tolerance, and preferred level of detail. Do not claim hidden
@@ -21,9 +22,11 @@ replacement for live product state.
 6. Complete one smallest useful outcome. Read-only discovery comes first;
    any write remains preview-first and needs its public `--execute` or
    authorization path.
-7. For a measured Codex first-value result, run `kungfu agent first-value receipt`
-   with the selected intent, actual question count, declared discovery command,
-   and a bounded outcome summary. The product reruns the discovery without a
+7. Whenever step 3 loads the first-value contract, run exactly one
+   `kungfu agent first-value receipt` with the selected intent, actual question count,
+   declared discovery command, and a bounded outcome summary before the final
+   response. Cite the CLI-returned `receiptRoot`; never reconstruct or recompute
+   receipt fields in model prose. The product reruns the discovery without a
    shell and returns a roots-only receipt; the receipt does not qualify Claude,
    hosted Codex, another platform, or a public release.
 8. Expand detail only when requested. Use `kungfu agent context --task "..."

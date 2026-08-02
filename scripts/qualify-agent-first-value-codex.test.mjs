@@ -4,10 +4,22 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 
 import {
+  codexResultSchema,
+  receiptsFromCodexEventStream,
   semanticRoot,
   verifyAgentFirstValueQualification,
   verifyFirstValueReceipt,
 } from './qualify-agent-first-value-codex.mjs';
+
+test('Codex result schema constrains the user response without copying receipts', () => {
+  assert.deepEqual(codexResultSchema(), {
+    $schema: 'https://json-schema.org/draft/2020-12/schema',
+    type: 'object',
+    additionalProperties: false,
+    required: ['response'],
+    properties: { response: { type: 'string', minLength: 40 } },
+  });
+});
 
 const root = (character) => `sha256:${character.repeat(64)}`;
 
@@ -58,6 +70,27 @@ function receipt(number) {
   value.receiptRoot = semanticRoot(value);
   return value;
 }
+
+test('extracts only CLI receipts from Codex command execution events', () => {
+  const value = receipt(1);
+  const stream = [
+    JSON.stringify({
+      type: 'item.completed',
+      item: {
+        type: 'command_execution',
+        aggregated_output: JSON.stringify({
+          final_output: `command output\n${JSON.stringify(value, null, 2)}\n`,
+        }),
+      },
+    }),
+    JSON.stringify({
+      type: 'item.completed',
+      item: { type: 'agent_message', text: JSON.stringify(receipt(2)) },
+    }),
+  ].join('\n');
+
+  assert.deepEqual(receiptsFromCodexEventStream(stream), [value]);
+});
 
 function qualification() {
   const receipts = [receipt(1), receipt(2), receipt(3)];
