@@ -9,7 +9,6 @@ import React from 'react';
 import {
   CLOSED_CONTROL_PLANE,
   type ControlPlaneState,
-  type ProductSurface,
   QUICK_COMMANDS,
   type QuickCommand,
 } from './control-plane-state.js';
@@ -88,12 +87,6 @@ export type ProfileShellLayout = {
   navigationWidth: number;
   evidenceWidth: number;
 };
-
-export function useStartupProductSurface(
-  surface: ProductSurface,
-): ProductSurface {
-  return React.useRef(surface).current;
-}
 
 export function resolveProfileShellLayout(
   dimensions: TerminalDimensions,

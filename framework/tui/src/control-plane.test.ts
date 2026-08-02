@@ -24,7 +24,6 @@ import {
   reduceControlPlaneInput,
   resolveProductStartupSurface,
   shouldStartContextualProjectRestore,
-  useStartupProductSurface,
 } from './profile-shell.js';
 import {
   PROJECTS_QUICK_COMMANDS,
@@ -156,7 +155,7 @@ function ContextualProjectRestoreHarness({
   navigation?: Promise<ProductSurface>;
 }) {
   const [surface, setSurfaceState] = React.useState<ProductSurface>('loading');
-  const startupSurface = useStartupProductSurface(surface);
+  const startupSurface = React.useRef(surface).current;
   const surfaceRef = React.useRef(surface);
   const [loading, setLoading] = React.useState(false);
   const [restored, setRestored] = React.useState(false);
