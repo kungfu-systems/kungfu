@@ -213,6 +213,29 @@ if (firstValueContract) {
     fail('first-value contract has an unknown schema');
   if (prompt.root !== promptRoot)
     fail('first-value contract prompt root does not bind the exact UTF-8 text');
+  const promptFamily = firstValueContract.promptFamily || {};
+  const variants = promptFamily.variants || [];
+  if (promptFamily.canonicalRoot !== prompt.root || variants.length !== 5)
+    fail('first-value contract natural prompt family is incomplete');
+  const promptRoots = new Set([prompt.root]);
+  for (const variant of variants) {
+    const root = `sha256:${crypto
+      .createHash('sha256')
+      .update(String(variant.text || ''), 'utf8')
+      .digest('hex')}`;
+    if (variant.root !== root || promptRoots.has(root))
+      fail('first-value contract natural prompt variant root is invalid');
+    promptRoots.add(root);
+    if (
+      !String(variant.text || '').includes(
+        promptFamily.naturalLanguagePolicy?.requiredPhrase || '',
+      ) ||
+      (promptFamily.naturalLanguagePolicy?.forbiddenProtocolHints || []).some(
+        (hint) => String(variant.text || '').includes(hint),
+      )
+    )
+      fail('first-value contract variant leaks protocol-step instructions');
+  }
   if (firstValueContract.result?.maximumQuestionCount !== 1)
     fail('first-value contract does not enforce at most one question');
   if (firstValueContract.result?.requiredIntentCount !== 1)
@@ -229,8 +252,19 @@ if (firstValueContract) {
       'kungfu agent status --target codex --scope project --json'
   )
     fail('first-value contract exact-prompt default is not deterministic');
-  if (firstValueContract.qualification?.requiredLocalCodexTrials !== 3)
-    fail('first-value contract does not require three local Codex trials');
+  if (
+    firstValueContract.qualification?.requiredLocalCodexTrials !== 10 ||
+    firstValueContract.qualification?.minimumCanonicalPromptTrials !== 5
+  )
+    fail('first-value contract does not require the 10-run local Codex matrix');
+  if (
+    firstValueContract.qualification?.experienceDimensions?.length !== 9 ||
+    firstValueContract.qualification?.evaluatorPolicy
+      ?.keywordOrSelfReportAloneCanPass !== false
+  )
+    fail(
+      'first-value contract does not bind the deterministic experience gate',
+    );
   if (
     firstValueContract.qualification?.ci !==
     'deterministic-contract-and-receipt-only'

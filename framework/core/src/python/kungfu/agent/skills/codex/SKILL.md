@@ -16,16 +16,20 @@ result is `status: bound`, including when another native writer is active.
 Run `kungfu agent brief`, then `kungfu agent docs --verify --json` and
 `kungfu agent map --json`. Select only the route relevant to the user's task.
 
-When the user asks to be led through a first useful result, also run
-`kungfu agent first-value contract --json`. Ask at most one necessary question,
+When an unfamiliar user naturally asks to understand, start, try, or be led
+through Kungfu, also run `kungfu agent first-value contract --json`. The user
+does not need to spell out the protocol. Ask at most one necessary question,
 complete one declared read-only or preview-safe discovery, and give one minimal
-outcome.
-For the contract's exact prompt, use its zero-question `onboarding` default and
+outcome. For the contract's canonical prompt and declared natural variants, use
+its zero-question `onboarding` default and
 `kungfu agent status --target codex --scope project --json` unless verified
 local evidence requires another route.
 Then run `kungfu agent first-value receipt --intent <id> --discovery '<command>'
 --question-count <0-or-1> --outcome '<bounded-summary>' --json`. Cite its
 `receiptRoot`; do not retain a raw transcript or treat model prose as proof.
+Name one user-supplied or workspace-visible personalization basis, then include
+one copyable read-only verification command, one concrete safe next step, and
+the candidate/provider/platform/public-release non-claims.
 
 Use `kungfu agent context --task "<task>" --role <role> --budget <tokens>
 --route <route-id> --json` when detail is needed. Stop on invalid roots,

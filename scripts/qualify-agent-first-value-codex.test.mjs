@@ -5,6 +5,8 @@ import test from 'node:test';
 
 import {
   codexResultSchema,
+  normalizedExperienceFromResult,
+  protocolEvidenceFromCodexEventStream,
   receiptsFromCodexEventStream,
   semanticRoot,
   verifyAgentFirstValueQualification,
@@ -12,18 +14,27 @@ import {
 } from './qualify-agent-first-value-codex.mjs';
 
 test('Codex result schema constrains the user response without copying receipts', () => {
-  assert.deepEqual(codexResultSchema(), {
-    $schema: 'https://json-schema.org/draft/2020-12/schema',
-    type: 'object',
-    additionalProperties: false,
-    required: ['response'],
-    properties: { response: { type: 'string', minLength: 40 } },
-  });
+  const schema = codexResultSchema();
+  assert.equal(schema.additionalProperties, false);
+  assert.deepEqual(schema.required, [
+    'response',
+    'intentId',
+    'personalization',
+    'verification',
+    'nextStep',
+    'nonClaims',
+  ]);
+  assert.equal(schema.properties.response.maxLength, 4096);
+  assert.equal(schema.properties.personalization.additionalProperties, false);
+  assert.deepEqual(schema.properties.nextStep.properties.safetyClass.enum, [
+    'read-only',
+    'preview-safe',
+  ]);
 });
 
 const root = (character) => `sha256:${character.repeat(64)}`;
 
-function receipt(number) {
+function receipt(number, promptRoot = root('1')) {
   const value = {
     schema: 'kungfu.agent-first-value-receipt/v1',
     verdict: 'verified',
@@ -33,7 +44,7 @@ function receipt(number) {
       qualificationScope: 'candidate-local-rerun',
     },
     platform: { system: 'darwin', machine: 'arm64' },
-    promptRoot: root('1'),
+    promptRoot,
     productIdentity: {
       version: '4.0.0-alpha.1',
       candidateRoot: root('2'),
@@ -71,6 +82,14 @@ function receipt(number) {
   return value;
 }
 
+const protocolEvidence = () => ({
+  brief: { commandRoot: root('a'), outputRoot: root('b') },
+  'docs-verify': { commandRoot: root('a'), outputRoot: root('b') },
+  'intent-map': { commandRoot: root('a'), outputRoot: root('b') },
+  'first-value-contract': { commandRoot: root('a'), outputRoot: root('b') },
+  'first-value-receipt': { commandRoot: root('a'), outputRoot: root('b') },
+});
+
 test('extracts only CLI receipts from Codex command execution events', () => {
   const value = receipt(1);
   const stream = [
@@ -106,10 +125,108 @@ test('keeps independently emitted CLI receipts distinct', () => {
   assert.deepEqual(receiptsFromCodexEventStream(stream), [first, second]);
 });
 
+test('binds autonomous protocol completion to command execution outputs', () => {
+  const value = receipt(1);
+  const command = (text, output) =>
+    JSON.stringify({
+      type: 'item.completed',
+      item: {
+        type: 'command_execution',
+        command: text,
+        aggregated_output: output,
+      },
+    });
+  const stream = [
+    command('kungfu agent brief', '# Kungfu Agent Brief'),
+    command(
+      'kungfu agent docs --verify --json',
+      JSON.stringify({
+        schema: 'kungfu.documentation-pack-verification/v1',
+        valid: true,
+      }),
+    ),
+    command(
+      'kungfu agent map --json',
+      JSON.stringify({
+        schema: 'kungfu.agent-intent-map/v1',
+        intents: [{ id: 'onboarding' }],
+      }),
+    ),
+    command(
+      'kungfu agent first-value contract --json',
+      JSON.stringify({
+        schema: 'kungfu.agent-first-value-contract-view/v1',
+        contract: {
+          prompt: { root: root('1') },
+          promptFamily: { variants: [] },
+        },
+      }),
+    ),
+    command(
+      'kungfu agent first-value receipt --intent onboarding',
+      JSON.stringify(value),
+    ),
+  ].join('\n');
+
+  assert.deepEqual(
+    Object.keys(protocolEvidenceFromCodexEventStream(stream, root('1'))).sort(),
+    [
+      'brief',
+      'docs-verify',
+      'first-value-contract',
+      'first-value-receipt',
+      'intent-map',
+    ],
+  );
+});
+
+test('normalizes experience only when the evidence is user-visible and safe', () => {
+  const value = receipt(1);
+  const explanation = 'Kungfu gives your agent a product-owned evidence path.';
+  const verification =
+    'kungfu agent status --target codex --scope project --json';
+  const next = 'kungfu project list --json';
+  const result = {
+    response: `${explanation} Verify with ${verification}; next run ${next}. ${value.receiptRoot}`,
+    intentId: 'onboarding',
+    personalization: { basis: ['current-tools'], explanation },
+    verification: {
+      command: verification,
+      expected: 'A rooted Agent status object.',
+    },
+    nextStep: {
+      command: next,
+      safetyClass: 'read-only',
+      reason: 'See registered projects.',
+    },
+    nonClaims: value.nonClaims.slice(0, 4),
+  };
+
+  assert.equal(
+    normalizedExperienceFromResult(result, value).intentId,
+    'onboarding',
+  );
+  result.nextStep.command = 'kungfu project open-plan --execute';
+  assert.throws(
+    () => normalizedExperienceFromResult(result, value),
+    /cannot execute writes/u,
+  );
+});
+
 function qualification() {
-  const receipts = [receipt(1), receipt(2), receipt(3)];
+  const promptRoots = [
+    ...Array(5).fill(root('1')),
+    root('a'),
+    root('b'),
+    root('c'),
+    root('d'),
+    root('e'),
+  ];
+  const receipts = promptRoots.map((promptRoot, index) =>
+    receipt(index + 1, promptRoot),
+  );
   const report = {
-    schema: 'kungfu.agent-first-value-local-codex-qualification/v1',
+    schema: 'kungfu.agent-first-value-local-codex-qualification/v2',
     qualified: true,
     provider: {
       surface: 'codex-cli',
@@ -123,16 +240,53 @@ function qualification() {
       productCandidateRoot: root('2'),
     },
     promptRoot: root('1'),
-    trialCount: 3,
+    promptCoverage: [
+      { id: 'canonical', root: root('1'), requiredCount: 5, count: 5 },
+      ...['a', 'b', 'c', 'd', 'e'].map((value, index) => ({
+        id: `variant-${index + 1}`,
+        root: root(value),
+        requiredCount: 1,
+        count: 1,
+      })),
+    ],
+    canonicalTrialCount: 5,
+    experienceDimensions: [
+      'autonomous-pack-verification',
+      'exactly-one-declared-intent',
+      'safe-discovery',
+      'question-count-at-most-one',
+      'candidate-bound-receipt-verification',
+      'personalized-plain-language-explanation',
+      'user-visible-verification',
+      'actionable-safe-next-step',
+      'qualification-non-claims',
+    ],
+    trialCount: 10,
     trials: receipts.map((value, index) => ({
       attemptId: value.attemptId,
       verified: true,
-      workspaceRoot: root(String(index + 3)),
-      eventStreamRoot: root(String(index + 6)),
-      responseRoot: root(String(index + 1)),
+      promptId: index < 5 ? 'canonical' : `variant-${index - 4}`,
+      promptRoot: value.promptRoot,
+      workspaceRoot: semanticRoot({ workspace: index }),
+      eventStreamRoot: semanticRoot({ events: index }),
+      responseRoot: semanticRoot({ response: index }),
       questionMarkCount: 0,
+      protocolEvidence: protocolEvidence(),
       receipt: value,
-      verificationRoot: root(String(index + 4)),
+      verificationRoot: root('8'),
+      experience: {
+        intentId: 'onboarding',
+        personalizationBasis: ['current-tools'],
+        personalizationExplanationRoot: root('9'),
+        verificationCommand:
+          'kungfu agent status --target codex --scope project --json',
+        verificationExpectedRoot: root('a'),
+        nextStepCommand: 'kungfu project list --json',
+        nextStepSafetyClass: 'read-only',
+        nextStepReasonRoot: root('b'),
+        nonClaims: value.nonClaims.slice(0, 4).sort(),
+        independentVerificationRoot: root('c'),
+      },
     })),
     rawTranscriptRetained: false,
     ciDependency: false,
@@ -143,7 +297,7 @@ function qualification() {
   return report;
 }
 
-test('deterministic CI verifier accepts three independent rooted receipts', () => {
+test('deterministic CI verifier accepts ten independent rooted experiences', () => {
   const report = qualification();
   assert.equal(
     verifyFirstValueReceipt(report.trials[0].receipt).verdict,
@@ -154,7 +308,7 @@ test('deterministic CI verifier accepts three independent rooted receipts', () =
 
 test('deterministic CI verifier rejects one failed or reused trial', () => {
   const failed = qualification();
-  failed.trials[2].verified = false;
+  failed.trials[9].verified = false;
   failed.qualificationRoot = semanticRoot({
     ...failed,
     qualificationRoot: undefined,
@@ -165,10 +319,19 @@ test('deterministic CI verifier rejects one failed or reused trial', () => {
   );
 
   const reused = qualification();
-  reused.trials[2].workspaceRoot = reused.trials[1].workspaceRoot;
+  reused.trials[9].workspaceRoot = reused.trials[8].workspaceRoot;
   assert.throws(
     () => verifyAgentFirstValueQualification(reused),
     /workspaces are not independent/u,
+  );
+});
+
+test('deterministic CI verifier rejects prose-only success without protocol evidence', () => {
+  const report = qualification();
+  report.trials[0].protocolEvidence = undefined;
+  assert.throws(
+    () => verifyAgentFirstValueQualification(report),
+    /omitted autonomous protocol evidence/u,
   );
 });
 

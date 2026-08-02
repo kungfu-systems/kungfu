@@ -50,6 +50,8 @@ def test_brief_and_intent_map_enforce_complete_bounded_first_entry():
     assert "run exactly one\n   `kungfu agent first-value receipt`" in brief
     assert "Cite the CLI-returned `receiptRoot`" in brief
     assert "never reconstruct or recompute" in brief
+    assert "the user does not need to name any protocol step" in brief
+    assert "one copyable read-only\n   verification command" in brief
     assert set(intent_map["requiredIntentIds"]) == {
         row["id"] for row in intent_map["intents"]
     }
@@ -152,10 +154,19 @@ def test_first_value_contract_binds_exact_prompt_and_packaged_roots():
     view = first_value.contract_view()
 
     assert view["contract"]["prompt"] == {
-        "text": "请运行 kungfu agent brief，不要在打印 brief 后停止，请继续按 First response protocol 依次验证文档、读取 intent map 与 first-value contract、执行一次安全发现并调用 first-value receipt 固化结果，最后结合你对我的了解，用最适合我的方式解释 Kungfu 并给我一个可验证的上手结果。",
-        "root": "sha256:c5e6c02d553e1addd4db51a573c54af86346b7ca55ee0b4778b80582cb56fee2",
+        "text": "请运行 kungfu agent brief，结合你对我的了解，用最适合我的方式解释并带我上手 Kungfu。",
+        "root": "sha256:423f13042ff32413653c8589a4fa768579ed6fbf90253e33952e60e86fa9338c",
         "encoding": "utf-8",
     }
+    family = view["contract"]["promptFamily"]
+    assert family["canonicalRoot"] == view["contract"]["prompt"]["root"]
+    assert len(family["variants"]) == 5
+    for prompt in [view["contract"]["prompt"], *family["variants"]]:
+        assert "kungfu agent brief" in prompt["text"]
+        assert all(
+            hint not in prompt["text"]
+            for hint in family["naturalLanguagePolicy"]["forbiddenProtocolHints"]
+        )
     assert view["contract"]["result"]["maximumQuestionCount"] == 1
     assert view["contract"]["result"]["exactPromptDefault"] == {
         "intentId": "onboarding",
@@ -163,7 +174,9 @@ def test_first_value_contract_binds_exact_prompt_and_packaged_roots():
         "discoveryCommand": "kungfu agent status --target codex --scope project --json",
         "outcomeKind": "verified-discovery",
     }
-    assert view["contract"]["qualification"]["requiredLocalCodexTrials"] == 3
+    assert view["contract"]["qualification"]["requiredLocalCodexTrials"] == 10
+    assert view["contract"]["qualification"]["minimumCanonicalPromptTrials"] == 5
+    assert len(view["contract"]["qualification"]["experienceDimensions"]) == 9
     assert view["productIdentity"]["candidateRoot"].startswith("sha256:")
     assert view["receiptSchema"]["properties"]["verdict"] == {
         "type": "string",
@@ -238,6 +251,22 @@ def test_first_value_receipt_reruns_declared_discovery_and_verifies():
     assert receipt["intentId"] == "onboarding"
     assert receipt["discovery"]["safetyClass"] == "read-only"
     assert receipt["discovery"]["outputBytes"] > 0
+    assert first_value.verify_receipt(receipt)["verified"] is True
+
+
+def test_first_value_receipt_binds_a_declared_natural_variant(monkeypatch):
+    variant = first_value.contract()["promptFamily"]["variants"][0]
+    monkeypatch.setenv("KUNGFU_FIRST_VALUE_PROMPT_ROOT", variant["root"])
+
+    receipt = first_value.create_receipt(
+        intent_id="onboarding",
+        discovery_command="kungfu agent capabilities --json",
+        question_count=0,
+        outcome_summary="Verified the candidate Agent capability envelope.",
+        runner=lambda argv, timeout, maximum: (0, b"ok\n", b""),
+    )
+
+    assert receipt["promptRoot"] == variant["root"]
     assert first_value.verify_receipt(receipt)["verified"] is True
 
 

@@ -72,6 +72,28 @@ def contract() -> dict[str, Any]:
     prompt = payload.get("prompt") or {}
     if prompt.get("root") != _root_bytes(str(prompt.get("text", "")).encode("utf-8")):
         raise ValueError("first-value contract prompt root mismatch")
+    family = payload.get("promptFamily") or {}
+    if family.get("canonicalRoot") != prompt.get("root"):
+        raise ValueError("first-value prompt family canonical root mismatch")
+    policy = family.get("naturalLanguagePolicy") or {}
+    required_phrase = str(policy.get("requiredPhrase") or "")
+    forbidden = [str(value) for value in policy.get("forbiddenProtocolHints") or []]
+    prompts = [prompt, *(family.get("variants") or [])]
+    roots: set[str] = set()
+    for candidate in prompts:
+        text = str(candidate.get("text") or "")
+        root = str(candidate.get("root") or "")
+        if not text or root != _root_bytes(text.encode("utf-8")):
+            raise ValueError("first-value prompt family root mismatch")
+        if root in roots:
+            raise ValueError("first-value prompt family roots must be unique")
+        roots.add(root)
+        if required_phrase and required_phrase not in text:
+            raise ValueError(
+                "first-value prompt family omitted the natural entry phrase"
+            )
+        if any(hint in text for hint in forbidden):
+            raise ValueError("first-value prompt family contains a protocol-step hint")
     return payload
 
 
@@ -107,6 +129,21 @@ def _pack_roots() -> dict[str, str]:
         "briefRoot": _root_bytes(_resource_bytes("brief.md")),
         "intentMapRoot": _root_bytes(_resource_bytes("intent-map.json")),
     }
+
+
+def _prompt_roots(first_value_contract: dict[str, Any]) -> set[str]:
+    prompt = first_value_contract["prompt"]
+    variants = (first_value_contract.get("promptFamily") or {}).get("variants") or []
+    return {prompt["root"], *(row["root"] for row in variants)}
+
+
+def _current_prompt_root(first_value_contract: dict[str, Any]) -> str:
+    requested = os.environ.get("KUNGFU_FIRST_VALUE_PROMPT_ROOT", "").strip()
+    if not requested:
+        return first_value_contract["prompt"]["root"]
+    if requested not in _prompt_roots(first_value_contract):
+        raise ValueError("KUNGFU_FIRST_VALUE_PROMPT_ROOT is not declared")
+    return requested
 
 
 def _source_revision() -> str | None:
@@ -251,7 +288,7 @@ def create_receipt(
             "system": platform.system().lower(),
             "machine": platform.machine().lower(),
         },
-        "promptRoot": first_value_contract["prompt"]["root"],
+        "promptRoot": _current_prompt_root(first_value_contract),
         "productIdentity": _product_identity(roots),
         "questionCount": question_count,
         "intentId": intent_id,
@@ -303,8 +340,8 @@ def verify_receipt(
         raise ValueError("first-value receipt root mismatch")
 
     first_value_contract = contract()
-    if receipt["promptRoot"] != first_value_contract["prompt"]["root"]:
-        raise ValueError("first-value receipt prompt root mismatch")
+    if receipt["promptRoot"] not in _prompt_roots(first_value_contract):
+        raise ValueError("first-value receipt prompt root is not declared")
     _, safety_class = validate_discovery(
         receipt["intentId"], receipt["discovery"]["command"]
     )

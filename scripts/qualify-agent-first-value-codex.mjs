@@ -12,7 +12,26 @@ const ROOT_PATTERN = /^sha256:[0-9a-f]{64}$/u;
 const REVISION_PATTERN = /^[0-9a-f]{40,64}$/u;
 const RECEIPT_SCHEMA = 'kungfu.agent-first-value-receipt/v1';
 const QUALIFICATION_SCHEMA =
-  'kungfu.agent-first-value-local-codex-qualification/v1';
+  'kungfu.agent-first-value-local-codex-qualification/v2';
+const REQUIRED_TRIALS = 10;
+const MINIMUM_CANONICAL_TRIALS = 5;
+const REQUIRED_NON_CLAIMS = [
+  'claude-qualified',
+  'ci-hosted-codex-qualified',
+  'other-platforms-qualified',
+  'public-release-qualified',
+];
+const EXPERIENCE_DIMENSIONS = [
+  'autonomous-pack-verification',
+  'exactly-one-declared-intent',
+  'safe-discovery',
+  'question-count-at-most-one',
+  'candidate-bound-receipt-verification',
+  'personalized-plain-language-explanation',
+  'user-visible-verification',
+  'actionable-safe-next-step',
+  'qualification-non-claims',
+];
 
 function stable(value) {
   if (Array.isArray(value)) return value.map(stable);
@@ -38,9 +57,69 @@ export function codexResultSchema() {
     $schema: 'https://json-schema.org/draft/2020-12/schema',
     type: 'object',
     additionalProperties: false,
-    required: ['response'],
+    required: [
+      'response',
+      'intentId',
+      'personalization',
+      'verification',
+      'nextStep',
+      'nonClaims',
+    ],
     properties: {
-      response: { type: 'string', minLength: 40 },
+      response: { type: 'string', minLength: 80, maxLength: 4096 },
+      intentId: { type: 'string', minLength: 1, maxLength: 64 },
+      personalization: {
+        type: 'object',
+        additionalProperties: false,
+        required: ['basis', 'explanation'],
+        properties: {
+          basis: {
+            type: 'array',
+            minItems: 1,
+            maxItems: 4,
+            uniqueItems: true,
+            items: {
+              type: 'string',
+              enum: [
+                'user-goal',
+                'current-tools',
+                'risk-tolerance',
+                'detail-preference',
+                'workspace',
+              ],
+            },
+          },
+          explanation: { type: 'string', minLength: 20, maxLength: 512 },
+        },
+      },
+      verification: {
+        type: 'object',
+        additionalProperties: false,
+        required: ['command', 'expected'],
+        properties: {
+          command: { type: 'string', minLength: 8, maxLength: 512 },
+          expected: { type: 'string', minLength: 8, maxLength: 512 },
+        },
+      },
+      nextStep: {
+        type: 'object',
+        additionalProperties: false,
+        required: ['command', 'safetyClass', 'reason'],
+        properties: {
+          command: { type: 'string', minLength: 8, maxLength: 512 },
+          safetyClass: { type: 'string', enum: ['read-only', 'preview-safe'] },
+          reason: { type: 'string', minLength: 8, maxLength: 512 },
+        },
+      },
+      nonClaims: {
+        type: 'array',
+        minItems: 4,
+        uniqueItems: true,
+        items: {
+          type: 'string',
+          enum: REQUIRED_NON_CLAIMS,
+        },
+      },
     },
   };
 }
@@ -120,6 +199,119 @@ export function receiptsFromCodexEventStream(jsonl) {
     }
   }
   return receipts;
+}
+
+function commandExecutions(jsonl) {
+  const executions = [];
+  for (const line of String(jsonl).split(/\r?\n/u)) {
+    if (!line.trim()) continue;
+    try {
+      const event = JSON.parse(line);
+      if (
+        event?.type === 'item.completed' &&
+        event.item?.type === 'command_execution' &&
+        typeof event.item.command === 'string'
+      ) {
+        executions.push({
+          command: event.item.command,
+          output: String(
+            event.item.aggregated_output ||
+              event.item.output ||
+              event.item.text ||
+              '',
+          ),
+        });
+      }
+    } catch {
+      // Provider event streams are untrusted input; malformed lines are ignored.
+    }
+  }
+  return executions;
+}
+
+function outputHasJson(output, predicate) {
+  return jsonObjects(output).some((value) => {
+    if (predicate(value)) return true;
+    return Object.values(value || {}).some(
+      (child) => child && typeof child === 'object' && predicate(child),
+    );
+  });
+}
+
+export function protocolEvidenceFromCodexEventStream(
+  jsonl,
+  expectedPromptRoot,
+) {
+  const requirements = [
+    {
+      id: 'brief',
+      command: (value) => /(?:^|\s)kungfu agent brief(?:\s|$)/u.test(value),
+      output: (value) => value.includes('# Kungfu Agent Brief'),
+    },
+    {
+      id: 'docs-verify',
+      command: (value) => value.includes('agent docs --verify --json'),
+      output: (value) =>
+        outputHasJson(
+          value,
+          (row) =>
+            row?.schema === 'kungfu.documentation-pack-verification/v1' &&
+            row.valid === true,
+        ),
+    },
+    {
+      id: 'intent-map',
+      command: (value) => value.includes('agent map --json'),
+      output: (value) =>
+        outputHasJson(
+          value,
+          (row) =>
+            typeof row?.schema === 'string' &&
+            row.schema.includes('agent-intent-map') &&
+            Array.isArray(row.intents),
+        ),
+    },
+    {
+      id: 'first-value-contract',
+      command: (value) => value.includes('agent first-value contract --json'),
+      output: (value) =>
+        outputHasJson(
+          value,
+          (row) =>
+            row?.schema === 'kungfu.agent-first-value-contract-view/v1' &&
+            row.contract?.promptFamily &&
+            [
+              row.contract?.prompt?.root,
+              ...(row.contract?.promptFamily?.variants || []).map(
+                (variant) => variant.root,
+              ),
+            ].includes(expectedPromptRoot),
+        ),
+    },
+    {
+      id: 'first-value-receipt',
+      command: (value) => value.includes('agent first-value receipt'),
+      output: (value) => value.includes(RECEIPT_SCHEMA),
+    },
+  ];
+  const executions = commandExecutions(jsonl);
+  const evidence = {};
+  for (const requirement of requirements) {
+    const matches = executions.filter(
+      (execution) =>
+        requirement.command(execution.command) &&
+        requirement.output(execution.output),
+    );
+    assert(
+      matches.length === 1,
+      `protocol evidence ${requirement.id} expected one verified command, got ${matches.length}`,
+    );
+    evidence[requirement.id] = {
+      commandRoot: bytesRoot(Buffer.from(matches[0].command)),
+      outputRoot: bytesRoot(Buffer.from(matches[0].output)),
+    };
+  }
+  return evidence;
 }
 
 function codexEventInventory(jsonl) {
@@ -291,6 +483,107 @@ export function verifyFirstValueReceipt(receipt, expected = {}) {
   return receipt;
 }
 
+function safeUserCommand(command, label) {
+  assert(
+    typeof command === 'string' && command.startsWith('kungfu '),
+    `${label} must use the public Kungfu CLI`,
+  );
+  assert(!command.includes('--execute'), `${label} cannot execute writes`);
+  assert(
+    !/[;&|`]|\$\(/u.test(command),
+    `${label} cannot contain shell composition`,
+  );
+}
+
+export function normalizedExperienceFromResult(result, receipt) {
+  assert(
+    typeof result?.response === 'string' && result.response.includes('Kungfu'),
+    'response omitted a plain-language Kungfu explanation',
+  );
+  assert(
+    result.intentId === receipt.intentId,
+    'response intent mismatched receipt',
+  );
+  assert(
+    result.personalization?.basis?.length >= 1 &&
+      typeof result.personalization?.explanation === 'string' &&
+      result.response.includes(result.personalization.explanation),
+    'personalization was not grounded in the user-visible response',
+  );
+  assert(
+    result.response.includes(receipt.receiptRoot),
+    'response omitted the CLI receipt root',
+  );
+  safeUserCommand(result.verification?.command, 'verification command');
+  safeUserCommand(result.nextStep?.command, 'next-step command');
+  assert(
+    result.response.includes(result.verification.command) &&
+      result.response.includes(result.nextStep.command),
+    'verification or next-step command was not user-visible',
+  );
+  assert(
+    ['read-only', 'preview-safe'].includes(result.nextStep?.safetyClass),
+    'next step omitted its safety class',
+  );
+  for (const nonClaim of REQUIRED_NON_CLAIMS) {
+    assert(
+      result.nonClaims?.includes(nonClaim),
+      `response omitted non-claim ${nonClaim}`,
+    );
+  }
+  return {
+    intentId: result.intentId,
+    personalizationBasis: [...result.personalization.basis].sort(),
+    personalizationExplanationRoot: bytesRoot(
+      Buffer.from(result.personalization.explanation),
+    ),
+    verificationCommand: result.verification.command,
+    verificationExpectedRoot: bytesRoot(
+      Buffer.from(result.verification.expected),
+    ),
+    nextStepCommand: result.nextStep.command,
+    nextStepSafetyClass: result.nextStep.safetyClass,
+    nextStepReasonRoot: bytesRoot(Buffer.from(result.nextStep.reason)),
+    nonClaims: [...result.nonClaims].sort(),
+  };
+}
+
+function declaredPromptEntries(contract) {
+  return [
+    { id: 'canonical', ...contract.prompt },
+    ...(contract.promptFamily?.variants || []),
+  ];
+}
+
+function validatePromptFamily(contract) {
+  const entries = declaredPromptEntries(contract);
+  const policy = contract.promptFamily?.naturalLanguagePolicy || {};
+  assert(entries.length >= 2, 'prompt family omitted natural variants');
+  assert(
+    contract.promptFamily?.canonicalRoot === contract.prompt?.root,
+    'prompt family canonical root mismatch',
+  );
+  const roots = new Set();
+  for (const entry of entries) {
+    assert(
+      bytesRoot(Buffer.from(entry.text || '')) === entry.root,
+      `prompt ${entry.id} root mismatch`,
+    );
+    assert(!roots.has(entry.root), `prompt ${entry.id} reused a root`);
+    roots.add(entry.root);
+    assert(
+      !policy.requiredPhrase || entry.text.includes(policy.requiredPhrase),
+      `prompt ${entry.id} omitted the natural entry phrase`,
+    );
+    for (const hint of policy.forbiddenProtocolHints || [])
+      assert(
+        !entry.text.includes(hint),
+        `prompt ${entry.id} contains protocol hint ${hint}`,
+      );
+  }
+  return entries;
+}
+
 export function verifyAgentFirstValueQualification(report) {
   assert(
     report?.schema === QUALIFICATION_SCHEMA,
@@ -310,8 +603,22 @@ export function verifyAgentFirstValueQualification(report) {
     'qualification is not macOS-local',
   );
   assert(
-    report.trialCount === 3 && report.trials?.length === 3,
-    'exactly three trials are required',
+    report.trialCount === REQUIRED_TRIALS &&
+      report.trials?.length === REQUIRED_TRIALS,
+    `exactly ${REQUIRED_TRIALS} trials are required`,
+  );
+  assert(
+    report.canonicalTrialCount >= MINIMUM_CANONICAL_TRIALS,
+    `at least ${MINIMUM_CANONICAL_TRIALS} canonical trials are required`,
+  );
+  assert(
+    report.promptCoverage?.every((entry) => entry.count >= entry.requiredCount),
+    'prompt-family coverage is incomplete',
+  );
+  assert(
+    JSON.stringify(report.experienceDimensions) ===
+      JSON.stringify(EXPERIENCE_DIMENSIONS),
+    'experience dimension contract drifted',
   );
   assert(
     report.rawTranscriptRetained === false,
@@ -331,6 +638,7 @@ export function verifyAgentFirstValueQualification(report) {
   );
   const ids = new Set();
   const workspaces = new Set();
+  const promptCounts = new Map();
   for (const trial of report.trials) {
     assert(trial.verified === true, 'a local Codex trial is not verified');
     assert(
@@ -343,6 +651,10 @@ export function verifyAgentFirstValueQualification(report) {
     );
     ids.add(trial.attemptId);
     workspaces.add(trial.workspaceRoot);
+    promptCounts.set(
+      trial.promptRoot,
+      (promptCounts.get(trial.promptRoot) || 0) + 1,
+    );
     assert(
       trial.questionMarkCount === trial.receipt.questionCount,
       'question count was not independently checked',
@@ -355,19 +667,48 @@ export function verifyAgentFirstValueQualification(report) {
       ROOT_PATTERN.test(trial.responseRoot || ''),
       'trial omitted response root',
     );
+    assert(
+      Object.keys(trial.protocolEvidence || {})
+        .sort()
+        .join(',') ===
+        'brief,docs-verify,first-value-contract,first-value-receipt,intent-map',
+      'trial omitted autonomous protocol evidence',
+    );
+    for (const evidence of Object.values(trial.protocolEvidence)) {
+      assert(
+        ROOT_PATTERN.test(evidence.commandRoot || '') &&
+          ROOT_PATTERN.test(evidence.outputRoot || ''),
+        'trial protocol evidence roots are invalid',
+      );
+    }
+    assert(
+      trial.experience?.intentId === trial.receipt.intentId &&
+        trial.experience?.personalizationBasis?.length >= 1,
+      'trial omitted normalized personalized experience facts',
+    );
+    safeUserCommand(
+      trial.experience?.verificationCommand,
+      'verification command',
+    );
+    safeUserCommand(trial.experience?.nextStepCommand, 'next-step command');
+    assert(
+      ROOT_PATTERN.test(trial.experience?.independentVerificationRoot || ''),
+      'trial omitted independent candidate verification',
+    );
     verifyFirstValueReceipt(trial.receipt, {
-      promptRoot: report.promptRoot,
+      promptRoot: trial.promptRoot,
       attemptId: trial.attemptId,
       candidateRoot: report.candidate.productCandidateRoot,
       sourceRevision: report.candidate.sourceRevision,
     });
   }
-  for (const nonClaim of [
-    'claude-qualified',
-    'ci-hosted-codex-qualified',
-    'other-platforms-qualified',
-    'public-release-qualified',
-  ])
+  for (const coverage of report.promptCoverage) {
+    assert(
+      promptCounts.get(coverage.root) === coverage.count,
+      `prompt coverage count drifted for ${coverage.id}`,
+    );
+  }
+  for (const nonClaim of REQUIRED_NON_CLAIMS)
     assert(
       report.nonClaims?.includes(nonClaim),
       `qualification omitted non-claim ${nonClaim}`,
@@ -474,8 +815,14 @@ function run(argv) {
       'candidate contract omitted prompt identity',
     );
     assert(
-      contract.contract?.qualification?.requiredLocalCodexTrials === 3,
+      contract.contract?.qualification?.requiredLocalCodexTrials ===
+        REQUIRED_TRIALS,
       'candidate contract trial count drifted',
+    );
+    assert(
+      contract.contract?.qualification?.minimumCanonicalPromptTrials ===
+        MINIMUM_CANONICAL_TRIALS,
+      'candidate canonical prompt threshold drifted',
     );
     assert(
       contract.productIdentity?.sourceRevision === options['source-revision'],
@@ -486,9 +833,21 @@ function run(argv) {
       'candidate contract omitted candidate identity',
     );
     const resultSchema = codexResultSchema();
+    const promptEntries = validatePromptFamily(contract.contract);
+    const canonical = promptEntries[0];
+    const variants = promptEntries.slice(1);
+    assert(
+      MINIMUM_CANONICAL_TRIALS + variants.length === REQUIRED_TRIALS,
+      'prompt family cannot satisfy the exact trial matrix',
+    );
+    const trialPrompts = [
+      ...Array.from({ length: MINIMUM_CANONICAL_TRIALS }, () => canonical),
+      ...variants,
+    ];
 
     const trials = [];
-    for (let number = 1; number <= 3; number += 1) {
+    for (let number = 1; number <= REQUIRED_TRIALS; number += 1) {
+      const promptEntry = trialPrompts[number - 1];
       const attemptId = `codex-local-${number}-${crypto.randomUUID()}`;
       const trialRoot = fs.mkdtempSync(
         path.join(os.tmpdir(), `kungfu-first-value-${number}-`),
@@ -505,8 +864,11 @@ function run(argv) {
         XDG_CONFIG_HOME: path.join(trialHome, '.config'),
         KF_CONFIG_HOME: path.join(trialHome, '.config', 'kungfu'),
         KUNGFU_FIRST_VALUE_ATTEMPT_ID: attemptId,
+        KUNGFU_FIRST_VALUE_PROMPT_ROOT: promptEntry.root,
       };
-      process.stderr.write(`[agent-first-value] Codex trial ${number}/3\n`);
+      process.stderr.write(
+        `[agent-first-value] Codex trial ${number}/${REQUIRED_TRIALS} (${promptEntry.id})\n`,
+      );
       try {
         const execution = successful(
           spawnSync(
@@ -525,7 +887,7 @@ function run(argv) {
               schemaPath,
               '--cd',
               workspace,
-              prompt,
+              promptEntry.text,
             ],
             {
               encoding: 'utf8',
@@ -541,10 +903,6 @@ function run(argv) {
           finalText,
           `Codex trial ${number} final response`,
         );
-        assert(
-          result.response.includes('Kungfu'),
-          `Codex trial ${number} response omitted Kungfu`,
-        );
         const questionMarkCount = [...result.response].filter(
           (character) => character === '?' || character === '？',
         ).length;
@@ -559,19 +917,20 @@ function run(argv) {
         );
         const [receipt] = receipts;
         verifyFirstValueReceipt(receipt, {
-          promptRoot,
+          promptRoot: promptEntry.root,
           attemptId,
           candidateRoot: contract.productIdentity.candidateRoot,
           sourceRevision: options['source-revision'],
         });
         assert(
-          result.response.includes(receipt.receiptRoot),
-          `Codex trial ${number} response omitted the CLI receipt root`,
-        );
-        assert(
           questionMarkCount === receipt.questionCount,
           `Codex trial ${number} declared a different question count`,
         );
+        const protocolEvidence = protocolEvidenceFromCodexEventStream(
+          execution.stdout,
+          promptEntry.root,
+        );
+        const experience = normalizedExperienceFromResult(result, receipt);
         const receiptPath = path.join(trialRoot, 'receipt.json');
         fs.writeFileSync(receiptPath, `${JSON.stringify(receipt)}\n`);
         const verification = parseJson(
@@ -592,15 +951,22 @@ function run(argv) {
         trials.push({
           attemptId,
           verified: true,
+          promptId: promptEntry.id,
+          promptRoot: promptEntry.root,
           workspaceRoot: bytesRoot(Buffer.from(workspace)),
           eventStreamRoot: bytesRoot(Buffer.from(execution.stdout)),
           responseRoot: bytesRoot(Buffer.from(result.response)),
           questionMarkCount,
+          protocolEvidence,
           receipt,
           verificationRoot: semanticRoot(verification),
+          experience: {
+            ...experience,
+            independentVerificationRoot: semanticRoot(verification),
+          },
         });
         process.stderr.write(
-          `[agent-first-value] Codex trial ${number}/3 passed\n`,
+          `[agent-first-value] Codex trial ${number}/${REQUIRED_TRIALS} passed\n`,
         );
       } finally {
         fs.rmSync(trialRoot, { recursive: true, force: true });
@@ -622,7 +988,17 @@ function run(argv) {
         productCandidateRoot: contract.productIdentity.candidateRoot,
       },
       promptRoot,
-      trialCount: 3,
+      promptCoverage: promptEntries.map((entry, index) => ({
+        id: entry.id,
+        root: entry.root,
+        requiredCount: index === 0 ? MINIMUM_CANONICAL_TRIALS : 1,
+        count: trials.filter((trial) => trial.promptRoot === entry.root).length,
+      })),
+      canonicalTrialCount: trials.filter(
+        (trial) => trial.promptRoot === promptRoot,
+      ).length,
+      experienceDimensions: EXPERIENCE_DIMENSIONS,
+      trialCount: REQUIRED_TRIALS,
       trials,
       rawTranscriptRetained: false,
       ciDependency: false,
