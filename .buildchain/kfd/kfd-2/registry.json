@@ -82,6 +82,11 @@
         "type": "file",
         "path": "scripts/qualify-agent-first-value-codex.test.mjs",
         "description": "Provider-free deterministic CI coverage for aggregate and receipt acceptance, tampering, reuse, and partial-failure cases."
+      },
+      {
+        "type": "file",
+        "path": "docs/qualification/evidence/agent-brief-first-value-loop/report.json",
+        "description": "Sanitized three-trial local Codex qualification whose receipts and aggregate root are reverified in provider-free CI."
       }
       ],
       "artifacts": [

@@ -79,7 +79,7 @@ test('extracts only CLI receipts from Codex command execution events', () => {
       item: {
         type: 'command_execution',
         aggregated_output: JSON.stringify({
-          final_output: `command output\n${JSON.stringify(value, null, 2)}\n`,
+          final_output: `command output\n${JSON.stringify(value, null, 2)}\n${JSON.stringify(value)}\n`,
         }),
       },
     }),
@@ -90,6 +90,20 @@ test('extracts only CLI receipts from Codex command execution events', () => {
   ].join('\n');
 
   assert.deepEqual(receiptsFromCodexEventStream(stream), [value]);
+});
+
+test('keeps independently emitted CLI receipts distinct', () => {
+  const first = receipt(1);
+  const second = receipt(2);
+  const stream = JSON.stringify({
+    type: 'item.completed',
+    item: {
+      type: 'command_execution',
+      aggregated_output: `${JSON.stringify(first)}\n${JSON.stringify(second)}\n`,
+    },
+  });
+
+  assert.deepEqual(receiptsFromCodexEventStream(stream), [first, second]);
 });
 
 function qualification() {

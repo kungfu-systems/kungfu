@@ -80,6 +80,7 @@ function jsonObjects(value) {
 
 export function receiptsFromCodexEventStream(jsonl) {
   const receipts = [];
+  const seen = new Set();
   const collect = (value, depth = 0) => {
     if (depth > 8) return;
     if (Array.isArray(value)) {
@@ -87,8 +88,14 @@ export function receiptsFromCodexEventStream(jsonl) {
       return;
     }
     if (value && typeof value === 'object') {
-      if (value.schema === RECEIPT_SCHEMA) receipts.push(value);
-      else for (const child of Object.values(value)) collect(child, depth + 1);
+      if (value.schema === RECEIPT_SCHEMA) {
+        const key = JSON.stringify(stable(value));
+        if (!seen.has(key)) {
+          seen.add(key);
+          receipts.push(value);
+        }
+      } else
+        for (const child of Object.values(value)) collect(child, depth + 1);
       return;
     }
     if (typeof value !== 'string' || !value.includes(RECEIPT_SCHEMA)) return;
@@ -394,6 +401,18 @@ function args(argv) {
 }
 
 function run(argv) {
+  if (argv[0] === '--verify-report') {
+    assert(argv.length === 2, '--verify-report requires exactly one path');
+    const reportPath = path.resolve(argv[1]);
+    const report = parseJson(
+      fs.readFileSync(reportPath, 'utf8'),
+      'first-value qualification report',
+    );
+    process.stdout.write(
+      `${JSON.stringify(verifyAgentFirstValueQualification(report), null, 2)}\n`,
+    );
+    return;
+  }
   const options = args(argv);
   const kungfu = fs.realpathSync(options.kungfu);
   const liveCli = fs.existsSync('/usr/local/bin/kungfu')

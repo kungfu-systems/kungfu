@@ -1,0 +1,202 @@
+{
+  "schema": "kungfu.agent-first-value-local-codex-qualification/v1",
+  "qualified": true,
+  "provider": {
+    "surface": "codex-cli",
+    "version": "codex-cli 0.146.0",
+    "executionMode": "codex-exec-ephemeral"
+  },
+  "platform": {
+    "system": "darwin",
+    "arch": "arm64"
+  },
+  "candidate": {
+    "executableRoot": "sha256:1fbf5274a9c7bf4d3c13b70297e97ff9e18ba053c92f55362ff6ec99917a2f39",
+    "sourceRevision": "602b7aa65ef13d94578d299e8699d7183ac41949",
+    "productCandidateRoot": "sha256:056488e9fc4e2850c93046ee54196e1a137064d725f9d78b96671477ed5f61f6"
+  },
+  "promptRoot": "sha256:c5e6c02d553e1addd4db51a573c54af86346b7ca55ee0b4778b80582cb56fee2",
+  "trialCount": 3,
+  "trials": [
+    {
+      "attemptId": "codex-local-1-f0eff5fe-864d-4612-8845-2a03b5cefb84",
+      "verified": true,
+      "workspaceRoot": "sha256:538e003d2048dbbef908a0bfcf8bd75bc843ec70a2e558456fa3d5e552c5f30d",
+      "eventStreamRoot": "sha256:4ed5d08f44e42629132ccb53bd84cfdad2b21324c961abd222173c1788a8f36a",
+      "responseRoot": "sha256:ad48049d18ba33fae5e112630fdd8c84ec8d7eedb294440e8b2fe8a9bb448d90",
+      "questionMarkCount": 0,
+      "receipt": {
+        "attemptId": "codex-local-1-f0eff5fe-864d-4612-8845-2a03b5cefb84",
+        "diagnostics": [],
+        "discovery": {
+          "command": "kungfu agent status --target codex --scope project --json",
+          "exitCode": 0,
+          "outputBytes": 989,
+          "outputRoot": "sha256:ce244356906982909caa5ac44fc5764c13e44201387799aa0e301592de8b9c9c",
+          "safetyClass": "read-only"
+        },
+        "intentId": "onboarding",
+        "nonClaims": [
+          "claude-qualified",
+          "ci-hosted-codex-qualified",
+          "other-platforms-qualified",
+          "public-release-qualified",
+          "model-output-alone-is-proof",
+          "brief-or-skill-grants-write-authority"
+        ],
+        "observedAt": "2026-08-02T02:51:17.917505Z",
+        "outcome": {
+          "kind": "verified-discovery",
+          "summaryRoot": "sha256:deee6bea602b819188de9b3ca3fa98542ce268df5caf7752620a48746e694927",
+          "verificationRoot": "sha256:d635a0feed525ccf33d1b0520d8aeb1c39088e623475985e5a292d948f8f4dea"
+        },
+        "platform": {
+          "machine": "arm64",
+          "system": "darwin"
+        },
+        "productIdentity": {
+          "briefRoot": "sha256:c954a43df415772ec5fe6f1b8cb88ea0a7508279d59ddffcb3c1a13081008ef9",
+          "candidateRoot": "sha256:056488e9fc4e2850c93046ee54196e1a137064d725f9d78b96671477ed5f61f6",
+          "contractRoot": "sha256:7242d507c17447c0d14cfdbd653c7c0c18c3eb106f3ab0f9b943cd12c78d87e6",
+          "intentMapRoot": "sha256:d483703e85a9db94b462bc4d7d09eed89af7333ad3723800f3a0496386a80531",
+          "sourceRevision": "602b7aa65ef13d94578d299e8699d7183ac41949",
+          "version": "4.0.0-alpha.1"
+        },
+        "promptRoot": "sha256:c5e6c02d553e1addd4db51a573c54af86346b7ca55ee0b4778b80582cb56fee2",
+        "provider": {
+          "qualificationScope": "candidate-local-rerun",
+          "surface": "kungfu-cli"
+        },
+        "questionCount": 0,
+        "receiptRoot": "sha256:657cbaafb453e1504d09b7349375c36996e5b15c6771f0705076052d4fe0c8ab",
+        "schema": "kungfu.agent-first-value-receipt/v1",
+        "verdict": "verified"
+      },
+      "verificationRoot": "sha256:ea8c2e588d8e7a79a5750075152ac6f74f85bac90b6414e2b141610d21ec8379"
+    },
+    {
+      "attemptId": "codex-local-2-8a47c916-dc68-4adb-93d0-c9031ef94a39",
+      "verified": true,
+      "workspaceRoot": "sha256:a8bcf01b6f23c1875bf2c9e00b7108dca2cb67a40a62f54b4cc921c488e5cfc5",
+      "eventStreamRoot": "sha256:884e260d32a924cd24847e16a05c241575cc4daa1c3f4fbeda1b5523d76a9d90",
+      "responseRoot": "sha256:6b8c3c0534847449a2e1e29a118c11f1c7d6ce98471f5a512af37f2676107f64",
+      "questionMarkCount": 0,
+      "receipt": {
+        "attemptId": "codex-local-2-8a47c916-dc68-4adb-93d0-c9031ef94a39",
+        "diagnostics": [],
+        "discovery": {
+          "command": "kungfu agent status --target codex --scope project --json",
+          "exitCode": 0,
+          "outputBytes": 989,
+          "outputRoot": "sha256:2d7d3d5c0928215f0fa122fffd45242db72518eb142ba33eea43e8e4a4839229",
+          "safetyClass": "read-only"
+        },
+        "intentId": "onboarding",
+        "nonClaims": [
+          "claude-qualified",
+          "ci-hosted-codex-qualified",
+          "other-platforms-qualified",
+          "public-release-qualified",
+          "model-output-alone-is-proof",
+          "brief-or-skill-grants-write-authority"
+        ],
+        "observedAt": "2026-08-02T02:57:10.256366Z",
+        "outcome": {
+          "kind": "verified-discovery",
+          "summaryRoot": "sha256:e0830b59a8b7414735198befec8db1f575189a981d4983c3a64704be4f0639f2",
+          "verificationRoot": "sha256:f1a111c6f787222adfa7c647023ba8e654e92970209a8e69f51ea0e93692adb4"
+        },
+        "platform": {
+          "machine": "arm64",
+          "system": "darwin"
+        },
+        "productIdentity": {
+          "briefRoot": "sha256:c954a43df415772ec5fe6f1b8cb88ea0a7508279d59ddffcb3c1a13081008ef9",
+          "candidateRoot": "sha256:056488e9fc4e2850c93046ee54196e1a137064d725f9d78b96671477ed5f61f6",
+          "contractRoot": "sha256:7242d507c17447c0d14cfdbd653c7c0c18c3eb106f3ab0f9b943cd12c78d87e6",
+          "intentMapRoot": "sha256:d483703e85a9db94b462bc4d7d09eed89af7333ad3723800f3a0496386a80531",
+          "sourceRevision": "602b7aa65ef13d94578d299e8699d7183ac41949",
+          "version": "4.0.0-alpha.1"
+        },
+        "promptRoot": "sha256:c5e6c02d553e1addd4db51a573c54af86346b7ca55ee0b4778b80582cb56fee2",
+        "provider": {
+          "qualificationScope": "candidate-local-rerun",
+          "surface": "kungfu-cli"
+        },
+        "questionCount": 0,
+        "receiptRoot": "sha256:a6dfe2ad5c8e39c0f96e2db9cc6544429033e30a7e6c4e792ccd237480402c54",
+        "schema": "kungfu.agent-first-value-receipt/v1",
+        "verdict": "verified"
+      },
+      "verificationRoot": "sha256:ddcb8a7cc1c0e2e92de18086e773b7bb2a7286dd234cd23f7477c69f748cca92"
+    },
+    {
+      "attemptId": "codex-local-3-91623d99-8d2e-4983-b3c9-1b591c0fc5d5",
+      "verified": true,
+      "workspaceRoot": "sha256:859f67ca79910c94832d1993b58449c3c0ac578f1cf05b8ace7eb1b905812681",
+      "eventStreamRoot": "sha256:c86b37520b8fb4fdede8d1c680224d4bc19c690e4355c9874df04770dba0f7ee",
+      "responseRoot": "sha256:e83c3066b4525ccccc4b8657d725e4c35f48a13a0a8716f6369904db1d8aded8",
+      "questionMarkCount": 0,
+      "receipt": {
+        "attemptId": "codex-local-3-91623d99-8d2e-4983-b3c9-1b591c0fc5d5",
+        "diagnostics": [],
+        "discovery": {
+          "command": "kungfu agent status --target codex --scope project --json",
+          "exitCode": 0,
+          "outputBytes": 989,
+          "outputRoot": "sha256:ff12867395b5624ba69d5dbf37e1694c3bc9316dcc3cd2e8c3c53695d654a762",
+          "safetyClass": "read-only"
+        },
+        "intentId": "onboarding",
+        "nonClaims": [
+          "claude-qualified",
+          "ci-hosted-codex-qualified",
+          "other-platforms-qualified",
+          "public-release-qualified",
+          "model-output-alone-is-proof",
+          "brief-or-skill-grants-write-authority"
+        ],
+        "observedAt": "2026-08-02T03:02:45.519971Z",
+        "outcome": {
+          "kind": "verified-discovery",
+          "summaryRoot": "sha256:ff5f723b9988089f83aceac88809aa24fd9820ec34d058825ccaba665d083cb2",
+          "verificationRoot": "sha256:55fdffa51160e747d29102627321d9ec068405d31e294a2ed1eaab76d826b7a3"
+        },
+        "platform": {
+          "machine": "arm64",
+          "system": "darwin"
+        },
+        "productIdentity": {
+          "briefRoot": "sha256:c954a43df415772ec5fe6f1b8cb88ea0a7508279d59ddffcb3c1a13081008ef9",
+          "candidateRoot": "sha256:056488e9fc4e2850c93046ee54196e1a137064d725f9d78b96671477ed5f61f6",
+          "contractRoot": "sha256:7242d507c17447c0d14cfdbd653c7c0c18c3eb106f3ab0f9b943cd12c78d87e6",
+          "intentMapRoot": "sha256:d483703e85a9db94b462bc4d7d09eed89af7333ad3723800f3a0496386a80531",
+          "sourceRevision": "602b7aa65ef13d94578d299e8699d7183ac41949",
+          "version": "4.0.0-alpha.1"
+        },
+        "promptRoot": "sha256:c5e6c02d553e1addd4db51a573c54af86346b7ca55ee0b4778b80582cb56fee2",
+        "provider": {
+          "qualificationScope": "candidate-local-rerun",
+          "surface": "kungfu-cli"
+        },
+        "questionCount": 0,
+        "receiptRoot": "sha256:0ec7b5bd58b8770d85b89d9cab251ca851011d3fca5b2eba07f1277dc8ee83c8",
+        "schema": "kungfu.agent-first-value-receipt/v1",
+        "verdict": "verified"
+      },
+      "verificationRoot": "sha256:c758700acc8f732730fc46afda0a1477a7098a7858fcc77c08f57cf533bc7dbf"
+    }
+  ],
+  "rawTranscriptRetained": false,
+  "ciDependency": false,
+  "nonClaims": [
+    "claude-qualified",
+    "ci-hosted-codex-qualified",
+    "other-platforms-qualified",
+    "public-release-qualified",
+    "model-output-alone-is-proof",
+    "brief-or-skill-grants-write-authority"
+  ],
+  "observedAt": "2026-08-02T03:03:06.804Z",
+  "qualificationRoot": "sha256:874362d45c480baa77a2c1982293827a8baea4010faaff6dd95c749356c893a6"
+}
