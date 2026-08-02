@@ -36,6 +36,24 @@ _TEMPLATE = re.compile(
 _UNRESOLVED_TEMPLATE = re.compile(r"\{[a-z_]+(?::json)?\}")
 
 
+def policy_payload(runtime_dir, target, mode, enabled=True):
+    closeout_gate = enabled and mode in {"report", "managed-run"}
+    return {
+        "schema": "kungfu.agent-policy/v1",
+        "target": target,
+        "mode": mode,
+        "enabled": enabled,
+        "reportCloseoutGate": closeout_gate,
+        "reportAdapter": "kungfu work claim-completion"
+        if target == "codex"
+        else "kungfu report run begin",
+        "receiptVerifier": "kungfu work status"
+        if target == "codex"
+        else "kungfu report run end",
+        "runtimeDir": runtime_dir,
+    }
+
+
 def _builtin_skill(provider: str) -> str:
     return str(agent_resources.skill_path(provider))
 

@@ -5,15 +5,15 @@
   "manifestPath": "framework/maintainability/abstraction-integrity.manifest.json",
   "measurement": {
     "aggregates": {
-      "kungfu-cli": 20273,
+      "kungfu-cli": 20249,
       "kungfu-flat-root": 35651,
       "kungfu-runtime-family": 6242
     },
     "counts": {
-      "productionFiles": 234,
-      "productionPhysicalLines": 83540,
+      "productionFiles": 235,
+      "productionPhysicalLines": 83955,
       "testFiles": 97,
-      "testPhysicalLines": 45663
+      "testPhysicalLines": 45797
     },
     "hiddenProductionFiles": [],
     "modulesOver1000": [
@@ -43,7 +43,7 @@
       },
       {
         "path": "framework/core/src/python/kungfu/cli/commands/agent.py",
-        "physicalLines": 1605
+        "physicalLines": 1581
       },
       {
         "path": "framework/core/src/python/kungfu/cli/commands/assignment.py",
@@ -158,10 +158,10 @@
         "responsibilities": 39
       },
       {
-        "contentRoot": "sha256:912a408df9c14eb30d335d9c526277ca2957023c921b500c84d2c9ce0a81b4b0",
+        "contentRoot": "sha256:163e434f02c7de2c04739e3f852f174e90c239ad806c2160a4aedad8e5b9ee3b",
         "path": "framework/core/src/python/kungfu/cli/commands/agent.py",
-        "physicalLines": 1605,
-        "responsibilities": 63
+        "physicalLines": 1581,
+        "responsibilities": 62
       },
       {
         "contentRoot": "sha256:cca64f0417aeca4e17752c213892cf3ae4171a657de1e95132f945b513ba6782",
@@ -257,7 +257,7 @@
     "parseErrors": [],
     "platformBranches": [
       {
-        "line": 34,
+        "line": 54,
         "path": "framework/core/src/python/kungfu/agent/session_surface.py",
         "test": "sys.platform == 'win32'"
       },
@@ -358,7 +358,7 @@
       }
     ],
     "schema": "kungfu.python-structure-measurement/v1",
-    "sourceRoot": "sha256:0cbcbcd49a89e39d9151bd577d48a7024047a52ee670c30d9a651f325af37526",
+    "sourceRoot": "sha256:a81f3b922c5b22398b49856f9d234ea49b4bbfbe5febce097e06f5a06207f401",
     "sourceRoots": {
       "production": [
         "framework/core/src/python"
@@ -421,6 +421,18 @@
       ]
     },
     {
+      "owner": "core/python-agent-first-value",
+      "paths": [
+        "framework/core/src/python/kungfu/agent/first_value.py"
+      ]
+    },
+    {
+      "owner": "product/agent-first-value-qualification",
+      "paths": [
+        "scripts/qualify-agent-first-value-codex.mjs"
+      ]
+    },
+    {
       "owner": "core/python-runtime-service-config",
       "paths": [
         "framework/core/src/python/kungfu/runtime_service_config.py"
@@ -456,9 +468,9 @@
     "kungfu.runtime_broker.NativeReadinessAuthority",
     "kungfu.runtime_service.ProcessRuntimeHost"
   ],
-  "reportRoot": "sha256:47fee75748e976feac0d65fc661ac16ecf9c136a6b75256c2545e1723a869858",
+  "reportRoot": "sha256:c2305678a910efc0d795afecc4d1c9fb8b7e57f97be1c553c8e56a08d6c0ea49",
   "schema": "kungfu.abstraction-integrity-report/v1",
-  "sourceRoot": "sha256:0cbcbcd49a89e39d9151bd577d48a7024047a52ee670c30d9a651f325af37526",
+  "sourceRoot": "sha256:a81f3b922c5b22398b49856f9d234ea49b4bbfbe5febce097e06f5a06207f401",
   "summary": {
     "blockingIssues": 0
   },

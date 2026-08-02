@@ -44,6 +44,24 @@
       "purpose": "Print and validate the complete stable first-entry intent route map."
     },
     {
+      "apiId": "kungfu.agent.first-value.contract",
+      "name": "kungfu agent first-value contract --json",
+      "maturity": "stable",
+      "purpose": "Print the exact prompt, packaged roots, result constraints, receipt schema, and qualification non-claims."
+    },
+    {
+      "apiId": "kungfu.agent.first-value.receipt",
+      "name": "kungfu agent first-value receipt --intent <id> --discovery <command> --question-count <0-or-1> --outcome <summary> --json",
+      "maturity": "stable",
+      "purpose": "Rerun one declared safe discovery without a shell and emit a sanitized rooted first-value receipt."
+    },
+    {
+      "apiId": "kungfu.agent.first-value.verify",
+      "name": "kungfu agent first-value verify <receipt-file> --json",
+      "maturity": "stable",
+      "purpose": "Fail closed while validating one retained first-value receipt against the current installed candidate."
+    },
+    {
       "apiId": "kungfu.agent.expand",
       "name": "kungfu agent expand --view agent --handle <id> --budget <tokens> --json",
       "maturity": "stable",

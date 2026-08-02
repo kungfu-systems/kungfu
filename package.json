@@ -166,7 +166,7 @@
     "agent-patrol:select": "node scripts/require-shifu.mjs agent-patrol:select && node framework/agent-patrol/select.mjs",
     "agent-patrol:dogfood-capture": "node scripts/require-shifu.mjs agent-patrol:dogfood-capture && node framework/agent-patrol/dogfood-capture.mjs",
     "qualify:agent-repository-work": "node scripts/require-shifu.mjs qualify:agent-repository-work && node framework/agent-repository-work/run.mjs",
-    "check:agent-pack": "node scripts/require-shifu.mjs check:agent-pack && node scripts/verify-agent-pack.mjs",
+    "check:agent-pack": "node scripts/require-shifu.mjs check:agent-pack && node scripts/verify-agent-pack.mjs && node --test scripts/qualify-agent-first-value-codex.test.mjs && node scripts/qualify-agent-first-value-codex.mjs --verify-report docs/qualification/evidence/agent-brief-first-value-loop/report.json",
     "check:fact-cut-kernel-contract": "node scripts/require-shifu.mjs check:fact-cut-kernel-contract && node --test scripts/check-fact-cut-kernel-contract.test.mjs",
     "check:work-lifecycle-operation-matrix": "node scripts/require-shifu.mjs check:work-lifecycle-operation-matrix && node scripts/materialize-work-lifecycle-operation-matrix.mjs --check && node scripts/render-work-lifecycle-operation-matrix.mjs --check && node developer/sdk/src/sdk.js contract render work-lifecycle-operation-matrix --check --json && node developer/sdk/src/sdk.js contract policy --check --json && node developer/sdk/src/sdk.js contract audit --json && node --test scripts/check-work-lifecycle-operation-matrix.test.mjs scripts/check-native-authority-membrane.test.mjs",
     "check:work-control-vocabulary": "node scripts/require-shifu.mjs check:work-control-vocabulary && node --test scripts/check-work-control-vocabulary.test.mjs",

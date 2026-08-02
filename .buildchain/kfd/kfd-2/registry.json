@@ -27,7 +27,7 @@
     {
       "id": "agent-onboarding-pack",
       "category": "kfd-2",
-      "statement": "Kungfu releases declare an installed agent onboarding pack with machine-readable command and mode metadata, safety boundaries, examples, and verifier coverage.",
+      "statement": "Kungfu releases declare an installed agent onboarding pack with machine-readable command and mode metadata, safety boundaries, a deterministic first-value contract and receipt, examples, and verifier coverage.",
       "source": {
         "kind": "file",
         "path": "framework/core/src/python/kungfu/agent/index.json"
@@ -42,6 +42,16 @@
         "type": "file",
         "path": "framework/core/src/python/kungfu/agent/cli_surface.catalog.json",
         "description": "Complete deterministic CLI surface graph shared by offline Agent capabilities and catalog parity checks."
+      },
+      {
+        "type": "file",
+        "path": "framework/core/src/python/kungfu/agent/first-value.contract.json",
+        "description": "Exact first-value prompt, bounded result, local Codex qualification, and explicit non-claim contract."
+      },
+      {
+        "type": "file",
+        "path": "framework/core/src/python/kungfu/agent/first-value-receipt.schema.json",
+        "description": "Machine-verifiable receipt schema for the selected intent, safe discovery, minimal outcome, and candidate identity."
       },
         {
           "type": "file",
@@ -62,6 +72,21 @@
         "type": "file",
         "path": "scripts/check-cli-catalog-parity.mjs",
         "description": "Build-free source-acceptance verifier for surface roots and Human, Agent, KFD-3, docs, skills, GUI, and package consumers."
+      },
+      {
+        "type": "file",
+        "path": "scripts/qualify-agent-first-value-codex.mjs",
+        "description": "Local-only three-trial fresh Codex qualification harness that retains sanitized receipts rather than raw transcripts."
+      },
+      {
+        "type": "file",
+        "path": "scripts/qualify-agent-first-value-codex.test.mjs",
+        "description": "Provider-free deterministic CI coverage for aggregate and receipt acceptance, tampering, reuse, and partial-failure cases."
+      },
+      {
+        "type": "file",
+        "path": "docs/qualification/evidence/agent-brief-first-value-loop/report.json",
+        "description": "Sanitized three-trial local Codex qualification whose receipts and aggregate root are reverified in provider-free CI."
       }
       ],
       "artifacts": [
@@ -79,6 +104,16 @@
         "name": "cli-surface-catalog",
         "path": "framework/core/src/python/kungfu/agent/cli_surface.catalog.json",
         "expectedPackagePath": "kungfu/agent/cli_surface.catalog.json"
+      },
+      {
+        "name": "agent-first-value-contract",
+        "path": "framework/core/src/python/kungfu/agent/first-value.contract.json",
+        "expectedPackagePath": "kungfu/agent/first-value.contract.json"
+      },
+      {
+        "name": "agent-first-value-receipt-schema",
+        "path": "framework/core/src/python/kungfu/agent/first-value-receipt.schema.json",
+        "expectedPackagePath": "kungfu/agent/first-value-receipt.schema.json"
       }
       ],
       "verification": {
@@ -86,10 +121,11 @@
         "expectedResult": "pass"
       },
       "auditBoundary": {
-      "scope": "The committed agent onboarding pack files listed in this claim and the verifier checks that enumerate required docs, skills, the complete generated CLI graph, command catalog entries, KFD-3 links, safety labels, package data, GUI hint, and TUI hint.",
+      "scope": "The committed agent onboarding pack files listed in this claim and the verifier checks that enumerate required docs, skills, the complete generated CLI graph, command catalog entries, KFD-3 links, safety labels, first-value contract and receipt, package data, GUI hint, and TUI hint.",
         "enumerability": "closed-world",
         "exclusions": [
           "Provider CLI behavior outside Kungfu",
+          "Claude qualification and Codex execution hosted by CI",
           "User-specific bootstrap policy files under local home directories",
           "Runtime data and receipts produced after installation"
         ]

@@ -13,6 +13,26 @@ from typing import Protocol
 MAX_RESPONSE_BYTES = 1024 * 1024
 
 
+def effective_work_ref(envelope):
+    effective = envelope.get("workRef")
+    try:
+        status = invoke(
+            {
+                "operation": "show",
+                "session": {
+                    "workConsoleId": envelope["consoleId"],
+                    "sessionAttemptId": envelope["attemptId"],
+                },
+            }
+        )
+        binding = status.get("binding") or {}
+        if binding.get("kind") == "work":
+            effective = binding.get("workRef")
+    except (OSError, ValueError):
+        pass
+    return effective
+
+
 class ReturnCodeResult(Protocol):
     returncode: int
 

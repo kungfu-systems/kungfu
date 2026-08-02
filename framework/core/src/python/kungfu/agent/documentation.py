@@ -17,6 +17,31 @@ from pathlib import Path, PurePosixPath
 _COMPATIBILITY = Path("compatibility/context-pack-v1")
 
 
+def discovery_context(repo_root=None):
+    local_docs = []
+    if repo_root is not None:
+        local_docs = [
+            {"name": "documentation map", "path": str(repo_root / "docs" / "MAP.md")},
+            {
+                "name": "agent-first global config",
+                "path": str(repo_root / "docs" / "config.md"),
+            },
+        ]
+    return {
+        "local": local_docs,
+        "public": [
+            {
+                "name": "documentation map",
+                "url": "https://github.com/kungfu-tech/kungfu/blob/dev/v3/docs/MAP.md",
+            },
+            {
+                "name": "agent-first global config",
+                "url": "https://github.com/kungfu-tech/kungfu/blob/dev/v3/docs/guides/config.md",
+            },
+        ],
+    }
+
+
 def _canonical_bytes(value):
     return (
         json.dumps(value, ensure_ascii=False, sort_keys=True, separators=(",", ":"))

@@ -1,0 +1,129 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kungfu.tech/schemas/agent-first-value-receipt-v1.schema.json",
+  "title": "Kungfu Agent first-value receipt v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "verdict",
+    "attemptId",
+    "provider",
+    "platform",
+    "promptRoot",
+    "productIdentity",
+    "questionCount",
+    "intentId",
+    "discovery",
+    "outcome",
+    "nonClaims",
+    "diagnostics",
+    "observedAt",
+    "receiptRoot"
+  ],
+  "$defs": {
+    "root": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+    "revision": {
+      "type": ["string", "null"],
+      "pattern": "^[0-9a-f]{40,64}$"
+    }
+  },
+  "properties": {
+    "schema": {
+      "type": "string",
+      "const": "kungfu.agent-first-value-receipt/v1"
+    },
+    "verdict": {"type": "string", "const": "verified"},
+    "attemptId": {"type": "string", "minLength": 1, "maxLength": 128},
+    "provider": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["surface", "qualificationScope"],
+      "properties": {
+        "surface": {"type": "string", "const": "kungfu-cli"},
+        "qualificationScope": {
+          "type": "string",
+          "const": "candidate-local-rerun"
+        }
+      }
+    },
+    "platform": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["system", "machine"],
+      "properties": {
+        "system": {"type": "string", "minLength": 1},
+        "machine": {"type": "string", "minLength": 1}
+      }
+    },
+    "promptRoot": {"$ref": "#/$defs/root"},
+    "productIdentity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "version",
+        "candidateRoot",
+        "contractRoot",
+        "briefRoot",
+        "intentMapRoot",
+        "sourceRevision"
+      ],
+      "properties": {
+        "version": {"type": "string", "minLength": 1},
+        "candidateRoot": {"$ref": "#/$defs/root"},
+        "contractRoot": {"$ref": "#/$defs/root"},
+        "briefRoot": {"$ref": "#/$defs/root"},
+        "intentMapRoot": {"$ref": "#/$defs/root"},
+        "sourceRevision": {"$ref": "#/$defs/revision"}
+      }
+    },
+    "questionCount": {"type": "integer", "minimum": 0, "maximum": 1},
+    "intentId": {"type": "string", "minLength": 1},
+    "discovery": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "command",
+        "safetyClass",
+        "exitCode",
+        "outputRoot",
+        "outputBytes"
+      ],
+      "properties": {
+        "command": {"type": "string", "minLength": 1},
+        "safetyClass": {
+          "type": "string",
+          "enum": ["read-only", "preview-safe"]
+        },
+        "exitCode": {"type": "integer", "const": 0},
+        "outputRoot": {"$ref": "#/$defs/root"},
+        "outputBytes": {"type": "integer", "minimum": 1, "maximum": 4194304}
+      }
+    },
+    "outcome": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "summaryRoot", "verificationRoot"],
+      "properties": {
+        "kind": {"type": "string", "const": "verified-discovery"},
+        "summaryRoot": {"$ref": "#/$defs/root"},
+        "verificationRoot": {"$ref": "#/$defs/root"}
+      }
+    },
+    "nonClaims": {
+      "type": "array",
+      "minItems": 6,
+      "uniqueItems": true,
+      "items": {"type": "string", "minLength": 1}
+    },
+    "diagnostics": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "maxItems": 0
+    },
+    "observedAt": {"type": "string", "format": "date-time"},
+    "receiptRoot": {"$ref": "#/$defs/root"}
+  }
+}

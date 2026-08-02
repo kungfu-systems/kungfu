@@ -125,6 +125,18 @@
       ]
     },
     {
+      "owner": "core/python-agent-first-value",
+      "paths": [
+        "framework/core/src/python/kungfu/agent/first_value.py"
+      ]
+    },
+    {
+      "owner": "product/agent-first-value-qualification",
+      "paths": [
+        "scripts/qualify-agent-first-value-codex.mjs"
+      ]
+    },
+    {
       "owner": "core/python-runtime-service-config",
       "paths": [
         "framework/core/src/python/kungfu/runtime_service_config.py"

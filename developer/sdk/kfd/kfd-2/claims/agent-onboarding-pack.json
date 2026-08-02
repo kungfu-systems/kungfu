@@ -1,13 +1,13 @@
 {
   "id": "agent-onboarding-pack",
   "public": true,
-  "claim": "Kungfu releases declare an installed agent onboarding pack with machine-readable command and mode metadata, safety boundaries, examples, and verifier coverage.",
+  "claim": "Kungfu releases declare an installed agent onboarding pack with machine-readable command and mode metadata, safety boundaries, a deterministic first-value contract and receipt, examples, and verifier coverage.",
   "sourceBindings": [
     {
       "role": "claim-source",
       "kind": "file",
       "path": "framework/core/src/python/kungfu/agent/index.json",
-      "sha256": "f41f59e287ce7d8c72c8c228036af99cf1467a0d2d0cf768e7469fb08dc57ecb"
+      "sha256": "ebefd3a90e1071aef91bf5e532859c7e62241cfbc5ec3e345da6d93dfc404b28"
     }
   ],
   "machineEvidence": [
@@ -16,7 +16,7 @@
       "pointer": {
         "kind": "file",
         "path": "framework/core/src/python/kungfu/agent/commands.json",
-        "sha256": "23b35b31bf415317ac0419dc8fa29fab9e3c594d41188925e8d46084b5050544"
+        "sha256": "35cea28ef6c43ee7aee80380bb20159ffdc28a5c6113878f501756e254d7908a"
       },
       "description": "Machine-readable command catalog and mode maturity metadata."
     },
@@ -25,9 +25,27 @@
       "pointer": {
         "kind": "file",
         "path": "framework/core/src/python/kungfu/agent/cli_surface.catalog.json",
-        "sha256": "8c3a60fb2cd620e8c42c5e402c629625a50b4390fc5209424ffd85c62a871dc5"
+        "sha256": "42ec9e630794b1cb3470a9c99c1972291b9be4ef05520c6a5223c0407965808b"
       },
       "description": "Complete deterministic CLI surface graph shared by offline Agent capabilities and catalog parity checks."
+    },
+    {
+      "type": "file",
+      "pointer": {
+        "kind": "file",
+        "path": "framework/core/src/python/kungfu/agent/first-value.contract.json",
+        "sha256": "7242d507c17447c0d14cfdbd653c7c0c18c3eb106f3ab0f9b943cd12c78d87e6"
+      },
+      "description": "Exact first-value prompt, bounded result, local Codex qualification, and explicit non-claim contract."
+    },
+    {
+      "type": "file",
+      "pointer": {
+        "kind": "file",
+        "path": "framework/core/src/python/kungfu/agent/first-value-receipt.schema.json",
+        "sha256": "89b076e6f4e1eba2c4a28d159c285c32227b8554f17c779e75369410a39ad839"
+      },
+      "description": "Machine-verifiable receipt schema for the selected intent, safe discovery, minimal outcome, and candidate identity."
     },
     {
       "type": "file",
@@ -52,7 +70,7 @@
       "pointer": {
         "kind": "file",
         "path": "scripts/verify-agent-pack.mjs",
-        "sha256": "cffae17bcd46c735f8b6ef46ef82eca230511655427b9ecc4b210c80dbb11cbe"
+        "sha256": "c67c1b163837167787016767df080ae26781ff1b0b24f5a37de45a90d7a5f020"
       },
       "description": "Read-only verifier for installed agent pack completeness and command/doc consistency."
     },
@@ -64,19 +82,54 @@
         "sha256": "5f827a4aecb90e240c3ec7e829547c99ac4f33d8a24bf5e1432a3a5eac97159e"
       },
       "description": "Build-free source-acceptance verifier for surface roots and Human, Agent, KFD-3, docs, skills, GUI, and package consumers."
+    },
+    {
+      "type": "file",
+      "pointer": {
+        "kind": "file",
+        "path": "scripts/qualify-agent-first-value-codex.mjs",
+        "sha256": "e0bd2814a73855f80661f9100d88b57fb72b0665b690a8add7f3913198e77ae9"
+      },
+      "description": "Local-only three-trial fresh Codex qualification harness that retains sanitized receipts rather than raw transcripts."
+    },
+    {
+      "type": "file",
+      "pointer": {
+        "kind": "file",
+        "path": "scripts/qualify-agent-first-value-codex.test.mjs",
+        "sha256": "4fbef47e7fbdf2745f072d0313fcd602fc9cdb072997ef87d929da99ecec30a1"
+      },
+      "description": "Provider-free deterministic CI coverage for aggregate and receipt acceptance, tampering, reuse, and partial-failure cases."
+    },
+    {
+      "type": "file",
+      "pointer": {
+        "kind": "file",
+        "path": "docs/qualification/evidence/agent-brief-first-value-loop/report.json",
+        "sha256": "ced28dbc3859b6f0ae905cb0b09bfa40688d7bff97a98320c44cf87bafe8532e"
+      },
+      "description": "Sanitized three-trial local Codex qualification whose receipts and aggregate root are reverified in provider-free CI."
     }
   ],
   "hashes": {
-    "registrySha256": "3ad1f496db4e1906d300e439542d3b1d6a69148519d2a5faa9635f6240d7ee56",
-    "sourceSha256": "f41f59e287ce7d8c72c8c228036af99cf1467a0d2d0cf768e7469fb08dc57ecb",
+    "registrySha256": "1365d3a445e1587000175cdbc7f50ed83dfe6ebf4190c73f5d18f0bb41c35e15",
+    "sourceSha256": "ebefd3a90e1071aef91bf5e532859c7e62241cfbc5ec3e345da6d93dfc404b28",
     "evidenceSha256": [
       {
         "path": "framework/core/src/python/kungfu/agent/commands.json",
-        "sha256": "23b35b31bf415317ac0419dc8fa29fab9e3c594d41188925e8d46084b5050544"
+        "sha256": "35cea28ef6c43ee7aee80380bb20159ffdc28a5c6113878f501756e254d7908a"
       },
       {
         "path": "framework/core/src/python/kungfu/agent/cli_surface.catalog.json",
-        "sha256": "8c3a60fb2cd620e8c42c5e402c629625a50b4390fc5209424ffd85c62a871dc5"
+        "sha256": "42ec9e630794b1cb3470a9c99c1972291b9be4ef05520c6a5223c0407965808b"
+      },
+      {
+        "path": "framework/core/src/python/kungfu/agent/first-value.contract.json",
+        "sha256": "7242d507c17447c0d14cfdbd653c7c0c18c3eb106f3ab0f9b943cd12c78d87e6"
+      },
+      {
+        "path": "framework/core/src/python/kungfu/agent/first-value-receipt.schema.json",
+        "sha256": "89b076e6f4e1eba2c4a28d159c285c32227b8554f17c779e75369410a39ad839"
       },
       {
         "path": "framework/core/src/python/kungfu/agent/mode-selection.md",
@@ -88,25 +141,45 @@
       },
       {
         "path": "scripts/verify-agent-pack.mjs",
-        "sha256": "cffae17bcd46c735f8b6ef46ef82eca230511655427b9ecc4b210c80dbb11cbe"
+        "sha256": "c67c1b163837167787016767df080ae26781ff1b0b24f5a37de45a90d7a5f020"
       },
       {
         "path": "scripts/check-cli-catalog-parity.mjs",
         "sha256": "5f827a4aecb90e240c3ec7e829547c99ac4f33d8a24bf5e1432a3a5eac97159e"
+      },
+      {
+        "path": "scripts/qualify-agent-first-value-codex.mjs",
+        "sha256": "e0bd2814a73855f80661f9100d88b57fb72b0665b690a8add7f3913198e77ae9"
+      },
+      {
+        "path": "scripts/qualify-agent-first-value-codex.test.mjs",
+        "sha256": "4fbef47e7fbdf2745f072d0313fcd602fc9cdb072997ef87d929da99ecec30a1"
+      },
+      {
+        "path": "docs/qualification/evidence/agent-brief-first-value-loop/report.json",
+        "sha256": "ced28dbc3859b6f0ae905cb0b09bfa40688d7bff97a98320c44cf87bafe8532e"
       }
     ],
     "artifactSha256": [
       {
         "path": "framework/core/src/python/kungfu/agent/index.json",
-        "sha256": "f41f59e287ce7d8c72c8c228036af99cf1467a0d2d0cf768e7469fb08dc57ecb"
+        "sha256": "ebefd3a90e1071aef91bf5e532859c7e62241cfbc5ec3e345da6d93dfc404b28"
       },
       {
         "path": "framework/core/src/python/kungfu/agent/commands.json",
-        "sha256": "23b35b31bf415317ac0419dc8fa29fab9e3c594d41188925e8d46084b5050544"
+        "sha256": "35cea28ef6c43ee7aee80380bb20159ffdc28a5c6113878f501756e254d7908a"
       },
       {
         "path": "framework/core/src/python/kungfu/agent/cli_surface.catalog.json",
-        "sha256": "8c3a60fb2cd620e8c42c5e402c629625a50b4390fc5209424ffd85c62a871dc5"
+        "sha256": "42ec9e630794b1cb3470a9c99c1972291b9be4ef05520c6a5223c0407965808b"
+      },
+      {
+        "path": "framework/core/src/python/kungfu/agent/first-value.contract.json",
+        "sha256": "7242d507c17447c0d14cfdbd653c7c0c18c3eb106f3ab0f9b943cd12c78d87e6"
+      },
+      {
+        "path": "framework/core/src/python/kungfu/agent/first-value-receipt.schema.json",
+        "sha256": "89b076e6f4e1eba2c4a28d159c285c32227b8554f17c779e75369410a39ad839"
       }
     ]
   },
@@ -114,20 +187,32 @@
     {
       "name": "agent-pack-index",
       "path": "framework/core/src/python/kungfu/agent/index.json",
-      "sha256": "f41f59e287ce7d8c72c8c228036af99cf1467a0d2d0cf768e7469fb08dc57ecb",
+      "sha256": "ebefd3a90e1071aef91bf5e532859c7e62241cfbc5ec3e345da6d93dfc404b28",
       "expectedPackagePath": "kungfu/agent/index.json"
     },
     {
       "name": "agent-command-catalog",
       "path": "framework/core/src/python/kungfu/agent/commands.json",
-      "sha256": "23b35b31bf415317ac0419dc8fa29fab9e3c594d41188925e8d46084b5050544",
+      "sha256": "35cea28ef6c43ee7aee80380bb20159ffdc28a5c6113878f501756e254d7908a",
       "expectedPackagePath": "kungfu/agent/commands.json"
     },
     {
       "name": "cli-surface-catalog",
       "path": "framework/core/src/python/kungfu/agent/cli_surface.catalog.json",
-      "sha256": "8c3a60fb2cd620e8c42c5e402c629625a50b4390fc5209424ffd85c62a871dc5",
+      "sha256": "42ec9e630794b1cb3470a9c99c1972291b9be4ef05520c6a5223c0407965808b",
       "expectedPackagePath": "kungfu/agent/cli_surface.catalog.json"
+    },
+    {
+      "name": "agent-first-value-contract",
+      "path": "framework/core/src/python/kungfu/agent/first-value.contract.json",
+      "sha256": "7242d507c17447c0d14cfdbd653c7c0c18c3eb106f3ab0f9b943cd12c78d87e6",
+      "expectedPackagePath": "kungfu/agent/first-value.contract.json"
+    },
+    {
+      "name": "agent-first-value-receipt-schema",
+      "path": "framework/core/src/python/kungfu/agent/first-value-receipt.schema.json",
+      "sha256": "89b076e6f4e1eba2c4a28d159c285c32227b8554f17c779e75369410a39ad839",
+      "expectedPackagePath": "kungfu/agent/first-value-receipt.schema.json"
     }
   ],
   "verification": {
@@ -136,10 +221,11 @@
     "expectedResult": "pass"
   },
   "auditBoundary": {
-    "scope": "The committed agent onboarding pack files listed in this claim and the verifier checks that enumerate required docs, skills, the complete generated CLI graph, command catalog entries, KFD-3 links, safety labels, package data, GUI hint, and TUI hint.",
+    "scope": "The committed agent onboarding pack files listed in this claim and the verifier checks that enumerate required docs, skills, the complete generated CLI graph, command catalog entries, KFD-3 links, safety labels, first-value contract and receipt, package data, GUI hint, and TUI hint.",
     "enumerability": "closed-world",
     "exclusions": [
       "Provider CLI behavior outside Kungfu",
+      "Claude qualification and Codex execution hosted by CI",
       "User-specific bootstrap policy files under local home directories",
       "Runtime data and receipts produced after installation"
     ]
