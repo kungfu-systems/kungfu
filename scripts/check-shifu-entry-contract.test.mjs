@@ -9,6 +9,11 @@ import { test } from 'node:test';
 import { fileURLToPath } from 'node:url';
 
 import { checkRoot, scanText } from './check-shifu-entry-contract.mjs';
+import {
+  assertSourceCheckoutUnchanged,
+  prepareSourceAcceptanceRuntime,
+  sourceCheckoutSnapshot,
+} from './readonly-source-toolchain.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 
@@ -611,27 +616,38 @@ test('runtime guard rejects a direct task and accepts Shifu provenance', () => {
   assert.equal(accepted.status, 0);
 });
 
-test('package task guard rejects direct package-manager provenance without repository writes', (t) => {
-  const runtimeRoot =
-    process.env.KUNGFU_SOURCE_ACCEPTANCE_RUNTIME_ROOT || os.tmpdir();
+test('real package manager cannot run a guarded task or write the checkout', (t) => {
+  const runtime = prepareSourceAcceptanceRuntime(ROOT);
+  t.after(runtime.cleanup);
+  const before = sourceCheckoutSnapshot(ROOT);
   const fixture = fs.mkdtempSync(
-    path.join(runtimeRoot, 'kungfu-package-manager-guard-'),
+    path.join(runtime.runtimeRoot, 'kungfu-package-manager-guard-'),
   );
-  t.after(() => fs.rmSync(fixture, { recursive: true, force: true }));
-  const direct = spawnSync(
-    process.execPath,
-    [path.join(ROOT, 'scripts', 'require-shifu.mjs'), 'check:entry-contract'],
-    {
-      cwd: fixture,
-      encoding: 'utf8',
-      env: {
-        ...process.env,
-        SHIFU_ENTRYPOINT: '',
-        npm_command: 'run-script',
-        npm_lifecycle_event: 'check:entry-contract',
+  const guard = path.join(ROOT, 'scripts', 'require-shifu.mjs');
+  const node = JSON.stringify(process.execPath);
+  const guardPath = JSON.stringify(guard);
+  fs.writeFileSync(
+    path.join(fixture, 'package.json'),
+    `${JSON.stringify(
+      {
+        name: 'kungfu-package-manager-guard-fixture',
+        private: true,
+        packageManager: 'pnpm@11.7.0',
+        scripts: {
+          'check:entry-contract': `${node} ${guardPath} check:entry-contract`,
+        },
       },
-    },
+      null,
+      2,
+    )}\n`,
   );
+  const corepack = process.platform === 'win32' ? 'corepack.cmd' : 'corepack';
+  const direct = spawnSync(corepack, ['pnpm', 'run', 'check:entry-contract'], {
+    cwd: fixture,
+    encoding: 'utf8',
+    env: { ...runtime.env, SHIFU_ENTRYPOINT: '' },
+    shell: process.platform === 'win32',
+  });
   const output = `${direct.stdout}\n${direct.stderr}`;
   assert.equal(direct.status, 1);
   assert.match(output, /Direct package-manager invocation is unsupported/);
@@ -640,5 +656,18 @@ test('package task guard rejects direct package-manager provenance without repos
     /\[shifu-entry\] Run: \.\/shifu (?:install|check:entry-contract)(?:\r?\n|$)/,
   );
   assert.doesNotMatch(output, /\[shifu-entry\] Run: (?:corepack|node|pnpm)\b/);
-  assert.deepEqual(fs.readdirSync(fixture), []);
+  assert.equal(
+    path.relative(runtime.runtimeRoot, fixture).startsWith('..'),
+    false,
+  );
+  assert.deepEqual(fs.readdirSync(fixture).sort(), [
+    'node_modules',
+    'package.json',
+    'pnpm-lock.yaml',
+  ]);
+  assert.equal(
+    fs.statSync(path.join(fixture, 'node_modules')).isDirectory(),
+    true,
+  );
+  assertSourceCheckoutUnchanged(before, sourceCheckoutSnapshot(ROOT));
 });
