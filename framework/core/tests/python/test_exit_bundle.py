@@ -10,6 +10,7 @@ import pytest
 
 from kungfu import dogfood as dogfood_api
 from kungfu import exit_bundle, exit_verifier, profile_composition, profile_sdk
+from kungfu import project_cut_exit
 from kungfu.agent import work_profile
 from kungfu.atlas import mission_control
 from kungfu.cli.commands import __registry__  # noqa: F401
@@ -19,7 +20,7 @@ from kungfu.storage import service as storage_service
 
 
 MISSION_PROFILE_SOURCE = (
-    Path(__file__).resolve().parents[4] / "extensions" / "mission-control"
+    Path(__file__).resolve().parents[4] / "extensions" / "work-control"
 )
 DOGFOOD_PROFILE_SOURCE = Path(__file__).resolve().parents[4] / "extensions" / "dogfood"
 REPOSITORY_ROOT = Path(__file__).resolve().parents[4]
@@ -704,6 +705,13 @@ def test_all_remaining_member_adapters_roundtrip_idempotently(tmp_path):
         assert imported["status"] == "imported", (member_id, imported)
         assert repeated["ok"] is True, (member_id, repeated)
         assert repeated["status"] == "already_present", (member_id, repeated)
+
+
+def test_project_cut_history_owner_preserves_composer_imports():
+    assert exit_bundle.ProjectCutExitError is project_cut_exit.ProjectCutExitError
+    assert exit_bundle._project_cut_build_bundle is project_cut_exit.build_bundle
+    assert exit_bundle._project_cut_verify_bundle is project_cut_exit.verify_bundle
+    assert exit_bundle._project_cut_import_bundle is project_cut_exit.import_bundle
 
 
 def test_project_cut_history_member_survives_source_removal(tmp_path):
