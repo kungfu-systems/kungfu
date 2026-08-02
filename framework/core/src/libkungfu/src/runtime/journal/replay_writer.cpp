@@ -19,7 +19,7 @@ replay_writer::replay_writer(const data::location_ptr &location, uint32_t dest_i
   }
 }
 
-frame_ptr replay_writer::open_frame(int64_t trigger_time, int32_t carrier_type, size_t length, uint64_t stream_id) {
+struct frame *replay_writer::select_replay_frame(int64_t trigger_time, int32_t carrier_type, size_t length) {
   while (reader_for_write_->data_available()) {
     auto frame = reader_for_write_->current_frame();
     if (frame->carrier_type() == carrier_type) {
@@ -44,14 +44,18 @@ frame_ptr replay_writer::open_frame(int64_t trigger_time, int32_t carrier_type, 
                                     source_data_length));
   }
   cloned_frame_->copy(*source);
-  return cloned_frame_;
+  return cloned_frame_.get();
 }
 
-void replay_writer::close_frame(size_t data_length, int64_t gen_time) {
+void replay_writer::commit_transaction_unserialized(size_t data_length, int64_t gen_time, struct frame *frame) {
+  (void)data_length;
+  (void)gen_time;
+  (void)frame;
   if (reader_for_write_->data_available()) {
     cloned_frame_->copy(*reader_for_write_->current_frame());
     reader_for_write_->next();
   }
+  size_to_write_ = 0;
 }
 
 uint64_t replay_writer::current_frame_uid() {
@@ -68,13 +72,14 @@ uint64_t replay_writer::current_frame_uid() {
 
 writer::frame_transaction replay_writer::reserve_frame(int64_t trigger_time, int32_t carrier_type, size_t length,
                                                        uint64_t stream_id) {
+  (void)stream_id;
   if (!writer_mtx_.try_lock_for(std::chrono::seconds(30))) {
     throw journal_error("Can not lock replay writer for " + journal_->location_->uname);
   }
   try {
-    auto frame = open_frame(trigger_time, carrier_type, length, stream_id);
+    auto *frame = select_replay_frame(trigger_time, carrier_type, length);
     size_to_write_ = length;
-    return frame_transaction(*this, frame.get(), true);
+    return frame_transaction(*this, frame);
   } catch (...) {
     size_to_write_ = 0;
     writer_mtx_.unlock();

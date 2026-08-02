@@ -109,21 +109,21 @@ int main(int argc, char **argv) {
     };
     const std::string body = payload.dump();
 
-    // Feed the causal parent explicitly, then open/close the frame. close_frame
-    // reads this value off the bus and stamps it into trigger_frame_uid.
+    // Feed the causal parent explicitly; commit reads this value off the bus
+    // and stamps it into trigger_frame_uid.
     bus->set_trigger_frame_uid(prev_uid);
 
     const int64_t gen_time = time::now_in_nano();
-    auto frame = writer->open_frame(/*trigger_time=*/prev_gen_time, carrier_type_for_step(i), body.size(), STREAM_ID);
-    frame->set_data_type(FrameDataType::Json);
-    std::memcpy(const_cast<void *>(frame->data_address()), body.data(), body.size());
+    auto tx = writer->reserve_frame(/*trigger_time=*/prev_gen_time, carrier_type_for_step(i), body.size(), STREAM_ID);
+    tx.frame()->set_data_type(FrameDataType::Json);
+    tx.copy_bytes(body.data(), body.size());
 
-    // Capture the uid this frame will be stamped with, BEFORE close_frame's
+    // Capture the uid this frame will be stamped with, BEFORE commit's
     // internal next() advances the shared frame object. This is the write-side
     // canonical uid (writer::current_frame_uid), and it is what we feed as the
     // next event's causal parent.
     const uint64_t this_uid = writer->current_frame_uid();
-    writer->close_frame(body.size(), gen_time);
+    tx.commit(body.size(), gen_time);
 
     chain.push_back({{"step", i}, {"frame_uid", this_uid}, {"trigger_frame_uid", prev_uid}});
     prev_uid = this_uid;

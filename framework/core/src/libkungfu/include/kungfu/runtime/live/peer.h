@@ -92,12 +92,6 @@ public:
   }
 
   template <typename DataType>
-  void write_raw_to(int64_t trigger_time, int32_t carrier_type, const DataType &data, uint32_t length,
-                    uint32_t dest_id) {
-    get_writer(dest_id)->write_raw(trigger_time, carrier_type, reinterpret_cast<uintptr_t>(&data), length);
-  }
-
-  template <typename DataType>
   void write_as(int64_t trigger_time, const DataType &data, uint32_t source_id, uint32_t dest_id) {
     get_writer(dest_id)->write_as(trigger_time, data, source_id, dest_id);
   }
@@ -117,28 +111,6 @@ public:
       }) | rx::first() |
           rx::$([&, trigger_time, data, dest_id, callback](const event_ptr &event) {
             write_to(trigger_time, data, dest_id);
-            callback();
-          });
-      try_write_dest_ids_.emplace(dest_id);
-    }
-  }
-
-  template <typename DataType>
-  void try_write_raw_to(
-      int64_t trigger_time, int32_t carrier_type, const DataType &data, uint32_t length, uint32_t dest_id,
-      const std::function<void()> &callback = []() {}) {
-    if (has_writer(dest_id)) {
-      write_raw_to(trigger_time, carrier_type, data, length, dest_id);
-      callback();
-    } else {
-      note_dynamic_route(route_extension::lazy_write, fmt::format("try_write:{:08x}", dest_id),
-                         yijinjing::types::Channel::tag);
-      events_ | rx::is(yijinjing::types::Channel::tag) | rx::filter([&, dest_id](const event_ptr &event) {
-        const yijinjing::types::Channel &channel = event->data<yijinjing::types::Channel>();
-        return channel.source_id == get_live_home_uid() and channel.dest_id == dest_id;
-      }) | rx::first() |
-          rx::$([&, trigger_time, carrier_type, data, length, dest_id](const event_ptr &event) {
-            write_raw_to(trigger_time, carrier_type, data, length, dest_id);
             callback();
           });
       try_write_dest_ids_.emplace(dest_id);
@@ -245,13 +217,13 @@ protected:
   // Ask the coordinator, via a TimeRequest, for a Time event at base_time + duration.
   void send_time_request(int32_t timer_id, int64_t base_time, int64_t duration_ns) {
     auto writer = get_writer(get_coordinator_command_uid());
-    yijinjing::types::TimeRequest &r = writer->open_data<yijinjing::types::TimeRequest>(now());
+    yijinjing::types::TimeRequest r{};
     r.id = timer_id;
     r.base_time = base_time;
     r.duration = duration_ns;
     r.repeat = 1;
     r.location_uid = get_live_home_uid();
-    writer->close_data();
+    writer->write(now(), r);
   }
 
   // Enable the timer and arm its first tick at now() + duration.

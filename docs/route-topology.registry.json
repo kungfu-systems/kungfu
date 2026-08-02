@@ -42,7 +42,7 @@
     },
     {
       "anchor": "framework/core/src/libkungfu/include/kungfu/runtime/live/peer.h",
-      "eventsPipeCount": 8
+      "eventsPipeCount": 7
     },
     {
       "anchor": "framework/core/src/bindings/node/binding/watcher.cpp",

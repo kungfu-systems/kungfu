@@ -13,6 +13,7 @@
 #include <kungfu/yijinjing/schema/registry.h>
 #include <kungfu/yijinjing/time.h>
 
+#include <span>
 #include <utility>
 
 using namespace kungfu::rx;
@@ -189,8 +190,7 @@ void coordinator::register_peer(const event_ptr &event) {
       attach_coordinator_authority(state_service::attach_projection_candidate_status(
                                        request_data, state_service::projection_candidate_status(projection_candidate)),
                                    continuity_authority_);
-  public_writer->write_raw(event->gen_time(), Register::tag, reinterpret_cast<uintptr_t>(published_register.data()),
-                           static_cast<uint32_t>(published_register.size()));
+  public_writer->write_bytes(event->gen_time(), Register::tag, std::as_bytes(std::span{published_register}));
 
   // hava to be put after register sent, because coordinator cmd journal only be joined after register;
   require_write_to(event->gen_time(), peer_location->uid, location::PUBLIC);
@@ -312,9 +312,7 @@ void coordinator::on_active() {
   auto now = yijinjing::time::now_in_nano();
   if (last_check_ + COORDINATOR_HEARTBEAT_INTERVAL_NS < now) {
     const auto heartbeat = attach_coordinator_authority("{}", continuity_authority_);
-    get_writer(location::PUBLIC)
-        ->write_raw(now, Ping::tag, reinterpret_cast<uintptr_t>(heartbeat.data()),
-                    static_cast<uint32_t>(heartbeat.size()));
+    get_writer(location::PUBLIC)->write_bytes(now, Ping::tag, std::as_bytes(std::span{heartbeat}));
     on_interval_check(now);
     last_check_ = now;
   }
@@ -510,10 +508,10 @@ void coordinator::on_new_location(const event_ptr &event) {
 
 void coordinator::write_time_reset(int64_t, const writer_ptr &writer) {
   auto time_base = yijinjing::time::get_base();
-  TimeReset &time_reset = writer->open_data<TimeReset>();
+  TimeReset time_reset{};
   time_reset.system_clock_count = time_base.system_clock_count;
   time_reset.steady_clock_count = time_base.steady_clock_count;
-  writer->close_data();
+  writer->write(0, time_reset);
 }
 
 void coordinator::write_registries(int64_t trigger_time, const writer_ptr &writer) {

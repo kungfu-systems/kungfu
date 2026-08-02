@@ -201,16 +201,14 @@ The registry distinguishes live debt from retained history:
 
 - `core.yijinjing.boolean-mmap-adapters` remains deprecated and not due before
   its combined calendar and qualified-release window;
-- `core.yijinjing.journal-open-policy-adapters`,
-  `core.yijinjing.page-open-policy-adapters`, and
-  `core.yijinjing.writer-split-frame-api` retain the observed 2026-07-11 and
-  2026-07-12 introduction dates and enroll the six previously unregistered
-  C++ markers;
+- `core.yijinjing.journal-open-policy-adapters` and
+  `core.yijinjing.page-open-policy-adapters` retain the observed 2026-07-11
+  introduction dates and enroll the four remaining C++ markers;
 - `cli.prestable-compatibility-aliases` is settled: current alias references are
   zero, while its exact non-copyable historical grandfather, migration, and
   removal evidence remain queryable.
 
-The current full-tree inventory contains 11 live C++ markers, four live
+The current full-tree inventory contains nine live C++ markers, three live
 registry entries, one settled entry, and one explicitly classified historical
 document. Generated vocabulary is reported separately when present.
 

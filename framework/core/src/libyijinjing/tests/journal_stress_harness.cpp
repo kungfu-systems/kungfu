@@ -310,8 +310,11 @@ int run_writer(const fs::path &root, const config &cfg) {
 
     const auto emit = [&](uint64_t payload_seq, bool corrupt) {
       const uint32_t length = build_payload(payload_seq, buffer, corrupt);
-      output.write_raw_at_as(gen_time, gen_time, loc->uid, DEST_ID, STRESS_CARRIER,
-                             reinterpret_cast<uintptr_t>(buffer.data()), length);
+      auto tx = output.reserve_frame(gen_time, STRESS_CARRIER, length);
+      tx.frame()->set_source(loc->uid);
+      tx.frame()->set_dest(DEST_ID);
+      tx.copy_bytes(buffer.data(), length);
+      tx.commit(length, gen_time);
       gen_time += 1'000;
       ++frames_written;
     };
@@ -353,8 +356,11 @@ int run_writer(const fs::path &root, const config &cfg) {
     const uint64_t total_data_frames = frames_written;
     std::vector<unsigned char> sentinel(sizeof(uint64_t));
     std::memcpy(sentinel.data(), &total_data_frames, sizeof(uint64_t));
-    output.write_raw_at_as(gen_time, gen_time, loc->uid, DEST_ID, SENTINEL_CARRIER,
-                           reinterpret_cast<uintptr_t>(sentinel.data()), sizeof(uint64_t));
+    auto tx = output.reserve_frame(gen_time, SENTINEL_CARRIER, sentinel.size());
+    tx.frame()->set_source(loc->uid);
+    tx.frame()->set_dest(DEST_ID);
+    tx.copy_bytes(sentinel.data(), sentinel.size());
+    tx.commit(sentinel.size(), gen_time);
     output.get_current_page()->flush();
 
     const uint32_t end_page = output.get_current_page()->get_page_id();

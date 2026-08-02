@@ -19,6 +19,7 @@
 #include <iostream>
 #include <map>
 #include <memory>
+#include <span>
 #include <stdexcept>
 #include <string>
 #include <vector>
@@ -151,7 +152,7 @@ void seed_qualification_journal(const options &opts) {
                                                       std::make_shared<yy::journal::noop_publisher>(), false,
                                                       std::make_shared<yy::journal::bus>(false));
   const std::vector<uint8_t> payload(256, 0x5a);
-  writer->write_bytes(yy::time::now_in_nano(), 21901, payload, static_cast<uint32_t>(payload.size()));
+  writer->write_bytes(yy::time::now_in_nano(), 21901, std::as_bytes(std::span{payload}));
 }
 
 nlohmann::json world_declaration() {

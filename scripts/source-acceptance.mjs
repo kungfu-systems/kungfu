@@ -171,6 +171,88 @@ export function isLocalQualificationRuntime(relativePath) {
   );
 }
 
+function assertYijinjingWriterInterface() {
+  const negativeGuard =
+    'framework/core/src/libyijinjing/tests/writer_interface_surface_tests.cpp';
+  const textFile = /\.(?:c|cc|cpp|cxx|h|hh|hpp|hxx|py|pyi|md|json|mjs)$/u;
+  const forbidden = [
+    ['open', 'frame'].join('_'),
+    ['close', 'frame'].join('_'),
+    ['write', 'raw'].join('_'),
+    ['write', 'raw', 'at', 'as'].join('_'),
+    ['open', 'data'].join('_'),
+    ['open', 'custom', 'data'].join('_'),
+    ['close', 'data'].join('_'),
+    ['on', 'open', 'frame'].join('_'),
+    ['on', 'close', 'frame'].join('_'),
+    ['core.yijinjing.writer', 'split-frame-api'].join('-'),
+  ];
+  const findings = [];
+  for (const relative of git([
+    'ls-files',
+    '--cached',
+    '--others',
+    '--exclude-standard',
+  ]).split('\n')) {
+    if (
+      !relative ||
+      relative === negativeGuard ||
+      relative === 'scripts/source-acceptance.mjs' ||
+      GENERATED_EVIDENCE_ROOTS.some((root) => relative.startsWith(root)) ||
+      !textFile.test(relative)
+    )
+      continue;
+    const content = fs.readFileSync(path.join(ROOT, relative), 'utf8');
+    for (const token of forbidden) {
+      if (content.includes(token))
+        findings.push(`${relative}: forbidden ${token}`);
+    }
+  }
+
+  const contracts = [
+    [
+      'framework/core/src/libyijinjing/include/kungfu/yijinjing/journal/journal.h',
+      'void write_bytes(int64_t trigger_time, int32_t carrier_type, std::span<const std::byte> data);',
+      'canonical span overload is absent',
+    ],
+    [
+      'framework/core/src/bindings/python/binding/py-runtime.cpp',
+      'py::buffer payload',
+      'Python write_bytes must accept one bytes-like buffer',
+    ],
+    [
+      'framework/core/stubs/pykungfu/runtime.pyi',
+      'payload: typing_extensions.Buffer',
+      'typing must carry the payload extent',
+    ],
+  ];
+  for (const [relative, required, message] of contracts) {
+    if (!fs.readFileSync(path.join(ROOT, relative), 'utf8').includes(required))
+      findings.push(`${relative}: ${message}`);
+  }
+  const uniqueBindings = [
+    [
+      'framework/core/src/bindings/python/binding/py-runtime.cpp',
+      /"write_bytes"/gu,
+      'Python must expose exactly one write_bytes binding',
+    ],
+    [
+      'framework/core/stubs/pykungfu/runtime.pyi',
+      /def write_bytes\(/gu,
+      'typing must expose exactly one write_bytes signature',
+    ],
+  ];
+  for (const [relative, pattern, message] of uniqueBindings) {
+    const content = fs.readFileSync(path.join(ROOT, relative), 'utf8');
+    if ((content.match(pattern) || []).length !== 1)
+      findings.push(`${relative}: ${message}`);
+  }
+  if (findings.length)
+    throw new Error(
+      `yijinjing writer interface check failed:\n${findings.map((finding) => `- ${finding}`).join('\n')}`,
+    );
+}
+
 const KFD_REBASE_EQUIVALENCE_ANCESTOR_LIMIT = 4096;
 
 export function findGitTreeEquivalentAncestor(
@@ -841,6 +923,10 @@ function run(step) {
 function main() {
   const files = sourceChangedFiles();
   console.log(`[source-acceptance] changed files: ${files.length}`);
+  if (process.env.KUNGFU_READONLY_NESTED_SOURCE_ACCEPTANCE !== '1') {
+    assertYijinjingWriterInterface();
+    console.log('[source-acceptance] yijinjing writer interface passed');
+  }
   const devChannels = checkDevChannelAuthority();
   console.log(
     `\n[source-acceptance] dev channel authority\n${JSON.stringify(devChannels, null, 2)}`,

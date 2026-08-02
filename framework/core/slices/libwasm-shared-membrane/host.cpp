@@ -8,6 +8,7 @@
 #include <algorithm>
 #include <cstdio>
 #include <memory>
+#include <span>
 #include <string>
 #include <vector>
 
@@ -39,10 +40,10 @@ bool seed(const std::string &root) {
   std::vector<uint8_t> payload(256);
   for (uint32_t index = 0; index < FIXTURE_FRAMES; ++index) {
     std::fill(payload.begin(), payload.end(), static_cast<uint8_t>(index & 0xffU));
-    writer->write_bytes(time::now_in_nano(), MSG_BATCH, payload, static_cast<uint32_t>(payload.size()));
+    writer->write_bytes(time::now_in_nano(), MSG_BATCH, std::as_bytes(std::span{payload}));
   }
   payload.assign(1024U * 1024U, 0x5a);
-  writer->write_bytes(time::now_in_nano(), MSG_ONE_MIB, payload, static_cast<uint32_t>(payload.size()));
+  writer->write_bytes(time::now_in_nano(), MSG_ONE_MIB, std::as_bytes(std::span{payload}));
   return true;
 }
 
