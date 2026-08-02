@@ -7,6 +7,8 @@ export function cliLauncherContent(platform = process.platform) {
       'set "KUNGFU_PRODUCT_MANIFEST=%~dp0product.json"',
       'set "KUNGFU_UPGRADE_MANIFEST=%~dp0upgrade\\kungfu-release-manifest.json"',
       'set "KF_BUNDLED_EXTENSION_ROOT=%~dp0extensions"',
+      'set "PYTHONUTF8=1"',
+      'set "PYTHONIOENCODING=utf-8"',
       '"%~dp0runtime\\kungfu.exe" %*',
       '',
     ].join('\r\n');
