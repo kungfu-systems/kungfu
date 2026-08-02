@@ -11,6 +11,7 @@ import {
   PlaybackBar,
   ProfileShell,
   type ProfileShellModel,
+  playbackBorderLines,
   profileShellCardPanelContainsPoint,
   renderProfileShellSnapshot,
   resolveProfileShellLayout,
@@ -505,7 +506,7 @@ test('playback bar is explicitly non-interactive', async () => {
         dimensions: { columns: 80, rows: 24 },
         label: 'DEMO PLAYBACK',
         status: 'Agent Work Lab · Offline continuity',
-        hint: 'Automatic · No input required · exits after the final result',
+        hint: 'q Exit · Automatic playback · exits after the final result',
       }),
     ),
     {
@@ -520,6 +521,21 @@ test('playback bar is explicitly non-interactive', async () => {
   instance.cleanup();
   const rendered = output.chunks.join('');
   assert.match(rendered, /DEMO PLAYBACK/);
-  assert.match(rendered, /No input required/);
+  assert.match(rendered, /q Exit/u);
   assert.doesNotMatch(rendered, /Type a message/);
+});
+
+test('playback description replaces the top border without consuming a row', () => {
+  const lines = playbackBorderLines({
+    columns: 80,
+    label: 'DEMO PLAYBACK',
+    status: 'Project Work · failure recovery and settlement',
+    hint: 'q Exit · Automatic playback · exits after the final result',
+  });
+  assert.equal(lines.length, 3);
+  assert.ok(lines.every((line) => line.length === 80));
+  assert.match(lines[0], /^╭─ DEMO PLAYBACK {2}▶ Project Work/u);
+  assert.match(lines[0], /─╮$/u);
+  assert.match(lines[1], /^│ q Exit/u);
+  assert.match(lines[2], /^╰─+╯$/u);
 });

@@ -12,6 +12,7 @@ import {
   type AgentWorkLabStartupRoute,
   type GlobalWorkFilter,
   type GlobalWorkSnapshot,
+  type KungfuOnboardingState,
   type ProductSearchDocument,
   type ProjectTemplateCreationReceipt,
   type ProjectTemplateWorkspaceSelection,
@@ -26,11 +27,17 @@ import {
   type WorkReviewReceipt,
   type WorkStartReceipt,
   applyProjectWorkspaceEnvironment,
+  beginKungfuOnboardingRoute,
+  dismissKungfuOnboarding,
+  finishKungfuOnboarding,
+  kungfuAgentBriefCommand,
+  kungfuAgentFirstPrompt,
   loadCliHelpSearchDocuments,
   openAgentWorkLab,
   openProjects,
   projectSearchDocuments,
   searchProductDocuments,
+  shouldShowKungfuOnboarding,
 } from '@kungfu-tech/api/capability';
 import { Box, Text, render, useApp } from 'ink';
 import React from 'react';
@@ -49,6 +56,11 @@ import {
 } from './agent-work-lab-view.js';
 import { scrollListSelection } from './list-window/index.js';
 import { boundedIndex, decodeShellKey } from './navigation.js';
+import { readTuiOnboardingState } from './onboarding-state.js';
+import {
+  AgentFirstOnboardingView,
+  type TuiOnboardingAction,
+} from './onboarding-view.js';
 import {
   CLOSED_CONTROL_PLANE,
   ControlPlaneBar,
@@ -81,6 +93,10 @@ import {
   projectWorkAmbientRows,
 } from './project-files-view/index.js';
 import {
+  cleanupProjectTourTemporaryProject,
+  playbackQuitRequested,
+} from './project-tour-lifecycle.js';
+import {
   PROJECTS_QUICK_COMMANDS,
   PROJECT_WORK_QUICK_COMMANDS,
   type ProjectWorkQuickAction,
@@ -95,6 +111,7 @@ import {
   type ProjectTourResult,
   ProjectTourView,
   StarterProjectHost,
+  parseProjectTourSpeed,
   workReceiptHasRetainedSession,
 } from './starter-project-view/index.js';
 import {
@@ -920,21 +937,33 @@ function ProductHost({
   dimensions,
   autoDemo = false,
   projectTourRoot,
+  projectTourSpeed = 1,
   emptyState = false,
   onAutoDemoSettled,
   onProjectTourSettled,
+  onPlaybackQuit,
 }: {
   lab: AgentWorkLab;
   dimensions: DimensionStore;
   autoDemo?: boolean;
   projectTourRoot?: string;
+  projectTourSpeed?: number;
   emptyState?: boolean;
   onAutoDemoSettled?: (result: AgentWorkLabAutoplayResult) => void;
   onProjectTourSettled?: (result: ProjectTourResult) => void;
+  onPlaybackQuit?: () => void;
 }) {
   const { exit } = useApp();
   const playbackMode = autoDemo || Boolean(projectTourRoot);
   const [size, setSize] = React.useState(dimensions.get());
+  const [onboardingState, setOnboardingState] =
+    React.useState<KungfuOnboardingState>(() => {
+      const paths = runtimePaths();
+      return readTuiOnboardingState(paths.configHome);
+    });
+  const [onboardingNotice, setOnboardingNotice] = React.useState('');
+  const firstLaunch =
+    !playbackMode && !emptyState && shouldShowKungfuOnboarding(onboardingState);
   const startupProjectRoot = React.useMemo(
     () =>
       emptyState
@@ -947,18 +976,27 @@ function ProductHost({
   >(playbackMode ? PENDING_STARTUP : undefined);
   const [surface, setSurface] = React.useState<
     | 'loading'
+    | 'onboarding'
     | 'lab'
     | 'all-work'
     | 'projects'
     | 'project-work'
     | 'project-assignment'
-  >(playbackMode ? 'lab' : emptyState ? 'all-work' : 'loading');
+  >(
+    playbackMode
+      ? 'lab'
+      : firstLaunch
+        ? 'onboarding'
+        : emptyState
+          ? 'all-work'
+          : 'loading',
+  );
   const startupAnimationEnabled = React.useMemo(
     () => terminalAnimationsEnabled(process.env),
     [],
   );
   const [startupIntroSettled, setStartupIntroSettled] = React.useState(
-    playbackMode || emptyState || !startupAnimationEnabled,
+    playbackMode || firstLaunch || emptyState || !startupAnimationEnabled,
   );
   const surfaceRef = React.useRef(surface);
   React.useEffect(() => {
@@ -1044,7 +1082,7 @@ function ProductHost({
   );
   React.useEffect(() => dimensions.subscribe(setSize), [dimensions]);
   React.useEffect(() => {
-    if (playbackMode) return undefined;
+    if (playbackMode || surface === 'onboarding') return undefined;
     const paths = runtimePaths();
     const invocation = tuiCliInvocation(paths);
     let active = true;
@@ -1077,13 +1115,13 @@ function ProductHost({
     return () => {
       active = false;
     };
-  }, [playbackMode]);
+  }, [playbackMode, surface]);
   React.useEffect(() => {
-    if (playbackMode || emptyState || !startupAnimationEnabled)
+    if (playbackMode || firstLaunch || emptyState || !startupAnimationEnabled)
       return undefined;
     const timer = setTimeout(() => setStartupIntroSettled(true), 540);
     return () => clearTimeout(timer);
-  }, [emptyState, playbackMode, startupAnimationEnabled]);
+  }, [emptyState, firstLaunch, playbackMode, startupAnimationEnabled]);
   React.useEffect(() => {
     if (playbackMode || control.mode === 'closed' || cliDocuments.length > 0)
       return;
@@ -1147,7 +1185,13 @@ function ProductHost({
     };
   }, [lab, playbackMode, startup, surface]);
   React.useEffect(() => {
-    if (playbackMode || emptyState || !startupProjectRoot) return;
+    if (
+      playbackMode ||
+      surface === 'onboarding' ||
+      emptyState ||
+      !startupProjectRoot
+    )
+      return;
     let active = true;
     const request = openProjectRequest.current + 1;
     openProjectRequest.current = request;
@@ -1211,7 +1255,7 @@ function ProductHost({
     return () => {
       active = false;
     };
-  }, [emptyState, lab, playbackMode, projects, startupProjectRoot]);
+  }, [emptyState, lab, playbackMode, projects, startupProjectRoot, surface]);
   const autoplay = React.useMemo(
     () =>
       autoDemo
@@ -1352,6 +1396,51 @@ function ProductHost({
       setControlNow({ ...CLOSED_CONTROL_PLANE, focus }),
     [setControlNow],
   );
+  const agentFirstEntry = React.useMemo(() => {
+    const paths = runtimePaths();
+    const invocation = tuiCliInvocation(paths);
+    const command = kungfuAgentBriefCommand(
+      invocation.bin,
+      invocation.argsPrefix,
+    );
+    return { command, prompt: kungfuAgentFirstPrompt(command) };
+  }, []);
+  const persistOnboarding = React.useCallback(
+    (next: KungfuOnboardingState, onSaved?: () => void) => {
+      const paths = runtimePaths();
+      const invocation = tuiCliInvocation(paths);
+      execFile(
+        invocation.bin,
+        invocation.args([
+          'config',
+          'set',
+          'ui.onboarding',
+          JSON.stringify(next),
+          '--scope',
+          'user',
+          '--json',
+        ]),
+        { env: invocation.env, maxBuffer: 2 * 1024 * 1024 },
+        (error) => {
+          if (error) {
+            setOnboardingNotice(
+              `Could not save Getting Started state: ${error.message}`,
+            );
+            setControlNow({
+              ...CLOSED_CONTROL_PLANE,
+              focus: 'workspace',
+              notice: `Could not save Getting Started state: ${error.message}`,
+            });
+            return;
+          }
+          setOnboardingNotice('');
+          setOnboardingState(next);
+          onSaved?.();
+        },
+      );
+    },
+    [setControlNow],
+  );
   const setWorkspaceInputActive = React.useCallback(
     (active: boolean) => {
       workspaceInputActiveRef.current = active;
@@ -1368,6 +1457,38 @@ function ProductHost({
       setLabActionRequest({ id: nextLabActionId.current, action });
     },
     [],
+  );
+  const handleOnboardingAction = React.useCallback(
+    (action: TuiOnboardingAction) => {
+      if (action === 'agent') {
+        persistOnboarding(
+          finishKungfuOnboarding(onboardingState, { route: 'agent' }),
+          () => setSurface('all-work'),
+        );
+      } else if (action === 'lab') {
+        persistOnboarding(
+          beginKungfuOnboardingRoute(onboardingState, 'lab'),
+          () => setSurface('lab'),
+        );
+      } else if (action === 'tour') {
+        persistOnboarding(
+          beginKungfuOnboardingRoute(onboardingState, 'tour'),
+          () => {
+            setSurface('lab');
+            dispatchLabAction('lab-starter');
+          },
+        );
+      } else if (action === 'dismiss') {
+        persistOnboarding(dismissKungfuOnboarding(onboardingState), () =>
+          setSurface('all-work'),
+        );
+      } else {
+        persistOnboarding(finishKungfuOnboarding(onboardingState), () =>
+          setSurface('all-work'),
+        );
+      }
+    },
+    [dispatchLabAction, onboardingState, persistOnboarding],
   );
   const acknowledgeLabAction = React.useCallback((id: number) => {
     setLabActionRequest((current) =>
@@ -1635,7 +1756,19 @@ function ProductHost({
     [inputFence, playbackMode],
   );
   React.useEffect(() => {
-    if (playbackMode) return;
+    if (!playbackMode) return;
+    const onData = (chunk: Buffer | string) => {
+      if (!playbackQuitRequested(chunk)) return;
+      onPlaybackQuit?.();
+      exit();
+    };
+    process.stdin.prependListener('data', onData);
+    return () => {
+      process.stdin.off('data', onData);
+    };
+  }, [exit, onPlaybackQuit, playbackMode]);
+  React.useEffect(() => {
+    if (playbackMode || surface === 'onboarding') return;
     const onData = (chunk: Buffer | string) => {
       if (workspaceInputActiveRef.current) return;
       const mouseEvents = decodeTerminalMouseInput(chunk);
@@ -1709,6 +1842,7 @@ function ProductHost({
     };
   }, [
     playbackMode,
+    surface,
     dispatchLabAction,
     exit,
     inputFence,
@@ -1722,7 +1856,7 @@ function ProductHost({
   ]);
 
   React.useEffect(() => {
-    if (playbackMode) return;
+    if (playbackMode || surface === 'onboarding') return;
     const onData = (chunk: Buffer | string) => {
       if (workspaceInputActiveRef.current || isInputCaptured()) return;
       const value = String(chunk);
@@ -1731,12 +1865,20 @@ function ProductHost({
         if (openedProject) openHome();
         else setSurface('projects');
       } else if (value === '3') setSurface('lab');
+      else if (value === '4') setSurface('onboarding');
     };
     process.stdin.on('data', onData);
     return () => {
       process.stdin.off('data', onData);
     };
-  }, [isInputCaptured, openGlobalWork, openHome, openedProject, playbackMode]);
+  }, [
+    isInputCaptured,
+    openGlobalWork,
+    openHome,
+    openedProject,
+    playbackMode,
+    surface,
+  ]);
 
   let content: React.ReactNode;
   if (projectTourRoot) {
@@ -1747,7 +1889,22 @@ function ProductHost({
         destination={projectTourRoot}
         columns={size.columns}
         rows={size.rows}
+        playbackSpeed={projectTourSpeed}
         onSettled={projectTourSettled}
+      />
+    );
+  } else if (surface === 'onboarding') {
+    content = (
+      <AgentFirstOnboardingView
+        dimensions={{
+          ...size,
+          rows: terminalCanvasRows(size.rows),
+        }}
+        state={onboardingState}
+        command={agentFirstEntry.command}
+        prompt={agentFirstEntry.prompt}
+        notice={onboardingNotice}
+        onAction={handleOnboardingAction}
       />
     );
   } else if (starterOpen && starterProject) {
@@ -1827,6 +1984,18 @@ function ProductHost({
           receipt: ProjectTemplateCreationReceipt,
           workspace: ProjectTemplateWorkspaceSelection,
         ) => {
+          if (
+            onboardingState.route === 'tour' ||
+            onboardingState.route === 'lab'
+          ) {
+            persistOnboarding(
+              finishKungfuOnboarding(onboardingState, {
+                route: onboardingState.route,
+                labCompleted: onboardingState.route === 'lab',
+                tourCompleted: onboardingState.route === 'tour',
+              }),
+            );
+          }
           applyProjectWorkspaceEnvironment(process.env, workspace);
           setStarterProject({ receipt, workspace });
           setStarterWorkReceipt(undefined);
@@ -1977,7 +2146,7 @@ function ProductHost({
       flexDirection="column"
       overflow="hidden"
     >
-      {!playbackMode ? (
+      {!playbackMode && surface !== 'onboarding' ? (
         <Box height={1} paddingX={1}>
           <Box flexGrow={1} flexShrink={1} gap={2} overflow="hidden">
             <Text
@@ -2008,14 +2177,15 @@ function ProductHost({
                 : 'Projects'}
             </Text>
           </Box>
-          <Box flexShrink={0} marginLeft={2}>
+          <Box flexShrink={0} marginLeft={2} gap={2}>
             <Text color={labOpen ? 'cyan' : undefined} bold={labOpen}>
               [3] Agent Work Lab
             </Text>
+            <Text>[4] Getting Started</Text>
           </Box>
         </Box>
       ) : null}
-      {!playbackMode ? (
+      {!playbackMode && surface !== 'onboarding' ? (
         <Box height={1} paddingX={1} overflow="hidden">
           <Text
             color={historyStatus.ok ? 'green' : 'yellow'}
@@ -2037,9 +2207,9 @@ function ProductHost({
               ? 'Project Work · failure recovery and settlement'
               : 'Agent Work Lab · Offline continuity'
           }
-          hint="Automatic · No input required · exits after the final result"
+          hint="q Exit · Automatic playback · exits after the final result"
         />
-      ) : (
+      ) : surface !== 'onboarding' ? (
         <>
           <ControlPlaneOverlay
             dimensions={contentDimensions.get()}
@@ -2082,7 +2252,7 @@ function ProductHost({
             }
           />
         </>
-      )}
+      ) : null}
     </Box>
   );
 }
@@ -2114,6 +2284,15 @@ async function main(): Promise<void> {
   if (projectTourIndex >= 0 && !projectTourRoot) {
     throw new Error('--project-work-tour-root requires a destination');
   }
+  const projectTourSpeedIndex = process.argv.indexOf('--project-tour-speed');
+  if (projectTourSpeedIndex >= 0 && !process.argv[projectTourSpeedIndex + 1]) {
+    throw new Error('--project-tour-speed requires a multiplier');
+  }
+  const projectTourSpeed = parseProjectTourSpeed(
+    projectTourSpeedIndex >= 0
+      ? process.argv[projectTourSpeedIndex + 1]
+      : undefined,
+  );
   const lab = openTuiAgentWorkLab(Boolean(projectTourRoot));
   const playbackMode = autoDemo || Boolean(projectTourRoot);
   const emptyState = process.argv.includes('--empty-state');
@@ -2148,6 +2327,7 @@ async function main(): Promise<void> {
   let instance: ReturnType<typeof render> | undefined;
   let autoDemoResult: AgentWorkLabAutoplayResult | undefined;
   let projectTourResult: ProjectTourResult | undefined;
+  let playbackQuit = false;
   let terminating = false;
   await lifecycle.run(
     {
@@ -2166,12 +2346,16 @@ async function main(): Promise<void> {
           dimensions={dimensions}
           autoDemo={autoDemo}
           projectTourRoot={projectTourRoot}
+          projectTourSpeed={projectTourSpeed}
           emptyState={emptyState}
           onAutoDemoSettled={(result) => {
             autoDemoResult = result;
           }}
           onProjectTourSettled={(result) => {
             projectTourResult = result;
+          }}
+          onPlaybackQuit={() => {
+            playbackQuit = true;
           }}
         />,
         {
@@ -2186,7 +2370,7 @@ async function main(): Promise<void> {
       await instance.waitUntilExit();
     },
   );
-  if (autoDemo) {
+  if (autoDemo && !playbackQuit) {
     if (!autoDemoResult) {
       throw new Error('Agent Work Lab autoplay exited without a result');
     }
@@ -2214,6 +2398,8 @@ async function main(): Promise<void> {
     }
   }
   if (projectTourRoot) {
+    cleanupProjectTourTemporaryProject(projectTourRoot);
+    if (playbackQuit) return;
     if (!projectTourResult) {
       throw new Error('Project Work tour exited without a result');
     }

@@ -347,9 +347,12 @@ test('the GUI shell uses the shared startup surface policy', () => {
   assert.match(source, /startupSurface === 'work-graph'/);
   assert.match(
     source,
-    /initialProjectsOpen[\s\S]*discoveredKfxCount: 0[\s\S]*: loadKfx\(/,
+    /initialProjectsOpen \|\| initialOnboardingOpen[\s\S]*discoveredKfxCount: 0[\s\S]*: loadKfx\(/,
   );
-  assert.match(source, /initialProjectsOpen && !initialFocusedProjectPath/);
+  assert.match(
+    source,
+    /!initialOnboardingOpen && initialProjectsOpen && !initialFocusedProjectPath/,
+  );
   assert.match(source, /projectPath: initialFocusedProjectPath/);
   assert.match(
     source,
@@ -359,6 +362,8 @@ test('the GUI shell uses the shared startup surface policy', () => {
     source,
     /shouldOpenAgentWorkLab\(startupSurface, loaded\.entries\.length\)/,
   );
+  assert.match(source, /shouldShowKungfuOnboarding/);
+  assert.match(source, /AgentFirstOnboardingPanel/);
   assert.match(projectsSource, /WORKSPACE_SELECT_PATH_CHANNEL/);
   assert.match(source, /onOpenStarterProject/);
   assert.match(mainSource, /ipcMain\.handle\(WORKSPACE_SELECT_PATH_CHANNEL/);

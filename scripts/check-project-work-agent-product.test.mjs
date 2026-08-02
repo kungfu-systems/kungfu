@@ -86,6 +86,7 @@ test('Project, Work, and Agent are the complete first-layer object model', () =>
     'Agent',
   ]);
   assert.deepEqual(contract.firstLayer.goldenPath, [
+    'Teach the existing Agent with kungfu agent brief',
     'New or Open Project',
     'Create or select Work',
     'Run Agent',
@@ -96,6 +97,10 @@ test('Project, Work, and Agent are the complete first-layer object model', () =>
     'Work',
     'Agent',
   ]);
+  assert.equal(
+    contract.firstEntry.principle,
+    "Kungfu's first entry is an Agent capability, not a new daily work interface.",
+  );
   assertRequiredCopy(contract.surfaces.tui.requiredCopy);
   assertRequiredCopy(contract.surfaces.gui.requiredCopy);
 });
@@ -107,6 +112,7 @@ test('CLI exposes Project creation and Agent execution without legacy entrypoint
   const rows = new Map(
     catalog.surfaces.map((row) => [row.canonical_path, row]),
   );
+  assert.ok(rows.has(contract.surfaces.cli.requiredOnboardingCommand));
 
   assert.deepEqual(registry.helpProjection.defaultVisibilities, ['start-here']);
   const startHere = Object.entries(registry.familyPolicies)

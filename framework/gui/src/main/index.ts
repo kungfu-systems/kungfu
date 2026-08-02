@@ -9,6 +9,13 @@ import {
   statSync,
 } from 'node:fs';
 import path from 'node:path';
+import {
+  DEFAULT_KUNGFU_ONBOARDING_STATE,
+  type KungfuOnboardingState,
+  kungfuAgentBriefCommand,
+  kungfuAgentFirstPrompt,
+  parseKungfuOnboardingState,
+} from '@kungfu-tech/api/capability';
 import { type KfxPlanDeps, planKfx } from '@kungfu-tech/kfx';
 import {
   BrowserWindow,
@@ -39,6 +46,9 @@ import {
   DESTROY_CHANNEL,
   ENSURE_CHANNEL,
   HIDE_CHANNEL,
+  ONBOARDING_GET_CHANNEL,
+  ONBOARDING_INSTALL_CLI_CHANNEL,
+  ONBOARDING_SET_CHANNEL,
   PROFILE_CLI_EXEC_CHANNEL,
   RUNTIME_BACKUP_RESET_CHANNEL,
   RUNTIME_STATUS_GET_CHANNEL,
@@ -74,6 +84,7 @@ import {
 } from './global-work-observer-host';
 import {
   installKungfuCliToPath,
+  isKungfuCliInstalled,
   uninstallKungfuCliFromPath,
 } from './installCli';
 import {
@@ -420,6 +431,35 @@ function kungfuBinPath(): string {
 function kungfuCliArgs(args: string[]): string[] {
   return [...kungfuCliInvocation.argsPrefix, ...args];
 }
+
+function readDesktopOnboardingState(): KungfuOnboardingState {
+  try {
+    const value = JSON.parse(
+      readFileSync(path.join(defaultConfigHome(), 'config.json'), 'utf8'),
+    ) as { ui?: { onboarding?: unknown } };
+    return parseKungfuOnboardingState(value.ui?.onboarding);
+  } catch {
+    return { ...DEFAULT_KUNGFU_ONBOARDING_STATE };
+  }
+}
+
+function desktopAgentFirstEntry() {
+  const command = kungfuAgentBriefCommand(
+    kungfuCliInvocation.bin,
+    kungfuCliInvocation.argsPrefix,
+  );
+  return {
+    state: readDesktopOnboardingState(),
+    command,
+    prompt: kungfuAgentFirstPrompt(command),
+    cliInstalled: isKungfuCliInstalled(),
+    cliPath: path.isAbsolute(kungfuCliInvocation.bin)
+      ? kungfuCliInvocation.bin
+      : '',
+  };
+}
+
+process.env.KFE_ONBOARDING = JSON.stringify(desktopAgentFirstEntry());
 
 // Finder-launched apps do not inherit an interactive shell PATH. Make the
 // packaged CLI discoverable to agents launched by the Console while retaining
@@ -1025,6 +1065,35 @@ ipcMain.handle(WORKSPACE_SELECT_RECENT_CHANNEL, (_event, payload) => {
     selected.workspace_root,
   );
 });
+ipcMain.handle(ONBOARDING_GET_CHANNEL, () => desktopAgentFirstEntry());
+ipcMain.handle(ONBOARDING_INSTALL_CLI_CHANNEL, () => {
+  const result = installKungfuCliToPath();
+  return { ...result, entry: desktopAgentFirstEntry() };
+});
+ipcMain.handle(ONBOARDING_SET_CHANNEL, (_event, payload) => {
+  const requested = parseKungfuOnboardingState(
+    (payload as { state?: unknown })?.state,
+  );
+  execFileSync(
+    kungfuBinPath(),
+    kungfuCliArgs([
+      'config',
+      'set',
+      'ui.onboarding',
+      JSON.stringify(requested),
+      '--scope',
+      'user',
+      '--json',
+    ]),
+    {
+      env: { ...process.env, KF_CONFIG_HOME: defaultConfigHome() },
+      timeout: 10000,
+    },
+  );
+  const entry = desktopAgentFirstEntry();
+  process.env.KFE_ONBOARDING = JSON.stringify(entry);
+  return entry;
+});
 // Application menu with the VS Code-style "Install 'kungfu' Command in PATH"
 // action, so a real user who installed Kungfu Episodes.app can use `kungfu` in a shell.
 function buildMenu() {
@@ -1080,29 +1149,8 @@ function buildMenu() {
       },
     },
     {
-      label: 'Show Agent Onboarding Brief',
-      click: async () => {
-        const kungfuBin = path.join(
-          path.dirname(process.env.KFE_PATH || bindingPath),
-          'kungfu',
-        );
-        try {
-          const out = execFileSync(kungfuBin, ['agent', 'brief'], {
-            timeout: 10000,
-          });
-          await dialog.showMessageBox({
-            type: 'info',
-            message: 'Kungfu Agent Onboarding',
-            detail: out.toString().slice(0, 4000),
-          });
-        } catch (e) {
-          await dialog.showMessageBox({
-            type: 'error',
-            message: 'Could not read Agent Onboarding brief',
-            detail: (e as Error).message,
-          });
-        }
-      },
+      label: 'Getting Started with Your Agent',
+      click: () => navigateShell({ target: 'onboarding' }),
     },
   ];
   const planDeps: KfxPlanDeps = {

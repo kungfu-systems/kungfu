@@ -11,6 +11,7 @@ import React from 'react';
 import { AGENT_WORK_LAB_QUICK_COMMANDS } from './agent-work-lab-view.js';
 import {
   CLOSED_CONTROL_PLANE,
+  CONTROL_PLANE_CURSOR_BLINK_MS,
   ControlPlaneBar,
   ControlPlaneOverlay,
   type ControlPlaneState,
@@ -553,10 +554,46 @@ test('the idle input is a focused full panel and renders typed text', async () =
   instance.cleanup();
   assert.match(frame, /continue work/);
   assert.match(frame, /VIEW CONTROLS/);
+  assert.match(frame, /╭─ VIEW CONTROLS/u);
   assert.match(frame, /Esc Controls · \? Help/);
   assert.doesNotMatch(frame, /Kungfu/);
+  assert.doesNotMatch(frame, /Type…/u);
   assert.match(frame, /╭/);
   assert.match(frame, /╰/);
+});
+
+test('the focused empty input blinks a cursor without placeholder copy', async () => {
+  const output = new CaptureOutput();
+  const instance = render(
+    React.createElement(
+      Box,
+      { width: 80, height: 23, flexDirection: 'column' },
+      React.createElement(ControlPlaneBar, {
+        dimensions: { columns: 80, rows: 24 },
+        state: CLOSED_CONTROL_PLANE,
+        resultCount: 0,
+      }),
+    ),
+    {
+      stdout: output as unknown as NodeJS.WriteStream,
+      exitOnCtrlC: false,
+      patchConsole: false,
+      debug: true,
+    },
+  );
+  await new Promise<void>((resolve) => setTimeout(resolve, 80));
+  const initialWriteCount = output.chunks.length;
+  const initialFrame = output.chunks.join('');
+  await new Promise<void>((resolve) =>
+    setTimeout(resolve, CONTROL_PLANE_CURSOR_BLINK_MS + 80),
+  );
+  const blinkingWriteCount = output.chunks.length;
+  instance.unmount();
+  instance.cleanup();
+
+  assert.match(initialFrame, /╭─ VIEW CONTROLS/u);
+  assert.doesNotMatch(initialFrame, /Type…/u);
+  assert.ok(blinkingWriteCount > initialWriteCount);
 });
 
 test('the idle bar makes Lab controls visually explicit', async () => {

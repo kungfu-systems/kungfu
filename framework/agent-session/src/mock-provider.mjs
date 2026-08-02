@@ -20,6 +20,8 @@ export const MOCK_AGENT_SCENARIOS = Object.freeze([
 ]);
 export const MOCK_DELIVERABLE_PATH =
   'deliverables/mock-agent-recovery-report.md';
+export const MOCK_RECOVERY_STORY_DELIVERABLE_PATH =
+  'deliverables/launch-brief.md';
 const ESCAPE = String.fromCharCode(27);
 const BRACKETED_PASTE_START = `${ESCAPE}[200~`;
 const BRACKETED_PASTE_END = `${ESCAPE}[201~`;
@@ -70,13 +72,13 @@ function mockReviewLine(prompt, inspectEvidence) {
     Boolean(request.primaryRoot) &&
     evidence.ok === true;
   const evidenceText = passed
-    ? `Mock qualification read ${request.primaryPath} (${request.primaryRoot}); ${evidence.bytes} bytes retained.`
-    : `Mock qualification could not read retained primary evidence: ${request.primaryPath || '(missing path)'}.`;
+    ? `The Mock Reviewer read ${request.primaryPath} (${request.primaryRoot}); ${evidence.bytes} bytes were available for review.`
+    : `The Mock Reviewer could not read the retained primary evidence: ${request.primaryPath || '(missing path)'}.`;
   return `KUNGFU_REVIEW_RESULT ${JSON.stringify({
     verdict: passed ? 'fit' : 'revision-required',
     summary: passed
-      ? `Mock qualification covered ${request.criteria.length} exact acceptance criteria.`
-      : 'Mock qualification could not verify retained evidence.',
+      ? `The independent Mock Reviewer checked ${request.criteria.length} exact acceptance criteria against the retained deliverable.`
+      : 'The independent Mock Reviewer could not verify the retained deliverable.',
     criteria: request.criteria.map((criterion) => ({
       criterion,
       passed,
@@ -95,7 +97,8 @@ export function createMockAgentMachine({
   const selected = requireScenario(scenario);
   let phase = 'waiting-for-work';
   const writeDeliverable =
-    effects.writeDeliverable ?? (() => ({ path: MOCK_DELIVERABLE_PATH }));
+    effects.writeDeliverable ??
+    ((relativePath = MOCK_DELIVERABLE_PATH) => ({ path: relativePath }));
   const inspectEvidence =
     effects.inspectEvidence ?? (() => ({ ok: true, bytes: 1 }));
   const nextRecoveryStep = effects.nextRecoveryStep ?? (() => 'deliverable');
@@ -111,6 +114,30 @@ export function createMockAgentMachine({
     '  output · deterministic fixture observed',
     '  agent · evidence retained; no completion claimed',
   ];
+  const recoveryAttempt = (behavior) => {
+    if (behavior === 'disconnect') {
+      return [
+        'MOCK WORKING: reading the Starter Project',
+        '  agent · I found the Work definition and three source notes.',
+        '  tool · read product notes and customer feedback',
+        '  agent · I am separating confirmed facts from open questions.',
+      ];
+    }
+    if (behavior === 'crash') {
+      return [
+        'MOCK WORKING: resuming the retained launch-brief Work',
+        '  agent · I recovered the objective and checks without relying on prior chat.',
+        '  tool · read release facts',
+        '  agent · I started drafting three evidence-backed benefits.',
+      ];
+    }
+    return [
+      'MOCK WORKING: completing the same launch brief',
+      '  agent · I re-read the Project sources and original checks.',
+      '  tool · write deliverables/launch-brief.md',
+      '  agent · I kept release date, pricing, and integrations open.',
+    ];
+  };
 
   return Object.freeze({
     scenario: selected,
@@ -139,7 +166,12 @@ export function createMockAgentMachine({
         if (behavior === 'crash') {
           phase = 'ended';
           return result(
-            [...work('start deterministic attempt'), 'MOCK CRASH: exit 23'],
+            [
+              ...(selected === 'recovery-story'
+                ? recoveryAttempt('crash')
+                : work('start deterministic attempt')),
+              'MOCK CRASH: the process stopped before submitting the draft; exit 23',
+            ],
             phase,
             23,
           );
@@ -148,8 +180,10 @@ export function createMockAgentMachine({
           phase = 'ended';
           return result(
             [
-              ...work('stream deterministic attempt'),
-              'MOCK DISCONNECTED: transport closed before completion; exit 75',
+              ...(selected === 'recovery-story'
+                ? recoveryAttempt('disconnect')
+                : work('stream deterministic attempt')),
+              'MOCK DISCONNECTED: the transport closed before I wrote the brief; exit 75',
             ],
             phase,
             75,
@@ -177,13 +211,19 @@ export function createMockAgentMachine({
           );
         }
         if (behavior === 'deliverable') {
-          const written = writeDeliverable();
+          const written = writeDeliverable(
+            selected === 'recovery-story'
+              ? MOCK_RECOVERY_STORY_DELIVERABLE_PATH
+              : MOCK_DELIVERABLE_PATH,
+          );
           phase = 'ended';
           return result(
             [
-              ...work('write bounded Project deliverable'),
+              ...(selected === 'recovery-story'
+                ? recoveryAttempt('deliverable')
+                : work('write bounded Project deliverable')),
               `MOCK FILE WRITTEN: ${written.path}`,
-              'MOCK READY FOR REVIEW: deterministic changes are available.',
+              'MOCK READY FOR REVIEW: Agent does not approve its own Work.',
               'mock› ',
             ],
             phase,
@@ -191,10 +231,14 @@ export function createMockAgentMachine({
           );
         }
         if (behavior === 'review-fit') {
+          const request = reviewRequest(prompt);
           phase = 'ended';
           return result(
             [
-              ...work('read retained Project evidence in qualification mode'),
+              'MOCK WORKING: reviewing the launch brief independently',
+              '  agent · I received no prior transcript and opened retained evidence read-only.',
+              `  tool · read ${request.primaryPath || 'the retained primary evidence'}`,
+              '  agent · I checked every acceptance criterion against the file.',
               mockReviewLine(prompt, inspectEvidence),
             ],
             phase,
@@ -295,26 +339,53 @@ function workspaceEffects(env) {
     return candidate;
   };
   return {
-    writeDeliverable() {
-      const target = resolveInsideWorkspace(MOCK_DELIVERABLE_PATH);
+    writeDeliverable(relativePath = MOCK_DELIVERABLE_PATH) {
+      const target = resolveInsideWorkspace(relativePath);
       mkdirSync(path.dirname(target), { recursive: true });
-      writeFileSync(
-        target,
-        [
-          '# Mock Agent recovery report',
-          '',
-          'This deterministic qualification fixture records a realistic Work recovery story.',
-          '',
-          '- Attempt 1: the transport disconnected before completion (exit 75).',
-          '- Attempt 2: the Agent process crashed before settlement (exit 23).',
-          '- Recovery: Kungfu retained both failed attempts and reopened the same Work.',
-          '- Completion: a new Mock Agent attempt produced this reviewable deliverable.',
-          '- Authority: process exit and Agent self-report do not settle Work; native review does.',
-          '',
-        ].join('\n'),
-        'utf8',
-      );
-      return { path: MOCK_DELIVERABLE_PATH };
+      const content =
+        relativePath === MOCK_RECOVERY_STORY_DELIVERABLE_PATH
+          ? [
+              '# Northstar Notes launch brief',
+              '',
+              '## Who it is for',
+              '',
+              'Northstar Notes is for small product teams coordinating launches across several agent sessions.',
+              '',
+              '## Why it matters',
+              '',
+              'Teams lose context when work continues from chat alone. Northstar Notes keeps decisions reviewable by linking summaries to their source notes and leaving unresolved questions visible.',
+              '',
+              '## Confirmed benefits',
+              '',
+              '- Each summary item can retain a link to its source note.',
+              '- Open questions remain visible until they are explicitly resolved.',
+              '- Teams can review a concise launch brief as a normal project file instead of reconstructing context from chat.',
+              '',
+              '## Open questions',
+              '',
+              '- Public release date',
+              '- Pricing',
+              '- Supported integrations',
+              '',
+              '## Next action',
+              '',
+              'Ask the launch owner to review this brief and resolve the release date, pricing, and integration questions before publication.',
+              '',
+            ]
+          : [
+              '# Mock Agent recovery report',
+              '',
+              'This deterministic qualification fixture records a realistic Work recovery story.',
+              '',
+              '- Attempt 1: the transport disconnected before completion (exit 75).',
+              '- Attempt 2: the Agent process crashed before settlement (exit 23).',
+              '- Recovery: Kungfu retained both failed attempts and reopened the same Work.',
+              '- Completion: a new Mock Agent attempt produced this reviewable deliverable.',
+              '- Authority: process exit and Agent self-report do not settle Work; native review does.',
+              '',
+            ];
+      writeFileSync(target, content.join('\n'), 'utf8');
+      return { path: relativePath };
     },
     inspectEvidence(relativePath) {
       if (!relativePath) return { ok: false, bytes: 0 };

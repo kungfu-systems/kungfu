@@ -3,7 +3,16 @@
   "id": "project-work-agent-first-layer",
   "version": 1,
   "status": "source-qualified",
-  "purpose": "Keep the first-use Kungfu product model small enough that an external user can act before learning the internal authority model.",
+  "purpose": "Make the user's existing Agent reliably capable of using Kungfu before asking the user to adopt a new work interface.",
+  "firstEntry": {
+    "principle": "Kungfu's first entry is an Agent capability, not a new daily work interface.",
+    "primaryRoute": "Give the user's existing Agent an exact local kungfu agent brief command and ask it to guide the first Project and Work.",
+    "prompt": "Run `<exact local CLI> agent brief`, then guide me through my first Project and Work. Keep me in my current agent, and use Kungfu as the durable Work layer.",
+    "cliAvailability": "The prompt carries an exact local command even when kungfu is not yet on the Agent's PATH; GUI also offers an explicit PATH install action.",
+    "optionalRoutes": ["Agent Work Lab", "Guided Project Tour"],
+    "surfaceRole": "GUI and TUI are optional control and observation surfaces; kungfu run codex|claude|opencode|amp preserves the user's familiar Agent.",
+    "completionRule": "A versioned user-level state is shared by GUI and TUI; completion or explicit dismissal returns later launches to normal Work while Getting Started remains reopenable."
+  },
   "firstLayer": {
     "objectNouns": ["Project", "Work", "Agent"],
     "definitions": {
@@ -16,6 +25,7 @@
       "All Work": "the active, completed, or complete machine-local Work projection across every available Project"
     },
     "goldenPath": [
+      "Teach the existing Agent with kungfu agent brief",
       "New or Open Project",
       "Create or select Work",
       "Run Agent",
@@ -58,6 +68,11 @@
     "tui": {
       "entrypoint": "kungfu",
       "requiredCopy": {
+        "framework/tui/src/onboarding-view.tsx": [
+          "Keep your agent. Give it durable Work.",
+          "Exact local command:",
+          "kungfu run codex|claude|opencode|amp"
+        ],
         "framework/tui/src/main.tsx": [
           "[1] All Work",
           "[2] Projects",
@@ -81,6 +96,12 @@
     "gui": {
       "entrypoint": "Kungfu Episodes.app",
       "requiredCopy": {
+        "framework/gui/src/renderer/src/onboarding-panel.tsx": [
+          "Keep your agent. Give it durable Work.",
+          "Copy prompt for my Agent",
+          "Install kungfu in PATH",
+          "kungfu run codex|claude|opencode|amp"
+        ],
         "framework/gui/src/renderer/src/main.tsx": [
           "All Work",
           "Projects",
@@ -106,6 +127,7 @@
         "kungfu project",
         "kungfu run"
       ],
+      "requiredOnboardingCommand": "kungfu agent brief",
       "forbiddenDefaultHelpNouns": [
         "Initiative",
         "Assignment",

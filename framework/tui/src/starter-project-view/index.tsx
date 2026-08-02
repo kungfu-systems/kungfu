@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import { createHash } from 'node:crypto';
+import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import type {
   AgentRuntimeProfile,
@@ -38,8 +39,15 @@ import {
   ProjectPathCopyOverlay,
   projectNavigationWidth,
 } from '../project-files-view/index.js';
-import { terminalCanvasRows } from '../terminal-canvas.js';
+import {
+  KUNGFU_WORK_DISCOVERY_PATTERN,
+  type TerminalAnimationCell,
+  terminalAnimationsEnabled,
+  terminalCanvasRows,
+  useTerminalAnimationFrame,
+} from '../terminal-canvas.js';
 import { decodeTerminalMouseInput } from '../terminal-lifecycle.js';
+import { TitledBorderWindow } from '../titled-border-window.js';
 
 type DimensionSource = {
   get(): TerminalDimensions;
@@ -1669,85 +1677,142 @@ export function StarterProjectHost({
 export const PROJECT_TOUR_STORY_STEPS = [
   'Create a disposable Project from the shipped Starter template',
   'Open the Project and inspect its real file tree',
-  'Run one Work; retain a simulated transport disconnect (exit 75)',
-  'Retry the same Work; retain a simulated Agent crash (exit 23)',
-  'Retry again; write a deterministic recovery deliverable',
+  'Start the launch brief; retain an intentional transport disconnect (exit 75)',
+  'Resume the same launch brief; retain an intentional Agent crash (exit 23)',
+  'Resume again and complete deliverables/launch-brief.md',
   'Run a fresh read-only Mock Reviewer and settle through native Work authority',
-  'Capture another Work and show the complete Project Work inventory',
+  'Capture the next business outcome beside the completed Work history',
 ] as const;
 
 export const PROJECT_TOUR_GUIDE_SCENES = [
   {
     id: 'starter-project',
-    kicker: 'NEW USER · STARTER PROJECT',
-    title: '先从一个真实、可丢弃的 Project 开始',
+    kicker: 'KEEP THE WORK WHEN THE CHAT ENDS · STARTER PROJECT',
+    title: 'Watch one real Work lifecycle; only the Agent is mocked',
     detail:
-      '文件树、Work 和后续证据都写入这个隔离 Project；演示不会触碰你的真实项目。',
+      'Session-first tools bind work to chat. Kungfu keeps Work outside it, so Agents are replaceable. The temporary Project is deleted.',
   },
   {
     id: 'connection-loss',
-    kicker: 'COMMON FAILURE · CONNECTION LOST',
-    title: '第一次执行模拟连接中断（exit 75）',
+    kicker: 'COMMON FAILURE · WE INTENTIONALLY DROP THE CONNECTION',
+    title: 'The Mock Agent starts the launch brief, then loses transport',
     detail:
-      '下面播放 Mock Agent 返回的真实公开事件；连接断开不会让 Work 消失或被误判为完成。',
+      'It reads Project sources, separates confirmed facts from open questions, then the tour ends the connection with exit 75.',
   },
   {
     id: 'connection-retained',
-    kicker: 'KUNGFU RETAINS THE ATTEMPT',
-    title: '失败的 Attempt 已保留，Work 仍然存在',
+    kicker: 'THE WORK SURVIVES THE CONNECTION',
+    title:
+      'The session is gone. The Work is not. Kungfu does not silently retry.',
     detail:
-      '你可以离开终端后再回来；Kungfu 保留同一个 Work 身份、失败证据和下一步。',
+      'Work retains objective, checks, Attempt history, and next action—not chat reconstruction. A user or automation starts the next Agent.',
   },
   {
     id: 'agent-crash',
-    kicker: 'COMMON FAILURE · PROCESS CRASH',
-    title: '第二次执行模拟 Agent 进程崩溃（exit 23）',
+    kicker: 'COMMON FAILURE · WE INTENTIONALLY CRASH THE PROCESS',
+    title: 'A new process resumes the same Work, then stops unexpectedly',
     detail:
-      '这是新的 Attempt，不是新的 Work。下面仍然只显示 Mock Agent 与 Kungfu 的真实事件。',
+      'It recovers the objective without prior chat and starts the brief. The tour then stops the process with exit 23.',
   },
   {
     id: 'same-work',
-    kicker: 'ONE WORK · MULTIPLE ATTEMPTS',
-    title: '两次故障都归属于同一个 Work',
+    kicker: 'ONE BUSINESS GOAL · MULTIPLE ATTEMPTS',
+    title: 'Two failures did not create two duplicate tasks',
     detail:
-      '重试不会丢失目标、验收条件或既有 Attempt；右侧可以看到完整的保留链。',
+      'Both Attempts remain under the same launch-brief Work. Retained history stays above while the current process starts cleanly below.',
   },
   {
     id: 'recovery',
     kicker: 'RECOVERY ATTEMPT',
-    title: '第三次启动一个全新的 Mock Agent 进程',
+    title: 'A third process completes the original launch brief',
     detail:
-      '它读取 Project 文件并写出确定性的恢复报告，过程事件将在下方逐条播放。',
+      'It re-reads Project sources, preserves open questions, and writes deliverables/launch-brief.md against the original checks.',
   },
   {
     id: 'agent-exit',
-    kicker: 'AGENT EXIT IS NOT COMPLETION',
-    title: 'Agent 成功退出，只代表产生了候选证据',
+    kicker: 'RESULT VISIBLE · AGENT EXIT IS NOT COMPLETION',
+    title: 'Read the launch brief before anyone approves it',
     detail:
-      'Kungfu 不接受 Agent 自我认证；Work 必须继续经过独立审查和原生结算。',
+      'The file above is retained evidence. The Mock Agent can say it is ready, but only an independent review can approve it.',
   },
   {
     id: 'independent-review',
     kicker: 'INDEPENDENT REVIEW',
-    title: '启动一个全新的只读 Mock Reviewer',
+    title: 'A fresh, read-only Mock Reviewer checks the launch brief',
     detail:
-      'Reviewer 不继承执行 Agent 的 transcript，并逐项核对验收条件；真实 review 事件显示在下方。',
+      'The Reviewer receives no prior Agent transcript. It reads the retained deliverable and checks every original acceptance criterion.',
   },
   {
     id: 'native-settlement',
-    kicker: 'NATIVE SETTLEMENT',
-    title: '审查通过后，仍由原生 Work authority 结算',
+    kicker: 'KUNGFU SETTLES REVIEWED WORK',
+    title: 'A passing review still does not complete the Work by itself',
     detail:
-      'Review 不是完成按钮；只有 proof-bound receipt 可以把 Work 变成 settled。',
+      'Kungfu binds review to the Work and file in a settlement receipt. It proves declared checks were reviewed—not universal business truth.',
+  },
+  {
+    id: 'next-work-capture',
+    kicker: 'NEXT OUTCOME · OPERATOR ACTION',
+    title: 'The tour now uses /new to capture another Work',
+    detail:
+      'The same /new action is available in your Project. It adds an outcome beside settled history; it does not reopen completed Work.',
   },
   {
     id: 'next-work',
-    kicker: 'KEEP THE WORK WHEN THE CHAT ENDS',
-    title: '旧 Work 已完成，下一项 Work 已被捕获',
+    kicker: 'TWO SESSIONS FAILED · ONE WORK CONTINUED',
+    title: 'Independent review passed; Kungfu settled it with evidence',
     detail:
-      'Project 同时保留完成历史和新的待办；这就是可以跨中断恢复的日常工作循环。',
+      'Sessions were replaceable Attempts; Project kept Work and proof. In your Project, use /new to capture one outcome, then Run Agent.',
   },
 ] as const;
+
+export const PROJECT_TOUR_PACING = {
+  guideDwellMs: 8000,
+  guideGapMs: 400,
+  activityEventMs: 900,
+  protocolEventMs: 600,
+  summaryDwellMs: 1800,
+  finalDwellMs: 3200,
+} as const;
+
+export const PROJECT_TOUR_SPEED_RANGE = {
+  min: 0.25,
+  max: 2,
+} as const;
+
+export function parseProjectTourSpeed(value?: string): number {
+  if (value === undefined) return 1;
+  const speed = Number(value);
+  if (
+    !Number.isFinite(speed) ||
+    speed < PROJECT_TOUR_SPEED_RANGE.min ||
+    speed > PROJECT_TOUR_SPEED_RANGE.max
+  ) {
+    throw new Error(
+      `--project-tour-speed must be between ${PROJECT_TOUR_SPEED_RANGE.min} and ${PROJECT_TOUR_SPEED_RANGE.max}`,
+    );
+  }
+  return speed;
+}
+
+export function projectTourPacingForSpeed(speed: number) {
+  parseProjectTourSpeed(String(speed));
+  return {
+    guideDwellMs: Math.round(PROJECT_TOUR_PACING.guideDwellMs / speed),
+    guideGapMs: Math.round(PROJECT_TOUR_PACING.guideGapMs / speed),
+    activityEventMs: Math.round(PROJECT_TOUR_PACING.activityEventMs / speed),
+    protocolEventMs: Math.round(PROJECT_TOUR_PACING.protocolEventMs / speed),
+    summaryDwellMs: Math.round(PROJECT_TOUR_PACING.summaryDwellMs / speed),
+    finalDwellMs: Math.round(PROJECT_TOUR_PACING.finalDwellMs / speed),
+  };
+}
+
+export const PROJECT_TOUR_STREAM_TRANSITIONS = {
+  A1: 'NEW MOCK AGENT PROCESS · CREATE THE LAUNCH BRIEF',
+  A2: 'NEW PROCESS · A1 KEPT ABOVE · SAME LAUNCH-BRIEF WORK',
+  REC: 'RECOVERY PROCESS · A1 + A2 KEPT ABOVE · COMPLETE THE SAME BRIEF',
+  REV: 'FRESH MOCK REVIEWER · PRIOR ATTEMPTS KEPT ABOVE · READ-ONLY',
+  SET: 'KUNGFU SETTLEMENT · PASSING REVIEW KEPT ABOVE · SAME WORK',
+} as const;
 
 export type ProjectTourGuideScene = (typeof PROJECT_TOUR_GUIDE_SCENES)[number];
 
@@ -1781,6 +1846,15 @@ export type ProjectTourStreamLine = {
   text: string;
 };
 
+export function updateProjectTourStream(
+  current: readonly ProjectTourStreamLine[],
+  line: ProjectTourStreamLine,
+  mode: 'append' | 'begin',
+): ProjectTourStreamLine[] {
+  if (mode === 'begin') return [line];
+  return [...current, line].slice(-120);
+}
+
 export function projectTourProtocolLine(
   event: ProjectWorkRunEvent | WorkReviewEvent,
   section: string,
@@ -1796,6 +1870,146 @@ export function projectTourProtocolLine(
     status: event.status,
     text: event.activity?.text || event.text,
   };
+}
+
+function sentenceCase(value: string): string {
+  if (!value) return value;
+  return `${value[0]?.toUpperCase() ?? ''}${value.slice(1)}`;
+}
+
+export function projectTourAudienceLine(
+  event: ProjectWorkRunEvent | WorkReviewEvent,
+  section: string,
+  sectionTag: string,
+  id: number,
+): ProjectTourStreamLine | null {
+  const line = projectTourProtocolLine(event, section, sectionTag, id);
+  if (!event.activity) {
+    if (
+      !/Agent process (?:exited|finished)|Every acceptance criterion passed/u.test(
+        line.text,
+      )
+    )
+      return null;
+    return line;
+  }
+
+  let text = line.text.trim();
+  const source = /^tool · /u.test(text) ? 'tool' : line.source;
+  if (
+    !text ||
+    text === 'mock›' ||
+    /^Kungfu Mock Agent\b/u.test(text) ||
+    /^KUNGFU_REVIEW_RESULT\b/u.test(text)
+  )
+    return null;
+
+  text = text
+    .replace(/^(?:agent|tool|output) · /u, '')
+    .replace(/^MOCK WORKING: /u, '')
+    .replace(/^MOCK DISCONNECTED: the transport closed /u, 'Connection lost · ')
+    .replace(/^MOCK CRASH: the process stopped /u, 'Process crashed · stopped ')
+    .replace(/^MOCK FILE WRITTEN: /u, 'Wrote ')
+    .replace(/^MOCK READY FOR REVIEW: /u, 'Review ready · ');
+  return { ...line, source, text: sentenceCase(text) };
+}
+
+export function projectTourArtifactPreview(content: string): string[] {
+  const lines = content.split(/\r?\n/u).map((line) => line.trim());
+  const title = lines.find((line) => /^# /u.test(line))?.replace(/^# /u, '');
+  const sectionLine = (heading: string) => {
+    const index = lines.indexOf(`## ${heading}`);
+    if (index < 0) return null;
+    return (
+      lines.slice(index + 1).find((line) => line && !/^#/u.test(line)) ?? null
+    );
+  };
+  const openQuestionIndex = lines.indexOf('## Open questions');
+  const openQuestions =
+    openQuestionIndex < 0
+      ? []
+      : lines
+          .slice(openQuestionIndex + 1)
+          .filter((line) => /^- /u.test(line))
+          .slice(0, 3)
+          .map((line) => line.replace(/^- /u, ''));
+  return [
+    title ? `FILE · ${title}` : null,
+    sectionLine('Who it is for'),
+    sectionLine('Why it matters'),
+    openQuestions.length > 0 ? `OPEN · ${openQuestions.join(' · ')}` : null,
+  ].filter((line): line is string => Boolean(line));
+}
+
+export function projectTourReceiptText(receipt: WorkCloseReceipt): string {
+  return `Settlement receipt recorded · Work completed · ${receipt.receiptRoot}`;
+}
+
+export function projectTourSummaryMode(columns: number): 'compact' | 'wide' {
+  return columns < 100 ? 'compact' : 'wide';
+}
+
+export function projectTourSummaryTitles(
+  mode: 'compact' | 'wide',
+  showingReviewEvidence: boolean,
+): readonly string[] {
+  if (mode === 'compact') {
+    return [
+      'FILES',
+      showingReviewEvidence
+        ? 'LAUNCH BRIEF · REVIEW EVIDENCE'
+        : 'PROJECT WORK · RETAINED HISTORY',
+    ];
+  }
+  return [
+    'FILES',
+    'PROJECT WORK',
+    showingReviewEvidence
+      ? 'LAUNCH BRIEF · REVIEW EVIDENCE'
+      : 'RETAINED WORK HISTORY',
+  ];
+}
+
+export function projectTourActivityWidth(
+  availableWidth: number,
+  heading: string,
+): number {
+  const width = availableWidth - heading.length - 1;
+  return width >= 9 ? width : 0;
+}
+
+export function projectTourActivityCells(
+  frame: number,
+  width: number,
+): TerminalAnimationCell[] {
+  return (
+    KUNGFU_WORK_DISCOVERY_PATTERN.render(frame, {
+      width: Math.max(1, width),
+      height: 1,
+    })[0] ?? []
+  );
+}
+
+function ProjectTourActivityNebula({ width }: { width: number }) {
+  const enabled = terminalAnimationsEnabled(process.env);
+  const frame = useTerminalAnimationFrame({
+    active: width > 0,
+    enabled,
+    pattern: KUNGFU_WORK_DISCOVERY_PATTERN,
+  });
+  const cells = projectTourActivityCells(frame, width);
+  return (
+    <Text>
+      {cells.map((cell, column) => (
+        <Text
+          key={`${KUNGFU_WORK_DISCOVERY_PATTERN.id}-activity-${column}`}
+          color={cell.color}
+        >
+          {cell.glyph}
+        </Text>
+      ))}
+    </Text>
+  );
 }
 
 export function projectTourLayout(rows: number): {
@@ -1843,20 +2057,35 @@ function terminalCharacterWidth(character: string): number {
 
 function projectTourWrapLine(value: string, width: number): string[] {
   const lines: string[] = [];
-  let line = '';
-  let cells = 0;
-  for (const character of value) {
-    const characterWidth = terminalCharacterWidth(character);
-    if (cells + characterWidth > width && line) {
-      lines.push(line.padEnd(line.length + width - cells));
-      line = '';
-      cells = 0;
+  let remaining = Array.from(value.trim());
+  while (remaining.length > 0) {
+    let cells = 0;
+    let take = 0;
+    let lastWhitespace = -1;
+    for (let index = 0; index < remaining.length; index += 1) {
+      const character = remaining[index] ?? '';
+      const characterWidth = terminalCharacterWidth(character);
+      if (cells + characterWidth > width) break;
+      cells += characterWidth;
+      take = index + 1;
+      if (/\s/u.test(character)) lastWhitespace = index;
     }
-    line += character;
-    cells += characterWidth;
+
+    if (take < remaining.length && lastWhitespace > 0) take = lastWhitespace;
+    if (take === 0) take = 1;
+
+    const lineCharacters = remaining.slice(0, take);
+    const line = lineCharacters.join('').trimEnd();
+    const lineCells = lineCharacters.reduce(
+      (total, character) => total + terminalCharacterWidth(character),
+      0,
+    );
+    lines.push(line.padEnd(line.length + width - lineCells));
+    remaining = remaining.slice(take);
+    while (remaining[0] && /\s/u.test(remaining[0]))
+      remaining = remaining.slice(1);
   }
-  lines.push(line.padEnd(line.length + width - cells));
-  return lines;
+  return lines.length > 0 ? lines : [' '.repeat(width)];
 }
 
 export function projectTourGuidePanelLines(
@@ -1871,7 +2100,7 @@ export function projectTourGuidePanelLines(
     detail[0] ?? ' '.repeat(width),
     detail[1] ?? ' '.repeat(width),
     ' '.repeat(width),
-    fit('真实事件流已暂停 · 导览将自动继续'),
+    fit('LIVE EVENT STREAM PAUSED · THE TOUR WILL RESUME AUTOMATICALLY'),
   ];
 }
 
@@ -1894,12 +2123,60 @@ function resultRoot(value: unknown): string {
   return `sha256:${createHash('sha256').update(JSON.stringify(value)).digest('hex')}`;
 }
 
+function projectTourWindowRows(
+  rows: readonly React.ReactNode[],
+  count: number,
+): React.ReactNode[] {
+  const visible = rows.slice(0, count);
+  return [
+    ...visible,
+    ...Array.from({ length: Math.max(0, count - visible.length) }, (_, index) =>
+      ' '.repeat(index + 1),
+    ),
+  ];
+}
+
+export function ProjectTourHeader({
+  columns,
+  step,
+  projectName,
+  playbackSpeed,
+}: {
+  columns: number;
+  step: number;
+  projectName: string;
+  playbackSpeed: number;
+}) {
+  return (
+    <Box
+      width={columns}
+      height={3}
+      borderStyle="round"
+      borderColor="cyan"
+      paddingX={1}
+    >
+      <Box flexGrow={1} flexShrink={1} overflow="hidden">
+        <Text bold color="cyan" wrap="truncate-end">
+          Kungfu Project → Work → Agent · STEP {Math.min(step + 1, 7)}/7 ·{' '}
+          {projectName}
+        </Text>
+      </Box>
+      <Box flexShrink={0} marginLeft={1}>
+        <Text bold color="yellow">
+          SPEED {playbackSpeed}×
+        </Text>
+      </Box>
+    </Box>
+  );
+}
+
 export function ProjectTourView({
   lab,
   projects,
   destination,
   columns,
   rows,
+  playbackSpeed = 1,
   onSettled,
 }: {
   lab: AgentWorkLab;
@@ -1907,13 +2184,19 @@ export function ProjectTourView({
   destination: string;
   columns: number;
   rows: number;
+  playbackSpeed?: number;
   onSettled: (result: ProjectTourResult) => void;
 }) {
+  const pacing = React.useMemo(
+    () => projectTourPacingForSpeed(playbackSpeed),
+    [playbackSpeed],
+  );
   const [step, setStep] = React.useState(0);
   const [events, setEvents] = React.useState<TourEvent[]>([]);
   const [files, setFiles] = React.useState<ProjectFileTreeEntry[]>([]);
   const [works, setWorks] = React.useState<ProjectWork[]>([]);
   const [guide, setGuide] = React.useState<ProjectTourGuideScene | null>(null);
+  const [artifactPreview, setArtifactPreview] = React.useState<string[]>([]);
   const [streamHeading, setStreamHeading] = React.useState(
     'WAITING FOR MOCK AGENT',
   );
@@ -1946,12 +2229,45 @@ export function ProjectTourView({
       return inventory;
     };
     let streamSequence = 0;
-    const showGuide = async (scene: ProjectTourGuideScene) => {
+    const beginStream = (section: string, sectionTag: string, text: string) => {
+      if (!active) return;
+      streamSequence += 1;
+      setStreamHeading(`${section} · RUNNING`);
+      const line: ProjectTourStreamLine = {
+        id: streamSequence,
+        section,
+        sectionTag,
+        index: null,
+        source: 'kungfu',
+        status: 'running',
+        text,
+      };
+      setStreamLines((current) =>
+        updateProjectTourStream(current, line, 'begin'),
+      );
+    };
+    const showGuide = async (
+      scene: ProjectTourGuideScene,
+      nextStream?: {
+        section: string;
+        sectionTag: string;
+        text: string;
+      },
+    ) => {
       if (!active) return;
       setGuide(scene);
-      await wait(1650);
-      if (active) setGuide(null);
-      await wait(140);
+      await wait(pacing.guideDwellMs);
+      if (active) {
+        if (nextStream) {
+          beginStream(
+            nextStream.section,
+            nextStream.sectionTag,
+            nextStream.text,
+          );
+        }
+        setGuide(null);
+      }
+      await wait(pacing.guideGapMs);
     };
     const replayEvents = async (
       section: string,
@@ -1963,15 +2279,43 @@ export function ProjectTourView({
       for (const event of captured) {
         if (!active) return;
         streamSequence += 1;
-        const line = projectTourProtocolLine(
+        const line = projectTourAudienceLine(
           event,
           section,
           sectionTag,
           streamSequence,
         );
-        setStreamLines((current) => [...current, line].slice(-120));
-        await wait(event.activity ? 260 : 150);
+        if (!line) continue;
+        setStreamLines((current) =>
+          updateProjectTourStream(current, line, 'append'),
+        );
+        await wait(
+          event.activity ? pacing.activityEventMs : pacing.protocolEventMs,
+        );
       }
+    };
+    const appendStream = (
+      section: string,
+      sectionTag: string,
+      source: ProjectTourStreamLine['source'],
+      status: string,
+      text: string,
+    ) => {
+      if (!active) return;
+      streamSequence += 1;
+      setStreamHeading(section);
+      const line: ProjectTourStreamLine = {
+        id: streamSequence,
+        section,
+        sectionTag,
+        index: null,
+        source,
+        status,
+        text,
+      };
+      setStreamLines((current) =>
+        updateProjectTourStream(current, line, 'append'),
+      );
     };
     const recordReceipt = (
       section: string,
@@ -1979,20 +2323,13 @@ export function ProjectTourView({
       receipt: WorkCloseReceipt,
     ) => {
       if (!active) return;
-      streamSequence += 1;
-      setStreamHeading(section);
-      setStreamLines((current) => [
-        ...current,
-        {
-          id: streamSequence,
-          section,
-          sectionTag,
-          index: null,
-          source: 'receipt',
-          status: receipt.status,
-          text: `${receipt.status} · Work ${receipt.workPhase} · ${receipt.receiptRoot}`,
-        },
-      ]);
+      appendStream(
+        section,
+        sectionTag,
+        'receipt',
+        receipt.status,
+        projectTourReceiptText(receipt),
+      );
     };
     const runAttempt = async (
       assignmentId: string,
@@ -2011,7 +2348,6 @@ export function ProjectTourView({
         );
       }
       const captured: ProjectWorkRunEvent[] = [];
-      setStreamHeading(`${section} · RUNNING`);
       const receipt = await projects.run(
         'mock',
         {
@@ -2045,13 +2381,17 @@ export function ProjectTourView({
         record({
           title: 'Starter Project created',
           detail:
-            'The Project is real and disposable; Files and captured Work are visible.',
+            'The Mock Agent is synthetic; this temporary Project and its complete Work lifecycle use the real Kungfu path.',
           tone: 'good',
         });
-        await wait(650);
+        await wait(pacing.summaryDwellMs);
 
         setStep(2);
-        await showGuide(PROJECT_TOUR_GUIDE_SCENES[1]);
+        await showGuide(PROJECT_TOUR_GUIDE_SCENES[1], {
+          section: 'MOCK AGENT · ATTEMPT 1',
+          sectionTag: 'A1',
+          text: PROJECT_TOUR_STREAM_TRANSITIONS.A1,
+        });
         const disconnected = await runAttempt(
           work.assignmentId,
           'agent-failed',
@@ -2061,15 +2401,19 @@ export function ProjectTourView({
         record({
           title: 'Connection lost · exit 75',
           detail:
-            'Kungfu retained the failed attempt; Work stayed executing and review was not fabricated.',
+            'The launch brief was not written, but Kungfu retained the same Work, the failed Attempt, and the next action.',
           tone: 'bad',
         });
         await refreshWorks();
         await showGuide(PROJECT_TOUR_GUIDE_SCENES[2]);
-        await wait(700);
+        await wait(pacing.summaryDwellMs);
 
         setStep(3);
-        await showGuide(PROJECT_TOUR_GUIDE_SCENES[3]);
+        await showGuide(PROJECT_TOUR_GUIDE_SCENES[3], {
+          section: 'MOCK AGENT · ATTEMPT 2',
+          sectionTag: 'A2',
+          text: PROJECT_TOUR_STREAM_TRANSITIONS.A2,
+        });
         const crashed = await runAttempt(
           work.assignmentId,
           'agent-failed',
@@ -2079,15 +2423,19 @@ export function ProjectTourView({
         record({
           title: 'Agent process crashed · exit 23',
           detail:
-            'The second failure is another retained attempt under the same Work identity.',
+            'The resumed draft stopped before submission; the original launch-brief Work still remained intact.',
           tone: 'bad',
         });
         await refreshWorks();
         await showGuide(PROJECT_TOUR_GUIDE_SCENES[4]);
-        await wait(700);
+        await wait(pacing.summaryDwellMs);
 
         setStep(4);
-        await showGuide(PROJECT_TOUR_GUIDE_SCENES[5]);
+        await showGuide(PROJECT_TOUR_GUIDE_SCENES[5], {
+          section: 'MOCK AGENT · RECOVERY ATTEMPT',
+          sectionTag: 'REC',
+          text: PROJECT_TOUR_STREAM_TRANSITIONS.REC,
+        });
         const completed = await runAttempt(
           work.assignmentId,
           'agent-finished',
@@ -2095,17 +2443,29 @@ export function ProjectTourView({
           'REC',
         );
         refreshFiles();
+        setArtifactPreview(
+          projectTourArtifactPreview(
+            readFileSync(
+              path.join(destination, 'deliverables/launch-brief.md'),
+              'utf8',
+            ),
+          ),
+        );
         record({
           title: 'Fresh attempt produced evidence',
           detail:
-            'Mock Agent wrote deliverables/mock-agent-recovery-report.md; process exit still did not settle Work.',
+            'Mock Agent completed deliverables/launch-brief.md against the original Work; process exit still did not settle it.',
           tone: 'good',
         });
         await showGuide(PROJECT_TOUR_GUIDE_SCENES[6]);
-        await wait(700);
+        await wait(pacing.summaryDwellMs);
 
         setStep(5);
-        await showGuide(PROJECT_TOUR_GUIDE_SCENES[7]);
+        await showGuide(PROJECT_TOUR_GUIDE_SCENES[7], {
+          section: 'INDEPENDENT REVIEW',
+          sectionTag: 'REV',
+          text: PROJECT_TOUR_STREAM_TRANSITIONS.REV,
+        });
         const reviewPlan = await lab.planStarterReview(
           completed,
           'kungfu.mock-agent.review-fit',
@@ -2113,7 +2473,6 @@ export function ProjectTourView({
         if (!reviewPlan.executable)
           throw new Error('Mock review plan is blocked');
         const reviewEvents: WorkReviewEvent[] = [];
-        setStreamHeading('INDEPENDENT REVIEW · RUNNING');
         const review = await lab.runStarterReview(reviewPlan, (event) =>
           reviewEvents.push(event),
         );
@@ -2123,6 +2482,14 @@ export function ProjectTourView({
             `Mock review returned ${review.status}: ${review.message ?? 'no settlement detail'}`,
           );
         }
+        appendStream(
+          'INDEPENDENT REVIEW',
+          'REV',
+          'kungfu',
+          'completed',
+          'Review passed · this Work is eligible for settlement.',
+        );
+        await wait(pacing.activityEventMs);
         const closePlan = await lab.planStarterClose({
           destination,
           initialWork: {
@@ -2131,25 +2498,39 @@ export function ProjectTourView({
             requestPath: work.requestPath,
           },
         });
+        await showGuide(PROJECT_TOUR_GUIDE_SCENES[8], {
+          section: 'NATIVE SETTLEMENT',
+          sectionTag: 'SET',
+          text: PROJECT_TOUR_STREAM_TRANSITIONS.SET,
+        });
         const closed = await lab.closeStarterWork(closePlan);
         if (closed.status !== 'completed') {
           throw new Error(`Native Work close returned ${closed.status}`);
         }
-        await showGuide(PROJECT_TOUR_GUIDE_SCENES[8]);
+        appendStream(
+          'NATIVE SETTLEMENT',
+          'SET',
+          'kungfu',
+          'completed',
+          'Passing review bound to this Work and deliverables/launch-brief.md.',
+        );
+        await wait(pacing.activityEventMs);
         recordReceipt('NATIVE SETTLEMENT', 'SET', closed);
+        setArtifactPreview([]);
         record({
           title: 'Independent review and native settlement',
           detail:
-            'The read-only qualification reviewer passed; native receipts closed the Work.',
+            'A fresh read-only Mock Reviewer passed the original checks; Kungfu then recorded the settlement receipt.',
           tone: 'good',
         });
         await refreshWorks();
-        await wait(700);
+        await wait(pacing.summaryDwellMs);
 
         setStep(6);
+        await showGuide(PROJECT_TOUR_GUIDE_SCENES[9]);
         const followupPlan = projects.prepareWork(
-          'Publish the recovery checklist for the next operator',
-          'A new captured Work remains visible beside the settled recovery Work',
+          'Prepare the launch handoff for the next operator',
+          'A new business outcome remains visible beside the settled launch-brief Work',
         );
         await projects.captureWork(destination, followupPlan);
         const finalInventory = await refreshWorks();
@@ -2158,8 +2539,8 @@ export function ProjectTourView({
           detail: `${finalInventory.works.length} Works are visible: completed history plus the next captured outcome.`,
           tone: 'info',
         });
-        await showGuide(PROJECT_TOUR_GUIDE_SCENES[9]);
-        await wait(1100);
+        await showGuide(PROJECT_TOUR_GUIDE_SCENES[10]);
+        await wait(pacing.finalDwellMs);
 
         const evidence = {
           projectPath: destination,
@@ -2192,12 +2573,150 @@ export function ProjectTourView({
     return () => {
       active = false;
     };
-  }, [destination, lab, onSettled, projects]);
+  }, [destination, lab, onSettled, pacing, projects]);
 
   const layout = projectTourLayout(rows);
-  const fileWidth = Math.min(38, Math.max(24, Math.floor(columns * 0.26)));
+  const summaryMode = projectTourSummaryMode(columns);
+  const summaryTitles = projectTourSummaryTitles(
+    summaryMode,
+    artifactPreview.length > 0,
+  );
+  const fileWidth =
+    summaryMode === 'compact'
+      ? Math.min(30, Math.max(24, Math.floor(columns * 0.34)))
+      : Math.min(38, Math.max(24, Math.floor(columns * 0.26)));
   const workWidth = Math.min(48, Math.max(32, Math.floor(columns * 0.3)));
+  const summaryContentRows = Math.max(1, layout.summaryRows - 2);
+  const compactWorkRows = Math.min(2, works.length);
+  const compactHistoryRows = Math.max(1, summaryContentRows - compactWorkRows);
+  const fileRows = projectTourWindowRows(
+    files.length === 0
+      ? [
+          <Text key="files-loading" dimColor>
+            Creating Starter files…
+          </Text>,
+        ]
+      : files.map((entry) => (
+          <Text
+            key={entry.relativePath}
+            wrap="truncate-end"
+            color={
+              entry.relativePath === 'deliverables/launch-brief.md'
+                ? 'green'
+                : undefined
+            }
+          >
+            {treeLabel(entry)}
+          </Text>
+        )),
+    summaryContentRows,
+  );
+  const artifactRows = artifactPreview.map((line) => (
+    <Text key={line} wrap="truncate-end">
+      {line}
+    </Text>
+  ));
+  const compactRows =
+    artifactPreview.length > 0
+      ? artifactRows
+      : [
+          ...(works.length === 0
+            ? [
+                <Text key="compact-work-loading" dimColor>
+                  Loading captured Work…
+                </Text>,
+              ]
+            : works.slice(0, compactWorkRows).map((work) => (
+                <Text
+                  key={`${work.initiativeId}:${work.assignmentId}`}
+                  wrap="truncate-end"
+                  color={
+                    work.settled
+                      ? 'green'
+                      : work.phase === 'executing'
+                        ? 'yellow'
+                        : 'cyan'
+                  }
+                >
+                  {work.settled ? '✓' : '●'} {shortWorkState(work)} ·{' '}
+                  {work.title}
+                </Text>
+              ))),
+          ...events.slice(-compactHistoryRows).map((event) => (
+            <Text
+              key={`${event.title}:${event.detail}`}
+              wrap="truncate-end"
+              color={
+                event.tone === 'good'
+                  ? 'green'
+                  : event.tone === 'bad'
+                    ? 'red'
+                    : 'cyan'
+              }
+            >
+              {event.tone === 'bad' ? '!' : '✓'} {event.title}
+            </Text>
+          )),
+        ];
+  const wideWorkRows =
+    works.length === 0
+      ? [
+          <Text key="wide-work-loading" dimColor>
+            Loading captured Work…
+          </Text>,
+        ]
+      : works
+          .slice(0, Math.max(1, Math.floor(summaryContentRows / 2)))
+          .flatMap((work) => [
+            <Text
+              key={`${work.initiativeId}:${work.assignmentId}:title`}
+              wrap="truncate-end"
+              color={
+                work.settled
+                  ? 'green'
+                  : work.phase === 'executing'
+                    ? 'yellow'
+                    : 'cyan'
+              }
+            >
+              {work.settled ? '✓' : '●'} {work.title}
+            </Text>,
+            <Text
+              key={`${work.initiativeId}:${work.assignmentId}:state`}
+              dimColor
+              wrap="truncate-end"
+            >
+              {shortWorkState(work)} · {work.assignmentId}
+            </Text>,
+          ]);
+  const wideHistoryRows =
+    artifactPreview.length > 0
+      ? artifactRows
+      : events.flatMap((event) => [
+          <Text
+            key={`${event.title}:${event.detail}:title`}
+            wrap="truncate-end"
+            color={
+              event.tone === 'good'
+                ? 'green'
+                : event.tone === 'bad'
+                  ? 'red'
+                  : 'cyan'
+            }
+          >
+            {event.tone === 'bad' ? '!' : '✓'} {event.title}
+          </Text>,
+          <Text
+            key={`${event.title}:${event.detail}:detail`}
+            dimColor
+            wrap="truncate-end"
+          >
+            {event.detail}
+          </Text>,
+        ]);
   const visibleStreamLines = streamLines.slice(-layout.visibleStreamRows);
+  const streamTitle = `AGENT EVENT STREAM · ${streamHeading}`;
+  const activityWidth = projectTourActivityWidth(columns - 4, streamTitle);
   const guidePanelLines = guide
     ? projectTourGuidePanelLines(guide, Math.max(1, columns - 4))
     : [];
@@ -2208,107 +2727,42 @@ export function ProjectTourView({
       height={layout.canvasRows}
       overflow="hidden"
     >
-      <Box height={3} borderStyle="round" borderColor="cyan" paddingX={1}>
-        <Text bold color="cyan" wrap="truncate-end">
-          Kungfu Project → Work → Agent · STEP {Math.min(step + 1, 7)}/7 ·{' '}
-          {path.basename(destination)}
-        </Text>
-      </Box>
+      <ProjectTourHeader
+        columns={columns}
+        step={step}
+        projectName={path.basename(destination)}
+        playbackSpeed={playbackSpeed}
+      />
       <Box flexDirection="row" height={layout.summaryRows} overflow="hidden">
-        <Box
-          width={fileWidth}
-          flexDirection="column"
-          borderStyle="round"
+        <TitledBorderWindow
+          columns={fileWidth}
+          title={summaryTitles[0] ?? 'FILES'}
           borderColor="gray"
-          paddingX={1}
-        >
-          <Text bold>FILES</Text>
-          {files.length === 0 ? (
-            <Text dimColor>Creating Starter files…</Text>
-          ) : (
-            files.slice(0, Math.max(2, layout.summaryRows - 3)).map((entry) => (
-              <Text
-                key={entry.relativePath}
-                color={
-                  entry.relativePath.includes('mock-agent-recovery')
-                    ? 'green'
-                    : undefined
-                }
-              >
-                {treeLabel(entry)}
-              </Text>
-            ))
-          )}
-        </Box>
-        <Box
-          width={workWidth}
-          flexDirection="column"
-          borderStyle="round"
-          borderColor="gray"
-          paddingX={1}
-        >
-          <Text bold>PROJECT WORK</Text>
-          {works.length === 0 ? (
-            <Text dimColor>Loading captured Work…</Text>
-          ) : (
-            works
-              .slice(0, Math.max(1, layout.summaryRows - 3))
-              .map((work, index) => (
-                <Box
-                  key={`${work.initiativeId}:${work.assignmentId}`}
-                  flexDirection="column"
-                  marginTop={index ? 1 : 0}
-                >
-                  <Text
-                    color={
-                      work.settled
-                        ? 'green'
-                        : work.phase === 'executing'
-                          ? 'yellow'
-                          : 'cyan'
-                    }
-                  >
-                    {work.settled ? '✓' : '●'} {work.title}
-                  </Text>
-                  <Text dimColor>
-                    {' '}
-                    {shortWorkState(work)} · {work.assignmentId}
-                  </Text>
-                </Box>
-              ))
-          )}
-        </Box>
-        <Box
-          flexGrow={1}
-          flexDirection="column"
-          borderStyle="round"
-          borderColor="gray"
-          paddingX={1}
-        >
-          <Text bold>RETAINED ATTEMPTS + SETTLEMENT</Text>
-          {events
-            .slice(-Math.max(1, Math.floor((layout.summaryRows - 3) / 2)))
-            .map((event, index) => (
-              <Box
-                key={`${event.title}:${index}`}
-                flexDirection="column"
-                marginTop={index ? 1 : 0}
-              >
-                <Text
-                  color={
-                    event.tone === 'good'
-                      ? 'green'
-                      : event.tone === 'bad'
-                        ? 'red'
-                        : 'cyan'
-                  }
-                >
-                  {event.tone === 'bad' ? '!' : '✓'} {event.title}
-                </Text>
-                <Text dimColor>{event.detail}</Text>
-              </Box>
-            ))}
-        </Box>
+          rows={fileRows}
+        />
+        {summaryMode === 'compact' ? (
+          <TitledBorderWindow
+            columns={Math.max(4, columns - fileWidth)}
+            title={summaryTitles[1] ?? 'PROJECT WORK · RETAINED HISTORY'}
+            borderColor={artifactPreview.length > 0 ? 'green' : 'gray'}
+            rows={projectTourWindowRows(compactRows, summaryContentRows)}
+          />
+        ) : (
+          <>
+            <TitledBorderWindow
+              columns={workWidth}
+              title={summaryTitles[1] ?? 'PROJECT WORK'}
+              borderColor="gray"
+              rows={projectTourWindowRows(wideWorkRows, summaryContentRows)}
+            />
+            <TitledBorderWindow
+              columns={Math.max(4, columns - fileWidth - workWidth)}
+              title={summaryTitles[2] ?? 'RETAINED WORK HISTORY'}
+              borderColor={artifactPreview.length > 0 ? 'green' : 'gray'}
+              rows={projectTourWindowRows(wideHistoryRows, summaryContentRows)}
+            />
+          </>
+        )}
       </Box>
       <Box
         height={layout.streamRows}
@@ -2331,13 +2785,19 @@ export function ProjectTourView({
           ))
         ) : (
           <>
-            <Text bold color="cyan" wrap="truncate-end">
-              AGENT EVENT STREAM · {streamHeading}
-            </Text>
-            {visibleStreamLines.length === 0 ? (
-              <Text dimColor>
-                Waiting for the first admitted Mock Agent event…
+            <Box height={1} flexDirection="row" overflow="hidden">
+              <Text bold color="cyan" wrap="truncate-end">
+                {streamTitle}
               </Text>
+              {activityWidth > 0 ? (
+                <>
+                  <Text> </Text>
+                  <ProjectTourActivityNebula width={activityWidth} />
+                </>
+              ) : null}
+            </Box>
+            {visibleStreamLines.length === 0 ? (
+              <Text dimColor>Waiting for the first Mock Agent event…</Text>
             ) : null}
             {visibleStreamLines.map((line) => (
               <Text
@@ -2355,11 +2815,7 @@ export function ProjectTourView({
                           : undefined
                 }
               >
-                {line.sectionTag.padEnd(3)}{' '}
-                {line.index === null
-                  ? '--'
-                  : String(line.index).padStart(2, '0')}{' '}
-                {line.source.padEnd(7)} {line.text}
+                {line.sectionTag} · {line.source.toUpperCase()} · {line.text}
               </Text>
             ))}
           </>

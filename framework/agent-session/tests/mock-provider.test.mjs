@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import {
   MOCK_AGENT_SCENARIOS,
+  MOCK_RECOVERY_STORY_DELIVERABLE_PATH,
   createMockAgentMachine,
 } from '../src/mock-provider.mjs';
 import { createProviderAdapter } from '../src/provider-adapters.mjs';
@@ -120,9 +121,9 @@ test('recovery-story keeps one profile while advancing disconnect, crash, and de
       scenario: 'recovery-story',
       effects: {
         nextRecoveryStep: () => steps.shift(),
-        writeDeliverable: () => {
-          writes.push('deliverables/mock-agent-recovery-report.md');
-          return { path: writes[0] };
+        writeDeliverable: (relativePath) => {
+          writes.push(relativePath);
+          return { path: relativePath };
         },
       },
     }).input('continue the same retained Work');
@@ -130,7 +131,28 @@ test('recovery-story keeps one profile while advancing disconnect, crash, and de
   assert.equal(run().exitCode, 75);
   assert.equal(run().exitCode, 23);
   assert.equal(run().exitCode, 0);
-  assert.equal(writes.length, 1);
+  assert.deepEqual(writes, [MOCK_RECOVERY_STORY_DELIVERABLE_PATH]);
+});
+
+test('recovery-story keeps the original business objective in natural Agent language', () => {
+  const steps = ['disconnect', 'crash', 'deliverable'];
+  const run = () =>
+    createMockAgentMachine({
+      scenario: 'recovery-story',
+      effects: {
+        nextRecoveryStep: () => steps.shift(),
+        writeDeliverable: (relativePath) => ({ path: relativePath }),
+      },
+    }).input('complete the retained launch brief');
+
+  const disconnect = run().lines.join('\n');
+  const crash = run().lines.join('\n');
+  const completed = run().lines.join('\n');
+  assert.match(disconnect, /three source notes/u);
+  assert.match(disconnect, /confirmed facts from open questions/u);
+  assert.match(crash, /without relying on prior chat/u);
+  assert.match(completed, /deliverables\/launch-brief\.md/u);
+  assert.match(completed, /does not approve its own Work/u);
 });
 
 test('every Mock Agent scenario reaches its declared deterministic boundary', () => {

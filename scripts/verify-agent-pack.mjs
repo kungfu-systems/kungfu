@@ -505,15 +505,27 @@ const gui = fs.readFileSync(
   path.join(ROOT, 'framework', 'gui', 'src', 'main', 'index.ts'),
   'utf8',
 );
-if (!gui.includes("['agent', 'brief']"))
-  fail('GUI menu does not expose agent brief');
+if (
+  !gui.includes('kungfuAgentBriefCommand(') ||
+  !gui.includes("navigateShell({ target: 'onboarding' })")
+) {
+  fail('GUI onboarding does not expose the exact local agent brief command');
+}
 
 const tui = fs.readFileSync(
   path.join(ROOT, 'framework', 'tui', 'src', 'main.tsx'),
   'utf8',
 );
-if (!tui.includes('kungfu agent brief'))
-  fail('TUI does not point to agent brief');
+const tuiOnboarding = fs.readFileSync(
+  path.join(ROOT, 'framework', 'tui', 'src', 'onboarding-view.tsx'),
+  'utf8',
+);
+if (
+  !tui.includes('kungfuAgentBriefCommand(') ||
+  !tuiOnboarding.includes('Exact local command:')
+) {
+  fail('TUI onboarding does not expose the exact local agent brief command');
+}
 
 if (failures.length) {
   console.error(failures.map((f) => `- ${f}`).join('\n'));

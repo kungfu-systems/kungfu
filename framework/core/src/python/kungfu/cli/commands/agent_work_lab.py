@@ -136,14 +136,29 @@ def autoplay(ctx):
     name="project-tour",
     help="animate a disposable Project Work failure-and-recovery story",
 )
+@click.option(
+    "--speed",
+    type=click.FloatRange(min=0.25, max=2.0),
+    default=1.0,
+    show_default=True,
+    help="playback speed multiplier; 0.5 doubles the reading time",
+)
 @kfd3_api("kungfu.agent-work-lab")
 @kfc.pass_context()
-def project_tour(ctx):
+def project_tour(ctx, speed):
     from kungfu.cli.tui_runtime import run_tui
 
     with tempfile.TemporaryDirectory(prefix="kungfu-project-tour-") as temporary:
         destination = Path(temporary) / "my-first-kungfu-project"
-        return run_tui(ctx, ("--project-work-tour-root", str(destination)))
+        return run_tui(
+            ctx,
+            (
+                "--project-work-tour-root",
+                str(destination),
+                "--project-tour-speed",
+                f"{speed:g}",
+            ),
+        )
 
 
 @agent_work_lab.command(

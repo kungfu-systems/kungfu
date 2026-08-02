@@ -26,6 +26,14 @@ import {
   useTerminalAnimationFrame,
 } from './terminal-canvas.js';
 export * from './terminal-canvas.js';
+import {
+  TitledBorderWindow,
+  titledBorderWindowLines,
+} from './titled-border-window.js';
+export {
+  TitledBorderWindow,
+  titledBorderWindowLines,
+} from './titled-border-window.js';
 import type { WorkLoopShellModel } from './work-loop-contribution.js';
 
 export {
@@ -1723,12 +1731,28 @@ export function ControlPlaneOverlay({
   );
 }
 
-function inputCursor(active: boolean) {
-  return active ? (
-    <Text inverse color="cyan">
+export const CONTROL_PLANE_CURSOR_BLINK_MS = 530;
+
+function BlinkingInputCursor({ active }: { active: boolean }) {
+  const [visible, setVisible] = React.useState(true);
+  React.useEffect(() => {
+    setVisible(true);
+    if (!active) return;
+    const timer = setInterval(
+      () => setVisible((current) => !current),
+      CONTROL_PLANE_CURSOR_BLINK_MS,
+    );
+    return () => clearInterval(timer);
+  }, [active]);
+  if (!active) return null;
+  return (
+    <Text
+      color={visible ? 'black' : undefined}
+      backgroundColor={visible ? 'cyan' : undefined}
+    >
       {' '}
     </Text>
-  ) : null;
+  );
 }
 
 export function ControlPlaneBar({
@@ -1759,8 +1783,7 @@ export function ControlPlaneBar({
       ? 'Help open'
       : state.mode === 'detail'
         ? 'Details open'
-        : value ||
-          (!modalOpen ? (inputFocused ? 'Type…' : 'Press i to type') : '');
+        : value || (!modalOpen && !inputFocused ? 'Press i to type' : '');
   const modeLabel = modalOpen ? state.mode.toUpperCase() : controlsLabel;
   const hint =
     state.notice ??
@@ -1781,30 +1804,28 @@ export function ControlPlaneBar({
       width={dimensions.columns}
       height={4}
       flexDirection="column"
-      borderStyle="round"
-      borderColor={tone}
-      paddingX={1}
       overflow="hidden"
     >
-      <Text
-        color={state.notice ? 'yellow' : inputFocused ? 'white' : 'gray'}
-        dimColor={!state.notice}
-        wrap="truncate-end"
-      >
-        <Text
-          bold
-          color={inputFocused ? 'black' : 'white'}
-          backgroundColor={inputFocused ? 'cyan' : 'gray'}
-        >
-          {' '}
-          {modeLabel}{' '}
-        </Text>{' '}
-        {hint}
-      </Text>
-      <Text color={tone} wrap="truncate-end">
-        <Text bold>{inputFocused ? '›' : '◇'}</Text> {prompt}
-        {acceptsText ? inputCursor(inputFocused) : null}
-      </Text>
+      <TitledBorderWindow
+        columns={dimensions.columns}
+        title={modeLabel}
+        borderColor={tone}
+        rows={[
+          <Text
+            key="hint"
+            color={state.notice ? 'yellow' : inputFocused ? 'white' : 'gray'}
+            dimColor={!state.notice}
+            wrap="truncate-end"
+          >
+            {hint}
+          </Text>,
+          <Text key="prompt" color={tone} wrap="truncate-end">
+            <Text bold>{inputFocused ? '›' : '◇'}</Text>
+            {prompt ? ` ${prompt}` : ' '}
+            {acceptsText ? <BlinkingInputCursor active={inputFocused} /> : null}
+          </Text>,
+        ]}
+      />
     </Box>
   );
 }
@@ -1823,27 +1844,41 @@ export function PlaybackBar({
   return (
     <Box
       position="absolute"
-      marginTop={Math.max(0, terminalCanvasRows(dimensions.rows) - 4)}
+      marginTop={Math.max(0, terminalCanvasRows(dimensions.rows) - 3)}
       width={dimensions.columns}
-      height={4}
+      height={3}
       flexDirection="column"
-      borderStyle="round"
-      borderColor="cyan"
-      paddingX={1}
       overflow="hidden"
     >
-      <Text color="cyan" wrap="truncate-end">
-        <Text bold color="black" backgroundColor="cyan">
-          {' '}
-          {label}{' '}
-        </Text>{' '}
-        <Text bold>▶</Text> {status}
-      </Text>
-      <Text color="white" dimColor wrap="truncate-end">
-        {hint}
-      </Text>
+      <TitledBorderWindow
+        columns={dimensions.columns}
+        title={`${label}  ▶ ${status}`}
+        rows={[
+          <Text key="hint" color="white" dimColor wrap="truncate-end">
+            {hint}
+          </Text>,
+        ]}
+      />
     </Box>
   );
+}
+
+export function playbackBorderLines({
+  columns,
+  label,
+  status,
+  hint,
+}: {
+  columns: number;
+  label: string;
+  status: string;
+  hint: string;
+}): [string, string, string] {
+  return titledBorderWindowLines({
+    columns,
+    title: `${label}  ▶ ${status}`,
+    content: [hint],
+  }) as [string, string, string];
 }
 
 export function TerminalAnimation({

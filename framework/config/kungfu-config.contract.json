@@ -904,7 +904,8 @@
         "required": [
           "fontFamily",
           "fontSize",
-          "scale"
+          "scale",
+          "onboarding"
         ],
         "properties": {
           "fontFamily": {
@@ -919,6 +920,30 @@
             "type": "number",
             "minimum": 0.5,
             "maximum": 3
+          },
+          "onboarding": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "version",
+              "status",
+              "route",
+              "labCompleted",
+              "tourCompleted",
+              "completedAt"
+            ],
+            "properties": {
+              "version": { "const": 1 },
+              "status": {
+                "enum": ["unseen", "started", "completed", "dismissed"]
+              },
+              "route": {
+                "enum": ["none", "agent", "lab", "tour"]
+              },
+              "labCompleted": { "type": "boolean" },
+              "tourCompleted": { "type": "boolean" },
+              "completedAt": { "type": "string" }
+            }
           }
         }
       },
@@ -1263,7 +1288,15 @@
     "ui": {
       "fontFamily": "system",
       "fontSize": 14,
-      "scale": 1
+      "scale": 1,
+      "onboarding": {
+        "version": 1,
+        "status": "unseen",
+        "route": "none",
+        "labCompleted": false,
+        "tourCompleted": false,
+        "completedAt": ""
+      }
     },
     "shortcuts": {
       "commandPalette": "Mod+K",
